@@ -21,6 +21,9 @@
 
 namespace cass {
 
+const Address Address::EMPTY_KEY("0.0.0.0", 0);
+const Address Address::DELETED_KEY("0.0.0.0", 1);
+
 Address::Address() {
   init();
 }

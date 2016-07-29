@@ -18,6 +18,7 @@
 #define __CASS_HASH_HPP_INCLUDED__
 
 #include <algorithm>
+#include <stdint.h>
 
 namespace cass { namespace hash {
 

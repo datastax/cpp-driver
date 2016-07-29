@@ -1,9 +1,9 @@
-#cmakedefine HASH_FUN_H  <functional>
+#cmakedefine HASH_FUN_H  <@HASH_FUN_H@>
 
 /* the namespace of the hash<> function */
-#cmakedefine HASH_NAMESPACE  std
+#cmakedefine HASH_NAMESPACE  @HASH_NAMESPACE@
 
-#cmakedefine HASH_NAME  hash
+#cmakedefine HASH_NAME  @HASH_NAME@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H  1

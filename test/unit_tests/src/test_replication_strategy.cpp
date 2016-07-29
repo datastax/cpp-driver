@@ -18,86 +18,177 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include "address.hpp"
-#include "host.hpp"
-#include "replication_strategy.hpp"
+#include "test_token_map_utils.hpp"
 
 #include <boost/test/unit_test.hpp>
 
 #include <vector>
 #include <set>
 #include <string>
+#include <sstream>
 
-static cass::SharedRefPtr<cass::Host> create_host(const std::string& ip,
-                                                  const std::string& rack = "",
-                                                  const std::string& dc = "") {
-  cass::SharedRefPtr<cass::Host> host =
-      cass::SharedRefPtr<cass::Host>(new cass::Host(cass::Address(ip, 4092), false));
-  host->set_rack_and_dc(rack, dc);
-  return host;
-}
+namespace {
+
+static const cass::CopyOnWriteHostVec NO_REPLICAS(NULL);
+
+template <class Partitioner>
+struct MockTokenMap {
+  typedef typename cass::ReplicationStrategy<Partitioner>::Token Token;
+  typedef typename cass::ReplicationStrategy<Partitioner>::TokenHost TokenHost;
+  typedef typename cass::ReplicationStrategy<Partitioner>::TokenHostVec TokenHostVec;
+  typedef typename cass::ReplicationStrategy<Partitioner>::TokenReplicas TokenReplicas;
+  typedef typename cass::ReplicationStrategy<Partitioner>::TokenReplicasVec TokenReplicasVec;
+
+  struct TokenReplicasCompare {
+    bool operator()(const TokenReplicas& lhs, const TokenReplicas& rhs) const {
+      return lhs.first < rhs.first;
+    }
+  };
+
+  cass::HostSet hosts;
+  cass::IdGenerator dc_ids;
+  cass::IdGenerator rack_ids;
+
+  cass::ReplicationStrategy<Partitioner> strategy;
+  TokenHostVec tokens;
+  TokenReplicasVec replicas;
+  cass::DatacenterMap datacenters;
+
+  void init_simple_strategy(size_t replication_factor) {
+    cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
+
+    ColumnMetadataVec column_metadata;
+    column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
+    column_metadata.push_back(ColumnMetadata("replication", cass::CollectionType::map(varchar_data_type, varchar_data_type, true)));
+    RowResultResponseBuilder builder(column_metadata);
+
+    ReplicationMap replication;
+    replication["class"] = CASS_SIMPLE_STRATEGY;
+
+    std::stringstream ss;
+    ss << replication_factor;
+    replication["replication_factor"] = ss.str();
+
+    builder.append_keyspace_row_v3("ks1", replication);
+    builder.finish();
+
+    cass::ResultIterator iterator(builder.finish());
+    BOOST_CHECK(iterator.next());
+    strategy.init(dc_ids, cass::VersionNumber(3, 0, 0), iterator.row());
+  }
+
+  void init_network_topology_strategy(ReplicationMap& replication) {
+    cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
+
+    ColumnMetadataVec column_metadata;
+    column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
+    column_metadata.push_back(ColumnMetadata("replication", cass::CollectionType::map(varchar_data_type, varchar_data_type, true)));
+    RowResultResponseBuilder builder(column_metadata);
+
+    replication["class"] = CASS_NETWORK_TOPOLOGY_STRATEGY;
+    builder.append_keyspace_row_v3("ks1", replication);
+    builder.finish();
+
+    cass::ResultIterator iterator(builder.finish());
+    BOOST_CHECK(iterator.next());
+    strategy.init(dc_ids, cass::VersionNumber(3, 0, 0), iterator.row());
+  }
+
+  void add_token(Token token,
+                 const std::string& address,
+                 const std::string& rack = "",
+                 const std::string& dc = "") {
+    tokens.push_back(TokenHost(token, create_host(address, rack, dc)));
+  }
+
+  void build_replicas() {
+    std::sort(tokens.begin(), tokens.end()); // We assume sorted tokens
+    cass::build_datacenters(hosts, datacenters);
+    strategy.build_replicas(tokens, datacenters, replicas);
+  }
+
+
+  const cass::CopyOnWriteHostVec& find_hosts(Token token) {
+    typename TokenReplicasVec::const_iterator i = std::lower_bound(replicas.begin(), replicas.end(),
+                                                                   TokenReplicas(token, NO_REPLICAS),
+                                                                   TokenReplicasCompare());
+    if (i != replicas.end() && i->first == token) {
+      return i->second;
+    }
+    return NO_REPLICAS;
+  }
+
+  cass::Host* create_host(const std::string& address,
+                          const std::string& rack = "",
+                          const std::string& dc = "") {
+    cass::Host::Ptr host(new cass::Host(cass::Address(address, 9042), false));
+    host->set_rack_and_dc(rack, dc);
+    host->set_rack_and_dc_ids(rack_ids.get(rack), dc_ids.get(dc));
+    cass::HostSet::iterator i = hosts.find(host);
+    if (i != hosts.end()) {
+      return i->get();
+    } else {
+      hosts.insert(host);
+      return host.get();
+    }
+  }
+};
 
 void check_host(const cass::SharedRefPtr<cass::Host>& host,
                 const std::string& ip,
                 const std::string& rack = "",
                 const std::string& dc = "") {
-  BOOST_CHECK(host->address() == cass::Address(ip, 4092));
+  BOOST_CHECK(host->address() == cass::Address(ip, 9042));
   BOOST_CHECK(host->rack() == rack);
   BOOST_CHECK(host->dc() == dc);
 }
+
+} // namespace
 
 BOOST_AUTO_TEST_SUITE(replication_strategy)
 
 BOOST_AUTO_TEST_CASE(simple)
 {
-  cass::SimpleStrategy strategy("SimpleStrategy", 3);
+  MockTokenMap<cass::Murmur3Partitioner> token_map;
 
-  cass::TokenHostMap primary;
+  token_map.init_simple_strategy(3);
 
-  cass::Token t1(1, 'f');
-  cass::Token t2(1, 'l');
-  cass::Token t3(1, 'r');
-  cass::Token t4(1, 'z');
+  MockTokenMap<cass::Murmur3Partitioner>::Token t1 = 0;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t2 = 100;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t3 = 200;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t4 = 300;
 
-  primary[t1] = create_host("1.0.0.1");
-  primary[t2] = create_host("1.0.0.2");
-  primary[t3] = create_host("1.0.0.3");
-  primary[t4] = create_host("1.0.0.4");
+  token_map.add_token(t1, "1.0.0.1");
+  token_map.add_token(t2, "1.0.0.2");
+  token_map.add_token(t3, "1.0.0.3");
+  token_map.add_token(t4, "1.0.0.4");
 
-  cass::TokenReplicaMap replicas;
-  strategy.tokens_to_replicas(primary, &replicas);
+  token_map.build_replicas();
 
   {
-    BOOST_REQUIRE(replicas.count(t1) > 0);
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t1)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t1);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "1.0.0.1");
     check_host((*hosts)[1], "1.0.0.2");
     check_host((*hosts)[2], "1.0.0.3");
   }
 
   {
-    BOOST_REQUIRE(replicas.count(t2) > 0);
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t2)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t2);
     check_host((*hosts)[0], "1.0.0.2");
     check_host((*hosts)[1], "1.0.0.3");
     check_host((*hosts)[2], "1.0.0.4");
   }
 
   {
-    BOOST_REQUIRE(replicas.count(t3) > 0);
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t3)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t3);
     check_host((*hosts)[0], "1.0.0.3");
     check_host((*hosts)[1], "1.0.0.4");
     check_host((*hosts)[2], "1.0.0.1");
   }
 
   {
-    BOOST_REQUIRE(replicas.count(t4) > 0);
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t4)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t4);
     check_host((*hosts)[0], "1.0.0.4");
     check_host((*hosts)[1], "1.0.0.1");
     check_host((*hosts)[2], "1.0.0.2");
@@ -106,40 +197,39 @@ BOOST_AUTO_TEST_CASE(simple)
 
 BOOST_AUTO_TEST_CASE(network_topology)
 {
-  cass::NetworkTopologyStrategy::DCReplicaCountMap dc_replicas;
-  dc_replicas["dc1"] = 2;
-  dc_replicas["dc2"] = 2;
+  MockTokenMap<cass::Murmur3Partitioner> token_map;
 
-  cass::NetworkTopologyStrategy strategy("NetworkTopologyStrategy", dc_replicas);
+  ReplicationMap replication;
+  replication["dc1"] = "2";
+  replication["dc2"] = "2";
 
-  cass::TokenHostMap primary;
+  token_map.init_network_topology_strategy(replication);
 
-  cass::Token t1(1, 'c');
-  cass::Token t2(1, 'f');
-  cass::Token t3(1, 'i');
-  cass::Token t4(1, 'l');
+  MockTokenMap<cass::Murmur3Partitioner>::Token t1 = 0;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t2 = 100;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t3 = 200;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t4 = 300;
 
-  primary[t1] = create_host("1.0.0.1", "rack1", "dc1");
-  primary[t2] = create_host("1.0.0.2", "rack1", "dc1");
-  primary[t3] = create_host("1.0.0.3", "rack2", "dc1");
-  primary[t4] = create_host("1.0.0.4", "rack2", "dc1");
+  token_map.add_token(t1, "1.0.0.1", "rack1", "dc1");
+  token_map.add_token(t2, "1.0.0.2", "rack1", "dc1");
+  token_map.add_token(t3, "1.0.0.3", "rack2", "dc1");
+  token_map.add_token(t4, "1.0.0.4", "rack2", "dc1");
 
-  cass::Token t5(1, 'o');
-  cass::Token t6(1, 'r');
-  cass::Token t7(1, 'u');
-  cass::Token t8(1, 'z');
+  MockTokenMap<cass::Murmur3Partitioner>::Token t5 = 400;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t6 = 500;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t7 = 600;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t8 = 700;
 
-  primary[t5] = create_host("2.0.0.1", "rack1", "dc2");
-  primary[t6] = create_host("2.0.0.2", "rack1", "dc2");
-  primary[t7] = create_host("2.0.0.3", "rack2", "dc2");
-  primary[t8] = create_host("2.0.0.4", "rack2", "dc2");
+  token_map.add_token(t5, "2.0.0.1", "rack1", "dc2");
+  token_map.add_token(t6, "2.0.0.2", "rack1", "dc2");
+  token_map.add_token(t7, "2.0.0.3", "rack2", "dc2");
+  token_map.add_token(t8, "2.0.0.4", "rack2", "dc2");
 
-  cass::TokenReplicaMap replicas;
-  strategy.tokens_to_replicas(primary, &replicas);
+  token_map.build_replicas();
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t1)->second;
-    BOOST_REQUIRE(hosts->size() == 4);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t1);
+    BOOST_REQUIRE(hosts && hosts->size() == 4);
     check_host((*hosts)[0], "1.0.0.1", "rack1", "dc1");
     check_host((*hosts)[1], "1.0.0.3", "rack2", "dc1");
     check_host((*hosts)[2], "2.0.0.1", "rack1", "dc2");
@@ -147,8 +237,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t2)->second;
-    BOOST_REQUIRE(hosts->size() == 4);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t2);
+    BOOST_REQUIRE(hosts && hosts->size() == 4);
     check_host((*hosts)[0], "1.0.0.2", "rack1", "dc1");
     check_host((*hosts)[1], "1.0.0.3", "rack2", "dc1");
     check_host((*hosts)[2], "2.0.0.1", "rack1", "dc2");
@@ -156,8 +246,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t3)->second;
-    BOOST_REQUIRE(hosts->size() == 4);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t3);
+    BOOST_REQUIRE(hosts && hosts->size() == 4);
     check_host((*hosts)[0], "1.0.0.3", "rack2", "dc1");
     check_host((*hosts)[1], "2.0.0.1", "rack1", "dc2");
     check_host((*hosts)[2], "2.0.0.3", "rack2", "dc2");
@@ -165,8 +255,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t4)->second;
-    BOOST_REQUIRE(hosts->size() == 4);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t4);
+    BOOST_REQUIRE(hosts && hosts->size() == 4);
     check_host((*hosts)[0], "1.0.0.4", "rack2", "dc1");
     check_host((*hosts)[1], "2.0.0.1", "rack1", "dc2");
     check_host((*hosts)[2], "2.0.0.3", "rack2", "dc2");
@@ -174,8 +264,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t5)->second;
-    BOOST_REQUIRE(hosts->size() == 4);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t5);
+    BOOST_REQUIRE(hosts && hosts->size() == 4);
     check_host((*hosts)[0], "2.0.0.1", "rack1", "dc2");
     check_host((*hosts)[1], "2.0.0.3", "rack2", "dc2");
     check_host((*hosts)[2], "1.0.0.1", "rack1", "dc1");
@@ -183,8 +273,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t6)->second;
-    BOOST_REQUIRE(hosts->size() == 4);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t6);
+    BOOST_REQUIRE(hosts && hosts->size() == 4);
     check_host((*hosts)[0], "2.0.0.2", "rack1", "dc2");
     check_host((*hosts)[1], "2.0.0.3", "rack2", "dc2");
     check_host((*hosts)[2], "1.0.0.1", "rack1", "dc1");
@@ -192,8 +282,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t7)->second;
-    BOOST_REQUIRE(hosts->size() == 4);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t7);
+    BOOST_REQUIRE(hosts && hosts->size() == 4);
     check_host((*hosts)[0], "2.0.0.3", "rack2", "dc2");
     check_host((*hosts)[1], "1.0.0.1", "rack1", "dc1");
     check_host((*hosts)[2], "1.0.0.3", "rack2", "dc1");
@@ -201,8 +291,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t8)->second;
-    BOOST_REQUIRE(hosts->size() == 4);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t8);
+    BOOST_REQUIRE(hosts && hosts->size() == 4);
     check_host((*hosts)[0], "2.0.0.4", "rack2", "dc2");
     check_host((*hosts)[1], "1.0.0.1", "rack1", "dc1");
     check_host((*hosts)[2], "1.0.0.3", "rack2", "dc1");
@@ -212,76 +302,75 @@ BOOST_AUTO_TEST_CASE(network_topology)
 
 BOOST_AUTO_TEST_CASE(network_topology_same_rack)
 {
-  cass::NetworkTopologyStrategy::DCReplicaCountMap dc_replicas;
-  dc_replicas["dc1"] = 2;
-  dc_replicas["dc2"] = 1;
+  MockTokenMap<cass::Murmur3Partitioner> token_map;
 
-  cass::NetworkTopologyStrategy strategy("NetworkTopologyStrategy", dc_replicas);
+  ReplicationMap replication;
+  replication["dc1"] = "2";
+  replication["dc2"] = "1";
 
-  cass::TokenHostMap primary;
+  token_map.init_network_topology_strategy(replication);
 
-  cass::Token t1(1, 'd');
-  cass::Token t2(1, 'h');
-  cass::Token t3(1, 'l');
+  MockTokenMap<cass::Murmur3Partitioner>::Token t1 = 100;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t2 = 200;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t3 = 300;
 
-  primary[t1] = create_host("1.0.0.1", "rack1", "dc1");
-  primary[t2] = create_host("1.0.0.2", "rack1", "dc1");
-  primary[t3] = create_host("1.0.0.3", "rack1", "dc1");
+  token_map.add_token(t1, "1.0.0.1", "rack1", "dc1");
+  token_map.add_token(t2, "1.0.0.2", "rack1", "dc1");
+  token_map.add_token(t3, "1.0.0.3", "rack1", "dc1");
 
-  cass::Token t4(1, 'p');
-  cass::Token t5(1, 't');
-  cass::Token t6(1, 'z');
+  MockTokenMap<cass::Murmur3Partitioner>::Token t4 = 400;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t5 = 500;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t6 = 600;
 
-  primary[t4] = create_host("2.0.0.1", "rack1", "dc2");
-  primary[t5] = create_host("2.0.0.2", "rack1", "dc2");
-  primary[t6] = create_host("2.0.0.3", "rack1", "dc2");
+  token_map.add_token(t4, "2.0.0.1", "rack1", "dc2");
+  token_map.add_token(t5, "2.0.0.2", "rack1", "dc2");
+  token_map.add_token(t6, "2.0.0.3", "rack1", "dc2");
 
-  cass::TokenReplicaMap replicas;
-  strategy.tokens_to_replicas(primary, &replicas);
+  token_map.build_replicas();
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t1)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t1);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "1.0.0.1", "rack1", "dc1");
     check_host((*hosts)[1], "1.0.0.2", "rack1", "dc1");
     check_host((*hosts)[2], "2.0.0.1", "rack1", "dc2");
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t2)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t2);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "1.0.0.2", "rack1", "dc1");
     check_host((*hosts)[1], "1.0.0.3", "rack1", "dc1");
     check_host((*hosts)[2], "2.0.0.1", "rack1", "dc2");
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t3)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t3);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "1.0.0.3", "rack1", "dc1");
     check_host((*hosts)[1], "2.0.0.1", "rack1", "dc2");
     check_host((*hosts)[2], "1.0.0.1", "rack1", "dc1");
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t4)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t4);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "2.0.0.1", "rack1", "dc2");
     check_host((*hosts)[1], "1.0.0.1", "rack1", "dc1");
     check_host((*hosts)[2], "1.0.0.2", "rack1", "dc1");
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t5)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t5);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "2.0.0.2", "rack1", "dc2");
     check_host((*hosts)[1], "1.0.0.1", "rack1", "dc1");
     check_host((*hosts)[2], "1.0.0.2", "rack1", "dc1");
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t6)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t6);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "2.0.0.3", "rack1", "dc2");
     check_host((*hosts)[1], "1.0.0.1", "rack1", "dc1");
     check_host((*hosts)[2], "1.0.0.2", "rack1", "dc1");
@@ -290,53 +379,52 @@ BOOST_AUTO_TEST_CASE(network_topology_same_rack)
 
 BOOST_AUTO_TEST_CASE(network_topology_not_enough_racks)
 {
-  cass::NetworkTopologyStrategy::DCReplicaCountMap dc_replicas;
-  dc_replicas["dc1"] = 3;
+  MockTokenMap<cass::Murmur3Partitioner> token_map;
 
-  cass::NetworkTopologyStrategy strategy("NetworkTopologyStrategy", dc_replicas);
+  ReplicationMap replication;
+  replication["dc1"] = "3";
 
-  cass::TokenHostMap primary;
+  token_map.init_network_topology_strategy(replication);
 
-  cass::Token t1(1, 'd');
-  cass::Token t2(1, 'h');
-  cass::Token t3(1, 'l');
-  cass::Token t4(1, 'p');
+  MockTokenMap<cass::Murmur3Partitioner>::Token t1 = 100;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t2 = 200;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t3 = 300;
+  MockTokenMap<cass::Murmur3Partitioner>::Token t4 = 400;
 
-  primary[t1] = create_host("1.0.0.1", "rack1", "dc1");
-  primary[t2] = create_host("1.0.0.2", "rack1", "dc1");
-  primary[t3] = create_host("1.0.0.3", "rack1", "dc1");
-  primary[t4] = create_host("1.0.0.4", "rack2", "dc1");
+  token_map.add_token(t1, "1.0.0.1", "rack1", "dc1");
+  token_map.add_token(t2, "1.0.0.2", "rack1", "dc1");
+  token_map.add_token(t3, "1.0.0.3", "rack1", "dc1");
+  token_map.add_token(t4, "1.0.0.4", "rack2", "dc1");
 
-  cass::TokenReplicaMap replicas;
-  strategy.tokens_to_replicas(primary, &replicas);
+  token_map.build_replicas();
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t1)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t1);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "1.0.0.1", "rack1", "dc1");
     check_host((*hosts)[1], "1.0.0.4", "rack2", "dc1");
     check_host((*hosts)[2], "1.0.0.2", "rack1", "dc1");
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t2)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t2);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "1.0.0.2", "rack1", "dc1");
     check_host((*hosts)[1], "1.0.0.4", "rack2", "dc1");
     check_host((*hosts)[2], "1.0.0.3", "rack1", "dc1");
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t3)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t3);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "1.0.0.3", "rack1", "dc1");
     check_host((*hosts)[1], "1.0.0.4", "rack2", "dc1");
     check_host((*hosts)[2], "1.0.0.1", "rack1", "dc1");
   }
 
   {
-    const cass::CopyOnWriteHostVec& hosts = replicas.find(t4)->second;
-    BOOST_REQUIRE(hosts->size() == 3);
+    const cass::CopyOnWriteHostVec& hosts = token_map.find_hosts(t4);
+    BOOST_REQUIRE(hosts && hosts->size() == 3);
     check_host((*hosts)[0], "1.0.0.4", "rack2", "dc1");
     check_host((*hosts)[1], "1.0.0.1", "rack1", "dc1");
     check_host((*hosts)[2], "1.0.0.2", "rack1", "dc1");

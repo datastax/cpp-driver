@@ -131,7 +131,7 @@ private:
 #endif
 
 private:
-  typedef sparsehash::dense_hash_map<Address, SharedRefPtr<Pool> > PoolMap;
+  typedef sparsehash::dense_hash_map<Address, SharedRefPtr<Pool>, AddressHash> PoolMap;
   typedef std::vector<SharedRefPtr<Pool> > PoolVec;
 
   void schedule_reconnect(const Host::ConstPtr& host);

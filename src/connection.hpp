@@ -338,18 +338,4 @@ private:
 
 } // namespace cass
 
-
-namespace  std {
-
-template<>
-struct hash<cass::Connection*> {
-  std::size_t operator()(const cass::Connection* c) const {
-    return hash(c->address());
-  }
-  std::hash<cass::Address> hash;
-};
-
-} // namespace std
-
-
 #endif

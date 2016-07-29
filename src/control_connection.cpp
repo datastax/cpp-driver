@@ -199,9 +199,6 @@ void ControlConnection::on_ready(Connection* connection) {
   LOG_DEBUG("Connection ready on host %s",
             connection->address().to_string().c_str());
 
-  // A protocol version is need to encode/decode maps properly
-  session_->metadata().set_protocol_version(protocol_version_);
-
   // The control connection has to refresh meta when there's a reconnect because
   // events could have been missed while not connected.
   query_meta_hosts();
@@ -284,7 +281,9 @@ void ControlConnection::on_event(EventResponse* response) {
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (host) {
             session_->on_remove(host);
-            session_->metadata().remove_host(host);
+            if (session_->token_map_) {
+              session_->token_map_->remove_host_and_build(host);
+            }
           } else {
             LOG_DEBUG("Tried to remove host %s that doesn't exist", address_str.c_str());
           }
@@ -298,7 +297,9 @@ void ControlConnection::on_event(EventResponse* response) {
             refresh_node_info(host, false, true);
           } else {
             LOG_DEBUG("Move event for host %s that doesn't exist", address_str.c_str());
-            session_->metadata().remove_host(host);
+            if (session_->token_map_) {
+              session_->token_map_->remove_host_and_build(host);
+            }
           }
           break;
       }
@@ -403,6 +404,10 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
 
   Session* session = control_connection->session_;
 
+  if (session->token_map_) {
+    session->token_map_->clear_hosts();
+  }
+
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
 
   // If the 'system.local' table is empty the connection isn't used as a control
@@ -418,9 +423,8 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
       ResultResponse* local_result;
       if (MultipleRequestHandler::get_result_response(responses, "local", &local_result) &&
           local_result->row_count() > 0) {
-        local_result->decode_first_row();
-        control_connection->update_node_info(host, &local_result->first_row());
-        session->metadata().set_cassandra_version(host->cassandra_version());
+        control_connection->update_node_info(host, &local_result->first_row(), ADD_NODE);
+        control_connection->cassandra_version_ = host->cassandra_version();
       } else {
         LOG_WARN("No row found in %s's local system table",
                  connection->address_string().c_str());
@@ -438,7 +442,6 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
   {
     ResultResponse* peers_result;
     if (MultipleRequestHandler::get_result_response(responses, "peers", &peers_result)) {
-      peers_result->decode_first_row();
       ResultIterator rows(peers_result);
       while (rows.next()) {
         Address address;
@@ -459,7 +462,7 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
 
         host->set_mark(session->current_host_mark_);
 
-        control_connection->update_node_info(host, rows.row());
+        control_connection->update_node_info(host, rows.row(), ADD_NODE);
         if (is_new && !is_initial_connection) {
           session->on_add(host, false);
         }
@@ -486,7 +489,7 @@ void ControlConnection::query_meta_schema() {
   ScopedRefPtr<ControlMultipleRequestHandler<UnusedData> > handler(
         new ControlMultipleRequestHandler<UnusedData>(this, ControlConnection::on_query_meta_schema, UnusedData()));
 
-  if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
+  if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     handler->execute_query("keyspaces", SELECT_KEYSPACES_30);
     handler->execute_query("tables", SELECT_TABLES_30);
     handler->execute_query("views", SELECT_VIEWS_30);
@@ -499,10 +502,10 @@ void ControlConnection::query_meta_schema() {
     handler->execute_query("keyspaces", SELECT_KEYSPACES_20);
     handler->execute_query("tables", SELECT_COLUMN_FAMILIES_20);
     handler->execute_query("columns", SELECT_COLUMNS_20);
-    if (session_->metadata().cassandra_version() >= VersionNumber(2, 1, 0)) {
+    if (cassandra_version_ >= VersionNumber(2, 1, 0)) {
       handler->execute_query("user_types", SELECT_USERTYPES_21);
     }
-    if (session_->metadata().cassandra_version() >= VersionNumber(2, 2, 0)) {
+    if (cassandra_version_ >= VersionNumber(2, 2, 0)) {
       handler->execute_query("functions", SELECT_FUNCTIONS_22);
       handler->execute_query("aggregates", SELECT_AGGREGATES_22);
     }
@@ -518,53 +521,64 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
   }
 
   Session* session = control_connection->session_;
+  int protocol_version = control_connection->protocol_version_;
+  const VersionNumber& cassandra_version = control_connection->cassandra_version_;
 
-  session->metadata().clear_and_update_back();
+  if (session->token_map_) {
+    session->token_map_->clear_keyspaces();
+  }
+
+  session->metadata().clear_and_update_back(cassandra_version);
 
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
 
   ResultResponse* keyspaces_result;
   if (MultipleRequestHandler::get_result_response(responses, "keyspaces", &keyspaces_result)) {
-    session->metadata().update_keyspaces(keyspaces_result);
+    if (session->token_map_) {
+      session->token_map_->add_keyspaces(cassandra_version, keyspaces_result);
+    }
+    session->metadata().update_keyspaces(protocol_version, cassandra_version, keyspaces_result);
   }
 
   ResultResponse* tables_result;
   if (MultipleRequestHandler::get_result_response(responses, "tables", &tables_result)) {
-    session->metadata().update_tables(tables_result);
+    session->metadata().update_tables(protocol_version, cassandra_version, tables_result);
   }
 
   ResultResponse* views_result;
   if (MultipleRequestHandler::get_result_response(responses, "views", &views_result)) {
-    session->metadata().update_views(views_result);
+    session->metadata().update_views(protocol_version, cassandra_version, views_result);
   }
 
   ResultResponse* columns_result = NULL;
   if (MultipleRequestHandler::get_result_response(responses, "columns", &columns_result)) {
-    session->metadata().update_columns(columns_result);
+    session->metadata().update_columns(protocol_version, cassandra_version, columns_result);
   }
 
   ResultResponse* indexes_result;
   if (MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result)) {
-    session->metadata().update_indexes(indexes_result);
+    session->metadata().update_indexes(protocol_version, cassandra_version, indexes_result);
   }
 
   ResultResponse* user_types_result;
   if (MultipleRequestHandler::get_result_response(responses, "user_types", &user_types_result)) {
-    session->metadata().update_user_types(user_types_result);
+    session->metadata().update_user_types(protocol_version, cassandra_version, user_types_result);
   }
 
   ResultResponse* functions_result;
   if (MultipleRequestHandler::get_result_response(responses, "functions", &functions_result)) {
-    session->metadata().update_functions(functions_result);
+    session->metadata().update_functions(protocol_version, cassandra_version, functions_result);
   }
 
   ResultResponse* aggregates_result;
   if (MultipleRequestHandler::get_result_response(responses, "aggregates", &aggregates_result)) {
-    session->metadata().update_aggregates(aggregates_result);
+    session->metadata().update_aggregates(protocol_version, cassandra_version, aggregates_result);
   }
 
   session->metadata().swap_to_back_and_update_front();
-  if (control_connection->should_query_tokens_) session->metadata().build();
+  if (session->token_map_) {
+    session->token_map_->build();
+  }
 
   if (is_initial_connection) {
     control_connection->state_ = CONTROL_STATE_READY;
@@ -636,8 +650,7 @@ void ControlConnection::on_refresh_node_info(ControlConnection* control_connecti
               host_address_str.c_str());
     return;
   }
-  result->decode_first_row();
-  control_connection->update_node_info(data.host, &result->first_row());
+  control_connection->update_node_info(data.host, &result->first_row(), UPDATE_NODE);
 
   if (data.is_new_node) {
     control_connection->session_->on_add(data.host, false);
@@ -665,7 +678,6 @@ void ControlConnection::on_refresh_node_info_all(ControlConnection* control_conn
     return;
   }
 
-  result->decode_first_row();
   ResultIterator rows(result);
   while (rows.next()) {
     const Row* row = rows.row();
@@ -676,7 +688,7 @@ void ControlConnection::on_refresh_node_info_all(ControlConnection* control_conn
                                           row->get_by_name("rpc_address"),
                                           &address);
     if (is_valid_address && data.host->address().compare(address) == 0) {
-      control_connection->update_node_info(data.host, row);
+      control_connection->update_node_info(data.host, row, UPDATE_NODE);
       if (data.is_new_node) {
         control_connection->session_->on_add(data.host, false);
       }
@@ -685,7 +697,7 @@ void ControlConnection::on_refresh_node_info_all(ControlConnection* control_conn
   }
 }
 
-void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row) {
+void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row, UpdateNodeType type) {
   const Value* v;
 
   std::string rack;
@@ -731,17 +743,18 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
     bool is_connected_host = connection_ != NULL && host->address().compare(connection_->address()) == 0;
     std::string partitioner;
     if (is_connected_host && row->get_string_by_name("partitioner", &partitioner)) {
-      session_->metadata().set_partitioner(partitioner);
+      if (!session_->token_map_) {
+        session_->token_map_.reset(TokenMap::from_partitioner(partitioner));
+      }
     }
     v = row->get_by_name("tokens");
-    if (v != NULL) {
-      CollectionIterator i(v);
-      TokenStringList tokens;
-      while (i.next()) {
-        tokens.push_back(i.value()->to_string_ref());
-      }
-      if (!tokens.empty()) {
-        session_->metadata().update_host(host, tokens);
+    if (v != NULL && v->is_collection()) {
+      if (session_->token_map_) {
+        if (type == UPDATE_NODE) {
+          session_->token_map_->update_host_and_build(host, v);
+        } else {
+          session_->token_map_->add_host(host, v);
+        }
       }
     }
   }
@@ -750,7 +763,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
 void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
   std::string query;
 
-  if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
+  if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     query.assign(SELECT_KEYSPACES_30);
   }  else {
     query.assign(SELECT_KEYSPACES_20);
@@ -777,7 +790,15 @@ void ControlConnection::on_refresh_keyspace(ControlConnection* control_connectio
               keyspace_name.c_str());
     return;
   }
-  control_connection->session_->metadata().update_keyspaces(result);
+
+  Session* session = control_connection->session_;
+  int protocol_version = control_connection->protocol_version_;
+  const VersionNumber& cassandra_version = control_connection->cassandra_version_;
+
+  if (session->token_map_) {
+    session->token_map_->update_keyspaces_and_build(cassandra_version, result);
+  }
+  session->metadata().update_keyspaces(protocol_version, cassandra_version, result);
 }
 
 void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
@@ -787,7 +808,7 @@ void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
   std::string column_query;
   std::string index_query;
 
-  if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
+  if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     table_query.assign(SELECT_TABLES_30);
     table_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
         .append("' AND table_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
@@ -837,6 +858,8 @@ void ControlConnection::on_refresh_table_or_view(ControlConnection* control_conn
                                                  const MultipleRequestHandler::ResponseMap& responses) {
   ResultResponse* tables_result;
   Session* session = control_connection->session_;
+  int protocol_version = control_connection->protocol_version_;
+  const VersionNumber& cassandra_version = control_connection->cassandra_version_;
   if (!MultipleRequestHandler::get_result_response(responses, "tables", &tables_result) ||
       tables_result->row_count() == 0) {
     ResultResponse* views_result;
@@ -846,19 +869,19 @@ void ControlConnection::on_refresh_table_or_view(ControlConnection* control_conn
                 data.keyspace_name.c_str(), data.table_or_view_name.c_str());
       return;
     }
-    session->metadata().update_views(views_result);
+    session->metadata().update_views(protocol_version, cassandra_version, views_result);
   } else {
-    session->metadata().update_tables(tables_result);
+    session->metadata().update_tables(protocol_version, cassandra_version, tables_result);
   }
 
   ResultResponse* columns_result;
   if (MultipleRequestHandler::get_result_response(responses, "columns", &columns_result)) {
-    session->metadata().update_columns(columns_result);
+    session->metadata().update_columns(protocol_version, cassandra_version, columns_result);
   }
 
   ResultResponse* indexes_result;
   if (MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result)) {
-    session->metadata().update_indexes(indexes_result);
+    session->metadata().update_indexes(protocol_version, cassandra_version, indexes_result);
   }
 }
 
@@ -867,7 +890,7 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name,
                                      const StringRef& type_name) {
 
   std::string query;
-  if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
+  if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     query.assign(SELECT_USERTYPES_30);
   } else {
     query.assign(SELECT_USERTYPES_21);
@@ -895,7 +918,10 @@ void ControlConnection::on_refresh_type(ControlConnection* control_connection,
               keyspace_and_type_names.second.c_str());
     return;
   }
-  control_connection->session_->metadata().update_user_types(result);
+  Session* session = control_connection->session_;
+  int protocol_version = control_connection->protocol_version_;
+  const VersionNumber& cassandra_version = control_connection->cassandra_version_;
+  session->metadata().update_user_types(protocol_version, cassandra_version, result);
 }
 
 void ControlConnection::refresh_function(const StringRef& keyspace_name,
@@ -904,7 +930,7 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
                                          bool is_aggregate) {
 
   std::string query;
-  if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
+  if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     if (is_aggregate) {
       query.assign(SELECT_AGGREGATES_30);
       query.append(" WHERE keyspace_name=? AND aggregate_name=? AND argument_types=?");
@@ -959,10 +985,13 @@ void ControlConnection::on_refresh_function(ControlConnection* control_connectio
               Metadata::full_function_name(data.function, data.arg_types).c_str());
     return;
   }
+  Session* session = control_connection->session_;
+  int protocol_version = control_connection->protocol_version_;
+  const VersionNumber& cassandra_version = control_connection->cassandra_version_;
   if (data.is_aggregate) {
-    control_connection->session_->metadata().update_aggregates(result);
+    session->metadata().update_aggregates(protocol_version, cassandra_version, result);
   } else {
-    control_connection->session_->metadata().update_functions(result);
+    session->metadata().update_functions(protocol_version, cassandra_version, result);
   }
 }
 

@@ -31,6 +31,7 @@
 #include <math.h>
 #include <set>
 #include <sstream>
+#include <stdint.h>
 #include <vector>
 
 namespace cass {
@@ -113,6 +114,8 @@ public:
 
   Host(const Address& address, bool mark)
       : address_(address)
+      , rack_id_(0)
+      , dc_id_(0)
       , mark_(mark)
       , state_(ADDED)
       , address_string_(address.to_string()) { }
@@ -138,6 +141,13 @@ public:
   void set_rack_and_dc(const std::string& rack, const std::string& dc) {
     rack_ = rack;
     dc_ = dc;
+  }
+
+  uint32_t rack_id() const { return rack_id_; }
+  uint32_t dc_id() const { return dc_id_; }
+  void set_rack_and_dc_ids(uint32_t rack_id, uint32_t dc_id) {
+    rack_id_ = rack_id;
+    dc_id_ = dc_id;
   }
 
   const std::string& listen_address() const { return listen_address_; }
@@ -219,6 +229,8 @@ private:
   }
 
   Address address_;
+  uint32_t rack_id_;
+  uint32_t dc_id_;
   bool mark_;
   Atomic<HostState> state_;
   std::string address_string_;
