@@ -1329,9 +1329,9 @@ cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
 /**
  * Configures the cluster to use token-aware request routing or not.
  *
- * <b>Important:</b> Token-aware routing depends on keyspace information.
- * For this reason enabling token-aware routing will also enable the usage
- * of schema metadata.
+ * <b>Important:</b> Token-aware routing depends on keyspace metadata.
+ * For this reason enabling token-aware routing will also enable retrieving
+ * and updating keyspace schema metadata.
  *
  * <b>Default:</b> cass_true (enabled).
  *
@@ -1343,8 +1343,6 @@ cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] enabled
- *
- * @see cass_cluster_set_use_schema();
  */
 CASS_EXPORT void
 cass_cluster_set_token_aware_routing(CassCluster* cluster,
@@ -1665,9 +1663,8 @@ cass_cluster_set_retry_policy(CassCluster* cluster,
 /**
  * Enable/Disable retrieving and updating schema metadata. If disabled
  * this is allows the driver to skip over retrieving and updating schema
- * metadata, but it also disables the usage of token-aware routing and
- * cass_session_get_schema_meta() will always return an empty object. This can
- * be useful for reducing the startup overhead of short-lived sessions.
+ * metadata and cass_session_get_schema_meta() will always return an empty object.
+ * This can be useful for reducing the startup overhead of short-lived sessions.
  *
  * <b>Default:</b> cass_true (enabled).
  *
@@ -1677,7 +1674,6 @@ cass_cluster_set_retry_policy(CassCluster* cluster,
  * @param[in] enabled
  *
  * @see cass_session_get_schema_meta()
- * @see cass_cluster_set_token_aware_routing()
  */
 CASS_EXPORT void
 cass_cluster_set_use_schema(CassCluster* cluster,

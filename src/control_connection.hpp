@@ -252,7 +252,8 @@ private:
   int protocol_version_;
   VersionNumber cassandra_version_;
   std::string last_connection_error_;
-  bool should_query_tokens_;
+  bool use_schema_;
+  bool token_aware_routing_;
 
   static Address bind_any_ipv4_;
   static Address bind_any_ipv6_;
