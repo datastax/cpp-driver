@@ -287,16 +287,14 @@ char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>*
   return buffer;
 }
 
-void ResultResponse::decode_first_row() {
+bool ResultResponse::decode_rows(char* input) {
+  char* buffer = decode_metadata(input, &metadata_);
+  rows_ = decode_int32(buffer, row_count_);
+  // Decode first row
   if (row_count_ > 0) {
     first_row_.values.reserve(column_count());
     rows_ = decode_row(rows_, this, first_row_.values);
   }
-}
-
-bool ResultResponse::decode_rows(char* input) {
-  char* buffer = decode_metadata(input, &metadata_);
-  rows_ = decode_int32(buffer, row_count_);
   return true;
 }
 

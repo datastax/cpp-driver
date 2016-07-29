@@ -35,8 +35,10 @@ IOWorker::IOWorker(Session* session)
     , keyspace_(new std::string)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
-  pools_.set_empty_key(Address());
-  unavailable_addresses_.set_empty_key(Address());
+  pools_.set_empty_key(Address::EMPTY_KEY);
+  pools_.set_deleted_key(Address::DELETED_KEY);
+  unavailable_addresses_.set_empty_key(Address::EMPTY_KEY);
+  unavailable_addresses_.set_deleted_key(Address::DELETED_KEY);
   prepare_.data = this;
   uv_mutex_init(&unavailable_addresses_mutex_);
 }

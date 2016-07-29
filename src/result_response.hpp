@@ -80,8 +80,6 @@ public:
 
   bool decode(int version, char* input, size_t size);
 
-  void decode_first_row();
-
 private:
   char* decode_metadata(char* input, SharedRefPtr<ResultMetadata>* metadata,
                         bool has_pk_indices = false);

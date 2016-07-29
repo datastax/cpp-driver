@@ -32,6 +32,9 @@ namespace cass {
 
 class Address {
 public:
+  static const Address EMPTY_KEY;
+  static const Address DELETED_KEY;
+
   Address();
 
   Address(const std::string& ip, int port);

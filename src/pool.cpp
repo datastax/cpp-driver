@@ -48,8 +48,9 @@ Pool::Pool(IOWorker* io_worker,
     , is_initial_connection_(is_initial_connection)
     , is_pending_flush_(false)
     , cancel_reconnect_(false) {
-  connections_pending_.set_empty_key(NULL);
-}
+      connections_pending_.set_empty_key(Address::EMPTY_KEY);
+      connections_pending_.set_deleted_key(Address::DELETED_KEY);
+    }
 
 Pool::~Pool() {
   LOG_DEBUG("Pool(%p) dtor with %u pending requests",
@@ -116,10 +117,10 @@ void Pool::close(bool cancel_reconnect) {
          it != end; ++it) {
       (*it)->close();
     }
-    for (ConnectionSet::iterator it = connections_pending_.begin(),
+    for (ConnectionMap::iterator it = connections_pending_.begin(),
                                  end = connections_pending_.end();
          it != end; ++it) {
-      (*it)->close();
+      it->second->close();
     }
   }
 
@@ -268,7 +269,7 @@ void Pool::spawn_connection() {
               static_cast<void*>(this));
     connection->connect();
 
-    connections_pending_.insert(connection);
+    connections_pending_[connection->address()] = connection;
   }
 }
 
@@ -299,7 +300,7 @@ Connection* Pool::find_least_busy() {
 }
 
 void Pool::on_ready(Connection* connection) {
-  connections_pending_.erase(connection);
+  connections_pending_.erase(connection->address());
   connections_.push_back(connection);
   return_connection(connection);
 
@@ -309,7 +310,7 @@ void Pool::on_ready(Connection* connection) {
 }
 
 void Pool::on_close(Connection* connection) {
-  connections_pending_.erase(connection);
+  connections_pending_.erase(connection->address());
 
   ConnectionVec::iterator it =
       std::find(connections_.begin(), connections_.end(), connection);
