@@ -235,11 +235,16 @@ private:
 };
 
 typedef std::map<Address, SharedRefPtr<Host> > HostMap;
+struct GetHost {
+  typedef std::pair<Address, Host::Ptr> Pair;
+  Host::Ptr operator()(const Pair& pair) const {
+    return pair.second;
+  }
+};
 typedef std::pair<Address, SharedRefPtr<Host> > HostPair;
 typedef std::vector<SharedRefPtr<Host> > HostVec;
 typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 
-void copy_hosts(const HostMap& from_hosts, CopyOnWriteHostVec& to_hosts);
 void add_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host);
 void remove_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host);
 

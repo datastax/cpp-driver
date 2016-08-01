@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE(simple) {
   populate_hosts(2, "rack", "dc", &hosts);
 
   cass::RoundRobinPolicy policy;
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
 
@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE(on_add)
   populate_hosts(2, "rack", "dc", &hosts);
 
   cass::RoundRobinPolicy policy;
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
 
@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE(on_remove)
   populate_hosts(3, "rack", "dc", &hosts);
 
   cass::RoundRobinPolicy policy;
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
 
@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE(on_down_on_up)
   populate_hosts(3, "rack", "dc", &hosts);
 
   cass::RoundRobinPolicy policy;
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
 
@@ -288,7 +288,7 @@ void test_dc_aware_policy(size_t local_count, size_t remote_count) {
   populate_hosts(local_count, "rack", LOCAL_DC, &hosts);
   populate_hosts(remote_count, "rack", REMOTE_DC, &hosts);
   cass::DCAwarePolicy policy(LOCAL_DC, remote_count, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   const size_t total_hosts = local_count + remote_count;
   cass::TokenMap tokenMap;
@@ -315,7 +315,7 @@ BOOST_AUTO_TEST_CASE(some_dc_local_unspecified)
   h->set_rack_and_dc("", "");
 
   cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
   boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
@@ -332,7 +332,7 @@ BOOST_AUTO_TEST_CASE(single_local_down)
   populate_hosts(1, "rack", REMOTE_DC, &hosts);
 
   cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
 
@@ -360,7 +360,7 @@ BOOST_AUTO_TEST_CASE(all_local_removed_returned)
   populate_hosts(1, "rack", REMOTE_DC, &hosts);
 
   cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
 
@@ -395,7 +395,7 @@ BOOST_AUTO_TEST_CASE(remote_removed_returned)
   cass::SharedRefPtr<cass::Host> target_host = hosts[target_addr];
 
   cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
 
@@ -429,7 +429,7 @@ BOOST_AUTO_TEST_CASE(used_hosts_per_remote_dc)
 
   for (size_t used_hosts = 0; used_hosts < 3; ++used_hosts) {
     cass::DCAwarePolicy policy(LOCAL_DC, used_hosts, false);
-    policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+    policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, cass::TokenMap(), NULL));
     size_t total_hosts = 3 + used_hosts;
@@ -449,7 +449,7 @@ BOOST_AUTO_TEST_CASE(allow_remote_dcs_for_local_cl)
     // Not allowing remote DCs for local CLs
     bool allow_remote_dcs_for_local_cl = false;
     cass::DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
-    policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+    policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     // Set local CL
     cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest());
@@ -465,7 +465,7 @@ BOOST_AUTO_TEST_CASE(allow_remote_dcs_for_local_cl)
     // Allowing remote DCs for local CLs
     bool allow_remote_dcs_for_local_cl = true;
     cass::DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
-    policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+    policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     // Set local CL
     cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest());
@@ -487,7 +487,7 @@ BOOST_AUTO_TEST_CASE(start_with_empty_local_dc)
   // Set local DC using connected host
   {
     cass::DCAwarePolicy policy("", 0, false);
-    policy.init(hosts[cass::Address("2.0.0.0", 4092)], hosts);
+    policy.init(hosts[cass::Address("2.0.0.0", 4092)], hosts, NULL);
 
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, cass::TokenMap(), NULL));
     const size_t seq[] = {2, 3, 4};
@@ -498,7 +498,7 @@ BOOST_AUTO_TEST_CASE(start_with_empty_local_dc)
   {
     cass::DCAwarePolicy policy("", 0, false);
     policy.init(cass::SharedRefPtr<cass::Host>(
-                  new cass::Host(cass::Address("0.0.0.0", 4092), false)), hosts);
+                  new cass::Host(cass::Address("0.0.0.0", 4092), false)), hosts, NULL);
 
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, cass::TokenMap(), NULL));
     const size_t seq[] = {1};
@@ -544,7 +544,7 @@ BOOST_AUTO_TEST_CASE(simple)
   }
 
   token_map.build();
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
@@ -625,7 +625,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   token_map.build();
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
   const char* value = "abc"; // hash: -5434086359492102041
@@ -732,7 +732,7 @@ BOOST_AUTO_TEST_CASE(simple)
   cass::HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
   cass::LatencyAwarePolicy policy(new cass::RoundRobinPolicy(), settings);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   // Record some latencies with 100 ns being the minimum
   for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
@@ -789,7 +789,7 @@ BOOST_AUTO_TEST_CASE(min_average_under_min_measured)
   cass::HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
   cass::LatencyAwarePolicy policy(new cass::RoundRobinPolicy(), settings);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   int count = 1;
   for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
@@ -828,7 +828,7 @@ BOOST_AUTO_TEST_CASE(simple)
   whitelist_hosts.push_back("37.0.0.0");
   whitelist_hosts.push_back("83.0.0.0");
   cass::WhitelistPolicy policy(new cass::RoundRobinPolicy(), whitelist_hosts);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
   boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
@@ -851,7 +851,7 @@ BOOST_AUTO_TEST_CASE(dc)
   whitelist_dcs.push_back(LOCAL_DC);
   whitelist_dcs.push_back(REMOTE_DC);
   cass::WhitelistDCPolicy policy(new cass::RoundRobinPolicy(), whitelist_dcs);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
   boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
@@ -877,7 +877,7 @@ BOOST_AUTO_TEST_CASE(simple)
   blacklist_hosts.push_back("2.0.0.0");
   blacklist_hosts.push_back("3.0.0.0");
   cass::BlacklistPolicy policy(new cass::RoundRobinPolicy(), blacklist_hosts);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
   boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
@@ -900,7 +900,7 @@ BOOST_AUTO_TEST_CASE(dc)
   blacklist_dcs.push_back(LOCAL_DC);
   blacklist_dcs.push_back(REMOTE_DC);
   cass::BlacklistDCPolicy policy(new cass::RoundRobinPolicy(), blacklist_dcs);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::TokenMap tokenMap;
   boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));

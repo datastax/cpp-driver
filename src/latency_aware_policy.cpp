@@ -19,15 +19,21 @@
 #include "get_time.hpp"
 #include "logger.hpp"
 
+#include <algorithm>
+#include <iterator>
+
 namespace cass {
 
-void LatencyAwarePolicy::init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
-  copy_hosts(hosts, hosts_);
+void LatencyAwarePolicy::init(const SharedRefPtr<Host>& connected_host,
+                              const HostMap& hosts,
+                              Random* random) {
+  hosts_->reserve(hosts.size());
+  std::transform(hosts.begin(), hosts.end(), std::back_inserter(*hosts_), GetHost());
   for (HostMap::const_iterator i = hosts.begin(),
        end = hosts.end(); i != end; ++i) {
     i->second->enable_latency_tracking(settings_.scale_ns, settings_.min_measured);
   }
-  ChainedLoadBalancingPolicy::init(connected_host, hosts);
+  ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
 }
 
 void LatencyAwarePolicy::register_handles(uv_loop_t* loop) {

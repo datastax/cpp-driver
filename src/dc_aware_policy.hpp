@@ -46,7 +46,7 @@ public:
       , local_dc_live_hosts_(new HostVec)
       , index_(0) {}
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts);
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random);
 
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const;
 

@@ -153,6 +153,7 @@ Session::~Session() {
 
 void Session::clear(const Config& config) {
   config_ = config;
+  random_.reset();
   metrics_.reset(new Metrics(config_.thread_count_io() + 1));
   load_balancing_policy_.reset(config.load_balancing_policy());
   connect_future_.reset();
@@ -419,6 +420,12 @@ void Session::on_event(const SessionEvent& event) {
     case SessionEvent::CONNECT: {
       int port = config_.port();
 
+      // This needs to be done on the session thread because it could pause
+      // generating a new random seed.
+      if (config_.use_randomized_contact_points()) {
+        random_.reset(new Random());
+      }
+
       MultiResolver<Session*>::Ptr resolver(
             new MultiResolver<Session*>(this, on_resolve,
 #if UV_VERSION_MAJOR >= 1
@@ -548,7 +555,7 @@ void Session::on_add_resolve_name(NameResolver* resolver) {
 
 void Session::on_control_connection_ready() {
   // No hosts lock necessary (only called on session thread and read-only)
-  load_balancing_policy_->init(control_connection_.connected_host(), hosts_);
+  load_balancing_policy_->init(control_connection_.connected_host(), hosts_, random_.get());
   load_balancing_policy_->register_handles(loop());
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {

@@ -21,8 +21,7 @@
 #include "copy_on_write_ptr.hpp"
 #include "load_balancing.hpp"
 #include "host.hpp"
-
-#include <algorithm>
+#include "random.hpp"
 
 namespace cass {
 
@@ -30,38 +29,21 @@ class RoundRobinPolicy : public LoadBalancingPolicy {
 public:
   RoundRobinPolicy()
     : hosts_(new HostVec)
-    , index_(0) {}
+    , index_(0) { }
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
-    copy_hosts(hosts, hosts_);
-  }
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random);
 
-  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const {
-    return CASS_HOST_DISTANCE_LOCAL;
-  }
+  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const;
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
                                     const TokenMap& token_map,
-                                    Request::EncodingCache* cache) {
-    return new RoundRobinQueryPlan(hosts_, index_++);
-  }
+                                    Request::EncodingCache* cache);
 
-  virtual void on_add(const SharedRefPtr<Host>& host) {
-    add_host(hosts_, host);
-  }
-
-  virtual void on_remove(const SharedRefPtr<Host>& host) {
-    remove_host(hosts_, host);
-  }
-
-  virtual void on_up(const SharedRefPtr<Host>& host) {
-    on_add(host);
-  }
-
-  virtual void on_down(const SharedRefPtr<Host>& host) {
-    on_remove(host);
-  }
+  virtual void on_add(const SharedRefPtr<Host>& host);
+  virtual void on_remove(const SharedRefPtr<Host>& host);
+  virtual void on_up(const SharedRefPtr<Host>& host);
+  virtual void on_down(const SharedRefPtr<Host>& host);
 
   virtual LoadBalancingPolicy* new_instance() { return new RoundRobinPolicy(); }
 
@@ -71,18 +53,9 @@ private:
     RoundRobinQueryPlan(const CopyOnWriteHostVec& hosts, size_t start_index)
       : hosts_(hosts)
       , index_(start_index)
-      , remaining_(hosts->size()) {}
+      , remaining_(hosts->size()) { }
 
-    SharedRefPtr<Host> compute_next()  {
-      while (remaining_ > 0) {
-        --remaining_;
-        const SharedRefPtr<Host>& host((*hosts_)[index_++ % hosts_->size()]);
-        if (host->is_up()) {
-          return host;
-        }
-      }
-      return SharedRefPtr<Host>();
-    }
+    virtual SharedRefPtr<Host> compute_next();
 
   private:
     const CopyOnWriteHostVec hosts_;

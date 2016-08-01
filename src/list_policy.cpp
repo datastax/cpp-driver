@@ -16,21 +16,27 @@
 
 #include "list_policy.hpp"
 
+#include "logger.hpp"
+
 namespace cass {
 
 void ListPolicy::init(const SharedRefPtr<Host>& connected_host,
-                           const HostMap& hosts) {
-  HostMap whitelist_hosts;
+                      const HostMap& hosts,
+                      Random* random) {
+  HostMap valid_hosts;
   for (HostMap::const_iterator i = hosts.begin(),
     end = hosts.end(); i != end; ++i) {
     const SharedRefPtr<Host>& host = i->second;
     if (is_valid_host(host)) {
-      whitelist_hosts.insert(HostPair(i->first, host));
+      valid_hosts.insert(HostPair(i->first, host));
     }
   }
 
-  assert(!whitelist_hosts.empty());
-  child_policy_->init(connected_host, whitelist_hosts);
+  if (valid_hosts.empty()) {
+    LOG_ERROR("No valid hosts available for list policy");
+  }
+
+  ChainedLoadBalancingPolicy::init(connected_host, valid_hosts, random);
 }
 
 CassHostDistance ListPolicy::distance(const SharedRefPtr<Host>& host) const {
@@ -41,9 +47,9 @@ CassHostDistance ListPolicy::distance(const SharedRefPtr<Host>& host) const {
 }
 
 QueryPlan* ListPolicy::new_query_plan(const std::string& connected_keyspace,
-                                           const Request* request,
-                                           const TokenMap& token_map,
-                                           Request::EncodingCache* cache) {
+                                      const Request* request,
+                                      const TokenMap& token_map,
+                                      Request::EncodingCache* cache) {
   return child_policy_->new_query_plan(connected_keyspace,
                                        request,
                                        token_map,

@@ -423,6 +423,12 @@ CassError cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
 #endif
 }
 
+CassError cass_cluster_set_use_randomized_contact_points(CassCluster* cluster,
+                                                         cass_bool_t enabled) {
+  cluster->config().set_use_randomized_contact_points(enabled);
+  return CASS_OK;
+}
+
 void cass_cluster_free(CassCluster* cluster) {
   delete cluster->from();
 }
