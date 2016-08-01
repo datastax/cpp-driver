@@ -1426,7 +1426,7 @@ BOOST_AUTO_TEST_CASE(frozen_types) {
  * @expected_result UDA and UDF can be looked up correctly
  */
 BOOST_AUTO_TEST_CASE(lookup) {
-  if (version < "2.1.0") return;
+  if (version < "2.2.0") return;
 
   test_utils::execute_query(session, "CREATE KEYSPACE lookup WITH replication = "
     "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
