@@ -559,12 +559,12 @@ public:
   virtual void add_host(const Host::Ptr& host, const Value* tokens);
   virtual void update_host_and_build(const Host::Ptr& host, const Value* tokens);
   virtual void remove_host_and_build(const Host::Ptr& host);
-  virtual void clear_hosts();
+  virtual void clear_tokens_and_hosts();
 
   virtual void add_keyspaces(const VersionNumber& cassandra_version, ResultResponse* result);
   virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, ResultResponse* result);
   virtual void drop_keyspace(const std::string& keyspace_name);
-  virtual void clear_keyspaces();
+  virtual void clear_replicas_and_strategies();
 
   virtual void build();
 
@@ -650,7 +650,7 @@ void TokenMapImpl<Partitioner>::remove_host_and_build(const Host::Ptr& host) {
 }
 
 template <class Partitioner>
-void TokenMapImpl<Partitioner>::clear_hosts() {
+void TokenMapImpl<Partitioner>::clear_tokens_and_hosts() {
   tokens_.clear();
   hosts_.clear();
 }
@@ -674,7 +674,7 @@ void TokenMapImpl<Partitioner>::drop_keyspace(const std::string& keyspace_name) 
 }
 
 template <class Partitioner>
-void TokenMapImpl<Partitioner>::clear_keyspaces() {
+void TokenMapImpl<Partitioner>::clear_replicas_and_strategies() {
   replicas_.clear();
   strategies_.clear();
 }

@@ -87,6 +87,8 @@ private:
         , response_callback_(response_callback)
         , data_(data) {}
 
+    void execute_query(const std::string& index, const std::string& query);
+
     virtual void on_set(const MultipleRequestHandler::ResponseMap& responses);
 
     virtual void on_error(CassError code, const std::string& message) {
@@ -177,9 +179,9 @@ private:
     bool is_aggregate;
   };
 
-  enum UpdateNodeType {
-    ADD_NODE,
-    UPDATE_NODE
+  enum UpdateHostType {
+    ADD_HOST,
+    UPDATE_HOST_AND_BUILD
   };
 
   void schedule_reconnect(uint64_t ms = 0);
@@ -217,7 +219,7 @@ private:
                                        const RefreshNodeData& data,
                                        Response* response);
 
-  void update_node_info(SharedRefPtr<Host> host, const Row* row, UpdateNodeType type);
+  void update_node_info(SharedRefPtr<Host> host, const Row* row, UpdateHostType type);
 
   void refresh_keyspace(const StringRef& keyspace_name);
   static void on_refresh_keyspace(ControlConnection* control_connection, const std::string& keyspace_name, Response* response);

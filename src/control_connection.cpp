@@ -400,6 +400,9 @@ void ControlConnection::on_event(EventResponse* response) {
 void ControlConnection::query_meta_hosts() {
   ScopedRefPtr<ControlMultipleRequestHandler<UnusedData> > handler(
         new ControlMultipleRequestHandler<UnusedData>(this, ControlConnection::on_query_hosts, UnusedData()));
+  // This needs to happen before other schema metadata queries so that we have
+  // a valid Cassandra version because this version determines which follow up
+  // schema metadata queries are executed.
   handler->execute_query("local", token_aware_routing_ ? SELECT_LOCAL_TOKENS : SELECT_LOCAL);
   handler->execute_query("peers", token_aware_routing_ ? SELECT_PEERS_TOKENS : SELECT_PEERS);
 }
@@ -415,7 +418,8 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
   Session* session = control_connection->session_;
 
   if (session->token_map_) {
-    session->token_map_->clear_hosts();
+    // Clearing token/hosts will not invalidate the replicas
+    session->token_map_->clear_tokens_and_hosts();
   }
 
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
@@ -433,7 +437,7 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
       ResultResponse* local_result;
       if (MultipleRequestHandler::get_result_response(responses, "local", &local_result) &&
           local_result->row_count() > 0) {
-        control_connection->update_node_info(host, &local_result->first_row(), ADD_NODE);
+        control_connection->update_node_info(host, &local_result->first_row(), ADD_HOST);
         control_connection->cassandra_version_ = host->cassandra_version();
       } else {
         LOG_WARN("No row found in %s's local system table",
@@ -472,7 +476,7 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
 
         host->set_mark(session->current_host_mark_);
 
-        control_connection->update_node_info(host, rows.row(), ADD_NODE);
+        control_connection->update_node_info(host, rows.row(), ADD_HOST);
         if (is_new && !is_initial_connection) {
           session->on_add(host, false);
         }
@@ -546,12 +550,12 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
 
   if (session->token_map_) {
-    session->token_map_->clear_keyspaces();
-
     ResultResponse* keyspaces_result;
     if (MultipleRequestHandler::get_result_response(responses, "keyspaces", &keyspaces_result)) {
+      session->token_map_->clear_replicas_and_strategies(); // Only clear replicas once we have the new keyspaces
       session->token_map_->add_keyspaces(cassandra_version, keyspaces_result);
     }
+    session->token_map_->build();
   }
 
   if (control_connection->use_schema_) {
@@ -598,10 +602,6 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
     }
 
     session->metadata().swap_to_back_and_update_front();
-  }
-
-  if (session->token_map_) {
-    session->token_map_->build();
   }
 
   if (is_initial_connection) {
@@ -674,7 +674,7 @@ void ControlConnection::on_refresh_node_info(ControlConnection* control_connecti
               host_address_str.c_str());
     return;
   }
-  control_connection->update_node_info(data.host, &result->first_row(), UPDATE_NODE);
+  control_connection->update_node_info(data.host, &result->first_row(), UPDATE_HOST_AND_BUILD);
 
   if (data.is_new_node) {
     control_connection->session_->on_add(data.host, false);
@@ -712,7 +712,7 @@ void ControlConnection::on_refresh_node_info_all(ControlConnection* control_conn
                                           row->get_by_name("rpc_address"),
                                           &address);
     if (is_valid_address && data.host->address().compare(address) == 0) {
-      control_connection->update_node_info(data.host, row, UPDATE_NODE);
+      control_connection->update_node_info(data.host, row, UPDATE_HOST_AND_BUILD);
       if (data.is_new_node) {
         control_connection->session_->on_add(data.host, false);
       }
@@ -721,7 +721,7 @@ void ControlConnection::on_refresh_node_info_all(ControlConnection* control_conn
   }
 }
 
-void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row, UpdateNodeType type) {
+void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row, UpdateHostType type) {
   const Value* v;
 
   std::string rack;
@@ -774,7 +774,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
     v = row->get_by_name("tokens");
     if (v != NULL && v->is_collection()) {
       if (session_->token_map_) {
-        if (type == UPDATE_NODE) {
+        if (type == UPDATE_HOST_AND_BUILD) {
           session_->token_map_->update_host_and_build(host, v);
         } else {
           session_->token_map_->add_host(host, v);
@@ -1080,6 +1080,17 @@ void ControlConnection::on_reconnect(Timer* timer) {
   ControlConnection* control_connection = static_cast<ControlConnection*>(timer->data());
   control_connection->query_plan_.reset(control_connection->session_->new_query_plan());
   control_connection->reconnect(false);
+}
+
+template<class T>
+void ControlConnection::ControlMultipleRequestHandler<T>::execute_query(
+    const std::string& index, const std::string& query) {
+  // We need to update the loop time to prevent new requests from timing out
+  // in cases where a callback took a long time to execute. In the future,
+  // we might improve this by executing the these long running callbacks
+  // on a seperate thread.
+  uv_update_time(control_connection_->session_->loop());
+  MultipleRequestHandler::execute_query(index, query);
 }
 
 template<class T>
