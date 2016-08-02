@@ -37,12 +37,12 @@ public:
   virtual void add_host(const Host::Ptr& host, const Value* tokens) = 0;
   virtual void update_host_and_build(const Host::Ptr& host, const Value* tokens) = 0;
   virtual void remove_host_and_build(const Host::Ptr& host) = 0;
-  virtual void clear_hosts() = 0;
+  virtual void clear_tokens_and_hosts() = 0;
 
   virtual void add_keyspaces(const VersionNumber& cassandra_version, ResultResponse* result) = 0;
   virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, ResultResponse* result) = 0;
   virtual void drop_keyspace(const std::string& keyspace_name) = 0;
-  virtual void clear_keyspaces() = 0;
+  virtual void clear_replicas_and_strategies() = 0;
 
   virtual void build() = 0;
 
