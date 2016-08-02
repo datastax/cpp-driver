@@ -40,16 +40,7 @@
 #define CASS_NETWORK_TOPOLOGY_STRATEGY "NetworkTopologyStrategy"
 #define CASS_SIMPLE_STRATEGY           "SimpleStrategy"
 
-namespace  std {
-
-template<>
-struct hash<cass::Host::Ptr> {
-  std::size_t operator()(const cass::Host::Ptr& host) const {
-    if (!host) return 0;
-    return hash(host->address());
-  }
-  std::hash<cass::Address> hash;
-};
+namespace std {
 
 template<>
 struct equal_to<cass::Host::Ptr> {
@@ -67,6 +58,14 @@ struct equal_to<cass::Host::Ptr> {
 } // namespace std
 
 namespace cass {
+
+struct HostHash {
+  std::size_t operator()(const cass::Host::Ptr& host) const {
+    if (!host) return 0;
+    return hash(host->address());
+  }
+  AddressHash hash;
+};
 
 class IdGenerator {
 public:
@@ -136,7 +135,7 @@ public:
   static StringRef name() { return "ByteOrderedPartitioner"; }
 };
 
-class HostSet : public sparsehash::dense_hash_set<Host::Ptr> {
+class HostSet : public sparsehash::dense_hash_set<Host::Ptr, HostHash> {
 public:
   HostSet() {
     set_empty_key(Host::Ptr(new Host(Address::EMPTY_KEY, false)));
@@ -153,6 +152,8 @@ public:
 };
 
 struct Datacenter {
+  Datacenter()
+    : num_nodes(0) { }
   size_t num_nodes;
   RackSet racks;
 };
@@ -166,6 +167,8 @@ public:
 };
 
 struct ReplicationFactor {
+  ReplicationFactor()
+    : count(0) { }
   size_t count;
   std::string name; // Used for logging the datacenter name
   bool operator==(const ReplicationFactor& other) const {
@@ -208,6 +211,10 @@ public:
   typedef std::deque<typename TokenHostVec::const_iterator> TokenHostQueue;
 
   struct DatacenterRackInfo {
+    DatacenterRackInfo()
+      : replica_count(0)
+      , replication_factor(0)
+      , rack_count(0) { }
     size_t replica_count;
     size_t replication_factor;
     RackSet racks_observed;
@@ -508,12 +515,37 @@ public:
   typedef std::pair<Token, Host*> TokenHost;
   typedef std::vector<TokenHost> TokenHostVec;
 
+  struct TokenHostCompare {
+    bool operator()(const TokenHost& lhs, const TokenHost& rhs) const {
+      return lhs.first < rhs.first;
+    }
+  };
+
+  struct RemoveTokenHostIf {
+    RemoveTokenHostIf(const Host::Ptr& host)
+      : host(host) { }
+
+    bool operator()(const TokenHost& token) const {
+      if (!token.second) {
+        return false;
+      }
+      return token.second->address() == host->address();
+    }
+
+    const Host::Ptr& host;
+  };
+
   typedef std::pair<Token, CopyOnWriteHostVec> TokenReplicas;
   typedef std::vector<TokenReplicas> TokenReplicasVec;
 
+  struct TokenReplicasCompare {
+    bool operator()(const TokenReplicas& lhs, const TokenReplicas& rhs) const {
+      return lhs.first < rhs.first;
+    }
+  };
+
   typedef sparsehash::dense_hash_map<std::string, TokenReplicasVec> KeyspaceReplicaMap;
-  typedef ReplicationStrategy<Partitioner> ReplicationStrategy;
-  typedef sparsehash::dense_hash_map<std::string, ReplicationStrategy> KeyspaceStrategyMap;
+  typedef sparsehash::dense_hash_map<std::string, ReplicationStrategy<Partitioner> > KeyspaceStrategyMap;
 
   static const CopyOnWriteHostVec NO_REPLICAS;
 
@@ -587,15 +619,7 @@ void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host, con
     new_tokens.push_back(TokenHost(token, host.get()));
   }
 
-  if (!std::is_sorted(new_tokens.begin(), new_tokens.end())) {
-    std::sort(new_tokens.begin(), new_tokens.end());
-  }
-
-  struct TokenHostCompare {
-    bool operator()(const TokenHost& lhs, const TokenHost& rhs) const {
-      return lhs.first < rhs.first;
-    }
-  };
+  std::sort(new_tokens.begin(), new_tokens.end());
 
   size_t previous_size = tokens_.size();
   tokens_.resize(tokens_.size() + new_tokens.size());
@@ -671,12 +695,6 @@ const CopyOnWriteHostVec& TokenMapImpl<Partitioner>::get_replicas(const std::str
                                                                   const std::string& routing_key) const {
   typename KeyspaceReplicaMap::const_iterator ks_it = replicas_.find(keyspace_name);
 
-  struct TokenReplicasCompare {
-    bool operator()(const TokenReplicas& lhs, const TokenReplicas& rhs) const {
-      return lhs.first < rhs.first;
-    }
-  };
-
   if (ks_it != replicas_.end()) {
     Token token = Partitioner::hash(routing_key);
     const TokenReplicasVec& replicas = ks_it->second;
@@ -708,7 +726,7 @@ void TokenMapImpl<Partitioner>::update_keyspace(const VersionNumber& cassandra_v
       continue;
     }
 
-    ReplicationStrategy strategy;
+    ReplicationStrategy<Partitioner> strategy;
 
     strategy.init(dc_ids_, cassandra_version, row);
 
@@ -735,20 +753,6 @@ void TokenMapImpl<Partitioner>::update_keyspace(const VersionNumber& cassandra_v
 
 template <class Partitioner>
 void TokenMapImpl<Partitioner>::remote_host_tokens(const Host::Ptr& host) {
-  struct RemoveTokenHostIf {
-    RemoveTokenHostIf(const Host::Ptr& host)
-      : host(host) { }
-
-    bool operator()(const TokenHost& token) const {
-      if (!token.second) {
-        return false;
-      }
-      return token.second->address() == host->address();
-    }
-
-    const Host::Ptr& host;
-  };
-
   typename TokenHostVec::iterator last = std::remove_copy_if(tokens_.begin(), tokens_.end(),
                                                              tokens_.begin(),
                                                              RemoveTokenHostIf(host));
@@ -767,7 +771,7 @@ void TokenMapImpl<Partitioner>::build_replicas() {
        end = strategies_.end();
        i != end; ++i) {
     const std::string& keyspace_name = i->first;
-    const ReplicationStrategy& strategy = i->second;
+    const ReplicationStrategy<Partitioner>& strategy = i->second;
     strategy.build_replicas(tokens_, datacenters_, replicas_[keyspace_name]);
   }
 }

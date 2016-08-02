@@ -20,10 +20,9 @@
 #include "constants.hpp"
 #include "serialization.hpp"
 #include "token_map_impl.hpp"
+#include "uint128.hpp"
 
 #include "third_party/mt19937_64/mt19937_64.hpp"
-
-#include <boost/multiprecision/cpp_int.hpp>
 
 #define CASS_PROTOCOL_VERSION 3
 
@@ -91,7 +90,7 @@ private:
   }
 
   static void encode(char* buf, const std::string& value) {
-    std::copy(value.begin(), value.end(), buf);
+    memcpy(buf, value.data(), value.size());
   }
 
   static size_t size_of(cass::ByteOrderedPartitioner::Token value) {
@@ -223,9 +222,9 @@ public:
   }
 
   void append_token(cass::RandomPartitioner::Token token) {
-    boost::multiprecision::uint128_t r = boost::multiprecision::uint128_t(token.lo) |
-                                         (boost::multiprecision::uint128_t(token.hi) << 64);
-    append_value<std::string>(r.convert_to<std::string>());
+    numeric::uint128_t r(token.lo);
+    r |= (numeric::uint128_t(token.hi) << 64);
+    append_value<std::string>(r.to_string());
     ++count_;
   }
 
@@ -310,9 +309,9 @@ inline cass::Host::Ptr create_host(const std::string& address,
 
 inline cass::RandomPartitioner::Token create_random_token(const std::string& s) {
   cass::RandomPartitioner::Token token;
-  boost::multiprecision::uint128_t i(s);
-  token.lo = (i & boost::multiprecision::uint128_t("0xFFFFFFFFFFFFFFFF")).convert_to<uint64_t>();
-  token.hi = (i >> 64).convert_to<uint64_t>();
+  numeric::uint128_t i(s);
+  token.lo = (i & numeric::uint128_t("0xFFFFFFFFFFFFFFFF")).to_base_type();
+  token.hi = (i >> 64).to_base_type();
   return token;
 }
 

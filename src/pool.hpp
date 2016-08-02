@@ -107,7 +107,7 @@ private:
   Connection* find_least_busy();
 
 private:
-  typedef sparsehash::dense_hash_map<Address, Connection*> ConnectionMap;
+  typedef sparsehash::dense_hash_map<Address, Connection*, AddressHash> ConnectionMap;
   typedef std::vector<Connection*> ConnectionVec;
 
   IOWorker* io_worker_;
