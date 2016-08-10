@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
 BOOST_AUTO_TEST_CASE(connection_spawn)
 {
   TestPool tester;
-  const std::string SPAWN_MSG = "Spawning new connection to host " + tester.ccm->get_ip_prefix() + "1:9042";
+  const std::string SPAWN_MSG = "Spawning new connection to host " + tester.ccm->get_ip_prefix() + "1";
   test_utils::CassLog::reset(SPAWN_MSG);
 
   test_utils::MultipleNodesTest inst(1, 0);
