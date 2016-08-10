@@ -199,7 +199,8 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
   CassRetryPolicy* downgrading_policy = cass_retry_policy_downgrading_consistency_new();
   cass_cluster_set_retry_policy(cluster.get(), downgrading_policy);
-  cass_cluster_set_connection_heartbeat_interval(cluster.get(), 0);
+  cass_cluster_set_connection_heartbeat_interval(cluster.get(), 1);
+  cass_cluster_set_connection_idle_timeout(cluster.get(), 10);
 
   if (ccm->create_cluster(3)) {
     ccm->start_cluster();
