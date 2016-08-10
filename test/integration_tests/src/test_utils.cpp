@@ -222,6 +222,7 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int nu
   cass_cluster_set_num_threads_io(cluster, 4);
   cass_cluster_set_max_concurrent_creation(cluster, 8);
   cass_cluster_set_protocol_version(cluster, protocol_version);
+  cass_cluster_set_use_randomized_contact_points(cluster, cass_false);
 }
 
 MultipleNodesTest::~MultipleNodesTest() {
