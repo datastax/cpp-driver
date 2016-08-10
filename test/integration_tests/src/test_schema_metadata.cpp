@@ -1490,7 +1490,7 @@ BOOST_AUTO_TEST_CASE(lookup) {
     BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_BIGINT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
     datatype = cass_aggregate_meta_return_type(agg_meta);
     BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_DOUBLE, cass_data_type_type(datatype));
-    func_meta = cass_aggregate_meta_state_func(agg_meta);
+    func_meta = cass_aggregate_meta_final_func(agg_meta);
     BOOST_CHECK_EQUAL(1, cass_function_meta_argument_count(func_meta));
     datatype = cass_function_meta_argument_type_by_name(func_meta, "state");
     BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
