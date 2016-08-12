@@ -241,19 +241,40 @@ namespace CCM {
     ClusterStatus cluster_status();
 
     /**
-     * Create a Cassandra cluster
+     * Create a Cassandra cluster with nodes in multiple data centers
      *
-     * @param data_center_one_nodes Number of nodes for DC1 (default: 1)
-     * @param data_center_two_nodes Number of nodes for DC2 (default: 0)
+     * @param data_center_nodes Vector of data center nodes
+     * @param with_vnodes True if vnodes tokens should be used; false otherwise
+     *                   (default: false)
      * @param is_ssl True if SSL should be enabled; false otherwise
      *               (default: false)
      * @param is_client_authentication True if client authentication should be
      *                                enabled; false otherwise (default: false)
      * @return True if cluster was created or switched; false otherwise
+     * @throws BridgeException
      */
-    bool create_cluster(unsigned short data_center_one_nodes = 1,
-      unsigned short data_center_two_node = 0,
-      bool is_ssl = false, bool is_client_authentication = false);
+    bool create_cluster(std::vector<unsigned short> data_center_nodes,
+      bool with_vnodes = false, bool is_ssl = false,
+      bool is_client_authentication = false);
+
+    /**
+     * Create a Cassandra cluster
+     *
+     * @param data_center_one_nodes Number of nodes for DC1 (default: 1)
+     * @param data_center_two_nodes Number of nodes for DC2 (default: 0)
+     * @param with_vnodes True if vnodes tokens should be used; false otherwise
+     *                   (default: false)
+     * @param is_ssl True if SSL should be enabled; false otherwise
+     *               (default: false)
+     * @param is_client_authentication True if client authentication should be
+     *                                enabled; false otherwise (default: false)
+     * @return True if cluster was created or switched; false otherwise
+     * @deprecated More than two data centers are needed; will be removed after
+     *             refactor of test harness
+     */
+    bool CCM_BRIDGE_DEPRECATED(create_cluster(unsigned short data_center_one_nodes = 1,
+      unsigned short data_center_two_nodes = 0, bool with_vnodes = false,
+      bool is_ssl = false, bool is_client_authentication = false));
 
     /**
      * Check to see if the active cluster is no longer accepting connections
@@ -354,6 +375,23 @@ namespace CCM {
      *               otherwise false (default: false)
      */
     void update_cluster_configuration(const std::string& key, const std::string& value, bool is_dse = false);
+
+    /**
+     * Update the node configuration
+     *
+     * @param node Node to update configuration on
+     * @param key_value_pairs Key:Value to update
+     */
+    void update_node_configuration(unsigned int node, std::vector<std::string> key_value_pairs);
+
+    /**
+     * Update the node configuration
+     *
+     * @param node Node to update configuration on
+     * @param key Key to update
+     * @param value Value to apply to key configuration
+     */
+    void update_node_configuration(unsigned int node, const std::string& key, const std::string& value);
 
     /**
      * Add a node on the active Cassandra cluster
@@ -784,25 +822,27 @@ namespace CCM {
      * in each data center
      *
      * @param cassandra_version Cassandra version being used
-     * @param data_center_one_nodes Number of nodes for DC1
-     * @param data_center_two_nodes Number of nodes for DC2
+     * @param data_center_nodes Vector of nodes for each data center
+     * @param with_vnodes True if vnodes are enabled; false otherwise
      * @param is_ssl True if SSL is enabled; false otherwise
-     * @param is_client_authentiction True if client authentication is enabled;
+     * @param is_client_authentication True if client authentication is enabled;
      *                                false otherwise
+     * @return Cluster name
      */
     std::string generate_cluster_name(CassVersion cassandra_version,
-      unsigned short data_center_one_nodes,
-      unsigned short data_center_two_nodes,
-      bool is_ssl, bool is_client_authentication);
+      std::vector<unsigned short> data_center_nodes,
+      bool with_vnodes, bool is_ssl, bool is_client_authentication);
 
     /**
      * Generate the nodes parameter for theCassandra cluster based on the number
      * of nodes in each data center
      *
-     * @param data_center_one_nodes Number of nodes for DC1
-     * #param data_center_two_nodes Number of nodes for DC2
+     * @param data_center_nodes Vector of nodes for each data center
+     * @param separator Separator to use between cluster nodes
+     * @return String of nodes separated by separator
      */
-    std::string generate_cluster_nodes(unsigned short data_center_one_nodes, unsigned short data_center_two_nodes);
+    std::string generate_cluster_nodes(std::vector<unsigned short> data_center_nodes,
+      char separator = ':');
 
     /**
      * Generate the CCM update configuration command based on the Cassandra

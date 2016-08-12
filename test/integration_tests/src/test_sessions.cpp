@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(connect_invalid_keyspace)
       ccm->start_cluster();
     }
 
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
     test_utils::CassSessionPtr session(cass_session_new());
     test_utils::CassFuturePtr connect_future(cass_session_connect_keyspace(session.get(), cluster.get(), "invalid"));
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(close_timeout_error)
       ccm->start_cluster();
     }
 
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
     // Create new connections after 1 pending request
     cass_cluster_set_max_concurrent_requests_threshold(cluster.get(), 1);
@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(connect_when_already_connected)
     ccm->start_cluster();
   }
 
-  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
   test_utils::CassSessionPtr session(cass_session_new());
   test_utils::CassFuturePtr connect_future1(cass_session_connect(session.get(), cluster.get()));
@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(close_when_already_closed)
     ccm->start_cluster();
   }
 
-  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
   test_utils::CassSessionPtr session(cass_session_new());
   test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster.get()));
@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE(add_nodes_connect) {
     if (ccm->create_cluster()) {
       ccm->start_cluster();
     }
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 3, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 3);
 
     //Add two nodes
     ccm->bootstrap_node();
@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE(add_nodes_connect) {
     if (ccm->create_cluster()) {
       ccm->start_cluster();
     }
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 2, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 2);
 
     //Add two nodes
     ccm->bootstrap_node();
@@ -250,7 +250,7 @@ BOOST_AUTO_TEST_CASE(add_nodes_connect) {
     if (ccm->create_cluster()) {
       ccm->start_cluster();
     }
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
     //Add two nodes
     ccm->bootstrap_node();
@@ -270,7 +270,7 @@ BOOST_AUTO_TEST_CASE(add_nodes_connect) {
     if (ccm->create_cluster(2)) {
       ccm->start_cluster();
     }
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 3, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 3);
 
     //Add one nodes
     ccm->bootstrap_node();
@@ -289,7 +289,7 @@ BOOST_AUTO_TEST_CASE(add_nodes_connect) {
     if (ccm->create_cluster(2)) {
       ccm->start_cluster();
     }
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 2, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 2);
 
     //Add one nodes
     ccm->bootstrap_node();
@@ -569,7 +569,7 @@ BOOST_AUTO_TEST_CASE(stress)
     if (ccm->create_cluster()) {
       ccm->start_cluster();
     }
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
     //Open and close sessions sequentially
     SessionContainer sessions(cluster.get());
@@ -621,7 +621,7 @@ BOOST_AUTO_TEST_CASE(stress)
     if (ccm->create_cluster(3)) {
       ccm->start_cluster();
     }
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 3, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 3);
 
     //Create sessions
     test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
