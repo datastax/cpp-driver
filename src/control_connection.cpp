@@ -519,6 +519,7 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
 
   Session* session = control_connection->session_;
 
+  // this clears token map and breaks token aware routing
   session->metadata().clear_and_update_back();
 
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
@@ -616,6 +617,7 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   }
 }
 
+  // duplicate code with on_refresh_node_info_all
 void ControlConnection::on_refresh_node_info(ControlConnection* control_connection,
                                              const RefreshNodeData& data,
                                              Response* response) {
@@ -644,6 +646,7 @@ void ControlConnection::on_refresh_node_info(ControlConnection* control_connecti
   }
 }
 
+  // duplicate code with on_refresh_node_info_all and query_host
 void ControlConnection::on_refresh_node_info_all(ControlConnection* control_connection,
                                                  const RefreshNodeData& data,
                                                  Response* response) {
