@@ -1111,7 +1111,9 @@ struct Value<CassDecimal> {
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
-  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool is_ssl = false);
+  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
+    unsigned int protocol_version = 4, bool with_vnodes = false,
+    bool is_ssl = false);
   virtual ~MultipleNodesTest();
 
   boost::shared_ptr<CCM::Bridge> ccm;
@@ -1121,7 +1123,9 @@ struct MultipleNodesTest {
 };
 
 struct SingleSessionTest : public MultipleNodesTest {
-  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool is_ssl = false);
+  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
+    unsigned int protocol_version = 4, bool with_vnodes = false,
+    bool is_ssl = false);
   virtual ~SingleSessionTest();
   void create_session();
   void close_session();
@@ -1130,7 +1134,8 @@ struct SingleSessionTest : public MultipleNodesTest {
   CassSsl* ssl;
 };
 
-void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigned int num_nodes_dc1, unsigned int num_nodes_dc2);
+void initialize_contact_points(CassCluster* cluster, std::string prefix,
+  unsigned int num_of_nodes);
 
 const char* get_value_type(CassValueType type);
 

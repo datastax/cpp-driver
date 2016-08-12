@@ -57,7 +57,7 @@ struct TestTokenMap {
 
   void build(const std::string& ip_prefix, int num_nodes) {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
-    test_utils::initialize_contact_points(cluster.get(), ip_prefix, num_nodes, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, num_nodes);
     cass_cluster_set_load_balance_round_robin(cluster.get());
     cass_cluster_set_token_aware_routing(cluster.get(), cass_false);
 
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(simple)
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
   std::string ip_prefix = ccm->get_ip_prefix();
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
   std::string ip_prefix = ccm->get_ip_prefix();
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -266,7 +266,7 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", rf, cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
-  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 

@@ -36,7 +36,7 @@ struct AthenticationTests {
     ccm->kill_cluster();
     ccm->update_cluster_configuration("authenticator", "PasswordAuthenticator");
     ccm->start_cluster("-Dcassandra.superuser_setup_delay_ms=0");
-    test_utils::initialize_contact_points(cluster.get(), CCM::Bridge::get_ip_prefix("config.txt"), 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), CCM::Bridge::get_ip_prefix("config.txt"), 1);
   }
 
   ~AthenticationTests() {

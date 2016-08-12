@@ -517,12 +517,13 @@ ClusterStatus CCM::Bridge::cluster_status() {
   return status;
 }
 
-bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
-  unsigned short data_center_two_node /*= 0*/,
-  bool is_ssl /* = false */, bool is_client_authentication /* = false */) {
+bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
+  bool with_vnodes /*= false*/, bool is_ssl /*= false*/,
+  bool is_client_authentication /*= false*/) {
   // Generate the cluster name and determine if it needs to be created
   std::string active_cluster_name = get_active_cluster();
-  std::string cluster_name = generate_cluster_name(cassandra_version_, data_center_one_nodes, data_center_two_node, is_ssl, is_client_authentication);
+  std::string cluster_name = generate_cluster_name(cassandra_version_, data_center_nodes,
+    with_vnodes, is_ssl, is_client_authentication);
   if (use_dse_ && dse_workload_ != DSE_WORKLOAD_CASSANDRA) {
     cluster_name.append("-").append(dse_workloads_[dse_workload_]);
   }
@@ -582,7 +583,7 @@ bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
     execute_ccm_command(generate_create_updateconf_command(cassandra_version_));
 
     // Create the cluster populate command and execute
-    std::string cluster_nodes = generate_cluster_nodes(data_center_one_nodes, data_center_two_node);
+    std::string cluster_nodes = generate_cluster_nodes(data_center_nodes);
     std::string cluster_ip_prefix = get_ip_prefix();
     std::vector<std::string> populate_command;
     populate_command.push_back("populate");
@@ -590,7 +591,16 @@ bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
     populate_command.push_back(cluster_nodes);
     populate_command.push_back("-i");
     populate_command.push_back(cluster_ip_prefix);
+    if (with_vnodes) {
+      populate_command.push_back("--vnodes");
+    }
     execute_ccm_command(populate_command);
+
+    // Update the cluster configuration (set num_tokens)
+    if (with_vnodes) {
+      // Maximum number of tokens is 1536
+      update_cluster_configuration("num_tokens", "1536");
+    }
 
     // Set the DSE workload (if applicable)
     if (use_dse_ && dse_workload_ != DSE_WORKLOAD_CASSANDRA) {
@@ -600,6 +610,18 @@ bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
 
   // Indicate if the cluster was created or switched
   return !(active_cluster_name.compare(cluster_name) == 0);
+}
+
+bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
+  unsigned short data_center_two_nodes /*= 0*/, bool with_vnodes /*= false*/,
+  bool is_ssl /*= false*/, bool is_client_authentication /*= false*/) {
+  // Create the data center nodes from the two data centers
+  std::vector<unsigned short> data_center_nodes;
+  data_center_nodes.push_back(data_center_one_nodes);
+  data_center_nodes.push_back(data_center_two_nodes);
+
+  return create_cluster(data_center_nodes, with_vnodes, is_ssl,
+    is_client_authentication);
 }
 
 bool CCM::Bridge::is_cluster_down() {
@@ -748,6 +770,26 @@ void CCM::Bridge::update_cluster_configuration(const std::string& key, const std
   // Create the update configuration command
   std::vector<std::string> updateconf_command;
   updateconf_command.push_back(is_dse ? "updatedseconf" : "updateconf");
+  updateconf_command.push_back(configuration.str());
+  execute_ccm_command(updateconf_command);
+}
+
+void CCM::Bridge::update_node_configuration(unsigned int node, std::vector<std::string> key_value_pairs) {
+  // Create the update configuration command
+  key_value_pairs.insert(key_value_pairs.begin(), generate_node_name(node));
+  key_value_pairs.insert(key_value_pairs.begin(), "updateconf");
+  execute_ccm_command(key_value_pairs);
+}
+
+void CCM::Bridge::update_node_configuration(unsigned int node, const std::string& key, const std::string& value) {
+  // Create the configuration to be updated
+  std::stringstream configuration;
+  configuration << key << ":" << value;
+
+  // Create the update configuration command
+  std::vector<std::string> updateconf_command;
+  updateconf_command.push_back(generate_node_name(node));
+  updateconf_command.push_back("updateconf");
   updateconf_command.push_back(configuration.str());
   execute_ccm_command(updateconf_command);
 }
@@ -1563,13 +1605,15 @@ std::vector<std::string> CCM::Bridge::get_available_clusters(std::string& active
 }
 
 std::string CCM::Bridge::generate_cluster_name(CassVersion cassandra_version,
-  unsigned short data_center_one_nodes,
-  unsigned short data_center_two_nodes,
-  bool is_ssl, bool is_client_authentication) {
+  std::vector<unsigned short> data_center_nodes,
+  bool with_vnodes, bool is_ssl, bool is_client_authentication) {
   std::stringstream cluster_name;
   cluster_name << cluster_prefix_ << "_"
                << (use_dse_ ? dse_version_.to_string(false) : cassandra_version.to_string(false))
-               << "_" << data_center_one_nodes << "-" << data_center_two_nodes;
+               << "_" << generate_cluster_nodes(data_center_nodes, '-');
+  if (with_vnodes) {
+    cluster_name << "-vnodes";
+  }
   if (is_ssl) {
     cluster_name << "-ssl";
     if (is_client_authentication) {
@@ -1579,9 +1623,16 @@ std::string CCM::Bridge::generate_cluster_name(CassVersion cassandra_version,
   return cluster_name.str();
 }
 
-std::string CCM::Bridge::generate_cluster_nodes(unsigned short data_center_one_nodes, unsigned short data_center_two_nodes) {
+std::string CCM::Bridge::generate_cluster_nodes(std::vector<unsigned short> data_center_nodes,
+  char separator /* = ':'*/) {
   std::stringstream cluster_nodes;
-  cluster_nodes << data_center_one_nodes << ":" << data_center_two_nodes;
+  for (std::vector<unsigned short>::iterator iterator = data_center_nodes.begin();
+    iterator != data_center_nodes.end(); ++iterator) {
+    cluster_nodes << *iterator;
+    if ((iterator + 1) != data_center_nodes.end()) {
+      cluster_nodes << separator;
+    }
+  }
   return cluster_nodes.str();
 }
 
