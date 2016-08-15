@@ -27,6 +27,8 @@
 #include "result_response.hpp"
 #include "timer.hpp"
 
+#include <algorithm>
+
 namespace cass {
 
 static bool least_busy_comp(Connection* a, Connection* b) {
@@ -47,10 +49,7 @@ Pool::Pool(IOWorker* io_worker,
     , is_available_(false)
     , is_initial_connection_(is_initial_connection)
     , is_pending_flush_(false)
-    , cancel_reconnect_(false) {
-      connections_pending_.set_empty_key(Address::EMPTY_KEY);
-      connections_pending_.set_deleted_key(Address::DELETED_KEY);
-    }
+    , cancel_reconnect_(false) { }
 
 Pool::~Pool() {
   LOG_DEBUG("Pool(%p) dtor with %u pending requests",
@@ -117,10 +116,10 @@ void Pool::close(bool cancel_reconnect) {
          it != end; ++it) {
       (*it)->close();
     }
-    for (ConnectionMap::iterator it = connections_pending_.begin(),
-                                 end = connections_pending_.end();
+    for (ConnectionVec::iterator it = pending_connections_.begin(),
+                                 end = pending_connections_.end();
          it != end; ++it) {
-      it->second->close();
+      (*it)->close();
     }
   }
 
@@ -234,7 +233,7 @@ void Pool::flush() {
 void Pool::maybe_notify_ready() {
   // This will notify ready even if all the connections fail.
   // it is up to the holder to inspect state
-  if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
+  if (state_ == POOL_STATE_CONNECTING && pending_connections_.empty()) {
     LOG_DEBUG("Pool(%p) connected to host %s",
               static_cast<void*>(this),
               host_->address_string().c_str());
@@ -245,7 +244,7 @@ void Pool::maybe_notify_ready() {
 
 void Pool::maybe_close() {
   if (state_ == POOL_STATE_CLOSING && connections_.empty() &&
-      connections_pending_.empty()) {
+      pending_connections_.empty()) {
 
     LOG_DEBUG("Pool(%p) closed connections to host %s",
               static_cast<void*>(this),
@@ -269,16 +268,16 @@ void Pool::spawn_connection() {
               static_cast<void*>(this));
     connection->connect();
 
-    connections_pending_[connection->address()] = connection;
+    pending_connections_.push_back(connection);
   }
 }
 
 void Pool::maybe_spawn_connection() {
-  if (connections_pending_.size() >= config_.max_concurrent_creation()) {
+  if (pending_connections_.size() >= config_.max_concurrent_creation()) {
     return;
   }
 
-  if (connections_.size() + connections_pending_.size() >=
+  if (connections_.size() + pending_connections_.size() >=
       config_.max_connections_per_host()) {
     return;
   }
@@ -300,7 +299,8 @@ Connection* Pool::find_least_busy() {
 }
 
 void Pool::on_ready(Connection* connection) {
-  connections_pending_.erase(connection->address());
+  pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connection),
+                             pending_connections_.end());
   connections_.push_back(connection);
   return_connection(connection);
 
@@ -310,7 +310,8 @@ void Pool::on_ready(Connection* connection) {
 }
 
 void Pool::on_close(Connection* connection) {
-  connections_pending_.erase(connection->address());
+  pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connection),
+                             pending_connections_.end());
 
   ConnectionVec::iterator it =
       std::find(connections_.begin(), connections_.end(), connection);
@@ -405,7 +406,7 @@ void Pool::on_partial_reconnect(Timer* timer) {
   Pool* pool = static_cast<Pool*>(timer->data());
 
   size_t current = pool->connections_.size() +
-                   pool->connections_pending_.size();
+                   pool->pending_connections_.size();
 
   size_t want = pool->config_.core_connections_per_host();
 

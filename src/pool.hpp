@@ -27,12 +27,6 @@
 #include "scoped_ptr.hpp"
 #include "timer.hpp"
 
-#include <sparsehash/dense_hash_map>
-
-#include <algorithm>
-#include <functional>
-#include <string>
-
 namespace cass {
 
 class IOWorker;
@@ -107,7 +101,6 @@ private:
   Connection* find_least_busy();
 
 private:
-  typedef sparsehash::dense_hash_map<Address, Connection*, AddressHash> ConnectionMap;
   typedef std::vector<Connection*> ConnectionVec;
 
   IOWorker* io_worker_;
@@ -119,7 +112,7 @@ private:
   PoolState state_;
   Connection::ConnectionError error_code_;
   ConnectionVec connections_;
-  ConnectionMap connections_pending_;
+  ConnectionVec pending_connections_;
   List<Handler> pending_requests_;
   int available_connection_count_;
   bool is_available_;
