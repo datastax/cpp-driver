@@ -25,10 +25,8 @@ TokenMap* TokenMap::from_partitioner(StringRef partitioner) {
     return new TokenMapImpl<Murmur3Partitioner>();
   } else if (ends_with(partitioner, RandomPartitioner::name())) {
     return new TokenMapImpl<RandomPartitioner>();
-    return NULL;
   } else if (ends_with(partitioner, ByteOrderedPartitioner::name())) {
     return new TokenMapImpl<ByteOrderedPartitioner>();
-    return NULL;
   } else {
     LOG_WARN("Unsupported partitioner class '%s'", partitioner.to_string().c_str());
     return NULL;

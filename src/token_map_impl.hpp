@@ -172,7 +172,7 @@ struct ReplicationFactor {
   size_t count;
   std::string name; // Used for logging the datacenter name
   bool operator==(const ReplicationFactor& other) const {
-    return count == other.count;
+    return count == other.count && name == other.name;
   }
 };
 
