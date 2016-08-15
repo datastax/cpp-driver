@@ -114,7 +114,6 @@ BOOST_AUTO_TEST_CASE(logging_connection_error_reduced)
  */
 BOOST_AUTO_TEST_CASE(logging_pool_error_reduced)
 {
-  test_utils::CassLog::set_output_log_level(CASS_LOG_DEBUG);
   test_utils::CassLog::reset("Connection pool was unable to connect to host");
   test_utils::CassLog::set_expected_log_level(CASS_LOG_ERROR);
 
