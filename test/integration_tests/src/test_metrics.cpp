@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(timeouts) {
   /*
    * Check for connection timeouts
    */
-  cass_cluster_set_connect_timeout(cluster_.get(), 0);
+  cass_cluster_set_connect_timeout(cluster_.get(), 1);
   if (ccm_->create_cluster(2)) {
     ccm_->start_cluster();
   }
@@ -196,12 +196,12 @@ BOOST_AUTO_TEST_CASE(timeouts) {
 
     // Ensure the pending request has occurred
     boost::chrono::steady_clock::time_point end =
-      boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
+    boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
     do {
       boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       get_metrics(&metrics);
     } while (boost::chrono::steady_clock::now() < end &&
-      metrics.errors.pending_request_timeouts == 0);
+    metrics.errors.pending_request_timeouts == 0);
     BOOST_CHECK_GT(metrics.errors.pending_request_timeouts, 0);
   } else {
     std::cout << "Skipping Pending Request Timeout for Cassandra v" << version.to_string() << std::endl;
@@ -210,8 +210,8 @@ BOOST_AUTO_TEST_CASE(timeouts) {
   /*
    * Check for request timeouts
    */
-  cass_cluster_set_connect_timeout(cluster_.get(), 5 * test_utils::ONE_SECOND_IN_MICROS);
-  cass_cluster_set_request_timeout(cluster_.get(), 0);
+  cass_cluster_set_connect_timeout(cluster_.get(), 30 * test_utils::ONE_SECOND_IN_MILLISECONDS);
+  cass_cluster_set_request_timeout(cluster_.get(), 1);
   if (ccm_->create_cluster()) {
     ccm_->start_cluster();
   }
