@@ -79,7 +79,7 @@ void check_result(CassSession* session) {
 }
 
 struct Version1Tests : public test_utils::SingleSessionTest {
-  Version1Tests() : SingleSessionTest(1, 0, 1) { // v1
+  Version1Tests() : SingleSessionTest(1, 0, true, 1) { // v1
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                            % test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
