@@ -203,7 +203,7 @@ BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
 
     std::string ip_prefix = tester.ccm->get_ip_prefix();
     test_utils::initialize_contact_points(tester.cluster, ip_prefix, 2);
-    cass_cluster_set_connect_timeout(tester.cluster, 1000);
+    cass_cluster_set_connect_timeout(tester.cluster, 100);
     cass_cluster_set_num_threads_io(tester.cluster, 32);
     cass_cluster_set_core_connections_per_host(tester.cluster, 4);
     cass_cluster_set_load_balance_round_robin(tester.cluster);
@@ -221,6 +221,7 @@ BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
     BOOST_CHECK_GE(test_utils::CassLog::message_count(), 1);
 
     // Handle partial reconnects
+    cass_cluster_set_connect_timeout(tester.cluster, 5 * test_utils::ONE_SECOND_IN_MILLISECONDS);
     cass_cluster_set_connection_idle_timeout(tester.cluster, 1);
     cass_cluster_set_connection_heartbeat_interval(tester.cluster, 2);
     test_utils::CassLog::reset("already present attempting to initiate immediate connection");
