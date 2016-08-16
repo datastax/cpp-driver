@@ -121,6 +121,7 @@ class cql_ccm_bridge_t;
 /** Random, reusable tools for testing. */
 namespace test_utils {
 
+extern const cass_duration_t ONE_SECOND_IN_MILLISECONDS;
 extern const cass_duration_t ONE_MILLISECOND_IN_MICROS;
 extern const cass_duration_t ONE_SECOND_IN_MICROS;
 
@@ -1114,6 +1115,7 @@ struct MultipleNodesTest {
   MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
     unsigned int protocol_version = 4, bool with_vnodes = false,
     bool is_ssl = false);
+
   virtual ~MultipleNodesTest();
 
   boost::shared_ptr<CCM::Bridge> ccm;
@@ -1124,8 +1126,9 @@ struct MultipleNodesTest {
 
 struct SingleSessionTest : public MultipleNodesTest {
   SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
-    unsigned int protocol_version = 4, bool with_vnodes = false,
-    bool is_ssl = false);
+    bool with_session = true, unsigned int protocol_version = 4,
+    bool with_vnodes = false, bool is_ssl = false);
+
   virtual ~SingleSessionTest();
   void create_session();
   void close_session();

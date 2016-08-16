@@ -33,7 +33,7 @@
 
 namespace test_utils {
 //-----------------------------------------------------------------------------------
-
+const cass_duration_t ONE_SECOND_IN_MILLISECONDS = 1000;
 const cass_duration_t ONE_MILLISECOND_IN_MICROS = 1000;
 const cass_duration_t ONE_SECOND_IN_MICROS = 1000 * ONE_MILLISECOND_IN_MICROS;
 
@@ -218,8 +218,8 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1,
   cluster = cass_cluster_new();
   initialize_contact_points(cluster, ccm->get_ip_prefix(), num_nodes_dc1 + num_nodes_dc2);
 
-  cass_cluster_set_connect_timeout(cluster, 10 * ONE_SECOND_IN_MICROS);
-  cass_cluster_set_request_timeout(cluster, 30 * ONE_SECOND_IN_MICROS);
+  cass_cluster_set_connect_timeout(cluster, 10 * ONE_SECOND_IN_MILLISECONDS);
+  cass_cluster_set_request_timeout(cluster, 30 * ONE_SECOND_IN_MILLISECONDS);
   cass_cluster_set_core_connections_per_host(cluster, 2);
   cass_cluster_set_max_connections_per_host(cluster, 4);
   cass_cluster_set_num_threads_io(cluster, 4);
@@ -233,15 +233,18 @@ MultipleNodesTest::~MultipleNodesTest() {
 }
 
 SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1,
-  unsigned int num_nodes_dc2, unsigned int protocol_version,
-  bool with_vnodes /* = false */, bool is_ssl /* = false */)
+  unsigned int num_nodes_dc2, bool with_session /* = true */,
+  unsigned int protocol_version, bool with_vnodes /* = false */,
+  bool is_ssl /* = false */)
   : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version,
     with_vnodes, is_ssl)
   , session(NULL)
   , ssl(NULL) {
   //SSL verification flags must be set before establishing session
   if (!is_ssl) {
-    create_session();
+    if (with_session) {
+      create_session();
+    }
   } else {
     ssl = cass_ssl_new();
   }

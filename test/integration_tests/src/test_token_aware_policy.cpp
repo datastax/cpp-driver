@@ -142,6 +142,7 @@ BOOST_AUTO_TEST_CASE(simple)
   }
 
   cass_cluster_set_load_balance_round_robin(cluster.get());
+  cass_cluster_set_use_schema(cluster.get(), cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
   std::string ip_prefix = ccm->get_ip_prefix();
@@ -198,6 +199,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", rf, cass_false);
+  cass_cluster_set_use_schema(cluster.get(), cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
   std::string ip_prefix = ccm->get_ip_prefix();
@@ -264,6 +266,7 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   }
 
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", rf, cass_false);
+  cass_cluster_set_use_schema(cluster.get(), cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
   test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
