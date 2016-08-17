@@ -41,9 +41,9 @@ class Timer;
 
 class ResponseFuture : public Future {
 public:
-  ResponseFuture(const Metadata& metadata)
+  ResponseFuture(int protocol_version, const VersionNumber& cassandra_version, const Metadata& metadata)
       : Future(CASS_FUTURE_TYPE_RESPONSE)
-      , schema_metadata(metadata.schema_snapshot()) { }
+      , schema_metadata(metadata.schema_snapshot(protocol_version, cassandra_version)) { }
 
   void set_response(Address address, const SharedRefPtr<Response>& response) {
     ScopedMutex lock(&mutex_);

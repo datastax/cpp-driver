@@ -56,8 +56,6 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseMap& responses) {
 
   if (MultipleRequestHandler::get_result_response(responses, "local", &local_result) &&
       local_result->row_count() > 0) {
-    local_result->decode_first_row();
-
     const Row* row = &local_result->first_row();
 
     const Value* v = row->get_by_name("schema_version");
@@ -71,8 +69,6 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseMap& responses) {
 
   ResultResponse* peers_result;
   if (MultipleRequestHandler::get_result_response(responses, "peers", &peers_result)) {
-    peers_result->decode_first_row();
-
     ResultIterator rows(peers_result);
     while (rows.next()) {
       const Row* row = rows.row();

@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE(simple_two_nodes)
     ccm->start_cluster();
   }
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 2, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 2);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(one_node_down)
     ccm->start_cluster();
   }
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 3, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 3);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(two_nodes_down)
     ccm->start_cluster();
   }
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 3, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 3);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
     ccm->start_cluster();
   }
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 3, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 3);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 

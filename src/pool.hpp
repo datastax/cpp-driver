@@ -27,11 +27,6 @@
 #include "scoped_ptr.hpp"
 #include "timer.hpp"
 
-#include <algorithm>
-#include <functional>
-#include <set>
-#include <string>
-
 namespace cass {
 
 class IOWorker;
@@ -106,7 +101,6 @@ private:
   Connection* find_least_busy();
 
 private:
-  typedef std::set<Connection*> ConnectionSet;
   typedef std::vector<Connection*> ConnectionVec;
 
   IOWorker* io_worker_;
@@ -118,7 +112,7 @@ private:
   PoolState state_;
   Connection::ConnectionError error_code_;
   ConnectionVec connections_;
-  ConnectionSet connections_pending_;
+  ConnectionVec pending_connections_;
   List<Handler> pending_requests_;
   int available_connection_count_;
   bool is_available_;
