@@ -29,7 +29,9 @@
 #include "session.hpp"
 #include "timer.hpp"
 
+#include <algorithm>
 #include <iomanip>
+#include <iterator>
 #include <sstream>
 #include <vector>
 
@@ -58,20 +60,25 @@ namespace cass {
 
 class ControlStartupQueryPlan : public QueryPlan {
 public:
-  ControlStartupQueryPlan(const HostMap& hosts)
-    : hosts_(hosts)
-    , it_(hosts_.begin()) {}
+  ControlStartupQueryPlan(const HostMap& hosts, Random* random)
+    : index_(random != NULL ? random->next(std::max(static_cast<size_t>(1), hosts.size())) : 0)
+    , count_(0) {
+    hosts_.reserve(hosts.size());
+    std::transform(hosts.begin(), hosts.end(), std::back_inserter(hosts_), GetHost());
+  }
 
   virtual SharedRefPtr<Host> compute_next() {
-    if (it_ == hosts_.end()) return SharedRefPtr<Host>();
-    const SharedRefPtr<Host>& host = it_->second;
-    ++it_;
-    return host;
+    const size_t size = hosts_.size();
+    if (count_ >= size) return SharedRefPtr<Host>();
+    size_t index = (index_ + count_) % size;
+    ++count_;
+    return hosts_[index];
   }
 
 private:
-  const HostMap hosts_;
-  HostMap::const_iterator it_;
+  HostVec hosts_;
+  size_t index_;
+  size_t count_;
 };
 
 bool ControlConnection::determine_address_for_peer_host(const Address& connected_address,
@@ -133,7 +140,8 @@ void ControlConnection::clear() {
 
 void ControlConnection::connect(Session* session) {
   session_ = session;
-  query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_)); // No hosts lock necessary (read-only)
+  query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_, // No hosts lock necessary (read-only)
+                                                session_->random_.get()));
   protocol_version_ = session_->config().protocol_version();
   use_schema_ = session_->config().use_schema();
   token_aware_routing_ = session_->config().token_aware_routing();

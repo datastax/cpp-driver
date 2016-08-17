@@ -14,6 +14,12 @@
   limitations under the License.
 */
 
+#include "random.hpp"
+
+#include "cassandra.h"
+#include "logger.hpp"
+#include "scoped_lock.hpp"
+
 #if defined(_WIN32)
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -29,9 +35,21 @@
 #include <sys/uio.h>
 #endif
 
-#include "logger.hpp"
-
 namespace cass {
+
+Random::Random()
+ // Use high resolution time if we can't get a real random seed
+  : rng_(get_random_seed(uv_hrtime())) {
+}
+
+uint64_t Random::next(uint64_t max) {
+  const uint64_t limit = CASS_UINT64_MAX - CASS_UINT64_MAX % max;
+  uint64_t r;
+  do {
+    r = rng_();
+  } while(r >= limit);
+  return r % max;
+}
 
 #if defined(_WIN32)
 

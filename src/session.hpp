@@ -27,6 +27,7 @@
 #include "metadata.hpp"
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
+#include "random.hpp"
 #include "ref_counted.hpp"
 #include "resolver.hpp"
 #include "row.hpp"
@@ -203,7 +204,7 @@ private:
 
   ScopedPtr<TokenMap> token_map_;
   Metadata metadata_;
-
+  ScopedPtr<Random> random_;
   ControlConnection control_connection_;
   bool current_host_mark_;
   int pending_pool_count_;

@@ -254,7 +254,7 @@ private:
     Timer timer;
   };
 
-  bool internal_write(Handler* request, bool flush_immediately, bool reset_idle_time);
+  bool internal_write(Handler* request, bool flush_immediately = true);
   void internal_close(ConnectionState close_state);
   void set_state(ConnectionState state);
   void consume(char* input, size_t size);
@@ -298,6 +298,8 @@ private:
 
   void restart_heartbeat_timer();
   static void on_heartbeat(Timer* timer);
+  void restart_terminate_timer();
+  static void on_terminate(Timer* timer);
 
 private:
   ConnectionState state_;
@@ -325,9 +327,9 @@ private:
   Timer connect_timer_;
   ScopedPtr<SslSession> ssl_session_;
 
-  uint64_t idle_start_time_ms_;
   bool heartbeat_outstanding_;
   Timer heartbeat_timer_;
+  Timer terminate_timer_;
 
   // buffer reuse for libuv
   std::stack<uv_buf_t> buffer_reuse_list_;

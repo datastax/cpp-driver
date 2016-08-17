@@ -18,14 +18,6 @@
 
 namespace cass {
 
-void copy_hosts(const HostMap& from_hosts, CopyOnWriteHostVec& to_hosts) {
-  to_hosts->reserve(from_hosts.size());
-  for (HostMap::const_iterator i = from_hosts.begin(),
-       end = from_hosts.end(); i != end; ++i) {
-    to_hosts->push_back(i->second);
-  }
-}
-
 void add_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host) {
   HostVec::iterator i;
   for (i = hosts->begin(); i != hosts->end(); ++i) {

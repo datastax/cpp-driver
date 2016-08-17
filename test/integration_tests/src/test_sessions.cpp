@@ -51,7 +51,7 @@ BOOST_FIXTURE_TEST_SUITE(sessions, SessionTests)
 
 BOOST_AUTO_TEST_CASE(connect_invalid_name)
 {
-  test_utils::CassLog::reset("Unable to resolve host node.domain-does-not-exist.dne:9042");
+  test_utils::CassLog::reset("Unable to resolve address for node.domain-does-not-exist.dne");
 
   CassError code;
 

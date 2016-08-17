@@ -19,7 +19,19 @@
 
 #include "third_party/mt19937_64/mt19937_64.hpp"
 
+#include <uv.h>
+
 namespace cass {
+
+class Random {
+public:
+  Random();
+
+  uint64_t next(uint64_t max);
+
+private:
+  MT19937_64 rng_;
+};
 
 uint64_t get_random_seed(uint64_t seed);
 

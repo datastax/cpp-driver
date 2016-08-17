@@ -16,6 +16,10 @@
 
 #include "token_aware_policy.hpp"
 
+#include "random.hpp"
+
+#include <algorithm>
+
 namespace cass {
 
 // The number of replicas is bounded by replication factor per DC. In practice, the number
@@ -28,6 +32,15 @@ static inline bool contains(const CopyOnWriteHostVec& replicas, const Address& a
     }
   }
   return false;
+}
+
+void TokenAwarePolicy::init(const SharedRefPtr<Host>& connected_host,
+                            const HostMap& hosts,
+                            Random* random) {
+  if (random != NULL) {
+    index_ = random->next(std::max(static_cast<size_t>(1), hosts.size()));
+  }
+  ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
 }
 
 QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspace,

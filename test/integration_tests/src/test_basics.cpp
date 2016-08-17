@@ -537,7 +537,7 @@ BOOST_AUTO_TEST_CASE(rows_in_rows_out)
     // Create insert statement for bound parameters
     std::string insert_query(boost::str(boost::format("INSERT INTO %s (tweet_id, t1, t2, t3) VALUES (?, ?, ?, ?);") % test_utils::SIMPLE_TABLE));
 
-    const size_t num_rows = 100000;
+    const size_t num_rows = 1000;
     for (size_t i = 0; i < num_rows; ++i) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 4));
 

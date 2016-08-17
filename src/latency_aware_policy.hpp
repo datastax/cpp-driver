@@ -51,7 +51,7 @@ public:
 
   virtual ~LatencyAwarePolicy() {}
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts);
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random);
 
   virtual void register_handles(uv_loop_t* loop);
   virtual void close_handles();

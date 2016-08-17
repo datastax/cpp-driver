@@ -158,7 +158,6 @@ Connection::HeartbeatHandler::HeartbeatHandler(Connection* connection)
 void Connection::HeartbeatHandler::on_set(ResponseMessage* response) {
   LOG_TRACE("Heartbeat completed on host %s",
             connection_->address_string().c_str());
-  connection_->idle_start_time_ms_ = 0;
   connection_->heartbeat_outstanding_ = false;
 }
 
@@ -196,7 +195,6 @@ Connection::Connection(uv_loop_t* loop,
     , response_(new ResponseMessage())
     , stream_manager_(protocol_version)
     , ssl_session_(NULL)
-    , idle_start_time_ms_(0)
     , heartbeat_outstanding_(false) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
@@ -237,10 +235,14 @@ void Connection::connect() {
 }
 
 bool Connection::write(Handler* handler, bool flush_immediately) {
-  return internal_write(handler, flush_immediately, true);
+  bool result = internal_write(handler, flush_immediately);
+  if (result) {
+    restart_heartbeat_timer();
+  }
+  return result;
 }
 
-bool Connection::internal_write(Handler* handler, bool flush_immediately, bool reset_idle_time) {
+bool Connection::internal_write(Handler* handler, bool flush_immediately) {
   int stream = stream_manager_.acquire(handler);
   if (stream < 0) {
     return false;
@@ -304,11 +306,6 @@ bool Connection::internal_write(Handler* handler, bool flush_immediately, bool r
     pending_write->flush();
   }
 
-  if (reset_idle_time) {
-    idle_start_time_ms_ = 0;
-    restart_heartbeat_timer();
-  }
-
   return true;
 }
 
@@ -344,6 +341,7 @@ void Connection::internal_close(ConnectionState close_state) {
     uv_handle_t* handle = copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_);
     if (!uv_is_closing(handle)) {
       heartbeat_timer_.stop();
+      terminate_timer_.stop();
       connect_timer_.stop();
       if (state_ == CONNECTION_STATE_CONNECTED ||
           state_ == CONNECTION_STATE_READY) {
@@ -427,6 +425,9 @@ void Connection::set_state(ConnectionState new_state) {
 void Connection::consume(char* input, size_t size) {
   char* buffer = input;
   size_t remaining = size;
+
+  // A successful read means the connection is still responsive
+  restart_terminate_timer();
 
   while (remaining != 0) {
     ssize_t consumed = response_->decode(buffer, remaining);
@@ -722,7 +723,7 @@ void Connection::on_timeout(Timer* timer) {
 }
 
 void Connection::on_connected() {
-  write(new StartupHandler(this, new OptionsRequest()));
+  internal_write(new StartupHandler(this, new OptionsRequest()));
 }
 
 void Connection::on_authenticate(const std::string& class_name) {
@@ -742,7 +743,7 @@ void Connection::on_auth_challenge(const AuthResponseRequest* request,
   }
   AuthResponseRequest* auth_response = new AuthResponseRequest(response,
                                                                request->auth());
-  write(new StartupHandler(this, auth_response));
+  internal_write(new StartupHandler(this, auth_response));
 }
 
 void Connection::on_auth_success(const AuthResponseRequest* request,
@@ -757,14 +758,14 @@ void Connection::on_auth_success(const AuthResponseRequest* request,
 void Connection::on_ready() {
   if (state_ == CONNECTION_STATE_CONNECTED && listener_->event_types() != 0) {
     set_state(CONNECTION_STATE_REGISTERING_EVENTS);
-    write(new StartupHandler(this, new RegisterRequest(listener_->event_types())));
+    internal_write(new StartupHandler(this, new RegisterRequest(listener_->event_types())));
     return;
   }
 
   if (keyspace_.empty()) {
     notify_ready();
   } else {
-    write(new StartupHandler(this, new QueryRequest("USE \"" + keyspace_ + "\"")));
+    internal_write(new StartupHandler(this, new QueryRequest("USE \"" + keyspace_ + "\"")));
   }
 }
 
@@ -779,7 +780,7 @@ void Connection::on_supported(ResponseMessage* response) {
   // TODO(mstump) do something with the supported info
   (void)supported;
 
-  write(new StartupHandler(this, new StartupRequest()));
+  internal_write(new StartupHandler(this, new StartupRequest()));
 }
 
 void Connection::on_pending_schema_agreement(Timer* timer) {
@@ -794,6 +795,7 @@ void Connection::on_pending_schema_agreement(Timer* timer) {
 void Connection::notify_ready() {
   connect_timer_.stop();
   restart_heartbeat_timer();
+  restart_terminate_timer();
   set_state(CONNECTION_STATE_READY);
   listener_->on_ready(this);
 }
@@ -845,7 +847,7 @@ void Connection::send_credentials(const std::string& class_name) {
   if (v1_auth) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
-    write(new StartupHandler(this, new CredentialsRequest(credentials)));
+    internal_write(new StartupHandler(this, new CredentialsRequest(credentials)));
   } else {
     send_initial_auth_response(class_name);
   }
@@ -862,7 +864,7 @@ void Connection::send_initial_auth_response(const std::string& class_name) {
       return;
     }
     AuthResponseRequest* auth_response = new AuthResponseRequest(response, auth);
-    write(new StartupHandler(this, auth_response));
+    internal_write(new StartupHandler(this, auth_response));
   }
 }
 
@@ -877,18 +879,8 @@ void Connection::restart_heartbeat_timer() {
 void Connection::on_heartbeat(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
 
-  if (connection->idle_start_time_ms_ == 0) {
-    connection->idle_start_time_ms_ = get_time_since_epoch_ms();
-  } else if ((get_time_since_epoch_ms() - connection->idle_start_time_ms_) / 1000 >
-             connection->config().connection_idle_timeout_secs()){
-    connection->notify_error("Failed to send a heartbeat within connection idle interval. "
-                             "Terminating connection...",
-                 CONNECTION_ERROR_TIMEOUT);
-    return;
-  }
-
   if (!connection->heartbeat_outstanding_) {
-    if (!connection->internal_write(new HeartbeatHandler(connection), true, false)) {
+    if (!connection->internal_write(new HeartbeatHandler(connection))) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests
       // that never returned and as a result timed out.
@@ -901,6 +893,24 @@ void Connection::on_heartbeat(Timer* timer) {
   }
 
   connection->restart_heartbeat_timer();
+}
+
+void Connection::restart_terminate_timer() {
+  // The terminate timer shouldn't be started without having heartbeats enabled,
+  // otherwise connections would be terminated in periods of request inactivity.
+  if (config_.connection_heartbeat_interval_secs() > 0 &&
+      config_.connection_idle_timeout_secs() > 0) {
+    terminate_timer_.start(loop_,
+                      1000 * config_.connection_idle_timeout_secs(),
+                      this, on_terminate);
+  }
+}
+
+void Connection::on_terminate(Timer* timer) {
+  Connection* connection = static_cast<Connection*>(timer->data());
+  connection->notify_error("Failed to send a heartbeat within connection idle interval. "
+                           "Terminating connection...",
+                           CONNECTION_ERROR_TIMEOUT);
 }
 
 void Connection::PendingSchemaAgreement::stop_timer() {
