@@ -61,6 +61,7 @@ public:
 
   void set_metadata(ResultMetadata* metadata) {
     metadata_.reset(metadata);
+    decode_first_row();
   }
 
   const SharedRefPtr<ResultMetadata>& result_metadata() const { return result_metadata_; }
@@ -80,11 +81,11 @@ public:
 
   bool decode(int version, char* input, size_t size);
 
-  void decode_first_row();
-
 private:
   char* decode_metadata(char* input, SharedRefPtr<ResultMetadata>* metadata,
                         bool has_pk_indices = false);
+
+  void decode_first_row();
 
   bool decode_rows(char* input);
 
