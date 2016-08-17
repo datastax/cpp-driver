@@ -1,4 +1,4 @@
-title:  C/C++ DataStax Enterprise Driver
+title:  DataStax Enterprise C/C++ Driver
 summary: A C/C++ Driver built for DataStax Enterprise
 homepage: http://datastax.github.io/cpp-driver-dse/
 sections:
@@ -14,7 +14,7 @@ sections:
     prefix:   /features
     type:     markdown
     files:   'doc/features/**/*.md'
-  - title:     API docs
+  - title:     API reference
     prefix:    /api
     type:      doxygen
     directory: 'include'
@@ -33,5 +33,3 @@ sections:
 versions:
   - name: v1.0.0rc1
     ref: HEAD
-  - name: v1.0.0eap1
-    ref: 838ffa07accd237767490e3159da81a7f152b3f5
