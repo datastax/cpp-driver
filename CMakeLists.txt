@@ -64,7 +64,6 @@ option(CASS_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
 option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
-option(CASS_USE_SPARSEHASH "Use sparsehash" OFF)
 option(CASS_USE_ZLIB "Use zlib" OFF)
 option(CASS_USE_LIBSSH2 "Use libssh2 for integration tests" ON)
 
@@ -107,12 +106,6 @@ CassUseLibuv()
 if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
   CassUseBoost()
 endif()
-
-# Sparsehash
-if(CASS_USE_SPARSEHASH)
-  CassUseSparshHash()
-endif()
-
 
 # OpenSSL
 if(CASS_USE_OPENSSL)

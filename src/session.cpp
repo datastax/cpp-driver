@@ -92,7 +92,7 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
 }
 
 const CassSchemaMeta* cass_session_get_schema_meta(const CassSession* session) {
-  return CassSchemaMeta::to(new cass::Metadata::SchemaSnapshot(session->metadata().schema_snapshot()));
+  return CassSchemaMeta::to(new cass::Metadata::SchemaSnapshot(session->metadata().schema_snapshot(session->protocol_version(), session->cassandra_version())));
 }
 
 void  cass_session_get_metrics(const CassSession* session,
@@ -579,7 +579,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   PrepareRequest* prepare = new PrepareRequest();
   prepare->set_query(statement, length);
 
-  ResponseFuture* future = new ResponseFuture(metadata_);
+  ResponseFuture* future = new ResponseFuture(protocol_version(), cassandra_version(), metadata_);
   future->inc_ref(); // External reference
   future->statement.assign(statement, length);
 
@@ -669,7 +669,7 @@ void Session::on_down(SharedRefPtr<Host> host) {
 }
 
 Future* Session::execute(const RoutableRequest* request) {
-  ResponseFuture* future = new ResponseFuture(metadata_);
+  ResponseFuture* future = new ResponseFuture(protocol_version(), cassandra_version(), metadata_);
   future->inc_ref(); // External reference
 
   RetryPolicy* retry_policy
@@ -745,8 +745,7 @@ void Session::on_execute(uv_async_t* data) {
 
 QueryPlan* Session::new_query_plan(const Request* request, Request::EncodingCache* cache) {
   const CopyOnWritePtr<std::string> keyspace(keyspace_);
-  return load_balancing_policy_->new_query_plan(*keyspace, request,
-                                                metadata_.token_map(), cache);
+  return load_balancing_policy_->new_query_plan(*keyspace, request, token_map_.get(), cache);
 }
 
 } // namespace cass

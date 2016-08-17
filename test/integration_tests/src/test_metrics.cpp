@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(connections) {
   cass_cluster_set_num_threads_io(cluster_.get(), 1);
   cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
   cass_cluster_set_reconnect_wait_time(cluster_.get(), 10); // Low re-connect for node restart
-  test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 3, 0);
+  test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 3);
   if (ccm_->create_cluster(3)) {
     ccm_->start_cluster();
   }
@@ -159,12 +159,12 @@ BOOST_AUTO_TEST_CASE(connections) {
 BOOST_AUTO_TEST_CASE(timeouts) {
   CassMetrics metrics;
   cass_cluster_set_core_connections_per_host(cluster_.get(), 2);
-  test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 2, 0);
+  test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 2);
 
   /*
    * Check for connection timeouts
    */
-  cass_cluster_set_connect_timeout(cluster_.get(), 0);
+  cass_cluster_set_connect_timeout(cluster_.get(), 1);
   if (ccm_->create_cluster(2)) {
     ccm_->start_cluster();
   }
@@ -196,12 +196,12 @@ BOOST_AUTO_TEST_CASE(timeouts) {
 
     // Ensure the pending request has occurred
     boost::chrono::steady_clock::time_point end =
-      boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
+    boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
     do {
       boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       get_metrics(&metrics);
     } while (boost::chrono::steady_clock::now() < end &&
-      metrics.errors.pending_request_timeouts == 0);
+    metrics.errors.pending_request_timeouts == 0);
     BOOST_CHECK_GT(metrics.errors.pending_request_timeouts, 0);
   } else {
     std::cout << "Skipping Pending Request Timeout for Cassandra v" << version.to_string() << std::endl;
@@ -210,8 +210,8 @@ BOOST_AUTO_TEST_CASE(timeouts) {
   /*
    * Check for request timeouts
    */
-  cass_cluster_set_connect_timeout(cluster_.get(), 5 * test_utils::ONE_SECOND_IN_MICROS);
-  cass_cluster_set_request_timeout(cluster_.get(), 0);
+  cass_cluster_set_connect_timeout(cluster_.get(), 30 * test_utils::ONE_SECOND_IN_MILLISECONDS);
+  cass_cluster_set_request_timeout(cluster_.get(), 1);
   if (ccm_->create_cluster()) {
     ccm_->start_cluster();
   }
@@ -237,7 +237,7 @@ BOOST_AUTO_TEST_CASE(request_statistics) {
   //Create one connections per host
   cass_cluster_set_num_threads_io(cluster_.get(), 1);
   cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
-  test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 1);
   if (ccm_->create_cluster()) {
     ccm_->start_cluster();
   }

@@ -642,7 +642,7 @@ BOOST_AUTO_TEST_CASE(empty_results)
 /**
  * Unset Parameters
  *
- * This test ensures that unset paremeters return an error for C* 2.2 or less
+ * This test ensures that unset parameters return an error for C* 2.2 or less
  * and correctly uses the UNSET values for C*2.2 or greater.
  *
  * @since 2.2.0-beta1

@@ -94,7 +94,8 @@ BOOST_FIXTURE_TEST_SUITE(control_connection, ControlConnectionTests)
 
 BOOST_AUTO_TEST_CASE(connect_invalid_ip)
 {
-  test_utils::CassLog::reset("Unable to establish a control connection to host 1.1.1.1 because of the following error: Connection timeout");
+  test_utils::CassLog::reset("Unable to establish a control connection to host "
+    "1.1.1.1 because of the following error: Connection timeout");
 
   test_utils::CassClusterPtr cluster(cass_cluster_new());
   cass_cluster_set_contact_points(cluster.get(), "1.1.1.1");
@@ -115,7 +116,7 @@ BOOST_AUTO_TEST_CASE(connect_invalid_port)
     ccm->start_cluster();
   }
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   cass_cluster_set_port(cluster.get(), 9999); // Invalid port
 
@@ -138,7 +139,7 @@ BOOST_AUTO_TEST_CASE(reconnection)
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -169,7 +170,7 @@ BOOST_AUTO_TEST_CASE(topology_change)
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -201,7 +202,7 @@ BOOST_AUTO_TEST_CASE(status_change)
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());;
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -234,7 +235,7 @@ BOOST_AUTO_TEST_CASE(node_discovery)
   cass_cluster_set_load_balance_round_robin(cluster.get());;
 
   // Only add a single IP
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -262,7 +263,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
     cass_cluster_set_contact_points(cluster.get(), "192.0.2.0,192.0.2.1,192.0.2.3");
 
     // Only add a single valid IP
-    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
     // Make sure the timeout is very high for the initial invalid IPs
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), NULL, 60 * test_utils::ONE_SECOND_IN_MICROS));
@@ -288,7 +289,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
   cass_cluster_set_load_balance_round_robin(cluster.get());;
 
   // Only add a single valid IP
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
@@ -318,7 +319,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
     cass_cluster_set_load_balance_round_robin(cluster.get());;
 
     // Only add a single valid IP
-    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
     // Make the 'rpc_address' null on all applicable hosts (1 and 2)
     {
@@ -350,7 +351,7 @@ BOOST_AUTO_TEST_CASE(full_outage)
     ccm->start_cluster();
   }
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
   test_utils::execute_query(session.get(), query);
 
@@ -383,7 +384,7 @@ BOOST_AUTO_TEST_CASE(node_decommission)
       ccm->start_cluster();
     }
 
-    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 2, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 2);
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
     // Wait for all hosts to be added to the pool; timeout after 10 seconds
@@ -427,7 +428,7 @@ BOOST_AUTO_TEST_CASE(randomized_contact_points)
       ccm->start_cluster();
     }
 
-    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 4, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 4);
     cass_cluster_set_use_randomized_contact_points(cluster.get(), cass_true);
 
     // Make sure the first host executing a statement is not .1

@@ -57,7 +57,7 @@ struct TestTokenMap {
 
   void build(const std::string& ip_prefix, int num_nodes) {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
-    test_utils::initialize_contact_points(cluster.get(), ip_prefix, num_nodes, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, num_nodes);
     cass_cluster_set_load_balance_round_robin(cluster.get());
     cass_cluster_set_token_aware_routing(cluster.get(), cass_false);
 
@@ -142,10 +142,11 @@ BOOST_AUTO_TEST_CASE(simple)
   }
 
   cass_cluster_set_load_balance_round_robin(cluster.get());
+  cass_cluster_set_use_schema(cluster.get(), cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
   std::string ip_prefix = ccm->get_ip_prefix();
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -198,10 +199,11 @@ BOOST_AUTO_TEST_CASE(network_topology)
   }
 
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", rf, cass_false);
+  cass_cluster_set_use_schema(cluster.get(), cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
   std::string ip_prefix = ccm->get_ip_prefix();
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -264,9 +266,10 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   }
 
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", rf, cass_false);
+  cass_cluster_set_use_schema(cluster.get(), cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
-  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -299,6 +302,101 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   test_utils::execute_query_with_error(session.get(),
     str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
     % keyspace));
+}
+
+/**
+ * Ensure the control connection is decoupled from request timeout
+ *
+ * This test addresses an issue where the control connection would timeout due
+ * to the rebuilding of the token map, re-establish the connection, re-build
+ * the token map and then rinse and repeat causing high CPU load and an
+ * infinite loop.
+ *
+ * @since 2.4.3
+ * @jira_ticket CPP-388
+ * @test_category load_balancing:token_aware
+ * @test_category control_connection
+ */
+BOOST_AUTO_TEST_CASE(no_timeout_control_connection)
+{
+  int num_of_keyspaces = 50;
+  int num_of_tables = 10;
+  std::string keyspace_prefix = "tap_";
+  std::string table_prefix = "table_";
+  test_utils::CassLog::reset("Request timed out to host");
+
+  // Create four data centers with single nodes
+  std::vector<unsigned short> data_center_nodes;
+  for (int i = 0; i < 4; ++i) {
+    data_center_nodes.push_back(1);
+  }
+
+  boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
+  if (ccm->create_cluster(data_center_nodes, true)) {
+    ccm->start_cluster();
+  }
+
+  // Create a session with a quick request timeout
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+  cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
+  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 4);
+  cass_cluster_set_request_timeout(cluster.get(), 500);
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+  // Create keyspaces, tables, and perform selects)
+  for (int i = 1; i <= num_of_keyspaces; ++i) {
+    // Randomly create keyspaces with valid and invalid data centers)
+    bool is_valid_keyspace = true;
+    std::string nts_dcs = "'dc1': 1, 'dc2': 1, 'dc3': 1, 'dc4': 1";
+    if ((rand() % 4) == 0) {
+      // Create the invalid data center network topology
+      int unknown_dcs = (rand() % 250) + 50; // random number [50 - 250]
+      for (int j = 5; j <= 4 + unknown_dcs; ++j) {
+        nts_dcs += ", 'dc" + boost::lexical_cast<std::string>(j) + "': 1";
+      }
+      is_valid_keyspace = false;
+    }
+
+    // Create the keyspace (handling errors to avoid test failure))
+    CassError error_code;
+    do {
+      error_code = test_utils::execute_query_with_error(session.get(),
+        str(boost::format("CREATE KEYSPACE " + keyspace_prefix + "%d "
+        "WITH replication = { 'class': 'NetworkTopologyStrategy', "
+        + nts_dcs + " }") % i));
+    } while (error_code != CASS_OK && error_code != CASS_ERROR_SERVER_ALREADY_EXISTS);
+
+    // Perform table creation and random selects (iff keyspace is valid))
+    if (is_valid_keyspace) {
+      // Create the table (handling errors to avoid test failures)
+      for (int j = 0; j < num_of_tables; ++j) {
+        std::stringstream full_table_name;
+        full_table_name << keyspace_prefix << i << "."
+          << table_prefix << j;
+        CassError error_code = CASS_ERROR_SERVER_READ_TIMEOUT;
+        do {
+          error_code = test_utils::execute_query_with_error(session.get(),
+          str(boost::format(test_utils::CREATE_TABLE_SIMPLE) %
+            full_table_name.str()));
+        } while (error_code != CASS_OK && error_code != CASS_ERROR_SERVER_ALREADY_EXISTS);
+
+        // Randomly perform select statements on the newly created table
+        if (rand() % 2 == 0) {
+          std::string query = "SELECT * FROM " + full_table_name.str();
+          do {
+            error_code = test_utils::execute_query_with_error(session.get(), query.c_str());
+          } while (error_code != CASS_OK);
+        }
+      }
+    }
+  }
+
+  /*
+   * Ensure timeouts occurred
+   *
+   * NOTE: This also ensures (if reached) that infinite loop did not occur
+   */
+  BOOST_REQUIRE_GT(test_utils::CassLog::message_count(), 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

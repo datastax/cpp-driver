@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(simple)
     ccm->start_cluster("-Dcassandra.custom_query_handler_class=org.apache.cassandra.cql3.CustomPayloadMirroringQueryHandler");
 
     test_utils::CassClusterPtr cluster(cass_cluster_new());
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 

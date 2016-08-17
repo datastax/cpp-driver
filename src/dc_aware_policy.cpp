@@ -63,7 +63,7 @@ CassHostDistance DCAwarePolicy::distance(const SharedRefPtr<Host>& host) const {
 
 QueryPlan* DCAwarePolicy::new_query_plan(const std::string& connected_keyspace,
                                          const Request* request,
-                                         const TokenMap& token_map,
+                                         const TokenMap* token_map,
                                          Request::EncodingCache* cache) {
   CassConsistency cl = request != NULL ? request->consistency() : Request::DEFAULT_CONSISTENCY;
   return new DCAwareQueryPlan(this, cl, index_++);

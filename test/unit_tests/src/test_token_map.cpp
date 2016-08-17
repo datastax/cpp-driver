@@ -18,92 +18,79 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include "address.hpp"
-#include "constants.hpp"
-#include "md5.hpp"
-#include "murmur3.hpp"
-#include "token_map.hpp"
+#include "test_token_map_utils.hpp"
 
-#include <boost/scoped_ptr.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
 #include <boost/test/unit_test.hpp>
-#include <boost/random/mersenne_twister.hpp>
 
-cass::SharedRefPtr<cass::Host> create_host(const std::string& ip) {
-  return cass::SharedRefPtr<cass::Host>(new cass::Host(cass::Address(ip, 4092), false));
-}
+namespace {
 
-template <class HashType>
+template <class Partitioner>
 struct TestTokenMap {
-  typedef HashType(HashFunc)(const std::string& s);
-  typedef std::map<HashType, cass::SharedRefPtr<cass::Host> > TokenHostMap;
+  typedef typename cass::ReplicationStrategy<Partitioner>::Token Token;
+  typedef std::map<Token, cass::Host::Ptr> TokenHostMap;
 
   TokenHostMap tokens;
-  cass::TokenMap token_map;
-  cass::SharedRefPtr<cass::ReplicationStrategy> strategy;
+  cass::ScopedPtr<cass::TokenMap> token_map;
 
-  void build(const std::string& partitioner,
-             const std::string& ks_name) {
-    token_map.set_partitioner(partitioner);
+  TestTokenMap()
+    : token_map(cass::TokenMap::from_partitioner(Partitioner::name())) { }
 
-    if (!strategy) {
-      strategy =  cass::SharedRefPtr<cass::ReplicationStrategy>(
-                    new cass::NonReplicatedStrategy(""));
+  void build(const std::string& keyspace_name = "ks", size_t replication_factor = 3) {
+    add_keyspace_simple(keyspace_name, replication_factor, token_map.get());
+    for (typename TokenHostMap::const_iterator i = tokens.begin(),
+         end = tokens.end(); i != end; ++i) {
+      TokenCollectionBuilder builder;
+      builder.append_token(i->first);
+      token_map->add_host(i->second, builder.finish());
     }
-
-    token_map.set_replication_strategy(ks_name, strategy);
-
-    for (typename TokenHostMap::iterator i = tokens.begin(); i != tokens.end(); ++i) {
-      cass::TokenStringList tokens;
-      std::string token(boost::lexical_cast<std::string>(i->first));
-      tokens.push_back(token);
-      token_map.update_host(i->second, tokens);
-    }
-
-    token_map.build();
+    token_map->build();
   }
 
-  void verify(HashFunc hash_func, const std::string& ks_name) {
-    for (int i = 0; i < 24; ++i) {
-      std::string value(1, 'a' + i);
-      const cass::CopyOnWriteHostVec& replicas
-          = token_map.get_replicas(ks_name, value);
+  const cass::Host::Ptr& get_replica(const std::string& key) {
+    typename TokenHostMap::const_iterator i = tokens.upper_bound(Partitioner::hash(key));
+    if (i != tokens.end()) {
+      return i->second;
+    } else {
+      return tokens.begin()->second;
+    }
+  }
 
-      HashType hash = hash_func(value);
-      typename TokenHostMap::iterator token = tokens.upper_bound(hash);
+  void verify(const std::string& keyspace_name = "ks") {
+    const std::string keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
-      if (token != tokens.end()) {
-        BOOST_CHECK(replicas->front() == token->second);
-      } else {
-        BOOST_CHECK(replicas->front() == tokens.begin()->second);
-      }
+    for (size_t i = 0; i < sizeof(keys)/sizeof(keys[0]); ++i) {
+      const std::string& key = keys[i];
+
+      const cass::CopyOnWriteHostVec& hosts = token_map->get_replicas(keyspace_name, key);
+      BOOST_REQUIRE(hosts && hosts->size() > 0);
+
+      const cass::Host::Ptr& host = get_replica(key);
+      BOOST_REQUIRE(host);
+
+      BOOST_CHECK_EQUAL(hosts->front()->address(), host->address());
     }
   }
 };
 
-BOOST_AUTO_TEST_SUITE(token_map)
+} // namespace
 
-int64_t murmur3_hash(const std::string& s) {
-  return cass::MurmurHash3_x64_128(s.data(), s.size(), 0);
-}
+BOOST_AUTO_TEST_SUITE(token_map)
 
 BOOST_AUTO_TEST_CASE(murmur3)
 {
-  TestTokenMap<int64_t> test_murmur3;
+  TestTokenMap<cass::Murmur3Partitioner> test_murmur3;
 
   test_murmur3.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
-  test_murmur3.tokens[0] = create_host("1.0.0.2");
+  test_murmur3.tokens[0]                  = create_host("1.0.0.2");
   test_murmur3.tokens[CASS_INT64_MAX / 2] = create_host("1.0.0.3");
-  // Anything greater than the last host should be wrapped around to host1
 
-  test_murmur3.build(cass::Murmur3Partitioner::PARTITIONER_CLASS, "test");
-  test_murmur3.verify(murmur3_hash, "test");
+  test_murmur3.build();
+  test_murmur3.verify();
 }
 
 BOOST_AUTO_TEST_CASE(murmur3_multiple_tokens_per_host)
 {
-  TestTokenMap<int64_t> test_murmur3;
+  TestTokenMap<cass::Murmur3Partitioner> test_murmur3;
 
   const size_t tokens_per_host = 256;
 
@@ -113,155 +100,271 @@ BOOST_AUTO_TEST_CASE(murmur3_multiple_tokens_per_host)
   hosts.push_back(create_host("1.0.0.3"));
   hosts.push_back(create_host("1.0.0.4"));
 
-  boost::mt19937_64 ng;
+  MT19937_64 rng;
 
   for (cass::HostVec::iterator i = hosts.begin(); i != hosts.end(); ++i) {
     for (size_t j = 0; j < tokens_per_host; ++j) {
-      int64_t t = static_cast<int64_t>(ng());
-      test_murmur3.tokens[t] = *i;
+      test_murmur3.tokens[rng()] = *i;
     }
   }
 
-  test_murmur3.build(cass::Murmur3Partitioner::PARTITIONER_CLASS, "test");
-  test_murmur3.verify(murmur3_hash, "test");
+  test_murmur3.build();
+  test_murmur3.verify();
 }
 
-boost::multiprecision::int128_t random_hash(const std::string& s) {
-  cass::Md5 m;
-  m.update(reinterpret_cast<const uint8_t*>(s.data()), s.size());
-  uint8_t h[16];
-  m.final(h);
-  std::string hex("0x");
-  for (int i = 0; i < 16; ++i) {
-    char buf[4];
-    sprintf(buf, "%02X", h[i]);
-    hex.append(buf);
+BOOST_AUTO_TEST_CASE(murmur3_large_number_of_vnodes)
+{
+  TestTokenMap<cass::Murmur3Partitioner> test_murmur3;
+
+  size_t num_dcs = 3;
+  size_t num_racks = 3;
+  size_t num_hosts = 4;
+  size_t num_vnodes = 256;
+  size_t replication_factor = 3;
+
+  ReplicationMap replication;
+  MT19937_64 rng;
+  cass::TokenMap* token_map = test_murmur3.token_map.get();
+  TestTokenMap<cass::Murmur3Partitioner>::TokenHostMap& tokens = test_murmur3.tokens;
+
+  // Populate tokens
+  int host_count = 1;
+  for (size_t i = 1; i <= num_dcs; ++i) {
+    char dc[32];
+    sprintf(dc, "dc%d", (int)i);
+    char rf[32];
+    sprintf(rf, "%d", (int)replication_factor);
+    replication[dc] = rf;
+
+    for (size_t j = 1; j <= num_racks; ++j) {
+      char rack[32];
+      sprintf(rack, "rack%d", (int)j);
+
+      for (size_t k = 1; k <= num_hosts; ++k) {
+        char ip[32];
+        sprintf(ip, "127.0.%d.%d", host_count / 255, host_count % 255);
+        host_count++;
+
+        cass::Host::Ptr host(create_host(ip, rack, dc));
+
+        TokenCollectionBuilder builder;
+        for (size_t i = 0;  i < num_vnodes; ++i) {
+          cass::Murmur3Partitioner::Token token = rng();
+          builder.append_token(token);
+          tokens[token] = host;
+        }
+        token_map->add_host(host, builder.finish());
+      }
+    }
   }
-  return boost::multiprecision::int128_t(hex);
+
+  // Build token map
+  add_keyspace_network_topology("ks1", replication, token_map);
+  token_map->build();
+
+  const std::string keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
+
+  for (size_t i = 0; i < sizeof(keys)/sizeof(keys[0]); ++i) {
+    const std::string& key = keys[i];
+
+    const cass::CopyOnWriteHostVec& hosts = token_map->get_replicas("ks1", key);
+    BOOST_REQUIRE(hosts && hosts->size() == replication_factor * num_dcs);
+
+    typedef std::map<std::string, std::set<std::string> > DcRackMap;
+
+    // Verify rack counts
+    DcRackMap dc_racks;
+    for (cass::HostVec::const_iterator i = hosts->begin(),
+         end = hosts->end(); i != end; ++i) {
+      const cass::Host::Ptr& host = (*i);
+      dc_racks[host->dc()].insert(host->rack());
+    }
+    BOOST_CHECK(dc_racks.size() == num_dcs);
+
+    for (DcRackMap::const_iterator i = dc_racks.begin(),
+         end = dc_racks.end(); i != end; ++i) {
+      BOOST_CHECK(i->second.size() >= std::min(num_racks, replication_factor));
+    }
+
+    // Verify replica
+    cass::Host::Ptr host = test_murmur3.get_replica(key);
+    BOOST_REQUIRE(host);
+
+    BOOST_CHECK_EQUAL((*hosts)[0]->address(), host->address());
+  }
 }
 
 BOOST_AUTO_TEST_CASE(random)
 {
-  TestTokenMap<boost::multiprecision::int128_t> test_random;
+  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::RandomPartitioner::name()));
 
-  test_random.tokens[boost::multiprecision::int128_t("42535295865117307932921825928971026432")] = create_host("1.0.0.1");  // 2^127 / 4
-  test_random.tokens[boost::multiprecision::int128_t("85070591730234615865843651857942052864")] = create_host("1.0.0.2");  // 2^127 / 2
-  test_random.tokens[boost::multiprecision::int128_t("1605887595351923798765477786913079296")] = create_host("1.0.0.3"); // 2^127 * 3 / 4
-  // Anything greater than the last host should be wrapped around to host1
+  TestTokenMap<cass::RandomPartitioner> test_random;
 
-  test_random.build(cass::RandomPartitioner::PARTITIONER_CLASS, "test");
-  test_random.verify(random_hash, "test");
-}
+  test_random.tokens[create_random_token("42535295865117307932921825928971026432")] = create_host("1.0.0.1");  // 2^127 / 4
+  test_random.tokens[create_random_token("85070591730234615865843651857942052864")] = create_host("1.0.0.2");  // 2^127 / 2
+  test_random.tokens[create_random_token("1605887595351923798765477786913079296")]  = create_host("1.0.0.3"); // 2^127 * 3 / 4
 
-std::string byte_ordered_hash(const std::string& s) {
-  return s;
+  test_random.build();
+  test_random.verify();
 }
 
 BOOST_AUTO_TEST_CASE(byte_ordered)
 {
-  TestTokenMap<std::string> test_byte_ordered;
+  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::ByteOrderedPartitioner::name()));
 
-  test_byte_ordered.tokens["g"] = create_host("1.0.0.1");
-  test_byte_ordered.tokens["m"] = create_host("1.0.0.2");
-  test_byte_ordered.tokens["s"] = create_host("1.0.0.3");
-  // Anything greater than the last host should be wrapped around to host1
+  TestTokenMap<cass::ByteOrderedPartitioner> test_byte_ordered;
 
-  test_byte_ordered.build(cass::ByteOrderedPartitioner::PARTITIONER_CLASS, "test");
-  test_byte_ordered.verify(byte_ordered_hash, "test");
+  test_byte_ordered.tokens[create_byte_ordered_token("g")] = create_host("1.0.0.1");
+  test_byte_ordered.tokens[create_byte_ordered_token("m")] = create_host("1.0.0.2");
+  test_byte_ordered.tokens[create_byte_ordered_token("s")] = create_host("1.0.0.3");
+
+  test_byte_ordered.build();
+  test_byte_ordered.verify();
 }
 
 BOOST_AUTO_TEST_CASE(remove_host)
 {
-  TestTokenMap<int64_t> test_remove_host;
-
-  test_remove_host.strategy =
-      cass::SharedRefPtr<cass::ReplicationStrategy>(new cass::SimpleStrategy("", 2));
+  TestTokenMap<cass::Murmur3Partitioner> test_remove_host;
 
   test_remove_host.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
-  test_remove_host.tokens[0] = create_host("1.0.0.2");
+  test_remove_host.tokens[0]                  = create_host("1.0.0.2");
   test_remove_host.tokens[CASS_INT64_MAX / 2] = create_host("1.0.0.3");
 
-  test_remove_host.build(cass::Murmur3Partitioner::PARTITIONER_CLASS, "test");
+  test_remove_host.build("ks", 2);
+  test_remove_host.verify();
 
-  cass::TokenMap& token_map = test_remove_host.token_map;
+  cass::TokenMap* token_map = test_remove_host.token_map.get();
 
   {
-    const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", "abc");
+    const cass::CopyOnWriteHostVec& replicas = token_map->get_replicas("ks", "abc");
 
-    BOOST_REQUIRE(replicas->size() == 2);
-    BOOST_CHECK((*replicas)[0]->address() == cass::Address("1.0.0.1", 9042));
-    BOOST_CHECK((*replicas)[1]->address() == cass::Address("1.0.0.2", 9042));
+    BOOST_REQUIRE(replicas && replicas->size() == 2);
+    BOOST_CHECK_EQUAL((*replicas)[0]->address(), cass::Address("1.0.0.1", 9042));
+    BOOST_CHECK_EQUAL((*replicas)[1]->address(), cass::Address("1.0.0.2", 9042));
   }
 
-  TestTokenMap<int64_t>::TokenHostMap::iterator host_to_remove_it = test_remove_host.tokens.begin();
+  TestTokenMap<cass::Murmur3Partitioner>::TokenHostMap::iterator host_to_remove_it = test_remove_host.tokens.begin();
 
-  token_map.remove_host(host_to_remove_it->second);
-
-  {
-    const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", "abc");
-
-    BOOST_REQUIRE(replicas->size() == 2);
-    BOOST_CHECK((*replicas)[0]->address() == cass::Address("1.0.0.2", 9042));
-    BOOST_CHECK((*replicas)[1]->address() == cass::Address("1.0.0.3", 9042));
-  }
-
-  ++host_to_remove_it;
-  token_map.remove_host(host_to_remove_it->second);
+  token_map->remove_host_and_build(host_to_remove_it->second);
 
   {
-    const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", "abc");
+    const cass::CopyOnWriteHostVec& replicas = token_map->get_replicas("ks", "abc");
 
-    BOOST_REQUIRE(replicas->size() == 1);
-    BOOST_CHECK((*replicas)[0]->address() == cass::Address("1.0.0.3", 9042));
+    BOOST_REQUIRE(replicas && replicas->size() == 2);
+    BOOST_CHECK_EQUAL((*replicas)[0]->address(), cass::Address("1.0.0.2", 9042));
+    BOOST_CHECK_EQUAL((*replicas)[1]->address(), cass::Address("1.0.0.3", 9042));
   }
 
   ++host_to_remove_it;
-  token_map.remove_host(host_to_remove_it->second);
+  token_map->remove_host_and_build(host_to_remove_it->second);
 
   {
-    const cass::CopyOnWriteHostVec& replicas = token_map.get_replicas("test", "abc");
+    const cass::CopyOnWriteHostVec& replicas = token_map->get_replicas("ks", "abc");
 
-    BOOST_REQUIRE(replicas->size() == 0);
+    BOOST_REQUIRE(replicas && replicas->size() == 1);
+    BOOST_CHECK_EQUAL((*replicas)[0]->address(), cass::Address("1.0.0.3", 9042));
+  }
+
+  ++host_to_remove_it;
+  token_map->remove_host_and_build(host_to_remove_it->second);
+
+  {
+    const cass::CopyOnWriteHostVec& replicas = token_map->get_replicas("test", "abc");
+
+    BOOST_CHECK(!replicas);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(update_host)
+{
+  TestTokenMap<cass::Murmur3Partitioner> test_update_host;
+
+  test_update_host.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
+  test_update_host.tokens[CASS_INT64_MIN / 4] = create_host("1.0.0.2");
+
+  test_update_host.build("ks", 4);
+  test_update_host.verify();
+
+  cass::TokenMap* token_map = test_update_host.token_map.get();
+
+  {
+    const cass::CopyOnWriteHostVec& replicas = token_map->get_replicas("ks", "abc");
+
+    BOOST_REQUIRE(replicas && replicas->size() == 2);
+    BOOST_CHECK_EQUAL((*replicas)[0]->address(), cass::Address("1.0.0.1", 9042));
+    BOOST_CHECK_EQUAL((*replicas)[1]->address(), cass::Address("1.0.0.2", 9042));
+  }
+
+  {
+    cass::Murmur3Partitioner::Token token = 0;
+    cass::Host::Ptr host(create_host("1.0.0.3"));
+
+    test_update_host.tokens[token] = host;
+
+    TokenCollectionBuilder builder;
+    builder.append_token(token);
+    token_map->update_host_and_build(host, builder.finish());
+  }
+
+  {
+    const cass::CopyOnWriteHostVec& replicas = token_map->get_replicas("ks", "abc");
+
+    BOOST_REQUIRE(replicas && replicas->size() == 3);
+    BOOST_CHECK_EQUAL((*replicas)[0]->address(), cass::Address("1.0.0.1", 9042));
+    BOOST_CHECK_EQUAL((*replicas)[1]->address(), cass::Address("1.0.0.2", 9042));
+    BOOST_CHECK_EQUAL((*replicas)[2]->address(), cass::Address("1.0.0.3", 9042));
+  }
+
+  {
+    cass::Murmur3Partitioner::Token token = CASS_INT64_MAX / 2;
+    cass::Host::Ptr host(create_host("1.0.0.4"));
+
+    test_update_host.tokens[token] = host;
+
+    TokenCollectionBuilder builder;
+    builder.append_token(token);
+    token_map->update_host_and_build(host, builder.finish());
+  }
+
+  {
+    const cass::CopyOnWriteHostVec& replicas = token_map->get_replicas("ks", "abc");
+
+    BOOST_REQUIRE(replicas && replicas->size() == 4);
+    BOOST_CHECK_EQUAL((*replicas)[0]->address(), cass::Address("1.0.0.1", 9042));
+    BOOST_CHECK_EQUAL((*replicas)[1]->address(), cass::Address("1.0.0.2", 9042));
+    BOOST_CHECK_EQUAL((*replicas)[2]->address(), cass::Address("1.0.0.3", 9042));
+    BOOST_CHECK_EQUAL((*replicas)[3]->address(), cass::Address("1.0.0.4", 9042));
   }
 }
 
 BOOST_AUTO_TEST_CASE(drop_keyspace)
 {
-  TestTokenMap<int64_t> test_drop_keyspace;
-
-  test_drop_keyspace.strategy =
-      cass::SharedRefPtr<cass::ReplicationStrategy>(new cass::SimpleStrategy("", 2));
+  TestTokenMap<cass::Murmur3Partitioner> test_drop_keyspace;
 
   test_drop_keyspace.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
-  test_drop_keyspace.tokens[0] = create_host("1.0.0.2");
+  test_drop_keyspace.tokens[0]                  = create_host("1.0.0.2");
   test_drop_keyspace.tokens[CASS_INT64_MAX / 2] = create_host("1.0.0.3");
 
-  test_drop_keyspace.build(cass::Murmur3Partitioner::PARTITIONER_CLASS, "test");
+  test_drop_keyspace.build("ks", 2);
+  test_drop_keyspace.verify();
 
-  cass::TokenMap& token_map = test_drop_keyspace.token_map;
+  cass::TokenMap* token_map = test_drop_keyspace.token_map.get();
 
   {
-    const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", "abc");
+    const cass::CopyOnWriteHostVec& replicas = token_map->get_replicas("ks", "abc");
 
-    BOOST_REQUIRE(replicas->size() == 2);
-    BOOST_CHECK((*replicas)[0]->address() == cass::Address("1.0.0.1", 9042));
-    BOOST_CHECK((*replicas)[1]->address() == cass::Address("1.0.0.2", 9042));
+    BOOST_REQUIRE(replicas && replicas->size() == 2);
+    BOOST_CHECK_EQUAL((*replicas)[0]->address(), cass::Address("1.0.0.1", 9042));
+    BOOST_CHECK_EQUAL((*replicas)[1]->address(), cass::Address("1.0.0.2", 9042));
   }
 
-  token_map.drop_keyspace("test");
+  token_map->drop_keyspace("ks");
 
   {
-    const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", "abc");
+    const cass::CopyOnWriteHostVec& replicas = token_map->get_replicas("ks", "abc");
 
-    BOOST_REQUIRE(replicas->size() == 0);
+    BOOST_CHECK(!replicas);
   }
 }
-
-
 
 BOOST_AUTO_TEST_SUITE_END()

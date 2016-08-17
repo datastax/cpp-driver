@@ -56,8 +56,6 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseMap& responses) {
 
   if (MultipleRequestHandler::get_result_response(responses, "local", &local_result) &&
       local_result->row_count() > 0) {
-    local_result->decode_first_row();
-
     const Row* row = &local_result->first_row();
 
     const Value* v = row->get_by_name("schema_version");
@@ -71,8 +69,6 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseMap& responses) {
 
   ResultResponse* peers_result;
   if (MultipleRequestHandler::get_result_response(responses, "peers", &peers_result)) {
-    peers_result->decode_first_row();
-
     ResultIterator rows(peers_result);
     while (rows.next()) {
       const Row* row = rows.row();
@@ -109,9 +105,8 @@ void SchemaChangeHandler::on_set(const ResponseMap& responses) {
       has_error = true;
     }
   }
-  if (has_error) return;
 
-  if (has_schema_agreement(responses)) {
+  if (!has_error && has_schema_agreement(responses)) {
     LOG_DEBUG("Found schema agreement in %llu ms",
               static_cast<unsigned long long>(elapsed_ms_));
     request_handler_->set_response(request_response_);

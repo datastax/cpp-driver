@@ -165,8 +165,6 @@ int main(int argc, char* argv[]) {
 
   const char* items[] = { "apple", "orange", "banana", "mango", NULL };
 
-  cass_cluster_set_protocol_version(cluster, 2);
-
   if (argc > 1) {
     hosts = argv[1];
   }

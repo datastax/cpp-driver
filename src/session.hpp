@@ -33,6 +33,7 @@
 #include "row.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
+#include "token_map.hpp"
 
 #include <list>
 #include <memory>
@@ -106,6 +107,10 @@ public:
 
   int protocol_version() const {
     return control_connection_.protocol_version();
+  }
+
+  const VersionNumber& cassandra_version() const {
+    return control_connection_.cassandra_version();
   }
 
 private:
@@ -196,6 +201,8 @@ private:
 
   IOWorkerVec io_workers_;
   ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
+
+  ScopedPtr<TokenMap> token_map_;
   Metadata metadata_;
   ScopedPtr<Random> random_;
   ControlConnection control_connection_;

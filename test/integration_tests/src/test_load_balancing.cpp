@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(round_robin)
 
   cass_cluster_set_load_balance_round_robin(cluster.get());
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
   wait_for_total_connections(session, 3);
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(dc_aware)
 
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", 1, cass_false);
 
-  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
   wait_for_total_connections(session, 3);
@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(blacklist)
   {
     cass_cluster_set_blacklist_filtering(cluster.get(), host2.c_str());
 
-    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
     wait_for_total_connections(session, 1);
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(blacklist_dc)
   {
     cass_cluster_set_blacklist_dc_filtering(cluster.get(), "dc2");
 
-    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
     wait_for_total_connections(session, 2);
@@ -228,7 +228,7 @@ BOOST_AUTO_TEST_CASE(blacklist_dc)
   {
     cass_cluster_set_blacklist_dc_filtering(cluster.get(), "");
 
-    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
 
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
     wait_for_total_connections(session, 4);

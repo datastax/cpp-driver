@@ -66,14 +66,17 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   const CassSchemaMeta* schema_meta_;
 
   TestSchemaMetadata()
-    : SingleSessionTest(1, 0)
-    , schema_meta_(NULL) {}
+    : SingleSessionTest(1, 0, false)
+    , schema_meta_(NULL) {
+    cass_cluster_set_token_aware_routing(cluster, cass_false);
+    create_session();
+  }
 
-	~TestSchemaMetadata() {
+  ~TestSchemaMetadata() {
     if (schema_meta_) {
       cass_schema_meta_free(schema_meta_);
-		}
-	}
+    }
+  }
 
   void verify_keyspace_created(const std::string& ks) {
     test_utils::CassResultPtr result;
@@ -110,23 +113,23 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     } else {
       schema_meta_ = cass_session_get_schema_meta(session);
     }
-	}
+  }
 
   void create_simple_strategy_keyspace(unsigned int replication_factor = 1, bool durable_writes = true) {
-		test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % SIMPLE_STRATEGY_KEYSPACE_NAME));
+    test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % SIMPLE_STRATEGY_KEYSPACE_NAME));
     test_utils::execute_query(session, str(boost::format("CREATE KEYSPACE %s WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %s } AND durable_writes = %s")
                                            % SIMPLE_STRATEGY_KEYSPACE_NAME % replication_factor % (durable_writes ? "true" : "false")));
     refresh_schema_meta();
-	}
+  }
 
   void create_network_topology_strategy_keyspace(unsigned int replicationFactorDataCenterOne = 3, unsigned int replicationFactorDataCenterTwo = 2, bool isDurableWrites = true) {
-		test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % NETWORK_TOPOLOGY_KEYSPACE_NAME));
+    test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % NETWORK_TOPOLOGY_KEYSPACE_NAME));
     test_utils::execute_query(session, str(boost::format("CREATE KEYSPACE %s WITH replication = { 'class' : 'NetworkTopologyStrategy',  'dc1' : %d, 'dc2' : %d } AND durable_writes = %s")
                                            % NETWORK_TOPOLOGY_KEYSPACE_NAME % replicationFactorDataCenterOne % replicationFactorDataCenterTwo
                                            % (isDurableWrites ? "true" : "false")));
 
     refresh_schema_meta();
-	}
+  }
 
   const CassKeyspaceMeta* schema_get_keyspace(const std::string& ks_name) {
     const CassKeyspaceMeta* ks_meta = cass_schema_meta_keyspace_by_name(schema_meta_, ks_name.c_str());
@@ -675,6 +678,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
 
     test_utils::execute_query(session, "USE " SIMPLE_STRATEGY_KEYSPACE_NAME);
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_TABLE_ALL_TYPES) % ALL_DATA_TYPES_TABLE_NAME));
+    refresh_schema_meta();
     test_utils::execute_query(session, "ALTER TABLE " ALL_DATA_TYPES_TABLE_NAME " WITH comment='" COMMENT "'");
     refresh_schema_meta();
 
@@ -1426,7 +1430,7 @@ BOOST_AUTO_TEST_CASE(frozen_types) {
  * @expected_result UDA and UDF can be looked up correctly
  */
 BOOST_AUTO_TEST_CASE(lookup) {
-  if (version < "2.1.0") return;
+  if (version < "2.2.0") return;
 
   test_utils::execute_query(session, "CREATE KEYSPACE lookup WITH replication = "
     "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");

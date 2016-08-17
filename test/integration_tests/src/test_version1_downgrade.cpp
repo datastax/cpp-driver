@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(query_after_downgrade)
         ccm->start_cluster();
       }
 
-      test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+      test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
 
       cass_cluster_set_protocol_version(cluster.get(), 2);
 
