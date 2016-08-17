@@ -2,7 +2,7 @@ title:   DataStax C/C++ Driver
 summary: DataStax C++ Driver for Apache Cassandra Documentation
 homepage: http://datastax.github.io/cpp-driver/
 sections:
-  - title:    Topics
+  - title:    Features
     prefix:   /topics
     type:     markdown
     files:   'topics/**/*.md'
