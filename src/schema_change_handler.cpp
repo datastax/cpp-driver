@@ -105,9 +105,8 @@ void SchemaChangeHandler::on_set(const ResponseMap& responses) {
       has_error = true;
     }
   }
-  if (has_error) return;
 
-  if (has_schema_agreement(responses)) {
+  if (!has_error && has_schema_agreement(responses)) {
     LOG_DEBUG("Found schema agreement in %llu ms",
               static_cast<unsigned long long>(elapsed_ms_));
     request_handler_->set_response(request_response_);
