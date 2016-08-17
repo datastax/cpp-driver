@@ -125,11 +125,11 @@ public:
     }
   }
 
-  bool operator==(const T* ptr) {
+  bool operator==(const T* ptr) const {
     return ptr_ == ptr;
   }
 
-  bool operator==(const SharedRefPtr<T>& ref) {
+  bool operator==(const SharedRefPtr<T>& ref) const {
     return ptr_ == ref.ptr_;
   }
 

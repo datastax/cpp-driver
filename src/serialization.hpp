@@ -124,16 +124,16 @@ inline void encode_int64(char* output, cass_int64_t value) {
   output[7] = static_cast<char>(value >> 0);
 }
 
-inline void encode_uint64(uint8_t* output, uint64_t value) {
+inline void encode_uint64(char* output, uint64_t value) {
   STATIC_ASSERT(sizeof(cass_uint64_t) == 8);
-  output[0] = static_cast<uint8_t>(value >> 56);
-  output[1] = static_cast<uint8_t>(value >> 48);
-  output[2] = static_cast<uint8_t>(value >> 40);
-  output[3] = static_cast<uint8_t>(value >> 32);
-  output[4] = static_cast<uint8_t>(value >> 24);
-  output[5] = static_cast<uint8_t>(value >> 16);
-  output[6] = static_cast<uint8_t>(value >> 8);
-  output[7] = static_cast<uint8_t>(value >> 0);
+  output[0] = static_cast<char>(static_cast<uint8_t>(value >> 56));
+  output[1] = static_cast<char>(static_cast<uint8_t>(value >> 48));
+  output[2] = static_cast<char>(static_cast<uint8_t>(value >> 40));
+  output[3] = static_cast<char>(static_cast<uint8_t>(value >> 32));
+  output[4] = static_cast<char>(static_cast<uint8_t>(value >> 24));
+  output[5] = static_cast<char>(static_cast<uint8_t>(value >> 16));
+  output[6] = static_cast<char>(static_cast<uint8_t>(value >> 8));
+  output[7] = static_cast<char>(static_cast<uint8_t>(value >> 0));
 }
 
 inline char* decode_int64(char* input, cass_int64_t& output) {

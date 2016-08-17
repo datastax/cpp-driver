@@ -59,7 +59,6 @@ const CassResult* cass_future_get_result(CassFuture* future) {
   cass::SharedRefPtr<cass::ResultResponse> result(response_future->response());
   if (!result) return NULL;
 
-  result->decode_first_row();
   result->inc_ref();
   return CassResult::to(result.get());
 }

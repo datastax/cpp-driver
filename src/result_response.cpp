@@ -288,7 +288,9 @@ char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>*
 }
 
 void ResultResponse::decode_first_row() {
-  if (row_count_ > 0) {
+  if (row_count_ > 0 &&
+      metadata_ && // Valid metadata required for column count
+      first_row_.values.empty()) { // Only decode the first row once
     first_row_.values.reserve(column_count());
     rows_ = decode_row(rows_, this, first_row_.values);
   }
@@ -297,6 +299,7 @@ void ResultResponse::decode_first_row() {
 bool ResultResponse::decode_rows(char* input) {
   char* buffer = decode_metadata(input, &metadata_);
   rows_ = decode_int32(buffer, row_count_);
+  decode_first_row();
   return true;
 }
 

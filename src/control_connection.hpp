@@ -19,7 +19,6 @@
 
 #include "address.hpp"
 #include "connection.hpp"
-#include "token_map.hpp"
 #include "handler.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
@@ -27,6 +26,9 @@
 #include "multiple_request_handler.hpp"
 #include "response.hpp"
 #include "scoped_ptr.hpp"
+#include "token_map.hpp"
+
+#include <stdint.h>
 
 namespace cass {
 
@@ -55,6 +57,10 @@ public:
 
   int protocol_version() const {
     return protocol_version_;
+  }
+
+  const VersionNumber& cassandra_version() const {
+    return cassandra_version_;
   }
 
   const SharedRefPtr<Host>& connected_host() const;
@@ -171,6 +177,11 @@ private:
     bool is_aggregate;
   };
 
+  enum UpdateNodeType {
+    ADD_NODE,
+    UPDATE_NODE
+  };
+
   void schedule_reconnect(uint64_t ms = 0);
   void reconnect(bool retry_current_host);
 
@@ -206,7 +217,7 @@ private:
                                        const RefreshNodeData& data,
                                        Response* response);
 
-  void update_node_info(SharedRefPtr<Host> host, const Row* row);
+  void update_node_info(SharedRefPtr<Host> host, const Row* row, UpdateNodeType type);
 
   void refresh_keyspace(const StringRef& keyspace_name);
   static void on_refresh_keyspace(ControlConnection* control_connection, const std::string& keyspace_name, Response* response);
@@ -239,8 +250,10 @@ private:
   ScopedPtr<QueryPlan> query_plan_;
   Host::Ptr current_host_;
   int protocol_version_;
+  VersionNumber cassandra_version_;
   std::string last_connection_error_;
-  bool should_query_tokens_;
+  bool use_schema_;
+  bool token_aware_routing_;
 
   static Address bind_any_ipv4_;
   static Address bind_any_ipv6_;

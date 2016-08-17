@@ -159,40 +159,6 @@ macro(CassUseBoost)
 endmacro()
 
 #------------------------
-# CassUseSparseHash
-#
-# Add includes required for using SparseHash.
-#
-# Input: CASS_INCLUDES
-# Output: CASS_INCLUDES
-#------------------------
-macro(CassUseSparseHash)
-  # Setup the paths and hints for sparsehash
-  set(_SPARSEHASH_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/sparsehash/")
-  set(_SPARSEHASH_ROOT_HINTS ${SPARSEHASH_ROOT_DIR} $ENV{SPARSEHASH_ROOT_DIR})
-  if(NOT WIN32)
-    set(_SPARSEHASH_ROOT_PATHS ${_SPARSEHASH_ROOT_PATHS} "/usr/" "/usr/local/")
-  endif()
-  set(_SPARSEHASH_ROOT_HINTS_AND_PATHS
-    HINTS ${_SPARSEHASH_ROOT_HINTS}
-    PATHS ${_SPARSEHASH_ROOT_PATHS})
-
-  # Ensure sparsehash headers were found
-  find_path(SPARSEHASH_INCLUDE_DIR
-    NAMES google/dense_hash_map
-    HINTS ${_SPARSEHASH_INCLUDE_DIR} ${_SPARSEHASH_ROOT_HINTS_AND_PATHS}
-    PATH_SUFFIXES include)
-  find_package_handle_standard_args(SparseJash "Could NOT find sparsehash, try to set the path to the sparsehash root folder in the system variable SPARSEHASH_ROOT_DIR"
-    SPARSEHASH_INCLUDE_DIR)
-
-  set(CASS_INCLUDES ${CASS_INCLUDES} ${SPARSEHASH_INCLUDE_DIR})
-
-  if (SPARSEHASH_INCLUDE_DIR)
-    add_definitions("-DCASS_USE_SPARSEHASH")
-  endif()
-endmacro()
-
-#------------------------
 # CassUseOpenSSL
 #
 # Add includes and libraries required for using OpenSSL.
@@ -458,8 +424,11 @@ macro(CassAddIncludes)
       ${CASS_SOURCE_DIR}/src
       ${CASS_SOURCE_DIR}/src/ssl
       ${CASS_SOURCE_DIR}/src/third_party/rapidjson
+      ${CASS_SOURCE_DIR}/src/third_party/rapidjson
+      ${CASS_SOURCE_DIR}/src/third_party/sparsehash/src
       ${CASS_INCLUDES}
       )
+  add_subdirectory(src/third_party/sparsehash)
 endmacro()
 
 #------------------------

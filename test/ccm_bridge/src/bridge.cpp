@@ -1291,7 +1291,7 @@ void CCM::Bridge::establish_libssh2_connection(AuthenticationType authentication
 
 void CCM::Bridge::open_libssh2_terminal() {
   // Open a channel; request a shell
-  while ((channel_ = libssh2_channel_open_session(session_)) == NULL
+  while (session_ != NULL && (channel_ = libssh2_channel_open_session(session_)) == NULL
     && libssh2_session_last_error(session_, NULL, NULL, FALSE) == LIBSSH2_ERROR_EAGAIN) {
     synchronize_socket();
   }
@@ -1385,6 +1385,11 @@ void CCM::Bridge::finalize_libssh2() {
 }
 
 std::string CCM::Bridge::execute_libssh2_command(const std::vector<std::string>& command) {
+  // Make sure the libssh2 session wasn't terminated
+  if (!session_) {
+    throw BridgeException("Command Cannot be Executed: libssh2 session is invalid/terminated");
+  }
+
   // Create/Open libssh2 terminal
   open_libssh2_terminal();
 
