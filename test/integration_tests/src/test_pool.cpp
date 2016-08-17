@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
     ConnectionInterruptionData ci_data = { tester.ccm.get(), 2, 0, 0 };
 
     std::string ip_prefix = tester.ccm->get_ip_prefix();
-    test_utils::initialize_contact_points(tester.cluster, ip_prefix, 2, 0);
+    test_utils::initialize_contact_points(tester.cluster, ip_prefix, 2);
     cass_cluster_set_connect_timeout(tester.cluster, 1000);
     cass_cluster_set_num_threads_io(tester.cluster, 32);
     cass_cluster_set_core_connections_per_host(tester.cluster, 4);

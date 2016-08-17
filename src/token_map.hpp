@@ -17,93 +17,37 @@
 #ifndef __CASS_TOKEN_MAP_HPP_INCLUDED__
 #define __CASS_TOKEN_MAP_HPP_INCLUDED__
 
-#include "buffer.hpp"
-#include "copy_on_write_ptr.hpp"
 #include "host.hpp"
-#include "replication_strategy.hpp"
-#include "scoped_ptr.hpp"
-#include "string_ref.hpp"
 
-#include <map>
-#include <vector>
+#include <string>
 
 namespace cass {
 
-typedef std::vector<StringRef> TokenStringList;
-
-class Partitioner {
-public:
-  virtual ~Partitioner() {}
-  virtual Token token_from_string_ref(const StringRef& token_string_ref) const = 0;
-  virtual Token hash(const uint8_t* data, size_t size) const = 0;
-};
+class VersionNumber;
+class Value;
+class ResultResponse;
+class StringRef;
 
 class TokenMap {
 public:
-  virtual ~TokenMap() {}
+  static TokenMap* from_partitioner(StringRef partitioner);
 
-  void clear();
-  void build();
+  virtual ~TokenMap() { }
 
-  void set_partitioner(const std::string& partitioner_class);
-  void update_host(SharedRefPtr<Host>& host, const TokenStringList& token_strings);
-  void remove_host(SharedRefPtr<Host>& host);
-  void update_keyspace(const std::string& ks_name, const KeyspaceMetadata& ks_meta);
-  void drop_keyspace(const std::string& ks_name);
-  const CopyOnWriteHostVec& get_replicas(const std::string& ks_name,
-                                         const std::string& routing_key) const;
+  virtual void add_host(const Host::Ptr& host, const Value* tokens) = 0;
+  virtual void update_host_and_build(const Host::Ptr& host, const Value* tokens) = 0;
+  virtual void remove_host_and_build(const Host::Ptr& host) = 0;
+  virtual void clear_tokens_and_hosts() = 0;
 
-  // Testing only
-  void set_replication_strategy(const std::string& ks_name,
-                                const SharedRefPtr<ReplicationStrategy>& strategy);
+  virtual void add_keyspaces(const VersionNumber& cassandra_version, ResultResponse* result) = 0;
+  virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, ResultResponse* result) = 0;
+  virtual void drop_keyspace(const std::string& keyspace_name) = 0;
+  virtual void clear_replicas_and_strategies() = 0;
 
-private:
-  void map_replicas(bool force = false);
-  void map_keyspace_replicas(const std::string& ks_name,
-                             const SharedRefPtr<ReplicationStrategy>& strategy,
-                             bool force = false);
-  bool purge_address(const Address& addr);
+  virtual void build() = 0;
 
-protected:
-  TokenHostMap token_map_;
-
-  typedef std::map<std::string, TokenReplicaMap> KeyspaceReplicaMap;
-  KeyspaceReplicaMap keyspace_replica_map_;
-
-  typedef std::map<std::string, SharedRefPtr<ReplicationStrategy> > KeyspaceStrategyMap;
-  KeyspaceStrategyMap keyspace_strategy_map_;
-
-  typedef std::set<Address> AddressSet;
-  AddressSet mapped_addresses_;
-
-  ScopedPtr<Partitioner> partitioner_;
-};
-
-
-class Murmur3Partitioner : public Partitioner {
-public:
-  static const std::string PARTITIONER_CLASS;
-
-  virtual Token token_from_string_ref(const StringRef& token_string_ref) const;
-  virtual Token hash(const uint8_t* data, size_t size) const;
-};
-
-
-class RandomPartitioner : public Partitioner {
-public:
-  static const std::string PARTITIONER_CLASS;
-
-  virtual Token token_from_string_ref(const StringRef& token_string_ref) const;
-  virtual Token hash(const uint8_t* data, size_t size) const;
-};
-
-
-class ByteOrderedPartitioner : public Partitioner {
-public:
-  static const std::string PARTITIONER_CLASS;
-
-  virtual Token token_from_string_ref(const StringRef& token_string_ref) const;
-  virtual Token hash(const uint8_t* data, size_t size) const;
+  virtual const CopyOnWriteHostVec& get_replicas(const std::string& keyspace_name,
+                                                 const std::string& routing_key) const = 0;
 };
 
 } // namespace cass

@@ -45,6 +45,10 @@ public:
     return *this;
   }
 
+  operator bool() const {
+    return ptr_->ref != NULL;
+  }
+
   const T& operator*() const {
     return *(ptr_->ref);
   }

@@ -26,12 +26,12 @@
 #include "murmur3.hpp"
 #include "query_request.hpp"
 #include "token_aware_policy.hpp"
-#include "token_map.hpp"
-#include "replication_strategy.hpp"
 #include "whitelist_policy.hpp"
 #include "blacklist_policy.hpp"
 #include "whitelist_dc_policy.hpp"
 #include "blacklist_dc_policy.hpp"
+
+#include "test_token_map_utils.hpp"
 
 #include <boost/chrono.hpp>
 #include <boost/lexical_cast.hpp>
@@ -160,20 +160,18 @@ BOOST_AUTO_TEST_CASE(simple) {
   cass::RoundRobinPolicy policy;
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-
   // start on first elem
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
   const size_t seq1[] = {1, 2};
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
 
   // rotate starting element
-  boost::scoped_ptr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL, NULL));
   const size_t seq2[] = {2, 1};
   verify_sequence(qp2.get(), VECTOR_FROM(size_t, seq2));
 
   // back around
-  boost::scoped_ptr<cass::QueryPlan> qp3(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp3(policy.new_query_plan("ks", NULL, NULL, NULL));
   verify_sequence(qp3.get(), VECTOR_FROM(size_t, seq1));
 }
 
@@ -185,10 +183,8 @@ BOOST_AUTO_TEST_CASE(on_add)
   cass::RoundRobinPolicy policy;
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-
   // baseline
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
   const size_t seq1[] = {1, 2};
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
 
@@ -197,7 +193,7 @@ BOOST_AUTO_TEST_CASE(on_add)
   cass::SharedRefPtr<cass::Host> host = host_for_addr(addr_new);
   policy.on_add(host);
 
-  boost::scoped_ptr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL, NULL));
   const size_t seq2[] = {2, seq_new, 1};
   verify_sequence(qp2.get(), VECTOR_FROM(size_t, seq2));
 }
@@ -210,13 +206,11 @@ BOOST_AUTO_TEST_CASE(on_remove)
   cass::RoundRobinPolicy policy;
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
   cass::SharedRefPtr<cass::Host> host = hosts.begin()->second;
   policy.on_remove(host);
 
-  boost::scoped_ptr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL, NULL));
 
   // first query plan has it
   // (note: not manipulating Host::state_ for dynamic removal)
@@ -236,10 +230,8 @@ BOOST_AUTO_TEST_CASE(on_down_on_up)
   cass::RoundRobinPolicy policy;
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-
-  boost::scoped_ptr<cass::QueryPlan> qp_before1(policy.new_query_plan("ks", NULL, tokenMap, NULL));
-  boost::scoped_ptr<cass::QueryPlan> qp_before2(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp_before1(policy.new_query_plan("ks", NULL, NULL, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp_before2(policy.new_query_plan("ks", NULL, NULL, NULL));
   cass::SharedRefPtr<cass::Host> host = hosts.begin()->second;
   policy.on_down(host);
 
@@ -260,8 +252,8 @@ BOOST_AUTO_TEST_CASE(on_down_on_up)
   // host is added to the list, but not 'up'
   policy.on_up(host);
 
-  boost::scoped_ptr<cass::QueryPlan> qp_after1(policy.new_query_plan("ks", NULL, tokenMap, NULL));
-  boost::scoped_ptr<cass::QueryPlan> qp_after2(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp_after1(policy.new_query_plan("ks", NULL, NULL, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp_after2(policy.new_query_plan("ks", NULL, NULL, NULL));
 
   // 1 is dynamically excluded from plan
   {
@@ -278,7 +270,7 @@ BOOST_AUTO_TEST_CASE(on_down_on_up)
   }
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END() // round_robin_lb
 
 
 BOOST_AUTO_TEST_SUITE(dc_aware_lb)
@@ -291,9 +283,8 @@ void test_dc_aware_policy(size_t local_count, size_t remote_count) {
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
   const size_t total_hosts = local_count + remote_count;
-  cass::TokenMap tokenMap;
 
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
   std::vector<size_t> seq(total_hosts);
   for (size_t i = 0; i < total_hosts; ++i) seq[i] = i + 1;
   verify_sequence(qp.get(), seq);
@@ -317,8 +308,7 @@ BOOST_AUTO_TEST_CASE(some_dc_local_unspecified)
   cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
 
   const size_t seq[] = {2, 3, 1};
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
@@ -334,12 +324,10 @@ BOOST_AUTO_TEST_CASE(single_local_down)
   cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-
-  boost::scoped_ptr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, tokenMap, NULL));// has down host ptr in plan
+  boost::scoped_ptr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL, NULL));// has down host ptr in plan
   target_host->set_down();
   policy.on_down(target_host);
-  boost::scoped_ptr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, tokenMap, NULL));// should not have down host ptr in plan
+  boost::scoped_ptr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL, NULL));// should not have down host ptr in plan
 
   {
     const size_t seq[] = {2, 3, 4};
@@ -362,12 +350,10 @@ BOOST_AUTO_TEST_CASE(all_local_removed_returned)
   cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-
-  boost::scoped_ptr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, tokenMap, NULL));// has down host ptr in plan
+  boost::scoped_ptr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL, NULL));// has down host ptr in plan
   target_host->set_down();
   policy.on_down(target_host);
-  boost::scoped_ptr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, tokenMap, NULL));// should not have down host ptr in plan
+  boost::scoped_ptr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL, NULL));// should not have down host ptr in plan
 
   {
     const size_t seq[] = {2};
@@ -379,7 +365,7 @@ BOOST_AUTO_TEST_CASE(all_local_removed_returned)
   policy.on_up(target_host);
 
   // make sure we get the local node first after on_up
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
   {
     const size_t seq[] = {1, 2};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
@@ -397,12 +383,10 @@ BOOST_AUTO_TEST_CASE(remote_removed_returned)
   cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-
-  boost::scoped_ptr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, tokenMap, NULL));// has down host ptr in plan
+  boost::scoped_ptr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL, NULL));// has down host ptr in plan
   target_host->set_down();
   policy.on_down(target_host);
-  boost::scoped_ptr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, tokenMap, NULL));// should not have down host ptr in plan
+  boost::scoped_ptr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL, NULL));// should not have down host ptr in plan
 
   {
     const size_t seq[] = {1};
@@ -414,7 +398,7 @@ BOOST_AUTO_TEST_CASE(remote_removed_returned)
   policy.on_up(target_host);
 
   // make sure we get both nodes, correct order after
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
   {
     const size_t seq[] = {1, 2};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
@@ -431,7 +415,7 @@ BOOST_AUTO_TEST_CASE(used_hosts_per_remote_dc)
     cass::DCAwarePolicy policy(LOCAL_DC, used_hosts, false);
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, cass::TokenMap(), NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
     size_t total_hosts = 3 + used_hosts;
     std::vector<size_t> seq(total_hosts);
     for (size_t i = 0; i < total_hosts; ++i) seq[i] = i + 1;
@@ -456,7 +440,7 @@ BOOST_AUTO_TEST_CASE(allow_remote_dcs_for_local_cl)
     request->set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
 
     // Check for only local hosts are used
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request.get(), cass::TokenMap(), NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request.get(), NULL, NULL));
     const size_t seq[] = {1, 2, 3};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -472,7 +456,7 @@ BOOST_AUTO_TEST_CASE(allow_remote_dcs_for_local_cl)
     request->set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
 
     // Check for only local hosts are used
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request.get(), cass::TokenMap(), NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request.get(), NULL, NULL));
     const size_t seq[] = {1, 2, 3, 4, 5, 6};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -487,9 +471,9 @@ BOOST_AUTO_TEST_CASE(start_with_empty_local_dc)
   // Set local DC using connected host
   {
     cass::DCAwarePolicy policy("", 0, false);
-    policy.init(hosts[cass::Address("2.0.0.0", 4092)], hosts);
+    policy.init(hosts[cass::Address("2.0.0.0", 9042)], hosts);
 
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, cass::TokenMap(), NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
     const size_t seq[] = {2, 3, 4};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -498,34 +482,23 @@ BOOST_AUTO_TEST_CASE(start_with_empty_local_dc)
   {
     cass::DCAwarePolicy policy("", 0, false);
     policy.init(cass::SharedRefPtr<cass::Host>(
-                  new cass::Host(cass::Address("0.0.0.0", 4092), false)), hosts);
+                  new cass::Host(cass::Address("0.0.0.0", 9042), false)), hosts);
 
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, cass::TokenMap(), NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
     const size_t seq[] = {1};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
 
-BOOST_AUTO_TEST_SUITE_END()
-
+BOOST_AUTO_TEST_SUITE_END() // dc_aware_lb
 
 BOOST_AUTO_TEST_SUITE(token_aware_lb)
-
-int64_t murmur3_hash(const std::string& s) {
-  return cass::MurmurHash3_x64_128(s.data(), s.size(), 0);
-}
 
 BOOST_AUTO_TEST_CASE(simple)
 {
   const int64_t num_hosts = 4;
   cass::HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
-  cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy());
-  cass::TokenMap token_map;
-
-  token_map.set_partitioner(cass::Murmur3Partitioner::PARTITIONER_CLASS);
-  cass::SharedRefPtr<cass::ReplicationStrategy> strategy(new cass::SimpleStrategy("", 3));
-  token_map.set_replication_strategy("test", strategy);
 
   // Tokens
   // 1.0.0.0 -4611686018427387905
@@ -533,17 +506,21 @@ BOOST_AUTO_TEST_CASE(simple)
   // 3.0.0.0  4611686018427387901
   // 4.0.0.0  9223372036854775804
 
+  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
+
   uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  int64_t t = CASS_INT64_MIN + partition_size;
+  int64_t token = CASS_INT64_MIN + partition_size;
   for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
-    std::string ts = boost::lexical_cast<std::string>(t);
-    cass::TokenStringList tokens;
-    tokens.push_back(cass::StringRef(ts));
-    token_map.update_host(i->second, tokens);
-    t += partition_size;
+    TokenCollectionBuilder builder;
+    builder.append_token(token);
+    token_map->add_host(i->second, builder.finish());
+    token += partition_size;
   }
 
-  token_map.build();
+  add_keyspace_simple("test", 3, token_map.get());
+  token_map->build();
+
+  cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy());
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
@@ -552,7 +529,7 @@ BOOST_AUTO_TEST_CASE(simple)
   request->add_key_index(0);
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map, NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map.get(), NULL));
     const size_t seq[] = { 4, 1, 2, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -562,7 +539,7 @@ BOOST_AUTO_TEST_CASE(simple)
   curr_host_it->second->set_down();
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map, NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map.get(), NULL));
     const size_t seq[] = { 2, 4, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -575,7 +552,7 @@ BOOST_AUTO_TEST_CASE(simple)
   curr_host_it->second->set_down();
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map, NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map.get(), NULL));
     const size_t seq[] = { 2, 1, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -595,16 +572,6 @@ BOOST_AUTO_TEST_CASE(network_topology)
     }
   }
 
-  cass::TokenAwarePolicy policy(new cass::DCAwarePolicy(LOCAL_DC, num_hosts / 2, false));
-  cass::TokenMap token_map;
-
-  token_map.set_partitioner(cass::Murmur3Partitioner::PARTITIONER_CLASS);
-  cass::NetworkTopologyStrategy::DCReplicaCountMap replication_factors;
-  replication_factors[LOCAL_DC] = 3;
-  replication_factors[REMOTE_DC] = 2;
-  cass::SharedRefPtr<cass::ReplicationStrategy> strategy(new cass::NetworkTopologyStrategy("", replication_factors));
-  token_map.set_replication_strategy("test", strategy);
-
   // Tokens
   // 1.0.0.0 local  -6588122883467697006
   // 2.0.0.0 remote -3952873730080618204
@@ -614,17 +581,24 @@ BOOST_AUTO_TEST_CASE(network_topology)
   // 6.0.0.0 remote  6588122883467697004
   // 7.0.0.0 local   9223372036854775806
 
+  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
+
   uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  int64_t t = CASS_INT64_MIN + partition_size;
+  int64_t token = CASS_INT64_MIN + partition_size;
   for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
-    std::string ts = boost::lexical_cast<std::string>(t);
-    cass::TokenStringList tokens;
-    tokens.push_back(cass::StringRef(ts));
-    token_map.update_host(i->second, tokens);
-    t += partition_size;
+    TokenCollectionBuilder builder;
+    builder.append_token(token);
+    token_map->add_host(i->second, builder.finish());
+    token += partition_size;
   }
 
-  token_map.build();
+  ReplicationMap replication;
+  replication[LOCAL_DC] = "3";
+  replication[REMOTE_DC] = "2";
+  add_keyspace_network_topology("test", replication, token_map.get());
+  token_map->build();
+
+  cass::TokenAwarePolicy policy(new cass::DCAwarePolicy(LOCAL_DC, num_hosts / 2, false));
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
@@ -633,7 +607,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   request->add_key_index(0);
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map, NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map.get(), NULL));
     const size_t seq[] = { 3, 5, 7, 1, 4, 6, 2 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -643,7 +617,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   curr_host_it->second->set_down();
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map, NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map.get(), NULL));
     const size_t seq[] = { 3, 5, 7, 6, 2, 4 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -655,13 +629,13 @@ BOOST_AUTO_TEST_CASE(network_topology)
   curr_host_it->second->set_down();
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map, NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request.get(), token_map.get(), NULL));
     const size_t seq[] = { 5, 7, 1, 2, 4, 6 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END() // token_aware_lb
 
 BOOST_AUTO_TEST_SUITE(latency_aware_lb)
 
@@ -765,7 +739,7 @@ BOOST_AUTO_TEST_CASE(simple)
 
   // 1 and 4  are under the minimum, but 2 and 3 will be skipped
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("", NULL, cass::TokenMap(), NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("", NULL, NULL, NULL));
     const size_t seq1[] = {1, 4, 2, 3};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   }
@@ -775,7 +749,7 @@ BOOST_AUTO_TEST_CASE(simple)
 
   // After waiting no hosts should be skipped (notice 2 and 3 tried first)
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("", NULL, cass::TokenMap(), NULL));
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("", NULL, NULL, NULL));
     const size_t seq1[] = {2, 3, 4, 1};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   }
@@ -815,7 +789,7 @@ BOOST_AUTO_TEST_CASE(min_average_under_min_measured)
   BOOST_CHECK(policy.min_average() == -1);
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END() // latency_aware_lb
 
 BOOST_AUTO_TEST_SUITE(whitelist_lb)
 
@@ -830,8 +804,7 @@ BOOST_AUTO_TEST_CASE(simple)
   cass::WhitelistPolicy policy(new cass::RoundRobinPolicy(), whitelist_hosts);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
 
   // Verify only hosts 37 and 83 are computed in the query plan
   const size_t seq1[] = { 37, 83 };
@@ -853,8 +826,7 @@ BOOST_AUTO_TEST_CASE(dc)
   cass::WhitelistDCPolicy policy(new cass::RoundRobinPolicy(), whitelist_dcs);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
 
   // Verify only hosts LOCAL_DC and REMOTE_DC are computed in the query plan
   const size_t seq1[] = { 1, 2, 3, 7, 8, 9 };
@@ -864,7 +836,7 @@ BOOST_AUTO_TEST_CASE(dc)
   BOOST_REQUIRE(!qp.get()->compute_next(&next_address));
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END() // whitelist_lb
 
 BOOST_AUTO_TEST_SUITE(blacklist_lb)
 
@@ -879,8 +851,7 @@ BOOST_AUTO_TEST_CASE(simple)
   cass::BlacklistPolicy policy(new cass::RoundRobinPolicy(), blacklist_hosts);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
 
   // Verify only hosts 1, 4 and 5 are computed in the query plan
   const size_t seq1[] = { 1, 4, 5 };
@@ -902,8 +873,7 @@ BOOST_AUTO_TEST_CASE(dc)
   cass::BlacklistDCPolicy policy(new cass::RoundRobinPolicy(), blacklist_dcs);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
-  cass::TokenMap tokenMap;
-  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL, NULL));
 
   // Verify only hosts from BACKUP_DC are computed in the query plan
   const size_t seq1[] = { 4, 5, 6 };
@@ -913,4 +883,4 @@ BOOST_AUTO_TEST_CASE(dc)
   BOOST_REQUIRE(!qp.get()->compute_next(&next_address));
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END() // blacklist_lb

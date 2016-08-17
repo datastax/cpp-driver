@@ -135,11 +135,11 @@ struct TestSSL {
    */
   void setup(bool is_ssl = true, bool is_client_authentication = false, bool is_failure = false, unsigned int nodes = 1, unsigned int protocol_version = 2) {
     //Create a n-node cluster
-    ccm_->create_cluster(nodes, 0, is_ssl, is_client_authentication);
+    ccm_->create_cluster(nodes, 0, false, is_ssl, is_client_authentication);
 
     //Initialize the cpp-driver
     cluster_ = cass_cluster_new();
-    test_utils::initialize_contact_points(cluster_, ccm_->get_ip_prefix(), nodes, 0);
+    test_utils::initialize_contact_points(cluster_, ccm_->get_ip_prefix(), nodes);
     cass_cluster_set_connect_timeout(cluster_, 10000);
     cass_cluster_set_request_timeout(cluster_, 10000);
     cass_cluster_set_num_threads_io(cluster_, 1);

@@ -24,11 +24,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#ifdef CASS_USE_SPARSEHASH
-#include <google/dense_hash_map>
-#else
-#include <map>
-#endif
+#include <sparsehash/dense_hash_map>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -44,12 +40,10 @@ public:
       , num_words_(max_streams_ / NUM_BITS_PER_WORD)
       , offset_(0)
       , words_(new word_t[num_words_]) {
-#ifdef CASS_USE_SPARSEHASH
     // Client request stream IDs are always positive values so it's
     // safe to use negative values for the empty and deleted keys.
     pending_.set_empty_key(-1);
     pending_.set_deleted_key(-2);
-#endif
     memset(words_.get(), 0xFF, sizeof(word_t) * num_words_);
   }
 
@@ -82,11 +76,7 @@ public:
   size_t max_streams() const { return max_streams_; }
 
 private:
-#ifdef CASS_USE_SPARSEHASH
-  typedef google::dense_hash_map<int, T> PendingMap;
-#else
-  typedef std::map<int, T> PendingMap;
-#endif
+  typedef sparsehash::dense_hash_map<int, T> PendingMap;
 
 #if defined(_MSC_VER) && defined(_M_AMD64)
   typedef __int64 word_t;

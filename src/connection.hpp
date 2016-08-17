@@ -20,6 +20,7 @@
 #include "buffer.hpp"
 #include "cassandra.h"
 #include "handler.hpp"
+#include "hash.hpp"
 #include "host.hpp"
 #include "list.hpp"
 #include "macros.hpp"
