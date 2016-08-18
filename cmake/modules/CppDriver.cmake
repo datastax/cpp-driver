@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 2.6.4)
 # Includes
 #-----------
 include(FindPackageHandleStandardArgs)
+include(CheckCXXSymbolExists)
 
 #-----------
 # Policies
@@ -305,10 +306,10 @@ macro(CassSetCompilerFlags)
   # Enable specific cass::Atomic implementation
   if(CASS_USE_BOOST_ATOMIC)
     message(STATUS "Using boost::atomic implementation for atomic operations")
-    add_definitions(-DCASS_USE_BOOST_ATOMIC)
+    set(HAVE_BOOST_ATOMIC 1)
   elseif(CASS_USE_STD_ATOMIC)
     message(STATUS "Using std::atomic implementation for atomic operations")
-    add_definitions(-DCASS_USE_STD_ATOMIC)
+    set(HAVE_STD_ATOMIC 1)
   endif()
 
   # Assign compiler specific flags
@@ -478,7 +479,7 @@ macro(CassFindSourceFiles)
     set(SRC_FILES ${SRC_FILES}
       ${CASS_SOURCE_DIR}/src/ssl/ssl_openssl_impl.cpp
       ${CASS_SOURCE_DIR}/src/ssl/ring_buffer_bio.cpp)
-    add_definitions(-DCASS_USE_OPENSSL)
+    set(HAVE_OPENSSL 1)
   else()
     set(INC_FILES ${INC_FILES}
       ${CASS_SOURCE_DIR}/src/ssl/ssl_no_impl.hpp)
@@ -493,4 +494,13 @@ macro(CassFindSourceFiles)
     string(REPLACE "${CMAKE_SOURCE_DIR}/" "" LOG_FILE_ ${SRC_FILE})
     set_source_files_properties(${SRC_FILE} PROPERTIES COMPILE_FLAGS -DLOG_FILE_=\\\"${LOG_FILE_}\\\")
   endforeach()
+endmacro()
+
+macro(CassConfigure)
+  check_cxx_symbol_exists(SO_NOSIGPIPE "sys/socket.h;sys/types.h" HAVE_NOSIGPIPE)
+  check_cxx_symbol_exists(sigtimedwait "signal.h" HAVE_SIGTIMEDWAIT)
+  if (NOT WIN32 AND NOT HAVE_NOSIGPIPE AND NOT HAVE_SIGTIMEDWAIT)
+    message(WARNING "Unable to handle SIGPIPE on your platform")
+  endif()
+  configure_file(${CASS_SOURCE_DIR}/cassconfig.hpp.in ${CASS_SOURCE_DIR}/src/cassconfig.hpp)
 endmacro()

@@ -50,6 +50,7 @@ Testing
 Debug
 demo/cassandra_demo
 test/unit_tests/cassandra_test
+src/cassconfig.hpp
 
 # API docs files
 Doxyfile

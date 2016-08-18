@@ -20,6 +20,7 @@
 #include "auth_requests.hpp"
 #include "auth_responses.hpp"
 #include "cassandra.h"
+#include "cassconfig.hpp"
 #include "constants.hpp"
 #include "connector.hpp"
 #include "timer.hpp"
@@ -34,6 +35,11 @@
 #include "event_response.hpp"
 #include "logger.hpp"
 #include "utils.hpp"
+
+#ifdef HAVE_NOSIGPIPE
+#include <sys/socket.h>
+#include <sys/types.h>
+#endif
 
 #include <iomanip>
 #include <sstream>
@@ -198,6 +204,16 @@ Connection::Connection(uv_loop_t* loop,
     , heartbeat_outstanding_(false) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
+
+
+#ifdef HAVE_NOSIGPIPE
+  uv_os_fd_t fd = 0;
+  int enabled = 1;
+  if (uv_fileno(copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_), &fd) != 0 ||
+      setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&enabled, sizeof(int)) != 0) {
+    LOG_WARN("Unable to set socket option SO_NOSIGPIPE");
+  }
+#endif
 
   if (uv_tcp_nodelay(&socket_,
                      config.tcp_nodelay_enable() ? 1 : 0) != 0) {
