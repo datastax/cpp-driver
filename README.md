@@ -21,6 +21,7 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - [Blacklist], [whitelist DC], and [blacklist DC] load balancing policies
 - [Custom] authenticators
 - [Reverse DNS] with SSL peer identity verification support
+- Randomized contact points
 
 More information about features included in 2.3 can be found in this [blog
 post](http://www.datastax.com/dev/blog/datastax-c-driver-2-3-ga-released).

@@ -184,7 +184,6 @@ Here are some features that are missing from the C/C++ driver, but are included 
 - Query tracing
 - Event registration and notification
 - Callback interfaces for load balancing, authentication, reconnection and retry
-- Generic SASL authentication interface
 
 [`cass_int32_t`]: http://datastax.github.io/cpp-driver/api/cassandra.h/#cass-int32-t
 [`cass_result_first_row()`]: http://datastax.github.io/cpp-driver/api/CassResult/#cass-result-first-row
