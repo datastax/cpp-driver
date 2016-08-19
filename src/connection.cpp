@@ -205,16 +205,6 @@ Connection::Connection(uv_loop_t* loop,
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
 
-
-#ifdef HAVE_NOSIGPIPE
-  uv_os_fd_t fd = 0;
-  int enabled = 1;
-  if (uv_fileno(copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_), &fd) != 0 ||
-      setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&enabled, sizeof(int)) != 0) {
-    LOG_WARN("Unable to set socket option SO_NOSIGPIPE");
-  }
-#endif
-
   if (uv_tcp_nodelay(&socket_,
                      config.tcp_nodelay_enable() ? 1 : 0) != 0) {
     LOG_WARN("Unable to set tcp nodelay");
@@ -539,6 +529,18 @@ void Connection::on_connect(Connector* connector) {
     LOG_DEBUG("Connected to host %s on connection(%p)",
               connection->host_->address_string().c_str(),
               static_cast<void*>(connection));
+
+#ifdef HAVE_NOSIGPIPE
+    // This must be done after connection for the socket file descriptor to be
+    // valid.
+    uv_os_fd_t fd = 0;
+    int enabled = 1;
+    if (uv_fileno(copy_cast<uv_tcp_t*, uv_handle_t*>(&connection->socket_), &fd) != 0 ||
+        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&enabled, sizeof(int)) != 0) {
+      LOG_WARN("Unable to set socket option SO_NOSIGPIPE for host %s",
+               connection->host_->address_string().c_str());
+    }
+#endif
 
     if (connection->ssl_session_) {
       uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
