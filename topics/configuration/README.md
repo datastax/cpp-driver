@@ -53,7 +53,7 @@ in conjunction with other load balancing and routing policies.
 cass_cluster_set_token_aware_routing(cluster, cass_true);
 
 /* Disable token-aware routing */
-cass_cluster_set_token_aware_routing(cluster, cass_true);
+cass_cluster_set_token_aware_routing(cluster, cass_false);
 ```
 
 ### Latency-aware Routing

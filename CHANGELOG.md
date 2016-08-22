@@ -1,3 +1,28 @@
+2.4.3
+===========
+August 22, 2016
+
+Features
+--------
+* Contact points are now randomized by default (CPP-193)
+* Token-aware routing can be used without enabling schema metadata (CPP-387)
+* Multiple IP addresses can be resolved from a single domain (CPP-364)
+
+Other
+--------
+* Fixed issue that would cause quadradic ring processing with invalid
+  replilcation factors (CPP-298)
+* Fixed issue where schema change handler could hang if an error is returned by
+  Cassandra (CPP-381)
+* Fixed crash caused by connecting seperate sessions in multiple threads
+  (CPP-385)
+* Fixed issue where the control connection could timeout as a result of schema
+  or token map processing (CPP-388)
+* Greatly improved the performance of building the token map for token aware
+  routing (CPP-389)
+* Fixed issue where heartbeats were restarted on unresponseive connections and
+  prevented the connection from being terminated (CPP-392)
+
 2.4.2
 ===========
 June 24, 2016
