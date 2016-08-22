@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.6.4)
 # Includes
 #-----------
 include(FindPackageHandleStandardArgs)
-include(CheckCXXSymbolExists)
+include(CheckSymbolExists)
 
 #-----------
 # Policies
@@ -497,8 +497,8 @@ macro(CassFindSourceFiles)
 endmacro()
 
 macro(CassConfigure)
-  check_cxx_symbol_exists(SO_NOSIGPIPE "sys/socket.h;sys/types.h" HAVE_NOSIGPIPE)
-  check_cxx_symbol_exists(sigtimedwait "signal.h" HAVE_SIGTIMEDWAIT)
+  check_symbol_exists(SO_NOSIGPIPE "sys/socket.h;sys/types.h" HAVE_NOSIGPIPE)
+  check_symbol_exists(sigtimedwait "signal.h" HAVE_SIGTIMEDWAIT)
   if (NOT WIN32 AND NOT HAVE_NOSIGPIPE AND NOT HAVE_SIGTIMEDWAIT)
     message(WARNING "Unable to handle SIGPIPE on your platform")
   endif()
