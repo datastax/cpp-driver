@@ -33,19 +33,11 @@ The driver has been built using both Clang (Ubuntu 12.04/14.04 and OS X) and GCC
 #### CentOS/RHEL
 
 ##### Additional Requirements for CentOS/RHEL 5
-CentOS/RHEL 5 does not contain `git` in its repositories; however RepoForge
-(formerly RPMforge) has a RPM for this dependency. It can be found
-[here](http://pkgs.repoforge.org/git/).
-
-###### Download the Appropriate RepoForge Release Package
-- [32-bit](http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.i386.rpm)
-- [64-bit](http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.x86_64.rpm)
-
-###### Install Key and RPM Package
+CentOS/RHEL 5 does not contain `git` in its core repositories; however, the [EPEL] has
+this dependency.
 
 ```bash
-sudo rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
-sudo rpm -i rpmforge-release-0.5.3-1.el5.rf.*.rpm
+sudo yum -y install epel-release
 ```
 
 ##### Dependencies and libuv Installation
@@ -328,3 +320,5 @@ VC_BUILD.BAT --STATIC --ENABLE-TESTS <ABSOLUTE-PATH-TO-BOOST>
 ```
  **NOTE:** When enabling tests, --USE-BOOST-ATOMIC will use the Boost atomic
  implementation supplied by <ABSOLUTE-PATH-TO-BOOST>
+
+[EPEL]: https://fedoraproject.org/wiki/EPEL

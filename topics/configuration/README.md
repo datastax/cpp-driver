@@ -182,5 +182,5 @@ cass_cluster_set_connection_idle_timeout(cluster, 120);
 It can be disabled by setting the value to a very long timeout or by disabling
 heartbeats.
 
-[`allow_remote_dcs_for_local_cl`]: http://datastax.github.io/cpp-driver/api/CassCluster/#1a46b9816129aaa5ab61a1363489dccfd0
+[`allow_remote_dcs_for_local_cl`]: http://datastax.github.io/cpp-driver/api/struct.CassCluster/#1a46b9816129aaa5ab61a1363489dccfd0
 [`OPTIONS`]: https://github.com/apache/cassandra/blob/trunk/doc/native_protocol_v3.spec#L278-L282

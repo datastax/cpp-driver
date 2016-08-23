@@ -39,7 +39,7 @@ resize) a statement's parameters.
 
 ## Constructing Collections
 
-Collections are supported using [`CassCollection`](http://datastax.github.io/cpp-driver/api/CassCollection/) objects; supporting `list`, `map` and `set` Cassandra types. The code below shows how to construct a `list` collection; however, a set can be constructed in a very similar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`.
+Collections are supported using [`CassCollection`](http://datastax.github.io/cpp-driver/api/struct.CassCollection/) objects; supporting `list`, `map` and `set` Cassandra types. The code below shows how to construct a `list` collection; however, a set can be constructed in a very similar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`.
 
 **Important**: Values appended to the collection can be freed immediately afterward because the values are copied.
 
@@ -91,4 +91,4 @@ Custom types can be bound using either the `cass_statement_bind_bytes[_by_name](
 name of the custom type matches the class name of the type being bound.
 
 [`cass_collection_append_collection()`]:
-http://datastax.github.io/cpp-driver/api/CassCollection/#cass-collection-append-collection
+http://datastax.github.io/cpp-driver/api/struct.CassCollection/#cass-collection-append-collection

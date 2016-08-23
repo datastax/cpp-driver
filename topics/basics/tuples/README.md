@@ -90,6 +90,6 @@ while (cass_iterator_next(tuple_iterator)) {
 cass_iterator_free(tuple_iterator);
 ```
 
-[`CassTuple`]: http://datastax.github.io/cpp-driver/api/CassTuple/
-[`CassUserType`]: http://datastax.github.io/cpp-driver/api/CassUserType/
-[`cass_tuple_set_*()`]: http://datastax.github.io/cpp-driver/api/CassTuple/#cass-tuple-set-null
+[`CassTuple`]: http://datastax.github.io/cpp-driver/api/struct.CassTuple/
+[`CassUserType`]: http://datastax.github.io/cpp-driver/api/struct.CassUserType/
+[`cass_tuple_set_*()`]: http://datastax.github.io/cpp-driver/api/struct.CassTuple/#cass-tuple-set-null

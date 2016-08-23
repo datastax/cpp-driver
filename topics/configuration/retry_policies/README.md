@@ -165,7 +165,7 @@ cass_cluster_set_retry_policy(cluster, logging_policy);
 cass_retry_policy_free(default_policy);
 cass_retry_policy_free(logging_policy);
 ```
-[`cass_cluster_set_retry_policy()`]: http://datastax.github.io/cpp-driver/api/CassCluster/#cass-cluster-set-retry-policy
-[`cass_statement_set_retry_policy()`]: http://datastax.github.io/cpp-driver/api/CassStatement/#cass-statement-set-retry-policy
-[`cass_batch_set_retry_policy()`]: http://datastax.github.io/cpp-driver/api/CassBatch/#cass-batch-set-retry-policy
+[`cass_cluster_set_retry_policy()`]: http://datastax.github.io/cpp-driver/api/struct.CassCluster/#cass-cluster-set-retry-policy
+[`cass_statement_set_retry_policy()`]: http://datastax.github.io/cpp-driver/api/struct.CassStatement/#cass-statement-set-retry-policy
+[`cass_batch_set_retry_policy()`]: http://datastax.github.io/cpp-driver/api/struct.CassBatch/#cass-batch-set-retry-policy
 [`CASS_LOG_INFO`]: http://datastax.github.io/cpp-driver/api/cassandra.h/#cass-log-level

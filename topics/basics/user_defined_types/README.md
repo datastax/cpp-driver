@@ -87,7 +87,7 @@ while (cass_iterator_next(udt_iterator)) {
 /* The UDT iterator needs to be freed */
 cass_iterator_free(udt_iterator);
 ```
-[`CassSchemaMeta`]: http://datastax.github.io/cpp-driver/api/CassSchemaMeta/
-[`CassUserType`]: http://datastax.github.io/cpp-driver/api/CassUserType/
-[`CassDataType`]: http://datastax.github.io/cpp-driver/api/CassDataType/
-[`cass_session_get_schema()`]: http://datastax.github.io/cpp-driver/api/CassSession/#cass-session-get-schema
+[`CassSchemaMeta`]: http://datastax.github.io/cpp-driver/api/struct.CassSchemaMeta/
+[`CassUserType`]: http://datastax.github.io/cpp-driver/api/struct.CassUserType/
+[`CassDataType`]: http://datastax.github.io/cpp-driver/api/struct.CassDataType/
+[`cass_session_get_schema()`]: http://datastax.github.io/cpp-driver/api/struct.CassSession/#cass-session-get-schema

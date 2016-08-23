@@ -22,7 +22,19 @@ sections:
       EXTRACT_ALL = YES
       INLINE_SOURCES = NO
       ALIASES = cassandra{1}="<b>Requires Cassandra:</b> \1"
-
+rewrites:
+  - http://datastax.github.io/cpp-driver/: /
+  - https://datastax.github.io/cpp-driver/: /
+  # Compatability changes for older versions
+  - /api/Cass(.*): /api/struct.Cass\1
+  - \(/api/struct.CassValue/\): /api/struct.CassValue/
+  - \(/topics/building/: /topics/building/
+  - TODO: /api/struct.CassResult/#function-cass_result_first_row # Invalid url in v1.0
+  - CHANGELOG.md: https://github.com/datastax/cpp-driver/blob/2.1.0/CHANGELOG.md # Invalid url in v2.1
+  - https://www.openssl.org/docs/crypto/pem.html: https://en.wikipedia.org/wiki/Privacy-enhanced_Electronic_Mail
+  - http://pkgs.repoforge.org/git/: https://dl.fedoraproject.org/pub/epel/
+  - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.i386.rpm: http://dl.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
+  - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.x86_64.rpm: http://dl.fedoraproject.org/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm
 versions:
   - name: v2.4
     ref: HEAD

@@ -59,5 +59,5 @@ cass_batch_set_timestamp(batch, 123456789);
 /* Add statments to batch */
 ```
 
-[`CassStatement`]: http://datastax.github.io/cpp-driver/api/CassStatement/
-[`CassBatch`]: http://datastax.github.io/cpp-driver/api/CassBatch/
+[`CassStatement`]: http://datastax.github.io/cpp-driver/api/struct.CassStatement/
+[`CassBatch`]: http://datastax.github.io/cpp-driver/api/struct.CassBatch/

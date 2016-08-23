@@ -63,5 +63,5 @@ cass_uint8_t version = cass_uuid_version(uuid);
 char uuid_str[CASS_UUID_STRING_LENGTH];
 cass_uuid_string(uuid, uuid_str);
 ```
-[`cass_uuid_timestamp()`]: http://datastax.github.io/cpp-driver/api/CassUuid/#1a3980467a0bb6642054ecf37d49aebf1a
-[`CassUuidGen`]: http://datastax.github.io/cpp-driver/api/CassUuidGen/
+[`cass_uuid_timestamp()`]: http://datastax.github.io/cpp-driver/api/struct.CassUuid/#1a3980467a0bb6642054ecf37d49aebf1a
+[`CassUuidGen`]: http://datastax.github.io/cpp-driver/api/struct.CassUuidGen/
