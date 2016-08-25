@@ -19,7 +19,7 @@
 #include "dc_aware_policy.hpp"
 #include "logger.hpp"
 #include "round_robin_policy.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 #include "utils.hpp"
 
 #include <sstream>

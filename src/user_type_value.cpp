@@ -18,7 +18,8 @@
 
 #include "collection.hpp"
 #include "macros.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
+#include "tuple.hpp"
 #include "utils.hpp"
 
 #include <string.h>

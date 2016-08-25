@@ -14,7 +14,9 @@
   limitations under the License.
 */
 
-#include "external_types.hpp"
+#include "external.hpp"
+
+#include "cassandra.h"
 
 #include <uv.h>
 

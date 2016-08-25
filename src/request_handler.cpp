@@ -105,7 +105,7 @@ void RequestHandler::set_error(CassError code, const std::string& message) {
   if (is_query_plan_exhausted_) {
     future_->set_error(code, message);
   } else {
-    future_->set_error_with_host_address(current_host_->address(), code, message);
+    future_->set_error_with_address(current_host_->address(), code, message);
   }
   return_connection_and_finish();
 }

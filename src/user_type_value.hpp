@@ -20,6 +20,7 @@
 #include "abstract_data.hpp"
 #include "cassandra.h"
 #include "data_type.hpp"
+#include "external.hpp"
 #include "ref_counted.hpp"
 
 namespace cass {
@@ -49,5 +50,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::UserTypeValue, CassUserType)
 
 #endif

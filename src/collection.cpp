@@ -17,8 +17,9 @@
 #include "collection.hpp"
 
 #include "constants.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 #include "macros.hpp"
+#include "tuple.hpp"
 #include "user_type_value.hpp"
 
 #include <string.h>

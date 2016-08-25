@@ -18,6 +18,7 @@
 #define __CASS_SCHEMA_METADATA_HPP_INCLUDED__
 
 #include "copy_on_write_ptr.hpp"
+#include "external.hpp"
 #include "host.hpp"
 #include "iterator.hpp"
 #include "macros.hpp"
@@ -718,6 +719,15 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Metadata::SchemaSnapshot, CassSchemaMeta)
+EXTERNAL_TYPE(cass::KeyspaceMetadata, CassKeyspaceMeta)
+EXTERNAL_TYPE(cass::TableMetadata, CassTableMeta)
+EXTERNAL_TYPE(cass::ViewMetadata, CassMaterializedViewMeta)
+EXTERNAL_TYPE(cass::ColumnMetadata, CassColumnMeta)
+EXTERNAL_TYPE(cass::IndexMetadata, CassIndexMeta)
+EXTERNAL_TYPE(cass::FunctionMetadata, CassFunctionMeta)
+EXTERNAL_TYPE(cass::AggregateMetadata, CassAggregateMeta)
 
 #endif
 

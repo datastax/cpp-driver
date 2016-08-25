@@ -16,7 +16,7 @@
 
 #include "timestamp_generator.hpp"
 
-#include "external_types.hpp"
+#include "external.hpp"
 #include "get_time.hpp"
 #include "logger.hpp"
 

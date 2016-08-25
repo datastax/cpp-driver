@@ -22,10 +22,8 @@
 
 #include <sparsehash/dense_hash_set>
 
-#include <uv.h>
-#include <set>
-#include <string.h>
 #include <string>
+#include <uv.h>
 #include <vector>
 
 namespace cass {
@@ -38,7 +36,6 @@ public:
   Address();
 
   Address(const std::string& ip, int port);
-
 
   static bool from_string(const std::string& ip, int port,
                           Address* output = NULL);
@@ -68,6 +65,8 @@ public:
     return copy_cast<const struct sockaddr_storage*, const sockaddr_in6*>(&addr_);
   }
 
+  bool is_valid() const { return family() == AF_INET || family() == AF_INET6; }
+
   int family() const { return addr_.ss_family; }
 
   int port() const;
@@ -78,8 +77,6 @@ public:
   int compare(const Address& a) const;
 
 private:
-  void init() { memset(&addr_, 0, sizeof(addr_)); }
-
   struct sockaddr_storage addr_;
 };
 

@@ -17,7 +17,7 @@
 #include "dc_aware_policy.hpp"
 
 #include "logger.hpp"
-
+#include "request_handler.hpp"
 #include "scoped_lock.hpp"
 
 #include <algorithm>
@@ -62,10 +62,9 @@ CassHostDistance DCAwarePolicy::distance(const SharedRefPtr<Host>& host) const {
 }
 
 QueryPlan* DCAwarePolicy::new_query_plan(const std::string& connected_keyspace,
-                                         const Request* request,
-                                         const TokenMap* token_map,
-                                         Request::EncodingCache* cache) {
-  CassConsistency cl = request != NULL ? request->consistency() : Request::DEFAULT_CONSISTENCY;
+                                         RequestHandler* request_handler,
+                                         const TokenMap* token_map) {
+  CassConsistency cl = request_handler != NULL ? request_handler->request()->consistency() : Request::DEFAULT_CONSISTENCY;
   return new DCAwareQueryPlan(this, cl, index_++);
 }
 

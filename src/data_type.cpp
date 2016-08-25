@@ -17,7 +17,7 @@
 #include "data_type.hpp"
 
 #include "collection.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 #include "tuple.hpp"
 #include "types.hpp"
 #include "user_type_value.hpp"

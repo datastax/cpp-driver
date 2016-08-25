@@ -35,9 +35,8 @@ public:
   virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random);
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
-                                    const Request* request,
-                                    const TokenMap* token_map,
-                                    Request::EncodingCache* cache);
+                                    RequestHandler* request_handler,
+                                    const TokenMap* token_map);
 
   LoadBalancingPolicy* new_instance() { return new TokenAwarePolicy(child_policy_->new_instance()); }
 

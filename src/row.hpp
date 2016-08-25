@@ -17,6 +17,7 @@
 #ifndef __CASS_ROW_HPP_INCLUDED__
 #define __CASS_ROW_HPP_INCLUDED__
 
+#include "external.hpp"
 #include "string_ref.hpp"
 #include "value.hpp"
 
@@ -51,5 +52,7 @@ private:
 char* decode_row(char* row, const ResultResponse* result, OutputValueVec& output);
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Row, CassRow)
 
 #endif

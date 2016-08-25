@@ -18,6 +18,7 @@
 #define __CASS_ITERATOR_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "external.hpp"
 
 namespace cass {
 
@@ -37,5 +38,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Iterator, CassIterator)
 
 #endif

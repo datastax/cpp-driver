@@ -19,6 +19,7 @@
 
 #include "abstract_data.hpp"
 #include "constants.hpp"
+#include "external.hpp"
 #include "macros.hpp"
 #include "request.hpp"
 #include "result_metadata.hpp"
@@ -112,5 +113,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Statement, CassStatement)
 
 #endif
