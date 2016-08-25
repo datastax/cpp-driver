@@ -8,7 +8,8 @@
 #include "dse.h"
 
 #include "auth.hpp"
-#include "cluster.hpp"
+
+#include <cluster.hpp>
 
 static void dse_plaintext_authenticator_cleanup(void* data) {
   delete static_cast<dse::PlaintextAuthenticatorData*>(data);
@@ -19,6 +20,12 @@ static void dse_gssapi_authenticator_cleanup(void* data) {
 }
 
 extern "C" {
+
+CassCluster* cass_cluster_new_dse() {
+  CassCluster* cluster = cass_cluster_new();
+  cluster->config().set_host_targeting(true);
+  return cluster;
+}
 
 CassError cass_cluster_set_dse_plaintext_authenticator(CassCluster* cluster,
                                                        const char* username,
@@ -57,7 +64,3 @@ CassError cass_cluster_set_dse_gssapi_authenticator_n(CassCluster* cluster,
 }
 
 } // extern "C"
-
-
-namespace dse {
-} // namespace dse

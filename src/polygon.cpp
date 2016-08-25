@@ -5,7 +5,6 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#include "external_types.hpp"
 #include "polygon.hpp"
 #include "validate.hpp"
 

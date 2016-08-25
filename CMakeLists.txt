@@ -141,6 +141,8 @@ endif()
 CassSetCompilerFlags()
 CassAddIncludes()
 CassFindSourceFiles()
+CassConfigure()
+
 source_group("Source Files\\Cassandra" FILES ${SRC_FILES})
 source_group("Header Files\\Cassandra" FILES ${API_HEADER_FILES} ${INC_FILES})
 

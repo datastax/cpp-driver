@@ -12,6 +12,8 @@
 
 #include "serialization.hpp"
 
+#include <external.hpp>
+
 namespace dse {
 
 class LineSegment {
@@ -96,5 +98,8 @@ private:
 };
 
 } // namespace dse
+
+EXTERNAL_TYPE(dse::LineSegment, DseLineString)
+EXTERNAL_TYPE(dse::LineSegmentIterator, DseLineStringIterator)
 
 #endif

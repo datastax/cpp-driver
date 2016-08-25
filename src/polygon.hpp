@@ -12,6 +12,8 @@
 
 #include "serialization.hpp"
 
+#include <external.hpp>
+
 namespace dse {
 
 class Polygon {
@@ -153,5 +155,8 @@ private:
 };
 
 } // namespace dse
+
+EXTERNAL_TYPE(dse::Polygon, DsePolygon)
+EXTERNAL_TYPE(dse::PolygonIterator, DsePolygonIterator)
 
 #endif

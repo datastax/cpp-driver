@@ -217,7 +217,7 @@ void execute_graph_query_and_print(CassSession* session,
 int main() {
   /* Setup and connect to cluster */
   CassFuture* connect_future = NULL;
-  CassCluster* cluster = cass_cluster_new();
+  CassCluster* cluster = cass_cluster_new_dse();
   CassSession* session = cass_session_new();
 
   cass_log_set_level(CASS_LOG_INFO);
@@ -240,11 +240,15 @@ int main() {
       execute_graph_query(session, GRAPH_SCHEMA, options, NULL, NULL);
       execute_graph_query(session, GRAPH_DATA, options, NULL, NULL);
 
-      printf("Who does 'marko' know?\n");
-      execute_graph_query_and_print(session, "g.V().has('name','marko').out('knows').values('name')", options, NULL);
+      dse_graph_options_set_graph_source(options, "a");
 
-      printf("What vertices are connected to 'marko'?\n");
-      execute_graph_query_and_print(session, "g.V().has('name', 'marko').out('knows')", options, NULL);
+      execute_graph_query_and_print(session, "g.V().count()", options, NULL);
+
+      //printf("Who does 'marko' know?\n");
+      //execute_graph_query_and_print(session, "g.V().has('name','marko').out('knows').values('name')", options, NULL);
+
+      //printf("What vertices are connected to 'marko'?\n");
+      //execute_graph_query_and_print(session, "g.V().has('name', 'marko').out('knows')", options, NULL);
     }
 
     dse_graph_options_free(options);

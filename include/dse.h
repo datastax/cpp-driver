@@ -169,7 +169,27 @@ typedef struct DsePolygonIterator_ DsePolygonIterator;
  ***********************************************************************************/
 
 /**
+ * Creates a new cluster with DSE specific settings.
  *
+ * @public @memberof CassCluster
+ *
+ * @return Returns a cluster that must be freed.
+ *
+ * @see cass_cluster_free()
+ */
+DSE_EXPORT CassCluster*
+cass_cluster_new_dse();
+
+/**
+ * Enables GSSAPI authentication for DSE clusters secured with the
+ * `DseAuthenticator`.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] service
+ * @param[in] principal
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
 cass_cluster_set_dse_gssapi_authenticator(CassCluster* cluster,
@@ -177,7 +197,17 @@ cass_cluster_set_dse_gssapi_authenticator(CassCluster* cluster,
                                           const char* principal);
 
 /**
+ * Same as cass_cluster_set_dse_gssapi_authenticator(), but with lengths for string
+ * parameters.
  *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] service
+ * @param[in] service_length
+ * @param[in] principal
+ * @param[in] principal_length
+ * @return same as cass_cluster_set_dse_gssapi_authenticator()
  */
 DSE_EXPORT CassError
 cass_cluster_set_dse_gssapi_authenticator_n(CassCluster* cluster,
@@ -187,7 +217,15 @@ cass_cluster_set_dse_gssapi_authenticator_n(CassCluster* cluster,
                                             size_t principal_length);
 
 /**
+ * Enables plaintext authentication for DSE clusters secured with the
+ * `DseAuthenticator`.
  *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] username
+ * @param[in] password
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
 cass_cluster_set_dse_plaintext_authenticator(CassCluster* cluster,
@@ -195,7 +233,17 @@ cass_cluster_set_dse_plaintext_authenticator(CassCluster* cluster,
                                              const char* password);
 
 /**
+ * Same as cass_cluster_set_dse_plaintext_authenticator(), but with lengths for string
+ * parameters.
  *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] username
+ * @param[in] username_length
+ * @param[in] password
+ * @param[in] password_length
+ * @return same as cass_cluster_set_dse_plaintext_authenticator()
  */
 DSE_EXPORT CassError
 cass_cluster_set_dse_plaintext_authenticator_n(CassCluster* cluster,
@@ -1757,17 +1805,24 @@ dse_polygon_iterator_next_point(DsePolygonIterator* iterator,
  ***********************************************************************************/
 
 /**
- *
+ * GSSAPI lock callback.
  */
 typedef void (*DseGssapiAuthenticatorLockCallback)(void* data);
 
 /**
  *
+ * GSSAPI unlock callback.
  */
 typedef void (*DseGssapiAuthenticatorUnlockCallback)(void* data);
 
 /**
+ * Set lock callbacks for GSSAPI authentication. This is used to protect
+ * Kerberos libraries that are not thread-safe.
  *
+ * @param[in] lock_callback
+ * @param[in] unlock_callback
+ * @param[in] data
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
 dse_gssapi_authenticator_set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
