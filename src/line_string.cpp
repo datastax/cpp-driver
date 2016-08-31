@@ -8,10 +8,16 @@
 #include "line_string.hpp"
 #include "validate.hpp"
 
+#include <string_ref.hpp>
+
+#include <assert.h>
+#include <iomanip>
+#include <sstream>
+
 extern "C" {
 
 DseLineString* dse_line_string_new() {
-  return DseLineString::to(new dse::LineSegment());
+  return DseLineString::to(new dse::LineString());
 }
 
 void dse_line_string_free(DseLineString* line_string) {
@@ -38,7 +44,7 @@ CassError dse_line_string_finish(DseLineString* line_string) {
 }
 
 DseLineStringIterator* dse_line_string_iterator_new() {
-  return DseLineStringIterator::to(new dse::LineSegmentIterator());
+  return DseLineStringIterator::to(new dse::LineStringIterator());
 }
 
 void dse_line_string_iterator_free(DseLineStringIterator* iterator) {
@@ -46,12 +52,46 @@ void dse_line_string_iterator_free(DseLineStringIterator* iterator) {
 }
 
 CassError dse_line_string_iterator_reset(DseLineStringIterator *iterator, const CassValue *value) {
+  return iterator->reset_binary(value);
+}
+
+cass_uint32_t dse_line_string_iterator_num_points(const DseLineStringIterator* iterator) {
+  return iterator->num_points();
+}
+
+CassError dse_line_string_iterator_next_point(DseLineStringIterator* iterator,
+                                              cass_double_t* x, cass_double_t* y) {
+  return iterator->next_point(x, y);
+}
+
+} // extern "C"
+
+namespace dse {
+
+std::string LineString::to_wkt() const {
+  std::stringstream ss;
+  ss << "LINESTRING (";
+  const cass_byte_t* pos = bytes_.data() + WKB_HEADER_SIZE + sizeof(cass_uint32_t);
+  for (cass_uint32_t i = 0; i < num_points_; ++i) {
+    if (i > 0) ss << ", ";
+    ss << std::setprecision(WKT_MAX_DIGITS) << decode_double(pos, native_byte_order());
+    pos += sizeof(cass_double_t);
+    ss << " ";
+    ss << std::setprecision(WKT_MAX_DIGITS) << decode_double(pos, native_byte_order());
+    pos += sizeof(cass_double_t);
+  }
+  ss << ")";
+  return ss.str();
+}
+
+CassError LineStringIterator::reset_binary(const CassValue* value) {
   size_t size;
   const cass_byte_t* pos;
   dse::WkbByteOrder byte_order;
   cass_uint32_t num_points;
+  CassError rc;
 
-  CassError rc = dse::validate_data_type(value, DSE_LINE_STRING_TYPE);
+  rc = dse::validate_data_type(value, DSE_LINE_STRING_TYPE);
   if (rc != CASS_OK) return rc;
 
   rc = cass_value_get_bytes(value, &pos, &size);
@@ -74,21 +114,108 @@ CassError dse_line_string_iterator_reset(DseLineStringIterator *iterator, const 
     return CASS_ERROR_LIB_NOT_ENOUGH_DATA;
   }
 
-  const cass_byte_t* points = pos;
-  const cass_byte_t* points_end = pos + size;
-
-  iterator->reset(num_points, points, points_end, byte_order);
+  num_points_ = num_points;
+  binary_iterator_ = BinaryIterator(pos, pos + size, byte_order);
+  iterator_ = &binary_iterator_;
 
   return CASS_OK;
 }
 
-cass_uint32_t dse_line_string_iterator_num_points(const DseLineStringIterator* iterator) {
-  return iterator->num_points();
+bool isnum(int c) {
+  return isdigit(c) || c == '+' || c == '-' || c == '.';
 }
 
-CassError dse_line_string_iterator_next_point(DseLineStringIterator* iterator,
-                                              cass_double_t* x, cass_double_t* y) {
-  return iterator->next_point(x, y);
+CassError LineStringIterator::reset_text(const char* text, size_t size) {
+  cass_uint32_t num_points = 0;
+  const bool skip_numbers = true;
+  WktLexer lexer(text, size, skip_numbers);
+
+  if (lexer.next_token() != WktLexer::TK_TYPE_LINESTRING) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+
+  // Validate format and count the number of points
+  if (lexer.next_token() != WktLexer::TK_OPEN_PAREN) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+
+  WktLexer::Token token = lexer.next_token();
+  while (token != WktLexer::TK_EOF && token != WktLexer::TK_CLOSE_PAREN) {
+    // First number in point
+    if (token != WktLexer::TK_NUMBER) {
+      return CASS_ERROR_LIB_BAD_PARAMS;
+    }
+
+    // Second number in point
+    token = lexer.next_token();
+    if (token != WktLexer::TK_NUMBER) {
+      return CASS_ERROR_LIB_BAD_PARAMS;
+    }
+
+    ++num_points;
+
+    // Check and skip "," token
+    token = lexer.next_token();
+    if (token == WktLexer::TK_COMMA) {
+      token = lexer.next_token();
+      // Verify there are more points
+      if(token != WktLexer::TK_NUMBER) {
+        return CASS_ERROR_LIB_BAD_PARAMS;
+      }
+    }
+  }
+
+  // Validate closing ")" and minimum number of points
+  if (token != WktLexer::TK_CLOSE_PAREN) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+
+  num_points_ = num_points;
+  text_iterator_ = TextIterator(text, size);
+  iterator_ = &text_iterator_;
+
+  return CASS_OK;
 }
 
-} // extern "C"
+CassError LineStringIterator::BinaryIterator::next_point(cass_double_t* x, cass_double_t* y) {
+  if (position_ >= points_end_) {
+    return CASS_ERROR_LIB_INVALID_STATE;
+  }
+
+  *x = decode_double(position_, byte_order_);
+  position_ += sizeof(cass_double_t);
+  *y = decode_double(position_, byte_order_);
+  position_ += sizeof(cass_double_t);
+
+  return CASS_OK;
+}
+
+LineStringIterator::TextIterator::TextIterator(const char* text, size_t size)
+  : lexer_(text, size) {
+  WktLexer::Token token;
+  // Skip over "LINESTRING (" tokens
+  token = lexer_.next_token(); assert(token == WktLexer::TK_TYPE_LINESTRING);
+  token = lexer_.next_token(); assert(token == WktLexer::TK_OPEN_PAREN);
+}
+
+CassError LineStringIterator::TextIterator::next_point(cass_double_t* x, cass_double_t* y) {
+  WktLexer::Token token;
+
+  // If we're at the end of the text this will return WktLexer::TK_EOF
+  token = lexer_.next_token();
+  if (token != WktLexer::TK_NUMBER) {
+    return CASS_ERROR_LIB_INVALID_STATE;
+  }
+  *x = lexer_.number();
+
+  token = lexer_.next_token(); assert(token == WktLexer::TK_NUMBER);
+  *y = lexer_.number();
+
+  // Skip trailing "," or  ")" tokens
+  token = lexer_.next_token(); assert(token == WktLexer::TK_COMMA ||
+                                      token == WktLexer::TK_CLOSE_PAREN);
+
+  return CASS_OK;
+}
+
+} // namespace dse
