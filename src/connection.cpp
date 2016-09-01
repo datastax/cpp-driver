@@ -349,10 +349,6 @@ void Connection::internal_close(ConnectionState close_state) {
       heartbeat_timer_.stop();
       terminate_timer_.stop();
       connect_timer_.stop();
-      if (state_ == CONNECTION_STATE_CONNECTED ||
-          state_ == CONNECTION_STATE_READY) {
-        uv_read_stop(copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_));
-      }
       set_state(close_state);
       uv_close(handle, on_close);
     }
