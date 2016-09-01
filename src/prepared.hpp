@@ -17,6 +17,7 @@
 #ifndef __CASS_PREPARED_HPP_INCLUDED__
 #define __CASS_PREPARED_HPP_INCLUDED__
 
+#include "external.hpp"
 #include "ref_counted.hpp"
 #include "result_response.hpp"
 #include "metadata.hpp"
@@ -45,5 +46,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Prepared, CassPrepared)
 
 #endif

@@ -16,7 +16,7 @@
 
 #include "retry_policy.hpp"
 
-#include "external_types.hpp"
+#include "external.hpp"
 #include "logger.hpp"
 
 extern "C" {

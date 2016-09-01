@@ -18,6 +18,7 @@
 #define __CASS_RETRY_POLICY_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "external.hpp"
 #include "ref_counted.hpp"
 
 #ifdef _WIN32
@@ -136,6 +137,8 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::RetryPolicy, CassRetryPolicy)
 
 #endif
 

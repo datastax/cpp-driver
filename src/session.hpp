@@ -20,6 +20,7 @@
 #include "config.hpp"
 #include "control_connection.hpp"
 #include "event_thread.hpp"
+#include "external.hpp"
 #include "future.hpp"
 #include "host.hpp"
 #include "io_worker.hpp"
@@ -35,7 +36,6 @@
 #include "scoped_ptr.hpp"
 #include "token_map.hpp"
 
-#include <list>
 #include <memory>
 #include <set>
 #include <string>
@@ -101,7 +101,8 @@ public:
   void close_async(Future* future, bool force = false);
 
   Future* prepare(const char* statement, size_t length);
-  Future* execute(const RoutableRequest* statement);
+  Future* execute(const RoutableRequest* statement,
+                  const Address* preferred_address = NULL);
 
   const Metadata& metadata() const { return metadata_; }
 
@@ -159,7 +160,7 @@ private:
   static void on_execute(uv_async_t* data);
 #endif
 
-  QueryPlan* new_query_plan(const Request* request = NULL, Request::EncodingCache* cache = NULL);
+  QueryPlan* new_query_plan(RequestHandler* request_handler = NULL);
 
   void on_reconnect(Timer* timer);
 
@@ -221,5 +222,7 @@ public:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Session, CassSession)
 
 #endif

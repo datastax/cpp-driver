@@ -18,6 +18,7 @@
 #define __CASS_AUTH_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "external.hpp"
 #include "host.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
@@ -168,5 +169,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::ExternalAuthenticator, CassAuthenticator)
 
 #endif

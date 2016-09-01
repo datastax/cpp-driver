@@ -51,9 +51,8 @@ public:
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const;
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
-                                    const Request* request,
-                                    const TokenMap* token_map,
-                                    Request::EncodingCache* cache);
+                                    RequestHandler* request_handler,
+                                    const TokenMap* token_map);
 
   virtual void on_add(const SharedRefPtr<Host>& host);
 

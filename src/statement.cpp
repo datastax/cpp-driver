@@ -18,12 +18,14 @@
 
 #include "collection.hpp"
 #include "execute_request.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
+#include "handler.hpp"
 #include "macros.hpp"
 #include "prepared.hpp"
 #include "query_request.hpp"
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"
+#include "tuple.hpp"
 #include "user_type_value.hpp"
 
 #include <uv.h>

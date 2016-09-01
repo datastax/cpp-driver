@@ -16,7 +16,7 @@
 
 #include "result_response.hpp"
 
-#include "external_types.hpp"
+#include "external.hpp"
 #include "result_metadata.hpp"
 #include "serialization.hpp"
 

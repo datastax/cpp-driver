@@ -19,6 +19,7 @@
 
 #include "atomic.hpp"
 #include "constants.hpp"
+#include "external.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
@@ -73,6 +74,8 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::TimestampGenerator, CassTimestampGen)
 
 #endif
 

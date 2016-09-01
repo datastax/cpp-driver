@@ -17,12 +17,16 @@
 #include "testing.hpp"
 
 #include "address.hpp"
+#include "cluster.hpp"
+#include "external.hpp"
+#include "future.hpp"
 #include "get_time.hpp"
 #include "logger.hpp"
 #include "metadata.hpp"
 #include "murmur3.hpp"
+#include "request_handler.hpp"
 #include "result_response.hpp"
-#include "external_types.hpp"
+#include "session.hpp"
 
 namespace cass {
 
@@ -32,7 +36,7 @@ std::string get_host_from_future(CassFuture* future) {
   }
   cass::ResponseFuture* response_future =
       static_cast<cass::ResponseFuture*>(future->from());
-  return response_future->get_host_address().to_string();
+  return response_future->address().to_string();
 }
 
 unsigned get_connect_timeout_from_cluster(CassCluster* cluster) {

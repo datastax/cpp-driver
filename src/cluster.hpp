@@ -18,6 +18,7 @@
 #define __CASS_CLUSTER_HPP_INCLUDED__
 
 #include "config.hpp"
+#include "external.hpp"
 
 namespace cass {
 
@@ -31,5 +32,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Cluster, CassCluster)
 
 #endif

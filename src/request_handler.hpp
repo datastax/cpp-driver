@@ -41,9 +41,13 @@ class Timer;
 
 class ResponseFuture : public Future {
 public:
-  ResponseFuture(int protocol_version, const VersionNumber& cassandra_version, const Metadata& metadata)
+  ResponseFuture()
+      : Future(CASS_FUTURE_TYPE_RESPONSE) { }
+
+
+  ResponseFuture(const Metadata::SchemaSnapshot& schema_metadata)
       : Future(CASS_FUTURE_TYPE_RESPONSE)
-      , schema_metadata(metadata.schema_snapshot(protocol_version, cassandra_version)) { }
+      , schema_metadata(new Metadata::SchemaSnapshot(schema_metadata)) { }
 
   void set_response(Address address, const SharedRefPtr<Response>& response) {
     ScopedMutex lock(&mutex_);
@@ -58,7 +62,7 @@ public:
     return response_;
   }
 
-  void set_error_with_host_address(Address address, CassError code, const std::string& message) {
+  void set_error_with_address(Address address, CassError code, const std::string& message) {
     ScopedMutex lock(&mutex_);
     address_ = address;
     internal_set_error(code, message, lock);
@@ -72,14 +76,14 @@ public:
     internal_set_error(code, message, lock);
   }
 
-  Address get_host_address() {
+  Address address() {
     ScopedMutex lock(&mutex_);
     internal_wait(lock);
     return address_;
   }
 
   std::string statement;
-  Metadata::SchemaSnapshot schema_metadata;
+  ScopedPtr<Metadata::SchemaSnapshot> schema_metadata;
 
 private:
   Address address_;
@@ -107,6 +111,14 @@ public:
   virtual void on_timeout();
 
   virtual void retry();
+
+  const Address& preferred_address() const {
+    return preferred_address_;
+  }
+
+  void set_preferred_address(const Address& preferred_address) {
+    preferred_address_ = preferred_address;
+  }
 
   void set_query_plan(QueryPlan* query_plan) {
     query_plan_.reset(query_plan);
@@ -144,6 +156,7 @@ private:
   ScopedRefPtr<ResponseFuture> future_;
   RetryPolicy* retry_policy_;
   int num_retries_;
+  Address preferred_address_;
   bool is_query_plan_exhausted_;
   SharedRefPtr<Host> current_host_;
   ScopedPtr<QueryPlan> query_plan_;

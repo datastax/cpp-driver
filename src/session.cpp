@@ -16,14 +16,17 @@
 
 #include "session.hpp"
 
+#include "batch_request.hpp"
+#include "cluster.hpp"
 #include "config.hpp"
 #include "constants.hpp"
 #include "logger.hpp"
 #include "prepare_request.hpp"
 #include "request_handler.hpp"
 #include "scoped_lock.hpp"
+#include "statement.hpp"
 #include "timer.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 
 extern "C" {
 
@@ -579,7 +582,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   PrepareRequest* prepare = new PrepareRequest();
   prepare->set_query(statement, length);
 
-  ResponseFuture* future = new ResponseFuture(protocol_version(), cassandra_version(), metadata_);
+  ResponseFuture* future = new ResponseFuture(metadata_.schema_snapshot(protocol_version(), cassandra_version()));
   future->inc_ref(); // External reference
   future->statement.assign(statement, length);
 
@@ -668,8 +671,9 @@ void Session::on_down(SharedRefPtr<Host> host) {
   }
 }
 
-Future* Session::execute(const RoutableRequest* request) {
-  ResponseFuture* future = new ResponseFuture(protocol_version(), cassandra_version(), metadata_);
+Future* Session::execute(const RoutableRequest* request,
+                         const Address* preferred_address) {
+  ResponseFuture* future = new ResponseFuture();
   future->inc_ref(); // External reference
 
   RetryPolicy* retry_policy
@@ -679,6 +683,9 @@ Future* Session::execute(const RoutableRequest* request) {
   RequestHandler* request_handler = new RequestHandler(request,
                                                        future,
                                                        retry_policy);
+  if (preferred_address) {
+    request_handler->set_preferred_address(*preferred_address);
+  }
   request_handler->inc_ref(); // IOWorker reference
 
   execute(request_handler);
@@ -698,8 +705,7 @@ void Session::on_execute(uv_async_t* data) {
   RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
-      request_handler->set_query_plan(session->new_query_plan(request_handler->request(),
-                                                              request_handler->encoding_cache()));
+      request_handler->set_query_plan(session->new_query_plan(request_handler));
 
       if (request_handler->timestamp() == CASS_INT64_MIN) {
         request_handler->set_timestamp(session->config_.timestamp_gen()->next());
@@ -743,9 +749,9 @@ void Session::on_execute(uv_async_t* data) {
   }
 }
 
-QueryPlan* Session::new_query_plan(const Request* request, Request::EncodingCache* cache) {
+QueryPlan* Session::new_query_plan(RequestHandler* request_handler) {
   const CopyOnWritePtr<std::string> keyspace(keyspace_);
-  return load_balancing_policy_->new_query_plan(*keyspace, request, token_map_.get(), cache);
+  return load_balancing_policy_->new_query_plan(*keyspace, request_handler, token_map_.get());
 }
 
 } // namespace cass

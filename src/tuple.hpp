@@ -20,6 +20,7 @@
 #include "cassandra.h"
 #include "data_type.hpp"
 #include "encode.hpp"
+#include "external.hpp"
 #include "buffer.hpp"
 #include "ref_counted.hpp"
 #include "types.hpp"
@@ -107,6 +108,8 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Tuple, CassTuple)
 
 #endif
 

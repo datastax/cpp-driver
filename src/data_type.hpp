@@ -18,6 +18,7 @@
 #define __CASS_DATA_TYPE_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "external.hpp"
 #include "hash_table.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
@@ -590,5 +591,7 @@ struct IsValidDataType<const UserTypeValue*> {
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::DataType, CassDataType)
 
 #endif

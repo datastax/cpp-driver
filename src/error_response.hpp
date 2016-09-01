@@ -17,6 +17,7 @@
 #ifndef __CASS_ERROR_RESPONSE_HPP_INCLUDED__
 #define __CASS_ERROR_RESPONSE_HPP_INCLUDED__
 
+#include "external.hpp"
 #include "response.hpp"
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
@@ -83,5 +84,7 @@ bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected
                                      Response* response);
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::ErrorResponse, CassErrorResult)
 
 #endif

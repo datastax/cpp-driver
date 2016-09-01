@@ -52,7 +52,7 @@ typedef enum CassHostDistance_ {
 namespace cass {
 
 class Random;
-class RoutableRequest;
+class RequestHandler;
 class TokenMap;
 
 inline bool is_dc_local(CassConsistency cl) {
@@ -89,9 +89,8 @@ public:
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const = 0;
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
-                                    const Request* request,
-                                    const TokenMap* token_map,
-                                    Request::EncodingCache* cache) = 0;
+                                    RequestHandler* request_handler,
+                                    const TokenMap* token_map) = 0;
 
   virtual LoadBalancingPolicy* new_instance() = 0;
 };
