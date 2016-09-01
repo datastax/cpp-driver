@@ -624,7 +624,7 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
 void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
                                           bool is_new_node,
                                           bool query_tokens) {
-  if (connection_ == NULL) {
+  if (connection_ == NULL || !connection_->is_ready()) {
     return;
   }
 

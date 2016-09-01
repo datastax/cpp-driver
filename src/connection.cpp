@@ -435,11 +435,10 @@ void Connection::consume(char* input, size_t size) {
   // A successful read means the connection is still responsive
   restart_terminate_timer();
 
-  while (remaining != 0) {
+  while (remaining != 0 && !is_closing()) {
     ssize_t consumed = response_->decode(buffer, remaining);
     if (consumed <= 0) {
       notify_error("Error consuming message");
-      remaining = 0;
       continue;
     }
 
@@ -460,6 +459,7 @@ void Connection::consume(char* input, size_t size) {
         } else {
           notify_error("Invalid response opcode for event stream: " +
                        opcode_to_string(response->opcode()));
+          continue;
         }
       } else {
         Handler* handler = NULL;
@@ -500,6 +500,7 @@ void Connection::consume(char* input, size_t size) {
           }
         } else {
           notify_error("Invalid stream ID");
+          continue;
         }
       }
     }
