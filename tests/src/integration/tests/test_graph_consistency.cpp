@@ -25,7 +25,7 @@ public:
     CHECK_VERSION(5.0.0);
 
     // Call the parent setup function
-    dse_workload_ = CCM::DSE_WORKLOAD_GRAPH;
+    dse_workload_.push_back(CCM::DSE_WORKLOAD_GRAPH);
     number_dc1_nodes_ = 3;
     replication_factor_ = 3; // Force RF=3 instead of default calculated RF=2
     DseIntegration::SetUp();

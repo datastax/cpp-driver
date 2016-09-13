@@ -32,10 +32,12 @@ Integration::Integration()
   , contact_points_("")
   , is_client_authentication_(false)
   , is_ssl_(false)
+  , is_with_vnodes_(false)
+  , is_randomized_contact_points_(false)
   , is_schema_metadata_(false)
   , is_ccm_start_requested_(true)
+  , is_ccm_start_node_individually_(false)
   , is_session_requested_(true)
-  , dse_workload_(CCM::DSE_WORKLOAD_CASSANDRA)
   , create_keyspace_query_("")
   , start_time_(0ull) {
   // Get the name of the test and the case/suite it belongs to
@@ -80,6 +82,10 @@ Integration::~Integration() {
 }
 
 void Integration::SetUp() {
+  // Initialize the DSE workload (iff not set)
+  if (dse_workload_.empty()) {
+    dse_workload_.push_back(CCM::DSE_WORKLOAD_CASSANDRA);
+  }
   // Generate the keyspace name
   keyspace_name_ = replace_all(to_lower(test_case_name_), "integrationtest", "") +
                    "_" + to_lower(test_name_);
@@ -116,6 +122,11 @@ void Integration::SetUp() {
                                          keyspace_name_.c_str(),
                                          replication_strategy_.c_str());
 
+  // Create the data center nodes vector
+  std::vector<unsigned short> data_center_nodes;
+  data_center_nodes.push_back(number_dc1_nodes_);
+  data_center_nodes.push_back(number_dc2_nodes_);
+
   try {
     //Create and start the CCM cluster (if not already created)
     ccm_ = new CCM::Bridge(server_version_,
@@ -128,12 +139,17 @@ void Integration::SetUp() {
       Options::host(), Options::port(),
       Options::username(), Options::password(),
       Options::public_key(), Options::private_key());
-    if (ccm_->create_cluster(number_dc1_nodes_,
-      number_dc2_nodes_,
-      is_ssl_,
+    if (ccm_->create_cluster(data_center_nodes, is_with_vnodes_, is_ssl_,
       is_client_authentication_)) {
       if (is_ccm_start_requested_) {
-        ccm_->start_cluster();
+        if (is_ccm_start_node_individually_) {
+          for (unsigned short node = 1;
+            node <= (number_dc1_nodes_ + number_dc2_nodes_); ++node) {
+            ccm_->start_node(node);
+          }
+        } else {
+          ccm_->start_cluster();
+        }
       }
     }
 
@@ -162,6 +178,7 @@ void Integration::TearDown() {
 
 void Integration::connect(Cluster cluster) {
   // Establish the session connection
+  cluster_ = cluster;
   session_ = cluster.connect();
   CHECK_FAILURE;
 
@@ -187,10 +204,31 @@ void Integration::connect(Cluster cluster) {
 
 void Integration::connect() {
   // Create the cluster configuration and establish the session connection
-  cluster_ = Cluster::build()
-    .with_contact_points(contact_points_)
-    .with_schema_metadata(is_schema_metadata_ ? cass_true : cass_false);
+  cluster_ = default_cluster();
   connect(cluster_);
+}
+
+test::driver::Cluster Integration::default_cluster() {
+  return Cluster::build()
+    .with_contact_points(contact_points_)
+    .with_randomized_contact_points(is_randomized_contact_points_)
+    .with_schema_metadata(is_schema_metadata_);
+}
+
+void Integration::enable_cluster_tracing(bool enable /*= true*/) {
+  std::vector<std::string> active_nodes = ccm_->cluster_ip_addresses();
+  for (std::vector<std::string>::iterator iterator = active_nodes.begin();
+    iterator != active_nodes.end(); ++iterator) {
+    // Get the node number from the IP address
+    std::string node_ip_address = *iterator;
+    std::stringstream node_value;
+    node_value << node_ip_address.at(node_ip_address.length() - 1);
+
+    // Enable tracing on the node
+    unsigned int node;
+    node_value >> node;
+    ccm_->enable_node_trace(node);
+  }
 }
 
 std::string Integration::generate_contact_points(const std::string& ip_prefix,

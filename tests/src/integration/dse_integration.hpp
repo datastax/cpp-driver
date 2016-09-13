@@ -39,6 +39,13 @@ public:
    */
   virtual void connect();
 
+  /**
+   * Get the default DSE cluster configuration
+   *
+   * @return DSE Cluster object (default)
+   */
+  virtual Cluster default_cluster();
+
 protected:
   /**
    * Connected database DSE session

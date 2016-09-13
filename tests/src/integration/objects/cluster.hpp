@@ -32,6 +32,14 @@ public:
     : Object<CassCluster, cass_cluster_free>(cass_cluster_new()) {}
 
   /**
+   * Create the cluster for the builder object
+   *
+   * @param cluster Already defined cluster object to utilize
+   */
+  Cluster(CassCluster* cluster)
+    : Object<CassCluster, cass_cluster_free>(cluster) {}
+
+  /**
    * Destroy the cluster
    */
   virtual ~Cluster() {};
@@ -88,6 +96,19 @@ public:
   Cluster& with_protocol_version(int protocol_version) {
     EXPECT_EQ(CASS_OK, cass_cluster_set_protocol_version(get(),
       protocol_version));
+    return *this;
+  }
+
+  /**
+   * Enable/Disable the randomization of the contact points list
+   *
+   * @param enable True if contact points should be randomized false otherwise
+   *               (default: true)
+   * @return Cluster object
+   */
+  Cluster& with_randomized_contact_points(bool enable = true) {
+    cass_cluster_set_use_randomized_contact_points(get(),
+      (enable == true ? cass_true : cass_false));
     return *this;
   }
 

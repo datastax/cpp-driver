@@ -387,7 +387,7 @@ SharedPtr<CCM::Bridge> Options::ccm() {
   return new CCM::Bridge( \
     Options::server_version(),
     Options::use_git(), Options::branch_tag(), \
-    Options::is_dse(), CCM::DSE_WORKLOAD_CASSANDRA, \
+    Options::is_dse(), CCM::Bridge::DEFAULT_DSE_WORKLOAD, \
     Options::cluster_prefix(), \
     Options::dse_credentials(), \
     Options::dse_username(), Options::dse_password(), \

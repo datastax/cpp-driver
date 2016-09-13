@@ -63,9 +63,16 @@ void DseIntegration::connect(Cluster cluster) {
 }
 
 void DseIntegration::connect() {
-  // Call the parent connect function
-  Integration::connect();
-  dse_session_ = session_;
+  // Create the cluster configuration and establish the session connection
+  cluster_ = default_cluster();
+  connect(cluster_);
+}
+
+test::driver::Cluster DseIntegration::default_cluster() {
+  return DseCluster::build()
+    .with_contact_points(contact_points_)
+    .with_randomized_contact_points(is_randomized_contact_points_)
+    .with_schema_metadata(is_schema_metadata_);
 }
 
 void DseIntegration::create_graph(const std::string& graph_name,
