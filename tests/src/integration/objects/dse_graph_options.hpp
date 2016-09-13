@@ -83,10 +83,10 @@ public:
   /**
    * Set the graph timeout to use when applied to a DSE graph statement
    *
-   * @param name Graph timeout (in milliseconds) to apply
+   * @param timemout_ms Graph timeout (in milliseconds) to apply
    */
-  void set_timeout(const cass_int64_t timemout) {
-    ASSERT_EQ(CASS_OK, dse_graph_options_set_request_timeout(get(), timemout));
+  void set_timeout(const cass_int64_t timemout_ms) {
+    ASSERT_EQ(CASS_OK, dse_graph_options_set_request_timeout(get(), timemout_ms));
   }
 
   /**

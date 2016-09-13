@@ -8,6 +8,7 @@
 #ifndef __TEST_FUTURE_HPP__
 #define __TEST_FUTURE_HPP__
 #include "cassandra.h"
+#include "testing.hpp"
 
 #include "objects/object_base.hpp"
 
@@ -73,6 +74,15 @@ public:
     size_t message_length;
     cass_future_error_message(get(), &message, &message_length);
     return std::string(message, message_length);
+  }
+
+  /**
+   * Get the host address of the future
+   *
+   * @return Host address
+   */
+  const std::string host_address() {
+    return cass::get_host_from_future(get());
   }
 
   /**

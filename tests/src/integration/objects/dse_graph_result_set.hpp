@@ -64,8 +64,12 @@ public:
    * Get the error code from the future
    *
    * @return Error code of the future
+   * @throws DseGraphResultSet::Exception
    */
   CassError error_code() {
+    if (!future_) {
+      throw Exception("Future is invalid or was not used to create instance");
+    }
     return future_.error_code();
   }
 
@@ -73,8 +77,12 @@ public:
    * Get the human readable description of the error code
    *
    * @return Error description
+   * @throws DseGraphResultSet::Exception
    */
   const std::string error_description() {
+    if (!future_) {
+      throw Exception("Future is invalid or was not used to create instance");
+    }
     return future_.error_description();
   }
 
@@ -82,9 +90,26 @@ public:
    * Get the error message of the future if an error occurred
    *
    * @return Error message
+   * @throws DseGraphResultSet::Exception
    */
   const std::string error_message() {
+    if (!future_) {
+      throw Exception("Future is invalid or was not used to create instance");
+    }
     return future_.error_message();
+  }
+
+  /**
+   * Get the host address of the future
+   *
+   * @return Host address
+   * @throws DseGraphResultSet::Exception
+   */
+  const std::string host_address() {
+    if (!future_) {
+      throw Exception("Future is invalid or was not used to create instance");
+    }
+    return future_.host_address();
   }
 
   /**

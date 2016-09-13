@@ -54,6 +54,20 @@ public:
   }
 
   /**
+   * Sets the amount of time between heartbeat messages and controls the amount
+   * of time the connection must be idle before sending heartbeat messages. This
+   * is useful for preventing intermediate network devices from dropping
+   * connections
+   *
+   * @param interval_s Heartbeat time interval (in seconds); 0 to disable
+   *                   heartbeat messages (default: 30s)
+   */
+  Cluster& with_connection_heartbeat_interval(unsigned int interval_s = 30) {
+    cass_cluster_set_connection_heartbeat_interval(get(), interval_s);
+    return *this;
+  }
+
+  /**
    * Assign/Append the contact points; passing an empty string will clear
    * the contact points
    *
@@ -109,6 +123,17 @@ public:
   Cluster& with_randomized_contact_points(bool enable = true) {
     cass_cluster_set_use_randomized_contact_points(get(),
       (enable == true ? cass_true : cass_false));
+    return *this;
+  }
+
+  /**
+   * Sets the timeout (in milliseconds) for waiting for a response from a node
+   *
+   * @param timeout_ms Request timeout in milliseconds; 0 to disable timeout
+   *                   (default: 12s)
+   */
+  Cluster& with_request_timeout(unsigned int timeout_ms = 12000) {
+    cass_cluster_set_request_timeout(get(), timeout_ms);
     return *this;
   }
 
