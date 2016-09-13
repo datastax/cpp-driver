@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_HANDLER_HPP_INCLUDED__
-#define __CASS_HANDLER_HPP_INCLUDED__
+#ifndef __CASS_REQUEST_CALLBACK_HPP_INCLUDED__
+#define __CASS_REQUEST_CALLBACK_HPP_INCLUDED__
 
 #include "buffer.hpp"
 #include "constants.hpp"
@@ -33,11 +33,13 @@ namespace cass {
 
 class Config;
 class Connection;
+class Response;
 class ResponseMessage;
+class ResultResponse;
 
 typedef std::vector<uv_buf_t> UvBufVec;
 
-class Handler : public RefCounted<Handler>, public List<Handler>::Node {
+class RequestCallback : public RefCounted<RequestCallback>, public List<RequestCallback>::Node {
 public:
   enum State {
     REQUEST_STATE_NEW,
@@ -50,7 +52,7 @@ public:
     REQUEST_STATE_DONE
   };
 
-  Handler(const Request* request)
+  RequestCallback(const Request* request)
     : request_(request)
     , connection_(NULL)
     , stream_(-1)
@@ -59,7 +61,7 @@ public:
     , timestamp_(CASS_INT64_MIN)
     , start_time_ns_(0) { }
 
-  virtual ~Handler() {}
+  virtual ~RequestCallback() {}
 
   int32_t encode(int version, int flags, BufferVec* bufs);
 
@@ -130,7 +132,55 @@ private:
   Request::EncodingCache encoding_cache_;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Handler);
+  DISALLOW_COPY_AND_ASSIGN(RequestCallback);
+};
+
+class MultipleRequestCallback : public RefCounted<MultipleRequestCallback> {
+public:
+  typedef std::map<std::string, SharedRefPtr<Response> > ResponseMap;
+
+  MultipleRequestCallback(Connection* connection)
+    : connection_(connection)
+    , has_errors_or_timeouts_(false)
+    , remaining_(0) { }
+
+  virtual ~MultipleRequestCallback() { }
+
+  static bool get_result_response(const ResponseMap& responses,
+                                  const std::string& index,
+                                  ResultResponse** response);
+
+  void execute_query(const std::string& index, const std::string& query);
+
+  virtual void on_set(const ResponseMap& responses) = 0;
+  virtual void on_error(CassError code, const std::string& message) = 0;
+  virtual void on_timeout() = 0;
+
+  Connection* connection() {
+    return connection_;
+  }
+
+private:
+  class InternalCallback : public RequestCallback {
+  public:
+    InternalCallback(MultipleRequestCallback* parent, const Request* request, const std::string& index)
+      : RequestCallback(request)
+      , parent_(parent)
+      , index_(index) { }
+
+    virtual void on_set(ResponseMessage* response);
+    virtual void on_error(CassError code, const std::string& message);
+    virtual void on_timeout();
+
+  private:
+    ScopedRefPtr<MultipleRequestCallback> parent_;
+    std::string index_;
+  };
+
+  Connection* connection_;
+  bool has_errors_or_timeouts_;
+  int remaining_;
+  ResponseMap responses_;
 };
 
 } // namespace cass

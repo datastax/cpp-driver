@@ -20,7 +20,7 @@
 #include "constants.hpp"
 #include "error_response.hpp"
 #include "future.hpp"
-#include "handler.hpp"
+#include "request_callback.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
 #include "metadata.hpp"
@@ -87,12 +87,12 @@ private:
 };
 
 
-class RequestHandler : public Handler {
+class RequestHandler : public RequestCallback {
 public:
   RequestHandler(const Request* request,
                  ResponseFuture* future,
                  RetryPolicy* retry_policy)
-      : Handler(request)
+      : RequestCallback(request)
       , future_(future)
       , retry_policy_(retry_policy)
       , num_retries_(0)

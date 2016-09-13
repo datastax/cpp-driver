@@ -17,11 +17,11 @@
 #include "execute_request.hpp"
 
 #include "constants.hpp"
-#include "handler.hpp"
+#include "request_callback.hpp"
 
 namespace cass {
 
-int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, Handler* handler) const {
+int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, RequestCallback* callback) const {
   int32_t length = 0;
   const std::string& id(prepared_->id());
 
@@ -37,7 +37,7 @@ int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, Handler* hand
 
   buf.encode_uint16(pos, elements_count());
   if (elements_count() > 0) {
-    int32_t result = copy_buffers(version, bufs, handler);
+    int32_t result = copy_buffers(version, bufs, callback);
     if (result < 0) return result;
     length += result;
   }
@@ -45,15 +45,15 @@ int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, Handler* hand
   return length;
 }
 
-int ExecuteRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
+int ExecuteRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   if (version == 1) {
-    return internal_encode_v1(handler, bufs);
+    return internal_encode_v1(callback, bufs);
   } else {
-    return internal_encode(version, handler, bufs);
+    return internal_encode(version, callback, bufs);
   }
 }
 
-int ExecuteRequest::internal_encode_v1(Handler* handler, BufferVec* bufs) const {
+int ExecuteRequest::internal_encode_v1(RequestCallback* callback, BufferVec* bufs) const {
   size_t length = 0;
   const int version = 1;
 
@@ -73,7 +73,7 @@ int ExecuteRequest::internal_encode_v1(Handler* handler, BufferVec* bufs) const 
                                  prepared_id.size());
     buf.encode_uint16(pos, elements_count());
     // <value_1>...<value_n>
-    int32_t result = copy_buffers(version, bufs, handler);
+    int32_t result = copy_buffers(version, bufs, callback);
     if (result < 0) return result;
     length += result;
   }
@@ -83,7 +83,7 @@ int ExecuteRequest::internal_encode_v1(Handler* handler, BufferVec* bufs) const 
     size_t buf_size = sizeof(uint16_t);
 
     Buffer buf(buf_size);
-    buf.encode_uint16(0, handler->consistency());
+    buf.encode_uint16(0, callback->consistency());
     bufs->push_back(buf);
     length += buf_size;
   }
@@ -91,7 +91,7 @@ int ExecuteRequest::internal_encode_v1(Handler* handler, BufferVec* bufs) const 
   return length;
 }
 
-int ExecuteRequest::internal_encode(int version, Handler* handler, BufferVec* bufs) const {
+int ExecuteRequest::internal_encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   int length = 0;
   uint8_t flags = this->flags();
 
@@ -122,7 +122,7 @@ int ExecuteRequest::internal_encode(int version, Handler* handler, BufferVec* bu
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
-  if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
+  if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {
     paging_buf_size += sizeof(int64_t); // [long]
     flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
   }
@@ -135,12 +135,12 @@ int ExecuteRequest::internal_encode(int version, Handler* handler, BufferVec* bu
     size_t pos = buf.encode_string(0,
                                  prepared_id.data(),
                                  prepared_id.size());
-    pos = buf.encode_uint16(pos, handler->consistency());
+    pos = buf.encode_uint16(pos, callback->consistency());
     pos = buf.encode_byte(pos, flags);
 
     if (elements_count() > 0) {
       buf.encode_uint16(pos, elements_count());
-      int32_t result = copy_buffers(version, bufs, handler);
+      int32_t result = copy_buffers(version, bufs, callback);
       if (result < 0) return result;
       length += result;
     }
@@ -165,8 +165,8 @@ int ExecuteRequest::internal_encode(int version, Handler* handler, BufferVec* bu
       pos = buf.encode_uint16(pos, serial_consistency());
     }
 
-    if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
-      pos = buf.encode_int64(pos, handler->timestamp());
+    if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {
+      pos = buf.encode_int64(pos, callback->timestamp());
     }
   }
 

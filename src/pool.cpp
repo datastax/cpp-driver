@@ -20,9 +20,8 @@
 #include "error_response.hpp"
 #include "io_worker.hpp"
 #include "logger.hpp"
-#include "prepare_handler.hpp"
+#include "query_request.hpp"
 #include "session.hpp"
-#include "set_keyspace_handler.hpp"
 #include "request_handler.hpp"
 #include "result_response.hpp"
 #include "timer.hpp"
@@ -33,6 +32,72 @@ namespace cass {
 
 static bool least_busy_comp(Connection* a, Connection* b) {
   return a->pending_request_count() < b->pending_request_count();
+}
+
+class SetKeyspaceCallback : public RequestCallback {
+public:
+  SetKeyspaceCallback(Connection* connection,
+                     const std::string& keyspace,
+                     RequestHandler* request_handler);
+
+  virtual void on_set(ResponseMessage* response);
+  virtual void on_error(CassError code, const std::string& message);
+  virtual void on_timeout();
+
+private:
+  void on_result_response(ResponseMessage* response);
+
+private:
+  ScopedRefPtr<RequestHandler> request_handler_;
+};
+
+SetKeyspaceCallback::SetKeyspaceCallback(Connection* connection,
+                                       const std::string& keyspace,
+                                       RequestHandler* request_handler)
+  : RequestCallback(new QueryRequest("USE \"" + keyspace + "\""))
+  , request_handler_(request_handler) {
+  set_connection(connection);
+}
+
+void SetKeyspaceCallback::on_set(ResponseMessage* response) {
+  switch (response->opcode()) {
+    case CQL_OPCODE_RESULT:
+      on_result_response(response);
+      break;
+    case CQL_OPCODE_ERROR:
+      connection_->defunct();
+      request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+                                 "Unable to set keyspace");
+      break;
+    default:
+      break;
+  }
+}
+
+void SetKeyspaceCallback::on_error(CassError code, const std::string& message) {
+  connection_->defunct();
+  request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+                             "Unable to set keyspace");
+}
+
+void SetKeyspaceCallback::on_timeout() {
+  // TODO(mpenick): What to do here?
+  request_handler_->on_timeout();
+}
+
+void SetKeyspaceCallback::on_result_response(ResponseMessage* response) {
+  ResultResponse* result =
+      static_cast<ResultResponse*>(response->response_body().get());
+  if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
+    if (!connection_->write(request_handler_.get())) {
+      // Try on the same host but a different connection
+      request_handler_->retry();
+    }
+  } else {
+    connection_->defunct();
+    request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+                               "Unable to set keyspace");
+  }
 }
 
 Pool::Pool(IOWorker* io_worker,
@@ -210,7 +275,7 @@ bool Pool::write(Connection* connection, RequestHandler* request_handler) {
               io_worker_->keyspace()->c_str(),
               static_cast<void*>(connection),
               static_cast<void*>(this));
-    if (!connection->write(new SetKeyspaceHandler(connection, *io_worker_->keyspace(),
+    if (!connection->write(new SetKeyspaceCallback(connection, *io_worker_->keyspace(),
                                                  request_handler), false)) {
       return false;
     }

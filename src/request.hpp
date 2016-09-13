@@ -31,7 +31,7 @@
 
 namespace cass {
 
-class Handler;
+class RequestCallback;
 class RequestMessage;
 
 class CustomPayload : public RefCounted<CustomPayload> {
@@ -111,7 +111,7 @@ public:
     custom_payload_.reset(payload);
   }
 
-  virtual int encode(int version, Handler* handler, BufferVec* bufs) const = 0;
+  virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const = 0;
 
 private:
   uint8_t opcode_;

@@ -14,33 +14,42 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARE_HANDLER_HPP_INCLUDED__
-#define __CASS_PREPARE_HANDLER_HPP_INCLUDED__
+#ifndef __CASS_SCHEMA_CHANGE_CALLBACK_HPP_INCLUDED__
+#define __CASS_SCHEMA_CHANGE_CALLBACK_HPP_INCLUDED__
 
-#include "handler.hpp"
-#include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 #include "request_handler.hpp"
+#include "scoped_ptr.hpp"
+#include "string_ref.hpp"
+
+#include <uv.h>
 
 namespace cass {
 
-class ResponseMessage;
-class Request;
+class Connection;
+class Response;
 
-class PrepareHandler : public Handler {
+class SchemaChangeCallback : public MultipleRequestCallback {
 public:
-  PrepareHandler(RequestHandler* request_handler)
-      : Handler(NULL)
-      , request_handler_(request_handler) {}
+  SchemaChangeCallback(Connection* connection,
+                      RequestHandler* request_handler,
+                      const SharedRefPtr<Response>& response,
+                      uint64_t elapsed = 0);
 
-  bool init(const std::string& prepared_id);
+  void execute();
 
-  virtual void on_set(ResponseMessage* response);
+  virtual void on_set(const ResponseMap& responses);
   virtual void on_error(CassError code, const std::string& message);
   virtual void on_timeout();
+  void on_closing();
 
 private:
+  bool has_schema_agreement(const ResponseMap& responses);
+
   ScopedRefPtr<RequestHandler> request_handler_;
+  SharedRefPtr<Response> request_response_;
+  uint64_t start_ms_;
+  uint64_t elapsed_ms_;
 };
 
 } // namespace cass

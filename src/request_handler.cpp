@@ -16,20 +16,91 @@
 
 #include "request_handler.hpp"
 
+#include "batch_request.hpp"
 #include "connection.hpp"
 #include "constants.hpp"
+#include "error_response.hpp"
 #include "execute_request.hpp"
 #include "io_worker.hpp"
 #include "pool.hpp"
-#include "prepare_handler.hpp"
+#include "prepare_request.hpp"
+#include "response.hpp"
 #include "result_response.hpp"
 #include "row.hpp"
-#include "schema_change_handler.hpp"
+#include "schema_change_callback.hpp"
 #include "session.hpp"
 
 #include <uv.h>
 
 namespace cass {
+
+class PrepareCallback : public RequestCallback {
+public:
+  PrepareCallback(RequestHandler* request_handler)
+    : RequestCallback(NULL)
+    , request_handler_(request_handler) {}
+
+  bool init(const std::string& prepared_id);
+
+  virtual void on_set(ResponseMessage* response);
+  virtual void on_error(CassError code, const std::string& message);
+  virtual void on_timeout();
+
+private:
+  ScopedRefPtr<RequestHandler> request_handler_;
+};
+
+bool PrepareCallback::init(const std::string& prepared_id) {
+  PrepareRequest* prepare =
+      static_cast<PrepareRequest*>(new PrepareRequest());
+  request_.reset(prepare);
+  if (request_handler_->request()->opcode() == CQL_OPCODE_EXECUTE) {
+    const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(
+                                      request_handler_->request());
+    prepare->set_query(execute->prepared()->statement());
+    return true;
+  } else if (request_handler_->request()->opcode() == CQL_OPCODE_BATCH) {
+    const BatchRequest* batch = static_cast<const BatchRequest*>(
+                                  request_handler_->request());
+    std::string prepared_statement;
+    if (batch->prepared_statement(prepared_id, &prepared_statement)) {
+      prepare->set_query(prepared_statement);
+      return true;
+    }
+  }
+  return false; // Invalid request type
+}
+
+void PrepareCallback::on_set(ResponseMessage* response) {
+  switch (response->opcode()) {
+    case CQL_OPCODE_RESULT: {
+      ResultResponse* result =
+          static_cast<ResultResponse*>(response->response_body().get());
+      if (result->kind() == CASS_RESULT_KIND_PREPARED) {
+        request_handler_->retry();
+      } else {
+        request_handler_->next_host();
+        request_handler_->retry();
+      }
+    } break;
+    case CQL_OPCODE_ERROR:
+      request_handler_->next_host();
+      request_handler_->retry();
+      break;
+    default:
+      break;
+  }
+}
+
+void PrepareCallback::on_error(CassError code, const std::string& message) {
+  request_handler_->next_host();
+  request_handler_->retry();
+}
+
+void PrepareCallback::on_timeout() {
+  request_handler_->next_host();
+  request_handler_->retry();
+}
 
 void RequestHandler::on_set(ResponseMessage* response) {
   assert(connection_ != NULL);
@@ -150,8 +221,8 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
       break;
 
     case CASS_RESULT_KIND_SCHEMA_CHANGE: {
-      SharedRefPtr<SchemaChangeHandler> schema_change_handler(
-            new SchemaChangeHandler(connection_,
+      SharedRefPtr<SchemaChangeCallback> schema_change_handler(
+            new SchemaChangeCallback(connection_,
                                     this,
                                     response->response_body()));
       schema_change_handler->execute();
@@ -214,7 +285,7 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
 }
 
 void RequestHandler::on_error_unprepared(ErrorResponse* error) {
-  ScopedRefPtr<PrepareHandler> prepare_handler(new PrepareHandler(this));
+  ScopedRefPtr<PrepareCallback> prepare_handler(new PrepareCallback(this));
   if (prepare_handler->init(error->prepared_id().to_string())) {
     if (!connection_->write(prepare_handler.get())) {
       // Try to prepare on the same host but on a different connection

@@ -19,11 +19,10 @@
 
 #include "address.hpp"
 #include "connection.hpp"
-#include "handler.hpp"
+#include "request_callback.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
 #include "macros.hpp"
-#include "multiple_request_handler.hpp"
 #include "response.hpp"
 #include "scoped_ptr.hpp"
 #include "token_map.hpp"
@@ -75,21 +74,21 @@ public:
 
 private:
   template<class T>
-  class ControlMultipleRequestHandler : public MultipleRequestHandler {
+  class ControlMultipleRequestCallback : public MultipleRequestCallback {
   public:
-    typedef void (*ResponseCallback)(ControlConnection*, const T&, const MultipleRequestHandler::ResponseMap&);
+    typedef void (*ResponseCallback)(ControlConnection*, const T&, const MultipleRequestCallback::ResponseMap&);
 
-    ControlMultipleRequestHandler(ControlConnection* control_connection,
+    ControlMultipleRequestCallback(ControlConnection* control_connection,
                                   ResponseCallback response_callback,
                                   const T& data)
-        : MultipleRequestHandler(control_connection->connection_)
+        : MultipleRequestCallback(control_connection->connection_)
         , control_connection_(control_connection)
         , response_callback_(response_callback)
         , data_(data) {}
 
     void execute_query(const std::string& index, const std::string& query);
 
-    virtual void on_set(const MultipleRequestHandler::ResponseMap& responses);
+    virtual void on_set(const MultipleRequestCallback::ResponseMap& responses);
 
     virtual void on_error(CassError code, const std::string& message) {
       control_connection_->handle_query_failure(code, message);
@@ -117,15 +116,15 @@ private:
   struct UnusedData {};
 
   template<class T>
-  class ControlHandler : public Handler {
+  class ControlCallback : public RequestCallback {
   public:
     typedef void (*ResponseCallback)(ControlConnection*, const T&, Response*);
 
-    ControlHandler(const Request* request,
+    ControlCallback(const Request* request,
                    ControlConnection* control_connection,
                    ResponseCallback response_callback,
                    const T& data)
-      : Handler(request)
+      : RequestCallback(request)
       , control_connection_(control_connection)
       , response_callback_(response_callback)
       , data_(data) {}
@@ -202,12 +201,12 @@ private:
   void query_meta_hosts();
   static void on_query_hosts(ControlConnection* control_connection,
                              const UnusedData& data,
-                             const MultipleRequestHandler::ResponseMap& responses);
+                             const MultipleRequestCallback::ResponseMap& responses);
 
   void query_meta_schema();
   static void on_query_meta_schema(ControlConnection* control_connection,
                                 const UnusedData& data,
-                                const MultipleRequestHandler::ResponseMap& responses);
+                                const MultipleRequestCallback::ResponseMap& responses);
 
   void refresh_node_info(SharedRefPtr<Host> host,
                          bool is_new_node,
@@ -228,7 +227,7 @@ private:
                      const StringRef& table_name);
   static void on_refresh_table_or_view(ControlConnection* control_connection,
                                const RefreshTableData& data,
-                               const MultipleRequestHandler::ResponseMap& responses);
+                               const MultipleRequestCallback::ResponseMap& responses);
 
   void refresh_type(const StringRef& keyspace_name,
                     const StringRef& type_name);

@@ -79,7 +79,7 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
-int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
+int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   int length = 0;
   uint8_t flags = 0;
 
@@ -104,11 +104,11 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
        end = statements_.end(); i != end; ++i) {
     const SharedRefPtr<Statement>& statement(*i);
     if (statement->has_names_for_values()) {
-      handler->on_error(CASS_ERROR_LIB_BAD_PARAMS,
+      callback->on_error(CASS_ERROR_LIB_BAD_PARAMS,
                         "Batches cannot contain queries with named values");
       return ENCODE_ERROR_BATCH_WITH_NAMED_VALUES;
     }
-    int32_t result = (*i)->encode_batch(version, bufs, handler);
+    int32_t result = (*i)->encode_batch(version, bufs, callback);
     if (result < 0) {
       return result;
     }
@@ -127,7 +127,7 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
         flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
       }
 
-      if (handler->timestamp() != CASS_INT64_MIN) {
+      if (callback->timestamp() != CASS_INT64_MIN) {
         buf_size += sizeof(int64_t); // [long]
         flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
       }
@@ -135,7 +135,7 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
 
     Buffer buf(buf_size);
 
-    size_t pos = buf.encode_uint16(0, handler->consistency());
+    size_t pos = buf.encode_uint16(0, callback->consistency());
     if (version >= 3) {
       pos = buf.encode_byte(pos, flags);
 
@@ -143,8 +143,8 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
         pos = buf.encode_uint16(pos, serial_consistency());
       }
 
-      if (handler->timestamp() != CASS_INT64_MIN) {
-        pos = buf.encode_int64(pos, handler->timestamp());
+      if (callback->timestamp() != CASS_INT64_MIN) {
+        pos = buf.encode_int64(pos, callback->timestamp());
       }
     }
 

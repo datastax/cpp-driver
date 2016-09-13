@@ -23,7 +23,7 @@
 #include "metrics.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
-#include "request_handler.hpp"
+#include "request_callback.hpp"
 #include "scoped_ptr.hpp"
 #include "timer.hpp"
 
@@ -113,7 +113,7 @@ private:
   Connection::ConnectionError error_code_;
   ConnectionVec connections_;
   ConnectionVec pending_connections_;
-  List<Handler> pending_requests_;
+  List<RequestCallback> pending_requests_;
   int available_connection_count_;
   bool is_available_;
   bool is_initial_connection_;

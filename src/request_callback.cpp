@@ -14,19 +14,20 @@
   limitations under the License.
 */
 
-#include "handler.hpp"
+#include "request_callback.hpp"
 
 #include "config.hpp"
 #include "connection.hpp"
 #include "constants.hpp"
 #include "logger.hpp"
+#include "query_request.hpp"
 #include "request.hpp"
 #include "result_response.hpp"
 #include "serialization.hpp"
 
 namespace cass {
 
-int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
+int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
   if (version < 1 || version > 4) {
     return Request::ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
   }
@@ -67,7 +68,7 @@ int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
   return length + header_size;
 }
 
-void Handler::set_state(Handler::State next_state) {
+void RequestCallback::set_state(RequestCallback::State next_state) {
   switch (state_) {
     case REQUEST_STATE_NEW:
       if (next_state == REQUEST_STATE_NEW) {
@@ -143,12 +144,54 @@ void Handler::set_state(Handler::State next_state) {
 
 }
 
-uint64_t Handler::request_timeout_ms(const Config& config) const {
+uint64_t RequestCallback::request_timeout_ms(const Config& config) const {
   uint64_t request_timeout_ms = request_->request_timeout_ms();
   if (request_timeout_ms == CASS_UINT64_MAX) {
     return config.request_timeout_ms();
   }
   return request_timeout_ms;
+}
+
+bool MultipleRequestCallback::get_result_response(const ResponseMap& responses,
+                                                 const std::string& index,
+                                                 ResultResponse** response) {
+  ResponseMap::const_iterator it = responses.find(index);
+  if (it == responses.end() || it->second->opcode() != CQL_OPCODE_RESULT) {
+    return false;
+  }
+  *response = static_cast<ResultResponse*>(it->second.get());
+  return true;
+}
+
+void MultipleRequestCallback::execute_query(const std::string& index, const std::string& query) {
+  if (has_errors_or_timeouts_) return;
+  responses_[index] = SharedRefPtr<Response>();
+  SharedRefPtr<InternalCallback> callback(new InternalCallback(this, new QueryRequest(query), index));
+  remaining_++;
+  if (!connection_->write(callback.get())) {
+    on_error(CASS_ERROR_LIB_NO_STREAMS, "No more streams available");
+  }
+}
+
+void MultipleRequestCallback::InternalCallback::on_set(ResponseMessage* response) {
+  parent_->responses_[index_] = response->response_body();
+  if (--parent_->remaining_ == 0 && !parent_->has_errors_or_timeouts_) {
+    parent_->on_set(parent_->responses_);
+  }
+}
+
+void MultipleRequestCallback::InternalCallback::on_error(CassError code, const std::string& message) {
+  if (!parent_->has_errors_or_timeouts_) {
+    parent_->on_error(code, message);
+  }
+  parent_->has_errors_or_timeouts_ = true;
+}
+
+void MultipleRequestCallback::InternalCallback::on_timeout() {
+  if (!parent_->has_errors_or_timeouts_) {
+    parent_->on_timeout();
+  }
+  parent_->has_errors_or_timeouts_ = true;
 }
 
 } // namespace cass

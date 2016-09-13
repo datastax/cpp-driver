@@ -54,12 +54,12 @@ private:
     return metadata_->get_column_definition(index).data_type;
   }
 
-  virtual int32_t encode_batch(int version, BufferVec* bufs, Handler* handler) const;
+  virtual int32_t encode_batch(int version, BufferVec* bufs, RequestCallback* callback) const;
 
 private:
-  int encode(int version, Handler* handler, BufferVec* bufs) const;
-  int internal_encode_v1(Handler* handler, BufferVec* bufs) const;
-  int internal_encode(int version, Handler* handler, BufferVec* bufs) const;
+  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
+  int internal_encode_v1(RequestCallback* callback, BufferVec* bufs) const;
+  int internal_encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   SharedRefPtr<const Prepared> prepared_;

@@ -30,7 +30,7 @@
 
 namespace cass {
 
-class Handler;
+class RequestCallback;
 
 class Statement : public RoutableRequest, public AbstractData {
 public:
@@ -95,10 +95,10 @@ public:
 
   virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
 
-  virtual int32_t encode_batch(int version, BufferVec* bufs, Handler* handler) const = 0;
+  virtual int32_t encode_batch(int version, BufferVec* bufs, RequestCallback* callback) const = 0;
 
 protected:
-  int32_t copy_buffers(int version, BufferVec* bufs, Handler* handler) const;
+  int32_t copy_buffers(int version, BufferVec* bufs, RequestCallback* callback) const;
 
 private:
   uint8_t flags_;

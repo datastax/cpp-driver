@@ -31,7 +31,7 @@ public:
     , credentials_(credentials) { }
 
 private:
-  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   V1Authenticator::Credentials credentials_;
@@ -48,7 +48,7 @@ public:
   const SharedRefPtr<Authenticator>& auth() const { return auth_; }
 
 private:
-  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   std::string token_;
