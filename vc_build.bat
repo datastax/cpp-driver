@@ -861,7 +861,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
     ECHO.
     IF !DRIVER_GENERATE_SOLUTION! EQU !TRUE! (
       ECHO Visual Studio !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! solution has been successfully generated
-      ECHO 	!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!\cassandra.sln
+      ECHO 	!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!\dse.sln
     ) ELSE (
       ECHO Driver has been successfully built [!TARGET_ARCHITECTURE!-bit !BUILD_TYPE!]
       ECHO 	!DRIVER_INSTALLATION_DIRECTORY!
@@ -1080,6 +1080,7 @@ REM Display the help message and exit with error code
   ECHO.
   ECHO     !ARGUMENT_ENABLE_INTEGRATION_TESTS!        Enable integration tests build
   ECHO     !ARGUMENT_ENABLE_UNIT_TESTS!               Enable unit tests build
+  ECHO     !ARGUMENT_ENABLE_TESTS!                    Enable integration and unit tests builds
   ECHO     !ARGUMENT_ENABLE_LIBSSH2!                  Enable libssh2 ^(remote server testing^)
   ECHO.
   ECHO     !ARGUMENT_HELP!                            Display this message
