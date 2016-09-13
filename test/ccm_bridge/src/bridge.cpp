@@ -139,6 +139,12 @@ const std::string DSE_WORKLOADS[] = {
 };
 const std::vector<std::string> CCM::Bridge::dse_workloads_(DSE_WORKLOADS,
   DSE_WORKLOADS + sizeof(DSE_WORKLOADS) / sizeof(DSE_WORKLOADS[0]));
+const CCM::DseWorkload DEFAULT_WORKLOAD[] {
+  CCM::DSE_WORKLOAD_CASSANDRA
+};
+const std::vector<CCM::DseWorkload> CCM::Bridge::DEFAULT_DSE_WORKLOAD(
+  DEFAULT_WORKLOAD, DEFAULT_WORKLOAD +
+  sizeof(DEFAULT_WORKLOAD) / sizeof(DEFAULT_WORKLOAD[0]));
 
 using namespace CCM;
 
@@ -146,7 +152,7 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   bool use_git /*= DEFAULT_USE_GIT*/,
   const std::string& branch_tag /* ""*/,
   bool use_dse /*= DEFAULT_USE_DSE*/,
-  DseWorkload dse_workload /*= DEFAULT_DSE_WORKLOAD*/,
+  std::vector<DseWorkload> dse_workload /*= DEFAULT_DSE_WORKLOAD*/,
   const std::string& cluster_prefix /*= DEFAULT_CLUSTER_PREFIX*/,
   DseCredentialsType dse_credentials_type /*= DEFAULT_DSE_CREDENTIALS*/,
   const std::string& dse_username /*= ""*/,
@@ -233,7 +239,6 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   , deployment_type_(DeploymentType::LOCAL)
   , host_("127.0.0.1") {
 #endif
-
   // Initialize the default remote configuration settings
   short port = DEFAULT_REMOTE_DEPLOYMENT_PORT;
   std::string username = DEFAULT_REMOTE_DEPLOYMENT_USERNAME;
@@ -524,8 +529,11 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
   std::string active_cluster_name = get_active_cluster();
   std::string cluster_name = generate_cluster_name(cassandra_version_, data_center_nodes,
     with_vnodes, is_ssl, is_client_authentication);
-  if (use_dse_ && dse_workload_ != DSE_WORKLOAD_CASSANDRA) {
-    cluster_name.append("-").append(dse_workloads_[dse_workload_]);
+  for (std::vector<DseWorkload>::iterator iterator = dse_workload_.begin();
+    iterator != dse_workload_.end(); ++iterator) {
+    if (use_dse_ && *iterator != DSE_WORKLOAD_CASSANDRA) {
+      cluster_name.append("-").append(dse_workloads_[*iterator]);
+    }
   }
   if (!switch_cluster(cluster_name)) {
     // Ensure any active cluster is stopped
@@ -603,8 +611,9 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
     }
 
     // Set the DSE workload (if applicable)
-    if (use_dse_ && dse_workload_ != DSE_WORKLOAD_CASSANDRA) {
-      set_dse_workload(dse_workload_);
+    if (use_dse_ &&
+      !(dse_workload_.size() == 1 && dse_workload_[0] == DSE_WORKLOAD_CASSANDRA)) {
+      set_dse_workloads(dse_workload_);
     }
   }
 
@@ -863,6 +872,16 @@ void CCM::Bridge::disable_node_gossip(unsigned int node) {
   execute_ccm_command(disable_node_gossip_command);
 }
 
+void CCM::Bridge::disable_node_trace(unsigned int node) {
+  // Create the disable node trace command and execute
+  std::vector<std::string> disable_node_trace_command;
+  disable_node_trace_command.push_back(generate_node_name(node));
+  disable_node_trace_command.push_back("nodetool");
+  disable_node_trace_command.push_back("settraceprobability");
+  disable_node_trace_command.push_back("0");
+  execute_ccm_command(disable_node_trace_command);
+}
+
 void CCM::Bridge::enable_node_binary_protocol(unsigned int node) {
   // Create the enable node binary protocol command and execute
   std::vector<std::string> enable_node_binary_protocol_command;
@@ -879,6 +898,16 @@ void CCM::Bridge::enable_node_gossip(unsigned int node) {
   disable_node_gossip_command.push_back("nodetool");
   disable_node_gossip_command.push_back("enablegossip");
   execute_ccm_command(disable_node_gossip_command);
+}
+
+void CCM::Bridge::enable_node_trace(unsigned int node) {
+  // Create the enable node trace command and execute
+  std::vector<std::string> enable_node_trace_command;
+  enable_node_trace_command.push_back(generate_node_name(node));
+  enable_node_trace_command.push_back("nodetool");
+  enable_node_trace_command.push_back("settraceprobability");
+  enable_node_trace_command.push_back("1");
+  execute_ccm_command(enable_node_trace_command);
 }
 
 void CCM::Bridge::execute_cql_on_node(unsigned int node, const std::string& cql) {
@@ -1097,14 +1126,29 @@ DseVersion CCM::Bridge::get_dse_version(const std::string& configuration_file) {
   return dse_version;
 }
 
-bool CCM::Bridge::set_dse_workload(unsigned int node, DseWorkload workload, bool is_kill /*= false */) {
-  // Update the member variable
-  dse_workload_ = workload;
+bool CCM::Bridge::set_dse_workload(unsigned int node, DseWorkload workload,
+  bool is_kill /*= false */) {
+  std::vector<DseWorkload> workloads;
+  workloads.push_back(workload);
+  return set_dse_workloads(1, workloads, is_kill);
+}
+
+bool CCM::Bridge::set_dse_workloads(unsigned int node,
+  std::vector<DseWorkload> workloads, bool is_kill /*= false */) {
+  // Ensure the workloads can be processed
+  if (workloads.empty()) {
+    throw BridgeException("No workloads to assign");
+  }
+
+  // Update the member variable with the workloads and generate workloads
+  dse_workload_.clear();
+  dse_workload_ = workloads;
+  std::string dse_workloads = generate_dse_workloads(workloads);
 
   // Determine if the node is currently active/up
   bool was_node_active = false;
   if (!is_node_down(node)) {
-    LOG("Stopping Active Node to Set Workload: " << dse_workloads_[workload]
+    LOG("Stopping Active Node to Set Workload: " << dse_workloads
       << " workload on node " << node);
     stop_node(node, is_kill);
     was_node_active = true;
@@ -1114,12 +1158,12 @@ bool CCM::Bridge::set_dse_workload(unsigned int node, DseWorkload workload, bool
   std::vector<std::string> dse_workload_command;
   dse_workload_command.push_back(generate_node_name(node));
   dse_workload_command.push_back("setworkload");
-  dse_workload_command.push_back(dse_workloads_[workload]);
+  dse_workload_command.push_back(dse_workloads);
   execute_ccm_command(dse_workload_command);
 
   // Determine if the node should be restarted
   if (was_node_active) {
-    LOG("Restarting Node to Apply Workload: " << dse_workloads_[workload]
+    LOG("Restarting Node to Apply Workload: " << dse_workloads
       << " workload on node " << node);
     start_node(node);
   }
@@ -1127,11 +1171,25 @@ bool CCM::Bridge::set_dse_workload(unsigned int node, DseWorkload workload, bool
   return was_node_active;
 }
 
-bool CCM::Bridge::set_dse_workload(DseWorkload workload, bool is_kill /*= false */) {
+bool CCM::Bridge::set_dse_workload(DseWorkload workload,
+  bool is_kill /*= false */) {
+  std::vector<DseWorkload> workloads;
+  workloads.push_back(workload);
+  return set_dse_workloads(workloads, is_kill);
+}
+
+bool CCM::Bridge::set_dse_workloads(std::vector<DseWorkload> workloads,
+  bool is_kill /*= false */) {
+  // Ensure the workloads can be processed
+  if (workloads.empty()) {
+    throw BridgeException("No workloads to assign");
+  }
+
   // Determine if the cluster is currently active/up
   bool was_cluster_active = false;
   if (!is_cluster_down()) {
-    LOG("Stopping Active Cluster to Set Workload: " << dse_workloads_[workload] << " workload");
+    LOG("Stopping Active Cluster to Set Workload: " <<
+      generate_dse_workloads(workloads) << " workload");
     stop_cluster(is_kill);
     was_cluster_active = true;
   }
@@ -1139,12 +1197,13 @@ bool CCM::Bridge::set_dse_workload(DseWorkload workload, bool is_kill /*= false 
   // Iterate over each node and set the DSE workload
   ClusterStatus status = cluster_status();
   for (unsigned int i = 1; i <= status.node_count; ++i) {
-    set_dse_workload(i, workload);
+    set_dse_workloads(i, workloads, false);
   }
 
   // Determine if the cluster should be restarted
   if (was_cluster_active) {
-    LOG("Restarting Cluster to Apply Workload: " << dse_workloads_[workload] << " workload");
+    LOG("Restarting Cluster to Apply Workload: " <<
+      generate_dse_workloads(workloads) << " workload");
     start_cluster();
   }
 
@@ -1646,39 +1705,42 @@ std::vector<std::string> CCM::Bridge::generate_create_updateconf_command(CassVer
   // Create the update configuration command (common updates)
   std::vector<std::string> updateconf_command;
   updateconf_command.push_back("updateconf");
-  updateconf_command.push_back("--rt=10000");
-  updateconf_command.push_back("read_request_timeout_in_ms:10000");
-  updateconf_command.push_back("write_request_timeout_in_ms:10000");
-  updateconf_command.push_back("request_timeout_in_ms:10000");
-  updateconf_command.push_back("phi_convict_threshold:16");
-  updateconf_command.push_back("hinted_handoff_enabled:false");
-  updateconf_command.push_back("dynamic_snitch_update_interval_in_ms:1000");
-  updateconf_command.push_back("native_transport_max_threads:1");
-  updateconf_command.push_back("rpc_min_threads:1");
-  updateconf_command.push_back("rpc_max_threads:1");
-  updateconf_command.push_back("concurrent_reads:2");
-  updateconf_command.push_back("concurrent_writes:2");
-  updateconf_command.push_back("concurrent_compactors:1");
-  updateconf_command.push_back("compaction_throughput_mb_per_sec:0");
-  updateconf_command.push_back("key_cache_size_in_mb:0");
-  updateconf_command.push_back("key_cache_save_period:0");
-  updateconf_command.push_back("memtable_flush_writers:1");
-  updateconf_command.push_back("max_hints_delivery_threads:1");
+  // Disable optimizations (limits) when using DSE
+  if (!use_dse_) {
+    updateconf_command.push_back("--rt=10000");
+    updateconf_command.push_back("read_request_timeout_in_ms:10000");
+    updateconf_command.push_back("write_request_timeout_in_ms:10000");
+    updateconf_command.push_back("request_timeout_in_ms:10000");
+    updateconf_command.push_back("phi_convict_threshold:16");
+    updateconf_command.push_back("hinted_handoff_enabled:false");
+    updateconf_command.push_back("dynamic_snitch_update_interval_in_ms:1000");
+    updateconf_command.push_back("native_transport_max_threads:1");
+    updateconf_command.push_back("rpc_min_threads:1");
+    updateconf_command.push_back("rpc_max_threads:1");
+    updateconf_command.push_back("concurrent_reads:2");
+    updateconf_command.push_back("concurrent_writes:2");
+    updateconf_command.push_back("concurrent_compactors:1");
+    updateconf_command.push_back("compaction_throughput_mb_per_sec:0");
+    updateconf_command.push_back("key_cache_size_in_mb:0");
+    updateconf_command.push_back("key_cache_save_period:0");
+    updateconf_command.push_back("memtable_flush_writers:1");
+    updateconf_command.push_back("max_hints_delivery_threads:1");
 
-  // Create Cassandra version specific updates (C* v1.2.x)
-  if (cassandra_version < "2.0.0") {
-    updateconf_command.push_back("reduce_cache_sizes_at:0");
-    updateconf_command.push_back("reduce_cache_capacity_to:0");
-    updateconf_command.push_back("flush_largest_memtables_at:0");
-    updateconf_command.push_back("index_interval:512");
-  } else {
-    updateconf_command.push_back("cas_contention_timeout_in_ms:10000");
-    updateconf_command.push_back("file_cache_size_in_mb:0");
-  }
+    // Create Cassandra version specific updates (C* v1.2.x)
+    if (cassandra_version < "2.0.0") {
+      updateconf_command.push_back("reduce_cache_sizes_at:0");
+      updateconf_command.push_back("reduce_cache_capacity_to:0");
+      updateconf_command.push_back("flush_largest_memtables_at:0");
+      updateconf_command.push_back("index_interval:512");
+    } else {
+      updateconf_command.push_back("cas_contention_timeout_in_ms:10000");
+      updateconf_command.push_back("file_cache_size_in_mb:0");
+    }
 
-  // Create Cassandra version specific updates (C* < v2.1)
-  if (cassandra_version < "2.1.0") {
-    updateconf_command.push_back("in_memory_compaction_limit_in_mb:1");
+    // Create Cassandra version specific updates (C* < v2.1)
+    if (cassandra_version < "2.1.0") {
+      updateconf_command.push_back("in_memory_compaction_limit_in_mb:1");
+    }
   }
 
   // Create Cassandra version specific updated (C* 2.2+)
@@ -1692,6 +1754,18 @@ std::vector<std::string> CCM::Bridge::generate_create_updateconf_command(CassVer
   }
 
   return updateconf_command;
+}
+
+std::string CCM::Bridge::generate_dse_workloads(std::vector<DseWorkload> workloads) {
+  std::string dse_workloads;
+  for (std::vector<DseWorkload>::iterator iterator = workloads.begin();
+    iterator != workloads.end(); ++iterator) {
+    dse_workloads += dse_workloads_[*iterator];
+    if ((iterator + 1) != workloads.end()) {
+      dse_workloads += ",";
+    }
+  }
+  return dse_workloads;
 }
 
 std::string CCM::Bridge::generate_node_name(unsigned int node) {

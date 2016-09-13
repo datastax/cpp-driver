@@ -46,7 +46,6 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 #define DEFAULT_DSE_VERSION DseVersion("4.8.8")
 #define DEFAULT_USE_GIT false
 #define DEFAULT_USE_DSE false
-#define DEFAULT_DSE_WORKLOAD DSE_WORKLOAD_CASSANDRA
 #define DEFAULT_CLUSTER_PREFIX "cpp-driver"
 #define DEFAULT_DSE_CREDENTIALS DseCredentialsType::USERNAME_PASSWORD
 #define DEFAULT_DEPLOYMENT DeploymentType::LOCAL
@@ -132,6 +131,11 @@ namespace CCM {
   class Bridge {
   public:
     /**
+     * Default DSE workload to apply (Cassandra)
+     */
+    static const std::vector<DseWorkload> DEFAULT_DSE_WORKLOAD;
+
+    /**
      * Constructor
      *
      * @param cassandra_version Cassandra version to use
@@ -148,7 +152,7 @@ namespace CCM {
      * @param use_dse True if CCM should load DSE for provided version; false
      *               otherwise (default: DEFAULT_USE_DSE)
      * @param dse_workload DSE workload to utilize
-     *                     (default: DSE_WORKLOAD_CASSANDRA)
+     *                     (default: DEFAULT_DSE_WORKLOAD)
      * @param cluster_prefix Prefix to use when creating a cluster name
      *                       (default: DEFAULT_CLUSTER_PREFIX)
      * @param dse_credentials_type Username|Password/INI file credentials
@@ -179,7 +183,7 @@ namespace CCM {
       bool use_git = DEFAULT_USE_GIT,
       const std::string& branch_tag = "",
       bool use_dse = DEFAULT_USE_DSE,
-      DseWorkload dse_workload = DSE_WORKLOAD_CASSANDRA,
+      std::vector<DseWorkload> dse_workload = DEFAULT_DSE_WORKLOAD,
       const std::string& cluster_prefix = DEFAULT_CLUSTER_PREFIX,
       DseCredentialsType dse_credentials_type = DEFAULT_DSE_CREDENTIALS,
       const std::string& dse_username = "",
@@ -438,6 +442,13 @@ namespace CCM {
     void disable_node_gossip(unsigned int node);
 
     /**
+     * Disable trace for a node on the active Cassandra cluster
+     *
+     * @param node Node to disable tracing
+     */
+    void disable_node_trace(unsigned int node);
+
+    /**
      * Enable binary protocol for a node on the active Cassandra cluster
      *
      * @param node Node to enable binary protocol
@@ -450,6 +461,13 @@ namespace CCM {
      * @param node Node to enable gossip
      */
     void enable_node_gossip(unsigned int node);
+
+    /**
+     * Enable trace for a node on the active Cassandra cluster
+     *
+     * @param node Node to enable tracing
+     */
+    void enable_node_trace(unsigned int node);
 
     /**
      * Execute a CQL statement on a particular node
@@ -579,6 +597,21 @@ namespace CCM {
     bool set_dse_workload(unsigned int node, DseWorkload workload, bool is_kill = false);
 
     /**
+     * Set the DSE workloads on a node
+     *
+     * NOTE: This operation should be performed before starting the node;
+     *       otherwise the node will be stopped and restarted
+     *
+     * @param node Node to set DSE workload on
+     * @param workloads Workloads to be set
+     * @param is_kill True if forced termination requested; false otherwise
+     *                (default: false)
+     * @return True if node was restarted; false otherwise
+     */
+    bool set_dse_workloads(unsigned int node, std::vector<DseWorkload> workloads,
+      bool is_kill = false);
+
+    /**
      * Set the DSE workload on the cluster
      *
      * NOTE: This operation should be performed before starting the cluster;
@@ -590,6 +623,20 @@ namespace CCM {
      * @return True if cluster was restarted; false otherwise
      */
     bool set_dse_workload(DseWorkload workload, bool is_kill = false);
+
+    /**
+     * Set the DSE workloads on the cluster
+     *
+     * NOTE: This operation should be performed before starting the cluster;
+     *       otherwise the cluster will be stopped and restarted
+     *
+     * @param workloads Workloads to be set
+     * @param is_kill True if forced termination requested; false otherwise
+     *                (default: false)
+     * @return True if cluster was restarted; false otherwise
+     */
+    bool set_dse_workloads(std::vector<DseWorkload> workloads,
+      bool is_kill = false);
 
     /**
      * Check to see if a node has been decommissioned
@@ -642,8 +689,10 @@ namespace CCM {
     bool use_dse_;
     /**
      * Workload to apply to the DSE cluster
+     *
+     * NOTE: Multiple workloads will be applied simultaneously via CCM
      */
-    DseWorkload dse_workload_;
+    std::vector<DseWorkload> dse_workload_;
     /**
      * Cluster prefix to apply to cluster name during create command
      */
@@ -852,6 +901,15 @@ namespace CCM {
      * @return Array/Vector containing the updateconf command
      */
     std::vector<std::string> generate_create_updateconf_command(CassVersion cassandra_version);
+
+    /**
+     * Generate the command separated list for have a single or multiple
+     * workloads for the CCM setworkload command
+     *
+     * @param workloads Workloads to be set
+     * @return String representing the workloads for the setworkload command
+     */
+    std::string generate_dse_workloads(std::vector<DseWorkload> workloads);
 
     /**
      * Get the next available node
