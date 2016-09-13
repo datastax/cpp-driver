@@ -74,7 +74,13 @@ void Logger::initialize(const std::string& test_case, const std::string& test_na
 }
 
 void Logger::add_critera(const std::string& criteria) {
+  cass::ScopedMutex lock(&mutex_);
   search_criteria_.push_back(criteria);
+}
+
+void test::driver::Logger::clear_critera() {
+  cass::ScopedMutex lock(&mutex_);
+  search_criteria_.clear();
 }
 
 size_t Logger::get_count() {
@@ -128,4 +134,10 @@ void Logger::log(const CassLogMessage* log, void* data) {
       ++count_;
     }
   }
+}
+
+void test::driver::Logger::reset() {
+  cass::ScopedMutex lock(&mutex_);
+  search_criteria_.clear();
+  count_ = 0;
 }
