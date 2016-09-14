@@ -96,6 +96,20 @@ public:
   static const std::string& branch_tag();
 
   /**
+   * Flag to determine if installation directory should be used (Passed to CCM)
+   *
+   * @return True if installation directory should be used; false otherwise
+   */
+  static bool use_install_dir();
+
+  /**
+   * Get the installation directory to use
+   *
+   * @return Installation directory
+   */
+  static const std::string& install_dir();
+
+  /**
    * Get the cluster prefix to use for the CCM clusters (e.g. cpp-driver)
    *
    * @return Cluster prefix
@@ -192,6 +206,14 @@ private:
    * Branch/Tag name to use if value is present
    */
   static std::string branch_tag_;
+  /**
+   * Flag to determine if installation directory should be used (passed to CCM)
+   */
+  static bool use_install_dir_;
+  /**
+   * Installation directory to use if value is present
+   */
+  static std::string install_dir_;
   /**
    * Cluster prefix to apply to cluster name during create command
    */

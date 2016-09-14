@@ -131,6 +131,7 @@ void Integration::SetUp() {
     //Create and start the CCM cluster (if not already created)
     ccm_ = new CCM::Bridge(server_version_,
       Options::use_git(), Options::branch_tag(),
+      Options::use_install_dir(), Options::install_dir(),
       Options::is_dse(), dse_workload_,
       Options::cluster_prefix(),
       Options::dse_credentials(),
