@@ -43,8 +43,9 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 
 // Default values
 #define DEFAULT_CASSANDRA_VERSION CassVersion("3.7")
-#define DEFAULT_DSE_VERSION DseVersion("4.8.8")
+#define DEFAULT_DSE_VERSION DseVersion("5.0.2")
 #define DEFAULT_USE_GIT false
+#define DEFAULT_USE_INSTALL_DIR false
 #define DEFAULT_USE_DSE false
 #define DEFAULT_CLUSTER_PREFIX "cpp-driver"
 #define DEFAULT_DSE_CREDENTIALS DseCredentialsType::USERNAME_PASSWORD
@@ -149,6 +150,11 @@ namespace CCM {
      * @param branch_tag Branch/Tag to use when use_git is enabled
      *                   (default: Empty). This value is independent of the
      *                   version specified.
+     * @param use_install_dir True if CCM should use a particular installation
+     *                        directory; false otherwise
+     *                        (default: DEAFAULT_USE_INSTALL_DIR)
+     * @param install_dir Installation directory to use when use_install_dir is
+     *                    enabled (default: Empty)
      * @param use_dse True if CCM should load DSE for provided version; false
      *               otherwise (default: DEFAULT_USE_DSE)
      * @param dse_workload DSE workload to utilize
@@ -182,6 +188,8 @@ namespace CCM {
     Bridge(CassVersion cassandra_version = DEFAULT_CASSANDRA_VERSION,
       bool use_git = DEFAULT_USE_GIT,
       const std::string& branch_tag = "",
+      bool use_install_dir = DEFAULT_USE_INSTALL_DIR,
+      const std::string& install_dir = "",
       bool use_dse = DEFAULT_USE_DSE,
       std::vector<DseWorkload> dse_workload = DEFAULT_DSE_WORKLOAD,
       const std::string& cluster_prefix = DEFAULT_CLUSTER_PREFIX,
@@ -683,6 +691,15 @@ namespace CCM {
      * Branch/Tag to retrieve from ASF/GitHub
      */
     std::string branch_tag_;
+    /**
+     * Flag to determine if installation directory should be used (passed to
+     * CCM)
+     */
+    bool use_install_dir_;
+    /**
+     * Installation directory to pass to CCM
+     */
+    std::string install_dir_;
     /**
      * Flag to determine if DSE is being used
      */

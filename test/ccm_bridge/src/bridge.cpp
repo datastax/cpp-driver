@@ -113,6 +113,8 @@ typedef SSIZE_T ssize_t;
 #define CCM_CONFIGURATION_KEY_CASSANDRA_VERSION "cassandra_version"
 #define CCM_CONFIGURATION_KEY_USE_GIT "use_git"
 #define CCM_CONFIGURATION_KEY_BRANCH_TAG "branch_tag"
+#define CCM_CONFIGURATION_KEY_USE_INSTALL_DIR "use_install_dir"
+#define CCM_CONFIGURATION_KEY_INSTALL_DIR "install_dir"
 #define CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE "deployment_type"
 #define CCM_CONFIGURATION_KEY_USE_DSE "use_dse"
 #define CCM_CONFIGURATION_KEY_DSE_VERSION "dse_version"
@@ -139,7 +141,7 @@ const std::string DSE_WORKLOADS[] = {
 };
 const std::vector<std::string> CCM::Bridge::dse_workloads_(DSE_WORKLOADS,
   DSE_WORKLOADS + sizeof(DSE_WORKLOADS) / sizeof(DSE_WORKLOADS[0]));
-const CCM::DseWorkload DEFAULT_WORKLOAD[] {
+const CCM::DseWorkload DEFAULT_WORKLOAD[] = {
   CCM::DSE_WORKLOAD_CASSANDRA
 };
 const std::vector<CCM::DseWorkload> CCM::Bridge::DEFAULT_DSE_WORKLOAD(
@@ -151,6 +153,8 @@ using namespace CCM;
 CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   bool use_git /*= DEFAULT_USE_GIT*/,
   const std::string& branch_tag /* ""*/,
+  bool use_install_dir /*=DEFAULT_USE_INSTALL_DIR*/,
+  const std::string& install_dir /*=""*/,
   bool use_dse /*= DEFAULT_USE_DSE*/,
   std::vector<DseWorkload> dse_workload /*= DEFAULT_DSE_WORKLOAD*/,
   const std::string& cluster_prefix /*= DEFAULT_CLUSTER_PREFIX*/,
@@ -169,6 +173,8 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   , dse_version_(DEFAULT_DSE_VERSION)
   , use_git_(use_git)
   , branch_tag_(branch_tag)
+  , use_install_dir_(use_install_dir)
+  , install_dir_(install_dir)
   , use_dse_(use_dse)
   , dse_workload_(dse_workload)
   , cluster_prefix_(cluster_prefix)
@@ -198,6 +204,11 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
     dse_version_ = DseVersion(server_version.to_string());
     cassandra_version_ = dse_version_.get_cass_version();
   }
+
+  // Determine if installation directory can be used
+  if (use_install_dir_ && install_dir_.empty()) {
+    throw BridgeException("Unable to use Installation Directory: Directory must not be blank");
+  }
 #ifdef CASS_USE_LIBSSH2
   // Determine if libssh2 needs to be initialized
   if (deployment_type_ == DeploymentType::REMOTE) {
@@ -223,6 +234,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   : cassandra_version_(DEFAULT_CASSANDRA_VERSION)
   , dse_version_(DEFAULT_DSE_VERSION)
   , use_git_(DEFAULT_USE_GIT)
+  , use_install_dir_(DEFAULT_USE_INSTALL_DIR)
   , use_dse_(DEFAULT_USE_DSE)
   , dse_workload_(DEFAULT_DSE_WORKLOAD)
   , cluster_prefix_(DEFAULT_CLUSTER_PREFIX)
@@ -276,6 +288,17 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_BRANCH_TAG) == 0) {
             branch_tag_ = value;
+          } else if (key.compare(CCM_CONFIGURATION_KEY_USE_INSTALL_DIR) == 0) {
+            //Convert the value
+            std::stringstream valueStream(value);
+            if (!(valueStream >> std::boolalpha >> use_install_dir_).fail()) {
+              continue;
+            } else {
+              LOG_ERROR("Invalid Flag [" << value << "] for Use Install Directory: Using default [" << DEFAULT_USE_INSTALL_DIR << "]");
+              use_install_dir_ = DEFAULT_USE_INSTALL_DIR;
+            }
+          } else if (key.compare(CCM_CONFIGURATION_KEY_INSTALL_DIR) == 0) {
+            install_dir_ = value;
           } else if (key.compare(CCM_CONFIGURATION_KEY_USE_DSE) == 0) {
             //Convert the value
             std::stringstream valueStream(value);
@@ -371,6 +394,11 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
     cassandra_version_ = dse_version_.get_cass_version();
   }
 
+  // Determine if installation directory can be used
+  if (use_install_dir_ && install_dir_.empty()) {
+    throw BridgeException("Unable to use Installation Directory: Directory must not be blank");
+  }
+
   // Display the configuration settings being used
   LOG("Host: " << host_);
   LOG("Cassandra Version: " << cassandra_version_.to_string());
@@ -379,6 +407,9 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   }
   if (use_git_ && !branch_tag_.empty()) {
     LOG("  Branch/Tag: " << branch_tag_);
+  }
+  if (use_install_dir_ && !install_dir_.empty()) {
+    LOG("  Installation Directory: " << install_dir_);
   }
   LOG("Cluster Prefix: " << cluster_prefix_);
   LOG("Deployment Type: " << deployment_type_.to_string());
@@ -544,31 +575,35 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
     // Create the cluster create command and execute
     std::vector<std::string> create_command;
     create_command.push_back("create");
-    create_command.push_back("-v");
-    if (use_dse_) {
-      if (use_git_) {
-        if (branch_tag_.empty()) {
-          create_command.push_back("git:" + dse_version_.to_string());
-        } else {
-          create_command.push_back("git:" + branch_tag_);
-        }
-      } else {
-        create_command.push_back(dse_version_.to_string());
-      }
-      create_command.push_back("--dse");
-      if (dse_credentials_type_ == DseCredentialsType::USERNAME_PASSWORD) {
-        create_command.push_back("--dse-username=" + dse_username_);
-        create_command.push_back("--dse-password=" + dse_password_);
-      }
+    if (use_install_dir_ && !install_dir_.empty()) {
+      create_command.push_back("--install-dir=" + install_dir_);
     } else {
-      if (use_git_) {
-        if (branch_tag_.empty()) {
-          create_command.push_back("git:cassandra-" + cassandra_version_.to_string());
+      create_command.push_back("-v");
+      if (use_dse_) {
+        if (use_git_) {
+          if (branch_tag_.empty()) {
+            create_command.push_back("git:" + dse_version_.to_string());
+          } else {
+            create_command.push_back("git:" + branch_tag_);
+          }
         } else {
-          create_command.push_back("git:" + branch_tag_);
+          create_command.push_back(dse_version_.to_string());
+        }
+        create_command.push_back("--dse");
+        if (dse_credentials_type_ == DseCredentialsType::USERNAME_PASSWORD) {
+          create_command.push_back("--dse-username=" + dse_username_);
+          create_command.push_back("--dse-password=" + dse_password_);
         }
       } else {
-        create_command.push_back(cassandra_version_.to_string());
+        if (use_git_) {
+          if (branch_tag_.empty()) {
+            create_command.push_back("git:cassandra-" + cassandra_version_.to_string());
+          } else {
+            create_command.push_back("git:" + branch_tag_);
+          }
+        } else {
+          create_command.push_back(cassandra_version_.to_string());
+        }
       }
     }
     create_command.push_back("-b");
