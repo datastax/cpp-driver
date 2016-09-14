@@ -18,6 +18,7 @@
 
 #include "cassandra.h"
 
+#include <string.h>
 #include <uv.h>
 
 #define NUM_SECONDS_PER_DAY (24U * 60U * 60U)

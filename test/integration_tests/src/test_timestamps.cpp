@@ -17,7 +17,6 @@
 #include "test_utils.hpp"
 
 #include "cassandra.h"
-#include "external_types.hpp"
 #include "timestamp_generator.hpp"
 #include "get_time.hpp"
 
