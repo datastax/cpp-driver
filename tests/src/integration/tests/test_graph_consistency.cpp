@@ -97,7 +97,7 @@ public:
     if (!propagate_schema_) {
       LOG("Performing Graph Query to Propagate Schema Across Cluster: "
         << "Waiting 10s");
-      execute_read_query(CASS_CONSISTENCY_ANY);
+      execute_read_query(CASS_CONSISTENCY_ONE);
       msleep(10000);
       propagate_schema_ = true;
     }
