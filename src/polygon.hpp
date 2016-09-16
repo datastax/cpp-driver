@@ -15,6 +15,8 @@
 
 #include <external.hpp>
 
+#include <string>
+
 namespace dse {
 
 class Polygon {
