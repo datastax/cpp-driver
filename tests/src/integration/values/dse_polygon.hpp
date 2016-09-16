@@ -64,8 +64,14 @@ public:
   }
 
   DsePolygon(const CassRow* row, size_t column_index)
-    : is_null_(false) {
+    : is_null_(true) {
     initialize(row, column_index);
+    set_polygon_string();
+  }
+
+  DsePolygon(const ::DseGraphResult* result)
+    : is_null_(false) {
+    initialize(result);
     set_polygon_string();
   }
 
@@ -127,11 +133,53 @@ public:
     return compare(rhs.line_strings_);
   }
 
+  /**
+   * Generate the native DsePolygon object from the list of line strings
+   *
+   * @return Generated native DsePolygon reference object; polygon may be
+   *         empty
+   */
+  Native get() {
+    // Create the native polygon object
+    Native polygon = dse_polygon_new();
+
+    // Ensure the polygon has sufficient line string(s)
+    if (line_strings_.size() > 0) {
+      // Initialize the polygon
+      polygon = dse_polygon_new();
+      size_t total_points = 0;
+      for (std::vector<DseLineString>::const_iterator iterator = line_strings_.begin();
+        iterator < line_strings_.end(); ++iterator) {
+        total_points += (*iterator).size();
+      }
+      dse_polygon_reserve(polygon.get(), static_cast<cass_uint32_t>(line_strings_.size()), static_cast<cass_uint32_t>(total_points));
+
+      // Add all the line strings to the native driver object
+      for (std::vector<DseLineString>::const_iterator line_strings_iterator = line_strings_.begin();
+        line_strings_iterator < line_strings_.end(); ++line_strings_iterator) {
+        // Add each ring of line strings to the polygon
+        std::vector<DsePoint> points = (*line_strings_iterator).value();
+        dse_polygon_start_ring(polygon.get());
+        for (std::vector<DsePoint>::const_iterator points_iterator = points.begin();
+          points_iterator < points.end(); ++points_iterator) {
+          Point point = (*points_iterator).value();
+          EXPECT_EQ(CASS_OK, dse_polygon_add_point(polygon.get(), point.x, point.y))
+            << "Unable to Add DSE Point to DSE Polygon: Invalid error code returned";
+        }
+      }
+      EXPECT_EQ(CASS_OK, dse_polygon_finish(polygon.get()))
+        << "Unable to Complete DSE Polygon: Invalid error code returned";
+    }
+
+    // Return the generated line string
+    return polygon;
+  }
+
   void statement_bind(Statement statement, size_t index) {
     if (is_null_) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
     } else {
-      Native polygon = generate_native_polygon();
+      Native polygon = get();
       ASSERT_EQ(CASS_OK, cass_statement_bind_dse_polygon(statement.get(), index, polygon.get()));
     }
   }
@@ -166,6 +214,32 @@ private:
    */
   bool is_null_;
 
+  /**
+   * Assign the line strings from the native iterator
+   *
+   * @param iterator Native driver iterator
+   */
+  void assign_line_strings(Iterator iterator) {
+    // Get the number of rings in the polygon
+    cass_uint32_t total_rings = dse_polygon_iterator_num_rings(iterator.get());
+
+    // Utilize the iterator to assign the line string from the points
+    for (cass_uint32_t i = 0; i < total_rings; ++i) {
+      // Add each ring of line strings to the polygon
+      cass_uint32_t total_points = 0;
+      ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_num_points(iterator.get(), &total_points))
+        << "Unable to Get Number of Points from DSE Polygon: Invalid error code returned";
+      std::vector<DsePoint> points;
+      for (cass_uint32_t j = 0; j < total_points; ++j) {
+        Point point = { 0.0, 0.0 };
+        ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(iterator.get(), &point.x, &point.y))
+          << "Unable to Get DSE Point from DSE Polygon: Invalid error code returned";
+        points.push_back(DsePoint(point));
+      }
+      line_strings_.push_back(DseLineString(points));
+    }
+  }
+
   void initialize(const CassValue* value) {
     // Ensure the value types
     ASSERT_TRUE(value != NULL) << "Invalid CassValue: Value should not be null";
@@ -181,33 +255,31 @@ private:
     if (cass_value_is_null(value)) {
       is_null_ = true;
     } else {
-      // Create the iterator
+      // Indicate the polygon is not null
+      is_null_ = false;
+
+      // Get the polygon from the value
       Iterator iterator(dse_polygon_iterator_new());
       ASSERT_EQ(CASS_OK, dse_polygon_iterator_reset(iterator.get(), value))
         << "Unable to Reset DSE Polygon Iterator: Invalid error code returned";
-      cass_uint32_t total_rings = dse_polygon_iterator_num_rings(iterator.get());
-
-      // Utilize the iterator to assign the line string from the points
-      for (cass_uint32_t i = 0; i < total_rings; ++i) {
-        // Add each ring of line strings to the polygon
-        cass_uint32_t total_points = 0;
-        ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_num_points(iterator.get(), &total_points))
-          << "Unable to Get Number of Points from DSE Polygon: Invalid error code returned";
-        std::vector<DsePoint> points;
-        for (cass_uint32_t j = 0; j < total_points; ++j) {
-          Point point = { 0.0, 0.0 };
-          ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(iterator.get(), &point.x, &point.y))
-            << "Unable to Get DSE Point from DSE Polygon: Invalid error code returned";
-          points.push_back(DsePoint(point));
-        }
-        line_strings_.push_back(DseLineString(points));
-      }
+      assign_line_strings(iterator);
     }
   }
 
   void initialize(const CassRow* row, size_t column_index) {
     ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
     initialize(cass_row_get_column(row, column_index));
+  }
+
+  void initialize(const ::DseGraphResult* result) {
+    if (dse_graph_result_is_null(result)) {
+      is_null_ = true;
+    } else {
+      // Get the polygon iterator from the result and assign the line strings
+      Iterator iterator(dse_polygon_iterator_new());
+      ASSERT_EQ(CASS_OK, dse_graph_result_as_polygon(result, iterator.get()));
+      assign_line_strings(iterator);
+    }
   }
 
   /**
@@ -248,48 +320,6 @@ private:
         close_paren = line_strings.find(')');
       }
     }
-  }
-
-  /**
-   * Generate the native DsePolygon object from the list of line strings
-   *
-   * @return Generated native DsePolygon reference object; polygon may be
-   *         empty
-   */
-  Native generate_native_polygon() {
-    // Create the native polygon object
-    Native polygon = dse_polygon_new();
-
-    // Ensure the polygon has sufficient line string(s)
-    if (line_strings_.size() > 0) {
-      // Initialize the polygon
-      polygon = dse_polygon_new();
-      size_t total_points = 0;
-      for (std::vector<DseLineString>::const_iterator iterator = line_strings_.begin();
-        iterator < line_strings_.end(); ++iterator) {
-        total_points += (*iterator).size();
-      }
-      dse_polygon_reserve(polygon.get(), static_cast<cass_uint32_t>(line_strings_.size()), static_cast<cass_uint32_t>(total_points));
-
-      // Add all the line strings to the native driver object
-      for (std::vector<DseLineString>::const_iterator line_strings_iterator = line_strings_.begin();
-        line_strings_iterator < line_strings_.end(); ++line_strings_iterator) {
-        // Add each ring of line strings to the polygon
-        std::vector<DsePoint> points = (*line_strings_iterator).value();
-        dse_polygon_start_ring(polygon.get());
-        for (std::vector<DsePoint>::const_iterator points_iterator = points.begin();
-          points_iterator < points.end(); ++points_iterator) {
-          Point point = (*points_iterator).value();
-          EXPECT_EQ(CASS_OK, dse_polygon_add_point(polygon.get(), point.x, point.y))
-            << "Unable to Add DSE Point to DSE Polygon: Invalid error code returned";
-        }
-      }
-      EXPECT_EQ(CASS_OK, dse_polygon_finish(polygon.get()))
-        << "Unable to Complete DSE Polygon: Invalid error code returned";
-    }
-
-    // Return the generated line string
-    return polygon;
   }
 
   /**

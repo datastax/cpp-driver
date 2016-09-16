@@ -72,8 +72,14 @@ public:
   }
 
   DseLineString(const CassRow* row, size_t column_index)
-    : is_null_(false) {
+    : is_null_(true) {
     initialize(row, column_index);
+    set_line_string_string();
+  }
+
+  DseLineString(const ::DseGraphResult* result)
+    : is_null_(false) {
+    initialize(result);
     set_line_string_string();
   }
 
@@ -137,6 +143,36 @@ public:
   }
 
   /**
+   * Generate the native DseLineString object from the list of points
+   *
+   * @return Generated native DseLineString reference object; line string
+   *         may be empty
+   */
+  Native get() {
+    // Create the native line string object
+    Native line_string = dse_line_string_new();
+
+    // Ensure the line string has sufficient point(s)
+    if (points_.size() > 0) {
+      // Initialize the line string
+      dse_line_string_reserve(line_string.get(), static_cast<cass_uint32_t>(points_.size()));
+
+      // Add all the points to the native driver object
+      for (std::vector<DsePoint>::const_iterator iterator = points_.begin();
+        iterator < points_.end(); ++iterator) {
+        Point point = (*iterator).value();
+        EXPECT_EQ(CASS_OK, dse_line_string_add_point(line_string.get(), point.x, point.y))
+          << "Unable to Add DSE Point to DSE Line String: Invalid error code returned";
+      }
+      EXPECT_EQ(CASS_OK, dse_line_string_finish(line_string.get()))
+        << "Unable to Complete DSE Line String: Invalid error code returned";
+    }
+
+    // Return the generated line string
+    return line_string;
+  }
+
+  /**
    * Get the size of the line string
    *
    * @return The number of points in the line string
@@ -149,7 +185,7 @@ public:
     if (is_null_) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
     } else {
-      Native line_string = generate_native_line_string();
+      Native line_string = get();
       ASSERT_EQ(CASS_OK, cass_statement_bind_dse_line_string(statement.get(), index, line_string.get()));
     }
   }
@@ -184,6 +220,24 @@ private:
    */
   bool is_null_;
 
+  /**
+   * Assign the points from the native iterator
+   *
+   * @param iterator Native driver iterator
+   */
+  void assign_points(Iterator iterator) {
+    // Get the number of points in the line string
+    cass_uint32_t size = dse_line_string_iterator_num_points(iterator.get());
+
+    // Utilize the iterator to assign the points from the line string
+    for (cass_uint32_t i = 0; i < size; ++i) {
+      Point point = { 0.0, 0.0 };
+      ASSERT_EQ(CASS_OK, dse_line_string_iterator_next_point(iterator.get(), &point.x, &point.y))
+        << "Unable to Get DSE Point from DSE Line String: Invalid error code returned";
+      points_.push_back(DsePoint(point));
+    }
+  }
+
   void initialize(const CassValue* value) {
     // Ensure the value types
     ASSERT_TRUE(value != NULL) << "Invalid CassValue: Value should not be null";
@@ -199,19 +253,14 @@ private:
     if (cass_value_is_null(value)) {
       is_null_ = true;
     } else {
-      // Create the iterator
+      // Indicate the line string is not null
+      is_null_ = false;
+
+      // Get the line string from the value
       Iterator iterator(dse_line_string_iterator_new());
       ASSERT_EQ(CASS_OK, dse_line_string_iterator_reset(iterator.get(), value))
         << "Unable to Reset DSE Line String Iterator: Invalid error code returned";
-      cass_uint32_t size = dse_line_string_iterator_num_points(iterator.get());
-
-      // Utilize the iterator to assign the points from the line string
-      for (cass_uint32_t i = 0; i < size; ++i) {
-        Point point = { 0.0, 0.0 };
-        ASSERT_EQ(CASS_OK, dse_line_string_iterator_next_point(iterator.get(), &point.x, &point.y))
-          << "Unable to Get DSE Point from DSE Line String: Invalid error code returned";
-        points_.push_back(DsePoint(point));
-      }
+      assign_points(iterator);
     }
   }
 
@@ -220,34 +269,15 @@ private:
     initialize(cass_row_get_column(row, column_index));
   }
 
-  /**
-   * Generate the native DseLineString object from the list of points
-   *
-   * @return Generated native DseLineString reference object; line string
-   *         may be empty
-   */
-  Native generate_native_line_string() {
-    // Create the native line string object
-    Native line_string = dse_line_string_new();
-
-    // Ensure the line string has sufficient point(s)
-    if (points_.size() > 0) {
-      // Initialize the line string
-      dse_line_string_reserve(line_string.get(), static_cast<cass_uint32_t>(points_.size()));
-
-      // Add all the points to the native driver object
-      for (std::vector<DsePoint>::const_iterator iterator = points_.begin();
-        iterator < points_.end(); ++iterator) {
-        Point point = (*iterator).value();
-        EXPECT_EQ(CASS_OK, dse_line_string_add_point(line_string.get(), point.x, point.y))
-          << "Unable to Add DSE Point to DSE Line String: Invalid error code returned";
-      }
-      EXPECT_EQ(CASS_OK, dse_line_string_finish(line_string.get()))
-        << "Unable to Complete DSE Line String: Invalid error code returned";
+  void initialize(const ::DseGraphResult* result) {
+    if (dse_graph_result_is_null(result)) {
+      is_null_ = true;
+    } else {
+      // Get the line string iterator from the result and assign the points
+      Iterator iterator(dse_line_string_iterator_new());
+      ASSERT_EQ(CASS_OK, dse_graph_result_as_line_string(result, iterator.get()));
+      assign_points(iterator);
     }
-
-    // Return the generated line string
-    return line_string;
   }
 
   /**

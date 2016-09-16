@@ -363,6 +363,51 @@ inline std::string DseGraphResult::value<std::string>() {
   return value<Varchar>().value();
 }
 
+/**
+ * Get the line string from the DSE graph result
+ *
+ * @return DseLineString value from the DSE graph result
+ * @throws DseGraphResult::Exception if DSE graph result is not a line string
+ */
+template<>
+inline DseLineString DseGraphResult::value<DseLineString>() {
+  DseLineString line_string(result_);
+  if (testing::Test::HasFailure()) {
+    throw Exception("Unable to get Value: DSE graph result is not a line string");
+  }
+  return line_string;
+}
+
+/**
+ * Get the point from the DSE graph result
+ *
+ * @return DsePoint value from the DSE graph result
+ * @throws DseGraphResult::Exception if DSE graph result is not a point
+ */
+template<>
+inline DsePoint DseGraphResult::value<DsePoint>() {
+  DsePoint point(result_);
+  if (testing::Test::HasFailure()) {
+    throw Exception("Unable to get Value: DSE graph result is not a point");
+  }
+  return point;
+}
+
+/**
+ * Get the polygon from the DSE graph result
+ *
+ * @return DsePolygon value from the DSE graph result
+ * @throws DseGraphResult::Exception if DSE graph result is not a polygon
+ */
+template<>
+inline DsePolygon DseGraphResult::value<DsePolygon>() {
+  DsePolygon polygon(result_);
+  if (testing::Test::HasFailure()) {
+    throw Exception("Unable to get Value: DSE graph result is not a polygon");
+  }
+  return polygon;
+}
+
 inline const std::string DseGraphResult::str(unsigned int indent) {
   std::stringstream output;
 
