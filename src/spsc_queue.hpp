@@ -31,8 +31,8 @@
 
 #include "atomic.hpp"
 #include "cassconfig.hpp"
-#include "utils.hpp"
 #include "macros.hpp"
+#include "utils.hpp"
 
 namespace cass {
 

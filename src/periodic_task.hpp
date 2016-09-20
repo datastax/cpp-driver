@@ -46,7 +46,7 @@ public:
 
 private:
   static void close(PeriodicTask* task) {
-    uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(&task->timer_handle_), on_close);
+    uv_close(reinterpret_cast<uv_handle_t*>(&task->timer_handle_), on_close);
   }
 
 #if UV_VERSION_MAJOR == 0

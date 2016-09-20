@@ -18,7 +18,6 @@
 #define __CASS_TIMER_HPP_INCLUDED__
 
 #include "macros.hpp"
-#include "utils.hpp"
 
 #include <uv.h>
 
@@ -40,7 +39,7 @@ public:
 
   bool is_running() const {
     if (handle_ == NULL) return false;
-    return uv_is_active(copy_cast<uv_timer_t*, uv_handle_t*>(handle_)) != 0;
+    return uv_is_active(reinterpret_cast<uv_handle_t*>(handle_)) != 0;
   }
 
   void start(uv_loop_t* loop, uint64_t timeout, void* data,
@@ -58,7 +57,7 @@ public:
   void stop() {
     if (handle_ == NULL) return;
     // This also stops the timer
-    uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(handle_), on_close);
+    uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
     handle_ = NULL;
   }
 
@@ -78,7 +77,7 @@ public:
   }
 
   static void on_close(uv_handle_t* handle) {
-    delete copy_cast<uv_handle_t*, uv_timer_t*>(handle);
+    delete reinterpret_cast<uv_timer_t*>(handle);
   }
 
 private:

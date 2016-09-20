@@ -34,7 +34,6 @@
 #include "error_response.hpp"
 #include "event_response.hpp"
 #include "logger.hpp"
-#include "utils.hpp"
 
 #ifdef HAVE_NOSIGPIPE
 #include <sys/socket.h>
@@ -344,14 +343,14 @@ void Connection::internal_close(ConnectionState close_state) {
 
   if (state_ != CONNECTION_STATE_CLOSE &&
       state_ != CONNECTION_STATE_CLOSE_DEFUNCT) {
-    uv_handle_t* handle = copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_);
+    uv_handle_t* handle = reinterpret_cast<uv_handle_t*>(&socket_);
     if (!uv_is_closing(handle)) {
       heartbeat_timer_.stop();
       terminate_timer_.stop();
       connect_timer_.stop();
       if (state_ == CONNECTION_STATE_CONNECTED ||
           state_ == CONNECTION_STATE_READY) {
-        uv_read_stop(copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_));
+        uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
       }
       set_state(close_state);
       uv_close(handle, on_close);
@@ -530,12 +529,12 @@ void Connection::on_connect(Connector* connector) {
               connection->host_->address_string().c_str(),
               static_cast<void*>(connection));
 
-#ifdef HAVE_NOSIGPIPE
+#if defined(HAVE_NOSIGPIPE) && UV_VERSION_MAJOR >= 1
     // This must be done after connection for the socket file descriptor to be
     // valid.
     uv_os_fd_t fd = 0;
     int enabled = 1;
-    if (uv_fileno(copy_cast<uv_tcp_t*, uv_handle_t*>(&connection->socket_), &fd) != 0 ||
+    if (uv_fileno(reinterpret_cast<uv_handle_t*>(&connection->socket_), &fd) != 0 ||
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&enabled, sizeof(int)) != 0) {
       LOG_WARN("Unable to set socket option SO_NOSIGPIPE for host %s",
                connection->host_->address_string().c_str());
@@ -543,10 +542,10 @@ void Connection::on_connect(Connector* connector) {
 #endif
 
     if (connection->ssl_session_) {
-      uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
+      uv_read_start(reinterpret_cast<uv_stream_t*>(&connection->socket_),
                     Connection::alloc_buffer_ssl, Connection::on_read_ssl);
     } else {
-      uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
+      uv_read_start(reinterpret_cast<uv_stream_t*>(&connection->socket_),
                     Connection::alloc_buffer, Connection::on_read);
     }
 
@@ -1036,7 +1035,7 @@ void Connection::PendingWrite::flush() {
     }
 
     is_flushed_ = true;
-    uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection_->socket_);
+    uv_stream_t* sock_stream = reinterpret_cast<uv_stream_t*>(&connection_->socket_);
     uv_write(&req_, sock_stream, bufs.data(), bufs.size(), PendingWrite::on_write);
   }
 }
@@ -1106,7 +1105,7 @@ void Connection::PendingWriteSsl::flush() {
 
     LOG_TRACE("Sending %u encrypted bytes", static_cast<unsigned int>(encrypted_size_));
 
-    uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection_->socket_);
+    uv_stream_t* sock_stream = reinterpret_cast<uv_stream_t*>(&connection_->socket_);
     uv_write(&req_, sock_stream, bufs.data(), bufs.size(), PendingWriteSsl::on_write);
 
     is_flushed_ = true;
@@ -1123,7 +1122,7 @@ void Connection::PendingWriteSsl::on_write(uv_write_t* req, int status) {
 
 bool Connection::SslHandshakeWriter::write(Connection* connection, char* buf, size_t buf_size) {
   SslHandshakeWriter* writer = new SslHandshakeWriter(connection, buf, buf_size);
-  uv_stream_t* stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_);
+  uv_stream_t* stream = reinterpret_cast<uv_stream_t*>(&connection->socket_);
 
   int rc = uv_write(&writer->req_, stream, &writer->uv_buf_, 1, SslHandshakeWriter::on_write);
   if (rc != 0) {

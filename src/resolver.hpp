@@ -26,7 +26,6 @@
 #include "address.hpp"
 #include "ref_counted.hpp"
 #include "timer.hpp"
-#include "utils.hpp"
 
 namespace cass {
 
@@ -100,7 +99,7 @@ private:
   static void on_timeout(Timer* timer) {
     Resolver* resolver = static_cast<Resolver*>(timer->data());
     resolver->status_ = FAILED_TIMED_OUT;
-    uv_cancel(copy_cast<uv_getaddrinfo_t*, uv_req_t*>(&resolver->req_));
+    uv_cancel(reinterpret_cast<uv_req_t*>(&resolver->req_));
   }
 
 private:
@@ -208,7 +207,7 @@ private:
   static void on_timeout(Timer* timer) {
     NameResolver* resolver = static_cast<NameResolver*>(timer->data());
     resolver->status_ = FAILED_TIMED_OUT;
-    uv_cancel(copy_cast<uv_getnameinfo_t*, uv_req_t*>(&resolver->req_));
+    uv_cancel(reinterpret_cast<uv_req_t*>(&resolver->req_));
   }
 
 private:
