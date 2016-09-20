@@ -32,5 +32,12 @@ BOOST_AUTO_TEST_CASE(compare_ipv4)
   BOOST_CHECK(cass::Address("1.2.3.4", 9042).compare(cass::Address("1.2.3.4", 9042)) == 0);
 }
 
+BOOST_AUTO_TEST_CASE(compare_no_port)
+{
+  BOOST_CHECK(cass::Address("0.0.0.0", 0).compare(cass::Address("0.0.0.0", 1), false) == 0);
+  BOOST_CHECK(cass::Address("0.0.0.0", 0).compare(cass::Address("0.0.0.0", 1), true) < 0);
+  BOOST_CHECK(cass::Address("0.0.0.0", 1).compare(cass::Address("0.0.0.0", 0), true) > 0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
