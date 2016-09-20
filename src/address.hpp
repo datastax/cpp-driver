@@ -49,22 +49,12 @@ public:
   bool init(const struct sockaddr* addr);
 
 #ifdef _WIN32
-  struct sockaddr* addr() { return reinterpret_cast<struct sockaddr*>(&addr_); }
   const struct sockaddr* addr() const { return reinterpret_cast<const struct sockaddr*>(&addr_); }
-
-  struct sockaddr_in* addr_in() { return reinterpret_cast<struct sockaddr_in*>(&addr_); }
   const struct sockaddr_in* addr_in() const { return reinterpret_cast<const struct sockaddr_in*>(&addr_); }
-
-  struct sockaddr_in6* addr_in6() { return reinterpret_cast<struct sockaddr_in6*>(&addr_); }
   const struct sockaddr_in6* addr_in6() const { return reinterpret_cast<const struct sockaddr_in6*>(&addr_); }
 #else
-  struct sockaddr* addr() { return &addr_; }
   const struct sockaddr* addr() const { return &addr_; }
-
-  struct sockaddr_in* addr_in() { return &addr_in_; }
   const struct sockaddr_in* addr_in() const { return &addr_in_; }
-
-  struct sockaddr_in6* addr_in6() { return &addr_in6_; }
   const struct sockaddr_in6* addr_in6() const { return &addr_in6_; }
 #endif
 
@@ -82,8 +72,16 @@ private:
   void init(const struct sockaddr_in6* addr);
 
 #ifdef _WIN32
+  struct sockaddr* addr() { return reinterpret_cast<struct sockaddr*>(&addr_); }
+  struct sockaddr_in* addr_in() { return reinterpret_cast<struct sockaddr_in*>(&addr_); }
+  struct sockaddr_in6* addr_in6() { return reinterpret_cast<struct sockaddr_in6*>(&addr_); }
+
   struct sockaddr_storage addr_;
 #else
+  struct sockaddr* addr() { return &addr_; }
+  struct sockaddr_in* addr_in() { return &addr_in_; }
+  struct sockaddr_in6* addr_in6() { return &addr_in6_; }
+
   union {
     struct sockaddr addr_;
     struct sockaddr_in addr_in_;
