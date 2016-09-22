@@ -26,6 +26,7 @@
 #include "host.hpp"
 #include "logger.hpp"
 #include "metrics.hpp"
+#include "pool.hpp"
 #include "spsc_queue.hpp"
 #include "timer.hpp"
 
@@ -37,7 +38,6 @@
 namespace cass {
 
 class Config;
-class Pool;
 class RequestHandler;
 class Session;
 class SSLContext;
@@ -65,6 +65,8 @@ class IOWorker
     : public EventThread<IOWorkerEvent>
     , public RefCounted<IOWorker> {
 public:
+  typedef SharedRefPtr<IOWorker> Ptr;
+
   enum State {
     IO_WORKER_STATE_READY,
     IO_WORKER_STATE_CLOSING,
@@ -131,8 +133,8 @@ private:
 #endif
 
 private:
-  typedef sparsehash::dense_hash_map<Address, SharedRefPtr<Pool>, AddressHash> PoolMap;
-  typedef std::vector<SharedRefPtr<Pool> > PoolVec;
+  typedef sparsehash::dense_hash_map<Address, Pool::Ptr, AddressHash> PoolMap;
+  typedef std::vector<Pool::Ptr > PoolVec;
 
   void schedule_reconnect(const Host::ConstPtr& host);
 

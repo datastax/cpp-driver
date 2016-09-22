@@ -43,7 +43,7 @@ public:
       }
   }
 
-  const SharedRefPtr<const Prepared>& prepared() const { return prepared_; }
+  const Prepared::ConstPtr& prepared() const { return prepared_; }
 
 private:
   virtual size_t get_indices(StringRef name, IndexVec* indices) {
@@ -62,8 +62,8 @@ private:
   int internal_encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
-  SharedRefPtr<const Prepared> prepared_;
-  SharedRefPtr<ResultMetadata> metadata_;
+  Prepared::ConstPtr prepared_;
+  ResultMetadata::Ptr metadata_;
 };
 
 } // namespace cass

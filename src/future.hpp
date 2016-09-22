@@ -40,6 +40,7 @@ enum FutureType {
 
 class Future : public RefCounted<Future> {
 public:
+  typedef SharedRefPtr<Future> Ptr;
   typedef void (*Callback)(CassFuture*, void*);
 
   struct Error {

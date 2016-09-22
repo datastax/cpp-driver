@@ -31,7 +31,7 @@ CassUserType* cass_user_type_new_from_data_type(const CassDataType* data_type) {
   }
   return CassUserType::to(
         new cass::UserTypeValue(
-          cass::SharedRefPtr<const cass::DataType>(data_type)));
+          cass::DataType::ConstPtr(data_type)));
 }
 
 void cass_user_type_free(CassUserType* user_type) {

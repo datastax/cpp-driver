@@ -30,6 +30,8 @@ namespace cass {
 
 class RetryPolicy : public RefCounted<RetryPolicy> {
 public:
+  typedef SharedRefPtr<RetryPolicy> Ptr;
+
   enum Type {
     DEFAULT,
     DOWNGRADING,
@@ -123,7 +125,7 @@ public:
 
 class LoggingRetryPolicy : public RetryPolicy {
 public:
-  LoggingRetryPolicy(const SharedRefPtr<RetryPolicy>& retry_policy)
+  LoggingRetryPolicy(const RetryPolicy::Ptr& retry_policy)
     : RetryPolicy(LOGGING)
     , retry_policy_(retry_policy) { }
 
@@ -132,7 +134,7 @@ public:
   virtual RetryDecision on_unavailable(CassConsistency cl, int required, int alive, int num_retries) const;
 
 private:
-  SharedRefPtr<RetryPolicy> retry_policy_;
+  RetryPolicy::Ptr retry_policy_;
 };
 
 } // namespace cass

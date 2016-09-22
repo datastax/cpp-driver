@@ -35,9 +35,9 @@
 namespace cass {
 
 SchemaChangeCallback::SchemaChangeCallback(Connection* connection,
-                                         RequestHandler* request_handler,
-                                         const SharedRefPtr<Response>& response,
-                                         uint64_t elapsed)
+                                           const RequestHandler::Ptr& request_handler,
+                                           const Response::Ptr& response,
+                                           uint64_t elapsed)
   : MultipleRequestCallback(connection)
   , request_handler_(request_handler)
   , request_response_(response)
@@ -123,11 +123,11 @@ void SchemaChangeCallback::on_set(const ResponseMap& responses) {
             "Trying again in %d ms", RETRY_SCHEMA_AGREEMENT_WAIT_MS);
 
   // Try again
-  SharedRefPtr<SchemaChangeCallback> callback(
+  Ptr callback(
         new SchemaChangeCallback(connection(),
-                                request_handler_.get(),
-                                request_response_,
-                                elapsed_ms_));
+                                 request_handler_,
+                                 request_response_,
+                                 elapsed_ms_));
   connection()->schedule_schema_agreement(callback,
                                           RETRY_SCHEMA_AGREEMENT_WAIT_MS);
 }

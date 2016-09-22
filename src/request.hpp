@@ -36,6 +36,8 @@ class RequestMessage;
 
 class CustomPayload : public RefCounted<CustomPayload> {
 public:
+  typedef SharedRefPtr<const CustomPayload> ConstPtr;
+
   virtual ~CustomPayload() { }
 
   void set(const char* name, size_t name_length,
@@ -54,6 +56,8 @@ private:
 
 class Request : public RefCounted<Request> {
 public:
+  typedef SharedRefPtr<const Request> ConstPtr;
+
   enum {
     ENCODE_ERROR_UNSUPPORTED_PROTOCOL = -1,
     ENCODE_ERROR_BATCH_WITH_NAMED_VALUES = -2,
@@ -103,7 +107,7 @@ public:
     retry_policy_.reset(retry_policy);
   }
 
-  const SharedRefPtr<const CustomPayload>& custom_payload() const {
+  const CustomPayload::ConstPtr& custom_payload() const {
     return custom_payload_;
   }
 
@@ -119,8 +123,8 @@ private:
   CassConsistency serial_consistency_;
   int64_t timestamp_;
   uint64_t request_timeout_ms_;
-  SharedRefPtr<RetryPolicy> retry_policy_;
-  SharedRefPtr<const CustomPayload> custom_payload_;
+  RetryPolicy::Ptr retry_policy_;
+  CustomPayload::ConstPtr custom_payload_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);

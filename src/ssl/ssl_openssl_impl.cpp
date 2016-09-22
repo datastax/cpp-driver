@@ -574,8 +574,8 @@ CassError OpenSslContext::set_private_key(const char* key,
   return CASS_OK;
 }
 
-SslContext* OpenSslContextFactory::create() {
-  return new OpenSslContext();
+SslContext::Ptr OpenSslContextFactory::create() {
+  return SslContext::Ptr(new OpenSslContext());
 }
 
 void OpenSslContextFactory::init() {

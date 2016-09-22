@@ -18,7 +18,7 @@
 
 namespace cass {
 
-bool BlacklistDCPolicy::is_valid_host(const SharedRefPtr<Host>& host) const {
+bool BlacklistDCPolicy::is_valid_host(const Host::Ptr& host) const {
   const std::string& host_dc = host->dc();
   for (DcList::const_iterator it = dcs_.begin(),
       end = dcs_.end(); it != end; ++it) {

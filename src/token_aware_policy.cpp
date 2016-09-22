@@ -34,7 +34,7 @@ static inline bool contains(const CopyOnWriteHostVec& replicas, const Address& a
   return false;
 }
 
-void TokenAwarePolicy::init(const SharedRefPtr<Host>& connected_host,
+void TokenAwarePolicy::init(const Host::Ptr& connected_host,
                             const HostMap& hosts,
                             Random* random) {
   if (random != NULL) {
@@ -79,23 +79,23 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
   return child_policy_->new_query_plan(connected_keyspace, request, token_map, cache);
 }
 
-SharedRefPtr<Host> TokenAwarePolicy::TokenAwareQueryPlan::compute_next()  {
+Host::Ptr TokenAwarePolicy::TokenAwareQueryPlan::compute_next()  {
   while (remaining_ > 0) {
     --remaining_;
-    const SharedRefPtr<Host>& host((*replicas_)[index_++ % replicas_->size()]);
+    const Host::Ptr& host((*replicas_)[index_++ % replicas_->size()]);
     if (host->is_up() && child_policy_->distance(host) == CASS_HOST_DISTANCE_LOCAL) {
       return host;
     }
   }
 
-  SharedRefPtr<Host> host;
+  Host::Ptr host;
   while ((host = child_plan_->compute_next())) {
     if (!contains(replicas_, host->address()) ||
         child_policy_->distance(host) != CASS_HOST_DISTANCE_LOCAL) {
       return host;
     }
   }
-  return SharedRefPtr<Host>();
+  return Host::Ptr();
 }
 
 } // namespace cass

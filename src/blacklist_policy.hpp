@@ -38,7 +38,7 @@ public:
   }
 
 private:
-  bool is_valid_host(const SharedRefPtr<Host>& host) const;
+  bool is_valid_host(const Host::Ptr& host) const;
 
   ContactPointList hosts_;
 

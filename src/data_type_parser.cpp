@@ -405,7 +405,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
   return DataType::ConstPtr(new CustomType(next));
 }
 
-SharedRefPtr<ParseResult> DataTypeClassNameParser::parse_with_composite(const std::string& type, const NativeDataTypes& native_types) {
+ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const std::string& type, const NativeDataTypes& native_types) {
   Parser parser(type, 0);
 
   std::string next;
@@ -414,20 +414,20 @@ SharedRefPtr<ParseResult> DataTypeClassNameParser::parse_with_composite(const st
   if (!is_composite(next)) {
     DataType::ConstPtr data_type = parse_one(type, native_types);
     if (!data_type) {
-      return SharedRefPtr<ParseResult>();
+      return ParseResult::Ptr();
     }
-    return SharedRefPtr<ParseResult>(new ParseResult(data_type, is_reversed(next)));
+    return ParseResult::Ptr(new ParseResult(data_type, is_reversed(next)));
   }
 
   TypeParamsVec sub_class_names;
 
   if (!parser.get_type_params(&sub_class_names)) {
-    return SharedRefPtr<ParseResult>();
+    return ParseResult::Ptr();
   }
 
   if (sub_class_names.empty()) {
     LOG_ERROR("Expected at least one subclass type for a composite type");
-    return SharedRefPtr<ParseResult>();
+    return ParseResult::Ptr();
   }
 
   ParseResult::CollectionMap collections;
@@ -440,14 +440,14 @@ SharedRefPtr<ParseResult> DataTypeClassNameParser::parse_with_composite(const st
     collection_parser.get_next_name();
     NameAndTypeParamsVec params;
     if (!collection_parser.get_collection_params(&params)) {
-      return SharedRefPtr<ParseResult>();
+      return ParseResult::Ptr();
     }
 
     for (NameAndTypeParamsVec::const_iterator i = params.begin(),
          end = params.end(); i != end; ++i) {
       DataType::ConstPtr data_type = parse_one(i->second, native_types);
       if (!data_type) {
-        return SharedRefPtr<ParseResult>();
+        return ParseResult::Ptr();
       }
       collections[i->first] = data_type;
     }
@@ -458,13 +458,13 @@ SharedRefPtr<ParseResult> DataTypeClassNameParser::parse_with_composite(const st
   for (size_t i = 0; i < count; ++i) {
     DataType::ConstPtr data_type = parse_one(sub_class_names[i], native_types);
     if (!data_type) {
-      return SharedRefPtr<ParseResult>();
+      return ParseResult::Ptr();
     }
     types.push_back(data_type);
     reversed.push_back(is_reversed(sub_class_names[i]));
   }
 
-  return SharedRefPtr<ParseResult>(new ParseResult(true, types, reversed, collections));
+  return ParseResult::Ptr(new ParseResult(true, types, reversed, collections));
 }
 
 bool DataTypeClassNameParser::get_nested_class_name(const std::string& type, std::string* class_name) {

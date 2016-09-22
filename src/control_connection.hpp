@@ -62,7 +62,7 @@ public:
     return cassandra_version_;
   }
 
-  const SharedRefPtr<Host>& connected_host() const;
+  const Host::Ptr& connected_host() const;
 
   void clear();
 
@@ -120,7 +120,7 @@ private:
   public:
     typedef void (*ResponseCallback)(ControlConnection*, const T&, Response*);
 
-    ControlCallback(const Request* request,
+    ControlCallback(const Request::ConstPtr& request,
                    ControlConnection* control_connection,
                    ResponseCallback response_callback,
                    const T& data)
@@ -152,11 +152,11 @@ private:
   };
 
   struct RefreshNodeData {
-    RefreshNodeData(const SharedRefPtr<Host>& host,
+    RefreshNodeData(const Host::Ptr& host,
                     bool is_new_node)
       : host(host)
       , is_new_node(is_new_node) {}
-    SharedRefPtr<Host> host;
+    Host::Ptr host;
     bool is_new_node;
   };
 
@@ -208,7 +208,7 @@ private:
                                 const UnusedData& data,
                                 const MultipleRequestCallback::ResponseMap& responses);
 
-  void refresh_node_info(SharedRefPtr<Host> host,
+  void refresh_node_info(Host::Ptr host,
                          bool is_new_node,
                          bool query_tokens = false);
   static void on_refresh_node_info(ControlConnection* control_connection,
@@ -218,7 +218,7 @@ private:
                                        const RefreshNodeData& data,
                                        Response* response);
 
-  void update_node_info(SharedRefPtr<Host> host, const Row* row, UpdateHostType type);
+  void update_node_info(Host::Ptr host, const Row* row, UpdateHostType type);
 
   void refresh_keyspace(const StringRef& keyspace_name);
   static void on_refresh_keyspace(ControlConnection* control_connection, const std::string& keyspace_name, Response* response);

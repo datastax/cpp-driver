@@ -36,6 +36,8 @@ class Config;
 class Pool : public RefCounted<Pool>
            , public Connection::Listener {
 public:
+  typedef SharedRefPtr<Pool> Ptr;
+
   enum PoolState {
     POOL_STATE_NEW,
     POOL_STATE_CONNECTING,

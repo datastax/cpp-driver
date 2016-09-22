@@ -165,8 +165,10 @@ bool MultipleRequestCallback::get_result_response(const ResponseMap& responses,
 
 void MultipleRequestCallback::execute_query(const std::string& index, const std::string& query) {
   if (has_errors_or_timeouts_) return;
-  responses_[index] = SharedRefPtr<Response>();
-  SharedRefPtr<InternalCallback> callback(new InternalCallback(this, new QueryRequest(query), index));
+  responses_[index] = Response::Ptr();
+  SharedRefPtr<InternalCallback> callback(
+        new InternalCallback(Ptr(this),
+                             Request::ConstPtr(new QueryRequest(query)), index));
   remaining_++;
   if (!connection_->write(callback.get())) {
     on_error(CASS_ERROR_LIB_NO_STREAMS, "No more streams available");

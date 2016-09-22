@@ -67,9 +67,9 @@ public:
     std::transform(hosts.begin(), hosts.end(), std::back_inserter(hosts_), GetHost());
   }
 
-  virtual SharedRefPtr<Host> compute_next() {
+  virtual Host::Ptr compute_next() {
     const size_t size = hosts_.size();
-    if (count_ >= size) return SharedRefPtr<Host>();
+    if (count_ >= size) return Host::Ptr();
     size_t index = (index_ + count_) % size;
     ++count_;
     return hosts_[index];
@@ -122,7 +122,7 @@ ControlConnection::ControlConnection()
   , use_schema_(false)
   , token_aware_routing_(false) { }
 
-const SharedRefPtr<Host>& ControlConnection::connected_host() const {
+const Host::Ptr& ControlConnection::connected_host() const {
   return current_host_;
 }
 
@@ -279,7 +279,7 @@ void ControlConnection::on_event(EventResponse* response) {
       switch (response->topology_change()) {
         case EventResponse::NEW_NODE: {
           LOG_INFO("New node %s added", address_str.c_str());
-          SharedRefPtr<Host> host = session_->get_host(response->affected_node());
+          Host::Ptr host = session_->get_host(response->affected_node());
           if (!host) {
             host = session_->add_host(response->affected_node());
             refresh_node_info(host, true, true);
@@ -289,7 +289,7 @@ void ControlConnection::on_event(EventResponse* response) {
 
         case EventResponse::REMOVED_NODE: {
           LOG_INFO("Node %s removed", address_str.c_str());
-          SharedRefPtr<Host> host = session_->get_host(response->affected_node());
+          Host::Ptr host = session_->get_host(response->affected_node());
           if (host) {
             session_->on_remove(host);
             if (session_->token_map_) {
@@ -303,7 +303,7 @@ void ControlConnection::on_event(EventResponse* response) {
 
         case EventResponse::MOVED_NODE:
           LOG_INFO("Node %s moved", address_str.c_str());
-          SharedRefPtr<Host> host = session_->get_host(response->affected_node());
+          Host::Ptr host = session_->get_host(response->affected_node());
           if (host) {
             refresh_node_info(host, false, true);
           } else {
@@ -406,7 +406,7 @@ void ControlConnection::on_event(EventResponse* response) {
 }
 
 void ControlConnection::query_meta_hosts() {
-  ScopedRefPtr<ControlMultipleRequestCallback<UnusedData> > callback(
+  SharedRefPtr<ControlMultipleRequestCallback<UnusedData> > callback(
         new ControlMultipleRequestCallback<UnusedData>(this, ControlConnection::on_query_hosts, UnusedData()));
   // This needs to happen before other schema metadata queries so that we have
   // a valid Cassandra version because this version determines which follow up
@@ -438,7 +438,7 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
   // versions of Cassandra. If this happens we defunct the connection and move
   // to the next node in the query plan.
   {
-    SharedRefPtr<Host> host = session->get_host(connection->address());
+    Host::Ptr host = session->get_host(connection->address());
     if (host) {
       host->set_mark(session->current_host_mark_);
 
@@ -475,7 +475,7 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
           continue;
         }
 
-        SharedRefPtr<Host> host = session->get_host(address);
+        Host::Ptr host = session->get_host(address);
         bool is_new = false;
         if (!host) {
           is_new = true;
@@ -509,7 +509,7 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
 //TODO: query and callbacks should be in Metadata
 // punting for now because of tight coupling of Session and CC state
 void ControlConnection::query_meta_schema() {
-  ScopedRefPtr<ControlMultipleRequestCallback<UnusedData> > callback(
+  SharedRefPtr<ControlMultipleRequestCallback<UnusedData> > callback(
         new ControlMultipleRequestCallback<UnusedData>(this, ControlConnection::on_query_meta_schema, UnusedData()));
 
   if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
@@ -621,7 +621,7 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
   }
 }
 
-void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
+void ControlConnection::refresh_node_info(Host::Ptr host,
                                           bool is_new_node,
                                           bool query_tokens) {
   if (connection_ == NULL) {
@@ -652,11 +652,11 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   LOG_DEBUG("refresh_node_info: %s", query.c_str());
 
   RefreshNodeData data(host, is_new_node);
-  ScopedRefPtr<ControlCallback<RefreshNodeData> > callback(
-        new ControlCallback<RefreshNodeData>(new QueryRequest(query),
-                                            this,
-                                            response_callback,
-                                            data));
+  SharedRefPtr<ControlCallback<RefreshNodeData> > callback(
+        new ControlCallback<RefreshNodeData>(Request::ConstPtr(new QueryRequest(query)),
+                                             this,
+                                             response_callback,
+                                             data));
   if (!connection_->write(callback.get())) {
     LOG_ERROR("No more stream available while attempting to refresh node info");
   }
@@ -729,7 +729,7 @@ void ControlConnection::on_refresh_node_info_all(ControlConnection* control_conn
   }
 }
 
-void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row, UpdateHostType type) {
+void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateHostType type) {
   const Value* v;
 
   std::string rack;
@@ -807,7 +807,7 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
   LOG_DEBUG("Refreshing keyspace %s", query.c_str());
 
   connection_->write(
-        new ControlCallback<std::string>(new QueryRequest(query),
+        new ControlCallback<std::string>(Request::ConstPtr(new QueryRequest(query)),
                                         this,
                                         ControlConnection::on_refresh_keyspace,
                                         keyspace_name.to_string()));
@@ -874,10 +874,10 @@ void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
     LOG_DEBUG("Refreshing table %s; %s", table_query.c_str(), column_query.c_str());
   }
 
-  ScopedRefPtr<ControlMultipleRequestCallback<RefreshTableData> > callback(
+  SharedRefPtr<ControlMultipleRequestCallback<RefreshTableData> > callback(
         new ControlMultipleRequestCallback<RefreshTableData>(this,
-                                                            ControlConnection::on_refresh_table_or_view,
-                                                            RefreshTableData(keyspace_name.to_string(), table_or_view_name.to_string())));
+                                                             ControlConnection::on_refresh_table_or_view,
+                                                             RefreshTableData(keyspace_name.to_string(), table_or_view_name.to_string())));
   callback->execute_query("tables", table_query);
   if (!view_query.empty()) {
     callback->execute_query("views", view_query);
@@ -937,7 +937,7 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name,
   LOG_DEBUG("Refreshing type %s", query.c_str());
 
   connection_->write(
-        new ControlCallback<std::pair<std::string, std::string> >(new QueryRequest(query),
+        new ControlCallback<std::pair<std::string, std::string> >(Request::ConstPtr(new QueryRequest(query)),
                                         this,
                                         ControlConnection::on_refresh_type,
                                         std::make_pair(keyspace_name.to_string(), type_name.to_string())));
@@ -1000,10 +1000,10 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
 
   request->set(0, CassString(keyspace_name.data(), keyspace_name.size()));
   request->set(1, CassString(function_name.data(), function_name.size()));
-  request->set(2, signature.get());
+  request->set(2, signature);
 
   connection_->write(
-        new ControlCallback<RefreshFunctionData>(request.get(),
+        new ControlCallback<RefreshFunctionData>(request,
                                                 this,
                                                 ControlConnection::on_refresh_function,
                                                 RefreshFunctionData(keyspace_name, function_name, arg_types, is_aggregate)));
@@ -1057,7 +1057,7 @@ void ControlConnection::handle_query_timeout() {
 }
 
 void ControlConnection::on_up(const Address& address) {
-  SharedRefPtr<Host> host = session_->get_host(address);
+  Host::Ptr host = session_->get_host(address);
   if (host) {
     if (host->is_up()) return;
 
@@ -1074,7 +1074,7 @@ void ControlConnection::on_up(const Address& address) {
 }
 
 void ControlConnection::on_down(const Address& address) {
-  SharedRefPtr<Host> host = session_->get_host(address);
+  Host::Ptr host = session_->get_host(address);
   if (host) {
     if (host->is_down()) return;
 

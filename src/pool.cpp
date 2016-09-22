@@ -48,13 +48,13 @@ private:
   void on_result_response(ResponseMessage* response);
 
 private:
-  ScopedRefPtr<RequestHandler> request_handler_;
+  RequestHandler::Ptr request_handler_;
 };
 
 SetKeyspaceCallback::SetKeyspaceCallback(Connection* connection,
-                                       const std::string& keyspace,
-                                       RequestHandler* request_handler)
-  : RequestCallback(new QueryRequest("USE \"" + keyspace + "\""))
+                                         const std::string& keyspace,
+                                         RequestHandler* request_handler)
+  : RequestCallback(Request::ConstPtr(new QueryRequest("USE \"" + keyspace + "\"")))
   , request_handler_(request_handler) {
   set_connection(connection);
 }

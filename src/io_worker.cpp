@@ -122,7 +122,7 @@ void IOWorker::add_pool(const Host::ConstPtr& host, bool is_initial_connection) 
 
     set_host_is_available(address, false);
 
-    SharedRefPtr<Pool> pool(new Pool(this, host, is_initial_connection));
+    Pool::Ptr pool(new Pool(this, host, is_initial_connection));
     pools_[address] = pool;
     pool->connect();
   } else  {
@@ -150,7 +150,7 @@ void IOWorker::retry(RequestHandler* request_handler) {
 
   PoolMap::const_iterator it = pools_.find(address);
   if (it != pools_.end() && it->second->is_ready()) {
-    const SharedRefPtr<Pool>& pool = it->second;
+    const Pool::Ptr& pool = it->second;
     Connection* connection = pool->borrow_connection();
     if (connection != NULL) {
       if (!pool->write(connection, request_handler)) {
@@ -209,7 +209,7 @@ void IOWorker::notify_pool_closed(Pool* pool) {
 }
 
 void IOWorker::add_pending_flush(Pool* pool) {
-  pools_pending_flush_.push_back(SharedRefPtr<Pool>(pool));
+  pools_pending_flush_.push_back(Pool::Ptr(pool));
 }
 
 void IOWorker::maybe_close() {
@@ -317,7 +317,7 @@ void IOWorker::schedule_reconnect(const Host::ConstPtr& host) {
              host->address_string().c_str(),
              config_.reconnect_wait_time_ms(),
              static_cast<void*>(this));
-    SharedRefPtr<Pool> pool(new Pool(this, host, false));
+    Pool::Ptr pool(new Pool(this, host, false));
     pools_[host->address()] = pool;
     pool->delayed_connect();
   }

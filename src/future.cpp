@@ -53,10 +53,9 @@ const CassResult* cass_future_get_result(CassFuture* future) {
   if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return NULL;
   }
-  cass::ResponseFuture* response_future =
-      static_cast<cass::ResponseFuture*>(future->from());
 
-  cass::SharedRefPtr<cass::ResultResponse> result(response_future->response());
+  cass::SharedRefPtr<cass::ResultResponse> result(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
   if (!result) return NULL;
 
   result->inc_ref();
@@ -78,7 +77,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   cass::Prepared* prepared = new cass::Prepared(result,
                                                 response_future->statement,
                                                 response_future->schema_metadata);
-  if (prepared) prepared->inc_ref();
+  prepared->inc_ref();
   return CassPrepared::to(prepared);
 }
 
@@ -86,10 +85,9 @@ const CassErrorResult* cass_future_get_error_result(CassFuture* future) {
   if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return NULL;
   }
-  cass::ResponseFuture* response_future =
-      static_cast<cass::ResponseFuture*>(future->from());
 
-  cass::SharedRefPtr<cass::Response> response(response_future->response());
+  cass::Response::Ptr response(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
   if (!response || response->opcode() != CQL_OPCODE_ERROR) {
     return NULL;
   }
@@ -126,7 +124,7 @@ size_t cass_future_custom_payload_item_count(CassFuture* future) {
   if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return 0;
   }
-  cass::SharedRefPtr<cass::Response> response(
+  cass::Response::Ptr response(
         static_cast<cass::ResponseFuture*>(future->from())->response());
   if (!response) return 0;
   return response->custom_payload().size();
@@ -141,7 +139,7 @@ CassError cass_future_custom_payload_item(CassFuture* future,
   if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return CASS_ERROR_LIB_INVALID_FUTURE_TYPE;
   }
-  cass::SharedRefPtr<cass::Response> response(
+  cass::Response::Ptr response(
         static_cast<cass::ResponseFuture*>(future->from())->response());
   if (!response) return CASS_ERROR_LIB_NO_CUSTOM_PAYLOAD;
 

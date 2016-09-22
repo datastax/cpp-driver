@@ -157,7 +157,7 @@ void Connection::StartupCallback::on_result_response(ResponseMessage* response) 
 }
 
 Connection::HeartbeatCallback::HeartbeatCallback(Connection* connection)
-  : RequestCallback(new OptionsRequest()) {
+  : RequestCallback(Request::ConstPtr(new OptionsRequest())) {
   set_connection(connection);
 }
 
@@ -321,7 +321,7 @@ void Connection::flush() {
   pending_writes_.back()->flush();
 }
 
-void Connection::schedule_schema_agreement(const SharedRefPtr<SchemaChangeCallback>& callback, uint64_t wait) {
+void Connection::schedule_schema_agreement(const SchemaChangeCallback::Ptr& callback, uint64_t wait) {
   PendingSchemaAgreement* pending_schema_agreement = new PendingSchemaAgreement(callback);
   pending_schema_agreements_.add_to_back(pending_schema_agreement);
   pending_schema_agreement->timer.start(loop_,
@@ -741,7 +741,7 @@ void Connection::on_timeout(Timer* timer) {
 }
 
 void Connection::on_connected() {
-  internal_write(new StartupCallback(this, new OptionsRequest()));
+  internal_write(new StartupCallback(this, Request::ConstPtr(new OptionsRequest())));
 }
 
 void Connection::on_authenticate(const std::string& class_name) {
@@ -759,9 +759,10 @@ void Connection::on_auth_challenge(const AuthResponseRequest* request,
     notify_error("Failed evaluating challenge token: " + request->auth()->error(), CONNECTION_ERROR_AUTH);
     return;
   }
-  AuthResponseRequest* auth_response = new AuthResponseRequest(response,
-                                                               request->auth());
-  internal_write(new StartupCallback(this, auth_response));
+  internal_write(new StartupCallback(this,
+                                     Request::ConstPtr(
+                                       new AuthResponseRequest(response,
+                                                               request->auth()))));
 }
 
 void Connection::on_auth_success(const AuthResponseRequest* request,
@@ -776,14 +777,18 @@ void Connection::on_auth_success(const AuthResponseRequest* request,
 void Connection::on_ready() {
   if (state_ == CONNECTION_STATE_CONNECTED && listener_->event_types() != 0) {
     set_state(CONNECTION_STATE_REGISTERING_EVENTS);
-    internal_write(new StartupCallback(this, new RegisterRequest(listener_->event_types())));
+    internal_write(new StartupCallback(this,
+                                       Request::ConstPtr(
+                                         new RegisterRequest(listener_->event_types()))));
     return;
   }
 
   if (keyspace_.empty()) {
     notify_ready();
   } else {
-    internal_write(new StartupCallback(this, new QueryRequest("USE \"" + keyspace_ + "\"")));
+    internal_write(new StartupCallback(this,
+                                       Request::ConstPtr(
+                                         new QueryRequest("USE \"" + keyspace_ + "\""))));
   }
 }
 
@@ -798,7 +803,8 @@ void Connection::on_supported(ResponseMessage* response) {
   // TODO(mstump) do something with the supported info
   (void)supported;
 
-  internal_write(new StartupCallback(this, new StartupRequest()));
+  internal_write(new StartupCallback(this,
+                                     Request::ConstPtr(new StartupRequest())));
 }
 
 void Connection::on_pending_schema_agreement(Timer* timer) {
@@ -865,14 +871,16 @@ void Connection::send_credentials(const std::string& class_name) {
   if (v1_auth) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
-    internal_write(new StartupCallback(this, new CredentialsRequest(credentials)));
+    internal_write(new StartupCallback(this,
+                                       Request::ConstPtr(
+                                         new CredentialsRequest(credentials))));
   } else {
     send_initial_auth_response(class_name);
   }
 }
 
 void Connection::send_initial_auth_response(const std::string& class_name) {
-  SharedRefPtr<Authenticator> auth(config_.auth_provider()->new_authenticator(host_, class_name));
+  Authenticator::Ptr auth(config_.auth_provider()->new_authenticator(host_, class_name));
   if (!auth) {
     notify_error("Authentication required but no auth provider set", CONNECTION_ERROR_AUTH);
   } else {
@@ -881,8 +889,9 @@ void Connection::send_initial_auth_response(const std::string& class_name) {
       notify_error("Failed creating initial response token: " + auth->error(), CONNECTION_ERROR_AUTH);
       return;
     }
-    AuthResponseRequest* auth_response = new AuthResponseRequest(response, auth);
-    internal_write(new StartupCallback(this, auth_response));
+    internal_write(new StartupCallback(this,
+                                       Request::ConstPtr(
+                                         new AuthResponseRequest(response, auth))));
   }
 }
 

@@ -71,6 +71,8 @@ protected:
 
 class SslContext : public RefCounted<SslContext> {
 public:
+  typedef SharedRefPtr<SslContext> Ptr;
+
   SslContext()
     : verify_flags_(CASS_SSL_VERIFY_PEER_CERT) {}
 
@@ -95,7 +97,7 @@ protected:
 template <class T>
 class SslContextFactoryBase {
 public:
-  static SslContext* create();
+  static SslContext::Ptr create();
   static void init();
 };
 

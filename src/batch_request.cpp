@@ -102,7 +102,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
 
   for (BatchRequest::StatementList::const_iterator i = statements_.begin(),
        end = statements_.end(); i != end; ++i) {
-    const SharedRefPtr<Statement>& statement(*i);
+    const Statement::Ptr& statement(*i);
     if (statement->has_names_for_values()) {
       callback->on_error(CASS_ERROR_LIB_BAD_PARAMS,
                         "Batches cannot contain queries with named values");
@@ -160,7 +160,7 @@ void BatchRequest::add_statement(Statement* statement) {
     ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
     prepared_statements_[execute_request->prepared()->id()] = execute_request;
   }
-  statements_.push_back(SharedRefPtr<Statement>(statement));
+  statements_.push_back(Statement::Ptr(statement));
 }
 
 bool BatchRequest::prepared_statement(const std::string& id,

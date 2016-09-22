@@ -31,9 +31,11 @@ class Response;
 
 class SchemaChangeCallback : public MultipleRequestCallback {
 public:
+  typedef SharedRefPtr<SchemaChangeCallback> Ptr;
+
   SchemaChangeCallback(Connection* connection,
-                      RequestHandler* request_handler,
-                      const SharedRefPtr<Response>& response,
+                      const RequestHandler::Ptr& request_handler,
+                      const Response::Ptr& response,
                       uint64_t elapsed = 0);
 
   void execute();
@@ -46,8 +48,8 @@ public:
 private:
   bool has_schema_agreement(const ResponseMap& responses);
 
-  ScopedRefPtr<RequestHandler> request_handler_;
-  SharedRefPtr<Response> request_response_;
+  RequestHandler::Ptr request_handler_;
+  Response::Ptr request_response_;
   uint64_t start_ms_;
   uint64_t elapsed_ms_;
 };

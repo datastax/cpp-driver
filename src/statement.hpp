@@ -34,6 +34,8 @@ class RequestCallback;
 
 class Statement : public RoutableRequest, public AbstractData {
 public:
+  typedef SharedRefPtr<Statement> Ptr;
+
   Statement(uint8_t opcode, uint8_t kind, size_t values_count = 0)
       : RoutableRequest(opcode)
       , AbstractData(values_count)

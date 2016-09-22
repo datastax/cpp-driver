@@ -107,7 +107,7 @@ public:
   bool write(RequestCallback* request, bool flush_immediately = true);
   void flush();
 
-  void schedule_schema_agreement(const SharedRefPtr<SchemaChangeCallback>& callback, uint64_t wait);
+  void schedule_schema_agreement(const SchemaChangeCallback::Ptr& callback, uint64_t wait);
 
   const Config& config() const { return config_; }
   Metrics* metrics() { return metrics_; }
@@ -165,7 +165,7 @@ private:
 
   class StartupCallback : public RequestCallback {
   public:
-    StartupCallback(Connection* connection, Request* request)
+    StartupCallback(Connection* connection, const Request::ConstPtr& request)
         : RequestCallback(request) {
       set_connection(connection);
     }
@@ -245,12 +245,12 @@ private:
 
   struct PendingSchemaAgreement
       : public List<PendingSchemaAgreement>::Node {
-    PendingSchemaAgreement(const SharedRefPtr<SchemaChangeCallback>& callback)
+    PendingSchemaAgreement(const SchemaChangeCallback::Ptr& callback)
         : callback(callback) { }
 
     void stop_timer();
 
-    SharedRefPtr<SchemaChangeCallback> callback;
+    SchemaChangeCallback::Ptr callback;
     Timer timer;
   };
 

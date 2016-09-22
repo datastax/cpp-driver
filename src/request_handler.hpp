@@ -41,18 +41,20 @@ class Timer;
 
 class ResponseFuture : public Future {
 public:
+  typedef SharedRefPtr<ResponseFuture> Ptr;
+
   ResponseFuture(int protocol_version, const VersionNumber& cassandra_version, const Metadata& metadata)
       : Future(CASS_FUTURE_TYPE_RESPONSE)
       , schema_metadata(metadata.schema_snapshot(protocol_version, cassandra_version)) { }
 
-  void set_response(Address address, const SharedRefPtr<Response>& response) {
+  void set_response(Address address, const Response::Ptr& response) {
     ScopedMutex lock(&mutex_);
     address_ = address;
     response_ = response;
     internal_set(lock);
   }
 
-  const SharedRefPtr<Response>& response() {
+  const Response::Ptr& response() {
     ScopedMutex lock(&mutex_);
     internal_wait(lock);
     return response_;
@@ -64,7 +66,7 @@ public:
     internal_set_error(code, message, lock);
   }
 
-  void set_error_with_response(Address address, const SharedRefPtr<Response>& response,
+  void set_error_with_response(Address address, const Response::Ptr& response,
                                CassError code, const std::string& message) {
     ScopedMutex lock(&mutex_);
     address_ = address;
@@ -83,14 +85,16 @@ public:
 
 private:
   Address address_;
-  SharedRefPtr<Response> response_;
+  Response::Ptr response_;
 };
 
 
 class RequestHandler : public RequestCallback {
 public:
-  RequestHandler(const Request* request,
-                 ResponseFuture* future,
+  typedef SharedRefPtr<RequestHandler> Ptr;
+
+  RequestHandler(const Request::ConstPtr& request,
+                 const ResponseFuture::Ptr& future,
                  RetryPolicy* retry_policy)
       : RequestCallback(request)
       , future_(future)
@@ -125,11 +129,11 @@ public:
 
   bool is_host_up(const Address& address) const;
 
-  void set_response(const SharedRefPtr<Response>& response);
+  void set_response(const Response::Ptr& response);
 
 private:
   void set_error(CassError code, const std::string& message);
-  void set_error_with_error_response(const SharedRefPtr<Response>& error,
+  void set_error_with_error_response(const Response::Ptr& error,
                                      CassError code, const std::string& message);
   void return_connection();
   void return_connection_and_finish();
@@ -141,11 +145,11 @@ private:
   void handle_retry_decision(ResponseMessage* response,
                              const RetryPolicy::RetryDecision& decision);
 
-  ScopedRefPtr<ResponseFuture> future_;
+  SharedRefPtr<ResponseFuture> future_;
   RetryPolicy* retry_policy_;
   int num_retries_;
   bool is_query_plan_exhausted_;
-  SharedRefPtr<Host> current_host_;
+  Host::Ptr current_host_;
   ScopedPtr<QueryPlan> query_plan_;
   IOWorker* io_worker_;
   Pool* pool_;

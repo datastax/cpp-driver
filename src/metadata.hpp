@@ -108,7 +108,7 @@ public:
 
   MetadataField(const std::string& name,
                 const Value& value,
-                const SharedRefPtr<RefBuffer>& buffer)
+                const RefBuffer::Ptr& buffer)
     : name_(name)
     , value_(value)
     , buffer_(buffer) { }
@@ -124,7 +124,7 @@ public:
 private:
   std::string name_;
   Value value_;
-  SharedRefPtr<RefBuffer> buffer_;
+  RefBuffer::Ptr buffer_;
 };
 
 class MetadataFieldIterator : public Iterator {
@@ -158,8 +158,8 @@ public:
   }
 
 protected:
-  const Value* add_field(const SharedRefPtr<RefBuffer>& buffer, const Row* row, const std::string& name);
-  void add_field(const SharedRefPtr<RefBuffer>& buffer, const Value& value, const std::string& name);
+  const Value* add_field(const RefBuffer::Ptr& buffer, const Row* row, const std::string& name);
+  void add_field(const RefBuffer::Ptr& buffer, const Value& value, const std::string& name);
   void add_json_list_field(int version, const Row* row, const std::string& name);
   const Value* add_json_map_field(int version, const Row* row, const std::string& name);
 
@@ -203,7 +203,7 @@ public:
   FunctionMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
                    const std::string& name, const Value* signature,
                    KeyspaceMetadata* keyspace,
-                   const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+                   const RefBuffer::Ptr& buffer, const Row* row);
 
   const std::string& simple_name() const { return simple_name_; }
   const Argument::Vec& args() const { return args_; }
@@ -236,7 +236,7 @@ public:
   AggregateMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
                     const std::string& name, const Value* signature,
                     KeyspaceMetadata* keyspace,
-                    const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+                    const RefBuffer::Ptr& buffer, const Row* row);
 
   const std::string& simple_name() const { return simple_name_; }
   const DataType::Vec arg_types() const { return arg_types_; }
@@ -271,12 +271,12 @@ public:
     , type_(CASS_INDEX_TYPE_UNKNOWN) { }
 
   static IndexMetadata::Ptr from_row(const std::string& index_name,
-                                     const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+                                     const RefBuffer::Ptr& buffer, const Row* row);
   void update(StringRef index_type, const Value* options);
 
   static IndexMetadata::Ptr from_legacy(int protocol_version,
                                         const std::string& index_name, const ColumnMetadata* column,
-                                        const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+                                        const RefBuffer::Ptr& buffer, const Row* row);
   void update_legacy(StringRef index_type, const ColumnMetadata* column, const Value* options);
 
 
@@ -319,7 +319,7 @@ public:
   ColumnMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
                  const std::string& name,
                  KeyspaceMetadata* keyspace,
-                 const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+                 const RefBuffer::Ptr& buffer, const Row* row);
 
   CassColumnType type() const { return type_; }
   int32_t position() const { return position_; }
@@ -353,7 +353,7 @@ public:
   };
 
   TableMetadataBase(int protocol_version, const VersionNumber& cassandra_version,
-                    const std::string& name, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+                    const std::string& name, const RefBuffer::Ptr& buffer, const Row* row);
 
   virtual ~TableMetadataBase() { }
 
@@ -390,7 +390,7 @@ public:
   ViewMetadata(int protocol_version, const VersionNumber& cassandra_version,
                TableMetadata* table,
                const std::string& name,
-               const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+               const RefBuffer::Ptr& buffer, const Row* row);
 
   const TableMetadata* base_table() const { return base_table_; }
   TableMetadata* base_table() { return base_table_; }
@@ -466,7 +466,7 @@ public:
   };
 
   TableMetadata(int protocol_version, const VersionNumber& cassandra_version, const std::string& name,
-                const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+                const RefBuffer::Ptr& buffer, const Row* row);
 
   const ViewMetadata::Vec& views() const { return views_; }
   const IndexMetadata::Vec& indexes() const { return indexes_; }
@@ -532,7 +532,7 @@ public:
     , aggregates_(new AggregateMetadata::Map) { }
 
   void update(int protocol_version, const VersionNumber& cassandra_version,
-              const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+              const RefBuffer::Ptr& buffer, const Row* row);
 
   const FunctionMetadata::Map& functions() const { return *functions_; }
   const UserType::Map& user_types() const { return *user_types_; }

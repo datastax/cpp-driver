@@ -43,6 +43,8 @@ struct ColumnDefinition : public HashTableEntry<ColumnDefinition> {
 
 class ResultMetadata : public RefCounted<ResultMetadata> {
 public:
+  typedef SharedRefPtr<ResultMetadata> Ptr;
+
   ResultMetadata(size_t column_count);
 
   const ColumnDefinition& get_column_definition(size_t index) const { return defs_[index]; }

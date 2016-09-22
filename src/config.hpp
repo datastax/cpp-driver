@@ -228,10 +228,10 @@ public:
     log_data_ = data;
   }
 
-  const SharedRefPtr<AuthProvider>& auth_provider() const { return auth_provider_; }
+  const AuthProvider::Ptr& auth_provider() const { return auth_provider_; }
 
-  void set_auth_provider(AuthProvider* auth_provider) {
-    auth_provider_.reset(auth_provider == NULL ? new AuthProvider() : auth_provider);
+  void set_auth_provider(const AuthProvider::Ptr& auth_provider) {
+    auth_provider_ = (!auth_provider ? AuthProvider::Ptr(new AuthProvider()) : auth_provider);
   }
 
   void set_credentials(const std::string& username, const std::string& password) {
@@ -389,9 +389,9 @@ private:
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;
-  SharedRefPtr<AuthProvider> auth_provider_;
-  SharedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
-  SharedRefPtr<SslContext> ssl_context_;
+  AuthProvider::Ptr auth_provider_;
+  LoadBalancingPolicy::Ptr load_balancing_policy_;
+  SslContext::Ptr ssl_context_;
   bool token_aware_routing_;
   bool latency_aware_routing_;
   LatencyAwarePolicy::Settings latency_aware_routing_settings_;
@@ -405,7 +405,7 @@ private:
   unsigned connection_idle_timeout_secs_;
   unsigned connection_heartbeat_interval_secs_;
   SharedRefPtr<TimestampGenerator> timestamp_gen_;
-  SharedRefPtr<RetryPolicy> retry_policy_;
+  RetryPolicy::Ptr retry_policy_;
   bool use_schema_;
   bool use_hostname_resolution_;
   bool use_randomized_contact_points_;

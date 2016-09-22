@@ -376,7 +376,9 @@ CassError cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
                                                    const CassAuthenticatorCallbacks* exchange_callbacks,
                                                    CassAuthenticatorDataCleanupCallback cleanup_callback,
                                                    void* data) {
-  cluster->config().set_auth_provider(new cass::ExternalAuthProvider(exchange_callbacks, cleanup_callback, data));
+  cluster->config().set_auth_provider(cass::AuthProvider::Ptr(
+                                        new cass::ExternalAuthProvider(exchange_callbacks,
+                                                                       cleanup_callback, data)));
   return CASS_OK;
 }
 

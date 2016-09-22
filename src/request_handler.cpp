@@ -36,8 +36,8 @@ namespace cass {
 
 class PrepareCallback : public RequestCallback {
 public:
-  PrepareCallback(RequestHandler* request_handler)
-    : RequestCallback(NULL)
+  PrepareCallback(const RequestHandler::Ptr& request_handler)
+    : RequestCallback(Request::ConstPtr())
     , request_handler_(request_handler) {}
 
   bool init(const std::string& prepared_id);
@@ -47,7 +47,7 @@ public:
   virtual void on_timeout();
 
 private:
-  ScopedRefPtr<RequestHandler> request_handler_;
+  RequestHandler::Ptr request_handler_;
 };
 
 bool PrepareCallback::init(const std::string& prepared_id) {
@@ -136,7 +136,6 @@ void RequestHandler::on_timeout() {
 }
 
 void RequestHandler::set_io_worker(IOWorker* io_worker) {
-  future_->set_loop(io_worker->loop());
   io_worker_ = io_worker;
 }
 
@@ -164,7 +163,7 @@ bool RequestHandler::is_host_up(const Address& address) const {
   return io_worker_->is_host_up(address);
 }
 
-void RequestHandler::set_response(const SharedRefPtr<Response>& response) {
+void RequestHandler::set_response(const Response::Ptr& response) {
   uint64_t elapsed = uv_hrtime() - start_time_ns();
   current_host_->update_latency(elapsed);
   connection_->metrics()->record_request(elapsed);
@@ -181,7 +180,7 @@ void RequestHandler::set_error(CassError code, const std::string& message) {
   return_connection_and_finish();
 }
 
-void RequestHandler::set_error_with_error_response(const SharedRefPtr<Response>& error,
+void RequestHandler::set_error_with_error_response(const Response::Ptr& error,
                                                    CassError code, const std::string& message) {
   future_->set_error_with_response(current_host_->address(), error, code, message);
   return_connection_and_finish();
@@ -221,9 +220,9 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
       break;
 
     case CASS_RESULT_KIND_SCHEMA_CHANGE: {
-      SharedRefPtr<SchemaChangeCallback> schema_change_handler(
+      SchemaChangeCallback::Ptr schema_change_handler(
             new SchemaChangeCallback(connection_,
-                                    this,
+                                    Ptr(this),
                                     response->response_body()));
       schema_change_handler->execute();
       break;
@@ -285,7 +284,7 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
 }
 
 void RequestHandler::on_error_unprepared(ErrorResponse* error) {
-  ScopedRefPtr<PrepareCallback> prepare_handler(new PrepareCallback(this));
+  SharedRefPtr<PrepareCallback> prepare_handler(new PrepareCallback(RequestHandler::Ptr(this)));
   if (prepare_handler->init(error->prepared_id().to_string())) {
     if (!connection_->write(prepare_handler.get())) {
       // Try to prepare on the same host but on a different connection
@@ -325,7 +324,7 @@ void RequestHandler::handle_retry_decision(ResponseMessage* response,
       break;
 
     case RetryPolicy::RetryDecision::IGNORE:
-      set_response(SharedRefPtr<Response>(new ResultResponse()));
+      set_response(Response::Ptr(new ResultResponse()));
       break;
   }
   num_retries_++;

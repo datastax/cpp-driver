@@ -44,7 +44,7 @@ public:
     : data_type_(data_type)
     , items_(data_type_->types().size()) { }
 
-  const SharedRefPtr<const TupleType>& data_type() const { return data_type_; }
+  const TupleType::ConstPtr& data_type() const { return data_type_; }
   const BufferVec& items() const { return items_; }
 
 #define SET_TYPE(Type)                  \
@@ -99,7 +99,7 @@ private:
   void encode_buffers(size_t pos, Buffer* buf) const;
 
 private:
-  SharedRefPtr<const TupleType> data_type_;
+  TupleType::ConstPtr data_type_;
   BufferVec items_;
 
 private:

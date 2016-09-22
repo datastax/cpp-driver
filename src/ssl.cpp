@@ -24,9 +24,9 @@
 extern "C" {
 
 CassSsl* cass_ssl_new() {
-  cass::SslContext* ssl_context = cass::SslContextFactory::create();
+  cass::SslContext::Ptr ssl_context(cass::SslContextFactory::create());
   ssl_context->inc_ref();
-  return CassSsl::to(ssl_context);
+  return CassSsl::to(ssl_context.get());
 }
 
 void cass_ssl_free(CassSsl* ssl) {
@@ -81,7 +81,7 @@ namespace cass {
 static uv_once_t ssl_init_guard = UV_ONCE_INIT;
 
 template<class T>
-SslContext* SslContextFactoryBase<T>::create() {
+SslContext::Ptr SslContextFactoryBase<T>::create() {
   init();
   return T::create();
 }

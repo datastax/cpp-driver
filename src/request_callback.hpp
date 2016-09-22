@@ -23,6 +23,7 @@
 #include "utils.hpp"
 #include "list.hpp"
 #include "request.hpp"
+#include "response.hpp"
 #include "scoped_ptr.hpp"
 #include "timer.hpp"
 
@@ -33,7 +34,6 @@ namespace cass {
 
 class Config;
 class Connection;
-class Response;
 class ResponseMessage;
 class ResultResponse;
 
@@ -52,7 +52,7 @@ public:
     REQUEST_STATE_DONE
   };
 
-  RequestCallback(const Request* request)
+  RequestCallback(const Request::ConstPtr& request)
     : request_(request)
     , connection_(NULL)
     , stream_(-1)
@@ -119,7 +119,7 @@ public:
   Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
 
 protected:
-  ScopedRefPtr<const Request> request_;
+  SharedRefPtr<const Request> request_;
   Connection* connection_;
 
 private:
@@ -137,7 +137,8 @@ private:
 
 class MultipleRequestCallback : public RefCounted<MultipleRequestCallback> {
 public:
-  typedef std::map<std::string, SharedRefPtr<Response> > ResponseMap;
+  typedef SharedRefPtr<MultipleRequestCallback> Ptr;
+  typedef std::map<std::string, Response::Ptr> ResponseMap;
 
   MultipleRequestCallback(Connection* connection)
     : connection_(connection)
@@ -163,7 +164,7 @@ public:
 private:
   class InternalCallback : public RequestCallback {
   public:
-    InternalCallback(MultipleRequestCallback* parent, const Request* request, const std::string& index)
+    InternalCallback(const Ptr& parent, const Request::ConstPtr& request, const std::string& index)
       : RequestCallback(request)
       , parent_(parent)
       , index_(index) { }
@@ -173,7 +174,7 @@ private:
     virtual void on_timeout();
 
   private:
-    ScopedRefPtr<MultipleRequestCallback> parent_;
+    Ptr parent_;
     std::string index_;
   };
 

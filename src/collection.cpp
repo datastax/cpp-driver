@@ -38,7 +38,7 @@ CassCollection* cass_collection_new_from_data_type(const CassDataType* data_type
     return NULL;
   }
   cass::Collection* collection
-      = new cass::Collection(cass::SharedRefPtr<const cass::DataType>(data_type),
+      = new cass::Collection(cass::DataType::ConstPtr(data_type),
                              item_count);
   collection->inc_ref();
   return CassCollection::to(collection);
