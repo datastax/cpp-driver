@@ -32,7 +32,7 @@ std::string get_host_from_future(CassFuture* future) {
   }
   cass::ResponseFuture* response_future =
       static_cast<cass::ResponseFuture*>(future->from());
-  return response_future->get_host_address().to_string();
+  return response_future->address().to_string();
 }
 
 unsigned get_connect_timeout_from_cluster(CassCluster* cluster) {

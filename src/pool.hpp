@@ -24,13 +24,13 @@
 #include "ref_counted.hpp"
 #include "request.hpp"
 #include "request_callback.hpp"
+#include "request_handler.hpp"
 #include "scoped_ptr.hpp"
 #include "timer.hpp"
 
 namespace cass {
 
 class IOWorker;
-class RequestHandler;
 class Config;
 
 class Pool : public RefCounted<Pool>
@@ -56,13 +56,15 @@ public:
   void delayed_connect();
   void close(bool cancel_reconnect = false);
 
-  bool write(Connection* connection, RequestHandler* request_handler);
+  bool write(Connection* connection, const SpeculativeExecution::Ptr& speculative_execution);
   void flush();
 
-  void wait_for_connection(RequestHandler* request_handler);
+  void wait_for_connection(const SpeculativeExecution::Ptr& speculative_execution);
   Connection* borrow_connection();
 
   const Host::ConstPtr& host() const { return host_; }
+  uv_loop_t* loop() { return loop_; }
+  const Config& config() const { return config_; }
 
   bool is_initial_connection() const { return is_initial_connection_; }
   bool is_ready() const { return state_ == POOL_STATE_READY; }
@@ -81,8 +83,7 @@ public:
   void return_connection(Connection* connection);
 
 private:
-  void add_pending_request(RequestHandler* request_handler);
-  void remove_pending_request(RequestHandler* request_handler);
+  void remove_pending_request(SpeculativeExecution* speculative_execution);
   void set_is_available(bool is_available);
 
   void maybe_notify_ready();

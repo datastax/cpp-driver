@@ -27,9 +27,15 @@
 
 namespace cass {
 
+void RequestCallback::start(Connection* connection, int stream) {
+  connection_ = connection;
+  stream_ = stream;
+  on_start();
+}
+
 int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
   if (version < 1 || version > 4) {
-    return Request::ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+    return Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
   }
 
   size_t index = bufs->size();
@@ -71,11 +77,9 @@ int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
 void RequestCallback::set_state(RequestCallback::State next_state) {
   switch (state_) {
     case REQUEST_STATE_NEW:
-      if (next_state == REQUEST_STATE_NEW) {
-        state_ = next_state;
-        stream_ = -1;
-      } else if (next_state == REQUEST_STATE_WRITING) {
-        start_time_ns_ = uv_hrtime();
+      if (next_state == REQUEST_STATE_NEW ||
+          next_state == REQUEST_STATE_CANCELLED ||
+          next_state == REQUEST_STATE_WRITING) {
         state_ = next_state;
       } else {
         assert(false && "Invalid request state after new");
@@ -83,78 +87,88 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
       break;
 
     case REQUEST_STATE_WRITING:
-      if (next_state == REQUEST_STATE_READING) { // Success
+      if(next_state == REQUEST_STATE_READING ||
+         next_state == REQUEST_STATE_READ_BEFORE_WRITE ||
+         next_state == REQUEST_STATE_FINISHED) {
         state_ = next_state;
-      } else if (next_state == REQUEST_STATE_READ_BEFORE_WRITE ||
-                 next_state == REQUEST_STATE_DONE) {
-        stop_timer();
-        state_ = next_state;
-      } else if (next_state == REQUEST_STATE_TIMEOUT) {
-        state_ = REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING;
+      } else if (next_state == REQUEST_STATE_CANCELLED) {
+        state_ = REQUEST_STATE_CANCELLED_WRITING;
       } else {
         assert(false && "Invalid request state after writing");
       }
       break;
 
     case REQUEST_STATE_READING:
-      if (next_state == REQUEST_STATE_DONE) { // Success
-        stop_timer();
+      if(next_state == REQUEST_STATE_FINISHED) {
         state_ = next_state;
-      } else if (next_state == REQUEST_STATE_TIMEOUT) {
-        state_ = next_state;
+      } else if (next_state == REQUEST_STATE_CANCELLED) {
+        state_ = REQUEST_STATE_CANCELLED_READING;
       } else {
         assert(false && "Invalid request state after reading");
       }
       break;
 
-    case REQUEST_STATE_TIMEOUT:
-      assert(next_state == REQUEST_STATE_DONE &&
-             "Invalid request state after timeout");
-      state_ = next_state;
-      break;
-
-    case REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
-      assert((next_state == REQUEST_STATE_TIMEOUT ||
-              next_state == REQUEST_STATE_READ_BEFORE_WRITE) &&
-             "Invalid request state after timeout (write outstanding)");
-      state_ = next_state;
-      break;
-
     case REQUEST_STATE_READ_BEFORE_WRITE:
-      assert((next_state == REQUEST_STATE_DONE ||
-              next_state == REQUEST_STATE_RETRY_WRITE_OUTSTANDING) &&
-             "Invalid request state after read before write");
-      state_ = next_state;
+      if (next_state == REQUEST_STATE_FINISHED) {
+        state_ = next_state;
+      } else if (next_state == REQUEST_STATE_CANCELLED) {
+        state_ = REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE;
+      } else {
+        assert(false && "Invalid request state after read before write");
+      }
       break;
 
-    case REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
-      assert(next_state == REQUEST_STATE_NEW && "Invalid request state after retry");
-      state_ = next_state;
+    case REQUEST_STATE_FINISHED:
+      if (next_state == REQUEST_STATE_NEW ||
+          next_state == REQUEST_STATE_CANCELLED) {
+        state_ = next_state;
+      } else {
+        assert(false && "Invalid request state after finished");
+      }
       break;
 
-    case REQUEST_STATE_DONE:
-      assert(next_state == REQUEST_STATE_NEW && "Invalid request state after done");
-      state_ = next_state;
+    case REQUEST_STATE_CANCELLED:
+      assert((next_state == REQUEST_STATE_FINISHED &&
+              next_state == REQUEST_STATE_CANCELLED) ||
+             "Invalid request state after cancelled");
+      // Ignore. Leave the request in the cancelled state.
+      break;
+
+
+    case REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
+      if (next_state == REQUEST_STATE_CANCELLED) {
+        state_ = next_state;
+      } else {
+        assert(false && "Invalid request state after cancelled (read before write)");
+      }
+
+    case REQUEST_STATE_CANCELLED_READING:
+      if (next_state == REQUEST_STATE_CANCELLED) {
+        state_ = next_state;
+      } else {
+        assert(false && "Invalid request state after cancelled (read outstanding)");
+      }
+      break;
+
+    case REQUEST_STATE_CANCELLED_WRITING:
+      if (next_state == REQUEST_STATE_CANCELLED ||
+          next_state == REQUEST_STATE_CANCELLED_READING ||
+          next_state == REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE) {
+        state_ = next_state;
+      } else {
+        assert(false && "Invalid request state after cancelled (write outstanding)");
+      }
       break;
 
     default:
       assert(false && "Invalid request state");
       break;
   }
-
-}
-
-uint64_t RequestCallback::request_timeout_ms(const Config& config) const {
-  uint64_t request_timeout_ms = request_->request_timeout_ms();
-  if (request_timeout_ms == CASS_UINT64_MAX) {
-    return config.request_timeout_ms();
-  }
-  return request_timeout_ms;
 }
 
 bool MultipleRequestCallback::get_result_response(const ResponseMap& responses,
-                                                 const std::string& index,
-                                                 ResultResponse** response) {
+                                                  const std::string& index,
+                                                  ResultResponse** response) {
   ResponseMap::const_iterator it = responses.find(index);
   if (it == responses.end() || it->second->opcode() != CQL_OPCODE_RESULT) {
     return false;
@@ -170,30 +184,64 @@ void MultipleRequestCallback::execute_query(const std::string& index, const std:
         new InternalCallback(Ptr(this),
                              Request::ConstPtr(new QueryRequest(query)), index));
   remaining_++;
-  if (!connection_->write(callback.get())) {
+  if (!connection_->write(callback)) {
     on_error(CASS_ERROR_LIB_NO_STREAMS, "No more streams available");
   }
 }
 
-void MultipleRequestCallback::InternalCallback::on_set(ResponseMessage* response) {
+MultipleRequestCallback::InternalCallback::InternalCallback(const MultipleRequestCallback::Ptr& parent,
+                                                            const Request::ConstPtr& request,
+                                                            const std::string& index)
+  : SimpleRequestCallback(request)
+  , parent_(parent)
+  , index_(index) { }
+
+void MultipleRequestCallback::InternalCallback::on_internal_set(ResponseMessage* response) {
   parent_->responses_[index_] = response->response_body();
   if (--parent_->remaining_ == 0 && !parent_->has_errors_or_timeouts_) {
     parent_->on_set(parent_->responses_);
   }
 }
 
-void MultipleRequestCallback::InternalCallback::on_error(CassError code, const std::string& message) {
+void MultipleRequestCallback::InternalCallback::on_internal_error(CassError code,
+                                                                  const std::string& message) {
   if (!parent_->has_errors_or_timeouts_) {
     parent_->on_error(code, message);
   }
   parent_->has_errors_or_timeouts_ = true;
 }
 
-void MultipleRequestCallback::InternalCallback::on_timeout() {
+void MultipleRequestCallback::InternalCallback::on_internal_timeout() {
   if (!parent_->has_errors_or_timeouts_) {
     parent_->on_timeout();
   }
   parent_->has_errors_or_timeouts_ = true;
+}
+
+void SimpleRequestCallback::on_start() {
+  timer_.start(connection()->loop(),
+               request()->request_timeout_ms(connection()->config().request_timeout_ms()),
+               this,
+               on_timeout);
+}
+
+void SimpleRequestCallback::on_set(ResponseMessage* response) {
+  timer_.stop();
+  on_internal_set(response);
+}
+
+void SimpleRequestCallback::on_error(CassError code, const std::string& message) {
+  timer_.stop();
+  on_internal_error(code, message);
+}
+
+void SimpleRequestCallback::on_retry(bool use_next_host) {
+  timer_.stop();
+  on_internal_timeout(); // Retries are unhandled so timeout
+}
+
+void SimpleRequestCallback::on_cancel() {
+  timer_.stop();
 }
 
 } // namespace cass
