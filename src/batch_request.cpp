@@ -58,6 +58,12 @@ CassError cass_batch_set_request_timeout(CassBatch *batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_is_idempotent(CassBatch* batch,
+                                       cass_bool_t is_idempotent) {
+  batch->set_is_idempotent(is_idempotent == cass_true);
+  return CASS_OK;
+}
+
 CassError cass_batch_set_retry_policy(CassBatch* batch,
                                       CassRetryPolicy* retry_policy) {
   batch->set_retry_policy(retry_policy);
@@ -84,7 +90,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
   uint8_t flags = 0;
 
   if (version == 1) {
-    return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+    return REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
   }
 
   {
@@ -106,7 +112,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
     if (statement->has_names_for_values()) {
       callback->on_error(CASS_ERROR_LIB_BAD_PARAMS,
                         "Batches cannot contain queries with named values");
-      return ENCODE_ERROR_BATCH_WITH_NAMED_VALUES;
+      return REQUEST_ERROR_BATCH_WITH_NAMED_VALUES;
     }
     int32_t result = (*i)->encode_batch(version, bufs, callback);
     if (result < 0) {

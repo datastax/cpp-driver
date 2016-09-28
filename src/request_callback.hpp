@@ -41,62 +41,64 @@ typedef std::vector<uv_buf_t> UvBufVec;
 
 class RequestCallback : public RefCounted<RequestCallback>, public List<RequestCallback>::Node {
 public:
+  typedef SharedRefPtr<RequestCallback> Ptr;
+
   enum State {
     REQUEST_STATE_NEW,
     REQUEST_STATE_WRITING,
     REQUEST_STATE_READING,
-    REQUEST_STATE_TIMEOUT,
-    REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING,
     REQUEST_STATE_READ_BEFORE_WRITE,
     REQUEST_STATE_RETRY_WRITE_OUTSTANDING,
-    REQUEST_STATE_DONE
+    REQUEST_STATE_FINISHED,
+    REQUEST_STATE_CANCELLED,
+    REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE,
+    REQUEST_STATE_CANCELLED_WRITE_OUTSTANDING
   };
 
-  RequestCallback(const Request::ConstPtr& request)
-    : request_(request)
-    , connection_(NULL)
+  RequestCallback()
+    : connection_(NULL)
     , stream_(-1)
     , state_(REQUEST_STATE_NEW)
-    , cl_(CASS_CONSISTENCY_UNKNOWN)
-    , timestamp_(CASS_INT64_MIN)
-    , start_time_ns_(0) { }
+    , cl_(CASS_CONSISTENCY_UNKNOWN) { }
 
-  virtual ~RequestCallback() {}
+  virtual ~RequestCallback() { }
+
+  void start(Connection* connection, int stream) {
+    connection_ = connection;
+    stream_ = stream;
+    on_start();
+  }
+
+  void finish() {
+    on_finish();
+    connection_ = NULL;
+    stream_ = -1;
+    dec_ref();
+  }
+
+  void finish_with_retry(bool use_next_host) {
+    on_finish_with_retry(use_next_host);
+    connection_ = NULL;
+    stream_ = -1;
+    dec_ref();
+  }
 
   int32_t encode(int version, int flags, BufferVec* bufs);
 
   virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
-  virtual void on_timeout() = 0;
 
-  virtual void retry() { }
+  virtual const Request* request() const = 0;
+  virtual Request::EncodingCache* encoding_cache() = 0;
 
-  const Request* request() const { return request_.get(); }
+  virtual int64_t timestamp() const { return request()->timestamp(); }
 
   Connection* connection() const { return connection_; }
 
-  void set_connection(Connection* connection) {
-    connection_ = connection;
-  }
-
   int stream() const { return stream_; }
 
-  void set_stream(int stream) {
-    stream_ = stream;
-  }
-
   State state() const { return state_; }
-
   void set_state(State next_state);
-
-  void start_timer(uv_loop_t* loop, uint64_t timeout, void* data,
-                   Timer::Callback cb) {
-    timer_.start(loop, timeout, data, cb);
-  }
-
-  void stop_timer() {
-    timer_.stop();
-  }
 
   CassConsistency consistency() const {
     return cl_ != CASS_CONSISTENCY_UNKNOWN ? cl_ : request()->consistency();
@@ -104,35 +106,60 @@ public:
 
   void set_consistency(CassConsistency cl) { cl_ = cl; }
 
-  int64_t timestamp() const {
-    return timestamp_;
-  }
-
-  void set_timestamp(int64_t timestamp) {
-    timestamp_ = timestamp;
-  }
-
-  uint64_t request_timeout_ms(const Config& config) const;
-
-  uint64_t start_time_ns() const { return start_time_ns_; }
-
-  Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
-
 protected:
-  SharedRefPtr<const Request> request_;
-  Connection* connection_;
+  // Called right before a request is written to a host.
+  virtual void on_start() = 0;
+
+  // One of theses methods will always be called when a connection is finished
+  // with a request regardless of the outcome.
+  virtual void on_finish() = 0;
+  virtual void on_finish_with_retry(bool use_next_host) = 0;
 
 private:
-  Timer timer_;
+  Connection* connection_;
   int stream_;
   State state_;
   CassConsistency cl_;
-  int64_t timestamp_;
-  uint64_t start_time_ns_;
-  Request::EncodingCache encoding_cache_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(RequestCallback);
+};
+
+class SimpleRequestCallback : public RequestCallback {
+public:
+  SimpleRequestCallback(uv_loop_t* loop,
+                        uint64_t request_timeout_ms,
+                        const Request::ConstPtr& request);
+
+  virtual void on_start() {
+    // Ignore
+  }
+
+  virtual void on_finish() {
+    timer_.stop();
+  }
+
+  virtual void on_finish_with_retry(bool use_next_host) {
+    timer_.stop();
+    on_timeout();
+  }
+
+  virtual const Request* request() const { return request_.get(); }
+  virtual Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
+
+  virtual void on_timeout() = 0;
+
+private:
+  static void on_timeout(Timer* timer) {
+    SimpleRequestCallback* callback = static_cast<SimpleRequestCallback*>(timer->data());
+    callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
+    callback->on_timeout();
+  }
+
+private:
+  Timer timer_;
+  const Request::ConstPtr request_;
+  Request::EncodingCache encoding_cache_;
 };
 
 class MultipleRequestCallback : public RefCounted<MultipleRequestCallback> {
@@ -157,24 +184,21 @@ public:
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
 
-  Connection* connection() {
-    return connection_;
-  }
+  Connection* connection() { return connection_; }
 
 private:
-  class InternalCallback : public RequestCallback {
+  class InternalCallback : public SimpleRequestCallback {
   public:
-    InternalCallback(const Ptr& parent, const Request::ConstPtr& request, const std::string& index)
-      : RequestCallback(request)
-      , parent_(parent)
-      , index_(index) { }
+    InternalCallback(const MultipleRequestCallback::Ptr& parent,
+                     const Request::ConstPtr& request,
+                     const std::string& index);
 
     virtual void on_set(ResponseMessage* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();
 
   private:
-    Ptr parent_;
+    MultipleRequestCallback::Ptr parent_;
     std::string index_;
   };
 

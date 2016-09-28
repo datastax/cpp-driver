@@ -29,10 +29,12 @@
 #include "mpmc_queue.hpp"
 #include "random.hpp"
 #include "ref_counted.hpp"
+#include "request_handler.hpp"
 #include "resolver.hpp"
 #include "row.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
+#include "speculative_execution.hpp"
 #include "token_map.hpp"
 
 #include <list>
@@ -44,7 +46,6 @@
 
 namespace cass {
 
-class RequestHandler;
 class Future;
 class IOWorker;
 class Request;
@@ -160,6 +161,7 @@ private:
 #endif
 
   QueryPlan* new_query_plan(const Request* request = NULL, Request::EncodingCache* cache = NULL);
+  SpeculativeExecutionPlan* new_execution_plan(const Request* request);
 
   void on_reconnect(Timer* timer);
 
@@ -191,6 +193,7 @@ private:
   Config config_;
   ScopedPtr<Metrics> metrics_;
   LoadBalancingPolicy::Ptr load_balancing_policy_;
+  SharedRefPtr<SpeculativeExecutionPolicy> speculative_execution_policy_;
   CassError connect_error_code_;
   std::string connect_error_message_;
   Future::Ptr connect_future_;

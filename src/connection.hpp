@@ -104,11 +104,12 @@ public:
 
   void connect();
 
-  bool write(RequestCallback* request, bool flush_immediately = true);
+  bool write(const RequestCallback::Ptr& request, bool flush_immediately = true);
   void flush();
 
   void schedule_schema_agreement(const SchemaChangeCallback::Ptr& callback, uint64_t wait);
 
+  uv_loop_t* loop() { return loop_; }
   const Config& config() const { return config_; }
   Metrics* metrics() { return metrics_; }
   const Address& address() const { return host_->address(); }
@@ -163,12 +164,9 @@ private:
     char buf_[MAX_BUFFER_SIZE];
   };
 
-  class StartupCallback : public RequestCallback {
+  class StartupCallback : public SimpleRequestCallback {
   public:
-    StartupCallback(Connection* connection, const Request::ConstPtr& request)
-        : RequestCallback(request) {
-      set_connection(connection);
-    }
+    StartupCallback(Connection* connection, const Request::ConstPtr& request);
 
     virtual void on_set(ResponseMessage* response);
     virtual void on_error(CassError code, const std::string& message);
@@ -178,7 +176,7 @@ private:
     void on_result_response(ResponseMessage* response);
   };
 
-  class HeartbeatCallback : public RequestCallback {
+  class HeartbeatCallback : public SimpleRequestCallback {
   public:
     HeartbeatCallback(Connection* connection);
 
@@ -254,7 +252,7 @@ private:
     Timer timer;
   };
 
-  bool internal_write(RequestCallback* request, bool flush_immediately = true);
+  int32_t internal_write(const RequestCallback::Ptr& request, bool flush_immediately = true);
   void internal_close(ConnectionState close_state);
   void set_state(ConnectionState state);
   void consume(char* input, size_t size);

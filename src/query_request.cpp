@@ -40,7 +40,7 @@ int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, RequestCallback
   if (has_names_for_values()) {
     if (version < 3) {
       LOG_ERROR("Protocol version %d does not support named values", version);
-      return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+      return REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
     }
     buf.encode_uint16(pos, value_names_.size());
     length += copy_buffers_with_names(version, bufs, callback->encoding_cache());
@@ -155,7 +155,7 @@ int QueryRequest::internal_encode(int version, RequestCallback* callback, Buffer
     if (has_names_for_values()) {
       if (version < 3) {
         LOG_ERROR("Protocol version %d does not support named values", version);
-        return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+        return REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
       }
       buf.encode_uint16(pos, value_names_.size());
       length += copy_buffers_with_names(version, bufs, callback->encoding_cache());

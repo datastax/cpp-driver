@@ -20,7 +20,6 @@
 #include "constants.hpp"
 #include "logger.hpp"
 #include "prepare_request.hpp"
-#include "request_handler.hpp"
 #include "scoped_lock.hpp"
 #include "timer.hpp"
 #include "external_types.hpp"
@@ -162,6 +161,7 @@ void Session::clear(const Config& config) {
   random_.reset();
   metrics_.reset(new Metrics(config_.thread_count_io() + 1));
   load_balancing_policy_.reset(config.load_balancing_policy());
+  speculative_execution_policy_.reset(config.speculative_execution_policy());
   connect_future_.reset();
   close_future_.reset();
   { // Lock hosts
@@ -526,14 +526,17 @@ void Session::on_resolve_done(MultiResolver<Session*>* resolver) {
 }
 
 void Session::execute(const RequestHandler::Ptr& request_handler) {
-  request_handler->inc_ref();
   if (state_.load(MEMORY_ORDER_ACQUIRE) != SESSION_STATE_CONNECTED) {
-    request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                              "Session is not connected");
+    request_handler->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                               "Session is not connected");
     return;
-  } else if (!request_queue_->enqueue(request_handler.get())) {
-    request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
-                              "The request queue has reached capacity");
+  }
+
+  request_handler->inc_ref(); // Queue reference
+  if (!request_queue_->enqueue(request_handler.get())) {
+    request_handler->dec_ref();
+    request_handler->set_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
+                               "The request queue has reached capacity");
   }
 }
 
@@ -584,18 +587,14 @@ void Session::on_control_connection_error(CassError code, const std::string& mes
 }
 
 Future::Ptr Session::prepare(const char* statement, size_t length) {
-  SharedRefPtr<PrepareRequest> prepare(new PrepareRequest());
-  prepare->set_query(statement, length);
+  SharedRefPtr<PrepareRequest> prepare(new PrepareRequest(std::string(statement, length)));
 
-  ResponseFuture::Ptr future(
-        new ResponseFuture(protocol_version(),
-                           cassandra_version(),
-                           metadata_));
+  ResponseFuture::Ptr future(new ResponseFuture(protocol_version(),
+                                                cassandra_version(),
+                                                metadata_));
   future->statement.assign(statement, length);
 
-  RequestHandler::Ptr request_handler(new RequestHandler(prepare, future, NULL));
-
-  execute(request_handler);
+  execute(RequestHandler::Ptr(new RequestHandler(prepare, future, NULL)));
 
   return future;
 }
@@ -678,20 +677,17 @@ void Session::on_down(Host::Ptr host) {
 }
 
 Future::Ptr Session::execute(const Request::ConstPtr& request) {
-  ResponseFuture::Ptr future(
-        new ResponseFuture(protocol_version(),
-                           cassandra_version(),
-                           metadata_));
+  ResponseFuture::Ptr future(new ResponseFuture(protocol_version(),
+                                                cassandra_version(),
+                                                metadata_));
 
   RetryPolicy* retry_policy
       = request->retry_policy() != NULL ? request->retry_policy()
                                         : config().retry_policy();
 
-  RequestHandler::Ptr request_handler(new RequestHandler(request,
-                                                         future,
-                                                         retry_policy));
-
-  execute(request_handler);
+  execute(RequestHandler::Ptr(new RequestHandler(request,
+                                                 future,
+                                                 retry_policy)));
 
   return future;
 }
@@ -705,11 +701,16 @@ void Session::on_execute(uv_async_t* data) {
 
   bool is_closing = false;
 
-  RequestHandler* request_handler = NULL;
-  while (session->request_queue_->dequeue(request_handler)) {
-    if (request_handler != NULL) {
-      request_handler->set_query_plan(session->new_query_plan(request_handler->request(),
-                                                              request_handler->encoding_cache()));
+  RequestHandler* temp = NULL;
+  while (session->request_queue_->dequeue(temp)) {
+    RequestHandler::Ptr request_handler(temp);
+    if (request_handler) {
+      request_handler->dec_ref(); // Queue reference
+
+      request_handler->set_query_plan(
+            session->new_query_plan(request_handler->request(),
+                                    request_handler->encoding_cache()));
+      request_handler->set_execution_plan(session->new_execution_plan(request_handler->request()));
 
       if (request_handler->timestamp() == CASS_INT64_MIN) {
         request_handler->set_timestamp(session->config_.timestamp_gen()->next());
@@ -717,19 +718,16 @@ void Session::on_execute(uv_async_t* data) {
 
       bool is_done = false;
       while (!is_done) {
-        request_handler->next_host();
-
-        Address address;
-        if (!request_handler->get_current_host_address(&address)) {
-          request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                                    "All connections on all I/O threads are busy");
+        if (!request_handler->first_host()) {
+          request_handler->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                                     "All connections on all I/O threads are busy");
           break;
         }
 
         size_t start = session->current_io_worker_;
         for (size_t i = 0, size = session->io_workers_.size(); i < size; ++i) {
           const IOWorker::Ptr& io_worker = session->io_workers_[start % size];
-          if (io_worker->is_host_available(address) &&
+          if (io_worker->is_host_available(request_handler->first_host()->address()) &&
               io_worker->execute(request_handler)) {
             session->current_io_worker_ = (start + 1) % size;
             is_done = true;
@@ -756,6 +754,11 @@ void Session::on_execute(uv_async_t* data) {
 QueryPlan* Session::new_query_plan(const Request* request, Request::EncodingCache* cache) {
   const CopyOnWritePtr<std::string> keyspace(keyspace_);
   return load_balancing_policy_->new_query_plan(*keyspace, request, token_map_.get(), cache);
+}
+
+SpeculativeExecutionPlan* Session::new_execution_plan(const Request* request) {
+  const CopyOnWritePtr<std::string> keyspace(keyspace_);
+  return speculative_execution_policy_->new_plan(*keyspace, request);
 }
 
 } // namespace cass

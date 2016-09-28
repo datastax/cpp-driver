@@ -61,21 +61,57 @@ namespace cass {
 
 static void cleanup_pending_callbacks(List<RequestCallback>* pending) {
   while (!pending->is_empty()) {
-    RequestCallback* callback = pending->front();
-    pending->remove(callback);
-    if (callback->state() == RequestCallback::REQUEST_STATE_WRITING ||
-        callback->state() == RequestCallback::REQUEST_STATE_READING) {
-      callback->on_timeout();
-      callback->stop_timer();
+    RequestCallback::Ptr callback(pending->front());
+
+    pending->remove(callback.get());
+
+    switch (callback->state()) {
+      case RequestCallback::REQUEST_STATE_NEW:
+      case RequestCallback::REQUEST_STATE_FINISHED:
+        assert(false && "Request state is invalid in cleanup");
+        break;
+
+      case RequestCallback::REQUEST_STATE_CANCELLED:
+        callback->finish();
+        break;
+
+      case RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
+      case RequestCallback::REQUEST_STATE_CANCELLED_WRITE_OUTSTANDING:
+        callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
+        callback->finish();
+        break;
+
+      case RequestCallback::REQUEST_STATE_WRITING:
+      case RequestCallback::REQUEST_STATE_READING:
+      case RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE:
+        if (callback->request()->is_idempotent()) {
+          callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
+          callback->finish_with_retry(true);
+        } else {
+          callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
+          callback->on_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
+                             "Request timed out");
+          callback->finish();
+        }
+        break;
+
+      case RequestCallback::REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
+        callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
+        callback->finish_with_retry(false);
+        break;
     }
-    callback->dec_ref();
   }
 }
+
+Connection::StartupCallback::StartupCallback(Connection* connection, const Request::ConstPtr& request)
+  : SimpleRequestCallback(connection->loop(),
+                          connection->config().request_timeout_ms(),
+                          request) { }
 
 void Connection::StartupCallback::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_SUPPORTED:
-      connection_->on_supported(response);
+      connection()->on_supported(response);
       break;
 
     case CQL_OPCODE_ERROR: {
@@ -92,31 +128,31 @@ void Connection::StartupCallback::on_set(ResponseMessage* response) {
                  error->message().find("does not exist") != StringRef::npos) {
         error_code = CONNECTION_ERROR_KEYSPACE;
       }
-      connection_->notify_error("Received error response " + error->error_message(), error_code);
+      connection()->notify_error("Received error response " + error->error_message(), error_code);
       break;
     }
 
     case CQL_OPCODE_AUTHENTICATE: {
       AuthenticateResponse* auth
           = static_cast<AuthenticateResponse*>(response->response_body().get());
-      connection_->on_authenticate(auth->class_name());
+      connection()->on_authenticate(auth->class_name());
       break;
     }
 
     case CQL_OPCODE_AUTH_CHALLENGE:
-      connection_->on_auth_challenge(
-            static_cast<const AuthResponseRequest*>(request_.get()),
+      connection()->on_auth_challenge(
+            static_cast<const AuthResponseRequest*>(request()),
             static_cast<AuthChallengeResponse*>(response->response_body().get())->token());
       break;
 
     case CQL_OPCODE_AUTH_SUCCESS:
-      connection_->on_auth_success(
-            static_cast<const AuthResponseRequest*>(request_.get()),
+      connection()->on_auth_success(
+            static_cast<const AuthResponseRequest*>(request()),
             static_cast<AuthSuccessResponse*>(response->response_body().get())->token());
       break;
 
     case CQL_OPCODE_READY:
-      connection_->on_ready();
+      connection()->on_ready();
       break;
 
     case CQL_OPCODE_RESULT:
@@ -124,7 +160,7 @@ void Connection::StartupCallback::on_set(ResponseMessage* response) {
       break;
 
     default:
-      connection_->notify_error("Invalid opcode");
+      connection()->notify_error("Invalid opcode");
       break;
   }
 }
@@ -134,12 +170,12 @@ void Connection::StartupCallback::on_error(CassError code,
   std::ostringstream ss;
   ss << "Error: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
-  connection_->notify_error(ss.str());
+  connection()->notify_error(ss.str());
 }
 
 void Connection::StartupCallback::on_timeout() {
-  if (!connection_->is_closing()) {
-    connection_->notify_error("Timed out", CONNECTION_ERROR_TIMEOUT);
+  if (!connection()->is_closing()) {
+    connection()->notify_error("Timed out", CONNECTION_ERROR_TIMEOUT);
   }
 }
 
@@ -148,36 +184,36 @@ void Connection::StartupCallback::on_result_response(ResponseMessage* response) 
       static_cast<ResultResponse*>(response->response_body().get());
   switch (result->kind()) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
-      connection_->on_set_keyspace();
+      connection()->on_set_keyspace();
       break;
     default:
-      connection_->notify_error("Invalid result response. Expected set keyspace.");
+      connection()->notify_error("Invalid result response. Expected set keyspace.");
       break;
   }
 }
 
 Connection::HeartbeatCallback::HeartbeatCallback(Connection* connection)
-  : RequestCallback(Request::ConstPtr(new OptionsRequest())) {
-  set_connection(connection);
-}
+  : SimpleRequestCallback(connection->loop(),
+                          connection->config().request_timeout_ms(),
+                          Request::ConstPtr(new OptionsRequest())) { }
 
 void Connection::HeartbeatCallback::on_set(ResponseMessage* response) {
   LOG_TRACE("Heartbeat completed on host %s",
-            connection_->address_string().c_str());
-  connection_->heartbeat_outstanding_ = false;
+            connection()->address_string().c_str());
+  connection()->heartbeat_outstanding_ = false;
 }
 
 void Connection::HeartbeatCallback::on_error(CassError code, const std::string& message) {
   LOG_WARN("An error occurred on host %s during a heartbeat request: %s",
-           connection_->address_string().c_str(),
+           connection()->address_string().c_str(),
            message.c_str());
-  connection_->heartbeat_outstanding_ = false;
+  connection()->heartbeat_outstanding_ = false;
 }
 
 void Connection::HeartbeatCallback::on_timeout() {
   LOG_WARN("Heartbeat request timed out on host %s",
-           connection_->address_string().c_str());
-  connection_->heartbeat_outstanding_ = false;
+           connection()->address_string().c_str());
+  connection()->heartbeat_outstanding_ = false;
 }
 
 Connection::Connection(uv_loop_t* loop,
@@ -240,23 +276,26 @@ void Connection::connect() {
   }
 }
 
-bool Connection::write(RequestCallback* callback, bool flush_immediately) {
-  bool result = internal_write(callback, flush_immediately);
-  if (result) {
+bool Connection::write(const RequestCallback::Ptr& callback, bool flush_immediately) {
+  int32_t result = internal_write(callback, flush_immediately);
+  if (result > 0) {
     restart_heartbeat_timer();
   }
-  return result;
+  return result != Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS;
 }
 
-bool Connection::internal_write(RequestCallback* callback, bool flush_immediately) {
-  int stream = stream_manager_.acquire(callback);
+int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool flush_immediately) {
+  if (callback->state() == RequestCallback::REQUEST_STATE_CANCELLED) {
+    return Request::REQUEST_ERROR_CANCELLED;
+  }
+
+  int stream = stream_manager_.acquire(callback.get());
   if (stream < 0) {
-    return false;
+    return Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS;
   }
 
   callback->inc_ref(); // Connection reference
-  callback->set_connection(this);
-  callback->set_stream(stream);
+  callback->start(this, stream);
 
   if (pending_writes_.is_empty() || pending_writes_.back()->is_flushed()) {
     if (ssl_session_) {
@@ -268,12 +307,12 @@ bool Connection::internal_write(RequestCallback* callback, bool flush_immediatel
 
   PendingWriteBase *pending_write = pending_writes_.back();
 
-  int32_t request_size = pending_write->write(callback);
+  int32_t request_size = pending_write->write(callback.get());
   if (request_size < 0) {
     stream_manager_.release(stream);
     switch (request_size) {
-      case Request::ENCODE_ERROR_BATCH_WITH_NAMED_VALUES:
-      case Request::ENCODE_ERROR_PARAMETER_UNSET:
+      case Request::REQUEST_ERROR_BATCH_WITH_NAMED_VALUES:
+      case Request::REQUEST_ERROR_PARAMETER_UNSET:
         // Already handled
         break;
 
@@ -282,8 +321,8 @@ bool Connection::internal_write(RequestCallback* callback, bool flush_immediatel
                           "Operation unsupported by this protocol version");
         break;
     }
-    callback->dec_ref();
-    return true; // Don't retry
+    callback->finish();
+    return request_size;
   }
 
   pending_writes_size_ += request_size;
@@ -300,14 +339,6 @@ bool Connection::internal_write(RequestCallback* callback, bool flush_immediatel
             opcode_to_string(callback->request()->opcode()).c_str(), stream);
 
   callback->set_state(RequestCallback::REQUEST_STATE_WRITING);
-  uint64_t request_timeout_ms = callback->request_timeout_ms(config_);
-  if (request_timeout_ms > 0) { // 0 means no timeout
-    callback->start_timer(loop_,
-                         request_timeout_ms,
-                         callback,
-                         Connection::on_timeout);
-  }
-
   if (flush_immediately) {
     pending_write->flush();
   }
@@ -462,16 +493,18 @@ void Connection::consume(char* input, size_t size) {
                        opcode_to_string(response->opcode()));
         }
       } else {
-        RequestCallback* callback = NULL;
-        if (stream_manager_.get_pending_and_release(response->stream(), callback)) {
+        RequestCallback* temp = NULL;
+
+        if (stream_manager_.get_pending_and_release(response->stream(), temp)) {
+          RequestCallback::Ptr callback(temp);
+
           switch (callback->state()) {
             case RequestCallback::REQUEST_STATE_READING:
               maybe_set_keyspace(response.get());
-              pending_reads_.remove(callback);
-              callback->stop_timer();
-              callback->set_state(RequestCallback::REQUEST_STATE_DONE);
+              pending_reads_.remove(callback.get());
+              callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
               callback->on_set(response.get());
-              callback->dec_ref();
+              callback->finish();
               break;
 
             case RequestCallback::REQUEST_STATE_WRITING:
@@ -483,15 +516,14 @@ void Connection::consume(char* input, size_t size) {
               callback->on_set(response.get());
               break;
 
-            case RequestCallback::REQUEST_STATE_TIMEOUT:
-              pending_reads_.remove(callback);
-              callback->set_state(RequestCallback::REQUEST_STATE_DONE);
-              callback->dec_ref();
+            case RequestCallback::REQUEST_STATE_CANCELLED:
+              pending_reads_.remove(callback.get());
+              callback->finish();
               break;
 
-            case RequestCallback::REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
+            case RequestCallback::REQUEST_STATE_CANCELLED_WRITE_OUTSTANDING:
               // We must wait for the write callback before we can do the cleanup
-              callback->set_state(RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE);
+              callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE);
               break;
 
             default:
@@ -725,23 +757,11 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
   }
 }
 
-void Connection::on_timeout(Timer* timer) {
-  RequestCallback* callback = static_cast<RequestCallback*>(timer->data());
-  Connection* connection = callback->connection();
-  LOG_INFO("Request timed out to host %s on connection(%p)",
-           connection->host_->address_string().c_str(),
-           static_cast<void*>(connection));
-  // TODO (mpenick): We need to handle the case where we have too many
-  // timeout requests and we run out of stream ids. The java-driver
-  // uses a threshold to defunct the connection.
-  callback->set_state(RequestCallback::REQUEST_STATE_TIMEOUT);
-  callback->on_timeout();
-
-  connection->metrics_->request_timeouts.inc();
-}
-
 void Connection::on_connected() {
-  internal_write(new StartupCallback(this, Request::ConstPtr(new OptionsRequest())));
+  internal_write(RequestCallback::Ptr(
+                   new StartupCallback(this,
+                                       Request::ConstPtr(
+                                         new OptionsRequest()))));
 }
 
 void Connection::on_authenticate(const std::string& class_name) {
@@ -759,10 +779,10 @@ void Connection::on_auth_challenge(const AuthResponseRequest* request,
     notify_error("Failed evaluating challenge token: " + request->auth()->error(), CONNECTION_ERROR_AUTH);
     return;
   }
-  internal_write(new StartupCallback(this,
-                                     Request::ConstPtr(
-                                       new AuthResponseRequest(response,
-                                                               request->auth()))));
+  internal_write(RequestCallback::Ptr(
+                   new StartupCallback(this,
+                                       Request::ConstPtr(
+                                         new AuthResponseRequest(response, request->auth())))));
 }
 
 void Connection::on_auth_success(const AuthResponseRequest* request,
@@ -777,18 +797,20 @@ void Connection::on_auth_success(const AuthResponseRequest* request,
 void Connection::on_ready() {
   if (state_ == CONNECTION_STATE_CONNECTED && listener_->event_types() != 0) {
     set_state(CONNECTION_STATE_REGISTERING_EVENTS);
-    internal_write(new StartupCallback(this,
-                                       Request::ConstPtr(
-                                         new RegisterRequest(listener_->event_types()))));
+    internal_write(RequestCallback::Ptr(
+                     new StartupCallback(this,
+                                         Request::ConstPtr(
+                                           new RegisterRequest(listener_->event_types())))));
     return;
   }
 
   if (keyspace_.empty()) {
     notify_ready();
   } else {
-    internal_write(new StartupCallback(this,
-                                       Request::ConstPtr(
-                                         new QueryRequest("USE \"" + keyspace_ + "\""))));
+    internal_write(RequestCallback::Ptr(
+                     new StartupCallback(this,
+                                         Request::ConstPtr(
+                                           new QueryRequest("USE \"" + keyspace_ + "\"")))));
   }
 }
 
@@ -803,8 +825,10 @@ void Connection::on_supported(ResponseMessage* response) {
   // TODO(mstump) do something with the supported info
   (void)supported;
 
-  internal_write(new StartupCallback(this,
-                                     Request::ConstPtr(new StartupRequest())));
+  internal_write(RequestCallback::Ptr(
+                   new StartupCallback(this,
+                                       Request::ConstPtr(
+                                         new StartupRequest()))));
 }
 
 void Connection::on_pending_schema_agreement(Timer* timer) {
@@ -871,9 +895,10 @@ void Connection::send_credentials(const std::string& class_name) {
   if (v1_auth) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
-    internal_write(new StartupCallback(this,
-                                       Request::ConstPtr(
-                                         new CredentialsRequest(credentials))));
+    internal_write(RequestCallback::Ptr(
+                     new StartupCallback(this,
+                                         Request::ConstPtr(
+                                           new CredentialsRequest(credentials)))));
   } else {
     send_initial_auth_response(class_name);
   }
@@ -889,9 +914,10 @@ void Connection::send_initial_auth_response(const std::string& class_name) {
       notify_error("Failed creating initial response token: " + auth->error(), CONNECTION_ERROR_AUTH);
       return;
     }
-    internal_write(new StartupCallback(this,
-                                       Request::ConstPtr(
-                                         new AuthResponseRequest(response, auth))));
+    internal_write(RequestCallback::Ptr(
+                     new StartupCallback(this,
+                                         Request::ConstPtr(
+                                           new AuthResponseRequest(response, auth)))));
   }
 }
 
@@ -907,7 +933,7 @@ void Connection::on_heartbeat(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
 
   if (!connection->heartbeat_outstanding_) {
-    if (!connection->internal_write(new HeartbeatCallback(connection))) {
+    if (!connection->internal_write(RequestCallback::Ptr(new HeartbeatCallback(connection)))) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests
       // that never returned and as a result timed out.
@@ -967,16 +993,23 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
 
   Connection* connection = static_cast<Connection*>(pending_write->connection_);
 
-  while (!pending_write->callbacks_.is_empty()) {
-    RequestCallback* callback = pending_write->callbacks_.front();
+  connection->pending_writes_size_ -= pending_write->size();
+  if (connection->pending_writes_size_ <
+      connection->config_.write_bytes_low_water_mark() &&
+      connection->state_ == CONNECTION_STATE_OVERWHELMED) {
+    connection->set_state(CONNECTION_STATE_READY);
+  }
 
-    pending_write->callbacks_.remove(callback);
+  while (!pending_write->callbacks_.is_empty()) {
+    RequestCallback::Ptr callback(pending_write->callbacks_.front());
+
+    pending_write->callbacks_.remove(callback.get());
 
     switch (callback->state()) {
       case RequestCallback::REQUEST_STATE_WRITING:
         if (status == 0) {
           callback->set_state(RequestCallback::REQUEST_STATE_READING);
-          connection->pending_reads_.add_to_back(callback);
+          connection->pending_reads_.add_to_back(callback.get());
         } else {
           if (!connection->is_closing()) {
             connection->notify_error("Write error '" +
@@ -986,45 +1019,42 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
           }
 
           connection->stream_manager_.release(callback->stream());
-          callback->stop_timer();
-          callback->set_state(RequestCallback::REQUEST_STATE_DONE);
+          callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
           callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
                             "Unable to write to socket");
-          callback->dec_ref();
+          callback->finish();
         }
-        break;
-
-      case RequestCallback::REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
-        // The read may still come back, handle cleanup there
-        callback->set_state(RequestCallback::REQUEST_STATE_TIMEOUT);
-        connection->pending_reads_.add_to_back(callback);
         break;
 
       case RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE:
         // The read callback happened before the write callback
         // returned. This is now responsible for cleanup.
-        callback->stop_timer();
-        callback->set_state(RequestCallback::REQUEST_STATE_DONE);
-        callback->dec_ref();
+        callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
+        callback->finish();
         break;
 
       case RequestCallback::REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
-        callback->stop_timer();
-        callback->retry();
-        callback->dec_ref();
+        callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
+        callback->finish_with_retry(false);
+        break;
+
+      case RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
+        // The read callback happened before the write callback
+        // returned. This is now responsible for cleanup.
+        callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
+        callback->finish();
+        break;
+
+      case RequestCallback::REQUEST_STATE_CANCELLED_WRITE_OUTSTANDING:
+        // The read may still come back, handle cleanup there
+        callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
+        connection->pending_reads_.add_to_back(callback.get());
         break;
 
       default:
         assert(false && "Invalid request state after write finished");
         break;
     }
-  }
-
-  connection->pending_writes_size_ -= pending_write->size();
-  if (connection->pending_writes_size_ <
-      connection->config_.write_bytes_low_water_mark() &&
-      connection->state_ == CONNECTION_STATE_OVERWHELMED) {
-    connection->set_state(CONNECTION_STATE_READY);
   }
 
   connection->pending_writes_.remove(pending_write);

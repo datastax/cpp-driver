@@ -26,8 +26,9 @@ namespace cass {
 
 class PrepareRequest : public Request {
 public:
-  PrepareRequest()
-      : Request(CQL_OPCODE_PREPARE) {}
+  PrepareRequest(const std::string& query)
+      : Request(CQL_OPCODE_PREPARE)
+      , query_(query) { }
 
   const std::string& query() const { return query_; }
 

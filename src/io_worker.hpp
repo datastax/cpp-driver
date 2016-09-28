@@ -27,6 +27,7 @@
 #include "logger.hpp"
 #include "metrics.hpp"
 #include "pool.hpp"
+#include "request_handler.hpp"
 #include "spsc_queue.hpp"
 #include "timer.hpp"
 
@@ -38,6 +39,7 @@
 namespace cass {
 
 class Config;
+class Pool;
 class RequestHandler;
 class Session;
 class SSLContext;
@@ -104,10 +106,10 @@ public:
   bool remove_pool_async(const Host::ConstPtr& host, bool cancel_reconnect);
   void close_async();
 
-  bool execute(RequestHandler* request_handler);
+  bool execute(const RequestHandler::Ptr& request_handler);
 
-  void retry(RequestHandler* request_handler);
-  void request_finished(RequestHandler* request_handler);
+  void retry(const SpeculativeExecution::Ptr& speculative_execution);
+  void request_finished();
 
   void notify_pool_ready(Pool* pool);
   void notify_pool_closed(Pool* pool);

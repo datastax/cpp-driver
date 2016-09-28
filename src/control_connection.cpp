@@ -657,7 +657,7 @@ void ControlConnection::refresh_node_info(Host::Ptr host,
                                              this,
                                              response_callback,
                                              data));
-  if (!connection_->write(callback.get())) {
+  if (!connection_->write(callback)) {
     LOG_ERROR("No more stream available while attempting to refresh node info");
   }
 }
@@ -806,11 +806,11 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
 
   LOG_DEBUG("Refreshing keyspace %s", query.c_str());
 
-  connection_->write(
+  connection_->write(RequestCallback::Ptr(
         new ControlCallback<std::string>(Request::ConstPtr(new QueryRequest(query)),
                                         this,
                                         ControlConnection::on_refresh_keyspace,
-                                        keyspace_name.to_string()));
+                                        keyspace_name.to_string())));
 }
 
 void ControlConnection::on_refresh_keyspace(ControlConnection* control_connection,
@@ -936,11 +936,12 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name,
 
   LOG_DEBUG("Refreshing type %s", query.c_str());
 
-  connection_->write(
-        new ControlCallback<std::pair<std::string, std::string> >(Request::ConstPtr(new QueryRequest(query)),
-                                        this,
-                                        ControlConnection::on_refresh_type,
-                                        std::make_pair(keyspace_name.to_string(), type_name.to_string())));
+  connection_->write(RequestCallback::Ptr(
+                       new ControlCallback<std::pair<std::string, std::string> >(
+                         Request::ConstPtr(new QueryRequest(query)),
+                         this,
+                         ControlConnection::on_refresh_type,
+                         std::make_pair(keyspace_name.to_string(), type_name.to_string()))));
 }
 
 void ControlConnection::on_refresh_type(ControlConnection* control_connection,
@@ -1002,11 +1003,11 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
   request->set(1, CassString(function_name.data(), function_name.size()));
   request->set(2, signature);
 
-  connection_->write(
+  connection_->write(RequestCallback::Ptr(
         new ControlCallback<RefreshFunctionData>(request,
                                                 this,
                                                 ControlConnection::on_refresh_function,
-                                                RefreshFunctionData(keyspace_name, function_name, arg_types, is_aggregate)));
+                                                RefreshFunctionData(keyspace_name, function_name, arg_types, is_aggregate))));
 }
 
 void ControlConnection::on_refresh_function(ControlConnection* control_connection,
@@ -1117,5 +1118,7 @@ void ControlConnection::ControlMultipleRequestCallback<T>::on_set(
 
 Address ControlConnection::bind_any_ipv4_("0.0.0.0", 0);
 Address ControlConnection::bind_any_ipv6_("::", 0);
+
+
 
 } // namespace cass

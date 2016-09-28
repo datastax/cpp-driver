@@ -18,6 +18,7 @@
 #define __CASS_CONTROL_CONNECTION_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "config.hpp"
 #include "connection.hpp"
 #include "request_callback.hpp"
 #include "host.hpp"
@@ -116,18 +117,20 @@ private:
   struct UnusedData {};
 
   template<class T>
-  class ControlCallback : public RequestCallback {
+  class ControlCallback : public SimpleRequestCallback {
   public:
     typedef void (*ResponseCallback)(ControlConnection*, const T&, Response*);
 
     ControlCallback(const Request::ConstPtr& request,
-                   ControlConnection* control_connection,
-                   ResponseCallback response_callback,
-                   const T& data)
-      : RequestCallback(request)
+                    ControlConnection* control_connection,
+                    ResponseCallback response_callback,
+                    const T& data)
+      : SimpleRequestCallback(control_connection->connection_->loop(),
+                              control_connection->connection_->config().request_timeout_ms(),
+                              request)
       , control_connection_(control_connection)
       , response_callback_(response_callback)
-      , data_(data) {}
+      , data_(data) { }
 
     virtual void on_set(ResponseMessage* response) {
       Response* response_body = response->response_body().get();

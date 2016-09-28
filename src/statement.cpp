@@ -115,10 +115,15 @@ CassError cass_statement_set_timestamp(CassStatement* statement,
   return CASS_OK;
 }
 
-CassError
-cass_statement_set_request_timeout(CassStatement* statement,
-                                   cass_uint64_t timeout_ms) {
+CassError cass_statement_set_request_timeout(CassStatement* statement,
+                                             cass_uint64_t timeout_ms) {
   statement->set_request_timeout_ms(timeout_ms);
+  return CASS_OK;
+}
+
+CassError cass_statement_set_is_idempotent(CassStatement* statement,
+                                           cass_bool_t is_idempotent) {
+  statement->set_is_idempotent(is_idempotent == cass_true);
   return CASS_OK;
 }
 
@@ -253,7 +258,7 @@ int32_t Statement::copy_buffers(int version, BufferVec* bufs, RequestCallback* c
         std::stringstream ss;
         ss << "Query parameter at index " << i << " was not set";
         callback->on_error(CASS_ERROR_LIB_PARAMETER_UNSET, ss.str());
-        return Request::ENCODE_ERROR_PARAMETER_UNSET;
+        return Request::REQUEST_ERROR_PARAMETER_UNSET;
       }
     }
     size += bufs->back().size();

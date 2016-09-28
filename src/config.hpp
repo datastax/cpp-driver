@@ -29,6 +29,7 @@
 #include "blacklist_policy.hpp"
 #include "whitelist_dc_policy.hpp"
 #include "blacklist_dc_policy.hpp"
+#include "speculative_execution.hpp"
 
 #include <list>
 #include <string>
@@ -64,6 +65,7 @@ public:
       , log_data_(NULL)
       , auth_provider_(new AuthProvider())
       , load_balancing_policy_(new DCAwarePolicy())
+      , speculative_execution_policy_(new NoSpeculativeExecutionPolicy())
       , token_aware_routing_(true)
       , latency_aware_routing_(false)
       , tcp_nodelay_enable_(true)
@@ -268,6 +270,15 @@ public:
     load_balancing_policy_.reset(lbp);
   }
 
+  SpeculativeExecutionPolicy* speculative_execution_policy() const {
+    return speculative_execution_policy_->new_instance();
+  }
+
+  void set_speculative_execution_policy(SpeculativeExecutionPolicy* sep) {
+    if (sep == NULL) return;
+    speculative_execution_policy_.reset(sep);
+  }
+
   SslContext* ssl_context() const { return ssl_context_.get(); }
 
   void set_ssl_context(SslContext* ssl_context) {
@@ -391,6 +402,7 @@ private:
   void* log_data_;
   AuthProvider::Ptr auth_provider_;
   LoadBalancingPolicy::Ptr load_balancing_policy_;
+  SharedRefPtr<SpeculativeExecutionPolicy> speculative_execution_policy_;
   SslContext::Ptr ssl_context_;
   bool token_aware_routing_;
   bool latency_aware_routing_;
