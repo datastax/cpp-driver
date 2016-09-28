@@ -180,37 +180,11 @@ void Future::internal_set(ScopedMutex& lock) {
   is_set_ = true;
   uv_cond_broadcast(&cond_);
   if (callback_) {
-    if (loop_.load() == NULL) {
-      Callback callback = callback_;
-      void* data = data_;
-      lock.unlock();
-      callback(CassFuture::to(this), data);
-    } else {
-      run_callback_on_work_thread();
-    }
+    Callback callback = callback_;
+    void* data = data_;
+    lock.unlock();
+    callback(CassFuture::to(this), data);
   }
-}
-
-void Future::run_callback_on_work_thread() {
-  inc_ref(); // Keep the future alive for the callback
-  work_.data = this;
-  uv_queue_work(loop_.load(), &work_, on_work, on_after_work);
-}
-
-void Future::on_work(uv_work_t* work) {
-  Future* future = static_cast<Future*>(work->data);
-
-  ScopedMutex lock(&future->mutex_);
-  Callback callback = future->callback_;
-  void* data = future->data_;
-  lock.unlock();
-
-  callback(CassFuture::to(future), data);
-}
-
-void Future::on_after_work(uv_work_t* work, int status) {
-  Future* future = static_cast<Future*>(work->data);
-  future->dec_ref();
 }
 
 } // namespace cass
