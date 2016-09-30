@@ -125,14 +125,13 @@ private:
                     ControlConnection* control_connection,
                     ResponseCallback response_callback,
                     const T& data)
-      : SimpleRequestCallback(control_connection->connection_->loop(),
-                              control_connection->connection_->config().request_timeout_ms(),
-                              request)
+      : SimpleRequestCallback(request)
       , control_connection_(control_connection)
       , response_callback_(response_callback)
       , data_(data) { }
 
-    virtual void on_set(ResponseMessage* response) {
+  private:
+    virtual void on_internal_set(ResponseMessage* response) {
       Response* response_body = response->response_body().get();
       if (control_connection_->handle_query_invalid_response(response_body)) {
         return;
@@ -140,11 +139,11 @@ private:
       response_callback_(control_connection_, data_, response_body);
     }
 
-    virtual void on_error(CassError code, const std::string& message) {
+    virtual void on_internal_error(CassError code, const std::string& message) {
       control_connection_->handle_query_failure(code, message);
     }
 
-    virtual void on_timeout() {
+    virtual void on_internal_timeout() {
       control_connection_->handle_query_timeout();
     }
 

@@ -131,11 +131,11 @@ struct TestSSL {
    * @param is_failure True if test is supposed to fail; false otherwise
    *                   (default: false)
    * @param nodes Number of nodes for the cluster (default: 1)
-   * @param protocol_version Protocol version to use for connection (default: 2)
    */
-  void setup(bool is_ssl = true, bool is_client_authentication = false, bool is_failure = false, unsigned int nodes = 1, unsigned int protocol_version = 2) {
+  void setup(bool is_ssl = true, bool is_client_authentication = false, bool is_failure = false, unsigned int nodes = 1) {
     //Create a n-node cluster
     ccm_->create_cluster(nodes, 0, false, is_ssl, is_client_authentication);
+    ccm_->start_cluster();
 
     //Initialize the cpp-driver
     cluster_ = cass_cluster_new();
@@ -145,7 +145,6 @@ struct TestSSL {
     cass_cluster_set_num_threads_io(cluster_, 1);
     cass_cluster_set_core_connections_per_host(cluster_, 2);
     cass_cluster_set_max_connections_per_host(cluster_, 4);
-    cass_cluster_set_protocol_version(cluster_, protocol_version);
     cass_cluster_set_ssl(cluster_, ssl_);
 
     //Establish the connection (if ssl)

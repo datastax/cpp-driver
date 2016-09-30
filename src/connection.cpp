@@ -68,47 +68,43 @@ static void cleanup_pending_callbacks(List<RequestCallback>* pending) {
     switch (callback->state()) {
       case RequestCallback::REQUEST_STATE_NEW:
       case RequestCallback::REQUEST_STATE_FINISHED:
+      case RequestCallback::REQUEST_STATE_CANCELLED:
         assert(false && "Request state is invalid in cleanup");
         break;
 
-      case RequestCallback::REQUEST_STATE_CANCELLED:
-        callback->finish();
-        break;
-
-      case RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
-      case RequestCallback::REQUEST_STATE_CANCELLED_WRITE_OUTSTANDING:
-        callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
-        callback->finish();
+      case RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE:
+        callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
+        // Use the response saved in the read callback
+        callback->on_set(callback->read_before_write_response());
         break;
 
       case RequestCallback::REQUEST_STATE_WRITING:
       case RequestCallback::REQUEST_STATE_READING:
-      case RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE:
+        callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
         if (callback->request()->is_idempotent()) {
-          callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
-          callback->finish_with_retry(true);
+          callback->on_retry(true);
         } else {
-          callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
           callback->on_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
                              "Request timed out");
-          callback->finish();
         }
         break;
 
-      case RequestCallback::REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
-        callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
-        callback->finish_with_retry(false);
+      case RequestCallback::REQUEST_STATE_CANCELLED_WRITING:
+      case RequestCallback::REQUEST_STATE_CANCELLED_READING:
+      case RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
+        callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
+        callback->on_cancel();
         break;
     }
+
+    callback->dec_ref();
   }
 }
 
-Connection::StartupCallback::StartupCallback(Connection* connection, const Request::ConstPtr& request)
-  : SimpleRequestCallback(connection->loop(),
-                          connection->config().request_timeout_ms(),
-                          request) { }
+Connection::StartupCallback::StartupCallback(const Request::ConstPtr& request)
+  : SimpleRequestCallback(request) { }
 
-void Connection::StartupCallback::on_set(ResponseMessage* response) {
+void Connection::StartupCallback::on_internal_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_SUPPORTED:
       connection()->on_supported(response);
@@ -165,15 +161,15 @@ void Connection::StartupCallback::on_set(ResponseMessage* response) {
   }
 }
 
-void Connection::StartupCallback::on_error(CassError code,
-                                          const std::string& message) {
+void Connection::StartupCallback::on_internal_error(CassError code,
+                                                    const std::string& message) {
   std::ostringstream ss;
   ss << "Error: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
   connection()->notify_error(ss.str());
 }
 
-void Connection::StartupCallback::on_timeout() {
+void Connection::StartupCallback::on_internal_timeout() {
   if (!connection()->is_closing()) {
     connection()->notify_error("Timed out", CONNECTION_ERROR_TIMEOUT);
   }
@@ -192,25 +188,23 @@ void Connection::StartupCallback::on_result_response(ResponseMessage* response) 
   }
 }
 
-Connection::HeartbeatCallback::HeartbeatCallback(Connection* connection)
-  : SimpleRequestCallback(connection->loop(),
-                          connection->config().request_timeout_ms(),
-                          Request::ConstPtr(new OptionsRequest())) { }
+Connection::HeartbeatCallback::HeartbeatCallback()
+  : SimpleRequestCallback(Request::ConstPtr(new OptionsRequest())) { }
 
-void Connection::HeartbeatCallback::on_set(ResponseMessage* response) {
+void Connection::HeartbeatCallback::on_internal_set(ResponseMessage* response) {
   LOG_TRACE("Heartbeat completed on host %s",
             connection()->address_string().c_str());
   connection()->heartbeat_outstanding_ = false;
 }
 
-void Connection::HeartbeatCallback::on_error(CassError code, const std::string& message) {
+void Connection::HeartbeatCallback::on_internal_error(CassError code, const std::string& message) {
   LOG_WARN("An error occurred on host %s during a heartbeat request: %s",
            connection()->address_string().c_str(),
            message.c_str());
   connection()->heartbeat_outstanding_ = false;
 }
 
-void Connection::HeartbeatCallback::on_timeout() {
+void Connection::HeartbeatCallback::on_internal_timeout() {
   LOG_WARN("Heartbeat request timed out on host %s",
            connection()->address_string().c_str());
   connection()->heartbeat_outstanding_ = false;
@@ -310,6 +304,7 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
   int32_t request_size = pending_write->write(callback.get());
   if (request_size < 0) {
     stream_manager_.release(stream);
+
     switch (request_size) {
       case Request::REQUEST_ERROR_BATCH_WITH_NAMED_VALUES:
       case Request::REQUEST_ERROR_PARAMETER_UNSET:
@@ -318,10 +313,11 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
 
       default:
         callback->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                          "Operation unsupported by this protocol version");
+                           "Operation unsupported by this protocol version");
         break;
     }
-    callback->finish();
+
+    callback->dec_ref();
     return request_size;
   }
 
@@ -335,8 +331,10 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
     set_state(CONNECTION_STATE_OVERWHELMED);
   }
 
-  LOG_TRACE("Sending message type %s with stream %d",
-            opcode_to_string(callback->request()->opcode()).c_str(), stream);
+  LOG_TRACE("Sending message type %s with stream %d on host %s",
+            opcode_to_string(callback->request()->opcode()).c_str(),
+            stream,
+            address_string().c_str());
 
   callback->set_state(RequestCallback::REQUEST_STATE_WRITING);
   if (flush_immediately) {
@@ -500,29 +498,33 @@ void Connection::consume(char* input, size_t size) {
 
           switch (callback->state()) {
             case RequestCallback::REQUEST_STATE_READING:
-              maybe_set_keyspace(response.get());
               pending_reads_.remove(callback.get());
               callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
+              maybe_set_keyspace(response.get());
               callback->on_set(response.get());
-              callback->finish();
+              callback->dec_ref();
               break;
 
             case RequestCallback::REQUEST_STATE_WRITING:
               // There are cases when the read callback will happen
               // before the write callback. If this happens we have
-              // to allow the write callback to cleanup.
-              maybe_set_keyspace(response.get());
+              // to allow the write callback to finish the request.
               callback->set_state(RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE);
-              callback->on_set(response.get());
+              // Save the response for the write callback
+              callback->set_read_before_write_response(response.release()); // Transfer ownership
               break;
 
-            case RequestCallback::REQUEST_STATE_CANCELLED:
+            case RequestCallback::REQUEST_STATE_CANCELLED_READING:
               pending_reads_.remove(callback.get());
-              callback->finish();
+              callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
+              callback->on_cancel();
+              callback->dec_ref();
               break;
 
-            case RequestCallback::REQUEST_STATE_CANCELLED_WRITE_OUTSTANDING:
-              // We must wait for the write callback before we can do the cleanup
+            case RequestCallback::REQUEST_STATE_CANCELLED_WRITING:
+              // There are cases when the read callback will happen
+              // before the write callback. If this happens we have
+              // to allow the write callback to finish the request.
               callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE);
               break;
 
@@ -759,8 +761,7 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
 
 void Connection::on_connected() {
   internal_write(RequestCallback::Ptr(
-                   new StartupCallback(this,
-                                       Request::ConstPtr(
+                   new StartupCallback(Request::ConstPtr(
                                          new OptionsRequest()))));
 }
 
@@ -780,8 +781,7 @@ void Connection::on_auth_challenge(const AuthResponseRequest* request,
     return;
   }
   internal_write(RequestCallback::Ptr(
-                   new StartupCallback(this,
-                                       Request::ConstPtr(
+                   new StartupCallback(Request::ConstPtr(
                                          new AuthResponseRequest(response, request->auth())))));
 }
 
@@ -798,8 +798,7 @@ void Connection::on_ready() {
   if (state_ == CONNECTION_STATE_CONNECTED && listener_->event_types() != 0) {
     set_state(CONNECTION_STATE_REGISTERING_EVENTS);
     internal_write(RequestCallback::Ptr(
-                     new StartupCallback(this,
-                                         Request::ConstPtr(
+                     new StartupCallback(Request::ConstPtr(
                                            new RegisterRequest(listener_->event_types())))));
     return;
   }
@@ -808,8 +807,7 @@ void Connection::on_ready() {
     notify_ready();
   } else {
     internal_write(RequestCallback::Ptr(
-                     new StartupCallback(this,
-                                         Request::ConstPtr(
+                     new StartupCallback(Request::ConstPtr(
                                            new QueryRequest("USE \"" + keyspace_ + "\"")))));
   }
 }
@@ -826,8 +824,7 @@ void Connection::on_supported(ResponseMessage* response) {
   (void)supported;
 
   internal_write(RequestCallback::Ptr(
-                   new StartupCallback(this,
-                                       Request::ConstPtr(
+                   new StartupCallback(Request::ConstPtr(
                                          new StartupRequest()))));
 }
 
@@ -896,8 +893,7 @@ void Connection::send_credentials(const std::string& class_name) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
     internal_write(RequestCallback::Ptr(
-                     new StartupCallback(this,
-                                         Request::ConstPtr(
+                     new StartupCallback(Request::ConstPtr(
                                            new CredentialsRequest(credentials)))));
   } else {
     send_initial_auth_response(class_name);
@@ -915,8 +911,7 @@ void Connection::send_initial_auth_response(const std::string& class_name) {
       return;
     }
     internal_write(RequestCallback::Ptr(
-                     new StartupCallback(this,
-                                         Request::ConstPtr(
+                     new StartupCallback(Request::ConstPtr(
                                            new AuthResponseRequest(response, auth)))));
   }
 }
@@ -933,7 +928,7 @@ void Connection::on_heartbeat(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
 
   if (!connection->heartbeat_outstanding_) {
-    if (!connection->internal_write(RequestCallback::Ptr(new HeartbeatCallback(connection)))) {
+    if (!connection->internal_write(RequestCallback::Ptr(new HeartbeatCallback()))) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests
       // that never returned and as a result timed out.
@@ -1021,34 +1016,32 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
           connection->stream_manager_.release(callback->stream());
           callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
           callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
-                            "Unable to write to socket");
-          callback->finish();
+                             "Unable to write to socket");
+          callback->dec_ref();
         }
         break;
 
       case RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE:
         // The read callback happened before the write callback
-        // returned. This is now responsible for cleanup.
+        // returned. This is now responsible for finishing the request.
         callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
-        callback->finish();
+        // Use the response saved in the read callback
+        connection->maybe_set_keyspace(callback->read_before_write_response());
+        callback->on_set(callback->read_before_write_response());
+        callback->dec_ref();
         break;
 
-      case RequestCallback::REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
-        callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
-        callback->finish_with_retry(false);
+      case RequestCallback::REQUEST_STATE_CANCELLED_WRITING:
+        callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED_READING);
+        connection->pending_reads_.add_to_back(callback.get());
         break;
 
       case RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
         // The read callback happened before the write callback
         // returned. This is now responsible for cleanup.
         callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
-        callback->finish();
-        break;
-
-      case RequestCallback::REQUEST_STATE_CANCELLED_WRITE_OUTSTANDING:
-        // The read may still come back, handle cleanup there
-        callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
-        connection->pending_reads_.add_to_back(callback.get());
+        callback->on_cancel();
+        callback->dec_ref();
         break;
 
       default:

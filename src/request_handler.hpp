@@ -115,7 +115,8 @@ public:
     , future_(future)
     , retry_policy_(retry_policy)
     , io_worker_(NULL)
-    , running_executions_(0) { }
+    , running_executions_(0)
+    , start_time_ns_(uv_hrtime()) { }
 
   const Request* request() const { return request_.get(); }
 
@@ -126,17 +127,17 @@ public:
 
   RetryPolicy* retry_policy() { return retry_policy_; }
 
-  void set_query_plan(QueryPlan* query_plan) {
-    query_plan_.reset(query_plan);
-    first_host_ = next_host();
-  }
+  void set_query_plan(QueryPlan* query_plan) { query_plan_.reset(query_plan); }
 
   void set_execution_plan(SpeculativeExecutionPlan* execution_plan) {
     execution_plan_.reset(execution_plan);
   }
 
-  const Host::Ptr& first_host() const { return first_host_; }
-  const Host::Ptr next_host() { return query_plan_->compute_next(); }
+  const Host::Ptr& current_host() const { return current_host_; }
+  const Host::Ptr& next_host() {
+    current_host_ = query_plan_->compute_next();
+    return current_host_;
+  }
 
   IOWorker* io_worker() { return io_worker_; }
 
@@ -158,7 +159,7 @@ private:
   friend class SpeculativeExecution;
 
   void add_execution(SpeculativeExecution* speculative_execution);
-  void schedule_next_execution(const Host::Ptr& first_host);
+  void schedule_next_execution(const Host::Ptr& current_host);
   void stop_request();
 
 private:
@@ -170,12 +171,13 @@ private:
   RetryPolicy* retry_policy_;
   ScopedPtr<QueryPlan> query_plan_;
   ScopedPtr<SpeculativeExecutionPlan> execution_plan_;
-  Host::Ptr first_host_;
+  Host::Ptr current_host_;
   IOWorker* io_worker_;
   Timer timer_;
   int running_executions_;
   SpeculativeExecutionVec speculative_executions_;
   Request::EncodingCache encoding_cache_;
+  uint64_t start_time_ns_;
 };
 
 class SpeculativeExecution : public RequestCallback {
@@ -184,9 +186,6 @@ public:
 
   SpeculativeExecution(const RequestHandler::Ptr& request_handler,
                        const Host::Ptr& current_host = Host::Ptr());
-
-  virtual void on_set(ResponseMessage* response);
-  virtual void on_error(CassError code, const std::string& message);
 
   virtual const Request* request() const { return request_handler_->request(); }
   virtual int64_t timestamp() const { return request_handler_->timestamp(); }
@@ -198,22 +197,33 @@ public:
   const Host::Ptr& current_host() const { return current_host_; }
   void next_host() { current_host_ = request_handler_->next_host(); }
 
-  void start_pending_request(Pool* pool, Timer::Callback cb);
-  void stop_pending_request();
-
   void retry_current_host();
   void retry_next_host();
+
+  void start_pending_request(Pool* pool, Timer::Callback cb);
+  void stop_pending_request();
 
   void execute();
   void schedule_next(int64_t timeout = 0);
   void cancel();
 
+  virtual void on_error(CassError code, const std::string& message);
+
 private:
   static void on_execute(Timer* timer);
 
   virtual void on_start();
-  virtual void on_finish();
-  virtual void on_finish_with_retry(bool use_next_host);
+
+  virtual void on_retry(bool use_next_host);
+
+  virtual void on_set(ResponseMessage* response);
+  virtual void on_cancel();
+
+  void on_result_response(ResponseMessage* response);
+  void on_error_response(ResponseMessage* response);
+  void on_error_unprepared(ErrorResponse* error);
+
+  void return_connection();
 
 private:
   friend class SchemaChangeCallback;
@@ -225,16 +235,11 @@ private:
   void set_error_with_error_response(const Response::Ptr& error,
                                      CassError code, const std::string& message);
 
-  void return_connection();
-
-  void on_result_response(ResponseMessage* response);
-  void on_error_response(ResponseMessage* response);
-  void on_error_unprepared(ErrorResponse* error);
-
 private:
   RequestHandler::Ptr request_handler_;
   Host::Ptr current_host_;
   Pool* pool_;
+  Connection* connection_;
   Timer schedule_timer_;
   Timer pending_request_timer_;
   int num_retries_;

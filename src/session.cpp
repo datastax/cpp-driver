@@ -718,7 +718,9 @@ void Session::on_execute(uv_async_t* data) {
 
       bool is_done = false;
       while (!is_done) {
-        if (!request_handler->first_host()) {
+        request_handler->next_host();
+
+        if (!request_handler->current_host()) {
           request_handler->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                                      "All connections on all I/O threads are busy");
           break;
@@ -727,7 +729,7 @@ void Session::on_execute(uv_async_t* data) {
         size_t start = session->current_io_worker_;
         for (size_t i = 0, size = session->io_workers_.size(); i < size; ++i) {
           const IOWorker::Ptr& io_worker = session->io_workers_[start % size];
-          if (io_worker->is_host_available(request_handler->first_host()->address()) &&
+          if (io_worker->is_host_available(request_handler->current_host()->address()) &&
               io_worker->execute(request_handler)) {
             session->current_io_worker_ = (start + 1) % size;
             is_done = true;

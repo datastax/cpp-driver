@@ -198,6 +198,8 @@ void insert_into_perf(CassSession* session, const char* query, const CassPrepare
       statement = cass_statement_new(query, 5);
     }
 
+    cass_statement_set_is_idempotent(statement, cass_true);
+
     cass_uuid_gen_time(uuid_gen, &id);
     cass_statement_bind_uuid(statement, 0, id);
     cass_statement_bind_string(statement, 1, big_string);
@@ -322,8 +324,10 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
+  execute_query(session, "DROP KEYSPACE stress");
+
   execute_query(session, "CREATE KEYSPACE IF NOT EXISTS stress WITH "
-                         "replication = { 'class': 'SimpleStrategy', 'replication_factor': '1'}");
+                         "replication = { 'class': 'SimpleStrategy', 'replication_factor': '3'}");
 
   execute_query(session, "CREATE TABLE IF NOT EXISTS stress.songs (id uuid PRIMARY KEY, "
                          "title text, album text, artist text, "

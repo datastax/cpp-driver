@@ -36,30 +36,26 @@ static bool least_busy_comp(Connection* a, Connection* b) {
 
 class SetKeyspaceCallback : public SimpleRequestCallback {
 public:
-  SetKeyspaceCallback(Connection* connection,
-                     const std::string& keyspace,
-                     const SpeculativeExecution::Ptr& speculative_execution);
-
-  virtual void on_set(ResponseMessage* response);
-  virtual void on_error(CassError code, const std::string& message);
-  virtual void on_timeout();
+  SetKeyspaceCallback(const std::string& keyspace,
+                      const SpeculativeExecution::Ptr& speculative_execution);
 
 private:
+  virtual void on_internal_set(ResponseMessage* response);
+  virtual void on_internal_error(CassError code, const std::string& message);
+  virtual void on_internal_timeout();
+
   void on_result_response(ResponseMessage* response);
 
 private:
   SpeculativeExecution::Ptr speculative_execution_;
 };
 
-SetKeyspaceCallback::SetKeyspaceCallback(Connection* connection,
-                                       const std::string& keyspace,
-                                       const SpeculativeExecution::Ptr& speculative_execution)
-  : SimpleRequestCallback(connection->loop(),
-                          connection->config().request_timeout_ms(),
-                          Request::ConstPtr(new QueryRequest("USE \"" + keyspace + "\"")))
+SetKeyspaceCallback::SetKeyspaceCallback(const std::string& keyspace,
+                                         const SpeculativeExecution::Ptr& speculative_execution)
+  : SimpleRequestCallback(Request::ConstPtr(new QueryRequest("USE \"" + keyspace + "\"")))
   , speculative_execution_(speculative_execution) { }
 
-void SetKeyspaceCallback::on_set(ResponseMessage* response) {
+void SetKeyspaceCallback::on_internal_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
@@ -74,13 +70,13 @@ void SetKeyspaceCallback::on_set(ResponseMessage* response) {
   }
 }
 
-void SetKeyspaceCallback::on_error(CassError code, const std::string& message) {
+void SetKeyspaceCallback::on_internal_error(CassError code, const std::string& message) {
   connection()->defunct();
   speculative_execution_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
                                    "Unable to set keyspace");
 }
 
-void SetKeyspaceCallback::on_timeout() {
+void SetKeyspaceCallback::on_internal_timeout() {
   speculative_execution_->retry_next_host();
 }
 
@@ -257,8 +253,9 @@ bool Pool::write(Connection* connection, const SpeculativeExecution::Ptr& specul
               static_cast<void*>(connection),
               static_cast<void*>(this));
     if (!connection->write(RequestCallback::Ptr(
-                             new SetKeyspaceCallback(connection, *io_worker_->keyspace(),
-                                                     speculative_execution)), false)) {
+                             new SetKeyspaceCallback(*io_worker_->keyspace(),
+                                                     speculative_execution)),
+                           false)) {
       return false;
     }
   }

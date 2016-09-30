@@ -111,7 +111,6 @@ public:
 
   uv_loop_t* loop() { return loop_; }
   const Config& config() const { return config_; }
-  Metrics* metrics() { return metrics_; }
   const Address& address() const { return host_->address(); }
   const std::string& address_string() const { return host_->address_string(); }
   const std::string& keyspace() const { return keyspace_; }
@@ -166,23 +165,24 @@ private:
 
   class StartupCallback : public SimpleRequestCallback {
   public:
-    StartupCallback(Connection* connection, const Request::ConstPtr& request);
-
-    virtual void on_set(ResponseMessage* response);
-    virtual void on_error(CassError code, const std::string& message);
-    virtual void on_timeout();
+    StartupCallback(const Request::ConstPtr& request);
 
   private:
+    virtual void on_internal_set(ResponseMessage* response);
+    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_timeout();
+
     void on_result_response(ResponseMessage* response);
   };
 
   class HeartbeatCallback : public SimpleRequestCallback {
   public:
-    HeartbeatCallback(Connection* connection);
+    HeartbeatCallback();
 
-    virtual void on_set(ResponseMessage* response);
-    virtual void on_error(CassError code, const std::string& message);
-    virtual void on_timeout();
+  private:
+    virtual void on_internal_set(ResponseMessage* response);
+    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_timeout();
   };
 
   class PendingWriteBase : public List<PendingWriteBase>::Node {

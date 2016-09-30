@@ -37,20 +37,19 @@ namespace cass {
 class PrepareCallback : public SimpleRequestCallback {
 public:
   PrepareCallback(const std::string& query, SpeculativeExecution* speculative_execution)
-    : SimpleRequestCallback(speculative_execution->connection()->loop(),
-                            speculative_execution->connection()->config().request_timeout_ms(),
-                            Request::ConstPtr(new PrepareRequest(query)))
+    : SimpleRequestCallback(Request::ConstPtr(new PrepareRequest(query)))
     , speculative_execution_(speculative_execution) { }
 
-  virtual void on_set(ResponseMessage* response);
-  virtual void on_error(CassError code, const std::string& message);
-  virtual void on_timeout();
+private:
+  virtual void on_internal_set(ResponseMessage* response);
+  virtual void on_internal_error(CassError code, const std::string& message);
+  virtual void on_internal_timeout();
 
 private:
   SpeculativeExecution::Ptr speculative_execution_;
 };
 
-void PrepareCallback::on_set(ResponseMessage* response) {
+void PrepareCallback::on_internal_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT: {
       ResultResponse* result =
@@ -69,11 +68,11 @@ void PrepareCallback::on_set(ResponseMessage* response) {
   }
 }
 
-void PrepareCallback::on_error(CassError code, const std::string& message) {
+void PrepareCallback::on_internal_error(CassError code, const std::string& message) {
   speculative_execution_->retry_next_host();
 }
 
-void PrepareCallback::on_timeout() {
+void PrepareCallback::on_internal_timeout() {
   speculative_execution_->retry_next_host();
 }
 
@@ -103,6 +102,7 @@ void RequestHandler::start_request(IOWorker* io_worker) {
 void RequestHandler::set_response(const Host::Ptr& host,
                                   const Response::Ptr& response) {
   if (future_->set_response(host->address(), response)) {
+    io_worker_->metrics()->record_request(uv_hrtime() - start_time_ns_);
     stop_request();
   }
 }
@@ -139,6 +139,8 @@ void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
 void RequestHandler::on_timeout(Timer* timer) {
   RequestHandler* request_handler =
       static_cast<RequestHandler*>(timer->data());
+  LOG_DEBUG("Request timed out on host %s",
+            request_handler->current_host_->address_string().c_str());
   request_handler->set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
                              "Request timed out");
 }
@@ -174,9 +176,16 @@ void SpeculativeExecution::on_execute(Timer* timer) {
   speculative_execution->execute();
 }
 
+void SpeculativeExecution::on_start() {
+  start_time_ns_ = uv_hrtime();
+}
+
 void SpeculativeExecution::on_set(ResponseMessage* response) {
   assert(connection() != NULL);
   assert(current_host_ && "Tried to set on a non-existent host");
+
+  return_connection();
+
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
@@ -192,6 +201,8 @@ void SpeculativeExecution::on_set(ResponseMessage* response) {
 }
 
 void SpeculativeExecution::on_error(CassError code, const std::string& message) {
+  return_connection();
+
   // Handle recoverable errors by retrying with the next host
   if (code == CASS_ERROR_LIB_WRITE_ERROR ||
       code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {
@@ -201,15 +212,7 @@ void SpeculativeExecution::on_error(CassError code, const std::string& message) 
   }
 }
 
-void SpeculativeExecution::on_start() {
-  start_time_ns_ = uv_hrtime();
-}
-
-void SpeculativeExecution::on_finish() {
-  return_connection();
-}
-
-void SpeculativeExecution::on_finish_with_retry(bool use_next_host) {
+void SpeculativeExecution::on_retry(bool use_next_host) {
   return_connection();
 
   if (use_next_host) {
@@ -219,13 +222,8 @@ void SpeculativeExecution::on_finish_with_retry(bool use_next_host) {
   }
 }
 
-void SpeculativeExecution::start_pending_request(Pool* pool, Timer::Callback cb) {
-  pool_ = pool;
-  pending_request_timer_.start(pool->loop(), pool->config().connect_timeout_ms(), this, cb);
-}
-
-void SpeculativeExecution::stop_pending_request() {
-  pending_request_timer_.stop();
+void SpeculativeExecution::on_cancel() {
+  return_connection();
 }
 
 void SpeculativeExecution::retry_current_host() {
@@ -242,6 +240,15 @@ void SpeculativeExecution::retry_current_host() {
 void SpeculativeExecution::retry_next_host() {
   next_host();
   retry_current_host();
+}
+
+void SpeculativeExecution::start_pending_request(Pool* pool, Timer::Callback cb) {
+  pool_ = pool;
+  pending_request_timer_.start(pool->loop(), pool->config().connect_timeout_ms(), this, cb);
+}
+
+void SpeculativeExecution::stop_pending_request() {
+  pending_request_timer_.stop();
 }
 
 void SpeculativeExecution::execute() {
@@ -269,15 +276,19 @@ void SpeculativeExecution::cancel() {
 void SpeculativeExecution::on_result_response(ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
+
   switch (result->kind()) {
     case CASS_RESULT_KIND_ROWS:
+      current_host_->update_latency(uv_hrtime() - start_time_ns_);
+
       // Execute statements with no metadata get their metadata from
       // result_metadata() returned when the statement was prepared.
       if (request()->opcode() == CQL_OPCODE_EXECUTE && result->no_metadata()) {
         const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
         if (!execute->skip_metadata()) {
           // Caused by a race condition in C* 2.1.0
-          on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE, "Expected metadata but no metadata in response (see CASSANDRA-8054)");
+          on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
+                   "Expected metadata but no metadata in response (see CASSANDRA-8054)");
           return;
         }
         result->set_metadata(execute->prepared()->result()->result_metadata().get());
@@ -288,8 +299,8 @@ void SpeculativeExecution::on_result_response(ResponseMessage* response) {
     case CASS_RESULT_KIND_SCHEMA_CHANGE: {
       SchemaChangeCallback::Ptr schema_change_handler(
             new SchemaChangeCallback(connection(),
-                                    Ptr(this),
-                                    response->response_body()));
+                                     Ptr(this),
+                                     response->response_body()));
       schema_change_handler->execute();
       break;
     }
@@ -391,13 +402,10 @@ void SpeculativeExecution::on_error_response(ResponseMessage* response) {
 
     case RetryPolicy::RetryDecision::RETRY:
       set_consistency(decision.retry_consistency());
-      if (!decision.retry_current_host()) {
-        next_host();
-      }
-      if (state() == REQUEST_STATE_FINISHED) {
+      if (decision.retry_current_host()) {
         retry_current_host();
       } else {
-        set_state(REQUEST_STATE_RETRY_WRITE_OUTSTANDING);
+        retry_next_host();
       }
       num_retries_++;
       break;
@@ -436,14 +444,17 @@ void SpeculativeExecution::on_error_unprepared(ErrorResponse* error) {
   }
 }
 
+void SpeculativeExecution::return_connection() {
+  if (pool_ != NULL && connection() != NULL) {
+    pool_->return_connection(connection());
+  }
+}
+
 bool SpeculativeExecution::is_host_up(const Address& address) const {
   return request_handler_->io_worker()->is_host_up(address);
 }
 
 void SpeculativeExecution::set_response(const Response::Ptr& response) {
-  uint64_t elapsed = uv_hrtime() - start_time_ns_;
-  current_host_->update_latency(elapsed);
-  connection()->metrics()->record_request(elapsed);
   request_handler_->set_response(current_host_, response);
 }
 
@@ -454,12 +465,6 @@ void SpeculativeExecution::set_error(CassError code, const std::string& message)
 void SpeculativeExecution::set_error_with_error_response(const Response::Ptr& error,
                                                          CassError code, const std::string& message) {
   request_handler_->set_error_with_error_response(current_host_, error, code, message);
-}
-
-void SpeculativeExecution::return_connection() {
-  if (pool_ != NULL && connection() != NULL) {
-    pool_->return_connection(connection());
-  }
 }
 
 } // namespace cass

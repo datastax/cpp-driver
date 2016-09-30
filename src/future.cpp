@@ -54,12 +54,15 @@ const CassResult* cass_future_get_result(CassFuture* future) {
     return NULL;
   }
 
-  cass::SharedRefPtr<cass::ResultResponse> result(
+  cass::Response::Ptr response(
         static_cast<cass::ResponseFuture*>(future->from())->response());
-  if (!result) return NULL;
+  if (!response || response->opcode() == CQL_OPCODE_ERROR) {
+    return NULL;
+  }
 
-  result->inc_ref();
-  return CassResult::to(result.get());
+  response->inc_ref();
+  return CassResult::to(
+        static_cast<cass::ResultResponse*>(response.get()));
 }
 
 const CassPrepared* cass_future_get_prepared(CassFuture* future) {

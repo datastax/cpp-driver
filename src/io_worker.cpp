@@ -291,7 +291,7 @@ void IOWorker::on_execute(uv_async_t* async) {
       io_worker->pending_request_count_++;
       request_handler->start_request(io_worker);
       SpeculativeExecution::Ptr speculative_execution(new SpeculativeExecution(request_handler,
-                                                                               request_handler->first_host()));
+                                                                               request_handler->current_host()));
       speculative_execution->execute();
     } else {
       io_worker->state_ = IO_WORKER_STATE_CLOSING;

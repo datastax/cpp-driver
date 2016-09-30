@@ -48,11 +48,11 @@ public:
     REQUEST_STATE_WRITING,
     REQUEST_STATE_READING,
     REQUEST_STATE_READ_BEFORE_WRITE,
-    REQUEST_STATE_RETRY_WRITE_OUTSTANDING,
     REQUEST_STATE_FINISHED,
     REQUEST_STATE_CANCELLED,
-    REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE,
-    REQUEST_STATE_CANCELLED_WRITE_OUTSTANDING
+    REQUEST_STATE_CANCELLED_WRITING,
+    REQUEST_STATE_CANCELLED_READING,
+    REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE
   };
 
   RequestCallback()
@@ -63,33 +63,16 @@ public:
 
   virtual ~RequestCallback() { }
 
-  void start(Connection* connection, int stream) {
-    connection_ = connection;
-    stream_ = stream;
-    on_start();
-  }
+  void start(Connection* connection, int stream);
 
-  void finish() {
-    on_finish();
-    connection_ = NULL;
-    stream_ = -1;
-    dec_ref();
-  }
+  virtual void on_retry(bool use_next_host) = 0;
 
-  void finish_with_retry(bool use_next_host) {
-    on_finish_with_retry(use_next_host);
-    connection_ = NULL;
-    stream_ = -1;
-    dec_ref();
-  }
-
-  int32_t encode(int version, int flags, BufferVec* bufs);
-
+  // One of these methods is called to finish a request
   virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
+  virtual void on_cancel() = 0;
 
-  virtual const Request* request() const = 0;
-  virtual Request::EncodingCache* encoding_cache() = 0;
+  int32_t encode(int version, int flags, BufferVec* bufs);
 
   virtual int64_t timestamp() const { return request()->timestamp(); }
 
@@ -106,20 +89,31 @@ public:
 
   void set_consistency(CassConsistency cl) { cl_ = cl; }
 
+  ResponseMessage* read_before_write_response() const {
+    return read_before_write_response_.get();
+  }
+
+  void set_read_before_write_response(ResponseMessage* response) {
+    read_before_write_response_.reset(response);
+  }
+
+public:
+  virtual const Request* request() const = 0;
+  virtual Request::EncodingCache* encoding_cache() = 0;
+
 protected:
   // Called right before a request is written to a host.
   virtual void on_start() = 0;
-
-  // One of theses methods will always be called when a connection is finished
-  // with a request regardless of the outcome.
-  virtual void on_finish() = 0;
-  virtual void on_finish_with_retry(bool use_next_host) = 0;
 
 private:
   Connection* connection_;
   int stream_;
   State state_;
   CassConsistency cl_;
+  ScopedPtr<ResponseMessage> read_before_write_response_;
+
+  typedef std::vector<State> StateVec;
+  StateVec state_history_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(RequestCallback);
@@ -127,33 +121,31 @@ private:
 
 class SimpleRequestCallback : public RequestCallback {
 public:
-  SimpleRequestCallback(uv_loop_t* loop,
-                        uint64_t request_timeout_ms,
-                        const Request::ConstPtr& request);
-
-  virtual void on_start() {
-    // Ignore
-  }
-
-  virtual void on_finish() {
-    timer_.stop();
-  }
-
-  virtual void on_finish_with_retry(bool use_next_host) {
-    timer_.stop();
-    on_timeout();
-  }
+  SimpleRequestCallback(const Request::ConstPtr& request)
+    : RequestCallback()
+    , request_(request) { }
 
   virtual const Request* request() const { return request_.get(); }
   virtual Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
 
-  virtual void on_timeout() = 0;
+protected:
+  virtual void on_internal_set(ResponseMessage* response) = 0;
+  virtual void on_internal_error(CassError code, const std::string& message) = 0;
+  virtual void on_internal_timeout() = 0;
 
 private:
+  virtual void on_start();
+
+  virtual void on_retry(bool use_next_host);
+
+  virtual void on_set(ResponseMessage* response);
+  virtual void on_error(CassError code, const std::string& message);
+  virtual void on_cancel();
+
   static void on_timeout(Timer* timer) {
     SimpleRequestCallback* callback = static_cast<SimpleRequestCallback*>(timer->data());
     callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
-    callback->on_timeout();
+    callback->on_internal_timeout();
   }
 
 private:
@@ -193,9 +185,10 @@ private:
                      const Request::ConstPtr& request,
                      const std::string& index);
 
-    virtual void on_set(ResponseMessage* response);
-    virtual void on_error(CassError code, const std::string& message);
-    virtual void on_timeout();
+  private:
+    virtual void on_internal_set(ResponseMessage* response);
+    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_timeout();
 
   private:
     MultipleRequestCallback::Ptr parent_;
