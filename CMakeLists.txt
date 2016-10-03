@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 # Ensure functions/modules are available
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
 set(PROJECT_NAME_STR cassandra)
 set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
