@@ -55,6 +55,7 @@ void graph_analytics_callback(CassFuture* future, void* data) {
     request->future->set_response(response_future->address(),
                                   response_future->response());
   }
+  delete request;
 }
 
 void graph_analytics_lookup_callback(CassFuture* future, void* data) {
@@ -66,6 +67,7 @@ void graph_analytics_lookup_callback(CassFuture* future, void* data) {
   if (response->row_count() == 0) {
     request->future->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
                                "No rows in analytics lookup response");
+    delete request;
     return;
   }
 
@@ -73,6 +75,7 @@ void graph_analytics_lookup_callback(CassFuture* future, void* data) {
   if (value == NULL) {
     request->future->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
                                "No column 'result' in analytics lookup response");
+    delete request;
     return;
   }
 
@@ -82,6 +85,7 @@ void graph_analytics_lookup_callback(CassFuture* future, void* data) {
     request->future->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
                                "'result' column is int the expected type "
                                "'map<text, text>' in analytics lookup response");
+    delete request;
     return;
   }
 
@@ -98,6 +102,8 @@ void graph_analytics_lookup_callback(CassFuture* future, void* data) {
   if (!cass::Address::from_string(location.to_string(), request->session->config().port(), &address)) {
     request->future->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
                                "'location' is not a valid address in analytics lookup response");
+    delete request;
+    return;
   }
 
   cass::Future* request_future = request->session->execute(request->statement.get(), &address);
