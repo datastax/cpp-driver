@@ -115,23 +115,38 @@ std::string test::Utils::implode(const std::vector<std::string>& elements,
 
 void test::Utils::mkdir(const std::string& path) {
   // Create a synchronous libuv file system call to create the path
-  uv_loop_t* loop = uv_default_loop();
+#if UV_VERSION_MAJOR == 0
+  uv_loop_t* loop = uv_loop_new();
+#else
+  uv_loop_t loop;
+  uv_loop_init(&loop);
+#endif
   uv_fs_t request;
-  int error_code = uv_fs_mkdir(loop, &request, path.c_str(), FILE_MODE, NULL);
+  int error_code;
+  std::string error_message;
+#if UV_VERSION_MAJOR == 0
+  error_code = uv_fs_mkdir(loop, &request, path.c_str(), FILE_MODE, NULL);
+  if (error_code != 0) {
+    uv_err_t error = uv_last_error(loop);
+    error_code = error.code;
+    if (error_code != UV_EEXIST) {
+      error_message = uv_strerror(error);
+    }
+  }
   uv_run(loop, UV_RUN_DEFAULT);
+  uv_loop_delete(loop);
+#else
+  error_code = uv_fs_mkdir(&loop, &request, path.c_str(), FILE_MODE, NULL);
+  if (error_code != 0 && error_code != UV_EEXIST) {
+    error_message = uv_strerror(error_code);
+  }
+  uv_run(&loop, UV_RUN_DEFAULT);
+  uv_loop_close(&loop);
+#endif
   uv_fs_req_cleanup(&request);
 
   // Determine if there was an issue creating the directory
-#if UV_VERSION_MAJOR == 0
-  uv_err_t error = uv_last_error(loop);
-  error_code = error.code;
-#endif
-  if (error_code != 0 && error_code != UV_EEXIST) {
-#if UV_VERSION_MAJOR == 0
-    std::string error_message = uv_strerror(error);
-#else
-    std::string error_message = uv_strerror(error_code);
-#endif
+  if (!error_message.empty()) {
     throw test::Exception("Unable to Create Directory: " + error_message);
   }
 }

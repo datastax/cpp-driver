@@ -7,6 +7,7 @@
 
 #ifndef __TEST_UTILS_HPP__
 #define __TEST_UTILS_HPP__
+#include <iostream>
 #include <string>
 #include <vector>
 
