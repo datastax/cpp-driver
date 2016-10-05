@@ -75,8 +75,6 @@ int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
 }
 
 void RequestCallback::set_state(RequestCallback::State next_state) {
-  state_history_.push_back(state_);
-
   switch (state_) {
     case REQUEST_STATE_NEW:
       if (next_state == REQUEST_STATE_NEW ||

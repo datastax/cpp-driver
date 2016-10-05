@@ -113,7 +113,6 @@ private:
   ScopedPtr<ResponseMessage> read_before_write_response_;
 
   typedef std::vector<State> StateVec;
-  StateVec state_history_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(RequestCallback);

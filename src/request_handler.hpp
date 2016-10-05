@@ -19,6 +19,7 @@
 
 #include "constants.hpp"
 #include "error_response.hpp"
+#include "fixed_vector.hpp"
 #include "future.hpp"
 #include "request_callback.hpp"
 #include "host.hpp"
@@ -163,7 +164,7 @@ private:
   void stop_request();
 
 private:
-  typedef std::vector<SpeculativeExecution*> SpeculativeExecutionVec;
+  typedef FixedVector<SpeculativeExecution*, 4> SpeculativeExecutionVec;
 
   const Request::ConstPtr request_;
   int64_t timestamp_;
