@@ -3248,6 +3248,37 @@ CASS_EXPORT CassSsl*
 cass_ssl_new();
 
 /**
+ * Creates a new SSL context <b>without</b> initializing the underlying library
+ * implementation. The integrating application is responsible for
+ * initializing the underlying SSL implementation. The driver uses the SSL
+ * implmentation from several threads concurrently so it's important that it's
+ * properly setup for multithreaded use e.g. lock callbacks for OpenSSL.
+ *
+ * <b>Important:</b> The SSL library must be initialized before calling this
+ * function.
+ *
+ * When using OpenSSL the following components need to be initialized:
+ *
+ * SSL_library_init();
+ * SSL_load_error_strings();
+ * OpenSSL_add_all_algorithms();
+ *
+ * The following thread-safety callbacks also need to be set:
+ *
+ * CRYPTO_set_locking_callback(...);
+ * CRYPTO_set_id_callback(...);
+ *
+ * @public @memberof CassSsl
+ *
+ * @return Returns a SSL context that must be freed.
+ *
+ * @see cass_ssl_new()
+ * @see cass_ssl_free()
+ */
+CASS_EXPORT CassSsl*
+cass_ssl_new_no_lib_init();
+
+/**
  * Frees a SSL context instance.
  *
  * @public @memberof CassSsl
