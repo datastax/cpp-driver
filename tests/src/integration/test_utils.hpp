@@ -19,10 +19,12 @@
 #define SUFFIX_LOG std::endl
 #ifdef INTEGRATION_VERBOSE_LOGGING
 # define LOG(message) PREFIX_LOG << PREFIX_MESSAGE << message << SUFFIX_LOG
+# define LOG_DEBUG(message) PREFIX_LOG << PREFIX_MESSAGE << "DEBUG: " << message << SUFFIX_LOG
 # define LOG_WARN(message) PREFIX_LOG << PREFIX_MESSAGE << "WARN: " << message << SUFFIX_LOG
 #else
 # define LOG_DISABLED do {} while (false)
 # define LOG(message) LOG_DISABLED
+# define LOG_DEBUG(message) LOG_DISABLED
 # define LOG_WARN(message) LOG_DISABLED
 #endif
 #define LOG_ERROR(message) PREFIX_LOG << PREFIX_MESSAGE << "ERROR: " \
