@@ -21,7 +21,7 @@ dependencies being installed.
 
 ### Test Dependencies
 
-- [boost 1.55+](http://www.boost.org)
+- [boost 1.59+](http://www.boost.org)
 - [libssh2](http://www.libssh2.org) (optional)
 
 ## Linux/OS X
@@ -45,9 +45,9 @@ sudo yum -y install epel-release
 ```bash
 sudo yum install automake cmake gcc-c++ git libtool openssl-devel wget
 pushd /tmp
-wget http://dist.libuv.org/dist/v1.7.5/libuv-v1.7.5.tar.gz
-tar xzf libuv-v1.7.5.tar.gz
-pushd libuv-v1.7.5
+wget http://dist.libuv.org/dist/v1.8.0/libuv-v1.8.0.tar.gz
+tar xzf libuv-v1.8.0.tar.gz
+pushd libuv-v1.8.0
 sh autogen.sh
 ./configure
 sudo make install
@@ -114,7 +114,7 @@ make
 #### Obtaining Test Dependencies
 
 ##### CentOS/RHEL
-CentOS/RHEL does not contain Boost v1.55+ libraries in its repositories; however
+CentOS/RHEL does not contain Boost v1.59+ libraries in its repositories; however
 these can be easily installed from source. Ensure previous version of Boost has
 been removed by executing the command `sudo yum remove boost*` before
 proceeding.
@@ -125,7 +125,7 @@ pushd /tmp
 wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz/download -O boost_1_59_0.tar.gz
 tar xzf boost_1_59_0.tar.gz
 pushd boost_1_59_0
-./bootstrap.sh --with-libraries=atomic,chrono,date_time,log,program_options,random,regex,system,thread,test
+./bootstrap.sh --with-libraries=atomic,chrono,system,thread,test
 sudo ./b2 cxxflags="-fPIC" install
 popd
 popd
@@ -141,21 +141,19 @@ brew install boost libssh2
 ```
 
 ##### Ubuntu
-
-###### Additional Requirements for Ubuntu 12.04
-Ubuntu 12.04 does not contain Boost v1.55+ C++ libraries in its repositories;
-however it can be obtained from the Boost PPA which can be found
-[here](https://launchpad.net/~boost-latest/+archive/ubuntu/ppa).
+Ubuntu does not contain Boost v1.59+ libraries in its repositories; however
+these can be easily installed from source.
 
 ```bash
-sudo add-apt-repository ppa:boost-latest/ppa
-sudo apt-get update
-```
-
-##### Install Dependencies
-
-```bash
-sudo apt-get install libboost1.55-all-dev libssh2-1-dev
+sudo apt-get install libssh2-1-dev
+pushd /tmp
+wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz/download -O boost_1_59_0.tar.gz
+tar xzf boost_1_59_0.tar.gz
+pushd boost_1_59_0
+./bootstrap.sh --with-libraries=atomic,chrono,system,thread,test
+sudo ./b2 install
+popd
+popd
 ```
 
 #### Building the Driver with the Tests
@@ -294,7 +292,7 @@ driver dependencies will also be copied (e.g. C:\myproject\dependencies\libs)
 ### Test Dependencies and Building the Tests (_NOT REQUIRED_)
 
 #### Obtaining Test Dependencies
-Boost v1.55+ is the only external dependency that will need to be obtained in
+Boost v1.59+ is the only external dependency that will need to be obtained in
 order to build the unit and integration tests.
 
 To simplify the process; pre-built binaries can be obtained

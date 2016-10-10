@@ -56,50 +56,6 @@ struct AllTypes {
   CassTime time_sample;
 };
 
-// This crashes in Boost 1.57 and the test_utils::CassPreparedPtr version
-// doesn't compile against Boost 1.55 or 1.56
-
-#if BOOST_VERSION < 105700
-// Move emulation wrapper for CassPrepared. This has to be used
-// with boost::container's because they have boost move emulation support.
-class CassPreparedMovable {
-public:
-  CassPreparedMovable(const CassPrepared* prepared = NULL)
-    : prepared_(prepared) {}
-
-  CassPreparedMovable(BOOST_RV_REF(CassPreparedMovable) r)
-    : prepared_(r.prepared_) {
-    r.prepared_ = NULL;
-  }
-
-  CassPreparedMovable(const CassPreparedMovable& r)
-    : prepared_(r.prepared_) {
-  }
-
-  CassPreparedMovable& operator=(BOOST_RV_REF(CassPreparedMovable) r) {
-    if (prepared_ != NULL) {
-      cass_prepared_free(prepared_);
-    }
-    prepared_ = r.prepared_;
-    r.prepared_ = NULL;
-    return *this;
-  }
-
-  ~CassPreparedMovable() {
-    if (prepared_ != NULL) {
-      cass_prepared_free(prepared_);
-    }
-  }
-
-  const CassPrepared* get() const { return prepared_; }
-
-private:
-  BOOST_MOVABLE_BUT_NOT_COPYABLE(CassPreparedMovable)
-
-  const CassPrepared* prepared_;
-};
-#endif
-
 struct PreparedTests : public test_utils::SingleSessionTest {
   static const char* ALL_TYPE_TABLE_NAME;
   std::string columns_;

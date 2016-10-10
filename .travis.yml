@@ -16,8 +16,8 @@ env:
     - BOOST_VERSION=1.59.0
     - BOOST_FILE_VERSION=1_59_0
   matrix:
-    - LIBUV_VERSION=0.10.x EXACT_LIBUV_VERSION=0.10.36
-    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.7.5
+    - LIBUV_VERSION=0.10.x EXACT_LIBUV_VERSION=0.10.37
+    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.8.0
 install:
   - if [ ! -d "${HOME}/dependencies/libuv-${LIBUV_VERSION}" ]; then
       wget -q http://dist.libuv.org/dist/v${EXACT_LIBUV_VERSION}/libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
@@ -44,7 +44,7 @@ install:
       wget -q http://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/boost_${BOOST_FILE_VERSION}.tar.gz/download -O boost_${BOOST_FILE_VERSION}.tar.gz;
       tar xzf boost_${BOOST_FILE_VERSION}.tar.gz;
       cd boost_${BOOST_FILE_VERSION};
-      ./bootstrap.sh --with-libraries=atomic,chrono,date_time,log,program_options,random,system,thread,test --prefix=${HOME}/dependencies/boost_${BOOST_FILE_VERSION};
+      ./bootstrap.sh --with-libraries=atomic,chrono,system,thread,test --prefix=${HOME}/dependencies/boost_${BOOST_FILE_VERSION};
       ./b2 -j2 install;
       cd - 2&> /dev/null;
     else echo "Using Cached Boost v${BOOST_VERSION}. Dependency does not need to be re-compiled";
