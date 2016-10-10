@@ -17,13 +17,13 @@
 #include "query_request.hpp"
 
 #include "constants.hpp"
-#include "handler.hpp"
+#include "request_callback.hpp"
 #include "logger.hpp"
 #include "serialization.hpp"
 
 namespace cass {
 
-int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, Handler* handler) const {
+int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, RequestCallback* callback) const {
   int32_t length = 0;
   const std::string& query(query_);
 
@@ -40,14 +40,14 @@ int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, Handler* handle
   if (has_names_for_values()) {
     if (version < 3) {
       LOG_ERROR("Protocol version %d does not support named values", version);
-      return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+      return REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
     }
     buf.encode_uint16(pos, value_names_.size());
-    length += copy_buffers_with_names(version, bufs, handler->encoding_cache());
+    length += copy_buffers_with_names(version, bufs, callback->encoding_cache());
   } else {
     buf.encode_uint16(pos, elements_count());
     if (elements_count() > 0) {
-      int32_t result = copy_buffers(version, bufs, handler);
+      int32_t result = copy_buffers(version, bufs, callback);
       if (result < 0) return result;
       length += result;
     }
@@ -89,27 +89,27 @@ int32_t QueryRequest::copy_buffers_with_names(int version,
   return size;
 }
 
-int QueryRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
+int QueryRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   if (version == 1) {
-    return internal_encode_v1(handler, bufs);
+    return internal_encode_v1(callback, bufs);
   } else  {
-    return internal_encode(version, handler, bufs);
+    return internal_encode(version, callback, bufs);
   }
 }
 
-int QueryRequest::internal_encode_v1(Handler* handler, BufferVec* bufs) const {
+int QueryRequest::internal_encode_v1(RequestCallback* callback, BufferVec* bufs) const {
   // <query> [long string] + <consistency> [short]
   size_t length = sizeof(int32_t) + query_.size() + sizeof(uint16_t);
 
   Buffer buf(length);
   size_t pos = buf.encode_long_string(0, query_.data(), query_.size());
-  buf.encode_uint16(pos, handler->consistency());
+  buf.encode_uint16(pos, callback->consistency());
   bufs->push_back(buf);
 
   return length;
 }
 
-int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs) const {
+int QueryRequest::internal_encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   int length = 0;
   uint8_t flags = this->flags();
 
@@ -138,7 +138,7 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
-  if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
+  if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {
     paging_buf_size += sizeof(int64_t); // [long]
     flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
   }
@@ -149,19 +149,19 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
 
     Buffer& buf = bufs->back();
     size_t pos = buf.encode_long_string(0, query_.data(), query_.size());
-    pos = buf.encode_uint16(pos, handler->consistency());
+    pos = buf.encode_uint16(pos, callback->consistency());
     pos = buf.encode_byte(pos, flags);
 
     if (has_names_for_values()) {
       if (version < 3) {
         LOG_ERROR("Protocol version %d does not support named values", version);
-        return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+        return REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
       }
       buf.encode_uint16(pos, value_names_.size());
-      length += copy_buffers_with_names(version, bufs, handler->encoding_cache());
+      length += copy_buffers_with_names(version, bufs, callback->encoding_cache());
     } else if (elements_count() > 0) {
       buf.encode_uint16(pos, elements_count());
-      int32_t result = copy_buffers(version, bufs, handler);
+      int32_t result = copy_buffers(version, bufs, callback);
       if (result < 0) return result;
       length += result;
     }
@@ -186,8 +186,8 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
       pos = buf.encode_uint16(pos, serial_consistency());
     }
 
-    if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
-      pos = buf.encode_int64(pos, handler->timestamp());
+    if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {
+      pos = buf.encode_int64(pos, callback->timestamp());
     }
   }
 

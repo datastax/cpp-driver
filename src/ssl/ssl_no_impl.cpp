@@ -45,8 +45,8 @@ CassError cass::NoSslContext::set_private_key(const char* key,
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
-SslContext* NoSslContextFactory::create() {
-  return new NoSslContext();
+SslContext::Ptr NoSslContextFactory::create() {
+  return SslContext::Ptr(new NoSslContext());
 }
 
 

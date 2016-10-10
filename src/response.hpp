@@ -30,6 +30,8 @@ namespace cass {
 
 class Response : public RefCounted<Response> {
 public:
+  typedef SharedRefPtr<Response> Ptr;
+
   struct CustomPayloadItem {
     CustomPayloadItem(StringRef name, StringRef value)
       : name(name)
@@ -49,10 +51,10 @@ public:
 
   char* data() const { return buffer_->data(); }
 
-  const SharedRefPtr<RefBuffer>& buffer() const { return buffer_; }
+  const RefBuffer::Ptr& buffer() const { return buffer_; }
 
   void set_buffer(size_t size) {
-    buffer_ = SharedRefPtr<RefBuffer>(RefBuffer::create(size));
+    buffer_ = RefBuffer::Ptr(RefBuffer::create(size));
   }
 
   const CustomPayloadVec& custom_payload() const { return custom_payload_; }
@@ -65,7 +67,7 @@ public:
 
 private:
   uint8_t opcode_;
-  SharedRefPtr<RefBuffer> buffer_;
+  RefBuffer::Ptr buffer_;
   CustomPayloadVec custom_payload_;
 
 private:
@@ -94,7 +96,7 @@ public:
 
   int16_t stream() const { return stream_; }
 
-  const SharedRefPtr<Response>& response_body() { return response_body_; }
+  const Response::Ptr& response_body() { return response_body_; }
 
   bool is_body_ready() const { return is_body_ready_; }
 
@@ -118,7 +120,7 @@ private:
 
   bool is_body_ready_;
   bool is_body_error_;
-  SharedRefPtr<Response> response_body_;
+  Response::Ptr response_body_;
   char* body_buffer_pos_;
 
 private:

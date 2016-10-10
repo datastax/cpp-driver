@@ -26,8 +26,9 @@ namespace cass {
 
 class PrepareRequest : public Request {
 public:
-  PrepareRequest()
-      : Request(CQL_OPCODE_PREPARE) {}
+  PrepareRequest(const std::string& query)
+      : Request(CQL_OPCODE_PREPARE)
+      , query_(query) { }
 
   const std::string& query() const { return query_; }
 
@@ -39,7 +40,7 @@ public:
   }
 
 private:
-  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   std::string query_;

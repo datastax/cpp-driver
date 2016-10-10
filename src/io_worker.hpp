@@ -26,6 +26,8 @@
 #include "host.hpp"
 #include "logger.hpp"
 #include "metrics.hpp"
+#include "pool.hpp"
+#include "request_handler.hpp"
 #include "spsc_queue.hpp"
 #include "timer.hpp"
 
@@ -65,6 +67,8 @@ class IOWorker
     : public EventThread<IOWorkerEvent>
     , public RefCounted<IOWorker> {
 public:
+  typedef SharedRefPtr<IOWorker> Ptr;
+
   enum State {
     IO_WORKER_STATE_READY,
     IO_WORKER_STATE_CLOSING,
@@ -102,10 +106,10 @@ public:
   bool remove_pool_async(const Host::ConstPtr& host, bool cancel_reconnect);
   void close_async();
 
-  bool execute(RequestHandler* request_handler);
+  bool execute(const RequestHandler::Ptr& request_handler);
 
-  void retry(RequestHandler* request_handler);
-  void request_finished(RequestHandler* request_handler);
+  void retry(const SpeculativeExecution::Ptr& speculative_execution);
+  void request_finished();
 
   void notify_pool_ready(Pool* pool);
   void notify_pool_closed(Pool* pool);
@@ -131,8 +135,8 @@ private:
 #endif
 
 private:
-  typedef sparsehash::dense_hash_map<Address, SharedRefPtr<Pool>, AddressHash> PoolMap;
-  typedef std::vector<SharedRefPtr<Pool> > PoolVec;
+  typedef sparsehash::dense_hash_map<Address, Pool::Ptr, AddressHash> PoolMap;
+  typedef std::vector<Pool::Ptr > PoolVec;
 
   void schedule_reconnect(const Host::ConstPtr& host);
 

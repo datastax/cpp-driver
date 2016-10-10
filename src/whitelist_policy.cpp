@@ -18,7 +18,7 @@
 
 namespace cass {
 
-bool WhitelistPolicy::is_valid_host(const SharedRefPtr<Host>& host) const {
+bool WhitelistPolicy::is_valid_host(const Host::Ptr& host) const {
   const std::string& host_address = host->address().to_string(false);
   for (ContactPointList::const_iterator it = hosts_.begin(),
                                                 end = hosts_.end();

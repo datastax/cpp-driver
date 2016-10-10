@@ -53,14 +53,16 @@ const CassResult* cass_future_get_result(CassFuture* future) {
   if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return NULL;
   }
-  cass::ResponseFuture* response_future =
-      static_cast<cass::ResponseFuture*>(future->from());
 
-  cass::SharedRefPtr<cass::ResultResponse> result(response_future->response());
-  if (!result) return NULL;
+  cass::Response::Ptr response(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
+  if (!response || response->opcode() == CQL_OPCODE_ERROR) {
+    return NULL;
+  }
 
-  result->inc_ref();
-  return CassResult::to(result.get());
+  response->inc_ref();
+  return CassResult::to(
+        static_cast<cass::ResultResponse*>(response.get()));
 }
 
 const CassPrepared* cass_future_get_prepared(CassFuture* future) {
@@ -78,7 +80,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   cass::Prepared* prepared = new cass::Prepared(result,
                                                 response_future->statement,
                                                 response_future->schema_metadata);
-  if (prepared) prepared->inc_ref();
+  prepared->inc_ref();
   return CassPrepared::to(prepared);
 }
 
@@ -86,10 +88,9 @@ const CassErrorResult* cass_future_get_error_result(CassFuture* future) {
   if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return NULL;
   }
-  cass::ResponseFuture* response_future =
-      static_cast<cass::ResponseFuture*>(future->from());
 
-  cass::SharedRefPtr<cass::Response> response(response_future->response());
+  cass::Response::Ptr response(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
   if (!response || response->opcode() != CQL_OPCODE_ERROR) {
     return NULL;
   }
@@ -126,7 +127,7 @@ size_t cass_future_custom_payload_item_count(CassFuture* future) {
   if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return 0;
   }
-  cass::SharedRefPtr<cass::Response> response(
+  cass::Response::Ptr response(
         static_cast<cass::ResponseFuture*>(future->from())->response());
   if (!response) return 0;
   return response->custom_payload().size();
@@ -141,7 +142,7 @@ CassError cass_future_custom_payload_item(CassFuture* future,
   if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return CASS_ERROR_LIB_INVALID_FUTURE_TYPE;
   }
-  cass::SharedRefPtr<cass::Response> response(
+  cass::Response::Ptr response(
         static_cast<cass::ResponseFuture*>(future->from())->response());
   if (!response) return CASS_ERROR_LIB_NO_CUSTOM_PAYLOAD;
 
@@ -182,37 +183,11 @@ void Future::internal_set(ScopedMutex& lock) {
   is_set_ = true;
   uv_cond_broadcast(&cond_);
   if (callback_) {
-    if (loop_.load() == NULL) {
-      Callback callback = callback_;
-      void* data = data_;
-      lock.unlock();
-      callback(CassFuture::to(this), data);
-    } else {
-      run_callback_on_work_thread();
-    }
+    Callback callback = callback_;
+    void* data = data_;
+    lock.unlock();
+    callback(CassFuture::to(this), data);
   }
-}
-
-void Future::run_callback_on_work_thread() {
-  inc_ref(); // Keep the future alive for the callback
-  work_.data = this;
-  uv_queue_work(loop_.load(), &work_, on_work, on_after_work);
-}
-
-void Future::on_work(uv_work_t* work) {
-  Future* future = static_cast<Future*>(work->data);
-
-  ScopedMutex lock(&future->mutex_);
-  Callback callback = future->callback_;
-  void* data = future->data_;
-  lock.unlock();
-
-  callback(CassFuture::to(future), data);
-}
-
-void Future::on_after_work(uv_work_t* work, int status) {
-  Future* future = static_cast<Future*>(work->data);
-  future->dec_ref();
 }
 
 } // namespace cass

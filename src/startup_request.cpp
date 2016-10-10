@@ -20,7 +20,7 @@
 
 namespace cass {
 
-int StartupRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
+int StartupRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   // <options> [string map]
   size_t length = sizeof(uint16_t);
 

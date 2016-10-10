@@ -36,7 +36,7 @@ CassTuple* cass_tuple_new_from_data_type(const CassDataType* data_type) {
   }
   return CassTuple::to(
         new cass::Tuple(
-          cass::SharedRefPtr<const cass::DataType>(data_type)));
+          cass::DataType::ConstPtr(data_type)));
 }
 
 void cass_tuple_free(CassTuple* tuple) {

@@ -24,7 +24,7 @@
 
 namespace cass {
 
-void LatencyAwarePolicy::init(const SharedRefPtr<Host>& connected_host,
+void LatencyAwarePolicy::init(const Host::Ptr& connected_host,
                               const HostMap& hosts,
                               Random* random) {
   hosts_->reserve(hosts.size());
@@ -45,7 +45,7 @@ void LatencyAwarePolicy::register_handles(uv_loop_t* loop) {
 }
 
 void LatencyAwarePolicy::close_handles() {
-  if (calculate_min_average_task_ != NULL) {
+  if (calculate_min_average_task_) {
     PeriodicTask::stop(calculate_min_average_task_);
   }
 }
@@ -59,33 +59,33 @@ QueryPlan* LatencyAwarePolicy::new_query_plan(const std::string& connected_keysp
                                                                  token_map, cache));
 }
 
-void LatencyAwarePolicy::on_add(const SharedRefPtr<Host>& host) {
+void LatencyAwarePolicy::on_add(const Host::Ptr& host) {
   host->enable_latency_tracking(settings_.scale_ns, settings_.min_measured);
   add_host(hosts_, host);
   ChainedLoadBalancingPolicy::on_add(host);
 }
 
-void LatencyAwarePolicy::on_remove(const SharedRefPtr<Host>& host) {
+void LatencyAwarePolicy::on_remove(const Host::Ptr& host) {
   remove_host(hosts_, host);
   ChainedLoadBalancingPolicy::on_remove(host);
 }
 
-void LatencyAwarePolicy::on_up(const SharedRefPtr<Host>& host) {
+void LatencyAwarePolicy::on_up(const Host::Ptr& host) {
   add_host(hosts_, host);
   ChainedLoadBalancingPolicy::on_up(host);
 }
 
-void LatencyAwarePolicy::on_down(const SharedRefPtr<Host>& host) {
+void LatencyAwarePolicy::on_down(const Host::Ptr& host) {
   remove_host(hosts_, host);
   ChainedLoadBalancingPolicy::on_down(host);
 }
 
-SharedRefPtr<Host> LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
+Host::Ptr LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
   int64_t min = policy_->min_average_.load();
   const Settings& settings = policy_->settings_;
   uint64_t now = uv_hrtime();
 
-  SharedRefPtr<Host> host;
+  Host::Ptr host;
   while ((host = child_plan_->compute_next())) {
     TimestampedAverage latency = host->get_current_average();
 
@@ -107,7 +107,7 @@ SharedRefPtr<Host> LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
     return skipped_[skipped_index_++];
   }
 
-  return SharedRefPtr<Host>();
+  return Host::Ptr();
 }
 
 void LatencyAwarePolicy::on_work(PeriodicTask* task) {
