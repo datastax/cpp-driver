@@ -624,7 +624,7 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
 void ControlConnection::refresh_node_info(Host::Ptr host,
                                           bool is_new_node,
                                           bool query_tokens) {
-  if (connection_ == NULL) {
+  if (connection_ == NULL || !connection_->is_ready()) {
     return;
   }
 
@@ -659,6 +659,7 @@ void ControlConnection::refresh_node_info(Host::Ptr host,
                                              data));
   if (!connection_->write(callback)) {
     LOG_ERROR("No more stream available while attempting to refresh node info");
+    connection_->defunct();
   }
 }
 
@@ -806,11 +807,16 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
 
   LOG_DEBUG("Refreshing keyspace %s", query.c_str());
 
-  connection_->write(RequestCallback::Ptr(
-        new ControlCallback<std::string>(Request::ConstPtr(new QueryRequest(query)),
-                                        this,
-                                        ControlConnection::on_refresh_keyspace,
-                                        keyspace_name.to_string())));
+  if (!connection_->write(
+        RequestCallback::Ptr(
+          new ControlCallback<std::string>(
+            Request::ConstPtr(new QueryRequest(query)),
+            this,
+            ControlConnection::on_refresh_keyspace,
+            keyspace_name.to_string())))) {
+    LOG_ERROR("No more stream available while attempting to refresh keyspace info");
+    connection_->defunct();
+  }
 }
 
 void ControlConnection::on_refresh_keyspace(ControlConnection* control_connection,
@@ -936,12 +942,16 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name,
 
   LOG_DEBUG("Refreshing type %s", query.c_str());
 
-  connection_->write(RequestCallback::Ptr(
-                       new ControlCallback<std::pair<std::string, std::string> >(
-                         Request::ConstPtr(new QueryRequest(query)),
-                         this,
-                         ControlConnection::on_refresh_type,
-                         std::make_pair(keyspace_name.to_string(), type_name.to_string()))));
+  if (!connection_->write(
+        RequestCallback::Ptr(
+          new ControlCallback<std::pair<std::string, std::string> >(
+            Request::ConstPtr(new QueryRequest(query)),
+            this,
+            ControlConnection::on_refresh_type,
+            std::make_pair(keyspace_name.to_string(), type_name.to_string()))))) {
+    LOG_ERROR("No more stream available while attempting to refresh type info");
+    connection_->defunct();
+  }
 }
 
 void ControlConnection::on_refresh_type(ControlConnection* control_connection,
@@ -1003,11 +1013,16 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
   request->set(1, CassString(function_name.data(), function_name.size()));
   request->set(2, signature);
 
-  connection_->write(RequestCallback::Ptr(
-        new ControlCallback<RefreshFunctionData>(request,
-                                                this,
-                                                ControlConnection::on_refresh_function,
-                                                RefreshFunctionData(keyspace_name, function_name, arg_types, is_aggregate))));
+  if (!connection_->write(
+        RequestCallback::Ptr(
+          new ControlCallback<RefreshFunctionData>(
+            request,
+            this,
+            ControlConnection::on_refresh_function,
+            RefreshFunctionData(keyspace_name, function_name, arg_types, is_aggregate))))) {
+    LOG_ERROR("No more stream available while attempting to refresh function info");
+    connection_->defunct();
+  }
 }
 
 void ControlConnection::on_refresh_function(ControlConnection* control_connection,

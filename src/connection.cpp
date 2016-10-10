@@ -378,10 +378,6 @@ void Connection::internal_close(ConnectionState close_state) {
       heartbeat_timer_.stop();
       terminate_timer_.stop();
       connect_timer_.stop();
-      if (state_ == CONNECTION_STATE_CONNECTED ||
-          state_ == CONNECTION_STATE_READY) {
-        uv_read_stop(copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_));
-      }
       set_state(close_state);
       uv_close(handle, on_close);
     }
@@ -464,11 +460,10 @@ void Connection::consume(char* input, size_t size) {
   // A successful read means the connection is still responsive
   restart_terminate_timer();
 
-  while (remaining != 0) {
+  while (remaining != 0 && !is_closing()) {
     ssize_t consumed = response_->decode(buffer, remaining);
     if (consumed <= 0) {
       notify_error("Error consuming message");
-      remaining = 0;
       continue;
     }
 
@@ -489,6 +484,7 @@ void Connection::consume(char* input, size_t size) {
         } else {
           notify_error("Invalid response opcode for event stream: " +
                        opcode_to_string(response->opcode()));
+          continue;
         }
       } else {
         RequestCallback* temp = NULL;
@@ -534,6 +530,7 @@ void Connection::consume(char* input, size_t size) {
           }
         } else {
           notify_error("Invalid stream ID");
+          continue;
         }
       }
     }
