@@ -14,11 +14,12 @@
   limitations under the License.
 */
 
-#include "collection.hpp"
+#include "tuple.hpp"
 
+#include "collection.hpp"
 #include "constants.hpp"
 #include "encode.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 #include "macros.hpp"
 #include "user_type_value.hpp"
 

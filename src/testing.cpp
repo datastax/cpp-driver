@@ -17,12 +17,16 @@
 #include "testing.hpp"
 
 #include "address.hpp"
+#include "cluster.hpp"
+#include "external.hpp"
+#include "future.hpp"
 #include "get_time.hpp"
 #include "logger.hpp"
 #include "metadata.hpp"
 #include "murmur3.hpp"
+#include "request_handler.hpp"
 #include "result_response.hpp"
-#include "external_types.hpp"
+#include "session.hpp"
 
 namespace cass {
 

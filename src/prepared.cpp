@@ -18,7 +18,7 @@
 
 #include "execute_request.hpp"
 #include "logger.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 
 extern "C" {
 

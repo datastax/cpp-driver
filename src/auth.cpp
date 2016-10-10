@@ -15,7 +15,7 @@
 */
 
 #include "auth.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 
 #include "cassandra.h"
 

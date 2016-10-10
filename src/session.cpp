@@ -16,13 +16,16 @@
 
 #include "session.hpp"
 
+#include "batch_request.hpp"
+#include "cluster.hpp"
 #include "config.hpp"
 #include "constants.hpp"
 #include "logger.hpp"
 #include "prepare_request.hpp"
 #include "scoped_lock.hpp"
+#include "statement.hpp"
 #include "timer.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 
 extern "C" {
 
@@ -589,9 +592,7 @@ void Session::on_control_connection_error(CassError code, const std::string& mes
 Future::Ptr Session::prepare(const char* statement, size_t length) {
   SharedRefPtr<PrepareRequest> prepare(new PrepareRequest(std::string(statement, length)));
 
-  ResponseFuture::Ptr future(new ResponseFuture(protocol_version(),
-                                                cassandra_version(),
-                                                metadata_));
+  ResponseFuture::Ptr future(new ResponseFuture(metadata_.schema_snapshot(protocol_version(), cassandra_version())));
   future->statement.assign(statement, length);
 
   execute(RequestHandler::Ptr(new RequestHandler(prepare, future, NULL)));
@@ -676,18 +677,22 @@ void Session::on_down(Host::Ptr host) {
   }
 }
 
-Future::Ptr Session::execute(const Request::ConstPtr& request) {
-  ResponseFuture::Ptr future(new ResponseFuture(protocol_version(),
-                                                cassandra_version(),
-                                                metadata_));
+Future::Ptr Session::execute(const Request::ConstPtr& request, 
+                             const Address* preferred_address) {
+  ResponseFuture::Ptr future(new ResponseFuture());
 
   RetryPolicy* retry_policy
       = request->retry_policy() != NULL ? request->retry_policy()
                                         : config().retry_policy();
 
-  execute(RequestHandler::Ptr(new RequestHandler(request,
-                                                 future,
-                                                 retry_policy)));
+  RequestHandler::Ptr request_handler(new RequestHandler(request,
+                                                         future,
+                                                         retry_policy));
+  if (preferred_address) {
+    request_handler->set_preferred_address(*preferred_address);
+  }
+
+  execute(request_handler);
 
   return future;
 }
@@ -707,9 +712,7 @@ void Session::on_execute(uv_async_t* data) {
     if (request_handler) {
       request_handler->dec_ref(); // Queue reference
 
-      request_handler->set_query_plan(
-            session->new_query_plan(request_handler->request(),
-                                    request_handler->encoding_cache()));
+      request_handler->set_query_plan(session->new_query_plan(request_handler));
       request_handler->set_execution_plan(session->new_execution_plan(request_handler->request()));
 
       if (request_handler->timestamp() == CASS_INT64_MIN) {
@@ -753,9 +756,9 @@ void Session::on_execute(uv_async_t* data) {
   }
 }
 
-QueryPlan* Session::new_query_plan(const Request* request, Request::EncodingCache* cache) {
+QueryPlan* Session::new_query_plan(const RequestHandler::Ptr& request_handler) {
   const CopyOnWritePtr<std::string> keyspace(keyspace_);
-  return load_balancing_policy_->new_query_plan(*keyspace, request, token_map_.get(), cache);
+  return load_balancing_policy_->new_query_plan(*keyspace, request_handler.get(), token_map_.get());
 }
 
 SpeculativeExecutionPlan* Session::new_execution_plan(const Request* request) {

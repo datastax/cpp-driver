@@ -16,8 +16,7 @@
 
 #include "request.hpp"
 
-#include "config.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 
 extern "C" {
 

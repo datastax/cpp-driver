@@ -19,6 +19,7 @@
 
 #include "atomic.hpp"
 #include "cassandra.h"
+#include "external.hpp"
 #include "host.hpp"
 #include "macros.hpp"
 #include "scoped_lock.hpp"
@@ -82,7 +83,7 @@ public:
     return internal_wait_for(lock, timeout_us);
   }
 
-  Error* get_error() {
+  Error* error() {
     ScopedMutex lock(&mutex_);
     internal_wait(lock);
     return error_.get();
@@ -144,5 +145,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Future, CassFuture)
 
 #endif

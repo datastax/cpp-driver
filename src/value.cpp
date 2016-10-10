@@ -18,7 +18,7 @@
 
 #include "collection_iterator.hpp"
 #include "data_type.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 #include "serialization.hpp"
 
 extern "C" {

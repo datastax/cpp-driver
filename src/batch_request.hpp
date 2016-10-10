@@ -19,13 +19,14 @@
 
 #include "cassandra.h"
 #include "constants.hpp"
+#include "external.hpp"
 #include "request.hpp"
 #include "ref_counted.hpp"
 #include "statement.hpp"
 
-#include <list>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace cass {
 
@@ -33,7 +34,7 @@ class ExecuteRequest;
 
 class BatchRequest : public RoutableRequest {
 public:
-  typedef std::list<Statement::Ptr> StatementList;
+  typedef std::vector<Statement::Ptr> StatementList;
 
   BatchRequest(uint8_t type_)
       : RoutableRequest(CQL_OPCODE_BATCH)
@@ -61,5 +62,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::BatchRequest, CassBatch)
 
 #endif

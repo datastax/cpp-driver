@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <sstream>
+#include <string.h>
 
 namespace cass {
 
@@ -25,11 +26,11 @@ const Address Address::EMPTY_KEY("0.0.0.0", 0);
 const Address Address::DELETED_KEY("0.0.0.0", 1);
 
 Address::Address() {
-  init();
+  memset(&addr_, 0, sizeof(addr_));
 }
 
 Address::Address(const std::string& ip, int port) {
-  init();
+  memset(&addr_, 0, sizeof(addr_));
   from_string(ip, port, this);
 }
 
@@ -117,7 +118,6 @@ int Address::port() const {
   } else if (family() == AF_INET6) {
     return htons(addr_in6()->sin6_port);
   } else {
-    assert(false);
     return -1;
   }
 }
@@ -136,8 +136,6 @@ std::string Address::to_string(bool with_port) const {
     if (with_port) ss << "[";
     ss << host;
     if (with_port) ss << "]:" << port();
-  } else {
-    assert(false);
   }
   return ss.str();
 }
@@ -166,9 +164,6 @@ int Address::compare(const Address& a) const {
   } else if (family() == AF_INET6) {
     return memcmp(&(addr_in6()->sin6_addr), &(a.addr_in6()->sin6_addr),
                   sizeof(addr_in6()->sin6_addr));
-  } else {
-    assert(false);
-    return -1;
   }
   return 0;
 }

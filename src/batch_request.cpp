@@ -18,7 +18,8 @@
 
 #include "constants.hpp"
 #include "execute_request.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
+#include "request_callback.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
 

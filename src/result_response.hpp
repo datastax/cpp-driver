@@ -119,4 +119,6 @@ private:
 
 } // namespace cass
 
+EXTERNAL_TYPE(cass::ResultResponse, CassResult)
+
 #endif

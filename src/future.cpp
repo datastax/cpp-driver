@@ -16,9 +16,11 @@
 
 #include "future.hpp"
 
+#include "external.hpp"
+#include "prepared.hpp"
 #include "request_handler.hpp"
+#include "result_response.hpp"
 #include "scoped_ptr.hpp"
-#include "external_types.hpp"
 
 extern "C" {
 
@@ -79,7 +81,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
 
   cass::Prepared* prepared = new cass::Prepared(result,
                                                 response_future->statement,
-                                                response_future->schema_metadata);
+                                                *response_future->schema_metadata);
   prepared->inc_ref();
   return CassPrepared::to(prepared);
 }
@@ -101,7 +103,7 @@ const CassErrorResult* cass_future_get_error_result(CassFuture* future) {
 }
 
 CassError cass_future_error_code(CassFuture* future) {
-  const cass::Future::Error* error = future->get_error();
+  const cass::Future::Error* error = future->error();
   if (error != NULL) {
     return error->code;
   } else {
@@ -112,7 +114,7 @@ CassError cass_future_error_code(CassFuture* future) {
 void cass_future_error_message(CassFuture* future,
                                const char** message,
                                size_t* message_length) {
-  const cass::Future::Error* error = future->get_error();
+  const cass::Future::Error* error = future->error();
   if (error != NULL) {
     const std::string& m = error->message;
     *message = m.data();

@@ -17,7 +17,7 @@
 #include "cluster.hpp"
 
 #include "dc_aware_policy.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 #include "logger.hpp"
 #include "round_robin_policy.hpp"
 #include "speculative_execution.hpp"

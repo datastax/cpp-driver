@@ -45,9 +45,12 @@ class ResponseFuture : public Future {
 public:
   typedef SharedRefPtr<ResponseFuture> Ptr;
 
-  ResponseFuture(int protocol_version, const VersionNumber& cassandra_version, const Metadata& metadata)
+  ResponseFuture()
+      : Future(CASS_FUTURE_TYPE_RESPONSE) { }
+
+  ResponseFuture(const Metadata::SchemaSnapshot& schema_metadata)
       : Future(CASS_FUTURE_TYPE_RESPONSE)
-      , schema_metadata(metadata.schema_snapshot(protocol_version, cassandra_version)) { }
+      , schema_metadata(new Metadata::SchemaSnapshot(schema_metadata)) { }
 
   bool set_response(Address address, const Response::Ptr& response) {
     ScopedMutex lock(&mutex_);
@@ -95,7 +98,7 @@ public:
   }
 
   std::string statement;
-  Metadata::SchemaSnapshot schema_metadata;
+  ScopedPtr<Metadata::SchemaSnapshot> schema_metadata;
 
 private:
   Address address_;
@@ -127,6 +130,14 @@ public:
   Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
 
   RetryPolicy* retry_policy() { return retry_policy_; }
+
+  const Address& preferred_address() const {
+    return preferred_address_;
+  }
+
+  void set_preferred_address(const Address& preferred_address) {
+    preferred_address_ = preferred_address;
+  }
 
   void set_query_plan(QueryPlan* query_plan) { query_plan_.reset(query_plan); }
 
@@ -179,6 +190,7 @@ private:
   SpeculativeExecutionVec speculative_executions_;
   Request::EncodingCache encoding_cache_;
   uint64_t start_time_ns_;
+  Address preferred_address_;
 };
 
 class SpeculativeExecution : public RequestCallback {

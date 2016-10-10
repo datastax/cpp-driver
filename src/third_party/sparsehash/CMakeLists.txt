@@ -104,5 +104,5 @@ check_type_size("uint16_t" UINT16_T)
 check_type_size("u_int16_t" U_INT16_T)
 check_type_size("__uint16_t" __UINT16_T)
 
-configure_file("${PROJECT_SOURCE_DIR}/src/third_party/sparsehash/config.h.cmake"
-               "${PROJECT_SOURCE_DIR}/src/third_party/sparsehash/src/sparsehash/internal/sparseconfig.h")
+configure_file("${CASS_SOURCE_DIR}/src/third_party/sparsehash/config.h.cmake"
+               "${CASS_SOURCE_DIR}/src/third_party/sparsehash/src/sparsehash/internal/sparseconfig.h")

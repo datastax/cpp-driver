@@ -16,7 +16,7 @@
 
 #include "error_response.hpp"
 
-#include "external_types.hpp"
+#include "external.hpp"
 #include "logger.hpp"
 #include "serialization.hpp"
 

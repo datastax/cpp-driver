@@ -18,6 +18,7 @@
 #define __CASS_VALUE_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "external.hpp"
 #include "result_metadata.hpp"
 #include "string_ref.hpp"
 
@@ -160,5 +161,7 @@ private:
 typedef std::vector<Value> OutputValueVec;
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Value, CassValue)
 
 #endif

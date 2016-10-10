@@ -19,6 +19,7 @@
 
 #include "cassandra.h"
 #include "cassconfig.hpp"
+#include "external.hpp"
 #include "host.hpp"
 #include "ref_counted.hpp"
 #include "ring_buffer.hpp"
@@ -108,5 +109,7 @@ public:
 #else
 #include "ssl/ssl_no_impl.hpp"
 #endif
+
+EXTERNAL_TYPE(cass::SslContext, CassSsl)
 
 #endif

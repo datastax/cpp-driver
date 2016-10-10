@@ -19,6 +19,7 @@
 
 #include "cassandra.h"
 #include "error_response.hpp"
+#include "external.hpp"
 #include "ref_counted.hpp"
 
 #ifdef _WIN32
@@ -182,6 +183,8 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::RetryPolicy, CassRetryPolicy)
 
 #endif
 

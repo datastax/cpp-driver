@@ -20,6 +20,7 @@
 #include "buffer.hpp"
 #include "cassandra.h"
 #include "constants.hpp"
+#include "external.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
 #include "retry_policy.hpp"
@@ -157,5 +158,8 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::CustomPayload, CassCustomPayload)
+
 
 #endif

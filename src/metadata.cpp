@@ -17,8 +17,9 @@
 #include "metadata.hpp"
 
 #include "buffer.hpp"
+#include "collection.hpp"
 #include "collection_iterator.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 #include "iterator.hpp"
 #include "logger.hpp"
 #include "map_iterator.hpp"
