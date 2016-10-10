@@ -258,9 +258,6 @@ private:
   bool use_schema_;
   bool token_aware_routing_;
 
-  static Address bind_any_ipv4_;
-  static Address bind_any_ipv6_;
-
 private:
   DISALLOW_COPY_AND_ASSIGN(ControlConnection);
 };

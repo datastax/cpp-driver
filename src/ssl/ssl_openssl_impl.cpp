@@ -324,14 +324,12 @@ private:
   }
 
   static Result match_subject_alt_names_ipadd(X509* cert, const Address& addr) {
-    char addr_buf[16];
+    uint8_t addr_buf[16];
     size_t addr_buf_size;
-    if (addr.family() == AF_INET) {
-      addr_buf_size = 4;
-      memcpy(addr_buf, &addr.addr_in()->sin_addr.s_addr, addr_buf_size);
-    } else {
-      addr_buf_size = 16;
-      memcpy(addr_buf, &addr.addr_in6()->sin6_addr, addr_buf_size);
+
+    addr_buf_size = addr.to_inet(addr_buf);
+    if (addr_buf_size == 0) {
+      return NO_MATCH;
     }
 
     STACK_OF(GENERAL_NAME)* names

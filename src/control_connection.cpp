@@ -86,20 +86,25 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
                                                         const Value* rpc_value,
                                                         Address* output) {
   Address peer_address;
-  Address::from_inet(peer_value->data(), peer_value->size(),
-                     connected_address.port(), &peer_address);
+  if (!Address::from_inet(peer_value->data(), peer_value->size(),
+                          connected_address.port(), &peer_address)) {
+    LOG_WARN("Invalid address format for peer address");
+    return false;
+  }
   if (rpc_value->size() > 0) {
-    Address::from_inet(rpc_value->data(), rpc_value->size(),
-                       connected_address.port(), output);
-    if (connected_address.compare(*output) == 0 ||
-        connected_address.compare(peer_address) == 0) {
+    if (Address::from_inet(rpc_value->data(), rpc_value->size(),
+                           connected_address.port(), output)) {
+      LOG_WARN("Invalid address format for rpc address");
+      return false;
+    }
+    if (connected_address == *output || connected_address == peer_address) {
       LOG_DEBUG("system.peers on %s contains a line with rpc_address for itself. "
                 "This is not normal, but is a known problem for some versions of DSE. "
                 "Ignoring this entry.", connected_address.to_string(false).c_str());
       return false;
     }
-    if (bind_any_ipv4_.compare(*output) == 0 ||
-        bind_any_ipv6_.compare(*output) == 0) {
+    if (Address::BIND_ANY_IPV4.compare(*output, false) == 0 ||
+        Address::BIND_ANY_IPV6.compare(*output, false) == 0) {
       LOG_WARN("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact instead. "
                "If this is incorrect you should configure a specific interface for rpc_address on the server.",
                peer_address.to_string(false).c_str());
@@ -628,7 +633,7 @@ void ControlConnection::refresh_node_info(Host::Ptr host,
     return;
   }
 
-  bool is_connected_host = host->address().compare(connection_->address()) == 0;
+  bool is_connected_host = host->address() == connection_->address();
 
   std::string query;
   ControlCallback<RefreshNodeData>::ResponseCallback response_callback;
@@ -720,7 +725,7 @@ void ControlConnection::on_refresh_node_info_all(ControlConnection* control_conn
                                           row->get_by_name("peer"),
                                           row->get_by_name("rpc_address"),
                                           &address);
-    if (is_valid_address && data.host->address().compare(address) == 0) {
+    if (is_valid_address && data.host->address() == address) {
       control_connection->update_node_info(data.host, row, UPDATE_HOST_AND_BUILD);
       if (data.is_new_node) {
         control_connection->session_->on_add(data.host, false);
@@ -746,10 +751,13 @@ void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateH
   v = row->get_by_name("peer");
   if (v != NULL) {
     Address listen_address;
-    Address::from_inet(v->data(), v->size(),
-                       connection_->address().port(),
-                       &listen_address);
-    host->set_listen_address(listen_address.to_string());
+    if (Address::from_inet(v->data(), v->size(),
+                           connection_->address().port(),
+                           &listen_address)) {
+      host->set_listen_address(listen_address.to_string());
+    } else {
+      LOG_WARN("Invalid address format for listen address");
+    }
   }
 
   if ((!rack.empty() && rack != host->rack()) ||
@@ -773,7 +781,7 @@ void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateH
   }
 
   if (token_aware_routing_) {
-    bool is_connected_host = connection_ != NULL && host->address().compare(connection_->address()) == 0;
+    bool is_connected_host = connection_ != NULL && host->address() == connection_->address();
     std::string partitioner;
     if (is_connected_host && row->get_string_by_name("partitioner", &partitioner)) {
       if (!session_->token_map_) {
@@ -1130,10 +1138,5 @@ void ControlConnection::ControlMultipleRequestCallback<T>::on_set(
   if (has_error) return;
   response_callback_(control_connection_, data_, responses);
 }
-
-Address ControlConnection::bind_any_ipv4_("0.0.0.0", 0);
-Address ControlConnection::bind_any_ipv6_("::", 0);
-
-
 
 } // namespace cass

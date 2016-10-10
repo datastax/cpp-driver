@@ -17,8 +17,6 @@
 #ifndef __CASS_ASYNC_QUEUE_HPP_INCLUDED__
 #define __CASS_ASYNC_QUEUE_HPP_INCLUDED__
 
-#include "utils.hpp"
-
 #include <uv.h>
 
 namespace cass {
@@ -35,7 +33,7 @@ public:
   }
 
   void close_handles() {
-    uv_close(copy_cast<uv_async_t*, uv_handle_t*>(&async_), NULL);
+    uv_close(reinterpret_cast<uv_handle_t*>(&async_), NULL);
   }
 
   void send() {

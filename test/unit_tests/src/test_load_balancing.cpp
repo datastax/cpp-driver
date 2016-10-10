@@ -53,9 +53,13 @@ const string BACKUP_DC = "backup";
 #define VECTOR_FROM(t, a) std::vector<t>(a, a + sizeof(a)/sizeof(a[0]))
 
 cass::Address addr_for_sequence(size_t i) {
-  cass::Address addr("0.0.0.0", 9042);
-  addr.addr_in()->sin_addr.s_addr = i;
-  return addr;
+  char temp[64];
+  sprintf(temp, "%d.%d.%d.%d",
+          static_cast<int>(i & 0xFF),
+          static_cast<int>((i >> 8) & 0xFF),
+          static_cast<int>((i >> 16) & 0xFF),
+          static_cast<int>((i >> 24) & 0xFF));
+  return cass::Address(temp, 9042);
 }
 
 cass::SharedRefPtr<cass::Host> host_for_addr(const cass::Address addr,
@@ -78,14 +82,12 @@ void populate_hosts(size_t count, const std::string& rack,
 }
 
 void verify_sequence(cass::QueryPlan* qp, const std::vector<size_t>& sequence) {
-  cass::Address expected("0.0.0.0", 9042);
   cass::Address received;
   for (std::vector<size_t>::const_iterator it = sequence.begin();
                                            it!= sequence.end();
                                          ++it) {
     BOOST_REQUIRE(qp->compute_next(&received));
-    expected.addr_in()->sin_addr.s_addr = *it;
-    BOOST_CHECK_EQUAL(expected, received);
+    BOOST_CHECK_EQUAL(addr_for_sequence(*it), received);
   }
   BOOST_CHECK(!qp->compute_next(&received));
 }

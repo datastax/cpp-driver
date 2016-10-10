@@ -92,7 +92,7 @@ public:
   void close_handles() {
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
     uv_prepare_stop(&prepare_);
-    uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
+    uv_close(reinterpret_cast<uv_handle_t*>(&prepare_), NULL);
 #endif
   }
 

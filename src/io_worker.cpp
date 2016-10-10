@@ -245,7 +245,7 @@ void IOWorker::close_handles() {
   EventThread<IOWorkerEvent>::close_handles();
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
-  uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
+  uv_close(reinterpret_cast<uv_handle_t*>(&prepare_), NULL);
 }
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
