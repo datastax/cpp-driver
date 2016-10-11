@@ -77,6 +77,7 @@ public:
       , serial_consistency_(CASS_CONSISTENCY_ANY)
       , timestamp_(CASS_INT64_MIN)
       , is_idempotent_(false)
+      , record_attempted_addresses_(false)
       , request_timeout_ms_(CASS_UINT64_MAX) { } // Disabled (use the cluster-level timeout)
 
   virtual ~Request() { }
@@ -100,6 +101,12 @@ public:
   bool is_idempotent() const { return is_idempotent_; }
 
   void set_is_idempotent(bool is_idempotent) { is_idempotent_ = is_idempotent; }
+
+  bool record_attempted_addresses() const { return record_attempted_addresses_; }
+
+  void set_record_attempted_addresses(bool record_attempted_addresses) {
+    record_attempted_addresses_ = record_attempted_addresses;
+  }
 
   uint64_t request_timeout_ms(uint64_t default_timeout_ms) const;
 
@@ -131,6 +138,7 @@ private:
   CassConsistency serial_consistency_;
   int64_t timestamp_;
   bool is_idempotent_;
+  bool record_attempted_addresses_;
   uint64_t request_timeout_ms_;
   RetryPolicy::Ptr retry_policy_;
   CustomPayload::ConstPtr custom_payload_;

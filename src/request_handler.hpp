@@ -97,12 +97,28 @@ public:
     return address_;
   }
 
+  // Currently, used for testing only, but it could be exposed in the future.
+  AddressVec attempted_addresses() {
+    ScopedMutex lock(&mutex_);
+    internal_wait(lock);
+    return attempted_addresses_;
+  }
+
   std::string statement;
   ScopedPtr<Metadata::SchemaSnapshot> schema_metadata;
 
 private:
+  friend class RequestHandler;
+
+  void add_attempted_address(const Address& address) {
+    ScopedMutex lock(&mutex_);
+    attempted_addresses_.push_back(address);
+  }
+
+private:
   Address address_;
   Response::Ptr response_;
+  AddressVec attempted_addresses_;
 };
 
 class SpeculativeExecution;
@@ -171,6 +187,7 @@ private:
   friend class SpeculativeExecution;
 
   void add_execution(SpeculativeExecution* speculative_execution);
+  void add_attempted_address(const Address& address);
   void schedule_next_execution(const Host::Ptr& current_host);
   void stop_request();
 

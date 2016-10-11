@@ -82,6 +82,10 @@ void RequestHandler::add_execution(SpeculativeExecution* speculative_execution) 
   speculative_executions_.push_back(speculative_execution);
 }
 
+void RequestHandler::add_attempted_address(const Address& address) {
+  future_->add_attempted_address(address);
+}
+
 void RequestHandler::schedule_next_execution(const Host::Ptr& current_host) {
   int64_t timeout = execution_plan_->next_execution(current_host);
   if (timeout >= 0) {
@@ -177,6 +181,10 @@ void SpeculativeExecution::on_execute(Timer* timer) {
 }
 
 void SpeculativeExecution::on_start() {
+  assert(current_host_ && "Tried to start on a non-existent host");
+  if (request()->record_attempted_addresses()) {
+    request_handler_->add_attempted_address(current_host_->address());
+  }
   start_time_ns_ = uv_hrtime();
 }
 
