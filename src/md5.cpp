@@ -102,38 +102,6 @@ void Md5::update(const uint8_t* data, size_t size) {
 }
 
 void Md5::final(uint8_t* result) {
-  final();
-
-  result[0]  = a_;
-  result[1]  = a_ >> 8;
-  result[2]  = a_ >> 16;
-  result[3]  = a_ >> 24;
-  result[4]  = b_;
-  result[5]  = b_ >> 8;
-  result[6]  = b_ >> 16;
-  result[7]  = b_ >> 24;
-  result[8]  = c_;
-  result[9]  = c_ >> 8;
-  result[10] = c_ >> 16;
-  result[11] = c_ >> 24;
-  result[12] = d_;
-  result[13] = d_ >> 8;
-  result[14] = d_ >> 16;
-  result[15] = d_ >> 24;
-
-  memset(this, 0, sizeof(Md5));
-}
-
-void Md5::final(uint64_t* hi, uint64_t* lo) {
-  final();
-
-  *hi = static_cast<uint64_t>(a_) << 32 | (static_cast<uint64_t>(b_) & 0xFFFFFFFF);
-  *lo  = static_cast<uint64_t>(c_) << 32 | (static_cast<uint64_t>(d_) & 0xFFFFFFFF);
-
-  memset(this, 0, sizeof(Md5));
-}
-
-void Md5::final() {
   unsigned long used, free;
 
   used = lo_ & 0x3f;
@@ -162,6 +130,25 @@ void Md5::final() {
   buffer_[63] = hi_ >> 24;
 
   body(buffer_, 64);
+
+  result[0]  = a_;
+  result[1]  = a_ >> 8;
+  result[2]  = a_ >> 16;
+  result[3]  = a_ >> 24;
+  result[4]  = b_;
+  result[5]  = b_ >> 8;
+  result[6]  = b_ >> 16;
+  result[7]  = b_ >> 24;
+  result[8]  = c_;
+  result[9]  = c_ >> 8;
+  result[10] = c_ >> 16;
+  result[11] = c_ >> 24;
+  result[12] = d_;
+  result[13] = d_ >> 8;
+  result[14] = d_ >> 16;
+  result[15] = d_ >> 24;
+
+  memset(this, 0, sizeof(Md5));
 }
 
 // This processes one or more 64-byte data blocks, but does NOT update
