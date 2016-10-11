@@ -79,6 +79,7 @@ namespace dse {
 
 std::string Polygon::to_wkt() const {
   std::stringstream ss;
+  ss.precision(WKT_MAX_DIGITS);
   ss << "POLYGON (";
   const cass_byte_t* pos = bytes_.data() + WKB_HEADER_SIZE + sizeof(cass_uint32_t);
   for (cass_uint32_t i = 0; i < num_rings_; ++i) {
@@ -88,10 +89,10 @@ std::string Polygon::to_wkt() const {
     pos += sizeof(cass_uint32_t);
     for (cass_uint32_t j = 0; j < num_points; ++j) {
       if (j > 0) ss << ", ";
-      ss << std::setprecision(WKT_MAX_DIGITS) << decode_double(pos, native_byte_order());
+      ss << decode_double(pos, native_byte_order());
       pos += sizeof(cass_double_t);
       ss << " ";
-      ss << std::setprecision(WKT_MAX_DIGITS) << decode_double(pos, native_byte_order());
+      ss << decode_double(pos, native_byte_order());
       pos += sizeof(cass_double_t);
     }
     ss << ")";
@@ -216,7 +217,7 @@ CassError PolygonIterator::reset_text(const char* text, size_t size) {
     }
   }
 
-  // Validate closing ")" and minimum number of rings
+  // Validate closing ")"
   if (token != WktLexer::TK_CLOSE_PAREN) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }

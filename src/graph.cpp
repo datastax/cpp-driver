@@ -844,9 +844,8 @@ const GraphResult* GraphResultSet::next() {
 
 void GraphWriter::add_point(cass_double_t x, cass_double_t y) {
   std::stringstream ss;
-  ss << "POINT ("
-     << std::setprecision(WKT_MAX_DIGITS) << x << " "
-     << std::setprecision(WKT_MAX_DIGITS) << y << ")";
+  ss.precision(WKT_MAX_DIGITS);
+  ss << "POINT (" << x << " " << y << ")";
   String(ss.str().c_str());
 }
 

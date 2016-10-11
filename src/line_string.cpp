@@ -70,14 +70,15 @@ namespace dse {
 
 std::string LineString::to_wkt() const {
   std::stringstream ss;
+  ss.precision(WKT_MAX_DIGITS);
   ss << "LINESTRING (";
   const cass_byte_t* pos = bytes_.data() + WKB_HEADER_SIZE + sizeof(cass_uint32_t);
   for (cass_uint32_t i = 0; i < num_points_; ++i) {
     if (i > 0) ss << ", ";
-    ss << std::setprecision(WKT_MAX_DIGITS) << decode_double(pos, native_byte_order());
+    ss << decode_double(pos, native_byte_order());
     pos += sizeof(cass_double_t);
     ss << " ";
-    ss << std::setprecision(WKT_MAX_DIGITS) << decode_double(pos, native_byte_order());
+    ss << decode_double(pos, native_byte_order());
     pos += sizeof(cass_double_t);
   }
   ss << ")";
@@ -165,7 +166,7 @@ CassError LineStringIterator::reset_text(const char* text, size_t size) {
     }
   }
 
-  // Validate closing ")" and minimum number of points
+  // Validate closing ")"
   if (token != WktLexer::TK_CLOSE_PAREN) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
