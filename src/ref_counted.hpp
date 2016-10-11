@@ -26,13 +26,13 @@
 
 namespace cass {
 
-struct RefCountedBase {};
+struct RefCountedBase { };
 
 template <class T>
 class RefCounted : public RefCountedBase {
 public:
   RefCounted()
-      : ref_count_(0) {}
+      : ref_count_(0) { }
 
   int ref_count() const {
     return ref_count_.load(MEMORY_ORDER_ACQUIRE);
@@ -54,37 +54,6 @@ public:
 private:
   mutable Atomic<int> ref_count_;
   DISALLOW_COPY_AND_ASSIGN(RefCounted);
-};
-
-class RefBuffer : public RefCounted<RefBuffer> {
-public:
-  static RefBuffer* create(size_t size) {
-#if defined(_WIN32)
-#pragma warning(push)
-#pragma warning(disable: 4291) //Invalid warning thrown RefBuffer has a delete function
-#endif
-    return new (size) RefBuffer();
-#if defined(_WIN32)
-#pragma warning(pop)
-#endif
-  }
-
-  char* data() {
-    return reinterpret_cast<char*>(this) + sizeof(RefBuffer);
-  }
-
-  void operator delete(void* ptr) {
-    ::operator delete(ptr);
-  }
-
-private:
-  RefBuffer() {}
-
-  void* operator new(size_t size, size_t extra) {
-    return ::operator new(size + extra);
-  }
-
-  DISALLOW_COPY_AND_ASSIGN(RefBuffer);
 };
 
 template<class T>
@@ -161,46 +130,37 @@ private:
   T* ptr_;
 };
 
-template<class T>
-class ScopedRefPtr {
+class RefBuffer : public RefCounted<RefBuffer> {
 public:
-  typedef T type;
+  typedef SharedRefPtr<RefBuffer> Ptr;
 
-  explicit ScopedRefPtr(type* ptr = NULL)
-       : ptr_(ptr) {
-    if (ptr_ != NULL) {
-      ptr_->inc_ref();
-    }
+  static RefBuffer* create(size_t size) {
+#if defined(_WIN32)
+#pragma warning(push)
+#pragma warning(disable: 4291) //Invalid warning thrown RefBuffer has a delete function
+#endif
+    return new (size) RefBuffer();
+#if defined(_WIN32)
+#pragma warning(pop)
+#endif
   }
 
-  ~ScopedRefPtr() {
-    if (ptr_ != NULL) {
-      ptr_->dec_ref();
-    }
+  char* data() {
+    return reinterpret_cast<char*>(this) + sizeof(RefBuffer);
   }
 
-  void reset(type* ptr = NULL) {
-    if (ptr == ptr_) return;
-    if (ptr != NULL) {
-      ptr->inc_ref();
-    }
-    type* temp = ptr_;
-    ptr_ = ptr;
-    if (temp != NULL) {
-      temp->dec_ref();
-    }
+  void operator delete(void* ptr) {
+    ::operator delete(ptr);
   }
-
-  type* get() const { return ptr_; }
-  type& operator*() const { return *ptr_; }
-  type* operator->() const { return ptr_; }
-  operator bool() const { return ptr_ != NULL; }
 
 private:
-  type* ptr_;
+  RefBuffer() { }
 
-private:
-  DISALLOW_COPY_AND_ASSIGN(ScopedRefPtr);
+  void* operator new(size_t size, size_t extra) {
+    return ::operator new(size + extra);
+  }
+
+  DISALLOW_COPY_AND_ASSIGN(RefBuffer);
 };
 
 } // namespace cass

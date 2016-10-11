@@ -18,7 +18,7 @@
 
 namespace cass {
 
-int CredentialsRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
+int CredentialsRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   if (version != 1) {
     return -1;
   }
@@ -39,7 +39,7 @@ int CredentialsRequest::encode(int version, Handler* handler, BufferVec* bufs) c
   return length;
 }
 
-int AuthResponseRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
+int AuthResponseRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   if (version < 2) {
     return -1;
   }

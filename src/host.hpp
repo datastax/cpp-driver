@@ -100,10 +100,10 @@ public:
   class StateListener {
   public:
     virtual ~StateListener() { }
-    virtual void on_add(const SharedRefPtr<Host>& host) = 0;
-    virtual void on_remove(const SharedRefPtr<Host>& host) = 0;
-    virtual void on_up(const SharedRefPtr<Host>& host) = 0;
-    virtual void on_down(const SharedRefPtr<Host>& host) = 0;
+    virtual void on_add(const Ptr& host) = 0;
+    virtual void on_remove(const Ptr& host) = 0;
+    virtual void on_up(const Ptr& host) = 0;
+    virtual void on_down(const Ptr& host) = 0;
   };
 
   enum HostState {
@@ -246,19 +246,19 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Host);
 };
 
-typedef std::map<Address, SharedRefPtr<Host> > HostMap;
+typedef std::map<Address, Host::Ptr> HostMap;
 struct GetHost {
   typedef std::pair<Address, Host::Ptr> Pair;
   Host::Ptr operator()(const Pair& pair) const {
     return pair.second;
   }
 };
-typedef std::pair<Address, SharedRefPtr<Host> > HostPair;
-typedef std::vector<SharedRefPtr<Host> > HostVec;
+typedef std::pair<Address, Host::Ptr> HostPair;
+typedef std::vector<Host::Ptr> HostVec;
 typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 
-void add_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host);
-void remove_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host);
+void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host);
+void remove_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host);
 
 } // namespace cass
 

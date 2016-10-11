@@ -31,7 +31,7 @@ public:
     , credentials_(credentials) { }
 
 private:
-  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   V1Authenticator::Credentials credentials_;
@@ -40,19 +40,19 @@ private:
 class AuthResponseRequest : public Request {
 public:
   AuthResponseRequest(const std::string& token,
-                      const SharedRefPtr<Authenticator>& auth)
+                      const Authenticator::Ptr& auth)
     : Request(CQL_OPCODE_AUTH_RESPONSE)
     , token_(token)
     , auth_(auth) { }
 
-  const SharedRefPtr<Authenticator>& auth() const { return auth_; }
+  const Authenticator::Ptr& auth() const { return auth_; }
 
 private:
-  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   std::string token_;
-  SharedRefPtr<Authenticator> auth_;
+  Authenticator::Ptr auth_;
 };
 
 } // namespace cass

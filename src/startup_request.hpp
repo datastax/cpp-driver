@@ -39,7 +39,7 @@ public:
   const std::string compression() const { return compression_; }
 
 private:
-  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   typedef std::map<std::string, std::string> OptionsMap;
