@@ -16,7 +16,8 @@ if(GSSAPI_FOUND AND KERBEROS_FOUND)
 else()
   # Setup the hints and patch for the Kerberos SDK location
   set(_KERBEROS_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/kerberos/")
-  set(_KERBEROS_ROOT_HINTS ${KERBEROS_ROOT_DIR} $ENV{KERBEROS_ROOT_DIR})
+  set(_KERBEROS_ROOT_HINTS ${KERBEROS_ROOT_DIR} $ENV{KERBEROS_ROOT_DIR}
+                           $ENV{KERBEROS_ROOT_DIR}/MIT/Kerberos)
   if(WIN32)
     if(CMAKE_CL_64)
       set(_KERBEROS_SDK_PROGRAMFILES "$ENV{PROGRAMW6432}")

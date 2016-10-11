@@ -1,5 +1,8 @@
 # C/C++ DataStax Enterprise Driver
 
+[![Build Status: Linux](https://travis-ci.org/datastax/cpp-driver-dse.svg?branch=master)](https://travis-ci.org/datastax/cpp-driver-dse)
+[![Build Status: Windows](https://ci.appveyor.com/api/projects/status/582057mqa3t6eimk/branch/master?svg=true)](https://ci.appveyor.com/project/DataStax/cpp-driver-dse)
+
 This driver is built on top of the [C/C++ driver for Apache
 Cassandra][cpp-driver], with specific extensions for DataStax Enterprise (DSE).
 

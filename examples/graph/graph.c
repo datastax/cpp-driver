@@ -57,8 +57,9 @@ void print_error(CassFuture* future) {
 }
 
 void print_indented(int indent, const char* format, ...) {
-  printf("%*s", indent, "");
   va_list args;
+
+  printf("%*s", indent, "");
   va_start(args, format);
   vprintf(format, args);
   va_end(args);
