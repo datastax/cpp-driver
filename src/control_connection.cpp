@@ -92,8 +92,8 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
     return false;
   }
   if (rpc_value->size() > 0) {
-    if (Address::from_inet(rpc_value->data(), rpc_value->size(),
-                           connected_address.port(), output)) {
+    if (!Address::from_inet(rpc_value->data(), rpc_value->size(),
+                            connected_address.port(), output)) {
       LOG_WARN("Invalid address format for rpc address");
       return false;
     }
