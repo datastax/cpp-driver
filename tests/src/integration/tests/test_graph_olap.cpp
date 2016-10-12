@@ -16,7 +16,7 @@
 #define GRAPH_OLAP_QUERY \
   "g.V().count();"
 
-#define GRAPH_OLAP_TIMEOUT 0 // 4 minutes
+#define GRAPH_OLAP_TIMEOUT 240000 // 4 minutes
 
 #define REPLICATION_STRATEGY "{ 'class': %s }"
 
