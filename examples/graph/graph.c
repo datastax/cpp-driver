@@ -240,15 +240,11 @@ int main() {
       execute_graph_query(session, GRAPH_SCHEMA, options, NULL, NULL);
       execute_graph_query(session, GRAPH_DATA, options, NULL, NULL);
 
-      dse_graph_options_set_graph_source(options, "a");
+      printf("Who does 'marko' know?\n");
+      execute_graph_query_and_print(session, "g.V().has('name','marko').out('knows').values('name')", options, NULL);
 
-      execute_graph_query_and_print(session, "g.V().count()", options, NULL);
-
-      //printf("Who does 'marko' know?\n");
-      //execute_graph_query_and_print(session, "g.V().has('name','marko').out('knows').values('name')", options, NULL);
-
-      //printf("What vertices are connected to 'marko'?\n");
-      //execute_graph_query_and_print(session, "g.V().has('name', 'marko').out('knows')", options, NULL);
+      printf("What vertices are connected to 'marko'?\n");
+      execute_graph_query_and_print(session, "g.V().has('name', 'marko').out('knows')", options, NULL);
     }
 
     dse_graph_options_free(options);

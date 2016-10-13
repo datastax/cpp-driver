@@ -13,8 +13,11 @@
 #include <session.hpp>
 #include <query_request.hpp>
 #include <value.hpp>
+#include <logger.hpp>
 
 #include <assert.h>
+
+using cass::Logger;
 
 namespace {
 
@@ -64,51 +67,48 @@ void graph_analytics_lookup_callback(CassFuture* future, void* data) {
   cass::ResponseFuture* response_future = static_cast<cass::ResponseFuture*>(future->from());
   cass::ResultResponse* response = static_cast<cass::ResultResponse*>(response_future->response().get());
 
-  if (response->row_count() == 0) {
-    request->future->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                               "No rows in analytics lookup response");
-    delete request;
-    return;
-  }
+  cass::Address preferred_address;
+  bool use_preferred_address = response->row_count() > 0;
 
-  const cass::Value* value = response->first_row().get_by_name("result");
-  if (value == NULL) {
-    request->future->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                               "No column 'result' in analytics lookup response");
-    delete request;
-    return;
-  }
+  if (use_preferred_address) {
+    const cass::Value* value = response->first_row().get_by_name("result");
+    if (value == NULL ||
+        !value->is_map() ||
+        !cass::is_string_type(value->primary_value_type()) ||
+        !cass::is_string_type(value->secondary_value_type())) {
+      LOG_ERROR("The 'result' column is either not present or is not the "
+                "expected type 'map<text, text>' in analytics master lookup "
+                "response.");
+      use_preferred_address = false;
+    } else {
+      cass::StringRef location;
+      cass::MapIterator iterator(value);
+      while(iterator.next()) {
+        if (iterator.key()->to_string_ref() == "location") {
+          location = iterator.value()->to_string_ref();
+          location = location.substr(0, location.find(":"));
+        }
+      }
 
-  if (!value->is_map() ||
-      !cass::is_string_type(value->primary_value_type()) ||
-      !cass::is_string_type(value->secondary_value_type())) {
-    request->future->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                               "'result' column is int the expected type "
-                               "'map<text, text>' in analytics lookup response");
-    delete request;
-    return;
-  }
-
-  cass::StringRef location;
-  cass::MapIterator iterator(value);
-  while(iterator.next()) {
-    if (iterator.key()->to_string_ref() == "location") {
-      location = iterator.value()->to_string_ref();
-      location = location.substr(0, location.find(":"));
+      if (!cass::Address::from_string(location.to_string(),
+                                      request->session->config().port(),
+                                      &preferred_address)) {
+        LOG_ERROR("The 'location' map entry's value is not a valid address in "
+                  "analytics master lookup response.");
+        use_preferred_address = false;
+      }
     }
   }
 
-  cass::Address address;
-  if (!cass::Address::from_string(location.to_string(), request->session->config().port(), &address)) {
-    request->future->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                               "'location' is not a valid address in analytics lookup response");
-    delete request;
-    return;
+  if (!use_preferred_address) {
+    LOG_INFO("Unable to determine the master node's address for the "
+             "analytics query. Using a coordinator node to route request...");
   }
 
-  cass::Future* request_future = request->session->execute(request->statement.get(), &address);
+  cass::Future::Ptr request_future(
+        request->session->execute(request->statement,
+                                  use_preferred_address ? &preferred_address : NULL));
   request_future->set_callback(graph_analytics_callback, data);
-  request_future->dec_ref();
 }
 
 } // namepsace
@@ -120,12 +120,14 @@ CassFuture* cass_session_execute_dse_graph(CassSession* session,
   if (statement->graph_source() == DSE_GRAPH_ANALYTICS_SOURCE) {
     cass::ResponseFuture* future = new cass::ResponseFuture();
 
-    cass::Future* request_future = session->execute(new cass::QueryRequest(DSE_LOOKUP_ANALYTICS_GRAPH_SERVER));
+    cass::Future::Ptr request_future(
+          session->execute(
+            cass::Request::ConstPtr(
+              new cass::QueryRequest(DSE_LOOKUP_ANALYTICS_GRAPH_SERVER))));
     request_future->set_callback(graph_analytics_lookup_callback,
                                  new GraphAnalyticsRequest(session,
                                                            future,
                                                            statement->wrapped()->from()));
-    request_future->dec_ref();
 
     future->inc_ref();
     return CassFuture::to(future);
