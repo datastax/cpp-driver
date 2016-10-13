@@ -143,8 +143,6 @@ void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
 void RequestHandler::on_timeout(Timer* timer) {
   RequestHandler* request_handler =
       static_cast<RequestHandler*>(timer->data());
-  LOG_DEBUG("Request timed out on host %s",
-            request_handler->current_host_->address_string().c_str());
   request_handler->set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
                              "Request timed out");
 }
@@ -231,6 +229,11 @@ void SpeculativeExecution::on_retry(bool use_next_host) {
 }
 
 void SpeculativeExecution::on_cancel() {
+  LOG_DEBUG("Cancelling speculative execution (%p) for request (%p) on host %s",
+            static_cast<void*>(this),
+            static_cast<void*>(request_handler_.get()),
+            current_host_ ? current_host_->address_string().c_str()
+                          : "<no current host>");
   return_connection();
 }
 
