@@ -100,11 +100,45 @@ RandomPartitioner::Token RandomPartitioner::from_string(const StringRef& str) {
   return token;
 }
 
+uint64_t RandomPartitioner::encode(uint8_t* bytes) {
+  uint64_t result = 0;
+  const size_t num_bytes = sizeof(uint64_t);
+  for (size_t i = 0; i < num_bytes; ++i) {
+    result |= (static_cast<uint64_t>(bytes[i]) << (8 * (num_bytes - i - 1)));
+  }
+  return result;
+}
+
+RandomPartitioner::Token RandomPartitioner::abs(RandomPartitioner::Token token) {
+  if (token.hi & 0x8000000000000000ULL) {
+    token.hi = ~token.hi;
+    token.lo = ~token.lo;
+
+    uint64_t old_lo = token.lo;
+    ++token.lo;
+    // Carry to "hi" if our "lo" value wrapped
+    if(token.lo < old_lo) {
+      ++token.hi;
+    }
+  }
+  return token;
+}
+
 RandomPartitioner::Token RandomPartitioner::hash(const StringRef& str) {
   Md5 hash;
   hash.update(reinterpret_cast<const uint8_t*>(str.data()), str.size());
+  uint8_t digest[16];
+  hash.final(digest);
   Token token;
-  hash.final(&token.hi, &token.lo);
+
+  // For compatability with Cassandra we interpret the MD5 as a big-endian value:
+  // Reference: https://docs.oracle.com/javase/7/docs/api/java/math/BigInteger.html#BigInteger(byte[])
+  token.hi = encode(digest);
+  token.lo = encode(digest + 8);
+
+  // Then we find the absolute value of the two's complement representation.
+  token = abs(token);
+
   return token;
 }
 

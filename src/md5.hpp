@@ -33,10 +33,8 @@ public:
 
   void update(const uint8_t* data, size_t size);
   void final(uint8_t* result);
-  void final(uint64_t* hi, uint64_t* lo);
 
 private:
-  void final();
   const uint8_t* body(const uint8_t* data, size_t size);
 
 private:

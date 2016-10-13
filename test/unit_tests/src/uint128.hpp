@@ -95,6 +95,7 @@ public:
 	uint128(double value)         : lo(static_cast<base_type>(value)), hi(0) {}
 	uint128(const uint128 &value) : lo(value.lo), hi (value.hi)              {}
 	uint128(base_type value)      : lo(value), hi(0)                         {}
+	uint128(base_type lo, base_type hi) : lo(lo), hi(hi)                     {}
 
 	uint128(const std::string &sz) : lo(0), hi(0) {
 
