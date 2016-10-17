@@ -189,6 +189,9 @@ private:
   void add_execution(SpeculativeExecution* speculative_execution);
   void add_attempted_address(const Address& address);
   void schedule_next_execution(const Host::Ptr& current_host);
+
+  // This MUST only be called once and that's currently guaranteed by the
+  // response future.
   void stop_request();
 
 private:

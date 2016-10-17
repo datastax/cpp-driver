@@ -20,6 +20,7 @@
 #include "connection.hpp"
 #include "constants.hpp"
 #include "logger.hpp"
+#include "metrics.hpp"
 #include "query_request.hpp"
 #include "request.hpp"
 #include "result_response.hpp"
@@ -242,6 +243,14 @@ void SimpleRequestCallback::on_retry(bool use_next_host) {
 
 void SimpleRequestCallback::on_cancel() {
   timer_.stop();
+}
+
+void SimpleRequestCallback::on_timeout(Timer* timer) {
+  SimpleRequestCallback* callback = static_cast<SimpleRequestCallback*>(timer->data());
+  callback->connection()->metrics()->request_timeouts.inc();
+  callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
+  callback->on_internal_timeout();
+  LOG_DEBUG("Request timed out (internal)");
 }
 
 } // namespace cass

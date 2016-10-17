@@ -323,7 +323,7 @@ BOOST_AUTO_TEST_CASE(no_timeout_control_connection)
   int num_of_tables = 10;
   std::string keyspace_prefix = "tap_";
   std::string table_prefix = "table_";
-  test_utils::CassLog::reset("Request timed out to host");
+  test_utils::CassLog::reset("Request timed out");
 
   // Create four data centers with single nodes
   std::vector<unsigned short> data_center_nodes;

@@ -111,6 +111,7 @@ public:
 
   uv_loop_t* loop() { return loop_; }
   const Config& config() const { return config_; }
+  Metrics* metrics() { return metrics_; }
   const Address& address() const { return host_->address(); }
   const std::string& address_string() const { return host_->address_string(); }
   const std::string& keyspace() const { return keyspace_; }

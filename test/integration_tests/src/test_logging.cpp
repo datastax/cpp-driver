@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(logging_pool_error_reduced)
   test_utils::CassLog::set_expected_log_level(CASS_LOG_ERROR);
 
   // Ensure the cluster is not running
-  if (!ccm->create_cluster()) {
+  if (!ccm->create_cluster(2)) {
     ccm->stop_cluster();
   }
 
@@ -130,15 +130,10 @@ BOOST_AUTO_TEST_CASE(logging_pool_error_reduced)
     test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1);
     test_utils::CassSessionPtr session(cass_session_new());
     ccm->start_cluster();
+    ccm->pause_node(2);
 
-    // Create a connection error by pausing the node during async connection (ERROR)
     test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster.get()));
-    ccm->pause_node(1);
-    while (CASS_ERROR_LIB_NO_HOSTS_AVAILABLE == cass_future_error_code(connect_future.get())) {
-      ccm->resume_node(1);
-      connect_future = test_utils::CassFuturePtr(cass_session_connect(session.get(), cluster.get()));
-      ccm->pause_node(1);
-    }
+    BOOST_CHECK_EQUAL(cass_future_error_code(connect_future.get()), CASS_OK);
     BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1);
 
     // Sleep to allow the connection pool failure on the paused node (WARN)

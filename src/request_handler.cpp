@@ -143,8 +143,10 @@ void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
 void RequestHandler::on_timeout(Timer* timer) {
   RequestHandler* request_handler =
       static_cast<RequestHandler*>(timer->data());
+  request_handler->io_worker_->metrics()->request_timeouts.inc();
   request_handler->set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
                              "Request timed out");
+  LOG_DEBUG("Request timed out");
 }
 
 void RequestHandler::stop_request() {
@@ -157,7 +159,6 @@ void RequestHandler::stop_request() {
   }
   if (io_worker_ != NULL) {
     io_worker_->request_finished();
-    io_worker_ = NULL;
   }
 }
 

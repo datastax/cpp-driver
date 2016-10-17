@@ -96,6 +96,11 @@ bool SchemaChangeCallback::has_schema_agreement(const ResponseMap& responses) {
 }
 
 void SchemaChangeCallback::on_set(const ResponseMap& responses) {
+  // Don't wait for schema agreement if the underlying request is cancelled
+  if (speculative_execution_->state() == RequestCallback::REQUEST_STATE_CANCELLED) {
+    return;
+  }
+
   elapsed_ms_ += get_time_since_epoch_ms() - start_ms_;
 
   bool has_error = false;

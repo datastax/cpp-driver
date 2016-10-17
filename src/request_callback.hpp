@@ -34,6 +34,7 @@ namespace cass {
 
 class Config;
 class Connection;
+class Metrics;
 class ResponseMessage;
 class ResultResponse;
 
@@ -112,8 +113,6 @@ private:
   CassConsistency cl_;
   ScopedPtr<ResponseMessage> read_before_write_response_;
 
-  typedef std::vector<State> StateVec;
-
 private:
   DISALLOW_COPY_AND_ASSIGN(RequestCallback);
 };
@@ -141,11 +140,7 @@ private:
   virtual void on_error(CassError code, const std::string& message);
   virtual void on_cancel();
 
-  static void on_timeout(Timer* timer) {
-    SimpleRequestCallback* callback = static_cast<SimpleRequestCallback*>(timer->data());
-    callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
-    callback->on_internal_timeout();
-  }
+  static void on_timeout(Timer* timer);
 
 private:
   Timer timer_;
