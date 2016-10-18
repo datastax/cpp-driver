@@ -113,6 +113,7 @@ public:
       // Execute the graph query and get the host address used
       test::driver::DseGraphResultSet result_set = dse_session_.execute(
         GRAPH_OLAP_QUERY, graph_options);
+      CHECK_FAILURE;
       std::string host = result_set.host_address();
       if (std::find(hosts->begin(), hosts->end(), host) == hosts->end()) {
         hosts->push_back(host);
