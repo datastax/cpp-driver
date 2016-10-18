@@ -15,7 +15,7 @@
 #include <iostream>
 
 #define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.7")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("4.8.8")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("5.0.2")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
@@ -24,6 +24,8 @@ CCM::CassVersion Options::server_version_ = DEFAULT_OPTIONS_CASSSANDRA_VERSION;
 bool Options::is_dse_ = false;
 bool Options::use_git_ = false;
 std::string Options::branch_tag_;
+bool Options::use_install_dir_ = false;
+std::string Options::install_dir_;
 std::string Options::cluster_prefix_ = "cpp-driver";
 std::string Options::dse_username_;
 std::string Options::dse_password_;
@@ -114,6 +116,14 @@ bool Options::initialize(int argc, char* argv[]) {
         if (!value.empty()) {
           branch_tag_ = value;
         }
+      } else if (key.compare("--install-dir") == 0) {
+        use_install_dir_ = true;
+        if (value.empty()) {
+          std::cerr << "Disabling the Use of the Installation Directory: Installation directory must not be empty" << std::endl;
+          use_install_dir_ = false;
+        } else {
+          install_dir_ = value;
+        }
       } else if (key.compare("--prefix") == 0) {
         if (!value.empty()) {
           cluster_prefix_ = value;
@@ -198,7 +208,7 @@ bool Options::initialize(int argc, char* argv[]) {
     if (deployment_type_ == CCM::DeploymentType::LOCAL) {
       host_ = "127.0.0.1";
     }
-    if (is_dse_) {
+    if (is_dse_ && !use_install_dir_) {
       // Determine if the DSE credentials type should be updated
       if (dse_credentials_type_ == CCM::DseCredentialsType::USERNAME_PASSWORD) {
         if (dse_username_.empty() || dse_password_.empty()) {
@@ -239,6 +249,8 @@ void Options::print_help() {
     << "Indicate Cassandra/DSE server download should be obtained from ASF/GitHub." << std::endl;
   std::cout << "  --git=[BRANCH_OR_TAG]" << std::endl << "      "
     << "Indicate Cassandra/DSE server branch/tag should be obtained from ASF/GitHub." << std::endl;
+  std::cout << "  --install-dir=[INSTALL_DIR]" << std::endl << "      "
+    << "Indicate Cassandra/DSE installation directory to use." << std::endl;
   std::cout << "  --prefix=[PREFIX]" << std::endl << "      "
     << "CCM cluster prefix. The default is " << cluster_prefix() << "." << std::endl;
 #ifdef CASS_USE_LIBSSH2
@@ -270,20 +282,26 @@ void Options::print_settings() {
     std::cout << "  Logging driver messages" << std::endl;
   }
   if (is_dse()) {
-    std::cout << "  " << "DSE Version: " << CCM::DseVersion(server_version()).to_string() << std::endl;
-    if (dse_credentials() == CCM::DseCredentialsType::USERNAME_PASSWORD) {
-      std::cout << "      Username: " << dse_username() << std::endl;
-      std::cout << "      Password: " << dse_password() << std::endl;
-    } else {
-      std::cout << "      Using INI file for DSE download authentication" << std::endl;
+    std::cout << "  DSE Version: " << CCM::DseVersion(server_version()).to_string() << std::endl;
+    if (!use_install_dir()) {
+      if (dse_credentials() == CCM::DseCredentialsType::USERNAME_PASSWORD) {
+        std::cout << "      Username: " << dse_username() << std::endl;
+        std::cout << "      Password: " << dse_password() << std::endl;
+      } else {
+        std::cout << "      Using INI file for DSE download authentication" << std::endl;
+      }
     }
   } else {
-    std::cout << "  " << "Cassandra Version: " << server_version().to_string() << std::endl;
+    std::cout << "  Cassandra Version: " << server_version().to_string() << std::endl;
   }
-  if (use_git()) {
-    std::cout << "      Using " << (is_dse() ? "GitHub" : "ASF") << " repository" << std::endl;
-    if (!branch_tag_.empty()) {
-      std::cout << "          Using branch/tag: " << branch_tag_ << std::endl;
+  if (use_install_dir()) {
+    std::cout << "    Using installation directory [" << install_dir() << "]" << std::endl;
+  } else {
+    if (use_git()) {
+      std::cout << "      Using " << (is_dse() ? "GitHub" : "ASF") << " repository" << std::endl;
+      if (!branch_tag_.empty()) {
+        std::cout << "          Using branch/tag: " << branch_tag_ << std::endl;
+      }
     }
   }
   std::cout << "  CCM Cluster Prefix: " << cluster_prefix() << std::endl;
@@ -339,6 +357,14 @@ const std::string& Options::branch_tag() {
   return branch_tag_;
 }
 
+bool Options::use_install_dir() {
+  return use_install_dir_;
+}
+
+const std::string& Options::install_dir() {
+  return install_dir_;
+}
+
 const std::string& Options::cluster_prefix() {
   return cluster_prefix_;
 }
@@ -387,7 +413,8 @@ SharedPtr<CCM::Bridge> Options::ccm() {
   return new CCM::Bridge( \
     Options::server_version(),
     Options::use_git(), Options::branch_tag(), \
-    Options::is_dse(), CCM::DSE_WORKLOAD_CASSANDRA, \
+    Options::use_install_dir(), Options::install_dir(), \
+    Options::is_dse(), CCM::Bridge::DEFAULT_DSE_WORKLOAD, \
     Options::cluster_prefix(), \
     Options::dse_credentials(), \
     Options::dse_username(), Options::dse_password(), \

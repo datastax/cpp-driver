@@ -7,10 +7,19 @@
 
 #include "graph.hpp"
 
-#include "external_types.hpp"
-
+#include <map_iterator.hpp>
+#include <request_handler.hpp>
 #include <serialization.hpp> // cass::encode_int64()
+#include <session.hpp>
+#include <query_request.hpp>
+#include <value.hpp>
+#include <logger.hpp>
+
 #include <assert.h>
+
+using cass::Logger;
+
+namespace {
 
 static const DseGraphResult* find_member(const DseGraphResult* result,
                                          const char* name, size_t expected_index) {
@@ -24,11 +33,107 @@ static const DseGraphResult* find_member(const DseGraphResult* result,
   return i != result->MemberEnd() ? DseGraphResult::to(&i->value) : NULL;
 }
 
+struct GraphAnalyticsRequest {
+  GraphAnalyticsRequest(cass::Session* session,
+                        cass::ResponseFuture* future,
+                        const cass::Statement* statement)
+    : session(session)
+    , future(future)
+    , statement(statement) { }
+
+  cass::Session* session;
+  cass::SharedRefPtr<cass::ResponseFuture> future;
+  cass::SharedRefPtr<const cass::Statement> statement;
+};
+
+void graph_analytics_callback(CassFuture* future, void* data) {
+  GraphAnalyticsRequest* request = static_cast<GraphAnalyticsRequest*>(data);
+
+  cass::ResponseFuture* response_future = static_cast<cass::ResponseFuture*>(future->from());
+  cass::Future::Error* error = response_future->error();
+  if (error != NULL) {
+    request->future->set_error_with_address(response_future->address(),
+                                            error->code, error->message);
+  } else  {
+    request->future->set_response(response_future->address(),
+                                  response_future->response());
+  }
+  delete request;
+}
+
+void graph_analytics_lookup_callback(CassFuture* future, void* data) {
+  GraphAnalyticsRequest* request = static_cast<GraphAnalyticsRequest*>(data);
+
+  cass::ResponseFuture* response_future = static_cast<cass::ResponseFuture*>(future->from());
+  cass::ResultResponse* response = static_cast<cass::ResultResponse*>(response_future->response().get());
+
+  cass::Address preferred_address;
+  bool use_preferred_address = response->row_count() > 0;
+
+  if (use_preferred_address) {
+    const cass::Value* value = response->first_row().get_by_name("result");
+    if (value == NULL ||
+        !value->is_map() ||
+        !cass::is_string_type(value->primary_value_type()) ||
+        !cass::is_string_type(value->secondary_value_type())) {
+      LOG_ERROR("The 'result' column is either not present or is not the "
+                "expected type 'map<text, text>' in analytics master lookup "
+                "response.");
+      use_preferred_address = false;
+    } else {
+      cass::StringRef location;
+      cass::MapIterator iterator(value);
+      while(iterator.next()) {
+        if (iterator.key()->to_string_ref() == "location") {
+          location = iterator.value()->to_string_ref();
+          location = location.substr(0, location.find(":"));
+        }
+      }
+
+      if (!cass::Address::from_string(location.to_string(),
+                                      request->session->config().port(),
+                                      &preferred_address)) {
+        LOG_ERROR("The 'location' map entry's value is not a valid address in "
+                  "analytics master lookup response.");
+        use_preferred_address = false;
+      }
+    }
+  }
+
+  if (!use_preferred_address) {
+    LOG_INFO("Unable to determine the master node's address for the "
+             "analytics query. Using a coordinator node to route request...");
+  }
+
+  cass::Future::Ptr request_future(
+        request->session->execute(request->statement,
+                                  use_preferred_address ? &preferred_address : NULL));
+  request_future->set_callback(graph_analytics_callback, data);
+}
+
+} // namepsace
+
 extern "C" {
 
 CassFuture* cass_session_execute_dse_graph(CassSession* session,
                                            const DseGraphStatement* statement) {
-  return cass_session_execute(session, statement->wrapped());
+  if (statement->graph_source() == DSE_GRAPH_ANALYTICS_SOURCE) {
+    cass::ResponseFuture* future = new cass::ResponseFuture();
+
+    cass::Future::Ptr request_future(
+          session->execute(
+            cass::Request::ConstPtr(
+              new cass::QueryRequest(DSE_LOOKUP_ANALYTICS_GRAPH_SERVER))));
+    request_future->set_callback(graph_analytics_lookup_callback,
+                                 new GraphAnalyticsRequest(session,
+                                                           future,
+                                                           statement->wrapped()->from()));
+
+    future->inc_ref();
+    return CassFuture::to(future);
+  } else {
+    return cass_session_execute(session, statement->wrapped());
+  }
 }
 
 DseGraphResultSet* cass_future_get_dse_graph_resultset(CassFuture* future) {

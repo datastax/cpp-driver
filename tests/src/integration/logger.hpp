@@ -51,11 +51,21 @@ public:
   void add_critera(const std::string& criteria);
 
   /**
+   * Clear criteria from the search criteria for incoming log messages
+   */
+  void clear_critera();
+
+  /**
    * Get the number of log messages that matched the search criteria
    *
    * @return Number of matched log messages
    */
   size_t get_count();
+
+  /**
+   * Clear the logging criteria and reset the count
+   */
+  void reset();
 
 private:
   /**

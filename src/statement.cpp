@@ -7,8 +7,9 @@
 
 #include "dse.h"
 
-#include "external_types.hpp"
 #include "serialization.hpp"
+#include "line_string.hpp"
+#include "polygon.hpp"
 
 namespace dse {
 

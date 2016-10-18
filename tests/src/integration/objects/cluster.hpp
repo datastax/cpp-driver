@@ -32,6 +32,14 @@ public:
     : Object<CassCluster, cass_cluster_free>(cass_cluster_new()) {}
 
   /**
+   * Create the cluster for the builder object
+   *
+   * @param cluster Already defined cluster object to utilize
+   */
+  Cluster(CassCluster* cluster)
+    : Object<CassCluster, cass_cluster_free>(cluster) {}
+
+  /**
    * Destroy the cluster
    */
   virtual ~Cluster() {};
@@ -43,6 +51,20 @@ public:
    */
   static Cluster build() {
     return Cluster();
+  }
+
+  /**
+   * Sets the amount of time between heartbeat messages and controls the amount
+   * of time the connection must be idle before sending heartbeat messages. This
+   * is useful for preventing intermediate network devices from dropping
+   * connections
+   *
+   * @param interval_s Heartbeat time interval (in seconds); 0 to disable
+   *                   heartbeat messages (default: 30s)
+   */
+  Cluster& with_connection_heartbeat_interval(unsigned int interval_s = 30) {
+    cass_cluster_set_connection_heartbeat_interval(get(), interval_s);
+    return *this;
   }
 
   /**
@@ -88,6 +110,30 @@ public:
   Cluster& with_protocol_version(int protocol_version) {
     EXPECT_EQ(CASS_OK, cass_cluster_set_protocol_version(get(),
       protocol_version));
+    return *this;
+  }
+
+  /**
+   * Enable/Disable the randomization of the contact points list
+   *
+   * @param enable True if contact points should be randomized false otherwise
+   *               (default: true)
+   * @return Cluster object
+   */
+  Cluster& with_randomized_contact_points(bool enable = true) {
+    cass_cluster_set_use_randomized_contact_points(get(),
+      (enable == true ? cass_true : cass_false));
+    return *this;
+  }
+
+  /**
+   * Sets the timeout (in milliseconds) for waiting for a response from a node
+   *
+   * @param timeout_ms Request timeout in milliseconds; 0 to disable timeout
+   *                   (default: 12s)
+   */
+  Cluster& with_request_timeout(unsigned int timeout_ms = 12000) {
+    cass_cluster_set_request_timeout(get(), timeout_ms);
     return *this;
   }
 

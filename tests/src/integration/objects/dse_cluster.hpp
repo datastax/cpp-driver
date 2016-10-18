@@ -23,7 +23,7 @@ public:
    * Create the DSE cluster for the builder object
    */
   DseCluster()
-    : Cluster() {}
+    : Cluster(cass_cluster_new_dse()) {}
 
   /**
    * Destroy the DSE cluster

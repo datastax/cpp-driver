@@ -149,6 +149,18 @@ protected:
    */
   bool is_ssl_;
   /**
+   * Setting for v-nodes usage. True if v-nodes should be enabled; false
+   * otherwise.
+   * (DEFAULT: false)
+   */
+  bool is_with_vnodes_;
+  /**
+   * Setting for randomized contact points. True if randomized contact points
+   * should be enabled; false otherwise.
+   * (DEFAULT: false)
+   */
+  bool is_randomized_contact_points_;
+  /**
    * Setting for schema metadata. True if schema metadata should be enabled;
    * false otherwise.
    * (DEFAULT: false)
@@ -161,6 +173,14 @@ protected:
    */
   bool is_ccm_start_requested_;
   /**
+   * Setting to determine if CCM cluster should be started normally or nodes
+   * should be started individually (and in order). True if CCM cluster should
+   * be started by starting all node individually; false otherwise (start
+   * cluster normally).
+   * (DEFAULT: false)
+   */
+  bool is_ccm_start_node_individually_;
+  /**
    * Setting to determine if session connection should be established. True if
    * session connection should be established; false otherwise.
    * (DEFAULT: true)
@@ -169,7 +189,7 @@ protected:
   /**
    * Workload to apply to the cluster
    */
-  CCM::DseWorkload dse_workload_;
+  std::vector<CCM::DseWorkload> dse_workload_;
   /**
    * Name of the test case/suite
    */
@@ -191,6 +211,21 @@ protected:
    * provided cluster object.
    */
   virtual void connect();
+
+  /**
+   * Get the default cluster configuration
+   *
+   * @return Cluster object (default)
+   */
+  virtual Cluster default_cluster();
+
+  /**
+   * Enable/Disable tracing on the cluster
+   *
+   * @param enable True if tracing should be enabled on the cluster; false
+   *               otherwise (default: true)
+   */
+  virtual void enable_cluster_tracing(bool enable = true);
 
   /**
    * Generate the contact points for the cluster

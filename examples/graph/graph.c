@@ -218,7 +218,7 @@ void execute_graph_query_and_print(CassSession* session,
 int main() {
   /* Setup and connect to cluster */
   CassFuture* connect_future = NULL;
-  CassCluster* cluster = cass_cluster_new();
+  CassCluster* cluster = cass_cluster_new_dse();
   CassSession* session = cass_session_new();
 
   cass_log_set_level(CASS_LOG_INFO);

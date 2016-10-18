@@ -153,6 +153,21 @@ public:
    * @return Trimmed string
    */
   static std::string trim(const std::string& input);
+
+  /**
+   * Wait for the port on a node to become available
+   *
+   * @param ip_address IPv4 address of node
+   * @param port Port to connect to
+   * @param number_of_retries Number of retries to attempt to establish the
+   *                          connection on the IP:PORT (DEFAULT: 100)
+   * @param retry_delay_ms Retry delay (in milliseconds) before attempting
+   *                       reconnection
+   * @return True if port on IP address is available; false otherwise
+   */
+  static bool wait_for_port(const std::string& ip_address, unsigned short port,
+    unsigned int number_of_retries = 100,
+    unsigned int retry_delay_ms = 100);
 };
 
 } // namespace test
