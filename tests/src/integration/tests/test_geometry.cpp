@@ -30,7 +30,7 @@ public:
     CHECK_VERSION(5.0.0);
 
     // Call the parent setup function
-    dse_workload_ = CCM::DSE_WORKLOAD_GRAPH;
+    dse_workload_.push_back(CCM::DSE_WORKLOAD_GRAPH);
     DseIntegration::SetUp();
 
     // Assign the primary key table name
