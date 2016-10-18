@@ -220,10 +220,14 @@ void MultipleRequestCallback::InternalCallback::on_internal_timeout() {
 }
 
 void SimpleRequestCallback::on_start() {
-  timer_.start(connection()->loop(),
-               request()->request_timeout_ms(connection()->config().request_timeout_ms()),
-               this,
-               on_timeout);
+  uint64_t request_timeout_ms = request()->request_timeout_ms(
+                                  connection()->config().request_timeout_ms());
+  if (request_timeout_ms > 0) { // 0 means no timeout
+    timer_.start(connection()->loop(),
+                 request_timeout_ms,
+                 this,
+                 on_timeout);
+  }
 }
 
 void SimpleRequestCallback::on_set(ResponseMessage* response) {

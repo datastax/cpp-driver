@@ -97,10 +97,14 @@ void RequestHandler::schedule_next_execution(const Host::Ptr& current_host) {
 
 void RequestHandler::start_request(IOWorker* io_worker) {
   io_worker_ = io_worker;
-  timer_.start(io_worker->loop(),
-               request_->request_timeout_ms(io_worker->config().request_timeout_ms()),
-               this,
-               on_timeout);
+  uint64_t request_timeout_ms = request_->request_timeout_ms(
+                                  io_worker->config().request_timeout_ms());
+  if (request_timeout_ms > 0) { // 0 means no timeout
+    timer_.start(io_worker->loop(),
+                 request_timeout_ms,
+                 this,
+                 on_timeout);
+  }
 }
 
 void RequestHandler::set_response(const Host::Ptr& host,
