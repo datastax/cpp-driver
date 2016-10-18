@@ -36,15 +36,17 @@ rewrites:
   - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.i386.rpm: http://dl.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
   - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.x86_64.rpm: http://dl.fedoraproject.org/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm
 versions:
-  - name: v2.4
+  - name: 2.5
     ref: HEAD
-  - name: v2.3
+  - name: 2.4
+    ref: 2b94bd1119c4bc6e005ce191cf7ec0fba6d823e9
+  - name: 2.3
     ref: 6f72bb8b5bd251e63846ebc9f0fba7adbc8c7e72
-  - name: v2.2
+  - name: 2.2
     ref: b4bb435129bab533612fa2caf194555fa943f925
-  - name: v2.1
+  - name: 2.1
     ref: 2c97015988e0a9e9342b233db5f37ca9386e4d7d
-  - name: v2.0
+  - name: 2.0
     ref: fc9c25a3db879894d40306642864413ef8f7d979
-  - name: v1.0
+  - name: 1.0
     ref: b2146f44ba5df28e37af28031f7609342023b329

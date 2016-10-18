@@ -1,3 +1,25 @@
+2.5.0
+===========
+October 20, 2016
+
+Features
+--------
+* Added constant specultive exectution which preemptively runs mutiple of the
+  same query in an effort to smooth out latency spikes.
+* Added idempotent queries to support speculative execution and allow automatic
+  retries. Use `cass_statement_set_is_idempotent()` or
+  `cass_batch_set_is_idempotent()`.
+* SSL can be now be used without initializing the underlying implmentation
+  (e.g. OpenSSL). Use `cass_ssl_new_no_lib_init()`.
+
+Other
+--------
+* Fixed an issue where a connection is incorrectly marked READY after it''s
+  already been marked DEFUNCT (CPP-401)
+* Fixed pointer aliasing issues in `cass::Address` (CPP-406)
+* Fixed an issue where random partitioner hash values were being incorrectly
+  generated (CPP-403)
+
 2.4.3
 ===========
 August 22, 2016
