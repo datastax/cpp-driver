@@ -30,6 +30,7 @@ public:
     CHECK_VERSION(5.0.0);
 
     // Call the parent setup function
+    dse_workload_ = CCM::DSE_WORKLOAD_GRAPH;
     DseIntegration::SetUp();
 
     // Assign the primary key table name
@@ -90,6 +91,48 @@ protected:
     Result result = session_.execute(select_statement);
     ASSERT_EQ(1u, result.row_count());
     ASSERT_EQ(value, C(result.first_row(), 0));
+  }
+
+  /**
+   * Assert and validate the geo type
+   *
+   * @param value Value to assert
+   * @param statement Graph statement to execute
+   */
+  void assert_and_validate_geo_type(C value,
+    test::driver::DseGraphStatement statement) {
+    test::driver::DseGraphResultSet result_set = dse_session_.execute(statement);
+    CHECK_FAILURE;
+    ASSERT_EQ(1, result_set.count());
+    test::driver::DseGraphResult result = result_set.next();
+    ASSERT_EQ(value, result.value<C>());
+  }
+
+  /**
+   * Assert and validate the geo type values in graph array
+   *
+   * @param expected_values Values to assert in graph array
+   * @param statement Graph statement to execute
+   */
+  void assert_and_validate_geo_type(std::vector<C> expected_values,
+    test::driver::DseGraphStatement statement) {
+    // Execute the statement and get the result
+    test::driver::DseGraphResultSet result_set = dse_session_.execute(statement);
+    CHECK_FAILURE;
+    ASSERT_EQ(1, result_set.count());
+    test::driver::DseGraphResult result = result_set.next();
+    ASSERT_TRUE(result.is_type<test::driver::DseGraphArray>());
+
+    // Gather the values from the graph array result
+    std::vector<C> values;
+    for (size_t i = 0; i < result.element_count(); ++i) {
+      C value = result.element(i).value<C>();
+      CHECK_FAILURE;
+      values.push_back(value);
+    }
+    ASSERT_EQ(expected_values.size(), values.size());
+    ASSERT_TRUE(std::equal(expected_values.begin(),
+      expected_values.begin() + expected_values.size(), values.begin()));
   }
 
   /**
@@ -212,8 +255,77 @@ TYPED_TEST_P(GeometryIntegrationTest, PreparedStatement) {
   }
 }
 
+/**
+ * Perform insert using a graph array
+ *
+ * This test will perform multiple inserts using a graph statement with the
+ * parameterized type values statically assigned against a single node cluster.
+ *
+ * @jira_ticket CPP-400
+ * @test_category dse:graph
+ * @since 1.0.0
+ * @dse_version 5.0.0
+ * @expected_result Geo type values are inserted and validated via graph
+ *                  operations using a graph array (attached to a graph object)
+ */
+TYPED_TEST_P(GeometryIntegrationTest, GraphArray) {
+  CHECK_VERSION(5.0.0);
+
+  // Iterate over all the values in the geo type and add them to a graph array
+  test::driver::DseGraphArray graph_array;
+  for (size_t i = 0; i < GeometryIntegrationTest<TypeParam>::values_.size(); ++i) {
+    // Get the value of the geo type being used
+    TypeParam value = GeometryIntegrationTest<TypeParam>::values_[i];
+
+    // Add the value to the graph array
+    graph_array.add<TypeParam>(value);
+  }
+
+  // Create the statement to insert the geo type using an object with array
+  test::driver::DseGraphObject graph_object;
+  graph_object.add<test::driver::DseGraphArray>("geo_type", graph_array);
+  test::driver::DseGraphStatement graph_statement("[geo_type]");
+  graph_statement.bind(graph_object);
+
+  // Assert/Validate the geo type using a graph statement
+  this->assert_and_validate_geo_type(GeometryIntegrationTest<TypeParam>::values_,
+    graph_statement);
+}
+
+/**
+ * Perform insert using a graph object
+ *
+ * This test will perform multiple inserts using a graph statement with the
+ * parameterized type values statically assigned against a single node cluster.
+ *
+ * @jira_ticket CPP-400
+ * @test_category dse:graph
+ * @since 1.0.0
+ * @dse_version 5.0.0
+ * @expected_result Geo type values are inserted and validated via graph
+ *                  operations using a graph object
+ */
+TYPED_TEST_P(GeometryIntegrationTest, GraphObject) {
+  CHECK_VERSION(5.0.0);
+
+  // Iterate over all the values in the geo type
+  for (size_t i = 0; i < GeometryIntegrationTest<TypeParam>::values_.size(); ++i) {
+    // Get the value of the geo type being used
+    TypeParam value = GeometryIntegrationTest<TypeParam>::values_[i];
+
+    // Create the graph statement to insert the geo type using an object
+    test::driver::DseGraphObject graph_object;
+    graph_object.add<TypeParam>("geo_type", value);
+    test::driver::DseGraphStatement graph_statement("[geo_type]");
+    graph_statement.bind(graph_object);
+
+    // Assert/Validate the geo type using a graph statement
+    this->assert_and_validate_geo_type(value, graph_statement);
+  }
+}
+
 // Register all test cases
-REGISTER_TYPED_TEST_CASE_P(GeometryIntegrationTest, SimpleStatement, PreparedStatement);
+REGISTER_TYPED_TEST_CASE_P(GeometryIntegrationTest, SimpleStatement, PreparedStatement, GraphArray, GraphObject);
 
 // Instantiate the test case for all the geo types
 typedef testing::Types<test::driver::DsePoint, test::driver::DseLineString, test::driver::DsePolygon> GeoTypes;
@@ -226,7 +338,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(Geometry, GeometryIntegrationTest, GeoTypes);
  * geo type point values specified against a single node cluster.
  *
  * @jira_ticket CPP-351
- * @test_category dse:geometric
+ * @jira_ticket CPP-400
+ * @test_category dse:geospatial
  * @since 1.0.0
  * @expected_result Geo type values are inserted and validated
  */
@@ -247,7 +360,8 @@ template<> const std::vector<test::driver::DsePoint> GeometryIntegrationTest<tes
  * geo type line string values specified against a single node cluster.
  *
  * @jira_ticket CPP-351
- * @test_category dse:geometric
+ * @jira_ticket CPP-400
+ * @test_category dse:geospatial
  * @since 1.0.0
  * @expected_result Geo type values are inserted and validated
  */
@@ -269,7 +383,8 @@ template<> const std::vector<test::driver::DseLineString> GeometryIntegrationTes
  * geo type polygon values specified against a single node cluster.
  *
  * @jira_ticket CPP-351
- * @test_category dse:geometric
+ * @jira_ticket CPP-400
+ * @test_category dse:geospatial
  * @since 1.0.0
  * @expected_result Geo type values are inserted and validated
  */

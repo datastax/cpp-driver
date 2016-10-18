@@ -11,7 +11,7 @@
 
 #include "objects/object_base.hpp"
 
-#include "values.hpp"
+#include "dse_values.hpp"
 
 #include <gtest/gtest.h>
 
@@ -67,6 +67,15 @@ public:
     : Object< ::DseGraphArray, dse_graph_array_free>(array) {}
 
   /**
+   * Destructor to clean up the shared reference pointers that may be associated
+   * with the array object
+   */
+  ~DseGraphArray() {
+    line_strings_.clear();
+    polygons_.clear();
+  }
+
+  /**
    * Finish (Complete/Close) a DSE graph array object
    */
   void finish() {
@@ -78,6 +87,8 @@ public:
    */
   void reset() {
     finish();
+    line_strings_.clear();
+    polygons_.clear();
     dse_graph_array_reset(get());
   }
 
@@ -92,6 +103,15 @@ public:
   }
 
 private:
+  /**
+   * Line strings associated with the graph array object
+   */
+  std::vector<DseLineString::Native> line_strings_;
+  /**
+   * Polygons associated with the graph array object
+   */
+  std::vector<DsePolygon::Native> polygons_;
+
   /**
    * Add a object to an array object
    *
@@ -170,6 +190,53 @@ inline void DseGraphArray::add<Text>(Text value) {
 template<>
 inline void DseGraphArray::add<std::string>(std::string value) {
   add<Varchar>(Varchar(value));
+}
+
+/**
+ * Add a line string to an array object
+ *
+ * @param value Line string value to apply
+ */
+template<>
+inline void DseGraphArray::add<DseLineString>(DseLineString value) {
+  if (value.is_null()) {
+    dse_graph_array_add_null(get());
+  } else {
+    DseLineString::Native line_string = value.get();
+    line_strings_.push_back(line_string);
+    ASSERT_EQ(CASS_OK, dse_graph_array_add_line_string(get(), line_string.get()));
+  }
+}
+
+/**
+ * Add a point to an array object
+ *
+ * @param value Point value to apply
+ */
+template<>
+inline void DseGraphArray::add<DsePoint>(DsePoint value) {
+  if (value.is_null()) {
+    dse_graph_array_add_null(get());
+  } else {
+    ASSERT_EQ(CASS_OK, dse_graph_array_add_point(get(), value.value().x,
+      value.value().y));
+  }
+}
+
+/**
+ * Add a polygon to an array object
+ *
+ * @param value Polygon value to apply
+ */
+template<>
+inline void DseGraphArray::add<DsePolygon>(DsePolygon value) {
+  if (value.is_null()) {
+    dse_graph_array_add_null(get());
+  } else {
+    DsePolygon::Native polygon = value.get();
+    polygons_.push_back(polygon);
+    ASSERT_EQ(CASS_OK, dse_graph_array_add_polygon(get(), polygon.get()));
+  }
 }
 
 } // namespace driver

@@ -10,12 +10,15 @@
 
 #include "dse.h"
 
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
+#include "line_string.hpp"
+#include "polygon.hpp"
 
-#include <scoped_ptr.hpp>
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 #include <external.hpp>
+#include <scoped_ptr.hpp>
 
 #include <string>
 #include <vector>
@@ -98,6 +101,7 @@ private:
   int64_t request_timeout_ms_;
 };
 
+
 class GraphWriter : private rapidjson::Writer<rapidjson::StringBuffer> {
 public:
   GraphWriter()
@@ -122,11 +126,20 @@ public:
     Key(key, static_cast<rapidjson::SizeType>(length));
   }
 
-  bool add_writer(const GraphWriter* writer, rapidjson::Type type) {
+  void add_point(cass_double_t x, cass_double_t y);
+
+  void add_line_string(const dse::LineString* line_string) {
+    String(line_string->to_wkt().c_str());
+  }
+
+  void add_polygon(const dse::Polygon* polygon) {
+    String(polygon->to_wkt().c_str());
+  }
+
+  void add_writer(const GraphWriter* writer, rapidjson::Type type) {
     size_t length = writer->buffer_.GetSize();
     Prefix(type);
     memcpy(os_->Push(length), writer->buffer_.GetString(), length);
-    return true;
   }
 
   void reset() {
@@ -246,7 +259,7 @@ public:
   const GraphResult* next();
 
 private:
-  rapidjson::Document document;
+  rapidjson::Document document_;
   std::string json_;
   CassIterator* rows_;
   const CassResult* result_;

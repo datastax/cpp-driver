@@ -11,8 +11,7 @@
 
 #include "dse.h"
 
-#include "dse_objects.hpp"
-#include "dse_integration.hpp"
+//#include "objects.hpp"
 
 namespace test {
 namespace driver {
@@ -63,6 +62,12 @@ public:
   DsePoint(const CassValue* value)
     : is_null_(false) {
     initialize(value);
+    set_point_string();
+  }
+
+  DsePoint(const ::DseGraphResult* result)
+    : is_null_(false) {
+    initialize(result);
     set_point_string();
   }
 
@@ -217,6 +222,14 @@ private:
   void initialize(const CassRow* row, size_t column_index) {
     ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
     initialize(cass_row_get_column(row, column_index));
+  }
+
+  void initialize(const ::DseGraphResult* result) {
+    if (dse_graph_result_is_null(result)) {
+      is_null_ = true;
+    } else {
+      ASSERT_EQ(CASS_OK, dse_graph_result_as_point(result, &point_.x, &point_.y));
+    }
   }
 
   /**

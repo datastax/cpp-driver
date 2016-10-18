@@ -11,14 +11,17 @@
 #include "dse.h"
 
 #include "serialization.hpp"
+#include "wkt.hpp"
 
 #include <external.hpp>
 
+#include <string>
+
 namespace dse {
 
-class LineSegment {
+class LineString {
 public:
-  LineSegment() {
+  LineString() {
     reset();
   }
 
@@ -54,52 +57,75 @@ public:
     return CASS_OK;
   }
 
+  std::string to_wkt() const;
+
 private:
   cass_uint32_t num_points_;
   Bytes bytes_;
 };
 
-class LineSegmentIterator {
+class LineStringIterator {
 public:
-  LineSegmentIterator()
-    : position_(NULL)
-    , points_end_(NULL)
-    , byte_order_(WKB_BYTE_ORDER_LITTLE_ENDIAN)
-    , num_points_(0) { }
+  LineStringIterator()
+    : num_points_(0)
+    , iterator_(NULL) { }
 
   cass_uint32_t num_points() const { return num_points_; }
 
-  void reset(cass_uint32_t num_points,
-             const cass_byte_t* points_begin,
-             const cass_byte_t* points_end,
-             WkbByteOrder byte_order) {
-    num_points_ = num_points;
-    position_ = points_begin;
-    points_end_ = points_end;
-    byte_order_ = byte_order;
-  }
+  CassError reset_binary(const CassValue* value);
+  CassError reset_text(const char* text, size_t size);
 
   CassError next_point(cass_double_t* x, cass_double_t* y) {
-    if (position_ < points_end_) {
-      *x = decode_double(position_, byte_order_);
-      position_ += sizeof(cass_double_t);
-      *y = decode_double(position_, byte_order_);
-      position_ += sizeof(cass_double_t);
-      return CASS_OK;
+    if (iterator_ == NULL) {
+      return CASS_ERROR_LIB_INVALID_STATE;
     }
-    return CASS_ERROR_LIB_INVALID_STATE;
+    return iterator_->next_point(x, y);
   }
 
 private:
-  const cass_byte_t* position_;
-  const cass_byte_t* points_end_;
-  WkbByteOrder byte_order_;
+  class Iterator {
+  public:
+    virtual CassError next_point(cass_double_t *x, cass_double_t *y) = 0;
+  };
+
+  class BinaryIterator : public Iterator {
+  public:
+    BinaryIterator() { }
+    BinaryIterator(const cass_byte_t* points_begin,
+                   const cass_byte_t* points_end,
+                   WkbByteOrder byte_order)
+      : position_(points_begin)
+      , points_end_(points_end)
+      , byte_order_(byte_order) { }
+
+    virtual CassError next_point(cass_double_t *x, cass_double_t *y);
+
+  private:
+    const cass_byte_t* position_;
+    const cass_byte_t* points_end_;
+    WkbByteOrder byte_order_;
+  };
+
+  class TextIterator : public Iterator {
+  public:
+    TextIterator() { }
+    TextIterator(const char* text, size_t size);
+
+    virtual CassError next_point(cass_double_t *x, cass_double_t *y);
+
+  private:
+    WktLexer lexer_;
+  };
+
   cass_uint32_t num_points_;
+  Iterator* iterator_;
+  BinaryIterator binary_iterator_;
+  TextIterator text_iterator_;
 };
 
 } // namespace dse
 
-EXTERNAL_TYPE(dse::LineSegment, DseLineString)
-EXTERNAL_TYPE(dse::LineSegmentIterator, DseLineStringIterator)
+EXTERNAL_TYPE(dse::LineString, DseLineString)
+EXTERNAL_TYPE(dse::LineStringIterator, DseLineStringIterator)
 
 #endif

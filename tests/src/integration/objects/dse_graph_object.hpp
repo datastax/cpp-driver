@@ -12,7 +12,7 @@
 #include "objects/object_base.hpp"
 #include "objects/dse_graph_array.hpp"
 
-#include "values.hpp"
+#include "dse_values.hpp"
 
 #include <gtest/gtest.h>
 
@@ -67,6 +67,15 @@ public:
     : Object< ::DseGraphObject, dse_graph_object_free>(object) {}
 
   /**
+   * Destructor to clean up the shared reference pointers that may be associated
+   * with the graph object
+   */
+  ~DseGraphObject() {
+    line_strings_.clear();
+    polygons_.clear();
+  }
+
+  /**
    * Finish (Complete/Close) a DSE graph object
    */
   void finish() {
@@ -78,6 +87,8 @@ public:
    */
   void reset() {
     finish();
+    line_strings_.clear();
+    polygons_.clear();
     dse_graph_object_reset(get());
   }
 
@@ -93,6 +104,15 @@ public:
   }
 
 private:
+  /**
+   * Line strings associated with the graph object
+   */
+  std::vector<DseLineString::Native> line_strings_;
+  /**
+   * Polygons associated with the graph object
+   */
+  std::vector<DsePolygon::Native> polygons_;
+
   /**
    * Add a array to an object with the specified name
    *
@@ -180,6 +200,46 @@ inline void DseGraphObject::add<Text>(const std::string& name, Text value) {
 template<>
 inline void DseGraphObject::add<std::string>(const std::string& name, std::string value) {
   add<Varchar>(name, Varchar(value));
+}
+
+/**
+ * Add a line string to an object with the specified name
+ *
+ * @param name Name to apply object value to
+ * @param value Line string value to apply
+ */
+template<>
+inline void DseGraphObject::add<DseLineString>(const std::string& name, DseLineString value) {
+  DseLineString::Native line_string = value.get();
+  line_strings_.push_back(line_string);
+  ASSERT_EQ(CASS_OK, dse_graph_object_add_line_string(get(), name.c_str(),
+    line_string.get()));
+}
+
+/**
+ * Add a point to an object with the specified name
+ *
+ * @param name Name to apply object value to
+ * @param value Point value to apply
+ */
+template<>
+inline void DseGraphObject::add<DsePoint>(const std::string& name, DsePoint value) {
+  ASSERT_EQ(CASS_OK, dse_graph_object_add_point(get(), name.c_str(),
+    value.value().x, value.value().y));
+}
+
+/**
+ * Add a polygon to an object with the specified name
+ *
+ * @param name Name to apply object value to
+ * @param value Polygon value to apply
+ */
+template<>
+inline void DseGraphObject::add<DsePolygon>(const std::string& name, DsePolygon value) {
+  DsePolygon::Native polygon = value.get();
+  polygons_.push_back(polygon);
+  ASSERT_EQ(CASS_OK, dse_graph_object_add_polygon(get(), name.c_str(),
+    polygon.get()));
 }
 
 } // namespace driver
