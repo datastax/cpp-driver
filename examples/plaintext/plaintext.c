@@ -10,14 +10,18 @@
 #include <stdio.h>
 #include <string.h>
 
-int main() {
+int main(int argc, char* argv[]) {
   /* Setup and connect to cluster */
   CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
+  char* hosts = "127.0.0.1,127.0.0.2,127.0.0.3";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
 
   /* Add contact points */
-  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, hosts);
 
   cass_cluster_set_dse_plaintext_authenticator(cluster, "cassandra", "cassandra");
 
