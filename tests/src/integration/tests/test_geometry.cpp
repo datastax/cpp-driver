@@ -103,7 +103,7 @@ protected:
     test::driver::DseGraphStatement statement) {
     test::driver::DseGraphResultSet result_set = dse_session_.execute(statement);
     CHECK_FAILURE;
-    ASSERT_EQ(1, result_set.count());
+    ASSERT_EQ(1ul, result_set.count());
     test::driver::DseGraphResult result = result_set.next();
     ASSERT_EQ(value, result.value<C>());
   }
@@ -119,7 +119,7 @@ protected:
     // Execute the statement and get the result
     test::driver::DseGraphResultSet result_set = dse_session_.execute(statement);
     CHECK_FAILURE;
-    ASSERT_EQ(1, result_set.count());
+    ASSERT_EQ(1ul, result_set.count());
     test::driver::DseGraphResult result = result_set.next();
     ASSERT_TRUE(result.is_type<test::driver::DseGraphArray>());
 

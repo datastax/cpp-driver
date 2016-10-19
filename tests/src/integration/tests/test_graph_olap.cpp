@@ -174,7 +174,7 @@ TEST_F(GraphOlapIntegrationTest, AnalyticsNodeTargeted) {
   std::vector<std::string> hosts;
   execute_query(12, "a", &hosts);
   CHECK_FAILURE;
-  ASSERT_EQ(1, hosts.size());
+  ASSERT_EQ(1ul, hosts.size());
   ASSERT_EQ(master_host_ip_address_, hosts[0]);
 }
 
