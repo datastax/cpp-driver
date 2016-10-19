@@ -263,7 +263,7 @@ CassError PolygonIterator::BinaryIterator::next_point(cass_double_t* x, cass_dou
 PolygonIterator::TextIterator::TextIterator(const char* text, size_t size)
   : state_(STATE_NUM_POINTS)
   , lexer_(text, size) {
-  WktLexer::Token token;
+  WktLexer::Token token; UNUSED_(token);
   // Skip over "POLYGON (" tokens
   token = lexer_.next_token(); assert(token == WktLexer::TK_TYPE_POLYGON);
   token = lexer_.next_token(); assert(token == WktLexer::TK_OPEN_PAREN);

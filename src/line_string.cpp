@@ -193,7 +193,7 @@ CassError LineStringIterator::BinaryIterator::next_point(cass_double_t* x, cass_
 
 LineStringIterator::TextIterator::TextIterator(const char* text, size_t size)
   : lexer_(text, size) {
-  WktLexer::Token token;
+  WktLexer::Token token; UNUSED_(token);
   // Skip over "LINESTRING (" tokens
   token = lexer_.next_token(); assert(token == WktLexer::TK_TYPE_LINESTRING);
   token = lexer_.next_token(); assert(token == WktLexer::TK_OPEN_PAREN);
