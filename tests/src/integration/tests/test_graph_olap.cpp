@@ -55,7 +55,7 @@ public:
      * master node.
      */
     Cluster cluster = Cluster::build()
-      .with_contact_points(contact_points_);
+      .with_contact_points(master_host_ip_address_);
     try {
       Session session = cluster.connect();
       session.execute(format_string(ALTER_DSE_LEASES_FORMAT,
