@@ -43,7 +43,7 @@
 #define DSE_VERSION_MAJOR 1
 #define DSE_VERSION_MINOR 0
 #define DSE_VERSION_PATCH 0
-#define DSE_VERSION_SUFFIX "rc1"
+#define DSE_VERSION_SUFFIX ""
 
 #ifdef __cplusplus
 extern "C" {
