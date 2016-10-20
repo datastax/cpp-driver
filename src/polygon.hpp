@@ -11,6 +11,11 @@
 #include "dse.h"
 
 #include "serialization.hpp"
+#include "wkt.hpp"
+
+#include <external.hpp>
+
+#include <string>
 
 namespace dse {
 
@@ -65,6 +70,8 @@ public:
     return finish_ring(); // Finish the last ring
   }
 
+  std::string to_wkt() const;
+
 private:
   CassError finish_ring() {
     if (ring_start_index_ > 0) {
@@ -95,63 +102,80 @@ private:
 
 public:
   PolygonIterator()
-    : state_(STATE_DONE)
-    , position_(NULL)
-    , rings_end_(NULL)
-    , byte_order_(WKB_BYTE_ORDER_LITTLE_ENDIAN)
-    , num_rings_(0) { }
+    : num_rings_(0)
+    , iterator_(NULL) { }
 
   cass_uint32_t num_rings() const { return num_rings_; }
-  State state() const { return state_; }
 
-  void reset(cass_uint32_t num_rings,
-             const cass_byte_t* rings_begin,
-             const cass_byte_t* rings_end,
-             WkbByteOrder byte_order) {
-    state_ = STATE_NUM_POINTS;
-    position_ = rings_begin;
-    rings_end_ = rings_end;
-    points_end_ = NULL;
-    byte_order_ = byte_order;
-    num_rings_ = num_rings;
-  }
+  CassError reset_binary(const CassValue* value);
+  CassError reset_text(const char* text, size_t size);
 
    CassError next_num_points(cass_uint32_t* num_points) {
-    if (state_ == STATE_NUM_POINTS) {
-      uint32_t n = *num_points = decode_uint32(position_, byte_order_);
-      position_ += sizeof(cass_uint32_t);
-      points_end_ = position_ + n * 2 * sizeof(cass_double_t);
-      state_ = STATE_POINTS;
-      return CASS_OK;
-    }
-    return CASS_ERROR_LIB_INVALID_STATE;
+     if (iterator_ == NULL) {
+       return CASS_ERROR_LIB_INVALID_STATE;
+     }
+     return iterator_->next_num_points(num_points);
   }
 
   CassError next_point(cass_double_t* x, cass_double_t* y) {
-    if (state_ == STATE_POINTS) {
-      *x = decode_double(position_, byte_order_);
-      position_ += sizeof(cass_double_t);
-      *y = decode_double(position_, byte_order_);
-      position_ += sizeof(cass_double_t);
-      if (position_ >= rings_end_) {
-        state_ = STATE_DONE;
-      } else if (position_ >= points_end_) {
-        state_ = STATE_NUM_POINTS;
-      }
-      return CASS_OK;
-    }
-    return CASS_ERROR_LIB_INVALID_STATE;
+     if (iterator_ == NULL) {
+       return CASS_ERROR_LIB_INVALID_STATE;
+     }
+     return iterator_->next_point(x, y);
   }
 
 private:
-  State state_;
-  const cass_byte_t* position_;
-  const cass_byte_t* rings_end_;
-  const cass_byte_t* points_end_;
-  WkbByteOrder byte_order_;
+  class Iterator {
+  public:
+    virtual CassError next_num_points(cass_uint32_t* num_points) = 0;
+    virtual CassError next_point(cass_double_t* x, cass_double_t* y) = 0;
+  };
+
+  class BinaryIterator : public Iterator {
+  public:
+    BinaryIterator() { }
+    BinaryIterator(const cass_byte_t* rings_begin,
+                   const cass_byte_t* rings_end,
+                   WkbByteOrder byte_order)
+      : state_(STATE_NUM_POINTS)
+      , position_(rings_begin)
+      , rings_end_(rings_end)
+      , points_end_(NULL)
+      , byte_order_(byte_order) { }
+
+    virtual CassError next_num_points(cass_uint32_t* num_points);
+    virtual CassError next_point(cass_double_t* x, cass_double_t* y);
+
+  private:
+    State state_;
+    const cass_byte_t* position_;
+    const cass_byte_t* rings_end_;
+    const cass_byte_t* points_end_;
+    WkbByteOrder byte_order_;
+  };
+
+  class TextIterator : public Iterator {
+  public:
+    TextIterator() { }
+    TextIterator(const char* text, size_t size);
+
+    virtual CassError next_num_points(cass_uint32_t* num_points);
+    virtual CassError next_point(cass_double_t* x, cass_double_t* y);
+
+  private:
+    State state_;
+    WktLexer lexer_;
+  };
+
   cass_uint32_t num_rings_;
+  Iterator* iterator_;
+  BinaryIterator binary_iterator_;
+  TextIterator text_iterator_;
 };
 
 } // namespace dse
+
+EXTERNAL_TYPE(dse::Polygon, DsePolygon)
+EXTERNAL_TYPE(dse::PolygonIterator, DsePolygonIterator)
 
 #endif

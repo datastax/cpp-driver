@@ -8,6 +8,7 @@
 #include "test_utils.hpp"
 
 #include "exception.hpp"
+#include "socket.hpp"
 
 #include <uv.h>
 
@@ -201,4 +202,22 @@ std::string test::Utils::trim(const std::string& input) {
     }
   }
   return result;
+}
+
+bool test::Utils::wait_for_port(const std::string& ip_address, unsigned short port,
+  unsigned int number_of_retries /*= 100*/,
+  unsigned int retry_delay_ms /*= 100*/) {
+  // Attempt establish a connection to the IP address and port of the node
+  for (unsigned int n = 0; n < number_of_retries; ++n) {
+    Socket socket;
+    try {
+      socket.establish_connection(ip_address, port);
+      return true;
+    } catch (...) {
+      msleep(retry_delay_ms);
+    }
+  }
+
+  // Unable to establish connection to node on port
+  return false;
 }

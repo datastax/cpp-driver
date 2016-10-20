@@ -43,7 +43,7 @@
 #define DSE_VERSION_MAJOR 1
 #define DSE_VERSION_MINOR 0
 #define DSE_VERSION_PATCH 0
-#define DSE_VERSION_SUFFIX "rc1"
+#define DSE_VERSION_SUFFIX ""
 
 #ifdef __cplusplus
 extern "C" {
@@ -169,7 +169,27 @@ typedef struct DsePolygonIterator_ DsePolygonIterator;
  ***********************************************************************************/
 
 /**
+ * Creates a new cluster with DSE specific settings.
  *
+ * @public @memberof CassCluster
+ *
+ * @return Returns a cluster that must be freed.
+ *
+ * @see cass_cluster_free()
+ */
+DSE_EXPORT CassCluster*
+cass_cluster_new_dse();
+
+/**
+ * Enables GSSAPI authentication for DSE clusters secured with the
+ * `DseAuthenticator`.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] service
+ * @param[in] principal
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
 cass_cluster_set_dse_gssapi_authenticator(CassCluster* cluster,
@@ -177,7 +197,17 @@ cass_cluster_set_dse_gssapi_authenticator(CassCluster* cluster,
                                           const char* principal);
 
 /**
+ * Same as cass_cluster_set_dse_gssapi_authenticator(), but with lengths for string
+ * parameters.
  *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] service
+ * @param[in] service_length
+ * @param[in] principal
+ * @param[in] principal_length
+ * @return same as cass_cluster_set_dse_gssapi_authenticator()
  */
 DSE_EXPORT CassError
 cass_cluster_set_dse_gssapi_authenticator_n(CassCluster* cluster,
@@ -187,7 +217,15 @@ cass_cluster_set_dse_gssapi_authenticator_n(CassCluster* cluster,
                                             size_t principal_length);
 
 /**
+ * Enables plaintext authentication for DSE clusters secured with the
+ * `DseAuthenticator`.
  *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] username
+ * @param[in] password
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
 cass_cluster_set_dse_plaintext_authenticator(CassCluster* cluster,
@@ -195,7 +233,17 @@ cass_cluster_set_dse_plaintext_authenticator(CassCluster* cluster,
                                              const char* password);
 
 /**
+ * Same as cass_cluster_set_dse_plaintext_authenticator(), but with lengths for string
+ * parameters.
  *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] username
+ * @param[in] username_length
+ * @param[in] password
+ * @param[in] password_length
+ * @return same as cass_cluster_set_dse_plaintext_authenticator()
  */
 DSE_EXPORT CassError
 cass_cluster_set_dse_plaintext_authenticator_n(CassCluster* cluster,
@@ -284,7 +332,6 @@ dse_graph_options_free(DseGraphOptions* options);
  * @param[in] options
  * @param[in] language
  * @return CASS_OK if successful, otherwise an error occurred.
- *
  */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_language(DseGraphOptions* options,
@@ -299,7 +346,7 @@ dse_graph_options_set_graph_language(DseGraphOptions* options,
  * @param[in] options
  * @param[in] language
  * @param[in] language_length
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_options_set_graph_language()
  */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_language_n(DseGraphOptions* options,
@@ -329,7 +376,7 @@ dse_graph_options_set_graph_source(DseGraphOptions* options,
  * @param[in] options
  * @param[in] source
  * @param[in] source_length
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_options_set_graph_source()
  */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_source_n(DseGraphOptions* options,
@@ -358,7 +405,7 @@ dse_graph_options_set_graph_name(DseGraphOptions* options,
  * @param[in] options
  * @param[in] name
  * @param[in] name_length
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_options_set_graph_name()
  */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_name_n(DseGraphOptions* options,
@@ -428,7 +475,7 @@ dse_graph_statement_new(const char* query,
                         const DseGraphOptions* options);
 
 /**
- * Same as dse_graph_statement_new_n(), but with lengths for string
+ * Same as dse_graph_statement_new(), but with lengths for string
  * parameters.
  *
  * @public @memberof DseGraphStatement
@@ -437,7 +484,7 @@ dse_graph_statement_new(const char* query,
  * @param[in] query_length
  * @param[in] options Optional. Use NULL for a system query with the
  * default graph language and source.
- * @return Returns a instance of graph statement that must be freed.
+ * @return same as dse_graph_statement_new()
  */
 DSE_EXPORT DseGraphStatement*
 dse_graph_statement_new_n(const char* query,
@@ -550,7 +597,7 @@ dse_graph_object_add_null(DseGraphObject* object,
  * @param[in] object
  * @param[in] name
  * @param[in] name_length
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_object_add_null()
  */
 DSE_EXPORT CassError
 dse_graph_object_add_null_n(DseGraphObject* object,
@@ -582,7 +629,7 @@ dse_graph_object_add_bool(DseGraphObject* object,
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_object_add_bool()
  */
 DSE_EXPORT CassError
 dse_graph_object_add_bool_n(DseGraphObject* object,
@@ -615,7 +662,7 @@ dse_graph_object_add_int32(DseGraphObject* object,
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_object_add_int32()
  */
 DSE_EXPORT CassError
 dse_graph_object_add_int32_n(DseGraphObject* object,
@@ -648,7 +695,7 @@ dse_graph_object_add_int64(DseGraphObject* object,
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_object_add_int64()
  */
 DSE_EXPORT CassError
 dse_graph_object_add_int64_n(DseGraphObject* object,
@@ -681,7 +728,7 @@ dse_graph_object_add_double(DseGraphObject* object,
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_object_add_double()
  */
 DSE_EXPORT CassError
 dse_graph_object_add_double_n(DseGraphObject* object,
@@ -715,7 +762,7 @@ dse_graph_object_add_string(DseGraphObject* object,
  * @param[in] name_length
  * @param[in] value
  * @param[in] value_length
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_object_add_string()
  */
 DSE_EXPORT CassError
 dse_graph_object_add_string_n(DseGraphObject* object,
@@ -749,7 +796,7 @@ dse_graph_object_add_object(DseGraphObject* object,
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_object_add_object()
  */
 DSE_EXPORT CassError
 dse_graph_object_add_object_n(DseGraphObject* object,
@@ -782,13 +829,114 @@ dse_graph_object_add_array(DseGraphObject* object,
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_object_add_array()
  */
 DSE_EXPORT CassError
 dse_graph_object_add_array_n(DseGraphObject* object,
                              const char* name,
                              size_t name_length,
                              const DseGraphArray* value);
+
+/**
+ * Add point geometric type to an object with the specified name.
+ *
+ * @public @memberof DseGraphObject
+ *
+ * @param[in] object
+ * @param[in] name
+ * @param[in] x
+ * @param[in] y
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_object_add_point(DseGraphObject* object,
+                           const char* name,
+                           cass_double_t x, cass_double_t y);
+
+/**
+ * Same as dse_graph_object_add_point(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof DseGraphObject
+ *
+ * @param[in] object
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] x
+ * @param[in] y
+ * @return same as dse_graph_object_add_point()
+ */
+DSE_EXPORT CassError
+dse_graph_object_add_point_n(DseGraphObject* object,
+                             const char* name,
+                             size_t name_length,
+                             cass_double_t x, cass_double_t y);
+
+/**
+ * Add line string geometric type to an object with the specified name.
+ *
+ * @public @memberof DseGraphObject
+ *
+ * @param[in] object
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_object_add_line_string(DseGraphObject* object,
+                                 const char* name,
+                                 const DseLineString* value);
+
+/**
+ * Same as dse_graph_object_add_line_string(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof DseGraphObject
+ *
+ * @param[in] object
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as dse_graph_object_add_line_string()
+ */
+DSE_EXPORT CassError
+dse_graph_object_add_line_string_n(DseGraphObject* object,
+                                   const char* name,
+                                   size_t name_length,
+                                   const DseLineString* value);
+
+/**
+ * Add polygon geometric type to an object with the specified name.
+ *
+ * @public @memberof DseGraphObject
+ *
+ * @param[in] object
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_object_add_polygon(DseGraphObject* object,
+                             const char* name,
+                             const DsePolygon* value);
+
+/**
+ * Same as dse_graph_object_add_polygon(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof DseGraphObject
+ *
+ * @param[in] object
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as dse_graph_object_add_polygon()
+ */
+DSE_EXPORT CassError
+dse_graph_object_add_polygon_n(DseGraphObject* object,
+                               const char* name,
+                               size_t name_length,
+                               const DsePolygon* value);
 
 /***********************************************************************************
  *
@@ -922,7 +1070,7 @@ dse_graph_array_add_string(DseGraphArray* array,
  * @param[in] array
  * @param[in] value
  * @param[in] value_length
- * @return CASS_OK if successful, otherwise an error occurred.
+ * @return same as dse_graph_array_add_string()
  */
 DSE_EXPORT CassError
 dse_graph_array_add_string_n(DseGraphArray* array,
@@ -954,6 +1102,46 @@ dse_graph_array_add_object(DseGraphArray* array,
 DSE_EXPORT CassError
 dse_graph_array_add_array(DseGraphArray* array,
                           const DseGraphArray* value);
+
+/**
+ * Add point geometric type to an array.
+ *
+ * @public @memberof DseGraphArray
+ *
+ * @param[in] array
+ * @param[in] x
+ * @param[in] y
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_array_add_point(DseGraphArray* array,
+                          cass_double_t x, cass_double_t y);
+
+/**
+ * Add line string geometric type to an array.
+ *
+ * @public @memberof DseGraphArray
+ *
+ * @param[in] array
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_array_add_line_string(DseGraphArray* array,
+                                const DseLineString* value);
+
+/**
+ * Add polygon geometric type to an array.
+ *
+ * @public @memberof DseGraphArray
+ *
+ * @param[in] array
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_array_add_polygon(DseGraphArray* array,
+                            const DsePolygon* value);
 
 /***********************************************************************************
  *
@@ -1009,6 +1197,17 @@ dse_graph_resultset_next(DseGraphResultSet* resultset);
  */
 DSE_EXPORT DseGraphResultType
 dse_graph_result_type(const DseGraphResult* result);
+
+/**
+ * Returns true if the result is null.
+ *
+ * @public @memberof DseGraphResult
+ *
+ * @param[in] result
+ * @return True if the result is null, otherwise false.
+ */
+DSE_EXPORT cass_bool_t
+dse_graph_result_is_null(const DseGraphResult* result);
 
 /**
  * Returns true if the result is a boolean.
@@ -1097,7 +1296,6 @@ dse_graph_result_is_array(const DseGraphResult* result);
  *
  * @param[in] result
  * @return The boolean value.
- *
  */
 DSE_EXPORT cass_bool_t
 dse_graph_result_get_bool(const DseGraphResult* result);
@@ -1109,7 +1307,6 @@ dse_graph_result_get_bool(const DseGraphResult* result);
  *
  * @param[in] result
  * @return The integer (32-bit) value.
- *
  */
 DSE_EXPORT cass_int32_t
 dse_graph_result_get_int32(const DseGraphResult* result);
@@ -1121,7 +1318,6 @@ dse_graph_result_get_int32(const DseGraphResult* result);
  *
  * @param[in] result
  * @return The integer (64-bit) value.
- *
  */
 DSE_EXPORT cass_int64_t
 dse_graph_result_get_int64(const DseGraphResult* result);
@@ -1133,7 +1329,6 @@ dse_graph_result_get_int64(const DseGraphResult* result);
  *
  * @param[in] result
  * @return The double value.
- *
  */
 DSE_EXPORT cass_double_t
 dse_graph_result_get_double(const DseGraphResult* result);
@@ -1146,7 +1341,6 @@ dse_graph_result_get_double(const DseGraphResult* result);
  * @param[in] result
  * @param[out] length
  * @return The string value.
- *
  */
 DSE_EXPORT const char*
 dse_graph_result_get_string(const DseGraphResult* result,
@@ -1160,7 +1354,6 @@ dse_graph_result_get_string(const DseGraphResult* result,
  * @param[in] result
  * @param[out] edge
  * @return CASS_OK if successful, otherwise an error occurred.
- *
  */
 DSE_EXPORT CassError
 dse_graph_result_as_edge(const DseGraphResult* result,
@@ -1174,7 +1367,6 @@ dse_graph_result_as_edge(const DseGraphResult* result,
  * @param[in] result
  * @param[out] vertex
  * @return CASS_OK if successful, otherwise an error occurred.
- *
  */
 DSE_EXPORT CassError
 dse_graph_result_as_vertex(const DseGraphResult* result,
@@ -1188,11 +1380,50 @@ dse_graph_result_as_vertex(const DseGraphResult* result,
  * @param[in] result
  * @param[out] path
  * @return CASS_OK if successful, otherwise an error occurred.
- *
  */
 DSE_EXPORT CassError
 dse_graph_result_as_path(const DseGraphResult* result,
                          DseGraphPathResult* path);
+
+/**
+ * Return an object as the point geometric type.
+ *
+ * @public @memberof DseGraphResult
+ *
+ * @param[in] result
+ * @param[out] x
+ * @param[out] y
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_result_as_point(const DseGraphResult* result,
+                          cass_double_t* x, cass_double_t* y);
+
+/**
+ * Return an object as the line string geometric type.
+ *
+ * @public @memberof DseGraphResult
+ *
+ * @param[in] result
+ * @param[out] line_string
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_result_as_line_string(const DseGraphResult* result,
+                                DseLineStringIterator* line_string);
+
+/**
+ * Return an object as the polygon geometric type.
+ *
+ * @public @memberof DseGraphResult
+ *
+ * @param[in] result
+ * @param[out] polygon
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_result_as_polygon(const DseGraphResult* result,
+                            DsePolygonIterator* polygon);
 
 /**
  * Returns the number of members in an object result.
@@ -1201,7 +1432,6 @@ dse_graph_result_as_path(const DseGraphResult* result,
  *
  * @param[in] result
  * @return The number of members in an object result.
- *
  */
 DSE_EXPORT size_t
 dse_graph_result_member_count(const DseGraphResult* result);
@@ -1215,7 +1445,6 @@ dse_graph_result_member_count(const DseGraphResult* result);
  * @param[in] index
  * @param[out] length
  * @return The string key of the member.
- *
  */
 DSE_EXPORT const char*
 dse_graph_result_member_key(const DseGraphResult* result,
@@ -1229,8 +1458,8 @@ dse_graph_result_member_key(const DseGraphResult* result,
  *
  * @param[in] result
  * @param[in] index
- * @return The result value of the member.
  *
+ * @return The result value of the member.
  */
 DSE_EXPORT const DseGraphResult*
 dse_graph_result_member_value(const DseGraphResult* result,
@@ -1243,7 +1472,6 @@ dse_graph_result_member_value(const DseGraphResult* result,
  *
  * @param[in] result
  * @return The number of elements in array result.
- *
  */
 DSE_EXPORT size_t
 dse_graph_result_element_count(const DseGraphResult* result);
@@ -1256,7 +1484,6 @@ dse_graph_result_element_count(const DseGraphResult* result);
  * @param[in] result
  * @param[in] index
  * @return The result value.
- *
  */
 DSE_EXPORT const DseGraphResult*
 dse_graph_result_element(const DseGraphResult* result,
@@ -1757,17 +1984,24 @@ dse_polygon_iterator_next_point(DsePolygonIterator* iterator,
  ***********************************************************************************/
 
 /**
- *
+ * GSSAPI lock callback.
  */
 typedef void (*DseGssapiAuthenticatorLockCallback)(void* data);
 
 /**
  *
+ * GSSAPI unlock callback.
  */
 typedef void (*DseGssapiAuthenticatorUnlockCallback)(void* data);
 
 /**
+ * Set lock callbacks for GSSAPI authentication. This is used to protect
+ * Kerberos libraries that are not thread-safe.
  *
+ * @param[in] lock_callback
+ * @param[in] unlock_callback
+ * @param[in] data
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
 dse_gssapi_authenticator_set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,

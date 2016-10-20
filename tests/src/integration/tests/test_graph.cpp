@@ -44,7 +44,7 @@ public:
     CHECK_VERSION(5.0.0);
 
     // Call the parent setup function
-    dse_workload_ = CCM::DSE_WORKLOAD_GRAPH;
+    dse_workload_.push_back(CCM::DSE_WORKLOAD_GRAPH);
     DseIntegration::SetUp();
   }
 
@@ -590,7 +590,8 @@ TEST_F(GraphIntegrationTest, Timestamp) {
 
   // Validate the timestamp from the graph inserted timestamp (+1 from insert)
   expected_timestamp += 1l;
-  const CassRow* row = session_.execute(select_timestamp).first_row();
+  test::driver::Result result = session_.execute(select_timestamp);
+  const CassRow* row = result.first_row();
   test::driver::BigInteger timestamp(row, 0);
   ASSERT_EQ(expected_timestamp, timestamp);
 }

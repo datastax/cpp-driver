@@ -10,11 +10,15 @@
 
 #include "dse.h"
 
+#include "line_string.hpp"
+#include "polygon.hpp"
+
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
-#include "scoped_ptr.hpp"
+#include <external.hpp>
+#include <scoped_ptr.hpp>
 
 #include <string>
 #include <vector>
@@ -26,8 +30,11 @@
 #define DSE_GRAPH_OPTION_WRITE_CONSISTENCY_KEY "graph-write-consistency"
 #define DSE_GRAPH_REQUEST_TIMEOUT              "request-timeout"
 
-#define DSE_GRAPH_DEFAULT_LANGUAGE "gremlin-groovy"
-#define DSE_GRAPH_DEFAULT_SOURCE   "g"
+#define DSE_GRAPH_DEFAULT_LANGUAGE             "gremlin-groovy"
+#define DSE_GRAPH_DEFAULT_SOURCE               "g"
+#define DSE_GRAPH_ANALYTICS_SOURCE             "a"
+
+#define DSE_LOOKUP_ANALYTICS_GRAPH_SERVER      "CALL DseClientTool.getAnalyticsGraphServer()"
 
 
 namespace dse {
@@ -55,10 +62,13 @@ public:
                               reinterpret_cast<const cass_byte_t*>(graph_language.data()), graph_language.size());
   }
 
+  const std::string graph_source() const { return graph_source_; }
+
   void set_graph_source(const std::string& graph_source) {
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_SOURCE_KEY, sizeof(DSE_GRAPH_OPTION_SOURCE_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_source.data()), graph_source.size());
+    graph_source_ = graph_source;
   }
 
   void set_graph_name(const std::string& graph_name) {
@@ -87,8 +97,10 @@ public:
 
 private:
   CassCustomPayload* payload_;
+  std::string graph_source_;
   int64_t request_timeout_ms_;
 };
+
 
 class GraphWriter : private rapidjson::Writer<rapidjson::StringBuffer> {
 public:
@@ -114,11 +126,20 @@ public:
     Key(key, static_cast<rapidjson::SizeType>(length));
   }
 
-  bool add_writer(const GraphWriter* writer, rapidjson::Type type) {
+  void add_point(cass_double_t x, cass_double_t y);
+
+  void add_line_string(const dse::LineString* line_string) {
+    String(line_string->to_wkt().c_str());
+  }
+
+  void add_polygon(const dse::Polygon* polygon) {
+    String(polygon->to_wkt().c_str());
+  }
+
+  void add_writer(const GraphWriter* writer, rapidjson::Type type) {
     size_t length = writer->buffer_.GetSize();
     Prefix(type);
     memcpy(os_->Push(length), writer->buffer_.GetString(), length);
-    return true;
   }
 
   void reset() {
@@ -179,17 +200,21 @@ public:
       cass_statement_set_custom_payload(wrapped_, options->payload());
       cass_statement_set_request_timeout(wrapped_,
                                          static_cast<cass_uint64_t>(options->request_timeout_ms()));
+      graph_source_ = options->graph_source();
     } else {
       GraphOptions default_options;
       cass_statement_set_custom_payload(wrapped_, default_options.payload());
       cass_statement_set_request_timeout(wrapped_,
                                          static_cast<cass_uint64_t>(default_options.request_timeout_ms()));
+      graph_source_ = default_options.graph_source();
     }
   }
 
   ~GraphStatement() {
     cass_statement_free(wrapped_);
   }
+
+  const std::string graph_source() const { return graph_source_; }
 
   const CassStatement* wrapped() const { return wrapped_; }
 
@@ -210,6 +235,7 @@ public:
 
 private:
   std::string query_;
+  std::string graph_source_;
   CassStatement* wrapped_;
 };
 
@@ -233,12 +259,19 @@ public:
   const GraphResult* next();
 
 private:
-  rapidjson::Document document;
+  rapidjson::Document document_;
   std::string json_;
   CassIterator* rows_;
   const CassResult* result_;
 };
 
 } // namespace dse
+
+EXTERNAL_TYPE(dse::GraphOptions, DseGraphOptions)
+EXTERNAL_TYPE(dse::GraphStatement, DseGraphStatement)
+EXTERNAL_TYPE(dse::GraphArray, DseGraphArray)
+EXTERNAL_TYPE(dse::GraphObject, DseGraphObject)
+EXTERNAL_TYPE(dse::GraphResultSet, DseGraphResultSet)
+EXTERNAL_TYPE(dse::GraphResult, DseGraphResult)
 
 #endif

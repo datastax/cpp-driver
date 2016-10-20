@@ -173,6 +173,16 @@ version of the driver there are some known limitations for some data types:
   </tbody>
 </table>
 
+### Geometric types
+
+Graph queries can use well-known text
+(https://en.wikipedia.org/wiki/Well-known_text) for handling geometric types or
+they can use the driver's built-in geometric types and functions. To bind a
+geometric type parameter use `dse_graph_object_add_point()`,
+`dse_graph_object_add_line_string()` and `dse_graph_object_add_polygon()`. To
+retrieve a geometric type from a graph result use `dse_graph_result_as_point()`,
+`dse_graph_result_as_line_string()` and `dse_graph_result_as_polygon()`. See the
+[geotypes section](/features/geotypes/) for more information.
 
 ## Parameter values
 

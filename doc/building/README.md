@@ -197,6 +197,7 @@ Usage: VC_BUILD.BAT [OPTION...]
 
     --ENABLE-INTEGRATION-TESTS        Enable integration tests build
     --ENABLE-UNIT-TESTS               Enable unit tests build
+    --ENABLE-TESTS                    Enable integration and unit tests builds
     --ENABLE-LIBSSH2                  Enable libssh2 (remote server testing)
 
     --HELP                            Display this message

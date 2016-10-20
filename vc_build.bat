@@ -110,8 +110,8 @@ SET LIBSSH2_BRANCH_TAG_VERSION=libssh2-1.7.0
 SET LIBSSH2_PACKAGE_VERSION=1.7.0
 SET OPENSSL_REPOSITORY_URL=https://github.com/openssl/openssl.git
 SET OPENSSL_DIRECTORY=openssl
-SET OPENSSL_BRANCH_TAG_VERSION=OpenSSL_1_0_2h
-SET OPENSSL_PACKAGE_VERSION=1.0.2h
+SET OPENSSL_BRANCH_TAG_VERSION=OpenSSL_1_0_2j
+SET OPENSSL_PACKAGE_VERSION=1.0.2j
 SET ZLIB_REPOSITORY_URL=https://github.com/madler/zlib.git
 SET ZLIB_DIRECTORY=zlib
 SET ZLIB_BRANCH_TAG_VERSION=v1.2.8
@@ -861,7 +861,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
     ECHO.
     IF !DRIVER_GENERATE_SOLUTION! EQU !TRUE! (
       ECHO Visual Studio !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! solution has been successfully generated
-      ECHO 	!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!\cassandra.sln
+      ECHO 	!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!\dse.sln
     ) ELSE (
       ECHO Driver has been successfully built [!TARGET_ARCHITECTURE!-bit !BUILD_TYPE!]
       ECHO 	!DRIVER_INSTALLATION_DIRECTORY!
@@ -1080,6 +1080,7 @@ REM Display the help message and exit with error code
   ECHO.
   ECHO     !ARGUMENT_ENABLE_INTEGRATION_TESTS!        Enable integration tests build
   ECHO     !ARGUMENT_ENABLE_UNIT_TESTS!               Enable unit tests build
+  ECHO     !ARGUMENT_ENABLE_TESTS!                    Enable integration and unit tests builds
   ECHO     !ARGUMENT_ENABLE_LIBSSH2!                  Enable libssh2 ^(remote server testing^)
   ECHO.
   ECHO     !ARGUMENT_HELP!                            Display this message
