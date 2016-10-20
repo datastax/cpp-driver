@@ -19,6 +19,7 @@
 
 #include "atomic.hpp"
 #include "cassandra.h"
+#include "external.hpp"
 #include "random.hpp"
 
 #include <uv.h>
@@ -49,5 +50,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::UuidGen, CassUuidGen)
 
 #endif

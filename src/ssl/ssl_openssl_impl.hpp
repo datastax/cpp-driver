@@ -70,7 +70,7 @@ private:
 
 class OpenSslContextFactory : SslContextFactoryBase<OpenSslContextFactory> {
 public:
-  static SslContext* create();
+  static SslContext::Ptr create();
   static void init();
 };
 

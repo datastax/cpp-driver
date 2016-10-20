@@ -121,6 +121,9 @@ struct RandomPartitioner {
     }
   };
 
+  static Token abs(Token token);
+  static uint64_t encode(uint8_t* bytes);
+
   static Token from_string(const StringRef& str);
   static Token hash(const StringRef& str);
   static StringRef name() { return "RandomPartitioner"; }

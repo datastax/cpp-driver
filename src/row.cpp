@@ -16,9 +16,10 @@
 
 #include "row.hpp"
 
-#include "external_types.hpp"
+#include "external.hpp"
 #include "result_metadata.hpp"
 #include "result_response.hpp"
+#include "serialization.hpp"
 #include "string_ref.hpp"
 
 extern "C" {

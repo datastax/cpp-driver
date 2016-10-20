@@ -17,7 +17,7 @@
 #include "iterator.hpp"
 
 #include "collection_iterator.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 #include "map_iterator.hpp"
 #include "result_iterator.hpp"
 #include "row_iterator.hpp"

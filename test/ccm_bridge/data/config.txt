@@ -13,7 +13,7 @@
 #
 # Uncomment to specify Cassandra version
 ##
-#CASSANDRA_VERSION=3.7
+#CASSANDRA_VERSION=3.9
 ##
 # Flag to determine if Cassandra/DSE version should be obtained from ASF/GitHub
 #
@@ -26,6 +26,18 @@
 # Uncomment to specify branch/tag to download
 ##
 #BRANCH_TAG=
+##
+# Flag to determine if Cassandra/DSE version should be obtained from ASF/GitHub
+#
+# Uncomment to specify use of installation directory
+##
+#USE_INSTALL_DIR=false
+##
+# Cassandra/DSE installation directory to utilize when creating CCM cluster
+#
+# Uncomment to specify installation directory to use
+##
+#INSTALL_DIR=/path/to/installation
 ##
 # CCM Deployment Type (local|remote)
 #
@@ -52,7 +64,7 @@
 #
 # Uncomment to specify DSE version
 ##
-#DSE_VERSION=4.8.8
+#DSE_VERSION=5.0.3
 ##
 # CCM DSE Credentials Type (username_password|ini_file)
 #

@@ -19,21 +19,22 @@
 
 #include "cassandra.h"
 #include "constants.hpp"
+#include "external.hpp"
 #include "request.hpp"
 #include "ref_counted.hpp"
+#include "statement.hpp"
 
-#include <list>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace cass {
 
-class Statement;
 class ExecuteRequest;
 
 class BatchRequest : public RoutableRequest {
 public:
-  typedef std::list<SharedRefPtr<Statement> > StatementList;
+  typedef std::vector<Statement::Ptr> StatementList;
 
   BatchRequest(uint8_t type_)
       : RoutableRequest(CQL_OPCODE_BATCH)
@@ -50,7 +51,7 @@ public:
   virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
 
 private:
-  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   typedef std::map<std::string, ExecuteRequest*> PreparedMap;
@@ -61,5 +62,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::BatchRequest, CassBatch)
 
 #endif

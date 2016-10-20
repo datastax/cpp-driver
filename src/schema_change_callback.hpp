@@ -14,34 +14,44 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SET_KEYSPACE_HANDLER_HPP_INCLUDED__
-#define __CASS_SET_KEYSPACE_HANDLER_HPP_INCLUDED__
+#ifndef __CASS_SCHEMA_CHANGE_CALLBACK_HPP_INCLUDED__
+#define __CASS_SCHEMA_CHANGE_CALLBACK_HPP_INCLUDED__
 
-#include "query_request.hpp"
 #include "ref_counted.hpp"
 #include "request_handler.hpp"
 #include "scoped_ptr.hpp"
+#include "string_ref.hpp"
+
+#include <uv.h>
 
 namespace cass {
 
-class ResponseMessage;
 class Connection;
+class Response;
 
-class SetKeyspaceHandler : public Handler {
+class SchemaChangeCallback : public MultipleRequestCallback {
 public:
-  SetKeyspaceHandler(Connection* connection,
-                     const std::string& keyspace,
-                     RequestHandler* request_handler);
+  typedef SharedRefPtr<SchemaChangeCallback> Ptr;
 
-  virtual void on_set(ResponseMessage* response);
+  SchemaChangeCallback(Connection* connection,
+                      const SpeculativeExecution::Ptr& speculative_execution,
+                      const Response::Ptr& response,
+                      uint64_t elapsed = 0);
+
+  void execute();
+
+  virtual void on_set(const ResponseMap& responses);
   virtual void on_error(CassError code, const std::string& message);
   virtual void on_timeout();
+  void on_closing();
 
 private:
-  void on_result_response(ResponseMessage* response);
+  bool has_schema_agreement(const ResponseMap& responses);
 
-private:
-  ScopedRefPtr<RequestHandler> request_handler_;
+  SpeculativeExecution::Ptr speculative_execution_;
+  Response::Ptr request_response_;
+  uint64_t start_ms_;
+  uint64_t elapsed_ms_;
 };
 
 } // namespace cass

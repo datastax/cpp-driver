@@ -21,7 +21,7 @@
 
 namespace cass {
 
-void RoundRobinPolicy::init(const SharedRefPtr<Host>& connected_host,
+void RoundRobinPolicy::init(const Host::Ptr& connected_host,
                             const HostMap& hosts,
                             Random* random) {
   hosts_->reserve(hosts.size());
@@ -31,42 +31,41 @@ void RoundRobinPolicy::init(const SharedRefPtr<Host>& connected_host,
   }
 }
 
-CassHostDistance RoundRobinPolicy::distance(const SharedRefPtr<Host>& host) const {
+CassHostDistance RoundRobinPolicy::distance(const Host::Ptr& host) const {
   return CASS_HOST_DISTANCE_LOCAL;
 }
 
 QueryPlan* RoundRobinPolicy::new_query_plan(const std::string& connected_keyspace,
-                                            const Request* request,
-                                            const TokenMap* token_map,
-                                            Request::EncodingCache* cache) {
+                                            RequestHandler* request_handler,
+                                            const TokenMap* token_map) {
   return new RoundRobinQueryPlan(hosts_, index_++);
 }
 
-void RoundRobinPolicy::on_add(const SharedRefPtr<Host>& host) {
+void RoundRobinPolicy::on_add(const Host::Ptr& host) {
   add_host(hosts_, host);
 }
 
-void RoundRobinPolicy::on_remove(const SharedRefPtr<Host>& host) {
+void RoundRobinPolicy::on_remove(const Host::Ptr& host) {
   remove_host(hosts_, host);
 }
 
-void RoundRobinPolicy::on_up(const SharedRefPtr<Host>& host) {
+void RoundRobinPolicy::on_up(const Host::Ptr& host) {
   on_add(host);
 }
 
-void RoundRobinPolicy::on_down(const SharedRefPtr<Host>& host) {
+void RoundRobinPolicy::on_down(const Host::Ptr& host) {
   on_remove(host);
 }
 
-SharedRefPtr<Host> RoundRobinPolicy::RoundRobinQueryPlan::compute_next() {
+Host::Ptr RoundRobinPolicy::RoundRobinQueryPlan::compute_next() {
   while (remaining_ > 0) {
     --remaining_;
-    const SharedRefPtr<Host>& host((*hosts_)[index_++ % hosts_->size()]);
+    const Host::Ptr& host((*hosts_)[index_++ % hosts_->size()]);
     if (host->is_up()) {
       return host;
     }
   }
-  return SharedRefPtr<Host>();
+  return Host::Ptr();
 }
 
 } // namespace cass

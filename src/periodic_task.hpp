@@ -26,27 +26,30 @@ namespace cass {
 
 class PeriodicTask : public RefCounted<PeriodicTask> {
 public:
+  typedef SharedRefPtr<PeriodicTask> Ptr;
+
   typedef void (*Callback)(PeriodicTask*);
 
   void* data() { return data_; }
 
-  static PeriodicTask* start(uv_loop_t* loop, uint64_t repeat, void* data,
+  static Ptr start(uv_loop_t* loop, uint64_t repeat, void* data,
                              Callback work_cb, Callback after_work_cb) {
-    PeriodicTask* task = new PeriodicTask(data, work_cb, after_work_cb);
-    task->inc_ref();
+    Ptr task(new PeriodicTask(data, work_cb, after_work_cb));
+
+    task->inc_ref(); // Timer reference
     uv_timer_init(loop, &task->timer_handle_);
     uv_timer_start(&task->timer_handle_, on_timeout, repeat, repeat);
     return task;
   }
 
-  static void stop(PeriodicTask* task) {
+  static void stop(const Ptr& task) {
     uv_timer_stop(&task->timer_handle_);
     close(task);
   }
 
 private:
-  static void close(PeriodicTask* task) {
-    uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(&task->timer_handle_), on_close);
+  static void close(const Ptr& task) {
+    uv_close(reinterpret_cast<uv_handle_t*>(&task->timer_handle_), on_close);
   }
 
 #if UV_VERSION_MAJOR == 0
@@ -58,14 +61,14 @@ private:
 
     if (task->is_running_) return;
 
-    task->inc_ref();
+    task->inc_ref(); // Work reference
     task->is_running_ = true;
     uv_queue_work(handle->loop, &task->work_request_, on_work, on_after_work);
   }
 
   static void on_close(uv_handle_t* handle) {
     PeriodicTask* task = static_cast<PeriodicTask*>(handle->data);
-    task->dec_ref();
+    task->dec_ref(); // Remove timer reference
   }
 
   static void on_work(uv_work_t* request) {
@@ -77,7 +80,7 @@ private:
     PeriodicTask* task = static_cast<PeriodicTask*>(request->data);
     task->after_work_cb_(task);
     task->is_running_ = false;
-    task->dec_ref();
+    task->dec_ref(); // Remove work reference
   }
 
 private:

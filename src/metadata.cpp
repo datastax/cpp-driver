@@ -17,8 +17,9 @@
 #include "metadata.hpp"
 
 #include "buffer.hpp"
+#include "collection.hpp"
 #include "collection_iterator.hpp"
-#include "external_types.hpp"
+#include "external.hpp"
 #include "iterator.hpp"
 #include "logger.hpp"
 #include "map_iterator.hpp"
@@ -983,7 +984,7 @@ std::string MetadataBase::get_string_field(const std::string& name) const {
   return value->to_string();
 }
 
-const Value* MetadataBase::add_field(const SharedRefPtr<RefBuffer>& buffer, const Row* row, const std::string& name) {
+const Value* MetadataBase::add_field(const RefBuffer::Ptr& buffer, const Row* row, const std::string& name) {
   const Value* value = row->get_by_name(name);
   if (value == NULL) return NULL;
   if (value->size() <= 0) {
@@ -995,7 +996,7 @@ const Value* MetadataBase::add_field(const SharedRefPtr<RefBuffer>& buffer, cons
   }
 }
 
-void MetadataBase::add_field(const SharedRefPtr<RefBuffer>& buffer, const Value& value, const std::string& name) {
+void MetadataBase::add_field(const RefBuffer::Ptr& buffer, const Value& value, const std::string& name) {
   fields_[name] = MetadataField(name, value, buffer);
 }
 
@@ -1026,14 +1027,14 @@ void MetadataBase::add_json_list_field(int protocol_version, const Row* row, con
     return;
   }
 
-  Collection collection(CollectionType::list(SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT)), false),
+  Collection collection(CollectionType::list(DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)), false),
                         d.Size());
   for (rapidjson::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
     collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
   }
 
   size_t encoded_size = collection.get_items_size(protocol_version);
-  SharedRefPtr<RefBuffer> encoded(RefBuffer::create(encoded_size));
+  RefBuffer::Ptr encoded(RefBuffer::create(encoded_size));
 
   collection.encode_items(protocol_version, encoded->data());
 
@@ -1071,8 +1072,8 @@ const Value* MetadataBase::add_json_map_field(int protocol_version, const Row* r
     return (fields_[name] = MetadataField(name)).value();
   }
 
-  Collection collection(CollectionType::map(SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT)),
-                                            SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT)),
+  Collection collection(CollectionType::map(DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)),
+                                            DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)),
                                             false),
                         2 * d.MemberCount());
   for (rapidjson::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
@@ -1081,7 +1082,7 @@ const Value* MetadataBase::add_json_map_field(int protocol_version, const Row* r
   }
 
   size_t encoded_size = collection.get_items_size(protocol_version);
-  SharedRefPtr<RefBuffer> encoded(RefBuffer::create(encoded_size));
+  RefBuffer::Ptr encoded(RefBuffer::create(encoded_size));
 
   collection.encode_items(protocol_version, encoded->data());
 
@@ -1165,7 +1166,7 @@ const UserType* KeyspaceMetadata::get_user_type(const std::string& name) const {
   return i->second.get();
 }
 
-void KeyspaceMetadata::update(int protocol_version, const VersionNumber& cassandra_version, const SharedRefPtr<RefBuffer>& buffer, const Row* row) {
+void KeyspaceMetadata::update(int protocol_version, const VersionNumber& cassandra_version, const RefBuffer::Ptr& buffer, const Row* row) {
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "durable_writes");
   if (cassandra_version >= VersionNumber(3, 0, 0))  {
@@ -1230,7 +1231,7 @@ void KeyspaceMetadata::drop_aggregate(const std::string& full_aggregate_name) {
 }
 
 TableMetadataBase::TableMetadataBase(int protocol_version, const VersionNumber& cassandra_version,
-                                     const std::string& name, const SharedRefPtr<RefBuffer>& buffer, const Row* row)
+                                     const std::string& name, const RefBuffer::Ptr& buffer, const Row* row)
   : MetadataBase(name) {
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "bloom_filter_fp_chance");
@@ -1349,7 +1350,7 @@ void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionN
         }
       }
 
-      SharedRefPtr<ParseResult> key_validator
+      ParseResult::Ptr key_validator
           = DataTypeClassNameParser::parse_with_composite(get_string_field("key_validator"), native_types);
       size_t size = key_validator->types().size();
       partition_key_.reserve(size);
@@ -1383,7 +1384,7 @@ void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionN
       }
 
       // TODO: Figure out how to test these special cases and properly document them here
-      SharedRefPtr<ParseResult> comparator
+      ParseResult::Ptr comparator
           = DataTypeClassNameParser::parse_with_composite(get_string_field("comparator"), native_types);
       size_t size = comparator->types().size();
       if (comparator->is_composite()) {
@@ -1431,7 +1432,7 @@ void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionN
 const TableMetadata::Ptr TableMetadata::NIL;
 
 TableMetadata::TableMetadata(int protocol_version, const VersionNumber& cassandra_version,
-                             const std::string& name, const SharedRefPtr<RefBuffer>& buffer, const Row* row)
+                             const std::string& name, const RefBuffer::Ptr& buffer, const Row* row)
   : TableMetadataBase(protocol_version, cassandra_version, name, buffer, row) {
   add_field(buffer, row, table_column_name(cassandra_version));
   if (cassandra_version >= VersionNumber(3, 0, 0)) {
@@ -1470,7 +1471,7 @@ void TableMetadata::key_aliases(const NativeDataTypes& native_types, KeyAliases*
     }
   }
   if (output->empty()) {// C* 1.2 tables created via CQL2 or thrift don't have col meta or key aliases
-    SharedRefPtr<ParseResult> key_validator_type
+    ParseResult::Ptr key_validator_type
         = DataTypeClassNameParser::parse_with_composite(get_string_field("key_validator"), native_types);
     const size_t count = key_validator_type->types().size();
     std::ostringstream ss("key");
@@ -1488,7 +1489,7 @@ const ViewMetadata::Ptr ViewMetadata::NIL;
 
 ViewMetadata::ViewMetadata(int protocol_version, const VersionNumber& cassandra_version,
                            TableMetadata* table,
-                           const std::string& name, const SharedRefPtr<RefBuffer>& buffer, const Row* row)
+                           const std::string& name, const RefBuffer::Ptr& buffer, const Row* row)
   : TableMetadataBase(protocol_version, cassandra_version, name, buffer, row)
   , base_table_(table) {
   add_field(buffer, row, "keyspace_name");
@@ -1519,7 +1520,7 @@ void TableMetadata::clear_indexes() {
 FunctionMetadata::FunctionMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
                                    const std::string& name, const Value* signature,
                                    KeyspaceMetadata* keyspace,
-                                   const SharedRefPtr<RefBuffer>& buffer, const Row* row)
+                                   const RefBuffer::Ptr& buffer, const Row* row)
   : MetadataBase(Metadata::full_function_name(name, signature->as_stringlist()))
   , simple_name_(name) {
   const Value* value1;
@@ -1591,7 +1592,7 @@ const DataType* FunctionMetadata::get_arg_type(StringRef name) const {
 AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
                                      const std::string& name, const Value* signature,
                                      KeyspaceMetadata* keyspace,
-                                     const SharedRefPtr<RefBuffer>& buffer, const Row* row)
+                                     const RefBuffer::Ptr& buffer, const Row* row)
   : MetadataBase(Metadata::full_function_name(name, signature->as_stringlist()))
   , simple_name_(name) {
   const Value* value;
@@ -1674,7 +1675,7 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
 }
 
 IndexMetadata::Ptr IndexMetadata::from_row(const std::string& index_name,
-                                           const SharedRefPtr<RefBuffer>& buffer, const Row* row) {
+                                           const RefBuffer::Ptr& buffer, const Row* row) {
   IndexMetadata::Ptr index(new IndexMetadata(index_name));
 
   StringRef kind;
@@ -1708,7 +1709,7 @@ void IndexMetadata::update(StringRef kind, const Value* options) {
 
 IndexMetadata::Ptr IndexMetadata::from_legacy(int protocol_version,
                                               const std::string& index_name, const ColumnMetadata* column,
-                                              const SharedRefPtr<RefBuffer>& buffer, const Row* row) {
+                                              const RefBuffer::Ptr& buffer, const Row* row) {
   IndexMetadata::Ptr index(new IndexMetadata(index_name));
 
   index->add_field(buffer, row, "index_name");
@@ -1771,7 +1772,7 @@ CassIndexType IndexMetadata::index_type_from_string(StringRef index_type) {
 ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
                                const std::string& name,
                                KeyspaceMetadata* keyspace,
-                               const SharedRefPtr<RefBuffer>& buffer, const Row* row)
+                               const RefBuffer::Ptr& buffer, const Row* row)
   : MetadataBase(name)
   , type_(CASS_COLUMN_TYPE_REGULAR)
   , position_(0)
@@ -1862,7 +1863,7 @@ ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassan
 
 void Metadata::InternalData::update_keyspaces(int protocol_version, const VersionNumber& cassandra_version,
                                               ResultResponse* result) {
-  SharedRefPtr<RefBuffer> buffer = result->buffer();
+  RefBuffer::Ptr buffer = result->buffer();
   ResultIterator rows(result);
 
   while (rows.next()) {
@@ -1881,7 +1882,7 @@ void Metadata::InternalData::update_keyspaces(int protocol_version, const Versio
 
 void Metadata::InternalData::update_tables(int protocol_version, const VersionNumber& cassandra_version,
                                            ResultResponse* result) {
-  SharedRefPtr<RefBuffer> buffer = result->buffer();
+  RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
@@ -1910,7 +1911,7 @@ void Metadata::InternalData::update_tables(int protocol_version, const VersionNu
 
 void Metadata::InternalData::update_views(int protocol_version, const VersionNumber& cassandra_version,
                                           ResultResponse* result) {
-  SharedRefPtr<RefBuffer> buffer = result->buffer();
+  RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
@@ -2043,7 +2044,7 @@ void Metadata::InternalData::update_user_types(int protocol_version, const Versi
 
 void Metadata::InternalData::update_functions(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
                                               ResultResponse* result) {
-  SharedRefPtr<RefBuffer> buffer = result->buffer();
+  RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
@@ -2077,7 +2078,7 @@ void Metadata::InternalData::update_functions(int protocol_version, const Versio
 }
 
 void Metadata::InternalData::update_aggregates(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types, ResultResponse* result) {
-  SharedRefPtr<RefBuffer> buffer = result->buffer();
+  RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
@@ -2139,7 +2140,7 @@ void Metadata::InternalData::drop_aggregate(const std::string& keyspace_name, co
 }
 
 void Metadata::InternalData::update_columns(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types, ResultResponse* result) {
-  SharedRefPtr<RefBuffer> buffer = result->buffer();
+  RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
@@ -2196,7 +2197,7 @@ void Metadata::InternalData::update_columns(int protocol_version, const VersionN
 }
 
 void Metadata::InternalData::update_legacy_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
-  SharedRefPtr<RefBuffer> buffer = result->buffer();
+  RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
@@ -2248,7 +2249,7 @@ void Metadata::InternalData::update_legacy_indexes(int protocol_version, const V
 }
 
 void Metadata::InternalData::update_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
-  SharedRefPtr<RefBuffer> buffer = result->buffer();
+  RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 

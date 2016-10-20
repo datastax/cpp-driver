@@ -18,7 +18,7 @@
 
 namespace cass {
 
-void add_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host) {
+void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
   HostVec::iterator i;
   for (i = hosts->begin(); i != hosts->end(); ++i) {
     if ((*i)->address() == host->address()) {
@@ -31,7 +31,7 @@ void add_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host) {
   }
 }
 
-void remove_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host) {
+void remove_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
   HostVec::iterator i;
   for (i = hosts->begin(); i != hosts->end(); ++i) {
     if ((*i)->address() == host->address()) {

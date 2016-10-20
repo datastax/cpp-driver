@@ -17,7 +17,7 @@
 #include "dc_aware_policy.hpp"
 
 #include "logger.hpp"
-
+#include "request_handler.hpp"
 #include "scoped_lock.hpp"
 
 #include <algorithm>
@@ -26,7 +26,7 @@ namespace cass {
 
 static const CopyOnWriteHostVec NO_HOSTS(new HostVec());
 
-void DCAwarePolicy::init(const SharedRefPtr<Host>& connected_host,
+void DCAwarePolicy::init(const Host::Ptr& connected_host,
                          const HostMap& hosts,
                          Random* random) {
   if (local_dc_.empty() && connected_host && !connected_host->dc().empty()) {
@@ -45,7 +45,7 @@ void DCAwarePolicy::init(const SharedRefPtr<Host>& connected_host,
   }
 }
 
-CassHostDistance DCAwarePolicy::distance(const SharedRefPtr<Host>& host) const {
+CassHostDistance DCAwarePolicy::distance(const Host::Ptr& host) const {
   if (local_dc_.empty() || host->dc() == local_dc_) {
     return CASS_HOST_DISTANCE_LOCAL;
   }
@@ -62,14 +62,13 @@ CassHostDistance DCAwarePolicy::distance(const SharedRefPtr<Host>& host) const {
 }
 
 QueryPlan* DCAwarePolicy::new_query_plan(const std::string& connected_keyspace,
-                                         const Request* request,
-                                         const TokenMap* token_map,
-                                         Request::EncodingCache* cache) {
-  CassConsistency cl = request != NULL ? request->consistency() : Request::DEFAULT_CONSISTENCY;
+                                         RequestHandler* request_handler,
+                                         const TokenMap* token_map) {
+  CassConsistency cl = request_handler != NULL ? request_handler->request()->consistency() : Request::DEFAULT_CONSISTENCY;
   return new DCAwareQueryPlan(this, cl, index_++);
 }
 
-void DCAwarePolicy::on_add(const SharedRefPtr<Host>& host) {
+void DCAwarePolicy::on_add(const Host::Ptr& host) {
   const std::string& dc = host->dc();
   if (local_dc_.empty() && !dc.empty()) {
     LOG_INFO("Using '%s' for local data center "
@@ -85,7 +84,7 @@ void DCAwarePolicy::on_add(const SharedRefPtr<Host>& host) {
   }
 }
 
-void DCAwarePolicy::on_remove(const SharedRefPtr<Host>& host) {
+void DCAwarePolicy::on_remove(const Host::Ptr& host) {
   const std::string& dc = host->dc();
   if (dc == local_dc_) {
     remove_host(local_dc_live_hosts_, host);
@@ -94,15 +93,15 @@ void DCAwarePolicy::on_remove(const SharedRefPtr<Host>& host) {
   }
 }
 
-void DCAwarePolicy::on_up(const SharedRefPtr<Host>& host) {
+void DCAwarePolicy::on_up(const Host::Ptr& host) {
   on_add(host);
 }
 
-void DCAwarePolicy::on_down(const SharedRefPtr<Host>& host) {
+void DCAwarePolicy::on_down(const Host::Ptr& host) {
   on_remove(host);
 }
 
-void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const std::string& dc, const SharedRefPtr<Host>& host) {
+void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const std::string& dc, const Host::Ptr& host) {
   ScopedWriteLock wl(&rwlock_);
   Map::iterator i = map_.find(dc);
   if (i == map_.end()) {
@@ -114,7 +113,7 @@ void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const std::string& dc, const Sh
   }
 }
 
-void DCAwarePolicy::PerDCHostMap::remove_host_from_dc(const std::string& dc, const SharedRefPtr<Host>& host) {
+void DCAwarePolicy::PerDCHostMap::remove_host_from_dc(const std::string& dc, const Host::Ptr& host) {
   ScopedWriteLock wl(&rwlock_);
   Map::iterator i = map_.find(dc);
   if (i != map_.end()) {
@@ -138,7 +137,7 @@ void DCAwarePolicy::PerDCHostMap::copy_dcs(KeySet* dcs) const {
 }
 
 // Helper method to prevent copy (Notice: "const CopyOnWriteHostVec&")
-static const SharedRefPtr<Host>& get_next_host(const CopyOnWriteHostVec& hosts, size_t index) {
+static const Host::Ptr& get_next_host(const CopyOnWriteHostVec& hosts, size_t index) {
   return (*hosts)[index % hosts->size()];
 }
 
@@ -157,17 +156,17 @@ DCAwarePolicy::DCAwareQueryPlan::DCAwareQueryPlan(const DCAwarePolicy* policy,
   , remote_remaining_(0)
   , index_(start_index) {}
 
-SharedRefPtr<Host> DCAwarePolicy::DCAwareQueryPlan::compute_next() {
+Host::Ptr DCAwarePolicy::DCAwareQueryPlan::compute_next() {
   while (local_remaining_ > 0) {
     --local_remaining_;
-    const SharedRefPtr<Host>& host(get_next_host(hosts_, index_++));
+    const Host::Ptr& host(get_next_host(hosts_, index_++));
     if (host->is_up()) {
       return host;
     }
   }
 
   if (policy_->skip_remote_dcs_for_local_cl_ && is_dc_local(cl_)) {
-    return SharedRefPtr<Host>();
+    return Host::Ptr();
   }
 
   if (!remote_dcs_) {
@@ -178,7 +177,7 @@ SharedRefPtr<Host> DCAwarePolicy::DCAwareQueryPlan::compute_next() {
   while (true) {
     while (remote_remaining_ > 0) {
       --remote_remaining_;
-      const SharedRefPtr<Host>& host(get_next_host(hosts_, index_++));
+      const Host::Ptr& host(get_next_host(hosts_, index_++));
       if (host->is_up()) {
         return host;
       }
@@ -194,7 +193,7 @@ SharedRefPtr<Host> DCAwarePolicy::DCAwareQueryPlan::compute_next() {
     remote_dcs_->erase(i);
   }
 
-  return SharedRefPtr<Host>();
+  return Host::Ptr();
 }
 
 } // namespace cass

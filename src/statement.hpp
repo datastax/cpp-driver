@@ -19,6 +19,7 @@
 
 #include "abstract_data.hpp"
 #include "constants.hpp"
+#include "external.hpp"
 #include "macros.hpp"
 #include "request.hpp"
 #include "result_metadata.hpp"
@@ -30,10 +31,12 @@
 
 namespace cass {
 
-class Handler;
+class RequestCallback;
 
 class Statement : public RoutableRequest, public AbstractData {
 public:
+  typedef SharedRefPtr<Statement> Ptr;
+
   Statement(uint8_t opcode, uint8_t kind, size_t values_count = 0)
       : RoutableRequest(opcode)
       , AbstractData(values_count)
@@ -95,10 +98,10 @@ public:
 
   virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
 
-  virtual int32_t encode_batch(int version, BufferVec* bufs, Handler* handler) const = 0;
+  virtual int32_t encode_batch(int version, BufferVec* bufs, RequestCallback* callback) const = 0;
 
 protected:
-  int32_t copy_buffers(int version, BufferVec* bufs, Handler* handler) const;
+  int32_t copy_buffers(int version, BufferVec* bufs, RequestCallback* callback) const;
 
 private:
   uint8_t flags_;
@@ -112,5 +115,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Statement, CassStatement)
 
 #endif

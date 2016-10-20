@@ -28,7 +28,7 @@ public:
       : Request(CQL_OPCODE_OPTIONS) {}
 
 private:
-  int encode(int version, Handler* handler, BufferVec* bufs) const { return 0; }
+  int encode(int version, RequestCallback* callback, BufferVec* bufs) const { return 0; }
 };
 
 } // namespace cass

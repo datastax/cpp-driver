@@ -46,7 +46,7 @@ public:
 
 class NoSslContextFactory : SslContextFactoryBase<NoSslContextFactory> {
 public:
-  static SslContext* create();
+  static SslContext::Ptr create();
   static void init() {}
 };
 

@@ -18,6 +18,7 @@
 #define __CASS_AUTH_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "external.hpp"
 #include "host.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
@@ -41,6 +42,8 @@ private:
 
 class Authenticator : public RefCounted<Authenticator> {
 public:
+  typedef SharedRefPtr<Authenticator> Ptr;
+
   Authenticator() { }
   virtual ~Authenticator() { }
 
@@ -78,13 +81,22 @@ private:
 
 class AuthProvider : public RefCounted<AuthProvider> {
 public:
+  typedef SharedRefPtr<AuthProvider> Ptr;
+
   AuthProvider()
     : RefCounted<AuthProvider>() { }
 
   virtual ~AuthProvider() { }
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host, const std::string& class_name) const { return NULL; }
-  virtual Authenticator* new_authenticator(const Host::ConstPtr& host, const std::string& class_name) const { return NULL; }
+  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host,
+                                                const std::string& class_name) const {
+    return NULL;
+  }
+
+  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
+                                               const std::string& class_name) const {
+    return Authenticator::Ptr();
+  }
 
 private:
   DISALLOW_COPY_AND_ASSIGN(AuthProvider);
@@ -136,9 +148,9 @@ public:
     }
   }
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host, const std::string& class_name) const { return NULL; }
-  virtual Authenticator* new_authenticator(const Host::ConstPtr& host, const std::string& class_name) const {
-    return new ExternalAuthenticator(host, class_name, &exchange_callbacks_, data_);
+  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
+                                               const std::string& class_name) const {
+    return Authenticator::Ptr(new ExternalAuthenticator(host, class_name, &exchange_callbacks_, data_));
   }
 
 private:
@@ -154,12 +166,14 @@ public:
     : username_(username)
     , password_(password) { }
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host, const std::string& class_name) const {
+  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host,
+                                                const std::string& class_name) const {
     return new PlainTextAuthenticator(username_, password_);
   }
 
-  virtual Authenticator* new_authenticator(const Host::ConstPtr& host, const std::string& class_name) const {
-    return new PlainTextAuthenticator(username_, password_);
+  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
+                                               const std::string& class_name) const {
+    return Authenticator::Ptr(new PlainTextAuthenticator(username_, password_));
   }
 
 private:
@@ -168,5 +182,7 @@ private:
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::ExternalAuthenticator, CassAuthenticator)
 
 #endif

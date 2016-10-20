@@ -183,6 +183,8 @@ BOOST_AUTO_TEST_CASE(blacklist)
 
     policy_tool.assert_queried(host1, 6);
     policy_tool.assert_queried(host2, 6);
+
+    policy_tool.drop_schema(session.get());
   }
 }
 
@@ -243,6 +245,8 @@ BOOST_AUTO_TEST_CASE(blacklist_dc)
     policy_tool.assert_queried(host2, 3);
     policy_tool.assert_queried(host3, 3);
     policy_tool.assert_queried(host4, 3);
+
+    policy_tool.drop_schema(session.get());
   }
 }
 

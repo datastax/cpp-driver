@@ -19,7 +19,7 @@
 
 #include "buffer.hpp"
 #include "cassandra.h"
-#include "handler.hpp"
+#include "request_callback.hpp"
 #include "hash.hpp"
 #include "host.hpp"
 #include "list.hpp"
@@ -28,7 +28,7 @@
 #include "ref_counted.hpp"
 #include "request.hpp"
 #include "response.hpp"
-#include "schema_change_handler.hpp"
+#include "schema_change_callback.hpp"
 #include "scoped_ptr.hpp"
 #include "ssl.hpp"
 #include "stream_manager.hpp"
@@ -104,11 +104,12 @@ public:
 
   void connect();
 
-  bool write(Handler* request, bool flush_immediately = true);
+  bool write(const RequestCallback::Ptr& request, bool flush_immediately = true);
   void flush();
 
-  void schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait);
+  void schedule_schema_agreement(const SchemaChangeCallback::Ptr& callback, uint64_t wait);
 
+  uv_loop_t* loop() { return loop_; }
   const Config& config() const { return config_; }
   Metrics* metrics() { return metrics_; }
   const Address& address() const { return host_->address(); }
@@ -163,28 +164,26 @@ private:
     char buf_[MAX_BUFFER_SIZE];
   };
 
-  class StartupHandler : public Handler {
+  class StartupCallback : public SimpleRequestCallback {
   public:
-    StartupHandler(Connection* connection, Request* request)
-        : Handler(request) {
-      set_connection(connection);
-    }
-
-    virtual void on_set(ResponseMessage* response);
-    virtual void on_error(CassError code, const std::string& message);
-    virtual void on_timeout();
+    StartupCallback(const Request::ConstPtr& request);
 
   private:
+    virtual void on_internal_set(ResponseMessage* response);
+    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_timeout();
+
     void on_result_response(ResponseMessage* response);
   };
 
-  class HeartbeatHandler : public Handler {
+  class HeartbeatCallback : public SimpleRequestCallback {
   public:
-    HeartbeatHandler(Connection* connection);
+    HeartbeatCallback();
 
-    virtual void on_set(ResponseMessage* response);
-    virtual void on_error(CassError code, const std::string& message);
-    virtual void on_timeout();
+  private:
+    virtual void on_internal_set(ResponseMessage* response);
+    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_timeout();
   };
 
   class PendingWriteBase : public List<PendingWriteBase>::Node {
@@ -206,7 +205,7 @@ private:
       return size_;
     }
 
-    int32_t write(Handler* handler);
+    int32_t write(RequestCallback* callback);
 
     virtual void flush() = 0;
 
@@ -218,7 +217,7 @@ private:
     bool is_flushed_;
     size_t size_;
     BufferVec buffers_;
-    List<Handler> handlers_;
+    List<RequestCallback> callbacks_;
   };
 
   class PendingWrite : public PendingWriteBase {
@@ -245,16 +244,16 @@ private:
 
   struct PendingSchemaAgreement
       : public List<PendingSchemaAgreement>::Node {
-    PendingSchemaAgreement(const SharedRefPtr<SchemaChangeHandler>& handler)
-        : handler(handler) { }
+    PendingSchemaAgreement(const SchemaChangeCallback::Ptr& callback)
+        : callback(callback) { }
 
     void stop_timer();
 
-    SharedRefPtr<SchemaChangeHandler> handler;
+    SchemaChangeCallback::Ptr callback;
     Timer timer;
   };
 
-  bool internal_write(Handler* request, bool flush_immediately = true);
+  int32_t internal_write(const RequestCallback::Ptr& request, bool flush_immediately = true);
   void internal_close(ConnectionState close_state);
   void set_state(ConnectionState state);
   void consume(char* input, size_t size);
@@ -309,7 +308,7 @@ private:
 
   size_t pending_writes_size_;
   List<PendingWriteBase> pending_writes_;
-  List<Handler> pending_reads_;
+  List<RequestCallback> pending_reads_;
   List<PendingSchemaAgreement> pending_schema_agreements_;
 
   uv_loop_t* loop_;
@@ -321,7 +320,7 @@ private:
   Listener* listener_;
 
   ScopedPtr<ResponseMessage> response_;
-  StreamManager<Handler*> stream_manager_;
+  StreamManager<RequestCallback*> stream_manager_;
 
   uv_tcp_t socket_;
   Timer connect_timer_;

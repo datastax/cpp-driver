@@ -122,7 +122,7 @@ void IOWorker::add_pool(const Host::ConstPtr& host, bool is_initial_connection) 
 
     set_host_is_available(address, false);
 
-    SharedRefPtr<Pool> pool(new Pool(this, host, is_initial_connection));
+    Pool::Ptr pool(new Pool(this, host, is_initial_connection));
     pools_[address] = pool;
     pool->connect();
   } else  {
@@ -135,38 +135,39 @@ void IOWorker::add_pool(const Host::ConstPtr& host, bool is_initial_connection) 
   }
 }
 
-bool IOWorker::execute(RequestHandler* request_handler) {
-  return request_queue_.enqueue(request_handler);
+bool IOWorker::execute(const RequestHandler::Ptr& request_handler) {
+  request_handler->inc_ref(); // Queue reference
+  if (!request_queue_.enqueue(request_handler.get())) {
+    request_handler->dec_ref();
+    return false;
+  }
+  return true;
 }
 
-void IOWorker::retry(RequestHandler* request_handler) {
-  Address address;
-  if (!request_handler->get_current_host_address(&address)) {
-    request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                              "All hosts in current policy attempted "
-                              "and were either unavailable or failed");
-    return;
-  }
-
-  PoolMap::const_iterator it = pools_.find(address);
-  if (it != pools_.end() && it->second->is_ready()) {
-    const SharedRefPtr<Pool>& pool = it->second;
-    Connection* connection = pool->borrow_connection();
-    if (connection != NULL) {
-      if (!pool->write(connection, request_handler)) {
-        request_handler->next_host();
-        retry(request_handler);
+void IOWorker::retry(const SpeculativeExecution::Ptr& speculative_execution) {
+  while (speculative_execution->current_host()) {
+    PoolMap::const_iterator it = pools_.find(speculative_execution->current_host()->address());
+    if (it != pools_.end() && it->second->is_ready()) {
+      const Pool::Ptr& pool = it->second;
+      Connection* connection = pool->borrow_connection();
+      if (connection != NULL) {
+        if (pool->write(connection, speculative_execution)) {
+          return; // Success
+        }
+      } else { // Too busy, or no connections
+        pool->wait_for_connection(speculative_execution);
+        return; // Waiting for connection
       }
-    } else { // Too busy, or no connections
-      pool->wait_for_connection(request_handler);
     }
-  } else {
-    request_handler->next_host();
-    retry(request_handler);
+    speculative_execution->next_host();
   }
+
+  speculative_execution->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                                  "All hosts in current policy attempted "
+                                  "and were either unavailable or failed");
 }
 
-void IOWorker::request_finished(RequestHandler* request_handler) {
+void IOWorker::request_finished() {
   pending_request_count_--;
   maybe_close();
   request_queue_.send();
@@ -209,7 +210,7 @@ void IOWorker::notify_pool_closed(Pool* pool) {
 }
 
 void IOWorker::add_pending_flush(Pool* pool) {
-  pools_pending_flush_.push_back(SharedRefPtr<Pool>(pool));
+  pools_pending_flush_.push_back(Pool::Ptr(pool));
 }
 
 void IOWorker::maybe_close() {
@@ -244,7 +245,7 @@ void IOWorker::close_handles() {
   EventThread<IOWorkerEvent>::close_handles();
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
-  uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
+  uv_close(reinterpret_cast<uv_handle_t*>(&prepare_), NULL);
 }
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
@@ -281,13 +282,17 @@ void IOWorker::on_execute(uv_async_t* async) {
 #endif
   IOWorker* io_worker = static_cast<IOWorker*>(async->data);
 
-  RequestHandler* request_handler = NULL;
+  RequestHandler* temp = NULL;
   size_t remaining = io_worker->config().max_requests_per_flush();
-  while (remaining != 0 && io_worker->request_queue_.dequeue(request_handler)) {
-    if (request_handler != NULL) {
+  while (remaining != 0 && io_worker->request_queue_.dequeue(temp)) {
+    RequestHandler::Ptr request_handler(temp);
+    if (request_handler) {
+      request_handler->dec_ref(); // Queue reference
       io_worker->pending_request_count_++;
-      request_handler->set_io_worker(io_worker);
-      request_handler->retry();
+      request_handler->start_request(io_worker);
+      SpeculativeExecution::Ptr speculative_execution(new SpeculativeExecution(request_handler,
+                                                                               request_handler->current_host()));
+      speculative_execution->execute();
     } else {
       io_worker->state_ = IO_WORKER_STATE_CLOSING;
     }
@@ -317,7 +322,7 @@ void IOWorker::schedule_reconnect(const Host::ConstPtr& host) {
              host->address_string().c_str(),
              config_.reconnect_wait_time_ms(),
              static_cast<void*>(this));
-    SharedRefPtr<Pool> pool(new Pool(this, host, false));
+    Pool::Ptr pool(new Pool(this, host, false));
     pools_[host->address()] = pool;
     pool->delayed_connect();
   }

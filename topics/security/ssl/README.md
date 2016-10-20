@@ -66,13 +66,40 @@ A [`CassSsl`](http://datastax.github.io/cpp-driver/api/struct.CassSsl/) object i
 void setup_ssl(CassCluster* cluster) {
   CassSsl* ssl = cass_ssl_new();
 
-  // Configure SSL object...
+  /* Configure SSL object... */
 
-  // To enable SSL attach it to the cluster object
+  /* To enable SSL attach it to the cluster object */
   cass_cluster_set_ssl(cluster, ssl);
 
-  // You can detach your reference to this object once it's
-  // added to the cluster object
+  /* You can detach your reference to this object once it's
+   * added to the cluster object
+   */
+  cass_ssl_free(ssl);
+}
+```
+
+### Enable SSL without initializing the underlying library (e.g. OpenSSL)
+
+This is useful for integrating with applications that have already initialized
+the underlying SSL library.
+
+```c
+#include <cassandra.h>
+
+void setup_ssl_no_lib_init(CassCluster* cluster) {
+  /* The underlying SSL implemenation should be initialized */
+
+  /* Enable SSL */
+  CassSsl* ssl = cass_ssl_new_no_lib_init(); /* Don't reinitialize the library */
+
+  /* Configure SSL object... */
+
+  /* To enable SSL attach it to the cluster object */
+  cass_cluster_set_ssl(cluster, ssl);
+
+  /* You can detach your reference to this object once it's
+   * added to the cluster object
+   */
   cass_ssl_free(ssl);
 }
 ```

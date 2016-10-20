@@ -18,14 +18,13 @@
 #define __CASS_ADDRESS_HPP_INCLUDED__
 
 #include "hash.hpp"
-#include "utils.hpp"
 
 #include <sparsehash/dense_hash_set>
 
-#include <uv.h>
-#include <set>
+#include <ostream>
 #include <string.h>
 #include <string>
+#include <uv.h>
 #include <vector>
 
 namespace cass {
@@ -35,62 +34,71 @@ public:
   static const Address EMPTY_KEY;
   static const Address DELETED_KEY;
 
+  static const Address BIND_ANY_IPV4;
+  static const Address BIND_ANY_IPV6;
+
   Address();
-
-  Address(const std::string& ip, int port);
-
+  Address(const std::string& ip, int port); // Tests only
 
   static bool from_string(const std::string& ip, int port,
                           Address* output = NULL);
 
-  static void from_inet(const char* data, size_t size, int port,
+  static bool from_inet(const char* data, size_t size, int port,
                         Address* output = NULL);
 
   bool init(const struct sockaddr* addr);
 
-  const struct sockaddr* addr() const {
-    return copy_cast<const struct sockaddr_storage*, const struct sockaddr*>(&addr_);
-  }
+#ifdef _WIN32
+  const struct sockaddr* addr() const { return reinterpret_cast<const struct sockaddr*>(&addr_); }
+  const struct sockaddr_in* addr_in() const { return reinterpret_cast<const struct sockaddr_in*>(&addr_); }
+  const struct sockaddr_in6* addr_in6() const { return reinterpret_cast<const struct sockaddr_in6*>(&addr_); }
+#else
+  const struct sockaddr* addr() const { return &addr_; }
+  const struct sockaddr_in* addr_in() const { return &addr_in_; }
+  const struct sockaddr_in6* addr_in6() const { return &addr_in6_; }
+#endif
 
-  struct sockaddr_in* addr_in() {
-    return copy_cast<struct sockaddr_storage*, struct sockaddr_in*>(&addr_);
-  }
-
-  const struct sockaddr_in* addr_in() const {
-    return copy_cast<const struct sockaddr_storage*, const sockaddr_in*>(&addr_);
-  }
-
-  struct sockaddr_in6* addr_in6() {
-    return copy_cast<struct sockaddr_storage*, sockaddr_in6*>(&addr_);
-  }
-
-  const struct sockaddr_in6* addr_in6() const {
-    return copy_cast<const struct sockaddr_storage*, const sockaddr_in6*>(&addr_);
-  }
-
-  int family() const { return addr_.ss_family; }
-
+  bool is_valid() const { return family() == AF_INET || family() == AF_INET6; }
+  int family() const { return addr()->sa_family; }
   int port() const;
 
   std::string to_string(bool with_port = false) const;
   uint8_t to_inet(uint8_t* data) const;
 
-  int compare(const Address& a) const;
+  int compare(const Address& a, bool with_port = true) const;
 
 private:
-  void init() { memset(&addr_, 0, sizeof(addr_)); }
+  void init() { addr()->sa_family = AF_UNSPEC; }
+  void init(const struct sockaddr_in* addr);
+  void init(const struct sockaddr_in6* addr);
+
+#ifdef _WIN32
+  struct sockaddr* addr() { return reinterpret_cast<struct sockaddr*>(&addr_); }
+  struct sockaddr_in* addr_in() { return reinterpret_cast<struct sockaddr_in*>(&addr_); }
+  struct sockaddr_in6* addr_in6() { return reinterpret_cast<struct sockaddr_in6*>(&addr_); }
 
   struct sockaddr_storage addr_;
+#else
+  struct sockaddr* addr() { return &addr_; }
+  struct sockaddr_in* addr_in() { return &addr_in_; }
+  struct sockaddr_in6* addr_in6() { return &addr_in6_; }
+
+  union {
+    struct sockaddr addr_;
+    struct sockaddr_in addr_in_;
+    struct sockaddr_in6 addr_in6_;
+  };
+#endif
 };
 
 struct AddressHash {
   std::size_t operator()(const cass::Address& a) const {
     if (a.family() == AF_INET) {
-      return cass::hash::fnv1a(reinterpret_cast<const char*>(a.addr_in()),
-          sizeof(struct sockaddr_in));
+      return cass::hash::fnv1a(reinterpret_cast<const char*>(a.addr()),
+                               sizeof(struct sockaddr_in));
     } else if (a.family() == AF_INET6) {
-      return cass::hash::fnv1a(reinterpret_cast<const char*>(a.addr_in6()),
-          sizeof(struct sockaddr_in6));
+      return cass::hash::fnv1a(reinterpret_cast<const char*>(a.addr()),
+                               sizeof(struct sockaddr_in6));
     }
     return 0;
   }

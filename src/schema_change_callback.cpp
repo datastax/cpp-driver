@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "schema_change_handler.hpp"
+#include "schema_change_callback.hpp"
 
 #include "address.hpp"
 #include "connection.hpp"
@@ -34,27 +34,27 @@
 
 namespace cass {
 
-SchemaChangeHandler::SchemaChangeHandler(Connection* connection,
-                                         RequestHandler* request_handler,
-                                         const SharedRefPtr<Response>& response,
-                                         uint64_t elapsed)
-  : MultipleRequestHandler(connection)
-  , request_handler_(request_handler)
+SchemaChangeCallback::SchemaChangeCallback(Connection* connection,
+                                           const SpeculativeExecution::Ptr& speculative_execution,
+                                           const Response::Ptr& response,
+                                           uint64_t elapsed)
+  : MultipleRequestCallback(connection)
+  , speculative_execution_(speculative_execution)
   , request_response_(response)
   , start_ms_(get_time_since_epoch_ms())
   , elapsed_ms_(elapsed) {}
 
-void SchemaChangeHandler::execute() {
+void SchemaChangeCallback::execute() {
   execute_query("local", "SELECT schema_version FROM system.local WHERE key='local'");
   execute_query("peers", "SELECT peer, rpc_address, schema_version FROM system.peers");
 }
 
-bool SchemaChangeHandler::has_schema_agreement(const ResponseMap& responses) {
+bool SchemaChangeCallback::has_schema_agreement(const ResponseMap& responses) {
   StringRef current_version;
 
   ResultResponse* local_result;
 
-  if (MultipleRequestHandler::get_result_response(responses, "local", &local_result) &&
+  if (MultipleRequestCallback::get_result_response(responses, "local", &local_result) &&
       local_result->row_count() > 0) {
     const Row* row = &local_result->first_row();
 
@@ -68,7 +68,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseMap& responses) {
   }
 
   ResultResponse* peers_result;
-  if (MultipleRequestHandler::get_result_response(responses, "peers", &peers_result)) {
+  if (MultipleRequestCallback::get_result_response(responses, "peers", &peers_result)) {
     ResultIterator rows(peers_result);
     while (rows.next()) {
       const Row* row = rows.row();
@@ -80,7 +80,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseMap& responses) {
                                                                row->get_by_name("rpc_address"),
                                                                &address);
 
-      if (is_valid_address && request_handler_->is_host_up(address)) {
+      if (is_valid_address && speculative_execution_->is_host_up(address)) {
         const Value* v = row->get_by_name("schema_version");
         if (!row->get_by_name("rpc_address")->is_null() && !v->is_null()) {
           StringRef version(v->to_string_ref());
@@ -95,13 +95,18 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseMap& responses) {
   return true;
 }
 
-void SchemaChangeHandler::on_set(const ResponseMap& responses) {
+void SchemaChangeCallback::on_set(const ResponseMap& responses) {
+  // Don't wait for schema agreement if the underlying request is cancelled
+  if (speculative_execution_->state() == RequestCallback::REQUEST_STATE_CANCELLED) {
+    return;
+  }
+
   elapsed_ms_ += get_time_since_epoch_ms() - start_ms_;
 
   bool has_error = false;
-  for (MultipleRequestHandler::ResponseMap::const_iterator it = responses.begin(),
+  for (MultipleRequestCallback::ResponseMap::const_iterator it = responses.begin(),
        end = responses.end(); it != end; ++it) {
-    if (check_error_or_invalid_response("SchemaChangeHandler", CQL_OPCODE_RESULT, it->second.get())) {
+    if (check_error_or_invalid_response("SchemaChangeCallback", CQL_OPCODE_RESULT, it->second.get())) {
       has_error = true;
     }
   }
@@ -109,13 +114,13 @@ void SchemaChangeHandler::on_set(const ResponseMap& responses) {
   if (!has_error && has_schema_agreement(responses)) {
     LOG_DEBUG("Found schema agreement in %llu ms",
               static_cast<unsigned long long>(elapsed_ms_));
-    request_handler_->set_response(request_response_);
+    speculative_execution_->set_response(request_response_);
     return;
   } else if (elapsed_ms_ >= MAX_SCHEMA_AGREEMENT_WAIT_MS) {
     LOG_WARN("No schema agreement on live nodes after %llu ms. "
              "Schema may not be up-to-date on some nodes.",
              static_cast<unsigned long long>(elapsed_ms_));
-    request_handler_->set_response(request_response_);
+    speculative_execution_->set_response(request_response_);
     return;
   }
 
@@ -123,31 +128,31 @@ void SchemaChangeHandler::on_set(const ResponseMap& responses) {
             "Trying again in %d ms", RETRY_SCHEMA_AGREEMENT_WAIT_MS);
 
   // Try again
-  SharedRefPtr<SchemaChangeHandler> handler(
-        new SchemaChangeHandler(connection(),
-                                request_handler_.get(),
-                                request_response_,
-                                elapsed_ms_));
-  connection()->schedule_schema_agreement(handler,
+  Ptr callback(
+        new SchemaChangeCallback(connection(),
+                                 speculative_execution_,
+                                 request_response_,
+                                 elapsed_ms_));
+  connection()->schedule_schema_agreement(callback,
                                           RETRY_SCHEMA_AGREEMENT_WAIT_MS);
 }
 
-void SchemaChangeHandler::on_error(CassError code, const std::string& message) {
+void SchemaChangeCallback::on_error(CassError code, const std::string& message) {
   std::ostringstream ss;
   ss << "An error occurred waiting for schema agreement: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
   LOG_ERROR("%s", ss.str().c_str());
-  request_handler_->set_response(request_response_);
+  speculative_execution_->set_response(request_response_);
 }
 
-void SchemaChangeHandler::on_timeout() {
+void SchemaChangeCallback::on_timeout() {
   LOG_ERROR("A timeout occurred waiting for schema agreement");
-  request_handler_->set_response(request_response_);
+  speculative_execution_->set_response(request_response_);
 }
 
-void SchemaChangeHandler::on_closing() {
+void SchemaChangeCallback::on_closing() {
   LOG_WARN("Connection closed while waiting for schema agreement");
-  request_handler_->set_response(request_response_);
+  speculative_execution_->set_response(request_response_);
 }
 
 } // namespace cass

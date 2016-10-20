@@ -51,24 +51,23 @@ public:
 
   virtual ~LatencyAwarePolicy() {}
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random);
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
 
   virtual void register_handles(uv_loop_t* loop);
   virtual void close_handles();
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
-                                    const Request* request,
-                                    const TokenMap* token_map,
-                                    Request::EncodingCache* cache);
+                                    RequestHandler* request_handler,
+                                    const TokenMap* token_map);
 
   virtual LoadBalancingPolicy* new_instance() {
     return new LatencyAwarePolicy(child_policy_->new_instance(), settings_);
   }
 
-  virtual void on_add(const SharedRefPtr<Host>& host);
-  virtual void on_remove(const SharedRefPtr<Host>& host);
-  virtual void on_up(const SharedRefPtr<Host>& host);
-  virtual void on_down(const SharedRefPtr<Host>& host);
+  virtual void on_add(const Host::Ptr& host);
+  virtual void on_remove(const Host::Ptr& host);
+  virtual void on_up(const Host::Ptr& host);
+  virtual void on_down(const Host::Ptr& host);
 
 public:
   // Testing only
@@ -84,7 +83,7 @@ private:
       , child_plan_(child_plan)
       , skipped_index_(0) {}
 
-    SharedRefPtr<Host> compute_next();
+    Host::Ptr compute_next();
 
   private:
     LatencyAwarePolicy* policy_;
@@ -98,7 +97,7 @@ private:
   static void on_after_work(PeriodicTask* task);
 
   Atomic<int64_t> min_average_;
-  PeriodicTask* calculate_min_average_task_;
+  PeriodicTask::Ptr calculate_min_average_task_;
   Settings settings_;
   CopyOnWriteHostVec hosts_;
 

@@ -20,6 +20,7 @@
 #include "auth.hpp"
 #include "cassandra.h"
 #include "dc_aware_policy.hpp"
+#include "host_targeting_policy.hpp"
 #include "latency_aware_policy.hpp"
 #include "retry_policy.hpp"
 #include "ssl.hpp"
@@ -29,6 +30,7 @@
 #include "blacklist_policy.hpp"
 #include "whitelist_dc_policy.hpp"
 #include "blacklist_dc_policy.hpp"
+#include "speculative_execution.hpp"
 
 #include <list>
 #include <string>
@@ -64,8 +66,10 @@ public:
       , log_data_(NULL)
       , auth_provider_(new AuthProvider())
       , load_balancing_policy_(new DCAwarePolicy())
+      , speculative_execution_policy_(new NoSpeculativeExecutionPolicy())
       , token_aware_routing_(true)
       , latency_aware_routing_(false)
+      , host_targeting_(false)
       , tcp_nodelay_enable_(true)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0)
@@ -228,10 +232,10 @@ public:
     log_data_ = data;
   }
 
-  const SharedRefPtr<AuthProvider>& auth_provider() const { return auth_provider_; }
+  const AuthProvider::Ptr& auth_provider() const { return auth_provider_; }
 
-  void set_auth_provider(AuthProvider* auth_provider) {
-    auth_provider_.reset(auth_provider == NULL ? new AuthProvider() : auth_provider);
+  void set_auth_provider(const AuthProvider::Ptr& auth_provider) {
+    auth_provider_ = (!auth_provider ? AuthProvider::Ptr(new AuthProvider()) : auth_provider);
   }
 
   void set_credentials(const std::string& username, const std::string& password) {
@@ -260,12 +264,24 @@ public:
     if (latency_aware()) {
       chain = new LatencyAwarePolicy(chain, latency_aware_routing_settings_);
     }
+    if (host_targeting()) {
+      chain = new HostTargetingPolicy(chain);
+    }
     return chain;
   }
 
   void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
     if (lbp == NULL) return;
     load_balancing_policy_.reset(lbp);
+  }
+
+  SpeculativeExecutionPolicy* speculative_execution_policy() const {
+    return speculative_execution_policy_->new_instance();
+  }
+
+  void set_speculative_execution_policy(SpeculativeExecutionPolicy* sep) {
+    if (sep == NULL) return;
+    speculative_execution_policy_.reset(sep);
   }
 
   SslContext* ssl_context() const { return ssl_context_.get(); }
@@ -281,6 +297,10 @@ public:
   bool latency_aware() const { return latency_aware_routing_; }
 
   void set_latency_aware_routing(bool is_latency_aware) { latency_aware_routing_ = is_latency_aware; }
+
+  bool host_targeting() const { return host_targeting_; }
+
+  void set_host_targeting(bool is_host_targeting) { host_targeting_ = is_host_targeting; }
 
   void set_latency_aware_routing_settings(const LatencyAwarePolicy::Settings& settings) {
     latency_aware_routing_settings_ = settings;
@@ -389,11 +409,13 @@ private:
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;
-  SharedRefPtr<AuthProvider> auth_provider_;
-  SharedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
-  SharedRefPtr<SslContext> ssl_context_;
+  AuthProvider::Ptr auth_provider_;
+  LoadBalancingPolicy::Ptr load_balancing_policy_;
+  SharedRefPtr<SpeculativeExecutionPolicy> speculative_execution_policy_;
+  SslContext::Ptr ssl_context_;
   bool token_aware_routing_;
   bool latency_aware_routing_;
+  bool host_targeting_;
   LatencyAwarePolicy::Settings latency_aware_routing_settings_;
   ContactPointList whitelist_;
   ContactPointList blacklist_;
@@ -405,7 +427,7 @@ private:
   unsigned connection_idle_timeout_secs_;
   unsigned connection_heartbeat_interval_secs_;
   SharedRefPtr<TimestampGenerator> timestamp_gen_;
-  SharedRefPtr<RetryPolicy> retry_policy_;
+  RetryPolicy::Ptr retry_policy_;
   bool use_schema_;
   bool use_hostname_resolution_;
   bool use_randomized_contact_points_;

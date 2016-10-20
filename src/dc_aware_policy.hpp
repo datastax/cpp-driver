@@ -46,22 +46,21 @@ public:
       , local_dc_live_hosts_(new HostVec)
       , index_(0) {}
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random);
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
 
-  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const;
+  virtual CassHostDistance distance(const Host::Ptr& host) const;
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
-                                    const Request* request,
-                                    const TokenMap* token_map,
-                                    Request::EncodingCache* cache);
+                                    RequestHandler* request_handler,
+                                    const TokenMap* token_map);
 
-  virtual void on_add(const SharedRefPtr<Host>& host);
+  virtual void on_add(const Host::Ptr& host);
 
-  virtual void on_remove(const SharedRefPtr<Host>& host);
+  virtual void on_remove(const Host::Ptr& host);
 
-  virtual void on_up(const SharedRefPtr<Host>& host);
+  virtual void on_up(const Host::Ptr& host);
 
-  virtual void on_down(const SharedRefPtr<Host>& host);
+  virtual void on_down(const Host::Ptr& host);
 
   virtual LoadBalancingPolicy* new_instance() {
     return new DCAwarePolicy(local_dc_,
@@ -78,8 +77,8 @@ private:
     PerDCHostMap() { uv_rwlock_init(&rwlock_); }
     ~PerDCHostMap() { uv_rwlock_destroy(&rwlock_); }
 
-    void add_host_to_dc(const std::string& dc, const SharedRefPtr<Host>& host);
-    void remove_host_from_dc(const std::string& dc, const SharedRefPtr<Host>& host);
+    void add_host_to_dc(const std::string& dc, const Host::Ptr& host);
+    void remove_host_from_dc(const std::string& dc, const Host::Ptr& host);
     const CopyOnWriteHostVec& get_hosts(const std::string& dc) const;
     void copy_dcs(KeySet* dcs) const;
 
@@ -100,7 +99,7 @@ private:
                      CassConsistency cl,
                      size_t start_index);
 
-    virtual SharedRefPtr<Host> compute_next();
+    virtual Host::Ptr compute_next();
 
   private:
     const DCAwarePolicy* policy_;

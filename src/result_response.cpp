@@ -16,7 +16,7 @@
 
 #include "result_response.hpp"
 
-#include "external_types.hpp"
+#include "external.hpp"
 #include "result_metadata.hpp"
 #include "serialization.hpp"
 
@@ -108,7 +108,7 @@ public:
 
   char* buffer() const { return buffer_; }
 
-  SharedRefPtr<DataType> decode() {
+  DataType::Ptr decode() {
     uint16_t value_type;
     buffer_ = decode_uint16(buffer_, value_type);
 
@@ -132,7 +132,7 @@ public:
           if (data_type_cache_[value_type]) {
             return data_type_cache_[value_type];
           } else {
-            SharedRefPtr<DataType> data_type(
+            DataType::Ptr data_type(
                   new DataType(static_cast<CassValueType>(value_type)));
             data_type_cache_[value_type] = data_type;
             return data_type;
@@ -141,26 +141,26 @@ public:
         break;
     }
 
-    return SharedRefPtr<DataType>();
+    return DataType::Ptr();
   }
 
 private:
-  SharedRefPtr<DataType> decode_custom() {
+  DataType::Ptr decode_custom() {
     StringRef class_name;
     buffer_ = decode_string(buffer_, &class_name);
-    return SharedRefPtr<DataType>(new CustomType(class_name.to_string()));
+    return DataType::Ptr(new CustomType(class_name.to_string()));
   }
 
-  SharedRefPtr<DataType> decode_collection(CassValueType collection_type) {
+  DataType::Ptr decode_collection(CassValueType collection_type) {
     DataType::Vec types;
     types.push_back(decode());
     if (collection_type == CASS_VALUE_TYPE_MAP) {
       types.push_back(decode());
     }
-    return SharedRefPtr<DataType>(new CollectionType(collection_type, types, false));
+    return DataType::Ptr(new CollectionType(collection_type, types, false));
   }
 
-  SharedRefPtr<DataType> decode_user_type() {
+  DataType::Ptr decode_user_type() {
     StringRef keyspace;
     buffer_ = decode_string(buffer_, &keyspace);
 
@@ -176,13 +176,13 @@ private:
       buffer_ = decode_string(buffer_, &field_name);
       fields.push_back(UserType::Field(field_name.to_string(), decode()));
     }
-    return SharedRefPtr<DataType>(new UserType(keyspace.to_string(),
+    return DataType::Ptr(new UserType(keyspace.to_string(),
                                                type_name.to_string(),
                                                fields,
                                                false));
   }
 
-  SharedRefPtr<DataType> decode_tuple() {
+  DataType::Ptr decode_tuple() {
     uint16_t n;
     buffer_ = decode_uint16(buffer_, n);
 
@@ -190,12 +190,12 @@ private:
     for (uint16_t i = 0; i < n; ++i) {
       types.push_back(decode());
     }
-    return SharedRefPtr<DataType>(new TupleType(types, false));
+    return DataType::Ptr(new TupleType(types, false));
   }
 
 private:
   char* buffer_;
-  SharedRefPtr<DataType> data_type_cache_[CASS_VALUE_TYPE_LAST_ENTRY];
+  DataType::Ptr data_type_cache_[CASS_VALUE_TYPE_LAST_ENTRY];
 };
 
 bool ResultResponse::decode(int version, char* input, size_t size) {
@@ -230,7 +230,7 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
   return false;
 }
 
-char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>* metadata,
+char* ResultResponse::decode_metadata(char* input, ResultMetadata::Ptr* metadata,
                                       bool has_pk_indices) {
   int32_t flags = 0;
   char* buffer = decode_int32(input, flags);

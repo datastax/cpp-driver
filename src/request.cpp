@@ -16,7 +16,7 @@
 
 #include "request.hpp"
 
-#include "external_types.hpp"
+#include "external.hpp"
 
 extern "C" {
 
@@ -81,6 +81,14 @@ int32_t CustomPayload::encode(BufferVec* bufs) const {
     bufs->push_back(buf);
   }
   return length;
+}
+
+uint64_t Request::request_timeout_ms(uint64_t default_timeout_ms) const {
+  uint64_t request_timeout_ms = request_timeout_ms_;
+  if (request_timeout_ms == CASS_UINT64_MAX) {
+    return default_timeout_ms;
+  }
+  return request_timeout_ms;
 }
 
 } // namespace cass

@@ -20,13 +20,13 @@
 
 namespace cass {
 
-void ListPolicy::init(const SharedRefPtr<Host>& connected_host,
+void ListPolicy::init(const Host::Ptr& connected_host,
                       const HostMap& hosts,
                       Random* random) {
   HostMap valid_hosts;
   for (HostMap::const_iterator i = hosts.begin(),
     end = hosts.end(); i != end; ++i) {
-    const SharedRefPtr<Host>& host = i->second;
+    const Host::Ptr& host = i->second;
     if (is_valid_host(host)) {
       valid_hosts.insert(HostPair(i->first, host));
     }
@@ -39,7 +39,7 @@ void ListPolicy::init(const SharedRefPtr<Host>& connected_host,
   ChainedLoadBalancingPolicy::init(connected_host, valid_hosts, random);
 }
 
-CassHostDistance ListPolicy::distance(const SharedRefPtr<Host>& host) const {
+CassHostDistance ListPolicy::distance(const Host::Ptr& host) const {
   if (is_valid_host(host)) {
     return child_policy_->distance(host);
   }
@@ -47,34 +47,32 @@ CassHostDistance ListPolicy::distance(const SharedRefPtr<Host>& host) const {
 }
 
 QueryPlan* ListPolicy::new_query_plan(const std::string& connected_keyspace,
-                                      const Request* request,
-                                      const TokenMap* token_map,
-                                      Request::EncodingCache* cache) {
+                                      RequestHandler* request_handler,
+                                      const TokenMap* token_map) {
   return child_policy_->new_query_plan(connected_keyspace,
-                                       request,
-                                       token_map,
-                                       cache);
+                                       request_handler,
+                                       token_map);
 }
 
-void ListPolicy::on_add(const SharedRefPtr<Host>& host) {
+void ListPolicy::on_add(const Host::Ptr& host) {
   if (is_valid_host(host)) {
     child_policy_->on_add(host);
   }
 }
 
-void ListPolicy::on_remove(const SharedRefPtr<Host>& host) {
+void ListPolicy::on_remove(const Host::Ptr& host) {
   if (is_valid_host(host)) {
     child_policy_->on_remove(host);
   }
 }
 
-void ListPolicy::on_up(const SharedRefPtr<Host>& host) {
+void ListPolicy::on_up(const Host::Ptr& host) {
   if (is_valid_host(host)) {
     child_policy_->on_up(host);
   }
 }
 
-void ListPolicy::on_down(const SharedRefPtr<Host>& host) {
+void ListPolicy::on_down(const Host::Ptr& host) {
   if (is_valid_host(host)) {
     child_policy_->on_down(host);
   }

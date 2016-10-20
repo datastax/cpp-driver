@@ -120,7 +120,7 @@ CassCluster* create_cluster(const char* hosts) {
 
 CassError connect_session(CassSession* session, const CassCluster* cluster) {
   CassError rc = CASS_OK;
-  CassFuture* future = cass_session_connect_keyspace(session, cluster, "examples");
+  CassFuture* future = cass_session_connect(session, cluster);
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
@@ -198,6 +198,8 @@ void insert_into_perf(CassSession* session, const char* query, const CassPrepare
       statement = cass_statement_new(query, 5);
     }
 
+    cass_statement_set_is_idempotent(statement, cass_true);
+
     cass_uuid_gen_time(uuid_gen, &id);
     cass_statement_bind_uuid(statement, 0, id);
     cass_statement_bind_string(statement, 1, big_string);
@@ -227,7 +229,7 @@ void run_insert_queries(void* data) {
   CassSession* session = (CassSession*)data;
 
   const CassPrepared* insert_prepared = NULL;
-  const char* insert_query = "INSERT INTO songs (id, title, album, artist, tags) VALUES (?, ?, ?, ?, ?);";
+  const char* insert_query = "INSERT INTO stress.songs (id, title, album, artist, tags) VALUES (?, ?, ?, ?, ?);";
 
 #if USE_PREPARED
   if (prepare_query(session, insert_query, &insert_prepared) == CASS_OK) {
@@ -256,6 +258,8 @@ void select_from_perf(CassSession* session, const char* query, const CassPrepare
       statement = cass_statement_new(query, 0);
     }
 
+    cass_statement_set_is_idempotent(statement, cass_true);
+
     futures[i] = cass_session_execute(session, statement);
 
     cass_statement_free(statement);
@@ -279,7 +283,7 @@ void run_select_queries(void* data) {
   int i;
   CassSession* session = (CassSession*)data;
   const CassPrepared* select_prepared = NULL;
-  const char* select_query = "SELECT * FROM songs WHERE id = a98d21b2-1900-11e4-b97b-e5e358e71e0d";
+  const char* select_query = "SELECT * FROM stress.songs WHERE id = a98d21b2-1900-11e4-b97b-e5e358e71e0d";
 
 #if USE_PREPARED
   if (prepare_query(session, select_query, &select_prepared) == CASS_OK) {
@@ -301,7 +305,6 @@ int main(int argc, char* argv[]) {
   uv_thread_t threads[NUM_THREADS];
   CassCluster* cluster = NULL;
   CassSession* session = NULL;
-  CassFuture* close_future = NULL;
   char* hosts = "127.0.0.1";
   if (argc > 1) {
     hosts = argv[1];
@@ -321,8 +324,17 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
+  execute_query(session, "DROP KEYSPACE stress");
+
+  execute_query(session, "CREATE KEYSPACE IF NOT EXISTS stress WITH "
+                         "replication = { 'class': 'SimpleStrategy', 'replication_factor': '3'}");
+
+  execute_query(session, "CREATE TABLE IF NOT EXISTS stress.songs (id uuid PRIMARY KEY, "
+                         "title text, album text, artist text, "
+                         "tags set<text>, data blob)");
+
   execute_query(session,
-                "INSERT INTO songs (id, title, album, artist, tags) VALUES "
+                "INSERT INTO stress.songs (id, title, album, artist, tags) VALUES "
                 "(a98d21b2-1900-11e4-b97b-e5e358e71e0d, "
                 "'La Petite Tonkinoise', 'Bye Bye Blackbird', 'Joséphine Baker', { 'jazz', '2013' });");
 
@@ -355,10 +367,8 @@ int main(int argc, char* argv[]) {
     uv_thread_join(&threads[i]);
   }
 
-  close_future = cass_session_close(session);
-  cass_future_wait(close_future);
-  cass_future_free(close_future);
   cass_cluster_free(cluster);
+  cass_session_free(session);
   cass_uuid_gen_free(uuid_gen);
 
   status_destroy(&status);

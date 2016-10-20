@@ -14,14 +14,11 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
-## What's New in 2.3 and 2.4
+## What's New in 2.5
 
-- Support for materialized view and secondary index metadata
-- Support for clustering key order, `frozen<>` and Cassandra version metadata
-- [Blacklist], [whitelist DC], and [blacklist DC] load balancing policies
-- [Custom] authenticators
-- [Reverse DNS] with SSL peer identity verification support
-- Randomized contact points
+- [Speculative execution]
+- [Idempotent statements]
+- [SSL] can be enabled without re-initializing the underlying library (e.g. OpenSSL)
 
 More information about features included in 2.3 can be found in this [blog
 post](http://www.datastax.com/dev/blog/datastax-c-driver-2-3-ga-released).
@@ -58,6 +55,13 @@ There were a couple breaking API changes between 1.0 and 2.0 that are documented
 - [Client-side timestamps]
 - [Data types]
 - [Idle connection heartbeats]
+- Support for materialized view and secondary index metadata
+- Support for clustering key order, `frozen<>` and Cassandra version metadata
+- [Blacklist], [whitelist DC], and [blacklist DC] load balancing policies
+- [Custom] authenticators
+- [Reverse DNS] with SSL peer identity verification support
+- Randomized contact points
+
 
 ## Compatibility
 
@@ -208,3 +212,5 @@ limitations under the License.
 [blacklist DC]: http://datastax.github.io/cpp-driver/topics/configuration/#datacenter
 [Custom]: http://datastax.github.io/cpp-driver/topics/security/#custom
 [Reverse DNS]: http://datastax.github.io/cpp-driver/topics/security/ssl/#enabling-cassandra-identity-verification
+[Speculative execution]: http://datastax.github.io/cpp-driver/topics/configuration/#speculative-execution
+[Idempotent statements]: http://datastax.github.io/cpp-driver/topics/configuration/#query-idempotence

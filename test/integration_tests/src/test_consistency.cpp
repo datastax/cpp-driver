@@ -221,7 +221,7 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
-  ccm->pause_node(2);
+  ccm->stop_node(2);
 
   {
     CassError init_result;
@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
-  ccm->pause_node(3);
+  ccm->stop_node(3);
 
   {
     CassError init_result;
@@ -263,9 +263,6 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
     } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
-
-  ccm->resume_node(2);
-  ccm->resume_node(3);
 
   cass_retry_policy_free(downgrading_policy);
 

@@ -18,6 +18,7 @@
 #define __CASS_DATA_TYPE_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "external.hpp"
 #include "hash_table.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
@@ -65,6 +66,7 @@ inline bool equals_both_not_empty(const std::string& s1,
 
 class DataType : public RefCounted<DataType> {
 public:
+  typedef SharedRefPtr<DataType> Ptr;
   typedef SharedRefPtr<const DataType> ConstPtr;
   typedef std::vector<ConstPtr> Vec;
 
@@ -103,8 +105,8 @@ public:
     }
   }
 
-  virtual DataType* copy() const {
-    return new DataType(value_type_);
+  virtual DataType::Ptr copy() const {
+    return Ptr(new DataType(value_type_));
   }
 
   virtual std::string to_string() const {
@@ -168,12 +170,12 @@ public:
     if (data_type->value_type() != CASS_VALUE_TYPE_CUSTOM) {
       return false;
     }
-    const SharedRefPtr<const CustomType>& custom_type(data_type);
+    const ConstPtr& custom_type(data_type);
     return equals_both_not_empty(class_name_, custom_type->class_name_);
   }
 
-  virtual DataType* copy() const {
-    return new CustomType(class_name_);
+  virtual DataType::Ptr copy() const {
+    return DataType::Ptr(new CustomType(class_name_));
   }
 
   virtual std::string to_string() const {
@@ -265,8 +267,8 @@ public:
     return true;
   }
 
-  virtual DataType* copy() const {
-    return new CollectionType(value_type(), types_, is_frozen());
+  virtual DataType::Ptr copy() const {
+    return DataType::Ptr(new CollectionType(value_type(), types_, is_frozen()));
   }
 
 public:
@@ -312,7 +314,7 @@ public:
       return false;
     }
 
-    const SharedRefPtr<const TupleType>& tuple_type(data_type);
+    const ConstPtr& tuple_type(data_type);
 
     // Only compare sub-types if both have sub-types
     if(!types_.empty() && !tuple_type->types_.empty()) {
@@ -329,8 +331,8 @@ public:
     return true;
   }
 
-  virtual DataType* copy() const {
-    return new TupleType(types_, is_frozen());
+  virtual DataType::Ptr copy() const {
+    return DataType::Ptr(new TupleType(types_, is_frozen()));
   }
 };
 
@@ -431,8 +433,8 @@ public:
     return true;
   }
 
-  virtual DataType* copy() const {
-    return new UserType(keyspace_, type_name_, fields_.entries(), is_frozen());
+  virtual DataType::Ptr copy() const {
+    return DataType::Ptr(new UserType(keyspace_, type_name_, fields_.entries(), is_frozen()));
   }
 
   virtual std::string to_string() const {
@@ -590,5 +592,7 @@ struct IsValidDataType<const UserTypeValue*> {
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::DataType, CassDataType)
 
 #endif

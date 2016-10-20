@@ -20,6 +20,7 @@
 #include "config.hpp"
 #include "control_connection.hpp"
 #include "event_thread.hpp"
+#include "external.hpp"
 #include "future.hpp"
 #include "host.hpp"
 #include "io_worker.hpp"
@@ -29,13 +30,14 @@
 #include "mpmc_queue.hpp"
 #include "random.hpp"
 #include "ref_counted.hpp"
+#include "request_handler.hpp"
 #include "resolver.hpp"
 #include "row.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
+#include "speculative_execution.hpp"
 #include "token_map.hpp"
 
-#include <list>
 #include <memory>
 #include <set>
 #include <string>
@@ -44,7 +46,6 @@
 
 namespace cass {
 
-class RequestHandler;
 class Future;
 class IOWorker;
 class Request;
@@ -89,7 +90,7 @@ public:
   void broadcast_keyspace_change(const std::string& keyspace,
                                  const IOWorker* calling_io_worker);
 
-  SharedRefPtr<Host> get_host(const Address& address);
+  Host::Ptr get_host(const Address& address);
 
   bool notify_ready_async();
   bool notify_keyspace_error_async();
@@ -97,11 +98,12 @@ public:
   bool notify_up_async(const Address& address);
   bool notify_down_async(const Address& address);
 
-  void connect_async(const Config& config, const std::string& keyspace, Future* future);
-  void close_async(Future* future, bool force = false);
+  void connect_async(const Config& config, const std::string& keyspace, const Future::Ptr& future);
+  void close_async(const Future::Ptr& future, bool force = false);
 
-  Future* prepare(const char* statement, size_t length);
-  Future* execute(const RoutableRequest* statement);
+  Future::Ptr prepare(const char* statement, size_t length);
+  Future::Ptr execute(const Request::ConstPtr& request,
+                      const Address* preferred_address = NULL);
 
   const Metadata& metadata() const { return metadata_; }
 
@@ -126,7 +128,7 @@ private:
   void notify_connect_error(CassError code, const std::string& message);
   void notify_closed();
 
-  void execute(RequestHandler* request_handler);
+  void execute(const RequestHandler::Ptr& request_handler);
 
   virtual void on_run();
   virtual void on_after_run();
@@ -138,13 +140,13 @@ private:
 #if UV_VERSION_MAJOR >= 1
   struct ResolveNameData {
     ResolveNameData(Session* session,
-                    const SharedRefPtr<Host>& host,
+                    const Host::Ptr& host,
                     bool is_initial_connection)
       : session(session)
       , host(host)
       , is_initial_connection(is_initial_connection) { }
     Session* session;
-    SharedRefPtr<Host> host;
+    Host::Ptr host;
     bool is_initial_connection;
   };
   typedef cass::NameResolver<ResolveNameData> NameResolver;
@@ -159,7 +161,8 @@ private:
   static void on_execute(uv_async_t* data);
 #endif
 
-  QueryPlan* new_query_plan(const Request* request = NULL, Request::EncodingCache* cache = NULL);
+  QueryPlan* new_query_plan(const RequestHandler::Ptr& request_handler = RequestHandler::Ptr());
+  SpeculativeExecutionPlan* new_execution_plan(const Request* request);
 
   void on_reconnect(Timer* timer);
 
@@ -167,7 +170,7 @@ private:
   // TODO(mpenick): Consider removing friend access to session
   friend class ControlConnection;
 
-  SharedRefPtr<Host> add_host(const Address& address);
+  Host::Ptr add_host(const Address& address);
   void purge_hosts(bool is_initial_connection);
 
   Metadata& metadata() { return metadata_; }
@@ -175,26 +178,27 @@ private:
   void on_control_connection_ready();
   void on_control_connection_error(CassError code, const std::string& message);
 
-  void on_add(SharedRefPtr<Host> host, bool is_initial_connection);
-  void internal_on_add(SharedRefPtr<Host> host, bool is_initial_connection);
+  void on_add(Host::Ptr host, bool is_initial_connection);
+  void internal_on_add(Host::Ptr host, bool is_initial_connection);
 
-  void on_remove(SharedRefPtr<Host> host);
-  void on_up(SharedRefPtr<Host> host);
-  void on_down(SharedRefPtr<Host> host);
+  void on_remove(Host::Ptr host);
+  void on_up(Host::Ptr host);
+  void on_down(Host::Ptr host);
 
 private:
-  typedef std::vector<SharedRefPtr<IOWorker> > IOWorkerVec;
+  typedef std::vector<IOWorker::Ptr > IOWorkerVec;
 
   Atomic<State> state_;
   uv_mutex_t state_mutex_;
 
   Config config_;
   ScopedPtr<Metrics> metrics_;
-  ScopedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
+  LoadBalancingPolicy::Ptr load_balancing_policy_;
+  SharedRefPtr<SpeculativeExecutionPolicy> speculative_execution_policy_;
   CassError connect_error_code_;
   std::string connect_error_message_;
-  ScopedRefPtr<Future> connect_future_;
-  ScopedRefPtr<Future> close_future_;
+  Future::Ptr connect_future_;
+  Future::Ptr close_future_;
 
   HostMap hosts_;
   uv_mutex_t hosts_mutex_;
@@ -216,10 +220,14 @@ private:
 
 class SessionFuture : public Future {
 public:
+  typedef SharedRefPtr<SessionFuture> Ptr;
+
   SessionFuture()
       : Future(CASS_FUTURE_TYPE_SESSION) {}
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Session, CassSession)
 
 #endif

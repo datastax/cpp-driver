@@ -16,8 +16,9 @@
 
 #include "retry_policy.hpp"
 
-#include "external_types.hpp"
+#include "external.hpp"
 #include "logger.hpp"
+#include "request.hpp"
 
 extern "C" {
 
@@ -72,7 +73,9 @@ inline RetryPolicy::RetryDecision max_likely_to_work(int received) {
 
 // Default retry policy
 
-RetryPolicy::RetryDecision DefaultRetryPolicy::on_read_timeout(CassConsistency cl, int received, int required, bool data_recevied, int num_retries) const {
+RetryPolicy::RetryDecision DefaultRetryPolicy::on_read_timeout(const Request* request, CassConsistency cl,
+                                                               int received, int required,
+                                                               bool data_recevied, int num_retries) const {
   if (num_retries != 0) {
     return RetryDecision::return_error();
   }
@@ -84,7 +87,9 @@ RetryPolicy::RetryDecision DefaultRetryPolicy::on_read_timeout(CassConsistency c
   }
 }
 
-RetryPolicy::RetryDecision DefaultRetryPolicy::on_write_timeout(CassConsistency cl, int received, int required, CassWriteType write_type, int num_retries) const {
+RetryPolicy::RetryDecision DefaultRetryPolicy::on_write_timeout(const Request* request, CassConsistency cl,
+                                                                int received, int required,
+                                                                CassWriteType write_type, int num_retries) const {
   if (num_retries != 0) {
     return RetryDecision::return_error();
   }
@@ -96,7 +101,9 @@ RetryPolicy::RetryDecision DefaultRetryPolicy::on_write_timeout(CassConsistency 
   }
 }
 
-RetryPolicy::RetryDecision DefaultRetryPolicy::on_unavailable(CassConsistency cl, int required, int alive, int num_retries) const {
+RetryPolicy::RetryDecision DefaultRetryPolicy::on_unavailable(const Request* request, CassConsistency cl,
+                                                              int required, int alive,
+                                                              int num_retries) const {
   if (num_retries == 0) {
     return RetryDecision::retry_next_host(cl);
   } else {
@@ -104,9 +111,16 @@ RetryPolicy::RetryDecision DefaultRetryPolicy::on_unavailable(CassConsistency cl
   }
 }
 
+RetryPolicy::RetryDecision DefaultRetryPolicy::on_request_error(const Request* request, CassConsistency cl,
+                                                                const ErrorResponse* error, int num_retries) const {
+  return RetryDecision::retry_next_host(cl);
+}
+
 // Downgrading retry policy
 
-RetryPolicy::RetryDecision DowngradingConsistencyRetryPolicy::on_read_timeout(CassConsistency cl, int received, int required, bool data_recevied, int num_retries) const {
+RetryPolicy::RetryDecision DowngradingConsistencyRetryPolicy::on_read_timeout(const Request* request, CassConsistency cl,
+                                                                              int received, int required,
+                                                                              bool data_recevied, int num_retries) const {
   if (num_retries != 0) {
     return RetryDecision::return_error();
   }
@@ -127,7 +141,9 @@ RetryPolicy::RetryDecision DowngradingConsistencyRetryPolicy::on_read_timeout(Ca
   }
 }
 
-RetryPolicy::RetryDecision DowngradingConsistencyRetryPolicy::on_write_timeout(CassConsistency cl, int received, int required, CassWriteType write_type, int num_retries) const {
+RetryPolicy::RetryDecision DowngradingConsistencyRetryPolicy::on_write_timeout(const Request* request, CassConsistency cl,
+                                                                               int received, int required,
+                                                                               CassWriteType write_type, int num_retries) const {
   if (num_retries != 0) {
     return RetryDecision::return_error();
   }
@@ -152,31 +168,51 @@ RetryPolicy::RetryDecision DowngradingConsistencyRetryPolicy::on_write_timeout(C
   }
 }
 
-RetryPolicy::RetryDecision DowngradingConsistencyRetryPolicy::on_unavailable(CassConsistency cl, int required, int alive, int num_retries) const {
+RetryPolicy::RetryDecision DowngradingConsistencyRetryPolicy::on_unavailable(const Request* request, CassConsistency cl,
+                                                                             int required, int alive,
+                                                                             int num_retries) const {
   if (num_retries != 0) {
     return RetryDecision::return_error();
   }
   return max_likely_to_work(alive);
 }
 
+RetryPolicy::RetryDecision DowngradingConsistencyRetryPolicy::on_request_error(const Request* request, CassConsistency cl,
+                                                                               const ErrorResponse* error, int num_retries) const {
+  return RetryDecision::retry_next_host(cl);
+}
+
 // Fallthrough retry policy
 
-RetryPolicy::RetryDecision FallthroughRetryPolicy::on_read_timeout(CassConsistency cl, int received, int required, bool data_recevied, int num_retries) const {
+RetryPolicy::RetryDecision FallthroughRetryPolicy::on_read_timeout(const Request* request, CassConsistency cl,
+                                                                   int received, int required,
+                                                                   bool data_recevied, int num_retries) const {
   return RetryDecision::return_error();
 }
 
-RetryPolicy::RetryDecision FallthroughRetryPolicy::on_write_timeout(CassConsistency cl, int received, int required, CassWriteType write_type, int num_retries) const {
+RetryPolicy::RetryDecision FallthroughRetryPolicy::on_write_timeout(const Request* request, CassConsistency cl,
+                                                                    int received, int required,
+                                                                    CassWriteType write_type, int num_retries) const {
   return RetryDecision::return_error();
 }
 
-RetryPolicy::RetryDecision FallthroughRetryPolicy::on_unavailable(CassConsistency cl, int required, int alive, int num_retries) const {
+RetryPolicy::RetryDecision FallthroughRetryPolicy::on_unavailable(const Request* request, CassConsistency cl,
+                                                                  int required, int alive,
+                                                                  int num_retries) const {
+  return RetryDecision::return_error();
+}
+
+RetryPolicy::RetryDecision FallthroughRetryPolicy::on_request_error(const Request* request, CassConsistency cl,
+                                                                    const ErrorResponse* error, int num_retries) const {
   return RetryDecision::return_error();
 }
 
 // Logging retry policy
 
-RetryPolicy::RetryDecision LoggingRetryPolicy::on_read_timeout(CassConsistency cl, int received, int required, bool data_recevied, int num_retries) const {
-  RetryDecision decision = retry_policy_->on_read_timeout(cl, received, required, data_recevied, num_retries);
+RetryPolicy::RetryDecision LoggingRetryPolicy::on_read_timeout(const Request* request, CassConsistency cl,
+                                                               int received, int required,
+                                                               bool data_recevied, int num_retries) const {
+  RetryDecision decision = retry_policy_->on_read_timeout(request, cl, received, required, data_recevied, num_retries);
 
   switch (decision.type()) {
     case RetryDecision::IGNORE:
@@ -201,8 +237,10 @@ RetryPolicy::RetryDecision LoggingRetryPolicy::on_read_timeout(CassConsistency c
   return decision;
 }
 
-RetryPolicy::RetryDecision LoggingRetryPolicy::on_write_timeout(CassConsistency cl, int received, int required, CassWriteType write_type, int num_retries) const {
-  RetryDecision decision = retry_policy_->on_write_timeout(cl, received, required, write_type, num_retries);
+RetryPolicy::RetryDecision LoggingRetryPolicy::on_write_timeout(const Request* request, CassConsistency cl,
+                                                                int received, int required,
+                                                                CassWriteType write_type, int num_retries) const {
+  RetryDecision decision = retry_policy_->on_write_timeout(request, cl, received, required, write_type, num_retries);
 
   switch (decision.type()) {
     case RetryDecision::IGNORE:
@@ -227,8 +265,10 @@ RetryPolicy::RetryDecision LoggingRetryPolicy::on_write_timeout(CassConsistency 
   return decision;
 }
 
-RetryPolicy::RetryDecision LoggingRetryPolicy::on_unavailable(CassConsistency cl, int required, int alive, int num_retries) const {
-  RetryDecision decision = retry_policy_->on_unavailable(cl, required, alive, num_retries);
+RetryPolicy::RetryDecision LoggingRetryPolicy::on_unavailable(const Request* request, CassConsistency cl,
+                                                              int required, int alive,
+                                                              int num_retries) const {
+  RetryDecision decision = retry_policy_->on_unavailable(request, cl, required, alive, num_retries);
 
   switch (decision.type()) {
     case RetryDecision::IGNORE:
@@ -243,6 +283,33 @@ RetryPolicy::RetryDecision LoggingRetryPolicy::on_unavailable(CassConsistency cl
                cass_consistency_string(decision.retry_consistency()),
                cass_consistency_string(cl),
                required, alive, num_retries);
+      break;
+
+    default:
+      break;
+  }
+
+  return decision;
+}
+
+RetryPolicy::RetryDecision LoggingRetryPolicy::on_request_error(const Request* request, CassConsistency cl,
+                                                                const ErrorResponse* error, int num_retries) const {
+  RetryDecision decision = retry_policy_->on_request_error(request, cl, error, num_retries);
+
+  switch (decision.type()) {
+    case RetryDecision::IGNORE:
+      LOG_INFO("Ignoring request error (initial consistency: %s, error: %s, retries: %d)",
+               cass_consistency_string(cl),
+               error->message().to_string().c_str(),
+               num_retries);
+      break;
+
+    case RetryDecision::RETRY:
+      LOG_INFO("Retrying on request error at consistency %s (initial consistency: %s, error: %s, retries: %d)",
+               cass_consistency_string(decision.retry_consistency()),
+               cass_consistency_string(cl),
+               error->message().to_string().c_str(),
+               num_retries);
       break;
 
     default:

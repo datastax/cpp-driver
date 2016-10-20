@@ -32,12 +32,11 @@ public:
 
   virtual ~TokenAwarePolicy() {}
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random);
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
-                                    const Request* request,
-                                    const TokenMap* token_map,
-                                    Request::EncodingCache* cache);
+                                    RequestHandler* request_handler,
+                                    const TokenMap* token_map);
 
   LoadBalancingPolicy* new_instance() { return new TokenAwarePolicy(child_policy_->new_instance()); }
 
@@ -51,7 +50,7 @@ private:
       , index_(start_index)
       , remaining_(replicas->size()) {}
 
-    SharedRefPtr<Host> compute_next();
+    Host::Ptr compute_next();
 
   private:
     LoadBalancingPolicy* child_policy_;

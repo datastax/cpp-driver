@@ -16,21 +16,29 @@
 
 #include "address.hpp"
 
+#include "macros.hpp"
+
 #include <assert.h>
 #include <sstream>
+#include <string.h>
 
 namespace cass {
 
 const Address Address::EMPTY_KEY("0.0.0.0", 0);
 const Address Address::DELETED_KEY("0.0.0.0", 1);
 
+const Address Address::BIND_ANY_IPV4("0.0.0.0", 0);
+const Address Address::BIND_ANY_IPV6("::", 0);
+
 Address::Address() {
-  init();
+  memset(&addr_, 0, sizeof(addr_));
 }
 
 Address::Address(const std::string& ip, int port) {
   init();
-  from_string(ip, port, this);
+  bool result = from_string(ip, port, this);
+  UNUSED_(result);
+  assert(result);
 }
 
 bool Address::from_string(const std::string& ip, int port, Address* output) {
@@ -47,7 +55,7 @@ bool Address::from_string(const std::string& ip, int port, Address* output) {
 #else
       uv_ip4_addr(ip.c_str(), port, &addr);
 #endif
-      output->init(copy_cast<struct sockaddr_in*, struct sockaddr*>(&addr));
+      output->init(&addr);
     }
     return true;
 #if UV_VERSION_MAJOR == 0
@@ -62,7 +70,7 @@ bool Address::from_string(const std::string& ip, int port, Address* output) {
 #else
       uv_ip6_addr(ip.c_str(), port, &addr);
 #endif
-      output->init(copy_cast<struct sockaddr_in6*, struct sockaddr*>(&addr));
+      output->init(&addr);
     }
     return true;
   } else {
@@ -70,12 +78,17 @@ bool Address::from_string(const std::string& ip, int port, Address* output) {
   }
 }
 
-void Address::from_inet(const char* data, size_t size, int port, Address* output) {
+bool Address::from_inet(const char* data, size_t size, int port, Address* output) {
 
-  assert(size == 4 || size == 16);
   if (size == 4) {
     char buf[INET_ADDRSTRLEN];
-    uv_inet_ntop(AF_INET, data, buf, sizeof(buf));
+#if UV_VERSION_MAJOR == 0
+    if (uv_inet_ntop(AF_INET, data, buf, sizeof(buf)).code != UV_OK) {
+#else
+    if (uv_inet_ntop(AF_INET, data, buf, sizeof(buf)) != 0) {
+#endif
+      return false;
+    }
     if (output != NULL) {
       struct sockaddr_in addr;
 #if UV_VERSION_MAJOR == 0
@@ -83,11 +96,19 @@ void Address::from_inet(const char* data, size_t size, int port, Address* output
 #else
       uv_ip4_addr(buf, port, &addr);
 #endif
-      output->init(copy_cast<struct sockaddr_in*, struct sockaddr*>(&addr));
+      output->init(&addr);
     }
+
+    return true;
   } else {
     char buf[INET6_ADDRSTRLEN];
-    uv_inet_ntop(AF_INET6, data, buf, sizeof(buf));
+#if UV_VERSION_MAJOR == 0
+    if (uv_inet_ntop(AF_INET6, data, buf, sizeof(buf)).code != UV_OK) {
+#else
+    if (uv_inet_ntop(AF_INET6, data, buf, sizeof(buf)) != 0) {
+#endif
+      return false;
+    }
     if (output != NULL) {
       struct sockaddr_in6 addr;
 #if UV_VERSION_MAJOR == 0
@@ -95,20 +116,31 @@ void Address::from_inet(const char* data, size_t size, int port, Address* output
 #else
       uv_ip6_addr(buf, port, &addr);
 #endif
-      output->init(copy_cast<struct sockaddr_in6*, struct sockaddr*>(&addr));
+      output->init(&addr);
     }
+
+    return true;
   }
+  return false;
 }
 
 bool Address::init(const sockaddr* addr) {
   if (addr->sa_family == AF_INET) {
-    memcpy(&addr_, addr, sizeof(struct sockaddr_in));
+    memcpy(addr_in(), addr, sizeof(struct sockaddr_in));
     return true;
   } else if (addr->sa_family == AF_INET6) {
-    memcpy(&addr_, addr, sizeof(struct sockaddr_in6));
+    memcpy(addr_in6(), addr, sizeof(struct sockaddr_in6));
     return true;
   }
   return false;
+}
+
+void Address::init(const struct sockaddr_in* addr) {
+  *addr_in() = *addr;
+}
+
+void Address::init(const struct sockaddr_in6* addr) {
+  *addr_in6() = *addr;
 }
 
 int Address::port() const {
@@ -116,10 +148,8 @@ int Address::port() const {
     return htons(addr_in()->sin_port);
   } else if (family() == AF_INET6) {
     return htons(addr_in6()->sin6_port);
-  } else {
-    assert(false);
-    return -1;
   }
+  return -1;
 }
 
 std::string Address::to_string(bool with_port) const {
@@ -136,8 +166,6 @@ std::string Address::to_string(bool with_port) const {
     if (with_port) ss << "[";
     ss << host;
     if (with_port) ss << "]:" << port();
-  } else {
-    assert(false);
   }
   return ss.str();
 }
@@ -146,17 +174,18 @@ uint8_t Address::to_inet(uint8_t* data) const {
   if (family() == AF_INET) {
     memcpy(data, &addr_in()->sin_addr, 4);
     return 4;
-  } else {
+  } else if (family() == AF_INET6) {
     memcpy(data, &addr_in6()->sin6_addr, 16);
     return 16;
   }
+  return 0;
 }
 
-int Address::compare(const Address& a) const {
+int Address::compare(const Address& a, bool with_port) const {
   if (family() != a.family()) {
     return family() < a.family() ? -1 : 1;
   }
-  if (port() != a.port()) {
+  if (with_port && port() != a.port()) {
     return port() < a.port() ? -1 : 1;
   }
   if (family() == AF_INET) {
@@ -166,11 +195,8 @@ int Address::compare(const Address& a) const {
   } else if (family() == AF_INET6) {
     return memcmp(&(addr_in6()->sin6_addr), &(a.addr_in6()->sin6_addr),
                   sizeof(addr_in6()->sin6_addr));
-  } else {
-    assert(false);
-    return -1;
   }
   return 0;
 }
 
-}
+} // namespace cass

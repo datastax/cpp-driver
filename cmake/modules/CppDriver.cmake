@@ -429,7 +429,7 @@ macro(CassAddIncludes)
       ${CASS_SOURCE_DIR}/src/third_party/sparsehash/src
       ${CASS_INCLUDES}
       )
-  add_subdirectory(src/third_party/sparsehash)
+  add_subdirectory(${CASS_SOURCE_DIR}/src/third_party/sparsehash)
 endmacro()
 
 #------------------------

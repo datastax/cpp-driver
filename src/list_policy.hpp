@@ -30,24 +30,23 @@ public:
 
   virtual ~ListPolicy() {}
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random);
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
 
-  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const;
+  virtual CassHostDistance distance(const Host::Ptr& host) const;
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
-                                    const Request* request,
-                                    const TokenMap* token_map,
-                                    Request::EncodingCache* cache);
+                                    RequestHandler* request_handler,
+                                    const TokenMap* token_map);
 
-  virtual void on_add(const SharedRefPtr<Host>& host);
-  virtual void on_remove(const SharedRefPtr<Host>& host);
-  virtual void on_up(const SharedRefPtr<Host>& host);
-  virtual void on_down(const SharedRefPtr<Host>& host);
+  virtual void on_add(const Host::Ptr& host);
+  virtual void on_remove(const Host::Ptr& host);
+  virtual void on_up(const Host::Ptr& host);
+  virtual void on_down(const Host::Ptr& host);
 
   virtual ListPolicy* new_instance() = 0;
 
 private:
-  virtual bool is_valid_host(const SharedRefPtr<Host>& host) const = 0;
+  virtual bool is_valid_host(const Host::Ptr& host) const = 0;
 
 };
 

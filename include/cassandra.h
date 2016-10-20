@@ -51,8 +51,8 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 4
-#define CASS_VERSION_PATCH 3
+#define CASS_VERSION_MINOR 5
+#define CASS_VERSION_PATCH 0
 #define CASS_VERSION_SUFFIX ""
 
 #ifdef __cplusplus
@@ -1714,12 +1714,38 @@ cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] enabled
  * @return CASS_OK if successful, otherwise an error occurred
- *
- * @see cass_cluster_set_resolve_timeout()
  */
 CASS_EXPORT CassError
 cass_cluster_set_use_randomized_contact_points(CassCluster* cluster,
                                                cass_bool_t enabled);
+
+/**
+ * Enable constant speculative executions with the supplied settings.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] constant_delay_ms
+ * @param[in] max_speculative_executions
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_cluster_set_constant_speculative_execution_policy(CassCluster* cluster,
+                                                       cass_int64_t constant_delay_ms,
+                                                       int max_speculative_executions);
+
+/**
+ * Disable speculative executions
+ *
+ * <b>Default:</b> This is the default speculative execution policy.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_cluster_set_no_speculative_execution_policy(CassCluster* cluster);
 
 /***********************************************************************************
  *
@@ -3248,6 +3274,37 @@ CASS_EXPORT CassSsl*
 cass_ssl_new();
 
 /**
+ * Creates a new SSL context <b>without</b> initializing the underlying library
+ * implementation. The integrating application is responsible for
+ * initializing the underlying SSL implementation. The driver uses the SSL
+ * implmentation from several threads concurrently so it's important that it's
+ * properly setup for multithreaded use e.g. lock callbacks for OpenSSL.
+ *
+ * <b>Important:</b> The SSL library must be initialized before calling this
+ * function.
+ *
+ * When using OpenSSL the following components need to be initialized:
+ *
+ * SSL_library_init();
+ * SSL_load_error_strings();
+ * OpenSSL_add_all_algorithms();
+ *
+ * The following thread-safety callbacks also need to be set:
+ *
+ * CRYPTO_set_locking_callback(...);
+ * CRYPTO_set_id_callback(...);
+ *
+ * @public @memberof CassSsl
+ *
+ * @return Returns a SSL context that must be freed.
+ *
+ * @see cass_ssl_new()
+ * @see cass_ssl_free()
+ */
+CASS_EXPORT CassSsl*
+cass_ssl_new_no_lib_init();
+
+/**
  * Frees a SSL context instance.
  *
  * @public @memberof CassSsl
@@ -3937,6 +3994,22 @@ cass_statement_set_timestamp(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_set_request_timeout(CassStatement* statement,
                                    cass_uint64_t timeout_ms);
+
+/**
+ * Sets whether the statement is idempotent. Idempotent statements are able to be
+ * automatically retried after timeouts/errors and can be speculatively executed.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] is_idempotent
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_constant_speculative_execution_policy()
+ */
+CASS_EXPORT CassError
+cass_statement_set_is_idempotent(CassStatement* statement,
+                                 cass_bool_t is_idempotent);
 
 /**
  * Sets the statement's retry policy.
@@ -5213,6 +5286,23 @@ cass_batch_set_timestamp(CassBatch* batch,
 CASS_EXPORT CassError
 cass_batch_set_request_timeout(CassBatch* batch,
                                cass_uint64_t timeout_ms);
+
+/**
+ * Sets whether the statements in a batch are idempotent. Idempotent batches
+ * are able to be automatically retried after timeouts/errors and can be
+ * speculatively executed.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] is_idempotent
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_constant_speculative_execution_policy()
+ */
+CASS_EXPORT CassError
+cass_batch_set_is_idempotent(CassBatch* batch,
+                             cass_bool_t is_idempotent);
 
 /**
  * Sets the batch's retry policy.

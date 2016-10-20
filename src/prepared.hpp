@@ -17,6 +17,7 @@
 #ifndef __CASS_PREPARED_HPP_INCLUDED__
 #define __CASS_PREPARED_HPP_INCLUDED__
 
+#include "external.hpp"
 #include "ref_counted.hpp"
 #include "result_response.hpp"
 #include "metadata.hpp"
@@ -28,22 +29,26 @@ namespace cass {
 
 class Prepared : public RefCounted<Prepared> {
 public:
-  Prepared(const SharedRefPtr<ResultResponse>& result,
+  typedef SharedRefPtr<const Prepared> ConstPtr;
+
+  Prepared(const ResultResponse::Ptr& result,
            const std::string& statement,
            const Metadata::SchemaSnapshot& schema_metadata);
 
-  const SharedRefPtr<const ResultResponse>& result() const { return result_; }
+  const ResultResponse::ConstPtr& result() const { return result_; }
   const std::string& id() const { return id_; }
   const std::string& statement() const { return statement_; }
   const ResultResponse::PKIndexVec& key_indices() const { return key_indices_; }
 
 private:
-  SharedRefPtr<const ResultResponse> result_;
+  ResultResponse::ConstPtr result_;
   std::string id_;
   std::string statement_;
   ResultResponse::PKIndexVec key_indices_;
 };
 
 } // namespace cass
+
+EXTERNAL_TYPE(cass::Prepared, CassPrepared)
 
 #endif

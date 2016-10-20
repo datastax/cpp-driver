@@ -49,8 +49,8 @@ BOOST_AUTO_TEST_CASE(error)
 
   // Should not be set
   BOOST_CHECK(cass_future_get_result(future.get()) == NULL);
-  BOOST_CHECK(cass_future_get_error_result(future.get()) == NULL);
   BOOST_CHECK(cass_future_get_prepared(future.get()) == NULL);
+  BOOST_CHECK(cass_future_get_error_result(future.get()) != NULL);
 
   BOOST_CHECK_EQUAL(cass_future_custom_payload_item_count(future.get()), 0);
   {
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(error)
     BOOST_REQUIRE_EQUAL(cass_future_custom_payload_item(future.get(), 0,
                                                         &name, &name_length,
                                                         &value, &value_size),
-                        CASS_ERROR_LIB_NO_CUSTOM_PAYLOAD);
+                        CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS);
   }
 }
 
