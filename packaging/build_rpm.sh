@@ -42,7 +42,7 @@ fi
 version=$(header_version "../include/dse.h")
 base="dse-cpp-driver-$version"
 archive="$base.tar.gz"
-files="CMakeLists.txt include src cmake cpp-driver/include cpp-driver/src cpp-driver/cmake README.md"
+files="CMakeLists.txt include src cmake cpp-driver/include cpp-driver/src cpp-driver/cmake cpp-driver/cassconfig.hpp.in README.md"
 
 echo "Building version $version"
 
