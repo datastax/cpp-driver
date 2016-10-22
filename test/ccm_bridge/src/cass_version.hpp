@@ -381,7 +381,11 @@ namespace CCM {
         return CassVersion("2.0.16-762");
       } else if (*this == "4.6.11") {
         return CassVersion("2.0.17-858");
-      } else if (*this == "4.7.0") {
+      } else if (*this == "4.6.12") {
+        return CassVersion("2.0.17-903");
+      } else if (*this == "4.6.13") {
+        return CassVersion("2.0.17-1420");
+      }else if (*this == "4.7.0") {
         return CassVersion("2.1.5-469");
       } else if (*this == "4.7.1" || *this == "4.7.2") {
         return CassVersion("2.1.8-621");
@@ -395,6 +399,10 @@ namespace CCM {
         return CassVersion("2.1.11-969");
       } else if (*this == "4.7.7") {
         return CassVersion("2.1.12-1049");
+      } else if (*this == "4.7.8") {
+        return CassVersion("2.1.13-1218");
+      }  else if (*this == "4.7.9") {
+        return CassVersion("2.1.15-1416");
       } else if (*this == "4.8.0") {
         return CassVersion("2.1.9-791");
       } else if (*this == "4.8.1") {
@@ -409,10 +417,22 @@ namespace CCM {
         return CassVersion("2.1.13-1131");
       } else if (*this == "4.8.6") {
         return CassVersion("2.1.13-1218");
-      }
-      // Guess future releases of DSE
-      else if (*this >= "5.0.0") {
-        return CassVersion("3.0");
+      } else if (*this == "4.8.7") {
+        return CassVersion("2.1.14-1272");
+      } else if (*this == "4.8.8") {
+        return CassVersion("2.1.14-1346");
+      } else if (*this == "4.8.9") {
+        return CassVersion("2.1.15-1403");
+      } else if (*this == "4.8.10") {
+        return CassVersion("2.1.15-1423");
+      } else if (*this >= "5.0.0") {
+        return CassVersion("3.0.7.1158");
+      } else if (*this >= "5.0.1") {
+        return CassVersion("3.0.7.1159");
+      } else if (*this >= "5.0.2") {
+        return CassVersion("3.0.8-1293");
+      } else if (*this >= "5.0.3") {
+        return CassVersion("3.0.9-1346");
       }
 
       // DSE version does not correspond to a valid Cassandra version
