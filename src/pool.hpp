@@ -75,7 +75,8 @@ public:
   bool is_critical_failure() const {
     return error_code_ == Connection::CONNECTION_ERROR_INVALID_PROTOCOL ||
         error_code_ == Connection::CONNECTION_ERROR_AUTH ||
-        error_code_ == Connection::CONNECTION_ERROR_SSL;
+        error_code_ == Connection::CONNECTION_ERROR_SSL_HANDSHAKE ||
+        error_code_ == Connection::CONNECTION_ERROR_SSL_VERIFY;
   }
 
   bool cancel_reconnect() const { return cancel_reconnect_; }
