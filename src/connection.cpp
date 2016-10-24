@@ -748,7 +748,7 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
     }
     if (rc <= 0 && ssl_session->has_error()) {
       connection->notify_error("Unable to decrypt data: " + ssl_session->error_message(),
-                               CONNECTION_ERROR_SSL);
+                               CONNECTION_ERROR_SSL_DECRYPT);
     }
   } else {
     connection->ssl_handshake();
@@ -849,7 +849,7 @@ void Connection::notify_error(const std::string& message, ConnectionError code) 
             message.c_str());
   error_message_ = message;
   error_code_ = code;
-  if (code == Connection::CONNECTION_ERROR_SSL) {
+  if (is_ssl_error()) {
     ssl_error_code_ = ssl_session_->error_code();
   }
   defunct();
@@ -859,7 +859,8 @@ void Connection::ssl_handshake() {
   if (!ssl_session_->is_handshake_done()) {
     ssl_session_->do_handshake();
     if (ssl_session_->has_error()) {
-      notify_error("Error during SSL handshake: " + ssl_session_->error_message(), CONNECTION_ERROR_SSL);
+      notify_error("Error during SSL handshake: " + ssl_session_->error_message(),
+                   CONNECTION_ERROR_SSL_HANDSHAKE);
       return;
     }
   }
@@ -876,7 +877,8 @@ void Connection::ssl_handshake() {
   if (ssl_session_->is_handshake_done()) {
     ssl_session_->verify();
     if (ssl_session_->has_error()) {
-      notify_error("Error verifying peer certificate: " + ssl_session_->error_message(), CONNECTION_ERROR_SSL);
+      notify_error("Error verifying peer certificate: " + ssl_session_->error_message(),
+                   CONNECTION_ERROR_SSL_VERIFY);
       return;
     }
     on_connected();
@@ -1111,7 +1113,8 @@ void Connection::PendingWriteSsl::encrypt() {
     if (is_done || copied == SSL_WRITE_SIZE) {
       int rc = ssl_session->encrypt(buf, copied);
       if (rc <= 0 && ssl_session->has_error()) {
-        connection_->notify_error("Unable to encrypt data: " + ssl_session->error_message(), CONNECTION_ERROR_SSL);
+        connection_->notify_error("Unable to encrypt data: " + ssl_session->error_message(),
+                                  CONNECTION_ERROR_SSL_ENCRYPT);
         return;
       }
       copied = 0;

@@ -66,7 +66,10 @@ public:
     CONNECTION_ERROR_TIMEOUT,
     CONNECTION_ERROR_INVALID_PROTOCOL,
     CONNECTION_ERROR_AUTH,
-    CONNECTION_ERROR_SSL,
+    CONNECTION_ERROR_SSL_ENCRYPT,
+    CONNECTION_ERROR_SSL_DECRYPT,
+    CONNECTION_ERROR_SSL_HANDSHAKE,
+    CONNECTION_ERROR_SSL_VERIFY,
     CONNECTION_ERROR_KEYSPACE
   };
 
@@ -130,7 +133,12 @@ public:
 
   bool is_invalid_protocol() const { return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL; }
   bool is_auth_error() const { return error_code_ == CONNECTION_ERROR_AUTH; }
-  bool is_ssl_error() const { return error_code_ == CONNECTION_ERROR_SSL; }
+  bool is_ssl_error() const {
+    return error_code_ == CONNECTION_ERROR_SSL_ENCRYPT ||
+        error_code_ == CONNECTION_ERROR_SSL_DECRYPT ||
+        error_code_ == CONNECTION_ERROR_SSL_HANDSHAKE ||
+        error_code_ == CONNECTION_ERROR_SSL_VERIFY;
+  }
   bool is_timeout_error() const { return error_code_ == CONNECTION_ERROR_TIMEOUT; }
 
   ConnectionError error_code() const { return error_code_; }
