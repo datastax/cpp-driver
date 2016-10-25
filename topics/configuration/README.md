@@ -232,5 +232,71 @@ cass_cluster_set_connection_idle_timeout(cluster, 120);
 It can be disabled by setting the value to a very long timeout or by disabling
 heartbeats.
 
+### Performance Tips
+
+#### Use a single persistent session
+
+Sessions are expensive objects to create in both time and resources because they
+maintain a pool of connections to your Cassandra cluster. An application should
+create a minimal number of sessions and maintain them for the lifetime of an
+application.
+
+#### Use token-aware and latency-aware policies
+
+The token-aware load balancing can reduce the latency of requests by avoiding an
+extra network hop through a coordinator node. When using the token-aware policy
+requests are sent to one of the nodes which will retrieved or stored instead of
+routing the request through a proxy node (coordinator node).
+
+The latency-aware load balancing policy can also reduce the latency of requests
+by routing requests to nodes that historical performing with the lowest latency.
+This can prevent requests from being sent to nodes that are underperforming.
+
+Both [latency-aware] and [token-aware] can be use together to obtain the benefits of
+both.
+
+#### High throughput applications may need increase watermark settings
+
+If your application is submitting a large number of requests it may trigger the
+driver's back pressure mechanism.  This means Cassandra cannot maintain your
+request rate and requests are starting to queue in the driver (as a pending
+request). This mechanism keeps the driver from queueing your requests until
+memory is exhausted and is a signal to your application to slow down. However,
+you can increase these parameters:
+
+```c
+cass_cluster_set_pending_requests_low_water_mark(cluster, 5000);
+cass_cluster_set_pending_requests_high_water_mark(cluster, 10000);
+```
+
+If your applications requests are very large you may need to adjust the size
+watermarks:
+
+```c
+cass_cluster_set_write_bytes_low_water_mark(cluster, 512 * 1024);
+cass_cluster_set_write_bytes_high_water_mark(cluster, 1024 * 1024);
+```
+
+#### Use [paging] when retrieving large result sets
+
+Using a large page size or a very high `LIMIT` clause can cause your application
+to delay for each individual request. The driver's paging mechanism can be used
+to decrease the latency of individual requests.
+
+#### Choose a lower consistency level
+
+Ultimately, choosing a consistency level is a trade-off between consistency and
+availability. Performance should not be a large deciding factor when choosing a
+consistency level. However, it can affect high-percentile latency numbers
+because requests with consistency levels greater than `ONE` can cause requests
+to wait for one or more nodes to respond back to the coordinator node before a
+request can complete. In multi-datacenter configurations, consistency levels such as
+`EACH_QUORUM` can cause a request to wait for replication across a slower cross
+datacenter network link.  More information about setting the consistency level
+can be found [here](http://datastax.github.io/cpp-driver/topics/basics/consistency/).
+
 [`allow_remote_dcs_for_local_cl`]: http://datastax.github.io/cpp-driver/api/struct.CassCluster/#1a46b9816129aaa5ab61a1363489dccfd0
-[`OPTIONS`]: https://github.com/apache/cassandra/blob/trunk/doc/native_protocol_v3.spec#L278-L282
+[`OPTIONS`]: https://github.com/apache/cassandra/blob/cassandra-3.0/doc/native_protocol_v3.spec
+[token-aware]: http://datastax.github.io/cpp-driver/topics/configuration/#latency-aware-routing
+[latency-aware]: http://datastax.github.io/cpp-driver/topics/configuration/#token-aware-routing
+[paging]: http://datastax.github.io/cpp-driver/topics/basics/handling_results/#paging
