@@ -23,6 +23,27 @@
 #include "test_utils.hpp"
 #include "values.hpp"
 
+// Macros for grouping tests together
+#define GROUP_TEST_F(group_name, test_case, test_name) \
+  TEST_F(test_case, group_name##_##test_name)
+#define GROUP_TYPED_TEST_P(group_name, test_case, test_name) \
+  TYPED_TEST_P(test_case, group_name##_##test_name)
+
+// Macros to use for grouping integration tests together
+#define GROUP_INTEGRATION_TEST(server_type) \
+  GROUP_CONCAT(Integration, server_type)
+#define INTEGRATION_TEST_F(server_type, test_case, test_name) \
+  GROUP_TEST_F(Integration##_##server_type, test_case, test_name)
+#define INTEGRATION_TYPED_TEST_P(server_type, test_case, test_name) \
+  GROUP_TYPED_TEST_P(Integration##_##server_type, test_case, test_name)
+
+// Macros to use for grouping Cassandra integration tests together
+#define CASSANDRA_TEST_NAME(test_name) Integration##_##Cassandra##_##test_name
+#define CASSANDRA_INTEGRATION_TEST_F(test_case, test_name) \
+  INTEGRATION_TEST_F(Cassandra, test_case, test_name)
+#define CASSANDRA_INTEGRATION_TYPED_TEST_P(test_case, test_name) \
+  INTEGRATION_TYPED_TEST_P(Cassandra, test_case, test_name)
+
 #define SKIP_TEST(message) \
   std::cout << "[ SKIPPED  ] " << message << std::endl; \
   return;
@@ -200,6 +221,38 @@ protected:
   std::string test_name_;
 
   /**
+   * Get the default keyspace name (based on the current test case and test
+   * name)
+   *
+   * @return Default keyspace name
+   */
+  virtual std::string default_keyspace();
+
+  /**
+   * Get the default replication factor (based on the number of nodes in the
+   * standard two data center configuration for the test harness)
+   *
+   * @return Default replication factor
+   */
+  virtual unsigned short default_replication_factor();
+
+  /**
+   * Get the default replication strategy for the keyspace (based on the
+   * default replication factor or the overridden value assigned during the test
+   * case setup process)
+   *
+   * @return  Default replication strategy
+   */
+  virtual std::string default_replication_strategy();
+
+  /**
+   * Get the default table name (based on the test name)
+   *
+   * @return  Default table name
+   */
+  virtual std::string default_table();
+
+  /**
    * Establish the session connection using provided cluster object.
    *
    * @param cluster Cluster object to use when creating session connection
@@ -275,7 +328,6 @@ protected:
     return duration;
   }
 
-protected:
   /**
    * Get the current working directory
    *

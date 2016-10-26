@@ -38,7 +38,7 @@
  *
  * @dse_version 5.0.0
  */
-class GraphIntegrationTest : public DseIntegration {
+class GraphTest : public DseIntegration {
 public:
   void SetUp() {
     CHECK_VERSION(5.0.0);
@@ -204,7 +204,7 @@ private:
  * @since 1.0.0
  * @expected_result Graph will be created and existence will be verified
  */
-TEST_F(GraphIntegrationTest, GraphExists) {
+DSE_INTEGRATION_TEST_F(GraphTest, GraphExists) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -242,7 +242,7 @@ TEST_F(GraphIntegrationTest, GraphExists) {
  * @since 1.0.0
  * @expected_result Graph will be created and existence will be verified
  */
-TEST_F(GraphIntegrationTest, ServerError) {
+DSE_INTEGRATION_TEST_F(GraphTest, ServerError) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -267,7 +267,7 @@ TEST_F(GraphIntegrationTest, ServerError) {
  * @since 1.0.0
  * @expected_result Named parameters will be assigned and validated (textual)
  */
-TEST_F(GraphIntegrationTest, MutlipleNamedParameters) {
+DSE_INTEGRATION_TEST_F(GraphTest, MutlipleNamedParameters) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -319,7 +319,7 @@ TEST_F(GraphIntegrationTest, MutlipleNamedParameters) {
  * @since 1.0.0
  * @expected_result Graph edges will be validated from classic example
  */
-TEST_F(GraphIntegrationTest, RetrieveEdges) {
+DSE_INTEGRATION_TEST_F(GraphTest, RetrieveEdges) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -362,7 +362,7 @@ TEST_F(GraphIntegrationTest, RetrieveEdges) {
  * @since 1.0.0
  * @expected_result Graph vertices will be validated from classic example
  */
-TEST_F(GraphIntegrationTest, RetrieveVertices) {
+DSE_INTEGRATION_TEST_F(GraphTest, RetrieveVertices) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -404,7 +404,7 @@ TEST_F(GraphIntegrationTest, RetrieveVertices) {
  * @since 1.0.0
  * @expected_result Graph paths will be validated from classic example
  */
-TEST_F(GraphIntegrationTest, RetrievePaths) {
+DSE_INTEGRATION_TEST_F(GraphTest, RetrievePaths) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -550,7 +550,7 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
  * @since 1.0.0
  * @expected_result Graph timestamp set will be validated
  */
-TEST_F(GraphIntegrationTest, Timestamp) {
+DSE_INTEGRATION_TEST_F(GraphTest, Timestamp) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -611,7 +611,7 @@ TEST_F(GraphIntegrationTest, Timestamp) {
  * @since 1.0.0
  * @expected_result Graph request client timeouts will be honored
  */
-TEST_F(GraphIntegrationTest, ClientRequestTimeout) {
+DSE_INTEGRATION_TEST_F(GraphTest, ClientRequestTimeout) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -653,7 +653,7 @@ TEST_F(GraphIntegrationTest, ClientRequestTimeout) {
  * @since 1.0.0
  * @expected_result Graph request server timeouts will be honored
  */
-TEST_F(GraphIntegrationTest, ServerRequestTimeout) {
+DSE_INTEGRATION_TEST_F(GraphTest, ServerRequestTimeout) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 

@@ -19,6 +19,7 @@
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
+bool Options::is_help_ = false;
 bool Options::is_log_tests_ = true;
 CCM::CassVersion Options::server_version_ = DEFAULT_OPTIONS_CASSSANDRA_VERSION;
 bool Options::is_dse_ = false;
@@ -40,6 +41,7 @@ std::string Options::private_key_ = "private.key";
 CCM::DseCredentialsType Options::dse_credentials_type_;
 CCM::AuthenticationType Options::authentication_type_;
 CCM::DeploymentType Options::deployment_type_;
+std::set<TestCategory> Options::categories_;
 
 bool Options::initialize(int argc, char* argv[]) {
   // Only allow initialization to occur once
@@ -53,6 +55,7 @@ bool Options::initialize(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
       if (std::string(argv[i]).compare("--help") == 0) {
         print_help();
+        is_help_ = true;
         return false;
       }
     }
@@ -66,8 +69,8 @@ bool Options::initialize(int argc, char* argv[]) {
 
     // Iterate through the command line arguments and parse the options
     for (int i = 1; i < argc; ++i) {
-      std::vector<std::string> option = explode(argv[i], '=');
-      std::string key(to_lower(option[0]));
+      std::vector<std::string> option = test::Utils::explode(argv[i], '=');
+      std::string key(test::Utils::to_lower(option[0]));
       std::string value;
       if (option.size() > 1) {
         value = option[1];
@@ -129,6 +132,20 @@ bool Options::initialize(int argc, char* argv[]) {
           cluster_prefix_ = value;
         } else {
           std::cerr << "Missing Cluster Prefix: Using default " << cluster_prefix_ << std::endl;
+        }
+      } else if (key.compare("--category") == 0) {
+        if (!value.empty()) {
+          std::vector<std::string> categories = test::Utils::explode(value, ':');
+          for (std::vector<std::string>::iterator iterator = categories.begin();
+            iterator != categories.end(); ++iterator) {
+            try {
+              categories_.insert(*iterator);
+            } catch (TestCategory::Exception& tce) {
+              std::cerr << "Invalid Category: " << *iterator << " will be ignored" << std::endl;
+            }
+          }
+        } else {
+          std::cerr << "Missing Category: All applicable tests will run" << std::endl;
         }
       }
 #ifdef CASS_USE_LIBSSH2
@@ -205,6 +222,17 @@ bool Options::initialize(int argc, char* argv[]) {
     }
 
     // Determine if the options should have their defaults reset
+    if (categories_.empty()) {
+      for (TestCategory::iterator iterator = TestCategory::begin();
+        iterator != TestCategory::end(); ++iterator) {
+        // Only add the DSE test category if DSE is enabled
+        if (*iterator != TestCategory::DSE || is_dse_) {
+          categories_.insert(*iterator);
+        } else {
+          std::cerr << "DSE Category Will be Ignored: DSE is not enabled [--dse]" << std::endl;
+        }
+      }
+    }
     if (deployment_type_ == CCM::DeploymentType::LOCAL) {
       host_ = "127.0.0.1";
     }
@@ -236,6 +264,18 @@ void Options::print_help() {
     << "      Default:" << std::endl
     << "        Cassandra Version: " << server_version().to_string() << std::endl
     << "        DSE Version: " << DEFAULT_OPTIONS_DSE_VERSION.to_string() << std::endl;
+  std::string categories;
+  for (TestCategory::iterator iterator = TestCategory::begin();
+    iterator != TestCategory::end(); ++iterator) {
+    if (iterator != TestCategory::begin()) {
+      categories += "|";
+    }
+    categories += iterator->name();
+  }
+  std::cout << "  --category=[" << categories << "]" << std::endl << "      "
+    << "Run only the categories whose name matches one of the available" << std::endl
+    << "      categories; ':' separates two categories. The default is all categories" << std::endl
+    << "      being executed."  << std::endl;
   std::cout << "  --dse" << std::endl << "      "
     << "Indicate server version supplied is DSE." << std::endl;
   std::cout << "  --dse-credentials=(USERNAME_PASSWORD|INI_FILE)" << std::endl << "      "
@@ -246,9 +286,11 @@ void Options::print_help() {
   std::cout << "  --dse-password=[PASSWORD]" << std::endl << "      "
     << "Password to use for DSE download authentication." << std::endl;
   std::cout << "  --git" << std::endl << "      "
-    << "Indicate Cassandra/DSE server download should be obtained from ASF/GitHub." << std::endl;
+    << "Indicate Cassandra/DSE server download should be obtained from" << std::endl
+    << "     ASF/GitHub." << std::endl;
   std::cout << "  --git=[BRANCH_OR_TAG]" << std::endl << "      "
-    << "Indicate Cassandra/DSE server branch/tag should be obtained from ASF/GitHub." << std::endl;
+    << "Indicate Cassandra/DSE server branch/tag should be obtained from" << std::endl
+    <<"      ASF/GitHub." << std::endl;
   std::cout << "  --install-dir=[INSTALL_DIR]" << std::endl << "      "
     << "Indicate Cassandra/DSE installation directory to use." << std::endl;
   std::cout << "  --prefix=[PREFIX]" << std::endl << "      "
@@ -321,6 +363,10 @@ void Options::print_settings() {
 #endif
 }
 
+bool Options::is_help() {
+  return is_help_;
+}
+
 bool Options::log_tests() {
   return is_log_tests_;
 }
@@ -385,6 +431,10 @@ CCM::AuthenticationType Options::authentication_type() {
   return authentication_type_;
 }
 
+std::set<TestCategory> Options::categories() {
+  return categories_;
+}
+
 const std::string& Options::host() {
   return host_;
 }
@@ -427,17 +477,8 @@ SharedPtr<CCM::Bridge> Options::ccm() {
 Options::Options() {
 }
 
-std::string Options::to_lower(const std::string& input) {
-  return test::Utils::to_lower(input);
-}
-
-std::vector<std::string> Options::explode(const std::string& input,
-  const char delimiter /*= ' '*/) {
-  return test::Utils::explode(input, delimiter);
-}
-
 bool Options::bool_value(const std::string& value) {
-  std::string lower_value = to_lower(value);
+  std::string lower_value = test::Utils::to_lower(value);
   if (lower_value.compare("yes") == 0 || lower_value.compare("true") == 0 ||
       lower_value.compare("on") == 0 || lower_value.compare("0") == 0) {
     return true;

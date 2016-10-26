@@ -86,36 +86,14 @@ void Integration::SetUp() {
   if (dse_workload_.empty()) {
     dse_workload_.push_back(CCM::DSE_WORKLOAD_CASSANDRA);
   }
-  // Generate the keyspace name
-  keyspace_name_ = replace_all(to_lower(test_case_name_), "integrationtest", "") +
-                   "_" + to_lower(test_name_);
-  if (keyspace_name_.size() > KEYSPACE_MAXIMUM_LENGTH) {
-    // Update the keyspace name with a UUID (first portions of v4 UUID)
-    std::vector<std::string> uuid_octets = explode(uuid_generator_.generate_timeuuid().str(), '-');
-    std::string id = uuid_octets[0] + uuid_octets[3];
-    keyspace_name_ = keyspace_name_.substr(0, KEYSPACE_MAXIMUM_LENGTH - id.size()) +
-                     id;
+  // Generate the default settings for most tests (handles overridden values)
+  keyspace_name_ = default_keyspace();
+  table_name_ = default_table();
+  if (replication_factor_ == 0) {
+    replication_factor_ = default_replication_factor();
   }
+  replication_strategy_ = default_replication_strategy();
 
-  // Generate the table name
-  table_name_ = to_lower(test_name_);
-
-  // Determine the replication strategy
-  std::stringstream replication_strategy;
-  if (number_dc2_nodes_ > 0) {
-    replication_strategy << "'NetworkTopologyStrategy', 'dc1': " <<
-                            number_dc1_nodes_ << ", " <<
-                            "'dc2': " << number_dc2_nodes_;
-  } else {
-    replication_strategy << "'SimpleStrategy', 'replication_factor': ";
-    if (replication_factor_ == 0) {
-      // Calculate the default replication factor
-      replication_factor_ = (number_dc1_nodes_ % 2 == 0) ? number_dc1_nodes_ / 2 : (number_dc1_nodes_ + 1) / 2;
-    }
-    replication_strategy << replication_factor_;
-  }
-  replication_strategy_ = format_string(REPLICATION_STRATEGY,
-                                        replication_strategy.str().c_str());
 
   // Generate the keyspace query
   create_keyspace_query_ = format_string(SIMPLE_KEYSPACE_FORMAT,
@@ -175,6 +153,62 @@ void Integration::TearDown() {
   try {
     session_.execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false);
   } catch (...) {}
+}
+
+std::string Integration::default_keyspace() {
+  // Clean up the initial keyspace name (remove category information)
+  std::string keyspace_name = to_lower(test_case_name_) + "_"
+    + to_lower(test_name_);
+  keyspace_name = replace_all(keyspace_name, "test", "");
+  keyspace_name = replace_all(keyspace_name, "integration", "");
+  for (TestCategory::iterator iterator = TestCategory::begin();
+    iterator != TestCategory::end(); ++iterator) {
+    keyspace_name = replace_all(keyspace_name,
+      "_" + to_lower(iterator->name()) + "_", "");
+  }
+
+  // Generate the keyspace name
+  if (keyspace_name.size() > KEYSPACE_MAXIMUM_LENGTH) {
+    // Update the keyspace name with a UUID (first portions of v4 UUID)
+    std::vector<std::string> uuid_octets = explode(
+      uuid_generator_.generate_timeuuid().str(), '-');
+    std::string id = uuid_octets[0] + uuid_octets[3];
+    keyspace_name = keyspace_name.substr(0,
+      KEYSPACE_MAXIMUM_LENGTH - id.size()) + id;
+  }
+  return keyspace_name;
+}
+
+unsigned short Integration::default_replication_factor() {
+  // Calculate and return the default replication factor
+  return (number_dc1_nodes_ % 2 == 0)
+    ? number_dc1_nodes_ / 2
+    : (number_dc1_nodes_ + 1) / 2;
+}
+
+std::string Integration::default_replication_strategy() {
+  // Determine the replication strategy
+  std::stringstream replication_strategy_s;
+  if (number_dc2_nodes_ > 0) {
+    replication_strategy_s << "'NetworkTopologyStrategy', 'dc1': "
+      << number_dc1_nodes_ << ", " << "'dc2': " << number_dc2_nodes_;
+  } else {
+    replication_strategy_s << "'SimpleStrategy', 'replication_factor': ";
+
+    // Ensure the replication factor has not been overridden or already set
+    if (replication_factor_ == 0) {
+      replication_factor_ = default_replication_factor();
+    }
+    replication_strategy_s << replication_factor_;
+  }
+
+  // Return the default replication strategy
+  std::string replication_strategy = replication_strategy_s.str();
+  return format_string(REPLICATION_STRATEGY, replication_strategy.c_str());
+}
+
+std::string Integration::default_table() {
+  return to_lower(test_name_);
 }
 
 void Integration::connect(Cluster cluster) {

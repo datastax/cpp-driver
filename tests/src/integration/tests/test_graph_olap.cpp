@@ -29,7 +29,7 @@
  *
  * @dse_version 5.0.0
  */
-class GraphOlapIntegrationTest : public DseIntegration {
+class GraphOlapTest : public DseIntegration {
 public:
   void SetUp() {
     CHECK_VERSION(5.0.0);
@@ -166,7 +166,7 @@ private:
  * @since 1.0.0
  * @expected_result Graph analytics node will be targeted during query
  */
-TEST_F(GraphOlapIntegrationTest, AnalyticsNodeTargeted) {
+DSE_INTEGRATION_TEST_F(GraphOlapTest, AnalyticsNodeTargeted) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -191,7 +191,7 @@ TEST_F(GraphOlapIntegrationTest, AnalyticsNodeTargeted) {
  * @since 1.0.0
  * @expected_result All graph nodes will be targeted during query
  */
-TEST_F(GraphOlapIntegrationTest, AnalyticsNodeNotTargeted) {
+DSE_INTEGRATION_TEST_F(GraphOlapTest, AnalyticsNodeNotTargeted) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 

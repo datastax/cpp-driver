@@ -19,7 +19,7 @@
  * @dse_version 5.0.0
  */
 template<class C>
-class GeometryIntegrationTest : public DseIntegration {
+class GeometryTest : public DseIntegration {
 public:
   /**
    * Geo type values
@@ -149,7 +149,7 @@ protected:
     ASSERT_EQ(id, TimeUuid(result.first_row(), 0));
   }
 };
-TYPED_TEST_CASE_P(GeometryIntegrationTest);
+TYPED_TEST_CASE_P(GeometryTest);
 
 /**
  * Perform insert using a simple statement operation
@@ -163,13 +163,13 @@ TYPED_TEST_CASE_P(GeometryIntegrationTest);
  * @dse_version 5.0.0
  * @expected_result Geo type values are inserted and validated
  */
-TYPED_TEST_P(GeometryIntegrationTest, SimpleStatement) {
+DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, SimpleStatement) {
   CHECK_VERSION(5.0.0);
 
   // Iterate over all the values in the geo type
-  for (size_t i = 0; i < GeometryIntegrationTest<TypeParam>::values_.size(); ++i) {
+  for (size_t i = 0; i < GeometryTest<TypeParam>::values_.size(); ++i) {
     // Get the value of the geo type being used
-    TypeParam value = GeometryIntegrationTest<TypeParam>::values_[i];
+    TypeParam value = GeometryTest<TypeParam>::values_[i];
 
     // Insert the geo type executed by a CQL query string statement
     TimeUuid id = this->uuid_generator_.generate_timeuuid();
@@ -224,13 +224,13 @@ TYPED_TEST_P(GeometryIntegrationTest, SimpleStatement) {
  * @dse_version 5.0.0
  * @expected_result Geo type values are inserted and validated
  */
-TYPED_TEST_P(GeometryIntegrationTest, PreparedStatement) {
+DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, PreparedStatement) {
   CHECK_VERSION(5.0.0);
 
   // Iterate over all the values in the geo type
-  for (size_t i = 0; i < GeometryIntegrationTest<TypeParam>::values_.size(); ++i) {
+  for (size_t i = 0; i < GeometryTest<TypeParam>::values_.size(); ++i) {
     // Get the value of the geo type being used
-    TypeParam value = GeometryIntegrationTest<TypeParam>::values_[i];
+    TypeParam value = GeometryTest<TypeParam>::values_[i];
 
     // Bind the time UUID and geo type
     Statement statement = this->prepared_statement_.bind();
@@ -268,14 +268,14 @@ TYPED_TEST_P(GeometryIntegrationTest, PreparedStatement) {
  * @expected_result Geo type values are inserted and validated via graph
  *                  operations using a graph array (attached to a graph object)
  */
-TYPED_TEST_P(GeometryIntegrationTest, GraphArray) {
+DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, GraphArray) {
   CHECK_VERSION(5.0.0);
 
   // Iterate over all the values in the geo type and add them to a graph array
   test::driver::DseGraphArray graph_array;
-  for (size_t i = 0; i < GeometryIntegrationTest<TypeParam>::values_.size(); ++i) {
+  for (size_t i = 0; i < GeometryTest<TypeParam>::values_.size(); ++i) {
     // Get the value of the geo type being used
-    TypeParam value = GeometryIntegrationTest<TypeParam>::values_[i];
+    TypeParam value = GeometryTest<TypeParam>::values_[i];
 
     // Add the value to the graph array
     graph_array.add<TypeParam>(value);
@@ -288,7 +288,7 @@ TYPED_TEST_P(GeometryIntegrationTest, GraphArray) {
   graph_statement.bind(graph_object);
 
   // Assert/Validate the geo type using a graph statement
-  this->assert_and_validate_geo_type(GeometryIntegrationTest<TypeParam>::values_,
+  this->assert_and_validate_geo_type(GeometryTest<TypeParam>::values_,
     graph_statement);
 }
 
@@ -305,13 +305,13 @@ TYPED_TEST_P(GeometryIntegrationTest, GraphArray) {
  * @expected_result Geo type values are inserted and validated via graph
  *                  operations using a graph object
  */
-TYPED_TEST_P(GeometryIntegrationTest, GraphObject) {
+DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, GraphObject) {
   CHECK_VERSION(5.0.0);
 
   // Iterate over all the values in the geo type
-  for (size_t i = 0; i < GeometryIntegrationTest<TypeParam>::values_.size(); ++i) {
+  for (size_t i = 0; i < GeometryTest<TypeParam>::values_.size(); ++i) {
     // Get the value of the geo type being used
-    TypeParam value = GeometryIntegrationTest<TypeParam>::values_[i];
+    TypeParam value = GeometryTest<TypeParam>::values_[i];
 
     // Create the graph statement to insert the geo type using an object
     test::driver::DseGraphObject graph_object;
@@ -325,11 +325,13 @@ TYPED_TEST_P(GeometryIntegrationTest, GraphObject) {
 }
 
 // Register all test cases
-REGISTER_TYPED_TEST_CASE_P(GeometryIntegrationTest, SimpleStatement, PreparedStatement, GraphArray, GraphObject);
+REGISTER_TYPED_TEST_CASE_P(GeometryTest, Integration_DSE_SimpleStatement,
+  Integration_DSE_PreparedStatement, Integration_DSE_GraphArray,
+  Integration_DSE_GraphObject); //TODO: Create expanding macro for registering typed tests
 
 // Instantiate the test case for all the geo types
 typedef testing::Types<test::driver::DsePoint, test::driver::DseLineString, test::driver::DsePolygon> GeoTypes;
-INSTANTIATE_TYPED_TEST_CASE_P(Geometry, GeometryIntegrationTest, GeoTypes);
+INSTANTIATE_TYPED_TEST_CASE_P(Geometry, GeometryTest, GeoTypes);
 
 /**
  * Perform insert and select operations for geo type point
@@ -349,7 +351,7 @@ const test::driver::DsePoint GEOMETRY_POINTS[] = {
   test::driver::DsePoint(-1.2, -100.0),
   test::driver::DsePoint() // NULL point
 };
-template<> const std::vector<test::driver::DsePoint> GeometryIntegrationTest<test::driver::DsePoint>::values_(
+template<> const std::vector<test::driver::DsePoint> GeometryTest<test::driver::DsePoint>::values_(
   GEOMETRY_POINTS,
   GEOMETRY_POINTS + sizeof(GEOMETRY_POINTS) / sizeof(GEOMETRY_POINTS[0]));
 
@@ -372,7 +374,7 @@ const test::driver::DseLineString GEOMETRY_LINE_STRING[] = {
   test::driver::DseLineString("LINESTRING EMPTY"),
   test::driver::DseLineString() // NULL line string
 };
-template<> const std::vector<test::driver::DseLineString> GeometryIntegrationTest<test::driver::DseLineString>::values_(
+template<> const std::vector<test::driver::DseLineString> GeometryTest<test::driver::DseLineString>::values_(
   GEOMETRY_LINE_STRING,
   GEOMETRY_LINE_STRING + sizeof(GEOMETRY_LINE_STRING) / sizeof(GEOMETRY_LINE_STRING[0]));
 
@@ -395,6 +397,6 @@ const test::driver::DsePolygon GEOMETRY_POLYGON[] = {
   test::driver::DsePolygon("POLYGON EMPTY"),
   test::driver::DsePolygon() // NULL polygon
 };
-template<> const std::vector<test::driver::DsePolygon> GeometryIntegrationTest<test::driver::DsePolygon>::values_(
+template<> const std::vector<test::driver::DsePolygon> GeometryTest<test::driver::DsePolygon>::values_(
   GEOMETRY_POLYGON,
   GEOMETRY_POLYGON + sizeof(GEOMETRY_POLYGON) / sizeof(GEOMETRY_POLYGON[0]));

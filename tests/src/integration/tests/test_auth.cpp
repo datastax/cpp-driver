@@ -31,7 +31,7 @@
 /**
  * Authentication integration tests
  */
-class AuthIntegrationTest : public DseIntegration {
+class AuthenticationTest : public DseIntegration {
 public:
   static void SetUpTestCase() {
     CHECK_FOR_KERBEROS_SKIPPED_TEST;
@@ -204,8 +204,8 @@ protected:
 };
 
 // Initialize static variables
-SharedPtr<EmbeddedADS> AuthIntegrationTest::ads_;
-bool AuthIntegrationTest::is_ads_available_ = false;
+SharedPtr<EmbeddedADS> AuthenticationTest::ads_;
+bool AuthenticationTest::is_ads_available_ = false;
 
 /**
  * Perform connection to DSE using Kerberos authentication
@@ -218,7 +218,7 @@ bool AuthIntegrationTest::is_ads_available_ = false;
  * @since 1.0.0
  * @expected_result Successful connection and query execution
  */
-TEST_F(AuthIntegrationTest, KerberosAuthentication) {
+DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthentication) {
   CHECK_FOR_KERBEROS_SKIPPED_TEST;
   CHECK_FAILURE;
 
@@ -239,7 +239,7 @@ TEST_F(AuthIntegrationTest, KerberosAuthentication) {
  * @since 1.0.0
  * @expected_result Connection is unsuccessful; Bad credentials
  */
-TEST_F(AuthIntegrationTest, KerberosAuthenticationFailureBadCredentials) {
+DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureBadCredentials) {
   CHECK_FOR_KERBEROS_SKIPPED_TEST;
   CHECK_FAILURE;
 
@@ -271,7 +271,7 @@ TEST_F(AuthIntegrationTest, KerberosAuthenticationFailureBadCredentials) {
  * @since 1.0.0
  * @expected_result Connection is unsuccessful; Bad credentials
  */
-TEST_F(AuthIntegrationTest, KerberosAuthenticationFailureNoTicket) {
+DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureNoTicket) {
   CHECK_FOR_KERBEROS_SKIPPED_TEST;
   CHECK_FAILURE;
 
@@ -300,7 +300,7 @@ TEST_F(AuthIntegrationTest, KerberosAuthenticationFailureNoTicket) {
  * @dse_version 5.0.0
  * @expected_result Successful connection and query execution
  */
-TEST_F(AuthIntegrationTest, InternalAuthentication) {
+DSE_INTEGRATION_TEST_F(AuthenticationTest, InternalAuthentication) {
   CHECK_VERSION(5.0.0);
   CHECK_FOR_KERBEROS_SKIPPED_TEST;
   CHECK_FAILURE;
@@ -323,7 +323,7 @@ TEST_F(AuthIntegrationTest, InternalAuthentication) {
  * @dse_version 5.0.0
  * @expected_result Connection is unsuccessful; Bad credentials
  */
-TEST_F(AuthIntegrationTest, InternalAuthenticationFailure) {
+DSE_INTEGRATION_TEST_F(AuthenticationTest, InternalAuthenticationFailure) {
   CHECK_VERSION(5.0.0)
   CHECK_FOR_KERBEROS_SKIPPED_TEST;
   CHECK_FAILURE;

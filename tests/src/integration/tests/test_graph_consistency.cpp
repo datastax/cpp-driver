@@ -19,7 +19,7 @@
  *
  * @dse_version 5.0.0
  */
-class GraphConsistencyIntegrationTest : public DseIntegration {
+class GraphConsistencyTest : public DseIntegration {
 public:
   void SetUp() {
     CHECK_VERSION(5.0.0);
@@ -183,7 +183,7 @@ private:
  * @since 1.0.0
  * @expected_result Graph read will succeed for all consistency levels applied
  */
-TEST_F(GraphConsistencyIntegrationTest, Read) {
+DSE_INTEGRATION_TEST_F(GraphConsistencyTest, Read) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -217,7 +217,7 @@ TEST_F(GraphConsistencyIntegrationTest, Read) {
  *                  and will expect failure to occur for ALL and THREE
  *                  consistency levels
  */
-TEST_F(GraphConsistencyIntegrationTest, ReadOneNodeDown) {
+DSE_INTEGRATION_TEST_F(GraphConsistencyTest, ReadOneNodeDown) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -256,7 +256,7 @@ TEST_F(GraphConsistencyIntegrationTest, ReadOneNodeDown) {
  * @since 1.0.0
  * @expected_result Graph write will succeed for all consistency levels applied
  */
-TEST_F(GraphConsistencyIntegrationTest, Write) {
+DSE_INTEGRATION_TEST_F(GraphConsistencyTest, Write) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -298,7 +298,7 @@ TEST_F(GraphConsistencyIntegrationTest, Write) {
  *                  and will expect failure to occur for ALL and THREE
  *                  consistency levels
  */
-TEST_F(GraphConsistencyIntegrationTest, WriteOneNodeDown) {
+DSE_INTEGRATION_TEST_F(GraphConsistencyTest, WriteOneNodeDown) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 

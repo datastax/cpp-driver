@@ -23,7 +23,7 @@
  *
  * @dse_version 5.0.0
  */
-class GraphDataTypeIntegrationTest : public DseIntegration {
+class GraphDataTypeTest : public DseIntegration {
 public:
 
   /**
@@ -223,7 +223,7 @@ private:
  * @since 1.0.0
  * @expected_result Bigint is usable and retrievable
  */
-TEST_F(GraphDataTypeIntegrationTest, BigInteger) {
+DSE_INTEGRATION_TEST_F(GraphDataTypeTest, BigInteger) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -249,7 +249,7 @@ TEST_F(GraphDataTypeIntegrationTest, BigInteger) {
  * @since 1.0.0
  * @expected_result Decimal, double, and float are usable and retrievable
  */
-TEST_F(GraphDataTypeIntegrationTest, DecimalDoubleFloat) {
+DSE_INTEGRATION_TEST_F(GraphDataTypeTest, DecimalDoubleFloat) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -295,7 +295,7 @@ TEST_F(GraphDataTypeIntegrationTest, DecimalDoubleFloat) {
  * @since 1.0.0
  * @expected_result Int, smallint, and varint are usable and retrievable
  */
-TEST_F(GraphDataTypeIntegrationTest, IntegerSmallIntegerVarint) {
+DSE_INTEGRATION_TEST_F(GraphDataTypeTest, IntegerSmallIntegerVarint) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -335,7 +335,7 @@ TEST_F(GraphDataTypeIntegrationTest, IntegerSmallIntegerVarint) {
  * @since 1.0.0
  * @expected_result Text are usable and retrievable
  */
-TEST_F(GraphDataTypeIntegrationTest, Text) {
+DSE_INTEGRATION_TEST_F(GraphDataTypeTest, Text) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 
@@ -365,7 +365,7 @@ TEST_F(GraphDataTypeIntegrationTest, Text) {
  * @since 1.0.0
  * @expected_result String results from the driver are usable and retrievable
  */
-TEST_F(GraphDataTypeIntegrationTest, StringResults) {
+DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
   CHECK_VERSION(5.0.0);
   CHECK_FAILURE;
 

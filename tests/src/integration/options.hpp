@@ -8,7 +8,9 @@
 #ifndef __OPTIONS_HPP__
 #define __OPTIONS_HPP__
 #include "bridge.hpp"
+#include "exception.hpp"
 #include "shared_ptr.hpp"
+#include "test_category.hpp"
 
 #include <string>
 
@@ -27,17 +29,20 @@ public:
    *         or there was an issue parsing the command line arguments.
    */
   static bool initialize(int argc, char* argv[]);
-
   /**
    * Print the help message for the options
    */
   static void print_help();
-
   /**
    * Print the settings message for the options
    */
   static void print_settings();
-
+  /**
+   * Flag to determine if the help flag was indicated
+   *
+   * @return True if help was indicated; false otherwise
+   */
+  static bool is_help();
   /**
    * Flag to determine if integration tests should log the driver logs to a file
    * for each test
@@ -45,91 +50,84 @@ public:
    * @return True if tests should be logged to a file; false otherwise
    */
   static bool log_tests();
-
   /**
    * Get the server version (Cassandra/DSE) to use
    *
    * @return Cassandra/DSE version to use
    */
   static CCM::CassVersion server_version();
-
   /**
    * Flag to determine if DSE should be used or not
    *
    * @return True if DSE should be used; false otherwise
    */
   static bool is_dse();
-
   /**
    * Get the DSE credentials type (username|password/INI file)
    *
    * @return DSE credentials type
    */
   static CCM::DseCredentialsType dse_credentials();
-
   /**
    * Get the username for SSH authentication
    *
    * @return Username for remote deployment
    */
   static const std::string& dse_username();
-
   /**
    * Get the password for SSH authentication
    *
    * @return Password for remote deployment
    */
   static const std::string& dse_password();
-
   /**
    * Flag to determine if Cassandra/DSE should be built from ASF/GitHub
    *
    * @return True if ASF/GitHub should be used; false otherwise
    */
   static bool use_git();
-
   /**
    * Get the branch/tag to use for ASF/GitHub
    *
    * @return Branch/Tag
    */
   static const std::string& branch_tag();
-
   /**
    * Flag to determine if installation directory should be used (Passed to CCM)
    *
    * @return True if installation directory should be used; false otherwise
    */
   static bool use_install_dir();
-
   /**
    * Get the installation directory to use
    *
    * @return Installation directory
    */
   static const std::string& install_dir();
-
   /**
    * Get the cluster prefix to use for the CCM clusters (e.g. cpp-driver)
    *
    * @return Cluster prefix
    */
   static const std::string& cluster_prefix();
-
   /**
    * Get the deployment type (local|remote)
    *
    * @return Deployment type
    */
   static CCM::DeploymentType deployment_type();
-
   /**
    * Get the authentication type for remote deployment
    *
    * @return Authentication type
    */
   static CCM::AuthenticationType authentication_type();
-
+  /**
+   * Get the test categories being applied
+   *
+   * @return Test categories being applied
+   */
+  static std::set<TestCategory> categories();
   /**
    * Get the IP address to use when establishing SSH connection for remote CCM
    * command execution and/or IP address to use for server connection IP
@@ -138,42 +136,36 @@ public:
    * @return Host to use for server (and SSH connection for remote deployment)
    */
   static const std::string& host();
-
   /**
    * Get the TCP/IP port for SSH connection
    *
    * @return SSH port to use
    */
   static short port();
-
   /**
    * Get the username for SSH authentication
    *
    * @return Username for remote deployment
    */
   static const std::string& username();
-
   /**
    * Get the password for SSH authentication
    *
    * @return Password for remote deployment
    */
   static const std::string& password();
-
   /**
    * Get the public key for SSH authentication
    *
    * @return Public key for remote deployment
    */
   static const std::string& public_key();
-
   /**
    * Get the private key for SSH authentication
    *
    * @return Private key for remote deployment
    */
   static const std::string& private_key();
-
   /**
    * Get a CCM instance based on the options
    *
@@ -186,6 +178,10 @@ private:
    * Flag to determine if the options have been initialized
    */
   static bool is_initialized_;
+  /**
+   * Flag to determine if the help flag was indicated
+   */
+  static bool is_help_;
   /**
    * Flag to indicate if log messages should be generated for each test
    */
@@ -245,6 +241,10 @@ private:
    */
   static CCM::DeploymentType deployment_type_;
   /**
+   * Test types (Cassandra|DSE|SCassandra)
+   */
+  static std::set<TestCategory> categories_;
+  /**
    * IP address to use when establishing SSH connection for remote CCM command
    * execution and/or IP address to use for server connection IP generation
    */
@@ -276,24 +276,12 @@ private:
    * Hidden default constructor
    */
   Options();
-
   /**
-   * Convert a string to lowercase
+   * Get the boolean value of a string
    *
-   * @param input String to convert to lowercase
+   * @param value Value to convert to boolean
+   * @return True if value is yes, true, on, or 0; false otherwise
    */
-  static std::string to_lower(const std::string& input);
-
-  /**
-  * Split a string into an array/vector
-  *
-  * @param input String to convert to array/vector
-  * @param delimiter Character to use split into elements (default: <space>)
-  * @return An array/vector representation of the string
-  */
-  static std::vector<std::string> explode(const std::string& input,
-    const char delimiter = ' ');
-
   static bool bool_value(const std::string& value);
 };
 
