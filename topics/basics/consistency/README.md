@@ -6,9 +6,10 @@ respectively.
 
 ## Default consistency
 
-The default consistency is now `CASS_CONSISTENCY_LOCAL_QUORUM` for driver
-versions 2.2 and above. It was `CASS_CONSISTENCY_ONE` for all previous versions
-(2.1 and below).
+The default consistency is `CASS_CONSISTENCY_LOCAL_ONE` for driver versions
+2.2.2 and above. In the past, versions 2.2.1 and below, it was
+`CASS_CONSISTENCY_QUORUM` or `CASS_CONSISTENCY_ONE` depending on the driver
+version.
 
 ## Consistency Levels
 
