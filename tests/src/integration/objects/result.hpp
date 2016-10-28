@@ -54,6 +54,15 @@ public:
     , future_(future) {}
 
   /**
+   * Get the attempted host/address of the future
+   *
+   * @return Attempted host/address
+   */
+  const std::vector<std::string> attempted_hosts() {
+    return future_.attempted_hosts();
+  }
+
+  /**
    * Get the error code from the future
    *
    * @return Error code of the future
@@ -78,6 +87,15 @@ public:
    */
   const std::string error_message() {
     return future_.error_message();
+  }
+
+  /**
+   * Get the host/address of the future
+   *
+   * @return Host/Address
+   */
+  const std::string host() {
+    return future_.host();
   }
 
   /**

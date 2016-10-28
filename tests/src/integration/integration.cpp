@@ -151,7 +151,8 @@ void Integration::TearDown() {
   std::stringstream use_keyspace_query;
   use_keyspace_query << "DROP KEYSPACE " << keyspace_name_;
   try {
-    session_.execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false);
+    session_.execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false,
+      false);
   } catch (...) {}
 }
 

@@ -82,6 +82,21 @@ public:
   }
 
   /**
+   * Assign the number of connections made to each node/server for each
+   * connections thread
+   *
+   * NOTE: One extra connection is established (the control connection)
+   *
+   * @param connections Number of connection per host (default: 1)
+   * @return Cluster object
+   */
+  Cluster& with_core_connections_per_host(unsigned int connections = 1) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_core_connections_per_host(get(),
+      connections));
+    return *this;
+  }
+
+  /**
    * Enable/Disable the use of hostname resolution
    *
    * This is useful for authentication (Kerberos) or encryption (SSL)

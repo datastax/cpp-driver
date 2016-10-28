@@ -12,6 +12,11 @@
 #include "objects/object_base.hpp"
 
 #include "objects/future.hpp"
+#include "objects/retry_policy.hpp"
+
+#include "driver_utils.hpp"
+
+#include <gtest/gtest.h>
 
 namespace test {
 namespace driver {
@@ -42,9 +47,11 @@ public:
    *
    * @param query Query to create statement from
    * @param parameter_count Number of parameters contained in the query
+   *                        (default: 0)
    */
-  Statement(const std::string& query, size_t parameter_count)
-    : Object<CassStatement, cass_statement_free>(cass_statement_new(query.c_str(), parameter_count)) {}
+  Statement(const std::string& query, size_t parameter_count = 0)
+    : Object<CassStatement, cass_statement_free>(cass_statement_new(query.c_str(),
+      parameter_count)) {}
 
   /**
    * Bind a value to the statement
@@ -55,6 +62,48 @@ public:
   template<typename T>
   void bind(size_t index, T value) {
     value.statement_bind(*this, index);
+  }
+
+  /**
+   * Assign/Set the statement's consistency level
+   *
+   * @param cosnsitency Consistency to use for the statement
+   */
+  void set_consistency(CassConsistency consistency) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_consistency(get(), consistency));
+  }
+
+  /**
+   * Enable/Disable whether the statement is idempotent. Idempotent statements
+   * are able to be automatically retried after timeouts/errors and can be
+   * speculatively executed.
+   *
+   * @param enable True if statement is idempotent; false otherwise
+   */
+  void set_idempotent(bool enable) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_is_idempotent(get(),
+      enable ? cass_true : cass_false));
+  }
+
+  /**
+   * Enable/Disable the statement's recording of hosts attempted during its
+   * execution
+   *
+   * @param enable True if attempted host should be recorded; false otherwise
+   */
+  void set_record_attempted_hosts(bool enable) {
+    return test::driver::internals::Utils::set_record_attempted_hosts(get(),
+      enable);
+  }
+
+  /**
+   * Assign/Set the statement's retry policy
+   *
+   * @param retry_policy Retry policy to use for the statement
+   */
+  void set_retry_policy(RetryPolicy retry_policy) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_retry_policy(get(),
+      retry_policy.get()));
   }
 };
 
@@ -102,10 +151,39 @@ public:
         << "Unable to Add Statement to Batch: " << cass_error_desc(error_code);
     }
   }
+
+  /**
+   * Assign/Set the batch's consistency level
+   *
+   * @param cosnsitency Consistency to use for the batch
+   */
+  void set_consistency(CassConsistency consistency) {
+    ASSERT_EQ(CASS_OK, cass_batch_set_consistency(get(), consistency));
+  }
+
+  /**
+   * Enable/Disable whether the statements in a batch are idempotent. Idempotent
+   * batches are able to be automatically retried after timeouts/errors and can
+   * be speculatively executed.
+   *
+   * @param enable True if statement in a batch is idempotent; false otherwise
+   */
+  void set_idempotent(bool enable) {
+    ASSERT_EQ(CASS_OK, cass_batch_set_is_idempotent(get(),
+      enable ? cass_true : cass_false));
+  }
+
+  /**
+   * Assign/Set the batch's retry policy
+   *
+   * @param retry_policy Retry policy to use for the batch
+   */
+  void set_retry_policy(RetryPolicy retry_policy) {
+    ASSERT_EQ(CASS_OK, cass_batch_set_retry_policy(get(), retry_policy.get()));
+  }
 };
 
 } // namespace driver
 } // namespace test
 
 #endif // __TEST_STATEMENT_HPP__
-

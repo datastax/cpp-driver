@@ -98,16 +98,18 @@ public:
    * @param query Query to execute as a simple statement
    * @param consistency Consistency level to execute the query at
    *                    (default: CASS_CONSISTENCY_LOCAL_ONE)
+   * @param is_idempotent True if statement is idempotent; false otherwise
+   *                      (default: false)
    * @param assert_ok True if error code for future should be asserted
    *                  CASS_OK; false otherwise (default: true)
    * @return Result object
    */
   Result execute(const std::string& query,
     CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
-    bool assert_ok = true) {
-    Statement statement(cass_statement_new(query.c_str(), 0));
-    EXPECT_EQ(CASS_OK, cass_statement_set_consistency(statement.get(),
-      consistency));
+    bool is_idempotent = false, bool assert_ok = true) {
+    Statement statement(query);
+    statement.set_consistency(consistency);
+    statement.set_idempotent(is_idempotent);
     return execute(statement, assert_ok);
   }
 
@@ -137,13 +139,16 @@ public:
    * @param query Query to execute as a simple statement
    * @param consistency Consistency level to execute the query at
    *                    (default: CASS_CONSISTENCY_LOCAL_ONE)
+   * @param is_idempotent True if statement is idempotent; false otherwise
+   *                      (default: false)
    * @return Future object
    */
   Future execute_async(const std::string& query,
-    CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE) {
-    Statement statement(cass_statement_new(query.c_str(), 0));
-    EXPECT_EQ(CASS_OK, cass_statement_set_consistency(statement.get(),
-      consistency));
+    CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
+    bool is_idempotent = false) {
+    Statement statement(query);
+    statement.set_consistency(consistency);
+    statement.set_idempotent(is_idempotent);
     return execute_async(statement);
   }
 

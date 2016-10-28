@@ -109,7 +109,7 @@ public:
     if (!future_) {
       throw Exception("Future is invalid or was not used to create instance");
     }
-    return future_.host_address();
+    return future_.host();
   }
 
   /**

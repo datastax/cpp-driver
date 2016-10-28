@@ -8,9 +8,10 @@
 #ifndef __TEST_FUTURE_HPP__
 #define __TEST_FUTURE_HPP__
 #include "cassandra.h"
-#include "testing.hpp"
 
 #include "objects/object_base.hpp"
+
+#include "driver_utils.hpp"
 
 #include <string>
 
@@ -47,6 +48,15 @@ public:
     : Object<CassFuture, cass_future_free>(future) {}
 
   /**
+   * Get the attempted hosts/addresses of the future (sorted)
+   *
+   * @return Attempted hosts/Addresses (sorted)
+   */
+  const std::vector<std::string> attempted_hosts() {
+    return test::driver::internals::Utils::attempted_hosts(get());
+  }
+
+  /**
    * Get the error code from the future
    *
    * @return Error code of the future
@@ -77,12 +87,12 @@ public:
   }
 
   /**
-   * Get the host address of the future
+   * Get the host/address of the future
    *
-   * @return Host address
+   * @return Host/Address
    */
-  const std::string host_address() {
-    return cass::get_host_from_future(get());
+  const std::string host() {
+    return test::driver::internals::Utils::host(get());
   }
 
   /**

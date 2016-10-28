@@ -14,6 +14,7 @@
 #include "objects/iterator.hpp"
 #include "objects/prepared.hpp"
 #include "objects/result.hpp"
+#include "objects/retry_policy.hpp"
 #include "objects/rows.hpp"
 #include "objects/session.hpp"
 #include "objects/statement.hpp"
