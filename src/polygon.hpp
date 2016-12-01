@@ -63,9 +63,6 @@ public:
   }
 
   CassError finish() {
-    if (num_rings_ == 0) {
-      return CASS_ERROR_LIB_INVALID_STATE;
-    }
     encode(num_rings_, WKB_HEADER_SIZE, bytes_);
     return finish_ring(); // Finish the last ring
   }
