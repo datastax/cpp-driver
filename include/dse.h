@@ -41,7 +41,7 @@
  */
 
 #define DSE_VERSION_MAJOR 1
-#define DSE_VERSION_MINOR 0
+#define DSE_VERSION_MINOR 1
 #define DSE_VERSION_PATCH 0
 #define DSE_VERSION_SUFFIX ""
 
@@ -301,7 +301,7 @@ cass_future_get_dse_graph_resultset(CassFuture* future);
  ***********************************************************************************/
 
 /**
- * Creates a new instance of graph options
+ * Creates a new instance of graph options.
  *
  * @public @memberof DseGraphOptions
  *
@@ -311,6 +311,18 @@ cass_future_get_dse_graph_resultset(CassFuture* future);
  */
 DSE_EXPORT DseGraphOptions*
 dse_graph_options_new();
+
+/**
+ * Creates a new instance of graph options from an existing object.
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @return Returns a instance of graph options that must be freed.
+ *
+ * @see dse_graph_options_free()
+ */
+DSE_EXPORT DseGraphOptions*
+dse_graph_options_new_from_existing(const DseGraphOptions* options);
 
 /**
  * Frees a graph options instance.

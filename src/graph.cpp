@@ -151,6 +151,10 @@ DseGraphOptions* dse_graph_options_new() {
   return DseGraphOptions::to(new dse::GraphOptions());
 }
 
+DseGraphOptions* dse_graph_options_new_from_existing(const DseGraphOptions* options) {
+  return DseGraphOptions::to(options->clone());
+}
+
 void dse_graph_options_free(DseGraphOptions* options) {
   delete options->from();
 }

@@ -45,6 +45,8 @@ class GraphOptions {
 public:
   GraphOptions()
     : payload_(cass_custom_payload_new())
+    , read_consistency_(CASS_CONSISTENCY_UNKNOWN)
+    , write_consistency_(CASS_CONSISTENCY_UNKNOWN)
     , request_timeout_ms_(0) {
     set_graph_language(DSE_GRAPH_DEFAULT_LANGUAGE);
     set_graph_source(DSE_GRAPH_DEFAULT_SOURCE);
@@ -56,10 +58,39 @@ public:
 
   CassCustomPayload* payload() const { return payload_; }
 
+  GraphOptions* clone() const {
+    GraphOptions* options = new GraphOptions();
+
+    if (!graph_language_.empty()) {
+      options->set_graph_language(graph_language_);
+    }
+
+    if (!graph_source_.empty()) {
+      options->set_graph_source(graph_source_);
+    }
+
+    if (!graph_name_.empty()) {
+      options->set_graph_name(graph_name_);
+    }
+
+    if (read_consistency_ != CASS_CONSISTENCY_UNKNOWN) {
+      options->set_graph_read_consistency(read_consistency_);
+    }
+
+    if (write_consistency_ != CASS_CONSISTENCY_UNKNOWN) {
+      options->set_graph_write_consistency(write_consistency_);
+    }
+
+    options->request_timeout_ms_ = request_timeout_ms_;
+
+    return options;
+  }
+
   void set_graph_language(const std::string& graph_language) {
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_LANGUAGE_KEY, sizeof(DSE_GRAPH_OPTION_LANGUAGE_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_language.data()), graph_language.size());
+    graph_language_ = graph_language;
   }
 
   const std::string graph_source() const { return graph_source_; }
@@ -75,6 +106,7 @@ public:
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_NAME_KEY, sizeof(DSE_GRAPH_OPTION_NAME_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_name.data()), graph_name.size());
+    graph_name_ = graph_name;
   }
 
   void set_graph_read_consistency(CassConsistency consistency) {
@@ -82,6 +114,7 @@ public:
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_READ_CONSISTENCY_KEY, sizeof(DSE_GRAPH_OPTION_READ_CONSISTENCY_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(name), strlen(name));
+    read_consistency_ = consistency;
   }
 
   void set_graph_write_consistency(CassConsistency consistency) {
@@ -89,6 +122,7 @@ public:
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_WRITE_CONSISTENCY_KEY, sizeof(DSE_GRAPH_OPTION_WRITE_CONSISTENCY_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(name), strlen(name));
+    write_consistency_ = consistency;
   }
 
   int64_t request_timeout_ms() const { return request_timeout_ms_; }
@@ -97,7 +131,11 @@ public:
 
 private:
   CassCustomPayload* payload_;
+  std::string graph_language_;
+  std::string graph_name_;
   std::string graph_source_;
+  CassConsistency read_consistency_;
+  CassConsistency write_consistency_;
   int64_t request_timeout_ms_;
 };
 
