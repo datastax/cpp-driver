@@ -12,11 +12,11 @@
 
 extern "C" {
 
-CassError dse_wkt_as_point(const char* wkt, cass_double_t* x, cass_double_t* y) {
-  return dse_wkt_as_point_n(wkt, strlen(wkt), x, y);
+CassError dse_point_from_wkt(const char* wkt, cass_double_t* x, cass_double_t* y) {
+  return dse_point_from_wkt_n(wkt, strlen(wkt), x, y);
 }
 
-CassError dse_wkt_as_point_n(const char* wkt, size_t wkt_length, cass_double_t* x, cass_double_t* y) {
+CassError dse_point_from_wkt_n(const char* wkt, size_t wkt_length, cass_double_t* x, cass_double_t* y) {
   WktLexer lexer(wkt, wkt_length);
 
   if (lexer.next_token() != WktLexer::TK_TYPE_POINT ||

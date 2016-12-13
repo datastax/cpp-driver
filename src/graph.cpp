@@ -769,7 +769,7 @@ CassError dse_graph_result_as_point(const DseGraphResult* result,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 
-  return dse_wkt_as_point_n(result->GetString(), result->GetStringLength(), x, y);
+  return dse_point_from_wkt_n(result->GetString(), result->GetStringLength(), x, y);
 }
 
 CassError dse_graph_result_as_line_string(const DseGraphResult* result,

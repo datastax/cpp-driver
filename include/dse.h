@@ -1686,21 +1686,16 @@ cass_value_get_dse_point(const CassValue* value,
 /**
  * Parse the WKT representation of a point and extract the x,y coordinates.
  *
- * @public
- *
  * @param[in] wkt WKT representation of the point
  * @param[out] x
  * @param[out] y
  * @return CASS_OK if successful, otherwise error occurred
  */
 DSE_EXPORT CassError
-dse_wkt_as_point(const char* wkt, cass_double_t* x, cass_double_t* y);
+dse_point_from_wkt(const char* wkt, cass_double_t* x, cass_double_t* y);
 
 /**
- * Parse the WKT representation (given by string and length arguments) of a point and extract
- * the x,y coordinates.
- *
- * @public
+ * Same as dse_point_from_wkt(), but with lengths for string parameters.
  *
  * @param[in] wkt WKT representation of the point
  * @param[in] wkt_length length of the wkt string
@@ -1709,7 +1704,7 @@ dse_wkt_as_point(const char* wkt, cass_double_t* x, cass_double_t* y);
  * @return CASS_OK if successful, otherwise error occurred
  */
 DSE_EXPORT CassError
-dse_wkt_as_point_n(const char* wkt, size_t wkt_length, cass_double_t* x, cass_double_t* y);
+dse_point_from_wkt_n(const char* wkt, size_t wkt_length, cass_double_t* x, cass_double_t* y);
 
 /***********************************************************************************
  *
@@ -1816,7 +1811,8 @@ DSE_EXPORT void
 dse_line_string_iterator_free(DseLineStringIterator* iterator);
 
 /**
- * Resets a line string iterator so that it can be reused to parse WKB.
+ * Resets a line string iterator so that it can be reused to process a
+ * binary representation.
  *
  * @public @memberof DseLineStringIterator
  *
@@ -1834,33 +1830,34 @@ dse_line_string_iterator_reset(DseLineStringIterator* iterator,
  * @public @memberof DseLineStringIterator
  *
  * @param[in] iterator the iterator to reset
- * @param[in] value WKT representation of the line string
- * @note The value string must remain allocated throughout the lifetime
+ * @param[in] wkt WKT representation of the line string
+ * @note The wkt string must remain allocated throughout the lifetime
  *       of the iterator since the iterator traverses the string without
  *       copying it.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
-dse_line_string_text_iterator_reset(DseLineStringIterator* iterator,
-                                    const char* value);
+dse_line_string_iterator_reset_with_wkt(DseLineStringIterator* iterator,
+                                        const char* wkt);
 
 /**
- * Resets a line string iterator so that it can be reused to parse WKT.
+ * Same as dse_line_string_iterator_reset_with_wkt(), but with lengths
+ * for string parameters.
  *
  * @public @memberof DseLineStringIterator
  *
  * @param[in] iterator the iterator to reset
- * @param[in] value WKT representation (string) of the line string
- * @param[in] value_length length of value string
- * @note The value string must remain allocated throughout the lifetime
+ * @param[in] wkt WKT representation (string) of the line string
+ * @param[in] wkt_length length of wkt string
+ * @note The wkt string must remain allocated throughout the lifetime
  *       of the iterator since the iterator traverses the string without
  *       copying it.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
-dse_line_string_text_iterator_reset_n(DseLineStringIterator* iterator,
-                                      const char* value,
-                                      size_t value_length);
+dse_line_string_iterator_reset_with_wkt_n(DseLineStringIterator* iterator,
+                                          const char* wkt,
+                                          size_t wkt_length);
 
 /**
  * Gets the number of points in the line string.
@@ -2007,7 +2004,8 @@ DSE_EXPORT void
 dse_polygon_iterator_free(DsePolygonIterator* iterator);
 
 /**
- * Resets a polygon iterator so that it can be reused to parse WKB.
+ * Resets a polygon iterator so that it can be reused to process a
+ * binary representation.
  *
  * @public @memberof DsePolygonIterator
  *
@@ -2025,33 +2023,34 @@ dse_polygon_iterator_reset(DsePolygonIterator* iterator,
  * @public @memberof DsePolygonIterator
  *
  * @param[in] iterator the iterator to reset
- * @param[in] value WKT representation of the polygon
- * @note The value string must remain allocated throughout the lifetime
+ * @param[in] wkt WKT representation of the polygon
+ * @note The wkt string must remain allocated throughout the lifetime
  *       of the iterator since the iterator traverses the string without
  *       copying it.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
-dse_polygon_text_iterator_reset(DsePolygonIterator* iterator,
-                                const char* value);
+dse_polygon_iterator_reset_with_wkt(DsePolygonIterator* iterator,
+                                    const char* wkt);
 
 /**
- * Resets a polygon iterator so that it can be reused to parse WKT.
+ * Same as dse_polygon_iterator_reset_with_wkt(), but with lengths for
+ * string parameters.
  *
  * @public @memberof DsePolygonIterator
  *
  * @param[in] iterator the iterator to reset
- * @param[in] value WKT representation (string) of the polygon
- * @param[in] value_length length of value string
- * @note The value string must remain allocated throughout the lifetime
+ * @param[in] wkt WKT representation (string) of the polygon
+ * @param[in] wkt_length length of wkt string
+ * @note The wkt string must remain allocated throughout the lifetime
  *       of the iterator since the iterator traverses the string without
  *       copying it.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
-dse_polygon_text_iterator_reset_n(DsePolygonIterator* iterator,
-                                  const char* value,
-                                  size_t value_length);
+dse_polygon_iterator_reset_with_wkt_n(DsePolygonIterator* iterator,
+                                      const char* wkt,
+                                      size_t wkt_length);
 
 /**
  * Gets the number rings in the polygon.
