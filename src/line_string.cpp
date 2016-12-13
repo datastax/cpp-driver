@@ -55,6 +55,17 @@ CassError dse_line_string_iterator_reset(DseLineStringIterator *iterator, const 
   return iterator->reset_binary(value);
 }
 
+CassError dse_line_string_iterator_reset_with_wkt_n(DseLineStringIterator* iterator,
+                                                    const char* wkt,
+                                                    size_t wkt_length) {
+  return iterator->reset_text(wkt, wkt_length);
+}
+
+CassError dse_line_string_iterator_reset_with_wkt(DseLineStringIterator* iterator,
+                                                  const char* wkt) {
+  return dse_line_string_iterator_reset_with_wkt_n(iterator, wkt, strlen(wkt));
+}
+
 cass_uint32_t dse_line_string_iterator_num_points(const DseLineStringIterator* iterator) {
   return iterator->num_points();
 }

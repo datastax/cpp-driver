@@ -769,27 +769,7 @@ CassError dse_graph_result_as_point(const DseGraphResult* result,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 
-  WktLexer lexer(result->GetString(), result->GetStringLength());
-
-  if (lexer.next_token() != WktLexer::TK_TYPE_POINT ||
-      lexer.next_token() != WktLexer::TK_OPEN_PAREN ||
-      lexer.next_token() != WktLexer::TK_NUMBER) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-
-  *x = lexer.number();
-
-  if (lexer.next_token() != WktLexer::TK_NUMBER) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-
-  *y = lexer.number();
-
-  if (lexer.next_token() != WktLexer::TK_CLOSE_PAREN) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-
-  return CASS_OK;
+  return dse_point_from_wkt_n(result->GetString(), result->GetStringLength(), x, y);
 }
 
 CassError dse_graph_result_as_line_string(const DseGraphResult* result,
