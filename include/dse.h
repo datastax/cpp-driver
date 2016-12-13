@@ -1817,7 +1817,7 @@ dse_line_string_iterator_free(DseLineStringIterator* iterator);
  * @public @memberof DseLineStringIterator
  *
  * @param[in] iterator the iterator to reset
- * @param[in] value WKB representation of the line string
+ * @param[in] value binary representation of the line string
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
@@ -2010,7 +2010,7 @@ dse_polygon_iterator_free(DsePolygonIterator* iterator);
  * @public @memberof DsePolygonIterator
  *
  * @param[in] iterator the iterator to reset
- * @param[in] value WKB representation of the polygon
+ * @param[in] value binary representation of the polygon
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
