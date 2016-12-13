@@ -55,6 +55,17 @@ CassError dse_polygon_iterator_reset(DsePolygonIterator* iterator,
   return iterator->reset_binary(value);
 }
 
+CassError dse_polygon_text_iterator_reset_n(DsePolygonIterator* iterator,
+                                            const char* value,
+                                            size_t value_length) {
+  return iterator->reset_text(value, value_length);
+}
+
+CassError dse_polygon_text_iterator_reset(DsePolygonIterator* iterator,
+                                          const char* value) {
+  return dse_polygon_text_iterator_reset_n(iterator, value, strlen(value));
+}
+
 void dse_polygon_iterator_free(DsePolygonIterator* iterator) {
   delete iterator->from();
 }
