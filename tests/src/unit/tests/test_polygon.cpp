@@ -138,11 +138,21 @@ TEST_F(PolygonUnitTest, TextJunkBeforePolygon) {
 }
 
 TEST_F(PolygonUnitTest, TextJunkAfterPolygon) {
-  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("POLYGON ((1 2)) bobo"));
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("POLYGON ((1 2)) bobo"));
+  ASSERT_EQ(1u, iterator.num_rings());
+
+  cass_uint32_t num_points;
+  ASSERT_EQ(CASS_OK, iterator.next_num_points(&num_points));
+  ASSERT_EQ(1u, num_points);
+
+  cass_double_t x, y;
+  ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
+  ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
 }
 
 TEST_F(PolygonUnitTest, TextJunkAfterEmptyPolygon) {
-  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("POLYGON EMPTY bobo"));
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("POLYGON EMPTY bobo"));
+  ASSERT_EQ(0u, iterator.num_rings());
 }
 
 TEST_F(PolygonUnitTest, TextEmpty) {

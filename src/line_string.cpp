@@ -156,10 +156,7 @@ CassError LineStringIterator::reset_text(const char* text, size_t size) {
 
   // Special case "LINESTRING EMPTY"
   if (token == WktLexer::TK_EMPTY) {
-    // We'd better be done parsing!
-    return (lexer.next_token() == WktLexer::TK_EOF) ?
-      CASS_OK :
-      CASS_ERROR_LIB_BAD_PARAMS;
+    return CASS_OK;
   }
 
   if (token != WktLexer::TK_OPEN_PAREN) {
@@ -192,9 +189,8 @@ CassError LineStringIterator::reset_text(const char* text, size_t size) {
     }
   }
 
-  // Validate closing ")" and end of string
-  if (token != WktLexer::TK_CLOSE_PAREN ||
-      lexer.next_token() != WktLexer::TK_EOF) {
+  // Validate closing ")"
+  if (token != WktLexer::TK_CLOSE_PAREN) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 

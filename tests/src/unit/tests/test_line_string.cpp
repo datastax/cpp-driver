@@ -88,11 +88,17 @@ TEST_F(LineStringUnitTest, TextJunkBeforeLineString) {
 }
 
 TEST_F(LineStringUnitTest, TextJunkAfterLineString) {
-  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("LINESTRING (1 2) bobo"));
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("LINESTRING (1 2) bobo"));
+  ASSERT_EQ(1u, iterator.num_points());
+
+  cass_double_t x, y;
+  ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
+  ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
 }
 
 TEST_F(LineStringUnitTest, TextJunkAfterEmptyLineString) {
-  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("LINESTRING EMPTY bobo"));
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("LINESTRING EMPTY bobo"));
+  ASSERT_EQ(0u, iterator.num_points());
 }
 
 TEST_F(LineStringUnitTest, TextEmpty) {

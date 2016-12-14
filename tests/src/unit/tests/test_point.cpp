@@ -40,7 +40,9 @@ TEST_F(PointUnitTest, TextJunkBeforePoint) {
 }
 
 TEST_F(PointUnitTest, TextJunkAfterPoint) {
-  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, dse_point_from_wkt("POINT (1 2) bobo", &x, &y));
+  ASSERT_EQ(CASS_OK, dse_point_from_wkt("POINT (1 2) bobo", &x, &y));
+  ASSERT_EQ(1, x);
+  ASSERT_EQ(2, y);
 }
 
 TEST_F(PointUnitTest, TextGoodInt) {
