@@ -13,6 +13,10 @@
 #include <value.hpp>
 #include <data_type.hpp>
 
+using namespace std;
+
+#define RESET_ITERATOR_WITH(x) iterator.reset_text((x), strlen((x)))
+ 
 class LineStringUnitTest : public testing::Test {
 public:
   void SetUp() {
@@ -33,12 +37,12 @@ public:
 
   DseLineString* line_string;
   cass::Value value;
+  dse::LineStringIterator iterator;
 };
 
 TEST_F(LineStringUnitTest, BinaryEmpty) {
   ASSERT_EQ(CASS_OK, dse_line_string_finish(line_string));
 
-  dse::LineStringIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_binary(to_value()));
 }
 
@@ -53,7 +57,6 @@ TEST_F(LineStringUnitTest, BinaryMultiple) {
   ASSERT_EQ(CASS_OK, dse_line_string_add_point(line_string, 4.0, 5.0));
   ASSERT_EQ(CASS_OK, dse_line_string_finish(line_string));
 
-  dse::LineStringIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_binary(to_value()));
   ASSERT_EQ(3u, iterator.num_points());
 
@@ -68,11 +71,40 @@ TEST_F(LineStringUnitTest, BinaryMultiple) {
   ASSERT_EQ(4.0, x); ASSERT_EQ(5.0, y);
 }
 
-TEST_F(LineStringUnitTest, TextEmpty) {
-  std::string wkt = line_string->to_wkt();
-  ASSERT_EQ("LINESTRING ()", wkt);
+TEST_F(LineStringUnitTest, TextMissingY) {
+  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("LINESTRING (1)"));
+}
 
-  dse::LineStringIterator iterator;
+TEST_F(LineStringUnitTest, TextBadX) {
+  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("LINESTRING (a 1)"));
+}
+
+TEST_F(LineStringUnitTest, TextBadY) {
+  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("LINESTRING (1 a)"));
+}
+
+TEST_F(LineStringUnitTest, TextJunkBeforeLineString) {
+  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("bobo LINESTRING (1 2)"));
+}
+
+TEST_F(LineStringUnitTest, TextJunkAfterLineString) {
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("LINESTRING (1 2) bobo"));
+  ASSERT_EQ(1u, iterator.num_points());
+
+  cass_double_t x, y;
+  ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
+  ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
+}
+
+TEST_F(LineStringUnitTest, TextJunkAfterEmptyLineString) {
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("LINESTRING EMPTY bobo"));
+  ASSERT_EQ(0u, iterator.num_points());
+}
+
+TEST_F(LineStringUnitTest, TextEmpty) {
+  string wkt = line_string->to_wkt();
+  ASSERT_EQ("LINESTRING EMPTY", wkt);
+
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
   ASSERT_EQ(0u, iterator.num_points());
 }
@@ -80,10 +112,9 @@ TEST_F(LineStringUnitTest, TextEmpty) {
 TEST_F(LineStringUnitTest, TextSingle) {
   ASSERT_EQ(CASS_OK, dse_line_string_add_point(line_string, 0.0, 1.0));
 
-  std::string wkt = line_string->to_wkt();
+  string wkt = line_string->to_wkt();
   ASSERT_EQ("LINESTRING (0 1)", wkt);
 
-  dse::LineStringIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
   ASSERT_EQ(1u, iterator.num_points());
 
@@ -97,10 +128,9 @@ TEST_F(LineStringUnitTest, TextMultiple) {
   ASSERT_EQ(CASS_OK, dse_line_string_add_point(line_string, 2.0, 3.0));
   ASSERT_EQ(CASS_OK, dse_line_string_add_point(line_string, 4.0, 5.0));
 
-  std::string wkt = line_string->to_wkt();
+  string wkt = line_string->to_wkt();
   ASSERT_EQ("LINESTRING (0 1, 2 3, 4 5)", wkt);
 
-  dse::LineStringIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
   ASSERT_EQ(3u, iterator.num_points());
 
@@ -118,14 +148,31 @@ TEST_F(LineStringUnitTest, TextMultiple) {
 TEST_F(LineStringUnitTest, TextPrecision) {
   ASSERT_EQ(CASS_OK, dse_line_string_add_point(line_string, 0.0001, 0.012345678901234567));
 
-  std::string wkt = line_string->to_wkt();
+  string wkt = line_string->to_wkt();
   ASSERT_EQ("LINESTRING (0.0001 0.012345678901234567)", wkt);
 
-  dse::LineStringIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
   ASSERT_EQ(1u, iterator.num_points());
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
   ASSERT_EQ(0.0001, x); ASSERT_EQ(0.012345678901234567, y);
+}
+
+TEST_F(LineStringUnitTest, TextLeadingSpace) {
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("  LINESTRING (1 3)"));
+  ASSERT_EQ(1u, iterator.num_points());
+
+  cass_double_t x, y;
+  ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
+  ASSERT_EQ(1.0, x); ASSERT_EQ(3.0, y);
+}
+
+TEST_F(LineStringUnitTest, TextTrailingSpace) {
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("LINESTRING (1 3)  "));
+  ASSERT_EQ(1u, iterator.num_points());
+
+  cass_double_t x, y;
+  ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
+  ASSERT_EQ(1.0, x); ASSERT_EQ(3.0, y);
 }

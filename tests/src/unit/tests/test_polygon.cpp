@@ -12,6 +12,10 @@
 
 #include <value.hpp>
 
+using namespace std;
+
+#define RESET_ITERATOR_WITH(x) iterator.reset_text((x), strlen((x)))
+
 class PolygonUnitTest : public testing::Test {
 public:
   void SetUp() {
@@ -32,13 +36,13 @@ public:
 
   DsePolygon* polygon;
   cass::Value value;
+  dse::PolygonIterator iterator;
 };
 
 TEST_F(PolygonUnitTest, BinaryEmptyRing) {
   ASSERT_EQ(CASS_OK, dse_polygon_start_ring(polygon));
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  dse::PolygonIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_binary(to_value()));
   ASSERT_EQ(1u, iterator.num_rings());
 }
@@ -50,7 +54,6 @@ TEST_F(PolygonUnitTest, BinarySingleRing) {
   ASSERT_EQ(CASS_OK, dse_polygon_add_point(polygon, 4, 5));
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  dse::PolygonIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_binary(to_value()));
   ASSERT_EQ(1u, iterator.num_rings());
 
@@ -83,7 +86,6 @@ TEST_F(PolygonUnitTest, BinaryMultipleRings) {
 
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  dse::PolygonIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_binary(to_value()));
   ASSERT_EQ(2u, iterator.num_rings());
 
@@ -119,11 +121,44 @@ TEST_F(PolygonUnitTest, BinaryMultipleRings) {
   ASSERT_EQ(12.0, x); ASSERT_EQ(13.0, y);
 }
 
-TEST_F(PolygonUnitTest, TextEmpty) {
-  std::string wkt = polygon->to_wkt();
-  ASSERT_EQ("POLYGON ()", wkt);
+TEST_F(PolygonUnitTest, TextMissingY) {
+  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("POLYGON ((1))"));
+}
 
-  dse::PolygonIterator iterator;
+TEST_F(PolygonUnitTest, TextBadX) {
+  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("POLYGON ((a 1))"));
+}
+
+TEST_F(PolygonUnitTest, TextBadY) {
+  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("POLYGON ((1 a))"));
+}
+
+TEST_F(PolygonUnitTest, TextJunkBeforePolygon) {
+  ASSERT_EQ(CASS_ERROR_LIB_BAD_PARAMS, RESET_ITERATOR_WITH("bobo POLYGON ((1 2))"));
+}
+
+TEST_F(PolygonUnitTest, TextJunkAfterPolygon) {
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("POLYGON ((1 2)) bobo"));
+  ASSERT_EQ(1u, iterator.num_rings());
+
+  cass_uint32_t num_points;
+  ASSERT_EQ(CASS_OK, iterator.next_num_points(&num_points));
+  ASSERT_EQ(1u, num_points);
+
+  cass_double_t x, y;
+  ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
+  ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
+}
+
+TEST_F(PolygonUnitTest, TextJunkAfterEmptyPolygon) {
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("POLYGON EMPTY bobo"));
+  ASSERT_EQ(0u, iterator.num_rings());
+}
+
+TEST_F(PolygonUnitTest, TextEmpty) {
+  string wkt = polygon->to_wkt();
+  ASSERT_EQ("POLYGON EMPTY", wkt);
+
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
   ASSERT_EQ(0u, iterator.num_rings());
 }
@@ -132,10 +167,9 @@ TEST_F(PolygonUnitTest, TextEmptyRing) {
   ASSERT_EQ(CASS_OK, dse_polygon_start_ring(polygon));
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  std::string wkt = polygon->to_wkt();
+  string wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON (())", wkt);
 
-  dse::PolygonIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
   ASSERT_EQ(1u, iterator.num_rings());
 }
@@ -147,10 +181,9 @@ TEST_F(PolygonUnitTest, TextSingleRing) {
   ASSERT_EQ(CASS_OK, dse_polygon_add_point(polygon, 4, 5));
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  std::string wkt = polygon->to_wkt();
+  string wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON ((0 1, 2 3, 4 5))", wkt);
 
-  dse::PolygonIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
   ASSERT_EQ(1u, iterator.num_rings());
 
@@ -183,10 +216,9 @@ TEST_F(PolygonUnitTest, TextMultipleRings) {
 
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  std::string wkt = polygon->to_wkt();
+  string wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON ((0 1, 2 3, 4 5), (6 7, 8 9, 10 11, 12 13))", wkt);
 
-  dse::PolygonIterator iterator;
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
   ASSERT_EQ(2u, iterator.num_rings());
 
@@ -220,4 +252,30 @@ TEST_F(PolygonUnitTest, TextMultipleRings) {
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
   ASSERT_EQ(12.0, x); ASSERT_EQ(13.0, y);
+}
+
+TEST_F(PolygonUnitTest, TextLeadingSpace) {
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("  POLYGON ((1 3))"));
+  ASSERT_EQ(1u, iterator.num_rings());
+
+  cass_uint32_t num_points;
+  ASSERT_EQ(CASS_OK, iterator.next_num_points(&num_points));
+  ASSERT_EQ(1u, num_points);
+
+  cass_double_t x, y;
+  ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
+  ASSERT_EQ(1.0, x); ASSERT_EQ(3.0, y);
+}
+
+TEST_F(PolygonUnitTest, TextTrailingSpace) {
+  ASSERT_EQ(CASS_OK, RESET_ITERATOR_WITH("POLYGON ((1 3))  "));
+  ASSERT_EQ(1u, iterator.num_rings());
+
+  cass_uint32_t num_points;
+  ASSERT_EQ(CASS_OK, iterator.next_num_points(&num_points));
+  ASSERT_EQ(1u, num_points);
+
+  cass_double_t x, y;
+  ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
+  ASSERT_EQ(1.0, x); ASSERT_EQ(3.0, y);
 }

@@ -1,3 +1,19 @@
+1.1.0
+===========
+
+Features
+--------
+* Expose wkt parsing logic for public use:
+** dse_point_from_wkt, dse_point_from_wkt_n
+** dse_line_string_iterator_reset_with_wkt, dse_line_string_iterator_reset_with_wkt_n
+** dse_polygon_iterator_reset_with_wkt, dse_polygon_iterator_reset_with_wkt_n
+
+Bug Fixes
+---------
+* [CPP-416] LineString::to_wkt and Polygon::to_wkt now return "LINESTRING EMPTY" and "POLYGON EMPTY", respectively, for empty
+  objects.
+* [CPP-416] WKT parsing for "LINESTRING EMPTY" and "POLYGON EMPTY" now succeeds.
+
 1.0.0
 ===========
 October 20, 2016

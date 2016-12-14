@@ -89,6 +89,11 @@ CassError dse_polygon_iterator_next_point(DsePolygonIterator* iterator,
 namespace dse {
 
 std::string Polygon::to_wkt() const {
+  // Special case empty polygon
+  if (num_rings_ == 0) {
+    return "POLYGON EMPTY";
+  }
+
   std::stringstream ss;
   ss.precision(WKT_MAX_DIGITS);
   ss << "POLYGON (";
@@ -174,11 +179,18 @@ CassError PolygonIterator::reset_text(const char* text, size_t size) {
   }
 
   // Validate format and count the number of rings
-  if (lexer.next_token() != WktLexer::TK_OPEN_PAREN) {
+  WktLexer::Token token = lexer.next_token();
+
+  // Special case "POLYGON EMPTY"
+  if (token == WktLexer::TK_EMPTY) {
+    return CASS_OK;
+  }
+
+  if (token != WktLexer::TK_OPEN_PAREN) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 
-  WktLexer::Token token = lexer.next_token();
+  token = lexer.next_token();
   while (token != WktLexer::TK_EOF && token != WktLexer::TK_CLOSE_PAREN) {
     // Start ring
     if (token != WktLexer::TK_OPEN_PAREN) {

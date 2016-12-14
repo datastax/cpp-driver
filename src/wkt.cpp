@@ -19,103 +19,109 @@ static const char _wkt_actions[] = {
 	5, 1, 6, 1, 7, 1, 8, 1, 
 	9, 1, 10, 1, 11, 1, 12, 1, 
 	13, 1, 14, 1, 15, 1, 16, 1, 
-	17, 2, 2, 3, 2, 2, 4
+	17, 1, 18, 2, 2, 3, 2, 2, 
+	4
 };
 
 static const char _wkt_key_offsets[] = {
 	0, 2, 6, 8, 9, 10, 11, 12, 
-	13, 14, 15, 16, 18, 19, 20, 21, 
-	22, 23, 24, 36, 39, 43, 45, 50, 
-	52, 53
+	13, 14, 15, 16, 17, 18, 19, 21, 
+	22, 23, 24, 25, 26, 27, 40, 43, 
+	47, 49, 54, 56, 57, 58
 };
 
 static const char _wkt_trans_keys[] = {
 	48, 57, 43, 45, 48, 57, 48, 57, 
-	78, 69, 83, 84, 82, 73, 78, 71, 
-	73, 76, 78, 84, 89, 71, 79, 78, 
-	9, 32, 40, 41, 44, 46, 76, 80, 
-	43, 45, 48, 57, 46, 48, 57, 69, 
-	101, 48, 57, 48, 57, 46, 69, 101, 
-	48, 57, 48, 57, 73, 79, 0
+	80, 84, 89, 78, 69, 83, 84, 82, 
+	73, 78, 71, 73, 76, 78, 84, 89, 
+	71, 79, 78, 9, 32, 40, 41, 44, 
+	46, 69, 76, 80, 43, 45, 48, 57, 
+	46, 48, 57, 69, 101, 48, 57, 48, 
+	57, 46, 69, 101, 48, 57, 48, 57, 
+	77, 73, 79, 0
 };
 
 static const char _wkt_single_lengths[] = {
 	0, 2, 0, 1, 1, 1, 1, 1, 
-	1, 1, 1, 2, 1, 1, 1, 1, 
-	1, 1, 8, 1, 2, 0, 3, 0, 
-	1, 1
+	1, 1, 1, 1, 1, 1, 2, 1, 
+	1, 1, 1, 1, 1, 9, 1, 2, 
+	0, 3, 0, 1, 1, 1
 };
 
 static const char _wkt_range_lengths[] = {
 	1, 1, 1, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 
-	0, 0, 2, 1, 1, 1, 1, 1, 
-	0, 0
+	0, 0, 0, 0, 0, 2, 1, 1, 
+	1, 1, 1, 0, 0, 0
 };
 
 static const char _wkt_index_offsets[] = {
 	0, 2, 6, 8, 10, 12, 14, 16, 
-	18, 20, 22, 24, 27, 29, 31, 33, 
-	35, 37, 39, 50, 53, 57, 59, 64, 
-	66, 68
+	18, 20, 22, 24, 26, 28, 30, 33, 
+	35, 37, 39, 41, 43, 45, 57, 60, 
+	64, 66, 71, 73, 75, 77
 };
 
 static const char _wkt_trans_targs[] = {
-	20, 18, 2, 2, 21, 18, 21, 18, 
-	4, 18, 5, 18, 6, 18, 7, 18, 
-	8, 18, 9, 18, 10, 18, 18, 18, 
-	12, 14, 18, 13, 18, 18, 18, 15, 
-	18, 16, 18, 17, 18, 18, 18, 18, 
-	18, 18, 18, 18, 23, 24, 25, 19, 
-	22, 18, 0, 22, 18, 1, 1, 20, 
-	18, 21, 18, 0, 1, 1, 22, 18, 
-	20, 18, 3, 18, 11, 18, 18, 18, 
-	18, 18, 18, 18, 18, 18, 18, 18, 
-	18, 18, 18, 18, 18, 18, 18, 18, 
-	18, 18, 18, 18, 18, 18, 18, 0
+	23, 21, 2, 2, 24, 21, 24, 21, 
+	4, 21, 5, 21, 21, 21, 7, 21, 
+	8, 21, 9, 21, 10, 21, 11, 21, 
+	12, 21, 13, 21, 21, 21, 15, 17, 
+	21, 16, 21, 21, 21, 18, 21, 19, 
+	21, 20, 21, 21, 21, 21, 21, 21, 
+	21, 21, 26, 27, 28, 29, 22, 25, 
+	21, 0, 25, 21, 1, 1, 23, 21, 
+	24, 21, 0, 1, 1, 25, 21, 23, 
+	21, 3, 21, 6, 21, 14, 21, 21, 
+	21, 21, 21, 21, 21, 21, 21, 21, 
+	21, 21, 21, 21, 21, 21, 21, 21, 
+	21, 21, 21, 21, 21, 21, 21, 21, 
+	21, 21, 21, 21, 0
 };
 
 static const char _wkt_trans_actions[] = {
-	5, 31, 0, 0, 0, 27, 0, 27, 
-	0, 29, 0, 29, 0, 29, 0, 29, 
-	0, 29, 0, 29, 0, 29, 9, 29, 
-	0, 0, 29, 0, 29, 7, 29, 0, 
-	29, 0, 29, 0, 29, 11, 29, 19, 
-	19, 13, 15, 17, 0, 5, 5, 36, 
-	33, 21, 0, 33, 25, 0, 0, 5, 
-	23, 0, 23, 0, 0, 0, 33, 23, 
-	5, 25, 0, 25, 0, 25, 31, 27, 
-	27, 29, 29, 29, 29, 29, 29, 29, 
-	29, 29, 29, 29, 29, 29, 29, 29, 
-	25, 23, 23, 23, 25, 25, 25, 0
+	5, 33, 0, 0, 0, 29, 0, 29, 
+	0, 31, 0, 31, 13, 31, 0, 31, 
+	0, 31, 0, 31, 0, 31, 0, 31, 
+	0, 31, 0, 31, 9, 31, 0, 0, 
+	31, 0, 31, 7, 31, 0, 31, 0, 
+	31, 0, 31, 11, 31, 21, 21, 15, 
+	17, 19, 0, 5, 5, 5, 38, 35, 
+	23, 0, 35, 27, 0, 0, 5, 25, 
+	0, 25, 0, 0, 0, 35, 25, 5, 
+	27, 0, 27, 0, 27, 0, 27, 33, 
+	29, 29, 31, 31, 31, 31, 31, 31, 
+	31, 31, 31, 31, 31, 31, 31, 31, 
+	31, 31, 31, 31, 27, 25, 25, 25, 
+	27, 27, 27, 27, 0
 };
 
 static const char _wkt_to_state_actions[] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 
-	0, 0, 1, 0, 0, 0, 0, 0, 
-	0, 0
+	0, 0, 0, 0, 0, 1, 0, 0, 
+	0, 0, 0, 0, 0, 0
 };
 
 static const char _wkt_from_state_actions[] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 
-	0, 0, 3, 0, 0, 0, 0, 0, 
-	0, 0
+	0, 0, 0, 0, 0, 3, 0, 0, 
+	0, 0, 0, 0, 0, 0
 };
 
 static const char _wkt_eof_trans[] = {
-	71, 73, 73, 88, 88, 88, 88, 88, 
-	88, 88, 88, 88, 88, 88, 88, 88, 
-	88, 88, 0, 95, 92, 92, 92, 95, 
-	95, 95
+	80, 82, 82, 100, 100, 100, 100, 100, 
+	100, 100, 100, 100, 100, 100, 100, 100, 
+	100, 100, 100, 100, 100, 0, 108, 104, 
+	104, 104, 108, 108, 108, 108
 };
 
-static const int wkt_start = 18;
-static const int wkt_first_final = 18;
+static const int wkt_start = 21;
+static const int wkt_first_final = 21;
 static const int wkt_error = -1;
 
-static const int wkt_en_main = 18;
+static const int wkt_en_main = 21;
 
 
 #line 16 "wkt.rl"
@@ -140,7 +146,7 @@ WktLexer::Token WktLexer::next_token() {
   if (p == eof) return TK_EOF;
 
   
-#line 144 "wkt.cpp"
+#line 150 "wkt.cpp"
 	{
 	cs = wkt_start;
 	ts = 0;
@@ -148,7 +154,7 @@ WktLexer::Token WktLexer::next_token() {
 	act = 0;
 	}
 
-#line 152 "wkt.cpp"
+#line 158 "wkt.cpp"
 	{
 	int _klen;
 	unsigned int _trans;
@@ -167,7 +173,7 @@ _resume:
 #line 1 "NONE"
 	{ts = p;}
 	break;
-#line 171 "wkt.cpp"
+#line 177 "wkt.cpp"
 		}
 	}
 
@@ -237,12 +243,12 @@ _eof_trans:
 	{te = p+1;}
 	break;
 	case 3:
-#line 47 "wkt.rl"
-	{act = 7;}
+#line 48 "wkt.rl"
+	{act = 8;}
 	break;
 	case 4:
-#line 55 "wkt.rl"
-	{act = 9;}
+#line 56 "wkt.rl"
+	{act = 10;}
 	break;
 	case 5:
 #line 41 "wkt.rl"
@@ -258,26 +264,30 @@ _eof_trans:
 	break;
 	case 8:
 #line 44 "wkt.rl"
-	{te = p+1;{ token = TK_OPEN_PAREN; {p++; goto _out; } }}
+	{te = p+1;{ token = TK_EMPTY; {p++; goto _out; } }}
 	break;
 	case 9:
 #line 45 "wkt.rl"
-	{te = p+1;{ token = TK_CLOSE_PAREN; {p++; goto _out; } }}
+	{te = p+1;{ token = TK_OPEN_PAREN; {p++; goto _out; } }}
 	break;
 	case 10:
 #line 46 "wkt.rl"
-	{te = p+1;{ token = TK_COMMA; {p++; goto _out; } }}
+	{te = p+1;{ token = TK_CLOSE_PAREN; {p++; goto _out; } }}
 	break;
 	case 11:
-#line 54 "wkt.rl"
-	{te = p+1;{ /* Skip */ }}
+#line 47 "wkt.rl"
+	{te = p+1;{ token = TK_COMMA; {p++; goto _out; } }}
 	break;
 	case 12:
 #line 55 "wkt.rl"
-	{te = p+1;{ token = TK_INVALID; {p++; goto _out; } }}
+	{te = p+1;{ /* Skip */ }}
 	break;
 	case 13:
-#line 47 "wkt.rl"
+#line 56 "wkt.rl"
+	{te = p+1;{ token = TK_INVALID; {p++; goto _out; } }}
+	break;
+	case 14:
+#line 48 "wkt.rl"
 	{te = p;p--;{
                    if (!skip_number_) {
                      number_ = atof(std::string(ts, te).c_str());
@@ -286,12 +296,12 @@ _eof_trans:
                    {p++; goto _out; }
                 }}
 	break;
-	case 14:
-#line 55 "wkt.rl"
+	case 15:
+#line 56 "wkt.rl"
 	{te = p;p--;{ token = TK_INVALID; {p++; goto _out; } }}
 	break;
-	case 15:
-#line 47 "wkt.rl"
+	case 16:
+#line 48 "wkt.rl"
 	{{p = ((te))-1;}{
                    if (!skip_number_) {
                      number_ = atof(std::string(ts, te).c_str());
@@ -300,14 +310,14 @@ _eof_trans:
                    {p++; goto _out; }
                 }}
 	break;
-	case 16:
-#line 55 "wkt.rl"
+	case 17:
+#line 56 "wkt.rl"
 	{{p = ((te))-1;}{ token = TK_INVALID; {p++; goto _out; } }}
 	break;
-	case 17:
+	case 18:
 #line 1 "NONE"
 	{	switch( act ) {
-	case 7:
+	case 8:
 	{{p = ((te))-1;}
                    if (!skip_number_) {
                      number_ = atof(std::string(ts, te).c_str());
@@ -316,13 +326,13 @@ _eof_trans:
                    {p++; goto _out; }
                 }
 	break;
-	case 9:
+	case 10:
 	{{p = ((te))-1;} token = TK_INVALID; {p++; goto _out; } }
 	break;
 	}
 	}
 	break;
-#line 326 "wkt.cpp"
+#line 336 "wkt.cpp"
 		}
 	}
 
@@ -335,7 +345,7 @@ _again:
 #line 1 "NONE"
 	{ts = 0;}
 	break;
-#line 339 "wkt.cpp"
+#line 349 "wkt.cpp"
 		}
 	}
 
@@ -353,7 +363,7 @@ _again:
 	_out: {}
 	}
 
-#line 60 "wkt.rl"
+#line 61 "wkt.rl"
 
 
   position_ = p;

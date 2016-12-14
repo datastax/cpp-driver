@@ -80,6 +80,11 @@ CassError dse_line_string_iterator_next_point(DseLineStringIterator* iterator,
 namespace dse {
 
 std::string LineString::to_wkt() const {
+  // Special case empty line string
+  if (num_points_ == 0) {
+    return "LINESTRING EMPTY";
+  }
+
   std::stringstream ss;
   ss.precision(WKT_MAX_DIGITS);
   ss << "LINESTRING (";
@@ -147,11 +152,18 @@ CassError LineStringIterator::reset_text(const char* text, size_t size) {
   }
 
   // Validate format and count the number of points
-  if (lexer.next_token() != WktLexer::TK_OPEN_PAREN) {
+  WktLexer::Token token = lexer.next_token();
+
+  // Special case "LINESTRING EMPTY"
+  if (token == WktLexer::TK_EMPTY) {
+    return CASS_OK;
+  }
+
+  if (token != WktLexer::TK_OPEN_PAREN) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 
-  WktLexer::Token token = lexer.next_token();
+  token = lexer.next_token();
   while (token != WktLexer::TK_EOF && token != WktLexer::TK_CLOSE_PAREN) {
     // First number in point
     if (token != WktLexer::TK_NUMBER) {
