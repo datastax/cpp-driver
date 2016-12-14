@@ -62,9 +62,5 @@ WktLexer::Token WktLexer::next_token() {
 
   position_ = p;
 
-  // Tolerate trailing whitespace in text.
-  if (p == eof && token == TK_INVALID) {
-    token = TK_EOF;
-  }
   return token;
 }

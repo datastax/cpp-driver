@@ -368,8 +368,5 @@ _again:
 
   position_ = p;
 
-  if (p == eof && token == TK_INVALID) {
-    token = TK_EOF;
-  }
   return token;
 }
