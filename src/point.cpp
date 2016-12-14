@@ -33,7 +33,9 @@ CassError dse_point_from_wkt_n(const char* wkt, size_t wkt_length, cass_double_t
 
   *y = lexer.number();
 
-  if (lexer.next_token() != WktLexer::TK_CLOSE_PAREN) {
+  // Look for the closing paren and then the end of string.
+  if (lexer.next_token() != WktLexer::TK_CLOSE_PAREN ||
+      lexer.next_token() != WktLexer::TK_EOF) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 

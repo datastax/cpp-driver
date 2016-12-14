@@ -41,6 +41,7 @@ WktLexer::Token WktLexer::next_token() {
       'POINT' => { token = TK_TYPE_POINT; fbreak; };
       'LINESTRING' => { token = TK_TYPE_LINESTRING; fbreak; };
       'POLYGON' => { token = TK_TYPE_POLYGON; fbreak; };
+      'EMPTY' => { token = TK_EMPTY; fbreak; };
       '(' => { token = TK_OPEN_PAREN; fbreak; };
       ')' => { token = TK_CLOSE_PAREN; fbreak; };
       ',' => { token = TK_COMMA; fbreak; };
@@ -61,5 +62,9 @@ WktLexer::Token WktLexer::next_token() {
 
   position_ = p;
 
+  // Tolerate trailing whitespace in text.
+  if (p == eof && token == TK_INVALID) {
+    token = TK_EOF;
+  }
   return token;
 }
