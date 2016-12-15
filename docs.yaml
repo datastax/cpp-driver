@@ -22,6 +22,10 @@ sections:
       EXTRACT_ALL = YES
       INLINE_SOURCES = NO
       ALIASES = cassandra{1}="<b>Requires Cassandra:</b> \1"
+checks:
+  external_links:
+    exclude:
+    - 'https://ci.appveyor.com/api/projects/status/ec0x0vuk59as28r6/branch/master'
 rewrites:
   - http://datastax.github.io/cpp-driver/: /
   - https://datastax.github.io/cpp-driver/: /
