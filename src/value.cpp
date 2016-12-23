@@ -139,6 +139,68 @@ CassError cass_value_get_bytes(const CassValue* value,
   return CASS_OK;
 }
 
+CassError cass_value_get_duration(const CassValue* value, cass_int64_t* months, cass_int64_t* days, cass_int64_t* nanos)
+{
+  cass_int64_t *outs[3];
+  int ctr;
+  size_t data_size;
+  const cass_byte_t* cur_byte;
+  const cass_byte_t* end;
+
+  // Package up the out-args in an array. Duration's always have months, then days, then nanos.
+  outs[0] = months;
+  outs[1] = days;
+  outs[2] = nanos;
+
+  cass_value_get_bytes(value, &cur_byte, &data_size);
+  end = cur_byte + data_size;
+
+  for (ctr = 0; ctr < 3 && cur_byte != end; ++ctr) {
+    int num_extra_bytes;
+    int i;
+    cass_byte_t first_byte = *cur_byte++;
+    if (first_byte <= 127) {
+      // If this is a multibyte vint, at least the MSB of the first byte
+      // will be set. Since that's not the case, this is a one-byte value.
+      *outs[ctr] = first_byte;
+    } else {
+      // The number of consecutive most significant bits of the first-byte tell us how
+      // many additional bytes are in this varint. Count them like this:
+      // 1. Invert the firstByte so that all leading 1s become 0s.
+      // 2. Count the number of leading zeros; num_leading_zeros assumes a 64-bit long.
+      // 3. We care about leading 0s in the byte, not int, so subtract out the
+      //    appropriate number of extra bits (56 for a 64-bit int).
+
+      // We mask out high-order bits to prevent sign-extension as the value is placed in a 64-bit arg
+      // to the num_leading_zeros function.
+      num_extra_bytes = cass::num_leading_zeros(~first_byte & 0xff) - 56;
+
+      // Error out if we don't have num_extra_bytes left in our data.
+      if (cur_byte + num_extra_bytes > end) {
+        // There aren't enough bytes. This duration object is not fully defined.
+        return CASS_ERROR_LIB_BAD_PARAMS;
+      }
+
+      // Build up the varint value one byte at a time from the data bytes.
+      // The firstByte contains size as well as the most significant bits of
+      // the value. Extract just the value.
+      *outs[ctr] = first_byte & (0xff >> num_extra_bytes);
+      for (i = 0; i < num_extra_bytes; ++i) {
+        cass_byte_t b = *cur_byte++;
+        *outs[ctr] <<= 8;
+        *outs[ctr] |= b & 0xff;
+      }
+    }
+    *outs[ctr] = cass::decode_zig_zag(*outs[ctr]);
+  }
+
+  if (ctr < 3) {
+    // There aren't enough bytes. This duration object is not fully defined.
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  return CASS_OK;
+}
+
 CassError cass_value_get_decimal(const CassValue* value,
                                  const cass_byte_t** varint,
                                  size_t* varint_size,

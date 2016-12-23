@@ -243,6 +243,95 @@ CassError cass_statement_bind_custom_by_name_n(CassStatement* statement,
                                          value, value_size));
 }
 
+static size_t encode_duration(cass_byte_t** data_ptr, cass_int64_t months, cass_int64_t days, cass_int64_t nanos) {
+  cass_byte_t *data, *cur_byte;
+  size_t data_size;
+  int i;
+
+  // Each duration attribute needs to be converted to zigzag form. Use an array to make it
+  // easy to do the same encoding ops on all three values.
+  uint64_t zigzag_values[3];
+
+  // We need varint sizes for each attribute.
+  size_t varint_sizes[3];
+
+  zigzag_values[0] = cass::encode_zig_zag(months);
+  zigzag_values[1] = cass::encode_zig_zag(days);
+  zigzag_values[2] = cass::encode_zig_zag(nanos);
+
+  // We also need the total size of all three varint's.
+  data_size = 0;
+  for (i = 0; i < 3; ++i) {
+    varint_sizes[i] = cass::varint_size(zigzag_values[i]);
+    data_size += varint_sizes[i];
+  }
+
+  // Allocate our data buffer and then start populating it.
+  data = *data_ptr = (cass_byte_t*) malloc(data_size);
+  cur_byte = data;
+
+  for (i = 0; i < 3; ++i) {
+    int j;
+    if (varint_sizes[i] == 1) {
+      // This is just a one byte value; write it and move on.
+      *cur_byte++ = zigzag_values[i];
+      continue;
+    }
+
+    // Write the bytes of zigzag value to the data array with most significant byte
+    // in first byte of buffer (cur_byte), and so on.
+    for (j = varint_sizes[i] - 1 ; j >= 0 ; --j) {
+      *(cur_byte + j) = zigzag_values[i] & 0xff;
+      zigzag_values[i] >>= 8;
+    }
+
+    // Now mix in the size of the varint into the first byte of the buffer,
+    // setting "size-1" higher order bits.
+    *cur_byte |= ~(0xff >> (varint_sizes[i] - 1));
+
+    // Move cur_byte forward, ready for the next attribute.
+    cur_byte += varint_sizes[i];
+  }
+  return data_size;
+}
+
+CassError cass_statement_bind_duration(CassStatement* statement,
+                                       size_t index,
+                                       cass_int64_t months,
+                                       cass_int64_t days,
+                                       cass_int64_t nanos)
+{
+  cass_byte_t* data;
+  size_t data_size = encode_duration(&data, months, days, nanos);
+
+  return cass_statement_bind_bytes(statement, index, data, data_size);
+}
+
+CassError cass_statement_bind_duration_by_name(CassStatement* statement,
+                                               const char* name,
+                                               cass_int64_t months,
+                                               cass_int64_t days,
+                                               cass_int64_t nanos)
+{
+  cass_byte_t* data;
+  size_t data_size = encode_duration(&data, months, days, nanos);
+
+  return cass_statement_bind_bytes_by_name(statement, name, data, data_size);
+}
+
+CassError cass_statement_bind_duration_by_name_n(CassStatement* statement,
+                                                 const char* name,
+                                                 size_t name_length,
+                                                 cass_int64_t months,
+                                                 cass_int64_t days,
+                                                 cass_int64_t nanos)
+{
+  cass_byte_t* data;
+  size_t data_size = encode_duration(&data, months, days, nanos);
+
+  return cass_statement_bind_bytes_by_name_n(statement, name, name_length, data, data_size);
+}
+
 } // extern "C"
 
 namespace cass {

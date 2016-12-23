@@ -91,6 +91,14 @@ std::string& to_cql_id(std::string& str);
 
 std::string& escape_id(std::string& str);
 
+size_t num_leading_zeros(int64_t value);
+
+int64_t decode_zig_zag(uint64_t n);
+
+uint64_t encode_zig_zag(cass_int64_t n);
+
+size_t varint_size(int64_t value);
+
 } // namespace cass
 
 #endif

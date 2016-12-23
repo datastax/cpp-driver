@@ -4928,6 +4928,71 @@ cass_statement_bind_decimal_by_name_n(CassStatement* statement,
                                       cass_int32_t scale);
 
 /**
+ * Binds a "duration" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] months
+ * @param[in] days
+ * @param[in] nanos
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_duration(CassStatement* statement,
+                             size_t index,
+                             cass_int64_t months,
+                             cass_int64_t days,
+                             cass_int64_t nanos);
+
+/**
+ * Binds a "duration" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] months
+ * @param[in] days
+ * @param[in] nanos
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_duration_by_name(CassStatement* statement,
+                                     const char* name,
+                                     cass_int64_t months,
+                                     cass_int64_t days,
+                                     cass_int64_t nanos);
+
+/**
+ * Same as cass_statement_bind_duration_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] months
+ * @param[in] days
+ * @param[in] nanos
+ * @return same as cass_statement_bind_duration_by_name()
+ *
+ * @see cass_statement_bind_duration_by_name()
+ */
+CASS_EXPORT CassError
+cass_statement_bind_duration_by_name_n(CassStatement* statement,
+                                       const char* name,
+                                       size_t name_length,
+                                       cass_int64_t months,
+                                       cass_int64_t days,
+                                       cass_int64_t nanos);
+
+/**
  * Bind a "list", "map" or "set" to a query or bound statement at the
  * specified index.
  *
@@ -8981,6 +9046,23 @@ cass_value_get_decimal(const CassValue* value,
                        const cass_byte_t** varint,
                        size_t* varint_size,
                        cass_int32_t* scale);
+
+/**
+ * Gets a duration for the specified value.
+ *
+ * @public @memberof CassValue
+ *
+ * @param[in] value
+ * @param[out] months
+ * @param[out] days
+ * @param[out] nanos
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_value_get_duration(const CassValue* value,
+                        cass_int64_t* months,
+                        cass_int64_t* days,
+                        cass_int64_t* nanos);
 
 /**
  * Gets the type of the specified value.
