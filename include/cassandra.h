@@ -548,6 +548,7 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_TIME      = 0x0012,
   CASS_VALUE_TYPE_SMALL_INT = 0x0013,
   CASS_VALUE_TYPE_TINY_INT  = 0x0014,
+  CASS_VALUE_TYPE_DURATION  = 0x0015,
   CASS_VALUE_TYPE_LIST      = 0x0020,
   CASS_VALUE_TYPE_MAP       = 0x0021,
   CASS_VALUE_TYPE_SET       = 0x0022,
@@ -4930,6 +4931,8 @@ cass_statement_bind_decimal_by_name_n(CassStatement* statement,
 /**
  * Binds a "duration" to a query or bound statement at the specified index.
  *
+ * @cassandra{3.10+}
+ *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -4949,8 +4952,7 @@ cass_statement_bind_duration(CassStatement* statement,
 /**
  * Binds a "duration" to all the values with the specified name.
  *
- * This can only be used with statements created by
- * cass_prepared_bind() when using Cassandra 2.0 or earlier.
+ * @cassandra{3.10+}
  *
  * @public @memberof CassStatement
  *
@@ -4971,6 +4973,8 @@ cass_statement_bind_duration_by_name(CassStatement* statement,
 /**
  * Same as cass_statement_bind_duration_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{3.10+}
  *
  * @public @memberof CassStatement
  *
@@ -6147,6 +6151,25 @@ cass_collection_append_decimal(CassCollection* collection,
                                cass_int32_t scale);
 
 /**
+ * Appends a "duration" to the collection.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] months
+ * @param[in] days
+ * @param[in] nanos
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_duration(CassCollection* collection,
+                                cass_int64_t months,
+                                cass_int64_t days,
+                                cass_int64_t nanos);
+
+/**
  * Appends a "list", "map" or "set" to the collection.
  *
  * @cassandra{2.1+}
@@ -6561,6 +6584,27 @@ cass_tuple_set_decimal(CassTuple* tuple,
                        const cass_byte_t* varint,
                        size_t varint_size,
                        cass_int32_t scale);
+
+/**
+ * Sets a "duration" in a tuple at the specified index.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] months
+ * @param[in] days
+ * @param[in] nanos
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_duration(CassTuple* tuple,
+                        size_t index,
+                        cass_int64_t months,
+                        cass_int64_t days,
+                        cass_int64_t nanos);
 
 /**
  * Sets a "list", "map" or "set" in a tuple at the specified index.
@@ -7573,6 +7617,74 @@ cass_user_type_set_decimal_by_name_n(CassUserType* user_type,
                                      const cass_byte_t* varint,
                                      size_t varint_size,
                                      int scale);
+
+/**
+ * Sets a "duration" in a user defined type at the specified index.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] months
+ * @param[in] days
+ * @param[in] nanos
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_duration(CassUserType* user_type,
+                            size_t index,
+                            cass_int64_t months,
+                            cass_int64_t days,
+                            cass_int64_t nanos);
+
+/**
+ * Sets "duration" in a user defined type at the specified name.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] months
+ * @param[in] days
+ * @param[in] nanos
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_duration_by_name(CassUserType* user_type,
+                                    const char* name,
+                                    cass_int64_t months,
+                                    cass_int64_t days,
+                                    cass_int64_t nanos);
+
+/**
+ * Same as cass_user_type_set_duration_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] months
+ * @param[in] days
+ * @param[in] nanos
+ * @return same as cass_user_type_set_duration_by_name()
+ *
+ * @see cass_user_type_set_duration_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_duration_by_name_n(CassUserType* user_type,
+                                      const char* name,
+                                      size_t name_length,
+                                      cass_int64_t months,
+                                      cass_int64_t days,
+                                      cass_int64_t nanos);
 
 /**
  * Sets a "list", "map" or "set" in a user defined type at the
@@ -9049,6 +9161,8 @@ cass_value_get_decimal(const CassValue* value,
 
 /**
  * Gets a duration for the specified value.
+ *
+ * @cassandra{3.10+}
  *
  * @public @memberof CassValue
  *

@@ -76,6 +76,7 @@ public:
   APPEND_TYPE(CassUuid)
   APPEND_TYPE(CassInet)
   APPEND_TYPE(CassDecimal)
+  APPEND_TYPE(CassDuration)
 
 #undef APPEND_TYPE
 

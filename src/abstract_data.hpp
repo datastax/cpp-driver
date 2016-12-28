@@ -117,6 +117,7 @@ public:
   SET_TYPE(CassUuid)
   SET_TYPE(CassInet)
   SET_TYPE(CassDecimal)
+  SET_TYPE(CassDuration)
 
 #undef SET_TYPE
 

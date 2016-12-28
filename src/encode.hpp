@@ -218,6 +218,10 @@ inline Buffer encode(CassDecimal value) {
   return buf;
 }
 
+Buffer encode(CassDuration value);
+
+Buffer encode_with_length(CassDuration value);
+
 } // namespace cass
 
 #endif
