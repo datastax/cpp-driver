@@ -91,13 +91,27 @@ std::string& to_cql_id(std::string& str);
 
 std::string& escape_id(std::string& str);
 
-size_t num_leading_zeros(int64_t value);
+inline size_t num_leading_zeros(cass_int64_t value) {
+  if (value == 0)
+    return 64;
 
-int64_t decode_zig_zag(uint64_t n);
+#if defined(_MSC_VER)
+  unsigned long index;
+  _BitScanReverse64(&index, value);
+  // index is the (zero based) index, counting from lsb, of the most-significant 1 bit.
+  // For example, a value of 12 (b1100) would return 3. The 4th bit is set, so there are
+  // 60 leading zeros.
+  return 64 - index - 1;
+#else
+  return __builtin_clzll(value);
+#endif
+}
+
+int64_t decode_zig_zag(cass_uint64_t n);
 
 uint64_t encode_zig_zag(cass_int64_t n);
 
-size_t varint_size(int64_t value);
+size_t varint_size(cass_int64_t value);
 
 } // namespace cass
 

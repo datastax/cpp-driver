@@ -158,23 +158,7 @@ std::string& to_cql_id(std::string& str) {
   return str;
 }
 
-inline size_t num_leading_zeros(int64_t value) {
-  if (value == 0)
-    return 64;
-
-#if defined(_MSC_VER)
-  unsigned long index;
-  _BitScanReverse64(&index, value);
-  // index is the (zero based) index, counting from lsb, of the most-significant 1 bit.
-  // For example, a value of 12 (b1100) would return 3. The 4th bit is set, so there are
-  // 60 leading zeros.
-  return 64 - index - 1;
-#else
-  return __builtin_clzll(value);
-#endif
-}
-
-int64_t decode_zig_zag(uint64_t n) {
+int64_t decode_zig_zag(cass_uint64_t n) {
   // n is an unsigned long because we want a logical shift right
   // (it should 0-fill high order bits), not arithmetic shift right.
   return (n >> 1) ^ -(n & 1);
@@ -184,7 +168,7 @@ uint64_t encode_zig_zag(cass_int64_t n) {
   return (n << 1) ^ (n >> 63);
 }
 
-size_t varint_size(int64_t value) {
+size_t varint_size(cass_int64_t value) {
   // | with 1 to ensure magnitude <= 63, so (63 - 1) / 7 <= 8
   size_t magnitude = num_leading_zeros(value | 1);
   return magnitude ? (9 - ((magnitude - 1) / 7)) : 9;
