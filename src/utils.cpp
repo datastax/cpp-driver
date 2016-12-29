@@ -158,13 +158,13 @@ std::string& to_cql_id(std::string& str) {
   return str;
 }
 
-int64_t decode_zig_zag(cass_uint64_t n) {
+cass_int64_t decode_zig_zag(cass_uint64_t n) {
   // n is an unsigned long because we want a logical shift right
   // (it should 0-fill high order bits), not arithmetic shift right.
   return (n >> 1) ^ -(n & 1);
 }
 
-uint64_t encode_zig_zag(cass_int64_t n) {
+cass_uint64_t encode_zig_zag(cass_int64_t n) {
   return (n << 1) ^ (n >> 63);
 }
 

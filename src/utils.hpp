@@ -107,9 +107,9 @@ inline size_t num_leading_zeros(cass_int64_t value) {
 #endif
 }
 
-int64_t decode_zig_zag(cass_uint64_t n);
+cass_int64_t decode_zig_zag(cass_uint64_t n);
 
-uint64_t encode_zig_zag(cass_int64_t n);
+cass_uint64_t encode_zig_zag(cass_int64_t n);
 
 size_t varint_size(cass_int64_t value);
 
