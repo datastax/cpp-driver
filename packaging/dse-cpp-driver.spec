@@ -32,7 +32,7 @@ Group: Development/Tools
 Requires: %{name} = %{epoch}:%{version}-%{release}
 Requires: libuv >= %{libuv_version}
 Requires: openssl >= 0.9.8e
-Requires: krb5
+Requires: krb5-libs
 Requires: pkgconfig
 
 %description devel
