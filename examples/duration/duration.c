@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
 
   insert_into(session, "base", 0, 0, 0);
   insert_into(session, "simple", 1, 2, 3);
-  insert_into(session, "edge", (1L << 63) - 1, 0xffffffffffffffff, 1L << 63);
+  insert_into(session, "edge", (1LL << 63) - 1, 0xffffffffffffffff, 1LL << 63);
   select_from(session, "base");
   select_from(session, "simple");
 

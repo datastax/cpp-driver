@@ -22,7 +22,6 @@
 #include <assert.h>
 #include <functional>
 #include <sstream>
-#include <strings.h>
 
 namespace cass {
 
