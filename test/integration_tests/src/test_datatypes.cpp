@@ -46,6 +46,10 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
     std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value " + test_utils::get_value_type(value_type) +")";
     test_utils::execute_query(session, create_table.c_str());
 
+    // Duration type is special in that it is really a custom type under the hood.
+    if (value_type == CASS_VALUE_TYPE_DURATION)
+      value_type = CASS_VALUE_TYPE_CUSTOM;
+
     // Bind, validate, and insert the value into Cassandra
     std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(? , ?)";
     test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
@@ -141,6 +145,17 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
     const cass_int32_t pi_scale = 100;
     CassDecimal value = CassDecimal(pi, sizeof(pi), pi_scale);
     insert_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value);
+  }
+
+  if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+    CassDuration value = CassDuration(0, 0, 0);
+    insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+
+    value = CassDuration(1, 2, 3);
+    insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+
+    value = CassDuration((1LL << 63) - 1, -1, 1LL << 63);
+    insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
   }
 
   insert_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);

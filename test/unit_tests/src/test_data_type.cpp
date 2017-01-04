@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(class_name)
 
   // Invalid type
   {
-    // Only custom data types support keyspace and type name
+    // Only custom data types support class name
     DataTypeWrapper data_type(cass_data_type_new(CASS_VALUE_TYPE_UDT));
 
     BOOST_CHECK_EQUAL(cass_data_type_set_class_name(data_type, "class_name1"),

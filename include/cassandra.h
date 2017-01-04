@@ -9212,6 +9212,17 @@ CASS_EXPORT cass_bool_t
 cass_value_is_collection(const CassValue* value);
 
 /**
+ * Returns true if a specified value is a duration.
+ *
+ * @public @memberof CassValue
+ *
+ * @param[in] value
+ * @return true if the value is a duration, otherwise false.
+ */
+CASS_EXPORT cass_bool_t
+cass_value_is_duration(const CassValue* value);
+
+/**
  * Get the number of items in a collection. Works for all collection types.
  *
  * @public @memberof CassValue

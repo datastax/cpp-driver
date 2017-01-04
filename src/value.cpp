@@ -147,6 +147,9 @@ CassError cass_value_get_duration(const CassValue* value, cass_int64_t* months, 
   const cass_byte_t* cur_byte;
   const cass_byte_t* end;
 
+  if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
+  if (!cass_value_is_duration(value)) return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+
   // Package up the out-args in an array. Duration's always have months, then days, then nanos.
   outs[0] = months;
   outs[1] = days;
@@ -225,6 +228,12 @@ cass_bool_t cass_value_is_null(const CassValue* value) {
 
 cass_bool_t cass_value_is_collection(const CassValue* value) {
   return static_cast<cass_bool_t>(value->is_collection());
+}
+
+cass_bool_t cass_value_is_duration(const CassValue* value) {
+  cass::IsValidDataType<cass::CassDuration> is_valid;
+  cass::CassDuration dummy(0, 0, 0);
+  return static_cast<cass_bool_t>(is_valid(dummy, value->data_type()));
 }
 
 size_t cass_value_item_count(const CassValue* collection) {

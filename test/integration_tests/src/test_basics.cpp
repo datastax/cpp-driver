@@ -49,6 +49,10 @@ struct BasicTests : public test_utils::SingleSessionTest {
     std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
     std::string type_name = test_utils::get_value_type(type);
 
+    // Duration type is special in that it is really a custom type under the hood.
+    if (type == CASS_VALUE_TYPE_DURATION)
+      type = CASS_VALUE_TYPE_CUSTOM;
+
     test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id uuid PRIMARY KEY, test_val %s)")
                                            % table_name % type_name));
 
@@ -281,6 +285,8 @@ struct BasicTests : public test_utils::SingleSessionTest {
     CassValueType check_type = type;
     if (type == CASS_VALUE_TYPE_TEXT) {
       check_type = CASS_VALUE_TYPE_VARCHAR;
+    } else if (type == CASS_VALUE_TYPE_DURATION) {
+      check_type = CASS_VALUE_TYPE_CUSTOM;
     }
     BOOST_REQUIRE_EQUAL(check_type, cass_data_type_type(cass_value_data_type(column_value)));
     BOOST_REQUIRE_EQUAL(check_type, cass_value_type(column_value));
@@ -395,6 +401,17 @@ BOOST_AUTO_TEST_CASE(basic_types)
     CassDecimal value(varint, sizeof(varint), scale);
     insert_single_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value);
   }
+
+  if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+    CassDuration value = CassDuration(0, 0, 0);
+    insert_single_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+
+    value = CassDuration(1, 2, 3);
+    insert_single_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+
+    value = CassDuration(-1, -2, -3);
+    insert_single_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+  }
 }
 
 BOOST_AUTO_TEST_CASE(min_max)
@@ -438,6 +455,9 @@ BOOST_AUTO_TEST_CASE(null)
   insert_null_value<CassBytes>(CASS_VALUE_TYPE_BLOB);
   insert_null_value<cass_bool_t>(CASS_VALUE_TYPE_BOOLEAN);
   insert_null_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL);
+  if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+    insert_null_value<CassDuration>(CASS_VALUE_TYPE_DURATION);
+  }
   insert_null_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE);
   insert_null_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT);
   insert_null_value<cass_int32_t>(CASS_VALUE_TYPE_INT);

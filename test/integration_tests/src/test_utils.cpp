@@ -69,6 +69,25 @@ const char* CREATE_TABLE_ALL_TYPES_V4 =
     "date_sample date,"
     "time_sample time);";
 
+const char* CREATE_TABLE_ALL_TYPES_V4_1 =
+    "CREATE TABLE %s ("
+    "id uuid PRIMARY KEY,"
+    "text_sample text,"
+    "int_sample int,"
+    "bigint_sample bigint,"
+    "float_sample float,"
+    "double_sample double,"
+    "decimal_sample decimal,"
+    "blob_sample blob,"
+    "boolean_sample boolean,"
+    "timestamp_sample timestamp,"
+    "inet_sample inet,"
+    "tinyint_sample tinyint,"
+    "smallint_sample smallint,"
+    "date_sample date,"
+    "time_sample time,"
+    "duration_sample duration);";
+
 const char* CREATE_TABLE_TIME_SERIES =
     "CREATE TABLE %s ("
     "id uuid,"
@@ -128,6 +147,7 @@ const char* get_value_type(CassValueType type) {
     case CASS_VALUE_TYPE_BOOLEAN: return "boolean";
     case CASS_VALUE_TYPE_COUNTER: return "counter";
     case CASS_VALUE_TYPE_DECIMAL: return "decimal";
+    case CASS_VALUE_TYPE_DURATION: return "duration";
     case CASS_VALUE_TYPE_DOUBLE: return "double";
     case CASS_VALUE_TYPE_FLOAT: return "float";
     case CASS_VALUE_TYPE_INT: return "int";
