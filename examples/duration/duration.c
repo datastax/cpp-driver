@@ -25,12 +25,7 @@
   For more information, please refer to <http://unlicense.org/>
 */
 
-#include <assert.h>
-#include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
 #include "cassandra.h"
 
 void print_error(CassFuture* future) {
@@ -150,11 +145,6 @@ int main(int argc, char* argv[]) {
   CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
   char* hosts = "127.0.0.1";
-
-// TODO: turn this into a unit test.
-//  long v = decode_zig_zag((long) -1);
-//  printf("decoded: %ld\n", v);
-//  return 0;
 
   if (argc > 1) {
     hosts = argv[1];
