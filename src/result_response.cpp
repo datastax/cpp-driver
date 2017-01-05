@@ -20,6 +20,8 @@
 #include "result_metadata.hpp"
 #include "serialization.hpp"
 
+#include <sparsehash/dense_hash_map>
+
 extern "C" {
 
 void cass_result_free(const CassResult* result) {
@@ -104,7 +106,9 @@ namespace cass {
 class DataTypeDecoder {
 public:
   DataTypeDecoder(char* input)
-    : buffer_(input) { }
+    : buffer_(input) {
+    data_type_cache_.set_empty_key(CASS_VALUE_TYPE_LAST_ENTRY);
+  }
 
   char* buffer() const { return buffer_; }
 
@@ -195,7 +199,7 @@ private:
 
 private:
   char* buffer_;
-  DataType::Ptr data_type_cache_[CASS_VALUE_TYPE_LAST_ENTRY];
+  sparsehash::dense_hash_map<uint16_t, DataType::Ptr> data_type_cache_;
 };
 
 bool ResultResponse::decode(int version, char* input, size_t size) {

@@ -527,6 +527,7 @@ typedef enum CassIndexType_ {
 
 typedef enum CassValueType_ {
   CASS_VALUE_TYPE_UNKNOWN   = 0xFFFF,
+  CASS_VALUE_TYPE_DURATION  = 0xFFFE,
   CASS_VALUE_TYPE_CUSTOM    = 0x0000,
   CASS_VALUE_TYPE_ASCII     = 0x0001,
   CASS_VALUE_TYPE_BIGINT    = 0x0002,
@@ -553,7 +554,6 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_SET       = 0x0022,
   CASS_VALUE_TYPE_UDT       = 0x0030,
   CASS_VALUE_TYPE_TUPLE     = 0x0031,
-  CASS_VALUE_TYPE_DURATION  = 0xFFFD,
   /* @cond IGNORE */
   CASS_VALUE_TYPE_LAST_ENTRY
   /* @endcond */
