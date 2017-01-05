@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_SUITE(encode_duration)
 
 BOOST_AUTO_TEST_CASE(base)
 {
-  CassDuration value = {0, 0, 0};
+  CassDuration value(0, 0, 0);
   Buffer result = encode(value);
   BOOST_CHECK_EQUAL(3, result.size());
   const char* result_data = result.data();
@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(base)
 
 BOOST_AUTO_TEST_CASE(simple)
 {
-  CassDuration value = {1, 2, 3};
+  CassDuration value(1, 2, 3);
   Buffer result = encode(value);
   BOOST_CHECK_EQUAL(3, result.size());
   const char* result_data = result.data();
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(simple)
 
 BOOST_AUTO_TEST_CASE(edge)
 {
-  CassDuration value = {(1LL << 63) - 1, -1, 1LL << 63};
+  CassDuration value((1ULL << 63) - 1, -1, 1LL << 63);
   Buffer result = encode(value);
   BOOST_CHECK_EQUAL(19, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
