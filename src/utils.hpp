@@ -97,7 +97,21 @@ inline size_t num_leading_zeros(cass_int64_t value) {
 
 #if defined(_MSC_VER)
   unsigned long index;
+#  if defined(_M_AMD64)
   _BitScanReverse64(&index, value);
+#  else
+  // On 32-bit this needs to be split into two operations
+  char isNonzero = _BitScanReverse(&index, (unsigned long)(value >> 32));
+
+  if (isNonzero)
+    // The most significant 4 bytes has a bit set, and our index is relative to that.
+    // Add 32 to account for the lower 4 bytes that make up our 64-bit number.
+    index += 32;
+  else {
+    // Scan the last 32 bits by truncating the 64-bit value
+    _BitScanReverse(&index, (unsigned long) value);
+  }
+#  endif
   // index is the (zero based) index, counting from lsb, of the most-significant 1 bit.
   // For example, a value of 12 (b1100) would return 3. The 4th bit is set, so there are
   // 60 leading zeros.
