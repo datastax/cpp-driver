@@ -143,9 +143,9 @@ CassError cass_value_get_duration(const CassValue* value, cass_int64_t* months, 
 {
   cass_int64_t *outs[3];
   int ctr;
-  size_t data_size;
-  const cass_byte_t* cur_byte;
-  const cass_byte_t* end;
+  size_t data_size = 0;
+  const cass_byte_t* cur_byte = NULL;
+  const cass_byte_t* end = NULL;
 
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
   if (!cass_value_is_duration(value)) return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
