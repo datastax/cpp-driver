@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(edge)
 
   // The first 9 bytes represent (1LL<<63 - 1), the max 64-bit number. Byte 0
   // has all bits set to indicate that there are 8 bytes beyond this one that
-  // define this field (each field is a varint of a zigzag encoding of the original
+  // define this field (each field is a vint of a zigzag encoding of the original
   // value). Encoding places the least-significant byte at byte 8 and works backwards
   // to record more significant bytes. Zigzag encoding just left shifts a value
   // by one bit for positive values, so byte 8 ends in a 0.
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(edge)
   }
   BOOST_CHECK_EQUAL(result_data[8], 0xfe);
 
-  // Next we have a 1-byte varint for -1.
+  // Next we have a 1-byte vint for -1.
   BOOST_CHECK_EQUAL(result_data[9], 1);
 
   // Finally, we have 9-bytes for 1LL << 63, the min 64-bit number. The zigzag

@@ -72,9 +72,4 @@ BOOST_AUTO_TEST_CASE(num_leading_zeros)
   BOOST_CHECK_EQUAL(0, cass::num_leading_zeros(1LL << 63 | 1 << 5));
 }
 
-BOOST_AUTO_TEST_CASE(decode_zig_zag)
-{
-  BOOST_CHECK_EQUAL(1LL << 63, cass::decode_zig_zag((long) -1));
-}
-
 BOOST_AUTO_TEST_SUITE_END()

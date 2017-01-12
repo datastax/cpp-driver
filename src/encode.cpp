@@ -15,27 +15,51 @@
 */
 
 #include "encode.hpp"
+#include "serialization.hpp"
 #include "utils.hpp"
 
 namespace cass {
+
+static char* encode_vint(char* output, uint64_t value, size_t value_size)
+{
+  if (value_size == 1) {
+    // This is just a one byte value; write it and get out.
+    *output = value;
+    return output + 1;
+  }
+
+  // Write the bytes of zigzag value to the output array with most significant byte
+  // in first byte of buffer, and so on.
+  for (int j = value_size - 1 ; j >= 0 ; --j) {
+    *(output + j) = value & 0xff;
+    value >>= 8;
+  }
+
+  // Now mix in the size of the vint into the first byte of the buffer,
+  // setting "value_size-1" higher order bits.
+  *output |= ~(0xff >> (value_size - 1));
+
+  // We're done with value_size bytes
+  return output + value_size;
+}
 
 static Buffer encode_internal(CassDuration value, bool with_length) {
   // Each duration attribute needs to be converted to zigzag form. Use an array to make it
   // easy to do the same encoding ops on all three values.
   uint64_t zigzag_values[3];
 
-  // We need varint sizes for each attribute.
-  size_t varint_sizes[3];
+  // We need vint sizes for each attribute.
+  size_t vint_sizes[3];
 
   zigzag_values[0] = cass::encode_zig_zag(value.months);
   zigzag_values[1] = cass::encode_zig_zag(value.days);
   zigzag_values[2] = cass::encode_zig_zag(value.nanos);
 
-  // We also need the total size of all three varint's.
+  // We also need the total size of all three vint's.
   size_t data_size = 0;
   for (int i = 0; i < 3; ++i) {
-    varint_sizes[i] = cass::varint_size(zigzag_values[i]);
-    data_size += varint_sizes[i];
+    vint_sizes[i] = cass::vint_size(zigzag_values[i]);
+    data_size += vint_sizes[i];
   }
 
   // Allocate our data buffer and then start populating it. If we're including the length,
@@ -50,25 +74,7 @@ static Buffer encode_internal(CassDuration value, bool with_length) {
   char* cur_byte = buf.data() + pos;
 
   for (int i = 0; i < 3; ++i) {
-    if (varint_sizes[i] == 1) {
-      // This is just a one byte value; write it and move on.
-      *cur_byte++ = zigzag_values[i];
-      continue;
-    }
-
-    // Write the bytes of zigzag value to the data array with most significant byte
-    // in first byte of buffer (cur_byte), and so on.
-    for (int j = varint_sizes[i] - 1 ; j >= 0 ; --j) {
-      *(cur_byte + j) = zigzag_values[i] & 0xff;
-      zigzag_values[i] >>= 8;
-    }
-
-    // Now mix in the size of the varint into the first byte of the buffer,
-    // setting "size-1" higher order bits.
-    *cur_byte |= ~(0xff >> (varint_sizes[i] - 1));
-
-    // Move cur_byte forward, ready for the next attribute.
-    cur_byte += varint_sizes[i];
+    cur_byte = encode_vint(cur_byte, zigzag_values[i], vint_sizes[i]);
   }
   return buf;
 }
