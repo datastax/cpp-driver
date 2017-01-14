@@ -49,10 +49,6 @@ struct BasicTests : public test_utils::SingleSessionTest {
     std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
     std::string type_name = test_utils::get_value_type(type);
 
-    // Duration type is special in that it is really a custom type under the hood.
-    if (type == CASS_VALUE_TYPE_DURATION)
-      type = CASS_VALUE_TYPE_CUSTOM;
-
     test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id uuid PRIMARY KEY, test_val %s)")
                                            % table_name % type_name));
 
@@ -285,8 +281,6 @@ struct BasicTests : public test_utils::SingleSessionTest {
     CassValueType check_type = type;
     if (type == CASS_VALUE_TYPE_TEXT) {
       check_type = CASS_VALUE_TYPE_VARCHAR;
-    } else if (type == CASS_VALUE_TYPE_DURATION) {
-      check_type = CASS_VALUE_TYPE_CUSTOM;
     }
     BOOST_REQUIRE_EQUAL(check_type, cass_data_type_type(cass_value_data_type(column_value)));
     BOOST_REQUIRE_EQUAL(check_type, cass_value_type(column_value));

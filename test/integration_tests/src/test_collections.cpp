@@ -68,10 +68,6 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
     const CassValue* output = cass_row_get_column(row, 1);
     BOOST_REQUIRE(cass_value_type(output) == type);
 
-    // Duration is actually a custom-type under the hood.
-    if (primary_type == CASS_VALUE_TYPE_DURATION)
-      primary_type = CASS_VALUE_TYPE_CUSTOM;
-
     BOOST_REQUIRE(cass_value_primary_sub_type(output) == primary_type);
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(output));
@@ -252,11 +248,6 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     const CassValue* output = cass_row_get_column(row, 1);
     BOOST_REQUIRE(cass_value_primary_sub_type(output) == primary_type);
-
-    // Duration's are really a custom-type under the hood.
-    if (secondary_type == CASS_VALUE_TYPE_DURATION)
-      secondary_type = CASS_VALUE_TYPE_CUSTOM;
-
     BOOST_REQUIRE(cass_value_secondary_sub_type(output) == secondary_type);
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(output));

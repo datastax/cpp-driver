@@ -67,10 +67,6 @@ public:
     std::string create_table = "CREATE TABLE " + table_name + "(key timeuuid PRIMARY KEY, value " + test_utils::get_value_type(value_type) + ")";
     test_utils::execute_query(session, create_table.c_str());
 
-    // Duration type is special in that it is really a custom type under the hood.
-    if (value_type == CASS_VALUE_TYPE_DURATION)
-      value_type = CASS_VALUE_TYPE_CUSTOM;
-
     // Bind and insert the named value parameter into Cassandra
     CassUuid key = test_utils::generate_time_uuid(uuid_gen);
     std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(:named_key, :named_value)";
@@ -117,10 +113,6 @@ public:
     std::string table_name = table_name_builder(value_type, true, "batch");
     std::string create_table = "CREATE TABLE " + table_name + "(key timeuuid PRIMARY KEY, value " + test_utils::get_value_type(value_type) + ")";
     test_utils::execute_query(session, create_table.c_str());
-
-    // Duration type is special in that it is really a custom type under the hood.
-    if (value_type == CASS_VALUE_TYPE_DURATION)
-      value_type = CASS_VALUE_TYPE_CUSTOM;
 
     // Bind and insert the named value parameter into Cassandra
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));

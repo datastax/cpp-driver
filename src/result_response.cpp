@@ -133,14 +133,7 @@ public:
 
       default:
         if (value_type < CASS_VALUE_TYPE_LAST_ENTRY) {
-          if (data_type_cache_[value_type]) {
-            return data_type_cache_[value_type];
-          } else {
-            DataType::Ptr data_type(
-                  new DataType(static_cast<CassValueType>(value_type)));
-            data_type_cache_[value_type] = data_type;
-            return data_type;
-          }
+          return decode_simple_type(value_type);
         }
         break;
     }
@@ -152,7 +145,21 @@ private:
   DataType::Ptr decode_custom() {
     StringRef class_name;
     buffer_ = decode_string(buffer_, &class_name);
+    if (class_name.to_string() == "org.apache.cassandra.db.marshal.DurationType") {
+      return decode_simple_type(CASS_VALUE_TYPE_DURATION);
+    }
     return DataType::Ptr(new CustomType(class_name.to_string()));
+  }
+
+  DataType::Ptr decode_simple_type(uint16_t value_type) {
+    if (data_type_cache_[value_type]) {
+      return data_type_cache_[value_type];
+    } else {
+      DataType::Ptr data_type(
+            new DataType(static_cast<CassValueType>(value_type)));
+      data_type_cache_[value_type] = data_type;
+      return data_type;
+    }
   }
 
   DataType::Ptr decode_collection(CassValueType collection_type) {

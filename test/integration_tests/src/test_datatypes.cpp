@@ -46,10 +46,6 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
     std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value " + test_utils::get_value_type(value_type) +")";
     test_utils::execute_query(session, create_table.c_str());
 
-    // Duration type is special in that it is really a custom type under the hood.
-    if (value_type == CASS_VALUE_TYPE_DURATION)
-      value_type = CASS_VALUE_TYPE_CUSTOM;
-
     // Bind, validate, and insert the value into Cassandra
     std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(? , ?)";
     test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));

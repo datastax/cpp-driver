@@ -580,9 +580,7 @@ struct IsValidDataType<CassDecimal> {
 template<>
 struct IsValidDataType<CassDuration> {
   bool operator()(CassDuration, const DataType::ConstPtr& data_type) const {
-    if (!data_type->is_custom()) return false;
-    CustomType::ConstPtr custom_type(data_type);
-    return custom_type->class_name() == "org.apache.cassandra.db.marshal.DurationType";
+    return data_type->value_type() == CASS_VALUE_TYPE_DURATION;
   }
 };
 
