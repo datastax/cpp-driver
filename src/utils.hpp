@@ -91,7 +91,7 @@ std::string& to_cql_id(std::string& str);
 
 std::string& escape_id(std::string& str);
 
-int32_t get_pid();
+cass_int32_t get_pid();
 
 } // namespace cass
 

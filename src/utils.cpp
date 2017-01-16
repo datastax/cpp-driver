@@ -23,7 +23,9 @@
 #include <functional>
 #include <sstream>
 
-#include <unistd.h>
+#if !defined(_MSC_VER)
+  #include <unistd.h>
+#endif
 
 namespace cass {
 
@@ -159,12 +161,12 @@ std::string& to_cql_id(std::string& str) {
   return str;
 }
 
-int32_t get_pid()
+cass_int32_t get_pid()
 {
 #if defined(_MSC_VER)
-  return reinterpret_cast<int32_t>(GetCurrentProcessId());
+  return reinterpret_cast<cass_int32_t>(GetCurrentProcessId());
 #else
-  return reinterpret_cast<int32_t>(getpid());
+  return reinterpret_cast<cass_int32_t>(getpid());
 #endif
 }
 
