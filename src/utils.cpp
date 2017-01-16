@@ -23,6 +23,8 @@
 #include <functional>
 #include <sstream>
 
+#include <unistd.h>
+
 namespace cass {
 
 std::string opcode_to_string(int opcode) {
@@ -155,6 +157,15 @@ std::string& to_cql_id(std::string& str) {
     return str.erase(str.length() - 1, 1).erase(0, 1);
   }
   return str;
+}
+
+int32_t get_pid()
+{
+#if defined(_MSC_VER)
+  return reinterpret_cast<int32_t>(GetCurrentProcessId());
+#else
+  return reinterpret_cast<int32_t>(getpid());
+#endif
 }
 
 } // namespace cass

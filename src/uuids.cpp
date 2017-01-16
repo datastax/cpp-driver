@@ -213,6 +213,10 @@ UuidGen::UuidGen()
       uv_free_cpu_info(cpu_infos, cpu_count);
     }
 
+    // Tack on the pid
+    int32_t pid = get_pid();
+    md5.update(reinterpret_cast<const uint8_t*>(&pid), 4);
+
     uint8_t hash[16];
     md5.final(hash);
 
