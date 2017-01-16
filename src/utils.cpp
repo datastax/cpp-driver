@@ -23,7 +23,9 @@
 #include <functional>
 #include <sstream>
 
-#if !defined(_MSC_VER)
+#if defined(_MSC_VER)
+  #include <windows.h>
+#else
   #include <unistd.h>
 #endif
 
@@ -164,9 +166,9 @@ std::string& to_cql_id(std::string& str) {
 cass_int32_t get_pid()
 {
 #if defined(_MSC_VER)
-  return reinterpret_cast<cass_int32_t>(GetCurrentProcessId());
+  return static_cast<cass_int32_t>(GetCurrentProcessId());
 #else
-  return reinterpret_cast<cass_int32_t>(getpid());
+  return static_cast<cass_int32_t>(getpid());
 #endif
 }
 
