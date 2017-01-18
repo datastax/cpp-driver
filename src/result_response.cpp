@@ -129,14 +129,7 @@ public:
 
       default:
         if (value_type < CASS_VALUE_TYPE_LAST_ENTRY) {
-          if (data_type_cache_[value_type]) {
-            return data_type_cache_[value_type];
-          } else {
-            DataType::Ptr data_type(
-                  new DataType(static_cast<CassValueType>(value_type)));
-            data_type_cache_[value_type] = data_type;
-            return data_type;
-          }
+          return decode_simple_type(value_type);
         }
         break;
     }
@@ -148,6 +141,18 @@ private:
   DataType::Ptr decode_custom() {
     StringRef class_name;
     buffer_ = decode_string(buffer_, &class_name);
+
+#define MAP_CUSTOM_TYPE(CUSTOM_TYPE, BUILTIN_TYPE) \
+    if (class_name.to_string() == CUSTOM_TYPE) {   \
+      return decode_simple_type(BUILTIN_TYPE);     \
+    }
+
+    MAP_CUSTOM_TYPE("org.apache.cassandra.db.marshal.ShortType", CASS_VALUE_TYPE_SMALL_INT);
+    MAP_CUSTOM_TYPE("org.apache.cassandra.db.marshal.ByteType", CASS_VALUE_TYPE_TINY_INT);
+    MAP_CUSTOM_TYPE("org.apache.cassandra.db.marshal.SimpleDateType", CASS_VALUE_TYPE_DATE);
+    MAP_CUSTOM_TYPE("org.apache.cassandra.db.marshal.TimeType", CASS_VALUE_TYPE_TIME);
+
+    // If no mapping exists, return an actual custom type.
     return DataType::Ptr(new CustomType(class_name.to_string()));
   }
 
@@ -158,6 +163,17 @@ private:
       types.push_back(decode());
     }
     return DataType::Ptr(new CollectionType(collection_type, types, false));
+  }
+
+  DataType::Ptr decode_simple_type(uint16_t value_type) {
+    if (data_type_cache_[value_type]) {
+      return data_type_cache_[value_type];
+    } else {
+      DataType::Ptr data_type(
+            new DataType(static_cast<CassValueType>(value_type)));
+      data_type_cache_[value_type] = data_type;
+      return data_type;
+    }
   }
 
   DataType::Ptr decode_user_type() {
