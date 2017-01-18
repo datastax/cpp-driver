@@ -104,7 +104,10 @@ namespace cass {
 class DataTypeDecoder {
 public:
   DataTypeDecoder(char* input)
-    : buffer_(input) { }
+    : buffer_(input)
+    {
+      native_types_.init_class_names();
+    }
 
   char* buffer() const { return buffer_; }
 
@@ -142,18 +145,12 @@ private:
     StringRef class_name;
     buffer_ = decode_string(buffer_, &class_name);
 
-#define MAP_CUSTOM_TYPE(CUSTOM_TYPE, BUILTIN_TYPE) \
-    if (class_name.to_string() == CUSTOM_TYPE) {   \
-      return decode_simple_type(BUILTIN_TYPE);     \
-    }
-
-    MAP_CUSTOM_TYPE("org.apache.cassandra.db.marshal.ShortType", CASS_VALUE_TYPE_SMALL_INT);
-    MAP_CUSTOM_TYPE("org.apache.cassandra.db.marshal.ByteType", CASS_VALUE_TYPE_TINY_INT);
-    MAP_CUSTOM_TYPE("org.apache.cassandra.db.marshal.SimpleDateType", CASS_VALUE_TYPE_DATE);
-    MAP_CUSTOM_TYPE("org.apache.cassandra.db.marshal.TimeType", CASS_VALUE_TYPE_TIME);
-
-    // If no mapping exists, return an actual custom type.
-    return DataType::Ptr(new CustomType(class_name.to_string()));
+    const DataType::ConstPtr& type = native_types_.by_class_name(class_name.to_string());
+    if (type == DataType::NIL)
+      // If no mapping exists, return an actual custom type.
+      return DataType::Ptr(new CustomType(class_name.to_string()));
+    else
+      return type->copy();
   }
 
   DataType::Ptr decode_collection(CassValueType collection_type) {
@@ -211,6 +208,7 @@ private:
 
 private:
   char* buffer_;
+  NativeDataTypes native_types_;
   DataType::Ptr data_type_cache_[CASS_VALUE_TYPE_LAST_ENTRY];
 };
 
