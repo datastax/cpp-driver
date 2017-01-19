@@ -127,6 +127,8 @@ inline size_t vint_size(cass_int64_t value) {
   return magnitude ? (9 - ((magnitude - 1) / 7)) : 9;
 }
 
+cass_int32_t get_pid();
+
 } // namespace cass
 
 #endif
