@@ -20,8 +20,6 @@
 #include "result_metadata.hpp"
 #include "serialization.hpp"
 
-#include <sparsehash/dense_hash_map>
-
 extern "C" {
 
 void cass_result_free(const CassResult* result) {
@@ -105,15 +103,13 @@ namespace cass {
 
 class DataTypeDecoder {
 public:
-  DataTypeDecoder(char* input)
-    : buffer_(input) {
-    data_type_cache_.set_empty_key(CASS_VALUE_TYPE_LAST_ENTRY);
-    native_types_.init_class_names();
-  }
+  DataTypeDecoder(char* input, SimpleDataTypeCache& cache)
+    : buffer_(input)
+    , cache_(cache) { }
 
   char* buffer() const { return buffer_; }
 
-  DataType::Ptr decode() {
+  DataType::ConstPtr decode() {
     uint16_t value_type;
     buffer_ = decode_uint16(buffer_, value_type);
 
@@ -133,49 +129,34 @@ public:
         return decode_tuple();
 
       default:
-        if (value_type < CASS_VALUE_TYPE_LAST_ENTRY) {
-          return decode_simple_type(value_type);
-        }
-        break;
+        return cache_.by_value_type(value_type);
     }
 
-    return DataType::Ptr();
+    return DataType::NIL;
   }
 
 private:
-  DataType::Ptr decode_custom() {
+  DataType::ConstPtr decode_custom() {
     StringRef class_name;
     buffer_ = decode_string(buffer_, &class_name);
 
-    const DataType::ConstPtr& type = native_types_.by_class_name(class_name.to_string());
-    if (type == DataType::NIL)
-      // If no mapping exists, return an actual custom type.
-      return DataType::Ptr(new CustomType(class_name.to_string()));
-    else
-      return type->copy();
+    DataType::ConstPtr type = cache_.by_class(class_name);
+    if (type) return type;
+
+    // If no mapping exists, return an actual custom type.
+    return DataType::ConstPtr(new CustomType(class_name.to_string()));
   }
 
-  DataType::Ptr decode_simple_type(uint16_t value_type) {
-    if (data_type_cache_[value_type]) {
-      return data_type_cache_[value_type];
-    } else {
-      DataType::Ptr data_type(
-            new DataType(static_cast<CassValueType>(value_type)));
-      data_type_cache_[value_type] = data_type;
-      return data_type;
-    }
-  }
-
-  DataType::Ptr decode_collection(CassValueType collection_type) {
+  DataType::ConstPtr decode_collection(CassValueType collection_type) {
     DataType::Vec types;
     types.push_back(decode());
     if (collection_type == CASS_VALUE_TYPE_MAP) {
       types.push_back(decode());
     }
-    return DataType::Ptr(new CollectionType(collection_type, types, false));
+    return DataType::ConstPtr(new CollectionType(collection_type, types, false));
   }
 
-  DataType::Ptr decode_user_type() {
+  DataType::ConstPtr decode_user_type() {
     StringRef keyspace;
     buffer_ = decode_string(buffer_, &keyspace);
 
@@ -191,13 +172,13 @@ private:
       buffer_ = decode_string(buffer_, &field_name);
       fields.push_back(UserType::Field(field_name.to_string(), decode()));
     }
-    return DataType::Ptr(new UserType(keyspace.to_string(),
-                                               type_name.to_string(),
-                                               fields,
-                                               false));
+    return DataType::ConstPtr(new UserType(keyspace.to_string(),
+                                           type_name.to_string(),
+                                           fields,
+                                           false));
   }
 
-  DataType::Ptr decode_tuple() {
+  DataType::ConstPtr decode_tuple() {
     uint16_t n;
     buffer_ = decode_uint16(buffer_, n);
 
@@ -205,13 +186,12 @@ private:
     for (uint16_t i = 0; i < n; ++i) {
       types.push_back(decode());
     }
-    return DataType::Ptr(new TupleType(types, false));
+    return DataType::ConstPtr(new TupleType(types, false));
   }
 
 private:
   char* buffer_;
-  sparsehash::dense_hash_map<uint16_t, DataType::Ptr> data_type_cache_;
-  NativeDataTypes native_types_;
+  SimpleDataTypeCache& cache_;
 };
 
 bool ResultResponse::decode(int version, char* input, size_t size) {
@@ -281,6 +261,8 @@ char* ResultResponse::decode_metadata(char* input, ResultMetadata::Ptr* metadata
 
     metadata->reset(new ResultMetadata(column_count));
 
+    SimpleDataTypeCache cache;
+
     for (int i = 0; i < column_count; ++i) {
       ColumnDefinition def;
 
@@ -293,7 +275,7 @@ char* ResultResponse::decode_metadata(char* input, ResultMetadata::Ptr* metadata
 
       buffer = decode_string(buffer, &def.name);
 
-      DataTypeDecoder type_decoder(buffer);
+      DataTypeDecoder type_decoder(buffer, cache);
       def.data_type = DataType::ConstPtr(type_decoder.decode());
       buffer = type_decoder.buffer();
 

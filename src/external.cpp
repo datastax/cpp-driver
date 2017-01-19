@@ -32,7 +32,7 @@ const char* cass_error_desc(CassError error) {
 #define XX(source, _, code, desc) \
   case CASS_ERROR(source, code):  \
     return desc;
-    CASS_ERROR_MAP(XX)
+    CASS_ERROR_MAPPING(XX)
 #undef XX
     default:
       return "";
@@ -44,7 +44,7 @@ const char* cass_log_level_string(CassLogLevel log_level) {
 #define XX(log_level, desc) \
   case log_level:           \
     return desc;
-    CASS_LOG_LEVEL_MAP(XX)
+    CASS_LOG_LEVEL_MAPPING(XX)
 #undef XX
     default:
       return "";
@@ -56,7 +56,7 @@ const char* cass_consistency_string(CassConsistency consistency) {
 #define XX(consistency, desc) \
   case consistency:           \
     return desc;
-    CASS_CONSISTENCY_MAP(XX)
+    CASS_CONSISTENCY_MAPPING(XX)
 #undef XX
     default:
       return "";
@@ -68,7 +68,7 @@ const char* cass_write_type_string(CassWriteType write_type) {
 #define XX(write_type, desc) \
   case write_type:           \
     return desc;
-    CASS_WRITE_TYPE_MAP(XX)
+    CASS_WRITE_TYPE_MAPPING(XX)
 #undef XX
     default:
       return "";

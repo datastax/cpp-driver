@@ -19,10 +19,10 @@
 
 #include "cassandra.h"
 #include "data_type.hpp"
-#include "fixed_vector.hpp"
 #include "hash_table.hpp"
 #include "list.hpp"
 #include "ref_counted.hpp"
+#include "small_vector.hpp"
 #include "string_ref.hpp"
 
 #include <uv.h>

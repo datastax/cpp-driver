@@ -1132,7 +1132,7 @@ void Connection::PendingWriteSsl::flush() {
 
     encrypt();
 
-    FixedVector<uv_buf_t, SSL_ENCRYPTED_BUFS_COUNT> bufs;
+    SmallVector<uv_buf_t, SSL_ENCRYPTED_BUFS_COUNT> bufs;
     encrypted_size_ = ssl_session->outgoing().peek_multiple(prev_pos, &bufs);
 
     LOG_TRACE("Sending %u encrypted bytes", static_cast<unsigned int>(encrypted_size_));

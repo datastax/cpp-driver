@@ -19,7 +19,6 @@
 
 #include "constants.hpp"
 #include "error_response.hpp"
-#include "fixed_vector.hpp"
 #include "future.hpp"
 #include "request_callback.hpp"
 #include "host.hpp"
@@ -29,6 +28,7 @@
 #include "response.hpp"
 #include "retry_policy.hpp"
 #include "scoped_ptr.hpp"
+#include "small_vector.hpp"
 #include "speculative_execution.hpp"
 
 #include <string>
@@ -195,7 +195,7 @@ private:
   void stop_request();
 
 private:
-  typedef FixedVector<SpeculativeExecution*, 4> SpeculativeExecutionVec;
+  typedef SmallVector<SpeculativeExecution*, 4> SpeculativeExecutionVec;
 
   const Request::ConstPtr request_;
   int64_t timestamp_;

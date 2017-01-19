@@ -39,8 +39,8 @@ public:
     StringRef name;
     StringRef value;
   };
-  typedef FixedVector<CustomPayloadItem, 8> CustomPayloadVec;
-  typedef FixedVector<StringRef, 8> WarningVec;
+  typedef SmallVector<CustomPayloadItem, 8> CustomPayloadVec;
+  typedef SmallVector<StringRef, 8> WarningVec;
 
   Response(uint8_t opcode)
       : opcode_(opcode) { }

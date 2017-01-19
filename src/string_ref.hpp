@@ -17,6 +17,8 @@
 #ifndef __CASS_STRING_REF_HPP_INCLUDED__
 #define __CASS_STRING_REF_HPP_INCLUDED__
 
+#include "hash.hpp"
+
 #include <algorithm>
 #include <assert.h>
 #include <cctype>
@@ -176,9 +178,21 @@ inline bool ends_with(const StringRef& input, const StringRef& target) {
                     target.data(), target.size(), StringRef::IsEqual()) == 0;
 }
 
-inline bool iequals(const StringRef& input, const StringRef& target) {
-  return input.iequals(target);
+inline bool iequals(const StringRef& lhs, const StringRef& rhs) {
+  return lhs.iequals(rhs);
 }
+
+struct StringRefIHash {
+  std::size_t operator()(const StringRef& s) const {
+    return hash::fnv1a(s.data(), s.size(), ::tolower);
+  }
+};
+
+struct StringRefIEquals {
+  bool operator()(const StringRef& lhs, const StringRef& rhs) const {
+    return lhs.iequals(rhs);
+  }
+};
 
 } // namespace cass
 

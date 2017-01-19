@@ -65,7 +65,7 @@ bool from_hex(const std::string& hex, std::string* result) {
 }
 
 DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
-                                                const NativeDataTypes& native_types,
+                                                SimpleDataTypeCache& cache,
                                                 KeyspaceMetadata* keyspace,
                                                 bool is_frozen) {
   Parser parser(type, 0);
@@ -75,9 +75,9 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
   parser.parse_type_name(&type_name);
   std::transform(type_name.begin(), type_name.end(), type_name.begin(), tolower);
 
-  DataType::ConstPtr native_type(native_types.by_cql_name(type_name));
-  if (native_type) {
-    return native_type;
+  DataType::ConstPtr simple_type(cache.by_cql(type_name));
+  if (simple_type) {
+    return simple_type;
   }
 
   if (type_name == "list") {
@@ -86,7 +86,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
       LOG_ERROR("Expecting single parameter for list %s", type.c_str());
       return DataType::NIL;
     }
-    DataType::ConstPtr element_type = parse(params[0], native_types, keyspace);
+    DataType::ConstPtr element_type = parse(params[0], cache, keyspace);
     return CollectionType::list(element_type, is_frozen);
   }
 
@@ -96,7 +96,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
       LOG_ERROR("Expecting single parameter for set %s", type.c_str());
       return DataType::NIL;
     }
-    DataType::ConstPtr element_type = parse(params[0], native_types, keyspace);
+    DataType::ConstPtr element_type = parse(params[0], cache, keyspace);
     return CollectionType::set(element_type, is_frozen);
   }
 
@@ -106,8 +106,8 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
       LOG_ERROR("Expecting two parameters for set %s", type.c_str());
       return DataType::NIL;
     }
-    DataType::ConstPtr key_type = parse(params[0], native_types, keyspace);
-    DataType::ConstPtr value_type = parse(params[1], native_types, keyspace);
+    DataType::ConstPtr key_type = parse(params[0], cache, keyspace);
+    DataType::ConstPtr value_type = parse(params[1], cache, keyspace);
     return CollectionType::map(key_type, value_type, is_frozen);
   }
 
@@ -121,7 +121,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
     for (Parser::TypeParamsVec::iterator i = params.begin(),
          end = params.end();
          i != end;  ++i) {
-      types.push_back(parse(*i, native_types, keyspace));
+      types.push_back(parse(*i, cache, keyspace));
     }
     return DataType::ConstPtr(new TupleType(types, is_frozen));
   }
@@ -132,7 +132,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
       LOG_ERROR("Expecting single parameter for frozen keyword %s", type.c_str());
       return DataType::NIL;
     }
-    return parse(params[0], native_types, keyspace, true);
+    return parse(params[0], cache, keyspace, true);
   }
 
   if (type_name == "empty") {
@@ -278,7 +278,7 @@ bool DataTypeClassNameParser::is_tuple_type(const std::string& type) {
   return starts_with(type, TUPLE_TYPE);
 }
 
-DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, const NativeDataTypes& native_types) {
+DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, SimpleDataTypeCache& cache) {
   bool is_frozen = DataTypeClassNameParser::is_frozen(type);
 
   std::string class_name;
@@ -301,7 +301,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
     if (!parser.get_type_params(&params) || params.empty()) {
       return DataType::ConstPtr();
     }
-    DataType::ConstPtr element_type(parse_one(params[0], native_types));
+    DataType::ConstPtr element_type(parse_one(params[0], cache));
     if (!element_type) {
       return DataType::ConstPtr();
     }
@@ -311,7 +311,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
     if (!parser.get_type_params(&params) || params.empty()) {
       return DataType::ConstPtr();
     }
-    DataType::ConstPtr element_type(parse_one(params[0], native_types));
+    DataType::ConstPtr element_type(parse_one(params[0], cache));
     if (!element_type) {
       return DataType::ConstPtr();
     }
@@ -321,8 +321,8 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
     if (!parser.get_type_params(&params) || params.size() < 2) {
       return DataType::ConstPtr();
     }
-    DataType::ConstPtr key_type(parse_one(params[0], native_types));
-    DataType::ConstPtr value_type(parse_one(params[1], native_types));
+    DataType::ConstPtr key_type(parse_one(params[0], cache));
+    DataType::ConstPtr value_type(parse_one(params[1], cache));
     if (!key_type || !value_type) {
       return DataType::ConstPtr();
     }
@@ -368,7 +368,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
     UserType::FieldVec fields;
     for (NameAndTypeParamsVec::const_iterator i = raw_fields.begin(),
          end = raw_fields.end(); i != end; ++i) {
-      DataType::ConstPtr data_type = parse_one(i->second, native_types);
+      DataType::ConstPtr data_type = parse_one(i->second, cache);
       if (!data_type) {
         return DataType::ConstPtr();
       }
@@ -387,7 +387,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
     DataType::Vec types;
     for (TypeParamsVec::const_iterator i = raw_types.begin(),
          end = raw_types.end(); i != end; ++i) {
-      DataType::ConstPtr data_type = parse_one(*i, native_types);
+      DataType::ConstPtr data_type = parse_one(*i, cache);
       if (!data_type) {
         return DataType::ConstPtr();
       }
@@ -397,22 +397,22 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
     return DataType::ConstPtr(new TupleType(types, true));
   }
 
-  DataType::ConstPtr native_type(native_types.by_class_name(next));
-  if (native_type) {
-    return native_type;
+  DataType::ConstPtr simple_type(cache.by_class(next));
+  if (simple_type) {
+    return simple_type;
   }
 
   return DataType::ConstPtr(new CustomType(next));
 }
 
-ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const std::string& type, const NativeDataTypes& native_types) {
+ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const std::string& type, SimpleDataTypeCache& cache) {
   Parser parser(type, 0);
 
   std::string next;
   parser.get_next_name(&next);
 
   if (!is_composite(next)) {
-    DataType::ConstPtr data_type = parse_one(type, native_types);
+    DataType::ConstPtr data_type = parse_one(type, cache);
     if (!data_type) {
       return ParseResult::Ptr();
     }
@@ -445,7 +445,7 @@ ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const std::string
 
     for (NameAndTypeParamsVec::const_iterator i = params.begin(),
          end = params.end(); i != end; ++i) {
-      DataType::ConstPtr data_type = parse_one(i->second, native_types);
+      DataType::ConstPtr data_type = parse_one(i->second, cache);
       if (!data_type) {
         return ParseResult::Ptr();
       }
@@ -456,7 +456,7 @@ ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const std::string
   DataType::Vec types;
   ParseResult::ReversedVec reversed;
   for (size_t i = 0; i < count; ++i) {
-    DataType::ConstPtr data_type = parse_one(sub_class_names[i], native_types);
+    DataType::ConstPtr data_type = parse_one(sub_class_names[i], cache);
     if (!data_type) {
       return ParseResult::Ptr();
     }

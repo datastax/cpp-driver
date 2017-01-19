@@ -22,7 +22,6 @@
 
 #include <limits>
 #include <memory>
-#include <vector>
 
 namespace cass {
 
@@ -111,32 +110,6 @@ private:
   Fixed* fixed_;
 };
 
-// This vector uses the fixed buffer as long as it doesn't exceed N items.
-// This can help to avoid heap allocation in the common cases while also
-// handling the cases that do exceed the fixed buffer.
-
-template<class T, size_t N>
-class FixedVector : public std::vector<T, FixedAllocator<T, N> > {
-public:
-  FixedVector()
-    : std::vector<T, FixedAllocator<T, N> >(FixedAllocator<T, N>(&fixed_)) {
-    this->reserve(N);
-  }
-
-  FixedVector(size_t inital_size)
-    : std::vector<T, FixedAllocator<T, N> >(FixedAllocator<T, N>(&fixed_)) {
-    this->resize(inital_size);
-  }
-
-  const typename FixedAllocator<T, N>::Fixed& fixed() const { return fixed_; }
-
-private:
-  typename FixedAllocator<T, N>::Fixed fixed_;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(FixedVector);
-};
-
 } // namespace cass
 
-#endif // FIXED_ALLOCATOR_HPP
+#endif

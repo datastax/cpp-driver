@@ -201,7 +201,7 @@ public:
     DataType::ConstPtr type;
   };
 
-  FunctionMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
+  FunctionMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                    const std::string& name, const Value* signature,
                    KeyspaceMetadata* keyspace,
                    const RefBuffer::Ptr& buffer, const Row* row);
@@ -234,7 +234,7 @@ public:
   typedef std::map<std::string, Ptr> Map;
   typedef std::vector<Ptr> Vec;
 
-  AggregateMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
+  AggregateMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                     const std::string& name, const Value* signature,
                     KeyspaceMetadata* keyspace,
                     const RefBuffer::Ptr& buffer, const Row* row);
@@ -317,7 +317,7 @@ public:
     , data_type_(data_type)
     , is_reversed_(false) { }
 
-  ColumnMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
+  ColumnMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                  const std::string& name,
                  KeyspaceMetadata* keyspace,
                  const RefBuffer::Ptr& buffer, const Row* row);
@@ -367,7 +367,7 @@ public:
   const ColumnMetadata* get_column(const std::string& name) const;
   void add_column(const ColumnMetadata::Ptr& column);
   void clear_columns();
-  void build_keys_and_sort(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types);
+  void build_keys_and_sort(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache);
 
 protected:
   ColumnMetadata::Vec columns_;
@@ -483,7 +483,7 @@ public:
   void add_index(const IndexMetadata::Ptr& index);
   void clear_indexes();
 
-  void key_aliases(const NativeDataTypes& native_types, KeyAliases* output) const;
+  void key_aliases(SimpleDataTypeCache& cache, KeyAliases* output) const;
 
 private:
   ViewMetadata::Vec views_;
@@ -670,12 +670,12 @@ private:
     void update_keyspaces(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
     void update_tables(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
     void update_views(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-    void update_columns(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types, ResultResponse* result);
+    void update_columns(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
     void update_legacy_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
     void update_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-    void update_user_types(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types, ResultResponse* result);
-    void update_functions(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types, ResultResponse* result);
-    void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types, ResultResponse* result);
+    void update_user_types(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
+    void update_functions(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
+    void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
 
     void drop_keyspace(const std::string& keyspace_name);
     void drop_table_or_view(const std::string& keyspace_name, const std::string& table_or_view_name);
@@ -712,7 +712,7 @@ private:
 
   // Only used internally on a single thread, there's
   // no need for copy-on-write.
-  NativeDataTypes native_types_;
+  SimpleDataTypeCache cache_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Metadata);

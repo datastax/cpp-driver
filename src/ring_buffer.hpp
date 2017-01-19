@@ -42,7 +42,7 @@
 #ifndef __CASS_RING_BUFFER_HPP_INCLUDED__
 #define __CASS_RING_BUFFER_HPP_INCLUDED__
 
-#include "fixed_vector.hpp"
+#include "small_vector.hpp"
 
 #include <uv.h>
 
@@ -104,7 +104,7 @@ class RingBuffer {
   // Return pointers and sizes of multiple internal data chunks available for
   // reading from position
   template <size_t N>
-  size_t peek_multiple(Position pos, FixedVector<uv_buf_t, N>* bufs);
+  size_t peek_multiple(Position pos, SmallVector<uv_buf_t, N>* bufs);
 
   // Find first appearance of `delim` in buffer or `limit` if `delim`
   // wasn't found.
@@ -136,7 +136,7 @@ class RingBuffer {
 };
 
 template <size_t N>
-size_t RingBuffer::peek_multiple(Position pos, FixedVector<uv_buf_t, N>* bufs) {
+size_t RingBuffer::peek_multiple(Position pos, SmallVector<uv_buf_t, N>* bufs) {
   Buffer* buf = pos.buf;
   size_t offset = pos.pos;
   size_t total = 0;

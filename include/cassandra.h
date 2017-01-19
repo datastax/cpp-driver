@@ -478,7 +478,7 @@ typedef enum CassConsistency_ {
   CASS_CONSISTENCY_LOCAL_ONE    = 0x000A
 } CassConsistency;
 
-#define CASS_CONSISTENCY_MAP(XX) \
+#define CASS_CONSISTENCY_MAPPING(XX) \
   XX(CASS_CONSISTENCY_UNKNOWN, "UNKNOWN") \
   XX(CASS_CONSISTENCY_ANY, "ANY") \
   XX(CASS_CONSISTENCY_ONE, "ONE") \
@@ -492,6 +492,8 @@ typedef enum CassConsistency_ {
   XX(CASS_CONSISTENCY_LOCAL_SERIAL, "LOCAL_SERIAL") \
   XX(CASS_CONSISTENCY_LOCAL_ONE, "LOCAL_ONE")
 
+#define CASS_CONSISTENCY_MAP CASS_CONSISTENCY_MAPPING /* Deprecated */
+
 typedef enum CassWriteType_ {
   CASS_WRITE_TYPE_UKNOWN,
   CASS_WRITE_TYPE_SIMPLE,
@@ -502,13 +504,15 @@ typedef enum CassWriteType_ {
   CASS_WRITE_TYPE_CAS
 } CassWriteType;
 
-#define CASS_WRITE_TYPE_MAP(XX) \
+#define CASS_WRITE_TYPE_MAPPING(XX) \
   XX(CASS_WRITE_TYPE_SIMPLE, "SIMPLE") \
   XX(CASS_WRITE_TYPE_BATCH, "BATCH") \
   XX(CASS_WRITE_TYPE_UNLOGGED_BATCH, "UNLOGGED_BATCH") \
   XX(CASS_WRITE_TYPE_COUNTER, "COUNTER") \
   XX(CASS_WRITE_TYPE_BATCH_LOG, "BATCH_LOG") \
   XX(CASS_WRITE_TYPE_CAS, "CAS")
+
+#define CASS_WRITE_TYPE_MAP CASS_WRITE_TYPE_MAPPING /* Deprecated */
 
 typedef enum CassColumnType_ {
   CASS_COLUMN_TYPE_REGULAR,
@@ -525,35 +529,40 @@ typedef enum CassIndexType_ {
   CASS_INDEX_TYPE_COMPOSITES
 } CassIndexType;
 
+#define CASS_VALUE_TYPE_MAPPING(XX) \
+  XX(CASS_VALUE_TYPE_CUSTOM,  0x0000, "", "") \
+  XX(CASS_VALUE_TYPE_ASCII,  0x0001, "ascii", "org.apache.cassandra.db.marshal.AsciiType") \
+  XX(CASS_VALUE_TYPE_BIGINT,  0x0002, "bigint", "org.apache.cassandra.db.marshal.LongType") \
+  XX(CASS_VALUE_TYPE_BLOB,  0x0003, "blob", "org.apache.cassandra.db.marshal.BytesType") \
+  XX(CASS_VALUE_TYPE_BOOLEAN,  0x0004, "boolean", "org.apache.cassandra.db.marshal.BooleanType") \
+  XX(CASS_VALUE_TYPE_COUNTER,  0x0005, "counter", "org.apache.cassandra.db.marshal.CounterColumnType") \
+  XX(CASS_VALUE_TYPE_DECIMAL,  0x0006, "decimal", "org.apache.cassandra.db.marshal.DecimalType") \
+  XX(CASS_VALUE_TYPE_DOUBLE,  0x0007, "double", "org.apache.cassandra.db.marshal.DoubleType") \
+  XX(CASS_VALUE_TYPE_FLOAT,  0x0008, "float", "org.apache.cassandra.db.marshal.FloatType") \
+  XX(CASS_VALUE_TYPE_INT,  0x0009, "int", "org.apache.cassandra.db.marshal.Int32Type") \
+  XX(CASS_VALUE_TYPE_TEXT,  0x000A, "text", "org.apache.cassandra.db.marshal.UTF8Type") \
+  XX(CASS_VALUE_TYPE_TIMESTAMP,  0x000B, "timestamp", "org.apache.cassandra.db.marshal.TimestampType") \
+  XX(CASS_VALUE_TYPE_UUID,  0x000C, "uuid", "org.apache.cassandra.db.marshal.UUIDType") \
+  XX(CASS_VALUE_TYPE_VARCHAR,  0x000D, "varchar", "") \
+  XX(CASS_VALUE_TYPE_VARINT,  0x000E, "varint", "org.apache.cassandra.db.marshal.IntegerType") \
+  XX(CASS_VALUE_TYPE_TIMEUUID,  0x000F, "timeuuid", "org.apache.cassandra.db.marshal.TimeUUIDType") \
+  XX(CASS_VALUE_TYPE_INET,  0x0010, "inet", "org.apache.cassandra.db.marshal.InetAddressType") \
+  XX(CASS_VALUE_TYPE_DATE,  0x0011, "date", "org.apache.cassandra.db.marshal.SimpleDateType") \
+  XX(CASS_VALUE_TYPE_TIME,  0x0012, "time", "org.apache.cassandra.db.marshal.TimeType") \
+  XX(CASS_VALUE_TYPE_SMALL_INT,  0x0013, "smallint", "org.apache.cassandra.db.marshal.ShortType") \
+  XX(CASS_VALUE_TYPE_TINY_INT,  0x0014, "tinyint", "org.apache.cassandra.db.marshal.ByteType") \
+  XX(CASS_VALUE_TYPE_DURATION,  0x0015, "duration", "org.apache.cassandra.db.marshal.DurationType") \
+  XX(CASS_VALUE_TYPE_LIST,  0x0020, "list", "org.apache.cassandra.db.marshal.ListType") \
+  XX(CASS_VALUE_TYPE_MAP,  0x0021, "map", "org.apache.cassandra.db.marshal.MapType") \
+  XX(CASS_VALUE_TYPE_SET,  0x0022, "set", "org.apache.cassandra.db.marshal.SetType") \
+  XX(CASS_VALUE_TYPE_UDT,  0x0030, "", "") \
+  XX(CASS_VALUE_TYPE_TUPLE,  0x0031, "tuple", "org.apache.cassandra.db.marshal.TupleType")
+
 typedef enum CassValueType_ {
-  CASS_VALUE_TYPE_UNKNOWN   = 0xFFFF,
-  CASS_VALUE_TYPE_CUSTOM    = 0x0000,
-  CASS_VALUE_TYPE_ASCII     = 0x0001,
-  CASS_VALUE_TYPE_BIGINT    = 0x0002,
-  CASS_VALUE_TYPE_BLOB      = 0x0003,
-  CASS_VALUE_TYPE_BOOLEAN   = 0x0004,
-  CASS_VALUE_TYPE_COUNTER   = 0x0005,
-  CASS_VALUE_TYPE_DECIMAL   = 0x0006,
-  CASS_VALUE_TYPE_DOUBLE    = 0x0007,
-  CASS_VALUE_TYPE_FLOAT     = 0x0008,
-  CASS_VALUE_TYPE_INT       = 0x0009,
-  CASS_VALUE_TYPE_TEXT      = 0x000A,
-  CASS_VALUE_TYPE_TIMESTAMP = 0x000B,
-  CASS_VALUE_TYPE_UUID      = 0x000C,
-  CASS_VALUE_TYPE_VARCHAR   = 0x000D,
-  CASS_VALUE_TYPE_VARINT    = 0x000E,
-  CASS_VALUE_TYPE_TIMEUUID  = 0x000F,
-  CASS_VALUE_TYPE_INET      = 0x0010,
-  CASS_VALUE_TYPE_DATE      = 0x0011,
-  CASS_VALUE_TYPE_TIME      = 0x0012,
-  CASS_VALUE_TYPE_SMALL_INT = 0x0013,
-  CASS_VALUE_TYPE_TINY_INT  = 0x0014,
-  CASS_VALUE_TYPE_DURATION  = 0x0015,
-  CASS_VALUE_TYPE_LIST      = 0x0020,
-  CASS_VALUE_TYPE_MAP       = 0x0021,
-  CASS_VALUE_TYPE_SET       = 0x0022,
-  CASS_VALUE_TYPE_UDT       = 0x0030,
-  CASS_VALUE_TYPE_TUPLE     = 0x0031,
+  CASS_VALUE_TYPE_UNKNOWN = 0xFFFF,
+#define XX_VALUE_TYPE(name, type, cql, klass) name = type,
+  CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
+#undef XX_VALUE_TYPE
   /* @cond IGNORE */
   CASS_VALUE_TYPE_LAST_ENTRY
   /* @endcond */
@@ -595,7 +604,7 @@ typedef enum CassIteratorType_ {
   CASS_ITERATOR_TYPE_MATERIALIZED_VIEW_META
 } CassIteratorType;
 
-#define CASS_LOG_LEVEL_MAP(XX) \
+#define CASS_LOG_LEVEL_MAPPING(XX) \
   XX(CASS_LOG_DISABLED, "") \
   XX(CASS_LOG_CRITICAL, "CRITICAL") \
   XX(CASS_LOG_ERROR, "ERROR") \
@@ -604,9 +613,11 @@ typedef enum CassIteratorType_ {
   XX(CASS_LOG_DEBUG, "DEBUG") \
   XX(CASS_LOG_TRACE, "TRACE")
 
+#define CASS_LOG_LEVEL_MAP CASS_LOG_LEVEL_MAPPING /* Deprecated */
+
 typedef enum CassLogLevel_ {
 #define XX_LOG(log_level, _) log_level,
-  CASS_LOG_LEVEL_MAP(XX_LOG)
+  CASS_LOG_LEVEL_MAPPING(XX_LOG)
 #undef XX_LOG
   /* @cond IGNORE */
   CASS_LOG_LAST_ENTRY
@@ -628,7 +639,7 @@ typedef enum  CassErrorSource_ {
   CASS_ERROR_SOURCE_COMPRESSION
 } CassErrorSource;
 
-#define CASS_ERROR_MAP(XX) \
+#define CASS_ERROR_MAPPING(XX) \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_BAD_PARAMS, 1, "Bad parameters") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 2, "No streams available") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 3, "Unable to initialize") \
@@ -687,12 +698,14 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_IDENTITY_MISMATCH, 5, "Certificate does not match host or IP address") \
   XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_PROTOCOL_ERROR, 6, "Protocol error")
 
+#define CASS_ERROR_MAP CASS_ERROR_MAPPING /* Deprecated */
+
 #define CASS_ERROR(source, code) ((source << 24) | code)
 
 typedef enum CassError_ {
   CASS_OK = 0,
 #define XX_ERROR(source, name, code, _) name = CASS_ERROR(source, code),
-  CASS_ERROR_MAP(XX_ERROR)
+  CASS_ERROR_MAPPING(XX_ERROR)
 #undef XX_ERROR
   /* @cond IGNORE */
   CASS_ERROR_LAST_ENTRY

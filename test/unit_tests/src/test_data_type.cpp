@@ -18,6 +18,7 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
+#include "cassandra.h"
 #include "data_type.hpp"
 
 #include <boost/test/unit_test.hpp>
@@ -380,6 +381,66 @@ BOOST_AUTO_TEST_CASE(subtypes)
     BOOST_REQUIRE_EQUAL(cass_data_type_sub_type_name(data_type, 2, &name, &name_length), CASS_OK);
     BOOST_CHECK_EQUAL(std::string(name, name_length), "field3");
   }
+}
+
+BOOST_AUTO_TEST_CASE(value_types_by_class)
+{
+#define XX_VALUE_TYPE(name, type, cql, klass)             \
+  BOOST_CHECK(strlen(klass) == 0 ||                       \
+              cass::ValueTypes::by_class(klass) == name); \
+
+  CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
+#undef XX_VALUE_TYPE
+}
+
+BOOST_AUTO_TEST_CASE(value_types_by_class_case_insensitive)
+{
+#define XX_VALUE_TYPE(name, type, cql, klass) {                              \
+    std::string upper(klass);                                                \
+    std::transform(upper.begin(), upper.end(), upper.begin(), toupper);      \
+    BOOST_CHECK(upper.empty() || cass::ValueTypes::by_class(upper) == name); \
+  }
+
+  CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
+#undef XX_VALUE_TYPE
+}
+
+BOOST_AUTO_TEST_CASE(value_types_by_cql)
+{
+#define XX_VALUE_TYPE(name, type, cql, klass)         \
+  BOOST_CHECK(strlen(cql) == 0 ||                     \
+              cass::ValueTypes::by_cql(cql) == name); \
+
+  CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
+#undef XX_VALUE_TYPE
+}
+
+BOOST_AUTO_TEST_CASE(value_types_by_cql_case_insensitive)
+{
+#define XX_VALUE_TYPE(name, type, cql, klass) {                            \
+    std::string upper(cql);                                                \
+    std::transform(upper.begin(), upper.end(), upper.begin(), toupper);    \
+    BOOST_CHECK(upper.empty() || cass::ValueTypes::by_cql(upper) == name); \
+  }
+
+  CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
+#undef XX_VALUE_TYPE
+}
+
+BOOST_AUTO_TEST_CASE(simple_data_type_cache)
+{
+  cass::SimpleDataTypeCache cache;
+
+  cass::DataType::ConstPtr by_class = cache.by_class("org.apache.cassandra.db.marshal.AsciiType");
+  cass::DataType::ConstPtr by_cql = cache.by_cql("ascii");
+  cass::DataType::ConstPtr by_value_type = cache.by_value_type(CASS_VALUE_TYPE_ASCII);
+
+  BOOST_CHECK(by_class->value_type() == CASS_VALUE_TYPE_ASCII);
+  BOOST_CHECK(by_cql->value_type() == CASS_VALUE_TYPE_ASCII);
+  BOOST_CHECK(by_value_type->value_type() == CASS_VALUE_TYPE_ASCII);
+
+  BOOST_CHECK(by_class.get() == by_cql.get());
+  BOOST_CHECK(by_class.get() == by_value_type.get());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
