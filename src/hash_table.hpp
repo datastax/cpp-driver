@@ -17,9 +17,9 @@
 #ifndef __CASS_HASH_INDEX_HPP_INCLUDED__
 #define __CASS_HASH_INDEX_HPP_INCLUDED__
 
-#include "fixed_vector.hpp"
 #include "hash.hpp"
 #include "macros.hpp"
+#include "small_vector.hpp"
 #include "string_ref.hpp"
 #include "utils.hpp"
 
@@ -31,7 +31,7 @@
 
 namespace cass {
 
-typedef FixedVector<size_t, 4> IndexVec;
+typedef SmallVector<size_t, 4> IndexVec;
 
 template<class T>
 struct HashTableEntry {
@@ -47,7 +47,7 @@ struct HashTableEntry {
 template<class T>
 class CaseInsensitiveHashTable {
 public:
-  typedef FixedVector<T, 16> EntryVec;
+  typedef SmallVector<T, 16> EntryVec;
 
   CaseInsensitiveHashTable(size_t capacity = 16);
   CaseInsensitiveHashTable(const EntryVec& entries);
@@ -72,7 +72,7 @@ private:
 private:
   size_t index_mask_;
   size_t count_;
-  FixedVector<T*, 32> index_;
+  SmallVector<T*, 32> index_;
   EntryVec entries_;
 
 private:

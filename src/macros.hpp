@@ -56,4 +56,25 @@ template <bool> struct StaticAssert;
 template <> struct StaticAssert<true> { };
 template<size_t s> struct StaticAssertTest { };
 
+#define STATIC_NEXT_POW_2(N) StaticNextPow2<N>::value
+
+template <size_t C, size_t N>
+struct StaticNextPow2Helper {
+  enum { 
+    value = static_cast<size_t>(StaticNextPow2Helper<C - 1, N>::value) < N
+          ? static_cast<size_t>(1) << C
+          : static_cast<size_t>(StaticNextPow2Helper<C - 1, N>::value)
+  };
+};
+
+template <size_t N>
+struct StaticNextPow2Helper<1, N> { 
+  enum { value = 2 }; 
+};
+
+template <size_t N>
+struct StaticNextPow2 {
+  enum { value = StaticNextPow2Helper<8 * sizeof(size_t) - 1, N>::value };
+};
+
 #endif

@@ -832,12 +832,12 @@ void Metadata::update_columns(int protocol_version, const VersionNumber& cassand
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_columns(protocol_version, cassandra_version, native_types_, result);
+    updating_->update_columns(protocol_version, cassandra_version, cache_, result);
     if (cassandra_version < VersionNumber(3, 0, 0)) {
       updating_->update_legacy_indexes(protocol_version, cassandra_version, result);
     }
   } else {
-    updating_->update_columns(protocol_version, cassandra_version, native_types_, result);
+    updating_->update_columns(protocol_version, cassandra_version, cache_, result);
     if (cassandra_version < VersionNumber(3, 0, 0)) {
       updating_->update_legacy_indexes(protocol_version, cassandra_version, result);
     }
@@ -860,9 +860,9 @@ void Metadata::update_user_types(int protocol_version, const VersionNumber& cass
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_user_types(protocol_version, cassandra_version, native_types_, result);
+    updating_->update_user_types(protocol_version, cassandra_version, cache_, result);
   } else {
-    updating_->update_user_types(protocol_version, cassandra_version, native_types_, result);
+    updating_->update_user_types(protocol_version, cassandra_version, cache_, result);
   }
 }
 
@@ -871,9 +871,9 @@ void Metadata::update_functions(int protocol_version, const VersionNumber& cassa
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_functions(protocol_version, cassandra_version, native_types_, result);
+    updating_->update_functions(protocol_version, cassandra_version, cache_, result);
   } else {
-    updating_->update_functions(protocol_version, cassandra_version, native_types_, result);
+    updating_->update_functions(protocol_version, cassandra_version, cache_, result);
   }
 }
 
@@ -882,9 +882,9 @@ void Metadata::update_aggregates(int protocol_version, const VersionNumber& cass
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_aggregates(protocol_version, cassandra_version, native_types_, result);
+    updating_->update_aggregates(protocol_version, cassandra_version, cache_, result);
   } else {
-    updating_->update_aggregates(protocol_version, cassandra_version, native_types_, result);
+    updating_->update_aggregates(protocol_version, cassandra_version, cache_, result);
   }
 }
 
@@ -944,11 +944,6 @@ void Metadata::drop_aggregate(const std::string& keyspace_name, const std::strin
 }
 
 void Metadata::clear_and_update_back(const VersionNumber& cassandra_version) {
-  if (cassandra_version >= VersionNumber(3, 0, 0)) {
-    native_types_.init_cql_names();
-  } else {
-    native_types_.init_class_names();
-  }
   back_.clear();
   updating_ = &back_;
 }
@@ -1308,7 +1303,7 @@ size_t get_column_count(const ColumnMetadata::Vec& columns, CassColumnType type)
   return count;
 }
 
-void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types) {
+void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache) {
   // Also, Reorders columns so that the order is:
   // 1) Parition key
   // 2) Clustering keys
@@ -1351,7 +1346,7 @@ void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionN
       }
 
       ParseResult::Ptr key_validator
-          = DataTypeClassNameParser::parse_with_composite(get_string_field("key_validator"), native_types);
+          = DataTypeClassNameParser::parse_with_composite(get_string_field("key_validator"), cache);
       size_t size = key_validator->types().size();
       partition_key_.reserve(size);
       for (size_t i = 0; i < size; ++i) {
@@ -1385,7 +1380,7 @@ void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionN
 
       // TODO: Figure out how to test these special cases and properly document them here
       ParseResult::Ptr comparator
-          = DataTypeClassNameParser::parse_with_composite(get_string_field("comparator"), native_types);
+          = DataTypeClassNameParser::parse_with_composite(get_string_field("comparator"), cache);
       size_t size = comparator->types().size();
       if (comparator->is_composite()) {
         if (!comparator->collections().empty() ||
@@ -1461,7 +1456,7 @@ void TableMetadata::sort_views() {
   std::sort(views_.begin(), views_.end());
 }
 
-void TableMetadata::key_aliases(const NativeDataTypes& native_types, KeyAliases* output) const {
+void TableMetadata::key_aliases(SimpleDataTypeCache& cache, KeyAliases* output) const {
   const Value* aliases = get_field("key_aliases");
   if (aliases != NULL) {
     output->reserve(aliases->count());
@@ -1472,7 +1467,7 @@ void TableMetadata::key_aliases(const NativeDataTypes& native_types, KeyAliases*
   }
   if (output->empty()) {// C* 1.2 tables created via CQL2 or thrift don't have col meta or key aliases
     ParseResult::Ptr key_validator_type
-        = DataTypeClassNameParser::parse_with_composite(get_string_field("key_validator"), native_types);
+        = DataTypeClassNameParser::parse_with_composite(get_string_field("key_validator"), cache);
     const size_t count = key_validator_type->types().size();
     std::ostringstream ss("key");
     for (size_t i = 0; i < count; ++i) {
@@ -1517,7 +1512,7 @@ void TableMetadata::clear_indexes() {
   indexes_by_name_.clear();
 }
 
-FunctionMetadata::FunctionMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
+FunctionMetadata::FunctionMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                                    const std::string& name, const Value* signature,
                                    KeyspaceMetadata* keyspace,
                                    const RefBuffer::Ptr& buffer, const Row* row)
@@ -1542,13 +1537,13 @@ FunctionMetadata::FunctionMetadata(int protocol_version, const VersionNumber& ca
     if (cassandra_version >= VersionNumber(3, 0, 0)) {
       while (iterator1.next() && iterator2.next()) {
         StringRef arg_name(iterator1.value()->to_string_ref());
-        DataType::ConstPtr arg_type(DataTypeCqlNameParser::parse(iterator2.value()->to_string(), native_types, keyspace));
+        DataType::ConstPtr arg_type(DataTypeCqlNameParser::parse(iterator2.value()->to_string(), cache, keyspace));
         args_.push_back(Argument(arg_name, arg_type));
       }
     } else {
       while (iterator1.next() && iterator2.next()) {
         StringRef arg_name(iterator1.value()->to_string_ref());
-        DataType::ConstPtr arg_type(DataTypeClassNameParser::parse_one(iterator2.value()->to_string(), native_types));
+        DataType::ConstPtr arg_type(DataTypeClassNameParser::parse_one(iterator2.value()->to_string(), cache));
         args_.push_back(Argument(arg_name, arg_type));
       }
     }
@@ -1558,9 +1553,9 @@ FunctionMetadata::FunctionMetadata(int protocol_version, const VersionNumber& ca
   if (value1 != NULL &&
       value1->value_type() == CASS_VALUE_TYPE_VARCHAR) {
     if (cassandra_version >= VersionNumber(3, 0, 0)) {
-      return_type_ = DataTypeCqlNameParser::parse(value1->to_string(), native_types, keyspace);
+      return_type_ = DataTypeCqlNameParser::parse(value1->to_string(), cache, keyspace);
     } else {
-      return_type_ = DataTypeClassNameParser::parse_one(value1->to_string(), native_types);
+      return_type_ = DataTypeClassNameParser::parse_one(value1->to_string(), cache);
     }
   }
 
@@ -1589,7 +1584,7 @@ const DataType* FunctionMetadata::get_arg_type(StringRef name) const {
   return i->type.get();
 }
 
-AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
+AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                                      const std::string& name, const Value* signature,
                                      KeyspaceMetadata* keyspace,
                                      const RefBuffer::Ptr& buffer, const Row* row)
@@ -1608,11 +1603,11 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
     CollectionIterator iterator(value);
     if (cassandra_version >= VersionNumber(3, 0, 0)) {
       while (iterator.next()) {
-        arg_types_.push_back(DataTypeCqlNameParser::parse(iterator.value()->to_string(), native_types, keyspace));
+        arg_types_.push_back(DataTypeCqlNameParser::parse(iterator.value()->to_string(), cache, keyspace));
       }
     } else {
       while (iterator.next()) {
-        arg_types_.push_back(DataTypeClassNameParser::parse_one(iterator.value()->to_string(), native_types));
+        arg_types_.push_back(DataTypeClassNameParser::parse_one(iterator.value()->to_string(), cache));
       }
     }
   }
@@ -1621,9 +1616,9 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
     if (cassandra_version >= VersionNumber(3, 0, 0)) {
-      return_type_ = DataTypeCqlNameParser::parse(value->to_string(), native_types, keyspace);
+      return_type_ = DataTypeCqlNameParser::parse(value->to_string(), cache, keyspace);
     } else {
-      return_type_ = DataTypeClassNameParser::parse_one(value->to_string(), native_types);
+      return_type_ = DataTypeClassNameParser::parse_one(value->to_string(), cache);
     }
   }
 
@@ -1631,9 +1626,9 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
     if (cassandra_version >= VersionNumber(3, 0, 0)) {
-      state_type_ = DataTypeCqlNameParser::parse(value->to_string(), native_types, keyspace);
+      state_type_ = DataTypeCqlNameParser::parse(value->to_string(), cache, keyspace);
     } else {
-      state_type_ = DataTypeClassNameParser::parse_one(value->to_string(), native_types);
+      state_type_ = DataTypeClassNameParser::parse_one(value->to_string(), cache);
     }
   }
 
@@ -1668,7 +1663,7 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
     } else if (cassandra_version >= VersionNumber(3, 0, 0) &&
                value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
       init_cond_ = Value(protocol_version,
-                         native_types.by_cql_name("varchar"),
+                         cache.by_value_type(CASS_VALUE_TYPE_VARCHAR),
                          value->data(), value->size());
     }
   }
@@ -1769,7 +1764,7 @@ CassIndexType IndexMetadata::index_type_from_string(StringRef index_type) {
   return CASS_INDEX_TYPE_UNKNOWN;
 }
 
-ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
+ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                                const std::string& name,
                                KeyspaceMetadata* keyspace,
                                const RefBuffer::Ptr& buffer, const Row* row)
@@ -1819,7 +1814,7 @@ ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassan
     if (value != NULL &&
         value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
       std::string type(value->to_string());
-      data_type_ = DataTypeCqlNameParser::parse(type, native_types, keyspace);
+      data_type_ = DataTypeCqlNameParser::parse(type, cache, keyspace);
     }
   } else {
     value = add_field(buffer, row, "type");
@@ -1851,7 +1846,7 @@ ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassan
     if (value != NULL &&
         value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
       std::string validator(value->to_string());
-      data_type_ = DataTypeClassNameParser::parse_one(validator, native_types);
+      data_type_ = DataTypeClassNameParser::parse_one(validator, cache);
       is_reversed_ = DataTypeClassNameParser::is_reversed(validator);
     }
 
@@ -1960,7 +1955,7 @@ void Metadata::InternalData::update_views(int protocol_version, const VersionNum
   }
 }
 
-void Metadata::InternalData::update_user_types(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types, ResultResponse* result) {
+void Metadata::InternalData::update_user_types(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result) {
   ResultIterator rows(result);
 
   std::string keyspace_name;
@@ -2022,9 +2017,9 @@ void Metadata::InternalData::update_user_types(int protocol_version, const Versi
       DataType::ConstPtr data_type;
 
       if (cassandra_version >= VersionNumber(3, 0, 0)) {
-        data_type = DataTypeCqlNameParser::parse(type->to_string(), native_types, keyspace);
+        data_type = DataTypeCqlNameParser::parse(type->to_string(), cache, keyspace);
       } else {
-        data_type = DataTypeClassNameParser::parse_one(type->to_string(), native_types);
+        data_type = DataTypeClassNameParser::parse_one(type->to_string(), cache);
       }
 
       if (!data_type) {
@@ -2042,7 +2037,7 @@ void Metadata::InternalData::update_user_types(int protocol_version, const Versi
   }
 }
 
-void Metadata::InternalData::update_functions(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types,
+void Metadata::InternalData::update_functions(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                                               ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
@@ -2069,7 +2064,7 @@ void Metadata::InternalData::update_functions(int protocol_version, const Versio
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace->add_function(FunctionMetadata::Ptr(new FunctionMetadata(protocol_version, cassandra_version, native_types,
+    keyspace->add_function(FunctionMetadata::Ptr(new FunctionMetadata(protocol_version, cassandra_version, cache,
                                                                       function_name, signature,
                                                                       keyspace,
                                                                       buffer, row)));
@@ -2077,7 +2072,7 @@ void Metadata::InternalData::update_functions(int protocol_version, const Versio
   }
 }
 
-void Metadata::InternalData::update_aggregates(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types, ResultResponse* result) {
+void Metadata::InternalData::update_aggregates(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
@@ -2103,7 +2098,7 @@ void Metadata::InternalData::update_aggregates(int protocol_version, const Versi
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace->add_aggregate(AggregateMetadata::Ptr(new AggregateMetadata(protocol_version, cassandra_version, native_types,
+    keyspace->add_aggregate(AggregateMetadata::Ptr(new AggregateMetadata(protocol_version, cassandra_version, cache,
                                                                          aggregate_name, signature,
                                                                          keyspace,
                                                                          buffer, row)));
@@ -2139,7 +2134,7 @@ void Metadata::InternalData::drop_aggregate(const std::string& keyspace_name, co
   i->second.drop_aggregate(full_aggregate_name);
 }
 
-void Metadata::InternalData::update_columns(int protocol_version, const VersionNumber& cassandra_version, const NativeDataTypes native_types, ResultResponse* result) {
+void Metadata::InternalData::update_columns(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
@@ -2173,7 +2168,7 @@ void Metadata::InternalData::update_columns(int protocol_version, const VersionN
     if (table_or_view_name != temp_table_or_view_name) {
       // Build keys for the previous table
       if (table_or_view) {
-        table_or_view->build_keys_and_sort(protocol_version, cassandra_version, native_types);
+        table_or_view->build_keys_and_sort(protocol_version, cassandra_version, cache);
       }
       table_or_view_name = temp_table_or_view_name;
       table_or_view = TableMetadataBase::Ptr(keyspace->get_table(table_or_view_name));
@@ -2185,14 +2180,14 @@ void Metadata::InternalData::update_columns(int protocol_version, const VersionN
     }
 
     if (table_or_view) {
-      table_or_view->add_column(ColumnMetadata::Ptr(new ColumnMetadata(protocol_version, cassandra_version, native_types, column_name,
+      table_or_view->add_column(ColumnMetadata::Ptr(new ColumnMetadata(protocol_version, cassandra_version, cache, column_name,
                                                                        keyspace, buffer, row)));
     }
   }
 
   // Build keys for the last table
   if (table_or_view) {
-    table_or_view->build_keys_and_sort(protocol_version, cassandra_version, native_types);
+    table_or_view->build_keys_and_sort(protocol_version, cassandra_version, cache);
   }
 }
 

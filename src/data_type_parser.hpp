@@ -83,7 +83,7 @@ protected:
 class DataTypeCqlNameParser {
 public:
   static DataType::ConstPtr parse(const std::string& type,
-                                  const NativeDataTypes& native_types,
+                                  SimpleDataTypeCache& cache,
                                   KeyspaceMetadata* keyspace,
                                   bool is_frozen = false);
 
@@ -147,8 +147,8 @@ public:
   static bool is_user_type(const std::string& type);
   static bool is_tuple_type(const std::string& type);
 
-  static DataType::ConstPtr parse_one(const std::string& type, const NativeDataTypes& native_types);
-  static ParseResult::Ptr parse_with_composite(const std::string& type, const NativeDataTypes& native_types);
+  static DataType::ConstPtr parse_one(const std::string& type, SimpleDataTypeCache& cache);
+  static ParseResult::Ptr parse_with_composite(const std::string& type, SimpleDataTypeCache& cache);
 
 private:
   static bool get_nested_class_name(const std::string& type, std::string* class_name);
