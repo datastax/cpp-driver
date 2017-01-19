@@ -104,7 +104,9 @@ namespace cass {
 class DataTypeDecoder {
 public:
   DataTypeDecoder(char* input)
-    : buffer_(input) { }
+    : buffer_(input) {
+    native_types_.init_class_names();
+  }
 
   char* buffer() const { return buffer_; }
 
@@ -129,14 +131,7 @@ public:
 
       default:
         if (value_type < CASS_VALUE_TYPE_LAST_ENTRY) {
-          if (data_type_cache_[value_type]) {
-            return data_type_cache_[value_type];
-          } else {
-            DataType::Ptr data_type(
-                  new DataType(static_cast<CassValueType>(value_type)));
-            data_type_cache_[value_type] = data_type;
-            return data_type;
-          }
+          return decode_simple_type(value_type);
         }
         break;
     }
@@ -148,7 +143,24 @@ private:
   DataType::Ptr decode_custom() {
     StringRef class_name;
     buffer_ = decode_string(buffer_, &class_name);
-    return DataType::Ptr(new CustomType(class_name.to_string()));
+
+    const DataType::ConstPtr& type = native_types_.by_class_name(class_name.to_string());
+    if (type == DataType::NIL)
+      // If no mapping exists, return an actual custom type.
+      return DataType::Ptr(new CustomType(class_name.to_string()));
+    else
+      return type->copy();
+  }
+
+  DataType::Ptr decode_simple_type(uint16_t value_type) {
+    if (data_type_cache_[value_type]) {
+      return data_type_cache_[value_type];
+    } else {
+      DataType::Ptr data_type(
+            new DataType(static_cast<CassValueType>(value_type)));
+      data_type_cache_[value_type] = data_type;
+      return data_type;
+    }
   }
 
   DataType::Ptr decode_collection(CassValueType collection_type) {
@@ -196,6 +208,7 @@ private:
 private:
   char* buffer_;
   DataType::Ptr data_type_cache_[CASS_VALUE_TYPE_LAST_ENTRY];
+  NativeDataTypes native_types_;
 };
 
 bool ResultResponse::decode(int version, char* input, size_t size) {
