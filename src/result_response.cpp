@@ -104,10 +104,9 @@ namespace cass {
 class DataTypeDecoder {
 public:
   DataTypeDecoder(char* input)
-    : buffer_(input)
-    {
-      native_types_.init_class_names();
-    }
+    : buffer_(input) {
+    native_types_.init_class_names();
+  }
 
   char* buffer() const { return buffer_; }
 
@@ -153,15 +152,6 @@ private:
       return type->copy();
   }
 
-  DataType::Ptr decode_collection(CassValueType collection_type) {
-    DataType::Vec types;
-    types.push_back(decode());
-    if (collection_type == CASS_VALUE_TYPE_MAP) {
-      types.push_back(decode());
-    }
-    return DataType::Ptr(new CollectionType(collection_type, types, false));
-  }
-
   DataType::Ptr decode_simple_type(uint16_t value_type) {
     if (data_type_cache_[value_type]) {
       return data_type_cache_[value_type];
@@ -171,6 +161,15 @@ private:
       data_type_cache_[value_type] = data_type;
       return data_type;
     }
+  }
+
+  DataType::Ptr decode_collection(CassValueType collection_type) {
+    DataType::Vec types;
+    types.push_back(decode());
+    if (collection_type == CASS_VALUE_TYPE_MAP) {
+      types.push_back(decode());
+    }
+    return DataType::Ptr(new CollectionType(collection_type, types, false));
   }
 
   DataType::Ptr decode_user_type() {
@@ -208,8 +207,8 @@ private:
 
 private:
   char* buffer_;
-  NativeDataTypes native_types_;
   DataType::Ptr data_type_cache_[CASS_VALUE_TYPE_LAST_ENTRY];
+  NativeDataTypes native_types_;
 };
 
 bool ResultResponse::decode(int version, char* input, size_t size) {
