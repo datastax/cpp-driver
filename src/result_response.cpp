@@ -108,6 +108,7 @@ public:
   DataTypeDecoder(char* input)
     : buffer_(input) {
     data_type_cache_.set_empty_key(CASS_VALUE_TYPE_LAST_ENTRY);
+    native_types_.init_class_names();
   }
 
   char* buffer() const { return buffer_; }
@@ -145,10 +146,13 @@ private:
   DataType::Ptr decode_custom() {
     StringRef class_name;
     buffer_ = decode_string(buffer_, &class_name);
-    if (class_name.to_string() == "org.apache.cassandra.db.marshal.DurationType") {
-      return decode_simple_type(CASS_VALUE_TYPE_DURATION);
-    }
-    return DataType::Ptr(new CustomType(class_name.to_string()));
+
+    const DataType::ConstPtr& type = native_types_.by_class_name(class_name.to_string());
+    if (type == DataType::NIL)
+      // If no mapping exists, return an actual custom type.
+      return DataType::Ptr(new CustomType(class_name.to_string()));
+    else
+      return type->copy();
   }
 
   DataType::Ptr decode_simple_type(uint16_t value_type) {
@@ -207,6 +211,7 @@ private:
 private:
   char* buffer_;
   sparsehash::dense_hash_map<uint16_t, DataType::Ptr> data_type_cache_;
+  NativeDataTypes native_types_;
 };
 
 bool ResultResponse::decode(int version, char* input, size_t size) {
