@@ -67,6 +67,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     const CassValue* output = cass_row_get_column(row, 1);
     BOOST_REQUIRE(cass_value_type(output) == type);
+
     BOOST_REQUIRE(cass_value_primary_sub_type(output) == primary_type);
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(output));
@@ -189,6 +190,16 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
         values.push_back(value);
       }
       insert_collection_value<CassDecimal>(session.get(), type, CASS_VALUE_TYPE_DECIMAL,  values);
+    }
+
+    // C* doesn't support set<Duration>.
+    if (type != CASS_VALUE_TYPE_SET && ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4)) {
+      std::vector<CassDuration> values;
+      for (int i = 0; i < 3; ++i) {
+        CassDuration value(1, 2, 3);
+        values.push_back(value);
+      }
+      insert_collection_value<CassDuration>(session.get(), type, CASS_VALUE_TYPE_DURATION,  values);
     }
 
     drop_keyspace(session);
@@ -375,6 +386,15 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
       values[CassDecimal(varint2, sizeof(varint2), 2)] = CassDecimal(varint2, sizeof(varint2), 3);
       values[CassDecimal(varint3, sizeof(varint3), 4)] = CassDecimal(varint3, sizeof(varint3), 5);
       insert_map_value<CassDecimal, CassDecimal>(session.get(), CASS_VALUE_TYPE_DECIMAL, CASS_VALUE_TYPE_DECIMAL, values);
+    }
+
+    if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+      // Duration keys are not supported.
+      std::map<cass_int32_t, CassDuration> values;
+      values[1] = CassDuration(0, 0, 1);
+      values[3] = CassDuration(1, 2, 5);
+      values[5] = CassDuration(-1, -2, -3);
+      insert_map_value<cass_int32_t, CassDuration>(session.get(), CASS_VALUE_TYPE_INT, CASS_VALUE_TYPE_DURATION, values);
     }
 
     {

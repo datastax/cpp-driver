@@ -350,6 +350,10 @@ BOOST_AUTO_TEST_CASE(all_primitives) {
         tester.insert_primitive_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value, is_prepared);
       }
 
+      if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+        tester.insert_primitive_value<CassDuration>(CASS_VALUE_TYPE_DURATION, CassDuration(1, 2, 3), is_prepared);
+      }
+
       tester.insert_primitive_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793, is_prepared);
       tester.insert_primitive_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f, is_prepared);
       tester.insert_primitive_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123, is_prepared);
@@ -422,6 +426,10 @@ BOOST_AUTO_TEST_CASE(all_primitives_batched) {
       const cass_int32_t pi_scale = 100;
       CassDecimal value = CassDecimal(pi, sizeof(pi), pi_scale);
       tester.insert_primitive_batch_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value, TOTAL_NUMBER_OF_BATCHES);
+    }
+
+    if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+      tester.insert_primitive_batch_value<CassDuration>(CASS_VALUE_TYPE_DURATION, CassDuration(1, 2, 3), TOTAL_NUMBER_OF_BATCHES);
     }
 
     tester.insert_primitive_batch_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793, TOTAL_NUMBER_OF_BATCHES);

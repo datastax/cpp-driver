@@ -395,6 +395,17 @@ BOOST_AUTO_TEST_CASE(basic_types)
     CassDecimal value(varint, sizeof(varint), scale);
     insert_single_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value);
   }
+
+  if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+    CassDuration value = CassDuration(0, 0, 0);
+    insert_single_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+
+    value = CassDuration(1, 2, 3);
+    insert_single_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+
+    value = CassDuration(-1, -2, -3);
+    insert_single_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+  }
 }
 
 BOOST_AUTO_TEST_CASE(min_max)
@@ -438,6 +449,9 @@ BOOST_AUTO_TEST_CASE(null)
   insert_null_value<CassBytes>(CASS_VALUE_TYPE_BLOB);
   insert_null_value<cass_bool_t>(CASS_VALUE_TYPE_BOOLEAN);
   insert_null_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL);
+  if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+    insert_null_value<CassDuration>(CASS_VALUE_TYPE_DURATION);
+  }
   insert_null_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE);
   insert_null_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT);
   insert_null_value<cass_int32_t>(CASS_VALUE_TYPE_INT);

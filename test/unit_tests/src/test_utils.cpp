@@ -65,4 +65,11 @@ BOOST_AUTO_TEST_CASE(escape_id)
   BOOST_CHECK_EQUAL(cass::escape_id(s), std::string("\"a\"\"Bc\""));
 }
 
+BOOST_AUTO_TEST_CASE(num_leading_zeros)
+{
+  BOOST_CHECK_EQUAL(64, cass::num_leading_zeros(0));
+  BOOST_CHECK_EQUAL(0, cass::num_leading_zeros(1LL << 63));
+  BOOST_CHECK_EQUAL(0, cass::num_leading_zeros(1LL << 63 | 1 << 5));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

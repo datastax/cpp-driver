@@ -78,6 +78,9 @@ CASS_COLLECTION_APPEND(bytes,
 CASS_COLLECTION_APPEND(decimal,
                        THREE_PARAMS_(const cass_byte_t* varint, size_t varint_size, int scale),
                        cass::CassDecimal(varint, varint_size, scale))
+CASS_COLLECTION_APPEND(duration,
+                       THREE_PARAMS_(cass_int64_t months, cass_int64_t days, cass_int64_t nanos),
+                       cass::CassDuration(months, days, nanos))
 
 #undef CASS_COLLECTION_APPEND
 

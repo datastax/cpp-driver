@@ -83,6 +83,18 @@ struct CassDecimal {
   cass_int32_t scale;
 };
 
+struct CassDuration {
+  CassDuration()
+    : months(0)
+    , days(0)
+    , nanos(0) {}
+  CassDuration(cass_int64_t months, cass_int64_t days, cass_int64_t nanos)
+    : months(months), days(days), nanos(nanos) {}
+  cass_int64_t months;
+  cass_int64_t days;
+  cass_int64_t nanos;
+};
+
 struct CassDate {
   CassDate(cass_uint32_t date = 0)
     : date(date) { }
@@ -1104,6 +1116,50 @@ struct Value<CassDecimal> {
   }
 };
 
+template<>
+struct Value<CassDuration> {
+  static CassError bind(CassStatement* statement, size_t index, CassDuration value) {
+    return cass_statement_bind_duration(statement, index, value.months, value.days, value.nanos);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassDuration value) {
+    return cass_statement_bind_duration_by_name(statement, name, value.months, value.days, value.nanos);
+  }
+
+  static CassError append(CassCollection* collection, CassDuration value) {
+    return cass_collection_append_duration(collection, value.months, value.days, value.nanos);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassDuration value) {
+    return cass_tuple_set_duration(tuple, index, value.months, value.days, value.nanos);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassDuration value) {
+    return cass_user_type_set_duration(user_type, index, value.months, value.days, value.nanos);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassDuration value) {
+    return cass_user_type_set_duration_by_name(user_type, name, value.months, value.days, value.nanos);
+  }
+
+  static CassError get(const CassValue* value, CassDuration* output) {
+    return cass_value_get_duration(value, &output->months, &output->days, &output->nanos);
+  }
+
+  static bool equal(CassDuration a, CassDuration b) {
+    return a.months == b.months && a.days == b.days && a.nanos == b.nanos;
+  }
+
+  static std::string to_string(CassDuration value) {
+    // String representation of Duration is wonky in C*. (-3, -2, -1) is represented by
+    // -3mo2d1ns. There is no way to represent a mix of positive and negative attributes. We tippy-toe
+    // around this in our testing...
+    std::ostringstream buf;
+    buf << value.months << "mo" << (value.days < 0 ? -value.days : value.days) << "d" << (value.nanos < 0 ? -value.nanos : value.nanos) << "ns";
+    return buf.str();
+  }
+};
+
 /*
  * TODO: Implement https://datastax-oss.atlassian.net/browse/CPP-244 to avoid
  *       current test skip implementation in batch and serial_consistency.
@@ -1275,6 +1331,7 @@ void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> no
 
 extern const char* CREATE_TABLE_ALL_TYPES;
 extern const char* CREATE_TABLE_ALL_TYPES_V4;
+extern const char* CREATE_TABLE_ALL_TYPES_V4_1;
 extern const char* CREATE_TABLE_TIME_SERIES;
 extern const char* CREATE_TABLE_SIMPLE;
 
@@ -1352,4 +1409,24 @@ inline bool operator<(CassDecimal a, CassDecimal b) {
     return true;
   }
   return memcmp(a.varint, b.varint, a.varint_size) < 0;
+}
+
+inline bool operator==(CassDuration a, CassDuration b) {
+  return a.months == b.months && a.days == b.days && a.nanos == b.nanos;
+}
+
+inline bool operator<(CassDuration a, CassDuration b) {
+  if (a.months > b.months) {
+    return false;
+  } else if (a.months < b.months) {
+    return true;
+  }
+
+  if (a.days > b.days) {
+    return false;
+  } else if (a.days < b.days) {
+    return true;
+  }
+
+  return a.nanos < b.nanos;
 }

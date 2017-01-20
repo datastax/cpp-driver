@@ -118,6 +118,7 @@ public:
       case CASS_VALUE_TYPE_COUNTER: return "counter";
       case CASS_VALUE_TYPE_DECIMAL: return "decimal";
       case CASS_VALUE_TYPE_DOUBLE: return "double";
+      case CASS_VALUE_TYPE_DURATION: return "duration";
       case CASS_VALUE_TYPE_FLOAT: return "float";
       case CASS_VALUE_TYPE_INT: return "int";
       case CASS_VALUE_TYPE_TEXT: return "text";
@@ -573,6 +574,13 @@ template<>
 struct IsValidDataType<CassDecimal> {
   bool operator()(CassDecimal, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_DECIMAL;
+  }
+};
+
+template<>
+struct IsValidDataType<CassDuration> {
+  bool operator()(CassDuration, const DataType::ConstPtr& data_type) const {
+    return data_type->value_type() == CASS_VALUE_TYPE_DURATION;
   }
 };
 

@@ -483,6 +483,11 @@ BOOST_AUTO_TEST_CASE(varying_size) {
             tester.insert_varying_sized_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value, size, nested_collection_type);
           }
 
+          if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+            CassDuration value = CassDuration(1, 2, 3);
+            tester.insert_varying_sized_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value, size, nested_collection_type);
+          }
+
           tester.insert_varying_sized_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793, size, nested_collection_type);
           tester.insert_varying_sized_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f, size, nested_collection_type);
           tester.insert_varying_sized_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123, size, nested_collection_type);
@@ -558,6 +563,9 @@ BOOST_AUTO_TEST_CASE(null) {
           tester.insert_varying_sized_null_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, size, nested_collection_type);
           tester.insert_varying_sized_null_value<CassDate>(CASS_VALUE_TYPE_DATE, size, nested_collection_type);
           tester.insert_varying_sized_null_value<CassTime>(CASS_VALUE_TYPE_TIME, size, nested_collection_type);
+        }
+        if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+          tester.insert_varying_sized_null_value<CassDuration>(CASS_VALUE_TYPE_DURATION, size, nested_collection_type);
         }
       }
     }

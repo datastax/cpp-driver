@@ -393,6 +393,7 @@ void NativeDataTypes::init_class_names() {
   by_class_names_["org.apache.cassandra.db.marshal.DateType"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_TIMESTAMP));
   by_class_names_["org.apache.cassandra.db.marshal.DecimalType"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_DECIMAL));
   by_class_names_["org.apache.cassandra.db.marshal.DoubleType"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_DOUBLE));
+  by_class_names_["org.apache.cassandra.db.marshal.DurationType"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_DURATION));
   by_class_names_["org.apache.cassandra.db.marshal.FloatType"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_FLOAT));
   by_class_names_["org.apache.cassandra.db.marshal.InetAddressType"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_INET));
   by_class_names_["org.apache.cassandra.db.marshal.Int32Type"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_INT));
@@ -423,6 +424,7 @@ void NativeDataTypes::init_cql_names() {
   by_cql_names_["date"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_DATE));
   by_cql_names_["decimal"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_DECIMAL));
   by_cql_names_["double"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_DOUBLE));
+  by_cql_names_["duration"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_DURATION));
   by_cql_names_["float"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_FLOAT));
   by_cql_names_["inet"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_INET));
   by_cql_names_["int"] = DataType::ConstPtr(new DataType(CASS_VALUE_TYPE_INT));

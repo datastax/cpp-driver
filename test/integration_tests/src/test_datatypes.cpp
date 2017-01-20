@@ -143,6 +143,17 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
     insert_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value);
   }
 
+  if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
+    CassDuration value = CassDuration(0, 0, 0);
+    insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+
+    value = CassDuration(1, 2, 3);
+    insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+
+    value = CassDuration((1LL << 63) - 1, -1, 1LL << 63);
+    insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
+  }
+
   insert_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);
   insert_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f);
   insert_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123);
