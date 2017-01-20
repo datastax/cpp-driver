@@ -31,5 +31,7 @@ sections:
       ALIASES = dse{1}="<b>Requires DSE:</b> \1"
 
 versions:
-  - name: 1.0
+  - name: 1.1
     ref: HEAD
+  - name: 1.0
+    ref: 1b8b2f752500f05ebf5837082e084981f6676106
