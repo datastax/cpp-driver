@@ -34,6 +34,15 @@ CassTimestampGen* cass_timestamp_gen_monotonic_new() {
   return CassTimestampGen::to(timestamp_gen);
 }
 
+CassTimestampGen* cass_timestamp_gen_monotonic_new_with_settings(int64_t warning_threshold_us,
+                                                                 int64_t warning_interval_ms) {
+  cass::TimestampGenerator* timestamp_gen
+      = new cass::MonotonicTimestampGenerator(warning_threshold_us,
+                                              warning_interval_ms);
+  timestamp_gen->inc_ref();
+  return CassTimestampGen::to(timestamp_gen);
+}
+
 void cass_timestamp_gen_free(CassTimestampGen* timestamp_gen) {
   timestamp_gen->dec_ref();
 }
@@ -52,24 +61,35 @@ int64_t MonotonicTimestampGenerator::next() {
   }
 }
 
+// This is guaranteed to return a monotonic timestamp. If clock skew is deteced
+// then this method will increment the last timestamp.
 int64_t MonotonicTimestampGenerator::compute_next(int64_t last) {
-  int64_t millis = last / 1000;
-  int64_t counter = last % 1000;
+  int64_t current = get_time_since_epoch_us();
 
-  int64_t now = get_time_since_epoch_ms();
-
-  if (millis >= now) {
-    if (counter == 999) {
-      LOG_WARN("Sub-millisecond counter overflowed, some query timestamps will not be distinct");
-    } else {
-      ++counter;
+  if (last >= current) { // There's clock skew
+    // If we exceed our warning threshhold then warn periodically that clock
+    // skew has been detected.
+    if (warning_threshold_us_ >= 0 && last > current + warning_threshold_us_) {
+      // Using a monotonic clock to prevent the effects of clock skew from properly
+      // triggering warnings.
+      int64_t now = get_time_monotonic_ns() / NANOSECONDS_PER_MILLISECOND;
+      int64_t last_warning = last_warning_.load();
+      if (now > last_warning + warning_interval_ms_ &&
+          last_warning_.compare_exchange_strong(last_warning, now)) {
+        LOG_WARN("Clock skew detected. The current time (%lld) was %lld "
+                 "microseconds behind the last generated timestamp (%lld). "
+                 "The next generated timestamp will be artificially incremented "
+                 "to guarantee montonicity.",
+                 static_cast<long long>(current),
+                 static_cast<long long>(last - current),
+                 static_cast<long long>(last));
+      }
     }
-  } else {
-    millis = now;
-    counter = 0;
+
+    return last + 1;
   }
 
-  return 1000 * millis + counter;
+  return current;
 }
 
 } // namespace cass

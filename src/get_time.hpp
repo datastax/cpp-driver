@@ -19,9 +19,24 @@
 
 #include <uv.h>
 
+#define NANOSECONDS_PER_MICROSECOND  1000LL
+#define NANOSECONDS_PER_MILLISECOND  1000000LL
+#define NANOSECONDS_PER_SECOND       1000000000LL
+
+#define MICROSECONDS_PER_MILLISECOND 1000LL
+
 namespace cass {
 
-uint64_t get_time_since_epoch_ms();
+uint64_t get_time_since_epoch_us();
+
+inline uint64_t get_time_since_epoch_ms() {
+  return get_time_since_epoch_us() / MICROSECONDS_PER_MILLISECOND;
+}
+
+// This is a best effort monotonic clock with an arbitrary start time. If the
+// system or platform doesn't have a monotonic clock then
+// `get_time_since_epoch_us()` will be used.
+uint64_t get_time_monotonic_ns();
 
 }
 

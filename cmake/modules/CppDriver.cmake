@@ -446,6 +446,20 @@ macro(CassFindSourceFiles)
   file(GLOB INC_FILES ${CASS_SOURCE_DIR}/src/*.hpp)
   file(GLOB SRC_FILES ${CASS_SOURCE_DIR}/src/*.cpp)
 
+  if(${APPLE})
+    list(REMOVE_ITEM SRC_FILES
+      "${CASS_SOURCE_DIR}/src/get_time-unix.cpp"
+      "${CASS_SOURCE_DIR}/src/get_time-win.cpp")
+  elseif(${UNIX})
+    list(REMOVE_ITEM SRC_FILES
+      "${CASS_SOURCE_DIR}/src/get_time-mac.cpp"
+      "${CASS_SOURCE_DIR}/src/get_time-win.cpp")
+  elseif(${WIN32})
+    list(REMOVE_ITEM SRC_FILES
+      "${CASS_SOURCE_DIR}/src/get_time-mac.cpp"
+      "${CASS_SOURCE_DIR}/src/get_time-unix.cpp")
+  endif()
+
   # Determine atomic library to include
   if(CASS_USE_BOOST_ATOMIC)
     set(INC_FILES ${INC_FILES}

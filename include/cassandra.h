@@ -9470,14 +9470,23 @@ CASS_EXPORT CassTimestampGen*
 cass_timestamp_gen_server_side_new();
 
 /**
- * Creates a new monotonically increasing timestamp generator. This generates
- * microsecond timestamps with the sub-millisecond part generated using a counter.
- * The implementation guarantees that no more than 1000 timestamps will be generated
- * for a given clock tick even if shared by multiple session objects. If that rate is
- * exceeded then a warning is logged and timestamps stop incrementing until the next
- * clock tick.
+ * Creates a new monotonically increasing timestamp generator with microsecond
+ * precision.
  *
- * <b>Note:</b> This generator is thread-safe and can be shared by multiple sessions.
+ * This implementation guarantees a monotonically increasing timestamp. If the
+ * timestamp generation rate exceeds one per microsecond or if the clock skews
+ * into the past the generator will artificially increment the previously
+ * generated timestamp until the request rate decreases or the clock skew
+ * is corrected.
+ *
+ * By default, this timestamp generator will generate warnings if more than
+ * 1 second of clock skew is detected. It will print an error every second until
+ * the clock skew is resolved. These settings can be changed by using
+ * `cass_timestamp_gen_monotonic_new_with_settings()` to create the generator
+ * instance.
+ *
+ * <b>Note:</b> This generator is thread-safe and can be shared by multiple
+ * sessions.
  *
  * @cassandra{2.1+}
  *
@@ -9485,10 +9494,27 @@ cass_timestamp_gen_server_side_new();
  *
  * @return Returns a timestamp generator that must be freed.
  *
+ * @see cass_timestamp_gen_monotonic_new_with_settings();
  * @see cass_timestamp_gen_free()
  */
 CASS_EXPORT CassTimestampGen*
 cass_timestamp_gen_monotonic_new();
+
+/**
+ * Same as cass_timestamp_gen_monotonic_new(), but with settings for controlling
+ * warnings about clock skew.
+ *
+ * @param warning_threshold_us The amount of clock skew, in microseconds, that
+ * must be detected before a warning is triggered. A threshold less than 0 can
+ * be used to disable warnings.
+ * @param warning_interval_ms The amount of time, in milliseonds, to wait before
+ * warning again about clock skew. An interval value less than or equal to 0 allows
+ * the warning to be triggered every millisecond.
+ * @return Returns a timestamp generator that must be freed.
+ */
+CASS_EXPORT CassTimestampGen*
+cass_timestamp_gen_monotonic_new_with_settings(cass_int64_t warning_threshold_us,
+                                               cass_int64_t warning_interval_ms);
 
 /**
  * Frees a timestamp generator instance.
