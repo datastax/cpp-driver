@@ -31,32 +31,32 @@ namespace cass {
 
 #if defined(_WIN32)
 
-uint64_t get_time_since_epoch_ms() {
+uint64_t get_time_since_epoch_us() {
   _FILETIME ft;
   GetSystemTimeAsFileTime(&ft);
   uint64_t ns100 = (static_cast<uint64_t>(ft.dwHighDateTime) << 32 |
                     static_cast<uint64_t>(ft.dwLowDateTime)) -
                    116444736000000000LL; // 100 nanosecond increments between
                                          // Jan. 1, 1601 - Jan. 1, 1970
-  return ns100 / 10000;                  // 100 nanoseconds to milliseconds
+  return ns100 / 10;                     // 100 nanosecond increments to microseconds
 }
 
 #elif defined(__APPLE__) && defined(__MACH__)
 
-uint64_t get_time_since_epoch_ms() {
+uint64_t get_time_since_epoch_us() {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  return static_cast<uint64_t>(tv.tv_sec)  * 1000 +
-         static_cast<uint64_t>(tv.tv_usec) / 1000;
+  return static_cast<uint64_t>(tv.tv_sec) * 1000000 +
+         static_cast<uint64_t>(tv.tv_usec);
 }
 
 #else
 
-uint64_t get_time_since_epoch_ms() {
+uint64_t get_time_since_epoch_us() {
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
-  return static_cast<uint64_t>(ts.tv_sec)  * 1000 +
-         static_cast<uint64_t>(ts.tv_nsec) / 1000000;
+  return static_cast<uint64_t>(ts.tv_sec)  * 1000000 +
+         static_cast<uint64_t>(ts.tv_nsec) / 1000;
 }
 
 #endif

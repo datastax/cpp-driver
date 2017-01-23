@@ -21,7 +21,11 @@
 
 namespace cass {
 
-uint64_t get_time_since_epoch_ms();
+uint64_t get_time_since_epoch_us();
+
+inline uint64_t get_time_since_epoch_ms() {
+  return get_time_since_epoch_us() / 1000;
+}
 
 }
 
