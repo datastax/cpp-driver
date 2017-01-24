@@ -1,6 +1,13 @@
 # Testing
 Before proceeding ensure the tests were built using the [build procedures].
 
+Both unit and integration tests use [Boost.Test](http://www.boost.org/doc/libs/1_62_0/libs/test/doc/html/index.html).
+
+Integration tests rely on [Cassandra Cluster Manager (CCM)](ccm) to be installed and a [configuration file](configuration)
+in the working directory where tests are executed.
+
+Details for running unit and integration tests can be found [here](running).
+
 Each test performs a [setup](#setup-cassandra), [execute](#execute-test), and
 [teardown](#teardown-cassandra). This ensures that each test has a clean and
 consistent run against the Apache Cassandra instance during the execution
@@ -41,7 +48,7 @@ cluster may be as large as nine nodes depending on the test being performed.
 
 ```
 
-### Execute Test
+#### Execute Test
 ```ditaa
                 /-----------\                                  /------------\
                 | Unit Test |         Perform Test             | C++ Driver |
@@ -80,7 +87,7 @@ cluster may be as large as nine nodes depending on the test being performed.
                                    \--------------------/
 ```
 
-### Teardown Cassandra
+#### Teardown Cassandra
 ```ditaa
 /------------------\               /------------\                  /-------------\                 /----------\
 | Integration Test |               | CCM Bridge |                  | CCM Machine |                 | CCM Tool |
