@@ -67,7 +67,7 @@ int64_t MonotonicTimestampGenerator::compute_next(int64_t last) {
   int64_t current = get_time_since_epoch_us();
 
   if (last >= current) { // There's clock skew
-    // If we execeed our warning threshhold then warn periodically that clock
+    // If we exceed our warning threshhold then warn periodically that clock
     // skew has been detected.
     if (warning_threshold_us_ >= 0 && last > current + warning_threshold_us_) {
       int64_t now = get_time_since_epoch_ms();

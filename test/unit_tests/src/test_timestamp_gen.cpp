@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(monotonic_warning_interval) {
   }
 
   // The 100ms timestamp generator should have logged more times because
-  // it had a shorter iterval.
+  // it had a shorter interval.
   BOOST_CHECK(counter_100ms > counter_default);
 }
 

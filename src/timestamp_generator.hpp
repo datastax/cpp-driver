@@ -67,7 +67,8 @@ public:
     , last_(0)
     , last_warning_(0)
     , warning_threshold_us_(warning_threshold_us)
-    , warning_interval_ms_(warning_interval_ms) { }
+    , warning_interval_ms_(warning_interval_ms < 0 ? 0
+                                                   : warning_interval_ms) { }
 
   virtual int64_t next();
 
