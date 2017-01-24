@@ -1,20 +1,12 @@
 # Testing
 Before proceeding ensure the tests were built using the [build procedures].
 
-Both unit and integration tests use [Boost.Test](http://www.boost.org/doc/libs/1_62_0/libs/test/doc/html/index.html)
-and are packaged up into the `test/unit_tests/cassandra_unit_tests` and
-`test/integration_tests/cassandra_integration_tests` binaries, respectively. Run the test program with desired options:
+Both unit and integration tests use [Boost.Test](http://www.boost.org/doc/libs/1_62_0/libs/test/doc/html/index.html).
 
-```
-# Run all integration tests
-test/integration_tests/cassandra_integration_tests
+Integration tests rely on [Cassandra Cluster Manager (CCM)](ccm) to be installed and a [configuration file](configuration)
+in the working directory where tests are executed.
 
-# List all unit test suites and the names of the tests they contain
-test/unit_tests/cassandra_unit_tests --list_content
-
-# Run a particular suite
-test/unit_tests/cassandra_unit_tests -t blacklist_lb
-```
+Details for running unit and integration tests can be found [here](running).
 
 Each test performs a [setup](#setup-cassandra), [execute](#execute-test), and
 [teardown](#teardown-cassandra). This ensures that each test has a clean and
