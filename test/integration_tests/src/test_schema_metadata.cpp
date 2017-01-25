@@ -1859,4 +1859,28 @@ BOOST_AUTO_TEST_CASE(duplicate_table_name) {
   }
 }
 
+/**
+ * Ensure integer type is returned as a varint.
+ *
+ * Verifies the case the Cassandra marshal type is IntegerType and maps to a
+ * CASS_VALUE_TYPE_VARINT.
+ *
+ * @since 2.6.0
+ * @jira_ticket CPP-419
+ * @test_category schema
+ * @cassandra_version 1.2.x
+ */
+BOOST_AUTO_TEST_CASE(integer_type_varint_mapping) {
+  test_utils::execute_query(session, "CREATE KEYSPACE varint_type WITH replication = "
+                                     "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+  test_utils::execute_query(session, "CREATE TABLE varint_type.table1 (key1 TEXT PRIMARY KEY, value1 VARINT)" );
+  refresh_schema_meta();
+
+  {
+    const CassColumnMeta* col_meta = schema_get_column("varint_type", "table1", "value1");
+    const CassValueType value_type = cass_data_type_type(cass_column_meta_data_type(col_meta));
+    BOOST_CHECK_EQUAL(value_type, CASS_VALUE_TYPE_VARINT);
+  }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
