@@ -70,7 +70,9 @@ int64_t MonotonicTimestampGenerator::compute_next(int64_t last) {
     // If we exceed our warning threshhold then warn periodically that clock
     // skew has been detected.
     if (warning_threshold_us_ >= 0 && last > current + warning_threshold_us_) {
-      int64_t now = get_time_since_epoch_ms();
+      // Using a monotonic clock to prevent the effects of clock skew from properly
+      // triggering warnings.
+      int64_t now = get_time_monotonic_ns() / NANOSECONDS_PER_MILLISECOND;
       int64_t last_warning = last_warning_.load();
       if (now > last_warning + warning_interval_ms_ &&
           last_warning_.compare_exchange_strong(last_warning, now)) {
