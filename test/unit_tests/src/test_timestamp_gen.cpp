@@ -22,6 +22,7 @@
 #include "logger.hpp"
 #include "timestamp_generator.hpp"
 
+#include <utility>
 #include <boost/test/unit_test.hpp>
 
 static void clock_skew_log_callback(const CassLogMessage* message, void* data) {
@@ -30,6 +31,47 @@ static void clock_skew_log_callback(const CassLogMessage* message, void* data) {
   if (msg.find("Clock skew detected") != std::string::npos) {
     (*counter)++;
   }
+}
+
+int run_monotonic_timestamp_gen(uint64_t warning_threshold_us, uint64_t warning_interval_ms, uint64_t duration_ms) {
+  const int NUM_TIMESTAMPS_PER_ITERATION = 1000;
+
+  cass::MonotonicTimestampGenerator gen(warning_threshold_us, warning_interval_ms);
+
+  int timestamp_count = 0;
+  int warn_count = 0;
+
+  cass::Logger::set_log_level(CASS_LOG_WARN);
+  cass::Logger::set_callback(clock_skew_log_callback, &warn_count);
+
+  uint64_t start = cass::get_time_since_epoch_ms();
+  uint64_t elapsed;
+
+  do {
+    int64_t prev = gen.next();
+    for (int i = 0; i < NUM_TIMESTAMPS_PER_ITERATION; ++i) {
+      int64_t now = gen.next();
+      // Verify that timestamps are alway increasing
+      BOOST_CHECK(now > prev);
+      prev = now;
+      timestamp_count++;
+    }
+
+    elapsed = cass::get_time_since_epoch_ms() - start;
+  } while (elapsed < duration_ms);
+
+  double timestamp_rate = (static_cast<double>(timestamp_count) / elapsed) * 1000;
+  // We can generate at most 1,000,000 timestamps in a second. If we exceed this
+  // limit and the clock skew threshold then a warning log should have been printed.
+  if (timestamp_rate > 1000000.0 &&
+      elapsed * MICROSECONDS_PER_MILLISECOND > warning_threshold_us) {
+    BOOST_CHECK(warn_count > 0);
+  } else {
+    BOOST_TEST_MESSAGE("Warning: The test did not exceed the timestamp generator maximum rate.");
+    BOOST_CHECK(warn_count == 0);
+  }
+
+  return warn_count;
 }
 
 BOOST_AUTO_TEST_SUITE(timestamp_gen)
@@ -42,90 +84,31 @@ BOOST_AUTO_TEST_CASE(server)
 
 BOOST_AUTO_TEST_CASE(monotonic)
 {
-  const int NUM_TIMESTAMPS = 5000000;
-
   cass::MonotonicTimestampGenerator gen;
-  int counter = 0;
-
-  cass::Logger::set_callback(clock_skew_log_callback, &counter);
-
-  uint64_t start = cass::get_time_since_epoch_ms();
 
   int64_t prev = gen.next();
-  for (int i = 0; i < NUM_TIMESTAMPS; ++i) {
+  for (int i = 0; i < 100; ++i) {
     int64_t now = gen.next();
     // Verify that timestamps are alway increasing
     BOOST_CHECK(now > prev);
     prev = now;
   }
-  double elapsed = (cass::get_time_since_epoch_ms() - start) / 1000.0; // Convert to seconds
+}
 
-  // We can generate at most 1,000,000 timestamps in a second. If we exceed this
-  // limit and the clock skew threshold then a log should have been printed.
-  double timestamp_rate = static_cast<double>(NUM_TIMESTAMPS) / elapsed;
-  if (timestamp_rate > 1000000.0 && elapsed > 1.0) {
-    BOOST_CHECK(counter > 0);
-  } else {
-    BOOST_TEST_MESSAGE("Warning: The test did not exceed the timestamp generator maximum rate.");
-    BOOST_CHECK(counter == 0);
-  }
+BOOST_AUTO_TEST_CASE(monotonic_exceed_warning_threshold)  {
+  // Set the threshold to something small that we're guaranteed to easily exceed.
+  run_monotonic_timestamp_gen(1, 1000, 100);
 }
 
 BOOST_AUTO_TEST_CASE(monotonic_warning_interval) {
-  const int NUM_TIMESTAMPS = 2500000;
-
-  cass::MonotonicTimestampGenerator gen_default;
-  cass::MonotonicTimestampGenerator gen_100ms(1000000, 100); // 100 ms interval
-
-  int counter_default = 0;
-  int counter_100ms = 0;
-
-  cass::Logger::set_callback(clock_skew_log_callback, &counter_default);
-
-  int64_t start = cass::get_time_since_epoch_ms();
-
-  int64_t prev = gen_default.next();
-  for (int i = 0; i < NUM_TIMESTAMPS; ++i) {
-    int64_t now = gen_default.next();
-    // Verify that timestamps are alway increasing
-    BOOST_CHECK(now > prev);
-    prev = now;
-  }
-  double elapsed_default = (cass::get_time_since_epoch_ms() - start) / 1000.0; // Convert to seconds
-
-  cass::Logger::set_callback(clock_skew_log_callback, &counter_100ms);
-
-  start = cass::get_time_since_epoch_ms();
-
-  prev = gen_100ms.next();
-  for (int i = 0; i < NUM_TIMESTAMPS; ++i) {
-    int64_t now = gen_100ms.next();
-    // Verify that timestamps are alway increasing
-    BOOST_CHECK(now > prev);
-    prev = now;
-  }
-
-  double elapsed_100ms = (cass::get_time_since_epoch_ms() - start) / 1000.0; // Convert to seconds
-
-  double timestamp_rate_default = static_cast<double>(NUM_TIMESTAMPS) / elapsed_default;
-  if (timestamp_rate_default > 1000000.0 && elapsed_default > 1.0) {
-    BOOST_CHECK(counter_default > 0);
-  } else {
-    BOOST_TEST_MESSAGE("Warning: The default generator did not exceed its maximum rate.");
-    BOOST_CHECK(counter_default == 0);
-  }
-
-  double timestamp_rate_100ms = static_cast<double>(NUM_TIMESTAMPS) / elapsed_100ms;
-  if (timestamp_rate_100ms > 1000000.0 && elapsed_100ms > 1.0) {
-    BOOST_CHECK(counter_100ms > 0);
-  } else {
-    BOOST_TEST_MESSAGE("Warning: The 100ms generator did not exceed its maximum rate.");
-    BOOST_CHECK(counter_100ms == 0);
-  }
+  // Use 2000 ms so that we give time for the generation rate to exceed the warning threshold
+  // for a good amount of time.
+  int warn_count_100ms = run_monotonic_timestamp_gen(1000 * MICROSECONDS_PER_MILLISECOND, 100, 2000);
+  int warn_count_1000ms = run_monotonic_timestamp_gen(1000 * MICROSECONDS_PER_MILLISECOND, 1000, 2000);
 
   // The 100ms timestamp generator should have logged more times because
   // it had a shorter interval.
-  BOOST_CHECK(counter_100ms > counter_default);
+  BOOST_CHECK(warn_count_100ms > warn_count_1000ms);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -80,7 +80,9 @@ int64_t MonotonicTimestampGenerator::compute_next(int64_t last) {
                  "microseconds behind the last generated timestamp (%lld). "
                  "The next generated timestamp will be artificially incremented "
                  "to guarantee montonicity.",
-                 current, last - current, last);
+                 static_cast<long long>(current),
+                 static_cast<long long>(last - current),
+                 static_cast<long long>(last));
       }
     }
 
