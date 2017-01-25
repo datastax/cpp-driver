@@ -135,7 +135,7 @@ public:
   bool is_auth_error() const { return error_code_ == CONNECTION_ERROR_AUTH; }
   bool is_ssl_error() const {
     return error_code_ == CONNECTION_ERROR_SSL_ENCRYPT ||
-        error_code_ == CONNECTION_ERROR_SSL_ENCRYPT ||
+        error_code_ == CONNECTION_ERROR_SSL_DECRYPT ||
         error_code_ == CONNECTION_ERROR_SSL_HANDSHAKE ||
         error_code_ == CONNECTION_ERROR_SSL_VERIFY;
   }
