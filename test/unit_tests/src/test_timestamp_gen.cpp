@@ -60,16 +60,15 @@ int run_monotonic_timestamp_gen(uint64_t warning_threshold_us, uint64_t warning_
     elapsed = cass::get_time_since_epoch_ms() - start;
   } while (elapsed < duration_ms);
 
-  double timestamp_rate = (static_cast<double>(timestamp_count) / elapsed) * 1000;
   // We can generate at most 1,000,000 timestamps in a second. If we exceed this
   // limit and the clock skew threshold then a warning log should have been printed.
-  if (timestamp_rate > 1000000.0 &&
-      elapsed * MICROSECONDS_PER_MILLISECOND > warning_threshold_us) {
-    BOOST_CHECK(warn_count > 0);
-  } else {
-    BOOST_TEST_MESSAGE("Warning: The test did not exceed the timestamp generator maximum rate.");
-    BOOST_CHECK(warn_count == 0);
+  double timestamp_rate = (static_cast<double>(timestamp_count) / elapsed) * 1000;
+  if (timestamp_rate <= 1000000.0 ||
+      elapsed * MICROSECONDS_PER_MILLISECOND <= warning_threshold_us) {
+    BOOST_TEST_MESSAGE("Warning: The test may not have exceeded the timestamp generator's maximum rate.");
   }
+
+  BOOST_CHECK(warn_count > 0);
 
   return warn_count;
 }

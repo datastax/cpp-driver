@@ -20,8 +20,8 @@
 
 #include "get_time.hpp"
 
-#include <unistd.h>
 #include <boost/test/unit_test.hpp>
+#include <boost/thread/thread.hpp>
 
 BOOST_AUTO_TEST_SUITE(get_time)
 
@@ -30,19 +30,28 @@ BOOST_AUTO_TEST_CASE(monotonic)
   uint64_t prev = cass::get_time_monotonic_ns();
   for (int i = 0; i < 100; ++i) {
     uint64_t current = cass::get_time_monotonic_ns();
-    BOOST_CHECK(current > prev);
+    BOOST_CHECK(current >= prev);
     prev = current;
   }
 }
 
 BOOST_AUTO_TEST_CASE(monotonic_duration)
 {
+  // Sleep can be off by as much as 10+ ms on most systems (or >10% for 100ms)
+  double tolerance = 15.0;
+
+#ifdef _WIN32
+  // Sleep can be off more on Windows; increasing tolerance
+  // https://msdn.microsoft.com/en-us/library/windows/desktop/ms686298(v=vs.85).aspx
+  tolerance = 25.0;
+#endif
+
   uint64_t start = cass::get_time_monotonic_ns();
-  sleep(1);
+  boost::this_thread::sleep_for(boost::chrono::seconds(1));
   uint64_t elapsed = cass::get_time_monotonic_ns() - start;
   BOOST_REQUIRE_CLOSE(static_cast<double>(elapsed),
                       static_cast<double>(NANOSECONDS_PER_SECOND),
-                      1.0); // 1% or +/- 10 milliseconds
+                      tolerance);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
