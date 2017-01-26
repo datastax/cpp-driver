@@ -14,50 +14,62 @@
   limitations under the License.
 */
 
-#include "get_time.hpp"
 
 #if defined(_WIN32)
+
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
 #endif
+
 #include <Windows.h>
-#elif defined(__APPLE__) && defined(__MACH__)
-#include <sys/time.h>
-#else
-#include <time.h>
-#endif
+
+#include "get_time.hpp"
 
 namespace cass {
 
-#if defined(_WIN32)
+// Information for using the query performance counter can be found here:
+// https://msdn.microsoft.com/en-us/library/dn553408(v=vs.85).aspx
 
-uint64_t get_time_since_epoch_ms() {
+class ClockInfo {
+public:
+  ClockInfo() {
+    LARGE_INTEGER frequency;
+    frequency_ = QueryPerformanceFrequency(&frequency) ? frequency.QuadPart : 0;
+  }
+
+  static uint64_t frequency() { return frequency_; }
+
+private:
+  static uint64_t frequency_;
+};
+
+uint64_t ClockInfo::frequency_;
+
+static ClockInfo __clock_info__; // Initializer
+
+uint64_t get_time_since_epoch_us() {
   _FILETIME ft;
   GetSystemTimeAsFileTime(&ft);
   uint64_t ns100 = (static_cast<uint64_t>(ft.dwHighDateTime) << 32 |
                     static_cast<uint64_t>(ft.dwLowDateTime)) -
                    116444736000000000LL; // 100 nanosecond increments between
                                          // Jan. 1, 1601 - Jan. 1, 1970
-  return ns100 / 10000;                  // 100 nanoseconds to milliseconds
+  return ns100 / 10;                     // 100 nanosecond increments to microseconds
 }
 
-#elif defined(__APPLE__) && defined(__MACH__)
+uint64_t get_time_monotonic_ns() {
+  if (ClockInfo::frequency() != 0) {
+    LARGE_INTEGER counter;
+    QueryPerformanceCounter(&counter);
 
-uint64_t get_time_since_epoch_ms() {
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  return static_cast<uint64_t>(tv.tv_sec)  * 1000 +
-         static_cast<uint64_t>(tv.tv_usec) / 1000;
+    counter.QuadPart *= NANOSECONDS_PER_SECOND;
+    return static_cast<uint64_t>(counter.QuadPart) / ClockInfo::frequency();
+  } else {
+    return get_time_since_epoch_us() * NANOSECONDS_PER_MICROSECOND;
+  }
 }
 
-#else
+} // namespace cass
 
-uint64_t get_time_since_epoch_ms() {
-  struct timespec ts;
-  clock_gettime(CLOCK_REALTIME, &ts);
-  return static_cast<uint64_t>(ts.tv_sec)  * 1000 +
-         static_cast<uint64_t>(ts.tv_nsec) / 1000000;
-}
+#endif // defined(_WIN32)
 
-#endif
-}

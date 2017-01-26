@@ -61,9 +61,14 @@ public:
 
 class MonotonicTimestampGenerator : public TimestampGenerator {
 public:
-  MonotonicTimestampGenerator()
+  MonotonicTimestampGenerator(int64_t warning_threshold_us = 1000000,
+                              int64_t warning_interval_ms = 1000)
     : TimestampGenerator(MONOTONIC)
-    , last_(0) { }
+    , last_(0)
+    , last_warning_(0)
+    , warning_threshold_us_(warning_threshold_us)
+    , warning_interval_ms_(warning_interval_ms < 0 ? 0
+                                                   : warning_interval_ms) { }
 
   virtual int64_t next();
 
@@ -71,6 +76,10 @@ private:
   int64_t compute_next(int64_t last);
 
   Atomic<int64_t> last_;
+  Atomic<int64_t> last_warning_;
+
+  const int64_t warning_threshold_us_;
+  const int64_t warning_interval_ms_;
 };
 
 } // namespace cass
