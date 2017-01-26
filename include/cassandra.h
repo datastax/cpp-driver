@@ -9480,7 +9480,7 @@ cass_timestamp_gen_server_side_new();
  * is corrected.
  *
  * By default, this timestamp generator will generate warnings if more than
- * 1 second of clock skew is detected. I will print an error every second until
+ * 1 second of clock skew is detected. It will print an error every second until
  * the clock skew is resolved. These settings can be changed by using
  * `cass_timestamp_gen_monotonic_new_with_settings()` to create the generator
  * instance.
@@ -9509,7 +9509,7 @@ cass_timestamp_gen_monotonic_new();
  * be used to disable warnings.
  * @param warning_interval_ms The amount of time, in milliseonds, to wait before
  * warning again about clock skew. An interval value less than or equal to 0 allows
- * the warning to be trigger every millisecond.
+ * the warning to be triggered every millisecond.
  * @return Returns a timestamp generator that must be freed.
  */
 CASS_EXPORT CassTimestampGen*

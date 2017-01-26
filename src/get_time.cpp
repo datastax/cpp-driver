@@ -77,7 +77,7 @@ uint64_t get_time_monotonic_ns() {
 
 #elif defined(__APPLE__) && defined(__MACH__)
 
-// Information on converting the absolute time to nanaoseconds can be found
+// Information on converting the absolute time to nanoseconds can be found
 // here: https://developer.apple.com/library/content/qa/qa1398/_index.html.
 
 class ClockInfo {
