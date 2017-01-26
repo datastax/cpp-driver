@@ -97,14 +97,14 @@ BOOST_AUTO_TEST_CASE(monotonic)
 
 BOOST_AUTO_TEST_CASE(monotonic_exceed_warning_threshold)  {
   // Set the threshold to something small that we're guaranteed to easily exceed.
-  run_monotonic_timestamp_gen(1, 1000, 100);
+  run_monotonic_timestamp_gen(1, 1000, 1000);
 }
 
 BOOST_AUTO_TEST_CASE(monotonic_warning_interval) {
   // Run for 1000 ms so that we give time for the generation rate to exceed the
   // warning threshold for a good amount of time.
-  int warn_count_100ms = run_monotonic_timestamp_gen(100 * MICROSECONDS_PER_MILLISECOND, 100, 1000);
-  int warn_count_1000ms = run_monotonic_timestamp_gen(100 * MICROSECONDS_PER_MILLISECOND, 1000, 1000);
+  int warn_count_100ms = run_monotonic_timestamp_gen(1, 100, 1000);
+  int warn_count_1000ms = run_monotonic_timestamp_gen(1, 1000, 1000);
 
   // The 100ms timestamp generator should have logged more times because
   // it had a shorter interval.
