@@ -31,7 +31,7 @@
 
 namespace cass {
 
-// This hash map uses a fixed buffer as long as it doesn't exceed N buckets.
+// This hash map uses a fixed buffer as long as it doesn't exceed N items.
 // This can help to avoid heap allocation in cases where the hash map remains
 // small and doesn't excceed the fixed buffer.
 

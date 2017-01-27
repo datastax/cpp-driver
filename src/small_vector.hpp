@@ -23,7 +23,7 @@
 
 namespace cass {
 
-// This vector uses a fixed buffer as long as it doesn't exceed N buckets.
+// This vector uses a fixed buffer as long as it doesn't exceed N items.
 // This can help to avoid heap allocation in cases where the vector remains
 // small and doesn't excceed the fixed buffer.
 
