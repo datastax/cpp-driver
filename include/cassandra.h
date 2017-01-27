@@ -68,10 +68,10 @@ typedef double cass_double_t;
 typedef __INT8_TYPE__ cass_int8_t;
 typedef __UINT8_TYPE__ cass_uint8_t;
 #elif defined(__INT8_TYPE__)
-typedef __INT8_TYPE__ cass_int8_t;
+typedef signed __INT8_TYPE__ cass_int8_t;
 typedef unsigned __INT8_TYPE__ cass_uint8_t;
 #else
-typedef char cass_int8_t;
+typedef signed char cass_int8_t;
 typedef unsigned char cass_uint8_t;
 #endif
 
