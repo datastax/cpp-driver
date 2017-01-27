@@ -214,7 +214,7 @@ UuidGen::UuidGen()
     }
 
     // Tack on the pid
-    cass_int32_t pid = get_pid();
+    int32_t pid = get_pid();
     md5.update(reinterpret_cast<const uint8_t*>(&pid), 4);
 
     uint8_t hash[16];
