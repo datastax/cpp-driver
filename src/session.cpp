@@ -579,6 +579,10 @@ void Session::on_control_connection_ready() {
        it != hosts_end; ++it) {
     on_add(it->second, true);
   }
+  if (pending_pool_count_ == 0) {
+    notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                         "No hosts available for connection using the current load balancy policy");
+  }
   if (config().core_connections_per_host() == 0) {
     // Special case for internal testing. Not allowed by API
     LOG_DEBUG("Session connected with no core IO connections");
