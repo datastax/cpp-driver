@@ -91,7 +91,7 @@ std::string& to_cql_id(std::string& str);
 
 std::string& escape_id(std::string& str);
 
-inline size_t num_leading_zeros(cass_int64_t value) {
+inline size_t num_leading_zeros(int64_t value) {
   if (value == 0)
     return 64;
 
@@ -121,13 +121,13 @@ inline size_t num_leading_zeros(cass_int64_t value) {
 #endif
 }
 
-inline size_t vint_size(cass_int64_t value) {
+inline size_t vint_size(int64_t value) {
   // | with 1 to ensure magnitude <= 63, so (63 - 1) / 7 <= 8
   size_t magnitude = num_leading_zeros(value | 1);
   return magnitude ? (9 - ((magnitude - 1) / 7)) : 9;
 }
 
-cass_int32_t get_pid();
+int32_t get_pid();
 
 } // namespace cass
 

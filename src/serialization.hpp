@@ -50,14 +50,14 @@ inline char* decode_byte(char* input, uint8_t& output) {
   return input + sizeof(uint8_t);
 }
 
-inline char* encode_int8(char* output, cass_int8_t value) {
+inline char* encode_int8(char* output, int8_t value) {
   output[0] = static_cast<char>(value);
-  return output + sizeof(cass_int8_t);
+  return output + sizeof(int8_t);
 }
 
-inline char* decode_int8(char* input, cass_int8_t& output) {
-  output = static_cast<cass_int8_t>(input[0]);
-  return input + sizeof(cass_int8_t);
+inline char* decode_int8(char* input, int8_t& output) {
+  output = static_cast<int8_t>(input[0]);
+  return input + sizeof(int8_t);
 }
 
 inline void encode_uint16(char* output, uint16_t value) {
@@ -112,8 +112,8 @@ inline char* decode_uint32(char* input, uint32_t& output) {
   return input + sizeof(uint32_t);
 }
 
-inline void encode_int64(char* output, cass_int64_t value) {
-  STATIC_ASSERT(sizeof(cass_int64_t) == 8);
+inline void encode_int64(char* output, int64_t value) {
+  STATIC_ASSERT(sizeof(int64_t) == 8);
   output[0] = static_cast<char>(value >> 56);
   output[1] = static_cast<char>(value >> 48);
   output[2] = static_cast<char>(value >> 40);
@@ -125,7 +125,7 @@ inline void encode_int64(char* output, cass_int64_t value) {
 }
 
 inline void encode_uint64(char* output, uint64_t value) {
-  STATIC_ASSERT(sizeof(cass_uint64_t) == 8);
+  STATIC_ASSERT(sizeof(uint64_t) == 8);
   output[0] = static_cast<char>(static_cast<uint8_t>(value >> 56));
   output[1] = static_cast<char>(static_cast<uint8_t>(value >> 48));
   output[2] = static_cast<char>(static_cast<uint8_t>(value >> 40));
@@ -136,17 +136,17 @@ inline void encode_uint64(char* output, uint64_t value) {
   output[7] = static_cast<char>(static_cast<uint8_t>(value >> 0));
 }
 
-inline char* decode_int64(char* input, cass_int64_t& output) {
-  STATIC_ASSERT(sizeof(cass_int64_t) == 8);
-  output = (static_cast<cass_int64_t>(static_cast<uint8_t>(input[7])) << 0) |
-           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[6])) << 8) |
-           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[5])) << 16) |
-           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[4])) << 24) |
-           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[3])) << 32) |
-           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[2])) << 40) |
-           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[1])) << 48) |
-           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[0])) << 56);
-  return input + sizeof(cass_int64_t);
+inline char* decode_int64(char* input, int64_t& output) {
+  STATIC_ASSERT(sizeof(int64_t) == 8);
+  output = (static_cast<int64_t>(static_cast<uint8_t>(input[7])) << 0) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[6])) << 8) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[5])) << 16) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[4])) << 24) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[3])) << 32) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[2])) << 40) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[1])) << 48) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[0])) << 56);
+  return input + sizeof(int64_t);
 }
 
 inline void encode_float(char* output, float value) {
@@ -169,7 +169,7 @@ inline void encode_double(char* output, double value) {
 
 inline char* decode_double(char* input, double& output) {
   STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
-  cass_int64_t int_value;
+  int64_t int_value;
   char* pos = decode_int64(input, int_value);
   output = copy_cast<int64_t, double>(int_value);
   return pos;
@@ -375,13 +375,13 @@ inline char* decode_size(int protocol_version, char* input, int32_t& size) {
   return pos;
 }
 
-inline cass_int64_t decode_zig_zag(cass_uint64_t n) {
+inline int64_t decode_zig_zag(uint64_t n) {
   // n is an unsigned long because we want a logical shift right
   // (it should 0-fill high order bits), not arithmetic shift right.
-  return (n >> 1) ^ -(n & 1);
+  return (n >> 1) ^ -static_cast<int64_t>(n & 1);
 }
 
-inline cass_uint64_t encode_zig_zag(cass_int64_t n) {
+inline uint64_t encode_zig_zag(int64_t n) {
   return (n << 1) ^ (n >> 63);
 }
 
