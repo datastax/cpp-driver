@@ -201,6 +201,21 @@ struct TestSSL {
   }
 
   /**
+   * "Crash" the cluster by sending the SIGHUP signal while executing a simple
+   * version query when applicable
+   *
+   * @param wait_s Wait time in seconds for each stage of the shutdown/restart
+   */
+  void crash_and_restart_cluster(unsigned int wait_s = 5) {
+    test_utils::get_version(session_);
+    ccm_->hang_up_cluster();
+    boost::this_thread::sleep_for(boost::chrono::seconds(wait_s));
+    ccm_->start_cluster();
+    boost::this_thread::sleep_for(boost::chrono::seconds(wait_s));
+    test_utils::get_version(session_);
+  }
+
+  /**
    * Test established connection with a normal load query
    */
   void test_normal_load() {
@@ -402,6 +417,29 @@ BOOST_AUTO_TEST_CASE(connect_failures) {
   BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, invalid_driver_private_key_.c_str(), INVALID_DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
   setup(true, true, true);
   teardown();
+}
+
+/**
+ * Driver reconnect when using SSL and node is terminated and restarted
+ *
+ * This test will ensure that one node is terminated (forced) and restarted and
+ * the driver will reconnect without throwing LIB errors.
+ *
+ * @since 2.6.0
+ * @jira_ticket CPP-408
+ * @test_category connection:ssl
+ * @test_category control_connection
+ * @expected_results Driver will reconnect without issues to a cluster using
+ *                   SSL that has crashed and brought back up
+ */
+BOOST_AUTO_TEST_CASE(reconnect_after_cluster_crash_and_restart) {
+  create_ssl_context();
+  cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(), cassandra_certificate_.size()), CASS_OK);
+  setup();
+  crash_and_restart_cluster();
+  teardown();
+  test_utils::CassLog::set_output_log_level(CASS_LOG_DISABLED);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
