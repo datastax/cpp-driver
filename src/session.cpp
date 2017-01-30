@@ -581,7 +581,7 @@ void Session::on_control_connection_ready() {
   }
   if (pending_pool_count_ == 0) {
     notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                         "No hosts available for connection using the current load balancy policy");
+                         "No hosts available for connection using the current load balancing policy");
   }
   if (config().core_connections_per_host() == 0) {
     // Special case for internal testing. Not allowed by API
@@ -681,7 +681,7 @@ void Session::on_down(Host::Ptr host) {
   }
 }
 
-Future::Ptr Session::execute(const Request::ConstPtr& request, 
+Future::Ptr Session::execute(const Request::ConstPtr& request,
                              const Address* preferred_address) {
   ResponseFuture::Ptr future(new ResponseFuture());
 
