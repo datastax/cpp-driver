@@ -696,6 +696,17 @@ bool CCM::Bridge::is_cluster_up() {
   return true;
 }
 
+bool CCM::Bridge::hang_up_cluster() {
+  // Create the cluster stop command and execute
+  std::vector<std::string> stop_command;
+  stop_command.push_back("stop");
+  stop_command.push_back("--hang-up");
+  execute_ccm_command(stop_command);
+
+  // Ensure the cluster is down
+  return is_cluster_down();
+}
+
 bool CCM::Bridge::kill_cluster() {
   return stop_cluster(true);
 }
@@ -957,6 +968,18 @@ void CCM::Bridge::execute_cql_on_node(unsigned int node, const std::string& cql)
   cqlsh_node_command.push_back("-x");
   cqlsh_node_command.push_back(execute_statement.str());
   execute_ccm_command(cqlsh_node_command);
+}
+
+bool CCM::Bridge::hang_up_node(unsigned int node) {
+  // Create the node stop command and execute
+  std::vector<std::string> stop_node_command;
+  stop_node_command.push_back(generate_node_name(node));
+  stop_node_command.push_back("stop");
+  stop_node_command.push_back("--hang-up");
+  execute_ccm_command(stop_node_command);
+
+  // Ensure the node is down
+  return is_node_down(node);
 }
 
 bool CCM::Bridge::kill_node(unsigned int node) {
