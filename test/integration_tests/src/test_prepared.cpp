@@ -281,7 +281,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
     all_types[2].time_sample = 12345678;
   }
   if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
-    all_types[2].duration_sample = CassDuration((1LL << 63) - 1, -1, 1LL << 63);
+    all_types[2].duration_sample = CassDuration(1, 2, 3);
   }
 
   for (size_t i = 0; i < all_types_count; ++i) {
