@@ -38,7 +38,7 @@ void cass_session_free(CassSession* session) {
   // hang indefinitely otherwise. This causes minimal delay
   // if the session is already closed.
   cass::SharedRefPtr<cass::Future> future(new cass::SessionFuture());
-  session->close_async(future, true);
+  session->close_async(future);
   future->wait();
 
   delete session->from();
@@ -175,6 +175,8 @@ void Session::clear(const Config& config) {
   request_queue_.reset();
   metadata_.clear();
   control_connection_.clear();
+  connect_error_code_ = CASS_OK;
+  connect_error_message_.clear();
   current_host_mark_ = true;
   pending_pool_count_ = 0;
   pending_workers_count_ = 0;
@@ -332,12 +334,11 @@ void Session::connect_async(const Config& config, const std::string& keyspace, c
   run();
 }
 
-void Session::close_async(const Future::Ptr& future, bool force) {
+void Session::close_async(const Future::Ptr& future) {
   ScopedMutex l(&state_mutex_);
 
   State state = state_.load(MEMORY_ORDER_RELAXED);
-  bool wait_for_connect_to_finish = (force && state == SESSION_STATE_CONNECTING);
-  if (state != SESSION_STATE_CONNECTED && !wait_for_connect_to_finish) {
+  if (state == SESSION_STATE_CLOSING || state == SESSION_STATE_CLOSED) {
     future->set_error(CASS_ERROR_LIB_UNABLE_TO_CLOSE,
                       "Already closing or closed");
     return;
@@ -346,9 +347,7 @@ void Session::close_async(const Future::Ptr& future, bool force) {
   state_.store(SESSION_STATE_CLOSING, MEMORY_ORDER_RELAXED);
   close_future_ = future;
 
-  if (!wait_for_connect_to_finish) {
-    internal_close();
-  }
+  internal_close();
 }
 
 void Session::internal_connect() {
@@ -370,25 +369,34 @@ void Session::internal_close() {
 
 void Session::notify_connected() {
   ScopedMutex l(&state_mutex_);
+
   if (state_.load(MEMORY_ORDER_RELAXED) == SESSION_STATE_CONNECTING) {
     state_.store(SESSION_STATE_CONNECTED, MEMORY_ORDER_RELAXED);
-  } else { // We recieved a 'force' close event
-    internal_close();
   }
-  connect_future_->set();
-  connect_future_.reset();
+  if (connect_future_) {
+    connect_future_->set();
+    connect_future_.reset();
+  }
 }
 
 void Session::notify_connect_error(CassError code, const std::string& message) {
+  ScopedMutex l(&state_mutex_);
+
+  State state = state_.load(MEMORY_ORDER_RELAXED);
+  if (state == SESSION_STATE_CLOSING || state == SESSION_STATE_CLOSED) {
+    return;
+  }
+
+  state_.store(SESSION_STATE_CLOSING, MEMORY_ORDER_RELAXED);
   connect_error_code_ = code;
   connect_error_message_ = message;
-  ScopedMutex l(&state_mutex_);
-  state_.store(SESSION_STATE_CLOSING, MEMORY_ORDER_RELAXED);
+
   internal_close();
 }
 
 void Session::notify_closed() {
   ScopedMutex l(&state_mutex_);
+
   state_.store(SESSION_STATE_CLOSED, MEMORY_ORDER_RELAXED);
   if (connect_future_) {
     connect_future_->set_error(connect_error_code_, connect_error_message_);
