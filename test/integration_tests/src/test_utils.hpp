@@ -1165,7 +1165,7 @@ struct Value<CassDuration> {
  *       current test skip implementation in batch and serial_consistency.
  */
 /** The following class cannot be used as a kernel of test fixture because of
-    parametrized ctor. Derive from it to use it in your tests.
+    parameterized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
   MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
