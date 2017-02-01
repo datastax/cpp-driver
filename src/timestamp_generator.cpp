@@ -61,13 +61,13 @@ int64_t MonotonicTimestampGenerator::next() {
   }
 }
 
-// This is guaranteed to return a monotonic timestamp. If clock skew is deteced
+// This is guaranteed to return a monotonic timestamp. If clock skew is detected
 // then this method will increment the last timestamp.
 int64_t MonotonicTimestampGenerator::compute_next(int64_t last) {
   int64_t current = get_time_since_epoch_us();
 
   if (last >= current) { // There's clock skew
-    // If we exceed our warning threshhold then warn periodically that clock
+    // If we exceed our warning threshold then warn periodically that clock
     // skew has been detected.
     if (warning_threshold_us_ >= 0 && last > current + warning_threshold_us_) {
       // Using a monotonic clock to prevent the effects of clock skew from properly
@@ -79,7 +79,7 @@ int64_t MonotonicTimestampGenerator::compute_next(int64_t last) {
         LOG_WARN("Clock skew detected. The current time (%lld) was %lld "
                  "microseconds behind the last generated timestamp (%lld). "
                  "The next generated timestamp will be artificially incremented "
-                 "to guarantee montonicity.",
+                 "to guarantee monotonicity.",
                  static_cast<long long>(current),
                  static_cast<long long>(last - current),
                  static_cast<long long>(last));
