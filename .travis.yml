@@ -13,11 +13,11 @@ cache:
     - ${HOME}/dependencies
 env:
   global:
-    - BOOST_VERSION=1.59.0
-    - BOOST_FILE_VERSION=1_59_0
+    - BOOST_VERSION=1.63.0
+    - BOOST_FILE_VERSION=1_63_0
   matrix:
     - LIBUV_VERSION=0.10.x EXACT_LIBUV_VERSION=0.10.37
-    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.8.0
+    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.11.0
 install:
   - if [ ! -d "${HOME}/dependencies/libuv-${LIBUV_VERSION}" ]; then
       wget -q http://dist.libuv.org/dist/v${EXACT_LIBUV_VERSION}/libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
