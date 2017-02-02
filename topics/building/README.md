@@ -45,9 +45,9 @@ sudo yum -y install epel-release
 ```bash
 sudo yum install automake cmake gcc-c++ git libtool openssl-devel wget
 pushd /tmp
-wget http://dist.libuv.org/dist/v1.8.0/libuv-v1.8.0.tar.gz
-tar xzf libuv-v1.8.0.tar.gz
-pushd libuv-v1.8.0
+wget http://dist.libuv.org/dist/v1.11.0/libuv-v1.11.0.tar.gz
+tar xzf libuv-v1.11.0.tar.gz
+pushd libuv-v1.11.0
 sh autogen.sh
 ./configure
 sudo make install
@@ -122,9 +122,9 @@ proceeding.
 ```bash
 sudo yum install libssh2-devel
 pushd /tmp
-wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz/download -O boost_1_59_0.tar.gz
-tar xzf boost_1_59_0.tar.gz
-pushd boost_1_59_0
+wget http://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz/download -O boost_1_63_0.tar.gz
+tar xzf boost_1_63_0.tar.gz
+pushd boost_1_63_0
 ./bootstrap.sh --with-libraries=atomic,chrono,system,thread,test
 sudo ./b2 cxxflags="-fPIC" install
 popd
@@ -147,9 +147,9 @@ these can be easily installed from source.
 ```bash
 sudo apt-get install libssh2-1-dev
 pushd /tmp
-wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz/download -O boost_1_59_0.tar.gz
-tar xzf boost_1_59_0.tar.gz
-pushd boost_1_59_0
+wget http://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz/download -O boost_1_63_0.tar.gz
+tar xzf boost_1_63_0.tar.gz
+pushd boost_1_63_0
 ./bootstrap.sh --with-libraries=atomic,chrono,system,thread,test
 sudo ./b2 install
 popd
@@ -296,25 +296,25 @@ Boost v1.59+ is the only external dependency that will need to be obtained in
 order to build the unit and integration tests.
 
 To simplify the process; pre-built binaries can be obtained
-[here](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/).
+[here](http://sourceforge.net/projects/boost/files/boost-binaries/1.63.0/).
 Ensure the proper Visual Studio (or Windows SDK) version and architecture is
 obtained and select from the following list:
 
 - Visual Studio 2010 (Windows SDK 7.1)
- - Boost v1.59 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-10.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-10.0-64.exe/download)
+ - Boost v1.63.0 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.63.0/boost_1_63_0-msvc-10.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.63.0/boost_1_63_0-msvc-10.0-64.exe/download)
 - Visual Studio 2012 (Windows SDK 8.0)
- - Boost v1.59 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-11.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-11.0-64.exe/download)
+ - Boost v1.63.0 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.63.0/boost_1_63_0-msvc-11.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.63.0/boost_1_63_0-msvc-11.0-64.exe/download)
 - Visual Studio 2013 (Windows SDK 8.1)
- - Boost v1.59 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-12.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-12.0-64.exe/download)
+ - Boost v1.63.0 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.63.0/boost_1_63_0-msvc-12.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.63.0/boost_1_63_0-msvc-12.0-64.exe/download)
 - Visual Studio 2015 (Windows SDK 10.0)
- - Boost v1.59 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-14.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-14.0-64.exe/download)
+ - Boost v1.63.0 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.63.0/boost_1_63_0-msvc-14.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.63.0/boost_1_63_0-msvc-14.0-64.exe/download)
 
 #### Building the Driver with the Tests
 
 ```dos
 VC_BUILD.BAT --STATIC --ENABLE-TESTS <ABSOLUTE-PATH-TO-BOOST>
 
-[e.g. C:\local\boost_1_59_0]
+[e.g. C:\local\boost_1_63_0]
 ```
  **NOTE:** When enabling tests, --USE-BOOST-ATOMIC will use the Boost atomic
  implementation supplied by <ABSOLUTE-PATH-TO-BOOST>
