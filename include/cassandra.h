@@ -47,13 +47,13 @@
  * @file include/cassandra.h
  *
  * C/C++ driver for Apache Cassandra. Uses the Cassandra Query Language versions 3
- * over the Cassandra Binary Protocol (versions 1 or 2).
+ * over the Cassandra Binary Protocol (versions 1, 2, or 3).
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 5
+#define CASS_VERSION_MINOR 6
 #define CASS_VERSION_PATCH 0
-#define CASS_VERSION_SUFFIX ""
+#define CASS_VERSION_SUFFIX "dev"
 
 #ifdef __cplusplus
 extern "C" {
