@@ -170,13 +170,11 @@ int main(int argc, char* argv[]) {
 
   insert_into(session, "base", 0, 0, 0);
   insert_into(session, "simple", 1, 2, 3);
-  insert_into(session, "edge", (1LL << 63) - 1, 0xffffffffffffffff, 1LL << 63);
+  insert_into(session, "negative", -1, -2, -3);
+
   select_from(session, "base");
   select_from(session, "simple");
-
-  // This case should print out
-  // months: 9223372036854775807  days: -1  nanos: -9223372036854775808
-  select_from(session, "edge");
+  select_from(session, "negative");
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);

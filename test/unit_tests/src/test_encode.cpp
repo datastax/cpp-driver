@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(base)
   BOOST_CHECK_EQUAL(result_data[2], 0);
 }
 
-BOOST_AUTO_TEST_CASE(simple)
+BOOST_AUTO_TEST_CASE(simple_positive)
 {
   CassDuration value(1, 2, 3);
   Buffer result = encode(value);
@@ -49,11 +49,22 @@ BOOST_AUTO_TEST_CASE(simple)
   BOOST_CHECK_EQUAL(result_data[2], 6);
 }
 
-BOOST_AUTO_TEST_CASE(edge)
+BOOST_AUTO_TEST_CASE(simple_negative)
 {
-  CassDuration value((1ULL << 63) - 1, -1, 1LL << 63);
+  CassDuration value(-1, -2, -3);
   Buffer result = encode(value);
-  BOOST_CHECK_EQUAL(19, result.size());
+  BOOST_CHECK_EQUAL(3, result.size());
+  const char* result_data = result.data();
+  BOOST_CHECK_EQUAL(result_data[0], 1);
+  BOOST_CHECK_EQUAL(result_data[1], 3);
+  BOOST_CHECK_EQUAL(result_data[2], 5);
+}
+
+BOOST_AUTO_TEST_CASE(edge_positive)
+{
+  CassDuration value((1ULL << 63) - 1, (1ULL << 63) - 1, (1ULL << 63) - 1);
+  Buffer result = encode(value);
+  BOOST_CHECK_EQUAL(27, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
 
   // The first 9 bytes represent (1LL<<63 - 1), the max 64-bit number. Byte 0
@@ -68,13 +79,31 @@ BOOST_AUTO_TEST_CASE(edge)
   }
   BOOST_CHECK_EQUAL(result_data[8], 0xfe);
 
-  // Next we have a 1-byte vint for -1.
-  BOOST_CHECK_EQUAL(result_data[9], 1);
+  // The same interpretation applies to "days" and "nanos".
+  for (int ind = 9; ind < 17; ++ind) {
+    BOOST_CHECK_EQUAL(result_data[ind], 0xff);
+  }
+  BOOST_CHECK_EQUAL(result_data[17], 0xfe);
 
-  // Finally, we have 9-bytes for 1LL << 63, the min 64-bit number. The zigzag
+  for (int ind = 18; ind < 26; ++ind) {
+    BOOST_CHECK_EQUAL(result_data[ind], 0xff);
+  }
+  BOOST_CHECK_EQUAL(result_data[26], 0xfe);
+}
+
+BOOST_AUTO_TEST_CASE(edge_negative)
+{
+  CassDuration value(1LL << 63, 1LL << 63, 1LL << 63);
+  Buffer result = encode(value);
+  BOOST_CHECK_EQUAL(27, result.size());
+  unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
+
+  // We have 9-bytes for 1LL << 63, the min 64-bit number. The zigzag
   // representation is 8 bytes of 0xff, and the first byte is 0xff to say we have
   // 8 bytes of value beyond these size-spec-bits.
-  for (int ind = 10; ind < 19; ++ind) {
+  //
+  // The same is true for "days" and "nanos".
+  for (int ind = 0; ind < 27; ++ind) {
     BOOST_CHECK_EQUAL(result_data[ind], 0xff);
   }
 }
