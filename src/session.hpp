@@ -99,7 +99,7 @@ public:
   bool notify_down_async(const Address& address);
 
   void connect_async(const Config& config, const std::string& keyspace, const Future::Ptr& future);
-  void close_async(const Future::Ptr& future, bool force = false);
+  void close_async(const Future::Ptr& future);
 
   Future::Ptr prepare(const char* statement, size_t length);
   Future::Ptr execute(const Request::ConstPtr& request,
