@@ -1883,4 +1883,33 @@ BOOST_AUTO_TEST_CASE(integer_type_varint_mapping) {
   }
 }
 
+/**
+ * Ensure custom types with single quotes are parsed properly.
+ *
+ * @since 2.6.0
+ * @jira_ticket CPP-431
+ * @test_category schema
+ * @cassandra_version 2.1.x
+ */
+BOOST_AUTO_TEST_CASE(single_quote_custom_type) {
+  if (version < "2.1.0") return;
+
+  test_utils::execute_query(session, "CREATE KEYSPACE single_quote_custom_type WITH replication = "
+                                     "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+  test_utils::execute_query(session, "CREATE TABLE single_quote_custom_type.table1 (key1 TEXT PRIMARY KEY, value1 'org.apache.cassandra.db.marshal.LexicalUUIDType')");
+
+  refresh_schema_meta();
+
+  {
+    const CassColumnMeta* col_meta = schema_get_column("single_quote_custom_type", "table1", "value1");
+    const CassDataType* data_type = cass_column_meta_data_type(col_meta);
+    BOOST_REQUIRE(data_type != NULL);
+    const CassValueType value_type = cass_data_type_type(data_type);
+    BOOST_CHECK_EQUAL(value_type, CASS_VALUE_TYPE_CUSTOM);
+    CassString class_name;
+    cass_data_type_class_name(data_type, &class_name.data, &class_name.length);
+    BOOST_CHECK_EQUAL(class_name, "org.apache.cassandra.db.marshal.LexicalUUIDType");
+  }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
