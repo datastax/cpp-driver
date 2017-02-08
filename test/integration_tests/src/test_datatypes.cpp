@@ -183,4 +183,50 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
   }
 }
 
+/**
+ * Ensure that a server error occurs with invalid duration values (mixed)
+ *
+ * This test will ensure that when using mixed positive and negative values on
+ * a duration data type, the server will return an error during statement
+ * execution.
+ *
+ * @jira_ticket CPP-429
+ * @since 2.6.0
+ * @test_category data_types::duration
+ * @expected_result Driver will handle the server error on statement execution
+ */
+BOOST_AUTO_TEST_CASE(duration_mixed_values_server_error)
+{
+  CCM::CassVersion version = test_utils::get_version();
+  if ((version.major_version >= 3 && version.minor_version >= 10)
+    || version.major_version >= 4) {
+    // Create the table for the test
+    std::string table_name = "duration_server_error";
+    std::string create_table = "CREATE TABLE " + table_name
+      + "(key text PRIMARY KEY, value duration)";
+    test_utils::execute_query(session, create_table.c_str());
+
+    // Bind, validate, and insert the value into the server
+    std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(? , ?)";
+    test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
+    CassDuration value = CassDuration(0, -1, 1);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_string(statement.get(), 0, "simple"), CASS_OK);
+    BOOST_REQUIRE_EQUAL(test_utils::Value<CassDuration>::bind(statement.get(), 1, value), CASS_OK);
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+    CassError error_code = test_utils::wait_and_return_error(future.get());
+
+    // Validate the server error and message
+    BOOST_REQUIRE_EQUAL(CASS_ERROR_SERVER_INVALID_QUERY, error_code);
+    CassString message;
+    cass_future_error_message(future.get(), &message.data, &message.length);
+    std::string expected = "The duration months, days and nanoseconds must be all of the same sign";
+    BOOST_REQUIRE(std::string(message.data, message.length).find(expected) != std::string::npos);
+
+  } else {
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string()
+      << ": Skipping datatypes/duration_mixed_values_server_error" << std::endl;
+    BOOST_REQUIRE(true);
+  }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
