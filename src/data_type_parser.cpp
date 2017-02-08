@@ -73,14 +73,13 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
   Parser::TypeParamsVec params;
 
   parser.parse_type_name(&type_name);
-  std::transform(type_name.begin(), type_name.end(), type_name.begin(), tolower);
 
   DataType::ConstPtr simple_type(cache.by_cql(type_name));
   if (simple_type) {
     return simple_type;
   }
 
-  if (type_name == "list") {
+  if (iequals(type_name, "list")) {
     parser.parse_type_parameters(&params);
     if (params.size() != 1) {
       LOG_ERROR("Expecting single parameter for list %s", type.c_str());
@@ -90,7 +89,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
     return CollectionType::list(element_type, is_frozen);
   }
 
-  if (type_name == "set") {
+  if (iequals(type_name, "set")) {
     parser.parse_type_parameters(&params);
     if (params.size() != 1) {
       LOG_ERROR("Expecting single parameter for set %s", type.c_str());
@@ -100,7 +99,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
     return CollectionType::set(element_type, is_frozen);
   }
 
-  if (type_name == "map") {
+  if (iequals(type_name, "map")) {
     parser.parse_type_parameters(&params);
     if (params.size() != 2) {
       LOG_ERROR("Expecting two parameters for set %s", type.c_str());
@@ -111,7 +110,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
     return CollectionType::map(key_type, value_type, is_frozen);
   }
 
-  if (type_name == "tuple") {
+  if (iequals(type_name, "tuple")) {
     parser.parse_type_parameters(&params);
     if (params.empty()) {
       LOG_ERROR("Expecting at least a one parameter for tuple %s", type.c_str());
@@ -126,7 +125,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
     return DataType::ConstPtr(new TupleType(types, is_frozen));
   }
 
-  if (type_name == "frozen") {
+  if (iequals(type_name, "frozen")) {
     parser.parse_type_parameters(&params);
     if (params.size() != 1) {
       LOG_ERROR("Expecting single parameter for frozen keyword %s", type.c_str());
@@ -135,12 +134,17 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
     return parse(params[0], cache, keyspace, true);
   }
 
-  if (type_name == "empty") {
-    return DataType::ConstPtr(new CustomType(type_name));
-  }
-
   if (type_name.empty()) {
     return DataType::NIL;
+  }
+
+  if (iequals(type_name, "empty")) {
+    return DataType::ConstPtr(new CustomType("org.apache.cassandra.db.marshal.EmptyType"));
+  }
+
+  if (type_name[0] == '\'') {
+    // Remove single quotes
+    return DataType::ConstPtr(new CustomType(type_name.substr(1, type_name.size() - 2)));
   }
 
   UserType::ConstPtr user_type(keyspace->get_or_create_user_type(type_name, is_frozen));
@@ -204,6 +208,9 @@ void DataTypeCqlNameParser::Parser::read_next_identifier(std::string* name) {
         }
       }
     }
+  } else if (str_[start_index] == '\'') {
+    ++index_;
+    while (!is_eos() && str_[index_++] != '\'') { }
   } else {
     while (!is_eos() && (is_identifier_char(str_[index_]) || str_[index_] == '"')) {
       ++index_;
