@@ -427,6 +427,7 @@ public:
         hdr_histogram* from = histograms_[inactive_index];
         phaser_.flip_phase();
         hdr_add(to, from);
+        hdr_reset(from);
       }
 
     private:
