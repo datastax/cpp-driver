@@ -55,7 +55,7 @@ TEST_TYPE(inet, CassInet)
 
 BOOST_AUTO_TEST_CASE(bad_duration)
 {
-  cass_int64_t months, days, nanos;
+  cass_int32_t months, days, nanos;
   BOOST_CHECK_EQUAL(cass_value_get_duration(s_text_value, &months, &days, &nanos), CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 }
 

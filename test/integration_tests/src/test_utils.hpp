@@ -88,11 +88,11 @@ struct CassDuration {
     : months(0)
     , days(0)
     , nanos(0) {}
-  CassDuration(cass_int64_t months, cass_int64_t days, cass_int64_t nanos)
+  CassDuration(cass_int32_t months, cass_int32_t days, cass_int32_t nanos)
     : months(months), days(days), nanos(nanos) {}
-  cass_int64_t months;
-  cass_int64_t days;
-  cass_int64_t nanos;
+  cass_int32_t months;
+  cass_int32_t days;
+  cass_int32_t nanos;
 };
 
 struct CassDate {

@@ -74,7 +74,7 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-CassError insert_into(CassSession* session, const char* key, cass_int64_t months, cass_int64_t days, cass_int64_t nanos) {
+CassError insert_into(CassSession* session, const char* key, cass_int32_t months, cass_int32_t days, cass_int32_t nanos) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
@@ -123,11 +123,11 @@ CassError select_from(CassSession* session, const char* key) {
     CassIterator* iterator = cass_iterator_from_result(result);
 
     if (cass_iterator_next(iterator)) {
-      cass_int64_t months, days, nanos;
+      cass_int32_t months, days, nanos;
       const CassRow* row = cass_iterator_get_row(iterator);
 
       cass_value_get_duration(cass_row_get_column(row, 0), &months, &days, &nanos);
-      printf("months: %lld  days: %lld  nanos: %lld\n", months, days, nanos);
+      printf("months: %d  days: %d  nanos: %d\n", months, days, nanos);
     }
 
     cass_result_free(result);

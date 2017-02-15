@@ -179,9 +179,9 @@ static const cass_byte_t* decode_vint(const cass_byte_t* input, const cass_byte_
   return input;
 }
 
-CassError cass_value_get_duration(const CassValue* value, cass_int64_t* months, cass_int64_t* days, cass_int64_t* nanos)
+CassError cass_value_get_duration(const CassValue* value, cass_int32_t* months, cass_int32_t* days, cass_int32_t* nanos)
 {
-  cass_int64_t *outs[3];
+  cass_int32_t *outs[3];
   int ctr;
   size_t data_size = 0;
   const cass_byte_t* cur_byte = NULL;
@@ -199,10 +199,11 @@ CassError cass_value_get_duration(const CassValue* value, cass_int64_t* months, 
   end = cur_byte + data_size;
 
   for (ctr = 0; ctr < 3 && cur_byte != end; ++ctr) {
-    cur_byte = decode_vint(cur_byte, end, outs[ctr]);
+    cass_int64_t decoded = 0;
+    cur_byte = decode_vint(cur_byte, end, &decoded);
     if (cur_byte == NULL)
       return CASS_ERROR_LIB_BAD_PARAMS;
-    *outs[ctr] = cass::decode_zig_zag(*outs[ctr]);
+    *outs[ctr] = (cass_int32_t) cass::decode_zig_zag(decoded);
   }
 
   if (ctr < 3) {
