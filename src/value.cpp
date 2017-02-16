@@ -203,7 +203,7 @@ CassError cass_value_get_duration(const CassValue* value, cass_int32_t* months, 
     cur_byte = decode_vint(cur_byte, end, &decoded);
     if (cur_byte == NULL)
       return CASS_ERROR_LIB_BAD_PARAMS;
-    *outs[ctr] = (cass_int32_t) cass::decode_zig_zag(decoded);
+    *outs[ctr] = static_cast<cass_int32_t>(cass::decode_zig_zag(decoded));
   }
 
   if (ctr < 3) {
