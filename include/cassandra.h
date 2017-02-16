@@ -4958,9 +4958,9 @@ cass_statement_bind_decimal_by_name_n(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_duration(CassStatement* statement,
                              size_t index,
-                             cass_int64_t months,
-                             cass_int64_t days,
-                             cass_int64_t nanos);
+                             cass_int32_t months,
+                             cass_int32_t days,
+                             cass_int32_t nanos);
 
 /**
  * Binds a "duration" to all the values with the specified name.
@@ -4979,9 +4979,9 @@ cass_statement_bind_duration(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_duration_by_name(CassStatement* statement,
                                      const char* name,
-                                     cass_int64_t months,
-                                     cass_int64_t days,
-                                     cass_int64_t nanos);
+                                     cass_int32_t months,
+                                     cass_int32_t days,
+                                     cass_int32_t nanos);
 
 /**
  * Same as cass_statement_bind_duration_by_name(), but with lengths for string
@@ -5005,9 +5005,9 @@ CASS_EXPORT CassError
 cass_statement_bind_duration_by_name_n(CassStatement* statement,
                                        const char* name,
                                        size_t name_length,
-                                       cass_int64_t months,
-                                       cass_int64_t days,
-                                       cass_int64_t nanos);
+                                       cass_int32_t months,
+                                       cass_int32_t days,
+                                       cass_int32_t nanos);
 
 /**
  * Bind a "list", "map" or "set" to a query or bound statement at the
@@ -6178,9 +6178,9 @@ cass_collection_append_decimal(CassCollection* collection,
  */
 CASS_EXPORT CassError
 cass_collection_append_duration(CassCollection* collection,
-                                cass_int64_t months,
-                                cass_int64_t days,
-                                cass_int64_t nanos);
+                                cass_int32_t months,
+                                cass_int32_t days,
+                                cass_int32_t nanos);
 
 /**
  * Appends a "list", "map" or "set" to the collection.
@@ -6615,9 +6615,9 @@ cass_tuple_set_decimal(CassTuple* tuple,
 CASS_EXPORT CassError
 cass_tuple_set_duration(CassTuple* tuple,
                         size_t index,
-                        cass_int64_t months,
-                        cass_int64_t days,
-                        cass_int64_t nanos);
+                        cass_int32_t months,
+                        cass_int32_t days,
+                        cass_int32_t nanos);
 
 /**
  * Sets a "list", "map" or "set" in a tuple at the specified index.
@@ -7648,9 +7648,9 @@ cass_user_type_set_decimal_by_name_n(CassUserType* user_type,
 CASS_EXPORT CassError
 cass_user_type_set_duration(CassUserType* user_type,
                             size_t index,
-                            cass_int64_t months,
-                            cass_int64_t days,
-                            cass_int64_t nanos);
+                            cass_int32_t months,
+                            cass_int32_t days,
+                            cass_int32_t nanos);
 
 /**
  * Sets "duration" in a user defined type at the specified name.
@@ -7669,9 +7669,9 @@ cass_user_type_set_duration(CassUserType* user_type,
 CASS_EXPORT CassError
 cass_user_type_set_duration_by_name(CassUserType* user_type,
                                     const char* name,
-                                    cass_int64_t months,
-                                    cass_int64_t days,
-                                    cass_int64_t nanos);
+                                    cass_int32_t months,
+                                    cass_int32_t days,
+                                    cass_int32_t nanos);
 
 /**
  * Same as cass_user_type_set_duration_by_name(), but with lengths for string
@@ -7695,9 +7695,9 @@ CASS_EXPORT CassError
 cass_user_type_set_duration_by_name_n(CassUserType* user_type,
                                       const char* name,
                                       size_t name_length,
-                                      cass_int64_t months,
-                                      cass_int64_t days,
-                                      cass_int64_t nanos);
+                                      cass_int32_t months,
+                                      cass_int32_t days,
+                                      cass_int32_t nanos);
 
 /**
  * Sets a "list", "map" or "set" in a user defined type at the
@@ -9187,9 +9187,9 @@ cass_value_get_decimal(const CassValue* value,
  */
 CASS_EXPORT CassError
 cass_value_get_duration(const CassValue* value,
-                        cass_int64_t* months,
-                        cass_int64_t* days,
-                        cass_int64_t* nanos);
+                        cass_int32_t* months,
+                        cass_int32_t* days,
+                        cass_int32_t* nanos);
 
 /**
  * Gets the type of the specified value.

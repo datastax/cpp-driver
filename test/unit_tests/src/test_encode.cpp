@@ -62,48 +62,62 @@ BOOST_AUTO_TEST_CASE(simple_negative)
 
 BOOST_AUTO_TEST_CASE(edge_positive)
 {
-  CassDuration value((1ULL << 63) - 1, (1ULL << 63) - 1, (1ULL << 63) - 1);
+  CassDuration value((1UL << 31) - 1, (1UL << 31) - 1, (1UL << 31) - 1);
   Buffer result = encode(value);
-  BOOST_CHECK_EQUAL(27, result.size());
+  BOOST_CHECK_EQUAL(15, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
 
-  // The first 9 bytes represent (1LL<<63 - 1), the max 64-bit number. Byte 0
-  // has all bits set to indicate that there are 8 bytes beyond this one that
+  // The first 5 bytes represent (1UL<<31 - 1), the max 32-bit number. Byte 0
+  // has the first 4 bits set to indicate that there are 4 bytes beyond this one that
   // define this field (each field is a vint of a zigzag encoding of the original
-  // value). Encoding places the least-significant byte at byte 8 and works backwards
+  // value). Encoding places the least-significant byte at byte 4 and works backwards
   // to record more significant bytes. Zigzag encoding just left shifts a value
-  // by one bit for positive values, so byte 8 ends in a 0.
+  // by one bit for positive values, so byte 4 ends in a 0.
 
-  for (int ind = 0; ind < 8; ++ind) {
+  BOOST_CHECK_EQUAL(result_data[0], 0xf0);
+  for (int ind = 1; ind < 4; ++ind) {
     BOOST_CHECK_EQUAL(result_data[ind], 0xff);
   }
-  BOOST_CHECK_EQUAL(result_data[8], 0xfe);
+  BOOST_CHECK_EQUAL(result_data[4], 0xfe);
 
   // The same interpretation applies to "days" and "nanos".
-  for (int ind = 9; ind < 17; ++ind) {
+  BOOST_CHECK_EQUAL(result_data[5], 0xf0);
+  for (int ind = 6; ind < 9; ++ind) {
     BOOST_CHECK_EQUAL(result_data[ind], 0xff);
   }
-  BOOST_CHECK_EQUAL(result_data[17], 0xfe);
+  BOOST_CHECK_EQUAL(result_data[9], 0xfe);
 
-  for (int ind = 18; ind < 26; ++ind) {
+  BOOST_CHECK_EQUAL(result_data[10], 0xf0);
+  for (int ind = 11; ind < 14; ++ind) {
     BOOST_CHECK_EQUAL(result_data[ind], 0xff);
   }
-  BOOST_CHECK_EQUAL(result_data[26], 0xfe);
+  BOOST_CHECK_EQUAL(result_data[14], 0xfe);
 }
 
 BOOST_AUTO_TEST_CASE(edge_negative)
 {
-  CassDuration value(1LL << 63, 1LL << 63, 1LL << 63);
+  CassDuration value(1L << 31, 1L << 31, 1L << 31);
   Buffer result = encode(value);
-  BOOST_CHECK_EQUAL(27, result.size());
+  BOOST_CHECK_EQUAL(15, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
 
-  // We have 9-bytes for 1LL << 63, the min 64-bit number. The zigzag
-  // representation is 8 bytes of 0xff, and the first byte is 0xff to say we have
-  // 8 bytes of value beyond these size-spec-bits.
-  //
+  // We have 5-bytes for 1L << 31, the min 32-bit number. The zigzag
+  // representation is 4 bytes of 0xff, and the first byte is 0xf0 to say we have
+  // 4 bytes of value beyond these size-spec-bits.
+
+  BOOST_CHECK_EQUAL(result_data[0], 0xf0);
+  for (int ind = 1; ind <= 4; ++ind) {
+    BOOST_CHECK_EQUAL(result_data[ind], 0xff);
+  }
+
   // The same is true for "days" and "nanos".
-  for (int ind = 0; ind < 27; ++ind) {
+  BOOST_CHECK_EQUAL(result_data[5], 0xf0);
+  for (int ind = 6; ind <= 9; ++ind) {
+    BOOST_CHECK_EQUAL(result_data[ind], 0xff);
+  }
+
+  BOOST_CHECK_EQUAL(result_data[10], 0xf0);
+  for (int ind = 11; ind <= 14; ++ind) {
     BOOST_CHECK_EQUAL(result_data[ind], 0xff);
   }
 }
