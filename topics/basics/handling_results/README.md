@@ -130,7 +130,7 @@ cass_bool_t has_more_pages = cass_true;
 while (has_more_pages) {
   CassFuture* query_future = cass_session_execute(session, statement);
 
-  const CassResult* result = cass_future_get_result(future);
+  const CassResult* result = cass_future_get_result(query_future);
 
   if (result == NULL) {
      /* Handle error */
