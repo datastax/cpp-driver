@@ -14,8 +14,9 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
-## What's New in 2.5
+## What's New in 2.5/2.6
 
+- Support for [`duration`]
 - [Speculative execution]
 - [Idempotent statements]
 - [SSL] can be enabled without re-initializing the underlying library (e.g. OpenSSL)
@@ -214,3 +215,4 @@ limitations under the License.
 [Reverse DNS]: http://datastax.github.io/cpp-driver/topics/security/ssl/#enabling-cassandra-identity-verification
 [Speculative execution]: http://datastax.github.io/cpp-driver/topics/configuration/#speculative-execution
 [Idempotent statements]: http://datastax.github.io/cpp-driver/topics/configuration/#query-idempotence
+[`duration`]: https://github.com/datastax/cpp-driver/tree/2.6.0/examples/duration/duration.c
