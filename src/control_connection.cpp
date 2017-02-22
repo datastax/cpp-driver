@@ -1019,7 +1019,7 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
 
   request->set(0, CassString(keyspace_name.data(), keyspace_name.size()));
   request->set(1, CassString(function_name.data(), function_name.size()));
-  request->set(2, signature);
+  request->set(2, signature.get());
 
   if (!connection_->write(
         RequestCallback::Ptr(
