@@ -1,0 +1,254 @@
+version: 2.x.{build}-{branch}
+branches:
+  except:
+    - gh-pages
+skip_tags: true
+shallow_clone: true
+cache:
+  - C:\projects\dependencies\libs -> appveyor.yml
+os: Visual Studio 2015
+platform:
+  - x86
+  - x64
+configuration:
+#  - Debug
+  - Release
+environment:
+  BOOST_FILENAME_VERSION: 1_63_0
+  BOOST_VERSION: 1.63.0
+  LIBSSH2_VERSION: 1.8.0
+  LIBUV_VERSION: 1.11.0
+  OPENSSL_VERSION: 1.0.2k
+  DOWNLOADS_URL_PREFIX: http://downloads.datastax.com/cpp-driver/windows/dependencies
+  TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX: https://raw.githubusercontent.com/mikefero/cpp-driver-msvc-libs/master
+  DEPENDENCIES_LOCATION_PREFIX: C:/projects/dependencies/libs
+  CONFIGURATION_COMPLETE: False
+  matrix:
+    - CMAKE_GENERATOR: Visual Studio 14 2015
+      VISUAL_STUDIO_INTERNAL_VERSION: 140
+      VISUAL_STUDIO_VERSION: 14.0
+    - CMAKE_GENERATOR: Visual Studio 12 2013
+      VISUAL_STUDIO_INTERNAL_VERSION: 120
+      VISUAL_STUDIO_VERSION: 12.0
+    - CMAKE_GENERATOR: Visual Studio 11 2012
+      VISUAL_STUDIO_INTERNAL_VERSION: 110
+      VISUAL_STUDIO_VERSION: 11.0
+    - CMAKE_GENERATOR: Visual Studio 10 2010
+      VISUAL_STUDIO_INTERNAL_VERSION: 100
+      VISUAL_STUDIO_VERSION: 10.0
+
+init:
+  - ps: |
+      # Determine the platform and create associate environment variables
+      If ($env:Platform -Match "x86") {
+        $env:ARCHITECTURE="32"
+      } Else {
+        $env:ARCHITECTURE="64"
+        $env:CMAKE_GENERATOR_SUFFIX=" Win64"
+      }
+      $env:LIB_ARCHITECTURE="lib$($env:ARCHITECTURE)"
+      $env:WINDOWS_ARCHITECTURE="win$($env:ARCHITECTURE)"
+
+      # Generate the environment for the dependencies root directory
+      $env:DEPENDENCIES_LOCATION="$($env:DEPENDENCIES_LOCATION_PREFIX)/$($env:Platform)/$($env:VISUAL_STUDIO_INTERNAL_VERSION)"
+
+      # Generate the default Boost environment variables
+      $env:BOOST_ROOT="C:/Libraries/boost_$($env:BOOST_FILENAME_VERSION)"
+      $env:BOOST_INCLUDEDIR="$($env:BOOST_ROOT)"
+      $env:BOOST_LIBRARYDIR="$($env:BOOST_ROOT)/$($env:LIB_ARCHITECTURE)-msvc-$($env:VISUAL_STUDIO_VERSION)"
+      $env:BOOST_ARCHIVE="boost_$($env:BOOST_FILENAME_VERSION)-bin-msvc-$($env:VISUAL_STUDIO_VERSION)-$($env:ARCHITECTURE).7z"
+
+      # Generate the libssh2 environment variables
+      $env:LIBSSH2_ARCHIVE="libssh2-$($env:LIBSSH2_VERSION)-$($env:WINDOWS_ARCHITECTURE)-msvc$($env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+      $env:LIBSSH2_ROOT_DIR="$($env:DEPENDENCIES_LOCATION)/libssh2-$($env:LIBSSH2_VERSION)"
+
+      # Generate the libuv environment variables
+      $env:LIBUV_ARCHIVE="libuv-$($env:LIBUV_VERSION)-$($env:WINDOWS_ARCHITECTURE)-msvc$($env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+      $env:LIBUV_ROOT_DIR="$($env:DEPENDENCIES_LOCATION)/libuv-$($env:LIBUV_VERSION)"
+
+      # Generate the OpenSSL environment variables
+      $env:OPENSSL_ARCHIVE="openssl-$($env:OPENSSL_VERSION)-$($env:WINDOWS_ARCHITECTURE)-msvc$($env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+      $env:OPENSSL_ROOT_DIR="$($env:DEPENDENCIES_LOCATION)/openssl-$($env:OPENSSL_VERSION)"
+
+      # Generate the archive name for the driver artifact
+      $env:DRIVER_ARTIFACT_ARCHIVE="cassandra-cpp-driver-ci-artifact-$env:APPVEYOR_BUILD_VERSION-win$env:ARCHITECTURE-msvc$env:VISUAL_STUDIO_INTERNAL_VERSION.zip"
+
+install:
+  - ps: |
+      # Install the dependencies (if needed)
+      New-Item -ItemType Directory -Force -Path "$($env:DEPENDENCIES_LOCATION)"
+      Push-Location "$($env:DEPENDENCIES_LOCATION)"
+
+      # Determine if Boost should be installed (pre-installed)
+      If (!(Test-Path -Path "$($env:BOOST_LIBRARYDIR)")) {
+        # Update the Boost environment variables for CMake to find installation
+        $env:BOOST_ROOT="$($env:DEPENDENCIES_LOCATION)/boost_$($env:BOOST_FILENAME_VERSION)"
+        $env:BOOST_INCLUDEDIR="$($env:BOOST_ROOT)"
+        $env:BOOST_LIBRARYDIR="$($env:BOOST_ROOT)/$($env:LIB_ARCHITECTURE)-msvc-$($env:VISUAL_STUDIO_VERSION)"
+
+        # Determine if Boost should be installed (cached)
+        If (!(Test-Path -Path "$($env:BOOST_LIBRARYDIR)")) {
+          # Download and extract the dependency (silently due to amount of files)
+          Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/boost/$($env:BOOST_VERSION)/$($env:BOOST_ARCHIVE)" -FileName $env:BOOST_ARCHIVE
+          Write-Output "Extracting Boost v$($env:BOOST_VERSION) for $($env:CMAKE_GENERATOR)$($env:CMAKE_GENERATOR_SUFFIX)"
+          7z x $env:BOOST_ARCHIVE > $NULL
+
+          # Delete the binary archive
+          Remove-Item $env:BOOST_ARCHIVE
+        }
+      }
+
+      # Determine if libssh2 should be installed (cached)
+      If (!(Test-Path -Path "libssh2-$($env:LIBSSH2_VERSION)")) {
+        # Download and extract the dependency
+        #Start-FileDownload "$($env:DOWNLOADS_URL_PREFIX)/libssh2/v$($env:LIBSSH2_VERSION)/$($env:LIBSSH2_ARCHIVE)" -FileName $env:LIBSSH2_ARCHIVE
+        Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/libssh2/$($env:LIBSSH2_VERSION)/$($env:LIBSSH2_ARCHIVE)" -FileName $env:LIBSSH2_ARCHIVE
+        7z -o"libssh2-$($env:LIBSSH2_VERSION)" x $env:LIBSSH2_ARCHIVE
+
+        # Delete the binary archive
+        Remove-Item $env:LIBSSH2_ARCHIVE
+      }
+
+      # Determine if libuv should be installed (cached)
+      If (!(Test-Path -Path "libuv-$($env:LIBUV_VERSION)")) {
+        # Download and extract the dependency
+        #Start-FileDownload "$($env:DOWNLOADS_URL_PREFIX)/libuv/v$($env:LIBUV_VERSION)/$($env:LIBUV_ARCHIVE)" -FileName $env:LIBUV_ARCHIVE
+        Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/libuv/$($env:LIBUV_VERSION)/$($env:LIBUV_ARCHIVE)" -FileName $env:LIBUV_ARCHIVE
+        7z -o"libuv-$($env:LIBUV_VERSION)" x $env:LIBUV_ARCHIVE
+
+        # Only keep the static libraries
+        Move-Item "libuv-$($env:LIBUV_VERSION)/static/lib" "libuv-$($env:LIBUV_VERSION)/lib"
+        Remove-Item "libuv-$($env:LIBUV_VERSION)/static" -Force -Recurse
+        Remove-Item "libuv-$($env:LIBUV_VERSION)/shared" -Force -Recurse
+
+        # Delete the binary archive
+        Remove-Item $env:LIBUV_ARCHIVE
+      }
+
+      # Determine if OpenSSL should be installed (cached)
+      If (!(Test-Path -Path "openssl-$($env:OPENSSL_VERSION)")) {
+        # Download and extract the dependency
+        #Start-FileDownload "$($env:DOWNLOADS_URL_PREFIX)/openssl/v$($env:OPENSSL_VERSION)/$($env:OPENSSL_ARCHIVE)" -FileName $env:OPENSSL_ARCHIVE
+        Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/openssl/$($env:OPENSSL_VERSION)/$($env:OPENSSL_ARCHIVE)" -FileName $env:OPENSSL_ARCHIVE
+        7z -o"openssl-$($env:OPENSSL_VERSION)" x $env:OPENSSL_ARCHIVE
+
+        # Only keep the static libaries
+        Move-Item "openssl-$($env:OPENSSL_VERSION)/static/lib" "openssl-$($env:OPENSSL_VERSION)/lib"
+        Remove-Item "openssl-$($env:OPENSSL_VERSION)/static" -Force -Recurse
+        Remove-Item "openssl-$($env:OPENSSL_VERSION)/shared" -Force -Recurse
+
+        # Delete the binary archive
+        Remove-Item $env:OPENSSL_ARCHIVE
+      }
+
+      # Remove pre-installed OpenSSL (resolve conflicts)
+      Remove-Item "C:/OpenSSL-*" -Force -Recurse
+
+      # Move back to original directory
+      Pop-Location
+
+before_build:
+  - ps: |
+      # Create and navigate to the build directory (build outside tree)
+      New-Item -ItemType Directory -Force -Path build
+      Push-Location build
+
+      # Configure the build via CMake
+      cmake -G "$($env:CMAKE_GENERATOR)$($env:CMAKE_GENERATOR_SUFFIX)" -DCMAKE_INSTALL_PREFIX=lib -DCASS_MULTICORE_COMPILATION=ON -DCMAKE_BUILD_TYPE=$env:CONFIGURATION -DCASS_BUILD_STATIC=ON -DCASS_USE_STATIC_LIBS=ON -DCASS_BUILD_EXAMPLES=ON -DCASS_BUILD_TESTS=ON -DCASS_USE_LIBSSH2=ON ..
+
+      # Move back to working directory
+      Pop-Location
+
+build_script:
+  - ps: $env:CONFIGURATION_COMPLETE=$TRUE
+  - ps: cmake --build build --config "$($env:CONFIGURATION)"
+
+after_build:
+  - ps: |
+      # Create the artifact structure for the driver
+      New-Item -ItemType Directory -Force -Path $env:TEMP/cpp-driver-artifact/bin
+      Copy-Item build/$env:CONFIGURATION/cassandra.dll $env:TEMP/cpp-driver-artifact/bin
+      New-Item -ItemType Directory -Force -Path $env:TEMP/cpp-driver-artifact/include
+      Copy-Item include/* $env:TEMP/cpp-driver-artifact/include
+      New-Item -ItemType Directory -Force -Path $env:TEMP/cpp-driver-artifact/lib
+      Copy-Item build/$env:CONFIGURATION/cassandra.lib $env:TEMP/cpp-driver-artifact/lib
+      Copy-Item build/$env:CONFIGURATION/cassandra_static.lib $env:TEMP/cpp-driver-artifact/lib
+
+      # Create the driver archive artifact
+      7z a -tzip $env:DRIVER_ARTIFACT_ARCHIVE -r $env:TEMP/cpp-driver-artifact/*
+
+      # Publish/Upload the artifacts to AppVeyor (Artifacts tab in UI)
+      Push-AppveyorArtifact $env:DRIVER_ARTIFACT_ARCHIVE -DeploymentName "DataStax C/C++ Driver"
+      Push-AppveyorArtifact build/test/integration_tests/$env:CONFIGURATION/cassandra_integration_tests.exe -DeploymentName "DataStax C/C++ Driver Integration Tests"
+      Push-AppveyorArtifact build/test/unit_tests/$env:CONFIGURATION/cassandra_unit_tests.exe -DeploymentName "DataStax C/C++ Driver Unit Tests"
+
+test_script:
+  - ps: Start-Process -FilePath "build/test/unit_tests/$env:CONFIGURATION/cassandra_unit_tests.exe" -ArgumentList "--run_test=!metrics/meter* --log_format=XML --log_sink=unit_tests-boost-results.xml --log_level=test_suite --report_level=no" -Wait -NoNewWindow
+
+on_finish:
+  - ps: |
+      # Publish/Upload the results to AppVeyor (Tests tab in UI)
+      If (Test-Path unit_tests-boost-results.xml) {
+      # Read and parse the Boost XML results
+        $content = [xml](Get-Content -Path .\unit_tests-boost-results.xml)
+        $cassandra_testsuite = $content.TestLog.TestSuite
+
+        $failure_occurred = $FALSE
+        ForEach ($testsuite In $cassandra_testsuite.TestSuite) {
+          ForEach ($testcase In $testsuite.TestCase) {
+            # Generate the name and filename for the test case
+            $testname = "$($testsuite.name):$($testcase.name)"
+            $filename = Split-Path $testsuite.file -leaf
+
+            # Parse each test case (determine duration, failure, and messages)
+            $outcome = "Passed"
+            $duration = 0
+            $stdout = $NULL
+            $error_message = $NULL
+            ForEach ($element In $testcase.ChildNodes) {
+              # Get the name of the element and the common attributes they share
+              $name = $element.Name
+              $file = $element.file
+              $line = $element.line
+              $text = $element.InnerText
+              $output_message = "[$($name)] - $text`n == [File] - $file`n == [Line] - $line`n"
+
+              # Determine the type of element the child node is
+              If ($name -eq "TestingTime") {
+                # Convert from microseconds to milliseconds
+                $duration = $text / 1000
+              } ElseIf ($name -eq "Error" -Or $name -eq "FatalError" -Or $name -eq "Exception") {
+                # Update the error message and indicate that a failure occurred
+                $error_message = $error_message + $output_message
+                $outcome = "Failed"
+                $failure_occurred = $TRUE
+              } ElseIf ($name -eq "Info" -Or $name -eq "Message") {
+                $stdout = $stdout + $output_message
+              }
+            }
+
+            # Add the test using the AppVeyor API
+            Add-AppVeyorTest "$($testname)" -Framework "Boost" -FileName "$($filename)" -Outcome "$($outcome)" -Duration "$($duration)" -ErrorMessage "$($error_message)" -StdOut "$($stdout)"
+          }
+        }
+
+        # Determine if any failures occurred in order to fail the build
+        if ($failure_occurred -eq $TRUE){
+          Write-Output "Failing build due to test failures"
+          $host.SetShouldExit(1)
+        }
+      }
+
+on_failure:
+  - ps: |
+      # Write the CMake output and error logs to the console
+      If ($env:CONFIGURATION_COMPLETE -eq "False") {
+        If (Test-Path build/CMakeFiles/CMakeOutput.log) {
+          Write-Output "CMakeOutput.log"
+          cat build/CMakeFiles/CMakeOutput.log
+        }
+        If (Test-Path builds/CMakeFiles/CMakeError.log) {
+          Write-Output "CMakeError.log"
+          cat build/CMakeFiles/CMakeError.log
+        }
+      }

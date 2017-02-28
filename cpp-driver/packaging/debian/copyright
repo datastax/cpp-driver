@@ -1,0 +1,27 @@
+Format: http://dep.debian.net/deps/dep5
+Upstream-Name: cassandra-cpp-driver
+Source: https://github.com/datastax/cpp-driver
+
+Files: *
+Copyright: Copyright 2014-2016 DataStax
+License: Apache-2.0
+  On Debian systems, the complete text of the Apache License Version 2.0
+  can be found in `/usr/share/common-licenses/Apache-2.0'.
+
+Files: src/third_party/hdr_histogram/*
+Copyright: Copyright (c) 2012, 2013, 2014 Gil Tene
+ Copyright (c) 2014 Michael Barker
+ Copyright (c) 2014 Matt Warren
+License: BSD-2-clause
+
+Files: src/third_party/mt19937_64/*
+Copyright: Copyright (C) 2004, Makoto Matsumoto and Takuji Nishimura
+License: BSD-3-clause
+
+Files: src/third_party/rapidjson/*
+Copyright: Copyright (C) 2011 Milo Yip
+License: MIT
+
+Files: src/third_party/curl/*
+Copyright: Copyright (C) 1998 - 2012, Daniel Stenberg, <daniel@haxx.se>, et al.
+License: MIT
