@@ -279,11 +279,7 @@ void ControlConnection::on_event(EventResponse* response) {
       switch (response->topology_change()) {
         case EventResponse::NEW_NODE: {
           LOG_INFO("New node %s added", address_str.c_str());
-          SharedRefPtr<Host> host = session_->get_host(response->affected_node());
-          if (!host) {
-            host = session_->add_host(response->affected_node());
-            refresh_node_info(host, true, true);
-          }
+          query_meta_hosts();
           break;
         }
 
