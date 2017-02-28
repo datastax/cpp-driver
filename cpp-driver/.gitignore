@@ -1,0 +1,99 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.0
+
+# Compiled Dynamic libraries
+libcassandra.so*
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# cmake output
+src/third_party/sparsehash/src/sparsehash/internal/sparseconfig.h
+*.cmake
+!Find*.cmake
+*.build
+*.xcodeproj
+CMakeFiles
+CMakeCache.txt
+CMakeScripts
+Makefile
+install_manifest.txt
+
+# library files
+lib/boost/include/**
+lib/boost/lib/**
+lib/libuv/include/**
+lib/libuv/lib/**
+lib/libssh2/include/**
+lib/libssh2/lib/**
+lib/openssl/include/**
+lib/openssl/lib/**
+# Excluded library files from ignore
+!lib/boost/include/README
+!lib/boost/lib/README
+!lib/libuv/include/README
+!lib/libuv/lib/README
+!lib/libssh2/include/README
+!lib/libssh2/lib/README
+!lib/openssl/include/README
+!lib/openssl/lib/README
+
+# build files
+build
+Testing
+Debug
+demo/cassandra_demo
+test/unit_tests/cassandra_test
+src/cassconfig.hpp
+
+# API docs files
+Doxyfile
+docs
+
+# editor
+*.swp
+*~
+.#*
+#*
+.clang_complete
+
+# OSX
+.DS_Store
+
+# Eclipse
+.cproject
+.project
+
+# AStyle backup
+*.orig
+
+# QT Creator
+*.config
+*.creator*
+*.files
+*.includes
+
+# MSVC
+*.vcxproj
+*.vcxproj.filters
+*.sdf
+*.sln
+*.suo
+*.opensdf
+
+# Travis Build Dependencies
+libuv-v*
+lib/libuv/include/**
+!lib/libuv/include/README
+lib/libuv/lib/**
+!lib/libuv/lib/README
+boost_1_*
+
+# Integration test configuration
+config*.txt

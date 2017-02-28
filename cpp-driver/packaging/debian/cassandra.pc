@@ -1,0 +1,11 @@
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${prefix}/lib/@DEB_HOST_MULTIARCH@
+includedir=${prefix}/include
+
+Name: cassandra
+Description: A C/C++ client driver for Apache Cassandra
+Version: @DEB_VERSION_UPSTREAM@
+Libs: -L${libdir} -lcassandra
+Cflags:
+URL: https://github.com/datastax/cpp-driver/

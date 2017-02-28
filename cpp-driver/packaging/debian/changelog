@@ -1,0 +1,5 @@
+cassandra-cpp-driver (1.0.0-1) stable; urgency=low
+
+  * Initial release
+
+ -- Michael Penick <michael.penick@datastax.com>  Tue, 20 Jan 2015 20:20:27 -0700

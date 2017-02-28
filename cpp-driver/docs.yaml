@@ -1,0 +1,56 @@
+title:   DataStax C/C++ Driver
+summary: DataStax C++ Driver for Apache Cassandra Documentation
+homepage: http://datastax.github.io/cpp-driver/
+sections:
+  - title:    Features
+    prefix:   /topics
+    type:     markdown
+    files:   'topics/**/*.md'
+
+  - title:     API docs
+    prefix:    /api
+    type:      doxygen
+    directory: 'include'
+    config: |
+      PREDEFINED = CASS_EXPORT=
+      EXCLUDE_SYMBOLS = XX* CASS_ERROR CASS_ERROR_MAP CASS_ERROR_LAST_ENTRY CASS_LOG_LEVEL_MAP CASS_LOG_LAST_ENTRY CASS_DEPRECATED
+      ENABLE_PREPROCESSING = YES
+      MACRO_EXPANSION = YES
+      EXPAND_ONLY_PREDEF = NO
+      SKIP_FUNCTION_MACROS = YES
+      TYPEDEF_HIDES_STRUCT = YES
+      EXTRACT_ALL = YES
+      INLINE_SOURCES = NO
+      ALIASES = cassandra{1}="<b>Requires Cassandra:</b> \1"
+checks:
+  external_links:
+    exclude:
+    - 'https://ci.appveyor.com/api/projects/status/ec0x0vuk59as28r6/branch/master'
+rewrites:
+  - http://datastax.github.io/cpp-driver/: /
+  - https://datastax.github.io/cpp-driver/: /
+  # Compatability changes for older versions
+  - /api/Cass(.*): /api/struct.Cass\1
+  - \(/api/struct.CassValue/\): /api/struct.CassValue/
+  - \(/topics/building/: /topics/building/
+  - TODO: /api/struct.CassResult/#function-cass_result_first_row # Invalid url in v1.0
+  - CHANGELOG.md: https://github.com/datastax/cpp-driver/blob/2.1.0/CHANGELOG.md # Invalid url in v2.1
+  - https://www.openssl.org/docs/crypto/pem.html: https://en.wikipedia.org/wiki/Privacy-enhanced_Electronic_Mail
+  - http://pkgs.repoforge.org/git/: https://dl.fedoraproject.org/pub/epel/
+  - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.i386.rpm: http://dl.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
+  - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.x86_64.rpm: http://dl.fedoraproject.org/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm
+versions:
+  - name: 2.5
+    ref: 7ebeac1532609e29c1f4ad8563a1a634fb151e6d
+  - name: 2.4
+    ref: 2b94bd1119c4bc6e005ce191cf7ec0fba6d823e9
+  - name: 2.3
+    ref: 6f72bb8b5bd251e63846ebc9f0fba7adbc8c7e72
+  - name: 2.2
+    ref: b4bb435129bab533612fa2caf194555fa943f925
+  - name: 2.1
+    ref: 2c97015988e0a9e9342b233db5f37ca9386e4d7d
+  - name: 2.0
+    ref: fc9c25a3db879894d40306642864413ef8f7d979
+  - name: 1.0
+    ref: b2146f44ba5df28e37af28031f7609342023b329

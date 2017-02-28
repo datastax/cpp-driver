@@ -1,0 +1,39 @@
+Source: cassandra-cpp-driver
+Priority: extra
+Maintainer: Michael Penick <michael.penick@datastax.com>
+Build-Depends: debhelper (>= 9.0.0), dh-exec, cmake, make,
+        libuv-dev (>= 1.0.0),
+        libssl-dev
+Standards-Version: 3.9.2
+Section: libs
+Homepage: http://datastax.github.io/cpp-driver/
+Vcs-Git: git://github.com/datastax/cpp-driver.git
+Vcs-Browser: https://github.com/datastax/cpp-driver
+
+Package: cassandra-cpp-driver
+Section: libs
+Architecture: any
+Pre-Depends: multiarch-support, ${misc:Pre-Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: C/C++ client driver for Apache Cassandra - runtime library
+ A modern, feature-rich, and highly tunable C/C++ client library for Apache
+ Cassandra using exclusively Cassandra's native protocol and Cassandra Query
+ Language.
+
+Package: cassandra-cpp-driver-dev
+Section: libdevel
+Architecture: any
+Depends: cassandra-cpp-driver (= ${binary:Version}), ${misc:Depends}
+Description: C/C++ client driver for Apache Cassandra - development files
+ A modern, feature-rich, and highly tunable C/C++ client library for Apache
+ Cassandra using exclusively Cassandra's native protocol and Cassandra Query
+ Language.
+
+Package: cassandra-cpp-driver-dbg
+Section: debug
+Architecture: any
+Depends: cassandra-cpp-driver (= ${binary:Version}), ${misc:Depends}
+Description: C/C++ client driver for Apache Cassandra - debugging symbols
+ A modern, feature-rich, and highly tunable C/C++ client library for Apache
+ Cassandra using exclusively Cassandra's native protocol and Cassandra Query
+ Language.

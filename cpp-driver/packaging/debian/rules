@@ -1,0 +1,36 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+include /usr/share/dpkg/default.mk
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+NUMJOBS=1
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+  NUMJOBS=$(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+endif
+
+export SOVER ?= $(shell dpkg-parsechangelog \
+    | sed -rne 's/^Version: ([0-9.]+)[-+~].*$$/\1/p')
+export SONAME=libcassandra.so.$(SOVER)
+
+%:
+	dh $@ 
+
+override_dh_auto_install:
+	dh_auto_install
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE=RELEASE -DCASS_BUILD_STATIC=ON -DCASS_INSTALL_PKG_CONFIG=OFF -DCMAKE_INSTALL_LIBDIR=/usr/lib
+
+override_dh_auto_build:
+	dh_auto_build -- -j$(NUMJOBS)
+
+override_dh_strip:
+	dh_strip --dbg-package=cassandra-cpp-driver-dbg
+	sed -i s/@DEB_HOST_MULTIARCH@/$(DEB_HOST_MULTIARCH)/ debian/cassandra-cpp-driver-dev/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/*.pc
+	sed -i s/@DEB_VERSION_UPSTREAM@/$(DEB_VERSION_UPSTREAM)/ debian/cassandra-cpp-driver-dev/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/*.pc
+
+override_dh_auto_test:
+override_dh_auto_clean:

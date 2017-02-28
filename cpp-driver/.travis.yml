@@ -1,0 +1,65 @@
+language: c++
+sudo: false
+compiler:
+  - clang
+  - gcc
+addons:
+  apt:
+    packages:
+      - libssl-dev
+      - libssh2-1-dev
+cache:
+  directories:
+    - ${HOME}/dependencies
+env:
+  global:
+    - BOOST_VERSION=1.63.0
+    - BOOST_FILE_VERSION=1_63_0
+  matrix:
+    - LIBUV_VERSION=0.10.x EXACT_LIBUV_VERSION=0.10.37
+    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.11.0
+install:
+  - if [ ! -d "${HOME}/dependencies/libuv-${LIBUV_VERSION}" ]; then
+      wget -q http://dist.libuv.org/dist/v${EXACT_LIBUV_VERSION}/libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
+      tar xzf libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
+      cd libuv-v${EXACT_LIBUV_VERSION};
+      if [ "${LIBUV_VERSION}" == "0.10.x" ]; then
+        make -j2;
+        mkdir -p ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
+        cp libuv* ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
+        cp -r include ${HOME}/dependencies/libuv-${LIBUV_VERSION};
+        cd ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
+        ln -s libuv.so libuv.so.0.10;
+        cd - 2&> /dev/null;
+      fi;
+      if [ "${LIBUV_VERSION}" == "1.x" ]; then
+        sh autogen.sh;
+        ./configure --prefix=${HOME}/dependencies/libuv-${LIBUV_VERSION};
+        make -j2 install;
+      fi;
+      cd - 2&> /dev/null
+    else echo "Using Cached libuv v${LIBUV_VERSION}. Dependency does not need to be re-compiled";
+    fi
+  - if [ ! -d "${HOME}/dependencies/boost_${BOOST_FILE_VERSION}" ]; then
+      wget -q http://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/boost_${BOOST_FILE_VERSION}.tar.gz/download -O boost_${BOOST_FILE_VERSION}.tar.gz;
+      tar xzf boost_${BOOST_FILE_VERSION}.tar.gz;
+      cd boost_${BOOST_FILE_VERSION};
+      ./bootstrap.sh --with-libraries=atomic,chrono,system,thread,test --prefix=${HOME}/dependencies/boost_${BOOST_FILE_VERSION};
+      ./b2 -j2 install;
+      cd - 2&> /dev/null;
+    else echo "Using Cached Boost v${BOOST_VERSION}. Dependency does not need to be re-compiled";
+    fi
+  - cd ${TRAVIS_BUILD_DIR}
+before_script:
+  - EXTRA_CXX_FLAGS=
+  - EXTRA_C_FLAGS=
+  - USE_BOOST_ATOMIC=OFF
+  - if [ "$CXX" == "clang++" ]; then
+      EXTRA_CXX_FLAGS="-Wno-unknown-warning-option -Wno-gnu-folding-constant -Wno-sign-compare";
+      EXTRA_C_FLAGS="-Wno-unknown-warning-option";
+      USE_BOOST_ATOMIC=ON;
+    fi
+  - CFLAGS="${EXTRA_C_FLAGS}" CXXFLAGS="${EXTRA_CXX_FLAGS}" cmake -DBOOST_ROOT_DIR=${HOME}/dependencies/boost_${BOOST_FILE_VERSION} -DLIBUV_ROOT_DIR=${HOME}/dependencies/libuv-${LIBUV_VERSION}/ -DCASS_BUILD_STATIC=ON -DCASS_BUILD_EXAMPLES=ON -DCASS_BUILD_TESTS=ON -DCASS_USE_BOOST_ATOMIC=${USE_BOOST_ATOMIC} .
+script:
+  - make -j2
+  - test/unit_tests/cassandra_unit_tests;
