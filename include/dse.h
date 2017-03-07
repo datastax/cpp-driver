@@ -217,6 +217,48 @@ cass_cluster_set_dse_gssapi_authenticator_n(CassCluster* cluster,
                                             size_t principal_length);
 
 /**
+ * Enables GSSAPI authentication with proxy authorization for DSE clusters secured with the
+ * `DseAuthenticator`.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] service
+ * @param[in] principal
+ * @param[in] authorization_id
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+cass_cluster_set_dse_gssapi_authenticator_proxy(CassCluster* cluster,
+                                                const char* service,
+                                                const char* principal,
+                                                const char* authorization_id);
+
+/**
+ * Same as cass_cluster_set_dse_gssapi_authenticator_proxy(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] service
+ * @param[in] service_length
+ * @param[in] principal
+ * @param[in] principal_length
+ * @param[in] authorization_id
+ * @param[in] authorization_id_length
+ * @return same as cass_cluster_set_dse_gssapi_authenticator_proxy()
+ */
+DSE_EXPORT CassError
+cass_cluster_set_dse_gssapi_authenticator_proxy_n(CassCluster* cluster,
+                                                  const char* service,
+                                                  size_t service_length,
+                                                  const char* principal,
+                                                  size_t principal_length,
+                                                  const char* authorization_id,
+                                                  size_t authorization_id_length);
+
+/**
  * Enables plaintext authentication for DSE clusters secured with the
  * `DseAuthenticator`.
  *
@@ -251,6 +293,48 @@ cass_cluster_set_dse_plaintext_authenticator_n(CassCluster* cluster,
                                                size_t username_length,
                                                const char* password,
                                                size_t password_length);
+
+/**
+ * Enables plaintext authentication with proxy authorization for DSE clusters secured with the
+ * `DseAuthenticator`.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] username
+ * @param[in] password
+ * @param[in] authorization_id
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+cass_cluster_set_dse_plaintext_authenticator_proxy(CassCluster* cluster,
+                                                   const char* username,
+                                                   const char* password,
+                                                   const char* authorization_id);
+
+/**
+ * Same as cass_cluster_set_dse_plaintext_authenticator_proxy(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] username
+ * @param[in] username_length
+ * @param[in] password
+ * @param[in] password_length
+ * @param[in] authorization_id
+ * @param[in] authorization_id_length
+ * @return same as cass_cluster_set_dse_plaintext_authenticator_proxy()
+ */
+DSE_EXPORT CassError
+cass_cluster_set_dse_plaintext_authenticator_proxy_n(CassCluster* cluster,
+                                                     const char* username,
+                                                     size_t username_length,
+                                                     const char* password,
+                                                     size_t password_length,
+                                                     const char* authorization_id,
+                                                     size_t authorization_id_length);
 
 /***********************************************************************************
  *
@@ -1656,6 +1740,36 @@ DSE_EXPORT CassError
 cass_statement_bind_dse_polygon_by_name_n(CassStatement* statement,
                                           const char* name, size_t name_length,
                                           const DsePolygon* polygon);
+
+/**
+ * Sets the name of the user to execute the statement as.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+cass_statement_set_execute_as(CassStatement* statement,
+                              const char* name);
+
+/**
+ * Same as cass_statement_set_execute_as(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_statement_set_execute_as()
+ *
+ * @see cass_statement_set_execute_as()
+ */
+DSE_EXPORT CassError
+cass_statement_set_execute_as_n(CassStatement* statement,
+                                const char* name, size_t name_length);
 
 /***********************************************************************************
  *

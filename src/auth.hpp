@@ -18,9 +18,11 @@ namespace dse {
 class PlaintextAuthenticatorData {
 public:
   PlaintextAuthenticatorData(const std::string& username,
-                             const std::string& password)
+                             const std::string& password,
+                             const std::string& authorization_id)
     : username_(username)
-    , password_(password) { }
+    , password_(password)
+    , authorization_id_(authorization_id) { }
 
   static const CassAuthenticatorCallbacks* callbacks() { return &callbacks_; }
 
@@ -35,19 +37,23 @@ private:
 private:
   std::string username_;
   std::string password_;
+  std::string authorization_id_;
 };
 
 class GssapiAuthenticatorData {
 public:
   GssapiAuthenticatorData(const std::string& service,
-                          const std::string& principal)
+                          const std::string& principal,
+                          const std::string& authorization_id)
     : service_(service)
-    , principal_(principal) { }
+    , principal_(principal)
+    , authorization_id_(authorization_id) { }
 
   static const CassAuthenticatorCallbacks* callbacks() { return &callbacks_; }
 
   const std::string& service() const { return service_; }
   const std::string& principal() const { return principal_; }
+  const std::string& authorization_id() const { return authorization_id_; }
 
   static CassError set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
                                       DseGssapiAuthenticatorUnlockCallback unlock_callback,
@@ -74,6 +80,7 @@ private:
 private:
   std::string service_;
   std::string principal_;
+  std::string authorization_id_;
 };
 
 } // namespace dse

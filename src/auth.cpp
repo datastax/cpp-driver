@@ -63,16 +63,24 @@ void PlaintextAuthenticatorData::on_challenge(CassAuthenticator* auth, void* dat
   if (plaintext == cass::StringRef(token, token_size)) {
     size_t username_size = plaintext_auth->username_.size();
     size_t password_size = plaintext_auth->password_.size();
-    size_t size = username_size + password_size + 2;
+    size_t authorization_id_size = plaintext_auth->authorization_id_.size();
+    size_t size = username_size + password_size + authorization_id_size + 2;
+    size_t write_index = 0;
 
     char* response = cass_authenticator_response(auth, size);
 
-    /* Credentials are prefixed with '\0' */
-    response[0] = '\0';
-    memcpy(response + 1, plaintext_auth->username_.c_str(), username_size);
+    // Credentials are of the form "<authid>\0<username>\0<password>"
+    memcpy(response + write_index, plaintext_auth->authorization_id_.c_str(), authorization_id_size);
+    write_index += authorization_id_size;
 
-    response[username_size + 1] = '\0';
-    memcpy(response + username_size + 2, plaintext_auth->password_.c_str(), password_size);
+    response[write_index++] = '\0';
+
+    memcpy(response + write_index, plaintext_auth->username_.c_str(), username_size);
+    write_index += username_size;
+
+    response[write_index++] = '\0';
+
+    memcpy(response + write_index, plaintext_auth->password_.c_str(), password_size);
 
     return;
   }
@@ -169,7 +177,7 @@ public:
     AUTH_CONFIDENTIALITY = 3
   };
 
-  GssapiAuthenticator();
+  GssapiAuthenticator(const std::string& authorization_id);
   ~GssapiAuthenticator();
 
   const std::string& response() const { return response_; }
@@ -193,13 +201,15 @@ private:
   std::string response_;
   std::string error_;
   State state_;
+  std::string authorization_id_;
 };
 
-GssapiAuthenticator::GssapiAuthenticator()
+GssapiAuthenticator::GssapiAuthenticator(const std::string& authorization_id)
   : context_(GSS_C_NO_CONTEXT)
   , server_name_(GSS_C_NO_NAME)
   , gss_flags_(GSS_C_MUTUAL_FLAG | GSS_C_SEQUENCE_FLAG)
-  , state_(NEGOTIATION) { }
+  , state_(NEGOTIATION)
+  , authorization_id_(authorization_id) { }
 
 GssapiAuthenticator::~GssapiAuthenticator() {
   OM_uint32 min_stat;
@@ -420,9 +430,12 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
   input.push_back((req_output_size >> 16) & 0xFF);
   input.push_back((req_output_size >> 8)  & 0xFF);
   input.push_back((req_output_size >> 0)  & 0xFF);
-  input.append(username_);
 
-  input_token.length = 4 + username_.size();
+  // Send the authorization_id if present (proxy login), otherwise the username.
+  const std::string& authorization_id = authorization_id_.empty() ? username_ : authorization_id_;
+  input.append(authorization_id);
+
+  input_token.length = 4 + authorization_id.size();
   input_token.value = const_cast<void*>(static_cast<const void*>(input.c_str()));
 
   output_token.release();
@@ -580,7 +593,7 @@ void GssapiAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
       service.append(hostname);
     }
 
-    gssapi_auth = new GssapiAuthenticator();
+    gssapi_auth = new GssapiAuthenticator(gssapi_auth_data->authorization_id());
     cass_authenticator_set_exchange_data(auth, static_cast<void*>(gssapi_auth));
 
     if (gssapi_auth->init(service,

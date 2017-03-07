@@ -50,6 +50,13 @@ public:
 
   int32_t encode(BufferVec* bufs) const;
 
+  inline bool empty() const {
+    return items_.empty();
+  }
+
+  inline size_t size() const {
+    return items_.size();
+  }
 private:
   typedef std::map<std::string, Buffer> ItemMap;
   ItemMap items_;
@@ -126,8 +133,33 @@ public:
     return custom_payload_;
   }
 
+  bool has_custom_payload() const {
+    return custom_payload_ || !custom_payload_extra_.empty();
+  }
+
   void set_custom_payload(const CustomPayload* payload) {
     custom_payload_.reset(payload);
+  }
+
+  inline void set_custom_payload(const char* key, const uint8_t* value, size_t value_len) {
+    custom_payload_extra_.set(key, strlen(key), value, value_len);
+  }
+
+  int32_t encode_custom_payload(BufferVec* bufs) const {
+    int32_t length = sizeof(uint16_t);
+    uint16_t count = 0;
+
+    Buffer buf(sizeof(uint16_t));
+    count += custom_payload_ ? custom_payload_->size() : 0;
+    count += custom_payload_extra_.size();
+    buf.encode_uint16(0, count);
+    bufs->push_back(buf);
+
+    if (custom_payload_) {
+      length += custom_payload_->encode(bufs);
+    }
+    length += custom_payload_extra_.encode(bufs);
+    return length;
   }
 
   virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const = 0;
@@ -142,6 +174,7 @@ private:
   uint64_t request_timeout_ms_;
   RetryPolicy::Ptr retry_policy_;
   CustomPayload::ConstPtr custom_payload_;
+  CustomPayload custom_payload_extra_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);

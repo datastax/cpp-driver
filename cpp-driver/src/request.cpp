@@ -69,10 +69,7 @@ void CustomPayload::set(const char* name, size_t name_length, const uint8_t* val
 }
 
 int32_t CustomPayload::encode(BufferVec* bufs) const {
-  int32_t length = sizeof(uint16_t);
-  Buffer buf(sizeof(uint16_t));
-  buf.encode_uint16(0, items_.size());
-  bufs->push_back(buf);
+  int32_t length = 0;
   for (ItemMap::const_iterator i = items_.begin(), end = items_.end();
        i != end;
        ++i) {

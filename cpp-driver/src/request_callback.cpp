@@ -45,9 +45,9 @@ int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
   const Request* req = request();
   int32_t length = 0;
 
-  if (version >= 4 && req->custom_payload()) {
+  if (version >= 4 && req->has_custom_payload()) {
     flags |= CASS_FLAG_CUSTOM_PAYLOAD;
-    length += req->custom_payload()->encode(bufs);
+    length += req->encode_custom_payload(bufs);
   }
 
   int32_t result = req->encode(version, this, bufs);

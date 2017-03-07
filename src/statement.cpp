@@ -11,6 +11,8 @@
 #include "line_string.hpp"
 #include "polygon.hpp"
 
+#include "statement.hpp"
+
 namespace dse {
 
 inline Bytes encode_point(cass_double_t x, cass_double_t y) {
@@ -101,6 +103,17 @@ CassError cass_statement_bind_dse_polygon_by_name_n(CassStatement* statement,
                                               name, name_length,
                                               DSE_POLYGON_TYPE, sizeof(DSE_POLYGON_TYPE) - 1,
                                               polygon->bytes().data(), polygon->bytes().size());
+}
+
+CassError cass_statement_set_execute_as_n(CassStatement* statement,
+                                          const char* name, size_t name_length) {
+  statement->set_custom_payload("ProxyExecute", reinterpret_cast<const uint8_t *>(name), name_length);
+  return CASS_OK;
+}
+
+CassError cass_statement_set_execute_as(CassStatement* statement,
+                                        const char* name) {
+  return cass_statement_set_execute_as_n(statement, name, strlen(name));
 }
 
 } // extern "C"
