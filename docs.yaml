@@ -40,6 +40,8 @@ rewrites:
   - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.i386.rpm: http://dl.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
   - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.x86_64.rpm: http://dl.fedoraproject.org/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm
 versions:
+  - name: 2.6
+    ref: 99b3ab2fa98ff55dab3c31bb99536ac929e9eef5
   - name: 2.5
     ref: 7ebeac1532609e29c1f4ad8563a1a634fb151e6d
   - name: 2.4

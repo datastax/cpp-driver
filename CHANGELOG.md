@@ -1,15 +1,42 @@
+2.6.0
+===========
+
+Features
+--------
+* Added duration type support via `cass_statement_bind_duration[by_name]()`,
+  `cass_collection_append_duration()`, `cass_tuple_set_duration()`,
+  `cass_user_type_set_duration[by_name]()` and `cass_value_get_duration()`
+
+Other
+--------
+* Added process information (pid) to UUID node hash (CPP-354)
+* Fixed documentation mismatch with default consistency (CPP-383)
+* Fixed issue where an invalid keyspace could cause a session to hang
+  indefinitely during the connection process (CPP-384)
+* Fixed issue where an invalid local datacenter (DC-aware policy) could cause a
+  session to hang indefinitely during the connection process (CPP-398)
+* Fixed issue where SSL errors would prevent connections from reconnecting (CPP-408)
+* Made the client-side timestamp generator fully monotonic (CPP-412)
+* Fixed issue where an invalid value type, `CASS_VALUE_TYPE_INT`, was returned
+  for `org.apache.cassandra.db.marshal.IntegerType` instead of
+  `CASS_VALUE_TYPE_VARINT` (CPP-419)
+* Fixed issue where single quote custom types (e.g.
+  'org.apache.cassandra.db.marshal.LexicalUUIDType') would be incorrectly
+  returned as a UDT data type instead of as a custom data type (CPP-431)
+
+
 2.5.0
 ===========
 October 20, 2016
 
 Features
 --------
-* Added constant specultive exectution which preemptively runs mutiple of the
+* Added constant speculative execution which preemptively runs multiple of the
   same query in an effort to smooth out latency spikes.
 * Added idempotent queries to support speculative execution and allow automatic
   retries. Use `cass_statement_set_is_idempotent()` or
   `cass_batch_set_is_idempotent()`.
-* SSL can be now be used without initializing the underlying implmentation
+* SSL can be now be used without initializing the underlying implementation
   (e.g. OpenSSL). Use `cass_ssl_new_no_lib_init()`.
 
 Other
@@ -32,17 +59,17 @@ Features
 
 Other
 --------
-* Fixed issue that would cause quadradic ring processing with invalid
-  replilcation factors (CPP-298)
+* Fixed issue that would cause quadratic ring processing with invalid
+  replication factors (CPP-298)
 * Fixed issue where schema change handler could hang if an error is returned by
   Cassandra (CPP-381)
-* Fixed crash caused by connecting seperate sessions in multiple threads
+* Fixed crash caused by connecting separate sessions in multiple threads
   (CPP-385)
 * Fixed issue where the control connection could timeout as a result of schema
   or token map processing (CPP-388)
 * Greatly improved the performance of building the token map for token aware
   routing (CPP-389)
-* Fixed issue where heartbeats were restarted on unresponseive connections and
+* Fixed issue where heartbeats were restarted on unresponsive connections and
   prevented the connection from being terminated (CPP-392)
 
 2.4.2
@@ -65,7 +92,7 @@ June 9, 2016
 
 Other
 --------
-* Fixed issue where `cass_future_get_result()` and similiar methods would
+* Fixed issue where `cass_future_get_result()` and similar methods would
   dereference a NULL pointer if a future is set to an error.
 
 2.4.0
@@ -126,7 +153,7 @@ Other
   "major.minor" are provided.
 * Fixed function `cass_session_connect_keyspace()` to correctly return an error
   when the keyspace is invalid.
-* Fixed invalid logic in schema metadata swap method which could cause unecessary
+* Fixed invalid logic in schema metadata swap method which could cause unnecessary
   copy-on-writes.
 * Fixed bottleneck in `cass::Session` by using copy-on-write instead of a
   highly contended lock to track the current keyspace.
@@ -208,7 +235,7 @@ Other
 * Fixed hanging issue caused by `cass::MPMCQueue` memory race
 * Fixed invalid state assertion in `cass::Handler`
 * Fixed UDTs with `text` fields
-* A value of `null` is no longer implictly used for unbound statement
+* A value of `null` is no longer implicitly used for unbound statement
   parameters. An error is returned (`CASS_ERROR_LIB_PARAMETER_UNSET`) for
   Cassandra 2.1 and earlier or the UNSET value is used for Cassandra 2.2 and
   later
@@ -229,7 +256,7 @@ Features
 
 Other
 --------
-* Connections that timeout will not disconnect an entire conneciton pool
+* Connections that timeout will not disconnect an entire connection pool
 * `TCP_NODELAY` is enabled by default
 * Connections now support using 32,767 stream IDs when using the CQL Native
   Protocol v3
@@ -297,13 +324,13 @@ Mar 2, 2015
 Other
 --------
 * Added testing documentation
-* Added docmentation for the `varint` data type
+* Added documentation for the `varint` data type
 * Added a contributing document
 * Added version defines to `cassandra.h`
 * Fixed an issue where connections were attempted against decommissioned nodes
 * Fixed an issue where an invalid key index was used for a single entry
   token-aware routing key
-* Improved build error output when an incompatabile version of Boost is used to
+* Improved build error output when an incompatible version of Boost is used to
   build the driver
 
 1.0.0
@@ -339,7 +366,7 @@ Features
 
 Other
 --------
-* `CassSession` objects must now be explictly allocated/freed using
+* `CassSession` objects must now be explicitly allocated/freed using
   `cass_session_new()` and `cass_session_free()`. `cass_cluster_connect()` has been
   removed and replaced by `cass_session_connect()`.
 * SIGPIPE is ignored on driver threads
@@ -355,7 +382,7 @@ Nov 20, 2014
 Features
 --------
 * Added SSL support
-* Added token-aware load balancing. It's enable by default. It can
+* Added token-aware load balancing. It''s enable by default. It can
   be disable using `cass_cluster_set_token_aware_routing()`.
 * Added functions to get schema metadata, `cass_session_get_schema()` can
   be use to get a snapshot of the schema metadata and `cass_meta_*()` functions
@@ -375,12 +402,12 @@ Other
   `cass_cluster_set_pending_requests_high_water_mark()`, and
   `cass_cluster_set_pending_requests_low_water_mark()`.
 * Fixed a crash caused by a request timing out followed by a
-  call to the conneciton read callback then the write callback.
+  call to the connection read callback then the write callback.
 * Fixed an issue that prevented the driver from recovering from
   a full cluster outage.
 * Fixed an issue that allowed `uv_queue_work()` to be called from an
   application thread.
-* Added logic to prevent redundant node refreshes when estabilishing
+* Added logic to prevent redundant node refreshes when establishing
   a new connection from multiple IO workers.
 * Fixed a crash caused by Cassandra 2.1.0 not returning metadata on
   execute requests.
@@ -416,9 +443,9 @@ Features
 * Added callbacks to futures, `cass_future_set_callback()`
 * Added plaintext authentication support, `cass_cluster_set_credentials()`
 * Added map iterator, `cass_iterator_from_map()`, key and value pairs can be
-  retreived using `cass_iterator_get_map_key()` and `cass_iterator_get_map_value()`
-* Values can be bound by name (statements created from prepared statments only)
-* Values can be retreived by name from result sets
+  retrieved using `cass_iterator_get_map_key()` and `cass_iterator_get_map_value()`
+* Values can be bound by name (statements created from prepared statements only)
+* Values can be retrieved by name from result sets
 
 Other
 ---------
@@ -447,14 +474,14 @@ Bug Fixes
 * Fixed issue where connections would log "'Timed out during startup' error on startup for ..."
   when a Session was closed while a connection was during its startup process
 * Fixed Row and collections iterator so they return the first and last item properly
-* Improved logic for creating new connections so it's based request throughput
+* Improved logic for creating new connections so it''s based request throughput
 
 Other
 ---------
 * Removed the `setopt` method added set methods for all options
 * Removed the `getopt` method
 * `cass_batch_new()` and `cass_collection_new()` no longer take a consistency parameter
-* `cass_collection_new()` now requires a colleciton type parameter
+* `cass_collection_new()` now requires a collection type parameter
 * `is_map` parameter removed from `cass_statement_bind_collection()`
 
 1.0.0-beta1
