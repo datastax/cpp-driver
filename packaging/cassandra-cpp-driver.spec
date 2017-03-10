@@ -87,33 +87,5 @@ rm -rf %{buildroot}
 %{_libdir}/pkgconfig/*.pc
 
 %changelog
-* Mon Dec 14 2015 Michael Penick <michael.penick@datastax.com> - 2.2.2-1
-- patch release
-* Fri Nov 20 2015 Michael Penick <michael.penick@datastax.com> - 2.2.1-1
-- patch release
-* Mon Nov 02 2015 Michael Penick <michael.penick@datastax.com> - 2.2.0-1
+* Mon Mar 13 2017 Michael Penick <michael.penick@datastax.com> - 2.6.0-1
 - release
-* Mon Sep 21 2015 Michael Penick <michael.penick@datastax.com> - 2.2.0beta1-1
-- beta release
-* Tue Aug 11 2015 Michael Penick <michael.penick@datastax.com> - 2.1.0-1
-- release
-* Wed Jul 08 2015 Michael Penick <michael.penick@datastax.com> - 2.1.0beta-1
-- beta release
-* Mon May 18 2015 Michael Penick <michael.penick@datastax.com> - 2.0.1-1
-- patch release
-* Thu Apr 23 2015 Michael Penick <michael.penick@datastax.com> - 2.0.0-1
-- release
-* Tue Feb 03 2015 Michael Penick <michael.penick@datastax.com> - 1.0.0-1
-- release
-* Tue Dec 23 2014 Michael Penick <michael.penick@datastax.com> - 1.0.0rc1-1
-- release candidate
-* Thu Nov 20 2014 Michael Penick <michael.penick@datastax.com> - 1.0.0beta5-1
-- beta release
-* Thu Sep 11 2014 Michael Penick <michael.penick@datastax.com> - 1.0.0beta4-1
-- beta release
-* Wed Aug 13 2014 Michael Penick <michael.penick@datastax.com> - 1.0.0beta3-1
-- beta release
-* Thu Jul 17 2014 Michael Penick <michael.penick@datastax.com> - 1.0.0beta2-1
-- beta release
-* Mon Jun 16 2014 Michael Penick <michael.penick@datastax.com> - 1.0.0beta1-1
-- beta release
