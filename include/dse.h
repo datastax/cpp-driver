@@ -1587,6 +1587,42 @@ dse_graph_result_element(const DseGraphResult* result,
 
 /***********************************************************************************
  *
+ * Batch
+ *
+ ***********************************************************************************/
+
+/**
+ * Sets the name of the user to execute the batch as.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] name
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+cass_batch_set_execute_as(CassBatch* batch,
+                          const char* name);
+
+/**
+ * Same as cass_batch_set_execute_as(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_batch_set_execute_as()
+ *
+ * @see cass_batch_set_execute_as()
+ */
+DSE_EXPORT CassError
+cass_batch_set_execute_as_n(CassBatch* batch,
+                            const char* name, size_t name_length);
+
+/***********************************************************************************
+ *
  * Statement
  *
  ***********************************************************************************/
