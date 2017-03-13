@@ -26,6 +26,10 @@
 #include <string.h>
 #include <vector>
 
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
+
 namespace cass {
 
 class BufferPiece;
