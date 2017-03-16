@@ -963,10 +963,28 @@ cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] protocol_version
  * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_use_beta_protocol_version()
  */
 CASS_EXPORT CassError
 cass_cluster_set_protocol_version(CassCluster* cluster,
                                   int protocol_version);
+
+/**
+ * Use the newest beta protocol version. This currently enables the use of
+ * protocol version 5.
+ *
+ * <b>Default:</b> cass_false
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] enable if false the highest non-beta protocol version will be used
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
+                                           cass_bool_t enable);
 
 /**
  * Sets the number of IO threads. This is the number of threads

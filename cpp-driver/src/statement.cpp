@@ -326,7 +326,7 @@ int32_t Statement::encode_v1(RequestCallback* callback, BufferVec* bufs) const {
 // where:
 // <query> has the format [long string]
 // <consistency> is a [short]
-// <flags> is a [byte]
+// <flags> is a [byte] (or [int] for protocol v5)
 // <n> is a [short]
 //
 // For execute statements the format is:
@@ -334,19 +334,24 @@ int32_t Statement::encode_v1(RequestCallback* callback, BufferVec* bufs) const {
 // where:
 // <id> has the format [short bytes] (or [string])
 // <consistency> is a [short]
-// <flags> is a [byte]
+// <flags> is a [byte] (or [int] for protocol v5)
 // <n> is a [short]
 int32_t Statement::encode_begin(int version, uint16_t element_count,
                                 RequestCallback* callback, BufferVec* bufs) const {
   int32_t length = 0;
   size_t query_params_buf_size = 0;
-  uint8_t flags = flags_;
+  int32_t flags = flags_;
 
   bufs->push_back(query_or_id_);
   length += query_or_id_.size();
 
   query_params_buf_size += sizeof(uint16_t); // <consistency> [short]
-  query_params_buf_size += sizeof(uint8_t); // <flags> [byte]
+
+  if (version >= 5) {
+    query_params_buf_size += sizeof(int32_t); // <flags> [int]
+  } else {
+    query_params_buf_size += sizeof(uint8_t); // <flags> [byte]
+  }
 
   if (element_count > 0) {
     query_params_buf_size += sizeof(uint16_t); // <n> [short]
@@ -374,7 +379,12 @@ int32_t Statement::encode_begin(int version, uint16_t element_count,
 
   Buffer& buf = bufs->back();
   size_t pos = buf.encode_uint16(0, callback->consistency());
-  pos = buf.encode_byte(pos, flags);
+
+  if (version >= 5) {
+    pos = buf.encode_int32(pos, flags);
+  } else {
+    pos = buf.encode_byte(pos, flags);
+  }
 
   if (element_count > 0) {
     buf.encode_uint16(pos, element_count);

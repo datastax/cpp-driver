@@ -151,6 +151,9 @@ bool ErrorResponse::decode(int version, char* buffer, size_t size) {
       pos = decode_int32(pos, received_);
       pos = decode_int32(pos, required_);
       pos = decode_int32(pos, num_failures_);
+      if (version >= 5) {
+        pos = decode_failures(pos);
+      }
       decode_byte(pos, data_present_);
       break;
     case CQL_ERROR_FUNCTION_FAILURE:
@@ -163,6 +166,9 @@ bool ErrorResponse::decode(int version, char* buffer, size_t size) {
       pos = decode_int32(pos, received_);
       pos = decode_int32(pos, required_);
       pos = decode_int32(pos, num_failures_);
+      if (version >= 5) {
+        pos = decode_failures(pos);
+      }
       decode_write_type(pos);
       break;
     case CQL_ERROR_UNPREPARED:
@@ -174,6 +180,21 @@ bool ErrorResponse::decode(int version, char* buffer, size_t size) {
       break;
   }
   return true;
+}
+
+// Format: <endpoint><failurecode>
+// where:
+// <endpoint> is a [inetaddr]
+// <failurecode> is a [short]
+char* ErrorResponse::decode_failures(char* pos) {
+  failures_.reserve(num_failures_);
+  for (int32_t i = 0; i < num_failures_; ++i) {
+    Failure failure;
+    pos = decode_inet(pos, &failure.endpoint);
+    pos = decode_uint16(pos, failure.failurecode);
+    failures_.push_back(failure);
+  }
+  return pos;
 }
 
 void ErrorResponse::decode_write_type(char* pos) {

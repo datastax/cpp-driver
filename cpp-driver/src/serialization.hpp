@@ -240,6 +240,15 @@ inline char* decode_inet(char* input, Address* output) {
   return pos;
 }
 
+inline char* decode_inet(char* input, CassInet* output) {
+  char* pos = decode_byte(input, output->address_length);
+
+  assert(output->address_length <= 16);
+  memcpy(output->address, pos, output->address_length);
+
+  return pos + output->address_length;
+}
+
 inline char* decode_string_map(char* input,
                                std::map<std::string, std::string>& map) {
 

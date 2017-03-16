@@ -28,6 +28,7 @@
 
 #include <string.h>
 #include <string>
+#include <vector>
 
 namespace cass {
 
@@ -62,7 +63,16 @@ public:
   bool decode(int version, char* buffer, size_t size);
 
 private:
+  char* decode_failures(char* pos);
   void decode_write_type(char* pos);
+
+private:
+  struct Failure {
+    CassInet endpoint;
+    uint16_t failurecode;
+  };
+
+  typedef std::vector<Failure> FailureVec;
 
 private:
   int32_t code_;
@@ -72,6 +82,7 @@ private:
   int32_t received_;
   int32_t required_;
   int32_t num_failures_;
+  FailureVec failures_;
   uint8_t data_present_;
   CassWriteType write_type_;
   StringRef keyspace_;
