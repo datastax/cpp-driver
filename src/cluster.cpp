@@ -16,6 +16,7 @@
 
 #include "cluster.hpp"
 
+#include "constants.hpp"
 #include "dc_aware_policy.hpp"
 #include "external.hpp"
 #include "logger.hpp"
@@ -50,7 +51,25 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
   if (protocol_version < 1) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
+  if (cluster->config().use_beta_protocol_version()) {
+    LOG_ERROR("The protocol version is already set to the newest beta version v%d "
+              "and cannot be explicitly set.", CASS_NEWEST_BETA_PROTOCOL_VERSION);
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  } else if (protocol_version > CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
+    LOG_ERROR("Protocol version v%d is higher than the highest supported "
+              "protocol version v%d (consider using the newest beta protocol version).",
+              protocol_version, CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
   cluster->config().set_protocol_version(protocol_version);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
+                                                     cass_bool_t enable) {
+  cluster->config().set_use_beta_protocol_version(enable == cass_true);
+  cluster->config().set_protocol_version(enable ? CASS_NEWEST_BETA_PROTOCOL_VERSION
+                                                : CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
   return CASS_OK;
 }
 

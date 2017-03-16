@@ -92,12 +92,13 @@ namespace cass {
 // <n> is a [short]
 // <query> has the format <kind><string_or_id><n>[<name_1>]<value_1>...[<name_n>]<value_n>
 // <consistency> is a [short]
-// <flags> is a [byte]
+// Only protocol v3 and higher for the following:
+// <flags> is a [byte] (or [int] for protocol v5)
 // <serial_consistency> is a [short]
 // <timestamp> is a [long]
 int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   int length = 0;
-  uint8_t flags = 0;
+  uint32_t flags = 0;
 
   if (version == 1) {
     return REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
@@ -136,7 +137,11 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
     size_t buf_size = sizeof(uint16_t);
     if (version >= 3) {
       // <flags>[<serial_consistency><timestamp>]
-      buf_size += sizeof(uint8_t); // [byte]
+      if (version >= 5) {
+        buf_size += sizeof(int32_t); // [int]
+      } else {
+        buf_size += sizeof(uint8_t); // [byte]
+      }
 
       if (serial_consistency() != 0) {
         buf_size += sizeof(uint16_t); // [short]
@@ -153,7 +158,11 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
 
     size_t pos = buf.encode_uint16(0, callback->consistency());
     if (version >= 3) {
-      pos = buf.encode_byte(pos, flags);
+      if (version >= 5) {
+        pos = buf.encode_int32(pos, flags);
+      } else {
+        pos = buf.encode_byte(pos, flags);
+      }
 
       if (serial_consistency() != 0) {
         pos = buf.encode_uint16(pos, serial_consistency());

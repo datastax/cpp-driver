@@ -635,12 +635,19 @@ typedef enum CassLogLevel_ {
   /* @endcond */
 } CassLogLevel;
 
-typedef enum CassSslVerifyFlags {
+typedef enum CassSslVerifyFlags_ {
   CASS_SSL_VERIFY_NONE              = 0x00,
   CASS_SSL_VERIFY_PEER_CERT         = 0x01,
   CASS_SSL_VERIFY_PEER_IDENTITY     = 0x02,
   CASS_SSL_VERIFY_PEER_IDENTITY_DNS = 0x04
 } CassSslVerifyFlags;
+
+typedef enum CassProtocolVersion_ {
+  CASS_PROTOCOL_VERSION_V1    = 0x01,
+  CASS_PROTOCOL_VERSION_V2    = 0x02,
+  CASS_PROTOCOL_VERSION_V3    = 0x03,
+  CASS_PROTOCOL_VERSION_V4    = 0x04,
+} CassProtocolVersion;
 
 typedef enum  CassErrorSource_ {
   CASS_ERROR_SOURCE_NONE,
@@ -976,10 +983,28 @@ cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] protocol_version
  * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_use_beta_protocol_version()
  */
 CASS_EXPORT CassError
 cass_cluster_set_protocol_version(CassCluster* cluster,
                                   int protocol_version);
+
+/**
+ * Use the newest beta protocol version. This currently enables the use of
+ * protocol version 5.
+ *
+ * <b>Default:</b> cass_false
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] enable if false the highest non-beta protocol version will be used
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
+                                           cass_bool_t enable);
 
 /**
  * Sets the number of IO threads. This is the number of threads

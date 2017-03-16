@@ -124,7 +124,7 @@ protected:
 
 private:
   Buffer query_or_id_;
-  uint8_t flags_;
+  int32_t flags_;
   int32_t page_size_;
   std::string paging_state_;
   std::vector<size_t> key_indices_;

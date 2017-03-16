@@ -35,15 +35,15 @@ void RequestCallback::start(Connection* connection, int stream) {
 }
 
 int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
-  if (version < 1 || version > 4) {
-    return Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
-  }
-
   size_t index = bufs->size();
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
   int32_t length = 0;
+
+  if (version == CASS_NEWEST_BETA_PROTOCOL_VERSION) {
+    flags |= CASS_FLAG_BETA;
+  }
 
   if (version >= 4 && req->custom_payload()) {
     flags |= CASS_FLAG_CUSTOM_PAYLOAD;
