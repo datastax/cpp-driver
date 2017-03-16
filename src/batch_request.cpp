@@ -86,6 +86,15 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
+// Format: <type><n><query_1>...<query_n><consistency><flags>[<serial_consistency>][<timestamp>]
+// where:
+// <type> is a [byte]
+// <n> is a [short]
+// <query> has the format <kind><string_or_id><n>[<name_1>]<value_1>...[<name_n>]<value_n>
+// <consistency> is a [short]
+// <flags> is a [byte]
+// <serial_consistency> is a [short]
+// <timestamp> is a [long]
 int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   int length = 0;
   uint8_t flags = 0;
@@ -115,7 +124,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
                         "Batches cannot contain queries with named values");
       return REQUEST_ERROR_BATCH_WITH_NAMED_VALUES;
     }
-    int32_t result = (*i)->encode_batch(version, bufs, callback);
+    int32_t result = statement->encode_batch(version, callback, bufs);
     if (result < 0) {
       return result;
     }

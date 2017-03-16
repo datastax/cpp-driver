@@ -89,7 +89,6 @@ public:
   virtual ~AbstractData() { }
 
   const ElementVec& elements() const { return elements_; }
-  size_t elements_count() const { return elements_.size(); }
 
   void reset(size_t count) {
     elements_.clear();
