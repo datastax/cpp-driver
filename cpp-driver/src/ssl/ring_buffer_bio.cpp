@@ -43,10 +43,18 @@
 
 #include <string.h>
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define BIO_set_data(b, p) ((b)->ptr = p)
+#define BIO_get_shutdown(b) ((b)->shutdown)
+#define BIO_set_shutdown(b, s) ((b)->shutdown = s)
+#define BIO_set_init(b, i) ((b)->init = i)
+#endif
+
 namespace cass {
 namespace rb {
 
-const BIO_METHOD RingBufferBio::method = {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+const BIO_METHOD RingBufferBio::method_ = {
   BIO_TYPE_MEM,
   "ring buffer",
   RingBufferBio::write,
@@ -58,20 +66,39 @@ const BIO_METHOD RingBufferBio::method = {
   RingBufferBio::destroy,
   NULL
 };
+#else
+BIO_METHOD* RingBufferBio::method_ = NULL;
 
-BIO* RingBufferBio::create(RingBuffer* ring_buffer) {
+void RingBufferBio::initialize() {
+  method_ = BIO_meth_new(BIO_TYPE_MEM, "ring buffer");
+  if (method_) {
+    BIO_meth_set_write(method_, RingBufferBio::write);
+    BIO_meth_set_read(method_, RingBufferBio::read);
+    BIO_meth_set_puts(method_, RingBufferBio::puts);
+    BIO_meth_set_gets(method_, RingBufferBio::gets);
+    BIO_meth_set_ctrl(method_, RingBufferBio::ctrl);
+    BIO_meth_set_create(method_, RingBufferBio::create);
+    BIO_meth_set_destroy(method_, RingBufferBio::destroy);
+  }
+}
+#endif
+
+BIO* RingBufferBio::create(RingBufferState* state) {
   // The const_cast doesn't violate const correctness.  OpenSSL's usage of
   // BIO_METHOD is effectively const but BIO_new() takes a non-const argument.
-  BIO* bio =  BIO_new(const_cast<BIO_METHOD*>(&method));
-  bio->ptr = ring_buffer;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  BIO* bio = BIO_new(const_cast<BIO_METHOD*>(&method_));
+#else
+  BIO* bio = BIO_new(method_);
+#endif
+  BIO_set_data(bio, state);
   return bio;
 }
 
 int RingBufferBio::create(BIO* bio) {
   // XXX Why am I doing it?!
-  bio->shutdown = 1;
-  bio->init = 1;
-  bio->num = -1;
+  BIO_set_shutdown(bio, 1);
+  BIO_set_init(bio, 1);
 
   return 1;
 }
@@ -87,10 +114,10 @@ int RingBufferBio::read(BIO* bio, char* out, int len) {
   int bytes;
   BIO_clear_retry_flags(bio);
 
-  bytes = from_bio(bio)->read(out, len);
+  bytes = from_bio(bio)->ring_buffer->read(out, len);
 
   if (bytes == 0) {
-    bytes = bio->num;
+    bytes = from_bio(bio)->ret;
     if (bytes != 0) {
       BIO_set_retry_read(bio);
     }
@@ -102,7 +129,7 @@ int RingBufferBio::read(BIO* bio, char* out, int len) {
 int RingBufferBio::write(BIO* bio, const char* data, int len) {
   BIO_clear_retry_flags(bio);
 
-  from_bio(bio)->write(data, len);
+  from_bio(bio)->ring_buffer->write(data, len);
 
   return len;
 }
@@ -112,7 +139,7 @@ int RingBufferBio::puts(BIO* bio, const char* str) {
 }
 
 int RingBufferBio::gets(BIO* bio, char* out, int size) {
-  RingBuffer* ring_buffer =  from_bio(bio);
+  RingBuffer* ring_buffer = from_bio(bio)->ring_buffer;
 
   if (ring_buffer->length() == 0)
     return 0;
@@ -136,24 +163,20 @@ int RingBufferBio::gets(BIO* bio, char* out, int size) {
 }
 
 long RingBufferBio::ctrl(BIO* bio, int cmd, long num, void* ptr) {
-  RingBuffer* ring_buffer;
-  long ret;
-
-  ring_buffer = from_bio(bio);
-  ret = 1;
+  long ret = 1;
 
   switch (cmd) {
     case BIO_CTRL_RESET:
-      ring_buffer->reset();
+      from_bio(bio)->ring_buffer->reset();
       break;
     case BIO_CTRL_EOF:
-      ret = ring_buffer->length() == 0;
+      ret = from_bio(bio)->ring_buffer->length() == 0;
       break;
     case BIO_C_SET_BUF_MEM_EOF_RETURN:
-      bio->num = num;
+      from_bio(bio)->ret = num;
       break;
     case BIO_CTRL_INFO:
-      ret = ring_buffer->length();
+      ret = from_bio(bio)->ring_buffer->length();
       if (ptr != NULL)
         *reinterpret_cast<void**>(ptr) = NULL;
       break;
@@ -166,16 +189,16 @@ long RingBufferBio::ctrl(BIO* bio, int cmd, long num, void* ptr) {
       ret = 0;
       break;
     case BIO_CTRL_GET_CLOSE:
-      ret = bio->shutdown;
+      ret = BIO_get_shutdown(bio);
       break;
     case BIO_CTRL_SET_CLOSE:
-      bio->shutdown = num;
+      BIO_set_shutdown(bio, num);
       break;
     case BIO_CTRL_WPENDING:
       ret = 0;
       break;
     case BIO_CTRL_PENDING:
-      ret = ring_buffer->length();
+      ret = from_bio(bio)->ring_buffer->length();
       break;
     case BIO_CTRL_DUP:
     case BIO_CTRL_FLUSH:
