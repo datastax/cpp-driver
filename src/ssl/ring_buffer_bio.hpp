@@ -47,17 +47,38 @@
 #include <assert.h>
 #include <openssl/bio.h>
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define BIO_get_data(b) ((b)->ptr)
+#endif
+
 namespace cass {
 namespace rb {
 
+// This wrapper is used to contain the ring buffer state kept in the BIO's
+// user data field. OpenSSL 1.1 made the BIO's structure opaque which removed access
+// to the "num" field which was used for the EOF return value. This struct's "ret"
+// is now used to track the EOF return value.
+struct RingBufferState {
+  RingBufferState(RingBuffer* ring_buffer)
+    : ring_buffer(ring_buffer)
+    , ret(-1) { }
+
+  RingBuffer* ring_buffer;
+  int ret; // Used to keep track of the EOF return value
+};
+
 class RingBufferBio {
 public:
-  static BIO* create(RingBuffer* ring_buffer);
+  static BIO* create(RingBufferState* ring_buffer);
 
-  static RingBuffer* from_bio(BIO* bio) {
-    assert(bio->ptr != NULL);
-    return static_cast<RingBuffer*>(bio->ptr);
+  static RingBufferState* from_bio(BIO* bio) {
+    assert(BIO_get_data(bio) != NULL);
+    return static_cast<RingBufferState*>(BIO_get_data(bio));
   }
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+  static void initialize();
+#endif
 
 private:
   static int create(BIO* bio);
@@ -68,7 +89,11 @@ private:
   static int gets(BIO* bio, char* out, int size);
   static long ctrl(BIO* bio, int cmd, long num, void* ptr);
 
-  static const BIO_METHOD method;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  static const BIO_METHOD method_;
+#else
+  static BIO_METHOD *method_;
+#endif
 };
 
 } // namespace rb

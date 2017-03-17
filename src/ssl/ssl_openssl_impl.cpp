@@ -19,8 +19,6 @@
 #include "logger.hpp"
 #include "utils.hpp"
 
-#include "ssl/ring_buffer_bio.hpp"
-
 #include "third_party/curl/hostcheck.hpp"
 
 #include <openssl/crypto.h>
@@ -29,6 +27,12 @@
 #include <string.h>
 
 #define DEBUG_SSL 0
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define ASN1_STRING_get0_data ASN1_STRING_data
+#else
+#define SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE SSL_F_USE_CERTIFICATE_CHAIN_FILE
+#endif
 
 namespace cass {
 
@@ -109,6 +113,7 @@ static int pem_password_callback(char* buf, int size, int rwflag, void* u) {
   return len;
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 static uv_rwlock_t* crypto_locks;
 
 static void crypto_locking_callback(int mode, int n, const char* file, int line) {
@@ -136,6 +141,7 @@ static unsigned long crypto_id_callback() {
   return copy_cast<uv_thread_t, unsigned long>(uv_thread_self());
 #endif
 }
+#endif
 
 // Implementation taken from OpenSSL's SSL_CTX_use_certificate_chain_file()
 // (https://github.com/openssl/openssl/blob/OpenSSL_0_9_8-stable/ssl/ssl_rsa.c#L705).
@@ -165,13 +171,21 @@ static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
     int r;
     unsigned long err;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (ctx->extra_certs != NULL) {
       sk_X509_pop_free(ctx->extra_certs, X509_free);
       ctx->extra_certs = NULL;
     }
+#else
+    SSL_CTX_clear_chain_certs(ctx);
+#endif
 
     while ((ca = PEM_read_bio_X509(in, NULL, pem_password_callback, NULL)) != NULL) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
       r = SSL_CTX_add_extra_chain_cert(ctx, ca);
+#else
+      r = SSL_CTX_add0_chain_cert(ctx, ca);
+#endif
       if (!r) {
         X509_free(ca);
         ret = 0;
@@ -278,7 +292,7 @@ private:
         return INVALID_CERT;
       }
 
-      const char* common_name = reinterpret_cast<char*>(ASN1_STRING_data(str));
+      const char* common_name = reinterpret_cast<const char*>(ASN1_STRING_get0_data(str));
       if (strlen(common_name) != static_cast<size_t>(ASN1_STRING_length(str))) {
         return INVALID_CERT;
       }
@@ -309,7 +323,7 @@ private:
         return INVALID_CERT;
       }
 
-      const char* common_name = reinterpret_cast<char*>(ASN1_STRING_data(str));
+      const char* common_name = reinterpret_cast<const char*>(ASN1_STRING_get0_data(str));
       if (strlen(common_name) != static_cast<size_t>(ASN1_STRING_length(str))) {
         return INVALID_CERT;
       }
@@ -349,7 +363,7 @@ private:
           break;
         }
 
-        unsigned char* ip = ASN1_STRING_data(str);
+        const unsigned char* ip = ASN1_STRING_get0_data(str);
         int ip_len = ASN1_STRING_length(str);
         if (ip_len != 4 && ip_len != 16) {
           result = INVALID_CERT;
@@ -386,7 +400,7 @@ private:
           break;
         }
 
-        const char* common_name = reinterpret_cast<char*>(ASN1_STRING_data(str));
+        const char* common_name = reinterpret_cast<const char*>(ASN1_STRING_get0_data(str));
         if (strlen(common_name) != static_cast<size_t>(ASN1_STRING_length(str))) {
           result = INVALID_CERT;
           break;
@@ -410,8 +424,10 @@ OpenSslSession::OpenSslSession(const Host::ConstPtr& host,
                                SSL_CTX* ssl_ctx)
   : SslSession(host, flags)
   , ssl_(SSL_new(ssl_ctx))
-  , incoming_bio_(rb::RingBufferBio::create(&incoming_))
-  , outgoing_bio_(rb::RingBufferBio::create(&outgoing_)) {
+  , incoming_state_(&incoming_)
+  , outgoing_state_(&outgoing_)
+  , incoming_bio_(rb::RingBufferBio::create(&incoming_state_))
+  , outgoing_bio_(rb::RingBufferBio::create(&outgoing_state_)) {
   SSL_set_bio(ssl_, incoming_bio_, outgoing_bio_);
   SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_NONE, ssl_no_verify_callback);
 #if DEBUG_SSL
@@ -581,6 +597,7 @@ void OpenSslContextFactory::init() {
   SSL_load_error_strings();
   OpenSSL_add_all_algorithms();
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   // We have to set the lock/id callbacks for use of OpenSSL thread safety.
   // It's not clear what's thread-safe in OpenSSL. Writing/Reading to
   // a single "SSL" object is NOT and we don't do that, but we do create multiple
@@ -597,6 +614,9 @@ void OpenSslContextFactory::init() {
 
   CRYPTO_set_locking_callback(crypto_locking_callback);
   CRYPTO_set_id_callback(crypto_id_callback);
+#else
+  rb::RingBufferBio::initialize();
+#endif
 }
 
 } // namespace cass

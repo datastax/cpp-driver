@@ -17,6 +17,8 @@
 #ifndef __CASS_SSL_OPENSSL_IMPL_HPP_INCLUDED__
 #define __CASS_SSL_OPENSSL_IMPL_HPP_INCLUDED__
 
+#include "ssl/ring_buffer_bio.hpp"
+
 #include <assert.h>
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
@@ -44,6 +46,8 @@ private:
   void check_error(int rc);
 
   SSL* ssl_;
+  rb::RingBufferState incoming_state_;
+  rb::RingBufferState outgoing_state_;
   BIO* incoming_bio_;
   BIO* outgoing_bio_;
 };
