@@ -72,6 +72,16 @@ std::string opcode_to_string(int opcode) {
   return "";
 }
 
+std::string protocol_version_to_string(int version) {
+  std::stringstream ss;
+  if (version & DSE_PROTOCOL_VERSION_BIT) {
+    ss << "DSEv" << (version & DSE_PROTOCOL_VERSION_MASK);
+  } else {
+    ss << "v" << version;
+  }
+  return ss.str();
+}
+
 void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter /* = ',' */) {
   std::istringstream stream(str);
   while (!stream.eof()) {

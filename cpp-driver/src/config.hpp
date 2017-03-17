@@ -44,7 +44,7 @@ class Config {
 public:
   Config()
       : port_(9042)
-      , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
+      , protocol_version_(DSE_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
       , use_beta_protocol_version_(false)
       , thread_count_io_(1)
       , queue_size_io_(8192)

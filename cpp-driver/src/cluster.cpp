@@ -51,14 +51,21 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
   if (protocol_version < 1) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
+  bool is_dse_version = protocol_version & DSE_PROTOCOL_VERSION_BIT;
   if (cluster->config().use_beta_protocol_version()) {
-    LOG_ERROR("The protocol version is already set to the newest beta version v%d "
-              "and cannot be explicitly set.", CASS_NEWEST_BETA_PROTOCOL_VERSION);
+    LOG_ERROR("The protocol version is already set to the newest beta version %s "
+              "and cannot be explicitly set.",
+              cass::protocol_version_to_string(CASS_NEWEST_BETA_PROTOCOL_VERSION).c_str());
     return CASS_ERROR_LIB_BAD_PARAMS;
-  } else if (protocol_version > CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
-    LOG_ERROR("Protocol version v%d is higher than the highest supported "
-              "protocol version v%d (consider using the newest beta protocol version).",
-              protocol_version, CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
+  } else if ((is_dse_version &&
+              protocol_version > DSE_HIGHEST_SUPPORTED_PROTOCOL_VERSION) ||
+             (!is_dse_version &&
+              protocol_version > CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)) {
+    LOG_ERROR("Protocol version %s is higher than the highest supported "
+              "protocol version %s (consider using the newest beta protocol version).",
+              cass::protocol_version_to_string(protocol_version).c_str(),
+              cass::protocol_version_to_string(is_dse_version ? DSE_HIGHEST_SUPPORTED_PROTOCOL_VERSION
+                                                              : CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION).c_str());
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_protocol_version(protocol_version);

@@ -624,12 +624,20 @@ typedef enum CassLogLevel_ {
   /* @endcond */
 } CassLogLevel;
 
-typedef enum CassSslVerifyFlags {
+typedef enum CassSslVerifyFlags_ {
   CASS_SSL_VERIFY_NONE              = 0x00,
   CASS_SSL_VERIFY_PEER_CERT         = 0x01,
   CASS_SSL_VERIFY_PEER_IDENTITY     = 0x02,
   CASS_SSL_VERIFY_PEER_IDENTITY_DNS = 0x04
 } CassSslVerifyFlags;
+
+typedef enum CassProtocolVersion_ {
+  CASS_PROTOCOL_VERSION_V1    = 0x01,
+  CASS_PROTOCOL_VERSION_V2    = 0x02,
+  CASS_PROTOCOL_VERSION_V3    = 0x03,
+  CASS_PROTOCOL_VERSION_V4    = 0x04,
+  CASS_PROTOCOL_VERSION_DSEV1 = 0x41
+} CassProtocolVersion;
 
 typedef enum  CassErrorSource_ {
   CASS_ERROR_SOURCE_NONE,

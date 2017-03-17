@@ -82,6 +82,8 @@ inline size_t next_pow_2(size_t num) {
 
 std::string opcode_to_string(int opcode);
 
+std::string protocol_version_to_string(int version);
+
 void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter = ',');
 
 std::string& trim(std::string& str);

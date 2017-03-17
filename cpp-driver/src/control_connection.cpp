@@ -28,6 +28,7 @@
 #include "result_response.hpp"
 #include "session.hpp"
 #include "timer.hpp"
+#include "utils.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -235,12 +236,27 @@ void ControlConnection::on_close(Connection* connection) {
                                              "Not even protocol version 1 is supported");
         return;
       }
-      LOG_WARN("Host %s does not support protocol version %d. "
-               "Trying protocol version %d...",
+
+      int previous_version = protocol_version_;
+      bool is_dse_version = protocol_version_ & DSE_PROTOCOL_VERSION_BIT;
+      if (is_dse_version) {
+        int dse_version = protocol_version_ & DSE_PROTOCOL_VERSION_MASK;
+        if (dse_version <= 1) {
+          // Start trying Cassandra protocol versions
+          protocol_version_ = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
+        } else {
+          protocol_version_--;
+        }
+      } else {
+        protocol_version_--;
+      }
+
+      LOG_WARN("Host %s does not support protocol version %s. "
+               "Trying protocol version %s...",
                connection->address_string().c_str(),
-               protocol_version_,
-               protocol_version_ - 1);
-      protocol_version_--;
+               protocol_version_to_string(previous_version).c_str(),
+               protocol_version_to_string(protocol_version_).c_str());
+
       retry_current_host = true;
     } else if (connection->is_auth_error()) {
       session_->on_control_connection_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
