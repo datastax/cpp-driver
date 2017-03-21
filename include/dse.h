@@ -1968,6 +1968,47 @@ cass_statement_set_execute_as_n(CassStatement* statement,
  ***********************************************************************************/
 
 /**
+ * Appends a point to the collection.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] x
+ * @param[in] y
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_dse_point(CassCollection* collection,
+                                 cass_double_t x, cass_double_t y);
+
+/**
+ * Appends a line string to the collection.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] line_string
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_dse_line_string(CassCollection* collection,
+                                       const DseLineString* line_string);
+
+/**
+ * Appends a polygon to the collection.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] polygon
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_dse_polygon(CassCollection* collection,
+                                   const DsePolygon* polygon);
+
+
+/**
  * Appends a DateRange to the collection.
  *
  * @cassandra{3.10+}
@@ -1987,6 +2028,52 @@ cass_collection_append_dse_date_range(CassCollection* collection,
  * Tuple
  *
  ***********************************************************************************/
+
+/**
+ * Sets a point in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] x
+ * @param[in] y
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_dse_point(CassTuple* tuple,
+                         size_t index,
+                         cass_double_t x, cass_double_t y);
+
+/**
+ * Sets a line string in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] line_string
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_dse_line_string(CassTuple* tuple,
+                               size_t index,
+                               const DseLineString* line_string);
+
+/**
+ * Sets a polygon in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] polygon
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_dse_polygon(CassTuple* tuple,
+                           size_t index,
+                           const DsePolygon* polygon);
 
 /**
  * Sets a DateRange in a tuple at the specified index.
@@ -2010,6 +2097,159 @@ cass_tuple_set_dse_date_range(CassTuple* tuple,
  * User defined type
  *
  ***********************************************************************************/
+
+/**
+ * Sets a point in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] x
+ * @param[in] y
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_point(CassUserType* user_type,
+                             size_t index,
+                             cass_double_t x, cass_double_t y);
+
+/**
+ * Sets a point in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] x
+ * @param[in] y
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_point_by_name(CassUserType* user_type,
+                                     const char* name,
+                                     cass_double_t x, cass_double_t y);
+
+/**
+ * Same as cass_user_type_set_dse_point_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] x
+ * @param[in] y
+ * @return same as cass_user_type_set_dse_point_by_name()
+ *
+ * @see cass_user_type_set_dse_point_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_point_by_name_n(CassUserType* user_type,
+                                       const char* name,
+                                       size_t name_length,
+                                       cass_double_t x, cass_double_t y);
+
+/**
+ * Sets a line string in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] line_string
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_line_string(CassUserType* user_type,
+                                   size_t index,
+                                   const DseLineString* line_string);
+
+/**
+ * Sets a line string in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] line_string
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_line_string_by_name(CassUserType* user_type,
+                                           const char* name,
+                                           const DseLineString* line_string);
+
+/**
+ * Same as cass_user_type_set_dse_line_string_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] line_string
+ * @return same as cass_user_type_set_dse_line_string_by_name()
+ *
+ * @see cass_user_type_set_dse_line_string_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_line_string_by_name_n(CassUserType* user_type,
+                                             const char* name,
+                                             size_t name_length,
+                                             const DseLineString* line_string);
+
+/**
+ * Sets a polygon in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] polygon
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_polygon(CassUserType* user_type,
+                               size_t index,
+                               const DsePolygon* polygon);
+
+/**
+ * Sets a polygon in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] polygon
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_polygon_by_name(CassUserType* user_type,
+                                       const char* name,
+                                       const DsePolygon* polygon);
+
+/**
+ * Same as cass_user_type_set_dse_polygon_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] polygon
+ * @return same as cass_user_type_set_dse_polygon_by_name()
+ *
+ * @see cass_user_type_set_dse_polygon_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_polygon_by_name_n(CassUserType* user_type,
+                                         const char* name,
+                                         size_t name_length,
+                                         const DsePolygon* polygon);
 
 /**
  * Sets a DateRange in a user defined type at the specified index.

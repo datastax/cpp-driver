@@ -8,28 +8,11 @@
 #include "dse.h"
 
 #include "date_range.hpp"
+#include "point.hpp"
 #include "line_string.hpp"
 #include "polygon.hpp"
 
 #include "statement.hpp"
-
-namespace dse {
-
-inline Bytes encode_point(cass_double_t x, cass_double_t y) {
-  Bytes bytes;
-
-  bytes.reserve(WKB_HEADER_SIZE +       // Header
-                sizeof(cass_double_t) + // X
-                sizeof(cass_double_t)); // Y
-
-  encode_header_append(WKB_GEOMETRY_TYPE_POINT, bytes);
-  encode_append(x, bytes);
-  encode_append(y, bytes);
-
-  return bytes;
-}
-
-} // namespace dse
 
 extern "C" {
 
