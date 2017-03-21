@@ -273,6 +273,7 @@ if(DSE_BUILD_EXAMPLES)
   add_subdirectory(examples/gssapi)
   add_subdirectory(examples/graph)
   add_subdirectory(examples/geotypes)
+  add_subdirectory(examples/date_range)
 endif()
 
 #--------

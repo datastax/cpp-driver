@@ -60,9 +60,10 @@ inline char* decode_int8(char* input, int8_t& output) {
   return input + sizeof(int8_t);
 }
 
-inline void encode_uint16(char* output, uint16_t value) {
+inline char* encode_uint16(char* output, uint16_t value) {
   output[0] = static_cast<char>(value >> 8);
   output[1] = static_cast<char>(value >> 0);
+  return output + sizeof(uint16_t);
 }
 
 inline char* decode_uint16(char* input, uint16_t& output) {
@@ -71,9 +72,10 @@ inline char* decode_uint16(char* input, uint16_t& output) {
   return input + sizeof(uint16_t);
 }
 
-inline void encode_int16(char* output, int16_t value) {
+inline char* encode_int16(char* output, int16_t value) {
   output[0] = static_cast<char>(value >> 8);
   output[1] = static_cast<char>(value >> 0);
+  return output + sizeof(int16_t);
 }
 
 inline char* decode_int16(char* input, int16_t& output) {
@@ -82,11 +84,12 @@ inline char* decode_int16(char* input, int16_t& output) {
   return input + sizeof(int16_t);
 }
 
-inline void encode_int32(char* output, int32_t value) {
+inline char* encode_int32(char* output, int32_t value) {
   output[0] = static_cast<char>(value >> 24);
   output[1] = static_cast<char>(value >> 16);
   output[2] = static_cast<char>(value >> 8);
   output[3] = static_cast<char>(value >> 0);
+  return output + sizeof(int32_t);
 }
 
 inline char* decode_int32(char* input, int32_t& output) {
@@ -97,11 +100,12 @@ inline char* decode_int32(char* input, int32_t& output) {
   return input + sizeof(int32_t);
 }
 
-inline void encode_uint32(char* output, uint32_t value) {
+inline char* encode_uint32(char* output, uint32_t value) {
   output[0] = static_cast<char>(value >> 24);
   output[1] = static_cast<char>(value >> 16);
   output[2] = static_cast<char>(value >> 8);
   output[3] = static_cast<char>(value >> 0);
+  return output + sizeof(uint32_t);
 }
 
 inline char* decode_uint32(char* input, uint32_t& output) {
@@ -112,7 +116,7 @@ inline char* decode_uint32(char* input, uint32_t& output) {
   return input + sizeof(uint32_t);
 }
 
-inline void encode_int64(char* output, int64_t value) {
+inline char* encode_int64(char* output, int64_t value) {
   STATIC_ASSERT(sizeof(int64_t) == 8);
   output[0] = static_cast<char>(value >> 56);
   output[1] = static_cast<char>(value >> 48);
@@ -122,9 +126,10 @@ inline void encode_int64(char* output, int64_t value) {
   output[5] = static_cast<char>(value >> 16);
   output[6] = static_cast<char>(value >> 8);
   output[7] = static_cast<char>(value >> 0);
+  return output + sizeof(int64_t);
 }
 
-inline void encode_uint64(char* output, uint64_t value) {
+inline char* encode_uint64(char* output, uint64_t value) {
   STATIC_ASSERT(sizeof(uint64_t) == 8);
   output[0] = static_cast<char>(static_cast<uint8_t>(value >> 56));
   output[1] = static_cast<char>(static_cast<uint8_t>(value >> 48));
@@ -134,6 +139,7 @@ inline void encode_uint64(char* output, uint64_t value) {
   output[5] = static_cast<char>(static_cast<uint8_t>(value >> 16));
   output[6] = static_cast<char>(static_cast<uint8_t>(value >> 8));
   output[7] = static_cast<char>(static_cast<uint8_t>(value >> 0));
+  return output + sizeof(uint64_t);
 }
 
 inline char* decode_int64(char* input, int64_t& output) {
@@ -149,9 +155,9 @@ inline char* decode_int64(char* input, int64_t& output) {
   return input + sizeof(int64_t);
 }
 
-inline void encode_float(char* output, float value) {
+inline char* encode_float(char* output, float value) {
   STATIC_ASSERT(std::numeric_limits<float>::is_iec559);
-  encode_int32(output, copy_cast<float, int32_t>(value));
+  return encode_int32(output, copy_cast<float, int32_t>(value));
 }
 
 inline char* decode_float(char* input, float& output) {
@@ -162,9 +168,9 @@ inline char* decode_float(char* input, float& output) {
   return pos;
 }
 
-inline void encode_double(char* output, double value) {
+inline char* encode_double(char* output, double value) {
   STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
-  encode_int64(output, copy_cast<double, int64_t>(value));
+  return encode_int64(output, copy_cast<double, int64_t>(value));
 }
 
 inline char* decode_double(char* input, double& output) {
@@ -326,7 +332,7 @@ inline char* decode_option(char* input, uint16_t& type, char** class_name,
   return buffer;
 }
 
-inline void encode_uuid(char* output, CassUuid uuid) {
+inline char* encode_uuid(char* output, CassUuid uuid) {
   uint64_t time_and_version = uuid.time_and_version;
   output[3] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
   time_and_version >>= 8;
@@ -351,6 +357,8 @@ inline void encode_uuid(char* output, CassUuid uuid) {
     output[15 - i] = static_cast<char>(clock_seq_and_node & 0x00000000000000FFL);
     clock_seq_and_node >>= 8;
   }
+  // UUID is 128-bit, which is 16 bytes.
+  return output + 16;
 }
 
 inline char* decode_uuid(char* input, CassUuid* output) {

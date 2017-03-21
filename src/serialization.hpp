@@ -20,12 +20,22 @@
 #define DSE_POINT_TYPE       "org.apache.cassandra.db.marshal.PointType"
 #define DSE_LINE_STRING_TYPE "org.apache.cassandra.db.marshal.LineStringType"
 #define DSE_POLYGON_TYPE     "org.apache.cassandra.db.marshal.PolygonType"
+#define DSE_DATE_RANGE_TYPE  "org.apache.cassandra.db.marshal.DateRangeType"
 
 #define WKB_HEADER_SIZE (sizeof(cass_uint8_t) + sizeof(cass_uint32_t)) // Endian + Type
 #define WKB_POLYGON_HEADER_SIZE (WKB_HEADER_SIZE + sizeof(cass_uint32_t)) // Header + Num rings
 #define WKB_LINE_STRING_HEADER_SIZE (WKB_HEADER_SIZE + sizeof(cass_uint32_t)) // Header + Num points
 
 namespace dse {
+
+enum DateRangeBoundType {
+  DATE_RANGE_BOUND_TYPE_SINGLE_DATE = 0,
+  DATE_RANGE_BOUND_TYPE_CLOSED_RANGE = 1,
+  DATE_RANGE_BOUND_TYPE_OPEN_RANGE_HIGH = 2,
+  DATE_RANGE_BOUND_TYPE_OPEN_RANGE_LOW = 3,
+  DATE_RANGE_BOUND_TYPE_BOTH_OPEN_RANGE = 4,
+  DATE_RANGE_BOUND_TYPE_SINGLE_DATE_OPEN = 5
+};
 
 enum WkbGeometryType {
   WKB_GEOMETRY_TYPE_POINT = 1,

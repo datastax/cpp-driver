@@ -49,6 +49,111 @@
 extern "C" {
 #endif
 
+/***********************************************************************************
+ *
+ * DateRange
+ *
+ ***********************************************************************************/
+
+typedef enum DseDateRangePrecision_ {
+  DSE_DATE_RANGE_PRECISION_UNBOUNDED = 0xFF,
+  DSE_DATE_RANGE_PRECISION_YEAR = 0,
+  DSE_DATE_RANGE_PRECISION_MONTH = 1,
+  DSE_DATE_RANGE_PRECISION_DAY = 2,
+  DSE_DATE_RANGE_PRECISION_HOUR = 3,
+  DSE_DATE_RANGE_PRECISION_MINUTE = 4,
+  DSE_DATE_RANGE_PRECISION_SECOND = 5,
+  DSE_DATE_RANGE_PRECISION_MILLISECOND = 6,
+} DseDateRangePrecision;
+
+/**
+ * The lower bound, upper bound, or single value of a DseDateRange.
+ *
+ * @struct DseDateRangeBound
+ */
+typedef struct DseDateRangeBound_ {
+  DseDateRangePrecision precision;
+  cass_int64_t value;
+} DseDateRangeBound;
+
+/**
+ * A DateRange object in DSE.
+ *
+ * @struct DseDateRange
+ */
+typedef struct DseDateRange_ {
+  cass_bool_t is_single_date;
+  DseDateRangeBound lower_bound; /* Lower bound is also used for a single date */
+  DseDateRangeBound upper_bound;
+} DseDateRange;
+
+/**
+ * Creates a new DseDateRangeBound with the given attributes.
+ *
+ * @public @memberof DseDateRangeBound
+ *
+ * @param[in] precision
+ * @param[in] value
+ *
+ * @return A date range bound
+ */
+DseDateRangeBound dse_date_range_bound_init(DseDateRangePrecision precision,
+                                            cass_int64_t value);
+
+/**
+ * Creates a new DseDateRangeBound that represents an open bound.
+ *
+ * @public @memberof DseDateRangeBound
+ *
+ * @return A date range bound
+ */
+DseDateRangeBound dse_date_range_bound_unbounded();
+
+/**
+ * Checks if the given DseDateRangeBound is an unbound value.
+ *
+ * @public @memberof DseDateRangeBound
+ *
+ * @param[in] bound
+ *
+ * @return cass_true if the bound is actually unbounded.
+ */
+cass_bool_t dse_date_range_bound_is_unbounded(DseDateRangeBound bound);
+
+/**
+ * Initializes a DseDateRange with a lower and upper bound.
+ *
+ * @public @memberof DseDateRange
+ *
+ * @param[out] range
+ * @param[in] lower_bound
+ * @param[in] upper_bound
+ *
+ * @return Returns the date-range object
+ */
+DseDateRange* dse_date_range_init(DseDateRange* range,
+                                  DseDateRangeBound lower_bound,
+                                  DseDateRangeBound upper_bound);
+
+/**
+ * Initializes a DseDateRange with a single date
+ *
+ * @public @memberof DseDateRange
+ *
+ * @param[out] range
+ * @param[in] date
+ *
+ * @return Returns the date-range object
+ */
+DseDateRange* dse_date_range_init_single_date(DseDateRange* range,
+                                              DseDateRangeBound date);
+
+/***********************************************************************************
+ *
+ * Graph
+ *
+ ***********************************************************************************/
+
 /**
  * Graph options for executing graph queries.
  *
@@ -1778,6 +1883,55 @@ cass_statement_bind_dse_polygon_by_name_n(CassStatement* statement,
                                           const DsePolygon* polygon);
 
 /**
+ * Binds a date-range to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] range
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+cass_statement_bind_dse_date_range(CassStatement* statement,
+                                   size_t index,
+                                   const DseDateRange* range);
+
+/**
+ * Binds a date-range to all the values with the specified name.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] range
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+cass_statement_bind_dse_date_range_by_name(CassStatement* statement,
+                                           const char* name,
+                                           const DseDateRange* range);
+
+/**
+ * Same as cass_statement_bind_dse_date_range_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] range
+ * @return same as cass_statement_bind_dse_date_range_by_name()
+ *
+ * @see cass_statement_bind_dse_date_range_by_name()
+ */
+DSE_EXPORT CassError
+cass_statement_bind_dse_date_range_by_name_n(CassStatement* statement,
+                                             const char* name, size_t name_length,
+                                             const DseDateRange* range);
+
+/**
  * Sets the name of the user to execute the statement as.
  *
  * @public @memberof CassStatement
@@ -1809,9 +1963,129 @@ cass_statement_set_execute_as_n(CassStatement* statement,
 
 /***********************************************************************************
  *
+ * Collection
+ *
+ ***********************************************************************************/
+
+/**
+ * Appends a DateRange to the collection.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] range
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_dse_date_range(CassCollection* collection,
+                                      const DseDateRange* range);
+
+/***********************************************************************************
+ *
+ * Tuple
+ *
+ ***********************************************************************************/
+
+/**
+ * Sets a DateRange in a tuple at the specified index.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] range
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_dse_date_range(CassTuple* tuple,
+                              size_t index,
+                              const DseDateRange* range);
+
+/***********************************************************************************
+ *
+ * User defined type
+ *
+ ***********************************************************************************/
+
+/**
+ * Sets a DateRange in a user defined type at the specified index.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] range
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_date_range(CassUserType* user_type,
+                                  size_t index,
+                                  const DseDateRange* range);
+
+/**
+ * Sets DateRange in a user defined type at the specified name.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] range
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_date_range_by_name(CassUserType* user_type,
+                                          const char* name,
+                                          const DseDateRange* range);
+
+/**
+ * Same as cass_user_type_set_dse_date_range_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @cassandra{3.10+}
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] range
+ * @return same as cass_user_type_set_dse_date_range_by_name()
+ *
+ * @see cass_user_type_set_dse_date_range_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_dse_date_range_by_name_n(CassUserType* user_type,
+                                            const char* name,
+                                            size_t name_length,
+                                            const DseDateRange* range);
+
+
+/***********************************************************************************
+ *
  * Value
  *
  ***********************************************************************************/
+
+/**
+ * Gets a date-range for the specified value.
+ *
+ * @public @memberof CassValue
+ *
+ * @param[in] value
+ * @param[out] range
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+DSE_EXPORT CassError
+cass_value_get_dse_date_range(const CassValue* value,
+                              DseDateRange* range);
 
 /**
  * Gets a point for the specified value.

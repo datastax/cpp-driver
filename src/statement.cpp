@@ -7,7 +7,7 @@
 
 #include "dse.h"
 
-#include "serialization.hpp"
+#include "date_range.hpp"
 #include "line_string.hpp"
 #include "polygon.hpp"
 
@@ -103,6 +103,28 @@ CassError cass_statement_bind_dse_polygon_by_name_n(CassStatement* statement,
                                               name, name_length,
                                               DSE_POLYGON_TYPE, sizeof(DSE_POLYGON_TYPE) - 1,
                                               polygon->bytes().data(), polygon->bytes().size());
+}
+
+CassError cass_statement_bind_dse_date_range(CassStatement* statement,
+                                             size_t index,
+                                             const DseDateRange* range) {
+  dse::Bytes bytes = dse::encode_date_range(range);
+  return cass_statement_bind_custom(statement, index, DSE_DATE_RANGE_TYPE, bytes.data(), bytes.size());
+}
+
+CassError cass_statement_bind_dse_date_range_by_name(CassStatement* statement,
+                                                     const char* name,
+                                                     const DseDateRange* range) {
+  return cass_statement_bind_dse_date_range_by_name_n(statement, name, strlen(name), range);
+}
+
+CassError cass_statement_bind_dse_date_range_by_name_n(CassStatement* statement,
+                                                       const char* name, size_t name_length,
+                                                       const DseDateRange* range) {
+  dse::Bytes bytes = dse::encode_date_range(range);
+  return cass_statement_bind_custom_by_name_n(statement, name, name_length,
+                                              DSE_DATE_RANGE_TYPE, sizeof(DSE_DATE_RANGE_TYPE) - 1,
+                                              bytes.data(), bytes.size());
 }
 
 CassError cass_statement_set_execute_as_n(CassStatement* statement,
