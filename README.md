@@ -74,7 +74,7 @@ int main() {
 
 ## License
 
-Copyright &copy; 2016 DataStax, Inc.
+Copyright &copy; 2017 DataStax, Inc.
 
 http://www.datastax.com/terms/datastax-dse-driver-license-terms
 
