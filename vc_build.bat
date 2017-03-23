@@ -39,6 +39,7 @@ SET ARGUMENT_INSTALLATION_DIRECTORY=--INSTALL-DIR
 SET ARGUMENT_USE_BOOST_ATOMIC=--USE-BOOST-ATOMIC
 SET ARGUMENT_LIBRARY_TYPE_SHARED=--SHARED
 SET ARGUMENT_LIBRARY_TYPE_STATIC=--STATIC
+SET ARGUMENT_ENABLE_SHARED_OPENSSL=--ENABLE-SHARED-OPENSSL
 SET ARGUMENT_TARGET_ARCHITECTURE_32BIT=--X86
 SET ARGUMENT_TARGET_ARCHITECTURE_64BIT=--X64
 SET ARGUMENT_TARGET_COMPILER=--TARGET-COMPILER
@@ -152,6 +153,7 @@ SET ENABLE_LIBSSH2=%FALSE%
 SET ENABLE_ZLIB=%FALSE%
 SET GENERATE_SOLUTION=%FALSE%
 SET LIBRARY_TYPE=%LIBRARY_TYPE_SHARED%
+SET ENABLE_SHARED_OPENSSL=%FALSE%
 SET TARGET_ARCHITECTURE=%SYSTEM_ARCHITECTURE%
 SET USE_BOOST_ATOMIC=%FALSE%
 SET ARGUMENT_IS_TEST=%FALSE%
@@ -178,6 +180,9 @@ IF NOT [%1] == [] (
   )
   IF "!ARGUMENT!" == "!ARGUMENT_LIBRARY_TYPE_STATIC!" (
     SET LIBRARY_TYPE=!LIBRARY_TYPE_STATIC!
+  )
+  IF "!ARGUMENT!" == "!ARGUMENT_ENABLE_SHARED_OPENSSL!" (
+    SET ENABLE_SHARED_OPENSSL=!TRUE!
   )
 
   REM Target architecture (32/64 bit)
@@ -324,6 +329,9 @@ IF NOT [%1] == [] (
 REM Ensure static builds are enabled and packages are disabled (if tests)
 IF !IS_TESTING_ENABLED! EQU !TRUE! (
   REM Force static for static linking
+  IF "!LIBRARY_TYPE!" == "!LIBRARY_TYPE_SHARED!" (
+    ECHO Force Static Linking: Testing overrides shared linking
+  )
   SET LIBRARY_TYPE=!LIBRARY_TYPE_STATIC!
 
   REM Determine if package build should be disabled
@@ -666,7 +674,7 @@ REM Initialize and update the cpp-driver submodule
 IF NOT EXIST "!ABSOLUTE_DEPENDENCIES_CASSANDRA_CPP_DRIVER_SOURCE_DIRECTORY!\include\cassandra.h" (
   PUSHD "!ABSOLUTE_BATCH_DIRECTORY!" > NUL
   ECHO Update cpp-driver submodule > "!LOG_DRIVER_BUILD!"
-  ECHO | SET /P=Update cpp-driver submodule ...
+  ECHO | SET /P=Update cpp-driver submodule ... 
   !GIT! submodule update --init --recursive >> "!LOG_DRIVER_BUILD!" 2>&1
   IF !ERRORLEVEL! EQU 0 (
     ECHO done.
@@ -684,7 +692,7 @@ IF !USE_BOOST_ATOMIC! EQU !TRUE! (
   IF !IS_TESTING_ENABLED! EQU !FALSE! (
     REM Clone Boost atomic and checkout the appropriate tag
     ECHO Gathering Boost atomic ^(and dependencies^) !BOOST_BRANCH_TAG_VERSION! > "!LOG_BOOST_CLONE!"
-    ECHO | SET /P=Gathering Boost atomic ^(and dependencies^) !BOOST_BRANCH_TAG_VERSION! ...
+    ECHO | SET /P=Gathering Boost atomic ^(and dependencies^) !BOOST_BRANCH_TAG_VERSION! ... 
     SET "BOOST_ATOMIC_DEPENDENCIES=atomic assert config mpl preprocessor static_assert type_traits"
     IF NOT EXIST "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\include" MKDIR "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\include"
     REM Store current Visual Studio tools environment variables
@@ -710,14 +718,14 @@ IF !USE_BOOST_ATOMIC! EQU !TRUE! (
 REM Clone libuv and checkout the appropriate tag
 IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" (
   ECHO Cloning libuv !LIBUV_BRANCH_TAG_VERSION! > "!LOG_LIBUV_BUILD!"
-  ECHO | SET /P=Cloning libuv !LIBUV_BRANCH_TAG_VERSION! ...
+  ECHO | SET /P=Cloning libuv !LIBUV_BRANCH_TAG_VERSION! ... 
   !GIT! clone --depth 1 --branch !LIBUV_BRANCH_TAG_VERSION! --single-branch !LIBUV_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" >> "!LOG_LIBUV_BUILD!" 2>&1
   IF !ERRORLEVEL! EQU 0 (
     ECHO done.
     REM Clone GYP (libuv dependency) to correctly use googlesource URL
     ECHO. >> "!LOG_LIBUV_BUILD!"
     ECHO Cloning gyp >> "!LOG_LIBUV_BUILD!"
-    ECHO | SET /P=Cloning gyp ...
+    ECHO | SET /P=Cloning gyp ... 
     !GIT! clone --depth 1 --single-branch !GYP_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!\build\gyp" >> "!LOG_LIBUV_BUILD!" 2>&1
     IF !ERRORLEVEL! EQU 0 (
       ECHO done.
@@ -737,7 +745,7 @@ REM Clone zlib (libssh2 dependency) and checkout the appropriate tag
 IF !ENABLE_ZLIB! EQU !TRUE! (
   IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!ZLIB_DIRECTORY!" (
     ECHO Cloning zlib !ZLIB_BRANCH_TAG_VERSION! > "!LOG_ZLIB_BUILD!"
-    ECHO | SET /P=Cloning zlib !ZLIB_BRANCH_TAG_VERSION! ...
+    ECHO | SET /P=Cloning zlib !ZLIB_BRANCH_TAG_VERSION! ... 
     !GIT! clone --depth 1 --branch !ZLIB_BRANCH_TAG_VERSION! --single-branch !ZLIB_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!ZLIB_DIRECTORY!" >> "!LOG_ZLIB_BUILD!" 2>&1
     IF !ERRORLEVEL! EQU 0 (
       ECHO done.
@@ -754,7 +762,7 @@ IF !ENABLE_LIBSSH2! EQU !TRUE! (
   REM Clone libssh2
   IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBSSH2_DIRECTORY!" (
     ECHO Cloning libssh2 !LIBSSH2_BRANCH_TAG_VERSION! > "!LOG_LIBSSH2_BUILD!"
-    ECHO | SET /P=Cloning libssh2 !LIBSSH2_BRANCH_TAG_VERSION! ...
+    ECHO | SET /P=Cloning libssh2 !LIBSSH2_BRANCH_TAG_VERSION! ... 
     !GIT! clone --depth 1 --branch !LIBSSH2_BRANCH_TAG_VERSION! --single-branch !LIBSSH2_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBSSH2_DIRECTORY!" >> "!LOG_LIBSSH2_BUILD!" 2>&1
     IF !ERRORLEVEL! EQU 0 (
       ECHO done.
@@ -769,7 +777,7 @@ IF !ENABLE_LIBSSH2! EQU !TRUE! (
 REM Clone OpenSSL and checkout the appropriate tag
 IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" (
   ECHO Cloning OpenSSL !OPENSSL_BRANCH_TAG_VERSION! > "!LOG_OPENSSL_BUILD!"
-  ECHO | SET /P=Cloning OpenSSL !OPENSSL_BRANCH_TAG_VERSION! ...
+  ECHO | SET /P=Cloning OpenSSL !OPENSSL_BRANCH_TAG_VERSION! ... 
   !GIT! clone --depth 1 --branch !OPENSSL_BRANCH_TAG_VERSION! --single-branch !OPENSSL_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" >> "!LOG_OPENSSL_BUILD!" 2>&1
   IF !ERRORLEVEL! EQU 0 (
     ECHO done.
@@ -809,8 +817,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
 
   REM Determine if OpenSSL needs to be built
   IF NOT EXIST "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" (
-    REM Determine if OpenSSL should be built with zlib support
-    CALL :BUILDOPENSSL "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" "!ABSOLUTE_ZLIB_LIBRARY_DIRECTORY!" !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !FALSE! "!LOG_OPENSSL_BUILD!"
+    CALL :BUILDOPENSSL "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" "!ABSOLUTE_ZLIB_LIBRARY_DIRECTORY!" !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !ENABLE_SHARED_OPENSSL! !FALSE! "!LOG_OPENSSL_BUILD!"
     IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
   )
 
@@ -847,7 +854,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
     REM Determine if dependencies should be copied
     IF !DRIVER_INSTALLATION_DIRECTORY_OVERRIDDEN! EQU !TRUE! (
       IF EXIST "!DRIVER_INSTALLATION_DIRECTORY!\..\" (
-        ECHO | SET /P=Installing cpp-driver dependencies ...
+        ECHO | SET /P=Installing cpp-driver dependencies ... 
         XCOPY /E /Y "!ABSOLUTE_DEPENDENCIES_LIBRARIES_DIRECTORY!" "!DRIVER_INSTALLATION_DIRECTORY!\..\" >> "!LOG_DRIVER_BUILD!" 2>&1
         IF NOT !ERRORLEVEL! EQU 0 (
           ECHO FAILED!
@@ -932,7 +939,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
         REM Build the dependencies and driver
         CALL :BUILDLIBUV "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_LIBUV_INSTALLATION_DIRECTORY!" %%C %%D !FALSE! !TRUE! "!LOG_LIBUV_BUILD!"
         IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
-        CALL :BUILDOPENSSL "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_OPENSSL_INSTALLATION_DIRECTORY!" "" %%C %%D !TRUE! "!LOG_OPENSSL_BUILD!"
+        CALL :BUILDOPENSSL "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_OPENSSL_INSTALLATION_DIRECTORY!" "" %%C %%D !FALSE! !TRUE! "!LOG_OPENSSL_BUILD!"
         IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
         IF !BUILD_DEPENDENCIES_ONLY! EQU !FALSE! (
           IF EXIST "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" CALL :CLEANDIRECTORY "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" "Cleaning driver library directory"
@@ -975,7 +982,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
 
       REM Build the zip packages for the current target architecture and Visual Studio version
       IF !BUILD_DEPENDENCIES_ONLY! EQU !FALSE! (
-        ECHO | SET /P=Building the driver package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ...
+        ECHO | SET /P=Building the driver package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ... 
         ECHO !ZIP! a -tzip !ABSOLUTE_PACKAGES_DIRECTORY!\!BUILD_PACKAGE_PREFIX!-!BUILD_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip -r !ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\ -xr^^!!DEPENDENCIES_DIRECTORY! >> "!LOG_PACKAGE_BUILD!"
         !ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\!BUILD_PACKAGE_PREFIX!-!BUILD_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r "!ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\*" -xr^^!!DEPENDENCIES_DIRECTORY! >> "!LOG_PACKAGE_BUILD!" 2>&1
         IF NOT !ERRORLEVEL! EQU 0 (
@@ -985,7 +992,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
         )
         ECHO done.
       )
-      ECHO | SET /P=Building the libuv package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ...
+      ECHO | SET /P=Building the libuv package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ... 
       ECHO !ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\libuv-!LIBUV_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r !ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!DEPENDENCIES_DIRECTORY!\!LIBUV_DIRECTORY!\ >> "!LOG_PACKAGE_BUILD!"
       !ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\libuv-!LIBUV_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r "!ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!DEPENDENCIES_DIRECTORY!\!LIBUV_DIRECTORY!\*" >> "!LOG_PACKAGE_BUILD!" 2>&1
       IF NOT !ERRORLEVEL! EQU 0 (
@@ -994,7 +1001,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
         EXIT /B !EXIT_CODE_PACKAGE_FAILED!
       )
       ECHO done.
-      ECHO | SET /P=Building the OpenSSL package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ...
+      ECHO | SET /P=Building the OpenSSL package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ... 
       ECHO !ZIP! a -tzip !ABSOLUTE_PACKAGES_DIRECTORY!\openssl-!OPENSSL_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip -r !ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!OPENSSL_DIRECTORY!\ >> "!LOG_PACKAGE_BUILD!"
       !ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\openssl-!OPENSSL_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r "!ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!DEPENDENCIES_DIRECTORY!\!OPENSSL_DIRECTORY!\*" >> "!LOG_PACKAGE_BUILD!" 2>&1
       IF NOT !ERRORLEVEL! EQU 0 (
@@ -1004,7 +1011,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
       )
       ECHO done.
       IF !ENABLE_LIBSSH2! EQU !TRUE! (
-        ECHO | SET /P=Building the libssh2 package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ...
+        ECHO | SET /P=Building the libssh2 package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ... 
         ECHO !ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\libssh2-!LIBSSH2_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r !ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!DEPENDENCIES_DIRECTORY!\!LIBSSH2_DIRECTORY!\ >> "!LOG_PACKAGE_BUILD!"
         !ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\libssh2-!LIBSSH2_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r "!ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!DEPENDENCIES_DIRECTORY!\!LIBSSH2_DIRECTORY!\*" >> "!LOG_PACKAGE_BUILD!" 2>&1
         IF NOT !ERRORLEVEL! EQU 0 (
@@ -1067,6 +1074,7 @@ REM Display the help message and exit with error code
   ECHO     !ARGUMENT_INSTALLATION_DIRECTORY! [install-dir]       Override installation directory
   ECHO     !ARGUMENT_LIBRARY_TYPE_SHARED!                          Build shared library ^(default^)
   ECHO     !ARGUMENT_LIBRARY_TYPE_STATIC!                          Build static library
+  ECHO     !ARGUMENT_ENABLE_SHARED_OPENSSL!           Force shared OpenSSL library
   IF !SYSTEM_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
     ECHO     !ARGUMENT_TARGET_ARCHITECTURE_32BIT!                             Target 32-bit build ^(default^)
     ECHO     !ARGUMENT_TARGET_ARCHITECTURE_64BIT!                             Target 64-bit build
@@ -1186,7 +1194,7 @@ REM @param directory Directory to clean
 REM @param message Message to display during clean
 :CLEANDIRECTORY [directory] [message]
   IF EXIST "%~1" (
-    ECHO | SET /P=%~2 ...
+    ECHO | SET /P=%~2 ... 
     RMDIR /S /Q "%~1" > NUL 2>&1
     IF NOT EXIST "%~1" (
       ECHO done.
@@ -1245,7 +1253,7 @@ REM @param log-filename Absolute path and filename for log output
   ) ELSE (
     SET LIBUV_LIBRARY_TYPE=static
   )
-  ECHO | SET /P=Configuring libuv ...
+  ECHO | SET /P=Configuring libuv ... 
   REM Modify the libuv build script to ensure proper Visual Studio detection
   SET LIBUV_VCBUILD_SCRIPT=vcbuild.bat
   IF "!LIBUV_IS_WINDOWS_SDK_BUILD!" == "!FALSE!" (
@@ -1294,7 +1302,7 @@ REM @param log-filename Absolute path and filename for log output
     SET "PATH=!BEFORE_BATCH_CALL_PATH!"
     SET BEFORE_BATCH_CALL_PATH=
   )
-  ECHO | SET /P=Building libuv ...
+  ECHO | SET /P=Building libuv ... 
   ECHO !MSBUILD! uv.sln /T:libuv /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "!LIBUV_LOG_FILENAME!"
   !MSBUILD! uv.sln /T:libuv /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "!LIBUV_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
@@ -1303,7 +1311,7 @@ REM @param log-filename Absolute path and filename for log output
     EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
   )
   ECHO done.
-  ECHO | SET /P=Installing libuv ...
+  ECHO | SET /P=Installing libuv ... 
   MKDIR "!LIBUV_INSTALL_DIRECTORY!\!LIBRARY_INCLUDE_DIRECTORY!"
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
@@ -1334,7 +1342,7 @@ REM @param log-filename Absolute path and filename for log output
   )
   ECHO done.
   IF "!LIBUV_IS_CLEAN_AFTER_INSTALL!" == "!TRUE!" (
-    ECHO | SET /P=Cleaning libuv build ...
+    ECHO | SET /P=Cleaning libuv build ... 
     ECHO !MSBUILD! uv.sln /T:Clean /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "!LIBUV_LOG_FILENAME!"
     !MSBUILD! uv.sln /T:Clean /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "!LIBUV_LOG_FILENAME!" 2>&1
     IF EXIST Release RMDIR /S /Q Release >> "!LIBUV_LOG_FILENAME!" 2>&1
@@ -1353,8 +1361,13 @@ REM @param target-architecture 32 or 64-bit
 REM @param library-type Shared or static
 REM @param is-clean-after-install True if clean should be performed after
 REM                               install; false otherwise
+REM @param is-force-shared True if OpenSSL library should be built as a shared
+REM                        library; false otherwise
+REM                        NOTE: If [library-type] is static and
+REM                              [zlib-library-directory] is valid then zlib
+REM                              will be statically linked
 REM @param log-filename Absolute path and filename for log output
-:BUILDOPENSSL [source-directory] [install-directory] [zlib-library-directory] [target-architecture] [library-type] [is-clean-after-install] [log-filename]
+:BUILDOPENSSL [source-directory] [install-directory] [zlib-library-directory] [target-architecture] [library-type] [is-force-shared] [is-clean-after-install] [log-filename]
   REM Create library variables from arguments
   SET "OPENSSL_SOURCE_DIRECTORY=%~1"
   SHIFT
@@ -1366,6 +1379,8 @@ REM @param log-filename Absolute path and filename for log output
   SHIFT
   SET "OPENSSL_LIBRARY_TYPE=%~1"
   SHIFT
+  SET OPENSSL_IS_FORCE_SHARED=%~1
+  SHIFT
   SET OPENSSL_IS_CLEAN_AFTER_INSTALL=%~1
   SHIFT
   SET "OPENSSL_LOG_FILENAME=%~1"
@@ -1373,7 +1388,7 @@ REM @param log-filename Absolute path and filename for log output
   REM Build OpenSSL dependency
   ECHO Building OpenSSL
   PUSHD "!OPENSSL_SOURCE_DIRECTORY!" > NUL
-  ECHO | SET /P=Configuring OpenSSL ...
+  ECHO | SET /P=Configuring OpenSSL ... 
   SET "OPENSSL_CONFIGURE_OPTIONS=Configure"
   IF !OPENSSL_TARGET_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
     SET "OPENSSL_CONFIGURE_OPTIONS=!OPENSSL_CONFIGURE_OPTIONS! VC-WIN32 no-asm"
@@ -1389,6 +1404,7 @@ REM @param log-filename Absolute path and filename for log output
     CALL :SHORTENPATH "!DEPENDENCY_ZLIB_LIBRARY_DIRECTORY!" SHORTENED_DEPENDENCY_ZLIB_LIBRARY_DIRECTORY
     SET "OPENSSL_CONFIGURE_OPTIONS=!OPENSSL_CONFIGURE_OPTIONS! zlib --with-zlib-include=^"!SHORTENED_DEPENDENCY_ZLIB_LIBRARY_DIRECTORY!\!LIBRARY_INCLUDE_DIRECTORY!^" --with-zlib-lib=^"!SHORTENED_DEPENDENCY_ZLIB_LIBRARY_DIRECTORY!\!LIBRARY_BINARY_DIRECTORY!\!DEPENDENCY_ZLIB_LIBRARY_FILENAME!^""
   )
+  IF !OPENSSL_IS_FORCE_SHARED! EQU !TRUE! SET OPENSSL_LIBRARY_TYPE=!LIBRARY_TYPE_SHARED!
   CALL :SHORTENPATH "!OPENSSL_INSTALL_DIRECTORY!" SHORTENED_OPENSSL_INSTALL_DIRECTORY
   !PERL! !OPENSSL_CONFIGURE_OPTIONS! enable-static-engine --openssldir=!SHORTENED_OPENSSL_INSTALL_DIRECTORY! --prefix=!SHORTENED_OPENSSL_INSTALL_DIRECTORY! >> "!OPENSSL_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
@@ -1397,7 +1413,7 @@ REM @param log-filename Absolute path and filename for log output
     EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
   )
   ECHO done.
-  ECHO | SET /P=Building OpenSSL ...
+  ECHO | SET /P=Building OpenSSL ... 
   IF !OPENSSL_TARGET_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
     CALL ms\do_ms.bat >> "!OPENSSL_LOG_FILENAME!" 2>&1
   ) ELSE (
@@ -1415,7 +1431,7 @@ REM @param log-filename Absolute path and filename for log output
     EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
   )
   ECHO done.
-  ECHO | SET /P=Installing OpenSSL ...
+  ECHO | SET /P=Installing OpenSSL ... 
   !NMAKE! /F !OPENSSL_MAKEFILE! install >> "!OPENSSL_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
@@ -1424,7 +1440,7 @@ REM @param log-filename Absolute path and filename for log output
   )
   ECHO done.
   IF !OPENSSL_IS_CLEAN_AFTER_INSTALL! EQU !TRUE! (
-    ECHO | SET /P=Cleaning OpenSSL build ...
+    ECHO | SET /P=Cleaning OpenSSL build ... 
     !NMAKE! /F !OPENSSL_MAKEFILE! clean >> "!OPENSSL_LOG_FILENAME!" 2>&1
     ECHO done.
   )
@@ -1449,7 +1465,7 @@ REM @param log-filename Absolute path and filename for log output
   PUSHD "!ZLIB_SOURCE_DIRECTORY!" > NUL
   IF NOT EXIST build MKDIR build
   PUSHD build > NUL
-  ECHO | SET /P=Configuring zlib ...
+  ECHO | SET /P=Configuring zlib ... 
   !CMAKE! -G "NMake Makefiles" -DCMAKE_C_FLAGS_RELEASE="/MT /NDEBUG" -DCMAKE_INSTALL_PREFIX="!ZLIB_INSTALL_DIRECTORY!" -DCMAKE_BUILD_TYPE=!BUILD_TYPE_RELEASE! .. >> "!ZLIB_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
@@ -1457,7 +1473,7 @@ REM @param log-filename Absolute path and filename for log output
     EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
   )
   ECHO done.
-  ECHO | SET /P=Building zlib ...
+  ECHO | SET /P=Building zlib ... 
   !CMAKE! --build . --config !BUILD_TYPE_RELEASE! >> "!ZLIB_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
@@ -1465,7 +1481,7 @@ REM @param log-filename Absolute path and filename for log output
     EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
   )
   ECHO done.
-  ECHO | SET /P=Installing zlib ...
+  ECHO | SET /P=Installing zlib ... 
   !CMAKE! --build . --config !BUILD_TYPE_RELEASE! --target install\fast >> "!ZLIB_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
@@ -1511,7 +1527,7 @@ REM @param log-filename Absolute path and filename for log output
   REM Build libssh2 dependency
   IF NOT EXIST "!LIBSSH2_SOURCE_DIRECTORY!\build" MKDIR "!LIBSSH2_SOURCE_DIRECTORY!\build"
   PUSHD "!LIBSSH2_SOURCE_DIRECTORY!\build" > NUL
-  ECHO | SET /P=Configuring libssh2 ...
+  ECHO | SET /P=Configuring libssh2 ... 
   IF NOT "!LIBSSH2_VISUAL_STUDIO_VERSION!" == "" (
     SET "LIBSSH2_CMAKE_COMMAND_LINE=-G ^"Visual Studio !LIBSSH2_VISUAL_STUDIO_VERSION!"
     IF !LIBSSH2_TARGET_ARCHITECTURE! EQU !ARCHITECTURE_64BIT! (
@@ -1531,7 +1547,7 @@ REM @param log-filename Absolute path and filename for log output
     EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
   )
   ECHO done.
-  ECHO | SET /P=Building libssh2 ...
+  ECHO | SET /P=Building libssh2 ... 
   !CMAKE! --build . --config !BUILD_TYPE_RELEASE! >> "!LIBSSH2_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
@@ -1539,7 +1555,7 @@ REM @param log-filename Absolute path and filename for log output
     EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
   )
   ECHO done.
-  ECHO | SET /P=Installing libssh2 ...
+  ECHO | SET /P=Installing libssh2 ... 
   !CMAKE! --build . --config !BUILD_TYPE_RELEASE! --target install >> "!LIBSSH2_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
@@ -1548,7 +1564,7 @@ REM @param log-filename Absolute path and filename for log output
   )
   ECHO done.
   IF !LIBSSH2_IS_CLEAN_AFTER_INSTALL! EQU !TRUE! (
-    ECHO | SET /P=Cleaning libssh2 build ...
+    ECHO | SET /P=Cleaning libssh2 build ... 
     DEL /S /Q * >> "!LIBSSH2_LOG_FILENAME!" 2>&1
     ECHO done.
   )
@@ -1621,9 +1637,9 @@ REM @param log-filename Absolute path and filename for log output
   IF NOT EXIST "!DRIVER_BUILD_DIRECTORY!" MKDIR "!DRIVER_BUILD_DIRECTORY!"
   PUSHD "!DRIVER_BUILD_DIRECTORY!" > NUL
   IF !DRIVER_GENERATE_SOLUTION! EQU !TRUE! (
-    ECHO | SET /P=Generating driver solution ...
+    ECHO | SET /P=Generating driver solution ... 
   ) ELSE (
-    ECHO | SET /P=Configuring driver ...
+    ECHO | SET /P=Configuring driver ... 
   )
   IF NOT "!DRIVER_VISUAL_STUDIO_VERSION!" == "" (
     SET "DRIVER_CMAKE_COMMAND_LINE=-G ^"Visual Studio !DRIVER_VISUAL_STUDIO_VERSION!"
@@ -1674,7 +1690,7 @@ REM @param log-filename Absolute path and filename for log output
     POPD
     EXIT /B
   )
-  ECHO | SET /P=Building driver ...
+  ECHO | SET /P=Building driver ... 
   !CMAKE! --build . --config !DRIVER_BUILD_TYPE! >> "!DRIVER_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
@@ -1682,7 +1698,7 @@ REM @param log-filename Absolute path and filename for log output
     EXIT /B !EXIT_CODE_BUILD_DRIVER_FAILED!
   )
   ECHO done.
-  ECHO | SET /P=Installing driver ...
+  ECHO | SET /P=Installing driver ... 
   !CMAKE! --build . --config !DRIVER_BUILD_TYPE! --target install >> "!DRIVER_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
