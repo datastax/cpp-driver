@@ -41,7 +41,7 @@
  */
 
 #define DSE_VERSION_MAJOR 1
-#define DSE_VERSION_MINOR 1
+#define DSE_VERSION_MINOR 2
 #define DSE_VERSION_PATCH 0
 #define DSE_VERSION_SUFFIX ""
 
@@ -63,7 +63,7 @@ typedef enum DseDateRangePrecision_ {
   DSE_DATE_RANGE_PRECISION_HOUR = 3,
   DSE_DATE_RANGE_PRECISION_MINUTE = 4,
   DSE_DATE_RANGE_PRECISION_SECOND = 5,
-  DSE_DATE_RANGE_PRECISION_MILLISECOND = 6,
+  DSE_DATE_RANGE_PRECISION_MILLISECOND = 6
 } DseDateRangePrecision;
 
 /**
@@ -2014,8 +2014,6 @@ cass_collection_append_dse_polygon(CassCollection* collection,
 /**
  * Appends a DateRange to the collection.
  *
- * @cassandra{3.10+}
- *
  * @public @memberof CassCollection
  *
  * @param[in] collection
@@ -2080,8 +2078,6 @@ cass_tuple_set_dse_polygon(CassTuple* tuple,
 
 /**
  * Sets a DateRange in a tuple at the specified index.
- *
- * @cassandra{3.10+}
  *
  * @public @memberof CassTuple
  *
@@ -2257,8 +2253,6 @@ cass_user_type_set_dse_polygon_by_name_n(CassUserType* user_type,
 /**
  * Sets a DateRange in a user defined type at the specified index.
  *
- * @cassandra{3.10+}
- *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -2273,8 +2267,6 @@ cass_user_type_set_dse_date_range(CassUserType* user_type,
 
 /**
  * Sets DateRange in a user defined type at the specified name.
- *
- * @cassandra{3.10+}
  *
  * @public @memberof CassUserType
  *
@@ -2291,8 +2283,6 @@ cass_user_type_set_dse_date_range_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_dse_date_range_by_name(), but with lengths for string
  * parameters.
- *
- * @cassandra{3.10+}
  *
  * @public @memberof CassUserType
  *
