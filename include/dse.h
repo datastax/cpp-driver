@@ -73,7 +73,7 @@ typedef enum DseDateRangePrecision_ {
  */
 typedef struct DseDateRangeBound_ {
   DseDateRangePrecision precision;
-  cass_int64_t value;
+  cass_int64_t time_ms;
 } DseDateRangeBound;
 
 /**
@@ -93,12 +93,12 @@ typedef struct DseDateRange_ {
  * @public @memberof DseDateRangeBound
  *
  * @param[in] precision
- * @param[in] value
+ * @param[in] time_ms
  *
  * @return A date range bound
  */
 DseDateRangeBound dse_date_range_bound_init(DseDateRangePrecision precision,
-                                            cass_int64_t value);
+                                            cass_int64_t time_ms);
 
 /**
  * Creates a new DseDateRangeBound that represents an open bound.

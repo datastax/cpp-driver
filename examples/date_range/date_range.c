@@ -62,7 +62,7 @@ void print_range(const DseDateRange* range) {
       printf("*\n");
     } else {
       precision_to_string(range->lower_bound.precision, from_precision_string);
-      time_to_string(range->lower_bound.value, from_time_string);
+      time_to_string(range->lower_bound.time_ms, from_time_string);
       printf("%s(%s)\n", from_time_string, from_precision_string);
     }
   } else if (dse_date_range_bound_is_unbounded(range->lower_bound) &&
@@ -70,17 +70,17 @@ void print_range(const DseDateRange* range) {
     printf("* TO *\n");
   } else if (dse_date_range_bound_is_unbounded(range->upper_bound)) {
     precision_to_string(range->lower_bound.precision, from_precision_string);
-    time_to_string(range->lower_bound.value, from_time_string);
+    time_to_string(range->lower_bound.time_ms, from_time_string);
     printf("%s(%s) TO *\n", from_time_string, from_precision_string);
   } else if (dse_date_range_bound_is_unbounded(range->lower_bound)) {
     precision_to_string(range->upper_bound.precision, to_precision_string);
-    time_to_string(range->upper_bound.value, to_time_string);
+    time_to_string(range->upper_bound.time_ms, to_time_string);
     printf("* TO %s(%s)\n", to_time_string, to_precision_string);
   } else {
     precision_to_string(range->lower_bound.precision, from_precision_string);
-    time_to_string(range->lower_bound.value, from_time_string);
+    time_to_string(range->lower_bound.time_ms, from_time_string);
     precision_to_string(range->upper_bound.precision, to_precision_string);
-    time_to_string(range->upper_bound.value, to_time_string);
+    time_to_string(range->upper_bound.time_ms, to_time_string);
     printf("%s(%s) TO %s(%s)\n", from_time_string, from_precision_string, to_time_string, to_precision_string);
   }
 }

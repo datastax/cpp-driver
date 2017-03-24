@@ -45,7 +45,7 @@ Bytes encode_date_range(const DseDateRange *range) {
       bytes.resize(sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t));
       pos = reinterpret_cast<char*>(&bytes[0]);
       pos = cass::encode_int8(pos, range_type);
-      pos = cass::encode_int64(pos, range->lower_bound.value);
+      pos = cass::encode_int64(pos, range->lower_bound.time_ms);
       cass::encode_int8(pos, range->lower_bound.precision);
       break;
     case DATE_RANGE_BOUND_TYPE_OPEN_RANGE_LOW:
@@ -53,7 +53,7 @@ Bytes encode_date_range(const DseDateRange *range) {
       bytes.resize(sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t));
       pos = reinterpret_cast<char*>(&bytes[0]);
       pos = cass::encode_int8(pos, range_type);
-      pos = cass::encode_int64(pos, range->upper_bound.value);
+      pos = cass::encode_int64(pos, range->upper_bound.time_ms);
       cass::encode_int8(pos, range->upper_bound.precision);
       break;
     case DATE_RANGE_BOUND_TYPE_CLOSED_RANGE:
@@ -61,9 +61,9 @@ Bytes encode_date_range(const DseDateRange *range) {
       bytes.resize(sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t));
       pos = reinterpret_cast<char*>(&bytes[0]);
       pos = cass::encode_int8(pos, range_type);
-      pos = cass::encode_int64(pos, range->lower_bound.value);
+      pos = cass::encode_int64(pos, range->lower_bound.time_ms);
       pos = cass::encode_int8(pos, range->lower_bound.precision);
-      pos = cass::encode_int64(pos, range->upper_bound.value);
+      pos = cass::encode_int64(pos, range->upper_bound.time_ms);
       cass::encode_int8(pos, range->upper_bound.precision);
       break;
   }
@@ -73,17 +73,17 @@ Bytes encode_date_range(const DseDateRange *range) {
 }
 
 DseDateRangeBound dse_date_range_bound_init(DseDateRangePrecision precision,
-                                            cass_int64_t value) {
+                                            cass_int64_t time_ms) {
   DseDateRangeBound bound;
   bound.precision = precision;
-  bound.value = value;
+  bound.time_ms = time_ms;
   return bound;
 }
 
 DseDateRangeBound dse_date_range_bound_unbounded() {
   DseDateRangeBound bound;
   bound.precision = DSE_DATE_RANGE_PRECISION_UNBOUNDED;
-  bound.value = -1;
+  bound.time_ms = -1;
   return bound;
 }
 

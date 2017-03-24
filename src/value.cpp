@@ -109,7 +109,7 @@ CassError cass_value_get_dse_date_range(const CassValue* value,
   }
 
   // We have at least one bound; write to the attribute that was chosen earlier.
-  pos = cass::decode_int64(const_cast<char*>(pos), first_bound->value);
+  pos = cass::decode_int64(const_cast<char*>(pos), first_bound->time_ms);
   pos = cass::decode_int8(const_cast<char*>(pos), decoded_byte);
   first_bound->precision = static_cast<DseDateRangePrecision>(decoded_byte);
 
@@ -118,7 +118,7 @@ CassError cass_value_get_dse_date_range(const CassValue* value,
   }
 
   // This is the second bound; must be upper.
-  pos = cass::decode_int64(const_cast<char*>(pos), range->upper_bound.value);
+  pos = cass::decode_int64(const_cast<char*>(pos), range->upper_bound.time_ms);
   cass::decode_int8(const_cast<char*>(pos), decoded_byte);
   range->upper_bound.precision = static_cast<DseDateRangePrecision>(decoded_byte);
 
