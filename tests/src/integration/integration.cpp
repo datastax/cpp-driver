@@ -18,6 +18,9 @@
 #define REPLICATION_STRATEGY "{ 'class': %s }"
 #define SELECT_SERVER_VERSION "SELECT release_version FROM system.local"
 
+// Initialize static variables
+bool Integration::skipped_message_displayed_ = false;
+
 Integration::Integration()
   : ccm_(NULL)
   , session_()
@@ -79,6 +82,9 @@ Integration::~Integration() {
   try {
     session_.close(false);
   } catch (...) {}
+
+  // Reset the skipped message displayed state
+  skipped_message_displayed_ = false;
 }
 
 void Integration::SetUp() {

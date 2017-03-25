@@ -17,6 +17,7 @@
 #define __CCM_CASS_VERSION_HPP__
 
 #include <algorithm>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -425,6 +426,15 @@ namespace CCM {
         return CassVersion("2.1.15-1403");
       } else if (*this == "4.8.10") {
         return CassVersion("2.1.15-1423");
+      } else if (*this == "4.8.11") {
+        return CassVersion("2.1.17-1428");
+      } else if (*this >= "4.8.12" && *this < "5.0.0") {
+        if (*this > "4.8.12") {
+          std::cerr << "Cassandra Version is not Defined: "
+            << "Add Cassandra version for DSE v" << this->to_string()
+            << std::endl;
+        }
+        return CassVersion("2.1.17-1439");
       } else if (*this >= "5.0.0") {
         return CassVersion("3.0.7.1158");
       } else if (*this >= "5.0.1") {
@@ -433,6 +443,19 @@ namespace CCM {
         return CassVersion("3.0.8-1293");
       } else if (*this >= "5.0.3") {
         return CassVersion("3.0.9-1346");
+      } else if (*this >= "5.0.4") {
+        return CassVersion("3.0.10-1443");
+      } else if (*this >= "5.0.5") {
+        return CassVersion("3.0.11-1485");
+      } else if (*this >= "5.0.6") {
+        return CassVersion("3.0.11-1564");
+      } else if (*this >= "5.0.7") {
+        if (*this > "5.0.7") {
+          std::cerr << "Cassandra Version is not Defined: "
+            << "Add Cassandra version for DSE v" << this->to_string()
+            << std::endl;
+        }
+        return CassVersion("3.0.12-1586");
       }
 
       // DSE version does not correspond to a valid Cassandra version

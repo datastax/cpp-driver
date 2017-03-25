@@ -10,8 +10,6 @@
 
 #include "cassandra.h"
 
-#include "statement.hpp"
-
 /**
  * Idempotent integration tests
  */

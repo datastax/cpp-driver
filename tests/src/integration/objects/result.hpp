@@ -29,6 +29,11 @@ namespace driver {
 class Result : public Object<const CassResult, cass_result_free> {
 public:
   /**
+   * Create an empty result object
+   */
+  Result() {}
+
+  /**
    * Create the result object from the native driver object
    *
    * @param result Native driver object
@@ -105,6 +110,23 @@ public:
    */
   size_t column_count() {
     return cass_result_column_count(get());
+  }
+
+  /**
+   * Get the column names from the result
+   *
+   * @return The names of the columns
+   */
+  std::vector<std::string> column_names() {
+    std::vector<std::string> column_names;
+    for (size_t i = 0; i < column_count(); ++i) {
+      const char* string;
+      size_t length;
+      if (CASS_OK == cass_result_column_name(get(), i, &string, &length)) {
+        column_names.push_back(std::string(string, length));
+      }
+    }
+    return column_names;
   }
 
   /**

@@ -30,6 +30,10 @@
 #define DSE_KEYTAB_ADS_CONFIGURATION_FILE "dse.keytab"
 #define DSE_USER_KEYTAB_ADS_CONFIGURATION_FILE "dseuser.keytab"
 #define UNKNOWN_KEYTAB_ADS_CONFIGURATION_FILE "unknown.keytab"
+#define BILL_KEYTAB_ADS_CONFIGURATION_FILE "bill.keytab"
+#define BOB_KEYTAB_ADS_CONFIGURATION_FILE "bob.keytab"
+#define CHARLIE_KEYTAB_ADS_CONFIGURATION_FILE "charlie.keytab"
+#define STEVE_KEYTAB_ADS_CONFIGURATION_FILE "steve.keytab"
 #define REALM "DATASTAX.COM"
 #define DSE_SERVICE_PRINCIPAL "dse/_HOST@DATASTAX.COM"
 #define CASSANDRA_USER "cassandra"
@@ -39,6 +43,10 @@
 #define DSE_USER_PRINCIPAL "dseuser@DATASTAX.COM"
 #define UNKNOWN "unknown"
 #define UNKNOWN_PRINCIPAL "unknown@DATASTAX.COM"
+#define BILL_PRINCIPAL "bill@DATASTAX.COM"
+#define BOB_PRINCIPAL "bob@DATASTAX.COM"
+#define CHARLIE_PRINCIPAL "charlie@DATASTAX.COM"
+#define STEVE_PRINCIPAL "steve@DATASTAX.COM"
 
 // Output buffer size for spawn pipe(s)
 #define OUTPUT_BUFFER_SIZE 10240
@@ -115,6 +123,19 @@ public:
   void terminate_process() {
     uv_process_kill(&process_, SIGTERM);
     uv_thread_join(&thread_);
+
+    // Reset the static variables
+    configuration_directory_ = "";
+    configuration_file_ = "";
+    cassandra_keytab_file_ = "";
+    dse_keytab_file_ = "";
+    dseuser_keytab_file_ = "";
+    unknown_keytab_file_ = "";
+    bill_keytab_file_ = "";
+    bob_keytab_file_ = "";
+    charlie_keytab_file_ = "";
+    steve_keytab_file_ = "";
+    is_initialized_ = false;
   }
 
   /**
@@ -187,6 +208,46 @@ public:
   }
 
   /**
+   * Get the Bill keytab configuration file being used by the ADS process
+   *
+   * @return Absolute path to the Bill keytab configuration file; empty string
+   *         indicates ADS was not started properly
+   */
+  static std::string get_bill_keytab_file() {
+    return bill_keytab_file_;
+  }
+
+  /**
+   * Get the Bob keytab configuration file being used by the ADS process
+   *
+   * @return Absolute path to the Bob keytab configuration file; empty string
+   *         indicates ADS was not started properly
+   */
+  static std::string get_bob_keytab_file() {
+    return bob_keytab_file_;
+  }
+
+  /**
+   * Get the Charlie keytab configuration file being used by the ADS process
+   *
+   * @return Absolute path to the Charlie keytab configuration file; empty
+   *         string indicates ADS was not started properly
+   */
+  static std::string get_charlie_keytab_file() {
+    return charlie_keytab_file_;
+  }
+
+  /**
+   * Get the Steve keytab configuration file being used by the ADS process
+   *
+   * @return Absolute path to the Steve keytab configuration file; empty string
+   *         string indicates ADS was not started properly
+   */
+  static std::string get_steve_keytab_file() {
+    return steve_keytab_file_;
+  }
+
+  /**
    * Acquire a ticket into the cache of the ADS for a given principal and keytab
    * file
    *
@@ -252,6 +313,22 @@ private:
    * Unknown keytab configuration file
    */
   static std::string unknown_keytab_file_;
+  /**
+   * Bill keytab configuration file
+   */
+  static std::string bill_keytab_file_;
+  /**
+   * Bob keytab configuration file
+   */
+  static std::string bob_keytab_file_;
+  /**
+   * Charlie keytab configuration file
+   */
+  static std::string charlie_keytab_file_;
+  /**
+   * Steve keytab configuration file
+   */
+  static std::string steve_keytab_file_;
   /**
    * Flag to determine if the ADS process is initialized
    */
@@ -439,6 +516,10 @@ private:
       dse_keytab_file_ = configuration_directory_ + DSE_KEYTAB_ADS_CONFIGURATION_FILE;
       dseuser_keytab_file_ = configuration_directory_ + DSE_USER_KEYTAB_ADS_CONFIGURATION_FILE;
       unknown_keytab_file_ = configuration_directory_ + UNKNOWN_KEYTAB_ADS_CONFIGURATION_FILE;
+      bill_keytab_file_ = configuration_directory_ + BILL_KEYTAB_ADS_CONFIGURATION_FILE;
+      bob_keytab_file_ = configuration_directory_ + BOB_KEYTAB_ADS_CONFIGURATION_FILE;
+      charlie_keytab_file_ = configuration_directory_ + CHARLIE_KEYTAB_ADS_CONFIGURATION_FILE;
+      steve_keytab_file_ = configuration_directory_ + STEVE_KEYTAB_ADS_CONFIGURATION_FILE;
 
       // Inject the configuration environment variable
       std::string krb5_config_environment = "KRB5_CONFIG=" + configuration_file_;
@@ -544,17 +625,6 @@ private:
 #endif
   }
 };
-
-// Initialize static variables
-uv_process_t EmbeddedADS::process_;
-uv_mutex_t EmbeddedADS::mutex_;
-std::string EmbeddedADS::configuration_directory_ = "";
-std::string EmbeddedADS::configuration_file_ = "";
-std::string EmbeddedADS::cassandra_keytab_file_ = "";
-std::string EmbeddedADS::dse_keytab_file_ = "";
-std::string EmbeddedADS::dseuser_keytab_file_ = "";
-std::string EmbeddedADS::unknown_keytab_file_ = "";
-bool EmbeddedADS::is_initialized_ = false;
 
 } // namespace test
 

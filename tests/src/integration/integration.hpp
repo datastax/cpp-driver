@@ -22,6 +22,7 @@
 #include "pretty_print.hpp"
 #include "test_utils.hpp"
 #include "values.hpp"
+#include "options.hpp"
 
 // Macros for grouping tests together
 #define GROUP_TEST_F(group_name, test_case, test_name) \
@@ -44,8 +45,13 @@
 #define CASSANDRA_INTEGRATION_TYPED_TEST_P(test_case, test_name) \
   INTEGRATION_TYPED_TEST_P(Cassandra, test_case, test_name)
 
+//TODO: Create SKIP_SUITE macro; reduces noise and makes sense for certain suites
+
 #define SKIP_TEST(message) \
-  std::cout << "[ SKIPPED  ] " << message << std::endl; \
+  if (!Integration::skipped_message_displayed_) { \
+    std::cout << "[ SKIPPED  ] " << message << std::endl; \
+    Integration::skipped_message_displayed_ = true; \
+  } \
   return;
 
 #define CHECK_FAILURE \
@@ -57,6 +63,13 @@
   if (this->server_version_ < #version) { \
     SKIP_TEST("Unsupported for Server Version " \
               << this->server_version_.to_string() << ": Server version " \
+              << #version << "+ is required") \
+  }
+
+#define CHECK_OPTIONS_VERSION(version) \
+  if (Options::server_version() < #version) { \
+    SKIP_TEST("Unsupported for Server Version " \
+              << Options::server_version().to_string() << ": Server version " \
               << #version << "+ is required") \
   }
 
@@ -102,6 +115,10 @@ public:
   virtual void TearDown();
 
 protected:
+  /**
+   * Flag to indicate the skipped message display state
+   */
+  static bool skipped_message_displayed_;
   /**
    * Handle for interacting with CCM
    */

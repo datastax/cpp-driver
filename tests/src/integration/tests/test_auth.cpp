@@ -89,6 +89,10 @@ public:
 
 protected:
   /**
+   * ADS instance
+   */
+  static SharedPtr<EmbeddedADS> ads_;
+  /**
    * Flag to determine if the ADS is available
    */
   static bool is_ads_available_;
@@ -195,12 +199,6 @@ protected:
     // Execute a simple query to ensure authentication
     session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
   }
-
-protected:
-  /**
-   * ADS instance
-   */
-  static SharedPtr<EmbeddedADS> ads_;
 };
 
 // Initialize static variables

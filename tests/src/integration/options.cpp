@@ -14,8 +14,8 @@
 #include <algorithm>
 #include <iostream>
 
-#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.9")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("5.0.3")
+#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.10")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("5.0.7")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
@@ -141,7 +141,8 @@ bool Options::initialize(int argc, char* argv[]) {
             try {
               categories_.insert(*iterator);
             } catch (TestCategory::Exception& tce) {
-              std::cerr << "Invalid Category: " << *iterator << " will be ignored" << std::endl;
+              std::cerr << "Invalid Category: " << *iterator << " will be ignored"
+                << " (" << tce.what() << ")" << std::endl;
             }
           }
         } else {

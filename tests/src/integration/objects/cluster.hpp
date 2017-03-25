@@ -40,6 +40,14 @@ public:
     : Object<CassCluster, cass_cluster_free>(cluster) {}
 
   /**
+   * Create the cluster object from a shared reference
+   *
+   * @param cluster Shared reference
+   */
+  Cluster(Ptr cluster)
+    : Object<CassCluster, cass_cluster_free>(cluster) {}
+
+  /**
    * Destroy the cluster
    */
   virtual ~Cluster() {};

@@ -72,10 +72,12 @@ public:
    * @param batch Batch statement to execute
    * @param assert_ok True if error code for future should be asserted
    *                  CASS_OK; false otherwise (default: true)
+   * @return Result object
    */
-  void execute(Batch batch, bool assert_ok = true) {
+  Result execute(Batch batch, bool assert_ok = true) {
     Future future(cass_session_execute_batch(get(), batch.get()));
     future.wait(assert_ok);
+    return Result(future);
   }
 
   /**

@@ -23,4 +23,12 @@
  */
 void PrintTo(CassError error_code, std::ostream* output_stream);
 
+/**
+ * Pretty print CassValueType values
+ *
+ * @param value_type CassValueType value to pretty print
+ * @param output_stream Output stream to pretty print value to
+ */
+void PrintTo(CassValueType value_type, std::ostream* output_stream);
+
 #endif // __PRETTY_PRINT_HPP__

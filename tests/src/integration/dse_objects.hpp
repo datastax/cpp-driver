@@ -12,6 +12,7 @@
 #include "objects.hpp"
 #include "objects/dse_cluster.hpp"
 #include "objects/dse_session.hpp"
+#include "objects/dse_statement.hpp"
 #include "objects/dse_graph_array.hpp"
 #include "objects/dse_graph_edge.hpp"
 #include "objects/dse_graph_object.hpp"

@@ -189,3 +189,91 @@ void PrintTo(CassError error_code, std::ostream* output_stream) {
     *output_stream << " [" << cass_error_desc(error_code) << "]";
   }
 }
+
+void PrintTo(CassValueType value_type, std::ostream* output_stream) {
+  switch (value_type) {
+    case CASS_VALUE_TYPE_CUSTOM:
+      *output_stream << "CASS_VALUE_TYPE_CUSTOM";
+      break;
+    case CASS_VALUE_TYPE_ASCII:
+      *output_stream << "CASS_VALUE_TYPE_ASCII";
+      break;
+    case CASS_VALUE_TYPE_BIGINT:
+      *output_stream << "CASS_VALUE_TYPE_BIGINT";
+      break;
+    case CASS_VALUE_TYPE_BLOB:
+      *output_stream << "CASS_VALUE_TYPE_BLOB";
+      break;
+    case CASS_VALUE_TYPE_BOOLEAN:
+      *output_stream << "CASS_VALUE_TYPE_BOOLEAN";
+      break;
+    case CASS_VALUE_TYPE_COUNTER:
+      *output_stream << "CASS_VALUE_TYPE_COUNTER";
+      break;
+    case CASS_VALUE_TYPE_DECIMAL:
+      *output_stream << "CASS_VALUE_TYPE_DECIMAL";
+      break;
+    case CASS_VALUE_TYPE_DOUBLE:
+      *output_stream << "CASS_VALUE_TYPE_DOUBLE";
+      break;
+    case CASS_VALUE_TYPE_FLOAT:
+      *output_stream << "CASS_VALUE_TYPE_FLOAT";
+      break;
+    case CASS_VALUE_TYPE_INT:
+      *output_stream << "CASS_VALUE_TYPE_INT";
+      break;
+    case CASS_VALUE_TYPE_TEXT:
+      *output_stream << "CASS_VALUE_TYPE_TEXT";
+      break;
+    case CASS_VALUE_TYPE_TIMESTAMP:
+      *output_stream << "CASS_VALUE_TYPE_TIMESTAMP";
+      break;
+    case CASS_VALUE_TYPE_UUID:
+      *output_stream << "CASS_VALUE_TYPE_UUID";
+      break;
+    case CASS_VALUE_TYPE_VARCHAR:
+      *output_stream << "CASS_VALUE_TYPE_VARCHAR";
+      break;
+    case CASS_VALUE_TYPE_VARINT:
+      *output_stream << "CASS_VALUE_TYPE_VARINT";
+      break;
+    case CASS_VALUE_TYPE_TIMEUUID:
+      *output_stream << "CASS_VALUE_TYPE_TIMEUUID";
+      break;
+    case CASS_VALUE_TYPE_INET:
+      *output_stream << "CASS_VALUE_TYPE_INET";
+      break;
+    case CASS_VALUE_TYPE_DATE:
+      *output_stream << "CASS_VALUE_TYPE_DATE";
+      break;
+    case CASS_VALUE_TYPE_TIME:
+      *output_stream << "CASS_VALUE_TYPE_TIME";
+      break;
+    case CASS_VALUE_TYPE_SMALL_INT:
+      *output_stream << "CASS_VALUE_TYPE_SMALL_INT";
+      break;
+    case CASS_VALUE_TYPE_TINY_INT:
+      *output_stream << "CASS_VALUE_TYPE_TINY_INT";
+      break;
+    case CASS_VALUE_TYPE_DURATION:
+      *output_stream << "CASS_VALUE_TYPE_DURATION";
+      break;
+    case CASS_VALUE_TYPE_LIST:
+      *output_stream << "CASS_VALUE_TYPE_LIST";
+      break;
+    case CASS_VALUE_TYPE_MAP:
+      *output_stream << "CASS_VALUE_TYPE_MAP";
+      break;
+    case CASS_VALUE_TYPE_SET:
+      *output_stream << "CASS_VALUE_TYPE_SET";
+      break;
+    case CASS_VALUE_TYPE_UDT:
+      *output_stream << "CASS_VALUE_TYPE_UDT";
+      break;
+    case CASS_VALUE_TYPE_TUPLE:
+      *output_stream << "CASS_VALUE_TYPE_TUPLE";
+      break;
+    default:
+      *output_stream << "CASS ERROR NEEDS TO BE ADDED";
+  }
+}
