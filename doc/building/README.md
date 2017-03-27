@@ -14,7 +14,7 @@ It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013/2015.
 - [CMake](http://www.cmake.org)
 - [libuv (1.x or 0.10.x)](https://github.com/libuv/libuv)
 - [Kerberos](http://web.mit.edu/kerberos/)
-- [OpenSSL](http://www.openssl.org/) (optional)
+- [OpenSSL (1.0.x or 1.1.x)](http://www.openssl.org/) (optional)
 
 **NOTE:** Utilizing the default package manager configuration to install
 dependencies on \*nix based operating systems may result in older versions of
@@ -46,9 +46,9 @@ The driver has been built using both Clang (Ubuntu 12.04/14.04 and OS X) and GCC
 ```bash
 sudo yum install automake cmake gcc-c++ git krb5-devel libtool openssl-devel wget
 pushd /tmp
-wget http://dist.libuv.org/dist/v1.8.0/libuv-v1.8.0.tar.gz
-tar xzf libuv-v1.8.0.tar.gz
-pushd libuv-v1.8.0
+wget http://dist.libuv.org/dist/v1.11.0/libuv-v1.11.0.tar.gz
+tar xzf libuv-v1.11.0.tar.gz
+pushd libuv-v1.11.0
 sh autogen.sh
 ./configure
 sudo make install
@@ -181,6 +181,7 @@ Usage: VC_BUILD.BAT [OPTION...]
     --RELEASE                         Enable release build (default)
     --DISABLE-CLEAN                   Disable clean build
     --DEPENDENCIES-ONLY               Build dependencies only
+    --OPENSSL-VERSION                 OpenSSL version 1.0, 1.1 (default: 1.0)
     --TARGET-COMPILER [version]       140, 120, 110, 100, or WINSDK
     --ENABLE-EXAMPLES                 Enable example builds
     --ENABLE-PACKAGES [version]       Enable package generation (*)
@@ -203,6 +204,7 @@ Usage: VC_BUILD.BAT [OPTION...]
     --HELP                            Display this message
 
 *   Packages are only generated using detected installations of Visual Studio
+    NOTE: OpenSSL v1.0.x is used for all package builds
 **  Dependencies are built before generation of Visual Studio solution
 *** Default target architecture is determined based on system architecture
 ```
