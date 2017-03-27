@@ -117,15 +117,7 @@ if(DSE_BUILD_INTEGRATION_TESTS)
   endif()
 
   # Determine if the SCassandra server will be available for the tests
-  if(EXISTS ${SCASSANDRA_SERVER_STANDALONE_JAR})
-    # Copy the standalone SCassandra server JAR file to output directory
-    configure_file(${SCASSANDRA_SERVER_STANDALONE_JAR} ${CMAKE_BINARY_DIR} COPYONLY)
-    if(WIN32)
-      # Copy SCassandra server to additional locations for use with IDE
-      configure_file(${SCASSANDRA_SERVER_STANDALONE_JAR} ${CMAKE_BINARY_DIR}/tests COPYONLY)
-      configure_file(${SCASSANDRA_SERVER_STANDALONE_JAR} ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE} COPYONLY)
-    endif()
-  else()
+  if(NOT EXISTS ${SCASSANDRA_SERVER_STANDALONE_JAR})
     message(WARNING "SCassandra Not Found: SCassandra support will be disabled")
   endif()
 
@@ -235,8 +227,23 @@ if(DSE_BUILD_INTEGRATION_TESTS)
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY FOLDER "Tests")
   set_property(TARGET ${INTEGRATION_TESTS_NAME} APPEND PROPERTY COMPILE_FLAGS ${TEST_CXX_FLAGS})
 
-  # Copy the ADS JAR file to output directory
+  # Copy the test related dependencies to their proper locations
+  if(EXISTS ${SCASSANDRA_SERVER_STANDALONE_JAR})
+    # Copy the standalone SCassandra server JAR file to output directory
+    configure_file(${SCASSANDRA_SERVER_STANDALONE_JAR} ${CMAKE_BINARY_DIR} COPYONLY)
+    if(WIN32)
+      # Copy SCassandra server to additional locations for use with IDE
+      get_filename_component(SCASSANDRA_SERVER_STANDALONE_JAR_FILENAME
+        ${SCASSANDRA_SERVER_STANDALONE_JAR}
+        NAME)
+      configure_file(${SCASSANDRA_SERVER_STANDALONE_JAR} ${CMAKE_BINARY_DIR}/tests COPYONLY)
+    endif()
+  endif()
   configure_file(embedded-ads.jar ${CMAKE_BINARY_DIR} COPYONLY)
+  if(WIN32)
+    # Copy the embedded ADS to additional locations for use with IDE
+    configure_file(embedded-ads.jar ${CMAKE_BINARY_DIR}/tests COPYONLY)
+  endif()
 endif()
 
 #------------------------------
