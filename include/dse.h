@@ -97,8 +97,8 @@ typedef struct DseDateRange_ {
  *
  * @return A date range bound
  */
-DseDateRangeBound dse_date_range_bound_init(DseDateRangePrecision precision,
-                                            cass_int64_t time_ms);
+DSE_EXPORT DseDateRangeBound
+dse_date_range_bound_init(DseDateRangePrecision precision, cass_int64_t time_ms);
 
 /**
  * Creates a new DseDateRangeBound that represents an open bound.
@@ -107,7 +107,8 @@ DseDateRangeBound dse_date_range_bound_init(DseDateRangePrecision precision,
  *
  * @return A date range bound
  */
-DseDateRangeBound dse_date_range_bound_unbounded();
+DSE_EXPORT DseDateRangeBound
+dse_date_range_bound_unbounded();
 
 /**
  * Checks if the given DseDateRangeBound is an unbound value.
@@ -118,7 +119,8 @@ DseDateRangeBound dse_date_range_bound_unbounded();
  *
  * @return cass_true if the bound is actually unbounded.
  */
-cass_bool_t dse_date_range_bound_is_unbounded(DseDateRangeBound bound);
+DSE_EXPORT cass_bool_t
+dse_date_range_bound_is_unbounded(DseDateRangeBound bound);
 
 /**
  * Initializes a DseDateRange with a lower and upper bound.
@@ -131,9 +133,10 @@ cass_bool_t dse_date_range_bound_is_unbounded(DseDateRangeBound bound);
  *
  * @return Returns the date-range object
  */
-DseDateRange* dse_date_range_init(DseDateRange* range,
-                                  DseDateRangeBound lower_bound,
-                                  DseDateRangeBound upper_bound);
+DSE_EXPORT DseDateRange*
+dse_date_range_init(DseDateRange* range,
+                    DseDateRangeBound lower_bound,
+                    DseDateRangeBound upper_bound);
 
 /**
  * Initializes a DseDateRange with a single date
@@ -145,8 +148,8 @@ DseDateRange* dse_date_range_init(DseDateRange* range,
  *
  * @return Returns the date-range object
  */
-DseDateRange* dse_date_range_init_single_date(DseDateRange* range,
-                                              DseDateRangeBound date);
+DSE_EXPORT DseDateRange*
+dse_date_range_init_single_date(DseDateRange* range, DseDateRangeBound date);
 
 /***********************************************************************************
  *
