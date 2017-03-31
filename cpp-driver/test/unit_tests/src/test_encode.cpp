@@ -62,17 +62,20 @@ BOOST_AUTO_TEST_CASE(simple_negative)
 
 BOOST_AUTO_TEST_CASE(edge_positive)
 {
-  CassDuration value((1UL << 31) - 1, (1UL << 31) - 1, (1UL << 31) - 1);
+  CassDuration value((1UL << 31) - 1, (1UL << 31) - 1, (1UL << 63) - 1);
   Buffer result = encode(value);
-  BOOST_CHECK_EQUAL(15, result.size());
+  BOOST_CHECK_EQUAL(19, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
 
-  // The first 5 bytes represent (1UL<<31 - 1), the max 32-bit number. Byte 0
+  // The first 5 bytes represent (1UL << 31 - 1), the max 32-bit number. Byte 0
   // has the first 4 bits set to indicate that there are 4 bytes beyond this one that
   // define this field (each field is a vint of a zigzag encoding of the original
   // value). Encoding places the least-significant byte at byte 4 and works backwards
   // to record more significant bytes. Zigzag encoding just left shifts a value
-  // by one bit for positive values, so byte 4 ends in a 0.
+  // by one bit for positive values, so byte 4 ends in a 0. The last 9 bytes represent
+  // (1UL << 63 - 1), the max 64-bit integer. Byte 10 has the first 8 bits set to indicate
+  // there are 8 follow up bytes to encode this value. The last byte also ends in a 0 because
+  // it is a positive value.
 
   BOOST_CHECK_EQUAL(result_data[0], 0xf0);
   for (int ind = 1; ind < 4; ++ind) {
@@ -87,23 +90,25 @@ BOOST_AUTO_TEST_CASE(edge_positive)
   }
   BOOST_CHECK_EQUAL(result_data[9], 0xfe);
 
-  BOOST_CHECK_EQUAL(result_data[10], 0xf0);
-  for (int ind = 11; ind < 14; ++ind) {
+  BOOST_CHECK_EQUAL(result_data[10], 0xff);
+  for (int ind = 11; ind < 18; ++ind) {
     BOOST_CHECK_EQUAL(result_data[ind], 0xff);
   }
-  BOOST_CHECK_EQUAL(result_data[14], 0xfe);
+  BOOST_CHECK_EQUAL(result_data[18], 0xfe);
 }
 
 BOOST_AUTO_TEST_CASE(edge_negative)
 {
-  CassDuration value(1L << 31, 1L << 31, 1L << 31);
+  CassDuration value(1L << 31, 1L << 31, 1L << 63);
   Buffer result = encode(value);
-  BOOST_CHECK_EQUAL(15, result.size());
+  BOOST_CHECK_EQUAL(19, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
 
   // We have 5-bytes for 1L << 31, the min 32-bit number. The zigzag
   // representation is 4 bytes of 0xff, and the first byte is 0xf0 to say we have
-  // 4 bytes of value beyond these size-spec-bits.
+  // 4 bytes of value beyond these size-spec-bits. The last 9 bytes represent
+  // 1L << 63 with all the first byte bits set to indicate 8 more bytes are needed to
+  // encode this value.
 
   BOOST_CHECK_EQUAL(result_data[0], 0xf0);
   for (int ind = 1; ind <= 4; ++ind) {
@@ -116,8 +121,8 @@ BOOST_AUTO_TEST_CASE(edge_negative)
     BOOST_CHECK_EQUAL(result_data[ind], 0xff);
   }
 
-  BOOST_CHECK_EQUAL(result_data[10], 0xf0);
-  for (int ind = 11; ind <= 14; ++ind) {
+  BOOST_CHECK_EQUAL(result_data[10], 0xff);
+  for (int ind = 11; ind <= 18; ++ind) {
     BOOST_CHECK_EQUAL(result_data[ind], 0xff);
   }
 }

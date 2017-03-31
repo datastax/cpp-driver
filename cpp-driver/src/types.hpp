@@ -65,13 +65,13 @@ struct CassDecimal {
 struct CassDuration {
   CassDuration(cass_int32_t months,
                cass_int32_t days,
-               cass_int32_t nanos)
+               cass_int64_t nanos)
     : months(months)
     , days(days)
     , nanos(nanos) { }
   cass_int32_t months;
   cass_int32_t days;
-  cass_int32_t nanos;
+  cass_int64_t nanos;
 };
 
 } // namespace cass

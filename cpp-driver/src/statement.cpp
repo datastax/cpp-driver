@@ -171,7 +171,7 @@ CASS_STATEMENT_BIND(decimal,
                     THREE_PARAMS_(const cass_byte_t* varint, size_t varint_size, int scale),
                     cass::CassDecimal(varint, varint_size, scale))
 CASS_STATEMENT_BIND(duration,
-                    THREE_PARAMS_(cass_int32_t months, cass_int32_t days, cass_int32_t nanos),
+                    THREE_PARAMS_(cass_int32_t months, cass_int32_t days, cass_int64_t nanos),
                     cass::CassDuration(months, days, nanos))
 
 #undef CASS_STATEMENT_BIND

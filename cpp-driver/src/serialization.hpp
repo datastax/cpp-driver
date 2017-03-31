@@ -402,6 +402,45 @@ inline uint64_t encode_zig_zag(int64_t n) {
   return (n << 1) ^ (n >> 63);
 }
 
+inline const uint8_t* decode_vint(const uint8_t* input, const uint8_t* end, uint64_t* output) {
+  int num_extra_bytes;
+  int i;
+  uint8_t first_byte = *input++;
+  if (first_byte <= 127) {
+    // If this is a multibyte vint, at least the MSB of the first byte
+    // will be set. Since that's not the case, this is a one-byte value.
+    *output = first_byte;
+  } else {
+    // The number of consecutive most significant bits of the first-byte tell us how
+    // many additional bytes are in this vint. Count them like this:
+    // 1. Invert the firstByte so that all leading 1s become 0s.
+    // 2. Count the number of leading zeros; num_leading_zeros assumes a 64-bit long.
+    // 3. We care about leading 0s in the byte, not int, so subtract out the
+    //    appropriate number of extra bits (56 for a 64-bit int).
+
+    // We mask out high-order bits to prevent sign-extension as the value is placed in a 64-bit arg
+    // to the num_leading_zeros function.
+    num_extra_bytes = cass::num_leading_zeros(~first_byte & 0xff) - 56;
+
+    // Error out if we don't have num_extra_bytes left in our data.
+    if (input + num_extra_bytes > end) {
+      // There aren't enough bytes. This duration object is not fully defined.
+      return NULL;
+    }
+
+    // Build up the vint value one byte at a time from the data bytes.
+    // The firstByte contains size as well as the most significant bits of
+    // the value. Extract just the value.
+    *output = first_byte & (0xff >> num_extra_bytes);
+    for (i = 0; i < num_extra_bytes; ++i) {
+      uint8_t b = *input++;
+      *output <<= 8;
+      *output |= b & 0xff;
+    }
+  }
+  return input;
+}
+
 } // namespace cass
 
 #endif
