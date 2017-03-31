@@ -32,9 +32,8 @@ public:
                size_t value_count = 0)
     : Statement(query.data(), query.size(), value_count) { }
 
-
   QueryRequest(const char* query, size_t query_length,
-               size_t value_count = 0)
+               size_t value_count)
     : Statement(query, query_length, value_count) { }
 
   virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const;

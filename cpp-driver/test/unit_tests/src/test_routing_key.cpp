@@ -42,7 +42,7 @@ BOOST_FIXTURE_TEST_SUITE(routing_key, RoutingKeyTest)
 BOOST_AUTO_TEST_CASE(single)
 {
   {
-    cass::QueryRequest query(1);
+    cass::QueryRequest query("", 1);
     cass::Request::EncodingCache cache;
 
 
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(single)
   }
 
   {
-    cass::QueryRequest query(1);
+    cass::QueryRequest query("", 1);
     cass::Request::EncodingCache cache;
 
     cass_int32_t value = 123456789;
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(single)
   }
 
   {
-    cass::QueryRequest query(1);
+    cass::QueryRequest query("", 1);
     cass::Request::EncodingCache cache;
 
     cass_int64_t value = 123456789;
@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(single)
   }
 
   {
-    cass::QueryRequest query(1);
+    cass::QueryRequest query("", 1);
     cass::Request::EncodingCache cache;
 
     query.set(0, cass_true);
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(single)
   }
 
   {
-    cass::QueryRequest query(1);
+    cass::QueryRequest query("", 1);
     cass::Request::EncodingCache cache;
 
     const char* value = "abcdefghijklmnop";
@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(single)
 
 BOOST_AUTO_TEST_CASE(empty_and_null)
 {
-  cass::QueryRequest query(1);
+  cass::QueryRequest query("", 1);
   cass::Request::EncodingCache cache;
 
   std::string routing_key;
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(empty_and_null)
 BOOST_AUTO_TEST_CASE(composite)
 {
   {
-    cass::QueryRequest query(3);
+    cass::QueryRequest query("", 3);
     cass::Request::EncodingCache cache;
 
     CassUuid uuid;
@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(composite)
   }
 
   {
-    cass::QueryRequest query(3);
+    cass::QueryRequest query("", 3);
     cass::Request::EncodingCache cache;
 
     query.set(0, cass_false);
