@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include "cassandra.h"
 
+#define NANOS_IN_A_SEC (1000LL * 1000LL * 1000LL)
+
 void print_error(CassFuture* future) {
   const char* message;
   size_t message_length;
@@ -74,14 +76,11 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-CassError insert_into(CassSession* session, const char* key, cass_int32_t months, cass_int32_t days, cass_int32_t nanos) {
+CassError insert_into(CassSession* session, const char* key, cass_int32_t months, cass_int32_t days, cass_int64_t nanos) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
   const char* query = "INSERT INTO examples.duration (key, d) VALUES (?, ?);";
-  cass_byte_t* data;
-  size_t data_size;
-
 
   statement = cass_statement_new(query, 2);
 
@@ -123,11 +122,12 @@ CassError select_from(CassSession* session, const char* key) {
     CassIterator* iterator = cass_iterator_from_result(result);
 
     if (cass_iterator_next(iterator)) {
-      cass_int32_t months, days, nanos;
+      cass_int32_t months, days;
+      cass_int64_t nanos;
       const CassRow* row = cass_iterator_get_row(iterator);
 
       cass_value_get_duration(cass_row_get_column(row, 0), &months, &days, &nanos);
-      printf("months: %d  days: %d  nanos: %d\n", months, days, nanos);
+      printf("months: %d  days: %d  nanos: %lld\n", months, days, nanos);
     }
 
     cass_result_free(result);
@@ -158,23 +158,23 @@ int main(int argc, char* argv[]) {
   }
 
   execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { \
-                           'class': 'SimpleStrategy', 'replication_factor': '3' };");
+                "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { "
+                "'class': 'SimpleStrategy', 'replication_factor': '3' };");
 
 
   execute_query(session,
-                "CREATE TABLE examples.duration (key text PRIMARY KEY, d duration)");
+                "CREATE TABLE IF NOT EXISTS examples.duration "
+                "(key text PRIMARY KEY, d duration)");
 
-  // Insert some rows into the table, playing with edge values; each of months, days, and nanos may be
-  // a 64-bit long.
+  /* Insert some rows into the table and read them back out */
 
-  insert_into(session, "base", 0, 0, 0);
-  insert_into(session, "simple", 1, 2, 3);
-  insert_into(session, "negative", -1, -2, -3);
+  insert_into(session, "zero", 0, 0, 0);
+  insert_into(session, "one_month_two_days_three_seconds", 1, 2, 3 * NANOS_IN_A_SEC);
+  insert_into(session, "negative_one_month_two_days_three_seconds", -1, -2, -3 * NANOS_IN_A_SEC);
 
-  select_from(session, "base");
-  select_from(session, "simple");
-  select_from(session, "negative");
+  select_from(session, "zero");
+  select_from(session, "one_month_two_days_three_seconds");
+  select_from(session, "negative_one_month_two_days_three_seconds");
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);

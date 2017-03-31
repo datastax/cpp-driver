@@ -139,77 +139,33 @@ CassError cass_value_get_bytes(const CassValue* value,
   return CASS_OK;
 }
 
-static const cass_byte_t* decode_vint(const cass_byte_t* input, const cass_byte_t* end, cass_int64_t* output)
-{
-  int num_extra_bytes;
-  int i;
-  cass_byte_t first_byte = *input++;
-  if (first_byte <= 127) {
-    // If this is a multibyte vint, at least the MSB of the first byte
-    // will be set. Since that's not the case, this is a one-byte value.
-    *output = first_byte;
-  } else {
-    // The number of consecutive most significant bits of the first-byte tell us how
-    // many additional bytes are in this vint. Count them like this:
-    // 1. Invert the firstByte so that all leading 1s become 0s.
-    // 2. Count the number of leading zeros; num_leading_zeros assumes a 64-bit long.
-    // 3. We care about leading 0s in the byte, not int, so subtract out the
-    //    appropriate number of extra bits (56 for a 64-bit int).
-
-    // We mask out high-order bits to prevent sign-extension as the value is placed in a 64-bit arg
-    // to the num_leading_zeros function.
-    num_extra_bytes = cass::num_leading_zeros(~first_byte & 0xff) - 56;
-
-    // Error out if we don't have num_extra_bytes left in our data.
-    if (input + num_extra_bytes > end) {
-      // There aren't enough bytes. This duration object is not fully defined.
-      return NULL;
-    }
-
-    // Build up the vint value one byte at a time from the data bytes.
-    // The firstByte contains size as well as the most significant bits of
-    // the value. Extract just the value.
-    *output = first_byte & (0xff >> num_extra_bytes);
-    for (i = 0; i < num_extra_bytes; ++i) {
-      cass_byte_t b = *input++;
-      *output <<= 8;
-      *output |= b & 0xff;
-    }
-  }
-  return input;
-}
-
-CassError cass_value_get_duration(const CassValue* value, cass_int32_t* months, cass_int32_t* days, cass_int32_t* nanos)
-{
-  cass_int32_t *outs[3];
-  int ctr;
-  size_t data_size = 0;
-  const cass_byte_t* cur_byte = NULL;
-  const cass_byte_t* end = NULL;
+CassError cass_value_get_duration(const CassValue* value,
+                                  cass_int32_t* months,
+                                  cass_int32_t* days,
+                                  cass_int64_t* nanos) {
+  const uint8_t* cur_byte = NULL;
+  const uint8_t* end = NULL;
 
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
   if (!cass_value_is_duration(value)) return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
 
-  // Package up the out-args in an array. Duration's always have months, then days, then nanos.
-  outs[0] = months;
-  outs[1] = days;
-  outs[2] = nanos;
+  cur_byte = reinterpret_cast<uint8_t*>(value->data());
+  end = cur_byte + value->size();
 
-  cass_value_get_bytes(value, &cur_byte, &data_size);
-  end = cur_byte + data_size;
+  uint64_t decoded = 0;
 
-  for (ctr = 0; ctr < 3 && cur_byte != end; ++ctr) {
-    cass_int64_t decoded = 0;
-    cur_byte = decode_vint(cur_byte, end, &decoded);
-    if (cur_byte == NULL)
-      return CASS_ERROR_LIB_BAD_PARAMS;
-    *outs[ctr] = static_cast<cass_int32_t>(cass::decode_zig_zag(decoded));
-  }
+  cur_byte = cass::decode_vint(cur_byte, end, &decoded);
+  if (cur_byte == NULL || cur_byte == end) return CASS_ERROR_LIB_BAD_PARAMS;
+  *months = static_cast<cass_int32_t>(cass::decode_zig_zag(decoded));
 
-  if (ctr < 3) {
-    // There aren't enough bytes. This duration object is not fully defined.
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
+  cur_byte = cass::decode_vint(cur_byte, end, &decoded);
+  if (cur_byte == NULL || cur_byte == end) return CASS_ERROR_LIB_BAD_PARAMS;
+  *days = static_cast<cass_int32_t>(cass::decode_zig_zag(decoded));
+
+  cur_byte = cass::decode_vint(cur_byte, end, &decoded);
+  if (cur_byte == NULL || cur_byte != end) return CASS_ERROR_LIB_BAD_PARAMS;
+  *nanos = static_cast<cass_int64_t>(cass::decode_zig_zag(decoded));
+
   return CASS_OK;
 }
 
