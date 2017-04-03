@@ -112,6 +112,15 @@ protected:
     }
   }
 
+  /**
+   * Assign the object reference
+   *
+   * @param object Object reference
+   */
+  void set(T* object) {
+    object_ = object;
+  }
+
 private:
   /**
    * Object reference

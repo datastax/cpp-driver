@@ -29,7 +29,7 @@
 #define ADD_ARRAY_VALUE_C_STR(add_function, value) \
   ADD_ARRAY_NULL(value) \
    else { \
-    ASSERT_EQ(CASS_OK, add_function(get(), value.c_str())); \
+    ASSERT_EQ(CASS_OK, add_function(get(), value.str().c_str())); \
   }
 
 namespace test {
@@ -202,7 +202,7 @@ inline void DseGraphArray::add<DseLineString>(DseLineString value) {
   if (value.is_null()) {
     dse_graph_array_add_null(get());
   } else {
-    DseLineString::Native line_string = value.get();
+    DseLineString::Native line_string = value.to_native();
     line_strings_.push_back(line_string);
     ASSERT_EQ(CASS_OK, dse_graph_array_add_line_string(get(), line_string.get()));
   }
@@ -233,7 +233,7 @@ inline void DseGraphArray::add<DsePolygon>(DsePolygon value) {
   if (value.is_null()) {
     dse_graph_array_add_null(get());
   } else {
-    DsePolygon::Native polygon = value.get();
+    DsePolygon::Native polygon = value.to_native();
     polygons_.push_back(polygon);
     ASSERT_EQ(CASS_OK, dse_graph_array_add_polygon(get(), polygon.get()));
   }

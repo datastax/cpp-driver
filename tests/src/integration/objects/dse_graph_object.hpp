@@ -30,7 +30,7 @@
 #define ADD_OBJECT_VALUE_C_STR(add_function, name, value) \
   ADD_OBJECT_NULL(name, value) \
    else { \
-    ASSERT_EQ(CASS_OK, add_function(get(), name.c_str(), value.c_str())); \
+    ASSERT_EQ(CASS_OK, add_function(get(), name.c_str(), value.str().c_str())); \
   }
 
 namespace test {
@@ -210,7 +210,7 @@ inline void DseGraphObject::add<std::string>(const std::string& name, std::strin
  */
 template<>
 inline void DseGraphObject::add<DseLineString>(const std::string& name, DseLineString value) {
-  DseLineString::Native line_string = value.get();
+  DseLineString::Native line_string = value.to_native();
   line_strings_.push_back(line_string);
   ASSERT_EQ(CASS_OK, dse_graph_object_add_line_string(get(), name.c_str(),
     line_string.get()));
@@ -236,7 +236,7 @@ inline void DseGraphObject::add<DsePoint>(const std::string& name, DsePoint valu
  */
 template<>
 inline void DseGraphObject::add<DsePolygon>(const std::string& name, DsePolygon value) {
-  DsePolygon::Native polygon = value.get();
+  DsePolygon::Native polygon = value.to_native();
   polygons_.push_back(polygon);
   ASSERT_EQ(CASS_OK, dse_graph_object_add_polygon(get(), name.c_str(),
     polygon.get()));

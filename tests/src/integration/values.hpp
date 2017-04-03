@@ -11,6 +11,9 @@
 #include "values/boolean.hpp"
 #include "values/double.hpp"
 #include "values/integer.hpp"
+#include "values/list.hpp"
+#include "values/map.hpp"
+#include "values/set.hpp"
 #include "values/uuid.hpp"
 #include "values/varchar.hpp"
 

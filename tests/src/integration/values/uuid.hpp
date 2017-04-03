@@ -29,20 +29,15 @@ namespace driver {
 class Uuid : public COMPARABLE_VALUE_INTERFACE(CassUuid, Uuid) {
 public:
   Uuid()
-    : is_null_(true) {
-    set_uuid_string();
-  }
+    : is_null_(true) {}
 
   Uuid(CassUuid uuid)
     : uuid_(uuid)
-    , is_null_(false) {
-    set_uuid_string();
-  }
+    , is_null_(false) {}
 
   Uuid(const CassValue* value)
     : is_null_(false) {
     initialize(value);
-    set_uuid_string();
   }
 
   Uuid(const std::string& value)
@@ -58,20 +53,14 @@ public:
       is_valid = false;
     }
 
-    set_uuid_string();
     if (!is_valid) {
       LOG_ERROR("Invalid UUID " << value_trim << ": Using default " << str());
     }
   }
 
-  Uuid(const CassRow* row, size_t column_index)
-    : is_null_(false) {
-    initialize(row, column_index);
-    set_uuid_string();
-  }
-
-  virtual const char* c_str() const {
-    return uuid_string_.c_str();
+  virtual void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_uuid(collection.get(), uuid_));
   }
 
   virtual std::string cql_type() const {
@@ -79,7 +68,7 @@ public:
   }
 
   virtual std::string cql_value() const {
-    return uuid_string_;
+    return str();
   }
 
   /**
@@ -107,6 +96,24 @@ public:
   virtual int compare(const Uuid& rhs) const {
     if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.uuid_);
+  }
+
+  virtual void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_uuid(tuple.get(), index, uuid_));
+    }
+  }
+
+  virtual void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_uuid_by_name(user_type.get(), name.c_str(), uuid_));
+    }
   }
 
   void statement_bind(Statement statement, size_t index) {
@@ -152,7 +159,13 @@ public:
   }
 
   virtual std::string str() const {
-    return uuid_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      char buffer[CASS_UUID_STRING_LENGTH];
+      cass_uuid_string(uuid_, buffer);
+      return buffer;
+    }
   }
 
   virtual CassUuid value() const {
@@ -178,10 +191,6 @@ protected:
    */
   CassUuid uuid_;
   /**
-   * Native driver value as string
-   */
-  std::string uuid_string_;
-  /**
    * Flag to determine if value is NULL
    */
   bool is_null_;
@@ -206,24 +215,6 @@ protected:
       is_null_ = false;
     }
   }
-
-  virtual void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
-  /**
-   * Set the string value of the UUID
-   */
-  void set_uuid_string() {
-    if (is_null_) {
-      uuid_string_ = "null";
-    } else {
-      char buffer[CASS_UUID_STRING_LENGTH];
-      cass_uuid_string(uuid_, buffer);
-      uuid_string_ = buffer;
-    }
-  }
 };
 
 /**
@@ -241,18 +232,10 @@ public:
     : Uuid() {
     is_null_ = false;
     initialize(value);
-    set_uuid_string();
   }
 
   TimeUuid(const std::string& value)
     : Uuid(value) {}
-
-  TimeUuid(const CassRow* row, size_t column_index)
-    : Uuid() {
-    is_null_ = false;
-    initialize(row, column_index);
-    set_uuid_string();
-  }
 
   std::string cql_type() const {
     return std::string("timeuuid");
@@ -265,7 +248,6 @@ public:
    */
   void max(cass_uint64_t timestamp) {
     cass_uuid_max_from_time(timestamp, &uuid_);
-    set_uuid_string();
   }
 
   /**
@@ -275,7 +257,6 @@ public:
    */
   void min(cass_uint64_t timestamp) {
     cass_uuid_min_from_time(timestamp, &uuid_);
-    set_uuid_string();
   }
 
   /**
@@ -311,11 +292,6 @@ protected:
         << "Unable to Get Uuid: Invalid error code returned";
       is_null_ = false;
     }
-  }
-
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
   }
 };
 

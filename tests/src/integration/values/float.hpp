@@ -30,21 +30,16 @@ class Float : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_float_t, Float) 
 public:
   Float()
     : float_(0.0f)
-    , is_null_(true) {
-    set_float_string();
-  }
+    , is_null_(true) {}
 
   Float(cass_float_t float_value)
     : float_(float_value)
-    , is_null_(false) {
-    set_float_string();
-  }
+    , is_null_(false) {}
 
   Float(const CassValue* value)
     : float_(0.0f)
     , is_null_(false) {
     initialize(value);
-    set_float_string();
   }
 
   Float(const std::string& value)
@@ -64,19 +59,11 @@ public:
           << float_);
       }
     }
-
-    set_float_string();
   }
 
-  Float(const CassRow* row, size_t column_index)
-    : float_(0.0f)
-    , is_null_(false) {
-    initialize(row, column_index);
-    set_float_string();
-  }
-
-  const char* c_str() const {
-    return float_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_float(collection.get(), float_));
   }
 
   std::string cql_type() const {
@@ -84,7 +71,7 @@ public:
   }
 
   std::string cql_value() const {
-    return float_string_;
+    return str();
   }
 
   /**
@@ -109,6 +96,25 @@ public:
   int compare(const Float& rhs) const {
     if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.float_);
+  }
+
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_tuple_set_float(tuple.get(), index, float_));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_float_by_name(user_type.get(), name.c_str(), float_));
+    }
   }
 
   void statement_bind(Statement statement, size_t index) {
@@ -142,7 +148,12 @@ public:
   }
 
   std::string str() const {
-    return float_string_;
+      return "null";
+    } else {
+      std::stringstream float_string;
+      float_string << float_;
+      return float_string.str();
+    }
   }
 
   cass_float_t value() const {
@@ -158,10 +169,6 @@ protected:
    * Native driver value
    */
   cass_float_t float_;
-  /**
-   * Native driver value as string
-   */
-  std::string float_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -185,24 +192,6 @@ protected:
       ASSERT_EQ(CASS_OK, cass_value_get_float(value, &float_))
         << "Unable to Get Float: Invalid error code returned";
       is_null_ = false;
-    }
-  }
-
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
-  /**
-   * Set the string value of the float
-   */
-  void set_float_string() {
-    if (is_null_) {
-      float_string_ = "null";
-    } else {
-      std::stringstream float_string;
-      float_string << float_;
-      float_string_ = float_string.str();
     }
   }
 };

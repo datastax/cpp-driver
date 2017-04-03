@@ -25,20 +25,15 @@ public:
   typedef Object< ::DsePolygonIterator, dse_polygon_iterator_free> Iterator;
 
   DsePolygon()
-    : is_null_(true) {
-    set_polygon_string();
-  }
+    : is_null_(true) {}
 
   DsePolygon(const std::vector<DseLineString>& line_strings)
     : line_strings_(line_strings)
-    , is_null_(false) {
-    set_polygon_string();
-  }
+    , is_null_(false) {}
 
   DsePolygon(const CassValue* value)
     : is_null_(false) {
     initialize(value);
-    set_polygon_string();
   }
 
   /**
@@ -59,24 +54,16 @@ public:
       // Parse and add the line string(s) from the polygon string value
       parse_and_add_line_strings(polygon_value);
     }
-
-    set_polygon_string();
-  }
-
-  DsePolygon(const CassRow* row, size_t column_index)
-    : is_null_(true) {
-    initialize(row, column_index);
-    set_polygon_string();
   }
 
   DsePolygon(const ::DseGraphResult* result)
     : is_null_(false) {
     initialize(result);
-    set_polygon_string();
   }
 
-  const char* c_str() const {
-    return polygon_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_dse_polygon(collection.get(), to_native().get()));
   }
 
   std::string cql_type() const {
@@ -84,15 +71,14 @@ public:
   }
 
   std::string cql_value() const {
-    // Ensure the polygon is not NULL or empty
     if (is_null_) {
-      return polygon_string_;
+      return "null";
     } else {
       if (line_strings_.empty()) {
         return "'POLYGON EMPTY'";
       }
     }
-    return "'POLYGON(" + polygon_string_ + ")'";
+    return "'POLYGON(" + str() + ")'";
   }
 
   /**
@@ -139,7 +125,7 @@ public:
    * @return Generated native DsePolygon reference object; polygon may be
    *         empty
    */
-  Native get() {
+  Native to_native() const {
     // Create the native polygon object
     Native polygon = dse_polygon_new();
 
@@ -175,11 +161,31 @@ public:
     return polygon;
   }
 
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_tuple_set_dse_polygon(tuple.get(), index, to_native().get()));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_dse_polygon_by_name(user_type.get(),
+        name.c_str(), to_native().get()));
+    }
+  }
+
   void statement_bind(Statement statement, size_t index) {
     if (is_null_) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
     } else {
-      Native polygon = get();
+      Native polygon = to_native();
       ASSERT_EQ(CASS_OK, cass_statement_bind_dse_polygon(statement.get(), index, polygon.get()));
     }
   }
@@ -189,7 +195,25 @@ public:
   }
 
   std::string str() const {
-    return polygon_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      std::stringstream polygon_string;
+      for (std::vector<DseLineString>::const_iterator iterator = line_strings_.begin();
+        iterator < line_strings_.end(); ++iterator) {
+        try {
+          polygon_string << "(" << (*iterator).str() << ")";
+
+          // Add a comma separation to the polygon (unless the last element)
+          if ((iterator + 1) != line_strings_.end()) {
+            polygon_string << ", ";
+          }
+        } catch (DsePoint::Exception& e) {
+          LOG_ERROR(e.what());
+        }
+      }
+      return polygon_string.str();
+    }
   }
 
   std::vector<DseLineString> value() const {
@@ -205,10 +229,6 @@ private:
    * DSE line strings used in the DSE polygon
    */
   std::vector<DseLineString> line_strings_;
-  /**
-   * Wrapped native driver value as string
-   */
-  std::string polygon_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -266,11 +286,6 @@ private:
     }
   }
 
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
   void initialize(const ::DseGraphResult* result) {
     if (dse_graph_result_is_null(result)) {
       is_null_ = true;
@@ -321,34 +336,14 @@ private:
       }
     }
   }
-
-  /**
-   * Set the string value of the DSE polygon
-   */
-  void set_polygon_string() {
-    if (is_null_) {
-      polygon_string_ = "null";
-    } else {
-      std::stringstream polygon_string;
-      for (std::vector<DseLineString>::const_iterator iterator = line_strings_.begin();
-        iterator < line_strings_.end(); ++iterator) {
-        try {
-          polygon_string << "(" << (*iterator).str() << ")";
-
-          // Add a comma separation to the polygon (unless the last element)
-          if ((iterator + 1) != line_strings_.end()) {
-            polygon_string << ", ";
-          }
-        } catch (DsePoint::Exception& e) {
-          LOG_ERROR(e.what());
-        }
-      }
-      polygon_string_ = polygon_string.str();
-    }
-  }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const DsePolygon& polygon) {
+  os << polygon.cql_value();
+  return os;
+}
 
 } // namespace driver
 } // namespace test
 
-#endif //  __TEST_DSE_POLYGON_HPP__
+#endif // __TEST_DSE_POLYGON_HPP__

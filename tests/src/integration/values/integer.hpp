@@ -30,21 +30,16 @@ class TinyInteger : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_int8_t, Ti
 public:
   TinyInteger()
     : integer_(0)
-    , is_null_(true) {
-    set_integer_string();
-  }
+    , is_null_(true) {}
 
   TinyInteger(cass_int8_t integer)
     : integer_(integer)
-    , is_null_(false) {
-    set_integer_string();
-  }
+    , is_null_(false) {}
 
   TinyInteger(const CassValue* value)
     : integer_(0)
     , is_null_(false) {
     initialize(value);
-    set_integer_string();
   }
 
   TinyInteger(const std::string& value)
@@ -64,19 +59,11 @@ public:
           << integer_);
       }
     }
-
-    set_integer_string();
   }
 
-  TinyInteger(const CassRow* row, size_t column_index)
-    : integer_(0)
-    , is_null_(false) {
-    initialize(row, column_index);
-    set_integer_string();
-  }
-
-  const char* c_str() const {
-    return integer_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_int8(collection.get(), integer_));
   }
 
   std::string cql_type() const {
@@ -84,7 +71,7 @@ public:
   }
 
   std::string cql_value() const {
-    return integer_string_;
+    return str();
   }
 
   /**
@@ -109,6 +96,25 @@ public:
   int compare(const TinyInteger& rhs) const {
     if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.integer_);
+  }
+
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_int8(tuple.get(), index, integer_));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_int8_by_name(user_type.get(), name.c_str(),
+        integer_));
+    }
   }
 
   void statement_bind(Statement statement, size_t index) {
@@ -142,7 +148,13 @@ public:
   }
 
   std::string str() const {
-    return integer_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      std::stringstream integer_string;
+      integer_string << integer_;
+      return integer_string.str();
+    }
   }
 
   cass_int8_t value() const {
@@ -158,10 +170,6 @@ protected:
    * Native driver value
    */
   cass_int8_t integer_;
-  /**
-   * Native driver value as string
-   */
-  std::string integer_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -187,24 +195,6 @@ protected:
       is_null_ = false;
     }
   }
-
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
-  /**
-   * Set the string value of the integer
-   */
-  void set_integer_string() {
-    if (is_null_) {
-      integer_string_ = "null";
-    } else {
-      std::stringstream integer_string;
-      integer_string << integer_;
-      integer_string_ = integer_string.str();
-    }
-  }
 };
 
 /**
@@ -214,21 +204,16 @@ class SmallInteger : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_int16_t, 
 public:
   SmallInteger()
     : integer_(0)
-    , is_null_(true) {
-    set_integer_string();
-  }
+    , is_null_(true) {}
 
   SmallInteger(cass_int16_t integer)
     : integer_(integer)
-    , is_null_(false) {
-    set_integer_string();
-  }
+    , is_null_(false) {}
 
   SmallInteger(const CassValue* value)
     : integer_(0)
     , is_null_(false) {
     initialize(value);
-    set_integer_string();
   }
 
   SmallInteger(const std::string& value)
@@ -248,19 +233,11 @@ public:
           << integer_);
       }
     }
-
-    set_integer_string();
   }
 
-  SmallInteger(const CassRow* row, size_t column_index)
-    : integer_(0)
-    , is_null_(false) {
-    initialize(row, column_index);
-    set_integer_string();
-  }
-
-  const char* c_str() const {
-    return integer_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_int16(collection.get(), integer_));
   }
 
   std::string cql_type() const {
@@ -268,7 +245,7 @@ public:
   }
 
   std::string cql_value() const {
-    return integer_string_;
+    return str();
   }
 
   /**
@@ -293,6 +270,25 @@ public:
   int compare(const SmallInteger& rhs) const {
     if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.integer_);
+  }
+
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_int16(tuple.get(), index, integer_));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_int16_by_name(user_type.get(), name.c_str(),
+        integer_));
+    }
   }
 
   void statement_bind(Statement statement, size_t index) {
@@ -326,7 +322,13 @@ public:
   }
 
   std::string str() const {
-    return integer_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      std::stringstream integer_string;
+      integer_string << integer_;
+      return integer_string.str();
+    }
   }
 
   cass_int16_t value() const {
@@ -342,10 +344,6 @@ protected:
    * Native driver value
    */
   cass_int16_t integer_;
-  /**
-   * Native driver value as string
-   */
-  std::string integer_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -371,24 +369,6 @@ protected:
       is_null_ = false;
     }
   }
-
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
-  /**
-   * Set the string value of the integer
-   */
-  void set_integer_string() {
-    if (is_null_) {
-      integer_string_ = "null";
-    } else {
-      std::stringstream integer_string;
-      integer_string << integer_;
-      integer_string_ = integer_string.str();
-    }
-  }
 };
 
 /**
@@ -398,21 +378,16 @@ class Integer : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_int32_t, Integ
 public:
   Integer()
     : integer_(0)
-    , is_null_(true) {
-    set_integer_string();
-  }
+    , is_null_(true) {}
 
   Integer(cass_int32_t integer)
     : integer_(integer)
-    , is_null_(false) {
-    set_integer_string();
-  }
+    , is_null_(false) {}
 
   Integer(const CassValue* value)
     : integer_(0)
     , is_null_(false) {
     initialize(value);
-    set_integer_string();
   }
 
   Integer(const std::string& value)
@@ -432,19 +407,11 @@ public:
           << integer_);
       }
     }
-
-    set_integer_string();
   }
 
-  Integer(const CassRow* row, size_t column_index)
-    : integer_(0)
-    , is_null_(false) {
-    initialize(row, column_index);
-    set_integer_string();
-  }
-
-  const char* c_str() const {
-    return integer_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_int32(collection.get(), integer_));
   }
 
   std::string cql_type() const {
@@ -452,7 +419,7 @@ public:
   }
 
   std::string cql_value() const {
-    return integer_string_;
+    return str();
   }
 
   /**
@@ -477,6 +444,25 @@ public:
   int compare(const Integer& rhs) const {
     if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.integer_);
+  }
+
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_int32(tuple.get(), index, integer_));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_int32_by_name(user_type.get(), name.c_str(),
+        integer_));
+    }
   }
 
   void statement_bind(Statement statement, size_t index) {
@@ -510,7 +496,13 @@ public:
   }
 
   std::string str() const {
-    return integer_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      std::stringstream integer_string;
+      integer_string << integer_;
+      return integer_string.str();
+    }
   }
 
   cass_int32_t value() const {
@@ -526,10 +518,6 @@ protected:
    * Native driver value
    */
   cass_int32_t integer_;
-  /**
-   * Native driver value as string
-   */
-  std::string integer_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -555,24 +543,6 @@ protected:
       is_null_ = false;
     }
   }
-
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
-  /**
-   * Set the string value of the integer
-   */
-  void set_integer_string() {
-    if (is_null_) {
-      integer_string_ = "null";
-    } else {
-      std::stringstream integer_string;
-      integer_string << integer_;
-      integer_string_ = integer_string.str();
-    }
-  }
 };
 
 /**
@@ -582,21 +552,16 @@ class BigInteger : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_int64_t, Bi
 public:
   BigInteger()
     : integer_(0)
-    , is_null_(true) {
-    set_integer_string();
-  }
+    , is_null_(true) {}
 
   BigInteger(cass_int64_t integer)
     : integer_(integer)
-    , is_null_(false) {
-    set_integer_string();
-  }
+    , is_null_(false) {}
 
   BigInteger(const CassValue* value)
     : integer_(0)
     , is_null_(false) {
     initialize(value);
-    set_integer_string();
   }
 
   BigInteger(const std::string& value)
@@ -616,19 +581,11 @@ public:
           << integer_);
       }
     }
-
-    set_integer_string();
   }
 
-  BigInteger(const CassRow* row, size_t column_index)
-    : integer_(0)
-    , is_null_(false) {
-    initialize(row, column_index);
-    set_integer_string();
-  }
-
-  const char* c_str() const {
-    return integer_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_int64(collection.get(), integer_));
   }
 
   std::string cql_type() const {
@@ -636,7 +593,7 @@ public:
   }
 
   std::string cql_value() const {
-    return integer_string_;
+    return str();
   }
 
   /**
@@ -661,6 +618,25 @@ public:
   int compare(const BigInteger& rhs) const {
     if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.integer_);
+  }
+
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_int64(tuple.get(), index, integer_));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_int64_by_name(user_type.get(), name.c_str(),
+        integer_));
+    }
   }
 
   void statement_bind(Statement statement, size_t index) {
@@ -694,7 +670,13 @@ public:
   }
 
   std::string str() const {
-    return integer_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      std::stringstream integer_string;
+      integer_string << integer_;
+      return integer_string.str();
+    }
   }
 
   cass_int64_t value() const {
@@ -710,10 +692,6 @@ protected:
    * Native driver value
    */
   cass_int64_t integer_;
-  /**
-   * Native driver value as string
-   */
-  std::string integer_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -737,24 +715,6 @@ protected:
       ASSERT_EQ(CASS_OK, cass_value_get_int64(value, &integer_))
         << "Unable to Get 64-bit Integer: Invalid error code returned";
       is_null_ = false;
-    }
-  }
-
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
-  /**
-   * Set the string value of the integer
-   */
-  void set_integer_string() {
-    if (is_null_) {
-      integer_string_ = "null";
-    } else {
-      std::stringstream integer_string;
-      integer_string << integer_;
-      integer_string_ = integer_string.str();
     }
   }
 };

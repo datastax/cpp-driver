@@ -26,20 +26,15 @@ public:
   typedef Object< ::DseLineStringIterator, dse_line_string_iterator_free> Iterator;
 
   DseLineString()
-    : is_null_(true) {
-    set_line_string_string();
-  }
+    : is_null_(true) {}
 
   DseLineString(const std::vector<DsePoint>& points)
     : points_(points)
-    , is_null_(false) {
-    set_line_string_string();
-  }
+    , is_null_(false) {}
 
   DseLineString(const CassValue* value)
     : is_null_(false) {
     initialize(value);
-    set_line_string_string();
   }
 
   /**
@@ -47,6 +42,9 @@ public:
    */
   DseLineString(const std::string& value)
     : is_null_(false) {
+
+    dse_line_string_iterator_new();
+
     std::string value_trim = Utils::trim(Utils::to_lower(value));
 
     // Determine if the value is NULL or valid
@@ -67,24 +65,16 @@ public:
         points_.push_back(point);
       }
     }
-
-    set_line_string_string();
-  }
-
-  DseLineString(const CassRow* row, size_t column_index)
-    : is_null_(true) {
-    initialize(row, column_index);
-    set_line_string_string();
   }
 
   DseLineString(const ::DseGraphResult* result)
     : is_null_(false) {
     initialize(result);
-    set_line_string_string();
   }
 
-  const char* c_str() const {
-    return line_string_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_dse_line_string(collection.get(), to_native().get()));
   }
 
   std::string cql_type() const {
@@ -94,14 +84,13 @@ public:
   std::string cql_value() const {
     // Ensure the line string is not NULL or empty
     if (is_null_) {
-      return line_string_string_;
+      return "null";
     } else {
-      if (points_.size() == 0) {
+      if (points_.empty()) {
         return "'LINESTRING EMPTY'";
       }
     }
-
-    return "'LINESTRING(" + line_string_string_ + ")'";
+    return "'LINESTRING(" + str() + ")'";
   }
 
   /**
@@ -148,7 +137,7 @@ public:
    * @return Generated native DseLineString reference object; line string
    *         may be empty
    */
-  Native get() {
+  Native to_native() const {
     // Create the native line string object
     Native line_string = dse_line_string_new();
 
@@ -172,6 +161,26 @@ public:
     return line_string;
   }
 
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_tuple_set_dse_line_string(tuple.get(), index, to_native().get()));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_dse_line_string_by_name(user_type.get(),
+        name.c_str(), to_native().get()));
+    }
+  }
+
   /**
    * Get the size of the line string
    *
@@ -185,7 +194,7 @@ public:
     if (is_null_) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
     } else {
-      Native line_string = get();
+      Native line_string = to_native();
       ASSERT_EQ(CASS_OK, cass_statement_bind_dse_line_string(statement.get(), index, line_string.get()));
     }
   }
@@ -195,8 +204,23 @@ public:
   }
 
   std::string str() const {
-    return line_string_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      std::stringstream line_string;
+      for (std::vector<DsePoint>::const_iterator iterator = points_.begin();
+        iterator < points_.end(); ++iterator) {
+        line_string << (*iterator).str();
+
+        // Add a comma separation to the line string (unless the last element)
+        if ((iterator + 1) != points_.end()) {
+          line_string << ", ";
+        }
+      }
+      return line_string.str();
+    }
   }
+
 
   std::vector<DsePoint> value() const {
     return points_;
@@ -211,10 +235,6 @@ private:
    * DSE Points used in the DSE line string
    */
   std::vector<DsePoint> points_;
-  /**
-   * Wrapped native driver value as string
-   */
-  std::string line_string_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -264,11 +284,6 @@ private:
     }
   }
 
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
   void initialize(const ::DseGraphResult* result) {
     if (dse_graph_result_is_null(result)) {
       is_null_ = true;
@@ -279,30 +294,14 @@ private:
       assign_points(iterator);
     }
   }
-
-  /**
-   * Set the string value of the DSE line string
-   */
-  void set_line_string_string() {
-    if (is_null_) {
-      line_string_string_ = "null";
-    } else {
-      std::stringstream line_string;
-      for (std::vector<DsePoint>::const_iterator iterator = points_.begin();
-        iterator < points_.end(); ++iterator) {
-        line_string << (*iterator).str();
-
-        // Add a comma separation to the line string (unless the last element)
-        if ((iterator + 1) != points_.end()) {
-          line_string << ", ";
-        }
-      }
-      line_string_string_ = line_string.str();
-    }
-  }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const DseLineString& line_string) {
+  os << line_string.cql_value();
+  return os;
+}
 
 } // namespace driver
 } // namespace test
 
-#endif //  __TEST_DSE_LINE_STRING_HPP__
+#endif // __TEST_DSE_LINE_STRING_HPP__

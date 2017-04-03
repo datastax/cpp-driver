@@ -56,6 +56,79 @@ std::string test::Utils::cwd() {
   return std::string(cwd, cwd_length);
 }
 
+std::string test::Utils::scalar_cql_type(CassValueType value_type) {
+  switch (value_type) {
+    case CASS_VALUE_TYPE_ASCII:
+      return "ascii";
+      break;
+    case CASS_VALUE_TYPE_BIGINT:
+      return "bigint";
+      break;
+    case CASS_VALUE_TYPE_BLOB:
+      return "blob";
+      break;
+    case CASS_VALUE_TYPE_BOOLEAN:
+      return "boolean";
+      break;
+    case CASS_VALUE_TYPE_COUNTER:
+      return "counter";
+      break;
+    case CASS_VALUE_TYPE_DECIMAL:
+      return "decimal";
+      break;
+    case CASS_VALUE_TYPE_DOUBLE:
+      return "double";
+      break;
+    case CASS_VALUE_TYPE_FLOAT:
+      return "float";
+      break;
+    case CASS_VALUE_TYPE_INT:
+      return "int";
+      break;
+    case CASS_VALUE_TYPE_TEXT:
+      return "text";
+      break;
+    case CASS_VALUE_TYPE_TIMESTAMP:
+      return "timestamp";
+      break;
+    case CASS_VALUE_TYPE_UUID:
+      return "uuid";
+      break;
+    case CASS_VALUE_TYPE_VARCHAR:
+      return "varchar";
+      break;
+    case CASS_VALUE_TYPE_VARINT:
+      return "varint";
+      break;
+    case CASS_VALUE_TYPE_TIMEUUID:
+      return "timeuuid";
+      break;
+    case CASS_VALUE_TYPE_INET:
+      return "inet";
+      break;
+    case CASS_VALUE_TYPE_DATE:
+      return "date";
+      break;
+    case CASS_VALUE_TYPE_TIME:
+      return "time";
+      break;
+    case CASS_VALUE_TYPE_SMALL_INT:
+      return "smallint";
+      break;
+    case CASS_VALUE_TYPE_TINY_INT:
+      return "tinyint";
+      break;
+    case CASS_VALUE_TYPE_DURATION:
+      return "duration";
+      break;
+    default:
+      std::stringstream message;
+      message << "Unable to Retrieve CQL Type: CassValueType [" <<
+        value_type << "] is not valid";
+      throw test::Exception(message.str());
+  }
+}
+
 std::vector<std::string> test::Utils::explode(const std::string& input,
   const char delimiter /*= ' '*/) {
   // Iterate over the input line and parse the tokens

@@ -51,6 +51,8 @@ public:
   UuidGen(Ptr uuid_gen)
     : Object<CassUuidGen, cass_uuid_gen_free>(uuid_gen) {}
 
+  virtual ~UuidGen() {}
+
   /**
    * Generate a v1 UUID (time based)
    *

@@ -42,15 +42,9 @@ public:
     update_value_if_null();
   }
 
-  Varchar(const CassRow* row, size_t column_index)
-    : varchar_("")
-    , is_null_(false) {
-    initialize(row, column_index);
-    update_value_if_null();
-  }
-
-  virtual const char* c_str() const {
-    return varchar_.c_str();
+  virtual void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_string(collection.get(), varchar_.c_str()));
   }
 
   virtual std::string cql_type() const {
@@ -81,6 +75,26 @@ public:
   virtual int compare(const Varchar& rhs) const {
     if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.varchar_);
+  }
+
+  virtual void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_tuple_set_string(tuple.get(), index, varchar_.c_str()));
+    }
+  }
+
+  virtual void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_string_by_name(user_type.get(), name.c_str(),
+        varchar_.c_str()));
+    }
   }
 
   void statement_bind(Statement statement, size_t index) {
@@ -149,11 +163,6 @@ protected:
       is_null_ = false;
     }
   }
-
-  virtual void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
 };
 
 /**
@@ -172,9 +181,6 @@ public:
 
   Text(Varchar varchar)
     : Varchar(varchar) {}
-
-  Text(const CassRow* row, size_t column_index)
-    : Varchar(row, column_index) {}
 
   std::string cql_type() const {
     return std::string("text");

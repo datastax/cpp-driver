@@ -11,8 +11,8 @@
 
 #include "objects/object_base.hpp"
 
+#include "objects/iterator.hpp"
 #include "objects/future.hpp"
-#include "objects/rows.hpp"
 
 #include "exception.hpp"
 
@@ -23,11 +23,21 @@
 namespace test {
 namespace driver {
 
+// Forward declarations
+class Row;
+class Rows;
+
 /**
  * Wrapped result object
  */
 class Result : public Object<const CassResult, cass_result_free> {
 public:
+  class Exception : public test::Exception {
+  public:
+    Exception(const std::string& message)
+      : test::Exception(message) {}
+  };
+
   /**
    * Create an empty result object
    */
@@ -134,9 +144,7 @@ public:
    *
    * @return The first row
    */
-  const CassRow* first_row() {
-    return cass_result_first_row(get());
-  }
+  Row first_row();
 
   /**
    * Get the number of rows from the result
@@ -152,9 +160,7 @@ public:
    *
    * @return The rows from the result
    */
-  Rows rows() {
-    return Rows(cass_iterator_from_result(get()), row_count(), column_count());
-  }
+  Rows rows();
 
 private:
   /**
@@ -162,6 +168,159 @@ private:
    */
   Future future_;
 };
+
+/**
+ * Column object
+ */
+class Column {
+public:
+  /**
+   * Create a column from a value
+   *
+   * @param value Native driver value
+   * @param parent The result object for the column
+   */
+  Column(const CassValue* value, const Result& parent)
+    : value_(value)
+    , parent_(parent) {}
+
+  /**
+   * Get the value as a specific type
+   *
+   * @return The value as a value type
+   */
+  template<class T>
+  T as() const {
+    return T(value_);
+  }
+
+private:
+  /**
+   * The value held by this column
+   */
+  const CassValue* value_;
+  /**
+   * Parent result object
+   */
+  Result parent_;
+};
+
+/**
+ * Wrapped row object
+ */
+class Row {
+public:
+  /**
+   * Create a value from a wrapped row object
+   *
+   * @param row Native driver row
+   * @param parent The result object for the row
+   */
+  Row(const CassRow* row, const Result& parent)
+    : iterator_(cass_iterator_from_row(row))
+    , parent_(parent) {}
+
+  /**
+   * Get the total number of columns in a row
+   *
+   * @return The total number of columns in a row
+   */
+  size_t column_count() {
+    return parent_.column_count();
+  }
+
+  /**
+   * Get the next column
+   *
+   * @return The next column
+   * @throws Exception if there are no more columns available
+   */
+  const Column next() {
+    if (cass_iterator_next(iterator_.get())) {
+      return Column(cass_iterator_get_column(iterator_.get()), parent_);
+    }
+    throw Exception("No more columns available");
+  }
+
+private:
+  /**
+   * Iterator driver wrapped object
+   */
+  Iterator iterator_;
+  /**
+   * Parent result object
+   */
+  Result parent_;
+};
+
+/**
+ * Rows object
+ */
+class Rows {
+public:
+  /**
+   * Create the rows object from a wrapped result object
+   *
+   * @param iterator Wrapped iterator object
+   * @param parent The result object for these rows
+   */
+  Rows(Iterator iterator, Result parent)
+    : iterator_(iterator)
+    , parent_(parent) {}
+
+  /**
+   * Get the total number of columns in a row
+   *
+   * @return The total number of columns in a row
+   */
+  size_t column_count() {
+    return parent_.column_count();
+  }
+
+  /**
+   * Get the total number of rows
+   *
+   * @return The total number of rows
+   */
+  size_t row_count() {
+    return parent_.row_count();
+  }
+
+  /**
+   * Get the next row
+   *
+   * @return The next row
+   * @throws Exception if there are no more rows available
+   */
+  const Row next() {
+    if (cass_iterator_next(iterator_.get())) {
+      return Row(cass_iterator_get_row(iterator_.get()), parent_);
+    }
+    throw Exception("No more rows available");
+  }
+
+private:
+  /**
+   * Iterator driver wrapped object
+   */
+  Iterator iterator_;
+  /**
+   * Parent result object
+   */
+  Result parent_;
+};
+
+
+inline Row Result::first_row() {
+  if (cass_result_row_count(get()) == 0) {
+    throw Exception("No first row available");
+  }
+  return Row(cass_result_first_row(get()), *this);
+}
+
+inline Rows Result::rows() {
+  return Rows(cass_iterator_from_result(get()), *this);
+}
 
 } // namespace driver
 } // namespace test

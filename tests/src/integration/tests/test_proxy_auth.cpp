@@ -249,9 +249,9 @@ protected:
     test::driver::Rows rows = result.rows();
     for (size_t i = 0; i < rows.row_count(); ++i) {
       // Retrieve the key/value pair
-      const CassRow* row = rows.next();
-      std::string key = test::driver::Varchar(row, 0).value();
-      std::string value = test::driver::Varchar(row, 1).value();
+      Row row = rows.next();
+      std::string key = row.next().as<driver::Varchar>().value();
+      std::string value = row.next().as<driver::Varchar>().value();
       results.push_back(key + "," + value);
     }
 

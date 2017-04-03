@@ -30,21 +30,16 @@ class Double : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_double_t, Doubl
 public:
   Double()
     : double_(0.0)
-    , is_null_(true) {
-    set_double_string();
-  }
+    , is_null_(true) {}
 
   Double(cass_double_t double_value)
     : double_(double_value)
-    , is_null_(false) {
-    set_double_string();
-  }
+    , is_null_(false) {}
 
   Double(const CassValue* value)
     : double_(0.0)
     , is_null_(false) {
     initialize(value);
-    set_double_string();
   }
 
   Double(const std::string& value)
@@ -64,19 +59,11 @@ public:
           << double_);
       }
     }
-
-    set_double_string();
   }
 
-  Double(const CassRow* row, size_t column_index)
-    : double_(0.0)
-    , is_null_(false) {
-    initialize(row, column_index);
-    set_double_string();
-  }
-
-  const char* c_str() const {
-    return double_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_double(collection.get(), double_));
   }
 
   std::string cql_type() const {
@@ -84,7 +71,7 @@ public:
   }
 
   std::string cql_value() const {
-    return double_string_;
+    return str();
   }
 
   /**
@@ -109,6 +96,24 @@ public:
   int compare(const Double& rhs) const {
     if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.double_);
+  }
+
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_double(tuple.get(), index, double_));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_double_by_name(user_type.get(), name.c_str(), double_));
+    }
   }
 
   void statement_bind(Statement statement, size_t index) {
@@ -142,7 +147,13 @@ public:
   }
 
   std::string str() const {
-    return double_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      std::stringstream double_string;
+      double_string << double_;
+      return double_string.str();
+    }
   }
 
   cass_double_t value() const {
@@ -158,10 +169,6 @@ protected:
    * Native driver value
    */
   cass_double_t double_;
-  /**
-   * Native driver value as string
-   */
-  std::string double_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -185,24 +192,6 @@ protected:
       ASSERT_EQ(CASS_OK, cass_value_get_double(value, &double_))
         << "Unable to Get Double: Invalid error code returned";
       is_null_ = false;
-    }
-  }
-
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
-  /**
-   * Set the string value of the double
-   */
-  void set_double_string() {
-    if (is_null_) {
-      double_string_ = "null";
-    } else {
-      std::stringstream double_string;
-      double_string << double_;
-      double_string_ = double_string.str();
     }
   }
 };

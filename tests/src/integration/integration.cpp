@@ -218,6 +218,20 @@ std::string Integration::default_table() {
   return to_lower(test_name_);
 }
 
+void Integration::drop_table(const std::string& table_name) {
+  // Drop table from the current keyspace
+  std::stringstream drop_table_query;
+  drop_table_query << "DROP TABLE " << table_name;
+  session_.execute(drop_table_query.str(), CASS_CONSISTENCY_ANY, false, false);
+}
+
+void Integration::drop_type(const std::string& type_name) {
+  // Drop type from the current keyspace
+  std::stringstream drop_type_query;
+  drop_type_query << "DROP TYPE " << type_name;
+  session_.execute(drop_type_query.str(), CASS_CONSISTENCY_ANY, false, false);
+}
+
 void Integration::connect(Cluster cluster) {
   // Establish the session connection
   cluster_ = cluster;

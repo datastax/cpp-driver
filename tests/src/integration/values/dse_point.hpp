@@ -8,10 +8,7 @@
 #ifndef __TEST_DSE_POINT_HPP__
 #define __TEST_DSE_POINT_HPP__
 #include "value_interface.hpp"
-
 #include "dse.h"
-
-//#include "objects.hpp"
 
 namespace test {
 namespace driver {
@@ -38,37 +35,32 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) {};
+      : test::Exception(message) {}
   };
 
   DsePoint()
     : is_null_(true) {
-    set_point_string();
   }
 
   DsePoint(cass_double_t x, cass_double_t y)
     : is_null_(false) {
     point_.x = x;
     point_.y = y;
-    set_point_string();
   }
 
   DsePoint(Point point)
     : point_(point)
     , is_null_(false) {
-    set_point_string();
   }
 
   DsePoint(const CassValue* value)
     : is_null_(false) {
     initialize(value);
-    set_point_string();
   }
 
   DsePoint(const ::DseGraphResult* result)
     : is_null_(false) {
     initialize(result);
-    set_point_string();
   }
 
   /**
@@ -109,18 +101,11 @@ public:
         throw Exception(message.str());
       }
     }
-
-    set_point_string();
   }
 
-  DsePoint(const CassRow* row, size_t column_index)
-    : is_null_(false) {
-    initialize(row, column_index);
-    set_point_string();
-  }
-
-  const char* c_str() const {
-    return point_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_dse_point(collection.get(), point_.x, point_.y));
   }
 
   std::string cql_type() const {
@@ -129,9 +114,9 @@ public:
 
   std::string cql_value() const {
     if (is_null_) {
-      return point_string_;
+      return "null";
     }
-    return "'POINT(" + point_string_ + ")'";
+    return "'POINT(" + str() + ")'";
   }
 
   /**
@@ -161,6 +146,26 @@ public:
     return compare(rhs.point_);
   }
 
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_tuple_set_dse_point(tuple.get(), index, point_.x, point_.y));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_dse_point_by_name(user_type.get(), name.c_str(),
+        point_.x, point_.y));
+    }
+  }
+
   void statement_bind(Statement statement, size_t index) {
     if (is_null_) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
@@ -174,7 +179,13 @@ public:
   }
 
   std::string str() const {
-    return point_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      std::stringstream point_string;
+      point_string << point_.x << " " << point_.y;
+      return point_string.str();
+    }
   }
 
   Point value() const {
@@ -190,10 +201,6 @@ private:
    * Simple point value
    */
   Point point_;
-  /**
-   * Wrapped native driver value as string
-   */
-  std::string point_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -219,11 +226,6 @@ private:
     }
   }
 
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
   void initialize(const ::DseGraphResult* result) {
     if (dse_graph_result_is_null(result)) {
       is_null_ = true;
@@ -231,22 +233,14 @@ private:
       ASSERT_EQ(CASS_OK, dse_graph_result_as_point(result, &point_.x, &point_.y));
     }
   }
-
-  /**
-   * Set the string value of the DSE point
-   */
-  void set_point_string() {
-    if (is_null_) {
-      point_string_ = "null";
-    } else {
-      std::stringstream point_string;
-      point_string << point_.x << " " << point_.y;
-      point_string_ = point_string.str();
-    }
-  }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const DsePoint& point) {
+  os << point.cql_value();
+  return os;
+}
 
 } // namespace driver
 } // namespace test
 
-#endif //  __TEST_DSE_POINT_HPP__
+#endif // __TEST_DSE_POINT_HPP__

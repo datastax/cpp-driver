@@ -55,7 +55,7 @@
   return;
 
 #define CHECK_FAILURE \
-  if (HasFailure()) { \
+  if (this->HasFailure()) { \
     return; \
   }
 
@@ -268,6 +268,20 @@ protected:
    * @return  Default table name
    */
   virtual std::string default_table();
+
+  /**
+   * Drop a table from the current keyspace
+   *
+   * @param table_name Table to drop from the current keyspace
+   */
+  virtual void drop_table(const std::string& table_name);
+
+  /**
+   * Drop a type from the current keyspace
+   *
+   * @param type_name Table to drop from the current keyspace
+   */
+  virtual void drop_type(const std::string& type_name);
 
   /**
    * Establish the session connection using provided cluster object.

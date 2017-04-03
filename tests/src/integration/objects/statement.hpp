@@ -67,7 +67,7 @@ public:
   /**
    * Assign/Set the statement's consistency level
    *
-   * @param cosnsitency Consistency to use for the statement
+   * @param consistency Consistency to use for the statement
    */
   void set_consistency(CassConsistency consistency) {
     ASSERT_EQ(CASS_OK, cass_statement_set_consistency(get(), consistency));
@@ -155,7 +155,7 @@ public:
   /**
    * Assign/Set the batch's consistency level
    *
-   * @param cosnsitency Consistency to use for the batch
+   * @param consistency Consistency to use for the batch
    */
   void set_consistency(CassConsistency consistency) {
     ASSERT_EQ(CASS_OK, cass_batch_set_consistency(get(), consistency));

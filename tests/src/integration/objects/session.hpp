@@ -14,6 +14,7 @@
 #include "objects/future.hpp"
 #include "objects/prepared.hpp"
 #include "objects/result.hpp"
+#include "objects/schema.hpp"
 #include "objects/statement.hpp"
 
 #include "exception.hpp"
@@ -166,6 +167,19 @@ public:
     Future prepare_future = cass_session_prepare(get(), query.c_str());
     prepare_future.wait(assert_ok);
     return Prepared(cass_future_get_prepared(prepare_future.get()));
+  }
+
+  /**
+   * Get a schema snapshot
+   *
+   * @return A schema snapshot
+   */
+  Schema schema() {
+    const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(get());
+    if (schema_meta == NULL) {
+      throw test::Exception("Unable to get schema metadata");
+    }
+    return Schema(schema_meta);
   }
 
 protected:

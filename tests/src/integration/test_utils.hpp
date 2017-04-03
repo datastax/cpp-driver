@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "cassandra.h"
 #include "exception.hpp"
 
 // Create simple console logging functions
@@ -30,6 +31,8 @@
 #define LOG_ERROR(message) PREFIX_LOG << PREFIX_MESSAGE << "ERROR: " \
                            << __FILE__ << "(" << __LINE__ << "): " \
                            << message << SUFFIX_LOG
+
+#define ARRAY_LEN(array) (sizeof(array) / sizeof(array[0]))
 
 namespace test {
 
@@ -66,6 +69,14 @@ public:
    * @return Current working directory
    */
   static std::string cwd();
+
+  /**
+   * Get the CQL type from the value type
+   *
+   * @param value_type Scalar value type; others are ignored
+   * @throws Exception If scalar CQL type cannot be determined
+   */
+  static std::string scalar_cql_type(CassValueType value_type);
 
   /**
    * Split a string into an array/vector

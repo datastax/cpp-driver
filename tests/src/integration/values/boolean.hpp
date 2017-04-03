@@ -20,21 +20,16 @@ class Boolean : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_bool_t, Boolea
 public:
   Boolean()
     : boolean_(cass_false)
-    , is_null_(true) {
-    set_boolean_string();
-  }
+    , is_null_(true) {}
 
   Boolean(cass_bool_t boolean)
     : boolean_(boolean)
-    , is_null_(false) {
-    set_boolean_string();
-  }
+    , is_null_(false) {}
 
   Boolean(const CassValue* value)
     : boolean_(cass_false)
     , is_null_(false) {
     initialize(value);
-    set_boolean_string();
   }
 
   Boolean(const std::string& value)
@@ -57,19 +52,11 @@ public:
       LOG_ERROR("Invalid Boolean " << value_trim << ": Using default "
         << (boolean_ == cass_true ? "true" : "false"));
     }
-
-    set_boolean_string();
   }
 
-  Boolean(const CassRow* row, size_t column_index)
-    : boolean_(cass_false)
-    , is_null_(false) {
-    initialize(row, column_index);
-    set_boolean_string();
-  }
-
-  const char* c_str() const {
-    return boolean_string_.c_str();
+  void append(Collection collection) {
+    ASSERT_EQ(CASS_OK,
+      cass_collection_append_bool(collection.get(), boolean_));
   }
 
   std::string cql_type() const {
@@ -77,7 +64,7 @@ public:
   }
 
   std::string cql_value() const {
-    return boolean_string_;
+    return str();
   }
 
   /**
@@ -104,6 +91,24 @@ public:
     return compare(rhs.boolean_);
   }
 
+  void set(Tuple tuple, size_t index) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_null(tuple.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_tuple_set_bool(tuple.get(), index, boolean_));
+    }
+  }
+
+  void set(UserType user_type, const std::string& name) {
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK,
+        cass_user_type_set_bool_by_name(user_type.get(), name.c_str(), boolean_));
+    }
+  }
+
   void statement_bind(Statement statement, size_t index) {
     if (is_null_) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
@@ -117,7 +122,11 @@ public:
   }
 
   std::string str() const {
-    return boolean_string_;
+    if (is_null_) {
+      return "null";
+    } else {
+      return (boolean_ == cass_true ? "true" : "false");
+    }
   }
 
   cass_bool_t value() const {
@@ -133,10 +142,6 @@ protected:
    * Native driver value
    */
   cass_bool_t boolean_;
-  /**
-   * Native driver value as string
-   */
-  std::string boolean_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -160,22 +165,6 @@ protected:
       ASSERT_EQ(CASS_OK, cass_value_get_bool(value, &boolean_))
         << "Unable to Get Boolean: Invalid error code returned";
       is_null_ = false;
-    }
-  }
-
-  void initialize(const CassRow* row, size_t column_index) {
-    ASSERT_TRUE(row != NULL) << "Invalid Row: Row should not be null";
-    initialize(cass_row_get_column(row, column_index));
-  }
-
-  /**
-   * Set the string value of the boolean
-   */
-  void set_boolean_string() {
-    if (is_null_) {
-      boolean_string_ = "null";
-    } else {
-      boolean_string_ = (boolean_ == cass_true ? "true" : "false");
     }
   }
 };

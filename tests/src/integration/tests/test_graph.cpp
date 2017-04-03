@@ -591,8 +591,7 @@ DSE_INTEGRATION_TEST_F(GraphTest, Timestamp) {
   // Validate the timestamp from the graph inserted timestamp (+1 from insert)
   expected_timestamp += 1l;
   test::driver::Result result = session_.execute(select_timestamp);
-  const CassRow* row = result.first_row();
-  test::driver::BigInteger timestamp(row, 0);
+  test::driver::BigInteger timestamp(result.first_row().next().as<BigInteger>());
   ASSERT_EQ(expected_timestamp, timestamp);
 }
 
