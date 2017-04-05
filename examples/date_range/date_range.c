@@ -50,7 +50,7 @@ void precision_to_string(DseDateRangePrecision precision, char* precision_string
 void time_to_string(cass_int64_t time_int, char* time_string) {
   /* time_int is ms-precision. */
   time_t time_secs = (time_t) time_int / 1000;
-  strftime(time_string, 19, "%Y-%m-%d %H:%M:%S", gmtime(&time_secs));
+  strftime(time_string, 20, "%Y-%m-%d %H:%M:%S", gmtime(&time_secs));
   sprintf(time_string + 19, ".%03d", (int) (time_int % 1000));
 }
 
