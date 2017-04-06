@@ -88,6 +88,7 @@ void print_range(const DseDateRange* range) {
 CassCluster* create_cluster(const char* hosts) {
   CassCluster* cluster = cass_cluster_new();
   cass_cluster_set_contact_points(cluster, hosts);
+  cass_cluster_set_dse_plaintext_authenticator(cluster, "cassandra", "cassandra");
   return cluster;
 }
 
@@ -95,7 +96,6 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
   CassError rc = CASS_OK;
   CassFuture* future = cass_session_connect(session, cluster);
 
-  cass_future_wait(future);
   rc = cass_future_error_code(future);
   if (rc != CASS_OK) {
     print_error(future);
@@ -111,7 +111,6 @@ CassError execute_query(CassSession* session, const char* query) {
   CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
-  cass_future_wait(future);
 
   rc = cass_future_error_code(future);
   if (rc != CASS_OK) {
@@ -138,7 +137,6 @@ CassError insert_into_table(CassSession* session,
   cass_statement_bind_dse_date_range(statement, 1, range);
 
   future = cass_session_execute(session, statement);
-  cass_future_wait(future);
 
   rc = cass_future_error_code(future);
   if (rc != CASS_OK) {
@@ -160,7 +158,6 @@ CassError select_from_table(CassSession* session) {
   statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
-  cass_future_wait(future);
 
   rc = cass_future_error_code(future);
   if (rc != CASS_OK) {
@@ -247,7 +244,6 @@ CassError insert_into_collections(CassSession* session, const char* key, const D
 
   /* Insert the row. */
   future = cass_session_execute(session, statement);
-  cass_future_wait(future);
 
   rc = cass_future_error_code(future);
   if (rc != CASS_OK) {
@@ -270,7 +266,6 @@ CassError select_from_collections(CassSession* session, const char* key) {
   cass_statement_bind_string(statement, 0, key);
 
   future = cass_session_execute(session, statement);
-  cass_future_wait(future);
 
   rc = cass_future_error_code(future);
   if (rc != CASS_OK) {
@@ -323,6 +318,7 @@ CassError select_from_collections(CassSession* session, const char* key) {
         cass_value_get_dse_date_range(field_value, &range);
         print_range(&range);
       }
+      cass_iterator_free(items_iterator);
 
       printf("\n");
     }
@@ -340,7 +336,6 @@ CassError select_from_collections(CassSession* session, const char* key) {
 int main(int argc, char* argv[]) {
   CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
-  CassFuture* close_future = NULL;
   char* hosts = "127.0.0.1";
   time_t now = time(NULL);
   DseDateRange range, range2;
@@ -357,19 +352,19 @@ int main(int argc, char* argv[]) {
   }
 
   execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { \
+                "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '1' };");
 
 
   execute_query(session,
-                "CREATE TABLE examples.dr (key text PRIMARY KEY, \
+                "CREATE TABLE IF NOT EXISTS examples.dr (key text PRIMARY KEY, \
                                            value 'DateRangeType');");
 
   execute_query(session,
-                "CREATE TYPE examples.dr_user_type (sub 'DateRangeType')");
+                "CREATE TYPE IF NOT EXISTS examples.dr_user_type (sub 'DateRangeType')");
 
   execute_query(session,
-                "CREATE TABLE examples.drcoll (key text PRIMARY KEY, \
+                "CREATE TABLE IF NOT EXISTS examples.drcoll (key text PRIMARY KEY, \
                                                coll_value set<'DateRangeType'>, \
                                                tuple_value tuple<'DateRangeType', 'DateRangeType'>, \
                                                udt_value dr_user_type)");
@@ -413,5 +408,9 @@ int main(int argc, char* argv[]) {
   /* Query the collection table and print out the results. */
   printf("\n\nexamples.drcoll:\n");
   select_from_collections(session, "key");
+
+  cass_cluster_free(cluster);
+  cass_session_free(session);
+
   return 0;
 }
