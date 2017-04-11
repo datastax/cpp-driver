@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
   CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
-  char* hosts = "127.0.0.1,127.0.0.2,127.0.0.3";
+  char* hosts = "127.0.0.1";
   if (argc > 1) {
     hosts = argv[1];
   }
@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
   /* Add contact points */
   cass_cluster_set_contact_points(cluster, hosts);
 
+  /* Hostname resolution is typically necessary when authenticating with Kerberos. */
   cass_cluster_set_use_hostname_resolution(cluster, cass_true);
 
   cass_cluster_set_dse_gssapi_authenticator(cluster, "dse", "cassandra@DATASTAX.COM");

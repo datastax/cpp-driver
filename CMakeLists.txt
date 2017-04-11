@@ -274,6 +274,7 @@ if(DSE_BUILD_EXAMPLES)
   add_subdirectory(examples/graph)
   add_subdirectory(examples/geotypes)
   add_subdirectory(examples/date_range)
+  add_subdirectory(examples/proxy_execution)
 endif()
 
 #--------
