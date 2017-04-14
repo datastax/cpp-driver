@@ -21,6 +21,14 @@ namespace driver {
  */
 class DsePolygon : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(std::vector<DseLineString>, DsePolygon) {
 public:
+  /**
+   * Get the minimum DSE version that supports this type
+   *
+   * @return A version string
+   */
+  static const char* supported_version() { return "5.0.0"; }
+
+public:
   typedef Object< ::DsePolygon, dse_polygon_free> Native;
   typedef Object< ::DsePolygonIterator, dse_polygon_iterator_free> Iterator;
 

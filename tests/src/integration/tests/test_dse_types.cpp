@@ -7,20 +7,25 @@
 
 #include "dse_integration.hpp"
 
-#define GEOMETRY_TABLE_FORMAT "CREATE TABLE %s (id %s PRIMARY KEY, value %s)"
-#define GEOMETRY_INSERT_FORMAT "INSERT INTO %s (id, value) VALUES(%s, %s)"
-#define GEOMETRY_SELECT_FORMAT "SELECT value FROM %s WHERE id=%s"
+#include "values/dse_date_range.hpp"
+
+#define DSE_TYPE_TABLE_FORMAT "CREATE TABLE %s (id %s PRIMARY KEY, value %s)"
+#define DSE_TYPE_INSERT_FORMAT "INSERT INTO %s (id, value) VALUES(%s, %s)"
+#define DSE_TYPE_SELECT_FORMAT "SELECT value FROM %s WHERE id=%s"
 
 /**
- * Geometry (geotypes) integration tests
+ * DSE type (geotypes and date range) integration tests
  *
- * @dse_version 5.0.0
+ * Note: Geotypes require version DSE 5.0.0+ and date range requires
+ * version DSE 5.1.0+.
+ *
+ * @dse_version 5.0.0+
  */
 template<class C>
-class GeometryTest : public DseIntegration {
+class DseTypesTest : public DseIntegration {
 public:
   /**
-   * Geotype values
+   * DSE type values
    */
   static const std::vector<C> values_;
 
@@ -63,14 +68,14 @@ protected:
    * @param cql_type CQL value type to use for the tables
    */
   void initialize(const std::string& cql_type) {
-    session_.execute(format_string(GEOMETRY_TABLE_FORMAT,
+    session_.execute(format_string(DSE_TYPE_TABLE_FORMAT,
       table_name_.c_str(), cql_type.c_str(), cql_type.c_str()));
-    insert_query_ = format_string(GEOMETRY_INSERT_FORMAT, table_name_.c_str(), "?", "?");
-    select_query_ = format_string(GEOMETRY_SELECT_FORMAT, table_name_.c_str(), "?");
+    insert_query_ = format_string(DSE_TYPE_INSERT_FORMAT, table_name_.c_str(), "?", "?");
+    select_query_ = format_string(DSE_TYPE_SELECT_FORMAT, table_name_.c_str(), "?");
     prepared_statement_ = session_.prepare(insert_query_);
   }
 };
-TYPED_TEST_CASE_P(GeometryTest);
+TYPED_TEST_CASE_P(DseTypesTest);
 
 /**
  * Perform insert using a simple and prepared statement operation
@@ -82,16 +87,18 @@ TYPED_TEST_CASE_P(GeometryTest);
  * @test_category queries:basic
  * @test_category prepared_statements
  * @test_category dse:geospatial
+ * @test_category dse::daterange
  * @since 1.0.0
- * @dse_version 5.0.0
- * @expected_result Geotype values are inserted and validated
+ * @dse_version 5.0.0+
+ * @expected_result DSE values are inserted and validated
  */
-DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Basic) {
-  CHECK_VERSION(5.0.0);
-  default_setup();
-  const std::vector<TypeParam>& values = GeometryTest<TypeParam>::values_;
+DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Basic) {
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
 
-  // Iterate over all the values in the geotype
+  this->default_setup();
+  const std::vector<TypeParam>& values = DseTypesTest<TypeParam>::values_;
+
+  // Iterate over all the DSE type values
   for (typename std::vector<TypeParam>::const_iterator it = values.begin();
     it != values.end(); ++it) {
     // Get the current value
@@ -107,7 +114,7 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Basic) {
     for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
       Statement& statement = statements[i];
 
-      // Bind both the primary key and the value with the geotype and insert
+      // Bind both the primary key and the value with the DSE type and insert
       statement.bind<TypeParam>(0, value);
       statement.bind<TypeParam>(1, value);
       this->session_.execute(statement);
@@ -123,99 +130,6 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Basic) {
 }
 
 /**
- * Perform insert using a graph array
- *
- * This test will perform multiple inserts using a graph statement with the
- * parameterized type values statically assigned against a single node cluster.
- *
- * @jira_ticket CPP-400
- * @test_category dse:graph
- * @test_category dse:geospatial
- * @since 1.0.0
- * @dse_version 5.0.0
- * @expected_result Geotype values are inserted and validated via graph
- *                  operations using a graph array (attached to a graph object)
- */
-DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, GraphArray) {
-  CHECK_VERSION(5.0.0);
-  default_setup();
-  const std::vector<TypeParam>& values = GeometryTest<TypeParam>::values_;
-
-  // Iterate over all the values in the geotype and add them to a graph array
-  test::driver::DseGraphArray graph_array;
-  for (size_t i = 0; i < values.size(); ++i) {
-    // Get the value of the geotype being used
-    TypeParam value = values[i];
-
-    // Add the value to the graph array
-    graph_array.add<TypeParam>(value);
-  }
-
-  // Create the statement to insert the geotype using an object with array
-  test::driver::DseGraphObject graph_object;
-  graph_object.add<test::driver::DseGraphArray>("geotype", graph_array);
-  test::driver::DseGraphStatement graph_statement("[geotype]");
-  graph_statement.bind(graph_object);
-
-  // Execute the statement and get the result
-  test::driver::DseGraphResultSet result_set = this->dse_session_.execute(graph_statement);
-
-  // Assert/Validate the geotype using a graph statement
-  CHECK_FAILURE;
-  ASSERT_EQ(1ul, result_set.count());
-  test::driver::DseGraphResult result = result_set.next();
-  ASSERT_TRUE(result.is_type<test::driver::DseGraphArray>());
-
-  // Gather the values from the graph array result
-  std::vector<TypeParam> result_values;
-  for (size_t i = 0; i < result.element_count(); ++i) {
-    TypeParam value = result.element(i).value<TypeParam>();
-    CHECK_FAILURE;
-    result_values.push_back(value);
-  }
-  ASSERT_EQ(values, result_values);
-}
-
-/**
- * Perform insert using a graph object
- *
- * This test will perform multiple inserts using a graph statement with the
- * parameterized type values statically assigned against a single node cluster.
- *
- * @jira_ticket CPP-400
- * @test_category dse:graph
- * @test_category dse:geospatial
- * @since 1.0.0
- * @dse_version 5.0.0
- * @expected_result Geotype values are inserted and validated via graph
- *                  operations using a graph object
- */
-DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, GraphObject) {
-  CHECK_VERSION(5.0.0);
-  default_setup();
-  const std::vector<TypeParam>& values = GeometryTest<TypeParam>::values_;
-
-  // Iterate over all the values in the geotype
-  for (size_t i = 0; i < values.size(); ++i) {
-    // Get the value of the geotype being used
-    TypeParam value = values[i];
-
-    // Create the graph statement to insert the geotype using an object
-    test::driver::DseGraphObject graph_object;
-    graph_object.add<TypeParam>("geotype", value);
-    test::driver::DseGraphStatement graph_statement("[geotype]");
-    graph_statement.bind(graph_object);
-
-    // Assert/Validate the geotype using a graph statement
-    test::driver::DseGraphResultSet result_set = this->dse_session_.execute(graph_statement);
-    CHECK_FAILURE;
-    ASSERT_EQ(1ul, result_set.count());
-    test::driver::DseGraphResult result = result_set.next();
-    ASSERT_EQ(value, result.value<TypeParam>());
-  }
-}
-
-/**
  * Perform insert using a collection; list
  *
  * This test will perform multiple inserts using simple and prepared statements
@@ -226,17 +140,18 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, GraphObject) {
  * @test_category prepared_statements
  * @test_category data_types:collections
  * @test_category dse:geospatial
+ * @test_category dse::daterange
  * @since 1.2.0
- * @dse_version 5.0.0
- * @expected_result Geotype values are inserted using a list and then validated
+ * @dse_version 5.0.0+
+ * @expected_result DSE values are inserted using a list and then validated
  *                  via simple and prepared statement operations
  */
-DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, List) {
-  CHECK_VERSION(5.0.0);
+DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, List) {
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   // Initialize the table and assign the values for the list
-  List<TypeParam> list(GeometryTest<TypeParam>::values_);
-  initialize("frozen<" + list.cql_type() + ">");
+  List<TypeParam> list(DseTypesTest<TypeParam>::values_);
+  this->initialize("frozen<" + list.cql_type() + ">");
 
   // Create both simple and prepared statements
   Statement statements[] = {
@@ -248,7 +163,7 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, List) {
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
     Statement& statement = statements[i];
 
-    // Bind both the primary key and the value with the geotype list and insert
+    // Bind both the primary key and the value with the DSE type list and insert
     statement.bind<List<TypeParam> >(0, list);
     statement.bind<List<TypeParam> >(1, list);
     this->session_.execute(statement);
@@ -274,17 +189,18 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, List) {
  * @test_category prepared_statements
  * @test_category data_types:collections
  * @test_category dse:geospatial
+ * @test_category dse::daterange
  * @since 1.2.0
- * @dse_version 5.0.0
- * @expected_result Geotype values are inserted using a set and then validated
+ * @dse_version 5.0.0+
+ * @expected_result DSE values are inserted using a set and then validated
  *                  via simple and prepared statement operations
  */
-DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Set) {
-  CHECK_VERSION(5.0.0);
+DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Set) {
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   // Initialize the table and assign the values for the set
-  Set<TypeParam> set(GeometryTest<TypeParam>::values_);
-  GeometryTest<TypeParam>::initialize("frozen<" + set.cql_type() + ">");
+  Set<TypeParam> set(DseTypesTest<TypeParam>::values_);
+  this->initialize("frozen<" + set.cql_type() + ">");
 
   // Create both simple and prepared statements
   Statement statements[] = {
@@ -296,7 +212,7 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Set) {
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
     Statement& statement = statements[i];
 
-    // Bind both the primary key and the value with the geotype set and insert
+    // Bind both the primary key and the value with the DSE type set and insert
     statement.bind<Set<TypeParam> >(0, set);
     statement.bind<Set<TypeParam> >(1, set);
     this->session_.execute(statement);
@@ -322,23 +238,24 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Set) {
  * @test_category prepared_statements
  * @test_category data_types:collections
  * @test_category dse:geospatial
+ * @test_category dse::daterange
  * @since 1.2.0
- * @dse_version 5.0.0
- * @expected_result Geotype values are inserted using a map and then validated
+ * @dse_version 5.0.0+
+ * @expected_result DSE values are inserted using a map and then validated
  *                  via simple and prepared statement operations
  */
-DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Map) {
-  CHECK_VERSION(5.0.0);
+DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Map) {
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   // Initialize the table and assign the values for the map
   std::map<TypeParam, TypeParam> map_values;
-  const std::vector<TypeParam>& values = GeometryTest<TypeParam>::values_;
+  const std::vector<TypeParam>& values = DseTypesTest<TypeParam>::values_;
   for (typename std::vector<TypeParam>::const_iterator it = values.begin();
     it != values.end(); ++it) {
     map_values[*it] = *it;
   }
   Map<TypeParam, TypeParam> map(map_values);
-  initialize("frozen<" + map.cql_type() + ">");
+  this->initialize("frozen<" + map.cql_type() + ">");
 
   // Create both simple and prepared statements
   Statement statements[] = {
@@ -350,7 +267,7 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Map) {
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
     Statement& statement = statements[i];
 
-    // Bind both the primary key and the value with the geotype map and insert
+    // Bind both the primary key and the value with the DSE type map and insert
     statement.bind<Map<TypeParam, TypeParam> >(0, map);
     statement.bind<Map<TypeParam, TypeParam> >(1, map);
     this->session_.execute(statement);
@@ -377,16 +294,17 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Map) {
  * @test_category prepared_statements
  * @test_category data_types:tuple
  * @test_category dse:geospatial
+ * @test_category dse::daterange
  * @since 1.2.0
- * @dse_version 5.0.0
- * @expected_result Geotype values are inserted using a tuple and then
+ * @dse_version 5.0.0+
+ * @expected_result DSE values are inserted using a tuple and then
  *                  validated via simple and prepared statement operations
  */
-DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Tuple) {
-  CHECK_VERSION(5.0.0);
+DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Tuple) {
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   // Initialize the table and assign the values for the tuple
-  const std::vector<TypeParam>& values = GeometryTest<TypeParam>::values_;
+  const std::vector<TypeParam>& values = DseTypesTest<TypeParam>::values_;
   Tuple tuple(values.size());
   std::string cql_type("tuple<");
   for (size_t i = 0; i < values.size(); ++i) {
@@ -395,7 +313,7 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Tuple) {
     tuple.set<TypeParam>(values[i], i);
   }
   cql_type.append(">");
-  initialize(cql_type);
+  this->initialize(cql_type);
 
   // Create both simple and prepared statements
   Statement statements[] = {
@@ -407,7 +325,7 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Tuple) {
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
     Statement& statement = statements[i];
 
-    // Bind both the primary key and the value with the geotype tuple and insert
+    // Bind both the primary key and the value with the DSE type tuple and insert
     statement.bind<Tuple>(0, tuple);
     statement.bind<Tuple>(1, tuple);
     this->session_.execute(statement);
@@ -433,16 +351,17 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, Tuple) {
  * @test_category prepared_statements
  * @test_category data_types:udt
  * @test_category dse:geospatial
+ * @test_category dse::daterange
  * @since 1.2.0
- * @dse_version 5.0.0
- * @expected_result Geotype values are inserted using a user data type and then
+ * @dse_version 5.0.0+
+ * @expected_result DSE values are inserted using a user data type and then
  *                  validated via simple and prepared statement operations
  */
-DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, UDT) {
-  CHECK_VERSION(5.0.0);
+DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, UDT) {
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
 
   // Build the UDT type name e.g. udt_pointtype, udt_line_string, etc.
-  const std::vector<TypeParam>& values = GeometryTest<TypeParam>::values_;
+  const std::vector<TypeParam>& values = DseTypesTest<TypeParam>::values_;
   std::string cql_type("udt_" + Utils::to_lower(Utils::replace_all(values[0].cql_type(), "'", "")));
 
   // Create the UDT type
@@ -461,7 +380,7 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, UDT) {
   this->session_.execute(create_type);
 
   // Initialize the table; NOTE: UDT must be frozen for older versions of DSE
-  initialize("frozen<" +  cql_type + ">");
+  this->initialize("frozen<" +  cql_type + ">");
 
   // Build our UDT values and UDT type
   std::map<std::string, TypeParam> udt_values;
@@ -489,7 +408,7 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, UDT) {
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
     Statement& statement = statements[i];
 
-    // Bind both the primary key and the value with the geotype UDT and insert
+    // Bind both the primary key and the value with the DSE type UDT and insert
     statement.bind<UserType>(0, user_type);
     statement.bind<UserType>(1, user_type);
     this->session_.execute(statement);
@@ -505,14 +424,13 @@ DSE_INTEGRATION_TYPED_TEST_P(GeometryTest, UDT) {
 }
 
 // Register all test cases
-REGISTER_TYPED_TEST_CASE_P(GeometryTest, Integration_DSE_Basic,
-  Integration_DSE_GraphArray, Integration_DSE_GraphObject,
+REGISTER_TYPED_TEST_CASE_P(DseTypesTest, Integration_DSE_Basic,
   Integration_DSE_List, Integration_DSE_Set,
   Integration_DSE_Map, Integration_DSE_Tuple, Integration_DSE_UDT); //TODO: Create expanding macro for registering typed tests
 
-// Instantiate the test case for all the geotypes
-typedef testing::Types<test::driver::DsePoint, test::driver::DseLineString, test::driver::DsePolygon> GeoTypes;
-INSTANTIATE_TYPED_TEST_CASE_P(Geometry, GeometryTest, GeoTypes);
+// Instantiate the test case for all the geotypes and date range
+typedef testing::Types<test::driver::DsePoint, test::driver::DseLineString, test::driver::DsePolygon, test::driver::DseDateRange> DseTypes;
+INSTANTIATE_TYPED_TEST_CASE_P(DseTypes, DseTypesTest, DseTypes);
 
 /**
  * Values for point tests
@@ -522,7 +440,7 @@ const test::driver::DsePoint GEOMETRY_POINTS[] = {
   test::driver::DsePoint(2.0, 4.0),
   test::driver::DsePoint(-1.2, -100.0),
 };
-template<> const std::vector<test::driver::DsePoint> GeometryTest<test::driver::DsePoint>::values_(
+template<> const std::vector<test::driver::DsePoint> DseTypesTest<test::driver::DsePoint>::values_(
   GEOMETRY_POINTS,
   GEOMETRY_POINTS + ARRAY_LEN(GEOMETRY_POINTS));
 
@@ -535,7 +453,7 @@ const test::driver::DseLineString GEOMETRY_LINE_STRING[] = {
   test::driver::DseLineString("-1.2 -100.0, 0.99 3.0"),
   test::driver::DseLineString("LINESTRING EMPTY"),
 };
-template<> const std::vector<test::driver::DseLineString> GeometryTest<test::driver::DseLineString>::values_(
+template<> const std::vector<test::driver::DseLineString> DseTypesTest<test::driver::DseLineString>::values_(
   GEOMETRY_LINE_STRING,
   GEOMETRY_LINE_STRING + ARRAY_LEN(GEOMETRY_LINE_STRING));
 
@@ -548,7 +466,86 @@ const test::driver::DsePolygon GEOMETRY_POLYGON[] = {
                             (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)"),
   test::driver::DsePolygon("POLYGON EMPTY"),
 };
-template<> const std::vector<test::driver::DsePolygon> GeometryTest<test::driver::DsePolygon>::values_(
+template<> const std::vector<test::driver::DsePolygon> DseTypesTest<test::driver::DsePolygon>::values_(
   GEOMETRY_POLYGON,
   GEOMETRY_POLYGON + ARRAY_LEN(GEOMETRY_POLYGON));
 
+/**
+ * Values for date range tests
+ */
+const driver::DseDateRange DATE_RANGES[] = {
+  // Single dates
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_YEAR, "1970"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_YEAR, "2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_MONTH, "04/2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_DAY, "04/14/2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 01/01/1970"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_HOUR, "23:00 04/14/2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_MINUTE, "23:59 04/14/2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_SECOND, "00:00:01 01/01/1970"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_SECOND, "23:59:59 04/14/2017"),
+  driver::DseDateRange(driver::DseDateRangeBound(0)),
+  driver::DseDateRange(driver::DseDateRangeBound(1000)),
+  driver::DseDateRange(driver::DseDateRangeBound(1)),
+
+  // Single date unbounded
+  driver::DseDateRange(driver::DseDateRangeBound::unbounded()),
+
+  // Upper and lower bounds
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_YEAR, "1970",
+                       DSE_DATE_RANGE_PRECISION_YEAR, "2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_MONTH, "02/1970",
+                       DSE_DATE_RANGE_PRECISION_MONTH, "08/2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_DAY, "4/14/1970",
+                       DSE_DATE_RANGE_PRECISION_DAY, "8/14/2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 4/14/1970",
+                       DSE_DATE_RANGE_PRECISION_HOUR, "12:00 8/14/2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_MINUTE, "01:01 2/28/1970",
+                       DSE_DATE_RANGE_PRECISION_MINUTE, "12:12 4/14/2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970",
+                       DSE_DATE_RANGE_PRECISION_SECOND, "12:12:12 4/14/2017"),
+  driver::DseDateRange(driver::DseDateRangeBound(1),
+                       driver::DseDateRangeBound(1000)),
+
+  // Upper and lower bounds mixed precisions
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970",
+                       DSE_DATE_RANGE_PRECISION_MONTH, "04/2017"),
+  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_YEAR, "2017",
+                       DSE_DATE_RANGE_PRECISION_MONTH, "04/2017"),
+
+  // Lower unbounded
+  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
+                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_YEAR, "2017")),
+  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
+                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MONTH, "08/2017")),
+  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
+                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_DAY, "8/14/2017")),
+  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
+                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_HOUR, "12:00 8/14/2017")),
+  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
+                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MINUTE, "12:12 4/14/2017")),
+  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
+                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_SECOND, "12:12:12 4/14/2017")),
+  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
+                       driver::DseDateRangeBound(1000)),
+
+  // Upper unbounded
+  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_YEAR, "1970"),
+                       driver::DseDateRangeBound::unbounded()),
+  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MONTH, "02/1970"),
+                       driver::DseDateRangeBound::unbounded()),
+  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_DAY, "4/14/1970"),
+                       driver::DseDateRangeBound::unbounded()),
+  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 4/14/1970"),
+                       driver::DseDateRangeBound::unbounded()),
+  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MINUTE, "01:01 2/28/1970"),
+                       driver::DseDateRangeBound::unbounded()),
+  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970"),
+                       driver::DseDateRangeBound::unbounded()),
+  driver::DseDateRange(driver::DseDateRangeBound(1),
+                       driver::DseDateRangeBound::unbounded()),
+};
+
+template<> const std::vector<test::driver::DseDateRange> DseTypesTest<test::driver::DseDateRange>::values_(
+  DATE_RANGES,
+  DATE_RANGES + ARRAY_LEN(DATE_RANGES));

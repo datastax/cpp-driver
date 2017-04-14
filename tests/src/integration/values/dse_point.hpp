@@ -32,6 +32,14 @@ typedef struct Point_ {
  */
 class DsePoint : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(Point, DsePoint) {
 public:
+  /**
+   * Get the minimum DSE version that supports this type
+   *
+   * @return A version string
+   */
+  static const char* supported_version() { return "5.0.0"; }
+
+public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)

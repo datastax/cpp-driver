@@ -14,7 +14,7 @@
 
 #define FORMAT_BUFFER_SIZE 10240
 #define KEYSPACE_MAXIMUM_LENGTH 48
-#define SIMPLE_KEYSPACE_FORMAT "CREATE KEYSPACE %s WITH replication = %s"
+#define SIMPLE_KEYSPACE_FORMAT "CREATE KEYSPACE IF NOT EXISTS %s WITH replication = %s"
 #define REPLICATION_STRATEGY "{ 'class': %s }"
 #define SELECT_SERVER_VERSION "SELECT release_version FROM system.local"
 

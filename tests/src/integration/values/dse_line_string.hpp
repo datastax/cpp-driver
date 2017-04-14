@@ -22,6 +22,14 @@ namespace driver {
  */
 class DseLineString : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(std::vector<DsePoint>, DseLineString) {
 public:
+  /**
+   * Get the minimum DSE version that supports this type
+   *
+   * @return A version string
+   */
+  static const char* supported_version() { return "5.0.0"; }
+
+public:
   typedef Object< ::DseLineString, dse_line_string_free> Native;
   typedef Object< ::DseLineStringIterator, dse_line_string_iterator_free> Iterator;
 
