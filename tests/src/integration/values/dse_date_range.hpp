@@ -41,7 +41,8 @@ namespace internal {
  * @return The number of seconds for localtime()
  */
 inline time_t timezone() {
-  struct tm tm = { };
+  struct tm tm;
+  memset(&tm, 0, sizeof(tm));
   // 01/01/1970
   tm.tm_year = 70;
   tm.tm_mday = 1;
@@ -134,7 +135,8 @@ public:
    * @return A lower date range bound rounded to the near precision unit.
    */
   static DseDateRangeBound lower(DseDateRangePrecision precision, const std::string& str) {
-    struct tm tm = { };
+    struct tm tm;
+    memset(&tm, 0, sizeof(tm));
     from_string(precision, str, &tm);
     return to_lower(precision, &tm);
   }
@@ -148,7 +150,8 @@ public:
    * @return An upper date range bound rounded to the near precision unit.
    */
   static DseDateRangeBound upper(DseDateRangePrecision precision, const std::string& str) {
-    struct tm tm = { };
+    struct tm tm;
+    memset(&tm, 0, sizeof(tm)); 
     from_string(precision, str, &tm);
     return to_upper(precision, &tm);
   }
