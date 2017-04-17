@@ -34,6 +34,12 @@
 #include <stdint.h>
 #include <vector>
 
+// sys/types defines macros major and minor
+#ifdef __FreeBSD__
+#undef major
+#undef minor
+#endif
+
 namespace cass {
 
 struct TimestampedAverage {
