@@ -40,8 +40,11 @@ echo "Building version $version"
 libuv_version=$(dpkg -s libuv | grep 'Version' | awk '{ print $2 }')
 
 if [[ -e $libuv_version ]]; then
-  echo "'libuv' required, but not installed"
-  exit 1
+    libuv_version=$(dpkg -s libuv1 | grep 'Version' | awk '{ print $2 }')
+    if [[ -e $libuv_version ]]; then
+	echo "'libuv' required, but not installed"
+	exit 1
+    fi
 fi
 
 echo "Using libuv version $libuv_version"
