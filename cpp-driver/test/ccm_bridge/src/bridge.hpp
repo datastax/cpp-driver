@@ -383,9 +383,17 @@ namespace CCM {
      *
      * @param key_value_pairs Key:Value to update
      * @param is_dse True if key/value pair should update the dse.yaml file;
-     *               otherwise false (default: false)
+     *               otherwise false (default: false; update cassandra.yaml)
+     * @param is_yaml True if key_value_pairs is a YAML string; otherwise false
+     *                (default: false)
+     *                NOTE: key_value_pairs in this instance must be a vector
+     *                      of strings for use with CCM literal YAML updates.
+     *                      These strings are single or multi-line YAML
+     *                      configurations; multi-line YAML must contain EOL
+     *                      marker at the end of each line (e.g. \n)
      */
-    void update_cluster_configuration(std::vector<std::string> key_value_pairs, bool is_dse = false);
+    void update_cluster_configuration(std::vector<std::string> key_value_pairs,
+      bool is_dse = false, bool is_yaml = false);
 
     /**
      * Update the cluster configuration
@@ -393,9 +401,22 @@ namespace CCM {
      * @param key Key to update
      * @param value Value to apply to key configuration
      * @param is_dse True if key/value pair should update the dse.yaml file;
-     *               otherwise false (default: false)
+     *               otherwise false (default: false; update cassandra.yaml)
      */
-    void update_cluster_configuration(const std::string& key, const std::string& value, bool is_dse = false);
+    void update_cluster_configuration(const std::string& key, const std::string& value,
+      bool is_dse = false);
+
+    /**
+     * Update the cluster configuration using a YAML configuration
+     *
+     * @param yaml YAML configuration to apply to the cluster
+     *             NOTE: These strings are single or multi-line YAML
+     *                   configurations; multi-line YAML must contain EOL
+     *                   marker at the end of each line (e.g. \n)
+     * @param is_dse True if yaml configuration should update the dse.yaml file;
+     *               otherwise false (default: false; update cassandra.yaml)
+     */
+    void update_cluster_configuration(const std::string& yaml, bool is_dse = false);
 
     /**
      * Update the node configuration

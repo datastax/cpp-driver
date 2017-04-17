@@ -113,17 +113,25 @@ protected:
       std::vector<std::string> update_dse_configuration;
       update_configuration.push_back("authorizer:com.datastax.bdp.cassandra.auth.DseAuthorizer");
       update_configuration.push_back("authenticator:com.datastax.bdp.cassandra.auth.DseAuthenticator");
-      update_dse_configuration.push_back("authentication_options.enabled:true");
       update_dse_configuration.push_back("authorization_options.enabled:true");
       update_dse_configuration.push_back("kerberos_options.service_principal:"
         + std::string(DSE_SERVICE_PRINCIPAL));
       update_dse_configuration.push_back("kerberos_options.keytab:"
         + ads_->get_dse_keytab_file());
       update_dse_configuration.push_back("kerberos_options.qop:auth");
+      std::string update_dse_configuration_yaml = "authentication_options:\n" \
+        "  allow_digest_with_kerberos: true\n" \
+        "  default_scheme: kerberos\n" \
+        "  enabled: true\n" \
+        "  other_schemes:\n" \
+        "    - internal\n" \
+        "  scheme_permissions: true\n" \
+        "  transitional_mode: normal";
 
       // Apply the configuration options
       ccm_->update_cluster_configuration(update_configuration);
       ccm_->update_cluster_configuration(update_dse_configuration, true);
+      ccm_->update_cluster_configuration(update_dse_configuration_yaml, true);
 
       // Start the cluster
       std::vector<std::string> jvm_arguments;
@@ -366,7 +374,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExec
 }
 
 /**
- * Perform a failing connection to DSE using plain text proxy authentication
+ * Perform a connection to DSE using plain text proxy authentication
+ * (e.g. authorization ID) and execute a query; query should fail
  *
  * This test will perform a connection to a DSE server using plain text proxy
  * authentication where the user "alice" is using the unauthorized credentials
@@ -376,9 +385,9 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExec
  * @jira_ticket CPP-426
  * @test_category dse:auth
  * @since 1.2.0
- * @expected_result Connection is unsuccessful; Bad credentials
+ * @expected_result Connection is successful; however queries are unauthorized
  */
-DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyBadCredentialsUserLoginAs) {
+DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyUnauthorizedUserLoginAs) {
   CHECK_VERSION(5.1.0);
   CHECK_FAILURE;
 
@@ -389,10 +398,11 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyBadCredentialsUser
     DseSession session = cluster
       .with_plaintext_authenticator_proxy("steve", "steve", "alice")
       .connect();
-  } catch (Session::Exception &se) {
-    LOG(se.what());
-    ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
-      << "Error code is not 'Bad credentials'";
+    query(session);
+  } catch (test::CassException &ce) {
+    LOG(ce.what());
+    ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
+      << "Error code is not 'Unauthorized'";
     is_session_failure = true;
   }
   ASSERT_EQ(true, is_session_failure) << "Session connection established";
