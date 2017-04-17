@@ -36,6 +36,7 @@
 
 #include "cassandra.h"
 #include "bridge.hpp"
+#include "constants.hpp"
 
 #ifdef min
 #undef min
@@ -1169,7 +1170,7 @@ struct Value<CassDuration> {
  */
 struct MultipleNodesTest {
   MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
-    unsigned int protocol_version = 4, bool with_vnodes = false,
+    unsigned int protocol_version = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, bool with_vnodes = false,
     bool is_ssl = false);
 
   virtual ~MultipleNodesTest();
@@ -1182,7 +1183,7 @@ struct MultipleNodesTest {
 
 struct SingleSessionTest : public MultipleNodesTest {
   SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
-    bool with_session = true, unsigned int protocol_version = 4,
+    bool with_session = true, unsigned int protocol_version = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION,
     bool with_vnodes = false, bool is_ssl = false);
 
   virtual ~SingleSessionTest();
