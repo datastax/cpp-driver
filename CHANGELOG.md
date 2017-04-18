@@ -1,3 +1,15 @@
+1.2.0
+===========
+
+Features
+--------
+* Added support for DSE proxy authentication
+* Added support for DSE `DateRangeType`
+* Added support for adding DSE geospatial types as elements of collections
+* Added support for `DurationType`
+* Added support for OpenSSL 1.1
+* Added support for protocol DSEv1 and V5 (beta)
+
 1.1.0
 ===========
 
