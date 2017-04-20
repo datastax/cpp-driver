@@ -108,10 +108,11 @@ protected:
     ccm_->stop_cluster();
 
     // Configure the default authentication options
+    std::vector<std::string> update_configuration;
     std::vector<std::string> update_dse_configuration;
     if (server_version_ >= "5.0.0") {
-      ccm_->update_cluster_configuration("authenticator",
-        "com.datastax.bdp.cassandra.auth.DseAuthenticator");
+
+      update_configuration.push_back("authenticator:com.datastax.bdp.cassandra.auth.DseAuthenticator");
       update_dse_configuration.push_back("authentication_options.enabled:true");
     }
 
@@ -125,8 +126,7 @@ protected:
         update_dse_configuration.push_back("authentication_options.allow_digest_with_kerberos:true");
         update_dse_configuration.push_back("authentication_options.transitional_mode:disabled");
       } else {
-        ccm_->update_cluster_configuration("authenticator",
-          "com.datastax.bdp.cassandra.auth.KerberosAuthenticator");
+        update_configuration.push_back("authenticator:com.datastax.bdp.cassandra.auth.KerberosAuthenticator");
       }
       update_dse_configuration.push_back("kerberos_options.service_principal:"
         + std::string(DSE_SERVICE_PRINCIPAL));
@@ -143,6 +143,7 @@ protected:
         update_dse_configuration.push_back("authentication_options.plain_text_without_ssl:allow");
       }
     }
+    ccm_->update_cluster_configuration(update_configuration);
     ccm_->update_cluster_configuration(update_dse_configuration, true);
 
     // Start the cluster
