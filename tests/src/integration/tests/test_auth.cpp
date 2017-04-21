@@ -11,20 +11,20 @@
 
 
 #if UV_VERSION_MAJOR == 0
-# define CHECK_FOR_KERBEROS_SKIPPED_TEST \
+# define CHECK_FOR_SKIPPED_TEST \
     SKIP_TEST("Test requires libuv v1.x+: Hostname resolution required");
 #else
 //TODO: Update test to work with remote deployments
 # ifdef _WIN32
-#   define CHECK_FOR_KERBEROS_SKIPPED_TEST \
+#   define CHECK_FOR_SKIPPED_TEST \
       SKIP_TEST("Test cannot currently run on Windows");
 # elif defined(CASS_USE_LIBSSH2)
-#   define CHECK_FOR_KERBEROS_SKIPPED_TEST \
+#   define CHECK_FOR_SKIPPED_TEST \
       if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
         SKIP_TEST("Test cannot currently run using remote deployment"); \
       }
 # else
-#   define CHECK_FOR_KERBEROS_SKIPPED_TEST ((void)0)
+#   define CHECK_FOR_SKIPPED_TEST ((void)0)
 # endif
 #endif
 
@@ -34,7 +34,7 @@
 class AuthenticationTest : public DseIntegration {
 public:
   static void SetUpTestCase() {
-    CHECK_FOR_KERBEROS_SKIPPED_TEST;
+    CHECK_FOR_SKIPPED_TEST;
 
     try {
       ads_ = new EmbeddedADS();
@@ -60,7 +60,7 @@ public:
   }
 
   void SetUp() {
-    CHECK_FOR_KERBEROS_SKIPPED_TEST;
+    CHECK_FOR_SKIPPED_TEST;
     //TODO: Update test to work with remote deployments
     // Ensure test can run for current configuration
 #ifdef _WIN32
@@ -218,7 +218,7 @@ bool AuthenticationTest::is_ads_available_ = false;
  * @expected_result Successful connection and query execution
  */
 DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthentication) {
-  CHECK_FOR_KERBEROS_SKIPPED_TEST;
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Acquire a key for the Cassandra user, connect, and query the system table
@@ -239,7 +239,7 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthentication) {
  * @expected_result Connection is unsuccessful; Bad credentials
  */
 DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureBadCredentials) {
-  CHECK_FOR_KERBEROS_SKIPPED_TEST;
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Acquire a key for the unknown user
@@ -271,7 +271,7 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureBadCrede
  * @expected_result Connection is unsuccessful; Bad credentials
  */
 DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureNoTicket) {
-  CHECK_FOR_KERBEROS_SKIPPED_TEST;
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Attempt to connect and ensure failed connection
@@ -301,7 +301,7 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureNoTicket
  */
 DSE_INTEGRATION_TEST_F(AuthenticationTest, InternalAuthentication) {
   CHECK_VERSION(5.0.0);
-  CHECK_FOR_KERBEROS_SKIPPED_TEST;
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Connect, and query the system table
@@ -324,7 +324,7 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, InternalAuthentication) {
  */
 DSE_INTEGRATION_TEST_F(AuthenticationTest, InternalAuthenticationFailure) {
   CHECK_VERSION(5.0.0)
-  CHECK_FOR_KERBEROS_SKIPPED_TEST;
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Attempt to connect and ensure failed connection

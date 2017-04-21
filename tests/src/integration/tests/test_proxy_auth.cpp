@@ -11,6 +11,24 @@
 
 #include <utility>
 
+#if UV_VERSION_MAJOR == 0
+# define CHECK_FOR_SKIPPED_TEST \
+    SKIP_TEST("Test requires libuv v1.x+: Hostname resolution required");
+#else
+//TODO: Update test to work with remote deployments
+# ifdef _WIN32
+#   define CHECK_FOR_SKIPPED_TEST \
+      SKIP_TEST("Test cannot currently run on Windows");
+# elif defined(CASS_USE_LIBSSH2)
+#   define CHECK_FOR_SKIPPED_TEST \
+      if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
+        SKIP_TEST("Test cannot currently run using remote deployment"); \
+      }
+# else
+#   define CHECK_FOR_SKIPPED_TEST ((void)0)
+# endif
+#endif
+
 #define ADS_WAIT_ATTEMPTS 500
 #define DEFAULT_KEY "DataStax Enterprise"
 #define DEFAULT_VALUE "DSE C/C++ Driver"
@@ -23,6 +41,7 @@ class ProxyAuthenticationTest : public DseIntegration {
 public:
   static void SetUpTestCase() {
     CHECK_OPTIONS_VERSION(5.1.0);
+    CHECK_FOR_SKIPPED_TEST;
 
     try {
       ads_ = new EmbeddedADS();
@@ -56,6 +75,7 @@ public:
 
   void SetUp() {
     CHECK_VERSION(5.1.0);
+    CHECK_FOR_SKIPPED_TEST;
 
     //TODO: Update test to work with remote deployments
     // Ensure test can run for current configuration
@@ -305,6 +325,7 @@ bool ProxyAuthenticationTest::is_ccm_configured_ = false;
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyAuthorizedUserLoginAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
@@ -333,6 +354,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyAuthorizedUserLogi
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExecuteAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
@@ -361,6 +383,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExec
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExecuteBatchAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
@@ -389,6 +412,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExec
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyUnauthorizedUserLoginAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Build the cluster configuration and attempt the session connection
@@ -424,6 +448,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyUnauthorizedUserLo
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnauthorizedExecuteAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
@@ -461,6 +486,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnau
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnauthorizedExecuteBatchAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
@@ -496,6 +522,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnau
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosProxyAuthorizedUserLoginAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Acquire a key for the Bob user
@@ -527,6 +554,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosProxyAuthorizedUserLogin
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginExecuteAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Acquire a key for the Bob user
@@ -558,6 +586,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginExecu
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginExecuteBatchAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Acquire a key for the Bob user
@@ -589,6 +618,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginExecu
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosProxyBadCredentialsUserLoginAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Acquire a key for the Charlie user
@@ -626,6 +656,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosProxyBadCredentialsUserL
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnauthorizedExecuteAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Acquire a key for the Bob user
@@ -666,6 +697,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnaut
  */
 DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnauthorizedExecuteBatchAs) {
   CHECK_VERSION(5.1.0);
+  CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Acquire a key for the Bob user
