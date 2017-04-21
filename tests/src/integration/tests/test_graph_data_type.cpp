@@ -57,7 +57,7 @@ protected:
    * @param values The values to insert and validate
    * @param expected_values The server may coerce the values into different
    *                        representation of the value; this will allow the
-   *                        validation of those coercsions
+   *                        validation of those coercions
    */
   template<typename T>
   void perform_data_type_test(const std::string& data_type,
@@ -144,9 +144,18 @@ private:
    * @param object DSE graph object for the named parameters
    */
   void create(const std::string& data_type, test::driver::DseGraphObject object) {
+    // Determine if data type is geospatial and append withGeoBounds
+    std::string type = data_type;
+    if (server_version_ >= "5.1.0" &&
+      (type.compare("Linestring") == 0 ||
+      type.compare("Point") == 0 ||
+      type.compare("Polygon") == 0)) {
+      type += "().withGeoBounds";
+    }
+
+    // Create and execute the statement
     test::driver::DseGraphStatement statement(
-      format_string(GRAPH_DATA_TYPE_CREATE_FORMAT,data_type.c_str()),
-      options_);
+      format_string(GRAPH_DATA_TYPE_CREATE_FORMAT, type.c_str()), options_);
     statement.bind(object);
     CHECK_FAILURE;
     dse_session_.execute(statement);
@@ -344,7 +353,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, Text) {
   values.push_back(test::driver::Varchar(
     "The quick brown fox jumps over the lazy dog"));
   values.push_back(test::driver::Varchar("Hello World!"));
-  values.push_back(test::driver::Varchar("DataStax C/C++ Driver Extension"));
+  values.push_back(test::driver::Varchar("DataStax C/C++ DSE Driver"));
 
   // Perform the test operations for all the values in the data type
   perform_data_type_test<test::driver::Varchar>("Text", values);
@@ -371,7 +380,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
 
   // Create blob values
   std::vector<std::string> blobs;
-  blobs.push_back("RGF0YVN0YXggQy9DKysgRHJpdmVyIEV4dGVuc2lvbg=="); // DataStax C/C++ Driver Extension [base64]
+  blobs.push_back("RGF0YVN0YXggQy9DKysgRFNFIERyaXZlcg=="); // DataStax C/C++ DSE Driver [base64]
 
   // Create inet values
   std::vector<std::string> inets;
@@ -418,12 +427,12 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
     test::driver::DseLineString("1.0 3.0, 2.0 6.0, 3.0 9.0").cql_value(),
     "'", ""));
   line_strings.push_back(replace_all(
-    test::driver::DseLineString("-1.2 -100.0, 0.99 3.0").cql_value(),
+    test::driver::DseLineString("-1.2 -90.0, 0.99 3.0").cql_value(),
     "'", ""));
   std::vector<std::string> line_strings_expected;
   line_strings_expected.push_back("LINESTRING (0 0, 1 1)");
   line_strings_expected.push_back("LINESTRING (1 3, 2 6, 3 9)");
-  line_strings_expected.push_back("LINESTRING (-1.2 -100, 0.99 3)");
+  line_strings_expected.push_back("LINESTRING (-1.2 -90, 0.99 3)");
 
   // Create point values (remove tick marks from CQL value)
   std::vector<std::string> points;
@@ -434,12 +443,12 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
     test::driver::DsePoint(2.0, 4.0).cql_value(),
     "'", ""));
   points.push_back(replace_all(
-    test::driver::DsePoint(-1.2, -100.0).cql_value(),
+    test::driver::DsePoint(-1.2, -90.0).cql_value(),
     "'", ""));
   std::vector<std::string> points_expected;
   points_expected.push_back("POINT (0 0)");
   points_expected.push_back("POINT (2 4)");
-  points_expected.push_back("POINT (-1.2 -100)");
+  points_expected.push_back("POINT (-1.2 -90)");
 
   // Create polygon values (remove tick marks from CQL value)
   std::vector<std::string> polygons;
