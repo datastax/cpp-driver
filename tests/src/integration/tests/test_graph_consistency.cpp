@@ -28,6 +28,7 @@ public:
     dse_workload_.push_back(CCM::DSE_WORKLOAD_GRAPH);
     number_dc1_nodes_ = 3;
     replication_factor_ = 3; // Force RF=3 instead of default calculated RF=2
+    is_ccm_start_node_individually_ = true;
     DseIntegration::SetUp();
 
     // Create the graph
@@ -315,10 +316,10 @@ DSE_INTEGRATION_TEST_F(GraphConsistencyTest, WriteOneNodeDown) {
 
   // Perform the write graph query with consistency levels expected to fail
   test::driver::DseGraphResultSet result_set =
-    execute_write_query(CASS_CONSISTENCY_THREE, false);
+    execute_write_query(CASS_CONSISTENCY_ALL, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
   ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level"));
-  result_set = execute_write_query(CASS_CONSISTENCY_ALL, false);
+  result_set = execute_write_query(CASS_CONSISTENCY_THREE, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
   ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level"));
 }

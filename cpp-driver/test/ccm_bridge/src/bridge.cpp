@@ -744,8 +744,10 @@ bool  CCM::Bridge::start_cluster(std::vector<std::string> jvm_arguments /*= DEFA
   start_command.push_back("--wait-other-notice");
   start_command.push_back("--wait-for-binary-proto");
 #ifdef _WIN32
-  if (cassandra_version_ >= "2.2.4") {
-    start_command.push_back("--quiet-windows");
+  if (deployment_type_ == DeploymentType::LOCAL) {
+    if (cassandra_version_ >= "2.2.4") {
+      start_command.push_back("--quiet-windows");
+    }
   }
 #endif
   for (std::vector<std::string>::const_iterator iterator = jvm_arguments.begin(); iterator != jvm_arguments.end(); ++iterator) {
@@ -1027,8 +1029,10 @@ bool CCM::Bridge::start_node(unsigned int node, std::vector<std::string> jvm_arg
   start_node_command.push_back("--wait-other-notice");
   start_node_command.push_back("--wait-for-binary-proto");
 #ifdef _WIN32
-  if (cassandra_version_ >= "2.2.4") {
-    start_node_command.push_back("--quiet-windows");
+  if (deployment_type_ == DeploymentType::LOCAL) {
+    if (cassandra_version_ >= "2.2.4") {
+      start_node_command.push_back("--quiet-windows");
+    }
   }
 #endif
   for (std::vector<std::string>::const_iterator iterator = jvm_arguments.begin(); iterator != jvm_arguments.end(); ++iterator) {
