@@ -17,7 +17,7 @@ section](#licence) below.
 
 ## Documentation
 
-Documentation for the DSE driver is found [here](cpp-driver-dse).
+Documentation for the DSE driver is found [here](http://docs.datastax.com/en/developer/cpp-driver-dse/).
 
 ## Examples
 
@@ -79,4 +79,3 @@ Copyright &copy; 2017 DataStax, Inc.
 http://www.datastax.com/terms/datastax-dse-driver-license-terms
 
 [cpp-driver]: http://datastax.github.io/cpp-driver/
-[cpp-driver-dse]: http://docs.datastax.com/en/developer/cpp-driver-dse/
