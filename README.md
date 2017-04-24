@@ -79,4 +79,4 @@ Copyright &copy; 2017 DataStax, Inc.
 http://www.datastax.com/terms/datastax-dse-driver-license-terms
 
 [cpp-driver]: http://datastax.github.io/cpp-driver/
-[cpp-driver-dse]: http://datastax.github.io/cpp-driver-dse
+[cpp-driver-dse]: http://docs.datastax.com/en/developer/cpp-driver-dse/
