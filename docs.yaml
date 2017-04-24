@@ -6,6 +6,10 @@ sections:
     prefix:   /getting-started
     type:     markdown
     files:   'doc/getting_started/**/*.md'
+  - title:    Installation
+    prefix:   /installation
+    type:     markdown
+    files:   'doc/installation/**/*.md'
   - title:    Building
     prefix:   /building
     type:     markdown

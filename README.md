@@ -21,8 +21,8 @@ Documentation for the DSE driver is found [here](http://docs.datastax.com/en/dev
 
 ## Examples
 
-The driver includes several examples in the [examples](examples) directory for
-using DSE specific features.
+The driver includes several examples in the [examples](https://github.com/datastax/cpp-dse-driver/tree/master/examples)
+directory for using DSE specific features.
 
 ## A Simple Example
 

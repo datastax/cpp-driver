@@ -6,7 +6,7 @@ Directions for installing the driver can be found [here](/installation).
 
 ## Upgrading From The Core C/C++ Driver
 
-Connecting the driver is is the same as the core [C/C++ driver](cpp-driver)
+Connecting the driver is is the same as the core [C/C++ driver](http://datastax.github.io/cpp-driver/)
 except that `dse.h` should be included instead of `cassandra.h` which is
 automatically included by `dse.h`.
 
@@ -69,5 +69,3 @@ application will also require `dse.dll` at runtime.
 These libraries (`dse.lib` or `dse_static.lib`) can be added to your MS Visual
 Studio project by adding them to project's properties under `Configuration
 Properties/Linker/Input/Additional Dependencies`.
-
-[cpp-driver]: http://datastax.github.io/cpp-driver/
