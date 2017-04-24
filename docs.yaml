@@ -21,10 +21,10 @@ sections:
   - title:     API reference
     prefix:    /api
     type:      doxygen
-    directory: 'include'
+    directory: ['include/', 'cpp-driver/include/']
     config: |
-      PREDEFINED = DSE_EXPORT=
-      EXCLUDE_SYMBOLS = XX* DSE_DEPRECATED
+      PREDEFINED = "DSE_EXPORT=" "CASS_EXPORT="
+      EXCLUDE_SYMBOLS = XX* DSE_DEPRECATED CASS_ERROR CASS_ERROR_MAP CASS_ERROR_LAST_ENTRY CASS_LOG_LEVEL_MAP CASS_LOG_LAST_ENTRY CASS_DEPRECATED
       ENABLE_PREPROCESSING = YES
       MACRO_EXPANSION = YES
       EXPAND_ONLY_PREDEF = NO
@@ -32,7 +32,7 @@ sections:
       TYPEDEF_HIDES_STRUCT = YES
       EXTRACT_ALL = YES
       INLINE_SOURCES = NO
-      ALIASES = dse{1}="<b>Requires DSE:</b> \1"
+      ALIASES = dse{1}="<b>Requires DSE:</b> \1" cassandra{1}="<b>Requires Cassandra:</b> \1"
 
 versions:
   - name: 1.2
