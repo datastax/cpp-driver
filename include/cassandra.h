@@ -646,7 +646,7 @@ typedef enum CassProtocolVersion_ {
   CASS_PROTOCOL_VERSION_V1    = 0x01,
   CASS_PROTOCOL_VERSION_V2    = 0x02,
   CASS_PROTOCOL_VERSION_V3    = 0x03,
-  CASS_PROTOCOL_VERSION_V4    = 0x04,
+  CASS_PROTOCOL_VERSION_V4    = 0x04
 } CassProtocolVersion;
 
 typedef enum  CassErrorSource_ {
