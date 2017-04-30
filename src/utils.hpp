@@ -82,7 +82,7 @@ inline size_t next_pow_2(size_t num) {
 
 std::string opcode_to_string(int opcode);
 
-void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter = ',');
+CASS_IMPL_EXPORT void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter = ',');
 
 std::string& trim(std::string& str);
 

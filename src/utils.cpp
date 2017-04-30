@@ -17,7 +17,6 @@
 #include "utils.hpp"
 
 #include "constants.hpp"
-#include "macros.hpp"
 
 #include <algorithm>
 #include <assert.h>
@@ -73,7 +72,7 @@ std::string opcode_to_string(int opcode) {
   return "";
 }
 
-CASS_IMPL_EXPORT void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter /* = ',' */) {
+void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter /* = ',' */) {
   std::istringstream stream(str);
   while (!stream.eof()) {
     std::string token;
