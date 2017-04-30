@@ -144,8 +144,12 @@ CassError cass_uuid_from_string_n(const char* str,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 
+  const char* end = str + 36;
   for (size_t i = 0; i < 16; ++i) {
-    if (*pos == '-') pos++;
+    if (pos < end && *pos == '-') pos++;
+    if (pos + 2 > end) {
+      return CASS_ERROR_LIB_BAD_PARAMS;
+    }
     uint8_t p0 = static_cast<uint8_t>(pos[0]);
     uint8_t p1 = static_cast<uint8_t>(pos[1]);
     if (hex_to_half_byte[p0] == -1 || hex_to_half_byte[p1] == -1)  {
