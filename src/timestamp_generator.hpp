@@ -59,7 +59,7 @@ public:
   virtual int64_t next() { return CASS_INT64_MIN; }
 };
 
-class MonotonicTimestampGenerator : public TimestampGenerator {
+class CASS_IMPL_EXPORT MonotonicTimestampGenerator : public TimestampGenerator {
 public:
   MonotonicTimestampGenerator(int64_t warning_threshold_us = 1000000,
                               int64_t warning_interval_ms = 1000)

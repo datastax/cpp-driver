@@ -77,4 +77,20 @@ struct StaticNextPow2 {
   enum { value = StaticNextPow2Helper<8 * sizeof(size_t) - 1, N>::value };
 };
 
+#if !defined(CASS_STATIC)
+#  if (defined(WIN32) || defined(_WIN32))
+#    if defined(CASS_BUILDING)
+#      define CASS_IMPL_EXPORT __declspec(dllexport)
+#    else
+#      define CASS_IMPL_EXPORT __declspec(dllexport)
+#    endif
+#  elif (defined(__SUNPRO_C)  || defined(__SUNPRO_CC)) && !defined(CASS_STATIC)
+#    define CASS_IMPL_EXPORT __global
+#  elif (defined(__GNUC__) && __GNUC__ >= 4) || defined(__INTEL_COMPILER)
+#    define CASS_IMPL_EXPORT __attribute__ ((visibility("default")))
+#  endif
+#else
+#define CASS_IMPL_EXPORT
+#endif
+
 #endif

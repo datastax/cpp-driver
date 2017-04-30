@@ -18,6 +18,7 @@
 #define __CASS_ADDRESS_HPP_INCLUDED__
 
 #include "hash.hpp"
+#include "macros.hpp"
 
 #include <sparsehash/dense_hash_set>
 
@@ -29,7 +30,7 @@
 
 namespace cass {
 
-class Address {
+class CASS_IMPL_EXPORT Address {
 public:
   static const Address EMPTY_KEY;
   static const Address DELETED_KEY;
