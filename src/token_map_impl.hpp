@@ -574,11 +574,20 @@ public:
   virtual const CopyOnWriteHostVec& get_replicas(const std::string& keyspace_name,
                                                  const std::string& routing_key) const;
 
+  // Test only
+  bool contains(const Token& token) const {
+    for (typename TokenHostVec::const_iterator i = tokens_.begin(),
+         end = tokens_.end(); i != end; ++i) {
+      if (token == i->first) return true;
+    }
+    return false;
+  }
+
 private:
   void update_keyspace(const VersionNumber& cassandra_version,
                        ResultResponse* result,
                        bool should_build_replicas);
-  void remote_host_tokens(const Host::Ptr& host);
+  void remove_host_tokens(const Host::Ptr& host);
   void update_host_ids(const Host::Ptr& host);
   void build_replicas();
 
@@ -610,7 +619,7 @@ void TokenMapImpl<Partitioner>::add_host(const Host::Ptr& host, const Value* tok
 template <class Partitioner>
 void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host, const Value* tokens) {
   uint64_t start = uv_hrtime();
-  remote_host_tokens(host);
+  remove_host_tokens(host);
 
   update_host_ids(host);
   hosts_.insert(host);
@@ -624,11 +633,11 @@ void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host, con
 
   std::sort(new_tokens.begin(), new_tokens.end());
 
-  size_t previous_size = tokens_.size();
-  tokens_.resize(tokens_.size() + new_tokens.size());
-  std::merge(tokens_.begin(), tokens_.begin() + previous_size,
+  TokenHostVec merged(tokens_.size() + new_tokens.size());
+  std::merge(tokens_.begin(), tokens_.end(),
              new_tokens.begin(), new_tokens.end(),
-             tokens_.begin(), TokenHostCompare());
+             merged.begin(), TokenHostCompare());
+  tokens_ = merged;
 
   build_replicas();
   LOG_DEBUG("Updated token map with host %s (%u tokens). Rebuilt token map with %u hosts and %u tokens in %f ms",
@@ -642,7 +651,7 @@ void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host, con
 template <class Partitioner>
 void TokenMapImpl<Partitioner>::remove_host_and_build(const Host::Ptr& host) {
   uint64_t start = uv_hrtime();
-  remote_host_tokens(host);
+  remove_host_tokens(host);
   hosts_.erase(host);
   build_replicas();
   LOG_DEBUG("Removed host %s from token map. Rebuilt token map with %u hosts and %u tokens in %f ms",
@@ -755,7 +764,7 @@ void TokenMapImpl<Partitioner>::update_keyspace(const VersionNumber& cassandra_v
 }
 
 template <class Partitioner>
-void TokenMapImpl<Partitioner>::remote_host_tokens(const Host::Ptr& host) {
+void TokenMapImpl<Partitioner>::remove_host_tokens(const Host::Ptr& host) {
   typename TokenHostVec::iterator last = std::remove_copy_if(tokens_.begin(), tokens_.end(),
                                                              tokens_.begin(),
                                                              RemoveTokenHostIf(host));
