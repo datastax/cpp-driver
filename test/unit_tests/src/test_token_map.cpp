@@ -337,6 +337,114 @@ BOOST_AUTO_TEST_CASE(update_host)
   }
 }
 
+/**
+ * Add/Remove hosts from a token map (using Murmur3 tokens)
+ *
+ * This test will verify that adding and removing hosts from a token map
+ * correctly updates the tokens array.
+ *
+ * @jira_ticket CPP-464
+ * @test_category token_map
+ * @expected_results Host's tokens should be added and removed from the token map.
+ */
+BOOST_AUTO_TEST_CASE(update_remove_hosts_murmur3)
+{
+  cass::TokenMapImpl<cass::Murmur3Partitioner> token_map;
+
+  // Add hosts and build token map
+  cass::Host::Ptr host1(create_host("1.0.0.1", "rack1", "dc1"));
+
+  TokenCollectionBuilder builder1;
+  builder1.append_token(-3LL);
+  builder1.append_token(-1LL);
+  builder1.append_token(1LL);
+  builder1.append_token(3LL);
+
+  token_map.add_host(host1, builder1.finish());
+
+  cass::Host::Ptr host2(create_host("1.0.0.2", "rack1", "dc2"));
+
+  TokenCollectionBuilder builder2;
+  builder2.append_token(-4LL);
+  builder2.append_token(-2LL);
+  builder2.append_token(2LL);
+  builder2.append_token(4LL);
+
+  token_map.add_host(host2, builder2.finish());
+
+  ReplicationMap replication;
+
+  replication["dc1"] = "1";
+  replication["dc2"] = "1";
+
+  add_keyspace_network_topology("ks1", replication, &token_map);
+
+  token_map.build();
+
+  // Verify all tokens are added to the array
+  BOOST_CHECK(token_map.contains(-3LL));
+  BOOST_CHECK(token_map.contains(-1LL));
+  BOOST_CHECK(token_map.contains(1LL));
+  BOOST_CHECK(token_map.contains(3LL));
+
+  BOOST_CHECK(token_map.contains(-4LL));
+  BOOST_CHECK(token_map.contains(-2LL));
+  BOOST_CHECK(token_map.contains(2LL));
+  BOOST_CHECK(token_map.contains(4LL));
+
+  // Remove host1 and check that its tokens have been removed
+  token_map.remove_host_and_build(host1);
+
+  BOOST_CHECK(!token_map.contains(-3LL));
+  BOOST_CHECK(!token_map.contains(-1LL));
+  BOOST_CHECK(!token_map.contains(1LL));
+  BOOST_CHECK(!token_map.contains(3LL));
+
+  BOOST_CHECK(token_map.contains(-4LL));
+  BOOST_CHECK(token_map.contains(-2LL));
+  BOOST_CHECK(token_map.contains(2LL));
+  BOOST_CHECK(token_map.contains(4LL));
+
+  // Add host1 and check that its tokens have been added (same as the initial state)
+  token_map.update_host_and_build(host1, builder1.finish());
+
+  BOOST_CHECK(token_map.contains(-3LL));
+  BOOST_CHECK(token_map.contains(-1LL));
+  BOOST_CHECK(token_map.contains(1LL));
+  BOOST_CHECK(token_map.contains(3LL));
+
+  BOOST_CHECK(token_map.contains(-4LL));
+  BOOST_CHECK(token_map.contains(-2LL));
+  BOOST_CHECK(token_map.contains(2LL));
+  BOOST_CHECK(token_map.contains(4LL));
+
+  // Remove host2 and check that its tokens have been removed
+  token_map.remove_host_and_build(host2);
+
+  BOOST_CHECK(token_map.contains(-3LL));
+  BOOST_CHECK(token_map.contains(-1LL));
+  BOOST_CHECK(token_map.contains(1LL));
+  BOOST_CHECK(token_map.contains(3LL));
+
+  BOOST_CHECK(!token_map.contains(-4LL));
+  BOOST_CHECK(!token_map.contains(-2LL));
+  BOOST_CHECK(!token_map.contains(2LL));
+  BOOST_CHECK(!token_map.contains(4LL));
+
+  // Add host2 and check that its tokens have been added (same as the initial state)
+  token_map.update_host_and_build(host2, builder2.finish());
+
+  BOOST_CHECK(token_map.contains(-3LL));
+  BOOST_CHECK(token_map.contains(-1LL));
+  BOOST_CHECK(token_map.contains(1LL));
+  BOOST_CHECK(token_map.contains(3LL));
+
+  BOOST_CHECK(token_map.contains(-4LL));
+  BOOST_CHECK(token_map.contains(-2LL));
+  BOOST_CHECK(token_map.contains(2LL));
+  BOOST_CHECK(token_map.contains(4LL));
+}
+
 BOOST_AUTO_TEST_CASE(drop_keyspace)
 {
   TestTokenMap<cass::Murmur3Partitioner> test_drop_keyspace;
