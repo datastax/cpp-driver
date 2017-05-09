@@ -19,6 +19,7 @@
 
 #include "auth.hpp"
 #include "cassandra.h"
+#include "constants.hpp"
 #include "dc_aware_policy.hpp"
 #include "host_targeting_policy.hpp"
 #include "latency_aware_policy.hpp"
@@ -43,7 +44,8 @@ class Config {
 public:
   Config()
       : port_(9042)
-      , protocol_version_(4)
+      , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
+      , use_beta_protocol_version_(false)
       , thread_count_io_(1)
       , queue_size_io_(8192)
       , queue_size_event_(8192)
@@ -217,6 +219,14 @@ public:
     protocol_version_ = protocol_version;
   }
 
+  bool use_beta_protocol_version() const {
+    return use_beta_protocol_version_;
+  }
+
+  void set_use_beta_protocol_version(bool enable) {
+    use_beta_protocol_version_ = enable;
+  }
+
   CassLogLevel log_level() const { return log_level_; }
 
   void set_log_level(CassLogLevel log_level) {
@@ -388,6 +398,7 @@ public:
 private:
   int port_;
   int protocol_version_;
+  bool use_beta_protocol_version_;
   ContactPointList contact_points_;
   unsigned thread_count_io_;
   unsigned queue_size_io_;

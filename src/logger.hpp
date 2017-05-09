@@ -102,12 +102,12 @@ private:
 #  define LOG_FUNCTION_ ""
 #endif
 
-#define LOG_CHECK_LEVEL(severity, ...) do {                       \
-  if (severity <= Logger::log_level()) {                          \
-    Logger::log(severity,                                         \
-                 LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
-                 LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__)); \
-  }                                                               \
+#define LOG_CHECK_LEVEL(severity, ...) do {                            \
+  if (severity <= cass::Logger::log_level()) {                         \
+    cass::Logger::log(severity,                                        \
+                      LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
+                      LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__)); \
+  }                                                                    \
 } while(0)
 
 #define LOG_CRITICAL(...) LOG_CHECK_LEVEL(CASS_LOG_CRITICAL, __VA_ARGS__)

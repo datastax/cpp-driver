@@ -21,10 +21,12 @@
 #include "constants.hpp"
 #include "external.hpp"
 #include "macros.hpp"
+#include "prepared.hpp"
 #include "request.hpp"
 #include "result_metadata.hpp"
 #include "result_response.hpp"
 #include "retry_policy.hpp"
+#include "scoped_ptr.hpp"
 
 #include <vector>
 #include <string>
@@ -37,26 +39,30 @@ class Statement : public RoutableRequest, public AbstractData {
 public:
   typedef SharedRefPtr<Statement> Ptr;
 
-  Statement(uint8_t opcode, uint8_t kind, size_t values_count = 0)
-      : RoutableRequest(opcode)
+  Statement(const char* query, size_t query_length,
+            size_t values_count)
+      : RoutableRequest(CQL_OPCODE_QUERY)
       , AbstractData(values_count)
+      , query_or_id_(sizeof(int32_t) + query_length)
       , flags_(0)
-      , page_size_(-1)
-      , kind_(kind) { }
+      , page_size_(-1) {
+    // <query> [long string]
+    query_or_id_.encode_long_string(0, query, query_length);
+  }
 
-  Statement(uint8_t opcode, uint8_t kind, size_t values_count,
-            const std::vector<size_t>& key_indices,
-            const std::string& keyspace)
-      : RoutableRequest(opcode, keyspace)
-      , AbstractData(values_count)
+  Statement(const Prepared* prepared)
+      : RoutableRequest(CQL_OPCODE_EXECUTE,
+                        prepared->result()->keyspace().to_string())
+      , AbstractData(prepared->result()->column_count())
+      , query_or_id_(sizeof(uint16_t) + prepared->id().size())
       , flags_(0)
-      , page_size_(-1)
-      , kind_(kind)
-      , key_indices_(key_indices) { }
+      , page_size_(-1) {
+    // <id> [short bytes] (or [string])
+    const std::string& id = prepared->id();
+    query_or_id_.encode_string(0, id.data(), id.size());
+  }
 
   virtual ~Statement() { }
-
-  uint8_t flags() const { return flags_; }
 
   bool skip_metadata() const {
     return flags_ & CASS_QUERY_FLAG_SKIP_METADATA;
@@ -82,7 +88,7 @@ public:
     return flags_ & CASS_QUERY_FLAG_NAMES_FOR_VALUES;
   }
 
-  int32_t page_size() const {  return page_size_;  }
+  int32_t page_size() const { return page_size_; }
 
   void set_page_size(int32_t page_size) { page_size_ = page_size; }
 
@@ -92,22 +98,35 @@ public:
     paging_state_ = paging_state;
   }
 
-  uint8_t kind() const { return kind_; }
+  uint8_t kind() const {
+    return opcode() == CQL_OPCODE_QUERY ? CASS_BATCH_KIND_QUERY
+                                        : CASS_BATCH_KIND_PREPARED;
+  }
 
   void add_key_index(size_t index) { key_indices_.push_back(index); }
 
-  virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
+  virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const {
+    return calculate_routing_key(key_indices_, routing_key, cache);
+  }
 
-  virtual int32_t encode_batch(int version, BufferVec* bufs, RequestCallback* callback) const = 0;
+  int32_t encode_batch(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 protected:
-  int32_t copy_buffers(int version, BufferVec* bufs, RequestCallback* callback) const;
+  int32_t encode_v1(RequestCallback* callback, BufferVec* bufs) const;
+
+  int32_t encode_begin(int version, uint16_t element_count,
+                       RequestCallback* callback, BufferVec* bufs) const;
+  int32_t encode_values(int version, RequestCallback* callback, BufferVec* bufs) const;
+  int32_t encode_end(int version, RequestCallback* callback, BufferVec* bufs) const;
+
+  bool calculate_routing_key(const std::vector<size_t>& key_indices,
+                             std::string* routing_key, EncodingCache* cache) const;
 
 private:
-  uint8_t flags_;
+  Buffer query_or_id_;
+  int32_t flags_;
   int32_t page_size_;
   std::string paging_state_;
-  uint8_t kind_;
   std::vector<size_t> key_indices_;
 
 private:

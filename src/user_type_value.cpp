@@ -79,7 +79,7 @@ CASS_USER_TYPE_SET(decimal,
                    THREE_PARAMS_(const cass_byte_t* varint, size_t varint_size, int scale),
                    cass::CassDecimal(varint, varint_size, scale))
 CASS_USER_TYPE_SET(duration,
-                   THREE_PARAMS_(cass_int32_t months, cass_int32_t days, cass_int32_t nanos),
+                   THREE_PARAMS_(cass_int32_t months, cass_int32_t days, cass_int64_t nanos),
                    cass::CassDuration(months, days, nanos))
 
 #undef CASS_USER_TYPE_SET

@@ -439,7 +439,7 @@ BOOST_AUTO_TEST_CASE(allow_remote_dcs_for_local_cl)
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     // Set local CL
-    cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest());
+    cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
       new cass::RequestHandler(request, cass::ResponseFuture::Ptr(), NULL));
@@ -457,7 +457,7 @@ BOOST_AUTO_TEST_CASE(allow_remote_dcs_for_local_cl)
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     // Set local CL
-    cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest());
+    cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
       new cass::RequestHandler(request, cass::ResponseFuture::Ptr(), NULL));
@@ -530,7 +530,7 @@ BOOST_AUTO_TEST_CASE(simple)
   cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy());
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
-  cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
+  cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
@@ -610,7 +610,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   cass::TokenAwarePolicy policy(new cass::DCAwarePolicy(LOCAL_DC, num_hosts / 2, false));
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
-  cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
+  cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 1));
   const char* value = "abc"; // hash: -5434086359492102041
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);

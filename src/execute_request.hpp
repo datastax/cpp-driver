@@ -30,12 +30,8 @@ namespace cass {
 class ExecuteRequest : public Statement {
 public:
   ExecuteRequest(const Prepared* prepared)
-      : Statement(CQL_OPCODE_EXECUTE, CASS_BATCH_KIND_PREPARED,
-                  prepared->result()->column_count(),
-                  prepared->key_indices(),
-                  prepared->result()->keyspace().to_string())
-      , prepared_(prepared)
-      , metadata_(prepared->result()->metadata()){
+      : Statement(prepared)
+      , prepared_(prepared) {
       // If the prepared statement has result metadata then there is no
       // need to get the metadata with this request too.
       if (prepared->result()->result_metadata()) {
@@ -45,25 +41,23 @@ public:
 
   const Prepared::ConstPtr& prepared() const { return prepared_; }
 
+  virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
+
+  bool get_routing_key(std::string* routing_key, EncodingCache* cache)  const {
+    return calculate_routing_key(prepared_->key_indices(), routing_key, cache);
+  }
+
 private:
   virtual size_t get_indices(StringRef name, IndexVec* indices) {
-    return metadata_->get_indices(name, indices);
+    return prepared_->result()->metadata()->get_indices(name, indices);
   }
 
   virtual const DataType::ConstPtr& get_type(size_t index) const {
-    return metadata_->get_column_definition(index).data_type;
+    return prepared_->result()->metadata()->get_column_definition(index).data_type;
   }
-
-  virtual int32_t encode_batch(int version, BufferVec* bufs, RequestCallback* callback) const;
-
-private:
-  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
-  int internal_encode_v1(RequestCallback* callback, BufferVec* bufs) const;
-  int internal_encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   Prepared::ConstPtr prepared_;
-  ResultMetadata::Ptr metadata_;
 };
 
 } // namespace cass

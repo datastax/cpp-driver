@@ -244,7 +244,12 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1,
   cass_cluster_set_max_connections_per_host(cluster, 4);
   cass_cluster_set_num_threads_io(cluster, 4);
   cass_cluster_set_max_concurrent_creation(cluster, 8);
-  cass_cluster_set_protocol_version(cluster, protocol_version);
+  if (version.major_version >= 3 && version.minor_version >= 10 &&
+      protocol_version == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
+    cass_cluster_set_use_beta_protocol_version(cluster, cass_true);
+  } else {
+    cass_cluster_set_protocol_version(cluster, protocol_version);
+  }
   cass_cluster_set_use_randomized_contact_points(cluster, cass_false);
 }
 
