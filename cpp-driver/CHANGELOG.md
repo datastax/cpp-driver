@@ -1,3 +1,18 @@
+2.7.0
+===========
+
+Features
+--------
+* Added beta support for protocol v5 which can be enabled using
+  `cass_cluster_set_use_beta_protocol_version()`
+
+Other
+--------
+* Duration type needs to use `int64_t` for the nanos component (CPP-454)
+* Heavy load when updating token maps on node addition (CPP-460)
+* Adding a node breaks token map reconstruction (and can cause long delays)
+  (CPP-464)
+
 2.6.0
 ===========
 
@@ -23,7 +38,6 @@ Other
 * Fixed issue where single quote custom types (e.g.
   'org.apache.cassandra.db.marshal.LexicalUUIDType') would be incorrectly
   returned as a UDT data type instead of as a custom data type (CPP-431)
-
 
 2.5.0
 ===========
