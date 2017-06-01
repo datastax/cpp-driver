@@ -11,11 +11,11 @@
 #include "dse.h"
 
 #include "macros.hpp"
+#include "vector.hpp"
 
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
-#include <vector>
 
 #define DSE_POINT_TYPE       "org.apache.cassandra.db.marshal.PointType"
 #define DSE_LINE_STRING_TYPE "org.apache.cassandra.db.marshal.LineStringType"
@@ -71,7 +71,7 @@ inline WkbByteOrder native_byte_order() {
 #endif
 
 
-typedef std::vector<cass_byte_t> Bytes;
+typedef cass::Vector<cass_byte_t> Bytes;
 
 #if defined(__GNUC__)
 inline cass_uint32_t swap_uint32(cass_uint32_t value)

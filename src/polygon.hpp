@@ -11,11 +11,10 @@
 #include "dse.h"
 
 #include "serialization.hpp"
+#include "string.hpp"
 #include "wkt.hpp"
 
 #include <external.hpp>
-
-#include <string>
 
 namespace dse {
 
@@ -67,7 +66,7 @@ public:
     return finish_ring(); // Finish the last ring
   }
 
-  std::string to_wkt() const;
+  cass::String to_wkt() const;
 
 private:
   CassError finish_ring() {

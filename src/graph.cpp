@@ -29,12 +29,12 @@ namespace {
 static const DseGraphResult* find_member(const DseGraphResult* result,
                                          const char* name, size_t expected_index) {
   if (expected_index < result->MemberCount()) {
-    const rapidjson::Value::Member& member = result->MemberBegin()[expected_index];
+    const cass::json::Value::Member& member = result->MemberBegin()[expected_index];
     if (member.name == name) {
       return DseGraphResult::to(&member.value);
     }
   }
-  rapidjson::Value::ConstMemberIterator i = result->FindMember(name);
+  cass::json::Value::ConstMemberIterator i = result->FindMember(name);
   return i != result->MemberEnd() ? DseGraphResult::to(&i->value) : NULL;
 }
 
@@ -63,7 +63,7 @@ void graph_analytics_callback(CassFuture* future, void* data) {
     request->future->set_response(response_future->address(),
                                   response_future->response());
   }
-  delete request;
+  cass::Memory::deallocate(request);
 }
 
 void graph_analytics_lookup_callback(CassFuture* future, void* data) {
@@ -123,16 +123,16 @@ extern "C" {
 CassFuture* cass_session_execute_dse_graph(CassSession* session,
                                            const DseGraphStatement* statement) {
   if (statement->graph_source() == DSE_GRAPH_ANALYTICS_SOURCE) {
-    cass::ResponseFuture* future = new cass::ResponseFuture();
+    cass::ResponseFuture* future = cass::Memory::allocate<cass::ResponseFuture>();
 
     cass::Future::Ptr request_future(
           session->execute(
             cass::Request::ConstPtr(
-              new cass::QueryRequest(DSE_LOOKUP_ANALYTICS_GRAPH_SERVER))));
+              cass::Memory::allocate<cass::QueryRequest>(DSE_LOOKUP_ANALYTICS_GRAPH_SERVER))));
     request_future->set_callback(graph_analytics_lookup_callback,
-                                 new GraphAnalyticsRequest(session,
-                                                           future,
-                                                           statement->wrapped()->from()));
+                                 cass::Memory::allocate<GraphAnalyticsRequest>(session,
+                                                                               future,
+                                                                               statement->wrapped()->from()));
 
     future->inc_ref();
     return CassFuture::to(future);
@@ -144,11 +144,11 @@ CassFuture* cass_session_execute_dse_graph(CassSession* session,
 DseGraphResultSet* cass_future_get_dse_graph_resultset(CassFuture* future) {
   const CassResult* result = cass_future_get_result(future);
   if (result == NULL) return NULL;
-  return DseGraphResultSet::to(new dse::GraphResultSet(result));
+  return DseGraphResultSet::to(cass::Memory::allocate<dse::GraphResultSet>(result));
 }
 
 DseGraphOptions* dse_graph_options_new() {
-  return DseGraphOptions::to(new dse::GraphOptions());
+  return DseGraphOptions::to(cass::Memory::allocate<dse::GraphOptions>());
 }
 
 DseGraphOptions* dse_graph_options_new_from_existing(const DseGraphOptions* options) {
@@ -156,7 +156,7 @@ DseGraphOptions* dse_graph_options_new_from_existing(const DseGraphOptions* opti
 }
 
 void dse_graph_options_free(DseGraphOptions* options) {
-  delete options->from();
+  cass::Memory::deallocate(options->from());
 }
 
 CassError dse_graph_options_set_graph_language(DseGraphOptions* options,
@@ -167,7 +167,7 @@ CassError dse_graph_options_set_graph_language(DseGraphOptions* options,
 
 CassError dse_graph_options_set_graph_language_n(DseGraphOptions* options,
                                                  const char* language, size_t language_length) {
-  options->set_graph_language(std::string(language, language_length));
+  options->set_graph_language(cass::String(language, language_length));
   return CASS_OK;
 }
 
@@ -179,7 +179,7 @@ CassError dse_graph_options_set_graph_source(DseGraphOptions* options,
 
 CassError dse_graph_options_set_graph_source_n(DseGraphOptions* options,
                                                const char* source, size_t source_length) {
-  options->set_graph_source(std::string(source, source_length));
+  options->set_graph_source(cass::String(source, source_length));
   return CASS_OK;
 }
 
@@ -191,7 +191,7 @@ CassError dse_graph_options_set_graph_name(DseGraphOptions* options,
 
 CassError dse_graph_options_set_graph_name_n(DseGraphOptions* options,
                                              const char* name, size_t name_length) {
-  options->set_graph_name(std::string(name, name_length));
+  options->set_graph_name(cass::String(name, name_length));
   return CASS_OK;
 }
 
@@ -223,12 +223,12 @@ DseGraphStatement* dse_graph_statement_new(const char* query,
 DseGraphStatement* dse_graph_statement_new_n(const char* query,
                                              size_t query_length,
                                              const DseGraphOptions* options) {
-  return DseGraphStatement::to(new dse::GraphStatement(query, query_length,
-                                                       options));
+  return DseGraphStatement::to(cass::Memory::allocate<dse::GraphStatement>(query, query_length,
+                                                                           options));
 }
 
 void dse_graph_statement_free(DseGraphStatement* statement) {
-  delete statement->from();
+  cass::Memory::deallocate(statement->from());
 }
 
 CassError dse_graph_statement_bind_values(DseGraphStatement* statement,
@@ -245,11 +245,11 @@ CassError dse_graph_statement_set_timestamp(DseGraphStatement* statement,
 }
 
 DseGraphObject* dse_graph_object_new() {
-  return DseGraphObject::to(new dse::GraphObject());
+  return DseGraphObject::to(cass::Memory::allocate<dse::GraphObject>());
 }
 
 void dse_graph_object_free(DseGraphObject* object) {
-  delete object->from();
+  cass::Memory::deallocate(object->from());
 }
 
 void dse_graph_object_reset(DseGraphObject* object) {
@@ -477,11 +477,11 @@ CassError dse_graph_object_add_polygon_n(DseGraphObject* object,
 }
 
 DseGraphArray* dse_graph_array_new() {
-  return DseGraphArray::to(new DseGraphArray());
+  return DseGraphArray::to(cass::Memory::allocate<DseGraphArray>());
 }
 
 void dse_graph_array_free(DseGraphArray* array) {
-  delete array->from();
+  cass::Memory::deallocate(array->from());
 }
 
 void dse_graph_array_reset(DseGraphArray* array) {
@@ -597,7 +597,7 @@ CassError dse_graph_array_add_polygon(DseGraphArray* array,
 }
 
 void dse_graph_resultset_free(DseGraphResultSet* resultset) {
-  delete resultset->from();
+  cass::Memory::deallocate(resultset->from());
 }
 
 size_t dse_graph_resultset_count(DseGraphResultSet* resultset) {
@@ -742,7 +742,7 @@ size_t dse_graph_result_member_count(const DseGraphResult* result) {
 const char* dse_graph_result_member_key(const DseGraphResult* result,
                                         size_t index,
                                         size_t* length) {
- const rapidjson::Value& key = result->MemberBegin()[index].name;
+ const cass::json::Value& key = result->MemberBegin()[index].name;
  if (length != NULL) {
    *length = key.GetStringLength();
  }
@@ -792,10 +792,38 @@ CassError dse_graph_result_as_polygon(const DseGraphResult* result,
 
 namespace dse {
 
+GraphOptions*GraphOptions::clone() const {
+  GraphOptions* options = cass::Memory::allocate<GraphOptions>();
+
+  if (!graph_language_.empty()) {
+    options->set_graph_language(graph_language_);
+  }
+
+  if (!graph_source_.empty()) {
+    options->set_graph_source(graph_source_);
+  }
+
+  if (!graph_name_.empty()) {
+    options->set_graph_name(graph_name_);
+  }
+
+  if (read_consistency_ != CASS_CONSISTENCY_UNKNOWN) {
+    options->set_graph_read_consistency(read_consistency_);
+  }
+
+  if (write_consistency_ != CASS_CONSISTENCY_UNKNOWN) {
+    options->set_graph_write_consistency(write_consistency_);
+  }
+
+  options->request_timeout_ms_ = request_timeout_ms_;
+
+  return options;
+}
+
 void GraphOptions::set_request_timeout_ms(int64_t timeout_ms) {
   request_timeout_ms_ = timeout_ms;
   if (timeout_ms > 0) {
-    std::string value(sizeof(timeout_ms), 0);
+    cass::String value(sizeof(timeout_ms), 0);
     cass::encode_int64(&value[0], timeout_ms);
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_REQUEST_TIMEOUT,
@@ -828,14 +856,14 @@ const GraphResult* GraphResultSet::next() {
       return NULL;
     }
 
-    rapidjson::Value::ConstMemberIterator i = document_.FindMember("result");
+    cass::json::Value::ConstMemberIterator i = document_.FindMember("result");
     return i != document_.MemberEnd() ? &i->value : NULL;
   }
   return NULL;
 }
 
 void GraphWriter::add_point(cass_double_t x, cass_double_t y) {
-  std::stringstream ss;
+  cass::OStringStream ss;
   ss.precision(WKT_MAX_DIGITS);
   ss << "POINT (" << x << " " << y << ")";
   String(ss.str().c_str());

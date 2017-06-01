@@ -11,11 +11,10 @@
 #include "dse.h"
 
 #include "serialization.hpp"
+#include "string.hpp"
 #include "wkt.hpp"
 
 #include <external.hpp>
-
-#include <string>
 
 namespace dse {
 
@@ -57,7 +56,7 @@ public:
     return CASS_OK;
   }
 
-  std::string to_wkt() const;
+  cass::String to_wkt() const;
 
 private:
   cass_uint32_t num_points_;

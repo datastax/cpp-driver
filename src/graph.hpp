@@ -10,18 +10,13 @@
 
 #include "dse.h"
 
+#include "json.hpp"
 #include "line_string.hpp"
 #include "polygon.hpp"
-
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
+#include "string.hpp"
 
 #include <external.hpp>
 #include <scoped_ptr.hpp>
-
-#include <string>
-#include <vector>
 
 #define DSE_GRAPH_OPTION_LANGUAGE_KEY          "graph-language"
 #define DSE_GRAPH_OPTION_SOURCE_KEY            "graph-source"
@@ -35,7 +30,6 @@
 #define DSE_GRAPH_ANALYTICS_SOURCE             "a"
 
 #define DSE_LOOKUP_ANALYTICS_GRAPH_SERVER      "CALL DseClientTool.getAnalyticsGraphServer()"
-
 
 namespace dse {
 
@@ -58,51 +52,25 @@ public:
 
   CassCustomPayload* payload() const { return payload_; }
 
-  GraphOptions* clone() const {
-    GraphOptions* options = new GraphOptions();
+  GraphOptions* clone() const;
 
-    if (!graph_language_.empty()) {
-      options->set_graph_language(graph_language_);
-    }
-
-    if (!graph_source_.empty()) {
-      options->set_graph_source(graph_source_);
-    }
-
-    if (!graph_name_.empty()) {
-      options->set_graph_name(graph_name_);
-    }
-
-    if (read_consistency_ != CASS_CONSISTENCY_UNKNOWN) {
-      options->set_graph_read_consistency(read_consistency_);
-    }
-
-    if (write_consistency_ != CASS_CONSISTENCY_UNKNOWN) {
-      options->set_graph_write_consistency(write_consistency_);
-    }
-
-    options->request_timeout_ms_ = request_timeout_ms_;
-
-    return options;
-  }
-
-  void set_graph_language(const std::string& graph_language) {
+  void set_graph_language(const cass::String& graph_language) {
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_LANGUAGE_KEY, sizeof(DSE_GRAPH_OPTION_LANGUAGE_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_language.data()), graph_language.size());
     graph_language_ = graph_language;
   }
 
-  const std::string graph_source() const { return graph_source_; }
+  const cass::String graph_source() const { return graph_source_; }
 
-  void set_graph_source(const std::string& graph_source) {
+  void set_graph_source(const cass::String& graph_source) {
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_SOURCE_KEY, sizeof(DSE_GRAPH_OPTION_SOURCE_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_source.data()), graph_source.size());
     graph_source_ = graph_source;
   }
 
-  void set_graph_name(const std::string& graph_name) {
+  void set_graph_name(const cass::String& graph_name) {
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_NAME_KEY, sizeof(DSE_GRAPH_OPTION_NAME_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_name.data()), graph_name.size());
@@ -131,19 +99,18 @@ public:
 
 private:
   CassCustomPayload* payload_;
-  std::string graph_language_;
-  std::string graph_name_;
-  std::string graph_source_;
+  cass::String graph_language_;
+  cass::String graph_name_;
+  cass::String graph_source_;
   CassConsistency read_consistency_;
   CassConsistency write_consistency_;
   int64_t request_timeout_ms_;
 };
 
-
-class GraphWriter : private rapidjson::Writer<rapidjson::StringBuffer> {
+class GraphWriter : private cass::json::Writer<cass::json::StringBuffer> {
 public:
   GraphWriter()
-    : rapidjson::Writer<rapidjson::StringBuffer>(buffer_) { }
+    : cass::json::Writer<cass::json::StringBuffer>(buffer_) { }
 
   const char* data() const { return buffer_.GetString(); }
   size_t length() const { return buffer_.GetSize(); }
@@ -193,7 +160,7 @@ protected:
   void end_array() { EndArray(); }
 
 private:
-  rapidjson::StringBuffer buffer_;
+  cass::json::StringBuffer buffer_;
 };
 
 class GraphObject : public GraphWriter {
@@ -252,7 +219,7 @@ public:
     cass_statement_free(wrapped_);
   }
 
-  const std::string graph_source() const { return graph_source_; }
+  const cass::String graph_source() const { return graph_source_; }
 
   const CassStatement* wrapped() const { return wrapped_; }
 
@@ -272,12 +239,12 @@ public:
   }
 
 private:
-  std::string query_;
-  std::string graph_source_;
+  cass::String query_;
+  cass::String graph_source_;
   CassStatement* wrapped_;
 };
 
-typedef rapidjson::Value GraphResult;
+typedef cass::json::Value GraphResult;
 
 class GraphResultSet {
 public:
@@ -297,8 +264,8 @@ public:
   const GraphResult* next();
 
 private:
-  rapidjson::Document document_;
-  std::string json_;
+  cass::json::Document document_;
+  cass::String json_;
   CassIterator* rows_;
   const CassResult* result_;
 };

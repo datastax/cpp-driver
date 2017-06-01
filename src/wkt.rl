@@ -7,8 +7,9 @@
 
 #include "wkt.hpp"
 
+#include "string.hpp"
+
 #include <stdlib.h>
-#include <string>
 
 %%{
   machine wkt;
@@ -47,7 +48,7 @@ WktLexer::Token WktLexer::next_token() {
       ',' => { token = TK_COMMA; fbreak; };
       number => {
                    if (!skip_number_) {
-                     number_ = atof(std::string(ts, te).c_str());
+                     number_ = atof(cass::String(ts, te).c_str());
                    }
                    token = TK_NUMBER;
                    fbreak;
