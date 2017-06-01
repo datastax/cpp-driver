@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(simple_negative)
 
 BOOST_AUTO_TEST_CASE(edge_positive)
 {
-  CassDuration value((1UL << 31) - 1, (1UL << 31) - 1, (1UL << 63) - 1);
+  CassDuration value((1UL << 31) - 1, (1UL << 31) - 1, (1ULL << 63) - 1);
   Buffer result = encode(value);
   BOOST_CHECK_EQUAL(19, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(edge_positive)
 
 BOOST_AUTO_TEST_CASE(edge_negative)
 {
-  CassDuration value(1L << 31, 1L << 31, 1L << 63);
+  CassDuration value(1L << 31, 1L << 31, 1LL << 63);
   Buffer result = encode(value);
   BOOST_CHECK_EQUAL(19, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
