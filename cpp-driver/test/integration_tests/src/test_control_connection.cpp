@@ -45,7 +45,7 @@ public:
     test_utils::CassStatementPtr statement(cass_statement_new(query.str().c_str(), 0));
     test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
     if (cass_future_error_code(future.get()) ==  CASS_OK) {
-      return cass::get_host_from_future(future.get());
+      return cass::get_host_from_future(future.get()).c_str();
     } else {
       CassString message;
       cass_future_error_message(future.get(), &message.data, &message.length);

@@ -533,7 +533,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_CHECK(base_table_name == CassString(view_base_table_name.c_str()));
 
     std::vector<std::string> columns;
-    cass::explode(view_columns, columns);
+    test_utils::explode(view_columns, columns);
     BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_column_count(view),  columns.size());
 
     test_utils::CassIteratorPtr iterator(cass_iterator_columns_from_materialized_view_meta(view));
@@ -559,7 +559,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     }
 
     std::vector<std::string> partition_key;
-    cass::explode(view_partition_key, partition_key);
+    test_utils::explode(view_partition_key, partition_key);
     BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_partition_key_count(view), partition_key.size());
     for (size_t i = 0; i < partition_key.size(); ++i) {
       const CassColumnMeta* column = cass_materialized_view_meta_partition_key(view, i);
@@ -571,7 +571,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     }
 
     std::vector<std::string> clustering_key;
-    cass::explode(view_clustering_key, clustering_key);
+    test_utils::explode(view_clustering_key, clustering_key);
     BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_clustering_key_count(view), clustering_key.size());
     for (size_t i = 0; i < clustering_key.size(); ++i) {
       const CassColumnMeta* column = cass_materialized_view_meta_clustering_key(view, i);
@@ -685,10 +685,30 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     verify_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME, COMMENT, "boolean_sample");
   }
 
+  std::vector<std::string> get_user_data_type_field_names(const std::string& ks_name, const std::string& udt_name) {
+    std::vector<std::string> result;
+
+    const CassKeyspaceMeta* ks_meta = cass_schema_meta_keyspace_by_name(schema_meta_, ks_name.c_str());
+    if (ks_meta) {
+      const CassDataType* data_type = cass_keyspace_meta_user_type_by_name(ks_meta, udt_name.c_str());
+
+      size_t count =  cass_data_type_sub_type_count(data_type);
+      for (size_t i = 0; i < count; ++i) {
+        const char* name;
+        size_t name_length;
+        if (cass_data_type_sub_type_name(data_type, i, &name, &name_length) == CASS_OK) {
+          result.push_back(std::string(name, name_length));
+        }
+      }
+    }
+
+    return result;
+  }
+
   void verify_user_type(const std::string& ks_name,
     const std::string& udt_name,
     const std::vector<std::string>& udt_datatypes) {
-    std::vector<std::string> udt_field_names = cass::get_user_data_type_field_names(schema_meta_, ks_name, udt_name);
+    std::vector<std::string> udt_field_names = get_user_data_type_field_names(ks_name.c_str(), udt_name.c_str());
     BOOST_REQUIRE_EQUAL_COLLECTIONS(udt_datatypes.begin(), udt_datatypes.end(), udt_field_names.begin(), udt_field_names.end());
   }
 

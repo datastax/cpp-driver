@@ -19,6 +19,8 @@
 #endif
 
 #include "test_token_map_utils.hpp"
+#include "map.hpp"
+#include "set.hpp"
 
 #include <boost/test/unit_test.hpp>
 
@@ -27,7 +29,7 @@ namespace {
 template <class Partitioner>
 struct TestTokenMap {
   typedef typename cass::ReplicationStrategy<Partitioner>::Token Token;
-  typedef std::map<Token, cass::Host::Ptr> TokenHostMap;
+  typedef cass::Map<Token, cass::Host::Ptr> TokenHostMap;
 
   TokenHostMap tokens;
   cass::ScopedPtr<cass::TokenMap> token_map;
@@ -35,7 +37,7 @@ struct TestTokenMap {
   TestTokenMap()
     : token_map(cass::TokenMap::from_partitioner(Partitioner::name())) { }
 
-  void build(const std::string& keyspace_name = "ks", size_t replication_factor = 3) {
+  void build(const cass::String& keyspace_name = "ks", size_t replication_factor = 3) {
     add_keyspace_simple(keyspace_name, replication_factor, token_map.get());
     for (typename TokenHostMap::const_iterator i = tokens.begin(),
          end = tokens.end(); i != end; ++i) {
@@ -46,7 +48,7 @@ struct TestTokenMap {
     token_map->build();
   }
 
-  const cass::Host::Ptr& get_replica(const std::string& key) {
+  const cass::Host::Ptr& get_replica(const cass::String& key) {
     typename TokenHostMap::const_iterator i = tokens.upper_bound(Partitioner::hash(key));
     if (i != tokens.end()) {
       return i->second;
@@ -55,11 +57,11 @@ struct TestTokenMap {
     }
   }
 
-  void verify(const std::string& keyspace_name = "ks") {
-    const std::string keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
+  void verify(const cass::String& keyspace_name = "ks") {
+    const cass::String keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
     for (size_t i = 0; i < sizeof(keys)/sizeof(keys[0]); ++i) {
-      const std::string& key = keys[i];
+      const cass::String& key = keys[i];
 
       const cass::CopyOnWriteHostVec& hosts = token_map->get_replicas(keyspace_name, key);
       BOOST_REQUIRE(hosts && hosts->size() > 0);
@@ -162,15 +164,15 @@ BOOST_AUTO_TEST_CASE(murmur3_large_number_of_vnodes)
   add_keyspace_network_topology("ks1", replication, token_map);
   token_map->build();
 
-  const std::string keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
+  const cass::String keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
   for (size_t i = 0; i < sizeof(keys)/sizeof(keys[0]); ++i) {
-    const std::string& key = keys[i];
+    const cass::String& key = keys[i];
 
     const cass::CopyOnWriteHostVec& hosts = token_map->get_replicas("ks1", key);
     BOOST_REQUIRE(hosts && hosts->size() == replication_factor * num_dcs);
 
-    typedef std::map<std::string, std::set<std::string> > DcRackMap;
+    typedef cass::Map<cass::String, cass::Set<cass::String> > DcRackMap;
 
     // Verify rack counts
     DcRackMap dc_racks;

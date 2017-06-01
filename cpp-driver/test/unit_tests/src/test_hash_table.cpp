@@ -25,9 +25,9 @@
 #include <string.h>
 
 struct TestEntry : cass::HashTableEntry<TestEntry> {
-  TestEntry(const std::string& name)
+  TestEntry(const cass::String& name)
     : name(name) { }
-  std::string name;
+  cass::String name;
 };
 
 BOOST_AUTO_TEST_SUITE(hash_table)
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(resize)
   cass::CaseInsensitiveHashTable<TestEntry> ht(0);
 
   for (int i = 0; i < 26; ++i) {
-    std::string s;
+    cass::String s;
     s.push_back('a' + i);
     ht.add(TestEntry(s));
   }

@@ -30,40 +30,40 @@ BOOST_AUTO_TEST_SUITE(utils)
 
 BOOST_AUTO_TEST_CASE(cql_id)
 {
-  std::string s;
+  cass::String s;
 
   // valid id
   s = "abc";
-  BOOST_CHECK_EQUAL(cass::to_cql_id(s), std::string("abc"));
+  BOOST_CHECK_EQUAL(cass::to_cql_id(s), cass::String("abc"));
 
   // test lower cassing
   s = "ABC";
-  BOOST_CHECK_EQUAL(cass::to_cql_id(s), std::string("abc"));
+  BOOST_CHECK_EQUAL(cass::to_cql_id(s), cass::String("abc"));
 
   // quoted
   s = "\"aBc\"";
-  BOOST_CHECK_EQUAL(cass::to_cql_id(s), std::string("aBc"));
+  BOOST_CHECK_EQUAL(cass::to_cql_id(s), cass::String("aBc"));
 
   // invalid chars
   s = "!@#";
-  BOOST_CHECK_EQUAL(cass::to_cql_id(s), std::string("!@#"));
+  BOOST_CHECK_EQUAL(cass::to_cql_id(s), cass::String("!@#"));
 }
 
 BOOST_AUTO_TEST_CASE(escape_id)
 {
-  std::string s;
+  cass::String s;
 
   s = "abc";
-  BOOST_CHECK_EQUAL(cass::escape_id(s), std::string("abc"));
+  BOOST_CHECK_EQUAL(cass::escape_id(s), cass::String("abc"));
 
   s = "aBc";
-  BOOST_CHECK_EQUAL(cass::escape_id(s), std::string("\"aBc\""));
+  BOOST_CHECK_EQUAL(cass::escape_id(s), cass::String("\"aBc\""));
 
   s = "\"";
-  BOOST_CHECK_EQUAL(cass::escape_id(s), std::string("\"\"\"\""));
+  BOOST_CHECK_EQUAL(cass::escape_id(s), cass::String("\"\"\"\""));
 
   s = "a\"Bc";
-  BOOST_CHECK_EQUAL(cass::escape_id(s), std::string("\"a\"\"Bc\""));
+  BOOST_CHECK_EQUAL(cass::escape_id(s), cass::String("\"a\"\"Bc\""));
 }
 
 BOOST_AUTO_TEST_CASE(num_leading_zeros)

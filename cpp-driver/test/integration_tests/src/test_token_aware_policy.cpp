@@ -77,7 +77,7 @@ struct TestTokenMap {
       cass_value_get_string(data_center, &str.data, &str.length);
       std::string dc(str.data, str.length);
 
-      std::string ip = cass::get_host_from_future(future.get());
+      std::string ip = cass::get_host_from_future(future.get()).c_str();
       test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(token_set));
       while (cass_iterator_next(iterator.get())) {
         cass_value_get_string(cass_iterator_get_value(iterator.get()), &str.data, &str.length);
@@ -89,7 +89,7 @@ struct TestTokenMap {
 
   ReplicaSet get_expected_replicas(size_t rf, const std::string& value, const std::string& local_dc = "") {
     ReplicaSet replicas;
-    TokenHostMap::iterator i = tokens.upper_bound(cass::create_murmur3_hash_from_string(value));
+    TokenHostMap::iterator i = tokens.upper_bound(cass::create_murmur3_hash_from_string(value.c_str()));
     while  (replicas.size() < rf) {
       if (local_dc.empty() || local_dc == i->second.dc) {
         replicas.insert(i->second.ip);
@@ -115,7 +115,7 @@ std::string get_replica(test_utils::CassSessionPtr session,
   cass_statement_set_keyspace(statement.get(), keyspace.c_str());
   test_utils::CassFuturePtr future(
         cass_session_execute(session.get(), statement.get()));
-  return cass::get_host_from_future(future.get());
+  return cass::get_host_from_future(future.get()).c_str();
 }
 
 TestTokenMap::ReplicaSet get_replicas(size_t rf,

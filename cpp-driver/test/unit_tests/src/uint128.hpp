@@ -25,8 +25,9 @@
 #ifndef UINT128_20050119_H_
 #define UINT128_20050119_H_
 
+#include "string.hpp"
+
 #include <stdexcept>
-#include <string>
 #include <iostream>
 #include <climits>
 #include <stdint.h>
@@ -97,7 +98,7 @@ public:
 	uint128(base_type value)      : lo(value), hi(0)                         {}
 	uint128(base_type lo, base_type hi) : lo(lo), hi(hi)                     {}
 
-	uint128(const std::string &sz) : lo(0), hi(0) {
+	uint128(const cass::String &sz) : lo(0), hi(0) {
 
 		// do we have at least one character?
 		if(!sz.empty()) {
@@ -105,7 +106,7 @@ public:
 			int radix = 10;
 			bool minus = false;
 
-      std::string::const_iterator i = sz.begin();
+      cass::String::const_iterator i = sz.begin();
 
 			// check for minus sign, i suppose technically this should only apply
 			// to base 10, but who says that -0x1 should be invalid?
@@ -374,7 +375,7 @@ public:
 		return lo;
 	}
 
-    std::string to_string(unsigned int radix = 10) const {
+    cass::String to_string(unsigned int radix = 10) const {
     	if(*this == 0) {
 			return "0";
 		}
