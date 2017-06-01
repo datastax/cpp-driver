@@ -22,7 +22,7 @@ const std::vector<std::string> test::driver::internals::Utils::attempted_hosts(
     cass::AddressVec attempted_addresses = response->attempted_addresses();
     for (cass::AddressVec::iterator iterator = attempted_addresses.begin();
       iterator != attempted_addresses.end(); ++iterator) {
-      attempted_hosts.push_back(iterator->to_string());
+      attempted_hosts.push_back(iterator->to_string().c_str());
     }
     std::sort(attempted_hosts.begin(), attempted_hosts.end());
   }
@@ -34,7 +34,7 @@ const std::string test::driver::internals::Utils::host(CassFuture* future) {
   if (future) {
     cass::Future* cass_future = static_cast<cass::Future*>(future);
     if (cass_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
-      return static_cast<cass::ResponseFuture*>(cass_future)->address().to_string();
+      return static_cast<cass::ResponseFuture*>(cass_future)->address().to_string().c_str();
     }
   }
   return "";
