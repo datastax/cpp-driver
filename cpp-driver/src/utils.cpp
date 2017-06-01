@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <assert.h>
 #include <functional>
-#include <sstream>
 
 #if (defined(WIN32) || defined(_WIN32))
   #include <windows.h>
@@ -31,7 +30,7 @@
 
 namespace cass {
 
-std::string opcode_to_string(int opcode) {
+String opcode_to_string(int opcode) {
   switch (opcode) {
     case CQL_OPCODE_ERROR:
       return "CQL_OPCODE_ERROR";
@@ -72,8 +71,8 @@ std::string opcode_to_string(int opcode) {
   return "";
 }
 
-std::string protocol_version_to_string(int version) {
-  std::stringstream ss;
+String protocol_version_to_string(int version) {
+  OStringStream ss;
   if (version & DSE_PROTOCOL_VERSION_BIT) {
     ss << "DSEv" << (version & DSE_PROTOCOL_VERSION_MASK);
   } else {
@@ -82,10 +81,10 @@ std::string protocol_version_to_string(int version) {
   return ss.str();
 }
 
-void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter /* = ',' */) {
-  std::istringstream stream(str);
+void explode(const String& str, Vector<String>& vec, const char delimiter /* = ',' */) {
+  IStringStream stream(str);
   while (!stream.eof()) {
-    std::string token;
+    String token;
     std::getline(stream, token, delimiter);
     if (!trim(token).empty()) {
       vec.push_back(token);
@@ -93,7 +92,7 @@ void explode(const std::string& str, std::vector<std::string>& vec, const char d
   }
 }
 
-std::string& trim(std::string& str) {
+String& trim(String& str) {
   // Trim front
   str.erase(str.begin(),
             std::find_if(str.begin(), str.end(),
@@ -115,8 +114,8 @@ static bool is_lower_word_char(int c) {
          (c >= '0' && c <= '9') || c == '_';
 }
 
-bool is_valid_cql_id(const std::string& str) {
-  for (std::string::const_iterator i = str.begin(),
+bool is_valid_cql_id(const String& str) {
+  for (String::const_iterator i = str.begin(),
        end = str.end(); i != end; ++i) {
     if (!is_word_char(*i)) {
       return false;
@@ -125,12 +124,12 @@ bool is_valid_cql_id(const std::string& str) {
   return true;
 }
 
-bool is_valid_lower_cql_id(const std::string& str) {
+bool is_valid_lower_cql_id(const String& str) {
   if (str.empty() || !is_lower_word_char(str[0])) {
     return false;
   }
   if (str.size() > 1) {
-    for (std::string::const_iterator i = str.begin() + 1,
+    for (String::const_iterator i = str.begin() + 1,
          end = str.end(); i != end; ++i) {
       if (!is_lower_word_char(*i)) {
         return false;
@@ -140,11 +139,11 @@ bool is_valid_lower_cql_id(const std::string& str) {
   return true;
 }
 
-std::string& quote_id(std::string& str) {
-  std::string temp(str);
+String& quote_id(String& str) {
+  String temp(str);
   str.clear();
   str.push_back('"');
-  for (std::string::const_iterator i = temp.begin(),
+  for (String::const_iterator i = temp.begin(),
        end = temp.end(); i != end; ++i) {
     if (*i == '"') {
       str.push_back('"');
@@ -158,11 +157,11 @@ std::string& quote_id(std::string& str) {
   return str;
 }
 
-std::string& escape_id(std::string& str) {
+String& escape_id(String& str) {
   return is_valid_lower_cql_id(str) ?  str : quote_id(str);
 }
 
-std::string& to_cql_id(std::string& str) {
+String& to_cql_id(String& str) {
   if (is_valid_cql_id(str)) {
     std::transform(str.begin(), str.end(), str.begin(), tolower);
     return str;

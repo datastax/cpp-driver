@@ -17,13 +17,12 @@
 #ifndef __CASS_EXECUTE_REQUEST_HPP_INCLUDED__
 #define __CASS_EXECUTE_REQUEST_HPP_INCLUDED__
 
-#include <string>
-#include <vector>
-
 #include "statement.hpp"
 #include "constants.hpp"
 #include "prepared.hpp"
 #include "ref_counted.hpp"
+#include "string.hpp"
+#include "vector.hpp"
 
 namespace cass {
 
@@ -43,7 +42,7 @@ public:
 
   virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
-  bool get_routing_key(std::string* routing_key, EncodingCache* cache)  const {
+  bool get_routing_key(String* routing_key, EncodingCache* cache)  const {
     return calculate_routing_key(prepared_->key_indices(), routing_key, cache);
   }
 

@@ -19,6 +19,8 @@
 
 #include "address.hpp"
 #include "cassandra.h"
+#include "map.hpp"
+#include "string.hpp"
 #include "string_ref.hpp"
 #include "utils.hpp"
 
@@ -26,9 +28,6 @@
 
 #include <assert.h>
 #include <limits>
-#include <list>
-#include <map>
-#include <string>
 #include <string.h>
 
 namespace cass {
@@ -256,7 +255,7 @@ inline char* decode_inet(char* input, CassInet* output) {
 }
 
 inline char* decode_string_map(char* input,
-                               std::map<std::string, std::string>& map) {
+                               Map<String, String>& map) {
 
   map.clear();
   uint16_t len = 0;
@@ -270,13 +269,13 @@ inline char* decode_string_map(char* input,
 
     buffer = decode_string(buffer, &key, key_size);
     buffer = decode_string(buffer, &value, value_size);
-    map.insert(std::make_pair(std::string(key, key_size),
-                              std::string(value, value_size)));
+    map.insert(std::make_pair(String(key, key_size),
+                              String(value, value_size)));
   }
   return buffer;
 }
 
-inline char* decode_stringlist(char* input, std::list<std::string>& output) {
+inline char* decode_stringlist(char* input, Vector<String>& output) {
   output.clear();
   uint16_t len = 0;
   char* buffer = decode_uint16(input, len);
@@ -286,7 +285,7 @@ inline char* decode_stringlist(char* input, std::list<std::string>& output) {
     size_t s_size = 0;
 
     buffer = decode_string(buffer, &s, s_size);
-    output.push_back(std::string(s, s_size));
+    output.push_back(String(s, s_size));
   }
   return buffer;
 }
@@ -304,7 +303,7 @@ inline char* decode_stringlist(char* input, StringRefVec& output) {
   return pos;
 }
 
-typedef std::map<std::string, std::list<std::string> > StringMultimap;
+typedef Map<String, Vector<String> > StringMultimap;
 
 inline char* decode_string_multimap(char* input, StringMultimap& output) {
   output.clear();
@@ -314,11 +313,11 @@ inline char* decode_string_multimap(char* input, StringMultimap& output) {
   for (int i = 0; i < len; i++) {
     char* key = 0;
     size_t key_size = 0;
-    std::list<std::string> value;
+    Vector<String> value;
 
     buffer = decode_string(buffer, &key, key_size);
     buffer = decode_stringlist(buffer, value);
-    output.insert(std::make_pair(std::string(key, key_size), value));
+    output.insert(std::make_pair(String(key, key_size), value));
   }
   return buffer;
 }

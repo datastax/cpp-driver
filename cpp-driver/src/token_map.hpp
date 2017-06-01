@@ -18,8 +18,8 @@
 #define __CASS_TOKEN_MAP_HPP_INCLUDED__
 
 #include "host.hpp"
-
-#include <string>
+#include "memory.hpp"
+#include "string.hpp"
 
 namespace cass {
 
@@ -41,13 +41,13 @@ public:
 
   virtual void add_keyspaces(const VersionNumber& cassandra_version, ResultResponse* result) = 0;
   virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, ResultResponse* result) = 0;
-  virtual void drop_keyspace(const std::string& keyspace_name) = 0;
+  virtual void drop_keyspace(const String& keyspace_name) = 0;
   virtual void clear_replicas_and_strategies() = 0;
 
   virtual void build() = 0;
 
-  virtual const CopyOnWriteHostVec& get_replicas(const std::string& keyspace_name,
-                                                 const std::string& routing_key) const = 0;
+  virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
+                                                 const String& routing_key) const = 0;
 };
 
 } // namespace cass

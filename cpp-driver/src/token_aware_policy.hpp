@@ -34,11 +34,11 @@ public:
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
 
-  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+  virtual QueryPlan* new_query_plan(const String& connected_keyspace,
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
-  LoadBalancingPolicy* new_instance() { return new TokenAwarePolicy(child_policy_->new_instance()); }
+  LoadBalancingPolicy* new_instance() { return Memory::allocate<TokenAwarePolicy>(child_policy_->new_instance()); }
 
 private:
   class TokenAwareQueryPlan : public QueryPlan {

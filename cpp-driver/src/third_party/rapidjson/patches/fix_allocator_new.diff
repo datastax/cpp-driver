@@ -1,0 +1,936 @@
+diff --git a/include/rapidjson/allocators.h b/include/rapidjson/allocators.h
+index 98affe0..3d2a771 100644
+--- a/include/rapidjson/allocators.h
++++ b/include/rapidjson/allocators.h
+@@ -1,5 +1,5 @@
+ // Tencent is pleased to support the open source community by making RapidJSON available.
+-// 
++//
+ // Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
+ //
+ // Licensed under the MIT License (the "License"); you may not use this file except
+@@ -7,9 +7,9 @@
+ //
+ // http://opensource.org/licenses/MIT
+ //
+-// Unless required by applicable law or agreed to in writing, software distributed 
+-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
+-// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
++// Unless required by applicable law or agreed to in writing, software distributed
++// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
++// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ // specific language governing permissions and limitations under the License.
+ 
+ #ifndef RAPIDJSON_ALLOCATORS_H_
+@@ -24,10 +24,10 @@ RAPIDJSON_NAMESPACE_BEGIN
+ 
+ /*! \class rapidjson::Allocator
+     \brief Concept for allocating, resizing and freeing memory block.
+-    
++
+     Note that Malloc() and Realloc() are non-static but Free() is static.
+-    
+-    So if an allocator need to support Free(), it needs to put its pointer in 
++
++    So if an allocator need to support Free(), it needs to put its pointer in
+     the header of memory block.
+ 
+ \code
+@@ -62,7 +62,7 @@ concept Allocator {
+ class CrtAllocator {
+ public:
+     static const bool kNeedFree = true;
+-    void* Malloc(size_t size) { 
++    void* Malloc(size_t size) {
+         if (size) //  behavior of malloc(0) is implementation defined.
+             return std::malloc(size);
+         else
+@@ -83,7 +83,7 @@ public:
+ // MemoryPoolAllocator
+ 
+ //! Default memory allocator used by the parser and DOM.
+-/*! This allocator allocate memory blocks from pre-allocated memory chunks. 
++/*! This allocator allocate memory blocks from pre-allocated memory chunks.
+ 
+     It does not free memory blocks. And Realloc() only allocate new memory.
+ 
+@@ -107,7 +107,7 @@ public:
+     /*! \param chunkSize The size of memory chunk. The default is kDefaultChunkSize.
+         \param baseAllocator The allocator for allocating memory chunks.
+     */
+-    MemoryPoolAllocator(size_t chunkSize = kDefaultChunkCapacity, BaseAllocator* baseAllocator = 0) : 
++    MemoryPoolAllocator(size_t chunkSize = kDefaultChunkCapacity, BaseAllocator* baseAllocator = 0) :
+         chunkHead_(0), chunk_capacity_(chunkSize), userBuffer_(0), baseAllocator_(baseAllocator), ownBaseAllocator_(0)
+     {
+     }
+@@ -236,7 +236,7 @@ private:
+     */
+     bool AddChunk(size_t capacity) {
+         if (!baseAllocator_)
+-            ownBaseAllocator_ = baseAllocator_ = RAPIDJSON_NEW(BaseAllocator());
++            ownBaseAllocator_ = baseAllocator_ = RAPIDJSON_NEW(BaseAllocator)();
+         if (ChunkHeader* chunk = reinterpret_cast<ChunkHeader*>(baseAllocator_->Malloc(RAPIDJSON_ALIGN(sizeof(ChunkHeader)) + capacity))) {
+             chunk->capacity = capacity;
+             chunk->size = 0;
+diff --git a/include/rapidjson/document.h b/include/rapidjson/document.h
+index e3e20df..f8a3823 100644
+--- a/include/rapidjson/document.h
++++ b/include/rapidjson/document.h
+@@ -1,5 +1,5 @@
+ // Tencent is pleased to support the open source community by making RapidJSON available.
+-// 
++//
+ // Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
+ //
+ // Licensed under the MIT License (the "License"); you may not use this file except
+@@ -7,9 +7,9 @@
+ //
+ // http://opensource.org/licenses/MIT
+ //
+-// Unless required by applicable law or agreed to in writing, software distributed 
+-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
+-// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
++// Unless required by applicable law or agreed to in writing, software distributed
++// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
++// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ // specific language governing permissions and limitations under the License.
+ 
+ #ifndef RAPIDJSON_DOCUMENT_H_
+@@ -67,8 +67,8 @@ class GenericDocument;
+     But a compiler (IBM XL C/C++ for AIX) have reported to have problem with that so it moved as a namespace scope struct.
+     https://code.google.com/p/rapidjson/issues/detail?id=64
+ */
+-template <typename Encoding, typename Allocator> 
+-struct GenericMember { 
++template <typename Encoding, typename Allocator>
++struct GenericMember {
+     GenericValue<Encoding, Allocator> name;     //!< name of member (must be a string)
+     GenericValue<Encoding, Allocator> value;    //!< value of member.
+ };
+@@ -410,7 +410,7 @@ namespace internal {
+ template <typename ValueType, typename T>
+ struct TypeHelper {};
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, bool> {
+     static bool Is(const ValueType& v) { return v.IsBool(); }
+     static bool Get(const ValueType& v) { return v.GetBool(); }
+@@ -418,7 +418,7 @@ struct TypeHelper<ValueType, bool> {
+     static ValueType& Set(ValueType& v, bool data, typename ValueType::AllocatorType&) { return v.SetBool(data); }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, int> {
+     static bool Is(const ValueType& v) { return v.IsInt(); }
+     static int Get(const ValueType& v) { return v.GetInt(); }
+@@ -426,7 +426,7 @@ struct TypeHelper<ValueType, int> {
+     static ValueType& Set(ValueType& v, int data, typename ValueType::AllocatorType&) { return v.SetInt(data); }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, unsigned> {
+     static bool Is(const ValueType& v) { return v.IsUint(); }
+     static unsigned Get(const ValueType& v) { return v.GetUint(); }
+@@ -434,7 +434,7 @@ struct TypeHelper<ValueType, unsigned> {
+     static ValueType& Set(ValueType& v, unsigned data, typename ValueType::AllocatorType&) { return v.SetUint(data); }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, int64_t> {
+     static bool Is(const ValueType& v) { return v.IsInt64(); }
+     static int64_t Get(const ValueType& v) { return v.GetInt64(); }
+@@ -442,7 +442,7 @@ struct TypeHelper<ValueType, int64_t> {
+     static ValueType& Set(ValueType& v, int64_t data, typename ValueType::AllocatorType&) { return v.SetInt64(data); }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, uint64_t> {
+     static bool Is(const ValueType& v) { return v.IsUint64(); }
+     static uint64_t Get(const ValueType& v) { return v.GetUint64(); }
+@@ -450,7 +450,7 @@ struct TypeHelper<ValueType, uint64_t> {
+     static ValueType& Set(ValueType& v, uint64_t data, typename ValueType::AllocatorType&) { return v.SetUint64(data); }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, double> {
+     static bool Is(const ValueType& v) { return v.IsDouble(); }
+     static double Get(const ValueType& v) { return v.GetDouble(); }
+@@ -458,7 +458,7 @@ struct TypeHelper<ValueType, double> {
+     static ValueType& Set(ValueType& v, double data, typename ValueType::AllocatorType&) { return v.SetDouble(data); }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, float> {
+     static bool Is(const ValueType& v) { return v.IsFloat(); }
+     static float Get(const ValueType& v) { return v.GetFloat(); }
+@@ -466,7 +466,7 @@ struct TypeHelper<ValueType, float> {
+     static ValueType& Set(ValueType& v, float data, typename ValueType::AllocatorType&) { return v.SetFloat(data); }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, const typename ValueType::Ch*> {
+     typedef const typename ValueType::Ch* StringType;
+     static bool Is(const ValueType& v) { return v.IsString(); }
+@@ -476,7 +476,7 @@ struct TypeHelper<ValueType, const typename ValueType::Ch*> {
+ };
+ 
+ #if RAPIDJSON_HAS_STDSTRING
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, std::basic_string<typename ValueType::Ch> > {
+     typedef std::basic_string<typename ValueType::Ch> StringType;
+     static bool Is(const ValueType& v) { return v.IsString(); }
+@@ -485,7 +485,7 @@ struct TypeHelper<ValueType, std::basic_string<typename ValueType::Ch> > {
+ };
+ #endif
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, typename ValueType::Array> {
+     typedef typename ValueType::Array ArrayType;
+     static bool Is(const ValueType& v) { return v.IsArray(); }
+@@ -494,14 +494,14 @@ struct TypeHelper<ValueType, typename ValueType::Array> {
+     static ValueType& Set(ValueType& v, ArrayType data, typename ValueType::AllocatorType&) { return v = data; }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, typename ValueType::ConstArray> {
+     typedef typename ValueType::ConstArray ArrayType;
+     static bool Is(const ValueType& v) { return v.IsArray(); }
+     static ArrayType Get(const ValueType& v) { return v.GetArray(); }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, typename ValueType::Object> {
+     typedef typename ValueType::Object ObjectType;
+     static bool Is(const ValueType& v) { return v.IsObject(); }
+@@ -510,7 +510,7 @@ struct TypeHelper<ValueType, typename ValueType::Object> {
+     static ValueType& Set(ValueType& v, ObjectType data, typename ValueType::AllocatorType&) { v = data; }
+ };
+ 
+-template<typename ValueType> 
++template<typename ValueType>
+ struct TypeHelper<ValueType, typename ValueType::ConstObject> {
+     typedef typename ValueType::ConstObject ObjectType;
+     static bool Is(const ValueType& v) { return v.IsObject(); }
+@@ -536,7 +536,7 @@ template <bool, typename> class GenericObject;
+     \tparam Encoding    Encoding of the value. (Even non-string values need to have the same encoding in a document)
+     \tparam Allocator   Allocator type for allocating memory of object, array and string.
+ */
+-template <typename Encoding, typename Allocator = MemoryPoolAllocator<> > 
++template <typename Encoding, typename Allocator = MemoryPoolAllocator<> >
+ class GenericValue {
+ public:
+     //! Name-value pair in an object.
+@@ -638,7 +638,7 @@ public:
+ 
+     //! Constructor for unsigned value.
+     explicit GenericValue(unsigned u) RAPIDJSON_NOEXCEPT : data_() {
+-        data_.n.u64 = u; 
++        data_.n.u64 = u;
+         data_.f.flags = (u & 0x80000000) ? kNumberUintFlag : (kNumberUintFlag | kIntFlag | kInt64Flag);
+     }
+ 
+@@ -857,14 +857,14 @@ public:
+         switch (GetType()) {
+         case kObjectType: // Warning: O(n^2) inner-loop
+             if (data_.o.size != rhs.data_.o.size)
+-                return false;           
++                return false;
+             for (ConstMemberIterator lhsMemberItr = MemberBegin(); lhsMemberItr != MemberEnd(); ++lhsMemberItr) {
+                 typename RhsType::ConstMemberIterator rhsMemberItr = rhs.FindMember(lhsMemberItr->name);
+                 if (rhsMemberItr == rhs.MemberEnd() || lhsMemberItr->value != rhsMemberItr->value)
+                     return false;
+             }
+             return true;
+-            
++
+         case kArrayType:
+             if (data_.a.size != rhs.data_.a.size)
+                 return false;
+@@ -1335,7 +1335,7 @@ public:
+         \note Linear time complexity.
+     */
+     void RemoveAllMembers() {
+-        RAPIDJSON_ASSERT(IsObject()); 
++        RAPIDJSON_ASSERT(IsObject());
+         for (MemberIterator m = MemberBegin(); m != MemberEnd(); ++m)
+             m->~Member();
+         data_.o.size = 0;
+@@ -1481,7 +1481,7 @@ public:
+         \note Linear time complexity.
+     */
+     void Clear() {
+-        RAPIDJSON_ASSERT(IsArray()); 
++        RAPIDJSON_ASSERT(IsArray());
+         GenericValue* e = GetElementsPointer();
+         for (GenericValue* v = e; v != e + data_.a.size; ++v)
+             v->~GenericValue();
+@@ -1628,7 +1628,7 @@ public:
+         RAPIDJSON_ASSERT(last <= End());
+         ValueIterator pos = Begin() + (first - Begin());
+         for (ValueIterator itr = pos; itr != last; ++itr)
+-            itr->~GenericValue();       
++            itr->~GenericValue();
+         std::memmove(pos, last, static_cast<size_t>(End() - last) * sizeof(GenericValue));
+         data_.a.size -= static_cast<SizeType>(last - first);
+         return pos;
+@@ -1687,7 +1687,7 @@ public:
+ 
+     //! Set this value as a string without copying source string.
+     /*! This version has better performance with supplied length, and also support string containing null character.
+-        \param s source string pointer. 
++        \param s source string pointer.
+         \param length The length of source string, excluding the trailing null terminator.
+         \return The value itself for fluent API.
+         \post IsString() == true && GetString() == s && GetStringLength() == length
+@@ -1704,7 +1704,7 @@ public:
+ 
+     //! Set this value as a string by copying from source string.
+     /*! This version has better performance with supplied length, and also support string containing null character.
+-        \param s source string. 
++        \param s source string.
+         \param length The length of source string, excluding the trailing null terminator.
+         \param allocator Allocator for allocating copied buffer. Commonly use GenericDocument::GetAllocator().
+         \return The value itself for fluent API.
+@@ -1713,7 +1713,7 @@ public:
+     GenericValue& SetString(const Ch* s, SizeType length, Allocator& allocator) { this->~GenericValue(); SetStringRaw(StringRef(s, length), allocator); return *this; }
+ 
+     //! Set this value as a string by copying from source string.
+-    /*! \param s source string. 
++    /*! \param s source string.
+         \param allocator Allocator for allocating copied buffer. Commonly use GenericDocument::GetAllocator().
+         \return The value itself for fluent API.
+         \post IsString() == true && GetString() != s && strcmp(GetString(),s) == 0 && GetStringLength() == length
+@@ -1790,10 +1790,10 @@ public:
+                 if (RAPIDJSON_UNLIKELY(!v->Accept(handler)))
+                     return false;
+             return handler.EndArray(data_.a.size);
+-    
++
+         case kStringType:
+             return handler.String(GetString(), GetStringLength(), (data_.f.flags & kCopyFlag) != 0);
+-    
++
+         default:
+             RAPIDJSON_ASSERT(GetType() == kNumberType);
+             if (IsDouble())         return handler.Double(data_.n.d);
+@@ -2010,7 +2010,7 @@ private:
+ typedef GenericValue<UTF8<> > Value;
+ 
+ ///////////////////////////////////////////////////////////////////////////////
+-// GenericDocument 
++// GenericDocument
+ 
+ //! A document for parsing JSON text as DOM.
+ /*!
+@@ -2038,20 +2038,20 @@ public:
+         GenericValue<Encoding, Allocator>(type),  allocator_(allocator), ownAllocator_(0), stack_(stackAllocator, stackCapacity), parseResult_()
+     {
+         if (!allocator_)
+-            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator());
++            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator)();
+     }
+ 
+     //! Constructor
+-    /*! Creates an empty document which type is Null. 
++    /*! Creates an empty document which type is Null.
+         \param allocator        Optional allocator for allocating memory.
+         \param stackCapacity    Optional initial capacity of stack in bytes.
+         \param stackAllocator   Optional allocator for allocating memory for stack.
+     */
+-    GenericDocument(Allocator* allocator = 0, size_t stackCapacity = kDefaultStackCapacity, StackAllocator* stackAllocator = 0) : 
++    GenericDocument(Allocator* allocator = 0, size_t stackCapacity = kDefaultStackCapacity, StackAllocator* stackAllocator = 0) :
+         allocator_(allocator), ownAllocator_(0), stack_(stackAllocator, stackCapacity), parseResult_()
+     {
+         if (!allocator_)
+-            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator());
++            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator)();
+     }
+ 
+ #if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+@@ -2253,7 +2253,7 @@ public:
+     GenericDocument& Parse(const Ch* str, size_t length) {
+         return Parse<parseFlags, Encoding>(str, length);
+     }
+-    
++
+     GenericDocument& Parse(const Ch* str, size_t length) {
+         return Parse<kParseDefaultFlags>(str, length);
+     }
+@@ -2273,7 +2273,7 @@ public:
+     GenericDocument& Parse(const std::basic_string<Ch>& str) {
+         return Parse<kParseDefaultFlags>(str);
+     }
+-#endif // RAPIDJSON_HAS_STDSTRING    
++#endif // RAPIDJSON_HAS_STDSTRING
+ 
+     //!@}
+ 
+@@ -2338,16 +2338,16 @@ public:
+     bool Uint64(uint64_t i) { new (stack_.template Push<ValueType>()) ValueType(i); return true; }
+     bool Double(double d) { new (stack_.template Push<ValueType>()) ValueType(d); return true; }
+ 
+-    bool RawNumber(const Ch* str, SizeType length, bool copy) { 
+-        if (copy) 
++    bool RawNumber(const Ch* str, SizeType length, bool copy) {
++        if (copy)
+             new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator());
+         else
+             new (stack_.template Push<ValueType>()) ValueType(str, length);
+         return true;
+     }
+ 
+-    bool String(const Ch* str, SizeType length, bool copy) { 
+-        if (copy) 
++    bool String(const Ch* str, SizeType length, bool copy) {
++        if (copy)
+             new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator());
+         else
+             new (stack_.template Push<ValueType>()) ValueType(str, length);
+@@ -2355,7 +2355,7 @@ public:
+     }
+ 
+     bool StartObject() { new (stack_.template Push<ValueType>()) ValueType(kObjectType); return true; }
+-    
++
+     bool Key(const Ch* str, SizeType length, bool copy) { return String(str, length, copy); }
+ 
+     bool EndObject(SizeType memberCount) {
+@@ -2365,7 +2365,7 @@ public:
+     }
+ 
+     bool StartArray() { new (stack_.template Push<ValueType>()) ValueType(kArrayType); return true; }
+-    
++
+     bool EndArray(SizeType elementCount) {
+         ValueType* elements = stack_.template Pop<ValueType>(elementCount);
+         stack_.template Top<ValueType>()->SetArrayRaw(elements, elementCount, GetAllocator());
+diff --git a/include/rapidjson/internal/stack.h b/include/rapidjson/internal/stack.h
+index 022c9aa..697ab6e 100644
+--- a/include/rapidjson/internal/stack.h
++++ b/include/rapidjson/internal/stack.h
+@@ -1,5 +1,5 @@
+ // Tencent is pleased to support the open source community by making RapidJSON available.
+-// 
++//
+ // Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
+ //
+ // Licensed under the MIT License (the "License"); you may not use this file except
+@@ -7,9 +7,9 @@
+ //
+ // http://opensource.org/licenses/MIT
+ //
+-// Unless required by applicable law or agreed to in writing, software distributed 
+-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
+-// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
++// Unless required by applicable law or agreed to in writing, software distributed
++// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
++// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ // specific language governing permissions and limitations under the License.
+ 
+ #ifndef RAPIDJSON_INTERNAL_STACK_H_
+@@ -97,7 +97,7 @@ public:
+ 
+     void Clear() { stackTop_ = stack_; }
+ 
+-    void ShrinkToFit() { 
++    void ShrinkToFit() {
+         if (Empty()) {
+             // If the stack is empty, completely deallocate the memory.
+             Allocator::Free(stack_);
+@@ -140,7 +140,7 @@ public:
+     }
+ 
+     template<typename T>
+-    T* Top() { 
++    T* Top() {
+         RAPIDJSON_ASSERT(GetSize() >= sizeof(T));
+         return reinterpret_cast<T*>(stackTop_ - sizeof(T));
+     }
+@@ -183,7 +183,7 @@ private:
+         size_t newCapacity;
+         if (stack_ == 0) {
+             if (!allocator_)
+-                ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator());
++                ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator)();
+             newCapacity = initialCapacity_;
+         } else {
+             newCapacity = GetCapacity();
+diff --git a/include/rapidjson/pointer.h b/include/rapidjson/pointer.h
+index 0206ac1..3c5016b 100644
+--- a/include/rapidjson/pointer.h
++++ b/include/rapidjson/pointer.h
+@@ -1,5 +1,5 @@
+ // Tencent is pleased to support the open source community by making RapidJSON available.
+-// 
++//
+ // Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
+ //
+ // Licensed under the MIT License (the "License"); you may not use this file except
+@@ -7,9 +7,9 @@
+ //
+ // http://opensource.org/licenses/MIT
+ //
+-// Unless required by applicable law or agreed to in writing, software distributed 
+-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
+-// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
++// Unless required by applicable law or agreed to in writing, software distributed
++// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
++// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ // specific language governing permissions and limitations under the License.
+ 
+ #ifndef RAPIDJSON_POINTER_H_
+@@ -50,16 +50,16 @@ enum PointerParseErrorCode {
+ 
+ //! Represents a JSON Pointer. Use Pointer for UTF8 encoding and default allocator.
+ /*!
+-    This class implements RFC 6901 "JavaScript Object Notation (JSON) Pointer" 
++    This class implements RFC 6901 "JavaScript Object Notation (JSON) Pointer"
+     (https://tools.ietf.org/html/rfc6901).
+ 
+     A JSON pointer is for identifying a specific value in a JSON document
+     (GenericDocument). It can simplify coding of DOM tree manipulation, because it
+     can access multiple-level depth of DOM tree with single API call.
+ 
+-    After it parses a string representation (e.g. "/foo/0" or URI fragment 
++    After it parses a string representation (e.g. "/foo/0" or URI fragment
+     representation (e.g. "#/foo/0") into its internal representation (tokens),
+-    it can be used to resolve a specific value in multiple documents, or sub-tree 
++    it can be used to resolve a specific value in multiple documents, or sub-tree
+     of documents.
+ 
+     Contrary to GenericValue, Pointer can be copy constructed and copy assigned.
+@@ -70,10 +70,10 @@ enum PointerParseErrorCode {
+     supplied tokens eliminates these.
+ 
+     GenericPointer depends on GenericDocument and GenericValue.
+-    
++
+     \tparam ValueType The value type of the DOM tree. E.g. GenericValue<UTF8<> >
+     \tparam Allocator The allocator type for allocating memory for internal representation.
+-    
++
+     \note GenericPointer uses same encoding of ValueType.
+     However, Allocator of GenericPointer is independent of Allocator of Value.
+ */
+@@ -85,7 +85,7 @@ public:
+ 
+     //! A token is the basic units of internal representation.
+     /*!
+-        A JSON pointer string representation "/foo/123" is parsed to two tokens: 
++        A JSON pointer string representation "/foo/123" is parsed to two tokens:
+         "foo" and 123. 123 will be represented in both numeric form and string form.
+         They are resolved according to the actual value type (object or array).
+ 
+@@ -93,7 +93,7 @@ public:
+         (greater than limits of SizeType), they are only treated as string form
+         (i.e. the token's index will be equal to kPointerInvalidIndex).
+ 
+-        This struct is public so that user can create a Pointer without parsing and 
++        This struct is public so that user can create a Pointer without parsing and
+         allocation, using a special constructor.
+     */
+     struct Token {
+@@ -337,7 +337,7 @@ public:
+ 
+         for (size_t i = 0; i < tokenCount_; i++) {
+             if (tokens_[i].index != rhs.tokens_[i].index ||
+-                tokens_[i].length != rhs.tokens_[i].length || 
++                tokens_[i].length != rhs.tokens_[i].length ||
+                 (tokens_[i].length != 0 && std::memcmp(tokens_[i].name, rhs.tokens_[i].name, sizeof(Ch)* tokens_[i].length) != 0))
+             {
+                 return false;
+@@ -388,9 +388,9 @@ public:
+         If the value is not exist, it creates all parent values and a JSON Null value.
+         So it always succeed and return the newly created or existing value.
+ 
+-        Remind that it may change types of parents according to tokens, so it 
+-        potentially removes previously stored values. For example, if a document 
+-        was an array, and "/foo" is used to create a value, then the document 
++        Remind that it may change types of parents according to tokens, so it
++        potentially removes previously stored values. For example, if a document
++        was an array, and "/foo" is used to create a value, then the document
+         will be changed to an object, and all existing array elements are lost.
+ 
+         \param root Root value of a DOM subtree to be resolved. It can be any value other than document root.
+@@ -511,7 +511,7 @@ public:
+         \param root Root value of a DOM sub-tree to be resolved. It can be any value other than document root.
+         \return Pointer to the value if it can be resolved. Otherwise null.
+     */
+-    const ValueType* Get(const ValueType& root, size_t* unresolvedTokenIndex = 0) const { 
++    const ValueType* Get(const ValueType& root, size_t* unresolvedTokenIndex = 0) const {
+         return Get(const_cast<ValueType&>(root), unresolvedTokenIndex);
+     }
+ 
+@@ -573,7 +573,7 @@ public:
+     ValueType& GetWithDefault(GenericDocument<EncodingType, typename ValueType::AllocatorType, stackAllocator>& document, const Ch* defaultValue) const {
+         return GetWithDefault(document, defaultValue, document.GetAllocator());
+     }
+-    
++
+ #if RAPIDJSON_HAS_STDSTRING
+     //! Query a value in a document with default std::basic_string.
+     template <typename stackAllocator>
+@@ -758,7 +758,7 @@ private:
+     */
+     Ch* CopyFromRaw(const GenericPointer& rhs, size_t extraToken = 0, size_t extraNameBufferSize = 0) {
+         if (!allocator_) // allocator is independently owned.
+-            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator());
++            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator)();
+ 
+         size_t nameBufferSize = rhs.tokenCount_; // null terminators for tokens
+         for (Token *t = rhs.tokens_; t != rhs.tokens_ + rhs.tokenCount_; ++t)
+@@ -806,11 +806,11 @@ private:
+ 
+         // Create own allocator if user did not supply.
+         if (!allocator_)
+-            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator());
++            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator)();
+ 
+         // Count number of '/' as tokenCount
+         tokenCount_ = 0;
+-        for (const Ch* s = source; s != source + length; s++) 
++        for (const Ch* s = source; s != source + length; s++)
+             if (*s == '/')
+                 tokenCount_++;
+ 
+@@ -867,7 +867,7 @@ private:
+                 }
+ 
+                 i++;
+-                
++
+                 // Escaping "~0" -> '~', "~1" -> '/'
+                 if (c == '~') {
+                     if (i < length) {
+@@ -956,7 +956,7 @@ private:
+                     os.Put('~');
+                     os.Put('1');
+                 }
+-                else if (uriFragment && NeedPercentEncode(c)) { 
++                else if (uriFragment && NeedPercentEncode(c)) {
+                     // Transcode to UTF8 sequence
+                     GenericStringStream<typename ValueType::EncodingType> source(&t->name[j]);
+                     PercentEncodeStream<OutputStream> target(os);
+@@ -974,7 +974,7 @@ private:
+     //! A helper stream for decoding a percent-encoded sequence into code unit.
+     /*!
+         This stream decodes %XY triplet into code unit (0-255).
+-        If it encounters invalid characters, it sets output code unit as 0 and 
++        If it encounters invalid characters, it sets output code unit as 0 and
+         mark invalid, and to be checked by IsValid().
+     */
+     class PercentDecodeStream {
+diff --git a/include/rapidjson/schema.h b/include/rapidjson/schema.h
+index b182aa2..cb5f836 100644
+--- a/include/rapidjson/schema.h
++++ b/include/rapidjson/schema.h
+@@ -1,5 +1,5 @@
+ // Tencent is pleased to support the open source community by making RapidJSON available->
+-// 
++//
+ // Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip-> All rights reserved->
+ //
+ // Licensed under the MIT License (the "License"); you may not use this file except
+@@ -7,9 +7,9 @@
+ //
+ // http://opensource->org/licenses/MIT
+ //
+-// Unless required by applicable law or agreed to in writing, software distributed 
+-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
+-// CONDITIONS OF ANY KIND, either express or implied-> See the License for the 
++// Unless required by applicable law or agreed to in writing, software distributed
++// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
++// CONDITIONS OF ANY KIND, either express or implied-> See the License for the
+ // specific language governing permissions and limitations under the License->
+ 
+ #ifndef RAPIDJSON_SCHEMA_H_
+@@ -174,10 +174,10 @@ public:
+     bool Uint(unsigned u) { Number n; n.u.u = u; n.d = static_cast<double>(u); return WriteNumber(n); }
+     bool Int64(int64_t i) { Number n; n.u.i = i; n.d = static_cast<double>(i); return WriteNumber(n); }
+     bool Uint64(uint64_t u) { Number n; n.u.u = u; n.d = static_cast<double>(u); return WriteNumber(n); }
+-    bool Double(double d) { 
+-        Number n; 
++    bool Double(double d) {
++        Number n;
+         if (d < 0) n.u.i = static_cast<int64_t>(d);
+-        else       n.u.u = static_cast<uint64_t>(d); 
++        else       n.u.u = static_cast<uint64_t>(d);
+         n.d = d;
+         return WriteNumber(n);
+     }
+@@ -194,7 +194,7 @@ public:
+ 
+     bool StartObject() { return true; }
+     bool Key(const Ch* str, SizeType len, bool copy) { return String(str, len, copy); }
+-    bool EndObject(SizeType memberCount) { 
++    bool EndObject(SizeType memberCount) {
+         uint64_t h = Hash(0, kObjectType);
+         uint64_t* kv = stack_.template Pop<uint64_t>(memberCount * 2);
+         for (SizeType i = 0; i < memberCount; i++)
+@@ -202,9 +202,9 @@ public:
+         *stack_.template Push<uint64_t>() = h;
+         return true;
+     }
+-    
++
+     bool StartArray() { return true; }
+-    bool EndArray(SizeType elementCount) { 
++    bool EndArray(SizeType elementCount) {
+         uint64_t h = Hash(0, kArrayType);
+         uint64_t* e = stack_.template Pop<uint64_t>(elementCount);
+         for (SizeType i = 0; i < elementCount; i++)
+@@ -231,9 +231,9 @@ private:
+     };
+ 
+     bool WriteType(Type type) { return WriteBuffer(type, 0, 0); }
+-    
++
+     bool WriteNumber(const Number& n) { return WriteBuffer(kNumberType, &n, sizeof(n)); }
+-    
++
+     bool WriteBuffer(Type type, const void* data, size_t len) {
+         // FNV-1a from http://isthe.com/chongo/tech/comp/fnv/
+         uint64_t h = Hash(RAPIDJSON_UINT64_C2(0x84222325, 0xcbf29ce4), type);
+@@ -432,7 +432,7 @@ public:
+             if (properties && properties->IsObject())
+                 for (ConstMemberIterator itr = properties->MemberBegin(); itr != properties->MemberEnd(); ++itr)
+                     AddUniqueElement(allProperties, itr->name);
+-            
++
+             if (required && required->IsArray())
+                 for (ConstValueIterator itr = required->Begin(); itr != required->End(); ++itr)
+                     if (itr->IsString())
+@@ -661,7 +661,7 @@ public:
+             for (SizeType i = allOf_.begin; i < allOf_.begin + allOf_.count; i++)
+                 if (!context.validators[i]->IsValid())
+                     RAPIDJSON_INVALID_KEYWORD_RETURN(GetAllOfString());
+-        
++
+         if (anyOf_.schemas) {
+             for (SizeType i = anyOf_.begin; i < anyOf_.begin + anyOf_.count; i++)
+                 if (context.validators[i]->IsValid())
+@@ -689,13 +689,13 @@ public:
+         return true;
+     }
+ 
+-    bool Null(Context& context) const { 
++    bool Null(Context& context) const {
+         if (!(type_ & (1 << kNullSchemaType)))
+             RAPIDJSON_INVALID_KEYWORD_RETURN(GetTypeString());
+         return CreateParallelValidator(context);
+     }
+-    
+-    bool Bool(Context& context, bool) const { 
++
++    bool Bool(Context& context, bool) const {
+         if (!(type_ & (1 << kBooleanSchemaType)))
+             RAPIDJSON_INVALID_KEYWORD_RETURN(GetTypeString());
+         return CreateParallelValidator(context);
+@@ -734,13 +734,13 @@ public:
+ 
+         if (!maximum_.IsNull() && !CheckDoubleMaximum(context, d))
+             return false;
+-        
++
+         if (!multipleOf_.IsNull() && !CheckDoubleMultipleOf(context, d))
+             return false;
+-        
++
+         return CreateParallelValidator(context);
+     }
+-    
++
+     bool String(Context& context, const Ch* str, SizeType length, bool) const {
+         if (!(type_ & (1 << kStringSchemaType)))
+             RAPIDJSON_INVALID_KEYWORD_RETURN(GetTypeString());
+@@ -761,7 +761,7 @@ public:
+         return CreateParallelValidator(context);
+     }
+ 
+-    bool StartObject(Context& context) const { 
++    bool StartObject(Context& context) const {
+         if (!(type_ & (1 << kObjectSchemaType)))
+             RAPIDJSON_INVALID_KEYWORD_RETURN(GetTypeString());
+ 
+@@ -779,7 +779,7 @@ public:
+ 
+         return CreateParallelValidator(context);
+     }
+-    
++
+     bool Key(Context& context, const Ch* str, SizeType len, bool) const {
+         if (patternProperties_) {
+             context.patternPropertiesSchemaCount = 0;
+@@ -855,7 +855,7 @@ public:
+         return true;
+     }
+ 
+-    bool StartArray(Context& context) const { 
++    bool StartArray(Context& context) const {
+         if (!(type_ & (1 << kArraySchemaType)))
+             RAPIDJSON_INVALID_KEYWORD_RETURN(GetTypeString());
+ 
+@@ -865,12 +865,12 @@ public:
+         return CreateParallelValidator(context);
+     }
+ 
+-    bool EndArray(Context& context, SizeType elementCount) const { 
++    bool EndArray(Context& context, SizeType elementCount) const {
+         context.inArray = false;
+-        
++
+         if (elementCount < minItems_)
+             RAPIDJSON_INVALID_KEYWORD_RETURN(GetMinItemsString());
+-        
++
+         if (elementCount > maxItems_)
+             RAPIDJSON_INVALID_KEYWORD_RETURN(GetMaxItemsString());
+ 
+@@ -1060,13 +1060,13 @@ private:
+ 
+             if (anyOf_.schemas)
+                 CreateSchemaValidators(context, anyOf_);
+-            
++
+             if (oneOf_.schemas)
+                 CreateSchemaValidators(context, oneOf_);
+-            
++
+             if (not_)
+                 context.validators[notValidatorIndex_] = context.factory.CreateSchemaValidator(*not_);
+-            
++
+             if (hasSchemaDependencies_) {
+                 for (SizeType i = 0; i < propertyCount_; i++)
+                     if (properties_[i].dependenciesSchema)
+@@ -1087,7 +1087,7 @@ private:
+         SizeType len = name.GetStringLength();
+         const Ch* str = name.GetString();
+         for (SizeType index = 0; index < propertyCount_; index++)
+-            if (properties_[index].name.GetStringLength() == len && 
++            if (properties_[index].name.GetStringLength() == len &&
+                 (std::memcmp(properties_[index].name.GetString(), str, sizeof(Ch) * len) == 0))
+             {
+                 *outIndex = index;
+@@ -1207,7 +1207,7 @@ private:
+ 
+     struct PatternProperty {
+         PatternProperty() : schema(), pattern() {}
+-        ~PatternProperty() { 
++        ~PatternProperty() {
+             if (pattern) {
+                 pattern->~RegexType();
+                 AllocatorType::Free(pattern);
+@@ -1347,7 +1347,7 @@ public:
+         schemaRef_(allocator, kInitialSchemaRefSize)
+     {
+         if (!allocator_)
+-            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator());
++            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator)();
+ 
+         // Generate root schema, it will call CreateSchema() to create sub-schemas,
+         // And call AddRefSchema() if there are $ref.
+@@ -1551,7 +1551,7 @@ template <
+     typename OutputHandler = BaseReaderHandler<typename SchemaDocumentType::SchemaType::EncodingType>,
+     typename StateAllocator = CrtAllocator>
+ class GenericSchemaValidator :
+-    public internal::ISchemaStateFactory<typename SchemaDocumentType::SchemaType>, 
++    public internal::ISchemaStateFactory<typename SchemaDocumentType::SchemaType>,
+     public internal::ISchemaValidator
+ {
+ public:
+@@ -1569,7 +1569,7 @@ public:
+     */
+     GenericSchemaValidator(
+         const SchemaDocumentType& schemaDocument,
+-        StateAllocator* allocator = 0, 
++        StateAllocator* allocator = 0,
+         size_t schemaStackCapacity = kDefaultSchemaStackCapacity,
+         size_t documentStackCapacity = kDefaultDocumentStackCapacity)
+         :
+@@ -1597,7 +1597,7 @@ public:
+     GenericSchemaValidator(
+         const SchemaDocumentType& schemaDocument,
+         OutputHandler& outputHandler,
+-        StateAllocator* allocator = 0, 
++        StateAllocator* allocator = 0,
+         size_t schemaStackCapacity = kDefaultSchemaStackCapacity,
+         size_t documentStackCapacity = kDefaultDocumentStackCapacity)
+         :
+@@ -1703,7 +1703,7 @@ RAPIDJSON_MULTILINEMACRO_END
+         RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(StartObject, ());
+         return valid_ = outputHandler_.StartObject();
+     }
+-    
++
+     bool Key(const Ch* str, SizeType len, bool copy) {
+         if (!valid_) return false;
+         AppendToken(str, len);
+@@ -1711,8 +1711,8 @@ RAPIDJSON_MULTILINEMACRO_END
+         RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(Key, (str, len, copy));
+         return valid_ = outputHandler_.Key(str, len, copy);
+     }
+-    
+-    bool EndObject(SizeType memberCount) { 
++
++    bool EndObject(SizeType memberCount) {
+         if (!valid_) return false;
+         RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(EndObject, (memberCount));
+         if (!CurrentSchema().EndObject(CurrentContext(), memberCount)) return valid_ = false;
+@@ -1724,7 +1724,7 @@ RAPIDJSON_MULTILINEMACRO_END
+         RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(StartArray, ());
+         return valid_ = outputHandler_.StartArray();
+     }
+-    
++
+     bool EndArray(SizeType elementCount) {
+         if (!valid_) return false;
+         RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(EndArray, (elementCount));
+@@ -1779,7 +1779,7 @@ private:
+     typedef GenericValue<UTF8<>, StateAllocator> HashCodeArray;
+     typedef internal::Hasher<EncodingType, StateAllocator> HasherType;
+ 
+-    GenericSchemaValidator( 
++    GenericSchemaValidator(
+         const SchemaDocumentType& schemaDocument,
+         const SchemaType& root,
+ #if RAPIDJSON_SCHEMA_VERBOSE
+@@ -1805,7 +1805,7 @@ private:
+ 
+     StateAllocator& GetStateAllocator() {
+         if (!stateAllocator_)
+-            stateAllocator_ = ownStateAllocator_ = RAPIDJSON_NEW(StateAllocator());
++            stateAllocator_ = ownStateAllocator_ = RAPIDJSON_NEW(StateAllocator)();
+         return *stateAllocator_;
+     }
+ 
+@@ -1854,7 +1854,7 @@ private:
+ #endif
+ 
+         uint64_t h = CurrentContext().arrayUniqueness ? static_cast<HasherType*>(CurrentContext().hasher)->GetHashCode() : 0;
+-        
++
+         PopSchema();
+ 
+         if (!schemaStack_.Empty()) {
+@@ -1895,7 +1895,7 @@ private:
+     }
+ 
+     RAPIDJSON_FORCEINLINE void PushSchema(const SchemaType& schema) { new (schemaStack_.template Push<Context>()) Context(*this, &schema); }
+-    
++
+     RAPIDJSON_FORCEINLINE void PopSchema() {
+         Context* c = schemaStack_.template Pop<Context>(1);
+         if (HashCodeArray* a = static_cast<HashCodeArray*>(c->arrayElementHashCodes)) {

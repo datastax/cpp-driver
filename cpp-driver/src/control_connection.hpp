@@ -87,11 +87,11 @@ private:
         , response_callback_(response_callback)
         , data_(data) {}
 
-    void execute_query(const std::string& index, const std::string& query);
+    void execute_query(const String& index, const String& query);
 
     virtual void on_set(const MultipleRequestCallback::ResponseMap& responses);
 
-    virtual void on_error(CassError code, const std::string& message) {
+    virtual void on_error(CassError code, const String& message) {
       control_connection_->handle_query_failure(code, message);
     }
 
@@ -106,12 +106,12 @@ private:
   };
 
   struct RefreshTableData {
-    RefreshTableData(const std::string& keyspace_name,
-                     const std::string& table_name)
+    RefreshTableData(const String& keyspace_name,
+                     const String& table_name)
       : keyspace_name(keyspace_name)
       , table_or_view_name(table_name) {}
-    std::string keyspace_name;
-    std::string table_or_view_name;
+    String keyspace_name;
+    String table_or_view_name;
   };
 
   struct UnusedData {};
@@ -139,7 +139,7 @@ private:
       response_callback_(control_connection_, data_, response_body);
     }
 
-    virtual void on_internal_error(CassError code, const std::string& message) {
+    virtual void on_internal_error(CassError code, const String& message) {
       control_connection_->handle_query_failure(code, message);
     }
 
@@ -163,7 +163,7 @@ private:
   };
 
   struct RefreshFunctionData {
-    typedef std::vector<std::string> StringVec;
+    typedef Vector<String> StringVec;
 
     RefreshFunctionData(StringRef keyspace,
                         StringRef function,
@@ -174,8 +174,8 @@ private:
       , arg_types(to_strings(arg_types))
       , is_aggregate(is_aggregate) { }
 
-    std::string keyspace;
-    std::string function;
+    String keyspace;
+    String function;
     StringVec arg_types;
     bool is_aggregate;
   };
@@ -197,7 +197,7 @@ private:
   static void on_reconnect(Timer* timer);
 
   bool handle_query_invalid_response(Response* response);
-  void handle_query_failure(CassError code, const std::string& message);
+  void handle_query_failure(CassError code, const String& message);
   void handle_query_timeout();
 
   void query_meta_hosts();
@@ -223,7 +223,7 @@ private:
   void update_node_info(Host::Ptr host, const Row* row, UpdateHostType type);
 
   void refresh_keyspace(const StringRef& keyspace_name);
-  static void on_refresh_keyspace(ControlConnection* control_connection, const std::string& keyspace_name, Response* response);
+  static void on_refresh_keyspace(ControlConnection* control_connection, const String& keyspace_name, Response* response);
 
   void refresh_table_or_view(const StringRef& keyspace_name,
                      const StringRef& table_name);
@@ -234,7 +234,7 @@ private:
   void refresh_type(const StringRef& keyspace_name,
                     const StringRef& type_name);
   static void on_refresh_type(ControlConnection* control_connection,
-                              const std::pair<std::string, std::string>& keyspace_and_type_names,
+                              const std::pair<String, String>& keyspace_and_type_names,
                               Response* response);
 
   void refresh_function(const StringRef& keyspace_name,
@@ -254,7 +254,7 @@ private:
   Host::Ptr current_host_;
   int protocol_version_;
   VersionNumber cassandra_version_;
-  std::string last_connection_error_;
+  String last_connection_error_;
   bool use_schema_;
   bool token_aware_routing_;
 

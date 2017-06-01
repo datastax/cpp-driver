@@ -22,16 +22,16 @@
 #include "host.hpp"
 #include "iterator.hpp"
 #include "macros.hpp"
+#include "map.hpp"
 #include "ref_counted.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
+#include "string.hpp"
 #include "data_type.hpp"
 #include "value.hpp"
+#include "vector.hpp"
 
-#include <map>
-#include <string>
 #include <uv.h>
-#include <vector>
 
 namespace cass {
 
@@ -46,7 +46,7 @@ template<class T>
 class MapIteratorImpl {
 public:
   typedef T ItemType;
-  typedef std::map<std::string, T> Collection;
+  typedef cass::Map<String, T> Collection;
 
   MapIteratorImpl(const Collection& map)
     : next_(map.begin())
@@ -74,7 +74,7 @@ template<class T>
 class VecIteratorImpl {
 public:
   typedef T ItemType;
-  typedef std::vector<T> Collection;
+  typedef Vector<T> Collection;
 
   VecIteratorImpl(const Collection& vec)
     : next_(vec.begin())
@@ -100,21 +100,21 @@ private:
 
 class MetadataField {
 public:
-  typedef std::map<std::string, MetadataField> Map;
+  typedef cass::Map<String, MetadataField> Map;
 
   MetadataField() { }
 
-  MetadataField(const std::string& name)
+  MetadataField(const String& name)
     : name_(name) { }
 
-  MetadataField(const std::string& name,
+  MetadataField(const String& name,
                 const Value& value,
                 const RefBuffer::Ptr& buffer)
     : name_(name)
     , value_(value)
     , buffer_(buffer) { }
 
-  const std::string& name() const {
+  const String& name() const {
     return name_;
   }
 
@@ -123,7 +123,7 @@ public:
   }
 
 private:
-  std::string name_;
+  String name_;
   Value value_;
   RefBuffer::Ptr buffer_;
 };
@@ -145,29 +145,29 @@ private:
 
 class MetadataBase {
 public:
-  MetadataBase(const std::string& name)
+  MetadataBase(const String& name)
     : name_(name) { }
 
-  const std::string& name() const { return name_; }
+  const String& name() const { return name_; }
 
-  const Value* get_field(const std::string& name) const;
-  std::string get_string_field(const std::string& name) const;
-  Iterator* iterator_fields() const { return new MetadataFieldIterator(fields_); }
+  const Value* get_field(const String& name) const;
+  String get_string_field(const String& name) const;
+  Iterator* iterator_fields() const { return Memory::allocate<MetadataFieldIterator>(fields_); }
 
   void swap_fields(MetadataBase& meta) {
     fields_.swap(meta.fields_);
   }
 
 protected:
-  const Value* add_field(const RefBuffer::Ptr& buffer, const Row* row, const std::string& name);
-  void add_field(const RefBuffer::Ptr& buffer, const Value& value, const std::string& name);
-  void add_json_list_field(int version, const Row* row, const std::string& name);
-  const Value* add_json_map_field(int version, const Row* row, const std::string& name);
+  const Value* add_field(const RefBuffer::Ptr& buffer, const Row* row, const String& name);
+  void add_field(const RefBuffer::Ptr& buffer, const Value& value, const String& name);
+  void add_json_list_field(int version, const Row* row, const String& name);
+  const Value* add_json_map_field(int version, const Row* row, const String& name);
 
   MetadataField::Map fields_;
 
 private:
-  const std::string name_;
+  const String name_;
 };
 
 template<class IteratorImpl>
@@ -188,11 +188,11 @@ protected:
 class FunctionMetadata : public MetadataBase, public RefCounted<FunctionMetadata> {
 public:
   typedef SharedRefPtr<FunctionMetadata> Ptr;
-  typedef std::map<std::string, Ptr> Map;
-  typedef std::vector<Ptr> Vec;
+  typedef cass::Map<String, Ptr> Map;
+  typedef Vector<Ptr> Vec;
 
   struct Argument {
-    typedef std::vector<Argument> Vec;
+    typedef Vector<Argument> Vec;
 
     Argument(const StringRef& name, const DataType::ConstPtr& type)
       : name(name)
@@ -202,11 +202,11 @@ public:
   };
 
   FunctionMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
-                   const std::string& name, const Value* signature,
+                   const String& name, const Value* signature,
                    KeyspaceMetadata* keyspace,
                    const RefBuffer::Ptr& buffer, const Row* row);
 
-  const std::string& simple_name() const { return simple_name_; }
+  const String& simple_name() const { return simple_name_; }
   const Argument::Vec& args() const { return args_; }
   const DataType::ConstPtr& return_type() const { return return_type_; }
   StringRef body() const { return body_; }
@@ -216,7 +216,7 @@ public:
   const DataType* get_arg_type(StringRef name) const;
 
 private:
-  std::string simple_name_;
+  String simple_name_;
   Argument::Vec args_;
   DataType::ConstPtr return_type_;
   StringRef body_;
@@ -231,15 +231,15 @@ inline bool operator==(const FunctionMetadata::Argument& a, StringRef b) {
 class AggregateMetadata : public MetadataBase, public RefCounted<AggregateMetadata> {
 public:
   typedef SharedRefPtr<AggregateMetadata> Ptr;
-  typedef std::map<std::string, Ptr> Map;
-  typedef std::vector<Ptr> Vec;
+  typedef cass::Map<String, Ptr> Map;
+  typedef Vector<Ptr> Vec;
 
   AggregateMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
-                    const std::string& name, const Value* signature,
+                    const String& name, const Value* signature,
                     KeyspaceMetadata* keyspace,
                     const RefBuffer::Ptr& buffer, const Row* row);
 
-  const std::string& simple_name() const { return simple_name_; }
+  const String& simple_name() const { return simple_name_; }
   const DataType::Vec arg_types() const { return arg_types_; }
   const DataType::ConstPtr& return_type() const { return return_type_; }
   const DataType::ConstPtr& state_type() const { return state_type_; }
@@ -248,7 +248,7 @@ public:
   const Value& init_cond() const { return init_cond_; }
 
 private:
-  std::string simple_name_;
+  String simple_name_;
   DataType::Vec arg_types_;
   DataType::ConstPtr return_type_;
   DataType::ConstPtr state_type_;
@@ -260,35 +260,35 @@ private:
 class IndexMetadata : public MetadataBase, public RefCounted<IndexMetadata> {
 public:
   typedef SharedRefPtr<IndexMetadata> Ptr;
-  typedef std::map<std::string, Ptr> Map;
-  typedef std::vector<Ptr> Vec;
+  typedef cass::Map<String, Ptr> Map;
+  typedef Vector<Ptr> Vec;
 
   CassIndexType type() const { return type_; }
-  const std::string& target() const { return target_; }
+  const String& target() const { return target_; }
   const Value* options() const { return &options_; }
 
-  IndexMetadata(const std::string& index_name)
+  IndexMetadata(const String& index_name)
     : MetadataBase(index_name)
     , type_(CASS_INDEX_TYPE_UNKNOWN) { }
 
-  static IndexMetadata::Ptr from_row(const std::string& index_name,
+  static IndexMetadata::Ptr from_row(const String& index_name,
                                      const RefBuffer::Ptr& buffer, const Row* row);
   void update(StringRef index_type, const Value* options);
 
   static IndexMetadata::Ptr from_legacy(int protocol_version,
-                                        const std::string& index_name, const ColumnMetadata* column,
+                                        const String& index_name, const ColumnMetadata* column,
                                         const RefBuffer::Ptr& buffer, const Row* row);
   void update_legacy(StringRef index_type, const ColumnMetadata* column, const Value* options);
 
 
 private:
   static CassIndexType index_type_from_string(StringRef index_type);
-  static std::string target_from_legacy(const ColumnMetadata* column,
+  static String target_from_legacy(const ColumnMetadata* column,
                                         const Value* options);
 
 private:
   CassIndexType type_;
-  std::string target_;
+  String target_;
   Value options_;
 
 private:
@@ -298,16 +298,16 @@ private:
 class ColumnMetadata : public MetadataBase, public RefCounted<ColumnMetadata> {
 public:
   typedef SharedRefPtr<ColumnMetadata> Ptr;
-  typedef std::map<std::string, Ptr> Map;
-  typedef std::vector<Ptr> Vec;
+  typedef cass::Map<String, Ptr> Map;
+  typedef Vector<Ptr> Vec;
 
-  ColumnMetadata(const std::string& name)
+  ColumnMetadata(const String& name)
     : MetadataBase(name)
     , type_(CASS_COLUMN_TYPE_REGULAR)
     , position_(0)
     , is_reversed_(false) { }
 
-  ColumnMetadata(const std::string& name,
+  ColumnMetadata(const String& name,
                  int32_t position,
                  CassColumnType type,
                  const DataType::ConstPtr& data_type)
@@ -318,7 +318,7 @@ public:
     , is_reversed_(false) { }
 
   ColumnMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
-                 const std::string& name,
+                 const String& name,
                  KeyspaceMetadata* keyspace,
                  const RefBuffer::Ptr& buffer, const Row* row);
 
@@ -337,14 +337,14 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ColumnMetadata);
 };
 
-inline bool operator==(const ColumnMetadata::Ptr& a, const std::string& b) {
+inline bool operator==(const ColumnMetadata::Ptr& a, const String& b) {
   return a->name() == b;
 }
 
 class TableMetadataBase : public MetadataBase, public RefCounted<TableMetadataBase> {
 public:
   typedef SharedRefPtr<TableMetadataBase> Ptr;
-  typedef std::vector<CassClusteringOrder> ClusteringOrderVec;
+  typedef Vector<CassClusteringOrder> ClusteringOrderVec;
 
   class ColumnIterator : public MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> > {
   public:
@@ -354,7 +354,7 @@ public:
   };
 
   TableMetadataBase(int protocol_version, const VersionNumber& cassandra_version,
-                    const std::string& name, const RefBuffer::Ptr& buffer, const Row* row);
+                    const String& name, const RefBuffer::Ptr& buffer, const Row* row);
 
   virtual ~TableMetadataBase() { }
 
@@ -363,8 +363,8 @@ public:
   const ColumnMetadata::Vec& clustering_key() const { return clustering_key_; }
   const ClusteringOrderVec& clustering_key_order() const { return clustering_key_order_; }
 
-  Iterator* iterator_columns() const { return new ColumnIterator(columns_); }
-  const ColumnMetadata* get_column(const std::string& name) const;
+  Iterator* iterator_columns() const { return Memory::allocate<ColumnIterator>(columns_); }
+  const ColumnMetadata* get_column(const String& name) const;
   virtual void add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column);
   void clear_columns();
   void build_keys_and_sort(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache);
@@ -383,14 +383,14 @@ private:
 class ViewMetadata : public TableMetadataBase {
 public:
   typedef SharedRefPtr<ViewMetadata> Ptr;
-  typedef std::map<std::string, Ptr> Map;
-  typedef std::vector<Ptr> Vec;
+  typedef cass::Map<String, Ptr> Map;
+  typedef Vector<Ptr> Vec;
 
   static const ViewMetadata::Ptr NIL;
 
   ViewMetadata(int protocol_version, const VersionNumber& cassandra_version,
                TableMetadata* table,
-               const std::string& name,
+               const String& name,
                const RefBuffer::Ptr& buffer, const Row* row);
 
   const TableMetadata* base_table() const { return base_table_; }
@@ -442,7 +442,7 @@ inline bool operator<(const ViewMetadata::Ptr& a, const ViewMetadata::Ptr& b) {
   return a->name() < b->name();
 }
 
-inline  bool operator<(const ViewMetadata::Ptr& a, const std::string& b) {
+inline  bool operator<(const ViewMetadata::Ptr& a, const String& b) {
   return a->name() < b;
 }
 
@@ -453,9 +453,9 @@ inline bool operator==(const ViewMetadata::Ptr& a, const ViewMetadata::Ptr& b) {
 class TableMetadata : public TableMetadataBase {
 public:
   typedef SharedRefPtr<TableMetadata> Ptr;
-  typedef std::map<std::string, Ptr> Map;
-  typedef std::vector<Ptr> Vec;
-  typedef std::vector<std::string> KeyAliases;
+  typedef cass::Map<String, Ptr> Map;
+  typedef Vector<Ptr> Vec;
+  typedef Vector<String> KeyAliases;
 
   static const TableMetadata::Ptr NIL;
 
@@ -466,21 +466,21 @@ public:
     const IndexMetadata* index() const { return impl_.item().get(); }
   };
 
-  TableMetadata(int protocol_version, const VersionNumber& cassandra_version, const std::string& name,
+  TableMetadata(int protocol_version, const VersionNumber& cassandra_version, const String& name,
                 const RefBuffer::Ptr& buffer, const Row* row);
 
   const ViewMetadata::Vec& views() const { return views_; }
   const IndexMetadata::Vec& indexes() const { return indexes_; }
 
-  Iterator* iterator_views() const { return new ViewIteratorVec(views_); }
-  const ViewMetadata* get_view(const std::string& name) const;
+  Iterator* iterator_views() const { return Memory::allocate<ViewIteratorVec>(views_); }
+  const ViewMetadata* get_view(const String& name) const;
   virtual void add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column);
   void add_view(const ViewMetadata::Ptr& view);
-  void drop_view(const std::string& name);
+  void drop_view(const String& name);
   void sort_views();
 
-  Iterator* iterator_indexes() const { return new IndexIterator(indexes_); }
-  const IndexMetadata* get_index(const std::string& name) const;
+  Iterator* iterator_indexes() const { return Memory::allocate<IndexIterator>(indexes_); }
+  const IndexMetadata* get_index(const String& name) const;
   void add_index(const IndexMetadata::Ptr& index);
   void clear_indexes();
 
@@ -494,7 +494,7 @@ private:
 
 class KeyspaceMetadata : public MetadataBase {
 public:
-  typedef std::map<std::string, KeyspaceMetadata> Map;
+  typedef cass::Map<String, KeyspaceMetadata> Map;
   typedef CopyOnWritePtr<KeyspaceMetadata::Map> MapPtr;
 
   class TableIterator : public MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> > {
@@ -525,13 +525,13 @@ public:
     const AggregateMetadata* aggregate() const { return impl_.item().get(); }
   };
 
-  KeyspaceMetadata(const std::string& name)
+  KeyspaceMetadata(const String& name)
     : MetadataBase(name)
-    , tables_(new TableMetadata::Map)
-    , views_(new ViewMetadata::Map)
-    , user_types_(new UserType::Map)
-    , functions_(new FunctionMetadata::Map)
-    , aggregates_(new AggregateMetadata::Map) { }
+    , tables_(Memory::allocate<TableMetadata::Map>())
+    , views_(Memory::allocate<ViewMetadata::Map>())
+    , user_types_(Memory::allocate<UserType::Map>())
+    , functions_(Memory::allocate<FunctionMetadata::Map>())
+    , aggregates_(Memory::allocate<AggregateMetadata::Map>()) { }
 
   void update(int protocol_version, const VersionNumber& cassandra_version,
               const RefBuffer::Ptr& buffer, const Row* row);
@@ -539,32 +539,32 @@ public:
   const FunctionMetadata::Map& functions() const { return *functions_; }
   const UserType::Map& user_types() const { return *user_types_; }
 
-  Iterator* iterator_tables() const { return new TableIterator(*tables_); }
-  const TableMetadata* get_table(const std::string& name) const;
-  const TableMetadata::Ptr& get_table(const std::string& name);
+  Iterator* iterator_tables() const { return Memory::allocate<TableIterator>(*tables_); }
+  const TableMetadata* get_table(const String& name) const;
+  const TableMetadata::Ptr& get_table(const String& name);
   void add_table(const TableMetadata::Ptr& table);
 
-  Iterator* iterator_views() const { return new ViewIteratorMap(*views_); }
-  const ViewMetadata* get_view(const std::string& name) const;
-  const ViewMetadata::Ptr& get_view(const std::string& name);
+  Iterator* iterator_views() const { return Memory::allocate<ViewIteratorMap>(*views_); }
+  const ViewMetadata* get_view(const String& name) const;
+  const ViewMetadata::Ptr& get_view(const String& name);
   void add_view(const ViewMetadata::Ptr& view);
 
-  void drop_table_or_view(const std::string& table_name);
+  void drop_table_or_view(const String& table_name);
 
-  Iterator* iterator_user_types() const { return new TypeIterator(*user_types_); }
-  const UserType* get_user_type(const std::string& type_name) const;
-  const UserType::Ptr& get_or_create_user_type(const std::string& name, bool is_frozen);
-  void drop_user_type(const std::string& type_name);
+  Iterator* iterator_user_types() const { return Memory::allocate<TypeIterator>(*user_types_); }
+  const UserType* get_user_type(const String& type_name) const;
+  const UserType::Ptr& get_or_create_user_type(const String& name, bool is_frozen);
+  void drop_user_type(const String& type_name);
 
-  Iterator* iterator_functions() const { return new FunctionIterator(*functions_); }
-  const FunctionMetadata* get_function(const std::string& full_function_name) const;
+  Iterator* iterator_functions() const { return Memory::allocate<FunctionIterator>(*functions_); }
+  const FunctionMetadata* get_function(const String& full_function_name) const;
   void add_function(const FunctionMetadata::Ptr& function);
-  void drop_function(const std::string& full_function_name);
+  void drop_function(const String& full_function_name);
 
-  Iterator* iterator_aggregates() const { return new AggregateIterator(*aggregates_); }
-  const AggregateMetadata* get_aggregate(const std::string& full_aggregate_name) const;
+  Iterator* iterator_aggregates() const { return Memory::allocate<AggregateIterator>(*aggregates_); }
+  const AggregateMetadata* get_aggregate(const String& full_aggregate_name) const;
   void add_aggregate(const AggregateMetadata::Ptr& aggregate);
-  void drop_aggregate(const std::string& full_aggregate_name);
+  void drop_aggregate(const String& full_aggregate_name);
 
   StringRef strategy_class() const { return strategy_class_; }
   const Value* strategy_options() const { return &strategy_options_; }
@@ -604,11 +604,11 @@ public:
     int protocol_version() const { return protocol_version_; }
     VersionNumber cassandra_version() const { return cassandra_version_; }
 
-    const KeyspaceMetadata* get_keyspace(const std::string& name) const;
-    Iterator* iterator_keyspaces() const { return new KeyspaceIterator(*keyspaces_); }
+    const KeyspaceMetadata* get_keyspace(const String& name) const;
+    Iterator* iterator_keyspaces() const { return Memory::allocate<KeyspaceIterator>(*keyspaces_); }
 
-    const UserType* get_user_type(const std::string& keyspace_name,
-                                  const std::string& type_name) const;
+    const UserType* get_user_type(const String& keyspace_name,
+                                  const String& type_name) const;
 
   private:
     uint32_t version_;
@@ -617,7 +617,7 @@ public:
     KeyspaceMetadata::MapPtr keyspaces_;
   };
 
-  static std::string full_function_name(const std::string& name, const StringVec& signature);
+  static String full_function_name(const String& name, const StringVec& signature);
 
 public:
   Metadata()
@@ -641,11 +641,11 @@ public:
   void update_functions(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
   void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
 
-  void drop_keyspace(const std::string& keyspace_name);
-  void drop_table_or_view(const std::string& keyspace_name, const std::string& table_or_view_name);
-  void drop_user_type(const std::string& keyspace_name, const std::string& type_name);
-  void drop_function(const std::string& keyspace_name, const std::string& full_function_name);
-  void drop_aggregate(const std::string& keyspace_name, const std::string& full_aggregate_name);
+  void drop_keyspace(const String& keyspace_name);
+  void drop_table_or_view(const String& keyspace_name, const String& table_or_view_name);
+  void drop_user_type(const String& keyspace_name, const String& type_name);
+  void drop_function(const String& keyspace_name, const String& full_function_name);
+  void drop_aggregate(const String& keyspace_name, const String& full_aggregate_name);
 
   // This clears and allows updates to the back buffer while preserving
   // the front buffer for snapshots.
@@ -664,7 +664,7 @@ private:
   class InternalData {
   public:
     InternalData()
-      : keyspaces_(new KeyspaceMetadata::Map()) { }
+      : keyspaces_(Memory::allocate<KeyspaceMetadata::Map>()) { }
 
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
@@ -678,11 +678,11 @@ private:
     void update_functions(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
     void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
 
-    void drop_keyspace(const std::string& keyspace_name);
-    void drop_table_or_view(const std::string& keyspace_name, const std::string& table_or_view_name);
-    void drop_user_type(const std::string& keyspace_name, const std::string& type_name);
-    void drop_function(const std::string& keyspace_name, const std::string& full_function_name);
-    void drop_aggregate(const std::string& keyspace_name, const std::string& full_aggregate_name);
+    void drop_keyspace(const String& keyspace_name);
+    void drop_table_or_view(const String& keyspace_name, const String& table_or_view_name);
+    void drop_user_type(const String& keyspace_name, const String& type_name);
+    void drop_function(const String& keyspace_name, const String& full_function_name);
+    void drop_aggregate(const String& keyspace_name, const String& full_aggregate_name);
 
     void clear() { keyspaces_->clear(); }
 
@@ -693,7 +693,7 @@ private:
     }
 
   private:
-    KeyspaceMetadata* get_or_create_keyspace(const std::string& name);
+    KeyspaceMetadata* get_or_create_keyspace(const String& name);
 
   private:
     CopyOnWritePtr<KeyspaceMetadata::Map> keyspaces_;

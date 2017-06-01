@@ -24,12 +24,10 @@
 #include "speculative_execution.hpp"
 #include "utils.hpp"
 
-#include <sstream>
-
 extern "C" {
 
 CassCluster* cass_cluster_new() {
-  return CassCluster::to(new cass::Cluster());
+  return CassCluster::to(cass::Memory::allocate<cass::Cluster>());
 }
 
 CassError cass_cluster_set_port(CassCluster* cluster,
@@ -122,7 +120,7 @@ CassError cass_cluster_set_contact_points_n(CassCluster* cluster,
   if (contact_points_length == 0) {
     cluster->config().contact_points().clear();
   } else {
-    cass::explode(std::string(contact_points, contact_points_length),
+    cass::explode(cass::String(contact_points, contact_points_length),
                   cluster->config().contact_points());
   }
   return CASS_OK;
@@ -246,12 +244,12 @@ void cass_cluster_set_credentials_n(CassCluster* cluster,
                                     size_t username_length,
                                     const char* password,
                                     size_t password_length) {
-  cluster->config().set_credentials(std::string(username, username_length),
-                                    std::string(password, password_length));
+  cluster->config().set_credentials(cass::String(username, username_length),
+                                    cass::String(password, password_length));
 }
 
 void cass_cluster_set_load_balance_round_robin(CassCluster* cluster) {
-  cluster->config().set_load_balancing_policy(new cass::RoundRobinPolicy());
+  cluster->config().set_load_balancing_policy(cass::Memory::allocate<cass::RoundRobinPolicy>());
 }
 
 CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
@@ -277,9 +275,9 @@ CassError cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_load_balancing_policy(
-        new cass::DCAwarePolicy(std::string(local_dc, local_dc_length),
-                                used_hosts_per_remote_dc,
-                                !allow_remote_dcs_for_local_cl));
+        cass::Memory::allocate<cass::DCAwarePolicy>(cass::String(local_dc, local_dc_length),
+                                                    used_hosts_per_remote_dc,
+                                                    !allow_remote_dcs_for_local_cl));
   return CASS_OK;
 }
 
@@ -323,7 +321,7 @@ void cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
   if (hosts_length == 0) {
     cluster->config().whitelist().clear();
   } else {
-    cass::explode(std::string(hosts, hosts_length),
+    cass::explode(cass::String(hosts, hosts_length),
                   cluster->config().whitelist());
   }
 }
@@ -343,7 +341,7 @@ void cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
   if (hosts_length == 0) {
     cluster->config().blacklist().clear();
   } else {
-    cass::explode(std::string(hosts, hosts_length),
+    cass::explode(cass::String(hosts, hosts_length),
                   cluster->config().blacklist());
   }
 }
@@ -363,7 +361,7 @@ void cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
   if (dcs_length == 0) {
     cluster->config().whitelist_dc().clear();
   } else {
-    cass::explode(std::string(dcs, dcs_length),
+    cass::explode(cass::String(dcs, dcs_length),
                   cluster->config().whitelist_dc());
   }
 }
@@ -383,7 +381,7 @@ void cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
   if (dcs_length == 0) {
     cluster->config().blacklist_dc().clear();
   } else {
-    cass::explode(std::string(dcs, dcs_length),
+    cass::explode(cass::String(dcs, dcs_length),
                   cluster->config().blacklist_dc());
   }
 }
@@ -404,8 +402,8 @@ CassError cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
                                                    CassAuthenticatorDataCleanupCallback cleanup_callback,
                                                    void* data) {
   cluster->config().set_auth_provider(cass::AuthProvider::Ptr(
-                                        new cass::ExternalAuthProvider(exchange_callbacks,
-                                                                       cleanup_callback, data)));
+                                        cass::Memory::allocate<cass::ExternalAuthProvider>(exchange_callbacks,
+                                                                                           cleanup_callback, data)));
   return CASS_OK;
 }
 
@@ -457,19 +455,19 @@ CassError cass_cluster_set_constant_speculative_execution_policy(CassCluster* cl
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_speculative_execution_policy(
-        new cass::ConstantSpeculativeExecutionPolicy(constant_delay_ms,
-                                                     max_speculative_executions));
+        cass::Memory::allocate<cass::ConstantSpeculativeExecutionPolicy>(constant_delay_ms,
+                                                                         max_speculative_executions));
   return CASS_OK;
 }
 
 CassError cass_cluster_set_no_speculative_execution_policy(CassCluster* cluster) {
   cluster->config().set_speculative_execution_policy(
-        new cass::NoSpeculativeExecutionPolicy());
+        cass::Memory::allocate<cass::NoSpeculativeExecutionPolicy>());
   return CASS_OK;
 }
 
 void cass_cluster_free(CassCluster* cluster) {
-  delete cluster->from();
+  cass::Memory::deallocate(cluster->from());
 }
 
 } // extern "C"

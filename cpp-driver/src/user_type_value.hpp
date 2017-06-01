@@ -21,11 +21,12 @@
 #include "cassandra.h"
 #include "data_type.hpp"
 #include "external.hpp"
+#include "memory.hpp"
 #include "ref_counted.hpp"
 
 namespace cass {
 
-class UserTypeValue : public AbstractData {
+class UserTypeValue : public AbstractData{
 public:
   UserTypeValue(const UserType::ConstPtr& data_type)
     : AbstractData(data_type->fields().size())

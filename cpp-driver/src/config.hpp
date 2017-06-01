@@ -32,9 +32,7 @@
 #include "whitelist_dc_policy.hpp"
 #include "blacklist_dc_policy.hpp"
 #include "speculative_execution.hpp"
-
-#include <list>
-#include <string>
+#include "string.hpp"
 
 namespace cass {
 
@@ -66,9 +64,9 @@ public:
       , log_level_(CASS_LOG_WARN)
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
-      , auth_provider_(new AuthProvider())
-      , load_balancing_policy_(new DCAwarePolicy())
-      , speculative_execution_policy_(new NoSpeculativeExecutionPolicy())
+      , auth_provider_(Memory::allocate<AuthProvider>())
+      , load_balancing_policy_(Memory::allocate<DCAwarePolicy>())
+      , speculative_execution_policy_(Memory::allocate<NoSpeculativeExecutionPolicy>())
       , token_aware_routing_(true)
       , latency_aware_routing_(false)
       , host_targeting_(false)
@@ -77,8 +75,8 @@ public:
       , tcp_keepalive_delay_secs_(0)
       , connection_idle_timeout_secs_(60)
       , connection_heartbeat_interval_secs_(30)
-      , timestamp_gen_(new ServerSideTimestampGenerator())
-      , retry_policy_(new DefaultRetryPolicy())
+      , timestamp_gen_(Memory::allocate<ServerSideTimestampGenerator>())
+      , retry_policy_(Memory::allocate<DefaultRetryPolicy>())
       , use_schema_(true)
       , use_hostname_resolution_(false)
       , use_randomized_contact_points_(true) { }
@@ -245,11 +243,11 @@ public:
   const AuthProvider::Ptr& auth_provider() const { return auth_provider_; }
 
   void set_auth_provider(const AuthProvider::Ptr& auth_provider) {
-    auth_provider_ = (!auth_provider ? AuthProvider::Ptr(new AuthProvider()) : auth_provider);
+    auth_provider_ = (!auth_provider ? AuthProvider::Ptr(Memory::allocate<AuthProvider>()) : auth_provider);
   }
 
-  void set_credentials(const std::string& username, const std::string& password) {
-    auth_provider_.reset(new PlainTextAuthProvider(username, password));
+  void set_credentials(const String& username, const String& password) {
+    auth_provider_.reset(Memory::allocate<PlainTextAuthProvider>(username, password));
   }
 
   LoadBalancingPolicy* load_balancing_policy() const {
@@ -257,25 +255,25 @@ public:
     // token aware, latency aware)
     LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
     if (!blacklist_.empty()) {
-      chain = new BlacklistPolicy(chain, blacklist_);
+      chain = Memory::allocate<BlacklistPolicy>(chain, blacklist_);
     }
     if (!whitelist_.empty()) {
-      chain = new WhitelistPolicy(chain, whitelist_);
+      chain = Memory::allocate<WhitelistPolicy>(chain, whitelist_);
     }
     if (!blacklist_dc_.empty()) {
-      chain = new BlacklistDCPolicy(chain, blacklist_dc_);
+      chain = Memory::allocate<BlacklistDCPolicy>(chain, blacklist_dc_);
     }
     if (!whitelist_dc_.empty()) {
-      chain = new WhitelistDCPolicy(chain, whitelist_dc_);
+      chain = Memory::allocate<WhitelistDCPolicy>(chain, whitelist_dc_);
     }
     if (token_aware_routing()) {
-      chain = new TokenAwarePolicy(chain);
+      chain = Memory::allocate<TokenAwarePolicy>(chain);
     }
     if (latency_aware()) {
-      chain = new LatencyAwarePolicy(chain, latency_aware_routing_settings_);
+      chain = Memory::allocate<LatencyAwarePolicy>(chain, latency_aware_routing_settings_);
     }
     if (host_targeting()) {
-      chain = new HostTargetingPolicy(chain);
+      chain = Memory::allocate<HostTargetingPolicy>(chain);
     }
     return chain;
   }

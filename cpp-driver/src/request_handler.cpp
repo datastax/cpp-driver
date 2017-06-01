@@ -36,13 +36,13 @@ namespace cass {
 
 class PrepareCallback : public SimpleRequestCallback {
 public:
-  PrepareCallback(const std::string& query, SpeculativeExecution* speculative_execution)
-    : SimpleRequestCallback(Request::ConstPtr(new PrepareRequest(query)))
+  PrepareCallback(const String& query, SpeculativeExecution* speculative_execution)
+    : SimpleRequestCallback(Request::ConstPtr(Memory::allocate<PrepareRequest>(query)))
     , speculative_execution_(speculative_execution) { }
 
 private:
   virtual void on_internal_set(ResponseMessage* response);
-  virtual void on_internal_error(CassError code, const std::string& message);
+  virtual void on_internal_error(CassError code, const String& message);
   virtual void on_internal_timeout();
 
 private:
@@ -68,7 +68,7 @@ void PrepareCallback::on_internal_set(ResponseMessage* response) {
   }
 }
 
-void PrepareCallback::on_internal_error(CassError code, const std::string& message) {
+void PrepareCallback::on_internal_error(CassError code, const String& message) {
   speculative_execution_->retry_next_host();
 }
 
@@ -90,7 +90,7 @@ void RequestHandler::schedule_next_execution(const Host::Ptr& current_host) {
   int64_t timeout = execution_plan_->next_execution(current_host);
   if (timeout >= 0) {
     SpeculativeExecution::Ptr speculative_execution(
-          new SpeculativeExecution(RequestHandler::Ptr(this)));
+          Memory::allocate<SpeculativeExecution>(RequestHandler::Ptr(this)));
     speculative_execution->schedule_next(timeout);
   }
 }
@@ -116,14 +116,14 @@ void RequestHandler::set_response(const Host::Ptr& host,
 }
 
 void RequestHandler::set_error(CassError code,
-                               const std::string& message) {
+                               const String& message) {
   if (future_->set_error(code, message)) {
     stop_request();
   }
 }
 
 void RequestHandler::set_error(const Host::Ptr& host,
-                               CassError code, const std::string& message) {
+                               CassError code, const String& message) {
   bool skip = (code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE && --running_executions_ > 0);
   if (!skip) {
     if (host) {
@@ -138,7 +138,7 @@ void RequestHandler::set_error(const Host::Ptr& host,
 
 void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
                                                    const Response::Ptr& error,
-                                                   CassError code, const std::string& message) {
+                                                   CassError code, const String& message) {
   if (future_->set_error_with_response(host->address(), error, code, message)) {
     stop_request();
   }
@@ -211,7 +211,7 @@ void SpeculativeExecution::on_set(ResponseMessage* response) {
   }
 }
 
-void SpeculativeExecution::on_error(CassError code, const std::string& message) {
+void SpeculativeExecution::on_error(CassError code, const String& message) {
   return_connection();
 
   // Handle recoverable errors by retrying with the next host
@@ -314,7 +314,7 @@ void SpeculativeExecution::on_result_response(ResponseMessage* response) {
 
     case CASS_RESULT_KIND_SCHEMA_CHANGE: {
       SchemaChangeCallback::Ptr schema_change_handler(
-            new SchemaChangeCallback(connection(),
+            Memory::allocate<SchemaChangeCallback>(connection(),
                                      Ptr(this),
                                      response->response_body()));
       schema_change_handler->execute();
@@ -427,13 +427,13 @@ void SpeculativeExecution::on_error_response(ResponseMessage* response) {
       break;
 
     case RetryPolicy::RetryDecision::IGNORE:
-      set_response(Response::Ptr(new ResultResponse()));
+      set_response(Response::Ptr(Memory::allocate<ResultResponse>()));
       break;
   }
 }
 
 void SpeculativeExecution::on_error_unprepared(ErrorResponse* error) {
-  std::string prepared_statement;
+  String prepared_statement;
 
   if (request()->opcode() == CQL_OPCODE_EXECUTE) {
     const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
@@ -454,7 +454,7 @@ void SpeculativeExecution::on_error_unprepared(ErrorResponse* error) {
   }
 
   if (!connection()->write(RequestCallback::Ptr(
-                            new PrepareCallback(prepared_statement, this)))) {
+                            Memory::allocate<PrepareCallback>(prepared_statement, this)))) {
     // Try to prepare on the same host but on a different connection
     retry_current_host();
   }
@@ -474,12 +474,12 @@ void SpeculativeExecution::set_response(const Response::Ptr& response) {
   request_handler_->set_response(current_host_, response);
 }
 
-void SpeculativeExecution::set_error(CassError code, const std::string& message) {
+void SpeculativeExecution::set_error(CassError code, const String& message) {
   request_handler_->set_error(current_host_, code, message);
 }
 
 void SpeculativeExecution::set_error_with_error_response(const Response::Ptr& error,
-                                                         CassError code, const std::string& message) {
+                                                         CassError code, const String& message) {
   request_handler_->set_error_with_error_response(current_host_, error, code, message);
 }
 

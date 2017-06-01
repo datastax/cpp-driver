@@ -17,14 +17,13 @@
 #include "dc_aware_policy.hpp"
 
 #include "logger.hpp"
+#include "memory.hpp"
 #include "request_handler.hpp"
 #include "scoped_lock.hpp"
 
 #include <algorithm>
 
 namespace cass {
-
-static const CopyOnWriteHostVec NO_HOSTS(new HostVec());
 
 void DCAwarePolicy::init(const Host::Ptr& connected_host,
                          const HostMap& hosts,
@@ -61,15 +60,15 @@ CassHostDistance DCAwarePolicy::distance(const Host::Ptr& host) const {
   return CASS_HOST_DISTANCE_IGNORE;
 }
 
-QueryPlan* DCAwarePolicy::new_query_plan(const std::string& connected_keyspace,
+QueryPlan* DCAwarePolicy::new_query_plan(const String& connected_keyspace,
                                          RequestHandler* request_handler,
                                          const TokenMap* token_map) {
   CassConsistency cl = request_handler != NULL ? request_handler->request()->consistency() : Request::DEFAULT_CONSISTENCY;
-  return new DCAwareQueryPlan(this, cl, index_++);
+  return Memory::allocate<DCAwareQueryPlan>(this, cl, index_++);
 }
 
 void DCAwarePolicy::on_add(const Host::Ptr& host) {
-  const std::string& dc = host->dc();
+  const String& dc = host->dc();
   if (local_dc_.empty() && !dc.empty()) {
     LOG_INFO("Using '%s' for local data center "
              "(if this is incorrect, please provide the correct data center)",
@@ -85,7 +84,7 @@ void DCAwarePolicy::on_add(const Host::Ptr& host) {
 }
 
 void DCAwarePolicy::on_remove(const Host::Ptr& host) {
-  const std::string& dc = host->dc();
+  const String& dc = host->dc();
   if (dc == local_dc_) {
     remove_host(local_dc_live_hosts_, host);
   } else {
@@ -101,11 +100,11 @@ void DCAwarePolicy::on_down(const Host::Ptr& host) {
   on_remove(host);
 }
 
-void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const std::string& dc, const Host::Ptr& host) {
+void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const String& dc, const Host::Ptr& host) {
   ScopedWriteLock wl(&rwlock_);
   Map::iterator i = map_.find(dc);
   if (i == map_.end()) {
-    CopyOnWriteHostVec hosts(new HostVec());
+    CopyOnWriteHostVec hosts(Memory::allocate<HostVec>());
     hosts->push_back(host);
     map_.insert(Map::value_type(dc, hosts));
   } else {
@@ -113,7 +112,7 @@ void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const std::string& dc, const Ho
   }
 }
 
-void DCAwarePolicy::PerDCHostMap::remove_host_from_dc(const std::string& dc, const Host::Ptr& host) {
+void DCAwarePolicy::PerDCHostMap::remove_host_from_dc(const String& dc, const Host::Ptr& host) {
   ScopedWriteLock wl(&rwlock_);
   Map::iterator i = map_.find(dc);
   if (i != map_.end()) {
@@ -121,10 +120,11 @@ void DCAwarePolicy::PerDCHostMap::remove_host_from_dc(const std::string& dc, con
   }
 }
 
-const CopyOnWriteHostVec& DCAwarePolicy::PerDCHostMap::get_hosts(const std::string& dc) const {
+const CopyOnWriteHostVec& DCAwarePolicy::PerDCHostMap::get_hosts(const String& dc) const {
   ScopedReadLock rl(&rwlock_);
   Map::const_iterator i = map_.find(dc);
-  if (i == map_.end()) return NO_HOSTS;
+  if (i == map_.end()) return no_hosts_;
+
   return i->second;
 }
 
@@ -170,7 +170,7 @@ Host::Ptr DCAwarePolicy::DCAwareQueryPlan::compute_next() {
   }
 
   if (!remote_dcs_) {
-    remote_dcs_.reset(new PerDCHostMap::KeySet());
+    remote_dcs_.reset(Memory::allocate<PerDCHostMap::KeySet>());
     policy_->per_remote_dc_live_hosts_.copy_dcs(remote_dcs_.get());
   }
 

@@ -18,6 +18,7 @@
 #define __CASS_CLUSTER_HPP_INCLUDED__
 
 #include "config.hpp"
+#include "memory.hpp"
 #include "external.hpp"
 
 namespace cass {

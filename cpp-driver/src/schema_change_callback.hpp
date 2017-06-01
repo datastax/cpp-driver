@@ -41,7 +41,7 @@ public:
   void execute();
 
   virtual void on_set(const ResponseMap& responses);
-  virtual void on_error(CassError code, const std::string& message);
+  virtual void on_error(CassError code, const String& message);
   virtual void on_timeout();
   void on_closing();
 

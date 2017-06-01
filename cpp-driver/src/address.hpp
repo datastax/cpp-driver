@@ -18,14 +18,14 @@
 #define __CASS_ADDRESS_HPP_INCLUDED__
 
 #include "hash.hpp"
-
-#include <sparsehash/dense_hash_set>
+#include "memory.hpp"
+#include "string.hpp"
+#include "vector.hpp"
+#include "dense_hash_set.hpp"
 
 #include <ostream>
 #include <string.h>
-#include <string>
 #include <uv.h>
-#include <vector>
 
 namespace cass {
 
@@ -38,9 +38,9 @@ public:
   static const Address BIND_ANY_IPV6;
 
   Address();
-  Address(const std::string& ip, int port); // Tests only
+  Address(const String& ip, int port); // Tests only
 
-  static bool from_string(const std::string& ip, int port,
+  static bool from_string(const String& ip, int port,
                           Address* output = NULL);
 
   static bool from_inet(const char* data, size_t size, int port,
@@ -62,7 +62,7 @@ public:
   int family() const { return addr()->sa_family; }
   int port() const;
 
-  std::string to_string(bool with_port = false) const;
+  String to_string(bool with_port = false) const;
   uint8_t to_inet(uint8_t* data) const;
 
   int compare(const Address& a, bool with_port = true) const;
@@ -104,8 +104,8 @@ struct AddressHash {
   }
 };
 
-typedef std::vector<Address> AddressVec;
-typedef sparsehash::dense_hash_set<Address, AddressHash> AddressSet;
+typedef Vector<Address> AddressVec;
+typedef DenseHashSet<Address, AddressHash> AddressSet;
 
 inline bool operator<(const Address& a, const Address& b) {
   return a.compare(b) < 0;

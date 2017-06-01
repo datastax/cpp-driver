@@ -18,6 +18,7 @@
 #define __CASS_TIMER_HPP_INCLUDED__
 
 #include "macros.hpp"
+#include "memory.hpp"
 
 #include <uv.h>
 
@@ -45,7 +46,7 @@ public:
   void start(uv_loop_t* loop, uint64_t timeout, void* data,
              Callback cb) {
     if (handle_ == NULL) {
-      handle_ = new uv_timer_t;
+      handle_ = Memory::allocate<uv_timer_t>();
       handle_->data = this;
       uv_timer_init(loop, handle_);
     }
@@ -77,7 +78,7 @@ public:
   }
 
   static void on_close(uv_handle_t* handle) {
-    delete reinterpret_cast<uv_timer_t*>(handle);
+    Memory::deallocate(reinterpret_cast<uv_timer_t*>(handle));
   }
 
 private:

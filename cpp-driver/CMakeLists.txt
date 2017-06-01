@@ -66,6 +66,7 @@ option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 option(CASS_USE_ZLIB "Use zlib" OFF)
 option(CASS_USE_LIBSSH2 "Use libssh2 for integration tests" ON)
+option(CASS_DEBUG_CUSTOM_ALLOC "Debug custom allocator" OFF)
 
 # Handle testing dependencies
 if(CASS_BUILD_TESTS)
@@ -90,6 +91,10 @@ endif()
 # Ensure the driver is configured to build
 if(NOT CASS_BUILD_SHARED AND NOT CASS_BUILD_STATIC)
   message(FATAL_ERROR "Driver is not Configured to Build: Ensure shared and/or static library is enabled")
+endif()
+
+if(CASS_DEBUG_CUSTOM_ALLOC AND CASS_USE_STATIC_LIBS)
+  message(WARNING "Debugging the custom allocator while static linking the library can cause your application to fail")
 endif()
 
 #---------------

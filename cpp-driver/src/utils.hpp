@@ -19,20 +19,20 @@
 
 #include "cassandra.h"
 #include "macros.hpp"
+#include "string.hpp"
+#include "vector.hpp"
 
 #include <stddef.h>
 #include <stdint.h>
-#include <string>
 #include <string.h>
-#include <vector>
 
 namespace cass {
 
 class BufferPiece;
 class Value;
 
-typedef std::vector<std::string> ContactPointList;
-typedef std::vector<std::string> DcList;
+typedef Vector<String> ContactPointList;
+typedef Vector<String> DcList;
 
 template<class From, class To>
 #if _MSC_VER && !__INTEL_COMPILER
@@ -80,19 +80,19 @@ inline size_t next_pow_2(size_t num) {
   return next;
 }
 
-std::string opcode_to_string(int opcode);
+String opcode_to_string(int opcode);
 
-std::string protocol_version_to_string(int version);
+String protocol_version_to_string(int version);
 
-void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter = ',');
+void explode(const String& str, Vector<String>& vec, const char delimiter = ',');
 
-std::string& trim(std::string& str);
+String& trim(String& str);
 
-bool is_valid_cql_id(const std::string& str);
+bool is_valid_cql_id(const String& str);
 
-std::string& to_cql_id(std::string& str);
+String& to_cql_id(String& str);
 
-std::string& escape_id(std::string& str);
+String& escape_id(String& str);
 
 inline size_t num_leading_zeros(int64_t value) {
   if (value == 0)

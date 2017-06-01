@@ -19,13 +19,12 @@
 
 #include "cassandra.h"
 #include "data_type.hpp"
+#include "map.hpp"
 #include "metadata.hpp"
 #include "ref_counted.hpp"
+#include "string.hpp"
 #include "value.hpp"
-
-#include <map>
-#include <string>
-#include <vector>
+#include "vector.hpp"
 
 #define EMPTY_TYPE "org.apache.cassandra.db.marshal.EmptyType"
 
@@ -33,7 +32,7 @@ namespace cass {
 
 class ParserBase {
 public:
-  ParserBase(const std::string& str, size_t index)
+  ParserBase(const String& str, size_t index)
     : str_(str)
     , index_(index) { }
 
@@ -78,13 +77,13 @@ public:
     }
 
 protected:
-  const std::string str_;
+  const String str_;
   size_t index_;
 };
 
 class DataTypeCqlNameParser {
 public:
-  static DataType::ConstPtr parse(const std::string& type,
+  static DataType::ConstPtr parse(const String& type,
                                   SimpleDataTypeCache& cache,
                                   KeyspaceMetadata* keyspace,
                                   bool is_frozen = false);
@@ -92,25 +91,25 @@ public:
 private:
   class Parser : public ParserBase {
   public:
-    typedef std::vector<std::string> TypeParamsVec;
+    typedef Vector<String> TypeParamsVec;
 
-    Parser(const std::string& str, size_t index)
+    Parser(const String& str, size_t index)
       : ParserBase(str, index) { }
 
-    void parse_type_name(std::string* name);
+    void parse_type_name(String* name);
     void parse_type_parameters(TypeParamsVec* params);
 
   private:
-    void read_next_identifier(std::string* name);
-    bool read_raw_type_parameters(std::string* param);
+    void read_next_identifier(String* name);
+    bool read_raw_type_parameters(String* param);
   };
 };
 
 class ParseResult : public RefCounted<ParseResult> {
 public:
   typedef SharedRefPtr<ParseResult> Ptr;
-  typedef std::vector<bool> ReversedVec;
-  typedef std::map<std::string, DataType::ConstPtr> CollectionMap;
+  typedef Vector<bool> ReversedVec;
+  typedef Map<String, DataType::ConstPtr> CollectionMap;
 
   ParseResult(DataType::ConstPtr type, bool reversed)
     : is_composite_(false) {
@@ -141,39 +140,39 @@ private:
 
 class DataTypeClassNameParser {
 public:
-  static bool is_reversed(const std::string& type);
-  static bool is_frozen(const std::string& type);
-  static bool is_composite(const std::string& type);
-  static bool is_collection(const std::string& type);
+  static bool is_reversed(const String& type);
+  static bool is_frozen(const String& type);
+  static bool is_composite(const String& type);
+  static bool is_collection(const String& type);
 
-  static bool is_user_type(const std::string& type);
-  static bool is_tuple_type(const std::string& type);
+  static bool is_user_type(const String& type);
+  static bool is_tuple_type(const String& type);
 
-  static DataType::ConstPtr parse_one(const std::string& type, SimpleDataTypeCache& cache);
-  static ParseResult::Ptr parse_with_composite(const std::string& type, SimpleDataTypeCache& cache);
+  static DataType::ConstPtr parse_one(const String& type, SimpleDataTypeCache& cache);
+  static ParseResult::Ptr parse_with_composite(const String& type, SimpleDataTypeCache& cache);
 
 private:
-  static bool get_nested_class_name(const std::string& type, std::string* class_name);
+  static bool get_nested_class_name(const String& type, String* class_name);
 
-  typedef std::vector<std::string> TypeParamsVec;
-  typedef std::vector<std::pair<std::string, std::string> > NameAndTypeParamsVec;
+  typedef Vector<String> TypeParamsVec;
+  typedef Vector<std::pair<String, String> > NameAndTypeParamsVec;
 
   class Parser : public ParserBase {
   public:
-    Parser(const std::string& str, size_t index)
+    Parser(const String& str, size_t index)
       : ParserBase(str, index) { }
 
-    bool read_one(std::string* name_and_args);
-    void get_next_name(std::string* name = NULL);
+    bool read_one(String* name_and_args);
+    void get_next_name(String* name = NULL);
     bool get_type_params(TypeParamsVec* params);
     bool get_name_and_type_params(NameAndTypeParamsVec* params);
     bool get_collection_params(NameAndTypeParamsVec* params);
 
   private:
-    bool read_raw_arguments(std::string* args);
-    void read_next_identifier(std::string* name);
+    bool read_raw_arguments(String* args);
+    void read_next_identifier(String* name);
 
-    static void parse_error(const std::string& str,
+    static void parse_error(const String& str,
                             size_t index,
                             const char* error);
   };

@@ -67,7 +67,7 @@ void Host::LatencyTracker::update(uint64_t latency_ns) {
   current_.timestamp = now;
 }
 
-bool VersionNumber::parse(const std::string& version) {
+bool VersionNumber::parse(const String& version) {
   return sscanf(version.c_str(), "%d.%d.%d", &major_version_, &minor_version_, &patch_version_) >= 2;
 }
 

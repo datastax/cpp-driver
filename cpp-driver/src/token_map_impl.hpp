@@ -19,23 +19,23 @@
 
 #include "collection_iterator.hpp"
 #include "constants.hpp"
+#include "dense_hash_map.hpp"
+#include "dense_hash_set.hpp"
+#include "deque.hpp"
+#include "json.hpp"
 #include "map_iterator.hpp"
+#include "memory.hpp"
 #include "result_iterator.hpp"
 #include "result_response.hpp"
 #include "row.hpp"
 #include "string_ref.hpp"
 #include "token_map.hpp"
 #include "value.hpp"
-
-#include "third_party/rapidjson/rapidjson/document.h"
-
-#include <sparsehash/dense_hash_map>
+#include "vector.hpp"
 
 #include <assert.h>
 #include <algorithm>
-#include <queue>
 #include <uv.h>
-#include <vector>
 
 #define CASS_NETWORK_TOPOLOGY_STRATEGY "NetworkTopologyStrategy"
 #define CASS_SIMPLE_STRATEGY           "SimpleStrategy"
@@ -69,16 +69,16 @@ struct HostHash {
 
 class IdGenerator {
 public:
-  typedef sparsehash::dense_hash_map<std::string, uint32_t> IdMap;
+  typedef DenseHashMap<String, uint32_t> IdMap;
 
   static const uint32_t EMPTY_KEY;
   static const uint32_t DELETED_KEY;
 
   IdGenerator() {
-    ids_.set_empty_key(std::string());
+    ids_.set_empty_key(String());
   }
 
-  uint32_t get(const std::string& key) {
+  uint32_t get(const String& key) {
     if (key.empty()) {
       return 0;
     }
@@ -131,22 +131,22 @@ struct RandomPartitioner {
 
 class ByteOrderedPartitioner {
 public:
-  typedef std::vector<uint8_t> Token;
+  typedef Vector<uint8_t> Token;
 
   static Token from_string(const StringRef& str);
   static Token hash(const StringRef& str);
   static StringRef name() { return "ByteOrderedPartitioner"; }
 };
 
-class HostSet : public sparsehash::dense_hash_set<Host::Ptr, HostHash> {
+class HostSet : public DenseHashSet<Host::Ptr, HostHash> {
 public:
   HostSet() {
-    set_empty_key(Host::Ptr(new Host(Address::EMPTY_KEY, false)));
-    set_deleted_key(Host::Ptr(new Host(Address::DELETED_KEY, false)));
+    set_empty_key(Host::Ptr(Memory::allocate<Host>(Address::EMPTY_KEY, false)));
+    set_deleted_key(Host::Ptr(Memory::allocate<Host>(Address::DELETED_KEY, false)));
   }
 };
 
-class RackSet : public sparsehash::dense_hash_set<uint32_t> {
+class RackSet : public DenseHashSet<uint32_t> {
 public:
   RackSet() {
     set_empty_key(IdGenerator::EMPTY_KEY);
@@ -161,7 +161,7 @@ struct Datacenter {
   RackSet racks;
 };
 
-class DatacenterMap : public sparsehash::dense_hash_map<uint32_t, Datacenter> {
+class DatacenterMap : public DenseHashMap<uint32_t, Datacenter> {
 public:
   DatacenterMap() {
     set_empty_key(IdGenerator::EMPTY_KEY);
@@ -173,7 +173,7 @@ struct ReplicationFactor {
   ReplicationFactor()
     : count(0) { }
   size_t count;
-  std::string name; // Used for logging the datacenter name
+  String name; // Used for logging the datacenter name
   bool operator==(const ReplicationFactor& other) const {
     return count == other.count && name == other.name;
   }
@@ -193,7 +193,7 @@ inline void build_datacenters(const HostSet& hosts, DatacenterMap& result) {
   }
 }
 
-class ReplicationFactorMap : public sparsehash::dense_hash_map<uint32_t, ReplicationFactor> {
+class ReplicationFactorMap : public DenseHashMap<uint32_t, ReplicationFactor> {
 public:
   ReplicationFactorMap() {
     set_empty_key(IdGenerator::EMPTY_KEY);
@@ -206,12 +206,12 @@ public:
   typedef typename Partitioner::Token Token;
 
   typedef std::pair<Token, Host*> TokenHost;
-  typedef std::vector<TokenHost> TokenHostVec;
+  typedef Vector<TokenHost> TokenHostVec;
 
   typedef std::pair<Token, CopyOnWriteHostVec> TokenReplicas;
-  typedef std::vector<TokenReplicas> TokenReplicasVec;
+  typedef Vector<TokenReplicas> TokenReplicasVec;
 
-  typedef std::deque<typename TokenHostVec::const_iterator> TokenHostQueue;
+  typedef Deque<typename TokenHostVec::const_iterator> TokenHostQueue;
 
   struct DatacenterRackInfo {
     DatacenterRackInfo()
@@ -225,10 +225,10 @@ public:
     TokenHostQueue skipped_endpoints;
   };
 
-  class DatacenterRackInfoMap : public sparsehash::dense_hash_map<uint32_t, DatacenterRackInfo> {
+  class DatacenterRackInfoMap : public DenseHashMap<uint32_t, DatacenterRackInfo> {
   public:
     DatacenterRackInfoMap () {
-      sparsehash::dense_hash_map<uint32_t, DatacenterRackInfo>::set_empty_key(IdGenerator::EMPTY_KEY);
+      DenseHashMap<uint32_t, DatacenterRackInfo>::set_empty_key(IdGenerator::EMPTY_KEY);
     }
   };
 
@@ -279,11 +279,11 @@ void ReplicationStrategy<Partitioner>::init(IdGenerator& dc_ids,
         is_string_type(value->secondary_value_type())) {
       MapIterator iterator(value);
       while (iterator.next()) {
-        std::string key(iterator.key()->to_string());
+        String key(iterator.key()->to_string());
         if (key == "class") {
           strategy_class = iterator.value()->to_string_ref();
         } else {
-          std::string value(iterator.value()->to_string());
+          String value(iterator.value()->to_string());
           size_t count = strtoul(value.c_str(), NULL, 10);
           if (count > 0) {
             ReplicationFactor replication_factor;
@@ -310,17 +310,17 @@ void ReplicationStrategy<Partitioner>::init(IdGenerator& dc_ids,
     value = row->get_by_name("strategy_options");
 
     int32_t buffer_size = value->size();
-    ScopedPtr<char[]> buf(new char[buffer_size + 1]);
-    memcpy(buf.get(), value->data(), buffer_size);
+    Vector<char> buf(buffer_size + 1);
+    memcpy(&buf[0], value->data(), buffer_size);
     buf[buffer_size] = '\0';
 
-    rapidjson::Document d;
-    d.ParseInsitu(buf.get());
+    json::Document d;
+    d.ParseInsitu(buf.data());
 
     if (!d.HasParseError() && d.IsObject()) {
-      for (rapidjson::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
-        std::string key(i->name.GetString(), i->name.GetStringLength());
-        std::string value(i->value.GetString(), i->value.GetStringLength());
+      for (json::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
+        String key(i->name.GetString(), i->name.GetStringLength());
+        String value(i->value.GetString(), i->value.GetStringLength());
         size_t count = strtoul(value.c_str(), NULL, 10);
         if (count > 0) {
           ReplicationFactor replication_factor;
@@ -406,7 +406,7 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(const Tok
     Token token = i->first;
     typename TokenHostVec::const_iterator token_it = i;
 
-    CopyOnWriteHostVec replicas(new HostVec());
+    CopyOnWriteHostVec replicas(Memory::allocate<HostVec>());
     replicas->reserve(num_replicas);
 
     // Clear datacenter and rack information for the next token
@@ -488,7 +488,7 @@ void ReplicationStrategy<Partitioner>::build_replicas_simple(const TokenHostVec&
   size_t num_replicas = std::min<size_t>(it->second.count, tokens.size());
   for (typename TokenHostVec::const_iterator i = tokens.begin(),
        end = tokens.end(); i != end; ++i) {
-    CopyOnWriteHostVec replicas(new HostVec());
+    CopyOnWriteHostVec replicas(Memory::allocate<HostVec>());
     typename TokenHostVec::const_iterator token_it = i;
     do {
       replicas->push_back(Host::Ptr(token_it->second));
@@ -505,7 +505,7 @@ template <class Partitioner>
 void ReplicationStrategy<Partitioner>::build_replicas_non_replicated(const TokenHostVec& tokens, const DatacenterMap& not_used,
                                                                      TokenReplicasVec& result) const {
   for (typename TokenHostVec::const_iterator i = tokens.begin(); i != tokens.end(); ++i) {
-    CopyOnWriteHostVec replicas(new HostVec(1, Host::Ptr(i->second)));
+    CopyOnWriteHostVec replicas(Memory::allocate<HostVec>(1, Host::Ptr(i->second)));
     result.push_back(TokenReplicas(i->first, replicas));
   }
 }
@@ -516,7 +516,7 @@ public:
   typedef typename Partitioner::Token Token;
 
   typedef std::pair<Token, Host*> TokenHost;
-  typedef std::vector<TokenHost> TokenHostVec;
+  typedef Vector<TokenHost> TokenHostVec;
 
   struct TokenHostCompare {
     bool operator()(const TokenHost& lhs, const TokenHost& rhs) const {
@@ -539,7 +539,7 @@ public:
   };
 
   typedef std::pair<Token, CopyOnWriteHostVec> TokenReplicas;
-  typedef std::vector<TokenReplicas> TokenReplicasVec;
+  typedef Vector<TokenReplicas> TokenReplicasVec;
 
   struct TokenReplicasCompare {
     bool operator()(const TokenReplicas& lhs, const TokenReplicas& rhs) const {
@@ -547,16 +547,15 @@ public:
     }
   };
 
-  typedef sparsehash::dense_hash_map<std::string, TokenReplicasVec> KeyspaceReplicaMap;
-  typedef sparsehash::dense_hash_map<std::string, ReplicationStrategy<Partitioner> > KeyspaceStrategyMap;
+  typedef DenseHashMap<String, TokenReplicasVec> KeyspaceReplicaMap;
+  typedef DenseHashMap<String, ReplicationStrategy<Partitioner> > KeyspaceStrategyMap;
 
-  static const CopyOnWriteHostVec NO_REPLICAS;
-
-  TokenMapImpl() {
-    replicas_.set_empty_key(std::string());
-    replicas_.set_deleted_key(std::string(1, '\0'));
-    strategies_.set_empty_key(std::string());
-    strategies_.set_deleted_key(std::string(1, '\0'));
+  TokenMapImpl()
+    : no_replicas_(NULL) {
+    replicas_.set_empty_key(String());
+    replicas_.set_deleted_key(String(1, '\0'));
+    strategies_.set_empty_key(String());
+    strategies_.set_deleted_key(String(1, '\0'));
   }
 
   virtual void add_host(const Host::Ptr& host, const Value* tokens);
@@ -566,13 +565,13 @@ public:
 
   virtual void add_keyspaces(const VersionNumber& cassandra_version, ResultResponse* result);
   virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, ResultResponse* result);
-  virtual void drop_keyspace(const std::string& keyspace_name);
+  virtual void drop_keyspace(const String& keyspace_name);
   virtual void clear_replicas_and_strategies();
 
   virtual void build();
 
-  virtual const CopyOnWriteHostVec& get_replicas(const std::string& keyspace_name,
-                                                 const std::string& routing_key) const;
+  virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
+                                                 const String& routing_key) const;
 
 private:
   void update_keyspace(const VersionNumber& cassandra_version,
@@ -590,10 +589,8 @@ private:
   KeyspaceStrategyMap strategies_;
   IdGenerator rack_ids_;
   IdGenerator dc_ids_;
+  CopyOnWriteHostVec no_replicas_;
 };
-
-template <class Partitioner>
-const CopyOnWriteHostVec TokenMapImpl<Partitioner>::NO_REPLICAS(NULL);
 
 template <class Partitioner>
 void TokenMapImpl<Partitioner>::add_host(const Host::Ptr& host, const Value* tokens) {
@@ -671,7 +668,7 @@ void TokenMapImpl<Partitioner>::update_keyspaces_and_build(const VersionNumber& 
 }
 
 template <class Partitioner>
-void TokenMapImpl<Partitioner>::drop_keyspace(const std::string& keyspace_name) {
+void TokenMapImpl<Partitioner>::drop_keyspace(const String& keyspace_name) {
   replicas_.erase(keyspace_name);
   strategies_.erase(keyspace_name);
 }
@@ -694,15 +691,15 @@ void TokenMapImpl<Partitioner>::build() {
 }
 
 template <class Partitioner>
-const CopyOnWriteHostVec& TokenMapImpl<Partitioner>::get_replicas(const std::string& keyspace_name,
-                                                                  const std::string& routing_key) const {
+const CopyOnWriteHostVec& TokenMapImpl<Partitioner>::get_replicas(const String& keyspace_name,
+                                                                  const String& routing_key) const {
   typename KeyspaceReplicaMap::const_iterator ks_it = replicas_.find(keyspace_name);
 
   if (ks_it != replicas_.end()) {
     Token token = Partitioner::hash(routing_key);
     const TokenReplicasVec& replicas = ks_it->second;
     typename TokenReplicasVec::const_iterator replicas_it = std::upper_bound(replicas.begin(), replicas.end(),
-                                                                             TokenReplicas(token, NO_REPLICAS),
+                                                                             TokenReplicas(token, no_replicas_),
                                                                              TokenReplicasCompare());
     if (replicas_it != replicas.end()) {
       return replicas_it->second;
@@ -711,7 +708,7 @@ const CopyOnWriteHostVec& TokenMapImpl<Partitioner>::get_replicas(const std::str
     }
   }
 
-  return NO_REPLICAS;
+  return no_replicas_;
 }
 
 template <class Partitioner>
@@ -721,7 +718,7 @@ void TokenMapImpl<Partitioner>::update_keyspace(const VersionNumber& cassandra_v
   ResultIterator rows(result);
 
   while (rows.next()) {
-    std::string keyspace_name;
+    String keyspace_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &keyspace_name)) {
@@ -773,7 +770,7 @@ void TokenMapImpl<Partitioner>::build_replicas() {
   for (typename KeyspaceStrategyMap::const_iterator i = strategies_.begin(),
        end = strategies_.end();
        i != end; ++i) {
-    const std::string& keyspace_name = i->first;
+    const String& keyspace_name = i->first;
     const ReplicationStrategy<Partitioner>& strategy = i->second;
     strategy.build_replicas(tokens_, datacenters_, replicas_[keyspace_name]);
   }

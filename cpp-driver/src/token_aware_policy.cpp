@@ -44,7 +44,7 @@ void TokenAwarePolicy::init(const Host::Ptr& connected_host,
   ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
 }
 
-QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspace,
+QueryPlan* TokenAwarePolicy::new_query_plan(const String& connected_keyspace,
                                             RequestHandler* request_handler,
                                             const TokenMap* token_map) {
   if (request_handler != NULL) {
@@ -54,20 +54,20 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
       case CQL_OPCODE_QUERY:
       case CQL_OPCODE_EXECUTE:
       case CQL_OPCODE_BATCH:
-        const std::string& statement_keyspace = request->keyspace();
-        const std::string& keyspace = statement_keyspace.empty()
+        const String& statement_keyspace = request->keyspace();
+        const String& keyspace = statement_keyspace.empty()
                                       ? connected_keyspace : statement_keyspace;
-        std::string routing_key;
+        String routing_key;
         if (request->get_routing_key(&routing_key, request_handler->encoding_cache()) && !keyspace.empty()) {
           if (token_map != NULL) {
             CopyOnWriteHostVec replicas = token_map->get_replicas(keyspace, routing_key);
             if (replicas && !replicas->empty()) {
-              return new TokenAwareQueryPlan(child_policy_.get(),
-                                             child_policy_->new_query_plan(connected_keyspace,
-                                                                           request_handler,
-                                                                           token_map),
-                                             replicas,
-                                             index_++);
+              return Memory::allocate<TokenAwareQueryPlan>(child_policy_.get(),
+                                                           child_policy_->new_query_plan(connected_keyspace,
+                                                                                         request_handler,
+                                                                                         token_map),
+                                                           replicas,
+                                                           index_++);
             }
           }
         }

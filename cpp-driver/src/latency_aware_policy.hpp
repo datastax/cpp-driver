@@ -47,7 +47,7 @@ public:
     , min_average_(-1)
     , calculate_min_average_task_(NULL)
     , settings_(settings)
-    , hosts_(new HostVec) {}
+    , hosts_(Memory::allocate<HostVec>()) {}
 
   virtual ~LatencyAwarePolicy() {}
 
@@ -56,12 +56,12 @@ public:
   virtual void register_handles(uv_loop_t* loop);
   virtual void close_handles();
 
-  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+  virtual QueryPlan* new_query_plan(const String& connected_keyspace,
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
   virtual LoadBalancingPolicy* new_instance() {
-    return new LatencyAwarePolicy(child_policy_->new_instance(), settings_);
+    return Memory::allocate<LatencyAwarePolicy>(child_policy_->new_instance(), settings_);
   }
 
   virtual void on_add(const Host::Ptr& host);

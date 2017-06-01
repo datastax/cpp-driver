@@ -20,6 +20,7 @@
 #include "atomic.hpp"
 #include "cassandra.h"
 #include "external.hpp"
+#include "memory.hpp"
 #include "random.hpp"
 
 #include <uv.h>

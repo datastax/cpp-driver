@@ -36,12 +36,12 @@ static bool least_busy_comp(Connection* a, Connection* b) {
 
 class SetKeyspaceCallback : public SimpleRequestCallback {
 public:
-  SetKeyspaceCallback(const std::string& keyspace,
+  SetKeyspaceCallback(const String& keyspace,
                       const SpeculativeExecution::Ptr& speculative_execution);
 
 private:
   virtual void on_internal_set(ResponseMessage* response);
-  virtual void on_internal_error(CassError code, const std::string& message);
+  virtual void on_internal_error(CassError code, const String& message);
   virtual void on_internal_timeout();
 
   void on_result_response(ResponseMessage* response);
@@ -50,9 +50,9 @@ private:
   SpeculativeExecution::Ptr speculative_execution_;
 };
 
-SetKeyspaceCallback::SetKeyspaceCallback(const std::string& keyspace,
+SetKeyspaceCallback::SetKeyspaceCallback(const String& keyspace,
                                          const SpeculativeExecution::Ptr& speculative_execution)
-  : SimpleRequestCallback(Request::ConstPtr(new QueryRequest("USE \"" + keyspace + "\"")))
+  : SimpleRequestCallback(Request::ConstPtr(Memory::allocate<QueryRequest>("USE \"" + keyspace + "\"")))
   , speculative_execution_(speculative_execution) { }
 
 void SetKeyspaceCallback::on_internal_set(ResponseMessage* response) {
@@ -70,7 +70,7 @@ void SetKeyspaceCallback::on_internal_set(ResponseMessage* response) {
   }
 }
 
-void SetKeyspaceCallback::on_internal_error(CassError code, const std::string& message) {
+void SetKeyspaceCallback::on_internal_error(CassError code, const String& message) {
   connection()->defunct();
   speculative_execution_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
                                    "Unable to set keyspace");
@@ -253,8 +253,8 @@ bool Pool::write(Connection* connection, const SpeculativeExecution::Ptr& specul
               static_cast<void*>(connection),
               static_cast<void*>(this));
     if (!connection->write(RequestCallback::Ptr(
-                             new SetKeyspaceCallback(*io_worker_->keyspace(),
-                                                     speculative_execution)),
+                             Memory::allocate<SetKeyspaceCallback>(*io_worker_->keyspace(),
+                                                                   speculative_execution)),
                            false)) {
       return false;
     }
@@ -301,11 +301,11 @@ void Pool::maybe_close() {
 void Pool::spawn_connection() {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     Connection* connection =
-        new Connection(loop_, config_, metrics_,
-                       host_,
-                       *io_worker_->keyspace(),
-                       io_worker_->protocol_version(),
-                       this);
+        Memory::allocate<Connection>(loop_, config_, metrics_,
+                                     host_,
+                                     *io_worker_->keyspace(),
+                                     io_worker_->protocol_version(),
+                                     this);
 
     LOG_DEBUG("Spawning new connection to host %s for pool(%p)",
               host_->address_string().c_str(),

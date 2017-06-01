@@ -21,7 +21,6 @@
 #include "serialization.hpp"
 
 #include <iomanip>
-#include <sstream>
 
 extern "C" {
 
@@ -116,8 +115,8 @@ CassError cass_error_result_arg_type(const CassErrorResult* error_result,
 
 namespace cass {
 
-std::string ErrorResponse::error_message() const {
-  std::ostringstream ss;
+String ErrorResponse::error_message() const {
+  OStringStream ss;
   ss << "'" << message().to_string() << "'"
      << " (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
      << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, code()) << ")";
@@ -213,13 +212,13 @@ void ErrorResponse::decode_write_type(char* pos) {
   }
 }
 
-bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected_opcode,
+bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opcode,
                                      Response* response) {
   if (response->opcode() == expected_opcode) {
     return false;
   }
 
-  std::ostringstream ss;
+  OStringStream ss;
   if (response->opcode() == CQL_OPCODE_ERROR) {
     ss << prefix << ": Error response "
        << static_cast<ErrorResponse*>(response)->error_message();

@@ -27,7 +27,6 @@
 #include "string_ref.hpp"
 
 #include <iomanip>
-#include <sstream>
 
 #define MAX_SCHEMA_AGREEMENT_WAIT_MS 10000
 #define RETRY_SCHEMA_AGREEMENT_WAIT_MS 200
@@ -129,16 +128,16 @@ void SchemaChangeCallback::on_set(const ResponseMap& responses) {
 
   // Try again
   Ptr callback(
-        new SchemaChangeCallback(connection(),
-                                 speculative_execution_,
-                                 request_response_,
-                                 elapsed_ms_));
+        Memory::allocate<SchemaChangeCallback>(connection(),
+                                               speculative_execution_,
+                                               request_response_,
+                                               elapsed_ms_));
   connection()->schedule_schema_agreement(callback,
                                           RETRY_SCHEMA_AGREEMENT_WAIT_MS);
 }
 
-void SchemaChangeCallback::on_error(CassError code, const std::string& message) {
-  std::ostringstream ss;
+void SchemaChangeCallback::on_error(CassError code, const String& message) {
+  OStringStream ss;
   ss << "An error occurred waiting for schema agreement: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
   LOG_ERROR("%s", ss.str().c_str());

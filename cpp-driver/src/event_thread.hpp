@@ -32,7 +32,7 @@ public:
   int init(size_t queue_size) {
     int rc = LoopThread::init();
     if (rc != 0) return rc;
-    event_queue_.reset(new AsyncQueue<MPMCQueue<E> >(queue_size));
+    event_queue_.reset(Memory::allocate<AsyncQueue<MPMCQueue<E> > >(queue_size));
     return event_queue_->init(loop(), this, on_event_internal);
   }
 

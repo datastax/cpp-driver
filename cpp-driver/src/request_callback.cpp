@@ -168,7 +168,7 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
 }
 
 bool MultipleRequestCallback::get_result_response(const ResponseMap& responses,
-                                                  const std::string& index,
+                                                  const String& index,
                                                   ResultResponse** response) {
   ResponseMap::const_iterator it = responses.find(index);
   if (it == responses.end() || it->second->opcode() != CQL_OPCODE_RESULT) {
@@ -178,12 +178,12 @@ bool MultipleRequestCallback::get_result_response(const ResponseMap& responses,
   return true;
 }
 
-void MultipleRequestCallback::execute_query(const std::string& index, const std::string& query) {
+void MultipleRequestCallback::execute_query(const String& index, const String& query) {
   if (has_errors_or_timeouts_) return;
   responses_[index] = Response::Ptr();
   SharedRefPtr<InternalCallback> callback(
-        new InternalCallback(Ptr(this),
-                             Request::ConstPtr(new QueryRequest(query)), index));
+        Memory::allocate<InternalCallback>(Ptr(this),
+                             Request::ConstPtr(Memory::allocate<QueryRequest>(query)), index));
   remaining_++;
   if (!connection_->write(callback)) {
     on_error(CASS_ERROR_LIB_NO_STREAMS, "No more streams available");
@@ -192,7 +192,7 @@ void MultipleRequestCallback::execute_query(const std::string& index, const std:
 
 MultipleRequestCallback::InternalCallback::InternalCallback(const MultipleRequestCallback::Ptr& parent,
                                                             const Request::ConstPtr& request,
-                                                            const std::string& index)
+                                                            const String& index)
   : SimpleRequestCallback(request)
   , parent_(parent)
   , index_(index) { }
@@ -205,7 +205,7 @@ void MultipleRequestCallback::InternalCallback::on_internal_set(ResponseMessage*
 }
 
 void MultipleRequestCallback::InternalCallback::on_internal_error(CassError code,
-                                                                  const std::string& message) {
+                                                                  const String& message) {
   if (!parent_->has_errors_or_timeouts_) {
     parent_->on_error(code, message);
   }
@@ -235,7 +235,7 @@ void SimpleRequestCallback::on_set(ResponseMessage* response) {
   on_internal_set(response);
 }
 
-void SimpleRequestCallback::on_error(CassError code, const std::string& message) {
+void SimpleRequestCallback::on_error(CassError code, const String& message) {
   timer_.stop();
   on_internal_error(code, message);
 }

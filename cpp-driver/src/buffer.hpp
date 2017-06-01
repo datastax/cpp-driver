@@ -19,10 +19,9 @@
 
 #include "ref_counted.hpp"
 #include "serialization.hpp"
+#include "vector.hpp"
 
 #include <uv.h>
-
-#include <vector>
 
 namespace cass {
 
@@ -141,18 +140,18 @@ public:
     return copy(pos, value, size);
   }
 
-  size_t encode_string_list(size_t offset, const std::vector<std::string>& value) {
+  size_t encode_string_list(size_t offset, const Vector<String>& value) {
     size_t pos = encode_uint16(offset, static_cast<uint16_t>(value.size()));
-    for (std::vector<std::string>::const_iterator it = value.begin(),
+    for (Vector<String>::const_iterator it = value.begin(),
          end = value.end(); it != end; ++it) {
       pos = encode_string(pos, it->data(), static_cast<uint16_t>(it->size()));
     }
     return pos;
   }
 
-  size_t encode_string_map(size_t offset, const std::map<std::string, std::string>& value) {
+  size_t encode_string_map(size_t offset, const Map<String, String>& value) {
     size_t pos = encode_uint16(offset, static_cast<uint16_t>(value.size()));
-    for (std::map<std::string, std::string>::const_iterator it = value.begin();
+    for (Map<String, String>::const_iterator it = value.begin();
          it != value.end(); ++it) {
       pos = encode_string(pos, it->first.c_str(), static_cast<uint16_t>(it->first.size()));
       pos = encode_string(pos, it->second.c_str(), static_cast<uint16_t>(it->second.size()));
@@ -220,7 +219,7 @@ private:
   size_t size_;
 };
 
-typedef std::vector<Buffer> BufferVec;
+typedef Vector<Buffer> BufferVec;
 
 } // namespace cass
 

@@ -27,9 +27,8 @@
 #include "result_response.hpp"
 #include "retry_policy.hpp"
 #include "scoped_ptr.hpp"
-
-#include <vector>
-#include <string>
+#include "string.hpp"
+#include "vector.hpp"
 
 namespace cass {
 
@@ -58,7 +57,7 @@ public:
       , flags_(0)
       , page_size_(-1) {
     // <id> [short bytes] (or [string])
-    const std::string& id = prepared->id();
+    const String& id = prepared->id();
     query_or_id_.encode_string(0, id.data(), id.size());
   }
 
@@ -92,9 +91,9 @@ public:
 
   void set_page_size(int32_t page_size) { page_size_ = page_size; }
 
-  const std::string& paging_state() const { return paging_state_; }
+  const String& paging_state() const { return paging_state_; }
 
-  void set_paging_state(const std::string& paging_state) {
+  void set_paging_state(const String& paging_state) {
     paging_state_ = paging_state;
   }
 
@@ -105,7 +104,7 @@ public:
 
   void add_key_index(size_t index) { key_indices_.push_back(index); }
 
-  virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const {
+  virtual bool get_routing_key(String* routing_key, EncodingCache* cache) const {
     return calculate_routing_key(key_indices_, routing_key, cache);
   }
 
@@ -119,15 +118,15 @@ protected:
   int32_t encode_values(int version, RequestCallback* callback, BufferVec* bufs) const;
   int32_t encode_end(int version, RequestCallback* callback, BufferVec* bufs) const;
 
-  bool calculate_routing_key(const std::vector<size_t>& key_indices,
-                             std::string* routing_key, EncodingCache* cache) const;
+  bool calculate_routing_key(const Vector<size_t>& key_indices,
+                             String* routing_key, EncodingCache* cache) const;
 
 private:
   Buffer query_or_id_;
   int32_t flags_;
   int32_t page_size_;
-  std::string paging_state_;
-  std::vector<size_t> key_indices_;
+  String paging_state_;
+  Vector<size_t> key_indices_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Statement);

@@ -25,9 +25,9 @@
 #include "request.hpp"
 #include "response.hpp"
 #include "scoped_ptr.hpp"
+#include "string.hpp"
 #include "timer.hpp"
 
-#include <string>
 #include <uv.h>
 
 namespace cass {
@@ -38,7 +38,7 @@ class Metrics;
 class ResponseMessage;
 class ResultResponse;
 
-typedef std::vector<uv_buf_t> UvBufVec;
+typedef Vector<uv_buf_t> UvBufVec;
 
 class RequestCallback : public RefCounted<RequestCallback>, public List<RequestCallback>::Node {
 public:
@@ -70,7 +70,7 @@ public:
 
   // One of these methods is called to finish a request
   virtual void on_set(ResponseMessage* response) = 0;
-  virtual void on_error(CassError code, const std::string& message) = 0;
+  virtual void on_error(CassError code, const String& message) = 0;
   virtual void on_cancel() = 0;
 
   int32_t encode(int version, int flags, BufferVec* bufs);
@@ -128,7 +128,7 @@ public:
 
 protected:
   virtual void on_internal_set(ResponseMessage* response) = 0;
-  virtual void on_internal_error(CassError code, const std::string& message) = 0;
+  virtual void on_internal_error(CassError code, const String& message) = 0;
   virtual void on_internal_timeout() = 0;
 
 private:
@@ -137,7 +137,7 @@ private:
   virtual void on_retry(bool use_next_host);
 
   virtual void on_set(ResponseMessage* response);
-  virtual void on_error(CassError code, const std::string& message);
+  virtual void on_error(CassError code, const String& message);
   virtual void on_cancel();
 
   static void on_timeout(Timer* timer);
@@ -151,7 +151,7 @@ private:
 class MultipleRequestCallback : public RefCounted<MultipleRequestCallback> {
 public:
   typedef SharedRefPtr<MultipleRequestCallback> Ptr;
-  typedef std::map<std::string, Response::Ptr> ResponseMap;
+  typedef Map<String, Response::Ptr> ResponseMap;
 
   MultipleRequestCallback(Connection* connection)
     : connection_(connection)
@@ -161,13 +161,13 @@ public:
   virtual ~MultipleRequestCallback() { }
 
   static bool get_result_response(const ResponseMap& responses,
-                                  const std::string& index,
+                                  const String& index,
                                   ResultResponse** response);
 
-  void execute_query(const std::string& index, const std::string& query);
+  void execute_query(const String& index, const String& query);
 
   virtual void on_set(const ResponseMap& responses) = 0;
-  virtual void on_error(CassError code, const std::string& message) = 0;
+  virtual void on_error(CassError code, const String& message) = 0;
   virtual void on_timeout() = 0;
 
   Connection* connection() { return connection_; }
@@ -177,16 +177,16 @@ private:
   public:
     InternalCallback(const MultipleRequestCallback::Ptr& parent,
                      const Request::ConstPtr& request,
-                     const std::string& index);
+                     const String& index);
 
   private:
     virtual void on_internal_set(ResponseMessage* response);
-    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_error(CassError code, const String& message);
     virtual void on_internal_timeout();
 
   private:
     MultipleRequestCallback::Ptr parent_;
-    std::string index_;
+    String index_;
   };
 
   Connection* connection_;

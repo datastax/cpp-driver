@@ -21,13 +21,12 @@
 #include "external.hpp"
 #include "hash_table.hpp"
 #include "macros.hpp"
+#include "map.hpp"
 #include "ref_counted.hpp"
 #include "small_dense_hash_map.hpp"
+#include "string.hpp"
 #include "types.hpp"
-
-#include <map>
-#include <string>
-#include <vector>
+#include "vector.hpp"
 
 namespace cass {
 
@@ -60,8 +59,8 @@ inline bool is_uuid_type(CassValueType value_type) {
 }
 
 // Only compare when both arguments are not empty
-inline bool equals_both_not_empty(const std::string& s1,
-                                  const std::string& s2) {
+inline bool equals_both_not_empty(const String& s1,
+                                  const String& s2) {
   return s1.empty() || s2.empty() || s1 == s2;
 }
 
@@ -69,7 +68,7 @@ class DataType : public RefCounted<DataType> {
 public:
   typedef SharedRefPtr<DataType> Ptr;
   typedef SharedRefPtr<const DataType> ConstPtr;
-  typedef std::vector<ConstPtr> Vec;
+  typedef Vector<ConstPtr> Vec;
 
   static const DataType::ConstPtr NIL;
 
@@ -111,10 +110,10 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return Ptr(new DataType(value_type_));
+    return Ptr(Memory::allocate<DataType>(value_type_));
   }
 
-  virtual std::string to_string() const {
+  virtual String to_string() const {
     switch (value_type_) {
 #define XX_VALUE_TYPE(name, type, cql, klass) case name: return cql;
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
@@ -139,13 +138,13 @@ public:
   CustomType()
     : DataType(CASS_VALUE_TYPE_CUSTOM) { }
 
-  CustomType(const std::string& class_name)
+  CustomType(const String& class_name)
     : DataType(CASS_VALUE_TYPE_CUSTOM)
     , class_name_(class_name) { }
 
-  const std::string& class_name() const { return class_name_; }
+  const String& class_name() const { return class_name_; }
 
-  void set_class_name(const std::string& class_name) {
+  void set_class_name(const String& class_name) {
     class_name_ = class_name;
   }
 
@@ -159,15 +158,15 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return DataType::Ptr(new CustomType(class_name_));
+    return DataType::Ptr(Memory::allocate<CustomType>(class_name_));
   }
 
-  virtual std::string to_string() const {
+  virtual String to_string() const {
     return class_name_;
   }
 
 private:
-  std::string class_name_;
+  String class_name_;
 };
 
 class CompositeType : public DataType {
@@ -182,8 +181,8 @@ public:
   DataType::Vec& types() { return types_; }
   const DataType::Vec& types() const { return types_; }
 
-  virtual std::string to_string() const {
-    std::string str;
+  virtual String to_string() const {
+    String str;
     if (is_frozen()) str.append("frozen<");
     str.append(DataType::to_string());
     str.push_back('<');
@@ -252,7 +251,7 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return DataType::Ptr(new CollectionType(value_type(), types_, is_frozen()));
+    return DataType::Ptr(Memory::allocate<CollectionType>(value_type(), types_, is_frozen()));
   }
 
 public:
@@ -260,14 +259,14 @@ public:
                                  bool is_frozen) {
     DataType::Vec types;
     types.push_back(element_type);
-    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_LIST, types, is_frozen));
+    return DataType::ConstPtr(Memory::allocate<CollectionType>(CASS_VALUE_TYPE_LIST, types, is_frozen));
   }
 
   static DataType::ConstPtr set(DataType::ConstPtr element_type,
                                 bool is_frozen) {
     DataType::Vec types;
     types.push_back(element_type);
-    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_SET, types, is_frozen));
+    return DataType::ConstPtr(Memory::allocate<CollectionType>(CASS_VALUE_TYPE_SET, types, is_frozen));
   }
 
   static DataType::ConstPtr map(DataType::ConstPtr key_type,
@@ -276,7 +275,7 @@ public:
     DataType::Vec types;
     types.push_back(key_type);
     types.push_back(value_type);
-    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_MAP, types, is_frozen));
+    return DataType::ConstPtr(Memory::allocate<CollectionType>(CASS_VALUE_TYPE_MAP, types, is_frozen));
   }
 };
 
@@ -316,23 +315,25 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return DataType::Ptr(new TupleType(types_, is_frozen()));
+    return DataType::Ptr(Memory::allocate<TupleType>(types_, is_frozen()));
   }
 };
 
 class UserType : public DataType {
+  friend class Memory;
+
 public:
   typedef SharedRefPtr<UserType> Ptr;
   typedef SharedRefPtr<const UserType> ConstPtr;
-  typedef std::map<std::string, UserType::Ptr > Map;
+  typedef cass::Map<String, UserType::Ptr > Map;
 
   struct Field : public HashTableEntry<Field> {
-    Field(const std::string& field_name,
+    Field(const String& field_name,
           const DataType::ConstPtr& type)
       : name(field_name)
       , type(type) { }
 
-    std::string name;
+    String name;
     DataType::ConstPtr type;
   };
 
@@ -345,15 +346,15 @@ public:
     : DataType(CASS_VALUE_TYPE_UDT, is_frozen)
     , fields_(field_count) { }
 
-  UserType(const std::string& keyspace,
-           const std::string& type_name,
+  UserType(const String& keyspace,
+           const String& type_name,
            bool is_frozen)
     : DataType(CASS_VALUE_TYPE_UDT, is_frozen)
     , keyspace_(keyspace)
     , type_name_(type_name) { }
 
-  UserType(const std::string& keyspace,
-           const std::string& type_name,
+  UserType(const String& keyspace,
+           const String& type_name,
            const FieldVec& fields,
            bool is_frozen)
     : DataType(CASS_VALUE_TYPE_UDT, is_frozen)
@@ -361,15 +362,15 @@ public:
     , type_name_(type_name)
     , fields_(fields) { }
 
-  const std::string& keyspace() const { return keyspace_; }
+  const String& keyspace() const { return keyspace_; }
 
-  void set_keyspace(const std::string& keyspace) {
+  void set_keyspace(const String& keyspace) {
     keyspace_ = keyspace;
   }
 
-  const std::string& type_name() const { return type_name_; }
+  const String& type_name() const { return type_name_; }
 
-  void set_type_name(const std::string& type_name) {
+  void set_type_name(const String& type_name) {
     type_name_ = type_name;
   }
 
@@ -379,7 +380,7 @@ public:
     return fields_.get_indices(name, result);
   }
 
-  void add_field(const std::string name, const DataType::ConstPtr& data_type) {
+  void add_field(const String name, const DataType::ConstPtr& data_type) {
     fields_.add(Field(name, data_type));
   }
 
@@ -418,11 +419,11 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return DataType::Ptr(new UserType(keyspace_, type_name_, fields_.entries(), is_frozen()));
+    return DataType::Ptr(Memory::allocate<UserType>(keyspace_, type_name_, fields_.entries(), is_frozen()));
   }
 
-  virtual std::string to_string() const {
-    std::string str;
+  virtual String to_string() const {
+    String str;
     if (is_frozen()) str.append("frozen<");
     str.append(type_name_);
     if (is_frozen()) str.push_back('>');
@@ -430,8 +431,8 @@ public:
   }
 
 private:
-  std::string keyspace_;
-  std::string type_name_;
+  String keyspace_;
+  String type_name_;
   CaseInsensitiveHashTable<Field> fields_;
 };
 

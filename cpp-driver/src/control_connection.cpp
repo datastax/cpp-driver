@@ -29,12 +29,11 @@
 #include "session.hpp"
 #include "timer.hpp"
 #include "utils.hpp"
+#include "vector.hpp"
 
 #include <algorithm>
 #include <iomanip>
 #include <iterator>
-#include <sstream>
-#include <vector>
 
 #define SELECT_LOCAL "SELECT data_center, rack, release_version FROM system.local WHERE key='local'"
 #define SELECT_LOCAL_TOKENS "SELECT data_center, rack, release_version, partitioner, tokens FROM system.local WHERE key='local'"
@@ -146,7 +145,7 @@ void ControlConnection::clear() {
 
 void ControlConnection::connect(Session* session) {
   session_ = session;
-  query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_, // No hosts lock necessary (read-only)
+  query_plan_.reset(Memory::allocate<ControlStartupQueryPlan>(session_->hosts_, // No hosts lock necessary (read-only)
                                                 session_->random_.get()));
   protocol_version_ = session_->config().protocol_version();
   use_schema_ = session_->config().use_schema();
@@ -202,13 +201,13 @@ void ControlConnection::reconnect(bool retry_current_host) {
     connection_->close();
   }
 
-  connection_ = new Connection(session_->loop(),
-                               session_->config(),
-                               session_->metrics(),
-                               current_host_,
-                               "", // No keyspace
-                               protocol_version_,
-                               this);
+  connection_ = Memory::allocate<Connection>(session_->loop(),
+                                             session_->config(),
+                                             session_->metrics(),
+                                             current_host_,
+                                             "", // No keyspace
+                                             protocol_version_,
+                                             this);
   connection_->connect();
 }
 
@@ -296,7 +295,7 @@ void ControlConnection::on_event(EventResponse* response) {
 
   switch (response->event_type()) {
     case CASS_EVENT_TOPOLOGY_CHANGE: {
-      std::string address_str = response->affected_node().to_string();
+      String address_str = response->affected_node().to_string();
       switch (response->topology_change()) {
         case EventResponse::NEW_NODE: {
           LOG_INFO("New node %s added", address_str.c_str());
@@ -339,7 +338,7 @@ void ControlConnection::on_event(EventResponse* response) {
     }
 
     case CASS_EVENT_STATUS_CHANGE: {
-      std::string address_str = response->affected_node().to_string();
+      String address_str = response->affected_node().to_string();
       switch (response->status_change()) {
         case EventResponse::UP: {
           LOG_INFO("Node %s is up", address_str.c_str());
@@ -428,7 +427,7 @@ void ControlConnection::on_event(EventResponse* response) {
 
 void ControlConnection::query_meta_hosts() {
   SharedRefPtr<ControlMultipleRequestCallback<UnusedData> > callback(
-        new ControlMultipleRequestCallback<UnusedData>(this, ControlConnection::on_query_hosts, UnusedData()));
+        Memory::allocate<ControlMultipleRequestCallback<UnusedData> >(this, ControlConnection::on_query_hosts, UnusedData()));
   // This needs to happen before other schema metadata queries so that we have
   // a valid Cassandra version because this version determines which follow up
   // schema metadata queries are executed.
@@ -531,7 +530,7 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
 // punting for now because of tight coupling of Session and CC state
 void ControlConnection::query_meta_schema() {
   SharedRefPtr<ControlMultipleRequestCallback<UnusedData> > callback(
-        new ControlMultipleRequestCallback<UnusedData>(this, ControlConnection::on_query_meta_schema, UnusedData()));
+        Memory::allocate<ControlMultipleRequestCallback<UnusedData> >(this, ControlConnection::on_query_meta_schema, UnusedData()));
 
   if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     if (use_schema_ || token_aware_routing_) {
@@ -651,7 +650,7 @@ void ControlConnection::refresh_node_info(Host::Ptr host,
 
   bool is_connected_host = host->address() == connection_->address();
 
-  std::string query;
+  String query;
   ControlCallback<RefreshNodeData>::ResponseCallback response_callback;
 
   bool token_query = token_aware_routing_ && (host->was_just_added() || query_tokens);
@@ -674,7 +673,7 @@ void ControlConnection::refresh_node_info(Host::Ptr host,
 
   RefreshNodeData data(host, is_new_node);
   SharedRefPtr<ControlCallback<RefreshNodeData> > callback(
-        new ControlCallback<RefreshNodeData>(Request::ConstPtr(new QueryRequest(query)),
+        Memory::allocate<ControlCallback<RefreshNodeData> >(Request::ConstPtr(Memory::allocate<QueryRequest>(query)),
                                              this,
                                              response_callback,
                                              data));
@@ -696,7 +695,7 @@ void ControlConnection::on_refresh_node_info(ControlConnection* control_connecti
       static_cast<ResultResponse*>(response);
 
   if (result->row_count() == 0) {
-    std::string host_address_str = data.host->address().to_string();
+    String host_address_str = data.host->address().to_string();
     LOG_ERROR("No row found for host %s in %s's local/peers system table. "
               "%s will be ignored.",
               host_address_str.c_str(),
@@ -723,7 +722,7 @@ void ControlConnection::on_refresh_node_info_all(ControlConnection* control_conn
       static_cast<ResultResponse*>(response);
 
   if (result->row_count() == 0) {
-    std::string host_address_str = data.host->address().to_string();
+    String host_address_str = data.host->address().to_string();
     LOG_ERROR("No row found for host %s in %s's peers system table. "
               "%s will be ignored.",
               host_address_str.c_str(),
@@ -754,13 +753,13 @@ void ControlConnection::on_refresh_node_info_all(ControlConnection* control_conn
 void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateHostType type) {
   const Value* v;
 
-  std::string rack;
+  String rack;
   row->get_string_by_name("rack", &rack);
 
-  std::string dc;
+  String dc;
   row->get_string_by_name("data_center", &dc);
 
-  std::string release_version;
+  String release_version;
   row->get_string_by_name("release_version", &release_version);
 
   // This value is not present in the "system.local" query
@@ -798,7 +797,7 @@ void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateH
 
   if (token_aware_routing_) {
     bool is_connected_host = connection_ != NULL && host->address() == connection_->address();
-    std::string partitioner;
+    String partitioner;
     if (is_connected_host && row->get_string_by_name("partitioner", &partitioner)) {
       if (!session_->token_map_) {
         session_->token_map_.reset(TokenMap::from_partitioner(partitioner));
@@ -818,7 +817,7 @@ void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateH
 }
 
 void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
-  std::string query;
+  String query;
 
   if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     query.assign(SELECT_KEYSPACES_30);
@@ -833,8 +832,8 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
 
   if (!connection_->write(
         RequestCallback::Ptr(
-          new ControlCallback<std::string>(
-            Request::ConstPtr(new QueryRequest(query)),
+          Memory::allocate<ControlCallback<String> >(
+            Request::ConstPtr(Memory::allocate<QueryRequest>(query)),
             this,
             ControlConnection::on_refresh_keyspace,
             keyspace_name.to_string())))) {
@@ -844,7 +843,7 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
 }
 
 void ControlConnection::on_refresh_keyspace(ControlConnection* control_connection,
-                                            const std::string& keyspace_name,
+                                            const String& keyspace_name,
                                             Response* response) {
   ResultResponse* result = static_cast<ResultResponse*>(response);
   if (result->row_count() == 0) {
@@ -868,10 +867,10 @@ void ControlConnection::on_refresh_keyspace(ControlConnection* control_connectio
 
 void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
                                               const StringRef& table_or_view_name) {
-  std::string table_query;
-  std::string view_query;
-  std::string column_query;
-  std::string index_query;
+  String table_query;
+  String view_query;
+  String column_query;
+  String index_query;
 
   if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     table_query.assign(SELECT_TABLES_30);
@@ -905,7 +904,7 @@ void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
   }
 
   SharedRefPtr<ControlMultipleRequestCallback<RefreshTableData> > callback(
-        new ControlMultipleRequestCallback<RefreshTableData>(this,
+        Memory::allocate<ControlMultipleRequestCallback<RefreshTableData> >(this,
                                                              ControlConnection::on_refresh_table_or_view,
                                                              RefreshTableData(keyspace_name.to_string(), table_or_view_name.to_string())));
   callback->execute_query("tables", table_query);
@@ -954,7 +953,7 @@ void ControlConnection::on_refresh_table_or_view(ControlConnection* control_conn
 void ControlConnection::refresh_type(const StringRef& keyspace_name,
                                      const StringRef& type_name) {
 
-  std::string query;
+  String query;
   if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     query.assign(SELECT_USERTYPES_30);
   } else {
@@ -968,8 +967,8 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name,
 
   if (!connection_->write(
         RequestCallback::Ptr(
-          new ControlCallback<std::pair<std::string, std::string> >(
-            Request::ConstPtr(new QueryRequest(query)),
+          Memory::allocate<ControlCallback<std::pair<String, String> > >(
+            Request::ConstPtr(Memory::allocate<QueryRequest>(query)),
             this,
             ControlConnection::on_refresh_type,
             std::make_pair(keyspace_name.to_string(), type_name.to_string()))))) {
@@ -979,7 +978,7 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name,
 }
 
 void ControlConnection::on_refresh_type(ControlConnection* control_connection,
-                                        const std::pair<std::string, std::string>& keyspace_and_type_names,
+                                        const std::pair<String, String>& keyspace_and_type_names,
                                         Response* response) {
   ResultResponse* result = static_cast<ResultResponse*>(response);
   if (result->row_count() == 0) {
@@ -999,7 +998,7 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
                                          const StringRefVec& arg_types,
                                          bool is_aggregate) {
 
-  std::string query;
+  String query;
   if (cassandra_version_ >= VersionNumber(3, 0, 0)) {
     if (is_aggregate) {
       query.assign(SELECT_AGGREGATES_30);
@@ -1021,10 +1020,10 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
   LOG_DEBUG("Refreshing %s %s in keyspace %s",
             is_aggregate ? "aggregate" : "function",
             Metadata::full_function_name(function_name.to_string(), to_strings(arg_types)).c_str(),
-            std::string(keyspace_name.data(), keyspace_name.length()).c_str());
+            String(keyspace_name.data(), keyspace_name.length()).c_str());
 
-  SharedRefPtr<QueryRequest> request(new QueryRequest(query, 3));
-  SharedRefPtr<Collection> signature(new Collection(CASS_COLLECTION_TYPE_LIST, arg_types.size()));
+  SharedRefPtr<QueryRequest> request(Memory::allocate<QueryRequest>(query, 3));
+  SharedRefPtr<Collection> signature(Memory::allocate<Collection>(CASS_COLLECTION_TYPE_LIST, arg_types.size()));
 
   for (StringRefVec::const_iterator i = arg_types.begin(),
        end = arg_types.end();
@@ -1039,7 +1038,7 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
 
   if (!connection_->write(
         RequestCallback::Ptr(
-          new ControlCallback<RefreshFunctionData>(
+          Memory::allocate<ControlCallback<RefreshFunctionData> >(
             request,
             this,
             ControlConnection::on_refresh_function,
@@ -1081,7 +1080,7 @@ bool ControlConnection::handle_query_invalid_response(Response* response) {
   return false;
 }
 
-void ControlConnection::handle_query_failure(CassError code, const std::string& message) {
+void ControlConnection::handle_query_failure(CassError code, const String& message) {
   // TODO(mpenick): This is a placeholder and might not be the right action for
   // all error scenarios
   if (connection_ != NULL) {
@@ -1132,7 +1131,7 @@ void ControlConnection::on_reconnect(Timer* timer) {
 
 template<class T>
 void ControlConnection::ControlMultipleRequestCallback<T>::execute_query(
-    const std::string& index, const std::string& query) {
+    const String& index, const String& query) {
   // We need to update the loop time to prevent new requests from timing out
   // in cases where a callback took a long time to execute. In the future,
   // we might improve this by executing the these long running callbacks

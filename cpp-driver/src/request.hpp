@@ -22,13 +22,13 @@
 #include "constants.hpp"
 #include "external.hpp"
 #include "macros.hpp"
+#include "map.hpp"
 #include "ref_counted.hpp"
 #include "retry_policy.hpp"
 #include "string_ref.hpp"
 
 #include <stdint.h>
 #include <utility>
-#include <map>
 
 namespace cass {
 
@@ -45,7 +45,7 @@ public:
            const uint8_t* value, size_t value_size);
 
   void remove(const char* name, size_t name_length) {
-    items_.erase(std::string(name, name_length));
+    items_.erase(String(name, name_length));
   }
 
   int32_t encode(BufferVec* bufs) const;
@@ -58,7 +58,7 @@ public:
     return items_.size();
   }
 private:
-  typedef std::map<std::string, Buffer> ItemMap;
+  typedef Map<String, Buffer> ItemMap;
   ItemMap items_;
 };
 
@@ -76,7 +76,7 @@ public:
 
   static const CassConsistency DEFAULT_CONSISTENCY = CASS_CONSISTENCY_LOCAL_ONE;
 
-  typedef std::map<const void*, Buffer> EncodingCache;
+  typedef Map<const void*, Buffer> EncodingCache;
 
   Request(uint8_t opcode)
       : opcode_(opcode)
@@ -185,17 +185,17 @@ public:
   RoutableRequest(uint8_t opcode)
     : Request(opcode) {}
 
-  RoutableRequest(uint8_t opcode, const std::string& keyspace)
+  RoutableRequest(uint8_t opcode, const String& keyspace)
     : Request(opcode)
     , keyspace_(keyspace){}
 
-  virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const = 0;
+  virtual bool get_routing_key(String* routing_key, EncodingCache* cache) const = 0;
 
-  const std::string& keyspace() const { return keyspace_; }
-  void set_keyspace(const std::string& keyspace) { keyspace_ = keyspace; }
+  const String& keyspace() const { return keyspace_; }
+  void set_keyspace(const String& keyspace) { keyspace_ = keyspace; }
 
 private:
-  std::string keyspace_;
+  String keyspace_;
 };
 
 } // namespace cass

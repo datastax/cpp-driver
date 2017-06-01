@@ -39,7 +39,7 @@ struct HashTableEntry {
     : index(0)
     , next(NULL) { }
 
-  // Requires a "name" std::string or cass::StringRef field
+  // Requires a "name" String or cass::StringRef field
   size_t index;
   T* next;
 };

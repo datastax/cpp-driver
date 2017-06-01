@@ -17,23 +17,22 @@
 #ifndef __CASS_PREPARE_REQUEST_HPP_INCLUDED__
 #define __CASS_PREPARE_REQUEST_HPP_INCLUDED__
 
-#include "request.hpp"
 #include "constants.hpp"
-
-#include <string>
+#include "request.hpp"
+#include "string.hpp"
 
 namespace cass {
 
 class PrepareRequest : public Request {
 public:
-  PrepareRequest(const std::string& query)
+  PrepareRequest(const String& query)
       : Request(CQL_OPCODE_PREPARE)
       , query_(query) { }
 
-  const std::string& query() const { return query_; }
+  const String& query() const { return query_; }
 
 
-  void set_query(const std::string& query) { query_ = query; }
+  void set_query(const String& query) { query_ = query; }
 
   void set_query(const char* query, size_t query_length) {
     query_.assign(query, query_length);
@@ -43,7 +42,7 @@ private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
-  std::string query_;
+  String query_;
 };
 
 } // namespace cass

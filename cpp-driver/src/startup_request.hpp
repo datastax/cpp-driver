@@ -19,10 +19,9 @@
 
 #include "request.hpp"
 #include "constants.hpp"
+#include "map.hpp"
 #include "scoped_ptr.hpp"
-
-#include <map>
-#include <string>
+#include "string.hpp"
 
 namespace cass {
 
@@ -35,17 +34,17 @@ public:
 
   bool encode(size_t reserved, char** output, size_t& size);
 
-  const std::string version() const { return version_; }
-  const std::string compression() const { return compression_; }
+  const String version() const { return version_; }
+  const String compression() const { return compression_; }
 
 private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
-  typedef std::map<std::string, std::string> OptionsMap;
+  typedef Map<String, String> OptionsMap;
 
-  std::string version_;
-  std::string compression_;
+  String version_;
+  String compression_;
 };
 
 } // namespace cass

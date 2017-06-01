@@ -41,7 +41,6 @@
 #endif
 
 #include <iomanip>
-#include <sstream>
 
 #define SSL_READ_SIZE 8192
 #define SSL_WRITE_SIZE 8192
@@ -161,8 +160,8 @@ void Connection::StartupCallback::on_internal_set(ResponseMessage* response) {
 }
 
 void Connection::StartupCallback::on_internal_error(CassError code,
-                                                    const std::string& message) {
-  std::ostringstream ss;
+                                                    const String& message) {
+  OStringStream ss;
   ss << "Error: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
   connection()->notify_error(ss.str());
@@ -188,7 +187,7 @@ void Connection::StartupCallback::on_result_response(ResponseMessage* response) 
 }
 
 Connection::HeartbeatCallback::HeartbeatCallback()
-  : SimpleRequestCallback(Request::ConstPtr(new OptionsRequest())) { }
+  : SimpleRequestCallback(Request::ConstPtr(Memory::allocate<OptionsRequest>())) { }
 
 void Connection::HeartbeatCallback::on_internal_set(ResponseMessage* response) {
   LOG_TRACE("Heartbeat completed on host %s",
@@ -196,7 +195,7 @@ void Connection::HeartbeatCallback::on_internal_set(ResponseMessage* response) {
   connection()->heartbeat_outstanding_ = false;
 }
 
-void Connection::HeartbeatCallback::on_internal_error(CassError code, const std::string& message) {
+void Connection::HeartbeatCallback::on_internal_error(CassError code, const String& message) {
   LOG_WARN("An error occurred on host %s during a heartbeat request: %s",
            connection()->address_string().c_str(),
            message.c_str());
@@ -213,7 +212,7 @@ Connection::Connection(uv_loop_t* loop,
                        const Config& config,
                        Metrics* metrics,
                        const Host::ConstPtr& host,
-                       const std::string& keyspace,
+                       const String& keyspace,
                        int protocol_version,
                        Listener* listener)
     : state_(CONNECTION_STATE_NEW)
@@ -227,7 +226,7 @@ Connection::Connection(uv_loop_t* loop,
     , keyspace_(keyspace)
     , protocol_version_(protocol_version)
     , listener_(listener)
-    , response_(new ResponseMessage())
+    , response_(Memory::allocate<ResponseMessage>())
     , stream_manager_(protocol_version)
     , ssl_session_(NULL)
     , heartbeat_outstanding_(false) {
@@ -255,7 +254,7 @@ Connection::~Connection()
 {
   while (!buffer_reuse_list_.empty()) {
     uv_buf_t buf = buffer_reuse_list_.top();
-    delete[] buf.base;
+    Memory::free(buf.base);
     buffer_reuse_list_.pop();
   }
 }
@@ -292,9 +291,9 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
 
   if (pending_writes_.is_empty() || pending_writes_.back()->is_flushed()) {
     if (ssl_session_) {
-      pending_writes_.add_to_back(new PendingWriteSsl(this));
+      pending_writes_.add_to_back(Memory::allocate<PendingWriteSsl>(this));
     } else {
-      pending_writes_.add_to_back(new PendingWrite(this));
+      pending_writes_.add_to_back(Memory::allocate<PendingWrite>(this));
     }
   }
 
@@ -350,7 +349,7 @@ void Connection::flush() {
 }
 
 void Connection::schedule_schema_agreement(const SchemaChangeCallback::Ptr& callback, uint64_t wait) {
-  PendingSchemaAgreement* pending_schema_agreement = new PendingSchemaAgreement(callback);
+  PendingSchemaAgreement* pending_schema_agreement = Memory::allocate<PendingSchemaAgreement>(callback);
   pending_schema_agreements_.add_to_back(pending_schema_agreement);
   pending_schema_agreement->timer.start(loop_,
                                         wait,
@@ -468,7 +467,7 @@ void Connection::consume(char* input, size_t size) {
 
     if (response_->is_body_ready()) {
       ScopedPtr<ResponseMessage> response(response_.release());
-      response_.reset(new ResponseMessage());
+      response_.reset(Memory::allocate<ResponseMessage>());
 
       LOG_TRACE("Consumed message type %s with stream %d, input %u, remaining %u on host %s",
                 opcode_to_string(response->opcode()).c_str(),
@@ -589,7 +588,7 @@ void Connection::on_connect(Connector* connector) {
     }
   } else {
     connection->notify_error("Connect error '" +
-                             std::string(UV_ERRSTR(connector->status(), connection->loop_)) +
+                             String(UV_ERRSTR(connector->status(), connection->loop_)) +
                              "'");
   }
 }
@@ -613,7 +612,7 @@ void Connection::on_close(uv_handle_t* handle) {
     PendingWriteBase* pending_write
         = connection->pending_writes_.front();
     connection->pending_writes_.remove(pending_write);
-    delete pending_write;
+    Memory::deallocate(pending_write);
   }
 
   while (!connection->pending_schema_agreements_.is_empty()) {
@@ -622,12 +621,12 @@ void Connection::on_close(uv_handle_t* handle) {
     connection->pending_schema_agreements_.remove(pending_schema_aggreement);
     pending_schema_aggreement->stop_timer();
     pending_schema_aggreement->callback->on_closing();
-    delete pending_schema_aggreement;
+    Memory::deallocate(pending_schema_aggreement);
   }
 
   connection->listener_->on_close(connection);
 
-  delete connection;
+  Memory::deallocate(connection);
 }
 
 uv_buf_t Connection::internal_alloc_buffer(size_t suggested_size) {
@@ -637,9 +636,9 @@ uv_buf_t Connection::internal_alloc_buffer(size_t suggested_size) {
       buffer_reuse_list_.pop();
       return ret;
     }
-    return uv_buf_init(new char[BUFFER_REUSE_SIZE], BUFFER_REUSE_SIZE);
+    return uv_buf_init(reinterpret_cast<char*>(Memory::malloc(BUFFER_REUSE_SIZE)), BUFFER_REUSE_SIZE);
   }
-  return uv_buf_init(new char[suggested_size], suggested_size);
+  return uv_buf_init(reinterpret_cast<char*>(Memory::malloc(BUFFER_REUSE_SIZE)), suggested_size);
 }
 
 void Connection::internal_reuse_buffer(uv_buf_t buf) {
@@ -647,7 +646,7 @@ void Connection::internal_reuse_buffer(uv_buf_t buf) {
     buffer_reuse_list_.push(buf);
     return;
   }
-  delete[] buf.base;
+  Memory::free(buf.base);
 }
 
 #if UV_VERSION_MAJOR == 0
@@ -676,7 +675,7 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf
     if (nread != UV_EOF) {
 #endif
       connection->notify_error("Read error '" +
-                               std::string(UV_ERRSTR(nread, connection->loop_)) +
+                               String(UV_ERRSTR(nread, connection->loop_)) +
                                "'");
     } else {
       connection->defunct();
@@ -730,7 +729,7 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
     if (nread != UV_EOF) {
 #endif
       connection->notify_error("Read error '" +
-                               std::string(UV_ERRSTR(nread, connection->loop_)) +
+                               String(UV_ERRSTR(nread, connection->loop_)) +
                                "'");
     } else {
       connection->defunct();
@@ -757,11 +756,11 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
 
 void Connection::on_connected() {
   internal_write(RequestCallback::Ptr(
-                   new StartupCallback(Request::ConstPtr(
-                                         new OptionsRequest()))));
+                   Memory::allocate<StartupCallback>(Request::ConstPtr(
+                                         Memory::allocate<OptionsRequest>()))));
 }
 
-void Connection::on_authenticate(const std::string& class_name) {
+void Connection::on_authenticate(const String& class_name) {
   if (protocol_version_ == 1) {
     send_credentials(class_name);
   } else {
@@ -770,19 +769,19 @@ void Connection::on_authenticate(const std::string& class_name) {
 }
 
 void Connection::on_auth_challenge(const AuthResponseRequest* request,
-                                   const std::string& token) {
-  std::string response;
+                                   const String& token) {
+  String response;
   if (!request->auth()->evaluate_challenge(token, &response)) {
     notify_error("Failed evaluating challenge token: " + request->auth()->error(), CONNECTION_ERROR_AUTH);
     return;
   }
   internal_write(RequestCallback::Ptr(
-                   new StartupCallback(Request::ConstPtr(
-                                         new AuthResponseRequest(response, request->auth())))));
+                   Memory::allocate<StartupCallback>(Request::ConstPtr(
+                                         Memory::allocate<AuthResponseRequest>(response, request->auth())))));
 }
 
 void Connection::on_auth_success(const AuthResponseRequest* request,
-                                 const std::string& token) {
+                                 const String& token) {
   if (!request->auth()->success(token)) {
     notify_error("Failed evaluating success token: " + request->auth()->error(), CONNECTION_ERROR_AUTH);
     return;
@@ -794,8 +793,8 @@ void Connection::on_ready() {
   if (state_ == CONNECTION_STATE_CONNECTED && listener_->event_types() != 0) {
     set_state(CONNECTION_STATE_REGISTERING_EVENTS);
     internal_write(RequestCallback::Ptr(
-                     new StartupCallback(Request::ConstPtr(
-                                           new RegisterRequest(listener_->event_types())))));
+                     Memory::allocate<StartupCallback>(Request::ConstPtr(
+                                           Memory::allocate<RegisterRequest>(listener_->event_types())))));
     return;
   }
 
@@ -803,8 +802,8 @@ void Connection::on_ready() {
     notify_ready();
   } else {
     internal_write(RequestCallback::Ptr(
-                     new StartupCallback(Request::ConstPtr(
-                                           new QueryRequest("USE \"" + keyspace_ + "\"")))));
+                     Memory::allocate<StartupCallback>(Request::ConstPtr(
+                                           Memory::allocate<QueryRequest>("USE \"" + keyspace_ + "\"")))));
   }
 }
 
@@ -820,8 +819,8 @@ void Connection::on_supported(ResponseMessage* response) {
   (void)supported;
 
   internal_write(RequestCallback::Ptr(
-                   new StartupCallback(Request::ConstPtr(
-                                         new StartupRequest()))));
+                   Memory::allocate<StartupCallback>(Request::ConstPtr(
+                                         Memory::allocate<StartupRequest>()))));
 }
 
 void Connection::on_pending_schema_agreement(Timer* timer) {
@@ -830,7 +829,7 @@ void Connection::on_pending_schema_agreement(Timer* timer) {
   Connection* connection = pending_schema_agreement->callback->connection();
   connection->pending_schema_agreements_.remove(pending_schema_agreement);
   pending_schema_agreement->callback->execute();
-  delete pending_schema_agreement;
+  Memory::deallocate(pending_schema_agreement);
 }
 
 void Connection::notify_ready() {
@@ -841,7 +840,7 @@ void Connection::notify_ready() {
   listener_->on_ready(this);
 }
 
-void Connection::notify_error(const std::string& message, ConnectionError code) {
+void Connection::notify_error(const String& message, ConnectionError code) {
   assert(code != CONNECTION_OK && "Notified error without an error");
   LOG_DEBUG("Lost connection(%p) to host %s with the following error: %s",
             static_cast<void*>(this),
@@ -885,32 +884,32 @@ void Connection::ssl_handshake() {
   }
 }
 
-void Connection::send_credentials(const std::string& class_name) {
+void Connection::send_credentials(const String& class_name) {
   ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(host_, class_name));
   if (v1_auth) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
     internal_write(RequestCallback::Ptr(
-                     new StartupCallback(Request::ConstPtr(
-                                           new CredentialsRequest(credentials)))));
+                     Memory::allocate<StartupCallback>(Request::ConstPtr(
+                                           Memory::allocate<CredentialsRequest>(credentials)))));
   } else {
     send_initial_auth_response(class_name);
   }
 }
 
-void Connection::send_initial_auth_response(const std::string& class_name) {
+void Connection::send_initial_auth_response(const String& class_name) {
   Authenticator::Ptr auth(config_.auth_provider()->new_authenticator(host_, class_name));
   if (!auth) {
     notify_error("Authentication required but no auth provider set", CONNECTION_ERROR_AUTH);
   } else {
-    std::string response;
+    String response;
     if (!auth->initial_response(&response)) {
       notify_error("Failed creating initial response token: " + auth->error(), CONNECTION_ERROR_AUTH);
       return;
     }
     internal_write(RequestCallback::Ptr(
-                     new StartupCallback(Request::ConstPtr(
-                                           new AuthResponseRequest(response, auth)))));
+                     Memory::allocate<StartupCallback>(Request::ConstPtr(
+                                           Memory::allocate<AuthResponseRequest>(response, auth)))));
   }
 }
 
@@ -926,7 +925,7 @@ void Connection::on_heartbeat(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
 
   if (!connection->heartbeat_outstanding_) {
-    if (!connection->internal_write(RequestCallback::Ptr(new HeartbeatCallback()))) {
+    if (!connection->internal_write(RequestCallback::Ptr(Memory::allocate<HeartbeatCallback>()))) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests
       // that never returned and as a result timed out.
@@ -1006,7 +1005,7 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
         } else {
           if (!connection->is_closing()) {
             connection->notify_error("Write error '" +
-                                     std::string(UV_ERRSTR(status, connection->loop_)) +
+                                     String(UV_ERRSTR(status, connection->loop_)) +
                                      "'");
             connection->defunct();
           }
@@ -1049,7 +1048,7 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
   }
 
   connection->pending_writes_.remove(pending_write);
-  delete pending_write;
+  Memory::deallocate(pending_write);
 
   connection->flush();
 }
@@ -1153,12 +1152,12 @@ void Connection::PendingWriteSsl::on_write(uv_write_t* req, int status) {
 }
 
 bool Connection::SslHandshakeWriter::write(Connection* connection, char* buf, size_t buf_size) {
-  SslHandshakeWriter* writer = new SslHandshakeWriter(connection, buf, buf_size);
+  SslHandshakeWriter* writer = Memory::allocate<SslHandshakeWriter>(connection, buf, buf_size);
   uv_stream_t* stream = reinterpret_cast<uv_stream_t*>(&connection->socket_);
 
   int rc = uv_write(&writer->req_, stream, &writer->uv_buf_, 1, SslHandshakeWriter::on_write);
   if (rc != 0) {
-    delete writer;
+    Memory::deallocate(writer);
     return false;
   }
 
@@ -1176,10 +1175,10 @@ void Connection::SslHandshakeWriter::on_write(uv_write_t* req, int status) {
   SslHandshakeWriter* writer = static_cast<SslHandshakeWriter*>(req->data);
   if (status != 0) {
     writer->connection_->notify_error("Write error '" +
-                                      std::string(UV_ERRSTR(status, writer->connection_->loop_)) +
+                                      String(UV_ERRSTR(status, writer->connection_->loop_)) +
                                       "'");
   }
-  delete writer;
+  Memory::deallocate(writer);
 }
 
 } // namespace cass
