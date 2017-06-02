@@ -27,6 +27,8 @@
 #include <string>
 #include <vector>
 
+#define EMPTY_TYPE "org.apache.cassandra.db.marshal.EmptyType"
+
 namespace cass {
 
 class ParserBase {

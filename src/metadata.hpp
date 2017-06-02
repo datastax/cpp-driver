@@ -373,7 +373,7 @@ public:
 
   Iterator* iterator_columns() const { return new ColumnIterator(columns_); }
   const ColumnMetadata* get_column(const std::string& name) const;
-  void add_column(const ColumnMetadata::Ptr& column);
+  virtual void add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column);
   void clear_columns();
   void build_keys_and_sort(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache);
 
@@ -488,6 +488,7 @@ public:
 
   Iterator* iterator_views() const { return new ViewIteratorVec(views_); }
   const ViewMetadata* get_view(const std::string& name) const;
+  virtual void add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column);
   void add_view(const ViewMetadata::Ptr& view);
   void sort_views();
 
