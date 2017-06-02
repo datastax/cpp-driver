@@ -139,7 +139,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
   }
 
   if (iequals(type_name, "empty")) {
-    return DataType::ConstPtr(new CustomType("org.apache.cassandra.db.marshal.EmptyType"));
+    return DataType::ConstPtr(new CustomType(EMPTY_TYPE));
   }
 
   if (type_name[0] == '\'') {

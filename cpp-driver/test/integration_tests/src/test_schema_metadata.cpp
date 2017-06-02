@@ -967,9 +967,9 @@ BOOST_AUTO_TEST_CASE(simple) {
 }
 
 /**
- * Test column parition and clustering keys
+ * Test column partition and clustering keys
  *
- * Verifies that the parition and clustering keys are properly
+ * Verifies that the partition and clustering keys are properly
  * categorized.
  *
  * @since 2.2.0
@@ -984,10 +984,10 @@ BOOST_AUTO_TEST_CASE(keys) {
   refresh_schema_meta();
 
   {
-    test_utils::execute_query(session, "CREATE TABLE keys.single_parition_key (key text, value text, PRIMARY KEY(key))");
+    test_utils::execute_query(session, "CREATE TABLE keys.single_partition_key (key text, value text, PRIMARY KEY(key))");
     refresh_schema_meta();
 
-    const CassTableMeta* table_meta = schema_get_table("keys", "single_parition_key");
+    const CassTableMeta* table_meta = schema_get_table("keys", "single_partition_key");
 
     BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 1);
     verify_partition_key(table_meta, 0, "key");
@@ -996,11 +996,11 @@ BOOST_AUTO_TEST_CASE(keys) {
   }
 
   {
-    test_utils::execute_query(session, "CREATE TABLE keys.composite_parition_key (key1 text, key2 text, value text, "
+    test_utils::execute_query(session, "CREATE TABLE keys.composite_partition_key (key1 text, key2 text, value text, "
                                        "PRIMARY KEY((key1, key2)))");
     refresh_schema_meta();
 
-    const CassTableMeta* table_meta = schema_get_table("keys", "composite_parition_key");
+    const CassTableMeta* table_meta = schema_get_table("keys", "composite_partition_key");
 
     BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 2);
     verify_partition_key(table_meta, 0, "key1");
@@ -1043,11 +1043,11 @@ BOOST_AUTO_TEST_CASE(keys) {
   }
 
   {
-    test_utils::execute_query(session, "CREATE TABLE keys.composite_parition_and_clustering_key (key1 text, key2 text, key3 text, key4 text, value text, "
+    test_utils::execute_query(session, "CREATE TABLE keys.composite_partition_and_clustering_key (key1 text, key2 text, key3 text, key4 text, value text, "
                                        "PRIMARY KEY((key1, key2), key3, key4))");
     refresh_schema_meta();
 
-    const CassTableMeta* table_meta = schema_get_table("keys", "composite_parition_and_clustering_key");
+    const CassTableMeta* table_meta = schema_get_table("keys", "composite_partition_and_clustering_key");
 
     BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 2);
     verify_partition_key(table_meta, 0, "key1");
@@ -1059,6 +1059,36 @@ BOOST_AUTO_TEST_CASE(keys) {
 
     verify_column_order(table_meta, 2, 2, 5);
   }
+}
+
+/**
+ * Test dense table
+ *
+ * Verifies that the columns in dense table metadata excludes the surrogate column.
+ *
+ * @since 2.2.0
+ * @jira_ticket CPP-432
+ * @test_category schema
+ * @cassandra_version 2.1.x
+ */
+BOOST_AUTO_TEST_CASE(dense_table) {
+  test_utils::execute_query(session, "CREATE KEYSPACE dense WITH replication = "
+    "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+  refresh_schema_meta();
+
+  test_utils::execute_query(session,
+                            "CREATE TABLE dense.my_table (key text, value text, PRIMARY KEY(key, value)) WITH COMPACT STORAGE");
+  refresh_schema_meta();
+
+  const CassTableMeta *table_meta = schema_get_table("dense", "my_table");
+
+  BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 1);
+  verify_partition_key(table_meta, 0, "key");
+
+  BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 1);
+  verify_clustering_key(table_meta, 0, "value");
+
+  verify_column_order(table_meta, 1, 1, 2);
 }
 
 /**
@@ -1151,10 +1181,10 @@ BOOST_AUTO_TEST_CASE(clustering_order) {
   refresh_schema_meta();
 
   {
-    test_utils::execute_query(session, "CREATE TABLE clustering_order.single_parition_key (key text, value text, PRIMARY KEY(key))");
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.single_partition_key (key text, value text, PRIMARY KEY(key))");
     refresh_schema_meta();
 
-    const CassTableMeta* table_meta = schema_get_table("clustering_order", "single_parition_key");
+    const CassTableMeta* table_meta = schema_get_table("clustering_order", "single_partition_key");
 
     BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 0);
     BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 0), CASS_CLUSTERING_ORDER_NONE);

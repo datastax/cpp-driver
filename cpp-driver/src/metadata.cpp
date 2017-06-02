@@ -1281,7 +1281,7 @@ const ColumnMetadata* TableMetadataBase::get_column(const std::string& name) con
   return i->second.get();
 }
 
-void TableMetadataBase::add_column(const ColumnMetadata::Ptr& column) {
+void TableMetadataBase::add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column) {
   if (columns_by_name_.insert(std::make_pair(column->name(), column)).second) {
     columns_.push_back(column);
   }
@@ -1433,6 +1433,24 @@ TableMetadata::TableMetadata(int protocol_version, const VersionNumber& cassandr
   if (cassandra_version >= VersionNumber(3, 0, 0)) {
     add_field(buffer, row, "flags");
   }
+}
+
+void TableMetadata::add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column) {
+  if (cassandra_version >= VersionNumber(3, 0, 0)) {
+    if (column->type() == CASS_COLUMN_TYPE_REGULAR && column->data_type()->is_custom()) {
+      const CustomType *customType = static_cast<const CustomType *>(column->data_type().get());
+      if (customType->class_name() == EMPTY_TYPE) {
+        // Don't add this column; it's a surrogate column in a dense table and
+        // should not be exposed to the user.
+        return;
+      }
+    }
+  } else if (column->type() == CASS_COLUMN_TYPE_COMPACT_VALUE && column->name().empty()) {
+    // Don't add this column; it's a surrogate column in a dense table and
+    // should not be exposed to the user.
+    return;
+  }
+  TableMetadataBase::add_column(cassandra_version, column);
 }
 
 const ViewMetadata* TableMetadata::get_view(const std::string& name) const {
@@ -2180,8 +2198,10 @@ void Metadata::InternalData::update_columns(int protocol_version, const VersionN
     }
 
     if (table_or_view) {
-      table_or_view->add_column(ColumnMetadata::Ptr(new ColumnMetadata(protocol_version, cassandra_version, cache, column_name,
-                                                                       keyspace, buffer, row)));
+      table_or_view->add_column(cassandra_version,
+                                ColumnMetadata::Ptr(new ColumnMetadata(protocol_version, cassandra_version, cache, column_name,
+                                                                       keyspace, buffer, row))
+      );
     }
   }
 
