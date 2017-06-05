@@ -139,14 +139,14 @@ BOOST_AUTO_TEST_CASE(v4)
 BOOST_AUTO_TEST_CASE(from_string)
 {
   CassUuid uuid;
-  const std::string expected = "c3b54ca0-7b01-11e4-aea6-c30dd51eaa64";
+  const cass::String expected = "c3b54ca0-7b01-11e4-aea6-c30dd51eaa64";
   char actual[CASS_UUID_STRING_LENGTH];
 
   BOOST_CHECK(cass_uuid_from_string(expected.c_str(), &uuid) == CASS_OK);
   cass_uuid_string(uuid, actual);
   BOOST_CHECK(expected == actual);
 
-  const std::string upper  = boost::to_upper_copy(expected);
+  const cass::String upper  = boost::to_upper_copy(expected);
   BOOST_CHECK(cass_uuid_from_string(upper.c_str(), &uuid) == CASS_OK);
   cass_uuid_string(uuid, actual);
   BOOST_CHECK(expected == actual);

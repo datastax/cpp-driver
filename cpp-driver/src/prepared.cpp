@@ -27,7 +27,7 @@ void cass_prepared_free(const CassPrepared* prepared) {
 }
 
 CassStatement* cass_prepared_bind(const CassPrepared* prepared) {
-  cass::ExecuteRequest* execute = new cass::ExecuteRequest(prepared);
+  cass::ExecuteRequest* execute = cass::Memory::allocate<cass::ExecuteRequest>(prepared);
   execute->inc_ref();
   return CassStatement::to(execute);
 }
@@ -79,7 +79,7 @@ const CassDataType* cass_prepared_parameter_data_type_by_name_n(const CassPrepar
 namespace cass {
 
 Prepared::Prepared(const ResultResponse::Ptr& result,
-                   const std::string& statement,
+                   const String& statement,
                    const Metadata::SchemaSnapshot& schema_metadata)
   : result_(result)
   , id_(result->prepared().to_string())

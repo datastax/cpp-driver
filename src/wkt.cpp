@@ -9,11 +9,12 @@
 
 #include "wkt.hpp"
 
+#include "string.hpp"
+
 #include <stdlib.h>
-#include <string>
 
 
-#line 17 "wkt.cpp"
+#line 18 "wkt.cpp"
 static const char _wkt_actions[] = {
 	0, 1, 0, 1, 1, 1, 2, 1, 
 	5, 1, 6, 1, 7, 1, 8, 1, 
@@ -124,7 +125,7 @@ static const int wkt_error = -1;
 static const int wkt_en_main = 21;
 
 
-#line 16 "wkt.rl"
+#line 17 "wkt.rl"
 
 
 
@@ -146,7 +147,7 @@ WktLexer::Token WktLexer::next_token() {
   if (p == eof) return TK_EOF;
 
   
-#line 150 "wkt.cpp"
+#line 151 "wkt.cpp"
 	{
 	cs = wkt_start;
 	ts = 0;
@@ -154,7 +155,7 @@ WktLexer::Token WktLexer::next_token() {
 	act = 0;
 	}
 
-#line 158 "wkt.cpp"
+#line 159 "wkt.cpp"
 	{
 	int _klen;
 	unsigned int _trans;
@@ -173,7 +174,7 @@ _resume:
 #line 1 "NONE"
 	{ts = p;}
 	break;
-#line 177 "wkt.cpp"
+#line 178 "wkt.cpp"
 		}
 	}
 
@@ -243,75 +244,75 @@ _eof_trans:
 	{te = p+1;}
 	break;
 	case 3:
-#line 48 "wkt.rl"
+#line 49 "wkt.rl"
 	{act = 8;}
 	break;
 	case 4:
-#line 56 "wkt.rl"
+#line 57 "wkt.rl"
 	{act = 10;}
 	break;
 	case 5:
-#line 41 "wkt.rl"
+#line 42 "wkt.rl"
 	{te = p+1;{ token = TK_TYPE_POINT; {p++; goto _out; } }}
 	break;
 	case 6:
-#line 42 "wkt.rl"
+#line 43 "wkt.rl"
 	{te = p+1;{ token = TK_TYPE_LINESTRING; {p++; goto _out; } }}
 	break;
 	case 7:
-#line 43 "wkt.rl"
+#line 44 "wkt.rl"
 	{te = p+1;{ token = TK_TYPE_POLYGON; {p++; goto _out; } }}
 	break;
 	case 8:
-#line 44 "wkt.rl"
+#line 45 "wkt.rl"
 	{te = p+1;{ token = TK_EMPTY; {p++; goto _out; } }}
 	break;
 	case 9:
-#line 45 "wkt.rl"
+#line 46 "wkt.rl"
 	{te = p+1;{ token = TK_OPEN_PAREN; {p++; goto _out; } }}
 	break;
 	case 10:
-#line 46 "wkt.rl"
+#line 47 "wkt.rl"
 	{te = p+1;{ token = TK_CLOSE_PAREN; {p++; goto _out; } }}
 	break;
 	case 11:
-#line 47 "wkt.rl"
+#line 48 "wkt.rl"
 	{te = p+1;{ token = TK_COMMA; {p++; goto _out; } }}
 	break;
 	case 12:
-#line 55 "wkt.rl"
+#line 56 "wkt.rl"
 	{te = p+1;{ /* Skip */ }}
 	break;
 	case 13:
-#line 56 "wkt.rl"
+#line 57 "wkt.rl"
 	{te = p+1;{ token = TK_INVALID; {p++; goto _out; } }}
 	break;
 	case 14:
-#line 48 "wkt.rl"
+#line 49 "wkt.rl"
 	{te = p;p--;{
                    if (!skip_number_) {
-                     number_ = atof(std::string(ts, te).c_str());
+                     number_ = atof(cass::String(ts, te).c_str());
                    }
                    token = TK_NUMBER;
                    {p++; goto _out; }
                 }}
 	break;
 	case 15:
-#line 56 "wkt.rl"
+#line 57 "wkt.rl"
 	{te = p;p--;{ token = TK_INVALID; {p++; goto _out; } }}
 	break;
 	case 16:
-#line 48 "wkt.rl"
+#line 49 "wkt.rl"
 	{{p = ((te))-1;}{
                    if (!skip_number_) {
-                     number_ = atof(std::string(ts, te).c_str());
+                     number_ = atof(cass::String(ts, te).c_str());
                    }
                    token = TK_NUMBER;
                    {p++; goto _out; }
                 }}
 	break;
 	case 17:
-#line 56 "wkt.rl"
+#line 57 "wkt.rl"
 	{{p = ((te))-1;}{ token = TK_INVALID; {p++; goto _out; } }}
 	break;
 	case 18:
@@ -320,7 +321,7 @@ _eof_trans:
 	case 8:
 	{{p = ((te))-1;}
                    if (!skip_number_) {
-                     number_ = atof(std::string(ts, te).c_str());
+                     number_ = atof(cass::String(ts, te).c_str());
                    }
                    token = TK_NUMBER;
                    {p++; goto _out; }
@@ -332,7 +333,7 @@ _eof_trans:
 	}
 	}
 	break;
-#line 336 "wkt.cpp"
+#line 337 "wkt.cpp"
 		}
 	}
 
@@ -345,7 +346,7 @@ _again:
 #line 1 "NONE"
 	{ts = 0;}
 	break;
-#line 349 "wkt.cpp"
+#line 350 "wkt.cpp"
 		}
 	}
 
@@ -363,7 +364,7 @@ _again:
 	_out: {}
 	}
 
-#line 61 "wkt.rl"
+#line 62 "wkt.rl"
 
 
   position_ = p;

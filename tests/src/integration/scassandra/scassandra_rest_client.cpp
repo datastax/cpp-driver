@@ -65,7 +65,7 @@ const Response SCassandraRestClient::send_request(Request request) {
 #endif
 
   // Create the IPv4 socket address
-  const cass::Address address(request.address, static_cast<int>(request.port));
+  const cass::Address address(request.address.c_str(), static_cast<int>(request.port));
 
   // Initialize the client TCP request
   uv_tcp_t tcp;

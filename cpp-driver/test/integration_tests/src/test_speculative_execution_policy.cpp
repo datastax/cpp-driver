@@ -129,7 +129,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
       cass::AddressVec attempted_addresses = native_reponse_future->attempted_addresses();
       for (cass::AddressVec::iterator iterator = attempted_addresses.begin();
         iterator != attempted_addresses.end(); ++iterator) {
-        attempted_hosts.push_back(iterator->to_string());
+        attempted_hosts.push_back(iterator->to_string().c_str());
       }
       std::sort(attempted_hosts.begin(), attempted_hosts.end());
     }
@@ -147,7 +147,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     cass::Future* native_future = static_cast<cass::Future*>(future.get());
     if (native_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
       cass::ResponseFuture* native_reponse_future = static_cast<cass::ResponseFuture*>(native_future);
-      host = native_reponse_future->address().to_string();
+      host = native_reponse_future->address().to_string().c_str();
     }
     return host;
   }

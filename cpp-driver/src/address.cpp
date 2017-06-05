@@ -19,7 +19,6 @@
 #include "macros.hpp"
 
 #include <assert.h>
-#include <sstream>
 #include <string.h>
 
 namespace cass {
@@ -34,14 +33,14 @@ Address::Address() {
   memset(&addr_, 0, sizeof(addr_));
 }
 
-Address::Address(const std::string& ip, int port) {
+Address::Address(const String& ip, int port) {
   init();
   bool result = from_string(ip, port, this);
   UNUSED_(result);
   assert(result);
 }
 
-bool Address::from_string(const std::string& ip, int port, Address* output) {
+bool Address::from_string(const String& ip, int port, Address* output) {
   char buf[sizeof(struct in6_addr)];
 #if UV_VERSION_MAJOR == 0
   if (uv_inet_pton(AF_INET, ip.c_str(), &buf).code == UV_OK) {
@@ -152,8 +151,8 @@ int Address::port() const {
   return -1;
 }
 
-std::string Address::to_string(bool with_port) const {
-  std::stringstream ss;
+String Address::to_string(bool with_port) const {
+  OStringStream ss;
   char host[INET6_ADDRSTRLEN + 1] = {'\0'};
   if (family() == AF_INET) {
     uv_ip4_name(const_cast<struct sockaddr_in*>(addr_in()), host,

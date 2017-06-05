@@ -19,6 +19,7 @@
 
 #include "aligned_storage.hpp"
 #include "macros.hpp"
+#include "memory.hpp"
 
 #include <limits>
 #include <memory>
@@ -82,7 +83,7 @@ public:
       fixed_->is_used = true; // Don't reuse the buffer
       return static_cast<T*>(fixed_->data.address());
     } else {
-      return static_cast<T*>(::operator new(sizeof(T) * n));
+      return static_cast<T*>(Memory::malloc(sizeof(T) * n));
     }
   }
 
@@ -90,7 +91,7 @@ public:
     if (fixed_ != NULL && fixed_->data.address() == p) {
       fixed_->is_used = false; // It's safe to reuse the buffer
     } else {
-      ::operator delete(p);
+      Memory::free(p);
     }
   }
 

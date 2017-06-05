@@ -18,10 +18,9 @@
 #define __CASS_HOST_TARGETING_POLICY_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "dense_hash_map.hpp"
 #include "load_balancing.hpp"
 #include "request_handler.hpp"
-
-#include <sparsehash/dense_hash_map>
 
 namespace cass {
 
@@ -36,12 +35,12 @@ public:
   virtual void init(const SharedRefPtr<Host>& connected_host,
                     const cass::HostMap& hosts, Random* random);
 
-  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+  virtual QueryPlan* new_query_plan(const String& connected_keyspace,
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
   virtual LoadBalancingPolicy* new_instance() {
-    return new HostTargetingPolicy(child_policy_->new_instance());
+    return Memory::allocate<HostTargetingPolicy>(child_policy_->new_instance());
   }
 
   virtual void on_add(const SharedRefPtr<Host>& host);
@@ -66,7 +65,7 @@ private:
   };
 
 private:
-  typedef sparsehash::dense_hash_map<Address, Host::Ptr, AddressHash> HostMap;
+  typedef DenseHashMap<Address, Host::Ptr, AddressHash> HostMap;
   HostMap available_hosts_;
 };
 

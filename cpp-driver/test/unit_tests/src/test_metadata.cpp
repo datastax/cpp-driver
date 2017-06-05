@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(case_sensitive)
 
   for (size_t i = 0; column_names[i] != NULL; ++i) {
     cass::IndexVec indices;
-    std::string name;
+    cass::String name;
     name.push_back('"');
     name.append(column_names[i]);
     name.push_back('"');

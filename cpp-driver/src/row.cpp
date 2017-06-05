@@ -78,7 +78,7 @@ const Value* Row::get_by_name(const StringRef& name) const {
   return &values[indices[0]];
 }
 
-bool Row::get_string_by_name(const StringRef& name, std::string* out) const {
+bool Row::get_string_by_name(const StringRef& name, String* out) const {
   const Value* value = get_by_name(name);
   if (value == NULL ||
       value->size() < 0) {

@@ -6,6 +6,7 @@
 */
 
 #include "line_string.hpp"
+#include "memory.hpp"
 #include "validate.hpp"
 
 #include <string_ref.hpp>
@@ -17,11 +18,11 @@
 extern "C" {
 
 DseLineString* dse_line_string_new() {
-  return DseLineString::to(new dse::LineString());
+  return DseLineString::to(cass::Memory::allocate<dse::LineString>());
 }
 
 void dse_line_string_free(DseLineString* line_string) {
-  delete line_string->from();
+  cass::Memory::deallocate(line_string->from());
 }
 
 void dse_line_string_reset(DseLineString* line_string) {
@@ -44,11 +45,11 @@ CassError dse_line_string_finish(DseLineString* line_string) {
 }
 
 DseLineStringIterator* dse_line_string_iterator_new() {
-  return DseLineStringIterator::to(new dse::LineStringIterator());
+  return DseLineStringIterator::to(cass::Memory::allocate<dse::LineStringIterator>());
 }
 
 void dse_line_string_iterator_free(DseLineStringIterator* iterator) {
-  delete iterator->from();
+  cass::Memory::deallocate(iterator->from());
 }
 
 CassError dse_line_string_iterator_reset(DseLineStringIterator *iterator, const CassValue *value) {
@@ -79,13 +80,13 @@ CassError dse_line_string_iterator_next_point(DseLineStringIterator* iterator,
 
 namespace dse {
 
-std::string LineString::to_wkt() const {
+cass::String LineString::to_wkt() const {
   // Special case empty line string
   if (num_points_ == 0) {
     return "LINESTRING EMPTY";
   }
 
-  std::stringstream ss;
+  cass::OStringStream ss;
   ss.precision(WKT_MAX_DIGITS);
   ss << "LINESTRING (";
   const cass_byte_t* pos = bytes_.data() + WKB_HEADER_SIZE + sizeof(cass_uint32_t);

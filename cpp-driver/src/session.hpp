@@ -36,13 +36,12 @@
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "speculative_execution.hpp"
+#include "string.hpp"
 #include "token_map.hpp"
+#include "vector.hpp"
 
 #include <memory>
-#include <set>
-#include <string>
 #include <uv.h>
-#include <vector>
 
 namespace cass {
 
@@ -87,7 +86,7 @@ public:
     load_balancing_policy_.reset(policy);
   }
 
-  void broadcast_keyspace_change(const std::string& keyspace,
+  void broadcast_keyspace_change(const String& keyspace,
                                  const IOWorker* calling_io_worker);
 
   Host::Ptr get_host(const Address& address);
@@ -98,7 +97,7 @@ public:
   bool notify_up_async(const Address& address);
   bool notify_down_async(const Address& address);
 
-  void connect_async(const Config& config, const std::string& keyspace, const Future::Ptr& future);
+  void connect_async(const Config& config, const String& keyspace, const Future::Ptr& future);
   void close_async(const Future::Ptr& future);
 
   Future::Ptr prepare(const char* statement, size_t length);
@@ -125,7 +124,7 @@ private:
   void internal_close();
 
   void notify_connected();
-  void notify_connect_error(CassError code, const std::string& message);
+  void notify_connect_error(CassError code, const String& message);
   void notify_closed();
 
   void execute(const RequestHandler::Ptr& request_handler);
@@ -176,7 +175,7 @@ private:
   Metadata& metadata() { return metadata_; }
 
   void on_control_connection_ready();
-  void on_control_connection_error(CassError code, const std::string& message);
+  void on_control_connection_error(CassError code, const String& message);
 
   void on_add(Host::Ptr host, bool is_initial_connection);
   void internal_on_add(Host::Ptr host, bool is_initial_connection);
@@ -186,7 +185,7 @@ private:
   void on_down(Host::Ptr host);
 
 private:
-  typedef std::vector<IOWorker::Ptr > IOWorkerVec;
+  typedef Vector<IOWorker::Ptr > IOWorkerVec;
 
   Atomic<State> state_;
   uv_mutex_t state_mutex_;
@@ -196,7 +195,7 @@ private:
   LoadBalancingPolicy::Ptr load_balancing_policy_;
   SharedRefPtr<SpeculativeExecutionPolicy> speculative_execution_policy_;
   CassError connect_error_code_;
-  std::string connect_error_message_;
+  String connect_error_message_;
   Future::Ptr connect_future_;
   Future::Ptr close_future_;
 
@@ -215,7 +214,7 @@ private:
   int pending_workers_count_;
   int current_io_worker_;
 
-  CopyOnWritePtr<std::string> keyspace_;
+  CopyOnWritePtr<String> keyspace_;
 };
 
 class SessionFuture : public Future {

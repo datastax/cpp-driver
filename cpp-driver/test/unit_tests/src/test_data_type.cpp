@@ -58,10 +58,10 @@ BOOST_AUTO_TEST_CASE(keyspace_and_type_name)
     size_t name_length;
 
     BOOST_REQUIRE_EQUAL(cass_data_type_keyspace(data_type, &name, &name_length), CASS_OK);
-    BOOST_CHECK_EQUAL(std::string(name, name_length), "keyspace1");
+    BOOST_CHECK_EQUAL(cass::String(name, name_length), "keyspace1");
 
     BOOST_REQUIRE_EQUAL(cass_data_type_type_name(data_type, &name, &name_length), CASS_OK);
-    BOOST_CHECK_EQUAL(std::string(name, name_length), "type_name1");
+    BOOST_CHECK_EQUAL(cass::String(name, name_length), "type_name1");
   }
 
   // Invalid type
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(class_name)
     size_t name_length;
 
     BOOST_REQUIRE_EQUAL(cass_data_type_class_name(data_type, &name, &name_length), CASS_OK);
-    BOOST_CHECK_EQUAL(std::string(name, name_length), "class_name1");
+    BOOST_CHECK_EQUAL(cass::String(name, name_length), "class_name1");
   }
 
   // Invalid type
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE(from_existing)
     size_t name_length;
 
     BOOST_REQUIRE_EQUAL(cass_data_type_class_name(data_type_copy, &name, &name_length), CASS_OK);
-    BOOST_CHECK_EQUAL(std::string(name, name_length), "class_name1");
+    BOOST_CHECK_EQUAL(cass::String(name, name_length), "class_name1");
   }
 
   // From an existing tuple
@@ -197,10 +197,10 @@ BOOST_AUTO_TEST_CASE(from_existing)
     size_t name_length;
 
     BOOST_REQUIRE_EQUAL(cass_data_type_keyspace(data_type_copy, &name, &name_length), CASS_OK);
-    BOOST_CHECK_EQUAL(std::string(name, name_length), "keyspace1");
+    BOOST_CHECK_EQUAL(cass::String(name, name_length), "keyspace1");
 
     BOOST_REQUIRE_EQUAL(cass_data_type_type_name(data_type_copy, &name, &name_length), CASS_OK);
-    BOOST_CHECK_EQUAL(std::string(name, name_length), "type_name1");
+    BOOST_CHECK_EQUAL(cass::String(name, name_length), "type_name1");
   }
 }
 
@@ -373,13 +373,13 @@ BOOST_AUTO_TEST_CASE(subtypes)
     size_t name_length;
 
     BOOST_REQUIRE_EQUAL(cass_data_type_sub_type_name(data_type, 0, &name, &name_length), CASS_OK);
-    BOOST_CHECK_EQUAL(std::string(name, name_length), "field1");
+    BOOST_CHECK_EQUAL(cass::String(name, name_length), "field1");
 
     BOOST_REQUIRE_EQUAL(cass_data_type_sub_type_name(data_type, 1, &name, &name_length), CASS_OK);
-    BOOST_CHECK_EQUAL(std::string(name, name_length), "field2");
+    BOOST_CHECK_EQUAL(cass::String(name, name_length), "field2");
 
     BOOST_REQUIRE_EQUAL(cass_data_type_sub_type_name(data_type, 2, &name, &name_length), CASS_OK);
-    BOOST_CHECK_EQUAL(std::string(name, name_length), "field3");
+    BOOST_CHECK_EQUAL(cass::String(name, name_length), "field3");
   }
 }
 
@@ -396,7 +396,7 @@ BOOST_AUTO_TEST_CASE(value_types_by_class)
 BOOST_AUTO_TEST_CASE(value_types_by_class_case_insensitive)
 {
 #define XX_VALUE_TYPE(name, type, cql, klass) {                              \
-    std::string upper(klass);                                                \
+    cass::String upper(klass);                                                \
     std::transform(upper.begin(), upper.end(), upper.begin(), toupper);      \
     BOOST_CHECK(upper.empty() || cass::ValueTypes::by_class(upper) == name); \
   }
@@ -418,7 +418,7 @@ BOOST_AUTO_TEST_CASE(value_types_by_cql)
 BOOST_AUTO_TEST_CASE(value_types_by_cql_case_insensitive)
 {
 #define XX_VALUE_TYPE(name, type, cql, klass) {                            \
-    std::string upper(cql);                                                \
+    cass::String upper(cql);                                                \
     std::transform(upper.begin(), upper.end(), upper.begin(), toupper);    \
     BOOST_CHECK(upper.empty() || cass::ValueTypes::by_cql(upper) == name); \
   }

@@ -79,6 +79,7 @@ option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
 option(DSE_USE_SPARSEHASH "Use sparsehash" OFF)
 option(DSE_USE_ZLIB "Use zlib" OFF)
 option(DSE_USE_LIBSSH2 "Use libssh2" OFF)
+option(DSE_DEBUG_CUSTOM_ALLOC "Debug custom allocator" OFF)
 
 if(DSE_BUILD_TESTS)
   # Enable integration and unit tests
@@ -101,6 +102,7 @@ set(CASS_USE_TCMALLOC ${DSE_USE_TCMALLOC})
 set(CASS_USE_SPARSEHASH ${DSE_USE_SPARSEHASH})
 set(CASS_USE_ZLIB ${DSE_USE_ZLIB})
 set(CASS_USE_LIBSSH2 ${DSE_USE_LIBSSH2})
+set(CASS_DEBUG_CUSTOM_ALLOC ${DSE_DEBUG_CUSTOM_ALLOC})
 
 #---------------
 # Dependencies

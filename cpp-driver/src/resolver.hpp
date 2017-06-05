@@ -17,20 +17,21 @@
 #ifndef __CASS_RESOLVER_HPP_INCLUDED__
 #define __CASS_RESOLVER_HPP_INCLUDED__
 
+#include "address.hpp"
+#include "ref_counted.hpp"
+#include "string.hpp"
+#include "timer.hpp"
+
 #include <uv.h>
 
 #include <functional>
-#include <string>
-#include <sstream>
-
-#include "address.hpp"
-#include "ref_counted.hpp"
-#include "timer.hpp"
 
 namespace cass {
 
 template <class T>
 class Resolver {
+  friend class Memory;
+
 public:
   typedef void (*Callback)(Resolver*);
 
@@ -43,7 +44,7 @@ public:
     SUCCESS
   };
 
-  const std::string& hostname() { return hostname_; }
+  const String& hostname() { return hostname_; }
   int port() { return port_; }
   bool is_success() { return status_ == SUCCESS; }
   bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
@@ -51,12 +52,12 @@ public:
   const AddressVec& addresses() const { return addresses_; }
   T& data() { return data_; }
 
-  static void resolve(uv_loop_t* loop, const std::string& hostname, int port,
+  static void resolve(uv_loop_t* loop, const String& hostname, int port,
                       const T& data, Callback cb, uint64_t timeout,
                       struct addrinfo* hints = NULL) {
-    Resolver* resolver = new Resolver(hostname, port, data, cb);
+    Resolver* resolver = Memory::allocate<Resolver>(hostname, port, data, cb);
 
-    std::ostringstream ss;
+    OStringStream ss;
     ss << port;
 
     if (timeout > 0) {
@@ -69,7 +70,7 @@ public:
     if (rc != 0) {
       resolver->status_ = FAILED_BAD_PARAM;
       resolver->cb_(resolver);
-      delete resolver;
+      Memory::deallocate(resolver);
     }
   }
 
@@ -92,7 +93,7 @@ private:
 
     resolver->cb_(resolver);
 
-    delete resolver;
+    Memory::deallocate(resolver);
     uv_freeaddrinfo(res);
   }
 
@@ -117,7 +118,7 @@ private:
   }
 
 private:
-  Resolver(const std::string& hostname, int port, const T& data, Callback cb)
+  Resolver(const String& hostname, int port, const T& data, Callback cb)
       : hostname_(hostname)
       , port_(port)
       , status_(RESOLVING)
@@ -130,7 +131,7 @@ private:
 
   uv_getaddrinfo_t req_;
   Timer timer_;
-  std::string hostname_;
+  String hostname_;
   int port_;
   Status status_;
   AddressVec addresses_;
@@ -142,6 +143,8 @@ private:
 #if UV_VERSION_MAJOR >= 1
 template <class T>
 class NameResolver {
+  friend class Memory;
+
 public:
   typedef void (*Callback)(NameResolver*);
 
@@ -157,13 +160,13 @@ public:
   bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
   Status status() { return status_; }
   const Address& address() const { return address_; }
-  const std::string& hostname() const { return hostname_; }
-  const std::string& service() const { return service_; }
+  const String& hostname() const { return hostname_; }
+  const String& service() const { return service_; }
   T& data() { return data_; }
 
   static void resolve(uv_loop_t* loop, const Address& address,
                       const T& data, Callback cb, uint64_t timeout, int flags = 0) {
-    NameResolver* resolver = new NameResolver(address, data, cb);
+    NameResolver* resolver = Memory::allocate<NameResolver>(address, data, cb);
 
     if (timeout > 0) {
       resolver->timer_.start(loop, timeout, resolver, on_timeout);
@@ -174,7 +177,7 @@ public:
     if (rc != 0) {
       resolver->status_ = FAILED_BAD_PARAM;
       resolver->cb_(resolver);
-      delete resolver;
+      Memory::deallocate(resolver);
     }
   }
 
@@ -201,7 +204,7 @@ private:
 
     resolver->cb_(resolver);
 
-    delete resolver;
+    Memory::deallocate(resolver);
   }
 
   static void on_timeout(Timer* timer) {
@@ -225,8 +228,8 @@ private:
   Timer timer_;
   Address address_;
   Status status_;
-  std::string hostname_;
-  std::string service_;
+  String hostname_;
+  String service_;
   T data_;
   Callback cb_;
 };
@@ -267,7 +270,7 @@ public:
   T& data() { return data_; }
 
   void resolve(uv_loop_t* loop,
-               const std::string& host, int port,
+               const String& host, int port,
                uint64_t timeout, struct addrinfo* hints = NULL) {
     this->inc_ref();
     cass::Resolver<MultiResolver<T>*>::resolve(loop, host, port, this,

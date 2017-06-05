@@ -19,13 +19,11 @@
 #endif
 
 #include "test_token_map_utils.hpp"
+#include "set.hpp"
+#include "string.hpp"
+#include "vector.hpp"
 
 #include <boost/test/unit_test.hpp>
-
-#include <vector>
-#include <set>
-#include <string>
-#include <sstream>
 
 namespace {
 
@@ -65,7 +63,7 @@ struct MockTokenMap {
     ReplicationMap replication;
     replication["class"] = CASS_SIMPLE_STRATEGY;
 
-    std::stringstream ss;
+    cass::OStringStream ss;
     ss << replication_factor;
     replication["replication_factor"] = ss.str();
 
@@ -95,9 +93,9 @@ struct MockTokenMap {
   }
 
   void add_token(Token token,
-                 const std::string& address,
-                 const std::string& rack = "",
-                 const std::string& dc = "") {
+                 const cass::String& address,
+                 const cass::String& rack = "",
+                 const cass::String& dc = "") {
     tokens.push_back(TokenHost(token, create_host(address, rack, dc)));
   }
 
@@ -118,9 +116,9 @@ struct MockTokenMap {
     return NO_REPLICAS;
   }
 
-  cass::Host* create_host(const std::string& address,
-                          const std::string& rack = "",
-                          const std::string& dc = "") {
+  cass::Host* create_host(const cass::String& address,
+                          const cass::String& rack = "",
+                          const cass::String& dc = "") {
     cass::Host::Ptr host(new cass::Host(cass::Address(address, 9042), false));
     host->set_rack_and_dc(rack, dc);
     host->set_rack_and_dc_ids(rack_ids.get(rack), dc_ids.get(dc));
@@ -135,9 +133,9 @@ struct MockTokenMap {
 };
 
 void check_host(const cass::SharedRefPtr<cass::Host>& host,
-                const std::string& ip,
-                const std::string& rack = "",
-                const std::string& dc = "") {
+                const cass::String& ip,
+                const cass::String& rack = "",
+                const cass::String& dc = "") {
   BOOST_CHECK(host->address() == cass::Address(ip, 9042));
   BOOST_CHECK(host->rack() == rack);
   BOOST_CHECK(host->dc() == dc);

@@ -105,7 +105,7 @@ private:
   Connection* find_least_busy();
 
 private:
-  typedef std::vector<Connection*> ConnectionVec;
+  typedef Vector<Connection*> ConnectionVec;
 
   IOWorker* io_worker_;
   Host::ConstPtr host_;

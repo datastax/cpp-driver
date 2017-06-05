@@ -9,17 +9,17 @@
 #define __DSE_AUTH_HPP_INCLUDED__
 
 #include "dse.h"
+#include "string.hpp"
 
-#include <string>
 #include <uv.h>
 
 namespace dse {
 
 class PlaintextAuthenticatorData {
 public:
-  PlaintextAuthenticatorData(const std::string& username,
-                             const std::string& password,
-                             const std::string& authorization_id)
+  PlaintextAuthenticatorData(const cass::String& username,
+                             const cass::String& password,
+                             const cass::String& authorization_id)
     : username_(username)
     , password_(password)
     , authorization_id_(authorization_id) { }
@@ -35,25 +35,25 @@ private:
   static CassAuthenticatorCallbacks callbacks_;
 
 private:
-  std::string username_;
-  std::string password_;
-  std::string authorization_id_;
+  cass::String username_;
+  cass::String password_;
+  cass::String authorization_id_;
 };
 
 class GssapiAuthenticatorData {
 public:
-  GssapiAuthenticatorData(const std::string& service,
-                          const std::string& principal,
-                          const std::string& authorization_id)
+  GssapiAuthenticatorData(const cass::String& service,
+                          const cass::String& principal,
+                          const cass::String& authorization_id)
     : service_(service)
     , principal_(principal)
     , authorization_id_(authorization_id) { }
 
   static const CassAuthenticatorCallbacks* callbacks() { return &callbacks_; }
 
-  const std::string& service() const { return service_; }
-  const std::string& principal() const { return principal_; }
-  const std::string& authorization_id() const { return authorization_id_; }
+  const cass::String& service() const { return service_; }
+  const cass::String& principal() const { return principal_; }
+  const cass::String& authorization_id() const { return authorization_id_; }
 
   static CassError set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
                                       DseGssapiAuthenticatorUnlockCallback unlock_callback,
@@ -78,9 +78,9 @@ private:
   static void* data_;
 
 private:
-  std::string service_;
-  std::string principal_;
-  std::string authorization_id_;
+  cass::String service_;
+  cass::String principal_;
+  cass::String authorization_id_;
 };
 
 } // namespace dse

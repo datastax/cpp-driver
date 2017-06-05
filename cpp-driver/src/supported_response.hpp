@@ -19,9 +19,8 @@
 
 #include "response.hpp"
 #include "constants.hpp"
-
-#include <list>
-#include <string>
+#include "string.hpp"
+#include "vector.hpp"
 
 namespace cass {
 
@@ -33,8 +32,8 @@ public:
   bool decode(int version, char* buffer, size_t size);
 
 private:
-  std::list<std::string> compression_;
-  std::list<std::string> versions_;
+  Vector<String> compression_;
+  Vector<String> versions_;
 };
 
 } // namespace cass

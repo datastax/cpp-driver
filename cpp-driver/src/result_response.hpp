@@ -24,10 +24,7 @@
 #include "response.hpp"
 #include "row.hpp"
 #include "string_ref.hpp"
-
-#include <map>
-#include <string>
-#include <vector>
+#include "vector.hpp"
 
 namespace cass {
 
@@ -37,7 +34,7 @@ class ResultResponse : public Response {
 public:
   typedef SharedRefPtr<ResultResponse> Ptr;
   typedef SharedRefPtr<const ResultResponse> ConstPtr;
-  typedef std::vector<size_t> PKIndexVec;
+  typedef Vector<size_t> PKIndexVec;
 
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)

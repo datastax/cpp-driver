@@ -9,10 +9,9 @@
 
 #include "dse.h"
 #include "polygon.hpp"
+#include "string.hpp"
 
 #include <value.hpp>
-
-using namespace std;
 
 #define RESET_ITERATOR_WITH(x) iterator.reset_text((x), strlen((x)))
 
@@ -156,7 +155,7 @@ TEST_F(PolygonUnitTest, TextJunkAfterEmptyPolygon) {
 }
 
 TEST_F(PolygonUnitTest, TextEmpty) {
-  string wkt = polygon->to_wkt();
+  cass::String wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON EMPTY", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
@@ -167,7 +166,7 @@ TEST_F(PolygonUnitTest, TextEmptyRing) {
   ASSERT_EQ(CASS_OK, dse_polygon_start_ring(polygon));
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  string wkt = polygon->to_wkt();
+  cass::String wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON (())", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
@@ -181,7 +180,7 @@ TEST_F(PolygonUnitTest, TextSingleRing) {
   ASSERT_EQ(CASS_OK, dse_polygon_add_point(polygon, 4, 5));
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  string wkt = polygon->to_wkt();
+  cass::String wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON ((0 1, 2 3, 4 5))", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
@@ -216,7 +215,7 @@ TEST_F(PolygonUnitTest, TextMultipleRings) {
 
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  string wkt = polygon->to_wkt();
+  cass::String wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON ((0 1, 2 3, 4 5), (6 7, 8 9, 10 11, 12 13))", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));

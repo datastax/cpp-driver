@@ -6,8 +6,8 @@
 */
 
 #include "auth.hpp"
+#include "memory.hpp"
 #include "logger.hpp"
-
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"
 
@@ -85,7 +85,7 @@ void PlaintextAuthenticatorData::on_challenge(CassAuthenticator* auth, void* dat
     return;
   }
 
-  std::string error("Unexpected token returned during plaintext challenge '");
+  cass::String error("Unexpected token returned during plaintext challenge '");
   error.append(token, token_size);
   error.append("'");
 
@@ -177,34 +177,34 @@ public:
     AUTH_CONFIDENTIALITY = 3
   };
 
-  GssapiAuthenticator(const std::string& authorization_id);
+  GssapiAuthenticator(const cass::String& authorization_id);
   ~GssapiAuthenticator();
 
-  const std::string& response() const { return response_; }
-  const std::string& error() const { return error_; }
+  const cass::String& response() const { return response_; }
+  const cass::String& error() const { return error_; }
 
-  Result init(const std::string& service, const std::string& principal);
+  Result init(const cass::String& service, const cass::String& principal);
   Result process(const char* token, size_t token_length);
 
 private:
   Result negotiate(gss_buffer_t challenge_token);
   Result authenticate(gss_buffer_t challenge_token);
 
-  static std::string display_status(OM_uint32 maj, OM_uint32 min);
+  static cass::String display_status(OM_uint32 maj, OM_uint32 min);
 
 private:
   gss_ctx_id_t context_;
   gss_name_t server_name_;
   OM_uint32 gss_flags_;
   gss_cred_id_t client_creds_;
-  std::string username_;
-  std::string response_;
-  std::string error_;
+  cass::String username_;
+  cass::String response_;
+  cass::String error_;
   State state_;
-  std::string authorization_id_;
+  cass::String authorization_id_;
 };
 
-GssapiAuthenticator::GssapiAuthenticator(const std::string& authorization_id)
+GssapiAuthenticator::GssapiAuthenticator(const cass::String& authorization_id)
   : context_(GSS_C_NO_CONTEXT)
   , server_name_(GSS_C_NO_NAME)
   , gss_flags_(GSS_C_MUTUAL_FLAG | GSS_C_SEQUENCE_FLAG)
@@ -237,7 +237,7 @@ GssapiAuthenticator::~GssapiAuthenticator() {
   }
 }
 
-GssapiAuthenticator::Result GssapiAuthenticator::init(const std::string& service, const std::string& principal) {
+GssapiAuthenticator::Result GssapiAuthenticator::init(const cass::String& service, const cass::String& principal) {
   OM_uint32 maj_stat;
   OM_uint32 min_stat;
   gss_buffer_desc name_token = GSS_C_EMPTY_BUFFER;
@@ -375,7 +375,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
   OM_uint32 req_output_size;
   OM_uint32 max_input_size;
   unsigned char qop;
-  std::string input;
+  cass::String input;
   gss_buffer_desc input_token = GSS_C_EMPTY_BUFFER;
   GssapiBuffer output_token;
 
@@ -432,7 +432,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
   input.push_back((req_output_size >> 0)  & 0xFF);
 
   // Send the authorization_id if present (proxy login), otherwise the username.
-  const std::string& authorization_id = authorization_id_.empty() ? username_ : authorization_id_;
+  const cass::String& authorization_id = authorization_id_.empty() ? username_ : authorization_id_;
   input.append(authorization_id);
 
   input_token.length = 4 + authorization_id.size();
@@ -465,8 +465,8 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
   return RESULT_COMPLETE;
 }
 
-std::string GssapiAuthenticator::display_status(OM_uint32 maj, OM_uint32 min) {
-  std::string error;
+cass::String GssapiAuthenticator::display_status(OM_uint32 maj, OM_uint32 min) {
+  cass::String error;
   OM_uint32 message_context;
 
   message_context = 0;
@@ -574,7 +574,7 @@ void GssapiAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
       = static_cast<GssapiAuthenticator*>(cass_authenticator_exchange_data(auth));
 
   if (gssapi_auth == NULL) {
-    std::string service;
+    cass::String service;
 
     size_t hostname_length = 0;
     const char* hostname = cass_authenticator_hostname(auth, &hostname_length);
@@ -593,12 +593,12 @@ void GssapiAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
       service.append(hostname);
     }
 
-    gssapi_auth = new GssapiAuthenticator(gssapi_auth_data->authorization_id());
+    gssapi_auth = cass::Memory::allocate<GssapiAuthenticator>(gssapi_auth_data->authorization_id());
     cass_authenticator_set_exchange_data(auth, static_cast<void*>(gssapi_auth));
 
     if (gssapi_auth->init(service,
                           gssapi_auth_data->principal()) == GssapiAuthenticator::RESULT_ERROR) {
-      std::string error("Unable to intialize GSSAPI: ");
+      cass::String error("Unable to intialize GSSAPI: ");
       error.append(gssapi_auth->error());
       cass_authenticator_set_error_n(auth, error.data(), error.length());
       return;
@@ -625,13 +625,13 @@ void GssapiAuthenticatorData::on_challenge(CassAuthenticator* auth, void* data,
 
   if (gssapi == cass::StringRef(token, token_size)) {
     if (gssapi_auth->process("", 0) == GssapiAuthenticator::RESULT_ERROR) {
-      std::string error("GSSAPI initial handshake failed: ");
+      cass::String error("GSSAPI initial handshake failed: ");
       error.append(gssapi_auth->error());
       cass_authenticator_set_error_n(auth, error.data(), error.length());
     }
   } else {
     if (gssapi_auth->process(token, token_size) == GssapiAuthenticator::RESULT_ERROR) {
-      std::string error("GSSAPI challenge handshake failed: ");
+      cass::String error("GSSAPI challenge handshake failed: ");
       error.append(gssapi_auth->error());
       cass_authenticator_set_error_n(auth, error.data(), error.length());
     }
@@ -645,7 +645,7 @@ void GssapiAuthenticatorData::on_challenge(CassAuthenticator* auth, void* data,
 void GssapiAuthenticatorData::on_cleanup(CassAuthenticator* auth, void* data) {
   GssapiAuthenticator* gssapi_auth
       = static_cast<GssapiAuthenticator*>(cass_authenticator_exchange_data(auth));
-  delete gssapi_auth;
+  cass::Memory::deallocate(gssapi_auth);
 }
 
 CassAuthenticatorCallbacks GssapiAuthenticatorData::callbacks_ = {

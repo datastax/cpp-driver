@@ -1330,6 +1330,23 @@ void wait_for_node_connection(const std::string& ip_prefix, int node, int total_
  */
 void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> nodes, int total_attempts = 10);
 
+/**
+ * Trim whitespace from the front and back of a string
+ *
+ * @param str The string to trim
+ * @return A reference to the modified string with its whitespace trimmed
+ */
+std::string& trim(std::string& str);
+
+/**
+ * Split a string into pieces using a provided delimiter charactor
+ *
+ * @param str The string to explode
+ * @param vec The result
+ * @param delimiter The character used to divide the string
+ */
+void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter = ',');
+
 extern const char* CREATE_TABLE_ALL_TYPES;
 extern const char* CREATE_TABLE_ALL_TYPES_V4;
 extern const char* CREATE_TABLE_ALL_TYPES_V4_1;

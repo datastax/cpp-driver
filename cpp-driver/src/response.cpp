@@ -59,35 +59,35 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
   switch (opcode) {
 
     case CQL_OPCODE_ERROR:
-      response_body_.reset(new ErrorResponse());
+      response_body_.reset(Memory::allocate<ErrorResponse>());
       return true;
 
     case CQL_OPCODE_READY:
-      response_body_.reset(new ReadyResponse());
+      response_body_.reset(Memory::allocate<ReadyResponse>());
       return true;
 
     case CQL_OPCODE_AUTHENTICATE:
-      response_body_.reset(new AuthenticateResponse());
+      response_body_.reset(Memory::allocate<AuthenticateResponse>());
       return true;
 
     case CQL_OPCODE_SUPPORTED:
-      response_body_.reset(new SupportedResponse());
+      response_body_.reset(Memory::allocate<SupportedResponse>());
       return true;
 
     case CQL_OPCODE_RESULT:
-      response_body_.reset(new ResultResponse());
+      response_body_.reset(Memory::allocate<ResultResponse>());
       return true;
 
     case CQL_OPCODE_EVENT:
-      response_body_.reset(new EventResponse());
+      response_body_.reset(Memory::allocate<EventResponse>());
       return true;
 
     case CQL_OPCODE_AUTH_CHALLENGE:
-      response_body_.reset(new AuthChallengeResponse());
+      response_body_.reset(Memory::allocate<AuthChallengeResponse>());
       return true;
 
     case CQL_OPCODE_AUTH_SUCCESS:
-      response_body_.reset(new AuthSuccessResponse());
+      response_body_.reset(Memory::allocate<AuthSuccessResponse>());
       return true;
 
     default:

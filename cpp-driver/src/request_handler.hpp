@@ -30,8 +30,8 @@
 #include "scoped_ptr.hpp"
 #include "small_vector.hpp"
 #include "speculative_execution.hpp"
+#include "string.hpp"
 
-#include <string>
 #include <uv.h>
 
 namespace cass {
@@ -50,7 +50,7 @@ public:
 
   ResponseFuture(const Metadata::SchemaSnapshot& schema_metadata)
       : Future(CASS_FUTURE_TYPE_RESPONSE)
-      , schema_metadata(new Metadata::SchemaSnapshot(schema_metadata)) { }
+      , schema_metadata(Memory::allocate<Metadata::SchemaSnapshot>(schema_metadata)) { }
 
   bool set_response(Address address, const Response::Ptr& response) {
     ScopedMutex lock(&mutex_);
@@ -69,7 +69,7 @@ public:
     return response_;
   }
 
-  bool set_error_with_address(Address address, CassError code, const std::string& message) {
+  bool set_error_with_address(Address address, CassError code, const String& message) {
     ScopedMutex lock(&mutex_);
     if (!is_set()) {
       address_ = address;
@@ -80,7 +80,7 @@ public:
   }
 
   bool set_error_with_response(Address address, const Response::Ptr& response,
-                               CassError code, const std::string& message) {
+                               CassError code, const String& message) {
     ScopedMutex lock(&mutex_);
     if (!is_set()) {
       address_ = address;
@@ -104,7 +104,7 @@ public:
     return attempted_addresses_;
   }
 
-  std::string statement;
+  String statement;
   ScopedPtr<Metadata::SchemaSnapshot> schema_metadata;
 
 private:
@@ -124,12 +124,14 @@ private:
 class SpeculativeExecution;
 
 class RequestHandler : public RefCounted<RequestHandler> {
+  friend class Memory;
+
 public:
   typedef SharedRefPtr<RequestHandler> Ptr;
 
   RequestHandler(const Request::ConstPtr& request,
                  const ResponseFuture::Ptr& future,
-                 RetryPolicy* retry_policy)
+                 RetryPolicy* retry_policy = NULL)
     : request_(request)
     , timestamp_(request->timestamp())
     , future_(future)
@@ -173,12 +175,12 @@ public:
 
   void set_response(const Host::Ptr& host,
                     const Response::Ptr& response);
-  void set_error(CassError code, const std::string& message);
+  void set_error(CassError code, const String& message);
   void set_error(const Host::Ptr& host,
-                 CassError code, const std::string& message);
+                 CassError code, const String& message);
   void set_error_with_error_response(const Host::Ptr& host,
                                      const Response::Ptr& error,
-                                     CassError code, const std::string& message);
+                                     CassError code, const String& message);
 
 private:
   static void on_timeout(Timer* timer);
@@ -240,7 +242,7 @@ public:
   void schedule_next(int64_t timeout = 0);
   void cancel();
 
-  virtual void on_error(CassError code, const std::string& message);
+  virtual void on_error(CassError code, const String& message);
 
 private:
   static void on_execute(Timer* timer);
@@ -264,9 +266,9 @@ private:
   bool is_host_up(const Address& address) const;
 
   void set_response(const Response::Ptr& response);
-  void set_error(CassError code, const std::string& message);
+  void set_error(CassError code, const String& message);
   void set_error_with_error_response(const Response::Ptr& error,
-                                     CassError code, const std::string& message);
+                                     CassError code, const String& message);
 
 private:
   RequestHandler::Ptr request_handler_;

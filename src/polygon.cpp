@@ -15,11 +15,11 @@
 extern "C" {
 
 DsePolygon* dse_polygon_new() {
-  return DsePolygon::to(new dse::Polygon());
+  return DsePolygon::to(cass::Memory::allocate<dse::Polygon>());
 }
 
 void dse_polygon_free(DsePolygon* polygon) {
-  delete polygon->from();
+  cass::Memory::deallocate(polygon->from());
 }
 
 void dse_polygon_reset(DsePolygon* polygon) {
@@ -47,7 +47,7 @@ CassError dse_polygon_finish(DsePolygon* polygon) {
 }
 
 DsePolygonIterator* dse_polygon_iterator_new() {
-  return DsePolygonIterator::to(new dse::PolygonIterator());
+  return DsePolygonIterator::to(cass::Memory::allocate<dse::PolygonIterator>());
 }
 
 CassError dse_polygon_iterator_reset(DsePolygonIterator* iterator,
@@ -67,7 +67,7 @@ CassError dse_polygon_iterator_reset_with_wkt(DsePolygonIterator* iterator,
 }
 
 void dse_polygon_iterator_free(DsePolygonIterator* iterator) {
-  delete iterator->from();
+  cass::Memory::deallocate(iterator->from());
 }
 
 cass_uint32_t dse_polygon_iterator_num_rings(const DsePolygonIterator* iterator) {
@@ -88,13 +88,13 @@ CassError dse_polygon_iterator_next_point(DsePolygonIterator* iterator,
 
 namespace dse {
 
-std::string Polygon::to_wkt() const {
+cass::String Polygon::to_wkt() const {
   // Special case empty polygon
   if (num_rings_ == 0) {
     return "POLYGON EMPTY";
   }
 
-  std::stringstream ss;
+  cass::OStringStream ss;
   ss.precision(WKT_MAX_DIGITS);
   ss << "POLYGON (";
   const cass_byte_t* pos = bytes_.data() + WKB_HEADER_SIZE + sizeof(cass_uint32_t);

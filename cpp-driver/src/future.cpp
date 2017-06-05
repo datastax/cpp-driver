@@ -79,9 +79,9 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
     return NULL;
   }
 
-  cass::Prepared* prepared = new cass::Prepared(result,
-                                                response_future->statement,
-                                                *response_future->schema_metadata);
+  cass::Prepared* prepared = cass::Memory::allocate<cass::Prepared>(result,
+                                                                    response_future->statement,
+                                                                    *response_future->schema_metadata);
   prepared->inc_ref();
   return CassPrepared::to(prepared);
 }
@@ -116,7 +116,7 @@ void cass_future_error_message(CassFuture* future,
                                size_t* message_length) {
   const cass::Future::Error* error = future->error();
   if (error != NULL) {
-    const std::string& m = error->message;
+    const cass::String& m = error->message;
     *message = m.data();
     *message_length = m.length();
   } else {

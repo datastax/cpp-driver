@@ -20,15 +20,14 @@
 #include "constants.hpp"
 #include "hash_table.hpp"
 #include "statement.hpp"
-
-#include <string>
-#include <vector>
+#include "string.hpp"
+#include "vector.hpp"
 
 namespace cass {
 
 class QueryRequest : public Statement {
 public:
-  QueryRequest(const std::string& query,
+  QueryRequest(const String& query,
                size_t value_count = 0)
     : Statement(query.data(), query.size(), value_count) { }
 
@@ -51,13 +50,13 @@ private:
   struct ValueName : HashTableEntry<ValueName> {
     ValueName() { }
 
-    ValueName(const std::string& name)
+    ValueName(const String& name)
       : name(name)
       , buf(sizeof(uint16_t) + name.size()) {
       buf.encode_string(0, name.data(), name.size());
     }
 
-    std::string name;
+    String name;
     Buffer buf;
   };
   typedef CaseInsensitiveHashTable<ValueName> ValueNameHashTable;

@@ -30,18 +30,18 @@
 extern "C" {
 
 CassSession* cass_session_new() {
-  return CassSession::to(new cass::Session());
+  return CassSession::to(cass::Memory::allocate<cass::Session>());
 }
 
 void cass_session_free(CassSession* session) {
   // This attempts to close the session because the joining will
   // hang indefinitely otherwise. This causes minimal delay
   // if the session is already closed.
-  cass::SharedRefPtr<cass::Future> future(new cass::SessionFuture());
+  cass::SharedRefPtr<cass::Future> future(cass::Memory::allocate<cass::SessionFuture>());
   session->close_async(future);
   future->wait();
 
-  delete session->from();
+  cass::Memory::deallocate(session->from());
 }
 
 CassFuture* cass_session_connect(CassSession* session, const CassCluster* cluster) {
@@ -61,14 +61,14 @@ CassFuture* cass_session_connect_keyspace_n(CassSession* session,
                                             const CassCluster* cluster,
                                             const char* keyspace,
                                             size_t keyspace_length) {
-  cass::SessionFuture::Ptr connect_future(new cass::SessionFuture());
-  session->connect_async(cluster->config(), std::string(keyspace, keyspace_length), connect_future);
+  cass::SessionFuture::Ptr connect_future(cass::Memory::allocate<cass::SessionFuture>());
+  session->connect_async(cluster->config(), cass::String(keyspace, keyspace_length), connect_future);
   connect_future->inc_ref();
   return CassFuture::to(connect_future.get());
 }
 
 CassFuture* cass_session_close(CassSession* session) {
-  cass::SessionFuture::Ptr close_future(new cass::SessionFuture());
+  cass::SessionFuture::Ptr close_future(cass::Memory::allocate<cass::SessionFuture>());
   session->close_async(close_future);
   close_future->inc_ref();
   return CassFuture::to(close_future.get());
@@ -100,7 +100,7 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
 }
 
 const CassSchemaMeta* cass_session_get_schema_meta(const CassSession* session) {
-  return CassSchemaMeta::to(new cass::Metadata::SchemaSnapshot(session->metadata().schema_snapshot(session->protocol_version(), session->cassandra_version())));
+  return CassSchemaMeta::to(cass::Memory::allocate<cass::Metadata::SchemaSnapshot>(session->metadata().schema_snapshot(session->protocol_version(), session->cassandra_version())));
 }
 
 void  cass_session_get_metrics(const CassSession* session,
@@ -148,7 +148,7 @@ Session::Session()
     , pending_pool_count_(0)
     , pending_workers_count_(0)
     , current_io_worker_(0)
-    , keyspace_(new std::string){
+    , keyspace_(Memory::allocate<String>()){
   uv_mutex_init(&state_mutex_);
   uv_mutex_init(&hosts_mutex_);
 }
@@ -162,7 +162,7 @@ Session::~Session() {
 void Session::clear(const Config& config) {
   config_ = config;
   random_.reset();
-  metrics_.reset(new Metrics(config_.thread_count_io() + 1));
+  metrics_.reset(Memory::allocate<Metrics>(config_.thread_count_io() + 1));
   load_balancing_policy_.reset(config.load_balancing_policy());
   speculative_execution_policy_.reset(config.speculative_execution_policy());
   connect_future_.reset();
@@ -187,12 +187,12 @@ int Session::init() {
   int rc = EventThread<SessionEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   request_queue_.reset(
-      new AsyncQueue<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
+      Memory::allocate<AsyncQueue<MPMCQueue<RequestHandler*> > >(config_.queue_size_io()));
   rc = request_queue_->init(loop(), this, &Session::on_execute);
   if (rc != 0) return rc;
 
   for (unsigned int i = 0; i < config_.thread_count_io(); ++i) {
-    IOWorker::Ptr io_worker(new IOWorker(this));
+    IOWorker::Ptr io_worker(Memory::allocate<IOWorker>(this));
     int rc = io_worker->init();
     if (rc != 0) return rc;
     io_workers_.push_back(io_worker);
@@ -201,7 +201,7 @@ int Session::init() {
   return rc;
 }
 
-void Session::broadcast_keyspace_change(const std::string& keyspace,
+void Session::broadcast_keyspace_change(const String& keyspace,
                                         const IOWorker* calling_io_worker) {
   // This can run on an IO worker thread. This is thread-safe because the IO workers
   // vector never changes after initialization and IOWorker::set_keyspace() uses
@@ -212,7 +212,7 @@ void Session::broadcast_keyspace_change(const std::string& keyspace,
     if (*it == calling_io_worker) continue;
       (*it)->set_keyspace(keyspace);
   }
-  keyspace_ = CopyOnWritePtr<std::string>(new std::string(keyspace));
+  keyspace_ = CopyOnWritePtr<String>(Memory::allocate<String>(keyspace));
 }
 
 Host::Ptr Session::get_host(const Address& address) {
@@ -227,7 +227,7 @@ Host::Ptr Session::get_host(const Address& address) {
 
 Host::Ptr Session::add_host(const Address& address) {
   LOG_DEBUG("Adding new host: %s", address.to_string().c_str());
-  Host::Ptr host(new Host(address, !current_host_mark_));
+  Host::Ptr host(Memory::allocate<Host>(address, !current_host_mark_));
   { // Lock hosts
     ScopedMutex l(&hosts_mutex_);
     hosts_[address] = host;
@@ -242,7 +242,7 @@ void Session::purge_hosts(bool is_initial_connection) {
     if (it->second->mark() != current_host_mark_) {
       HostMap::iterator to_remove_it = it++;
 
-      std::string address_str = to_remove_it->first.to_string();
+      String address_str = to_remove_it->first.to_string();
       if (is_initial_connection) {
         LOG_WARN("Unable to reach contact point %s", address_str.c_str());
         { // Lock hosts
@@ -292,7 +292,7 @@ bool Session::notify_down_async(const Address& address) {
   return send_event_async(event);
 }
 
-void Session::connect_async(const Config& config, const std::string& keyspace, const Future::Ptr& future) {
+void Session::connect_async(const Config& config, const String& keyspace, const Future::Ptr& future) {
   ScopedMutex l(&state_mutex_);
 
   if (state_.load(MEMORY_ORDER_RELAXED) != SESSION_STATE_CLOSED) {
@@ -379,7 +379,7 @@ void Session::notify_connected() {
   }
 }
 
-void Session::notify_connect_error(CassError code, const std::string& message) {
+void Session::notify_connect_error(CassError code, const String& message) {
   ScopedMutex l(&state_mutex_);
 
   State state = state_.load(MEMORY_ORDER_RELAXED);
@@ -440,11 +440,11 @@ void Session::on_event(const SessionEvent& event) {
       // This needs to be done on the session thread because it could pause
       // generating a new random seed.
       if (config_.use_randomized_contact_points()) {
-        random_.reset(new Random());
+        random_.reset(Memory::allocate<Random>());
       }
 
       MultiResolver<Session*>::Ptr resolver(
-            new MultiResolver<Session*>(this, on_resolve,
+            Memory::allocate<MultiResolver<Session*> >(this, on_resolve,
 #if UV_VERSION_MAJOR >= 1
                                         on_resolve_name,
 #endif
@@ -454,7 +454,7 @@ void Session::on_event(const SessionEvent& event) {
       for (ContactPointList::const_iterator it = contact_points.begin(),
                                                     end = contact_points.end();
            it != end; ++it) {
-        const std::string& seed = *it;
+        const String& seed = *it;
         Address address;
         if (Address::from_string(seed, port, &address)) {
 #if UV_VERSION_MAJOR >= 1
@@ -487,7 +487,7 @@ void Session::on_event(const SessionEvent& event) {
     case SessionEvent::NOTIFY_KEYSPACE_ERROR: {
       // Currently, this is only called when the keyspace does not exist
       // and not for any other keyspace related errors.
-      const CopyOnWritePtr<std::string> keyspace(keyspace_);
+      const CopyOnWritePtr<String> keyspace(keyspace_);
       notify_connect_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
                            "Keyspace '" + *keyspace + "' does not exist");
       break;
@@ -597,17 +597,17 @@ void Session::on_control_connection_ready() {
   }
 }
 
-void Session::on_control_connection_error(CassError code, const std::string& message) {
+void Session::on_control_connection_error(CassError code, const String& message) {
   notify_connect_error(code, message);
 }
 
 Future::Ptr Session::prepare(const char* statement, size_t length) {
-  SharedRefPtr<PrepareRequest> prepare(new PrepareRequest(std::string(statement, length)));
+  SharedRefPtr<PrepareRequest> prepare(Memory::allocate<PrepareRequest>(String(statement, length)));
 
-  ResponseFuture::Ptr future(new ResponseFuture(metadata_.schema_snapshot(protocol_version(), cassandra_version())));
+  ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(metadata_.schema_snapshot(protocol_version(), cassandra_version())));
   future->statement.assign(statement, length);
 
-  execute(RequestHandler::Ptr(new RequestHandler(prepare, future, NULL)));
+  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future)));
 
   return future;
 }
@@ -691,15 +691,15 @@ void Session::on_down(Host::Ptr host) {
 
 Future::Ptr Session::execute(const Request::ConstPtr& request,
                              const Address* preferred_address) {
-  ResponseFuture::Ptr future(new ResponseFuture());
+  ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>());
 
   RetryPolicy* retry_policy
       = request->retry_policy() != NULL ? request->retry_policy()
                                         : config().retry_policy();
 
-  RequestHandler::Ptr request_handler(new RequestHandler(request,
-                                                         future,
-                                                         retry_policy));
+  RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request,
+                                                                       future,
+                                                                       retry_policy));
   if (preferred_address) {
     request_handler->set_preferred_address(*preferred_address);
   }
@@ -769,12 +769,12 @@ void Session::on_execute(uv_async_t* data) {
 }
 
 QueryPlan* Session::new_query_plan(const RequestHandler::Ptr& request_handler) {
-  const CopyOnWritePtr<std::string> keyspace(keyspace_);
+  const CopyOnWritePtr<String> keyspace(keyspace_);
   return load_balancing_policy_->new_query_plan(*keyspace, request_handler.get(), token_map_.get());
 }
 
 SpeculativeExecutionPlan* Session::new_execution_plan(const Request* request) {
-  const CopyOnWritePtr<std::string> keyspace(keyspace_);
+  const CopyOnWritePtr<String> keyspace(keyspace_);
   return speculative_execution_policy_->new_plan(*keyspace, request);
 }
 

@@ -24,6 +24,7 @@
 #include "host.hpp"
 #include "list.hpp"
 #include "macros.hpp"
+#include "memory.hpp"
 #include "metrics.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
@@ -31,12 +32,11 @@
 #include "schema_change_callback.hpp"
 #include "scoped_ptr.hpp"
 #include "ssl.hpp"
+#include "stack.hpp"
 #include "stream_manager.hpp"
 #include "timer.hpp"
 
 #include <uv.h>
-
-#include <stack>
 
 namespace cass {
 
@@ -100,7 +100,7 @@ public:
              const Config& config,
              Metrics* metrics,
              const Host::ConstPtr& host,
-             const std::string& keyspace,
+             const String& keyspace,
              int protocol_version,
              Listener* listener);
   ~Connection();
@@ -116,8 +116,8 @@ public:
   const Config& config() const { return config_; }
   Metrics* metrics() { return metrics_; }
   const Address& address() const { return host_->address(); }
-  const std::string& address_string() const { return host_->address_string(); }
-  const std::string& keyspace() const { return keyspace_; }
+  const String& address_string() const { return host_->address_string(); }
+  const String& keyspace() const { return keyspace_; }
 
   void close();
   void defunct();
@@ -142,7 +142,7 @@ public:
   bool is_timeout_error() const { return error_code_ == CONNECTION_ERROR_TIMEOUT; }
 
   ConnectionError error_code() const { return error_code_; }
-  const std::string& error_message() const { return error_message_; }
+  const String& error_message() const { return error_message_; }
 
   CassError ssl_error_code() const { return ssl_error_code_; }
 
@@ -155,6 +155,8 @@ public:
 
 private:
   class SslHandshakeWriter {
+    friend class Memory;
+
   public:
     static const int MAX_BUFFER_SIZE = 16 * 1024 + 5;
 
@@ -178,7 +180,7 @@ private:
 
   private:
     virtual void on_internal_set(ResponseMessage* response);
-    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_error(CassError code, const String& message);
     virtual void on_internal_timeout();
 
     void on_result_response(ResponseMessage* response);
@@ -190,7 +192,7 @@ private:
 
   private:
     virtual void on_internal_set(ResponseMessage* response);
-    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_error(CassError code, const String& message);
     virtual void on_internal_timeout();
   };
 
@@ -287,21 +289,21 @@ private:
 #endif
 
   void on_connected();
-  void on_authenticate(const std::string& class_name);
-  void on_auth_challenge(const AuthResponseRequest* auth_response, const std::string& token);
-  void on_auth_success(const AuthResponseRequest* auth_response, const std::string& token);
+  void on_authenticate(const String& class_name);
+  void on_auth_challenge(const AuthResponseRequest* auth_response, const String& token);
+  void on_auth_success(const AuthResponseRequest* auth_response, const String& token);
   void on_ready();
   void on_set_keyspace();
   void on_supported(ResponseMessage* response);
   static void on_pending_schema_agreement(Timer* timer);
 
   void notify_ready();
-  void notify_error(const std::string& message, ConnectionError code = CONNECTION_ERROR_GENERIC);
+  void notify_error(const String& message, ConnectionError code = CONNECTION_ERROR_GENERIC);
 
   void ssl_handshake();
 
-  void send_credentials(const std::string& class_name);
-  void send_initial_auth_response(const std::string& class_name);
+  void send_credentials(const String& class_name);
+  void send_initial_auth_response(const String& class_name);
 
   void restart_heartbeat_timer();
   static void on_heartbeat(Timer* timer);
@@ -311,7 +313,7 @@ private:
 private:
   ConnectionState state_;
   ConnectionError error_code_;
-  std::string error_message_;
+  String error_message_;
   CassError ssl_error_code_;
 
   size_t pending_writes_size_;
@@ -323,7 +325,7 @@ private:
   const Config& config_;
   Metrics* metrics_;
   Host::ConstPtr host_;
-  std::string keyspace_;
+  String keyspace_;
   const int protocol_version_;
   Listener* listener_;
 
@@ -339,7 +341,7 @@ private:
   Timer terminate_timer_;
 
   // buffer reuse for libuv
-  std::stack<uv_buf_t> buffer_reuse_list_;
+  Stack<uv_buf_t> buffer_reuse_list_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Connection);

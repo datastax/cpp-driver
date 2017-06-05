@@ -25,6 +25,8 @@
 namespace cass {
 
 class PeriodicTask : public RefCounted<PeriodicTask> {
+  friend class Memory;
+
 public:
   typedef SharedRefPtr<PeriodicTask> Ptr;
 
@@ -34,7 +36,7 @@ public:
 
   static Ptr start(uv_loop_t* loop, uint64_t repeat, void* data,
                              Callback work_cb, Callback after_work_cb) {
-    Ptr task(new PeriodicTask(data, work_cb, after_work_cb));
+    Ptr task(Memory::allocate<PeriodicTask>(data, work_cb, after_work_cb));
 
     task->inc_ref(); // Timer reference
     uv_timer_init(loop, &task->timer_handle_);

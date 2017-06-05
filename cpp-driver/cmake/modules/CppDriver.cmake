@@ -276,6 +276,56 @@ macro(CassSetCompilerFlags)
     if("${CMAKE_CXX_COMPILER_VERSION}" STREQUAL "")
       execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION)
     endif()
+
+    # Enable debug "operator new" and operator delete" and strip symbols from shared library
+    if(CASS_DEBUG_CUSTOM_ALLOC)
+      if (APPLE)
+        file(WRITE "${CMAKE_BINARY_DIR}/unexported.txt"
+          "__Znwm\n"
+          "__Znwm.eh\n"
+          "__ZnwmRKSt9nothrow_t\n"
+          "__ZnwmRKSt9nothrow_t.eh\n"
+          "__ZdlPv\n"
+          "__ZdlPv.eh\n"
+          "__ZdlPvRKSt9nothrow_t\n"
+          "__ZdlPvRKSt9nothrow_t.eh\n"
+          "__Znam\n"
+          "__Znam.eh\n"
+          "__ZnamRKSt9nothrow_t\n"
+          "__ZnamRKSt9nothrow_t.eh\n"
+          "__ZdaPv\n"
+          "__ZdaPv.eh\n"
+          "__ZdaPvRKSt9nothrow_t\n"
+          "__ZdaPvRKSt9nothrow_t.eh\n")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -unexported_symbols_list ${CMAKE_BINARY_DIR}/unexported.txt")
+      elseif ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+        file(WRITE "${CMAKE_BINARY_DIR}/exported.ver"
+          "DEBUG_CUSTOM_ALLOC\n"
+          "{\n"
+          "  global: *;\n"
+          "  local:\n"
+          "    _Znwm;\n"
+          "    _Znwm.eh;\n"
+          "    _ZnwmRKSt9nothrow_t;\n"
+          "    _ZnwmRKSt9nothrow_t.eh;\n"
+          "    _ZdlPv;\n"
+          "    _ZdlPv.eh;\n"
+          "    _ZdlPvRKSt9nothrow_t;\n"
+          "    _ZdlPvRKSt9nothrow_t.eh;\n"
+          "    _Znam;\n"
+          "    _Znam.eh;\n"
+          "    _ZnamRKSt9nothrow_t;\n"
+          "    _ZnamRKSt9nothrow_t.eh;\n"
+          "    _ZdaPv;\n"
+          "    _ZdaPv.eh;\n"
+          "    _ZdaPvRKSt9nothrow_t;\n"
+          "    _ZdaPvRKSt9nothrow_t.eh;\n"
+          "};\n")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--version-script=${CMAKE_BINARY_DIR}/exported.ver")
+      endif()
+
+      add_definitions(-DDEBUG_CUSTOM_ALLOCATOR)
+    endif()
   endif()
 
   # Determine if std::atomic can be used for GCC, Clang, or MSVC

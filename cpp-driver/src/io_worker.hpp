@@ -22,6 +22,7 @@
 #include "async_queue.hpp"
 #include "copy_on_write_ptr.hpp"
 #include "constants.hpp"
+#include "dense_hash_map.hpp"
 #include "event_thread.hpp"
 #include "host.hpp"
 #include "logger.hpp"
@@ -29,11 +30,9 @@
 #include "pool.hpp"
 #include "request_handler.hpp"
 #include "spsc_queue.hpp"
+#include "string.hpp"
 #include "timer.hpp"
 
-#include <sparsehash/dense_hash_map>
-
-#include <string>
 #include <uv.h>
 
 namespace cass {
@@ -93,9 +92,9 @@ public:
     protocol_version_.store(protocol_version);
   }
 
-  const CopyOnWritePtr<std::string> keyspace() const { return keyspace_; }
-  void set_keyspace(const std::string& keyspace);
-  void broadcast_keyspace_change(const std::string& keyspace);
+  const CopyOnWritePtr<String> keyspace() const { return keyspace_; }
+  void set_keyspace(const String& keyspace);
+  void broadcast_keyspace_change(const String& keyspace);
 
   void set_host_is_available(const Address& address, bool is_available);
   bool is_host_available(const Address& address);
@@ -135,8 +134,8 @@ private:
 #endif
 
 private:
-  typedef sparsehash::dense_hash_map<Address, Pool::Ptr, AddressHash> PoolMap;
-  typedef std::vector<Pool::Ptr > PoolVec;
+  typedef DenseHashMap<Address, Pool::Ptr, AddressHash> PoolMap;
+  typedef Vector<Pool::Ptr > PoolVec;
 
   void schedule_reconnect(const Host::ConstPtr& host);
 
@@ -148,7 +147,7 @@ private:
   Atomic<int> protocol_version_;
   uv_prepare_t prepare_;
 
-  CopyOnWritePtr<std::string> keyspace_;
+  CopyOnWritePtr<String> keyspace_;
 
   AddressSet unavailable_addresses_;
   uv_mutex_t unavailable_addresses_mutex_;

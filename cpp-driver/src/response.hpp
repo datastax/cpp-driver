@@ -21,6 +21,7 @@
 #include "constants.hpp"
 #include "hash_table.hpp"
 #include "macros.hpp"
+#include "memory.hpp"
 #include "ref_counted.hpp"
 #include "scoped_ptr.hpp"
 

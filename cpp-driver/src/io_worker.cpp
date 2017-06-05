@@ -32,7 +32,7 @@ IOWorker::IOWorker(Session* session)
     , config_(session->config())
     , metrics_(session->metrics())
     , protocol_version_(-1)
-    , keyspace_(new std::string)
+    , keyspace_(Memory::allocate<String>())
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
   pools_.set_empty_key(Address::EMPTY_KEY);
@@ -59,11 +59,11 @@ int IOWorker::init() {
   return rc;
 }
 
-void IOWorker::set_keyspace(const std::string& keyspace) {
-  keyspace_ = CopyOnWritePtr<std::string>(new std::string(keyspace));
+void IOWorker::set_keyspace(const String& keyspace) {
+  keyspace_ = CopyOnWritePtr<String>(Memory::allocate<String>(keyspace));
 }
 
-void IOWorker::broadcast_keyspace_change(const std::string& keyspace) {
+void IOWorker::broadcast_keyspace_change(const String& keyspace) {
   set_keyspace(keyspace);
   session_->broadcast_keyspace_change(keyspace, this);
 }
@@ -122,7 +122,7 @@ void IOWorker::add_pool(const Host::ConstPtr& host, bool is_initial_connection) 
 
     set_host_is_available(address, false);
 
-    Pool::Ptr pool(new Pool(this, host, is_initial_connection));
+    Pool::Ptr pool(Memory::allocate<Pool>(this, host, is_initial_connection));
     pools_[address] = pool;
     pool->connect();
   } else  {
@@ -290,8 +290,8 @@ void IOWorker::on_execute(uv_async_t* async) {
       request_handler->dec_ref(); // Queue reference
       io_worker->pending_request_count_++;
       request_handler->start_request(io_worker);
-      SpeculativeExecution::Ptr speculative_execution(new SpeculativeExecution(request_handler,
-                                                                               request_handler->current_host()));
+      SpeculativeExecution::Ptr speculative_execution(Memory::allocate<SpeculativeExecution>(request_handler,
+                                                                                             request_handler->current_host()));
       speculative_execution->execute();
     } else {
       io_worker->state_ = IO_WORKER_STATE_CLOSING;
@@ -322,7 +322,7 @@ void IOWorker::schedule_reconnect(const Host::ConstPtr& host) {
              host->address_string().c_str(),
              config_.reconnect_wait_time_ms(),
              static_cast<void*>(this));
-    Pool::Ptr pool(new Pool(this, host, false));
+    Pool::Ptr pool(Memory::allocate<Pool>(this, host, false));
     pools_[host->address()] = pool;
     pool->delayed_connect();
   }

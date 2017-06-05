@@ -25,6 +25,7 @@
 #include "atomic.hpp"
 #include "cassconfig.hpp"
 #include "macros.hpp"
+#include "memory.hpp"
 #include "utils.hpp"
 
 #include <assert.h>
@@ -39,7 +40,7 @@ public:
   MPMCQueue(size_t size)
       : size_(next_pow_2(size))
       , mask_(size_ - 1)
-      , buffer_(new Node[size_])
+      , buffer_(size_)
       , tail_(0)
       , head_(0) {
     // populate the sequence initial values
@@ -47,8 +48,6 @@ public:
       buffer_[i].seq.store(i, MEMORY_ORDER_RELAXED);
     }
   }
-
-  ~MPMCQueue() { delete[] buffer_; }
 
   bool enqueue(const T& data) {
     // head_seq_ only wraps at MAX(head_seq_) instead we use a mask to
@@ -150,7 +149,7 @@ private:
   CachePad pad0_;
   const size_t size_;
   const size_t mask_;
-  Node* const buffer_;
+  DynamicArray<Node> buffer_;
   CachePad pad1_;
   Atomic<size_t> tail_;
   CachePad pad2_;

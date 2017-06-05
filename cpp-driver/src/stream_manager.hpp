@@ -17,14 +17,13 @@
 #ifndef __CASS_STREAM_MANAGER_HPP_INCLUDED__
 #define __CASS_STREAM_MANAGER_HPP_INCLUDED__
 
+#include "dense_hash_map.hpp"
 #include "macros.hpp"
 #include "scoped_ptr.hpp"
 
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
-
-#include <sparsehash/dense_hash_map>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -39,12 +38,11 @@ public:
       : max_streams_(static_cast<size_t>(1) << (num_bytes_for_stream(protocol_version) * 8 - 1))
       , num_words_(max_streams_ / NUM_BITS_PER_WORD)
       , offset_(0)
-      , words_(new word_t[num_words_]) {
+      , words_(num_words_, ~static_cast<word_t>(0)) {
     // Client request stream IDs are always positive values so it's
     // safe to use negative values for the empty and deleted keys.
     pending_.set_empty_key(-1);
     pending_.set_deleted_key(-2);
-    memset(words_.get(), 0xFF, sizeof(word_t) * num_words_);
   }
 
   int acquire(const T& item) {
@@ -76,7 +74,7 @@ public:
   size_t max_streams() const { return max_streams_; }
 
 private:
-  typedef sparsehash::dense_hash_map<int, T> PendingMap;
+  typedef DenseHashMap<int, T> PendingMap;
 
 #if defined(_MSC_VER) && defined(_M_AMD64)
   typedef __int64 word_t;
@@ -144,7 +142,7 @@ private:
   const size_t max_streams_;
   const size_t num_words_;
   size_t offset_;
-  ScopedPtr<word_t[]> words_;
+  Vector<word_t> words_;
   PendingMap pending_;
 
 private:

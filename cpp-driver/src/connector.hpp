@@ -20,10 +20,13 @@
 #include <uv.h>
 
 #include "address.hpp"
+#include "memory.hpp"
 
 namespace cass {
 
 class Connector {
+  friend class Memory;
+
 public:
   typedef void (*Callback)(Connector*);
 
@@ -33,7 +36,7 @@ public:
 
   static void connect(uv_tcp_t* handle, const Address& address, void* data,
                       Callback cb) {
-    Connector* connector = new Connector(address, data, cb);
+    Connector* connector = Memory::allocate<Connector>(address, data, cb);
 
     int rc = 0;
 
@@ -53,7 +56,7 @@ public:
     if (rc != 0) {
       connector->status_ = -1;
       connector->cb_(connector);
-      delete connector;
+      Memory::deallocate(connector);
     }
   }
 
@@ -62,7 +65,7 @@ private:
     Connector* connector = static_cast<Connector*>(req->data);
     connector->status_ = status;
     connector->cb_(connector);
-    delete connector;
+    Memory::deallocate(connector);
   }
 
 private:
@@ -82,5 +85,7 @@ private:
   Callback cb_;
   int status_;
 };
-}
+
+} // namespace cass
+
 #endif

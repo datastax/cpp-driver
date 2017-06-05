@@ -17,6 +17,7 @@
 #include "ssl.hpp"
 
 #include "logger.hpp"
+#include "memory.hpp"
 #include "utils.hpp"
 
 #include "third_party/curl/hostcheck.hpp"
@@ -80,11 +81,11 @@ static void ssl_log_errors(const char* context) {
   ERR_print_errors_fp(stderr);
 }
 
-static std::string ssl_error_string() {
+static String ssl_error_string() {
   const char* data;
   int flags;
   int err;
-  std::string error;
+  String error;
   while ((err = ERR_get_error_line_data(NULL, NULL, &data, &flags)) != 0) {
     char buf[256];
     ERR_error_string_n(err, buf, sizeof(buf));
@@ -274,7 +275,7 @@ public:
   }
 
 private:
-  static Result match_common_name_ipaddr(X509* cert, const std::string& address) {
+  static Result match_common_name_ipaddr(X509* cert, const String& address) {
     X509_NAME* name = X509_get_subject_name(cert);
     if (name == NULL) {
       return INVALID_CERT;
@@ -305,7 +306,7 @@ private:
     return NO_MATCH;
   }
 
-  static Result match_common_name_dns(X509* cert, const std::string& hostname) {
+  static Result match_common_name_dns(X509* cert, const String& hostname) {
     X509_NAME* name = X509_get_subject_name(cert);
     if (name == NULL) {
       return INVALID_CERT;
@@ -382,7 +383,7 @@ private:
     return result;
   }
 
-  static Result match_subject_alt_names_dns(X509* cert, const std::string& hostname) {
+  static Result match_subject_alt_names_dns(X509* cert, const String& hostname) {
     STACK_OF(GENERAL_NAME)* names
       = static_cast<STACK_OF(GENERAL_NAME)*>(X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
     if (names == NULL) {
@@ -537,7 +538,7 @@ OpenSslContext::~OpenSslContext() {
 }
 
 SslSession* OpenSslContext::create_session(const Host::ConstPtr& host) {
-  return new OpenSslSession(host, verify_flags_, ssl_ctx_);
+  return Memory::allocate<OpenSslSession>(host, verify_flags_, ssl_ctx_);
 }
 
 CassError OpenSslContext::add_trusted_cert(const char* cert,
@@ -589,10 +590,44 @@ CassError OpenSslContext::set_private_key(const char* key,
 }
 
 SslContext::Ptr OpenSslContextFactory::create() {
-  return SslContext::Ptr(new OpenSslContext());
+  return SslContext::Ptr(Memory::allocate<OpenSslContext>());
 }
 
+namespace openssl {
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  void* malloc(size_t size) {
+    return Memory::malloc(size);
+  }
+
+  void* realloc(void* ptr, size_t size) {
+    return Memory::realloc(ptr, size);
+  }
+
+  void free(void* ptr) {
+    Memory::free(ptr);
+  }
+#else
+  void* malloc(size_t size, const char* file, int line) {
+    return Memory::malloc(size);
+  }
+
+  void* realloc(void* ptr, size_t size, const char* file, int line) {
+    return Memory::realloc(ptr, size);
+  }
+
+  void free(void* ptr, const char* file, int line) {
+    Memory::free(ptr);
+  }
+#endif
+
+} // namespace openssl
+
+
+
 void OpenSslContextFactory::init() {
+  CRYPTO_set_mem_functions(openssl::malloc, openssl::realloc, openssl::free);
+
   SSL_library_init();
   SSL_load_error_strings();
   OpenSSL_add_all_algorithms();
@@ -604,7 +639,7 @@ void OpenSslContextFactory::init() {
   // "SSL" objects from a single "SSL_CTX" in different threads. That seems to be
   // okay with the following callbacks set.
   int num_locks = CRYPTO_num_locks();
-  crypto_locks = new uv_rwlock_t[num_locks];
+  crypto_locks = reinterpret_cast<uv_rwlock_t*>(Memory::malloc(sizeof(uv_rwlock_t) * num_locks));
   for (int i = 0; i < num_locks; ++i) {
     if (uv_rwlock_init(crypto_locks + i)) {
       fprintf(stderr, "Unable to init read/write lock");
@@ -614,6 +649,7 @@ void OpenSslContextFactory::init() {
 
   CRYPTO_set_locking_callback(crypto_locking_callback);
   CRYPTO_set_id_callback(crypto_id_callback);
+
 #else
   rb::RingBufferBio::initialize();
 #endif

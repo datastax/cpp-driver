@@ -20,11 +20,9 @@
 #include "cassandra.h"
 #include "constants.hpp"
 #include "host.hpp"
+#include "memory.hpp"
 #include "request.hpp"
-
-#include <list>
-#include <set>
-#include <string>
+#include "string.hpp"
 
 #include <uv.h>
 
@@ -90,7 +88,7 @@ public:
 
   virtual CassHostDistance distance(const Host::Ptr& host) const = 0;
 
-  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+  virtual QueryPlan* new_query_plan(const String& connected_keyspace,
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map) = 0;
 

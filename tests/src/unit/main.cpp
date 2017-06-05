@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "dse.h"
+#include "string.hpp"
 
 #if defined(_WIN32) && defined(_DEBUG)
 # ifdef USE_VISUAL_LEAK_DETECTOR
@@ -120,14 +121,14 @@ class BootstrapListener : public testing::EmptyTestEventListener {
               << CASS_VERSION_MAJOR << "."
               << CASS_VERSION_MINOR << "."
               << CASS_VERSION_PATCH;
-    if (!std::string(CASS_VERSION_SUFFIX).empty()) {
+    if (!cass::String(CASS_VERSION_SUFFIX).empty()) {
       std::cout << "-" << CASS_VERSION_SUFFIX;
     }
     std::cout << std::endl << "  DSE driver v"
               << DSE_VERSION_MAJOR << "."
               << DSE_VERSION_MINOR << "."
               << DSE_VERSION_PATCH;
-    if (!std::string(DSE_VERSION_SUFFIX).empty()) {
+    if (!cass::String(DSE_VERSION_SUFFIX).empty()) {
       std::cout << "-" << DSE_VERSION_SUFFIX;
     }
     std::cout << std::endl;

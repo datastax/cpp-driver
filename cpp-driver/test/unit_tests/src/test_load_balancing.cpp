@@ -26,6 +26,7 @@
 #include "murmur3.hpp"
 #include "query_request.hpp"
 #include "request_handler.hpp"
+#include "string.hpp"
 #include "token_aware_policy.hpp"
 #include "whitelist_policy.hpp"
 #include "blacklist_policy.hpp"
@@ -41,16 +42,13 @@
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/thread/thread.hpp>
 
-#include <string>
 #include <uv.h>
 
-using std::string;
+const cass::String LOCAL_DC = "local";
+const cass::String REMOTE_DC = "remote";
+const cass::String BACKUP_DC = "backup";
 
-const string LOCAL_DC = "local";
-const string REMOTE_DC = "remote";
-const string BACKUP_DC = "backup";
-
-#define VECTOR_FROM(t, a) std::vector<t>(a, a + sizeof(a)/sizeof(a[0]))
+#define VECTOR_FROM(t, a) cass::Vector<t>(a, a + sizeof(a)/sizeof(a[0]))
 
 cass::Address addr_for_sequence(size_t i) {
   char temp[64];
@@ -63,16 +61,16 @@ cass::Address addr_for_sequence(size_t i) {
 }
 
 cass::SharedRefPtr<cass::Host> host_for_addr(const cass::Address addr,
-                                             const std::string& rack = "rack",
-                                             const std::string& dc = "dc") {
+                                             const cass::String& rack = "rack",
+                                             const cass::String& dc = "dc") {
   cass::SharedRefPtr<cass::Host>host(new cass::Host(addr, false));
   host->set_up();
   host->set_rack_and_dc(rack, dc);
   return host;
 }
 
-void populate_hosts(size_t count, const std::string& rack,
-                    const std::string& dc, cass::HostMap* hosts) {
+void populate_hosts(size_t count, const cass::String& rack,
+                    const cass::String& dc, cass::HostMap* hosts) {
   cass::Address addr;
   size_t first = hosts->size() + 1;
   for (size_t i = first; i < first+count; ++i) {
@@ -81,9 +79,9 @@ void populate_hosts(size_t count, const std::string& rack,
   }
 }
 
-void verify_sequence(cass::QueryPlan* qp, const std::vector<size_t>& sequence) {
+void verify_sequence(cass::QueryPlan* qp, const cass::Vector<size_t>& sequence) {
   cass::Address received;
-  for (std::vector<size_t>::const_iterator it = sequence.begin();
+  for (cass::Vector<size_t>::const_iterator it = sequence.begin();
                                            it!= sequence.end();
                                          ++it) {
     BOOST_REQUIRE(qp->compute_next(&received));
@@ -288,7 +286,7 @@ void test_dc_aware_policy(size_t local_count, size_t remote_count) {
   const size_t total_hosts = local_count + remote_count;
 
   boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-  std::vector<size_t> seq(total_hosts);
+  cass::Vector<size_t> seq(total_hosts);
   for (size_t i = 0; i < total_hosts; ++i) seq[i] = i + 1;
   verify_sequence(qp.get(), seq);
 }
@@ -420,7 +418,7 @@ BOOST_AUTO_TEST_CASE(used_hosts_per_remote_dc)
 
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
     size_t total_hosts = 3 + used_hosts;
-    std::vector<size_t> seq(total_hosts);
+    cass::Vector<size_t> seq(total_hosts);
     for (size_t i = 0; i < total_hosts; ++i) seq[i] = i + 1;
     verify_sequence(qp.get(), seq);
   }

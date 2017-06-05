@@ -38,7 +38,7 @@ public:
 
   template<class T>
   void append(T value) {
-    std::string buffer(size_of(value), 0);
+    cass::String buffer(size_of(value), 0);
     encode(&buffer[0], value);
     buffer_.append(buffer);
   }
@@ -49,7 +49,7 @@ public:
     append<T>(value);
   }
 
-  void append_string(const std::string& str) {
+  void append_string(const cass::String& str) {
     append<uint16_t>(str.size());
     append(str);
   }
@@ -73,7 +73,7 @@ private:
     return sizeof(int64_t);
   }
 
-  static size_t size_of(const std::string& value) {
+  static size_t size_of(const cass::String& value) {
     return value.size();
   }
 
@@ -89,7 +89,7 @@ private:
     cass::encode_int64(buf, value);
   }
 
-  static void encode(char* buf, const std::string& value) {
+  static void encode(char* buf, const cass::String& value) {
     memcpy(buf, value.data(), value.size());
   }
 
@@ -103,20 +103,20 @@ private:
 
 
 private:
-  std::string buffer_;
+  cass::String buffer_;
 };
 
-typedef std::map<std::string, std::string> ReplicationMap;
+typedef cass::Map<cass::String, cass::String> ReplicationMap;
 
 struct ColumnMetadata {
-  ColumnMetadata(const std::string& name, const cass::DataType::ConstPtr& data_type)
+  ColumnMetadata(const cass::String& name, const cass::DataType::ConstPtr& data_type)
     : name(name)
     , data_type(data_type) { }
-  std::string name;
+  cass::String name;
   cass::DataType::ConstPtr data_type;
 };
 
-typedef std::vector<ColumnMetadata> ColumnMetadataVec;
+typedef cass::Vector<ColumnMetadata> ColumnMetadataVec;
 
 class RowResultResponseBuilder : protected BufferBuilder {
 public:
@@ -137,9 +137,9 @@ public:
     append<cass_int32_t>(0); // Row count (updated later)
   }
 
-  void append_keyspace_row_v3(const std::string& keyspace_name,
+  void append_keyspace_row_v3(const cass::String& keyspace_name,
                               const ReplicationMap& replication) {
-    append_value<std::string>(keyspace_name);
+    append_value<cass::String>(keyspace_name);
 
     size_t size = sizeof(int32_t);
     for (ReplicationMap::const_iterator i = replication.begin(),
@@ -152,19 +152,19 @@ public:
     append<cass_int32_t>(replication.size()); // Element count
     for (ReplicationMap::const_iterator i = replication.begin(),
          end = replication.end(); i != end; ++i) {
-      append_value<std::string>(i->first);
-      append_value<std::string>(i->second);
+      append_value<cass::String>(i->first);
+      append_value<cass::String>(i->second);
     }
 
     ++row_count_;
   }
 
-  void append_keyspace_row_v2(const std::string& keyspace_name,
-                              const std::string& strategy_class,
-                              const std::string& strategy_options) {
-    append_value<std::string>(keyspace_name);
-    append_value<std::string>(strategy_class);
-    append_value<std::string>(strategy_options);
+  void append_keyspace_row_v2(const cass::String& keyspace_name,
+                              const cass::String& strategy_class,
+                              const cass::String& strategy_options) {
+    append_value<cass::String>(keyspace_name);
+    append_value<cass::String>(strategy_class);
+    append_value<cass::String>(strategy_options);
 
     ++row_count_;
   }
@@ -215,16 +215,16 @@ public:
   }
 
   void append_token(cass::Murmur3Partitioner::Token token) {
-    std::stringstream ss;
+    cass::OStringStream ss;
     ss << token;
-    append_value<std::string>(ss.str());
+    append_value<cass::String>(ss.str());
     ++count_;
   }
 
   void append_token(cass::RandomPartitioner::Token token) {
     numeric::uint128_t r(token.lo);
     r |= (numeric::uint128_t(token.hi) << 64);
-    append_value<std::string>(r.to_string());
+    append_value<cass::String>(r.to_string());
     ++count_;
   }
 
@@ -248,7 +248,7 @@ private:
   int32_t count_;
 };
 
-inline void add_keyspace_simple(const std::string& keyspace_name,
+inline void add_keyspace_simple(const cass::String& keyspace_name,
                                 size_t replication_factor,
                                 cass::TokenMap* token_map) {
 
@@ -261,7 +261,7 @@ inline void add_keyspace_simple(const std::string& keyspace_name,
 
   ReplicationMap replication;
   replication["class"] = CASS_SIMPLE_STRATEGY;
-  std::stringstream ss;
+  cass::OStringStream ss;
   ss << replication_factor;
   replication["replication_factor"] = ss.str();
   builder.append_keyspace_row_v3(keyspace_name, replication);
@@ -270,7 +270,7 @@ inline void add_keyspace_simple(const std::string& keyspace_name,
   token_map->add_keyspaces(cass::VersionNumber(3, 0, 0), builder.finish());
 }
 
-inline void add_keyspace_network_topology(const std::string& keyspace_name,
+inline void add_keyspace_network_topology(const cass::String& keyspace_name,
                                           ReplicationMap& replication,
                                           cass::TokenMap* token_map) {
 
@@ -299,15 +299,15 @@ inline void add_murmur3_host(const cass::Host::Ptr& host,
   token_map->add_host(host, builder.finish());
 }
 
-inline cass::Host::Ptr create_host(const std::string& address,
-                                   const std::string& rack = "",
-                                   const std::string& dc = "") {
+inline cass::Host::Ptr create_host(const cass::String& address,
+                                   const cass::String& rack = "",
+                                   const cass::String& dc = "") {
   cass::Host::Ptr host(new cass::Host(cass::Address(address, 9042), false));
   host->set_rack_and_dc(rack, dc);
   return host;
 }
 
-inline cass::RandomPartitioner::Token create_random_token(const std::string& s) {
+inline cass::RandomPartitioner::Token create_random_token(const cass::String& s) {
   cass::RandomPartitioner::Token token;
   numeric::uint128_t i(s);
   token.lo = (i & numeric::uint128_t("0xFFFFFFFFFFFFFFFF")).to_base_type();
@@ -315,9 +315,9 @@ inline cass::RandomPartitioner::Token create_random_token(const std::string& s) 
   return token;
 }
 
-inline cass::ByteOrderedPartitioner::Token create_byte_ordered_token(const std::string& s) {
+inline cass::ByteOrderedPartitioner::Token create_byte_ordered_token(const cass::String& s) {
   cass::ByteOrderedPartitioner::Token token;
-  for (std::string::const_iterator i = s.begin(),
+  for (cass::String::const_iterator i = s.begin(),
        end = s.end(); i != end; ++i) {
     token.push_back(static_cast<uint8_t>(*i));
   }

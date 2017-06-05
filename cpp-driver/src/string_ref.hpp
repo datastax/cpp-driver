@@ -18,14 +18,14 @@
 #define __CASS_STRING_REF_HPP_INCLUDED__
 
 #include "hash.hpp"
+#include "string.hpp"
+#include "vector.hpp"
 
 #include <algorithm>
 #include <assert.h>
 #include <cctype>
 #include <stddef.h>
-#include <string>
 #include <string.h>
-#include <vector>
 
 namespace cass {
 
@@ -78,7 +78,7 @@ public:
     : ptr_(str)
     , length_(str != NULL ? strlen(str) : 0) {}
 
-  StringRef(const std::string& str)
+  StringRef(const String& str)
     : ptr_(str.data())
     , length_(str.size()) {}
 
@@ -92,8 +92,8 @@ public:
   char front() const { return ptr_[0]; }
   char back() const { return ptr_[length_ - 1]; }
 
-  std::string to_string() const {
-    return std::string(ptr_, length_);
+  String to_string() const {
+    return String(ptr_, length_);
   }
 
   StringRef substr(size_t pos = 0, size_t length = npos) {
@@ -152,8 +152,8 @@ private:
   size_t length_;
 };
 
-typedef std::vector<std::string> StringVec;
-typedef std::vector<StringRef> StringRefVec;
+typedef Vector<String> StringVec;
+typedef Vector<StringRef> StringRefVec;
 
 inline StringVec to_strings(const StringRefVec& refs) {
   StringVec strings;

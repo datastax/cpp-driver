@@ -22,11 +22,11 @@ namespace cass {
 
 TokenMap* TokenMap::from_partitioner(StringRef partitioner) {
   if (ends_with(partitioner, Murmur3Partitioner::name())) {
-    return new TokenMapImpl<Murmur3Partitioner>();
+    return Memory::allocate<TokenMapImpl<Murmur3Partitioner> >();
   } else if (ends_with(partitioner, RandomPartitioner::name())) {
-    return new TokenMapImpl<RandomPartitioner>();
+    return Memory::allocate<TokenMapImpl<RandomPartitioner> >();
   } else if (ends_with(partitioner, ByteOrderedPartitioner::name())) {
-    return new TokenMapImpl<ByteOrderedPartitioner>();
+    return Memory::allocate<TokenMapImpl<ByteOrderedPartitioner> >();
   } else {
     LOG_WARN("Unsupported partitioner class '%s'", partitioner.to_string().c_str());
     return NULL;

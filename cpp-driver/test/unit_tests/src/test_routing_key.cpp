@@ -18,15 +18,14 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include "query_request.hpp"
-#include "token_map.hpp"
-#include "murmur3.hpp"
 #include "logger.hpp"
+#include "murmur3.hpp"
+#include "query_request.hpp"
+#include "string.hpp"
+#include "token_map.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/cstdint.hpp>
-
-#include <string>
 
 // The java-driver was used as a reference for the hash value
 // below.
@@ -52,7 +51,7 @@ BOOST_AUTO_TEST_CASE(single)
     query.set(0, uuid);
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -67,7 +66,7 @@ BOOST_AUTO_TEST_CASE(single)
     query.set(0, value);
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -82,7 +81,7 @@ BOOST_AUTO_TEST_CASE(single)
     query.set(0, value);
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -96,7 +95,7 @@ BOOST_AUTO_TEST_CASE(single)
     query.set(0, cass_true);
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -111,7 +110,7 @@ BOOST_AUTO_TEST_CASE(single)
     query.set(0, cass::CassString(value, strlen(value)));
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -124,7 +123,7 @@ BOOST_AUTO_TEST_CASE(empty_and_null)
   cass::QueryRequest query("", 1);
   cass::Request::EncodingCache cache;
 
-  std::string routing_key;
+  cass::String routing_key;
   BOOST_CHECK_EQUAL(query.get_routing_key(&routing_key, &cache), false);
 
   query.set(0, cass::CassNull());
@@ -152,7 +151,7 @@ BOOST_AUTO_TEST_CASE(composite)
     query.set(2, cass::CassString(value, strlen(value)));
     query.add_key_index(2);
 
-    std::string routing_key;
+    cass::String routing_key;
     BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -173,7 +172,7 @@ BOOST_AUTO_TEST_CASE(composite)
     query.set(2, cass::CassString(value, strlen(value)));
     query.add_key_index(2);
 
-    std::string routing_key;
+    cass::String routing_key;
     BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);

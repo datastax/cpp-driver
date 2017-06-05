@@ -31,12 +31,12 @@ CassUserType* cass_user_type_new_from_data_type(const CassDataType* data_type) {
     return NULL;
   }
   return CassUserType::to(
-        new cass::UserTypeValue(
+        cass::Memory::allocate<cass::UserTypeValue>(
           cass::DataType::ConstPtr(data_type)));
 }
 
 void cass_user_type_free(CassUserType* user_type) {
-  delete user_type->from();
+  cass::Memory::deallocate(user_type->from());
 }
 
 const CassDataType* cass_user_type_data_type(const CassUserType* user_type) {

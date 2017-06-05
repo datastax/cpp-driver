@@ -24,11 +24,11 @@
 #include "macros.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
+#include "string.hpp"
 #include "ref_counted.hpp"
 
 #include <uv.h>
 #include <assert.h>
-#include <string>
 
 namespace cass {
 
@@ -45,12 +45,12 @@ public:
   typedef void (*Callback)(CassFuture*, void*);
 
   struct Error {
-    Error(CassError code, const std::string& message)
+    Error(CassError code, const String& message)
         : code(code)
         , message(message) {}
 
     CassError code;
-    std::string message;
+    String message;
   };
 
   Future(FutureType type)
@@ -94,7 +94,7 @@ public:
     internal_set(lock);
   }
 
-  bool set_error(CassError code, const std::string& message) {
+  bool set_error(CassError code, const String& message) {
     ScopedMutex lock(&mutex_);
     if (!is_set_) {
       internal_set_error(code, message, lock);
@@ -125,8 +125,8 @@ protected:
 
   void internal_set(ScopedMutex& lock);
 
-  void internal_set_error(CassError code, const std::string& message, ScopedMutex& lock) {
-    error_.reset(new Error(code, message));
+  void internal_set_error(CassError code, const String& message, ScopedMutex& lock) {
+    error_.reset(Memory::allocate<Error>(code, message));
     internal_set(lock);
   }
 

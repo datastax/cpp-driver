@@ -21,8 +21,6 @@
 #include "string_ref.hpp"
 #include "value.hpp"
 
-#include <vector>
-
 namespace cass {
 
 class ResultResponse;
@@ -39,7 +37,7 @@ public:
 
   const Value* get_by_name(const StringRef& name) const;
 
-  bool get_string_by_name(const StringRef& name, std::string* out) const;
+  bool get_string_by_name(const StringRef& name, String* out) const;
 
   const ResultResponse* result() const { return result_; }
 

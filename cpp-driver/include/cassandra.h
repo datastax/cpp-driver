@@ -764,10 +764,50 @@ typedef struct CassLogMessage_ {
  * @param[in] data user defined data provided when the callback
  * was registered.
  *
- * @see cass_log_set_callback();
+ * @see cass_log_set_callback()
  */
 typedef void (*CassLogCallback)(const CassLogMessage* message,
                                 void* data);
+
+/**
+ * A custom malloc function. This function should allocate "size" bytes and
+ * return a pointer to that memory
+ *
+ * @param[in] size The size of the memory to allocate
+ *
+ * @see CassFreeFunction
+ * @see cass_alloc_set_functions()
+ */
+typedef void* (*CassMallocFunction)(size_t size);
+
+/**
+ * A custom realloc function. This function attempts to change the size of the
+ * memory pointed to by "ptr". If the memory cannot be resized then new memory
+ * should be allocated and contain the contents of the original memory at "ptr".
+ *
+ * @param[in] ptr A pointer to the original memory. If NULL it should behave the
+ * same as "CassMallocFunction"
+ * @param[in] size The size of the memory to allocate/resize.
+ *
+ * @see CassMallocFunction
+ * @see CassFreeFunction
+ * @see cass_alloc_set_functions()
+ */
+typedef void* (*CassReallocFunction)(void* ptr, size_t size);
+
+/**
+ * A custom free function. This function deallocates the memory pointed to by
+ * "ptr" that was previously allocated by a "CassMallocFunction" or
+ * "CassReallocFunction" function.
+ *
+ * @param[in] ptr A pointer to memory that should be deallocated. If NULL then
+ * this will perform no operation.
+ *
+ * @see CassMallocFunction
+ * @see CassReallocFunction
+ * @see cass_alloc_set_functions()
+ */
+typedef void (*CassFreeFunction)(void* ptr);
 
 /**
  * An authenticator.
@@ -10015,6 +10055,29 @@ cass_time_from_epoch(cass_int64_t epoch_secs);
 CASS_EXPORT cass_int64_t
 cass_date_time_to_epoch(cass_uint32_t date,
                         cass_int64_t time);
+
+/***********************************************************************************
+ *
+ * Allocator
+ *
+ ************************************************************************************/
+
+/**
+ * Set custom allocation functions.
+ *
+ * <b>Note:</b> This is not thread-safe. The allocation functions must be set
+ * before any other library function is called.
+ *
+ * <b>Default:</b> The C runtime's malloc(), realloc() and free()
+ *
+ * @param[in] malloc_func
+ * @param[in] realloc_func
+ * @param[in] free_func
+ */
+CASS_EXPORT void
+cass_alloc_set_functions(CassMallocFunction malloc_func,
+                         CassReallocFunction realloc_func,
+                         CassFreeFunction free_func);
 
 #ifdef __cplusplus
 } /* extern "C" */

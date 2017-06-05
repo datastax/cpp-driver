@@ -144,7 +144,7 @@ private:
     if (type) return type;
 
     // If no mapping exists, return an actual custom type.
-    return DataType::ConstPtr(new CustomType(class_name.to_string()));
+    return DataType::ConstPtr(Memory::allocate<CustomType>(class_name.to_string()));
   }
 
   DataType::ConstPtr decode_collection(CassValueType collection_type) {
@@ -153,7 +153,7 @@ private:
     if (collection_type == CASS_VALUE_TYPE_MAP) {
       types.push_back(decode());
     }
-    return DataType::ConstPtr(new CollectionType(collection_type, types, false));
+    return DataType::ConstPtr(Memory::allocate<CollectionType>(collection_type, types, false));
   }
 
   DataType::ConstPtr decode_user_type() {
@@ -172,10 +172,10 @@ private:
       buffer_ = decode_string(buffer_, &field_name);
       fields.push_back(UserType::Field(field_name.to_string(), decode()));
     }
-    return DataType::ConstPtr(new UserType(keyspace.to_string(),
-                                           type_name.to_string(),
-                                           fields,
-                                           false));
+    return DataType::ConstPtr(Memory::allocate<UserType>(keyspace.to_string(),
+                                                         type_name.to_string(),
+                                                         fields,
+                                                         false));
   }
 
   DataType::ConstPtr decode_tuple() {
@@ -186,7 +186,7 @@ private:
     for (uint16_t i = 0; i < n; ++i) {
       types.push_back(decode());
     }
-    return DataType::ConstPtr(new TupleType(types, false));
+    return DataType::ConstPtr(Memory::allocate<TupleType>(types, false));
   }
 
 private:
@@ -259,7 +259,7 @@ char* ResultResponse::decode_metadata(char* input, ResultMetadata::Ptr* metadata
       buffer = decode_string(buffer, &table_);
     }
 
-    metadata->reset(new ResultMetadata(column_count));
+    metadata->reset(Memory::allocate<ResultMetadata>(column_count));
 
     SimpleDataTypeCache cache;
 

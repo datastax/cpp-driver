@@ -23,16 +23,14 @@
 #include "get_time.hpp"
 #include "logger.hpp"
 #include "macros.hpp"
+#include "map.hpp"
 #include "ref_counted.hpp"
 #include "scoped_ptr.hpp"
 #include "spin_lock.hpp"
+#include "vector.hpp"
 
-#include <map>
 #include <math.h>
-#include <set>
-#include <sstream>
 #include <stdint.h>
-#include <vector>
 
 namespace cass {
 
@@ -80,7 +78,7 @@ public:
     return 0;
   }
 
-  bool parse(const std::string& version);
+  bool parse(const String& version);
 
   int major_version() const { return major_version_; }
   int minor_version() const { return minor_version_; }
@@ -121,13 +119,13 @@ public:
       , address_string_(address.to_string()) { }
 
   const Address& address() const { return address_; }
-  const std::string& address_string() const { return address_string_; }
+  const String& address_string() const { return address_string_; }
 
   bool mark() const { return mark_; }
   void set_mark(bool mark) { mark_ = mark; }
 
-  const std::string hostname() const { return hostname_; }
-  void set_hostname(const std::string& hostname) {
+  const String hostname() const { return hostname_; }
+  void set_hostname(const String& hostname) {
     if (!hostname.empty() && hostname[hostname.size() - 1] == '.') {
       // Strip off trailing dot for hostcheck comparison
       hostname_ = hostname.substr(0, hostname.size() - 1);
@@ -136,9 +134,9 @@ public:
     }
   }
 
-  const std::string& rack() const { return rack_; }
-  const std::string& dc() const { return dc_; }
-  void set_rack_and_dc(const std::string& rack, const std::string& dc) {
+  const String& rack() const { return rack_; }
+  const String& dc() const { return dc_; }
+  void set_rack_and_dc(const String& rack, const String& dc) {
     rack_ = rack;
     dc_ = dc;
   }
@@ -150,8 +148,8 @@ public:
     dc_id_ = dc_id;
   }
 
-  const std::string& listen_address() const { return listen_address_; }
-  void set_listen_address(const std::string& listen_address) {
+  const String& listen_address() const { return listen_address_; }
+  void set_listen_address(const String& listen_address) {
     listen_address_ = listen_address;
   }
 
@@ -167,8 +165,8 @@ public:
   bool is_down() const { return state() == DOWN; }
   void set_down() { set_state(DOWN); }
 
-  std::string to_string() const {
-    std::ostringstream ss;
+  String to_string() const {
+    OStringStream ss;
     ss << address_string_;
     if (!rack_.empty() || !dc_.empty()) {
       ss << " [" << rack_ << ':' << dc_ << "]";
@@ -178,7 +176,7 @@ public:
 
   void enable_latency_tracking(uint64_t scale, uint64_t min_measured) {
     if (!latency_tracker_) {
-      latency_tracker_.reset(new LatencyTracker(scale, (30LL * min_measured) / 100LL));
+      latency_tracker_.reset(Memory::allocate<LatencyTracker>(scale, (30LL * min_measured) / 100LL));
     }
   }
 
@@ -233,12 +231,12 @@ private:
   uint32_t dc_id_;
   bool mark_;
   Atomic<HostState> state_;
-  std::string address_string_;
-  std::string listen_address_;
+  String address_string_;
+  String listen_address_;
   VersionNumber cassandra_version_;
-  std::string hostname_;
-  std::string rack_;
-  std::string dc_;
+  String hostname_;
+  String rack_;
+  String dc_;
 
   ScopedPtr<LatencyTracker> latency_tracker_;
 
@@ -246,7 +244,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Host);
 };
 
-typedef std::map<Address, Host::Ptr> HostMap;
+typedef Map<Address, Host::Ptr> HostMap;
 struct GetHost {
   typedef std::pair<Address, Host::Ptr> Pair;
   Host::Ptr operator()(const Pair& pair) const {
@@ -254,7 +252,7 @@ struct GetHost {
   }
 };
 typedef std::pair<Address, Host::Ptr> HostPair;
-typedef std::vector<Host::Ptr> HostVec;
+typedef Vector<Host::Ptr> HostVec;
 typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 
 void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host);

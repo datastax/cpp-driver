@@ -140,7 +140,7 @@ public:
     return StringRef(data_, size_);
   }
 
-  std::string to_string() const {
+  String to_string() const {
     return to_string_ref().to_string();
   }
 
@@ -158,7 +158,7 @@ private:
   int32_t size_;
 };
 
-typedef std::vector<Value> OutputValueVec;
+typedef Vector<Value> OutputValueVec;
 
 } // namespace cass
 

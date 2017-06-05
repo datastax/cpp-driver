@@ -22,8 +22,7 @@
 #include "result_response.hpp"
 #include "metadata.hpp"
 #include "scoped_ptr.hpp"
-
-#include <string>
+#include "string.hpp"
 
 namespace cass {
 
@@ -32,18 +31,18 @@ public:
   typedef SharedRefPtr<const Prepared> ConstPtr;
 
   Prepared(const ResultResponse::Ptr& result,
-           const std::string& statement,
+           const String& statement,
            const Metadata::SchemaSnapshot& schema_metadata);
 
   const ResultResponse::ConstPtr& result() const { return result_; }
-  const std::string& id() const { return id_; }
-  const std::string& statement() const { return statement_; }
+  const String& id() const { return id_; }
+  const String& statement() const { return statement_; }
   const ResultResponse::PKIndexVec& key_indices() const { return key_indices_; }
 
 private:
   ResultResponse::ConstPtr result_;
-  std::string id_;
-  std::string statement_;
+  String id_;
+  String statement_;
   ResultResponse::PKIndexVec key_indices_;
 };
 

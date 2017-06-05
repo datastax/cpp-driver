@@ -50,10 +50,10 @@ void LatencyAwarePolicy::close_handles() {
   }
 }
 
-QueryPlan* LatencyAwarePolicy::new_query_plan(const std::string& connected_keyspace,
+QueryPlan* LatencyAwarePolicy::new_query_plan(const String& connected_keyspace,
                                               RequestHandler* request_handler,
                                               const TokenMap* token_map) {
-  return new LatencyAwareQueryPlan(this,
+  return Memory::allocate<LatencyAwareQueryPlan>(this,
                                    child_policy_->new_query_plan(connected_keyspace,
                                                                  request_handler,
                                                                  token_map));

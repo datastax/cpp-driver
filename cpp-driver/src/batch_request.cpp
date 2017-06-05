@@ -26,7 +26,7 @@
 extern "C" {
 
 CassBatch* cass_batch_new(CassBatchType type) {
-  cass::BatchRequest* batch = new cass::BatchRequest(type);
+  cass::BatchRequest* batch = cass::Memory::allocate<cass::BatchRequest>(type);
   batch->inc_ref();
   return CassBatch::to(batch);
 }
@@ -188,8 +188,8 @@ void BatchRequest::add_statement(Statement* statement) {
   statements_.push_back(Statement::Ptr(statement));
 }
 
-bool BatchRequest::prepared_statement(const std::string& id,
-                                      std::string* statement) const {
+bool BatchRequest::prepared_statement(const String& id,
+                                      String* statement) const {
   PreparedMap::const_iterator it = prepared_statements_.find(id);
   if (it != prepared_statements_.end()) {
     *statement = it->second->prepared()->statement();
@@ -198,7 +198,7 @@ bool BatchRequest::prepared_statement(const std::string& id,
   return false;
 }
 
-bool BatchRequest::get_routing_key(std::string* routing_key, EncodingCache* cache) const {
+bool BatchRequest::get_routing_key(String* routing_key, EncodingCache* cache) const {
   for (BatchRequest::StatementList::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
     if ((*i)->get_routing_key(routing_key, cache)) {

@@ -24,7 +24,7 @@ int StartupRequest::encode(int version, RequestCallback* callback, BufferVec* bu
   // <options> [string map]
   size_t length = sizeof(uint16_t);
 
-  std::map<std::string, std::string> options;
+  Map<String, String> options;
   if (!compression_.empty()) {
     const char* key = "COMPRESSION";
     length += sizeof(uint16_t) + strlen(key);

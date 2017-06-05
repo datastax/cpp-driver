@@ -23,8 +23,8 @@
 #include "host.hpp"
 #include "ref_counted.hpp"
 #include "ring_buffer.hpp"
+#include "string.hpp"
 
-#include <string>
 #include <uv.h>
 
 namespace cass {
@@ -47,7 +47,7 @@ public:
     return error_code_;
   }
 
-  std::string error_message() const {
+  String error_message() const {
     return error_message_;
   }
 
@@ -67,7 +67,7 @@ protected:
   rb::RingBuffer incoming_;
   rb::RingBuffer outgoing_;
   CassError error_code_;
-  std::string error_message_;
+  String error_message_;
 };
 
 class SslContext : public RefCounted<SslContext> {

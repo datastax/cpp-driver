@@ -24,6 +24,7 @@
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
 #include "scoped_lock.hpp"
+#include "vector.hpp"
 
 #include "third_party/hdr_histogram/hdr_histogram.hpp"
 
@@ -95,7 +96,7 @@ public:
   public:
     Counter(ThreadState* thread_state)
       : thread_state_(thread_state)
-      , counters_(new PerThreadCounter[thread_state->max_threads()]) {}
+      , counters_(thread_state->max_threads()) {}
 
     void inc() {
       counters_[thread_state_->current_thread_id()].add(1LL);
@@ -153,7 +154,7 @@ public:
 
   private:
     ThreadState* thread_state_;
-    ScopedPtr<PerThreadCounter[]> counters_;
+    DynamicArray<PerThreadCounter> counters_;
 
   private:
     DISALLOW_COPY_AND_ASSIGN(Counter);
@@ -283,7 +284,7 @@ public:
 
     Histogram(ThreadState* thread_state)
       : thread_state_(thread_state)
-      , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
+      , histograms_(thread_state->max_threads()) {
       hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
       uv_mutex_init(&mutex_);
     }
@@ -422,7 +423,7 @@ public:
         phaser_.writer_critical_section_end(critical_value_enter);
       }
 
-      void add(hdr_histogram* to) {
+      void add(hdr_histogram* to) const {
         int inactive_index = active_index_.exchange(!active_index_.load());
         hdr_histogram* from = histograms_[inactive_index];
         phaser_.flip_phase();
@@ -432,13 +433,13 @@ public:
 
     private:
       hdr_histogram* histograms_[2];
-      Atomic<int> active_index_;
-      WriterReaderPhaser phaser_;
+      mutable Atomic<int> active_index_;
+      mutable WriterReaderPhaser phaser_;
     };
 #endif
 
     ThreadState* thread_state_;
-    ScopedPtr<PerThreadHistogram[]> histograms_;
+    DynamicArray<PerThreadHistogram> histograms_;
     hdr_histogram* histogram_;
     mutable uv_mutex_t mutex_;
 
