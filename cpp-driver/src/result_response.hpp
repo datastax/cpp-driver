@@ -20,11 +20,9 @@
 #include "constants.hpp"
 #include "data_type.hpp"
 #include "macros.hpp"
-#include "map.hpp"
 #include "result_metadata.hpp"
 #include "response.hpp"
 #include "row.hpp"
-#include "string.hpp"
 #include "string_ref.hpp"
 #include "vector.hpp"
 

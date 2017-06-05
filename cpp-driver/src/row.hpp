@@ -20,7 +20,6 @@
 #include "external.hpp"
 #include "string_ref.hpp"
 #include "value.hpp"
-#include "vector.hpp"
 
 namespace cass {
 

@@ -196,7 +196,7 @@ private:
     virtual void on_internal_timeout();
   };
 
-  class PendingWriteBase : public List<PendingWriteBase>::Node{
+  class PendingWriteBase : public List<PendingWriteBase>::Node {
   public:
     PendingWriteBase(Connection* connection)
       : connection_(connection)

@@ -792,7 +792,7 @@ CassError dse_graph_result_as_polygon(const DseGraphResult* result,
 
 namespace dse {
 
-GraphOptions*GraphOptions::clone() const {
+GraphOptions* GraphOptions::clone() const {
   GraphOptions* options = cass::Memory::allocate<GraphOptions>();
 
   if (!graph_language_.empty()) {

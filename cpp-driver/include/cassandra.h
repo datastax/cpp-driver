@@ -770,7 +770,7 @@ typedef void (*CassLogCallback)(const CassLogMessage* message,
                                 void* data);
 
 /**
- * A custom malloc function. This function should allocator "size" bytes and
+ * A custom malloc function. This function should allocate "size" bytes and
  * return a pointer to that memory
  *
  * @param[in] size The size of the memory to allocate

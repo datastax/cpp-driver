@@ -20,13 +20,8 @@
 #include "cassandra.h"
 #include "data_type.hpp"
 #include "hash_table.hpp"
-#include "list.hpp"
-#include "map.hpp"
 #include "ref_counted.hpp"
-#include "small_vector.hpp"
-#include "string.hpp"
 #include "string_ref.hpp"
-#include "vector.hpp"
 
 #include <uv.h>
 

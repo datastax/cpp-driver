@@ -638,7 +638,7 @@ uv_buf_t Connection::internal_alloc_buffer(size_t suggested_size) {
     }
     return uv_buf_init(reinterpret_cast<char*>(Memory::malloc(BUFFER_REUSE_SIZE)), BUFFER_REUSE_SIZE);
   }
-  return uv_buf_init(reinterpret_cast<char*>(Memory::malloc(BUFFER_REUSE_SIZE)), suggested_size);
+  return uv_buf_init(reinterpret_cast<char*>(Memory::malloc(suggested_size)), suggested_size);
 }
 
 void Connection::internal_reuse_buffer(uv_buf_t buf) {

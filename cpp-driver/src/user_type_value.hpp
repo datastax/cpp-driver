@@ -26,7 +26,7 @@
 
 namespace cass {
 
-class UserTypeValue : public AbstractData{
+class UserTypeValue : public AbstractData {
 public:
   UserTypeValue(const UserType::ConstPtr& data_type)
     : AbstractData(data_type->fields().size())
