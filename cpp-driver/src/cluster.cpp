@@ -466,6 +466,12 @@ CassError cass_cluster_set_no_speculative_execution_policy(CassCluster* cluster)
   return CASS_OK;
 }
 
+CassError cass_cluster_set_max_reusable_write_objects(CassCluster* cluster,
+                                                      unsigned num_objects) {
+  cluster->config().set_max_reusable_write_objects(num_objects);
+  return CASS_OK;
+}
+
 void cass_cluster_free(CassCluster* cluster) {
   cass::Memory::deallocate(cluster->from());
 }

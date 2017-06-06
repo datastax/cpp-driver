@@ -1832,6 +1832,27 @@ cass_cluster_set_constant_speculative_execution_policy(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_no_speculative_execution_policy(CassCluster* cluster);
 
+/**
+ * Sets the maximum number of "pending write" objects that will be
+ * saved for re-use for marshalling new requests. These objects may
+ * hold on to a significant amount of memory and reducing the
+ * number of these objects may reduce memory usage of the application.
+ *
+ * The cost of reducing the value of this setting is potentially slower
+ * marshalling of requests prior to sending.
+ *
+ * <b>Default:</b> Max unsigned integer value
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] num_objects
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_max_reusable_write_objects(CassCluster* cluster,
+                                            unsigned num_objects);
+
 /***********************************************************************************
  *
  * Session

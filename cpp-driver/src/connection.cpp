@@ -57,46 +57,40 @@
 
 namespace cass {
 
-static void cleanup_pending_callbacks(List<RequestCallback>* pending) {
-  while (!pending->is_empty()) {
-    RequestCallback::Ptr callback(pending->front());
+static void cleanup_pending_callback(const RequestCallback::Ptr& callback) {
+  switch (callback->state()) {
+    case RequestCallback::REQUEST_STATE_NEW:
+    case RequestCallback::REQUEST_STATE_FINISHED:
+    case RequestCallback::REQUEST_STATE_CANCELLED:
+      assert(false && "Request state is invalid in cleanup");
+      break;
 
-    pending->remove(callback.get());
+    case RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE:
+      callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
+      // Use the response saved in the read callback
+      callback->on_set(callback->read_before_write_response());
+      break;
 
-    switch (callback->state()) {
-      case RequestCallback::REQUEST_STATE_NEW:
-      case RequestCallback::REQUEST_STATE_FINISHED:
-      case RequestCallback::REQUEST_STATE_CANCELLED:
-        assert(false && "Request state is invalid in cleanup");
-        break;
+    case RequestCallback::REQUEST_STATE_WRITING:
+    case RequestCallback::REQUEST_STATE_READING:
+      callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
+      if (callback->request()->is_idempotent()) {
+        callback->on_retry(true);
+      } else {
+        callback->on_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
+                           "Request timed out");
+      }
+      break;
 
-      case RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE:
-        callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
-        // Use the response saved in the read callback
-        callback->on_set(callback->read_before_write_response());
-        break;
-
-      case RequestCallback::REQUEST_STATE_WRITING:
-      case RequestCallback::REQUEST_STATE_READING:
-        callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
-        if (callback->request()->is_idempotent()) {
-          callback->on_retry(true);
-        } else {
-          callback->on_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
-                             "Request timed out");
-        }
-        break;
-
-      case RequestCallback::REQUEST_STATE_CANCELLED_WRITING:
-      case RequestCallback::REQUEST_STATE_CANCELLED_READING:
-      case RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
-        callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
-        callback->on_cancel();
-        break;
-    }
-
-    callback->dec_ref();
+    case RequestCallback::REQUEST_STATE_CANCELLED_WRITING:
+    case RequestCallback::REQUEST_STATE_CANCELLED_READING:
+    case RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
+      callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
+      callback->on_cancel();
+      break;
   }
+
+  callback->dec_ref();
 }
 
 Connection::StartupCallback::StartupCallback(const Request::ConstPtr& request)
@@ -257,6 +251,11 @@ Connection::~Connection()
     Memory::free(buf.base);
     buffer_reuse_list_.pop();
   }
+
+  for (PendingWriteVec::iterator i = free_writes_.begin(),
+       end = free_writes_.end(); i != end; ++i) {
+    Memory::deallocate(*i);
+  }
 }
 
 void Connection::connect() {
@@ -290,7 +289,10 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
   callback->start(this, stream);
 
   if (pending_writes_.is_empty() || pending_writes_.back()->is_flushed()) {
-    if (ssl_session_) {
+    if (!free_writes_.empty()) {
+      pending_writes_.add_to_back(free_writes_.back());
+      free_writes_.pop_back();
+    } else if (ssl_session_) {
       pending_writes_.add_to_back(Memory::allocate<PendingWriteSsl>(this));
     } else {
       pending_writes_.add_to_back(Memory::allocate<PendingWrite>(this));
@@ -606,19 +608,21 @@ void Connection::on_close(uv_handle_t* handle) {
             static_cast<void*>(connection),
             connection->host_->address_string().c_str());
 
-  cleanup_pending_callbacks(&connection->pending_reads_);
+  while (!connection->pending_reads_.is_empty()) {
+    RequestCallback::Ptr callback(connection->pending_reads_.pop_front());
+    cleanup_pending_callback(callback);
+  }
 
   while (!connection->pending_writes_.is_empty()) {
     PendingWriteBase* pending_write
-        = connection->pending_writes_.front();
-    connection->pending_writes_.remove(pending_write);
+        = connection->pending_writes_.pop_front();
+    pending_write->cleanup();
     Memory::deallocate(pending_write);
   }
 
   while (!connection->pending_schema_agreements_.is_empty()) {
     PendingSchemaAgreement* pending_schema_aggreement
-        = connection->pending_schema_agreements_.front();
-    connection->pending_schema_agreements_.remove(pending_schema_aggreement);
+        = connection->pending_schema_agreements_.pop_front();
     pending_schema_aggreement->stop_timer();
     pending_schema_aggreement->callback->on_closing();
     Memory::deallocate(pending_schema_aggreement);
@@ -962,8 +966,12 @@ void Connection::PendingSchemaAgreement::stop_timer() {
   timer.stop();
 }
 
-Connection::PendingWriteBase::~PendingWriteBase() {
-  cleanup_pending_callbacks(&callbacks_);
+void Connection::PendingWriteBase::cleanup() {
+  for (CallbackVec::iterator i = callbacks_.begin(), end = callbacks_.end();
+       i != end; ++i) {
+    RequestCallback::Ptr callback(*i);
+    cleanup_pending_callback(callback);
+  }
 }
 
 int32_t Connection::PendingWriteBase::write(RequestCallback* callback) {
@@ -975,7 +983,7 @@ int32_t Connection::PendingWriteBase::write(RequestCallback* callback) {
   }
 
   size_ += request_size;
-  callbacks_.add_to_back(callback);
+  callbacks_.push_back(callback);
 
   return request_size;
 }
@@ -992,10 +1000,9 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
     connection->set_state(CONNECTION_STATE_READY);
   }
 
-  while (!pending_write->callbacks_.is_empty()) {
-    RequestCallback::Ptr callback(pending_write->callbacks_.front());
-
-    pending_write->callbacks_.remove(callback.get());
+  for (CallbackVec::iterator i = pending_write->callbacks_.begin(),
+       end = pending_write->callbacks_.end(); i != end; ++i) {
+    RequestCallback::Ptr callback(*i);
 
     switch (callback->state()) {
       case RequestCallback::REQUEST_STATE_WRITING:
@@ -1048,7 +1055,13 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
   }
 
   connection->pending_writes_.remove(pending_write);
-  Memory::deallocate(pending_write);
+
+  if (connection->free_writes_.size() < connection->config_.max_reusable_write_objects()) {
+    pending_write->clear();
+    connection->free_writes_.push_back(pending_write);
+  } else {
+    Memory::deallocate(pending_write);
+  }
 
   connection->flush();
 }

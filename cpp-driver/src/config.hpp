@@ -79,7 +79,8 @@ public:
       , retry_policy_(Memory::allocate<DefaultRetryPolicy>())
       , use_schema_(true)
       , use_hostname_resolution_(false)
-      , use_randomized_contact_points_(true) { }
+      , use_randomized_contact_points_(true)
+      , max_reusable_write_objects_(UINT_MAX) { }
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -393,6 +394,8 @@ public:
     use_randomized_contact_points_ = enable;
   }
 
+  unsigned max_reusable_write_objects() const { return max_reusable_write_objects_; }
+  void set_max_reusable_write_objects(unsigned max_reusable_write_objects) { max_reusable_write_objects_ = max_reusable_write_objects; }
 private:
   int port_;
   int protocol_version_;
@@ -440,6 +443,7 @@ private:
   bool use_schema_;
   bool use_hostname_resolution_;
   bool use_randomized_contact_points_;
+  unsigned max_reusable_write_objects_;
 };
 
 } // namespace cass

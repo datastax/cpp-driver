@@ -47,6 +47,12 @@ class Connector;
 class EventResponse;
 class Request;
 
+// Whenever we create a Buffer vector, reserve 128 slots. This reduces the
+// number of reallocations that will occur as the vector grows, improving
+// efficiency of request encoding.
+
+#define MIN_BUFFERS_SIZE 128
+
 class Connection {
 public:
   enum ConnectionState {
@@ -203,9 +209,10 @@ private:
       , is_flushed_(false)
       , size_(0) {
       req_.data = this;
+      buffers_.reserve(MIN_BUFFERS_SIZE);
     }
 
-    virtual ~PendingWriteBase();
+    virtual ~PendingWriteBase() {}
 
     bool is_flushed() const {
       return is_flushed_;
@@ -215,6 +222,15 @@ private:
       return size_;
     }
 
+    void clear() {
+      buffers_.clear();
+      callbacks_.clear();
+      size_ = 0;
+      is_flushed_ = false;
+    }
+
+    void cleanup();
+
     int32_t write(RequestCallback* callback);
 
     virtual void flush() = 0;
@@ -222,12 +238,14 @@ private:
   protected:
     static void on_write(uv_write_t* req, int status);
 
+    typedef std::vector<RequestCallback*> CallbackVec;
+
     Connection* connection_;
     uv_write_t req_;
     bool is_flushed_;
     size_t size_;
     BufferVec buffers_;
-    List<RequestCallback> callbacks_;
+    CallbackVec callbacks_;
   };
 
   class PendingWrite : public PendingWriteBase {
@@ -311,6 +329,8 @@ private:
   static void on_terminate(Timer* timer);
 
 private:
+  typedef std::vector<PendingWriteBase*> PendingWriteVec;
+
   ConnectionState state_;
   ConnectionError error_code_;
   String error_message_;
@@ -320,6 +340,8 @@ private:
   List<PendingWriteBase> pending_writes_;
   List<RequestCallback> pending_reads_;
   List<PendingSchemaAgreement> pending_schema_agreements_;
+
+  PendingWriteVec free_writes_;
 
   uv_loop_t* loop_;
   const Config& config_;
