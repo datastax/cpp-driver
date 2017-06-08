@@ -1607,9 +1607,9 @@ cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
                                           size_t dcs_length);
 
 /**
- * Enable/Disable Nagel's algorithm on connections.
+ * Enable/Disable Nagle's algorithm on connections.
  *
- * <b>Default:</b> cass_true (disables Nagel's algorithm).
+ * <b>Default:</b> cass_true (disables Nagle's algorithm).
  *
  * @public @memberof CassCluster
  *
