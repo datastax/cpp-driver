@@ -87,6 +87,21 @@ if(DSE_BUILD_TESTS)
   set(DSE_BUILD_UNIT_TESTS ON)
 endif()
 
+if(DSE_BUILD_INTEGRATION_TESTS)
+  # Enable integration tests for core driver
+  set(CASS_BUILD_INTEGRATION_TESTS ON)
+endif()
+
+if(DSE_BUILD_UNIT_TESTS)
+  # Enable unit tests for core driver
+  set(CASS_BUILD_UNIT_TESTS ON)
+endif()
+
+if(DSE_BUILD_EXAMPLES)
+  # Build examples for core driver
+  set(CASS_BUILD_EXAMPLES ON)
+endif()
+
 # Determine which driver target should be used as a dependency
 set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
 if(DSE_USE_STATIC_LIBS)
@@ -115,7 +130,7 @@ CassUseLibuv()
 #------------------------
 
 # Boost
-if(CASS_USE_BOOST_ATOMIC)
+if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
   CassUseBoost()
 endif()
 
@@ -263,6 +278,7 @@ if(DSE_BUILD_STATIC)
   # Update the test flags to indicate the use of the static library
   if(DSE_USE_STATIC_LIBS)
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DDSE_STATIC")
+    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DCASS_STATIC")
   endif()
 endif()
 
@@ -270,13 +286,24 @@ endif()
 # Examples
 #-----------
 
+# Determine example directories at cmake execution time.
+# When a new example dir is added, the user just runs cmake again to pull it in;
+# no need to update CMakeLists.txt!
+
 if(DSE_BUILD_EXAMPLES)
-  add_subdirectory(examples/plaintext)
-  add_subdirectory(examples/gssapi)
-  add_subdirectory(examples/graph)
-  add_subdirectory(examples/geotypes)
-  add_subdirectory(examples/date_range)
-  add_subdirectory(examples/proxy_execution)
+  file(GLOB EXAMPLES_TO_BUILD "examples/*/CMakeLists.txt")
+  foreach(example ${EXAMPLES_TO_BUILD})
+    get_filename_component(exdir ${example} DIRECTORY)
+    add_subdirectory(${exdir})
+  endforeach()
+endif()
+
+if(CASS_BUILD_EXAMPLES)
+  file(GLOB EXAMPLES_TO_BUILD "cpp-driver/examples/*/CMakeLists.txt")
+  foreach(example ${EXAMPLES_TO_BUILD})
+    get_filename_component(exdir ${example} DIRECTORY)
+    add_subdirectory(${exdir})
+  endforeach()
 endif()
 
 #--------
@@ -284,6 +311,23 @@ endif()
 #--------
 if (DSE_BUILD_INTEGRATION_TESTS OR DSE_BUILD_UNIT_TESTS)
   add_subdirectory(tests)
+endif()
+
+if(CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
+  set(CASS_TEST_LIBS ${Boost_LIBRARIES})
+  if(UNIX)
+    set(CASS_TEST_LIBS ${CASS_TEST_LIBS} pthread)
+  endif()
+endif()
+
+if(CASS_BUILD_INTEGRATION_TESTS)
+  set(CCM_BRIDGE_INCLUDES "${CASS_SOURCE_DIR}/test/ccm_bridge/src")
+  add_subdirectory(cpp-driver/test/ccm_bridge)
+  add_subdirectory(cpp-driver/test/integration_tests)
+endif()
+
+if(CASS_BUILD_UNIT_TESTS)
+  add_subdirectory(cpp-driver/test/unit_tests)
 endif()
 
 #-------------------------------------

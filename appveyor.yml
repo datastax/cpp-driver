@@ -14,10 +14,12 @@ configuration:
 #  - Debug
   - Release
 environment:
+  BOOST_FILENAME_VERSION: 1_64_0
+  BOOST_VERSION: 1.64.0
   KERBEROS_VERSION: 4.1
-  LIBSSH2_VERSION: 1.7.0
-  LIBUV_VERSION: 1.8.0
-  OPENSSL_VERSION: 1.0.2h
+  LIBSSH2_VERSION: 1.8.0
+  LIBUV_VERSION: 1.12.0
+  OPENSSL_VERSION: 1.0.2l
   DOWNLOADS_URL_PREFIX: http://downloads.datastax.com/cpp-driver/windows/dependencies
   TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX: https://raw.githubusercontent.com/mikefero/cpp-driver-msvc-libs/master
   DEPENDENCIES_LOCATION_PREFIX: C:/projects/dependencies/libs
@@ -51,6 +53,12 @@ init:
       # Generate the environment for the dependencies root directory
       $env:DEPENDENCIES_LOCATION="$($env:DEPENDENCIES_LOCATION_PREFIX)/$($env:Platform)/$($env:VISUAL_STUDIO_INTERNAL_VERSION)"
 
+      # Generate the default Boost environment variables
+      $env:BOOST_ROOT="C:/Libraries/boost_$($env:BOOST_FILENAME_VERSION)"
+      $env:BOOST_INCLUDEDIR="$($env:BOOST_ROOT)"
+      $env:BOOST_LIBRARYDIR="$($env:BOOST_ROOT)/$($env:LIB_ARCHITECTURE)-msvc-$($env:VISUAL_STUDIO_VERSION)"
+      $env:BOOST_ARCHIVE="boost_$($env:BOOST_FILENAME_VERSION)-bin-msvc-$($env:VISUAL_STUDIO_VERSION)-$($env:ARCHITECTURE).7z"
+
       # Generate the Kerberos environment variables
       $env:KERBEROS_ARCHIVE="kfw-$($env:KERBEROS_VERSION)-$($env:WINDOWS_ARCHITECTURE)-msvc100.zip"
       $env:KERBEROS_ROOT_DIR="$($env:DEPENDENCIES_LOCATION)/kfw-$($env:KERBEROS_VERSION)"
@@ -75,6 +83,25 @@ install:
       # Install the dependencies (if needed)
       New-Item -ItemType Directory -Force -Path "$($env:DEPENDENCIES_LOCATION)"
       Push-Location "$($env:DEPENDENCIES_LOCATION)"
+
+      # Determine if Boost should be installed (pre-installed)
+      If (!(Test-Path -Path "$($env:BOOST_LIBRARYDIR)")) {
+        # Update the Boost environment variables for CMake to find installation
+        $env:BOOST_ROOT="$($env:DEPENDENCIES_LOCATION)/boost_$($env:BOOST_FILENAME_VERSION)"
+        $env:BOOST_INCLUDEDIR="$($env:BOOST_ROOT)"
+        $env:BOOST_LIBRARYDIR="$($env:BOOST_ROOT)/$($env:LIB_ARCHITECTURE)-msvc-$($env:VISUAL_STUDIO_VERSION)"
+
+        # Determine if Boost should be installed (cached)
+        If (!(Test-Path -Path "$($env:BOOST_LIBRARYDIR)")) {
+          # Download and extract the dependency (silently due to amount of files)
+          Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/boost/$($env:BOOST_VERSION)/$($env:BOOST_ARCHIVE)" -FileName $env:BOOST_ARCHIVE
+          Write-Output "Extracting Boost v$($env:BOOST_VERSION) for $($env:CMAKE_GENERATOR)$($env:CMAKE_GENERATOR_SUFFIX)"
+          7z x $env:BOOST_ARCHIVE > $NULL
+
+          # Delete the binary archive
+          Remove-Item $env:BOOST_ARCHIVE
+        }
+      }
 
       # Determine if Kerberos for Windows should be installed (cached)
       If (!(Test-Path -Path "kfw-$($env:KERBEROS_VERSION)")) {
@@ -169,13 +196,70 @@ after_build:
       Push-AppveyorArtifact $env:DRIVER_ARTIFACT_ARCHIVE -DeploymentName "DataStax C/C++ DSE Driver"
       Push-AppveyorArtifact build/$env:CONFIGURATION/dse-integration-tests.exe -DeploymentName "DataStax C/C++ DSE Driver Integration Tests"
       Push-AppveyorArtifact build/$env:CONFIGURATION/dse-unit-tests.exe -DeploymentName "DataStax C/C++ DSE Driver Unit Tests"
+      Push-AppveyorArtifact build/cpp-driver/test/integration_tests/$env:CONFIGURATION/cassandra_integration_tests.exe -DeploymentName "DataStax C/C++ Driver Integration Tests"
+      Push-AppveyorArtifact build/cpp-driver/test/unit_tests/$env:CONFIGURATION/cassandra_unit_tests.exe -DeploymentName "DataStax C/C++ Driver Unit Tests"
 
 test_script:
+  - ps: Start-Process -FilePath "build/cpp-driver/test/unit_tests/$env:CONFIGURATION/cassandra_unit_tests.exe" -ArgumentList "--run_test=!metrics/meter* --log_format=XML --log_sink=unit-tests-boost-results.xml --log_level=test_suite --report_level=no" -Wait -NoNewWindow
   - ps: Start-Process -FilePath "build/$env:CONFIGURATION/dse-unit-tests.exe" -ArgumentList "--gtest_output=xml:unit-tests-gtest-results.xml" -Wait -NoNewWindow
 
 on_finish:
-  - ps: (New-Object System.Net.WebClient).UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\unit-tests-gtest-results.xml))
+  - ps: |
+      # Publish/Upload the results to AppVeyor (Tests tab in UI)
+      If (Test-Path .\unit-tests-gtest-results.xml) {
+        (New-Object System.Net.WebClient).UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\unit-tests-gtest-results.xml))
+      }
+      # Publish/Upload the results to AppVeyor (Tests tab in UI)
+      If (Test-Path .\unit-tests-boost-results.xml) {
+        # Read and parse the Boost XML results
+        $content = [xml](Get-Content -Path .\unit-tests-boost-results.xml)
+        $cassandra_testsuite = $content.TestLog.TestSuite
 
+        $failure_occurred = $FALSE
+        ForEach ($testsuite In $cassandra_testsuite.TestSuite) {
+          ForEach ($testcase In $testsuite.TestCase) {
+            # Generate the name and filename for the test case
+            $testname = "$($testsuite.name):$($testcase.name)"
+            $filename = Split-Path $testsuite.file -leaf
+
+            # Parse each test case (determine duration, failure, and messages)
+            $outcome = "Passed"
+            $duration = 0
+            $stdout = $NULL
+            $error_message = $NULL
+            ForEach ($element In $testcase.ChildNodes) {
+              # Get the name of the element and the common attributes they share
+              $name = $element.Name
+              $file = $element.file
+              $line = $element.line
+              $text = $element.InnerText
+              $output_message = "[$($name)] - $text`n == [File] - $file`n == [Line] - $line`n"
+
+              # Determine the type of element the child node is
+              If ($name -eq "TestingTime") {
+                # Convert from microseconds to milliseconds
+                $duration = $text / 1000
+              } ElseIf ($name -eq "Error" -Or $name -eq "FatalError" -Or $name -eq "Exception") {
+                # Update the error message and indicate that a failure occurred
+                $error_message = $error_message + $output_message
+                $outcome = "Failed"
+                $failure_occurred = $TRUE
+              } ElseIf ($name -eq "Info" -Or $name -eq "Message") {
+                $stdout = $stdout + $output_message
+              }
+            }
+
+            # Add the test using the AppVeyor API
+            Add-AppVeyorTest "$($testname)" -Framework "Boost" -FileName "$($filename)" -Outcome "$($outcome)" -Duration "$($duration)" -ErrorMessage "$($error_message)" -StdOut "$($stdout)"
+          }
+        }
+
+        # Determine if any failures occurred in order to fail the build
+        if ($failure_occurred -eq $TRUE){
+          Write-Output "Failing build due to test failures"
+          $host.SetShouldExit(1)
+        }
+      }
 on_failure:
   - ps: |
       # Write the CMake output and error logs to the console

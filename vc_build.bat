@@ -102,11 +102,11 @@ SET DEPENDENCIES_LIBRARIES_DIRECTORY=libs
 SET CASSANDRA_CPP_DRIVER_DIRECTORY=cpp-driver
 SET BOOST_REPOSITORY_URL=https://github.com/boostorg/
 SET BOOST_DIRECTORY=boost
-SET BOOST_BRANCH_TAG_VERSION=boost-1.63.0
+SET BOOST_BRANCH_TAG_VERSION=boost-1.64.0
 SET LIBUV_REPOSITORY_URL=https://github.com/libuv/libuv.git
 SET LIBUV_DIRECTORY=libuv
-SET LIBUV_BRANCH_TAG_VERSION=v1.11.0
-SET LIBUV_PACKAGE_VERSION=1.11.0
+SET LIBUV_BRANCH_TAG_VERSION=v1.12.0
+SET LIBUV_PACKAGE_VERSION=1.12.0
 SET GYP_REPOSITORY_URL=https://chromium.googlesource.com/external/gyp.git
 SET LIBSSH2_REPOSITORY_URL=https://github.com/libssh2/libssh2.git
 SET LIBSSH2_DIRECTORY=libssh2
@@ -114,8 +114,8 @@ SET LIBSSH2_BRANCH_TAG_VERSION=libssh2-1.8.0
 SET LIBSSH2_PACKAGE_VERSION=1.8.0
 SET OPENSSL_REPOSITORY_URL=https://github.com/openssl/openssl.git
 SET OPENSSL_DIRECTORY=openssl
-SET OPENSSL_1_0_BRANCH_TAG_VERSION=OpenSSL_1_0_2k
-SET OPENSSL_1_1_BRANCH_TAG_VERSION=OpenSSL_1_1_0e
+SET OPENSSL_1_0_BRANCH_TAG_VERSION=OpenSSL_1_0_2l
+SET OPENSSL_1_1_BRANCH_TAG_VERSION=OpenSSL_1_1_0f
 SET OPENSSL_PACKAGE_VERSION=1.0.2k
 SET "SUPPORTED_OPENSSL_VERSIONS=1_0 1_1"
 SET "SUPPORTED_OPENSSL_DISPLAY_VERSIONS=1.0 1.1"
@@ -271,6 +271,21 @@ IF NOT [%1] == [] (
     IF !IS_TESTING_ENABLED! EQU !FALSE! (
       REM Indicate testing is enabled
       SET IS_TESTING_ENABLED=!TRUE!
+
+      REM Make sure the Boost root directory exists
+      IF [%2] == [] (
+          ECHO Invalid Boost Root Directory: Location of Boost must be supplied
+          EXIT /B !EXIT_CODE_MISSING_BUILD_DEPENDENCY!
+      ) ELSE (
+          REM Get the Boost root directory and remove trailing slash (if exists)
+          SET "BOOST_ROOT_DIRECTORY=%2"
+          IF "!BOOST_ROOT_DIRECTORY:~-1!" == "\" SET "BOOST_ROOT_DIRECTORY=!BOOST_ROOT_DIRECTORY:~0,-1!"
+          IF NOT EXIST "!BOOST_ROOT_DIRECTORY!" (
+              ECHO Invalid Boost Root Directory: Location does not exist [%2]
+              EXIT /B !EXIT_CODE_MISSING_BUILD_DEPENDENCY!
+          )
+          SHIFT
+      )
 
       REM Reset the argument flag
       SET ARGUMENT_IS_TEST=!FALSE!
@@ -687,7 +702,6 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
     SET ENABLE_LIBSSH2=!FALSE!
   )
 
-
   REM Add common 7-zip locations to system path
   SET "PATH=!PATH!;!PROGRAMFILES!\7-zip;!PROGRAMFILES(X86)!\7-zip"
 
@@ -717,22 +731,6 @@ REM Move to the dependencies directory
 PUSHD "!ABSOLUTE_DEPENDENCIES_DIRECTORY!" > NUL
 
 ECHO Cloning Library Dependencies
-
-REM Initialize and update the cpp-driver submodule
-IF NOT EXIST "!ABSOLUTE_DEPENDENCIES_CASSANDRA_CPP_DRIVER_SOURCE_DIRECTORY!\include\cassandra.h" (
-  PUSHD "!ABSOLUTE_BATCH_DIRECTORY!" > NUL
-  ECHO Update cpp-driver submodule > "!LOG_DRIVER_BUILD!"
-  ECHO | SET /P="Update cpp-driver submodule ... "
-  !GIT! submodule update --init --recursive >> "!LOG_DRIVER_BUILD!" 2>&1
-  IF !ERRORLEVEL! EQU 0 (
-    ECHO done.
-    POPD
-  ) ELSE (
-    ECHO FAILED!
-    ECHO 	See !LOG_DRIVER_BUILD! for more details
-    EXIT /B !EXIT_CODE_CLONE_FAILED!
-  )
-)
 
 REM Determine if Boost atomic dependency is required
 IF !USE_BOOST_ATOMIC! EQU !TRUE! (
@@ -895,7 +893,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
     IF NOT EXIST "!DRIVER_INSTALLATION_DIRECTORY!" (
       SET BOOST_DEPENDENCY_SOURCE_DIRECTORY=
       IF !USE_BOOST_ATOMIC! EQU !TRUE! SET "BOOST_DEPENDENCY_SOURCE_DIRECTORY=!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!"
-      CALL :BUILDDRIVER "!ABSOLUTE_BATCH_DIRECTORY!" "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" "!DRIVER_INSTALLATION_DIRECTORY!" "!ABSOLUTE_LIBUV_LIBRARY_DIRECTORY!" "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" "!ABSOLUTE_ZLIB_LIBRARY_DIRECTORY!" "!ABSOLUTE_LIBSSH2_LIBRARY_DIRECTORY!" !BUILD_TYPE! !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! !ENABLE_EXAMPLES! !ENABLE_INTEGRATION_TESTS! !ENABLE_UNIT_TESTS! !GENERATE_SOLUTION! "!BOOST_DEPENDENCY_SOURCE_DIRECTORY!" "!LOG_DRIVER_BUILD!"
+      CALL :BUILDDRIVER "!ABSOLUTE_BATCH_DIRECTORY!" "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" "!DRIVER_INSTALLATION_DIRECTORY!" "!ABSOLUTE_LIBUV_LIBRARY_DIRECTORY!" "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" "!ABSOLUTE_ZLIB_LIBRARY_DIRECTORY!" "!BOOST_ROOT_DIRECTORY!" "!ABSOLUTE_LIBSSH2_LIBRARY_DIRECTORY!" !BUILD_TYPE! !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! !ENABLE_EXAMPLES! !ENABLE_TESTS! !ENABLE_INTEGRATION_TESTS! !ENABLE_UNIT_TESTS! !GENERATE_SOLUTION! "!BOOST_DEPENDENCY_SOURCE_DIRECTORY!" "!LOG_DRIVER_BUILD!"
       IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
     )
 
@@ -1050,7 +1048,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
           IF EXIST "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" CALL :CLEANDIRECTORY "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" "Cleaning driver library directory"
           SET BOOST_DEPENDENCY_SOURCE_DIRECTORY=
           IF !VISUAL_STUDIO_VERSION! EQU 2010 SET "BOOST_DEPENDENCY_SOURCE_DIRECTORY=!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!"
-          CALL :BUILDDRIVER "!ABSOLUTE_BATCH_DIRECTORY!" "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" "!ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_LIBUV_INSTALLATION_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_OPENSSL_INSTALLATION_DIRECTORY!" "" "" !BUILD_TYPE_RELEASE! %%C %%D !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! !FALSE! !FALSE! !FALSE! !GENERATE_SOLUTION! "!BOOST_DEPENDENCY_SOURCE_DIRECTORY!" "!LOG_DRIVER_BUILD!"
+          CALL :BUILDDRIVER "!ABSOLUTE_BATCH_DIRECTORY!" "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" "!ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_LIBUV_INSTALLATION_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_OPENSSL_INSTALLATION_DIRECTORY!" "" "" "" !BUILD_TYPE_RELEASE! %%C %%D !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! !FALSE! !FALSE! !FALSE! !FALSE! !GENERATE_SOLUTION! "!BOOST_DEPENDENCY_SOURCE_DIRECTORY!" "!LOG_DRIVER_BUILD!"
           IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
         )
 
@@ -1192,9 +1190,12 @@ REM Display the help message and exit with error code
   ECHO.
   ECHO     Testing Arguments
   ECHO.
-  ECHO     !ARGUMENT_ENABLE_INTEGRATION_TESTS!        Enable integration tests build
-  ECHO     !ARGUMENT_ENABLE_UNIT_TESTS!               Enable unit tests build
-  ECHO     !ARGUMENT_ENABLE_TESTS!                    Enable integration and unit tests builds
+  ECHO     !ARGUMENT_ENABLE_TESTS!
+  ECHO          [boost-root-dir]             Enable integration and unit tests build
+  ECHO     !ARGUMENT_ENABLE_INTEGRATION_TESTS!
+  ECHO          [boost-root-dir]             Enable integration tests build
+  ECHO     !ARGUMENT_ENABLE_UNIT_TESTS!
+  ECHO          [boost-root-dir]             Enable unit tests build
   ECHO     !ARGUMENT_ENABLE_LIBSSH2!                  Enable libssh2 ^(remote server testing^)
   ECHO.
   ECHO     !ARGUMENT_HELP!                            Display this message
@@ -1709,6 +1710,8 @@ REM @param openssl-library-directory Library directory for OpenSSL; empty
 REM                                  string indicates OpenSSL disabled
 REM @param zlib-library-directory Library directory for zlib; empty string
 REM                               indicates zlib is not required
+REM @param boost-library-directory Library directory for Boost; empty string
+REM                                indicates tests are disabled
 REM @param libssh2-library-directory Library directory for libssh2; empty
 REM                                  string indicates tests are disabled
 REM @param build-type Debug or release
@@ -1717,6 +1720,7 @@ REM @param library-type Shared or static
 REM @param visual-studio-version Shortened Visual Studio version; empty
 REM                              string indicates Windows SDK build
 REM @param build-examples True to build examples; false otherwise
+REM @param build-test True to build tests; false otherwise
 REM @param build-integration-test True to build integration tests; false
 REM                               otherwise
 REM @param build-unit-test True to build unit tests; false otherwise
@@ -1725,7 +1729,7 @@ REM                          false to perform build using NMake
 REM @param boost-atomic-directory Library directory for atomic; empty string
 REM                               indicates Boost atomic is not being used
 REM @param log-filename Absolute path and filename for log output
-:BUILDDRIVER [source-directory] [build-directory] [install-directory] [libuv-library-directory] [openssl-library-directory] [zlib-library-directory] [libssh2-library-directory] [build-type] [target-architecture] [library-type] [visual-studio-version] [build-examples] [build-integration-tests] [build-unit-tests] [generate-solution] [boost-atomic-directory] [log-filename]
+:BUILDDRIVER [source-directory] [build-directory] [install-directory] [libuv-library-directory] [openssl-library-directory] [zlib-library-directory] [boost-library-directory] [libssh2-library-directory] [build-type] [target-architecture] [library-type] [visual-studio-version] [build-examples] [build-tests] [build-integration-tests] [build-unit-tests] [generate-solution] [boost-atomic-directory] [log-filename]
   REM Create driver variables from arguments
   SET "DRIVER_SOURCE_DIRECTORY=%~1"
   SHIFT
@@ -1739,6 +1743,8 @@ REM @param log-filename Absolute path and filename for log output
   SHIFT
   SET "DRIVER_ZLIB_LIBRARY_DIRECTORY=%~1"
   SHIFT
+  SET "TESTS_BOOST_LIBRARY_DIRECTORY=%~1"
+  SHIFT
   SET "TESTS_LIBSSH2_LIBRARY_DIRECTORY=%~1"
   SHIFT
   SET "DRIVER_BUILD_TYPE=%~1"
@@ -1750,6 +1756,8 @@ REM @param log-filename Absolute path and filename for log output
   SET "DRIVER_VISUAL_STUDIO_VERSION=%~1"
   SHIFT
   SET "DRIVER_BUILD_EXAMPLES=%~1"
+  SHIFT
+  SET "DRIVER_BUILD_TESTS=%~1"
   SHIFT
   SET "DRIVER_BUILD_INTEGRATION_TESTS=%~1"
   SHIFT
@@ -1795,6 +1803,17 @@ REM @param log-filename Absolute path and filename for log output
   IF !DRIVER_BUILD_TESTS! EQU !TRUE! SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DDSE_BUILD_TESTS=ON"
   IF !DRIVER_BUILD_INTEGRATION_TESTS! EQU !TRUE! SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DDSE_BUILD_INTEGRATION_TESTS=ON"
   IF !DRIVER_BUILD_UNIT_TESTS! EQU !TRUE! SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DDSE_BUILD_UNIT_TESTS=ON"
+  IF NOT "!TESTS_BOOST_LIBRARY_DIRECTORY!" == "" (
+      REM Determine if using Boost distributed or include/lib binaries
+      SET "BOOST_DISTRIBUTION_ROOT_DIRECTORY=!TESTS_BOOST_LIBRARY_DIRECTORY!"
+      SET "BOOST_DISTRIBUTION_INCLUDE_DIRECTORY=!BOOST_DISTRIBUTION_ROOT_DIRECTORY!"
+      SET "BOOST_DISTRIBUTION_LIBRARY_DIRECTORY=!BOOST_DISTRIBUTION_ROOT_DIRECTORY!\lib!DRIVER_TARGET_ARCHITECTURE!-msvc-!DRIVER_VISUAL_STUDIO_VERSION!.0"
+      IF NOT EXIST "!BOOST_DISTRIBUTION_LIBRARY_DIRECTORY!" (
+          SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DBOOST_ROOT_DIR=^"!TESTS_BOOST_LIBRARY_DIRECTORY!^""
+      ) ELSE (
+          SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DBOOST_ROOT=^"!BOOST_DISTRIBUTION_ROOT_DIRECTORY!^" -DBOOST_INCLUDEDIR=^"!BOOST_DISTRIBUTION_INCLUDE_DIRECTORY!^" -DBOOST_LIBRARYDIR=^"!BOOST_DISTRIBUTION_LIBRARY_DIRECTORY!^""
+      )
+  )
   IF NOT "!TESTS_LIBSSH2_LIBRARY_DIRECTORY!" == "" (
     SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DDSE_USE_LIBSSH2=ON -DLIBSSH2_ROOT_DIR=^"!TESTS_LIBSSH2_LIBRARY_DIRECTORY!^""
   ) ELSE (

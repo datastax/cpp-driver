@@ -287,28 +287,16 @@ endif()
 # Examples
 #-----------
 
+# Determine example directories at cmake execution time.
+# When a new example dir is added, the user just runs cmake again to pull it in;
+# no need to update CMakeLists.txt!
+
 if(CASS_BUILD_EXAMPLES)
-  add_subdirectory(examples/async)
-  add_subdirectory(examples/auth)
-  add_subdirectory(examples/basic)
-  add_subdirectory(examples/batch)
-  add_subdirectory(examples/bind_by_name)
-  add_subdirectory(examples/callbacks)
-  add_subdirectory(examples/collections)
-  add_subdirectory(examples/date_time)
-  add_subdirectory(examples/duration)
-  add_subdirectory(examples/logging)
-  add_subdirectory(examples/maps)
-  add_subdirectory(examples/prepared)
-  add_subdirectory(examples/uuids)
-  add_subdirectory(examples/schema_meta)
-  add_subdirectory(examples/simple)
-  add_subdirectory(examples/ssl)
-  add_subdirectory(examples/paging)
-  add_subdirectory(examples/perf)
-  add_subdirectory(examples/named_parameters)
-  add_subdirectory(examples/tuple)
-  add_subdirectory(examples/udt)
+  file(GLOB EXAMPLES_TO_BUILD "examples/*/CMakeLists.txt")
+  foreach(example ${EXAMPLES_TO_BUILD})
+    get_filename_component(exdir ${example} DIRECTORY)
+    add_subdirectory(${exdir})
+  endforeach()
 endif()
 
 #------------------

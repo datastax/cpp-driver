@@ -5,15 +5,15 @@ set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 
 # Assign the project settings
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ".")
-set(PROJECT_UNIT_TESTS_NAME ${PROJECT_NAME_STR}_unit_tests)
+set(PROJECT_UNIT_TESTS_NAME cassandra_unit_tests)
 
 # Gather the header and source files
-file(GLOB UNIT_TESTS_INC_FILES ${PROJECT_SOURCE_DIR}/test/unit_tests/src/*.hpp)
-file(GLOB UNIT_TESTS_SRC_FILES ${PROJECT_SOURCE_DIR}/test/unit_tests/src/*.cpp)
+file(GLOB UNIT_TESTS_INC_FILES ${CASS_SOURCE_DIR}/test/unit_tests/src/*.hpp)
+file(GLOB UNIT_TESTS_SRC_FILES ${CASS_SOURCE_DIR}/test/unit_tests/src/*.cpp)
 
 # Build up the include paths
 set(UNIT_TESTS_INCLUDES ${PROJECT_INCLUDE_DIR}
-  ${PROJECT_SOURCE_DIR}/src
+  ${CASS_SOURCE_DIR}/src
   ${CASS_INCLUDES}
   ${Boost_INCLUDE_DIRS}
   ${LIBUV_INCLUDE_DIR})
