@@ -1987,8 +1987,6 @@ cass_session_get_schema_meta(const CassSession* session);
  *
  * @param[in] session
  * @param[out] output
- *
- * @see cass_schema_meta_free()
  */
 CASS_EXPORT void
 cass_session_get_metrics(const CassSession* session,
