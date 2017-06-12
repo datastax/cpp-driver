@@ -1975,7 +1975,7 @@ cass_session_execute_batch(CassSession* session,
  * @param[in] session
  * @return A schema instance that must be freed.
  *
- * @see cass_schema_free()
+ * @see cass_schema_meta_free()
  */
 CASS_EXPORT const CassSchemaMeta*
 cass_session_get_schema_meta(const CassSession* session);
@@ -1987,8 +1987,6 @@ cass_session_get_schema_meta(const CassSession* session);
  *
  * @param[in] session
  * @param[out] output
- *
- * @see cass_schema_free()
  */
 CASS_EXPORT void
 cass_session_get_metrics(const CassSession* session,
