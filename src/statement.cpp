@@ -35,7 +35,7 @@ extern "C" {
 
 CassStatement* cass_statement_new(const char* query,
                                   size_t parameter_count) {
-  return cass_statement_new_n(query, strlen(query), parameter_count);
+  return cass_statement_new_n(query, SAFE_STRLEN(query), parameter_count);
 }
 
 CassStatement* cass_statement_new_n(const char* query,
@@ -60,7 +60,7 @@ CassError cass_statement_add_key_index(CassStatement* statement, size_t index) {
 }
 
 CassError cass_statement_set_keyspace(CassStatement* statement, const char* keyspace) {
-  return cass_statement_set_keyspace_n(statement, keyspace, strlen(keyspace));
+  return cass_statement_set_keyspace_n(statement, keyspace, SAFE_STRLEN(keyspace));
 }
 
 CassError cass_statement_set_keyspace_n(CassStatement* statement,
@@ -183,7 +183,7 @@ CASS_STATEMENT_BIND(duration,
 CassError cass_statement_bind_string(CassStatement* statement, size_t index,
                                      const char* value) {
   return cass_statement_bind_string_n(statement, index,
-                                      value, strlen(value));
+                                      value, SAFE_STRLEN(value));
 }
 
 CassError cass_statement_bind_string_n(CassStatement* statement, size_t index,
@@ -195,7 +195,7 @@ CassError cass_statement_bind_string_by_name(CassStatement* statement,
                                              const char* name,
                                              const char* value) {
   return statement->set(cass::StringRef(name),
-                        cass::CassString(value, strlen(value)));
+                        cass::CassString(value, SAFE_STRLEN(value)));
 }
 
 CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
@@ -204,7 +204,7 @@ CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
                                                const char* value,
                                                size_t value_length) {
   return statement->set(cass::StringRef(name, name_length),
-                        cass::CassString(value, strlen(value)));
+                        cass::CassString(value, SAFE_STRLEN(value)));
 }
 
 CassError cass_statement_bind_custom(CassStatement* statement,

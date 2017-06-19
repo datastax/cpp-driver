@@ -19,6 +19,8 @@
 
 #include <stddef.h>
 
+#define SAFE_STRLEN(s) ((s) ? strlen(s) : 0)
+
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&);               \
   TypeName& operator=(const TypeName&)

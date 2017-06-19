@@ -55,7 +55,7 @@ CassFuture* cass_session_connect_keyspace(CassSession* session,
   return cass_session_connect_keyspace_n(session,
                                          cluster,
                                          keyspace,
-                                         strlen(keyspace));
+                                         SAFE_STRLEN(keyspace));
 }
 
 CassFuture* cass_session_connect_keyspace_n(CassSession* session,
@@ -76,7 +76,7 @@ CassFuture* cass_session_close(CassSession* session) {
 }
 
 CassFuture* cass_session_prepare(CassSession* session, const char* query) {
-  return cass_session_prepare_n(session, query, strlen(query));
+  return cass_session_prepare_n(session, query, SAFE_STRLEN(query));
 }
 
 CassFuture* cass_session_prepare_n(CassSession* session,

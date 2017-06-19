@@ -102,11 +102,9 @@ CassError cass_cluster_set_queue_size_event(CassCluster* cluster,
 
 CassError cass_cluster_set_contact_points(CassCluster* cluster,
                                           const char* contact_points) {
-  size_t contact_points_length
-      = contact_points == NULL ? 0 : strlen(contact_points);
   return cass_cluster_set_contact_points_n(cluster,
                                            contact_points,
-                                           contact_points_length);
+                                           SAFE_STRLEN(contact_points));
 }
 
 CassError cass_cluster_set_contact_points_n(CassCluster* cluster,
@@ -214,8 +212,8 @@ void cass_cluster_set_credentials(CassCluster* cluster,
                                   const char* username,
                                   const char* password) {
   return cass_cluster_set_credentials_n(cluster,
-                                        username, strlen(username),
-                                        password, strlen(password));
+                                        username, SAFE_STRLEN(username),
+                                        password, SAFE_STRLEN(password));
 }
 
 void cass_cluster_set_credentials_n(CassCluster* cluster,
@@ -240,7 +238,7 @@ CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
   }
   return cass_cluster_set_load_balance_dc_aware_n(cluster,
                                                   local_dc,
-                                                  strlen(local_dc),
+                                                  SAFE_STRLEN(local_dc),
                                                   used_hosts_per_remote_dc,
                                                   allow_remote_dcs_for_local_cl);
 }
@@ -287,11 +285,9 @@ void cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
 
 void cass_cluster_set_whitelist_filtering(CassCluster* cluster,
                                           const char* hosts) {
-  size_t hosts_length
-      = hosts == NULL ? 0 : strlen(hosts);
   cass_cluster_set_whitelist_filtering_n(cluster,
                                          hosts,
-                                         hosts_length);
+                                         SAFE_STRLEN(hosts));
 }
 
 void cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
@@ -307,11 +303,9 @@ void cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
 
 void cass_cluster_set_blacklist_filtering(CassCluster* cluster,
                                           const char* hosts) {
-  size_t hosts_length
-      = hosts == NULL ? 0 : strlen(hosts);
   cass_cluster_set_blacklist_filtering_n(cluster,
                                          hosts,
-                                         hosts_length);
+                                         SAFE_STRLEN(hosts));
 }
 
 void cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
@@ -327,11 +321,9 @@ void cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
 
 void cass_cluster_set_whitelist_dc_filtering(CassCluster* cluster,
                                              const char* dcs) {
-  size_t dcs_length
-      = dcs == NULL ? 0 : strlen(dcs);
   cass_cluster_set_whitelist_dc_filtering_n(cluster,
                                             dcs,
-                                            dcs_length);
+                                            SAFE_STRLEN(dcs));
 }
 
 void cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
@@ -347,11 +339,9 @@ void cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
 
 void cass_cluster_set_blacklist_dc_filtering(CassCluster* cluster,
                                              const char* dcs) {
-  size_t dcs_length
-      = dcs == NULL ? 0 : strlen(dcs);
   cass_cluster_set_blacklist_dc_filtering_n(cluster,
                                             dcs,
-                                            dcs_length);
+                                            SAFE_STRLEN(dcs));
 }
 
 void cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,

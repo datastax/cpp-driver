@@ -86,7 +86,7 @@ CASS_COLLECTION_APPEND(duration,
 
 CassError cass_collection_append_string(CassCollection* collection,
                                         const char* value) {
-  return collection->append(cass::CassString(value, strlen(value)));
+  return collection->append(cass::CassString(value, SAFE_STRLEN(value)));
 }
 
 CassError cass_collection_append_string_n(CassCollection* collection,

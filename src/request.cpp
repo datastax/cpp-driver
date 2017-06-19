@@ -31,7 +31,7 @@ void cass_custom_payload_set(CassCustomPayload* payload,
                                 const char* name,
                                 const cass_byte_t* value,
                                 size_t value_size) {
-  payload->set(name, strlen(name), value, value_size);
+  payload->set(name, SAFE_STRLEN(name), value, value_size);
 }
 
 void cass_custom_payload_set_n(CassCustomPayload* payload,
@@ -44,7 +44,7 @@ void cass_custom_payload_set_n(CassCustomPayload* payload,
 
 void cass_custom_payload_remove(CassCustomPayload* payload,
                                 const char* name) {
-  payload->remove(name, strlen(name));
+  payload->remove(name, SAFE_STRLEN(name));
 }
 
 void cass_custom_payload_remove_n(CassCustomPayload* payload,
