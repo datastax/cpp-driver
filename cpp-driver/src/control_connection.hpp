@@ -119,7 +119,7 @@ private:
   template<class T>
   class ControlCallback : public SimpleRequestCallback {
   public:
-    typedef void (*ResponseCallback)(ControlConnection*, const T&, Response*);
+    typedef void (*ResponseCallback)(ControlConnection*, const T&, const Response*);
 
     ControlCallback(const Request::ConstPtr& request,
                     ControlConnection* control_connection,
@@ -132,7 +132,7 @@ private:
 
   private:
     virtual void on_internal_set(ResponseMessage* response) {
-      Response* response_body = response->response_body().get();
+      const Response* response_body = response->response_body().get();
       if (control_connection_->handle_query_invalid_response(response_body)) {
         return;
       }
@@ -192,11 +192,11 @@ private:
   virtual void on_ready(Connection* connection);
   virtual void on_close(Connection* connection);
   virtual void on_availability_change(Connection* connection) {}
-  virtual void on_event(EventResponse* response);
+  virtual void on_event(const EventResponse* response);
 
   static void on_reconnect(Timer* timer);
 
-  bool handle_query_invalid_response(Response* response);
+  bool handle_query_invalid_response(const Response* response);
   void handle_query_failure(CassError code, const String& message);
   void handle_query_timeout();
 
@@ -215,15 +215,15 @@ private:
                          bool query_tokens = false);
   static void on_refresh_node_info(ControlConnection* control_connection,
                                    const RefreshNodeData& data,
-                                   Response* response);
+                                   const Response* response);
   static void on_refresh_node_info_all(ControlConnection* control_connection,
                                        const RefreshNodeData& data,
-                                       Response* response);
+                                       const Response* response);
 
   void update_node_info(Host::Ptr host, const Row* row, UpdateHostType type);
 
   void refresh_keyspace(const StringRef& keyspace_name);
-  static void on_refresh_keyspace(ControlConnection* control_connection, const String& keyspace_name, Response* response);
+  static void on_refresh_keyspace(ControlConnection* control_connection, const String& keyspace_name, const Response* response);
 
   void refresh_table_or_view(const StringRef& keyspace_name,
                      const StringRef& table_name);
@@ -235,7 +235,7 @@ private:
                     const StringRef& type_name);
   static void on_refresh_type(ControlConnection* control_connection,
                               const std::pair<String, String>& keyspace_and_type_names,
-                              Response* response);
+                              const Response* response);
 
   void refresh_function(const StringRef& keyspace_name,
                         const StringRef& function_name,
@@ -243,7 +243,7 @@ private:
                         bool is_aggregate);
   static void on_refresh_function(ControlConnection* control_connection,
                                   const RefreshFunctionData& data,
-                                  Response* response);
+                                  const Response* response);
 
 private:
   State state_;

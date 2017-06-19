@@ -60,11 +60,11 @@ public:
 
   const CustomPayloadVec& custom_payload() const { return custom_payload_; }
 
-  char* decode_custom_payload(char* buffer, size_t size);
+  const char* decode_custom_payload(const char* buffer, size_t size);
 
-  char* decode_warnings(char* buffer, size_t size);
+  const char* decode_warnings(const char* buffer, size_t size);
 
-  virtual bool decode(int version, char* buffer, size_t size) = 0;
+  virtual bool decode(int version, const char* buffer, size_t size) = 0;
 
 private:
   uint8_t opcode_;
@@ -101,7 +101,7 @@ public:
 
   bool is_body_ready() const { return is_body_ready_; }
 
-  ssize_t decode(char* input, size_t size);
+  ssize_t decode(const char* input, size_t size);
 
 private:
   bool allocate_body(int8_t opcode);

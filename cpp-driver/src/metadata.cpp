@@ -778,7 +778,8 @@ Metadata::SchemaSnapshot Metadata::schema_snapshot(int protocol_version, const V
                         front_.keyspaces());
 }
 
-void Metadata::update_keyspaces(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_keyspaces(int protocol_version, const VersionNumber& cassandra_version,
+                                const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -789,7 +790,8 @@ void Metadata::update_keyspaces(int protocol_version, const VersionNumber& cassa
   }
 }
 
-void Metadata::update_tables(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_tables(int protocol_version, const VersionNumber& cassandra_version,
+                             const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -800,7 +802,8 @@ void Metadata::update_tables(int protocol_version, const VersionNumber& cassandr
   }
 }
 
-void Metadata::update_views(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_views(int protocol_version, const VersionNumber& cassandra_version,
+                            const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -811,7 +814,8 @@ void Metadata::update_views(int protocol_version, const VersionNumber& cassandra
   }
 }
 
-void Metadata::update_columns(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_columns(int protocol_version, const VersionNumber& cassandra_version,
+                              const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -828,7 +832,8 @@ void Metadata::update_columns(int protocol_version, const VersionNumber& cassand
   }
 }
 
-void Metadata::update_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_indexes(int protocol_version, const VersionNumber& cassandra_version,
+                              const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -839,7 +844,8 @@ void Metadata::update_indexes(int protocol_version, const VersionNumber& cassand
   }
 }
 
-void Metadata::update_user_types(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_user_types(int protocol_version, const VersionNumber& cassandra_version,
+                                 const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -850,7 +856,8 @@ void Metadata::update_user_types(int protocol_version, const VersionNumber& cass
   }
 }
 
-void Metadata::update_functions(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_functions(int protocol_version, const VersionNumber& cassandra_version,
+                                const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -861,7 +868,8 @@ void Metadata::update_functions(int protocol_version, const VersionNumber& cassa
   }
 }
 
-void Metadata::update_aggregates(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_aggregates(int protocol_version, const VersionNumber& cassandra_version,
+                                 const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -1874,7 +1882,7 @@ ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassan
 }
 
 void Metadata::InternalData::update_keyspaces(int protocol_version, const VersionNumber& cassandra_version,
-                                              ResultResponse* result) {
+                                              const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
   ResultIterator rows(result);
 
@@ -1893,7 +1901,7 @@ void Metadata::InternalData::update_keyspaces(int protocol_version, const Versio
 }
 
 void Metadata::InternalData::update_tables(int protocol_version, const VersionNumber& cassandra_version,
-                                           ResultResponse* result) {
+                                           const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
@@ -1925,7 +1933,7 @@ void Metadata::InternalData::update_tables(int protocol_version, const VersionNu
 }
 
 void Metadata::InternalData::update_views(int protocol_version, const VersionNumber& cassandra_version,
-                                          ResultResponse* result) {
+                                          const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
@@ -1979,7 +1987,8 @@ void Metadata::InternalData::update_views(int protocol_version, const VersionNum
   }
 }
 
-void Metadata::InternalData::update_user_types(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result) {
+void Metadata::InternalData::update_user_types(int protocol_version, const VersionNumber& cassandra_version,
+                                               SimpleDataTypeCache& cache, const ResultResponse* result) {
   ResultIterator rows(result);
 
   String keyspace_name;
@@ -2061,8 +2070,8 @@ void Metadata::InternalData::update_user_types(int protocol_version, const Versi
   }
 }
 
-void Metadata::InternalData::update_functions(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
-                                              ResultResponse* result) {
+void Metadata::InternalData::update_functions(int protocol_version, const VersionNumber& cassandra_version,
+                                              SimpleDataTypeCache& cache, const ResultResponse *result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
@@ -2096,7 +2105,8 @@ void Metadata::InternalData::update_functions(int protocol_version, const Versio
   }
 }
 
-void Metadata::InternalData::update_aggregates(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result) {
+void Metadata::InternalData::update_aggregates(int protocol_version, const VersionNumber& cassandra_version,
+                                               SimpleDataTypeCache& cache, const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
@@ -2159,7 +2169,8 @@ void Metadata::InternalData::drop_aggregate(const String& keyspace_name, const S
   i->second.drop_aggregate(full_aggregate_name);
 }
 
-void Metadata::InternalData::update_columns(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result) {
+void Metadata::InternalData::update_columns(int protocol_version, const VersionNumber& cassandra_version,
+                                            SimpleDataTypeCache& cache, const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
@@ -2219,7 +2230,8 @@ void Metadata::InternalData::update_columns(int protocol_version, const VersionN
   }
 }
 
-void Metadata::InternalData::update_legacy_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::InternalData::update_legacy_indexes(int protocol_version, const VersionNumber& cassandra_version,
+                                                   const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
@@ -2271,7 +2283,8 @@ void Metadata::InternalData::update_legacy_indexes(int protocol_version, const V
   }
 }
 
-void Metadata::InternalData::update_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::InternalData::update_indexes(int protocol_version, const VersionNumber& cassandra_version,
+                                            const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);

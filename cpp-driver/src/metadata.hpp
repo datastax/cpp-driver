@@ -632,14 +632,14 @@ public:
 
   SchemaSnapshot schema_snapshot(int protocol_version, const VersionNumber& cassandra_version) const;
 
-  void update_keyspaces(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-  void update_tables(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-  void update_views(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-  void update_columns(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-  void update_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-  void update_user_types(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-  void update_functions(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-  void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
+  void update_keyspaces(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_tables(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_views(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_columns(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_indexes(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_user_types(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_functions(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
 
   void drop_keyspace(const String& keyspace_name);
   void drop_table_or_view(const String& keyspace_name, const String& table_or_view_name);
@@ -668,15 +668,18 @@ private:
 
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
-    void update_keyspaces(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-    void update_tables(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-    void update_views(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-    void update_columns(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
-    void update_legacy_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-    void update_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result);
-    void update_user_types(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
-    void update_functions(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
-    void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result);
+    void update_keyspaces(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_tables(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_views(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_columns(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, const ResultResponse* result);
+    void update_legacy_indexes(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_indexes(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_user_types(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+                           const ResultResponse* result);
+    void update_functions(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+                          const ResultResponse* result);
+    void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+                           const ResultResponse* result);
 
     void drop_keyspace(const String& keyspace_name);
     void drop_table_or_view(const String& keyspace_name, const String& table_or_view_name);

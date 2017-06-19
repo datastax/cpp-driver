@@ -20,14 +20,14 @@
 
 namespace cass {
 
-bool AuthenticateResponse::decode(int version, char* buffer, size_t size) {
+bool AuthenticateResponse::decode(int version, const char* buffer, size_t size) {
   StringRef class_name;
   decode_string(buffer, &class_name);
   class_name_ = class_name.to_string();
   return true;
 }
 
-bool cass::AuthChallengeResponse::decode(int version, char* buffer, size_t size) {
+bool cass::AuthChallengeResponse::decode(int version, const char* buffer, size_t size) {
   if (version < 2) {
     return false;
   }
@@ -37,7 +37,7 @@ bool cass::AuthChallengeResponse::decode(int version, char* buffer, size_t size)
   return true;
 }
 
-bool cass::AuthSuccessResponse::decode(int version, char* buffer, size_t size) {
+bool cass::AuthSuccessResponse::decode(int version, const char* buffer, size_t size) {
   if (version < 2) {
     return false;
   }

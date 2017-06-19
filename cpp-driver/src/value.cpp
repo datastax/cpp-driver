@@ -134,7 +134,7 @@ CassError cass_value_get_bytes(const CassValue* value,
                                const cass_byte_t** output,
                                size_t* output_size) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  *output = reinterpret_cast<cass_byte_t*>(value->data());
+  *output = reinterpret_cast<const cass_byte_t*>(value->data());
   *output_size = value->size();
   return CASS_OK;
 }
@@ -149,7 +149,7 @@ CassError cass_value_get_duration(const CassValue* value,
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
   if (!cass_value_is_duration(value)) return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
 
-  cur_byte = reinterpret_cast<uint8_t*>(value->data());
+  cur_byte = reinterpret_cast<const uint8_t*>(value->data());
   end = cur_byte + value->size();
 
   uint64_t decoded = 0;
@@ -220,7 +220,7 @@ namespace cass {
 
 Value::Value(int protocol_version,
              const DataType::ConstPtr& data_type,
-             char* data, int32_t size)
+             const char* data, int32_t size)
   : protocol_version_(protocol_version)
   , data_type_(data_type) {
   if (size > 0 && data_type->is_collection()) {

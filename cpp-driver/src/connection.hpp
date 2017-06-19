@@ -96,7 +96,7 @@ public:
     virtual void on_close(Connection* connection) = 0;
     virtual void on_availability_change(Connection* connection) = 0;
 
-    virtual void on_event(EventResponse* response) = 0;
+    virtual void on_event(const EventResponse* response) = 0;
 
   private:
     int event_types_;
@@ -284,7 +284,7 @@ private:
   int32_t internal_write(const RequestCallback::Ptr& request, bool flush_immediately = true);
   void internal_close(ConnectionState close_state);
   void set_state(ConnectionState state);
-  void consume(char* input, size_t size);
+  void consume(const char* input, size_t size);
   void maybe_set_keyspace(ResponseMessage* response);
 
   static void on_connect(Connector* connecter);

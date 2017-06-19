@@ -27,9 +27,9 @@
 
 namespace cass {
 
-char* Response::decode_custom_payload(char* buffer, size_t size) {
+const char* Response::decode_custom_payload(const char* buffer, size_t size) {
   uint16_t item_count;
-  char* pos = decode_uint16(buffer, item_count);
+  const char* pos = decode_uint16(buffer, item_count);
   for (uint16_t i = 0; i < item_count; ++i) {
     StringRef name;
     StringRef value;
@@ -41,9 +41,9 @@ char* Response::decode_custom_payload(char* buffer, size_t size) {
   return pos;
 }
 
-char* Response::decode_warnings(char* buffer, size_t size) {
+const char* Response::decode_warnings(const char* buffer, size_t size) {
   uint16_t warning_count;
-  char* pos = decode_uint16(buffer, warning_count);
+  const char* pos = decode_uint16(buffer, warning_count);
 
   for (uint16_t i = 0; i < warning_count; ++i) {
     StringRef warning;
@@ -95,8 +95,8 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
   }
 }
 
-ssize_t ResponseMessage::decode(char* input, size_t size) {
-  char* input_pos = input;
+ssize_t ResponseMessage::decode(const char* input, size_t size) {
+  const char* input_pos = input;
 
   received_ += size;
 
@@ -120,7 +120,7 @@ ssize_t ResponseMessage::decode(char* input, size_t size) {
       input_pos += needed;
       assert(header_buffer_pos_ == header_buffer_ + header_size_);
 
-      char* buffer = header_buffer_ + 1; // Skip over "version" byte
+      const char* buffer = header_buffer_ + 1; // Skip over "version" byte
       flags_ = *(buffer++);
 
       if (version_ >= 3) {
@@ -162,7 +162,7 @@ ssize_t ResponseMessage::decode(char* input, size_t size) {
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->data() + length_);
 
-    char* pos = response_body()->data();
+    const char* pos = response_body()->data();
 
     if (flags_ & CASS_FLAG_WARNING) {
       pos = response_body()->decode_warnings(pos, length_);

@@ -47,7 +47,7 @@ private:
   const ResultResponse* result_;
 };
 
-char* decode_row(char* row, const ResultResponse* result, OutputValueVec& output);
+const char* decode_row(const char* row, const ResultResponse* result, OutputValueVec& output);
 
 } // namespace cass
 

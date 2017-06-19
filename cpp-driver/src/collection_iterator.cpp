@@ -27,11 +27,11 @@ bool CollectionIterator::next() {
   return true;
 }
 
-char* CollectionIterator::decode_value(char* position) {
+const char* CollectionIterator::decode_value(const char* position) {
   int protocol_version = collection_->protocol_version();
 
   int32_t size;
-  char* buffer = decode_size(protocol_version, position, size);
+  const char* buffer = decode_size(protocol_version, position, size);
 
   DataType::ConstPtr data_type;
   if (collection_->value_type() == CASS_VALUE_TYPE_MAP) {
@@ -55,9 +55,9 @@ bool TupleIterator::next() {
   return true;
 }
 
-char* TupleIterator::decode_value(char* position) {
+const char* TupleIterator::decode_value(const char* position) {
   int32_t size;
-  char* buffer = decode_int32(position, size);
+  const char* buffer = decode_int32(position, size);
 
   value_ = Value(tuple_->protocol_version(), *current_, buffer, size);
 

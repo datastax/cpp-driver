@@ -103,11 +103,11 @@ namespace cass {
 
 class DataTypeDecoder {
 public:
-  DataTypeDecoder(char* input, SimpleDataTypeCache& cache)
+  DataTypeDecoder(const char* input, SimpleDataTypeCache& cache)
     : buffer_(input)
     , cache_(cache) { }
 
-  char* buffer() const { return buffer_; }
+  const char* buffer() const { return buffer_; }
 
   DataType::ConstPtr decode() {
     uint16_t value_type;
@@ -190,14 +190,14 @@ private:
   }
 
 private:
-  char* buffer_;
+  const char* buffer_;
   SimpleDataTypeCache& cache_;
 };
 
-bool ResultResponse::decode(int version, char* input, size_t size) {
+bool ResultResponse::decode(int version, const char* input, size_t size) {
   protocol_version_ = version;
 
-  char* buffer = decode_int32(input, kind_);
+  const char* buffer = decode_int32(input, kind_);
 
   switch (kind_) {
     case CASS_RESULT_KIND_VOID:
@@ -226,10 +226,10 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
   return false;
 }
 
-char* ResultResponse::decode_metadata(char* input, ResultMetadata::Ptr* metadata,
-                                      bool has_pk_indices) {
+const char* ResultResponse::decode_metadata(const char* input, ResultMetadata::Ptr* metadata,
+                                            bool has_pk_indices) {
   int32_t flags = 0;
-  char* buffer = decode_int32(input, flags);
+  const char* buffer = decode_int32(input, flags);
 
   int32_t column_count = 0;
   buffer = decode_int32(buffer, column_count);
@@ -294,20 +294,20 @@ void ResultResponse::decode_first_row() {
   }
 }
 
-bool ResultResponse::decode_rows(char* input) {
-  char* buffer = decode_metadata(input, &metadata_);
+bool ResultResponse::decode_rows(const char* input) {
+  const char* buffer = decode_metadata(input, &metadata_);
   rows_ = decode_int32(buffer, row_count_);
   decode_first_row();
   return true;
 }
 
-bool ResultResponse::decode_set_keyspace(char* input) {
+bool ResultResponse::decode_set_keyspace(const char* input) {
   decode_string(input, &keyspace_);
   return true;
 }
 
-bool ResultResponse::decode_prepared(int version, char* input) {
-  char* buffer = decode_string(input, &prepared_);
+bool ResultResponse::decode_prepared(int version, const char* input) {
+  const char* buffer = decode_string(input, &prepared_);
   buffer = decode_metadata(buffer, &metadata_, version >= 4);
   if (version > 1) {
     decode_metadata(buffer, &result_metadata_);
@@ -315,8 +315,8 @@ bool ResultResponse::decode_prepared(int version, char* input) {
   return true;
 }
 
-bool ResultResponse::decode_schema_change(char* input) {
-  char* buffer = decode_string(input, &change_);
+bool ResultResponse::decode_schema_change(const char* input) {
+  const char* buffer = decode_string(input, &change_);
   buffer = decode_string(buffer, &keyspace_);
   buffer = decode_string(buffer, &table_);
   return true;

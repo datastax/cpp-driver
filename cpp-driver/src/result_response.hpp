@@ -70,7 +70,7 @@ public:
   StringRef keyspace() const { return keyspace_; }
   StringRef table() const { return table_; }
 
-  char* rows() const { return rows_; }
+  const char* rows() const { return rows_; }
 
   int32_t row_count() const { return row_count_; }
 
@@ -78,21 +78,21 @@ public:
 
   const PKIndexVec& pk_indices() const { return pk_indices_; }
 
-  bool decode(int version, char* input, size_t size);
+  bool decode(int version, const char* input, size_t size);
 
 private:
-  char* decode_metadata(char* input, ResultMetadata::Ptr* metadata,
+  const char* decode_metadata(const char* input, ResultMetadata::Ptr* metadata,
                         bool has_pk_indices = false);
 
   void decode_first_row();
 
-  bool decode_rows(char* input);
+  bool decode_rows(const char* input);
 
-  bool decode_set_keyspace(char* input);
+  bool decode_set_keyspace(const char* input);
 
-  bool decode_prepared(int version, char* input);
+  bool decode_prepared(int version, const char* input);
 
-  bool decode_schema_change(char* input);
+  bool decode_schema_change(const char* input);
 
 private:
   int protocol_version_;
@@ -106,7 +106,7 @@ private:
   StringRef keyspace_; // rows, set keyspace, and schema change
   StringRef table_; // rows, and schema change
   int32_t row_count_;
-  char* rows_;
+  const char* rows_;
   Row first_row_;
   PKIndexVec pk_indices_;
 

@@ -563,8 +563,8 @@ public:
   virtual void remove_host_and_build(const Host::Ptr& host);
   virtual void clear_tokens_and_hosts();
 
-  virtual void add_keyspaces(const VersionNumber& cassandra_version, ResultResponse* result);
-  virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, ResultResponse* result);
+  virtual void add_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result);
+  virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, const ResultResponse* result);
   virtual void drop_keyspace(const String& keyspace_name);
   virtual void clear_replicas_and_strategies();
 
@@ -575,7 +575,7 @@ public:
 
 private:
   void update_keyspace(const VersionNumber& cassandra_version,
-                       ResultResponse* result,
+                       const ResultResponse* result,
                        bool should_build_replicas);
   void remote_host_tokens(const Host::Ptr& host);
   void update_host_ids(const Host::Ptr& host);
@@ -657,13 +657,13 @@ void TokenMapImpl<Partitioner>::clear_tokens_and_hosts() {
 
 template <class Partitioner>
 void TokenMapImpl<Partitioner>::add_keyspaces(const VersionNumber& cassandra_version,
-                                              ResultResponse* result) {
+                                              const ResultResponse* result) {
   update_keyspace(cassandra_version, result, false);
 }
 
 template <class Partitioner>
 void TokenMapImpl<Partitioner>::update_keyspaces_and_build(const VersionNumber& cassandra_version,
-                                                           ResultResponse* result) {
+                                                           const ResultResponse* result) {
   update_keyspace(cassandra_version, result, true);
 }
 
@@ -713,7 +713,7 @@ const CopyOnWriteHostVec& TokenMapImpl<Partitioner>::get_replicas(const String& 
 
 template <class Partitioner>
 void TokenMapImpl<Partitioner>::update_keyspace(const VersionNumber& cassandra_version,
-                                                ResultResponse* result,
+                                                const ResultResponse* result,
                                                 bool should_build_replicas) {
   ResultIterator rows(result);
 

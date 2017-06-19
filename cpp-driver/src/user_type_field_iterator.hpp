@@ -49,12 +49,12 @@ public:
   }
 
 private:
-  char* decode_field(char* position);
+  const char* decode_field(const char* position);
 
 private:
   const Value* user_type_value_;
 
-  char* position_;
+  const char* position_;
   UserType::FieldVec::const_iterator next_;
   UserType::FieldVec::const_iterator current_;
   UserType::FieldVec::const_iterator end_;

@@ -286,7 +286,7 @@ void ControlConnection::on_close(Connection* connection) {
   reconnect(retry_current_host);
 }
 
-void ControlConnection::on_event(EventResponse* response) {
+void ControlConnection::on_event(const EventResponse* response) {
   // Only process events after an initial set of hosts and schema have been
   // established. Adding a host from an UP/NEW_NODE event before the initial
   // set will cause the driver to hang waiting for an invalid pending pool
@@ -685,14 +685,14 @@ void ControlConnection::refresh_node_info(Host::Ptr host,
 
 void ControlConnection::on_refresh_node_info(ControlConnection* control_connection,
                                              const RefreshNodeData& data,
-                                             Response* response) {
+                                             const Response* response) {
   Connection* connection = control_connection->connection_;
   if (connection == NULL) {
     return;
   }
 
-  ResultResponse* result =
-      static_cast<ResultResponse*>(response);
+  const ResultResponse* result =
+      static_cast<const ResultResponse*>(response);
 
   if (result->row_count() == 0) {
     String host_address_str = data.host->address().to_string();
@@ -712,14 +712,14 @@ void ControlConnection::on_refresh_node_info(ControlConnection* control_connecti
 
 void ControlConnection::on_refresh_node_info_all(ControlConnection* control_connection,
                                                  const RefreshNodeData& data,
-                                                 Response* response) {
+                                                 const Response* response) {
   Connection* connection = control_connection->connection_;
   if (connection == NULL) {
     return;
   }
 
-  ResultResponse* result =
-      static_cast<ResultResponse*>(response);
+  const ResultResponse* result =
+      static_cast<const ResultResponse*>(response);
 
   if (result->row_count() == 0) {
     String host_address_str = data.host->address().to_string();
@@ -844,8 +844,8 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
 
 void ControlConnection::on_refresh_keyspace(ControlConnection* control_connection,
                                             const String& keyspace_name,
-                                            Response* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response);
+                                            const Response* response) {
+  const ResultResponse* result = static_cast<const ResultResponse*>(response);
   if (result->row_count() == 0) {
     LOG_ERROR("No row found for keyspace %s in system schema table.",
               keyspace_name.c_str());
@@ -979,8 +979,8 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name,
 
 void ControlConnection::on_refresh_type(ControlConnection* control_connection,
                                         const std::pair<String, String>& keyspace_and_type_names,
-                                        Response* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response);
+                                        const Response* response) {
+  const ResultResponse* result = static_cast<const ResultResponse*>(response);
   if (result->row_count() == 0) {
     LOG_ERROR("No row found for keyspace %s and type %s in system schema.",
               keyspace_and_type_names.first.c_str(),
@@ -1050,8 +1050,8 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
 
 void ControlConnection::on_refresh_function(ControlConnection* control_connection,
                                             const RefreshFunctionData& data,
-                                            Response* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response);
+                                            const Response* response) {
+  const ResultResponse* result = static_cast<const ResultResponse*>(response);
   if (result->row_count() == 0) {
     LOG_ERROR("No row found for keyspace %s and %s %s",
               data.keyspace.c_str(),
@@ -1069,7 +1069,7 @@ void ControlConnection::on_refresh_function(ControlConnection* control_connectio
   }
 }
 
-bool ControlConnection::handle_query_invalid_response(Response* response) {
+bool ControlConnection::handle_query_invalid_response(const Response* response) {
   if (check_error_or_invalid_response("ControlConnection", CQL_OPCODE_RESULT,
                                       response)) {
     if (connection_ != NULL) {

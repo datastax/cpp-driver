@@ -453,8 +453,8 @@ void Connection::set_state(ConnectionState new_state) {
   }
 }
 
-void Connection::consume(char* input, size_t size) {
-  char* buffer = input;
+void Connection::consume(const char* input, size_t size) {
+  const char* buffer = input;
   size_t remaining = size;
 
   // A successful read means the connection is still responsive

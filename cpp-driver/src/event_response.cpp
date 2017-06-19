@@ -20,9 +20,9 @@
 
 namespace cass {
 
-bool EventResponse::decode(int version, char* buffer, size_t size) {
+bool EventResponse::decode(int version, const char* buffer, size_t size) {
   StringRef event_type;
-  char* pos = decode_string(buffer, &event_type);
+  const char* pos = decode_string(buffer, &event_type);
 
   if (event_type == "TOPOLOGY_CHANGE") {
     event_type_ = CASS_EVENT_TOPOLOGY_CHANGE;

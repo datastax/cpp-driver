@@ -46,11 +46,11 @@ public:
   }
 
 private:
-  char* decode_pair(char* position);
+  const char* decode_pair(const char* position);
 
 private:
   const Value* map_;
-  char* position_;
+  const char* position_;
   Value key_;
   Value value_;
   int32_t index_;

@@ -41,7 +41,7 @@ public:
   // Used for regular values or collections
   Value(int protocol_version,
         const DataType::ConstPtr& data_type,
-        char* data, int32_t size);
+        const char* data, int32_t size);
 
   // Used for schema metadata collections (converted from JSON)
   Value(int protocol_version,
@@ -132,7 +132,7 @@ public:
     return count_;
   }
 
-  char* data() const { return data_; }
+  const char* data() const { return data_; }
   int32_t size() const { return size_; }
 
   StringRef to_string_ref() const {
@@ -154,7 +154,7 @@ private:
   DataType::ConstPtr data_type_;
   int32_t count_;
 
-  char* data_;
+  const char* data_;
   int32_t size_;
 };
 

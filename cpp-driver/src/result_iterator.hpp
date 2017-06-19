@@ -60,7 +60,7 @@ public:
 private:
   const ResultResponse* result_;
   int32_t index_;
-  char* position_;
+  const char* position_;
   Row row_;
 };
 

@@ -48,8 +48,8 @@ const CassValue* cass_row_get_column_by_name_n(const CassRow* row,
 
 namespace cass {
 
-char* decode_row(char* rows, const ResultResponse* result, OutputValueVec& output) {
-  char* buffer = rows;
+const char* decode_row(const char* rows, const ResultResponse* result, OutputValueVec& output) {
+  const char* buffer = rows;
   output.clear();
 
   const int protocol_version = result->protocol_version();

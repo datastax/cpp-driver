@@ -51,12 +51,12 @@ public:
   virtual bool next();
 
 private:
-  char* decode_value(char* position);
+  const char* decode_value(const char* position);
 
 private:
   const Value* collection_;
 
-  char* position_;
+  const char* position_;
   int32_t index_;
   const int32_t count_;
 };
@@ -75,12 +75,12 @@ public:
   virtual bool next();
 
 private:
-  char* decode_value(char* position);
+  const char* decode_value(const char* position);
 
 private:
   const Value* tuple_;
 
-  char* position_;
+  const char* position_;
   DataType::Vec::const_iterator next_;
   DataType::Vec::const_iterator current_;
   DataType::Vec::const_iterator end_;

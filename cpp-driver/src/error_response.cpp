@@ -123,8 +123,8 @@ String ErrorResponse::error_message() const {
   return ss.str();
 }
 
-bool ErrorResponse::decode(int version, char* buffer, size_t size) {
-  char* pos = decode_int32(buffer, code_);
+bool ErrorResponse::decode(int version, const char* buffer, size_t size) {
+  const char* pos = decode_int32(buffer, code_);
   pos = decode_string(pos, &message_);
 
   switch (code_) {
@@ -185,7 +185,7 @@ bool ErrorResponse::decode(int version, char* buffer, size_t size) {
 // where:
 // <endpoint> is a [inetaddr]
 // <failurecode> is a [short]
-char* ErrorResponse::decode_failures(char* pos) {
+const char* ErrorResponse::decode_failures(const char* pos) {
   failures_.reserve(num_failures_);
   for (int32_t i = 0; i < num_failures_; ++i) {
     Failure failure;
@@ -196,7 +196,7 @@ char* ErrorResponse::decode_failures(char* pos) {
   return pos;
 }
 
-void ErrorResponse::decode_write_type(char* pos) {
+void ErrorResponse::decode_write_type(const char* pos) {
   StringRef write_type;
   decode_string(pos, &write_type);
   if (write_type == "SIMPLE") {
@@ -213,7 +213,7 @@ void ErrorResponse::decode_write_type(char* pos) {
 }
 
 bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opcode,
-                                     Response* response) {
+                                     const Response* response) {
   if (response->opcode() == expected_opcode) {
     return false;
   }
@@ -221,7 +221,7 @@ bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opco
   OStringStream ss;
   if (response->opcode() == CQL_OPCODE_ERROR) {
     ss << prefix << ": Error response "
-       << static_cast<ErrorResponse*>(response)->error_message();
+       << static_cast<const ErrorResponse*>(response)->error_message();
   } else {
     ss << prefix << ": Unexpected opcode "
        << opcode_to_string(response->opcode());

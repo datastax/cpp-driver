@@ -96,7 +96,7 @@ private:
   virtual void on_ready(Connection* connection);
   virtual void on_close(Connection* connection);
   virtual void on_availability_change(Connection* connection);
-  virtual void on_event(EventResponse* response) {}
+  virtual void on_event(const EventResponse* response) {}
 
   static void on_pending_request_timeout(Timer* timer);
   static void on_partial_reconnect(Timer* timer);

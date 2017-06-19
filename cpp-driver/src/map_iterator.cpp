@@ -18,7 +18,7 @@
 
 namespace cass {
 
-char* MapIterator::decode_pair(char* position) {
+const char* MapIterator::decode_pair(const char* position) {
   int protocol_version = map_->protocol_version();
 
   int32_t size;

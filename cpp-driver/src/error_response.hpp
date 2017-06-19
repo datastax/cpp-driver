@@ -60,11 +60,11 @@ public:
 
   String error_message() const;
 
-  bool decode(int version, char* buffer, size_t size);
+  bool decode(int version, const char* buffer, size_t size);
 
 private:
-  char* decode_failures(char* pos);
-  void decode_write_type(char* pos);
+  const char* decode_failures(const char* pos);
+  void decode_write_type(const char* pos);
 
 private:
   struct Failure {
@@ -92,7 +92,7 @@ private:
 };
 
 bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opcode,
-                                     Response* response);
+                                     const Response* response);
 
 } // namespace cass
 
