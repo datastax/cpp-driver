@@ -39,7 +39,7 @@ void cass_ssl_free(CassSsl* ssl) {
 }
 
 CassError cass_ssl_add_trusted_cert(CassSsl* ssl, const char* cert) {
-  return cass_ssl_add_trusted_cert_n(ssl, cert, strlen(cert));
+  return cass_ssl_add_trusted_cert_n(ssl, cert, SAFE_STRLEN(cert));
 }
 
 CassError cass_ssl_add_trusted_cert_n(CassSsl* ssl, const char* cert, size_t cert_length) {
@@ -51,7 +51,7 @@ void cass_ssl_set_verify_flags(CassSsl* ssl, int flags) {
 }
 
 CassError cass_ssl_set_cert(CassSsl* ssl, const char* cert) {
-  return cass_ssl_set_cert_n(ssl, cert, strlen(cert));
+  return cass_ssl_set_cert_n(ssl, cert, SAFE_STRLEN(cert));
 }
 
 CassError cass_ssl_set_cert_n(CassSsl* ssl,
@@ -64,8 +64,8 @@ CassError cass_ssl_set_private_key(CassSsl* ssl,
                                    const char* key,
                                    const char* password) {
   return cass_ssl_set_private_key_n(ssl,
-                                    key, strlen(key),
-                                    password, strlen(password));
+                                    key, SAFE_STRLEN(key),
+                                    password, SAFE_STRLEN(password));
 }
 
 CassError cass_ssl_set_private_key_n(CassSsl* ssl,

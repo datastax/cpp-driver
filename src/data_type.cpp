@@ -101,9 +101,9 @@ const CassDataType* cass_data_type_sub_data_type(const CassDataType* data_type,
 }
 
 const CassDataType* cass_data_type_sub_data_type_by_name(const CassDataType* data_type,
-                                                             const char* name) {
+                                                         const char* name) {
   return cass_data_type_sub_data_type_by_name_n(data_type,
-                                                name, strlen(name));
+                                                name, SAFE_STRLEN(name));
 }
 
 const CassDataType* cass_data_type_sub_data_type_by_name_n(const CassDataType* data_type,
@@ -151,7 +151,7 @@ CassError cass_data_type_type_name(const CassDataType* data_type,
 CassError cass_data_type_set_type_name(CassDataType* data_type,
                                        const char* type_name) {
   return cass_data_type_set_type_name_n(data_type,
-                                        type_name, strlen(type_name));
+                                        type_name, SAFE_STRLEN(type_name));
 }
 
 CassError cass_data_type_set_type_name_n(CassDataType* data_type,
@@ -186,9 +186,9 @@ CassError cass_data_type_keyspace(const CassDataType* data_type,
 }
 
 CassError cass_data_type_set_keyspace(CassDataType* data_type,
-                                        const char* keyspace) {
+                                      const char* keyspace) {
   return cass_data_type_set_keyspace_n(data_type,
-                                       keyspace, strlen(keyspace));
+                                       keyspace, SAFE_STRLEN(keyspace));
 }
 
 CassError cass_data_type_set_keyspace_n(CassDataType* data_type,
@@ -225,7 +225,7 @@ CassError cass_data_type_class_name(const CassDataType* data_type,
 CassError cass_data_type_set_class_name(CassDataType* data_type,
                                         const char* class_name) {
   return cass_data_type_set_class_name_n(data_type,
-                                         class_name, strlen(class_name));
+                                         class_name, SAFE_STRLEN(class_name));
 }
 
 CassError cass_data_type_set_class_name_n(CassDataType* data_type,
@@ -324,7 +324,7 @@ CassError cass_data_type_add_sub_type_by_name(CassDataType* data_type,
                                               const char* name,
                                               const CassDataType* sub_data_type) {
   return cass_data_type_add_sub_type_by_name_n(data_type,
-                                               name, strlen(name),
+                                               name, SAFE_STRLEN(name),
                                                sub_data_type);
 }
 
