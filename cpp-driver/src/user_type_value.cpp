@@ -87,7 +87,7 @@ CASS_USER_TYPE_SET(duration,
 CassError cass_user_type_set_string(CassUserType* user_type,
                                     size_t index,
                                     const char* value) {
-  return user_type->set(index, cass::CassString(value, strlen(value)));
+  return user_type->set(index, cass::CassString(value, SAFE_STRLEN(value)));
 }
 
 CassError cass_user_type_set_string_n(CassUserType* user_type,
@@ -101,7 +101,7 @@ CassError cass_user_type_set_string_by_name(CassUserType* user_type,
                                             const char* name,
                                             const char* value) {
   return user_type->set(cass::StringRef(name),
-                        cass::CassString(value, strlen(value)));
+                        cass::CassString(value, SAFE_STRLEN(value)));
 }
 
 CassError cass_user_type_set_string_by_name_n(CassUserType* user_type,

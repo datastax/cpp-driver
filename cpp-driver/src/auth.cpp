@@ -69,7 +69,7 @@ void cass_authenticator_set_response(CassAuthenticator* auth,
 
 void cass_authenticator_set_error(CassAuthenticator* auth,
                                   const char* message) {
-  cass_authenticator_set_error_n(auth, message, strlen(message));
+  cass_authenticator_set_error_n(auth, message, SAFE_STRLEN(message));
 }
 
 void cass_authenticator_set_error_n(CassAuthenticator* auth,

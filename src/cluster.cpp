@@ -33,8 +33,8 @@ CassError cass_cluster_set_dse_plaintext_authenticator(CassCluster* cluster,
                                                        const char* username,
                                                        const char* password) {
   return cass_cluster_set_dse_plaintext_authenticator_n(cluster,
-                                                        username, strlen(username),
-                                                        password, strlen(password));
+                                                        username, SAFE_STRLEN(username),
+                                                        password, SAFE_STRLEN(password));
 }
 
 CassError cass_cluster_set_dse_plaintext_authenticator_n(CassCluster* cluster,
@@ -51,9 +51,9 @@ CassError cass_cluster_set_dse_plaintext_authenticator_proxy(CassCluster* cluste
                                                              const char* password,
                                                              const char* authorization_id) {
   return cass_cluster_set_dse_plaintext_authenticator_proxy_n(cluster,
-                                                              username, strlen(username),
-                                                              password, strlen(password),
-                                                              authorization_id, strlen(authorization_id));
+                                                              username, SAFE_STRLEN(username),
+                                                              password, SAFE_STRLEN(password),
+                                                              authorization_id, SAFE_STRLEN(authorization_id));
 }
 
 CassError cass_cluster_set_dse_plaintext_authenticator_proxy_n(CassCluster* cluster,
@@ -72,8 +72,8 @@ CassError cass_cluster_set_dse_gssapi_authenticator(CassCluster* cluster,
                                                     const char* service,
                                                     const char* principal) {
   return cass_cluster_set_dse_gssapi_authenticator_n(cluster,
-                                                     service, strlen(service),
-                                                     principal, strlen(principal));
+                                                     service, SAFE_STRLEN(service),
+                                                     principal, SAFE_STRLEN(principal));
 }
 
 CassError cass_cluster_set_dse_gssapi_authenticator_n(CassCluster* cluster,
@@ -90,9 +90,9 @@ CassError cass_cluster_set_dse_gssapi_authenticator_proxy(CassCluster* cluster,
                                                           const char* principal,
                                                           const char* authorization_id) {
   return cass_cluster_set_dse_gssapi_authenticator_proxy_n(cluster,
-                                                           service, strlen(service),
-                                                           principal, strlen(principal),
-                                                           authorization_id, strlen(authorization_id));
+                                                           service, SAFE_STRLEN(service),
+                                                           principal, SAFE_STRLEN(principal),
+                                                           authorization_id, SAFE_STRLEN(authorization_id));
 }
 
 CassError cass_cluster_set_dse_gssapi_authenticator_proxy_n(CassCluster* cluster,

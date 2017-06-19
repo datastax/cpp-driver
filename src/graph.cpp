@@ -216,7 +216,7 @@ CassError dse_graph_options_set_request_timeout(DseGraphOptions* options,
 
 DseGraphStatement* dse_graph_statement_new(const char* query,
                                            const DseGraphOptions* options) {
-  return dse_graph_statement_new_n(query, strlen(query),
+  return dse_graph_statement_new_n(query, SAFE_STRLEN(query),
                                    options);
 }
 
@@ -263,7 +263,7 @@ void dse_graph_object_finish(DseGraphObject* object) {
 CassError dse_graph_object_add_null(DseGraphObject* object,
                                     const char* name) {
   return dse_graph_object_add_null_n(object,
-                                     name, strlen(name));
+                                     name, SAFE_STRLEN(name));
 }
 
 CassError dse_graph_object_add_null_n(DseGraphObject* object,
@@ -281,7 +281,7 @@ CassError dse_graph_object_add_bool(DseGraphObject* object,
                                      const char* name,
                                      cass_bool_t value) {
   return dse_graph_object_add_bool_n(object,
-                                      name, strlen(name),
+                                      name, SAFE_STRLEN(name),
                                       value);
 }
 
@@ -301,7 +301,7 @@ CassError dse_graph_object_add_int32(DseGraphObject* object,
                                      const char* name,
                                      cass_int32_t value) {
   return dse_graph_object_add_int32_n(object,
-                                      name, strlen(name),
+                                      name, SAFE_STRLEN(name),
                                       value);
 }
 
@@ -321,7 +321,7 @@ CassError dse_graph_object_add_int64(DseGraphObject* object,
                                      const char* name,
                                      cass_int64_t value) {
   return dse_graph_object_add_int64_n(object,
-                                      name, strlen(name),
+                                      name, SAFE_STRLEN(name),
                                       value);
 }
 
@@ -341,7 +341,7 @@ CassError dse_graph_object_add_double(DseGraphObject* object,
                                       const char* name,
                                       cass_double_t value) {
   return dse_graph_object_add_double_n(object,
-                                       name, strlen(name),
+                                       name, SAFE_STRLEN(name),
                                        value);
 }
 
@@ -361,8 +361,8 @@ CassError dse_graph_object_add_string(DseGraphObject* object,
                                       const char* name,
                                       const char* value) {
   return dse_graph_object_add_string_n(object,
-                                       name, strlen(name),
-                                       value, strlen(value));
+                                       name, SAFE_STRLEN(name),
+                                       value, SAFE_STRLEN(value));
 }
 
 CassError dse_graph_object_add_string_n(DseGraphObject* object,
@@ -380,7 +380,7 @@ CassError dse_graph_object_add_object(DseGraphObject* object,
                                       const char* name,
                                       const DseGraphObject* value) {
   return dse_graph_object_add_object_n(object,
-                                       name, strlen(name),
+                                       name, SAFE_STRLEN(name),
                                        value);
 }
 
@@ -400,7 +400,7 @@ CassError dse_graph_object_add_array(DseGraphObject* object,
                                      const char* name,
                                      const DseGraphArray* value) {
   return dse_graph_object_add_array_n(object,
-                                      name, strlen(name),
+                                      name, SAFE_STRLEN(name),
                                       value);
 }
 
@@ -420,7 +420,7 @@ CassError dse_graph_object_add_point(DseGraphObject* object,
                                      const char* name,
                                      cass_double_t x, cass_double_t y) {
   return dse_graph_object_add_point_n(object,
-                                      name, strlen(name),
+                                      name, SAFE_STRLEN(name),
                                       x, y);
 }
 
@@ -440,7 +440,7 @@ CassError dse_graph_object_add_line_string(DseGraphObject* object,
                                            const char* name,
                                            const DseLineString* value) {
   return dse_graph_object_add_line_string_n(object,
-                                            name, strlen(name),
+                                            name, SAFE_STRLEN(name),
                                             value);
 }
 
@@ -460,7 +460,7 @@ CassError dse_graph_object_add_polygon(DseGraphObject* object,
                                        const char* name,
                                        const DsePolygon* value) {
   return dse_graph_object_add_polygon_n(object,
-                                        name, strlen(name),
+                                        name, SAFE_STRLEN(name),
                                         value);
 }
 
@@ -538,7 +538,7 @@ CassError dse_graph_array_add_double(DseGraphArray* array,
 
 CassError dse_graph_array_add_string(DseGraphArray* array,
                                      const char* value) {
-  return dse_graph_array_add_string_n(array, value, strlen(value));
+  return dse_graph_array_add_string_n(array, value, SAFE_STRLEN(value));
 }
 
 CassError dse_graph_array_add_string_n(DseGraphArray* array,

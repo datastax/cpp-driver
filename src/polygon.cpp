@@ -63,7 +63,7 @@ CassError dse_polygon_iterator_reset_with_wkt_n(DsePolygonIterator* iterator,
 
 CassError dse_polygon_iterator_reset_with_wkt(DsePolygonIterator* iterator,
                                               const char* wkt) {
-  return dse_polygon_iterator_reset_with_wkt_n(iterator, wkt, strlen(wkt));
+  return dse_polygon_iterator_reset_with_wkt_n(iterator, wkt, SAFE_STRLEN(wkt));
 }
 
 void dse_polygon_iterator_free(DsePolygonIterator* iterator) {

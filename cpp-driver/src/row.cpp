@@ -34,7 +34,7 @@ const CassValue* cass_row_get_column(const CassRow* row, size_t index) {
 const CassValue* cass_row_get_column_by_name(const CassRow* row,
                                              const char* name) {
 
-  return cass_row_get_column_by_name_n(row, name, strlen(name));
+  return cass_row_get_column_by_name_n(row, name, SAFE_STRLEN(name));
 }
 
 const CassValue* cass_row_get_column_by_name_n(const CassRow* row,

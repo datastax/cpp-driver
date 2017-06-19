@@ -82,7 +82,7 @@ CASS_TUPLE_SET(duration,
 CassError cass_tuple_set_string(CassTuple* tuple,
                                 size_t index,
                                 const char* value) {
-  return tuple->set(index, cass::CassString(value, strlen(value)));
+  return tuple->set(index, cass::CassString(value, SAFE_STRLEN(value)));
 }
 
 CassError cass_tuple_set_string_n(CassTuple* tuple,

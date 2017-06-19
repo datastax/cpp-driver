@@ -28,7 +28,7 @@ CassError cass_statement_bind_dse_point_by_name(CassStatement* statement,
                                                 const char* name,
                                                 cass_double_t x, cass_double_t y) {
   return cass_statement_bind_dse_point_by_name_n(statement,
-                                                 name, strlen(name),
+                                                 name, SAFE_STRLEN(name),
                                                  x, y);
 }
 
@@ -98,7 +98,7 @@ CassError cass_statement_bind_dse_date_range(CassStatement* statement,
 CassError cass_statement_bind_dse_date_range_by_name(CassStatement* statement,
                                                      const char* name,
                                                      const DseDateRange* range) {
-  return cass_statement_bind_dse_date_range_by_name_n(statement, name, strlen(name), range);
+  return cass_statement_bind_dse_date_range_by_name_n(statement, name, SAFE_STRLEN(name), range);
 }
 
 CassError cass_statement_bind_dse_date_range_by_name_n(CassStatement* statement,
@@ -118,7 +118,7 @@ CassError cass_statement_set_execute_as_n(CassStatement* statement,
 
 CassError cass_statement_set_execute_as(CassStatement* statement,
                                         const char* name) {
-  return cass_statement_set_execute_as_n(statement, name, strlen(name));
+  return cass_statement_set_execute_as_n(statement, name, SAFE_STRLEN(name));
 }
 
 } // extern "C"

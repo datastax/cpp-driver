@@ -19,7 +19,7 @@ CassError cass_batch_set_execute_as_n(CassBatch* batch,
 
 CassError cass_batch_set_execute_as(CassBatch* batch,
                                     const char* name) {
-  return cass_batch_set_execute_as_n(batch, name, strlen(name));
+  return cass_batch_set_execute_as_n(batch, name, SAFE_STRLEN(name));
 }
 
 } // extern "C"

@@ -26,7 +26,7 @@ CassError cass_user_type_set_dse_point_by_name(CassUserType* user_type,
                                                const char* name,
                                                cass_double_t x, cass_double_t y) {
   return cass_user_type_set_dse_point_by_name_n(user_type,
-                                                name, strlen(name),
+                                                name, SAFE_STRLEN(name),
                                                 x, y);
 }
 
@@ -54,7 +54,7 @@ CassError cass_user_type_set_dse_line_string_by_name(CassUserType* user_type,
                                                      const char* name,
                                                      const DseLineString* line_string) {
   return cass_user_type_set_dse_line_string_by_name_n(user_type,
-                                                      name, strlen(name),
+                                                      name, SAFE_STRLEN(name),
                                                       line_string);
 }
 
@@ -82,7 +82,7 @@ CassError cass_user_type_set_dse_polygon_by_name(CassUserType* user_type,
                                                  const char* name,
                                                  const DsePolygon* polygon) {
   return cass_user_type_set_dse_polygon_by_name_n(user_type,
-                                                  name, strlen(name),
+                                                  name, SAFE_STRLEN(name),
                                                   polygon);
 }
 
@@ -110,7 +110,7 @@ CassError cass_user_type_set_dse_date_range_by_name(CassUserType* user_type,
                                                     const char* name,
                                                     const DseDateRange* range) {
   return cass_user_type_set_dse_date_range_by_name_n(user_type,
-                                                     name, strlen(name),
+                                                     name, SAFE_STRLEN(name),
                                                      range);
 }
 

@@ -64,7 +64,7 @@ CassError dse_line_string_iterator_reset_with_wkt_n(DseLineStringIterator* itera
 
 CassError dse_line_string_iterator_reset_with_wkt(DseLineStringIterator* iterator,
                                                   const char* wkt) {
-  return dse_line_string_iterator_reset_with_wkt_n(iterator, wkt, strlen(wkt));
+  return dse_line_string_iterator_reset_with_wkt_n(iterator, wkt, SAFE_STRLEN(wkt));
 }
 
 cass_uint32_t dse_line_string_iterator_num_points(const DseLineStringIterator* iterator) {

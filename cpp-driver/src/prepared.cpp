@@ -58,7 +58,7 @@ const CassDataType* cass_prepared_parameter_data_type(const CassPrepared* prepar
 const CassDataType* cass_prepared_parameter_data_type_by_name(const CassPrepared* prepared,
                                                               const char* name) {
   return cass_prepared_parameter_data_type_by_name_n(prepared,
-                                                     name, strlen(name));
+                                                     name, SAFE_STRLEN(name));
 }
 
 const CassDataType* cass_prepared_parameter_data_type_by_name_n(const CassPrepared* prepared,
