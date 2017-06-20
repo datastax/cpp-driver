@@ -31,9 +31,14 @@ public:
 
   virtual bool decode(Decoder& decoder);
 
+  const Vector<String> compression() { return compression_; }
+  const Vector<String> cql_versions() { return cql_versions_; }
+  const Vector<String> protocol_versions() { return protocol_versions_; }
+
 private:
   Vector<String> compression_;
-  Vector<String> versions_;
+  Vector<String> cql_versions_;
+  Vector<String> protocol_versions_;
 };
 
 } // namespace cass

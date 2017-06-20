@@ -32,9 +32,14 @@ bool SupportedResponse::decode(Decoder& decoder) {
     compression_ = it->second;
   }
 
-  it = supported.find("CASS_VERSION");
+  it = supported.find("CQL_VERSIONS");
   if (it != supported.end()) {
-    versions_ = it->second;
+    cql_versions_ = it->second;
+  }
+
+  it = supported.find("PROTOCOL_VERSIONS");
+  if (it != supported.end()) {
+    protocol_versions_ = it->second;
   }
   return true;
 }
