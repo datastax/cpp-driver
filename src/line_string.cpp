@@ -103,11 +103,11 @@ cass::String LineString::to_wkt() const {
 }
 
 CassError LineStringIterator::reset_binary(const CassValue* value) {
-  size_t size;
-  const cass_byte_t* pos;
+  size_t size = 0;
+  const cass_byte_t* pos = NULL;
   dse::WkbByteOrder byte_order;
-  cass_uint32_t num_points;
-  CassError rc;
+  cass_uint32_t num_points = 0;
+  CassError rc = CASS_OK;
 
   rc = dse::validate_data_type(value, DSE_LINE_STRING_TYPE);
   if (rc != CASS_OK) return rc;

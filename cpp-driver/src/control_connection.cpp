@@ -86,14 +86,16 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
                                                         const Value* rpc_value,
                                                         Address* output) {
   Address peer_address;
-  if (!Address::from_inet(peer_value->data(), peer_value->size(),
-                          connected_address.port(), &peer_address)) {
+  if (!peer_value->decoder().as_inet(peer_value->size(),
+                                     connected_address.port(),
+                                     &peer_address)) {
     LOG_WARN("Invalid address format for peer address");
     return false;
   }
-  if (rpc_value->size() > 0) {
-    if (!Address::from_inet(rpc_value->data(), rpc_value->size(),
-                            connected_address.port(), output)) {
+  if (!rpc_value->is_null()) {
+    if (!rpc_value->decoder().as_inet(rpc_value->size(),
+                                      connected_address.port(),
+                                      output)) {
       LOG_WARN("Invalid address format for rpc address");
       return false;
     }
@@ -572,7 +574,6 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
   }
 
   Session* session = control_connection->session_;
-  int protocol_version = control_connection->protocol_version_;
   const VersionNumber& cassandra_version = control_connection->cassandra_version_;
 
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
@@ -591,42 +592,42 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
 
     ResultResponse* keyspaces_result;
     if (MultipleRequestCallback::get_result_response(responses, "keyspaces", &keyspaces_result)) {
-      session->metadata().update_keyspaces(protocol_version, cassandra_version, keyspaces_result);
+      session->metadata().update_keyspaces(cassandra_version, keyspaces_result);
     }
 
     ResultResponse* tables_result;
     if (MultipleRequestCallback::get_result_response(responses, "tables", &tables_result)) {
-      session->metadata().update_tables(protocol_version, cassandra_version, tables_result);
+      session->metadata().update_tables(cassandra_version, tables_result);
     }
 
     ResultResponse* views_result;
     if (MultipleRequestCallback::get_result_response(responses, "views", &views_result)) {
-      session->metadata().update_views(protocol_version, cassandra_version, views_result);
+      session->metadata().update_views(cassandra_version, views_result);
     }
 
     ResultResponse* columns_result = NULL;
     if (MultipleRequestCallback::get_result_response(responses, "columns", &columns_result)) {
-      session->metadata().update_columns(protocol_version, cassandra_version, columns_result);
+      session->metadata().update_columns(cassandra_version, columns_result);
     }
 
     ResultResponse* indexes_result;
     if (MultipleRequestCallback::get_result_response(responses, "indexes", &indexes_result)) {
-      session->metadata().update_indexes(protocol_version, cassandra_version, indexes_result);
+      session->metadata().update_indexes(cassandra_version, indexes_result);
     }
 
     ResultResponse* user_types_result;
     if (MultipleRequestCallback::get_result_response(responses, "user_types", &user_types_result)) {
-      session->metadata().update_user_types(protocol_version, cassandra_version, user_types_result);
+      session->metadata().update_user_types(cassandra_version, user_types_result);
     }
 
     ResultResponse* functions_result;
     if (MultipleRequestCallback::get_result_response(responses, "functions", &functions_result)) {
-      session->metadata().update_functions(protocol_version, cassandra_version, functions_result);
+      session->metadata().update_functions(cassandra_version, functions_result);
     }
 
     ResultResponse* aggregates_result;
     if (MultipleRequestCallback::get_result_response(responses, "aggregates", &aggregates_result)) {
-      session->metadata().update_aggregates(protocol_version, cassandra_version, aggregates_result);
+      session->metadata().update_aggregates(cassandra_version, aggregates_result);
     }
 
     session->metadata().swap_to_back_and_update_front();
@@ -766,9 +767,9 @@ void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateH
   v = row->get_by_name("peer");
   if (v != NULL) {
     Address listen_address;
-    if (Address::from_inet(v->data(), v->size(),
-                           connection_->address().port(),
-                           &listen_address)) {
+    if (v->decoder().as_inet(v->size(),
+                             connection_->address().port(),
+                             &listen_address)) {
       host->set_listen_address(listen_address.to_string());
     } else {
       LOG_WARN("Invalid address format for listen address");
@@ -853,7 +854,6 @@ void ControlConnection::on_refresh_keyspace(ControlConnection* control_connectio
   }
 
   Session* session = control_connection->session_;
-  int protocol_version = control_connection->protocol_version_;
   const VersionNumber& cassandra_version = control_connection->cassandra_version_;
 
   if (session->token_map_) {
@@ -861,7 +861,7 @@ void ControlConnection::on_refresh_keyspace(ControlConnection* control_connectio
   }
 
   if (control_connection->use_schema_) {
-    session->metadata().update_keyspaces(protocol_version, cassandra_version, result);
+    session->metadata().update_keyspaces(cassandra_version, result);
   }
 }
 
@@ -922,7 +922,6 @@ void ControlConnection::on_refresh_table_or_view(ControlConnection* control_conn
                                                  const MultipleRequestCallback::ResponseMap& responses) {
   ResultResponse* tables_result;
   Session* session = control_connection->session_;
-  int protocol_version = control_connection->protocol_version_;
   const VersionNumber& cassandra_version = control_connection->cassandra_version_;
   if (!MultipleRequestCallback::get_result_response(responses, "tables", &tables_result) ||
       tables_result->row_count() == 0) {
@@ -933,19 +932,19 @@ void ControlConnection::on_refresh_table_or_view(ControlConnection* control_conn
                 data.keyspace_name.c_str(), data.table_or_view_name.c_str());
       return;
     }
-    session->metadata().update_views(protocol_version, cassandra_version, views_result);
+    session->metadata().update_views(cassandra_version, views_result);
   } else {
-    session->metadata().update_tables(protocol_version, cassandra_version, tables_result);
+    session->metadata().update_tables(cassandra_version, tables_result);
   }
 
   ResultResponse* columns_result;
   if (MultipleRequestCallback::get_result_response(responses, "columns", &columns_result)) {
-    session->metadata().update_columns(protocol_version, cassandra_version, columns_result);
+    session->metadata().update_columns(cassandra_version, columns_result);
   }
 
   ResultResponse* indexes_result;
   if (MultipleRequestCallback::get_result_response(responses, "indexes", &indexes_result)) {
-    session->metadata().update_indexes(protocol_version, cassandra_version, indexes_result);
+    session->metadata().update_indexes(cassandra_version, indexes_result);
   }
 }
 
@@ -988,9 +987,8 @@ void ControlConnection::on_refresh_type(ControlConnection* control_connection,
     return;
   }
   Session* session = control_connection->session_;
-  int protocol_version = control_connection->protocol_version_;
   const VersionNumber& cassandra_version = control_connection->cassandra_version_;
-  session->metadata().update_user_types(protocol_version, cassandra_version, result);
+  session->metadata().update_user_types(cassandra_version, result);
 }
 
 void ControlConnection::refresh_function(const StringRef& keyspace_name,
@@ -1060,12 +1058,11 @@ void ControlConnection::on_refresh_function(ControlConnection* control_connectio
     return;
   }
   Session* session = control_connection->session_;
-  int protocol_version = control_connection->protocol_version_;
   const VersionNumber& cassandra_version = control_connection->cassandra_version_;
   if (data.is_aggregate) {
-    session->metadata().update_aggregates(protocol_version, cassandra_version, result);
+    session->metadata().update_aggregates(cassandra_version, result);
   } else {
-    session->metadata().update_functions(protocol_version, cassandra_version, result);
+    session->metadata().update_functions(cassandra_version, result);
   }
 }
 

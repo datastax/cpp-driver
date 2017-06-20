@@ -60,7 +60,7 @@ public:
       , schema_change_(0)
       , schema_change_target_(0) { }
 
-  bool decode(int version, const char* buffer, size_t size);
+  virtual bool decode(Decoder& decoder);
 
   int event_type() const { return event_type_; }
   int topology_change() const { return topology_change_; }

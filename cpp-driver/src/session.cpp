@@ -100,7 +100,7 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
 }
 
 const CassSchemaMeta* cass_session_get_schema_meta(const CassSession* session) {
-  return CassSchemaMeta::to(cass::Memory::allocate<cass::Metadata::SchemaSnapshot>(session->metadata().schema_snapshot(session->protocol_version(), session->cassandra_version())));
+  return CassSchemaMeta::to(cass::Memory::allocate<cass::Metadata::SchemaSnapshot>(session->metadata().schema_snapshot(session->cassandra_version())));
 }
 
 void  cass_session_get_metrics(const CassSession* session,
@@ -625,7 +625,7 @@ void Session::on_control_connection_error(CassError code, const String& message)
 Future::Ptr Session::prepare(const char* statement, size_t length) {
   SharedRefPtr<PrepareRequest> prepare(Memory::allocate<PrepareRequest>(String(statement, length)));
 
-  ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(metadata_.schema_snapshot(protocol_version(), cassandra_version())));
+  ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(metadata_.schema_snapshot(cassandra_version())));
   future->statement.assign(statement, length);
 
   execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future)));

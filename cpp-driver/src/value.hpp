@@ -18,6 +18,7 @@
 #define __CASS_VALUE_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "decoder.hpp"
 #include "external.hpp"
 #include "result_metadata.hpp"
 #include "string_ref.hpp"
@@ -27,33 +28,29 @@ namespace cass {
 class Value {
 public:
   Value()
-      : protocol_version_(0)
-      , count_(0)
-      , size_(-1) { }
+      : count_(0)
+      , is_null_(false) { }
 
   // Used for "null" values
   Value(const DataType::ConstPtr& data_type)
-      : protocol_version_(0)
-      , data_type_(data_type)
+      : data_type_(data_type)
       , count_(0)
-      , size_(-1) { }
+      , is_null_(true) { }
 
-  // Used for regular values or collections
-  Value(int protocol_version,
-        const DataType::ConstPtr& data_type,
-        const char* data, int32_t size);
+  // Used for regular values, tuples, and UDTs
+  Value(const DataType::ConstPtr& data_type, Decoder decoder);
 
-  // Used for schema metadata collections (converted from JSON)
-  Value(int protocol_version,
-        const DataType::ConstPtr& data_type,
-        int32_t count, char* data, int32_t size)
-      : protocol_version_(protocol_version)
-      , data_type_(data_type)
+  // Used for collections and schema metadata collections (converted from JSON)
+  Value(const DataType::ConstPtr& data_type,
+        int32_t count, Decoder decoder)
+      : data_type_(data_type)
       , count_(count)
-      , data_(data)
-      , size_(size) { }
+      , decoder_(decoder)
+      , is_null_(false) { }
 
-  int protocol_version() const { return protocol_version_; }
+  Decoder decoder() const { return decoder_; }
+  int protocol_version() const { return decoder_.protocol_version(); }
+  int64_t size() const { return (is_null_ ? -1 : decoder_.remaining()); }
 
   CassValueType value_type() const {
     if (!data_type_) {
@@ -105,7 +102,7 @@ public:
   }
 
   bool is_null() const {
-    return size_ < 0;
+    return is_null_;
   }
 
   bool is_collection() const {
@@ -132,12 +129,9 @@ public:
     return count_;
   }
 
-  const char* data() const { return data_; }
-  int32_t size() const { return size_; }
-
   StringRef to_string_ref() const {
-    if (size_ < 0) return StringRef();
-    return StringRef(data_, size_);
+    if (is_null()) return StringRef();
+    return decoder_.as_string_ref();
   }
 
   String to_string() const {
@@ -150,12 +144,10 @@ public:
   StringVec as_stringlist() const;
 
 private:
-  int protocol_version_;
   DataType::ConstPtr data_type_;
   int32_t count_;
-
-  const char* data_;
-  int32_t size_;
+  Decoder decoder_;
+  bool is_null_;
 };
 
 typedef Vector<Value> OutputValueVec;

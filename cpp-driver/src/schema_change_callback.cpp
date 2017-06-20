@@ -59,7 +59,7 @@ bool SchemaChangeCallback::has_schema_agreement(const ResponseMap& responses) {
 
     const Value* v = row->get_by_name("schema_version");
     if (!v->is_null()) {
-      current_version = StringRef(v->data(), v->size());
+      current_version = v->to_string_ref();
     }
   } else {
     LOG_DEBUG("No row found in %s's local system table",

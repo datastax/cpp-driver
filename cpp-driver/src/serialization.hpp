@@ -83,22 +83,6 @@ inline const char* decode_int16(const char* input, int16_t& output) {
   return input + sizeof(int16_t);
 }
 
-inline char* encode_int32(char* output, int32_t value) {
-  output[0] = static_cast<char>(value >> 24);
-  output[1] = static_cast<char>(value >> 16);
-  output[2] = static_cast<char>(value >> 8);
-  output[3] = static_cast<char>(value >> 0);
-  return output + sizeof(int32_t);
-}
-
-inline const char* decode_int32(const char* input, int32_t& output) {
-  output = (static_cast<int32_t>(static_cast<uint8_t>(input[3])) << 0) |
-           (static_cast<int32_t>(static_cast<uint8_t>(input[2])) << 8) |
-           (static_cast<int32_t>(static_cast<uint8_t>(input[1])) << 16) |
-           (static_cast<int32_t>(static_cast<uint8_t>(input[0])) << 24);
-  return input + sizeof(int32_t);
-}
-
 inline char* encode_uint32(char* output, uint32_t value) {
   output[0] = static_cast<char>(value >> 24);
   output[1] = static_cast<char>(value >> 16);
@@ -115,6 +99,22 @@ inline const char* decode_uint32(const char* input, uint32_t& output) {
   return input + sizeof(uint32_t);
 }
 
+inline char* encode_int32(char* output, int32_t value) {
+  output[0] = static_cast<char>(value >> 24);
+  output[1] = static_cast<char>(value >> 16);
+  output[2] = static_cast<char>(value >> 8);
+  output[3] = static_cast<char>(value >> 0);
+  return output + sizeof(int32_t);
+}
+
+inline const char* decode_int32(const char* input, int32_t& output) {
+  output = (static_cast<int32_t>(static_cast<uint8_t>(input[3])) << 0) |
+           (static_cast<int32_t>(static_cast<uint8_t>(input[2])) << 8) |
+           (static_cast<int32_t>(static_cast<uint8_t>(input[1])) << 16) |
+           (static_cast<int32_t>(static_cast<uint8_t>(input[0])) << 24);
+  return input + sizeof(int32_t);
+}
+
 inline char* encode_int64(char* output, int64_t value) {
   STATIC_ASSERT(sizeof(int64_t) == 8);
   output[0] = static_cast<char>(value >> 56);
@@ -126,19 +126,6 @@ inline char* encode_int64(char* output, int64_t value) {
   output[6] = static_cast<char>(value >> 8);
   output[7] = static_cast<char>(value >> 0);
   return output + sizeof(int64_t);
-}
-
-inline char* encode_uint64(char* output, uint64_t value) {
-  STATIC_ASSERT(sizeof(uint64_t) == 8);
-  output[0] = static_cast<char>(static_cast<uint8_t>(value >> 56));
-  output[1] = static_cast<char>(static_cast<uint8_t>(value >> 48));
-  output[2] = static_cast<char>(static_cast<uint8_t>(value >> 40));
-  output[3] = static_cast<char>(static_cast<uint8_t>(value >> 32));
-  output[4] = static_cast<char>(static_cast<uint8_t>(value >> 24));
-  output[5] = static_cast<char>(static_cast<uint8_t>(value >> 16));
-  output[6] = static_cast<char>(static_cast<uint8_t>(value >> 8));
-  output[7] = static_cast<char>(static_cast<uint8_t>(value >> 0));
-  return output + sizeof(uint64_t);
 }
 
 inline const char* decode_int64(const char* input, int64_t& output) {
@@ -178,156 +165,6 @@ inline const char* decode_double(const char* input, double& output) {
   const char* pos = decode_int64(input, int_value);
   output = copy_cast<int64_t, double>(int_value);
   return pos;
-}
-
-inline const char* decode_string(const char* input, const char** output, size_t& size) {
-  uint16_t string_size;
-  const char* pos = decode_uint16(input, string_size);
-  size = string_size;
-  *output = pos;
-  return pos + string_size;
-}
-
-inline const char* decode_string(const char* buffer, StringRef* output) {
-  const char* str;
-  size_t str_size;
-  buffer = decode_string(buffer, &str, str_size);
-  *output = StringRef(str, str_size);
-  return buffer;
-}
-
-inline const char* decode_long_string(const char* input, const char** output, size_t& size) {
-  int32_t string_size;
-  const char* pos = decode_int32(input, string_size);
-  assert(string_size >= 0);
-  size = string_size;
-  *output = pos;
-  return pos + string_size;
-}
-
-inline const char* decode_bytes(const char* input, const char** output, size_t& size) {
-  int32_t bytes_size;
-  const char* pos = decode_int32(input, bytes_size);
-  if (bytes_size < 0) {
-    *output = NULL;
-    size = 0;
-    return pos;
-  } else {
-    *output = pos;
-    size = bytes_size;
-    return pos + size;
-  }
-}
-
-inline const char* decode_bytes(const char* buffer, StringRef* output) {
-  const char* bytes;
-  size_t bytes_size;
-  buffer = decode_bytes(buffer, &bytes, bytes_size);
-  *output = StringRef(bytes, bytes_size);
-  return buffer;
-}
-
-inline const char* decode_inet(const char* input, Address* output) {
-  uint8_t address_len;
-  char address[16];
-  int32_t port;
-
-  const char* pos = decode_byte(input, address_len);
-
-  assert(address_len <= 16);
-  memcpy(address, pos, address_len);
-  pos += address_len;
-
-  pos = decode_int32(pos, port);
-
-  Address::from_inet(address, address_len, port, output);
-
-  return pos;
-}
-
-inline const char* decode_inet(const char* input, CassInet* output) {
-  const char* pos = decode_byte(input, output->address_length);
-
-  assert(output->address_length <= 16);
-  memcpy(output->address, pos, output->address_length);
-
-  return pos + output->address_length;
-}
-
-inline const char* decode_string_map(const char* input, Map<String, String> &map) {
-
-  map.clear();
-  uint16_t len = 0;
-  const char* buffer = decode_uint16(input, len);
-
-  for (int i = 0; i < len; i++) {
-    const char* key = 0;
-    size_t key_size = 0;
-    const char* value = 0;
-    size_t value_size = 0;
-
-    buffer = decode_string(buffer, &key, key_size);
-    buffer = decode_string(buffer, &value, value_size);
-    map.insert(std::make_pair(String(key, key_size),
-                              String(value, value_size)));
-  }
-  return buffer;
-}
-
-inline const char* decode_stringlist(const char* input, Vector<String>& output) {
-  output.clear();
-  uint16_t len = 0;
-  const char* buffer = decode_uint16(input, len);
-
-  for (int i = 0; i < len; i++) {
-    const char* s = NULL;
-    size_t s_size = 0;
-
-    buffer = decode_string(buffer, &s, s_size);
-    output.push_back(String(s, s_size));
-  }
-  return buffer;
-}
-
-inline const char* decode_stringlist(const char* input, StringRefVec& output) {
-  output.clear();
-  uint16_t len = 0;
-  const char* pos = decode_uint16(input, len);
-  output.reserve(len);
-  for (int i = 0; i < len; i++) {
-    StringRef s;
-    pos = decode_string(pos, &s);
-    output.push_back(s);
-  }
-  return pos;
-}
-
-typedef Map<String, Vector<String> > StringMultimap;
-
-inline const char* decode_string_multimap(const char* input, StringMultimap& output) {
-  output.clear();
-  uint16_t len = 0;
-  const char* buffer = decode_uint16(input, len);
-
-  for (int i = 0; i < len; i++) {
-    const char* key = 0;
-    size_t key_size = 0;
-    Vector<String> value;
-
-    buffer = decode_string(buffer, &key, key_size);
-    buffer = decode_stringlist(buffer, value);
-    output.insert(std::make_pair(String(key, key_size), value));
-  }
-  return buffer;
-}
-
-inline const char* decode_option(const char* input, uint16_t& type, const char** class_name,
-                                 size_t& class_name_size) {
-  const char* buffer = decode_uint16(input, type);
-  if (type == CASS_VALUE_TYPE_CUSTOM) {
-    buffer = decode_string(buffer, class_name, class_name_size);
-  }
-  return buffer;
 }
 
 inline char* encode_uuid(char* output, CassUuid uuid) {
@@ -378,7 +215,8 @@ inline const char* decode_uuid(const char* input, CassUuid* output) {
   return input + 16;
 }
 
-inline const char* decode_size(int protocol_version, const char* input, int32_t& size) {
+inline const char* decode_size(int protocol_version, const char* input,
+                               int32_t& size) {
   const char* pos;
   if (protocol_version >= 3) {
     pos = decode_int32(input, size);
@@ -398,45 +236,6 @@ inline int64_t decode_zig_zag(uint64_t n) {
 
 inline uint64_t encode_zig_zag(int64_t n) {
   return (n << 1) ^ (n >> 63);
-}
-
-inline const uint8_t* decode_vint(const uint8_t* input, const uint8_t* end, uint64_t* output) {
-  int num_extra_bytes;
-  int i;
-  uint8_t first_byte = *input++;
-  if (first_byte <= 127) {
-    // If this is a multibyte vint, at least the MSB of the first byte
-    // will be set. Since that's not the case, this is a one-byte value.
-    *output = first_byte;
-  } else {
-    // The number of consecutive most significant bits of the first-byte tell us how
-    // many additional bytes are in this vint. Count them like this:
-    // 1. Invert the firstByte so that all leading 1s become 0s.
-    // 2. Count the number of leading zeros; num_leading_zeros assumes a 64-bit long.
-    // 3. We care about leading 0s in the byte, not int, so subtract out the
-    //    appropriate number of extra bits (56 for a 64-bit int).
-
-    // We mask out high-order bits to prevent sign-extension as the value is placed in a 64-bit arg
-    // to the num_leading_zeros function.
-    num_extra_bytes = cass::num_leading_zeros(~first_byte & 0xff) - 56;
-
-    // Error out if we don't have num_extra_bytes left in our data.
-    if (input + num_extra_bytes > end) {
-      // There aren't enough bytes. This duration object is not fully defined.
-      return NULL;
-    }
-
-    // Build up the vint value one byte at a time from the data bytes.
-    // The firstByte contains size as well as the most significant bits of
-    // the value. Extract just the value.
-    *output = first_byte & (0xff >> num_extra_bytes);
-    for (i = 0; i < num_extra_bytes; ++i) {
-      uint8_t b = *input++;
-      *output <<= 8;
-      *output |= b & 0xff;
-    }
-  }
-  return input;
 }
 
 } // namespace cass

@@ -12,6 +12,7 @@
 
 #include "macros.hpp"
 #include "vector.hpp"
+#include "cpp-driver/src/serialization.hpp"
 
 #include <assert.h>
 #include <stdint.h>

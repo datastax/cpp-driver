@@ -60,19 +60,7 @@ public:
 
   String error_message() const;
 
-  bool decode(int version, const char* buffer, size_t size);
-
-private:
-  const char* decode_failures(const char* pos);
-  void decode_write_type(const char* pos);
-
-private:
-  struct Failure {
-    CassInet endpoint;
-    uint16_t failurecode;
-  };
-
-  typedef Vector<Failure> FailureVec;
+  virtual bool decode(Decoder& decoder);
 
 private:
   int32_t code_;

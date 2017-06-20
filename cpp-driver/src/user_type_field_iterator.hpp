@@ -29,8 +29,7 @@ class UserTypeFieldIterator : public Iterator {
 public:
   UserTypeFieldIterator(const Value* user_type_value)
       : Iterator(CASS_ITERATOR_TYPE_USER_TYPE_FIELD)
-      , user_type_value_(user_type_value)
-      , position_(user_type_value->data()) {
+      , decoder_(user_type_value->decoder()) {
     UserType::ConstPtr user_type(user_type_value->data_type());
     next_ = user_type->fields().begin();
     end_ = user_type->fields().end();
@@ -49,12 +48,7 @@ public:
   }
 
 private:
-  const char* decode_field(const char* position);
-
-private:
-  const Value* user_type_value_;
-
-  const char* position_;
+  Decoder decoder_;
   UserType::FieldVec::const_iterator next_;
   UserType::FieldVec::const_iterator current_;
   UserType::FieldVec::const_iterator end_;

@@ -23,16 +23,10 @@ bool CollectionIterator::next() {
     return false;
   }
   ++index_;
-  position_ = decode_value(position_);
-  return true;
+  return decode_value();
 }
 
-const char* CollectionIterator::decode_value(const char* position) {
-  int protocol_version = collection_->protocol_version();
-
-  int32_t size;
-  const char* buffer = decode_size(protocol_version, position, size);
-
+bool CollectionIterator::decode_value() {
   DataType::ConstPtr data_type;
   if (collection_->value_type() == CASS_VALUE_TYPE_MAP) {
     data_type = (index_ % 2 == 0) ? collection_->primary_data_type()
@@ -41,9 +35,7 @@ const char* CollectionIterator::decode_value(const char* position) {
     data_type = collection_->primary_data_type();
   }
 
-  value_ = Value(protocol_version, data_type, buffer, size);
-
-  return buffer + size;
+  return decoder_.decode_value(data_type, value_, true);
 }
 
 bool TupleIterator::next() {
@@ -51,17 +43,7 @@ bool TupleIterator::next() {
     return false;
   }
   current_ = next_++;
-  position_ = decode_value(position_);
-  return true;
-}
-
-const char* TupleIterator::decode_value(const char* position) {
-  int32_t size;
-  const char* buffer = decode_int32(position, size);
-
-  value_ = Value(tuple_->protocol_version(), *current_, buffer, size);
-
-  return size > 0 ? buffer + size : buffer;
+  return decoder_.decode_value(*current_, value_);
 }
 
 } // namespace cass

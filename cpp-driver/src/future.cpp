@@ -148,13 +148,13 @@ CassError cass_future_custom_payload_item(CassFuture* future,
         static_cast<cass::ResponseFuture*>(future->from())->response());
   if (!response) return CASS_ERROR_LIB_NO_CUSTOM_PAYLOAD;
 
-  const cass::Response::CustomPayloadVec& custom_payload =
+  const cass::CustomPayloadVec& custom_payload =
       response->custom_payload();
   if (index >= custom_payload.size()) {
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
   }
 
-  const cass::Response::CustomPayloadItem& item = custom_payload[index];
+  const cass::CustomPayloadItem& item = custom_payload[index];
   *name = item.name.data();
   *name_length = item.name.size();
   *value = reinterpret_cast<const cass_byte_t*>(item.value.data());

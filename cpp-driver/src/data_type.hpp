@@ -123,7 +123,6 @@ public:
   }
 
 private:
-  int protocol_version_;
   CassValueType value_type_;
   bool is_frozen_;
 

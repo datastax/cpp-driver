@@ -38,15 +38,11 @@ public:
 
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
-      , protocol_version_(0)
       , kind_(CASS_RESULT_KIND_VOID)
       , has_more_pages_(false)
-      , row_count_(0)
-      , rows_(NULL) {
+      , row_count_(0) {
     first_row_.set_result(this);
   }
-
-  int protocol_version() const{ return protocol_version_; }
 
   int32_t kind() const { return kind_; }
 
@@ -70,7 +66,8 @@ public:
   StringRef keyspace() const { return keyspace_; }
   StringRef table() const { return table_; }
 
-  const char* rows() const { return rows_; }
+  int protocol_version() const { return decoder_.protocol_version(); }
+  Decoder& decoder() { return decoder_; }
 
   int32_t row_count() const { return row_count_; }
 
@@ -78,24 +75,23 @@ public:
 
   const PKIndexVec& pk_indices() const { return pk_indices_; }
 
-  bool decode(int version, const char* input, size_t size);
+  virtual bool decode(Decoder& decoder);
 
 private:
-  const char* decode_metadata(const char* input, ResultMetadata::Ptr* metadata,
-                        bool has_pk_indices = false);
+  bool decode_metadata(Decoder& decoder, ResultMetadata::Ptr* metadata,
+                       bool has_pk_indices = false);
 
-  void decode_first_row();
+  bool decode_first_row();
 
-  bool decode_rows(const char* input);
+  bool decode_rows(Decoder& decoder);
 
-  bool decode_set_keyspace(const char* input);
+  bool decode_set_keyspace(Decoder& decoder);
 
-  bool decode_prepared(int version, const char* input);
+  bool decode_prepared(Decoder& decoder);
 
-  bool decode_schema_change(const char* input);
+  bool decode_schema_change(Decoder& decoder);
 
 private:
-  int protocol_version_;
   int32_t kind_;
   bool has_more_pages_; // row data
   ResultMetadata::Ptr metadata_;
@@ -106,7 +102,7 @@ private:
   StringRef keyspace_; // rows, set keyspace, and schema change
   StringRef table_; // rows, and schema change
   int32_t row_count_;
-  const char* rows_;
+  Decoder decoder_;
   Row first_row_;
   PKIndexVec pk_indices_;
 

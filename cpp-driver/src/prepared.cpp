@@ -84,7 +84,7 @@ Prepared::Prepared(const ResultResponse::Ptr& result,
   : result_(result)
   , id_(result->prepared().to_string())
   , statement_(statement) {
-  if (schema_metadata.protocol_version() >= 4) {
+  if (result->protocol_version() >= 4) {
     key_indices_ = result->pk_indices();
   } else {
     const KeyspaceMetadata* keyspace = schema_metadata.get_keyspace(result->keyspace().to_string());

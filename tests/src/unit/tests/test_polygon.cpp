@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "dse.h"
+#include "decoder.hpp"
 #include "polygon.hpp"
 #include "string.hpp"
 
@@ -27,9 +28,8 @@ public:
 
   const CassValue* to_value() {
     char* data = const_cast<char*>(reinterpret_cast<const char*>(polygon->bytes().data()));
-    value =  cass::Value(0, // Not used
-                         cass::DataType::ConstPtr(new cass::CustomType(DSE_POLYGON_TYPE)),
-                         data, polygon->bytes().size());
+    value =  cass::Value(cass::DataType::ConstPtr(new cass::CustomType(DSE_POLYGON_TYPE)),
+                         cass::Decoder(data, polygon->bytes().size(), 0)); // Protocol version not used
     return CassValue::to(&value);
   }
 

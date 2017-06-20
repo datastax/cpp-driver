@@ -23,14 +23,6 @@ set(RAPID_JSON_INCLUDE_DIR "${CPP_DRIVER_THIRD_PARTY_SOURCE_DIR}/rapidjson")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CASS_SOURCE_DIR}/cmake/modules/")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
-# Determine if the submodule should be initialized
-if(NOT EXISTS "${CASS_SOURCE_DIR}/CMakeLists.txt")
-    find_package(Git REQUIRED)
-    execute_process(COMMAND git submodule update --init --recursive
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        OUTPUT_QUIET)
-endif()
-
 include(CppDriver)
 
 CassPolicies()
@@ -164,7 +156,7 @@ source_group("Source Files\\Cassandra" FILES ${SRC_FILES})
 source_group("Header Files\\Cassandra" FILES ${API_HEADER_FILES} ${INC_FILES})
 
 # Build up the include paths
-set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
+set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/include)
 set(DSE_INCLUDES ${PROJECT_INCLUDE_DIR})
 set(DSE_INCLUDES ${DSE_INCLUDES} ${PROJECT_SOURCE_DIR}/src)
 set(DSE_INCLUDES ${DSE_INCLUDES} ${RAPID_JSON_INCLUDE_DIR})

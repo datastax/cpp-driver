@@ -31,7 +31,7 @@ public:
 
   const String& class_name() const { return class_name_; }
 
-  bool decode(int version, const char* buffer, size_t size);
+  virtual bool decode(Decoder& decoder);
 
 private:
   String class_name_;
@@ -44,7 +44,7 @@ public:
 
   const String& token() const { return token_; }
 
-  bool decode(int version, const char* buffer, size_t size);
+  virtual bool decode(Decoder& decoder);
 
 private:
   String token_;
@@ -57,7 +57,7 @@ public:
 
   const String& token() const { return token_; }
 
-  bool decode(int version, const char* buffer, size_t size);
+  virtual bool decode(Decoder& decoder);
 
 private:
   String token_;

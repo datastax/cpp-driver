@@ -16,8 +16,6 @@
 
 #include "startup_request.hpp"
 
-#include "serialization.hpp"
-
 namespace cass {
 
 int StartupRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {

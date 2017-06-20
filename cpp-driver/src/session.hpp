@@ -106,10 +106,6 @@ public:
 
   const Metadata& metadata() const { return metadata_; }
 
-  int protocol_version() const {
-    return control_connection_.protocol_version();
-  }
-
   const VersionNumber& cassandra_version() const {
     return control_connection_.cassandra_version();
   }

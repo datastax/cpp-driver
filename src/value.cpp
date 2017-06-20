@@ -12,7 +12,6 @@
 
 #include "serialization.hpp"
 #include "validate.hpp"
-#include "../cpp-driver/src/serialization.hpp"
 
 extern "C" {
 
@@ -47,11 +46,13 @@ CassError cass_value_get_dse_point(const CassValue* value,
 
 CassError cass_value_get_dse_date_range(const CassValue* value,
                                         DseDateRange* range) {
-  size_t size, expected_size;
-  const char* pos, *end = NULL;
+  size_t size = 0;
+  size_t expected_size = 0;
+  const char* pos = NULL;
+  const char* end = NULL;
   dse::DateRangeBoundType range_type;
   DseDateRangeBound* first_bound = NULL;
-  int8_t decoded_byte;
+  int8_t decoded_byte = 0;
 
   CassError rc = dse::validate_data_type(value, DSE_DATE_RANGE_TYPE);
   if (rc != CASS_OK) return rc;

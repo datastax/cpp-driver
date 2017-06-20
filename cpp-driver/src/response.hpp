@@ -19,6 +19,7 @@
 
 #include "utils.hpp"
 #include "constants.hpp"
+#include "decoder.hpp"
 #include "hash_table.hpp"
 #include "macros.hpp"
 #include "memory.hpp"
@@ -27,21 +28,13 @@
 
 #include <uv.h>
 
+#define CHECK_RESULT(result) if(!(result)) return false;
+
 namespace cass {
 
 class Response : public RefCounted<Response> {
 public:
   typedef SharedRefPtr<Response> Ptr;
-
-  struct CustomPayloadItem {
-    CustomPayloadItem(StringRef name, StringRef value)
-      : name(name)
-      , value(value) { }
-    StringRef name;
-    StringRef value;
-  };
-  typedef SmallVector<CustomPayloadItem, 8> CustomPayloadVec;
-  typedef SmallVector<StringRef, 8> WarningVec;
 
   Response(uint8_t opcode)
       : opcode_(opcode) { }
@@ -60,16 +53,19 @@ public:
 
   const CustomPayloadVec& custom_payload() const { return custom_payload_; }
 
-  const char* decode_custom_payload(const char* buffer, size_t size);
+  const WarningVec& warnings() const { return warnings_; }
 
-  const char* decode_warnings(const char* buffer, size_t size);
+  bool decode_custom_payload(Decoder& decoder);
 
-  virtual bool decode(int version, const char* buffer, size_t size) = 0;
+  bool decode_warnings(Decoder& decoder);
+
+  virtual bool decode(Decoder& decoder) = 0;
 
 private:
   uint8_t opcode_;
   RefBuffer::Ptr buffer_;
   CustomPayloadVec custom_payload_;
+  WarningVec warnings_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Response);
@@ -91,7 +87,7 @@ public:
       , is_body_error_(false)
       , body_buffer_pos_(NULL) {}
 
-  uint8_t floats() const { return flags_; }
+  uint8_t flags() const { return flags_; }
 
   uint8_t opcode() const { return opcode_; }
 

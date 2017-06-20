@@ -23,35 +23,15 @@
 #include "ready_response.hpp"
 #include "result_response.hpp"
 #include "supported_response.hpp"
-#include "serialization.hpp"
 
 namespace cass {
 
-const char* Response::decode_custom_payload(const char* buffer, size_t size) {
-  uint16_t item_count;
-  const char* pos = decode_uint16(buffer, item_count);
-  for (uint16_t i = 0; i < item_count; ++i) {
-    StringRef name;
-    StringRef value;
-    pos = decode_string(pos, &name);
-    pos = decode_bytes(pos, &value);
-    custom_payload_.push_back(CustomPayloadItem(name, value));
-  }
-
-  return pos;
+bool Response::decode_custom_payload(Decoder& decoder) {
+  return decoder.decode_custom_payload(custom_payload_);
 }
 
-const char* Response::decode_warnings(const char* buffer, size_t size) {
-  uint16_t warning_count;
-  const char* pos = decode_uint16(buffer, warning_count);
-
-  for (uint16_t i = 0; i < warning_count; ++i) {
-    StringRef warning;
-    pos = decode_string(pos, &warning);
-    LOG_WARN("Server-side warning: %.*s", (int)warning.size(), warning.data());
-  }
-
-  return pos;
+bool Response::decode_warnings(Decoder& decoder) {
+  return decoder.decode_warnings(warnings_);
 }
 
 bool ResponseMessage::allocate_body(int8_t opcode) {
@@ -102,6 +82,10 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
 
   if (!is_header_received_) {
     if (version_ == 0) {
+      if (received_ < 1) {
+        LOG_ERROR("Expected at least 1 byte to decode header version");
+        return -1;
+      }
       version_ = input[0] & 0x7F; // "input" will always have at least 1 bytes
       if (version_ >= 3) {
         header_size_  = CASS_HEADER_SIZE_V3;
@@ -161,18 +145,17 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
     body_buffer_pos_ += needed;
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->data() + length_);
-
-    const char* pos = response_body()->data();
+    Decoder decoder(response_body_->data(), length_, version_);
 
     if (flags_ & CASS_FLAG_WARNING) {
-      pos = response_body()->decode_warnings(pos, length_);
+      if (!response_body_->decode_warnings(decoder)) return -1;
     }
 
     if (flags_ & CASS_FLAG_CUSTOM_PAYLOAD) {
-      pos = response_body()->decode_custom_payload(pos, length_);
+      if (!response_body_->decode_custom_payload(decoder)) return -1;
     }
 
-    if (!response_body_->decode(version_, pos, length_)) {
+    if (!response_body_->decode(decoder)) {
       is_body_error_ = true;
       return -1;
     }

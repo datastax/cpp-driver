@@ -48,26 +48,18 @@ const CassValue* cass_row_get_column_by_name_n(const CassRow* row,
 
 namespace cass {
 
-const char* decode_row(const char* rows, const ResultResponse* result, OutputValueVec& output) {
-  const char* buffer = rows;
+bool decode_row(Decoder& decoder, const ResultResponse* result,
+                OutputValueVec& output) {
   output.clear();
-
-  const int protocol_version = result->protocol_version();
-
+  output.reserve(result->column_count());
   for (int i = 0; i < result->column_count(); ++i) {
-    int32_t size = 0;
-    buffer = decode_int32(buffer, size);
-
+    Value value;
     const ColumnDefinition& def = result->metadata()->get_column_definition(i);
-
-    if (size >= 0) {
-      output.push_back(Value(protocol_version, def.data_type, buffer, size));
-      buffer += size;
-    } else { // null value
-      output.push_back(Value(def.data_type));
-    }
+    CHECK_RESULT(decoder.decode_value(def.data_type, value));
+    output.push_back(value);
   }
-  return buffer;
+
+  return true;
 }
 
 const Value* Row::get_by_name(const StringRef& name) const {
@@ -80,11 +72,10 @@ const Value* Row::get_by_name(const StringRef& name) const {
 
 bool Row::get_string_by_name(const StringRef& name, String* out) const {
   const Value* value = get_by_name(name);
-  if (value == NULL ||
-      value->size() < 0) {
+  if (value == NULL || value->is_null()) {
     return false;
   }
-  out->assign(value->data(), value->size());
+  *out = value->decoder().as_string();
   return true;
 }
 

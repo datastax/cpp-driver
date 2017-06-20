@@ -161,8 +161,8 @@ public:
 protected:
   const Value* add_field(const RefBuffer::Ptr& buffer, const Row* row, const String& name);
   void add_field(const RefBuffer::Ptr& buffer, const Value& value, const String& name);
-  void add_json_list_field(int version, const Row* row, const String& name);
-  const Value* add_json_map_field(int version, const Row* row, const String& name);
+  void add_json_list_field(const Row* row, const String& name);
+  const Value* add_json_map_field(const Row* row, const String& name);
 
   MetadataField::Map fields_;
 
@@ -201,7 +201,7 @@ public:
     DataType::ConstPtr type;
   };
 
-  FunctionMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+  FunctionMetadata(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                    const String& name, const Value* signature,
                    KeyspaceMetadata* keyspace,
                    const RefBuffer::Ptr& buffer, const Row* row);
@@ -234,7 +234,7 @@ public:
   typedef cass::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
 
-  AggregateMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+  AggregateMetadata(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                     const String& name, const Value* signature,
                     KeyspaceMetadata* keyspace,
                     const RefBuffer::Ptr& buffer, const Row* row);
@@ -275,8 +275,7 @@ public:
                                      const RefBuffer::Ptr& buffer, const Row* row);
   void update(StringRef index_type, const Value* options);
 
-  static IndexMetadata::Ptr from_legacy(int protocol_version,
-                                        const String& index_name, const ColumnMetadata* column,
+  static IndexMetadata::Ptr from_legacy(const String& index_name, const ColumnMetadata* column,
                                         const RefBuffer::Ptr& buffer, const Row* row);
   void update_legacy(StringRef index_type, const ColumnMetadata* column, const Value* options);
 
@@ -317,7 +316,7 @@ public:
     , data_type_(data_type)
     , is_reversed_(false) { }
 
-  ColumnMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+  ColumnMetadata(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                  const String& name,
                  KeyspaceMetadata* keyspace,
                  const RefBuffer::Ptr& buffer, const Row* row);
@@ -353,7 +352,7 @@ public:
     const ColumnMetadata* column() const { return impl_.item().get(); }
   };
 
-  TableMetadataBase(int protocol_version, const VersionNumber& cassandra_version,
+  TableMetadataBase(const VersionNumber& cassandra_version,
                     const String& name, const RefBuffer::Ptr& buffer, const Row* row);
 
   virtual ~TableMetadataBase() { }
@@ -367,7 +366,7 @@ public:
   const ColumnMetadata* get_column(const String& name) const;
   virtual void add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column);
   void clear_columns();
-  void build_keys_and_sort(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache);
+  void build_keys_and_sort(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache);
 
 protected:
   ColumnMetadata::Vec columns_;
@@ -388,7 +387,7 @@ public:
 
   static const ViewMetadata::Ptr NIL;
 
-  ViewMetadata(int protocol_version, const VersionNumber& cassandra_version,
+  ViewMetadata(const VersionNumber& cassandra_version,
                TableMetadata* table,
                const String& name,
                const RefBuffer::Ptr& buffer, const Row* row);
@@ -466,7 +465,7 @@ public:
     const IndexMetadata* index() const { return impl_.item().get(); }
   };
 
-  TableMetadata(int protocol_version, const VersionNumber& cassandra_version, const String& name,
+  TableMetadata(const VersionNumber& cassandra_version, const String& name,
                 const RefBuffer::Ptr& buffer, const Row* row);
 
   const ViewMetadata::Vec& views() const { return views_; }
@@ -533,7 +532,7 @@ public:
     , functions_(Memory::allocate<FunctionMetadata::Map>())
     , aggregates_(Memory::allocate<AggregateMetadata::Map>()) { }
 
-  void update(int protocol_version, const VersionNumber& cassandra_version,
+  void update(const VersionNumber& cassandra_version,
               const RefBuffer::Ptr& buffer, const Row* row);
 
   const FunctionMetadata::Map& functions() const { return *functions_; }
@@ -592,16 +591,13 @@ public:
   class SchemaSnapshot {
   public:
     SchemaSnapshot(uint32_t version,
-                   int protocol_version,
                    const VersionNumber& cassandra_version,
                    const KeyspaceMetadata::MapPtr& keyspaces)
       : version_(version)
-      , protocol_version_(protocol_version)
       , cassandra_version_(cassandra_version)
       , keyspaces_(keyspaces) { }
 
     uint32_t version() const { return version_; }
-    int protocol_version() const { return protocol_version_; }
     VersionNumber cassandra_version() const { return cassandra_version_; }
 
     const KeyspaceMetadata* get_keyspace(const String& name) const;
@@ -612,7 +608,6 @@ public:
 
   private:
     uint32_t version_;
-    int protocol_version_;
     VersionNumber cassandra_version_;
     KeyspaceMetadata::MapPtr keyspaces_;
   };
@@ -630,16 +625,16 @@ public:
     uv_mutex_destroy(&mutex_);
   }
 
-  SchemaSnapshot schema_snapshot(int protocol_version, const VersionNumber& cassandra_version) const;
+  SchemaSnapshot schema_snapshot(const VersionNumber& cassandra_version) const;
 
-  void update_keyspaces(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_tables(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_views(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_columns(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_indexes(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_user_types(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_functions(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_tables(const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_views(const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_columns(const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_indexes(const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_user_types(const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_functions(const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_aggregates(const VersionNumber& cassandra_version, const ResultResponse* result);
 
   void drop_keyspace(const String& keyspace_name);
   void drop_table_or_view(const String& keyspace_name, const String& table_or_view_name);
@@ -668,17 +663,17 @@ private:
 
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
-    void update_keyspaces(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_tables(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_views(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_columns(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, const ResultResponse* result);
-    void update_legacy_indexes(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_indexes(int protocol_version, const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_user_types(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+    void update_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_tables(const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_views(const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_columns(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, const ResultResponse* result);
+    void update_legacy_indexes(const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_indexes(const VersionNumber& cassandra_version, const ResultResponse* result);
+    void update_user_types(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                            const ResultResponse* result);
-    void update_functions(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+    void update_functions(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                           const ResultResponse* result);
-    void update_aggregates(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+    void update_aggregates(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
                            const ResultResponse* result);
 
     void drop_keyspace(const String& keyspace_name);

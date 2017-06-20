@@ -21,6 +21,15 @@
 #include "external.hpp"
 #include "serialization.hpp"
 
+#define CHECK_RESULT(result) if(!(result)) return false;
+#define CHECK_VALUE(result) do { \
+  if ((result)) { \
+    return CASS_OK; \
+  } else { \
+    return CASS_ERROR_LIB_NOT_ENOUGH_DATA; \
+  } \
+} while (0)
+
 extern "C" {
 
 const CassDataType* cass_value_data_type(const CassValue* value) {
@@ -32,8 +41,7 @@ CassError cass_value_get_int8(const CassValue* value, cass_int8_t* output) {
   if (value->value_type() != CASS_VALUE_TYPE_TINY_INT) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_int8(value->data(), *output);
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_int8(output));
 }
 
 CassError cass_value_get_int16(const CassValue* value, cass_int16_t* output) {
@@ -41,8 +49,7 @@ CassError cass_value_get_int16(const CassValue* value, cass_int16_t* output) {
   if (value->value_type() != CASS_VALUE_TYPE_SMALL_INT) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_int16(value->data(), *output);
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_int16(output));
 }
 
 CassError cass_value_get_int32(const CassValue* value, cass_int32_t* output) {
@@ -50,8 +57,7 @@ CassError cass_value_get_int32(const CassValue* value, cass_int32_t* output) {
   if (value->value_type() != CASS_VALUE_TYPE_INT) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_int32(value->data(), *output);
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_int32(output));
 
 }
 
@@ -60,8 +66,7 @@ CassError cass_value_get_uint32(const CassValue* value, cass_uint32_t* output) {
   if (value->value_type() != CASS_VALUE_TYPE_DATE) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_uint32(value->data(), *output);
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_uint32(output));
 }
 
 CassError cass_value_get_int64(const CassValue* value, cass_int64_t* output) {
@@ -69,8 +74,7 @@ CassError cass_value_get_int64(const CassValue* value, cass_int64_t* output) {
   if (!cass::is_int64_type(value->value_type())) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_int64(value->data(), *output);
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_int64(output));
 }
 
 CassError cass_value_get_float(const CassValue* value, cass_float_t* output) {
@@ -78,8 +82,7 @@ CassError cass_value_get_float(const CassValue* value, cass_float_t* output) {
   if (value->value_type() != CASS_VALUE_TYPE_FLOAT) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_float(value->data(), *output);
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_float(output));
 }
 
 CassError cass_value_get_double(const CassValue* value, cass_double_t* output) {
@@ -87,18 +90,19 @@ CassError cass_value_get_double(const CassValue* value, cass_double_t* output) {
   if (value->value_type() != CASS_VALUE_TYPE_DOUBLE) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_double(value->data(), *output);
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_double(output));
 }
 
 CassError cass_value_get_bool(const CassValue* value, cass_bool_t* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  uint8_t byte;
   if (value->value_type() != CASS_VALUE_TYPE_BOOLEAN) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_byte(value->data(), byte);
-  *output = static_cast<cass_bool_t>(byte);
+  bool decode_value = false;
+  if (!value->decoder().as_bool(&decode_value)) {
+    return CASS_ERROR_LIB_NOT_ENOUGH_DATA;
+  }
+  *output = decode_value ? cass_true : cass_false;
   return CASS_OK;
 }
 
@@ -107,8 +111,7 @@ CassError cass_value_get_uuid(const CassValue* value, CassUuid* output) {
   if (!cass::is_uuid_type(value->value_type())) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_uuid(value->data(), output);
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_uuid(output));
 }
 
 CassError cass_value_get_inet(const CassValue* value, CassInet* output) {
@@ -116,8 +119,9 @@ CassError cass_value_get_inet(const CassValue* value, CassInet* output) {
   if (value->value_type() != CASS_VALUE_TYPE_INET) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  output->address_length = value->size();
-  memcpy(output->address, value->data(), value->size());
+  if (!value->decoder().as_inet(value->size(), output)) {
+    return CASS_ERROR_LIB_INVALID_DATA;
+  }
   return CASS_OK;
 }
 
@@ -125,8 +129,9 @@ CassError cass_value_get_string(const CassValue* value,
                                 const char** output,
                                 size_t* output_length) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  *output = value->data();
-  *output_length = value->size();
+  cass::StringRef buffer = value->decoder().as_string_ref();
+  *output = buffer.data();
+  *output_length = buffer.size();
   return CASS_OK;
 }
 
@@ -134,8 +139,9 @@ CassError cass_value_get_bytes(const CassValue* value,
                                const cass_byte_t** output,
                                size_t* output_size) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  *output = reinterpret_cast<const cass_byte_t*>(value->data());
-  *output_size = value->size();
+  cass::StringRef buffer = value->decoder().as_string_ref();
+  *output = reinterpret_cast<const cass_byte_t*>(buffer.data());
+  *output_size = buffer.size();
   return CASS_OK;
 }
 
@@ -143,30 +149,9 @@ CassError cass_value_get_duration(const CassValue* value,
                                   cass_int32_t* months,
                                   cass_int32_t* days,
                                   cass_int64_t* nanos) {
-  const uint8_t* cur_byte = NULL;
-  const uint8_t* end = NULL;
-
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
   if (!cass_value_is_duration(value)) return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
-
-  cur_byte = reinterpret_cast<const uint8_t*>(value->data());
-  end = cur_byte + value->size();
-
-  uint64_t decoded = 0;
-
-  cur_byte = cass::decode_vint(cur_byte, end, &decoded);
-  if (cur_byte == NULL || cur_byte == end) return CASS_ERROR_LIB_BAD_PARAMS;
-  *months = static_cast<cass_int32_t>(cass::decode_zig_zag(decoded));
-
-  cur_byte = cass::decode_vint(cur_byte, end, &decoded);
-  if (cur_byte == NULL || cur_byte == end) return CASS_ERROR_LIB_BAD_PARAMS;
-  *days = static_cast<cass_int32_t>(cass::decode_zig_zag(decoded));
-
-  cur_byte = cass::decode_vint(cur_byte, end, &decoded);
-  if (cur_byte == NULL || cur_byte != end) return CASS_ERROR_LIB_BAD_PARAMS;
-  *nanos = static_cast<cass_int64_t>(cass::decode_zig_zag(decoded));
-
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_duration(months, days, nanos));
 }
 
 CassError cass_value_get_decimal(const CassValue* value,
@@ -177,10 +162,7 @@ CassError cass_value_get_decimal(const CassValue* value,
   if (value->value_type() != CASS_VALUE_TYPE_DECIMAL) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  const char* buffer = cass::decode_int32(value->data(), *scale);
-  *varint = reinterpret_cast<const cass_byte_t*>(buffer);
-  *varint_size = value->size() - sizeof(int32_t);
-  return CASS_OK;
+  CHECK_VALUE(value->decoder().as_decimal(varint, varint_size, scale));
 }
 
 CassValueType cass_value_type(const CassValue* value) {
@@ -218,44 +200,34 @@ CassValueType cass_value_secondary_sub_type(const CassValue* collection) {
 
 namespace cass {
 
-Value::Value(int protocol_version,
-             const DataType::ConstPtr& data_type,
-             const char* data, int32_t size)
-  : protocol_version_(protocol_version)
-  , data_type_(data_type) {
-  if (size > 0 && data_type->is_collection()) {
-    data_ = decode_size(protocol_version, data, count_);
-    if (protocol_version_ >= 3) {
-      size_ = size - sizeof(int32_t);
-    } else {
-      size_ = size - sizeof(uint16_t);
-    }
+Value::Value(const DataType::ConstPtr &data_type, Decoder decoder)
+    : data_type_(data_type)
+    , count_(0)
+    , decoder_(decoder)
+    , is_null_(false) {
+  assert(!data_type->is_collection());
+  if (data_type->is_tuple()) {
+    SharedRefPtr<const CompositeType> composite_type(data_type);
+    count_ = composite_type->types().size();
+  } else if (data_type->is_user_type()) {
+    UserType::ConstPtr user_type(data_type);
+    count_ = user_type->fields().size();
   } else {
-    if (data_type->is_tuple()) {
-      SharedRefPtr<const CompositeType> composite_type(data_type);
-      count_ = composite_type->types().size();
-    } else if (data_type->is_user_type()) {
-      UserType::ConstPtr user_type(data_type);
-      count_ = user_type->fields().size();
-    } else {
-      count_ = 0;
-    }
-    data_ = data;
-    size_ = size;
+    count_ = 0;
   }
 }
 
 bool Value::as_bool() const {
   assert(!is_null() && value_type() == CASS_VALUE_TYPE_BOOLEAN);
-  uint8_t value;
-  decode_byte(data_, value);
-  return value != 0;
+  bool value = false;
+  assert(decoder_.as_bool(&value));
+  return value;
 }
 
 int32_t Value::as_int32() const {
   assert(!is_null() && value_type() == CASS_VALUE_TYPE_INT);
   int32_t value;
-  decode_int32(data_, value);
+  assert(decoder_.as_int32(&value));
   return value;
 }
 
@@ -263,9 +235,8 @@ CassUuid Value::as_uuid() const {
   assert(!is_null() && (value_type() == CASS_VALUE_TYPE_UUID ||
                         value_type() == CASS_VALUE_TYPE_TIMEUUID));
   CassUuid value;
-  decode_uuid(data_, &value);
+  assert(decoder_.as_uuid(&value));
   return value;
-
 }
 
 StringVec Value::as_stringlist() const {
@@ -280,4 +251,4 @@ StringVec Value::as_stringlist() const {
   return stringlist;
 }
 
-} // namespace cassandra
+} // namespace cass

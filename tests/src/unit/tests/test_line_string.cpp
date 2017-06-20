@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "dse.h"
+#include "decoder.hpp"
 #include "line_string.hpp"
 
 #include <value.hpp>
@@ -27,9 +28,8 @@ public:
 
   const CassValue* to_value() {
     char* data = const_cast<char*>(reinterpret_cast<const char*>(line_string->bytes().data()));
-    value =  cass::Value(0, // Not used
-                         cass::DataType::ConstPtr(new cass::CustomType(DSE_LINE_STRING_TYPE)),
-                         data, line_string->bytes().size());
+    value =  cass::Value(cass::DataType::ConstPtr(new cass::CustomType(DSE_LINE_STRING_TYPE)),
+                         cass::Decoder(data, line_string->bytes().size(), 0)); // Protocol version not used
     return CassValue::to(&value);
   }
 

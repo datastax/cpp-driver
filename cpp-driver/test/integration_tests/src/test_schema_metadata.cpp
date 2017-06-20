@@ -691,13 +691,14 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     const CassKeyspaceMeta* ks_meta = cass_schema_meta_keyspace_by_name(schema_meta_, ks_name.c_str());
     if (ks_meta) {
       const CassDataType* data_type = cass_keyspace_meta_user_type_by_name(ks_meta, udt_name.c_str());
-
-      size_t count =  cass_data_type_sub_type_count(data_type);
-      for (size_t i = 0; i < count; ++i) {
-        const char* name;
-        size_t name_length;
-        if (cass_data_type_sub_type_name(data_type, i, &name, &name_length) == CASS_OK) {
-          result.push_back(std::string(name, name_length));
+      if (data_type) {
+        size_t count = cass_data_type_sub_type_count(data_type);
+        for (size_t i = 0; i < count; ++i) {
+          const char *name;
+          size_t name_length;
+          if (cass_data_type_sub_type_name(data_type, i, &name, &name_length) == CASS_OK) {
+            result.push_back(std::string(name, name_length));
+          }
         }
       }
     }

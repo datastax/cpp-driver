@@ -123,93 +123,59 @@ String ErrorResponse::error_message() const {
   return ss.str();
 }
 
-bool ErrorResponse::decode(int version, const char* buffer, size_t size) {
-  const char* pos = decode_int32(buffer, code_);
-  pos = decode_string(pos, &message_);
+bool ErrorResponse::decode(Decoder& decoder) {
+  decoder.set_type("error");
+  CHECK_RESULT(decoder.decode_int32(code_));
+  CHECK_RESULT(decoder.decode_string(&message_));
 
   switch (code_) {
     case CQL_ERROR_UNAVAILABLE:
-      pos = decode_uint16(pos, cl_);
-      pos = decode_int32(pos, required_);
-      decode_int32(pos, received_);
+      CHECK_RESULT(decoder.decode_uint16(cl_));
+      CHECK_RESULT(decoder.decode_int32(required_));
+      CHECK_RESULT(decoder.decode_int32(received_));
       break;
     case CQL_ERROR_READ_TIMEOUT:
-      pos = decode_uint16(pos, cl_);
-      pos = decode_int32(pos, received_);
-      pos = decode_int32(pos, required_);
-      decode_byte(pos, data_present_);
+      CHECK_RESULT(decoder.decode_uint16(cl_));
+      CHECK_RESULT(decoder.decode_int32(received_));
+      CHECK_RESULT(decoder.decode_int32(required_));
+      CHECK_RESULT(decoder.decode_byte(data_present_));
       break;
     case CQL_ERROR_WRITE_TIMEOUT:
-      pos = decode_uint16(pos, cl_);
-      pos = decode_int32(pos, received_);
-      pos = decode_int32(pos, required_);
-      decode_write_type(pos);
+      CHECK_RESULT(decoder.decode_uint16(cl_));
+      CHECK_RESULT(decoder.decode_int32(received_));
+      CHECK_RESULT(decoder.decode_int32(required_));
+      CHECK_RESULT(decoder.decode_write_type(write_type_));
       break;
     case CQL_ERROR_READ_FAILURE:
-      pos = decode_uint16(pos, cl_);
-      pos = decode_int32(pos, received_);
-      pos = decode_int32(pos, required_);
-      pos = decode_int32(pos, num_failures_);
-      if (version >= 5) {
-        pos = decode_failures(pos);
-      }
-      decode_byte(pos, data_present_);
+      CHECK_RESULT(decoder.decode_uint16(cl_));
+      CHECK_RESULT(decoder.decode_int32(received_));
+      CHECK_RESULT(decoder.decode_int32(required_));
+      CHECK_RESULT(decoder.decode_failures(failures_, num_failures_));
+      CHECK_RESULT(decoder.decode_byte(data_present_));
       break;
     case CQL_ERROR_FUNCTION_FAILURE:
-      pos = decode_string(pos, &keyspace_);
-      pos = decode_string(pos, &function_);
-      decode_stringlist(pos, arg_types_);
+      CHECK_RESULT(decoder.decode_string(&keyspace_));
+      CHECK_RESULT(decoder.decode_string(&function_));
+      CHECK_RESULT(decoder.decode_stringlist(arg_types_));
       break;
     case CQL_ERROR_WRITE_FAILURE:
-      pos = decode_uint16(pos, cl_);
-      pos = decode_int32(pos, received_);
-      pos = decode_int32(pos, required_);
-      pos = decode_int32(pos, num_failures_);
-      if (version >= 5) {
-        pos = decode_failures(pos);
-      }
-      decode_write_type(pos);
+      CHECK_RESULT(decoder.decode_uint16(cl_));
+      CHECK_RESULT(decoder.decode_int32(received_));
+      CHECK_RESULT(decoder.decode_int32(required_));
+      CHECK_RESULT(decoder.decode_failures(failures_, num_failures_));
+      CHECK_RESULT(decoder.decode_write_type(write_type_));
       break;
     case CQL_ERROR_UNPREPARED:
-      decode_string(pos, &prepared_id_);
+      CHECK_RESULT(decoder.decode_string(&prepared_id_));
       break;
     case CQL_ERROR_ALREADY_EXISTS:
-      pos = decode_string(pos, &keyspace_);
-      pos = decode_string(pos, &table_);
+      CHECK_RESULT(decoder.decode_string(&keyspace_));
+      CHECK_RESULT(decoder.decode_string(&table_));
       break;
   }
+
+  decoder.maybe_log_remaining();
   return true;
-}
-
-// Format: <endpoint><failurecode>
-// where:
-// <endpoint> is a [inetaddr]
-// <failurecode> is a [short]
-const char* ErrorResponse::decode_failures(const char* pos) {
-  failures_.reserve(num_failures_);
-  for (int32_t i = 0; i < num_failures_; ++i) {
-    Failure failure;
-    pos = decode_inet(pos, &failure.endpoint);
-    pos = decode_uint16(pos, failure.failurecode);
-    failures_.push_back(failure);
-  }
-  return pos;
-}
-
-void ErrorResponse::decode_write_type(const char* pos) {
-  StringRef write_type;
-  decode_string(pos, &write_type);
-  if (write_type == "SIMPLE") {
-    write_type_ = CASS_WRITE_TYPE_SIMPLE;
-  } else if(write_type == "BATCH") {
-    write_type_ = CASS_WRITE_TYPE_BATCH;
-  } else if(write_type == "UNLOGGED_BATCH") {
-    write_type_ = CASS_WRITE_TYPE_UNLOGGED_BATCH;
-  } else if(write_type == "COUNTER") {
-    write_type_ = CASS_WRITE_TYPE_COUNTER;
-  } else if(write_type == "BATCH_LOG") {
-    write_type_ = CASS_WRITE_TYPE_BATCH_LOG;
-  }
 }
 
 bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opcode,

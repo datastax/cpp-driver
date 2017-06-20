@@ -26,7 +26,7 @@ public:
   ReadyResponse()
       : Response(CQL_OPCODE_READY) {}
 
-  bool decode(int version, const char* buffer, size_t size) { return true; }
+  virtual bool decode(Decoder& decoder) { return true; }
 };
 
 } // namespace cass

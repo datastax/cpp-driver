@@ -18,7 +18,7 @@
 #define __CASS_TEST_TOKEN_MAP_UTILS_HPP_INCLUDED__
 
 #include "constants.hpp"
-#include "serialization.hpp"
+#include "decoder.hpp"
 #include "token_map_impl.hpp"
 #include "uint128.hpp"
 
@@ -197,7 +197,8 @@ public:
 
   cass::ResultResponse* finish() {
     encode_at(row_count_index_, row_count_);
-    result_response_.decode(CASS_PROTOCOL_VERSION, data(), size());
+    cass::Decoder decoder(data(), size(), CASS_PROTOCOL_VERSION);
+    result_response_.decode(decoder);
     return &result_response_;
   }
 
@@ -210,9 +211,7 @@ private:
 class TokenCollectionBuilder : protected BufferBuilder {
 public:
   TokenCollectionBuilder()
-    : count_(0) {
-    append<cass_int32_t>(0); // Element count (updated later)
-  }
+    : count_(0) { }
 
   void append_token(cass::Murmur3Partitioner::Token token) {
     cass::OStringStream ss;
@@ -234,12 +233,12 @@ public:
   }
 
   cass::Value* finish() {
-    encode_at(0, count_);
     cass::CollectionType::ConstPtr data_type(
           cass::CollectionType::list(
             cass::DataType::ConstPtr(
               new cass::DataType(CASS_VALUE_TYPE_VARINT)), false));
-    value_ = cass::Value(CASS_PROTOCOL_VERSION, data_type, data(), size());
+    value_ = cass::Value(data_type, count_, cass::Decoder(data(), size(),
+                                                          CASS_PROTOCOL_VERSION));
     return &value_;
   }
 

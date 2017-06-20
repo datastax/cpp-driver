@@ -29,7 +29,7 @@ public:
   SupportedResponse()
       : Response(CQL_OPCODE_SUPPORTED) {}
 
-  bool decode(int version, const char* buffer, size_t size);
+  virtual bool decode(Decoder& decoder);
 
 private:
   Vector<String> compression_;

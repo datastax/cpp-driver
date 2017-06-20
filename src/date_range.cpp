@@ -6,7 +6,7 @@
 */
 
 #include "serialization.hpp"
-#include "../cpp-driver/src/serialization.hpp"
+#include "cpp-driver/src/serialization.hpp"
 
 namespace dse {
 

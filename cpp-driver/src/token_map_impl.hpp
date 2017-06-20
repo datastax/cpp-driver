@@ -309,13 +309,9 @@ void ReplicationStrategy<Partitioner>::init(IdGenerator& dc_ids,
 
     value = row->get_by_name("strategy_options");
 
-    int32_t buffer_size = value->size();
-    Vector<char> buf(buffer_size + 1);
-    memcpy(&buf[0], value->data(), buffer_size);
-    buf[buffer_size] = '\0';
-
+    Vector<char> buf = value->decoder().as_vector();
     json::Document d;
-    d.ParseInsitu(buf.data());
+    d.ParseInsitu(&buf[0]);
 
     if (!d.HasParseError() && d.IsObject()) {
       for (json::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
