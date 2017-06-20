@@ -18,6 +18,7 @@
 #define __CASS_STRING_REF_HPP_INCLUDED__
 
 #include "hash.hpp"
+#include "macros.hpp"
 #include "string.hpp"
 #include "vector.hpp"
 
@@ -76,7 +77,7 @@ public:
 
   StringRef(const char* str)
     : ptr_(str)
-    , length_(str != NULL ? strlen(str) : 0) {}
+    , length_(SAFE_STRLEN(str)) {}
 
   StringRef(const String& str)
     : ptr_(str.data())

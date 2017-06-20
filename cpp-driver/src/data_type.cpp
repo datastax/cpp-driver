@@ -410,8 +410,8 @@ ValueTypes::ValueTypes() {
   value_types_by_cql_.set_empty_key("");
 
 #define XX_VALUE_TYPE(name, type, cql, klass)                   \
-    if (strlen(klass) > 0) value_types_by_class_[klass] = name; \
-    if (strlen(cql) > 0) value_types_by_cql_[cql] = name;
+    if (sizeof(klass) - 1 > 0) value_types_by_class_[klass] = name; \
+    if (sizeof(cql) - 1 > 0) value_types_by_cql_[cql] = name;
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
 #undef XX_VALUE_TYPE
