@@ -25,6 +25,7 @@
 #include "loop_thread.hpp"
 #include "murmur3.hpp"
 #include "query_request.hpp"
+#include "random.hpp"
 #include "request_handler.hpp"
 #include "string.hpp"
 #include "token_aware_policy.hpp"
@@ -525,7 +526,7 @@ BOOST_AUTO_TEST_CASE(simple)
   add_keyspace_simple("test", 3, token_map.get());
   token_map->build();
 
-  cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy());
+  cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy(), false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 1));
@@ -547,7 +548,7 @@ BOOST_AUTO_TEST_CASE(simple)
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
-    const size_t seq[] = { 2, 4, 3 };
+    const size_t seq[] = { 4, 2, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 
@@ -560,8 +561,93 @@ BOOST_AUTO_TEST_CASE(simple)
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
-    const size_t seq[] = { 2, 1, 3 };
+    const size_t seq[] = { 1, 2, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
+  }
+}
+
+BOOST_AUTO_TEST_CASE(shuffle_replicas)
+{
+  cass::Random random;
+  const int64_t num_hosts = 4;
+  cass::HostMap hosts;
+  populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
+
+  // Tokens
+  // 1.0.0.0 -4611686018427387905
+  // 2.0.0.0 -2
+  // 3.0.0.0  4611686018427387901
+  // 4.0.0.0  9223372036854775804
+
+  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
+
+  uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
+  int64_t token = CASS_INT64_MIN + partition_size;
+  for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
+    TokenCollectionBuilder builder;
+    builder.append_token(token);
+    token_map->add_host(i->second, builder.finish());
+    token += partition_size;
+  }
+
+  add_keyspace_simple("test", 3, token_map.get());
+  token_map->build();
+
+  cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 1));
+  const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
+  request->set(0, cass::CassString(value, strlen(value)));
+  request->add_key_index(0);
+  cass::SharedRefPtr<cass::RequestHandler> request_handler(
+      new cass::RequestHandler(request, cass::ResponseFuture::Ptr(), NULL));
+
+
+  cass::HostVec not_shuffled;
+  {
+    cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy(), false); // Not shuffled
+    policy.init(cass::SharedRefPtr<cass::Host>(), hosts, &random);
+    cass::ScopedPtr<cass::QueryPlan> qp1(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    for (int i = 0; i < num_hosts; ++i) {
+      not_shuffled.push_back(qp1->compute_next());
+    }
+
+    // Verify that not shuffled will repeat the same order
+    cass::HostVec not_shuffled_again;
+    cass::ScopedPtr<cass::QueryPlan> qp2(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    for (int i = 0; i < num_hosts; ++i) {
+      not_shuffled_again.push_back(qp2->compute_next());
+    }
+    BOOST_CHECK(not_shuffled_again == not_shuffled);
+  }
+
+  // Verify that the shuffle setting does indeed shuffle the replicas
+  {
+    cass::TokenAwarePolicy shuffle_policy(new cass::RoundRobinPolicy(), true); // Shuffled
+    shuffle_policy.init(cass::SharedRefPtr<cass::Host>(), hosts, &random);
+
+    cass::HostVec shuffled_previous;
+    cass::ScopedPtr<cass::QueryPlan> qp(shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    for (int i = 0; i < num_hosts; ++i) {
+      shuffled_previous.push_back(qp->compute_next());
+    }
+
+    int count;
+    const int max_iterations = num_hosts * num_hosts;
+    for (count = 0; count < max_iterations; ++count) {
+      cass::ScopedPtr<cass::QueryPlan> qp(shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
+
+      cass::HostVec shuffled;
+      for (int j = 0; j < num_hosts; ++j) {
+        cass::Host::Ptr host(qp->compute_next());
+        BOOST_CHECK(std::count(not_shuffled.begin(), not_shuffled.end(), host) > 0);
+        shuffled.push_back(host);
+      }
+      // Exit if we prove that we shuffled the hosts
+      if (shuffled != not_shuffled && shuffled != shuffled_previous) {
+        break;
+      }
+    }
+
+    BOOST_CHECK(count != max_iterations);
   }
 }
 
@@ -605,7 +691,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   add_keyspace_network_topology("test", replication, token_map.get());
   token_map->build();
 
-  cass::TokenAwarePolicy policy(new cass::DCAwarePolicy(LOCAL_DC, num_hosts / 2, false));
+  cass::TokenAwarePolicy policy(new cass::DCAwarePolicy(LOCAL_DC, num_hosts / 2, false), false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 1));

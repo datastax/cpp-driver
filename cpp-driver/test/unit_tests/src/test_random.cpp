@@ -19,10 +19,10 @@
 #endif
 
 #include "random.hpp"
+#include "third_party/hdr_histogram/hdr_histogram.hpp"
 
 #include <boost/test/unit_test.hpp>
-
-#define MAX_ITERATIONS 10
+#include <vector>
 
 // 626 of the first numbers generated with the default seed of 5489LL using boost::mt19937_64
 uint64_t random_numbers[] = {
@@ -110,22 +110,48 @@ uint64_t random_numbers[] = {
 // Named this because "rand" and "random" already defined
 BOOST_AUTO_TEST_SUITE(randomness)
 
+BOOST_AUTO_TEST_CASE(random_shuffle)
+{
+  cass::Random r;
+
+  const int num_elements = 8;
+  const int max_iterations = num_elements * num_elements;
+
+  std::vector<int> previous;
+  for (int i = 0; i < num_elements; ++i) {
+    previous.push_back(i);
+  }
+
+  // Verify that the values have been shuffled
+  int count;
+  for (count = 0; count < max_iterations; ++count) {
+    std::vector<int> copy(previous);
+    cass::random_shuffle(copy.begin(), copy.end(), &r);
+    if (copy != previous) {
+      break;
+    }
+  }
+
+  BOOST_REQUIRE(count != max_iterations);
+}
+
 BOOST_AUTO_TEST_CASE(random_seed)
 {
+  const int max_iterations = 10;
   uint64_t previous = 0;
 
   // Verify that we get at least 2 unique values
   for (int i = 0; i < 2; ++i) {
     int count;
     // Keep trying while seed equals previous value
-    for (count = 0; count < MAX_ITERATIONS; ++count) {
+    for (count = 0; count < max_iterations; ++count) {
       uint64_t seed = cass::get_random_seed(previous);
       if (seed != previous) {
         previous = seed;
         break;
       }
     }
-    BOOST_REQUIRE(count != MAX_ITERATIONS);
+    BOOST_REQUIRE(count != max_iterations);
   }
 }
 

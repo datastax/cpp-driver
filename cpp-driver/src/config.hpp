@@ -68,6 +68,7 @@ public:
       , load_balancing_policy_(Memory::allocate<DCAwarePolicy>())
       , speculative_execution_policy_(Memory::allocate<NoSpeculativeExecutionPolicy>())
       , token_aware_routing_(true)
+      , token_aware_routing_shuffle_replicas_(true)
       , latency_aware_routing_(false)
       , host_targeting_(false)
       , tcp_nodelay_enable_(true)
@@ -268,7 +269,7 @@ public:
       chain = Memory::allocate<WhitelistDCPolicy>(chain, whitelist_dc_);
     }
     if (token_aware_routing()) {
-      chain = Memory::allocate<TokenAwarePolicy>(chain);
+      chain = Memory::allocate<TokenAwarePolicy>(chain, token_aware_routing_shuffle_replicas_);
     }
     if (latency_aware()) {
       chain = Memory::allocate<LatencyAwarePolicy>(chain, latency_aware_routing_settings_);
@@ -302,6 +303,8 @@ public:
   bool token_aware_routing() const { return token_aware_routing_; }
 
   void set_token_aware_routing(bool is_token_aware) { token_aware_routing_ = is_token_aware; }
+
+  void set_token_aware_routing_shuffle_replicas(bool shuffle_replicas) { token_aware_routing_shuffle_replicas_ = shuffle_replicas; }
 
   bool latency_aware() const { return latency_aware_routing_; }
 
@@ -426,6 +429,7 @@ private:
   SharedRefPtr<SpeculativeExecutionPolicy> speculative_execution_policy_;
   SslContext::Ptr ssl_context_;
   bool token_aware_routing_;
+  bool token_aware_routing_shuffle_replicas_;
   bool latency_aware_routing_;
   bool host_targeting_;
   LatencyAwarePolicy::Settings latency_aware_routing_settings_;

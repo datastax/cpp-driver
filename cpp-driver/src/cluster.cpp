@@ -284,6 +284,11 @@ void cass_cluster_set_token_aware_routing(CassCluster* cluster,
   cluster->config().set_token_aware_routing(enabled == cass_true);
 }
 
+void cass_cluster_set_token_aware_routing_shuffle_replicas(CassCluster* cluster,
+                                                           cass_bool_t enabled) {
+  cluster->config().set_token_aware_routing_shuffle_replicas(enabled == cass_true);
+}
+
 void cass_cluster_set_latency_aware_routing(CassCluster* cluster,
                                             cass_bool_t enabled) {
   cluster->config().set_latency_aware_routing(enabled == cass_true);

@@ -123,8 +123,9 @@ TestTokenMap::ReplicaSet get_replicas(size_t rf,
                                       const std::string& keyspace,
                                       const std::string& value) {
   TestTokenMap::ReplicaSet replicas;
-  for (size_t i = 0; i < rf; ++i) {
+  for (size_t i = 0; i < rf * rf; ++i) {
     replicas.insert(get_replica(session, keyspace, "abc"));
+    if (replicas.size() == rf) break;
   }
   return replicas;
 }
@@ -237,6 +238,75 @@ BOOST_AUTO_TEST_CASE(network_topology)
   ccm->stop_node(3);
   replicas = get_replicas(rf, session, keyspace, value);
   BOOST_CHECK(replicas.size() > 0 && !intersects(replicas, local_replicas));
+
+  // Drop the keyspace (ignore any and all errors)
+  test_utils::execute_query_with_error(session.get(),
+    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+    % keyspace));
+}
+
+/**
+ * Shuffle replicas
+ *
+ * Tests whether replicas are randomly shuffled when the setting is enabled for
+ * token aware routing.
+ *
+ * @jira_ticket CPP-266
+ * @test_category load_balancing:token_aware
+ */
+BOOST_AUTO_TEST_CASE(shuffle_replicas)
+{
+  const size_t rf = 2;
+  const size_t max_iterations = rf * rf;
+  const std::string value = "abc";
+
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
+  if (ccm->create_cluster(rf)) {
+    ccm->start_cluster();
+  }
+
+  cass_cluster_set_load_balance_round_robin(cluster.get());
+  cass_cluster_set_use_schema(cluster.get(), cass_false);
+  cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
+
+  std::string ip_prefix = ccm->get_ip_prefix();
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1);
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+  std::string keyspace = "ks";
+
+  test_utils::execute_query(session.get(),
+                            str(boost::format("CREATE KEYSPACE %s "
+                                              "WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': %d }") %
+                                keyspace % rf));
+  std::string replica_previous;
+
+  // With shuffle enabled (default) the replica order should eventually change
+  replica_previous = get_replica(session, keyspace, value);
+
+  size_t count;
+  for (count = 0; count < max_iterations; ++count) {
+    std::string replica = get_replica(session, keyspace, value);
+    // Exit if we find a replica that's different
+    if (replica != replica_previous) {
+      break;
+    }
+  }
+
+  BOOST_REQUIRE(count != max_iterations);
+
+  // Without shuffle all the same replica should be returned every time
+  cass_cluster_set_token_aware_routing_shuffle_replicas(cluster.get(), cass_false);
+  test_utils::CassSessionPtr no_shuffle_session(test_utils::create_session(cluster.get()));
+  replica_previous = get_replica(no_shuffle_session, keyspace, value);
+
+  for (size_t i = 0; i < rf; ++i) {
+    std::string replica = get_replica(no_shuffle_session, keyspace, value);
+    BOOST_REQUIRE_EQUAL(replica, replica_previous);
+  }
 
   // Drop the keyspace (ignore any and all errors)
   test_utils::execute_query_with_error(session.get(),

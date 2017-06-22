@@ -1449,6 +1449,25 @@ cass_cluster_set_token_aware_routing(CassCluster* cluster,
 
 
 /**
+ * Configures token-aware routing to randomly shuffle replicas. This can reduce
+ * the effectiveness of server-side caching, but it can better distribute load over
+ * replicas for a given partition key.
+ *
+ * <b>Note:</b> Token-aware routing must be enabled for the setting to
+ * be applicable.
+ *
+ * <b>Default:</b> cass_true (enabled).
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] enabled
+ */
+CASS_EXPORT void
+cass_cluster_set_token_aware_routing_shuffle_replicas(CassCluster* cluster,
+                                                      cass_bool_t enabled);
+
+/**
  * Configures the cluster to use latency-aware request routing or not.
  *
  * <b>Default:</b> cass_false (disabled).
