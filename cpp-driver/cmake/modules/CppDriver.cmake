@@ -997,6 +997,12 @@ endmacro()
 # Input: CASS_ROOT_DIR, CASS_SRC_DIR
 #------------------------
 macro(CassConfigure)
+  # Determine random availability
+  if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    check_symbol_exists(GRND_NONBLOCK "linux/random.h" HAVE_GETRANDOM)
+  else()
+    check_symbol_exists(arc4random_buf "stdlib.h" HAVE_ARC4RANDOM)
+  endif()
   # Determine if sigpipe is available
   check_symbol_exists(SO_NOSIGPIPE "sys/socket.h;sys/types.h" HAVE_NOSIGPIPE)
   check_symbol_exists(sigtimedwait "signal.h" HAVE_SIGTIMEDWAIT)
