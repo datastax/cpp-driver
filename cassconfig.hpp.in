@@ -6,5 +6,7 @@
 #cmakedefine HAVE_BOOST_ATOMIC
 #cmakedefine HAVE_NOSIGPIPE
 #cmakedefine HAVE_SIGTIMEDWAIT
+#cmakedefine HAVE_ARC4RANDOM
+#cmakedefine HAVE_GETRANDOM
 
 #endif

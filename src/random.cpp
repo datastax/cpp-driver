@@ -16,6 +16,7 @@
 
 #include "random.hpp"
 
+#include "cassconfig.hpp"
 #include "cassandra.h"
 #include "logger.hpp"
 #include "scoped_lock.hpp"
@@ -27,9 +28,14 @@
 #include <Windows.h>
 #include <WinCrypt.h>
 #else
+#if defined(HAVE_GETRANDOM)
+#include <syscall.h>
+#include <linux/random.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -84,33 +90,53 @@ uint64_t Random::next(uint64_t max) {
 #endif
 
   uint64_t get_random_seed(uint64_t seed) {
+#if defined(HAVE_ARC4RANDOM)
+    arc4random_buf(&seed, sizeof(seed));
+#else
     static const char* device = "/dev/urandom";
-
-    int fd = open(device, O_RDONLY);
-
-    if (fd < 0) {
+    ssize_t num_bytes;
+    bool readurandom = true;
+#if defined(HAVE_GETRANDOM)
+    num_bytes = static_cast<ssize_t>(syscall(SYS_getrandom, &seed,
+            sizeof(seed), GRND_NONBLOCK));
+    if (num_bytes < static_cast<ssize_t>(sizeof(seed))) {
       char buf[STRERROR_BUFSIZE_];
       char* err = STRERROR_R_(errno, buf, sizeof(buf));
-      LOG_CRITICAL("Unable to open random device (%s): %s", device, err);
-      return seed;
+      LOG_WARN("Unable to read %zu random bytes (%s): %zu read",
+            sizeof(seed), err, num_bytes);
+    } else {
+      readurandom = false;      
     }
+#endif
 
-    ssize_t num_bytes = read(fd, reinterpret_cast<char*>(&seed), sizeof(seed));
-    if (num_bytes < 0) {
-      char buf[STRERROR_BUFSIZE_];
-      char* err = STRERROR_R_(errno, buf, sizeof(buf));
-      LOG_CRITICAL("Unable to read from random device (%s): %s", device, err);
-    } else if (num_bytes != sizeof(seed)) {
-      char buf[STRERROR_BUFSIZE_];
-      char* err = STRERROR_R_(errno, buf, sizeof(buf));
-      LOG_CRITICAL("Unable to read full seed value (expected: %u read: %u) "
-                   "from random device (%s): %s",
-                   static_cast<unsigned int>(sizeof(seed)),
-                   static_cast<unsigned int>(num_bytes),
-                   device, err);
+    if (readurandom) {
+      int fd = open(device, O_RDONLY);
+
+      if (fd < 0) {
+        char buf[STRERROR_BUFSIZE_];
+        char* err = STRERROR_R_(errno, buf, sizeof(buf));
+        LOG_CRITICAL("Unable to open random device (%s): %s", device, err);
+        return seed;
+      }
+
+      num_bytes = read(fd, reinterpret_cast<char*>(&seed), sizeof(seed));
+      if (num_bytes < 0) {
+        char buf[STRERROR_BUFSIZE_];
+        char* err = STRERROR_R_(errno, buf, sizeof(buf));
+        LOG_CRITICAL("Unable to read from random device (%s): %s", device, err);
+      } else if (num_bytes != sizeof(seed)) {
+        char buf[STRERROR_BUFSIZE_];
+        char* err = STRERROR_R_(errno, buf, sizeof(buf));
+        LOG_CRITICAL("Unable to read full seed value (expected: %u read: %u) "
+            "from random device (%s): %s",
+            static_cast<unsigned int>(sizeof(seed)),
+            static_cast<unsigned int>(num_bytes),
+            device, err);
+      }
+
+      close(fd);
     }
-
-    close(fd);
+#endif
 
     return seed;
   }
