@@ -208,6 +208,7 @@ GssapiAuthenticator::GssapiAuthenticator(const cass::String& authorization_id)
   : context_(GSS_C_NO_CONTEXT)
   , server_name_(GSS_C_NO_NAME)
   , gss_flags_(GSS_C_MUTUAL_FLAG | GSS_C_SEQUENCE_FLAG)
+  , client_creds_(GSS_C_NO_CREDENTIAL)
   , state_(NEGOTIATION)
   , authorization_id_(authorization_id) { }
 
@@ -258,9 +259,10 @@ GssapiAuthenticator::Result GssapiAuthenticator::init(const cass::String& servic
     return RESULT_ERROR;
   }
 
+  GssapiName principal_name; // Initialized to GSS_C_NO_NAME
+
   if (!principal.empty()) {
     gss_buffer_desc principal_token = GSS_C_EMPTY_BUFFER;
-    GssapiName principal_name;
 
     principal_token.value = const_cast<void*>(static_cast<const void*>(principal.c_str()));
     principal_token.length = principal.size();
@@ -277,22 +279,22 @@ GssapiAuthenticator::Result GssapiAuthenticator::init(const cass::String& servic
                     display_status(maj_stat, min_stat));
       return RESULT_ERROR;
     }
+  }
 
-    GssapiAuthenticatorData::lock();
-    maj_stat = gss_acquire_cred(&min_stat,
-                                principal_name.name,
-                                GSS_C_INDEFINITE,
-                                GSS_C_NO_OID_SET,
-                                GSS_C_INITIATE,
-                                &client_creds_,
-                                NULL, NULL);
-    GssapiAuthenticatorData::unlock();
+  GssapiAuthenticatorData::lock();
+  maj_stat = gss_acquire_cred(&min_stat,
+                              principal_name.name,
+                              GSS_C_INDEFINITE,
+                              GSS_C_NO_OID_SET,
+                              GSS_C_INITIATE,
+                              &client_creds_,
+                              NULL, NULL);
+  GssapiAuthenticatorData::unlock();
 
-    if (GSS_ERROR(maj_stat)) {
-      error_.assign("Failed to acquire principal credentials (gss_acquire_cred()): " +
-                    display_status(maj_stat, min_stat));
-      return RESULT_ERROR;
-    }
+  if (GSS_ERROR(maj_stat)) {
+    error_.assign("Failed to acquire principal credentials (gss_acquire_cred()): " +
+                  display_status(maj_stat, min_stat));
+    return RESULT_ERROR;
   }
 
   return RESULT_COMPLETE;
@@ -357,7 +359,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::negotiate(gss_buffer_t challeng
     GssapiAuthenticatorData::unlock();
 
     if (GSS_ERROR(maj_stat)) {
-      error_.assign("Failed to get display name for user principle (gss_inquire_context()): " +
+      error_.assign("Failed to get display name for user principal (gss_inquire_context()): " +
                     display_status(maj_stat, min_stat));
       return RESULT_ERROR;
     } else {

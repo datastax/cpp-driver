@@ -144,6 +144,7 @@ public:
    * @return True is ADS is initialized; false otherwise
    */
   static bool is_initialized() {
+    cass::ScopedMutex lock(&mutex_);
     return is_initialized_;
   }
 
@@ -276,6 +277,21 @@ public:
     execute_command(args);
   }
 
+
+  void use_keytab(const std::string& keytab) {
+    // MIT Kerberos
+    setenv("KRB5_CLIENT_KTNAME", keytab);
+    // Heimdal
+    setenv("KRB5_KTNAME", keytab);
+  }
+
+  void clear_keytab() {
+    // MIT Kerberos
+    setenv("KRB5_CLIENT_KTNAME", "");
+    // Heimdal
+    setenv("KRB5_KTNAME", "");
+  }
+
 private:
   /**
    * Thread for the ADS process to execute in
@@ -387,6 +403,12 @@ private:
 #endif
     if (error_code == 0) {
       LOG("Launched " << args[0] << " with ID " << process_.pid);
+
+      std::string stdout_message;
+      std::string stderr_message;
+
+      standard_output.data = &stdout_message;
+      error_output.data = &stderr_message;
 
       // Start the output thread loops
       uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
@@ -504,6 +526,12 @@ private:
     if (error_code == 0) {
       LOG("Launched " << args[0] << " with ID " << process_.pid);
 
+      std::string stdout_message;
+      std::string stderr_message;
+
+      standard_output.data = &stdout_message;
+      error_output.data = &stderr_message;
+
       // Start the output thread loops
       uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
       uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
@@ -522,8 +550,7 @@ private:
       steve_keytab_file_ = configuration_directory_ + STEVE_KEYTAB_ADS_CONFIGURATION_FILE;
 
       // Inject the configuration environment variable
-      std::string krb5_config_environment = "KRB5_CONFIG=" + configuration_file_;
-      putenv(const_cast<char*>(krb5_config_environment.c_str()));
+      setenv("KRB5_CONFIG", configuration_file_);
 
       // Start the process loop
 #if UV_VERSION_MAJOR == 0
@@ -597,18 +624,22 @@ private:
   static void process_read(uv_stream_t* stream, ssize_t buffer_length, const uv_buf_t* buffer) {
 #endif
     cass::ScopedMutex lock(&mutex_);
+
+    std::string* message = reinterpret_cast<std::string*>(stream->data);
+
     if (buffer_length > 0) {
       // Process the buffer and determine if the ADS is finished initializing
 #if UV_VERSION_MAJOR == 0
-      std::string message(buffer.base, buffer_length);
+      message->append(buffer.base, buffer_length);
 #else
-      std::string message(buffer->base, buffer_length);
+      message->append(buffer->base, buffer_length);
 #endif
-      if (!is_initialized_ && message.find("Principal Initialization Complete") != std::string::npos) {
+
+      if (!is_initialized_ && message->find("Principal Initialization Complete") != std::string::npos) {
         Utils::msleep(10000); // TODO: Not 100% ready; need to add a better check mechanism
         is_initialized_ = true;
       }
-      LOG(Utils::trim(message));
+      LOG(Utils::trim(*message));
     } else if (buffer_length < 0) {
 #if UV_VERSION_MAJOR == 0
       uv_err_t error = uv_last_error(stream->loop);
@@ -622,6 +653,14 @@ private:
     delete[] buffer.base;
 #else
     delete[] buffer->base;
+#endif
+  }
+
+  static void setenv(const std::string& name, const std::string& value) {
+#ifdef _WIN32
+    putenv(const_cast<char*>(std::string(name + "=" + value).c_str()));
+#else
+    ::setenv(name.c_str(), value.c_str(), 1);
 #endif
   }
 };
