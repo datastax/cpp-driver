@@ -84,6 +84,7 @@ public:
     if (is_ads_available_) {
       // Remove all the cached authentication tickets
       ads_->destroy_tickets();
+      ads_->clear_keytab();
     }
   }
 
@@ -173,7 +174,8 @@ protected:
     Session session = cluster.connect();
 
     // Execute a simple query to ensure authentication
-    session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
+    Result result = session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
+    ASSERT_GT(result.row_count(), 0u);
   }
 
   /**
@@ -340,3 +342,58 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, InternalAuthenticationFailure) {
   ASSERT_EQ(true, is_session_failure) << "Session connection established";
 }
 
+/**
+ * Use an empty principal with a credential added to the credential cache.
+ *
+ * The default credential in the cache should be used to authenticate the
+ * request.
+ *
+ * @test_category dse:auth
+ * @since 1.0.0
+ * @dse_version 5.0.0
+ * @expected_result Successful connection and query execution
+ */
+DSE_INTEGRATION_TEST_F(AuthenticationTest, EmptyPrincipalCredentialCache) {
+  CHECK_FOR_SKIPPED_TEST;
+  CHECK_FAILURE;
+  ads_->acquire_ticket(CASSANDRA_USER_PRINCIPAL, ads_->get_cassandra_keytab_file());
+  connect_using_kerberos_and_query_system_table("");
+}
+
+/**
+ * Use a keytab to authenticate the request.
+ *
+ * The cassandra principal will be use to find the principal in the provided
+ * keytab.
+ *
+ * @test_category dse:auth
+ * @since 1.0.0
+ * @dse_version 5.0.0
+ * @expected_result Successful connection and query execution
+ */
+DSE_INTEGRATION_TEST_F(AuthenticationTest, UseKeytab) {
+  CHECK_FOR_SKIPPED_TEST;
+  CHECK_FAILURE;
+
+  ads_->use_keytab(ads_->get_cassandra_keytab_file());
+  connect_using_kerberos_and_query_system_table(CASSANDRA_USER_PRINCIPAL);
+}
+
+/**
+ * Use an empty principal with a keytab file.
+ *
+ * The default credential in the keytab should be used to authenticate the
+ * request.
+ *
+ * @test_category dse:auth
+ * @since 1.0.0
+ * @dse_version 5.0.0
+ * @expected_result Successful connection and query execution
+ */
+DSE_INTEGRATION_TEST_F(AuthenticationTest, EmptyPrincipalKeytab) {
+  CHECK_FOR_SKIPPED_TEST;
+  CHECK_FAILURE;
+
+  ads_->use_keytab(ads_->get_cassandra_keytab_file());
+  connect_using_kerberos_and_query_system_table("");
+}
