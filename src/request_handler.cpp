@@ -36,9 +36,9 @@ namespace cass {
 
 class PrepareCallback : public SimpleRequestCallback {
 public:
-  PrepareCallback(const std::string& query, SpeculativeExecution* speculative_execution)
+  PrepareCallback(const std::string& query, RequestExecution* request_execution)
     : SimpleRequestCallback(Request::ConstPtr(new PrepareRequest(query)))
-    , speculative_execution_(speculative_execution) { }
+    , request_execution_(request_execution) { }
 
 private:
   virtual void on_internal_set(ResponseMessage* response);
@@ -46,7 +46,7 @@ private:
   virtual void on_internal_timeout();
 
 private:
-  SpeculativeExecution::Ptr speculative_execution_;
+  RequestExecution::Ptr request_execution_;
 };
 
 void PrepareCallback::on_internal_set(ResponseMessage* response) {
@@ -55,13 +55,13 @@ void PrepareCallback::on_internal_set(ResponseMessage* response) {
       ResultResponse* result =
           static_cast<ResultResponse*>(response->response_body().get());
       if (result->kind() == CASS_RESULT_KIND_PREPARED) {
-        speculative_execution_->retry_current_host();
+        request_execution_->retry_current_host();
       } else {
-        speculative_execution_->retry_next_host();
+        request_execution_->retry_next_host();
       }
     } break;
     case CQL_OPCODE_ERROR:
-      speculative_execution_->retry_next_host();
+      request_execution_->retry_next_host();
       break;
     default:
       break;
@@ -69,17 +69,17 @@ void PrepareCallback::on_internal_set(ResponseMessage* response) {
 }
 
 void PrepareCallback::on_internal_error(CassError code, const std::string& message) {
-  speculative_execution_->retry_next_host();
+  request_execution_->retry_next_host();
 }
 
 void PrepareCallback::on_internal_timeout() {
-  speculative_execution_->retry_next_host();
+  request_execution_->retry_next_host();
 }
 
-void RequestHandler::add_execution(SpeculativeExecution* speculative_execution) {
+void RequestHandler::add_execution(RequestExecution* request_execution) {
   running_executions_++;
-  speculative_execution->inc_ref();
-  speculative_executions_.push_back(speculative_execution);
+  request_execution->inc_ref();
+  request_executions_.push_back(request_execution);
 }
 
 void RequestHandler::add_attempted_address(const Address& address) {
@@ -89,9 +89,9 @@ void RequestHandler::add_attempted_address(const Address& address) {
 void RequestHandler::schedule_next_execution(const Host::Ptr& current_host) {
   int64_t timeout = execution_plan_->next_execution(current_host);
   if (timeout >= 0) {
-    SpeculativeExecution::Ptr speculative_execution(
-          new SpeculativeExecution(RequestHandler::Ptr(this)));
-    speculative_execution->schedule_next(timeout);
+    RequestExecution::Ptr request_execution(
+          new RequestExecution(RequestHandler::Ptr(this)));
+    request_execution->schedule_next(timeout);
   }
 }
 
@@ -155,19 +155,19 @@ void RequestHandler::on_timeout(Timer* timer) {
 
 void RequestHandler::stop_request() {
   timer_.stop();
-  for (SpeculativeExecutionVec::const_iterator i = speculative_executions_.begin(),
-       end = speculative_executions_.end(); i != end; ++i) {
-    SpeculativeExecution* speculative_execution = *i;
-    speculative_execution->cancel();
-    speculative_execution->dec_ref();
+  for (RequestExecutionVec::const_iterator i = request_executions_.begin(),
+       end = request_executions_.end(); i != end; ++i) {
+    RequestExecution* request_execution = *i;
+    request_execution->cancel();
+    request_execution->dec_ref();
   }
   if (io_worker_ != NULL) {
     io_worker_->request_finished();
   }
 }
 
-SpeculativeExecution::SpeculativeExecution(const RequestHandler::Ptr& request_handler,
-                                           const Host::Ptr& current_host)
+RequestExecution::RequestExecution(const RequestHandler::Ptr& request_handler,
+                                   const Host::Ptr& current_host)
   : RequestCallback()
   , request_handler_(request_handler)
   , current_host_(current_host)
@@ -177,13 +177,13 @@ SpeculativeExecution::SpeculativeExecution(const RequestHandler::Ptr& request_ha
   request_handler_->add_execution(this);
 }
 
-void SpeculativeExecution::on_execute(Timer* timer) {
-  SpeculativeExecution* speculative_execution = static_cast<SpeculativeExecution*>(timer->data());
-  speculative_execution->next_host();
-  speculative_execution->execute();
+void RequestExecution::on_execute(Timer* timer) {
+  RequestExecution* request_execution = static_cast<RequestExecution*>(timer->data());
+  request_execution->next_host();
+  request_execution->execute();
 }
 
-void SpeculativeExecution::on_start() {
+void RequestExecution::on_start() {
   assert(current_host_ && "Tried to start on a non-existent host");
   if (request()->record_attempted_addresses()) {
     request_handler_->add_attempted_address(current_host_->address());
@@ -191,7 +191,7 @@ void SpeculativeExecution::on_start() {
   start_time_ns_ = uv_hrtime();
 }
 
-void SpeculativeExecution::on_set(ResponseMessage* response) {
+void RequestExecution::on_set(ResponseMessage* response) {
   assert(connection() != NULL);
   assert(current_host_ && "Tried to set on a non-existent host");
 
@@ -211,7 +211,7 @@ void SpeculativeExecution::on_set(ResponseMessage* response) {
   }
 }
 
-void SpeculativeExecution::on_error(CassError code, const std::string& message) {
+void RequestExecution::on_error(CassError code, const std::string& message) {
   return_connection();
 
   // Handle recoverable errors by retrying with the next host
@@ -223,7 +223,7 @@ void SpeculativeExecution::on_error(CassError code, const std::string& message) 
   }
 }
 
-void SpeculativeExecution::on_retry(bool use_next_host) {
+void RequestExecution::on_retry(bool use_next_host) {
   return_connection();
 
   if (use_next_host) {
@@ -233,7 +233,7 @@ void SpeculativeExecution::on_retry(bool use_next_host) {
   }
 }
 
-void SpeculativeExecution::on_cancel() {
+void RequestExecution::on_cancel() {
   LOG_DEBUG("Cancelling speculative execution (%p) for request (%p) on host %s",
             static_cast<void*>(this),
             static_cast<void*>(request_handler_.get()),
@@ -242,7 +242,7 @@ void SpeculativeExecution::on_cancel() {
   return_connection();
 }
 
-void SpeculativeExecution::retry_current_host() {
+void RequestExecution::retry_current_host() {
   if (state() == REQUEST_STATE_CANCELLED) {
     return;
   }
@@ -253,21 +253,21 @@ void SpeculativeExecution::retry_current_host() {
   request_handler_->io_worker()->retry(RequestCallback::Ptr(this));
 }
 
-void SpeculativeExecution::retry_next_host() {
+void RequestExecution::retry_next_host() {
   next_host();
   retry_current_host();
 }
 
-void SpeculativeExecution::start_pending_request(Pool* pool, Timer::Callback cb) {
+void RequestExecution::start_pending_request(Pool* pool, Timer::Callback cb) {
   pool_ = pool;
   pending_request_timer_.start(pool->loop(), pool->config().connect_timeout_ms(), this, cb);
 }
 
-void SpeculativeExecution::stop_pending_request() {
+void RequestExecution::stop_pending_request() {
   pending_request_timer_.stop();
 }
 
-void SpeculativeExecution::execute() {
+void RequestExecution::execute() {
   if (request()->is_idempotent()) {
     request_handler_->schedule_next_execution(current_host_);
   }
@@ -275,7 +275,7 @@ void SpeculativeExecution::execute() {
 
 }
 
-void SpeculativeExecution::schedule_next(int64_t timeout) {
+void RequestExecution::schedule_next(int64_t timeout) {
   if (timeout > 0) {
     schedule_timer_.start(request_handler_->io_worker()->loop(), timeout, this, on_execute);
   } else {
@@ -284,12 +284,12 @@ void SpeculativeExecution::schedule_next(int64_t timeout) {
   }
 }
 
-void SpeculativeExecution::cancel() {
+void RequestExecution::cancel() {
   schedule_timer_.stop();
   set_state(REQUEST_STATE_CANCELLED);
 }
 
-void SpeculativeExecution::on_result_response(ResponseMessage* response) {
+void RequestExecution::on_result_response(ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
 
@@ -332,7 +332,7 @@ void SpeculativeExecution::on_result_response(ResponseMessage* response) {
   }
 }
 
-void SpeculativeExecution::on_error_response(ResponseMessage* response) {
+void RequestExecution::on_error_response(ResponseMessage* response) {
   ErrorResponse* error =
       static_cast<ErrorResponse*>(response->response_body().get());
 
@@ -432,7 +432,7 @@ void SpeculativeExecution::on_error_response(ResponseMessage* response) {
   }
 }
 
-void SpeculativeExecution::on_error_unprepared(ErrorResponse* error) {
+void RequestExecution::on_error_unprepared(ErrorResponse* error) {
   std::string prepared_statement;
 
   if (request()->opcode() == CQL_OPCODE_EXECUTE) {
@@ -460,26 +460,26 @@ void SpeculativeExecution::on_error_unprepared(ErrorResponse* error) {
   }
 }
 
-void SpeculativeExecution::return_connection() {
+void RequestExecution::return_connection() {
   if (pool_ != NULL && connection() != NULL) {
     pool_->return_connection(connection());
   }
 }
 
-bool SpeculativeExecution::is_host_up(const Address& address) const {
+bool RequestExecution::is_host_up(const Address& address) const {
   return request_handler_->io_worker()->is_host_up(address);
 }
 
-void SpeculativeExecution::set_response(const Response::Ptr& response) {
+void RequestExecution::set_response(const Response::Ptr& response) {
   request_handler_->set_response(current_host_, response);
 }
 
-void SpeculativeExecution::set_error(CassError code, const std::string& message) {
+void RequestExecution::set_error(CassError code, const std::string& message) {
   request_handler_->set_error(current_host_, code, message);
 }
 
-void SpeculativeExecution::set_error_with_error_response(const Response::Ptr& error,
-                                                         CassError code, const std::string& message) {
+void RequestExecution::set_error_with_error_response(const Response::Ptr& error,
+                                                     CassError code, const std::string& message) {
   request_handler_->set_error_with_error_response(current_host_, error, code, message);
 }
 

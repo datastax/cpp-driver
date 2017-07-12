@@ -151,27 +151,27 @@ bool IOWorker::execute(const RequestHandler::Ptr& request_handler) {
   return true;
 }
 
-void IOWorker::retry(const SpeculativeExecution::Ptr& speculative_execution) {
-  while (speculative_execution->current_host()) {
-    PoolMap::const_iterator it = pools_.find(speculative_execution->current_host()->address());
+void IOWorker::retry(const RequestExecution::Ptr& request_execution) {
+  while (request_execution->current_host()) {
+    PoolMap::const_iterator it = pools_.find(request_execution->current_host()->address());
     if (it != pools_.end() && it->second->is_ready()) {
       const Pool::Ptr& pool = it->second;
       Connection* connection = pool->borrow_connection();
       if (connection != NULL) {
-        if (pool->write(connection, speculative_execution)) {
+        if (pool->write(connection, request_execution)) {
           return; // Success
         }
       } else { // Too busy, or no connections
-        pool->wait_for_connection(speculative_execution);
+        pool->wait_for_connection(request_execution);
         return; // Waiting for connection
       }
     }
-    speculative_execution->next_host();
+    request_execution->next_host();
   }
 
-  speculative_execution->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                                  "All hosts in current policy attempted "
-                                  "and were either unavailable or failed");
+  request_execution->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                              "All hosts in current policy attempted "
+                              "and were either unavailable or failed");
 }
 
 void IOWorker::request_finished() {
@@ -297,9 +297,9 @@ void IOWorker::on_execute(uv_async_t* async) {
       request_handler->dec_ref(); // Queue reference
       io_worker->pending_request_count_++;
       request_handler->start_request(io_worker);
-      SpeculativeExecution::Ptr speculative_execution(new SpeculativeExecution(request_handler,
-                                                                               request_handler->current_host()));
-      speculative_execution->execute();
+      RequestExecution::Ptr request_execution(new RequestExecution(request_handler,
+                                                                   request_handler->current_host()));
+      request_execution->execute();
     } else {
       io_worker->state_ = IO_WORKER_STATE_CLOSING;
     }
