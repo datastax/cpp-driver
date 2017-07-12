@@ -24,6 +24,7 @@
 
 #include <boost/format.hpp>
 #include <boost/test/unit_test.hpp>
+#include <boost/thread.hpp>
 
 #define SPEC_EX_TABLE_FORMAT "CREATE TABLE %s.%s (key int PRIMARY KEY, value int)"
 #define SPEC_EX_INSERT_FORMAT "INSERT INTO %s.%s (key, value) VALUES (%d, %d)"
@@ -63,7 +64,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
   /**
    * Initialize the test case by creating the session and creating the
    * necessary keyspaces, tables with data, and UDFs being utilized during
-   * query exection.
+   * query execution.
    */
   void initialize() {
     create_session();
@@ -85,7 +86,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
 
   /**
    * Execute a query that utilizes a UDF timeout and a given statement
-   * indempotance
+   * idempotence
    *
    * @param is_idempotent True if statement should be idempotent;
    *                      false otherwise
@@ -109,8 +110,13 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     cass::Statement* native_statement = static_cast<cass::Statement*>(statement.get());
     native_statement->set_record_attempted_addresses(true);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
-    CassError error_code = test_utils::wait_and_return_error(future.get());
-    BOOST_REQUIRE_EQUAL(expected_error_code, error_code);
+    if (expected_error_code == CASS_OK) {
+      test_utils::wait_and_check_error(future.get());
+    } else {
+      CassError error_code = test_utils::wait_and_return_error(future.get());
+      BOOST_REQUIRE_EQUAL(expected_error_code, error_code);
+    }
+
     return future;
   }
 
@@ -125,8 +131,8 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     std::vector<std::string> attempted_hosts;
     cass::Future* native_future = static_cast<cass::Future*>(future.get());
     if (native_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
-      cass::ResponseFuture* native_reponse_future = static_cast<cass::ResponseFuture*>(native_future);
-      cass::AddressVec attempted_addresses = native_reponse_future->attempted_addresses();
+      cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
+      cass::AddressVec attempted_addresses = native_response_future->attempted_addresses();
       for (cass::AddressVec::iterator iterator = attempted_addresses.begin();
         iterator != attempted_addresses.end(); ++iterator) {
         attempted_hosts.push_back(iterator->to_string().c_str());
@@ -146,8 +152,8 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     std::string host;
     cass::Future* native_future = static_cast<cass::Future*>(future.get());
     if (native_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
-      cass::ResponseFuture* native_reponse_future = static_cast<cass::ResponseFuture*>(native_future);
-      host = native_reponse_future->address().to_string().c_str();
+      cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
+      host = native_response_future->address().to_string().c_str();
     }
     return host;
   }
@@ -202,13 +208,45 @@ BOOST_AUTO_TEST_CASE(execute_on_all_nodes) {
     std::vector<std::string>::iterator iterator = std::find(
       attempted_hosts.begin(), attempted_hosts.end(), executed_host);
     BOOST_REQUIRE(iterator != attempted_hosts.end());
+
+    // Ok, this is lame. We have the response from our request, but there
+    // are still some speculative execution's floating around. We have to
+    // wait until those complete in order to get accurate metrics. Sleeping
+    // for a few seconds accomplishes this.
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
+
+    CassSpeculativeExecutionMetrics spec_metrics;
+    cass_session_get_speculative_execution_metrics(tester.session, &spec_metrics);
+
+    // Ok, this is a little funky. We send one request to three nodes, and one
+    // of them will come back first and be the "true result". So 2/3 of the requests
+    // are speculative executions that (in the grand scheme of things) are
+    // wasteful. However, metrics collection starts when the session is created,
+    // so the various startup messages are also included, and those succeed
+    // quickly with no retries. There are 4 such requests. So, we have a total of 7
+    // requests sent on the wire. We respect the result of 5 of them (the 4 startup
+    // requests and one of the three query requests). So the wasted speculative
+    // execution work is (7-5) / 7.
+
+    BOOST_CHECK_GT(spec_metrics.min, 0);
+    BOOST_CHECK_GT(spec_metrics.max, 0);
+    BOOST_CHECK_GT(spec_metrics.mean, 0);
+    BOOST_CHECK_GT(spec_metrics.stddev, 0);
+    BOOST_CHECK_GT(spec_metrics.median, 0);
+    BOOST_CHECK_GT(spec_metrics.percentile_75th, 0);
+    BOOST_CHECK_GT(spec_metrics.percentile_95th, 0);
+    BOOST_CHECK_GT(spec_metrics.percentile_98th, 0);
+    BOOST_CHECK_GT(spec_metrics.percentile_99th, 0);
+    BOOST_CHECK_GT(spec_metrics.percentile_999th, 0);
+    BOOST_CHECK_EQUAL(2.0 / 7 * 100, spec_metrics.percentage);
+    BOOST_CHECK_EQUAL(2, spec_metrics.count);
   }
 }
 
 /**
  * Speculative execution policy; one node is attempted with idempotent statement
  *
- * This test will ensure that one nodes is attempted when executing a query
+ * This test will ensure that one node is attempted when executing a query
  * using the speculative execution policy.
  *
  * @since 2.5.0
@@ -235,6 +273,14 @@ BOOST_AUTO_TEST_CASE(execute_one_node_idempotent) {
     BOOST_REQUIRE_EQUAL(1, attempted_hosts.size());
     std::string executed_host = tester.executed_host(future);
     BOOST_REQUIRE_EQUAL(executed_host, attempted_hosts.at(0));
+
+    CassSpeculativeExecutionMetrics spec_metrics;
+    cass_session_get_speculative_execution_metrics(tester.session, &spec_metrics);
+
+    // Ok, since 4 startup requests are included in this, we have a total of 5 requests,
+    // and no retries. See details in execute_on_all_nodes test.
+    BOOST_CHECK_EQUAL(0.0, spec_metrics.percentage);
+    BOOST_CHECK_EQUAL(0, spec_metrics.count);
   }
 }
 
@@ -270,6 +316,14 @@ BOOST_AUTO_TEST_CASE(execute_one_node_non_idempotent) {
     BOOST_REQUIRE_EQUAL(1, attempted_hosts.size());
     std::string executed_host = tester.executed_host(future);
     BOOST_REQUIRE_EQUAL(executed_host, attempted_hosts.at(0));
+
+    CassSpeculativeExecutionMetrics spec_metrics;
+    cass_session_get_speculative_execution_metrics(tester.session, &spec_metrics);
+
+    // Ok, since 4 startup requests are included in this, we have a total of 5 requests,
+    // and no retries. See details in execute_on_all_nodes test.
+    BOOST_CHECK_EQUAL(0.0, spec_metrics.percentage);
+    BOOST_CHECK_EQUAL(0, spec_metrics.count);
   }
 }
 
@@ -305,6 +359,21 @@ BOOST_AUTO_TEST_CASE(attempt_two_nodes) {
     std::vector<std::string>::iterator iterator = std::find(
       attempted_hosts.begin(), attempted_hosts.end(), executed_host);
     BOOST_REQUIRE(iterator != attempted_hosts.end());
+
+    // Ok, this is lame. We have the response from our request, but there
+    // are still some speculative execution's floating around. We have to
+    // wait until those complete in order to get accurate metrics. Sleeping
+    // for a few seconds accomplishes this.
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
+
+    // Use get_speculative_execution_metrics to get speculative execution stats.
+    CassSpeculativeExecutionMetrics spec_metrics;
+    cass_session_get_speculative_execution_metrics(tester.session, &spec_metrics);
+
+    // Ok, since 4 startup requests are included in this, we have a total of 6 requests,
+    // and 1 is a retry. See details in execute_on_all_nodes test.
+    BOOST_CHECK_EQUAL(1.0 / 6 * 100, spec_metrics.percentage);
+    BOOST_CHECK_EQUAL(1, spec_metrics.count);
   }
 }
 
@@ -336,6 +405,13 @@ BOOST_AUTO_TEST_CASE(without_speculative_execution_policy) {
     BOOST_REQUIRE_EQUAL(1, attempted_hosts.size());
     std::string executed_host = tester.executed_host(future);
     BOOST_REQUIRE_EQUAL(executed_host, attempted_hosts.at(0));
+
+    CassSpeculativeExecutionMetrics spec_metrics;
+    cass_session_get_speculative_execution_metrics(tester.session, &spec_metrics);
+
+    // Ok, since we're not doing speculative execution, this should be 0.
+    BOOST_CHECK_EQUAL(0.0, spec_metrics.percentage);
+    BOOST_CHECK_EQUAL(0, spec_metrics.count);
   }
 }
 
@@ -368,6 +444,18 @@ BOOST_AUTO_TEST_CASE(execute_on_all_nodes_with_timeout) {
       CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     std::vector<std::string> attempted_hosts = tester.attempted_hosts(future);
     BOOST_REQUIRE_EQUAL(3, attempted_hosts.size());
+
+    // Give the executions a chance to register. They should not.
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
+
+    CassSpeculativeExecutionMetrics spec_metrics;
+    cass_session_get_speculative_execution_metrics(tester.session, &spec_metrics);
+
+    // All the requests time out (from the client side), but we do
+    // get responses eventually. We will record stats for those super-slow
+    // responses.
+    BOOST_CHECK_EQUAL(3.0 / 7 * 100, spec_metrics.percentage);
+    BOOST_CHECK_EQUAL(3, spec_metrics.count);
   }
 }
 

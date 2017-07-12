@@ -86,7 +86,7 @@ static void cleanup_pending_callback(const RequestCallback::Ptr& callback) {
     case RequestCallback::REQUEST_STATE_CANCELLED_READING:
     case RequestCallback::REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
       callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
-      callback->on_cancel();
+      callback->on_cancel(NULL);
       break;
   }
 
@@ -513,7 +513,7 @@ void Connection::consume(const char* input, size_t size) {
             case RequestCallback::REQUEST_STATE_CANCELLED_READING:
               pending_reads_.remove(callback.get());
               callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
-              callback->on_cancel();
+              callback->on_cancel(response.get());
               callback->dec_ref();
               break;
 
@@ -1044,7 +1044,7 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
         // The read callback happened before the write callback
         // returned. This is now responsible for cleanup.
         callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
-        callback->on_cancel();
+        callback->on_cancel(NULL);
         callback->dec_ref();
         break;
 

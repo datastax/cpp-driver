@@ -252,7 +252,7 @@ private:
   virtual void on_retry(bool use_next_host);
 
   virtual void on_set(ResponseMessage* response);
-  virtual void on_cancel();
+  virtual void on_cancel(ResponseMessage *response);
 
   void on_result_response(ResponseMessage* response);
   void on_error_response(ResponseMessage* response);

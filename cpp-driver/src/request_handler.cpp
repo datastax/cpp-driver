@@ -112,6 +112,12 @@ void RequestHandler::set_response(const Host::Ptr& host,
   if (future_->set_response(host->address(), response)) {
     io_worker_->metrics()->record_request(uv_hrtime() - start_time_ns_);
     stop_request();
+  } else {
+    // This request is a speculative execution for whom we already processed
+    // a response (another speculative execution). So consider this one an
+    // aborted speculative execution.
+
+    io_worker()->metrics()->record_speculative_request(uv_hrtime() - start_time_ns_);
   }
 }
 
@@ -233,12 +239,18 @@ void SpeculativeExecution::on_retry(bool use_next_host) {
   }
 }
 
-void SpeculativeExecution::on_cancel() {
+void SpeculativeExecution::on_cancel(ResponseMessage* response) {
   LOG_DEBUG("Cancelling speculative execution (%p) for request (%p) on host %s",
             static_cast<void*>(this),
             static_cast<void*>(request_handler_.get()),
             current_host_ ? current_host_->address_string().c_str()
                           : "<no current host>");
+
+  // Only record stats for successful requests.
+  if (response != NULL && response->opcode() == CQL_OPCODE_RESULT) {
+    uint64_t elapsed = uv_hrtime() - request_handler_->start_time_ns_;
+    request_handler_->io_worker()->metrics()->record_speculative_request(elapsed);
+  }
   return_connection();
 }
 

@@ -133,6 +133,26 @@ BOOST_AUTO_TEST_CASE(histogram)
   BOOST_CHECK(snapshot.stddev == 28);
 }
 
+BOOST_AUTO_TEST_CASE(histogram_empty)
+{
+  cass::Metrics::ThreadState thread_state(1);
+  cass::Metrics::Histogram histogram(&thread_state);
+
+  cass::Metrics::Histogram::Snapshot snapshot;
+  histogram.get_snapshot(&snapshot);
+
+  BOOST_CHECK_EQUAL(snapshot.min, 0);
+  BOOST_CHECK_EQUAL(snapshot.max, 0);
+  BOOST_CHECK_EQUAL(snapshot.mean, 0);
+  BOOST_CHECK_EQUAL(snapshot.stddev, 0);
+  BOOST_CHECK_EQUAL(snapshot.median, 0);
+  BOOST_CHECK_EQUAL(snapshot.percentile_75th, 0);
+  BOOST_CHECK_EQUAL(snapshot.percentile_95th, 0);
+  BOOST_CHECK_EQUAL(snapshot.percentile_98th, 0);
+  BOOST_CHECK_EQUAL(snapshot.percentile_99th, 0);
+  BOOST_CHECK_EQUAL(snapshot.percentile_999th, 0);
+}
+
 BOOST_AUTO_TEST_CASE(histogram_threads)
 {
   HistogramThreadArgs args[NUM_THREADS];
@@ -190,6 +210,26 @@ BOOST_AUTO_TEST_CASE(meter)
   BOOST_CHECK_CLOSE(meter.one_minute_rate(), 10, tolerance);
   BOOST_CHECK_CLOSE(meter.five_minute_rate(), 10, tolerance);
   BOOST_CHECK_CLOSE(meter.fifteen_minute_rate(), 10, tolerance);
+}
+
+BOOST_AUTO_TEST_CASE(meter_speculative) {
+  cass::Metrics::ThreadState thread_state(1);
+  cass::Metrics::Meter meter(&thread_state);
+
+  // Emulate a situation where for a total of 60 requests sent on the wire,
+  // where 15 are unique requests and 45 are dups (speculative executions).
+
+  for (int i = 0; i < 15; ++i) {
+    meter.mark();
+  }
+
+  // Test "no speculative execution configured" case while we're here.
+  BOOST_CHECK_EQUAL(0.0, meter.speculative_request_percent());
+  for (int i = 0; i < 45; ++i) {
+    meter.mark_speculative();
+  }
+
+  BOOST_CHECK_EQUAL(75.0, meter.speculative_request_percent());
 }
 
 BOOST_AUTO_TEST_CASE(meter_threads)

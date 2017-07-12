@@ -245,7 +245,7 @@ void SimpleRequestCallback::on_retry(bool use_next_host) {
   on_internal_timeout(); // Retries are unhandled so timeout
 }
 
-void SimpleRequestCallback::on_cancel() {
+void SimpleRequestCallback::on_cancel(ResponseMessage *response) {
   timer_.stop();
 }
 

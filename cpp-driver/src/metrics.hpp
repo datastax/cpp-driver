@@ -205,6 +205,7 @@ public:
         , five_minute_rate_(1.0 - exp(-static_cast<double>(ExponentiallyWeightedMovingAverage::INTERVAL) / 60.0 / 5), thread_state)
         , fifteen_minute_rate_(1.0 - exp(-static_cast<double>(ExponentiallyWeightedMovingAverage::INTERVAL) / 60.0 / 15), thread_state)
         , count_(thread_state)
+        , speculative_request_count_(thread_state)
         , start_time_(uv_hrtime())
         , last_tick_(start_time_) {}
 
@@ -214,6 +215,10 @@ public:
         one_minute_rate_.update();
         five_minute_rate_.update();
         fifteen_minute_rate_.update();
+      }
+
+      void mark_speculative() {
+        speculative_request_count_.inc();
       }
 
       double one_minute_rate() const { return one_minute_rate_.rate(); }
@@ -231,6 +236,24 @@ public:
 
       uint64_t count() const {
         return count_.sum();
+      }
+
+      uint64_t speculative_request_count() const {
+        return speculative_request_count_.sum();
+      }
+
+      double speculative_request_percent() const {
+        // count() gives us the number of requests that we successfully handled.
+        //
+        // speculative_request_count() give us the number of requests sent on
+        // the wire but were aborted after we received a good response.
+
+        uint64_t spec_count = speculative_request_count();
+        uint64_t total_requests = spec_count + count();
+
+        // Be wary of div by 0.
+        return total_requests ?
+               static_cast<double>(spec_count) / total_requests * 100 : 0;
       }
 
     private:
@@ -258,6 +281,7 @@ public:
       ExponentiallyWeightedMovingAverage five_minute_rate_;
       ExponentiallyWeightedMovingAverage fifteen_minute_rate_;
       Counter count_;
+      Counter speculative_request_count_;
       const uint64_t start_time_;
       Atomic<uint64_t> last_tick_;
 
@@ -308,16 +332,31 @@ public:
       for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
         histograms_[i].add(h);
       }
-      snapshot->min = hdr_min(h);
-      snapshot->max = hdr_max(h);
-      snapshot->mean = static_cast<int64_t>(hdr_mean(h));
-      snapshot->stddev = static_cast<int64_t>(hdr_stddev(h));
-      snapshot->median = hdr_value_at_percentile(h, 50.0);
-      snapshot->percentile_75th = hdr_value_at_percentile(h, 75.0);
-      snapshot->percentile_95th = hdr_value_at_percentile(h, 95.0);
-      snapshot->percentile_98th = hdr_value_at_percentile(h, 98.0);
-      snapshot->percentile_99th = hdr_value_at_percentile(h, 99.0);
-      snapshot->percentile_999th = hdr_value_at_percentile(h, 99.9);
+
+      if (h->total_count == 0) {
+        // There is no data; default to 0 for the stats.
+        snapshot->max = 0;
+        snapshot->min = 0;
+        snapshot->mean = 0;
+        snapshot->stddev = 0;
+        snapshot->median = 0;
+        snapshot->percentile_75th = 0;
+        snapshot->percentile_95th = 0;
+        snapshot->percentile_98th = 0;
+        snapshot->percentile_99th = 0;
+        snapshot->percentile_999th = 0;
+      } else {
+        snapshot->max = hdr_max(h);
+        snapshot->min = hdr_min(h);
+        snapshot->mean = static_cast<int64_t>(hdr_mean(h));
+        snapshot->stddev = static_cast<int64_t>(hdr_stddev(h));
+        snapshot->median = hdr_value_at_percentile(h, 50.0);
+        snapshot->percentile_75th = hdr_value_at_percentile(h, 75.0);
+        snapshot->percentile_95th = hdr_value_at_percentile(h, 95.0);
+        snapshot->percentile_98th = hdr_value_at_percentile(h, 98.0);
+        snapshot->percentile_99th = hdr_value_at_percentile(h, 99.0);
+        snapshot->percentile_999th = hdr_value_at_percentile(h, 99.9);
+      }
     }
 
   private:
@@ -463,6 +502,7 @@ public:
     : thread_state_(max_threads)
 #endif
     , request_latencies(&thread_state_)
+    , speculative_request_latencies(&thread_state_)
     , request_rates(&thread_state_)
     , total_connections(&thread_state_)
     , available_connections(&thread_state_)
@@ -478,11 +518,17 @@ public:
     request_rates.mark();
   }
 
+  void record_speculative_request(uint64_t latency_ns) {
+    // Final measurement is in microseconds
+    speculative_request_latencies.record_value(latency_ns / 1000);
+    request_rates.mark_speculative();
+  }
 private:
   ThreadState thread_state_;
 
 public:
   Histogram request_latencies;
+  Histogram speculative_request_latencies;
   Meter request_rates;
 
   Counter total_connections;

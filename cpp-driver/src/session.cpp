@@ -126,7 +126,6 @@ void  cass_session_get_metrics(const CassSession* session,
   metrics->requests.fifteen_minute_rate = internal_metrics->request_rates.fifteen_minute_rate();
   metrics->requests.mean_rate = internal_metrics->request_rates.mean_rate();
 
-
   metrics->stats.total_connections = internal_metrics->total_connections.sum();
   metrics->stats.available_connections = internal_metrics->available_connections.sum();
   metrics->stats.exceeded_write_bytes_water_mark = internal_metrics->exceeded_write_bytes_water_mark.sum();
@@ -135,6 +134,29 @@ void  cass_session_get_metrics(const CassSession* session,
   metrics->errors.connection_timeouts = internal_metrics->connection_timeouts.sum();
   metrics->errors.pending_request_timeouts = internal_metrics->pending_request_timeouts.sum();
   metrics->errors.request_timeouts = internal_metrics->request_timeouts.sum();
+}
+
+void  cass_session_get_speculative_execution_metrics(const CassSession* session,
+                                                     CassSpeculativeExecutionMetrics* metrics) {
+  const cass::Metrics* internal_metrics = session->metrics();
+
+  cass::Metrics::Histogram::Snapshot speculative_snapshot;
+  internal_metrics->speculative_request_latencies.get_snapshot(&speculative_snapshot);
+
+  metrics->min = speculative_snapshot.min;
+  metrics->max = speculative_snapshot.max;
+  metrics->mean = speculative_snapshot.mean;
+  metrics->stddev = speculative_snapshot.stddev;
+  metrics->median = speculative_snapshot.median;
+  metrics->percentile_75th = speculative_snapshot.percentile_75th;
+  metrics->percentile_95th = speculative_snapshot.percentile_95th;
+  metrics->percentile_98th = speculative_snapshot.percentile_98th;
+  metrics->percentile_99th = speculative_snapshot.percentile_99th;
+  metrics->percentile_999th = speculative_snapshot.percentile_999th;
+  metrics->count =
+    internal_metrics->request_rates.speculative_request_count();
+  metrics->percentage =
+    internal_metrics->request_rates.speculative_request_percent();
 }
 
 } // extern "C"

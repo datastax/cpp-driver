@@ -71,7 +71,7 @@ public:
   // One of these methods is called to finish a request
   virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const String& message) = 0;
-  virtual void on_cancel() = 0;
+  virtual void on_cancel(ResponseMessage *response) = 0;
 
   int32_t encode(int version, int flags, BufferVec* bufs);
 
@@ -138,7 +138,7 @@ private:
 
   virtual void on_set(ResponseMessage* response);
   virtual void on_error(CassError code, const String& message);
-  virtual void on_cancel();
+  virtual void on_cancel(ResponseMessage *response);
 
   static void on_timeout(Timer* timer);
 

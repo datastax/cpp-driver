@@ -447,10 +447,10 @@ typedef struct CassMetrics_ {
     cass_uint64_t percentile_98th; /**< 98th percentile in microseconds */
     cass_uint64_t percentile_99th; /**< 99the percentile in microseconds */
     cass_uint64_t percentile_999th; /**< 99.9th percentile in microseconds */
-    cass_double_t mean_rate; /**<  Mean rate in requests per second*/
+    cass_double_t mean_rate; /**<  Mean rate in requests per second */
     cass_double_t one_minute_rate; /**< 1 minute rate in requests per second */
-    cass_double_t five_minute_rate; /**<  5 minute rate in requests per second*/
-    cass_double_t fifteen_minute_rate; /**< 15 minute rate in requests per second*/
+    cass_double_t five_minute_rate; /**<  5 minute rate in requests per second */
+    cass_double_t fifteen_minute_rate; /**< 15 minute rate in requests per second */
   } requests;
 
   struct {
@@ -465,8 +465,22 @@ typedef struct CassMetrics_ {
     cass_uint64_t pending_request_timeouts; /** Occurrences of requests that timed out waiting for a connection */
     cass_uint64_t request_timeouts; /** Occurrences of requests that timed out waiting for a request to finish */
   } errors;
-
 } CassMetrics;
+
+typedef struct CassSpeculativeExecutionMetrics_ {
+  cass_uint64_t min; /**< Minimum in microseconds */
+  cass_uint64_t max; /**< Maximum in microseconds */
+  cass_uint64_t mean; /**< Mean in microseconds */
+  cass_uint64_t stddev; /**< Standard deviation in microseconds */
+  cass_uint64_t median; /**< Median in microseconds */
+  cass_uint64_t percentile_75th; /**< 75th percentile in microseconds */
+  cass_uint64_t percentile_95th; /**< 95th percentile in microseconds */
+  cass_uint64_t percentile_98th; /**< 98th percentile in microseconds */
+  cass_uint64_t percentile_99th; /**< 99the percentile in microseconds */
+  cass_uint64_t percentile_999th; /**< 99.9th percentile in microseconds */
+  cass_uint64_t count; /**< The number of aborted speculative retries */
+  cass_double_t percentage; /**< Fraction of requests that are aborted speculative retries */
+} CassSpeculativeExecutionMetrics;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_UNKNOWN      = 0xFFFF,
@@ -2029,7 +2043,7 @@ cass_session_execute_batch(CassSession* session,
  * @param[in] session
  * @return A schema instance that must be freed.
  *
- * @see cass_schema_free()
+ * @see cass_schema_meta_free()
  */
 CASS_EXPORT const CassSchemaMeta*
 cass_session_get_schema_meta(const CassSession* session);
@@ -2041,12 +2055,22 @@ cass_session_get_schema_meta(const CassSession* session);
  *
  * @param[in] session
  * @param[out] output
- *
- * @see cass_schema_free()
  */
 CASS_EXPORT void
 cass_session_get_metrics(const CassSession* session,
                          CassMetrics* output);
+
+/**
+ * Gets a copy of this session's speculative execution metrics.
+ *
+ * @public @memberof CassSession
+ *
+ * @param[in] session
+ * @param[out] output
+ */
+CASS_EXPORT void
+cass_session_get_speculative_execution_metrics(const CassSession* session,
+                                               CassSpeculativeExecutionMetrics* output);
 
 /***********************************************************************************
  *

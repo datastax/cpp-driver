@@ -79,6 +79,15 @@ public:
   }
 
  /**
+  * Get the driver speculative execution metrics
+  *
+  * @param metrics Metrics to assign from the active session
+  */
+  void get_speculative_execution_metrics(CassSpeculativeExecutionMetrics *metrics) {
+    cass_session_get_speculative_execution_metrics(session_.get(), metrics);
+  }
+
+  /**
   * Execute a query on the system table
   *
   * @param is_async True if async query; false otherwise
@@ -201,7 +210,7 @@ BOOST_AUTO_TEST_CASE(timeouts) {
       boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       get_metrics(&metrics);
     } while (boost::chrono::steady_clock::now() < end &&
-    metrics.errors.pending_request_timeouts == 0);
+             metrics.errors.pending_request_timeouts == 0);
     BOOST_CHECK_GT(metrics.errors.pending_request_timeouts, 0);
   } else {
     std::cout << "Skipping Pending Request Timeout for Cassandra v" << version.to_string() << std::endl;
@@ -244,11 +253,13 @@ BOOST_AUTO_TEST_CASE(request_statistics) {
   create_session();
 
   CassMetrics metrics;
+  CassSpeculativeExecutionMetrics spec_metrics;
   boost::chrono::steady_clock::time_point end =
     boost::chrono::steady_clock::now() + boost::chrono::seconds(70);
   do {
     execute_query();
     get_metrics(&metrics);
+    get_speculative_execution_metrics(&spec_metrics);
   } while (boost::chrono::steady_clock::now() < end &&
     metrics.requests.one_minute_rate == 0.0);
 
@@ -266,6 +277,21 @@ BOOST_AUTO_TEST_CASE(request_statistics) {
   BOOST_CHECK_GT(metrics.requests.one_minute_rate, 0.0);
   BOOST_CHECK_EQUAL(metrics.requests.five_minute_rate, metrics.requests.one_minute_rate);
   BOOST_CHECK_EQUAL(metrics.requests.fifteen_minute_rate, metrics.requests.one_minute_rate);
+
+  // Since speculative retries are disabled, this stat should be 0.
+  // test_speculative_execution_policy tests the non-zero case.
+  BOOST_CHECK_EQUAL(spec_metrics.min, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.max, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.mean, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.stddev, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.median, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.percentile_75th, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.percentile_95th, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.percentile_98th, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.percentile_99th, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.percentile_999th, 0);
+  BOOST_CHECK_EQUAL(spec_metrics.percentage, 0.0);
+  BOOST_CHECK_EQUAL(spec_metrics.count, 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
