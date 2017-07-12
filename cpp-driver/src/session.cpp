@@ -120,7 +120,6 @@ void  cass_session_get_metrics(const CassSession* session,
   metrics->requests.percentile_98th = requests_snapshot.percentile_98th;
   metrics->requests.percentile_99th = requests_snapshot.percentile_99th;
   metrics->requests.percentile_999th = requests_snapshot.percentile_999th;
-
   metrics->requests.one_minute_rate = internal_metrics->request_rates.one_minute_rate();
   metrics->requests.five_minute_rate = internal_metrics->request_rates.five_minute_rate();
   metrics->requests.fifteen_minute_rate = internal_metrics->request_rates.fifteen_minute_rate();

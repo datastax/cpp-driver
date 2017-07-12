@@ -34,11 +34,11 @@
 namespace cass {
 
 SchemaChangeCallback::SchemaChangeCallback(Connection* connection,
-                                           const SpeculativeExecution::Ptr& speculative_execution,
+                                           const RequestExecution::Ptr& request_execution,
                                            const Response::Ptr& response,
                                            uint64_t elapsed)
   : MultipleRequestCallback(connection)
-  , speculative_execution_(speculative_execution)
+  , request_execution_(request_execution)
   , request_response_(response)
   , start_ms_(get_time_since_epoch_ms())
   , elapsed_ms_(elapsed) {}
@@ -79,7 +79,7 @@ bool SchemaChangeCallback::has_schema_agreement(const ResponseMap& responses) {
                                                                row->get_by_name("rpc_address"),
                                                                &address);
 
-      if (is_valid_address && speculative_execution_->is_host_up(address)) {
+      if (is_valid_address && request_execution_->is_host_up(address)) {
         const Value* v = row->get_by_name("schema_version");
         if (!row->get_by_name("rpc_address")->is_null() && !v->is_null()) {
           StringRef version(v->to_string_ref());
@@ -96,7 +96,7 @@ bool SchemaChangeCallback::has_schema_agreement(const ResponseMap& responses) {
 
 void SchemaChangeCallback::on_set(const ResponseMap& responses) {
   // Don't wait for schema agreement if the underlying request is cancelled
-  if (speculative_execution_->state() == RequestCallback::REQUEST_STATE_CANCELLED) {
+  if (request_execution_->state() == RequestCallback::REQUEST_STATE_CANCELLED) {
     return;
   }
 
@@ -113,13 +113,13 @@ void SchemaChangeCallback::on_set(const ResponseMap& responses) {
   if (!has_error && has_schema_agreement(responses)) {
     LOG_DEBUG("Found schema agreement in %llu ms",
               static_cast<unsigned long long>(elapsed_ms_));
-    speculative_execution_->set_response(request_response_);
+    request_execution_->set_response(request_response_);
     return;
   } else if (elapsed_ms_ >= MAX_SCHEMA_AGREEMENT_WAIT_MS) {
     LOG_WARN("No schema agreement on live nodes after %llu ms. "
              "Schema may not be up-to-date on some nodes.",
              static_cast<unsigned long long>(elapsed_ms_));
-    speculative_execution_->set_response(request_response_);
+    request_execution_->set_response(request_response_);
     return;
   }
 
@@ -129,7 +129,7 @@ void SchemaChangeCallback::on_set(const ResponseMap& responses) {
   // Try again
   Ptr callback(
         Memory::allocate<SchemaChangeCallback>(connection(),
-                                               speculative_execution_,
+                                               request_execution_,
                                                request_response_,
                                                elapsed_ms_));
   connection()->schedule_schema_agreement(callback,
@@ -141,17 +141,17 @@ void SchemaChangeCallback::on_error(CassError code, const String& message) {
   ss << "An error occurred waiting for schema agreement: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
   LOG_ERROR("%s", ss.str().c_str());
-  speculative_execution_->set_response(request_response_);
+  request_execution_->set_response(request_response_);
 }
 
 void SchemaChangeCallback::on_timeout() {
   LOG_ERROR("A timeout occurred waiting for schema agreement");
-  speculative_execution_->set_response(request_response_);
+  request_execution_->set_response(request_response_);
 }
 
 void SchemaChangeCallback::on_closing() {
   LOG_WARN("Connection closed while waiting for schema agreement");
-  speculative_execution_->set_response(request_response_);
+  request_execution_->set_response(request_response_);
 }
 
 } // namespace cass

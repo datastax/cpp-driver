@@ -121,7 +121,7 @@ private:
   AddressVec attempted_addresses_;
 };
 
-class SpeculativeExecution;
+class RequestExecution;
 
 class RequestHandler : public RefCounted<RequestHandler> {
   friend class Memory;
@@ -186,9 +186,9 @@ private:
   static void on_timeout(Timer* timer);
 
 private:
-  friend class SpeculativeExecution;
+  friend class RequestExecution;
 
-  void add_execution(SpeculativeExecution* speculative_execution);
+  void add_execution(RequestExecution* request_execution);
   void add_attempted_address(const Address& address);
   void schedule_next_execution(const Host::Ptr& current_host);
 
@@ -197,7 +197,7 @@ private:
   void stop_request();
 
 private:
-  typedef SmallVector<SpeculativeExecution*, 4> SpeculativeExecutionVec;
+  typedef SmallVector<RequestExecution*, 4> RequestExecutionVec;
 
   const Request::ConstPtr request_;
   int64_t timestamp_;
@@ -209,18 +209,18 @@ private:
   IOWorker* io_worker_;
   Timer timer_;
   int running_executions_;
-  SpeculativeExecutionVec speculative_executions_;
+  RequestExecutionVec request_executions_;
   Request::EncodingCache encoding_cache_;
   uint64_t start_time_ns_;
   Address preferred_address_;
 };
 
-class SpeculativeExecution : public RequestCallback {
+class RequestExecution : public RequestCallback {
 public:
-  typedef SharedRefPtr<SpeculativeExecution> Ptr;
+  typedef SharedRefPtr<RequestExecution> Ptr;
 
-  SpeculativeExecution(const RequestHandler::Ptr& request_handler,
-                       const Host::Ptr& current_host = Host::Ptr());
+  RequestExecution(const RequestHandler::Ptr& request_handler,
+                   const Host::Ptr& current_host = Host::Ptr());
 
   virtual const Request* request() const { return request_handler_->request(); }
   virtual int64_t timestamp() const { return request_handler_->timestamp(); }
