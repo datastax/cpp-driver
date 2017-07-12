@@ -109,7 +109,7 @@ public:
 
   bool execute(const RequestHandler::Ptr& request_handler);
 
-  void retry(const SpeculativeExecution::Ptr& speculative_execution);
+  void retry(const RequestExecution::Ptr& request_execution);
   void request_finished();
 
   void notify_pool_ready(Pool* pool);

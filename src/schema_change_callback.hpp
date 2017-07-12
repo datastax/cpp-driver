@@ -34,7 +34,7 @@ public:
   typedef SharedRefPtr<SchemaChangeCallback> Ptr;
 
   SchemaChangeCallback(Connection* connection,
-                      const SpeculativeExecution::Ptr& speculative_execution,
+                      const RequestExecution::Ptr& request_execution,
                       const Response::Ptr& response,
                       uint64_t elapsed = 0);
 
@@ -48,7 +48,7 @@ public:
 private:
   bool has_schema_agreement(const ResponseMap& responses);
 
-  SpeculativeExecution::Ptr speculative_execution_;
+  RequestExecution::Ptr request_execution_;
   Response::Ptr request_response_;
   uint64_t start_ms_;
   uint64_t elapsed_ms_;
