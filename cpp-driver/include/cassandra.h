@@ -51,7 +51,7 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 6
+#define CASS_VERSION_MINOR 7
 #define CASS_VERSION_PATCH 0
 #define CASS_VERSION_SUFFIX ""
 
@@ -511,7 +511,9 @@ typedef enum CassConsistency_ {
   XX(CASS_CONSISTENCY_LOCAL_SERIAL, "LOCAL_SERIAL") \
   XX(CASS_CONSISTENCY_LOCAL_ONE, "LOCAL_ONE")
 
+/* @cond IGNORE */
 #define CASS_CONSISTENCY_MAP CASS_CONSISTENCY_MAPPING /* Deprecated */
+/* @endcond */
 
 typedef enum CassWriteType_ {
   CASS_WRITE_TYPE_UKNOWN,
@@ -531,7 +533,9 @@ typedef enum CassWriteType_ {
   XX(CASS_WRITE_TYPE_BATCH_LOG, "BATCH_LOG") \
   XX(CASS_WRITE_TYPE_CAS, "CAS")
 
+/* @cond IGNORE */
 #define CASS_WRITE_TYPE_MAP CASS_WRITE_TYPE_MAPPING /* Deprecated */
+/* @endcond */
 
 typedef enum CassColumnType_ {
   CASS_COLUMN_TYPE_REGULAR,
@@ -632,7 +636,9 @@ typedef enum CassIteratorType_ {
   XX(CASS_LOG_DEBUG, "DEBUG") \
   XX(CASS_LOG_TRACE, "TRACE")
 
+/* @cond IGNORE */
 #define CASS_LOG_LEVEL_MAP CASS_LOG_LEVEL_MAPPING /* Deprecated */
+/* @endcond */
 
 typedef enum CassLogLevel_ {
 #define XX_LOG(log_level, _) log_level,
@@ -725,7 +731,9 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_IDENTITY_MISMATCH, 5, "Certificate does not match host or IP address") \
   XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_PROTOCOL_ERROR, 6, "Protocol error")
 
+/* @cond IGNORE */
 #define CASS_ERROR_MAP CASS_ERROR_MAPPING /* Deprecated */
+/* @endcond*/
 
 #define CASS_ERROR(source, code) ((source << 24) | code)
 
@@ -1673,9 +1681,9 @@ cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
                                           size_t dcs_length);
 
 /**
- * Enable/Disable Nagel's algorithm on connections.
+ * Enable/Disable Nagle's algorithm on connections.
  *
- * <b>Default:</b> cass_true (disables Nagel's algorithm).
+ * <b>Default:</b> cass_true (disables Nagle's algorithm).
  *
  * @public @memberof CassCluster
  *

@@ -167,6 +167,8 @@ BOOST_AUTO_TEST_CASE(from_string_invalid)
   BOOST_CHECK(cass_uuid_from_string("c3b54ca0-7b01-11e4-aea6-c30dd51eaa-4", &uuid) == CASS_ERROR_LIB_BAD_PARAMS);
   // Invalid group
   BOOST_CHECK(cass_uuid_from_string("c3b54ca07b0-1-11e4-aea6-c30dd51eaa64", &uuid) == CASS_ERROR_LIB_BAD_PARAMS);
+  // String longer then str_length
+  BOOST_CHECK(cass_uuid_from_string_n("00-00-00-00-11-11-11-11-22-22-22-22-deadbeaf", 36, &uuid) == CASS_ERROR_LIB_BAD_PARAMS);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

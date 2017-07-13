@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(execute_on_all_nodes) {
   CCM::CassVersion version = test_utils::get_version();
   if (version < "2.2.0") {
     std::cout << "Speculative Execution Test Requires UDF Functionality: Cassandra v"
-      << version.to_string() << "does not support UDFs" << std::endl;
+      << version.to_string() << " does not support UDFs" << std::endl;
     BOOST_REQUIRE(true);
   } else {
     // Create the session and initialize the server
@@ -258,7 +258,7 @@ BOOST_AUTO_TEST_CASE(execute_one_node_idempotent) {
   CCM::CassVersion version = test_utils::get_version();
   if (version < "2.2.0") {
     std::cout << "Speculative Execution Test Requires UDF Functionality: Cassandra v"
-      << version.to_string() << "does not support UDFs" << std::endl;
+      << version.to_string() << " does not support UDFs" << std::endl;
     BOOST_REQUIRE(true);
   } else {
     // Create the session and initialize the server
@@ -301,7 +301,7 @@ BOOST_AUTO_TEST_CASE(execute_one_node_non_idempotent) {
   CCM::CassVersion version = test_utils::get_version();
   if (version < "2.2.0") {
     std::cout << "Speculative Execution Test Requires UDF Functionality: Cassandra v"
-      << version.to_string() << "does not support UDFs" << std::endl;
+      << version.to_string() << " does not support UDFs" << std::endl;
     BOOST_REQUIRE(true);
   } else {
     // Create the session and initialize the server
@@ -342,7 +342,7 @@ BOOST_AUTO_TEST_CASE(attempt_two_nodes) {
   CCM::CassVersion version = test_utils::get_version();
   if (version < "2.2.0") {
     std::cout << "Speculative Execution Test Requires UDF Functionality: Cassandra v"
-      << version.to_string() << "does not support UDFs" << std::endl;
+      << version.to_string() << " does not support UDFs" << std::endl;
     BOOST_REQUIRE(true);
   } else {
     // Create the session and initialize the server
@@ -392,7 +392,7 @@ BOOST_AUTO_TEST_CASE(without_speculative_execution_policy) {
   CCM::CassVersion version = test_utils::get_version();
   if (version < "2.2.0") {
     std::cout << "Speculative Execution Test Requires UDF Functionality: Cassandra v"
-      << version.to_string() << "does not support UDFs" << std::endl;
+      << version.to_string() << " does not support UDFs" << std::endl;
     BOOST_REQUIRE(true);
   } else {
     // Create the session and initialize the server
@@ -430,7 +430,7 @@ BOOST_AUTO_TEST_CASE(execute_on_all_nodes_with_timeout) {
   CCM::CassVersion version = test_utils::get_version();
   if (version < "2.2.0") {
     std::cout << "Speculative Execution Test Requires UDF Functionality: Cassandra v"
-      << version.to_string() << "does not support UDFs" << std::endl;
+      << version.to_string() << " does not support UDFs" << std::endl;
     BOOST_REQUIRE(true);
   } else {
     // Create the session and initialize the server
