@@ -8,71 +8,52 @@
 cmake_minimum_required(VERSION 2.6.4)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-set(PROJECT_NAME_STRING dse)
-set(PROJECT_LIB_NAME ${PROJECT_NAME_STRING})
-set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
-
-project(${PROJECT_NAME_STRING} C CXX)
-
-set(CASS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/cpp-driver")
-set(CPP_DRIVER_INCLUDE_DIR "${CASS_SOURCE_DIR}/include")
-set(CPP_DRIVER_SOURCE_DIR "${CASS_SOURCE_DIR}/src")
-set(CPP_DRIVER_THIRD_PARTY_SOURCE_DIR "${CPP_DRIVER_SOURCE_DIR}/third_party")
-set(RAPID_JSON_INCLUDE_DIR "${CPP_DRIVER_THIRD_PARTY_SOURCE_DIR}/rapidjson")
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CASS_SOURCE_DIR}/cmake/modules/")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
+# Ensure functions/modules are available
+set(CASS_ROOT_DIR "${CMAKE_SOURCE_DIR}/cpp-driver")
+set(CASS_SRC_DIR "${CASS_ROOT_DIR}/src")
+set(CASS_INCLUDE_DIR "${CASS_ROOT_DIR}/include")
+list(APPEND CMAKE_MODULE_PATH ${CASS_ROOT_DIR}/cmake/modules
+  ${CMAKE_SOURCE_DIR}/cmake/modules
+)
 
 include(CppDriver)
 
+CassInitProject(dse)
+CassRapidJson()
 CassPolicies()
 CassCheckPlatform()
 
-# Title the project and define the versioning
-set(PROJECT_DISPLAY_NAME "DataStax C/C++ DSE Driver")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# Retrieve version from header file
-set(PROJECT_VERSION_HEADER_FILE "${PROJECT_SOURCE_DIR}/include/dse.h")
+#------------------------
+# Project Version
+#------------------------
+CassProjectVersion("${PROJECT_SOURCE_DIR}/include/dse.h" "DSE")
 
-file(STRINGS ${PROJECT_VERSION_HEADER_FILE} PROJECT_VERSION_PARTS
-  REGEX "^#define[ \t]+DSE_VERSION_(MAJOR|MINOR|PATCH)[ \t]+[0-9]+$")
+#---------------
+# Options
+#---------------
 
-# Verify version parts
-string(REGEX MATCH "DSE_VERSION_MAJOR[ \t]+[0-9]+" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_PARTS})
-string(REGEX MATCH "DSE_VERSION_MINOR[ \t]+[0-9]+" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_PARTS})
-string(REGEX MATCH "DSE_VERSION_PATCH[ \t]+[0-9]+" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PARTS})
-if(NOT PROJECT_VERSION_MAJOR OR NOT PROJECT_VERSION_MINOR OR NOT PROJECT_VERSION_PATCH)
-  message(FATAL_ERROR "Unable to retrieve project version from ${PROJECT_VERSION_HEADER_FILE}")
-endif()
-
-# Extract version numbers
-string(REGEX REPLACE "DSE_VERSION_MAJOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_MAJOR})
-string(REGEX REPLACE "DSE_VERSION_MINOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_MINOR})
-string(REGEX REPLACE "DSE_VERSION_PATCH[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PATCH})
-set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
-message(STATUS "Project version: ${PROJECT_VERSION_STRING}")
-
-# Project options
+option(DSE_BUILD_DOCS "Build documentation" OFF)
+option(DSE_BUILD_EXAMPLES "Build examples" OFF)
+option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
 option(DSE_BUILD_SHARED "Build shared library" ON)
 option(DSE_BUILD_STATIC "Build static library" OFF)
+option(DSE_BUILD_TESTS "Build tests" OFF)
+option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
+option(DSE_DEBUG_CUSTOM_ALLOC "Debug custom allocator" OFF)
 option(DSE_INSTALL_HEADER "Install header file" ON)
 option(DSE_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
-option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
-option(DSE_BUILD_EXAMPLES "Build examples" OFF)
-option(DSE_BUILD_DOCS "Build documentation" OFF)
-option(DSE_BUILD_TESTS "Build tests" OFF)
-option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
-option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(DSE_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
-option(DSE_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
-option(DSE_USE_OPENSSL "Use OpenSSL" ON)
-option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
-option(DSE_USE_SPARSEHASH "Use sparsehash" OFF)
-option(DSE_USE_ZLIB "Use zlib" OFF)
 option(DSE_USE_LIBSSH2 "Use libssh2" OFF)
-option(DSE_DEBUG_CUSTOM_ALLOC "Debug custom allocator" OFF)
+option(DSE_USE_OPENSSL "Use OpenSSL" ON)
+option(DSE_USE_SPARSEHASH "Use sparsehash" OFF)
+option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
+option(DSE_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
+option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
+option(DSE_USE_ZLIB "Use zlib" OFF)
 
+# Handle testing dependencies
 if(DSE_BUILD_TESTS)
   # Enable integration and unit tests
   set(DSE_BUILD_INTEGRATION_TESTS ON)
@@ -82,6 +63,7 @@ endif()
 if(DSE_BUILD_INTEGRATION_TESTS)
   # Enable integration tests for core driver
   set(CASS_BUILD_INTEGRATION_TESTS ON)
+  set(CASS_USE_OPENSSL ON) # Required for integration tests
 endif()
 
 if(DSE_BUILD_UNIT_TESTS)
@@ -101,50 +83,27 @@ if(DSE_USE_STATIC_LIBS)
   set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
 endif()
 
-set(CASS_USE_STATIC_LIBS ${DSE_USE_STATIC_LIBS})
-set(CASS_USE_BOOST_ATOMIC ${DSE_USE_BOOST_ATOMIC})
-set(CASS_USE_STD_ATOMIC ${DSE_USE_STD_ATOMIC})
-set(CASS_USE_OPENSSL ${DSE_USE_OPENSSL})
-set(CASS_USE_TCMALLOC ${DSE_USE_TCMALLOC})
-set(CASS_USE_SPARSEHASH ${DSE_USE_SPARSEHASH})
-set(CASS_USE_ZLIB ${DSE_USE_ZLIB})
-set(CASS_USE_LIBSSH2 ${DSE_USE_LIBSSH2})
-set(CASS_DEBUG_CUSTOM_ALLOC ${DSE_DEBUG_CUSTOM_ALLOC})
+# Set CASS options based on DSE options.
+foreach(key USE_STATIC_LIBS USE_BOOST_ATOMIC USE_STD_ATOMIC USE_OPENSSL
+            USE_TCMALLOC USE_SPARSEHASH USE_ZLIB USE_LIBSSH2 DEBUG_CUSTOM_ALLOC)
+  set(CASS_${key} ${DSE_${key}})
+endforeach()
 
 #---------------
 # Dependencies
 #---------------
-
 CassUseLibuv()
 
 #------------------------
 # Optional Dependencies
 #------------------------
+CassOptionalDependencies()
 
-# Boost
-if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
-  CassUseBoost()
-endif()
-
-# Sparsehash
-if(CASS_USE_SPARSEHASH)
-  CassUseSparshHash()
-endif()
-
-
-# OpenSSL
-if(CASS_USE_OPENSSL)
-  CassUseOpenSSL()
-endif()
-
-# tcmalloc
-if(CASS_USE_TCMALLOC)
-  CassUseTcmalloc()
-endif()
-
-# zlib
-if(CASS_USE_ZLIB)
-  CassUseZlib()
+#----------------------
+# Generating API docs
+#----------------------
+if(DSE_BUILD_DOCS)
+  CassDoxygen()
 endif()
 
 CassSetCompilerFlags()
@@ -152,14 +111,13 @@ CassAddIncludes()
 CassFindSourceFiles()
 CassConfigure()
 
-source_group("Source Files\\Cassandra" FILES ${SRC_FILES})
-source_group("Header Files\\Cassandra" FILES ${API_HEADER_FILES} ${INC_FILES})
+source_group("Source Files\\Cassandra" FILES ${CASS_SRC_FILES})
+source_group("Header Files\\Cassandra" FILES ${CASS_API_HEADER_FILES} ${CASS_INC_FILES})
 
 # Build up the include paths
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/include)
 set(DSE_INCLUDES ${PROJECT_INCLUDE_DIR})
 set(DSE_INCLUDES ${DSE_INCLUDES} ${PROJECT_SOURCE_DIR}/src)
-set(DSE_INCLUDES ${DSE_INCLUDES} ${RAPID_JSON_INCLUDE_DIR})
 set(DSE_INCLUDES ${DSE_INCLUDES} ${CASS_INCLUDES})
 
 # Build up libraries
@@ -171,31 +129,15 @@ set(DSE_INCLUDES ${DSE_INCLUDES} ${KERBEROS_INCLUDE_DIR})
 set(DSE_LIBS ${DSE_LIBS} ${KERBEROS_LIBRARIES})
 
 # Build up compiler flags
-set(PROJECT_CXX_FLAGS ${CASS_DRIVER_CXX_FLAGS})
+set(DSE_DRIVER_CXX_FLAGS ${CASS_DRIVER_CXX_FLAGS})
 set(TEST_CXX_FLAGS ${CASS_TEST_CXX_FLAGS})
-
-#----------------------
-# Generating API docs
-#----------------------
-
-# Doxygen
-if(DSE_BUILD_DOCS)
-  find_package(Doxygen)
-  if(DOXYGEN_FOUND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-    add_custom_target(docs
-      ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      COMMENT "Generating API documentation with Doxygen" VERBATIM)
-  endif()
-endif()
 
 #------------------------------
 # DSE static and shared
 #------------------------------
 
 # Copy "cassandra.h"
-configure_file(${PROJECT_SOURCE_DIR}/cpp-driver/include/cassandra.h
+configure_file(${CASS_ROOT_DIR}/include/cassandra.h
                ${PROJECT_SOURCE_DIR}/include/dse/cassandra.h
                COPYONLY)
 
@@ -217,7 +159,7 @@ set(DSE_ALL_SOURCE_FILES
 if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
   add_library(cpp-driver-dse OBJECT ${DSE_ALL_SOURCE_FILES})
   if(NOT WIN32)
-    set_property(TARGET cpp-driver-dse PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -fPIC")
+    set_property(TARGET cpp-driver-dse PROPERTY COMPILE_FLAGS "${DSE_DRIVER_CXX_FLAGS} -fPIC")
   endif()
   set_property(TARGET cpp-driver-dse PROPERTY FOLDER "Driver/DSE")
 
@@ -228,79 +170,50 @@ endif()
 
 # Assign the include directories
 include_directories(${DSE_INCLUDES})
-include_directories(${CPP_DRIVER_SOURCE_DIR})
-include_directories(${CPP_DRIVER_INCLUDE_DIR})
+include_directories(${CASS_SRC_DIR})
+include_directories(${CASS_INCLUDE_DIR})
 
 # Additional project definitions
 add_definitions(-DNOMINMAX)
 
 # Determine if the dynamic/shared library should be built
 if(DSE_BUILD_SHARED)
+  # It would be great to move this logic into the CassConfigureShared
+  # macro, but if you do, something goes wrong and the cmake output
+  # warns that policy CMP0042 is violated.
   if(CMAKE_VERSION VERSION_LESS "2.8.8")
     add_library(${PROJECT_LIB_NAME} SHARED ${DSE_ALL_SOURCE_FILES})
   else()
     add_library(${PROJECT_LIB_NAME} SHARED $<TARGET_OBJECTS:cpp-driver-dse>)
   endif()
-  target_link_libraries(${PROJECT_LIB_NAME} ${DSE_LIBS})
-  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
-  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
-  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
-  set_property(
-    TARGET ${PROJECT_LIB_NAME}
-    APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DDSE_BUILDING")
+  CassConfigureShared("DSE")
   set_property(TARGET ${PROJECT_LIB_NAME} PROPERTY FOLDER "Driver/DSE")
 endif()
 
 # Determine if the static library should be built
 if(DSE_BUILD_STATIC)
+  # It would be great to move this logic into the CassConfigureStatic
+  # macro, but if you do, something goes wrong and the cmake output
+  # warns that policy CMP0042 is violated.
   if(CMAKE_VERSION VERSION_LESS "2.8.8")
     add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${DSE_ALL_SOURCE_FILES})
   else()
     add_library(${PROJECT_LIB_NAME_STATIC} STATIC $<TARGET_OBJECTS:cpp-driver-dse>)
   endif()
-  target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${DSE_LIBS})
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
-  set_property(
-    TARGET ${PROJECT_LIB_NAME_STATIC}
-    APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DDSE_STATIC")
-  set_property(TARGET ${PROJECT_LIB_NAME_STATIC} PROPERTY FOLDER "Driver/DSE")
+  CassConfigureStatic("DSE")
 
   # Update the test flags to indicate the use of the static library
   if(DSE_USE_STATIC_LIBS)
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DDSE_STATIC")
     set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DCASS_STATIC")
   endif()
+
+  set_property(TARGET ${PROJECT_LIB_NAME_STATIC} PROPERTY FOLDER "Driver/DSE")
 endif()
 
-#-----------
-# Examples
-#-----------
-
-# Determine example directories at cmake execution time.
-# When a new example dir is added, the user just runs cmake again to pull it in;
-# no need to update CMakeLists.txt!
-
-if(DSE_BUILD_EXAMPLES)
-  file(GLOB EXAMPLES_TO_BUILD "examples/*/CMakeLists.txt")
-  foreach(example ${EXAMPLES_TO_BUILD})
-    get_filename_component(exdir ${example} DIRECTORY)
-    add_subdirectory(${exdir})
-  endforeach()
-endif()
-
-if(CASS_BUILD_EXAMPLES)
-  file(GLOB EXAMPLES_TO_BUILD "cpp-driver/examples/*/CMakeLists.txt")
-  foreach(example ${EXAMPLES_TO_BUILD})
-    get_filename_component(exdir ${example} DIRECTORY)
-    add_subdirectory(${exdir})
-  endforeach()
-endif()
-
-#--------
-# Tests
-#--------
+#-----------------------------
+# Unit and Integration Tests
+#-----------------------------
 if (DSE_BUILD_INTEGRATION_TESTS OR DSE_BUILD_UNIT_TESTS)
   add_subdirectory(tests)
 endif()
@@ -312,97 +225,26 @@ if(CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
   endif()
 endif()
 
-if(CASS_BUILD_INTEGRATION_TESTS)
-  set(CCM_BRIDGE_INCLUDES "${CASS_SOURCE_DIR}/test/ccm_bridge/src")
-  add_subdirectory(cpp-driver/test/ccm_bridge)
-  add_subdirectory(cpp-driver/test/integration_tests)
-endif()
+CassConfigureTests(${CASS_ROOT_DIR})
 
-if(CASS_BUILD_UNIT_TESTS)
-  add_subdirectory(cpp-driver/test/unit_tests)
+#-----------
+# Examples
+#-----------
+
+# Determine example directories at cmake execution time.
+# When a new example dir is added, the user just runs cmake again to pull it in;
+# no need to update CMakeLists.txt!
+
+if(DSE_BUILD_EXAMPLES)
+  CassBuildExamples("examples")
+  CassBuildExamples("cpp-driver/examples")
 endif()
 
 #-------------------------------------
-# Directory installation information
+# Installation information
 #-------------------------------------
+CassConfigureInstall(DSE dse)
 
-# Determine if the library directory needs to be determined
-if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" AND
-      ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr" OR
-       "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local"))
-    if(EXISTS "/etc/debian_version")
-      set (CMAKE_INSTALL_LIBDIR "lib/${CMAKE_LIBRARY_ARCHITECTURE}")
-    elseif(EXISTS "/etc/redhat-release" OR EXISTS "/etc/fedora-release" OR
-           EXISTS "/etc/slackware-version" OR EXISTS "/etc/gentoo-release")
-      if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set (CMAKE_INSTALL_LIBDIR "lib64")
-      else()
-        set (CMAKE_INSTALL_LIBDIR "lib")
-      endif()
-    else()
-      set (CMAKE_INSTALL_LIBDIR "lib")
-    endif()
-  else()
-    set (CMAKE_INSTALL_LIBDIR "lib")
-  endif()
-endif()
-
-# Create a binary directory executable and DLLs (windows only)
-set(INSTALL_DLL_EXE_DIR "bin")
-
-#------------------------------
-# Install targets
-#------------------------------
-
-if(DSE_INSTALL_PKG_CONFIG)
-  if(NOT WIN32)
-    find_package(PkgConfig)
-    if(PKG_CONFIG_FOUND)
-      set(prefix ${CMAKE_INSTALL_PREFIX})
-      set(exec_prefix ${CMAKE_INSTALL_PREFIX})
-      set(libdir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
-      set(includedir ${CMAKE_INSTALL_PREFIX}/include)
-      set(version ${PROJECT_VERSION_STRING})
-    endif()
-  endif()
-endif()
-
-# Determine if the header should be installed
 if(DSE_INSTALL_HEADER)
   install(DIRECTORY include/dse DESTINATION include FILES_MATCHING PATTERN "*.h")
-  install(FILES ${DSE_API_HEADER_FILES} DESTINATION "include")
-endif()
-
-# Install the dynamic/shared library
-if(DSE_BUILD_SHARED)
-  install(TARGETS ${PROJECT_LIB_NAME}
-    RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
-  if(DSE_INSTALL_PKG_CONFIG)
-    if(NOT WIN32)
-      if(PKG_CONFIG_FOUND)
-        configure_file("${PROJECT_SOURCE_DIR}/packaging/dse.pc.in" "dse.pc" @ONLY)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/dse.pc"
-          DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-      endif()
-    endif()
-  endif()
-endif()
-
-if(DSE_BUILD_STATIC)
-  install(TARGETS ${PROJECT_LIB_NAME_STATIC}
-    RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
-  if(DSE_INSTALL_PKG_CONFIG)
-    if(NOT WIN32)
-      if(PKG_CONFIG_FOUND)
-        configure_file("${PROJECT_SOURCE_DIR}/packaging/dse_static.pc.in" "dse_static.pc" @ONLY)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/dse_static.pc"
-          DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-      endif()
-    endif()
-  endif()
 endif()

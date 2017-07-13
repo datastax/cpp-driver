@@ -6,10 +6,258 @@ cmake_minimum_required(VERSION 2.6.4)
 include(FindPackageHandleStandardArgs)
 include(CheckSymbolExists)
 
+#------------------------
+# CassInitProject
+#
+# Set some PROJECT_* variables, given the project name.
+# Also declare the project itself.
+#
+# Output: PROJECT_NAME_STRING, PROJECT_LIB_NAME, PROJECT_LIB_NAME_STATIC
+#------------------------
+macro(CassInitProject project_name)
+  set(PROJECT_NAME_STRING ${project_name})
+  set(PROJECT_LIB_NAME ${PROJECT_NAME_STRING})
+  set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
+
+  project(${PROJECT_NAME_STRING} C CXX)
+endmacro()
+
+#------------------------
+# CassProjectVersion
+#
+# Read the given 'version header file', looking for version tokens that start
+# with 'prefix'. Parse the discovered version and set PROJECT_VERSION_*
+# variables.
+#
+# Output: PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR, PROJECT_VERSION_PATCH,
+#         PROJECT_VERSION_STRING
+#------------------------
+macro(CassProjectVersion version_header_file prefix)
+  # Retrieve version from header file
+  file(STRINGS ${version_header_file} PROJECT_VERSION_PARTS
+      REGEX "^#define[ \t]+${prefix}_VERSION_(MAJOR|MINOR|PATCH)[ \t]+[0-9]+$")
+
+  # Verify version parts
+  string(REGEX MATCH "${prefix}_VERSION_MAJOR[ \t]+[0-9]+" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_PARTS})
+  string(REGEX MATCH "${prefix}_VERSION_MINOR[ \t]+[0-9]+" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_PARTS})
+  string(REGEX MATCH "${prefix}_VERSION_PATCH[ \t]+[0-9]+" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PARTS})
+  if(NOT PROJECT_VERSION_MAJOR OR NOT PROJECT_VERSION_MINOR OR NOT PROJECT_VERSION_PATCH)
+    message(FATAL_ERROR "Unable to retrieve project version from ${version_header_file}")
+  endif()
+
+  # Extract version numbers
+  string(REGEX REPLACE "${prefix}_VERSION_MAJOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_MAJOR})
+  string(REGEX REPLACE "${prefix}_VERSION_MINOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_MINOR})
+  string(REGEX REPLACE "${prefix}_VERSION_PATCH[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PATCH})
+  set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
+  message(STATUS "Project version: ${PROJECT_VERSION_STRING}")
+endmacro()
+
+#------------------------
+# CassOptionalDependencies
+#
+# Configure enabled optional dependencies.
+#
+# Output: CASS_INCLUDES and CASS_LIBS
+#------------------------
+macro(CassOptionalDependencies)
+  # Boost
+  if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
+    CassUseBoost()
+  endif()
+
+  # OpenSSL
+  if(CASS_USE_OPENSSL)
+    CassUseOpenSSL()
+  endif()
+
+  # tcmalloc
+  if(CASS_USE_TCMALLOC)
+    CassUseTcmalloc()
+  endif()
+
+  # zlib
+  if(CASS_USE_ZLIB)
+    CassUseZlib()
+  endif()
+endmacro()
+
+#------------------------
+# CassDoxygen
+#
+# Configure docs target
+#------------------------
+macro(CassDoxygen)
+  find_package(Doxygen)
+  if(DOXYGEN_FOUND)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    add_custom_target(docs
+        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen" VERBATIM)
+  endif()
+endmacro()
+
+#------------------------
+# CassConfigureShared
+#
+# Configure the project to build a shared library.
+#
+# Arguments:
+#    prefix - prefix of global variable names that contain specific
+#        info on building the library (e.g. CASS or DSE).
+# Input: PROJECT_LIB_NAME, PROJECT_VERSION_STRING, PROJECT_VERSION_MAJOR,
+#        PROJECT_CXX_LINKER_FLAGS, *_DRIVER_CXX_FLAGS
+# Output: CASS_INCLUDES and CASS_LIBS
+#------------------------
+macro(CassConfigureShared prefix)
+  target_link_libraries(${PROJECT_LIB_NAME} ${${prefix}_LIBS})
+  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
+  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
+  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
+  set_property(
+      TARGET ${PROJECT_LIB_NAME}
+      APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -D${prefix}_BUILDING")
+endmacro()
+
+#------------------------
+# CassConfigureStatic
+#
+# Configure the project to build a static library.
+#
+# Arguments:
+#    prefix - prefix of global variable names that contain specific
+#        info on building the library (e.g. CASS or DSE).
+# Input: PROJECT_LIB_NAME_STATIC, PROJECT_VERSION_STRING, PROJECT_VERSION_MAJOR,
+#        PROJECT_CXX_LINKER_FLAGS, *_DRIVER_CXX_FLAGS
+# Output: CASS_INCLUDES and CASS_LIBS
+#------------------------
+macro(CassConfigureStatic prefix)
+  target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${${prefix}_LIBS})
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
+  set_property(
+      TARGET ${PROJECT_LIB_NAME_STATIC}
+      APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DDSE_STATIC")
+endmacro()
+
+#------------------------
+# CassConfigureExamples
+#
+# Configure the project to build examples.
+#
+# Arguments:
+#    examples_dir - directory containing all example sub-directories.
+macro(CassBuildExamples examples_dir)
+  file(GLOB EXAMPLES_TO_BUILD "${examples_dir}/*/CMakeLists.txt")
+  foreach(example ${EXAMPLES_TO_BUILD})
+    get_filename_component(exdir ${example} PATH)
+    add_subdirectory(${exdir})
+  endforeach()
+endmacro()
+
+#------------------------
+# CassConfigureInstall
+#
+# Configure the project to be able to "install" (e.g. make install).
+#
+# Arguments:
+#    var_prefix - prefix of install-related CMake variables.
+#    pkg_config_stem - base name of package config files for this project.
+# Input: CMAKE_CURRENT_BINARY_DIR, CMAKE_SYSTEM_NAME, CMAKE_INSTALL_PREFIX,
+#        CMAKE_LIBRARY_ARCHITECTURE, *_API_HEADER_FILES, *_BUILD_SHARED, *_BUILD_STATIC,
+#        *_INSTALL_HEADER, *_INSTALL_PKG_CONFIG, PROJECT_LIB_NAME, PROJECT_LIB_NAME_STATIC,
+#        PROJECT_SOURCE_DIR, PROJECT_VERSION_STRING
+# Output: CMAKE_INSTALL_LIBDIR, INSTALL_DLL_EXE_DIR
+macro(CassConfigureInstall var_prefix pkg_config_stem)
+  # Determine if the library directory needs to be determined
+  if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+    if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" AND
+    ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr" OR
+        "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local"))
+      if(EXISTS "/etc/debian_version")
+        set (CMAKE_INSTALL_LIBDIR "lib/${CMAKE_LIBRARY_ARCHITECTURE}")
+      elseif(EXISTS "/etc/redhat-release" OR EXISTS "/etc/fedora-release" OR
+          EXISTS "/etc/slackware-version" OR EXISTS "/etc/gentoo-release")
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+          set (CMAKE_INSTALL_LIBDIR "lib64")
+        else()
+          set (CMAKE_INSTALL_LIBDIR "lib")
+        endif()
+      else()
+        set (CMAKE_INSTALL_LIBDIR "lib")
+      endif()
+    else()
+      set (CMAKE_INSTALL_LIBDIR "lib")
+    endif()
+  endif()
+
+  # Create a binary directory executable and DLLs (windows only)
+  set(INSTALL_DLL_EXE_DIR "bin")
+
+  if(${var_prefix}_INSTALL_PKG_CONFIG)
+    if(NOT WIN32)
+      find_package(PkgConfig)
+      if(PKG_CONFIG_FOUND)
+        set(prefix ${CMAKE_INSTALL_PREFIX})
+        set(exec_prefix ${CMAKE_INSTALL_PREFIX})
+        set(libdir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
+        set(includedir ${CMAKE_INSTALL_PREFIX}/include)
+        set(version ${PROJECT_VERSION_STRING})
+      endif()
+    endif()
+  endif()
+
+  # Determine if the header should be installed
+  if(${var_prefix}_INSTALL_HEADER)
+    install(FILES ${${var_prefix}_API_HEADER_FILES} DESTINATION "include")
+  endif()
+
+  # Install the dynamic/shared library
+  if(${var_prefix}_BUILD_SHARED)
+    install(TARGETS ${PROJECT_LIB_NAME}
+        RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
+    if(${var_prefix}_INSTALL_PKG_CONFIG)
+      if(NOT WIN32)
+        if(PKG_CONFIG_FOUND)
+          configure_file("${PROJECT_SOURCE_DIR}/packaging/${pkg_config_stem}.pc.in" "${pkg_config_stem}.pc" @ONLY)
+          install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${pkg_config_stem}.pc"
+              DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+        endif()
+      endif()
+    endif()
+  endif()
+
+  if(${var_prefix}_BUILD_STATIC)
+    install(TARGETS ${PROJECT_LIB_NAME_STATIC}
+        RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
+    if(${var_prefix}_INSTALL_PKG_CONFIG)
+      if(NOT WIN32)
+        if(PKG_CONFIG_FOUND)
+          configure_file("${PROJECT_SOURCE_DIR}/packaging/${pkg_config_stem}_static.pc.in" "${pkg_config_stem}_static.pc" @ONLY)
+          install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${pkg_config_stem}_static.pc"
+              DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+        endif()
+      endif()
+    endif()
+  endif()
+endmacro()
+
+
 #-----------
 # Policies
 #-----------
 
+#------------------------
+# CassPolicies
+#
+# Tweak some CMake behaviors.
+#------------------------
 macro(CassPolicies)
   # TODO: Figure out Mac OS X rpath
   if(POLICY CMP0042)
@@ -26,7 +274,6 @@ endmacro()
 # CassCheckPlatform
 #
 # Check to ensure the platform is valid for the driver
-#
 #------------------------
 macro(CassCheckPlatform)
   # Ensure Windows platform is supported
@@ -39,6 +286,30 @@ macro(CassCheckPlatform)
       string(REGEX REPLACE "([0-9])" "0\\1" WINDOWS_VERSION ${WINDOWS_VERSION})
       message(FATAL_ERROR "Unable to build driver: Unsupported Windows platform 0x${WINDOWS_VERSION}")
     endif()
+  endif()
+endmacro()
+
+#------------------------
+# CassConfigureTests
+#
+# Add test subdirs for core driver to the build if testing is enabled.
+#
+# Input: CASS_BUILD_INTEGRATION_TESTS, CASS_BUILD_UNIT_TESTS, CASS_ROOT_DIR
+#------------------------
+macro(CassConfigureTests)
+  if(CASS_BUILD_INTEGRATION_TESTS)
+    # Add CCM bridge as a dependency for integration tests
+    set(CCM_BRIDGE_INCLUDES "${CASS_ROOT_DIR}/test/ccm_bridge/src")
+    add_subdirectory(${CASS_ROOT_DIR}/test/ccm_bridge)
+    add_subdirectory(${CASS_ROOT_DIR}/test/integration_tests)
+  endif()
+
+  if(CASS_BUILD_UNIT_TESTS)
+    add_subdirectory(${CASS_ROOT_DIR}/test/unit_tests)
+  endif()
+
+  if (CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
+    add_subdirectory(${CASS_ROOT_DIR}/gtests)
   endif()
 endmacro()
 
@@ -89,6 +360,124 @@ endmacro()
 
 # Minimum supported version of Boost
 set(CASS_MINIMUM_BOOST_VERSION 1.59.0)
+
+#------------------------
+# CassCcmBridge
+#
+# Add includes and libraries needed for CCM Bridge.
+#
+# Input: CASS_ROOT_DIR, CASS_USE_LIBSSH2, OPENSSL_FOUND, OPENSSL_LIBRARIES,
+#        PROJECT_SOURCE_DIR, ZLIB_FOUND, ZLIB_LIBRARIES
+# Output: CCM_BRIDGE_DIR, CCM_BRIDGE_HEADER_FILES, CCM_BRIDGE_LIBRARIES,
+#         CCM_BRIDGE_SOURCE_DIR, CCM_BRIDGE_SOURCE_FILES, LIBSSH2_FOUND
+#------------------------
+macro(CassCcmBridge)
+  # Add CCM bridge functionality from the Core driver
+  set(CCM_BRIDGE_DIR ${CASS_ROOT_DIR}/test/ccm_bridge)
+  set(CCM_BRIDGE_SOURCE_DIR ${CCM_BRIDGE_DIR}/src)
+  file(GLOB CCM_BRIDGE_HEADER_FILES ${CCM_BRIDGE_SOURCE_DIR}/*.hpp)
+  file(GLOB CCM_BRIDGE_SOURCE_FILES ${CCM_BRIDGE_SOURCE_DIR}/*.cpp)
+  if(CASS_USE_LIBSSH2)
+    if(OPENSSL_FOUND)
+      set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/" $ENV{LIBSSH2_ROOT})
+      set(LIBSSH2_ROOT ${LIBSSH2_ROOT} ${LIBSSH2_ROOT_DIR} $ENV{LIBSSH2_ROOT_DIR})
+      find_package(LIBSSH2)
+      if(LIBSSH2_FOUND)
+        # Build up the includes and libraries for CCM dependencies
+        include_directories(${LIBSSH2_INCLUDE_DIRS})
+        include_directories(${OPENSSL_INCLUDE_DIR})
+        set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} ${LIBSSH2_LIBRARIES} ${OPENSSL_LIBRARIES})
+        if(ZLIB_FOUND)
+          set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} ${ZLIB_LIBRARIES})
+        endif()
+        if(UNIX)
+          set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} pthread)
+        endif()
+        add_definitions(-DCASS_USE_LIBSSH2 -DOPENSSL_CLEANUP)
+        file(GLOB LIBSSH2_INCLUDE_FILES ${LIBSSH2_INCLUDE_DIRS}/*.h)
+        source_group("Header Files\\ccm_bridge\\libssh2" FILES ${LIBSSH2_INCLUDE_FILES})
+      else()
+        message(STATUS "libssh2 is Unavailable: Building integration tests without libssh2 support")
+      endif()
+    else()
+      message(STATUS "OpenSSL is Unavailable: Building integration tests without libssh2 support")
+    endif()
+  endif()
+  if(WIN32)
+    add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS)
+    set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} wsock32 ws2_32)
+  endif()
+  include_directories(${CCM_BRIDGE_SOURCE_DIR})
+  source_group("Header Files\\ccm_bridge" FILES ${CCM_BRIDGE_HEADER_FILES})
+  source_group("Source Files\\ccm_bridge" FILES ${CCM_BRIDGE_SOURCE_FILES})
+endmacro()
+
+#------------------------
+# CassRapidJson
+#
+# Set some RAPID_JSON_* variables, set up some source_group's,
+# and add the RapidJson include dir to our list of include dirs.
+#
+# Input: CASS_SRC_DIR
+# Output: RAPID_JSON_INCLUDE_DIR, RAPIDJSON_HEADER_FILES, RAPIDJSON_ERROR_HEADER_FILES
+#         RAPIDJSON_INTERNAL_HEADER_FILES, RAPIDJSON_MSIINTTYPES_HEADER_FILES
+#------------------------
+macro(CassRapidJson)
+  set(RAPID_JSON_INCLUDE_DIR "${CASS_SRC_DIR}/third_party/rapidjson")
+  file(GLOB RAPIDJSON_HEADER_FILES ${RAPID_JSON_INCLUDE_DIR}/rapidjson/*.h)
+  file(GLOB RAPIDJSON_ERROR_HEADER_FILES ${RAPID_JSON_INCLUDE_DIR}/rapidjson/error/*.h)
+  file(GLOB RAPIDJSON_INTERNAL_HEADER_FILES ${RAPID_JSON_INCLUDE_DIR}/rapidjson/internal/*.h)
+  file(GLOB RAPIDJSON_MSIINTTYPES_HEADER_FILES ${RAPID_JSON_INCLUDE_DIR}/rapidjson/msiinttypes/*.h)
+  source_group("Header Files\\rapidjson" FILES ${RAPIDJSON_HEADER_FILES})
+  source_group("Header Files\\rapidjson\\error" FILES ${RAPIDJSON_ERROR_HEADER_FILES})
+  source_group("Header Files\\rapidjson\\internal" FILES ${RAPIDJSON_INTERNAL_HEADER_FILES})
+  source_group("Header Files\\rapidjson\\msiinttypes" FILES ${RAPIDJSON_MSIINTTYPES_HEADER_FILES})
+  include_directories(${RAPID_JSON_INCLUDE_DIR})
+endmacro()
+
+#------------------------
+# CassSCassandra
+#
+# Set up SCassandra for use in tests.
+#
+# Input: TESTS_SCASSANDRA_SERVER_SOURCE_DIR
+# Output: SCASSANDRA_SERVER_BUILD_SCRIPT, SCASSANDRA_SERVER_STANDALONE_JAR
+#------------------------
+macro(CassSCassandra)
+  # Determine if SCassandra server can be built (Java is available)
+  find_package(Java COMPONENTS Development)
+  if(Java_Development_FOUND)
+    # Determine if the submodule should be initialized
+    set(SCASSANDRA_SERVER_BUILD_SCRIPT "./gradlew")
+    if(WIN32)
+      set(SCASSANDRA_SERVER_BUILD_SCRIPT "gradlew.bat")
+    endif()
+    if(NOT EXISTS "${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}/${SCASSANDRA_SERVER_BUILD_SCRIPT}")
+      find_package(Git REQUIRED)
+      execute_process(COMMAND git submodule update --init --recursive
+          WORKING_DIRECTORY ${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}
+          OUTPUT_QUIET)
+    endif()
+
+    # Build SCassandra server
+    file(GLOB SCASSANDRA_SERVER_STANDALONE_JAR
+        ${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}/server/build/libs/scassandra-server_*-standalone.jar)
+    if(NOT EXISTS ${SCASSANDRA_SERVER_STANDALONE_JAR})
+      message(STATUS "Building standalone SCassandra server")
+      execute_process(COMMAND ${SCASSANDRA_SERVER_BUILD_SCRIPT} server:fatJar
+          WORKING_DIRECTORY ${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}
+          OUTPUT_QUIET)
+      file(GLOB SCASSANDRA_SERVER_STANDALONE_JAR
+          ${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}/server/build/libs/scassandra-server_*-standalone.jar)
+    endif()
+  endif()
+
+  # Determine if the SCassandra server will be available for the tests
+  if(NOT EXISTS ${SCASSANDRA_SERVER_STANDALONE_JAR})
+    message(WARNING "SCassandra Not Found: SCassandra support will be disabled")
+  endif()
+endmacro()
+
 
 #------------------------
 # CassUseBoost
@@ -254,9 +643,9 @@ endmacro()
 # Detect compiler version and set compiler flags and defines
 #
 # Input: CASS_USE_STD_ATOMIC, CASS_USE_BOOST_ATOMIC, CASS_MULTICORE_COMPILATION
-# and CASS_USE_STATIC_LIBS
-# Output: CASS_USE_STD_ATOMIC, CASS_DRIVER_CXX_FLAGS, CASS_TEST_CXX_FLAGS and
-# CASS_EXAMPLE_C_FLAGS
+#        CASS_USE_STATIC_LIBS
+# Output: CASS_USE_STD_ATOMIC, CASS_DRIVER_CXX_FLAGS, CASS_TEST_CXX_FLAGS,
+#         CASS_EXAMPLE_C_FLAGS
 #------------------------
 macro(CassSetCompilerFlags)
   # Force OLD style of implicitly dereferencing variables
@@ -471,15 +860,15 @@ endmacro()
 #------------------------
 macro(CassAddIncludes)
   set(CASS_INCLUDES
-      ${CASS_SOURCE_DIR}/include
-      ${CASS_SOURCE_DIR}/src
-      ${CASS_SOURCE_DIR}/src/ssl
-      ${CASS_SOURCE_DIR}/src/third_party/rapidjson
-      ${CASS_SOURCE_DIR}/src/third_party/rapidjson
-      ${CASS_SOURCE_DIR}/src/third_party/sparsehash/src
+      ${CASS_ROOT_DIR}/include
+      ${CASS_SRC_DIR}
+      ${CASS_SRC_DIR}/ssl
+      ${CASS_SRC_DIR}/third_party/rapidjson
+      ${CASS_SRC_DIR}/third_party/rapidjson
+      ${CASS_SRC_DIR}/third_party/sparsehash/src
       ${CASS_INCLUDES}
       )
-  add_subdirectory(${CASS_SOURCE_DIR}/src/third_party/sparsehash)
+  add_subdirectory(${CASS_SRC_DIR}/third_party/sparsehash)
 endmacro()
 
 #------------------------
@@ -487,84 +876,91 @@ endmacro()
 #
 # Gather the header and source files
 #
-# Input: CASS_SOURCE_DIR, CASS_USE_BOOST_ATOMIC, CASS_USE_STD_ATOMIC and
-# CASS_USE_OPENSSL
+# Input: CASS_ROOT_DIR, CASS_USE_BOOST_ATOMIC, CASS_USE_STD_ATOMIC
+#        CASS_USE_OPENSSL
 # Output: CASS_ALL_SOURCE_FILES
 #------------------------
 macro(CassFindSourceFiles)
-  file(GLOB API_HEADER_FILES ${CASS_SOURCE_DIR}/include/*.h)
-  file(GLOB INC_FILES ${CASS_SOURCE_DIR}/src/*.hpp)
-  file(GLOB SRC_FILES ${CASS_SOURCE_DIR}/src/*.cpp)
+  file(GLOB CASS_API_HEADER_FILES ${CASS_ROOT_DIR}/include/*.h)
+  file(GLOB CASS_INC_FILES ${CASS_SRC_DIR}/*.hpp)
+  file(GLOB CASS_SRC_FILES ${CASS_SRC_DIR}/*.cpp)
 
   if(${APPLE})
-    list(REMOVE_ITEM SRC_FILES
-      "${CASS_SOURCE_DIR}/src/get_time-unix.cpp"
-      "${CASS_SOURCE_DIR}/src/get_time-win.cpp")
+    list(REMOVE_ITEM CASS_SRC_FILES
+      "${CASS_SRC_DIR}/get_time-unix.cpp"
+      "${CASS_SRC_DIR}/get_time-win.cpp")
   elseif(${UNIX})
-    list(REMOVE_ITEM SRC_FILES
-      "${CASS_SOURCE_DIR}/src/get_time-mac.cpp"
-      "${CASS_SOURCE_DIR}/src/get_time-win.cpp")
+    list(REMOVE_ITEM CASS_SRC_FILES
+      "${CASS_SRC_DIR}/get_time-mac.cpp"
+      "${CASS_SRC_DIR}/get_time-win.cpp")
   elseif(${WIN32})
-    list(REMOVE_ITEM SRC_FILES
-      "${CASS_SOURCE_DIR}/src/get_time-mac.cpp"
-      "${CASS_SOURCE_DIR}/src/get_time-unix.cpp")
+    list(REMOVE_ITEM CASS_SRC_FILES
+      "${CASS_SRC_DIR}/get_time-mac.cpp"
+      "${CASS_SRC_DIR}/get_time-unix.cpp")
   endif()
 
   # Determine atomic library to include
   if(CASS_USE_BOOST_ATOMIC)
-    set(INC_FILES ${INC_FILES}
-      ${CASS_SOURCE_DIR}/src/atomic/atomic_boost.hpp)
+    set(CASS_INC_FILES ${CASS_INC_FILES}
+      ${CASS_SRC_DIR}/atomic/atomic_boost.hpp)
   elseif(CASS_USE_STD_ATOMIC)
-    set(INC_FILES ${INC_FILES}
-      ${CASS_SOURCE_DIR}/src/atomic/atomic_std.hpp)
+    set(CASS_INC_FILES ${CASS_INC_FILES}
+      ${CASS_SRC_DIR}/atomic/atomic_std.hpp)
   else()
-    set(INC_FILES ${INC_FILES}
-      ${CASS_SOURCE_DIR}/src/atomic/atomic_intrinsics.hpp)
+    set(CASS_INC_FILES ${CASS_INC_FILES}
+      ${CASS_SRC_DIR}/atomic/atomic_intrinsics.hpp)
     if(WIN32)
-      set(INC_FILES ${INC_FILES}
-        ${CASS_SOURCE_DIR}/src/atomic/atomic_intrinsics_msvc.hpp)
+      set(CASS_INC_FILES ${CASS_INC_FILES}
+        ${CASS_SRC_DIR}/atomic/atomic_intrinsics_msvc.hpp)
     else()
-      set(INC_FILES ${INC_FILES}
-        ${CASS_SOURCE_DIR}/src/atomic/atomic_intrinsics_gcc.hpp)
+      set(CASS_INC_FILES ${CASS_INC_FILES}
+        ${CASS_SRC_DIR}/atomic/atomic_intrinsics_gcc.hpp)
     endif()
   endif()
 
-  set(SRC_FILES ${SRC_FILES}
-    ${CASS_SOURCE_DIR}/src/third_party/hdr_histogram/hdr_histogram.cpp)
+  set(CASS_SRC_FILES ${CASS_SRC_FILES}
+    ${CASS_SRC_DIR}/third_party/hdr_histogram/hdr_histogram.cpp)
 
-  set(SRC_FILES ${SRC_FILES}
-    ${CASS_SOURCE_DIR}/src/third_party/curl/hostcheck.cpp)
+  set(CASS_SRC_FILES ${CASS_SRC_FILES}
+    ${CASS_SRC_DIR}/third_party/curl/hostcheck.cpp)
 
   # Determine if OpenSSL should be compiled in (or not)
   if(CASS_USE_OPENSSL)
-    set(INC_FILES ${INC_FILES}
-      ${CASS_SOURCE_DIR}/src/ssl/ssl_openssl_impl.hpp
-      ${CASS_SOURCE_DIR}/src/ssl/ring_buffer_bio.hpp)
-    set(SRC_FILES ${SRC_FILES}
-      ${CASS_SOURCE_DIR}/src/ssl/ssl_openssl_impl.cpp
-      ${CASS_SOURCE_DIR}/src/ssl/ring_buffer_bio.cpp)
+    set(CASS_INC_FILES ${CASS_INC_FILES}
+      ${CASS_SRC_DIR}/ssl/ssl_openssl_impl.hpp
+      ${CASS_SRC_DIR}/ssl/ring_buffer_bio.hpp)
+    set(CASS_SRC_FILES ${CASS_SRC_FILES}
+      ${CASS_SRC_DIR}/ssl/ssl_openssl_impl.cpp
+      ${CASS_SRC_DIR}/ssl/ring_buffer_bio.cpp)
     set(HAVE_OPENSSL 1)
   else()
-    set(INC_FILES ${INC_FILES}
-      ${CASS_SOURCE_DIR}/src/ssl/ssl_no_impl.hpp)
-    set(SRC_FILES ${SRC_FILES}
-      ${CASS_SOURCE_DIR}/src/ssl/ssl_no_impl.cpp)
+    set(CASS_INC_FILES ${CASS_INC_FILES}
+      ${CASS_SRC_DIR}/ssl/ssl_no_impl.hpp)
+    set(CASS_SRC_FILES ${CASS_SRC_FILES}
+      ${CASS_SRC_DIR}/ssl/ssl_no_impl.cpp)
   endif()
 
-  set(CASS_ALL_SOURCE_FILES ${SRC_FILES} ${API_HEADER_FILES} ${INC_FILES})
+  set(CASS_ALL_SOURCE_FILES ${CASS_SRC_FILES} ${CASS_API_HEADER_FILES} ${CASS_INC_FILES})
 
   # Shorten the source file pathing for log messages
-  foreach(SRC_FILE ${SRC_FILES})
-    string(REPLACE "${CMAKE_SOURCE_DIR}/" "" LOG_FILE_ ${SRC_FILE})
+  foreach(SRC_FILE ${CASS_SRC_FILES})
+    string(REPLACE "${CASS_ROOT_DIR}/" "" LOG_FILE_ ${SRC_FILE})
     set_source_files_properties(${SRC_FILE} PROPERTIES COMPILE_FLAGS -DLOG_FILE_=\\\"${LOG_FILE_}\\\")
   endforeach()
 endmacro()
 
+#------------------------
+# CassConfigure
+#
+# Generate cassconfig.hpp from cassconfig.hpp.in
+#
+# Input: CASS_ROOT_DIR, CASS_SRC_DIR
+#------------------------
 macro(CassConfigure)
   check_symbol_exists(SO_NOSIGPIPE "sys/socket.h;sys/types.h" HAVE_NOSIGPIPE)
   check_symbol_exists(sigtimedwait "signal.h" HAVE_SIGTIMEDWAIT)
   if (NOT WIN32 AND NOT HAVE_NOSIGPIPE AND NOT HAVE_SIGTIMEDWAIT)
     message(WARNING "Unable to handle SIGPIPE on your platform")
   endif()
-  configure_file(${CASS_SOURCE_DIR}/cassconfig.hpp.in ${CASS_SOURCE_DIR}/src/cassconfig.hpp)
+  configure_file(${CASS_ROOT_DIR}/cassconfig.hpp.in ${CASS_SRC_DIR}/cassconfig.hpp)
 endmacro()

@@ -43,8 +43,13 @@
 # Set ``OPENSSL_MSVC_STATIC_RT`` set ``TRUE`` to choose the MT version of the lib.
 
 if (UNIX)
-  find_package(PkgConfig QUIET)
-  pkg_check_modules(_OPENSSL QUIET openssl)
+  if(CMAKE_VERSION VERSION_LESS "2.8.0")
+    find_package(PkgConfig)
+    pkg_check_modules(_OPENSSL openssl)
+  else()
+    find_package(PkgConfig QUIET)
+    pkg_check_modules(_OPENSSL QUIET openssl)
+  endif()
 endif ()
 
 # Support preference of static libs by adjusting CMAKE_FIND_LIBRARY_SUFFIXES
@@ -305,8 +310,9 @@ function(from_hex HEX DEC)
 
   while (_strlen GREATER 0)
     math(EXPR _res "${_res} * 16")
+    math(EXPR _remaining_len "${_strlen} - 1")
     string(SUBSTRING "${HEX}" 0 1 NIBBLE)
-    string(SUBSTRING "${HEX}" 1 -1 HEX)
+    string(SUBSTRING "${HEX}" 1 ${_remaining_len} HEX)
     if (NIBBLE STREQUAL "A")
       math(EXPR _res "${_res} + 10")
     elseif (NIBBLE STREQUAL "B")
@@ -368,16 +374,30 @@ endif ()
 set(OPENSSL_LIBRARIES ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} )
 
 if (OPENSSL_VERSION)
-  find_package_handle_standard_args(OpenSSL
-    REQUIRED_VARS
-      OPENSSL_SSL_LIBRARY
-      OPENSSL_CRYPTO_LIBRARY
-      OPENSSL_INCLUDE_DIR
-    VERSION_VAR
-      OPENSSL_VERSION
-    FAIL_MESSAGE
-      "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR"
-  )
+  if(CMAKE_VERSION VERSION_LESS "2.8.0")
+    find_package_handle_standard_args(OpenSSL
+        REQUIRED_VARS
+        OPENSSL_FOUND
+        OPENSSL_LIBRARIES
+        OPENSSL_INCLUDE_DIR
+        )
+    if(OPENSSL_FOUND)
+      message(STATUS "Found OpenSSL: ${OPENSSL_LIBRARIES} (found version ${OPENSSL_VERSION})")
+    else()
+      message(FATAL_ERROR "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR")
+    endif()
+  else()
+    find_package_handle_standard_args(OpenSSL
+      REQUIRED_VARS
+        OPENSSL_SSL_LIBRARY
+        OPENSSL_CRYPTO_LIBRARY
+        OPENSSL_INCLUDE_DIR
+      VERSION_VAR
+        OPENSSL_VERSION
+      FAIL_MESSAGE
+        "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR"
+    )
+  endif()
 else ()
   find_package_handle_standard_args(OpenSSL "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR"
     OPENSSL_SSL_LIBRARY

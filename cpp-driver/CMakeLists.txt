@@ -1,82 +1,59 @@
 cmake_minimum_required(VERSION 2.6.4)
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # Ensure functions/modules are available
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
-
-set(PROJECT_NAME_STR cassandra)
-set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
-set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
-
-# Title the project and define the versioning
-project(${PROJECT_NAME_STR} C CXX)
+set(CASS_ROOT_DIR ${CMAKE_SOURCE_DIR})
+set(CASS_SRC_DIR "${CASS_ROOT_DIR}/src")
+set(CASS_INCLUDE_DIR "${CASS_ROOT_DIR}/include")
+list(APPEND CMAKE_MODULE_PATH ${CASS_ROOT_DIR}/cmake/modules)
 
 include(CppDriver)
 
+CassInitProject(cassandra)
 CassPolicies()
 CassCheckPlatform()
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 #------------------------
 # Project Version
 #------------------------
-
-# Retrieve version from header file
-set(PROJECT_VERSION_HEADER_FILE "${PROJECT_SOURCE_DIR}/include/cassandra.h")
-
-file(STRINGS ${PROJECT_VERSION_HEADER_FILE} PROJECT_VERSION_PARTS
-  REGEX "^#define[ \t]+CASS_VERSION_(MAJOR|MINOR|PATCH)[ \t]+[0-9]+$")
-
-# Verify version parts
-string(REGEX MATCH "CASS_VERSION_MAJOR[ \t]+[0-9]+" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_PARTS})
-string(REGEX MATCH "CASS_VERSION_MINOR[ \t]+[0-9]+" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_PARTS})
-string(REGEX MATCH "CASS_VERSION_PATCH[ \t]+[0-9]+" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PARTS})
-
-if(NOT PROJECT_VERSION_MAJOR OR NOT PROJECT_VERSION_MINOR OR NOT PROJECT_VERSION_PATCH)
-  message(FATAL_ERROR "Unable to retrieve project version from ${PROJECT_VERSION_HEADER_FILE}")
-endif()
-
-# Extract version numbers
-string(REGEX REPLACE "CASS_VERSION_MAJOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_MAJOR})
-string(REGEX REPLACE "CASS_VERSION_MINOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_MINOR})
-string(REGEX REPLACE "CASS_VERSION_PATCH[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PATCH})
-
-set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
-
-message(STATUS "Project version: ${PROJECT_VERSION_STRING}")
-
-set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
+CassProjectVersion("${CASS_INCLUDE_DIR}/cassandra.h" "CASS")
 
 #---------------
 # Options
 #---------------
 
+option(CASS_BUILD_DOCS "Build documentation" OFF)
+option(CASS_BUILD_EXAMPLES "Build examples" OFF)
+option(CASS_BUILD_INTEGRATION_TESTS "Build integration tests" OFF)
 option(CASS_BUILD_SHARED "Build shared library" ON)
 option(CASS_BUILD_STATIC "Build static library" OFF)
-option(CASS_BUILD_EXAMPLES "Build examples" OFF)
-option(CASS_BUILD_DOCS "Build documentation" OFF)
 option(CASS_BUILD_TESTS "Build tests" OFF)
-option(CASS_BUILD_INTEGRATION_TESTS "Build integration tests" OFF)
 option(CASS_BUILD_UNIT_TESTS "Build unit tests" OFF)
+option(CASS_DEBUG_CUSTOM_ALLOC "Debug custom allocator" OFF)
 option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
 option(CASS_MULTICORE_COMPILATION "Enable multicore compilation" OFF)
-option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(CASS_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
-option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
+option(CASS_USE_LIBSSH2 "Use libssh2 for integration tests" ON)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
+option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
+option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 option(CASS_USE_ZLIB "Use zlib" OFF)
-option(CASS_USE_LIBSSH2 "Use libssh2 for integration tests" ON)
-option(CASS_DEBUG_CUSTOM_ALLOC "Debug custom allocator" OFF)
 
 # Handle testing dependencies
 if(CASS_BUILD_TESTS)
-  # Enable integration and unit tests for backwards compatibility
+  # Enable integration and unit tests
   set(CASS_BUILD_INTEGRATION_TESTS ON)
   set(CASS_BUILD_UNIT_TESTS ON)
 endif()
+
 if(CASS_BUILD_INTEGRATION_TESTS)
   set(CASS_USE_OPENSSL ON) # Required for integration tests
 endif()
+
 if(CASS_BUILD_UNIT_TESTS)
   set(CASS_BUILD_STATIC ON) # Required for unit tests
 endif()
@@ -106,26 +83,7 @@ CassUseLibuv()
 #------------------------
 # Optional Dependencies
 #------------------------
-
-# Boost
-if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
-  CassUseBoost()
-endif()
-
-# OpenSSL
-if(CASS_USE_OPENSSL)
-  CassUseOpenSSL()
-endif()
-
-# tcmalloc
-if(CASS_USE_TCMALLOC)
-  CassUseTcmalloc()
-endif()
-
-# zlib
-if(CASS_USE_ZLIB)
-  CassUseZlib()
-endif()
+CassOptionalDependencies()
 
 #--------------------
 # Test Dependencies
@@ -159,26 +117,19 @@ endif()
 
 # Doxygen
 if(CASS_BUILD_DOCS)
-  find_package(Doxygen)
-  if(DOXYGEN_FOUND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-    add_custom_target(docs
-      ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      COMMENT "Generating API documentation with Doxygen" VERBATIM)
-  endif()
+  CassDoxygen()
 endif()
 
 #------------------------------
 # Cassandra static and shared
 #------------------------------
 
-set(CASS_SOURCE_DIR ${PROJECT_SOURCE_DIR})
-
 CassSetCompilerFlags()
 CassAddIncludes()
 CassFindSourceFiles()
 CassConfigure()
+
+set(TEST_CXX_FLAGS ${CASS_TEST_CXX_FLAGS})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -206,13 +157,7 @@ if(CASS_BUILD_SHARED)
   else()
     add_library(${PROJECT_LIB_NAME} SHARED $<TARGET_OBJECTS:cpp-driver>)
   endif()
-  target_link_libraries(${PROJECT_LIB_NAME} ${CASS_LIBS})
-  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
-  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
-  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
-  set_property(
-    TARGET ${PROJECT_LIB_NAME}
-    APPEND PROPERTY COMPILE_FLAGS "${CASS_DRIVER_CXX_FLAGS} -DCASS_BUILDING")
+  CassConfigureShared("CASS")
 endif()
 
 # Determine if the static library should be built
@@ -222,12 +167,7 @@ if(CASS_BUILD_STATIC)
   else()
     add_library(${PROJECT_LIB_NAME_STATIC} STATIC $<TARGET_OBJECTS:cpp-driver>)
   endif()
-  target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
-  set_property(
-    TARGET ${PROJECT_LIB_NAME_STATIC}
-    APPEND PROPERTY COMPILE_FLAGS "${CASS_DRIVER_CXX_FLAGS} -DCASS_STATIC")
+  CassConfigureStatic("CASS")
 
   # Update the test flags to indicate the use of the static library
   if(CASS_USE_STATIC_LIBS)
@@ -235,53 +175,11 @@ if(CASS_BUILD_STATIC)
   endif()
 endif()
 
-#-------------------------------------
-# Directory installation information
-#-------------------------------------
-
-# Determine if the library directory needs to be determined
-if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" AND
-      ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr" OR
-       "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local"))
-    if(EXISTS "/etc/debian_version")
-      set (CMAKE_INSTALL_LIBDIR "lib/${CMAKE_LIBRARY_ARCHITECTURE}")
-    elseif(EXISTS "/etc/redhat-release" OR EXISTS "/etc/fedora-release" OR
-           EXISTS "/etc/slackware-version" OR EXISTS "/etc/gentoo-release" OR
-           EXISTS "/etc/os-release")
-      if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set (CMAKE_INSTALL_LIBDIR "lib64")
-      else()
-        set (CMAKE_INSTALL_LIBDIR "lib")
-      endif()
-    else()
-      set (CMAKE_INSTALL_LIBDIR "lib")
-    endif()
-  else()
-    set (CMAKE_INSTALL_LIBDIR "lib")
-  endif()
-endif()
-
-# Create a binary directory executable and DLLs (windows only)
-set(INSTALL_DLL_EXE_DIR "bin")
-
 #-----------------------------
 # Unit and integration tests
 #-----------------------------
 
-# Add the unit and integration tests to the build process
-if(CASS_BUILD_UNIT_TESTS)
-  # Add the unit test project
-  add_subdirectory(test/unit_tests)
-endif()
-if(CASS_BUILD_INTEGRATION_TESTS)
-  # Add CCM bridge as a dependency for integration tests
-  add_subdirectory("${PROJECT_SOURCE_DIR}/test/ccm_bridge")
-  set(CCM_BRIDGE_INCLUDES "${PROJECT_SOURCE_DIR}/test/ccm_bridge/src")
-
-  # Add the integration test project
-  add_subdirectory(test/integration_tests)
-endif()
+CassConfigureTests()
 
 #-----------
 # Examples
@@ -292,67 +190,13 @@ endif()
 # no need to update CMakeLists.txt!
 
 if(CASS_BUILD_EXAMPLES)
-  file(GLOB EXAMPLES_TO_BUILD "examples/*/CMakeLists.txt")
-  foreach(example ${EXAMPLES_TO_BUILD})
-    get_filename_component(exdir ${example} DIRECTORY)
-    add_subdirectory(${exdir})
-  endforeach()
+  CassBuildExamples("examples")
 endif()
 
-#------------------
-# Install targets
-#------------------
-if(CASS_INSTALL_PKG_CONFIG)
-  if(NOT WIN32)
-    find_package(PkgConfig)
-    if(PKG_CONFIG_FOUND)
-      set(prefix ${CMAKE_INSTALL_PREFIX})
-      set(exec_prefix ${CMAKE_INSTALL_PREFIX})
-      set(libdir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
-      set(includedir ${CMAKE_INSTALL_PREFIX}/include)
-      set(version ${PROJECT_VERSION_STRING})
-    endif()
-  endif()
-endif()
-
-# Determine if the header should be installed
-if(CASS_INSTALL_HEADER)
-  install(FILES ${API_HEADER_FILES} DESTINATION "include")
-endif()
-
-# Install the dynamic/shared library
-if(CASS_BUILD_SHARED)
-  install(TARGETS ${PROJECT_LIB_NAME}
-    RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
-  if(CASS_INSTALL_PKG_CONFIG)
-    if(NOT WIN32)
-      if(PKG_CONFIG_FOUND)
-        configure_file("${PROJECT_SOURCE_DIR}/packaging/cassandra.pc.in" "cassandra.pc" @ONLY)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/cassandra.pc"
-          DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-      endif()
-    endif()
-  endif()
-endif()
-
-# Install the static library
-if(CASS_BUILD_STATIC)
-  install(TARGETS ${PROJECT_LIB_NAME_STATIC}
-    RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
-  if(CASS_INSTALL_PKG_CONFIG)
-    if(NOT WIN32)
-      if(PKG_CONFIG_FOUND)
-        configure_file("${PROJECT_SOURCE_DIR}/packaging/cassandra_static.pc.in" "cassandra_static.pc" @ONLY)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/cassandra_static.pc"
-          DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-      endif()
-    endif()
-  endif()
-endif()
+#-------------------------------------
+# Installation information
+#-------------------------------------
+CassConfigureInstall(CASS cassandra)
 
 #-------------------
 # Uninstall target

@@ -7,10 +7,9 @@
 
 #ifndef __TEST_DSE_LINE_STRING_HPP__
 #define __TEST_DSE_LINE_STRING_HPP__
-#include "value_interface.hpp"
 #include "test_utils.hpp"
 
-#include "values/dse_point.hpp"
+#include "dse_point.hpp"
 
 #include <algorithm>
 

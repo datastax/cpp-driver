@@ -8,12 +8,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ".")
 set(PROJECT_INTEGRATION_TESTS_NAME cassandra_integration_tests)
 
 # Gather the header and source files
-file(GLOB INTEGRATION_TESTS_INC_FILES ${CASS_SOURCE_DIR}/test/integration_tests/src/*.hpp)
-file(GLOB INTEGRATION_TESTS_SRC_FILES ${CASS_SOURCE_DIR}/test/integration_tests/src/*.cpp)
+file(GLOB INTEGRATION_TESTS_INC_FILES ${CASS_ROOT_DIR}/test/integration_tests/src/*.hpp)
+file(GLOB INTEGRATION_TESTS_SRC_FILES ${CASS_ROOT_DIR}/test/integration_tests/src/*.cpp)
 
 # Build up the include paths
 set(INTEGRATION_TESTS_INCLUDES ${PROJECT_INCLUDE_DIR}
-  ${CASS_SOURCE_DIR}/src
+  ${CASS_SRC_DIR}
   ${CASS_INCLUDES}
   ${Boost_INCLUDE_DIRS}
   ${CCM_BRIDGE_INCLUDES}

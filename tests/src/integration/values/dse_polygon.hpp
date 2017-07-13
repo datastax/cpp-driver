@@ -7,7 +7,6 @@
 
 #ifndef __TEST_DSE_POLYGON_HPP__
 #define __TEST_DSE_POLYGON_HPP__
-#include "value_interface.hpp"
 
 #include "values/dse_line_string.hpp"
 

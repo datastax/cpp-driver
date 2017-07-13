@@ -7,7 +7,7 @@
 
 #ifndef __TEST_DSE_POINT_HPP__
 #define __TEST_DSE_POINT_HPP__
-#include "value_interface.hpp"
+#include "values/value_interface.hpp"
 #include "dse.h"
 
 namespace test {

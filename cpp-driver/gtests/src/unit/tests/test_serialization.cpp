@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "cpp-driver/src/serialization.hpp"
+#include "serialization.hpp"
 #include "buffer.hpp"
 
 TEST(SerializationTest, DecodeZigZag) {
