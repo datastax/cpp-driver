@@ -62,4 +62,4 @@ before_script:
   - CFLAGS="${EXTRA_C_FLAGS}" CXXFLAGS="${EXTRA_CXX_FLAGS}" cmake -DBOOST_ROOT_DIR=${HOME}/dependencies/boost_${BOOST_FILE_VERSION} -DLIBUV_ROOT_DIR=${HOME}/dependencies/libuv-${LIBUV_VERSION}/ -DCASS_BUILD_STATIC=ON -DCASS_BUILD_EXAMPLES=ON -DCASS_BUILD_TESTS=ON -DCASS_USE_BOOST_ATOMIC=${USE_BOOST_ATOMIC} .
 script:
   - make -j2
-  - test/unit_tests/cassandra_unit_tests;
+  - build/cassandra-unit-tests

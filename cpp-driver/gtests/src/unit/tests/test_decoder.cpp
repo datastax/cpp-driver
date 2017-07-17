@@ -26,6 +26,7 @@ public:
   void SetUp() {
     failure_logged_ = false;
     warning_logged_ = false;
+    cass_log_set_level(CASS_LOG_WARN);
     cass::Logger::set_callback(DecoderUnitTest::log, NULL);
   }
 

@@ -64,6 +64,5 @@ before_script:
     )
 script:
   - make -C build -j$(nproc)
-  - build/cpp-driver/test/unit_tests/cassandra_unit_tests
   - build/cassandra-unit-tests
   - build/dse-unit-tests

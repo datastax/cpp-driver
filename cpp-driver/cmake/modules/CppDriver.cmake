@@ -63,7 +63,7 @@ endmacro()
 #------------------------
 macro(CassOptionalDependencies)
   # Boost
-  if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
+  if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS)
     CassUseBoost()
   endif()
 
@@ -305,10 +305,6 @@ macro(CassConfigureTests)
     add_subdirectory(${CASS_ROOT_DIR}/test/integration_tests)
   endif()
 
-  if(CASS_BUILD_UNIT_TESTS)
-    add_subdirectory(${CASS_ROOT_DIR}/test/unit_tests)
-  endif()
-
   if (CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
     add_subdirectory(${CASS_ROOT_DIR}/gtests)
   endif()
@@ -525,7 +521,7 @@ macro(CassUseBoost)
   endif()
 
   # Determine if Boost components are available for test executables
-  if(CASS_BUILD_UNIT_TESTS OR CASS_BUILD_INTEGRATION_TESTS)
+  if(CASS_BUILD_INTEGRATION_TESTS)
     find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono system thread unit_test_framework)
     if(NOT Boost_FOUND)
       # Ensure Boost was not found due to minimum version requirement

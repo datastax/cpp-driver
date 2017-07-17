@@ -174,7 +174,15 @@ macro(GtestUnitTests project_name extra_source_files)
   set(UNIT_TESTS_NAME "${project_name}-unit-tests")
   set(UNIT_TESTS_DISPLAY_NAME "Unit Tests")
   set(UNIT_TESTS_SOURCE_DIR "${TESTS_SOURCE_DIR}/unit")
-  file(GLOB UNIT_TESTS_INCLUDE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.hpp)
+
+  # The unit tests use `test::Utils::msleep()` and this is the minimum include
+  # and source files required to shared that code.
+  set(INTEGRATION_TESTS_SOURCE_DIR "${CASS_ROOT_DIR}/gtests/src/integration")
+  set(CCM_BRIDGE_SOURCE_DIR "${CASS_ROOT_DIR}/test/ccm_bridge/src")
+  set(INTEGRATION_TESTS_SOURCE_FILES "${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp")
+  set(CCM_BRIDGE_SOURCE_FILES "${CCM_BRIDGE_SOURCE_DIR}/socket.cpp")
+
+  file(GLOB UNIT_TESTS_INCLUDE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.hpp )
   file(GLOB UNIT_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.cpp)
   file(GLOB UNIT_TESTS_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/tests/*.cpp)
   source_group("Header Files" FILES ${UNIT_TESTS_INCLUDE_FILES})
@@ -186,6 +194,8 @@ macro(GtestUnitTests project_name extra_source_files)
       ${UNIT_TESTS_TESTS_SOURCE_FILES}
       ${CPP_DRIVER_SOURCE_FILES}
       ${UNIT_TESTS_INCLUDE_FILES}
+      ${INTEGRATION_TESTS_SOURCE_FILES}
+      ${CCM_BRIDGE_SOURCE_FILES}
       ${CASS_API_HEADER_FILES}
       ${CPP_DRIVER_INCLUDE_FILES}
       ${CPP_DRIVER_HEADER_SOURCE_FILES}
@@ -194,9 +204,9 @@ macro(GtestUnitTests project_name extra_source_files)
       ${GOOGLE_TEST_SOURCE_FILES}
       ${LIBUV_INCLUDE_FILES})
   if(CMAKE_VERSION VERSION_LESS "2.8.11")
-    include_directories(${UNIT_TESTS_SOURCE_DIR})
+    include_directories(${UNIT_TESTS_SOURCE_DIR} ${INTEGRATION_TESTS_SOURCE_DIR} ${CCM_BRIDGE_SOURCE_DIR})
   else()
-    target_include_directories(${UNIT_TESTS_NAME} PUBLIC ${UNIT_TESTS_SOURCE_DIR})
+    target_include_directories(${UNIT_TESTS_NAME} PUBLIC ${UNIT_TESTS_SOURCE_DIR} ${INTEGRATION_TESTS_SOURCE_DIR} ${CCM_BRIDGE_SOURCE_DIR})
   endif()
   target_link_libraries(${UNIT_TESTS_NAME}
       ${GOOGLE_TEST_LIBRARIES}
