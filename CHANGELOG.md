@@ -1,3 +1,43 @@
+1.3.0
+===========
+
+Features
+--------
+* [CPP-360] Added the ability to specify custom memory allocators using
+  `cass_alloc_set_functions()`
+* [CPP-417] Added speculative execution metrics which can be obtained using
+  `cass_session_get_speculative_execution_metrics()`
+* [CPP-466] Token aware routing replicas are now randomly shuffled by default
+  instead of using a random index
+
+Bug Fixes
+--------
+* [CPP-368] API Functions that take strings now check for NULL and replace it
+  with an empty string
+* [CPP-437] Fixed batch encoding performance regression
+* [CPP-477] Native protocol "support" messages are now properly decoded, but
+  still remain unused
+* [CPP-487] Fixed a Kerberos regression caused by providing an empty principal
+
+Other
+--------
+* [CPP-136] Decoding now verifies buffer sizes when processing server responses
+* [CPP-432] Removed dense table 'empty' columns from metadata
+* [CPP-440] Improved encoding performance by preallocating buffers
+* [CPP-444] Fixed const correctness of serialization functions
+* [CPP-476] Replaced `strlen()` with `sizeof()` for static strings
+* [CPP-478] Renamed the class `SpeculativeExecution` to `RequestExection` to
+  reduce confusion when it appears in driver logs
+* [CPP-480] Added more detailed documentation to help with using Kerberos
+  authentication
+
+Merged from OSS 2.7.0
+--------
+* [CPP-464] Adding a node breaks token map reconstruction
+* Fixed an issue where UUID parsing could read past the supplied string
+* Fixed various typos in `cassandra.h`
+* Fixed missing header for intrinsics when building with MSVC15
+
 1.2.0
 ===========
 
