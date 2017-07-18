@@ -591,7 +591,7 @@ public:
   bool decode_warnings(WarningVec& output);
 
   bool decode_value(const DataType::ConstPtr& data_type, Value& output,
-                    bool is_collection = false);
+                    bool is_inside_collection = false);
 
 protected:
   // Testing only

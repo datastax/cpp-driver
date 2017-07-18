@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 2.6.4)
 #-----------
 include(FindPackageHandleStandardArgs)
 include(CheckSymbolExists)
+include(CheckCXXSourceCompiles)
 
 #------------------------
 # CassInitProject
@@ -957,10 +958,27 @@ endmacro()
 # Input: CASS_ROOT_DIR, CASS_SRC_DIR
 #------------------------
 macro(CassConfigure)
+  # Determine if sigpipe is available
   check_symbol_exists(SO_NOSIGPIPE "sys/socket.h;sys/types.h" HAVE_NOSIGPIPE)
   check_symbol_exists(sigtimedwait "signal.h" HAVE_SIGTIMEDWAIT)
   if (NOT WIN32 AND NOT HAVE_NOSIGPIPE AND NOT HAVE_SIGTIMEDWAIT)
     message(WARNING "Unable to handle SIGPIPE on your platform")
   endif()
+
+  # Determine if hash is in the tr1 namespace
+  string(REPLACE "::" ";" HASH_NAMESPACE_LIST ${HASH_NAMESPACE})
+  foreach(NAMESPACE ${HASH_NAMESPACE_LIST})
+    if(NAMESPACE STREQUAL "tr1")
+      set(HASH_IN_TR1 1)
+    endif()
+  endforeach()
+
+  # Check for GCC compiler builtins
+  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    check_cxx_source_compiles("int main() { return __builtin_bswap32(42); }" HAVE_BUILTIN_BSWAP32)
+    check_cxx_source_compiles("int main() { return __builtin_bswap64(42); }" HAVE_BUILTIN_BSWAP64)
+  endif()
+
+  # Generate the cassconfig.hpp file
   configure_file(${CASS_ROOT_DIR}/cassconfig.hpp.in ${CASS_SRC_DIR}/cassconfig.hpp)
 endmacro()

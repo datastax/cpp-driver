@@ -9,8 +9,10 @@
 #define __DSE_STRING_HPP_INCLUDED__
 
 #include "allocator.hpp"
+#include "cassconfig.hpp"
 #include "hash.hpp"
 
+#include <sparsehash/dense_hash_map>
 #include <string>
 #include <sstream>
 
@@ -90,6 +92,10 @@ private:
 
 namespace std {
 
+#if defined(HASH_IN_TR1) && !defined(_WIN32)
+namespace tr1 {
+#endif
+
 template <>
 struct hash<cass::String> {
   size_t operator()(const cass::String& str) const {
@@ -97,6 +103,10 @@ struct hash<cass::String> {
   }
 };
 
-} // namespace std
+#if defined(HASH_IN_TR1) && !defined(_WIN32)
+} //namespace tr1
+#endif
+
+} //namespace std
 
 #endif

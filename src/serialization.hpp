@@ -74,7 +74,7 @@ inline WkbByteOrder native_byte_order() {
 
 typedef cass::Vector<cass_byte_t> Bytes;
 
-#if defined(__GNUC__)
+#if defined(HAVE_BUILTIN_BSWAP32) && defined(HAVE_BUILTIN_BSWAP64)
 inline cass_uint32_t swap_uint32(cass_uint32_t value)
 {
   return __builtin_bswap32(value);

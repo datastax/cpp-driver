@@ -226,7 +226,7 @@ bool Value::as_bool() const {
 
 int32_t Value::as_int32() const {
   assert(!is_null() && value_type() == CASS_VALUE_TYPE_INT);
-  int32_t value;
+  int32_t value = 0;
   assert(decoder_.as_int32(&value));
   return value;
 }
@@ -234,7 +234,7 @@ int32_t Value::as_int32() const {
 CassUuid Value::as_uuid() const {
   assert(!is_null() && (value_type() == CASS_VALUE_TYPE_UUID ||
                         value_type() == CASS_VALUE_TYPE_TIMEUUID));
-  CassUuid value;
+  CassUuid value = { 0, 0 };
   assert(decoder_.as_uuid(&value));
   return value;
 }

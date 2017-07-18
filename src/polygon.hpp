@@ -123,6 +123,7 @@ public:
 private:
   class Iterator {
   public:
+    virtual ~Iterator() { }
     virtual CassError next_num_points(cass_uint32_t* num_points) = 0;
     virtual CassError next_point(cass_double_t* x, cass_double_t* y) = 0;
   };

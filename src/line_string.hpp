@@ -84,6 +84,7 @@ public:
 private:
   class Iterator {
   public:
+    virtual ~Iterator() { }
     virtual CassError next_point(cass_double_t *x, cass_double_t *y) = 0;
   };
 
