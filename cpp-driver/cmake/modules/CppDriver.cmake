@@ -23,6 +23,47 @@ macro(CassInitProject project_name)
   project(${PROJECT_NAME_STRING} C CXX)
 endmacro()
 
+
+#------------------------
+# CassExtractHeaderVersion
+#
+# Read the given 'version header file', looking for version tokens that start
+# with 'prefix'. Parse the discovered version and set ${project_name}_VERSION_*
+# variables.
+#
+# Output: ${project_name}_VERSION_MAJOR, ${project_name}_VERSION_MINOR, 
+#         ${project_name}_VERSION_PATCH, ${project_name}_VERSION_STRING
+#------------------------
+macro(CassExtractHeaderVersion project_name version_header_file prefix)
+  # Retrieve version from header file
+  file(STRINGS ${version_header_file} _VERSION_PARTS
+      REGEX "^#define[ \t]+${prefix}_VERSION_(MAJOR|MINOR|PATCH)[ \t]+[0-9]+$")
+
+  foreach(part MAJOR MINOR PATCH)
+    string(REGEX MATCH "${prefix}_VERSION_${part}[ \t]+[0-9]+" 
+           ${project_name}_VERSION_${part} ${_VERSION_PARTS})
+    # Extract version numbers
+    if (${project_name}_VERSION_${part})
+      string(REGEX REPLACE "${prefix}_VERSION_${part}[ \t]+([0-9]+)" "\\1" 
+             ${project_name}_VERSION_${part} ${${project_name}_VERSION_${part}})
+    endif()
+  endforeach()
+
+  # Verify version parts
+  if(NOT ${project_name}_VERSION_MAJOR AND NOT ${project_name}_VERSION_MINOR)
+    message(FATAL_ERROR "Unable to retrieve ${project_name} version from ${version_header_file}")
+  endif()
+
+  set(${project_name}_VERSION_STRING 
+      ${${project_name}_VERSION_MAJOR}.${${project_name}_VERSION_MINOR})
+  if(NOT ${project_name}_VERSION_PATCH STREQUAL "")
+    set(${project_name}_VERSION_STRING 
+        "${${project_name}_VERSION_STRING}.${${project_name}_VERSION_PATCH}")
+  endif()
+
+  message(STATUS "${project_name} version: ${${project_name}_VERSION_STRING}")
+endmacro()
+
 #------------------------
 # CassProjectVersion
 #
@@ -34,24 +75,7 @@ endmacro()
 #         PROJECT_VERSION_STRING
 #------------------------
 macro(CassProjectVersion version_header_file prefix)
-  # Retrieve version from header file
-  file(STRINGS ${version_header_file} PROJECT_VERSION_PARTS
-      REGEX "^#define[ \t]+${prefix}_VERSION_(MAJOR|MINOR|PATCH)[ \t]+[0-9]+$")
-
-  # Verify version parts
-  string(REGEX MATCH "${prefix}_VERSION_MAJOR[ \t]+[0-9]+" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_PARTS})
-  string(REGEX MATCH "${prefix}_VERSION_MINOR[ \t]+[0-9]+" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_PARTS})
-  string(REGEX MATCH "${prefix}_VERSION_PATCH[ \t]+[0-9]+" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PARTS})
-  if(NOT PROJECT_VERSION_MAJOR OR NOT PROJECT_VERSION_MINOR OR NOT PROJECT_VERSION_PATCH)
-    message(FATAL_ERROR "Unable to retrieve project version from ${version_header_file}")
-  endif()
-
-  # Extract version numbers
-  string(REGEX REPLACE "${prefix}_VERSION_MAJOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_MAJOR})
-  string(REGEX REPLACE "${prefix}_VERSION_MINOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_MINOR})
-  string(REGEX REPLACE "${prefix}_VERSION_PATCH[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PATCH})
-  set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
-  message(STATUS "Project version: ${PROJECT_VERSION_STRING}")
+  CassExtractHeaderVersion("PROJECT" ${version_header_file} ${prefix})
 endmacro()
 
 #------------------------
@@ -345,6 +369,25 @@ macro(CassUseLibuv)
   find_package_handle_standard_args(Libuv "Could NOT find libuv, try to set the path to the libuv root folder in the system variable LIBUV_ROOT_DIR"
     LIBUV_LIBRARY
     LIBUV_INCLUDE_DIR)
+
+  if (EXISTS "${LIBUV_INCLUDE_DIR}/uv-version.h")
+    set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv-version.h")
+  else()
+    set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv.h")
+  endif()
+
+  CassExtractHeaderVersion("LIBUV" ${LIBUV_VERSION_HEADER_FILE} "UV")
+
+  if (LIBUV_VERSION_STRING VERSION_LESS "1.0")
+    message(WARNING "Libuv version ${LIBUV_VERSION_STRING} does not support reverse "
+    "name lookup. Hostname resolution will not work (version 1.0 or greater "
+    "required)")
+  endif()
+
+  if (LIBUV_VERSION_STRING VERSION_LESS "1.6")
+    message(WARNING "Libuv version ${LIBUV_VERSION_STRING} does not support custom "
+    "memory allocators (version 1.6 or greater required)")
+  endif()
 
   # Assign libuv include and libraries
   set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIR})

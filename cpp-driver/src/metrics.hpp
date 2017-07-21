@@ -376,7 +376,7 @@ public:
 
       }
 
-      void add(hdr_histogram* to) {
+      void add(hdr_histogram* to) const {
         hdr_add(to, histogram_);
       }
 

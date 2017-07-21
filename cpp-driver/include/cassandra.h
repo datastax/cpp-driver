@@ -10142,6 +10142,9 @@ cass_date_time_to_epoch(cass_uint32_t date,
  *
  * <b>Default:</b> The C runtime's malloc(), realloc() and free()
  *
+ * <b>Important:</b> The C runtime's malloc(), realloc() and free() will be
+ * used by libuv when using versions 1.5 or earlier.
+ *
  * @param[in] malloc_func
  * @param[in] realloc_func
  * @param[in] free_func

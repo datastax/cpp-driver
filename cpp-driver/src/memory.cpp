@@ -51,6 +51,7 @@ CassMallocFunction Memory::malloc_func_ = NULL;
 CassReallocFunction Memory::realloc_func_ = NULL;
 CassFreeFunction Memory::free_func_ = NULL;
 
+#if UV_VERSION_MAJOR >= 1 && UV_VERSION_MINOR >= 6
 static void* calloc_(size_t count, size_t size) {
   void* ptr = Memory::malloc(count * size);
   if (ptr != NULL) {
@@ -58,6 +59,7 @@ static void* calloc_(size_t count, size_t size) {
   }
   return ptr;
 }
+#endif
 
 void Memory::set_functions(CassMallocFunction malloc_func,
                            CassReallocFunction realloc_func,
@@ -73,7 +75,9 @@ void Memory::set_functions(CassMallocFunction malloc_func,
     Memory::realloc_func_ = realloc_func;
     Memory::free_func_ = free_func;
   }
+#if UV_VERSION_MAJOR >= 1 && UV_VERSION_MINOR >= 6
   uv_replace_allocator(Memory::malloc_func_, Memory::realloc_func_, calloc_, Memory::free_func_);
+#endif
 }
 
 } // namespace cass
