@@ -9,9 +9,9 @@
 #define __TEST_CLUSTER_HPP__
 #include "cassandra.h"
 
-#include "objects/object_base.hpp"
+#include "object_base.hpp"
 
-#include "objects/session.hpp"
+#include "session.hpp"
 
 #include <string>
 
@@ -185,8 +185,8 @@ public:
    * @return Session object
    * @throws Session::Exception If session could not be established
    */
-  Session connect(const std::string& keyspace = "") {
-    return Session::connect(get(), keyspace);
+  Session connect(const std::string& keyspace = "", bool assert_ok = true) {
+    return Session::connect(get(), keyspace, assert_ok);
   }
 };
 

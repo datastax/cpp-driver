@@ -94,6 +94,10 @@ size_t CaseInsensitiveHashTable<T>::get_indices(StringRef name, IndexVec* result
   result->clear();
   bool is_case_sensitive = false;
 
+  if (!name.data()) {
+    return 0;
+  }
+
   if (name.size() > 0 && name.front() == '"' && name.back() == '"') {
     is_case_sensitive = true;
     name = name.substr(1, name.size() - 2);

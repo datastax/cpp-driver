@@ -3713,7 +3713,7 @@ cass_authenticator_set_error(CassAuthenticator* auth,
                              const char* message);
 
 /**
- * Same as cass_authenticator_set_error_n(), but with lengths for string
+ * Same as cass_authenticator_set_error(), but with lengths for string
  * parameters.
  *
  * @public @memberof CassAuthenticator

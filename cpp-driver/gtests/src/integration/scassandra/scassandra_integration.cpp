@@ -115,7 +115,7 @@ test::driver::Result SCassandraIntegration::execute_mock_query(
 void SCassandraIntegration::prime_mock_query(unsigned int node /*= 0*/) {
   // Create the mock query
   PrimingRequest mock_query = mock_query_;
-  mock_query.with_result(PrimingResult::SUCCESS);
+  mock_query.with_result(PrimingResult::success());
 
   // Determine if this is targeting a particular node
   if (node > 0) {

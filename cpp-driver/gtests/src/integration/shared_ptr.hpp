@@ -77,6 +77,12 @@ public:
     return NULL;
   }
 
+  const T* get() const {
+    if (object_) {
+      return object_->get();
+    }
+    return NULL;
+  }
 private:
   /**
    * Object reference

@@ -78,7 +78,7 @@ CassVersion cass_schema_meta_version(const CassSchemaMeta* schema_meta) {
 
 const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name(const CassSchemaMeta* schema_meta,
                                                const char* keyspace) {
-  return CassKeyspaceMeta::to(schema_meta->get_keyspace(keyspace));
+  return cass_schema_meta_keyspace_by_name_n(schema_meta, keyspace, SAFE_STRLEN(keyspace));
 }
 
 const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name_n(const CassSchemaMeta* schema_meta,
@@ -95,7 +95,7 @@ void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
 
 const CassTableMeta* cass_keyspace_meta_table_by_name(const CassKeyspaceMeta* keyspace_meta,
                                                       const char* table) {
-  return CassTableMeta::to(keyspace_meta->get_table(table));
+  return cass_keyspace_meta_table_by_name_n(keyspace_meta, table, SAFE_STRLEN(table));
 }
 
 const CassTableMeta* cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* keyspace_meta,
@@ -107,7 +107,7 @@ const CassTableMeta* cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* 
 
 const CassMaterializedViewMeta* cass_keyspace_meta_materialized_view_by_name(const CassKeyspaceMeta* keyspace_meta,
                                                                              const char* view) {
-  return CassMaterializedViewMeta::to(keyspace_meta->get_view(view));
+  return cass_keyspace_meta_materialized_view_by_name_n(keyspace_meta, view, SAFE_STRLEN(view));
 }
 
 const CassMaterializedViewMeta* cass_keyspace_meta_materialized_view_by_name_n(const CassKeyspaceMeta* keyspace_meta,
@@ -119,7 +119,7 @@ const CassMaterializedViewMeta* cass_keyspace_meta_materialized_view_by_name_n(c
 
 const CassDataType* cass_keyspace_meta_user_type_by_name(const CassKeyspaceMeta* keyspace_meta,
                                                          const char* type) {
-  return CassDataType::to(keyspace_meta->get_user_type(type));
+  return cass_keyspace_meta_user_type_by_name_n(keyspace_meta, type, SAFE_STRLEN(type));
 }
 
 const CassDataType* cass_keyspace_meta_user_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
@@ -131,9 +131,9 @@ const CassDataType* cass_keyspace_meta_user_type_by_name_n(const CassKeyspaceMet
 const CassFunctionMeta* cass_keyspace_meta_function_by_name(const CassKeyspaceMeta* keyspace_meta,
                                                             const char* name,
                                                             const char* arguments) {
-  cass::String full_function_name(name);
-  return CassFunctionMeta::to(keyspace_meta->get_function(
-                                append_arguments(full_function_name, cass::String(arguments))));
+  return cass_keyspace_meta_function_by_name_n(keyspace_meta,
+                                               name, SAFE_STRLEN(name),
+                                               arguments, SAFE_STRLEN(arguments));
 }
 
 
@@ -150,9 +150,9 @@ const CassFunctionMeta* cass_keyspace_meta_function_by_name_n(const CassKeyspace
 const CassAggregateMeta* cass_keyspace_meta_aggregate_by_name(const CassKeyspaceMeta* keyspace_meta,
                                                               const char* name,
                                                               const char* arguments) {
-  cass::String full_aggregate_name(name);
-  return CassAggregateMeta::to(keyspace_meta->get_aggregate(
-                                 append_arguments(full_aggregate_name, cass::String(arguments))));
+  return cass_keyspace_meta_aggregate_by_name_n(keyspace_meta,
+                                                name, SAFE_STRLEN(name),
+                                                arguments, SAFE_STRLEN(arguments));
 }
 
 const CassAggregateMeta* cass_keyspace_meta_aggregate_by_name_n(const CassKeyspaceMeta* keyspace_meta,
@@ -166,12 +166,12 @@ const CassAggregateMeta* cass_keyspace_meta_aggregate_by_name_n(const CassKeyspa
 }
 
 const CassValue* cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspace_meta,
-                                               const char* name) {
-  return CassValue::to(keyspace_meta->get_field(name));
+                                                  const char* name) {
+  return cass_keyspace_meta_field_by_name_n(keyspace_meta, name, SAFE_STRLEN(name));
 }
 
 const CassValue* cass_keyspace_meta_field_by_name_n(const CassKeyspaceMeta* keyspace_meta,
-                                                 const char* name, size_t name_length) {
+                                                    const char* name, size_t name_length) {
   return CassValue::to(keyspace_meta->get_field(cass::String(name, name_length)));
 }
 
@@ -182,13 +182,13 @@ void cass_table_meta_name(const CassTableMeta* table_meta,
 }
 
 const CassColumnMeta* cass_table_meta_column_by_name(const CassTableMeta* table_meta,
-                                                 const char* column) {
-  return CassColumnMeta::to(table_meta->get_column(column));
+                                                     const char* column) {
+  return cass_table_meta_column_by_name_n(table_meta, column, SAFE_STRLEN(column));
 }
 
 const CassColumnMeta* cass_table_meta_column_by_name_n(const CassTableMeta* table_meta,
-                                                   const char* column,
-                                                   size_t column_length) {
+                                                       const char* column,
+                                                       size_t column_length) {
   return CassColumnMeta::to(table_meta->get_column(cass::String(column, column_length)));
 }
 
@@ -205,13 +205,13 @@ const CassColumnMeta* cass_table_meta_column(const CassTableMeta* table_meta,
 }
 
 const CassIndexMeta* cass_table_meta_index_by_name(const CassTableMeta* table_meta,
-                                                 const char* index) {
-  return CassIndexMeta::to(table_meta->get_index(index));
+                                                   const char* index) {
+  return cass_table_meta_index_by_name_n(table_meta, index, SAFE_STRLEN(index));
 }
 
 const CassIndexMeta* cass_table_meta_index_by_name_n(const CassTableMeta* table_meta,
-                                                   const char* index,
-                                                   size_t index_length) {
+                                                     const char* index,
+                                                     size_t index_length) {
   return CassIndexMeta::to(table_meta->get_index(cass::String(index, index_length)));
 }
 
@@ -220,7 +220,7 @@ size_t cass_table_meta_index_count(const CassTableMeta* table_meta) {
 }
 
 const CassIndexMeta* cass_table_meta_index(const CassTableMeta* table_meta,
-                                             size_t index) {
+                                           size_t index) {
   if (index >= table_meta->indexes().size()) {
     return NULL;
   }
@@ -229,7 +229,7 @@ const CassIndexMeta* cass_table_meta_index(const CassTableMeta* table_meta,
 
 const CassMaterializedViewMeta* cass_table_meta_materialized_view_by_name(const CassTableMeta* table_meta,
                                                                           const char* view) {
-  return CassMaterializedViewMeta::to(table_meta->get_view(view));
+  return cass_table_meta_materialized_view_by_name_n(table_meta, view, SAFE_STRLEN(view));
 }
 
 const CassMaterializedViewMeta* cass_table_meta_materialized_view_by_name_n(const CassTableMeta* table_meta,
@@ -284,7 +284,7 @@ CassClusteringOrder cass_table_meta_clustering_key_order(const CassTableMeta* ta
 
 const CassValue* cass_table_meta_field_by_name(const CassTableMeta* table_meta,
                                                const char* name) {
-  return CassValue::to(table_meta->get_field(name));
+  return cass_table_meta_field_by_name_n(table_meta, name, SAFE_STRLEN(name));
 }
 
 const CassValue* cass_table_meta_field_by_name_n(const CassTableMeta* table_meta,
@@ -294,7 +294,7 @@ const CassValue* cass_table_meta_field_by_name_n(const CassTableMeta* table_meta
 
 const CassColumnMeta* cass_materialized_view_meta_column_by_name(const CassMaterializedViewMeta* view_meta,
                                                                  const char* column) {
-  return CassColumnMeta::to(view_meta->get_column(column));
+  return cass_materialized_view_meta_column_by_name_n(view_meta, column, SAFE_STRLEN(column));
 }
 
 const CassColumnMeta* cass_materialized_view_meta_column_by_name_n(const CassMaterializedViewMeta* view_meta,
@@ -315,7 +315,7 @@ const CassTableMeta* cass_materialized_view_meta_base_table(const CassMaterializ
 
 const CassValue* cass_materialized_view_meta_field_by_name(const CassMaterializedViewMeta* view_meta,
                                                            const char* name) {
-  return CassValue::to(view_meta->get_field(name));
+  return cass_materialized_view_meta_field_by_name_n(view_meta, name, SAFE_STRLEN(name));
 }
 
 const CassValue* cass_materialized_view_meta_field_by_name_n(const CassMaterializedViewMeta* view_meta,
@@ -383,13 +383,13 @@ const CassDataType* cass_column_meta_data_type(const CassColumnMeta* column_meta
 
 const CassValue*
 cass_column_meta_field_by_name(const CassColumnMeta* column_meta,
-                           const char* name) {
-  return CassValue::to(column_meta->get_field(name));
+                               const char* name) {
+  return cass_column_meta_field_by_name_n(column_meta, name, SAFE_STRLEN(name));
 }
 
 const CassValue*
 cass_column_meta_field_by_name_n(const CassColumnMeta* column_meta,
-                             const char* name, size_t name_length) {
+                                 const char* name, size_t name_length) {
   return CassValue::to(column_meta->get_field(cass::String(name, name_length)));
 }
 
@@ -415,8 +415,8 @@ const CassValue* cass_index_meta_options(const CassIndexMeta* index_meta) {
 
 const CassValue*
 cass_index_meta_field_by_name(const CassIndexMeta* index_meta,
-                           const char* name) {
-  return CassValue::to(index_meta->get_field(name));
+                              const char* name) {
+  return cass_index_meta_field_by_name_n(index_meta, name, SAFE_STRLEN(name));
 }
 
 const CassValue*
@@ -478,7 +478,7 @@ CassError cass_function_meta_argument(const CassFunctionMeta* function_meta,
 
 const CassDataType* cass_function_meta_argument_type_by_name(const CassFunctionMeta* function_meta,
                                                              const char* name) {
-  return CassDataType::to(function_meta->get_arg_type(name));
+  return cass_function_meta_argument_type_by_name_n(function_meta, name, SAFE_STRLEN(name));
 }
 
 const CassDataType* cass_function_meta_argument_type_by_name_n(const CassFunctionMeta* function_meta,
@@ -493,7 +493,7 @@ const CassDataType* cass_function_meta_return_type(const CassFunctionMeta* funct
 
 const CassValue* cass_function_meta_field_by_name(const CassFunctionMeta* function_meta,
                                                   const char* name) {
-  return CassValue::to(function_meta->get_field(name));
+  return cass_function_meta_field_by_name_n(function_meta, name, SAFE_STRLEN(name));
 }
 
 const CassValue* cass_function_meta_field_by_name_n(const CassFunctionMeta* function_meta,
@@ -550,7 +550,7 @@ const CassValue* cass_aggregate_meta_init_cond(const CassAggregateMeta* aggregat
 
 const CassValue* cass_aggregate_meta_field_by_name(const CassAggregateMeta* aggregate_meta,
                                                    const char* name) {
-  return CassValue::to(aggregate_meta->get_field(name));
+  return cass_aggregate_meta_field_by_name_n(aggregate_meta, name, SAFE_STRLEN(name));
 }
 
 const CassValue* cass_aggregate_meta_field_by_name_n(const CassAggregateMeta* aggregate_meta,

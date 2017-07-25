@@ -471,6 +471,9 @@ protected:
     return Utils::trim(input);
   }
 
+protected:
+  void maybe_shrink_name(std::string& name);
+
 private:
   /**
    * Keyspace creation query (generated via SetUp)

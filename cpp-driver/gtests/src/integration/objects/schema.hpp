@@ -52,6 +52,10 @@ public:
    * @throws Exception if keyspace is not available
    */
   Keyspace keyspace(const std::string& name);
+
+  const CassVersion version() const {
+    return cass_schema_meta_version(get());
+  }
 };
 
 /**
@@ -64,6 +68,11 @@ public:
     Exception(const std::string& message)
       : test::Exception(message) {}
   };
+
+  /**
+   * Default constructor
+   */
+  Keyspace() {}
 
   /**
    * Create the keyspace object
@@ -109,6 +118,11 @@ private:
  */
 class Table {
 public:
+  /*
+   * Default constructor
+   */
+  Table() {}
+
   /**
    * Create the table object
    *

@@ -69,7 +69,7 @@ public:
  */
 SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, WriteTimeoutNonIdempotentNoRetry) {
   // Simulate a write timeout on node 1
-  prime_mock_query_with_error(PrimingResult::WRITE_REQUEST_TIMEOUT, 1);
+  prime_mock_query_with_error(PrimingResult::write_request_timeout(), 1);
 
   // Loop through all the nodes in the cluster execute the mock query
   for (unsigned int n = 0; n < number_dc1_nodes_; ++n) {
@@ -96,7 +96,7 @@ SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, WriteTimeoutNonIdempotentNoRetry) 
  */
 SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, WriteTimeoutIdempotentRetry) {
   // Simulate a write timeout on node 1 and server error on node 3
-  prime_mock_query_with_error(PrimingResult::WRITE_REQUEST_TIMEOUT, 1);
+  prime_mock_query_with_error(PrimingResult::write_request_timeout(), 1);
 
   // Loop through all the nodes in the cluster execute the mock query
   bool was_node_one_attempted = false;
@@ -127,7 +127,7 @@ SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, WriteTimeoutIdempotentRetry) {
  */
 SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, ClosedConnectionNonIdempotentNoRetry) {
   // Simulate a closed connection on node 1
-  prime_mock_query_with_error(PrimingResult::CLOSED_CONNECTION, 1);
+  prime_mock_query_with_error(PrimingResult::closed_connection(), 1);
   std::stringstream node_closed;
   node_closed << "to host " << scc_->get_ip_prefix() << "1 closed";
   logger_.add_critera(node_closed.str());
@@ -143,7 +143,7 @@ SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, ClosedConnectionNonIdempotentNoRet
   }
 
   // Ensure that node one connection was closed
-  ASSERT_EQ(1, logger_.get_count());
+  ASSERT_EQ(1u, logger_.get_count());
 }
 
 
@@ -161,7 +161,7 @@ SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, ClosedConnectionNonIdempotentNoRet
  */
 SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, ClosedConnectionIdempotentRetry) {
   // Simulate a closed connection on node 1
-  prime_mock_query_with_error(PrimingResult::CLOSED_CONNECTION, 1);
+  prime_mock_query_with_error(PrimingResult::closed_connection(), 1);
 
   // Loop through all the nodes in the cluster execute the mock query
   bool was_node_one_attempted = false;

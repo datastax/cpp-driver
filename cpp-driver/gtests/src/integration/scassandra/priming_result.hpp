@@ -15,76 +15,86 @@
  */
 class PrimingResult {
 public:
+
+#define MAKE_PRIMING_RESULT(FUNC) \
+  static const PrimingResult FUNC() { \
+    return PrimingResult(#FUNC); \
+  }
+
   /**
    * Success
    */
-  static const PrimingResult SUCCESS;
+  MAKE_PRIMING_RESULT(success);
   /**
    * Read request timeout
    */
-  static const PrimingResult READ_REQUEST_TIMEOUT;
+  MAKE_PRIMING_RESULT(request_timeout);
   /**
    * Unavailable
    */
-  static const PrimingResult UNAVAILABLE;
+  MAKE_PRIMING_RESULT(unavailable);
   /**
    * Write request timeout
    */
-  static const PrimingResult WRITE_REQUEST_TIMEOUT;
+  MAKE_PRIMING_RESULT(write_request_timeout);
   /**
    * Server error
    */
-  static const PrimingResult SERVER_ERROR;
+  MAKE_PRIMING_RESULT(server_error);
   /**
    * Protocol error
    */
-  static const PrimingResult PROTOCOL_ERROR;
+  MAKE_PRIMING_RESULT(protocol_error);
   /**
    * Bas/Invalid credentials
    */
-  static const PrimingResult BAD_CREDENTIALS;
+  MAKE_PRIMING_RESULT(bad_credentials);
   /**
    * Overloaded
    */
-  static const PrimingResult OVERLOADED;
+  MAKE_PRIMING_RESULT(overloaded);
   /**
    * Bootstrapping
    */
-  static const PrimingResult IS_BOOTSTRAPPING;
+  MAKE_PRIMING_RESULT(is_bootstrapping);
   /**
    * Truncate error
    */
-  static const PrimingResult TRUNCATE_ERROR;
+  MAKE_PRIMING_RESULT(truncate_error);
   /**
    * Syntax error
    */
-  static const PrimingResult SYNTAX_ERROR;
+  MAKE_PRIMING_RESULT(syntax_error);
   /**
    * Unauthorized
    */
-  static const PrimingResult UNAUTHORIZED;
+  MAKE_PRIMING_RESULT(unauthorized);
   /**
    * Invalid
    */
-  static const PrimingResult INVALID;
+  MAKE_PRIMING_RESULT(invalid);
   /**
    * Configuration error
    */
-  static const PrimingResult CONFIG_ERROR;
+  MAKE_PRIMING_RESULT(config_error);
   /**
    * Already exists
    */
-  static const PrimingResult ALREADY_EXISTS;
+  MAKE_PRIMING_RESULT(already_exists);
   /**
    * Unprepared
    */
-  static const PrimingResult UNPREPARED;
+  MAKE_PRIMING_RESULT(unprepared);
   /**
    * Closed connection
    */
-  static const PrimingResult CLOSED_CONNECTION;
+  MAKE_PRIMING_RESULT(closed_connection);
 
-  const std::string& json_value() const;
+#undef MAKE_PRIMING_RESULT
+
+  inline const std::string& json_value() const {
+    return json_value_;
+  }
 
 private:
   /**
@@ -92,12 +102,12 @@ private:
    */
   std::string json_value_;
 
-    /**
+  /**
    * Create the result constant for priming the result of an executed query
    *
    * @param json_value JSON value to associated with the constant
    */
-  PrimingResult(const std::string& json_value);
+  PrimingResult(const std::string& json_value) : json_value_(json_value) {}
 };
 
 #endif //__PRIMING_RESULT_HPP__

@@ -176,7 +176,7 @@ private:
 
     Then()
       : fixed_delay_ms_(0)
-      , result_(PrimingResult::SUCCESS) {};
+      , result_(PrimingResult::success()) {};
 
     /**
      * Build the then section for the priming request

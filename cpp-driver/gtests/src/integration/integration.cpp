@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 
 #define FORMAT_BUFFER_SIZE 10240
-#define KEYSPACE_MAXIMUM_LENGTH 48
+#define ENTITY_MAXIMUM_LENGTH 48
 #define SIMPLE_KEYSPACE_FORMAT "CREATE KEYSPACE IF NOT EXISTS %s WITH replication = %s"
 #define REPLICATION_STRATEGY "{ 'class': %s }"
 #define SELECT_SERVER_VERSION "SELECT release_version FROM system.local"
@@ -95,6 +95,7 @@ void Integration::SetUp() {
   // Generate the default settings for most tests (handles overridden values)
   keyspace_name_ = default_keyspace();
   table_name_ = default_table();
+
   if (replication_factor_ == 0) {
     replication_factor_ = default_replication_factor();
   }
@@ -163,27 +164,23 @@ void Integration::TearDown() {
 }
 
 std::string Integration::default_keyspace() {
+  if (!keyspace_name_.empty()) {
+    return keyspace_name_;
+  }
+
   // Clean up the initial keyspace name (remove category information)
-  std::string keyspace_name = to_lower(test_case_name_) + "_"
-    + to_lower(test_name_);
-  keyspace_name = replace_all(keyspace_name, "test", "");
-  keyspace_name = replace_all(keyspace_name, "integration", "");
+  keyspace_name_ = to_lower(test_case_name_) + "_" + to_lower(test_name_);
+  keyspace_name_ = replace_all(keyspace_name_, "test", "");
+  keyspace_name_ = replace_all(keyspace_name_, "integration", "");
   for (TestCategory::iterator iterator = TestCategory::begin();
     iterator != TestCategory::end(); ++iterator) {
-    keyspace_name = replace_all(keyspace_name,
+    keyspace_name_ = replace_all(keyspace_name_,
       "_" + to_lower(iterator->name()) + "_", "");
   }
 
   // Generate the keyspace name
-  if (keyspace_name.size() > KEYSPACE_MAXIMUM_LENGTH) {
-    // Update the keyspace name with a UUID (first portions of v4 UUID)
-    std::vector<std::string> uuid_octets = explode(
-      uuid_generator_.generate_timeuuid().str(), '-');
-    std::string id = uuid_octets[0] + uuid_octets[3];
-    keyspace_name = keyspace_name.substr(0,
-      KEYSPACE_MAXIMUM_LENGTH - id.size()) + id;
-  }
-  return keyspace_name;
+  maybe_shrink_name(keyspace_name_);
+  return keyspace_name_;
 }
 
 unsigned short Integration::default_replication_factor() {
@@ -215,7 +212,12 @@ std::string Integration::default_replication_strategy() {
 }
 
 std::string Integration::default_table() {
-  return to_lower(test_name_);
+  if (!table_name_.empty()) {
+    return table_name_;
+  }
+  table_name_ = to_lower(test_name_);
+  maybe_shrink_name(table_name_);
+  return table_name_;
 }
 
 void Integration::drop_table(const std::string& table_name) {
@@ -313,3 +315,13 @@ std::string Integration::format_string(const char* format, ...) const {
   return buffer;
 }
 
+void Integration::maybe_shrink_name(std::string& name)
+{
+  if (name.size() > ENTITY_MAXIMUM_LENGTH) {
+    // Update the name with a UUID (first portions of v4 UUID)
+    std::vector<std::string> uuid_octets = explode(
+      uuid_generator_.generate_timeuuid().str(), '-');
+    std::string id = uuid_octets[0] + uuid_octets[3];
+    name = name.substr(0, ENTITY_MAXIMUM_LENGTH - id.size()) + id;
+  }
+}

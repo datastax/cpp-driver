@@ -68,6 +68,33 @@ public:
   }
 
   /**
+   * Get the error code that occurred during the connection
+   *
+   * @return Error code of the future
+   */
+  CassError connect_error_code() {
+    return connect_future_.error_code();
+  }
+
+  /**
+   * Get the human readable description of the error code during the connection
+   *
+   * @return Error description
+   */
+  const std::string connect_error_description() {
+    return connect_future_.error_description();
+  }
+
+  /**
+   * Get the error message that occurred during the connection
+   *
+   * @return Error message
+   */
+  const std::string connect_error_message() {
+    return connect_future_.error_message();
+  }
+
+  /**
    * Execute a batch statement synchronously
    *
    * @param batch Batch statement to execute
@@ -193,22 +220,24 @@ protected:
    * @return Session object
    * @throws Session::Exception If session could not be established
    */
-  static Session connect(CassCluster* cluster, const std::string& keyspace) {
+  static Session connect(CassCluster* cluster, const std::string& keyspace, bool assert_ok = true) {
     Session session;
-    Future connect_future;
     if (keyspace.empty()) {
-      connect_future = Future(cass_session_connect(session.get(), cluster));
+      session.connect_future_ = cass_session_connect(session.get(), cluster);
     } else {
-      connect_future = Future(cass_session_connect_keyspace(session.get(),
-        cluster, keyspace.c_str()));
+      session.connect_future_ = cass_session_connect_keyspace(session.get(),
+        cluster, keyspace.c_str());
     }
-    connect_future.wait(false);
-    if (connect_future.error_code() != CASS_OK) {
+    session.connect_future_.wait(false);
+    if (assert_ok && session.connect_error_code() != CASS_OK) {
       throw Exception("Unable to Establish Session Connection: "
-          + connect_future.error_description(), connect_future.error_code());
+          + session.connect_error_description(), session.connect_error_code());
     }
     return session;
   }
+
+private:
+  Future connect_future_;
 };
 
 } // namespace driver
