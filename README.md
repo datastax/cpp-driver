@@ -14,6 +14,8 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
+__Note__: DataStax products do not support big-endian systems.
+
 ## What's New in 2.5/2.6
 
 - Support for [`duration`]
