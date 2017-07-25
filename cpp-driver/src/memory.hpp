@@ -9,11 +9,27 @@
 #define __DSE_MEMORY_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "is_polymorphic.hpp"
 
 #include <limits>
 #include <stdlib.h>
 
 namespace cass {
+
+// Placement new can return a pointer to the polymorphic class instead of the
+// base/allocated address in the case of multiple inheritance. In this case
+// dynamic_cast<void*>() can be used to get the original base/allocated address,
+// but it's only valid for polymorphic types.
+
+template <class T, bool is_polymorphic>
+struct GetAllocatedPtr {
+  static void* cast(T* ptr) { return reinterpret_cast<void*>(ptr); }
+};
+
+template <class T>
+struct GetAllocatedPtr<T, true> {
+  static void* cast(T* ptr) { return dynamic_cast<void*>(ptr); }
+};
 
 class Memory {
 public:
@@ -126,8 +142,9 @@ public:
   template <class T>
   static void deallocate(T* ptr) {
     if (!ptr) return;
+    void* base_ptr = GetAllocatedPtr<T, IsPolymorphic<T>::value>::cast(ptr);
     ptr->~T();
-    free(reinterpret_cast<void*>(ptr));
+    free(base_ptr);
   }
 
   template <class T>
