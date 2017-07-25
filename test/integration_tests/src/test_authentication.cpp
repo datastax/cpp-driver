@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(empty_credentials)
   invalid_credentials(3, NULL, "pass", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   invalid_credentials(4, NULL, "pass", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 
-  expected_error = "and/or password are incorrect"; // Handle multuple versions of Cassandra and DSE
+  expected_error = "and/or password are incorrect"; // Handle multiple versions of Cassandra and DSE
   invalid_credentials(3, "user", NULL, expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
   invalid_credentials(4, "user", NULL, expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
 }
@@ -133,6 +133,27 @@ BOOST_AUTO_TEST_CASE(bad_credentials)
     invalid_credentials(2, "invalid", "invalid", expected_error.c_str(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
   }
   invalid_credentials(3, "invalid", "invalid", expected_error.c_str(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
+  invalid_credentials(4, "invalid", "invalid", expected_error.c_str(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
+}
+
+/**
+ * Set authenticator error to NULL
+ *
+ * @jira_ticket CPP-368
+ * @test_category authentication
+ * @since 1.3.0
+ * @expected_result Successfully connect.
+ */
+BOOST_AUTO_TEST_CASE(authenticator_set_error_null_error) {
+  std::string expected_error = "Username and/or password are incorrect";
+  if (version >= "3.10") {
+    expected_error = "Provided username invalid and/or password are incorrect";
+  }
+
+  CassAuthenticatorCallbacks auth_callbacks = {on_auth_initial, NULL, NULL, NULL };
+  BOOST_CHECK_EQUAL(CASS_OK,
+    cass_cluster_set_authenticator_callbacks(cluster.get(),
+                                             &auth_callbacks, NULL, NULL));
   invalid_credentials(4, "invalid", "invalid", expected_error.c_str(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
 }
 
