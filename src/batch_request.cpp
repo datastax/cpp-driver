@@ -37,7 +37,7 @@ void cass_batch_free(CassBatch* batch) {
 }
 
 CassError cass_batch_set_keyspace(CassBatch* batch, const char* keyspace) {
-  return cass_batch_set_keyspace_n(batch, keyspace, strlen(keyspace));
+  return cass_batch_set_keyspace_n(batch, keyspace, SAFE_STRLEN(keyspace));
 }
 
 CassError cass_batch_set_keyspace_n(CassBatch* batch,
