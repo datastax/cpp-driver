@@ -18,6 +18,7 @@ Bug Fixes
 * [CPP-477] Native protocol "support" messages are now properly decoded, but
   still remain unused
 * [CPP-487] Fixed a Kerberos regression caused by providing an empty principal
+* [CPP-501] Schema metadata is corrupted when views and indexes exist for a table
 
 Other
 --------
