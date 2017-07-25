@@ -18,6 +18,7 @@ namespace driver {
 // Forward declarations
 class Keyspace;
 class UserTypeType;
+class Table;
 
 /**
  * Wrapped schema object
@@ -29,6 +30,11 @@ public:
     Exception(const std::string& message)
       : test::Exception(message) {}
   };
+
+  /**
+   * Default constructor
+   */
+  Schema() : Object<const CassSchemaMeta, cass_schema_meta_free>(NULL) {}
 
   /**
    * Create a schema object
@@ -77,6 +83,16 @@ public:
    */
   UserTypeType user_type(const std::string& name);
 
+  /**
+   * Get the Table object for a given table
+   *
+   * @param name Table name to lookup
+   * @throws Exception if name is not available
+   */
+  Table table(const std::string& name);
+
+  const CassKeyspaceMeta* get() const { return keyspace_meta_; }
+
 private:
   /**
    * The keyspace metadata held by this keyspace object
@@ -86,6 +102,34 @@ private:
    * Parent schema object
    */
   Schema parent_;
+};
+
+/**
+ * Table object
+ */
+class Table {
+public:
+  /**
+   * Create the table object
+   *
+   * @param table_meta Native driver object
+   * @param parent The keyspace object that owns the table
+   */
+  Table(const CassTableMeta* table_meta, const Keyspace& parent)
+    : table_meta_(table_meta)
+    , parent_(parent) {}
+
+  const CassTableMeta* get() const { return table_meta_; }
+
+private:
+  /**
+   * The table metadata held by this table object
+   */
+  const CassTableMeta* table_meta_;
+  /**
+   * Parent keyspace object
+   */
+  Keyspace parent_;
 };
 
 /**
@@ -140,6 +184,15 @@ inline UserTypeType Keyspace::user_type(const std::string& name) {
     throw Exception("Unable to get metadata for user type: " + name);
   }
   return UserTypeType(data_type, *this);
+}
+
+inline Table Keyspace::table(const std::string& name) {
+  const CassTableMeta* table =
+    cass_keyspace_meta_table_by_name(keyspace_meta_, name.c_str());
+  if (table == NULL) {
+    throw Exception("Unable to get metadata for table: " + name);
+  }
+  return Table(table, *this);
 }
 
 } // namespace driver
