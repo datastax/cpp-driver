@@ -57,6 +57,27 @@ namespace test {
  * Embedded ADS for easily authenticating with DSE using Kerberos
  */
 class EmbeddedADS {
+/**
+ * Result for command execution
+ */
+typedef struct CommandResult_ {
+  /**
+   * Error code (e.g. exit status)
+   */
+  int error_code;
+  /**
+   * Standard output from executing command
+   */
+  std::string standard_output;
+  /**
+   * Standard error from executing command
+   */
+  std::string standard_error;
+
+  CommandResult_()
+    : error_code(-1) { }
+} CommandResult;
+
 public:
   /**
    * @throws EmbeddedADS::Exception If applications are not available to operate the ADS
@@ -249,6 +270,34 @@ public:
   }
 
   /**
+   * Check to see if the Kerberos client binaries are Heimdal
+   *
+   * @return True if Kerberos implementation is Heimdal; false otherwise
+   */
+  static bool is_kerberos_client_heimdal() {
+    if (is_kerberos_client_available()) {
+      // kinit
+      char* kinit_args[3];
+      kinit_args[0] = const_cast<char*>("kinit");
+      kinit_args[1] = const_cast<char*>("--version");
+      kinit_args[2] = NULL;
+
+      // Check the output of the kinit command for Heimdal
+      CommandResult result = execute_command(kinit_args);
+      if (result.error_code == 0) {
+        // Check both outputs
+        bool is_in_standard_output = Utils::contains(result.standard_output,
+                                                     "Heimdal");
+        bool is_in_standard_error = Utils::contains(result.standard_error,
+                                                     "Heimdal");
+        return (is_in_standard_output || is_in_standard_error);
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Acquire a ticket into the cache of the ADS for a given principal and keytab
    * file
    *
@@ -277,14 +326,21 @@ public:
     execute_command(args);
   }
 
-
-  void use_keytab(const std::string& keytab) {
+  /**
+   * Assign the Kerberos environment for keytab use
+   *
+   * @param keytab_file Filename of keytab to use
+   */
+  void use_keytab(const std::string& keytab_file) {
     // MIT Kerberos
-    setenv("KRB5_CLIENT_KTNAME", keytab);
+    setenv("KRB5_CLIENT_KTNAME", keytab_file);
     // Heimdal
-    setenv("KRB5_KTNAME", keytab);
+    setenv("KRB5_KTNAME", keytab_file);
   }
 
+  /**
+   * Clear/Unassign the Kerberos environment for keytab use
+   */
   void clear_keytab() {
     // MIT Kerberos
     setenv("KRB5_CLIENT_KTNAME", "");
@@ -357,7 +413,7 @@ private:
    * @param Process and arguments to execute
    * @return Error code returned from executing command
    */
-  static int execute_command(char* args[]) {
+  static CommandResult execute_command(char* args[]) {
     // Create the loop
 #if UV_VERSION_MAJOR == 0
     uv_loop_t* loop = uv_loop_new();
@@ -393,22 +449,23 @@ private:
     options.file = args[0];
 
     // Start the process and process loop (if spawned)
+    CommandResult result;
     uv_process_t process;
 #if UV_VERSION_MAJOR == 0
     int error_code = uv_spawn(loop, &process, options);
     uv_err_t error = uv_last_error(loop);
-    error_code = error.code;
+    result.error_code = error.code;
 #else
-    int error_code = uv_spawn(&loop, &process, &options);
+    result.error_code = uv_spawn(&loop, &process, &options);
 #endif
-    if (error_code == 0) {
+    if (result.error_code == 0) {
       LOG("Launched " << args[0] << " with ID " << process_.pid);
 
+      // Configure the storage for the output pipes
       std::string stdout_message;
       std::string stderr_message;
-
-      standard_output.data = &stdout_message;
-      error_output.data = &stderr_message;
+      standard_output.data = &result.standard_output;
+      error_output.data = &result.standard_error;
 
       // Start the output thread loops
       uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
@@ -423,27 +480,27 @@ private:
       uv_loop_close(&loop);
 #endif
     }
-    return error_code;
+    return result;
   }
 
   /**
    * Check to see if Java is available in order to execute the ADS process
    *
-   * @return True is Java is available; false otherwise
+   * @return True if Java is available; false otherwise
    */
   static bool is_java_available() {
     char* args[3];
     args[0] = const_cast<char*>("java");
     args[1] = const_cast<char*>("-help");
     args[2] = NULL;
-    return (execute_command(args) == 0);
+    return (execute_command(args).error_code == 0);
   }
 
   /**
    * Check to see if the Kerberos client binaries are available in order to
    * properly execute request for the ADS
    *
-   * @return True is kinit and kdestroy are available; false otherwise
+   * @return True if kinit and kdestroy are available; false otherwise
    */
   static bool is_kerberos_client_available() {
     // kinit
@@ -451,14 +508,14 @@ private:
     kinit_args[0] = const_cast<char*>("kinit");
     kinit_args[1] = const_cast<char*>("--help");
     kinit_args[2] = NULL;
-    bool is_kinit_available = (execute_command(kinit_args) == 0);
+    bool is_kinit_available = (execute_command(kinit_args).error_code == 0);
 
     // kdestroy
     char* kdestroy_args[3];
     kdestroy_args[0] = const_cast<char*>("kdestroy");
     kdestroy_args[1] = const_cast<char*>("--help");
     kdestroy_args[2] = NULL;
-    bool is_kdestroy_available = (execute_command(kdestroy_args) == 0);
+    bool is_kdestroy_available = (execute_command(kdestroy_args).error_code == 0);
 
     return (is_kinit_available && is_kdestroy_available);
   }
@@ -526,9 +583,9 @@ private:
     if (error_code == 0) {
       LOG("Launched " << args[0] << " with ID " << process_.pid);
 
+      // Configure the storage for the output pipes
       std::string stdout_message;
       std::string stderr_message;
-
       standard_output.data = &stdout_message;
       error_output.data = &stderr_message;
 
@@ -625,21 +682,24 @@ private:
 #endif
     cass::ScopedMutex lock(&mutex_);
 
+    // Get the pipe message contents
     std::string* message = reinterpret_cast<std::string*>(stream->data);
 
     if (buffer_length > 0) {
       // Process the buffer and determine if the ADS is finished initializing
 #if UV_VERSION_MAJOR == 0
-      message->append(buffer.base, buffer_length);
+      std::string output(buffer.base, buffer_length);
+      message->append(output);
 #else
-      message->append(buffer->base, buffer_length);
+      std::string output(buffer->base, buffer_length);
+      message->append(output);
 #endif
 
       if (!is_initialized_ && message->find("Principal Initialization Complete") != std::string::npos) {
         Utils::msleep(10000); // TODO: Not 100% ready; need to add a better check mechanism
         is_initialized_ = true;
       }
-      LOG(Utils::trim(*message));
+      LOG(Utils::trim(output));
     } else if (buffer_length < 0) {
 #if UV_VERSION_MAJOR == 0
       uv_err_t error = uv_last_error(stream->loop);

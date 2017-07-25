@@ -10,6 +10,12 @@
 #include "options.hpp"
 
 
+#define CHECK_FOR_KERBEROS_HEIMDAL do { \
+  if (EmbeddedADS::is_kerberos_client_heimdal()) { \
+    SKIP_TEST("Heimdal implementation is not valid for this test"); \
+  } \
+} while(0);
+
 #if UV_VERSION_MAJOR == 0
 # define CHECK_FOR_SKIPPED_TEST \
     SKIP_TEST("Test requires libuv v1.x+: Hostname resolution required");
@@ -19,10 +25,11 @@
 #   define CHECK_FOR_SKIPPED_TEST \
       SKIP_TEST("Test cannot currently run on Windows");
 # elif defined(CASS_USE_LIBSSH2)
-#   define CHECK_FOR_SKIPPED_TEST \
+#   define CHECK_FOR_SKIPPED_TEST do { \
       if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
         SKIP_TEST("Test cannot currently run using remote deployment"); \
-      }
+      } \
+    } while(0);
 # else
 #   define CHECK_FOR_SKIPPED_TEST ((void)0)
 # endif
@@ -112,7 +119,6 @@ protected:
     std::vector<std::string> update_configuration;
     std::vector<std::string> update_dse_configuration;
     if (server_version_ >= "5.0.0") {
-
       update_configuration.push_back("authenticator:com.datastax.bdp.cassandra.auth.DseAuthenticator");
       update_dse_configuration.push_back("authentication_options.enabled:true");
     }
@@ -168,9 +174,9 @@ protected:
       .with_gssapi_authenticator("dse", principal)
       .with_contact_points(contact_points_)
 #if UV_VERSION_MAJOR > 0
-      .with_hostname_resolution(cass_true) // hostname resolution is not available in libuv 0.10.x
+      .with_hostname_resolution(true) // hostname resolution is not available in libuv 0.10.x
 #endif
-      .with_schema_metadata(cass_false);
+      .with_schema_metadata(false);
     Session session = cluster.connect();
 
     // Execute a simple query to ensure authentication
@@ -195,8 +201,10 @@ protected:
     Cluster cluster = DseCluster::build()
       .with_plaintext_authenticator(username, password)
       .with_contact_points(contact_points_)
-      .with_schema_metadata(cass_false)
-      .with_hostname_resolution(cass_true);
+#if UV_VERSION_MAJOR > 0
+      .with_hostname_resolution(true) // hostname resolution is not available in libuv 0.10.x
+#endif
+      .with_schema_metadata(false);
     Session session = cluster.connect();
 
     // Execute a simple query to ensure authentication
@@ -385,6 +393,8 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, UseKeytab) {
  * The default credential in the keytab should be used to authenticate the
  * request.
  *
+ * NOTE: This test is not valid with Heimdal
+ *
  * @test_category dse:auth
  * @since 1.0.0
  * @dse_version 5.0.0
@@ -392,6 +402,7 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, UseKeytab) {
  */
 DSE_INTEGRATION_TEST_F(AuthenticationTest, EmptyPrincipalKeytab) {
   CHECK_FOR_SKIPPED_TEST;
+  CHECK_FOR_KERBEROS_HEIMDAL;
   CHECK_FAILURE;
 
   ads_->use_keytab(ads_->get_cassandra_keytab_file());
