@@ -9,6 +9,8 @@ Cassandra][cpp-driver], with specific extensions for DataStax Enterprise (DSE).
 This software can be used solely with DataStax Enterprise. See the [License
 section](#licence) below.
 
+__Note__: DataStax products do not support big-endian systems.
+
 ## Features
 
 * [DSE plaintext and GSSAPI authentication](http://docs.datastax.com/en/developer/cpp-driver-dse/1.0/features/authentication/)
