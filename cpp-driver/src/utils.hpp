@@ -59,7 +59,7 @@ class IsConvertible {
 
 template<class From, class To>
 const bool IsConvertible<From, To>::value
-  = sizeof(IsConvertible<From, To>::Helper::test(IsConvertible<From, To>::Helper::check())) == sizeof(IsConvertible<From, To>::Yes);
+  = sizeof(IsConvertible<From, To>::Helper::test(IsConvertible<From, To>::Helper::check())) == sizeof(typename IsConvertible<From, To>::Yes);
 #endif
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated

@@ -13,7 +13,7 @@
 #if !defined(DSE_STATIC)
 #  if (defined(WIN32) || defined(_WIN32))
 #    if defined(DSE_BUILDING)
-#      define DSE_EXPORT __declspec(dllexport)
+#      define DSE_EXPORT __declspec(dllimport)
 #    else
 #      define DSE_EXPORT __declspec(dllexport)
 #    endif

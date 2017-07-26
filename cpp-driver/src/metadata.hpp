@@ -356,6 +356,7 @@ public:
 
   TableMetadataBase(const TableMetadataBase& other)
     : MetadataBase(other)
+    , RefCounted<TableMetadataBase>()
     , columns_(other.columns_)
     , columns_by_name_(other.columns_by_name_)
     , partition_key_(other.partition_key_)

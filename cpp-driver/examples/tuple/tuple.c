@@ -185,7 +185,7 @@ CassError select_from_tuple(CassSession* session) {
           } else if (cass_value_type(value) == CASS_VALUE_TYPE_BIGINT) {
             cass_int64_t i;
             cass_value_get_int64(value, &i);
-            printf("%lld ", i);
+            printf("%lld ", (long long int)i);
           } else {
             printf("<invalid> ");
           }
