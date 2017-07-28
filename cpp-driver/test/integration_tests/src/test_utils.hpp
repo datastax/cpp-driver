@@ -37,6 +37,7 @@
 #include "cassandra.h"
 #include "bridge.hpp"
 #include "constants.hpp"
+#include "pretty_print.hpp"
 
 #ifdef min
 #undef min
@@ -671,8 +672,9 @@ struct Value<CassTime> {
 
   static std::string to_string(CassTime value) {
     char temp[32];
-    time_t epoch_secs = static_cast<time_t>(cass_date_time_to_epoch(0, value));
-    strftime(temp, sizeof(temp), "'%H:%M:%S", gmtime(&epoch_secs));
+    time_t epoch_secs = static_cast<time_t>(cass_date_time_to_epoch(2147483648, value));
+    struct tm* time = gmtime(&epoch_secs);
+    strftime(temp, sizeof(temp), "'%H:%M:%S", time);
     std::string str(temp);
     cass_int64_t diff = value - epoch_secs * 1000000000;
     sprintf(temp, "%09u", (unsigned int)diff);

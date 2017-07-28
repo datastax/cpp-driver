@@ -416,7 +416,7 @@ namespace CCM {
      * @param is_dse True if yaml configuration should update the dse.yaml file;
      *               otherwise false (default: false; update cassandra.yaml)
      */
-    void update_cluster_configuration(const std::string& yaml, bool is_dse = false);
+    void update_cluster_configuration_yaml(const std::string& yaml, bool is_dse = false);
 
     /**
      * Update the node configuration

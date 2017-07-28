@@ -151,7 +151,7 @@ protected:
       // Apply the configuration options
       ccm_->update_cluster_configuration(update_configuration);
       ccm_->update_cluster_configuration(update_dse_configuration, true);
-      ccm_->update_cluster_configuration(update_dse_configuration_yaml, true);
+      ccm_->update_cluster_configuration_yaml(update_dse_configuration_yaml, true);
 
       // Start the cluster
       std::vector<std::string> jvm_arguments;
