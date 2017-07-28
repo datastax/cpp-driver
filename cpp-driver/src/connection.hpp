@@ -238,7 +238,7 @@ private:
   protected:
     static void on_write(uv_write_t* req, int status);
 
-    typedef std::vector<RequestCallback*> CallbackVec;
+    typedef Vector<RequestCallback*> CallbackVec;
 
     Connection* connection_;
     uv_write_t req_;
@@ -329,7 +329,7 @@ private:
   static void on_terminate(Timer* timer);
 
 private:
-  typedef std::vector<PendingWriteBase*> PendingWriteVec;
+  typedef Vector<PendingWriteBase*> PendingWriteVec;
 
   ConnectionState state_;
   ConnectionError error_code_;

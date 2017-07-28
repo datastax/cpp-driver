@@ -24,12 +24,12 @@ void cass_alloc_set_functions(CassMallocFunction malloc_func,
 } // extern "C"
 
 #ifdef DEBUG_CUSTOM_ALLOCATOR
-void* operator new(size_t size) {
+void* operator new(size_t size) throw(std::bad_alloc) {
   assert(false && "Attempted to use global operator new");
   return cass::Memory::malloc(size);
 }
 
-void* operator new[](size_t size) {
+void* operator new[](size_t size) throw(std::bad_alloc) {
   assert(false && "Attempted to use global operator new[]");
   return cass::Memory::malloc(size);
 }
