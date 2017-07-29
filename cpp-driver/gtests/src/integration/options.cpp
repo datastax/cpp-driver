@@ -14,8 +14,8 @@
 #include <algorithm>
 #include <iostream>
 
-#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.10")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("5.1.1")
+#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.0")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("5.1.2")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
