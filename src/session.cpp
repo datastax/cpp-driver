@@ -147,16 +147,17 @@ Session::Session()
     , current_host_mark_(true)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
-    , current_io_worker_(0)
-    , keyspace_(new std::string){
+    , current_io_worker_(0) {
   uv_mutex_init(&state_mutex_);
   uv_mutex_init(&hosts_mutex_);
+  uv_mutex_init(&keyspace_mutex_);
 }
 
 Session::~Session() {
   join();
   uv_mutex_destroy(&state_mutex_);
   uv_mutex_destroy(&hosts_mutex_);
+  uv_mutex_destroy(&keyspace_mutex_);
 }
 
 void Session::clear(const Config& config) {
@@ -201,18 +202,29 @@ int Session::init() {
   return rc;
 }
 
+std::string Session::keyspace() const {
+  ScopedMutex l(&keyspace_mutex_);
+  return keyspace_;
+}
+
+void Session::set_keyspace(const std::string& keyspace) {
+  ScopedMutex l(&keyspace_mutex_);
+  keyspace_ = keyspace;
+}
+
 void Session::broadcast_keyspace_change(const std::string& keyspace,
                                         const IOWorker* calling_io_worker) {
   // This can run on an IO worker thread. This is thread-safe because the IO workers
   // vector never changes after initialization and IOWorker::set_keyspace() uses
-  // copy-on-write. This also means that calling "USE <keyspace>" frequently is an
+  // a lock. This also means that calling "USE <keyspace>" frequently is an
   // anti-pattern.
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
     if (*it == calling_io_worker) continue;
       (*it)->set_keyspace(keyspace);
   }
-  keyspace_ = CopyOnWritePtr<std::string>(new std::string(keyspace));
+
+  set_keyspace(keyspace);
 }
 
 Host::Ptr Session::get_host(const Address& address) {
@@ -487,9 +499,8 @@ void Session::on_event(const SessionEvent& event) {
     case SessionEvent::NOTIFY_KEYSPACE_ERROR: {
       // Currently, this is only called when the keyspace does not exist
       // and not for any other keyspace related errors.
-      const CopyOnWritePtr<std::string> keyspace(keyspace_);
       notify_connect_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                           "Keyspace '" + *keyspace + "' does not exist");
+                           "Keyspace '" + keyspace() + "' does not exist");
       break;
     }
 
@@ -769,13 +780,11 @@ void Session::on_execute(uv_async_t* data) {
 }
 
 QueryPlan* Session::new_query_plan(const RequestHandler::Ptr& request_handler) {
-  const CopyOnWritePtr<std::string> keyspace(keyspace_);
-  return load_balancing_policy_->new_query_plan(*keyspace, request_handler.get(), token_map_.get());
+  return load_balancing_policy_->new_query_plan(keyspace(), request_handler.get(), token_map_.get());
 }
 
 SpeculativeExecutionPlan* Session::new_execution_plan(const Request* request) {
-  const CopyOnWritePtr<std::string> keyspace(keyspace_);
-  return speculative_execution_policy_->new_plan(*keyspace, request);
+  return speculative_execution_policy_->new_plan(keyspace(), request);
 }
 
 } // namespace cass

@@ -93,8 +93,9 @@ public:
     protocol_version_.store(protocol_version);
   }
 
-  const CopyOnWritePtr<std::string> keyspace() const { return keyspace_; }
+  std::string keyspace() const;
   void set_keyspace(const std::string& keyspace);
+
   void broadcast_keyspace_change(const std::string& keyspace);
 
   void set_host_is_available(const Address& address, bool is_available);
@@ -148,7 +149,8 @@ private:
   Atomic<int> protocol_version_;
   uv_prepare_t prepare_;
 
-  CopyOnWritePtr<std::string> keyspace_;
+  std::string keyspace_;
+  mutable uv_mutex_t keyspace_mutex_;
 
   AddressSet unavailable_addresses_;
   uv_mutex_t unavailable_addresses_mutex_;

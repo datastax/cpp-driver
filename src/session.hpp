@@ -87,6 +87,11 @@ public:
     load_balancing_policy_.reset(policy);
   }
 
+private:
+  std::string keyspace() const;
+  void set_keyspace(const std::string& keyspace);
+
+public:
   void broadcast_keyspace_change(const std::string& keyspace,
                                  const IOWorker* calling_io_worker);
 
@@ -215,7 +220,8 @@ private:
   int pending_workers_count_;
   int current_io_worker_;
 
-  CopyOnWritePtr<std::string> keyspace_;
+  std::string keyspace_;
+  mutable uv_mutex_t keyspace_mutex_;
 };
 
 class SessionFuture : public Future {

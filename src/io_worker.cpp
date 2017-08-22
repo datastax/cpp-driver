@@ -32,7 +32,6 @@ IOWorker::IOWorker(Session* session)
     , config_(session->config())
     , metrics_(session->metrics())
     , protocol_version_(-1)
-    , keyspace_(new std::string)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
   pools_.set_empty_key(Address::EMPTY_KEY);
@@ -41,10 +40,12 @@ IOWorker::IOWorker(Session* session)
   unavailable_addresses_.set_deleted_key(Address::DELETED_KEY);
   prepare_.data = this;
   uv_mutex_init(&unavailable_addresses_mutex_);
+  uv_mutex_init(&keyspace_mutex_);
 }
 
 IOWorker::~IOWorker() {
   uv_mutex_destroy(&unavailable_addresses_mutex_);
+  uv_mutex_destroy(&keyspace_mutex_);
 }
 
 int IOWorker::init() {
@@ -59,8 +60,14 @@ int IOWorker::init() {
   return rc;
 }
 
+std::string IOWorker::keyspace() const {
+  ScopedMutex l(&keyspace_mutex_);
+  return keyspace_;
+}
+
 void IOWorker::set_keyspace(const std::string& keyspace) {
-  keyspace_ = CopyOnWritePtr<std::string>(new std::string(keyspace));
+  ScopedMutex l(&keyspace_mutex_);
+  keyspace_ = keyspace;
 }
 
 void IOWorker::broadcast_keyspace_change(const std::string& keyspace) {
