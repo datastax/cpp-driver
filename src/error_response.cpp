@@ -38,11 +38,11 @@ CassConsistency cass_error_result_consistency(const CassErrorResult* error_resul
   return error_result->consistency();
 }
 
-cass_int32_t cass_error_result_actual(const CassErrorResult* error_result) {
+cass_int32_t cass_error_result_responses_received(const CassErrorResult* error_result) {
   return error_result->received();
 }
 
-cass_int32_t cass_error_result_required(const CassErrorResult* error_result) {
+cass_int32_t cass_error_result_responses_required(const CassErrorResult* error_result) {
   return error_result->required();
 }
 
