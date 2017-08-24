@@ -210,6 +210,16 @@ void ErrorResponse::decode_write_type(char* pos) {
     write_type_ = CASS_WRITE_TYPE_COUNTER;
   } else if(write_type == "BATCH_LOG") {
     write_type_ = CASS_WRITE_TYPE_BATCH_LOG;
+  } else if (write_type == "CAS") {
+    write_type_ = CASS_WRITE_TYPE_CAS;
+  } else if (write_type == "VIEW") {
+    write_type_ = CASS_WRITE_TYPE_VIEW;
+  } else if (write_type == "CDC") {
+    write_type_ = CASS_WRITE_TYPE_CDC;
+  } else {
+    LOG_WARN("Invalid write type %.*s",
+      (int) write_type.size(), write_type.data());
+    write_type_ = CASS_WRITE_TYPE_UNKNOWN;
   }
 }
 
