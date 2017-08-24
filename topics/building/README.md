@@ -72,8 +72,9 @@ additional configuration before building the driver.
 
 ```bash
 brew install openssl
-brew link --force openssl
+export OPENSSL_ROOT_DIR=/usr/local/opt/openssl
 ```
+**NOTE:** brew refuses `brew link --force openssl`, so you have to set openssl path manually.
 
 #### Ubuntu
 
