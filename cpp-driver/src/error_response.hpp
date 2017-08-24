@@ -42,7 +42,7 @@ public:
       , required_(-1)
       , num_failures_(-1)
       , data_present_(0)
-      , write_type_(CASS_WRITE_TYPE_UKNOWN) { }
+      , write_type_(CASS_WRITE_TYPE_UNKNOWN) { }
 
   int32_t code() const { return code_; }
   StringRef message() const { return message_; }

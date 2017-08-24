@@ -92,6 +92,7 @@ bool Decoder::as_inet(const int address_length, CassInet* output) const {
 
 bool Decoder::decode_write_type(CassWriteType& output) {
   StringRef write_type;
+  output = CASS_WRITE_TYPE_UNKNOWN;
   if (!decode_string(&write_type)) return false;
 
   if (write_type == "SIMPLE") {
@@ -106,6 +107,10 @@ bool Decoder::decode_write_type(CassWriteType& output) {
     output = CASS_WRITE_TYPE_BATCH_LOG;
   } else if (write_type == "CAS") {
     output = CASS_WRITE_TYPE_CAS;
+  } else if (write_type == "VIEW") {
+    output = CASS_WRITE_TYPE_VIEW;
+  } else if (write_type == "CDC") {
+    output = CASS_WRITE_TYPE_CDC;
   } else {
     LOG_WARN("Invalid write type %.*s",
              (int)write_type.size(), write_type.data());

@@ -991,34 +991,46 @@ TEST_F(DecoderUnitTest, DecodeFailuresWithVector) {
 }
 
 TEST_F(DecoderUnitTest, DecodeWriteType) {
-  const char input[51] = { 0, 6, 83, 73, 77, 80, 76, 69, // SIMPLE
+  const char input[67] = { 0, 6, 83, 73, 77, 80, 76, 69, // SIMPLE
                            0, 5, 66, 65, 84, 67, 72, // BATCH
                            0, 14, 85, 78, 76, 79, 71, 71, 69, 68, 95, 66, 65, 84, 67, 72, // UNLOGGED_BATCH
                            0, 7, 67, 79, 85, 78, 84, 69, 82, // COUNTER
-                           0, 9, 66, 65, 84, 67, 72, 95, 76, 79, 71 }; // BATCH_LOG
-                           //0, 3, 67, 65, 83 }; // CAS
-  TestDecoder decoder(input, 51);
+                           0, 9, 66, 65, 84, 67, 72, 95, 76, 79, 71, // BATCH_LOG
+                           0, 3, 67, 65, 83, // CAS
+                           0, 4, 86, 73, 69, 87, // VIEW
+                           0, 3, 67, 68, 67 }; // CDC
+  TestDecoder decoder(input, 67);
   CassWriteType value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_write_type(value));
-  ASSERT_EQ(43ul, decoder.remaining());
+  ASSERT_EQ(59ul, decoder.remaining());
   ASSERT_EQ(CASS_WRITE_TYPE_SIMPLE, value);
   ASSERT_TRUE(decoder.decode_write_type(value));
-  ASSERT_EQ(36ul, decoder.remaining());
+  ASSERT_EQ(52ul, decoder.remaining());
   ASSERT_EQ(CASS_WRITE_TYPE_BATCH, value);
   ASSERT_TRUE(decoder.decode_write_type(value));
-  ASSERT_EQ(20ul, decoder.remaining());
+  ASSERT_EQ(36ul, decoder.remaining());
   ASSERT_EQ(CASS_WRITE_TYPE_UNLOGGED_BATCH, value);
   ASSERT_TRUE(decoder.decode_write_type(value));
-  ASSERT_EQ(11ul, decoder.remaining());
+  ASSERT_EQ(27ul, decoder.remaining());
   ASSERT_EQ(CASS_WRITE_TYPE_COUNTER, value);
   ASSERT_TRUE(decoder.decode_write_type(value));
-  ASSERT_EQ(0ul, decoder.remaining());
+  ASSERT_EQ(16ul, decoder.remaining());
   ASSERT_EQ(CASS_WRITE_TYPE_BATCH_LOG, value);
+  ASSERT_TRUE(decoder.decode_write_type(value));
+  ASSERT_EQ(11ul, decoder.remaining());
+  ASSERT_EQ(CASS_WRITE_TYPE_CAS, value);
+  ASSERT_TRUE(decoder.decode_write_type(value));
+  ASSERT_EQ(5ul, decoder.remaining());
+  ASSERT_EQ(CASS_WRITE_TYPE_VIEW, value);
+  ASSERT_TRUE(decoder.decode_write_type(value));
+  ASSERT_EQ(0ul, decoder.remaining());
+  ASSERT_EQ(CASS_WRITE_TYPE_CDC, value);
 
   // FAIL
   ASSERT_FALSE(decoder.decode_write_type(value));
+  ASSERT_EQ(CASS_WRITE_TYPE_UNKNOWN, value);
   ASSERT_TRUE(failure_logged_);
 }
 
