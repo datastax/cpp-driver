@@ -102,12 +102,13 @@ uint64_t Random::next(uint64_t max) {
     if (num_bytes < static_cast<ssize_t>(sizeof(seed))) {
       char buf[STRERROR_BUFSIZE_];
       char* err = STRERROR_R_(errno, buf, sizeof(buf));
-      LOG_WARN("Unable to read %zu random bytes (%s): %zu read",
-            sizeof(seed), err, num_bytes);
+      LOG_WARN("Unable to read %u random bytes (%s): %u read",
+            static_cast<unsigned int>(sizeof(seed)), err, 
+            static_cast<unsigned int>(num_bytes));
     } else {
       readurandom = false;      
     }
-#endif
+#endif // defined(HAVE_GETRANDOM)
 
     if (readurandom) {
       int fd = open(device, O_RDONLY);
@@ -136,7 +137,7 @@ uint64_t Random::next(uint64_t max) {
 
       close(fd);
     }
-#endif
+#endif // defined(HAVE_ARC4RANDOM)
 
     return seed;
   }
