@@ -1071,22 +1071,6 @@ cass_cluster_set_queue_size_event(CassCluster* cluster,
                                   unsigned queue_size);
 
 /**
- * Sets the size of the fixed size queue that stores
- * log messages.
- *
- * <b>Default:</b> 8192
- *
- * @public @memberof CassCluster
- *
- * @param[in] cluster
- * @param[in] queue_size
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_cluster_set_queue_size_log(CassCluster* cluster,
-                                unsigned queue_size);
-
-/**
  * Sets the number of connections made to each server in each
  * IO thread.
  *
