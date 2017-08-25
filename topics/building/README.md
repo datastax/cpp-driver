@@ -103,6 +103,10 @@ popd
 
 #### OpenSSL
 
+The DataStax C/C++ driver requires OpenSSL v1.0.x; v1.1.x+ is not currently
+supported by the driver. Ensure that you are installing and using a compatible
+version of OpenSSL.
+
 ##### CentOS (Yum)
 
 ```bash
@@ -127,6 +131,20 @@ __Note__: For Mac OS X 10.11 (El Capitan) and Mac OS 10.12 (Sierra) a link
 
 ```bash
 brew link --force openssl
+```
+
+##### Manually build and install
+
+```bash
+pushd /tmp
+wget --no-check-certificate https://www.openssl.org/source/openssl-1.0.2l.tar.gz
+tar xzf openssl-1.0.2l.tar.gz
+pushd openssl-1.0.2l
+CFLAGS=-fpic ./config shared
+make
+make install
+popd
+popd
 ```
 
 ### Building and installing the C/C++ driver
