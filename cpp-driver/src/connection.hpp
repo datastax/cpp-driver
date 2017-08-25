@@ -349,7 +349,7 @@ private:
   Listener* listener_;
 
   ScopedPtr<ResponseMessage> response_;
-  StreamManager<RequestCallback*> stream_manager_;
+  StreamManager<RequestCallback::Ptr> stream_manager_;
 
   uv_tcp_t socket_;
   Timer connect_timer_;

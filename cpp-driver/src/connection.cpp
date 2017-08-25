@@ -89,8 +89,6 @@ static void cleanup_pending_callback(const RequestCallback::Ptr& callback) {
       callback->on_cancel(NULL);
       break;
   }
-
-  callback->dec_ref();
 }
 
 Connection::StartupCallback::StartupCallback(const Request::ConstPtr& request)
@@ -279,12 +277,11 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
     return Request::REQUEST_ERROR_CANCELLED;
   }
 
-  int stream = stream_manager_.acquire(callback.get());
+  int stream = stream_manager_.acquire(callback);
   if (stream < 0) {
     return Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS;
   }
 
-  callback->inc_ref(); // Connection reference
   callback->start(this, stream);
 
   if (pending_writes_.is_empty() || pending_writes_.back()->is_flushed()) {
@@ -316,7 +313,6 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
         break;
     }
 
-    callback->dec_ref();
     return request_size;
   }
 
@@ -460,18 +456,16 @@ void Connection::consume(const char* input, size_t size) {
           continue;
         }
       } else {
-        RequestCallback* temp = NULL;
+        RequestCallback::Ptr callback;
 
-        if (stream_manager_.get_pending_and_release(response->stream(), temp)) {
-          RequestCallback::Ptr callback(temp);
-
+        if (stream_manager_.get(response->stream(), callback)) {
           switch (callback->state()) {
             case RequestCallback::REQUEST_STATE_READING:
               pending_reads_.remove(callback.get());
               callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
               maybe_set_keyspace(response.get());
               callback->on_set(response.get());
-              callback->dec_ref();
+              stream_manager_.release(callback->stream());
               break;
 
             case RequestCallback::REQUEST_STATE_WRITING:
@@ -487,7 +481,7 @@ void Connection::consume(const char* input, size_t size) {
               pending_reads_.remove(callback.get());
               callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
               callback->on_cancel(response.get());
-              callback->dec_ref();
+              stream_manager_.release(callback->stream());
               break;
 
             case RequestCallback::REQUEST_STATE_CANCELLED_WRITING:
@@ -987,7 +981,6 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
           callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
           callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
                              "Unable to write to socket");
-          callback->dec_ref();
         }
         break;
 
@@ -998,7 +991,7 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
         // Use the response saved in the read callback
         connection->maybe_set_keyspace(callback->read_before_write_response());
         callback->on_set(callback->read_before_write_response());
-        callback->dec_ref();
+        connection->stream_manager_.release(callback->stream());
         break;
 
       case RequestCallback::REQUEST_STATE_CANCELLED_WRITING:
@@ -1011,7 +1004,7 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
         // returned. This is now responsible for cleanup.
         callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
         callback->on_cancel(NULL);
-        callback->dec_ref();
+        connection->stream_manager_.release(callback->stream());
         break;
 
       default:

@@ -67,12 +67,10 @@ public:
     release_stream(stream);
   }
 
-  bool get_pending_and_release(int stream, T& output) {
+  bool get(int stream, T& output) {
     typename PendingMap::iterator i = pending_.find(stream);
     if (i != pending_.end()) {
       output = i->second;
-      pending_.erase(i);
-      release_stream(stream);
       return true;
     }
     return false;
