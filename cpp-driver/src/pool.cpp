@@ -117,7 +117,6 @@ Pool::Pool(IOWorker* io_worker,
     , metrics_(io_worker->metrics())
     , state_(POOL_STATE_NEW)
     , error_code_(Connection::CONNECTION_OK)
-    , is_available_(false)
     , is_initial_connection_(is_initial_connection)
     , is_pending_flush_(false)
     , cancel_reconnect_(false) { }
@@ -179,7 +178,6 @@ void Pool::close(bool cancel_reconnect) {
       state_ = POOL_STATE_CLOSING;
     }
 
-    set_is_available(false);
     cancel_reconnect_ = cancel_reconnect;
 
     for (ConnectionVec::iterator it = connections_.begin(),
@@ -233,22 +231,6 @@ void Pool::return_connection(Connection* connection) {
 void Pool::remove_pending_request(PoolCallback* callback) {
   pending_requests_.remove(callback);
   callback->dec_ref();
-  set_is_available(true);
-}
-
-void Pool::set_is_available(bool is_available) {
-  if (is_available) {
-    if (!is_available_ &&
-        pending_requests_.size() < config_.pending_requests_low_water_mark()) {
-      io_worker_->set_host_is_available(host_->address(), true);
-      is_available_ = true;
-    }
-  } else {
-    if (is_available_) {
-      io_worker_->set_host_is_available(host_->address(), false);
-      is_available_ = false;
-    }
-  }
 }
 
 bool Pool::write(Connection* connection, const PoolCallback::Ptr& callback) {
@@ -448,15 +430,6 @@ void Pool::wait_for_connection(const PoolCallback::Ptr& callback) {
               pending_requests_.size() > 0 ? "s":"",
               host_->address_string().c_str(),
               static_cast<void*>(this));
-  }
-
-  if (pending_requests_.size() > config_.pending_requests_high_water_mark()) {
-    LOG_WARN("Exceeded pending requests water mark (current: %u water mark: %u) for host %s",
-             static_cast<unsigned int>(pending_requests_.size()),
-             config_.pending_requests_high_water_mark(),
-             host_->address_string().c_str());
-    set_is_available(false);
-    metrics_->exceeded_pending_requests_water_mark.inc();
   }
 }
 

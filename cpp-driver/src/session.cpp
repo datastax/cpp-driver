@@ -136,7 +136,7 @@ void  cass_session_get_metrics(const CassSession* session,
   metrics->stats.total_connections = internal_metrics->total_connections.sum();
   metrics->stats.available_connections = internal_metrics->available_connections.sum();
   metrics->stats.exceeded_write_bytes_water_mark = 0; // Deprecated
-  metrics->stats.exceeded_pending_requests_water_mark = internal_metrics->exceeded_pending_requests_water_mark.sum();
+  metrics->stats.exceeded_pending_requests_water_mark = 0; // Deprecated
 
   metrics->errors.connection_timeouts = internal_metrics->connection_timeouts.sum();
   metrics->errors.pending_request_timeouts = internal_metrics->pending_request_timeouts.sum();
@@ -911,8 +911,7 @@ void Session::on_execute(uv_async_t* data) {
         size_t start = session->current_io_worker_;
         for (size_t i = 0, size = session->io_workers_.size(); i < size; ++i) {
           const IOWorker::Ptr& io_worker = session->io_workers_[start % size];
-          if (io_worker->is_host_available(request_handler->current_host()->address()) &&
-              io_worker->execute(request_handler)) {
+          if (io_worker->execute(request_handler)) {
             session->current_io_worker_ = (start + 1) % size;
             is_done = true;
             break;

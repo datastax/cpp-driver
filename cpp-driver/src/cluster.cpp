@@ -188,21 +188,13 @@ CassError cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
 
 CassError cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
                                                             unsigned num_requests) {
-  if (num_requests == 0 ||
-      num_requests < cluster->config().pending_requests_low_water_mark()) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_pending_requests_high_water_mark(num_requests);
+  // Deprecated
   return CASS_OK;
 }
 
 CassError cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
                                                            unsigned num_requests) {
-  if (num_requests == 0 ||
-      num_requests > cluster->config().pending_requests_high_water_mark()) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_pending_requests_low_water_mark(num_requests);
+  // Deprecated
   return CASS_OK;
 }
 

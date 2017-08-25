@@ -417,7 +417,7 @@ typedef struct CassMetrics_ {
   struct {
     cass_uint64_t total_connections; /**< The total number of connections */
     cass_uint64_t available_connections; /**< The number of connections available to take requests */
-    cass_uint64_t exceeded_pending_requests_water_mark; /**< Occurrences when requests exceeded a pool's water mark */
+    cass_uint64_t exceeded_pending_requests_water_mark; /**< Deprecated */
     cass_uint64_t exceeded_write_bytes_water_mark; /**< Deprecated */
   } stats;
 
@@ -1702,13 +1702,16 @@ CASS_DEPRECATED(cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
-                                                  unsigned num_requests);
+CASS_DEPRECATED(cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
+                                                                  unsigned num_requests));
 
 /**
  * Sets the low water mark for the number of requests queued waiting
@@ -1720,13 +1723,16 @@ cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
-                                                 unsigned num_requests);
+CASS_DEPRECATED(cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
+                                                                 unsigned num_requests));
 
 /**
  * Sets the timeout for connecting to a node.
