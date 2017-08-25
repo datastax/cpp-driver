@@ -85,7 +85,6 @@ public:
 
 private:
   void remove_pending_request(PoolCallback* callback);
-  void set_is_available(bool is_available);
 
   void maybe_notify_ready();
   void maybe_close();
@@ -117,7 +116,6 @@ private:
   ConnectionVec connections_;
   ConnectionVec pending_connections_;
   List<RequestCallback> pending_requests_;
-  bool is_available_;
   bool is_initial_connection_;
   bool is_pending_flush_;
   bool cancel_reconnect_;

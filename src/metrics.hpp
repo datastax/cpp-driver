@@ -465,7 +465,6 @@ public:
     , request_rates(&thread_state_)
     , total_connections(&thread_state_)
     , available_connections(&thread_state_)
-    , exceeded_pending_requests_water_mark(&thread_state_)
     , connection_timeouts(&thread_state_)
     , pending_request_timeouts(&thread_state_)
     , request_timeouts(&thread_state_) {}
@@ -485,7 +484,6 @@ public:
 
   Counter total_connections;
   Counter available_connections;
-  Counter exceeded_pending_requests_water_mark;
 
   Counter connection_timeouts;
   Counter pending_request_timeouts;
