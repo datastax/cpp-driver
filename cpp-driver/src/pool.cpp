@@ -117,7 +117,6 @@ Pool::Pool(IOWorker* io_worker,
     , metrics_(io_worker->metrics())
     , state_(POOL_STATE_NEW)
     , error_code_(Connection::CONNECTION_OK)
-    , available_connection_count_(0)
     , is_available_(false)
     , is_initial_connection_(is_initial_connection)
     , is_pending_flush_(false)
@@ -240,7 +239,6 @@ void Pool::remove_pending_request(PoolCallback* callback) {
 void Pool::set_is_available(bool is_available) {
   if (is_available) {
     if (!is_available_ &&
-        available_connection_count_ > 0 &&
         pending_requests_.size() < config_.pending_requests_low_water_mark()) {
       io_worker_->set_host_is_available(host_->address(), true);
       is_available_ = true;
@@ -417,23 +415,6 @@ void Pool::on_close(Connection* connection) {
   } else {
     maybe_notify_ready();
     maybe_close();
-  }
-}
-
-void Pool::on_availability_change(Connection* connection) {
-  if (connection->is_available()) {
-    ++available_connection_count_;
-    set_is_available(true);
-
-    metrics_->available_connections.inc();
-  } else {
-    --available_connection_count_;
-    assert(available_connection_count_ >= 0);
-    if (available_connection_count_ == 0) {
-      set_is_available(false);
-    }
-
-    metrics_->available_connections.dec();
   }
 }
 

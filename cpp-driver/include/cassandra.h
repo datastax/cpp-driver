@@ -418,7 +418,7 @@ typedef struct CassMetrics_ {
     cass_uint64_t total_connections; /**< The total number of connections */
     cass_uint64_t available_connections; /**< The number of connections available to take requests */
     cass_uint64_t exceeded_pending_requests_water_mark; /**< Occurrences when requests exceeded a pool's water mark */
-    cass_uint64_t exceeded_write_bytes_water_mark; /**< Occurrences when number of bytes exceeded a connection's water mark */
+    cass_uint64_t exceeded_write_bytes_water_mark; /**< Deprecated */
   } stats;
 
   struct {
@@ -1661,13 +1661,16 @@ cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_bytes
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
-                                             unsigned num_bytes);
+CASS_DEPRECATED(cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
+                                                             unsigned num_bytes));
 
 /**
  * Sets the low water mark for number of bytes outstanding on a
@@ -1678,13 +1681,16 @@ cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_bytes
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
-                                            unsigned num_bytes);
+CASS_DEPRECATED(cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
+                                                            unsigned num_bytes));
 
 /**
  * Sets the high water mark for the number of requests queued waiting
@@ -10586,7 +10592,7 @@ cass_error_desc(CassError error);
  * to call any cass_*() functions after this call.
  *
  * @deprecated This is no longer useful and does nothing. Expect this to be
- * removed in a few releases.
+ * removed in a future release.
  */
 CASS_EXPORT void
 CASS_DEPRECATED(cass_log_cleanup());
@@ -10629,7 +10635,7 @@ cass_log_set_callback(CassLogCallback callback,
  * <b>Default:</b> 2048
  *
  * @deprecated This is no longer useful and does nothing. Expect this to be
- * removed in a few releases.
+ * removed in a future release.
  *
  * @param[in] queue_size
  */
