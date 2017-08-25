@@ -219,7 +219,6 @@ Connection::Connection(uv_loop_t* loop,
     : state_(CONNECTION_STATE_NEW)
     , error_code_(CONNECTION_OK)
     , ssl_error_code_(CASS_OK)
-    , pending_writes_size_(0)
     , loop_(loop)
     , config_(config)
     , metrics_(metrics)
@@ -320,16 +319,6 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
     return request_size;
   }
 
-  pending_writes_size_ += request_size;
-  if (pending_writes_size_ > config_.write_bytes_high_water_mark()) {
-    LOG_WARN("Exceeded write bytes water mark (current: %u water mark: %u) on connection to host %s",
-             static_cast<unsigned int>(pending_writes_size_),
-             config_.write_bytes_high_water_mark(),
-             host_->address_string().c_str());
-    metrics_->exceeded_write_bytes_water_mark.inc();
-    set_state(CONNECTION_STATE_OVERWHELMED);
-  }
-
   LOG_TRACE("Sending message type %s with stream %d on host %s",
             opcode_to_string(callback->request()->opcode()).c_str(),
             stream,
@@ -387,8 +376,6 @@ void Connection::set_state(ConnectionState new_state) {
   // Only update if the state changed
   if (new_state == state_) return;
 
-  ConnectionState old_state = state_;
-
   switch (state_) {
     case CONNECTION_STATE_NEW:
       assert(new_state == CONNECTION_STATE_CONNECTING &&
@@ -422,18 +409,9 @@ void Connection::set_state(ConnectionState new_state) {
       break;
 
     case CONNECTION_STATE_READY:
-      assert((new_state == CONNECTION_STATE_OVERWHELMED ||
-              new_state == CONNECTION_STATE_CLOSE ||
+      assert((new_state == CONNECTION_STATE_CLOSE ||
               new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
              "Invalid connection state after ready");
-      state_ = new_state;
-      break;
-
-    case CONNECTION_STATE_OVERWHELMED:
-      assert((new_state == CONNECTION_STATE_READY ||
-              new_state == CONNECTION_STATE_CLOSE ||
-              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
-             "Invalid connection state after being overwhelmed");
       state_ = new_state;
       break;
 
@@ -444,11 +422,6 @@ void Connection::set_state(ConnectionState new_state) {
     case CONNECTION_STATE_CLOSE_DEFUNCT:
       assert(false && "No state change after close defunct");
       break;
-  }
-
-  // Only change the availability if the state changes to/from being ready
-  if (new_state == CONNECTION_STATE_READY || old_state == CONNECTION_STATE_READY) {
-    listener_->on_availability_change(this);
   }
 }
 
@@ -985,13 +958,6 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
   PendingWrite* pending_write = static_cast<PendingWrite*>(req->data);
 
   Connection* connection = static_cast<Connection*>(pending_write->connection_);
-
-  connection->pending_writes_size_ -= pending_write->size();
-  if (connection->pending_writes_size_ <
-      connection->config_.write_bytes_low_water_mark() &&
-      connection->state_ == CONNECTION_STATE_OVERWHELMED) {
-    connection->set_state(CONNECTION_STATE_READY);
-  }
 
   while (!pending_write->callbacks_.is_empty()) {
     RequestCallback::Ptr callback(pending_write->callbacks_.front());

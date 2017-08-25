@@ -95,7 +95,6 @@ private:
   // Connection listener methods
   virtual void on_ready(Connection* connection);
   virtual void on_close(Connection* connection);
-  virtual void on_availability_change(Connection* connection);
   virtual void on_event(EventResponse* response) {}
 
   static void on_pending_request_timeout(Timer* timer);
@@ -118,7 +117,6 @@ private:
   ConnectionVec connections_;
   ConnectionVec pending_connections_;
   List<RequestCallback> pending_requests_;
-  int available_connection_count_;
   bool is_available_;
   bool is_initial_connection_;
   bool is_pending_flush_;

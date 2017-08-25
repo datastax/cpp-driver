@@ -191,7 +191,6 @@ private:
   // Connection listener methods
   virtual void on_ready(Connection* connection);
   virtual void on_close(Connection* connection);
-  virtual void on_availability_change(Connection* connection) {}
   virtual void on_event(EventResponse* response);
 
   static void on_reconnect(Timer* timer);
