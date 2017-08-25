@@ -42,7 +42,8 @@ TEST(StreamManagerUnitTest, Simple)
 
     for (size_t i = 0; i < streams.max_streams(); ++i) {
       int item = -1;
-      EXPECT_TRUE(streams.get_pending_and_release(i, item));
+      EXPECT_TRUE(streams.get(i, item));
+      streams.release(i);
       EXPECT_GE(item, 0);
     }
 
