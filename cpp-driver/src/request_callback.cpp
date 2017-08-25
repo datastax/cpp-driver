@@ -142,6 +142,7 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
       } else {
         assert(false && "Invalid request state after cancelled (read before write)");
       }
+      break;
 
     case REQUEST_STATE_CANCELLED_READING:
       if (next_state == REQUEST_STATE_CANCELLED) {
