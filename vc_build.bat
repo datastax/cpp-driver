@@ -78,9 +78,10 @@ SET "DOWNLOAD_URL_PYTHON=https://www.python.org/downloads/"
 SET DEVENV=devenv.exe
 SET MSBUILD=msbuild.exe
 SET NMAKE=nmake.exe
-SET "DOWNLOAD_URL_VISUAL_STUDIO=https://go.microsoft.com/fwlink/?LinkId=615464&clcid=0x409"
+SET "DOWNLOAD_URL_VISUAL_STUDIO=https://www.visualstudio.com/thank-you-downloading-visual-studio/?sku=Community&rel=15"
 SET ZIP=7z.exe
 SET "DOWNLOAD_URL_ZIP=http://www.7-zip.org/download.html"
+SET "VSWHERE=!ABSOLUTE_BATCH_DIRECTORY!\bin\vswhere.exe"
 
 REM Minimum version build dependency constants
 SET MINIMUM_VERSION_REQUIRED_CMAKE=3.4.0
@@ -105,8 +106,8 @@ SET BOOST_DIRECTORY=boost
 SET BOOST_BRANCH_TAG_VERSION=boost-1.64.0
 SET LIBUV_REPOSITORY_URL=https://github.com/libuv/libuv.git
 SET LIBUV_DIRECTORY=libuv
-SET LIBUV_BRANCH_TAG_VERSION=v1.13.1
-SET LIBUV_PACKAGE_VERSION=1.13.1
+SET LIBUV_BRANCH_TAG_VERSION=v1.14.0
+SET LIBUV_PACKAGE_VERSION=1.14.0
 SET GYP_REPOSITORY_URL=https://chromium.googlesource.com/external/gyp.git
 SET LIBSSH2_REPOSITORY_URL=https://github.com/libssh2/libssh2.git
 SET LIBSSH2_DIRECTORY=libssh2
@@ -205,11 +206,11 @@ IF NOT [%1] == [] (
     SET TARGET_ARCHITECTURE=!ARCHITECTURE_64BIT!
   )
 
-  REM Target compiler (VS/Windows SDK)
+  REM Target compiler (Visual Studio)
   IF "!ARGUMENT!" == "!ARGUMENT_TARGET_COMPILER!" (
     REM Make sure the compiler is valid
     IF [%2] == [] (
-      ECHO Invalid Compiler: Visual Studio/Windows SDK version must be supplied
+      ECHO Invalid Compiler: Visual Studio version must be supplied
       EXIT /B !EXIT_CODE_MISSING_VISUAL_STUDIO!
     ) ELSE (
       REM Get the compiler version to use
@@ -221,8 +222,8 @@ IF NOT [%1] == [] (
         IF NOT "!TARGET_COMPILER_VERSION!" == "110" (
           IF NOT "!TARGET_COMPILER_VERSION!" == "120" (
             IF NOT "!TARGET_COMPILER_VERSION!" == "140" (
-              IF NOT "!TARGET_COMPILER_VERSION!" == "WINSDK" (
-                ECHO Invalid Compiler Version: 100, 110, 120, 140, or WINSDK must be supplied
+              IF NOT "!TARGET_COMPILER_VERSION!" == "141" (
+                ECHO Invalid Compiler Version: 100, 110, 120, 140, or 141 must be supplied
                 EXIT /B !EXIT_CODE_MISSING_VISUAL_STUDIO!
               )
             )
@@ -402,37 +403,65 @@ FOR %%A IN (!OPENSSL_VERSION!) DO (
   SET "OPENSSL_BRANCH_TAG_VERSION=!OPENSSL_%%A_BRANCH_TAG_VERSION!"
 )
 
-REM Determine Visual Studio Version(s) available
-SET "VISUAL_STUDIO_INTERNAL_VERSIONS=140 120 110 100"
-SET "VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS=14 12 11 10"
-SET "VISUAL_STUDIO_VERSIONS=2015 2013 2012 2010"
+REM Create a listing of all the supported Visual Studio versions
+SET "LEGACY_VISUAL_STUDIO_INTERNAL_VERSIONS=140 120 110 100"
+SET "LEGACY_VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS=14 12 11 10"
+SET "LEGACY_VISUAL_STUDIO_VERSIONS=2015 2013 2012 2010"
+SET "MODERN_VISUAL_STUDIO_INTERNAL_VERSIONS=141"
+SET "MODERN_VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS=15"
+SET "MODERN_VISUAL_STUDIO_VERSIONS=2017"
+SET "VISUAL_STUDIO_INTERNAL_VERSIONS=!MODERN_VISUAL_STUDIO_INTERNAL_VERSIONS! !LEGACY_VISUAL_STUDIO_INTERNAL_VERSIONS!"
+SET "VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS=!MODERN_VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS! !LEGACY_VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS!"
+SET "VISUAL_STUDIO_VERSIONS=!MODERN_VISUAL_STUDIO_VERSIONS! !LEGACY_VISUAL_STUDIO_VERSIONS!"
+
+REM Determine Visual Studio version(s) available (modern 2017+)
 SET INDEX=0
 SET TARGET_COMPILER_VERSION_FOUND=!FALSE!
-FOR %%A IN (!VISUAL_STUDIO_INTERNAL_VERSIONS!) DO (
+SET FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS=
+FOR %%A IN (!MODERN_VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS!) DO (
   SET /A INDEX+=1
+  FOR /F "TOKENS=*" %%B IN ('!VSWHERE! -version %%A -requires Microsoft.VisualStudio.Workload.NativeDesktop -property installationPath') DO (
+    CALL :GETARRAYELEMENT MODERN_VISUAL_STUDIO_INTERNAL_VERSIONS !INDEX! VISUAL_STUDIO_INTERNAL_VERSION
+    SET "AVAILABLE_VISUAL_STUDIO_VERSIONS=!AVAILABLE_VISUAL_STUDIO_VERSIONS! !INDEX!"
+    SET "FOUND_MODERN_VISUAL_STUDIO_INTERNAL_VERSIONS=!FOUND_MODERN_VISUAL_STUDIO_INTERNAL_VERSIONS! !VISUAL_STUDIO_INTERNAL_VERSION!"
+
+    REM Determine if targeted version can be detected
+    IF !VISUAL_STUDIO_INTERNAL_VERSION! EQU !TARGET_COMPILER_VERSION! (
+      REM Indicate the compiler was found and set the user choice
+      SET TARGET_COMPILER_VERSION_FOUND=!TRUE!
+      SET USER_CHOICE_ENTRY=!INDEX!
+    )
+  )
+)
+SET "FOUND_MODERN_VISUAL_STUDIO_INTERNAL_VERSIONS=!FOUND_MODERN_VISUAL_STUDIO_INTERNAL_VERSIONS:~1!"
+
+REM Determine Visual Studio version(s) available (legacy)
+FOR %%A IN (!VISUAL_STUDIO_INTERNAL_VERSIONS!) DO (
   IF DEFINED VS%%ACOMNTOOLS (
     SET "AVAILABLE_VISUAL_STUDIO_VERSIONS=!AVAILABLE_VISUAL_STUDIO_VERSIONS! !INDEX!"
 
     REM Determine if targeted version can be detected
-    IF NOT "!TARGET_COMPILER_VERSION!" == "WINSDK" (
-      IF %%A EQU !TARGET_COMPILER_VERSION! (
-        REM Indicate the compiler was found and set the user choice
-        SET TARGET_COMPILER_VERSION_FOUND=!TRUE!
-        SET USER_CHOICE_ENTRY=!INDEX!
-      )
+    IF %%A EQU !TARGET_COMPILER_VERSION! (
+      REM Indicate the compiler was found and set the user choice
+      SET TARGET_COMPILER_VERSION_FOUND=!TRUE!
+      SET USER_CHOICE_ENTRY=!INDEX!
     )
   )
-)
 
-REM Find all available versions of Visual Studio
-SET FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS=
-FOR /F "TOKENS=1,2 DELIMS==" %%A IN ('SET VS') DO (
-  SET EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION=%%A
-  SET EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION=!EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION:VS=!
-  SET EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION=!EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION:COMNTOOLS=!
-  SET "FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS=!FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS! !EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION!"
+  SET /A INDEX+=1
 )
-SET "FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS=!FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS:~1!"
+SET "AVAILABLE_VISUAL_STUDIO_VERSIONS=!AVAILABLE_VISUAL_STUDIO_VERSIONS:~1!"
+
+REM Find all available versions of legacy Visual Studio
+FOR /F "TOKENS=1,2 DELIMS==" %%A IN ('SET VS') DO (
+  IF NOT "%%A" == "VSWHERE" (
+    SET EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION=%%A
+    SET EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION=!EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION:VS=!
+    SET EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION=!EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION:COMNTOOLS=!
+    SET "FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS=!FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS! !EXTRACT_VISUAL_STUDIO_INTERNAL_VERSION!"
+  )
+)
+SET "FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS=!FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS:~1! !FOUND_MODERN_VISUAL_STUDIO_INTERNAL_VERSIONS!"
 
 REM Remove versions of Visual Studio that are not applicable for C/C++ driver
 FOR %%A IN (!FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS!) DO (
@@ -444,27 +473,6 @@ FOR %%A IN (!FOUND_VISUAL_STUDIO_INTERNAL_VERSIONS!) DO (
   IF !KEEP_VISUAL_STUDIO_VERSION! EQU !FALSE! SET VS%%ACOMNTOOLS=
 )
 
-REM Determine Windows SDK Version(s) available
-SET "WINDOWS_SDK_VERSIONS=v7.1 v8.0 v8.1"
-IF DEFINED WindowsSDKDir (
-  IF DEFINED WindowsSDKVersionOverride (
-    CALL :GETVALUE WindowsSDKVersionOverride WINDOWS_SDK_VERSION
-    SET INDEX=0
-    FOR %%A IN (!WINDOWS_SDK_VERSIONS!) DO (
-      SET /A INDEX+=1
-      CALL :GETARRAYELEMENT WINDOWS_SDK_VERSIONS !INDEX! CHECK_WINDOWS_SDK_VERSION
-      IF "!WINDOWS_SDK_VERSION!" == "!CHECK_WINDOWS_SDK_VERSION!" (
-        SET WINDOWS_SDK_FOUND=!TRUE!
-
-        REM Determine if targeted version can be detected
-        IF "!TARGET_COMPILER_VERSION!" == "WINSDK" (
-          SET TARGET_COMPILER_VERSION_FOUND=!TRUE!
-        )
-      )
-    )
-  )
-)
-
 REM Determine if targeted compiler was detected
 IF NOT "!TARGET_COMPILER_VERSION!" == "" (
   IF !TARGET_COMPILER_VERSION_FOUND! EQU !FALSE! (
@@ -472,18 +480,17 @@ IF NOT "!TARGET_COMPILER_VERSION!" == "" (
   )
 )
 
-REM Determine the number of Visual Studio (and/or Windows SDK) version(s)
+REM Determine the number of Visual Studio version(s)
 set NUMBER_OF_VERSIONS=0
 FOR %%A IN (!AVAILABLE_VISUAL_STUDIO_VERSIONS!) DO (
   SET /A NUMBER_OF_VERSIONS+=1
 )
-IF DEFINED WINDOWS_SDK_FOUND SET /A NUMBER_OF_VERSIONS+=1
 
 REM Determine if build can proceed
 IF !NUMBER_OF_VERSIONS! EQU 0 (
-  ECHO Visual Studio Not Found: Install Visual Studio 2010 - 2015 to complete build
+  ECHO Visual Studio Not Found: Install Visual Studio 2010 - 2017 to complete build
   ECHO	!DOWNLOAD_URL_VISUAL_STUDIO!
-  CHOICE /N /T 15 /D N /M "Would you like to download Visual Studio 2015 Express now?"
+  CHOICE /N /T 15 /D N /M "Would you like to download Visual Studio 2017 Community now?"
   IF !ERRORLEVEL! EQU !YES! START !DOWNLOAD_URL_VISUAL_STUDIO!
   EXIT /B !EXIT_CODE_MISSING_VISUAL_STUDIO!
 )
@@ -595,14 +602,6 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
       ECHO !INDEX!^) Visual Studio !VISUAL_STUDIO_VERSION!
     )
 
-    REM Display discovered Windows SDK version for selection
-    IF DEFINED WINDOWS_SDK_FOUND (
-      SET /A INDEX+=1
-      SET "SELECTION_OPTIONS=!SELECTION_OPTIONS!!INDEX!"
-      SET WINDOWS_SDK_SELECTION_OPTION=!INDEX!
-      ECHO !INDEX!^) Windows SDK !WINDOWS_SDK_VERSION!
-    )
-
     REM Add the exit option
     ECHO E^) Exit
     SET "SELECTION_OPTIONS=!SELECTION_OPTIONS!E"
@@ -610,7 +609,6 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
     REM Determine if the targeted compiler should be used
     IF !TARGET_COMPILER_VERSION_FOUND! EQU !TRUE! (
       REM Make selection choice for the user
-      IF "!TARGET_COMPILER_VERSION!" == "WINSDK" SET USER_CHOICE_ENTRY=!WINDOWS_SDK_SELECTION_OPTION!
       ECHO Please Select a Compiler: !USER_CHOICE_ENTRY!
     ) ELSE (
       REM Present selection to the user
@@ -623,41 +621,26 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
     ECHO.
 
     REM Determine the selection
-    IF !USER_CHOICE_ENTRY! NEQ !WINDOWS_SDK_SELECTION_OPTION! (
-      CALL :GETARRAYELEMENT AVAILABLE_VISUAL_STUDIO_VERSIONS !USER_CHOICE_ENTRY! USER_SELECTION
-      CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_VERSIONS !USER_SELECTION! VISUAL_STUDIO_INTERNAL_VERSION
-      CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS !USER_SELECTION! VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION
-      CALL :GETARRAYELEMENT VISUAL_STUDIO_VERSIONS !USER_SELECTION! VISUAL_STUDIO_VERSION
+    CALL :GETARRAYELEMENT AVAILABLE_VISUAL_STUDIO_VERSIONS !USER_CHOICE_ENTRY! USER_SELECTION
+    CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_VERSIONS !USER_SELECTION! VISUAL_STUDIO_INTERNAL_VERSION
+    CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS !USER_SELECTION! VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION
+    CALL :GETARRAYELEMENT VISUAL_STUDIO_VERSIONS !USER_SELECTION! VISUAL_STUDIO_VERSION
 
-      REM Ensure the other versions of VSXXXCOMNTOOLS are undefined (unset)
-      FOR %%A IN (!VISUAL_STUDIO_INTERNAL_VERSIONS!) DO (
-        IF NOT %%A EQU !VISUAL_STUDIO_INTERNAL_VERSION! SET VS%%ACOMNTOOLS=
-      )
-
-      REM Ensure the Windows SDK version is undefined (unset)
-      IF DEFINED WindowsSDKDir SET WindowsSDKDir=
-    ) ELSE (
-      SET WINDOWS_SDK_SELECTED=!TRUE!
+    REM Ensure the other versions of VSXXXCOMNTOOLS are undefined (unset)
+    FOR %%A IN (!VISUAL_STUDIO_INTERNAL_VERSIONS!) DO (
+      IF NOT %%A EQU !VISUAL_STUDIO_INTERNAL_VERSION! SET VS%%ACOMNTOOLS=
     )
+
+    REM Ensure the Windows SDK version is undefined (unset)
+    IF DEFINED WindowsSDKDir SET WindowsSDKDir=
   ) ELSE (
-    IF NOT DEFINED WINDOWS_SDK_FOUND (
-      CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_VERSIONS !AVAILABLE_VISUAL_STUDIO_VERSIONS! VISUAL_STUDIO_INTERNAL_VERSION
-      CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS !AVAILABLE_VISUAL_STUDIO_VERSIONS! VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION
-      CALL :GETARRAYELEMENT VISUAL_STUDIO_VERSIONS !AVAILABLE_VISUAL_STUDIO_VERSIONS! VISUAL_STUDIO_VERSION
-    ) ELSE (
-      SET WINDOWS_SDK_SELECTED=!TRUE!
-    )
-  )
-
-  REM Ensure the environment is setup correctly; if Windows SDK build environment
-  IF DEFINED WINDOWS_SDK_FOUND (
-    CALL :CONFIGUREWINDOWSSDKENVIRONMENT !BUILD_TYPE! !TARGET_ARCHITECTURE!
+    CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_VERSIONS !AVAILABLE_VISUAL_STUDIO_VERSIONS! VISUAL_STUDIO_INTERNAL_VERSION
+    CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS !AVAILABLE_VISUAL_STUDIO_VERSIONS! VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION
+    CALL :GETARRAYELEMENT VISUAL_STUDIO_VERSIONS !AVAILABLE_VISUAL_STUDIO_VERSIONS! VISUAL_STUDIO_VERSION
   )
 
   REM Setup the Visual Studio environment for compiling
-  IF NOT DEFINED WINDOWS_SDK_SELECTED (
-    CALL :CONFIGUREVISUALSTUDIOENVIRONMENT !VISUAL_STUDIO_INTERNAL_VERSION! !TARGET_ARCHITECTURE!
-  )
+  CALL :CONFIGUREVISUALSTUDIOENVIRONMENT !VISUAL_STUDIO_INTERNAL_VERSION! !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! !TARGET_ARCHITECTURE!
   CALL :GETFULLPATH "!DEVENV!" DEVENV_FOUND
   CALL :GETFULLPATH "!MSBUILD!" MSBUILD_FOUND
   CALL :GETFULLPATH "!NMAKE!" NMAKE_FOUND
@@ -681,11 +664,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
   ECHO Generate Solution          !GENERATE_SOLUTION!
   ECHO Target Architecture:       !TARGET_ARCHITECTURE!
   ECHO Use Boost Atomic:          !USE_BOOST_ATOMIC!
-  IF NOT DEFINED WINDOWS_SDK_SELECTED (
-    ECHO Visual Studio:             !VISUAL_STUDIO_VERSION!
-  ) ELSE (
-    ECHO Windows SDK:               !WINDOWS_SDK_VERSION!
-  )
+  ECHO Visual Studio:             !VISUAL_STUDIO_VERSION!
   ECHO.
 ) ELSE (
   REM Ensure package properties are set (ignore commandline arguments)
@@ -844,9 +823,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
 
   REM Determine if libuv needs to be built
   IF NOT EXIST "!ABSOLUTE_LIBUV_LIBRARY_DIRECTORY!" (
-    SET IS_WINDOWS_SDK_ENABLED=!FALSE!
-    IF DEFINED WINDOWS_SDK_SELECTED SET IS_WINDOWS_SDK_ENABLED=!TRUE!
-    CALL :BUILDLIBUV "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" "!ABSOLUTE_LIBUV_LIBRARY_DIRECTORY!" !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !IS_WINDOWS_SDK_ENABLED! !FALSE! "!LOG_LIBUV_BUILD!"
+    CALL :BUILDLIBUV "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" "!ABSOLUTE_LIBUV_LIBRARY_DIRECTORY!" !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !VISUAL_STUDIO_VERSION! !FALSE! "!LOG_LIBUV_BUILD!"
     IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
   )
 
@@ -1017,7 +994,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
     REM Iterate through all available target architectures
     FOR %%C IN (!AVAILABLE_TARGET_ARCHITECTURES!) DO (
       REM Setup the Visual Studio environment
-      CALL :CONFIGUREVISUALSTUDIOENVIRONMENT !VISUAL_STUDIO_INTERNAL_VERSION! %%C
+      CALL :CONFIGUREVISUALSTUDIOENVIRONMENT !VISUAL_STUDIO_INTERNAL_VERSION! !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! %%C
       CALL :GETFULLPATH "!DEVENV!" DEVENV_FOUND
       CALL :GETFULLPATH "!MSBUILD!" MSBUILD_FOUND
       CALL :GETFULLPATH "!NMAKE!" NMAKE_FOUND
@@ -1040,7 +1017,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
         SET "ABSOLUTE_DEPENDENCY_PACKAGE_OPENSSL_INSTALLATION_DIRECTORY=!ABSOLUTE_PACKAGES_DIRECTORY!\!DEPENDENCY_PACKAGE_OPENSSL_INSTALLATION_DIRECTORY!"
 
         REM Build the dependencies and driver
-        CALL :BUILDLIBUV "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_LIBUV_INSTALLATION_DIRECTORY!" %%C %%D !FALSE! !TRUE! "!LOG_LIBUV_BUILD!"
+        CALL :BUILDLIBUV "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_LIBUV_INSTALLATION_DIRECTORY!" %%C %%D !VISUAL_STUDIO_VERSION! !TRUE! "!LOG_LIBUV_BUILD!"
         IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
         CALL :BUILDOPENSSL "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_OPENSSL_INSTALLATION_DIRECTORY!" "" %%C %%D !FALSE! !OPENSSL_VERSION! !TRUE! "!LOG_OPENSSL_BUILD!"
         IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
@@ -1170,7 +1147,7 @@ REM Display the help message and exit with error code
   ECHO     !ARGUMENT_DISABLE_CLEAN_BUILD!                   Disable clean build
   ECHO     !ARGUMENT_BUILD_DEPENDENCIES_ONLY!               Build dependencies only
   ECHO     !ARGUMENT_OPENSSL_VERSION!                 OpenSSL version 1.0, 1.1 ^(default: 1.0^)
-  ECHO     !ARGUMENT_TARGET_COMPILER! [version]       140, 120, 110, 100, or WINSDK
+  ECHO     !ARGUMENT_TARGET_COMPILER! [version]       141, 140, 120, 110, or 100
   ECHO     !ARGUMENT_ENABLE_EXAMPLES!                 Enable example builds
   ECHO     !ARGUMENT_ENABLE_BUILD_PACKAGES! [version]       Enable package generation
   ECHO     !ARGUMENT_ENABLE_ZLIB!                     Enable zlib
@@ -1260,39 +1237,42 @@ REM @param return-patch Patch version number parsed from version
   )
   EXIT /B
 
-REM Configure the Windows SDK environment
-REM
-REM @param build-type Debug or release
-REM @param target-architecture 32 or 64-bit
-:CONFIGUREWINDOWSSDKENVIRONMENT [build-type] [target-architecture]
-  REM Ensure Windows SDK environment is configured correctly
-  IF "%~1" == "!BUILD_TYPE_DEBUG!" CALL SetEnv /Debug > NUL 2>&1
-  IF "%~1" == "!BUILD_TYPE_RELEASE!" CALL SetEnv /Release > NUL 2>&1
-  IF "%~2" == "!ARCHITECTURE_32BIT!" CALL SetEnv /x86 > NUL 2>&1
-  IF "%~2" == "!ARCHITECTURE_64BIT!" CALL SetEnv /x64 > NUL 2>&1
-  EXIT /B
-
 REM Configure Visual Studio environment
 REM
-REM @param internal-version Visual Studio internal version (e.b 100, 110,
-REM                         120, 140, WINSDK)
+REM @param internal-version Visual Studio internal version (e.b 100, 110, 120,
+REM                         140, 141)
 REM @param target-architecture 32 or 64-bit
-:CONFIGUREVISUALSTUDIOENVIRONMENT [internal-version] [target-architecture]
-  SET VISUAL_STUDIO_ENVIRONMENT_VARIABLE=VS%~1COMNTOOLS
-  CALL :GETVALUE !VISUAL_STUDIO_ENVIRONMENT_VARIABLE! VISUAL_STUDIO_COMMON_TOOLS_DIRECTORY
-  IF %~2 EQU !ARCHITECTURE_32BIT! (
-    IF NOT EXIST "!VISUAL_STUDIO_COMMON_TOOLS_DIRECTORY!\vsvars32.bat" (
-      ECHO Unable to Setup 32-bit Build Environment: !VISUAL_STUDIO_COMMON_TOOLS_DIRECTORY!\vsvars32.bat is missing
-      EXIT /B !EXIT_CODE_MISSING_VISUAL_STUDIO!
+:CONFIGUREVISUALSTUDIOENVIRONMENT [internal-version] [internal-shorthand-version] [target-architecture]
+  REM Determine if modern or legacy Visual Studio is being used
+  IF %~1 GEQ 141 (
+    REM Get the auxiliary build directory (legacy style environment scripts) 
+    FOR /F "TOKENS=*" %%A IN ('!VSWHERE! -version %~2 -requires Microsoft.VisualStudio.Workload.NativeDesktop -property installationPath') DO SET "VISUAL_STUDIO_COMMON_AUXILIARY_TOOLS_DIRECTORY=%%A\VC\Auxiliary\Build"
+
+    REM Determine the proper environment script to execute
+    IF %~3 EQU !ARCHITECTURE_32BIT! (
+      SET "VISUAL_STUDIO_ENVIRONMENT_SCRIPT=!VISUAL_STUDIO_COMMON_AUXILIARY_TOOLS_DIRECTORY!\vcvars32.bat"
+    ) ELSE (
+      SET "VISUAL_STUDIO_ENVIRONMENT_SCRIPT=!VISUAL_STUDIO_COMMON_AUXILIARY_TOOLS_DIRECTORY!\vcvarsx86_amd64.bat"
     )
-    CALL "!VISUAL_STUDIO_COMMON_TOOLS_DIRECTORY!\vsvars32.bat"
   ) ELSE (
-    IF NOT EXIST "!VISUAL_STUDIO_COMMON_TOOLS_DIRECTORY!\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat" (
-      ECHO Unable to Setup 64-bit Build Environment: !VISUAL_STUDIO_COMMON_TOOLS_DIRECTORY!\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat is missing
-      EXIT /B !EXIT_CODE_MISSING_VISUAL_STUDIO!
+    REM Get the tools directory
+    SET VISUAL_STUDIO_ENVIRONMENT_VARIABLE=VS%~1COMNTOOLS
+    CALL :GETVALUE !VISUAL_STUDIO_ENVIRONMENT_VARIABLE! VISUAL_STUDIO_COMMON_AUXILIARY_TOOLS_DIRECTORY
+
+    REM Determine the proper environment script to execute
+    IF %~3 EQU !ARCHITECTURE_32BIT! (
+      SET "VISUAL_STUDIO_ENVIRONMENT_SCRIPT=!VISUAL_STUDIO_COMMON_AUXILIARY_TOOLS_DIRECTORY!\vsvars32.bat"
+    ) ELSE (
+      SET "VISUAL_STUDIO_ENVIRONMENT_SCRIPT=!VISUAL_STUDIO_COMMON_AUXILIARY_TOOLS_DIRECTORY!\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat"
     )
-    CALL "!VISUAL_STUDIO_COMMON_TOOLS_DIRECTORY!\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat"
   )
+
+  REM Execute the environment script for Visual Studio
+  IF NOT EXIST "!VISUAL_STUDIO_ENVIRONMENT_SCRIPT!" (
+    ECHO Unable to Setup %~3-bit Build Environment: !VISUAL_STUDIO_ENVIRONMENT_SCRIPT! is missing
+  )
+  CALL "!VISUAL_STUDIO_ENVIRONMENT_SCRIPT!"
+  ECHO.
   EXIT /B
 
 REM Clean/Delete a directory
@@ -1325,11 +1305,11 @@ REM @param source-directory Location of libuv source
 REM @param install-directory Location to install libuv library
 REM @param target-architecture 32 or 64-bit
 REM @param library-type Shared or static
-REM @param is-windows-sdk True if building with Windows SDK; false otherwise
+REM @param visual-studio-version Shortened Visual Studio version
 REM @param is-clean-after-install True if clean should be performed after
 REM                               install; false otherwise
 REM @param log-filename Absolute path and filename for log output
-:BUILDLIBUV [source-directory] [install-directory] [target-architecture] [library-type] [is-windows-sdk-build] [is-clean-after-install] [log-filename]
+:BUILDLIBUV [source-directory] [install-directory] [target-architecture] [library-type] [visual-studio-version] [is-clean-after-install] [log-filename]
   REM Create library variables from arguments
   SET "LIBUV_SOURCE_DIRECTORY=%~1"
   SHIFT
@@ -1339,7 +1319,7 @@ REM @param log-filename Absolute path and filename for log output
   SHIFT
   SET "LIBUV_LIBRARY_TYPE=%~1"
   SHIFT
-  SET LIBUV_IS_WINDOWS_SDK_BUILD=%~1
+  SET "LIBUV_VISUAL_STUDIO_VERSION=%~1"
   SHIFT
   SET LIBUV_IS_CLEAN_AFTER_INSTALL=%~1
   SHIFT
@@ -1363,10 +1343,8 @@ REM @param log-filename Absolute path and filename for log output
   ECHO | SET /P="Configuring libuv ... "
   REM Modify the libuv build script to ensure proper Visual Studio detection
   SET LIBUV_VCBUILD_SCRIPT=vcbuild.bat
-  IF "!LIBUV_IS_WINDOWS_SDK_BUILD!" == "!FALSE!" (
-    SET LIBUV_VCBUILD_SCRIPT=vcbuild-modified.bat
-    TYPE vcbuild.bat | FINDSTR /V /C:"if defined WindowsSDKDir goto select-target" | FINDSTR /V /C:"if defined VCINSTALLDIR goto select-target" > !LIBUV_VCBUILD_SCRIPT!
-  )
+  SET LIBUV_VCBUILD_SCRIPT=vcbuild-modified.bat
+  TYPE vcbuild.bat | FINDSTR /V /C:"if defined WindowsSDKDir goto select-target" | FINDSTR /V /C:"if defined VCINSTALLDIR goto select-target" > !LIBUV_VCBUILD_SCRIPT!
   REM Handle long PATH issues that can be manifested by calling vcvarsall.bat
   IF DEFINED INCLUDE (
     SET "STORED_INCLUDE=!INCLUDE!"
@@ -1384,8 +1362,8 @@ REM @param log-filename Absolute path and filename for log output
     SET BEFORE_BATCH_CALL_PATH=!PATH!
     SET PATH=!STORED_PATH!
   )
-  ECHO !LIBUV_VCBUILD_SCRIPT! release nobuild !LIBUV_TARGET_ARCHITECTURE! !LIBUV_LIBRARY_TYPE! >> "!LIBUV_LOG_FILENAME!"
-  CALL !LIBUV_VCBUILD_SCRIPT! release nobuild !LIBUV_TARGET_ARCHITECTURE! !LIBUV_LIBRARY_TYPE! >> "!LIBUV_LOG_FILENAME!" 2>&1
+  ECHO !LIBUV_VCBUILD_SCRIPT! release nobuild vs!LIBUV_VISUAL_STUDIO_VERSION! !LIBUV_TARGET_ARCHITECTURE! !LIBUV_LIBRARY_TYPE! >> "!LIBUV_LOG_FILENAME!"
+  CALL !LIBUV_VCBUILD_SCRIPT! release nobuild vs!LIBUV_VISUAL_STUDIO_VERSION! !LIBUV_TARGET_ARCHITECTURE! !LIBUV_LIBRARY_TYPE! >> "!LIBUV_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
     ECHO 	See !LIBUV_LOG_FILENAME! for more details
@@ -1630,8 +1608,7 @@ REM @param openssl-library-directory Library directory for OpenSSL
 REM @param zlib-library-directory Library directory for zlib; empty string
 REM                               indicates zlib disabled
 REM @param target-architecture 32 or 64-bit
-REM @param visual-studio-version Shortened Visual Studio version; empty
-REM                              string indicates Windows SDK build
+REM @param visual-studio-version Shortened Visual Studio version
 REM @param is-clean-after-install True if clean should be performed after
 REM                               install; false otherwise
 REM @param log-filename Absolute path and filename for log output
@@ -1657,13 +1634,11 @@ REM @param log-filename Absolute path and filename for log output
   IF NOT EXIST "!LIBSSH2_SOURCE_DIRECTORY!\build" MKDIR "!LIBSSH2_SOURCE_DIRECTORY!\build"
   PUSHD "!LIBSSH2_SOURCE_DIRECTORY!\build" > NUL
   ECHO | SET /P="Configuring libssh2 ... "
-  IF NOT "!LIBSSH2_VISUAL_STUDIO_VERSION!" == "" (
-    SET "LIBSSH2_CMAKE_COMMAND_LINE=-G ^"Visual Studio !LIBSSH2_VISUAL_STUDIO_VERSION!"
-    IF !LIBSSH2_TARGET_ARCHITECTURE! EQU !ARCHITECTURE_64BIT! (
-      SET "LIBSSH2_CMAKE_COMMAND_LINE=!LIBSSH2_CMAKE_COMMAND_LINE! Win64"
-    )
-    SET "LIBSSH2_CMAKE_COMMAND_LINE=!LIBSSH2_CMAKE_COMMAND_LINE!^""
+  SET "LIBSSH2_CMAKE_COMMAND_LINE=-G ^"Visual Studio !LIBSSH2_VISUAL_STUDIO_VERSION!"
+  IF !LIBSSH2_TARGET_ARCHITECTURE! EQU !ARCHITECTURE_64BIT! (
+    SET "LIBSSH2_CMAKE_COMMAND_LINE=!LIBSSH2_CMAKE_COMMAND_LINE! Win64"
   )
+  SET "LIBSSH2_CMAKE_COMMAND_LINE=!LIBSSH2_CMAKE_COMMAND_LINE!^""
   SET "LIBSSH2_CMAKE_COMMAND_LINE=!LIBSSH2_CMAKE_COMMAND_LINE! -DCMAKE_BUILD_TYPE=!BUILD_TYPE_RELEASE! -DCMAKE_INSTALL_PREFIX=^"!LIBSSH2_INSTALL_DIRECTORY!^" -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DOPENSSL_ROOT_DIR=^"!DEPENDENCY_OPENSSL_LIBRARY_DIRECTORY!^""
   IF NOT "!DEPENDENCY_ZLIB_LIBRARY_DIRECTORY!" == "" (
     SET "LIBSSH2_CMAKE_COMMAND_LINE=!LIBSSH2_CMAKE_COMMAND_LINE! -DENABLE_ZLIB_COMPRESSION=ON -DZLIB_ROOT=^"!DEPENDENCY_ZLIB_LIBRARY_DIRECTORY!^""
@@ -1717,8 +1692,7 @@ REM                                  string indicates tests are disabled
 REM @param build-type Debug or release
 REM @param target-architecture 32 or 64-bit
 REM @param library-type Shared or static
-REM @param visual-studio-version Shortened Visual Studio version; empty
-REM                              string indicates Windows SDK build
+REM @param visual-studio-version Shortened Visual Studio version
 REM @param build-examples True to build examples; false otherwise
 REM @param build-test True to build tests; false otherwise
 REM @param build-integration-test True to build integration tests; false
@@ -1777,13 +1751,11 @@ REM @param log-filename Absolute path and filename for log output
   ) ELSE (
     ECHO | SET /P="Configuring driver ... "
   )
-  IF NOT "!DRIVER_VISUAL_STUDIO_VERSION!" == "" (
-    SET "DRIVER_CMAKE_COMMAND_LINE=-G ^"Visual Studio !DRIVER_VISUAL_STUDIO_VERSION!"
-    IF !DRIVER_TARGET_ARCHITECTURE! EQU !ARCHITECTURE_64BIT! (
-      SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! Win64"
-    )
-    SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE!^""
+  SET "DRIVER_CMAKE_COMMAND_LINE=-G ^"Visual Studio !DRIVER_VISUAL_STUDIO_VERSION!"
+  IF !DRIVER_TARGET_ARCHITECTURE! EQU !ARCHITECTURE_64BIT! (
+    SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! Win64"
   )
+  SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE!^""
   IF !DRIVER_BUILD_EXAMPLES! EQU !TRUE! (
     SET DRIVER_BUILD_EXAMPLES=ON
   ) ELSE (

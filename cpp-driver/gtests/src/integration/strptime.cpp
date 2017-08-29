@@ -1,7 +1,6 @@
 #include "strptime.hpp"
 
 #include <stdlib.h>
-#include <time.h>
 #include <ctype.h>
 #include <stddef.h>
 #include <string.h>
@@ -38,7 +37,7 @@
 namespace test {
 
 /* A restricted form of strptime() that doesn't support any locale based format options */
-char *strptime(const char * s, const char * f, struct tm * tm)
+char *strptime(const char * s, const char * f, struct tm * v)
 {
   int i, w, neg, adj, min, range, *dest, dummy;
   int want_century = 0, century = 0, relyear = 0;
@@ -67,38 +66,38 @@ char *strptime(const char * s, const char * f, struct tm * tm)
       want_century |= 2;
       goto numeric_digits;
     case 'd': case 'e':
-      dest = &tm->tm_mday;
+      dest = &v->tm_mday;
       min = 1;
       range = 31;
       goto numeric_range;
     case 'D':
-      s = test::strptime(s, "%m/%d/%y", tm);
+      s = test::strptime(s, "%m/%d/%y", v);
       if (!s) return 0;
       break;
     case 'H':
-      dest = &tm->tm_hour;
+      dest = &v->tm_hour;
       min = 0;
       range = 24;
       goto numeric_range;
     case 'I':
-      dest = &tm->tm_hour;
+      dest = &v->tm_hour;
       min = 1;
       range = 12;
       goto numeric_range;
     case 'j':
-      dest = &tm->tm_yday;
+      dest = &v->tm_yday;
       min = 1;
       range = 366;
       adj = 1;
       goto numeric_range;
     case 'm':
-      dest = &tm->tm_mon;
+      dest = &v->tm_mon;
       min = 1;
       range = 12;
       adj = 1;
       goto numeric_range;
     case 'M':
-      dest = &tm->tm_min;
+      dest = &v->tm_min;
       min = 0;
       range = 60;
       goto numeric_range;
@@ -106,16 +105,16 @@ char *strptime(const char * s, const char * f, struct tm * tm)
       for (; *s && isspace(*s); s++);
       break;
     case 'R':
-      s = test::strptime(s, "%H:%M", tm);
+      s = test::strptime(s, "%H:%M", v);
       if (!s) return 0;
       break;
     case 'S':
-      dest = &tm->tm_sec;
+      dest = &v->tm_sec;
       min = 0;
       range = 61;
       goto numeric_range;
     case 'T':
-      s = test::strptime(s, "%H:%M:%S", tm);
+      s = test::strptime(s, "%H:%M:%S", v);
       if (!s) return 0;
       break;
     case 'U':
@@ -126,7 +125,7 @@ char *strptime(const char * s, const char * f, struct tm * tm)
       range = 54;
       goto numeric_range;
     case 'w':
-      dest = &tm->tm_wday;
+      dest = &v->tm_wday;
       min = 0;
       range = 7;
       goto numeric_range;
@@ -136,7 +135,7 @@ char *strptime(const char * s, const char * f, struct tm * tm)
       want_century |= 1;
       goto numeric_digits;
     case 'Y':
-      dest = &tm->tm_year;
+      dest = &v->tm_year;
       if (w<0) w=4;
       adj = 1900;
       want_century = 0;
@@ -153,7 +152,7 @@ char *strptime(const char * s, const char * f, struct tm * tm)
         *dest = *dest * 10 + *s++ - '0';
       if (*dest - min >= (unsigned)range) return 0;
       *dest -= adj;
-      switch((char *)dest - (char *)tm) {
+      switch((char *)dest - (char *)v) {
       case offsetof(struct tm, tm_yday):
         ;
       }
@@ -174,9 +173,9 @@ char *strptime(const char * s, const char * f, struct tm * tm)
     }
   }
   if (want_century) {
-    tm->tm_year = relyear;
-    if (want_century & 2) tm->tm_year += century * 100 - 1900;
-    else if (tm->tm_year <= 68) tm->tm_year += 100;
+    v->tm_year = relyear;
+    if (want_century & 2) v->tm_year += century * 100 - 1900;
+    else if (v->tm_year <= 68) v->tm_year += 100;
   }
   return (char *)s;
 }

@@ -6,7 +6,6 @@ skip_tags: true
 shallow_clone: false
 cache:
   - C:\projects\dependencies\libs -> appveyor.yml
-os: Visual Studio 2015
 platform:
   - x86
   - x64
@@ -14,29 +13,38 @@ configuration:
 #  - Debug
   - Release
 environment:
+  appveyor_build_worker_cloud: gce
   BOOST_FILENAME_VERSION: 1_64_0
   BOOST_VERSION: 1.64.0
   KERBEROS_VERSION: 4.1
   LIBSSH2_VERSION: 1.8.0
-  LIBUV_VERSION: 1.13.1
+  LIBUV_VERSION: 1.14.0
   OPENSSL_VERSION: 1.0.2l
   DOWNLOADS_URL_PREFIX: http://downloads.datastax.com/cpp-driver/windows/dependencies
   TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX: https://raw.githubusercontent.com/mikefero/cpp-driver-msvc-libs/master
   DEPENDENCIES_LOCATION_PREFIX: C:/projects/dependencies/libs
   CONFIGURATION_COMPLETE: False
   matrix:
-    - CMAKE_GENERATOR: Visual Studio 10 2010
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CMAKE_GENERATOR: Visual Studio 10 2010
       VISUAL_STUDIO_INTERNAL_VERSION: 100
       VISUAL_STUDIO_VERSION: 10.0
-    - CMAKE_GENERATOR: Visual Studio 11 2012
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CMAKE_GENERATOR: Visual Studio 11 2012
       VISUAL_STUDIO_INTERNAL_VERSION: 110
       VISUAL_STUDIO_VERSION: 11.0
-    - CMAKE_GENERATOR: Visual Studio 12 2013
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_GENERATOR: Visual Studio 12 2013
       VISUAL_STUDIO_INTERNAL_VERSION: 120
       VISUAL_STUDIO_VERSION: 12.0
-    - CMAKE_GENERATOR: Visual Studio 14 2015
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_GENERATOR: Visual Studio 14 2015
       VISUAL_STUDIO_INTERNAL_VERSION: 140
       VISUAL_STUDIO_VERSION: 14.0
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_GENERATOR: Visual Studio 15 2017
+      VISUAL_STUDIO_INTERNAL_VERSION: 141
+      VISUAL_STUDIO_VERSION: 14.1
 
 init:
   - ps: |
