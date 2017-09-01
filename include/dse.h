@@ -728,7 +728,7 @@ dse_graph_statement_bind_values(DseGraphStatement* statement,
  * @param[in] timestamp
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 dse_graph_statement_set_timestamp(DseGraphStatement* statement,
                                   cass_int64_t timestamp);
 
@@ -1980,7 +1980,7 @@ cass_statement_set_execute_as_n(CassStatement* statement,
  * @param[in] y
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_collection_append_dse_point(CassCollection* collection,
                                  cass_double_t x, cass_double_t y);
 
@@ -1993,7 +1993,7 @@ cass_collection_append_dse_point(CassCollection* collection,
  * @param[in] line_string
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_collection_append_dse_line_string(CassCollection* collection,
                                        const DseLineString* line_string);
 
@@ -2006,7 +2006,7 @@ cass_collection_append_dse_line_string(CassCollection* collection,
  * @param[in] polygon
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_collection_append_dse_polygon(CassCollection* collection,
                                    const DsePolygon* polygon);
 
@@ -2020,7 +2020,7 @@ cass_collection_append_dse_polygon(CassCollection* collection,
  * @param[in] range
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_collection_append_dse_date_range(CassCollection* collection,
                                       const DseDateRange* range);
 
@@ -2041,7 +2041,7 @@ cass_collection_append_dse_date_range(CassCollection* collection,
  * @param[in] y
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_tuple_set_dse_point(CassTuple* tuple,
                          size_t index,
                          cass_double_t x, cass_double_t y);
@@ -2056,7 +2056,7 @@ cass_tuple_set_dse_point(CassTuple* tuple,
  * @param[in] line_string
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_tuple_set_dse_line_string(CassTuple* tuple,
                                size_t index,
                                const DseLineString* line_string);
@@ -2071,7 +2071,7 @@ cass_tuple_set_dse_line_string(CassTuple* tuple,
  * @param[in] polygon
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_tuple_set_dse_polygon(CassTuple* tuple,
                            size_t index,
                            const DsePolygon* polygon);
@@ -2086,7 +2086,7 @@ cass_tuple_set_dse_polygon(CassTuple* tuple,
  * @param[in] range
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_tuple_set_dse_date_range(CassTuple* tuple,
                               size_t index,
                               const DseDateRange* range);
@@ -2108,7 +2108,7 @@ cass_tuple_set_dse_date_range(CassTuple* tuple,
  * @param[in] y
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_point(CassUserType* user_type,
                              size_t index,
                              cass_double_t x, cass_double_t y);
@@ -2124,7 +2124,7 @@ cass_user_type_set_dse_point(CassUserType* user_type,
  * @param[in] y
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_point_by_name(CassUserType* user_type,
                                      const char* name,
                                      cass_double_t x, cass_double_t y);
@@ -2144,7 +2144,7 @@ cass_user_type_set_dse_point_by_name(CassUserType* user_type,
  *
  * @see cass_user_type_set_dse_point_by_name()
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_point_by_name_n(CassUserType* user_type,
                                        const char* name,
                                        size_t name_length,
@@ -2160,7 +2160,7 @@ cass_user_type_set_dse_point_by_name_n(CassUserType* user_type,
  * @param[in] line_string
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_line_string(CassUserType* user_type,
                                    size_t index,
                                    const DseLineString* line_string);
@@ -2175,7 +2175,7 @@ cass_user_type_set_dse_line_string(CassUserType* user_type,
  * @param[in] line_string
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_line_string_by_name(CassUserType* user_type,
                                            const char* name,
                                            const DseLineString* line_string);
@@ -2194,7 +2194,7 @@ cass_user_type_set_dse_line_string_by_name(CassUserType* user_type,
  *
  * @see cass_user_type_set_dse_line_string_by_name()
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_line_string_by_name_n(CassUserType* user_type,
                                              const char* name,
                                              size_t name_length,
@@ -2210,7 +2210,7 @@ cass_user_type_set_dse_line_string_by_name_n(CassUserType* user_type,
  * @param[in] polygon
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_polygon(CassUserType* user_type,
                                size_t index,
                                const DsePolygon* polygon);
@@ -2225,7 +2225,7 @@ cass_user_type_set_dse_polygon(CassUserType* user_type,
  * @param[in] polygon
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_polygon_by_name(CassUserType* user_type,
                                        const char* name,
                                        const DsePolygon* polygon);
@@ -2244,7 +2244,7 @@ cass_user_type_set_dse_polygon_by_name(CassUserType* user_type,
  *
  * @see cass_user_type_set_dse_polygon_by_name()
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_polygon_by_name_n(CassUserType* user_type,
                                          const char* name,
                                          size_t name_length,
@@ -2260,7 +2260,7 @@ cass_user_type_set_dse_polygon_by_name_n(CassUserType* user_type,
  * @param[in] range
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_date_range(CassUserType* user_type,
                                   size_t index,
                                   const DseDateRange* range);
@@ -2275,7 +2275,7 @@ cass_user_type_set_dse_date_range(CassUserType* user_type,
  * @param[in] range
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_date_range_by_name(CassUserType* user_type,
                                           const char* name,
                                           const DseDateRange* range);
@@ -2294,7 +2294,7 @@ cass_user_type_set_dse_date_range_by_name(CassUserType* user_type,
  *
  * @see cass_user_type_set_dse_date_range_by_name()
  */
-CASS_EXPORT CassError
+DSE_EXPORT CassError
 cass_user_type_set_dse_date_range_by_name_n(CassUserType* user_type,
                                             const char* name,
                                             size_t name_length,
