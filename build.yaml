@@ -1,0 +1,77 @@
+schedules:
+  adhoc:
+    schedule: adhoc
+    branches:
+      include: [master] 
+architecture:
+  - x64
+os:
+  - ubuntu/trusty64/cpp
+  - ubuntu/xenial64
+  - centos/6-64
+  - centos/7-64
+build:
+  - script: |
+      echo "Running packaging job"
+package:
+  include: # list of files and glob paths to include in the artifact, relative to the current working directory
+    - packaging/packages/*
+release:
+    after:
+      each:
+        - script: |
+            LIBUV_VERSION=1.14.0
+            TOKENS=($(echo ${OS_VERSION} | tr "/" " "))
+            DISTRO=${TOKENS[0]}
+            RELEASE=${TOKENS[1]}
+
+            if [ "${DISTRO}" = "ubuntu" ]; then
+              NAME=$(echo ${RELEASE%??})
+              ARCHITECTURE=${RELEASE:-2}
+              PACKAGE_TYPE=deb
+              PACKAGE_INSTALL="dpkg -i"
+              if [ "${NAME}" = "trusty" ]; then
+                RELEASE=14.04
+              elif [ "${NAME}" = "xenial" ]; then
+                RELEASE=16.04
+              else
+                printf "Unsupported Ubuntu Version: %s\n" ${RELEASE}
+                exit 1
+              fi
+            elif [ "${DISTRO}" = "centos" ]; then
+              TOKENS=($(echo ${RELEASE} | tr "-" " "))
+              NAME=${DISTRO}
+              RELEASE=${TOKENS[0]}
+              ARCHITECTURE=${TOKENS[1]}
+              PACKAGE_TYPE=rpm
+              PACKAGE_INSTALL="rpm -i"
+            else
+              printf "Unsupported OS: %s\n" ${OS_VERSION}
+              exit 1
+            fi
+
+            pushd packaging
+            
+            mkdir packages
+
+            # Build libuv, install, and copy to "packages"
+            echo "Building libuv Packages [${LIBUV_VERSION}] ...\n"
+            git clone --depth 1 https://github.com/mpenick/libuv-packaging.git libuv-packaging
+            
+            pushd libuv-packaging
+            ./build_${PACKAGE_TYPE}.sh ${LIBUV_VERSION}
+            popd
+            find libuv-packaging/build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
+            sudo ${PACKAGE_INSTALL} packages/libuv*.${PACKAGE_TYPE}
+
+            # Build, package and upload DataStax C/C++ DSE driver
+            echo "Building DataStax C/C++ DSE driver ..."
+            ./build_${PACKAGE_TYPE}.sh
+            find build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
+            pushd packages
+            # Uploading driver packages
+            curl -$ARTIFACTORY_CREDS -T "{$(echo cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/cassandra/v$version/" 
+
+            # Uploading libuv packages
+            curl -$ARTIFACTORY_CREDS -T "{$(echo libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
+            popd
