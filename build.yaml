@@ -64,8 +64,8 @@ release:
             find libuv-packaging/build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
             sudo ${PACKAGE_INSTALL} packages/libuv*.${PACKAGE_TYPE}
 
-            # Build, package and upload DataStax C/C++ DSE driver
-            echo "Building DataStax C/C++ DSE driver ..."
+            # Build, package and upload DataStax C/C++ driver
+            echo "Building DataStax C/C++ driver ..."
             ./build_${PACKAGE_TYPE}.sh
             find build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
             pushd packages
