@@ -243,17 +243,18 @@ void Pool::set_is_available(bool is_available) {
 
 bool Pool::write(Connection* connection, const RequestExecution::Ptr& request_execution) {
   request_execution->set_pool(this);
-  if (*io_worker_->keyspace() == connection->keyspace()) {
+  String keyspace(io_worker_->keyspace());
+  if (keyspace == connection->keyspace()) {
     if (!connection->write(request_execution, false)) {
       return false;
     }
   } else {
     LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)",
-              io_worker_->keyspace()->c_str(),
+              keyspace.c_str(),
               static_cast<void*>(connection),
               static_cast<void*>(this));
     if (!connection->write(RequestCallback::Ptr(
-                             Memory::allocate<SetKeyspaceCallback>(*io_worker_->keyspace(),
+                             Memory::allocate<SetKeyspaceCallback>(keyspace,
                                                                    request_execution)),
                            false)) {
       return false;
@@ -303,7 +304,7 @@ void Pool::spawn_connection() {
     Connection* connection =
         Memory::allocate<Connection>(loop_, config_, metrics_,
                                      host_,
-                                     *io_worker_->keyspace(),
+                                     io_worker_->keyspace(),
                                      io_worker_->protocol_version(),
                                      this);
 

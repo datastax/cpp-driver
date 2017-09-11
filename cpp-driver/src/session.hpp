@@ -86,6 +86,11 @@ public:
     load_balancing_policy_.reset(policy);
   }
 
+private:
+  String keyspace() const;
+  void set_keyspace(const String& keyspace);
+
+public:
   void broadcast_keyspace_change(const String& keyspace,
                                  const IOWorker* calling_io_worker);
 
@@ -210,7 +215,8 @@ private:
   int pending_workers_count_;
   int current_io_worker_;
 
-  CopyOnWritePtr<String> keyspace_;
+  String keyspace_;
+  mutable uv_mutex_t keyspace_mutex_;
 };
 
 class SessionFuture : public Future {
