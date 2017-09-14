@@ -84,6 +84,7 @@ Prepared::Prepared(const ResultResponse::Ptr& result,
   : result_(result)
   , id_(result->prepared().to_string())
   , statement_(statement) {
+  assert(result->protocol_version() > 0 && "The protocol version should be set");
   if (result->protocol_version() >= 4) {
     key_indices_ = result->pk_indices();
   } else {
@@ -95,7 +96,7 @@ Prepared::Prepared(const ResultResponse::Ptr& result,
         IndexVec indices;
         for (ColumnMetadata::Vec::const_iterator i = partition_key.begin(),
              end = partition_key.end(); i != end; ++i) {
-          if (result->metadata()->get_indices(StringRef((*i)->name()), &indices) > 0) {
+          if (result->metadata()->get_indices((*i)->name(), &indices) > 0) {
             key_indices_.push_back(indices[0]);
           } else {
             LOG_WARN("Unable to find key column '%s' in prepared query", (*i)->name().c_str());

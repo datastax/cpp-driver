@@ -191,7 +191,13 @@ private:
   SimpleDataTypeCache& cache_;
 };
 
+void ResultResponse::set_metadata(ResultMetadata* metadata) {
+  metadata_.reset(metadata);
+  decode_first_row();
+}
+
 bool ResultResponse::decode(Decoder& decoder) {
+  protocol_version_ = decoder.protocol_version();
   decoder.set_type("result");
   bool is_valid = false;
 
@@ -293,7 +299,7 @@ bool ResultResponse::decode_first_row() {
       metadata_ && // Valid metadata required for column count
       first_row_.values.empty()) { // Only decode the first row once
     first_row_.values.reserve(column_count());
-    return decode_row(decoder_, this, first_row_.values);
+    return decode_row(row_decoder_, this, first_row_.values);
   }
   return true;
 }
@@ -301,7 +307,7 @@ bool ResultResponse::decode_first_row() {
 bool ResultResponse::decode_rows(Decoder& decoder) {
   CHECK_RESULT(decode_metadata(decoder, &metadata_));
   CHECK_RESULT(decoder.decode_int32(row_count_));
-  decoder_ = decoder;
+  row_decoder_ = decoder;
   CHECK_RESULT(decode_first_row());
   return true;
 }

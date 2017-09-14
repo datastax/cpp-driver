@@ -39,12 +39,15 @@ public:
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
       , kind_(CASS_RESULT_KIND_VOID)
+      , protocol_version_(-1)
       , has_more_pages_(false)
       , row_count_(0) {
     first_row_.set_result(this);
   }
 
   int32_t kind() const { return kind_; }
+
+  int protocol_version() const { return protocol_version_; }
 
   bool has_more_pages() const { return has_more_pages_; }
 
@@ -54,10 +57,7 @@ public:
 
   const ResultMetadata::Ptr& metadata() const { return metadata_; }
 
-  void set_metadata(ResultMetadata* metadata) {
-    metadata_.reset(metadata);
-    decode_first_row();
-  }
+  void set_metadata(ResultMetadata* metadata);
 
   const ResultMetadata::Ptr& result_metadata() const { return result_metadata_; }
 
@@ -66,8 +66,7 @@ public:
   StringRef keyspace() const { return keyspace_; }
   StringRef table() const { return table_; }
 
-  int protocol_version() const { return decoder_.protocol_version(); }
-  Decoder& decoder() { return decoder_; }
+  const Decoder& row_decoder() const { return row_decoder_; }
 
   int32_t row_count() const { return row_count_; }
 
@@ -93,6 +92,7 @@ private:
 
 private:
   int32_t kind_;
+  int protocol_version_;
   bool has_more_pages_; // row data
   ResultMetadata::Ptr metadata_;
   ResultMetadata::Ptr result_metadata_;
@@ -102,7 +102,7 @@ private:
   StringRef keyspace_; // rows, set keyspace, and schema change
   StringRef table_; // rows, and schema change
   int32_t row_count_;
-  Decoder decoder_;
+  Decoder row_decoder_;
   Row first_row_;
   PKIndexVec pk_indices_;
 

@@ -30,7 +30,7 @@ public:
       , result_(result)
       , index_(-1)
       , row_(result) {
-    decoder_ = (const_cast<ResultResponse*>(result))->decoder();
+    decoder_ = (const_cast<ResultResponse*>(result))->row_decoder();
     row_.values.reserve(result->column_count());
   }
 
