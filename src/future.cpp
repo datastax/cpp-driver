@@ -183,13 +183,16 @@ bool Future::set_callback(Future::Callback callback, void* data) {
 
 void Future::internal_set(ScopedMutex& lock) {
   is_set_ = true;
-  uv_cond_broadcast(&cond_);
   if (callback_) {
     Callback callback = callback_;
     void* data = data_;
     lock.unlock();
     callback(CassFuture::to(this), data);
+    lock.lock();
   }
+  // Broadcast after we've run the callback so that threads waiting
+  // on this future see the side effects of the callback.
+  uv_cond_broadcast(&cond_);
 }
 
 } // namespace cass
