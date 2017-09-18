@@ -66,6 +66,7 @@ if (WIN32)
   unset(_programfiles)
 else ()
   set(_OPENSSL_ROOT_HINTS
+    /usr/local/opt/openssl
     ${OPENSSL_ROOT_DIR}
     ENV OPENSSL_ROOT_DIR
     )

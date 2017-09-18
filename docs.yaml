@@ -39,6 +39,7 @@ rewrites:
   - http://pkgs.repoforge.org/git/: https://dl.fedoraproject.org/pub/epel/
   - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.i386.rpm: http://dl.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
   - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.x86_64.rpm: http://dl.fedoraproject.org/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm
+  - ../../vc_build.bat: https://github.com/datastax/cpp-driver/blob/master/vc_build.bat
 versions:
   - name: 2.7
     ref: 2.7.0
