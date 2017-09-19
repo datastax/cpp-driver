@@ -1,3 +1,16 @@
+2.7.1
+===========
+
+Bug Fixes
+--------
+* [CPP-473] Missing symbol cass_cluster_set_queue_size_log
+* [CPP-486] Compiler warning 'implicit-fallthrough' causing build errors
+* [CPP-491] Unintentional switch case fallthrough in `RequestCallback`
+* [CPP-496] CassWriteType CDC and VIEW missing
+* [CPP-514] Prepared Statement Crash
+* [CPP-513] Copy-on-write keyspace logic is incorrect
+* [CPP-502] Incorrectly exported symbols cass_error_result_responses_received / required
+
 2.7.0
 ===========
 
@@ -396,7 +409,7 @@ Nov 20, 2014
 Features
 --------
 * Added SSL support
-* Added token-aware load balancing. It''s enable by default. It can
+* Added token-aware load balancing. It''s enabled by default. It can
   be disable using `cass_cluster_set_token_aware_routing()`.
 * Added functions to get schema metadata, `cass_session_get_schema()` can
   be use to get a snapshot of the schema metadata and `cass_meta_*()` functions
@@ -488,7 +501,7 @@ Bug Fixes
 * Fixed issue where connections would log "'Timed out during startup' error on startup for ..."
   when a Session was closed while a connection was during its startup process
 * Fixed Row and collections iterator so they return the first and last item properly
-* Improved logic for creating new connections so it''s based request throughput
+* Improved logic for creating new connections so it''s based on request throughput
 
 Other
 ---------
