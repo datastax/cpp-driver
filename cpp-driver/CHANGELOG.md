@@ -1,3 +1,16 @@
+2.7.1
+===========
+
+Bug Fixes
+--------
+* [CPP-473] Missing symbol cass_cluster_set_queue_size_log
+* [CPP-486] Compiler warning 'implicit-fallthrough' causing build errors
+* [CPP-491] Unintentional switch case fallthrough in `RequestCallback`
+* [CPP-496] CassWriteType CDC and VIEW missing
+* [CPP-514] Prepared Statement Crash
+* [CPP-513] Copy-on-write keyspace logic is incorrect
+* [CPP-502] Incorrectly exported symbols cass_error_result_responses_received / required
+
 2.7.0
 ===========
 
