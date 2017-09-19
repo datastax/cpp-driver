@@ -2,7 +2,7 @@ schedules:
   adhoc:
     schedule: adhoc
     branches:
-      include: [master] 
+      include: [master]
 architecture:
   - x64
 os:
@@ -20,7 +20,7 @@ release:
     after:
       each:
         - script: |
-            LIBUV_VERSION=1.14.0
+            LIBUV_VERSION=1.14.1
             TOKENS=($(echo ${OS_VERSION} | tr "/" " "))
             DISTRO=${TOKENS[0]}
             RELEASE=${TOKENS[1]}
@@ -51,13 +51,13 @@ release:
             fi
 
             pushd packaging
-            
+
             mkdir packages
 
             # Build libuv, install, and copy to "packages"
             echo "Building libuv Packages [${LIBUV_VERSION}] ...\n"
             git clone --depth 1 https://github.com/mpenick/libuv-packaging.git libuv-packaging
-            
+
             pushd libuv-packaging
             ./build_${PACKAGE_TYPE}.sh ${LIBUV_VERSION}
             popd
@@ -70,7 +70,7 @@ release:
             find build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
             pushd packages
             # Uploading driver packages
-            curl -$ARTIFACTORY_CREDS -T "{$(echo cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/cassandra/v$version/" 
+            curl -$ARTIFACTORY_CREDS -T "{$(echo cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/cassandra/v$version/"
 
             # Uploading libuv packages
             curl -$ARTIFACTORY_CREDS -T "{$(echo libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
