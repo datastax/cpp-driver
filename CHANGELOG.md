@@ -11,6 +11,10 @@ Bug Fixes
 * [CPP-513] Copy-on-write keyspace logic is incorrect
 * [CPP-514] Prepared Statement Crash
 
+Other
+--------
+[CPP-449] - Update vc_build.bat to include automated build for Visual Studio 2017
+
 1.3.0
 ===========
 
