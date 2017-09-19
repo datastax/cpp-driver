@@ -7,9 +7,9 @@ Bug Fixes
 * [CPP-486] Compiler warning 'implicit-fallthrough' causing build errors
 * [CPP-491] Unintentional switch case fallthrough in `RequestCallback`
 * [CPP-496] CassWriteType CDC and VIEW missing
-* [CPP-514] Prepared Statement Crash
-* [CPP-513] Copy-on-write keyspace logic is incorrect
 * [CPP-502] Incorrectly exported symbols cass_error_result_responses_received / required
+* [CPP-513] Copy-on-write keyspace logic is incorrect
+* [CPP-514] Prepared Statement Crash
 
 1.3.0
 ===========
