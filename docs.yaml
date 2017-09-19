@@ -42,7 +42,7 @@ rewrites:
   - ../../vc_build.bat: https://github.com/datastax/cpp-driver/blob/master/vc_build.bat
 versions:
   - name: 2.7
-    ref: 2.7.0
+    ref: 2.7.1
   - name: 2.6
     ref: 2.6.0
   - name: 2.5
