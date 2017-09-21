@@ -6,7 +6,6 @@ skip_tags: true
 shallow_clone: true
 cache:
   - C:\projects\dependencies\libs -> appveyor.yml
-os: Visual Studio 2015
 platform:
   - x86
   - x64
@@ -14,6 +13,7 @@ configuration:
 #  - Debug
   - Release
 environment:
+  appveyor_build_worker_cloud: gce
   BOOST_FILENAME_VERSION: 1_64_0
   BOOST_VERSION: 1.64.0
   LIBSSH2_VERSION: 1.8.0
@@ -24,18 +24,26 @@ environment:
   DEPENDENCIES_LOCATION_PREFIX: C:/projects/dependencies/libs
   CONFIGURATION_COMPLETE: False
   matrix:
-    - CMAKE_GENERATOR: Visual Studio 14 2015
-      VISUAL_STUDIO_INTERNAL_VERSION: 140
-      VISUAL_STUDIO_VERSION: 14.0
-    - CMAKE_GENERATOR: Visual Studio 12 2013
-      VISUAL_STUDIO_INTERNAL_VERSION: 120
-      VISUAL_STUDIO_VERSION: 12.0
-    - CMAKE_GENERATOR: Visual Studio 11 2012
-      VISUAL_STUDIO_INTERNAL_VERSION: 110
-      VISUAL_STUDIO_VERSION: 11.0
-    - CMAKE_GENERATOR: Visual Studio 10 2010
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CMAKE_GENERATOR: Visual Studio 10 2010
       VISUAL_STUDIO_INTERNAL_VERSION: 100
       VISUAL_STUDIO_VERSION: 10.0
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CMAKE_GENERATOR: Visual Studio 11 2012
+      VISUAL_STUDIO_INTERNAL_VERSION: 110
+      VISUAL_STUDIO_VERSION: 11.0
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_GENERATOR: Visual Studio 12 2013
+      VISUAL_STUDIO_INTERNAL_VERSION: 120
+      VISUAL_STUDIO_VERSION: 12.0
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_GENERATOR: Visual Studio 14 2015
+      VISUAL_STUDIO_INTERNAL_VERSION: 140
+      VISUAL_STUDIO_VERSION: 14.0
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_GENERATOR: Visual Studio 15 2017
+      VISUAL_STUDIO_INTERNAL_VERSION: 141
+      VISUAL_STUDIO_VERSION: 14.1
 
 init:
   - ps: |
@@ -238,7 +246,6 @@ on_finish:
           $host.SetShouldExit(1)
         }
       }
-
 on_failure:
   - ps: |
       # Write the CMake output and error logs to the console
@@ -247,7 +254,7 @@ on_failure:
           Write-Output "CMakeOutput.log"
           cat build/CMakeFiles/CMakeOutput.log
         }
-        If (Test-Path builds/CMakeFiles/CMakeError.log) {
+        If (Test-Path build/CMakeFiles/CMakeError.log) {
           Write-Output "CMakeError.log"
           cat build/CMakeFiles/CMakeError.log
         }
