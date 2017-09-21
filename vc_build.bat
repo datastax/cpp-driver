@@ -46,6 +46,7 @@ SET ARGUMENT_ENABLE_LIBSSH2=--ENABLE-LIBSSH2
 SET ARGUMENT_ENABLE_ZLIB=--ENABLE-ZLIB
 SET ARGUMENT_GENERATE_SOLUTION=--GENERATE-SOLUTION
 SET ARGUMENT_INSTALLATION_DIRECTORY=--INSTALL-DIR
+SET ARGUMENT_OPENSSL_VERSION=--OPENSSL-VERSION
 SET ARGUMENT_USE_BOOST_ATOMIC=--USE-BOOST-ATOMIC
 SET ARGUMENT_LIBRARY_TYPE_SHARED=--SHARED
 SET ARGUMENT_LIBRARY_TYPE_STATIC=--STATIC
@@ -122,8 +123,11 @@ SET LIBSSH2_BRANCH_TAG_VERSION=libssh2-1.8.0
 SET LIBSSH2_PACKAGE_VERSION=1.8.0
 SET OPENSSL_REPOSITORY_URL=https://github.com/openssl/openssl.git
 SET OPENSSL_DIRECTORY=openssl
-SET OPENSSL_BRANCH_TAG_VERSION=OpenSSL_1_0_2l
+SET OPENSSL_1_0_BRANCH_TAG_VERSION=OpenSSL_1_0_2l
+SET OPENSSL_1_1_BRANCH_TAG_VERSION=OpenSSL_1_1_0f
 SET OPENSSL_PACKAGE_VERSION=1.0.2l
+SET "SUPPORTED_OPENSSL_VERSIONS=1_0 1_1"
+SET "SUPPORTED_OPENSSL_DISPLAY_VERSIONS=1.0 1.1"
 SET ZLIB_REPOSITORY_URL=https://github.com/madler/zlib.git
 SET ZLIB_DIRECTORY=zlib
 SET ZLIB_BRANCH_TAG_VERSION=v1.2.11
@@ -165,6 +169,7 @@ SET ENABLE_ZLIB=%FALSE%
 SET GENERATE_SOLUTION=%FALSE%
 SET LIBRARY_TYPE=%LIBRARY_TYPE_SHARED%
 SET ENABLE_SHARED_OPENSSL=%FALSE%
+SET OPENSSL_VERSION=1_0
 SET TARGET_ARCHITECTURE=%SYSTEM_ARCHITECTURE%
 SET USE_BOOST_ATOMIC=%FALSE%
 SET ARGUMENT_IS_TEST=%FALSE%
@@ -341,6 +346,32 @@ IF NOT [%1] == [] (
     )
   )
 
+  REM OpenSSL version (1.0 and 1.1)
+  IF "!ARGUMENT!" == "!ARGUMENT_OPENSSL_VERSION!" (
+    REM Make sure the version information exists
+    IF [%2] == [] (
+      ECHO Invalid Version: Version must be supplied when choosing OpenSSL version
+      EXIT /B !EXIT_CODE_INVALID_VERSION!
+    ) ELSE (
+      REM Ensure the OpenSSL version is valid
+      IF NOT "%2" == "1.0" (
+         IF NOT "%2" == "1.1" (
+          ECHO Invalid Version: Version not within range [1.0, 1.1]
+          EXIT /B !EXIT_CODE_INVALID_VERSION!
+        )
+      )
+
+      REM Get the version information and format for branch/tag variable use
+      IF "%2" == "1.0" (
+        SET OPENSSL_VERSION=1_0
+      )
+      IF "%2" == "1.1" (
+        SET OPENSSL_VERSION=1_1
+      )
+      SHIFT
+    )
+  )
+
   REM Enable the use of Boost atomic library (header only)
   IF "!ARGUMENT!" == "!ARGUMENT_USE_BOOST_ATOMIC!" (
     SET USE_BOOST_ATOMIC=!TRUE!
@@ -386,12 +417,25 @@ IF !IS_TESTING_ENABLED! EQU !TRUE! (
   )
 )
 
+REM Ensure OpenSSL v1.0.x is used for package building
+IF !ENABLE_BUILD_PACKAGES! EQU !TRUE! (
+  IF "!OPENSSL_VERSION!" == "1_1" (
+    REM Force OpenSSL v1.0.x
+    ECHO Disabling OpenSSL v1.1.x: Packaging build OpenSSL v1.0.x only
+    SET OPENSSL_VERSION=1_0
+  )
+)
+REM Set the OpenSSL branch/tag version to use
+FOR %%A IN (!OPENSSL_VERSION!) DO (
+  SET "OPENSSL_BRANCH_TAG_VERSION=!OPENSSL_%%A_BRANCH_TAG_VERSION!"
+)
+
 REM Determine if zlib should be enabled
 IF !ENABLE_ZLIB! EQU !TRUE! (
   SET ENABLE_ZLIB_IS_VALID=!FALSE!
   IF !ENABLE_LIBSSH! EQU !TRUE! SET ENABLE_ZLIB_IS_VALID=!TRUE!
-  IF !ENABLE_OPENSSL! EQU !TRUE! SET ENABLE_ZLIB_IS_VALID=!TRUE!
   SET ENABLE_ZLIB=!ENABLE_ZLIB_IS_VALID!
+  IF !ENABLE_ZLIB! EQU !FALSE! ECHO Disabling zlib: Not needed for current build configuration
 )
 
 REM Create a listing of all the supported Visual Studio versions
@@ -624,6 +668,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
   ECHO Examples Enabled:          !ENABLE_EXAMPLES!
   ECHO Library Type:              !LIBRARY_TYPE!
   ECHO OpenSSL Enabled:           !ENABLE_OPENSSL!
+  IF !ENABLE_OPENSSL! EQU !TRUE! ECHO   OpenSSL Version:         !OPENSSL_VERSION!
   ECHO Tests Enabled:             !ENABLE_TESTS!
   ECHO Integration Tests Enabled: !ENABLE_INTEGRATION_TESTS!
   ECHO Unit Tests Enabled:        !ENABLE_UNIT_TESTS!
@@ -814,7 +859,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
   IF !ENABLE_OPENSSL! EQU !TRUE! (
     REM Determine if OpenSSL needs to be built
     IF NOT EXIST "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" (
-      CALL :BUILDOPENSSL "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" "!ABSOLUTE_ZLIB_LIBRARY_DIRECTORY!" !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !ENABLE_SHARED_OPENSSL! !FALSE! "!LOG_OPENSSL_BUILD!"
+      CALL :BUILDOPENSSL "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" "!ABSOLUTE_ZLIB_LIBRARY_DIRECTORY!" !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !ENABLE_SHARED_OPENSSL! !OPENSSL_VERSION! !FALSE! "!LOG_OPENSSL_BUILD!"
       IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
     )
   ) ELSE (
@@ -872,6 +917,44 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
       ECHO Visual Studio !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! solution has been successfully generated
       ECHO 	!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!\cassandra.sln
     ) ELSE (
+      REM Determine if runtime libraries should be copied
+      SET RUNTIME_LIBRARIES_REQUIRED=!FALSE!
+      SET "DRIVER_BUILD_DIRECTORY=!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!"
+      SET "DRIVER_RUNTIME_DIRECTORY=!DRIVER_BUILD_DIRECTORY!\!BUILD_TYPE!"
+      IF !ENABLE_TESTS! EQU !TRUE! SET RUNTIME_LIBRARIES_REQUIRED=!TRUE!
+      IF !ENABLE_INTEGRATION_TESTS! EQU !TRUE! SET RUNTIME_LIBRARIES_REQUIRED=!TRUE!
+      IF !ENABLE_UNIT_TESTS! EQU !TRUE! SET RUNTIME_LIBRARIES_REQUIRED=!TRUE!
+      IF !RUNTIME_LIBRARIES_REQUIRED! EQU !TRUE! (
+        ECHO | SET /P="Copying runtime libraries for tests ... "
+        IF !ENABLE_SHARED_OPENSSL! EQU !TRUE! (
+          XCOPY /Y /E "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!\!LIBRARY_RUNTIME_DIRECTORY!\*.dll" "!DRIVER_RUNTIME_DIRECTORY!" >> "!LOG_DRIVER_BUILD!" 2>&1
+          IF NOT !ERRORLEVEL! EQU 0 (
+            ECHO FAILED!
+            ECHO 	See !LOG_DRIVER_BUILD! for more details
+            EXIT /B !EXIT_CODE_BUILD_DRIVER_FAILED!
+          )
+        )
+        ECHO done.
+      )
+      IF !ENABLE_EXAMPLES! EQU !TRUE! (
+        SET "EXAMPLES_DIRECTORY=!DRIVER_BUILD_DIRECTORY!\examples"
+        ECHO | SET /P="Copying runtime libraries for examples ... "
+        FOR /D %%A IN ("!EXAMPLES_DIRECTORY!\*") DO (
+          SET "EXAMPLE_DIRECTORY=!EXAMPLES_DIRECTORY!\%%~NA\!BUILD_TYPE!"
+          IF !ENABLE_SHARED_OPENSSL! EQU !TRUE! (
+            XCOPY /Y /E "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!\!LIBRARY_RUNTIME_DIRECTORY!\*.dll" "!EXAMPLE_DIRECTORY!" >> "!LOG_DRIVER_BUILD!" 2>&1
+            IF NOT !ERRORLEVEL! EQU 0 (
+              ECHO FAILED!
+              ECHO 	See !LOG_DRIVER_BUILD! for more details
+              EXIT /B !EXIT_CODE_BUILD_DRIVER_FAILED!
+            )
+          )
+        )
+        ECHO done.
+      )
+
+      REM Indicate the driver has been built
+      ECHO.
       ECHO Driver has been successfully built [!TARGET_ARCHITECTURE!-bit !BUILD_TYPE!]
       ECHO 	!DRIVER_INSTALLATION_DIRECTORY!
     )
@@ -941,7 +1024,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
         REM Build the dependencies and driver
         CALL :BUILDLIBUV "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_LIBUV_INSTALLATION_DIRECTORY!" %%C %%D !VISUAL_STUDIO_VERSION! !TRUE! "!LOG_LIBUV_BUILD!"
         IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
-        CALL :BUILDOPENSSL "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_OPENSSL_INSTALLATION_DIRECTORY!" "" %%C %%D !FALSE! !TRUE! "!LOG_OPENSSL_BUILD!"
+        CALL :BUILDOPENSSL "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" "!ABSOLUTE_DEPENDENCY_PACKAGE_OPENSSL_INSTALLATION_DIRECTORY!" "" %%C %%D !FALSE! !OPENSSL_VERSION! !TRUE! "!LOG_OPENSSL_BUILD!"
         IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
         IF !BUILD_DEPENDENCIES_ONLY! EQU !FALSE! (
           IF EXIST "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" CALL :CLEANDIRECTORY "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" "Cleaning driver library directory"
@@ -1068,6 +1151,7 @@ REM Display the help message and exit with error code
   ECHO     !ARGUMENT_BUILD_TYPE_RELEASE!                         Enable release build ^(default^)
   ECHO     !ARGUMENT_DISABLE_CLEAN_BUILD!                   Disable clean build
   ECHO     !ARGUMENT_BUILD_DEPENDENCIES_ONLY!               Build dependencies only
+  ECHO     !ARGUMENT_OPENSSL_VERSION!                 OpenSSL version 1.0, 1.1 ^(default: 1.0^)
   ECHO     !ARGUMENT_TARGET_COMPILER! [version]       141, 140, 120, 110, or 100
   ECHO     !ARGUMENT_DISABLE_OPENSSL!                 Disable OpenSSL support
   ECHO     !ARGUMENT_ENABLE_EXAMPLES!                 Enable example builds
@@ -1386,10 +1470,11 @@ REM                        library; false otherwise
 REM                        NOTE: If [library-type] is static and
 REM                              [zlib-library-directory] is valid then zlib
 REM                              will be statically linked
+REM @param openssl-version OpenSSL version being built
 REM @param is-clean-after-install True if clean should be performed after
 REM                               install; false otherwise
 REM @param log-filename Absolute path and filename for log output
-:BUILDOPENSSL [source-directory] [install-directory] [zlib-library-directory] [target-architecture] [library-type] [is-force-shared] [is-clean-after-install] [log-filename]
+:BUILDOPENSSL [source-directory] [install-directory] [zlib-library-directory] [target-architecture] [library-type] [is-force-shared] [openssl-version] [is-clean-after-install] [log-filename]
   REM Create library variables from arguments
   SET "OPENSSL_SOURCE_DIRECTORY=%~1"
   SHIFT
@@ -1402,6 +1487,8 @@ REM @param log-filename Absolute path and filename for log output
   SET "OPENSSL_LIBRARY_TYPE=%~1"
   SHIFT
   SET OPENSSL_IS_FORCE_SHARED=%~1
+  SHIFT
+  SET "OPENSSL_VERSION=%~1"
   SHIFT
   SET OPENSSL_IS_CLEAN_AFTER_INSTALL=%~1
   SHIFT
@@ -1427,6 +1514,13 @@ REM @param log-filename Absolute path and filename for log output
     SET "OPENSSL_CONFIGURE_OPTIONS=!OPENSSL_CONFIGURE_OPTIONS! zlib --with-zlib-include=^"!SHORTENED_DEPENDENCY_ZLIB_LIBRARY_DIRECTORY!\!LIBRARY_INCLUDE_DIRECTORY!^" --with-zlib-lib=^"!SHORTENED_DEPENDENCY_ZLIB_LIBRARY_DIRECTORY!\!LIBRARY_BINARY_DIRECTORY!\!DEPENDENCY_ZLIB_LIBRARY_FILENAME!^""
   )
   IF !OPENSSL_IS_FORCE_SHARED! EQU !TRUE! SET OPENSSL_LIBRARY_TYPE=!LIBRARY_TYPE_SHARED!
+  IF "!OPENSSL_VERSION!" == "1_1" (
+    IF "!OPENSSL_LIBRARY_TYPE!" == "!LIBRARY_TYPE_SHARED!" (
+      SET "OPENSSL_CONFIGURE_OPTIONS=!OPENSSL_CONFIGURE_OPTIONS! shared"
+    ) ELSE (
+      SET "OPENSSL_CONFIGURE_OPTIONS=!OPENSSL_CONFIGURE_OPTIONS! no-shared -static"
+    )
+  )
   CALL :SHORTENPATH "!OPENSSL_INSTALL_DIRECTORY!" SHORTENED_OPENSSL_INSTALL_DIRECTORY
   !PERL! !OPENSSL_CONFIGURE_OPTIONS! enable-static-engine --openssldir=!SHORTENED_OPENSSL_INSTALL_DIRECTORY! --prefix=!SHORTENED_OPENSSL_INSTALL_DIRECTORY! >> "!OPENSSL_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
@@ -1437,24 +1531,36 @@ REM @param log-filename Absolute path and filename for log output
   ECHO done.
   ECHO | SET /P="Building OpenSSL ... "
   IF !OPENSSL_TARGET_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
-    CALL ms\do_ms.bat >> "!OPENSSL_LOG_FILENAME!" 2>&1
+    IF "!OPENSSL_VERSION!" == "1_0" (
+      CALL ms\do_ms.bat >> "!OPENSSL_LOG_FILENAME!" 2>&1
+    )
   ) ELSE (
-    CALL ms\do_win64a.bat >> "!OPENSSL_LOG_FILENAME!" 2>&1
+    IF "!OPENSSL_VERSION!" == "1_0" (
+      CALL ms\do_win64a.bat >> "!OPENSSL_LOG_FILENAME!" 2>&1
+    )
   )
-  IF "!OPENSSL_LIBRARY_TYPE!" == "!LIBRARY_TYPE_SHARED!" (
-    SET OPENSSL_MAKEFILE=ms\ntdll.mak
+  IF "!OPENSSL_VERSION!" == "1_0" (
+    IF "!OPENSSL_LIBRARY_TYPE!" == "!LIBRARY_TYPE_SHARED!" (
+      SET OPENSSL_MAKEFILE=ms\ntdll.mak
+    ) ELSE (
+      SET OPENSSL_MAKEFILE=ms\nt.mak
+    )
+    !NMAKE! /F !OPENSSL_MAKEFILE! >> "!OPENSSL_LOG_FILENAME!" 2>&1
   ) ELSE (
-    SET OPENSSL_MAKEFILE=ms\nt.mak
+    !NMAKE! >> "!OPENSSL_LOG_FILENAME!" 2>&1
   )
-  !NMAKE! /F !OPENSSL_MAKEFILE! >> "!OPENSSL_LOG_FILENAME!" 2>&1
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
     ECHO 	See !OPENSSL_LOG_FILENAME! for more details
     EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
   )
   ECHO done.
-  ECHO | SET /P="Installing OpenSSL ... "
-  !NMAKE! /F !OPENSSL_MAKEFILE! install >> "!OPENSSL_LOG_FILENAME!" 2>&1
+  ECHO | SET /P="Installing OpenSSL ..."
+  IF "!OPENSSL_VERSION!" == "1_0" (
+    !NMAKE! /F !OPENSSL_MAKEFILE! install >> "!OPENSSL_LOG_FILENAME!" 2>&1
+  ) ELSE (
+    !NMAKE! install >> "!OPENSSL_LOG_FILENAME!" 2>&1
+  )
   IF NOT !ERRORLEVEL! EQU 0 (
     ECHO FAILED!
     ECHO 	See !OPENSSL_LOG_FILENAME! for more details

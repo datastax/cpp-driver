@@ -1,40 +1,46 @@
+# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
+# file Copyright.txt or https://cmake.org/licensing for details.
+
 #.rst:
 # FindOpenSSL
 # -----------
 #
-# Try to find the OpenSSL encryption library
+# Find the OpenSSL encryption library.
 #
-# Once done this will define
+# Imported Targets
+# ^^^^^^^^^^^^^^^^
 #
-# ::
+# This module defines the following :prop_tgt:`IMPORTED` targets:
 #
-#   OPENSSL_ROOT_DIR - Set this variable to the root installation of OpenSSL
+# ``OpenSSL::SSL``
+#   The OpenSSL ``ssl`` library, if found.
+# ``OpenSSL::Crypto``
+#   The OpenSSL ``crypto`` library, if found.
 #
+# Result Variables
+# ^^^^^^^^^^^^^^^^
 #
+# This module will set the following variables in your project:
 #
-# Read-Only variables:
+# ``OPENSSL_FOUND``
+#   System has the OpenSSL library.
+# ``OPENSSL_INCLUDE_DIR``
+#   The OpenSSL include directory.
+# ``OPENSSL_CRYPTO_LIBRARY``
+#   The OpenSSL crypto library.
+# ``OPENSSL_SSL_LIBRARY``
+#   The OpenSSL SSL library.
+# ``OPENSSL_LIBRARIES``
+#   All OpenSSL libraries.
+# ``OPENSSL_VERSION``
+#   This is set to ``$major.$minor.$revision$patch`` (e.g. ``0.9.8s``).
 #
-# ::
+# Hints
+# ^^^^^
 #
-#   OPENSSL_FOUND - system has the OpenSSL library
-#   OPENSSL_INCLUDE_DIR - the OpenSSL include directory
-#   OPENSSL_LIBRARIES - The libraries needed to use OpenSSL
-#   OPENSSL_VERSION - This is set to $major.$minor.$revision$path (eg. 0.9.8s)
-
-#=============================================================================
-# Copyright 2006-2009 Kitware, Inc.
-# Copyright 2006 Alexander Neundorf <neundorf@kde.org>
-# Copyright 2009-2011 Mathieu Malaterre <mathieu.malaterre@gmail.com>
-#
-# Distributed under the OSI-approved BSD License (the "License");
-# see accompanying file Copyright.txt for details.
-#
-# This software is distributed WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the License for more information.
-#=============================================================================
-# (To distribute this file outside of CMake, substitute the full
-#  License text for the above reference.)
+# Set ``OPENSSL_ROOT_DIR`` to the root directory of an OpenSSL installation.
+# Set ``OPENSSL_USE_STATIC_LIBS`` to ``TRUE`` to look for static libraries.
+# Set ``OPENSSL_MSVC_STATIC_RT`` set ``TRUE`` to choose the MT version of the lib.
 
 if (UNIX)
   if(CMAKE_VERSION VERSION_LESS "2.8.0")
@@ -45,6 +51,16 @@ if (UNIX)
     pkg_check_modules(_OPENSSL QUIET openssl)
   endif()
 endif ()
+
+# Support preference of static libs by adjusting CMAKE_FIND_LIBRARY_SUFFIXES
+if(OPENSSL_USE_STATIC_LIBS)
+  set(_openssl_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  if(WIN32)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  else()
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a )
+  endif()
+endif()
 
 if (WIN32)
   # http://www.slproweb.com/products/Win32OpenSSL.html
@@ -92,7 +108,7 @@ if(WIN32 AND NOT CYGWIN)
     # /MD and /MDd are the standard values - if someone wants to use
     # others, the libnames have to change here too
     # use also ssl and ssleay32 in debug as fallback for openssl < 0.9.8b
-    # TODO: handle /MT and static lib
+    # enable OPENSSL_MSVC_STATIC_RT to get the libs build /MT (Multithreaded no-DLL)
     # In Visual C++ naming convention each of these four kinds of Windows libraries has it's standard suffix:
     #   * MD for dynamic-release
     #   * MDd for dynamic-debug
@@ -103,49 +119,82 @@ if(WIN32 AND NOT CYGWIN)
     # We are using the libraries located in the VC subdir instead of the parent directory eventhough :
     # libeay32MD.lib is identical to ../libeay32.lib, and
     # ssleay32MD.lib is identical to ../ssleay32.lib
+    # enable OPENSSL_USE_STATIC_LIBS to use the static libs located in lib/VC/static
+
+    if (OPENSSL_MSVC_STATIC_RT)
+      set(_OPENSSL_MSVC_RT_MODE "MT")
+    else ()
+      set(_OPENSSL_MSVC_RT_MODE "MD")
+    endif ()
+
+    # Since OpenSSL 1.1, lib names are like libcrypto32MTd.lib and libssl32MTd.lib
+    if( "${CMAKE_SIZEOF_VOID_P}" STREQUAL "8" )
+        set(_OPENSSL_MSVC_ARCH_SUFFIX "64")
+    else()
+        set(_OPENSSL_MSVC_ARCH_SUFFIX "32")
+    endif()
+
+    if(OPENSSL_USE_STATIC_LIBS)
+      set(_OPENSSL_PATH_SUFFIXES
+        "lib/VC/static"
+        "VC/static"
+        "lib"
+        )
+    else()
+      set(_OPENSSL_PATH_SUFFIXES
+        "lib/VC"
+        "VC"
+        "lib"
+        )
+    endif ()
+
     find_library(LIB_EAY_DEBUG
       NAMES
-        libeay32MDd
+        libcrypto${_OPENSSL_MSVC_ARCH_SUFFIX}${_OPENSSL_MSVC_RT_MODE}d
+        libcryptod
+        libeay32${_OPENSSL_MSVC_RT_MODE}d
         libeay32d
+      NAMES_PER_DIR
       ${_OPENSSL_ROOT_HINTS_AND_PATHS}
       PATH_SUFFIXES
-        "lib"
-        "VC"
-        "lib/VC"
+        ${_OPENSSL_PATH_SUFFIXES}
     )
 
     find_library(LIB_EAY_RELEASE
       NAMES
-        libeay32MD
+        libcrypto${_OPENSSL_MSVC_ARCH_SUFFIX}${_OPENSSL_MSVC_RT_MODE}
+        libcrypto
+        libeay32${_OPENSSL_MSVC_RT_MODE}
         libeay32
+      NAMES_PER_DIR
       ${_OPENSSL_ROOT_HINTS_AND_PATHS}
       PATH_SUFFIXES
-        "lib"
-        "VC"
-        "lib/VC"
+        ${_OPENSSL_PATH_SUFFIXES}
     )
 
     find_library(SSL_EAY_DEBUG
       NAMES
-        ssleay32MDd
+        libssl${_OPENSSL_MSVC_ARCH_SUFFIX}${_OPENSSL_MSVC_RT_MODE}d
+        libssld
+        ssleay32${_OPENSSL_MSVC_RT_MODE}d
         ssleay32d
+      NAMES_PER_DIR
       ${_OPENSSL_ROOT_HINTS_AND_PATHS}
       PATH_SUFFIXES
-        "lib"
-        "VC"
-        "lib/VC"
+        ${_OPENSSL_PATH_SUFFIXES}
     )
 
     find_library(SSL_EAY_RELEASE
       NAMES
-        ssleay32MD
+        libssl${_OPENSSL_MSVC_ARCH_SUFFIX}${_OPENSSL_MSVC_RT_MODE}
+        libssl
+        ssleay32${_OPENSSL_MSVC_RT_MODE}
         ssleay32
         ssl
+      NAMES_PER_DIR
       ${_OPENSSL_ROOT_HINTS_AND_PATHS}
       PATH_SUFFIXES
-        "lib"
-        "VC"
-        "lib/VC"
+        ${_OPENSSL_PATH_SUFFIXES}
     )
 
     set(LIB_EAY_LIBRARY_DEBUG "${LIB_EAY_DEBUG}")
@@ -159,42 +208,44 @@ if(WIN32 AND NOT CYGWIN)
 
     mark_as_advanced(LIB_EAY_LIBRARY_DEBUG LIB_EAY_LIBRARY_RELEASE
                      SSL_EAY_LIBRARY_DEBUG SSL_EAY_LIBRARY_RELEASE)
-    set( OPENSSL_LIBRARIES ${SSL_EAY_LIBRARY} ${LIB_EAY_LIBRARY} )
+    set(OPENSSL_SSL_LIBRARY ${SSL_EAY_LIBRARY} )
+    set(OPENSSL_CRYPTO_LIBRARY ${LIB_EAY_LIBRARY} )
   elseif(MINGW)
     # same player, for MinGW
-    set(LIB_EAY_NAMES libeay32)
-    set(SSL_EAY_NAMES ssleay32)
-    if(CMAKE_CROSSCOMPILING)
-      list(APPEND LIB_EAY_NAMES crypto)
-      list(APPEND SSL_EAY_NAMES ssl)
-    endif()
+    set(LIB_EAY_NAMES crypto libeay32)
+    set(SSL_EAY_NAMES ssl ssleay32)
     find_library(LIB_EAY
       NAMES
         ${LIB_EAY_NAMES}
+      NAMES_PER_DIR
       ${_OPENSSL_ROOT_HINTS_AND_PATHS}
       PATH_SUFFIXES
-        "lib"
         "lib/MinGW"
+        "lib"
     )
 
     find_library(SSL_EAY
       NAMES
         ${SSL_EAY_NAMES}
+      NAMES_PER_DIR
       ${_OPENSSL_ROOT_HINTS_AND_PATHS}
       PATH_SUFFIXES
-        "lib"
         "lib/MinGW"
+        "lib"
     )
 
     mark_as_advanced(SSL_EAY LIB_EAY)
-    set( OPENSSL_LIBRARIES ${SSL_EAY} ${LIB_EAY} )
+    set(OPENSSL_SSL_LIBRARY ${SSL_EAY} )
+    set(OPENSSL_CRYPTO_LIBRARY ${LIB_EAY} )
     unset(LIB_EAY_NAMES)
     unset(SSL_EAY_NAMES)
   else()
     # Not sure what to pick for -say- intel, let's use the toplevel ones and hope someone report issues:
     find_library(LIB_EAY
       NAMES
+        libcrypto
         libeay32
+      NAMES_PER_DIR
       ${_OPENSSL_ROOT_HINTS_AND_PATHS}
       HINTS
         ${_OPENSSL_LIBDIR}
@@ -204,7 +255,9 @@ if(WIN32 AND NOT CYGWIN)
 
     find_library(SSL_EAY
       NAMES
+        libssl
         ssleay32
+      NAMES_PER_DIR
       ${_OPENSSL_ROOT_HINTS_AND_PATHS}
       HINTS
         ${_OPENSSL_LIBDIR}
@@ -213,7 +266,8 @@ if(WIN32 AND NOT CYGWIN)
     )
 
     mark_as_advanced(SSL_EAY LIB_EAY)
-    set( OPENSSL_LIBRARIES ${SSL_EAY} ${LIB_EAY} )
+    set(OPENSSL_SSL_LIBRARY ${SSL_EAY} )
+    set(OPENSSL_CRYPTO_LIBRARY ${LIB_EAY} )
   endif()
 else()
 
@@ -222,6 +276,7 @@ else()
       ssl
       ssleay32
       ssleay32MD
+    NAMES_PER_DIR
     ${_OPENSSL_ROOT_HINTS_AND_PATHS}
     HINTS
       ${_OPENSSL_LIBDIR}
@@ -232,6 +287,7 @@ else()
   find_library(OPENSSL_CRYPTO_LIBRARY
     NAMES
       crypto
+    NAMES_PER_DIR
     ${_OPENSSL_ROOT_HINTS_AND_PATHS}
     HINTS
       ${_OPENSSL_LIBDIR}
@@ -245,8 +301,6 @@ else()
   set(OPENSSL_SSL_LIBRARIES ${OPENSSL_SSL_LIBRARY})
   set(OPENSSL_CRYPTO_LIBRARIES ${OPENSSL_CRYPTO_LIBRARY})
 
-  set(OPENSSL_LIBRARIES ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
-
 endif()
 
 function(from_hex HEX DEC)
@@ -256,12 +310,9 @@ function(from_hex HEX DEC)
 
   while (_strlen GREATER 0)
     math(EXPR _res "${_res} * 16")
+    math(EXPR _remaining_len "${_strlen} - 1")
     string(SUBSTRING "${HEX}" 0 1 NIBBLE)
-    if(_strlen GREATER 1)
-      string(SUBSTRING "${HEX}" 1 1 HEX)
-    else()
-      set(HEX "")
-    endif()
+    string(SUBSTRING "${HEX}" 1 ${_remaining_len} HEX)
     if (NIBBLE STREQUAL "A")
       math(EXPR _res "${_res} + 10")
     elseif (NIBBLE STREQUAL "B")
@@ -284,13 +335,11 @@ function(from_hex HEX DEC)
   set(${DEC} ${_res} PARENT_SCOPE)
 endfunction()
 
-if (OPENSSL_INCLUDE_DIR)
-  if (_OPENSSL_VERSION)
-    set(OPENSSL_VERSION "${_OPENSSL_VERSION}")
-  elseif(OPENSSL_INCLUDE_DIR AND EXISTS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h")
-    file(STRINGS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h" openssl_version_str
-         REGEX "^# *define[\t ]+OPENSSL_VERSION_NUMBER[\t ]+0x([0-9a-fA-F])+.*")
+if(OPENSSL_INCLUDE_DIR AND EXISTS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h")
+  file(STRINGS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h" openssl_version_str
+       REGEX "^#[\t ]*define[\t ]+OPENSSL_VERSION_NUMBER[\t ]+0x([0-9a-fA-F])+.*")
 
+  if(openssl_version_str)
     # The version number is encoded as 0xMNNFFPPS: major minor fix patch status
     # The status gives if this is a developer or prerelease and is ignored here.
     # Major, minor, and fix directly translate into the version numbers shown in
@@ -322,23 +371,26 @@ if (OPENSSL_INCLUDE_DIR)
   endif ()
 endif ()
 
+set(OPENSSL_LIBRARIES ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} )
+
 if (OPENSSL_VERSION)
   if(CMAKE_VERSION VERSION_LESS "2.8.0")
     find_package_handle_standard_args(OpenSSL
-      REQUIRED_VARS
+        REQUIRED_VARS
         OPENSSL_FOUND
         OPENSSL_LIBRARIES
         OPENSSL_INCLUDE_DIR
-    )
-  if(OPENSSL_FOUND)
-    message(STATUS "Found OpenSSL: ${OPENSSL_LIBRARIES} (found version ${OPENSSL_VERSION})")
-  else()
-    message(FATAL_ERROR "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR")
-  endif()
+        )
+    if(OPENSSL_FOUND)
+      message(STATUS "Found OpenSSL: ${OPENSSL_LIBRARIES} (found version ${OPENSSL_VERSION})")
+    else()
+      message(FATAL_ERROR "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR")
+    endif()
   else()
     find_package_handle_standard_args(OpenSSL
       REQUIRED_VARS
-        OPENSSL_LIBRARIES
+        OPENSSL_SSL_LIBRARY
+        OPENSSL_CRYPTO_LIBRARY
         OPENSSL_INCLUDE_DIR
       VERSION_VAR
         OPENSSL_VERSION
@@ -348,9 +400,78 @@ if (OPENSSL_VERSION)
   endif()
 else ()
   find_package_handle_standard_args(OpenSSL "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR"
-    OPENSSL_LIBRARIES
+    OPENSSL_SSL_LIBRARY
+    OPENSSL_CRYPTO_LIBRARY
     OPENSSL_INCLUDE_DIR
   )
 endif ()
 
 mark_as_advanced(OPENSSL_INCLUDE_DIR OPENSSL_LIBRARIES)
+
+if(OPENSSL_FOUND)
+  if(NOT TARGET OpenSSL::Crypto AND
+      (EXISTS "${OPENSSL_CRYPTO_LIBRARY}" OR
+        EXISTS "${LIB_EAY_LIBRARY_DEBUG}" OR
+        EXISTS "${LIB_EAY_LIBRARY_RELEASE}")
+      )
+    add_library(OpenSSL::Crypto UNKNOWN IMPORTED)
+    set_target_properties(OpenSSL::Crypto PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
+    if(EXISTS "${OPENSSL_CRYPTO_LIBRARY}")
+      set_target_properties(OpenSSL::Crypto PROPERTIES
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${OPENSSL_CRYPTO_LIBRARY}")
+    endif()
+    if(EXISTS "${LIB_EAY_LIBRARY_RELEASE}")
+      set_property(TARGET OpenSSL::Crypto APPEND PROPERTY
+        IMPORTED_CONFIGURATIONS RELEASE)
+      set_target_properties(OpenSSL::Crypto PROPERTIES
+        IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "C"
+        IMPORTED_LOCATION_RELEASE "${LIB_EAY_LIBRARY_RELEASE}")
+    endif()
+    if(EXISTS "${LIB_EAY_LIBRARY_DEBUG}")
+      set_property(TARGET OpenSSL::Crypto APPEND PROPERTY
+        IMPORTED_CONFIGURATIONS DEBUG)
+      set_target_properties(OpenSSL::Crypto PROPERTIES
+        IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
+        IMPORTED_LOCATION_DEBUG "${LIB_EAY_LIBRARY_DEBUG}")
+    endif()
+  endif()
+  if(NOT TARGET OpenSSL::SSL AND
+      (EXISTS "${OPENSSL_SSL_LIBRARY}" OR
+        EXISTS "${SSL_EAY_LIBRARY_DEBUG}" OR
+        EXISTS "${SSL_EAY_LIBRARY_RELEASE}")
+      )
+    add_library(OpenSSL::SSL UNKNOWN IMPORTED)
+    set_target_properties(OpenSSL::SSL PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
+    if(EXISTS "${OPENSSL_SSL_LIBRARY}")
+      set_target_properties(OpenSSL::SSL PROPERTIES
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}")
+    endif()
+    if(EXISTS "${SSL_EAY_LIBRARY_RELEASE}")
+      set_property(TARGET OpenSSL::SSL APPEND PROPERTY
+        IMPORTED_CONFIGURATIONS RELEASE)
+      set_target_properties(OpenSSL::SSL PROPERTIES
+        IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "C"
+        IMPORTED_LOCATION_RELEASE "${SSL_EAY_LIBRARY_RELEASE}")
+    endif()
+    if(EXISTS "${SSL_EAY_LIBRARY_DEBUG}")
+      set_property(TARGET OpenSSL::SSL APPEND PROPERTY
+        IMPORTED_CONFIGURATIONS DEBUG)
+      set_target_properties(OpenSSL::SSL PROPERTIES
+        IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
+        IMPORTED_LOCATION_DEBUG "${SSL_EAY_LIBRARY_DEBUG}")
+    endif()
+    if(TARGET OpenSSL::Crypto)
+      set_target_properties(OpenSSL::SSL PROPERTIES
+        INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
+    endif()
+  endif()
+endif()
+
+# Restore the original find library ordering
+if(OPENSSL_USE_STATIC_LIBS)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${_openssl_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
+endif()

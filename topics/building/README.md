@@ -24,7 +24,7 @@ The C/C++ driver depends on the following software:
 
 * [CMake] v2.6.4+
 * [libuv] 1.x
-* [OpenSSL] v1.0.x
+* [OpenSSL] v1.0.x or v1.1.x
 
 ## Linux/Mac OS
 
@@ -102,10 +102,6 @@ popd
 ```
 
 #### OpenSSL
-
-The DataStax C/C++ driver requires OpenSSL v1.0.x; v1.1.x+ is not currently
-supported by the driver. Ensure that you are installing and using a compatible
-version of OpenSSL.
 
 ##### CentOS (Yum)
 
@@ -263,6 +259,7 @@ Usage: VC_BUILD.BAT [OPTION...]
     --RELEASE                         Enable release build (default)
     --DISABLE-CLEAN                   Disable clean build
     --DEPENDENCIES-ONLY               Build dependencies only
+    --OPENSSL-VERSION                 OpenSSL version 1.0, 1.1 (default: 1.0)
     --TARGET-COMPILER [version]       141, 140, 120, 110, or 100
     --DISABLE-OPENSSL                 Disable OpenSSL support
     --ENABLE-EXAMPLES                 Enable example builds
@@ -290,6 +287,7 @@ Usage: VC_BUILD.BAT [OPTION...]
     --HELP                            Display this message
 
 *   Packages are only generated using detected installations of Visual Studio
+    NOTE: OpenSSL v1.0.x is used for all package builds
 **  Dependencies are built before generation of Visual Studio solution
 *** Default target architecture is determined based on system architecture
 ```
