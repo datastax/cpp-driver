@@ -36,6 +36,8 @@ public:
 
 class SpeculativeExecutionPolicy : public RefCounted<SpeculativeExecutionPolicy> {
 public:
+  typedef SharedRefPtr<SpeculativeExecutionPolicy> Ptr;
+
   virtual ~SpeculativeExecutionPolicy() { }
 
   virtual SpeculativeExecutionPlan* new_plan(const std::string& keyspace,

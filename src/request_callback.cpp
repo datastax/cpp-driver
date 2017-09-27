@@ -28,6 +28,14 @@
 
 namespace cass {
 
+void RequestWrapper::init(const Config& config) {
+  consistency_ = config.consistency();
+  serial_consistency_ = config.serial_consistency();
+  request_timeout_ms_ = config.request_timeout_ms();
+  timestamp_ = config.timestamp_gen()->next();
+  retry_policy_ = config.retry_policy();
+}
+
 void RequestCallback::start(Connection* connection, int stream) {
   connection_ = connection;
   stream_ = stream;
@@ -220,9 +228,10 @@ void MultipleRequestCallback::InternalCallback::on_internal_timeout() {
   parent_->has_errors_or_timeouts_ = true;
 }
 
+
+
 void SimpleRequestCallback::on_start() {
-  uint64_t request_timeout_ms = request()->request_timeout_ms(
-                                  connection()->config().request_timeout_ms());
+  uint64_t request_timeout_ms = this->request_timeout_ms();
   if (request_timeout_ms > 0) { // 0 means no timeout
     timer_.start(connection()->loop(),
                  request_timeout_ms,

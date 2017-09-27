@@ -18,8 +18,8 @@
 #define __CASS_REQUEST_CALLBACK_HPP_INCLUDED__
 
 #include "buffer.hpp"
-#include "constants.hpp"
 #include "cassandra.h"
+#include "constants.hpp"
 #include "utils.hpp"
 #include "list.hpp"
 #include "request.hpp"
@@ -40,6 +40,70 @@ class ResultResponse;
 
 typedef std::vector<uv_buf_t> UvBufVec;
 
+/**
+ * A wrapper class for keeping a request's state grouped together with the
+ * request object. This is necessary because a request object is immutable
+ * when it's being executed.
+ */
+class RequestWrapper {
+public:
+  RequestWrapper(const Request::ConstPtr &request)
+    : request_(request)
+    , consistency_(CASS_DEFAULT_CONSISTENCY)
+    , serial_consistency_(CASS_DEFAULT_SERIAL_CONSISTENCY)
+    , request_timeout_ms_(CASS_DEFAULT_REQUEST_TIMEOUT_MS)
+    , timestamp_(CASS_INT64_MIN) { }
+
+  void init(const Config& config);
+
+  const Request::ConstPtr& request() const {
+    return request_;
+  }
+
+  CassConsistency consistency() const {
+    if (request()->consistency() != CASS_CONSISTENCY_UNKNOWN) {
+      return request()->consistency();
+    }
+    return consistency_;
+  }
+
+  CassConsistency serial_consistency() const {
+    if (request()->serial_consistency() != CASS_CONSISTENCY_UNKNOWN) {
+      return request()->serial_consistency();
+    }
+    return serial_consistency_;
+  }
+
+  uint64_t request_timeout_ms() const {
+    if (request()->request_timeout_ms() != CASS_UINT64_MAX) {
+      return request()->request_timeout_ms();
+    }
+    return request_timeout_ms_;
+  }
+
+  int64_t timestamp() const {
+    if (request()->timestamp() != CASS_INT64_MIN) {
+      return request()->timestamp();
+    }
+    return timestamp_;
+  }
+
+  const RetryPolicy::Ptr& retry_policy() const {
+    if (request()->retry_policy()) {
+      return request()->retry_policy();
+    }
+    return retry_policy_;
+  }
+
+private:
+  Request::ConstPtr request_;
+  CassConsistency consistency_;
+  CassConsistency serial_consistency_;
+  uint64_t request_timeout_ms_;
+  int64_t timestamp_;
+  RetryPolicy::Ptr retry_policy_;
+};
+
 class RequestCallback : public RefCounted<RequestCallback>, public List<RequestCallback>::Node {
 public:
   typedef SharedRefPtr<RequestCallback> Ptr;
@@ -56,11 +120,12 @@ public:
     REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE
   };
 
-  RequestCallback()
-    : connection_(NULL)
+  RequestCallback(const RequestWrapper& wrapper)
+    : wrapper_(wrapper)
+    , connection_(NULL)
     , stream_(-1)
     , state_(REQUEST_STATE_NEW)
-    , cl_(CASS_CONSISTENCY_UNKNOWN) { }
+    , retry_consistency_(CASS_CONSISTENCY_UNKNOWN) { }
 
   virtual ~RequestCallback() { }
 
@@ -75,7 +140,33 @@ public:
 
   int32_t encode(int version, int flags, BufferVec* bufs);
 
-  virtual int64_t timestamp() const { return request()->timestamp(); }
+  const Request* request() const { return wrapper_.request().get(); }
+
+  CassConsistency consistency() {
+    // The retry consistency takes the highest priority
+    if (retry_consistency_ != CASS_CONSISTENCY_UNKNOWN) {
+      return retry_consistency_;
+    }
+    return wrapper_.consistency();
+  }
+
+  CassConsistency serial_consistency() {
+    return wrapper_.serial_consistency();
+  }
+
+  uint64_t request_timeout_ms() {
+    return wrapper_.request_timeout_ms();
+  }
+
+ int64_t timestamp() {
+   return wrapper_.timestamp();
+ }
+
+ const RetryPolicy::Ptr& retry_policy() {
+   return wrapper_.retry_policy();
+ }
+
+  void set_retry_consistency(CassConsistency cl) { retry_consistency_ = cl; }
 
   Connection* connection() const { return connection_; }
 
@@ -83,12 +174,6 @@ public:
 
   State state() const { return state_; }
   void set_state(State next_state);
-
-  CassConsistency consistency() const {
-    return cl_ != CASS_CONSISTENCY_UNKNOWN ? cl_ : request()->consistency();
-  }
-
-  void set_consistency(CassConsistency cl) { cl_ = cl; }
 
   ResponseMessage* read_before_write_response() const {
     return read_before_write_response_.get();
@@ -98,18 +183,16 @@ public:
     read_before_write_response_.reset(response);
   }
 
-public:
-  virtual const Request* request() const = 0;
-
 protected:
   // Called right before a request is written to a host.
   virtual void on_start() = 0;
 
 private:
+  const RequestWrapper wrapper_;
   Connection* connection_;
   int stream_;
   State state_;
-  CassConsistency cl_;
+  CassConsistency retry_consistency_;
   ScopedPtr<ResponseMessage> read_before_write_response_;
 
 private:
@@ -119,10 +202,7 @@ private:
 class SimpleRequestCallback : public RequestCallback {
 public:
   SimpleRequestCallback(const Request::ConstPtr& request)
-    : RequestCallback()
-    , request_(request) { }
-
-  virtual const Request* request() const { return request_.get(); }
+    : RequestCallback(RequestWrapper(request)) { }
 
 protected:
   virtual void on_internal_set(ResponseMessage* response) = 0;
@@ -142,7 +222,6 @@ private:
 
 private:
   Timer timer_;
-  const Request::ConstPtr request_;
 };
 
 class MultipleRequestCallback : public RefCounted<MultipleRequestCallback> {
