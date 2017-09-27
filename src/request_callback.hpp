@@ -100,7 +100,6 @@ public:
 
 public:
   virtual const Request* request() const = 0;
-  virtual Request::EncodingCache* encoding_cache() = 0;
 
 protected:
   // Called right before a request is written to a host.
@@ -124,7 +123,6 @@ public:
     , request_(request) { }
 
   virtual const Request* request() const { return request_.get(); }
-  virtual Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
 
 protected:
   virtual void on_internal_set(ResponseMessage* response) = 0;
@@ -145,7 +143,6 @@ private:
 private:
   Timer timer_;
   const Request::ConstPtr request_;
-  Request::EncodingCache encoding_cache_;
 };
 
 class MultipleRequestCallback : public RefCounted<MultipleRequestCallback> {

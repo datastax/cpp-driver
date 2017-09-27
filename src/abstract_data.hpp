@@ -72,7 +72,7 @@ public:
 
     size_t get_size(int version) const;
     size_t copy_buffer(int version, size_t pos, Buffer* buf) const;
-    Buffer get_buffer_cached(int version, Request::EncodingCache* cache, bool add_to_cache) const;
+    Buffer get_buffer(int version) const;
 
   private:
     Type type_;

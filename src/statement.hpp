@@ -105,8 +105,8 @@ public:
 
   void add_key_index(size_t index) { key_indices_.push_back(index); }
 
-  virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const {
-    return calculate_routing_key(key_indices_, routing_key, cache);
+  virtual bool get_routing_key(std::string* routing_key) const {
+    return calculate_routing_key(key_indices_, routing_key);
   }
 
   int32_t encode_batch(int version, RequestCallback* callback, BufferVec* bufs) const;
@@ -119,8 +119,7 @@ protected:
   int32_t encode_values(int version, RequestCallback* callback, BufferVec* bufs) const;
   int32_t encode_end(int version, RequestCallback* callback, BufferVec* bufs) const;
 
-  bool calculate_routing_key(const std::vector<size_t>& key_indices,
-                             std::string* routing_key, EncodingCache* cache) const;
+  bool calculate_routing_key(const std::vector<size_t>& key_indices, std::string* routing_key) const;
 
 private:
   Buffer query_or_id_;
