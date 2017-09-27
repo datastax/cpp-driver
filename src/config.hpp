@@ -46,6 +46,8 @@ public:
       : port_(9042)
       , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
       , use_beta_protocol_version_(false)
+      , consistency_(CASS_DEFAULT_CONSISTENCY)
+      , serial_consistency_(CASS_DEFAULT_SERIAL_CONSISTENCY)
       , thread_count_io_(1)
       , queue_size_io_(8192)
       , queue_size_event_(8192)
@@ -61,7 +63,7 @@ public:
       , pending_requests_high_water_mark_(128 * max_connections_per_host_)
       , pending_requests_low_water_mark_(pending_requests_high_water_mark_ / 2)
       , connect_timeout_ms_(5000)
-      , request_timeout_ms_(12000)
+      , request_timeout_ms_(CASS_DEFAULT_REQUEST_TIMEOUT_MS)
       , resolve_timeout_ms_(2000)
       , log_level_(CASS_LOG_WARN)
       , log_callback_(stderr_log_callback)
@@ -82,6 +84,52 @@ public:
       , use_schema_(true)
       , use_hostname_resolution_(false)
       , use_randomized_contact_points_(true) { }
+
+  Config new_instance() const {
+    Config config = *this;
+
+    // The base LBP can be augmented by special wrappers (whitelist,
+    // token aware, latency aware)
+    LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
+    if (!blacklist_.empty()) {
+      chain = new BlacklistPolicy(chain, blacklist_);
+    }
+    if (!whitelist_.empty()) {
+      chain = new WhitelistPolicy(chain, whitelist_);
+    }
+    if (!blacklist_dc_.empty()) {
+      chain = new BlacklistDCPolicy(chain, blacklist_dc_);
+    }
+    if (!whitelist_dc_.empty()) {
+      chain = new WhitelistDCPolicy(chain, whitelist_dc_);
+    }
+    if (token_aware_routing()) {
+      chain = new TokenAwarePolicy(chain);
+    }
+    if (latency_aware()) {
+      chain = new LatencyAwarePolicy(chain, latency_aware_routing_settings_);
+    }
+    if (host_targeting()) {
+      chain = new HostTargetingPolicy(chain);
+    }
+
+    config.set_load_balancing_policy(chain);
+    config.set_speculative_execution_policy(speculative_execution_policy_->new_instance());
+
+    return config;
+  }
+
+  CassConsistency consistency() const { return consistency_; }
+
+  void set_consistency(CassConsistency consistency) {
+    consistency_ = consistency;
+  }
+
+  CassConsistency serial_consistency() const { return serial_consistency_; }
+
+  void set_serial_consistency(CassConsistency serial_consistency) {
+    serial_consistency_ = serial_consistency;
+  }
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -252,32 +300,8 @@ public:
     auth_provider_.reset(new PlainTextAuthProvider(username, password));
   }
 
-  LoadBalancingPolicy* load_balancing_policy() const {
-    // The base LBP can be augmented by special wrappers (whitelist,
-    // token aware, latency aware)
-    LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
-    if (!blacklist_.empty()) {
-      chain = new BlacklistPolicy(chain, blacklist_);
-    }
-    if (!whitelist_.empty()) {
-      chain = new WhitelistPolicy(chain, whitelist_);
-    }
-    if (!blacklist_dc_.empty()) {
-      chain = new BlacklistDCPolicy(chain, blacklist_dc_);
-    }
-    if (!whitelist_dc_.empty()) {
-      chain = new WhitelistDCPolicy(chain, whitelist_dc_);
-    }
-    if (token_aware_routing()) {
-      chain = new TokenAwarePolicy(chain);
-    }
-    if (latency_aware()) {
-      chain = new LatencyAwarePolicy(chain, latency_aware_routing_settings_);
-    }
-    if (host_targeting()) {
-      chain = new HostTargetingPolicy(chain);
-    }
-    return chain;
+  const LoadBalancingPolicy::Ptr& load_balancing_policy() const {
+    return load_balancing_policy_;
   }
 
   void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
@@ -285,8 +309,8 @@ public:
     load_balancing_policy_.reset(lbp);
   }
 
-  SpeculativeExecutionPolicy* speculative_execution_policy() const {
-    return speculative_execution_policy_->new_instance();
+  const SpeculativeExecutionPolicy::Ptr& speculative_execution_policy() const {
+    return speculative_execution_policy_;
   }
 
   void set_speculative_execution_policy(SpeculativeExecutionPolicy* sep) {
@@ -371,8 +395,8 @@ public:
     timestamp_gen_.reset(timestamp_gen);
   }
 
-  RetryPolicy* retry_policy() const {
-    return retry_policy_.get();
+  const RetryPolicy::Ptr& retry_policy() const {
+    return retry_policy_;
   }
 
   void set_retry_policy(RetryPolicy* retry_policy) {
@@ -400,6 +424,8 @@ private:
   int protocol_version_;
   bool use_beta_protocol_version_;
   ContactPointList contact_points_;
+  CassConsistency consistency_;
+  CassConsistency serial_consistency_;
   unsigned thread_count_io_;
   unsigned queue_size_io_;
   unsigned queue_size_event_;
@@ -422,7 +448,7 @@ private:
   void* log_data_;
   AuthProvider::Ptr auth_provider_;
   LoadBalancingPolicy::Ptr load_balancing_policy_;
-  SharedRefPtr<SpeculativeExecutionPolicy> speculative_execution_policy_;
+  SpeculativeExecutionPolicy::Ptr speculative_execution_policy_;
   SslContext::Ptr ssl_context_;
   bool token_aware_routing_;
   bool latency_aware_routing_;

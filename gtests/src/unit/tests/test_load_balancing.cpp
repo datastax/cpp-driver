@@ -409,7 +409,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr(), NULL));
+      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
 
     // Check for only local hosts are used
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
@@ -427,7 +427,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr(), NULL));
+      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
 
     // Check for only local hosts are used
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
@@ -496,7 +496,7 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
   cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr(), NULL));
+      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -575,7 +575,7 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
   cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr(), NULL));
+      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));

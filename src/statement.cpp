@@ -366,7 +366,7 @@ int32_t Statement::encode_begin(int version, uint16_t element_count,
     flags |= CASS_QUERY_FLAG_PAGING_STATE;
   }
 
-  if (serial_consistency() != 0) {
+  if (callback->serial_consistency() != 0) {
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
@@ -435,7 +435,7 @@ int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec*
     paging_buf_size += sizeof(int32_t) + paging_state().size(); // [bytes]
   }
 
-  if (serial_consistency() != 0) {
+  if (callback->serial_consistency() != 0) {
     paging_buf_size += sizeof(uint16_t); // [short]
   }
 
@@ -458,8 +458,8 @@ int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec*
       pos = buf.encode_bytes(pos, paging_state().data(), paging_state().size());
     }
 
-    if (serial_consistency() != 0) {
-      pos = buf.encode_uint16(pos, serial_consistency());
+    if (callback->serial_consistency() != 0) {
+      pos = buf.encode_uint16(pos, callback->serial_consistency());
     }
 
     if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {

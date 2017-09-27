@@ -67,12 +67,10 @@ public:
     REQUEST_ERROR_CANCELLED = -5
   };
 
-  static const CassConsistency DEFAULT_CONSISTENCY = CASS_CONSISTENCY_LOCAL_ONE;
-
   Request(uint8_t opcode)
       : opcode_(opcode)
-      , consistency_(DEFAULT_CONSISTENCY)
-      , serial_consistency_(CASS_CONSISTENCY_ANY)
+      , consistency_(CASS_CONSISTENCY_UNKNOWN)
+      , serial_consistency_(CASS_CONSISTENCY_UNKNOWN)
       , timestamp_(CASS_INT64_MIN)
       , is_idempotent_(false)
       , record_attempted_addresses_(false)
@@ -106,14 +104,14 @@ public:
     record_attempted_addresses_ = record_attempted_addresses;
   }
 
-  uint64_t request_timeout_ms(uint64_t default_timeout_ms) const;
+  uint64_t request_timeout_ms() const { return request_timeout_ms_; }
 
   void set_request_timeout_ms(uint64_t request_timeout_ms) {
     request_timeout_ms_ = request_timeout_ms;
   }
 
-  RetryPolicy* retry_policy() const {
-    return retry_policy_.get();
+  const RetryPolicy::Ptr& retry_policy() const {
+    return retry_policy_;
   }
 
   void set_retry_policy(RetryPolicy* retry_policy) {

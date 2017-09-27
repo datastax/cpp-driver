@@ -83,10 +83,6 @@ public:
   const Config& config() const { return config_; }
   Metrics* metrics() const { return metrics_.get(); }
 
-  void set_load_balancing_policy(LoadBalancingPolicy* policy) {
-    load_balancing_policy_.reset(policy);
-  }
-
 private:
   std::string keyspace() const;
   void set_keyspace(const std::string& keyspace);
@@ -166,8 +162,7 @@ private:
   static void on_execute(uv_async_t* data);
 #endif
 
-  QueryPlan* new_query_plan(const RequestHandler::Ptr& request_handler = RequestHandler::Ptr());
-  SpeculativeExecutionPlan* new_execution_plan(const Request* request);
+  QueryPlan* new_query_plan();
 
   void on_reconnect(Timer* timer);
 
@@ -198,8 +193,6 @@ private:
 
   Config config_;
   ScopedPtr<Metrics> metrics_;
-  LoadBalancingPolicy::Ptr load_balancing_policy_;
-  SharedRefPtr<SpeculativeExecutionPolicy> speculative_execution_policy_;
   CassError connect_error_code_;
   std::string connect_error_message_;
   Future::Ptr connect_future_;

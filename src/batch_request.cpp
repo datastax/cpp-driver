@@ -143,7 +143,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
         buf_size += sizeof(uint8_t); // [byte]
       }
 
-      if (serial_consistency() != 0) {
+      if (callback->serial_consistency() != 0) {
         buf_size += sizeof(uint16_t); // [short]
         flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
       }
@@ -164,8 +164,8 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
         pos = buf.encode_byte(pos, flags);
       }
 
-      if (serial_consistency() != 0) {
-        pos = buf.encode_uint16(pos, serial_consistency());
+      if (callback->serial_consistency() != 0) {
+        pos = buf.encode_uint16(pos, callback->serial_consistency());
       }
 
       if (callback->timestamp() != CASS_INT64_MIN) {

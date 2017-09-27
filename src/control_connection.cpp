@@ -763,11 +763,11 @@ void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateH
   if ((!rack.empty() && rack != host->rack()) ||
       (!dc.empty() && dc != host->dc())) {
     if (!host->was_just_added()) {
-      session_->load_balancing_policy_->on_remove(host);
+      session_->config().load_balancing_policy()->on_remove(host);
     }
     host->set_rack_and_dc(rack, dc);
     if (!host->was_just_added()) {
-      session_->load_balancing_policy_->on_add(host);
+      session_->config().load_balancing_policy()->on_add(host);
     }
   }
 
