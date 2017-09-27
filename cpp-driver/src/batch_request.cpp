@@ -198,10 +198,10 @@ bool BatchRequest::prepared_statement(const String& id,
   return false;
 }
 
-bool BatchRequest::get_routing_key(String* routing_key, EncodingCache* cache) const {
+bool BatchRequest::get_routing_key(String* routing_key) const {
   for (BatchRequest::StatementList::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
-    if ((*i)->get_routing_key(routing_key, cache)) {
+    if ((*i)->get_routing_key(routing_key)) {
       return true;
     }
   }

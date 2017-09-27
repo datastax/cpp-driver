@@ -145,8 +145,6 @@ public:
   int64_t timestamp() const { return timestamp_; }
   void set_timestamp(int64_t timestamp) { timestamp_ = timestamp; }
 
-  Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
-
   RetryPolicy* retry_policy() { return retry_policy_; }
 
   const Address& preferred_address() const {
@@ -210,7 +208,6 @@ private:
   Timer timer_;
   int running_executions_;
   RequestExecutionVec request_executions_;
-  Request::EncodingCache encoding_cache_;
   uint64_t start_time_ns_;
   Address preferred_address_;
 };
@@ -224,7 +221,6 @@ public:
 
   virtual const Request* request() const { return request_handler_->request(); }
   virtual int64_t timestamp() const { return request_handler_->timestamp(); }
-  virtual Request::EncodingCache* encoding_cache() { return request_handler_->encoding_cache(); }
 
   Pool* pool() const { return pool_; }
   void set_pool(Pool* pool) { pool_ = pool; }

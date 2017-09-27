@@ -47,7 +47,7 @@ public:
 
   bool prepared_statement(const String& id, String* statement) const;
 
-  virtual bool get_routing_key(String* routing_key, EncodingCache* cache) const;
+  virtual bool get_routing_key(String* routing_key) const;
 
 private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
