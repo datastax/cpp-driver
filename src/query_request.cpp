@@ -53,7 +53,7 @@ int32_t QueryRequest::encode_values_with_names(int version, RequestCallback* cal
     const Buffer& name_buf = (*value_names_)[i].buf;
     bufs->push_back(name_buf);
 
-    Buffer value_buf(elements()[i].get_buffer_cached(version, callback->encoding_cache(), false));
+    Buffer value_buf(elements()[i].get_buffer(version));
     bufs->push_back(value_buf);
 
     size += name_buf.size() + value_buf.size();

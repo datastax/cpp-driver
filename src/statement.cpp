@@ -401,7 +401,7 @@ int32_t Statement::encode_values(int version, RequestCallback* callback, BufferV
   for (size_t i = 0; i < elements().size(); ++i) {
     const Element& element = elements()[i];
     if (!element.is_unset()) {
-      bufs->push_back(element.get_buffer_cached(version, callback->encoding_cache(), false));
+      bufs->push_back(element.get_buffer(version));
     } else  {
       if (version >= 4) {
         bufs->push_back(cass::encode_with_length(CassUnset()));
@@ -470,8 +470,7 @@ int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec*
   return length;
 }
 
-bool Statement::calculate_routing_key(const std::vector<size_t>& key_indices,
-                                      std::string* routing_key, EncodingCache* cache) const {
+bool Statement::calculate_routing_key(const std::vector<size_t>& key_indices, std::string* routing_key) const {
   if (key_indices.empty()) return false;
 
   if (key_indices.size() == 1) {
@@ -480,7 +479,7 @@ bool Statement::calculate_routing_key(const std::vector<size_t>& key_indices,
     if (element.is_unset() || element.is_null()) {
       return false;
     }
-    Buffer buf(element.get_buffer_cached(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, cache, true));
+    Buffer buf(element.get_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION));
     routing_key->assign(buf.data() + sizeof(int32_t),
                         buf.size() - sizeof(int32_t));
   } else {
@@ -503,7 +502,7 @@ bool Statement::calculate_routing_key(const std::vector<size_t>& key_indices,
     for (std::vector<size_t>::const_iterator i = key_indices.begin();
          i != key_indices.end(); ++i) {
       const AbstractData::Element& element(elements()[*i]);
-      Buffer buf(element.get_buffer_cached(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, cache, true));
+      Buffer buf(element.get_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION));
       size_t size = buf.size() - sizeof(int32_t);
 
       char size_buf[sizeof(uint16_t)];

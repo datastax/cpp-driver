@@ -48,7 +48,7 @@ public:
 
   bool prepared_statement(const std::string& id, std::string* statement) const;
 
-  virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
+  virtual bool get_routing_key(std::string* routing_key) const;
 
 private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;

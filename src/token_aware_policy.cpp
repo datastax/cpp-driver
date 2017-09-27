@@ -58,7 +58,7 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
         const std::string& keyspace = statement_keyspace.empty()
                                       ? connected_keyspace : statement_keyspace;
         std::string routing_key;
-        if (request->get_routing_key(&routing_key, request_handler->encoding_cache()) && !keyspace.empty()) {
+        if (request->get_routing_key(&routing_key) && !keyspace.empty()) {
           if (token_map != NULL) {
             CopyOnWriteHostVec replicas = token_map->get_replicas(keyspace, routing_key);
             if (replicas && !replicas->empty()) {

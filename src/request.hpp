@@ -69,8 +69,6 @@ public:
 
   static const CassConsistency DEFAULT_CONSISTENCY = CASS_CONSISTENCY_LOCAL_ONE;
 
-  typedef std::map<const void*, Buffer> EncodingCache;
-
   Request(uint8_t opcode)
       : opcode_(opcode)
       , consistency_(DEFAULT_CONSISTENCY)
@@ -156,7 +154,7 @@ public:
     : Request(opcode)
     , keyspace_(keyspace){}
 
-  virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const = 0;
+  virtual bool get_routing_key(std::string* routing_key) const = 0;
 
   const std::string& keyspace() const { return keyspace_; }
   void set_keyspace(const std::string& keyspace) { keyspace_ = keyspace; }
