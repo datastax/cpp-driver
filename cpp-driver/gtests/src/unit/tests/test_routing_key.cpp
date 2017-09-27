@@ -32,8 +32,6 @@ TEST_F(RoutingKeyUnitTest, Single)
 {
   {
     cass::QueryRequest query("", 1);
-    cass::Request::EncodingCache cache;
-
 
     CassUuid uuid;
     ASSERT_EQ(cass_uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", &uuid), CASS_OK);
@@ -42,7 +40,7 @@ TEST_F(RoutingKeyUnitTest, Single)
     query.add_key_index(0);
 
     cass::String routing_key;
-    EXPECT_TRUE(query.get_routing_key(&routing_key, &cache));
+    EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 6739078495667776670);
@@ -50,14 +48,13 @@ TEST_F(RoutingKeyUnitTest, Single)
 
   {
     cass::QueryRequest query("", 1);
-    cass::Request::EncodingCache cache;
 
     cass_int32_t value = 123456789;
     query.set(0, value);
     query.add_key_index(0);
 
     cass::String routing_key;
-    EXPECT_TRUE(query.get_routing_key(&routing_key, &cache));
+    EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, -567416363967733925);
@@ -65,14 +62,13 @@ TEST_F(RoutingKeyUnitTest, Single)
 
   {
     cass::QueryRequest query("", 1);
-    cass::Request::EncodingCache cache;
 
     cass_int64_t value = 123456789;
     query.set(0, value);
     query.add_key_index(0);
 
     cass::String routing_key;
-    EXPECT_TRUE(query.get_routing_key(&routing_key, &cache));
+    EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 5616923877423390342);
@@ -80,13 +76,12 @@ TEST_F(RoutingKeyUnitTest, Single)
 
   {
     cass::QueryRequest query("", 1);
-    cass::Request::EncodingCache cache;
 
     query.set(0, cass_true);
     query.add_key_index(0);
 
     cass::String routing_key;
-    EXPECT_TRUE(query.get_routing_key(&routing_key, &cache));
+    EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 8849112093580131862);
@@ -94,14 +89,13 @@ TEST_F(RoutingKeyUnitTest, Single)
 
   {
     cass::QueryRequest query("", 1);
-    cass::Request::EncodingCache cache;
 
     const char* value = "abcdefghijklmnop";
     query.set(0, cass::CassString(value, strlen(value)));
     query.add_key_index(0);
 
     cass::String routing_key;
-    EXPECT_TRUE(query.get_routing_key(&routing_key, &cache));
+    EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, -4266531025627334877);
@@ -111,22 +105,20 @@ TEST_F(RoutingKeyUnitTest, Single)
 TEST_F(RoutingKeyUnitTest, EmptyAndNull)
 {
   cass::QueryRequest query("", 1);
-  cass::Request::EncodingCache cache;
 
   cass::String routing_key;
-  EXPECT_FALSE(query.get_routing_key(&routing_key, &cache));
+  EXPECT_FALSE(query.get_routing_key(&routing_key));
 
   query.set(0, cass::CassNull());
   query.add_key_index(0);
 
-  EXPECT_FALSE(query.get_routing_key(&routing_key, &cache));
+  EXPECT_FALSE(query.get_routing_key(&routing_key));
 }
 
 TEST_F(RoutingKeyUnitTest, Composite)
 {
   {
     cass::QueryRequest query("", 3);
-    cass::Request::EncodingCache cache;
 
     CassUuid uuid;
     ASSERT_EQ(cass_uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", &uuid), CASS_OK);
@@ -142,7 +134,7 @@ TEST_F(RoutingKeyUnitTest, Composite)
     query.add_key_index(2);
 
     cass::String routing_key;
-    EXPECT_TRUE(query.get_routing_key(&routing_key, &cache));
+    EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 3838437721532426513);
@@ -150,7 +142,6 @@ TEST_F(RoutingKeyUnitTest, Composite)
 
   {
     cass::QueryRequest query("", 3);
-    cass::Request::EncodingCache cache;
 
     query.set(0, cass_false);
     query.add_key_index(0);
@@ -163,7 +154,7 @@ TEST_F(RoutingKeyUnitTest, Composite)
     query.add_key_index(2);
 
     cass::String routing_key;
-    EXPECT_TRUE(query.get_routing_key(&routing_key, &cache));
+    EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 4466051201071860026);

@@ -111,19 +111,9 @@ size_t AbstractData::Element::copy_buffer(int version, size_t pos, Buffer* buf) 
   }
 }
 
-Buffer AbstractData::Element::get_buffer_cached(int version, Request::EncodingCache* cache, bool add_to_cache) const {
+Buffer AbstractData::Element::get_buffer(int version) const {
   if (type_ == COLLECTION) {
-    Request::EncodingCache::const_iterator i = cache->find(collection_.get());
-    if (i != cache->end()) {
-      return i->second;
-    } else {
-      Buffer buf(collection_->encode_with_length(version));
-      if (add_to_cache) {
-        // TODO: Is there a size threshold where it might be faster to alway re-encode?
-        cache->insert(std::make_pair(collection_.get(), buf));
-      }
-      return buf;
-    }
+    return collection_->encode_with_length(version);
   } else {
     assert(type_ == BUFFER || type_ == NUL);
     return buf_;

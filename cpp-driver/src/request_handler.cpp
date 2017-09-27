@@ -95,10 +95,15 @@ void RequestHandler::schedule_next_execution(const Host::Ptr& current_host) {
   }
 }
 
+void RequestHandler::init(const Config& config, const String& keyspace, const TokenMap* token_map) {
+  wrapper_.init(config);
+  query_plan_.reset(config.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
+  execution_plan_.reset(config.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
+}
+
 void RequestHandler::start_request(IOWorker* io_worker) {
   io_worker_ = io_worker;
-  uint64_t request_timeout_ms = request_->request_timeout_ms(
-                                  io_worker->config().request_timeout_ms());
+  uint64_t request_timeout_ms = wrapper_.request_timeout_ms();
   if (request_timeout_ms > 0) { // 0 means no timeout
     timer_.start(io_worker->loop(),
                  request_timeout_ms,
@@ -174,7 +179,7 @@ void RequestHandler::stop_request() {
 
 RequestExecution::RequestExecution(const RequestHandler::Ptr& request_handler,
                                    const Host::Ptr& current_host)
-  : RequestCallback()
+  : RequestCallback(request_handler->wrapper_)
   , request_handler_(request_handler)
   , current_host_(current_host)
   , pool_(NULL)
@@ -350,44 +355,47 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
 
   RetryPolicy::RetryDecision decision = RetryPolicy::RetryDecision::return_error();
 
-
   switch(error->code()) {
     case CQL_ERROR_READ_TIMEOUT:
-      decision =  request_handler_->retry_policy()->on_read_timeout(request(),
-                                                                    error->consistency(),
-                                                                    error->received(),
-                                                                    error->required(),
-                                                                    error->data_present() > 0,
-                                                                    num_retries_);
+      if (retry_policy()) {
+        decision =  retry_policy()->on_read_timeout(request(),
+                                                    error->consistency(),
+                                                    error->received(),
+                                                    error->required(),
+                                                    error->data_present() > 0,
+                                                    num_retries_);
+      }
       break;
 
     case CQL_ERROR_WRITE_TIMEOUT:
-      if (request()->is_idempotent()) {
-        decision =  request_handler_->retry_policy()->on_write_timeout(request(),
-                                                                       error->consistency(),
-                                                                       error->received(),
-                                                                       error->required(),
-                                                                       error->write_type(),
-                                                                       num_retries_);
+      if (retry_policy() && request()->is_idempotent()) {
+        decision = retry_policy()->on_write_timeout(request(),
+                                                    error->consistency(),
+                                                    error->received(),
+                                                    error->required(),
+                                                    error->write_type(),
+                                                    num_retries_);
       }
       break;
 
     case CQL_ERROR_UNAVAILABLE:
-      decision =  request_handler_->retry_policy()->on_unavailable(request(),
-                                                                   error->consistency(),
-                                                                   error->required(),
-                                                                   error->received(),
-                                                                   num_retries_);
+      if (retry_policy()) {
+        decision =  retry_policy()->on_unavailable(request(),
+                                                   error->consistency(),
+                                                   error->required(),
+                                                   error->received(),
+                                                   num_retries_);
+      }
       break;
 
     case CQL_ERROR_OVERLOADED:
       LOG_WARN("Host %s is overloaded.",
                connection()->address_string().c_str());
-      if (request()->is_idempotent()) {
-        decision = request_handler_->retry_policy()->on_request_error(request(),
-                                                                      request()->consistency(),
-                                                                      error,
-                                                                      num_retries_);
+      if (retry_policy() && request()->is_idempotent()) {
+        decision = retry_policy()->on_request_error(request(),
+                                                    request()->consistency(),
+                                                    error,
+                                                    num_retries_);
       }
       break;
 
@@ -396,11 +404,11 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
                error->message().to_string().c_str(),
                connection()->address_string().c_str());
       connection()->defunct();
-      if (request()->is_idempotent()) {
-        decision = request_handler_->retry_policy()->on_request_error(request(),
-                                                                      request()->consistency(),
-                                                                      error,
-                                                                      num_retries_);
+      if (retry_policy() && request()->is_idempotent()) {
+        decision = retry_policy()->on_request_error(request(),
+                                                    request()->consistency(),
+                                                    error,
+                                                    num_retries_);
       }
       break;
 
@@ -429,7 +437,7 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
       break;
 
     case RetryPolicy::RetryDecision::RETRY:
-      set_consistency(decision.retry_consistency());
+      set_retry_consistency(decision.retry_consistency());
       if (decision.retry_current_host()) {
         retry_current_host();
       } else {

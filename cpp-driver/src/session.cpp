@@ -182,11 +182,9 @@ Session::~Session() {
 }
 
 void Session::clear(const Config& config) {
-  config_ = config;
+  config_ = config.new_instance();
   random_.reset();
   metrics_.reset(Memory::allocate<Metrics>(config_.thread_count_io() + 1));
-  load_balancing_policy_.reset(config.load_balancing_policy());
-  speculative_execution_policy_.reset(config.speculative_execution_policy());
   connect_future_.reset();
   close_future_.reset();
   { // Lock hosts
@@ -444,7 +442,7 @@ void Session::notify_closed() {
 void Session::close_handles() {
   EventThread<SessionEvent>::close_handles();
   request_queue_->close_handles();
-  load_balancing_policy_->close_handles();
+  config_.load_balancing_policy()->close_handles();
 }
 
 void Session::on_run() {
@@ -609,8 +607,8 @@ void Session::on_add_resolve_name(NameResolver* resolver) {
 
 void Session::on_control_connection_ready() {
   // No hosts lock necessary (only called on session thread and read-only)
-  load_balancing_policy_->init(control_connection_.connected_host(), hosts_, random_.get());
-  load_balancing_policy_->register_handles(loop());
+  config().load_balancing_policy()->init(control_connection_.connected_host(), hosts_, random_.get());
+  config().load_balancing_policy()->register_handles(loop());
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
     (*it)->set_protocol_version(control_connection_.protocol_version());
@@ -662,14 +660,14 @@ void Session::on_add(Host::Ptr host, bool is_initial_connection) {
 void Session::internal_on_add(Host::Ptr host, bool is_initial_connection) {
   host->set_up();
 
-  if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
+  if (config().load_balancing_policy()->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
     return;
   }
 
   if (is_initial_connection) {
     pending_pool_count_ += io_workers_.size();
   } else {
-    load_balancing_policy_->on_add(host);
+    config().load_balancing_policy()->on_add(host);
   }
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
@@ -679,7 +677,7 @@ void Session::internal_on_add(Host::Ptr host, bool is_initial_connection) {
 }
 
 void Session::on_remove(Host::Ptr host) {
-  load_balancing_policy_->on_remove(host);
+  config().load_balancing_policy()->on_remove(host);
   { // Lock hosts
     ScopedMutex l(&hosts_mutex_);
     hosts_.erase(host->address());
@@ -693,11 +691,11 @@ void Session::on_remove(Host::Ptr host) {
 void Session::on_up(Host::Ptr host) {
   host->set_up();
 
-  if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
+  if (config().load_balancing_policy()->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
     return;
   }
 
-  load_balancing_policy_->on_up(host);
+  config().load_balancing_policy()->on_up(host);
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
@@ -707,10 +705,10 @@ void Session::on_up(Host::Ptr host) {
 
 void Session::on_down(Host::Ptr host) {
   host->set_down();
-  load_balancing_policy_->on_down(host);
+  config().load_balancing_policy()->on_down(host);
 
   bool cancel_reconnect = false;
-  if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
+  if (config().load_balancing_policy()->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
     // This permanently removes a host from all IO workers by stopping
     // any attempt to reconnect to that host.
     cancel_reconnect = true;
@@ -725,13 +723,8 @@ Future::Ptr Session::execute(const Request::ConstPtr& request,
                              const Address* preferred_address) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>());
 
-  RetryPolicy* retry_policy
-      = request->retry_policy() != NULL ? request->retry_policy()
-                                        : config().retry_policy();
-
-  RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request,
-                                                                       future,
-                                                                       retry_policy));
+  RequestHandler::Ptr request_handler(
+        Memory::allocate<RequestHandler>(request, future));
   if (preferred_address) {
     request_handler->set_preferred_address(*preferred_address);
   }
@@ -756,12 +749,7 @@ void Session::on_execute(uv_async_t* data) {
     if (request_handler) {
       request_handler->dec_ref(); // Queue reference
 
-      request_handler->set_query_plan(session->new_query_plan(request_handler));
-      request_handler->set_execution_plan(session->new_execution_plan(request_handler->request()));
-
-      if (request_handler->timestamp() == CASS_INT64_MIN) {
-        request_handler->set_timestamp(session->config_.timestamp_gen()->next());
-      }
+      request_handler->init(session->config_, session->keyspace(), session->token_map_.get());
 
       bool is_done = false;
       while (!is_done) {
@@ -800,12 +788,8 @@ void Session::on_execute(uv_async_t* data) {
   }
 }
 
-QueryPlan* Session::new_query_plan(const RequestHandler::Ptr& request_handler) {
-  return load_balancing_policy_->new_query_plan(keyspace(), request_handler.get(), token_map_.get());
-}
-
-SpeculativeExecutionPlan* Session::new_execution_plan(const Request* request) {
-  return speculative_execution_policy_->new_plan(keyspace(), request);
+QueryPlan* Session::new_query_plan() {
+  return config_.load_balancing_policy()->new_query_plan(keyspace(), NULL, token_map_.get());
 }
 
 } // namespace cass

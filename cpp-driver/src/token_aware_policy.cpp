@@ -65,7 +65,7 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const String& connected_keyspace,
         const String& keyspace = statement_keyspace.empty()
                                       ? connected_keyspace : statement_keyspace;
         String routing_key;
-        if (request->get_routing_key(&routing_key, request_handler->encoding_cache()) && !keyspace.empty()) {
+        if (request->get_routing_key(&routing_key) && !keyspace.empty()) {
           if (token_map != NULL) {
             CopyOnWriteHostVec replicas = token_map->get_replicas(keyspace, routing_key);
             if (replicas && !replicas->empty()) {

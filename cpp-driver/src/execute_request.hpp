@@ -42,8 +42,8 @@ public:
 
   virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
-  bool get_routing_key(String* routing_key, EncodingCache* cache)  const {
-    return calculate_routing_key(prepared_->key_indices(), routing_key, cache);
+  bool get_routing_key(String* routing_key)  const {
+    return calculate_routing_key(prepared_->key_indices(), routing_key);
   }
 
 private:
