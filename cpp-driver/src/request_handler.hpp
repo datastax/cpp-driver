@@ -40,6 +40,7 @@ class Connection;
 class IOWorker;
 class Pool;
 class Timer;
+class TokenMap;
 
 class ResponseFuture : public Future {
 public:
@@ -130,22 +131,18 @@ public:
   typedef SharedRefPtr<RequestHandler> Ptr;
 
   RequestHandler(const Request::ConstPtr& request,
-                 const ResponseFuture::Ptr& future,
-                 RetryPolicy* retry_policy = NULL)
-    : request_(request)
-    , timestamp_(request->timestamp())
+                 const ResponseFuture::Ptr& future)
+    : wrapper_(request)
     , future_(future)
-    , retry_policy_(retry_policy)
     , io_worker_(NULL)
     , running_executions_(0)
     , start_time_ns_(uv_hrtime()) { }
 
-  const Request* request() const { return request_.get(); }
+  void init(const Config& config, const String& keyspace, const TokenMap* token_map);
 
-  int64_t timestamp() const { return timestamp_; }
-  void set_timestamp(int64_t timestamp) { timestamp_ = timestamp; }
+  const Request* request() const { return wrapper_.request().get(); }
 
-  RetryPolicy* retry_policy() { return retry_policy_; }
+  CassConsistency consistency() const { return wrapper_.consistency(); }
 
   const Address& preferred_address() const {
     return preferred_address_;
@@ -153,12 +150,6 @@ public:
 
   void set_preferred_address(const Address& preferred_address) {
     preferred_address_ = preferred_address;
-  }
-
-  void set_query_plan(QueryPlan* query_plan) { query_plan_.reset(query_plan); }
-
-  void set_execution_plan(SpeculativeExecutionPlan* execution_plan) {
-    execution_plan_.reset(execution_plan);
   }
 
   const Host::Ptr& current_host() const { return current_host_; }
@@ -197,10 +188,8 @@ private:
 private:
   typedef SmallVector<RequestExecution*, 4> RequestExecutionVec;
 
-  const Request::ConstPtr request_;
-  int64_t timestamp_;
+  RequestWrapper wrapper_;
   SharedRefPtr<ResponseFuture> future_;
-  RetryPolicy* retry_policy_;
   ScopedPtr<QueryPlan> query_plan_;
   ScopedPtr<SpeculativeExecutionPlan> execution_plan_;
   Host::Ptr current_host_;
@@ -218,9 +207,6 @@ public:
 
   RequestExecution(const RequestHandler::Ptr& request_handler,
                    const Host::Ptr& current_host = Host::Ptr());
-
-  virtual const Request* request() const { return request_handler_->request(); }
-  virtual int64_t timestamp() const { return request_handler_->timestamp(); }
 
   Pool* pool() const { return pool_; }
   void set_pool(Pool* pool) { pool_ = pool; }
