@@ -21,6 +21,8 @@ release:
       each:
         - script: |
             LIBUV_VERSION=1.14.1
+            CC=gcc
+            TEST_PROGRAM=$(mktemp)
             TOKENS=($(echo ${OS_VERSION} | tr "/" " "))
             DISTRO=${TOKENS[0]}
             RELEASE=${TOKENS[1]}
@@ -69,6 +71,37 @@ release:
             ./build_${PACKAGE_TYPE}.sh
             find build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
             pushd packages
+
+            # Install cpp-driver packages
+            sudo ${PACKAGE_INSTALL} cassandra*.${PACKAGE_TYPE}
+
+            # Create test file against cpp-driver and try to connect. 
+            # Should compile and throw a connection error when executed.
+            $CC -x c -o $TEST_PROGRAM - -Wno-implicit-function-declaration -lcassandra - <<EOF
+            #include <cassandra.h>
+            int main(int argc, char* argv[]) {
+            CassFuture* connect_future = NULL;
+            CassCluster* cluster = cass_cluster_new();
+            CassSession* session = cass_session_new();
+            cass_cluster_set_contact_points(cluster, "127.0.0.1");
+            connect_future = cass_session_connect(session, cluster);
+            cass_future_wait(connect_future);
+            printf("Success\n");
+            return 0;
+            }
+            EOF
+            
+            # Throw error if either compilation or test run fails
+            if [ $? -ne 0 ] ; then
+              echo "Connection test compilation failed. Marking build as failure."
+              exit 1
+            fi    
+            
+            if [ "$($TEST_PROGRAM)" != "Success" ] ; then
+              echo "Connection test did not return success. Marking build as failure."
+              exit 1
+            fi
+
             # Uploading driver packages
             curl -$ARTIFACTORY_CREDS -T "{$(echo cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/cassandra/v$version/"
 
