@@ -20,6 +20,7 @@
 #include "cluster.hpp"
 #include "config.hpp"
 #include "constants.hpp"
+#include "execute_request.hpp"
 #include "logger.hpp"
 #include "prepare_request.hpp"
 #include "scoped_lock.hpp"
@@ -82,6 +83,13 @@ CassFuture* cass_session_prepare_n(CassSession* session,
                                    const char* query,
                                    size_t query_length) {
   cass::Future::Ptr future(session->prepare(query, query_length));
+  future->inc_ref();
+  return CassFuture::to(future.get());
+}
+
+CassFuture* cass_session_prepare_from_existing(CassSession* session,
+                                               CassStatement* statement) {
+  cass::Future::Ptr future(session->prepare(statement));
   future->inc_ref();
   return CassFuture::to(future.get());
 }
@@ -610,10 +618,33 @@ void Session::on_control_connection_error(CassError code, const std::string& mes
 }
 
 Future::Ptr Session::prepare(const char* statement, size_t length) {
-  SharedRefPtr<PrepareRequest> prepare(new PrepareRequest(std::string(statement, length)));
+  PrepareRequest::Ptr prepare(new PrepareRequest(std::string(statement, length)));
 
   ResponseFuture::Ptr future(new ResponseFuture(metadata_.schema_snapshot(protocol_version(), cassandra_version())));
-  future->statement.assign(statement, length);
+  future->prepare_request = PrepareRequest::ConstPtr(prepare);
+
+  execute(RequestHandler::Ptr(new RequestHandler(prepare, future)));
+
+  return future;
+}
+
+Future::Ptr Session::prepare(const Statement* statement) {
+  std::string query;
+
+  if (statement->opcode() == CQL_OPCODE_QUERY) { // Simple statement
+    query = statement->query();
+  } else { // Bound statement
+    query = static_cast<const ExecuteRequest*>(statement)->prepared()->query();
+  }
+
+  PrepareRequest::Ptr prepare(new PrepareRequest(query));
+
+  // Inherit the settings of the existing statement. These will in turn be
+  // inherited by bound statements.
+  prepare->set_settings(statement->settings());
+
+  ResponseFuture::Ptr future(new ResponseFuture(metadata_.schema_snapshot(protocol_version(), cassandra_version())));
+  future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
   execute(RequestHandler::Ptr(new RequestHandler(prepare, future)));
 
