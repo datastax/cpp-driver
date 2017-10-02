@@ -18,7 +18,9 @@
 #define __CASS_PREPARED_HPP_INCLUDED__
 
 #include "external.hpp"
+#include "prepare_request.hpp"
 #include "ref_counted.hpp"
+#include "request.hpp"
 #include "result_response.hpp"
 #include "metadata.hpp"
 #include "scoped_ptr.hpp"
@@ -32,18 +34,22 @@ public:
   typedef SharedRefPtr<const Prepared> ConstPtr;
 
   Prepared(const ResultResponse::Ptr& result,
-           const std::string& statement,
+           const PrepareRequest::ConstPtr& prepare_request,
            const Metadata::SchemaSnapshot& schema_metadata);
 
   const ResultResponse::ConstPtr& result() const { return result_; }
   const std::string& id() const { return id_; }
-  const std::string& statement() const { return statement_; }
+  const std::string& query() const { return query_; }
+  const std::string& keyspace() const { return keyspace_; }
+  const RequestSettings& request_settings() const { return request_settings_; }
   const ResultResponse::PKIndexVec& key_indices() const { return key_indices_; }
 
 private:
   ResultResponse::ConstPtr result_;
   std::string id_;
-  std::string statement_;
+  std::string query_;
+  std::string keyspace_;
+  RequestSettings request_settings_;
   ResultResponse::PKIndexVec key_indices_;
 };
 

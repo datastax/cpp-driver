@@ -65,7 +65,10 @@ CassError cass_statement_set_keyspace(CassStatement* statement, const char* keys
 CassError cass_statement_set_keyspace_n(CassStatement* statement,
                                         const char* keyspace,
                                         size_t keyspace_length) {
-  if (statement->kind() != CASS_BATCH_KIND_QUERY) return CASS_ERROR_LIB_BAD_PARAMS;
+  // The keyspace is set by the prepared metadata
+  if (statement->opcode() == CQL_OPCODE_EXECUTE) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
   statement->set_keyspace(std::string(keyspace, keyspace_length));
   return CASS_OK;
 }
@@ -250,6 +253,42 @@ CassError cass_statement_bind_custom_by_name_n(CassStatement* statement,
 
 namespace cass {
 
+Statement::Statement(const char* query, size_t query_length, size_t values_count)
+  : RoutableRequest(CQL_OPCODE_QUERY)
+  , AbstractData(values_count)
+  , query_or_id_(sizeof(int32_t) + query_length)
+  , flags_(0)
+  , page_size_(-1) {
+  // <query> [long string]
+  query_or_id_.encode_long_string(0, query, query_length);
+}
+
+Statement::Statement(const Prepared* prepared)
+  : RoutableRequest(CQL_OPCODE_EXECUTE)
+  , AbstractData(prepared->result()->column_count())
+  , query_or_id_(sizeof(uint16_t) + prepared->id().size())
+  , flags_(0)
+  , page_size_(-1) {
+  // <id> [short bytes] (or [string])
+  const std::string& id = prepared->id();
+  query_or_id_.encode_string(0, id.data(), id.size());
+  // Inherit settings and keyspace from the prepared statement
+  set_settings(prepared->request_settings());
+  // If the keyspace wasn't explictly set then attempt to set it using the
+  // prepared statement's result metadata.
+  if (keyspace().empty()) {
+    set_keyspace(prepared->result()->keyspace().to_string());
+  }
+}
+
+std::string Statement::query() const {
+  if (opcode() == CQL_OPCODE_QUERY) {
+    return std::string(query_or_id_.data() + sizeof(int32_t),
+                       query_or_id_.size() - sizeof(int32_t));
+  }
+  return std::string();
+}
+
 // Format: <kind><string_or_id><n><value_1>...<value_n>
 // where:
 // <kind> is a [byte]
@@ -283,6 +322,13 @@ int32_t Statement::encode_batch(int version, RequestCallback* callback, BufferVe
   }
 
   return length;
+}
+
+bool Statement::with_keyspace(int version) const {
+  return supports_set_keyspace(version) &&
+      // Execute requests (bound statements) use the keyspace
+      // from the time of prepare.
+      opcode() != CQL_OPCODE_EXECUTE && !keyspace().empty();
 }
 
 // Format: <string_or_id>[<n><value_1>...<value_n>]<consistency>
@@ -374,6 +420,10 @@ int32_t Statement::encode_begin(int version, uint16_t element_count,
     flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
   }
 
+  if (with_keyspace(version)) {
+    flags |= CASS_QUERY_FLAG_WITH_KEYSPACE;
+  }
+
   bufs->push_back(Buffer(query_params_buf_size));
   length += query_params_buf_size;
 
@@ -423,9 +473,12 @@ int32_t Statement::encode_values(int version, RequestCallback* callback, BufferV
 // <paging_state> is a [bytes]
 // <serial_consistency> is a [short]
 // <timestamp> is a [long]
+// <keyspace> is a [string]
 int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec* bufs) const {
   int32_t length = 0;
   size_t paging_buf_size = 0;
+
+  bool with_keyspace = this->with_keyspace(version);
 
   if (page_size() > 0) {
     paging_buf_size += sizeof(int32_t); // [int]
@@ -441,6 +494,10 @@ int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec*
 
   if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {
     paging_buf_size += sizeof(int64_t); // [long]
+  }
+
+  if (with_keyspace) {
+    paging_buf_size += sizeof(uint16_t) + keyspace().size();
   }
 
   if (paging_buf_size > 0) {
@@ -464,6 +521,10 @@ int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec*
 
     if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {
       pos = buf.encode_int64(pos, callback->timestamp());
+    }
+
+    if (with_keyspace) {
+      pos = buf.encode_string(pos, keyspace().data(), keyspace().size());
     }
   }
 

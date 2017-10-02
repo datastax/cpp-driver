@@ -34,7 +34,7 @@ class ExecuteRequest;
 
 class BatchRequest : public RoutableRequest {
 public:
-  typedef std::vector<Statement::Ptr> StatementList;
+  typedef std::vector<Statement::Ptr> StatementVec;
 
   BatchRequest(uint8_t type_)
       : RoutableRequest(CQL_OPCODE_BATCH)
@@ -42,11 +42,11 @@ public:
 
   uint8_t type() const { return type_; }
 
-  const StatementList& statements() const { return statements_; }
+  const StatementVec& statements() const { return statements_; }
 
   void add_statement(Statement* statement);
 
-  bool prepared_statement(const std::string& id, std::string* statement) const;
+  bool find_prepared_query(const std::string& id, std::string* query) const;
 
   virtual bool get_routing_key(std::string* routing_key) const;
 
@@ -54,11 +54,8 @@ private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
-  typedef std::map<std::string, ExecuteRequest*> PreparedMap;
-
   uint8_t type_;
-  StatementList statements_;
-  PreparedMap prepared_statements_;
+  StatementVec statements_;
 };
 
 } // namespace cass

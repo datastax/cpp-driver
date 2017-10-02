@@ -650,7 +650,8 @@ typedef enum CassProtocolVersion_ {
   CASS_PROTOCOL_VERSION_V1    = 0x01,
   CASS_PROTOCOL_VERSION_V2    = 0x02,
   CASS_PROTOCOL_VERSION_V3    = 0x03,
-  CASS_PROTOCOL_VERSION_V4    = 0x04
+  CASS_PROTOCOL_VERSION_V4    = 0x04,
+  CASS_PROTOCOL_VERSION_V5    = 0x05
 } CassProtocolVersion;
 
 typedef enum  CassErrorSource_ {
@@ -980,7 +981,7 @@ cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
  * Sets the protocol version. This will automatically downgrade to the lowest
  * supported protocol version.
  *
- * <b>Default:</b> 4
+ * <b>Default:</b> CASS_PROTOCOL_VERSION_V4
  *
  * @public @memberof CassCluster
  *
@@ -996,7 +997,7 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
 
 /**
  * Use the newest beta protocol version. This currently enables the use of
- * protocol version 5.
+ * protocol version v5 (CASS_PROTOCOL_VERSION_V5).
  *
  * <b>Default:</b> cass_false
  *
@@ -1919,6 +1920,25 @@ CASS_EXPORT CassFuture*
 cass_session_prepare_n(CassSession* session,
                        const char* query,
                        size_t query_length);
+
+/**
+ * Create a prepared statement from an existing statement.
+ *
+ * <b>Note:</b> Bound statements will inherit the keyspace, consistency,
+ * serial consistency, request timeout and retry policy of the existing
+ * statement.
+ *
+ * @public @memberof CassSession
+ *
+ * @param[in] session
+ * @param[in] statement
+ * @return A future that must be freed.
+ *
+ * @see cass_future_get_prepared()
+ */
+CASS_EXPORT CassFuture*
+cass_session_prepare_from_existing(CassSession* session,
+                                   CassStatement* statement);
 
 /**
  * Execute a query or bound statement.
@@ -3876,12 +3896,13 @@ CASS_EXPORT CassError
 cass_statement_add_key_index(CassStatement* statement,
                              size_t index);
 
-
 /**
- * Sets the statement's keyspace for use with token-aware routing.
+ * Sets the statement's keyspace. This is used for token-aware routing and when
+ * using protocol v5 or greater it also overrides the session's current
+ * keyspace for the statement.
  *
- * This is not necessary for prepared statements, as the keyspace
- * is determined in the metadata processed in the prepare phase.
+ * This is not necessary and will not work for bound statements, as the keyspace
+ * is determined by the prepared statement metadata.
  *
  * @public @memberof CassStatement
  *
@@ -5327,6 +5348,41 @@ cass_batch_new(CassBatchType type);
  */
 CASS_EXPORT void
 cass_batch_free(CassBatch* batch);
+
+/**
+ * Sets the batch's keyspace. When using protocol v5 or greater it overrides
+ * the session's keyspace for the batch.
+ *
+ * <b>Note:</b> If not set explicitly then the batch will inherit the keyspace
+ * of the first child statement with a non-empty keyspace.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] keyspace
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_keyspace(CassBatch* batch,
+                        const char* keyspace);
+
+/**
+ * Same as cass_batch_set_keyspace(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] keyspace
+ * @param[in] keyspace_length
+ * @return same as cass_batch_set_keyspace()
+ *
+ * @see cass_batch_set_keyspace()
+ */
+CASS_EXPORT CassError
+cass_batch_set_keyspace_n(CassBatch* batch,
+                          const char* keyspace,
+                          size_t keyspace_length);
 
 /**
  * Sets the batch's consistency level
