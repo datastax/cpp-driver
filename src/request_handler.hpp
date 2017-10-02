@@ -24,6 +24,7 @@
 #include "host.hpp"
 #include "load_balancing.hpp"
 #include "metadata.hpp"
+#include "prepare_request.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include "retry_policy.hpp"
@@ -105,7 +106,7 @@ public:
     return attempted_addresses_;
   }
 
-  std::string statement;
+  PrepareRequest::ConstPtr prepare_request;
   ScopedPtr<Metadata::SchemaSnapshot> schema_metadata;
 
 private:
@@ -136,7 +137,8 @@ public:
     , running_executions_(0)
     , start_time_ns_(uv_hrtime()) { }
 
-  void init(const Config& config, const std::string& keyspace, const TokenMap* token_map);
+  void init(const Config& config, const std::string& connected_keyspace,
+            const TokenMap* token_map);
 
   const Request* request() const { return wrapper_.request().get(); }
 
