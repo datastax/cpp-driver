@@ -48,6 +48,7 @@ namespace cass {
 class Future;
 class IOWorker;
 class Request;
+class Statement;
 
 struct SessionEvent {
   enum Type {
@@ -102,6 +103,7 @@ public:
   void close_async(const Future::Ptr& future);
 
   Future::Ptr prepare(const char* statement, size_t length);
+  Future::Ptr prepare(const Statement* statement);
   Future::Ptr execute(const Request::ConstPtr& request,
                       const Address* preferred_address = NULL);
 

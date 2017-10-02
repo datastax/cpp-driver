@@ -33,7 +33,7 @@ class ExecuteRequest;
 
 class BatchRequest : public RoutableRequest {
 public:
-  typedef Vector<Statement::Ptr> StatementList;
+  typedef Vector<Statement::Ptr> StatementVec;
 
   BatchRequest(uint8_t type_)
       : RoutableRequest(CQL_OPCODE_BATCH)
@@ -41,11 +41,11 @@ public:
 
   uint8_t type() const { return type_; }
 
-  const StatementList& statements() const { return statements_; }
+  const StatementVec& statements() const { return statements_; }
 
   void add_statement(Statement* statement);
 
-  bool prepared_statement(const String& id, String* statement) const;
+  bool find_prepared_query(const String& id, String* query) const;
 
   virtual bool get_routing_key(String* routing_key) const;
 
@@ -53,11 +53,8 @@ private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
-  typedef Map<String, ExecuteRequest*> PreparedMap;
-
   uint8_t type_;
-  StatementList statements_;
-  PreparedMap prepared_statements_;
+  StatementVec statements_;
 };
 
 } // namespace cass

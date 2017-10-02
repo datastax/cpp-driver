@@ -96,9 +96,13 @@ void RequestHandler::schedule_next_execution(const Host::Ptr& current_host) {
 }
 
 void RequestHandler::init(const Config& config, const ExecutionProfile& profile,
-                          const String& keyspace, const TokenMap* token_map) {
+                          const String& connected_keyspace, const TokenMap* token_map) {
   wrapper_.init(config, profile);
-  query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
+
+  // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
+  const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : connected_keyspace);
+
+  query_plan_.reset(config.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
   execution_plan_.reset(config.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
 }
 
@@ -454,14 +458,14 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
 }
 
 void RequestExecution::on_error_unprepared(ErrorResponse* error) {
-  String prepared_statement;
+  String query;
 
   if (request()->opcode() == CQL_OPCODE_EXECUTE) {
     const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
-    prepared_statement = execute->prepared()->statement();
+    query = execute->prepared()->query();
   } else if (request()->opcode() == CQL_OPCODE_BATCH) {
     const BatchRequest* batch = static_cast<const BatchRequest*>(request());
-    if (!batch->prepared_statement(error->prepared_id().to_string(), &prepared_statement)) {
+    if (!batch->find_prepared_query(error->prepared_id().to_string(), &query)) {
       set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
                 "Unable to find prepared statement in batch statement");
       return;
@@ -475,7 +479,7 @@ void RequestExecution::on_error_unprepared(ErrorResponse* error) {
   }
 
   if (!connection()->write(RequestCallback::Ptr(
-                            Memory::allocate<PrepareCallback>(prepared_statement, this)))) {
+                            Memory::allocate<PrepareCallback>(query, this)))) {
     // Try to prepare on the same host but on a different connection
     retry_current_host();
   }

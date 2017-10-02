@@ -39,29 +39,16 @@ public:
   typedef SharedRefPtr<Statement> Ptr;
 
   Statement(const char* query, size_t query_length,
-            size_t values_count)
-      : RoutableRequest(CQL_OPCODE_QUERY)
-      , AbstractData(values_count)
-      , query_or_id_(sizeof(int32_t) + query_length)
-      , flags_(0)
-      , page_size_(-1) {
-    // <query> [long string]
-    query_or_id_.encode_long_string(0, query, query_length);
-  }
+            size_t values_count);
 
-  Statement(const Prepared* prepared)
-      : RoutableRequest(CQL_OPCODE_EXECUTE,
-                        prepared->result()->keyspace().to_string())
-      , AbstractData(prepared->result()->column_count())
-      , query_or_id_(sizeof(uint16_t) + prepared->id().size())
-      , flags_(0)
-      , page_size_(-1) {
-    // <id> [short bytes] (or [string])
-    const String& id = prepared->id();
-    query_or_id_.encode_string(0, id.data(), id.size());
-  }
+  Statement(const Prepared* prepared);
 
   virtual ~Statement() { }
+
+  // Used to get the original query string from a simple statement. To get the
+  // query from a execute request (bound statement) cast it and get it from the
+  // prepared object.
+  String query() const;
 
   bool skip_metadata() const {
     return flags_ & CASS_QUERY_FLAG_SKIP_METADATA;
@@ -111,6 +98,8 @@ public:
   int32_t encode_batch(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 protected:
+  bool with_keyspace(int version) const;
+
   int32_t encode_v1(RequestCallback* callback, BufferVec* bufs) const;
 
   int32_t encode_begin(int version, uint16_t element_count,

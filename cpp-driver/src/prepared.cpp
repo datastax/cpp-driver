@@ -79,11 +79,13 @@ const CassDataType* cass_prepared_parameter_data_type_by_name_n(const CassPrepar
 namespace cass {
 
 Prepared::Prepared(const ResultResponse::Ptr& result,
-                   const String& statement,
+                   const PrepareRequest::ConstPtr& prepare_request,
                    const Metadata::SchemaSnapshot& schema_metadata)
   : result_(result)
   , id_(result->prepared().to_string())
-  , statement_(statement) {
+  , query_(prepare_request->query())
+  , keyspace_(prepare_request->keyspace())
+  , request_settings_(prepare_request->settings()) {
   assert(result->protocol_version() > 0 && "The protocol version should be set");
   if (result->protocol_version() >= 4) {
     key_indices_ = result->pk_indices();

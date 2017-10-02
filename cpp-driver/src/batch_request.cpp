@@ -35,8 +35,19 @@ void cass_batch_free(CassBatch* batch) {
   batch->dec_ref();
 }
 
+CassError cass_batch_set_keyspace(CassBatch* batch, const char* keyspace) {
+  return cass_batch_set_keyspace_n(batch, keyspace, SAFE_STRLEN(keyspace));
+}
+
+CassError cass_batch_set_keyspace_n(CassBatch* batch,
+                                    const char* keyspace,
+                                    size_t keyspace_length) {
+  batch->set_keyspace(cass::String(keyspace, keyspace_length));
+  return CASS_OK;
+}
+
 CassError cass_batch_set_consistency(CassBatch* batch,
-                                CassConsistency consistency) {
+                                     CassConsistency consistency) {
   batch->set_consistency(consistency);
   return CASS_OK;
 }
@@ -135,7 +146,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
     length += buf_size;
   }
 
-  for (BatchRequest::StatementList::const_iterator i = statements_.begin(),
+  for (BatchRequest::StatementVec::const_iterator i = statements_.begin(),
        end = statements_.end(); i != end; ++i) {
     const Statement::Ptr& statement(*i);
     if (statement->has_names_for_values()) {
@@ -154,7 +165,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
     // <consistency> [short]
     size_t buf_size = sizeof(uint16_t);
     if (version >= 3) {
-      // <flags>[<serial_consistency><timestamp>]
+      // <flags>[<serial_consistency><timestamp><keyspace>]
       if (version >= 5) {
         buf_size += sizeof(int32_t); // [int]
       } else {
@@ -169,6 +180,11 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
       if (callback->timestamp() != CASS_INT64_MIN) {
         buf_size += sizeof(int64_t); // [long]
         flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+      }
+
+      if (supports_set_keyspace(version) && !keyspace().empty()) {
+        buf_size += sizeof(uint16_t) + keyspace().size();
+        flags |= CASS_QUERY_FLAG_WITH_KEYSPACE;
       }
     }
 
@@ -189,6 +205,10 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
       if (callback->timestamp() != CASS_INT64_MIN) {
         pos = buf.encode_int64(pos, callback->timestamp());
       }
+
+      if (supports_set_keyspace(version) && !keyspace().empty()) {
+        pos = buf.encode_string(pos, keyspace().data(), keyspace().size());
+      }
     }
 
     bufs->push_back(buf);
@@ -199,25 +219,31 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
 }
 
 void BatchRequest::add_statement(Statement* statement) {
-  if (statement->kind() == CASS_BATCH_KIND_PREPARED) {
-    ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
-    prepared_statements_[execute_request->prepared()->id()] = execute_request;
+  // If the keyspace is not set then inherit the keyspace of the first
+  // statement with a non-empty keyspace.
+  if (keyspace().empty()) {
+    set_keyspace(statement->keyspace());
   }
   statements_.push_back(Statement::Ptr(statement));
 }
 
-bool BatchRequest::prepared_statement(const String& id,
-                                      String* statement) const {
-  PreparedMap::const_iterator it = prepared_statements_.find(id);
-  if (it != prepared_statements_.end()) {
-    *statement = it->second->prepared()->statement();
-    return true;
+bool BatchRequest::find_prepared_query(const String& id, String* query) const {
+  for (StatementVec::const_iterator it = statements_.begin(),
+       end = statements_.end(); it != end; ++it) {
+    const Statement::Ptr& statement(*it);
+    if (statement->kind() == CASS_BATCH_KIND_PREPARED) {
+      ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement.get());
+      if (execute_request->prepared()->id() == id) {
+        *query = execute_request->prepared()->query();
+        return true;
+      }
+    }
   }
   return false;
 }
 
 bool BatchRequest::get_routing_key(String* routing_key) const {
-  for (BatchRequest::StatementList::const_iterator i = statements_.begin();
+  for (BatchRequest::StatementVec::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
     if ((*i)->get_routing_key(routing_key)) {
       return true;

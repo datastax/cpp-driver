@@ -25,12 +25,14 @@ namespace cass {
 
 class PrepareRequest : public Request {
 public:
+  typedef SharedRefPtr<PrepareRequest> Ptr;
+  typedef SharedRefPtr<const PrepareRequest> ConstPtr;
+
   PrepareRequest(const String& query)
       : Request(CQL_OPCODE_PREPARE)
       , query_(query) { }
 
   const String& query() const { return query_; }
-
 
   void set_query(const String& query) { query_ = query; }
 

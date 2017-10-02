@@ -73,8 +73,8 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
 CassError cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
                                                      cass_bool_t enable) {
   cluster->config().set_use_beta_protocol_version(enable == cass_true);
-  cluster->config().set_protocol_version(enable ? CASS_NEWEST_BETA_PROTOCOL_VERSION
-                                                : CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
+  cluster->config().set_protocol_version(enable ? DSE_NEWEST_BETA_PROTOCOL_VERSION
+                                                : DSE_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
   return CASS_OK;
 }
 
