@@ -99,9 +99,9 @@ public:
     : Batch(batch) {}
 
   /**
-   * Set the name of the user to execute the statement as
+   * Set the name of the user to execute the batch statement as
    *
-   * @param name Name to execute the statement as
+   * @param name Name to execute the batch statement as
    */
   void set_execute_as(const std::string& name) {
     ASSERT_EQ(CASS_OK, cass_batch_set_execute_as(get(), name.c_str()));

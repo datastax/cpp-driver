@@ -216,11 +216,10 @@ DSE_INTEGRATION_TEST_F(GraphConsistencyTest, ReadOneNodeDown) {
   // Perform the read graph query with consistency levels expected to fail
   test::driver::DseGraphResultSet result_set =
     execute_read_query(CASS_CONSISTENCY_ALL, false);
-  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
+  ASSERT_NE(CASS_OK, result_set.error_code());
   ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level"));
   result_set = execute_read_query(CASS_CONSISTENCY_THREE, false);
-  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
-  ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level"));
+  ASSERT_NE(CASS_OK, result_set.error_code());
 }
 
 /**
@@ -302,9 +301,8 @@ DSE_INTEGRATION_TEST_F(GraphConsistencyTest, WriteOneNodeDown) {
   // Perform the write graph query with consistency levels expected to fail
   test::driver::DseGraphResultSet result_set =
     execute_write_query(CASS_CONSISTENCY_ALL, false);
-  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
+  ASSERT_NE(CASS_OK, result_set.error_code());
   ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level"));
   result_set = execute_write_query(CASS_CONSISTENCY_THREE, false);
-  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
-  ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level"));
+  ASSERT_NE(CASS_OK, result_set.error_code());
 }
