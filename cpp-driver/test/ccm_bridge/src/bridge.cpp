@@ -1750,9 +1750,11 @@ std::string CCM::Bridge::generate_cluster_name(CassVersion cassandra_version,
   std::vector<unsigned short> data_center_nodes,
   bool with_vnodes, bool is_ssl, bool is_client_authentication) {
   std::stringstream cluster_name;
+  std::string server_version = use_dse_ ? dse_version_.to_string(false) : cassandra_version.to_string(false);
+  std::replace(server_version.begin(), server_version.end(), '.', '-');
   cluster_name << cluster_prefix_ << "_"
-               << (use_dse_ ? dse_version_.to_string(false) : cassandra_version.to_string(false))
-               << "_" << generate_cluster_nodes(data_center_nodes, '-');
+               << server_version << "_"
+               << generate_cluster_nodes(data_center_nodes, '-');
   if (with_vnodes) {
     cluster_name << "-vnodes";
   }
