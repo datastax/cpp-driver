@@ -7,8 +7,6 @@
 
 #ifndef __TEST_OBJECT_BASE_HPP__
 #define __TEST_OBJECT_BASE_HPP__
-#include "cassandra.h"
-
 #include "exception.hpp"
 #include "shared_ptr.hpp"
 

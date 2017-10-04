@@ -150,10 +150,14 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
     value = CassDuration(1, 2, 3);
     insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
 
-    value = CassDuration((1ULL << 31) - 1, (1ULL << 31) - 1, (1ULL << 63) - 1);
+    value = CassDuration(std::numeric_limits<int32_t>::max(),
+                         std::numeric_limits<int32_t>::max(),
+                         std::numeric_limits<int64_t>::max());
     insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
 
-    value = CassDuration(1LL << 31, 1LL << 31, 1LL << 63);
+    value = CassDuration(std::numeric_limits<int32_t>::min(),
+                         std::numeric_limits<int32_t>::min(),
+                         std::numeric_limits<int64_t>::min());
     insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
   }
 

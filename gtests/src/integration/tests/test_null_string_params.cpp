@@ -400,7 +400,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, StatementFunctions) {
   BIND_BY_NAME_TEST(cass_statement_bind_int32_by_name, NULL, 42);
   BIND_BY_NAME_TEST(cass_statement_bind_uint32_by_name, NULL, 42);
   BIND_BY_NAME_TEST(cass_statement_bind_int64_by_name, NULL, 42);
-  BIND_BY_NAME_TEST(cass_statement_bind_float_by_name, NULL, 42.2);
+  BIND_BY_NAME_TEST(cass_statement_bind_float_by_name, NULL, 42.2f);
   BIND_BY_NAME_TEST(cass_statement_bind_double_by_name, NULL, 42.0);
   BIND_BY_NAME_TEST(cass_statement_bind_bool_by_name, NULL, cass_true);
 

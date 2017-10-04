@@ -50,7 +50,9 @@ TEST(EncodeDurationUnitTest, SimpleNegative) {
 }
 
 TEST(EncodeDurationUnitTest, EdgePositive) {
-  CassDuration value((1UL << 31) - 1, (1UL << 31) - 1, (1ULL << 63) - 1);
+  CassDuration value(std::numeric_limits<int32_t>::max(),
+                     std::numeric_limits<int32_t>::max(),
+                     std::numeric_limits<int64_t>::max());
   Buffer result = encode(value);
   EXPECT_EQ(19u, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
@@ -86,7 +88,9 @@ TEST(EncodeDurationUnitTest, EdgePositive) {
 }
 
 TEST(EncodeDurationUnitTest, EdgeNegative) {
-  CassDuration value(1L << 31, 1L << 31, 1LL << 63);
+  CassDuration value(std::numeric_limits<int32_t>::min(),
+                     std::numeric_limits<int32_t>::min(),
+                     std::numeric_limits<int64_t>::min());
   Buffer result = encode(value);
   EXPECT_EQ(19u, result.size());
   unsigned const char* result_data = reinterpret_cast<unsigned const char*>(result.data());
