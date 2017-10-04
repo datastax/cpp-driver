@@ -36,6 +36,14 @@ public:
   static const std::string host(CassFuture* future);
 
   /**
+   * Get the Murmur3 hash for a given value
+   *
+   * @param value Value to calculate Murmur3 hash for
+   * @return Murmur3 hash for value
+   */
+  static int64_t murmur3_hash(const std::string& value);
+
+  /**
    * Enable/Disable the recording of hosts attempted during the execution of
    * a statement
    *

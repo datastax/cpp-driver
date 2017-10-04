@@ -137,6 +137,19 @@ public:
    */
   static const std::string& host();
   /**
+   * Get the IP address to use when establishing SSH connection for remote CCM
+   * command execution and/or IP address to use for server connection IP
+   * generation.
+   *
+   * @return Host to use for server (and SSH connection for remote deployment)
+   */
+  /**
+   * Get the IP address prefix from the host IP address
+   *
+   * @return IP address prefix
+   */
+  static std::string host_prefix();
+  /**
    * Get the TCP/IP port for SSH connection
    *
    * @return SSH port to use

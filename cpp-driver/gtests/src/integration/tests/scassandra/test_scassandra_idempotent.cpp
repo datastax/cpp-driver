@@ -6,9 +6,6 @@
 */
 
 #include "scassandra_integration.hpp"
-#include "next_host_retry_policy.hpp"
-
-#include "cassandra.h"
 
 /**
  * Idempotent integration tests
@@ -143,7 +140,7 @@ SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, ClosedConnectionNonIdempotentNoRet
   }
 
   // Ensure that node one connection was closed
-  ASSERT_EQ(1u, logger_.get_count());
+  ASSERT_EQ(1u, logger_.count());
 }
 
 

@@ -440,6 +440,10 @@ const std::string& Options::host() {
   return host_;
 }
 
+std::string Options::host_prefix() {
+  return host_.substr(0, host_.size() - 1);
+}
+
 short Options::port() {
   return port_;
 }

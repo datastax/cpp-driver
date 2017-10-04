@@ -16,6 +16,14 @@
  ********************************************************/
 
 /**
+ * Pretty print CassConsistency values
+ *
+ * @param consistency CassConsistency value to pretty print
+ * @param output_stream Output stream to pretty print value to
+ */
+void PrintTo(CassConsistency consistency, std::ostream* output_stream);
+
+/**
  * Pretty print CassError values
  *
  * @param error_code CassError value to pretty print

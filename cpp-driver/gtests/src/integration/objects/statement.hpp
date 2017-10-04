@@ -11,6 +11,7 @@
 
 #include "objects/object_base.hpp"
 
+#include "objects/execution_profile.hpp"
 #include "objects/future.hpp"
 #include "objects/retry_policy.hpp"
 
@@ -54,6 +55,19 @@ public:
       parameter_count)) {}
 
   /**
+   * Add a key index specifier to the statement.
+   *
+   * When using token-aware routing, this can be used to tell the driver which
+   * parameters within a non-prepared, parameterized statement are part of
+   * the partition key.
+   *
+   * @param index Index to add key index to
+   */
+  void add_key_index(size_t index) {
+    ASSERT_EQ(CASS_OK, cass_statement_add_key_index(get(), index));
+  }
+
+  /**
    * Bind a value to the statement
    *
    * @param index Index to bind the value to
@@ -74,6 +88,15 @@ public:
   }
 
   /**
+   * Set the execution profile to execute the statement with
+   *
+   * @param name Execution profile to assign during execution of statement
+   */
+  void set_execution_profile(const std::string& name) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_execution_profile(get(), name.c_str()));
+  }
+
+  /**
    * Enable/Disable whether the statement is idempotent. Idempotent statements
    * are able to be automatically retried after timeouts/errors and can be
    * speculatively executed.
@@ -83,6 +106,15 @@ public:
   void set_idempotent(bool enable) {
     ASSERT_EQ(CASS_OK, cass_statement_set_is_idempotent(get(),
       enable ? cass_true : cass_false));
+  }
+
+  /**
+   * Sets the statement's keyspace for use with token-aware routing.
+   *
+   * @param keyspace Keyspace to aid in token aware routing for statement
+   */
+  void set_keyspace(const std::string& keyspace) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_keyspace(get(), keyspace.c_str()));
   }
 
   /**
@@ -97,6 +129,16 @@ public:
   }
 
   /**
+   * Assign/Set the timeout for statement execution
+   *
+   * @param timeout_ms Timeout in milliseconds
+   */
+  void set_request_timeout(uint64_t timeout_ms) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_request_timeout(get(),
+      timeout_ms));
+  }
+
+  /**
    * Assign/Set the statement's retry policy
    *
    * @param retry_policy Retry policy to use for the statement
@@ -104,6 +146,16 @@ public:
   void set_retry_policy(RetryPolicy retry_policy) {
     ASSERT_EQ(CASS_OK, cass_statement_set_retry_policy(get(),
       retry_policy.get()));
+  }
+
+  /**
+   * Assign/Set the statement's serial consistency level
+   *
+   * @param serial_consistency Serial consistency to use for the statement
+   */
+  void set_serial_consistency(CassConsistency serial_consistency) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_serial_consistency(get(),
+      serial_consistency));
   }
 };
 
@@ -162,6 +214,15 @@ public:
   }
 
   /**
+   * Set the execution profile to execute the batch statement with
+   *
+   * @param name Execution profile to assign during execution of batch statement
+   */
+  void set_execution_profile(const std::string& name) {
+    ASSERT_EQ(CASS_OK, cass_batch_set_execution_profile(get(), name.c_str()));
+  }
+
+  /**
    * Enable/Disable whether the statements in a batch are idempotent. Idempotent
    * batches are able to be automatically retried after timeouts/errors and can
    * be speculatively executed.
@@ -174,12 +235,32 @@ public:
   }
 
   /**
+   * Assign/Set the timeout for batch execution
+   *
+   * @param timeout_ms Timeout in milliseconds
+   */
+  void set_request_timeout(uint64_t timeout_ms) {
+    ASSERT_EQ(CASS_OK, cass_batch_set_request_timeout(get(),
+      timeout_ms));
+  }
+
+  /**
    * Assign/Set the batch's retry policy
    *
    * @param retry_policy Retry policy to use for the batch
    */
   void set_retry_policy(RetryPolicy retry_policy) {
     ASSERT_EQ(CASS_OK, cass_batch_set_retry_policy(get(), retry_policy.get()));
+  }
+
+  /**
+   * Assign/Set the batch's serial consistency level
+   *
+   * @param serial_consistency Serial consistency to use for the batch
+   */
+  void set_serial_consistency(CassConsistency serial_consistency) {
+    ASSERT_EQ(CASS_OK, cass_batch_set_serial_consistency(get(),
+      serial_consistency));
   }
 };
 

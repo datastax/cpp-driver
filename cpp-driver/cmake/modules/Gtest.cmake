@@ -103,6 +103,7 @@ endmacro()
 macro(GtestIntegrationTestFiles integration_tests_source_dir prefix)
   file(GLOB ${prefix}_INTEGRATION_TESTS_INCLUDE_FILES ${integration_tests_source_dir}/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES ${integration_tests_source_dir}/objects/*.hpp)
+  file(GLOB ${prefix}_INTEGRATION_TESTS_POLICIES_INCLUDE_FILES ${integration_tests_source_dir}/policies/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_VALUES_INCLUDE_FILES ${integration_tests_source_dir}/values/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_SOURCE_FILES ${integration_tests_source_dir}/*.cpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_OBJECTS_SOURCE_FILES ${integration_tests_source_dir}/objects/*.cpp)
@@ -121,6 +122,7 @@ endmacro()
 macro(GtestIntegrationTestSourceGroups)
   source_group("Header Files" FILES ${INTEGRATION_TESTS_INCLUDE_FILES})
   source_group("Header Files\\objects" FILES ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES})
+  source_group("Header Files\\policies" FILES ${INTEGRATION_TESTS_POLICIES_INCLUDE_FILES})
   source_group("Header Files\\values" FILES ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES})
   source_group("Source Files" FILES ${INTEGRATION_TESTS_SOURCE_FILES})
   source_group("Source Files\\objects" FILES ${INTEGRATION_TESTS_OBJECTS_SOURCE_FILES})
@@ -144,6 +146,7 @@ macro(GtestCommonIntegrationTestSourceFiles)
     ${CPP_DRIVER_SOURCE_FILES}
     ${INTEGRATION_TESTS_INCLUDE_FILES}
     ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES}
+    ${INTEGRATION_TESTS_POLICIES_INCLUDE_FILES}
     ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES}
     ${CCM_INCLUDE_FILES}
     ${CASS_API_HEADER_FILES}

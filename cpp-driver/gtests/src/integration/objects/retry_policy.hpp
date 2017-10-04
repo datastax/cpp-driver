@@ -50,6 +50,32 @@ public:
 };
 
 /**
+ * Wrapped downgrading consistency retry policy
+ */
+class DowngradingConsistencyRetryPolicy : public RetryPolicy {
+public:
+  /**
+   * Create the downgrading consistency retry policy object from the native
+   * driver downgrading consistency retry policy object
+   */
+  DowngradingConsistencyRetryPolicy()
+    : RetryPolicy(cass_retry_policy_downgrading_consistency_new()) {}
+};
+
+/**
+ * Wrapped fallthrough retry policy
+ */
+class FallthroughRetryPolicy : public RetryPolicy {
+public:
+  /**
+   * Create the fallthrough retry policy object from the native driver
+   * fallthrough retry policy object
+   */
+  FallthroughRetryPolicy()
+    : RetryPolicy(cass_retry_policy_fallthrough_new()) {}
+};
+
+/**
  * Wrapped logging retry policy
  */
 class LoggingRetryPolicy : public RetryPolicy {

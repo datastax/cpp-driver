@@ -80,7 +80,7 @@ public:
    * the contact points
    *
    * @param contact_points A comma delimited list of hosts (addresses or
-   *                       names
+   *                       names)
    * @return Cluster object
    */
   Cluster& with_contact_points(const std::string& contact_points) {
@@ -105,6 +105,20 @@ public:
   }
 
   /**
+   * Set/Add a execution profile
+   *
+   * @param name Name for the execution profile
+   * @param profile Execution profile to add to the cluster
+   * @return Cluster object
+   */
+  Cluster& with_execution_profile(const std::string& name,
+                                  ExecutionProfile profile) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_execution_profile(get(),
+              name.c_str(), profile.get()));
+    return *this;
+  }
+
+  /**
    * Enable/Disable the use of hostname resolution
    *
    * This is useful for authentication (Kerberos) or encryption (SSL)
@@ -112,8 +126,8 @@ public:
    *
    * NOTE: Not available if using libuv 0.10.x or earlier
    *
-   * @param enable True if hostname resolution should be enable; false
-   *               otherwise (default: false)
+   * @param enable True if hostname resolution should be enabled; false
+   *               otherwise (default: true)
    * @return Cluster object
    */
   Cluster& with_hostname_resolution(bool enable = true) {
@@ -157,6 +171,17 @@ public:
    */
   Cluster& with_request_timeout(unsigned int timeout_ms = 12000) {
     cass_cluster_set_request_timeout(get(), timeout_ms);
+    return *this;
+  }
+
+  /**
+   * Sets the retry policy used for all requests unless overridden by setting
+   * a retry policy on a statement or a batch.
+   *
+   * @param retry_policy Retry policy to assign to the cluster profile
+   */
+  Cluster& with_retry_policy(RetryPolicy retry_policy) {
+    cass_cluster_set_retry_policy(get(), retry_policy.get());
     return *this;
   }
 

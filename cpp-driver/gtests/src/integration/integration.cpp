@@ -154,6 +154,14 @@ void Integration::SetUp() {
 }
 
 void Integration::TearDown() {
+  // Restart all stopped nodes
+  for (std::vector<unsigned int>::iterator iterator = stopped_nodes_.begin();
+       iterator != stopped_nodes_.end(); ++iterator) {
+    LOG("Restarting Node Stopped in " << test_name_ << ": " << *iterator);
+    ccm_->start_node(*iterator);
+  }
+  stopped_nodes_.clear();
+
   // Drop keyspace for integration test (may or may have not been created)
   std::stringstream use_keyspace_query;
   use_keyspace_query << "DROP KEYSPACE " << keyspace_name_;
@@ -209,6 +217,12 @@ std::string Integration::default_replication_strategy() {
   // Return the default replication strategy
   std::string replication_strategy = replication_strategy_s.str();
   return format_string(REPLICATION_STRATEGY, replication_strategy.c_str());
+}
+
+std::string Integration::default_select_all() {
+  std::stringstream cql;
+  cql << "SELECT * FROM " << default_keyspace() << "." << default_table();
+  return cql.str();
 }
 
 std::string Integration::default_table() {
@@ -267,10 +281,15 @@ void Integration::connect() {
 }
 
 test::driver::Cluster Integration::default_cluster() {
-  return Cluster::build()
+  Cluster cluster = Cluster::build()
     .with_contact_points(contact_points_)
     .with_randomized_contact_points(is_randomized_contact_points_)
     .with_schema_metadata(is_schema_metadata_);
+  for(ExecutionProfile::Map::iterator it = profiles_.begin();
+      it != profiles_.end(); ++it) {
+    cluster.with_execution_profile(it->first, it->second);
+  }
+  return cluster;
 }
 
 void Integration::enable_cluster_tracing(bool enable /*= true*/) {
@@ -287,6 +306,15 @@ void Integration::enable_cluster_tracing(bool enable /*= true*/) {
     node_value >> node;
     ccm_->enable_node_trace(node);
   }
+}
+
+bool Integration::stop_node(unsigned int node) {
+  // Stop the requested node
+  bool status = ccm_->stop_node(node);
+  if (status) {
+    stopped_nodes_.push_back(node);
+  }
+  return status;
 }
 
 std::string Integration::generate_contact_points(const std::string& ip_prefix,

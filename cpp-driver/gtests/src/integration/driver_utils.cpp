@@ -9,6 +9,7 @@
 
 #include "address.hpp"
 #include "future.hpp"
+#include "murmur3.hpp"
 #include "request_handler.hpp"
 #include "statement.hpp"
 
@@ -38,6 +39,11 @@ const std::string test::driver::internals::Utils::host(CassFuture* future) {
     }
   }
   return "";
+}
+
+int64_t test::driver::internals::Utils::murmur3_hash(
+  const std::string& value) {
+  return cass::MurmurHash3_x64_128(value.data(), value.size(), 0);
 }
 
 void test::driver::internals::Utils::set_record_attempted_hosts(

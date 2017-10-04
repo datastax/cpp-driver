@@ -19,6 +19,7 @@
 #include "bridge.hpp"
 #include "logger.hpp"
 #include "objects.hpp"
+#include "policies.hpp"
 #include "pretty_print.hpp"
 #include "test_utils.hpp"
 #include "values.hpp"
@@ -112,7 +113,6 @@ enum StatementType {
  */
 class Integration : public testing::Test {
 public:
-
   Integration();
 
   virtual ~Integration();
@@ -236,6 +236,10 @@ protected:
    */
   std::vector<CCM::DseWorkload> dse_workload_;
   /**
+   * Execution profiles to associate with default cluster
+   */
+  ExecutionProfile::Map profiles_;
+  /**
    * Name of the test case/suite
    */
   std::string test_case_name_;
@@ -243,6 +247,10 @@ protected:
    * Name of the test
    */
   std::string test_name_;
+  /**
+   * Vector of nodes that have been stopped
+   */
+  std::vector<unsigned int> stopped_nodes_;
 
   /**
    * Get the default keyspace name (based on the current test case and test
@@ -268,6 +276,13 @@ protected:
    * @return  Default replication strategy
    */
   virtual std::string default_replication_strategy();
+
+  /**
+   * Get the default select all CQL statement
+   *
+   * @return Default CQL statement to select all elements in the row
+   */
+  virtual std::string default_select_all();
 
   /**
    * Get the default table name (based on the test name)
@@ -317,6 +332,13 @@ protected:
    *               otherwise (default: true)
    */
   virtual void enable_cluster_tracing(bool enable = true);
+
+  /**
+   * Stop a node that should be restarted after test case is completed
+   *
+   * @param node Node that should be stopped
+   */
+  virtual bool stop_node(unsigned int node);
 
   /**
    * Generate the contact points for the cluster

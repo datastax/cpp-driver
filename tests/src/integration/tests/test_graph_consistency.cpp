@@ -38,16 +38,6 @@ public:
     CHECK_FAILURE;
   }
 
-  void TearDown() {
-    // Restart all stopped nodes
-    for (std::vector<unsigned int>::iterator iterator = stopped_nodes_.begin();
-      iterator != stopped_nodes_.end(); ++iterator) {
-      LOG("Restarting Node Stopped in " << test_name_ << ": " << *iterator);
-      ccm_->start_node(*iterator);
-    }
-    stopped_nodes_.clear();
-  }
-
   /**
    * Execute a graph read query with the specified read consistencies
    *
@@ -93,7 +83,7 @@ public:
    *
    * @param node Node that should be stopped
    */
-  void stop_node(unsigned int node) {
+  bool stop_node(unsigned int node) {
     // Determine if schema operations should be triggered across cluster nodes
     if (!propagate_schema_) {
       LOG("Performing Graph Query to Propagate Schema Across Cluster: "
@@ -104,8 +94,7 @@ public:
     }
 
     // Stop the requested node
-    ccm_->stop_node(node);
-    stopped_nodes_.push_back(node);
+    return DseIntegration::stop_node(node);
   }
 
   /**
@@ -160,10 +149,6 @@ private:
    * Flag to determine if a node stop was previously requested
    */
   bool propagate_schema_;
-  /**
-   * Vector of nodes that have been stopped
-   */
-  std::vector<unsigned int> stopped_nodes_;
 };
 
 /**
