@@ -15,6 +15,8 @@
  */
 class IdempotentTest : public SCassandraIntegration {
 public:
+  using SCassandraIntegration::execute_mock_query;
+
   void SetUp() {
     number_dc1_nodes_ = 3;
     SCassandraIntegration::SetUp();
@@ -30,14 +32,13 @@ public:
    *       check value
    *
    * @param is_idempotent True if statement execution is idempotent; false
-   *                      otherwise (DEFAULT: true)
+   *                      otherwise
    * @param apply_custom_retry_policy True if custom idempotent retry policy
    *                                  should be enabled; false otherwise
-   *                                  (DEFAULT: true)
    * @return Result from the executed mock query; see Result::error_code()
    */
-  test::driver::Result execute_mock_query(bool is_idempotent = true,
-    bool apply_custom_retry_policy = true) {
+  test::driver::Result execute_mock_query(bool is_idempotent,
+    bool apply_custom_retry_policy) {
     // Create the statement with the desired idempotence and custom retry policy
     test::driver::Statement statement("mock query");
     statement.set_consistency(CASS_CONSISTENCY_ONE);
@@ -73,7 +74,7 @@ SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, WriteTimeoutNonIdempotentNoRetry) 
 
   // Loop through all the nodes in the cluster execute the mock query
   for (unsigned int n = 0; n < number_dc1_nodes_; ++n) {
-    test::driver::Result result = execute_mock_query(false);
+    test::driver::Result result = execute_mock_query(false, true);
     if (result.host() == scc_->get_ip_address(1)) {
       ASSERT_EQ(CASS_ERROR_SERVER_WRITE_TIMEOUT, result.error_code());
     } else {
@@ -101,7 +102,7 @@ SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, WriteTimeoutIdempotentRetry) {
   // Loop through all the nodes in the cluster execute the mock query
   bool was_node_one_attempted = false;
   for (unsigned int n = 0; n < number_dc1_nodes_; ++n) {
-    test::driver::Result result = execute_mock_query();
+    test::driver::Result result = execute_mock_query(true, true);
     std::vector<std::string> attempted_hosts = result.attempted_hosts();
     ASSERT_EQ(CASS_OK, result.error_code());
     if (result.attempted_hosts().size() > 1) {
@@ -134,7 +135,7 @@ SCASSANDRA_INTEGRATION_TEST_F(IdempotentTest, ClosedConnectionNonIdempotentNoRet
 
   // Loop through all the nodes in the cluster execute the mock query
   for (unsigned int n = 0; n < number_dc1_nodes_; ++n) {
-    test::driver::Result result = execute_mock_query(false);
+    test::driver::Result result = execute_mock_query(false, true);
     if (result.host() == scc_->get_ip_address(1)) {
       ASSERT_EQ(CASS_ERROR_LIB_REQUEST_TIMED_OUT, result.error_code());
     } else {

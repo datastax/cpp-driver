@@ -14,6 +14,8 @@
  */
 class ConnectionTest : public SCassandraIntegration {
 public:
+  using SCassandraIntegration::connect;
+
   void SetUp() {
     is_scc_start_requested_ = false;
     is_scc_for_test_case_ = false;
