@@ -20,17 +20,9 @@
 #include "auth.hpp"
 #include "cassandra.h"
 #include "constants.hpp"
-#include "dc_aware_policy.hpp"
-#include "host_targeting_policy.hpp"
-#include "latency_aware_policy.hpp"
-#include "retry_policy.hpp"
+#include "execution_profile.hpp"
 #include "ssl.hpp"
 #include "timestamp_generator.hpp"
-#include "token_aware_policy.hpp"
-#include "whitelist_policy.hpp"
-#include "blacklist_policy.hpp"
-#include "whitelist_dc_policy.hpp"
-#include "blacklist_dc_policy.hpp"
 #include "speculative_execution.hpp"
 #include "string.hpp"
 
@@ -44,8 +36,6 @@ public:
       : port_(9042)
       , protocol_version_(DSE_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
       , use_beta_protocol_version_(false)
-      , consistency_(CASS_DEFAULT_CONSISTENCY)
-      , serial_consistency_(CASS_DEFAULT_SERIAL_CONSISTENCY)
       , thread_count_io_(1)
       , queue_size_io_(8192)
       , queue_size_event_(8192)
@@ -61,74 +51,52 @@ public:
       , pending_requests_high_water_mark_(128 * max_connections_per_host_)
       , pending_requests_low_water_mark_(pending_requests_high_water_mark_ / 2)
       , connect_timeout_ms_(5000)
-      , request_timeout_ms_(CASS_DEFAULT_REQUEST_TIMEOUT_MS)
       , resolve_timeout_ms_(2000)
       , log_level_(CASS_LOG_WARN)
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
       , auth_provider_(Memory::allocate<AuthProvider>())
-      , load_balancing_policy_(Memory::allocate<DCAwarePolicy>())
       , speculative_execution_policy_(Memory::allocate<NoSpeculativeExecutionPolicy>())
-      , token_aware_routing_(true)
-      , token_aware_routing_shuffle_replicas_(true)
-      , latency_aware_routing_(false)
-      , host_targeting_(false)
       , tcp_nodelay_enable_(true)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0)
       , connection_idle_timeout_secs_(60)
       , connection_heartbeat_interval_secs_(30)
       , timestamp_gen_(Memory::allocate<ServerSideTimestampGenerator>())
-      , retry_policy_(Memory::allocate<DefaultRetryPolicy>())
       , use_schema_(true)
       , use_hostname_resolution_(false)
       , use_randomized_contact_points_(true)
-      , max_reusable_write_objects_(UINT_MAX) { }
+      , max_reusable_write_objects_(UINT_MAX) {
+    profiles_.set_empty_key(String());
+
+    // Assign the defaults to the cluster profile
+    default_profile_.set_consistency(CASS_DEFAULT_CONSISTENCY);
+    default_profile_.set_serial_consistency(CASS_DEFAULT_SERIAL_CONSISTENCY);
+    default_profile_.set_request_timeout(CASS_DEFAULT_REQUEST_TIMEOUT_MS);
+    default_profile_.set_load_balancing_policy(Memory::allocate<DCAwarePolicy>());
+    default_profile_.set_retry_policy(Memory::allocate<DefaultRetryPolicy>());
+  }
 
   Config new_instance() const {
     Config config = *this;
-
-    // The base LBP can be augmented by special wrappers (whitelist,
-    // token aware, latency aware)
-    LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
-    if (!blacklist_.empty()) {
-      chain = Memory::allocate<BlacklistPolicy>(chain, blacklist_);
-    }
-    if (!whitelist_.empty()) {
-      chain = Memory::allocate<WhitelistPolicy>(chain, whitelist_);
-    }
-    if (!blacklist_dc_.empty()) {
-      chain = Memory::allocate<BlacklistDCPolicy>(chain, blacklist_dc_);
-    }
-    if (!whitelist_dc_.empty()) {
-      chain = Memory::allocate<WhitelistDCPolicy>(chain, whitelist_dc_);
-    }
-    if (token_aware_routing()) {
-      chain = Memory::allocate<TokenAwarePolicy>(chain, token_aware_routing_shuffle_replicas_);
-    }
-    if (latency_aware()) {
-      chain = Memory::allocate<LatencyAwarePolicy>(chain, latency_aware_routing_settings_);
-    }
-    if (host_targeting()) {
-      chain = Memory::allocate<HostTargetingPolicy>(chain);
-    }
-
-    config.set_load_balancing_policy(chain);
+    config.init_profiles(); // Builds the LBPs and updates the profiles
     config.set_speculative_execution_policy(speculative_execution_policy_->new_instance());
 
     return config;
   }
 
-  CassConsistency consistency() const { return consistency_; }
+  CassConsistency consistency() const { return default_profile_.consistency(); }
 
   void set_consistency(CassConsistency consistency) {
-    consistency_ = consistency;
+    default_profile_.set_consistency(consistency);
   }
 
-  CassConsistency serial_consistency() const { return serial_consistency_; }
+  CassConsistency serial_consistency() const {
+    return default_profile_.serial_consistency();
+  }
 
   void set_serial_consistency(CassConsistency serial_consistency) {
-    serial_consistency_ = serial_consistency;
+    default_profile_.set_serial_consistency(serial_consistency);
   }
 
   unsigned thread_count_io() const { return thread_count_io_; }
@@ -235,10 +203,12 @@ public:
     connect_timeout_ms_ = timeout_ms;
   }
 
-  unsigned request_timeout_ms() const { return request_timeout_ms_; }
+  unsigned request_timeout_ms() const {
+    return default_profile_.request_timeout_ms();
+  }
 
   void set_request_timeout(unsigned timeout_ms) {
-    request_timeout_ms_ = timeout_ms;
+    default_profile_.set_request_timeout(timeout_ms);
   }
 
   unsigned resolve_timeout_ms() const { return resolve_timeout_ms_; }
@@ -300,13 +270,16 @@ public:
     auth_provider_.reset(Memory::allocate<PlainTextAuthProvider>(username, password));
   }
 
+  const LoadBalancingPolicy::Vec& load_balancing_policies() const {
+    return load_balancing_policies_;
+  }
+
   const LoadBalancingPolicy::Ptr& load_balancing_policy() const {
-    return load_balancing_policy_;
+    return default_profile_.load_balancing_policy();
   }
 
   void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
-    if (lbp == NULL) return;
-    load_balancing_policy_.reset(lbp);
+    default_profile_.set_load_balancing_policy(lbp);
   }
 
   const SpeculativeExecutionPolicy::Ptr& speculative_execution_policy() const {
@@ -324,38 +297,52 @@ public:
     ssl_context_.reset(ssl_context);
   }
 
-  bool token_aware_routing() const { return token_aware_routing_; }
+  bool token_aware_routing() const {
+    return default_profile_.token_aware_routing();
+  }
 
-  void set_token_aware_routing(bool is_token_aware) { token_aware_routing_ = is_token_aware; }
+  void set_token_aware_routing(bool is_token_aware) {
+    default_profile_.set_token_aware_routing(is_token_aware);
+  }
 
-  void set_token_aware_routing_shuffle_replicas(bool shuffle_replicas) { token_aware_routing_shuffle_replicas_ = shuffle_replicas; }
+  void set_token_aware_routing_shuffle_replicas(bool shuffle_replicas) {
+    default_profile_.set_token_aware_routing_shuffle_replicas(shuffle_replicas);
+  }
 
-  bool latency_aware() const { return latency_aware_routing_; }
+  bool latency_aware() const {
+    return default_profile_.latency_aware();
+  }
 
-  void set_latency_aware_routing(bool is_latency_aware) { latency_aware_routing_ = is_latency_aware; }
+  void set_latency_aware_routing(bool is_latency_aware) {
+    default_profile_.set_latency_aware_routing(is_latency_aware);
+  }
 
-  bool host_targeting() const { return host_targeting_; }
+  bool host_targeting() const {
+    return default_profile_.host_targeting();
+  }
 
-  void set_host_targeting(bool is_host_targeting) { host_targeting_ = is_host_targeting; }
+  void set_host_targeting(bool is_host_targeting) {
+    default_profile_.set_host_targeting(is_host_targeting);
+  }
 
   void set_latency_aware_routing_settings(const LatencyAwarePolicy::Settings& settings) {
-    latency_aware_routing_settings_ = settings;
+    default_profile_.set_latency_aware_routing_settings(settings);
   }
 
   ContactPointList& whitelist() {
-    return whitelist_;
+    return default_profile_.whitelist();
   }
 
   ContactPointList& blacklist() {
-    return blacklist_;
+    return default_profile_.blacklist();
   }
 
   DcList& whitelist_dc() {
-    return whitelist_dc_;
+    return default_profile_.whitelist_dc();
   }
 
   DcList& blacklist_dc() {
-    return blacklist_dc_;
+    return default_profile_.blacklist_dc();
   }
 
   bool tcp_nodelay_enable() const { return tcp_nodelay_enable_; }
@@ -398,12 +385,11 @@ public:
   }
 
   const RetryPolicy::Ptr& retry_policy() const {
-    return retry_policy_;
+    return default_profile_.retry_policy();
   }
 
   void set_retry_policy(RetryPolicy* retry_policy) {
-    if (retry_policy == NULL) return;
-    retry_policy_.reset(retry_policy);
+    default_profile_.set_retry_policy(retry_policy);
   }
 
   bool use_schema() const { return use_schema_; }
@@ -424,13 +410,43 @@ public:
   unsigned max_reusable_write_objects() const { return max_reusable_write_objects_; }
   void set_max_reusable_write_objects(unsigned max_reusable_write_objects) { max_reusable_write_objects_ = max_reusable_write_objects; }
 
+  const ExecutionProfile& default_profile() {
+    return default_profile_;
+  }
+
+  bool profile(const String& name, ExecutionProfile& profile) const {
+    // Determine if cluster profile should be used
+    if (name.empty()) {
+      profile = default_profile_;
+      return true;
+    }
+
+    // Handle profile lookup
+    ExecutionProfile::Map::const_iterator it = profiles_.find(name);
+    if (it != profiles_.end()) {
+      profile = it->second;
+      return true;
+    }
+    return false;
+  }
+
+  void set_execution_profile(const String& name,
+                             const ExecutionProfile* profile) {
+    // Assign the host targeting profile based on the cluster profile
+    // This is required as their is no exposed API to set this chained policy
+    ExecutionProfile copy = *profile;
+    copy.set_host_targeting(default_profile_.host_targeting());
+    profiles_[name] = copy;
+  }
+
+private:
+  void init_profiles();
+
 private:
   int port_;
   int protocol_version_;
   bool use_beta_protocol_version_;
   ContactPointList contact_points_;
-  CassConsistency consistency_;
-  CassConsistency serial_consistency_;
   unsigned thread_count_io_;
   unsigned queue_size_io_;
   unsigned queue_size_event_;
@@ -446,35 +462,26 @@ private:
   unsigned pending_requests_high_water_mark_;
   unsigned pending_requests_low_water_mark_;
   unsigned connect_timeout_ms_;
-  unsigned request_timeout_ms_;
   unsigned resolve_timeout_ms_;
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;
   AuthProvider::Ptr auth_provider_;
-  LoadBalancingPolicy::Ptr load_balancing_policy_;
   SpeculativeExecutionPolicy::Ptr speculative_execution_policy_;
   SslContext::Ptr ssl_context_;
-  bool token_aware_routing_;
-  bool token_aware_routing_shuffle_replicas_;
-  bool latency_aware_routing_;
-  bool host_targeting_;
-  LatencyAwarePolicy::Settings latency_aware_routing_settings_;
-  ContactPointList whitelist_;
-  ContactPointList blacklist_;
-  DcList whitelist_dc_;
-  DcList blacklist_dc_;
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;
   unsigned tcp_keepalive_delay_secs_;
   unsigned connection_idle_timeout_secs_;
   unsigned connection_heartbeat_interval_secs_;
   SharedRefPtr<TimestampGenerator> timestamp_gen_;
-  RetryPolicy::Ptr retry_policy_;
   bool use_schema_;
   bool use_hostname_resolution_;
   bool use_randomized_contact_points_;
   unsigned max_reusable_write_objects_;
+  ExecutionProfile default_profile_;
+  ExecutionProfile::Map profiles_;
+  LoadBalancingPolicy::Vec load_balancing_policies_;
 };
 
 } // namespace cass

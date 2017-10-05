@@ -23,6 +23,7 @@
 #include "memory.hpp"
 #include "request.hpp"
 #include "string.hpp"
+#include "vector.hpp"
 
 #include <uv.h>
 
@@ -75,6 +76,7 @@ public:
 class LoadBalancingPolicy : public Host::StateListener, public RefCounted<LoadBalancingPolicy> {
 public:
   typedef SharedRefPtr<LoadBalancingPolicy> Ptr;
+  typedef Vector<Ptr> Vec;
 
   LoadBalancingPolicy()
     : RefCounted<LoadBalancingPolicy>() {}

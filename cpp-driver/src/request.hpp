@@ -76,8 +76,8 @@ public:
 
   Request(uint8_t opcode)
       : opcode_(opcode)
-      , consistency_(CASS_DEFAULT_CONSISTENCY)
-      , serial_consistency_(CASS_DEFAULT_SERIAL_CONSISTENCY)
+      , consistency_(CASS_CONSISTENCY_UNKNOWN)
+      , serial_consistency_(CASS_CONSISTENCY_UNKNOWN)
       , timestamp_(CASS_INT64_MIN)
       , is_idempotent_(false)
       , record_attempted_addresses_(false)
@@ -141,6 +141,16 @@ public:
     custom_payload_extra_.set(key, strlen(key), value, value_len);
   }
 
+  bool has_execution_profile() const {
+    return !profile_name_.empty();
+  }
+
+  const String& execution_profile_name() const { return profile_name_; }
+
+  void set_execution_profile_name(const String& name) {
+    profile_name_ = name;
+  }
+
   int32_t encode_custom_payload(BufferVec* bufs) const {
     int32_t length = sizeof(uint16_t);
     uint16_t count = 0;
@@ -171,6 +181,7 @@ private:
   RetryPolicy::Ptr retry_policy_;
   CustomPayload::ConstPtr custom_payload_;
   CustomPayload custom_payload_extra_;
+  String profile_name_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);

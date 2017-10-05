@@ -36,9 +36,11 @@
 
 namespace cass {
 
+class Config;
 class Connection;
 class IOWorker;
 class Pool;
+class ExecutionProfile;
 class Timer;
 class TokenMap;
 
@@ -138,7 +140,8 @@ public:
     , running_executions_(0)
     , start_time_ns_(uv_hrtime()) { }
 
-  void init(const Config& config, const String& keyspace, const TokenMap* token_map);
+  void init(const Config& config, const ExecutionProfile& profile,
+            const String& keyspace, const TokenMap* token_map);
 
   const Request* request() const { return wrapper_.request().get(); }
 

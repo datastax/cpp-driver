@@ -12,6 +12,7 @@
 #include "is_polymorphic.hpp"
 
 #include <limits>
+#include <new>
 #include <stdlib.h>
 
 namespace cass {

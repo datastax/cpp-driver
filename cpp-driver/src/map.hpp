@@ -15,9 +15,9 @@
 namespace cass {
 
 template <class K, class V, class Compare = std::less<K> >
-class Map : public std::map<K, V, Compare, cass::Allocator<std::pair<K, V> > > {
+class Map : public std::map<K, V, Compare, cass::Allocator<std::pair<const K, V> > > {
 public:
-  typedef cass::Allocator<std::pair<K, V> > Allocator;
+  typedef cass::Allocator<std::pair<const K, V> > Allocator;
 
   explicit Map(const Compare& compare = Compare(),
                const Allocator& alloc = Allocator())

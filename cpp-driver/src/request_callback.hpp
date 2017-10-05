@@ -20,13 +20,13 @@
 #include "buffer.hpp"
 #include "cassandra.h"
 #include "constants.hpp"
-#include "utils.hpp"
 #include "list.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include "scoped_ptr.hpp"
 #include "string.hpp"
 #include "timer.hpp"
+#include "utils.hpp"
 
 #include <uv.h>
 
@@ -34,6 +34,7 @@ namespace cass {
 
 class Config;
 class Connection;
+class ExecutionProfile;
 class Metrics;
 class ResponseMessage;
 class ResultResponse;
@@ -41,7 +42,7 @@ class ResultResponse;
 typedef Vector<uv_buf_t> UvBufVec;
 
 /**
- * A wrapper class for keeping a request's state grouped together with the
+ * A wrapper class for keeping a requests state grouped together with the
  * request object. This is necessary because a request object is immutable
  * when it's being executed.
  */
@@ -54,7 +55,7 @@ public:
     , request_timeout_ms_(CASS_DEFAULT_REQUEST_TIMEOUT_MS)
     , timestamp_(CASS_INT64_MIN) { }
 
-  void init(const Config& config);
+  void init(const Config& config, const ExecutionProfile& profile);
 
   const Request::ConstPtr& request() const {
     return request_;

@@ -467,6 +467,27 @@ CassError cass_cluster_set_max_reusable_write_objects(CassCluster* cluster,
   return CASS_OK;
 }
 
+CassError cass_cluster_set_execution_profile(CassCluster* cluster,
+                                             const char* name,
+                                             CassExecProfile* profile) {
+  return cass_cluster_set_execution_profile_n(cluster,
+                                             name,
+                                             SAFE_STRLEN(name),
+                                              profile);
+}
+
+CassError cass_cluster_set_execution_profile_n(CassCluster* cluster,
+                                             const char* name,
+                                             size_t name_length,
+                                             CassExecProfile* profile) {
+  if (name_length == 0 || !profile) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_execution_profile(cass::String(name, name_length),
+                                          profile);
+  return CASS_OK;
+}
+
 void cass_cluster_free(CassCluster* cluster) {
   cass::Memory::deallocate(cluster->from());
 }

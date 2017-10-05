@@ -19,6 +19,7 @@
 #include "config.hpp"
 #include "connection.hpp"
 #include "constants.hpp"
+#include "execution_profile.hpp"
 #include "logger.hpp"
 #include "metrics.hpp"
 #include "query_request.hpp"
@@ -28,12 +29,12 @@
 
 namespace cass {
 
-void RequestWrapper::init(const Config& config) {
-  consistency_ = config.consistency();
-  serial_consistency_ = config.serial_consistency();
-  request_timeout_ms_ = config.request_timeout_ms();
+void RequestWrapper::init(const Config& config, const ExecutionProfile& profile) {
+  consistency_ = profile.consistency();
+  serial_consistency_ = profile.serial_consistency();
+  request_timeout_ms_ = profile.request_timeout_ms();
   timestamp_ = config.timestamp_gen()->next();
-  retry_policy_ = config.retry_policy();
+  retry_policy_ = profile.retry_policy();
 }
 
 void RequestCallback::start(Connection* connection, int stream) {
@@ -96,9 +97,9 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
       break;
 
     case REQUEST_STATE_WRITING:
-      if(next_state == REQUEST_STATE_READING ||
-         next_state == REQUEST_STATE_READ_BEFORE_WRITE ||
-         next_state == REQUEST_STATE_FINISHED) {
+      if (next_state == REQUEST_STATE_READING ||
+          next_state == REQUEST_STATE_READ_BEFORE_WRITE ||
+          next_state == REQUEST_STATE_FINISHED) {
         state_ = next_state;
       } else if (next_state == REQUEST_STATE_CANCELLED) {
         state_ = REQUEST_STATE_CANCELLED_WRITING;
@@ -108,7 +109,7 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
       break;
 
     case REQUEST_STATE_READING:
-      if(next_state == REQUEST_STATE_FINISHED) {
+      if (next_state == REQUEST_STATE_FINISHED) {
         state_ = next_state;
       } else if (next_state == REQUEST_STATE_CANCELLED) {
         state_ = REQUEST_STATE_CANCELLED_READING;
@@ -138,7 +139,7 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
 
     case REQUEST_STATE_CANCELLED:
       assert((next_state == REQUEST_STATE_FINISHED &&
-              next_state == REQUEST_STATE_CANCELLED) ||
+             next_state == REQUEST_STATE_CANCELLED) ||
              "Invalid request state after cancelled");
       // Ignore. Leave the request in the cancelled state.
       break;

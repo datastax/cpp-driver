@@ -442,7 +442,11 @@ void Session::notify_closed() {
 void Session::close_handles() {
   EventThread<SessionEvent>::close_handles();
   request_queue_->close_handles();
-  config_.load_balancing_policy()->close_handles();
+  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    (*it)->close_handles();
+  }
 }
 
 void Session::on_run() {
@@ -607,8 +611,12 @@ void Session::on_add_resolve_name(NameResolver* resolver) {
 
 void Session::on_control_connection_ready() {
   // No hosts lock necessary (only called on session thread and read-only)
-  config().load_balancing_policy()->init(control_connection_.connected_host(), hosts_, random_.get());
-  config().load_balancing_policy()->register_handles(loop());
+  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    (*it)->init(control_connection_.connected_host(), hosts_, random_.get());
+    (*it)->register_handles(loop());
+  }
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
     (*it)->set_protocol_version(control_connection_.protocol_version());
@@ -660,14 +668,25 @@ void Session::on_add(Host::Ptr host, bool is_initial_connection) {
 void Session::internal_on_add(Host::Ptr host, bool is_initial_connection) {
   host->set_up();
 
-  if (config().load_balancing_policy()->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
+  bool is_host_ignored = true;
+  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+      is_host_ignored = false;
+      if (!is_initial_connection) {
+        (*it)->on_add(host);
+      }
+    }
+  }
+  if (is_host_ignored) {
+    LOG_DEBUG("Host %s will be ignored by all query plans",
+              host->address_string().c_str());
     return;
   }
 
   if (is_initial_connection) {
     pending_pool_count_ += io_workers_.size();
-  } else {
-    config().load_balancing_policy()->on_add(host);
   }
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
@@ -677,7 +696,11 @@ void Session::internal_on_add(Host::Ptr host, bool is_initial_connection) {
 }
 
 void Session::on_remove(Host::Ptr host) {
-  config().load_balancing_policy()->on_remove(host);
+  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    (*it)->on_remove(host);
+  }
   { // Lock hosts
     ScopedMutex l(&hosts_mutex_);
     hosts_.erase(host->address());
@@ -691,11 +714,20 @@ void Session::on_remove(Host::Ptr host) {
 void Session::on_up(Host::Ptr host) {
   host->set_up();
 
-  if (config().load_balancing_policy()->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
+  bool is_host_ignored = true;
+  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+      is_host_ignored = false;
+      (*it)->on_up(host);
+    }
+  }
+  if (is_host_ignored) {
+    LOG_DEBUG("Host %s will be ignored by all query plans",
+              host->address_string().c_str());
     return;
   }
-
-  config().load_balancing_policy()->on_up(host);
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
@@ -705,12 +737,24 @@ void Session::on_up(Host::Ptr host) {
 
 void Session::on_down(Host::Ptr host) {
   host->set_down();
-  config().load_balancing_policy()->on_down(host);
+
+  bool is_host_ignored = true;
+  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    (*it)->on_down(host);
+    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+      is_host_ignored = false;
+    }
+  }
 
   bool cancel_reconnect = false;
-  if (config().load_balancing_policy()->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
+  if (is_host_ignored) {
     // This permanently removes a host from all IO workers by stopping
-    // any attempt to reconnect to that host.
+    // any attempt to reconnect to that host if all load balancing policies
+    // ignore the host distance.
+    LOG_DEBUG("Host %s will be ignored by all query plans",
+              host->address_string().c_str());
     cancel_reconnect = true;
   }
   for (IOWorkerVec::iterator it = io_workers_.begin(),
@@ -749,7 +793,19 @@ void Session::on_execute(uv_async_t* data) {
     if (request_handler) {
       request_handler->dec_ref(); // Queue reference
 
-      request_handler->init(session->config_, session->keyspace(), session->token_map_.get());
+      const String& profile_name = request_handler->request()->execution_profile_name();
+      ExecutionProfile profile;
+      if (session->config().profile(profile_name, profile)) {
+        if (!profile_name.empty()) {
+          LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
+        }
+        request_handler->init(session->config(), profile, session->keyspace(),
+                              session->token_map_.get());
+      } else {
+        request_handler->set_error(CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID,
+                                   profile_name + " does not exist");
+        continue;
+      }
 
       bool is_done = false;
       while (!is_done) {
@@ -789,7 +845,9 @@ void Session::on_execute(uv_async_t* data) {
 }
 
 QueryPlan* Session::new_query_plan() {
-  return config_.load_balancing_policy()->new_query_plan(keyspace(), NULL, token_map_.get());
+  return config_.default_profile().load_balancing_policy()->new_query_plan(keyspace_,
+                                                                           NULL,
+                                                                           token_map_.get());
 }
 
 } // namespace cass

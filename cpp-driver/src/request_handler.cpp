@@ -95,9 +95,10 @@ void RequestHandler::schedule_next_execution(const Host::Ptr& current_host) {
   }
 }
 
-void RequestHandler::init(const Config& config, const String& keyspace, const TokenMap* token_map) {
-  wrapper_.init(config);
-  query_plan_.reset(config.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
+void RequestHandler::init(const Config& config, const ExecutionProfile& profile,
+                          const String& keyspace, const TokenMap* token_map) {
+  wrapper_.init(config, profile);
+  query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
   execution_plan_.reset(config.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
 }
 

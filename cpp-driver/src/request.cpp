@@ -26,7 +26,6 @@ CassCustomPayload* cass_custom_payload_new() {
   return CassCustomPayload::to(payload);
 }
 
-
 void cass_custom_payload_set(CassCustomPayload* payload,
                                 const char* name,
                                 const cass_byte_t* value,

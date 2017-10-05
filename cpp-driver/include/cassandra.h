@@ -671,6 +671,7 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NOT_ENOUGH_DATA, 31, "Not enough data") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_STATE, 32, "Invalid state") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_CUSTOM_PAYLOAD, 33, "No custom payload") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID, 34, "Invalid execution profile specified") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -878,6 +879,485 @@ typedef struct CassAuthenticatorCallbacks_ {
   CassAuthenticatorSuccessCallback success_callback;
   CassAuthenticatorCleanupCallback cleanup_callback;
 } CassAuthenticatorCallbacks;
+
+/***********************************************************************************
+ *
+ * Execution Profile
+ *
+ ***********************************************************************************/
+
+/**
+ * An execution profile object provides a mechanism to group together a set of
+ * configuration options and reuse them across different statement executions.
+ * This feature is useful when dealing with different query workloads.
+ *
+ * @struct CassExecProfile
+ */
+typedef struct CassExecProfile_ CassExecProfile;
+
+/**
+ * Creates a new execution profile.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @return Returns a execution profile that must be freed.
+ *
+ * @see cass_execution_profile_free()
+ */
+CASS_EXPORT CassExecProfile*
+cass_execution_profile_new();
+
+/**
+ * Frees a execution profile instance.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ */
+CASS_EXPORT void
+cass_execution_profile_free(CassExecProfile* profile);
+
+/**
+ * Sets the timeout waiting for a response from a node.
+ *
+ * <b>Default:</b> Disabled (uses the cluster request timeout)
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] timeout_ms Request timeout in milliseconds. Use 0 for no timeout
+ * or CASS_UINT64_MAX to disable.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_statement_set_request_timeout()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_request_timeout(CassExecProfile* profile,
+                                           cass_uint64_t timeout_ms);
+
+/**
+ * Sets the consistency level.
+ *
+ * <b>Default:</b> Disabled (uses the default consistency)
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_statement_set_consistency()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_consistency(CassExecProfile* profile,
+                                       CassConsistency consistency);
+
+/**
+ * Sets the serial consistency level.
+ *
+ * <b>Default:</b> Disabled (uses the default serial consistency)
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] serial_consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_statement_set_serial_consistency()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_serial_consistency(CassExecProfile* profile,
+                                              CassConsistency serial_consistency);
+
+/**
+ * Configures the execution profile to use round-robin load balancing.
+ *
+ * The driver discovers all nodes in a cluster and cycles through
+ * them per request. All are considered 'local'.
+ *
+ * <b>Note:</b> Profile-based load balancing policy is disabled by default;
+ * cluster load balancing policy is used when profile does not contain a policy.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_load_balance_round_robin()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_load_balance_round_robin(CassExecProfile* profile);
+
+/**
+ * Configures the execution profile to use DC-aware load balancing.
+ * For each query, all live nodes in a primary 'local' DC are tried first,
+ * followed by any node from other DCs.
+ *
+ * <b>Note:</b> Profile-based load balancing policy is disabled by default;
+ * cluster load balancing policy is used when profile does not contain a policy.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] local_dc The primary data center to try first
+ * @param[in] used_hosts_per_remote_dc The number of hosts used in each remote
+ * DC if no hosts are available in the local dc
+ * @param[in] allow_remote_dcs_for_local_cl Allows remote hosts to be used if no
+ * local dc hosts are available and the consistency level is LOCAL_ONE or
+ * LOCAL_QUORUM
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_load_balance_dc_aware()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_load_balance_dc_aware(CassExecProfile* profile,
+                                                 const char* local_dc,
+                                                 unsigned used_hosts_per_remote_dc,
+                                                 cass_bool_t allow_remote_dcs_for_local_cl);
+
+/**
+ * Same as cass_execution_profile_set_load_balance_dc_aware(), but with lengths
+ * for string parameters.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] local_dc
+ * @param[in] local_dc_length
+ * @param[in] used_hosts_per_remote_dc
+ * @param[in] allow_remote_dcs_for_local_cl
+ * @return same as cass_execution_profile_set_load_balance_dc_aware()
+ *
+ * @see cass_execution_profile_set_load_balance_dc_aware()
+ * @see cass_cluster_set_load_balance_dc_aware_n()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_load_balance_dc_aware_n(CassExecProfile* profile,
+                                                   const char* local_dc,
+                                                   size_t local_dc_length,
+                                                   unsigned used_hosts_per_remote_dc,
+                                                   cass_bool_t allow_remote_dcs_for_local_cl);
+
+/**
+ * Configures the execution profile to use token-aware request routing or not.
+ *
+ * <b>Important:</b> Token-aware routing depends on keyspace metadata.
+ * For this reason enabling token-aware routing will also enable retrieving
+ * and updating keyspace schema metadata.
+ *
+ * <b>Default:</b> cass_true (enabled).
+ *
+ * This routing policy composes the base routing policy, routing
+ * requests first to replicas on nodes considered 'local' by
+ * the base load balancing policy.
+ *
+ * <b>Note:</b> Execution profiles use the cluster-level load balancing policy
+ * unless enabled. This setting is not applicable unless a load balancing policy
+ * is enabled on the execution profile.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] enabled
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_token_aware_routing()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_token_aware_routing(CassExecProfile* profile,
+                                               cass_bool_t enabled);
+
+/**
+ * Configures the execution profile's token-aware routing to randomly shuffle
+ * replicas. This can reduce the effectiveness of server-side caching, but it
+ * can better distribute load over replicas for a given partition key.
+ *
+ * <b>Note:</b> Token-aware routing must be enabled and a load balancing policy
+ * must be enabled on the execution profile for the setting to be applicable.
+ *
+ * <b>Default:</b> cass_true (enabled).
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] enabled
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_token_aware_routing_shuffle_replicas()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_token_aware_routing_shuffle_replicas(CassExecProfile* profile,
+                                                                cass_bool_t enabled);
+
+/**
+ * Configures the execution profile to use latency-aware request routing or not.
+ *
+ * <b>Note:</b> Execution profiles use the cluster-level load balancing policy
+ * unless enabled. This setting is not applicable unless a load balancing policy
+ * is enabled on the execution profile.
+ *
+ * <b>Default:</b> cass_false (disabled).
+ *
+ * This routing policy is a top-level routing policy. It uses the
+ * base routing policy to determine locality (dc-aware) and/or
+ * placement (token-aware) before considering the latency.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] enabled
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @cass_cluster_set_latency_aware_routing()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_latency_aware_routing(CassExecProfile* profile,
+                                                 cass_bool_t enabled);
+
+/**
+ * Configures the execution profile's settings for latency-aware request
+ * routing.
+ *
+ * <b>Note:</b> Execution profiles use the cluster-level load balancing policy
+ * unless enabled. This setting is not applicable unless a load balancing policy
+ * is enabled on the execution profile.
+ *
+ * <b>Defaults:</b>
+ *
+ * <ul>
+ *   <li>exclusion_threshold: 2.0</li>
+ *   <li>scale_ms: 100 milliseconds</li>
+ *   <li>retry_period_ms: 10,000 milliseconds (10 seconds)</li>
+ *   <li>update_rate_ms: 100 milliseconds</li>
+ *   <li>min_measured: 50</li>
+ * </ul>
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] exclusion_threshold Controls how much worse the latency must be
+ * compared to the average latency of the best performing node before it
+ * penalized.
+ * @param[in] scale_ms Controls the weight given to older latencies when
+ * calculating the average latency of a node. A bigger scale will give more
+ * weight to older latency measurements.
+ * @param[in] retry_period_ms The amount of time a node is penalized by the
+ * policy before being given a second chance when the current average latency
+ * exceeds the calculated threshold
+ * (exclusion_threshold * best_average_latency).
+ * @param[in] update_rate_ms The rate at  which the best average latency is
+ * recomputed.
+ * @param[in] min_measured The minimum number of measurements per-host required
+ * to be considered by the policy.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_latency_aware_routing_settings()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_latency_aware_routing_settings(CassExecProfile* profile,
+                                                          cass_double_t exclusion_threshold,
+                                                          cass_uint64_t scale_ms,
+                                                          cass_uint64_t retry_period_ms,
+                                                          cass_uint64_t update_rate_ms,
+                                                          cass_uint64_t min_measured);
+
+/**
+ * Sets/Appends whitelist hosts for the execution profile. The first call sets
+ * the whitelist hosts and any subsequent calls appends additional hosts.
+ * Passing an empty string will clear and disable the whitelist. White space is
+ * striped from the hosts.
+ *
+ * This policy filters requests to all other policies, only allowing requests
+ * to the hosts contained in the whitelist. Any host not in the whitelist will
+ * be ignored and a connection will not be established. This policy is useful
+ * for ensuring that the driver will only connect to a predefined set of hosts.
+ *
+ * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2"
+ *
+ * <b>Note:</b> Execution profiles use the cluster-level load balancing policy
+ * unless enabled. This setting is not applicable unless a load balancing policy
+ * is enabled on the execution profile.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] hosts A comma delimited list of addresses. An empty string will
+ * clear the whitelist hosts. The string is copied into the cluster
+ * configuration; the memory pointed to by this parameter can be freed after
+ * this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_whitelist_filtering()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_whitelist_filtering(CassExecProfile* profile,
+                                               const char* hosts);
+
+/**
+ * Same as cass_execution_profile_set_whitelist_filtering(), but with lengths
+ * for string parameters.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] hosts
+ * @param[in] hosts_length
+ * @return same as cass_execution_profile_set_whitelist_filtering()
+ *
+ * @see cass_execution_profile_set_whitelist_filtering()
+ * @see cass_cluster_set_whitelist_filtering()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_whitelist_filtering_n(CassExecProfile* profile,
+                                                 const char* hosts,
+                                                 size_t hosts_length);
+
+/**
+ * Sets/Appends blacklist hosts for the execution profile. The first call sets
+ * the blacklist hosts and any subsequent calls appends additional hosts.
+ * Passing an empty string will clear and disable the blacklist. White space is
+ * striped from the hosts.
+ *
+ * This policy filters requests to all other policies, only allowing requests
+ * to the hosts not contained in the blacklist. Any host in the blacklist will
+ * be ignored and a connection will not be established. This policy is useful
+ * for ensuring that the driver will not connect to a predefined set of hosts.
+ *
+ * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2"
+ *
+ * <b>Note:</b> Execution profiles use the cluster-level load balancing policy
+ * unless enabled. This setting is not applicable unless a load balancing policy
+ * is enabled on the execution profile.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] hosts A comma delimited list of addresses. An empty string will
+ * clear the blacklist hosts. The string is copied into the cluster
+ * configuration; the memory pointed to by this parameter can be freed after
+ * this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_blacklist_filtering()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_blacklist_filtering(CassExecProfile* profile,
+                                               const char* hosts);
+
+/**
+ * Same as cass_execution_profile_set_blacklist_filtering(), but with lengths
+ * for string parameters.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] hosts
+ * @param[in] hosts_length
+ * @return same as cass_execution_profile_set_blacklist_filtering_hosts()
+ *
+ * @see cass_execution_profile_set_blacklist_filtering()
+ * @see cass_cluster_set_blacklist_filtering()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_blacklist_filtering_n(CassExecProfile* profile,
+                                                 const char* hosts,
+                                                 size_t hosts_length);
+
+/**
+ * Same as cass_execution_profile_set_whitelist_filtering(), but whitelist all
+ * hosts of a dc.
+ *
+ * Examples: "dc1", "dc1,dc2"
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] dcs A comma delimited list of dcs. An empty string will clear the
+ * whitelist dcs. The string is copied into the cluster configuration; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_whitelist_dc_filtering()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_whitelist_dc_filtering(CassExecProfile* profile,
+                                                  const char* dcs);
+
+/**
+ * Same as cass_execution_profile_set_whitelist_dc_filtering(), but with lengths
+ * for string parameters.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] dcs
+ * @param[in] dcs_length
+ * @return same as cass_execution_profile_set_whitelist_dc_filtering()
+ *
+ * @see cass_execution_profile_set_whitelist_dc_filtering()
+ * @see cass_cluster_set_whitelist_dc_filtering()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_whitelist_dc_filtering_n(CassExecProfile* profile,
+                                                    const char* dcs,
+                                                    size_t dcs_length);
+
+/**
+ * Same as cass_execution_profile_set_blacklist_filtering(), but blacklist all
+ * hosts of a dc.
+ *
+ * Examples: "dc1", "dc1,dc2"
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] dcs A comma delimited list of dcs. An empty string will clear the
+ * blacklist dcs. The string is copied into the cluster configuration; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_execution_profile_set_blacklist_filtering()
+ * @see cass_cluster_set_blacklist_dc_filtering()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_blacklist_dc_filtering(CassExecProfile* profile,
+                                                  const char* dcs);
+
+/**
+ * Same as cass_execution_profile_set_blacklist_dc_filtering(), but with lengths
+ * for string parameters.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] dcs
+ * @param[in] dcs_length
+ * @return same as cass_execution_profile_set_blacklist_dc_filtering()
+ *
+ * @see cass_execution_profile_set_blacklist_dc_filtering()
+ * @see cass_cluster_set_blacklist_dc_filtering()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_blacklist_dc_filtering_n(CassExecProfile* profile,
+                                                    const char* dcs,
+                                                    size_t dcs_length);
+
+/**
+ * Sets the execution profile's retry policy.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * <b>Note:</b> Profile-based retry policy is disabled by default; cluster retry
+ * policy is used when profile does not contain a policy unless the retry policy
+ * was explicitly set on the batch/statement request.
+ *
+ * @param[in] profile
+ * @param[in] retry_policy NULL will clear retry policy from execution profile
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_retry_policy(CassExecProfile* profile,
+                                        CassRetryPolicy* retry_policy);
 
 /***********************************************************************************
  *
@@ -1347,7 +1827,7 @@ cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
  *
  * @param[in] cluster
  * @param[in] local_dc The primary data center to try first
- * @param[in] used_hosts_per_remote_dc The number of host used in each remote DC if no hosts
+ * @param[in] used_hosts_per_remote_dc The number of hosts used in each remote DC if no hosts
  * are available in the local dc
  * @param[in] allow_remote_dcs_for_local_cl Allows remote hosts to be used if no local dc hosts
  * are available and the consistency level is LOCAL_ONE or LOCAL_QUORUM
@@ -1502,7 +1982,7 @@ cass_cluster_set_whitelist_filtering(CassCluster* cluster,
                                      const char* hosts);
 
 /**
- * Same as cass_cluster_set_whitelist_filtering_hosts(), but with lengths for
+ * Same as cass_cluster_set_whitelist_filtering(), but with lengths for
  * string parameters.
  *
  * @public @memberof CassCluster
@@ -1510,9 +1990,9 @@ cass_cluster_set_whitelist_filtering(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] hosts
  * @param[in] hosts_length
- * @return same as cass_cluster_set_whitelist_filtering_hosts()
+ * @return same as cass_cluster_set_whitelist_filtering()
  *
- * @see cass_cluster_set_whitelist_filtering_hosts()
+ * @see cass_cluster_set_whitelist_filtering()
  */
 CASS_EXPORT void
 cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
@@ -1552,9 +2032,9 @@ cass_cluster_set_blacklist_filtering(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] hosts
  * @param[in] hosts_length
- * @return same as cass_cluster_set_blacklist_filtering_hosts()
+ * @return same as cass_cluster_set_blacklist_filtering()
  *
- * @see cass_cluster_set_blacklist_filtering_hosts()
+ * @see cass_cluster_set_blacklist_filtering()
  */
 CASS_EXPORT void
 cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
@@ -1842,6 +2322,50 @@ cass_cluster_set_no_speculative_execution_policy(CassCluster* cluster);
 CASS_EXPORT CassError
 cass_cluster_set_max_reusable_write_objects(CassCluster* cluster,
                                             unsigned num_objects);
+
+/**
+ * Associates a named execution profile which can be utilized during execution.
+ *
+ * <b>Note:</b> Once the execution profile is added to a cluster, it is
+ * immutable and any changes made to the execution profile must be re-assigned
+ * to the cluster before a session connection is established in order for those
+ * settings to be utilized during query execution.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] name
+ * @param[in] profile
+ * @return CASS_OK if successful, otherwise an error occurred
+ *
+ * @see cass_batch_set_execution_profile()
+ * @see cass_statement_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_cluster_set_execution_profile(CassCluster* cluster,
+                                   const char* name,
+                                   CassExecProfile* profile);
+
+/**
+ * Same as cass_cluster_add_execution_profile(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] profile
+ * @return same as cass_cluster_set_execution_profile()
+ *
+ * @see cass_batch_set_execution_profile()
+ * @see cass_statement_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_cluster_set_execution_profile_n(CassCluster* cluster,
+                                     const char* name,
+                                     size_t name_length,
+                                     CassExecProfile* profile);
 
 /***********************************************************************************
  *
@@ -5269,6 +5793,41 @@ cass_statement_bind_user_type_by_name_n(CassStatement* statement,
                                         size_t name_length,
                                         const CassUserType* user_type);
 
+/**
+ * Sets the execution profile to execute the statement with.
+ *
+ * <b>Note:</b> NULL or empty string will clear execution profile from statement
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_statement_set_execution_profile(CassStatement* statement,
+                                     const char* name);
+
+/**
+ * Same as cass_statement_set_execution_profile(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_statement_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_statement_set_execution_profile_n(CassStatement* statement,
+                                       const char* name,
+                                       size_t name_length);
+
 /***********************************************************************************
  *
  * Prepared
@@ -5522,6 +6081,41 @@ cass_batch_set_custom_payload(CassBatch* batch,
 CASS_EXPORT CassError
 cass_batch_add_statement(CassBatch* batch,
                          CassStatement* statement);
+
+/**
+ * Sets the execution profile to execute the batch with.
+ *
+ * <b>Note:</b> NULL or empty string will clear execution profile from batch
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] name
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_batch_set_execution_profile(CassBatch* batch,
+                                 const char* name);
+
+/**
+ * Same as cass_batch_set_execution_profile(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] name
+ * @param[in] name_length
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_batch_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_batch_set_execution_profile_n(CassBatch* batch,
+                                   const char* name,
+                                   size_t name_length);
 
 /***********************************************************************************
  *

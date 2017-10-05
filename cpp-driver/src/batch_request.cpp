@@ -82,6 +82,24 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   return CASS_OK;
 }
 
+CassError cass_batch_set_execution_profile(CassBatch* batch,
+                                           const char* name) {
+  return cass_batch_set_execution_profile_n(batch,
+                                            name,
+                                            SAFE_STRLEN(name));
+}
+
+CassError cass_batch_set_execution_profile_n(CassBatch* batch,
+                                             const char* name,
+                                             size_t name_length) {
+  if (name_length > 0) {
+    batch->set_execution_profile_name(cass::String(name, name_length));
+  } else {
+    batch->set_execution_profile_name(cass::String());
+  }
+  return CASS_OK;
+}
+
 } // extern "C"
 
 namespace cass {
@@ -143,7 +161,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
         buf_size += sizeof(uint8_t); // [byte]
       }
 
-      if (serial_consistency() != 0) {
+      if (callback->serial_consistency() != 0) {
         buf_size += sizeof(uint16_t); // [short]
         flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
       }
@@ -164,8 +182,8 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
         pos = buf.encode_byte(pos, flags);
       }
 
-      if (serial_consistency() != 0) {
-        pos = buf.encode_uint16(pos, serial_consistency());
+      if (callback->serial_consistency() != 0) {
+        pos = buf.encode_uint16(pos, callback->serial_consistency());
       }
 
       if (callback->timestamp() != CASS_INT64_MIN) {

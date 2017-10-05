@@ -779,11 +779,19 @@ void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateH
   if ((!rack.empty() && rack != host->rack()) ||
       (!dc.empty() && dc != host->dc())) {
     if (!host->was_just_added()) {
-      session_->config().load_balancing_policy()->on_remove(host);
+      const LoadBalancingPolicy::Vec& policies = session_->config().load_balancing_policies();
+      for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+           it != policies.end(); ++it) {
+        (*it)->on_remove(host);
+      }
     }
     host->set_rack_and_dc(rack, dc);
     if (!host->was_just_added()) {
-      session_->config().load_balancing_policy()->on_add(host);
+      const LoadBalancingPolicy::Vec& policies = session_->config().load_balancing_policies();
+      for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+           it != policies.end(); ++it) {
+        (*it)->on_add(host);
+      }
     }
   }
 
