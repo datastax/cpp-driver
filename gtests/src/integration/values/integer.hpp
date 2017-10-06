@@ -55,7 +55,7 @@ public:
     //Convert the value
       std::stringstream valueStream(value_trim);
       if ((valueStream >> integer_).fail()) {
-        LOG_ERROR("Invalid Tiny Integer " << value_trim << ": Using default "
+        TEST_LOG_ERROR("Invalid Tiny Integer " << value_trim << ": Using default "
           << integer_);
       }
     }
@@ -229,7 +229,7 @@ public:
     //Convert the value
       std::stringstream valueStream(value_trim);
       if ((valueStream >> integer_).fail()) {
-        LOG_ERROR("Invalid Small Integer " << value_trim << ": Using default "
+        TEST_LOG_ERROR("Invalid Small Integer " << value_trim << ": Using default "
           << integer_);
       }
     }
@@ -403,7 +403,7 @@ public:
     //Convert the value
       std::stringstream valueStream(value_trim);
       if ((valueStream >> integer_).fail()) {
-        LOG_ERROR("Invalid Integer " << value_trim << ": Using default "
+        TEST_LOG_ERROR("Invalid Integer " << value_trim << ": Using default "
           << integer_);
       }
     }
@@ -577,7 +577,7 @@ public:
       //Convert the value
       std::stringstream valueStream(value_trim);
       if ((valueStream >> integer_).fail()) {
-        LOG_ERROR("Invalid Big Integer " << value_trim << ": Using default "
+        TEST_LOG_ERROR("Invalid Big Integer " << value_trim << ": Using default "
           << integer_);
       }
     }

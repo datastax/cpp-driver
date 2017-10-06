@@ -15,22 +15,22 @@
 #include "exception.hpp"
 
 // Create simple console logging functions
-#define PREFIX_LOG std::cout
-#define PREFIX_MESSAGE "Integration Tests: "
-#define SUFFIX_LOG std::endl
+#define TEST_PREFIX_LOG std::cout
+#define TEST_PREFIX_MESSAGE "Integration Tests: "
+#define TEST_SUFFIX_LOG std::endl
 #ifdef INTEGRATION_VERBOSE_LOGGING
-# define LOG(message) PREFIX_LOG << PREFIX_MESSAGE << message << SUFFIX_LOG
-# define LOG_DEBUG(message) PREFIX_LOG << PREFIX_MESSAGE << "DEBUG: " << message << SUFFIX_LOG
-# define LOG_WARN(message) PREFIX_LOG << PREFIX_MESSAGE << "WARN: " << message << SUFFIX_LOG
+# define TEST_LOG(message) TEST_PREFIX_LOG << TEST_PREFIX_MESSAGE << message << TEST_SUFFIX_LOG
+# define TEST_LOG_DEBUG(message) TEST_PREFIX_LOG << TEST_PREFIX_MESSAGE << "DEBUG: " << message << TEST_SUFFIX_LOG
+# define TEST_LOG_WARN(message) TEST_PREFIX_LOG << TEST_PREFIX_MESSAGE << "WARN: " << message << TEST_SUFFIX_LOG
 #else
-# define LOG_DISABLED do {} while (false)
-# define LOG(message) LOG_DISABLED
-# define LOG_DEBUG(message) LOG_DISABLED
-# define LOG_WARN(message) LOG_DISABLED
+# define TEST_LOG_DISABLED do {} while (false)
+# define TEST_LOG(message) TEST_LOG_DISABLED
+# define TEST_LOG_DEBUG(message) TEST_LOG_DISABLED
+# define TEST_LOG_WARN(message) TEST_LOG_DISABLED
 #endif
-#define LOG_ERROR(message) PREFIX_LOG << PREFIX_MESSAGE << "ERROR: " \
+#define TEST_LOG_ERROR(message) TEST_PREFIX_LOG << TEST_PREFIX_MESSAGE << "ERROR: " \
                            << __FILE__ << "(" << __LINE__ << "): " \
-                           << message << SUFFIX_LOG
+                           << message << TEST_SUFFIX_LOG
 
 #define ARRAY_LEN(array) (sizeof(array) / sizeof(array[0]))
 

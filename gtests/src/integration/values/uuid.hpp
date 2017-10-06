@@ -54,7 +54,7 @@ public:
     }
 
     if (!is_valid) {
-      LOG_ERROR("Invalid UUID " << value_trim << ": Using default " << str());
+      TEST_LOG_ERROR("Invalid UUID " << value_trim << ": Using default " << str());
     }
   }
 

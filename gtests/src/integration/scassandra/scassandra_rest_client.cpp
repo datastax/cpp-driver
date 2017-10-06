@@ -76,12 +76,12 @@ const Response SCassandraRestClient::send_request(Request request) {
   error_code = uv_tcp_init(&loop, &tcp);
 #endif
   if (error_code != 0) {
-    LOG_ERROR("Unable to Initialize TCP Request: "
+    TEST_LOG_ERROR("Unable to Initialize TCP Request: "
       << UV_ERRSTR(error_code, loop));
   }
   error_code = uv_tcp_keepalive(&tcp, 1, 60);
   if (error_code != 0) {
-    LOG_ERROR("Unable to Set TCP KeepAlive: " << UV_ERRSTR(error_code, loop));
+    TEST_LOG_ERROR("Unable to Set TCP KeepAlive: " << UV_ERRSTR(error_code, loop));
   }
 
   // Start the request and attach the HTTP request to send to the REST server
@@ -125,7 +125,7 @@ void SCassandraRestClient::handle_connected(uv_connect_t* req, int status) {
   HttpRequest* request = static_cast<HttpRequest*>(req->data);
 
   if (status < 0) {
-    LOG_ERROR("Unable to Connect to HTTP Server: "
+    TEST_LOG_ERROR("Unable to Connect to HTTP Server: "
       << UV_ERRSTR(status, request->loop));
     uv_close(reinterpret_cast<uv_handle_t*>(req->handle), NULL);
   } else {
@@ -156,7 +156,7 @@ void SCassandraRestClient::handle_response(uv_stream_t* stream, ssize_t buffer_l
 #else
     std::string server_response = std::string(buffer->base, buffer_length);
 #endif
-    LOG_DEBUG(test::Utils::trim(server_response));
+    TEST_LOG_DEBUG(test::Utils::trim(server_response));
 
     // Parse the status code and content of the response
     std::istringstream lines(server_response);
@@ -168,7 +168,7 @@ void SCassandraRestClient::handle_response(uv_stream_t* stream, ssize_t buffer_l
         std::stringstream status_code;
         status_code << test::Utils::explode(current_line, ' ').at(1);
         if ((status_code >> request->response.status_code).fail()) {
-          LOG_ERROR("Unable to Determine Status Code: " << current_line);
+          TEST_LOG_ERROR("Unable to Determine Status Code: " << current_line);
         }
       } else if (current_line.compare(0, 1, "\r") == 0) {
         while (std::getline(lines, current_line)) {
@@ -214,6 +214,6 @@ const std::string SCassandraRestClient::generate_http_message(Request request) {
     << (is_post ? request.content : "");
 
   // Return the HTTP message
-  LOG_DEBUG("[HTTP Message]: " << message.str());
+  TEST_LOG_DEBUG("[HTTP Message]: " << message.str());
   return message.str();
 }

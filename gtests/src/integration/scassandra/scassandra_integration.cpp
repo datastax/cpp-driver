@@ -56,7 +56,7 @@ void SCassandraIntegration::SetUp() {
     if (is_scc_started_) {
       connect();
     } else {
-      LOG_ERROR("Connection to SCassandra Cluster Aborted: SCC has not been started");
+      TEST_LOG_ERROR("Connection to SCassandra Cluster Aborted: SCC has not been started");
     }
   }
 }

@@ -247,7 +247,7 @@ void Integration::connect(Cluster cluster) {
     } else {
       server_version_ = ccm_->get_cassandra_version();
     }
-    LOG("Branch/Tag Option was Used: Retrieved server version is " << server_version_.to_string());
+    TEST_LOG("Branch/Tag Option was Used: Retrieved server version is " << server_version_.to_string());
   }
 
   // Create the keyspace for the integration test
