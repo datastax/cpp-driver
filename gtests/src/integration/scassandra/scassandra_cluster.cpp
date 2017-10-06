@@ -237,7 +237,7 @@ bool test::SCassandraCluster::is_node_down(unsigned int node) {
     if (!is_node_available(node)) {
       return true;
     } else {
-      LOG("Connected to Node " << node
+      TEST_LOG("Connected to Node " << node
         << " in Cluster: Rechecking node down status ["
         << number_of_retries << "]");
       test::Utils::msleep(SCASSANDRA_NAP);
@@ -255,7 +255,7 @@ bool test::SCassandraCluster::is_node_up(unsigned int node) {
     if (is_node_available(node)) {
       return true;
     } else {
-      LOG("Unable to Connect to Node " << node
+      TEST_LOG("Unable to Connect to Node " << node
         << " in Cluster: Rechecking node up status ["
         << number_of_retries << "]");
       test::Utils::msleep(SCASSANDRA_NAP);
@@ -300,7 +300,7 @@ bool test::SCassandraCluster::start_cluster() {
         return false;
       }
     } catch (Exception e) {
-      LOG_ERROR(e.what());
+      TEST_LOG_ERROR(e.what());
       return false;
     }
   }
@@ -331,7 +331,7 @@ bool test::SCassandraCluster::stop_cluster() {
         return false;
       }
     } catch (Exception e) {
-      LOG_ERROR(e.what());
+      TEST_LOG_ERROR(e.what());
       return false;
     }
   }
@@ -381,7 +381,7 @@ bool test::SCassandraCluster::stop_node(unsigned int node,
       uv_close(reinterpret_cast<uv_handle_t*>(&process.process), NULL);
       error_code = uv_thread_join(&process.thread);
       if (error_code != 0) {
-        LOG_ERROR(UV_ERRSTR(error_code, process.loop));
+        TEST_LOG_ERROR(UV_ERRSTR(error_code, process.loop));
         return false;
       }
     } else {
@@ -515,7 +515,7 @@ std::vector<std::string> test::SCassandraCluster::active_connections(
       throw Exception("Connections is not a valid JSON array");
     }
   } else {
-    LOG_DEBUG("No active connections returned from SCassandra server");
+    TEST_LOG_DEBUG("No active connections returned from SCassandra server");
   }
   return connections;
 }
@@ -561,7 +561,7 @@ void test::SCassandraCluster::handle_exit(uv_process_t* process,
   int64_t error_code, int term_signal) {
 #endif
   cass::ScopedMutex lock(&mutex_);
-  LOG("Process " << process->pid << " Terminated: " << error_code);
+  TEST_LOG("Process " << process->pid << " Terminated: " << error_code);
   uv_close(reinterpret_cast<uv_handle_t*>(process), NULL);
 }
 
@@ -640,7 +640,7 @@ void test::SCassandraCluster::handle_thread_create(void* arg) {
   int error_code = uv_spawn(&loop, &process->process, &options);
 #endif
   if (error_code == 0) {
-    LOG("Launched " << spawn_command[0] << " with ID "
+    TEST_LOG("Launched " << spawn_command[0] << " with ID "
       << process->process.pid);
 
     // Start the output thread loops
@@ -660,7 +660,7 @@ void test::SCassandraCluster::handle_thread_create(void* arg) {
 #endif
     process->is_running = false;
   } else {
-    LOG_ERROR(UV_ERRSTR(error_code, loop));
+    TEST_LOG_ERROR(UV_ERRSTR(error_code, loop));
   }
 }
 
@@ -679,7 +679,7 @@ void test::SCassandraCluster::handle_read(uv_stream_t* stream,
 #else
     std::string message(buffer->base, buffer_length);
 #endif
-    LOG(Utils::trim(message));
+    TEST_LOG(Utils::trim(message));
   } else if (buffer_length < 0) {
 #if UV_VERSION_MAJOR == 0
     uv_err_t error = uv_last_error(stream->loop);
