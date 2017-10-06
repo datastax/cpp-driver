@@ -46,14 +46,14 @@ public:
     try {
       ads_ = new EmbeddedADS();
       ads_->start_process();
-      LOG("Waiting for Initialization of ADS");
+      TEST_LOG("Waiting for Initialization of ADS");
       while (!ads_->is_initialized()) {
         msleep(100);
       }
-      LOG("ADS is Initialized and Ready");
+      TEST_LOG("ADS is Initialized and Ready");
       is_ads_available_ = true;
     } catch (test::Exception &e) {
-      LOG_ERROR(e.what());
+      TEST_LOG_ERROR(e.what());
     }
   }
 
@@ -260,7 +260,7 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureBadCrede
   try {
     connect_using_kerberos_and_query_system_table(UNKNOWN_PRINCIPAL);
   } catch (Session::Exception &se) {
-    LOG(se.what());
+    TEST_LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
       << "Error code is not 'Bad credentials'";
     is_session_failure = true;
@@ -289,7 +289,7 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureNoTicket
   try {
     connect_using_kerberos_and_query_system_table(CASSANDRA_USER_PRINCIPAL);
   } catch (Session::Exception &se) {
-    LOG(se.what());
+    TEST_LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
       << "Error code is not 'Bad credentials'";
     is_session_failure = true;
@@ -342,7 +342,7 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, InternalAuthenticationFailure) {
   try {
     connect_using_internal_authentication_and_query_system_table("invalid", "invalid");
   } catch (Session::Exception &se) {
-    LOG(se.what());
+    TEST_LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
       << "Error code is not 'Bad credentials'";
     is_session_failure = true;

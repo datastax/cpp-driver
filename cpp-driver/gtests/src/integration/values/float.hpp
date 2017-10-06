@@ -55,7 +55,7 @@ public:
       //Convert the value
       std::stringstream valueStream(value_trim);
       if ((valueStream >> float_).fail()) {
-        LOG_ERROR("Invalid Float " << value_trim << ": Using default "
+        TEST_LOG_ERROR("Invalid Float " << value_trim << ": Using default "
           << float_);
       }
     }

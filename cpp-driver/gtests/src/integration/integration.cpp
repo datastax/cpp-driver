@@ -157,7 +157,7 @@ void Integration::TearDown() {
   // Restart all stopped nodes
   for (std::vector<unsigned int>::iterator iterator = stopped_nodes_.begin();
        iterator != stopped_nodes_.end(); ++iterator) {
-    LOG("Restarting Node Stopped in " << test_name_ << ": " << *iterator);
+    TEST_LOG("Restarting Node Stopped in " << test_name_ << ": " << *iterator);
     ccm_->start_node(*iterator);
   }
   stopped_nodes_.clear();
@@ -261,7 +261,7 @@ void Integration::connect(Cluster cluster) {
     } else {
       server_version_ = ccm_->get_cassandra_version();
     }
-    LOG("Branch/Tag Option was Used: Retrieved server version is " << server_version_.to_string());
+    TEST_LOG("Branch/Tag Option was Used: Retrieved server version is " << server_version_.to_string());
   }
 
   // Create the keyspace for the integration test

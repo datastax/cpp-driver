@@ -74,7 +74,7 @@ public:
     }
 
     //TODO: Remove sleep and add parsing of HTML body from spark master to look for live workers
-    LOG("Waiting for workers: Sleeping " << WAIT_FOR_WORKERS_SLEEP / 1000
+    TEST_LOG("Waiting for workers: Sleeping " << WAIT_FOR_WORKERS_SLEEP / 1000
       << "s");
     msleep(WAIT_FOR_WORKERS_SLEEP);
 

@@ -216,7 +216,7 @@ public:
             polygon_string << ", ";
           }
         } catch (DsePoint::Exception& e) {
-          LOG_ERROR(e.what());
+          TEST_LOG_ERROR(e.what());
         }
       }
       return polygon_string.str();

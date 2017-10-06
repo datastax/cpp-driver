@@ -286,7 +286,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, DecimalDoubleFloat) {
   // Iterate over all the values and perform the test operations
   for (std::map<std::string, std::vector<test::driver::Double> >::iterator iterator = values.begin();
     iterator != values.end(); ++iterator) {
-    LOG("Testing data type " << iterator->first);
+    TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<test::driver::Double>(iterator->first, iterator->second);
   }
 }
@@ -328,7 +328,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, IntegerSmallIntegerVarint) {
   // Iterate over all the values and perform the test operations
   for (std::map<std::string, std::vector<test::driver::Integer> >::iterator iterator = values.begin();
     iterator != values.end(); ++iterator) {
-    LOG("Testing data type " << iterator->first);
+    TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<test::driver::Integer>(iterator->first, iterator->second);
   }
 }
@@ -488,12 +488,12 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
   // Iterate over all the values and perform the test operations
   for (std::map<std::string, std::vector<std::string> >::iterator iterator = values.begin();
     iterator != values.end(); ++iterator) {
-    LOG("Testing data type " << iterator->first);
+    TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<std::string>(iterator->first, iterator->second);
   }
   for (std::map<std::string, ValuesExpected>::iterator iterator = values_expected.begin();
     iterator != values_expected.end(); ++iterator) {
-    LOG("Testing data type " << iterator->first);
+    TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<std::string>(iterator->first,
       iterator->second.first, iterator->second.second);
   }

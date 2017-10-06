@@ -49,7 +49,7 @@ public:
                value_trim.compare("no") == 0 ||
                value_trim.compare("0") == 0) {
     } else {
-      LOG_ERROR("Invalid Boolean " << value_trim << ": Using default "
+      TEST_LOG_ERROR("Invalid Boolean " << value_trim << ": Using default "
         << (boolean_ == cass_true ? "true" : "false"));
     }
   }

@@ -46,19 +46,19 @@ public:
     try {
       ads_ = new EmbeddedADS();
       ads_->start_process();
-      LOG("Waiting for Initialization of ADS");
+      TEST_LOG("Waiting for Initialization of ADS");
       int count = 0;
       while (!ads_->is_initialized() && count++ < ADS_WAIT_ATTEMPTS) {
         msleep(100);
       }
       if (ads_->is_initialized()) {
-        LOG("ADS is Initialized and Ready");
+        TEST_LOG("ADS is Initialized and Ready");
         is_ads_available_ = true;
       } else {
-        LOG_ERROR("ADS was not Initialized");
+        TEST_LOG_ERROR("ADS was not Initialized");
       }
     } catch (test::Exception &e) {
-      LOG_ERROR(e.what());
+      TEST_LOG_ERROR(e.what());
     }
   }
 
@@ -424,7 +424,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyUnauthorizedUserLo
       .connect();
     query(session);
   } catch (test::CassException &ce) {
-    LOG(ce.what());
+    TEST_LOG(ce.what());
     ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
       << "Error code is not 'Unauthorized'";
     is_session_failure = true;
@@ -462,7 +462,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnau
   try {
     query(session, "alice");
   } catch (test::CassException &ce) {
-    LOG(ce.what());
+    TEST_LOG(ce.what());
     ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
       << "Error code is not 'Unauthorized'";
     is_query_failure = true;
@@ -500,7 +500,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnau
   try {
     batch_query(session, "alice");
   } catch (test::CassException &ce) {
-    LOG(ce.what());
+    TEST_LOG(ce.what());
     ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
       << "Error code is not 'Unauthorized'";
     is_query_failure = true;
@@ -632,7 +632,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosProxyBadCredentialsUserL
     .with_gssapi_authenticator_proxy("dse", CHARLIE_PRINCIPAL, "alice")
     .connect();
   } catch (Session::Exception &se) {
-    LOG(se.what());
+    TEST_LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
       << "Error code is not 'Bad credentials'";
     is_session_failure = true;
@@ -673,7 +673,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnaut
   try {
     query(session, "alice");
   } catch (test::CassException &ce) {
-    LOG(ce.what());
+    TEST_LOG(ce.what());
     ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
       << "Error code is not 'Unauthorized'";
     is_query_failure = true;
@@ -714,7 +714,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnaut
   try {
     batch_query(session, "alice");
   } catch (test::CassException &ce) {
-    LOG(ce.what());
+    TEST_LOG(ce.what());
     ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
       << "Error code is not 'Unauthorized'";
     is_query_failure = true;

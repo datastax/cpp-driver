@@ -55,7 +55,7 @@ public:
       //Convert the value
       std::stringstream valueStream(value_trim);
       if ((valueStream >> double_).fail()) {
-        LOG_ERROR("Invalid Double " << value_trim << ": Using default "
+        TEST_LOG_ERROR("Invalid Double " << value_trim << ": Using default "
           << double_);
       }
     }

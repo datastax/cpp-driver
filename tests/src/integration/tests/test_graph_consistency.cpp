@@ -86,7 +86,7 @@ public:
   bool stop_node(unsigned int node) {
     // Determine if schema operations should be triggered across cluster nodes
     if (!propagate_schema_) {
-      LOG("Performing Graph Query to Propagate Schema Across Cluster: "
+      TEST_LOG("Performing Graph Query to Propagate Schema Across Cluster: "
         << "Waiting 10s");
       execute_read_query(CASS_CONSISTENCY_ONE);
       msleep(10000);

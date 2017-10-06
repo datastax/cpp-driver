@@ -54,7 +54,7 @@ void Logger::initialize(const std::string& test_case, const std::string& test_na
 
   // Initialize the driver logger callback
   if (output_.fail()) {
-    LOG_ERROR("Unable to Create Log File: " << filename);
+    TEST_LOG_ERROR("Unable to Create Log File: " << filename);
   }
 
   // Create the mutex for callback operations (thread safety)

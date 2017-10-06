@@ -459,7 +459,7 @@ private:
     result.error_code = uv_spawn(&loop, &process, &options);
 #endif
     if (result.error_code == 0) {
-      LOG("Launched " << args[0] << " with ID " << process_.pid);
+      TEST_LOG("Launched " << args[0] << " with ID " << process_.pid);
 
       // Configure the storage for the output pipes
       std::string stdout_message;
@@ -581,7 +581,7 @@ private:
     int error_code = uv_spawn(&loop, &process_, &options);
 #endif
     if (error_code == 0) {
-      LOG("Launched " << args[0] << " with ID " << process_.pid);
+      TEST_LOG("Launched " << args[0] << " with ID " << process_.pid);
 
       // Configure the storage for the output pipes
       std::string stdout_message;
@@ -619,9 +619,9 @@ private:
 #endif
     } else {
 #if UV_VERSION_MAJOR == 0
-      LOG_ERROR(uv_strerror(error));
+      TEST_LOG_ERROR(uv_strerror(error));
 #else
-      LOG_ERROR(uv_strerror(error_code));
+      TEST_LOG_ERROR(uv_strerror(error_code));
 #endif
     }
   }
@@ -639,7 +639,7 @@ private:
   static void process_exit(uv_process_t* process, int64_t error_code, int term_signal) {
 #endif
     cass::ScopedMutex lock(&mutex_);
-    LOG("Process " << process->pid << " Terminated: " << error_code);
+    TEST_LOG("Process " << process->pid << " Terminated: " << error_code);
     uv_close(reinterpret_cast<uv_handle_t*>(process), NULL);
   }
 
@@ -699,7 +699,7 @@ private:
         Utils::msleep(10000); // TODO: Not 100% ready; need to add a better check mechanism
         is_initialized_ = true;
       }
-      LOG(Utils::trim(output));
+      TEST_LOG(Utils::trim(output));
     } else if (buffer_length < 0) {
 #if UV_VERSION_MAJOR == 0
       uv_err_t error = uv_last_error(stream->loop);
