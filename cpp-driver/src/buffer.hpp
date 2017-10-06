@@ -211,9 +211,12 @@ private:
     size_ = buf.size_;
   }
 
-  union {
+  union Data {
     char fixed[FIXED_BUFFER_SIZE];
     RefBuffer* buffer;
+
+    Data()
+      : buffer(NULL) { }
   } data_;
 
   size_t size_;
