@@ -20,6 +20,10 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <algorithm>
+#include <cstdlib>
+#include <string>
+
 /**
  * Destroy all CCM clusters when starting and stopping the integration tests.
  * This will only be run on startup and shutdown using the BOOST_GLOBAL_FIXTURE
@@ -29,12 +33,26 @@ struct CCMCleanUp {
 public:
   CCMCleanUp() {
     std::cout << "Entering C/C++ Driver Integration Test Setup" << std::endl;
-    CCM::Bridge("config.txt").remove_all_clusters();
+    if (!keep_clusters()) {
+      CCM::Bridge("config.txt").remove_all_clusters();
+    }
   }
 
   ~CCMCleanUp() {
     std::cout << "Entering C/C++ Driver Integration Test Teardown" << std::endl;
-    CCM::Bridge("config.txt").remove_all_clusters();
+    if (!keep_clusters()) {
+      CCM::Bridge("config.txt").remove_all_clusters();
+    }
+  }
+
+  bool keep_clusters() {
+    std::string value;
+    char* temp = getenv("KEEP_CLUSTERS");
+    if (temp) {
+      value.assign(temp);
+      std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+    }
+    return !value.empty() && value != "0" && value != "false";
   }
 };
 BOOST_GLOBAL_FIXTURE(CCMCleanUp);
