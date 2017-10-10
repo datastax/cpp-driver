@@ -474,6 +474,8 @@ namespace CCM {
                     << std::endl;
         }
         return CassVersion("3.11.0-1758");
+      } else  if (*this >= "6.0.0" && *this < "7.0.0") {
+        return CassVersion("4.0.0");
       }
 
       // DSE version does not correspond to a valid Cassandra version
