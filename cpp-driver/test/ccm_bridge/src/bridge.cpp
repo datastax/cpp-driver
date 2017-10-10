@@ -390,7 +390,6 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
 
   // Determine if DSE is being used
   if (use_dse_) {
-    dse_version_ = DseVersion(dse_version_.to_string());
     cassandra_version_ = dse_version_.get_cass_version();
   }
 

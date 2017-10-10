@@ -253,13 +253,19 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1,
   cass_cluster_set_use_randomized_contact_points(cluster, cass_false);
 }
 
+bool MultipleNodesTest::check_version(const std::string& required) {
+  if (version >= required) return true;
+  BOOST_TEST_MESSAGE("Cassandra version " << required << " required for this test");
+  return false;
+}
+
 MultipleNodesTest::~MultipleNodesTest() {
   cass_uuid_gen_free(uuid_gen);
   cass_cluster_free(cluster);
 }
 
 SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1,
-  unsigned int num_nodes_dc2, bool with_session /* = true */,
+                                     unsigned int num_nodes_dc2, bool with_session /* = true */,
   unsigned int protocol_version, bool with_vnodes /* = false */,
   bool is_ssl /* = false */)
   : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version,
