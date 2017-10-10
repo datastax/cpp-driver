@@ -413,6 +413,15 @@ struct Deleter<CassCustomPayload> {
   }
 };
 
+template<>
+struct Deleter<CassRetryPolicy> {
+  void operator()(CassRetryPolicy* ptr) {
+    if (ptr != NULL) {
+      cass_retry_policy_free(ptr);
+    }
+  }
+};
+
 template <class T>
 class CassSharedPtr : public boost::shared_ptr<T> {
 public:
@@ -435,6 +444,7 @@ typedef CassSharedPtr<CassBatch> CassBatchPtr;
 typedef CassSharedPtr<CassUuidGen> CassUuidGenPtr;
 typedef CassSharedPtr<const CassSchemaMeta> CassSchemaMetaPtr;
 typedef CassSharedPtr<CassCustomPayload> CassCustomPayloadPtr;
+typedef CassSharedPtr<CassRetryPolicy> CassRetryPolicyPtr;
 
 template<class T>
 struct Value;
@@ -1174,6 +1184,8 @@ struct MultipleNodesTest {
   MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
     unsigned int protocol_version = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, bool with_vnodes = false,
     bool is_ssl = false);
+
+  bool check_version(const std::string& required);
 
   virtual ~MultipleNodesTest();
 
