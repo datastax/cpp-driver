@@ -11,35 +11,36 @@
 
 namespace test {
 namespace driver {
+namespace dse {
 
 /**
  * Wrapped DSE statement object
  */
-class DseStatement : public Statement {
+class Statement : public driver::Statement {
 public:
   /**
    * Create the DSE statement object from the native driver statement object
    *
    * @param statement Native driver object
    */
-  DseStatement(CassStatement* statement)
-    : Statement(statement) {}
+  Statement(CassStatement* statement)
+    : driver::Statement(statement) {}
 
   /**
    * Create the DSE statement object from the shared reference
    *
    * @param statement Shared reference
    */
-  DseStatement(Ptr statement)
-    : Statement(statement) {}
+  Statement(Ptr statement)
+    : driver::Statement(statement) {}
 
   /**
    * Create the DSE statement object from a wrapped statement object
    *
    * @param statement Wrapped statement object
    */
-  DseStatement(Statement statement)
-    : Statement(statement) {}
+  Statement(driver::Statement statement)
+    : driver::Statement(statement) {}
 
   /**
    * Create the statement object from a query
@@ -48,8 +49,8 @@ public:
    * @param parameter_count Number of parameters contained in the query
    *                        (default: 0)
    */
-  DseStatement(const std::string& query, size_t parameter_count = 0)
-    : Statement(cass_statement_new(query.c_str(), parameter_count)) {}
+  Statement(const std::string& query, size_t parameter_count = 0)
+    : driver::Statement(cass_statement_new(query.c_str(), parameter_count)) {}
 
   /**
    * Set the name of the user to execute the statement as
@@ -64,39 +65,39 @@ public:
 /**
  * Wrapped DSE batch object
  */
-class DseBatch : public Batch {
+class Batch : public driver::Batch {
 public:
   /**
    * Create the batch object based on the type of batch statement to use
    *
    * @param batch_type Type of batch to create (default: Unlogged)
    */
-  DseBatch(CassBatchType batch_type = CASS_BATCH_TYPE_UNLOGGED)
-    : Batch(cass_batch_new(batch_type)) {}
+  Batch(CassBatchType batch_type = CASS_BATCH_TYPE_UNLOGGED)
+    : driver::Batch(cass_batch_new(batch_type)) {}
 
   /**
    * Create the batch object from the native driver batch object
    *
    * @param batch Native driver object
    */
-  DseBatch(CassBatch* batch)
-    : Batch(batch) {}
+  Batch(CassBatch* batch)
+    : driver::Batch(batch) {}
 
   /**
    * Create the batch object from the shared reference
    *
    * @param batch Shared reference
    */
-  DseBatch(Ptr batch)
-    : Batch(batch) {}
+  Batch(Ptr batch)
+    : driver::Batch(batch) {}
 
   /**
    * Create the DSE batch object from a wrapped batch object
    *
    * @param batch Wrapped batch object
    */
-  DseBatch(Batch batch)
-    : Batch(batch) {}
+  Batch(driver::Batch batch)
+    : driver::Batch(batch) {}
 
   /**
    * Set the name of the user to execute the batch statement as
@@ -108,6 +109,7 @@ public:
   }
 };
 
+} // namespace dse
 } // namespace driver
 } // namespace test
 

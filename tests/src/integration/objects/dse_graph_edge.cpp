@@ -8,36 +8,36 @@
 #include "objects/dse_graph_edge.hpp"
 #include "objects/dse_graph_result.hpp"
 
-test::driver::DseGraphResult test::driver::DseGraphEdge::id() {
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::id() {
   return edge_.id;
 }
 
-test::driver::DseGraphResult test::driver::DseGraphEdge::label() {
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::label() {
   return edge_.label;
 }
 
-test::driver::DseGraphResult test::driver::DseGraphEdge::type() {
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::type() {
   return edge_.type;
 }
 
-test::driver::DseGraphResult test::driver::DseGraphEdge::properties() {
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::properties() {
   return edge_.properties;
 }
 
-test::driver::DseGraphVertex test::driver::DseGraphEdge::in_vertex() {
-  DseGraphResult vertex(edge_.in_vertex);
+test::driver::dse::GraphVertex test::driver::dse::GraphEdge::in_vertex() {
+  GraphResult vertex(edge_.in_vertex);
   return vertex.vertex();
 }
 
-test::driver::DseGraphResult test::driver::DseGraphEdge::in_vertex_label() {
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::in_vertex_label() {
   return edge_.in_vertex_label;
 }
 
-test::driver::DseGraphVertex test::driver::DseGraphEdge::out_vertex() {
-  DseGraphResult vertex(edge_.out_vertex);
+test::driver::dse::GraphVertex test::driver::dse::GraphEdge::out_vertex() {
+  GraphResult vertex(edge_.out_vertex);
   return vertex.vertex();
 }
 
-test::driver::DseGraphResult test::driver::DseGraphEdge::out_vertex_label() {
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::out_vertex_label() {
   return edge_.out_vertex_label;
 }

@@ -170,7 +170,7 @@ protected:
     configure_dse_cluster();
 
     // Build the cluster configuration and establish the session connection
-    Cluster cluster = DseCluster::build()
+    Cluster cluster = dse::Cluster::build()
       .with_gssapi_authenticator("dse", principal)
       .with_contact_points(contact_points_)
 #if UV_VERSION_MAJOR > 0
@@ -198,7 +198,7 @@ protected:
     configure_dse_cluster(false);
 
     // Build the cluster configuration and establish the session connection
-    Cluster cluster = DseCluster::build()
+    Cluster cluster = dse::Cluster::build()
       .with_plaintext_authenticator(username, password)
       .with_contact_points(contact_points_)
 #if UV_VERSION_MAJOR > 0

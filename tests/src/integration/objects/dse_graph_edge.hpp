@@ -13,14 +13,15 @@
 
 namespace test {
 namespace driver {
+namespace dse {
 
 // Forward declaration for circular dependency
-class DseGraphResult;
+class GraphResult;
 
 /**
  * Wrapped DSE graph edge object
  */
-class DseGraphEdge {
+class GraphEdge {
 public:
   /**
    * Create the DSE graph edge object from the native driver DSE graph edge
@@ -28,7 +29,7 @@ public:
    *
    * @param edge Native driver object
    */
-  DseGraphEdge(DseGraphEdgeResult edge)
+  GraphEdge(DseGraphEdgeResult edge)
     : edge_(edge) {}
 
   /**
@@ -36,56 +37,56 @@ public:
    *
    * @return DSE graph result representing the id
    */
-  DseGraphResult id();
+  GraphResult id();
 
   /**
    * Get the DSE graph edge label
    *
    * @return Edge label
    */
-  DseGraphResult label();
+  GraphResult label();
 
   /**
    * Get the DSE graph edge type
    *
    * @return DSE graph result type
    */
-  DseGraphResult type();
+  GraphResult type();
 
   /**
    * Get the DSE graph edge properties
    *
    * @return DSE graph result representing the properties
    */
-  DseGraphResult properties();
+  GraphResult properties();
 
   /**
    * Get the DSE graph edge incoming/head vertex
    *
    * @return Incoming/Head vertex
    */
-  DseGraphVertex in_vertex();
+  GraphVertex in_vertex();
 
   /**
    * Get the DSE graph edge incoming/head vertex label
    *
    * @return Incoming/Head vertex label
    */
-  DseGraphResult in_vertex_label();
+  GraphResult in_vertex_label();
 
   /**
    * Get the DSE graph edge outgoing/tail vertex
    *
    * @return Outgoing/Tail vertex
    */
-  DseGraphVertex out_vertex();
+  GraphVertex out_vertex();
 
   /**
    * Get the DSE graph edge outgoing/tail vertex label
    *
    * @return Outgoing/Tail vertex label
    */
-  DseGraphResult out_vertex_label();
+  GraphResult out_vertex_label();
 
 private:
   /**
@@ -94,6 +95,7 @@ private:
   DseGraphEdgeResult edge_;
 };
 
+} // namespace dse
 } // namespace driver
 } // namespace test
 

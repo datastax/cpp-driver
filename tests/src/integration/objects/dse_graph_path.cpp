@@ -8,10 +8,10 @@
 #include "objects/dse_graph_path.hpp"
 #include "objects/dse_graph_result.hpp"
 
-test::driver::DseGraphResult test::driver::DseGraphPath::labels() {
+test::driver::dse::GraphResult test::driver::dse::GraphPath::labels() {
   return path_.labels;
 }
 
-test::driver::DseGraphResult test::driver::DseGraphPath::objects() {
+test::driver::dse::GraphResult test::driver::dse::GraphPath::objects() {
   return path_.objects;
 }

@@ -56,7 +56,7 @@ void DseIntegration::SetUp() {
   dse_session_ = session_;
 }
 
-void DseIntegration::connect(Cluster cluster) {
+void DseIntegration::connect(dse::Cluster cluster) {
   // Call the parent connect function
   Integration::connect(cluster);
   dse_session_ = session_;
@@ -68,8 +68,8 @@ void DseIntegration::connect() {
   connect(cluster_);
 }
 
-test::driver::Cluster DseIntegration::default_cluster() {
-  return DseCluster::build()
+Cluster DseIntegration::default_cluster() {
+  return dse::Cluster::build()
     .with_contact_points(contact_points_)
     .with_randomized_contact_points(is_randomized_contact_points_)
     .with_schema_metadata(is_schema_metadata_);
@@ -79,11 +79,11 @@ void DseIntegration::create_graph(const std::string& graph_name,
   const std::string& replication_strategy,
   const std::string& duration) {
   // Create the graph statement using the pre-determined replication config
-  test::driver::DseGraphObject graph_object;
+  dse::GraphObject graph_object;
   graph_object.add<std::string>("name", graph_name);
   graph_object.add<std::string>("replication", replication_strategy);
   graph_object.add<std::string>("duration", duration);
-  test::driver::DseGraphStatement graph_statement(GRAPH_CREATE);
+  dse::GraphStatement graph_statement(GRAPH_CREATE);
   graph_statement.bind(graph_object);
   CHECK_FAILURE;
 
@@ -92,7 +92,7 @@ void DseIntegration::create_graph(const std::string& graph_name,
   CHECK_FAILURE;
 
   // Enable testing functionality for the graph
-  test::driver::DseGraphOptions options;
+  dse::GraphOptions options;
   options.set_name(graph_name);
   dse_session_.execute(GRAPH_ALLOW_SCANS, options);
   CHECK_FAILURE;
@@ -102,7 +102,7 @@ void DseIntegration::create_graph(const std::string& graph_name,
 
 void DseIntegration::populate_classic_graph(const std::string& graph_name) {
   // Initialize the graph pre-populated data
-  test::driver::DseGraphOptions options;
+  dse::GraphOptions options;
   options.set_name(graph_name);
   dse_session_.execute(GRAPH_SCHEMA, options);
   CHECK_FAILURE;

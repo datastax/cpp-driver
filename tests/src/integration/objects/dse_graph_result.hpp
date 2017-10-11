@@ -24,11 +24,12 @@
 
 namespace test {
 namespace driver {
+namespace dse {
 
 /**
  * Wrapped DSE graph result object
  */
-class DseGraphResult {
+class GraphResult {
 public:
   class Exception : public test::Exception {
   public:
@@ -43,7 +44,7 @@ public:
    * @param result Native driver pointer
    * @throws test::Exception if DSE graph result is NULL
    */
-  DseGraphResult(const ::DseGraphResult* result)
+  GraphResult(const DseGraphResult* result)
     : result_(result) {
     if (!result) {
       throw Exception("Unable to Create DseGraphResult: Native pointer is NULL");
@@ -56,7 +57,7 @@ public:
    * @param index The element index to retrieve DSE graph result
    * @return DSE graph result at the specified element
    */
-  DseGraphResult element(size_t index) {
+  GraphResult element(size_t index) {
     return dse_graph_result_element(result_, index);
   }
 
@@ -87,7 +88,7 @@ public:
    * @param index The member index to retrieve DSE graph result
    * @return DSE graph result at the specified member index
    */
-  DseGraphResult member(size_t index) {
+  GraphResult member(size_t index) {
     return dse_graph_result_member_value(result_, index);
   }
 
@@ -115,7 +116,7 @@ public:
    *
    * @return DSE graph edge
    */
-  DseGraphEdge edge() {
+  GraphEdge edge() {
     // Validate this is a edge result
     EXPECT_EQ(8u, member_count());
     EXPECT_EQ("id", key(0));
@@ -138,7 +139,7 @@ public:
    *
    * @return DSE graph path
    */
-  DseGraphPath path() {
+  GraphPath path() {
     // Validate this is a path result
     EXPECT_EQ(2u, member_count());
     EXPECT_EQ("labels", key(0));
@@ -155,7 +156,7 @@ public:
    *
    * @return DSE graph vertex
    */
-  DseGraphVertex vertex() {
+  GraphVertex vertex() {
     // Validate this is a vertex result
     EXPECT_EQ(4u, member_count());
     EXPECT_EQ("id", key(0));
@@ -199,7 +200,7 @@ private:
   /**
    * Native driver pointer instance
    */
-  const ::DseGraphResult* result_;
+  const DseGraphResult* result_;
 };
 
 /**
@@ -209,7 +210,7 @@ private:
  *         otherwise
  */
 template<>
-inline bool DseGraphResult::is_type<DseGraphArray>() {
+inline bool GraphResult::is_type<GraphArray>() {
   return (dse_graph_result_is_array(result_) != cass_false);
 }
 
@@ -219,7 +220,7 @@ inline bool DseGraphResult::is_type<DseGraphArray>() {
  * @return True if DSE graph result is a boolean; false otherwise
  */
 template<>
-inline bool DseGraphResult::is_type<Boolean>() {
+inline bool GraphResult::is_type<Boolean>() {
   return (dse_graph_result_is_bool(result_) != cass_false);
 }
 
@@ -229,7 +230,7 @@ inline bool DseGraphResult::is_type<Boolean>() {
  * @return True if DSE graph result is a double; false otherwise
  */
 template<>
-inline bool DseGraphResult::is_type<Double>() {
+inline bool GraphResult::is_type<Double>() {
   return (dse_graph_result_is_double(result_) != cass_false);
 }
 
@@ -239,7 +240,7 @@ inline bool DseGraphResult::is_type<Double>() {
  * @return True if DSE graph result is a 32-bit integer; false otherwise
  */
 template<>
-inline bool DseGraphResult::is_type<Integer>() {
+inline bool GraphResult::is_type<Integer>() {
   return (dse_graph_result_is_int32(result_) != cass_false);
 }
 
@@ -249,7 +250,7 @@ inline bool DseGraphResult::is_type<Integer>() {
  * @return True if DSE graph result is a 64-bit integer; false otherwise
  */
 template<>
-inline bool DseGraphResult::is_type<BigInteger>() {
+inline bool GraphResult::is_type<BigInteger>() {
   return (dse_graph_result_is_int64(result_) != cass_false);
 }
 
@@ -259,7 +260,7 @@ inline bool DseGraphResult::is_type<BigInteger>() {
  * @return True if DSE graph result is a DSE graph object; false otherwise
  */
 template<>
-inline bool DseGraphResult::is_type<DseGraphObject>() {
+inline bool GraphResult::is_type<GraphObject>() {
   return (dse_graph_result_is_object(result_) != cass_false);
 }
 
@@ -269,15 +270,15 @@ inline bool DseGraphResult::is_type<DseGraphObject>() {
  * @return True if DSE graph result is a string; false otherwise
  */
 template<>
-inline bool DseGraphResult::is_type<Varchar>() {
+inline bool GraphResult::is_type<Varchar>() {
   return (dse_graph_result_is_string(result_) != cass_false);
 }
 template<>
-inline bool DseGraphResult::is_type<Text>() {
+inline bool GraphResult::is_type<Text>() {
   return is_type<Varchar>();
 }
 template<>
-inline bool DseGraphResult::is_type<std::string>() {
+inline bool GraphResult::is_type<std::string>() {
   return is_type<Varchar>();
 }
 
@@ -288,11 +289,11 @@ inline bool DseGraphResult::is_type<std::string>() {
  * @throws DseGraphResult::Exception if DSE graph result is not a boolean
  */
 template<>
-inline Boolean DseGraphResult::value<Boolean>() {
+inline Boolean GraphResult::value<Boolean>() {
   if (!this->is_type<Boolean>()) {
     throw Exception("Unable to get Value: DSE graph result is not a boolean");
   }
-  return dse_graph_result_get_bool(result_);
+  return Boolean(dse_graph_result_get_bool(result_) == cass_true ? true : false);
 }
 
 /**
@@ -302,11 +303,11 @@ inline Boolean DseGraphResult::value<Boolean>() {
  * @throws DseGraphResult::Exception if DSE graph result is not a double
  */
 template<>
-inline Double DseGraphResult::value<Double>() {
+inline Double GraphResult::value<Double>() {
   if (!this->is_type<Double>()) {
     throw Exception("Unable to get Value: DSE graph result is not a double");
   }
-  return dse_graph_result_get_double(result_);
+  return Double(dse_graph_result_get_double(result_));
 }
 
 /**
@@ -317,11 +318,11 @@ inline Double DseGraphResult::value<Double>() {
  *         integer
  */
 template<>
-inline Integer DseGraphResult::value<Integer>() {
+inline Integer GraphResult::value<Integer>() {
   if (!this->is_type<Integer>()) {
     throw Exception("Unable to get Value: DSE graph result is not a integer");
   }
-  return dse_graph_result_get_int32(result_);
+  return Integer(dse_graph_result_get_int32(result_));
 }
 
 /**
@@ -332,11 +333,11 @@ inline Integer DseGraphResult::value<Integer>() {
  *         integer
  */
 template<>
-inline BigInteger DseGraphResult::value<BigInteger>() {
+inline BigInteger GraphResult::value<BigInteger>() {
   if (!this->is_type<BigInteger>()) {
     throw Exception("Unable to get Value: DSE graph result is not a big integer");
   }
-  return dse_graph_result_get_int64(result_);
+  return BigInteger(dse_graph_result_get_int64(result_));
 }
 
 /**
@@ -346,32 +347,32 @@ inline BigInteger DseGraphResult::value<BigInteger>() {
  * @throws DseGraphResult::Exception if DSE graph result is not a string
  */
 template<>
-inline Varchar DseGraphResult::value<Varchar>() {
+inline Varchar GraphResult::value<Varchar>() {
   if (!this->is_type<Varchar>()) {
     throw Exception("Unable to get Value: DSE graph result is not a string");
   }
   size_t length;
   const char* value = dse_graph_result_get_string(result_, &length);
-  return std::string(value, length);
+  return Varchar(std::string(value, length));
 }
 template<>
-inline Text DseGraphResult::value<Text>() {
-  return value<Varchar>();
+inline Text GraphResult::value<Text>() {
+  return Text(value<Varchar>().value());
 }
 template<>
-inline std::string DseGraphResult::value<std::string>() {
+inline std::string GraphResult::value<std::string>() {
   return value<Varchar>().value();
 }
 
 /**
  * Get the line string from the DSE graph result
  *
- * @return DseLineString value from the DSE graph result
+ * @return LineString value from the DSE graph result
  * @throws DseGraphResult::Exception if DSE graph result is not a line string
  */
 template<>
-inline DseLineString DseGraphResult::value<DseLineString>() {
-  DseLineString line_string(result_);
+inline LineString GraphResult::value<LineString>() {
+  LineString line_string(result_);
   if (testing::Test::HasFailure()) {
     throw Exception("Unable to get Value: DSE graph result is not a line string");
   }
@@ -381,12 +382,12 @@ inline DseLineString DseGraphResult::value<DseLineString>() {
 /**
  * Get the point from the DSE graph result
  *
- * @return DsePoint value from the DSE graph result
+ * @return Point value from the DSE graph result
  * @throws DseGraphResult::Exception if DSE graph result is not a point
  */
 template<>
-inline DsePoint DseGraphResult::value<DsePoint>() {
-  DsePoint point(result_);
+inline Point GraphResult::value<Point>() {
+  Point point(result_);
   if (testing::Test::HasFailure()) {
     throw Exception("Unable to get Value: DSE graph result is not a point");
   }
@@ -396,19 +397,19 @@ inline DsePoint DseGraphResult::value<DsePoint>() {
 /**
  * Get the polygon from the DSE graph result
  *
- * @return DsePolygon value from the DSE graph result
+ * @return Polygon value from the DSE graph result
  * @throws DseGraphResult::Exception if DSE graph result is not a polygon
  */
 template<>
-inline DsePolygon DseGraphResult::value<DsePolygon>() {
-  DsePolygon polygon(result_);
+inline Polygon GraphResult::value<Polygon>() {
+  Polygon polygon(result_);
   if (testing::Test::HasFailure()) {
     throw Exception("Unable to get Value: DSE graph result is not a polygon");
   }
   return polygon;
 }
 
-inline const std::string DseGraphResult::str(unsigned int indent) {
+inline const std::string GraphResult::str(unsigned int indent) {
   std::stringstream output;
 
   // Determine how to output the result value
@@ -444,7 +445,7 @@ inline const std::string DseGraphResult::str(unsigned int indent) {
         output << std::endl
                << Utils::indent("\"" + key(i) + "\"", indent + INDENT_INCREMENT)
                << ":";
-        DseGraphResult member(this->member(i));
+        GraphResult member(this->member(i));
         if (member.type() == DSE_GRAPH_RESULT_TYPE_ARRAY ||
             member.type() == DSE_GRAPH_RESULT_TYPE_OBJECT) {
           output << std::endl << member.str(indent + INDENT_INCREMENT);
@@ -466,6 +467,7 @@ inline const std::string DseGraphResult::str(unsigned int indent) {
   return output.str();
 }
 
+} // namespace dse
 } // namespace driver
 } // namespace test
 

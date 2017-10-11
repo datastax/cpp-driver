@@ -76,7 +76,7 @@ protected:
     for (size_t i = 0; i < values.size(); ++i) {
       T value = values[i];
       T expected = expected_values[i];
-      test::driver::DseGraphObject object = create_object<T>(value);
+      dse::GraphObject object = create_object<T>(value);
       CHECK_FAILURE;
 
       // Create the data type
@@ -84,9 +84,9 @@ protected:
       CHECK_FAILURE;
 
       // Insert and validate the data type
-      test::driver::DseGraphResultSet result_set = insert(object);
+      dse::GraphResultSet result_set = insert(object);
       CHECK_FAILURE;
-      test::driver::DseGraphResult result = get_data_type_value(result_set);
+      dse::GraphResult result = get_data_type_value(result_set);
       CHECK_FAILURE;
       ASSERT_TRUE(result.is_type<T>());
       ASSERT_EQ(expected, result.value<T>());
@@ -104,7 +104,7 @@ private:
   /**
    * Graph options for the data type integration tests
    */
-  test::driver::DseGraphOptions options_;
+  dse::GraphOptions options_;
   /**
    * Property name being generated/used
    */
@@ -121,8 +121,8 @@ private:
    * @return DSE graph object to apply to DSE graph statements
    */
   template<typename T>
-  test::driver::DseGraphObject create_object(T value) {
-    test::driver::DseGraphObject object;
+  dse::GraphObject create_object(T value) {
+    dse::GraphObject object;
 
     // Initialize the property and vertex labels
     std::vector<std::string> uuid_octets = explode(uuid_generator_.generate_timeuuid().str(), '-');
@@ -143,7 +143,7 @@ private:
    * @param data_type Data type being created
    * @param object DSE graph object for the named parameters
    */
-  void create(const std::string& data_type, test::driver::DseGraphObject object) {
+  void create(const std::string& data_type, dse::GraphObject object) {
     // Determine if data type is geospatial and append withGeoBounds
     std::string type = data_type;
     if (server_version_ >= "5.1.0" &&
@@ -154,7 +154,7 @@ private:
     }
 
     // Create and execute the statement
-    test::driver::DseGraphStatement statement(
+    dse::GraphStatement statement(
       format_string(GRAPH_DATA_TYPE_CREATE_FORMAT, type.c_str()), options_);
     statement.bind(object);
     CHECK_FAILURE;
@@ -167,8 +167,8 @@ private:
    * @param object DSE graph object for the named parameters (includes value)
    * @return DSE graph result set to validate insert
    */
-  test::driver::DseGraphResultSet insert(test::driver::DseGraphObject object) {
-    test::driver::DseGraphStatement statement(GRAPH_DATA_TYPE_INSERT, options_);
+  dse::GraphResultSet insert(dse::GraphObject object) {
+    dse::GraphStatement statement(GRAPH_DATA_TYPE_INSERT, options_);
     statement.bind(object);
     return dse_session_.execute(statement);
   }
@@ -179,8 +179,8 @@ private:
    * @param object DSE graph object for the named parameters (includes value)
    * @return DSE graph result set to validate
    */
-  test::driver::DseGraphResultSet select(test::driver::DseGraphObject object) {
-    test::driver::DseGraphStatement statement(GRAPH_DATA_TYPE_SELECT, options_);
+  dse::GraphResultSet select(dse::GraphObject object) {
+    dse::GraphStatement statement(GRAPH_DATA_TYPE_SELECT, options_);
     statement.bind(object);
     return dse_session_.execute(statement);
   }
@@ -194,25 +194,25 @@ private:
    * @param result_set DSE graph result set to get the value from
    * @return DSE graph result which will contain only the data type value
    */
-  test::driver::DseGraphResult get_data_type_value(
-    test::driver::DseGraphResultSet result_set) {
+  dse::GraphResult get_data_type_value(
+    dse::GraphResultSet result_set) {
     EXPECT_EQ(1u, result_set.count());
-    test::driver::DseGraphResult result = result_set.next();
-    test::driver::DseGraphVertex vertex = result.vertex();
+    dse::GraphResult result = result_set.next();
+    dse::GraphVertex vertex = result.vertex();
     EXPECT_EQ(vertex_label_, vertex.label().value<std::string>());
 
-    test::driver::DseGraphResult property = vertex.properties();
+    dse::GraphResult property = vertex.properties();
     EXPECT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, property.type());
     EXPECT_EQ(1u, property.member_count());
     EXPECT_EQ(property_name_, property.key(0));
     property = property.member(0);
 
     EXPECT_EQ(DSE_GRAPH_RESULT_TYPE_ARRAY, property.type());
-    EXPECT_TRUE(property.is_type<test::driver::DseGraphArray>());
+    EXPECT_TRUE(property.is_type<dse::GraphArray>());
     property = property.element(0);
 
     EXPECT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, property.type());
-    EXPECT_TRUE(property.is_type<test::driver::DseGraphObject>());
+    EXPECT_TRUE(property.is_type<dse::GraphObject>());
     EXPECT_EQ(2u, property.member_count());
     EXPECT_EQ("value", property.key(1));
 
@@ -237,10 +237,10 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, BigInteger) {
   CHECK_FAILURE;
 
   // Create the values being tested
-  std::vector<test::driver::BigInteger> values;
-  values.push_back(test::driver::BigInteger::max());
-  values.push_back(test::driver::BigInteger::min());
-  values.push_back(test::driver::BigInteger(static_cast<cass_int64_t>(0)));
+  std::vector<BigInteger> values;
+  values.push_back(BigInteger::max());
+  values.push_back(BigInteger::min());
+  values.push_back(BigInteger(static_cast<cass_int64_t>(0)));
 
   // Perform the test operations for all the values in the data type
   perform_data_type_test("Bigint", values);
@@ -263,31 +263,31 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, DecimalDoubleFloat) {
   CHECK_FAILURE;
 
   // Create the decimal values
-  std::vector<test::driver::Double> decimals;
-  decimals.push_back(test::driver::Double(8675309.9998));
-  decimals.push_back(test::driver::Double(3.14159265359));
+  std::vector<Double> decimals;
+  decimals.push_back(Double(8675309.9998));
+  decimals.push_back(Double(3.14159265359));
 
   // Create the double values
-  std::vector<test::driver::Double> doubles;
-  doubles.push_back(test::driver::Double(123456.123456));
-  doubles.push_back(test::driver::Double(456789.456789));
+  std::vector<Double> doubles;
+  doubles.push_back(Double(123456.123456));
+  doubles.push_back(Double(456789.456789));
 
   // Create the float values
-  std::vector<test::driver::Double> floats;
-  floats.push_back(test::driver::Double(123.123));
-  floats.push_back(test::driver::Double(456.456));
+  std::vector<Double> floats;
+  floats.push_back(Double(123.123));
+  floats.push_back(Double(456.456));
 
   // Create the values being tested (data type, [value])
-  std::map<std::string, std::vector<test::driver::Double> > values;
+  std::map<std::string, std::vector<Double> > values;
   values.insert(std::make_pair("Decimal", decimals));
   values.insert(std::make_pair("Double", doubles));
   values.insert(std::make_pair("Float", floats));
 
   // Iterate over all the values and perform the test operations
-  for (std::map<std::string, std::vector<test::driver::Double> >::iterator iterator = values.begin();
+  for (std::map<std::string, std::vector<Double> >::iterator iterator = values.begin();
     iterator != values.end(); ++iterator) {
     TEST_LOG("Testing data type " << iterator->first);
-    perform_data_type_test<test::driver::Double>(iterator->first, iterator->second);
+    perform_data_type_test<Double>(iterator->first, iterator->second);
   }
 }
 
@@ -309,27 +309,27 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, IntegerSmallIntegerVarint) {
   CHECK_FAILURE;
 
   // Create the integer values
-  std::vector<test::driver::Integer> integers;
-  integers.push_back(test::driver::Integer::max());
-  integers.push_back(test::driver::Integer::min());
-  integers.push_back(test::driver::Integer(0));
+  std::vector<Integer> integers;
+  integers.push_back(Integer::max());
+  integers.push_back(Integer::min());
+  integers.push_back(Integer(0));
 
   // Create the small integer values
-  std::vector<test::driver::Integer> small_integers;
-  small_integers.push_back(test::driver::SmallInteger::max().str());
-  small_integers.push_back(test::driver::SmallInteger::min().str());
+  std::vector<Integer> small_integers;
+  small_integers.push_back(Integer(SmallInteger::max().value()));
+  small_integers.push_back(Integer(SmallInteger::min().value()));
 
   // Create the values being tested (data type, [value])
-  std::map<std::string, std::vector<test::driver::Integer> > values;
+  std::map<std::string, std::vector<Integer> > values;
   values.insert(std::make_pair("Int", integers));
   values.insert(std::make_pair("Smallint", small_integers));
   values.insert(std::make_pair("Varint", integers));
 
   // Iterate over all the values and perform the test operations
-  for (std::map<std::string, std::vector<test::driver::Integer> >::iterator iterator = values.begin();
+  for (std::map<std::string, std::vector<Integer> >::iterator iterator = values.begin();
     iterator != values.end(); ++iterator) {
     TEST_LOG("Testing data type " << iterator->first);
-    perform_data_type_test<test::driver::Integer>(iterator->first, iterator->second);
+    perform_data_type_test<Integer>(iterator->first, iterator->second);
   }
 }
 
@@ -349,14 +349,14 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, Text) {
   CHECK_FAILURE;
 
   // Create the values being tested
-  std::vector<test::driver::Varchar> values;
-  values.push_back(test::driver::Varchar(
+  std::vector<Varchar> values;
+  values.push_back(Varchar(
     "The quick brown fox jumps over the lazy dog"));
-  values.push_back(test::driver::Varchar("Hello World!"));
-  values.push_back(test::driver::Varchar("DataStax C/C++ DSE Driver"));
+  values.push_back(Varchar("Hello World!"));
+  values.push_back(Varchar("DataStax C/C++ DSE Driver"));
 
   // Perform the test operations for all the values in the data type
-  perform_data_type_test<test::driver::Varchar>("Text", values);
+  perform_data_type_test<Varchar>("Text", values);
 }
 
 /**
@@ -390,8 +390,8 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
 
   // Create UUID values
   std::vector<std::string> uuids;
-  uuids.push_back(test::driver::Uuid::max().str());
-  uuids.push_back(test::driver::Uuid::min().str());
+  uuids.push_back(Uuid::max().str());
+  uuids.push_back(Uuid::min().str());
   uuids.push_back(uuid_generator_.generate_random_uuid().str());
   uuids.push_back(uuid_generator_.generate_timeuuid().str());
 
@@ -421,14 +421,17 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
   // Create line string values (remove tick marks from CQL value)
   std::vector<std::string> line_strings;
   line_strings.push_back(replace_all(
-    test::driver::DseLineString("0.0 0.0, 1.0 1.0").cql_value(),
-    "'", ""));
+    dse::LineString("0.0 0.0, 1.0 1.0").cql_value(),
+                    "'",
+                    ""));
   line_strings.push_back(replace_all(
-    test::driver::DseLineString("1.0 3.0, 2.0 6.0, 3.0 9.0").cql_value(),
-    "'", ""));
+    dse::LineString("1.0 3.0, 2.0 6.0, 3.0 9.0").cql_value(),
+                    "'",
+                    ""));
   line_strings.push_back(replace_all(
-    test::driver::DseLineString("-1.2 -90.0, 0.99 3.0").cql_value(),
-    "'", ""));
+    dse::LineString("-1.2 -90.0, 0.99 3.0").cql_value(),
+                    "'",
+                    ""));
   std::vector<std::string> line_strings_expected;
   line_strings_expected.push_back("LINESTRING (0 0, 1 1)");
   line_strings_expected.push_back("LINESTRING (1 3, 2 6, 3 9)");
@@ -436,15 +439,9 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
 
   // Create point values (remove tick marks from CQL value)
   std::vector<std::string> points;
-  points.push_back(replace_all(
-    test::driver::DsePoint(0.0, 0.0).cql_value(),
-    "'", ""));
-  points.push_back(replace_all(
-    test::driver::DsePoint(2.0, 4.0).cql_value(),
-    "'", ""));
-  points.push_back(replace_all(
-    test::driver::DsePoint(-1.2, -90.0).cql_value(),
-    "'", ""));
+  points.push_back(replace_all(dse::Point("0.0, 0.0").cql_value(), "'", ""));
+  points.push_back(replace_all(dse::Point("2.0, 4.0").cql_value(), "'", ""));
+  points.push_back(replace_all(dse::Point("-1.2, -90.0").cql_value(), "'", ""));
   std::vector<std::string> points_expected;
   points_expected.push_back("POINT (0 0)");
   points_expected.push_back("POINT (2 4)");
@@ -453,12 +450,14 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
   // Create polygon values (remove tick marks from CQL value)
   std::vector<std::string> polygons;
   polygons.push_back(replace_all(
-    test::driver::DsePolygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)").cql_value(),
-    "'", ""));
+    dse::Polygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)").cql_value(),
+                 "'",
+                 ""));
   polygons.push_back(replace_all(
-    test::driver::DsePolygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
-                              (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)").cql_value(),
-    "'", ""));
+    dse::Polygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
+                  (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)").cql_value(),
+                 "'",
+                 ""));
   std::vector<std::string> polygons_expected;
   polygons_expected.push_back("POLYGON ((1 3, 3 1, 3 6, 1 3))");
   polygons_expected.push_back("POLYGON ((0 10, 10 0, 10 10, 0 10), " \

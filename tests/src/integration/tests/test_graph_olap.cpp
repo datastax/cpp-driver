@@ -35,8 +35,8 @@ public:
     CHECK_VERSION(5.0.0);
 
     // Call the parent setup function
-    number_dc1_nodes_ = 2;
-    replication_factor_ = 2;
+    number_dc1_nodes_ = 3;
+    replication_factor_ = 3;
     is_ccm_start_requested_ = false;
     is_session_requested_ = false;
     dse_workload_.push_back(CCM::DSE_WORKLOAD_SPARK);
@@ -101,7 +101,7 @@ public:
   void execute_query(unsigned int number_of_queries,
     const std::string& source, std::vector<std::string> *hosts) {
     // Initialize the graph options and set analytics source
-    test::driver::DseGraphOptions graph_options;
+    dse::GraphOptions graph_options;
     graph_options.set_name(test_name_);
     if (!source.empty()) {
       graph_options.set_source(source);
@@ -111,7 +111,7 @@ public:
     // Execute the graph query and return the hosts used during execution
     for (unsigned int n = 0; n < number_of_queries; ++n) {
       // Execute the graph query and get the host address used
-      test::driver::DseGraphResultSet result_set = dse_session_.execute(
+      dse::GraphResultSet result_set = dse_session_.execute(
         GRAPH_OLAP_QUERY, graph_options);
       CHECK_FAILURE;
       std::string host = result_set.host_address();
@@ -121,11 +121,12 @@ public:
 
       // Validate the result
       ASSERT_EQ(1u, result_set.count());
-      test::driver::DseGraphResult result = result_set.next();
+      dse::GraphResult result = result_set.next();
       ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_NUMBER, result.type());
       ASSERT_TRUE(result.is_type<Integer>());
       ASSERT_EQ(6, result.value<Integer>().value());
     }
+    std::sort(hosts->begin(), hosts->end());
   }
 
 protected:

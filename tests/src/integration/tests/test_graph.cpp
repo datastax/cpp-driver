@@ -56,20 +56,20 @@ public:
    * @param is_object_requested True if object should be added to the array;
    *                            false otherwise
    */
-  test::driver::DseGraphArray create_array(bool is_array_requested = true,
+  dse::GraphArray create_array(bool is_array_requested = true,
     bool is_object_requested = true) {
     // Create the data type objects for the DSE graph array
-    test::driver::DseGraphArray graph_array_value;
+    dse::GraphArray graph_array_value;
     if (is_array_requested) {
-      graph_array_value.add<test::driver::DseGraphArray>(create_array(false, false));
+      graph_array_value.add<dse::GraphArray>(create_array(false, false));
     }
-    graph_array_value.add<test::driver::BigInteger>(BIG_INTEGER_VALUE);
-    graph_array_value.add<test::driver::Boolean>(BOOLEAN_VALUE);
-    graph_array_value.add<test::driver::Double>(DOUBLE_VALUE);
-    graph_array_value.add<test::driver::Integer>(INTEGER_VALUE);
+    graph_array_value.add<BigInteger>(BIG_INTEGER_VALUE);
+    graph_array_value.add<Boolean>(BOOLEAN_VALUE);
+    graph_array_value.add<Double>(DOUBLE_VALUE);
+    graph_array_value.add<Integer>(INTEGER_VALUE);
     graph_array_value.add<NULL_DATA_TYPE>(NULL_VALUE);
     if (is_object_requested) {
-      graph_array_value.add<test::driver::DseGraphObject>(create_named_object(false, false));
+      graph_array_value.add<dse::GraphObject>(create_named_object(false, false));
     }
     graph_array_value.add<std::string>(STRING_VALUE);
 
@@ -84,20 +84,20 @@ public:
    * @param is_object_requested True if object should be added to the object;
    *                            false otherwise
    */
-  test::driver::DseGraphObject create_named_object(bool is_array_requested = true,
+  dse::GraphObject create_named_object(bool is_array_requested = true,
     bool is_object_requested = true) {
-    test::driver::DseGraphObject graph_object_value;
+    dse::GraphObject graph_object_value;
     if (is_array_requested) {
-      graph_object_value.add<test::driver::DseGraphArray>(GRAPH_ARRAY_NAMED_PARAMETER,
+      graph_object_value.add<dse::GraphArray>(GRAPH_ARRAY_NAMED_PARAMETER,
         create_array(false, false));
     }
-    graph_object_value.add<test::driver::BigInteger>(BIG_INTEGER_NAMED_PARAMETER, BIG_INTEGER_VALUE);
-    graph_object_value.add<test::driver::Boolean>(BOOLEAN_NAMED_PARAMETER, BOOLEAN_VALUE);
-    graph_object_value.add<test::driver::Double>(DOUBLE_NAMED_PARAMETER, DOUBLE_VALUE);
-    graph_object_value.add<test::driver::Integer>(INTEGER_NAMED_PARAMETER, INTEGER_VALUE);
+    graph_object_value.add<BigInteger>(BIG_INTEGER_NAMED_PARAMETER, BIG_INTEGER_VALUE);
+    graph_object_value.add<Boolean>(BOOLEAN_NAMED_PARAMETER, BOOLEAN_VALUE);
+    graph_object_value.add<Double>(DOUBLE_NAMED_PARAMETER, DOUBLE_VALUE);
+    graph_object_value.add<Integer>(INTEGER_NAMED_PARAMETER, INTEGER_VALUE);
     graph_object_value.add<NULL_DATA_TYPE>(NULL_NAMED_PARAMETER, NULL_VALUE);
     if (is_object_requested) {
-      graph_object_value.add<test::driver::DseGraphObject>(GRAPH_OBJECT_NAMED_PARAMETER,
+      graph_object_value.add<dse::GraphObject>(GRAPH_OBJECT_NAMED_PARAMETER,
         create_named_object(false, false));
     }
     graph_object_value.add<std::string>(STRING_NAMED_PARAMETER, STRING_VALUE);
@@ -213,18 +213,18 @@ DSE_INTEGRATION_TEST_F(GraphTest, GraphExists) {
   CHECK_FAILURE;
 
   // Create the graph statement to see if the default graph exists
-  test::driver::DseGraphObject graph_object;
+  dse::GraphObject graph_object;
   graph_object.add<std::string>("name", test_name_);
   CHECK_FAILURE;
-  test::driver::DseGraphStatement graph_statement("system.graph(name).exists()");
+  dse::GraphStatement graph_statement("system.graph(name).exists()");
   graph_statement.bind(graph_object);
   CHECK_FAILURE;
 
   // Execute the graph statement and ensure the graph exists
-  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement);
+  dse::GraphResultSet result_set = dse_session_.execute(graph_statement);
   CHECK_FAILURE;
   ASSERT_EQ(1u, result_set.count());
-  test::driver::DseGraphResult result = result_set.next();
+  dse::GraphResult result = result_set.next();
   ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_BOOL, result.type());
   ASSERT_TRUE(result.is_type<Boolean>());
   ASSERT_EQ(cass_true, result.value<Boolean>().value());
@@ -247,7 +247,7 @@ DSE_INTEGRATION_TEST_F(GraphTest, ServerError) {
   CHECK_FAILURE;
 
   // Execute the graph statement where a graph is used but does not exist
-  test::driver::DseGraphResultSet result_set = dse_session_.execute(
+  dse::GraphResultSet result_set = dse_session_.execute(
     "system.graph('graph_name_does_not_exist').drop()", NULL, false);
   CHECK_FAILURE;
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
@@ -281,27 +281,27 @@ DSE_INTEGRATION_TEST_F(GraphTest, MutlipleNamedParameters) {
     << STRING_NAMED_PARAMETER << ","
     << GRAPH_ARRAY_NAMED_PARAMETER << ","
     << GRAPH_OBJECT_NAMED_PARAMETER << "]";
-  test::driver::DseGraphStatement graph_statement(simple_array.str());
+  dse::GraphStatement graph_statement(simple_array.str());
 
   // Create the named parameters and bind the DSE graph object to the statement
-  test::driver::DseGraphArray graph_array = create_array();
+  dse::GraphArray graph_array = create_array();
   CHECK_FAILURE;
-  test::driver::DseGraphObject graph_object = create_named_object();
+  dse::GraphObject graph_object = create_named_object();
   CHECK_FAILURE;
-  test::driver::DseGraphObject graph_named_values = create_named_object(false,
+  dse::GraphObject graph_named_values = create_named_object(false,
     false);
   CHECK_FAILURE;
-  graph_named_values.add<test::driver::DseGraphArray>(GRAPH_ARRAY_NAMED_PARAMETER,
+  graph_named_values.add<dse::GraphArray>(GRAPH_ARRAY_NAMED_PARAMETER,
     graph_array);
   CHECK_FAILURE;
-  graph_named_values.add<test::driver::DseGraphObject>(GRAPH_OBJECT_NAMED_PARAMETER,
+  graph_named_values.add<dse::GraphObject>(GRAPH_OBJECT_NAMED_PARAMETER,
     graph_object);
   CHECK_FAILURE;
   graph_statement.bind(graph_named_values);
   CHECK_FAILURE;
 
   // Execute the graph statement and validate the results
-  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement);
+  dse::GraphResultSet result_set = dse_session_.execute(graph_statement);
   CHECK_FAILURE;
   std::string expected = "[" + expected_result() + "]";
   ASSERT_EQ(expected, Utils::shorten(result_set.str(), false));
@@ -330,18 +330,18 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrieveEdges) {
   CHECK_FAILURE;
 
   // Create the graph statement to see who created what
-  test::driver::DseGraphOptions graph_options;
+  dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
-  test::driver::DseGraphStatement graph_statement("g.E().hasLabel('created')",
+  dse::GraphStatement graph_statement("g.E().hasLabel('created')",
     graph_options);
 
   // Execute the graph statement and ensure the edges were retrieved (validate)
-  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement);
+  dse::GraphResultSet result_set = dse_session_.execute(graph_statement);
   CHECK_FAILURE;
   ASSERT_EQ(4u, result_set.count());
   for (size_t i = 0; i < 4; ++i) {
-    test::driver::DseGraphResult result = result_set.next();
-    test::driver::DseGraphEdge edge = result.edge();
+    dse::GraphResult result = result_set.next();
+    dse::GraphEdge edge = result.edge();
     CHECK_FAILURE;
 
     ASSERT_EQ("created", edge.label().value<std::string>());
@@ -373,18 +373,18 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrieveVertices) {
   CHECK_FAILURE;
 
   // Create the graph statement to see who Marko knows
-  test::driver::DseGraphOptions graph_options;
+  dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
-  test::driver::DseGraphStatement graph_statement("g.V().has('name', 'marko').out('knows')",
+  dse::GraphStatement graph_statement("g.V().has('name', 'marko').out('knows')",
     graph_options);
 
   // Execute the graph statement and ensure the vertices were retrieved (validate)
-  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement);
+  dse::GraphResultSet result_set = dse_session_.execute(graph_statement);
   CHECK_FAILURE;
   ASSERT_EQ(2u, result_set.count());
   for (size_t i = 0; i < 2; ++i) {
-    test::driver::DseGraphResult result = result_set.next();
-    test::driver::DseGraphVertex vertex = result.vertex();
+    dse::GraphResult result = result_set.next();
+    dse::GraphVertex vertex = result.vertex();
     CHECK_FAILURE;
 
     ASSERT_EQ("person", vertex.label().value<std::string>());
@@ -421,24 +421,24 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrievePaths) {
    * marko -> knows -> josh -> created -> lop
    * marko -> knows -> josh -> created -> ripple
    */
-  test::driver::DseGraphOptions graph_options;
+  dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
-  test::driver::DseGraphStatement graph_statement("g.V().hasLabel('person')" \
+  dse::GraphStatement graph_statement("g.V().hasLabel('person')" \
     ".has('name', 'marko').as('a').outE('knows').as('b').inV().as('c', 'd')" \
     ".outE('created').as('e', 'f', 'g').inV().as('h').path()",
     graph_options);
 
   // Execute the graph statement and ensure the vertices were retrieved (validate)
-  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement);
+  dse::GraphResultSet result_set = dse_session_.execute(graph_statement);
   CHECK_FAILURE;
   ASSERT_EQ(2u, result_set.count());
   for (size_t i = 0; i < 2; ++i) {
-    test::driver::DseGraphResult result = result_set.next();
-    test::driver::DseGraphPath path = result.path();
+    dse::GraphResult result = result_set.next();
+    dse::GraphPath path = result.path();
     CHECK_FAILURE;
 
     // Ensure the labels are organized as expected
-    test::driver::DseGraphResult labels = path.labels();
+    dse::GraphResult labels = path.labels();
     ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_ARRAY, labels.type());
     ASSERT_EQ(5u, labels.element_count());
     std::string labels_values = Utils::shorten(labels.str(), false);
@@ -446,28 +446,28 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrievePaths) {
     ASSERT_EQ("[[a],[b],[c,d],[e,f,g],[h]]", labels_values);
 
     // Ensure the objects matches what is expected from the paths
-    test::driver::DseGraphResult objects = path.objects();
+    dse::GraphResult objects = path.objects();
     ASSERT_EQ(5u, objects.element_count());
-    test::driver::DseGraphVertex marko = objects.element(0).vertex();
+    dse::GraphVertex marko = objects.element(0).vertex();
     CHECK_FAILURE;
-    test::driver::DseGraphEdge knows = objects.element(1).edge();
+    dse::GraphEdge knows = objects.element(1).edge();
     (void)knows;
     CHECK_FAILURE;
-    test::driver::DseGraphVertex josh = objects.element(2).vertex();
+    dse::GraphVertex josh = objects.element(2).vertex();
     (void)josh;
     CHECK_FAILURE;
-    test::driver::DseGraphEdge created = objects.element(3).edge();
+    dse::GraphEdge created = objects.element(3).edge();
     CHECK_FAILURE;
-    test::driver::DseGraphVertex software = objects.element(4).vertex();
+    dse::GraphVertex software = objects.element(4).vertex();
     CHECK_FAILURE;
 
     // Validate Marko (vertex)
     ASSERT_EQ("person", marko.label().value<std::string>());
     ASSERT_EQ("vertex", marko.type().value<std::string>());
-    test::driver::DseGraphResult marko_properties = marko.properties();
+    dse::GraphResult marko_properties = marko.properties();
     ASSERT_EQ(2u, marko_properties.member_count());
     for (size_t j = 0; j < 2; ++j) {
-      test::driver::DseGraphResult property = marko_properties.member(j);
+      dse::GraphResult property = marko_properties.member(j);
       ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_ARRAY, property.type());
       ASSERT_EQ(1u, property.element_count());
       property = property.element(0);
@@ -487,7 +487,7 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrievePaths) {
       } else {
         for (size_t k = 0; k < 2; ++k) {
           if (property.key(k).compare("value") == 0) {
-            ASSERT_EQ(29, property.member(k).value<Integer>());
+            ASSERT_EQ(Integer(29), property.member(k).value<Integer>());
             marko_property_asserted = true;
             break;
           }
@@ -497,7 +497,7 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrievePaths) {
     }
 
     // Get properties for the created edge to compare with software name
-    test::driver::DseGraphResult created_property = created.properties();
+    dse::GraphResult created_property = created.properties();
     ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, created_property.type());
     ASSERT_EQ(1u, created_property.member_count());
     ASSERT_EQ("weight", created_property.key(0));
@@ -507,10 +507,10 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrievePaths) {
     Double created_weight = created_property.value<Double>();
 
     // Validate software (should contain different values for each result set)
-    test::driver::DseGraphResult software_properties = software.properties();
+    dse::GraphResult software_properties = software.properties();
     ASSERT_EQ(2u, software_properties.member_count());
     for (size_t j = 0; j < 2; ++j) {
-      test::driver::DseGraphResult property = software_properties.member(j);
+      dse::GraphResult property = software_properties.member(j);
       ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_ARRAY, property.type());
       ASSERT_EQ(1u, property.element_count());
       property = property.element(0);
@@ -524,11 +524,11 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrievePaths) {
             // Validate the software name and created weight
             if (i == 0) {
               ASSERT_EQ("lop", property.member(k).value<std::string>());
-              ASSERT_EQ(0.4, created_weight);
+              ASSERT_EQ(Double(0.4), created_weight);
               break;
             } else {
               ASSERT_EQ("ripple", property.member(k).value<std::string>());
-              ASSERT_EQ(1.0, created_weight);
+              ASSERT_EQ(Double(1.0), created_weight);
               break;
             }
           }
@@ -564,15 +564,15 @@ DSE_INTEGRATION_TEST_F(GraphTest, Timestamp) {
   std::string add_vertex = format_string(GRAPH_ADD_VERTEX_FORMAT, "person",
     "michael", "age", 27);
   cass_int64_t expected_timestamp = 1270110600000;
-  test::driver::DseGraphOptions graph_options;
+  dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
-  test::driver::DseGraphStatement graph_statement(add_vertex, graph_options);
+  dse::GraphStatement graph_statement(add_vertex, graph_options);
   graph_statement.set_timestamp(expected_timestamp);
-  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement,
+  dse::GraphResultSet result_set = dse_session_.execute(graph_statement,
     graph_options);
 
   // Get the community id from the vertex insert and create the select statement
-  test::driver::DseGraphResult id = result_set.next();
+  dse::GraphResult id = result_set.next();
   ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, id.type());
   id = id.member(0);
   ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, id.type());
@@ -584,15 +584,15 @@ DSE_INTEGRATION_TEST_F(GraphTest, Timestamp) {
   }
   id = id.member(community_id_index);
   ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_NUMBER, id.type());
-  test::driver::BigInteger community_id = id.value<test::driver::BigInteger>();
+  BigInteger community_id = id.value<BigInteger>();
   std::string select_timestamp = format_string(GRAPH_SELECT_VERTEX_TIMESTAMP_FORMAT,
     test_name_.c_str(), "person", community_id.value());
 
   // Validate the timestamp from the graph inserted timestamp (+1 from insert)
   expected_timestamp += 1l;
-  test::driver::Result result = session_.execute(select_timestamp);
-  test::driver::BigInteger timestamp(result.first_row().next().as<BigInteger>());
-  ASSERT_EQ(expected_timestamp, timestamp);
+  Result result = session_.execute(select_timestamp);
+  BigInteger timestamp(result.first_row().next().as<BigInteger>());
+  ASSERT_EQ(BigInteger(expected_timestamp), timestamp);
 }
 
 /**
@@ -616,10 +616,10 @@ DSE_INTEGRATION_TEST_F(GraphTest, ClientRequestTimeout) {
 
   // Create a graph statement that will execute longer than the client request
   std::string graph_ms_sleep = format_string(GRAPH_SLEEP_FORMAT, 35000);
-  test::driver::DseGraphOptions graph_options;
+  dse::GraphOptions graph_options;
   graph_options.set_timeout(500);
   start_timer();
-  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
+  dse::GraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
     graph_options, false);
   ASSERT_LE(stop_timer(), 600ull);
   ASSERT_EQ(CASS_ERROR_LIB_REQUEST_TIMED_OUT, result_set.error_code());
@@ -662,10 +662,10 @@ DSE_INTEGRATION_TEST_F(GraphTest, ServerRequestTimeout) {
 
   // Create a graph statement that will execute longer than the server request
   // default request timeout
-  test::driver::DseGraphOptions graph_options;
+  dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
   std::string graph_ms_sleep = format_string(GRAPH_SLEEP_FORMAT, 35000);
-  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
+  dse::GraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
     graph_options, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
   ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));

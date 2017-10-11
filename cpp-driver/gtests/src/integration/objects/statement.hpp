@@ -88,6 +88,17 @@ public:
   }
 
   /**
+   * Bind a value to the statement by name
+   *
+   * @param name Column name to bind the value to
+   * @param value<T> Value to bind to the statement at given index
+   */
+  template<typename T>
+  void bind(const std::string& name, T value) {
+    value.statement_bind(*this, name);
+  }
+
+  /**
    * Assign/Set the statement's consistency level
    *
    * @param consistency Consistency to use for the statement
@@ -133,7 +144,7 @@ public:
    * @param enable True if attempted host should be recorded; false otherwise
    */
   void set_record_attempted_hosts(bool enable) {
-    return test::driver::internals::Utils::set_record_attempted_hosts(get(),
+    return internals::Utils::set_record_attempted_hosts(get(),
       enable);
   }
 

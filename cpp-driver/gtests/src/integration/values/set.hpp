@@ -16,7 +16,7 @@
 
 #ifndef __TEST_SET_HPP__
 #define __TEST_SET_HPP__
-#include "value_interface.hpp"
+#include "nullable_value.hpp"
 #include "test_utils.hpp"
 
 namespace test {
@@ -26,7 +26,7 @@ namespace driver {
  * Set wrapped value
  */
 template<typename T>
-class Set : public Collection, COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(std::set<T>, Set<T>) {
+class Set : public Collection, Comparable<Set<T> > {
 public:
   Set(const std::set<T>& set)
     : Collection(CASS_COLLECTION_TYPE_SET, set.size())
@@ -73,6 +73,10 @@ public:
     return str();
   }
 
+  bool is_null() const {
+    return Collection::is_null_;
+  }
+
   /**
    * Comparison operation for driver value set. This comparison is performed in
    * lexicographical order.
@@ -104,7 +108,6 @@ public:
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
   int compare(const Set& rhs) const {
-    if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.set_);
   }
 
@@ -126,7 +129,7 @@ public:
   }
 
   void statement_bind(Statement statement, size_t index) {
-    if (is_null_) {
+    if (is_null()) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
     } else {
       ASSERT_EQ(CASS_OK,
@@ -134,12 +137,19 @@ public:
     }
   }
 
-  bool is_null() const {
-    return is_null_;
+  void statement_bind(Statement statement, const std::string& name) {
+    if (is_null()) {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_null_by_name(statement.get(),
+                                                          name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_collection_by_name(statement.get(),
+                                                                name.c_str(),
+                                                                get()));
+    }
   }
 
   std::string str() const {
-    if (is_null_) {
+    if (is_null()) {
       return "null";
     } else if (set_.empty()) {
       return "{}";

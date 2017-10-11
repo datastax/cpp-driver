@@ -62,7 +62,7 @@ public:
    * @return Attempted hosts/Addresses (sorted)
    */
   const std::vector<std::string> attempted_hosts() {
-    return test::driver::internals::Utils::attempted_hosts(get());
+    return internals::Utils::attempted_hosts(get());
   }
 
   /**
@@ -101,7 +101,7 @@ public:
    * @return Host/Address
    */
   const std::string host() {
-    return test::driver::internals::Utils::host(get());
+    return internals::Utils::host(get());
   }
 
   /**

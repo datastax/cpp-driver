@@ -18,11 +18,12 @@
 
 namespace test {
 namespace driver {
+namespace dse {
 
 /**
  * Wrapped DSE graph result set object
  */
-class DseGraphResultSet : public Object< ::DseGraphResultSet, dse_graph_resultset_free> {
+class GraphResultSet : public Object<DseGraphResultSet, dse_graph_resultset_free> {
 public:
   class Exception : public test::Exception {
   public:
@@ -36,8 +37,8 @@ public:
    *
    * @param result_set Native driver object
    */
-  DseGraphResultSet(::DseGraphResultSet* result_set)
-    : Object< ::DseGraphResultSet, dse_graph_resultset_free>(result_set)
+  GraphResultSet(DseGraphResultSet* result_set)
+    : Object<DseGraphResultSet, dse_graph_resultset_free>(result_set)
     , index_(0) {}
 
   /**
@@ -45,8 +46,8 @@ public:
    *
    * @param result_set Shared reference
    */
-  DseGraphResultSet(Ptr result_set)
-    : Object< ::DseGraphResultSet, dse_graph_resultset_free>(result_set)
+  GraphResultSet(Ptr result_set)
+    : Object<DseGraphResultSet, dse_graph_resultset_free>(result_set)
     , index_(0) {}
 
   /**
@@ -54,8 +55,8 @@ public:
    *
    * @param future Wrapped driver object
    */
-  DseGraphResultSet(Future future)
-    : Object< ::DseGraphResultSet, dse_graph_resultset_free>(
+  GraphResultSet(Future future)
+    : Object<DseGraphResultSet, dse_graph_resultset_free>(
         cass_future_get_dse_graph_resultset(future.get()))
     , future_(future)
     , index_(0) {}
@@ -135,12 +136,12 @@ public:
    *
    * @return DSE graph result
    */
-  DseGraphResult next() {
+  GraphResult next() {
     try {
-      DseGraphResult result(dse_graph_resultset_next(get()));
+      GraphResult result(dse_graph_resultset_next(get()));
       ++index_;
       return result;
-    } catch (DseGraphResult::Exception& e) {
+    } catch (GraphResult::Exception& e) {
       throw e;
     }
     return NULL;
@@ -189,6 +190,7 @@ private:
 
 };
 
+} // namespace dse
 } // namespace driver
 } // namespace test
 

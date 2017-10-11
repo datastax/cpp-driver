@@ -67,10 +67,10 @@ public:
    *
    * @return v1 UUID for the current time
    */
-  TimeUuid generate_timeuuid() {
+  values::TimeUuid generate_timeuuid() {
     CassUuid uuid;
     cass_uuid_gen_time(get(), &uuid);
-    return TimeUuid(uuid);
+    return values::TimeUuid(uuid);
   }
 
   /**
@@ -79,10 +79,10 @@ public:
    * @param timestamp Timestamp to generate v1 UUID from
    * @return v1 UUID for the given timestamp
    */
-  TimeUuid generate_timeuuid(cass_uint64_t timestamp) {
+  values::TimeUuid generate_timeuuid(cass_uint64_t timestamp) {
     CassUuid uuid;
     cass_uuid_gen_from_time(get(), timestamp, &uuid);
-    return TimeUuid(uuid);
+    return values::TimeUuid(uuid);
   }
 
   /**
@@ -90,10 +90,10 @@ public:
    *
    * @return Randomly generated v4 UUID
    */
-  Uuid generate_random_uuid() {
+  values::Uuid generate_random_uuid() {
     CassUuid uuid;
     cass_uuid_gen_random(get(), &uuid);
-    return Uuid(uuid);
+    return values::Uuid(uuid);
   }
 };
 

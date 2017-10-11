@@ -196,8 +196,8 @@ bool Options::initialize(int argc, char* argv[]) {
       } else if (key.compare("--port") == 0) {
         //Convert the value
         if (!value.empty()) {
-          std::stringstream valueStream(value);
-          if (!(valueStream >> port_).fail()) {
+          std::stringstream ss(value);
+          if (!(ss >> port_).fail()) {
             continue;
           } else {
             std::cerr << "Invalid Port: Using default [" << port_ << "]";

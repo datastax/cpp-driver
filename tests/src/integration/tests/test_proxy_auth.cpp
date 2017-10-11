@@ -162,7 +162,7 @@ protected:
       msleep(5000); // DSE may not be 100% available (even though port is available)
 
       // Create the default connection to the cluster
-      DseCluster cluster = default_cluster();
+      dse::Cluster cluster = default_cluster();
       cluster.with_plaintext_authenticator("cassandra", "cassandra");
       DseIntegration::connect(cluster);
 
@@ -210,7 +210,7 @@ protected:
    *           normally
    * @throws test::CassException if query did not execute properly
    */
-  void query(DseSession session, const std::string& as = "") {
+  void query(dse::Session session, const std::string& as = "") {
     // Execute the query and validate the results
     test::driver::Result result;
     if (!as.empty()) {
@@ -239,7 +239,7 @@ protected:
    *           normally
    * @throws test::CassException if query did not execute properly
    */
-  void batch_query(DseSession session, const std::string& as = "") {
+  void batch_query(dse::Session session, const std::string& as = "") {
     // Create a bunch of batch inserts to execute
     test::driver::Batch batch;
     for (int i = 0; i < 10; ++i) {
@@ -329,8 +329,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyAuthorizedUserLogi
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_plaintext_authenticator_proxy("ben", "ben", "alice")
     .connect();
 
@@ -358,8 +358,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExec
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_plaintext_authenticator("steve", "steve")
     .connect();
 
@@ -387,8 +387,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExec
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_plaintext_authenticator("steve", "steve")
     .connect();
 
@@ -418,8 +418,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyUnauthorizedUserLo
   // Build the cluster configuration and attempt the session connection
   bool is_session_failure = false;
   try {
-    DseCluster cluster = default_cluster();
-    DseSession session = cluster
+    dse::Cluster cluster = default_cluster();
+    dse::Session session = cluster
       .with_plaintext_authenticator_proxy("steve", "steve", "alice")
       .connect();
     query(session);
@@ -452,8 +452,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnau
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_plaintext_authenticator("ben", "ben")
     .connect();
 
@@ -490,8 +490,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnau
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_plaintext_authenticator("ben", "ben")
     .connect();
 
@@ -529,8 +529,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosProxyAuthorizedUserLogin
   ads_->acquire_ticket(BOB_PRINCIPAL, ads_->get_bob_keytab_file());
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_gssapi_authenticator_proxy("dse", BOB_PRINCIPAL, "alice")
     .connect();
 
@@ -561,8 +561,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginExecu
   ads_->acquire_ticket(CHARLIE_PRINCIPAL, ads_->get_charlie_keytab_file());
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_gssapi_authenticator("dse", CHARLIE_PRINCIPAL)
     .connect();
 
@@ -593,8 +593,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginExecu
   ads_->acquire_ticket(CHARLIE_PRINCIPAL, ads_->get_charlie_keytab_file());
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_gssapi_authenticator("dse", CHARLIE_PRINCIPAL)
     .connect();
 
@@ -627,8 +627,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosProxyBadCredentialsUserL
   // Build the cluster configuration and attempt the session connection
   bool is_session_failure = false;
   try {
-    DseCluster cluster = default_cluster();
-    DseSession session = cluster
+    dse::Cluster cluster = default_cluster();
+    dse::Session session = cluster
     .with_gssapi_authenticator_proxy("dse", CHARLIE_PRINCIPAL, "alice")
     .connect();
   } catch (Session::Exception &se) {
@@ -663,8 +663,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnaut
   ads_->acquire_ticket(BOB_PRINCIPAL, ads_->get_bob_keytab_file());
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_gssapi_authenticator("dse", BOB_PRINCIPAL)
     .connect();
 
@@ -704,8 +704,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnaut
   ads_->acquire_ticket(BOB_PRINCIPAL, ads_->get_bob_keytab_file());
 
   // Build the cluster configuration and establish the session connection
-  DseCluster cluster = default_cluster();
-  DseSession session = cluster
+  dse::Cluster cluster = default_cluster();
+  dse::Session session = cluster
     .with_gssapi_authenticator("dse", BOB_PRINCIPAL)
     .connect();
 

@@ -35,42 +35,43 @@
 
 namespace test {
 namespace driver {
+namespace dse {
 
 // Forward declaration for circular dependency
-class DseGraphArray;
+class GraphArray;
 
 /**
  * Wrapped DSE graph object
  */
-class DseGraphObject : public Object< ::DseGraphObject, dse_graph_object_free> {
+class GraphObject : public Object<DseGraphObject, dse_graph_object_free> {
 public:
   /**
    * Create the empty DSE graph object
    */
-  DseGraphObject()
-    : Object< ::DseGraphObject, dse_graph_object_free>(dse_graph_object_new()) {}
+  GraphObject()
+    : Object<DseGraphObject, dse_graph_object_free>(dse_graph_object_new()) {}
 
   /**
    * Create the DSE graph object from the native driver DSE graph object
    *
    * @param object Native driver object
    */
-  DseGraphObject(::DseGraphObject* object)
-    : Object< ::DseGraphObject, dse_graph_object_free>(object) {}
+  GraphObject(DseGraphObject* object)
+    : Object<DseGraphObject, dse_graph_object_free>(object) {}
 
   /**
    * Create the DSE graph object from the shared reference
    *
    * @param object Shared reference
    */
-  DseGraphObject(Ptr object)
-    : Object< ::DseGraphObject, dse_graph_object_free>(object) {}
+  GraphObject(Ptr object)
+    : Object<DseGraphObject, dse_graph_object_free>(object) {}
 
   /**
    * Destructor to clean up the shared reference pointers that may be associated
    * with the graph object
    */
-  ~DseGraphObject() {
+  ~GraphObject() {
     line_strings_.clear();
     polygons_.clear();
   }
@@ -107,11 +108,11 @@ private:
   /**
    * Line strings associated with the graph object
    */
-  std::vector<DseLineString::Native> line_strings_;
+  std::vector<values::dse::LineString::Native> line_strings_;
   /**
    * Polygons associated with the graph object
    */
-  std::vector<DsePolygon::Native> polygons_;
+  std::vector<values::dse::Polygon::Native> polygons_;
 
   /**
    * Add a array to an object with the specified name
@@ -119,7 +120,7 @@ private:
    * @param name Name to apply array value to
    * @param value Array value to apply
    */
-  void add_value(const std::string& name, ::DseGraphArray* value)  {
+  void add_value(const std::string& name, DseGraphArray* value)  {
     dse_graph_array_finish(value);
     ASSERT_EQ(CASS_OK, dse_graph_object_add_array(get(), name.c_str(), value));
   }
@@ -132,7 +133,7 @@ private:
  * @param value Boolean value to apply
  */
 template<>
-inline void DseGraphObject::add<Boolean>(const std::string& name, Boolean value) {
+inline void GraphObject::add<Boolean>(const std::string& name, Boolean value) {
   ADD_OBJECT_VALUE(dse_graph_object_add_bool, name, value);
 }
 
@@ -143,7 +144,7 @@ inline void DseGraphObject::add<Boolean>(const std::string& name, Boolean value)
  * @param value Double value to apply
  */
 template<>
-inline void DseGraphObject::add<Double>(const std::string& name, Double value) {
+inline void GraphObject::add<Double>(const std::string& name, Double value) {
   ADD_OBJECT_VALUE(dse_graph_object_add_double, name, value);
 }
 
@@ -154,7 +155,7 @@ inline void DseGraphObject::add<Double>(const std::string& name, Double value) {
  * @param value 32-bit integer value to apply
  */
 template<>
-inline void DseGraphObject::add<Integer>(const std::string& name, Integer value) {
+inline void GraphObject::add<Integer>(const std::string& name, Integer value) {
   ADD_OBJECT_VALUE(dse_graph_object_add_int32, name, value);
 }
 
@@ -166,7 +167,7 @@ inline void DseGraphObject::add<Integer>(const std::string& name, Integer value)
  * @param value 64-bit integer value to apply
  */
 template<>
-inline void DseGraphObject::add<BigInteger>(const std::string& name, BigInteger value) {
+inline void GraphObject::add<BigInteger>(const std::string& name, BigInteger value) {
   ADD_OBJECT_VALUE(dse_graph_object_add_int64, name, value);
 }
 
@@ -177,10 +178,10 @@ inline void DseGraphObject::add<BigInteger>(const std::string& name, BigInteger 
  * @param value Object value to apply
  */
 template<>
-inline void DseGraphObject::add<DseGraphObject>(const std::string& name, DseGraphObject value) {
+inline void GraphObject::add<GraphObject>(const std::string& name, GraphObject value) {
   value.finish();
   ASSERT_EQ(CASS_OK, dse_graph_object_add_object(get(), name.c_str(),
-    const_cast< ::DseGraphObject*>(value.get())));
+    const_cast<DseGraphObject*>(value.get())));
 }
 
 /**
@@ -190,15 +191,15 @@ inline void DseGraphObject::add<DseGraphObject>(const std::string& name, DseGrap
  * @param value String value to apply
  */
 template<>
-inline void DseGraphObject::add<Varchar>(const std::string& name, Varchar value) {
+inline void GraphObject::add<Varchar>(const std::string& name, Varchar value) {
   ADD_OBJECT_VALUE_C_STR(dse_graph_object_add_string, name, value);
 }
 template<>
-inline void DseGraphObject::add<Text>(const std::string& name, Text value) {
+inline void GraphObject::add<Text>(const std::string& name, Text value) {
   add<Text>(name, value);
 }
 template<>
-inline void DseGraphObject::add<std::string>(const std::string& name, std::string value) {
+inline void GraphObject::add<std::string>(const std::string& name, std::string value) {
   add<Varchar>(name, Varchar(value));
 }
 
@@ -209,11 +210,13 @@ inline void DseGraphObject::add<std::string>(const std::string& name, std::strin
  * @param value Line string value to apply
  */
 template<>
-inline void DseGraphObject::add<DseLineString>(const std::string& name, DseLineString value) {
-  DseLineString::Native line_string = value.to_native();
+inline void GraphObject::add<LineString>(const std::string& name,
+                                         LineString value) {
+  values::dse::LineString::Native line_string = value.to_native();
   line_strings_.push_back(line_string);
-  ASSERT_EQ(CASS_OK, dse_graph_object_add_line_string(get(), name.c_str(),
-    line_string.get()));
+  ASSERT_EQ(CASS_OK, dse_graph_object_add_line_string(get(),
+                                                      name.c_str(),
+                                                      line_string.get()));
 }
 
 /**
@@ -223,9 +226,12 @@ inline void DseGraphObject::add<DseLineString>(const std::string& name, DseLineS
  * @param value Point value to apply
  */
 template<>
-inline void DseGraphObject::add<DsePoint>(const std::string& name, DsePoint value) {
-  ASSERT_EQ(CASS_OK, dse_graph_object_add_point(get(), name.c_str(),
-    value.value().x, value.value().y));
+inline void GraphObject::add<Point>(const std::string& name,
+                                    Point value) {
+  ASSERT_EQ(CASS_OK, dse_graph_object_add_point(get(),
+                                                name.c_str(),
+                                                value.value().x,
+                                                value.value().y));
 }
 
 /**
@@ -235,13 +241,16 @@ inline void DseGraphObject::add<DsePoint>(const std::string& name, DsePoint valu
  * @param value Polygon value to apply
  */
 template<>
-inline void DseGraphObject::add<DsePolygon>(const std::string& name, DsePolygon value) {
-  DsePolygon::Native polygon = value.to_native();
+inline void GraphObject::add<Polygon>(const std::string& name,
+                                      Polygon value) {
+  values::dse::Polygon::Native polygon = value.to_native();
   polygons_.push_back(polygon);
-  ASSERT_EQ(CASS_OK, dse_graph_object_add_polygon(get(), name.c_str(),
-    polygon.get()));
+  ASSERT_EQ(CASS_OK, dse_graph_object_add_polygon(get(),
+                                                  name.c_str(),
+                                                  polygon.get()));
 }
 
+} // namespace dse
 } // namespace driver
 } // namespace test
 

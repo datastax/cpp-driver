@@ -13,14 +13,15 @@
 
 namespace test {
 namespace driver {
+namespace dse {
 
 // Forward declaration for circular dependency
-class DseGraphResult;
+class GraphResult;
 
 /**
  * Wrapped DSE graph vertex object
  */
-class DseGraphVertex {
+class GraphVertex {
 public:
   /**
    * Create the DSE graph vertex object from the native driver DSE graph vertex
@@ -28,7 +29,7 @@ public:
    *
    * @param vertex Native driver object
    */
-  DseGraphVertex(DseGraphVertexResult vertex)
+  GraphVertex(DseGraphVertexResult vertex)
     : vertex_(vertex) {}
 
   /**
@@ -36,28 +37,28 @@ public:
    *
    * @return DSE graph result representing the id
    */
-  DseGraphResult id();
+  GraphResult id();
 
   /**
    * Get the DSE graph vertex label
    *
    * @return DSE graph result representing the label
    */
-  DseGraphResult label();
+  GraphResult label();
 
   /**
    * Get the DSE graph vertex type
    *
    * @return DSE graph result representing the type
    */
-  DseGraphResult type();
+  GraphResult type();
 
   /**
    * Get the DSE graph vertex properties
    *
    * @return DSE graph result representing the properties
    */
-  DseGraphResult properties();
+  GraphResult properties();
 
 private:
   /**
@@ -66,6 +67,7 @@ private:
   DseGraphVertexResult vertex_;
 };
 
+} // namespace dse
 } // namespace driver
 } // namespace test
 

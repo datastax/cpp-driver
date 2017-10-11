@@ -34,20 +34,21 @@
 
 namespace test {
 namespace driver {
+namespace dse {
 
 // Forward declaration for circular dependency
-class DseGraphObject;
+class GraphObject;
 
 /**
  * Wrapped DSE graph array object
  */
-class DseGraphArray : public Object< ::DseGraphArray, dse_graph_array_free> {
+class GraphArray : public Object<DseGraphArray, dse_graph_array_free> {
 public:
   /**
    * Create the empty DSE graph array object
    */
-  DseGraphArray()
-    : Object< ::DseGraphArray, dse_graph_array_free>(dse_graph_array_new()) {}
+  GraphArray()
+    : Object<DseGraphArray, dse_graph_array_free>(dse_graph_array_new()) {}
 
   /**
    * Create the DSE graph array object from the native driver DSE graph
@@ -55,22 +56,22 @@ public:
    *
    * @param array Native driver object
    */
-  DseGraphArray(::DseGraphArray* array)
-    : Object< ::DseGraphArray, dse_graph_array_free>(array) {}
+  GraphArray(DseGraphArray* array)
+    : Object<DseGraphArray, dse_graph_array_free>(array) {}
 
   /**
    * Create the DSE graph array object from the shared reference
    *
    * @param array Shared reference
    */
-  DseGraphArray(Ptr array)
-    : Object< ::DseGraphArray, dse_graph_array_free>(array) {}
+  GraphArray(Ptr array)
+    : Object<DseGraphArray, dse_graph_array_free>(array) {}
 
   /**
    * Destructor to clean up the shared reference pointers that may be associated
    * with the array object
    */
-  ~DseGraphArray() {
+  ~GraphArray() {
     line_strings_.clear();
     polygons_.clear();
   }
@@ -106,18 +107,18 @@ private:
   /**
    * Line strings associated with the graph array object
    */
-  std::vector<DseLineString::Native> line_strings_;
+  std::vector<values::dse::LineString::Native> line_strings_;
   /**
    * Polygons associated with the graph array object
    */
-  std::vector<DsePolygon::Native> polygons_;
+  std::vector<values::dse::Polygon::Native> polygons_;
 
   /**
    * Add a object to an array object
    *
    * @param value Object value to add
    */
-  void add_value(::DseGraphObject* value) {
+  void add_value(DseGraphObject* value) {
     dse_graph_object_finish(value);
     ASSERT_EQ(CASS_OK, dse_graph_array_add_object(get(), value));
   }
@@ -129,9 +130,9 @@ private:
  * @param value Array value to add
  */
 template<>
-inline void DseGraphArray::add<DseGraphArray>(DseGraphArray value) {
+inline void GraphArray::add<GraphArray>(GraphArray value) {
   value.finish();
-  ASSERT_EQ(CASS_OK, dse_graph_array_add_array(get(), const_cast< ::DseGraphArray*>(value.get())));
+  ASSERT_EQ(CASS_OK, dse_graph_array_add_array(get(), const_cast<DseGraphArray*>(value.get())));
 }
 
 /**
@@ -140,7 +141,7 @@ inline void DseGraphArray::add<DseGraphArray>(DseGraphArray value) {
  * @param value Boolean value to add
  */
 template<>
-inline void DseGraphArray::add<Boolean>(Boolean value) {
+inline void GraphArray::add<Boolean>(Boolean value) {
   ADD_ARRAY_VALUE(dse_graph_array_add_bool, value);
 }
 
@@ -150,7 +151,7 @@ inline void DseGraphArray::add<Boolean>(Boolean value) {
  * @param value Double value to add
  */
 template<>
-inline void DseGraphArray::add<Double>(Double value) {
+inline void GraphArray::add<Double>(Double value) {
   ADD_ARRAY_VALUE(dse_graph_array_add_double, value);
 }
 
@@ -160,7 +161,7 @@ inline void DseGraphArray::add<Double>(Double value) {
  * @param value 32-bit integer value to add
  */
 template<>
-inline void DseGraphArray::add<Integer>(Integer value) {
+inline void GraphArray::add<Integer>(Integer value) {
   ADD_ARRAY_VALUE(dse_graph_array_add_int32, value);
 }
 
@@ -170,7 +171,7 @@ inline void DseGraphArray::add<Integer>(Integer value) {
  * @param value 64-bit integer value to add
  */
 template<>
-inline void DseGraphArray::add<BigInteger>(BigInteger value) {
+inline void GraphArray::add<BigInteger>(BigInteger value) {
   ADD_ARRAY_VALUE(dse_graph_array_add_int64, value);
 }
 
@@ -180,15 +181,15 @@ inline void DseGraphArray::add<BigInteger>(BigInteger value) {
  * @param value String value to add
  */
 template<>
-inline void DseGraphArray::add<Varchar>(Varchar value) {
+inline void GraphArray::add<Varchar>(Varchar value) {
   ADD_ARRAY_VALUE_C_STR(dse_graph_array_add_string, value);
 }
 template<>
-inline void DseGraphArray::add<Text>(Text value) {
-  add<Varchar>(value);
+inline void GraphArray::add<Text>(Text value) {
+  add<Varchar>(Varchar(value.value()));
 }
 template<>
-inline void DseGraphArray::add<std::string>(std::string value) {
+inline void GraphArray::add<std::string>(std::string value) {
   add<Varchar>(Varchar(value));
 }
 
@@ -198,11 +199,11 @@ inline void DseGraphArray::add<std::string>(std::string value) {
  * @param value Line string value to apply
  */
 template<>
-inline void DseGraphArray::add<DseLineString>(DseLineString value) {
+inline void GraphArray::add<LineString>(LineString value) {
   if (value.is_null()) {
     dse_graph_array_add_null(get());
   } else {
-    DseLineString::Native line_string = value.to_native();
+    values::dse::LineString::Native line_string = value.to_native();
     line_strings_.push_back(line_string);
     ASSERT_EQ(CASS_OK, dse_graph_array_add_line_string(get(), line_string.get()));
   }
@@ -214,12 +215,13 @@ inline void DseGraphArray::add<DseLineString>(DseLineString value) {
  * @param value Point value to apply
  */
 template<>
-inline void DseGraphArray::add<DsePoint>(DsePoint value) {
+inline void GraphArray::add<Point>(Point value) {
   if (value.is_null()) {
     dse_graph_array_add_null(get());
   } else {
-    ASSERT_EQ(CASS_OK, dse_graph_array_add_point(get(), value.value().x,
-      value.value().y));
+    ASSERT_EQ(CASS_OK, dse_graph_array_add_point(get(),
+                                                 value.value().x,
+                                                 value.value().y));
   }
 }
 
@@ -229,16 +231,17 @@ inline void DseGraphArray::add<DsePoint>(DsePoint value) {
  * @param value Polygon value to apply
  */
 template<>
-inline void DseGraphArray::add<DsePolygon>(DsePolygon value) {
+inline void GraphArray::add<Polygon>(Polygon value) {
   if (value.is_null()) {
     dse_graph_array_add_null(get());
   } else {
-    DsePolygon::Native polygon = value.to_native();
+    values::dse::Polygon::Native polygon = value.to_native();
     polygons_.push_back(polygon);
     ASSERT_EQ(CASS_OK, dse_graph_array_add_polygon(get(), polygon.get()));
   }
 }
 
+} // namespace dse
 } // namespace driver
 } // namespace test
 

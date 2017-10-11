@@ -11,14 +11,15 @@
 
 namespace test {
 namespace driver {
+namespace dse {
 
 // Forward declaration for circular dependency
-class DseGraphResult;
+class GraphResult;
 
 /**
  * Wrapped DSE graph edge object
  */
-class DseGraphPath {
+class GraphPath {
 public:
   /**
    * Create the DSE graph path object from the native driver DSE graph path
@@ -26,7 +27,7 @@ public:
    *
    * @param edge Native driver object
    */
-  DseGraphPath(DseGraphPathResult path)
+  GraphPath(DseGraphPathResult path)
     : path_(path) {}
 
   /**
@@ -34,14 +35,14 @@ public:
    *
    * @return DSE graph result representing the path labels
    */
-  DseGraphResult labels();
+  GraphResult labels();
 
   /**
    * Get the DSE graph path objects
    *
    * @return DSE graph result representing the path objects
    */
-  DseGraphResult objects();
+  GraphResult objects();
 
 private:
   /**
@@ -50,6 +51,7 @@ private:
   DseGraphPathResult path_;
 };
 
+} // namespace dse
 } // namespace driver
 } // namespace test
 

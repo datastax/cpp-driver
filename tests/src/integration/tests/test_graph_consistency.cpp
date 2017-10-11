@@ -46,10 +46,10 @@ public:
    *                  otherwise
    * @return DSE graph result from the executed query
    */
-  test::driver::DseGraphResultSet execute_read_query(CassConsistency consistency,
+  dse::GraphResultSet execute_read_query(CassConsistency consistency,
     bool assert_ok = true) {
     // Initialize the graph options
-    test::driver::DseGraphOptions graph_options;
+    dse::GraphOptions graph_options;
     graph_options.set_name(test_name_);
     graph_options.set_read_consistency(consistency);
 
@@ -65,10 +65,10 @@ public:
    *                  otherwise
    * @return DSE graph result from the executed query
    */
-  test::driver::DseGraphResultSet execute_write_query(CassConsistency consistency,
-    bool assert_ok = true) {
+  dse::GraphResultSet execute_write_query(CassConsistency consistency,
+                                          bool assert_ok = true) {
     // Initialize the graph options
-    test::driver::DseGraphOptions graph_options;
+    dse::GraphOptions graph_options;
     graph_options.set_name(test_name_);
     graph_options.set_write_consistency(consistency);
 
@@ -102,19 +102,19 @@ public:
    *
    * @param result_set Write query result set to validate
    */
-  void validate_write_query(test::driver::DseGraphResultSet result_set) {
+  void validate_write_query(dse::GraphResultSet result_set) {
     // Get the vertex from the result set
     ASSERT_EQ(CASS_OK, result_set.error_code());
-    test::driver::DseGraphResult result = result_set.next();
-    test::driver::DseGraphVertex vertex = result.vertex();
+    dse::GraphResult result = result_set.next();
+    dse::GraphVertex vertex = result.vertex();
     CHECK_FAILURE;
 
     // Validate the properties on the vertex
     ASSERT_EQ("person", vertex.label().value<std::string>());
-    test::driver::DseGraphResult properties = vertex.properties();
+    dse::GraphResult properties = vertex.properties();
     ASSERT_EQ(2u, properties.member_count());
     for (size_t i = 0; i < 2; ++i) {
-      test::driver::DseGraphResult property = properties.member(i);
+      dse::GraphResult property = properties.member(i);
       ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_ARRAY, property.type());
       ASSERT_EQ(1u, property.element_count());
       property = property.element(0);
@@ -134,7 +134,7 @@ public:
       } else {
         for (size_t k = 0; k < 2; ++k) {
           if (property.key(k).compare("value") == 0) {
-            ASSERT_EQ(27, property.member(k).value<Integer>());
+            ASSERT_EQ(Integer(27), property.member(k).value<Integer>());
             property_asserted = true;
             break;
           }
@@ -214,10 +214,11 @@ DSE_INTEGRATION_TEST_F(GraphConsistencyTest, ReadOneNodeDown) {
   ASSERT_EQ(CASS_OK, execute_read_query(CASS_CONSISTENCY_QUORUM).error_code());
 
   // Perform the read graph query with consistency levels expected to fail
-  test::driver::DseGraphResultSet result_set =
-    execute_read_query(CASS_CONSISTENCY_ALL, false);
+  dse::GraphResultSet result_set = execute_read_query(CASS_CONSISTENCY_ALL,
+                                                      false);
   ASSERT_NE(CASS_OK, result_set.error_code());
-  ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level"));
+  ASSERT_TRUE(contains(result_set.error_message(),
+                       "Cannot achieve consistency level"));
   result_set = execute_read_query(CASS_CONSISTENCY_THREE, false);
   ASSERT_NE(CASS_OK, result_set.error_code());
 }
@@ -299,7 +300,7 @@ DSE_INTEGRATION_TEST_F(GraphConsistencyTest, WriteOneNodeDown) {
   CHECK_FAILURE;
 
   // Perform the write graph query with consistency levels expected to fail
-  test::driver::DseGraphResultSet result_set =
+  dse::GraphResultSet result_set =
     execute_write_query(CASS_CONSISTENCY_ALL, false);
   ASSERT_NE(CASS_OK, result_set.error_code());
   ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level"));

@@ -28,6 +28,7 @@
  */
 class DseIntegration : public Integration {
 public:
+  using Integration::connect;
 
   DseIntegration();
 
@@ -38,7 +39,7 @@ public:
    *
    * @param cluster Cluster object to use when creating session connection
    */
-  virtual void connect(Cluster cluster);
+  virtual void connect(dse::Cluster cluster);
 
   /**
    * Create the cluster configuration and establish the session connection using
@@ -57,7 +58,7 @@ protected:
   /**
    * Connected database DSE session
    */
-  DseSession dse_session_;
+  dse::Session dse_session_;
 
   /**
    * Create the graph using the specified replication strategy

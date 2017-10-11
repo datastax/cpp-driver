@@ -62,8 +62,8 @@ public:
     // Create the insert statement for later use
     insert_ = Statement(format_string("INSERT INTO %s (key, value) VALUES (?, ?) IF NOT EXISTS",
                                       table_name_.c_str()), 2);
-    insert_.bind<Text>(0, table_name_);
-    insert_.bind<Integer>(1, 0);
+    insert_.bind<Text>(0, Text(table_name_));
+    insert_.bind<Integer>(1, Integer(0));
 
     // Insert an expected value (if not the serial consistency test)
     session_.execute(insert_);
@@ -448,7 +448,7 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, TokenAwareRouting) {
     value << i;
 
     // Execute a batched query with assigned profile
-    insert_.bind<Text>(0, value.str());
+    insert_.bind<Text>(0, Text(value.str()));
     Batch batch;
     batch.add(insert_);
     batch.set_execution_profile("token_aware");
@@ -470,7 +470,7 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, TokenAwareRouting) {
     value << i;
 
     // Execute a simple query with assigned profile and set for token aware
-    insert_.bind<Text>(0, value.str());
+    insert_.bind<Text>(0, Text(value.str()));
     Result result = session_.execute(insert_);
     ASSERT_EQ(CASS_OK, result.error_code());
 

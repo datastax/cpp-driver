@@ -72,7 +72,7 @@
 #define SKIP_TEST_VERSION(server_version_string, version_string) \
   SKIP_TEST("Unsupported for Server Version " \
   << server_version_string << ": Server version " \
-  << version_string << "+ is required") \
+  << version_string << "+ is required")
 
 #define CHECK_VERSION(version) \
   if (this->server_version_ < #version) { \
@@ -85,14 +85,17 @@
   }
 
 #define CHECK_VALUE_TYPE_VERSION(type) \
-  if (this->server_version_ < type::supported_version()) { \
+  if (this->server_version_ < type::supported_server_version()) { \
     SKIP_TEST_VERSION(this->server_version_.to_string(), \
-                      type::supported_version()) \
+                      type::supported_server_version()) \
   }
 
 #define CHECK_CONTINUE(flag, message) \
   ASSERT_TRUE(flag) << message; \
 
+#define CASSANDRA_KEY_VALUE_TABLE_FORMAT "CREATE TABLE %s (key %s PRIMARY KEY, value %s)"
+#define CASSANDRA_KEY_VALUE_INSERT_FORMAT "INSERT INTO %s (key, value) VALUES(%s, %s)"
+#define CASSANDRA_SELECT_VALUE_FORMAT "SELECT value FROM %s WHERE key=%s"
 #define SELECT_ALL_SYSTEM_LOCAL_CQL "SELECT * FROM system.local"
 
 using namespace test;

@@ -7,8 +7,6 @@
 
 #include "dse_integration.hpp"
 
-#include "values/dse_date_range.hpp"
-
 #define DSE_TYPE_TABLE_FORMAT "CREATE TABLE %s (id %s PRIMARY KEY, value %s)"
 #define DSE_TYPE_INSERT_FORMAT "INSERT INTO %s (id, value) VALUES(%s, %s)"
 #define DSE_TYPE_SELECT_FORMAT "SELECT value FROM %s WHERE id=%s"
@@ -87,7 +85,7 @@ TYPED_TEST_CASE_P(DseTypesTest);
  * @test_category queries:basic
  * @test_category prepared_statements
  * @test_category dse:geospatial
- * @test_category dse::daterange
+ * @test_category dse:daterange
  * @since 1.0.0
  * @dse_version 5.0.0+
  * @expected_result DSE values are inserted and validated
@@ -140,7 +138,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Basic) {
  * @test_category prepared_statements
  * @test_category data_types:collections
  * @test_category dse:geospatial
- * @test_category dse::daterange
+ * @test_category dse:daterange
  * @since 1.2.0
  * @dse_version 5.0.0+
  * @expected_result DSE values are inserted using a list and then validated
@@ -189,7 +187,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, List) {
  * @test_category prepared_statements
  * @test_category data_types:collections
  * @test_category dse:geospatial
- * @test_category dse::daterange
+ * @test_category dse:daterange
  * @since 1.2.0
  * @dse_version 5.0.0+
  * @expected_result DSE values are inserted using a set and then validated
@@ -238,7 +236,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Set) {
  * @test_category prepared_statements
  * @test_category data_types:collections
  * @test_category dse:geospatial
- * @test_category dse::daterange
+ * @test_category dse:daterange
  * @since 1.2.0
  * @dse_version 5.0.0+
  * @expected_result DSE values are inserted using a map and then validated
@@ -294,7 +292,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Map) {
  * @test_category prepared_statements
  * @test_category data_types:tuple
  * @test_category dse:geospatial
- * @test_category dse::daterange
+ * @test_category dse:daterange
  * @since 1.2.0
  * @dse_version 5.0.0+
  * @expected_result DSE values are inserted using a tuple and then
@@ -351,7 +349,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Tuple) {
  * @test_category prepared_statements
  * @test_category data_types:udt
  * @test_category dse:geospatial
- * @test_category dse::daterange
+ * @test_category dse:daterange
  * @since 1.2.0
  * @dse_version 5.0.0+
  * @expected_result DSE values are inserted using a user data type and then
@@ -425,127 +423,137 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, UDT) {
 
 // Register all test cases
 REGISTER_TYPED_TEST_CASE_P(DseTypesTest, Integration_DSE_Basic,
-  Integration_DSE_List, Integration_DSE_Set,
-  Integration_DSE_Map, Integration_DSE_Tuple, Integration_DSE_UDT); //TODO: Create expanding macro for registering typed tests
+                                         Integration_DSE_List,
+                                         Integration_DSE_Set,
+                                         Integration_DSE_Map,
+                                         Integration_DSE_Tuple,
+                                         Integration_DSE_UDT);
 
 // Instantiate the test case for all the geotypes and date range
-typedef testing::Types<test::driver::DsePoint, test::driver::DseLineString, test::driver::DsePolygon, test::driver::DseDateRange> DseTypes;
+typedef testing::Types<dse::Point, dse::LineString, dse::Polygon, dse::DateRange> DseTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(DseTypes, DseTypesTest, DseTypes);
 
 /**
  * Values for point tests
  */
-const test::driver::DsePoint GEOMETRY_POINTS[] = {
-  test::driver::DsePoint(0.0, 0.0),
-  test::driver::DsePoint(2.0, 4.0),
-  test::driver::DsePoint(-1.2, -100.0),
+const dse::Point GEOMETRY_POINTS[] = {
+  dse::Point("0.0, 0.0"),
+  dse::Point("2.0, 4.0"),
+  dse::Point("-1.2, -100.0")
 };
-template<> const std::vector<test::driver::DsePoint> DseTypesTest<test::driver::DsePoint>::values_(
+template<> const std::vector<dse::Point> DseTypesTest<dse::Point>::values_(
   GEOMETRY_POINTS,
   GEOMETRY_POINTS + ARRAY_LEN(GEOMETRY_POINTS));
 
 /**
  * Values for line string tests
  */
-const test::driver::DseLineString GEOMETRY_LINE_STRING[] = {
-  test::driver::DseLineString("0.0 0.0, 1.0 1.0"),
-  test::driver::DseLineString("1.0 3.0, 2.0 6.0, 3.0 9.0"),
-  test::driver::DseLineString("-1.2 -100.0, 0.99 3.0"),
-  test::driver::DseLineString("LINESTRING EMPTY"),
+const dse::LineString GEOMETRY_LINE_STRING[] = {
+  dse::LineString("0.0 0.0, 1.0 1.0"),
+  dse::LineString("1.0 3.0, 2.0 6.0, 3.0 9.0"),
+  dse::LineString("-1.2 -100.0, 0.99 3.0"),
+  dse::LineString("LINESTRING EMPTY")
 };
-template<> const std::vector<test::driver::DseLineString> DseTypesTest<test::driver::DseLineString>::values_(
+template<> const std::vector<dse::LineString> DseTypesTest<dse::LineString>::values_(
   GEOMETRY_LINE_STRING,
   GEOMETRY_LINE_STRING + ARRAY_LEN(GEOMETRY_LINE_STRING));
 
 /**
  * Values for polygon tests
  */
-const test::driver::DsePolygon GEOMETRY_POLYGON[] = {
-  test::driver::DsePolygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)"),
-  test::driver::DsePolygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
-                            (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)"),
-  test::driver::DsePolygon("POLYGON EMPTY"),
+const dse::Polygon GEOMETRY_POLYGON[] = {
+  dse::Polygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)"),
+  dse::Polygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
+                (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)"),
+  dse::Polygon("POLYGON EMPTY")
 };
-template<> const std::vector<test::driver::DsePolygon> DseTypesTest<test::driver::DsePolygon>::values_(
+template<> const std::vector<dse::Polygon> DseTypesTest<dse::Polygon>::values_(
   GEOMETRY_POLYGON,
   GEOMETRY_POLYGON + ARRAY_LEN(GEOMETRY_POLYGON));
 
 /**
  * Values for date range tests
  */
-const driver::DseDateRange DATE_RANGES[] = {
+const dse::DateRange DATE_RANGES[] = {
   // Single dates
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_YEAR, "1970"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_YEAR, "2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_MONTH, "04/2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_DAY, "04/14/2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 01/01/1970"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_HOUR, "23:00 04/14/2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_MINUTE, "23:59 04/14/2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_SECOND, "00:00:01 01/01/1970"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_SECOND, "23:59:59 04/14/2017"),
-  driver::DseDateRange(driver::DseDateRangeBound(0)),
-  driver::DseDateRange(driver::DseDateRangeBound(1000)),
-  driver::DseDateRange(driver::DseDateRangeBound(1)),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_YEAR, "1970")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_YEAR, "2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_MONTH,
+                                        "04/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_DAY,
+                                        "04/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_HOUR,
+                                        "01:00 01/01/1970")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_HOUR,
+                                        "23:00 04/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_MINUTE,
+                                        "23:59 04/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND,
+                                        "00:00:01 01/01/1970")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND,
+                                        "23:59:59 04/14/2017")),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(0))),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(1000))),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(1))),
 
   // Single date unbounded
-  driver::DseDateRange(driver::DseDateRangeBound::unbounded()),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded())),
 
   // Upper and lower bounds
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_YEAR, "1970",
-                       DSE_DATE_RANGE_PRECISION_YEAR, "2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_MONTH, "02/1970",
-                       DSE_DATE_RANGE_PRECISION_MONTH, "08/2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_DAY, "4/14/1970",
-                       DSE_DATE_RANGE_PRECISION_DAY, "8/14/2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 4/14/1970",
-                       DSE_DATE_RANGE_PRECISION_HOUR, "12:00 8/14/2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_MINUTE, "01:01 2/28/1970",
-                       DSE_DATE_RANGE_PRECISION_MINUTE, "12:12 4/14/2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970",
-                       DSE_DATE_RANGE_PRECISION_SECOND, "12:12:12 4/14/2017"),
-  driver::DseDateRange(driver::DseDateRangeBound(1),
-                       driver::DseDateRangeBound(1000)),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_YEAR, "1970",
+                                        DSE_DATE_RANGE_PRECISION_YEAR, "2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_MONTH, "02/1970",
+                                        DSE_DATE_RANGE_PRECISION_MONTH, "08/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_DAY, "4/14/1970",
+                                        DSE_DATE_RANGE_PRECISION_DAY, "8/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 4/14/1970",
+                                        DSE_DATE_RANGE_PRECISION_HOUR, "12:00 8/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_MINUTE, "01:01 2/28/1970",
+                                        DSE_DATE_RANGE_PRECISION_MINUTE, "12:12 4/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970",
+                                        DSE_DATE_RANGE_PRECISION_SECOND, "12:12:12 4/14/2017")),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(1),
+                                        values::dse::DateRangeBound(1000))),
 
   // Upper and lower bounds mixed precisions
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970",
-                       DSE_DATE_RANGE_PRECISION_MONTH, "04/2017"),
-  driver::DseDateRange(DSE_DATE_RANGE_PRECISION_YEAR, "2017",
-                       DSE_DATE_RANGE_PRECISION_MONTH, "04/2017"),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970",
+                                        DSE_DATE_RANGE_PRECISION_MONTH, "04/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_YEAR, "2017",
+                                        DSE_DATE_RANGE_PRECISION_MONTH, "04/2017")),
 
   // Lower unbounded
-  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
-                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_YEAR, "2017")),
-  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
-                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MONTH, "08/2017")),
-  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
-                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_DAY, "8/14/2017")),
-  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
-                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_HOUR, "12:00 8/14/2017")),
-  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
-                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MINUTE, "12:12 4/14/2017")),
-  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
-                       driver::DseDateRangeBound::upper(DSE_DATE_RANGE_PRECISION_SECOND, "12:12:12 4/14/2017")),
-  driver::DseDateRange(driver::DseDateRangeBound::unbounded(),
-                       driver::DseDateRangeBound(1000)),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
+                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_YEAR, "2017"))),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
+                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MONTH, "08/2017"))),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
+                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_DAY, "8/14/2017"))),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
+                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_HOUR, "12:00 8/14/2017"))),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
+                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MINUTE, "12:12 4/14/2017"))),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
+                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_SECOND, "12:12:12 4/14/2017"))),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
+                                        values::dse::DateRangeBound(1000))),
 
   // Upper unbounded
-  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_YEAR, "1970"),
-                       driver::DseDateRangeBound::unbounded()),
-  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MONTH, "02/1970"),
-                       driver::DseDateRangeBound::unbounded()),
-  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_DAY, "4/14/1970"),
-                       driver::DseDateRangeBound::unbounded()),
-  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 4/14/1970"),
-                       driver::DseDateRangeBound::unbounded()),
-  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MINUTE, "01:01 2/28/1970"),
-                       driver::DseDateRangeBound::unbounded()),
-  driver::DseDateRange(driver::DseDateRangeBound::lower(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970"),
-                       driver::DseDateRangeBound::unbounded()),
-  driver::DseDateRange(driver::DseDateRangeBound(1),
-                       driver::DseDateRangeBound::unbounded()),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_YEAR, "1970"),
+                                        values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MONTH, "02/1970"),
+                                        values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_DAY, "4/14/1970"),
+                                        values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 4/14/1970"),
+                                        values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MINUTE, "01:01 2/28/1970"),
+                                        values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970"),
+                                        values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(1),
+                                        values::dse::DateRangeBound::unbounded()))
 };
 
-template<> const std::vector<test::driver::DseDateRange> DseTypesTest<test::driver::DseDateRange>::values_(
+template<> const std::vector<dse::DateRange> DseTypesTest<dse::DateRange>::values_(
   DATE_RANGES,
   DATE_RANGES + ARRAY_LEN(DATE_RANGES));
