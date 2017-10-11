@@ -45,12 +45,18 @@ public:
   typedef SharedPtr<T, Dtor> Ptr;
 
   /**
+   * Create an empty object
+   */
+  Object()
+    : object_(NULL) { }
+
+  /**
    * Create the object with the native pointer object
    *
    * @param object Native pointer object
    */
   Object(T* object)
-    : object_(object) {}
+    : object_(object) { }
 
   /**
    * Create the object with the reference pointer object
@@ -58,7 +64,7 @@ public:
    * @param object Shared reference pointer object
    */
   Object(Ptr object)
-    : object_(object) {}
+    : object_(object) { }
 
   /**
    * Get the object pointer
@@ -103,11 +109,6 @@ public:
   }
 
 protected:
-  /**
-   * Create an empty object
-   */
-  Object() {}
-
   /**
    * Check to see if the object is NULL
    *
