@@ -69,9 +69,13 @@ public:
   const ResultMetadata::Ptr& result_metadata() const { return result_metadata_; }
 
   StringRef paging_state() const { return paging_state_; }
-  StringRef prepared() const { return prepared_; }
+  StringRef prepared_id() const { return prepared_id_; }
+  StringRef result_metadata_id() const { return result_metadata_id_; }
   StringRef keyspace() const { return keyspace_; }
   StringRef table() const { return table_; }
+
+  bool metadata_changed() { return new_metadata_id_.size() > 0; }
+  StringRef new_metadata_id() const { return new_metadata_id_; }
 
   char* rows() const { return rows_; }
 
@@ -84,12 +88,13 @@ public:
   bool decode(int version, char* input, size_t size);
 
 private:
-  char* decode_metadata(char* input, ResultMetadata::Ptr* metadata,
+  char* decode_metadata(int version,
+                        char* input, ResultMetadata::Ptr* metadata,
                         bool has_pk_indices = false);
 
   void decode_first_row();
 
-  bool decode_rows(char* input);
+  bool decode_rows(int version, char* input);
 
   bool decode_set_keyspace(char* input);
 
@@ -104,10 +109,12 @@ private:
   ResultMetadata::Ptr metadata_;
   ResultMetadata::Ptr result_metadata_;
   StringRef paging_state_; // row paging
-  StringRef prepared_; // prepared result
+  StringRef prepared_id_; // prepared result
+  StringRef result_metadata_id_; // prepared result, protocol v5/DSEv2
   StringRef change_; // schema change
   StringRef keyspace_; // rows, set keyspace, and schema change
   StringRef table_; // rows, and schema change
+  StringRef new_metadata_id_; // rows result, protocol v5/DSEv2
   int32_t row_count_;
   char* rows_;
   Row first_row_;

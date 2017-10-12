@@ -17,6 +17,7 @@
 #include "result_response.hpp"
 
 #include "external.hpp"
+#include "logger.hpp"
 #include "result_metadata.hpp"
 #include "serialization.hpp"
 
@@ -205,7 +206,7 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
       break;
 
     case CASS_RESULT_KIND_ROWS:
-      return decode_rows(buffer);
+      return decode_rows(version, buffer);
       break;
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
@@ -226,13 +227,20 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
   return false;
 }
 
-char* ResultResponse::decode_metadata(char* input, ResultMetadata::Ptr* metadata,
+char* ResultResponse::decode_metadata(int version,
+                                      char* input, ResultMetadata::Ptr* metadata,
                                       bool has_pk_indices) {
   int32_t flags = 0;
   char* buffer = decode_int32(input, flags);
 
   int32_t column_count = 0;
   buffer = decode_int32(buffer, column_count);
+
+  if (version >= CASS_PROTOCOL_VERSION_V5) {
+    if (flags & CASS_RESULT_FLAG_METADATA_CHANGED) {
+      buffer = decode_string(buffer, &new_metadata_id_);
+    }
+  }
 
   if (has_pk_indices) {
     int32_t pk_count = 0;
@@ -294,8 +302,8 @@ void ResultResponse::decode_first_row() {
   }
 }
 
-bool ResultResponse::decode_rows(char* input) {
-  char* buffer = decode_metadata(input, &metadata_);
+bool ResultResponse::decode_rows(int version, char* input) {
+  char* buffer = decode_metadata(version, input, &metadata_);
   rows_ = decode_int32(buffer, row_count_);
   decode_first_row();
   return true;
@@ -307,10 +315,13 @@ bool ResultResponse::decode_set_keyspace(char* input) {
 }
 
 bool ResultResponse::decode_prepared(int version, char* input) {
-  char* buffer = decode_string(input, &prepared_);
-  buffer = decode_metadata(buffer, &metadata_, version >= 4);
+  char* buffer = decode_string(input, &prepared_id_);
+  if (version >= CASS_PROTOCOL_VERSION_V5) {
+    buffer = decode_string(buffer, &result_metadata_id_);
+  }
+  buffer = decode_metadata(version, buffer, &metadata_, version >= 4);
   if (version > 1) {
-    decode_metadata(buffer, &result_metadata_);
+    decode_metadata(version, buffer, &result_metadata_);
   }
   return true;
 }

@@ -623,7 +623,7 @@ Future::Ptr Session::prepare(const char* statement, size_t length) {
   ResponseFuture::Ptr future(new ResponseFuture(metadata_.schema_snapshot(protocol_version(), cassandra_version())));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(new RequestHandler(prepare, future)));
+  execute(RequestHandler::Ptr(new RequestHandler(prepare, future, this)));
 
   return future;
 }
@@ -728,11 +728,18 @@ void Session::on_down(Host::Ptr host) {
   }
 }
 
+void Session::on_result_metadata_changed(const std::string& prepared_id,
+                                         const std::string& result_metadata_id,
+                                         const ResultResponse::ConstPtr& result_response) {
+  prepared_metadata_.set(prepared_id, result_metadata_id, result_response);
+}
+
 Future::Ptr Session::execute(const Request::ConstPtr& request,
                              const Address* preferred_address) {
   ResponseFuture::Ptr future(new ResponseFuture());
 
-  RequestHandler::Ptr request_handler(new RequestHandler(request, future));
+  RequestHandler::Ptr request_handler(new RequestHandler(request, future, this));
+
   if (preferred_address) {
     request_handler->set_preferred_address(*preferred_address);
   }
@@ -757,7 +764,10 @@ void Session::on_execute(uv_async_t* data) {
     if (request_handler) {
       request_handler->dec_ref(); // Queue reference
 
-      request_handler->init(session->config_, session->keyspace(), session->token_map_.get());
+      request_handler->init(session->config_,
+                            session->keyspace(),
+                            session->token_map_.get(),
+                            session->prepared_metadata_);
 
       bool is_done = false;
       while (!is_done) {
