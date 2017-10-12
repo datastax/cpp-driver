@@ -27,8 +27,8 @@ int QueryRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
   if (version == 1) {
     return encode_v1(callback, bufs);
   } else {
-    int32_t length = 0;
     int32_t result;
+    int32_t length = encode_query_or_id(bufs);
     if (has_names_for_values()) {
       length += encode_begin(version, value_names_->size(), callback, bufs);
       result = encode_values_with_names(version, callback, bufs);

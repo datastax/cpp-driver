@@ -19,6 +19,7 @@
 #include "config.hpp"
 #include "connection.hpp"
 #include "constants.hpp"
+#include "execute_request.hpp"
 #include "logger.hpp"
 #include "metrics.hpp"
 #include "query_request.hpp"
@@ -28,12 +29,18 @@
 
 namespace cass {
 
-void RequestWrapper::init(const Config& config) {
+void RequestWrapper::init(const Config& config,
+                          const PreparedMetadata& prepared_metadata) {
   consistency_ = config.consistency();
   serial_consistency_ = config.serial_consistency();
   request_timeout_ms_ = config.request_timeout_ms();
   timestamp_ = config.timestamp_gen()->next();
   retry_policy_ = config.retry_policy();
+
+  if (request()->opcode() == CQL_OPCODE_EXECUTE) {
+    const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request().get());
+    prepared_metadata_entry_ = prepared_metadata.get(execute->prepared()->id());
+  }
 }
 
 void RequestCallback::start(Connection* connection, int stream) {
@@ -81,6 +88,13 @@ int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
   (*bufs)[index] = buf;
 
   return length + header_size;
+}
+
+bool RequestCallback::skip_metadata() const {
+    // Skip the metadata if this an execute request and we have an entry cached
+  return request()->opcode() == CQL_OPCODE_EXECUTE &&
+      prepared_metadata_entry() &&
+      prepared_metadata_entry()->result()->result_metadata();
 }
 
 void RequestCallback::set_state(RequestCallback::State next_state) {

@@ -27,6 +27,7 @@
 #include "prepare_request.hpp"
 #include "request.hpp"
 #include "response.hpp"
+#include "result_response.hpp"
 #include "retry_policy.hpp"
 #include "scoped_ptr.hpp"
 #include "small_vector.hpp"
@@ -124,21 +125,31 @@ private:
 };
 
 class RequestExecution;
+class PreparedMetadata;
+
+class RequestListener {
+public:
+  virtual void on_result_metadata_changed(const std::string& prepared_id,
+                                          const std::string& result_metadata_id,
+                                          const ResultResponse::ConstPtr& result_response) = 0;
+};
 
 class RequestHandler : public RefCounted<RequestHandler> {
 public:
   typedef SharedRefPtr<RequestHandler> Ptr;
 
   RequestHandler(const Request::ConstPtr& request,
-                 const ResponseFuture::Ptr& future)
+                 const ResponseFuture::Ptr& future,
+                 RequestListener* listener = NULL)
     : wrapper_(request)
     , future_(future)
     , io_worker_(NULL)
     , running_executions_(0)
-    , start_time_ns_(uv_hrtime()) { }
+    , start_time_ns_(uv_hrtime())
+    , listener_(listener) { }
 
   void init(const Config& config, const std::string& connected_keyspace,
-            const TokenMap* token_map);
+            const TokenMap* token_map, const PreparedMetadata& prepared_metdata);
 
   const Request* request() const { return wrapper_.request().get(); }
 
@@ -199,6 +210,8 @@ private:
   RequestExecutionVec request_executions_;
   uint64_t start_time_ns_;
   Address preferred_address_;
+  ResultMetadata::Ptr prepared_result_metadata_;
+  RequestListener* listener_;
 };
 
 class RequestExecution : public RequestCallback {
@@ -225,6 +238,8 @@ public:
   void cancel();
 
   virtual void on_error(CassError code, const std::string& message);
+
+  void on_result_metadata_changed(ResultResponse* result_response);
 
 private:
   static void on_execute(Timer* timer);
