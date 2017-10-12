@@ -22,6 +22,7 @@
 #include "constants.hpp"
 #include "utils.hpp"
 #include "list.hpp"
+#include "prepared.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include "scoped_ptr.hpp"
@@ -35,6 +36,7 @@ namespace cass {
 class Config;
 class Connection;
 class Metrics;
+class PreparedMetadata;
 class ResponseMessage;
 class ResultResponse;
 
@@ -54,7 +56,8 @@ public:
     , request_timeout_ms_(CASS_DEFAULT_REQUEST_TIMEOUT_MS)
     , timestamp_(CASS_INT64_MIN) { }
 
-  void init(const Config& config);
+  void init(const Config& config,
+            const PreparedMetadata& prepared_metadata);
 
   const Request::ConstPtr& request() const {
     return request_;
@@ -95,6 +98,10 @@ public:
     return retry_policy_;
   }
 
+  const PreparedMetadata::Entry::Ptr& prepared_metadata_entry() const {
+    return prepared_metadata_entry_;
+  }
+
 private:
   Request::ConstPtr request_;
   CassConsistency consistency_;
@@ -102,6 +109,7 @@ private:
   uint64_t request_timeout_ms_;
   int64_t timestamp_;
   RetryPolicy::Ptr retry_policy_;
+  PreparedMetadata::Entry::Ptr prepared_metadata_entry_;
 };
 
 class RequestCallback : public RefCounted<RequestCallback>, public List<RequestCallback>::Node {
@@ -142,6 +150,8 @@ public:
 
   const Request* request() const { return wrapper_.request().get(); }
 
+  bool skip_metadata() const;
+
   CassConsistency consistency() {
     // The retry consistency takes the highest priority
     if (retry_consistency_ != CASS_CONSISTENCY_UNKNOWN) {
@@ -165,6 +175,10 @@ public:
  const RetryPolicy::Ptr& retry_policy() {
    return wrapper_.retry_policy();
  }
+
+  const PreparedMetadata::Entry::Ptr& prepared_metadata_entry() const {
+    return wrapper_.prepared_metadata_entry();
+  }
 
   void set_retry_consistency(CassConsistency cl) { retry_consistency_ = cl; }
 

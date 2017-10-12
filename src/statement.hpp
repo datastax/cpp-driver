@@ -51,18 +51,6 @@ public:
   // prepared object.
   std::string query() const;
 
-  bool skip_metadata() const {
-    return flags_ & CASS_QUERY_FLAG_SKIP_METADATA;
-  }
-
-  void set_skip_metadata(bool skip_metadata) {
-    if (skip_metadata) {
-      flags_ |= CASS_QUERY_FLAG_SKIP_METADATA;
-    } else {
-      flags_ &= ~CASS_QUERY_FLAG_SKIP_METADATA;
-    }
-  }
-
   void set_has_names_for_values(bool has_names_for_values) {
     if (has_names_for_values) {
       flags_ |= CASS_QUERY_FLAG_NAMES_FOR_VALUES;
@@ -103,6 +91,7 @@ protected:
 
   int32_t encode_v1(RequestCallback* callback, BufferVec* bufs) const;
 
+  int32_t encode_query_or_id(BufferVec* bufs) const;
   int32_t encode_begin(int version, uint16_t element_count,
                        RequestCallback* callback, BufferVec* bufs) const;
   int32_t encode_values(int version, RequestCallback* callback, BufferVec* bufs) const;

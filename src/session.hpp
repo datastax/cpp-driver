@@ -28,6 +28,7 @@
 #include "metadata.hpp"
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
+#include "prepared.hpp"
 #include "random.hpp"
 #include "ref_counted.hpp"
 #include "request_handler.hpp"
@@ -69,7 +70,7 @@ struct SessionEvent {
   Address address;
 };
 
-class Session : public EventThread<SessionEvent> {
+class Session : public EventThread<SessionEvent>, public RequestListener {
 public:
   enum State {
     SESSION_STATE_CONNECTING,
@@ -187,6 +188,10 @@ private:
   void on_up(Host::Ptr host);
   void on_down(Host::Ptr host);
 
+  virtual void on_result_metadata_changed(const std::string& prepared_id,
+                                          const std::string& result_metadata_id,
+                                          const ResultResponse::ConstPtr& result_response);
+
 private:
   typedef std::vector<IOWorker::Ptr > IOWorkerVec;
 
@@ -208,6 +213,7 @@ private:
 
   ScopedPtr<TokenMap> token_map_;
   Metadata metadata_;
+  PreparedMetadata prepared_metadata_;
   ScopedPtr<Random> random_;
   ControlConnection control_connection_;
   bool current_host_mark_;
