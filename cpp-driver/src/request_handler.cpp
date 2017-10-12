@@ -55,6 +55,7 @@ void PrepareCallback::on_internal_set(ResponseMessage* response) {
       ResultResponse* result =
           static_cast<ResultResponse*>(response->response_body().get());
       if (result->kind() == CASS_RESULT_KIND_PREPARED) {
+        request_execution_->on_result_metadata_changed(result);
         request_execution_->retry_current_host();
       } else {
         request_execution_->retry_next_host();
@@ -95,9 +96,10 @@ void RequestHandler::schedule_next_execution(const Host::Ptr& current_host) {
   }
 }
 
-void RequestHandler::init(const Config& config, const ExecutionProfile& profile,
-                          const String& connected_keyspace, const TokenMap* token_map) {
-  wrapper_.init(config, profile);
+void RequestHandler::init(const Config& config, const ExecutionProfile& profile, 
+                          const String& connected_keyspace, const TokenMap* token_map,
+                          const PreparedMetadata& prepared_metdata) {
+  wrapper_.init(config, profile, prepared_metdata);
 
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
   const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : connected_keyspace);
@@ -239,6 +241,27 @@ void RequestExecution::on_error(CassError code, const String& message) {
   }
 }
 
+void RequestExecution::on_result_metadata_changed(ResultResponse* result_response) {
+  if (request_handler_->listener_) {
+    assert((request()->opcode() == CQL_OPCODE_EXECUTE ||
+            request()->opcode() == CQL_OPCODE_PREPARE) &&
+           "Result metadata should only change as a result of an execute or prepare request");
+
+    if (result_response->kind() == CASS_RESULT_KIND_ROWS) {
+      const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
+      request_handler_->listener_->on_result_metadata_changed(execute->prepared()->id(),
+                                                              result_response->new_metadata_id().to_string(),
+                                                              ResultResponse::ConstPtr(result_response));
+    } else if (result_response->kind() == CASS_RESULT_KIND_PREPARED) {
+      request_handler_->listener_->on_result_metadata_changed(result_response->prepared_id().to_string(),
+                                                              result_response->result_metadata_id().to_string(),
+                                                              ResultResponse::ConstPtr(result_response));
+    } else {
+      assert (false && "Invalid response type for a result metadata change");
+    }
+  }
+}
+
 void RequestExecution::on_retry(bool use_next_host) {
   return_connection();
 
@@ -321,15 +344,18 @@ void RequestExecution::on_result_response(ResponseMessage* response) {
 
       // Execute statements with no metadata get their metadata from
       // result_metadata() returned when the statement was prepared.
-      if (request()->opcode() == CQL_OPCODE_EXECUTE && result->no_metadata()) {
-        const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
-        if (!execute->skip_metadata()) {
-          // Caused by a race condition in C* 2.1.0
-          on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                   "Expected metadata but no metadata in response (see CASSANDRA-8054)");
-          return;
+      if (request()->opcode() == CQL_OPCODE_EXECUTE) {
+        if (result->no_metadata()) {
+          if (!skip_metadata()) {
+            // Caused by a race condition in C* 2.1.0
+            on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
+                     "Expected metadata but no metadata in response (see CASSANDRA-8054)");
+            return;
+          }
+          result->set_metadata(prepared_metadata_entry()->result()->result_metadata().get());
+        } else if (result->metadata_changed()) {
+          on_result_metadata_changed(result);
         }
-        result->set_metadata(execute->prepared()->result()->result_metadata().get());
       }
       set_response(response->response_body());
       break;
@@ -345,6 +371,12 @@ void RequestExecution::on_result_response(ResponseMessage* response) {
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
       request_handler_->io_worker()->broadcast_keyspace_change(result->keyspace().to_string());
+      set_response(response->response_body());
+      break;
+
+
+    case CASS_RESULT_KIND_PREPARED:
+      on_result_metadata_changed(result);
       set_response(response->response_body());
       break;
 

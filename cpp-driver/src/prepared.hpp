@@ -17,14 +17,19 @@
 #ifndef __CASS_PREPARED_HPP_INCLUDED__
 #define __CASS_PREPARED_HPP_INCLUDED__
 
+#include "buffer.hpp"
 #include "external.hpp"
 #include "prepare_request.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
 #include "result_response.hpp"
 #include "metadata.hpp"
+#include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "string.hpp"
+#include "dense_hash_map.hpp"
+
+#include <uv.h>
 
 namespace cass {
 
@@ -50,6 +55,61 @@ private:
   String keyspace_;
   RequestSettings request_settings_;
   ResultResponse::PKIndexVec key_indices_;
+};
+
+class PreparedMetadata {
+public:
+  class Entry : public RefCounted<Entry> {
+  public:
+    typedef SharedRefPtr<const Entry> Ptr;
+
+    Entry(const String& result_metadata_id,
+          const ResultResponse::ConstPtr& result)
+      : result_metadata_id_(sizeof(uint16_t) + result_metadata_id.size())
+      , result_(result) {
+      result_metadata_id_.encode_string(0,
+                                        result_metadata_id.data(),
+                                        result_metadata_id.size());
+    }
+
+    const Buffer& result_metadata_id() const { return result_metadata_id_; }
+    const ResultResponse::ConstPtr& result() const { return result_; }
+
+  private:
+    Buffer result_metadata_id_;
+    ResultResponse::ConstPtr result_;
+  };
+
+  PreparedMetadata() {
+    metadata_.set_empty_key(String());
+    uv_rwlock_init(&rwlock_);
+  }
+
+  ~PreparedMetadata() {
+    uv_rwlock_destroy(&rwlock_);
+  }
+
+   Entry::Ptr get(const String& prepared_id) const {
+    ScopedReadLock rl(&rwlock_);
+    Map::const_iterator i = metadata_.find(prepared_id);
+    if (i != metadata_.end()) {
+      return i->second;
+    }
+    return Entry::Ptr();
+  }
+
+  void set(const String& prepared_id, const String& result_metadata_id, const ResultResponse::ConstPtr& result) {
+    PreparedMetadata::Entry::Ptr entry(
+          Memory::allocate<PreparedMetadata::Entry>(result_metadata_id, result));
+    ScopedWriteLock wl(&rwlock_);
+    metadata_[prepared_id] = entry;
+  }
+
+private:
+  typedef DenseHashMap<String, Entry::Ptr> Map;
+
+  mutable uv_rwlock_t rwlock_;
+  Map metadata_;
 };
 
 } // namespace cass

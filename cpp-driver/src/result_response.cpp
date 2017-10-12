@@ -17,6 +17,7 @@
 #include "result_response.hpp"
 
 #include "external.hpp"
+#include "logger.hpp"
 #include "result_metadata.hpp"
 #include "serialization.hpp"
 
@@ -242,6 +243,17 @@ bool ResultResponse::decode_metadata(Decoder& decoder,
   int32_t column_count = 0;
   CHECK_RESULT(decoder.decode_int32(column_count));
 
+  if (flags & CASS_RESULT_FLAG_METADATA_CHANGED) {
+    if (decoder.protocol_version() >= CASS_PROTOCOL_VERSION_V5 ||
+        decoder.protocol_version() >= CASS_PROTOCOL_VERSION_DSEV2) {
+      CHECK_RESULT(decoder.decode_string(&new_metadata_id_))
+    } else {
+      LOG_ERROR("Metadata changed flag set with invalid protocol version %d",
+                decoder.protocol_version());
+      return false;
+    }
+  }
+
   if (has_pk_indices) {
     int32_t pk_count = 0;
     CHECK_RESULT(decoder.decode_int32(pk_count));
@@ -318,7 +330,11 @@ bool ResultResponse::decode_set_keyspace(Decoder& decoder) {
 }
 
 bool ResultResponse::decode_prepared(Decoder& decoder) {
-  CHECK_RESULT(decoder.decode_string(&prepared_));
+  CHECK_RESULT(decoder.decode_string(&prepared_id_));
+  if (decoder.protocol_version() >= CASS_PROTOCOL_VERSION_V5 ||
+      decoder.protocol_version() >= CASS_PROTOCOL_VERSION_DSEV2) {
+    CHECK_RESULT(decoder.decode_string(&result_metadata_id_));
+  }
   CHECK_RESULT(decode_metadata(decoder, &metadata_,
                                decoder.protocol_version() >= 4));
   if (decoder.protocol_version() > 1) {

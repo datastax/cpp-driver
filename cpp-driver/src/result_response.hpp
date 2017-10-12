@@ -62,9 +62,13 @@ public:
   const ResultMetadata::Ptr& result_metadata() const { return result_metadata_; }
 
   StringRef paging_state() const { return paging_state_; }
-  StringRef prepared() const { return prepared_; }
+  StringRef prepared_id() const { return prepared_id_; }
+  StringRef result_metadata_id() const { return result_metadata_id_; }
   StringRef keyspace() const { return keyspace_; }
   StringRef table() const { return table_; }
+
+  bool metadata_changed() { return new_metadata_id_.size() > 0; }
+  StringRef new_metadata_id() const { return new_metadata_id_; }
 
   const Decoder& row_decoder() const { return row_decoder_; }
 
@@ -97,10 +101,12 @@ private:
   ResultMetadata::Ptr metadata_;
   ResultMetadata::Ptr result_metadata_;
   StringRef paging_state_; // row paging
-  StringRef prepared_; // prepared result
+  StringRef prepared_id_; // prepared result
+  StringRef result_metadata_id_; // prepared result, protocol v5/DSEv2
   StringRef change_; // schema change
   StringRef keyspace_; // rows, set keyspace, and schema change
   StringRef table_; // rows, and schema change
+  StringRef new_metadata_id_; // rows result, protocol v5/DSEv2
   int32_t row_count_;
   Decoder row_decoder_;
   Row first_row_;

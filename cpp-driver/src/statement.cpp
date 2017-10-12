@@ -400,14 +400,21 @@ int32_t Statement::encode_v1(RequestCallback* callback, BufferVec* bufs) const {
 // <consistency> is a [short]
 // <flags> is a [byte] (or [int] for protocol v5)
 // <n> is a [short]
+
+int32_t Statement::encode_query_or_id(BufferVec* bufs) const {
+  bufs->push_back(query_or_id_);
+  return query_or_id_.size();
+}
+
 int32_t Statement::encode_begin(int version, uint16_t element_count,
                                 RequestCallback* callback, BufferVec* bufs) const {
   int32_t length = 0;
   size_t query_params_buf_size = 0;
   int32_t flags = flags_;
 
-  bufs->push_back(query_or_id_);
-  length += query_or_id_.size();
+  if (callback->skip_metadata()) {
+    flags |= CASS_QUERY_FLAG_SKIP_METADATA;
+  }
 
   query_params_buf_size += sizeof(uint16_t); // <consistency> [short]
 

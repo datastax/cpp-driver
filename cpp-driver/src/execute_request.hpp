@@ -28,15 +28,7 @@ namespace cass {
 
 class ExecuteRequest : public Statement {
 public:
-  ExecuteRequest(const Prepared* prepared)
-      : Statement(prepared)
-      , prepared_(prepared) {
-      // If the prepared statement has result metadata then there is no
-      // need to get the metadata with this request too.
-      if (prepared->result()->result_metadata()) {
-        set_skip_metadata(true);
-      }
-  }
+  ExecuteRequest(const Prepared* prepared);
 
   const Prepared::ConstPtr& prepared() const { return prepared_; }
 

@@ -653,7 +653,7 @@ Future::Ptr Session::prepare(const char* statement, size_t length) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(metadata_.schema_snapshot(cassandra_version())));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future)));
+  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future, this)));
 
   return future;
 }
@@ -794,12 +794,19 @@ void Session::on_down(Host::Ptr host) {
   }
 }
 
+void Session::on_result_metadata_changed(const String& prepared_id,
+                                         const String& result_metadata_id,
+                                         const ResultResponse::ConstPtr& result_response) {
+  prepared_metadata_.set(prepared_id, result_metadata_id, result_response);
+}
+
 Future::Ptr Session::execute(const Request::ConstPtr& request,
                              const Address* preferred_address) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>());
 
   RequestHandler::Ptr request_handler(
-        Memory::allocate<RequestHandler>(request, future));
+        Memory::allocate<RequestHandler>(request, future, this));
+
   if (preferred_address) {
     request_handler->set_preferred_address(*preferred_address);
   }
@@ -830,8 +837,11 @@ void Session::on_execute(uv_async_t* data) {
         if (!profile_name.empty()) {
           LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
         }
-        request_handler->init(session->config(), profile, session->keyspace(),
-                              session->token_map_.get());
+        request_handler->init(session->config_,
+                              profile,
+                              session->keyspace(),
+                              session->token_map_.get(),
+                              session->prepared_metadata_);
       } else {
         request_handler->set_error(CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID,
                                    profile_name + " does not exist");

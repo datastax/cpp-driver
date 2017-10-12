@@ -82,7 +82,7 @@ Prepared::Prepared(const ResultResponse::Ptr& result,
                    const PrepareRequest::ConstPtr& prepare_request,
                    const Metadata::SchemaSnapshot& schema_metadata)
   : result_(result)
-  , id_(result->prepared().to_string())
+  , id_(result->prepared_id().to_string())
   , query_(prepare_request->query())
   , keyspace_(prepare_request->keyspace())
   , request_settings_(prepare_request->settings()) {
