@@ -36,6 +36,7 @@ namespace cass {
 class Config;
 class Connection;
 class Metrics;
+class Pool;
 class PreparedMetadata;
 class ResponseMessage;
 class ResultResponse;
@@ -139,7 +140,8 @@ public:
 
   void start(Connection* connection, int stream);
 
-  virtual void on_retry(bool use_next_host) = 0;
+  virtual void on_retry_current_host() = 0;
+  virtual void on_retry_next_host() = 0;
 
   // One of these methods is called to finish a request
   virtual void on_set(ResponseMessage* response) = 0;
@@ -213,6 +215,32 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RequestCallback);
 };
 
+/**
+ * A request callback that handles pool specific functionality including waiting
+ * for a pool connection and returning a pool connection.
+ */
+class PoolCallback : public RequestCallback {
+public:
+  typedef SharedRefPtr<PoolCallback> Ptr;
+
+  PoolCallback(const RequestWrapper& wrapper)
+    : RequestCallback(wrapper)
+    , pool_(NULL) { }
+
+  Pool* pool() const { return pool_; }
+  void set_pool(Pool* pool) { pool_ = pool; }
+
+  void start_pending_request(Pool* pool, Timer::Callback cb);
+  void stop_pending_request();
+
+protected:
+  void return_connection();
+
+private:
+  Pool* pool_;
+  Timer pending_request_timer_;
+};
+
 class SimpleRequestCallback : public RequestCallback {
 public:
   SimpleRequestCallback(const Request::ConstPtr& request)
@@ -226,7 +254,8 @@ protected:
 private:
   virtual void on_start();
 
-  virtual void on_retry(bool use_next_host);
+  virtual void on_retry_current_host();
+  virtual void on_retry_next_host();
 
   virtual void on_set(ResponseMessage* response);
   virtual void on_error(CassError code, const std::string& message);

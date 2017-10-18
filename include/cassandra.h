@@ -1788,6 +1788,21 @@ cass_cluster_set_constant_speculative_execution_policy(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_no_speculative_execution_policy(CassCluster* cluster);
 
+/**
+ * Prepare statements on all available hosts.
+ *
+ * <b>Default:</b> cass_true
+ *
+ * @public @memberof CassCluster
+ *
+ * @param cluster
+ * @param enabled
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_cluster_set_prepare_on_all_hosts(CassCluster* cluster,
+                                      cass_bool_t enabled);
+
 /***********************************************************************************
  *
  * Session
