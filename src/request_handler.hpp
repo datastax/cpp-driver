@@ -151,6 +151,8 @@ public:
   void init(const Config& config, const std::string& connected_keyspace,
             const TokenMap* token_map, const PreparedMetadata& prepared_metdata);
 
+  const RequestWrapper& wrapper() const { return wrapper_; }
+
   const Request* request() const { return wrapper_.request().get(); }
 
   CassConsistency consistency() const { return wrapper_.consistency(); }
@@ -214,24 +216,15 @@ private:
   RequestListener* listener_;
 };
 
-class RequestExecution : public RequestCallback {
+class RequestExecution : public PoolCallback {
 public:
   typedef SharedRefPtr<RequestExecution> Ptr;
 
   RequestExecution(const RequestHandler::Ptr& request_handler,
                    const Host::Ptr& current_host = Host::Ptr());
 
-  Pool* pool() const { return pool_; }
-  void set_pool(Pool* pool) { pool_ = pool; }
-
   const Host::Ptr& current_host() const { return current_host_; }
   void next_host() { current_host_ = request_handler_->next_host(); }
-
-  void retry_current_host();
-  void retry_next_host();
-
-  void start_pending_request(Pool* pool, Timer::Callback cb);
-  void stop_pending_request();
 
   void execute();
   void schedule_next(int64_t timeout = 0);
@@ -239,14 +232,21 @@ public:
 
   virtual void on_error(CassError code, const std::string& message);
 
+  virtual void on_retry_current_host();
+  virtual void on_retry_next_host();
+
   void on_result_metadata_changed(ResultResponse* result_response);
+
+private:
+  friend class PrepareCallback;
+
+  void retry_current_host();
+  void retry_next_host();
 
 private:
   static void on_execute(Timer* timer);
 
   virtual void on_start();
-
-  virtual void on_retry(bool use_next_host);
 
   virtual void on_set(ResponseMessage* response);
   virtual void on_cancel();
@@ -254,8 +254,6 @@ private:
   void on_result_response(ResponseMessage* response);
   void on_error_response(ResponseMessage* response);
   void on_error_unprepared(ErrorResponse* error);
-
-  void return_connection();
 
 private:
   friend class SchemaChangeCallback;
@@ -270,10 +268,8 @@ private:
 private:
   RequestHandler::Ptr request_handler_;
   Host::Ptr current_host_;
-  Pool* pool_;
   Connection* connection_;
   Timer schedule_timer_;
-  Timer pending_request_timer_;
   int num_retries_;
   uint64_t start_time_ns_;
 };

@@ -81,7 +81,7 @@ static void cleanup_pending_callbacks(List<RequestCallback>* pending) {
       case RequestCallback::REQUEST_STATE_READING:
         callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
         if (callback->request()->is_idempotent()) {
-          callback->on_retry(true);
+          callback->on_retry_next_host();
         } else {
           callback->on_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
                              "Request timed out");
