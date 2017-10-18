@@ -23,6 +23,7 @@
 #include "execution_profile.hpp"
 #include "logger.hpp"
 #include "metrics.hpp"
+#include "pool.hpp"
 #include "query_request.hpp"
 #include "request.hpp"
 #include "result_response.hpp"
@@ -192,6 +193,21 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
   }
 }
 
+void PoolCallback::start_pending_request(Pool* pool, Timer::Callback cb) {
+  pool_ = pool;
+  pending_request_timer_.start(pool->loop(), pool->config().connect_timeout_ms(), this, cb);
+}
+
+void PoolCallback::stop_pending_request() {
+  pending_request_timer_.stop();
+}
+
+void PoolCallback::return_connection() {
+  if (pool_ != NULL && connection() != NULL) {
+    pool_->return_connection(connection());
+  }
+}
+
 bool MultipleRequestCallback::get_result_response(const ResponseMap& responses,
                                                   const String& index,
                                                   ResultResponse** response) {
@@ -266,9 +282,13 @@ void SimpleRequestCallback::on_error(CassError code, const String& message) {
   on_internal_error(code, message);
 }
 
-void SimpleRequestCallback::on_retry(bool use_next_host) {
+void SimpleRequestCallback::on_retry_current_host() {
   timer_.stop();
   on_internal_timeout(); // Retries are unhandled so timeout
+}
+
+void SimpleRequestCallback::on_retry_next_host() {
+  on_retry_current_host(); // Same as retry current (timeout)
 }
 
 void SimpleRequestCallback::on_cancel(ResponseMessage *response) {

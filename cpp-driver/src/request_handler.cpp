@@ -204,10 +204,9 @@ void RequestHandler::stop_request() {
 
 RequestExecution::RequestExecution(const RequestHandler::Ptr& request_handler,
                                    const Host::Ptr& current_host)
-  : RequestCallback(request_handler->wrapper_)
+  : PoolCallback(request_handler->wrapper())
   , request_handler_(request_handler)
   , current_host_(current_host)
-  , pool_(NULL)
   , num_retries_(0)
   , start_time_ns_(0) {
   request_handler_->add_execution(this);
@@ -276,14 +275,14 @@ void RequestExecution::on_result_metadata_changed(ResultResponse* result_respons
   }
 }
 
-void RequestExecution::on_retry(bool use_next_host) {
+void RequestExecution::on_retry_current_host() {
   return_connection();
+  retry_current_host();
+}
 
-  if (use_next_host) {
-    retry_next_host();
-  } else {
-    retry_current_host();
-  }
+void RequestExecution::on_retry_next_host() {
+  return_connection();
+  retry_next_host();
 }
 
 void RequestExecution::on_cancel(ResponseMessage* response) {
@@ -308,8 +307,8 @@ void RequestExecution::retry_current_host() {
 
   // Reset the request so it can be executed again
   set_state(REQUEST_STATE_NEW);
-  pool_ = NULL;
-  request_handler_->io_worker()->retry(RequestCallback::Ptr(this));
+  set_pool(NULL);
+  request_handler_->io_worker()->retry(RequestExecution::Ptr(this));
 }
 
 void RequestExecution::retry_next_host() {
@@ -317,20 +316,11 @@ void RequestExecution::retry_next_host() {
   retry_current_host();
 }
 
-void RequestExecution::start_pending_request(Pool* pool, Timer::Callback cb) {
-  pool_ = pool;
-  pending_request_timer_.start(pool->loop(), pool->config().connect_timeout_ms(), this, cb);
-}
-
-void RequestExecution::stop_pending_request() {
-  pending_request_timer_.stop();
-}
-
 void RequestExecution::execute() {
   if (request()->is_idempotent()) {
     request_handler_->schedule_next_execution(current_host_);
   }
-  request_handler_->io_worker()->retry(RequestCallback::Ptr(this));
+  request_handler_->io_worker()->retry(RequestExecution::Ptr(this));
 
 }
 
@@ -391,7 +381,9 @@ void RequestExecution::on_result_response(ResponseMessage* response) {
 
     case CASS_RESULT_KIND_PREPARED:
       on_result_metadata_changed(result);
-      set_response(response->response_body());
+      if (!request_handler_->io_worker()->prepare_all(response->response_body(), request_handler_)) {
+        set_response(response->response_body());
+      }
       break;
 
     default:
@@ -528,12 +520,6 @@ void RequestExecution::on_error_unprepared(ErrorResponse* error) {
                             Memory::allocate<PrepareCallback>(query, this)))) {
     // Try to prepare on the same host but on a different connection
     retry_current_host();
-  }
-}
-
-void RequestExecution::return_connection() {
-  if (pool_ != NULL && connection() != NULL) {
-    pool_->return_connection(connection());
   }
 }
 

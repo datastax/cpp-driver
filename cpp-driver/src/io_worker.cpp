@@ -26,6 +26,121 @@
 
 namespace cass {
 
+/**
+ * A handler that tracks the progress of prepares on all hosts and returns the
+ * initial "PREPARED" result response when the last prepare is finished.
+ */
+class PrepareAllHandler : public RefCounted<PrepareAllHandler> {
+public:
+  typedef SharedRefPtr<PrepareAllHandler> Ptr;
+
+  PrepareAllHandler(const Response::Ptr& response,
+                    const RequestHandler::Ptr& request_handler,
+                    int remaining)
+    : response_(response)
+    , request_handler_(request_handler)
+    , remaining_(remaining) {
+    assert(remaining > 0);
+  }
+
+  const RequestWrapper& wrapper() const { return request_handler_->wrapper(); }
+
+  uv_loop_t* loop() { return request_handler_->io_worker()->loop(); }
+
+  void finish() {
+    if (--remaining_ <= 0) { // The last request sets the response on the future.
+      request_handler_->set_response(request_handler_->current_host(),
+                                     response_);
+    }
+  }
+
+private:
+  Response::Ptr response_;
+  RequestHandler::Ptr request_handler_;
+  int remaining_;
+};
+
+/**
+ * A callback for preparing a statement. It's used in conjunction with
+ * `PrepareAllHandler` to prepare a statement on all hosts. It calls finish
+ *  on the handler when the request is done (success, error, or timeout).
+ */
+class PrepareAllCallback : public PoolCallback {
+public:
+  typedef SharedRefPtr<PrepareAllCallback> Ptr;
+
+  PrepareAllCallback(const Address& address, const PrepareAllHandler::Ptr& handler)
+    : PoolCallback(handler->wrapper())
+    , address_(address)
+    , handler_(handler)
+    , is_finished_(false) { }
+
+  ~PrepareAllCallback() {
+    finish();
+  }
+
+private:
+  void finish() {
+    // Only finish the callback one time. This can happen if the request times out.
+    if (!is_finished_) {
+      timer_.stop();
+      handler_->finish();
+      is_finished_ = true;
+    }
+  }
+
+  virtual void on_retry_current_host() {
+    return_connection();
+  }
+
+  virtual void on_retry_next_host() {
+    return_connection();
+  }
+
+  virtual void on_set(ResponseMessage* response) {
+    return_connection();
+    if (timer_.is_running()) { // The request hasn't timed out
+      LOG_DEBUG("Successfully prepared all on host %s",
+                address_.to_string().c_str());
+    }
+  }
+
+  virtual void on_error(CassError code, const String& message) {
+    return_connection();
+    if (timer_.is_running()) { // The request hasn't timed out
+      LOG_WARN("Failed to prepare all on host %s with error: '%s'",
+               address_.to_string().c_str(),
+               message.c_str());
+    }
+  }
+
+  virtual void on_cancel(ResponseMessage *response) {
+    return_connection();
+  }
+
+  virtual void on_start() {
+    int request_timeout_ms = this->request_timeout_ms();
+    if (request_timeout_ms > 0) { // 0 means no timeout
+      timer_.start(handler_->loop(),
+                   request_timeout_ms,
+                   this, on_timeout);
+    }
+  }
+
+  static void on_timeout(Timer* timer) {
+    PrepareAllCallback* callback = static_cast<PrepareAllCallback*>(timer->data());
+    LOG_WARN("Prepare all timed out on host %s",
+             callback->address_.to_string().c_str());
+    callback->finish(); // Don't wait for the request to come back
+  }
+
+private:
+  Address address_;
+  PrepareAllHandler::Ptr handler_;
+  bool is_finished_;
+  Timer timer_;
+};
+
 IOWorker::IOWorker(Session* session)
     : state_(IO_WORKER_STATE_READY)
     , session_(session)
@@ -148,6 +263,50 @@ bool IOWorker::execute(const RequestHandler::Ptr& request_handler) {
     request_handler->dec_ref();
     return false;
   }
+  return true;
+}
+
+bool IOWorker::prepare_all(const Response::Ptr& response,
+                           const RequestHandler::Ptr& request_handler) {
+  assert(request_handler->request()->opcode() == CQL_OPCODE_PREPARE);
+
+  if (!config_.prepare_on_all_hosts() ||
+      // If there's only 1 node (or 0 nodes) to prepare then we're done.
+      pools_.size() < 2) {
+    return false; // Either not enabled or not enough hosts
+  }
+
+  PrepareAllHandler::Ptr prepare_all_handler(
+        Memory::allocate<PrepareAllHandler>(response,
+                                            request_handler,
+                                            // Subtract the node that's already been prepared
+                                            pools_.size() - 1));
+
+  for (PoolMap::iterator it = pools_.begin(),
+       end = pools_.end(); it != end; ++it)  {
+    // Skip over the node we've already prepared
+    if (request_handler->current_host()->address() == it->first) {
+      continue;
+    }
+
+    const Pool::Ptr& pool = it->second;
+    // The destructor of `PrepareAllCallback` will decrement the remaining
+    // count in `PrepareAllHandler` even if this is unable to write to a
+    // connection successfully.
+    PrepareAllCallback::Ptr prepare_all_callback(
+          Memory::allocate<PrepareAllCallback>(pool->host()->address(),
+                                               prepare_all_handler));
+
+    if (pool->is_ready()) {
+      Connection* connection = pool->borrow_connection();
+      if (connection != NULL) {
+        pool->write(connection, prepare_all_callback);
+      } else { // Too busy, or no connections
+        pool->wait_for_connection(prepare_all_callback);
+      }
+    }
+  }
+
   return true;
 }
 

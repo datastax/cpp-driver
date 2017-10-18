@@ -108,6 +108,12 @@ public:
 
   bool execute(const RequestHandler::Ptr& request_handler);
 
+  // Prepares a statement on all other hosts. It returns false if
+  // "prepare on all" is disabled in the config or if there's
+  // not enough hosts.
+  bool prepare_all(const Response::Ptr& response,
+                   const RequestHandler::Ptr& request_handler);
+
   void retry(const RequestExecution::Ptr& request_execution);
   void request_finished();
 

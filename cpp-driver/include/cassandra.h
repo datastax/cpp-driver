@@ -2369,6 +2369,21 @@ cass_cluster_set_execution_profile_n(CassCluster* cluster,
                                      size_t name_length,
                                      CassExecProfile* profile);
 
+/**
+ * Prepare statements on all available hosts.
+ *
+ * <b>Default:</b> cass_true
+ *
+ * @public @memberof CassCluster
+ *
+ * @param cluster
+ * @param enabled
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_cluster_set_prepare_on_all_hosts(CassCluster* cluster,
+                                      cass_bool_t enabled);
+
 /***********************************************************************************
  *
  * Session

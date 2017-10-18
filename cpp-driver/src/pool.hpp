@@ -56,10 +56,10 @@ public:
   void delayed_connect();
   void close(bool cancel_reconnect = false);
 
-  bool write(Connection* connection, const RequestExecution::Ptr& request_execution);
+  bool write(Connection* connection, const PoolCallback::Ptr& callback);
   void flush();
 
-  void wait_for_connection(const RequestExecution::Ptr& request_execution);
+  void wait_for_connection(const PoolCallback::Ptr& callback);
   Connection* borrow_connection();
 
   const Host::ConstPtr& host() const { return host_; }
@@ -84,7 +84,7 @@ public:
   void return_connection(Connection* connection);
 
 private:
-  void remove_pending_request(RequestExecution* request_execution);
+  void remove_pending_request(PoolCallback* callback);
   void set_is_available(bool is_available);
 
   void maybe_notify_ready();
