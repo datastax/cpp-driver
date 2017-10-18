@@ -82,8 +82,8 @@ public:
       , timestamp_gen_(new ServerSideTimestampGenerator())
       , retry_policy_(new DefaultRetryPolicy())
       , use_schema_(true)
-      , use_hostname_resolution_(false)
-      , use_randomized_contact_points_(true) { }
+      , use_randomized_contact_points_(true)
+      , prepare_on_all_hosts_(true) { }
 
   Config new_instance() const {
     Config config = *this;
@@ -419,6 +419,10 @@ public:
     use_randomized_contact_points_ = enable;
   }
 
+  bool prepare_on_all_hosts() const { return prepare_on_all_hosts_; }
+
+  void set_prepare_on_all_hosts(bool enabled) { prepare_on_all_hosts_ = enabled; }
+
 private:
   int port_;
   int protocol_version_;
@@ -468,6 +472,7 @@ private:
   bool use_schema_;
   bool use_hostname_resolution_;
   bool use_randomized_contact_points_;
+  bool prepare_on_all_hosts_;
 };
 
 } // namespace cass
