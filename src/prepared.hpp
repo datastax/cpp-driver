@@ -30,6 +30,7 @@
 #include <sparsehash/dense_hash_set>
 #include <string>
 #include <uv.h>
+#include <vector>
 
 namespace cass {
 
@@ -62,20 +63,29 @@ public:
   class Entry : public RefCounted<Entry> {
   public:
     typedef SharedRefPtr<const Entry> Ptr;
+    typedef std::vector<Ptr> Vec;
 
-    Entry(const std::string& result_metadata_id,
+    Entry(const std::string& query,
+          const std::string& keyspace,
+          const std::string& result_metadata_id,
           const ResultResponse::ConstPtr& result)
-      : result_metadata_id_(sizeof(uint16_t) + result_metadata_id.size())
+      : query_(query)
+      , keyspace_(keyspace)
+      , result_metadata_id_(sizeof(uint16_t) + result_metadata_id.size())
       , result_(result) {
       result_metadata_id_.encode_string(0,
                                         result_metadata_id.data(),
                                         result_metadata_id.size());
     }
 
+    const std::string& query() const { return query_; }
+    const std::string& keyspace() const { return keyspace_; }
     const Buffer& result_metadata_id() const { return result_metadata_id_; }
     const ResultResponse::ConstPtr& result() const { return result_; }
 
   private:
+    std::string query_;
+    std::string keyspace_;
     Buffer result_metadata_id_;
     ResultResponse::ConstPtr result_;
   };
@@ -98,11 +108,20 @@ public:
     return Entry::Ptr();
   }
 
-  void set(const std::string& prepared_id, const std::string& result_metadata_id, const ResultResponse::ConstPtr& result) {
-    PreparedMetadata::Entry::Ptr entry(
-          new PreparedMetadata::Entry(result_metadata_id, result));
+  void set(const std::string& prepared_id, const PreparedMetadata::Entry::Ptr& entry) {
     ScopedWriteLock wl(&rwlock_);
     metadata_[prepared_id] = entry;
+  }
+
+  Entry::Vec copy() const {
+    ScopedReadLock rl(&rwlock_);
+    Entry::Vec temp;
+    temp.reserve(metadata_.size());
+    for (Map::const_iterator it = metadata_.begin(),
+         end = metadata_.end(); it != end; ++it) {
+      temp.push_back(it->second);
+    }
+    return temp;
   }
 
 private:
