@@ -24,6 +24,7 @@
 #include "io_worker.hpp"
 #include "pool.hpp"
 #include "prepare_request.hpp"
+#include "protocol.hpp"
 #include "response.hpp"
 #include "result_response.hpp"
 #include "row.hpp"
@@ -253,13 +254,28 @@ void RequestExecution::on_error(CassError code, const std::string& message) {
 
 void RequestExecution::on_result_metadata_changed(ResultResponse* result_response) {
   if (request_handler_->listener_) {
+    // Attempt to use the per-query keyspace first (v5+/DSEv2+ only) then
+    // the keyspace in the result metadata.
+    std::string keyspace;
+    if (supports_set_keyspace(result_response->protocol_version()) &&
+        !request()->keyspace().empty()) {
+      keyspace = request()->keyspace();
+    } else {
+      keyspace = result_response->keyspace().to_string();
+    }
+
     if (result_response->kind() == CASS_RESULT_KIND_ROWS) {
       const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
       request_handler_->listener_->on_result_metadata_changed(execute->prepared()->id(),
+                                                              execute->prepared()->query(),
+                                                              keyspace,
                                                               result_response->new_metadata_id().to_string(),
                                                               ResultResponse::ConstPtr(result_response));
     } else if (result_response->kind() == CASS_RESULT_KIND_PREPARED) {
+      const PrepareRequest* prepare = static_cast<const PrepareRequest*>(request());
       request_handler_->listener_->on_result_metadata_changed(result_response->prepared_id().to_string(),
+                                                              prepare->query(),
+                                                              keyspace,
                                                               result_response->result_metadata_id().to_string(),
                                                               ResultResponse::ConstPtr(result_response));
     } else {

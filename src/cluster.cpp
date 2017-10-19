@@ -467,6 +467,12 @@ CassError cass_cluster_set_prepare_on_all_hosts(CassCluster* cluster,
   return CASS_OK;
 }
 
+CassError cass_cluster_set_prepare_on_up_or_add_host(CassCluster* cluster,
+                                                     cass_bool_t enabled) {
+  cluster->config().set_prepare_on_up_or_add_host(enabled == cass_true);
+  return CASS_OK;
+}
+
 void cass_cluster_free(CassCluster* cluster) {
   delete cluster->from();
 }

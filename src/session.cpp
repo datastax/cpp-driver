@@ -277,6 +277,28 @@ void Session::purge_hosts(bool is_initial_connection) {
   current_host_mark_ = !current_host_mark_;
 }
 
+bool Session::prepare_host(const Host::Ptr& host,
+                           PrepareHostHandler::Callback callback) {
+  if (config_.prepare_on_up_or_add_host()) {
+    PrepareHostHandler::Ptr prepare_host_handler(
+          new PrepareHostHandler(host,
+                                 this,
+                                 control_connection_.protocol_version()));
+    prepare_host_handler->prepare(callback);
+    return true;
+  }
+  return false;
+}
+
+void Session::on_prepare_host_add(const PrepareHostHandler* handler) {
+  // Always "false" because this will not be called on the initial connection.
+  handler->session()->internal_on_add(handler->host(), false);
+}
+
+void Session::on_prepare_host_up(const PrepareHostHandler* handler) {
+  handler->session()->internal_on_up(handler->host());
+}
+
 bool Session::notify_ready_async() {
   SessionEvent event;
   event.type = SessionEvent::NOTIFY_READY;
@@ -587,7 +609,10 @@ void Session::on_add_resolve_name(NameResolver* resolver) {
   if (resolver->is_success() && !resolver->hostname().empty()) {
     data.host->set_hostname(resolver->hostname());
   }
-  data.session->internal_on_add(data.host, data.is_initial_connection);
+  if (data.is_initial_connection ||
+      !data.session->prepare_host(data.host, on_prepare_host_add)) {
+    data.session->internal_on_add(data.host, data.is_initial_connection);
+  }
 }
 #endif
 
@@ -652,6 +677,8 @@ Future::Ptr Session::prepare(const Statement* statement) {
 }
 
 void Session::on_add(Host::Ptr host, bool is_initial_connection) {
+  host->set_up(); // Set the host as up immediately (to avoid duplicate actions)
+
 #if UV_VERSION_MAJOR >= 1
   if (config_.use_hostname_resolution() && host->hostname().empty()) {
     NameResolver::resolve(loop(),
@@ -660,14 +687,19 @@ void Session::on_add(Host::Ptr host, bool is_initial_connection) {
                           on_add_resolve_name, config_.resolve_timeout_ms());
   } else {
 #endif
-    internal_on_add(host, is_initial_connection);
+    // There won't be any prepared statements on the initial connection
+    if (is_initial_connection ||
+        !prepare_host(host, on_prepare_host_add)) {
+      internal_on_add(host, is_initial_connection);
+    }
 #if UV_VERSION_MAJOR >= 1
   }
 #endif
 }
 
 void Session::internal_on_add(Host::Ptr host, bool is_initial_connection) {
-  host->set_up();
+  // Verify that the host is still available
+  if (host->is_down()) return;
 
   if (config().load_balancing_policy()->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
     return;
@@ -686,6 +718,8 @@ void Session::internal_on_add(Host::Ptr host, bool is_initial_connection) {
 }
 
 void Session::on_remove(Host::Ptr host) {
+  host->set_down();
+
   config().load_balancing_policy()->on_remove(host);
   { // Lock hosts
     ScopedMutex l(&hosts_mutex_);
@@ -698,10 +732,26 @@ void Session::on_remove(Host::Ptr host) {
 }
 
 void Session::on_up(Host::Ptr host) {
-  host->set_up();
+  host->set_up(); // Set the host as up immediately (to avoid duplicate actions)
+
+  if (!prepare_host(host, on_prepare_host_up)) {
+    internal_on_up(host);
+  }
+}
+
+void Session::internal_on_up(Host::Ptr host) {
+  // Verify that the host is still available
+  if (host->is_down()) return;
 
   if (config().load_balancing_policy()->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
     return;
+  }
+
+  config().load_balancing_policy()->on_up(host);
+
+  for (IOWorkerVec::iterator it = io_workers_.begin(),
+       end = io_workers_.end(); it != end; ++it) {
+    (*it)->add_pool_async(host, false);
   }
 
   config().load_balancing_policy()->on_up(host);
@@ -729,9 +779,16 @@ void Session::on_down(Host::Ptr host) {
 }
 
 void Session::on_result_metadata_changed(const std::string& prepared_id,
+                                         const std::string& query,
+                                         const std::string& keyspace,
                                          const std::string& result_metadata_id,
                                          const ResultResponse::ConstPtr& result_response) {
-  prepared_metadata_.set(prepared_id, result_metadata_id, result_response);
+  PreparedMetadata::Entry::Ptr entry(
+        new PreparedMetadata::Entry(query,
+                                    keyspace,
+                                    result_metadata_id,
+                                    result_response));
+  prepared_metadata_.set(prepared_id, entry);
 }
 
 Future::Ptr Session::execute(const Request::ConstPtr& request,
