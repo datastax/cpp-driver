@@ -1803,6 +1803,26 @@ CASS_EXPORT CassError
 cass_cluster_set_prepare_on_all_hosts(CassCluster* cluster,
                                       cass_bool_t enabled);
 
+/**
+ * Enable pre-preparing cached prepared statements when existing hosts become
+ * available again or when new hosts are added to the cluster.
+ *
+ * This can help mitigate request latency when executing prepared statements
+ * by avoiding an extra round trip in cases where the statement is
+ * unprepared on a freshly started server. The main tradeoff is extra background
+ * network traffic is required to prepare the statements on hosts as they become
+ * available.
+ *
+ * <b>Default:</b> cass_true
+ *
+ * @param cluster
+ * @param enabled
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_cluster_set_prepare_on_up_or_add_host(CassCluster* cluster,
+                                           cass_bool_t enabled);
+
 /***********************************************************************************
  *
  * Session

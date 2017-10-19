@@ -38,6 +38,7 @@ TEST(StringRefUnitTest, Empty)
 {
   cass::StringRef s;
 
+  EXPECT_TRUE(s.empty());
   EXPECT_EQ(s, "");
   EXPECT_NE(s, "abc");
 
