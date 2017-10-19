@@ -32,11 +32,20 @@
 
 namespace cass {
 
+inline int max_streams_for_protocol_version(int protocol_version) {
+  // Note: Only half the range because negative values are reserved for
+  // responses.
+
+  // Protocol v3+: 2 ^ (16 - 1) (2 bytes)
+  // Protocol v1 and v2: 2 ^ (8 - 1) (1 byte)
+  return protocol_version >= 3 ? 32768 : 128;
+}
+
 template <class T>
 class StreamManager {
 public:
   StreamManager(int protocol_version)
-      : max_streams_(static_cast<size_t>(1) << (num_bytes_for_stream(protocol_version) * 8 - 1))
+      : max_streams_(max_streams_for_protocol_version(protocol_version))
       , num_words_(max_streams_ / NUM_BITS_PER_WORD)
       , offset_(0)
       , words_(new word_t[num_words_]) {
@@ -85,14 +94,6 @@ private:
 #endif
 
   static const size_t NUM_BITS_PER_WORD = sizeof(word_t) * 8;
-
-  static inline int num_bytes_for_stream(int protocol_version) {
-    if (protocol_version >= 3) {
-      return 2;
-    } else {
-      return 1;
-    }
-  }
 
   static inline int count_trailing_zeros(word_t word) {
 #if defined(__GNUC__)

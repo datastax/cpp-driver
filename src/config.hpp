@@ -83,7 +83,8 @@ public:
       , retry_policy_(new DefaultRetryPolicy())
       , use_schema_(true)
       , use_randomized_contact_points_(true)
-      , prepare_on_all_hosts_(true) { }
+      , prepare_on_all_hosts_(true)
+      , prepare_on_up_or_add_host_(true) { }
 
   Config new_instance() const {
     Config config = *this;
@@ -423,6 +424,12 @@ public:
 
   void set_prepare_on_all_hosts(bool enabled) { prepare_on_all_hosts_ = enabled; }
 
+  bool prepare_on_up_or_add_host() const { return prepare_on_up_or_add_host_; }
+
+  void set_prepare_on_up_or_add_host(bool enabled) {
+    prepare_on_up_or_add_host_ = enabled;
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -473,6 +480,7 @@ private:
   bool use_hostname_resolution_;
   bool use_randomized_contact_points_;
   bool prepare_on_all_hosts_;
+  bool prepare_on_up_or_add_host_;
 };
 
 } // namespace cass
