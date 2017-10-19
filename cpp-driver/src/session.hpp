@@ -29,6 +29,7 @@
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
 #include "prepared.hpp"
+#include "prepare_host_handler.hpp"
 #include "random.hpp"
 #include "ref_counted.hpp"
 #include "request_handler.hpp"
@@ -83,6 +84,10 @@ public:
 
   const Config& config() const { return config_; }
   Metrics* metrics() const { return metrics_.get(); }
+
+  PreparedMetadata::Entry::Vec prepared_metadata_entries() const {
+    return prepared_metadata_.copy();
+  }
 
 private:
   String keyspace() const;
@@ -173,6 +178,13 @@ private:
 
   Metadata& metadata() { return metadata_; }
 
+  // Asynchronously prepare all queries on a host
+  bool prepare_host(const Host::Ptr& host,
+                    PrepareHostHandler::Callback callback);
+
+  static void on_prepare_host_add(const PrepareHostHandler* handler);
+  static void on_prepare_host_up(const PrepareHostHandler* handler);
+
   void on_control_connection_ready();
   void on_control_connection_error(CassError code, const String& message);
 
@@ -180,10 +192,15 @@ private:
   void internal_on_add(Host::Ptr host, bool is_initial_connection);
 
   void on_remove(Host::Ptr host);
+
   void on_up(Host::Ptr host);
+  void internal_on_up(Host::Ptr host);
+
   void on_down(Host::Ptr host);
 
   virtual void on_result_metadata_changed(const String& prepared_id,
+                                          const String& query,
+                                          const String& keyspace,
                                           const String& result_metadata_id,
                                           const ResultResponse::ConstPtr& result_response);
 

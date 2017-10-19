@@ -67,7 +67,8 @@ public:
       , use_hostname_resolution_(false)
       , use_randomized_contact_points_(true)
       , max_reusable_write_objects_(UINT_MAX)
-      , prepare_on_all_hosts_(true) {
+      , prepare_on_all_hosts_(true)
+      , prepare_on_up_or_add_host_(true) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
@@ -444,6 +445,12 @@ public:
 
   void set_prepare_on_all_hosts(bool enabled) { prepare_on_all_hosts_ = enabled; }
 
+  bool prepare_on_up_or_add_host() const { return prepare_on_up_or_add_host_; }
+
+  void set_prepare_on_up_or_add_host(bool enabled) {
+    prepare_on_up_or_add_host_ = enabled;
+  }
+
 private:
   void init_profiles();
 
@@ -488,6 +495,7 @@ private:
   ExecutionProfile::Map profiles_;
   LoadBalancingPolicy::Vec load_balancing_policies_;
   bool prepare_on_all_hosts_;
+  bool prepare_on_up_or_add_host_;
 };
 
 } // namespace cass

@@ -132,6 +132,8 @@ class PreparedMetadata;
 class RequestListener {
 public:
   virtual void on_result_metadata_changed(const String& prepared_id,
+                                          const String& query,
+                                          const String& keyspace,
                                           const String& result_metadata_id,
                                           const ResultResponse::ConstPtr& result_response) = 0;
 };

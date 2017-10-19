@@ -62,20 +62,29 @@ public:
   class Entry : public RefCounted<Entry> {
   public:
     typedef SharedRefPtr<const Entry> Ptr;
+    typedef Vector<Ptr> Vec;
 
-    Entry(const String& result_metadata_id,
+    Entry(const String& query,
+          const String& keyspace,
+          const String& result_metadata_id,
           const ResultResponse::ConstPtr& result)
-      : result_metadata_id_(sizeof(uint16_t) + result_metadata_id.size())
+      : query_(query)
+      , keyspace_(keyspace)
+      , result_metadata_id_(sizeof(uint16_t) + result_metadata_id.size())
       , result_(result) {
       result_metadata_id_.encode_string(0,
                                         result_metadata_id.data(),
                                         result_metadata_id.size());
     }
 
+    const String& query() const { return query_; }
+    const String& keyspace() const { return keyspace_; }
     const Buffer& result_metadata_id() const { return result_metadata_id_; }
     const ResultResponse::ConstPtr& result() const { return result_; }
 
   private:
+    String query_;
+    String keyspace_;
     Buffer result_metadata_id_;
     ResultResponse::ConstPtr result_;
   };
@@ -98,11 +107,20 @@ public:
     return Entry::Ptr();
   }
 
-  void set(const String& prepared_id, const String& result_metadata_id, const ResultResponse::ConstPtr& result) {
-    PreparedMetadata::Entry::Ptr entry(
-          Memory::allocate<PreparedMetadata::Entry>(result_metadata_id, result));
+  void set(const String& prepared_id, const PreparedMetadata::Entry::Ptr& entry) {
     ScopedWriteLock wl(&rwlock_);
     metadata_[prepared_id] = entry;
+  }
+
+  Entry::Vec copy() const {
+    ScopedReadLock rl(&rwlock_);
+    Entry::Vec temp;
+    temp.reserve(metadata_.size());
+    for (Map::const_iterator it = metadata_.begin(),
+         end = metadata_.end(); it != end; ++it) {
+      temp.push_back(it->second);
+    }
+    return temp;
   }
 
 private:

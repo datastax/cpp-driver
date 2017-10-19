@@ -86,6 +86,7 @@ public:
   const char* data() const { return ptr_; }
   size_t size() const { return length_; }
   size_t length() const { return length_; }
+  bool empty() const { return size() == 0; }
 
   iterator begin() const { return ptr_; }
   iterator end() const { return ptr_ + length_; }
