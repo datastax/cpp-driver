@@ -1103,6 +1103,21 @@ const TableMetadata::Ptr& KeyspaceMetadata::get_table(const std::string& name) {
 }
 
 void KeyspaceMetadata::add_table(const TableMetadata::Ptr& table) {
+  TableMetadata::Map::iterator table_it = tables_->find(table->name());
+
+  // If there's a previous version of this table then copy its views
+  // to the new version of the table, and update the table back-refs
+  // in the views.
+
+  if (table_it != tables_->end()) {
+    TableMetadata::Ptr old_table(table_it->second);
+    for (ViewMetadata::Vec::const_iterator i = old_table->views().begin(),
+           end = old_table->views().end(); i != end; ++i) {
+      ViewMetadata::Ptr view(new ViewMetadata(**i, table.get()));
+      table->add_view(view);
+      (*views_)[view->name()] = view;
+    }
+  }
   (*tables_)[table->name()] = table;
 }
 
@@ -1119,6 +1134,8 @@ const ViewMetadata::Ptr& KeyspaceMetadata::get_view(const std::string& name) {
 }
 
 void KeyspaceMetadata::add_view(const ViewMetadata::Ptr& view) {
+  // Properly remove the previous view if it exists
+  drop_table_or_view(view->name());
   (*views_)[view->name()] = view;
 }
 
@@ -1139,7 +1156,18 @@ void KeyspaceMetadata::drop_table_or_view(const std::string& table_or_view_name)
     ViewMetadata::Map::iterator view_it = views_->find(table_or_view_name);
     if (view_it != views_->end()) {
       ViewMetadata::Ptr view(view_it->second);
-      view->base_table()->drop_view(table_or_view_name);
+
+      // Remove view from the base table's views
+      ViewMetadata::Vec views(view->base_table()->views());
+      ViewMetadata::Vec::iterator i = std::lower_bound(views.begin(), views.end(), table_or_view_name);
+      if (i != views.end() && (*i)->name() == table_or_view_name) {
+        views.erase(i);
+      }
+
+      // Create new instance of the base table with the view removed
+      TableMetadata::Ptr table(new TableMetadata(*view->base_table(), views));
+      (*tables_)[table->name()] = table;
+
       views_->erase(view_it);
     }
   }
@@ -1445,13 +1473,6 @@ void TableMetadata::add_view(const ViewMetadata::Ptr& view) {
   views_.push_back(view);
 }
 
-void TableMetadata::drop_view(const std::string& name) {
- ViewMetadata::Vec::iterator i = std::lower_bound(views_.begin(), views_.end(), name);
-  if (i != views_.end() &&  (*i)->name() == name) {
-    views_.erase(i);
-  }
-}
-
 void TableMetadata::sort_views() {
   std::sort(views_.begin(), views_.end());
 }
@@ -1483,7 +1504,7 @@ void TableMetadata::key_aliases(SimpleDataTypeCache& cache, KeyAliases* output) 
 const ViewMetadata::Ptr ViewMetadata::NIL;
 
 ViewMetadata::ViewMetadata(int protocol_version, const VersionNumber& cassandra_version,
-                           TableMetadata* table,
+                           const TableMetadata* table,
                            const std::string& name, const RefBuffer::Ptr& buffer, const Row* row)
   : TableMetadataBase(protocol_version, cassandra_version, name, buffer, row)
   , base_table_(table) {
