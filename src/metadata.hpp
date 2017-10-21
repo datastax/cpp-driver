@@ -394,23 +394,25 @@ public:
   static const ViewMetadata::Ptr NIL;
 
   ViewMetadata(int protocol_version, const VersionNumber& cassandra_version,
-               const TableMetadata* table,
+               TableMetadata* table,
                const std::string& name,
                const RefBuffer::Ptr& buffer, const Row* row);
 
   ViewMetadata(const ViewMetadata& other,
-               const TableMetadata* table)
+               TableMetadata* table)
     : TableMetadataBase(other)
     , base_table_(table) { }
 
+  void base_table(TableMetadata* base_table) { base_table_ = base_table; }
   const TableMetadata* base_table() const { return base_table_; }
+  TableMetadata* base_table() { return base_table_; }
 
 private:
   // This cannot be a reference counted pointer because it would cause a cycle.
   // This is okay because the lifetime of the table will exceed the lifetime
   // of a table's view. That is, a table's views will be removed when a table is
   // removed.
-  const TableMetadata* base_table_;
+  TableMetadata* base_table_;
 };
 
 class ViewIteratorBase : public Iterator {
@@ -478,12 +480,7 @@ public:
   TableMetadata(int protocol_version, const VersionNumber& cassandra_version, const std::string& name,
                 const RefBuffer::Ptr& buffer, const Row* row);
 
-  TableMetadata(const TableMetadata& other,
-                const ViewMetadata::Vec& views)
-    : TableMetadataBase(other)
-    , views_(views)
-    , indexes_(other.indexes_)
-    , indexes_by_name_(other.indexes_by_name_) { }
+  TableMetadata(const TableMetadata& other, const ViewMetadata::Vec& views);
 
   const ViewMetadata::Vec& views() const { return views_; }
   const IndexMetadata::Vec& indexes() const { return indexes_; }
