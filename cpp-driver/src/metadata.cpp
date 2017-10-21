@@ -1089,15 +1089,22 @@ void KeyspaceMetadata::add_table(const TableMetadata::Ptr& table) {
   // If there's a previous version of this table then copy its views
   // to the new version of the table, and update the table back-refs
   // in the views.
-
   if (table_it != tables_->end()) {
     TableMetadata::Ptr old_table(table_it->second);
-    for (ViewMetadata::Vec::const_iterator i = old_table->views().begin(),
-           end = old_table->views().end(); i != end; ++i) {
-      ViewMetadata::Ptr view(Memory::allocate<ViewMetadata>(**i, table.get()));
-      table->add_view(view);
-      (*views_)[view->name()] = view;
-    }
+    internal_add_table(table, old_table->views());
+  } else {
+    (*tables_)[table->name()] = table; // Add new table
+  }
+}
+
+void KeyspaceMetadata::internal_add_table(const TableMetadata::Ptr& table,
+                                          const ViewMetadata::Vec& views) {
+  // Copy all the views and update the table and keyspace views
+  for (ViewMetadata::Vec::const_iterator i = views.begin();
+       i != views.end(); ++i) {
+    ViewMetadata::Ptr view(new ViewMetadata(**i, table.get()));
+    table->add_view(view);
+    (*views_)[view->name()] = view;
   }
   (*tables_)[table->name()] = table;
 }
@@ -1145,10 +1152,11 @@ void KeyspaceMetadata::drop_table_or_view(const String& table_or_view_name) {
         views.erase(i);
       }
 
-      // Create new instance of the base table with the view removed
-      TableMetadata::Ptr table(Memory::allocate<TableMetadata>(*view->base_table(), views));
-      (*tables_)[table->name()] = table;
+      // Create and add a new copy of the base table
+      TableMetadata::Ptr table(Memory::allocate<TableMetadata>(*view->base_table()));
+      internal_add_table(table, views);
 
+      // Remove the dropped view
       views_->erase(view_it);
     }
   }

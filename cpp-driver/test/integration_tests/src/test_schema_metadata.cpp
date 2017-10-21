@@ -760,6 +760,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     CassString actual_name;
     const CassColumnMeta* column_meta = cass_table_meta_partition_key(table_meta, index);
     BOOST_REQUIRE(column_meta);
+    cass_column_meta_name(column_meta, &actual_name.data, &actual_name.length);
     BOOST_CHECK_EQUAL(std::string(actual_name.data, actual_name.length), column_name);
     BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_PARTITION_KEY);
   }
@@ -1689,7 +1690,7 @@ BOOST_AUTO_TEST_CASE(indexes) {
  * Verifies that materialized view metadata is correctly updated and returned.
  *
  * @since 2.3.0
- * @jira_ticket CPP-331
+ * @jira_ticket CPP-331, CPP-501, CPP-503, CPP-535
  * @test_category schema
  * @cassandra_version 3.0.x
  */
@@ -1793,26 +1794,42 @@ BOOST_AUTO_TEST_CASE(materialized_views) {
   }
 
   // Drop views
+  // (CPP-503: Schema metadata race condition when a view is dropped)
   {
-    const CassTableMeta* table_meta;
-
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table2");
+    schema_get_view("materialized_views", "view2"); // Ensures view not NULL
     test_utils::execute_query(session, "DROP MATERIALIZED VIEW materialized_views.view2");
 
     refresh_schema_meta();
-
     verify_materialized_view_count("materialized_views", 2);
+    BOOST_REQUIRE(cass_keyspace_meta_materialized_view_by_name(schema_get_keyspace("materialized_views"), "view2") == NULL);
 
-    table_meta = schema_get_table("materialized_views", "table2");
-    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 1);
+    const CassTableMeta* new_table_meta = schema_get_table("materialized_views", "table2");
+    schema_get_view("materialized_views", "view1"); // Ensures view not NULL
+    BOOST_CHECK(cass_table_meta_materialized_view_count(new_table_meta) == 1);
+    BOOST_CHECK_NE(table_meta, new_table_meta);
 
+    table_meta = schema_get_table("materialized_views", "table1");
     test_utils::execute_query(session, "DROP MATERIALIZED VIEW materialized_views.view1");
 
     refresh_schema_meta();
-
     verify_materialized_view_count("materialized_views", 1);
+    BOOST_REQUIRE(cass_keyspace_meta_materialized_view_by_name(schema_get_keyspace("materialized_views"), "view1") == NULL);
 
-    table_meta = schema_get_table("materialized_views", "table1");
-    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 0);
+    new_table_meta = schema_get_table("materialized_views", "table1");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(new_table_meta) == 0);
+    BOOST_CHECK_NE(table_meta, new_table_meta);
+  }
+
+  // Alter view (CPP-501: Ensure schema metadata is not corrupted)
+  {
+    const CassMaterializedViewMeta* view = schema_get_view("materialized_views", "view3");
+    test_utils::execute_query(session, "ALTER MATERIALIZED VIEW materialized_views.view3 "
+                              "WITH comment = 'my view rocks'");
+    refresh_schema_meta();
+    verify_materialized_view_count("materialized_views", 1);
+    const CassMaterializedViewMeta* new_view = schema_get_view("materialized_views", "view3");
+    BOOST_CHECK_NE(view, new_view);
   }
 
   // Note: Cassandra doesn't allow for dropping tables with active views.
