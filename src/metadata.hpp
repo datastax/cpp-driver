@@ -38,7 +38,6 @@ namespace cass {
 class ColumnMetadata;
 class TableMetadata;
 class KeyspaceMetadata;
-class TableMetadata;
 class Row;
 class ResultResponse;
 
@@ -356,6 +355,15 @@ public:
   TableMetadataBase(int protocol_version, const VersionNumber& cassandra_version,
                     const std::string& name, const RefBuffer::Ptr& buffer, const Row* row);
 
+  TableMetadataBase(const TableMetadataBase& other)
+    : MetadataBase(other)
+    , RefCounted<TableMetadataBase>()
+    , columns_(other.columns_)
+    , columns_by_name_(other.columns_by_name_)
+    , partition_key_(other.partition_key_)
+    , clustering_key_(other.clustering_key_)
+    , clustering_key_order_(other.clustering_key_order_) { }
+
   virtual ~TableMetadataBase() { }
 
   const ColumnMetadata::Vec& columns() const { return columns_; }
@@ -375,9 +383,6 @@ protected:
   ColumnMetadata::Vec partition_key_;
   ColumnMetadata::Vec clustering_key_;
   ClusteringOrderVec clustering_key_order_;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(TableMetadataBase);
 };
 
 class ViewMetadata : public TableMetadataBase {
@@ -389,19 +394,23 @@ public:
   static const ViewMetadata::Ptr NIL;
 
   ViewMetadata(int protocol_version, const VersionNumber& cassandra_version,
-               TableMetadata* table,
+               const TableMetadata* table,
                const std::string& name,
                const RefBuffer::Ptr& buffer, const Row* row);
 
+  ViewMetadata(const ViewMetadata& other,
+               const TableMetadata* table)
+    : TableMetadataBase(other)
+    , base_table_(table) { }
+
   const TableMetadata* base_table() const { return base_table_; }
-  TableMetadata* base_table() { return base_table_; }
 
 private:
   // This cannot be a reference counted pointer because it would cause a cycle.
   // This is okay because the lifetime of the table will exceed the lifetime
   // of a table's view. That is, a table's views will be removed when a table is
   // removed.
-  TableMetadata* base_table_;
+  const TableMetadata* base_table_;
 };
 
 class ViewIteratorBase : public Iterator {
@@ -469,13 +478,19 @@ public:
   TableMetadata(int protocol_version, const VersionNumber& cassandra_version, const std::string& name,
                 const RefBuffer::Ptr& buffer, const Row* row);
 
+  TableMetadata(const TableMetadata& other,
+                const ViewMetadata::Vec& views)
+    : TableMetadataBase(other)
+    , views_(views)
+    , indexes_(other.indexes_)
+    , indexes_by_name_(other.indexes_by_name_) { }
+
   const ViewMetadata::Vec& views() const { return views_; }
   const IndexMetadata::Vec& indexes() const { return indexes_; }
 
   Iterator* iterator_views() const { return new ViewIteratorVec(views_); }
   const ViewMetadata* get_view(const std::string& name) const;
   void add_view(const ViewMetadata::Ptr& view);
-  void drop_view(const std::string& name);
   void sort_views();
 
   Iterator* iterator_indexes() const { return new IndexIterator(indexes_); }
