@@ -1164,7 +1164,7 @@ void KeyspaceMetadata::drop_table_or_view(const std::string& table_or_view_name)
         views.erase(i);
       }
 
-      // Create new instance of the base table with the view removed
+      // Create new instance of the base table
       TableMetadata::Ptr table(new TableMetadata(*view->base_table()));
 
       // Copy all the views and update the table and keyspace views
