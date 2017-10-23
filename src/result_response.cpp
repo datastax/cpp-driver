@@ -18,6 +18,7 @@
 
 #include "external.hpp"
 #include "logger.hpp"
+#include "protocol.hpp"
 #include "result_metadata.hpp"
 #include "serialization.hpp"
 
@@ -236,7 +237,7 @@ char* ResultResponse::decode_metadata(int version,
   int32_t column_count = 0;
   buffer = decode_int32(buffer, column_count);
 
-  if (version >= CASS_PROTOCOL_VERSION_V5) {
+  if (supports_result_metadata_id(version)) {
     if (flags & CASS_RESULT_FLAG_METADATA_CHANGED) {
       buffer = decode_string(buffer, &new_metadata_id_);
     }
@@ -316,7 +317,7 @@ bool ResultResponse::decode_set_keyspace(char* input) {
 
 bool ResultResponse::decode_prepared(int version, char* input) {
   char* buffer = decode_string(input, &prepared_id_);
-  if (version >= CASS_PROTOCOL_VERSION_V5) {
+  if (supports_result_metadata_id(version)) {
     buffer = decode_string(buffer, &result_metadata_id_);
   }
   buffer = decode_metadata(version, buffer, &metadata_, version >= 4);

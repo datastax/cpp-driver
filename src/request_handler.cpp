@@ -36,9 +36,19 @@ namespace cass {
 
 class PrepareCallback : public SimpleRequestCallback {
 public:
-  PrepareCallback(const std::string& query, RequestExecution* request_execution)
-    : SimpleRequestCallback(Request::ConstPtr(new PrepareRequest(query)))
-    , request_execution_(request_execution) { }
+  PrepareCallback(const std::string& query, RequestExecution* request_execution);
+
+private:
+  class PrepareRequest : public cass::PrepareRequest {
+  public:
+    PrepareRequest(const std::string& query,
+                   const std::string& keyspace,
+                   uint64_t request_timeout_ms)
+      : cass::PrepareRequest(query) {
+      set_keyspace(keyspace);
+      set_request_timeout_ms(request_timeout_ms);
+    }
+  };
 
 private:
   virtual void on_internal_set(ResponseMessage* response);
@@ -48,6 +58,14 @@ private:
 private:
   RequestExecution::Ptr request_execution_;
 };
+
+PrepareCallback::PrepareCallback(const std::string& query, RequestExecution* request_execution)
+  : SimpleRequestCallback(
+      Request::ConstPtr(
+        new PrepareRequest(query,
+                           request_execution->request()->keyspace(),
+                           request_execution->request_timeout_ms())))
+  , request_execution_(request_execution) { }
 
 void PrepareCallback::on_internal_set(ResponseMessage* response) {
   switch (response->opcode()) {
@@ -236,10 +254,6 @@ void RequestExecution::on_error(CassError code, const std::string& message) {
 
 void RequestExecution::on_result_metadata_changed(ResultResponse* result_response) {
   if (request_handler_->listener_) {
-    assert((request()->opcode() == CQL_OPCODE_EXECUTE ||
-            request()->opcode() == CQL_OPCODE_PREPARE) &&
-           "Result metadata should only change as a result of an execute or prepare request");
-
     if (result_response->kind() == CASS_RESULT_KIND_ROWS) {
       const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
       request_handler_->listener_->on_result_metadata_changed(execute->prepared()->id(),

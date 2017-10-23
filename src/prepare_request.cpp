@@ -16,6 +16,7 @@
 
 #include "prepare_request.hpp"
 
+#include "protocol.hpp"
 #include "serialization.hpp"
 
 namespace cass {

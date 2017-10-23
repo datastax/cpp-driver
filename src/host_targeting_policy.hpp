@@ -36,7 +36,7 @@ public:
   virtual void init(const SharedRefPtr<Host>& connected_host,
                     const cass::HostMap& hosts, Random* random);
 
-  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+  virtual QueryPlan* new_query_plan(const std::string& keyspace,
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 

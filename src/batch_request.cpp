@@ -19,6 +19,7 @@
 #include "constants.hpp"
 #include "execute_request.hpp"
 #include "external.hpp"
+#include "protocol.hpp"
 #include "request_callback.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
