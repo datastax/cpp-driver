@@ -1165,7 +1165,15 @@ void KeyspaceMetadata::drop_table_or_view(const std::string& table_or_view_name)
       }
 
       // Create new instance of the base table with the view removed
-      TableMetadata::Ptr table(new TableMetadata(*view->base_table(), views));
+      TableMetadata::Ptr table(new TableMetadata(*view->base_table()));
+
+      // Copy all the views and update the table and keyspace views
+      for (ViewMetadata::Vec::const_iterator i = views.begin();
+           i != views.end(); ++i) {
+        ViewMetadata::Ptr view(new ViewMetadata(**i, table.get()));
+        table->add_view(view);
+        (*views_)[view->name()] = view;
+      }
       (*tables_)[table->name()] = table;
 
       views_->erase(view_it);
@@ -1463,19 +1471,6 @@ TableMetadata::TableMetadata(int protocol_version, const VersionNumber& cassandr
   }
 }
 
-TableMetadata::TableMetadata(const TableMetadata& other,
-                             const ViewMetadata::Vec& views)
-  : TableMetadataBase(other)
-  , views_(views)
-  , indexes_(other.indexes_)
-  , indexes_by_name_(other.indexes_by_name_) {
-  // Update base table on each view
-  for (ViewMetadata::Vec::const_iterator i = views.begin(),
-       end = views.end(); i != end; ++i) {
-    (*i)->base_table(this);
-  }
-}
-
 const ViewMetadata* TableMetadata::get_view(const std::string& name) const {
  ViewMetadata::Vec::const_iterator i = std::lower_bound(views_.begin(), views_.end(), name);
   if (i == views_.end() || (*i)->name() != name) return NULL;
@@ -1517,7 +1512,7 @@ void TableMetadata::key_aliases(SimpleDataTypeCache& cache, KeyAliases* output) 
 const ViewMetadata::Ptr ViewMetadata::NIL;
 
 ViewMetadata::ViewMetadata(int protocol_version, const VersionNumber& cassandra_version,
-                           TableMetadata* table,
+                           const TableMetadata* table,
                            const std::string& name, const RefBuffer::Ptr& buffer, const Row* row)
   : TableMetadataBase(protocol_version, cassandra_version, name, buffer, row)
   , base_table_(table) {
