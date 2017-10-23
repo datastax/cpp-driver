@@ -51,7 +51,7 @@ void TokenAwarePolicy::init(const Host::Ptr& connected_host,
   ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
 }
 
-QueryPlan* TokenAwarePolicy::new_query_plan(const String& connected_keyspace,
+QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace,
                                             RequestHandler* request_handler,
                                             const TokenMap* token_map) {
   if (request_handler != NULL) {
@@ -61,9 +61,6 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const String& connected_keyspace,
       case CQL_OPCODE_QUERY:
       case CQL_OPCODE_EXECUTE:
       case CQL_OPCODE_BATCH:
-        const String& statement_keyspace = request->keyspace();
-        const String& keyspace = statement_keyspace.empty()
-                                      ? connected_keyspace : statement_keyspace;
         String routing_key;
         if (request->get_routing_key(&routing_key) && !keyspace.empty()) {
           if (token_map != NULL) {
@@ -73,7 +70,7 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const String& connected_keyspace,
                 random_shuffle(replicas->begin(), replicas->end(), random_);
               }
               return Memory::allocate<TokenAwareQueryPlan>(child_policy_.get(),
-                                                           child_policy_->new_query_plan(connected_keyspace,
+                                                           child_policy_->new_query_plan(keyspace,
                                                                                          request_handler,
                                                                                          token_map),
                                                            replicas,
@@ -88,7 +85,7 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const String& connected_keyspace,
         break;
     }
   }
-  return child_policy_->new_query_plan(connected_keyspace,
+  return child_policy_->new_query_plan(keyspace,
                                        request_handler,
                                        token_map);
 }

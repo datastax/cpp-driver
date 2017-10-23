@@ -60,7 +60,7 @@ CassHostDistance DCAwarePolicy::distance(const Host::Ptr& host) const {
   return CASS_HOST_DISTANCE_IGNORE;
 }
 
-QueryPlan* DCAwarePolicy::new_query_plan(const String& connected_keyspace,
+QueryPlan* DCAwarePolicy::new_query_plan(const String& keyspace,
                                          RequestHandler* request_handler,
                                          const TokenMap* token_map) {
   CassConsistency cl = request_handler != NULL ? request_handler->consistency() : CASS_DEFAULT_CONSISTENCY;

@@ -21,6 +21,7 @@
 #include "external.hpp"
 #include "macros.hpp"
 #include "prepared.hpp"
+#include "protocol.hpp"
 #include "query_request.hpp"
 #include "request_callback.hpp"
 #include "scoped_ptr.hpp"

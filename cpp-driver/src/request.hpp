@@ -195,15 +195,6 @@ public:
 
   virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const = 0;
 
-public:
-  static bool supports_set_keyspace(int version) {
-    if (version & DSE_PROTOCOL_VERSION_BIT) {
-      return version >= CASS_PROTOCOL_VERSION_DSEV2;
-    } else {
-      return version >= CASS_PROTOCOL_VERSION_V5;
-    }
-  }
-
 private:
   uint8_t opcode_;
   RequestSettings settings_;

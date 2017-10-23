@@ -46,10 +46,10 @@ CassHostDistance ListPolicy::distance(const Host::Ptr& host) const {
   return CASS_HOST_DISTANCE_IGNORE;
 }
 
-QueryPlan* ListPolicy::new_query_plan(const String& connected_keyspace,
+QueryPlan* ListPolicy::new_query_plan(const String& keyspace,
                                       RequestHandler* request_handler,
                                       const TokenMap* token_map) {
-  return child_policy_->new_query_plan(connected_keyspace,
+  return child_policy_->new_query_plan(keyspace,
                                        request_handler,
                                        token_map);
 }
