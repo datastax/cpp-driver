@@ -45,11 +45,26 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                            % keyspace2
                                            % "1"));
+    create_table();
+    cass_cluster_set_use_beta_protocol_version(cluster, cass_true);
+  }
+
+  /**
+   * Create table schema.
+   */
+  void create_table() {
     test_utils::execute_query(session, str(boost::format("CREATE TABLE %s.test (k text PRIMARY KEY, v text)")
                                            % keyspace2));
     test_utils::execute_query(session, str(boost::format("INSERT INTO %s.test (k, v) VALUES ('key1', 'value1')")
                                            % keyspace2));
-    cass_cluster_set_use_beta_protocol_version(cluster, cass_true);
+  }
+
+  /**
+   * Drop table schema.
+   */
+  void drop_table() {
+    test_utils::execute_query(session, str(boost::format("DROP TABLE %s.test")
+                                           % keyspace2));
   }
 
   /**
@@ -300,6 +315,42 @@ BOOST_AUTO_TEST_CASE(prepared_not_supported_by_older_protocol) {
 
   test_utils::CassFuturePtr future(cass_session_prepare_from_existing(session.get(), statement.get()));
   BOOST_CHECK_EQUAL(cass_future_error_code(future.get()), CASS_ERROR_SERVER_INVALID_QUERY);
+}
+
+/**
+ * Verify that a re-prepare (as a result of a UNPREPARED response) correctly
+ * prepares the statement with the original keyspace.
+ *
+ * @since 2.8
+ * @test_category basic
+ *
+ */
+BOOST_AUTO_TEST_CASE(prepared_should_reprepare_with_the_same_keyspace) {
+  if (!check_version("4.0.0")) return;
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+
+  test_utils::CassStatementPtr statement(cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
+
+  // Attempt to set the keyspace with an older protocol
+  cass_statement_set_keyspace(statement.get(), keyspace2.c_str());
+
+  test_utils::CassFuturePtr future(cass_session_prepare_from_existing(session.get(), statement.get()));
+  BOOST_CHECK_EQUAL(cass_future_error_code(future.get()), CASS_OK);
+
+  test_utils::CassPreparedPtr prepared(cass_future_get_prepared(future.get()));
+  BOOST_CHECK(prepared);
+
+  // Force the statement to be reprepared
+  test_utils::execute_query(session.get(), "TRUNCATE system.prepared_statements"); // Required for 3.10+ (CASSANDRA-8831)
+  drop_table();
+  create_table();
+
+  // Check to see if the statement reprepared with the correct keyspace
+  test_utils::CassStatementPtr bound_statement(cass_prepared_bind(prepared.get()));
+  BOOST_CHECK(bound_statement);
+
+  validate_query_result(test_utils::CassFuturePtr(cass_session_execute(session.get(), bound_statement.get())));
 }
 
 /**

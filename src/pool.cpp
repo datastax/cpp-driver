@@ -40,6 +40,15 @@ public:
                       const RequestExecution::Ptr& request_execution);
 
 private:
+  class SetKeyspaceRequest : public QueryRequest {
+  public:
+      SetKeyspaceRequest(const std::string& keyspace, uint64_t request_timeout_ms)
+        : QueryRequest("USE \"" + keyspace + "\"") {
+        set_request_timeout_ms(request_timeout_ms);
+      }
+  };
+
+private:
   virtual void on_internal_set(ResponseMessage* response);
   virtual void on_internal_error(CassError code, const std::string& message);
   virtual void on_internal_timeout();
@@ -52,7 +61,10 @@ private:
 
 SetKeyspaceCallback::SetKeyspaceCallback(const std::string& keyspace,
                                          const RequestExecution::Ptr& request_execution)
-  : SimpleRequestCallback(Request::ConstPtr(new QueryRequest("USE \"" + keyspace + "\"")))
+  : SimpleRequestCallback(
+      Request::ConstPtr(
+        new SetKeyspaceRequest(keyspace,
+                               request_execution->request_timeout_ms())))
   , request_execution_(request_execution) { }
 
 void SetKeyspaceCallback::on_internal_set(ResponseMessage* response) {
