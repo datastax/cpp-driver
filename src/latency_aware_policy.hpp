@@ -56,7 +56,7 @@ public:
   virtual void register_handles(uv_loop_t* loop);
   virtual void close_handles();
 
-  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+  virtual QueryPlan* new_query_plan(const std::string& keyspace,
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 

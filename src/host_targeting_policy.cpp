@@ -28,10 +28,10 @@ void HostTargetingPolicy::init(const SharedRefPtr<Host>& connected_host,
   ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
 }
 
-QueryPlan* HostTargetingPolicy::new_query_plan(const std::string& connected_keyspace,
+QueryPlan* HostTargetingPolicy::new_query_plan(const std::string& keyspace,
                                                RequestHandler* request_handler,
                                                const TokenMap* token_map) {
-  QueryPlan* child_plan = child_policy_->new_query_plan(connected_keyspace,
+  QueryPlan* child_plan = child_policy_->new_query_plan(keyspace,
                                                         request_handler,
                                                         token_map);
   if (request_handler == NULL ||

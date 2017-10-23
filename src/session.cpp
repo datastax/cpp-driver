@@ -646,7 +646,7 @@ Future::Ptr Session::prepare(const Statement* statement) {
   ResponseFuture::Ptr future(new ResponseFuture(metadata_.schema_snapshot(protocol_version(), cassandra_version())));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(new RequestHandler(prepare, future)));
+  execute(RequestHandler::Ptr(new RequestHandler(prepare, future, this)));
 
   return future;
 }
