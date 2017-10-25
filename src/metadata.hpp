@@ -478,10 +478,8 @@ public:
   TableMetadata(int protocol_version, const VersionNumber& cassandra_version, const std::string& name,
                 const RefBuffer::Ptr& buffer, const Row* row);
 
-  TableMetadata(const TableMetadata& other,
-                const ViewMetadata::Vec& views)
+  TableMetadata(const TableMetadata& other)
     : TableMetadataBase(other)
-    , views_(views)
     , indexes_(other.indexes_)
     , indexes_by_name_(other.indexes_by_name_) { }
 
@@ -582,6 +580,10 @@ public:
 
   StringRef strategy_class() const { return strategy_class_; }
   const Value* strategy_options() const { return &strategy_options_; }
+
+private:
+  void internal_add_table(const TableMetadata::Ptr& table,
+                          const ViewMetadata::Vec& views);
 
 private:
   StringRef strategy_class_;

@@ -1592,7 +1592,7 @@ BOOST_AUTO_TEST_CASE(indexes) {
  * Verifies that materialized view metadata is correctly updated and returned.
  *
  * @since 2.3.0
- * @jira_ticket CPP-331
+ * @jira_ticket CPP-331, CPP-501, CPP-503, CPP-535
  * @test_category schema
  * @cassandra_version 3.0.x
  */
