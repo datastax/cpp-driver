@@ -452,7 +452,7 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
                connection()->address_string().c_str());
       if (retry_policy() && request()->is_idempotent()) {
         decision = retry_policy()->on_request_error(request(),
-                                                    request()->consistency(),
+                                                    consistency(),
                                                     error,
                                                     num_retries_);
       }
@@ -465,7 +465,7 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
       connection()->defunct();
       if (retry_policy() && request()->is_idempotent()) {
         decision = retry_policy()->on_request_error(request(),
-                                                    request()->consistency(),
+                                                    consistency(),
                                                     error,
                                                     num_retries_);
       }
