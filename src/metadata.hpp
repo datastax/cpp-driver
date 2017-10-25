@@ -582,6 +582,10 @@ public:
   const Value* strategy_options() const { return &strategy_options_; }
 
 private:
+  void internal_add_table(const TableMetadata::Ptr& table,
+                          const ViewMetadata::Vec& views);
+
+private:
   StringRef strategy_class_;
   Value strategy_options_;
 
