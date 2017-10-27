@@ -18,9 +18,9 @@ describe Cassandra types including UDTs, tuples, collections and all basic types
 const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
 
 const CassKeyspaceMeta* keyspace_meta =
-  cass_schema_meta_keyspace_by_name("keyspace");
+  cass_schema_meta_keyspace_by_name(schema_meta, "keyspace");
 
-const DataType* data_type =
+const CassDataType* data_type =
   cass_keyspace_meta_user_type_by_name(keyspace_meta, "typename");
 
 CassUserType* user_type = cass_user_type_new_from_data_type(data_type);
@@ -67,7 +67,7 @@ to the way collections or tuples are consumed.
 const CassValue* udt_value = cass_row_get_column_by_name(row, "value1");
 
 /* Create an iterator for the UDT value */
-CassIterator* udt_iterator = cass_iterator_from_user_type(udt_value);
+CassIterator* udt_iterator = cass_iterator_fields_from_user_type(udt_value);
 
 /* Iterate over the UDT fields */
 while (cass_iterator_next(udt_iterator)) {

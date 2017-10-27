@@ -127,7 +127,7 @@ CassError select_from(CassSession* session, const char* key) {
       const CassRow* row = cass_iterator_get_row(iterator);
 
       cass_value_get_duration(cass_row_get_column(row, 0), &months, &days, &nanos);
-      printf("months: %d  days: %d  nanos: %lld\n", months, days, nanos);
+      printf("months: %d  days: %d  nanos: %lld\n", months, days, (long long int)nanos);
     }
 
     cass_result_free(result);

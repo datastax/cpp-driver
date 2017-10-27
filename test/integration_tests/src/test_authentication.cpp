@@ -27,8 +27,8 @@
 #include <boost/thread.hpp>
 #include <boost/scoped_ptr.hpp>
 
-struct AthenticationTests {
-  AthenticationTests()
+struct AuthenticationTests {
+  AuthenticationTests()
     : cluster(cass_cluster_new())
     , ccm(new CCM::Bridge("config.txt"))
     , version(test_utils::get_version()) {
@@ -39,7 +39,7 @@ struct AthenticationTests {
     test_utils::initialize_contact_points(cluster.get(), CCM::Bridge::get_ip_prefix("config.txt"), 1);
   }
 
-  ~AthenticationTests() {
+  ~AuthenticationTests() {
     //TODO: Add name generation for simple auth tests
     ccm->remove_cluster();
   }
@@ -77,7 +77,13 @@ struct AthenticationTests {
   CCM::CassVersion version;
 };
 
-BOOST_FIXTURE_TEST_SUITE(authentication, AthenticationTests)
+// Authenticator callback used in AuthenticatorSetErrorNullError test
+void on_auth_initial(CassAuthenticator* auth,
+                     void* data) {
+  cass_authenticator_set_error(auth, NULL);
+}
+
+BOOST_FIXTURE_TEST_SUITE(authentication, AuthenticationTests)
 
 BOOST_AUTO_TEST_CASE(protocol_versions)
 {
@@ -106,6 +112,12 @@ BOOST_AUTO_TEST_CASE(empty_credentials)
   }
   invalid_credentials(3, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   invalid_credentials(4, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+  invalid_credentials(3, NULL, "pass", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+  invalid_credentials(4, NULL, "pass", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+
+  expected_error = "Username and/or password are incorrect";
+  invalid_credentials(3, "user", NULL, expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
+  invalid_credentials(4, "user", NULL, expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
 }
 
 BOOST_AUTO_TEST_CASE(bad_credentials)

@@ -1,0 +1,3 @@
+0.9
+
+#84 Support activity verification for batch queries

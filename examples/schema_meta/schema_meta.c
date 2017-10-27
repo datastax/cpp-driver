@@ -140,48 +140,64 @@ int main(int argc, char* argv[]) {
 
   if (cass_future_error_code(connect_future) == CASS_OK) {
     CassFuture* close_future = NULL;
+    const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
+    CassVersion version = cass_schema_meta_version(schema_meta);
+
+    execute_query(session, "DROP KEYSPACE IF EXISTS examples;");
 
     execute_query(session,
                   "CREATE KEYSPACE examples WITH replication = { \
-                  'class': 'SimpleStrategy', 'replication_factor': '3' };");
+                  'class': 'SimpleStrategy', 'replication_factor': '3' }");
 
     print_keyspace(session, "examples");
 
     execute_query(session,
                   "CREATE TABLE examples.schema_meta (key text, \
                   value bigint, \
-                  PRIMARY KEY (key));");
+                  PRIMARY KEY (key))");
 
     execute_query(session,
-                  "CREATE FUNCTION examples.avg_state(state tuple<int, bigint>, val int) \
+                  "CREATE INDEX schema_meta_idx \
+                    ON examples.schema_meta (value)");
+
+    execute_query(session,
+                  "CREATE FUNCTION \
+                     examples.avg_state(state tuple<int, bigint>, val int) \
                   CALLED ON NULL INPUT RETURNS tuple<int, bigint> \
                   LANGUAGE java AS \
                     'if (val != null) { \
                       state.setInt(0, state.getInt(0) + 1); \
                       state.setLong(1, state.getLong(1) + val.intValue()); \
                     } \
-                    return state;'\
-                  ;");
+                    return state;'");
     execute_query(session,
-                  "CREATE FUNCTION examples.avg_final (state tuple<int, bigint>) \
+                  "CREATE FUNCTION \
+                     examples.avg_final (state tuple<int, bigint>) \
                   CALLED ON NULL INPUT RETURNS double \
                   LANGUAGE java AS \
                     'double r = 0; \
                     if (state.getInt(0) == 0) return null; \
                     r = state.getLong(1); \
                     r /= state.getInt(0); \
-                    return Double.valueOf(r);'\
-                  ;");
+                    return Double.valueOf(r);'");
 
     execute_query(session,
                   "CREATE AGGREGATE examples.average(int) \
                   SFUNC avg_state STYPE tuple<int, bigint> FINALFUNC avg_final \
-                  INITCOND(0, 0);");
+                  INITCOND(0, 0)");
 
     print_table(session, "examples", "schema_meta");
-    print_function(session, "examples", "avg_state", "tuple<int,bigint>,int");
-    print_function(session, "examples", "avg_final", "tuple<int,bigint>");
+    if (version.major_version >= 3) {
+      /* Collection types are marked as frozen in Cassandra 3.x and later. */
+      print_function(session, "examples", "avg_state", "frozen<tuple<int,bigint>>,int");
+      print_function(session, "examples", "avg_final", "frozen<tuple<int,bigint>>");
+    } else {
+      print_function(session, "examples", "avg_state", "tuple<int,bigint>,int");
+      print_function(session, "examples", "avg_final", "tuple<int,bigint>");
+    }
     print_aggregate(session, "examples", "average", "int");
+
+    cass_schema_meta_free(schema_meta);
 
     /* Close the session */
     close_future = cass_session_close(session);
@@ -205,6 +221,7 @@ void print_schema_map(const CassValue* value);
 void print_meta_field(const CassIterator* iterator, int indent);
 void print_meta_fields(CassIterator* iterator, int indent);
 void print_column_meta(const CassColumnMeta* meta, int indent);
+void print_index_meta(const CassIndexMeta* meta, int indent);
 
 void print_indent(int indent) {
   int i;
@@ -375,6 +392,14 @@ void print_table_meta(const CassTableMeta* meta, int indent) {
   printf("\n");
 
   cass_iterator_free(iterator);
+
+  iterator = cass_iterator_indexes_from_table_meta(meta);
+  while (cass_iterator_next(iterator)) {
+    print_index_meta(cass_iterator_get_index_meta(iterator), indent + 1);
+  }
+  printf("\n");
+
+  cass_iterator_free(iterator);
 }
 
 void print_function_meta(const CassFunctionMeta* meta, int indent) {
@@ -412,3 +437,13 @@ void print_column_meta(const CassColumnMeta* meta, int indent) {
   printf("\n");
 }
 
+void print_index_meta(const CassIndexMeta* meta, int indent) {
+  const char* name;
+  size_t name_length;
+
+  print_indent(indent);
+  cass_index_meta_name(meta, &name, &name_length);
+  printf("Index \"%.*s\":\n", (int)name_length, name);
+  print_meta_fields(cass_iterator_fields_from_index_meta(meta), indent + 1);
+  printf("\n");
+}

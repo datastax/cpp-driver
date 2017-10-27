@@ -1,0 +1,129 @@
+/*
+  Copyright (c) 2017 DataStax, Inc.
+
+  This software can be used solely with DataStax Enterprise. Please consult the
+  license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
+*/
+#include "test_category.hpp"
+
+#include <algorithm>
+#include <climits>
+
+// Constant value definitions for test type
+const TestCategory TestCategory::CASSANDRA("CASSANDRA", 0, "Cassandra", "*_Cassandra_*");
+const TestCategory TestCategory::DSE("DSE", 1, "DataStax Enterprise", "*_DSE_*");
+const TestCategory TestCategory::SCASSANDRA("SCASSANDRA", SHRT_MAX, "Stubbed Cassandra", "*_SCassandra_*");
+
+// Static declarations for test type
+std::set<TestCategory> TestCategory::constants_;
+
+std::ostream& operator<<(std::ostream& os, const TestCategory& object) {
+  os << object.display_name();
+  return os;
+}
+
+TestCategory::TestCategory()
+  : name_("INVALID")
+  , ordinal_(-1)
+  , display_name_("Invalid test category")
+  , filter_("*") {}
+
+TestCategory::TestCategory(const std::string& name) {
+  *this = name;
+}
+
+const std::string& TestCategory::name() const {
+  return name_;
+}
+
+short TestCategory::ordinal() const {
+  return ordinal_;
+}
+
+const std::string& TestCategory::display_name() const {
+  return display_name_;
+}
+
+const std::string& TestCategory::filter() const {
+  return filter_;
+}
+
+void TestCategory::operator =(const TestCategory& object) {
+  name_ = object.name_;
+  ordinal_ = object.ordinal_;
+  display_name_ = object.display_name_;
+}
+
+void TestCategory::operator=(const std::string& name) {
+  *this = get_enumeration(name);
+}
+
+bool TestCategory::operator<(const TestCategory& object) const {
+  return ordinal_ < object.ordinal_;
+}
+
+bool TestCategory::operator==(const TestCategory& object) const {
+  if (name_ == object.name_) {
+    if (ordinal_ == object.ordinal_) {
+      if (display_name_ == object.display_name_) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool TestCategory::operator==(const std::string& object) const {
+  std::string lhs = name_;
+  std::string rhs = object;
+  std::transform(lhs.begin(), lhs.end(), lhs.begin(), ::tolower);
+  std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::tolower);
+  return lhs.compare(rhs) == 0;
+}
+
+bool TestCategory::operator !=(const TestCategory& object) const {
+  return !(*this == object);
+}
+
+bool TestCategory::operator !=(const std::string& object) const {
+  return !(*this == object);
+}
+
+TestCategory::iterator TestCategory::begin() {
+    return get_constants().begin();
+  }
+
+TestCategory::iterator TestCategory::end() {
+  return get_constants().end();
+}
+
+TestCategory::TestCategory(const std::string& name, short ordinal,
+  const std::string& display_name, const std::string& filter)
+  : name_(name)
+  , ordinal_(ordinal)
+  , display_name_(display_name)
+  , filter_(filter) {}
+
+const std::set<TestCategory>& TestCategory::get_constants() {
+  if (constants_.empty()) {
+    constants_.insert(CASSANDRA);
+    constants_.insert(DSE);
+    constants_.insert(SCASSANDRA);
+  }
+
+  return constants_;
+}
+
+TestCategory TestCategory::get_enumeration(const std::string& name)  const{
+  // Iterator over the constants and find the corresponding enumeration
+  if (!name.empty()) {
+    for (iterator iterator = begin(); iterator != end(); ++iterator) {
+      if (*iterator == name) {
+        return *iterator;
+      }
+    }
+  }
+
+  // Enumeration was not found; throw exception if not
+  throw Exception(name + " is not a valid test category");
+}

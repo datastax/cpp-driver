@@ -24,7 +24,6 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 
-
 #include <algorithm>
 #include <set>
 #include <stdlib.h>
@@ -41,6 +40,19 @@
 #define USER_DEFINED_FUNCTION_NAME "user_defined_function"
 #define USER_DEFINED_AGGREGATE_NAME "user_defined_aggregate"
 #define USER_DEFINED_AGGREGATE_FINAL_FUNCTION_NAME "uda_udf_final"
+
+#define RETRIEVE_METADATA(meta, func, type) do { \
+  int attempts = 0; \
+  while (!meta && attempts < 10) { \
+    meta = func; \
+    if (!meta) { \
+      std::cout << type << " metadata is not valid; initiating schema refresh" << std::endl; \
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(1000)); \
+      refresh_schema_meta(); \
+    } \
+    ++attempts; \
+  } \
+} while(0)
 
 namespace std {
 
@@ -132,21 +144,32 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   }
 
   const CassKeyspaceMeta* schema_get_keyspace(const std::string& ks_name) {
-    const CassKeyspaceMeta* ks_meta = cass_schema_meta_keyspace_by_name(schema_meta_, ks_name.c_str());
+    const CassKeyspaceMeta* ks_meta = NULL;
+    RETRIEVE_METADATA(ks_meta,
+                      cass_schema_meta_keyspace_by_name(schema_meta_, ks_name.c_str()),
+                      "Keyspace");
     BOOST_REQUIRE(ks_meta);
     return ks_meta;
   }
 
   const CassTableMeta* schema_get_table(const std::string& ks_name,
                                      const std::string& table_name) {
-    const CassTableMeta* table_meta = cass_keyspace_meta_table_by_name(schema_get_keyspace(ks_name), table_name.c_str());
+    const CassTableMeta* table_meta = NULL;
+    RETRIEVE_METADATA(table_meta,
+                      cass_keyspace_meta_table_by_name(schema_get_keyspace(ks_name),
+                                                       table_name.c_str()),
+                      "Table");
     BOOST_REQUIRE(table_meta);
     return table_meta;
   }
 
   const CassMaterializedViewMeta* schema_get_view(const std::string& ks_name,
                                                   const std::string& view_name) {
-    const CassMaterializedViewMeta* view_meta = cass_keyspace_meta_materialized_view_by_name(schema_get_keyspace(ks_name), view_name.c_str());
+    const CassMaterializedViewMeta* view_meta = NULL;
+    RETRIEVE_METADATA(view_meta,
+                      cass_keyspace_meta_materialized_view_by_name(schema_get_keyspace(ks_name),
+                                                                   view_name.c_str()),
+                      "View");
     BOOST_REQUIRE(view_meta);
     return view_meta;
   }
@@ -154,7 +177,11 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   const CassColumnMeta* schema_get_column(const std::string& ks_name,
                                       const std::string& table_name,
                                       const std::string& col_name) {
-    const CassColumnMeta* col_meta = cass_table_meta_column_by_name(schema_get_table(ks_name, table_name), col_name.c_str());
+    const CassColumnMeta* col_meta = NULL;
+    RETRIEVE_METADATA(col_meta,
+                      cass_table_meta_column_by_name(schema_get_table(ks_name, table_name),
+                                                     col_name.c_str()),
+                      "Column");
     BOOST_REQUIRE(col_meta);
     return col_meta;
   }
@@ -163,9 +190,12 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
                               const std::string& func_name,
                               const std::vector<std::string>& func_types) {
 
-    const CassFunctionMeta* func_meta = cass_keyspace_meta_function_by_name(schema_get_keyspace(ks_name),
-      func_name.c_str(),
-      test_utils::implode(func_types, ',').c_str());
+    const CassFunctionMeta* func_meta = NULL;
+    RETRIEVE_METADATA(func_meta,
+                      cass_keyspace_meta_function_by_name(schema_get_keyspace(ks_name),
+                                                          func_name.c_str(),
+                                                          test_utils::implode(func_types, ',').c_str()),
+                      "Function");
     BOOST_REQUIRE(func_meta);
     return func_meta;
   }
@@ -173,9 +203,12 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   const CassAggregateMeta* schema_get_aggregate(const std::string& ks_name,
                                 const std::string& agg_name,
                                 const std::vector<std::string>& agg_types) {
-    const CassAggregateMeta* agg_meta = cass_keyspace_meta_aggregate_by_name(schema_get_keyspace(ks_name),
-      agg_name.c_str(),
-      test_utils::implode(agg_types, ',').c_str());
+    const CassAggregateMeta* agg_meta = NULL;
+    RETRIEVE_METADATA(agg_meta,
+                      cass_keyspace_meta_aggregate_by_name(schema_get_keyspace(ks_name),
+                                                           agg_name.c_str(),
+                                                           test_utils::implode(agg_types, ',').c_str()),
+                      "Aggregate");
     BOOST_REQUIRE(agg_meta);
     return agg_meta;
   }
@@ -504,15 +537,23 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
 
   void verify_materialized_view_count(const std::string& keyspace_name,
                                       size_t count) {
-    const CassKeyspaceMeta* keyspace_meta = schema_get_keyspace("materialized_views");
-    test_utils::CassIteratorPtr iterator(cass_iterator_materialized_views_from_keyspace_meta(keyspace_meta));
-
     size_t actual_count = 0;
-    while (cass_iterator_next(iterator.get())) {
-      actual_count++;
+    size_t attempts = 0;
+    // Allow for extra attempts in the event the schema needs to be refreshed
+    while (actual_count != count && attempts < 10) {
+      const CassKeyspaceMeta* keyspace_meta = schema_get_keyspace("materialized_views");
+      test_utils::CassIteratorPtr iterator(cass_iterator_materialized_views_from_keyspace_meta(keyspace_meta));
+      while (cass_iterator_next(iterator.get())) {
+        actual_count++;
+      }
+      if (actual_count != count) {
+        std::cout << "View count is not valid; initiating schema refresh" << std::endl;
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
+        refresh_schema_meta();
+      }
+      ++attempts;
     }
     BOOST_CHECK_EQUAL(actual_count, count);
-
   }
 
   void verify_materialized_view(const CassMaterializedViewMeta* view,
@@ -533,7 +574,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_CHECK(base_table_name == CassString(view_base_table_name.c_str()));
 
     std::vector<std::string> columns;
-    cass::explode(view_columns, columns);
+    test_utils::explode(view_columns, columns);
     BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_column_count(view),  columns.size());
 
     test_utils::CassIteratorPtr iterator(cass_iterator_columns_from_materialized_view_meta(view));
@@ -559,7 +600,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     }
 
     std::vector<std::string> partition_key;
-    cass::explode(view_partition_key, partition_key);
+    test_utils::explode(view_partition_key, partition_key);
     BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_partition_key_count(view), partition_key.size());
     for (size_t i = 0; i < partition_key.size(); ++i) {
       const CassColumnMeta* column = cass_materialized_view_meta_partition_key(view, i);
@@ -571,7 +612,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     }
 
     std::vector<std::string> clustering_key;
-    cass::explode(view_clustering_key, clustering_key);
+    test_utils::explode(view_clustering_key, clustering_key);
     BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_clustering_key_count(view), clustering_key.size());
     for (size_t i = 0; i < clustering_key.size(); ++i) {
       const CassColumnMeta* column = cass_materialized_view_meta_clustering_key(view, i);
@@ -685,10 +726,31 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     verify_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME, COMMENT, "boolean_sample");
   }
 
+  std::vector<std::string> get_user_data_type_field_names(const std::string& ks_name, const std::string& udt_name) {
+    std::vector<std::string> result;
+
+    const CassKeyspaceMeta* ks_meta = cass_schema_meta_keyspace_by_name(schema_meta_, ks_name.c_str());
+    if (ks_meta) {
+      const CassDataType* data_type = cass_keyspace_meta_user_type_by_name(ks_meta, udt_name.c_str());
+      if (data_type) {
+        size_t count = cass_data_type_sub_type_count(data_type);
+        for (size_t i = 0; i < count; ++i) {
+          const char *name;
+          size_t name_length;
+          if (cass_data_type_sub_type_name(data_type, i, &name, &name_length) == CASS_OK) {
+            result.push_back(std::string(name, name_length));
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
   void verify_user_type(const std::string& ks_name,
     const std::string& udt_name,
     const std::vector<std::string>& udt_datatypes) {
-    std::vector<std::string> udt_field_names = cass::get_user_data_type_field_names(schema_meta_, ks_name, udt_name);
+    std::vector<std::string> udt_field_names = get_user_data_type_field_names(ks_name.c_str(), udt_name.c_str());
     BOOST_REQUIRE_EQUAL_COLLECTIONS(udt_datatypes.begin(), udt_datatypes.end(), udt_field_names.begin(), udt_field_names.end());
   }
 
@@ -697,7 +759,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
                             const std::string& column_name) {
     CassString actual_name;
     const CassColumnMeta* column_meta = cass_table_meta_partition_key(table_meta, index);
-    cass_column_meta_name(column_meta, &actual_name.data, &actual_name.length);
+    BOOST_REQUIRE(column_meta);
     BOOST_CHECK_EQUAL(std::string(actual_name.data, actual_name.length), column_name);
     BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_PARTITION_KEY);
   }
@@ -707,6 +769,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
                              const std::string& column_name) {
     CassString actual_name;
     const CassColumnMeta* column_meta = cass_table_meta_clustering_key(table_meta, index);
+    BOOST_REQUIRE(column_meta);
     cass_column_meta_name(column_meta, &actual_name.data, &actual_name.length);
     BOOST_CHECK_EQUAL(std::string(actual_name.data, actual_name.length), column_name);
     BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_CLUSTERING_KEY);
@@ -722,10 +785,14 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     size_t index = 0;
     for (; index < partition_key_size; ++index) {
       const CassColumnMeta* column_meta = cass_table_meta_column(table_meta, index);
+      BOOST_REQUIRE(column_meta);
       BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_PARTITION_KEY);
     }
     for (; index < clustering_key_size; ++index) {
-      const CassColumnMeta* column_meta = cass_table_meta_column(table_meta, index);
+      const CassColumnMeta* column_meta = NULL;
+      RETRIEVE_METADATA(column_meta, cass_table_meta_column(table_meta, index),
+                        "Column");
+      BOOST_REQUIRE(column_meta);
       BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_CLUSTERING_KEY);
     }
 
@@ -967,9 +1034,9 @@ BOOST_AUTO_TEST_CASE(simple) {
 }
 
 /**
- * Test column parition and clustering keys
+ * Test column partition and clustering keys
  *
- * Verifies that the parition and clustering keys are properly
+ * Verifies that the partition and clustering keys are properly
  * categorized.
  *
  * @since 2.2.0
@@ -984,10 +1051,10 @@ BOOST_AUTO_TEST_CASE(keys) {
   refresh_schema_meta();
 
   {
-    test_utils::execute_query(session, "CREATE TABLE keys.single_parition_key (key text, value text, PRIMARY KEY(key))");
+    test_utils::execute_query(session, "CREATE TABLE keys.single_partition_key (key text, value text, PRIMARY KEY(key))");
     refresh_schema_meta();
 
-    const CassTableMeta* table_meta = schema_get_table("keys", "single_parition_key");
+    const CassTableMeta* table_meta = schema_get_table("keys", "single_partition_key");
 
     BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 1);
     verify_partition_key(table_meta, 0, "key");
@@ -996,11 +1063,11 @@ BOOST_AUTO_TEST_CASE(keys) {
   }
 
   {
-    test_utils::execute_query(session, "CREATE TABLE keys.composite_parition_key (key1 text, key2 text, value text, "
+    test_utils::execute_query(session, "CREATE TABLE keys.composite_partition_key (key1 text, key2 text, value text, "
                                        "PRIMARY KEY((key1, key2)))");
     refresh_schema_meta();
 
-    const CassTableMeta* table_meta = schema_get_table("keys", "composite_parition_key");
+    const CassTableMeta* table_meta = schema_get_table("keys", "composite_partition_key");
 
     BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 2);
     verify_partition_key(table_meta, 0, "key1");
@@ -1043,11 +1110,11 @@ BOOST_AUTO_TEST_CASE(keys) {
   }
 
   {
-    test_utils::execute_query(session, "CREATE TABLE keys.composite_parition_and_clustering_key (key1 text, key2 text, key3 text, key4 text, value text, "
+    test_utils::execute_query(session, "CREATE TABLE keys.composite_partition_and_clustering_key (key1 text, key2 text, key3 text, key4 text, value text, "
                                        "PRIMARY KEY((key1, key2), key3, key4))");
     refresh_schema_meta();
 
-    const CassTableMeta* table_meta = schema_get_table("keys", "composite_parition_and_clustering_key");
+    const CassTableMeta* table_meta = schema_get_table("keys", "composite_partition_and_clustering_key");
 
     BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 2);
     verify_partition_key(table_meta, 0, "key1");
@@ -1059,6 +1126,36 @@ BOOST_AUTO_TEST_CASE(keys) {
 
     verify_column_order(table_meta, 2, 2, 5);
   }
+}
+
+/**
+ * Test dense table
+ *
+ * Verifies that the columns in dense table metadata excludes the surrogate column.
+ *
+ * @since 2.2.0
+ * @jira_ticket CPP-432
+ * @test_category schema
+ * @cassandra_version 2.1.x
+ */
+BOOST_AUTO_TEST_CASE(dense_table) {
+  test_utils::execute_query(session, "CREATE KEYSPACE dense WITH replication = "
+    "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+  refresh_schema_meta();
+
+  test_utils::execute_query(session,
+                            "CREATE TABLE dense.my_table (key text, value text, PRIMARY KEY(key, value)) WITH COMPACT STORAGE");
+  refresh_schema_meta();
+
+  const CassTableMeta *table_meta = schema_get_table("dense", "my_table");
+
+  BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 1);
+  verify_partition_key(table_meta, 0, "key");
+
+  BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 1);
+  verify_clustering_key(table_meta, 0, "value");
+
+  verify_column_order(table_meta, 1, 1, 2);
 }
 
 /**
@@ -1151,10 +1248,10 @@ BOOST_AUTO_TEST_CASE(clustering_order) {
   refresh_schema_meta();
 
   {
-    test_utils::execute_query(session, "CREATE TABLE clustering_order.single_parition_key (key text, value text, PRIMARY KEY(key))");
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.single_partition_key (key text, value text, PRIMARY KEY(key))");
     refresh_schema_meta();
 
-    const CassTableMeta* table_meta = schema_get_table("clustering_order", "single_parition_key");
+    const CassTableMeta* table_meta = schema_get_table("clustering_order", "single_partition_key");
 
     BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 0);
     BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 0), CASS_CLUSTERING_ORDER_NONE);

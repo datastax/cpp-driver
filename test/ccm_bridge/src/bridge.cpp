@@ -744,8 +744,10 @@ bool  CCM::Bridge::start_cluster(std::vector<std::string> jvm_arguments /*= DEFA
   start_command.push_back("--wait-other-notice");
   start_command.push_back("--wait-for-binary-proto");
 #ifdef _WIN32
-  if (cassandra_version_ >= "2.2.4") {
-    start_command.push_back("--quiet-windows");
+  if (deployment_type_ == DeploymentType::LOCAL) {
+    if (cassandra_version_ >= "2.2.4") {
+      start_command.push_back("--quiet-windows");
+    }
   }
 #endif
   for (std::vector<std::string>::const_iterator iterator = jvm_arguments.begin(); iterator != jvm_arguments.end(); ++iterator) {
@@ -810,11 +812,18 @@ bool CCM::Bridge::switch_cluster(const std::string& cluster_name) {
   return false;
 }
 
-void CCM::Bridge::update_cluster_configuration(std::vector<std::string> key_value_pairs, bool is_dse /*= false*/) {
+void CCM::Bridge::update_cluster_configuration(std::vector<std::string> key_value_pairs,
+  bool is_dse /*= false*/, bool is_yaml /*= false*/) {
   // Create the update configuration command
-  key_value_pairs.insert(key_value_pairs.begin(), (is_dse ? "updatedseconf" : "updateconf"));
-  execute_ccm_command(key_value_pairs);
-
+  if (is_yaml) {
+    for (std::vector<std::string>::const_iterator iterator = key_value_pairs.begin();
+      iterator != key_value_pairs.end(); ++iterator) {
+      update_cluster_configuration_yaml(*iterator, is_dse);
+    }
+  } else {
+    key_value_pairs.insert(key_value_pairs.begin(), (is_dse ? "updatedseconf" : "updateconf"));
+    execute_ccm_command(key_value_pairs);
+  }
 }
 
 void CCM::Bridge::update_cluster_configuration(const std::string& key, const std::string& value, bool is_dse /*= false*/) {
@@ -826,6 +835,15 @@ void CCM::Bridge::update_cluster_configuration(const std::string& key, const std
   std::vector<std::string> updateconf_command;
   updateconf_command.push_back(is_dse ? "updatedseconf" : "updateconf");
   updateconf_command.push_back(configuration.str());
+  execute_ccm_command(updateconf_command);
+}
+
+void CCM::Bridge::update_cluster_configuration_yaml(const std::string& yaml, bool is_dse /*= false*/) {
+  // Create the update configuration command for a literal YAML
+  std::vector<std::string> updateconf_command;
+  updateconf_command.push_back(is_dse ? "updatedseconf" : "updateconf");
+  updateconf_command.push_back("-y");
+  updateconf_command.push_back("'" + yaml + "'");
   execute_ccm_command(updateconf_command);
 }
 
@@ -1010,8 +1028,10 @@ bool CCM::Bridge::start_node(unsigned int node, std::vector<std::string> jvm_arg
   start_node_command.push_back("--wait-other-notice");
   start_node_command.push_back("--wait-for-binary-proto");
 #ifdef _WIN32
-  if (cassandra_version_ >= "2.2.4") {
-    start_node_command.push_back("--quiet-windows");
+  if (deployment_type_ == DeploymentType::LOCAL) {
+    if (cassandra_version_ >= "2.2.4") {
+      start_node_command.push_back("--quiet-windows");
+    }
   }
 #endif
   for (std::vector<std::string>::const_iterator iterator = jvm_arguments.begin(); iterator != jvm_arguments.end(); ++iterator) {

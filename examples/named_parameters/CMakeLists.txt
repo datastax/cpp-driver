@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6.4)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ".")
 set(PROJECT_EXAMPLE_NAME named_parameters)
 
-file(GLOB EXAMPLE_SRC_FILES ${PROJECT_SOURCE_DIR}/examples/named_parameters/*.c)
+file(GLOB EXAMPLE_SRC_FILES ${CASS_ROOT_DIR}/examples/named_parameters/*.c)
 include_directories(${INCLUDES})
 add_executable(${PROJECT_EXAMPLE_NAME} ${EXAMPLE_SRC_FILES})
 target_link_libraries(${PROJECT_EXAMPLE_NAME} ${PROJECT_LIB_NAME_TARGET} ${CASS_LIBS})

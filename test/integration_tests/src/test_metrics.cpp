@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(timeouts) {
       boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       get_metrics(&metrics);
     } while (boost::chrono::steady_clock::now() < end &&
-    metrics.errors.pending_request_timeouts == 0);
+             metrics.errors.pending_request_timeouts == 0);
     BOOST_CHECK_GT(metrics.errors.pending_request_timeouts, 0);
   } else {
     std::cout << "Skipping Pending Request Timeout for Cassandra v" << version.to_string() << std::endl;
