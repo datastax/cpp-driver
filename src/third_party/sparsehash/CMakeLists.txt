@@ -89,6 +89,8 @@ if(NOT HASH_FUN_H)
 endif()
 
 message(STATUS "Using hash header <${HASH_FUN_H}> and namespace \"${HASH_NAMESPACE}\"")
+set(HASH_NAMESPACE ${HASH_NAMESPACE} PARENT_SCOPE)
+set(HASH_FUN_H ${HASH_FUN_H} PARENT_SCOPE)
 
 set(CMAKE_REQUIRED_QUIET ${SAVED_CMAKE_REQUIRED_QUIET})
 set(CMAKE_REQUIRED_FLAGS ${SAVED_CMAKE_REQUIRED_FLAGS})
@@ -104,5 +106,5 @@ check_type_size("uint16_t" UINT16_T)
 check_type_size("u_int16_t" U_INT16_T)
 check_type_size("__uint16_t" __UINT16_T)
 
-configure_file("${CASS_SOURCE_DIR}/src/third_party/sparsehash/config.h.cmake"
-               "${CASS_SOURCE_DIR}/src/third_party/sparsehash/src/sparsehash/internal/sparseconfig.h")
+configure_file("${CASS_SRC_DIR}/third_party/sparsehash/config.h.cmake"
+               "${CASS_SRC_DIR}/third_party/sparsehash/src/sparsehash/internal/sparseconfig.h")

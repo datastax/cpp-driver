@@ -188,10 +188,11 @@ after_build:
       # Publish/Upload the artifacts to AppVeyor (Artifacts tab in UI)
       Push-AppveyorArtifact $env:DRIVER_ARTIFACT_ARCHIVE -DeploymentName "DataStax C/C++ Driver"
       Push-AppveyorArtifact build/test/integration_tests/$env:CONFIGURATION/cassandra_integration_tests.exe -DeploymentName "DataStax C/C++ Driver Integration Tests"
-      Push-AppveyorArtifact build/test/unit_tests/$env:CONFIGURATION/cassandra_unit_tests.exe -DeploymentName "DataStax C/C++ Driver Unit Tests"
+      Push-AppveyorArtifact build/$env:CONFIGURATION/cassandra-integration-tests.exe -DeploymentName "DataStax C/C++ Driver Integration Tests (Google)"
+      Push-AppveyorArtifact build/$env:CONFIGURATION/cassandra-unit-tests.exe -DeploymentName "DataStax C/C++ Driver Unit Tests (Google)"
 
 test_script:
-  - ps: Start-Process -FilePath "build/test/unit_tests/$env:CONFIGURATION/cassandra_unit_tests.exe" -ArgumentList "--run_test=!metrics/meter* --log_format=XML --log_sink=unit_tests-boost-results.xml --log_level=test_suite --report_level=no" -Wait -NoNewWindow
+  - ps: Start-Process -FilePath "build/$env:CONFIGURATION/cassandra-unit-tests.exe" -ArgumentList "--gtest_output=xml:cass-unit-tests-gtest-results.xml" -Wait -NoNewWindow
 
 on_finish:
   - ps: |

@@ -1,0 +1,11 @@
+*.iws
+*.ipr
+*.iml
+.gradle
+out
+build
+buildAndCopy.sh
+target
+*.bat
+.idea
+generated
