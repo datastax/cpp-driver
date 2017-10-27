@@ -192,61 +192,15 @@ after_build:
       Push-AppveyorArtifact build/$env:CONFIGURATION/cassandra-unit-tests.exe -DeploymentName "DataStax C/C++ Driver Unit Tests (Google)"
 
 test_script:
-  - ps: Start-Process -FilePath "build/$env:CONFIGURATION/cassandra-unit-tests.exe" -ArgumentList "--gtest_output=xml:cass-unit-tests-gtest-results.xml" -Wait -NoNewWindow
+  - ps: Start-Process -FilePath "build/$env:CONFIGURATION/cassandra-unit-tests.exe" -ArgumentList "--gtest_output=xml:unit-tests-gtest-results.xml" -Wait -NoNewWindow
 
 on_finish:
   - ps: |
       # Publish/Upload the results to AppVeyor (Tests tab in UI)
-      If (Test-Path unit_tests-boost-results.xml) {
-      # Read and parse the Boost XML results
-        $content = [xml](Get-Content -Path .\unit_tests-boost-results.xml)
-        $cassandra_testsuite = $content.TestLog.TestSuite
-
-        $failure_occurred = $FALSE
-        ForEach ($testsuite In $cassandra_testsuite.TestSuite) {
-          ForEach ($testcase In $testsuite.TestCase) {
-            # Generate the name and filename for the test case
-            $testname = "$($testsuite.name):$($testcase.name)"
-            $filename = Split-Path $testsuite.file -leaf
-
-            # Parse each test case (determine duration, failure, and messages)
-            $outcome = "Passed"
-            $duration = 0
-            $stdout = $NULL
-            $error_message = $NULL
-            ForEach ($element In $testcase.ChildNodes) {
-              # Get the name of the element and the common attributes they share
-              $name = $element.Name
-              $file = $element.file
-              $line = $element.line
-              $text = $element.InnerText
-              $output_message = "[$($name)] - $text`n == [File] - $file`n == [Line] - $line`n"
-
-              # Determine the type of element the child node is
-              If ($name -eq "TestingTime") {
-                # Convert from microseconds to milliseconds
-                $duration = $text / 1000
-              } ElseIf ($name -eq "Error" -Or $name -eq "FatalError" -Or $name -eq "Exception") {
-                # Update the error message and indicate that a failure occurred
-                $error_message = $error_message + $output_message
-                $outcome = "Failed"
-                $failure_occurred = $TRUE
-              } ElseIf ($name -eq "Info" -Or $name -eq "Message") {
-                $stdout = $stdout + $output_message
-              }
-            }
-
-            # Add the test using the AppVeyor API
-            Add-AppVeyorTest "$($testname)" -Framework "Boost" -FileName "$($filename)" -Outcome "$($outcome)" -Duration "$($duration)" -ErrorMessage "$($error_message)" -StdOut "$($stdout)"
-          }
-        }
-
-        # Determine if any failures occurred in order to fail the build
-        if ($failure_occurred -eq $TRUE){
-          Write-Output "Failing build due to test failures"
-          $host.SetShouldExit(1)
-        }
+      If (Test-Path .\unit-tests-gtest-results.xml) {
+        (New-Object System.Net.WebClient).UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\unit-tests-gtest-results.xml))
       }
+
 on_failure:
   - ps: |
       # Write the CMake output and error logs to the console
