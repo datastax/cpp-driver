@@ -63,7 +63,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
   /**
    * Initialize the test case by creating the session and creating the
    * necessary keyspaces, tables with data, and UDFs being utilized during
-   * query exection.
+   * query execution.
    */
   void initialize() {
     create_session();
@@ -85,7 +85,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
 
   /**
    * Execute a query that utilizes a UDF timeout and a given statement
-   * indempotance
+   * idempotence
    *
    * @param is_idempotent True if statement should be idempotent;
    *                      false otherwise
@@ -109,8 +109,13 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     cass::Statement* native_statement = static_cast<cass::Statement*>(statement.get());
     native_statement->set_record_attempted_addresses(true);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
-    CassError error_code = test_utils::wait_and_return_error(future.get());
-    BOOST_REQUIRE_EQUAL(expected_error_code, error_code);
+    if (expected_error_code == CASS_OK) {
+      test_utils::wait_and_check_error(future.get());
+    } else {
+      CassError error_code = test_utils::wait_and_return_error(future.get());
+      BOOST_REQUIRE_EQUAL(expected_error_code, error_code);
+    }
+
     return future;
   }
 
@@ -125,8 +130,8 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     std::vector<std::string> attempted_hosts;
     cass::Future* native_future = static_cast<cass::Future*>(future.get());
     if (native_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
-      cass::ResponseFuture* native_reponse_future = static_cast<cass::ResponseFuture*>(native_future);
-      cass::AddressVec attempted_addresses = native_reponse_future->attempted_addresses();
+      cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
+      cass::AddressVec attempted_addresses = native_response_future->attempted_addresses();
       for (cass::AddressVec::iterator iterator = attempted_addresses.begin();
         iterator != attempted_addresses.end(); ++iterator) {
         attempted_hosts.push_back(iterator->to_string());
@@ -146,8 +151,8 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     std::string host;
     cass::Future* native_future = static_cast<cass::Future*>(future.get());
     if (native_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
-      cass::ResponseFuture* native_reponse_future = static_cast<cass::ResponseFuture*>(native_future);
-      host = native_reponse_future->address().to_string();
+      cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
+      host = native_response_future->address().to_string();
     }
     return host;
   }
@@ -208,7 +213,7 @@ BOOST_AUTO_TEST_CASE(execute_on_all_nodes) {
 /**
  * Speculative execution policy; one node is attempted with idempotent statement
  *
- * This test will ensure that one nodes is attempted when executing a query
+ * This test will ensure that one node is attempted when executing a query
  * using the speculative execution policy.
  *
  * @since 2.5.0

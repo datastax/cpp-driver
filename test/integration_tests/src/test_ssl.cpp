@@ -369,6 +369,12 @@ BOOST_AUTO_TEST_CASE(connect_failures) {
   BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, "Invalid Private Key", "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
 
+  // Null certificate arg
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, NULL), CASS_ERROR_SSL_INVALID_CERT);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, NULL), CASS_ERROR_SSL_INVALID_CERT);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, NULL, "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), NULL), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
+
   //Connect with SSL where the Cassandra server has SSL disabled
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_NONE);

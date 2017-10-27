@@ -488,5 +488,28 @@ void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> no
   }
 }
 
+std::string& trim(std::string& str) {
+  // Trim front
+  str.erase(str.begin(),
+            std::find_if(str.begin(), str.end(),
+                         std::not1(std::ptr_fun<int, int>(::isspace))));
+  // Trim back
+  str.erase(std::find_if(str.rbegin(), str.rend(),
+                         std::not1(std::ptr_fun<int, int>(::isspace))).base(),
+            str.end());
+  return str;
+}
+
+void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter) {
+  std::istringstream stream(str);
+  while (!stream.eof()) {
+    std::string token;
+    std::getline(stream, token, delimiter);
+    if (!trim(token).empty()) {
+      vec.push_back(token);
+    }
+  }
+}
+
 //-----------------------------------------------------------------------------------
 } // End of namespace test_utils

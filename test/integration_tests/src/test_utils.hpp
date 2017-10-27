@@ -37,6 +37,7 @@
 #include "cassandra.h"
 #include "bridge.hpp"
 #include "constants.hpp"
+#include "pretty_print.hpp"
 
 #ifdef min
 #undef min
@@ -671,8 +672,9 @@ struct Value<CassTime> {
 
   static std::string to_string(CassTime value) {
     char temp[32];
-    time_t epoch_secs = static_cast<time_t>(cass_date_time_to_epoch(0, value));
-    strftime(temp, sizeof(temp), "'%H:%M:%S", gmtime(&epoch_secs));
+    time_t epoch_secs = static_cast<time_t>(cass_date_time_to_epoch(2147483648, value));
+    struct tm* time = gmtime(&epoch_secs);
+    strftime(temp, sizeof(temp), "'%H:%M:%S", time);
     std::string str(temp);
     cass_int64_t diff = value - epoch_secs * 1000000000;
     sprintf(temp, "%09u", (unsigned int)diff);
@@ -1329,6 +1331,23 @@ void wait_for_node_connection(const std::string& ip_prefix, int node, int total_
  *                       (default: 10)
  */
 void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> nodes, int total_attempts = 10);
+
+/**
+ * Trim whitespace from the front and back of a string
+ *
+ * @param str The string to trim
+ * @return A reference to the modified string with its whitespace trimmed
+ */
+std::string& trim(std::string& str);
+
+/**
+ * Split a string into pieces using a provided delimiter charactor
+ *
+ * @param str The string to explode
+ * @param vec The result
+ * @param delimiter The character used to divide the string
+ */
+void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter = ',');
 
 extern const char* CREATE_TABLE_ALL_TYPES;
 extern const char* CREATE_TABLE_ALL_TYPES_V4;

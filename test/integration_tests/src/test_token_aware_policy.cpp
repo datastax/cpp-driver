@@ -123,8 +123,9 @@ TestTokenMap::ReplicaSet get_replicas(size_t rf,
                                       const std::string& keyspace,
                                       const std::string& value) {
   TestTokenMap::ReplicaSet replicas;
-  for (size_t i = 0; i < rf; ++i) {
+  for (size_t i = 0; i < rf * rf; ++i) {
     replicas.insert(get_replica(session, keyspace, "abc"));
+    if (replicas.size() == rf) break;
   }
   return replicas;
 }
