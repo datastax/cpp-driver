@@ -40,7 +40,7 @@ typedef std::vector<std::string> DcList;
 
 template<class From, class To>
 #if _MSC_VER && !__INTEL_COMPILER
-class IsConvertible : public std::is_convertible<From, To> {
+class IsConvertible : public std::is_convertible<From, To> { };
 #else
 class IsConvertible {
   private:
@@ -54,9 +54,13 @@ class IsConvertible {
     };
 
   public:
-    static const bool value = sizeof(Helper::test(Helper::check())) == sizeof(Yes);
-#endif
+    static const bool value;
 };
+
+template<class From, class To>
+const bool IsConvertible<From, To>::value
+  = sizeof(IsConvertible<From, To>::Helper::test(IsConvertible<From, To>::Helper::check())) == sizeof(typename IsConvertible<From, To>::Yes);
+#endif
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated
 // types reference the same memory location and strict aliasing is enabled.
