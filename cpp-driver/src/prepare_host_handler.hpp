@@ -14,14 +14,14 @@
   limitations under the License.
 */
 
+#ifndef __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
+#define __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
+
 #include "connection.hpp"
 #include "host.hpp"
 #include "prepared.hpp"
 #include "ref_counted.hpp"
 #include "string.hpp"
-
-#ifndef __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
-#define __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
 
 namespace cass {
 
