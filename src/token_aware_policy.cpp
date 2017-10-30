@@ -64,7 +64,7 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& keyspace,
                                                                            request_handler,
                                                                            token_map),
                                              replicas,
-                                             index_);
+                                             index_++);
             }
           }
         }
