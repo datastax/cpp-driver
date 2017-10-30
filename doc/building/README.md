@@ -1,178 +1,282 @@
 # Building
 
-## Supported Platforms
-The driver is known to work on CentOS/RHEL 6/7, Mac OS X 10.8/10.9/10.10/10.11
-(Moutain Lion, Mavericks, Yosemite, and El Capitan), Ubuntu 12.04/14.04 LTS, and
-Windows 7 SP1 and above.
+The C/C++ DSE driver will build on most standard Unix-like and Microsoft
+Windows platforms. Packages are available for the following platforms:
 
-It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013/2015.
+* [CentOS 6][cpp-dse-driver-centos6]
+* [CentOS 7][cpp-dse-driver-centos7]
+* [Ubuntu 14.04 LTS][cpp-dse-driver-ubuntu14-04]
+* [Ubuntu 16.04 LTS][cpp-dse-driver-ubuntu16-04]
+* [Windows][cpp-dse-driver-windows]
+
+__NOTE__: The build procedures only need to be performed for driver development
+          or if your system doesn't have packages available for download and
+          installation.
+
+## Compatibility
+
+* Architectures: 32-bit (x86) and 64-bit (x64)
+* Compilers: GCC 4.1.2+ Clang 3.4+, and MSVC 2010/2012/2013/2015/2017
 
 ## Dependencies
 
-### Driver
+The C/C++ DSE driver depends on the following software:
 
-- [CMake](http://www.cmake.org)
-- [libuv (1.x or 0.10.x)](https://github.com/libuv/libuv)
-- [Kerberos](http://web.mit.edu/kerberos/)
-- [OpenSSL (1.0.x or 1.1.x)](http://www.openssl.org/) (optional)
+* [CMake] v2.6.4+
+* [libuv] 1.x
+* Kerberos v5 ([Heimdal] or [MIT])
+* [OpenSSL] v1.0.x or v1.1.x
 
-**NOTE:** Utilizing the default package manager configuration to install
-dependencies on \*nix based operating systems may result in older versions of
-dependencies being installed.
+## Linux/Mac OS
+
+The driver is known to build on CentOS/RHEL 6/7, Mac OS X 10.10/10.11 (Yosemite
+and El Capitan), Mac OS 10.12 (Sierra), and Ubuntu 14.04/16.04 LTS.
+
+__NOTE__: The driver will also build on most standard Unix-like systems using
+          GCC 4.1.2+ or Clang 3.4+.
+
+### Installing dependencies
+
+#### Initial environment setup
+
+##### CentOS/RHEL (Yum)
+
+```bash
+yum install automake cmake gcc-c++ git libtool
+```
+
+##### Ubuntu (APT)
+
+```bash
+apt-get update
+apt-get install build-essential cmake git
+```
+
+##### Mac OS (Brew)
+
+[Homebrew][Homebrew] (or brew) is a free and open-source software package
+management system that simplifies the installation of software on the Mac OS
+operating system. Ensure [Homebrew is installed][Homebrew] before proceeding.
+
+```bash
+brew update
+brew upgrade
+brew install autoconf automake cmake libtool
+```
 
 #### Kerberos
 
-In addition to the dependencies required by the core driver the DSE driver also
-requires Kerberos. Kerberos can be obtains by using these packages:
-
-* Ubuntu requires the package `libkrb5-dev`
-* RHEL (CentOS) requires the package `krb5-devel`
-* Windows requires [Kerberos for Windows] to be installed
-
-### Test Dependencies
-
-- [libssh2](http://www.libssh2.org) (optional)
-
-## Linux/OS X
-The driver has been built using both Clang (Ubuntu 12.04/14.04 and OS X) and GCC
-(Linux).
-
-### Obtaining Dependencies
-
-#### CentOS/RHEL
-
-##### Dependencies and libuv Installation
+##### CentOS/RHEL (Yum)
 
 ```bash
-sudo yum install automake cmake gcc-c++ git krb5-devel libtool openssl-devel wget
+yum install krb5-devel
+```
+
+##### Ubuntu (APT)
+
+```bash
+apt-get install libkrb5-dev
+```
+
+#### libuv
+
+libuv v1.x should be used in order to ensure all features of the C/C++ DSE
+driver are available. When using a package manager for your operating system
+make sure you install v1.x; if available.
+
+##### CentOS/RHEL and Ubuntu packages
+
+Packages are available from our [download server]:
+
+* [CentOS 6][libuv-centos6]
+* [CentOS 7][libuv-centos7]
+* [Ubuntu 14.04 LTS][libuv-ubuntu14-04]
+* [Ubuntu 16.04 LTS][libuv-ubuntu16-04]
+
+##### Mac OS (Brew)
+
+```bash
+brew install libuv
+```
+
+##### Manually build and install
+
+_The following procedures should be performed if packages are not available for
+your system._
+
+```bash
 pushd /tmp
-wget http://dist.libuv.org/dist/v1.11.0/libuv-v1.11.0.tar.gz
-tar xzf libuv-v1.11.0.tar.gz
-pushd libuv-v1.11.0
+wget http://dist.libuv.org/dist/v1.14.0/libuv-v1.14.0.tar.gz
+tar xzf libuv-v1.14.0.tar.gz
+pushd libuv-v1.14.0
 sh autogen.sh
 ./configure
-sudo make install
+make install
 popd
 popd
 ```
 
-#### OS X
-The driver has been built and tested using the Clang compiler provided by XCode
-5.1+. The dependencies were obtained using [Homebrew](http://brew.sh).
+#### OpenSSL
+
+##### CentOS (Yum)
 
 ```bash
-brew install libuv cmake
+yum install openssl-devel
 ```
 
-**NOTE:** The driver utilizes the OpenSSL library included with XCode unless
-          running XCode 7+.
+##### Ubuntu (APT)
 
-##### Additional Requirements for 10.11+ (El Capitan) and XCode 7+
-OpenSSL has been officially removed from the OS X SDK 10.11+ and requires
-additional configuration before building the driver.
+```bash
+apt-get install libssl-dev
+```
+
+##### Mac OS (Brew)
 
 ```bash
 brew install openssl
+```
+
+__Note__: For Mac OS X 10.11 (El Capitan) and Mac OS 10.12 (Sierra) a link
+          needs to be created in order to make OpenSSL available to the
+          building libraries:
+
+```bash
 brew link --force openssl
 ```
 
-#### Ubuntu
-
-##### Additional Requirements for Ubuntu 12.04
-Ubuntu 12.04 does not contain libuv in its repositories; however the LinuxJedi
-PPA has a backport from Ubuntu 14.04 which can be found
-[here](https://launchpad.net/~linuxjedi/+archive/ubuntu/ppa).
+##### Manually build and install
 
 ```bash
-sudo apt-add-repository ppa:linuxjedi/ppa
-sudo apt-get update
+pushd /tmp
+wget --no-check-certificate https://www.openssl.org/source/openssl-1.0.2l.tar.gz
+tar xzf openssl-1.0.2l.tar.gz
+pushd openssl-1.0.2l
+CFLAGS=-fpic ./config shared
+make
+make install
+popd
+popd
 ```
 
-##### GCC
+### Building and installing the C/C++ DSE driver
 
 ```bash
-sudo apt-get install g++ make cmake libuv-dev libkrb5-dev libssl-dev
-```
-
-##### Clang
-
-```bash
-sudo apt-get install clang make cmake libuv-dev libkrb5-dev libssl-dev
-```
-
-### Building the Driver
-
-```bash
-git clone https://github.com/datastax/cpp-driver-dse.git
-mkdir cpp-driver-dse/build
-cd cpp-driver-dse/build
+mkdir build
+pushd build
 cmake ..
 make
+make install
+popd
 ```
 
-### Test Dependencies and Building the Tests (_NOT REQUIRED_)
+#### Building examples (optional)
 
-#### Obtaining Test Dependencies
-
-##### CentOS/RHEL
+Examples are not built by default and need to be enabled. Update your [CMake]
+line to build examples.
 
 ```bash
-sudo yum install libssh2-devel
+cmake -DDSE_BUILD_EXAMPLES=On ..
 ```
 
-##### OS X
+#### Building tests (optional)
+
+Tests (integration and unit) are not built by default and need to be enabled.
+Before proceeding [Boost] v1.59.0+ must be installed to properly configure and
+build the integration and unit tests.
+
+Once [Boost] is installed, update your CMake line to build tests.
+
+##### Boost
+
+###### CentOS/RHEL and Ubuntu
+
+CentOS/RHEL and Ubuntu do not contain Boost v1.59+ libraries in its
+repositories; however the following steps will install Boost from source:
+
+__Note__: Ensure previous version of Boost has been removed before proceeding.
 
 ```bash
-brew install libssh2
+pushd /tmp
+wget http://sourceforge.net/projects/boost/files/boost/1.64.0/boost_1_64_0.tar.gz/download -O boost_1_64_0.tar.gz
+tar xzf boost_1_64_0.tar.gz
+pushd boost_1_64_0
+./bootstrap.sh --with-libraries=atomic,chrono,system,thread,test
+sudo ./b2 cxxflags="-fPIC" install
+popd
+popd
 ```
 
-##### Ubuntu
+###### Mac OS
+
+```
+brew install boost
+```
+
+##### All tests
 
 ```bash
-sudo apt-get install libssh2-1-dev
+cmake -DDSE_BUILD_TESTS=On ..
 ```
 
-#### Building the Driver with the Tests
+__Note__: This will build both the integration and unit tests
+
+##### Integration tests
 
 ```bash
-git clone https://github.com/datastax/cpp-driver-dse.git
-mkdir cpp-driver-dse/build
-cd cpp-driver-dse/build
-cmake -DDSE_BUILD_TESTS=ON ..
-make
+cmake -DDSE_BUILD_INTEGRATION_TESTS=On ..
 ```
+
+##### Unit tests
+
+```bash
+cmake -DDSE_BUILD_UNIT_TESTS=On ..
+```
+
 
 ## Windows
-The driver has been built and tested using Microsoft Visual Studio 2010, 2012,
-2013 and 2015 (using the "Express" and Professional versions) and Windows SDK
-v7.1, 8.0, 8.1, and 10.0 on Windows 7 SP1 and above. The library dependencies
-will automatically download and build; however the following build dependencies
-will need to be installed.
 
-### Obtaining Build Dependencies
-- Download and install [CMake](http://www.cmake.org/download).
- - Make sure to select the option "Add CMake to the system PATH for all users"
-   or "Add CMake to the system PATH for current user".
-- Download and install [Git](http://git-scm.com/download/win)
- - Make sure to select the option "Use Git from Windows Command Prompt" or
-   manually add the git executable to the system PATH.
-- Download and install [ActiveState Perl](https://www.perl.org/get.html#win32)
- - Make sure to select the option "Add Perl to PATH environment variable".
- - **NOTE:** This build dependency is required if building with OpenSSL support
-- Download and install [Python v2.7.x](https://www.python.org/downloads)
- - Make sure to select/install the feature "Add python.exe to Path"
-- Download and install Kerberos for Windows v4.0.1
- - [32-bit](http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-i386.msi)
- - [64-bit](http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-amd64.msi)
+We provide a self-contained [batch script] for building the C/C++ DSE driver
+and all of its dependencies. In order to run it, you have to install the build
+dependencies and clone the repository with the DataStax C/C++ DSE driver for
+DataStax Enterprise.
 
-### Building the Driver
-A batch script has been created to detect installed versions of Visual Studio
-(and/or Windows SDK installations) to simplify the build process on Windows. If
-you have more than one version of Visual Studio (and/or Windows SDK) installed
-you will be prompted to select which version to use when compiling the driver.
+### Obtaining build dependencies
 
-First you will need to open a "Command Prompt" (or Windows SDK Command Prompt)
-to execute the batch script.
+* Download and install [Bison]
+  * Make sure Bison is in your system PATH and not installed in a directory with
+    spaces (e.g. `%SYSTEMDRIVE%\GnuWin32`)
+* Download and install [CMake]
+  * Make sure to select the option "Add CMake to the system PATH for all users"
+    or "Add CMake to the system PATH for current user"
+* Download and install [Git]
+  * Make sure to select the option "Use Git from Windows Command Prompt" or
+    manually add the git executable to the system PATH.
+* Download and install [ActiveState Perl]
+  * Make sure to select the option "Add Perl to PATH environment variable"
+* Download and install [Python v2.7.x][python-27]
+  * Make sure to select/install the feature "Add python.exe to Path"
+* Download and install Kerberos for Windows v4.0.1
+  * [32-bit][k4w-32]
+  * [64-bit][k4w-64]
+* Download and install [Boost][Boost] (Optional: Tests only)
+  * Visual Studio 2010: [32-bit][boost-msvc-100-32-bit]/[64-bit][boost-msvc-100-64-bit]
+  * Visual Studio 2012: [32-bit][boost-msvc-110-32-bit]/[64-bit][boost-msvc-110-64-bit]
+  * Visual Studio 2013: [32-bit][boost-msvc-120-32-bit]/[64-bit][boost-msvc-120-64-bit]
+  * Visual Studio 2015: [32-bit][boost-msvc-140-32-bit]/[64-bit][boost-msvc-140-64-bit]
+  * Visual Studio 2015: [32-bit][boost-msvc-141-32-bit]/[64-bit][boost-msvc-141-64-bit]
+
+### Building the driver
+
+The [batch script] detects installed versions of Visual Studio to simplify the
+build process on Windows and select the correct version of Visual Studio when
+compiling the driver.
+
+First you will need to open a "Command Prompt" to execute the batch script.
+Running the batch script without any arguments will build the driver for C/C++
+DSE driver for the current system architecture (e.g. x64).
+
+To perform advanced build configuration, execute the batch script with the
+`--HELP` argument to display the options available.
 
 ```dos
 Usage: VC_BUILD.BAT [OPTION...]
@@ -182,7 +286,7 @@ Usage: VC_BUILD.BAT [OPTION...]
     --DISABLE-CLEAN                   Disable clean build
     --DEPENDENCIES-ONLY               Build dependencies only
     --OPENSSL-VERSION                 OpenSSL version 1.0, 1.1 (default: 1.0)
-    --TARGET-COMPILER [version]       140, 120, 110, 100, or WINSDK
+    --TARGET-COMPILER [version]       141, 140, 120, 110, or 100
     --ENABLE-EXAMPLES                 Enable example builds
     --ENABLE-PACKAGES [version]       Enable package generation (*)
     --ENABLE-ZLIB                     Enable zlib
@@ -190,15 +294,19 @@ Usage: VC_BUILD.BAT [OPTION...]
     --INSTALL-DIR [install-dir]       Override installation directory
     --SHARED                          Build shared library (default)
     --STATIC                          Build static library
+    --ENABLE-SHARED-OPENSSL           Force shared OpenSSL library
     --X86                             Target 32-bit build (***)
     --X64                             Target 64-bit build (***)
     --USE-BOOST-ATOMIC                Use Boost atomic
 
     Testing Arguments
 
-    --ENABLE-INTEGRATION-TESTS        Enable integration tests build
-    --ENABLE-UNIT-TESTS               Enable unit tests build
-    --ENABLE-TESTS                    Enable integration and unit tests builds
+    --ENABLE-TESTS
+         [boost-root-dir]             Enable integration and unit tests build
+    --ENABLE-INTEGRATION-TESTS
+         [boost-root-dir]             Enable integration tests build
+    --ENABLE-UNIT-TESTS
+         [boost-root-dir]             Enable unit tests build
     --ENABLE-LIBSSH2                  Enable libssh2 (remote server testing)
 
     --HELP                            Display this message
@@ -209,66 +317,46 @@ Usage: VC_BUILD.BAT [OPTION...]
 *** Default target architecture is determined based on system architecture
 ```
 
-To build 32-bit shared library:
+__Note__: In order to properly run integration tests on Windows
+          `--ENABLE-LIBSSH2` should utilized in order to create DSE cluster(s)
+          on a Unix-like system when `--ENABLE-TESTS` or
+          `--ENABLE-INTEGRATION-TESTS` is used.
 
-```dos
-VC_BUILD.BAT --X86
-```
+__Note__: When overriding installation directory using `--INSTALL-DIR`, the
+          driver dependencies will also be copied (e.g.
+          C:\myproject\dependencies\libs)
 
-To build 64-bit shared library:
-
-```dos
-VC_BUILD.BAT --X64
-```
-
-To build using Boost atomic implementation:
-
-```dos
-VC_BUILD.BAT --USE-BOOST-ATOMIC
-```
-
-To build static library:
-
-```dos
-VC_BUILD.BAT --STATIC
-```
-
-To build examples:
-
-```dos
-VC_BUILD.BAT --ENABLE-EXAMPLES
-```
-
-To generate Visual Studio solution file:
-
-```dos
-VC_BUILD.BAT --GENERATE-SOLUTION
-```
-
-To use vc_build.bat for easy inclusion into a project:
-
-```dos
-VC_BUILD.BAT --TARGET-COMPILER 120 --INSTALL-DIR C:\myproject\dependencies\libs\cpp-driver-dse
-```
-
-**NOTE:** When overriding installation directory using `--INSTALL-DIR`, the
-driver dependencies will also be copied (e.g. C:\myproject\dependencies\libs)
-
-#### Building the Driver with the Tests
-
-##### Integration Tests
-
-To build integration tests with static linking:
-
-```dos
-VC_BUILD.BAT --STATIC --ENABLE-INTEGRATION-TESTS
-```
-
-To build unit tests with static linking:
-
-##### Unit Tests
-```dos
-VC_BUILD.BAT --STATIC --ENABLE-UNIT-TESTS
-```
-
-[Kerberos for Windows]: http://web.mit.edu/kerberos/dist/index.html
+[download server]: http://downloads.datastax.com
+[cpp-dse-driver-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/dse
+[cpp-dse-driver-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/dse
+[cpp-dse-driver-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dse
+[cpp-dse-driver-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dse
+[cpp-dse-driver-windows]: http://downloads.datastax.com/cpp-driver/windows/dse
+[libuv-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies/libuv
+[libuv-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/libuv
+[libuv-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/libuv
+[libuv-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/libuv
+[batch script]: ../../vc_build.bat
+[Homebrew]: https://brew.sh
+[Bison]: http://gnuwin32.sourceforge.net/downlinks/bison.php
+[CMake]: http://www.cmake.org/download
+[Git]: http://git-scm.com/download/win
+[ActiveState Perl]: https://www.perl.org/get.html#win32
+[python-27]: https://www.python.org/downloads
+[k4w-32]: http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-i386.msi
+[k4w-64]: http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-amd64.msi
+[libuv]: http://libuv.org
+[Heimdal]: https://www.h5l.org
+[MIT]: https://web.mit.edu/kerberos
+[OpenSSL]: https://www.openssl.org
+[Boost]: http://www.boost.org
+[boost-msvc-100-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-10.0-32.exe/download
+[boost-msvc-100-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-10.0-64.exe/download
+[boost-msvc-110-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-11.0-32.exe/download
+[boost-msvc-110-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-11.0-64.exe/download
+[boost-msvc-120-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-12.0-32.exe/download
+[boost-msvc-120-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-12.0-64.exe/download
+[boost-msvc-140-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-14.0-32.exe/download
+[boost-msvc-140-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-14.0-64.exe/download
+[boost-msvc-141-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-14.1-32.exe/download
+[boost-msvc-141-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-14.1-64.exe/download

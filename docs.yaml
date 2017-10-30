@@ -33,6 +33,8 @@ sections:
       EXTRACT_ALL = YES
       INLINE_SOURCES = NO
       ALIASES = dse{1}="<b>Requires DSE:</b> \1" cassandra{1}="<b>Requires Cassandra:</b> \1"
+rewrites:
+  - ../../vc_build.bat: https://github.com/datastax/cpp-dse-driver/blob/master/vc_build.bat
 
 versions:
   - name: 1.3
