@@ -1,6 +1,6 @@
 title:  DataStax Enterprise C/C++ Driver
 summary: A C/C++ Driver built for DataStax Enterprise
-homepage: http://datastax.github.io/cpp-driver-dse/
+homepage: http://docs.datastax.com/en/developer/cpp-driver-dse/latest
 sections:
   - title:    Getting Started
     prefix:   /getting-started
@@ -35,6 +35,21 @@ sections:
       ALIASES = dse{1}="<b>Requires DSE:</b> \1" cassandra{1}="<b>Requires Cassandra:</b> \1"
 rewrites:
   - ../../vc_build.bat: https://github.com/datastax/cpp-dse-driver/blob/master/vc_build.bat
+  - http://datastax.github.io/cpp-driver/: http://docs.datastax.com/en/developer/cpp-driver/latest
+  - examples/(.*): https://github.com/datastax/cpp-dse-driver/blob/master/examples/\1
+links:
+  - title: Binaries
+    href:  http://downloads.datastax.com/cpp-driver
+  - title: Docs
+    href:  http://docs.datastax.com/en/developer/cpp-driver-dse
+  - title: Issues
+    href:  https://datastax-oss.atlassian.net/browse/CPP
+  - title: Mailing List
+    href:  https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
+  - title: Slack
+    href:  https://academy.datastax.com/slack
+  - title: Releases
+    href:  https://github.com/datastax/cpp-dse-driver/releases
 
 versions:
   - name: 1.3

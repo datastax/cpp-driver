@@ -263,7 +263,7 @@ DataStax Enterprise.
   * Visual Studio 2012: [32-bit][boost-msvc-110-32-bit]/[64-bit][boost-msvc-110-64-bit]
   * Visual Studio 2013: [32-bit][boost-msvc-120-32-bit]/[64-bit][boost-msvc-120-64-bit]
   * Visual Studio 2015: [32-bit][boost-msvc-140-32-bit]/[64-bit][boost-msvc-140-64-bit]
-  * Visual Studio 2015: [32-bit][boost-msvc-141-32-bit]/[64-bit][boost-msvc-141-64-bit]
+  * Visual Studio 2017: [32-bit][boost-msvc-141-32-bit]/[64-bit][boost-msvc-141-64-bit]
 
 ### Building the driver
 
