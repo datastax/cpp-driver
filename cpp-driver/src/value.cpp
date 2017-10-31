@@ -220,14 +220,18 @@ Value::Value(const DataType::ConstPtr &data_type, Decoder decoder)
 bool Value::as_bool() const {
   assert(!is_null() && value_type() == CASS_VALUE_TYPE_BOOLEAN);
   bool value = false;
-  assert(decoder_.as_bool(&value));
+  bool result = decoder_.as_bool(&value);
+  UNUSED_(result);
+  assert(result);
   return value;
 }
 
 int32_t Value::as_int32() const {
   assert(!is_null() && value_type() == CASS_VALUE_TYPE_INT);
   int32_t value = 0;
-  assert(decoder_.as_int32(&value));
+  bool result = decoder_.as_int32(&value);
+  UNUSED_(result);
+  assert(result);
   return value;
 }
 
@@ -235,7 +239,9 @@ CassUuid Value::as_uuid() const {
   assert(!is_null() && (value_type() == CASS_VALUE_TYPE_UUID ||
                         value_type() == CASS_VALUE_TYPE_TIMEUUID));
   CassUuid value = { 0, 0 };
-  assert(decoder_.as_uuid(&value));
+  bool result = decoder_.as_uuid(&value);
+  UNUSED_(result);
+  assert(result);
   return value;
 }
 
