@@ -416,7 +416,7 @@ typedef struct CassMetrics_ {
 
   struct {
     cass_uint64_t total_connections; /**< The total number of connections */
-    cass_uint64_t available_connections; /**< The number of connections available to take requests */
+    cass_uint64_t available_connections; /**< Deprecated */
     cass_uint64_t exceeded_pending_requests_water_mark; /**< Deprecated */
     cass_uint64_t exceeded_write_bytes_water_mark; /**< Deprecated */
   } stats;
