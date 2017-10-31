@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014-2017 DataStax
+  Copyright (c) DataStax, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@
 
   [1]
   http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
-
 */
 
 #ifndef __CASS_SPSC_QUEUE_HPP_INCLUDED__

@@ -1,9 +1,9 @@
 Format: http://dep.debian.net/deps/dep5
 Upstream-Name: dse-cpp-driver
-Source: https://github.com/datastax/cpp-driver-dse
+Source: https://github.com/datastax/cpp-dse-driver
 
 Files: *
-Copyright: Copyright 2014-2017 DataStax
+Copyright: Copyright (c) DataStax, Inc.
 License: Proprietary
 
 Files: cpp-driver/src/third_party/hdr_histogram/*

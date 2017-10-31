@@ -1,5 +1,5 @@
 @ECHO OFF
-REM Copyright (c) 2017 DataStax, Inc.
+REM Copyright (c) DataStax, Inc.
 REM
 REM This software can be used solely with DataStax Enterprise. Please consult the
 REM license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
