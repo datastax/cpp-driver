@@ -54,9 +54,9 @@ CassLogLevel Logger::log_level_ = CASS_LOG_WARN;
 CassLogCallback Logger::cb_ = stderr_log_callback;
 void* Logger::data_ = NULL;
 
-void Logger::log(CassLogLevel severity,
-                 const char* file, int line, const char* function,
-                 const char* format, va_list args) {
+void Logger::internal_log(CassLogLevel severity,
+                          const char* file, int line, const char* function,
+                          const char* format, va_list args) {
   CassLogMessage message = {
     get_time_since_epoch_ms(), severity,
     file, line, function,

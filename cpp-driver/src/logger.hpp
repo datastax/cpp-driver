@@ -45,15 +45,15 @@ public:
                    const char* format, ...) {
     va_list args;
     va_start(args, format);
-    log(severity, file, line, function, format, args);
+    internal_log(severity, file, line, function, format, args);
     va_end(args);
   }
 
 private:
   ATTR_FORMAT(5, 0)
-  static void log(CassLogLevel severity,
-                  const char* file, int line, const char* function,
-                  const char* format, va_list args);
+  static void internal_log(CassLogLevel severity,
+                           const char* file, int line, const char* function,
+                           const char* format, va_list args);
 
 private:
   static CassLogLevel log_level_;
