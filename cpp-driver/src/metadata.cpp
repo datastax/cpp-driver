@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <cmath>
 #include <ctype.h>
+#include <iterator>
 
 static cass::String& append_arguments(cass::String& full_name,
                                       const cass::String& arguments) {
@@ -1346,18 +1347,18 @@ void TableMetadataBase::build_keys_and_sort(const VersionNumber& cassandra_versi
       }
     }
 
-    ColumnMetadata::Vec columns(columns_.size());
+    ColumnMetadata::Vec columns;
+    columns.reserve(columns_.size());
 
-    ColumnMetadata::Vec::iterator pos = columns.begin();
-    pos = std::copy(partition_key_.begin(), partition_key_.end(), pos);
-    pos = std::copy(clustering_key_.begin(), clustering_key_.end(), pos);
+    std::copy(partition_key_.begin(), partition_key_.end(), std::back_inserter<ColumnMetadata::Vec>(columns));
+    std::copy(clustering_key_.begin(), clustering_key_.end(), std::back_inserter<ColumnMetadata::Vec>(columns));
 
     for (ColumnMetadata::Vec::const_iterator i = columns_.begin(),
          end = columns_.end(); i != end; ++i) {
       const ColumnMetadata::Ptr& column(*i);
       if (column->type() != CASS_COLUMN_TYPE_PARTITION_KEY &&
           column->type() != CASS_COLUMN_TYPE_CLUSTERING_KEY) {
-        *pos++ = column;
+        columns.push_back(column);
       }
     }
 
