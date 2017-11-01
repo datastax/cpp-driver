@@ -135,6 +135,7 @@ void  cass_session_get_metrics(const CassSession* session,
 
 
   metrics->stats.total_connections = internal_metrics->total_connections.sum();
+  metrics->stats.available_connections = metrics->stats.total_connections; // Deprecated
   metrics->stats.exceeded_write_bytes_water_mark = 0; // Deprecated
   metrics->stats.exceeded_pending_requests_water_mark = 0; // Deprecated
 
