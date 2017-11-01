@@ -7,7 +7,7 @@ Some notes on this guide:
 - Angle bracket fields (e.g. `<field>`) in examples need to be replaced with values specific to your environment.
 - [keytool](https://docs.oracle.com/javase/6/docs/technotes/tools/solaris/keytool.html) is an application included with Java 6+
 
-SSL can be rather cumbersome to setup; if assistance is required please use the [mailing list](https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user) or [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers) for help.
+SSL can be rather cumbersome to setup; if assistance is required please use the [mailing list](https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user).
 
 ### Generating the Cassandra Public and Private Keys
 
