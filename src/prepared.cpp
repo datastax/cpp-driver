@@ -98,10 +98,12 @@ Prepared::Prepared(const ResultResponse::Ptr& result,
         IndexVec indices;
         for (ColumnMetadata::Vec::const_iterator i = partition_key.begin(),
              end = partition_key.end(); i != end; ++i) {
-          if (result->metadata()->get_indices(StringRef((*i)->name()), &indices) > 0) {
+          const ColumnMetadata::Ptr& column(*i);
+          if (column && result->metadata()->get_indices(column->name(), &indices) > 0) {
             key_indices_.push_back(indices[0]);
           } else {
-            LOG_WARN("Unable to find key column '%s' in prepared query", (*i)->name().c_str());
+            LOG_WARN("Unable to find key column '%s' in prepared query",
+                     column ? column->name().c_str() : "<null>");
             key_indices_.clear();
             break;
           }
