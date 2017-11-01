@@ -39,7 +39,14 @@ rewrites:
   - http://pkgs.repoforge.org/git/: https://dl.fedoraproject.org/pub/epel/
   - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.i386.rpm: http://dl.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
   - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.x86_64.rpm: http://dl.fedoraproject.org/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm
+  - ../../vc_build.bat: https://github.com/datastax/cpp-driver/blob/master/vc_build.bat
+  - https://github.com/datastax/cpp-driver/tree/2.6.0/examples/duration/duration.c: https://github.com/datastax/cpp-driver/blob/master/examples/duration/duration.c
+  - examples/(.*): https://github.com/datastax/cpp-driver/blob/master/examples/\1
 versions:
+  - name: 2.7
+    ref: 2.7.1
+  - name: 2.6
+    ref: 2.6.0
   - name: 2.5
     ref: 7ebeac1532609e29c1f4ad8563a1a634fb151e6d
   - name: 2.4
