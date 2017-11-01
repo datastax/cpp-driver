@@ -46,10 +46,6 @@ public:
       , max_concurrent_creation_(1)
       , max_requests_per_flush_(128)
       , max_concurrent_requests_threshold_(100)
-      , write_bytes_high_water_mark_(64 * 1024)
-      , write_bytes_low_water_mark_(32 * 1024)
-      , pending_requests_high_water_mark_(128 * max_connections_per_host_)
-      , pending_requests_low_water_mark_(pending_requests_high_water_mark_ / 2)
       , connect_timeout_ms_(5000)
       , resolve_timeout_ms_(2000)
       , log_level_(CASS_LOG_WARN)
@@ -145,38 +141,6 @@ public:
 
   void set_max_concurrent_creation(unsigned num_connections) {
     max_concurrent_creation_ = num_connections;
-  }
-
-  unsigned write_bytes_high_water_mark() const {
-    return write_bytes_high_water_mark_;
-  }
-
-  void set_write_bytes_high_water_mark(unsigned write_bytes_high_water_mark) {
-    write_bytes_high_water_mark_ = write_bytes_high_water_mark;
-  }
-
-  unsigned write_bytes_low_water_mark() const {
-    return write_bytes_low_water_mark_;
-  }
-
-  void set_write_bytes_low_water_mark(unsigned write_bytes_low_water_mark) {
-    write_bytes_low_water_mark_ = write_bytes_low_water_mark;
-  }
-
-  unsigned pending_requests_high_water_mark() const {
-    return pending_requests_high_water_mark_;
-  }
-
-  void set_pending_requests_high_water_mark(unsigned pending_requests_high_water_mark) {
-    pending_requests_high_water_mark_ = pending_requests_high_water_mark;
-  }
-
-  unsigned pending_requests_low_water_mark() const {
-    return pending_requests_low_water_mark_;
-  }
-
-  void set_pending_requests_low_water_mark(unsigned pending_requests_low_water_mark) {
-    pending_requests_low_water_mark_ = pending_requests_low_water_mark;
   }
 
   unsigned reconnect_wait_time_ms() const { return reconnect_wait_time_ms_; }
@@ -469,10 +433,6 @@ private:
   unsigned max_concurrent_creation_;
   unsigned max_requests_per_flush_;
   unsigned max_concurrent_requests_threshold_;
-  unsigned write_bytes_high_water_mark_;
-  unsigned write_bytes_low_water_mark_;
-  unsigned pending_requests_high_water_mark_;
-  unsigned pending_requests_low_water_mark_;
   unsigned connect_timeout_ms_;
   unsigned resolve_timeout_ms_;
   CassLogLevel log_level_;

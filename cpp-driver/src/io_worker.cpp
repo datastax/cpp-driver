@@ -151,15 +151,11 @@ IOWorker::IOWorker(Session* session)
     , request_queue_(config_.queue_size_io()) {
   pools_.set_empty_key(Address::EMPTY_KEY);
   pools_.set_deleted_key(Address::DELETED_KEY);
-  unavailable_addresses_.set_empty_key(Address::EMPTY_KEY);
-  unavailable_addresses_.set_deleted_key(Address::DELETED_KEY);
   prepare_.data = this;
-  uv_mutex_init(&unavailable_addresses_mutex_);
   uv_mutex_init(&keyspace_mutex_);
 }
 
 IOWorker::~IOWorker() {
-  uv_mutex_destroy(&unavailable_addresses_mutex_);
   uv_mutex_destroy(&keyspace_mutex_);
 }
 
@@ -195,20 +191,6 @@ bool IOWorker::is_host_up(const Address& address) const {
   return it != pools_.end() && it->second->is_ready();
 }
 
-void IOWorker::set_host_is_available(const Address& address, bool is_available) {
-  ScopedMutex lock(&unavailable_addresses_mutex_);
-  if (is_available) {
-    unavailable_addresses_.erase(address);
-  } else {
-    unavailable_addresses_.insert(address);
-  }
-}
-
-bool IOWorker::is_host_available(const Address& address) {
-  ScopedMutex lock(&unavailable_addresses_mutex_);
-  return unavailable_addresses_.count(address) == 0;
-}
-
 bool IOWorker::add_pool_async(const Host::ConstPtr& host, bool is_initial_connection) {
   IOWorkerEvent event;
   event.type = IOWorkerEvent::ADD_POOL;
@@ -241,8 +223,6 @@ void IOWorker::add_pool(const Host::ConstPtr& host, bool is_initial_connection) 
     LOG_DEBUG("Adding pool for host %s io_worker(%p)",
               host->address_string().c_str(),
               static_cast<void*>(this));
-
-    set_host_is_available(address, false);
 
     Pool::Ptr pool(Memory::allocate<Pool>(this, host, is_initial_connection));
     pools_[address] = pool;

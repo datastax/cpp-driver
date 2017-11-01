@@ -176,41 +176,25 @@ CassError cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
 
 CassError cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
                                                        unsigned num_bytes) {
-  if (num_bytes == 0 ||
-      num_bytes < cluster->config().write_bytes_low_water_mark()) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_write_bytes_high_water_mark(num_bytes);
+  // Deprecated
   return CASS_OK;
 }
 
 CassError cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
                                                       unsigned num_bytes) {
-  if (num_bytes == 0 ||
-      num_bytes > cluster->config().write_bytes_high_water_mark()) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_write_bytes_low_water_mark(num_bytes);
+  // Deprecated
   return CASS_OK;
 }
 
 CassError cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
                                                             unsigned num_requests) {
-  if (num_requests == 0 ||
-      num_requests < cluster->config().pending_requests_low_water_mark()) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_pending_requests_high_water_mark(num_requests);
+  // Deprecated
   return CASS_OK;
 }
 
 CassError cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
                                                            unsigned num_requests) {
-  if (num_requests == 0 ||
-      num_requests > cluster->config().pending_requests_high_water_mark()) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_pending_requests_low_water_mark(num_requests);
+  // Deprecated
   return CASS_OK;
 }
 
