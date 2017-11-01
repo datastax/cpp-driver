@@ -255,28 +255,6 @@ This can prevent requests from being sent to nodes that are underperforming.
 Both [latency-aware] and [token-aware] can be use together to obtain the benefits of
 both.
 
-#### High throughput applications may need increase watermark settings
-
-If your application is submitting a large number of requests it may trigger the
-driver's back pressure mechanism.  This means Cassandra cannot maintain your
-request rate and requests are starting to queue in the driver (as a pending
-request). This mechanism keeps the driver from queueing your requests until
-memory is exhausted and is a signal to your application to slow down. However,
-you can increase these parameters:
-
-```c
-cass_cluster_set_pending_requests_low_water_mark(cluster, 5000);
-cass_cluster_set_pending_requests_high_water_mark(cluster, 10000);
-```
-
-If your applications requests are very large you may need to adjust the size
-watermarks:
-
-```c
-cass_cluster_set_write_bytes_low_water_mark(cluster, 512 * 1024);
-cass_cluster_set_write_bytes_high_water_mark(cluster, 1024 * 1024);
-```
-
 #### Use [paging] when retrieving large result sets
 
 Using a large page size or a very high `LIMIT` clause can cause your application

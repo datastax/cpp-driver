@@ -98,9 +98,6 @@ public:
 
   void broadcast_keyspace_change(const std::string& keyspace);
 
-  void set_host_is_available(const Address& address, bool is_available);
-  bool is_host_available(const Address& address);
-
   bool is_host_up(const Address& address) const;
 
   bool add_pool_async(const Host::ConstPtr& host, bool is_initial_connection);
@@ -157,9 +154,6 @@ private:
 
   std::string keyspace_;
   mutable uv_mutex_t keyspace_mutex_;
-
-  AddressSet unavailable_addresses_;
-  uv_mutex_t unavailable_addresses_mutex_;
 
   PoolMap pools_;
   PoolVec pools_pending_flush_;

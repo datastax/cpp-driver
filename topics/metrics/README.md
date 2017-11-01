@@ -21,13 +21,7 @@ numbers are in requests per seconds.
 
 ## Statistics
 
-The `stats` field contains information about connections
-and backpressure markers. If the number of `available_connections` is less than
-the number of `total_connections` this could mean the number of I/O threads or
-number of connections may need to be increased. The same is true for
-`exceeded_pending_requests_water_mark` and `exceeded_write_bytes_water_mark`
-metrics. It could also mean the Cassandra cluster is unable to handle the
-current request load.
+The `stats` field contains information about the total number of connections.
 
 ## Errors
 

@@ -464,9 +464,6 @@ public:
     , request_latencies(&thread_state_)
     , request_rates(&thread_state_)
     , total_connections(&thread_state_)
-    , available_connections(&thread_state_)
-    , exceeded_pending_requests_water_mark(&thread_state_)
-    , exceeded_write_bytes_water_mark(&thread_state_)
     , connection_timeouts(&thread_state_)
     , pending_request_timeouts(&thread_state_)
     , request_timeouts(&thread_state_) {}
@@ -485,9 +482,6 @@ public:
   Meter request_rates;
 
   Counter total_connections;
-  Counter available_connections;
-  Counter exceeded_pending_requests_water_mark;
-  Counter exceeded_write_bytes_water_mark;
 
   Counter connection_timeouts;
   Counter pending_request_timeouts;

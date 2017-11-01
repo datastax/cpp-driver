@@ -182,8 +182,6 @@ BOOST_AUTO_TEST_CASE(timeouts) {
     cass_cluster_set_max_connections_per_host(cluster_.get(), 1);
     // Lower connect timeout because this is what affects pending request timeout
     cass_cluster_set_connect_timeout(cluster_.get(), 100);
-    // Make the number of pending requests really high to exceed the timeout
-    cass_cluster_set_pending_requests_high_water_mark(cluster_.get(), 1000);
     if (ccm_->create_cluster(2)) {
       ccm_->start_cluster();
     }

@@ -55,7 +55,6 @@ public:
     CONNECTION_STATE_CONNECTED,
     CONNECTION_STATE_REGISTERING_EVENTS,
     CONNECTION_STATE_READY,
-    CONNECTION_STATE_OVERWHELMED,
     CONNECTION_STATE_CLOSE,
     CONNECTION_STATE_CLOSE_DEFUNCT
   };
@@ -88,7 +87,6 @@ public:
 
     virtual void on_ready(Connection* connection) = 0;
     virtual void on_close(Connection* connection) = 0;
-    virtual void on_availability_change(Connection* connection) = 0;
 
     virtual void on_event(EventResponse* response) = 0;
 
@@ -314,7 +312,6 @@ private:
   std::string error_message_;
   CassError ssl_error_code_;
 
-  size_t pending_writes_size_;
   List<PendingWriteBase> pending_writes_;
   List<RequestCallback> pending_reads_;
   List<PendingSchemaAgreement> pending_schema_agreements_;
