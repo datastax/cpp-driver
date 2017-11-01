@@ -3,7 +3,7 @@ Upstream-Name: cassandra-cpp-driver
 Source: https://github.com/datastax/cpp-driver
 
 Files: *
-Copyright: Copyright 2014-2016 DataStax
+Copyright: Copyright (c) DataStax, Inc.
 License: Apache-2.0
   On Debian systems, the complete text of the Apache License Version 2.0
   can be found in `/usr/share/common-licenses/Apache-2.0'.
