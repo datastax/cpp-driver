@@ -99,7 +99,7 @@ BOOST_FIXTURE_TEST_SUITE(prepared_metadata, PreparedMetadataTests)
  * change for older protocol versions (v4 and less) when a table's schema is altered.
  *
  * @since 2.8
- * @test_category basic
+ * @test_category prepared
  *
  */
 BOOST_AUTO_TEST_CASE(alter_doesnt_update_column_count) {
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(alter_doesnt_update_column_count) {
  * schema is altered.
  *
  * @since 2.8
- * @test_category basic
+ * @test_category prepared
  *
  */
 BOOST_AUTO_TEST_CASE(alter_properly_updates_column_count) {
