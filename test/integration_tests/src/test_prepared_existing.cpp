@@ -77,7 +77,7 @@ BOOST_FIXTURE_TEST_SUITE(prepared_existing, PreparedFromExistingTests)
  * statement. The settings from the original statement should be inherited.
  *
  * @since 2.8
- * @test_category basic
+ * @test_category prepared
  *
  */
 BOOST_AUTO_TEST_CASE(prepare_from_existing_simple_statement) {
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(prepare_from_existing_simple_statement) {
  * inherited.
  *
  * @since 2.8
- * @test_category basic
+ * @test_category prepared
  *
  */
 BOOST_AUTO_TEST_CASE(prepare_from_existing_bound_statement) {
