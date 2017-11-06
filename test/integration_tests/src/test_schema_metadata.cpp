@@ -674,7 +674,9 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     size_t keyspace_count = 0;
     while (cass_iterator_next(itr.get())) ++keyspace_count;
     size_t number_of_default_keyspaces = 2;
-    if (version >= "3.0.0") {
+    if (ccm->is_dse() && ccm->get_dse_version() >= "5.0.0") {
+      number_of_default_keyspaces = 9;
+    } else if (version >= "3.0.0") {
       number_of_default_keyspaces = 5;
     } else if (version >= "2.2.0") {
       number_of_default_keyspaces = 4;
@@ -760,6 +762,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     CassString actual_name;
     const CassColumnMeta* column_meta = cass_table_meta_partition_key(table_meta, index);
     BOOST_REQUIRE(column_meta);
+    cass_column_meta_name(column_meta, &actual_name.data, &actual_name.length);
     BOOST_CHECK_EQUAL(std::string(actual_name.data, actual_name.length), column_name);
     BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_PARTITION_KEY);
   }

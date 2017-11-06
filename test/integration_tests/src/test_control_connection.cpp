@@ -182,7 +182,7 @@ BOOST_AUTO_TEST_CASE(topology_change)
   check_for_live_hosts(session, should_be_present);
 
   // Decommissioning a node will trigger a "REMOVED_NODE" event
-  ccm->decommission_node(2);
+  ccm->force_decommission_node(2);
 
   should_be_present.erase(ip_prefix + "2");
   check_for_live_hosts(session, should_be_present);
@@ -395,7 +395,7 @@ BOOST_AUTO_TEST_CASE(node_decommission)
     BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2ul);
 
     test_utils::CassLog::reset("Spawning new connection to host " + ip_prefix + "1");
-    ccm->decommission_node(1);
+    ccm->force_decommission_node(1);
     std::cout << "Node Decommissioned [" << ip_prefix << "1]: Sleeping for 30 seconds" << std::endl;
     boost::this_thread::sleep_for(boost::chrono::seconds(30));
   }
