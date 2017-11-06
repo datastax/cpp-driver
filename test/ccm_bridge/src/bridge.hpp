@@ -42,8 +42,8 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 #endif
 
 // Default values
-#define DEFAULT_CASSANDRA_VERSION CassVersion("3.11.0")
-#define DEFAULT_DSE_VERSION DseVersion("5.1.2")
+#define DEFAULT_CASSANDRA_VERSION CassVersion("3.11.1")
+#define DEFAULT_DSE_VERSION DseVersion("5.1.5")
 #define DEFAULT_USE_GIT false
 #define DEFAULT_USE_INSTALL_DIR false
 #define DEFAULT_USE_DSE false
@@ -449,7 +449,7 @@ namespace CCM {
      * Bootstrap (add and start) a node on the active Cassandra cluster
      *
      * @param jvm_argument JVM argument to apply during node start
-     *                     (default: no JVM argument
+     *                     (default: no JVM argument)
      * @param data_center If provided add the node to the data center; otherwise
      *                    add node normally (default: no data center)
      * @return Node added to cluster
@@ -461,9 +461,11 @@ namespace CCM {
      * Decommission a node on the active Cassandra cluster
      *
      * @param node Node to decommission
+     * @oaram is_force True if decommission should be forced; false otherwise
+     *                 (default: false)
      * @return True if node was decommissioned; false otherwise
      */
-    bool decommission_node(unsigned int node);
+    bool decommission_node(unsigned int node, bool is_force = false);
 
     /**
      * Disable binary protocol for a node on the active Cassandra cluster
@@ -514,6 +516,18 @@ namespace CCM {
      * @param cql CQL statement to execute
      */
     void execute_cql_on_node(unsigned int node, const std::string& cql);
+
+    CCM_BRIDGE_DEPRECATED(bool is_dse() { return use_dse_; })
+
+    /**
+     * Force decommission of a node on the active Cassandra cluster
+     *
+     * NOTE: Alias for decommission_node(node, true)
+     *
+     * @param node Node to decommission
+     * @return True if node was decommissioned; false otherwise
+     */
+    bool force_decommission_node(unsigned int node);
 
     /**
      * "Hang up" a node on the active Cassandra cluster (SIGHUP)
