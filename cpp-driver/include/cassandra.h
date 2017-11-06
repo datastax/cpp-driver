@@ -1110,7 +1110,7 @@ cass_execution_profile_set_token_aware_routing_shuffle_replicas(CassExecProfile*
  * @param[in] enabled
  * @return CASS_OK if successful, otherwise an error occurred.
  *
- * @cass_cluster_set_latency_aware_routing()
+ * @see cass_cluster_set_latency_aware_routing()
  */
 CASS_EXPORT CassError
 cass_execution_profile_set_latency_aware_routing(CassExecProfile* profile,
