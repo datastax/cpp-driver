@@ -419,8 +419,12 @@ BOOST_AUTO_TEST_CASE(invalid) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_user_type(statement.get(), 1, phone.get()), CASS_OK);
+      CassError expected_error = CASS_ERROR_SERVER_INVALID_QUERY;
+      if (version >= "3.11.0") {
+        expected_error = CASS_ERROR_SERVER_SERVER_ERROR;
+      }
       BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get()),
-                          CASS_ERROR_SERVER_INVALID_QUERY);
+                          expected_error);
     }
   } else {
     std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping udts/invalid" << std::endl;

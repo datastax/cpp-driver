@@ -223,8 +223,19 @@ BOOST_AUTO_TEST_CASE(timeouts) {
     ccm_->start_cluster();
   }
   create_session(true);
-  get_metrics(&metrics);
-  BOOST_CHECK_GE(metrics.errors.request_timeouts, 1);
+  for (int n = 0; n < 100; ++n) {
+    execute_query(true);
+  }
+
+  // Ensure the request timeout has occurred
+  boost::chrono::steady_clock::time_point end =
+    boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
+  do {
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+    get_metrics(&metrics);
+  } while (boost::chrono::steady_clock::now() < end &&
+           metrics.errors.request_timeouts == 0);
+  BOOST_CHECK_GT(metrics.errors.request_timeouts, 0);
 }
 
 /**

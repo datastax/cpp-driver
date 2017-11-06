@@ -103,7 +103,7 @@ BOOST_FIXTURE_TEST_SUITE(prepared_metadata, PreparedMetadataTests)
  *
  */
 BOOST_AUTO_TEST_CASE(alter_doesnt_update_column_count) {
-  // Ensure protocol v4 or less
+  cass_cluster_set_use_beta_protocol_version(cluster, cass_false); // Ensure beta protocol is not set
   BOOST_REQUIRE_EQUAL(cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4), CASS_OK);
 
   // The column count will stay the same even after the alter

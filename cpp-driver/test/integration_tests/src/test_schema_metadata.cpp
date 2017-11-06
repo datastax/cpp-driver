@@ -674,7 +674,9 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     size_t keyspace_count = 0;
     while (cass_iterator_next(itr.get())) ++keyspace_count;
     size_t number_of_default_keyspaces = 2;
-    if (version >= "3.0.0") {
+    if (ccm->is_dse() && ccm->get_dse_version() >= "5.0.0") {
+      number_of_default_keyspaces = 9;
+    } else if (version >= "3.0.0") {
       number_of_default_keyspaces = 5;
     } else if (version >= "2.2.0") {
       number_of_default_keyspaces = 4;

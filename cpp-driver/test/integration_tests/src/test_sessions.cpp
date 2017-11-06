@@ -524,7 +524,7 @@ void query_sessions(const SessionContainer& sessions) {
 static void minor_chaos(void *ccm) {
   CCM::Bridge* ccm_ptr = static_cast<CCM::Bridge*>(ccm);
   ccm_ptr->kill_node(1);
-  ccm_ptr->decommission_node(2);
+  ccm_ptr->force_decommission_node(2);
   ccm_ptr->start_node(1);
   ccm_ptr->disable_node_gossip(3);
 }

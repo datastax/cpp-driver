@@ -49,12 +49,8 @@ public:
    */
   DseLineString(const std::string& value)
     : is_null_(false) {
-
-    dse_line_string_iterator_new();
-
-    std::string value_trim = Utils::trim(Utils::to_lower(value));
-
     // Determine if the value is NULL or valid
+    std::string value_trim = Utils::trim(Utils::to_lower(value));
     if (value_trim.compare("null") == 0) {
       is_null_ = true;
     } else {

@@ -906,11 +906,16 @@ unsigned int CCM::Bridge::bootstrap_node(const std::string& jvm_argument /*= ""*
   return node;
 }
 
-bool CCM::Bridge::decommission_node(unsigned int node) {
+bool CCM::Bridge::decommission_node(unsigned int node, bool is_force /*= false*/) {
   // Create the node decommission command and execute
   std::vector<std::string> decommission_node_command;
   decommission_node_command.push_back(generate_node_name(node));
   decommission_node_command.push_back("decommission");
+  if (is_force &&
+      ((!use_dse_ && cassandra_version_ >= "3.12") || // Cassandra v3.12+
+       (use_dse_ && dse_version_ >= "5.1.0"))) { // DataStax Enterprise v5.1.0+
+    decommission_node_command.push_back("--force");
+  }
   execute_ccm_command(decommission_node_command);
 
   // Ensure the node has been decommissioned
@@ -985,6 +990,10 @@ void CCM::Bridge::execute_cql_on_node(unsigned int node, const std::string& cql)
   cqlsh_node_command.push_back("-x");
   cqlsh_node_command.push_back(execute_statement.str());
   execute_ccm_command(cqlsh_node_command);
+}
+
+bool CCM::Bridge::force_decommission_node(unsigned int node) {
+  return decommission_node(node, true);
 }
 
 bool CCM::Bridge::hang_up_node(unsigned int node) {
