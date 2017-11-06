@@ -115,7 +115,7 @@ void RequestHandler::schedule_next_execution(const Host::Ptr& current_host) {
   }
 }
 
-void RequestHandler::init(const Config& config, const ExecutionProfile& profile, 
+void RequestHandler::init(const Config& config, const ExecutionProfile& profile,
                           const String& connected_keyspace, const TokenMap* token_map,
                           const PreparedMetadata& prepared_metdata) {
   wrapper_.init(config, profile, prepared_metdata);
@@ -123,7 +123,7 @@ void RequestHandler::init(const Config& config, const ExecutionProfile& profile,
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
   const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : connected_keyspace);
 
-  query_plan_.reset(config.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
+  query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
   execution_plan_.reset(config.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
 }
 
