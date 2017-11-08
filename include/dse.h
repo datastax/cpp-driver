@@ -8,6 +8,14 @@
 #ifndef __DSE_H_INCLUDED__
 #define __DSE_H_INCLUDED__
 
+#if !defined(DSE_STATIC)
+#  if (defined(DSE_BUILDING) && !defined(CASS_BUILDING))
+#    define CASS_BUILDING
+#  endif
+#elif !defined(CASS_STATIC)
+#  define CASS_STATIC
+#endif
+
 #include <dse/cassandra.h>
 
 #if !defined(DSE_STATIC)
@@ -23,7 +31,7 @@
 #    define DSE_EXPORT __attribute__ ((visibility("default")))
 #  endif
 #else
-#define DSE_EXPORT
+#  define DSE_EXPORT
 #endif
 
 #if defined(_MSC_VER)
