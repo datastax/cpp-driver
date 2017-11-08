@@ -135,42 +135,23 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-# Create an object library for the driver (single build)
-if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
-  add_library(cpp-driver OBJECT ${CASS_ALL_SOURCE_FILES})
-  if(NOT WIN32)
-    set_property(TARGET cpp-driver PROPERTY COMPILE_FLAGS "${CASS_DRIVER_CXX_FLAGS} -fPIC")
-  endif()
-
-  # Build both shared and static libraries
-  set(CASS_BUILD_SHARED ON)
-  set(CASS_BUILD_STATIC ON)
-endif()
-
 # Assign the include directories
 include_directories(${CASS_INCLUDES})
 
 # Determine if the dynamic/shared library should be built
 if(CASS_BUILD_SHARED)
-  if(CMAKE_VERSION VERSION_LESS "2.8.8")
-    add_library(${PROJECT_LIB_NAME} SHARED ${CASS_ALL_SOURCE_FILES})
-  else()
-    add_library(${PROJECT_LIB_NAME} SHARED $<TARGET_OBJECTS:cpp-driver>)
-  endif()
+  add_library(${PROJECT_LIB_NAME} SHARED ${CASS_ALL_SOURCE_FILES})
   CassConfigureShared("CASS")
 endif()
 
 # Determine if the static library should be built
 if(CASS_BUILD_STATIC)
-  if(CMAKE_VERSION VERSION_LESS "2.8.8")
-    add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${CASS_ALL_SOURCE_FILES})
-  else()
-    add_library(${PROJECT_LIB_NAME_STATIC} STATIC $<TARGET_OBJECTS:cpp-driver>)
-  endif()
+  add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${CASS_ALL_SOURCE_FILES})
   CassConfigureStatic("CASS")
 
   # Update the test flags to indicate the use of the static library
   if(CASS_USE_STATIC_LIBS)
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DCASS_STATIC")
     set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DCASS_STATIC")
   endif()
 endif()
