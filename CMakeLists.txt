@@ -216,6 +216,10 @@ CassConfigureTests(${CASS_ROOT_DIR})
 # no need to update CMakeLists.txt!
 
 if(DSE_BUILD_EXAMPLES)
+  if(DSE_USE_STATIC_LIBS)
+    set(EXAMPLE_C_FLAGS "${EXAMPLE_C_FLAGS} -DDSE_STATIC")
+    set(CASS_EXAMPLE_C_FLAGS "${CASS_EXAMPLE_C_FLAGS} -DCASS_STATIC")
+  endif()
   CassBuildExamples("examples")
   CassBuildExamples("cpp-driver/examples")
 endif()
