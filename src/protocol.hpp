@@ -27,7 +27,12 @@ inline bool supports_set_keyspace(int version) {
 }
 
 inline bool supports_result_metadata_id(int version) {
-  return version >= CASS_PROTOCOL_VERSION_V5;
+  // Cassandra v4.x broke the beta protocol v5 version
+  // JIRA: https://issues.apache.org/jira/browse/CASSANDRA-10786
+  // Mailing List Discussion: https://www.mail-archive.com/dev@cassandra.apache.org/msg11731.html
+  // TODO: Remove after Cassandra v4.0.0 is released
+  return false;
+  //return version >= CASS_PROTOCOL_VERSION_V5;
 }
 
 } // namespace cass
