@@ -155,19 +155,6 @@ set(DSE_ALL_SOURCE_FILES
   ${DSE_SRC_FILES} ${DSE_API_HEADER_FILES}
   ${DSE_INC_FILES} ${CASS_ALL_SOURCE_FILES})
 
-# Create an object library for the driver (single build)
-if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
-  add_library(cpp-driver-dse OBJECT ${DSE_ALL_SOURCE_FILES})
-  if(NOT WIN32)
-    set_property(TARGET cpp-driver-dse PROPERTY COMPILE_FLAGS "${DSE_DRIVER_CXX_FLAGS} -fPIC")
-  endif()
-  set_property(TARGET cpp-driver-dse PROPERTY FOLDER "Driver/DSE")
-
-  # Build both shared and static libraries
-  set(DSE_BUILD_SHARED ON)
-  set(DSE_BUILD_STATIC ON)
-endif()
-
 # Assign the include directories
 include_directories(${DSE_INCLUDES})
 include_directories(${CASS_SRC_DIR})
@@ -181,11 +168,8 @@ if(DSE_BUILD_SHARED)
   # It would be great to move this logic into the CassConfigureShared
   # macro, but if you do, something goes wrong and the cmake output
   # warns that policy CMP0042 is violated.
-  if(CMAKE_VERSION VERSION_LESS "2.8.8")
-    add_library(${PROJECT_LIB_NAME} SHARED ${DSE_ALL_SOURCE_FILES})
-  else()
-    add_library(${PROJECT_LIB_NAME} SHARED $<TARGET_OBJECTS:cpp-driver-dse>)
-  endif()
+  add_library(${PROJECT_LIB_NAME} SHARED ${DSE_ALL_SOURCE_FILES})
+  set(DSE_DRIVER_CXX_FLAGS "${DSE_DRIVER_CXX_FLAGS} -DDSE_BUILDING")
   CassConfigureShared("DSE")
   set_property(TARGET ${PROJECT_LIB_NAME} PROPERTY FOLDER "Driver/DSE")
 endif()
@@ -195,16 +179,12 @@ if(DSE_BUILD_STATIC)
   # It would be great to move this logic into the CassConfigureStatic
   # macro, but if you do, something goes wrong and the cmake output
   # warns that policy CMP0042 is violated.
-  if(CMAKE_VERSION VERSION_LESS "2.8.8")
-    add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${DSE_ALL_SOURCE_FILES})
-  else()
-    add_library(${PROJECT_LIB_NAME_STATIC} STATIC $<TARGET_OBJECTS:cpp-driver-dse>)
-  endif()
+  add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${DSE_ALL_SOURCE_FILES})
   CassConfigureStatic("DSE")
 
   # Update the test flags to indicate the use of the static library
   if(DSE_USE_STATIC_LIBS)
-    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DDSE_STATIC")
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DDSE_STATIC -DCASS_STATIC")
     set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DCASS_STATIC")
   endif()
 

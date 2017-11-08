@@ -13,9 +13,9 @@
 #if !defined(DSE_STATIC)
 #  if (defined(WIN32) || defined(_WIN32))
 #    if defined(DSE_BUILDING)
-#      define DSE_EXPORT __declspec(dllimport)
-#    else
 #      define DSE_EXPORT __declspec(dllexport)
+#    else
+#      define DSE_EXPORT __declspec(dllimport)
 #    endif
 #  elif (defined(__SUNPRO_C)  || defined(__SUNPRO_CC)) && !defined(DSE_STATIC)
 #    define DSE_EXPORT __global
