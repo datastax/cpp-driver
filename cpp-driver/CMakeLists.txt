@@ -142,6 +142,7 @@ include_directories(${CASS_INCLUDES})
 if(CASS_BUILD_SHARED)
   add_library(${PROJECT_LIB_NAME} SHARED ${CASS_ALL_SOURCE_FILES})
   CassConfigureShared("CASS")
+  set_property(TARGET ${PROJECT_LIB_NAME} PROPERTY FOLDER "Driver/Cassandra")
 endif()
 
 # Determine if the static library should be built
@@ -154,6 +155,8 @@ if(CASS_BUILD_STATIC)
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DCASS_STATIC")
     set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DCASS_STATIC")
   endif()
+
+  set_property(TARGET ${PROJECT_LIB_NAME_STATIC} PROPERTY FOLDER "Driver/Cassandra")
 endif()
 
 #-----------------------------

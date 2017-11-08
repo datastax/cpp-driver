@@ -32,7 +32,7 @@ if(CASS_BUILD_INTEGRATION_TESTS)
   CassRapidJson()
 
   set(INTEGRATION_TESTS_NAME "cassandra-integration-tests")
-  set(INTEGRATION_TESTS_DISPLAY_NAME "Integration Tests")
+  set(INTEGRATION_TESTS_DISPLAY_NAME "Integration Tests (cassandra)")
   set(INTEGRATION_TESTS_SOURCE_DIR "${TESTS_SOURCE_DIR}/integration")
 
   GtestIntegrationTestFiles(${INTEGRATION_TESTS_SOURCE_DIR} "CASS")
