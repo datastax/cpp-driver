@@ -304,10 +304,10 @@ void cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
                                             const char* hosts,
                                             size_t hosts_length) {
   if (hosts_length == 0) {
-    cluster->config().whitelist().clear();
+    cluster->config().default_profile().whitelist().clear();
   } else {
     cass::explode(cass::String(hosts, hosts_length),
-                  cluster->config().whitelist());
+                  cluster->config().default_profile().whitelist());
   }
 }
 
@@ -322,10 +322,10 @@ void cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
                                             const char* hosts,
                                             size_t hosts_length) {
   if (hosts_length == 0) {
-    cluster->config().blacklist().clear();
+    cluster->config().default_profile().blacklist().clear();
   } else {
     cass::explode(cass::String(hosts, hosts_length),
-                  cluster->config().blacklist());
+                  cluster->config().default_profile().blacklist());
   }
 }
 
@@ -340,10 +340,10 @@ void cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
                                                const char* dcs,
                                                size_t dcs_length) {
   if (dcs_length == 0) {
-    cluster->config().whitelist_dc().clear();
+    cluster->config().default_profile().whitelist_dc().clear();
   } else {
     cass::explode(cass::String(dcs, dcs_length),
-                  cluster->config().whitelist_dc());
+                  cluster->config().default_profile().whitelist_dc());
   }
 }
 
@@ -358,10 +358,10 @@ void cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
                                                const char* dcs,
                                                size_t dcs_length) {
   if (dcs_length == 0) {
-    cluster->config().blacklist_dc().clear();
+    cluster->config().default_profile().blacklist_dc().clear();
   } else {
     cass::explode(cass::String(dcs, dcs_length),
-                  cluster->config().blacklist_dc());
+                  cluster->config().default_profile().blacklist_dc());
   }
 }
 

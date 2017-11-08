@@ -28,7 +28,8 @@ TEST(ExecutionProfileUnitTest, Consistency) {
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(CASS_DEFAULT_CONSISTENCY, profile_lookup.consistency());
-  ASSERT_EQ(CASS_DEFAULT_CONSISTENCY, copy_config.consistency());
+  ASSERT_EQ(CASS_DEFAULT_CONSISTENCY,
+            copy_config.default_profile().consistency());
 }
 
 TEST(ExecutionProfileUnitTest, SerialConsistency) {
@@ -42,7 +43,8 @@ TEST(ExecutionProfileUnitTest, SerialConsistency) {
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(CASS_DEFAULT_SERIAL_CONSISTENCY, profile_lookup.serial_consistency());
-  ASSERT_EQ(CASS_DEFAULT_SERIAL_CONSISTENCY, copy_config.serial_consistency());
+  ASSERT_EQ(CASS_DEFAULT_SERIAL_CONSISTENCY,
+            copy_config.default_profile().serial_consistency());
 }
 
 TEST(ExecutionProfileUnitTest, RequestTimeout) {
@@ -56,7 +58,8 @@ TEST(ExecutionProfileUnitTest, RequestTimeout) {
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(CASS_DEFAULT_REQUEST_TIMEOUT_MS, profile_lookup.request_timeout_ms());
-  ASSERT_EQ(CASS_DEFAULT_REQUEST_TIMEOUT_MS, copy_config.request_timeout_ms());
+  ASSERT_EQ(CASS_DEFAULT_REQUEST_TIMEOUT_MS,
+            copy_config.default_profile().request_timeout_ms());
 }
 
 TEST(ExecutionProfileUnitTest, NullLoadBalancingPolicy) {
@@ -75,7 +78,7 @@ TEST(ExecutionProfileUnitTest, ClusterLoadBalancingPolicy) {
   cass::Config copy_config = config.new_instance();
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
-  ASSERT_EQ(copy_config.load_balancing_policy().get(),
+  ASSERT_EQ(copy_config.default_profile().load_balancing_policy().get(),
             profile_lookup.load_balancing_policy().get());
 }
 
@@ -108,7 +111,7 @@ TEST(ExecutionProfileUnitTest, ClusterLoadBalancingPolicies) {
   EXPECT_NE(profile_1_lbp, profile_2_lbp);
   EXPECT_NE(profile_2_lbp, profile_3_lbp);
   EXPECT_NE(profile_3_lbp, profile_1_lbp);
-  ASSERT_EQ(copy_config.load_balancing_policy().get(),
+  ASSERT_EQ(copy_config.default_profile().load_balancing_policy().get(),
             profile_2_lbp);
 }
 
@@ -133,7 +136,7 @@ TEST(ExecutionProfileUnitTest, Blacklist) {
                profile_lookup.blacklist().at(1).c_str());
   ASSERT_STREQ(profile.blacklist().at(2).c_str(),
                profile_lookup.blacklist().at(2).c_str());
-  ASSERT_EQ(0u, copy_config.blacklist().size());
+  ASSERT_EQ(0u, copy_config.default_profile().blacklist().size());
 }
 
 TEST(ExecutionProfileUnitTest, BlacklistDC) {
@@ -157,7 +160,7 @@ TEST(ExecutionProfileUnitTest, BlacklistDC) {
                profile_lookup.blacklist_dc().at(1).c_str());
   ASSERT_STREQ(profile.blacklist_dc().at(2).c_str(),
                profile_lookup.blacklist_dc().at(2).c_str());
-  ASSERT_EQ(0u, copy_config.blacklist_dc().size());
+  ASSERT_EQ(0u, copy_config.default_profile().blacklist_dc().size());
 }
 
 TEST(ExecutionProfileUnitTest, Whitelist) {
@@ -181,7 +184,7 @@ TEST(ExecutionProfileUnitTest, Whitelist) {
                profile_lookup.whitelist().at(1).c_str());
   ASSERT_STREQ(profile.whitelist().at(2).c_str(),
                profile_lookup.whitelist().at(2).c_str());
-  ASSERT_EQ(0u, copy_config.whitelist().size());
+  ASSERT_EQ(0u, copy_config.default_profile().whitelist().size());
 }
 
 TEST(ExecutionProfileUnitTest, WhitelistDC) {
@@ -205,7 +208,7 @@ TEST(ExecutionProfileUnitTest, WhitelistDC) {
                profile_lookup.whitelist_dc().at(1).c_str());
   ASSERT_STREQ(profile.whitelist_dc().at(2).c_str(),
                profile_lookup.whitelist_dc().at(2).c_str());
-  ASSERT_EQ(0u, copy_config.whitelist_dc().size());
+  ASSERT_EQ(0u, copy_config.default_profile().whitelist_dc().size());
 }
 
 TEST(ExecutionProfileUnitTest, LatencyAware) {
@@ -218,7 +221,7 @@ TEST(ExecutionProfileUnitTest, LatencyAware) {
   cass::Config copy_config = config.new_instance();
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
-  ASSERT_FALSE(copy_config.latency_aware());
+  ASSERT_FALSE(copy_config.default_profile().latency_aware());
   ASSERT_TRUE(profile_lookup.latency_aware());
 }
 
@@ -232,7 +235,7 @@ TEST(ExecutionProfileUnitTest, TokenAware) {
   cass::Config copy_config = config.new_instance();
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
-  ASSERT_TRUE(copy_config.token_aware_routing());
+  ASSERT_TRUE(copy_config.default_profile().token_aware_routing());
   ASSERT_FALSE(profile_lookup.token_aware_routing());
 }
 
@@ -250,7 +253,7 @@ TEST(ExecutionProfileUnitTest, ClusterRetryPolicy) {
   cass::Config copy_config = config.new_instance();
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
-  ASSERT_EQ(copy_config.retry_policy().get(),
+  ASSERT_EQ(copy_config.default_profile().retry_policy().get(),
             profile_lookup.retry_policy().get());
 }
 
@@ -282,7 +285,7 @@ TEST(ExecutionProfileUnitTest, ClusterRetryPolicies) {
   EXPECT_NE(profile_1_retry_policy, profile_2_retry_policy);
   EXPECT_NE(profile_2_retry_policy, profile_3_retry_policy);
   EXPECT_NE(profile_3_retry_policy, profile_1_retry_policy);
-  ASSERT_EQ(copy_config.retry_policy().get(),
+  ASSERT_EQ(copy_config.default_profile().retry_policy().get(),
             profile_2_retry_policy);
 }
 

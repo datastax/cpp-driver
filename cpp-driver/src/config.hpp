@@ -83,14 +83,8 @@ public:
     return config;
   }
 
-  CassConsistency consistency() const { return default_profile_.consistency(); }
-
   void set_consistency(CassConsistency consistency) {
     default_profile_.set_consistency(consistency);
-  }
-
-  CassConsistency serial_consistency() const {
-    return default_profile_.serial_consistency();
   }
 
   void set_serial_consistency(CassConsistency serial_consistency) {
@@ -169,10 +163,6 @@ public:
     connect_timeout_ms_ = timeout_ms;
   }
 
-  unsigned request_timeout_ms() const {
-    return default_profile_.request_timeout_ms();
-  }
-
   void set_request_timeout(unsigned timeout_ms) {
     default_profile_.set_request_timeout(timeout_ms);
   }
@@ -240,10 +230,6 @@ public:
     return load_balancing_policies_;
   }
 
-  const LoadBalancingPolicy::Ptr& load_balancing_policy() const {
-    return default_profile_.load_balancing_policy();
-  }
-
   void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
     default_profile_.set_load_balancing_policy(lbp);
   }
@@ -263,10 +249,6 @@ public:
     ssl_context_.reset(ssl_context);
   }
 
-  bool token_aware_routing() const {
-    return default_profile_.token_aware_routing();
-  }
-
   void set_token_aware_routing(bool is_token_aware) {
     default_profile_.set_token_aware_routing(is_token_aware);
   }
@@ -275,16 +257,8 @@ public:
     default_profile_.set_token_aware_routing_shuffle_replicas(shuffle_replicas);
   }
 
-  bool latency_aware() const {
-    return default_profile_.latency_aware();
-  }
-
   void set_latency_aware_routing(bool is_latency_aware) {
     default_profile_.set_latency_aware_routing(is_latency_aware);
-  }
-
-  bool host_targeting() const {
-    return default_profile_.host_targeting();
   }
 
   void set_host_targeting(bool is_host_targeting) {
@@ -293,22 +267,6 @@ public:
 
   void set_latency_aware_routing_settings(const LatencyAwarePolicy::Settings& settings) {
     default_profile_.set_latency_aware_routing_settings(settings);
-  }
-
-  ContactPointList& whitelist() {
-    return default_profile_.whitelist();
-  }
-
-  ContactPointList& blacklist() {
-    return default_profile_.blacklist();
-  }
-
-  DcList& whitelist_dc() {
-    return default_profile_.whitelist_dc();
-  }
-
-  DcList& blacklist_dc() {
-    return default_profile_.blacklist_dc();
   }
 
   bool tcp_nodelay_enable() const { return tcp_nodelay_enable_; }
@@ -350,10 +308,6 @@ public:
     timestamp_gen_.reset(timestamp_gen);
   }
 
-  const RetryPolicy::Ptr& retry_policy() const {
-    return default_profile_.retry_policy();
-  }
-
   void set_retry_policy(RetryPolicy* retry_policy) {
     default_profile_.set_retry_policy(retry_policy);
   }
@@ -376,7 +330,11 @@ public:
   unsigned max_reusable_write_objects() const { return max_reusable_write_objects_; }
   void set_max_reusable_write_objects(unsigned max_reusable_write_objects) { max_reusable_write_objects_ = max_reusable_write_objects; }
 
-  const ExecutionProfile& default_profile() {
+  const ExecutionProfile& default_profile() const {
+    return default_profile_;
+  }
+
+  ExecutionProfile& default_profile() {
     return default_profile_;
   }
 

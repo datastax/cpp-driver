@@ -123,7 +123,7 @@ void PrepareHostHandler::prepare_next() {
 
     // Set the keyspace in case per request keyspaces are supported
     prepare_request->set_keyspace(current_keyspace_);
-    prepare_request->set_request_timeout_ms(session_->config().request_timeout_ms());
+    prepare_request->set_request_timeout_ms(session_->config().default_profile().request_timeout_ms());
 
     if (!connection_->write(PrepareCallback::Ptr(
                               Memory::allocate<PrepareCallback>(prepare_request, Ptr(this))),
