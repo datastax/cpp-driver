@@ -174,6 +174,9 @@ CassConfigureTests()
 # no need to update CMakeLists.txt!
 
 if(CASS_BUILD_EXAMPLES)
+  if(CASS_USE_STATIC_LIBS)
+    set(CASS_EXAMPLE_C_FLAGS "${CASS_EXAMPLE_C_FLAGS} -DCASS_STATIC")
+  endif()
   CassBuildExamples("examples")
 endif()
 
