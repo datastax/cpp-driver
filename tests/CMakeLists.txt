@@ -36,7 +36,7 @@ CassRapidJson()
 if(DSE_BUILD_INTEGRATION_TESTS)
   CassCcmBridge()
   set(INTEGRATION_TESTS_NAME "${PROJECT_NAME_STRING}-integration-tests")
-  set(INTEGRATION_TESTS_DISPLAY_NAME "Integration Tests")
+  set(INTEGRATION_TESTS_DISPLAY_NAME "Integration Tests (${PROJECT_NAME_STRING})")
 
   GtestIntegrationTestFiles("${TESTS_SOURCE_DIR}/integration" "DSE")
   GtestIntegrationTestFiles("${CASS_TESTS_SOURCE_DIR}/integration" "CASS")
