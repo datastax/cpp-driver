@@ -24,7 +24,7 @@
 #    if defined(CASS_BUILDING)
 #      define CASS_EXPORT __declspec(dllexport)
 #    else
-#      define CASS_EXPORT __declspec(dllexport)
+#      define CASS_EXPORT __declspec(dllimport)
 #    endif
 #  elif (defined(__SUNPRO_C)  || defined(__SUNPRO_CC)) && !defined(CASS_STATIC)
 #    define CASS_EXPORT __global

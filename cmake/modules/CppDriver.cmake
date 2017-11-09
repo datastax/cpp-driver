@@ -142,7 +142,7 @@ macro(CassConfigureShared prefix)
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
   set_property(
       TARGET ${PROJECT_LIB_NAME}
-      APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -D${prefix}_BUILDING")
+      APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DCASS_BUILDING")
 endmacro()
 
 #------------------------
@@ -164,7 +164,7 @@ macro(CassConfigureStatic prefix)
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
   set_property(
       TARGET ${PROJECT_LIB_NAME_STATIC}
-      APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DDSE_STATIC")
+      APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DCASS_STATIC")
 endmacro()
 
 #------------------------

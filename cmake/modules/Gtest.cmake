@@ -172,7 +172,7 @@ endmacro()
 #------------------------
 macro(GtestUnitTests project_name extra_source_files)
   set(UNIT_TESTS_NAME "${project_name}-unit-tests")
-  set(UNIT_TESTS_DISPLAY_NAME "Unit Tests")
+  set(UNIT_TESTS_DISPLAY_NAME "Unit Tests (${project_name})")
   set(UNIT_TESTS_SOURCE_DIR "${TESTS_SOURCE_DIR}/unit")
 
   # The unit tests use `test::Utils::msleep()` and this is the minimum include
