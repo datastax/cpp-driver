@@ -26,6 +26,8 @@
 #include "speculative_execution.hpp"
 #include "string.hpp"
 
+#include <climits>
+
 namespace cass {
 
 void stderr_log_callback(const CassLogMessage* message, void* data);
