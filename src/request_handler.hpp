@@ -232,11 +232,6 @@ public:
   void schedule_next(int64_t timeout = 0);
   void cancel();
 
-  virtual void on_error(CassError code, const std::string& message);
-
-  virtual void on_retry_current_host();
-  virtual void on_retry_next_host();
-
   void on_result_metadata_changed(const Request *request,
                                   ResultResponse* result_response);
 
@@ -249,14 +244,19 @@ private:
 private:
   static void on_execute(Timer* timer);
 
-  virtual void on_start();
+  virtual void on_internal_start();
 
-  virtual void on_set(ResponseMessage* response);
-  virtual void on_cancel();
+  virtual void on_internal_set(Connection* connection, ResponseMessage* response);
+  virtual void on_internal_error(CassError code, const std::string& message);
 
-  void on_result_response(ResponseMessage* response);
-  void on_error_response(ResponseMessage* response);
-  void on_error_unprepared(ErrorResponse* error);
+  virtual void on_internal_retry_current_host();
+  virtual void on_internal_retry_next_host();
+
+  virtual void on_internal_cancel();
+
+  void on_result_response(Connection* connection, ResponseMessage* response);
+  void on_error_response(Connection* connection, ResponseMessage* response);
+  void on_error_unprepared(Connection* connection, ErrorResponse* error);
 
 private:
   friend class SchemaChangeCallback;

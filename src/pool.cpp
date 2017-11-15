@@ -422,7 +422,7 @@ void Pool::wait_for_connection(const PoolCallback::Ptr& callback) {
   pending_requests_.add_to_back(callback.get());
 
   callback->start_pending_request(this,
-                                           Pool::on_pending_request_timeout);
+                                  Pool::on_pending_request_timeout);
 
   if (pending_requests_.size() % 10 == 0) {
     LOG_DEBUG("%u request%s pending on %s pool(%p)",
