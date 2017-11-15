@@ -1,3 +1,40 @@
+2.8.0
+===========
+
+Features
+--------
+* [CPP-393] Allow prepared statements to be prepared on all nodes
+* [CPP-394] Prepare statements on UP/ADD events
+* [CPP-439] Support OpenSSL 1.1
+* [CPP-512] Include hash of result set metadata in prepared statement id
+* [CPP-528] Per-query (and per-batch) keyspace support
+
+Bug Fixes
+--------
+* [CPP-368] API Functions that take strings now check for NULL and replace it
+  with an empty string
+* [CPP-438] Broken build with GCC 7 and OpenSSL 1.1
+* [CPP-501] Schema metadata is corrupted when views and indexes exist for a
+  table
+* [CPP-503] Schema meta race condition when a view is dropped from a table
+* [CPP-535] Schema metadata views are not properly updated during drop event
+* [CPP-540] NULL columns in table/view metadata caused by side-effect in a
+  compiled out assertion
+* [CPP-543] Fix dllimport/dllexport
+* [CPP-546] Result metadata callback casting requests to invalid types
+* [CPP-547] Pool request callback attempting to return a deleted connection
+
+Other
+-------
+* [CPP-432] Removed dense table 'empty' columns from metadata
+* [CPP-449] Update vc_build.bat to include automated build for Visual Studio
+  2017
+* [CPP-478] Renamed the class `SpeculativeExecution` to `RequestExection` to
+  reduce confusion when it appears in driver logs
+* [CPP-523] Use arc4random or getrandom instead of /dev/urandom (if available)
+* [CPP-526] Add a mutable wrapper around the request object
+* [CPP-538] Deprecate watermarks
+
 2.7.1
 ===========
 
