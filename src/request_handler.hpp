@@ -237,7 +237,8 @@ public:
   virtual void on_retry_current_host();
   virtual void on_retry_next_host();
 
-  void on_result_metadata_changed(ResultResponse* result_response);
+  void on_result_metadata_changed(const Request *request,
+                                  ResultResponse* result_response);
 
 private:
   friend class PrepareCallback;
