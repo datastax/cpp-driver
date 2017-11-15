@@ -43,6 +43,8 @@ rewrites:
   - https://github.com/datastax/cpp-driver/tree/2.6.0/examples/duration/duration.c: https://github.com/datastax/cpp-driver/blob/master/examples/duration/duration.c
   - examples/(.*): https://github.com/datastax/cpp-driver/blob/master/examples/\1
 versions:
+  - name: 2.8
+    ref: 2.8.0
   - name: 2.7
     ref: 2.7.1
   - name: 2.6
