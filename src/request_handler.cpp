@@ -74,7 +74,7 @@ void PrepareCallback::on_internal_set(ResponseMessage* response) {
       ResultResponse* result =
           static_cast<ResultResponse*>(response->response_body().get());
       if (result->kind() == CASS_RESULT_KIND_PREPARED) {
-        request_execution_->on_result_metadata_changed(result);
+        request_execution_->on_result_metadata_changed(request(), result);
         request_execution_->retry_current_host();
       } else {
         request_execution_->retry_next_host();
@@ -252,27 +252,30 @@ void RequestExecution::on_error(CassError code, const std::string& message) {
   }
 }
 
-void RequestExecution::on_result_metadata_changed(ResultResponse* result_response) {
+void RequestExecution::on_result_metadata_changed(const Request* request,
+                                                  ResultResponse* result_response) {
   if (request_handler_->listener_) {
     // Attempt to use the per-query keyspace first (v5+/DSEv2+ only) then
     // the keyspace in the result metadata.
     std::string keyspace;
     if (supports_set_keyspace(result_response->protocol_version()) &&
-        !request()->keyspace().empty()) {
-      keyspace = request()->keyspace();
+        !request->keyspace().empty()) {
+      keyspace = request->keyspace();
     } else {
       keyspace = result_response->keyspace().to_string();
     }
 
-    if (result_response->kind() == CASS_RESULT_KIND_ROWS) {
-      const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
+    if (request->opcode() == CQL_OPCODE_EXECUTE &&
+        result_response->kind() == CASS_RESULT_KIND_ROWS) {
+      const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request);
       request_handler_->listener_->on_result_metadata_changed(execute->prepared()->id(),
                                                               execute->prepared()->query(),
                                                               keyspace,
                                                               result_response->new_metadata_id().to_string(),
                                                               ResultResponse::ConstPtr(result_response));
-    } else if (result_response->kind() == CASS_RESULT_KIND_PREPARED) {
-      const PrepareRequest* prepare = static_cast<const PrepareRequest*>(request());
+    } else if (request->opcode()  == CQL_OPCODE_PREPARE &&
+               result_response->kind() == CASS_RESULT_KIND_PREPARED) {
+      const PrepareRequest* prepare = static_cast<const PrepareRequest*>(request);
       request_handler_->listener_->on_result_metadata_changed(result_response->prepared_id().to_string(),
                                                               prepare->query(),
                                                               keyspace,
@@ -361,7 +364,7 @@ void RequestExecution::on_result_response(ResponseMessage* response) {
           }
           result->set_metadata(prepared_metadata_entry()->result()->result_metadata().get());
         } else if (result->metadata_changed()) {
-          on_result_metadata_changed(result);
+          on_result_metadata_changed(request(), result);
         }
       }
       set_response(response->response_body());
@@ -383,7 +386,7 @@ void RequestExecution::on_result_response(ResponseMessage* response) {
 
 
     case CASS_RESULT_KIND_PREPARED:
-      on_result_metadata_changed(result);
+      on_result_metadata_changed(request(), result);
       if (!request_handler_->io_worker()->prepare_all(response->response_body(), request_handler_)) {
         set_response(response->response_body());
       }
