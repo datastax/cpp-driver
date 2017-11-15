@@ -89,24 +89,18 @@ private:
     }
   }
 
-  virtual void on_retry_current_host() {
-    return_connection();
-  }
+  virtual void on_internal_retry_current_host() { }
+  virtual void on_internal_retry_next_host() { }
+  virtual void on_internal_cancel() { }
 
-  virtual void on_retry_next_host() {
-    return_connection();
-  }
-
-  virtual void on_set(ResponseMessage* response) {
-    return_connection();
+  virtual void on_internal_set(Connection* connection, ResponseMessage* response) {
     if (timer_.is_running()) { // The request hasn't timed out
       LOG_DEBUG("Successfully prepared all on host %s",
                 address_.to_string().c_str());
     }
   }
 
-  virtual void on_error(CassError code, const std::string& message) {
-    return_connection();
+  virtual void on_internal_error(CassError code, const std::string& message) {
     if (timer_.is_running()) { // The request hasn't timed out
       LOG_WARN("Failed to prepare all on host %s with error: '%s'",
                address_.to_string().c_str(),
@@ -114,11 +108,7 @@ private:
     }
   }
 
-  virtual void on_cancel() {
-    return_connection();
-  }
-
-  virtual void on_start() {
+  virtual void on_internal_start() {
     int request_timeout_ms = this->request_timeout_ms();
     if (request_timeout_ms > 0) { // 0 means no timeout
       timer_.start(handler_->loop(),

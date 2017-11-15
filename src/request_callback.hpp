@@ -131,7 +131,6 @@ public:
 
   RequestCallback(const RequestWrapper& wrapper)
     : wrapper_(wrapper)
-    , connection_(NULL)
     , stream_(-1)
     , state_(REQUEST_STATE_NEW)
     , retry_consistency_(CASS_CONSISTENCY_UNKNOWN) { }
@@ -184,8 +183,6 @@ public:
 
   void set_retry_consistency(CassConsistency cl) { retry_consistency_ = cl; }
 
-  Connection* connection() const { return connection_; }
-
   int stream() const { return stream_; }
 
   State state() const { return state_; }
@@ -201,11 +198,10 @@ public:
 
 protected:
   // Called right before a request is written to a host.
-  virtual void on_start() = 0;
+  virtual void on_start(Connection* connection) = 0;
 
 private:
   const RequestWrapper wrapper_;
-  Connection* connection_;
   int stream_;
   State state_;
   CassConsistency retry_consistency_;
@@ -225,6 +221,7 @@ public:
 
   PoolCallback(const RequestWrapper& wrapper)
     : RequestCallback(wrapper)
+    , connection_(NULL)
     , pool_(NULL) { }
 
   Pool* pool() const { return pool_; }
@@ -233,10 +230,31 @@ public:
   void start_pending_request(Pool* pool, Timer::Callback cb);
   void stop_pending_request();
 
+  virtual void on_error(CassError code, const std::string& message);
+
+  virtual void on_retry_current_host();
+  virtual void on_retry_next_host();
+
 protected:
-  void return_connection();
+  virtual void on_internal_start() = 0;
+
+  virtual void on_internal_retry_current_host() = 0;
+  virtual void on_internal_retry_next_host() = 0;
+
+  virtual void on_internal_set(Connection* connection, ResponseMessage* response) = 0;
+  virtual void on_internal_error(CassError code, const std::string& message) = 0;
+  virtual void on_internal_cancel() = 0;
 
 private:
+  void return_connection();
+
+  virtual void on_start(Connection *connection);
+
+  virtual void on_set(ResponseMessage* response);
+  virtual void on_cancel();
+
+private:
+  Connection* connection_;
   Pool* pool_;
   Timer pending_request_timer_;
 };
@@ -244,15 +262,18 @@ private:
 class SimpleRequestCallback : public RequestCallback {
 public:
   SimpleRequestCallback(const Request::ConstPtr& request)
-    : RequestCallback(RequestWrapper(request)) { }
+    : RequestCallback(RequestWrapper(request))
+    , connection_(NULL) { }
 
 protected:
+  Connection* connection() { return connection_; }
+
   virtual void on_internal_set(ResponseMessage* response) = 0;
   virtual void on_internal_error(CassError code, const std::string& message) = 0;
   virtual void on_internal_timeout() = 0;
 
 private:
-  virtual void on_start();
+  virtual void on_start(Connection* connection);
 
   virtual void on_retry_current_host();
   virtual void on_retry_next_host();
@@ -264,6 +285,7 @@ private:
   static void on_timeout(Timer* timer);
 
 private:
+  Connection* connection_;
   Timer timer_;
 };
 

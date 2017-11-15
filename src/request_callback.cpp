@@ -45,9 +45,8 @@ void RequestWrapper::init(const Config& config,
 }
 
 void RequestCallback::start(Connection* connection, int stream) {
-  connection_ = connection;
   stream_ = stream;
-  on_start();
+  on_start(connection);
 }
 
 int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
@@ -201,9 +200,42 @@ void PoolCallback::stop_pending_request() {
 }
 
 void PoolCallback::return_connection() {
-  if (pool_ != NULL && connection() != NULL) {
-    pool_->return_connection(connection());
+  if (pool_ != NULL && connection_ != NULL) {
+    pool_->return_connection(connection_);
   }
+  connection_ = NULL;
+  pool_ = NULL;
+}
+
+void PoolCallback::on_start(Connection* connection) {
+  connection_ = connection;
+  on_internal_start();
+}
+
+void PoolCallback::on_retry_current_host() {
+  return_connection();
+  on_internal_retry_current_host();
+}
+
+void PoolCallback::on_retry_next_host() {
+  return_connection();
+  on_internal_retry_next_host();
+}
+
+void PoolCallback::on_set(ResponseMessage* response) {
+  Connection* connection = connection_;
+  return_connection();
+  on_internal_set(connection, response);
+}
+
+void PoolCallback::on_error(CassError code, const std::string& message) {
+  return_connection();
+  on_internal_error(code, message);
+}
+
+void PoolCallback::on_cancel() {
+  return_connection();
+  on_internal_cancel();
 }
 
 bool MultipleRequestCallback::get_result_response(const ResponseMap& responses,
@@ -258,16 +290,15 @@ void MultipleRequestCallback::InternalCallback::on_internal_timeout() {
   parent_->has_errors_or_timeouts_ = true;
 }
 
-
-
-void SimpleRequestCallback::on_start() {
+void SimpleRequestCallback::on_start(Connection* connection) {
   uint64_t request_timeout_ms = this->request_timeout_ms();
   if (request_timeout_ms > 0) { // 0 means no timeout
-    timer_.start(connection()->loop(),
+    timer_.start(connection->loop(),
                  request_timeout_ms,
                  this,
                  on_timeout);
   }
+  connection_ = connection;
 }
 
 void SimpleRequestCallback::on_set(ResponseMessage* response) {

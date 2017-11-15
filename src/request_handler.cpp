@@ -212,7 +212,7 @@ void RequestExecution::on_execute(Timer* timer) {
   request_execution->execute();
 }
 
-void RequestExecution::on_start() {
+void RequestExecution::on_internal_start() {
   assert(current_host_ && "Tried to start on a non-existent host");
   if (request()->record_attempted_addresses()) {
     request_handler_->add_attempted_address(current_host_->address());
@@ -220,29 +220,24 @@ void RequestExecution::on_start() {
   start_time_ns_ = uv_hrtime();
 }
 
-void RequestExecution::on_set(ResponseMessage* response) {
-  assert(connection() != NULL);
+void RequestExecution::on_internal_set(Connection* connection, ResponseMessage* response) {
   assert(current_host_ && "Tried to set on a non-existent host");
-
-  return_connection();
 
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
-      on_result_response(response);
+      on_result_response(connection, response);
       break;
     case CQL_OPCODE_ERROR:
-      on_error_response(response);
+      on_error_response(connection, response);
       break;
     default:
-      connection()->defunct();
+      connection->defunct();
       set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE, "Unexpected response");
       break;
   }
 }
 
-void RequestExecution::on_error(CassError code, const std::string& message) {
-  return_connection();
-
+void RequestExecution::on_internal_error(CassError code, const std::string& message) {
   // Handle recoverable errors by retrying with the next host
   if (code == CASS_ERROR_LIB_WRITE_ERROR ||
       code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {
@@ -287,23 +282,20 @@ void RequestExecution::on_result_metadata_changed(const Request* request,
   }
 }
 
-void RequestExecution::on_retry_current_host() {
-  return_connection();
+void RequestExecution::on_internal_retry_current_host() {
   retry_current_host();
 }
 
-void RequestExecution::on_retry_next_host() {
-  return_connection();
+void RequestExecution::on_internal_retry_next_host() {
   retry_next_host();
 }
 
-void RequestExecution::on_cancel() {
+void RequestExecution::on_internal_cancel() {
   LOG_DEBUG("Cancelling speculative execution (%p) for request (%p) on host %s",
             static_cast<void*>(this),
             static_cast<void*>(request_handler_.get()),
             current_host_ ? current_host_->address_string().c_str()
                           : "<no current host>");
-  return_connection();
 }
 
 void RequestExecution::retry_current_host() {
@@ -313,7 +305,6 @@ void RequestExecution::retry_current_host() {
 
   // Reset the request so it can be executed again
   set_state(REQUEST_STATE_NEW);
-  set_pool(NULL);
   request_handler_->io_worker()->retry(RequestExecution::Ptr(this));
 }
 
@@ -344,7 +335,7 @@ void RequestExecution::cancel() {
   set_state(REQUEST_STATE_CANCELLED);
 }
 
-void RequestExecution::on_result_response(ResponseMessage* response) {
+void RequestExecution::on_result_response(Connection* connection, ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
 
@@ -372,7 +363,7 @@ void RequestExecution::on_result_response(ResponseMessage* response) {
 
     case CASS_RESULT_KIND_SCHEMA_CHANGE: {
       SchemaChangeCallback::Ptr schema_change_handler(
-            new SchemaChangeCallback(connection(),
+            new SchemaChangeCallback(connection,
                                      Ptr(this),
                                      response->response_body()));
       schema_change_handler->execute();
@@ -398,7 +389,7 @@ void RequestExecution::on_result_response(ResponseMessage* response) {
   }
 }
 
-void RequestExecution::on_error_response(ResponseMessage* response) {
+void RequestExecution::on_error_response(Connection* connection, ResponseMessage* response) {
   ErrorResponse* error =
       static_cast<ErrorResponse*>(response->response_body().get());
 
@@ -439,7 +430,7 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
 
     case CQL_ERROR_OVERLOADED:
       LOG_WARN("Host %s is overloaded.",
-               connection()->address_string().c_str());
+               connection->address_string().c_str());
       if (retry_policy() && request()->is_idempotent()) {
         decision = retry_policy()->on_request_error(request(),
                                                     consistency(),
@@ -451,8 +442,8 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
     case CQL_ERROR_SERVER_ERROR:
       LOG_WARN("Received server error '%s' from host %s. Defuncting the connection...",
                error->message().to_string().c_str(),
-               connection()->address_string().c_str());
-      connection()->defunct();
+               connection->address_string().c_str());
+      connection->defunct();
       if (retry_policy() && request()->is_idempotent()) {
         decision = retry_policy()->on_request_error(request(),
                                                     consistency(),
@@ -463,12 +454,12 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
 
     case CQL_ERROR_IS_BOOTSTRAPPING:
       LOG_ERROR("Query sent to bootstrapping host %s. Retrying on the next host...",
-                connection()->address_string().c_str());
+                connection->address_string().c_str());
       retry_next_host();
       return; // Done
 
     case CQL_ERROR_UNPREPARED:
-      on_error_unprepared(error);
+      on_error_unprepared(connection, error);
       return; // Done
 
     default:
@@ -501,7 +492,7 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
   }
 }
 
-void RequestExecution::on_error_unprepared(ErrorResponse* error) {
+void RequestExecution::on_error_unprepared(Connection* connection, ErrorResponse* error) {
   std::string query;
 
   if (request()->opcode() == CQL_OPCODE_EXECUTE) {
@@ -515,15 +506,15 @@ void RequestExecution::on_error_unprepared(ErrorResponse* error) {
       return;
     }
   } else {
-    connection()->defunct();
+    connection->defunct();
     set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
               "Received unprepared error for invalid "
               "request type or invalid prepared id");
     return;
   }
 
-  if (!connection()->write(RequestCallback::Ptr(
-                            new PrepareCallback(query, this)))) {
+  if (!connection->write(RequestCallback::Ptr(
+                           new PrepareCallback(query, this)))) {
     // Try to prepare on the same host but on a different connection
     retry_current_host();
   }
