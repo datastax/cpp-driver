@@ -1103,7 +1103,7 @@ void KeyspaceMetadata::internal_add_table(const TableMetadata::Ptr& table,
   // Copy all the views and update the table and keyspace views
   for (ViewMetadata::Vec::const_iterator i = views.begin();
        i != views.end(); ++i) {
-    ViewMetadata::Ptr view(new ViewMetadata(**i, table.get()));
+    ViewMetadata::Ptr view(Memory::allocate<ViewMetadata>(**i, table.get()));
     table->add_view(view);
     (*views_)[view->name()] = view;
   }
