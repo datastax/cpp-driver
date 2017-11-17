@@ -119,6 +119,7 @@ public:
   void notify_pool_closed(Pool* pool);
 
   void add_pending_flush(Pool* pool);
+  void add_pending_request_processing(Pool* pool);
 
 private:
   void add_pool(const Host::ConstPtr& host, bool is_initial_connection);
@@ -132,9 +133,11 @@ private:
 
 #if UV_VERSION_MAJOR == 0
   static void on_execute(uv_async_t* async, int status);
+  static void on_check(uv_check_t *check, int status);
   static void on_prepare(uv_prepare_t *prepare, int status);
 #else
   static void on_execute(uv_async_t* async);
+  static void on_check(uv_check_t *check);
   static void on_prepare(uv_prepare_t *prepare);
 #endif
 
@@ -150,6 +153,7 @@ private:
   const Config& config_;
   Metrics* metrics_;
   Atomic<int> protocol_version_;
+  uv_check_t check_;
   uv_prepare_t prepare_;
 
   std::string keyspace_;
@@ -157,6 +161,7 @@ private:
 
   PoolMap pools_;
   PoolVec pools_pending_flush_;
+  PoolVec pools_pending_request_processing_;
   bool is_closing_;
   int pending_request_count_;
 
