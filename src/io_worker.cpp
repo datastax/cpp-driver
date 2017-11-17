@@ -65,12 +65,12 @@ private:
  * `PrepareAllHandler` to prepare a statement on all hosts. It calls finish
  *  on the handler when the request is done (success, error, or timeout).
  */
-class PrepareAllCallback : public PoolCallback {
+class PrepareAllCallback : public RequestCallback {
 public:
   typedef SharedRefPtr<PrepareAllCallback> Ptr;
 
   PrepareAllCallback(const Address& address, const PrepareAllHandler::Ptr& handler)
-    : PoolCallback(handler->wrapper())
+    : RequestCallback(handler->wrapper())
     , address_(address)
     , handler_(handler)
     , is_finished_(false) { }
@@ -89,16 +89,12 @@ private:
     }
   }
 
-  virtual void on_retry_current_host() {
-    return_connection();
-  }
+  virtual void on_retry_current_host() { }
+  virtual void on_retry_next_host() { }
 
-  virtual void on_retry_next_host() {
-    return_connection();
-  }
+  virtual void on_cancel() { }
 
   virtual void on_set(ResponseMessage* response) {
-    return_connection();
     if (timer_.is_running()) { // The request hasn't timed out
       LOG_DEBUG("Successfully prepared all on host %s",
                 address_.to_string().c_str());
@@ -106,16 +102,11 @@ private:
   }
 
   virtual void on_error(CassError code, const std::string& message) {
-    return_connection();
     if (timer_.is_running()) { // The request hasn't timed out
       LOG_WARN("Failed to prepare all on host %s with error: '%s'",
                address_.to_string().c_str(),
                message.c_str());
     }
-  }
-
-  virtual void on_cancel() {
-    return_connection();
   }
 
   virtual void on_start() {
@@ -151,6 +142,7 @@ IOWorker::IOWorker(Session* session)
     , request_queue_(config_.queue_size_io()) {
   pools_.set_empty_key(Address::EMPTY_KEY);
   pools_.set_deleted_key(Address::DELETED_KEY);
+  check_.data = this;
   prepare_.data = this;
   uv_mutex_init(&keyspace_mutex_);
 }
@@ -163,6 +155,10 @@ int IOWorker::init() {
   int rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   rc = request_queue_.init(loop(), this, &IOWorker::on_execute);
+  if (rc != 0) return rc;
+  rc = uv_check_init(loop(), &check_);
+  if (rc != 0) return rc;
+  rc = uv_check_start(&check_, on_check);
   if (rc != 0) return rc;
   rc = uv_prepare_init(loop(), &prepare_);
   if (rc != 0) return rc;
@@ -278,12 +274,7 @@ bool IOWorker::prepare_all(const Response::Ptr& response,
                                  prepare_all_handler));
 
     if (pool->is_ready()) {
-      Connection* connection = pool->borrow_connection();
-      if (connection != NULL) {
-        pool->write(connection, prepare_all_callback);
-      } else { // Too busy, or no connections
-        pool->wait_for_connection(prepare_all_callback);
-      }
+      pool->write(prepare_all_callback);
     }
   }
 
@@ -293,17 +284,10 @@ bool IOWorker::prepare_all(const Response::Ptr& response,
 void IOWorker::retry(const RequestExecution::Ptr& request_execution) {
   while (request_execution->current_host()) {
     PoolMap::const_iterator it = pools_.find(request_execution->current_host()->address());
-    if (it != pools_.end() && it->second->is_ready()) {
-      const Pool::Ptr& pool = it->second;
-      Connection* connection = pool->borrow_connection();
-      if (connection != NULL) {
-        if (pool->write(connection, request_execution)) {
-          return; // Success
-        }
-      } else { // Too busy, or no connections
-        pool->wait_for_connection(request_execution);
-        return; // Waiting for connection
-      }
+    if (it != pools_.end() &&
+        it->second->is_ready() &&
+        it->second->write(request_execution)) {
+        return; // Successfully written or pending
     }
     request_execution->next_host();
   }
@@ -359,6 +343,10 @@ void IOWorker::add_pending_flush(Pool* pool) {
   pools_pending_flush_.push_back(Pool::Ptr(pool));
 }
 
+void IOWorker::add_pending_request_processing(Pool* pool) {
+  pools_pending_request_processing_.push_back(Pool::Ptr(pool));
+}
+
 void IOWorker::maybe_close() {
   if (is_closing() && pending_request_count_ <= 0) {
     if (config_.core_connections_per_host() > 0) {
@@ -390,6 +378,8 @@ void IOWorker::maybe_notify_closed() {
 void IOWorker::close_handles() {
   EventThread<IOWorkerEvent>::close_handles();
   request_queue_.close_handles();
+  uv_check_stop(&check_);
+  uv_close(reinterpret_cast<uv_handle_t*>(&check_), NULL);
   uv_prepare_stop(&prepare_);
   uv_close(reinterpret_cast<uv_handle_t*>(&prepare_), NULL);
 }
@@ -446,6 +436,24 @@ void IOWorker::on_execute(uv_async_t* async) {
   }
 
   io_worker->maybe_close();
+}
+
+#if UV_VERSION_MAJOR == 0
+void IOWorker::on_check(uv_check_t* check, int status) {
+#else
+void IOWorker::on_check(uv_check_t* check) {
+#endif
+  IOWorker* io_worker = static_cast<IOWorker*>(check->data);
+
+  PoolVec still_requires_processing;
+  for (PoolVec::iterator it = io_worker->pools_pending_request_processing_.begin(),
+       end = io_worker->pools_pending_request_processing_.end(); it != end; ++it) {
+    if ((*it)->process_pending_requests()) {
+      still_requires_processing.push_back(*it);
+    }
+  }
+
+  io_worker->pools_pending_request_processing_.swap(still_requires_processing);
 }
 
 #if UV_VERSION_MAJOR == 0

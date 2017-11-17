@@ -75,13 +75,13 @@ void PrepareCallback::on_internal_set(ResponseMessage* response) {
           static_cast<ResultResponse*>(response->response_body().get());
       if (result->kind() == CASS_RESULT_KIND_PREPARED) {
         request_execution_->on_result_metadata_changed(request(), result);
-        request_execution_->retry_current_host();
+        request_execution_->on_retry_current_host();
       } else {
-        request_execution_->retry_next_host();
+        request_execution_->on_retry_next_host();
       }
     } break;
     case CQL_OPCODE_ERROR:
-      request_execution_->retry_next_host();
+      request_execution_->on_retry_next_host();
       break;
     default:
       break;
@@ -89,11 +89,11 @@ void PrepareCallback::on_internal_set(ResponseMessage* response) {
 }
 
 void PrepareCallback::on_internal_error(CassError code, const std::string& message) {
-  request_execution_->retry_next_host();
+  request_execution_->on_retry_next_host();
 }
 
 void PrepareCallback::on_internal_timeout() {
-  request_execution_->retry_next_host();
+  request_execution_->on_retry_next_host();
 }
 
 void RequestHandler::add_execution(RequestExecution* request_execution) {
@@ -198,12 +198,35 @@ void RequestHandler::stop_request() {
 
 RequestExecution::RequestExecution(const RequestHandler::Ptr& request_handler,
                                    const Host::Ptr& current_host)
-  : PoolCallback(request_handler->wrapper())
+  : RequestCallback(request_handler->wrapper())
   , request_handler_(request_handler)
   , current_host_(current_host)
   , num_retries_(0)
   , start_time_ns_(0) {
   request_handler_->add_execution(this);
+}
+
+void RequestExecution::on_retry_current_host() {
+  retry_current_host();
+}
+
+void RequestExecution::on_retry_next_host() {
+  retry_next_host();
+}
+
+void RequestExecution::retry_current_host() {
+  if (state() == REQUEST_STATE_CANCELLED) {
+    return;
+  }
+
+  // Reset the request so it can be executed again
+  set_state(REQUEST_STATE_NEW);
+  request_handler_->io_worker()->retry(RequestExecution::Ptr(this));
+}
+
+void RequestExecution::retry_next_host() {
+  next_host();
+  retry_current_host();
 }
 
 void RequestExecution::on_execute(Timer* timer) {
@@ -224,14 +247,12 @@ void RequestExecution::on_set(ResponseMessage* response) {
   assert(connection() != NULL);
   assert(current_host_ && "Tried to set on a non-existent host");
 
-  return_connection();
-
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
-      on_result_response(response);
+      on_result_response(connection(), response);
       break;
     case CQL_OPCODE_ERROR:
-      on_error_response(response);
+      on_error_response(connection(), response);
       break;
     default:
       connection()->defunct();
@@ -241,8 +262,6 @@ void RequestExecution::on_set(ResponseMessage* response) {
 }
 
 void RequestExecution::on_error(CassError code, const std::string& message) {
-  return_connection();
-
   // Handle recoverable errors by retrying with the next host
   if (code == CASS_ERROR_LIB_WRITE_ERROR ||
       code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {
@@ -287,39 +306,12 @@ void RequestExecution::on_result_metadata_changed(const Request* request,
   }
 }
 
-void RequestExecution::on_retry_current_host() {
-  return_connection();
-  retry_current_host();
-}
-
-void RequestExecution::on_retry_next_host() {
-  return_connection();
-  retry_next_host();
-}
-
 void RequestExecution::on_cancel() {
   LOG_DEBUG("Cancelling speculative execution (%p) for request (%p) on host %s",
             static_cast<void*>(this),
             static_cast<void*>(request_handler_.get()),
             current_host_ ? current_host_->address_string().c_str()
                           : "<no current host>");
-  return_connection();
-}
-
-void RequestExecution::retry_current_host() {
-  if (state() == REQUEST_STATE_CANCELLED) {
-    return;
-  }
-
-  // Reset the request so it can be executed again
-  set_state(REQUEST_STATE_NEW);
-  set_pool(NULL);
-  request_handler_->io_worker()->retry(RequestExecution::Ptr(this));
-}
-
-void RequestExecution::retry_next_host() {
-  next_host();
-  retry_current_host();
 }
 
 void RequestExecution::execute() {
@@ -344,7 +336,7 @@ void RequestExecution::cancel() {
   set_state(REQUEST_STATE_CANCELLED);
 }
 
-void RequestExecution::on_result_response(ResponseMessage* response) {
+void RequestExecution::on_result_response(Connection* connection, ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
 
@@ -372,7 +364,7 @@ void RequestExecution::on_result_response(ResponseMessage* response) {
 
     case CASS_RESULT_KIND_SCHEMA_CHANGE: {
       SchemaChangeCallback::Ptr schema_change_handler(
-            new SchemaChangeCallback(connection(),
+            new SchemaChangeCallback(connection,
                                      Ptr(this),
                                      response->response_body()));
       schema_change_handler->execute();
@@ -398,7 +390,7 @@ void RequestExecution::on_result_response(ResponseMessage* response) {
   }
 }
 
-void RequestExecution::on_error_response(ResponseMessage* response) {
+void RequestExecution::on_error_response(Connection* connection, ResponseMessage* response) {
   ErrorResponse* error =
       static_cast<ErrorResponse*>(response->response_body().get());
 
@@ -439,7 +431,7 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
 
     case CQL_ERROR_OVERLOADED:
       LOG_WARN("Host %s is overloaded.",
-               connection()->address_string().c_str());
+               connection->address_string().c_str());
       if (retry_policy() && request()->is_idempotent()) {
         decision = retry_policy()->on_request_error(request(),
                                                     consistency(),
@@ -451,8 +443,8 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
     case CQL_ERROR_SERVER_ERROR:
       LOG_WARN("Received server error '%s' from host %s. Defuncting the connection...",
                error->message().to_string().c_str(),
-               connection()->address_string().c_str());
-      connection()->defunct();
+               connection->address_string().c_str());
+      connection->defunct();
       if (retry_policy() && request()->is_idempotent()) {
         decision = retry_policy()->on_request_error(request(),
                                                     consistency(),
@@ -463,12 +455,12 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
 
     case CQL_ERROR_IS_BOOTSTRAPPING:
       LOG_ERROR("Query sent to bootstrapping host %s. Retrying on the next host...",
-                connection()->address_string().c_str());
+                connection->address_string().c_str());
       retry_next_host();
       return; // Done
 
     case CQL_ERROR_UNPREPARED:
-      on_error_unprepared(error);
+      on_error_unprepared(connection, error);
       return; // Done
 
     default:
@@ -501,7 +493,7 @@ void RequestExecution::on_error_response(ResponseMessage* response) {
   }
 }
 
-void RequestExecution::on_error_unprepared(ErrorResponse* error) {
+void RequestExecution::on_error_unprepared(Connection* connection, ErrorResponse* error) {
   std::string query;
 
   if (request()->opcode() == CQL_OPCODE_EXECUTE) {
@@ -515,15 +507,15 @@ void RequestExecution::on_error_unprepared(ErrorResponse* error) {
       return;
     }
   } else {
-    connection()->defunct();
+    connection->defunct();
     set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
               "Received unprepared error for invalid "
               "request type or invalid prepared id");
     return;
   }
 
-  if (!connection()->write(RequestCallback::Ptr(
-                            new PrepareCallback(query, this)))) {
+  if (!connection->write(RequestCallback::Ptr(
+                           new PrepareCallback(query, this)))) {
     // Try to prepare on the same host but on a different connection
     retry_current_host();
   }

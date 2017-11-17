@@ -37,7 +37,7 @@ static bool least_busy_comp(Connection* a, Connection* b) {
 class SetKeyspaceCallback : public SimpleRequestCallback {
 public:
   SetKeyspaceCallback(const std::string& keyspace,
-                      const PoolCallback::Ptr& callback);
+                      const RequestCallback::Ptr& callback);
 
 private:
   class SetKeyspaceRequest : public QueryRequest {
@@ -56,11 +56,11 @@ private:
   void on_result_response(ResponseMessage* response);
 
 private:
-  PoolCallback::Ptr callback_;
+  RequestCallback::Ptr callback_;
 };
 
 SetKeyspaceCallback::SetKeyspaceCallback(const std::string& keyspace,
-                                         const PoolCallback::Ptr& callback)
+                                         const RequestCallback::Ptr& callback)
   : SimpleRequestCallback(
       Request::ConstPtr(
         new SetKeyspaceRequest(keyspace,
@@ -119,19 +119,16 @@ Pool::Pool(IOWorker* io_worker,
     , error_code_(Connection::CONNECTION_OK)
     , is_initial_connection_(is_initial_connection)
     , is_pending_flush_(false)
+    , is_pending_request_processing_(false)
     , cancel_reconnect_(false) { }
 
 Pool::~Pool() {
   LOG_DEBUG("Pool(%p) dtor with %u pending requests",
             static_cast<void*>(this),
             static_cast<unsigned int>(pending_requests_.size()));
-  while (!pending_requests_.is_empty()) {
-    PoolCallback::Ptr callback(
-          static_cast<PoolCallback*>(pending_requests_.front()));
-    pending_requests_.remove(callback.get());
-    callback->dec_ref();
-    callback->stop_pending_request();
-    callback->on_retry_next_host();
+  for (RequestCallback::Vec::iterator it = pending_requests_.begin(),
+       end = pending_requests_.end(); it != end; ++it) {
+    (*it)->on_retry_next_host();
   }
 }
 
@@ -195,6 +192,19 @@ void Pool::close(bool cancel_reconnect) {
   maybe_close();
 }
 
+bool Pool::write(const RequestCallback::Ptr& callback) {
+  Connection* connection = borrow_connection();
+  if (connection != NULL) {
+    if (internal_write(connection, callback)) {
+      return true;
+    }
+  } else { // Too busy, or no connections
+    wait_for_connection(callback);
+    return true; // Waiting for connection
+  }
+  return false;
+}
+
 Connection* Pool::borrow_connection() {
   if (connections_.empty()) {
     for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
@@ -214,27 +224,7 @@ Connection* Pool::borrow_connection() {
   return connection;
 }
 
-void Pool::return_connection(Connection* connection) {
-  while (connection->is_ready() && !pending_requests_.is_empty()) {
-    PoolCallback::Ptr callback(
-          static_cast<PoolCallback*>(pending_requests_.front()));
-
-    remove_pending_request(callback.get());
-    callback->stop_pending_request();
-
-    if (!write(connection, callback)) {
-      callback->on_retry_next_host();
-    }
-  }
-}
-
-void Pool::remove_pending_request(PoolCallback* callback) {
-  pending_requests_.remove(callback);
-  callback->dec_ref();
-}
-
-bool Pool::write(Connection* connection, const PoolCallback::Ptr& callback) {
-  callback->set_pool(this);
+bool Pool::internal_write(Connection* connection, const RequestCallback::Ptr& callback) {
   std::string keyspace(io_worker_->keyspace());
   if (keyspace == connection->keyspace()) {
     if (!connection->write(callback, false)) {
@@ -259,12 +249,58 @@ bool Pool::write(Connection* connection, const PoolCallback::Ptr& callback) {
   return true;
 }
 
+void Pool::wait_for_connection(const RequestCallback::Ptr& callback) {
+  if (callback->state() == RequestCallback::REQUEST_STATE_CANCELLED) {
+    return;
+  }
+
+  pending_requests_.push_back(callback);
+
+  if (!is_pending_request_processing_) {
+    io_worker_->add_pending_request_processing(this);
+  }
+  is_pending_request_processing_ = true;
+}
+
 void Pool::flush() {
   is_pending_flush_ = false;
   for (ConnectionVec::iterator it = connections_.begin(),
        end = connections_.end(); it != end; ++it) {
     (*it)->flush();
   }
+}
+
+bool Pool::process_pending_requests() {
+  RequestCallback::Vec::iterator it = pending_requests_.begin();
+  for (RequestCallback::Vec::iterator end = pending_requests_.end();
+       it != end; ++it) {
+    const RequestCallback::Ptr& callback(*it);
+
+    // Skip cancelled requests (and remove them)
+    if (callback->state() == RequestCallback::REQUEST_STATE_CANCELLED) {
+      continue;
+    }
+
+    Connection* connection = borrow_connection();
+
+    // Stop processing requests because there are no more streams available.
+    if (connection == NULL) break;
+
+    if (!internal_write(connection, callback)) {
+      callback->on_retry_next_host();
+    }
+  }
+
+  LOG_TRACE("Processed (or cancelled) %u pending request(s) on %s pool(%p)",
+            static_cast<unsigned int>(it - pending_requests_.begin()),
+            host_->address_string().c_str(),
+            static_cast<void*>(this));
+
+  pending_requests_.erase(pending_requests_.begin(), it);
+
+  is_pending_request_processing_ = !pending_requests_.empty();
+
+  return is_pending_request_processing_;
 }
 
 void Pool::maybe_notify_ready() {
@@ -339,7 +375,6 @@ void Pool::on_ready(Connection* connection) {
   pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connection),
                              pending_connections_.end());
   connections_.push_back(connection);
-  return_connection(connection);
 
   maybe_notify_ready();
 
@@ -397,39 +432,6 @@ void Pool::on_close(Connection* connection) {
   } else {
     maybe_notify_ready();
     maybe_close();
-  }
-}
-
-void Pool::on_pending_request_timeout(Timer* timer) {
-  PoolCallback::Ptr callback(
-        static_cast<PoolCallback*>(timer->data()));
-  Pool* pool = callback->pool();
-  pool->metrics_->pending_request_timeouts.inc();
-  pool->remove_pending_request(callback.get());
-  callback->on_retry_next_host();
-  LOG_DEBUG("Timeout waiting for connection to %s pool(%p)",
-            pool->host_->address_string().c_str(),
-            static_cast<void*>(pool));
-  pool->maybe_close();
-}
-
-void Pool::wait_for_connection(const PoolCallback::Ptr& callback) {
-  if (callback->state() == RequestCallback::REQUEST_STATE_CANCELLED) {
-    return;
-  }
-
-  callback->inc_ref();
-  pending_requests_.add_to_back(callback.get());
-
-  callback->start_pending_request(this,
-                                           Pool::on_pending_request_timeout);
-
-  if (pending_requests_.size() % 10 == 0) {
-    LOG_DEBUG("%u request%s pending on %s pool(%p)",
-              static_cast<unsigned int>(pending_requests_.size() + 1),
-              pending_requests_.size() > 0 ? "s":"",
-              host_->address_string().c_str(),
-              static_cast<void*>(this));
   }
 }
 
