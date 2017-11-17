@@ -118,6 +118,7 @@ private:
 class RequestCallback : public RefCounted<RequestCallback>, public List<RequestCallback>::Node {
 public:
   typedef SharedRefPtr<RequestCallback> Ptr;
+  typedef Vector<Ptr> Vec;
 
   enum State {
     REQUEST_STATE_NEW,
@@ -215,32 +216,6 @@ private:
 
 private:
   DISALLOW_COPY_AND_ASSIGN(RequestCallback);
-};
-
-/**
- * A request callback that handles pool specific functionality including waiting
- * for a pool connection and returning a pool connection.
- */
-class PoolCallback : public RequestCallback {
-public:
-  typedef SharedRefPtr<PoolCallback> Ptr;
-
-  PoolCallback(const RequestWrapper& wrapper)
-    : RequestCallback(wrapper)
-    , pool_(NULL) { }
-
-  Pool* pool() const { return pool_; }
-  void set_pool(Pool* pool) { pool_ = pool; }
-
-  void start_pending_request(Pool* pool, Timer::Callback cb);
-  void stop_pending_request();
-
-protected:
-  void return_connection();
-
-private:
-  Pool* pool_;
-  Timer pending_request_timer_;
 };
 
 class SimpleRequestCallback : public RequestCallback {

@@ -330,7 +330,7 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
     pending_write->flush();
   }
 
-  return true;
+  return request_size;
 }
 
 void Connection::flush() {
