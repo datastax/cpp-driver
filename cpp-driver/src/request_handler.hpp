@@ -223,7 +223,7 @@ private:
   RequestListener* listener_;
 };
 
-class RequestExecution : public PoolCallback {
+class RequestExecution : public RequestCallback {
 public:
   typedef SharedRefPtr<RequestExecution> Ptr;
 
@@ -237,16 +237,15 @@ public:
   void schedule_next(int64_t timeout = 0);
   void cancel();
 
+  void on_result_metadata_changed(const Request *request,
+                                  ResultResponse* result_response);
+
   virtual void on_error(CassError code, const String& message);
 
   virtual void on_retry_current_host();
   virtual void on_retry_next_host();
 
-  void on_result_metadata_changed(ResultResponse* result_response);
-
 private:
-  friend class PrepareCallback;
-
   void retry_current_host();
   void retry_next_host();
 
@@ -258,9 +257,9 @@ private:
   virtual void on_set(ResponseMessage* response);
   virtual void on_cancel(ResponseMessage *response);
 
-  void on_result_response(ResponseMessage* response);
-  void on_error_response(ResponseMessage* response);
-  void on_error_unprepared(ErrorResponse* error);
+  void on_result_response(Connection* connection, ResponseMessage* response);
+  void on_error_response(Connection* connection, ResponseMessage* response);
+  void on_error_unprepared(Connection* connection, ErrorResponse* error);
 
 private:
   friend class SchemaChangeCallback;

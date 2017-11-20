@@ -56,11 +56,9 @@ public:
   void delayed_connect();
   void close(bool cancel_reconnect = false);
 
-  bool write(Connection* connection, const PoolCallback::Ptr& callback);
+  bool write(const RequestCallback::Ptr& callback);
   void flush();
-
-  void wait_for_connection(const PoolCallback::Ptr& callback);
-  Connection* borrow_connection();
+  bool process_pending_requests();
 
   const Host::ConstPtr& host() const { return host_; }
   uv_loop_t* loop() { return loop_; }
@@ -81,11 +79,12 @@ public:
 
   bool cancel_reconnect() const { return cancel_reconnect_; }
 
-  void return_connection(Connection* connection);
+private:
+  Connection* borrow_connection();
+  bool internal_write(Connection* connection, const RequestCallback::Ptr& callback);
+  void wait_for_connection(const RequestCallback::Ptr& callback);
 
 private:
-  void remove_pending_request(PoolCallback* callback);
-
   void maybe_notify_ready();
   void maybe_close();
   void spawn_connection();
@@ -96,7 +95,6 @@ private:
   virtual void on_close(Connection* connection);
   virtual void on_event(const EventResponse* response) {}
 
-  static void on_pending_request_timeout(Timer* timer);
   static void on_partial_reconnect(Timer* timer);
   static void on_wait_to_connect(Timer* timer);
 
@@ -115,9 +113,10 @@ private:
   Connection::ConnectionError error_code_;
   ConnectionVec connections_;
   ConnectionVec pending_connections_;
-  List<RequestCallback> pending_requests_;
+  RequestCallback::Vec pending_requests_;
   bool is_initial_connection_;
   bool is_pending_flush_;
+  bool is_pending_request_processing_;
   bool cancel_reconnect_;
 
   Timer connect_timer;

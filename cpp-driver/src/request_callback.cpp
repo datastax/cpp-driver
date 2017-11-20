@@ -193,21 +193,6 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
   }
 }
 
-void PoolCallback::start_pending_request(Pool* pool, Timer::Callback cb) {
-  pool_ = pool;
-  pending_request_timer_.start(pool->loop(), pool->config().connect_timeout_ms(), this, cb);
-}
-
-void PoolCallback::stop_pending_request() {
-  pending_request_timer_.stop();
-}
-
-void PoolCallback::return_connection() {
-  if (pool_ != NULL && connection() != NULL) {
-    pool_->return_connection(connection());
-  }
-}
-
 bool MultipleRequestCallback::get_result_response(const ResponseMap& responses,
                                                   const String& index,
                                                   ResultResponse** response) {
@@ -259,8 +244,6 @@ void MultipleRequestCallback::InternalCallback::on_internal_timeout() {
   }
   parent_->has_errors_or_timeouts_ = true;
 }
-
-
 
 void SimpleRequestCallback::on_start() {
   uint64_t request_timeout_ms = this->request_timeout_ms();
