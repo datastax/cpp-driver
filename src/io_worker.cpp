@@ -34,10 +34,12 @@ class PrepareAllHandler : public RefCounted<PrepareAllHandler> {
 public:
   typedef SharedRefPtr<PrepareAllHandler> Ptr;
 
-  PrepareAllHandler(const Response::Ptr& response,
+  PrepareAllHandler(const Host::Ptr& current_host,
+                    const Response::Ptr& response,
                     const RequestHandler::Ptr& request_handler,
                     int remaining)
-    : response_(response)
+    : current_host_(current_host)
+    , response_(response)
     , request_handler_(request_handler)
     , remaining_(remaining) {
     assert(remaining > 0);
@@ -49,12 +51,12 @@ public:
 
   void finish() {
     if (--remaining_ <= 0) { // The last request sets the response on the future.
-      request_handler_->set_response(request_handler_->current_host(),
-                                     response_);
+      request_handler_->set_response(current_host_, response_);
     }
   }
 
 private:
+  Host::Ptr current_host_;
   Response::Ptr response_;
   RequestHandler::Ptr request_handler_;
   int remaining_;
@@ -242,7 +244,8 @@ bool IOWorker::execute(const RequestHandler::Ptr& request_handler) {
   return true;
 }
 
-bool IOWorker::prepare_all(const Response::Ptr& response,
+bool IOWorker::prepare_all(const Host::Ptr& current_host,
+                           const Response::Ptr& response,
                            const RequestHandler::Ptr& request_handler) {
   assert(request_handler->request()->opcode() == CQL_OPCODE_PREPARE);
 
@@ -253,7 +256,8 @@ bool IOWorker::prepare_all(const Response::Ptr& response,
   }
 
   PrepareAllHandler::Ptr prepare_all_handler(
-        new PrepareAllHandler(response,
+        new PrepareAllHandler(current_host,
+                              response,
                               request_handler,
                               // Subtract the node that's already been prepared
                               pools_.size() - 1));
@@ -261,7 +265,7 @@ bool IOWorker::prepare_all(const Response::Ptr& response,
   for (PoolMap::iterator it = pools_.begin(),
        end = pools_.end(); it != end; ++it)  {
     // Skip over the node we've already prepared
-    if (request_handler->current_host()->address() == it->first) {
+    if (current_host->address() == it->first) {
       continue;
     }
 
