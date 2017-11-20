@@ -392,7 +392,9 @@ void RequestExecution::on_result_response(Connection* connection, ResponseMessag
 
     case CASS_RESULT_KIND_PREPARED:
       on_result_metadata_changed(request(), result);
-      if (!request_handler_->io_worker()->prepare_all(response->response_body(), request_handler_)) {
+      if (!request_handler_->io_worker()->prepare_all(current_host(),
+                                                      response->response_body(),
+                                                      request_handler_)) {
         set_response(response->response_body());
       }
       break;
