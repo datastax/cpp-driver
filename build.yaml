@@ -20,7 +20,7 @@ release:
     after:
       each:
         - script: |
-            LIBUV_VERSION=1.14.1
+            LIBUV_VERSION=1.16.1
             CC=gcc
             TEST_PROGRAM=$(mktemp)
             TOKENS=($(echo ${OS_VERSION} | tr "/" " "))
@@ -75,7 +75,7 @@ release:
             # Install cpp-dse-driver packages
             sudo ${PACKAGE_INSTALL} dse*.${PACKAGE_TYPE}
 
-            # Create test file against cpp-dse-driver and try to connect. 
+            # Create test file against cpp-dse-driver and try to connect.
             # Should compile and throw a connection error when executed.
             $CC -x c -o $TEST_PROGRAM - -Wno-implicit-function-declaration -ldse - <<EOF
             #include <dse.h>
@@ -90,13 +90,13 @@ release:
             return 0;
             }
             EOF
-            
+
             # Throw error if either compilation or test run fails
             if [ $? -ne 0 ] ; then
               echo "Connection test compilation failed. Marking build as failure."
               exit 1
-            fi    
-            
+            fi
+
             if [ "$($TEST_PROGRAM)" != "Success" ] ; then
               echo "Connection test did not return success. Marking build as failure."
               exit 1
