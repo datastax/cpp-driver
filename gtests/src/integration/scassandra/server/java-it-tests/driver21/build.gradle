@@ -1,8 +1,0 @@
-dependencies {
-    compile project(':java-it-tests:common')
-    compile project(':java-it-tests:common-v3')
-    compile('com.datastax.cassandra:cassandra-driver-core:2.1.10.2') {
-        exclude module: 'log4j'
-        exclude module: 'slf4j-log4j12'
-    }
-}

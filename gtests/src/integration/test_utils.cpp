@@ -181,20 +181,6 @@ std::string test::Utils::indent(const std::string& input, unsigned int indent) {
   return output.str();
 }
 
-std::string test::Utils::implode(const std::vector<std::string>& elements,
-  const char delimiter /*= ' '*/) {
-  // Iterate through each element in the vector and concatenate the string
-  std::string result;
-  for (std::vector<std::string>::const_iterator iterator = elements.begin();
-    iterator < elements.end(); ++iterator) {
-    result += *iterator;
-    if ((iterator + 1) != elements.end()) {
-      result += delimiter;
-    }
-  }
-  return result;
-}
-
 void test::Utils::mkdir(const std::string& path) {
   // Create a synchronous libuv file system call to create the path
 #if UV_VERSION_MAJOR == 0

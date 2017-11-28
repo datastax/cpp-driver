@@ -1,4 +1,0 @@
-dependencies {
-    compile project(":java-client")
-    compile 'com.google.guava:guava:17.0'
-}

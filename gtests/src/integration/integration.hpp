@@ -28,6 +28,7 @@
 #include "bridge.hpp"
 #include "logger.hpp"
 #include "objects.hpp"
+#include "policies.hpp"
 #include "pretty_print.hpp"
 #include "test_utils.hpp"
 #include "values.hpp"
@@ -422,15 +423,16 @@ protected:
   }
 
   /**
-   * Concatenate an array/vector into a string
+   * Concatenate or join a vector into a string
    *
-   * @param elements Array/Vector elements to concatenate
+   * @param elements Vector of strings to concatenate
    * @param delimiter Character to use between elements (default: <space>)
-   * @return A string representation of all the array/vector elements
+   * @return A string concatenating all the vector strings with delimiter
+   *         separation
    */
   inline static std::string implode(const std::vector<std::string>& elements,
-    const char delimiter = ' ') {
-    return Utils::implode(elements, delimiter);
+                                    const char delimiter = ' ') {
+    return Utils::implode<std::string>(elements, delimiter);
   }
 
   /**
@@ -483,7 +485,13 @@ protected:
     return Utils::trim(input);
   }
 
-protected:
+  /**
+   * Shrink the given name if the name is longer than allowable by the server
+   *
+   * NOTE: This is for keyspaces, tables, and other misc server side items
+   *
+   * @param name Name to shrink if name too long
+   */
   void maybe_shrink_name(std::string& name);
 
 private:

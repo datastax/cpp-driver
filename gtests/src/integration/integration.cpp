@@ -301,7 +301,7 @@ void Integration::enable_cluster_tracing(bool enable /*= true*/) {
 }
 
 std::string Integration::generate_contact_points(const std::string& ip_prefix,
-  size_t number_of_nodes) {
+                                                 size_t number_of_nodes) {
   // Iterate over the total number of nodes to create the contact list
   std::vector<std::string> contact_points;
   for (size_t i = 1; i <= number_of_nodes; ++i) {
