@@ -22,7 +22,7 @@
 // Constant value definitions for test type
 const TestCategory TestCategory::CASSANDRA("CASSANDRA", 0, "Cassandra", "*_Cassandra_*");
 const TestCategory TestCategory::DSE("DSE", 1, "DataStax Enterprise", "*_DSE_*");
-const TestCategory TestCategory::SCASSANDRA("SCASSANDRA", SHRT_MAX, "Stubbed Cassandra", "*_SCassandra_*");
+const TestCategory TestCategory::SIMULACRON("SIMULACRON", SHRT_MAX, "Simulated DSE (and Cassandra)", "*_simulacron_*");
 
 // Static declarations for test type
 std::set<TestCategory> TestCategory::constants_;
@@ -118,7 +118,7 @@ const std::set<TestCategory>& TestCategory::get_constants() {
   if (constants_.empty()) {
     constants_.insert(CASSANDRA);
     constants_.insert(DSE);
-    constants_.insert(SCASSANDRA);
+    constants_.insert(SIMULACRON);
   }
 
   return constants_;

@@ -47,7 +47,7 @@ public:
   /**
    * Stubbed Cassandra category
    */
-  static const TestCategory SCASSANDRA;
+  static const TestCategory SIMULACRON;
 
   /**
    * Default constructor to handle issues with static initialization of

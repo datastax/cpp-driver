@@ -17,6 +17,7 @@
 #ifndef __TEST_UTILS_HPP__
 #define __TEST_UTILS_HPP__
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -115,14 +116,28 @@ public:
   static std::string indent(const std::string& input, unsigned int indent);
 
   /**
-   * Concatenate an array/vector into a string
+   * Concatenate or join a vector into a string
    *
-   * @param elements Array/Vector elements to concatenate
+   * @param elements Vector of elements to concatenate
    * @param delimiter Character to use between elements (default: <space>)
-   * @return A string representation of all the array/vector elements
+   * @return A string concatenating all the vector elements with delimiter
+   *         separation
    */
-  static std::string implode(const std::vector<std::string>& elements,
-    const char delimiter = ' ');
+  template<typename T>
+  inline static std::string implode(const std::vector<T>& elements,
+                                    const char delimiter = ' ') {
+    // Iterate through each element in the vector and concatenate the string
+    std::stringstream result;
+    for (typename std::vector<T>::const_iterator iterator = elements.begin();
+      iterator < elements.end(); ++iterator) {
+      result << *iterator;
+      if ((iterator + 1) != elements.end()) {
+        result << delimiter;
+      }
+    }
+    std::string temp = result.str();
+    return temp;
+  }
 
   /**
    * Create the directory from a path

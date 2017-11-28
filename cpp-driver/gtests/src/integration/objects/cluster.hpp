@@ -146,6 +146,16 @@ public:
   }
 
   /**
+   * Enable round robin load balance policy for statement/batch execution
+   *
+   * @return Cluster object
+   */
+  Cluster& with_load_balance_round_robin() {
+    cass_cluster_set_load_balance_round_robin(get());
+    return *this;
+  }
+
+  /**
    * Assign the use of a particular binary protocol version; driver will
    * automatically downgrade to the lowest server supported version on
    * connection

@@ -476,45 +476,25 @@ macro(CassRapidJson)
 endmacro()
 
 #------------------------
-# CassSCassandra
+# CassSimulacron
 #
-# Set up SCassandra for use in tests.
+# Set up Simulacron for use in tests.
 #
-# Input: TESTS_SCASSANDRA_SERVER_SOURCE_DIR
-# Output: SCASSANDRA_SERVER_BUILD_SCRIPT, SCASSANDRA_SERVER_STANDALONE_JAR
+# Input: TESTS_SIMULACRON_SERVER_DIR
+# Output: SIMULACRON_SERVER_JAR
 #------------------------
-macro(CassSCassandra)
-  # Determine if SCassandra server can be built (Java is available)
-  find_package(Java COMPONENTS Development)
-  if(Java_Development_FOUND)
-    # Determine if the submodule should be initialized
-    set(SCASSANDRA_SERVER_BUILD_SCRIPT "./gradlew")
-    if(WIN32)
-      set(SCASSANDRA_SERVER_BUILD_SCRIPT "gradlew.bat")
-    endif()
-    if(NOT EXISTS "${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}/${SCASSANDRA_SERVER_BUILD_SCRIPT}")
-      find_package(Git REQUIRED)
-      execute_process(COMMAND git submodule update --init --recursive
-          WORKING_DIRECTORY ${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}
-          OUTPUT_QUIET)
-    endif()
-
-    # Build SCassandra server
-    file(GLOB SCASSANDRA_SERVER_STANDALONE_JAR
-        ${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}/server/build/libs/scassandra-server_*-standalone.jar)
-    if(NOT EXISTS ${SCASSANDRA_SERVER_STANDALONE_JAR})
-      message(STATUS "Building standalone SCassandra server")
-      execute_process(COMMAND ${SCASSANDRA_SERVER_BUILD_SCRIPT} server:fatJar
-          WORKING_DIRECTORY ${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}
-          OUTPUT_QUIET)
-      file(GLOB SCASSANDRA_SERVER_STANDALONE_JAR
-          ${TESTS_SCASSANDRA_SERVER_SOURCE_DIR}/server/build/libs/scassandra-server_*-standalone.jar)
-    endif()
+macro(CassSimulacron)
+  # Determine if Simulacron server can be executed (Java runtime is available)
+  find_package(Java COMPONENTS Runtime)
+  if(Java_Runtime_FOUND)
+    # Determine the Simulacron jar file
+    file(GLOB SIMULACRON_SERVER_JAR
+      ${TESTS_SIMULACRON_SERVER_DIR}/simulacron-standalone-*.jar)
   endif()
 
-  # Determine if the SCassandra server will be available for the tests
-  if(NOT EXISTS ${SCASSANDRA_SERVER_STANDALONE_JAR})
-    message(WARNING "SCassandra Not Found: SCassandra support will be disabled")
+  # Determine if the Simulacron server will be available for the tests
+  if(NOT EXISTS ${SIMULACRON_SERVER_JAR})
+    message(WARNING "Simulacron Not Found: Simulacron support will be disabled")
   endif()
 endmacro()
 

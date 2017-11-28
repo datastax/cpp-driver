@@ -1,3 +1,0 @@
-[submodule "tests/src/integration/scassandra/server"]
-	path = cpp-driver/gtests/src/integration/scassandra/server
-	url = https://github.com/scassandra/scassandra-server.git

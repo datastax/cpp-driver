@@ -263,7 +263,7 @@ private:
    */
   static CCM::DeploymentType deployment_type_;
   /**
-   * Test types (Cassandra|DSE|SCassandra)
+   * Test types (Cassandra|DSE|Simulacron)
    */
   static std::set<TestCategory> categories_;
   /**
