@@ -222,6 +222,12 @@ std::string Integration::default_replication_strategy() {
   return format_string(REPLICATION_STRATEGY, replication_strategy.c_str());
 }
 
+std::string Integration::default_select_all() {
+  std::stringstream cql;
+  cql << "SELECT * FROM " << default_keyspace() << "." << default_table();
+  return cql.str();
+}
+
 std::string Integration::default_table() {
   if (!table_name_.empty()) {
     return table_name_;

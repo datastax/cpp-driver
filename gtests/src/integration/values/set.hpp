@@ -28,6 +28,9 @@ namespace driver {
 template<typename T>
 class Set : public Collection, Comparable<Set<T> > {
 public:
+  Set()
+    : Collection(CASS_COLLECTION_TYPE_SET) { }
+
   Set(const std::set<T>& set)
     : Collection(CASS_COLLECTION_TYPE_SET, set.size())
     , set_(set) {
@@ -193,10 +196,12 @@ private:
     Collection::initialize(value);
 
     // Add the values to the set
-    const CassValue* current_value = next();
-    while (current_value) {
-      set_.insert(T(current_value));
-      current_value = next();
+    if (!is_null_) {
+      const CassValue* current_value = next();
+      while (current_value) {
+        set_.insert(T(current_value));
+        current_value = next();
+      }
     }
   }
 };

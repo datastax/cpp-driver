@@ -44,13 +44,13 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) {}
+      : test::Exception(message) { }
   };
 
   /**
    * Create an empty result object
    */
-  Result() {}
+  Result() { }
 
   /**
    * Create the result object from the native driver object
@@ -58,7 +58,7 @@ public:
    * @param result Native driver object
    */
   Result(const CassResult* result)
-    : Object<const CassResult, cass_result_free>(result) {}
+    : Object<const CassResult, cass_result_free>(result) { }
 
   /**
    * Create the result object from a shared reference
@@ -66,7 +66,7 @@ public:
    * @param result Shared reference
    */
   Result(Ptr result)
-    : Object<const CassResult, cass_result_free>(result) {}
+    : Object<const CassResult, cass_result_free>(result) { }
 
   /**
    * Create the result object from a future object
@@ -75,7 +75,7 @@ public:
    */
   Result(Future future)
     : Object<const CassResult, cass_result_free>(future.result())
-    , future_(future) {}
+    , future_(future) { }
 
   /**
    * Get the attempted host/address of the future
@@ -171,6 +171,16 @@ public:
    */
   Rows rows();
 
+  /**
+   * Check to see if the result is empty by iterating over each row in the
+   * result
+   *
+   * @return True if result is empty; false otherwise
+   */
+  bool is_empty() {
+    return row_count() == 0;
+  }
+
 private:
   /**
    * Future wrapped object
@@ -191,7 +201,7 @@ public:
    */
   Column(const CassValue* value, const Result& parent)
     : value_(value)
-    , parent_(parent) {}
+    , parent_(parent) { }
 
   /**
    * Get the value as a specific type
@@ -226,8 +236,13 @@ public:
    * @param parent The result object for the row
    */
   Row(const CassRow* row, const Result& parent)
-    : iterator_(cass_iterator_from_row(row))
-    , parent_(parent) {}
+    : parent_(parent) {
+    if (row != NULL) {
+      iterator_ = cass_iterator_from_row(row);
+    } else {
+      ADD_FAILURE() << "Row should not be NULL: Severe error has occurred";
+    }
+  }
 
   /**
    * Get the total number of columns in a row
@@ -275,7 +290,7 @@ public:
    */
   Rows(Iterator iterator, Result parent)
     : iterator_(iterator)
-    , parent_(parent) {}
+    , parent_(parent) { }
 
   /**
    * Get the total number of columns in a row

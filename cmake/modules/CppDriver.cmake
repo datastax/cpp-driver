@@ -808,13 +808,11 @@ macro(CassSetCompilerFlags)
     # Create the project, example, and test flags
     set(CASS_DRIVER_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
     set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
-    set(CASS_TEST_CXX_FLAGS "${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    # Enable bigobj for large object files during compilation (Cassandra types integration test)
+    set(CASS_TEST_CXX_FLAGS "${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} /bigobj")
 
     # Assign additional library requirements for Windows
     set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv)
-
-    # Enable bigobj for large object files during debug compilation (Cassandra types integration test)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /bigobj")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     # GCC specific compiler options
     # I disabled long-long warning because boost generates about 50 such warnings

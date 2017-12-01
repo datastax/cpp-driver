@@ -291,6 +291,14 @@ public:
     return value_.value_type();
   }
 
+  NullableValue<T> operator -(const NullableValue<T>& rhs) {
+    return NullableValue<T>(value_ - rhs.value_);
+  }
+
+  NullableValue<T> operator +(const NullableValue<T>& rhs) {
+    return NullableValue<T>(value_ + rhs.value_);
+  }
+
 protected:
   /**
    * Flag to determine if value is NULL
