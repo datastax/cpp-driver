@@ -30,12 +30,15 @@ namespace driver {
 template<typename T>
 class List : public Collection, Comparable<List<T> > {
 public:
+  List()
+    : Collection(CASS_COLLECTION_TYPE_LIST) { }
+
   List(const std::vector<T>& list)
     : Collection(CASS_COLLECTION_TYPE_LIST, list.size())
     , list_(list) {
     // Create the collection
     for (typename std::vector<T>::const_iterator iterator = list.begin();
-      iterator != list.end(); ++iterator) {
+         iterator != list.end(); ++iterator) {
       T value = *iterator;
       Collection::append<T>(value);
       primary_sub_type_ = value.value_type();
@@ -184,10 +187,12 @@ private:
     Collection::initialize(value);
 
     // Add the values to the list
-    const CassValue* current_value = next();
-    while (current_value) {
-      list_.push_back(T(current_value));
-      current_value = next();
+    if (!is_null_) {
+      const CassValue* current_value = next();
+      while (current_value) {
+        list_.push_back(T(current_value));
+        current_value = next();
+      }
     }
   }
 };

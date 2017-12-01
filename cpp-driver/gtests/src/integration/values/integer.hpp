@@ -465,12 +465,37 @@ public:
     return CASS_VALUE_TYPE_BIGINT;
   }
 
+  BigInteger operator -(const BigInteger& rhs) {
+    return integer_ - rhs.integer_;
+  }
+
+  BigInteger operator +(const BigInteger& rhs) {
+    return integer_ + rhs.integer_;
+  }
+
 protected:
   /**
    * Native driver value
    */
   cass_int64_t integer_;
 };
+
+/**
+ * Counter (e.g. bigint)
+ */
+class Counter : public BigInteger {
+public:
+  Counter()
+    : BigInteger(0) { }
+
+  Counter(ConvenienceType integer)
+    : BigInteger(integer) { }
+
+  CassValueType value_type() const {
+    return CASS_VALUE_TYPE_COUNTER;
+  }
+};
+
 
 inline std::ostream& operator<<(std::ostream& output_stream,
                                 const TinyInteger& value) {

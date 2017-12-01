@@ -96,6 +96,8 @@
 #define CASSANDRA_KEY_VALUE_TABLE_FORMAT "CREATE TABLE %s (key %s PRIMARY KEY, value %s)"
 #define CASSANDRA_KEY_VALUE_INSERT_FORMAT "INSERT INTO %s (key, value) VALUES(%s, %s)"
 #define CASSANDRA_SELECT_VALUE_FORMAT "SELECT value FROM %s WHERE key=%s"
+#define CASSANDRA_DELETE_ROW_FORMAT "DELETE FROM %s WHERE key=%s"
+#define CASSANDRA_UPDATE_VALUE_FORMAT "UPDATE %s SET value=%s WHERE key=%s"
 #define SELECT_ALL_SYSTEM_LOCAL_CQL "SELECT * FROM system.local"
 
 using namespace test;
