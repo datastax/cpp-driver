@@ -28,6 +28,9 @@ namespace driver {
 template<typename K, typename V>
 class Map : public Collection {
 public:
+  Map()
+    : Collection(CASS_COLLECTION_TYPE_MAP) { }
+
   Map(const std::map<K, V>& map)
     : Collection(CASS_COLLECTION_TYPE_MAP, map.size())
     , map_(map) {
@@ -173,13 +176,15 @@ private:
     Collection::initialize(value);
 
     // Add the values to the map
-    const CassValue* current_value = next();
-    while (current_value) {
-      K key = K(current_value);
-      current_value = next();
-      V value = V(current_value);
-      map_.insert(std::pair<K, V>(key, value));
-      current_value = next();
+    if (!is_null_) {
+      const CassValue* current_value = next();
+      while (current_value) {
+        K key = K(current_value);
+        current_value = next();
+        V value = V(current_value);
+        map_.insert(std::pair<K, V>(key, value));
+        current_value = next();
+      }
     }
   }
 };

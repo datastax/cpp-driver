@@ -92,7 +92,7 @@ TYPED_TEST_CASE_P(CassandraTypesTest);
 /**
  * Specialized duration integration test extension
  */
-class DurationTypeTest : public CassandraTypesTest<Duration> { };
+class CassandraTypesDurationTest : public CassandraTypesTest<Duration> { };
 
 /**
  * Perform insert using a simple and prepared statement operation
@@ -252,6 +252,147 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullValues) {
     ASSERT_EQ(1u, result.row_count());
     TypeParam select_value = result.first_row().next().as<TypeParam>();
     ASSERT_EQ(null_value, select_value);
+    ASSERT_TRUE(select_value.is_null());
+  }
+}
+
+/**
+ * Perform insert using a NULL list collection
+ *
+ * This test will perform multiple NULL inserts using a simple/prepared
+ * statement with the parameterized type inside a list collection against a
+ * single node cluster.
+ *
+ * @test_category queries:basic
+ * @test_category prepared_statements
+ * @test_category data_types:collections
+ * @since core:1.0.0
+ * @expected_result Cassandra NULL values are inserted and validated
+ */
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullList) {
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
+
+  this->is_key_allowed_ = false; // Ensure the TypeParam is not allowed as a key
+  this->default_setup();
+
+  // Create both simple and prepared statements
+  Statement statements[] = {
+    Statement(this->insert_query_, 2),
+    this->prepared_statement_.bind()
+  };
+
+  // Iterate over all the statements
+  for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
+    Statement& statement = statements[i];
+    test::driver::List<TypeParam> value;
+
+    // Bind the NULL collection and insert
+    statement.bind<Integer>(0, Integer(i));
+    statement.bind<test::driver::List<TypeParam> >(1, value);
+    this->session_.execute(statement);
+
+    // Validate the insert and result
+    Statement select_statement(this->select_query_, 1);
+    select_statement.bind<Integer>(0, Integer(i));
+    Result result = this->session_.execute(select_statement);
+    ASSERT_EQ(1u, result.row_count());
+    test::driver::List<TypeParam> select_value =
+      result.first_row().next().as<test::driver::List<TypeParam> >();
+    ASSERT_EQ(value, select_value);
+    ASSERT_TRUE(select_value.is_null());
+  }
+}
+
+/**
+ *Perform insert using a NULL map collection
+ *
+ * This test will perform multiple NULL inserts using a simple/prepared
+ * statement with the parameterized type inside a map collection against a
+ * single node cluster.
+ *
+ * @test_category queries:basic
+ * @test_category prepared_statements
+ * @test_category data_types:collections
+ * @since core:1.0.0
+ * @expected_result Cassandra NULL values are inserted and validated
+ */
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullMap) {
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
+
+  this->is_key_allowed_ = false; // Ensure the TypeParam is not allowed as a key
+  this->default_setup();
+
+  // Create both simple and prepared statements
+  Statement statements[] = {
+    Statement(this->insert_query_, 2),
+    this->prepared_statement_.bind()
+  };
+
+  // Iterate over all the statements
+  for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
+    Statement& statement = statements[i];
+    test::driver::Map<TypeParam, TypeParam> value;
+
+    // Bind the NULL collection and insert
+    statement.bind<Integer>(0, Integer(i));
+    statement.bind<test::driver::Map<TypeParam, TypeParam> >(1, value);
+    this->session_.execute(statement);
+
+    // Validate the insert and result
+    Statement select_statement(this->select_query_, 1);
+    select_statement.bind<Integer>(0, Integer(i));
+    Result result = this->session_.execute(select_statement);
+    ASSERT_EQ(1u, result.row_count());
+    test::driver::Map<TypeParam, TypeParam> select_value =
+      result.first_row().next().as<test::driver::Map<TypeParam, TypeParam> >();
+    ASSERT_EQ(value, select_value);
+    ASSERT_TRUE(select_value.is_null());
+  }
+}
+
+/**
+ * Perform insert using a NULL set collection
+ *
+ * This test will perform multiple NULL inserts using a simple/prepared
+ * statement with the parameterized type inside a set collection against a
+ * single node cluster.
+ *
+ * @test_category queries:basic
+ * @test_category prepared_statements
+ * @test_category data_types:collections
+ * @since core:1.0.0
+ * @expected_result Cassandra NULL values are inserted and validated
+ */
+CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullSet) {
+  CHECK_VALUE_TYPE_VERSION(TypeParam);
+
+  this->is_key_allowed_ = false; // Ensure the TypeParam is not allowed as a key
+  this->default_setup();
+
+  // Create both simple and prepared statements
+  Statement statements[] = {
+    Statement(this->insert_query_, 2),
+    this->prepared_statement_.bind()
+  };
+
+  // Iterate over all the statements
+  for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
+    Statement& statement = statements[i];
+    test::driver::Set<TypeParam> value;
+
+    // Bind the NULL collection and insert
+    statement.bind<Integer>(0, Integer(i));
+    statement.bind<test::driver::Set<TypeParam> >(1, value);
+    this->session_.execute(statement);
+
+    // Validate the insert and result
+    Statement select_statement(this->select_query_, 1);
+    select_statement.bind<Integer>(0, Integer(i));
+    Result result = this->session_.execute(select_statement);
+    ASSERT_EQ(1u, result.row_count());
+    test::driver::Set<TypeParam> select_value =
+      result.first_row().next().as<test::driver::Set<TypeParam> >();
+    ASSERT_EQ(value, select_value);
     ASSERT_TRUE(select_value.is_null());
   }
 }
@@ -613,10 +754,13 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, UDT) {
   }
 }
 
-// Register all parameterized test cases
+// Register all parameterized test cases for primitives (excludes duration)
 REGISTER_TYPED_TEST_CASE_P(CassandraTypesTest, Integration_Cassandra_Basic,
                                                Integration_Cassandra_BasicByName,
                                                Integration_Cassandra_BasicNullValues,
+                                               Integration_Cassandra_BasicNullList,
+                                               Integration_Cassandra_BasicNullMap,
+                                               Integration_Cassandra_BasicNullSet,
                                                Integration_Cassandra_List,
                                                Integration_Cassandra_Set,
                                                Integration_Cassandra_Map,
@@ -636,7 +780,7 @@ REGISTER_TYPED_TEST_CASE_P(CassandraTypesTest, Integration_Cassandra_Basic,
  * @expected_result Statement request will execute and a server error will
  *                  occur.
  */
-CASSANDRA_INTEGRATION_TEST_F(DurationTypeTest, MixedValues) {
+CASSANDRA_INTEGRATION_TEST_F(CassandraTypesDurationTest, MixedValues) {
   CHECK_FAILURE;
   CHECK_VALUE_TYPE_VERSION(Duration);
 

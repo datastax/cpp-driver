@@ -43,6 +43,7 @@ typedef NullableValue<values::Ascii> Ascii;
 typedef NullableValue<values::BigInteger> BigInteger;
 typedef NullableValue<values::Blob> Blob;
 typedef NullableValue<values::Boolean> Boolean;
+typedef NullableValue<values::Counter> Counter;
 typedef NullableValue<values::Date> Date;
 typedef NullableValue<values::Decimal> Decimal;
 typedef NullableValue<values::Double> Double;

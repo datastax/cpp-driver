@@ -180,31 +180,33 @@ protected:
   virtual void initialize(const CassValue* value) {
     // Ensure the value is a collection
     ASSERT_TRUE(value != NULL) << "Invalid CassValue: Value should not be null";
-    ASSERT_TRUE(cass_value_is_collection(value)) << "Invalid CassValue: Value is not a collection";
+    if (!cass_value_is_null(value)) {
+      ASSERT_TRUE(cass_value_is_collection(value)) << "Invalid CassValue: Value is not a collection";
 
-    // Determine the type of collection from the value type
-    CassValueType value_type = cass_value_type(value);
-    if (value_type == CASS_VALUE_TYPE_LIST) {
-      collection_type_ = CASS_COLLECTION_TYPE_LIST;
-      primary_sub_type_ = secondary_sub_type_ = cass_value_primary_sub_type(value);
-    } else if (value_type == CASS_VALUE_TYPE_MAP) {
-      collection_type_ = CASS_COLLECTION_TYPE_MAP;
-      primary_sub_type_ = cass_value_primary_sub_type(value);
-      secondary_sub_type_ = cass_value_secondary_sub_type(value);
-    } else if (value_type == CASS_VALUE_TYPE_SET) {
-      collection_type_ = CASS_COLLECTION_TYPE_SET;
-      primary_sub_type_ = secondary_sub_type_ = cass_value_primary_sub_type(value);
-    } else {
-      FAIL() << "Invalid CassValueType: Value type is not a valid collection";
-    }
+      // Determine the type of collection from the value type
+      CassValueType value_type = cass_value_type(value);
+      if (value_type == CASS_VALUE_TYPE_LIST) {
+        collection_type_ = CASS_COLLECTION_TYPE_LIST;
+        primary_sub_type_ = secondary_sub_type_ = cass_value_primary_sub_type(value);
+      } else if (value_type == CASS_VALUE_TYPE_MAP) {
+        collection_type_ = CASS_COLLECTION_TYPE_MAP;
+        primary_sub_type_ = cass_value_primary_sub_type(value);
+        secondary_sub_type_ = cass_value_secondary_sub_type(value);
+      } else if (value_type == CASS_VALUE_TYPE_SET) {
+        collection_type_ = CASS_COLLECTION_TYPE_SET;
+        primary_sub_type_ = secondary_sub_type_ = cass_value_primary_sub_type(value);
+      } else {
+        FAIL() << "Invalid CassValueType: Value type is not a valid collection";
+      }
 
-    // Initialize the iterator
-    iterator_ = cass_iterator_from_collection(value);
+      // Initialize the iterator
+      iterator_ = cass_iterator_from_collection(value);
 
-    // Determine if the collection is empty (null)
-    const CassValue* check_value = cass_iterator_get_value(iterator_.get());
-    if (check_value) {
-      is_null_ = false;
+      // Determine if the collection is empty (null)
+      const CassValue* check_value = cass_iterator_get_value(iterator_.get());
+      if (check_value) {
+        is_null_ = false;
+      }
     }
   }
 };
