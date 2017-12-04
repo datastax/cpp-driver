@@ -71,6 +71,17 @@ public:
   }
 
   /**
+   * Sets the custom authenticator
+   */
+  Cluster& with_authenticator_callbacks(const CassAuthenticatorCallbacks* exchange_callbacks,
+                                        CassAuthenticatorDataCleanupCallback cleanup_callback,
+                                        void* data) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_authenticator_callbacks(get(),
+              exchange_callbacks, cleanup_callback, data));
+    return *this;
+  }
+
+  /**
    * Use the newest beta protocol version
    *
    * @param enable True if beta protocol should be enable; false the highest
@@ -124,6 +135,19 @@ public:
   Cluster& with_core_connections_per_host(unsigned int connections = 1u) {
     EXPECT_EQ(CASS_OK, cass_cluster_set_core_connections_per_host(get(),
       connections));
+    return *this;
+  }
+
+  /**
+   * Sets credentials for plain text authentication
+   *
+   * @param username Username
+   * param password Password
+   * @return Cluster object
+   */
+  Cluster& with_credentials(const char* username,
+                            const char* password) {
+    cass_cluster_set_credentials(get(), username, password);
     return *this;
   }
 
