@@ -50,6 +50,7 @@ Integration::Integration()
   , is_ccm_start_requested_(true)
   , is_ccm_start_node_individually_(false)
   , is_session_requested_(true)
+  , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
   , create_keyspace_query_("")
   , start_time_(0ull) {
   // Get the name of the test and the case/suite it belongs to
@@ -292,10 +293,19 @@ void Integration::connect() {
 }
 
 test::driver::Cluster Integration::default_cluster() {
+  // Create the default cluster object
   Cluster cluster = Cluster::build()
     .with_contact_points(contact_points_)
     .with_randomized_contact_points(is_randomized_contact_points_)
     .with_schema_metadata(is_schema_metadata_);
+  if (server_version_ >= "3.10" &&
+      protocol_version_ == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
+    cluster.with_beta_protocol(true);
+  } else {
+    cluster.with_protocol_version(protocol_version_);
+  }
+
+  // Assign the execution profiles to the cluster object (if available)
   for(ExecutionProfile::Map::iterator it = profiles_.begin();
       it != profiles_.end(); ++it) {
     cluster.with_execution_profile(it->first, it->second);

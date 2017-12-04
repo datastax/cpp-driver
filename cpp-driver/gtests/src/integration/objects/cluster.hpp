@@ -38,7 +38,7 @@ public:
    * Create the cluster for the builder object
    */
   Cluster()
-    : Object<CassCluster, cass_cluster_free>(cass_cluster_new()) {}
+    : Object<CassCluster, cass_cluster_free>(cass_cluster_new()) { }
 
   /**
    * Create the cluster for the builder object
@@ -46,7 +46,7 @@ public:
    * @param cluster Already defined cluster object to utilize
    */
   Cluster(CassCluster* cluster)
-    : Object<CassCluster, cass_cluster_free>(cluster) {}
+    : Object<CassCluster, cass_cluster_free>(cluster) { }
 
   /**
    * Create the cluster object from a shared reference
@@ -54,7 +54,7 @@ public:
    * @param cluster Shared reference
    */
   Cluster(Ptr cluster)
-    : Object<CassCluster, cass_cluster_free>(cluster) {}
+    : Object<CassCluster, cass_cluster_free>(cluster) { }
 
   /**
    * Destroy the cluster
@@ -71,6 +71,19 @@ public:
   }
 
   /**
+   * Use the newest beta protocol version
+   *
+   * @param enable True if beta protocol should be enable; false the highest
+   *               non-beta protocol will be used (unless set) (default: false)
+   * @return Cluster object
+   */
+  Cluster& with_beta_protocol(bool enable = false) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_use_beta_protocol_version(get(),
+              (enable == true ? cass_true : cass_false)));
+    return *this;
+  }
+
+  /**
    * Sets the amount of time between heartbeat messages and controls the amount
    * of time the connection must be idle before sending heartbeat messages. This
    * is useful for preventing intermediate network devices from dropping
@@ -78,8 +91,9 @@ public:
    *
    * @param interval_s Heartbeat time interval (in seconds); 0 to disable
    *                   heartbeat messages (default: 30s)
+   * @return Cluster object
    */
-  Cluster& with_connection_heartbeat_interval(unsigned int interval_s = 30) {
+  Cluster& with_connection_heartbeat_interval(unsigned int interval_s = 30u) {
     cass_cluster_set_connection_heartbeat_interval(get(), interval_s);
     return *this;
   }
@@ -107,7 +121,7 @@ public:
    * @param connections Number of connection per host (default: 1)
    * @return Cluster object
    */
-  Cluster& with_core_connections_per_host(unsigned int connections = 1) {
+  Cluster& with_core_connections_per_host(unsigned int connections = 1u) {
     EXPECT_EQ(CASS_OK, cass_cluster_set_core_connections_per_host(get(),
       connections));
     return *this;
@@ -188,7 +202,7 @@ public:
    * @param timeout_ms Request timeout in milliseconds; 0 to disable timeout
    *                   (default: 12s)
    */
-  Cluster& with_request_timeout(unsigned int timeout_ms = 12000) {
+  Cluster& with_request_timeout(unsigned int timeout_ms = 12000u) {
     cass_cluster_set_request_timeout(get(), timeout_ms);
     return *this;
   }
