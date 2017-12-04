@@ -69,18 +69,23 @@ public:
    *
    * @return Number of matched log messages
    */
-  size_t get_count();
+  size_t count();
 
   /**
    * Clear the logging criteria and reset the count
    */
   void reset();
 
+  /**
+   * Resets the number of log messages that matched the search criteria
+   */
+  void reset_count();
+
 private:
   /**
    * Mutex for operations on the logging callback
    */
-  static uv_mutex_t mutex_;
+  uv_mutex_t mutex_;
   /**
    * Logging file stream to output driver logging messages
    */
@@ -88,11 +93,11 @@ private:
   /**
    * List of search criteria to match incoming log messages
    */
-  static std::vector<std::string> search_criteria_;
+  std::vector<std::string> search_criteria_;
   /**
    * Number of log messages that match the search criteria
    */
-  static size_t count_;
+  size_t count_;
 
   /**
    * Log the message from the driver (callback)
@@ -107,3 +112,4 @@ private:
 } // namespace test
 
 #endif // __TEST_LOGGER_HPP__
+
