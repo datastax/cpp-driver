@@ -131,16 +131,15 @@ public:
    * Wait for the future to resolve itself or timeout after the specified
    * duration
    *
-   * @param timeout Timeout (in milliseconds) for the future to resolve
-   *                itself
-   * @param assert_true True if error code for future should be asserted
-   *                    CASS_OK; false otherwise (default: true)
+   * @param timeout Timeout (in microseconds) for the future to resolve itself
+   *                (default: 60s)
+   * @param assert_true True if timeout should be asserted; false otherwise
+      *                 (default: true)
    */
-  void wait(cass_duration_t timeout, bool assert_true = true) {
+  void wait_timed(cass_duration_t timeout = 60000000, bool assert_true = true) {
     cass_bool_t timed_out = cass_future_wait_timed(get(), timeout);
     if (assert_true) {
-      ASSERT_EQ(cass_true, timed_out)
-        << error_description() << ": " << error_message();
+      ASSERT_TRUE(timed_out) << "Timed out waiting for result";
     }
   }
 };
