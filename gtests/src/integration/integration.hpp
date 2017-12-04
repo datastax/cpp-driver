@@ -251,6 +251,10 @@ protected:
    */
   std::vector<CCM::DseWorkload> dse_workload_;
   /**
+   * Protocol version to associate with default cluster
+   */
+  int protocol_version_;
+  /**
    * Name of the test case/suite
    */
   std::string test_case_name_;
