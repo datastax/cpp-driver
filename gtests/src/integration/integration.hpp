@@ -99,6 +99,7 @@
 #define CASSANDRA_DELETE_ROW_FORMAT "DELETE FROM %s WHERE key=%s"
 #define CASSANDRA_UPDATE_VALUE_FORMAT "UPDATE %s SET value=%s WHERE key=%s"
 #define SELECT_ALL_SYSTEM_LOCAL_CQL "SELECT * FROM system.local"
+#define SELECT_COUNT_FORMAT "SELECT COUNT(*) FROM %s LIMIT 1000000"
 
 using namespace test;
 using namespace test::driver;
@@ -294,6 +295,13 @@ protected:
    * @return Default CQL statement to select all elements in the row
    */
   virtual std::string default_select_all();
+
+  /**
+   * Get the row count using the default table name (based on the test name)
+   *
+   * @return The number of rows in the table
+   */
+  virtual int64_t default_select_count();
 
   /**
    * Get the default table name (based on the test name)
