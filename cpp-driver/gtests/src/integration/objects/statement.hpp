@@ -37,6 +37,11 @@ namespace driver {
 class Statement : public Object<CassStatement, cass_statement_free> {
 public:
   /**
+   * Create an empty statement
+   */
+  Statement()
+    : Object<CassStatement, cass_statement_free>() { }
+  /**
    * Create the statement object from the native driver statement object
    *
    * @param statement Native driver object
