@@ -229,6 +229,14 @@ std::string Integration::default_select_all() {
   return cql.str();
 }
 
+int64_t Integration::default_select_count() {
+  Result result = session_.execute(format_string(SELECT_COUNT_FORMAT,
+                                                 table_name_.c_str()));
+  EXPECT_EQ(CASS_OK, result.error_code()) << "Unable to get Row Count: "
+    << result.error_message();
+  return result.first_row().next().as<BigInteger>().value();
+}
+
 std::string Integration::default_table() {
   if (!table_name_.empty()) {
     return table_name_;

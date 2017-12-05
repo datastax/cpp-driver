@@ -19,8 +19,8 @@
 #define NUMBER_OF_CONCURRENT_REQUESTS 4096u
 
 /**
-* Asynchronous integration tests
-*/
+ * Asynchronous integration tests
+ */
 class AsyncTests : public Integration {
 public:
   void SetUp() {
