@@ -310,6 +310,14 @@ protected:
   T value_;
 };
 
+template<typename T>
+inline std::ostream& operator<<(std::ostream& output_stream,
+                               const NullableValue<T>& value) {
+  output_stream << value.cql_value();
+  return output_stream;
+}
+
+
 } // namespace driver
 } // namespace test
 
