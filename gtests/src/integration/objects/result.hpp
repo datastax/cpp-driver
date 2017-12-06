@@ -236,12 +236,24 @@ public:
    * @param parent The result object for the row
    */
   Row(const CassRow* row, const Result& parent)
-    : parent_(parent) {
+    : row_(row)
+    , parent_(parent) {
     if (row != NULL) {
       iterator_ = cass_iterator_from_row(row);
     } else {
       ADD_FAILURE() << "Row should not be NULL: Severe error has occurred";
     }
+  }
+
+  /**
+   * Get the value as a specific type for the given column name
+   *
+   * @param name Name of the column to retrieve
+   * @return The value as a value type
+   */
+  template<typename T>
+  T column_by_name(const std::string& name) {
+    return T(cass_row_get_column_by_name(row_, name.c_str()));
   }
 
   /**
@@ -251,6 +263,10 @@ public:
    */
   size_t column_count() {
     return parent_.column_count();
+  }
+
+  const CassRow* get() {
+    return row_;
   }
 
   /**
@@ -271,6 +287,10 @@ private:
    * Iterator driver wrapped object
    */
   Iterator iterator_;
+  /**
+   * Native row object
+   */
+  const CassRow* row_;
   /**
    * Parent result object
    */
