@@ -95,6 +95,17 @@ public:
   }
 
   /**
+   * Sets the timeout for connecting to a node
+   *
+   * @param timeout_ms Connect timeout in milliseconds
+   * @return Cluster object
+   */
+  Cluster& with_connect_timeout(unsigned int timeout_ms) {
+    cass_cluster_set_connect_timeout(get(), timeout_ms);
+    return *this;
+  }
+
+  /**
    * Sets the amount of time between heartbeat messages and controls the amount
    * of time the connection must be idle before sending heartbeat messages. This
    * is useful for preventing intermediate network devices from dropping
@@ -190,6 +201,17 @@ public:
    */
   Cluster& with_load_balance_round_robin() {
     cass_cluster_set_load_balance_round_robin(get());
+    return *this;
+  }
+
+  /**
+   * Sets the port
+   *
+   * @param port Port number to set
+   * @return Cluster object
+   */
+  Cluster& with_port(int port) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_port(get(), port));
     return *this;
   }
 

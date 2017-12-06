@@ -34,7 +34,23 @@ public:
    * @param future Future to retrieve hosts/addresses from
    * @return Attempted hosts/Addresses (sorted)
    */
-  static const std::vector<std::string> attempted_hosts(CassFuture* future);
+  static std::vector<std::string> attempted_hosts(CassFuture* future);
+
+  /**
+   * Get the connect timeout assigned to the cluster configuration
+   *
+   * @param cluster Cluster to retrieve connect timeout from
+   * @return Connect timeout (in milliseconds)
+   */
+  static unsigned int connect_timeout(CassCluster* cluster);
+
+  /**
+   * Get the contact points assigned to the cluster configuration
+   *
+   * @param cluster Cluster to retrieve connect timeout from
+   * @return Contact points
+   */
+  static std::string contact_points(CassCluster* cluster);
 
   /**
    * Get the host/address of the future
@@ -42,7 +58,7 @@ public:
    * @param future Future to retrieve hosts/addresses from
    * @return Host/Address
    */
-  static const std::string host(CassFuture* future);
+  static std::string host(CassFuture* future);
 
   /**
    * Get the Murmur3 hash for a given value
@@ -53,6 +69,14 @@ public:
   static int64_t murmur3_hash(const std::string& value);
 
   /**
+   * Get the port assigned to the cluster configuration
+   *
+   * @param cluster Cluster to retrieve connect timeout from
+   * @return Port number
+   */
+  static int port(CassCluster* cluster);
+
+  /**
    * Enable/Disable the recording of hosts attempted during the execution of
    * a statement
    *
@@ -60,7 +84,6 @@ public:
    * @param enable True if attempted host should be recorded; false otherwise
    */
   static void set_record_attempted_hosts(CassStatement* statement, bool enable);
-
 };
 
 } // namespace internals

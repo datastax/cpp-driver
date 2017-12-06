@@ -182,7 +182,9 @@ macro(GtestUnitTests project_name extra_source_files)
   # and source files required to shared that code.
   set(INTEGRATION_TESTS_SOURCE_DIR "${CASS_ROOT_DIR}/gtests/src/integration")
   set(CCM_BRIDGE_SOURCE_DIR "${CASS_ROOT_DIR}/test/ccm_bridge/src")
-  set(INTEGRATION_TESTS_SOURCE_FILES "${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp")
+  set(INTEGRATION_TESTS_SOURCE_FILES
+    "${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp"
+    "${INTEGRATION_TESTS_SOURCE_DIR}/driver_utils.cpp")
   set(CCM_BRIDGE_SOURCE_FILES "${CCM_BRIDGE_SOURCE_DIR}/socket.cpp")
 
   file(GLOB UNIT_TESTS_INCLUDE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.hpp )

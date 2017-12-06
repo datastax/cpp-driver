@@ -17,12 +17,13 @@
 #include "driver_utils.hpp"
 
 #include "address.hpp"
+#include "cluster.hpp"
 #include "future.hpp"
 #include "murmur3.hpp"
 #include "request_handler.hpp"
 #include "statement.hpp"
 
-const std::vector<std::string> test::driver::internals::Utils::attempted_hosts(
+std::vector<std::string> test::driver::internals::Utils::attempted_hosts(
   CassFuture* future) {
   std::vector<std::string> attempted_hosts;
   if (future) {
@@ -40,7 +41,25 @@ const std::vector<std::string> test::driver::internals::Utils::attempted_hosts(
   return attempted_hosts;
 }
 
-const std::string test::driver::internals::Utils::host(CassFuture* future) {
+unsigned int test::driver::internals::Utils::connect_timeout(CassCluster* cluster) {
+  return cluster->config().connect_timeout_ms();
+}
+
+std::string test::driver::internals::Utils::contact_points(CassCluster* cluster) {
+  std::string contact_points;
+  const cass::ContactPointList& contact_points_list =
+    cluster->config().contact_points();
+  for (cass::ContactPointList::const_iterator it = contact_points_list.begin();
+       it != contact_points_list.end(); ++it) {
+    if (contact_points.size() > 0) {
+      contact_points.push_back(',');
+    }
+    contact_points.append((*it).c_str());
+  }
+  return contact_points;
+}
+
+std::string test::driver::internals::Utils::host(CassFuture* future) {
   if (future) {
     cass::Future* cass_future = static_cast<cass::Future*>(future);
     if (cass_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
@@ -53,6 +72,10 @@ const std::string test::driver::internals::Utils::host(CassFuture* future) {
 int64_t test::driver::internals::Utils::murmur3_hash(
   const std::string& value) {
   return cass::MurmurHash3_x64_128(value.data(), value.size(), 0);
+}
+
+int test::driver::internals::Utils::port(CassCluster* cluster) {
+  return cluster->config().port();
 }
 
 void test::driver::internals::Utils::set_record_attempted_hosts(
