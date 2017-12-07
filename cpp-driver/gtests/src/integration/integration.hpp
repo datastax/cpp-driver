@@ -247,6 +247,11 @@ protected:
    */
   bool is_session_requested_;
   /**
+   * Flag to indicate if a test is chaotic and should have its CCM cluster
+   * destroyed
+   */
+  bool is_test_chaotic_;
+  /**
    * Workload to apply to the cluster
    */
   std::vector<CCM::DseWorkload> dse_workload_;
@@ -360,9 +365,21 @@ protected:
   virtual void enable_cluster_tracing(bool enable = true);
 
   /**
-   * Stop a node that should be restarted after test case is completed
+   * Decommission a node and force the cluster to be removed after the test is
+   * completed
+   *
+   * @param node Node that should be decommissioned
+   * @return True if node was decommissioned; false otherwise (the node is
+   *         invalid or was already decommissioned)
+   */
+  virtual bool decommission_node(unsigned int node);
+
+  /**
+   * Stop a node that should be restarted after test is completed
    *
    * @param node Node that should be stopped
+   * @return True if node was stopped; false otherwise (the node is invalid or
+   *         was already stopped)
    */
   virtual bool stop_node(unsigned int node);
 
