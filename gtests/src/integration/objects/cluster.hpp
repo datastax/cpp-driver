@@ -240,6 +240,17 @@ public:
   }
 
   /**
+   * Sets the retry policy used for all requests unless overridden by setting
+   * a retry policy on a statement or a batch.
+   *
+   * @param retry_policy Retry policy to assign to the cluster profile
+   */
+  Cluster& with_retry_policy(RetryPolicy retry_policy) {
+    cass_cluster_set_retry_policy(get(), retry_policy.get());
+    return *this;
+  }
+
+  /**
    * Enable/Disable the schema metadata
    *
    * If disabled this allows the driver to skip over retrieving and
