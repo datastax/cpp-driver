@@ -50,6 +50,7 @@ Integration::Integration()
   , is_ccm_start_requested_(true)
   , is_ccm_start_node_individually_(false)
   , is_session_requested_(true)
+  , is_test_chaotic_(false)
   , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
   , create_keyspace_query_("")
   , start_time_(0ull) {
@@ -173,6 +174,13 @@ void Integration::TearDown() {
     session_.execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false,
       false);
   } catch (...) {}
+
+  // Determine if the CCM cluster should be destroyed
+  if (is_test_chaotic_) {
+    // Destroy the current cluster and reset the chaos flag for the next test
+    ccm_->remove_cluster();
+    is_test_chaotic_ = false;
+  }
 }
 
 std::string Integration::default_keyspace() {
@@ -322,6 +330,25 @@ void Integration::enable_cluster_tracing(bool enable /*= true*/) {
     node_value >> node;
     ccm_->enable_node_trace(node);
   }
+}
+
+bool Integration::decommission_node(unsigned int node) {
+  // Decommission the requested node
+  bool status = ccm_->decommission_node(node);
+  if (status) {
+    // Indicate the test is chaotic
+    is_test_chaotic_ = true;
+  }
+  return status;
+}
+
+bool Integration::stop_node(unsigned int node) {
+  // Stop the requested node
+  bool status = ccm_->stop_node(node);
+  if (status) {
+    stopped_nodes_.push_back(node);
+  }
+  return status;
 }
 
 std::string Integration::generate_contact_points(const std::string& ip_prefix,
