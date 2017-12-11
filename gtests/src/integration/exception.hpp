@@ -54,14 +54,27 @@ public:
    * @param message Exception message
    * @param error_code Error code
    */
-  CassException(const std::string &message, const CassError error_code)
+  CassException(const std::string& message, const CassError error_code)
     : Exception(message)
     , error_code_(error_code) {}
 
   /**
+   * Exception class that contains an error code
+   *
+   * @param message Exception message
+   * @param error_code Error code
+   * @param error_code Error message
+   */
+  CassException(const std::string& message, const CassError error_code,
+                const std::string& error_message)
+    : Exception(message)
+    , error_code_(error_code)
+    , error_message_(error_message) { }
+
+  /**
    * Destructor
    */
-  virtual ~CassException() throw() {}
+  virtual ~CassException() throw() { }
 
   /**
    * Get the error code associated with the exception
@@ -70,11 +83,31 @@ public:
    */
   CassError error_code() const { return error_code_; }
 
+  /**
+   * Get the human readable description of the error code
+   *
+   * @return Error description
+   */
+  const std::string error_description() {
+    return std::string(cass_error_desc(error_code()));
+  }
+
+  /**
+   * Get the error message associated with the exception
+   *
+   * @return Error message
+   */
+  const std::string error_message() { return error_message_; }
+
 private:
   /**
    * Error code associated with the exception
    */
   CassError error_code_;
+  /**
+   * Error message associated with the exception
+   */
+  std::string error_message_;
 };
 
 } // namespace test

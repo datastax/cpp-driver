@@ -239,7 +239,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests,
   session_.execute(select_);
 
   // Decommission node two
-  decommission_node(2);
+  force_decommission_node(2);
 
   // Perform a check using consistency `QUORUM` (N=2, RF=3)
   insert_.set_consistency(CASS_CONSISTENCY_QUORUM);
@@ -298,8 +298,8 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests,
   session_.execute(select_);
 
   // Decommission node two and three
-  decommission_node(2);
-  decommission_node(3);
+  force_decommission_node(2);
+  force_decommission_node(3);
 
   // Perform a check using consistency `ONE` (N=1, RF=3)
   insert_.set_consistency(CASS_CONSISTENCY_ONE);
