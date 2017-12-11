@@ -39,15 +39,16 @@ friend class Cluster;
 public:
   class Exception : public test::CassException {
   public:
-    Exception(const std::string& message, const CassError error_code)
-      : test::CassException(message, error_code) {}
+    Exception(const std::string& message, const CassError error_code,
+              const std::string& error_message)
+      : test::CassException(message, error_code, error_message) { }
   };
 
   /**
    * Create the default session object
    */
   Session()
-    : Object<CassSession, cass_session_free>(cass_session_new()) {}
+    : Object<CassSession, cass_session_free>(cass_session_new()) { }
 
   /**
    * Create the session object from the native driver object
@@ -55,7 +56,7 @@ public:
    * @param session Native driver object
    */
   Session(CassSession* session)
-    : Object<CassSession, cass_session_free>(session) {}
+    : Object<CassSession, cass_session_free>(session) { }
 
   /**
    * Create the session object from a shared reference
@@ -63,7 +64,7 @@ public:
    * @param session Shared reference
    */
   Session(Ptr session)
-    : Object<CassSession, cass_session_free>(session) {}
+    : Object<CassSession, cass_session_free>(session) { }
 
   /**
    * Close the active session
@@ -240,7 +241,9 @@ protected:
     session.connect_future_.wait(false);
     if (assert_ok && session.connect_error_code() != CASS_OK) {
       throw Exception("Unable to Establish Session Connection: "
-          + session.connect_error_description(), session.connect_error_code());
+                      + session.connect_error_description(),
+                      session.connect_error_code(),
+                      session.connect_error_message());
     }
     return session;
   }

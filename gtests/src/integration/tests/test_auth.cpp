@@ -92,12 +92,6 @@ protected:
 CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, ProtocolVersions) {
   CHECK_FAILURE;
 
-  // Determine the schema keyspaces table (based on server version used)
-  std::string schema_keysapces_table = "system.schema_keyspaces";
-  if (server_version_ >= "3.0.0") {
-    schema_keysapces_table = "system_schema.keyspaces";
-  }
-
   // Iterate over all known/supported protocol versions
   for (int i = starting_protocol_version_;
        i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION; ++i) {
@@ -107,7 +101,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, ProtocolVersions) {
       << session.connect_error_description();
 
     // Execute a query against the schema keyspaces table
-    Result result = session.execute("SELECT * FROM " + schema_keysapces_table);
+    Result result = session.execute("SELECT * FROM " + system_schema_keyspaces_);
     ASSERT_EQ(CASS_OK, result.error_code());
     ASSERT_GT(result.row_count(), 0u);
   }

@@ -447,7 +447,19 @@ namespace CCM {
     unsigned int add_node(const std::string& data_center = "");
 
     /**
-     * Bootstrap (add and start) a node on the active Cassandra cluster
+     * Bootstrap (add and start) a node on the active cluster
+     *
+     * @param jvm_arguments JVM arguments to apply during node start
+     * @param data_center If provided add the node to the data center; otherwise
+     *                    add node normally (default: no data center)
+     * @return Node added to cluster
+     * @throws BridgeException
+     */
+    unsigned int bootstrap_node(const std::vector<std::string>& jvm_arguments,
+                                const std::string& data_center = "");
+
+    /**
+     * Bootstrap (add and start) a node on the active cluster
      *
      * @param jvm_argument JVM argument to apply during node start
      *                     (default: no JVM argument)
@@ -456,7 +468,8 @@ namespace CCM {
      * @return Node added to cluster
      * @throws BridgeException
      */
-    unsigned int bootstrap_node(const std::string& jvm_argument = "", const std::string& data_center = "");
+    unsigned int bootstrap_node(const std::string& jvm_argument = "",
+                                const std::string& data_center = "");
 
     /**
      * Decommission a node on the active Cassandra cluster
@@ -568,7 +581,8 @@ namespace CCM {
      *                      start (default: DEFAULT_JVM_ARGUMENTS)
      * @return True if node is up; false otherwise
      */
-    bool start_node(unsigned int node, std::vector<std::string> jvm_arguments = DEFAULT_JVM_ARGUMENTS);
+    bool start_node(unsigned int node,
+                    const std::vector<std::string>& jvm_arguments = DEFAULT_JVM_ARGUMENTS);
 
     /**
      * Start a node on the active Cassandra cluster with an additional JVM
@@ -578,7 +592,7 @@ namespace CCM {
      * @param jvm_argument JVM argument to apply during node start
      * @return True if node is up; false otherwise
      */
-    bool start_node(unsigned int node, std::string jvm_argument);
+    bool start_node(unsigned int node, const std::string& jvm_argument);
 
     /**
      * Stop a node on the active Cassandra cluster
