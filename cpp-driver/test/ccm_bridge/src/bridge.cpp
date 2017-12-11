@@ -901,7 +901,15 @@ unsigned int CCM::Bridge::add_node(const std::string& data_center /*= ""*/) {
   return node;
 }
 
-unsigned int CCM::Bridge::bootstrap_node(const std::string& jvm_argument /*= ""*/, const std::string& data_center /*= ""*/) {
+unsigned int CCM::Bridge::bootstrap_node(const std::vector<std::string>& jvm_arguments,
+                                         const std::string& data_center /*= ""*/) {
+  unsigned int node = add_node(data_center);
+  start_node(node, jvm_arguments);
+  return node;
+}
+
+unsigned int CCM::Bridge::bootstrap_node(const std::string& jvm_argument /*= ""*/,
+                                         const std::string& data_center /*= ""*/) {
   unsigned int node = add_node(data_center);
   start_node(node, jvm_argument);
   return node;
@@ -1029,7 +1037,8 @@ void CCM::Bridge::resume_node(unsigned int node) {
   execute_ccm_command(resume_node_command);
 }
 
-bool CCM::Bridge::start_node(unsigned int node, std::vector<std::string> jvm_arguments /*= DEFAULT_JVM_ARGUMENTS*/) {
+bool CCM::Bridge::start_node(unsigned int node,
+                             const std::vector<std::string>& jvm_arguments /*= DEFAULT_JVM_ARGUMENTS*/) {
   // Create the node start command and execute
   std::vector<std::string> start_node_command;
   start_node_command.push_back(generate_node_name(node));
@@ -1043,10 +1052,11 @@ bool CCM::Bridge::start_node(unsigned int node, std::vector<std::string> jvm_arg
     }
   }
 #endif
-  for (std::vector<std::string>::const_iterator iterator = jvm_arguments.begin(); iterator != jvm_arguments.end(); ++iterator) {
+  for (std::vector<std::string>::const_iterator iterator = jvm_arguments.begin();
+       iterator != jvm_arguments.end(); ++iterator) {
     std::string jvm_argument = trim(*iterator);
     if (!jvm_argument.empty()) {
-      start_node_command.push_back("--jvm_arg=" + *iterator);
+      start_node_command.push_back("--jvm_arg=\"" + *iterator + "\"");
     }
   }
   execute_ccm_command(start_node_command);
@@ -1055,7 +1065,7 @@ bool CCM::Bridge::start_node(unsigned int node, std::vector<std::string> jvm_arg
   return is_node_up(node);
 }
 
-bool CCM::Bridge::start_node(unsigned int node, std::string jvm_argument) {
+bool CCM::Bridge::start_node(unsigned int node, const std::string& jvm_argument) {
   // Create the JVM arguments array/vector
   std::vector<std::string> jvm_arguments;
   jvm_arguments.push_back(jvm_argument);

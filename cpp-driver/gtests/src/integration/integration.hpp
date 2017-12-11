@@ -166,6 +166,10 @@ protected:
    */
   std::string table_name_;
   /**
+   * Keyspaces schema table
+   */
+  std::string system_schema_keyspaces_;
+  /**
    * UUID generator
    */
   UuidGen uuid_generator_;
@@ -369,10 +373,24 @@ protected:
    * completed
    *
    * @param node Node that should be decommissioned
+   * @oaram is_force True if decommission should be forced; false otherwise
+   *                 (default: false)
    * @return True if node was decommissioned; false otherwise (the node is
    *         invalid or was already decommissioned)
    */
-  virtual bool decommission_node(unsigned int node);
+  virtual bool decommission_node(unsigned int node, bool is_force = false);
+
+  /**
+   * Decommission a node by force and ensure the cluster is set to be removed
+   * after the test is completed
+   *
+   * NOTE: Alias for decommission_node(node, true)
+   *
+   * @param node Node that should be decommissioned forcefully
+   * @return True if node was decommissioned; false otherwise (the node is
+   *         invalid or was already decommissioned)
+   */
+  virtual bool force_decommission_node(unsigned int node);
 
   /**
    * Stop a node that should be restarted after test is completed

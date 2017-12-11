@@ -195,6 +195,42 @@ public:
   }
 
   /**
+   * Sets the number of I/O threads. This is the number of threads that will
+   * handle query requests
+   *
+   * @param num_threads Number of thread that will handle query requests
+   * @return Cluster object
+   */
+  Cluster& with_num_threads_io(unsigned int num_threads) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_num_threads_io(get(), num_threads));
+    return *this;
+  }
+
+  /**
+   * Enable data center aware load balance policy for statement/batch execution
+   *
+   * @param local_dc The primary data center to try first
+   * @param used_hosts_per_remote_dc The number of hosts used in each remote
+   *                                 data center if no hosts are available in
+   *                                 the local data center
+   * @param allow_remote_dcs_for_local_cl True if remote hosts are to be used as
+   *                                      local data centers when no local data
+   *                                      center is available and consistency
+   *                                      levels are LOCAL_ONE or LOCAL_QUORUM;
+   *                                      otherwise false
+   * @return Cluster object
+   */
+  Cluster& with_load_balance_dc_aware(const std::string& local_dc,
+                                      size_t used_hosts_per_remote_dc,
+                                      bool allow_remote_dcs_for_local_cl) {
+    EXPECT_EQ(CASS_OK,
+              cass_cluster_set_load_balance_dc_aware(get(), local_dc.c_str(),
+              used_hosts_per_remote_dc,
+              (allow_remote_dcs_for_local_cl == true ? cass_true : cass_false)));
+    return *this;
+  }
+
+  /**
    * Enable round robin load balance policy for statement/batch execution
    *
    * @return Cluster object

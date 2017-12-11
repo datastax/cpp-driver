@@ -35,6 +35,7 @@ Integration::Integration()
   , session_()
   , keyspace_name_("")
   , table_name_("")
+  , system_schema_keyspaces_("system.schema_keyspaces")
   , uuid_generator_()
   , server_version_(Options::server_version())
   , number_dc1_nodes_(1)
@@ -54,6 +55,11 @@ Integration::Integration()
   , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
   , create_keyspace_query_("")
   , start_time_(0ull) {
+  // Determine if the schema keyspaces table should be updated
+  if (server_version_ >= "3.0.0") {
+    system_schema_keyspaces_ = "system_schema.keyspaces";
+  }
+
   // Get the name of the test and the case/suite it belongs to
   const testing::TestInfo* test_information = testing::UnitTest::GetInstance()->current_test_info();
   test_name_ = test_information->name();
@@ -168,20 +174,24 @@ void Integration::SetUp() {
 
 void Integration::TearDown() {
   // Restart all stopped nodes
-  for (std::vector<unsigned int>::iterator iterator = stopped_nodes_.begin();
-       iterator != stopped_nodes_.end(); ++iterator) {
-    TEST_LOG("Restarting Node Stopped in " << test_name_ << ": " << *iterator);
-    ccm_->start_node(*iterator);
+  if (!is_test_chaotic_) { // No need to restart as cluster will be destroyed
+    for (std::vector<unsigned int>::iterator iterator = stopped_nodes_.begin();
+         iterator != stopped_nodes_.end(); ++iterator) {
+      TEST_LOG("Restarting Node Stopped in " << test_name_ << ": " << *iterator);
+      ccm_->start_node(*iterator);
+    }
   }
   stopped_nodes_.clear();
 
   // Drop keyspace for integration test (may or may have not been created)
-  std::stringstream use_keyspace_query;
-  use_keyspace_query << "DROP KEYSPACE " << keyspace_name_;
-  try {
-    session_.execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false,
-      false);
-  } catch (...) {}
+  if (!is_test_chaotic_) { // No need to drop keyspace as cluster will be destroyed
+    std::stringstream use_keyspace_query;
+    use_keyspace_query << "DROP KEYSPACE " << keyspace_name_;
+    try {
+      session_.execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false,
+                       false);
+    } catch (...) { }
+  }
 
   // Determine if the CCM cluster should be destroyed
   if (is_test_chaotic_) {
@@ -345,14 +355,19 @@ void Integration::enable_cluster_tracing(bool enable /*= true*/) {
   }
 }
 
-bool Integration::decommission_node(unsigned int node) {
+bool Integration::decommission_node(unsigned int node,
+                                    bool is_force /*= false */) {
   // Decommission the requested node
-  bool status = ccm_->decommission_node(node);
+  bool status = ccm_->decommission_node(node, is_force);
   if (status) {
     // Indicate the test is chaotic
     is_test_chaotic_ = true;
   }
   return status;
+}
+
+bool Integration::force_decommission_node(unsigned int node) {
+  return decommission_node(node, true);
 }
 
 bool Integration::stop_node(unsigned int node) {
