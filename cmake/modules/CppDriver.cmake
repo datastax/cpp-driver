@@ -140,6 +140,9 @@ macro(CassConfigureShared prefix)
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
+  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES
+    COMPILE_PDB_NAME "${PROJECT_LIB_NAME}"
+    COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/driver_pdb")
   set_property(
       TARGET ${PROJECT_LIB_NAME}
       APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DCASS_BUILDING")
@@ -162,6 +165,9 @@ macro(CassConfigureStatic prefix)
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES
+    COMPILE_PDB_NAME "${PROJECT_LIB_NAME_STATIC}"
+    COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/driver_pdb")
   set_property(
       TARGET ${PROJECT_LIB_NAME_STATIC}
       APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DCASS_STATIC")
@@ -269,6 +275,15 @@ macro(CassConfigureInstall var_prefix pkg_config_stem)
               DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
         endif()
       endif()
+    endif()
+  endif()
+
+  if(${var_prefix}_INSTALL_PDB_FILES)
+    if(WIN32)
+      install(FILES "${CMAKE_CURRENT_BINARY_DIR}/driver_pdb/${CMAKE_BUILD_TYPE}/${PROJECT_LIB_NAME}.pdb"
+        DESTINATION "${INSTALL_DLL_EXE_DIR}" OPTIONAL)
+      install(FILES "${CMAKE_CURRENT_BINARY_DIR}/driver_pdb/${CMAKE_BUILD_TYPE}/${PROJECT_LIB_NAME_STATIC}.pdb"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}" OPTIONAL)
     endif()
   endif()
 endmacro()
