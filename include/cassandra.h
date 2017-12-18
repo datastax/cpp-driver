@@ -447,24 +447,24 @@ typedef struct CassMetrics_ {
     cass_uint64_t percentile_98th; /**< 98th percentile in microseconds */
     cass_uint64_t percentile_99th; /**< 99the percentile in microseconds */
     cass_uint64_t percentile_999th; /**< 99.9th percentile in microseconds */
-    cass_double_t mean_rate; /**<  Mean rate in requests per second*/
+    cass_double_t mean_rate; /**<  Mean rate in requests per second */
     cass_double_t one_minute_rate; /**< 1 minute rate in requests per second */
-    cass_double_t five_minute_rate; /**<  5 minute rate in requests per second*/
-    cass_double_t fifteen_minute_rate; /**< 15 minute rate in requests per second*/
-  } requests;
+    cass_double_t five_minute_rate; /**<  5 minute rate in requests per second */
+    cass_double_t fifteen_minute_rate; /**< 15 minute rate in requests per second */
+  } requests; /**< Performance request metrics */
 
   struct {
     cass_uint64_t total_connections; /**< The total number of connections */
     cass_uint64_t available_connections; /**< Deprecated */
     cass_uint64_t exceeded_pending_requests_water_mark; /**< Deprecated */
     cass_uint64_t exceeded_write_bytes_water_mark; /**< Deprecated */
-  } stats;
+  } stats; /**< Diagnostic metrics */
 
   struct {
     cass_uint64_t connection_timeouts; /**< Occurrences of a connection timeout */
-    cass_uint64_t pending_request_timeouts; /** Occurrences of requests that timed out waiting for a connection */
-    cass_uint64_t request_timeouts; /** Occurrences of requests that timed out waiting for a request to finish */
-  } errors;
+    cass_uint64_t pending_request_timeouts; /**< Occurrences of requests that timed out waiting for a connection */
+    cass_uint64_t request_timeouts; /**< Occurrences of requests that timed out waiting for a request to finish */
+  } errors; /**< Error metrics */
 
 } CassMetrics;
 
