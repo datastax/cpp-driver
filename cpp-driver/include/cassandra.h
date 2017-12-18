@@ -412,20 +412,20 @@ typedef struct CassMetrics_ {
     cass_double_t one_minute_rate; /**< 1 minute rate in requests per second */
     cass_double_t five_minute_rate; /**<  5 minute rate in requests per second */
     cass_double_t fifteen_minute_rate; /**< 15 minute rate in requests per second */
-  } requests;
+  } requests; /**< Performance request metrics */
 
   struct {
     cass_uint64_t total_connections; /**< The total number of connections */
     cass_uint64_t available_connections; /**< Deprecated */
     cass_uint64_t exceeded_pending_requests_water_mark; /**< Deprecated */
     cass_uint64_t exceeded_write_bytes_water_mark; /**< Deprecated */
-  } stats;
+  } stats; /**< Diagnostic metrics */
 
   struct {
     cass_uint64_t connection_timeouts; /**< Occurrences of a connection timeout */
-    cass_uint64_t pending_request_timeouts; /** Occurrences of requests that timed out waiting for a connection */
-    cass_uint64_t request_timeouts; /** Occurrences of requests that timed out waiting for a request to finish */
-  } errors;
+    cass_uint64_t pending_request_timeouts; /**< Occurrences of requests that timed out waiting for a connection */
+    cass_uint64_t request_timeouts; /**< Occurrences of requests that timed out waiting for a request to finish */
+  } errors; /**< Error metrics */
 } CassMetrics;
 
 typedef struct CassSpeculativeExecutionMetrics_ {
