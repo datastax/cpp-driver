@@ -1012,6 +1012,36 @@ cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
                                            cass_bool_t enable);
 
 /**
+ * Sets default consistency level of statement.
+ *
+ * <b>Default:</b> CASS_CONSISTENCY_LOCAL_ONE
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_consistency(CassCluster* cluster,
+                             CassConsistency consistency);
+
+/**
+ * Sets default serial consistency level of statement.
+ *
+ * <b>Default:</b> CASS_CONSISTENCY_ANY
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_serial_consistency(CassCluster* cluster,
+                                    CassConsistency consistency);
+
+/**
  * Sets the number of IO threads. This is the number of threads
  * that will handle query requests.
  *

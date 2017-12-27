@@ -73,6 +73,24 @@ CassError cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
   return CASS_OK;
 }
 
+CassError cass_cluster_set_consistency(CassCluster* cluster,
+                                       CassConsistency consistency) {
+  if (consistency == CASS_CONSISTENCY_UNKNOWN) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_consistency(consistency);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_serial_consistency(CassCluster* cluster,
+                                              CassConsistency consistency) {
+  if (consistency == CASS_CONSISTENCY_UNKNOWN) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_serial_consistency(consistency);
+  return CASS_OK;
+}
+
 CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
                                           unsigned num_threads) {
   if (num_threads == 0) {
