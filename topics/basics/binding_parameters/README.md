@@ -13,7 +13,7 @@ cass_statement_bind_string(statement, 0, "abc");
 cass_statement_free(statement);
 ```
 
-Variables can only be bound by name for prepared statements. This limitation exists because query metadata provided by Cassandra is required to map the variable name to the variable’s marker index.
+Variables can only be bound by name for [prepared statements](../prepared_statements/). This limitation exists because query metadata provided by Cassandra is required to map the variable name to the variable’s marker index. Named bind variables are specified as `:variable` inside query string.
 
 ```c
 /* Prepare statment */

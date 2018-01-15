@@ -18,7 +18,7 @@ CREATE TYPE person (name text,
 
 ## Retrieving an Existing Data Type
 
-**Important**: Any `const [CassDataType]*` object doesn't need to be freed. Its
+**Important**: Any `const CassDataType*` object doesn't need to be freed. Its
 lifetime is bound to the object it came from.
 
 UDT data types can be retrieved using a [`CassSchemaMeta`] object. The resulting
@@ -128,6 +128,7 @@ cass_collection_free(phone_numbers);
 ```
 
 [`CassDataType`]: http://datastax.github.io/cpp-driver/api/struct.CassDataType/
+[`CassUserType`]: http://datastax.github.io/cpp-driver/api/struct.CassUserType/
 [`CassPrepared`]: http://datastax.github.io/cpp-driver/api/struct.CassPrepared/
 [`CassResult`]: http://datastax.github.io/cpp-driver/api/struct.CassResult/
 [`CassValue`]: http://datastax.github.io/cpp-driver/api/struct.CassValue/
