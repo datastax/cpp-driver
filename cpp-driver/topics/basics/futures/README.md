@@ -4,7 +4,7 @@ Futures are returned from any driver call that would result in blocking the clie
 
 ## Waiting for Results
 
-Futures results can be waited on indefinitely by either calling a wait method or by attempting to get the result. They can also be waited on for an explicit amount of time or periodically polled without waiting to execute application code.
+Futures results can be waited on indefinitely by either calling the `cass_future_wait()` method or by attempting to get the result with `cass_future_get_result()`. They can also be waited on for an explicit amount of time or periodically polled without waiting to execute application code.
 
 ### Synchronously Waiting on the Future
 ```c

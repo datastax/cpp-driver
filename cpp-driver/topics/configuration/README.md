@@ -6,7 +6,7 @@ Load balancing controls how queries are distributed to nodes in a Cassandra
 cluster.
 
 Without additional configuration the C/C++ driver defaults to using Datacenter-aware
-load balancing with token-aware routing. Meaning the driver will only send
+load balancing with token-aware routing. This means that driver will only send
 queries to nodes in the local datacenter (for local consistency levels) and
 it will use the primary key of queries to route them directly to the nodes where the
 corresponding data is located.
@@ -117,7 +117,7 @@ cass_cluster_set_latency_aware_routing_settings(cluster,
 cass_cluster_free(cluster);
 ```
 
-### Filtering
+### Filtering policies
 
 #### Whitelist
 
