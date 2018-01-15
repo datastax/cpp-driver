@@ -91,7 +91,7 @@
     </tr>
 
     <tr>
-      <td><code>user defined type</code></td>
+      <td><code>user-defined type</code></td>
       <td><code>CassUserType</code></td>
       <td>2.1+</td>
     </tr>

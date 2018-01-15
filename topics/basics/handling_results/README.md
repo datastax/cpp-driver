@@ -153,7 +153,9 @@ void page_results(CassSession* session) {
     const CassResult* result = cass_future_get_result(query_future);
 
     if (result == NULL) {
+
       /* Handle error */
+
       cass_future_free(query_future);
       break;
     }
@@ -168,6 +170,7 @@ void page_results(CassSession* session) {
       cass_statement_set_paging_state(statement, result);
     }
 
+    cass_future_free(query_future);
     cass_result_free(result);
   }
 
