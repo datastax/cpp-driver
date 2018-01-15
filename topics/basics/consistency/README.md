@@ -86,7 +86,7 @@ level can be found
   </tbody>
 </table>
 
-**NOTE:** Consistency level `CASS_CONSISTENCY_ANY` is only valid for read operation statements.
+**NOTE:** Consistency level `CASS_CONSISTENCY_ANY` is only valid for write operation statements.
 
 ## Setting Consistency Level
 

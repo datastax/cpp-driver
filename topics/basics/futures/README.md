@@ -86,7 +86,7 @@ void on_result(CassFuture* future, void* data) {
 CassFuture* future = /* Some operation */;
 
 /* Set a callback instead of waiting for the result to be returned */
-cass_future_set_callback(on_result, NULL);
+cass_future_set_callback(future, on_result, NULL);
 
 /* The application's reference to the future can be freed immediately */
 cass_future_free(future);

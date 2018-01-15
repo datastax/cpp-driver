@@ -109,7 +109,7 @@ CassTuple* address =
 
 /* Construct a new map collection from a nested data type */
 CassCollection* phone_numbers =
-  cass_collection_new_from_data_type
+  cass_collection_new_from_data_type(
     cass_data_type_sub_data_type_by_name(person_data_type, "phone_numbers"));
 
 /* ... */
