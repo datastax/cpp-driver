@@ -101,5 +101,5 @@ executed by the session.
 cass_statement_set_consistency(statement, CASS_CONSISTENCY_QUORUM);
 ```
 
-**NOTE:** Consistency is ignored for `USE`, `TRUNCATE`, `CREATE` and `ALTER`
-statements, and some `CASS_CONSISTENCY_ANY` aren’t allowed in all situations.
+**NOTE:** Consistency level is ignored for `USE`, `TRUNCATE`, `CREATE` and `ALTER`
+statements, and some, like `CASS_CONSISTENCY_ANY`, aren’t allowed in all situations.

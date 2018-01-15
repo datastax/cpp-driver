@@ -1,9 +1,9 @@
 # Data Types
 
 [`CassDataType`] objects are useful for describing the different values that can
-be stored in Cassandra, from primitive types to more complex composite types
-such as UDTs, tuples and collections. Data types can be retrieved from existing
-metadata found in schema, results, values or prepared statements or they can be
+be stored in Cassandra, from primitive types to more complex composite types,
+such as, UDTs (user defined types), tuples and collections. Data types can be retrieved from existing
+metadata found in schema, results, values or prepared statements, or they can be
 constructed programmatically.
 
 The following code snippets use the following type schema:
@@ -54,10 +54,10 @@ Data types can also be retrieved from [`CassResult`], [`CassPrepared`], and
 * [`cass_value_data_type()`] can be used to get the data type represented by a
   [`CassValue`] object.
 
-## Programmatically Building a Data Type
+## Building a Data Type Programmatically
 
-Data types can also be programmatically constructed. This is useful for application that
-may have disabled schema metatdata.
+Data types could be constructed programmatically. This is useful for application that may
+have schema metatdata disabled.
 
 ```c
 CassDataType* person_data_type = cass_data_type_new_udt(3);
@@ -90,8 +90,8 @@ cass_data_type_free(phone_numbers_data_type);
 
 ## Creating UDTs, Tuples and Collections Using Data Types
 
-Once the user type object has be retrieved or created manually it can be used to
-construct composite data types. The sub-types of a data type can be used to
+After the user type object is retrieved or created manually, it can be used to
+construct composite data types. The subtypes of a data type can be used to
 construct other nested types.
 
 ```c
