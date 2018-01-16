@@ -152,7 +152,7 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
 }
 ```
 
-It is possible to load multiple self-signed certificates or CA certificate chains. This will be required in case when self-signed certificates with unique IP addresses are being used. It is possible to disable the certificate verification process, but it is not recommended.
+It is possible to load multiple self-signed certificates or CA certificate chains. This will be required in cases when self-signed certificates with unique IP addresses are being used. It is possible to disable the certificate verification process, but it is not recommended.
 
 ```c
 // Disable certifcate verifcation

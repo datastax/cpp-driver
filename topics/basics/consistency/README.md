@@ -19,7 +19,7 @@ The consistency level determines the number of replicas on which the read/write
 must respond/succeed before returning an acknowledgment to the client
 application. Descriptions and Usage scenarios for each read/write consistency
 level can be found
-[here](http://docs.datastax.com/en/cassandra/3.0/cassandra/dml/dmlConfigConsistency.html).
+[here](http://docs.datastax.com/en/cassandra/latest/cassandra/dml/dmlConfigConsistency.html).
 
 <table class="table table-striped table-hover table-condensed">
   <thead>

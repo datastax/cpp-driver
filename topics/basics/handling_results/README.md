@@ -131,9 +131,9 @@ while (has_more_pages) {
   CassFuture* query_future = cass_session_execute(session, statement);
 
   const CassResult* result = cass_future_get_result(query_future);
-  cass_future_free(query_future);
 
   if (result == NULL) {
+     cass_future_free(query_future);
      /* Handle error */
      break;
   }
@@ -149,6 +149,7 @@ while (has_more_pages) {
   }
 
   cass_result_free(result);
+  cass_future_free(query_future);
 }
 ```
 

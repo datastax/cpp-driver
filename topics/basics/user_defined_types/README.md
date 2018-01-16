@@ -1,8 +1,8 @@
-# User Defined Types (UDTs)
+# User-Defined Types (UDTs)
 
 **Note**: Cassandra 2.1+ is required.
 
-User defined types (UDT) can be used to create arbitrary user types with fields
+User-defined types (UDT) can be used to create arbitrary user types with fields
 that can be accessed by name or position. When used with the driver they can be
 created from a previously defined type determined from schema or they can be
 created from a manually defined data type.

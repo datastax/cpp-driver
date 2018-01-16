@@ -29,7 +29,7 @@ cass_tuple_free(tuple);
 ## Create a Tuple using a Data Type
 
 A tuple can also be created using a [`CassDataType`] that comes from schema
-metadata or is manually constructed. However, this is not necessary step as
+metadata or is manually constructed. However, this is not a necessary step as
 a tuple can be created without a data type. A typed tuple will not allow invalid
 type to be added to it. [`cass_tuple_set_*()`] functions will return an error
 code if the incorrect type is added to a position.

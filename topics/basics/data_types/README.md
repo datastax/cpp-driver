@@ -2,7 +2,7 @@
 
 [`CassDataType`] objects are useful for describing the different values that can
 be stored in Cassandra, from primitive types to more complex composite types,
-such as, UDTs (user defined types), tuples and collections. Data types can be retrieved from existing
+such as, UDTs (user-defined types), tuples and collections. Data types can be retrieved from existing
 metadata found in schema, results, values or prepared statements, or they can be
 constructed programmatically.
 
@@ -29,7 +29,7 @@ data type object can be used to construct a new [`CassUserType`] object using
 /* Get schema object (this should be cached) */
 const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
 
-/* Get the keyspace for the user defined type. It doesn't need to be freed */
+/* Get the keyspace for the user-defined type. It doesn't need to be freed */
 const CassKeyspaceMeta* keyspace_meta =
   cass_schema_meta_keyspace_by_name("examples");
 
