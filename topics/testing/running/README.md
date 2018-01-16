@@ -64,5 +64,5 @@ Equivalently, without wildcards all test cases within the suite run:
 ```
 
 
-[Cassandra Cluster Manager (CCM)]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/testing/ccm/
-[configuration]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/testing/configuration/
+[Cassandra Cluster Manager (CCM)]: http://datastax.github.io/cpp-driver/topics/testing/ccm/
+[configuration]: http://datastax.github.io/cpp-driver/topics/testing/configuration/
