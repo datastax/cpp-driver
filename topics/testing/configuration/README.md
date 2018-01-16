@@ -156,5 +156,5 @@ an example of the configuration file for use with the [CCM Cluster] VM.
 To execute any of the tests in the `ssl` test suite, follow the [instructions]
 for generating public and private keys to use with the driver and Cassandra.
 
-[CCM Cluster]: http://datastax.github.io/cpp-driver/topics/testing/ccm/#ccm-cluster-by-way-of-vagrant-and-virtual-box
+[CCM Cluster]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/testing/ccm/#ccm-cluster-by-way-of-vagrant-and-virtual-box
 [instructions]: https://github.com/datastax/cpp-driver/tree/1.0/test/ccm_bridge/data/ssl

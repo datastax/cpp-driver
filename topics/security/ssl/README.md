@@ -59,7 +59,7 @@ The following [guide](http://www.datastax.com/documentation/cassandra/2.1/cassan
 
 ## Setting up the C/C++ Driver to Use SSL
 
-A [`CassSsl`](http://datastax.github.io/cpp-driver/api/struct.CassSsl/) object is required and must be configured:
+A [`CassSsl`](http://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassSsl/) object is required and must be configured:
 
 ```c
 #include <cassandra.h>
