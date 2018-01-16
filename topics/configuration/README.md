@@ -273,7 +273,7 @@ request can complete. In multi-datacenter configurations, consistency levels suc
 datacenter network link.  More information about setting the consistency level
 can be found [here](http://docs.datastax.com/en/developer/cpp-driver/latest/topics/basics/consistency/).
 
-[`allow_remote_dcs_for_local_cl`]: http://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassCluster/#1a46b9816129aaa5ab61a1363489dccfd0
+[`allow_remote_dcs_for_local_cl`]: http://docs.datastax.com/en/developer/cpp-driver/latest/api/struct.CassCluster/#function-cass_cluster_set_load_balance_dc_aware
 [`OPTIONS`]: https://github.com/apache/cassandra/blob/cassandra-3.0/doc/native_protocol_v3.spec
 [token-aware]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#latency-aware-routing
 [latency-aware]: http://docs.datastax.com/en/developer/cpp-driver/latest/topics/configuration/#token-aware-routing
