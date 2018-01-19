@@ -27,7 +27,8 @@ namespace cass {
 
 class OpenSslSession : public SslSession {
 public:
-  OpenSslSession(const Host::ConstPtr& host,
+  OpenSslSession(const Address& address,
+                 const String& hostname,
                  int flags,
                  SSL_CTX* ssl_ctx);
   ~OpenSslSession();
@@ -58,8 +59,7 @@ public:
 
   ~OpenSslContext();
 
-  virtual SslSession* create_session(const Host::ConstPtr& host);
-
+  virtual SslSession* create_session(const Address& address, const String& hostname);
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length);
   virtual CassError set_cert(const char* cert, size_t cert_length);
   virtual CassError set_private_key(const char* key,

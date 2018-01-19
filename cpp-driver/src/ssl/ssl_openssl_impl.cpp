@@ -258,18 +258,18 @@ public:
     NO_SAN_PRESENT
   };
 
-  static Result match(X509* cert, const Host::ConstPtr& host) {
-    Result result = match_subject_alt_names_ipadd(cert, host->address());
+  static Result match(X509* cert, const Address& address) {
+    Result result = match_subject_alt_names_ipadd(cert, address);
     if (result == NO_SAN_PRESENT) {
-      result = match_common_name_ipaddr(cert, host->address_string());
+      result = match_common_name_ipaddr(cert, address.to_string());
     }
     return result;
   }
 
-  static Result match_dns(X509* cert, const Host::ConstPtr& host) {
-    Result result = match_subject_alt_names_dns(cert, host->hostname());
+  static Result match_dns(X509* cert, const String& hostname) {
+    Result result = match_subject_alt_names_dns(cert, hostname);
     if (result == NO_SAN_PRESENT) {
-      result = match_common_name_dns(cert, host->hostname());
+      result = match_common_name_dns(cert, hostname);
     }
     return result;
   }
@@ -420,10 +420,11 @@ private:
   }
 };
 
-OpenSslSession::OpenSslSession(const Host::ConstPtr& host,
+OpenSslSession::OpenSslSession(const Address& address,
+                               const String& hostname,
                                int flags,
                                SSL_CTX* ssl_ctx)
-  : SslSession(host, flags)
+  : SslSession(address, hostname, flags)
   , ssl_(SSL_new(ssl_ctx))
   , incoming_state_(&incoming_)
   , outgoing_state_(&outgoing_)
@@ -467,7 +468,7 @@ void OpenSslSession::verify() {
   }
 
   if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY) { // Match using IP addresses
-    switch (OpenSslVerifyIdentity::match(peer_cert, host_)) {
+    switch (OpenSslVerifyIdentity::match(peer_cert, address_)) {
       case OpenSslVerifyIdentity::MATCH:
         // Success
         break;
@@ -485,7 +486,7 @@ void OpenSslSession::verify() {
         return;
     }
   } else if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY_DNS) { // Match using hostnames (including wildcards)
-    switch (OpenSslVerifyIdentity::match_dns(peer_cert, host_)) {
+    switch (OpenSslVerifyIdentity::match_dns(peer_cert, hostname_)) {
       case OpenSslVerifyIdentity::MATCH:
         // Success
         break;
@@ -537,8 +538,8 @@ OpenSslContext::~OpenSslContext() {
   SSL_CTX_free(ssl_ctx_);
 }
 
-SslSession* OpenSslContext::create_session(const Host::ConstPtr& host) {
-  return Memory::allocate<OpenSslSession>(host, verify_flags_, ssl_ctx_);
+SslSession* OpenSslContext::create_session(const Address& address, const String& hostname) {
+  return Memory::allocate<OpenSslSession>(address, hostname, verify_flags_, ssl_ctx_);
 }
 
 CassError OpenSslContext::add_trusted_cert(const char* cert,
