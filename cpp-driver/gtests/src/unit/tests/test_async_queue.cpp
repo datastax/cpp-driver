@@ -17,9 +17,9 @@
 #include <gtest/gtest.h>
 
 #include "async_queue.hpp"
-#include "loop_thread.hpp"
 #include "mpmc_queue.hpp"
 #include "spsc_queue.hpp"
+#include "event_loop.hpp"
 #include "atomic.hpp"
 
 #include <stdio.h>
@@ -28,14 +28,14 @@ const int NUM_ITERATIONS = 1000000;
 const int NUM_ENQUEUE_THREADS = 2;
 
 template <class Queue>
-struct TestAsyncQueue : public cass::LoopThread {
+struct TestAsyncQueue : public cass::EventLoop {
   TestAsyncQueue(size_t queue_size)
     : value_(0)
     , async_queue_(queue_size) {
   }
 
   void init() {
-    ASSERT_EQ(0, cass::LoopThread::init());
+    ASSERT_EQ(0, cass::EventLoop::init());
     ASSERT_EQ(0, async_queue_.init(loop(), this, TestAsyncQueue::async_func));
   }
 
@@ -46,12 +46,8 @@ struct TestAsyncQueue : public cass::LoopThread {
     join();
   }
 
-#if UV_VERSION_MAJOR == 0
-  static void async_func(uv_async_t *handle, int status) {
-#else
-  static void async_func(uv_async_t *handle) {
-#endif
-    TestAsyncQueue* test_queue = static_cast<TestAsyncQueue*>(handle->data);
+  static void async_func(cass::Async* async) {
+    TestAsyncQueue* test_queue = static_cast<TestAsyncQueue*>(async->data());
     int n;
     while (test_queue->async_queue_.dequeue(n)) {
       if (n < 0) {

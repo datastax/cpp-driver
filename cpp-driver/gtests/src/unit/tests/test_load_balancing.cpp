@@ -20,7 +20,6 @@
 #include "constants.hpp"
 #include "dc_aware_policy.hpp"
 #include "latency_aware_policy.hpp"
-#include "loop_thread.hpp"
 #include "murmur3.hpp"
 #include "query_request.hpp"
 #include "random.hpp"
@@ -28,6 +27,7 @@
 #include "scoped_ptr.hpp"
 #include "string.hpp"
 #include "token_aware_policy.hpp"
+#include "event_loop.hpp"
 #include "whitelist_policy.hpp"
 #include "blacklist_policy.hpp"
 #include "whitelist_dc_policy.hpp"
@@ -84,14 +84,14 @@ void verify_sequence(cass::QueryPlan* qp, const cass::Vector<size_t>& sequence) 
   EXPECT_FALSE(qp->compute_next(&received));
 }
 
-struct RunPeriodicTask : public cass::LoopThread {
+struct RunPeriodicTask : public cass::EventLoop {
   RunPeriodicTask(cass::LatencyAwarePolicy* policy)
     : policy(policy) {
     async.data = this;
   }
 
   int init() {
-    int rc = cass::LoopThread::init();
+    int rc = cass::EventLoop::init();
     if (rc != 0) return rc;
     rc = uv_async_init(loop(), &async, on_async);
     if (rc != 0) return rc;
