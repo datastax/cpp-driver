@@ -77,7 +77,7 @@ void DCAwarePolicy::on_add(const Host::Ptr& host) {
   }
 
   if (dc == local_dc_) {
-    local_dc_live_hosts_->push_back(host);
+    add_host(local_dc_live_hosts_, host);
   } else {
     per_remote_dc_live_hosts_.add_host_to_dc(dc, host);
   }

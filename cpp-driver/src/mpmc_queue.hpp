@@ -125,8 +125,8 @@ public:
   }
 
   bool is_empty() const {
-    size_t pos = head_.load(MEMORY_ORDER_ACQUIRE);
-    Node* node = &buffer_[pos & mask_];
+    size_t pos = head_.load(MEMORY_ORDER_RELAXED);
+    const Node* node = &buffer_[pos & mask_];
     size_t node_seq = node->seq.load(MEMORY_ORDER_ACQUIRE);
     return (intptr_t)node_seq - (intptr_t)(pos + 1) < 0;
   }

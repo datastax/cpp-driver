@@ -33,7 +33,6 @@
 namespace cass {
 
 class RequestCallback;
-class RequestMessage;
 
 class CustomPayload : public RefCounted<CustomPayload> {
 public:

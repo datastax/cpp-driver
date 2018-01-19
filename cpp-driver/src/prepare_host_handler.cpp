@@ -71,27 +71,38 @@ void PrepareHostHandler::prepare(Callback callback) {
 
   current_entry_it_ = prepared_metadata_entries_.begin();
 
-  connection_ = Memory::allocate<Connection>(session_->loop(),
-                                             session_->config(),
-                                             session_->metrics(),
-                                             host_,
-                                             "", // No keyspace
-                                             protocol_version_,
-                                             this);
-
   inc_ref(); // Reference for the event loop
 
-  connection_->connect();
-}
+  Connector::Ptr connector(Memory::allocate<Connector>(host_->address(),
+                                                       protocol_version_,
+                                                       this,
+                                                       on_connect));
 
-void PrepareHostHandler::on_ready(Connection* connection) {
-  prepare_next();
+  connector->with_settings(ConnectionSettings(session_->config()))
+           ->with_listener(this)
+           ->connect(session_->loop());
 }
 
 void PrepareHostHandler::on_close(Connection* connection) {
   callback_(this);
 
   dec_ref(); // The event loop is done with this handler
+}
+
+void PrepareHostHandler::on_connect(Connector* connector) {
+  PrepareHostHandler* handler = static_cast<PrepareHostHandler*>(connector->data());
+  handler->handle_connect(connector);
+}
+
+void PrepareHostHandler::handle_connect(Connector* connector) {
+  if (connector->is_ok()) {
+    connection_ = connector->connection().get();
+    prepare_next();
+  } else {
+    callback_(this);
+
+    dec_ref(); // The event loop is done with this handler
+  }
 }
 
 // This is the main loop for preparing statements. It's called after each
@@ -126,8 +137,7 @@ void PrepareHostHandler::prepare_next() {
     prepare_request->set_request_timeout_ms(session_->config().default_profile().request_timeout_ms());
 
     if (!connection_->write(PrepareCallback::Ptr(
-                              Memory::allocate<PrepareCallback>(prepare_request, Ptr(this))),
-                            false)) { // Flush after we write all prepare requests
+                              Memory::allocate<PrepareCallback>(prepare_request, Ptr(this))))) {
       LOG_WARN("Failed to write prepare request while preparing all queries on host %s",
                host_->address_string().c_str());
       close();
@@ -149,8 +159,8 @@ bool PrepareHostHandler::check_and_set_keyspace() {
   const String& keyspace((*current_entry_it_)->keyspace());
 
   if (keyspace != current_keyspace_) {
-    if (!connection_->write(PrepareCallback::Ptr(
-                              Memory::allocate<SetKeyspaceCallback>(keyspace, Ptr(this))))) {
+    if (!connection_->write_and_flush(PrepareCallback::Ptr(
+                                        Memory::allocate<SetKeyspaceCallback>(keyspace, Ptr(this))))) {
       LOG_WARN("Failed to write \"USE\" keyspace request while preparing all queries on host %s",
                host_->address_string().c_str());
       close();

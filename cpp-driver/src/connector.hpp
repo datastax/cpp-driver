@@ -14,76 +14,218 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONNECTOR_HPP_INCLUDED__
-#define __CASS_CONNECTOR_HPP_INCLUDED__
+#include "auth.hpp"
+#include "connection.hpp"
+#include "socket_connector.hpp"
 
-#include <uv.h>
-
-#include "address.hpp"
-#include "memory.hpp"
+#ifndef __CASS_CONNECTION_CONNECTOR_HPP_INCLUDED__
+#define __CASS_CONNECTION_CONNECTOR_HPP_INCLUDED__
 
 namespace cass {
 
-class Connector {
-  friend class Memory;
+class AuthResponseRequest;
+class Config;
+class ResponseMessage;
+class RequestCallback;
+
+/**
+ * Connection settings.
+ */
+struct ConnectionSettings {
+  ConnectionSettings()
+    : connect_timeout_ms(5000)
+    , idle_timeout_secs(60)
+    , heartbeat_interval_secs(30) { }
+
+  /**
+   * Constructor. Initialize connection settings from a config object.
+   *
+   * @param config The config object.
+   */
+  ConnectionSettings(const Config& config);
+
+  SocketSettings socket_settings;
+  uint64_t connect_timeout_ms;
+  AuthProvider::Ptr auth_provider;
+  unsigned int idle_timeout_secs;
+  unsigned int heartbeat_interval_secs;
+};
+
+/**
+ * A connector. This contains all the initialization code to connect a
+ * connection.
+ */
+class Connector : public RefCounted<Connector>, public ConnectionListener {
+  friend class StartupCallback;
 
 public:
+  typedef SharedRefPtr<Connector> Ptr;
+  typedef Vector<Ptr> Vec;
+
   typedef void (*Callback)(Connector*);
 
-  const Address& address() { return address_; }
-  int status() { return status_; }
+  enum ConnectionError {
+    CONNECTION_OK,
+    CONNECTION_CANCELLED,
+    CONNECTION_ERROR_AUTH,
+    CONNECTION_ERROR_CONNECT,
+    CONNECTION_ERROR_CLOSE,
+    CONNECTION_ERROR_INTERNAL,
+    CONNECTION_ERROR_INVALID_OPCODE,
+    CONNECTION_ERROR_INVALID_PROTOCOL,
+    CONNECTION_ERROR_KEYSPACE,
+    CONNECTION_ERROR_RESPONSE,
+    CONNECTION_ERROR_SSL_HANDSHAKE,
+    CONNECTION_ERROR_SSL_VERIFY,
+    CONNECTION_ERROR_SOCKET,
+    CONNECTION_ERROR_TIMEOUT
+  };
+
+public:
+  /**
+   * Constructor
+   *
+   * @param address The address to connect to.
+   * @param protocol_version The protocol version to use for the connection.
+   * @param data User data that is available from the callback.
+   * @param callback A callback that is called when the connection is connected or
+   * if an error occurred.
+   */
+  Connector(const Address& address,
+            int protocol_version,
+            void* data,
+            Callback callback);
+
+  /**
+   * Set the keyspace to connect with. Calls "USE <keyspace>" after
+   * the connection is connected and protocol handshake is completed.
+   *
+   * @param keyspace A keyspace to register after connection.
+   * @return The connector to chain calls.
+   */
+  Connector* with_keyspace(const String& keyspace);
+
+  /**
+   * Set the event types to register for during the protocol handshake.
+   *
+   * @param event_types A bit set of event types to register.
+   * @return The connector to chain calls.
+   */
+  Connector* with_event_types(int event_types);
+
+  /**
+   * Set the connection listener to use after the connection is connected.
+   *
+   * @param listener A listener that handles connection events.
+   * @return The connector to chain calls.
+   */
+  Connector* with_listener(ConnectionListener* listener);
+
+  /**
+   * Set the metrics object to use to record metrics.
+   *
+   * @param metrics A metrics object.
+   * @return The connector to chain calls.
+   */
+  Connector* with_metrics(Metrics* metrics);
+
+  /**
+   * Set the connection and socket settings.
+   *
+   * @param The settings to use for connecting the connection.
+   * @return The connector to chain calls.
+   */
+  Connector* with_settings(const ConnectionSettings& settings);
+
+  /**
+   * Connect the connection.
+   *
+   * @param loop An event loop to use for connecting the connection.
+   */
+  void connect(uv_loop_t* loop);
+
+  /**
+   * Cancel the connection process.
+   */
+  void cancel();
+
+public:
   void* data() { return data_; }
+  const Connection::Ptr& connection() { return connection_; }
+  uv_loop_t* loop() { return loop_; }
 
-  static void connect(uv_tcp_t* handle, const Address& address, void* data,
-                      Callback cb) {
-    Connector* connector = Memory::allocate<Connector>(address, data, cb);
+  const Address& address() const { return socket_connector_->address(); }
 
-    int rc = 0;
 
-#if UV_VERSION_MAJOR == 0
-    if (address.family() == AF_INET) {
-      rc = uv_tcp_connect(&connector->req_, handle, *address.addr_in(),
-                          on_connect);
-    } else {
-      rc = uv_tcp_connect6(&connector->req_, handle, *address.addr_in6(),
-                           on_connect);
-    }
-#else
-    rc = uv_tcp_connect(&connector->req_, handle, address.addr(),
-                        on_connect);
-#endif
-
-    if (rc != 0) {
-      connector->status_ = -1;
-      connector->cb_(connector);
-      Memory::deallocate(connector);
-    }
+  bool is_ok() const {
+    return error_code_ == CONNECTION_OK;
   }
+  bool is_cancelled() const {
+    return error_code_ == CONNECTION_CANCELLED;
+  }
+  bool is_invalid_protocol() const {
+    return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL;
+  }
+  bool is_auth_error() const {
+    return error_code_ == CONNECTION_ERROR_AUTH;
+  }
+  bool is_ssl_error() const {
+    return error_code_ == CONNECTION_ERROR_SSL_HANDSHAKE ||
+        error_code_ == CONNECTION_ERROR_SSL_VERIFY;
+  }
+  bool is_timeout_error() const {
+    return error_code_ == CONNECTION_ERROR_TIMEOUT;
+  }
+  bool is_keyspace_error() const {
+    return error_code_ == CONNECTION_ERROR_KEYSPACE;
+  }
+
+  ConnectionError error_code() { return error_code_; }
+  const String& error_message() { return error_message_; }
+
+  SocketConnector::SocketError socket_error_code() { return socket_connector_->error_code(); }
+  const String& socket_error_message() { return socket_connector_->error_message(); }
 
 private:
-  static void on_connect(uv_connect_t* req, int status) {
-    Connector* connector = static_cast<Connector*>(req->data);
-    connector->status_ = status;
-    connector->cb_(connector);
-    Memory::deallocate(connector);
-  }
+  void finish();
+
+  void on_error(ConnectionError code, const String& message); void on_ready_or_set_keyspace();
+  void on_ready_or_register_for_events();
+  void on_supported(ResponseMessage* response);
+
+  void send_credentials(const String& class_name);
+  void send_initial_auth_response(const String& class_name);
+
+  void on_authenticate(const String& class_name);
+  void on_auth_challenge(const AuthResponseRequest* request, const String& token);
+  void on_auth_success(const AuthResponseRequest* request, const String& token);
+
+  virtual void on_close(Connection* connection);
+
+  static void on_connect(SocketConnector* socket_connector);
+  void handle_connect(SocketConnector* socket_connector);
+
+  static void on_timeout(Timer* timer);
+  void handle_timeout(Timer* timer);
 
 private:
-  Connector(const Address& address, void* data, Callback cb)
-      : address_(address)
-      , data_(data)
-      , cb_(cb)
-      , status_(-1) {
-    req_.data = this;
-  }
-
-  ~Connector() {}
-
-  uv_connect_t req_;
-  Address address_;
   void* data_;
-  Callback cb_;
-  int status_;
+  Callback callback_;
+  uv_loop_t* loop_;
+
+  Connection::Ptr connection_;
+  SocketConnector::Ptr socket_connector_;
+  Timer timer_;
+
+  ConnectionError error_code_;
+  String error_message_;
+
+  int protocol_version_;
+  String keyspace_;
+  int event_types_;
+  ConnectionListener* listener_;
+  Metrics* metrics_;
+  ConnectionSettings settings_;
 };
 
 } // namespace cass

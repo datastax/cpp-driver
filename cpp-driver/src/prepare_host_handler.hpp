@@ -25,13 +25,14 @@
 
 namespace cass {
 
+class Connector;
 class Session;
 
 /**
  * A handler for pre-preparing statements on a newly available host.
  */
 class PrepareHostHandler : public RefCounted<PrepareHostHandler>
-                         , public Connection::Listener {
+                         , public ConnectionListener {
 public:
   typedef void (*Callback)(const PrepareHostHandler*);
 
@@ -47,13 +48,10 @@ public:
   void prepare(Callback callback);
 
 private:
-  virtual void on_ready(Connection* connection);
-
   virtual void on_close(Connection* connection);
 
-  virtual void on_availability_change(Connection* connection) { }
-
-  virtual void on_event(const EventResponse* response) { }
+  static void on_connect(Connector* connector);
+  void handle_connect(Connector* connector);
 
 private:
   /**

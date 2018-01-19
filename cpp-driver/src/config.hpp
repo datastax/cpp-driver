@@ -50,6 +50,7 @@ public:
       , max_concurrent_requests_threshold_(100)
       , connect_timeout_ms_(5000)
       , resolve_timeout_ms_(2000)
+      , max_schema_wait_time_ms_(10000)
       , log_level_(CASS_LOG_WARN)
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
@@ -165,6 +166,12 @@ public:
     connect_timeout_ms_ = timeout_ms;
   }
 
+  unsigned max_schema_wait_time_ms() const { return max_schema_wait_time_ms_; }
+
+  void set_max_schema_wait_time_ms(unsigned time_ms) {
+    max_schema_wait_time_ms_ = time_ms;
+  }
+
   void set_request_timeout(unsigned timeout_ms) {
     default_profile_.set_request_timeout(timeout_ms);
   }
@@ -245,7 +252,7 @@ public:
     speculative_execution_policy_.reset(sep);
   }
 
-  SslContext* ssl_context() const { return ssl_context_.get(); }
+  const SslContext::Ptr& ssl_context() const { return ssl_context_; }
 
   void set_ssl_context(SslContext* ssl_context) {
     ssl_context_.reset(ssl_context);
@@ -395,6 +402,7 @@ private:
   unsigned max_concurrent_requests_threshold_;
   unsigned connect_timeout_ms_;
   unsigned resolve_timeout_ms_;
+  unsigned max_schema_wait_time_ms_;
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;

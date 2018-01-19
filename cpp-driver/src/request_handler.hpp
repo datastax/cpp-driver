@@ -40,7 +40,7 @@ namespace cass {
 
 class Config;
 class Connection;
-class IOWorker;
+class ConnectionPoolManager;
 class Pool;
 class ExecutionProfile;
 class Timer;
@@ -127,16 +127,8 @@ private:
 };
 
 class RequestExecution;
+class RequestListener;
 class PreparedMetadata;
-
-class RequestListener {
-public:
-  virtual void on_result_metadata_changed(const String& prepared_id,
-                                          const String& query,
-                                          const String& keyspace,
-                                          const String& result_metadata_id,
-                                          const ResultResponse::ConstPtr& result_response) = 0;
-};
 
 class RequestHandler : public RefCounted<RequestHandler> {
   friend class Memory;
@@ -144,43 +136,56 @@ class RequestHandler : public RefCounted<RequestHandler> {
 public:
   typedef SharedRefPtr<RequestHandler> Ptr;
 
+  // TODO: Remove default parameters where possible
   RequestHandler(const Request::ConstPtr& request,
                  const ResponseFuture::Ptr& future,
-                 RequestListener* listener = NULL)
-    : wrapper_(request)
-    , future_(future)
-    , io_worker_(NULL)
-    , running_executions_(0)
-    , start_time_ns_(uv_hrtime())
-    , listener_(listener) { }
+                 ConnectionPoolManager* manager = NULL,
+                 Metrics* metrics = NULL,
+                 RequestListener* listener = NULL,
+                 const Address* preferred_address = NULL);
+  ~RequestHandler();
 
   void init(const Config& config, const ExecutionProfile& profile,
             const String& connected_keyspace, const TokenMap* token_map,
             const PreparedMetadata& prepared_metdata);
 
+  void execute();
+
   const RequestWrapper& wrapper() const { return wrapper_; }
-
   const Request* request() const { return wrapper_.request().get(); }
-
   CassConsistency consistency() const { return wrapper_.consistency(); }
+  const Address& preferred_address() const { return preferred_address_; }
 
-  const Address& preferred_address() const {
-    return preferred_address_;
-  }
+public:
+  class Protected {
+    friend class RequestExecution;
+    Protected() {}
+    Protected(Protected const&) {}
+  };
 
-  void set_preferred_address(const Address& preferred_address) {
-    preferred_address_ = preferred_address;
-  }
+  void retry(RequestExecution* request_execution, Protected);
 
-  const Host::Ptr& current_host() const { return current_host_; }
-  const Host::Ptr& next_host() {
-    current_host_ = query_plan_->compute_next();
-    return current_host_;
-  }
+  Host::Ptr next_host(Protected);
+  int64_t next_execution(const Host::Ptr& current_host, Protected);
 
-  IOWorker* io_worker() { return io_worker_; }
+  void start_request(uv_loop_t* loop, Protected);
 
-  void start_request(IOWorker* io_worker);
+  void add_execution(RequestExecution* request_execution, Protected);
+  void add_attempted_address(const Address& address, Protected);
+
+  void notify_result_metadata_changed(const String& prepared_id,
+                                      const String& query,
+                                      const String& keyspace,
+                                      const String& result_metadata_id,
+                                      const ResultResponse::ConstPtr& result_response, Protected);
+
+  void notify_keyspace_changed(const String& keyspace);
+
+  bool wait_for_schema_agreement(const Host::Ptr& current_host,
+                                 const Response::Ptr& response);
+
+  bool prepare_all(const Host::Ptr& current_host,
+                   const Response::Ptr& response);
 
   void set_response(const Host::Ptr& host,
                     const Response::Ptr& response);
@@ -195,77 +200,82 @@ private:
   static void on_timeout(Timer* timer);
 
 private:
-  friend class RequestExecution;
-
-  void add_execution(RequestExecution* request_execution);
-  void add_attempted_address(const Address& address);
-  void schedule_next_execution(const Host::Ptr& current_host);
-
-  // This MUST only be called once and that's currently guaranteed by the
-  // response future.
   void stop_request();
+  void internal_retry(RequestExecution* request_execution);
 
 private:
-  typedef SmallVector<RequestExecution*, 4> RequestExecutionVec;
-
   RequestWrapper wrapper_;
   SharedRefPtr<ResponseFuture> future_;
+
+  Atomic<bool> is_cancelled_;
+  Atomic<int> running_executions_;
+
+  uv_mutex_t lock_;
   ScopedPtr<QueryPlan> query_plan_;
   ScopedPtr<SpeculativeExecutionPlan> execution_plan_;
-  Host::Ptr current_host_;
-  IOWorker* io_worker_;
   Timer timer_;
-  int running_executions_;
-  RequestExecutionVec request_executions_;
-  uint64_t start_time_ns_;
-  Address preferred_address_;
-  ResultMetadata::Ptr prepared_result_metadata_;
-  RequestListener* listener_;
+  bool is_timer_started_;
+  uv_thread_t timer_thread_id_;
+
+  const uint64_t start_time_ns_;
+  Metrics* const metrics_;
+  RequestListener* const listener_;
+  ConnectionPoolManager* const manager_;
+  const Address preferred_address_;
+};
+
+class RequestListener {
+public:
+  virtual void on_result_metadata_changed(const String& prepared_id,
+                                          const String& query,
+                                          const String& keyspace,
+                                          const String& result_metadata_id,
+                                          const ResultResponse::ConstPtr& result_response) = 0;
+
+  virtual void on_keyspace_changed(const String& keyspace) = 0;
+
+  virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
+                                            const Host::Ptr& current_host,
+                                            const Response::Ptr& response) = 0;
+
+  virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
+                              const Host::Ptr& current_host,
+                              const Response::Ptr& response) = 0;
 };
 
 class RequestExecution : public RequestCallback {
 public:
   typedef SharedRefPtr<RequestExecution> Ptr;
 
-  RequestExecution(const RequestHandler::Ptr& request_handler,
-                   const Host::Ptr& current_host = Host::Ptr());
+  RequestExecution(RequestHandler* request_handler);
 
   const Host::Ptr& current_host() const { return current_host_; }
-  void next_host() { current_host_ = request_handler_->next_host(); }
+  void next_host() {
+    current_host_ = request_handler_->next_host(RequestHandler::Protected());
+  }
 
-  void execute();
-  void schedule_next(int64_t timeout = 0);
-  void cancel();
-
-  void on_result_metadata_changed(const Request *request,
-                                  ResultResponse* result_response);
-
-  virtual void on_error(CassError code, const String& message);
+  void notify_result_metadata_changed(const Request *request,
+                                      ResultResponse* result_response);
 
   virtual void on_retry_current_host();
   virtual void on_retry_next_host();
 
 private:
+  static void on_execute_next(Timer* timer);
+
   void retry_current_host();
   void retry_next_host();
 
-private:
-  static void on_execute(Timer* timer);
-
-  virtual void on_start();
+  virtual void on_write(Connection* connection);
 
   virtual void on_set(ResponseMessage* response);
-  virtual void on_cancel(ResponseMessage *response);
+  virtual void on_error(CassError code, const String& message);
 
   void on_result_response(Connection* connection, ResponseMessage* response);
   void on_error_response(Connection* connection, ResponseMessage* response);
   void on_error_unprepared(Connection* connection, ErrorResponse* error);
 
 private:
-  friend class SchemaChangeCallback;
-
-  bool is_host_up(const Address& address) const;
-
   void set_response(const Response::Ptr& response);
   void set_error(CassError code, const String& message);
   void set_error_with_error_response(const Response::Ptr& error,
@@ -277,7 +287,7 @@ private:
   Connection* connection_;
   Timer schedule_timer_;
   int num_retries_;
-  uint64_t start_time_ns_;
+  const uint64_t start_time_ns_;
 };
 
 } // namespace cass
