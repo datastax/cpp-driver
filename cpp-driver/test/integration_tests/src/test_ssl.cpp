@@ -153,7 +153,7 @@ struct TestSSL {
     if (!is_failure) {
       test_utils::wait_and_check_error(connect_future_);
     } else {
-      BOOST_REQUIRE(!cass_future_wait_timed(connect_future_, 2000)); //Ensure the wait is long enough for slow machines
+      BOOST_REQUIRE(cass_future_wait_timed(connect_future_, 2000000)); //Ensure the wait is long enough for slow machines
     }
   }
 

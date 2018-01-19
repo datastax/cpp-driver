@@ -92,7 +92,7 @@ SslContext::Ptr SslContextFactoryBase<T>::create() {
 
 template<class T>
 void SslContextFactoryBase<T>::init() {
-  uv_once(&ssl_init_guard, T::init);
+  uv_once(&ssl_init_guard, T::internal_init);
 }
 
 

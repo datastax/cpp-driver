@@ -44,10 +44,10 @@ public:
                                     size_t password_length);
 };
 
-class NoSslContextFactory : SslContextFactoryBase<NoSslContextFactory> {
+class NoSslContextFactory : public SslContextFactoryBase<NoSslContextFactory> {
 public:
   static SslContext::Ptr create();
-  static void init() {}
+  static void internal_init() { }
 };
 
 typedef SslContextFactoryBase<NoSslContextFactory> SslContextFactory;

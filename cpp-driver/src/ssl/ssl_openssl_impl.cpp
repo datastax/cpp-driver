@@ -625,7 +625,7 @@ namespace openssl {
 
 
 
-void OpenSslContextFactory::init() {
+void OpenSslContextFactory::internal_init() {
   CRYPTO_set_mem_functions(openssl::malloc, openssl::realloc, openssl::free);
 
   SSL_library_init();

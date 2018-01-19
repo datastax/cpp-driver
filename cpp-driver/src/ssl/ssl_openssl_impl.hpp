@@ -72,10 +72,10 @@ private:
   X509_STORE* trusted_store_;
 };
 
-class OpenSslContextFactory : SslContextFactoryBase<OpenSslContextFactory> {
+class OpenSslContextFactory : public SslContextFactoryBase<OpenSslContextFactory> {
 public:
   static SslContext::Ptr create();
-  static void init();
+  static void internal_init();
 };
 
 typedef SslContextFactoryBase<OpenSslContextFactory> SslContextFactory;
