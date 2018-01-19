@@ -242,7 +242,7 @@ public:
   typedef SharedRefPtr<SessionFuture> Ptr;
 
   SessionFuture()
-      : Future(CASS_FUTURE_TYPE_SESSION) {}
+    : Future(FUTURE_TYPE_SESSION) {}
 };
 
 } // namespace cass

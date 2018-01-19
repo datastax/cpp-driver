@@ -31,7 +31,7 @@
 namespace cass {
 
 String get_host_from_future(CassFuture* future) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
     return "";
   }
   cass::ResponseFuture* response_future =
