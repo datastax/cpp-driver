@@ -22,7 +22,7 @@
 #include "cass_version.hpp"
 #include "deployment_type.hpp"
 #include "dse_credentials_type.hpp"
-#include "socket.hpp"
+#include "tsocket.hpp"
 
 #include <map>
 #include <string>

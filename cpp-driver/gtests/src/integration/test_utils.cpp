@@ -17,7 +17,7 @@
 #include "test_utils.hpp"
 
 #include "exception.hpp"
-#include "socket.hpp"
+#include "tsocket.hpp"
 
 #include <uv.h>
 
