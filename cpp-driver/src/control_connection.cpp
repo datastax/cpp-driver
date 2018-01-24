@@ -81,6 +81,9 @@ private:
   size_t count_;
 };
 
+/**
+ * A request callback for handle query requests for the control connection.
+ */
 class ControlRequestCallback : public SimpleRequestCallback {
 public:
   typedef SharedRefPtr<ControlRequestCallback> Ptr;
@@ -146,6 +149,12 @@ void ControlRequestCallback::on_internal_timeout() {
   control_connection_->handle_query_timeout();
 }
 
+/**
+ * A request callback for handling multiple control connection queries as a
+ * single request. This is useful for processing multiple schema queries as a
+ * single request. For example, table refreshes require schema data from the
+ * table, columns, index, and materialized view schema tables.
+ */
 class ChainedControlRequestCallback : public ChainedRequestCallback {
 public:
   typedef SharedRefPtr<ChainedControlRequestCallback> Ptr;

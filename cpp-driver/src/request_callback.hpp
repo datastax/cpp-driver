@@ -258,24 +258,103 @@ private:
   Timer timer_;
 };
 
+/**
+ * A request callback that chains multiple requests together as a single
+ * request.
+ */
 class ChainedRequestCallback : public SimpleRequestCallback {
 public:
   typedef SharedRefPtr<ChainedRequestCallback> Ptr;
   typedef DenseHashMap<String, Response::Ptr> Map;
 
+  /**
+   * Constructor for a simple query.
+   *
+   * @param key A key to map the response to the query.
+   * @param query The actual query to run.
+   * @param chain A request that's chained to this request. Don't use directly
+   * instead use the chain() method.
+   */
   ChainedRequestCallback(const String& key, const String& query, const Ptr& chain = Ptr());
+
+  /**
+   * Constructor for any type of request.
+   *
+   * @param key A key to map the response to the request.
+   * @param request The actual request to run.
+   * @param chain A request that's chained to this request. Don't use directly
+   * instead use the chain() method.
+   */
   ChainedRequestCallback(const String& key, const Request::ConstPtr& request, const Ptr& chain = Ptr());
 
+  /**
+   * Add a chained query to this request callback.
+   *
+   * Note: The last request in the chain must be executed for all prior chained
+   * requests to execute properly.
+   *
+   * @param key A key to map the response to the query.
+   * @param query The actual query to chain.
+   * @return Returns the new chained request callback so that another request
+   * can be chained. e.g. callback->chain(...)->chain(...)
+   */
   ChainedRequestCallback::Ptr chain(const String& key, const String& query);
+
+  /**
+   * Add a chained request to this request callback.
+   *
+   * Note: The last request in the chain must be executed for all prior chained
+   * requests to execute properly.
+   *
+   * @param key A key to map the response to the request.
+   * @param request The actual request to run.
+   * @return Returns the new chained request callback so that another request
+   * can be chained. e.g. callback->chain(...)->chain(...)
+   */
   ChainedRequestCallback::Ptr chain(const String& key, const Request::ConstPtr& request);
 
+  /**
+   * The responses for the chained callbacks.
+   *
+   * @return A map of the responses by key.
+   */
   const Map& responses() const { return responses_; }
+
+  /**
+   * Get the result response for a key.
+   *
+   * @param The key the query/request was created with.
+   * @return  The result response for the chained request, null if not a
+   * result response or if the key doesn't exist.
+   */
   ResultResponse::Ptr result(const String& key) const;
 
 protected:
+  /**
+   * A callback for when the chained request is written to a connection.
+   *
+   * @param connection The connection the callback was written to.
+   */
   virtual void on_chain_write(Connection* connection) { }
+
+  /**
+   * A callback for when all responses have been received.
+   */
   virtual void on_chain_set() { }
+
+  /**
+   * A callback for when an error occurs. A single error causes the whole
+   * chain to fail.
+   *
+   * @param code The error code.
+   * @param message The error message.
+   */
   virtual void on_chain_error(CassError code, const String& message) { }
+
+  /**
+   * A callback for a request timeout. A single timeout causes the whole
+   * chain to fail.
+   */
   virtual void on_chain_timeout() { }
 
 private:

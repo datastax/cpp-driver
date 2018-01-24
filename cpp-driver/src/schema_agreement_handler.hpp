@@ -27,21 +27,48 @@
 
 namespace cass {
 
+/**
+ * A listener that used for determining if a host is up.
+ */
 class SchemaAgreementListener {
 public:
+  /**
+   * A callback for determining if a host is up.
+   *
+   * @param address A host address.
+   * @return Returns true if the host is up.
+   */
   virtual bool on_is_host_up(const Address& address) = 0;
 };
 
+/**
+ * A handler that waits for schema agreement after schema changes. It waits for
+ * schema to propagate to all nodes then it sets the future of the request that
+ * originally made the schema change.
+ */
 class SchemaAgreementHandler : public RefCounted<SchemaAgreementHandler> {
 public:
   typedef SharedRefPtr<SchemaAgreementHandler> Ptr;
 
+  /**
+   * Constructor.
+   *
+   * @param request_handler The request handler for the schema change.
+   * @param current_host The host that processed the schema change.
+   * @param response The original response for the schema change.
+   * @param listener A listener for determining host liveness.
+   */
   SchemaAgreementHandler(const RequestHandler::Ptr& request_handler,
                          const Host::Ptr& current_host,
                          const Response::Ptr& response,
                          SchemaAgreementListener* listener,
                          uint64_t max_schema_wait_time_ms);
 
+  /**
+   * Gets a request callback for executing queries on behalf of the handler.
+   *
+   * @return Returns a chain of queries to execute.
+   */
   ChainedRequestCallback::Ptr callback();
 
 private:
@@ -62,7 +89,7 @@ private:
   Timer timer_;
   Timer retry_timer_;
   bool is_finished_;
-  Connection::Ptr connection_; // The conneciton could close so keep a reference
+  Connection::Ptr connection_; // The connection could close so keep a reference
   const uint64_t start_time_ms_;
   const uint64_t max_schema_wait_time_ms_;
   SchemaAgreementListener* const listener_;

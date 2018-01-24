@@ -29,6 +29,10 @@
 
 namespace cass {
 
+/**
+ * A request callback for executing multiple queries together for the schema
+ * agreement handler.
+ */
 class SchemaAgreementCallback : public ChainedRequestCallback {
 public:
   SchemaAgreementCallback(const String& key, const String& query,
