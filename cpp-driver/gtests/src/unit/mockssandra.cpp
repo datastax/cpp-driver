@@ -19,14 +19,12 @@ String Ssl::generate_key() {
   EVP_PKEY_keygen(pctx, &pkey);
 
   String result;
-  { // Write key into string
-    BIO* bio = BIO_new(BIO_s_mem());
-    PEM_write_bio_PrivateKey(bio, pkey, NULL, NULL, 0, NULL, NULL);
-    BUF_MEM* mem = NULL;
-    BIO_get_mem_ptr(bio, &mem);
-    result.append(mem->data, mem->length);
-    BIO_free(bio);
-  }
+  BIO* bio = BIO_new(BIO_s_mem());
+  PEM_write_bio_PrivateKey(bio, pkey, NULL, NULL, 0, NULL, NULL);
+  BUF_MEM* mem = NULL;
+  BIO_get_mem_ptr(bio, &mem);
+  result.append(mem->data, mem->length);
+  BIO_free(bio);
 
   EVP_PKEY_free(pkey);
 
@@ -582,7 +580,7 @@ inline const char* decode_int16(const char* input, const char* end, int16_t* val
 }
 
 inline const char* decode_uint16(const char* input, const char* end, uint16_t* value) {
-  CHECK(input + 2, "Unable to decode signed unsigned short");
+  CHECK(input + 2, "Unable to decode unsigned short");
   *value = (static_cast<uint16_t>(static_cast<uint8_t>(input[1])) << 0) |
       (static_cast<uint16_t>(static_cast<uint8_t>(input[0])) << 8);
   return input + sizeof(uint16_t);
@@ -645,7 +643,7 @@ inline const char* decode_string_map(const char* input,
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   output->reserve(len);
-  for (int i = 0; i < len; i++) {
+  for (int i = 0; i < len; ++i) {
     String key;
     String value;
     pos = decode_string(pos, end, &key);
@@ -661,7 +659,7 @@ inline const char* decode_stringlist(const char* input,
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   output->reserve(len);
-  for (int i = 0; i < len; i++) {
+  for (int i = 0; i < len; ++i) {
     String value;
     pos = decode_string(pos, end, &value);
     output->push_back(value);
@@ -675,7 +673,7 @@ inline const char* decode_values(const char* input,
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   output->reserve(len);
-  for (int i = 0; i < len; i++) {
+  for (int i = 0; i < len; ++i) {
     String value;
     pos = decode_bytes(pos, end, &value);
     output->push_back(value);
@@ -691,7 +689,7 @@ inline const char* decode_values_with_names(const char* input,
   const char* pos = decode_uint16(input, end, &len);
   names->reserve(len);
   values->reserve(len);
-  for (int i = 0; i < len; i++) {
+  for (int i = 0; i < len; ++i) {
     String name;
     pos = decode_string(pos, end, &name);
     names->push_back(name);
@@ -909,11 +907,11 @@ Action::Builder& Action::Builder::no_result() {
   return execute(Memory::allocate<NoResult>());
 }
 
-Action::Builder&Action::Builder::use_keyspace(const cass::String& keyspace) {
+Action::Builder& Action::Builder::use_keyspace(const cass::String& keyspace) {
   return execute((Memory::allocate<UseKeyspace>(keyspace)));
 }
 
-Action::Builder&Action::Builder::plaintext_auth(const cass::String& username,
+Action::Builder& Action::Builder::plaintext_auth(const cass::String& username,
                                                 const cass::String& password) {
   return execute((Memory::allocate<PlaintextAuth>(username, password)));
 }
@@ -939,10 +937,8 @@ Action::Builder& Action::Builder::validate_query() {
 }
 
 const Action* Action::Builder::build() {
-  if (action_) {
-    if (builder_) {
-      action_->next = builder_->build();
-    }
+  if (action_ && builder_) {
+    action_->next = builder_->build();
   }
   return action_.release();
 }
@@ -1245,8 +1241,10 @@ void ProtocolHandler::decode(ClientConnection* client, const char* data, int32_t
     if (static_cast<size_t>(result) == buffer_.size()) {
       buffer_.clear();
     } else {
-      // Not efficient, but concise
-      std::rotate(buffer_.begin(), buffer_.begin() + result, buffer_.end());
+      // Not efficient, but concise. Copy the consumed part of the buffer
+      // forward then resize the buffer to what's left over.
+      std::copy(buffer_.begin(), buffer_.begin() + result, buffer_.end());
+      buffer.resize(buffer_.size() - result);
     }
   }
 }
@@ -1259,14 +1257,11 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
   while (remaining > 0) {
     switch (state_) {
       case PROTOCOL_VERSION:
-        if (len >= 1) {
-          version_ = *pos++;
-          if (version_ < 1 || version_ > 5) {
-            request_handler_->invalid_protocol(Memory::allocate<Request>(version_, flags_, stream_, opcode_, String(), client));
-            return -1;
-          }
-          remaining--;
-        } else {
+        // Version requires a single byte and that's guaranteed by the loop check.
+        version_ = *pos++;
+        remaining--;
+        if (version_ < 1 || version_ > 5) {
+          request_handler_->invalid_protocol(Memory::allocate<Request>(version_, flags_, stream_, opcode_, String(), client));
           return len - remaining;
         }
         state_ = HEADER;
@@ -1305,7 +1300,7 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
     }
   }
 
-  return len;
+  return len; // All bytes have been consumed
 }
 
 void ProtocolHandler::decode_body(ClientConnection* client, const char* body, int32_t len) {
