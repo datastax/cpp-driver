@@ -42,24 +42,30 @@ template<class From, class To>
 #if _MSC_VER && !__INTEL_COMPILER
 class IsConvertible : public std::is_convertible<From, To> { };
 #else
+// From Boost's GNU implementation
 class IsConvertible {
-  private:
-    typedef char Yes;
-    typedef struct { char not_used[2]; } No;
+private:
+  typedef char Yes;
+  typedef struct { char not_used[2]; } No;
+  static From& from;
 
-    struct Helper {
-      static Yes test(To);
-      static No test(...);
-      static From& check();
-    };
+  struct Any {
+    template <class T> Any(T&);
+    template <class T> Any(const T&);
+    template <class T> Any(volatile T&);
+    template <class T> Any(const volatile T&);
+  };
 
-  public:
-    static const bool value;
+  struct Helper {
+    static Yes test(To, int);
+    static No test(Any ...);
+  };
+
+public:
+  enum {
+    value = sizeof(Helper::test(from, 0)) == sizeof(Yes)
+  };
 };
-
-template<class From, class To>
-const bool IsConvertible<From, To>::value
-  = sizeof(IsConvertible<From, To>::Helper::test(IsConvertible<From, To>::Helper::check())) == sizeof(typename IsConvertible<From, To>::Yes);
 #endif
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated

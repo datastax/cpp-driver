@@ -130,15 +130,10 @@ private:
 #endif
 
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
-
 #if UV_VERSION_MAJOR == 0
-  static void on_prepare(uv_prepare_t *prepare, int status) {
-     consume_blocked_sigpipe();
-  }
+  static void on_prepare(uv_prepare_t *prepare, int status);
 #else
-  static void on_prepare(uv_prepare_t *prepare) {
-    consume_blocked_sigpipe();
-  }
+  static void on_prepare(uv_prepare_t *prepare);
 #endif
 
   uv_prepare_t prepare_;

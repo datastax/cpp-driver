@@ -191,7 +191,7 @@ private:
  */
 class SocketWriteBase : public List<SocketWriteBase>::Node {
 public:
-  typedef List<SocketWriteBase> List;
+  typedef cass::List<SocketWriteBase> List;
 
   /**
    * Constructor

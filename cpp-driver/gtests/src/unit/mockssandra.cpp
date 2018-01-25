@@ -612,7 +612,6 @@ inline const char* decode_string(const char* input, const char* end, String* out
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   CHECK(pos + len, "Unable to decode string");
-  assert(len >= 0);
   output->assign(pos, len);
   return pos + len;
 }
@@ -1244,7 +1243,7 @@ void ProtocolHandler::decode(ClientConnection* client, const char* data, int32_t
       // Not efficient, but concise. Copy the consumed part of the buffer
       // forward then resize the buffer to what's left over.
       std::copy(buffer_.begin(), buffer_.begin() + result, buffer_.end());
-      buffer.resize(buffer_.size() - result);
+      buffer_.resize(buffer_.size() - result);
     }
   }
 }

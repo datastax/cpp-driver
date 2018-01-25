@@ -196,9 +196,9 @@ void SocketConnector::handle_connect(TcpConnector* tcp_connector) {
               address_.to_string().c_str(),
               static_cast<void*>(this));
 
+#if defined(HAVE_NOSIGPIPE) && UV_VERSION_MAJOR >= 1
     uv_tcp_t* tcp = &socket_->tcp_;
 
-#if defined(HAVE_NOSIGPIPE) && UV_VERSION_MAJOR >= 1
     // This must be done after socket for the socket file descriptor to be
     // valid.
     uv_os_fd_t fd = 0;

@@ -170,6 +170,16 @@ void EventLoop::handle_task() {
   }
 }
 
+#if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
+#if UV_VERSION_MAJOR == 0
+void EventLoop::on_prepare(uv_prepare_t *prepare, int status) {
+#else
+void EventLoop::on_prepare(uv_prepare_t* prepare) {
+#endif
+  consume_blocked_sigpipe();
+}
+#endif
+
 int RoundRobinEventLoopGroup::init() {
   for (size_t i = 0; i < threads_.size(); ++i) {
     int rc = threads_[i].init();
