@@ -23,7 +23,7 @@
 #if !defined(CASS_STATIC)
 #  if (defined(WIN32) || defined(_WIN32))
 #    if defined(CASS_BUILDING)
-#      define CASS_EXPORT __declspec(dllimport)
+#      define CASS_EXPORT __declspec(dllexport)
 #    else
 #      define CASS_EXPORT __declspec(dllimport)
 #    endif

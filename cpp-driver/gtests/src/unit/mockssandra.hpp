@@ -1,11 +1,11 @@
 #ifndef MOCKSSANDRA_HPP
 #define MOCKSSANDRA_HPP
 
+#include <uv.h>
+
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
-
-#include <uv.h>
 
 #include <stdint.h>
 
@@ -18,6 +18,12 @@
 #include "ref_counted.hpp"
 #include "list.hpp"
 #include "scoped_ptr.hpp"
+
+#if defined(WIN32) || defined(_WIN32)
+#undef ERROR_ALREADY_EXISTS
+#undef ERROR
+#undef X509_NAME
+#endif
 
 using cass::Address;
 using cass::EventLoop;
