@@ -16,7 +16,10 @@
 
 #ifndef __TEST_BLOB_HPP__
 #define __TEST_BLOB_HPP__
+
 #include "nullable_value.hpp"
+
+#include <cstring>
 
 namespace test {
 namespace driver {
