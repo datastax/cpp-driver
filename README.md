@@ -15,8 +15,7 @@ __Note__: DataStax products do not support big-endian systems.
 ## Getting the Driver
 
 Binary versions of the driver, available for multiple operating systems and
-multiple architectures, can be obtained from our [download server]. The
-source code is made available via [GitHub].
+multiple architectures, can be obtained from our [download server].
 
 ## Features
 
@@ -42,21 +41,21 @@ source code is made available via [GitHub].
 * [Features]
 * [Building and Testing]
 * [Migration]
- 
+
 ## Getting Help
- 
+
 * JIRA: https://datastax-oss.atlassian.net/browse/CPP (Assign "Component/s" field set to "DSE")
 * Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 * DataStax Academy via Slack: https://academy.datastax.com/slack
- 
+
 ## Feedback Requested
- 
+
 **Help us focus our efforts!** [Provide your input] on the DSE C/C++ Driver
 Platform and Runtime Survey (we kept it short).
 
 ## Examples
 
-The driver includes several examples in the [examples] directory.
+Examples for using the driver can be found in our [examples repository].
 
 ### A Simple Example
 
@@ -122,10 +121,10 @@ http://www.datastax.com/terms/datastax-dse-driver-license-terms
 [Building and Testing]: http://docs.datastax.com/en/developer/cpp-driver-dse/latest/building
 [Migration]: http://docs.datastax.com/en/developer/cpp-driver-dse/latest/getting-started
 [Provide your input]: http://goo.gl/forms/ihKC5uEQr6
-[examples]: examples/
+[examples repository]: https://github.com/datastax/cpp-dse-driver-examples
 [DSE authentication]: http://docs.datastax.com/en/developer/cpp-driver-dse/latest/features/authentication
 [DSE geospatial types]: http://docs.datastax.com/en/developer/cpp-driver-dse/latest/features/geotypes
 [DSE graph integration]: http://docs.datastax.com/en/developer/cpp-driver-dse/latest/features/graph
 [DSE Proxy Authentication]: http://docs.datastax.com/en/developer/cpp-driver-dse/latest/features/authentication/#proxy-authentication
 [DSE Proxy Execution]: http://docs.datastax.com/en/developer/cpp-driver-dse/latest/features/authentication/#proxy-execution
-[DSE DateRange]: examples/date_range/date_range.c
+[DSE DateRange]: https://github.com/datastax/cpp-dse-driver-examples/blob/master/dse/examples/date_range/date_range.c

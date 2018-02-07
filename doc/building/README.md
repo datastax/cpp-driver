@@ -235,10 +235,10 @@ cmake -DDSE_BUILD_UNIT_TESTS=On ..
 
 ## Windows
 
-We provide a self-contained [batch script] for building the C/C++ DSE driver
-and all of its dependencies. In order to run it, you have to install the build
-dependencies and clone the repository with the DataStax C/C++ DSE driver for
-DataStax Enterprise.
+We provide a self-contained batch script (`vc_build.bat`) for building the C/C++
+DSE driver and all of its dependencies. In order to run it, you have to install
+the build dependencies and clone the repository with the DataStax C/C++ DSE
+driver for DataStax Enterprise.
 
 ### Obtaining build dependencies
 
@@ -267,9 +267,9 @@ DataStax Enterprise.
 
 ### Building the driver
 
-The [batch script] detects installed versions of Visual Studio to simplify the
-build process on Windows and select the correct version of Visual Studio when
-compiling the driver.
+The batch script (`vc_build.bat`) detects installed versions of Visual Studio to
+simplify the build process on Windows and select the correct version of Visual
+Studio when compiling the driver.
 
 First you will need to open a "Command Prompt" to execute the batch script.
 Running the batch script without any arguments will build the driver for C/C++
@@ -336,7 +336,6 @@ __Note__: When overriding installation directory using `--INSTALL-DIR`, the
 [libuv-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/libuv
 [libuv-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/libuv
 [libuv-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/libuv
-[batch script]: ../../vc_build.bat
 [Homebrew]: https://brew.sh
 [Bison]: http://gnuwin32.sourceforge.net/downlinks/bison.php
 [CMake]: http://www.cmake.org/download
