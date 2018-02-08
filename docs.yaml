@@ -2,22 +2,26 @@ title:  DataStax Enterprise C/C++ Driver
 summary: A C/C++ Driver built for DataStax Enterprise
 homepage: http://docs.datastax.com/en/developer/cpp-driver-dse/latest
 sections:
-  - title:    Getting Started
-    prefix:   /getting-started
-    type:     markdown
-    files:   'doc/getting_started/**/*.md'
-  - title:    Installation
-    prefix:   /installation
-    type:     markdown
-    files:   'doc/installation/**/*.md'
-  - title:    Building
-    prefix:   /building
-    type:     markdown
-    files:   'doc/building/**/*.md'
-  - title:    Features
-    prefix:   /features
-    type:     markdown
-    files:   'doc/features/**/*.md'
+  - title:     Getting Started
+    prefix:    /getting-started
+    type:      markdown
+    files:     'doc/getting_started/**/*.md'
+  - title:     Installation
+    prefix:    /installation
+    type:      markdown
+    files:     'doc/installation/**/*.md'
+  - title:     Building
+    prefix:    /building
+    type:      markdown
+    files:     'doc/building/**/*.md'
+  - title:     Features
+    prefix:    /features
+    type:      markdown
+    files:     'doc/features/**/*.md'
+  - title:     Changelog
+    prefix:    /changelog
+    type:      markdown
+    files:     'CHANGELOG.md'
   - title:     API reference
     prefix:    /api
     type:      doxygen
