@@ -136,18 +136,17 @@ void DCAwarePolicy::PerDCHostMap::copy_dcs(KeySet* dcs) const {
   }
 }
 
-// Helper method to prevent copy (Notice: "const CopyOnWriteHostVec&")
+// Helper functions to prevent copy (Notice: "const CopyOnWriteHostVec&")
+
 static const Host::Ptr& get_next_host(const CopyOnWriteHostVec& hosts, size_t index) {
   return (*hosts)[index % hosts->size()];
 }
 
-// Helper method to prevent copy (Notice: "const CopyOnWriteHostVec&")
 static const Host::Ptr& get_next_host_bounded(const CopyOnWriteHostVec& hosts,
                                               size_t index, size_t bound) {
   return (*hosts)[index % std::min(hosts->size(), bound)];
 }
 
-// Helper method to prevent copy (Notice: "const CopyOnWriteHostVec&")
 static size_t get_hosts_size(const CopyOnWriteHostVec& hosts) {
   return hosts->size();
 }
