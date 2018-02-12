@@ -88,10 +88,10 @@ CASSANDRA_INTEGRATION_TEST_F(DcAwarePolicyTest, UsedHostsRemoteDc) {
     std::vector<std::string> attempted_hosts = validate(session);
 
     // Verify that local DC hosts were used
-    EXPECT_TRUE(contains("127.0.0.1", attempted_hosts) || contains("127.0.0.2", attempted_hosts));
+    EXPECT_TRUE(contains(ccm_->get_ip_prefix() + "1", attempted_hosts) || contains(ccm_->get_ip_prefix() + "2", attempted_hosts));
 
     // Verify that no remote DC hosts were used
-    EXPECT_TRUE(!contains("127.0.0.3", attempted_hosts) && !contains("127.0.0.4", attempted_hosts));
+    EXPECT_TRUE(!contains(ccm_->get_ip_prefix() + "3", attempted_hosts) && !contains(ccm_->get_ip_prefix() + "4", attempted_hosts));
   }
 
   // Stop the whole local DC
@@ -102,9 +102,9 @@ CASSANDRA_INTEGRATION_TEST_F(DcAwarePolicyTest, UsedHostsRemoteDc) {
     std::vector<std::string> attempted_hosts = validate(session);
 
     // Verify that remote DC hosts were used
-    EXPECT_TRUE(contains("127.0.0.3", attempted_hosts) || contains("127.0.0.4", attempted_hosts));
+    EXPECT_TRUE(contains(ccm_->get_ip_prefix() + "3", attempted_hosts) || contains(ccm_->get_ip_prefix() + "4", attempted_hosts));
 
     // Verify that no local DC hosts where used
-    EXPECT_TRUE(!contains("127.0.0.1", attempted_hosts) && !contains("127.0.0.2", attempted_hosts));
+    EXPECT_TRUE(!contains(ccm_->get_ip_prefix() + "1", attempted_hosts) && !contains(ccm_->get_ip_prefix() + "2", attempted_hosts));
   }
 }
