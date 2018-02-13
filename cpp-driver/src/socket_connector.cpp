@@ -44,7 +44,7 @@ public:
   }
 
   virtual void on_write(Socket* socket, int status, SocketRequest* request) {
-    delete request;
+    Memory::deallocate(request);
     if (status != 0) {
       connector_->on_error(SocketConnector::SOCKET_ERROR_WRITE, "Write error");
     }

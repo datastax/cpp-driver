@@ -740,6 +740,7 @@ public:
 
   void close() {
     server_->close();
+    server_->wait_close();
   }
 
   String use_ssl() {

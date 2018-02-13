@@ -450,25 +450,28 @@ void ServerConnection::wait_close() {
 void ServerConnection::internal_listen(const Address& address) {
   int rc = 0;
 
-  rc = tcp_.init(loop());
-  if (rc != 0) {
-    fprintf(stderr, "Unable to initialize socket\n");
-    signal_listen(rc);
-    return;
-  }
+  { // Locked
+    ScopedMutex l(&mutex_);
+    rc = tcp_.init(loop());
+    if (rc != 0) {
+      fprintf(stderr, "Unable to initialize socket\n");
+      signal_listen(rc);
+      return;
+    }
 
-  rc = tcp_.bind(address.addr());
-  if (rc != 0) {
-    fprintf(stderr, "Unable to bind address %s\n", address.to_string().c_str());
-    signal_listen(rc);
-    return;
-  }
+    rc = tcp_.bind(address.addr());
+    if (rc != 0) {
+      fprintf(stderr, "Unable to bind address %s\n", address.to_string().c_str());
+      signal_listen(rc);
+      return;
+    }
 
-  rc = uv_listen(tcp_.as_stream(), 128, on_connection);
-  if (rc != 0) {
-    fprintf(stderr, "Unable to listen on address %s\n", address.to_string().c_str());
-    signal_listen(rc);
-    return;
+    rc = uv_listen(tcp_.as_stream(), 128, on_connection);
+    if (rc != 0) {
+      fprintf(stderr, "Unable to listen on address %s\n", address.to_string().c_str());
+      signal_listen(rc);
+      return;
+    }
   }
 
   inc_ref();
@@ -951,7 +954,7 @@ Action::Builder& Action::Builder::builder() {
 
 void Action::run(Request* request) const {
   if (on_run(request)) {
-    delete request;
+    Memory::deallocate(request);
   }
 }
 
@@ -959,7 +962,7 @@ void Action::run_next(Request* request) const {
   if (next) {
     next->run(request);
   } else {
-    delete request;
+    Memory::deallocate(request);
   }
 }
 
@@ -1308,7 +1311,7 @@ void ProtocolHandler::decode_body(ClientConnection* client, const char* body, in
 
 ClientConnection::~ClientConnection() {
   while(!requests_.is_empty()) {
-    delete requests_.front(); // Removes itself from the list
+    Memory::deallocate(requests_.front()); // Removes itself from the list
   }
 }
 

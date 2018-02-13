@@ -173,7 +173,7 @@ public:
     }
 
     virtual void on_close() {
-      delete this;
+      Memory::deallocate(this);
     }
 
   private:
@@ -400,7 +400,7 @@ TEST_F(PoolUnitTest, Auth) {
           static_cast<void*>(future.get()), on_pool_connected));
 
   ConnectionPoolManagerSettings settings;
-  settings.connection_settings.auth_provider.reset(new PlainTextAuthProvider("cassandra", "cassandra"));
+  settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
 
   initializer
       ->with_settings(settings)
@@ -445,7 +445,7 @@ TEST_F(PoolUnitTest, Listener) {
           static_cast<void*>(NULL), on_pool_nop));
 
   initializer
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses());
 
   EXPECT_EQ(future->count(ListenerFuture::UP), 3);
@@ -466,7 +466,7 @@ TEST_F(PoolUnitTest, ListenerDown) {
           static_cast<void*>(NULL), on_pool_nop));
 
   initializer
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses());
 
   EXPECT_EQ(future->count(ListenerFuture::UP), 1);
@@ -490,7 +490,7 @@ TEST_F(PoolUnitTest, AddRemove) {
   AddressVec addresses(this->addresses());
 
   initializer
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses);
 
   EXPECT_EQ(future->count(ListenerFuture::UP), 3);
@@ -530,7 +530,7 @@ TEST_F(PoolUnitTest, Reconnect) {
   AddressVec addresses(this->addresses());
 
   initializer
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses);
 
   EXPECT_EQ(future->count(ListenerFuture::UP), 3);
@@ -576,7 +576,7 @@ TEST_F(PoolUnitTest, Timeout) {
 
   initializer
       ->with_settings(settings)
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses());
 
   EXPECT_EQ(future->count(ListenerFuture::DOWN), 3);
@@ -596,7 +596,7 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
           static_cast<void*>(NULL), on_pool_nop));
 
   initializer
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses());
 
   EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_INVALID_PROTOCOL), 3);
@@ -632,7 +632,7 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
 
   initializer
       ->with_keyspace("invalid")
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses());
 
   EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_KEYSPACE), 3);
@@ -660,11 +660,11 @@ TEST_F(PoolUnitTest, InvalidAuth) {
           static_cast<void*>(future.get()), on_pool_connected));
 
   ConnectionPoolManagerSettings settings;
-  settings.connection_settings.auth_provider.reset(new PlainTextAuthProvider("invalid", "invalid"));
+  settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
 
   initializer
       ->with_settings(settings)
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses());
 
   EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_AUTH), 3);
@@ -691,7 +691,7 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
 
   initializer
       ->with_settings(settings)
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses());
 
   EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_SSL_HANDSHAKE), 3);
@@ -719,7 +719,7 @@ TEST_F(PoolUnitTest, InvalidSsl) {
 
   initializer
       ->with_settings(settings)
-      ->with_listener(new Listener(future))
+      ->with_listener(Memory::allocate<Listener>(future))
       ->initialize(addresses());
 
   EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_SSL_VERIFY), 3);

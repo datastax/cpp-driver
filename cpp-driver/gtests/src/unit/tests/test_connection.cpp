@@ -201,7 +201,7 @@ TEST_F(ConnectionUnitTest, Auth) {
                                                        on_connection_connected));
 
   ConnectionSettings settings;
-  settings.auth_provider.reset(new PlainTextAuthProvider("cassandra", "cassandra"));
+  settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
 
   connector
       ->with_settings(settings)
@@ -433,7 +433,7 @@ TEST_F(ConnectionUnitTest, InvalidAuth) {
                                                        on_connection_error_code));
 
   ConnectionSettings settings;
-  settings.auth_provider.reset(new PlainTextAuthProvider("invalid", "invalid"));
+  settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
 
   connector
       ->with_settings(settings)

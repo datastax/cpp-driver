@@ -185,7 +185,8 @@ public:
 class RoundRobinEventLoopGroup : public EventLoopGroup {
 public:
   RoundRobinEventLoopGroup(size_t num_threads)
-    : threads_(num_threads) { }
+    : current_(0)
+    , threads_(num_threads) { }
 
   int init();
   void run();
