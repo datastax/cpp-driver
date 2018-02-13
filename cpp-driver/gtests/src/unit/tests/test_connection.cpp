@@ -253,7 +253,7 @@ TEST_F(ConnectionUnitTest, Close) {
   Vector<Connector::Ptr> connectors;
 
   bool is_closed(false);
-  for (size_t i = 0; i < 1000; ++i) {
+  for (size_t i = 0; i < 100; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
                                                          static_cast<void*>(&is_closed),
@@ -276,7 +276,7 @@ TEST_F(ConnectionUnitTest, SslClose) {
   Vector<Connector::Ptr> connectors;
 
   bool is_closed(false);
-  for (size_t i = 0; i < 1000; ++i) {
+  for (size_t i = 0; i < 100; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
                                                          static_cast<void*>(&is_closed),
@@ -298,7 +298,7 @@ TEST_F(ConnectionUnitTest, Cancel) {
   Vector<Connector::Ptr> connectors;
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  for (size_t i = 0; i < 1000; ++i) {
+  for (size_t i = 0; i < 100; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
                                                          static_cast<void*>(&error_code),
@@ -327,7 +327,7 @@ TEST_F(ConnectionUnitTest, SslCancel) {
   Vector<Connector::Ptr> connectors;
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  for (size_t i = 0; i < 1000; ++i) {
+  for (size_t i = 0; i < 100; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
                                                          static_cast<void*>(&error_code),

@@ -211,7 +211,7 @@ TEST_F(SocketUnitTest, SslClose) {
   Vector<SocketConnector::Ptr> connectors;
 
   bool is_closed = false;
-  for (size_t i = 0; i < 1000; ++i) {
+  for (size_t i = 0; i < 100; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
                                                                      static_cast<void*>(&is_closed),
                                                                      on_socket_closed));
@@ -233,7 +233,7 @@ TEST_F(SocketUnitTest, Cancel) {
   Vector<SocketConnector::Ptr> connectors;
 
   bool is_cancelled = false;
-  for (size_t i = 0; i < 1000; ++i) {
+  for (size_t i = 0; i < 100; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
                                                                      static_cast<void*>(&is_cancelled),
                                                                      on_socket_cancelled));
@@ -261,7 +261,7 @@ TEST_F(SocketUnitTest, SslCancel) {
   Vector<SocketConnector::Ptr> connectors;
 
   bool is_cancelled = false;
-  for (size_t i = 0; i < 1000; ++i) {
+  for (size_t i = 0; i < 100; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
                                                                      static_cast<void*>(&is_cancelled),
                                                                      on_socket_cancelled));
