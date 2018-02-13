@@ -62,7 +62,8 @@ int run_monotonic_timestamp_gen(uint64_t warning_threshold_us, uint64_t warning_
   double timestamp_rate = (static_cast<double>(timestamp_count) / elapsed) * 1000;
   if (timestamp_rate <= 1000000.0 ||
       elapsed * MICROSECONDS_PER_MILLISECOND <= warning_threshold_us) {
-    EXPECT_TRUE(false) << "Warning: The test may not have exceeded the timestamp generator's maximum rate.";
+    fprintf(stderr, "Warning: The test may not have exceeded the timestamp " \
+                    "generator's maximum rate.");
   }
 
   EXPECT_GT(warn_count, 0);
