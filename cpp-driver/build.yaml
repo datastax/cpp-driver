@@ -66,22 +66,22 @@ release:
             find libuv-packaging/build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
             sudo ${PACKAGE_INSTALL} packages/libuv*.${PACKAGE_TYPE}
 
-            # Build, package and upload DataStax C/C++ DSE driver
-            echo "Building DataStax C/C++ DSE driver ..."
+            # Build, package and upload DataStax C/C++ driver
+            echo "Building DataStax C/C++ driver ..."
             ./build_${PACKAGE_TYPE}.sh
             find build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
             pushd packages
 
-            # Install cpp-dse-driver packages
-            sudo ${PACKAGE_INSTALL} dse*.${PACKAGE_TYPE}
+            # Install cpp-driver packages
+            sudo ${PACKAGE_INSTALL} cassandra*.${PACKAGE_TYPE}
 
-            # Create test file against cpp-dse-driver and try to connect.
+            # Create test file against cpp-driver and try to connect.
             # Should compile and throw a connection error when executed.
-            $CC -x c -o $TEST_PROGRAM - -Wno-implicit-function-declaration -ldse - <<EOF
-            #include <dse.h>
+            $CC -x c -o $TEST_PROGRAM - -Wno-implicit-function-declaration -lcassandra - <<EOF
+            #include <cassandra.h>
             int main(int argc, char* argv[]) {
             CassFuture* connect_future = NULL;
-            CassCluster* cluster = cass_cluster_new_dse();
+            CassCluster* cluster = cass_cluster_new();
             CassSession* session = cass_session_new();
             cass_cluster_set_contact_points(cluster, "127.0.0.1");
             connect_future = cass_session_connect(session, cluster);
@@ -103,8 +103,8 @@ release:
             fi
 
             # Uploading driver packages
-            curl -$ARTIFACTORY_CREDS -T "{$(echo dse-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-dse-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/dse/v$version/"
+            curl -$ARTIFACTORY_CREDS -T "{$(echo cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/cassandra/v$version/"
 
             # Uploading libuv packages
-            curl -$ARTIFACTORY_CREDS -T "{$(echo libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-dse-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
+            curl -$ARTIFACTORY_CREDS -T "{$(echo libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
             popd

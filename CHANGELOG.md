@@ -1,3 +1,10 @@
+1.4.1
+===========
+
+Bug Fixes
+--------
+* [CPP-572] DC aware policy plan returns hosts that are not connected
+
 1.4.0
 ===========
 
