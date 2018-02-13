@@ -1,3 +1,14 @@
+2.8.1
+===========
+
+Bug Fixes
+--------
+* [CPP-572] DC aware policy plan returns hosts that are not connected
+
+Other
+--------
+* [CPP-563] Re-add randomization determination during configuration
+
 2.8.0
 ===========
 

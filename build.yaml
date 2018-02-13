@@ -20,7 +20,7 @@ release:
     after:
       each:
         - script: |
-            LIBUV_VERSION=1.16.1
+            LIBUV_VERSION=1.18.0
             CC=gcc
             TEST_PROGRAM=$(mktemp)
             TOKENS=($(echo ${OS_VERSION} | tr "/" " "))
