@@ -47,7 +47,7 @@ rewrites:
   - examples/(.*): https://github.com/datastax/cpp-driver/blob/master/examples/\1
 versions:
   - name: 2.8
-    ref: 2.8.0
+    ref: 2.8.1
   - name: 2.7
     ref: 2.7.1
   - name: 2.6
