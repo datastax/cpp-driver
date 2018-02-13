@@ -71,7 +71,9 @@ Integration::Integration()
         if (!(tokenStream >> number).fail()) {
           std::vector<std::string> type_param_tokens = explode(type_param, ':');
           size_t size = type_param_tokens.size();
-          test_case_name_ += type_param_tokens[size - 1];
+          test_case_name_ += test::Utils::replace_all(type_param_tokens[size - 1],
+                                                      ">",
+                                                      "");
         }
       } else {
         test_case_name_ += token + "_";
@@ -289,7 +291,7 @@ void Integration::enable_cluster_tracing(bool enable /*= true*/) {
     // Get the node number from the IP address
     std::string node_ip_address = *iterator;
     std::stringstream node_value;
-    node_value << node_ip_address.at(node_ip_address.length() - 1);
+    node_value << node_ip_address[node_ip_address.length() - 1];
 
     // Enable tracing on the node
     unsigned int node;

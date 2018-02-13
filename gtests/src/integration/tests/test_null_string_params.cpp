@@ -570,6 +570,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, CollectionFunctions) {
   EXPECT_EQ(CASS_OK, cass_tuple_set_string(tuple, 0, NULL));
   EXPECT_EQ(CASS_OK, cass_tuple_set_custom(tuple, 0, NULL,
     reinterpret_cast<const cass_byte_t *>("a"), 1));
+  cass_tuple_free(tuple);
 }
 
 /**

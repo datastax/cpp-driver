@@ -62,15 +62,6 @@ public:
   }
 
   /**
-   * Determine if the collection is NULL (or unassigned)
-   *
-   * @return True if collection is NULL; false otherwise
-   */
-  bool is_null() {
-    return is_null_;
-  }
-
-  /**
    * Get the next value
    *
    * @return The next value; NULL if iterator is NULL or has reached the end of
@@ -150,7 +141,7 @@ protected:
    */
   CassValueType secondary_sub_type_;
   /**
-   * Flag to determine if a collection is empty (null)
+   * Flag to determine if value is NULL
    */
   bool is_null_;
 
@@ -163,7 +154,7 @@ protected:
   Collection(CassCollectionType collection_type, size_t count = 1)
     : Object<CassCollection, cass_collection_free>(cass_collection_new(collection_type, count))
     , collection_type_(collection_type)
-    , is_null_(true) {}
+    , is_null_(true) { }
 
   /**
    * Append the value to the collection

@@ -16,7 +16,7 @@
 
 #ifndef __TEST_MAP_HPP__
 #define __TEST_MAP_HPP__
-#include "value_interface.hpp"
+#include "nullable_value.hpp"
 #include "test_utils.hpp"
 
 namespace test {
@@ -26,7 +26,7 @@ namespace driver {
  * Map wrapped value
  */
 template<typename K, typename V>
-class Map : public Collection, KeyValueInterface<K, V> {
+class Map : public Collection {
 public:
   Map(const std::map<K, V>& map)
     : Collection(CASS_COLLECTION_TYPE_MAP, map.size())
@@ -63,6 +63,10 @@ public:
     return str();
   }
 
+  bool is_null() const {
+    return Collection::is_null_;
+  }
+
   CassCollectionType collection_type() const {
     return collection_type_;
   }
@@ -85,7 +89,7 @@ public:
   }
 
   void statement_bind(Statement statement, size_t index) {
-    if (is_null_) {
+    if (is_null()) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
     } else {
       ASSERT_EQ(CASS_OK,
@@ -93,8 +97,15 @@ public:
     }
   }
 
-  bool is_null() const {
-    return is_null_;
+  void statement_bind(Statement statement, const std::string& name) {
+    if (is_null()) {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_null_by_name(statement.get(),
+                                                          name.c_str()));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_collection_by_name(statement.get(),
+                                                                name.c_str(),
+                                                                get()));
+    }
   }
 
   std::vector<K> keys() const {
@@ -111,7 +122,7 @@ public:
   }
 
   std::string str() const {
-    if (is_null_) {
+    if (is_null()) {
       return "null";
     } else if (map_.empty()) {
       return "{}";

@@ -14,94 +14,94 @@
   limitations under the License.
 */
 
-#ifndef __TEST_BOOLEAN_HPP__
-#define __TEST_BOOLEAN_HPP__
+#ifndef __TEST_ASCII_HPP__
+#define __TEST_ASCII_HPP__
 #include "nullable_value.hpp"
-#include "test_utils.hpp"
 
 namespace test {
 namespace driver {
 namespace values {
 
 /**
- * Boolean wrapped value
+ * ASCII wrapped value
  */
-class Boolean {
+class Ascii {
 public:
-  typedef bool ConvenienceType;
-  typedef cass_bool_t ValueType;
+  typedef std::string ConvenienceType;
+  typedef std::string ValueType;
 
-  Boolean()
-    : boolean_(cass_false) { }
+  Ascii() { }
 
-  Boolean(const ConvenienceType boolean)
-    : boolean_(boolean ? cass_true : cass_false) { }
+  Ascii(const ConvenienceType& ascii)
+    : ascii_(ascii) { }
 
   void append(Collection collection) {
     ASSERT_EQ(CASS_OK,
-      cass_collection_append_bool(collection.get(), boolean_));
+              cass_collection_append_string(collection.get(), ascii_.c_str()));
   }
 
   std::string cql_type() const {
-    return "boolean";
+    return "ascii";
   }
 
   std::string cql_value() const {
-    return str();
+    return "'" + str() + "'";
   }
 
   /**
-   * Comparison operation for driver booleans
+   * Comparison operation for driver string
    *
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const cass_bool_t& rhs) const {
-    if (boolean_ < rhs) return -1;
-    if (boolean_ > rhs) return 1;
-
-    return 0;
+  int compare(const std::string& rhs) const {
+    return ascii_.compare(rhs);
   }
 
   /**
-   * Comparison operation for driver booleans
+   * Comparison operation for ASCII
    *
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Boolean& rhs) const {
-    return compare(rhs.boolean_);
+  int compare(const Ascii& rhs) const {
+    return compare(rhs.ascii_);
   }
 
   void initialize(const CassValue* value) {
-    ASSERT_EQ(CASS_OK, cass_value_get_bool(value, &boolean_))
-      << "Unable to Get Boolean: Invalid error code returned";
+    const char* string = NULL;
+    size_t length;
+    ASSERT_EQ(CASS_OK, cass_value_get_string(value, &string, &length))
+      << "Unable to Get ASCII: Invalid error code returned";
+    ascii_.assign(string, length);
   }
 
   void set(Tuple tuple, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_tuple_set_bool(tuple.get(), index, boolean_));
+    ASSERT_EQ(CASS_OK,
+              cass_tuple_set_string(tuple.get(), index, ascii_.c_str()));
   }
 
   void set(UserType user_type, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_user_type_set_bool_by_name(user_type.get(),
-                                                       name.c_str(),
-                                                       boolean_));
+    ASSERT_EQ(CASS_OK,
+              cass_user_type_set_string_by_name(user_type.get(),
+                                                name.c_str(),
+                                                ascii_.c_str()));
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_bool(statement.get(),
-                                                index,
-                                                boolean_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_string(statement.get(),
+                                                  index,
+                                                  ascii_.c_str()));
   }
 
   void statement_bind(Statement statement, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_bool_by_name(statement.get(),
-                                                        name.c_str(),
-                                                        boolean_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_string_by_name(statement.get(),
+                                                          name.c_str(),
+                                                          ascii_.c_str()));
   }
 
   std::string str() const {
-    return (boolean_ == cass_true ? "true" : "false");
+    return ascii_;
   }
 
   static std::string supported_server_version() {
@@ -109,22 +109,22 @@ public:
   }
 
   ValueType value() const {
-    return boolean_;
+    return ascii_;
   }
 
   CassValueType value_type() const {
-    return CASS_VALUE_TYPE_BOOLEAN;
+    return CASS_VALUE_TYPE_ASCII;
   }
 
 protected:
   /**
    * Native driver value
    */
-  cass_bool_t boolean_;
+  std::string ascii_;
 };
 
 inline std::ostream& operator<<(std::ostream& output_stream,
-                                const Boolean& value) {
+                                const Ascii& value) {
   output_stream << value.cql_value();
   return output_stream;
 }
@@ -133,4 +133,4 @@ inline std::ostream& operator<<(std::ostream& output_stream,
 } // namespace driver
 } // namespace test
 
-#endif // __TEST_BOOLEAN_HPP__
+#endif // __TEST_ASCII_HPP__

@@ -108,7 +108,8 @@ struct Process {
     listen_address_s << SCASSANDRA_IP_PREFIX << (data_center - 1) << "." << node;
     listen_address = listen_address_s.str();
     admin_port = node + SCASSANDRA_REST_PORT_NODE_OFFSET;
-    test::driver::Uuid uuid = test::driver::UuidGen().generate_random_uuid();
+    test::driver::values::Uuid uuid =
+      test::driver::UuidGen().generate_random_uuid();
     host_id = uuid.str();
 
     // Create the spawn command
@@ -164,7 +165,8 @@ test::SCassandraCluster::SCassandraCluster() {
   }
 
   // Generate the schema version (for priming nodes)
-  test::driver::Uuid uuid = test::driver::UuidGen().generate_random_uuid();
+  test::driver::values::Uuid uuid =
+    test::driver::UuidGen().generate_random_uuid();
   schema_version_ = uuid.str();
 }
 

@@ -15,7 +15,7 @@
 */
 
 #include "scassandra_integration.hpp"
-#include "next_host_retry_policy.hpp"
+#include "policies/next_host_retry_policy.hpp"
 
 #include "cassandra.h"
 

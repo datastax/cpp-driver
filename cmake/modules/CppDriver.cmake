@@ -832,6 +832,9 @@ macro(CassSetCompilerFlags)
 
     # Assign additional library requirements for Windows
     set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv)
+
+    # Enable bigobj for large object files during debug compilation (Cassandra types integration test)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /bigobj")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     # GCC specific compiler options
     # I disabled long-long warning because boost generates about 50 such warnings

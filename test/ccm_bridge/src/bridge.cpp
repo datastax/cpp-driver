@@ -265,7 +265,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
     while (std::getline(file, current_line)) {
       // Ignore lines that start with '#'
       current_line = trim(current_line);
-      if (!current_line.empty() && current_line.at(0) != '#') {
+      if (!current_line.empty() && current_line[0] != '#') {
         std::vector<std::string> tokens = explode(current_line, '=');
         // Ensure the configuration is a key/value pair
         if (tokens.size() == 2) {
@@ -279,8 +279,8 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             dse_version_ = DseVersion(value);
           } else if (key.compare(CCM_CONFIGURATION_KEY_USE_GIT) == 0) {
             //Convert the value
-            std::stringstream valueStream(value);
-            if (!(valueStream >> std::boolalpha >> use_git_).fail()) {
+            std::stringstream ss(value);
+            if (!(ss >> std::boolalpha >> use_git_).fail()) {
               continue;
             } else {
               CCM_LOG_ERROR("Invalid Flag [" << value << "] for Use git: Using default [" << DEFAULT_USE_GIT << "]");
@@ -290,8 +290,8 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             branch_tag_ = value;
           } else if (key.compare(CCM_CONFIGURATION_KEY_USE_INSTALL_DIR) == 0) {
             //Convert the value
-            std::stringstream valueStream(value);
-            if (!(valueStream >> std::boolalpha >> use_install_dir_).fail()) {
+            std::stringstream ss(value);
+            if (!(ss >> std::boolalpha >> use_install_dir_).fail()) {
               continue;
             } else {
               CCM_LOG_ERROR("Invalid Flag [" << value << "] for Use Install Directory: Using default [" << DEFAULT_USE_INSTALL_DIR << "]");
@@ -301,8 +301,8 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             install_dir_ = value;
           } else if (key.compare(CCM_CONFIGURATION_KEY_USE_DSE) == 0) {
             //Convert the value
-            std::stringstream valueStream(value);
-            if (!(valueStream >> std::boolalpha >> use_dse_).fail()) {
+            std::stringstream ss(value);
+            if (!(ss >> std::boolalpha >> use_dse_).fail()) {
               continue;
             } else {
               CCM_LOG_ERROR("Invalid Flag [" << value << "] for Use DSE: Using default [" << DEFAULT_USE_DSE << "]");
@@ -359,8 +359,8 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
 #endif
           } else if (key.compare(CCM_CONFIGURATION_KEY_SSH_PORT) == 0) {
             //Convert the value
-            std::stringstream valueStream(value);
-            if (!(valueStream >> port).fail()) {
+            std::stringstream ss(value);
+            if (!(ss >> port).fail()) {
               continue;
             } else {
               CCM_LOG_ERROR("Invalid Port: Using default [" << DEFAULT_REMOTE_DEPLOYMENT_PORT << "]");
@@ -1087,7 +1087,7 @@ std::string CCM::Bridge::get_ip_prefix(const std::string& configuration_file) {
     std::string current_line;
     while (std::getline(file, current_line)) {
       // Ignore lines that start with '#'
-      if (!current_line.empty() && current_line.at(0) != '#') {
+      if (!current_line.empty() && current_line[0] != '#') {
         std::vector<std::string> tokens = explode(trim(current_line), '=');
         // Ensure the configuration is a key/value pair
         if (tokens.size() == 2) {
@@ -1135,7 +1135,7 @@ CassVersion CCM::Bridge::get_cassandra_version(const std::string& configuration_
     std::string current_line;
     while (std::getline(file, current_line)) {
       // Ignore lines that start with '#'
-      if (!current_line.empty() && current_line.at(0) != '#') {
+      if (!current_line.empty() && current_line[0] != '#') {
         std::vector<std::string> tokens = explode(trim(current_line), '=');
         // Ensure the configuration is a key/value pair
         if (tokens.size() == 2) {
@@ -1149,8 +1149,8 @@ CassVersion CCM::Bridge::get_cassandra_version(const std::string& configuration_
             dse_version = DseVersion(value);
           } else if (key.compare(CCM_CONFIGURATION_KEY_USE_DSE) == 0) {
             //Convert the value
-            std::stringstream valueStream(value);
-            if (!(valueStream >> std::boolalpha >> use_dse).fail()) {
+            std::stringstream ss(value);
+            if (!(ss >> std::boolalpha >> use_dse).fail()) {
               continue;
             }
           }
@@ -1192,7 +1192,7 @@ DseVersion CCM::Bridge::get_dse_version(const std::string& configuration_file) {
     std::string current_line;
     while (std::getline(file, current_line)) {
       // Ignore lines that start with '#'
-      if (!current_line.empty() && current_line.at(0) != '#') {
+      if (!current_line.empty() && current_line[0] != '#') {
         std::vector<std::string> tokens = explode(trim(current_line), '=');
         // Ensure the configuration is a key/value pair
         if (tokens.size() == 2) {
@@ -1747,7 +1747,7 @@ std::vector<std::string> CCM::Bridge::get_available_clusters(std::string& active
     if (cluster.compare(0, 1, "*") == 0) {
       cluster.erase(std::remove(cluster.begin(), cluster.end(), '*'), cluster.end());
       active_cluster = cluster;
-      clusters.at(index) = cluster;
+      clusters[index] = cluster;
     }
     ++index;
   }
