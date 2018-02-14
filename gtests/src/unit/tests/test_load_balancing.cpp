@@ -385,14 +385,28 @@ TEST(DatacenterAwareLoadBalancingUnitTest, UsedHostsPerDatacenter) {
   populate_hosts(3, "rack", LOCAL_DC, &hosts);
   populate_hosts(3, "rack", REMOTE_DC, &hosts);
 
-  for (size_t used_hosts = 0; used_hosts < 3; ++used_hosts) {
+  for (size_t used_hosts = 0; used_hosts < 4; ++used_hosts) {
     cass::DCAwarePolicy policy(LOCAL_DC, used_hosts, false);
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-    size_t total_hosts = 3 + used_hosts;
-    std::vector<size_t> seq(total_hosts);
-    for (size_t i = 0; i < total_hosts; ++i) seq[i] = i + 1;
+    std::vector<size_t> seq;
+    size_t index = 0;
+
+    seq.reserve(3 + used_hosts);
+
+    // Local DC hosts
+    for (size_t i = 0; i < 3; ++i) {
+      seq.push_back(index++ + 1);
+    }
+
+    // Remote DC hosts
+    for (size_t i = 0; i < used_hosts; ++i) {
+      // DC-aware only uses hosts up to the used host count so we need to wrap
+      // around.
+      seq.push_back(3 + (index++ % used_hosts) + 1);
+    }
+
     verify_sequence(qp.get(), seq);
   }
 }
