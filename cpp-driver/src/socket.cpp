@@ -57,6 +57,14 @@ void SocketWrite::flush() {
   }
 }
 
+SocketHandler::~SocketHandler() {
+  while (!buffer_reuse_list_.empty()) {
+    uv_buf_t buf = buffer_reuse_list_.top();
+    Memory::free(buf.base);
+    buffer_reuse_list_.pop();
+  }
+}
+
 SocketWriteBase* SocketHandler::new_pending_write(Socket* socket) {
   return Memory::allocate<SocketWrite>(socket);
 }
@@ -262,6 +270,13 @@ void SocketWriteBase::handle_write(uv_write_t* req, int status) {
   }
 
   socket->flush();
+}
+
+Socket::~Socket() {
+  for (SocketWriteVec::iterator i = free_writes_.begin(),
+    end = free_writes_.end(); i != end; ++i) {
+    Memory::deallocate(*i);
+  }
 }
 
 void Socket::set_handler(SocketHandlerBase* handler) {

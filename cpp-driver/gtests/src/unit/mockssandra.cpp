@@ -1245,7 +1245,7 @@ void ProtocolHandler::decode(ClientConnection* client, const char* data, int32_t
     } else {
       // Not efficient, but concise. Copy the consumed part of the buffer
       // forward then resize the buffer to what's left over.
-      std::copy(buffer_.begin(), buffer_.begin() + result, buffer_.end());
+      std::copy(buffer_.begin(), buffer_.begin() + result, buffer_.begin());
       buffer_.resize(buffer_.size() - result);
     }
   }

@@ -140,6 +140,8 @@ public:
  */
 class SocketHandler : public SocketHandlerBase {
 public:
+  ~SocketHandler();
+
   virtual SocketWriteBase* new_pending_write(Socket* socket);
   virtual void alloc_buffer(size_t suggested_size, uv_buf_t* buf);
 
@@ -281,6 +283,11 @@ public:
     , address_string_(address.to_string()) {
     tcp_.data = this;
   }
+
+  /**
+   * Destructor. 
+   */
+  ~Socket();
 
   /**
    * Set the handler that will process the actions for this socket.
