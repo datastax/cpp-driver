@@ -48,7 +48,6 @@ static void divide(const T &numerator, const T &denominator, T &quotient, T &rem
 		T x      = 1;
 		T answer = 0;
 
-
 		while((n >= d) && (((d >> (bits - 1)) & 1) == 0)) {
 			x <<= 1;
 			d <<= 1;
@@ -246,7 +245,7 @@ public: // basic math operators
 		return *this += -b;
     }
 
-		uint128 &operator+(const uint128& b) const {
+    uint128 operator+(const uint128& b) const {
 			return uint128(*this) += b;
 		}
 
@@ -272,7 +271,7 @@ public: // basic math operators
             		*this += (a << i);
 				}
 
-        		t >>= 1;
+				 t >>= 1;
     		}
 		}
 
@@ -291,7 +290,7 @@ public: // basic math operators
     	return *this;
 	}
 
-		uint128 &operator&(const uint128 &b) const {
+    uint128 operator&(const uint128 &b) const {
 			return uint128(*this) &= b;
 		}
 
@@ -346,7 +345,7 @@ public: // basic math operators
     	return *this;
 	}
 
-	uint128 &operator<<(const uint128& rhs) const {
+  uint128 operator<<(const uint128& rhs) const {
 		return uint128(*this) <<= rhs;
 	}
 
@@ -384,7 +383,7 @@ public: // basic math operators
     	return *this;
 	}
 
-	uint128 &operator>>(const uint128 &rhs) const {
+  uint128 operator>>(const uint128 &rhs) const {
 		return uint128(*this) >>= rhs;
 	}
 
