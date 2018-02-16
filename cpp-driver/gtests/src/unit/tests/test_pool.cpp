@@ -19,6 +19,7 @@
 #include "event_loop.hpp"
 #include "future.hpp"
 #include "request_queue.hpp"
+#include "ssl.hpp"
 
 #define NUM_NODES 3
 #define PROTOCOL_VERSION 4
@@ -263,7 +264,6 @@ public:
   }
 
   virtual void SetUp() {
-    SslContextFactory::init();
     ASSERT_EQ(event_loop_group_.init(), 0);
     event_loop_group_.run();
     ASSERT_EQ(request_queue_manager_.init(1024), 0);

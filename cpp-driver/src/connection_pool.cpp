@@ -55,7 +55,7 @@ PooledConnection::Ptr ConnectionPool::find_least_busy() const {
 
 void ConnectionPool::close() {
   ScopedWriteLock wl(&rwlock_);
-  internal_close();
+  internal_close(wl);
 }
 
 void ConnectionPool::notify_up_or_down(ConnectionPoolConnector* connector, Protected) {
@@ -106,16 +106,7 @@ void ConnectionPool::close_connection(PooledConnection* connection, Protected) {
   }
 
   if (is_closing_) {
-    LOG_DEBUG("Pool for host %s closed (%p)",
-              address_.to_string().c_str(),
-              static_cast<void*>(this));
-    // Remove the pool once all current connection and pending connections
-    // are terminated.
-    if (connections_.empty() && pending_connections_.empty()) {
-      wl.unlock(); // The pool is destroyed in this step it must be unlocked
-      manager_->remove_pool(this, ConnectionPoolManager::Protected());
-      dec_ref();
-    }
+    maybe_closed(wl);
   } else {
     internal_schedule_reconnect(connection->event_loop());
   }
@@ -135,7 +126,7 @@ void ConnectionPool::internal_schedule_reconnect(EventLoop* event_loop) {
                              PooledConnector::Protected());
 }
 
-void ConnectionPool::internal_close() {
+void ConnectionPool::internal_close(ScopedWriteLock& wl) {
   if (!is_closing_) {
     for (PooledConnection::Vec::iterator it = connections_.begin(),
          end = connections_.end(); it != end; ++it) {
@@ -146,6 +137,17 @@ void ConnectionPool::internal_close() {
       (*it)->cancel();
     }
     is_closing_ = true;
+  }
+  maybe_closed(wl);
+}
+
+void ConnectionPool::maybe_closed(ScopedWriteLock& wl) {
+  // Remove the pool once all current connections and pending connections
+  // are terminated.
+  if (connections_.empty() && pending_connections_.empty()) {
+    wl.unlock(); // The pool is destroyed in this step it must be unlocked
+    manager_->remove_pool(this, ConnectionPoolManager::Protected());
+    dec_ref();
   }
 }
 
@@ -160,12 +162,7 @@ void ConnectionPool::handle_reconnect(PooledConnector* connector, EventLoop* eve
                              pending_connections_.end());
 
   if (is_closing_) {
-    // Remove the pool once all current connections and pending connections
-    // are terminated.
-    if (connections_.empty() && pending_connections_.empty()) {
-      wl.unlock(); // The pool is destroyed in this step it must be unlocked
-      manager_->remove_pool(this, ConnectionPoolManager::Protected());
-    }
+    maybe_closed(wl);
   } else {
     if (connector->is_ok()) {
       // When there currently no more connections available and a one becomes
@@ -183,7 +180,7 @@ void ConnectionPool::handle_reconnect(PooledConnector* connector, EventLoop* eve
                                          connector->error_code(),
                                          connector->error_message(),
                                          ConnectionPoolManager::Protected());
-        internal_close();
+        internal_close(wl);
       } else {
         LOG_WARN("Connection pool was unable to reconnect to host %s because of the following error: %s",
                  address().to_string().c_str(),

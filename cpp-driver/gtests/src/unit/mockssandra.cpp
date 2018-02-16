@@ -17,6 +17,7 @@ String Ssl::generate_key() {
   EVP_PKEY_keygen_init(pctx);
   EVP_PKEY_CTX_set_rsa_keygen_bits(pctx, 2048);
   EVP_PKEY_keygen(pctx, &pkey);
+  EVP_PKEY_CTX_free(pctx);
 
   String result;
   BIO* bio = BIO_new(BIO_s_mem());
@@ -31,7 +32,7 @@ String Ssl::generate_key() {
   return result;
 }
 
-String Ssl::gererate_cert(const String& key, const String cn) {
+String Ssl::generate_cert(const String& key, const String& cn) {
   EVP_PKEY* pkey = NULL;
   { // Read key from string
     BIO* bio = BIO_new_mem_buf(key.c_str(), key.length());
@@ -358,8 +359,10 @@ bool ServerConnection::use_ssl(const String& key,
 
   if (SSL_CTX_use_certificate(ssl_context_, x509) <= 0) {
     print_ssl_error();
+    X509_free(x509);
     return false;
   }
+  X509_free(x509);
 
   EVP_PKEY* pkey = NULL;
   { // Read key from string
@@ -377,6 +380,7 @@ bool ServerConnection::use_ssl(const String& key,
     EVP_PKEY_free(pkey);
     return false;
   }
+  EVP_PKEY_free(pkey);
 
   RSA* rsa = RSA_generate_key(512, RSA_F4, NULL, NULL);
   SSL_CTX_set_tmp_rsa(ssl_context_, rsa);
@@ -1336,7 +1340,7 @@ Cluster::~Cluster() {
 
 String Cluster::use_ssl() {
   String key(Ssl::generate_key());
-  String cert(Ssl::gererate_cert(key));
+  String cert(Ssl::generate_cert(key));
   for (size_t i = 0; i < servers_.size(); ++i) {
     Server& server = servers_[i];
     if (!server.connection->use_ssl(key, cert)) {

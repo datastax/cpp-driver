@@ -78,6 +78,7 @@ public:
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
   static void initialize();
+  static void cleanup();
 #endif
 
 private:

@@ -76,6 +76,8 @@ class OpenSslContextFactory : public SslContextFactoryBase<OpenSslContextFactory
 public:
   static SslContext::Ptr create();
   static void internal_init();
+  static void internal_thread_cleanup();
+  static void internal_cleanup();
 };
 
 typedef SslContextFactoryBase<OpenSslContextFactory> SslContextFactory;

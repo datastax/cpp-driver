@@ -359,6 +359,8 @@ private:
   static void on_close(uv_handle_t* handle);
   void handle_close();
 
+  void cleanup_free_writes();
+
 private:
   typedef Vector<SocketWriteBase*> SocketWriteVec;
 

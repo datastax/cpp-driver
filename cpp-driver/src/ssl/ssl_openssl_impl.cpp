@@ -25,6 +25,7 @@
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+#include <openssl/engine.h>
 #include <string.h>
 
 #define DEBUG_SSL 0
@@ -115,7 +116,7 @@ static int pem_password_callback(char* buf, int size, int rwflag, void* u) {
 }
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-static uv_rwlock_t* crypto_locks;
+static uv_rwlock_t* crypto_locks = NULL;
 
 static void crypto_locking_callback(int mode, int n, const char* file, int line) {
   if (mode & CRYPTO_LOCK) {
@@ -653,6 +654,42 @@ void OpenSslContextFactory::internal_init() {
 
 #else
   rb::RingBufferBio::initialize();
+#endif
+}
+
+void OpenSslContextFactory::internal_thread_cleanup() {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  ERR_remove_thread_state(NULL);
+#else
+  OPENSSL_thread_stop();
+#endif
+}
+
+void OpenSslContextFactory::internal_cleanup() {
+  RAND_cleanup();
+  ENGINE_cleanup();
+  CONF_modules_unload(1);
+  CONF_modules_free();
+  EVP_cleanup();
+  ERR_free_strings();
+  CRYPTO_cleanup_all_ex_data();
+  CRYPTO_set_locking_callback(NULL);
+  CRYPTO_set_id_callback(NULL);
+  SSL_COMP_free_compression_methods();
+
+  thread_cleanup();
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  if (crypto_locks != NULL) {
+    int num_locks = CRYPTO_num_locks();
+    for (int i = 0; i < num_locks; ++i) {
+      uv_rwlock_destroy(crypto_locks + i);
+    }
+    Memory::free(crypto_locks);
+    crypto_locks = NULL;
+  }
+#else
+  rb::RingBufferBio::cleanup();
 #endif
 }
 

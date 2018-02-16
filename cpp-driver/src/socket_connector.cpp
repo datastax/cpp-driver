@@ -216,7 +216,7 @@ void SocketConnector::handle_connect(TcpConnector* tcp_connector) {
     } else {
       finish();
     }
-  } else if (tcp_connector->is_cancelled()) {
+  } else if (is_cancelled() || tcp_connector->is_cancelled()) {
     finish();
   } else {
     on_error(SOCKET_ERROR_CONNECT,
@@ -239,7 +239,7 @@ void SocketConnector::handle_resolve(NameResolver* resolver) {
 
     hostname_ = resolver->hostname();
     internal_connect(resolver->loop());
-  } else if (resolver->is_cancelled()) {
+  } else if (is_cancelled() || resolver->is_cancelled()) {
     finish();
   } else if (resolver->is_timed_out()) {
     on_error(SOCKET_ERROR_RESOLVE_TIMEOUT,

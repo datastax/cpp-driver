@@ -105,7 +105,7 @@ void ConnectionPoolManager::remove(const Address& address) {
 }
 
 void ConnectionPoolManager::close() {
-  ScopedReadLock rl(&rwlock_);
+  ScopedWriteLock wl(&rwlock_);
   if (!is_closing_) {
     for (ConnectionPool::Map::iterator it = pools_.begin(),
          end = pools_.end(); it != end; ++it) {
@@ -118,6 +118,7 @@ void ConnectionPoolManager::close() {
     }
     is_closing_ = true;
   }
+  maybe_closed(wl);
 }
 
 EventLoopGroup* ConnectionPoolManager::event_loop_group() const {
@@ -173,6 +174,10 @@ void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
 void ConnectionPoolManager::internal_remove_pool(const Address& address) {
   ScopedWriteLock wl(&rwlock_);
   pools_.erase(address);
+  maybe_closed(wl);
+}
+
+void ConnectionPoolManager::maybe_closed(ScopedWriteLock& wl) {
   if (is_closing_ && pools_.empty()) {
     wl.unlock(); // The manager is destroyed in this step it must be unlocked
     if (listener_ != NULL) {

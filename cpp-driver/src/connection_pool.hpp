@@ -106,7 +106,8 @@ public:
 private:
   void internal_add_connection(const PooledConnection::Ptr& connection);
   void internal_schedule_reconnect(EventLoop* event_loop);
-  void internal_close();
+  void internal_close(ScopedWriteLock& wl);
+  void maybe_closed(ScopedWriteLock& wl);
 
   static void on_reconnect(PooledConnector* connector, EventLoop* loop);
   void handle_reconnect(PooledConnector* connector, EventLoop* event_loop);

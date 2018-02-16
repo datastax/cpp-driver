@@ -57,14 +57,13 @@ public:
   }
 
   void stop() {
-    if (handle_ == NULL) return;
-    uv_timer_stop(handle_);
+    close_handle();
   }
 
   void close_handle() {
     if (handle_ == NULL) return;
     // This also stops the timer
-    uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
+    uv_close(reinterpret_cast<uv_handle_t*>(handle_), Timer::on_close);
     handle_ = NULL;
   }
 
@@ -74,6 +73,7 @@ public:
   static void on_timeout(uv_timer_t* handle) {
 #endif
     Timer* timer = static_cast<Timer*>(handle->data);
+    timer->close_handle();
     timer->cb_(timer);
   }
 

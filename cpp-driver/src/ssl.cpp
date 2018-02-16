@@ -24,7 +24,7 @@
 extern "C" {
 
 CassSsl* cass_ssl_new() {
-  cass::SslContextFactory::init();
+  cass::SslContextFactory::init_once();
   return cass_ssl_new_no_lib_init();
 }
 
@@ -83,17 +83,7 @@ CassError cass_ssl_set_private_key_n(CassSsl* ssl,
 
 namespace cass {
 
-static uv_once_t ssl_init_guard = UV_ONCE_INIT;
-
 template<class T>
-SslContext::Ptr SslContextFactoryBase<T>::create() {
-  return T::create();
-}
-
-template<class T>
-void SslContextFactoryBase<T>::init() {
-  uv_once(&ssl_init_guard, T::internal_init);
-}
-
+uv_once_t SslContextFactoryBase<T>::ssl_init_guard = UV_ONCE_INIT;
 
 } // namespace cass

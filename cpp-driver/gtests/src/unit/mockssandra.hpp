@@ -42,7 +42,7 @@ namespace mockssandra {
 class Ssl {
 public:
   static String generate_key();
-  static String gererate_cert(const String& key, const String cn = "localhost");
+  static String generate_cert(const String& key, const String& cn = "localhost");
 };
 
 namespace internal {
@@ -745,7 +745,7 @@ public:
 
   String use_ssl() {
     String key(Ssl::generate_key());
-    String cert(Ssl::gererate_cert(key));
+    String cert(Ssl::generate_cert(key));
     if (!server_->use_ssl(key, cert)) {
       return "";
     }

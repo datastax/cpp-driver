@@ -100,7 +100,6 @@ public:
 
   virtual void SetUp() {
     uv_loop_init(loop());
-    SslContextFactory::init();
     saved_log_level_ = Logger::log_level();
     Logger::set_log_level(CASS_LOG_DISABLED);
   }

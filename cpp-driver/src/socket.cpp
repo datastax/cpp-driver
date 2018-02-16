@@ -273,14 +273,12 @@ void SocketWriteBase::handle_write(uv_write_t* req, int status) {
 }
 
 Socket::~Socket() {
-  for (SocketWriteVec::iterator i = free_writes_.begin(),
-    end = free_writes_.end(); i != end; ++i) {
-    Memory::deallocate(*i);
-  }
+  cleanup_free_writes();
 }
 
 void Socket::set_handler(SocketHandlerBase* handler) {
   handler_.reset(handler);
+  cleanup_free_writes();
   free_writes_.clear();
   if (handler_) {
     uv_read_start(reinterpret_cast<uv_stream_t*>(&tcp_),
@@ -379,6 +377,13 @@ void Socket::handle_close() {
     handler_->on_close();
   }
   dec_ref();
+}
+
+void Socket::cleanup_free_writes() {
+  for (SocketWriteVec::iterator i = free_writes_.begin(),
+       end = free_writes_.end(); i != end; ++i) {
+    Memory::deallocate(*i);
+  }
 }
 
 } // namespace cass

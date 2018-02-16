@@ -15,6 +15,7 @@
 */
 
 #include "event_loop.hpp"
+#include "ssl.hpp"
 
 #if !defined(_WIN32)
 #include <signal.h>
@@ -146,6 +147,7 @@ void EventLoop::handle_run() {
   on_run();
   uv_run(loop(), UV_RUN_DEFAULT);
   on_after_run();
+  SslContextFactory::thread_cleanup();
 }
 
 void EventLoop::on_task(Async* async) {
