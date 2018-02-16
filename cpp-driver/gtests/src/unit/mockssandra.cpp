@@ -1425,7 +1425,9 @@ Address Ipv4AddressGenerator::next() {
 
 SimpleEventLoopGroup::SimpleEventLoopGroup(size_t num_threads)
   : cass::RoundRobinEventLoopGroup(num_threads) {
-  assert(init() == 0 && "Unable to initialize simple event loop");
+  int rc = init();
+  UNUSED_(rc);
+  assert(rc == 0 && "Unable to initialize simple event loop");
   run();
 }
 
