@@ -31,7 +31,7 @@ class Config;
 struct SocketSettings {
   SocketSettings()
     : hostname_resolution_enabled(false)
-    , resolve_timeout_ms(2000)
+    , resolve_timeout_ms(5000)
     , tcp_nodelay_enabled(true)
     , tcp_keepalive_enabled(false)
     , tcp_keepalive_delay_secs(0) { }

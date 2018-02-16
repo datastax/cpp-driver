@@ -39,7 +39,7 @@ public:
     int count(State state) {
       wait();
       int count = 0;
-      for (typename std::vector<State>::const_iterator it = results_.begin(),
+      for (typename Vector<State>::const_iterator it = results_.begin(),
            end = results_.end(); it != end; ++it) {
         if (*it == state) count++;
       }
@@ -49,6 +49,7 @@ public:
   protected:
     void set(State state) {
       cass::ScopedMutex lock(&mutex_);
+      if (is_set()) return;
       results_.push_back(state);
       if (results_.size() == count_) {
         Future::internal_set(lock);
@@ -56,7 +57,7 @@ public:
     }
 
   private:
-    std::vector<State> results_;
+    Vector<State> results_;
     const size_t count_;
   };
 
@@ -628,7 +629,7 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(future.get()), on_pool_connected));
+          static_cast<void*>(NULL), on_pool_nop));
 
   initializer
       ->with_keyspace("invalid")
@@ -657,7 +658,7 @@ TEST_F(PoolUnitTest, InvalidAuth) {
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(future.get()), on_pool_connected));
+          static_cast<void*>(NULL), on_pool_nop));
 
   ConnectionPoolManagerSettings settings;
   settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
@@ -681,7 +682,7 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(future.get()), on_pool_connected));
+          static_cast<void*>(NULL), on_pool_nop));
 
   SslContext::Ptr ssl_context(SslContextFactory::create());
 
@@ -709,7 +710,7 @@ TEST_F(PoolUnitTest, InvalidSsl) {
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(future.get()), on_pool_connected));
+          static_cast<void*>(NULL), on_pool_nop));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
