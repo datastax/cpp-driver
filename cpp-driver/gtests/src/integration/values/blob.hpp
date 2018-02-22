@@ -78,6 +78,16 @@ public:
     return compare(rhs.blob_);
   }
 
+  /**
+   * Helper method to return data for the blob type
+   *
+   * @return Blob data
+   */
+  const cass_byte_t* data() const {
+    return reinterpret_cast<const cass_byte_t*>(blob_.data());
+  }
+
+
   void initialize(const CassValue* value) {
     const cass_byte_t* bytes = NULL;
     size_t size;
@@ -98,6 +108,16 @@ public:
                                                         data(),
                                                         size()));
   }
+
+  /**
+   * Helper method to determine the size of the blob (amount of data)
+   *
+   * @return Blob size (e.g.length)
+   */
+  size_t size() const {
+    return blob_.size() / sizeof(cass_byte_t);
+  }
+
 
   void statement_bind(Statement statement, size_t index) {
     ASSERT_EQ(CASS_OK, cass_statement_bind_bytes(statement.get(),
@@ -144,24 +164,6 @@ protected:
    * Native driver value
    */
   std::string blob_;
-
-  /**
-   * Helper method to return data for the blob type
-   *
-   * @return Blob data
-   */
-  const cass_byte_t* data() const {
-    return reinterpret_cast<const cass_byte_t*>(blob_.data());
-  }
-
-  /**
-   * Helper method to determine the size of the blob (amount of data)
-   *
-   * @return Blob size (e.g.length)
-   */
-  size_t size() const {
-    return blob_.size() / sizeof(cass_byte_t);
-  }
 };
 
 inline std::ostream& operator<<(std::ostream& output_stream,

@@ -283,6 +283,15 @@ public:
   }
 
   /**
+   * Get the wrapped value
+   *
+   * @return Wrapped value type (templated type)
+   */
+  T wrapped_value() const {
+    return value_;
+  }
+
+  /**
    * Get the type of value the native driver value is
    *
    * @return Value type of the native driver value

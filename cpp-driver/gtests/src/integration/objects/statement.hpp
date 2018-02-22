@@ -31,6 +31,9 @@
 namespace test {
 namespace driver {
 
+// Forward declaration for circular dependency
+class CustomPayload;
+
 /**
  * Wrapped statement object
  */
@@ -111,6 +114,13 @@ public:
   void set_consistency(CassConsistency consistency) {
     ASSERT_EQ(CASS_OK, cass_statement_set_consistency(get(), consistency));
   }
+
+  /**
+   * Assign/Set the statement's custom payload
+   *
+   * @param custom_payload Custom payload to use for the statement
+   */
+  void set_custom_payload(CustomPayload custom_payload);
 
   /**
    * Set the execution profile to execute the statement with
