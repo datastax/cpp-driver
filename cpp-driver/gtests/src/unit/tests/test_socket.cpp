@@ -1,9 +1,12 @@
 /*
   Copyright (c) DataStax, Inc.
+
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
+
   http://www.apache.org/licenses/LICENSE-2.0
+
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -210,7 +213,7 @@ TEST_F(SocketUnitTest, SslClose) {
   Vector<SocketConnector::Ptr> connectors;
 
   bool is_closed = false;
-  for (size_t i = 0; i < 100; ++i) {
+  for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
                                                                      static_cast<void*>(&is_closed),
                                                                      on_socket_closed));
@@ -232,7 +235,7 @@ TEST_F(SocketUnitTest, Cancel) {
   Vector<SocketConnector::Ptr> connectors;
 
   bool is_cancelled = false;
-  for (size_t i = 0; i < 100; ++i) {
+  for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
                                                                      static_cast<void*>(&is_cancelled),
                                                                      on_socket_cancelled));
@@ -260,7 +263,7 @@ TEST_F(SocketUnitTest, SslCancel) {
   Vector<SocketConnector::Ptr> connectors;
 
   bool is_cancelled = false;
-  for (size_t i = 0; i < 100; ++i) {
+  for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
                                                                      static_cast<void*>(&is_cancelled),
                                                                      on_socket_cancelled));

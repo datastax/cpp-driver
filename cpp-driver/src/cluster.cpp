@@ -213,6 +213,11 @@ void cass_cluster_set_resolve_timeout(CassCluster* cluster,
   cluster->config().set_resolve_timeout(timeout_ms);
 }
 
+void cass_cluster_set_max_schema_wait_time(CassCluster* cluster,
+                                           unsigned wait_time_ms) {
+  cluster->config().set_max_schema_wait_time_ms(wait_time_ms);
+}
+
 void cass_cluster_set_credentials(CassCluster* cluster,
                                   const char* username,
                                   const char* password) {

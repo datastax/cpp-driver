@@ -57,7 +57,7 @@ public:
   int acquire(const T& item) {
     int stream = acquire_stream();
     if (stream < 0) return -1;
-    pending_[stream] = item;
+    pending_.insert(std::pair<int, T>(stream, item));
     return stream;
   }
 

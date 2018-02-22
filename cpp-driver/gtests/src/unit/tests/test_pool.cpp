@@ -13,20 +13,21 @@
 
 #include <gtest/gtest.h>
 
-#include "mockssandra.hpp"
+#include "mockssandra_test.hpp"
 
 #include "connection_pool_manager_initializer.hpp"
+#include "constants.hpp"
 #include "event_loop.hpp"
 #include "future.hpp"
 #include "request_queue.hpp"
 #include "ssl.hpp"
 
 #define NUM_NODES 3
-#define PROTOCOL_VERSION 4
+#define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
 
 using namespace cass;
 
-class PoolUnitTest : public testing::Test {
+class PoolUnitTest : public mockssandra::SimpleClusterTest {
 public:
 
   template <class State>
@@ -215,7 +216,7 @@ public:
   };
 
   PoolUnitTest()
-    : cluster_(mockssandra::SimpleRequestHandlerBuilder().build(), NUM_NODES)
+    : mockssandra::SimpleClusterTest(NUM_NODES)
     , event_loop_group_(1)
     , request_queue_manager_(&event_loop_group_) { }
 
@@ -229,42 +230,13 @@ public:
   }
 
   ConnectionPoolManagerSettings use_ssl() {
-    SslContext::Ptr ssl_context(SslContextFactory::create());
-
-    String cert = cluster_.use_ssl();
-    EXPECT_FALSE(cert.empty()) << "Unable to enable SSL";
-    EXPECT_EQ(ssl_context->add_trusted_cert(cert.data(), cert.size()), CASS_OK);
-
     ConnectionPoolManagerSettings settings;
-    settings.connection_settings.socket_settings.ssl_context = ssl_context;
-    settings.connection_settings.socket_settings.hostname_resolution_enabled = true;
-
+    settings.connection_settings = mockssandra::SimpleClusterTest::use_ssl();
     return settings;
   }
 
-  void stop_all() {
-    cluster_.stop_all();
-  }
-
-  void start_all() {
-    if (cluster_.start_all() != 0) {
-      cluster_.stop_all();
-      ASSERT_TRUE(false) << "Unable to start cluster";
-    }
-  }
-
-  void start(size_t node) {
-    if (cluster_.start(node) != 0) {
-      cluster_.stop_all();
-      ASSERT_TRUE(false) << "Unable to start node " << node;
-    }
-  }
-
-  void stop(size_t node) {
-    cluster_.stop(node);
-  }
-
   virtual void SetUp() {
+    mockssandra::SimpleClusterTest::SetUp();
     ASSERT_EQ(event_loop_group_.init(), 0);
     event_loop_group_.run();
     ASSERT_EQ(request_queue_manager_.init(1024), 0);
@@ -274,7 +246,7 @@ public:
     request_queue_manager_.close_handles();
     event_loop_group_.close_handles();
     event_loop_group_.join();
-    stop_all();
+    mockssandra::SimpleClusterTest::TearDown();
   }
 
   RequestQueueManager* request_queue_manager() {
@@ -310,13 +282,9 @@ public:
     }
   }
 
-  static void on_pool_cancelled(ConnectionPoolManagerInitializer* initializer) {
-  }
-
   static void on_pool_nop(ConnectionPoolManagerInitializer* initializer) { }
 
 private:
-  mockssandra::SimpleCluster cluster_;
   RoundRobinEventLoopGroup event_loop_group_;
   RequestQueueManager request_queue_manager_;
 };

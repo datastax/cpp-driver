@@ -95,6 +95,10 @@ void RequestQueue::handle_flush() {
           connections_.insert(item.connection);
         }
       }
+    } else {
+      // See if there's another connection available for the current host;
+      // otherwise the next host in the query plan will be used.
+      item.callback->on_retry_current_host();
     }
 
     item.callback->dec_ref();

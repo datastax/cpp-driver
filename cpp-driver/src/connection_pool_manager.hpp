@@ -56,6 +56,7 @@ public:
    * during reconnection.
    *
    * The following are critical errors:
+   * * Invalid keyspace
    * * Invalid protocol version
    * * Authentication failure
    * * SSL failure

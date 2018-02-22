@@ -1,3 +1,19 @@
+/*
+  Copyright (c) DataStax, Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
 #include "mockssandra.hpp"
 
 #include <assert.h>
@@ -47,12 +63,12 @@ String Ssl::generate_cert(const String& key, const String& cn) {
   X509_set_version(x509, 2);
   ASN1_INTEGER_set(X509_get_serialNumber(x509), 0);
   X509_gmtime_adj(X509_get_notBefore(x509), 0);
-  X509_gmtime_adj(X509_get_notAfter(x509), (long)60*60*24*365);
+  X509_gmtime_adj(X509_get_notAfter(x509), static_cast<long>(60 * 60 * 24 * 365));
   X509_set_pubkey(x509, pkey);
 
   X509_NAME* name = X509_get_subject_name(x509);
-  X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"US", -1, -1, 0);
-  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)cn.c_str(), -1, -1, 0);
+  X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, reinterpret_cast<const unsigned char*>("US"), -1, -1, 0);
+  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
   X509_set_issuer_name(x509, name);
   X509_sign(x509, pkey, EVP_md5());
 
@@ -75,9 +91,10 @@ String Ssl::generate_cert(const String& key, const String& cn) {
 namespace internal {
 
 static void print_ssl_error() {
-  unsigned long n = ERR_get_error();
-  char buf[1024];
-  fprintf(stderr, "%s\n", ERR_error_string(n, buf));
+  unsigned long err = ERR_get_error();
+  char buf[256];
+  ERR_error_string_n(err, buf, sizeof(buf));
+  fprintf(stderr, "%s\n", buf);
 }
 
 struct WriteReq {

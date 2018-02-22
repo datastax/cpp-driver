@@ -76,7 +76,6 @@ public:
    */
   void close_handles();
 
-
   /**
    * Waits for the event loop thread to exit (thread-safe).
    */

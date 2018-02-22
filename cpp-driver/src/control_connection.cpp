@@ -117,9 +117,9 @@ ControlRequestCallback::ControlRequestCallback(const String& query,
   , control_connection_(control_connection)
   , callback_(callback) {
   // We need to update the loop time to prevent new requests from timing out
-  // in cases where a callback took a long time to execute. In the future,
-  // we might improve this by executing the these long running callbacks
-  // on a seperate thread.
+  // in cases where a callback took a long time to execute.
+  // TODO: In the future, we might improve this by executing the these long
+  // running callbacks on a seperate thread.
   uv_update_time(control_connection->session_->loop());
 }
 
@@ -182,9 +182,9 @@ ChainedControlRequestCallback::ChainedControlRequestCallback(const String& key, 
   , control_connection_(control_connection)
   , callback_(callback) {
   // We need to update the loop time to prevent new requests from timing out
-  // in cases where a callback took a long time to execute. In the future,
-  // we might improve this by executing the these long running callbacks
-  // on a seperate thread.
+  // in cases where a callback took a long time to execute.
+  // TODO: In the future, we might improve this by executing the these long
+  // running callbacks on a seperate thread.
   uv_update_time(control_connection->session_->loop());
 }
 

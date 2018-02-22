@@ -19,8 +19,6 @@
 
 #include "async.hpp"
 
-#include <uv.h>
-
 namespace cass {
 
 template <typename Q>

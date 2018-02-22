@@ -227,7 +227,7 @@ void Connector::on_error(ConnectionError code, const String& message) {
   LOG_DEBUG("Unable to connect to host %s because of the following error: %s",
             address().to_string().c_str(),
             message.c_str());
-  if (error_code_ == CONNECTION_OK) { // Only all this once
+  if (error_code_ == CONNECTION_OK) { // Only perform this once
     error_message_ = message;
     error_code_ = code;
     if (connection_) connection_->defunct();
@@ -262,6 +262,9 @@ void Connector::on_ready_or_register_for_events() {
   }
 }
 
+// TODO: We don't currently do anything with the options returned from the
+// SUPPORTED response. In the not too distant future we will be using these
+// options for at least compression, but likely other things too.
 #ifdef CASS_USE_OPTIONS
 void ConnectionConnector::on_supported(ResponseMessage* response) {
   SupportedResponse* supported =

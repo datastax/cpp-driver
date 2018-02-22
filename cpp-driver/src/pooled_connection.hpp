@@ -22,8 +22,6 @@
 #include "ref_counted.hpp"
 #include "vector.hpp"
 
-#include <uv.h>
-
 namespace cass {
 
 class ConnectionPool;

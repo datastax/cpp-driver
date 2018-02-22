@@ -60,7 +60,7 @@ public:
   /**
    * Connect a pool.
    *
-   * @param An event loop group to use run the connection process.
+   * @param event_loop_group An event loop group to use run the connection process.
    */
   void connect(EventLoopGroup* event_loop_group);
 

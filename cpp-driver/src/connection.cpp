@@ -141,8 +141,6 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
 
   callback->set_state(RequestCallback::REQUEST_STATE_WRITING);
 
-  restart_heartbeat_timer();
-
   return request_size;
 }
 
@@ -189,6 +187,12 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
 }
 
 void Connection::on_write(int status, RequestCallback* callback) {
+  // A successful write means that a heartbeat doesn't need to be sent so the
+  // timer can be reset.
+  if (status == 0) {
+    restart_heartbeat_timer();
+  }
+
   switch (callback->state()) {
     case RequestCallback::REQUEST_STATE_WRITING:
       if (status == 0) {
@@ -307,7 +311,7 @@ void Connection::on_close() {
 }
 
 void Connection::restart_heartbeat_timer() {
-  if (heartbeat_interval_secs_ > 0) {
+  if (!is_closing() && heartbeat_interval_secs_ > 0) {
     heartbeat_timer_.start(socket_->loop(),
                            1000 * heartbeat_interval_secs_,
                            this, on_heartbeat);
@@ -336,11 +340,11 @@ void Connection::on_heartbeat(Timer* timer) {
 void Connection::restart_terminate_timer() {
   // The terminate timer shouldn't be started without having heartbeats enabled,
   // otherwise connections would be terminated in periods of request inactivity.
-  if (heartbeat_interval_secs_ > 0 &&
+  if (!is_closing() && heartbeat_interval_secs_ > 0 &&
       idle_timeout_secs_ > 0) {
     terminate_timer_.start(socket_->loop(),
-                      1000 * idle_timeout_secs_,
-                      this, on_terminate);
+                           1000 * idle_timeout_secs_,
+                           this, on_terminate);
   }
 }
 

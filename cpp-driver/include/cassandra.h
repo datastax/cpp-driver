@@ -1777,6 +1777,21 @@ cass_cluster_set_resolve_timeout(CassCluster* cluster,
                                  unsigned timeout_ms);
 
 /**
+ * Sets the maximum time to wait for schema agreement after a schema change
+ * is made (e.g. creating, altering, dropping a table/keyspace/view/index etc).
+ *
+ * <b>Default:</b> 10000 milliseconds
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] wait_time_ms Wait time in milliseconds
+ */
+CASS_EXPORT void
+cass_cluster_set_max_schema_wait_time(CassCluster* cluster,
+                                      unsigned wait_time_ms);
+
+/**
  * Sets credentials for plain text authentication.
  *
  * @public @memberof CassCluster

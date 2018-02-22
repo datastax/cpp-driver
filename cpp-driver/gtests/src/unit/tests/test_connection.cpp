@@ -1,9 +1,12 @@
 /*
   Copyright (c) DataStax, Inc.
+
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
+
   http://www.apache.org/licenses/LICENSE-2.0
+
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,19 +16,20 @@
 
 #include <gtest/gtest.h>
 
-#include "mockssandra.hpp"
+#include "mockssandra_test.hpp"
 
 #include "auth.hpp"
 #include "connector.hpp"
+#include "constants.hpp"
 #include "request_callback.hpp"
 #include "ssl.hpp"
 
 using namespace cass;
 
-#define PROTOCOL_VERSION 4
+#define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
 #define PORT 9042
 
-class ConnectionUnitTest : public testing::Test {
+class ConnectionUnitTest : public mockssandra::SimpleClusterTest {
 public:
   enum State {
     STATE_NEW,
@@ -67,47 +71,16 @@ public:
     Connection* connection_;
   };
 
-  ConnectionUnitTest()
-    : cluster_(mockssandra::SimpleRequestHandlerBuilder().build()) { }
-
   uv_loop_t* loop() { return &loop_; }
 
-  ConnectionSettings use_ssl() {
-    SslContext::Ptr ssl_context(SslContextFactory::create());
-
-    String cert = cluster_.use_ssl();
-    EXPECT_FALSE(cert.empty()) << "Unable to enable SSL";
-    EXPECT_EQ(ssl_context->add_trusted_cert(cert.data(), cert.size()), CASS_OK);
-
-    ConnectionSettings settings;
-    settings.socket_settings.ssl_context = ssl_context;
-    settings.socket_settings.hostname_resolution_enabled = true;
-
-    return settings;
-  }
-
-  void start_all() {
-    ASSERT_EQ(cluster_.start_all(), 0);
-  }
-
-  void stop_all() {
-    cluster_.stop_all();
-  }
-
-  void use_close_immediately() {
-    cluster_.use_close_immediately();
-  }
-
   virtual void SetUp() {
+    mockssandra::SimpleClusterTest::SetUp();
     uv_loop_init(loop());
-    saved_log_level_ = Logger::log_level();
-    Logger::set_log_level(CASS_LOG_DISABLED);
   }
 
   virtual void TearDown() {
     uv_loop_close(loop());
-    stop_all();
-    Logger::set_log_level(saved_log_level_);
+    mockssandra::SimpleClusterTest::TearDown();
   }
 
   static void on_connection_connected(Connector* connector) {
@@ -123,6 +96,8 @@ public:
         static_cast<Connector::ConnectionError*>(connector->data());
     if (!connector->is_ok()) {
       *error_code = connector->error_code();
+    } else {
+      connector->connection()->close();
     }
   }
 
@@ -135,8 +110,6 @@ public:
 
 private:
   uv_loop_t loop_;
-  mockssandra::SimpleCluster cluster_;
-  CassLogLevel saved_log_level_;
 };
 
 
@@ -252,7 +225,7 @@ TEST_F(ConnectionUnitTest, Close) {
   Vector<Connector::Ptr> connectors;
 
   bool is_closed(false);
-  for (size_t i = 0; i < 100; ++i) {
+  for (size_t i = 0; i < 10; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
                                                          static_cast<void*>(&is_closed),
@@ -275,7 +248,7 @@ TEST_F(ConnectionUnitTest, SslClose) {
   Vector<Connector::Ptr> connectors;
 
   bool is_closed(false);
-  for (size_t i = 0; i < 100; ++i) {
+  for (size_t i = 0; i < 10; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
                                                          static_cast<void*>(&is_closed),
@@ -297,7 +270,7 @@ TEST_F(ConnectionUnitTest, Cancel) {
   Vector<Connector::Ptr> connectors;
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  for (size_t i = 0; i < 100; ++i) {
+  for (size_t i = 0; i < 10; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
                                                          static_cast<void*>(&error_code),
@@ -326,7 +299,7 @@ TEST_F(ConnectionUnitTest, SslCancel) {
   Vector<Connector::Ptr> connectors;
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  for (size_t i = 0; i < 100; ++i) {
+  for (size_t i = 0; i < 10; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
                                                          static_cast<void*>(&error_code),
