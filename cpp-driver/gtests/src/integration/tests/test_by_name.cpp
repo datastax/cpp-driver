@@ -420,7 +420,7 @@ CASSANDRA_INTEGRATION_TEST_F(ByNameBytesTests, Prepared) {
   // Create values to be inserted in the test
   TimeUuid key = uuid_generator_.generate_timeuuid();
   Blob blobs("68971169783116971203269110116101114112114105115101329911211245100114105118101114");
-  Varint varints("12345678.90123456789012345678901234567890");
+  Varint varints("1234567890123456789012345678901234567890");
 
   // Prepare, bind, and insert the values into the table
   Prepared prepared = session_.prepare(format_string(INSERT_BYTES_FORMAT,
