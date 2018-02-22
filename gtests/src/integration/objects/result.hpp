@@ -20,8 +20,9 @@
 
 #include "objects/object_base.hpp"
 
-#include "objects/iterator.hpp"
+#include "objects/custom_payload.hpp"
 #include "objects/future.hpp"
+#include "objects/iterator.hpp"
 
 #include "exception.hpp"
 
@@ -75,7 +76,8 @@ public:
    */
   Result(Future future)
     : Object<const CassResult, cass_result_free>(future.result())
-    , future_(future) { }
+    , future_(future)
+    , custom_payload_(future) { }
 
   /**
    * Get the attempted host/address of the future
@@ -181,11 +183,24 @@ public:
     return row_count() == 0;
   }
 
+  /**
+   * Get the custom payload associated with the result
+   *
+   * @return Custom payload
+   */
+  CustomPayload custom_payload() {
+    return custom_payload_;
+  }
+
 private:
   /**
    * Future wrapped object
    */
   Future future_;
+  /**
+   * Custom payload associated with response future (may be empty)
+   */
+  CustomPayload custom_payload_;
 };
 
 /**

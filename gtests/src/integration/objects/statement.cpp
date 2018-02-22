@@ -14,22 +14,12 @@
   limitations under the License.
 */
 
-#ifndef __TEST_OBJECTS_HPP__
-#define __TEST_OBJECTS_HPP__
-#include "cassandra.h"
+#include "statement.hpp"
 
-#include "objects/cluster.hpp"
-#include "objects/collection.hpp"
 #include "objects/custom_payload.hpp"
-#include "objects/future.hpp"
-#include "objects/iterator.hpp"
-#include "objects/prepared.hpp"
-#include "objects/result.hpp"
-#include "objects/retry_policy.hpp"
-#include "objects/session.hpp"
-#include "objects/statement.hpp"
-#include "objects/tuple.hpp"
-#include "objects/user_type.hpp"
-#include "objects/uuid_gen.hpp"
 
-#endif // __TEST_OBJECTS_HPP__
+void test::driver::Statement::set_custom_payload(CustomPayload custom_payload) {
+  ASSERT_EQ(CASS_OK, cass_statement_set_custom_payload(get(),
+            custom_payload.get()));
+}
+
