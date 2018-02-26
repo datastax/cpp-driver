@@ -221,7 +221,8 @@ public:
 
 private:
   void internal_add_pool(const ConnectionPool::Ptr& pool);
-  void internal_remove_pool(const Address& address);
+  void internal_remove_pool(ScopedWriteLock& wl,
+                            const Address& address);
   void maybe_closed(ScopedWriteLock& wl);
 
 private:

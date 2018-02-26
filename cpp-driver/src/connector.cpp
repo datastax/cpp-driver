@@ -193,6 +193,11 @@ Connector* Connector::with_metrics(Metrics* metrics) {
 
 Connector* Connector::with_settings(const ConnectionSettings& settings) {
   settings_ = settings;
+  // Only use hostname resolution if actually required for SSL or
+  // authentication.
+  settings_.socket_settings.hostname_resolution_enabled
+      = settings.socket_settings.hostname_resolution_enabled &&
+      (settings.auth_provider || settings.socket_settings.ssl_context);
   return this;
 }
 

@@ -234,13 +234,13 @@ ChainedRequestCallback::ChainedRequestCallback(const String& key, const Request:
   , has_pending_(false)
   , key_(key) { }
 
-ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String&key, const String& query) {
+ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const String& query) {
   has_pending_ = true;
   return ChainedRequestCallback::Ptr(
                    Memory::allocate<ChainedRequestCallback>(key, query, Ptr(this)));
 }
 
-ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String&key, const Request::ConstPtr& request) {
+ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const Request::ConstPtr& request) {
   has_pending_ = true;
   return ChainedRequestCallback::Ptr(
         Memory::allocate<ChainedRequestCallback>(key, request, Ptr(this)));

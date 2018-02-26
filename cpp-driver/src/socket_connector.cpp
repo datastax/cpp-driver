@@ -199,8 +199,8 @@ void SocketConnector::handle_connect(TcpConnector* tcp_connector) {
 #if defined(HAVE_NOSIGPIPE) && UV_VERSION_MAJOR >= 1
     uv_tcp_t* tcp = &socket_->tcp_;
 
-    // This must be done after socket for the socket file descriptor to be
-    // valid.
+    // This must be done after the socket is intialized, which is done in the
+    // connection process, for the socket file descriptor to be valid.
     uv_os_fd_t fd = 0;
     int enabled = 1;
     if (uv_fileno(reinterpret_cast<uv_handle_t*>(tcp), &fd) != 0 ||

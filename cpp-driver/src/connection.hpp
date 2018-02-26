@@ -83,7 +83,7 @@ public:
 };
 
 /**
- * A connection. It's a socket wrapper that handles Cassadndra/DSE specific
+ * A connection. It's a socket wrapper that handles Cassandra/DSE specific
  * functionality such as decoding responses and heartbeats. It can not be
  * connected directly instead use a Connector object.
  *

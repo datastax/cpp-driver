@@ -41,7 +41,7 @@ private:
 
 /**
  * A request callback that sets the keyspace then runs the original request
- * callback. The happens when the current keyspace wasn't set or has been
+ * callback. This happens when the current keyspace wasn't set or has been
  * changed.
  */
 class ChainedSetKeyspaceCallback : public SimpleRequestCallback {

@@ -98,9 +98,11 @@ void ConnectionPoolManager::add(const Address& address) {
 }
 
 void ConnectionPoolManager::remove(const Address& address) {
-  ScopedWriteLock rl(&rwlock_);
+  ScopedReadLock rl(&rwlock_);
   ConnectionPool::Map::iterator it = pools_.find(address);
   if (it == pools_.end()) return;
+  // The connection pool will remove itself from the manager when all of its
+  // connections are closed.
   it->second->close();
 }
 
@@ -141,7 +143,8 @@ void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool, Protected)
 }
 
 void ConnectionPoolManager::remove_pool(ConnectionPool* pool, Protected) {
-  internal_remove_pool(pool->address());
+  ScopedWriteLock wl(&rwlock_);
+  internal_remove_pool(wl, pool->address());
 }
 
 void ConnectionPoolManager::notify_up(ConnectionPool* pool, Protected) {
@@ -163,7 +166,8 @@ void ConnectionPoolManager::notify_critical_error(ConnectionPool* pool,
   if (listener_ != NULL) {
     listener_->on_critical_error(pool->address(), code, message);
   }
-  internal_remove_pool(pool->address());
+  ScopedWriteLock wl(&rwlock_);
+  internal_remove_pool(wl, pool->address());
 }
 
 void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
@@ -171,12 +175,14 @@ void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
   pools_[pool->address()] = pool;
 }
 
-void ConnectionPoolManager::internal_remove_pool(const Address& address) {
-  ScopedWriteLock wl(&rwlock_);
+void ConnectionPoolManager::internal_remove_pool(ScopedWriteLock& wl,
+                                                 const Address& address) {
   pools_.erase(address);
   maybe_closed(wl);
 }
 
+// This must be the last call in a function because it can potentially
+// deallocate the manager.
 void ConnectionPoolManager::maybe_closed(ScopedWriteLock& wl) {
   if (is_closing_ && pools_.empty()) {
     wl.unlock(); // The manager is destroyed in this step it must be unlocked

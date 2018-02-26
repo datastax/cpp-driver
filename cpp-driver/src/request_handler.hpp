@@ -170,7 +170,6 @@ public:
 
   void start_request(uv_loop_t* loop, Protected);
 
-  void add_execution(RequestExecution* request_execution, Protected);
   void add_attempted_address(const Address& address, Protected);
 
   void notify_result_metadata_changed(const String& prepared_id,
