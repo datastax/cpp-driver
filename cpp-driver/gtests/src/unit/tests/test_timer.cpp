@@ -41,14 +41,9 @@ void on_timer_repeat(cass::Timer* timer) {
 TEST(TimerUnitTest, Once)
 {
   uv_loop_t* loop;
-
-#if UV_VERSION_MAJOR == 0
-  loop = uv_loop_new();
-#else
   uv_loop_t loop_storage__;
   loop = &loop_storage__;
   uv_loop_init(loop);
-#endif
 
   cass::Timer timer;
 
@@ -63,25 +58,15 @@ TEST(TimerUnitTest, Once)
   EXPECT_FALSE(timer.is_running());
   EXPECT_TRUE(was_timer_called);
 
-#if UV_VERSION_MAJOR == 0
-  uv_loop_delete(loop);
-#else
   uv_loop_close(loop);
-#endif
-
 }
 
 TEST(TimerUnitTest, Repeat)
 {
   uv_loop_t* loop;
-
-#if UV_VERSION_MAJOR == 0
-  loop = uv_loop_new();
-#else
   uv_loop_t loop_storage__;
   loop = &loop_storage__;
   uv_loop_init(loop);
-#endif
 
   cass::Timer timer;
 
@@ -98,10 +83,5 @@ TEST(TimerUnitTest, Repeat)
   EXPECT_FALSE(timer.is_running());
   EXPECT_EQ(data.count, 2);
 
-#if UV_VERSION_MAJOR == 0
-  uv_loop_delete(loop);
-#else
   uv_loop_close(loop);
-#endif
-
 }

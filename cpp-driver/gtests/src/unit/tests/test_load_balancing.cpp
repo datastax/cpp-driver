@@ -103,11 +103,7 @@ struct RunPeriodicTask : public cass::EventLoop {
     uv_async_send(&async);
   }
 
-#if UV_VERSION_MAJOR == 0
-  static void on_async(uv_async_t *handle, int status) {
-#else
   static void on_async(uv_async_t *handle) {
-#endif
     RunPeriodicTask* task = static_cast<RunPeriodicTask*>(handle->data);
     task->close_handles();
     task->policy->close_handles();

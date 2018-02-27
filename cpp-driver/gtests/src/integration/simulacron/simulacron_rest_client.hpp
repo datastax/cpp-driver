@@ -109,17 +109,6 @@ private:
    */
   SimulacronRestClient();
 
-#if UV_VERSION_MAJOR == 0
-  /**
-   * Handle the buffer allocation of memory for the requests and server
-   * responses.
-   *
-   * @param handle The libuv handle type
-   * @param suggested_size The size (in bytes) to allocate for the buffer
-   * @return The allocated buffer (must be freed)
-   */
-  static uv_buf_t handle_allocation(uv_handle_t* handle, size_t suggested_size);
-#else
   /**
    * Handle the buffer allocation of memory for the requests and server
    * responses.
@@ -130,7 +119,6 @@ private:
    */
   static void handle_allocation(uv_handle_t* handle, size_t suggested_size,
     uv_buf_t* buffer);
-#endif
 
   /**
    * Handle the connect (callback) when the connection has been established to
@@ -150,13 +138,9 @@ private:
    *              will equal <b>UV_EOF</b>
    * @param buf Buffer to read from
    */
-#if UV_VERSION_MAJOR == 0
-  static void handle_response(uv_stream_t* strean, ssize_t nread, uv_buf_t buf);
-#else
   static void handle_response(uv_stream_t* stream,
                               ssize_t nread,
                               const uv_buf_t* buf);
-#endif
 
   /**
    * Generate the HTTP message for the REST request.

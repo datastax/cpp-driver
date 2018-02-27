@@ -16,10 +16,6 @@
   } \
 } while(0);
 
-#if UV_VERSION_MAJOR == 0
-# define CHECK_FOR_SKIPPED_TEST \
-    SKIP_TEST("Test requires libuv v1.x+: Hostname resolution required");
-#else
 //TODO: Update test to work with remote deployments
 # ifdef _WIN32
 #   define CHECK_FOR_SKIPPED_TEST \
@@ -33,7 +29,6 @@
 # else
 #   define CHECK_FOR_SKIPPED_TEST ((void)0)
 # endif
-#endif
 
 /**
  * Authentication integration tests
@@ -173,9 +168,7 @@ protected:
     Cluster cluster = dse::Cluster::build()
       .with_gssapi_authenticator("dse", principal)
       .with_contact_points(contact_points_)
-#if UV_VERSION_MAJOR > 0
-      .with_hostname_resolution(true) // hostname resolution is not available in libuv 0.10.x
-#endif
+      .with_hostname_resolution(true)
       .with_schema_metadata(false);
     Session session = cluster.connect();
 
@@ -201,9 +194,7 @@ protected:
     Cluster cluster = dse::Cluster::build()
       .with_plaintext_authenticator(username, password)
       .with_contact_points(contact_points_)
-#if UV_VERSION_MAJOR > 0
-      .with_hostname_resolution(true) // hostname resolution is not available in libuv 0.10.x
-#endif
+      .with_hostname_resolution(true)
       .with_schema_metadata(false);
     Session session = cluster.connect();
 

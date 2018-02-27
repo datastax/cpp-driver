@@ -16,27 +16,15 @@ env:
     - BOOST_VERSION=1.63.0
     - BOOST_FILE_VERSION=1_63_0
   matrix:
-    - LIBUV_VERSION=0.10.x EXACT_LIBUV_VERSION=0.10.37
-    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.11.0
+    - LIBUV_VERSION=1.11.0
 install:
   - if [ ! -d "${HOME}/dependencies/libuv-${LIBUV_VERSION}" ]; then
-      wget -q http://dist.libuv.org/dist/v${EXACT_LIBUV_VERSION}/libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
-      tar xzf libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
-      cd libuv-v${EXACT_LIBUV_VERSION};
-      if [ "${LIBUV_VERSION}" == "0.10.x" ]; then
-        make -j2;
-        mkdir -p ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
-        cp libuv* ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
-        cp -r include ${HOME}/dependencies/libuv-${LIBUV_VERSION};
-        cd ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
-        ln -s libuv.so libuv.so.0.10;
-        cd - 2&> /dev/null;
-      fi;
-      if [ "${LIBUV_VERSION}" == "1.x" ]; then
-        sh autogen.sh;
-        ./configure --prefix=${HOME}/dependencies/libuv-${LIBUV_VERSION};
-        make -j2 install;
-      fi;
+      wget -q http://dist.libuv.org/dist/v${LIBUV_VERSION}/libuv-v${LIBUV_VERSION}.tar.gz;
+      tar xzf libuv-v${LIBUV_VERSION}.tar.gz;
+      cd libuv-v${LIBUV_VERSION};
+      sh autogen.sh;
+      ./configure --prefix=${HOME}/dependencies/libuv-${LIBUV_VERSION};
+      make -j2 install;
       cd - 2&> /dev/null
     else echo "Using Cached libuv v${LIBUV_VERSION}. Dependency does not need to be re-compiled";
     fi

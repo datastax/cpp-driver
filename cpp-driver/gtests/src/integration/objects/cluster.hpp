@@ -182,8 +182,6 @@ public:
    * This is useful for authentication (Kerberos) or encryption (SSL)
    * services that require a valid hostname for verification.
    *
-   * NOTE: Not available if using libuv 0.10.x or earlier
-   *
    * @param enable True if hostname resolution should be enabled; false
    *               otherwise (default: true)
    * @return Cluster object

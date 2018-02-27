@@ -379,9 +379,9 @@ macro(CassUseLibuv)
   CassExtractHeaderVersion("LIBUV" ${LIBUV_VERSION_HEADER_FILE} "UV")
 
   if (LIBUV_VERSION_STRING VERSION_LESS "1.0")
-    message(WARNING "Libuv version ${LIBUV_VERSION_STRING} does not support reverse "
-    "name lookup. Hostname resolution will not work (version 1.0 or greater "
-    "required)")
+    message(FATAL_ERROR "Libuv version ${LIBUV_VERSION_STRING} is not "
+      " supported. Please updgrade to libuv version 1.0 or greater in order to "
+      "utilize the driver.")
   endif()
 
   if (LIBUV_VERSION_STRING VERSION_LESS "1.6")
