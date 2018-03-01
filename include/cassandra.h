@@ -1865,6 +1865,28 @@ CASS_EXPORT CassError
 cass_cluster_set_prepare_on_up_or_add_host(CassCluster* cluster,
                                            cass_bool_t enabled);
 
+/**
+ * Enable the <b>NO_COMPACT</b> startup option.
+ *
+ * This can help facilitate uninterrupted cluster upgrades where tables using
+ * <b>COMPACT_STORAGE</b> will operate in "compatibility mode" for
+ * <b>BATCH</b>, <b>DELETE</b>, <b>SELECT</b>, and <b>UPDATE</b> CQL operations.
+ *
+ * <b>Default:</b> cass_false
+ *
+ * @cassandra{3.0.16+}
+ * @cassandra{3.11.2+}
+ * @cassandra{4.0+}
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] enabled
+ */
+CASS_EXPORT CassError
+cass_cluster_set_no_compact(CassCluster* cluster,
+                            cass_bool_t enabled);
+
 /***********************************************************************************
  *
  * Session

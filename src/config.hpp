@@ -80,7 +80,8 @@ public:
       , use_schema_(true)
       , use_randomized_contact_points_(true)
       , prepare_on_all_hosts_(true)
-      , prepare_on_up_or_add_host_(true) { }
+      , prepare_on_up_or_add_host_(true)
+      , no_compact_(false) { }
 
   Config new_instance() const {
     Config config = *this;
@@ -394,6 +395,12 @@ public:
     prepare_on_up_or_add_host_ = enabled;
   }
 
+  bool no_compact() const { return no_compact_; }
+
+  void set_no_compact(bool enabled) {
+    no_compact_ = enabled;
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -441,6 +448,7 @@ private:
   bool use_randomized_contact_points_;
   bool prepare_on_all_hosts_;
   bool prepare_on_up_or_add_host_;
+  bool no_compact_;
 };
 
 } // namespace cass

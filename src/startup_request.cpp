@@ -39,6 +39,14 @@ int StartupRequest::encode(int version, RequestCallback* callback, BufferVec* bu
     options[key] = version_;
   }
 
+  if (no_compact_enabled_) {
+    const char* key = "NO_COMPACT";
+    const char* value = "true";
+    length += 2 + strlen(key);
+    length += 2 + strlen(value);
+    options[key] = value;
+  }
+
   bufs->push_back(Buffer(length));
   bufs->back().encode_string_map(0, options);
 

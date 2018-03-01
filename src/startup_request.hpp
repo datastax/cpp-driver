@@ -28,15 +28,15 @@ namespace cass {
 
 class StartupRequest : public Request {
 public:
-  StartupRequest()
+  StartupRequest(bool no_compact_enabled)
       : Request(CQL_OPCODE_STARTUP)
       , version_("3.0.0")
-      , compression_("") {}
-
-  bool encode(size_t reserved, char** output, size_t& size);
+      , compression_("")
+      , no_compact_enabled_(no_compact_enabled) { }
 
   const std::string version() const { return version_; }
   const std::string compression() const { return compression_; }
+  bool no_compact_enabled() const { return no_compact_enabled_; }
 
 private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
@@ -46,6 +46,7 @@ private:
 
   std::string version_;
   std::string compression_;
+  bool no_compact_enabled_;
 };
 
 } // namespace cass
