@@ -227,6 +227,20 @@ public:
   }
 
   /**
+   * Enable NO_COMPACT in the STARTUP OPTIONS for the connection
+   *
+   * @param enable True if NO_COMPACT should be enable; false otherwise
+   *              (default: true)
+   * @return Cluster object
+   */
+  Cluster& with_no_compact(bool enable = true) {
+    EXPECT_EQ(CASS_OK,
+              cass_cluster_set_no_compact(get(),
+                                          enable == true ? cass_true : cass_false));
+    return *this;
+  }
+
+  /**
    * Sets the port
    *
    * @param port Port number to set
