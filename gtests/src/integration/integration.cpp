@@ -208,6 +208,7 @@ std::string Integration::default_keyspace() {
 
   // Clean up the initial keyspace name (remove category information)
   keyspace_name_ = to_lower(test_case_name_) + "_" + to_lower(test_name_);
+  keyspace_name_ = replace_all(keyspace_name_, "tests", ""); //TODO: Rename integration tests (remove 's' or add 's')
   keyspace_name_ = replace_all(keyspace_name_, "test", "");
   keyspace_name_ = replace_all(keyspace_name_, "integration", "");
   for (TestCategory::iterator iterator = TestCategory::begin();
@@ -267,7 +268,9 @@ std::string Integration::default_table() {
   if (!table_name_.empty()) {
     return table_name_;
   }
+
   table_name_ = to_lower(test_name_);
+  table_name_ = replace_all(table_name_, "integration_", "");
   maybe_shrink_name(table_name_);
   return table_name_;
 }

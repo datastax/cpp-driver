@@ -307,7 +307,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, TableMetaFunctions) {
  * @expected_result Null for each lookup, since no object has a null name.
  */
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, MaterializedViewMetaFunctions) {
-  CHECK_VERSION(3.0.0)
+  CHECK_VERSION(3.0.0);
 
   const CassMaterializedViewMeta *view_meta =
     cass_table_meta_materialized_view_by_name(table_meta_.get(), VIEW_NAME);
