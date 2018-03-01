@@ -794,7 +794,7 @@ void Connection::on_supported(ResponseMessage* response) {
 
   internal_write(RequestCallback::Ptr(
                    new StartupCallback(Request::ConstPtr(
-                                         new StartupRequest()))));
+                                         new StartupRequest(config().no_compact())))));
 }
 
 void Connection::on_pending_schema_agreement(Timer* timer) {
