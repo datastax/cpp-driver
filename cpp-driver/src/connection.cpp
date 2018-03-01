@@ -797,7 +797,7 @@ void Connection::on_supported(ResponseMessage* response) {
 
   internal_write(RequestCallback::Ptr(
                    Memory::allocate<StartupCallback>(Request::ConstPtr(
-                                         Memory::allocate<StartupRequest>()))));
+                                         Memory::allocate<StartupRequest>(config().no_compact())))));
 }
 
 void Connection::on_pending_schema_agreement(Timer* timer) {
