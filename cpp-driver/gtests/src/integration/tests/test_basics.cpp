@@ -314,3 +314,86 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, BindBlobAsString) {
   ASSERT_EQ(Integer(0), row.next().as<Integer>());
   ASSERT_EQ(data, row.next().as<Blob>());
 }
+
+/**
+ * Perform select against a table using COMPACT STORAGE in compatibility mode.
+ *
+ * This this will perform querying a table with COMPACT STORAGE applied and
+ * queried using a separate session where the NO_COMPACT STARTUP_OPTIONS was
+ * supplied.
+ *
+ * NOTE: This test can only be run using Apache Cassandra versions where
+ *       COMPACT STORAGE is still applicable and supports the NO_COMPACT
+ *       STARTUP OPTIONS (e.g. v3.0.16+, v3.11.2+; but must be less than v4.x)
+ *
+ * @jira_ticket CPP-578
+ * @test_category connection
+ * @since core:2.9.0
+ * @cassandra_version 3.0.16
+ * @cassandra_version 3.11.2
+ * @expected_result Values inserted into the COMPACT STORAGE table will be
+ *                  selectable and contain additional metadata (columns).
+ */
+CASSANDRA_INTEGRATION_TEST_F(BasicsTests, NoCompactEnabledConnection) {
+  CHECK_FAILURE;
+  CHECK_VERSION(3.0.16);
+  CHECK_VERSION(3.11.2);
+  CCM::CassVersion cass_version = server_version_;
+  if (Options::is_dse()) {
+    cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
+  }
+  if (cass_version >= "4.0.0") {
+    SKIP_TEST("Unsupported for Apache Cassandra Version " << cass_version.to_string()
+              << ": Server version must be less than v4.0.0 and either 3.0.16+"
+              << " or 3.11.2+ in order to execute");
+  }
+
+  // Create a session where the NO_COMPACT option is set
+  Session no_compact_session = default_cluster()
+    .with_no_compact()
+    .connect(default_keyspace());
+
+  // Create the table and insert data using the NO_COMPACT session
+  no_compact_session.execute(format_string(
+                             "CREATE TABLE %s (k int PRIMARY KEY, v int) WITH COMPACT STORAGE",
+                             table_name_.c_str()));
+  no_compact_session.execute(format_string("INSERT INTO %s (k, v) VALUES(%s, %s)",
+                             table_name_.c_str(), "1", "1"));
+  no_compact_session.execute(format_string("INSERT INTO %s (k, v) VALUES(%s, %s)",
+                             table_name_.c_str(), "2", "2"));
+  no_compact_session.execute(format_string("INSERT INTO %s (k, v) VALUES(%s, %s)",
+                             table_name_.c_str(), "3", "3"));
+
+  // Validate the default session with compact storage enabled
+  Result result = session_.execute(default_select_all());
+  ASSERT_EQ(3u, result.row_count());
+  ASSERT_EQ(2u, result.column_count());
+  Rows rows = result.rows();
+  for (size_t i = 0; i < rows.row_count(); ++i) {
+    Row row = rows.next();
+    Integer k = row.next().as<Integer>();
+    Integer v = row.next().as<Integer>();
+    ASSERT_EQ(k, Integer(i + 1));
+    ASSERT_EQ(v, Integer(i + 1));
+  }
+
+  // Validate the default session with compact storage disabled (NO_COMPACT)
+  result = no_compact_session.execute(default_select_all());
+  ASSERT_EQ(3u, result.row_count());
+  ASSERT_EQ(4u, result.column_count()); // Should contain extra columns (column and value)
+  std::vector<std::string> column_names = result.column_names();
+  ASSERT_EQ("k", column_names[0]);
+  ASSERT_EQ("column1", column_names[1]);
+  ASSERT_EQ("v", column_names[2]);
+  ASSERT_EQ("value", column_names[3]);
+  rows = result.rows();
+  for (size_t i = 0; i < rows.row_count(); ++i) {
+    Row row = rows.next();
+    Integer k = row.next().as<Integer>();
+    ASSERT_EQ(k, Integer(i + 1));
+    ASSERT_TRUE(row.next().as<Varchar>().is_null());
+    Integer v = row.next().as<Integer>();
+    ASSERT_EQ(v, Integer(i + 1));
+    ASSERT_TRUE(row.next().as<Blob>().is_null());
+  }
+}

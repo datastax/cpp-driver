@@ -15,6 +15,20 @@
 #include "dse_pretty_print.hpp"
 #include "dse_values.hpp"
 
+#undef SKIP_TEST_VERSION
+#define SKIP_TEST_VERSION(server_version_string, version_string) \
+  SKIP_TEST("Unsupported for DataStax Enterprise Version " \
+    << server_version_string << ": Server version " \
+    << version_string << "+ is required")
+
+#undef CHECK_VERSION
+#define CHECK_VERSION(version) \
+  if (!Options::is_dse()) { \
+    SKIP_TEST("DataStax Enterprise Version " << #version << " is required") \
+  } else if (this->server_version_ < #version) { \
+    SKIP_TEST_VERSION(this->server_version_.to_string(), #version) \
+  }
+
 // Macros to use for grouping DSE integration tests together
 #define DSE_TEST_NAME(test_name) Integration##_##DSE##_##test_name
 #define DSE_INTEGRATION_TEST_F(test_case, test_name) \
