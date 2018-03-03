@@ -24,6 +24,10 @@
 #include "request_callback.hpp"
 #include "ssl.hpp"
 
+#ifdef WIN32
+#undef STATUS_TIMEOUT
+#endif
+
 using namespace cass;
 
 #define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
@@ -37,8 +41,8 @@ public:
     STATUS_ERROR,
     STATUS_ERROR_RESPONSE,
     STATUS_TIMEOUT,
-    STATUS_SUCCESS,
-  } status;
+    STATUS_SUCCESS
+  };
 
   struct State {
     State()
