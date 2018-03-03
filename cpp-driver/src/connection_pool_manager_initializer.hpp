@@ -104,9 +104,20 @@ public:
    */
   ConnectionPoolConnector::Vec failures() const;
 
+  /**
+   * Release the manager from the intializer. If not released in the callback
+   * the manager automatically be closed.
+   *
+   * @return The manager object for this initializer. This returns a null object
+   * if the manager is not connected or an error occured.
+   */
+  ConnectionPoolManager::Ptr release_manager() {
+    ConnectionPoolManager::Ptr temp = manager_;
+    manager_.reset();
+    return temp;
+  }
 
 public:
-  const ConnectionPoolManager::Ptr& manager() { return manager_; }
   void* data() { return data_; }
 
 private:

@@ -69,8 +69,16 @@ public:
    */
   void cancel();
 
+  /**
+   * Release the pool from the connector. If not released in the callback
+   * the pool automatically be closed.
+   *
+   * @return The pool object for this connector. This returns a null object
+   * if the pool is not connected or an error occured.
+   */
+  ConnectionPool::Ptr release_pool();
+
 public:
-  const ConnectionPool::Ptr& pool() { return pool_; }
   const Address& address() const { return pool_->address(); }
   void* data() { return data_; }
 

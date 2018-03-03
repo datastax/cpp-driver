@@ -106,13 +106,21 @@ public:
    */
   void cancel();
 
+  /**
+   * Release the socket from the connector. If not released in the callback
+   * the socket automatically be closed.
+   *
+   * @return The socket object for this connector. This returns a null object
+   * if the socket is not connected or an error occured.
+   */
+  Socket::Ptr release_socket();
+
 public:
   const Address& address() { return address_; }
   const String& hostname() { return hostname_; }
 
   void* data() { return data_; }
 
-  const Socket::Ptr& socket() { return socket_; }
   ScopedPtr<SslSession>& ssl_session() { return ssl_session_; }
 
   SocketError error_code() { return error_code_; }

@@ -115,17 +115,18 @@ public:
   }
 
   static void on_socket_connected(SocketConnector* connector) {
+    Socket::Ptr socket = connector->release_socket();
     if (connector->error_code() == SocketConnector::SOCKET_OK) {
       if (connector->ssl_session()) {
-        connector->socket()->set_handler(Memory::allocate<SslTestSocketHandler>(connector->ssl_session().release(),
+        socket->set_handler(Memory::allocate<SslTestSocketHandler>(connector->ssl_session().release(),
                                                                                 static_cast<String*>(connector->data())));
       } else {
-        connector->socket()->set_handler(Memory::allocate<TestSocketHandler>(static_cast<String*>(connector->data())));
+        socket->set_handler(Memory::allocate<TestSocketHandler>(static_cast<String*>(connector->data())));
       }
       const char* data = "The socket is sucessfully connected and wrote data - ";
-      connector->socket()->write(Memory::allocate<BufferSocketRequest>(Buffer(data, strlen(data))));
-      connector->socket()->write(Memory::allocate<BufferSocketRequest>(Buffer("Closed", sizeof("Closed") - 1)));
-      connector->socket()->flush();
+      socket->write(Memory::allocate<BufferSocketRequest>(Buffer(data, strlen(data))));
+      socket->write(Memory::allocate<BufferSocketRequest>(Buffer("Closed", sizeof("Closed") - 1)));
+      socket->flush();
     } else {
       ASSERT_TRUE(false) << "Failed to connect: " << connector->error_message();
     }

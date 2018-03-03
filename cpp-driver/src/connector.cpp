@@ -122,7 +122,7 @@ void StartupCallback::on_internal_set(ResponseMessage* response) {
 
 void StartupCallback::on_internal_error(CassError code, const String& message) {
   // Ignore timeouts caused by the connection closing
-  if (connector_->connection()->is_closing() &&
+  if (connector_->connection_->is_closing() &&
       code == CASS_ERROR_LIB_REQUEST_TIMED_OUT) {
     return;
   }
@@ -218,12 +218,20 @@ void Connector::cancel() {
   if (connection_) connection_->close();
 }
 
+Connection::Ptr Connector::release_connection() {
+  Connection::Ptr temp(connection_);
+  connection_.reset();
+  return temp;
+}
+
 void Connector::finish() {
   timer_.stop();
   if (connection_) {
     connection_->set_listener(is_ok() ? listener_ : NULL);
   }
   callback_(this);
+  // If the connection hasn't been released then close it.
+  if (connection_) connection_->close();
   dec_ref();
 }
 
@@ -367,7 +375,7 @@ void Connector::on_connect(SocketConnector* socket_connector) {
 
 void Connector::handle_connect(SocketConnector* socket_connector) {
   if (socket_connector->is_ok()) {
-    Socket::Ptr socket(socket_connector->socket());
+    Socket::Ptr socket(socket_connector->release_socket());
 
     connection_.reset(Memory::allocate<Connection>(socket,
                                                    protocol_version_,

@@ -84,6 +84,12 @@ void PooledConnector::cancel() {
   }
 }
 
+PooledConnection::Ptr PooledConnector::release_connection() {
+  PooledConnection::Ptr temp = connection_;
+  connection_.reset();
+  return temp;
+}
+
 bool PooledConnector::is_cancelled() const {
   return is_cancelled_;
 }
@@ -120,7 +126,11 @@ void PooledConnector::delayed_connect(EventLoop* event_loop, uint64_t wait_time_
     callback_(this, event_loop_);
   } else {
     inc_ref();
-    delayed_connect_timer_.start(event_loop_->loop(), wait_time_ms, this, on_delayed_connect);
+    if (wait_time_ms > 0) {
+      delayed_connect_timer_.start(event_loop_->loop(), wait_time_ms, this, on_delayed_connect);
+    } else {
+      internal_connect();
+    }
   }
 }
 
@@ -152,9 +162,11 @@ void PooledConnector::handle_connect(Connector* connector) {
   if (!is_cancelled_ && connector_->is_ok()) {
     connection_.reset(Memory::allocate<PooledConnection>(pool_,
                                                          event_loop_,
-                                                         connector->connection()));
+                                                         connector->release_connection()));
   }
   callback_(this, event_loop_);
+  // If the connection hasn't been released then close it.
+  if (connection_) connection_->close();
   dec_ref();
 }
 

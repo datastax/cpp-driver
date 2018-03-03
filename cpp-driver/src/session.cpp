@@ -747,7 +747,7 @@ void Session::on_initialize(ConnectionPoolManagerInitializer* initializer) {
 
 void Session::handle_initialize(ConnectionPoolManagerInitializer* initializer) {
   // Not much can be done in here because this is running on a thread pool thread.
-  notify_initialize_async(initializer->manager(), initializer->failures());
+  notify_initialize_async(initializer->release_manager(), initializer->failures());
 }
 
 void Session::on_result_metadata_changed(const String& prepared_id,

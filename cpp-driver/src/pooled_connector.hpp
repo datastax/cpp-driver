@@ -64,8 +64,16 @@ public:
    */
   void cancel();
 
+  /**
+   * Release the connection from the connector. If not released in the callback
+   * the connection automatically be closed.
+   *
+   * @return The connection object for this connector. This returns a null object
+   * if the connection is not connected or an error occured.
+   */
+  PooledConnection::Ptr release_connection();
+
 public:
-  const PooledConnection::Ptr& connection() const { return connection_; }
   void* data() { return data_; }
 
   bool is_cancelled() const;

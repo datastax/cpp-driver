@@ -38,7 +38,7 @@ ConnectionPoolManager::ConnectionPoolManager(RequestQueueManager* request_queue_
   , protocol_version_(protocol_version)
   , listener_(listener)
   , settings_(settings)
-  , is_closing_(false)
+  , close_state_(OPEN)
   , keyspace_(keyspace)
   , metrics_(metrics) {
   inc_ref(); // Reference for the lifetime of the connection pools
@@ -108,7 +108,8 @@ void ConnectionPoolManager::remove(const Address& address) {
 
 void ConnectionPoolManager::close() {
   ScopedWriteLock wl(&rwlock_);
-  if (!is_closing_) {
+  if (close_state_ == OPEN) {
+    close_state_ = CLOSING;
     for (ConnectionPool::Map::iterator it = pools_.begin(),
          end = pools_.end(); it != end; ++it) {
       it->second->close();
@@ -118,7 +119,6 @@ void ConnectionPoolManager::close() {
          end = pending_pools_.end(); it != end; ++it) {
       (*it)->cancel();
     }
-    is_closing_ = true;
   }
   maybe_closed(wl);
 }
@@ -184,7 +184,8 @@ void ConnectionPoolManager::internal_remove_pool(ScopedWriteLock& wl,
 // This must be the last call in a function because it can potentially
 // deallocate the manager.
 void ConnectionPoolManager::maybe_closed(ScopedWriteLock& wl) {
-  if (is_closing_ && pools_.empty()) {
+  if (close_state_ == CLOSING && pools_.empty()) {
+    close_state_ = CLOSED;
     wl.unlock(); // The manager is destroyed in this step it must be unlocked
     if (listener_ != NULL) {
       listener_->on_close();
@@ -203,7 +204,7 @@ void ConnectionPoolManager::handle_connect(ConnectionPoolConnector* pool_connect
   pending_pools_.erase(std::remove(pending_pools_.begin(), pending_pools_.end(), pool_connector),
                        pending_pools_.end());
   if (pool_connector->is_ok()) {
-    internal_add_pool(pool_connector->pool());
+    internal_add_pool(pool_connector->release_pool());
   } else if (listener_) {
       listener_->on_critical_error(pool_connector->address(),
                                    pool_connector->error_code(),

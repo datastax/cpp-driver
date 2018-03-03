@@ -90,7 +90,7 @@ void ConnectionPoolManagerInitializer::handle_connect(ConnectionPoolConnector* p
     ScopedMutex l(&lock_);
 
     if (pool_connector->is_ok()) {
-      manager_->add_pool(pool_connector->pool(), ConnectionPoolManager::Protected());
+      manager_->add_pool(pool_connector->release_pool(), ConnectionPoolManager::Protected());
     } else {
       failures_.push_back(ConnectionPoolConnector::Ptr(pool_connector));
     }
@@ -98,6 +98,8 @@ void ConnectionPoolManagerInitializer::handle_connect(ConnectionPoolConnector* p
 
   if (remaining_.fetch_sub(1) - 1 == 0) {
     callback_(this);
+    // If the manager hasn't been released then close it.
+    if (manager_) manager_->close();
     dec_ref();
   }
 }

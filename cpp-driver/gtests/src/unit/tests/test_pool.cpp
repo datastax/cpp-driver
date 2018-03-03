@@ -24,12 +24,12 @@
 
 #define NUM_NODES 3
 #define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
+#define WAIT_FOR_TIME 5 * 1000 * 1000 // 5 seconds
 
 using namespace cass;
 
 class PoolUnitTest : public mockssandra::SimpleClusterTest {
 public:
-
   template <class State>
   class Future : public cass::Future {
   public:
@@ -37,24 +37,36 @@ public:
       : cass::Future(FUTURE_TYPE_GENERIC)
       , count_(count) { }
 
-    int count(State state) {
-      wait();
-      int count = 0;
-      for (typename Vector<State>::const_iterator it = results_.begin(),
-           end = results_.end(); it != end; ++it) {
-        if (*it == state) count++;
+    size_t count(State state) {
+      ScopedMutex lock(&mutex_);
+      size_t count = 0;
+      if (internal_wait_for(lock, WAIT_FOR_TIME)) {
+        for (typename Vector<State>::const_iterator it = results_.begin(),
+             end = results_.end(); it != end; ++it) {
+          if (*it == state) count++;
+        }
+      } else {
+        fprintf(stderr, "Warning: Future timed out waiting for count\n");
       }
       return count;
     }
 
   protected:
     void set(State state) {
-      cass::ScopedMutex lock(&mutex_);
+      ScopedMutex lock(&mutex_);
+      add_result(lock, state);
+      maybe_set(lock);
+    }
+
+    void maybe_set(ScopedMutex& lock) {
       if (is_set()) return;
-      results_.push_back(state);
       if (results_.size() == count_) {
         Future::internal_set(lock);
       }
+    }
+
+    void add_result(ScopedMutex& lock, State state) {
+      results_.push_back(state);
     }
 
   private:
@@ -82,12 +94,53 @@ public:
     RequestFuture(int num_nodes = NUM_NODES)
       : Future(num_nodes) { }
 
+    virtual ~RequestFuture() { }
+
+    virtual void set(RequestState::Enum state) {
+      Future::set(state);
+    }
+
     void success() { set(SUCCESS); }
     void error_failed_write() { set(ERROR_FAILED_WRITE); }
     void error_no_connection() { set(ERROR_NO_CONNECTION); }
     void error() { set(ERROR); }
     void error_response() { set(ERROR_RESPONSE); }
     void timeout() { set(TIMEOUT); }
+  };
+
+  class RequestFutureWithManager
+      : public RequestFuture {
+  public:
+    typedef SharedRefPtr<RequestFutureWithManager> Ptr;
+
+    RequestFutureWithManager(int num_nodes = NUM_NODES)
+      : RequestFuture(num_nodes) { }
+
+    ~RequestFutureWithManager() {
+      ConnectionPoolManager::Ptr temp(manager());
+      if (temp) temp->close();
+    }
+
+    void set_manager(const ConnectionPoolManager::Ptr& manager) {
+      cass::ScopedMutex lock(&mutex_);
+      manager_ = manager;
+      maybe_set(lock);
+    }
+
+    ConnectionPoolManager::Ptr manager() {
+      cass::ScopedMutex lock(&mutex_);
+      internal_wait(lock);
+      return manager_;
+    }
+
+    virtual void set(RequestState::Enum state) {
+      ScopedMutex lock(&mutex_);
+      Future::add_result(lock, state);
+      if (manager_) maybe_set(lock);
+    }
+
+  private:
+    ConnectionPoolManager::Ptr manager_;
   };
 
   struct ListenerState {
@@ -256,21 +309,24 @@ public:
   void run_request(const ConnectionPoolManager::Ptr& manager, const Address& address) {
     PooledConnection::Ptr connection = manager->find_least_busy(address);
     if (connection) {
-      RequestFuture::Ptr future(Memory::allocate<RequestFuture>(1));
-      RequestCallback::Ptr callback(Memory::allocate<RequestCallback>(future.get()));
+      RequestFuture::Ptr request_future(Memory::allocate<RequestFuture>(1));
+      RequestCallback::Ptr callback(Memory::allocate<RequestCallback>(request_future.get()));
       EXPECT_TRUE(connection->write(callback.get())) << "Unable to write request to connection " << address.to_string();
-      EXPECT_EQ(future->count(RequestFuture::SUCCESS), 1);
+      EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 1u);
     } else {
       EXPECT_TRUE(false) << "No connection available for " << address.to_string();
     }
   }
 
   static void on_pool_connected(ConnectionPoolManagerInitializer* initializer) {
-    RequestFuture* future = static_cast<RequestFuture*>(initializer->data());
+    RequestFutureWithManager* future = static_cast<RequestFutureWithManager*>(initializer->data());
 
     mockssandra::Ipv4AddressGenerator generator;
+    ConnectionPoolManager::Ptr manager = initializer->release_manager();
+    future->set_manager(manager);
+
     for (int i = 0; i < NUM_NODES; ++i) {
-      PooledConnection::Ptr connection = initializer->manager()->find_least_busy(generator.next());
+      PooledConnection::Ptr connection = manager->find_least_busy(generator.next());
       if (connection) {
         RequestCallback::Ptr callback(Memory::allocate<RequestCallback>(future));
         if(!connection->write(callback.get())) {
@@ -282,7 +338,10 @@ public:
     }
   }
 
-  static void on_pool_nop(ConnectionPoolManagerInitializer* initializer) { }
+  static void on_pool_nop(ConnectionPoolManagerInitializer* initializer) {
+    RequestFutureWithManager* future = static_cast<RequestFutureWithManager*>(initializer->data());
+    future->set_manager(initializer->release_manager());
+  }
 
 private:
   RoundRobinEventLoopGroup event_loop_group_;
@@ -292,20 +351,18 @@ private:
 TEST_F(PoolUnitTest, Simple) {
   start_all();
 
-  RequestFuture::Ptr future(Memory::allocate<RequestFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(future.get()), on_pool_connected));
+          static_cast<void*>(request_future.get()), on_pool_connected));
 
   initializer
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(RequestFuture::SUCCESS), 3);
-
-  initializer->manager()->close();
+  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u);
 }
 
 TEST_F(PoolUnitTest, Keyspace) {
@@ -319,13 +376,13 @@ TEST_F(PoolUnitTest, Keyspace) {
 
   cluster.start_all();
 
-  RequestFuture::Ptr future(Memory::allocate<RequestFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(future.get()), on_pool_connected));
+          static_cast<void*>(request_future.get()), on_pool_connected));
 
   AddressVec addresses(this->addresses());
 
@@ -333,9 +390,10 @@ TEST_F(PoolUnitTest, Keyspace) {
       ->with_keyspace("foo")
       ->initialize(addresses);
 
-  EXPECT_EQ(future->count(RequestFuture::SUCCESS), 3);
+  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u);
 
-  ConnectionPoolManager::Ptr manager(initializer->manager());
+  ConnectionPoolManager::Ptr manager = request_future->manager();
+  ASSERT_TRUE(manager);
 
   for (size_t i = 0; i < NUM_NODES; ++i) {
     PooledConnection::Ptr connection = manager->find_least_busy(addresses[i]);
@@ -345,8 +403,6 @@ TEST_F(PoolUnitTest, Keyspace) {
       EXPECT_TRUE(false) << "Unable to get connection for " << addresses[i].to_string();
     }
   }
-
-  manager->close();
 }
 
 TEST_F(PoolUnitTest, Auth) {
@@ -360,13 +416,13 @@ TEST_F(PoolUnitTest, Auth) {
   mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
   cluster.start_all();
 
-  RequestFuture::Ptr future(Memory::allocate<RequestFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(future.get()), on_pool_connected));
+          static_cast<void*>(request_future.get()), on_pool_connected));
 
   ConnectionPoolManagerSettings settings;
   settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
@@ -375,9 +431,7 @@ TEST_F(PoolUnitTest, Auth) {
       ->with_settings(settings)
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(RequestFuture::SUCCESS), 3);
-
-  initializer->manager()->close();
+  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u);
 }
 
 TEST_F(PoolUnitTest, Ssl) {
@@ -385,144 +439,145 @@ TEST_F(PoolUnitTest, Ssl) {
 
   start_all();
 
-  RequestFuture::Ptr future(Memory::allocate<RequestFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(future.get()), on_pool_connected));
+          static_cast<void*>(request_future.get()), on_pool_connected));
 
   initializer
       ->with_settings(settings)
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(RequestFuture::SUCCESS), 3);
-
-  initializer->manager()->close();
+  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u);
 }
 
 TEST_F(PoolUnitTest, Listener) {
   start_all();
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   initializer
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(ListenerFuture::UP), 3);
+  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 3u);
   EXPECT_EQ(initializer->failures().size(), 0u);
-
-  initializer->manager()->close();
 }
 
 TEST_F(PoolUnitTest, ListenerDown) {
   start(1);
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   initializer
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(ListenerFuture::UP), 1);
-  EXPECT_EQ(future->count(ListenerFuture::DOWN), 2);
+  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 2u);
   EXPECT_EQ(initializer->failures().size(), 0u);
-
-  initializer->manager()->close();
 }
 
 TEST_F(PoolUnitTest, AddRemove) {
   start_all();
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   AddressVec addresses(this->addresses());
 
   initializer
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses);
 
-  EXPECT_EQ(future->count(ListenerFuture::UP), 3);
+  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 3u);
 
-  ConnectionPoolManager::Ptr manager(initializer->manager());
+  ConnectionPoolManager::Ptr manager = request_future->manager();
+  ASSERT_TRUE(manager);
 
   for (size_t i = 0; i < NUM_NODES; ++i) {
-    future.reset(Memory::allocate<ListenerFuture>(1));
-    static_cast<Listener*>(manager->listener())->reset(future);
+    listener_future.reset(Memory::allocate<ListenerFuture>(1));
+    static_cast<Listener*>(manager->listener())->reset(listener_future);
 
     manager->remove(addresses[i]); // Remove node
-    EXPECT_EQ(future->count(ListenerFuture::DOWN), 1);
+    EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 1u);
     EXPECT_FALSE(manager->find_least_busy(addresses[i]));
 
-    future.reset(Memory::allocate<ListenerFuture>(1));
-    static_cast<Listener*>(manager->listener())->reset(future);
+    listener_future.reset(Memory::allocate<ListenerFuture>(1));
+    static_cast<Listener*>(manager->listener())->reset(listener_future);
 
     manager->add(addresses[i]); // Add node
-    EXPECT_EQ(future->count(ListenerFuture::UP), 1);
+    EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u);
     run_request(manager, addresses[i]);
   }
-
-  manager->close();
 }
 
 TEST_F(PoolUnitTest, Reconnect) {
   start_all();
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   AddressVec addresses(this->addresses());
 
+  ConnectionPoolManagerSettings settings;
+  settings.reconnect_wait_time_ms = 0; // Reconnect immediately
+
   initializer
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_settings(settings)
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses);
 
-  EXPECT_EQ(future->count(ListenerFuture::UP), 3);
+  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 3u);
 
-  ConnectionPoolManager::Ptr manager(initializer->manager());
+  ConnectionPoolManager::Ptr manager = request_future->manager();
+  ASSERT_TRUE(manager);
 
   for (size_t i = 0; i < NUM_NODES; ++i) {
-    future.reset(Memory::allocate<ListenerFuture>(1));
-    static_cast<Listener*>(manager->listener())->reset(future);
+    listener_future.reset(Memory::allocate<ListenerFuture>(1));
+    static_cast<Listener*>(manager->listener())->reset(listener_future);
 
     stop(i + 1); // Stop node
-    EXPECT_EQ(future->count(ListenerFuture::DOWN), 1);
+    EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 1u);
     EXPECT_FALSE(manager->find_least_busy(addresses[i]));
 
-    future.reset(Memory::allocate<ListenerFuture>(1));
-    static_cast<Listener*>(manager->listener())->reset(future);
+    listener_future.reset(Memory::allocate<ListenerFuture>(1));
+    static_cast<Listener*>(manager->listener())->reset(listener_future);
 
     start(i + 1); // Start node
-    EXPECT_EQ(future->count(ListenerFuture::UP), 1);
+    EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u);
     run_request(manager, addresses[i]);
   }
-
-  manager->close();
 }
 
 TEST_F(PoolUnitTest, Timeout) {
@@ -532,43 +587,43 @@ TEST_F(PoolUnitTest, Timeout) {
   mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
   cluster.start_all();
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   ConnectionPoolManagerSettings settings;
-  settings.connection_settings.connect_timeout_ms = 1000;
+  settings.connection_settings.connect_timeout_ms = 200;
 
   initializer
       ->with_settings(settings)
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(ListenerFuture::DOWN), 3);
-
-  initializer->manager()->close();
+  EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 3u);
 }
 
 TEST_F(PoolUnitTest, InvalidProtocol) {
   start_all();
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           0x7F,  // Invalid protocol version
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   initializer
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_INVALID_PROTOCOL), 3);
+  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_INVALID_PROTOCOL), 3u);
 
   ConnectionPoolConnector::Vec failures = initializer->failures();
   EXPECT_EQ(failures.size(), 3u);
@@ -578,7 +633,7 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
     EXPECT_EQ((*it)->error_code(), Connector::CONNECTION_ERROR_INVALID_PROTOCOL);
   }
 
-  initializer->manager()->close();
+  request_future->wait();
 }
 
 TEST_F(PoolUnitTest, InvalidKeyspace) {
@@ -591,22 +646,21 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
 
   cluster.start_all();
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   initializer
       ->with_keyspace("invalid")
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_KEYSPACE), 3);
-
-  initializer->manager()->close();
+  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_KEYSPACE), 3u);
 }
 
 TEST_F(PoolUnitTest, InvalidAuth) {
@@ -620,37 +674,37 @@ TEST_F(PoolUnitTest, InvalidAuth) {
   mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
   cluster.start_all();
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   ConnectionPoolManagerSettings settings;
   settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
 
   initializer
       ->with_settings(settings)
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_AUTH), 3);
-
-  initializer->manager()->close();
+  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_AUTH), 3u);
 }
 
 TEST_F(PoolUnitTest, InvalidNoSsl) {
   start_all(); // Start without ssl
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   SslContext::Ptr ssl_context(SslContextFactory::create());
 
@@ -660,25 +714,24 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
 
   initializer
       ->with_settings(settings)
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_SSL_HANDSHAKE), 3);
-
-  initializer->manager()->close();
+  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_SSL_HANDSHAKE), 3u);
 }
 
 TEST_F(PoolUnitTest, InvalidSsl) {
   use_ssl();
   start_all();
 
-  ListenerFuture::Ptr future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listner_future(Memory::allocate<ListenerFuture>());
+  RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           request_queue_manager(),
           PROTOCOL_VERSION,
-          static_cast<void*>(NULL), on_pool_nop));
+          static_cast<void*>(request_future.get()), on_pool_nop));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
@@ -688,12 +741,10 @@ TEST_F(PoolUnitTest, InvalidSsl) {
 
   initializer
       ->with_settings(settings)
-      ->with_listener(Memory::allocate<Listener>(future))
+      ->with_listener(Memory::allocate<Listener>(listner_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(future->count(ListenerFuture::CRITICAL_ERROR_SSL_VERIFY), 3);
-
-  initializer->manager()->close();
+  EXPECT_EQ(listner_future->count(ListenerFuture::CRITICAL_ERROR_SSL_VERIFY), 3u);
 }
 
 TEST_F(PoolUnitTest, PartialReconnect) {

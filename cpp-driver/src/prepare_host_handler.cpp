@@ -96,7 +96,7 @@ void PrepareHostHandler::on_connect(Connector* connector) {
 
 void PrepareHostHandler::handle_connect(Connector* connector) {
   if (connector->is_ok()) {
-    connection_ = connector->connection().get();
+    connection_ = connector->release_connection().get();
     prepare_next();
   } else {
     callback_(this);

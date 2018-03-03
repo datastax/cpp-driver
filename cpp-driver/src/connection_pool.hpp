@@ -113,11 +113,18 @@ private:
   void handle_reconnect(PooledConnector* connector, EventLoop* event_loop);
 
 private:
+  enum CloseState {
+    OPEN,
+    CLOSING,
+    CLOSED
+  };
+
+private:
   ConnectionPoolManager* manager_;
   Address address_;
 
   mutable uv_rwlock_t rwlock_;
-  bool is_closing_;
+  CloseState close_state_;
   PooledConnection::Vec connections_;
   PooledConnector::Vec pending_connections_;
 };

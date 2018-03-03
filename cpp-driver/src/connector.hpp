@@ -149,9 +149,17 @@ public:
    */
   void cancel();
 
+  /**
+   * Release the connection from the connector. If not released in the callback
+   * the connection automatically be closed.
+   *
+   * @return The connection object for this connector. This returns a null object
+   * if the connection is not connected or an error occured.
+   */
+  Connection::Ptr release_connection();
+
 public:
   void* data() { return data_; }
-  const Connection::Ptr& connection() { return connection_; }
   uv_loop_t* loop() { return loop_; }
 
   const Address& address() const { return socket_connector_->address(); }

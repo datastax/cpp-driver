@@ -57,6 +57,12 @@ void ConnectionPoolConnector::cancel() {
   }
 }
 
+ConnectionPool::Ptr ConnectionPoolConnector::release_pool() {
+  ConnectionPool::Ptr temp = pool_;
+  pool_.reset();
+  return temp;
+}
+
 Connector::ConnectionError ConnectionPoolConnector::error_code() const {
   ScopedMutex l(&lock_);
   return critical_error_connector_ ?  critical_error_connector_->error_code() : Connector::CONNECTION_OK;
@@ -96,7 +102,7 @@ void ConnectionPoolConnector::handle_connect(PooledConnector* connector, EventLo
                                pending_connections_.end());
 
     if (connector->is_ok()) {
-      pool_->add_connection(connector->connection(), ConnectionPool::Protected());
+      pool_->add_connection(connector->release_connection(), ConnectionPool::Protected());
     } else if (!connector->is_cancelled()){
       LOG_ERROR("Connection pool was unable to connect to host %s because of the following error: %s",
                 pool_->address().to_string().c_str(),
@@ -120,6 +126,8 @@ void ConnectionPoolConnector::handle_connect(PooledConnector* connector, EventLo
   if (remaining_.fetch_sub(1) - 1 == 0) {
     pool_->notify_up_or_down(this, ConnectionPool::Protected());
     callback_(this);
+    // If the pool hasn't been released then close it.
+    if (pool_) pool_->close();
     dec_ref();
   }
 }

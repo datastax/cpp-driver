@@ -577,7 +577,7 @@ void ControlConnection::handle_connect(Connector* connector) {
     LOG_DEBUG("Connection ready on host %s",
               connector->address().to_string().c_str());
 
-    connection_ = connector->connection().get();
+    connection_ = connector->release_connection().get();
 
     // The control connection has to refresh meta when there's a reconnect because
     // events could have been missed while not connected.

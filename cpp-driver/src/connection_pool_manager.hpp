@@ -230,6 +230,13 @@ private:
   void handle_connect(ConnectionPoolConnector* pool_connector);
 
 private:
+  enum CloseState {
+    OPEN,
+    CLOSING,
+    CLOSED
+  };
+
+private:
   RequestQueueManager* const request_queue_manager_;
 
   const int protocol_version_;
@@ -237,7 +244,7 @@ private:
   const ConnectionPoolManagerSettings settings_;
 
   mutable uv_rwlock_t rwlock_;
-  bool is_closing_;
+  CloseState close_state_;
   ConnectionPool::Map pools_;
   ConnectionPoolConnector::Vec pending_pools_;
 

@@ -31,13 +31,21 @@ using namespace cass;
 
 class ConnectionUnitTest : public mockssandra::SimpleClusterTest {
 public:
-  enum State {
-    STATE_NEW,
-    STATE_CONNECTED,
-    STATE_ERROR,
-    STATE_ERROR_RESPONSE,
-    STATE_TIMEOUT,
-    STATE_SUCCESS,
+  enum Status {
+    STATUS_NEW,
+    STATUS_CONNECTED,
+    STATUS_ERROR,
+    STATUS_ERROR_RESPONSE,
+    STATUS_TIMEOUT,
+    STATUS_SUCCESS,
+  } status;
+
+  struct State {
+    State()
+      : status(STATUS_NEW) { }
+
+    Connection::Ptr connection;
+    Status status;
   };
 
   class RequestCallback : public SimpleRequestCallback {
@@ -50,19 +58,19 @@ public:
     virtual void on_internal_set(ResponseMessage* response) {
       connection_->close();
       if (response->response_body()->opcode() == CQL_OPCODE_RESULT) {
-        *state_ = ConnectionUnitTest::STATE_SUCCESS;
+        state_->status = ConnectionUnitTest::STATUS_SUCCESS;
       } else {
-        *state_ = ConnectionUnitTest::STATE_ERROR_RESPONSE;
+        state_->status = ConnectionUnitTest::STATUS_ERROR_RESPONSE;
       }
     }
 
     virtual void on_internal_error(CassError code, const String& message) {
       connection_->close();
-      *state_ = ConnectionUnitTest::STATE_ERROR;
+      state_->status = ConnectionUnitTest::STATUS_ERROR;
     }
 
     virtual void on_internal_timeout() {
-      *state_ = ConnectionUnitTest::STATE_TIMEOUT;
+      state_->status = ConnectionUnitTest::STATUS_TIMEOUT;
       connection_->close();
     }
 
@@ -86,9 +94,10 @@ public:
   static void on_connection_connected(Connector* connector) {
     ASSERT_TRUE(connector->is_ok());
     State* state = static_cast<State*>(connector->data());
-    *state = STATE_CONNECTED;
-    connector->connection()->start_heartbeats();
-    connector->connection()->write_and_flush(RequestCallback::Ptr(Memory::allocate<RequestCallback>(connector->connection().get(), state)));
+    state->status = STATUS_CONNECTED;
+    state->connection = connector->release_connection();
+    state->connection->start_heartbeats();
+    state->connection->write_and_flush(RequestCallback::Ptr(Memory::allocate<RequestCallback>(state->connection.get(), state)));
   }
 
   static void on_connection_error_code(Connector* connector) {
@@ -96,8 +105,6 @@ public:
         static_cast<Connector::ConnectionError*>(connector->data());
     if (!connector->is_ok()) {
       *error_code = connector->error_code();
-    } else {
-      connector->connection()->close();
     }
   }
 
@@ -116,7 +123,7 @@ private:
 TEST_F(ConnectionUnitTest, Simple) {
   start_all();
 
-  State state(STATE_NEW);
+  State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
                                                        static_cast<void*>(&state),
@@ -126,7 +133,7 @@ TEST_F(ConnectionUnitTest, Simple) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(state, STATE_SUCCESS);
+  EXPECT_EQ(state.status, STATUS_SUCCESS);
 }
 
 TEST_F(ConnectionUnitTest, Keyspace) {
@@ -138,7 +145,7 @@ TEST_F(ConnectionUnitTest, Keyspace) {
   mockssandra::SimpleCluster cluster(builder.build());
   cluster.start_all();
 
-  State state(STATE_NEW);
+  State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
                                                        static_cast<void*>(&state),
@@ -150,8 +157,9 @@ TEST_F(ConnectionUnitTest, Keyspace) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(state, STATE_SUCCESS);
-  EXPECT_EQ(connector->connection()->keyspace(), "foo");
+  EXPECT_EQ(state.status, STATUS_SUCCESS);
+  ASSERT_TRUE(static_cast<bool>(state.connection));
+  EXPECT_EQ(state.connection->keyspace(), "foo");
 }
 
 TEST_F(ConnectionUnitTest, Auth) {
@@ -166,7 +174,7 @@ TEST_F(ConnectionUnitTest, Auth) {
   mockssandra::SimpleCluster cluster(builder.build());
   cluster.start_all();
 
-  State state(STATE_NEW);
+  State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
                                                        static_cast<void*>(&state),
@@ -181,7 +189,7 @@ TEST_F(ConnectionUnitTest, Auth) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(state, STATE_SUCCESS);
+  EXPECT_EQ(state.status, STATUS_SUCCESS);
 }
 
 TEST_F(ConnectionUnitTest, Ssl) {
@@ -189,7 +197,7 @@ TEST_F(ConnectionUnitTest, Ssl) {
 
   start_all();
 
-  State state(STATE_NEW);
+  State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
                                                        static_cast<void*>(&state),
@@ -200,7 +208,7 @@ TEST_F(ConnectionUnitTest, Ssl) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(state, STATE_SUCCESS);
+  EXPECT_EQ(state.status, STATUS_SUCCESS);
 }
 
 TEST_F(ConnectionUnitTest, Refused) {
@@ -336,7 +344,7 @@ TEST_F(ConnectionUnitTest, Timeout) {
                                                        on_connection_error_code));
 
   ConnectionSettings settings;
-  settings.connect_timeout_ms = 1000;
+  settings.connect_timeout_ms = 200;
 
   connector
       ->with_settings(settings)

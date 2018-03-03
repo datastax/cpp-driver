@@ -74,7 +74,6 @@ SocketConnector::SocketConnector(const Address& address, void* data, Callback ca
   : address_(address)
   , data_(data)
   , callback_(callback)
-  , socket_(NULL)
   , error_code_(SOCKET_OK)
   , ssl_error_code_(CASS_OK) { }
 
@@ -100,6 +99,12 @@ void SocketConnector::cancel() {
   if (resolver_) resolver_->cancel();
   if (connector_) connector_->cancel();
   if (socket_) socket_->close();
+}
+
+Socket::Ptr SocketConnector::release_socket() {
+  Socket::Ptr temp(socket_);
+  socket_.reset();
+  return temp;
 }
 
 void SocketConnector::internal_connect(uv_loop_t* loop) {
@@ -166,6 +171,8 @@ void SocketConnector::ssl_handshake() {
 void SocketConnector::finish() {
   if (socket_) socket_->set_handler(NULL);
   callback_(this);
+  // If the socket hasn't been released then close it.
+  if (socket_) socket_->close();
   dec_ref();
 }
 

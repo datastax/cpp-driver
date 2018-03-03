@@ -35,7 +35,7 @@ ConnectionPool::ConnectionPool(ConnectionPoolManager* manager,
                                const Address& address)
   : manager_(manager)
   , address_(address)
-  , is_closing_(false) {
+  , close_state_(OPEN) {
   inc_ref(); // Reference for the lifetime of the pooled connections
   uv_rwlock_init(&rwlock_);
 }
@@ -105,11 +105,12 @@ void ConnectionPool::close_connection(PooledConnection* connection, Protected) {
     manager_->notify_down(this, ConnectionPoolManager::Protected());
   }
 
-  if (is_closing_) {
+  if (close_state_ != OPEN) {
     maybe_closed(wl);
-  } else {
-    internal_schedule_reconnect(connection->event_loop());
+    return;
   }
+
+  internal_schedule_reconnect(connection->event_loop());
 }
 
 // Lock must be held to call this method
@@ -127,7 +128,8 @@ void ConnectionPool::internal_schedule_reconnect(EventLoop* event_loop) {
 }
 
 void ConnectionPool::internal_close(ScopedWriteLock& wl) {
-  if (!is_closing_) {
+  if (close_state_ == OPEN) {
+    close_state_ = CLOSING;
     for (PooledConnection::Vec::iterator it = connections_.begin(),
          end = connections_.end(); it != end; ++it) {
       (*it)->close();
@@ -136,7 +138,6 @@ void ConnectionPool::internal_close(ScopedWriteLock& wl) {
          end = pending_connections_.end(); it != end; ++it) {
       (*it)->cancel();
     }
-    is_closing_ = true;
   }
   maybe_closed(wl);
 }
@@ -144,7 +145,8 @@ void ConnectionPool::internal_close(ScopedWriteLock& wl) {
 void ConnectionPool::maybe_closed(ScopedWriteLock& wl) {
   // Remove the pool once all current connections and pending connections
   // are terminated.
-  if (connections_.empty() && pending_connections_.empty()) {
+  if (close_state_ == CLOSING && connections_.empty() && pending_connections_.empty()) {
+    close_state_ = CLOSED;
     wl.unlock(); // The pool is destroyed in this step it must be unlocked
     manager_->remove_pool(this, ConnectionPoolManager::Protected());
     dec_ref();
@@ -161,32 +163,33 @@ void ConnectionPool::handle_reconnect(PooledConnector* connector, EventLoop* eve
   pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
                              pending_connections_.end());
 
-  if (is_closing_) {
+  if (close_state_ !=  OPEN) {
     maybe_closed(wl);
-  } else {
-    if (connector->is_ok()) {
-      // When there currently no more connections available and a one becomes
-      // available then notify that the host is up.
-      if (connections_.empty()) {
-        manager_->notify_up(this, ConnectionPoolManager::Protected());
-      }
-      internal_add_connection(connector->connection());
-    } else if (!connector->is_cancelled()) {
-      if(connector->is_critical_error()) {
-        LOG_ERROR("Closing established connection pool to host %s because of the following error: %s",
-                  address().to_string().c_str(),
-                  connector->error_message().c_str());
-        manager()->notify_critical_error(this,
-                                         connector->error_code(),
-                                         connector->error_message(),
-                                         ConnectionPoolManager::Protected());
-        internal_close(wl);
-      } else {
-        LOG_WARN("Connection pool was unable to reconnect to host %s because of the following error: %s",
-                 address().to_string().c_str(),
-                 connector->error_message().c_str());
-        internal_schedule_reconnect(event_loop);
-      }
+    return;
+  }
+
+  if (connector->is_ok()) {
+    // When there currently no more connections available and a one becomes
+    // available then notify that the host is up.
+    if (connections_.empty()) {
+      manager_->notify_up(this, ConnectionPoolManager::Protected());
+    }
+    internal_add_connection(connector->release_connection());
+  } else if (!connector->is_cancelled()) {
+    if(connector->is_critical_error()) {
+      LOG_ERROR("Closing established connection pool to host %s because of the following error: %s",
+                address().to_string().c_str(),
+                connector->error_message().c_str());
+      manager()->notify_critical_error(this,
+                                       connector->error_code(),
+                                       connector->error_message(),
+                                       ConnectionPoolManager::Protected());
+      internal_close(wl);
+    } else {
+      LOG_WARN("Connection pool was unable to reconnect to host %s because of the following error: %s",
+               address().to_string().c_str(),
+               connector->error_message().c_str());
+      internal_schedule_reconnect(event_loop);
     }
   }
 }
