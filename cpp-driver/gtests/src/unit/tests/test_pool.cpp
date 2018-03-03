@@ -51,6 +51,12 @@ public:
       return count;
     }
 
+    Vector<State> results() {
+      ScopedMutex lock(&mutex_);
+      internal_wait_for(lock, WAIT_FOR_TIME);
+      return results_;
+    }
+
   protected:
     void set(State state) {
       ScopedMutex lock(&mutex_);
@@ -81,8 +87,20 @@ public:
       ERROR_FAILED_WRITE,
       ERROR,
       ERROR_RESPONSE,
-      TIMEOUT,
+      TIMEOUT
     };
+
+    static const char* to_string(Enum state) {
+      switch (state) {
+        case SUCCESS: return "SUCCESS";
+        case ERROR_NO_CONNECTION: return "ERROR_NO_CONNECTION";
+        case ERROR_FAILED_WRITE: return "ERROR_FAILED_WRITE";
+        case ERROR: return "ERROR";
+        case ERROR_RESPONSE: return "ERROR_RESPONSE";
+        case TIMEOUT: return "TIMEOUT";
+      }
+      return "";
+    }
   };
 
   class RequestFuture
@@ -154,6 +172,20 @@ public:
       CRITICAL_ERROR_SSL_HANDSHAKE,
       CRITICAL_ERROR_SSL_VERIFY
     };
+
+    static const char* to_string(Enum state) {
+      switch (state) {
+        case UP: return "UP";
+        case DOWN: return "DOWN";
+        case CRITICAL_ERROR: return "CRITICAL_ERROR";
+        case CRITICAL_ERROR_INVALID_PROTOCOL: return "CRITICAL_ERROR_INVALID_PROTOCOL";
+        case CRITICAL_ERROR_KEYSPACE: return "CRITICAL_ERROR_KEYSPACE";
+        case CRITICAL_ERROR_AUTH: return "CRITICAL_ERROR_AUTH";
+        case CRITICAL_ERROR_SSL_HANDSHAKE: return "CRITICAL_ERROR_SSL_HANDSHAKE";
+        case CRITICAL_ERROR_SSL_VERIFY: return "CRITICAL_ERROR_SSL_VERIFY";
+      }
+      return "";
+    }
   };
 
   class ListenerFuture
@@ -312,7 +344,7 @@ public:
       RequestFuture::Ptr request_future(Memory::allocate<RequestFuture>(1));
       RequestCallback::Ptr callback(Memory::allocate<RequestCallback>(request_future.get()));
       EXPECT_TRUE(connection->write(callback.get())) << "Unable to write request to connection " << address.to_string();
-      EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 1u);
+      EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 1u) << request_future->results();
     } else {
       EXPECT_TRUE(false) << "No connection available for " << address.to_string();
     }
@@ -348,6 +380,38 @@ private:
   RequestQueueManager request_queue_manager_;
 };
 
+std::ostream& operator<<(std::ostream& os, const Vector<PoolUnitTest::RequestState::Enum>& states) {
+  os << "[";
+  bool first = true;;
+  for (Vector<PoolUnitTest::RequestState::Enum>::const_iterator it = states.begin(),
+       end = states.end(); it != end; ++it) {
+    if (!first) {
+      os << ", ";
+    } else {
+      first = false;
+    }
+    os << PoolUnitTest::RequestState::to_string(*it);
+  }
+  os << "]";
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Vector<PoolUnitTest::ListenerState::Enum>& states) {
+  os << "[";
+  bool first = true;;
+  for (Vector<PoolUnitTest::ListenerState::Enum>::const_iterator it = states.begin(),
+       end = states.end(); it != end; ++it) {
+    if (!first) {
+      os << ", ";
+    } else {
+      first = false;
+    }
+    os << PoolUnitTest::ListenerState::to_string(*it);
+  }
+  os << "]";
+  return os;
+}
+
 TEST_F(PoolUnitTest, Simple) {
   start_all();
 
@@ -362,7 +426,7 @@ TEST_F(PoolUnitTest, Simple) {
   initializer
       ->initialize(addresses());
 
-  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u);
+  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u) << request_future->results();
 }
 
 TEST_F(PoolUnitTest, Keyspace) {
@@ -390,7 +454,7 @@ TEST_F(PoolUnitTest, Keyspace) {
       ->with_keyspace("foo")
       ->initialize(addresses);
 
-  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u);
+  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u) << request_future->results();
 
   ConnectionPoolManager::Ptr manager = request_future->manager();
   ASSERT_TRUE(manager);
@@ -431,7 +495,7 @@ TEST_F(PoolUnitTest, Auth) {
       ->with_settings(settings)
       ->initialize(addresses());
 
-  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u);
+  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u) << request_future->results();
 }
 
 TEST_F(PoolUnitTest, Ssl) {
@@ -451,7 +515,7 @@ TEST_F(PoolUnitTest, Ssl) {
       ->with_settings(settings)
       ->initialize(addresses());
 
-  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u);
+  EXPECT_EQ(request_future->count(RequestFuture::SUCCESS), 3u) << request_future->results();
 }
 
 TEST_F(PoolUnitTest, Listener) {
@@ -470,7 +534,7 @@ TEST_F(PoolUnitTest, Listener) {
       ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 3u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 3u) << listener_future->results();
   EXPECT_EQ(initializer->failures().size(), 0u);
 }
 
@@ -491,8 +555,8 @@ TEST_F(PoolUnitTest, ListenerDown) {
       ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u);
-  EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 2u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u) << listener_future->results();
+  EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 2u) << listener_future->results();
   EXPECT_EQ(initializer->failures().size(), 0u);
 }
 
@@ -514,7 +578,7 @@ TEST_F(PoolUnitTest, AddRemove) {
       ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses);
 
-  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 3u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 3u) << listener_future->results();
 
   ConnectionPoolManager::Ptr manager = request_future->manager();
   ASSERT_TRUE(manager);
@@ -524,14 +588,14 @@ TEST_F(PoolUnitTest, AddRemove) {
     static_cast<Listener*>(manager->listener())->reset(listener_future);
 
     manager->remove(addresses[i]); // Remove node
-    EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 1u);
+    EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 1u) << listener_future->results();
     EXPECT_FALSE(manager->find_least_busy(addresses[i]));
 
     listener_future.reset(Memory::allocate<ListenerFuture>(1));
     static_cast<Listener*>(manager->listener())->reset(listener_future);
 
     manager->add(addresses[i]); // Add node
-    EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u);
+    EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u) << listener_future->results();
     run_request(manager, addresses[i]);
   }
 }
@@ -558,7 +622,7 @@ TEST_F(PoolUnitTest, Reconnect) {
       ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses);
 
-  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 3u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::UP), 3u) << listener_future->results();
 
   ConnectionPoolManager::Ptr manager = request_future->manager();
   ASSERT_TRUE(manager);
@@ -568,14 +632,14 @@ TEST_F(PoolUnitTest, Reconnect) {
     static_cast<Listener*>(manager->listener())->reset(listener_future);
 
     stop(i + 1); // Stop node
-    EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 1u);
+    EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 1u) << listener_future->results();
     EXPECT_FALSE(manager->find_least_busy(addresses[i]));
 
     listener_future.reset(Memory::allocate<ListenerFuture>(1));
     static_cast<Listener*>(manager->listener())->reset(listener_future);
 
     start(i + 1); // Start node
-    EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u);
+    EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u) << listener_future->results();
     run_request(manager, addresses[i]);
   }
 }
@@ -604,7 +668,7 @@ TEST_F(PoolUnitTest, Timeout) {
       ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 3u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::DOWN), 3u) << listener_future->results();
 }
 
 TEST_F(PoolUnitTest, InvalidProtocol) {
@@ -623,7 +687,7 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
       ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_INVALID_PROTOCOL), 3u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_INVALID_PROTOCOL), 3u) << listener_future->results();
 
   ConnectionPoolConnector::Vec failures = initializer->failures();
   EXPECT_EQ(failures.size(), 3u);
@@ -632,8 +696,6 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
        end = failures.end(); it != end; ++it) {
     EXPECT_EQ((*it)->error_code(), Connector::CONNECTION_ERROR_INVALID_PROTOCOL);
   }
-
-  request_future->wait();
 }
 
 TEST_F(PoolUnitTest, InvalidKeyspace) {
@@ -660,7 +722,7 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
       ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_KEYSPACE), 3u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_KEYSPACE), 3u) << listener_future->results();
 }
 
 TEST_F(PoolUnitTest, InvalidAuth) {
@@ -691,7 +753,7 @@ TEST_F(PoolUnitTest, InvalidAuth) {
       ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_AUTH), 3u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_AUTH), 3u) << listener_future->results();
 }
 
 TEST_F(PoolUnitTest, InvalidNoSsl) {
@@ -717,14 +779,14 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
       ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_SSL_HANDSHAKE), 3u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_SSL_HANDSHAKE), 3u) << listener_future->results();
 }
 
 TEST_F(PoolUnitTest, InvalidSsl) {
   use_ssl();
   start_all();
 
-  ListenerFuture::Ptr listner_future(Memory::allocate<ListenerFuture>());
+  ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());
   RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>(0));
 
   ConnectionPoolManagerInitializer::Ptr initializer(
@@ -741,10 +803,10 @@ TEST_F(PoolUnitTest, InvalidSsl) {
 
   initializer
       ->with_settings(settings)
-      ->with_listener(Memory::allocate<Listener>(listner_future))
+      ->with_listener(Memory::allocate<Listener>(listener_future))
       ->initialize(addresses());
 
-  EXPECT_EQ(listner_future->count(ListenerFuture::CRITICAL_ERROR_SSL_VERIFY), 3u);
+  EXPECT_EQ(listener_future->count(ListenerFuture::CRITICAL_ERROR_SSL_VERIFY), 3u) << listener_future->results();
 }
 
 TEST_F(PoolUnitTest, PartialReconnect) {
