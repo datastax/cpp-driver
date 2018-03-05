@@ -38,36 +38,6 @@ class Value;
 typedef Vector<String> ContactPointList;
 typedef Vector<String> DcList;
 
-template<class From, class To>
-#if _MSC_VER && !__INTEL_COMPILER
-class IsConvertible : public std::is_convertible<From, To> { };
-#else
-// From Boost's GNU implementation
-class IsConvertible {
-private:
-  typedef char Yes;
-  typedef struct { char not_used[2]; } No;
-  static From& from;
-
-  struct Any {
-    template <class T> Any(T&);
-    template <class T> Any(const T&);
-    template <class T> Any(volatile T&);
-    template <class T> Any(const volatile T&);
-  };
-
-  struct Helper {
-    static Yes test(To, int);
-    static No test(Any ...);
-  };
-
-public:
-  enum {
-    value = sizeof(Helper::test(from, 0)) == sizeof(Yes)
-  };
-};
-#endif
-
 // copy_cast<> prevents incorrect code from being generated when two unrelated
 // types reference the same memory location and strict aliasing is enabled.
 // The type "char*" is an exception and is allowed to alias any other
