@@ -25,7 +25,7 @@
 namespace cass {
 
 /**
- * A wrapper for uv_async. The is useful for signalling an event loop that's
+ * A wrapper for uv_async. This is useful for signaling an event loop that's
  * running on another thread.
  */
 class Async {

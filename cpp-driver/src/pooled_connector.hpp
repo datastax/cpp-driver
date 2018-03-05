@@ -69,14 +69,14 @@ public:
    * the connection automatically be closed.
    *
    * @return The connection object for this connector. This returns a null object
-   * if the connection is not connected or an error occured.
+   * if the connection is not connected or an error occurred.
    */
   PooledConnection::Ptr release_connection();
 
 public:
   void* data() { return data_; }
 
-  bool is_cancelled() const;
+  bool is_canceled() const;
   bool is_ok() const;
   bool is_critical_error() const;
   bool is_keyspace_error() const;
@@ -134,7 +134,7 @@ private:
   Callback callback_;
 
   Timer delayed_connect_timer_;
-  bool is_cancelled_;
+  bool is_canceled_;
 
   uv_mutex_t lock_;
   EventLoop* event_loop_;

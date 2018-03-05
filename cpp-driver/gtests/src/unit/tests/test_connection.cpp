@@ -300,7 +300,7 @@ TEST_F(ConnectionUnitTest, Cancel) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(Connector::CONNECTION_CANCELLED, error_code);
+  EXPECT_EQ(Connector::CONNECTION_CANCELED, error_code);
 }
 
 TEST_F(ConnectionUnitTest, SslCancel) {
@@ -331,7 +331,7 @@ TEST_F(ConnectionUnitTest, SslCancel) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(Connector::CONNECTION_CANCELLED, error_code);
+  EXPECT_EQ(Connector::CONNECTION_CANCELED, error_code);
 }
 
 TEST_F(ConnectionUnitTest, Timeout) {

@@ -39,7 +39,7 @@ public:
     CONNECTING,
     FAILED_BAD_PARAM,
     FAILED_TO_CONNECT,
-    CANCELLED,
+    CANCELED,
     SUCCESS
   };
 
@@ -89,7 +89,7 @@ public:
   void cancel() {
     if (status_ == CONNECTING) {
       uv_cancel(reinterpret_cast<uv_req_t*>(&req_));
-      status_ = CANCELLED;
+      status_ = CANCELED;
     }
   }
 
@@ -98,7 +98,7 @@ public:
   void* data() { return data_; }
 
   bool is_success() { return status_ == SUCCESS; }
-  bool is_cancelled() { return status_ == CANCELLED; }
+  bool is_canceled() { return status_ == CANCELED; }
   Status status() { return status_; }
   int uv_status() { return uv_status_; }
 

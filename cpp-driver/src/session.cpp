@@ -565,7 +565,7 @@ void Session::on_control_connection_ready() {
   addresses.reserve(hosts_.size());
 
   // If addresses aren't ignored by all the load balancing policies then add
-  // them to be intialized on the thread pool.
+  // them to be initialized on the thread pool.
   for (HostMap::iterator i = hosts_.begin(), end = hosts_.end();
        i != end; ++i) {
     Host::Ptr host(i->second);

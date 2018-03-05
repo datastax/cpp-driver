@@ -206,7 +206,7 @@ private:
   RequestWrapper wrapper_;
   SharedRefPtr<ResponseFuture> future_;
 
-  Atomic<bool> is_cancelled_;
+  Atomic<bool> is_canceled_;
   Atomic<int> running_executions_;
 
   uv_mutex_t lock_;

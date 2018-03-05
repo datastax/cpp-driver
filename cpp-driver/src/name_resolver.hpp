@@ -38,7 +38,7 @@ public:
     FAILED_BAD_PARAM,
     FAILED_UNABLE_TO_RESOLVE,
     FAILED_TIMED_OUT,
-    CANCELLED,
+    CANCELED,
     SUCCESS
   };
 
@@ -55,7 +55,7 @@ public:
   void* data() { return data_; }
 
   bool is_success() { return status_ == SUCCESS; }
-  bool is_cancelled() { return status_ == CANCELLED; }
+  bool is_canceled() { return status_ == CANCELED; }
   bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
   Status status() { return status_; }
   int uv_status() { return uv_status_; }
@@ -88,7 +88,7 @@ public:
     if (status_ == RESOLVING) {
       uv_cancel(reinterpret_cast<uv_req_t*>(&req_));
       timer_.stop();
-      status_ = CANCELLED;
+      status_ = CANCELED;
     }
   }
 

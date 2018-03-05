@@ -51,7 +51,7 @@ public:
   }
 
   virtual void on_close() {
-    if (connector_->is_cancelled()) {
+    if (connector_->is_canceled()) {
       connector_->finish();
     } else {
       connector_->on_error(SocketConnector::SOCKET_ERROR_CLOSE, "Socket closed prematurely");
@@ -95,7 +95,7 @@ void SocketConnector::connect(uv_loop_t* loop) {
 }
 
 void SocketConnector::cancel() {
-  error_code_ = SOCKET_CANCELLED;
+  error_code_ = SOCKET_CANCELED;
   if (resolver_) resolver_->cancel();
   if (connector_) connector_->cancel();
   if (socket_) socket_->close();
@@ -223,7 +223,7 @@ void SocketConnector::handle_connect(TcpConnector* tcp_connector) {
     } else {
       finish();
     }
-  } else if (is_cancelled() || tcp_connector->is_cancelled()) {
+  } else if (is_canceled() || tcp_connector->is_canceled()) {
     finish();
   } else {
     on_error(SOCKET_ERROR_CONNECT,
@@ -246,7 +246,7 @@ void SocketConnector::handle_resolve(NameResolver* resolver) {
 
     hostname_ = resolver->hostname();
     internal_connect(resolver->loop());
-  } else if (is_cancelled() || resolver->is_cancelled()) {
+  } else if (is_canceled() || resolver->is_canceled()) {
     finish();
   } else if (resolver->is_timed_out()) {
     on_error(SOCKET_ERROR_RESOLVE_TIMEOUT,

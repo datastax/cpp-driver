@@ -74,7 +74,7 @@ public:
    * the pool automatically be closed.
    *
    * @return The pool object for this connector. This returns a null object
-   * if the pool is not connected or an error occured.
+   * if the pool is not connected or an error occurred.
    */
   ConnectionPool::Ptr release_pool();
 

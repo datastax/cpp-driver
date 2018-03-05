@@ -812,7 +812,8 @@ typedef struct CassAuthenticator_ CassAuthenticator;
  *
  * Use cass_authenticator_set_response() to set the response token.
  *
- * Use cass_authenticator_set_error() if an error occured during initialization.
+ * Use cass_authenticator_set_error() if an error occurred during
+ * initialization.
  *
  * @param[in] auth
  * @param[in] data
@@ -826,7 +827,7 @@ typedef void (*CassAuthenticatorInitialCallback)(CassAuthenticator* auth,
  *
  * Use cass_authenticator_set_response() to set the response token.
  *
- * Use cass_authenticator_set_error() if an error occured during the challenge.
+ * Use cass_authenticator_set_error() if an error occurred during the challenge.
  *
  * @param[in] auth
  * @param[in] data
@@ -841,7 +842,7 @@ typedef void (*CassAuthenticatorChallengeCallback)(CassAuthenticator* auth,
  * A callback used to indicate the success of the authentication
  * exchange.
  *
- * Use cass_authenticator_set_error() if an error occured while evaluating
+ * Use cass_authenticator_set_error() if an error occurred while evaluating
  * the success token.
  *
  * @param[in] auth

@@ -65,7 +65,7 @@ public:
 
   enum SocketError {
     SOCKET_OK,
-    SOCKET_CANCELLED,
+    SOCKET_CANCELED,
     SOCKET_ERROR_CLOSE,
     SOCKET_ERROR_CONNECT,
     SOCKET_ERROR_INIT,
@@ -111,7 +111,7 @@ public:
    * the socket automatically be closed.
    *
    * @return The socket object for this connector. This returns a null object
-   * if the socket is not connected or an error occured.
+   * if the socket is not connected or an error occurred.
    */
   Socket::Ptr release_socket();
 
@@ -131,8 +131,8 @@ public:
     return error_code_ == SOCKET_OK;
   }
 
-  bool is_cancelled() const {
-    return error_code_ == SOCKET_CANCELLED;
+  bool is_canceled() const {
+    return error_code_ == SOCKET_CANCELED;
   }
 
   bool is_ssl_error() const {

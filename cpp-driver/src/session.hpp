@@ -222,14 +222,14 @@ private:
                               const Host::Ptr& current_host,
                               const Response::Ptr& response);
 
-  // Conneciton pool callbacks
+  // Connection pool callbacks
   virtual void on_up(const Address& address);
   virtual void on_down(const Address& address);
   virtual void on_critical_error(const Address& address,
                                  Connector::ConnectionError code,
                                  const String& message);
 
-  // Schema aggreement callback
+  // Schema agreement callback
   virtual bool on_is_host_up(const Address& address);
 
 private:

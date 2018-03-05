@@ -42,7 +42,7 @@ private:
 };
 
 /**
- * A task for cancelling the connection process from the event loop thread.
+ * A task for canceling the connection process from the event loop thread.
  */
 class RunCancel : public Task {
 public:
@@ -63,7 +63,7 @@ PooledConnector::PooledConnector(ConnectionPool* pool,
   , connector_(Memory::allocate<Connector>(pool->address(), pool->manager()->protocol_version(), this, on_connect))
   , data_(data)
   , callback_(callback)
-  , is_cancelled_(false)
+  , is_canceled_(false)
   , event_loop_(NULL) {
   uv_mutex_init(&lock_);
 }
@@ -90,12 +90,12 @@ PooledConnection::Ptr PooledConnector::release_connection() {
   return temp;
 }
 
-bool PooledConnector::is_cancelled() const {
-  return is_cancelled_;
+bool PooledConnector::is_canceled() const {
+  return is_canceled_;
 }
 
 bool PooledConnector::is_ok() const {
-  return !is_cancelled() && connector_->is_ok();
+  return !is_canceled() && connector_->is_ok();
 }
 
 bool PooledConnector::is_critical_error() const {
@@ -111,7 +111,7 @@ bool PooledConnector::is_keyspace_error() const {
 
 void PooledConnector::connect(Protected) {
   ScopedMutex l(&lock_);
-  if (is_cancelled_) {
+  if (is_canceled_) {
     callback_(this, event_loop_);
   } else {
     inc_ref();
@@ -122,7 +122,7 @@ void PooledConnector::connect(Protected) {
 void PooledConnector::delayed_connect(EventLoop* event_loop, uint64_t wait_time_ms, Protected) {
   ScopedMutex l(&lock_);
   event_loop_ = event_loop;
-  if (is_cancelled_) {
+  if (is_canceled_) {
     callback_(this, event_loop_);
   } else {
     inc_ref();
@@ -159,7 +159,7 @@ void PooledConnector::on_connect(Connector* connector) {
 }
 
 void PooledConnector::handle_connect(Connector* connector) {
-  if (!is_cancelled_ && connector_->is_ok()) {
+  if (!is_canceled_ && connector_->is_ok()) {
     connection_.reset(Memory::allocate<PooledConnection>(pool_,
                                                          event_loop_,
                                                          connector->release_connection()));
@@ -176,7 +176,7 @@ void PooledConnector::on_delayed_connect(Timer* timer) {
 }
 
 void PooledConnector::handle_delayed_connect(Timer* timer) {
-  if (is_cancelled_) {
+  if (is_canceled_) {
     callback_(this, event_loop_);
     dec_ref();
   } else {
