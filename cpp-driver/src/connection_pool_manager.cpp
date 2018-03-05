@@ -38,7 +38,7 @@ ConnectionPoolManager::ConnectionPoolManager(RequestQueueManager* request_queue_
   , protocol_version_(protocol_version)
   , listener_(listener)
   , settings_(settings)
-  , close_state_(OPEN)
+  , close_state_(CLOSE_STATE_OPEN)
   , keyspace_(keyspace)
   , metrics_(metrics) {
   inc_ref(); // Reference for the lifetime of the connection pools
@@ -108,8 +108,8 @@ void ConnectionPoolManager::remove(const Address& address) {
 
 void ConnectionPoolManager::close() {
   ScopedWriteLock wl(&rwlock_);
-  if (close_state_ == OPEN) {
-    close_state_ = CLOSING;
+  if (close_state_ == CLOSE_STATE_OPEN) {
+    close_state_ = CLOSE_STATE_CLOSING;
     for (ConnectionPool::Map::iterator it = pools_.begin(),
          end = pools_.end(); it != end; ++it) {
       it->second->close();
@@ -142,9 +142,13 @@ void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool, Protected)
   internal_add_pool(pool);
 }
 
-void ConnectionPoolManager::remove_pool(ConnectionPool* pool, Protected) {
+void ConnectionPoolManager::notify_closed(ConnectionPool* pool, bool should_notify_down, Protected) {
   ScopedWriteLock wl(&rwlock_);
-  internal_remove_pool(wl, pool->address());
+  pools_.erase(pool->address());
+  if (should_notify_down && listener_ != NULL) {
+    listener_->on_down(pool->address());
+  }
+  maybe_closed(wl);
 }
 
 void ConnectionPoolManager::notify_up(ConnectionPool* pool, Protected) {
@@ -166,8 +170,6 @@ void ConnectionPoolManager::notify_critical_error(ConnectionPool* pool,
   if (listener_ != NULL) {
     listener_->on_critical_error(pool->address(), code, message);
   }
-  ScopedWriteLock wl(&rwlock_);
-  internal_remove_pool(wl, pool->address());
 }
 
 void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
@@ -175,17 +177,11 @@ void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
   pools_[pool->address()] = pool;
 }
 
-void ConnectionPoolManager::internal_remove_pool(ScopedWriteLock& wl,
-                                                 const Address& address) {
-  pools_.erase(address);
-  maybe_closed(wl);
-}
-
 // This must be the last call in a function because it can potentially
 // deallocate the manager.
 void ConnectionPoolManager::maybe_closed(ScopedWriteLock& wl) {
-  if (close_state_ == CLOSING && pools_.empty()) {
-    close_state_ = CLOSED;
+  if (close_state_ == CLOSE_STATE_CLOSING && pools_.empty()) {
+    close_state_ = CLOSE_STATE_CLOSED;
     wl.unlock(); // The manager is destroyed in this step it must be unlocked
     if (listener_ != NULL) {
       listener_->on_close();

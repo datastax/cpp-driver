@@ -124,8 +124,16 @@ void ConnectionPoolConnector::handle_connect(PooledConnector* connector, EventLo
   }
 
   if (remaining_.fetch_sub(1) - 1 == 0) {
-    pool_->notify_up_or_down(this, ConnectionPool::Protected());
+    ConnectionPool::Ptr temp = pool_;
     callback_(this);
+    // Notify listener after the callback
+    if (!critical_error_connector_) {
+      temp->notify_up_or_down(ConnectionPool::Protected());
+    } else {
+      temp->notify_critical_error(critical_error_connector_->error_code(),
+                                  critical_error_connector_->error_message(),
+                                  ConnectionPool::Protected());
+    }
     // If the pool hasn't been released then close it.
     if (pool_) pool_->close();
     dec_ref();

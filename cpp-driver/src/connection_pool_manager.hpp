@@ -185,12 +185,13 @@ public:
   void add_pool(const ConnectionPool::Ptr& pool, Protected);
 
   /**
-   * Remove a connection pool from the event loop thread.
+   * Notify that a pool is closed.
    *
    * @param pool A pool to remove.
+   * @param should_notify_down Notify the listener that the connection is down if true.
    * @param A key to restrict access to the method.
    */
-  void remove_pool(ConnectionPool* pool, Protected);
+  void notify_closed(ConnectionPool* pool, bool should_notify_down, Protected);
 
   /**
    * Notify that a pool is up.
@@ -212,6 +213,8 @@ public:
    * Notify that a pool has had a critical error.
    *
    * @param pool A pool that had a critical error.
+   * @param code The code of the critical error.
+   * @param message The message of the critical error.
    * @param A key to restrict access to the method.
    */
   void notify_critical_error(ConnectionPool* pool,
@@ -220,21 +223,19 @@ public:
                              Protected);
 
 private:
+  enum CloseState {
+    CLOSE_STATE_OPEN,
+    CLOSE_STATE_CLOSING,
+    CLOSE_STATE_CLOSED
+  };
+
+private:
   void internal_add_pool(const ConnectionPool::Ptr& pool);
-  void internal_remove_pool(ScopedWriteLock& wl,
-                            const Address& address);
   void maybe_closed(ScopedWriteLock& wl);
 
 private:
   static void on_connect(ConnectionPoolConnector* pool_connector);
   void handle_connect(ConnectionPoolConnector* pool_connector);
-
-private:
-  enum CloseState {
-    OPEN,
-    CLOSING,
-    CLOSED
-  };
 
 private:
   RequestQueueManager* const request_queue_manager_;

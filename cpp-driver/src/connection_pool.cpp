@@ -35,7 +35,8 @@ ConnectionPool::ConnectionPool(ConnectionPoolManager* manager,
                                const Address& address)
   : manager_(manager)
   , address_(address)
-  , close_state_(OPEN) {
+  , close_state_(CLOSE_STATE_OPEN)
+  , notify_state_(NOTIFY_STATE_NEW) {
   inc_ref(); // Reference for the lifetime of the pooled connections
   uv_rwlock_init(&rwlock_);
 }
@@ -58,37 +59,14 @@ void ConnectionPool::close() {
   internal_close(wl);
 }
 
-void ConnectionPool::notify_up_or_down(ConnectionPoolConnector* connector, Protected) {
-  ScopedReadLock rl(&rwlock_);
-  if (connections_.empty()) {
-    if (connector->is_critical_error()) {
-      manager_->notify_critical_error(this,
-                                      connector->error_code(),
-                                      connector->error_message(),
-                                      ConnectionPoolManager::Protected());
-    } else {
-      manager_->notify_down(this, ConnectionPoolManager::Protected());
-    }
-  } else {
-    manager_->notify_up(this, ConnectionPoolManager::Protected());
-  }
-}
-
 void ConnectionPool::schedule_reconnect(EventLoop* event_loop, Protected) {
   ScopedWriteLock wl(&rwlock_);
-  internal_schedule_reconnect(event_loop);
-}
-
-void ConnectionPool::internal_add_connection(const PooledConnection::Ptr& connection) {
-  if (manager_->metrics()) {
-    manager_->metrics()->total_connections.inc();
-  }
-  connections_.push_back(connection);
+  internal_schedule_reconnect(wl, event_loop);
 }
 
 void ConnectionPool::add_connection(const PooledConnection::Ptr& connection, Protected) {
   ScopedWriteLock wl(&rwlock_);
-  internal_add_connection(connection);
+  internal_add_connection(wl, connection);
 }
 
 void ConnectionPool::close_connection(PooledConnection* connection, Protected) {
@@ -99,22 +77,32 @@ void ConnectionPool::close_connection(PooledConnection* connection, Protected) {
   connections_.erase(std::remove(connections_.begin(), connections_.end(), connection),
                      connections_.end());
 
-  // When there are no more connections available then notify that the host
-  // is down.
-  if (connections_.empty()) {
-    manager_->notify_down(this, ConnectionPoolManager::Protected());
-  }
-
-  if (close_state_ != OPEN) {
+  if (close_state_ != CLOSE_STATE_OPEN) {
     maybe_closed(wl);
     return;
   }
 
-  internal_schedule_reconnect(connection->event_loop());
+  // When there are no more connections available then notify that the host
+  // is down.
+  internal_notify_up_or_down(wl);
+  internal_schedule_reconnect(wl, connection->event_loop());
+}
+
+void ConnectionPool::notify_up_or_down(ConnectionPool::Protected) {
+  ScopedWriteLock wl(&rwlock_);
+  internal_notify_up_or_down(wl);
+}
+
+void ConnectionPool::notify_critical_error(Connector::ConnectionError code,
+                                           const String& message,
+                                           ConnectionPool::Protected) {
+  ScopedWriteLock wl(&rwlock_);
+  internal_notify_critical_error(wl, code, message);
 }
 
 // Lock must be held to call this method
-void ConnectionPool::internal_schedule_reconnect(EventLoop* event_loop) {
+void ConnectionPool::internal_schedule_reconnect(ScopedWriteLock& wl,
+                                                 EventLoop* event_loop) {
   // Reschedule a new connection on the same event loop
   LOG_INFO("Scheduling reconnect for host %s in %llu ms on connection pool (%p)",
            address_.to_string().c_str(),
@@ -127,9 +115,40 @@ void ConnectionPool::internal_schedule_reconnect(EventLoop* event_loop) {
                              PooledConnector::Protected());
 }
 
+void ConnectionPool::internal_notify_up_or_down(ScopedWriteLock& wl) {
+  if ((notify_state_ == NOTIFY_STATE_NEW || notify_state_ == NOTIFY_STATE_UP) &&
+      connections_.empty()) {
+    notify_state_ = NOTIFY_STATE_DOWN;
+    manager_->notify_down(this, ConnectionPoolManager::Protected());
+  } else if ((notify_state_ == NOTIFY_STATE_NEW || notify_state_ == NOTIFY_STATE_DOWN) &&
+             !connections_.empty()) {
+    notify_state_ = NOTIFY_STATE_UP;
+    manager_->notify_up(this, ConnectionPoolManager::Protected());
+  }
+}
+
+void ConnectionPool::internal_notify_critical_error(ScopedWriteLock& wl,
+                                                    Connector::ConnectionError code,
+                                                    const String& message) {
+  if (notify_state_ != NOTIFY_STATE_CRITICAL) {
+    notify_state_ = NOTIFY_STATE_CRITICAL;
+    manager_->notify_critical_error(this, code, message,
+                                    ConnectionPoolManager::Protected());
+  }
+}
+
+void ConnectionPool::internal_add_connection(ScopedWriteLock& wl,
+                                             const PooledConnection::Ptr& connection) {
+  if (manager_->metrics()) {
+    manager_->metrics()->total_connections.inc();
+  }
+  connections_.push_back(connection);
+}
+
+
 void ConnectionPool::internal_close(ScopedWriteLock& wl) {
-  if (close_state_ == OPEN) {
-    close_state_ = CLOSING;
+  if (close_state_ == CLOSE_STATE_OPEN) {
+    close_state_ = CLOSE_STATE_CLOSING;
     for (PooledConnection::Vec::iterator it = connections_.begin(),
          end = connections_.end(); it != end; ++it) {
       (*it)->close();
@@ -145,10 +164,13 @@ void ConnectionPool::internal_close(ScopedWriteLock& wl) {
 void ConnectionPool::maybe_closed(ScopedWriteLock& wl) {
   // Remove the pool once all current connections and pending connections
   // are terminated.
-  if (close_state_ == CLOSING && connections_.empty() && pending_connections_.empty()) {
-    close_state_ = CLOSED;
+  if (close_state_ == CLOSE_STATE_CLOSING && connections_.empty() && pending_connections_.empty()) {
+    close_state_ = CLOSE_STATE_CLOSED;
+    // Only mark DOWN if it's UP otherwise we might get multiple DOWN events
+    // when connecting the pool.
+    bool should_notify_down = (notify_state_ == NOTIFY_STATE_UP);
     wl.unlock(); // The pool is destroyed in this step it must be unlocked
-    manager_->remove_pool(this, ConnectionPoolManager::Protected());
+    manager_->notify_closed(this, should_notify_down, ConnectionPoolManager::Protected());
     dec_ref();
   }
 }
@@ -163,33 +185,29 @@ void ConnectionPool::handle_reconnect(PooledConnector* connector, EventLoop* eve
   pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
                              pending_connections_.end());
 
-  if (close_state_ !=  OPEN) {
+  if (close_state_ !=  CLOSE_STATE_OPEN) {
     maybe_closed(wl);
     return;
   }
 
   if (connector->is_ok()) {
-    // When there currently no more connections available and a one becomes
-    // available then notify that the host is up.
-    if (connections_.empty()) {
-      manager_->notify_up(this, ConnectionPoolManager::Protected());
-    }
-    internal_add_connection(connector->release_connection());
+    internal_add_connection(wl,
+                            connector->release_connection());
+    internal_notify_up_or_down(wl);
   } else if (!connector->is_cancelled()) {
     if(connector->is_critical_error()) {
       LOG_ERROR("Closing established connection pool to host %s because of the following error: %s",
                 address().to_string().c_str(),
                 connector->error_message().c_str());
-      manager()->notify_critical_error(this,
-                                       connector->error_code(),
-                                       connector->error_message(),
-                                       ConnectionPoolManager::Protected());
+      internal_notify_critical_error(wl,
+                                     connector->error_code(),
+                                     connector->error_message());
       internal_close(wl);
     } else {
       LOG_WARN("Connection pool was unable to reconnect to host %s because of the following error: %s",
                address().to_string().c_str(),
                connector->error_message().c_str());
-      internal_schedule_reconnect(event_loop);
+      internal_schedule_reconnect(wl, event_loop);
     }
   }
 }

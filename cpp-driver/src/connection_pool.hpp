@@ -88,12 +88,22 @@ public:
   void close_connection(PooledConnection* connection, Protected);
 
   /**
-   * Notify the pool manager that the host is up/down or critical.
+   * Notify the pool manager that the host is up/down
    *
-   * @param connector The connector for this pool.
    * @param A key to restrict access to the method.
    */
-  void notify_up_or_down(ConnectionPoolConnector* connector, Protected);
+  void notify_up_or_down(Protected);
+
+  /**
+   * Notify the pool manager that the host is critical
+   *
+   * @param code The code of the critical error.
+   * @param message The message of the critical error.
+   * @param A key to restrict access to the method.
+   */
+  void notify_critical_error(Connector::ConnectionError code,
+                             const String& message,
+                             Protected);
 
   /**
    * Schedule a new connection.
@@ -104,8 +114,31 @@ public:
   void schedule_reconnect(EventLoop* event_loop, Protected);
 
 private:
-  void internal_add_connection(const PooledConnection::Ptr& connection);
-  void internal_schedule_reconnect(EventLoop* event_loop);
+  enum CloseState {
+    CLOSE_STATE_OPEN,
+    CLOSE_STATE_CLOSING,
+    CLOSE_STATE_CLOSED
+  };
+
+  enum NotifyState {
+    NOTIFY_STATE_NEW,
+    NOTIFY_STATE_UP,
+    NOTIFY_STATE_DOWN,
+    NOTIFY_STATE_CRITICAL
+  };
+
+private:
+  friend class NotifyDownOnRemovePoolOp;
+
+private:
+  void internal_notify_up_or_down(ScopedWriteLock& wl);
+  void internal_notify_critical_error(ScopedWriteLock& wl,
+                                      Connector::ConnectionError code,
+                                      const String& message);
+  void internal_add_connection(ScopedWriteLock& wl,
+                               const PooledConnection::Ptr& connection);
+  void internal_schedule_reconnect(ScopedWriteLock& wl,
+                                   EventLoop* event_loop);
   void internal_close(ScopedWriteLock& wl);
   void maybe_closed(ScopedWriteLock& wl);
 
@@ -113,18 +146,12 @@ private:
   void handle_reconnect(PooledConnector* connector, EventLoop* event_loop);
 
 private:
-  enum CloseState {
-    OPEN,
-    CLOSING,
-    CLOSED
-  };
-
-private:
   ConnectionPoolManager* manager_;
   Address address_;
 
   mutable uv_rwlock_t rwlock_;
   CloseState close_state_;
+  NotifyState notify_state_;
   PooledConnection::Vec connections_;
   PooledConnector::Vec pending_connections_;
 };
