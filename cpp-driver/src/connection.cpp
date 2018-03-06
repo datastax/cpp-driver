@@ -199,11 +199,11 @@ void Connection::on_write(int status, RequestCallback* callback) {
         callback->set_state(RequestCallback::REQUEST_STATE_READING);
         pending_reads_.add_to_back(callback);
       } else {
-        stream_manager_.release(callback->stream());
-        inflight_request_count_.fetch_sub(1);
         callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
         callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
                            "Unable to write to socket");
+        stream_manager_.release(callback->stream());
+        inflight_request_count_.fetch_sub(1);
       }
       break;
 
