@@ -2271,8 +2271,6 @@ cass_cluster_set_use_schema(CassCluster* cluster,
  *
  * <b>Default:</b> cass_false (disabled).
  *
- * <b>Important:</b> Not implemented if using libuv 0.1x or earlier
- *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
