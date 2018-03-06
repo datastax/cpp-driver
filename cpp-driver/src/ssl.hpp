@@ -17,10 +17,10 @@
 #ifndef __CASS_SSL_HPP_INCLUDED__
 #define __CASS_SSL_HPP_INCLUDED__
 
+#include "address.hpp"
 #include "cassandra.h"
 #include "cassconfig.hpp"
 #include "external.hpp"
-#include "host.hpp"
 #include "ref_counted.hpp"
 #include "ring_buffer.hpp"
 #include "string.hpp"
@@ -31,9 +31,11 @@ namespace cass {
 
 class SslSession {
 public:
-  SslSession(const Host::ConstPtr& host,
+  SslSession(const Address& address,
+             const String& hostname,
              int flags)
-    : host_(host)
+    : address_(address)
+    , hostname_(hostname)
     , verify_flags_(flags)
     , error_code_(CASS_OK) {}
 
@@ -62,7 +64,8 @@ public:
   rb::RingBuffer& outgoing() { return outgoing_; }
 
 protected:
-  Host::ConstPtr host_;
+  Address address_;
+  String hostname_;
   int verify_flags_;
   rb::RingBuffer incoming_;
   rb::RingBuffer outgoing_;
@@ -83,7 +86,7 @@ public:
     verify_flags_ = flags;
   }
 
-  virtual SslSession* create_session(const Host::ConstPtr& host) = 0;
+  virtual SslSession* create_session(const Address& address, const String& hostname) = 0;
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length) = 0;
   virtual CassError set_cert(const char* cert, size_t cert_length) = 0;
   virtual CassError set_private_key(const char* key,
@@ -99,8 +102,40 @@ template <class T>
 class SslContextFactoryBase {
 public:
   static SslContext::Ptr create();
-  static void init();
+  static void init_once();
+  static void thread_cleanup();
+
+  static void init(); // Tests only
+  static void cleanup(); // Tests only
+
+private:
+  static uv_once_t ssl_init_guard;
 };
+
+template<class T>
+SslContext::Ptr SslContextFactoryBase<T>::create() {
+  return T::create();
+}
+
+template<class T>
+void SslContextFactoryBase<T>::init_once() {
+  uv_once(&ssl_init_guard, T::init);
+}
+
+template<class T>
+void SslContextFactoryBase<T>::thread_cleanup() {
+  T::internal_thread_cleanup();
+}
+
+template<class T>
+void SslContextFactoryBase<T>::init() {
+  T::internal_init();
+}
+
+template<class T>
+void SslContextFactoryBase<T>::cleanup() {
+  T::internal_cleanup();
+}
 
 } // namespace cass
 

@@ -87,12 +87,14 @@ public:
 
   virtual ~AuthProvider() { }
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host,
+  virtual V1Authenticator* new_authenticator_v1(const Address& address,
+                                                const String& hostname,
                                                 const String& class_name) const {
     return NULL;
   }
 
-  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
+  virtual Authenticator::Ptr new_authenticator(const Address& address,
+                                               const String& hostname,
                                                const String& class_name) const {
     return Authenticator::Ptr();
   }
@@ -103,7 +105,8 @@ private:
 
 class ExternalAuthenticator : public Authenticator {
 public:
-  ExternalAuthenticator(const Host::ConstPtr& host, const String& class_name,
+  ExternalAuthenticator(const Address& address, const String& hostname,
+                        const String& class_name,
                         const CassAuthenticatorCallbacks* callbacks, void* data);
 
   ~ExternalAuthenticator();
@@ -147,9 +150,14 @@ public:
     }
   }
 
-  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
+  virtual Authenticator::Ptr new_authenticator(const Address& address,
+                                               const String& hostname,
                                                const String& class_name) const {
-    return Authenticator::Ptr(Memory::allocate<ExternalAuthenticator>(host, class_name, &exchange_callbacks_, data_));
+    return Authenticator::Ptr(Memory::allocate<ExternalAuthenticator>(address,
+                                                                      hostname,
+                                                                      class_name,
+                                                                      &exchange_callbacks_,
+                                                                      data_));
   }
 
 private:
@@ -165,12 +173,14 @@ public:
     : username_(username)
     , password_(password) { }
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host,
+  virtual V1Authenticator* new_authenticator_v1(const Address& address,
+                                                const String& hostname,
                                                 const String& class_name) const {
     return Memory::allocate<PlainTextAuthenticator>(username_, password_);
   }
 
-  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
+  virtual Authenticator::Ptr new_authenticator(const Address& address,
+                                               const String& hostname,
                                                const String& class_name) const {
     return Authenticator::Ptr(Memory::allocate<PlainTextAuthenticator>(username_, password_));
   }

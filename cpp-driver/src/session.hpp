@@ -17,13 +17,14 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
+#include "async_queue.hpp"
 #include "config.hpp"
+#include "connection_pool_connector.hpp"
+#include "connection_pool_manager.hpp"
 #include "control_connection.hpp"
-#include "event_thread.hpp"
 #include "external.hpp"
 #include "future.hpp"
 #include "host.hpp"
-#include "io_worker.hpp"
 #include "load_balancing.hpp"
 #include "metadata.hpp"
 #include "metrics.hpp"
@@ -33,44 +34,33 @@
 #include "random.hpp"
 #include "ref_counted.hpp"
 #include "request_handler.hpp"
+#include "request_queue.hpp"
 #include "resolver.hpp"
 #include "row.hpp"
+#include "schema_agreement_handler.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "speculative_execution.hpp"
 #include "string.hpp"
 #include "token_map.hpp"
 #include "vector.hpp"
+#include "event_loop.hpp"
 
 #include <memory>
 #include <uv.h>
 
 namespace cass {
 
+class ConnectionPoolManagerInitializer;
 class Future;
 class IOWorker;
 class Request;
 class Statement;
 
-struct SessionEvent {
-  enum Type {
-    INVALID,
-    CONNECT,
-    NOTIFY_READY,
-    NOTIFY_KEYSPACE_ERROR,
-    NOTIFY_WORKER_CLOSED,
-    NOTIFY_UP,
-    NOTIFY_DOWN
-  };
-
-  SessionEvent()
-    : type(INVALID) { }
-
-  Type type;
-  Address address;
-};
-
-class Session : public EventThread<SessionEvent>, public RequestListener {
+class Session : public EventLoop,
+    public RequestListener,
+    public ConnectionPoolManagerListener,
+    public SchemaAgreementListener {
 public:
   enum State {
     SESSION_STATE_CONNECTING,
@@ -89,21 +79,13 @@ public:
     return prepared_metadata_.copy();
   }
 
-private:
-  String keyspace() const;
-  void set_keyspace(const String& keyspace);
-
 public:
-  void broadcast_keyspace_change(const String& keyspace,
-                                 const IOWorker* calling_io_worker);
-
   Host::Ptr get_host(const Address& address);
 
-  bool notify_ready_async();
-  bool notify_keyspace_error_async();
-  bool notify_worker_closed_async();
-  bool notify_up_async(const Address& address);
-  bool notify_down_async(const Address& address);
+  void notify_initialize_async(const ConnectionPoolManager::Ptr& manager,
+                               const ConnectionPoolConnector::Vec& failures);
+  void notify_up_async(const Address& address);
+  void notify_down_async(const Address& address);
 
   void connect_async(const Config& config, const String& keyspace, const Future::Ptr& future);
   void close_async(const Future::Ptr& future);
@@ -118,6 +100,54 @@ public:
   const VersionNumber& cassandra_version() const {
     return control_connection_.cassandra_version();
   }
+
+
+private:
+  class NotifyConnect : public Task {
+  public:
+    virtual void run(EventLoop* event_loop);
+  };
+
+  void handle_notify_connect();
+
+  class NotifyInitalize : public Task {
+  public:
+    NotifyInitalize(const ConnectionPoolManager::Ptr& manager,
+                    const ConnectionPoolConnector::Vec& failures)
+      : manager_(manager)
+      , failures_(failures) { }
+
+    virtual void run(EventLoop* event_loop);
+
+  private:
+    ConnectionPoolManager::Ptr manager_;
+    ConnectionPoolConnector::Vec failures_;
+  };
+
+  void handle_notify_initialize(const ConnectionPoolManager::Ptr& manager,
+                                const ConnectionPoolConnector::Vec& failures);
+
+  class NotifyUp : public Task {
+  public:
+    NotifyUp(const Address& address)
+      : address_(address) { }
+
+    virtual void run(EventLoop* event_loop);
+
+  private:
+    Address address_;
+  };
+
+  class NotifyDown : public Task {
+  public:
+    NotifyDown(const Address& address)
+      : address_(address) { }
+
+    virtual void run(EventLoop* event_loop);
+
+  private:
+    Address address_;
+  };
 
 private:
   void clear(const Config& config);
@@ -136,34 +166,11 @@ private:
 
   virtual void on_run();
   virtual void on_after_run();
-  virtual void on_event(const SessionEvent& event);
 
   static void on_resolve(MultiResolver<Session*>::Resolver* resolver);
   static void on_resolve_done(MultiResolver<Session*>* resolver);
 
-#if UV_VERSION_MAJOR >= 1
-  struct ResolveNameData {
-    ResolveNameData(Session* session,
-                    const Host::Ptr& host,
-                    bool is_initial_connection)
-      : session(session)
-      , host(host)
-      , is_initial_connection(is_initial_connection) { }
-    Session* session;
-    Host::Ptr host;
-    bool is_initial_connection;
-  };
-  typedef cass::NameResolver<ResolveNameData> NameResolver;
-
-  static void on_resolve_name(MultiResolver<Session*>::NameResolver* resolver);
-  static void on_add_resolve_name(NameResolver* resolver);
-#endif
-
-#if UV_VERSION_MAJOR == 0
-  static void on_execute(uv_async_t* data, int status);
-#else
-  static void on_execute(uv_async_t* data);
-#endif
+  static void on_execute(Async* async);
 
   QueryPlan* new_query_plan();
 
@@ -188,8 +195,8 @@ private:
   void on_control_connection_ready();
   void on_control_connection_error(CassError code, const String& message);
 
-  void on_add(Host::Ptr host, bool is_initial_connection);
-  void internal_on_add(Host::Ptr host, bool is_initial_connection);
+  void on_add(Host::Ptr host);
+  void internal_on_add(Host::Ptr host);
 
   void on_remove(Host::Ptr host);
 
@@ -198,15 +205,34 @@ private:
 
   void on_down(Host::Ptr host);
 
+  static void on_initialize(ConnectionPoolManagerInitializer* initializer);
+  void handle_initialize(ConnectionPoolManagerInitializer* initializer);
+
+  // Request listener callbacks
   virtual void on_result_metadata_changed(const String& prepared_id,
                                           const String& query,
                                           const String& keyspace,
                                           const String& result_metadata_id,
                                           const ResultResponse::ConstPtr& result_response);
+  virtual void on_keyspace_changed(const String& keyspace);
+  virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
+                                            const Host::Ptr& current_host,
+                                            const Response::Ptr& response);
+  virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
+                              const Host::Ptr& current_host,
+                              const Response::Ptr& response);
+
+  // Conneciton pool callbacks
+  virtual void on_up(const Address& address);
+  virtual void on_down(const Address& address);
+  virtual void on_critical_error(const Address& address,
+                                 Connector::ConnectionError code,
+                                 const String& message);
+
+  // Schema aggreement callback
+  virtual bool on_is_host_up(const Address& address);
 
 private:
-  typedef Vector<IOWorker::Ptr > IOWorkerVec;
-
   Atomic<State> state_;
   uv_mutex_t state_mutex_;
 
@@ -214,13 +240,17 @@ private:
   ScopedPtr<Metrics> metrics_;
   CassError connect_error_code_;
   String connect_error_message_;
+  String connect_keyspace_;
   Future::Ptr connect_future_;
   Future::Ptr close_future_;
 
   HostMap hosts_;
   uv_mutex_t hosts_mutex_;
 
-  IOWorkerVec io_workers_;
+  ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
+  ScopedPtr<RequestQueueManager> request_queue_manager_;
+  ConnectionPoolManager::Ptr manager_;
+
   ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
 
   ScopedPtr<TokenMap> token_map_;
@@ -229,12 +259,6 @@ private:
   ScopedPtr<Random> random_;
   ControlConnection control_connection_;
   bool current_host_mark_;
-  int pending_pool_count_;
-  int pending_workers_count_;
-  int current_io_worker_;
-
-  String keyspace_;
-  mutable uv_mutex_t keyspace_mutex_;
 };
 
 class SessionFuture : public Future {
@@ -242,7 +266,7 @@ public:
   typedef SharedRefPtr<SessionFuture> Ptr;
 
   SessionFuture()
-      : Future(CASS_FUTURE_TYPE_SESSION) {}
+    : Future(FUTURE_TYPE_SESSION) {}
 };
 
 } // namespace cass

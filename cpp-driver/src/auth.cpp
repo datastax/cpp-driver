@@ -106,12 +106,13 @@ bool PlainTextAuthenticator::success(const String& token) {
   return true;
 }
 
-ExternalAuthenticator::ExternalAuthenticator(const Host::ConstPtr& host,
+ExternalAuthenticator::ExternalAuthenticator(const Address& address,
+                                             const String& hostname,
                                              const String& class_name,
                                              const CassAuthenticatorCallbacks* callbacks,
                                              void* data)
-  : address_(host->address())
-  , hostname_(host->hostname())
+  : address_(address)
+  , hostname_(hostname)
   , class_name_(class_name)
   , response_(NULL)
   , callbacks_(callbacks)

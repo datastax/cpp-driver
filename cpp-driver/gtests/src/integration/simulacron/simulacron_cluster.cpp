@@ -19,7 +19,7 @@
 #include "test_utils.hpp"
 
 #include "scoped_lock.hpp"
-#include "socket.hpp"
+#include "tsocket.hpp"
 #include "values/uuid.hpp"
 #include "objects/uuid_gen.hpp"
 

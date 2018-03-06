@@ -32,6 +32,9 @@
 
 namespace cass {
 
+class Connector;
+class ChainedControlRequestCallback;
+class ControlRequestCallback;
 class EventResponse;
 class Request;
 class Row;
@@ -39,7 +42,7 @@ class Session;
 class Timer;
 class Value;
 
-class ControlConnection : public Connection::Listener {
+class ControlConnection : public ConnectionListener {
 public:
   static bool determine_address_for_peer_host(const Address& connected_address,
                                               const Value* peer_value,
@@ -74,111 +77,8 @@ public:
   void on_down(const Address& address);
 
 private:
-  template<class T>
-  class ControlMultipleRequestCallback : public MultipleRequestCallback {
-  public:
-    typedef void (*ResponseCallback)(ControlConnection*, const T&, const MultipleRequestCallback::ResponseMap&);
-
-    ControlMultipleRequestCallback(ControlConnection* control_connection,
-                                  ResponseCallback response_callback,
-                                  const T& data)
-        : MultipleRequestCallback(control_connection->connection_)
-        , control_connection_(control_connection)
-        , response_callback_(response_callback)
-        , data_(data) {}
-
-    void execute_query(const String& index, const String& query);
-
-    virtual void on_set(const MultipleRequestCallback::ResponseMap& responses);
-
-    virtual void on_error(CassError code, const String& message) {
-      control_connection_->handle_query_failure(code, message);
-    }
-
-    virtual void on_timeout() {
-      control_connection_->handle_query_timeout();
-    }
-
-  private:
-    ControlConnection* control_connection_;
-    ResponseCallback response_callback_;
-    T data_;
-  };
-
-  struct RefreshTableData {
-    RefreshTableData(const String& keyspace_name,
-                     const String& table_name)
-      : keyspace_name(keyspace_name)
-      , table_or_view_name(table_name) {}
-    String keyspace_name;
-    String table_or_view_name;
-  };
-
-  struct UnusedData {};
-
-  template<class T>
-  class ControlCallback : public SimpleRequestCallback {
-  public:
-    typedef void (*ResponseCallback)(ControlConnection*, const T&, const Response*);
-
-    ControlCallback(const Request::ConstPtr& request,
-                    ControlConnection* control_connection,
-                    ResponseCallback response_callback,
-                    const T& data)
-      : SimpleRequestCallback(request)
-      , control_connection_(control_connection)
-      , response_callback_(response_callback)
-      , data_(data) { }
-
-  private:
-    virtual void on_internal_set(ResponseMessage* response) {
-      const Response* response_body = response->response_body().get();
-      if (control_connection_->handle_query_invalid_response(response_body)) {
-        return;
-      }
-      response_callback_(control_connection_, data_, response_body);
-    }
-
-    virtual void on_internal_error(CassError code, const String& message) {
-      control_connection_->handle_query_failure(code, message);
-    }
-
-    virtual void on_internal_timeout() {
-      control_connection_->handle_query_timeout();
-    }
-
-  private:
-    ControlConnection* control_connection_;
-    ResponseCallback response_callback_;
-    T data_;
-  };
-
-  struct RefreshNodeData {
-    RefreshNodeData(const Host::Ptr& host,
-                    bool is_new_node)
-      : host(host)
-      , is_new_node(is_new_node) {}
-    Host::Ptr host;
-    bool is_new_node;
-  };
-
-  struct RefreshFunctionData {
-    typedef Vector<String> StringVec;
-
-    RefreshFunctionData(StringRef keyspace,
-                        StringRef function,
-                        const StringRefVec& arg_types,
-                        bool is_aggregate)
-      : keyspace(keyspace.to_string())
-      , function(function.to_string())
-      , arg_types(to_strings(arg_types))
-      , is_aggregate(is_aggregate) { }
-
-    String keyspace;
-    String function;
-    StringVec arg_types;
-    bool is_aggregate;
-  };
+  friend class ControlRequestCallback;
+  friend class ChainedControlRequestCallback;
 
   enum UpdateHostType {
     ADD_HOST,
@@ -189,9 +89,11 @@ private:
   void reconnect(bool retry_current_host);
 
   // Connection listener methods
-  virtual void on_ready(Connection* connection);
   virtual void on_close(Connection* connection);
   virtual void on_event(const EventResponse* response);
+
+  static void on_connect(Connector* connector);
+  void handle_connect(Connector* connector);
 
   static void on_reconnect(Timer* timer);
 
@@ -200,54 +102,41 @@ private:
   void handle_query_timeout();
 
   void query_meta_hosts();
-  static void on_query_hosts(ControlConnection* control_connection,
-                             const UnusedData& data,
-                             const MultipleRequestCallback::ResponseMap& responses);
+  static void on_query_hosts(ChainedControlRequestCallback* callback);
 
   void query_meta_schema();
-  static void on_query_meta_schema(ControlConnection* control_connection,
-                                const UnusedData& data,
-                                const MultipleRequestCallback::ResponseMap& responses);
+  static void on_query_meta_schema(ChainedControlRequestCallback* callback);
 
   void refresh_node_info(Host::Ptr host,
                          bool is_new_node,
                          bool query_tokens = false);
-  static void on_refresh_node_info(ControlConnection* control_connection,
-                                   const RefreshNodeData& data,
-                                   const Response* response);
-  static void on_refresh_node_info_all(ControlConnection* control_connection,
-                                       const RefreshNodeData& data,
-                                       const Response* response);
+  static void on_refresh_node_info(ControlRequestCallback* callback);
+  static void on_refresh_node_info_all(ControlRequestCallback* callback);
 
   void update_node_info(Host::Ptr host, const Row* row, UpdateHostType type);
 
   void refresh_keyspace(const StringRef& keyspace_name);
-  static void on_refresh_keyspace(ControlConnection* control_connection, const String& keyspace_name, const Response* response);
+  static void on_refresh_keyspace(ControlRequestCallback* callback);
 
   void refresh_table_or_view(const StringRef& keyspace_name,
                      const StringRef& table_name);
-  static void on_refresh_table_or_view(ControlConnection* control_connection,
-                               const RefreshTableData& data,
-                               const MultipleRequestCallback::ResponseMap& responses);
+  static void on_refresh_table_or_view(ChainedControlRequestCallback* callback);
 
   void refresh_type(const StringRef& keyspace_name,
                     const StringRef& type_name);
-  static void on_refresh_type(ControlConnection* control_connection,
-                              const std::pair<String, String>& keyspace_and_type_names,
-                              const Response* response);
+  static void on_refresh_type(ControlRequestCallback* callback);
 
   void refresh_function(const StringRef& keyspace_name,
                         const StringRef& function_name,
                         const StringRefVec& arg_types,
                         bool is_aggregate);
-  static void on_refresh_function(ControlConnection* control_connection,
-                                  const RefreshFunctionData& data,
-                                  const Response* response);
+  static void on_refresh_function(ControlRequestCallback* callback);
 
 private:
   State state_;
   Session* session_;
   Connection* connection_;
+  int event_types_;
   Timer reconnect_timer_;
   ScopedPtr<QueryPlan> query_plan_;
   Host::Ptr current_host_;

@@ -52,7 +52,7 @@ cass_bool_t cass_future_wait_timed(CassFuture* future, cass_duration_t wait_us) 
 }
 
 const CassResult* cass_future_get_result(CassFuture* future) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
     return NULL;
   }
 
@@ -68,7 +68,7 @@ const CassResult* cass_future_get_result(CassFuture* future) {
 }
 
 const CassPrepared* cass_future_get_prepared(CassFuture* future) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
     return NULL;
   }
   cass::ResponseFuture* response_future =
@@ -87,7 +87,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
 }
 
 const CassErrorResult* cass_future_get_error_result(CassFuture* future) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
     return NULL;
   }
 
@@ -126,7 +126,7 @@ void cass_future_error_message(CassFuture* future,
 }
 
 size_t cass_future_custom_payload_item_count(CassFuture* future) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
     return 0;
   }
   cass::Response::Ptr response(
@@ -141,7 +141,7 @@ CassError cass_future_custom_payload_item(CassFuture* future,
                                           size_t* name_length,
                                           const cass_byte_t** value,
                                           size_t* value_size) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
     return CASS_ERROR_LIB_INVALID_FUTURE_TYPE;
   }
   cass::Response::Ptr response(

@@ -14,356 +14,212 @@
   limitations under the License.
 */
 
+#include "request_callback.hpp"
+#include "socket.hpp"
+#include "stream_manager.hpp"
+
 #ifndef __CASS_CONNECTION_HPP_INCLUDED__
 #define __CASS_CONNECTION_HPP_INCLUDED__
 
-#include "buffer.hpp"
-#include "cassandra.h"
-#include "request_callback.hpp"
-#include "hash.hpp"
-#include "host.hpp"
-#include "list.hpp"
-#include "macros.hpp"
-#include "memory.hpp"
-#include "metrics.hpp"
-#include "ref_counted.hpp"
-#include "request.hpp"
-#include "response.hpp"
-#include "schema_change_callback.hpp"
-#include "scoped_ptr.hpp"
-#include "ssl.hpp"
-#include "stack.hpp"
-#include "stream_manager.hpp"
-#include "timer.hpp"
-
-#include <uv.h>
-
 namespace cass {
 
-class AuthProvider;
-class AuthResponseRequest;
-class Config;
-class Connector;
+class ResponseMessage;
 class EventResponse;
-class Request;
+class Connection;
 
-// Whenever we create a Buffer vector, reserve 128 slots. This reduces the
-// number of reallocations that will occur as the vector grows, improving
-// efficiency of request encoding.
-
-#define MIN_BUFFERS_SIZE 128
-
-class Connection {
+/**
+ * A proxy socket handler for the connection.
+ */
+class ConnectionHandler : public SocketHandler {
 public:
-  enum ConnectionState {
-    CONNECTION_STATE_NEW,
-    CONNECTION_STATE_CONNECTING,
-    CONNECTION_STATE_CONNECTED,
-    CONNECTION_STATE_REGISTERING_EVENTS,
-    CONNECTION_STATE_READY,
-    CONNECTION_STATE_CLOSE,
-    CONNECTION_STATE_CLOSE_DEFUNCT
-  };
+  ConnectionHandler(Connection* connection)
+    : connection_(connection) { }
 
-  enum ConnectionError {
-    CONNECTION_OK,
-    CONNECTION_ERROR_GENERIC,
-    CONNECTION_ERROR_TIMEOUT,
-    CONNECTION_ERROR_INVALID_PROTOCOL,
-    CONNECTION_ERROR_AUTH,
-    CONNECTION_ERROR_SSL_ENCRYPT,
-    CONNECTION_ERROR_SSL_DECRYPT,
-    CONNECTION_ERROR_SSL_HANDSHAKE,
-    CONNECTION_ERROR_SSL_VERIFY,
-    CONNECTION_ERROR_KEYSPACE
-  };
-
-  class Listener {
-  public:
-    Listener()
-      : event_types_(0) {}
-
-    virtual ~Listener() {}
-
-    int event_types() const { return event_types_; }
-
-    void set_event_types(int event_types) {
-      event_types_ = event_types;
-    }
-
-    virtual void on_ready(Connection* connection) = 0;
-    virtual void on_close(Connection* connection) = 0;
-
-    virtual void on_event(const EventResponse* response) = 0;
-
-  private:
-    int event_types_;
-  };
-
-  Connection(uv_loop_t* loop,
-             const Config& config,
-             Metrics* metrics,
-             const Host::ConstPtr& host,
-             const String& keyspace,
-             int protocol_version,
-             Listener* listener);
-  ~Connection();
-
-  void connect();
-
-  bool write(const RequestCallback::Ptr& request, bool flush_immediately = true);
-  void flush();
-
-  void schedule_schema_agreement(const SchemaChangeCallback::Ptr& callback, uint64_t wait);
-
-  uv_loop_t* loop() { return loop_; }
-  const Config& config() const { return config_; }
-  Metrics* metrics() { return metrics_; }
-  const Address& address() const { return host_->address(); }
-  const String& address_string() const { return host_->address_string(); }
-  const String& keyspace() const { return keyspace_; }
-
-  void close();
-  void defunct();
-
-  bool is_closing() const {
-    return state_ == CONNECTION_STATE_CLOSE ||
-        state_ == CONNECTION_STATE_CLOSE_DEFUNCT;
-  }
-
-  bool is_ready() const { return state_ == CONNECTION_STATE_READY; }
-  bool is_available() const { return is_ready(); }
-  bool is_defunct() const { return state_ == CONNECTION_STATE_CLOSE_DEFUNCT; }
-
-  bool is_invalid_protocol() const { return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL; }
-  bool is_auth_error() const { return error_code_ == CONNECTION_ERROR_AUTH; }
-  bool is_ssl_error() const {
-    return error_code_ == CONNECTION_ERROR_SSL_ENCRYPT ||
-        error_code_ == CONNECTION_ERROR_SSL_DECRYPT ||
-        error_code_ == CONNECTION_ERROR_SSL_HANDSHAKE ||
-        error_code_ == CONNECTION_ERROR_SSL_VERIFY;
-  }
-  bool is_timeout_error() const { return error_code_ == CONNECTION_ERROR_TIMEOUT; }
-
-  ConnectionError error_code() const { return error_code_; }
-  const String& error_message() const { return error_message_; }
-
-  CassError ssl_error_code() const { return ssl_error_code_; }
-
-  int protocol_version() const { return protocol_version_; }
-
-  size_t available_streams() const { return stream_manager_.available_streams(); }
-  size_t pending_request_count() const { return stream_manager_.pending_streams(); }
-
-  static void on_timeout(Timer* timer);
+  virtual void on_read(Socket* socket, ssize_t nread, const uv_buf_t* buf);
+  virtual void on_write(Socket* socket, int status, SocketRequest* request);
+  virtual void on_close();
 
 private:
-  class SslHandshakeWriter {
-    friend class Memory;
+  Connection* connection_;
+};
 
-  public:
-    static const int MAX_BUFFER_SIZE = 16 * 1024 + 5;
+/**
+ * A proxy SSL socket handler for the connection.
+ */
+class SslConnectionHandler : public SslSocketHandler {
+public:
+  SslConnectionHandler(SslSession* ssl_session, Connection* connection)
+    : SslSocketHandler(ssl_session)
+    , connection_(connection) { }
 
-    static bool write(Connection* connection, char* buf, size_t buf_size);
+  virtual void on_ssl_read(Socket* socket, char* buf, size_t size);
+  virtual void on_write(Socket* socket, int status, SocketRequest* request);
+  virtual void on_close();
 
-  private:
-    SslHandshakeWriter(Connection* connection, char* buf, size_t buf_size);
+private:
+  Connection* connection_;
+};
 
-    static void on_write(uv_write_t* req, int status);
+/**
+ * A listener that handles events for the connection.
+ */
+class ConnectionListener {
+public:
+  virtual ~ConnectionListener() { }
+  /**
+   * A callback that's called when the connection closes.
+   *
+   * @param connection The closing connection.
+   */
+  virtual void on_close(Connection* connection) = 0;
 
-  private:
-    uv_write_t req_;
-    Connection* connection_;
-    uv_buf_t uv_buf_;
-    char buf_[MAX_BUFFER_SIZE];
-  };
+  /**
+   * A callback that's called when the connection receives an event. The
+   * connection must register for events when connected.
+   *
+   * @param response The event response data sent from the server.
+   */
+  virtual void on_event(const EventResponse* response) { }
+};
 
-  class StartupCallback : public SimpleRequestCallback {
-  public:
-    StartupCallback(const Request::ConstPtr& request);
+/**
+ * A connection. It's a socket wrapper that handles Cassandra/DSE specific
+ * functionality such as decoding responses and heartbeats. It can not be
+ * connected directly instead use a Connector object.
+ *
+ * @see Connector
+ */
+class Connection : public RefCounted<Connection> {
+  friend class ConnectionConnector;
+  friend class ConnectionHandler;
+  friend class SslConnectionHandler;
+  friend class HeartbeatCallback;
 
-  private:
-    virtual void on_internal_set(ResponseMessage* response);
-    virtual void on_internal_error(CassError code, const String& message);
-    virtual void on_internal_timeout();
+public:
+  typedef SharedRefPtr<Connection> Ptr;
+  typedef Vector<Ptr> Vec;
 
-    void on_result_response(ResponseMessage* response);
-  };
+  /**
+   * Constructor. Don't use directly.
+   *
+   * @param socket The wrapped socket.
+   * @param protocol_version The protocol version to use for the connection.
+   * @param idle_timeout_secs The amount of time (in seconds) without a write or heartbeat
+   * where the connection is considered idle and is terminated.
+   * @param heartbeat_interval_secs The interval (in seconds) to send a heartbeat.
+   */
+  Connection(const Socket::Ptr& socket,
+             int protocol_version,
+             unsigned int idle_timeout_secs,
+             unsigned int heartbeat_interval_secs);
 
-  class HeartbeatCallback : public SimpleRequestCallback {
-  public:
-    HeartbeatCallback();
+  /**
+   * Write a request to the connection and coalesce with outstanding requests. This
+   * method doesn't flush.
+   *
+   * @param callback A request callback that will handle the request.
+   * @return The number of bytes written, or negative if an error occurred.
+   */
+  int32_t write(const RequestCallback::Ptr& callback);
 
-  private:
-    virtual void on_internal_set(ResponseMessage* response);
-    virtual void on_internal_error(CassError code, const String& message);
-    virtual void on_internal_timeout();
-  };
+  /**
+   * Write a request to the connection and flush immediately.
+   *
+   * @param callback The request callback that will handle the request.
+   * @return The number of bytes written, or negative if an error occurred.
+   */
+  int32_t write_and_flush(const RequestCallback::Ptr& callback);
 
-  class PendingWriteBase : public List<PendingWriteBase>::Node {
-  public:
-    PendingWriteBase(Connection* connection)
-      : connection_(connection)
-      , is_flushed_(false)
-      , size_(0) {
-      req_.data = this;
-      buffers_.reserve(MIN_BUFFERS_SIZE);
-    }
+  /**
+   * Flush all outstanding requests.
+   */
+  void flush();
 
-    virtual ~PendingWriteBase() {}
+  /**
+   * Determine if the connection is closing.
+   *
+   * @return Returns true if closing.
+   */
+  bool is_closing() const { return socket_->is_closing(); }
 
-    bool is_flushed() const {
-      return is_flushed_;
-    }
+  /**
+   * Close the connection.
+   */
+  void close();
 
-    size_t size() const {
-      return size_;
-    }
+  /**
+   * Determine if the connection is defunct.
+   *
+   * @return Returns true if defunct.
+   */
+  bool is_defunct() const { return socket_->is_defunct(); }
 
-    void clear() {
-      buffers_.clear();
-      callbacks_.clear();
-      size_ = 0;
-      is_flushed_ = false;
-    }
+  /**
+   * Mark as defunct and close the connection.
+   */
+  void defunct();
 
-    void cleanup();
+  /**
+   * Set the listener that will handle events for the connection.
+   *
+   * @param listener The connection listener.
+   */
+  void set_listener(ConnectionListener* listener) { listener_ = listener; }
 
-    int32_t write(RequestCallback* callback);
+  /**
+   * Start heartbeats to keep the connection alive and to detect a network or
+   * server-side failure.
+   */
+  void start_heartbeats();
 
-    virtual void flush() = 0;
+  /**
+   * Stop heartbeats.
+   */
+  void stop_heartbeats();
 
-  protected:
-    static void on_write(uv_write_t* req, int status);
+public:
+  const Address& address() { return socket_->address(); }
+  const String& address_string() { return socket_->address_string(); }
+  int protocol_version() const { return protocol_version_; }
+  const String& keyspace() { return keyspace_; }
+  uv_loop_t* loop() { return socket_->loop(); }
 
-    typedef Vector<RequestCallback*> CallbackVec;
+  int inflight_request_count() const {
+    return inflight_request_count_.load(MEMORY_ORDER_RELAXED);
+  }
 
-    Connection* connection_;
-    uv_write_t req_;
-    bool is_flushed_;
-    size_t size_;
-    BufferVec buffers_;
-    CallbackVec callbacks_;
-  };
-
-  class PendingWrite : public PendingWriteBase {
-  public:
-    PendingWrite(Connection* connection)
-       : PendingWriteBase(connection) {}
-
-    virtual void flush();
-  };
-
-  class PendingWriteSsl : public PendingWriteBase {
-  public:
-    PendingWriteSsl(Connection* connection)
-       : PendingWriteBase(connection)
-       , encrypted_size_(0) {}
-
-    void encrypt();
-    virtual void flush();
-
-  private:
-    size_t encrypted_size_;
-    static void on_write(uv_write_t* req, int status);
-  };
-
-  struct PendingSchemaAgreement
-      : public List<PendingSchemaAgreement>::Node {
-    PendingSchemaAgreement(const SchemaChangeCallback::Ptr& callback)
-        : callback(callback) { }
-
-    void stop_timer();
-
-    SchemaChangeCallback::Ptr callback;
-    Timer timer;
-  };
-
-  int32_t internal_write(const RequestCallback::Ptr& request, bool flush_immediately = true);
-  void internal_close(ConnectionState close_state);
-  void set_state(ConnectionState state);
-  void consume(const char* input, size_t size);
+private:
   void maybe_set_keyspace(ResponseMessage* response);
 
-  static void on_connect(Connector* connecter);
-  static void on_connect_timeout(Timer* timer);
-  static void on_close(uv_handle_t* handle);
+  void on_write(int status, RequestCallback* callback);
+  void on_read(const char* buf, size_t size);
+  void on_close();
 
-  uv_buf_t internal_alloc_buffer(size_t suggested_size);
-  void internal_reuse_buffer(uv_buf_t buf);
-
-#if UV_VERSION_MAJOR == 0
-  static uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size);
-  static void on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf);
-  static uv_buf_t alloc_buffer_ssl(uv_handle_t* handle, size_t suggested_size);
-  static void on_read_ssl(uv_stream_t* client, ssize_t nread, uv_buf_t buf);
-#else
-  static void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
-  static void on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf);
-  static void alloc_buffer_ssl(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
-  static void on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t *buf);
-#endif
-
-  void on_connected();
-  void on_authenticate(const String& class_name);
-  void on_auth_challenge(const AuthResponseRequest* auth_response, const String& token);
-  void on_auth_success(const AuthResponseRequest* auth_response, const String& token);
-  void on_ready();
-  void on_set_keyspace();
-  void on_supported(ResponseMessage* response);
-  static void on_pending_schema_agreement(Timer* timer);
-
-  void notify_ready();
-  void notify_error(const String& message, ConnectionError code = CONNECTION_ERROR_GENERIC);
-
-  void ssl_handshake();
-
-  void send_credentials(const String& class_name);
-  void send_initial_auth_response(const String& class_name);
-
+private:
   void restart_heartbeat_timer();
   static void on_heartbeat(Timer* timer);
+
   void restart_terminate_timer();
   static void on_terminate(Timer* timer);
 
 private:
-  typedef Vector<PendingWriteBase*> PendingWriteVec;
+  Socket::Ptr socket_;
+  StreamManager<RequestCallback::Ptr> stream_manager_;
+  Atomic<int> inflight_request_count_;
 
-  ConnectionState state_;
-  ConnectionError error_code_;
-  String error_message_;
-  CassError ssl_error_code_;
-
-  List<PendingWriteBase> pending_writes_;
-  List<RequestCallback> pending_reads_;
-  List<PendingSchemaAgreement> pending_schema_agreements_;
-
-  PendingWriteVec free_writes_;
-
-  uv_loop_t* loop_;
-  const Config& config_;
-  Metrics* metrics_;
-  Host::ConstPtr host_;
-  String keyspace_;
-  const int protocol_version_;
-  Listener* listener_;
-
+  List<SocketRequest> pending_reads_;
   ScopedPtr<ResponseMessage> response_;
-  StreamManager<RequestCallback*> stream_manager_;
 
-  uv_tcp_t socket_;
-  Timer connect_timer_;
-  ScopedPtr<SslSession> ssl_session_;
+  ConnectionListener* listener_;
 
+  int protocol_version_;
+  String keyspace_;
+
+  unsigned int idle_timeout_secs_;
+  unsigned int heartbeat_interval_secs_;
   bool heartbeat_outstanding_;
   Timer heartbeat_timer_;
   Timer terminate_timer_;
-
-  // buffer reuse for libuv
-  Stack<uv_buf_t> buffer_reuse_list_;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 
 } // namespace cass

@@ -25,6 +25,7 @@
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+#include <openssl/engine.h>
 #include <string.h>
 
 #define DEBUG_SSL 0
@@ -115,7 +116,7 @@ static int pem_password_callback(char* buf, int size, int rwflag, void* u) {
 }
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-static uv_rwlock_t* crypto_locks;
+static uv_rwlock_t* crypto_locks = NULL;
 
 static void crypto_locking_callback(int mode, int n, const char* file, int line) {
   if (mode & CRYPTO_LOCK) {
@@ -258,18 +259,18 @@ public:
     NO_SAN_PRESENT
   };
 
-  static Result match(X509* cert, const Host::ConstPtr& host) {
-    Result result = match_subject_alt_names_ipadd(cert, host->address());
+  static Result match(X509* cert, const Address& address) {
+    Result result = match_subject_alt_names_ipadd(cert, address);
     if (result == NO_SAN_PRESENT) {
-      result = match_common_name_ipaddr(cert, host->address_string());
+      result = match_common_name_ipaddr(cert, address.to_string());
     }
     return result;
   }
 
-  static Result match_dns(X509* cert, const Host::ConstPtr& host) {
-    Result result = match_subject_alt_names_dns(cert, host->hostname());
+  static Result match_dns(X509* cert, const String& hostname) {
+    Result result = match_subject_alt_names_dns(cert, hostname);
     if (result == NO_SAN_PRESENT) {
-      result = match_common_name_dns(cert, host->hostname());
+      result = match_common_name_dns(cert, hostname);
     }
     return result;
   }
@@ -420,10 +421,11 @@ private:
   }
 };
 
-OpenSslSession::OpenSslSession(const Host::ConstPtr& host,
+OpenSslSession::OpenSslSession(const Address& address,
+                               const String& hostname,
                                int flags,
                                SSL_CTX* ssl_ctx)
-  : SslSession(host, flags)
+  : SslSession(address, hostname, flags)
   , ssl_(SSL_new(ssl_ctx))
   , incoming_state_(&incoming_)
   , outgoing_state_(&outgoing_)
@@ -467,7 +469,7 @@ void OpenSslSession::verify() {
   }
 
   if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY) { // Match using IP addresses
-    switch (OpenSslVerifyIdentity::match(peer_cert, host_)) {
+    switch (OpenSslVerifyIdentity::match(peer_cert, address_)) {
       case OpenSslVerifyIdentity::MATCH:
         // Success
         break;
@@ -485,7 +487,7 @@ void OpenSslSession::verify() {
         return;
     }
   } else if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY_DNS) { // Match using hostnames (including wildcards)
-    switch (OpenSslVerifyIdentity::match_dns(peer_cert, host_)) {
+    switch (OpenSslVerifyIdentity::match_dns(peer_cert, hostname_)) {
       case OpenSslVerifyIdentity::MATCH:
         // Success
         break;
@@ -537,8 +539,8 @@ OpenSslContext::~OpenSslContext() {
   SSL_CTX_free(ssl_ctx_);
 }
 
-SslSession* OpenSslContext::create_session(const Host::ConstPtr& host) {
-  return Memory::allocate<OpenSslSession>(host, verify_flags_, ssl_ctx_);
+SslSession* OpenSslContext::create_session(const Address& address, const String& hostname) {
+  return Memory::allocate<OpenSslSession>(address, hostname, verify_flags_, ssl_ctx_);
 }
 
 CassError OpenSslContext::add_trusted_cert(const char* cert,
@@ -625,7 +627,7 @@ namespace openssl {
 
 
 
-void OpenSslContextFactory::init() {
+void OpenSslContextFactory::internal_init() {
   CRYPTO_set_mem_functions(openssl::malloc, openssl::realloc, openssl::free);
 
   SSL_library_init();
@@ -652,6 +654,42 @@ void OpenSslContextFactory::init() {
 
 #else
   rb::RingBufferBio::initialize();
+#endif
+}
+
+void OpenSslContextFactory::internal_thread_cleanup() {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  ERR_remove_thread_state(NULL);
+#else
+  OPENSSL_thread_stop();
+#endif
+}
+
+void OpenSslContextFactory::internal_cleanup() {
+  RAND_cleanup();
+  ENGINE_cleanup();
+  CONF_modules_unload(1);
+  CONF_modules_free();
+  EVP_cleanup();
+  ERR_free_strings();
+  CRYPTO_cleanup_all_ex_data();
+  CRYPTO_set_locking_callback(NULL);
+  CRYPTO_set_id_callback(NULL);
+  SSL_COMP_free_compression_methods();
+
+  thread_cleanup();
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  if (crypto_locks != NULL) {
+    int num_locks = CRYPTO_num_locks();
+    for (int i = 0; i < num_locks; ++i) {
+      uv_rwlock_destroy(crypto_locks + i);
+    }
+    Memory::free(crypto_locks);
+    crypto_locks = NULL;
+  }
+#else
+  rb::RingBufferBio::cleanup();
 #endif
 }
 

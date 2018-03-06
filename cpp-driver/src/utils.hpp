@@ -38,30 +38,6 @@ class Value;
 typedef Vector<String> ContactPointList;
 typedef Vector<String> DcList;
 
-template<class From, class To>
-#if _MSC_VER && !__INTEL_COMPILER
-class IsConvertible : public std::is_convertible<From, To> { };
-#else
-class IsConvertible {
-  private:
-    typedef char Yes;
-    typedef struct { char not_used[2]; } No;
-
-    struct Helper {
-      static Yes test(To);
-      static No test(...);
-      static From& check();
-    };
-
-  public:
-    static const bool value;
-};
-
-template<class From, class To>
-const bool IsConvertible<From, To>::value
-  = sizeof(IsConvertible<From, To>::Helper::test(IsConvertible<From, To>::Helper::check())) == sizeof(typename IsConvertible<From, To>::Yes);
-#endif
-
 // copy_cast<> prevents incorrect code from being generated when two unrelated
 // types reference the same memory location and strict aliasing is enabled.
 // The type "char*" is an exception and is allowed to alias any other

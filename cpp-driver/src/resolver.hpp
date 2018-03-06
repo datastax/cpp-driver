@@ -139,102 +139,6 @@ private:
   Callback cb_;
 };
 
-
-#if UV_VERSION_MAJOR >= 1
-template <class T>
-class NameResolver {
-  friend class Memory;
-
-public:
-  typedef void (*Callback)(NameResolver*);
-
-  enum Status {
-    RESOLVING,
-    FAILED_BAD_PARAM,
-    FAILED_UNABLE_TO_RESOLVE,
-    FAILED_TIMED_OUT,
-    SUCCESS
-  };
-
-  bool is_success() { return status_ == SUCCESS; }
-  bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
-  Status status() { return status_; }
-  const Address& address() const { return address_; }
-  const String& hostname() const { return hostname_; }
-  const String& service() const { return service_; }
-  T& data() { return data_; }
-
-  static void resolve(uv_loop_t* loop, const Address& address,
-                      const T& data, Callback cb, uint64_t timeout, int flags = 0) {
-    NameResolver* resolver = Memory::allocate<NameResolver>(address, data, cb);
-
-    if (timeout > 0) {
-      resolver->timer_.start(loop, timeout, resolver, on_timeout);
-    }
-
-    int rc = uv_getnameinfo(loop, &resolver->req_, on_resolve, address.addr(), flags);
-
-    if (rc != 0) {
-      resolver->status_ = FAILED_BAD_PARAM;
-      resolver->cb_(resolver);
-      Memory::deallocate(resolver);
-    }
-  }
-
-private:
-  static void on_resolve(uv_getnameinfo_t* req, int status,
-                         const char* hostname, const char* service) {
-    NameResolver* resolver = static_cast<NameResolver*>(req->data);
-
-    if (resolver->status_ == RESOLVING) { // A timeout may have happened
-      resolver->timer_.stop();
-
-      if (status != 0) {
-        resolver->status_ = FAILED_UNABLE_TO_RESOLVE;
-      } else {
-        if (hostname != NULL) {
-          resolver->hostname_ = hostname;
-        }
-        if (service != NULL) {
-          resolver->service_ = service;
-        }
-        resolver->status_ = SUCCESS;
-      }
-    }
-
-    resolver->cb_(resolver);
-
-    Memory::deallocate(resolver);
-  }
-
-  static void on_timeout(Timer* timer) {
-    NameResolver* resolver = static_cast<NameResolver*>(timer->data());
-    resolver->status_ = FAILED_TIMED_OUT;
-    uv_cancel(reinterpret_cast<uv_req_t*>(&resolver->req_));
-  }
-
-private:
-  NameResolver(const Address& address, const T& data, Callback cb)
-      : address_(address)
-      , status_(RESOLVING)
-      , data_(data)
-      , cb_(cb) {
-    req_.data = this;
-  }
-
-  ~NameResolver() {}
-
-  uv_getnameinfo_t req_;
-  Timer timer_;
-  Address address_;
-  Status status_;
-  String hostname_;
-  String service_;
-  T data_;
-  Callback cb_;
-};
-#endif
-
 template <class T>
 class MultiResolver : public RefCounted<MultiResolver<T> > {
 public:
@@ -243,24 +147,13 @@ public:
   typedef cass::Resolver<MultiResolver<T>*> Resolver;
   typedef void (*ResolveCallback)(Resolver* resolver);
 
-#if UV_VERSION_MAJOR >= 1
-  typedef cass::NameResolver<MultiResolver<T>*> NameResolver;
-  typedef void (*ResolveNameCallback)(NameResolver* resolver);
-#endif
-
   typedef void (*FinishedCallback)(MultiResolver<T>* resolver);
 
   MultiResolver(const T& data,
                 ResolveCallback resolve_cb,
-#if UV_VERSION_MAJOR >= 1
-                ResolveNameCallback resolve_name_cb,
-#endif
                 FinishedCallback finished_cb)
     : data_(data)
     , resolve_cb_(resolve_cb)
-#if UV_VERSION_MAJOR >= 1
-    , resolve_name_cb_(resolve_name_cb)
-#endif
     , finished_cb_(finished_cb) { }
 
   ~MultiResolver() {
@@ -277,16 +170,6 @@ public:
                                                on_resolve, timeout, hints);
   }
 
-#if UV_VERSION_MAJOR >= 1
-  void resolve_name(uv_loop_t* loop,
-                    const Address& address,
-                    uint64_t timeout, int flags = 0) {
-    this->inc_ref();
-    cass::NameResolver<MultiResolver<T>*>::resolve(loop, address, this,
-                                                   on_resolve_name, timeout, flags);
-  }
-#endif
-
 private:
   static void on_resolve(Resolver* resolver) {
     MultiResolver<T>* multi_resolver = resolver->data();
@@ -294,20 +177,9 @@ private:
     multi_resolver->dec_ref();
   }
 
-#if UV_VERSION_MAJOR >= 1
-  static void on_resolve_name(NameResolver* resolver) {
-    MultiResolver<T>* multi_resolver = resolver->data();
-    if (multi_resolver->resolve_name_cb_) multi_resolver->resolve_name_cb_(resolver);
-    multi_resolver->dec_ref();
-  }
-#endif
-
 private:
   T data_;
   ResolveCallback resolve_cb_;
-#if UV_VERSION_MAJOR >= 1
-  ResolveNameCallback resolve_name_cb_;
-#endif
   FinishedCallback finished_cb_;
 
   DISALLOW_COPY_AND_ASSIGN(MultiResolver);

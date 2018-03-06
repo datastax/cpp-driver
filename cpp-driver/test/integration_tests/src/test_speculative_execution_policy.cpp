@@ -130,7 +130,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     // Gather and return the attempted hosts from the response
     std::vector<std::string> attempted_hosts;
     cass::Future* native_future = static_cast<cass::Future*>(future.get());
-    if (native_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
+    if (native_future->type() == cass::Future::FUTURE_TYPE_RESPONSE) {
       cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
       cass::AddressVec attempted_addresses = native_response_future->attempted_addresses();
       for (cass::AddressVec::iterator iterator = attempted_addresses.begin();
@@ -151,7 +151,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
   std::string executed_host(test_utils::CassFuturePtr future) {
     std::string host;
     cass::Future* native_future = static_cast<cass::Future*>(future.get());
-    if (native_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
+    if (native_future->type() == cass::Future::FUTURE_TYPE_RESPONSE) {
       cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
       host = native_response_future->address().to_string().c_str();
     }

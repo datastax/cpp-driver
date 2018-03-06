@@ -18,14 +18,14 @@
 
 namespace cass {
 
-NoSslSession::NoSslSession(const Host::ConstPtr& host)
-  : SslSession(host, CASS_SSL_VERIFY_NONE) {
+NoSslSession::NoSslSession(const Address& address, const String& hostname)
+  : SslSession(address, hostname, CASS_SSL_VERIFY_NONE) {
   error_code_ = CASS_ERROR_LIB_NOT_IMPLEMENTED;
   error_message_ = "SSL support not built into driver";
 }
 
-SslSession* cass::NoSslContext::create_session(const Host::ConstPtr& host) {
-  return Memory::allocate<NoSslSession>(host);
+SslSession* cass::NoSslContext::create_session(const Address& address, const String& hostname) {
+  return Memory::allocate<NoSslSession>(address, hostname);
 }
 
 CassError cass::NoSslContext::add_trusted_cert(const char* cert,

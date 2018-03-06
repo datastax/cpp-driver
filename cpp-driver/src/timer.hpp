@@ -33,9 +33,10 @@ public:
     , data_(NULL) { }
 
   ~Timer() {
-    stop();
+    close_handle();
   }
 
+  uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
   void* data() const { return data_; }
 
   bool is_running() const {
@@ -56,9 +57,13 @@ public:
   }
 
   void stop() {
+    close_handle();
+  }
+
+  void close_handle() {
     if (handle_ == NULL) return;
     // This also stops the timer
-    uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
+    uv_close(reinterpret_cast<uv_handle_t*>(handle_), Timer::on_close);
     handle_ = NULL;
   }
 
@@ -68,12 +73,7 @@ public:
   static void on_timeout(uv_timer_t* handle) {
 #endif
     Timer* timer = static_cast<Timer*>(handle->data);
-    // The timer handle needs to be closed everytime because a stopped timer
-    // will not prevent uv_run() from exiting the event loop and the handle
-    // can't be deleted immediately because the event loop is still using the
-    // memory. Closing the handle everytime guarantees it will be cleaned up
-    // properly without crashing the event loop.
-    timer->stop();
+    timer->close_handle();
     timer->cb_(timer);
   }
 

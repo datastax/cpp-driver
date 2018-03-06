@@ -185,7 +185,7 @@ macro(GtestUnitTests project_name extra_source_files)
   set(INTEGRATION_TESTS_SOURCE_FILES
     "${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp"
     "${INTEGRATION_TESTS_SOURCE_DIR}/driver_utils.cpp")
-  set(CCM_BRIDGE_SOURCE_FILES "${CCM_BRIDGE_SOURCE_DIR}/socket.cpp")
+  set(CCM_BRIDGE_SOURCE_FILES "${CCM_BRIDGE_SOURCE_DIR}/tsocket.cpp")
 
   file(GLOB UNIT_TESTS_INCLUDE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.hpp )
   file(GLOB UNIT_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.cpp)

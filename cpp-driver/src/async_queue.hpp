@@ -17,7 +17,7 @@
 #ifndef __CASS_ASYNC_QUEUE_HPP_INCLUDED__
 #define __CASS_ASYNC_QUEUE_HPP_INCLUDED__
 
-#include <uv.h>
+#include "async.hpp"
 
 namespace cass {
 
@@ -27,18 +27,13 @@ public:
   AsyncQueue(size_t queue_size)
       : queue_(queue_size) {}
 
-  int init(uv_loop_t* loop, void* data, uv_async_cb async_cb) {
-    async_.data = data;
-    return uv_async_init(loop, &async_, async_cb);
+  int init(uv_loop_t* loop, void* data, Async::Callback cb) {
+    return async_.start(loop, data, cb);
   }
 
-  void close_handles() {
-    uv_close(reinterpret_cast<uv_handle_t*>(&async_), NULL);
-  }
+  void close_handles() { async_.close_handle(); }
 
-  void send() {
-    uv_async_send(&async_);
-  }
+  void send() { async_.send(); }
 
   bool enqueue(const typename Q::EntryType& data) {
     if (queue_.enqueue(data)) {
@@ -46,7 +41,7 @@ public:
       // be necessary to use a memory fence to make sure stores happen before
       // the event loop wakes up and runs the async callback.
       Q::memory_fence();
-      uv_async_send(&async_);
+      send();
       return true;
     }
     return false;
@@ -58,7 +53,7 @@ public:
   bool is_empty() const { return queue_.is_empty(); }
 
 private:
-  uv_async_t async_;
+  Async async_;
   Q queue_;
 };
 

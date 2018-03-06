@@ -23,7 +23,6 @@
 #include "execution_profile.hpp"
 #include "logger.hpp"
 #include "metrics.hpp"
-#include "pool.hpp"
 #include "query_request.hpp"
 #include "request.hpp"
 #include "result_response.hpp"
@@ -46,17 +45,28 @@ void RequestWrapper::init(const Config& config,
   }
 }
 
-void RequestCallback::start(Connection* connection, int stream) {
-  connection_ = connection;
+void RequestCallback::notify_write(Connection* connection,
+                                   int protocol_version,
+                                   int stream) {
+  protocol_version_ = protocol_version;
   stream_ = stream;
-  on_start();
+  on_write(connection);
 }
 
-int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
+bool RequestCallback::skip_metadata() const {
+    // Skip the metadata if this an execute request and we have an entry cached
+  return request()->opcode() == CQL_OPCODE_EXECUTE &&
+      prepared_metadata_entry() &&
+      prepared_metadata_entry()->result()->result_metadata();
+}
+
+int32_t RequestCallback::encode(BufferVec* bufs) {
   size_t index = bufs->size();
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
+  int version = protocol_version_;
+  int flags = 0;
   int32_t length = 0;
 
   if (version == CASS_NEWEST_BETA_PROTOCOL_VERSION) {
@@ -93,18 +103,35 @@ int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
   return length + header_size;
 }
 
-bool RequestCallback::skip_metadata() const {
-    // Skip the metadata if this an execute request and we have an entry cached
-  return request()->opcode() == CQL_OPCODE_EXECUTE &&
-      prepared_metadata_entry() &&
-      prepared_metadata_entry()->result()->result_metadata();
+void RequestCallback::on_close() {
+  switch (state()) {
+    case RequestCallback::REQUEST_STATE_NEW:
+    case RequestCallback::REQUEST_STATE_FINISHED:
+      assert(false && "Request state is invalid in cleanup");
+      break;
+
+    case RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE:
+      set_state(RequestCallback::REQUEST_STATE_FINISHED);
+      // Use the response saved in the read callback
+      on_set(read_before_write_response());
+      break;
+
+    case RequestCallback::REQUEST_STATE_WRITING:
+    case RequestCallback::REQUEST_STATE_READING:
+      set_state(RequestCallback::REQUEST_STATE_FINISHED);
+      if (request()->is_idempotent()) {
+        on_retry_next_host();
+      } else {
+        on_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT, "Request timed out");
+      }
+      break;
+  }
 }
 
 void RequestCallback::set_state(RequestCallback::State next_state) {
   switch (state_) {
     case REQUEST_STATE_NEW:
       if (next_state == REQUEST_STATE_NEW ||
-          next_state == REQUEST_STATE_CANCELLED ||
           next_state == REQUEST_STATE_WRITING) {
         state_ = next_state;
       } else {
@@ -117,8 +144,6 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
           next_state == REQUEST_STATE_READ_BEFORE_WRITE ||
           next_state == REQUEST_STATE_FINISHED) {
         state_ = next_state;
-      } else if (next_state == REQUEST_STATE_CANCELLED) {
-        state_ = REQUEST_STATE_CANCELLED_WRITING;
       } else {
         assert(false && "Invalid request state after writing");
       }
@@ -127,8 +152,6 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
     case REQUEST_STATE_READING:
       if (next_state == REQUEST_STATE_FINISHED) {
         state_ = next_state;
-      } else if (next_state == REQUEST_STATE_CANCELLED) {
-        state_ = REQUEST_STATE_CANCELLED_READING;
       } else {
         assert(false && "Invalid request state after reading");
       }
@@ -137,53 +160,16 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
     case REQUEST_STATE_READ_BEFORE_WRITE:
       if (next_state == REQUEST_STATE_FINISHED) {
         state_ = next_state;
-      } else if (next_state == REQUEST_STATE_CANCELLED) {
-        state_ = REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE;
       } else {
         assert(false && "Invalid request state after read before write");
       }
       break;
 
     case REQUEST_STATE_FINISHED:
-      if (next_state == REQUEST_STATE_NEW ||
-          next_state == REQUEST_STATE_CANCELLED) {
+      if (next_state == REQUEST_STATE_NEW) {
         state_ = next_state;
       } else {
         assert(false && "Invalid request state after finished");
-      }
-      break;
-
-    case REQUEST_STATE_CANCELLED:
-      assert((next_state == REQUEST_STATE_FINISHED &&
-             next_state == REQUEST_STATE_CANCELLED) ||
-             "Invalid request state after cancelled");
-      // Ignore. Leave the request in the cancelled state.
-      break;
-
-
-    case REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE:
-      if (next_state == REQUEST_STATE_CANCELLED) {
-        state_ = next_state;
-      } else {
-        assert(false && "Invalid request state after cancelled (read before write)");
-      }
-      break;
-
-    case REQUEST_STATE_CANCELLED_READING:
-      if (next_state == REQUEST_STATE_CANCELLED) {
-        state_ = next_state;
-      } else {
-        assert(false && "Invalid request state after cancelled (read outstanding)");
-      }
-      break;
-
-    case REQUEST_STATE_CANCELLED_WRITING:
-      if (next_state == REQUEST_STATE_CANCELLED ||
-          next_state == REQUEST_STATE_CANCELLED_READING ||
-          next_state == REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE) {
-        state_ = next_state;
-      } else {
-        assert(false && "Invalid request state after cancelled (write outstanding)");
       }
       break;
 
@@ -193,66 +179,20 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
   }
 }
 
-bool MultipleRequestCallback::get_result_response(const ResponseMap& responses,
-                                                  const String& index,
-                                                  ResultResponse** response) {
-  ResponseMap::const_iterator it = responses.find(index);
-  if (it == responses.end() || it->second->opcode() != CQL_OPCODE_RESULT) {
-    return false;
-  }
-  *response = static_cast<ResultResponse*>(it->second.get());
-  return true;
-}
+SimpleRequestCallback::SimpleRequestCallback(const String& query, uint64_t request_timeout_ms)
+  : RequestCallback(
+      RequestWrapper(Request::ConstPtr(Memory::allocate<QueryRequest>(query)),
+                     request_timeout_ms)) { }
 
-void MultipleRequestCallback::execute_query(const String& index, const String& query) {
-  if (has_errors_or_timeouts_) return;
-  responses_[index] = Response::Ptr();
-  SharedRefPtr<InternalCallback> callback(
-        Memory::allocate<InternalCallback>(Ptr(this),
-                             Request::ConstPtr(Memory::allocate<QueryRequest>(query)), index));
-  remaining_++;
-  if (!connection_->write(callback)) {
-    on_error(CASS_ERROR_LIB_NO_STREAMS, "No more streams available");
-  }
-}
-
-MultipleRequestCallback::InternalCallback::InternalCallback(const MultipleRequestCallback::Ptr& parent,
-                                                            const Request::ConstPtr& request,
-                                                            const String& index)
-  : SimpleRequestCallback(request)
-  , parent_(parent)
-  , index_(index) { }
-
-void MultipleRequestCallback::InternalCallback::on_internal_set(ResponseMessage* response) {
-  parent_->responses_[index_] = response->response_body();
-  if (--parent_->remaining_ == 0 && !parent_->has_errors_or_timeouts_) {
-    parent_->on_set(parent_->responses_);
-  }
-}
-
-void MultipleRequestCallback::InternalCallback::on_internal_error(CassError code,
-                                                                  const String& message) {
-  if (!parent_->has_errors_or_timeouts_) {
-    parent_->on_error(code, message);
-  }
-  parent_->has_errors_or_timeouts_ = true;
-}
-
-void MultipleRequestCallback::InternalCallback::on_internal_timeout() {
-  if (!parent_->has_errors_or_timeouts_) {
-    parent_->on_timeout();
-  }
-  parent_->has_errors_or_timeouts_ = true;
-}
-
-void SimpleRequestCallback::on_start() {
+void SimpleRequestCallback::on_write(Connection* connection) {
   uint64_t request_timeout_ms = this->request_timeout_ms();
   if (request_timeout_ms > 0) { // 0 means no timeout
-    timer_.start(connection()->loop(),
+    timer_.start(connection->loop(),
                  request_timeout_ms,
                  this,
                  on_timeout);
   }
+  on_internal_write(connection);
 }
 
 void SimpleRequestCallback::on_set(ResponseMessage* response) {
@@ -274,16 +214,96 @@ void SimpleRequestCallback::on_retry_next_host() {
   on_retry_current_host(); // Same as retry current (timeout)
 }
 
-void SimpleRequestCallback::on_cancel(ResponseMessage *response) {
-  timer_.stop();
-}
-
 void SimpleRequestCallback::on_timeout(Timer* timer) {
   SimpleRequestCallback* callback = static_cast<SimpleRequestCallback*>(timer->data());
-  callback->connection()->metrics()->request_timeouts.inc();
-  callback->set_state(RequestCallback::REQUEST_STATE_CANCELLED);
   callback->on_internal_timeout();
   LOG_DEBUG("Request timed out (internal)");
+}
+
+ChainedRequestCallback::ChainedRequestCallback(const String& key, const String& query, const Ptr& chain)
+  : SimpleRequestCallback(query)
+  , chain_(chain)
+  , has_pending_(false)
+  , key_(key) {
+  responses_.set_empty_key(String());
+}
+
+ChainedRequestCallback::ChainedRequestCallback(const String& key, const Request::ConstPtr& request, const Ptr& chain)
+  : SimpleRequestCallback(request)
+  , chain_(chain)
+  , has_pending_(false)
+  , key_(key) { }
+
+ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const String& query) {
+  has_pending_ = true;
+  return ChainedRequestCallback::Ptr(
+                   Memory::allocate<ChainedRequestCallback>(key, query, Ptr(this)));
+}
+
+ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const Request::ConstPtr& request) {
+  has_pending_ = true;
+  return ChainedRequestCallback::Ptr(
+        Memory::allocate<ChainedRequestCallback>(key, request, Ptr(this)));
+}
+
+ResultResponse::Ptr ChainedRequestCallback::result(const String& key) const {
+  Map::const_iterator it = responses_.find(key);
+  if (it == responses_.end() || it->second->opcode() != CQL_OPCODE_RESULT) {
+    return ResultResponse::Ptr();
+  }
+  return it->second;
+}
+
+void ChainedRequestCallback::on_internal_write(Connection* connection) {
+  if (chain_) {
+    int32_t result = connection->write_and_flush(chain_);
+    if (result == Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS) {
+      on_error(CASS_ERROR_LIB_NO_STREAMS,
+               "No streams available when attempting to write chained request");
+    }
+  }
+  on_chain_write(connection);
+}
+
+void ChainedRequestCallback::on_internal_set(ResponseMessage* response) {
+  response_ = response->response_body();
+  maybe_finish();
+}
+
+void ChainedRequestCallback::on_internal_error(CassError code, const String& message) {
+  if (chain_) {
+    chain_->on_error(code, message);
+  } else {
+    on_chain_error(code, message);
+  }
+}
+
+void ChainedRequestCallback::on_internal_timeout() {
+  if (chain_) {
+    chain_->on_internal_timeout();
+  } else {
+    on_chain_timeout();
+  }
+}
+
+void ChainedRequestCallback::set_chain_responses(Map& responses) {
+  responses_.swap(responses);
+  maybe_finish();
+}
+
+bool ChainedRequestCallback::is_finished() const {
+  return response_ && ((has_pending_ && !responses_.empty()) || !has_pending_);
+}
+
+void ChainedRequestCallback::maybe_finish() {
+  if (is_finished()) {
+    responses_[key_] = response_;
+    if (chain_) {
+      chain_->set_chain_responses(responses_);
+    } else {
+      on_chain_set();
+    }
+  }
 }
 
 } // namespace cass
