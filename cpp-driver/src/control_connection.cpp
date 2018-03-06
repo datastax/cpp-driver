@@ -422,8 +422,10 @@ void ControlConnection::on_close(Connection* connection) {
   // This pointer to the connection is no longer valid once it's closed
   connection_ = NULL;
 
-  LOG_WARN("Lost control connection to host %s",
-           connection->address().to_string().c_str());
+  if (state_ != CONTROL_STATE_CLOSED) {
+    LOG_WARN("Lost control connection to host %s",
+             connection->address().to_string().c_str());
+  }
 
   reconnect(false);
 }
