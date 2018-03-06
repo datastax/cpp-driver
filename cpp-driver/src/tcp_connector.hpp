@@ -74,15 +74,7 @@ public:
     callback_ = callback;
     status_ = CONNECTING;
 
-#if UV_VERSION_MAJOR == 0
-    if (address.family() == AF_INET) {
-      rc = uv_tcp_connect(&req_, handle, *address_.addr_in(), on_connect);
-    } else {
-      rc = uv_tcp_connect6(&req_, handle, *address_.addr_in6(), on_connect);
-    }
-#else
     rc = uv_tcp_connect(&req_, handle, static_cast<const Address>(address_).addr(), on_connect);
-#endif
 
     if (rc != 0) {
       status_ = FAILED_BAD_PARAM;

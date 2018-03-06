@@ -26,7 +26,6 @@
 
 namespace cass {
 
-#if UV_VERSION_MAJOR >= 1
 class NameResolver : public RefCounted<NameResolver> {
 public:
   typedef SharedRefPtr<NameResolver> Ptr;
@@ -136,7 +135,6 @@ private:
   void* data_;
   Callback callback_;
 };
-#endif
 
 } // namespace cass
 

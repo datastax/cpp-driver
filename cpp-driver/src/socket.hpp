@@ -29,12 +29,6 @@
 
 #define MIN_BUFFERS_SIZE 128
 
-#if UV_VERSION_MAJOR == 0
-#define UV_ERRSTR(status, loop) uv_strerror(uv_last_error(loop))
-#else
-#define UV_ERRSTR(status, loop) uv_strerror(status)
-#endif
-
 namespace cass {
 
 class Socket;

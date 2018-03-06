@@ -248,7 +248,7 @@ void SocketWriteBase::handle_write(uv_write_t* req, int status) {
 
   if (status != 0) {
     if (!socket->is_closing()) {
-      LOG_ERROR("Socket write error '%s'", UV_ERRSTR(status, socket->loop_));
+      LOG_ERROR("Socket write error '%s'", uv_strerror(status));
       socket->defunct();
     }
   }
@@ -345,12 +345,8 @@ void Socket::on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf) {
 
 void Socket::handle_read(ssize_t nread, const uv_buf_t* buf) {
   if (nread < 0) {
-#if UV_VERSION_MAJOR == 0
-    if (uv_last_error(loop_).code != UV_EOF) {
-#else
     if (nread != UV_EOF) {
-#endif
-      LOG_ERROR("Socket read error '%s'", UV_ERRSTR(nread, loop_));
+      LOG_ERROR("Socket read error '%s'", uv_strerror(nread));
     }
     defunct();
   }

@@ -45,33 +45,23 @@ static void consume_blocked_sigpipe() {
 
 
 EventLoop::EventLoop()
-#if UV_VERSION_MAJOR == 0
-  : loop_(uv_loop_new())
-  #else
   : is_loop_initialized_(false)
-  #endif
   , is_joinable_(false)
   , is_closing_(false) { }
 
 EventLoop::~EventLoop() {
-#if UV_VERSION_MAJOR == 0
-  uv_loop_delete(loop_);
-#else
   if (is_loop_initialized_) {
     uv_loop_close(&loop_);
   }
-#endif
 }
 
 int EventLoop::init() {
   int rc = 0;
-#if UV_VERSION_MAJOR > 0
   rc = uv_loop_init(&loop_);
   if (rc != 0) return rc;
   rc = async_.start(loop(), this, on_task);
   if (rc != 0) return rc;
   is_loop_initialized_ = true;
-#endif
 
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
   rc = block_sigpipe();
@@ -173,11 +163,7 @@ void EventLoop::handle_task() {
 }
 
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
-#if UV_VERSION_MAJOR == 0
-void EventLoop::on_prepare(uv_prepare_t *prepare, int status) {
-#else
 void EventLoop::on_prepare(uv_prepare_t* prepare) {
-#endif
   consume_blocked_sigpipe();
 }
 #endif

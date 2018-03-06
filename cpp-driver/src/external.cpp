@@ -97,18 +97,10 @@ void cass_inet_string(CassInet inet, char* output) {
 }
 
 CassError cass_inet_from_string(const char* str, CassInet* output) {
-#if UV_VERSION_MAJOR == 0
-  if (uv_inet_pton(AF_INET, str, output->address).code == UV_OK) {
-#else
   if (uv_inet_pton(AF_INET, str, output->address) == 0) {
-#endif
     output->address_length = CASS_INET_V4_LENGTH;
     return CASS_OK;
-#if UV_VERSION_MAJOR == 0
-  } else if (uv_inet_pton(AF_INET6, str, output->address).code == UV_OK) {
-#else
   } else if (uv_inet_pton(AF_INET6, str, output->address) == 0) {
-#endif
     output->address_length = CASS_INET_V6_LENGTH;
     return CASS_OK;
   } else {
