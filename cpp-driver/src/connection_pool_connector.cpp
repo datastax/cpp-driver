@@ -37,7 +37,7 @@ ConnectionPoolConnector::~ConnectionPoolConnector() {
   uv_mutex_destroy(&lock_);
 }
 
-void ConnectionPoolConnector::connect(EventLoopGroup* event_loop_group) {
+void ConnectionPoolConnector::connect() {
   inc_ref();
   const size_t num_connections_per_host = pool_->manager()->settings().num_connections_per_host;
   remaining_.store(num_connections_per_host);

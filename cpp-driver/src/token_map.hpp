@@ -45,6 +45,7 @@ public:
   virtual void clear_replicas_and_strategies() = 0;
 
   virtual void build() = 0;
+  virtual TokenMap* clone() const = 0;
 
   virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
                                                  const String& routing_key) const = 0;

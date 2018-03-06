@@ -18,7 +18,6 @@
 
 #include "config.hpp"
 #include "memory.hpp"
-#include "request_queue.hpp"
 #include "scoped_lock.hpp"
 
 namespace cass {
@@ -26,15 +25,16 @@ namespace cass {
 ConnectionPoolManagerSettings::ConnectionPoolManagerSettings(const Config& config)
   : connection_settings(config)
   , num_connections_per_host(config.core_connections_per_host())
-  , reconnect_wait_time_ms(config.reconnect_wait_time_ms()) { }
+  , reconnect_wait_time_ms(config.reconnect_wait_time_ms())
+  , queue_size_io(config.queue_size_io()) { }
 
-ConnectionPoolManager::ConnectionPoolManager(RequestQueueManager* request_queue_manager,
+ConnectionPoolManager::ConnectionPoolManager(EventLoop* event_loop,
                                              int protocol_version,
                                              const String& keyspace,
                                              ConnectionPoolManagerListener* listener,
                                              Metrics* metrics,
                                              const ConnectionPoolManagerSettings& settings)
-  : request_queue_manager_(request_queue_manager)
+  : event_loop_(event_loop)
   , protocol_version_(protocol_version)
   , listener_(listener)
   , settings_(settings)
@@ -46,6 +46,7 @@ ConnectionPoolManager::ConnectionPoolManager(RequestQueueManager* request_queue_
   uv_rwlock_init(&keyspace_rwlock_);
   pools_.set_empty_key(Address::EMPTY_KEY);
   pools_.set_deleted_key(Address::DELETED_KEY);
+  request_queue_.init(event_loop_, settings_.queue_size_io);
 }
 
 ConnectionPoolManager::~ConnectionPoolManager() {
@@ -94,7 +95,7 @@ void ConnectionPoolManager::add(const Address& address) {
                                                   this,
                                                   on_connect));
   pending_pools_.push_back(connector);
-  connector->connect(request_queue_manager_->event_loop_group());
+  connector->connect();
 }
 
 void ConnectionPoolManager::remove(const Address& address) {
@@ -120,11 +121,8 @@ void ConnectionPoolManager::close() {
       (*it)->cancel();
     }
   }
+  request_queue_.close_handles();
   maybe_closed(wl);
-}
-
-EventLoopGroup* ConnectionPoolManager::event_loop_group() const {
-  return request_queue_manager_->event_loop_group();
 }
 
 String ConnectionPoolManager::keyspace() const {

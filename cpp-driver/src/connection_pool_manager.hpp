@@ -22,13 +22,13 @@
 #include "connection_pool.hpp"
 #include "connection_pool_connector.hpp"
 #include "ref_counted.hpp"
+#include "request_queue.hpp"
 
 #include <uv.h>
 
 namespace cass {
 
-class EventLoopGroup;
-class RequestQueueManager;
+class EventLoop;
 
 /**
  * A listener that handles connection pool events.
@@ -81,7 +81,8 @@ public:
 struct ConnectionPoolManagerSettings {
   ConnectionPoolManagerSettings()
     : num_connections_per_host(1)
-    , reconnect_wait_time_ms(2000) { }
+    , reconnect_wait_time_ms(2000)
+    , queue_size_io(8192) { }
 
   /**
    * Constructor. Initialize manager settings from a config object.
@@ -93,6 +94,7 @@ struct ConnectionPoolManagerSettings {
   ConnectionSettings connection_settings;
   size_t num_connections_per_host;
   uint64_t reconnect_wait_time_ms;
+  uint64_t queue_size_io;
 };
 
 /**
@@ -105,14 +107,14 @@ public:
   /**
    * Constructor. Don't use directly.
    *
-   * @param request_queue_manager A request queue manager for handling requests.
+   * @param event_loop Event loop to utilize for handling requests.
    * @param protocol_version The protocol version to use for connections.
    * @param keyspace The current keyspace to use for connections.
    * @param listener A listener that handles manager events.
    * @param metrics An object for recording metrics.
    * @param settings Settings for the manager and its connections.
    */
-  ConnectionPoolManager(RequestQueueManager* request_queue_manager,
+  ConnectionPoolManager(EventLoop* event_loop,
                         int protocol_version,
                         const String& keyspace,
                         ConnectionPoolManagerListener* listener,
@@ -150,15 +152,14 @@ public:
    */
   void remove(const Address& address);
 
-
   /**
    * Close all connection pools (thread-safe).
    */
   void close();
 
 public:
-  EventLoopGroup* event_loop_group() const;
-  RequestQueueManager* request_queue_manager() const { return request_queue_manager_; }
+  EventLoop* event_loop() const { return event_loop_; }
+  RequestQueue* request_queue() { return &request_queue_; }
   int protocol_version() const { return protocol_version_; }
   const ConnectionPoolManagerSettings& settings() const { return settings_; }
   ConnectionPoolManagerListener* listener() const { return listener_; }
@@ -238,7 +239,8 @@ private:
   void handle_connect(ConnectionPoolConnector* pool_connector);
 
 private:
-  RequestQueueManager* const request_queue_manager_;
+  EventLoop* const event_loop_;
+  RequestQueue request_queue_;
 
   const int protocol_version_;
   ConnectionPoolManagerListener* const listener_;

@@ -351,7 +351,7 @@ void ControlConnection::clear() {
 void ControlConnection::connect(Session* session) {
   session_ = session;
   query_plan_.reset(Memory::allocate<ControlStartupQueryPlan>(session_->hosts_, // No hosts lock necessary (read-only)
-                                                session_->random_.get()));
+                                                              session_->random_.get()));
   protocol_version_ = session_->config().protocol_version();
   use_schema_ = session_->config().use_schema();
   token_aware_routing_ = session_->config().default_profile().token_aware_routing();
@@ -456,9 +456,7 @@ void ControlConnection::on_event(const EventResponse* response) {
           Host::Ptr host = session_->get_host(response->affected_node());
           if (host) {
             session_->on_remove(host);
-            if (session_->token_map_) {
-              session_->token_map_->remove_host_and_build(host);
-            }
+            session_->token_map_host_remove(host);
           } else {
             LOG_DEBUG("Tried to remove host %s that doesn't exist", address_str.c_str());
           }
@@ -472,9 +470,7 @@ void ControlConnection::on_event(const EventResponse* response) {
             refresh_node_info(host, false, true);
           } else {
             LOG_DEBUG("Move event for host %s that doesn't exist", address_str.c_str());
-            if (session_->token_map_) {
-              session_->token_map_->remove_host_and_build(host);
-            }
+            session_->token_map_host_remove(host);
           }
           break;
       }
@@ -670,9 +666,8 @@ void ControlConnection::on_query_hosts(ChainedControlRequestCallback* callback) 
 
   Session* session = control_connection->session_;
 
-  if (session->token_map_) {
-    // Clearing token/hosts will not invalidate the replicas
-    session->token_map_->clear_tokens_and_hosts();
+  if (control_connection->token_aware_routing_) {
+    session->token_map_hosts_cleared();
   }
 
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
@@ -807,13 +802,9 @@ void ControlConnection::on_query_meta_schema(ChainedControlRequestCallback* call
 
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
 
-  if (session->token_map_) {
+  if (control_connection->token_aware_routing_) {
     ResultResponse::Ptr keyspaces_result(callback->result("keyspaces"));
-    if (keyspaces_result) {
-      session->token_map_->clear_replicas_and_strategies(); // Only clear replicas once we have the new keyspaces
-      session->token_map_->add_keyspaces(cassandra_version, keyspaces_result.get());
-    }
-    session->token_map_->build();
+    session->token_map_keyspaces_add(cassandra_version, keyspaces_result);
   }
 
   if (control_connection->use_schema_) {
@@ -1002,19 +993,11 @@ void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateH
   if ((!rack.empty() && rack != host->rack()) ||
       (!dc.empty() && dc != host->dc())) {
     if (!host->was_just_added()) {
-      const LoadBalancingPolicy::Vec& policies = session_->config().load_balancing_policies();
-      for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-           it != policies.end(); ++it) {
-        (*it)->on_remove(host);
-      }
+      session_->load_balancing_policy_host_add_remove(host, false);
     }
     host->set_rack_and_dc(rack, dc);
     if (!host->was_just_added()) {
-      const LoadBalancingPolicy::Vec& policies = session_->config().load_balancing_policies();
-      for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-           it != policies.end(); ++it) {
-        (*it)->on_add(host);
-      }
+      session_->load_balancing_policy_host_add_remove(host, true);
     }
   }
 
@@ -1031,18 +1014,16 @@ void ControlConnection::update_node_info(Host::Ptr host, const Row* row, UpdateH
     bool is_connected_host = connection_ != NULL && host->address() == connection_->address();
     String partitioner;
     if (is_connected_host && row->get_string_by_name("partitioner", &partitioner)) {
-      if (!session_->token_map_) {
-        session_->token_map_.reset(TokenMap::from_partitioner(partitioner));
+      if (!session_->token_map_init(partitioner)) {
+        LOG_TRACE("Token map has already been initialized");
       }
     }
     v = row->get_by_name("tokens");
     if (v != NULL && v->is_collection()) {
-      if (session_->token_map_) {
-        if (type == UPDATE_HOST_AND_BUILD) {
-          session_->token_map_->update_host_and_build(host, v);
-        } else {
-          session_->token_map_->add_host(host, v);
-        }
+      if (type == UPDATE_HOST_AND_BUILD) {
+        session_->token_map_host_update(host, v);
+      } else {
+        session_->token_map_host_add(host, v);
       }
     }
   }
@@ -1084,8 +1065,8 @@ void ControlConnection::on_refresh_keyspace(ControlRequestCallback* callback) {
   Session* session = control_connection->session_;
   const VersionNumber& cassandra_version = control_connection->cassandra_version_;
 
-  if (session->token_map_) {
-    session->token_map_->update_keyspaces_and_build(cassandra_version, result.get());
+  if (control_connection->token_aware_routing_) {
+    session->token_map_keyspaces_update(cassandra_version, result);
   }
 
   if (control_connection->use_schema_) {

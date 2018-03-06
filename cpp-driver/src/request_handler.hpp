@@ -139,14 +139,13 @@ public:
   // TODO: Remove default parameters where possible
   RequestHandler(const Request::ConstPtr& request,
                  const ResponseFuture::Ptr& future,
-                 ConnectionPoolManager* manager = NULL,
                  Metrics* metrics = NULL,
                  RequestListener* listener = NULL,
                  const Address* preferred_address = NULL);
   ~RequestHandler();
 
   void init(const Config& config, const ExecutionProfile& profile,
-            const String& connected_keyspace, const TokenMap* token_map,
+            ConnectionPoolManager* manager, const TokenMap* token_map,
             const PreparedMetadata& prepared_metdata);
 
   void execute();
@@ -159,8 +158,8 @@ public:
 public:
   class Protected {
     friend class RequestExecution;
-    Protected() {}
-    Protected(Protected const&) {}
+    Protected() { }
+    Protected(Protected const&) { }
   };
 
   void retry(RequestExecution* request_execution, Protected);
@@ -219,7 +218,7 @@ private:
   const uint64_t start_time_ns_;
   Metrics* const metrics_;
   RequestListener* const listener_;
-  ConnectionPoolManager* const manager_;
+  ConnectionPoolManager* manager_;
   const Address preferred_address_;
 };
 

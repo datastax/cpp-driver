@@ -21,6 +21,7 @@ namespace cass {
 void Config::init_profiles() {
   // Build the cluster profile load balancing policy
   default_profile_.build_load_balancing_policy();
+  load_balancing_policies_.clear();
   load_balancing_policies_.push_back(default_profile_.load_balancing_policy());
 
   // Build/Assign the load balancing policies and update profile settings

@@ -554,6 +554,16 @@ public:
     strategies_.set_deleted_key(String(1, '\0'));
   }
 
+  TokenMapImpl(const TokenMapImpl& token_map_impl)
+    : tokens_(token_map_impl.tokens_)
+    , hosts_(token_map_impl.hosts_)
+    , datacenters_(token_map_impl.datacenters_)
+    , replicas_(token_map_impl.replicas_)
+    , strategies_(token_map_impl.strategies_)
+    , rack_ids_(token_map_impl.rack_ids_)
+    , dc_ids_(token_map_impl.dc_ids_)
+    , no_replicas_(token_map_impl.no_replicas_) { }
+
   virtual void add_host(const Host::Ptr& host, const Value* tokens);
   virtual void update_host_and_build(const Host::Ptr& host, const Value* tokens);
   virtual void remove_host_and_build(const Host::Ptr& host);
@@ -565,6 +575,7 @@ public:
   virtual void clear_replicas_and_strategies();
 
   virtual void build();
+  virtual TokenMap* clone() const;
 
   virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
                                                  const String& routing_key) const;
@@ -693,6 +704,11 @@ void TokenMapImpl<Partitioner>::build() {
             (unsigned int)hosts_.size(),
             (unsigned int)tokens_.size(),
             (double)(uv_hrtime() - start) / (1000.0 * 1000.0));
+}
+
+template <class Partitioner>
+TokenMap* TokenMapImpl<Partitioner>::clone() const {
+  return Memory::allocate<TokenMapImpl<Partitioner> >(*this);
 }
 
 template <class Partitioner>

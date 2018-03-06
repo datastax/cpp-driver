@@ -74,7 +74,8 @@ PooledConnector::~PooledConnector() {
 
 void PooledConnector::connect() {
   ScopedMutex l(&lock_);
-  event_loop_ = pool_->manager()->request_queue_manager()->event_loop_group()->add(Memory::allocate<RunConnect>(Ptr(this)));
+  event_loop_ = pool_->manager()->event_loop();
+  event_loop_->add(Memory::allocate<RunConnect>(Ptr(this)));
 }
 
 void PooledConnector::cancel() {
@@ -183,6 +184,5 @@ void PooledConnector::handle_delayed_connect(Timer* timer) {
     internal_connect();
   }
 }
-
 
 } // namespace cass

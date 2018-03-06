@@ -22,13 +22,13 @@
 
 namespace cass {
 
-ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(RequestQueueManager* request_queue_manager,
+ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(EventLoop* event_loop,
                                                                    int protocol_version,
                                                                    void* data, Callback callback)
   : data_(data)
   , callback_(callback)
   , remaining_(0)
-  , request_queue_manager_(request_queue_manager)
+  , event_loop_(event_loop)
   , protocol_version_(protocol_version)
   , listener_(NULL)
   , metrics_(NULL) {
@@ -42,7 +42,7 @@ ConnectionPoolManagerInitializer::~ConnectionPoolManagerInitializer() {
 void ConnectionPoolManagerInitializer::initialize(const AddressVec& hosts) {
   inc_ref();
   remaining_.store(hosts.size());
-  manager_.reset(Memory::allocate<ConnectionPoolManager>(request_queue_manager_,
+  manager_.reset(Memory::allocate<ConnectionPoolManager>(event_loop_,
                                                          protocol_version_,
                                                          keyspace_,
                                                          listener_,
@@ -51,7 +51,7 @@ void ConnectionPoolManagerInitializer::initialize(const AddressVec& hosts) {
   for (AddressVec::const_iterator it = hosts.begin(),
        end = hosts.end(); it != end; ++it) {
     ConnectionPoolConnector::Ptr pool_connector(Memory::allocate<ConnectionPoolConnector>(manager_.get(), *it, this, on_connect));
-    pool_connector->connect(manager_->request_queue_manager()->event_loop_group());
+    pool_connector->connect();
   }
 }
 

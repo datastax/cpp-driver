@@ -43,7 +43,6 @@ static void consume_blocked_sigpipe() {
 }
 #endif
 
-
 EventLoop::EventLoop()
   : is_loop_initialized_(false)
   , is_joinable_(false)
@@ -55,7 +54,10 @@ EventLoop::~EventLoop() {
   }
 }
 
-int EventLoop::init() {
+int EventLoop::init(const String& thread_name /*= ""*/) {
+#if defined(_MSC_VER) && defined(_DEBUG)
+  thread_name_ = thread_name;
+#endif
   int rc = 0;
   rc = uv_loop_init(&loop_);
   if (rc != 0) return rc;
@@ -97,6 +99,20 @@ void EventLoop::join() {
 void EventLoop::add(Task* task) {
   tasks_.enqueue(task);
   async_.send();
+}
+
+void EventLoop::on_run() {
+#if defined(_MSC_VER) && defined(_DEBUG)
+  char temp[64];
+  unsigned long thread_id = static_cast<unsigned long>(GetThreadId(uv_thread_self()));
+  if (thread_name_.empty()) {
+    sprintf(temp, "Event Loop - %lu", thread_id);
+  } else {
+    sprintf(temp, "%s - %lu", thread_name_.c_str(), thread_id);
+  }
+  thread_name_ = temp;
+  set_thread_name(thread_name_);
+#endif
 }
 
 EventLoop::TaskQueue::TaskQueue() {
@@ -177,19 +193,19 @@ int RoundRobinEventLoopGroup::init() {
 }
 
 void RoundRobinEventLoopGroup::run() {
-  for (size_t i = 0; i < threads_.size(); ++i){
+  for (size_t i = 0; i < threads_.size(); ++i) {
     threads_[i].run();
   }
 }
 
 void RoundRobinEventLoopGroup::close_handles() {
-  for (size_t i = 0; i < threads_.size(); ++i){
+  for (size_t i = 0; i < threads_.size(); ++i) {
     threads_[i].close_handles();
   }
 }
 
 void RoundRobinEventLoopGroup::join() {
-  for (size_t i = 0; i < threads_.size(); ++i){
+  for (size_t i = 0; i < threads_.size(); ++i) {
     threads_[i].join();
   }
 }
@@ -199,6 +215,5 @@ EventLoop* RoundRobinEventLoopGroup::add(Task* task) {
   event_loop->add(task);
   return event_loop;
 }
-
 
 } // namespace cass

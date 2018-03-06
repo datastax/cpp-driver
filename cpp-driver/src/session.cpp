@@ -195,10 +195,8 @@ void Session::clear(const Config& config) {
     ScopedMutex l(&hosts_mutex_);
     hosts_.clear();
   }
-  manager_.reset();
   request_queue_.reset();
-  event_loop_group_.reset();
-  request_queue_manager_.reset();
+  request_event_loop_group_.reset();
   metadata_.clear();
   control_connection_.clear();
   connect_error_code_ = CASS_OK;
@@ -206,19 +204,15 @@ void Session::clear(const Config& config) {
   current_host_mark_ = true;
 }
 
-int Session::init() {
-  int rc = EventLoop::init();
-  request_queue_.reset(
-        Memory::allocate<AsyncQueue<MPMCQueue<RequestHandler*> > >(config_.queue_size_io()));
-  rc = request_queue_->init(loop(), this, &Session::on_execute);
-  if (rc != 0) return rc;
+int Session::init(const String& connect_keyspace) {
+  int rc = EventLoop::init("Session");
 
-  event_loop_group_.reset(Memory::allocate<RoundRobinEventLoopGroup>(config_.thread_count_io()));
-  rc = event_loop_group_->init();
-  if (rc != 0) return rc;
+  request_queue_.reset(Memory::allocate<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
 
-  request_queue_manager_.reset(Memory::allocate<RequestQueueManager>(event_loop_group_.get()));
-  rc = request_queue_manager_->init(config().queue_size_io());
+  request_event_loop_group_.reset(Memory::allocate<RoundRobinRequestEventLoopGroup>(config_.thread_count_io()));
+  rc = request_event_loop_group_->init(config_,
+                                       connect_keyspace,
+                                       this);
   if (rc != 0) return rc;
 
   return rc;
@@ -232,6 +226,14 @@ Host::Ptr Session::get_host(const Address& address) {
     return Host::Ptr();
   }
   return it->second;
+}
+
+bool Session::dequeue(RequestHandler*& request_handler) {
+  return request_queue_->dequeue(request_handler);
+}
+
+bool Session::request_queue_empty() {
+  return request_queue_->is_empty();
 }
 
 Host::Ptr Session::add_host(const Address& address) {
@@ -290,11 +292,6 @@ void Session::on_prepare_host_up(const PrepareHostHandler* handler) {
   handler->session()->internal_on_up(handler->host());
 }
 
-void Session::notify_initialize_async(const ConnectionPoolManager::Ptr& manager,
-                                      const ConnectionPoolConnector::Vec& failures) {
-  add(Memory::allocate<NotifyInitalize>(manager, failures));
-}
-
 void Session::notify_up_async(const Address& address) {
   add(Memory::allocate<NotifyUp>(address));
 }
@@ -314,14 +311,13 @@ void Session::connect_async(const Config& config, const String& keyspace, const 
 
   clear(config);
 
-  if (init() != 0) {
+  if (init(keyspace) != 0) {
     future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
                       "Error initializing session");
     return;
   }
 
   state_.store(SESSION_STATE_CONNECTING, MEMORY_ORDER_RELAXED);
-  connect_keyspace_ = keyspace;
   connect_future_ = future;
 
   add(Memory::allocate<NotifyConnect>());
@@ -361,9 +357,9 @@ void Session::internal_connect() {
 }
 
 void Session::internal_close() {
-  while (!request_queue_->enqueue(NULL)) {
-    // Keep trying
-  }
+  request_event_loop_group_->terminate();
+  control_connection_.close();
+  close_handles();
 
   LOG_DEBUG("Issued close");
 }
@@ -415,24 +411,18 @@ void Session::notify_closed() {
 
 void Session::close_handles() {
   EventLoop::close_handles();
-  event_loop_group_->close_handles();
-  request_queue_manager_->close_handles();
-  request_queue_->close_handles();
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    (*it)->close_handles();
-  }
+  config().default_profile().load_balancing_policy()->close_handles();
 }
 
 void Session::on_run() {
+  EventLoop::on_run();
   LOG_DEBUG("Creating %u IO worker threads",
             static_cast<unsigned int>(config_.thread_count_io()));
-  event_loop_group_->run();
+  request_event_loop_group_->run();
 }
 
 void Session::on_after_run() {
-  event_loop_group_->join();
+  request_event_loop_group_->join();
   notify_closed();
 }
 
@@ -451,8 +441,8 @@ void Session::handle_notify_connect() {
   }
 
   MultiResolver<Session*>::Ptr resolver(
-        Memory::allocate<MultiResolver<Session*> >(this, on_resolve,
-                                                   on_resolve_done));
+      Memory::allocate<MultiResolver<Session*> >(this, on_resolve,
+                                                 on_resolve_done));
 
   const ContactPointList& contact_points = config_.contact_points();
   for (ContactPointList::const_iterator it = contact_points.begin(),
@@ -465,44 +455,6 @@ void Session::handle_notify_connect() {
     } else {
       resolver->resolve(loop(), seed, port, config_.resolve_timeout_ms());
     }
-  }
-}
-
-void Session::NotifyInitalize::run(EventLoop* event_loop) {
-  Session* session = static_cast<Session*>(event_loop);
-  session->handle_notify_initialize(manager_, failures_);
-}
-
-void Session::handle_notify_initialize(const ConnectionPoolManager::Ptr& manager,
-                                       const ConnectionPoolConnector::Vec& failures) {
-  bool is_keyspace_error = false;
-
-  manager_ = manager;
-
-  for (ConnectionPoolConnector::Vec::const_iterator it = failures.begin(),
-       end = failures.end(); it != end; ++it) {
-    ConnectionPoolConnector::Ptr connector(*it);
-    if (connector->is_keyspace_error()) {
-      is_keyspace_error = true;
-      break;
-    } else { // Lock hosts
-      ScopedMutex l(&hosts_mutex_);
-      hosts_.erase(connector->address());
-    }
-  }
-
-  if (is_keyspace_error) {
-    notify_connect_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                         "Keyspace '" + manager_->keyspace() + "' does not exist");
-  } else if (hosts_.empty()) {
-    notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                         "Unable to connect to any hosts");
-  } else {
-    for (HostMap::iterator it = hosts_.begin(), end = hosts_.end();
-         it != end; ++it) {
-      it->second->set_up();
-    }
-    notify_connected();
   }
 }
 
@@ -545,37 +497,105 @@ void Session::execute(const RequestHandler::Ptr& request_handler) {
   }
 
   request_handler->inc_ref(); // Queue reference
-  if (!request_queue_->enqueue(request_handler.get())) {
+  if (request_queue_->enqueue(request_handler.get())) {
+    request_event_loop_group_->notify_request();
+  } else {
     request_handler->dec_ref();
     request_handler->set_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
                                "The request queue has reached capacity");
   }
 }
 
+bool Session::token_map_init(const String& partitioner) {
+  if (!token_map_) {
+    token_map_.reset(TokenMap::from_partitioner(partitioner));
+    notify_token_map_update();
+    return true;
+  }
+  return false;
+}
+
+void Session::token_map_host_add(const Host::Ptr& host, const Value* tokens) {
+  if (token_map_) {
+    token_map_->add_host(host, tokens);
+    notify_token_map_update();
+  }
+}
+
+void Session::token_map_host_update(const Host::Ptr& host, const Value* tokens) {
+  if (token_map_) {
+    token_map_->update_host_and_build(host, tokens);
+    notify_token_map_update();
+  }
+}
+
+void Session::token_map_host_remove(const Host::Ptr& host) {
+  if (token_map_) {
+    token_map_->remove_host_and_build(host);
+    notify_token_map_update();
+  }
+}
+
+void Session::token_map_hosts_cleared() {
+  if (token_map_) {
+    token_map_->clear_tokens_and_hosts();
+    notify_token_map_update();
+  }
+}
+
+void Session::token_map_keyspaces_add(const VersionNumber& cassandra_version,
+                                      const ResultResponse::Ptr& keyspaces) {
+  if (token_map_) {
+    if (keyspaces) {
+      token_map_->clear_replicas_and_strategies(); // Only clear replicas once we have the new keyspaces
+      token_map_->add_keyspaces(cassandra_version, keyspaces.get());
+    }
+    token_map_->build();
+    notify_token_map_update();
+  }
+}
+
+void Session::token_map_keyspaces_update(const VersionNumber& cassandra_version,
+                                         const ResultResponse::Ptr& keyspaces) {
+  if (token_map_ && keyspaces) {
+    token_map_->update_keyspaces_and_build(cassandra_version, keyspaces.get());
+    notify_token_map_update();
+  }
+}
+
+void Session::load_balancing_policy_host_add_remove(const Host::Ptr& host,
+                                                    bool is_add) {
+  LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
+  if (is_add) {
+    if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+      default_policy->on_add(host);
+    }
+  } else {
+    default_policy->on_remove(host);
+  }
+}
+
+void Session::notify_token_map_update() {
+  request_event_loop_group_->token_map_update(token_map_.get());
+}
+
 void Session::on_control_connection_ready() {
   // No hosts lock necessary (only called on session thread and read-only)
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    (*it)->init(control_connection_.connected_host(), hosts_, random_.get());
-    (*it)->register_handles(loop());
-  }
+  LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
+  const Host::Ptr connected_host = control_connection_.connected_host();
+  Random* random = random_.get();
+  default_policy->init(connected_host, hosts_, random);
+  default_policy->register_handles(loop());
 
   AddressVec addresses;
   addresses.reserve(hosts_.size());
 
-  // If addresses aren't ignored by all the load balancing policies then add
+  // If addresses aren't ignored by the default load balancing policies then add
   // them to be initialized on the thread pool.
-  for (HostMap::iterator i = hosts_.begin(), end = hosts_.end();
-       i != end; ++i) {
+  for (HostMap::iterator i = hosts_.begin(), end = hosts_.end(); i != end; ++i) {
     Host::Ptr host(i->second);
-    const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-    for (LoadBalancingPolicy::Vec::const_iterator j = policies.begin(),
-         end = policies.end(); j != end; ++j) {
-      if ((*j)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-        addresses.push_back(host->address());
-        break;
-      }
+    if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+      addresses.push_back(host->address());
     }
   }
 
@@ -585,16 +605,10 @@ void Session::on_control_connection_ready() {
     return;
   }
 
-  ConnectionPoolManagerInitializer::Ptr initializer(Memory::allocate<ConnectionPoolManagerInitializer>(request_queue_manager_.get(),
-                                                                                                       control_connection_.protocol_version(),
-                                                                                                       this,
-                                                                                                       on_initialize));
-  initializer
-      ->with_settings(ConnectionPoolManagerSettings(config_))
-      ->with_listener(this)
-      ->with_keyspace(connect_keyspace_)
-      ->with_metrics(metrics_.get())
-      ->initialize(addresses);
+  request_event_loop_group_->connect(connected_host,
+                                     control_connection_.protocol_version(),
+                                     hosts_,
+                                     token_map_.get());
 
   // TODO: We really can't do this anymore
   if (config().core_connections_per_host() == 0) {
@@ -613,7 +627,7 @@ Future::Ptr Session::prepare(const char* statement, size_t length) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(metadata_.schema_snapshot(cassandra_version())));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future, manager_.get(), metrics_.get(), this)));
+  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future, metrics_.get(), this)));
 
   return future;
 }
@@ -636,7 +650,7 @@ Future::Ptr Session::prepare(const Statement* statement) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(metadata_.schema_snapshot(cassandra_version())));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future, manager_.get(), metrics_.get(), this)));
+  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future, metrics_.get(), this)));
 
   return future;
 }
@@ -653,38 +667,28 @@ void Session::internal_on_add(Host::Ptr host) {
   // Verify that the host is still available
   if (host->is_down()) return;
 
-  bool is_host_ignored = true;
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-      is_host_ignored = false;
-      (*it)->on_add(host);
-    }
-  }
-  if (is_host_ignored) {
+  LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
+  if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+    default_policy->on_add(host);
+  } else {
     LOG_DEBUG("Host %s will be ignored by all query plans",
               host->address_string().c_str());
     return;
   }
 
-  if (manager_) manager_->add(host->address());
+  if (request_event_loop_group_) request_event_loop_group_->host_add(host);
 }
 
 void Session::on_remove(Host::Ptr host) {
   host->set_down();
 
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    (*it)->on_remove(host);
-  }
+  config().default_profile().load_balancing_policy()->on_remove(host);
   { // Lock hosts
     ScopedMutex l(&hosts_mutex_);
     hosts_.erase(host->address());
   }
 
-  if (manager_) manager_->remove(host->address());
+  if (request_event_loop_group_) request_event_loop_group_->host_remove(host);
 }
 
 void Session::on_up(Host::Ptr host) {
@@ -699,55 +703,29 @@ void Session::internal_on_up(Host::Ptr host) {
   // Verify that the host is still available
   if (host->is_down()) return;
 
-  bool is_host_ignored = true;
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-      is_host_ignored = false;
-      (*it)->on_up(host);
-    }
-  }
-  if (is_host_ignored) {
-    LOG_DEBUG("Host %s will be ignored by all query plans",
+  LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
+  if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+    default_policy->on_up(host);
+  } else {
+    LOG_DEBUG("Host %s will be ignored by query plans for control connection",
               host->address_string().c_str());
     return;
   }
-
-  if (manager_) manager_->add(host->address());
 }
 
 void Session::on_down(Host::Ptr host) {
   host->set_down();
 
-  bool is_host_ignored = true;
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    (*it)->on_down(host);
-    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-      is_host_ignored = false;
-    }
-  }
-
-  if (is_host_ignored) {
+  LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
+  if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+    default_policy->on_down(host);
+  } else {
     // This permanently removes a host from all IO workers by stopping
     // any attempt to reconnect to that host if all load balancing policies
     // ignore the host distance.
-    LOG_DEBUG("Host %s will be ignored by all query plans",
+    LOG_DEBUG("Host %s will be ignored by control connection query plans",
               host->address_string().c_str());
-    if (manager_) manager_->remove(host->address());
   }
-}
-
-void Session::on_initialize(ConnectionPoolManagerInitializer* initializer) {
-  Session* session = static_cast<Session*>(initializer->data());
-  session->handle_initialize(initializer);
-}
-
-void Session::handle_initialize(ConnectionPoolManagerInitializer* initializer) {
-  // Not much can be done in here because this is running on a thread pool thread.
-  notify_initialize_async(initializer->release_manager(), initializer->failures());
 }
 
 void Session::on_result_metadata_changed(const String& prepared_id,
@@ -764,7 +742,7 @@ void Session::on_result_metadata_changed(const String& prepared_id,
 }
 
 void Session::on_keyspace_changed(const String& keyspace) {
-  manager_->set_keyspace(keyspace);
+  request_event_loop_group_->keyspace_update(keyspace);
 }
 
 bool Session::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
@@ -775,7 +753,7 @@ bool Session::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_ha
           request_handler, current_host, response,
           this, config_.max_schema_wait_time_ms()));
 
-  PooledConnection::Ptr connection(manager_->find_least_busy(current_host->address()));
+  PooledConnection::Ptr connection(request_event_loop_group_->find_least_busy(current_host->address()));
   if (connection && connection->write(handler->callback().get())) {
     return true;
   }
@@ -790,7 +768,7 @@ bool Session::on_prepare_all(const RequestHandler::Ptr& request_handler,
     return false;
   }
 
-  AddressVec addresses = manager_->available();
+  AddressVec addresses = request_event_loop_group_->available();
   if (addresses.empty() ||
       (addresses.size() == 1 && addresses[0] == current_host->address())) {
     return false;
@@ -818,27 +796,13 @@ bool Session::on_prepare_all(const RequestHandler::Ptr& request_handler,
     PrepareAllCallback::Ptr prepare_all_callback(
           new PrepareAllCallback(address, prepare_all_handler));
 
-    PooledConnection::Ptr connection(manager_->find_least_busy(address));
+    PooledConnection::Ptr connection(request_event_loop_group_->find_least_busy(address));
     if (connection) {
       connection->write(prepare_all_callback.get());
     }
   }
 
   return true;
-}
-
-void Session::on_up(const Address& address) {
-  notify_up_async(address);
-}
-
-void Session::on_down(const Address& address) {
-  notify_down_async(address);
-}
-
-void Session::on_critical_error(const Address& address,
-                                Connector::ConnectionError code,
-                                const String& message) {
-  notify_down_async(address);
 }
 
 bool Session::on_is_host_up(const Address& address) {
@@ -851,48 +815,9 @@ Future::Ptr Session::execute(const Request::ConstPtr& request,
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>());
 
   execute(RequestHandler::Ptr(
-            Memory::allocate<RequestHandler>(request, future, manager_.get(), metrics_.get(), this, preferred_address)));
+            Memory::allocate<RequestHandler>(request, future, metrics_.get(), this, preferred_address)));
 
   return future;
-}
-
-void Session::on_execute(Async* async) {
-  Session* session = static_cast<Session*>(async->data());
-
-  bool is_closing = false;
-
-  RequestHandler* request_handler = NULL;
-  while (session->request_queue_->dequeue(request_handler)) {
-    if (request_handler) {
-      const String& profile_name = request_handler->request()->execution_profile_name();
-      ExecutionProfile profile;
-      if (session->config().profile(profile_name, profile)) {
-        if (!profile_name.empty()) {
-          LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
-        }
-        request_handler->init(session->config_,
-                              profile,
-                              session->manager_->keyspace(),
-                              session->token_map_.get(),
-                              session->prepared_metadata_);
-        request_handler->execute();
-      } else {
-        request_handler->set_error(CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID,
-                                   profile_name + " does not exist");
-      }
-      request_handler->dec_ref();
-    } else {
-      is_closing = true;
-    }
-  }
-
-  if (is_closing) {
-    if (session->manager_) {
-      session->manager_->close();
-    }
-    session->control_connection_.close();
-    session->close_handles();
-  }
 }
 
 QueryPlan* Session::new_query_plan() {

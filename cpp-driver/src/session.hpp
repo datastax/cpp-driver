@@ -17,10 +17,7 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
-#include "async_queue.hpp"
 #include "config.hpp"
-#include "connection_pool_connector.hpp"
-#include "connection_pool_manager.hpp"
 #include "control_connection.hpp"
 #include "external.hpp"
 #include "future.hpp"
@@ -33,6 +30,7 @@
 #include "prepare_host_handler.hpp"
 #include "random.hpp"
 #include "ref_counted.hpp"
+#include "request_event_loop.hpp"
 #include "request_handler.hpp"
 #include "request_queue.hpp"
 #include "resolver.hpp"
@@ -51,15 +49,12 @@
 
 namespace cass {
 
-class ConnectionPoolManagerInitializer;
 class Future;
-class IOWorker;
 class Request;
 class Statement;
 
 class Session : public EventLoop,
     public RequestListener,
-    public ConnectionPoolManagerListener,
     public SchemaAgreementListener {
 public:
   enum State {
@@ -74,6 +69,7 @@ public:
 
   const Config& config() const { return config_; }
   Metrics* metrics() const { return metrics_.get(); }
+  const PreparedMetadata& prepared_metadata() const { return prepared_metadata_; }
 
   PreparedMetadata::Entry::Vec prepared_metadata_entries() const {
     return prepared_metadata_.copy();
@@ -81,9 +77,9 @@ public:
 
 public:
   Host::Ptr get_host(const Address& address);
+  bool dequeue(RequestHandler*& request_handler);
+  bool request_queue_empty();
 
-  void notify_initialize_async(const ConnectionPoolManager::Ptr& manager,
-                               const ConnectionPoolConnector::Vec& failures);
   void notify_up_async(const Address& address);
   void notify_down_async(const Address& address);
 
@@ -101,6 +97,21 @@ public:
     return control_connection_.cassandra_version();
   }
 
+  bool token_map_init(const String& partitioner);
+  void token_map_host_add(const Host::Ptr& host, const Value* tokens);
+  void token_map_host_update(const Host::Ptr& host, const Value* tokens);
+  void token_map_host_remove(const Host::Ptr& host);
+  void token_map_hosts_cleared();
+  void token_map_keyspaces_add(const VersionNumber& cassandra_version,
+                               const ResultResponse::Ptr& keyspaces);
+  void token_map_keyspaces_update(const VersionNumber& cassandra_version,
+                                  const ResultResponse::Ptr& keyspaces);
+
+  void load_balancing_policy_host_add_remove(const Host::Ptr& host, bool is_add);
+
+  void notify_connected();
+  void notify_connect_error(CassError code, const String& message);
+  void notify_closed();
 
 private:
   class NotifyConnect : public Task {
@@ -109,23 +120,6 @@ private:
   };
 
   void handle_notify_connect();
-
-  class NotifyInitalize : public Task {
-  public:
-    NotifyInitalize(const ConnectionPoolManager::Ptr& manager,
-                    const ConnectionPoolConnector::Vec& failures)
-      : manager_(manager)
-      , failures_(failures) { }
-
-    virtual void run(EventLoop* event_loop);
-
-  private:
-    ConnectionPoolManager::Ptr manager_;
-    ConnectionPoolConnector::Vec failures_;
-  };
-
-  void handle_notify_initialize(const ConnectionPoolManager::Ptr& manager,
-                                const ConnectionPoolConnector::Vec& failures);
 
   class NotifyUp : public Task {
   public:
@@ -151,16 +145,12 @@ private:
 
 private:
   void clear(const Config& config);
-  int init();
+  int init(const String& connect_keyspace);
 
   void close_handles();
 
   void internal_connect();
   void internal_close();
-
-  void notify_connected();
-  void notify_connect_error(CassError code, const String& message);
-  void notify_closed();
 
   void execute(const RequestHandler::Ptr& request_handler);
 
@@ -170,11 +160,7 @@ private:
   static void on_resolve(MultiResolver<Session*>::Resolver* resolver);
   static void on_resolve_done(MultiResolver<Session*>* resolver);
 
-  static void on_execute(Async* async);
-
   QueryPlan* new_query_plan();
-
-  void on_reconnect(Timer* timer);
 
 private:
   // TODO(mpenick): Consider removing friend access to session
@@ -184,6 +170,9 @@ private:
   void purge_hosts(bool is_initial_connection);
 
   Metadata& metadata() { return metadata_; }
+
+  // Asynchronously notify request event loops of a token map update
+  void notify_token_map_update();
 
   // Asynchronously prepare all queries on a host
   bool prepare_host(const Host::Ptr& host,
@@ -205,9 +194,6 @@ private:
 
   void on_down(Host::Ptr host);
 
-  static void on_initialize(ConnectionPoolManagerInitializer* initializer);
-  void handle_initialize(ConnectionPoolManagerInitializer* initializer);
-
   // Request listener callbacks
   virtual void on_result_metadata_changed(const String& prepared_id,
                                           const String& query,
@@ -222,13 +208,6 @@ private:
                               const Host::Ptr& current_host,
                               const Response::Ptr& response);
 
-  // Connection pool callbacks
-  virtual void on_up(const Address& address);
-  virtual void on_down(const Address& address);
-  virtual void on_critical_error(const Address& address,
-                                 Connector::ConnectionError code,
-                                 const String& message);
-
   // Schema agreement callback
   virtual bool on_is_host_up(const Address& address);
 
@@ -240,18 +219,14 @@ private:
   ScopedPtr<Metrics> metrics_;
   CassError connect_error_code_;
   String connect_error_message_;
-  String connect_keyspace_;
   Future::Ptr connect_future_;
   Future::Ptr close_future_;
 
   HostMap hosts_;
   uv_mutex_t hosts_mutex_;
 
-  ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
-  ScopedPtr<RequestQueueManager> request_queue_manager_;
-  ConnectionPoolManager::Ptr manager_;
-
-  ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
+  ScopedPtr<RoundRobinRequestEventLoopGroup> request_event_loop_group_;
+  ScopedPtr<MPMCQueue<RequestHandler*> > request_queue_;
 
   ScopedPtr<TokenMap> token_map_;
   Metadata metadata_;

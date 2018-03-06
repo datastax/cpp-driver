@@ -96,7 +96,6 @@ void PrepareCallback::on_internal_timeout() {
 
 RequestHandler::RequestHandler(const Request::ConstPtr& request,
                                const ResponseFuture::Ptr& future,
-                               ConnectionPoolManager* manager,
                                Metrics* metrics,
                                RequestListener* listener,
                                const Address* preferred_address)
@@ -109,7 +108,7 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request,
   , start_time_ns_(uv_hrtime())
   , metrics_(metrics)
   , listener_(listener)
-  , manager_(manager)
+  , manager_(NULL)
   , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) {
   uv_mutex_init(&lock_);
 }
@@ -119,12 +118,13 @@ RequestHandler::~RequestHandler() {
 }
 
 void RequestHandler::init(const Config& config, const ExecutionProfile& profile,
-                          const String& connected_keyspace, const TokenMap* token_map,
+                          ConnectionPoolManager* manager, const TokenMap* token_map,
                           const PreparedMetadata& prepared_metdata) {
+  manager_ = manager;
   wrapper_.init(config, profile, prepared_metdata);
 
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
-  const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : connected_keyspace);
+  const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());
 
   query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
   execution_plan_.reset(config.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));

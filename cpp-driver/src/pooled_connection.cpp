@@ -126,7 +126,7 @@ PooledConnection::PooledConnection(ConnectionPool* pool,
                                    EventLoop* event_loop,
                                    const Connection::Ptr& connection)
   : connection_(connection)
-  , request_queue_(pool->manager()->request_queue_manager()->get(event_loop))
+  , request_queue_(pool->manager()->request_queue())
   , pool_(pool)
   , event_loop_(event_loop)
   , pending_request_count_(0) {

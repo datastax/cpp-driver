@@ -30,7 +30,6 @@
 namespace cass {
 
 class ConnectionPoolManager;
-class EventLoopGroup;
 
 /**
  * A connector for a connection pool. This handles the connection process for a
@@ -59,10 +58,8 @@ public:
 
   /**
    * Connect a pool.
-   *
-   * @param event_loop_group An event loop group to use run the connection process.
    */
-  void connect(EventLoopGroup* event_loop_group);
+  void connect();
 
   /**
    * Cancel the connection process.

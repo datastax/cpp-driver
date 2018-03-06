@@ -30,7 +30,6 @@ namespace cass {
 
 class Config;
 class Metrics;
-class RequestQueueManager;
 
 /**
  * An initializer for a connection pool manager. This connects many connection
@@ -45,15 +44,16 @@ public:
   /**
    * Constructor
    *
-   * @param request_queue_manager A request queue manager to use for handling requests.
+   * @param event_loop A event loop to use for handling requests.
    * @param protocol_version The protocol version to use for connections.
    * @param data User data that's passed to the callback.
    * @param callback A callback that is called when the manager is connected or
    * if an error occurred.
    */
-  ConnectionPoolManagerInitializer(RequestQueueManager* request_queue_manager,
+  ConnectionPoolManagerInitializer(EventLoop* event_loop,
                                    int protocol_version,
-                                   void* data, Callback callback);
+                                   void* data,
+                                   Callback callback);
   ~ConnectionPoolManagerInitializer();
 
   /**
@@ -135,7 +135,7 @@ private:
   mutable uv_mutex_t lock_;
   ConnectionPoolConnector::Vec failures_;
 
-  RequestQueueManager* const request_queue_manager_;
+  EventLoop* const event_loop_;
 
   int protocol_version_;
   String keyspace_;

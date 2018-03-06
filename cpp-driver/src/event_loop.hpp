@@ -24,6 +24,7 @@
 #include "deque.hpp"
 #include "macros.hpp"
 #include "scoped_lock.hpp"
+#include "utils.hpp"
 
 #include <assert.h>
 #include <uv.h>
@@ -56,9 +57,10 @@ public:
    * Initialize the event loop. This creates/initializes libuv objects that can
    * potentially fail.
    *
+   * @param thread_name (WINDOWS DEBUG ONLY) Names thread for debugger (optional)
    * @return Returns 0 if successful, otherwise an error occurred.
    */
-  int init();
+  int init(const String& thread_name = "");
 
   /**
    * Start the event loop thread.
@@ -88,7 +90,7 @@ protected:
   /**
    * A callback that's run before the event loop is run.
    */
-  virtual void on_run() { }
+  virtual void on_run();
 
   /**
    * A callback that's run after the event loop exits.
@@ -131,6 +133,10 @@ private:
   Async async_;
   TaskQueue tasks_;
   Atomic<bool> is_closing_;
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+  String thread_name_;
+#endif
 };
 
 /**

@@ -301,9 +301,7 @@ public:
   };
 
   PoolUnitTest()
-    : mockssandra::SimpleClusterTest(NUM_NODES)
-    , event_loop_group_(1)
-    , request_queue_manager_(&event_loop_group_) { }
+    : mockssandra::SimpleClusterTest(NUM_NODES) { }
 
   AddressVec addresses() const {
     mockssandra::Ipv4AddressGenerator generator;
@@ -322,20 +320,18 @@ public:
 
   virtual void SetUp() {
     mockssandra::SimpleClusterTest::SetUp();
-    ASSERT_EQ(event_loop_group_.init(), 0);
-    event_loop_group_.run();
-    ASSERT_EQ(request_queue_manager_.init(1024), 0);
+    ASSERT_EQ(event_loop_.init(), 0);
+    event_loop_.run();
   }
 
   virtual void TearDown() {
-    request_queue_manager_.close_handles();
-    event_loop_group_.close_handles();
-    event_loop_group_.join();
+    event_loop_.close_handles();
+    event_loop_.join();
     mockssandra::SimpleClusterTest::TearDown();
   }
 
-  RequestQueueManager* request_queue_manager() {
-    return &request_queue_manager_;
+  EventLoop* event_loop() {
+    return &event_loop_;
   }
 
   void run_request(const ConnectionPoolManager::Ptr& manager, const Address& address) {
@@ -376,8 +372,7 @@ public:
   }
 
 private:
-  RoundRobinEventLoopGroup event_loop_group_;
-  RequestQueueManager request_queue_manager_;
+  EventLoop event_loop_;
 };
 
 std::ostream& operator<<(std::ostream& os, const Vector<PoolUnitTest::RequestState::Enum>& states) {
@@ -419,7 +414,7 @@ TEST_F(PoolUnitTest, Simple) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_connected));
 
@@ -444,7 +439,7 @@ TEST_F(PoolUnitTest, Keyspace) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_connected));
 
@@ -484,7 +479,7 @@ TEST_F(PoolUnitTest, Auth) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_connected));
 
@@ -507,7 +502,7 @@ TEST_F(PoolUnitTest, Ssl) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_connected));
 
@@ -526,7 +521,7 @@ TEST_F(PoolUnitTest, Listener) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_nop));
 
@@ -547,7 +542,7 @@ TEST_F(PoolUnitTest, ListenerDown) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_nop));
 
@@ -568,7 +563,7 @@ TEST_F(PoolUnitTest, AddRemove) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_nop));
 
@@ -608,7 +603,7 @@ TEST_F(PoolUnitTest, Reconnect) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_nop));
 
@@ -656,7 +651,7 @@ TEST_F(PoolUnitTest, Timeout) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_nop));
 
@@ -679,7 +674,7 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           0x7F,  // Invalid protocol version
           static_cast<void*>(request_future.get()), on_pool_nop));
 
@@ -713,7 +708,7 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_nop));
 
@@ -741,7 +736,7 @@ TEST_F(PoolUnitTest, InvalidAuth) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_nop));
 
@@ -764,7 +759,7 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_nop));
 
@@ -791,7 +786,7 @@ TEST_F(PoolUnitTest, InvalidSsl) {
 
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
-          request_queue_manager(),
+          event_loop(),
           PROTOCOL_VERSION,
           static_cast<void*>(request_future.get()), on_pool_nop));
 

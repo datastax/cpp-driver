@@ -82,53 +82,6 @@ private:
   Timer timer_;
 };
 
-/**
- * A manager that handles mapping request queues to event loop threads.
- */
-class RequestQueueManager {
-public:
-  /**
-   * Constructor
-   *
-   * @param event_loop_group The event loop group that will process the request
-   * queues.
-   */
-  RequestQueueManager(EventLoopGroup* event_loop_group);
-
-  /**
-   * Initialize the request queues.
-   *
-   * @return Returns 0 if successful, otherwise an error occurred.
-   */
-  int init(size_t queue_size);
-
-
-  /**
-   * Close all libuv handles for all request queues (thread-safe).
-   */
-  void close_handles();
-
-  /**
-   * Get the request queue for a given event loop (thread-safe).
-   *
-   * @param event_loop The current event loop.
-   * @return Returns the request queue that's handling requests for the given
-   * event loop.
-   */
-  RequestQueue* get(EventLoop* event_loop) const;
-
-public:
-  EventLoopGroup* event_loop_group() const { return event_loop_group_; }
-
-private:
-  typedef DenseHashMap<EventLoop*, RequestQueue*> Map;
-
-private:
-  Map request_queues_;
-  DynamicArray<RequestQueue> storage_;
-  EventLoopGroup* const event_loop_group_;
-};
-
 } // namespace cass
 
 #endif

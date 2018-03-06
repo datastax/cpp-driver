@@ -140,33 +140,4 @@ void RequestQueue::handle_flush() {
   }
 }
 
-RequestQueueManager::RequestQueueManager(EventLoopGroup* event_loop_group)
-  : storage_(event_loop_group->size())
-  , event_loop_group_(event_loop_group) {
-  set_pointer_keys(request_queues_);
-}
-
-int RequestQueueManager::init(size_t queue_size) {
-  for (size_t i = 0; i < storage_.size(); ++i) {
-    RequestQueue* request_queue = &storage_[i];
-    EventLoop* event_loop = event_loop_group_->get(i);
-    int rc = request_queue->init(event_loop, queue_size);
-    if (rc != 0) return rc;
-    request_queues_[event_loop] = request_queue;
-  }
-  return 0;
-}
-
-void RequestQueueManager::close_handles() {
-  for (size_t i = 0; i < storage_.size(); ++i) {
-    storage_[i].close_handles();
-  }
-}
-
-RequestQueue* RequestQueueManager::get(EventLoop* event_loop) const {
-  Map::const_iterator it = request_queues_.find(event_loop);
-  assert(it != request_queues_.end() && "Request queue not found for event loop");
-  return it->second;
-}
-
 } // namespace cass
