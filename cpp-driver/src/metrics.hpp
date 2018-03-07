@@ -48,31 +48,21 @@ class Metrics {
 public:
   class ThreadState {
   public:
-#if UV_VERSION_MAJOR == 0
-    ThreadState(size_t max_threads)
-      : max_threads_(1) {}
-#else
     ThreadState(size_t max_threads)
       : max_threads_(max_threads)
       , thread_count_(1) {
       uv_key_create(&thread_id_key_);
     }
-#endif
 
-#if UV_VERSION_MAJOR >= 1
     ~ThreadState() {
       uv_key_delete(&thread_id_key_);
     }
-#endif
 
     size_t max_threads() const {
       return max_threads_;
     }
 
     size_t current_thread_id() {
-#if UV_VERSION_MAJOR == 0
-      return 0;
-#else
       void* id = uv_key_get(&thread_id_key_);
       if (id == NULL) {
         size_t thread_id = thread_count_.fetch_add(1);
@@ -81,15 +71,12 @@ public:
         uv_key_set(&thread_id_key_, id);
       }
       return reinterpret_cast<size_t>(id) - 1;
-#endif
     }
 
   private:
     const size_t max_threads_;
-#if UV_VERSION_MAJOR >= 1
     Atomic<size_t> thread_count_;
     uv_key_t thread_id_key_;
-#endif
   };
 
   class Counter {
@@ -319,10 +306,6 @@ public:
     }
 
     void record_value(int64_t value) {
-      // All threads share the same histogram so access needs to be synchronized
-#if UV_VERSION_MAJOR == 0
-      ScopedMutex l(&mutex_);
-#endif
       histograms_[thread_state_->current_thread_id()].record_value(value);
     }
 
@@ -360,30 +343,6 @@ public:
     }
 
   private:
-#if UV_VERSION_MAJOR == 0
-    class PerThreadHistogram {
-    public:
-      PerThreadHistogram() {
-        hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
-      }
-
-      ~PerThreadHistogram() {
-        free(histogram_);
-      }
-
-      void record_value(int64_t value) {
-        hdr_record_value(histogram_, value);
-
-      }
-
-      void add(hdr_histogram* to) const {
-        hdr_add(to, histogram_);
-      }
-
-    private:
-      hdr_histogram* histogram_;
-    };
-#else
     class WriterReaderPhaser {
     public:
       WriterReaderPhaser()
@@ -475,7 +434,6 @@ public:
       mutable Atomic<int> active_index_;
       mutable WriterReaderPhaser phaser_;
     };
-#endif
 
     ThreadState* thread_state_;
     DynamicArray<PerThreadHistogram> histograms_;
@@ -487,20 +445,7 @@ public:
   };
 
   Metrics(size_t max_threads)
-  // Note: For best performance use libuv 1.X!
-
-  // libuv 0.10.X doesn't support thread-local variables so that means
-  // per-thread counters and histograms are disabled which means
-  // that these shared objects need to have their access synchronized
-  // (and means increased contention). Counters already uses an atomic
-  // type so this doesn't need any update, but it means that all threads
-  // use the same counter. Histogram uses a shared lock instead
-  // of accumulating latencies from per-thread instances.
-#if UV_VERSION_MAJOR == 0
     : thread_state_(max_threads)
-#else
-    : thread_state_(max_threads)
-#endif
     , request_latencies(&thread_state_)
     , speculative_request_latencies(&thread_state_)
     , request_rates(&thread_state_)

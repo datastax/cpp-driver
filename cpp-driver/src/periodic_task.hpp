@@ -54,11 +54,7 @@ private:
     uv_close(reinterpret_cast<uv_handle_t*>(&task->timer_handle_), on_close);
   }
 
-#if UV_VERSION_MAJOR == 0
-  static void on_timeout(uv_timer_t* handle, int status) {
-#else
   static void on_timeout(uv_timer_t* handle) {
-#endif
     PeriodicTask* task = static_cast<PeriodicTask*>(handle->data);
 
     if (task->is_running_) return;

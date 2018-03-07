@@ -203,7 +203,7 @@ void SocketConnector::handle_connect(TcpConnector* tcp_connector) {
               address_.to_string().c_str(),
               static_cast<void*>(this));
 
-#if defined(HAVE_NOSIGPIPE) && UV_VERSION_MAJOR >= 1
+#ifdef HAVE_NOSIGPIPE
     uv_tcp_t* tcp = &socket_->tcp_;
 
     // This must be done after the socket is intialized, which is done in the
@@ -228,7 +228,7 @@ void SocketConnector::handle_connect(TcpConnector* tcp_connector) {
   } else {
     on_error(SOCKET_ERROR_CONNECT,
              "Connect error '" +
-             String(UV_ERRSTR(tcp_connector->uv_status(), socket_->loop())) +
+             String(uv_strerror(tcp_connector->uv_status())) +
              "'");
   }
 }
@@ -254,7 +254,7 @@ void SocketConnector::handle_resolve(NameResolver* resolver) {
   } else {
     on_error(SOCKET_ERROR_RESOLVE,
              "Unable to resolve hostname '" +
-             String(UV_ERRSTR(resolver->uv_status(), socket_->loop())) +
+             String(uv_strerror(resolver->uv_status())) +
              "'");
   }
 }

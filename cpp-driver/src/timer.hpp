@@ -67,11 +67,7 @@ public:
     handle_ = NULL;
   }
 
-#if UV_VERSION_MAJOR == 0
-  static void on_timeout(uv_timer_t* handle, int status) {
-#else
   static void on_timeout(uv_timer_t* handle) {
-#endif
     Timer* timer = static_cast<Timer*>(handle->data);
     timer->close_handle();
     timer->cb_(timer);

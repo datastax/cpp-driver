@@ -50,11 +50,7 @@ public:
 
   virtual ~EventLoop();
 
-#if UV_VERSION_MAJOR == 0
-  uv_loop_t* loop() { return loop_; }
-#else
   uv_loop_t* loop() { return &loop_; }
-#endif
 
   /**
    * Initialize the event loop. This creates/initializes libuv objects that can
@@ -121,19 +117,11 @@ private:
   static void on_task(Async* async);
   void handle_task();
 
-#if UV_VERSION_MAJOR == 0
-  uv_loop_t* loop_;
-#else
   uv_loop_t loop_;
   bool is_loop_initialized_;
-#endif
 
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
-#if UV_VERSION_MAJOR == 0
-  static void on_prepare(uv_prepare_t *prepare, int status);
-#else
   static void on_prepare(uv_prepare_t *prepare);
-#endif
 
   uv_prepare_t prepare_;
 #endif

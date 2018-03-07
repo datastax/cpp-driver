@@ -42,33 +42,17 @@ Address::Address(const String& ip, int port) {
 
 bool Address::from_string(const String& ip, int port, Address* output) {
   char buf[sizeof(struct in6_addr)];
-#if UV_VERSION_MAJOR == 0
-  if (uv_inet_pton(AF_INET, ip.c_str(), &buf).code == UV_OK) {
-#else
   if (uv_inet_pton(AF_INET, ip.c_str(), &buf) == 0) {
-#endif
     if (output != NULL) {
       struct sockaddr_in addr;
-#if UV_VERSION_MAJOR == 0
-      addr = uv_ip4_addr(ip.c_str(), port);
-#else
       uv_ip4_addr(ip.c_str(), port, &addr);
-#endif
       output->init(&addr);
     }
     return true;
-#if UV_VERSION_MAJOR == 0
-  } else if (uv_inet_pton(AF_INET6, ip.c_str(), &buf).code == UV_OK) {
-#else
   } else if (uv_inet_pton(AF_INET6, ip.c_str(), &buf) == 0) {
-#endif
     if (output != NULL) {
       struct sockaddr_in6 addr;
-#if UV_VERSION_MAJOR == 0
-      addr = uv_ip6_addr(ip.c_str(), port);
-#else
       uv_ip6_addr(ip.c_str(), port, &addr);
-#endif
       output->init(&addr);
     }
     return true;
@@ -81,40 +65,24 @@ bool Address::from_inet(const char* data, size_t size, int port, Address* output
 
   if (size == 4) {
     char buf[INET_ADDRSTRLEN];
-#if UV_VERSION_MAJOR == 0
-    if (uv_inet_ntop(AF_INET, data, buf, sizeof(buf)).code != UV_OK) {
-#else
     if (uv_inet_ntop(AF_INET, data, buf, sizeof(buf)) != 0) {
-#endif
       return false;
     }
     if (output != NULL) {
       struct sockaddr_in addr;
-#if UV_VERSION_MAJOR == 0
-      addr = uv_ip4_addr(buf, port);
-#else
       uv_ip4_addr(buf, port, &addr);
-#endif
       output->init(&addr);
     }
 
     return true;
   } else {
     char buf[INET6_ADDRSTRLEN];
-#if UV_VERSION_MAJOR == 0
-    if (uv_inet_ntop(AF_INET6, data, buf, sizeof(buf)).code != UV_OK) {
-#else
     if (uv_inet_ntop(AF_INET6, data, buf, sizeof(buf)) != 0) {
-#endif
       return false;
     }
     if (output != NULL) {
       struct sockaddr_in6 addr;
-#if UV_VERSION_MAJOR == 0
-      addr = uv_ip6_addr(buf, port);
-#else
       uv_ip6_addr(buf, port, &addr);
-#endif
       output->init(&addr);
     }
 

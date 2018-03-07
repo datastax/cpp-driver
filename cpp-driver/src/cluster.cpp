@@ -418,12 +418,8 @@ void cass_cluster_set_use_schema(CassCluster* cluster,
 
 CassError cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
                                               cass_bool_t enabled) {
-#if UV_VERSION_MAJOR >= 1
   cluster->config().set_use_hostname_resolution(enabled == cass_true);
   return CASS_OK;
-#else
-  return CASS_ERROR_LIB_NOT_IMPLEMENTED;
-#endif
 }
 
 CassError cass_cluster_set_use_randomized_contact_points(CassCluster* cluster,

@@ -135,9 +135,7 @@ static void crypto_locking_callback(int mode, int n, const char* file, int line)
 }
 
 static unsigned long crypto_id_callback() {
-#if UV_VERSION_MAJOR == 0
-  return uv_thread_self();
-#elif defined(WIN32) || defined(_WIN32) 
+#if defined(WIN32) || defined(_WIN32)
   return static_cast<unsigned long>(GetCurrentThreadId());
 #else
   return copy_cast<uv_thread_t, unsigned long>(uv_thread_self());

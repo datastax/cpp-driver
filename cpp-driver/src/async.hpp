@@ -91,11 +91,7 @@ public:
   void* data() const { return data_; }
 
 private:
-#if UV_VERSION_MAJOR == 0
-  static void on_async(uv_async_t* handle, int status) {
-#else
   static void on_async(uv_async_t* handle) {
-#endif
     Async* async = static_cast<Async*>(handle->data);
     async->callback_(async);
   }
