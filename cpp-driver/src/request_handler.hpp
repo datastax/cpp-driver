@@ -145,9 +145,11 @@ public:
                  const Address* preferred_address = NULL);
   ~RequestHandler();
 
-  void init(const Config& config, const ExecutionProfile& profile,
-            const String& connected_keyspace, const TokenMap* token_map,
-            const PreparedMetadata& prepared_metdata);
+  void init(const Config& config,
+            const ExecutionProfile& profile,
+            const PreparedMetadata::Entry::Ptr& prepared_metdata_entry,
+            QueryPlan* query_plan,
+            SpeculativeExecutionPlan* execution_plan);
 
   void execute();
 
@@ -225,6 +227,8 @@ private:
 
 class RequestListener {
 public:
+  virtual ~RequestListener() { }
+
   virtual void on_result_metadata_changed(const String& prepared_id,
                                           const String& query,
                                           const String& keyspace,

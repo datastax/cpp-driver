@@ -115,7 +115,7 @@ struct MockTokenMap {
   cass::Host* create_host(const cass::String& address,
                           const cass::String& rack = "",
                           const cass::String& dc = "") {
-    cass::Host::Ptr host(new cass::Host(cass::Address(address, 9042), false));
+    cass::Host::Ptr host(new cass::Host(cass::Address(address, 9042)));
     host->set_rack_and_dc(rack, dc);
     host->set_rack_and_dc_ids(rack_ids.get(rack), dc_ids.get(dc));
     cass::HostSet::iterator i = hosts.find(host);

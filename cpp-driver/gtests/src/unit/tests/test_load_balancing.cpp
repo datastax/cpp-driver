@@ -57,7 +57,7 @@ cass::Address addr_for_sequence(size_t i) {
 cass::SharedRefPtr<cass::Host> host_for_addr(const cass::Address addr,
                                              const cass::String& rack = "rack",
                                              const cass::String& dc = "dc") {
-  cass::SharedRefPtr<cass::Host>host(new cass::Host(addr, false));
+  cass::SharedRefPtr<cass::Host>host(cass::Memory::allocate<cass::Host>(addr));
   host->set_up();
   host->set_rack_and_dc(rack, dc);
   return host;
@@ -124,7 +124,7 @@ uint64_t calculate_moving_average(uint64_t first_latency_ns,
   const uint64_t min_measured = 15LL;
   const uint64_t threshold_to_account = (30LL * min_measured) / 100LL;
 
-  cass::Host host(cass::Address("0.0.0.0", 9042), false);
+  cass::Host host(cass::Address("0.0.0.0", 9042));
   host.enable_latency_tracking(scale, min_measured);
 
   for (uint64_t i = 0; i < threshold_to_account; ++i) {
@@ -418,10 +418,10 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     // Set local CL
-    cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 0));
+    cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      cass::Memory::allocate<cass::RequestHandler>(request, cass::ResponseFuture::Ptr()));
 
     // Check for only local hosts are used
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
@@ -436,10 +436,10 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     // Set local CL
-    cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 0));
+    cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      cass::Memory::allocate<cass::RequestHandler>(request, cass::ResponseFuture::Ptr()));
 
     // Check for only local hosts are used
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
@@ -467,7 +467,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, StartWithEmptyLocalDatacenter) {
   {
     cass::DCAwarePolicy policy("", 0, false);
     policy.init(cass::SharedRefPtr<cass::Host>(
-                  new cass::Host(cass::Address("0.0.0.0", 9042), false)), hosts, NULL);
+                  cass::Memory::allocate<cass::Host>(cass::Address("0.0.0.0", 9042))), hosts, NULL);
 
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
     const size_t seq[] = {1};
@@ -475,10 +475,16 @@ TEST(DatacenterAwareLoadBalancingUnitTest, StartWithEmptyLocalDatacenter) {
   }
 }
 
+cass::Vector<cass::String> single_token(int64_t token) {
+  cass::OStringStream ss;
+  ss << token;
+  return cass::Vector<cass::String>(1, ss.str());
+}
+
 TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   const int64_t num_hosts = 4;
   cass::HostMap hosts;
-  populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
+  cass::TokenMap::Ptr token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
 
   // Tokens
   // 1.0.0.0 -4611686018427387905
@@ -486,29 +492,33 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   // 3.0.0.0  4611686018427387901
   // 4.0.0.0  9223372036854775804
 
-  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
+  const uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
+  cass::Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
 
-  uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  int64_t token = CASS_INT64_MIN + partition_size;
-  for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
-    TokenCollectionBuilder builder;
-    builder.append_token(token);
-    token_map->add_host(i->second, builder.finish());
+  for (size_t i = 1; i <= num_hosts; ++i) {
+    cass::Host::Ptr host(create_host(addr_for_sequence(i),
+                                     single_token(token),
+                                     cass::Murmur3Partitioner::name().to_string(),
+                                     "rack1",
+                                     LOCAL_DC));
+
+    hosts[host->address()] = host;
+    token_map->add_host(host);
     token += partition_size;
   }
 
   add_keyspace_simple("test", 3, token_map.get());
   token_map->build();
 
-  cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy(), false);
+  cass::TokenAwarePolicy policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
-  cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 1));
+  cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
   cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      cass::Memory::allocate<cass::RequestHandler>(request, cass::ResponseFuture::Ptr()));
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -544,14 +554,7 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   const size_t num_hosts = 7;
   cass::HostMap hosts;
 
-  for (size_t i = 1; i <= num_hosts; ++i) {
-    cass::Address addr = addr_for_sequence(i);
-    if (i % 2 == 0) {
-      hosts[addr] = host_for_addr(addr, "rack1", REMOTE_DC);
-    } else {
-      hosts[addr] = host_for_addr(addr, "rack1", LOCAL_DC);
-    }
-  }
+  cass::TokenMap::Ptr token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
 
   // Tokens
   // 1.0.0.0 local  -6588122883467697006
@@ -562,14 +565,18 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   // 6.0.0.0 remote  6588122883467697004
   // 7.0.0.0 local   9223372036854775806
 
-  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
+  const uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
+ cass::Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
 
-  uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  int64_t token = CASS_INT64_MIN + partition_size;
-  for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
-    TokenCollectionBuilder builder;
-    builder.append_token(token);
-    token_map->add_host(i->second, builder.finish());
+  for (size_t i = 1; i <= num_hosts; ++i) {
+    cass::Host::Ptr host(create_host(addr_for_sequence(i),
+                                     single_token(token),
+                                     cass::Murmur3Partitioner::name().to_string(),
+                                     "rack1",
+                                     i % 2 == 0 ? REMOTE_DC : LOCAL_DC));
+
+    hosts[host->address()] = host;
+    token_map->add_host(host);
     token += partition_size;
   }
 
@@ -579,15 +586,15 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   add_keyspace_network_topology("test", replication, token_map.get());
   token_map->build();
 
-  cass::TokenAwarePolicy policy(new cass::DCAwarePolicy(LOCAL_DC, num_hosts / 2, false), false);
+  cass::TokenAwarePolicy policy(cass::Memory::allocate<cass::DCAwarePolicy>(LOCAL_DC, num_hosts / 2, false), false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
-  cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 1));
+  cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 1));
   const char* value = "abc"; // hash: -5434086359492102041
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
   cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      cass::Memory::allocate<cass::RequestHandler>(request, cass::ResponseFuture::Ptr()));
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -620,9 +627,10 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
 
 TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   cass::Random random;
+
   const int64_t num_hosts = 4;
   cass::HostMap hosts;
-  populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
+  cass::TokenMap::Ptr token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
 
   // Tokens
   // 1.0.0.0 -4611686018427387905
@@ -630,31 +638,35 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   // 3.0.0.0  4611686018427387901
   // 4.0.0.0  9223372036854775804
 
-  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
+  const uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
+  cass::Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
 
-  uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  int64_t token = CASS_INT64_MIN + partition_size;
-  for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
-    TokenCollectionBuilder builder;
-    builder.append_token(token);
-    token_map->add_host(i->second, builder.finish());
+  for (size_t i = 1; i <= num_hosts; ++i) {
+    cass::Host::Ptr host(create_host(addr_for_sequence(i),
+                                     single_token(token),
+                                     cass::Murmur3Partitioner::name().to_string(),
+                                     "rack1",
+                                     LOCAL_DC));
+
+    hosts[host->address()] = host;
+    token_map->add_host(host);
     token += partition_size;
   }
 
   add_keyspace_simple("test", 3, token_map.get());
   token_map->build();
 
-  cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 1));
+  cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
   cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      cass::Memory::allocate<cass::RequestHandler>(request, cass::ResponseFuture::Ptr()));
 
 
   cass::HostVec not_shuffled;
   {
-    cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy(), false); // Not shuffled
+    cass::TokenAwarePolicy policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), false); // Not shuffled
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts, &random);
     cass::ScopedPtr<cass::QueryPlan> qp1(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     for (int i = 0; i < num_hosts; ++i) {
@@ -672,7 +684,7 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
 
   // Verify that the shuffle setting does indeed shuffle the replicas
   {
-    cass::TokenAwarePolicy shuffle_policy(new cass::RoundRobinPolicy(), true); // Shuffled
+    cass::TokenAwarePolicy shuffle_policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), true); // Shuffled
     shuffle_policy.init(cass::SharedRefPtr<cass::Host>(), hosts, &random);
 
     cass::HostVec shuffled_previous;
@@ -708,7 +720,7 @@ TEST(LatencyAwaryLoadBalancingUnitTest, ThreadholdToAccount) {
   const uint64_t threshold_to_account = (30LL * min_measured) / 100LL;
   const uint64_t one_ms = 1000000LL; // 1 ms in ns
 
-  cass::Host host(cass::Address("0.0.0.0", 9042), false);
+  cass::Host host(cass::Address("0.0.0.0", 9042));
   host.enable_latency_tracking(scale, min_measured);
 
   cass::TimestampedAverage current = host.get_current_average();
@@ -765,7 +777,7 @@ TEST(LatencyAwaryLoadBalancingUnitTest, Simple) {
   const int64_t num_hosts = 4;
   cass::HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
-  cass::LatencyAwarePolicy policy(new cass::RoundRobinPolicy(), settings);
+  cass::LatencyAwarePolicy policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), settings);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   // Record some latencies with 100 ns being the minimum
@@ -821,7 +833,7 @@ TEST(LatencyAwaryLoadBalancingUnitTest, MinAverageUnderMinMeasured) {
   const int64_t num_hosts = 4;
   cass::HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
-  cass::LatencyAwarePolicy policy(new cass::RoundRobinPolicy(), settings);
+  cass::LatencyAwarePolicy policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), settings);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   int count = 1;
@@ -855,7 +867,7 @@ TEST(WhitelistLoadBalancingUnitTest, Hosts) {
   cass::ContactPointList whitelist_hosts;
   whitelist_hosts.push_back("37.0.0.0");
   whitelist_hosts.push_back("83.0.0.0");
-  cass::WhitelistPolicy policy(new cass::RoundRobinPolicy(), whitelist_hosts);
+  cass::WhitelistPolicy policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), whitelist_hosts);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
@@ -876,7 +888,7 @@ TEST(WhitelistLoadBalancingUnitTest, Datacenters) {
   cass::DcList whitelist_dcs;
   whitelist_dcs.push_back(LOCAL_DC);
   whitelist_dcs.push_back(REMOTE_DC);
-  cass::WhitelistDCPolicy policy(new cass::RoundRobinPolicy(), whitelist_dcs);
+  cass::WhitelistDCPolicy policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), whitelist_dcs);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
@@ -896,7 +908,7 @@ TEST(BlacklistLoadBalancingUnitTest, Hosts) {
   cass::ContactPointList blacklist_hosts;
   blacklist_hosts.push_back("2.0.0.0");
   blacklist_hosts.push_back("3.0.0.0");
-  cass::BlacklistPolicy policy(new cass::RoundRobinPolicy(), blacklist_hosts);
+  cass::BlacklistPolicy policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), blacklist_hosts);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
@@ -917,7 +929,7 @@ TEST(BlacklistLoadBalancingUnitTest, Datacenters) {
   cass::DcList blacklist_dcs;
   blacklist_dcs.push_back(LOCAL_DC);
   blacklist_dcs.push_back(REMOTE_DC);
-  cass::BlacklistDCPolicy policy(new cass::RoundRobinPolicy(), blacklist_dcs);
+  cass::BlacklistDCPolicy policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), blacklist_dcs);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));

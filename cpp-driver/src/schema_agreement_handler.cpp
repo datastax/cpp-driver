@@ -104,10 +104,10 @@ bool SchemaAgreementCallback::has_schema_aggrement() {
 
       Address address;
       bool is_valid_address
-          = ControlConnection::determine_address_for_peer_host(handler_->connection_->address(),
-                                                               row->get_by_name("peer"),
-                                                               row->get_by_name("rpc_address"),
-                                                               &address);
+          = determine_address_for_peer_host(handler_->connection_->address(),
+                                            row->get_by_name("peer"),
+                                            row->get_by_name("rpc_address"),
+                                            &address);
 
       if (is_valid_address && handler_->listener_->on_is_host_up(address)) {
         const Value* v = row->get_by_name("schema_version");

@@ -16,7 +16,10 @@
 
 #include "address.hpp"
 
+#include "logger.hpp"
 #include "macros.hpp"
+#include "row.hpp"
+#include "value.hpp"
 
 #include <assert.h>
 #include <string.h>
@@ -164,6 +167,60 @@ int Address::compare(const Address& a, bool with_port) const {
                   sizeof(addr_in6()->sin6_addr));
   }
   return 0;
+}
+
+bool determine_address_for_peer_host(const Address& connected_address,
+                                     const Value* peer_value,
+                                     const Value* rpc_value,
+                                     Address* output) {
+  Address peer_address;
+  if (!peer_value || !peer_value->decoder().as_inet(peer_value->size(),
+                                                    connected_address.port(),
+                                                    &peer_address)) {
+    LOG_WARN("Invalid address format for peer address");
+    return false;
+  }
+  if (rpc_value && !rpc_value->is_null()) {
+    if (!rpc_value->decoder().as_inet(rpc_value->size(),
+                                      connected_address.port(),
+                                      output)) {
+      LOG_WARN("Invalid address format for rpc address");
+      return false;
+    }
+    if (connected_address == *output || connected_address == peer_address) {
+      LOG_DEBUG("system.peers on %s contains a line with rpc_address for itself. "
+                "This is not normal, but is a known problem for some versions of DSE. "
+                "Ignoring this entry.", connected_address.to_string(false).c_str());
+      return false;
+    }
+    if (Address::BIND_ANY_IPV4.compare(*output, false) == 0 ||
+        Address::BIND_ANY_IPV6.compare(*output, false) == 0) {
+      LOG_WARN("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact instead. "
+               "If this is incorrect you should configure a specific interface for rpc_address on the server.",
+               peer_address.to_string(false).c_str());
+      *output = peer_address;
+    }
+  } else {
+    LOG_WARN("No rpc_address for host %s in system.peers on %s. "
+             "Ignoring this entry.", peer_address.to_string(false).c_str(),
+             connected_address.to_string(false).c_str());
+    return false;
+  }
+  return true;
+}
+
+String determine_listen_address(const Address& address, const Row* row) {
+  const Value* v = row->get_by_name("peer");
+  if (v != NULL) {
+    Address listen_address;
+    if (v->decoder().as_inet(v->size(), address.port(), &listen_address)) {
+      return listen_address.to_string();
+    } else {
+      LOG_WARN("Invalid address format for listen address for host %s",
+               address.to_string().c_str());
+    }
+  }
+  return "";
 }
 
 } // namespace cass

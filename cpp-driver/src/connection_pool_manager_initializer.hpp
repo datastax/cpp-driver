@@ -64,6 +64,11 @@ public:
   void initialize(const AddressVec& hosts);
 
   /**
+   * Cancel the initialization process of the manager.
+   */
+  void cancel();
+
+  /**
    * Set the keyspace to connect pools with.
    *
    * @param keyspace A keyspace to register after connection.
@@ -105,6 +110,13 @@ public:
   ConnectionPoolConnector::Vec failures() const;
 
   /**
+   * Determines if the initializer has been cancelled.
+   *
+   * @return Returns true if cancelled.
+   */
+  bool is_cancelled();
+
+  /**
    * Release the manager from the intializer. If not released in the callback
    * the manager automatically be closed.
    *
@@ -125,10 +137,13 @@ private:
   void handle_connect(ConnectionPoolConnector* pool_connector);
 
 private:
-  ConnectionPoolManager::Ptr manager_;
-
   void* data_;
   Callback callback_;
+
+  ConnectionPoolManager::Ptr manager_;
+  ConnectionPoolConnector::Vec connectors_;
+
+  bool is_cancelled_;
 
   Atomic<size_t> remaining_;
 

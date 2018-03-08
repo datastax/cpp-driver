@@ -223,17 +223,17 @@ public:
       future_ = future;
     }
 
-    virtual void on_up(const Address& address)  {
+    virtual void on_pool_up(const Address& address)  {
       ScopedMutex l(&mutex_);
       future_->up();
     }
 
-    virtual void on_down(const Address& address) {
+    virtual void on_pool_down(const Address& address) {
       ScopedMutex l(&mutex_);
       future_->down();
     }
 
-    virtual void on_critical_error(const Address& address,
+    virtual void on_pool_critical_error(const Address& address,
                                    Connector::ConnectionError code,
                                    const String& message)  {
       ScopedMutex l(&mutex_);
@@ -260,7 +260,7 @@ public:
 
     }
 
-    virtual void on_close() {
+    virtual void on_close(ConnectionPoolManager* manager) {
       Memory::deallocate(this);
     }
 
@@ -470,14 +470,8 @@ TEST_F(PoolUnitTest, Keyspace) {
 }
 
 TEST_F(PoolUnitTest, Auth) {
-  mockssandra::SimpleRequestHandlerBuilder builder;
-  builder
-      .on(mockssandra::OPCODE_STARTUP)
-      .authenticate("com.datastax.SomeAuthenticator");
-  builder
-      .on(mockssandra::OPCODE_AUTH_RESPONSE)
-      .plaintext_auth("cassandra", "cassandra");
-  mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
+  mockssandra::SimpleCluster cluster(
+        mockssandra::AuthRequestHandlerBuilder().build(), NUM_NODES);
   cluster.start_all();
 
   RequestFutureWithManager::Ptr request_future(Memory::allocate<RequestFutureWithManager>());
@@ -726,14 +720,8 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
 }
 
 TEST_F(PoolUnitTest, InvalidAuth) {
-  mockssandra::SimpleRequestHandlerBuilder builder;
-  builder
-      .on(mockssandra::OPCODE_STARTUP)
-      .authenticate("com.datastax.SomeAuthenticator");
-  builder
-      .on(mockssandra::OPCODE_AUTH_RESPONSE)
-      .plaintext_auth("cassandra", "cassandra");
-  mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
+  mockssandra::SimpleCluster cluster(
+        mockssandra::AuthRequestHandlerBuilder().build(), NUM_NODES);
   cluster.start_all();
 
   ListenerFuture::Ptr listener_future(Memory::allocate<ListenerFuture>());

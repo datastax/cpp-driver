@@ -22,6 +22,7 @@
 #include "constants.hpp"
 #include "error_response.hpp"
 #include "execute_request.hpp"
+#include "metrics.hpp"
 #include "prepare_request.hpp"
 #include "protocol.hpp"
 #include "response.hpp"
@@ -118,16 +119,14 @@ RequestHandler::~RequestHandler() {
   uv_mutex_destroy(&lock_);
 }
 
-void RequestHandler::init(const Config& config, const ExecutionProfile& profile,
-                          const String& connected_keyspace, const TokenMap* token_map,
-                          const PreparedMetadata& prepared_metdata) {
-  wrapper_.init(config, profile, prepared_metdata);
-
-  // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
-  const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : connected_keyspace);
-
-  query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
-  execution_plan_.reset(config.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
+void RequestHandler::init(const Config& config,
+                          const ExecutionProfile& profile,
+                          const PreparedMetadata::Entry::Ptr& prepared_metdata_entry,
+                          QueryPlan* query_plan,
+                          SpeculativeExecutionPlan* execution_plan) {
+  wrapper_.init(config, profile, prepared_metdata_entry);
+  query_plan_.reset(query_plan);
+  execution_plan_.reset(execution_plan);
 }
 
 void RequestHandler::execute() {

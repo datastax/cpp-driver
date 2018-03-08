@@ -32,6 +32,8 @@ namespace cass {
  */
 class SchemaAgreementListener {
 public:
+  virtual ~SchemaAgreementListener() { }
+
   /**
    * A callback for determining if a host is up.
    *

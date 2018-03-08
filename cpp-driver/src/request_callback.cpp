@@ -32,17 +32,13 @@ namespace cass {
 
 void RequestWrapper::init(const Config& config,
                           const ExecutionProfile& profile,
-                          const PreparedMetadata& prepared_metadata) {
+                          const PreparedMetadata::Entry::Ptr& prepared_metadata_entry) {
   consistency_ = profile.consistency();
   serial_consistency_ = profile.serial_consistency();
   request_timeout_ms_ = profile.request_timeout_ms();
   timestamp_ = config.timestamp_gen()->next();
   retry_policy_ = profile.retry_policy();
-
-  if (request()->opcode() == CQL_OPCODE_EXECUTE) {
-    const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request().get());
-    prepared_metadata_entry_ = prepared_metadata.get(execute->prepared()->id());
-  }
+  prepared_metadata_entry_ = prepared_metadata_entry;
 }
 
 void RequestCallback::notify_write(Connection* connection,
@@ -297,6 +293,10 @@ bool ChainedRequestCallback::is_finished() const {
 
 void ChainedRequestCallback::maybe_finish() {
   if (is_finished()) {
+    if (response_->opcode() == CQL_OPCODE_ERROR) {
+      LOG_ERROR("Chained error response %s",
+                static_cast<const ErrorResponse*>(response_.get())->error_message().c_str());
+    }
     responses_[key_] = response_;
     if (chain_) {
       chain_->set_chain_responses(responses_);

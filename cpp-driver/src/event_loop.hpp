@@ -176,7 +176,7 @@ public:
     , threads_(num_threads) { }
 
   int init();
-  void run();
+  int run();
   void close_handles();
   void join();
 

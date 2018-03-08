@@ -23,6 +23,10 @@
 
 namespace cass {
 
+ConnectionPoolManagerSettings::ConnectionPoolManagerSettings()
+  : num_connections_per_host(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
+  , reconnect_wait_time_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS) { }
+
 ConnectionPoolManagerSettings::ConnectionPoolManagerSettings(const Config& config)
   : connection_settings(config)
   , num_connections_per_host(config.core_connections_per_host())
@@ -44,8 +48,6 @@ ConnectionPoolManager::ConnectionPoolManager(RequestQueueManager* request_queue_
   inc_ref(); // Reference for the lifetime of the connection pools
   uv_rwlock_init(&rwlock_);
   uv_rwlock_init(&keyspace_rwlock_);
-  pools_.set_empty_key(Address::EMPTY_KEY);
-  pools_.set_deleted_key(Address::DELETED_KEY);
 }
 
 ConnectionPoolManager::~ConnectionPoolManager() {
@@ -146,20 +148,20 @@ void ConnectionPoolManager::notify_closed(ConnectionPool* pool, bool should_noti
   ScopedWriteLock wl(&rwlock_);
   pools_.erase(pool->address());
   if (should_notify_down && listener_ != NULL) {
-    listener_->on_down(pool->address());
+    listener_->on_pool_down(pool->address());
   }
   maybe_closed(wl);
 }
 
 void ConnectionPoolManager::notify_up(ConnectionPool* pool, Protected) {
   if (listener_ != NULL) {
-    listener_->on_up(pool->address());
+    listener_->on_pool_up(pool->address());
   }
 }
 
 void ConnectionPoolManager::notify_down(ConnectionPool* pool, Protected) {
   if (listener_ != NULL) {
-    listener_->on_down(pool->address());
+    listener_->on_pool_down(pool->address());
   }
 }
 
@@ -168,7 +170,7 @@ void ConnectionPoolManager::notify_critical_error(ConnectionPool* pool,
                                                   const String& message,
                                                   Protected) {
   if (listener_ != NULL) {
-    listener_->on_critical_error(pool->address(), code, message);
+    listener_->on_pool_critical_error(pool->address(), code, message);
   }
 }
 
@@ -184,7 +186,7 @@ void ConnectionPoolManager::maybe_closed(ScopedWriteLock& wl) {
     close_state_ = CLOSE_STATE_CLOSED;
     wl.unlock(); // The manager is destroyed in this step it must be unlocked
     if (listener_ != NULL) {
-      listener_->on_close();
+      listener_->on_close(this);
     }
     dec_ref();
   }
@@ -202,7 +204,7 @@ void ConnectionPoolManager::handle_connect(ConnectionPoolConnector* pool_connect
   if (pool_connector->is_ok()) {
     internal_add_pool(pool_connector->release_pool());
   } else if (listener_) {
-      listener_->on_critical_error(pool_connector->address(),
+      listener_->on_pool_critical_error(pool_connector->address(),
                                    pool_connector->error_code(),
                                    pool_connector->error_message());
   }

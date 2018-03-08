@@ -184,5 +184,4 @@ void PooledConnector::handle_delayed_connect(Timer* timer) {
   }
 }
 
-
 } // namespace cass

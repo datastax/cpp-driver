@@ -62,13 +62,22 @@ private:
   SocketConnector* connector_;
 };
 
+SocketSettings::SocketSettings()
+  : hostname_resolution_enabled(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
+  , resolve_timeout_ms(CASS_DEFAULT_RESOLVE_TIMEOUT_MS)
+  , tcp_nodelay_enabled(CASS_DEFAULT_TCP_NO_DELAY_ENABLED)
+  , tcp_keepalive_enabled(CASS_DEFAULT_TCP_KEEPALIVE_ENABLED)
+  , tcp_keepalive_delay_secs(CASS_DEFAULT_TCP_KEEPALIVE_DELAY_SECS)
+  , max_reusable_write_objects(CASS_DEFAULT_MAX_REUSABLE_WRITE_OBJECTS) { }
+
 SocketSettings::SocketSettings(const Config& config)
   : hostname_resolution_enabled(config.use_hostname_resolution())
   , resolve_timeout_ms(config.resolve_timeout_ms())
   , ssl_context(config.ssl_context())
   , tcp_nodelay_enabled(config.tcp_nodelay_enable())
   , tcp_keepalive_enabled(config.tcp_keepalive_enable())
-  , tcp_keepalive_delay_secs(config.tcp_keepalive_delay_secs()) { }
+  , tcp_keepalive_delay_secs(config.tcp_keepalive_delay_secs())
+  , max_reusable_write_objects(config.max_reusable_write_objects()) { }
 
 SocketConnector::SocketConnector(const Address& address, void* data, Callback callback)
   : address_(address)
@@ -87,8 +96,8 @@ void SocketConnector::connect(uv_loop_t* loop) {
 
   if (settings_.hostname_resolution_enabled) {
     // Run hostname resolution then connect.
-    resolver_.reset(Memory::allocate<NameResolver>(address_));
-    resolver_->resolve(loop, this, on_resolve, settings_.resolve_timeout_ms);
+    resolver_.reset(Memory::allocate<NameResolver>(address_, this, on_resolve));
+    resolver_->resolve(loop, settings_.resolve_timeout_ms);
   } else {
     internal_connect(loop);
   }
@@ -108,7 +117,9 @@ Socket::Ptr SocketConnector::release_socket() {
 }
 
 void SocketConnector::internal_connect(uv_loop_t* loop) {
-  Socket::Ptr socket(Memory::allocate<Socket>(address_));
+  Socket::Ptr socket(
+        Memory::allocate<Socket>(address_,
+                                 settings_.max_reusable_write_objects));
 
   if (uv_tcp_init(loop, socket->handle()) != 0) {
     on_error(SOCKET_ERROR_INIT, "Unable to initalize TCP object");

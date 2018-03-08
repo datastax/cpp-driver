@@ -42,14 +42,14 @@ public:
    *
    * @param address The address of the host.
    */
-  virtual void on_up(const Address& address) = 0;
+  virtual void on_pool_up(const Address& address) = 0;
 
   /**
    * A callback that's called when a host is down.
    *
    * @param address The address of the host.
    */
-  virtual void on_down(const Address& address) = 0;
+  virtual void on_pool_down(const Address& address) = 0;
 
   /**
    * A callback that's called when a host has a critical error
@@ -65,23 +65,26 @@ public:
    * @param code The code of the critical error.
    * @param message The message of the critical error.
    */
-  virtual void on_critical_error(const Address& address,
-                                 Connector::ConnectionError code,
-                                 const String& message) = 0;
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message) = 0;
 
   /**
    * A callback that's called when a manager is closed.
+   *
+   * @param manager The calling connection pool manager.
    */
-  virtual void on_close() { }
+  virtual void on_close(ConnectionPoolManager* manager) { }
 };
 
 /**
  * The connection pool manager settings.
  */
 struct ConnectionPoolManagerSettings {
-  ConnectionPoolManagerSettings()
-    : num_connections_per_host(1)
-    , reconnect_wait_time_ms(2000) { }
+  /**
+   * Constructor. Initialize with default settings.
+   */
+  ConnectionPoolManagerSettings();
 
   /**
    * Constructor. Initialize manager settings from a config object.

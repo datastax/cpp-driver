@@ -14,41 +14,27 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RANDOM_HPP_INCLUDED__
-#define __CASS_RANDOM_HPP_INCLUDED__
+#ifndef __CASS_CLUSTER_CONFIG_HPP_INCLUDED__
+#define __CASS_CLUSTER_CONFIG_HPP_INCLUDED__
 
-#include "third_party/mt19937_64/mt19937_64.hpp"
+#include "config.hpp"
+#include "external.hpp"
 
-#include <algorithm>
-#include <uv.h>
+#include "uv.h"
 
 namespace cass {
 
-class Random {
+class ClusterConfig {
 public:
-  Random();
-  ~Random();
-
-  uint64_t next(uint64_t max);
+  const Config& config() const { return config_; }
+  Config& config() { return config_; }
 
 private:
-  uv_mutex_t mutex_;
-  MT19937_64 rng_;
+  Config config_;
 };
-
-uint64_t get_random_seed(uint64_t seed);
-
-template <class RandomAccessIterator>
-void random_shuffle(RandomAccessIterator first,
-                    RandomAccessIterator last,
-                    Random* random) {
-  size_t size = last - first;
-  for (size_t i = size - 1; i > 0; --i) {
-    std::swap(first[i], first[random->next(i + 1)]);
-  }
-}
 
 } // namespace cass
 
-#endif
+EXTERNAL_TYPE(cass::ClusterConfig, CassCluster)
 
+#endif

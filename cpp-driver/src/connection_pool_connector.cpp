@@ -40,7 +40,10 @@ ConnectionPoolConnector::~ConnectionPoolConnector() {
 void ConnectionPoolConnector::connect(EventLoopGroup* event_loop_group) {
   inc_ref();
   const size_t num_connections_per_host = pool_->manager()->settings().num_connections_per_host;
+
   remaining_.store(num_connections_per_host);
+
+  ScopedMutex l(&lock_);
   for (size_t i = 0; i < num_connections_per_host; ++i) {
     PooledConnector::Ptr connector(Memory::allocate<PooledConnector>(pool_.get(), this, on_connect));
     pending_connections_.push_back(connector);
@@ -50,7 +53,7 @@ void ConnectionPoolConnector::connect(EventLoopGroup* event_loop_group) {
 
 void ConnectionPoolConnector::cancel() {
   ScopedMutex l(&lock_);
-  pool_->close();
+  if (pool_) pool_->close();
   for (PooledConnector::Vec::iterator it = pending_connections_.begin(),
        end = pending_connections_.end(); it != end; ++it) {
     (*it)->cancel();
@@ -58,6 +61,7 @@ void ConnectionPoolConnector::cancel() {
 }
 
 ConnectionPool::Ptr ConnectionPoolConnector::release_pool() {
+  ScopedMutex l(&lock_);
   ConnectionPool::Ptr temp = pool_;
   pool_.reset();
   return temp;

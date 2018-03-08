@@ -20,10 +20,13 @@
 #include <stdio.h>
 
 #include "scoped_lock.hpp"
+#include "control_connection.hpp" // For host queries
 
 using cass::ScopedMutex;
+using cass::OStringStream;
 
 #define SSL_BUF_SIZE 8192
+#define SERVER_VERSION "3.11.2"
 
 namespace mockssandra {
 
@@ -329,11 +332,13 @@ void ClientConnection::on_ssl_read(const char* data, size_t len) {
   }
 }
 
-ServerConnection::ServerConnection(const ClientConnectionFactory& factory)
+ServerConnection::ServerConnection(const Address& address,
+                                   const ClientConnectionFactory& factory)
   : tcp_(this)
   , event_loop_(NULL)
   , state_(STATE_CLOSED)
   , rc_(0)
+  , address_(address)
   , factory_(factory)
   , ssl_context_(NULL) {
   uv_mutex_init(&mutex_);
@@ -346,6 +351,11 @@ ServerConnection::~ServerConnection() {
   if (ssl_context_) {
     SSL_CTX_free(ssl_context_);
   }
+}
+
+uv_loop_t*ServerConnection::loop() {
+  ScopedMutex l(&mutex_);
+  return event_loop_->loop();
 }
 
 bool ServerConnection::use_ssl(const String& key,
@@ -412,17 +422,15 @@ using cass::Task;
 
 class RunListen : public Task {
 public:
-  RunListen(ServerConnection* server, const Address& address)
-    : server_(server)
-    , address_(address) { }
+  RunListen(ServerConnection* server)
+    : server_(server) { }
 
   virtual void run(EventLoop* event_loop) {
-    server_->internal_listen(address_);
+    server_->internal_listen();
   }
 
 private:
   ServerConnection* server_;
-  const Address address_;
 };
 
 class RunClose : public Task {
@@ -438,12 +446,26 @@ private:
   ServerConnection* server_;
 };
 
+class RunTask : public Task {
+public:
+  RunTask(const ServerConnectionTask::Ptr& task, const ServerConnection::Ptr& connection)
+    : task_(task)
+    , connection_(connection) { }
 
-void ServerConnection::listen(EventLoopGroup* event_loop_group, const Address& address) {
+  virtual void run(EventLoop* event_loop) {
+    task_->run(connection_.get());
+  }
+
+private:
+  ServerConnectionTask::Ptr task_;
+  ServerConnection::Ptr connection_;
+};
+
+void ServerConnection::listen(EventLoopGroup* event_loop_group) {
   ScopedMutex l(&mutex_);
   if (state_ != STATE_CLOSED) return;
   state_ = STATE_PENDING;
-  event_loop_ = event_loop_group->add(Memory::allocate<RunListen>(this, address));
+  event_loop_ = event_loop_group->add(Memory::allocate<RunListen>(this));
 }
 
 int ServerConnection::wait_listen() {
@@ -468,31 +490,34 @@ void ServerConnection::wait_close() {
   }
 }
 
-void ServerConnection::internal_listen(const Address& address) {
+void ServerConnection::run(const ServerConnectionTask::Ptr& task) {
+  ScopedMutex l(&mutex_);
+  if (state_ != STATE_LISTENING) return;
+  event_loop_->add(Memory::allocate<RunTask>(task, Ptr(this)));
+}
+
+void ServerConnection::internal_listen() {
   int rc = 0;
 
-  { // Locked
-    ScopedMutex l(&mutex_);
-    rc = tcp_.init(loop());
-    if (rc != 0) {
-      fprintf(stderr, "Unable to initialize socket\n");
-      signal_listen(rc);
-      return;
-    }
+  rc = tcp_.init(loop());
+  if (rc != 0) {
+    fprintf(stderr, "Unable to initialize socket\n");
+    signal_listen(rc);
+    return;
+  }
 
-    rc = tcp_.bind(address.addr());
-    if (rc != 0) {
-      fprintf(stderr, "Unable to bind address %s\n", address.to_string().c_str());
-      signal_listen(rc);
-      return;
-    }
+  rc = tcp_.bind(address_.addr());
+  if (rc != 0) {
+    fprintf(stderr, "Unable to bind address %s\n", address_.to_string(true).c_str());
+    signal_listen(rc);
+    return;
+  }
 
-    rc = uv_listen(tcp_.as_stream(), 128, on_connection);
-    if (rc != 0) {
-      fprintf(stderr, "Unable to listen on address %s\n", address.to_string().c_str());
-      signal_listen(rc);
-      return;
-    }
+  rc = uv_listen(tcp_.as_stream(), 128, on_connection);
+  if (rc != 0) {
+    fprintf(stderr, "Unable to listen on address %s\n", address_.to_string(true).c_str());
+    signal_listen(rc);
+    return;
   }
 
   inc_ref();
@@ -504,14 +529,14 @@ int ServerConnection::accept(uv_stream_t* client) {
 }
 
 void ServerConnection::remove(ClientConnection* connection) {
-  connections_.erase(std::remove(connections_.begin(), connections_.end(), connection),
-                     connections_.end());
+  clients_.erase(std::remove(clients_.begin(), clients_.end(), connection),
+                     clients_.end());
   maybe_close();
 }
 
 void ServerConnection::internal_close() {
-  for (Vec::iterator it = connections_.begin(),
-       end = connections_.end();
+  for (ClientConnections::iterator it = clients_.begin(),
+       end = clients_.end();
        it != end; ++it) {
     (*it)->close();
   }
@@ -521,7 +546,7 @@ void ServerConnection::internal_close() {
 void ServerConnection::maybe_close() {
   ScopedMutex l(&mutex_);
   if (state_ == STATE_CLOSING &&
-      connections_.empty() &&
+      clients_.empty() &&
       !uv_is_closing(tcp_.as_handle())) {
     uv_close(tcp_.as_handle(), on_close);
   }
@@ -562,7 +587,7 @@ void ServerConnection::handle_connection(int status) {
     Memory::deallocate(connection);
     return;
   }
-  connections_.push_back(connection);
+  clients_.push_back(connection);
 }
 
 void ServerConnection::on_close(uv_handle_t* handle) {
@@ -872,13 +897,136 @@ inline int32_t encode_int32(int32_t value, String* output) {
 inline int32_t encode_string(const String& value, String* output) {
   int32_t size = encode_uint16(value.size(), output) + value.size();
   output->append(value);
+  return size + value.size();
+}
+
+inline int32_t encode_string_list(const Vector<String>& value, String* output) {
+  int32_t size = encode_int16(value.size(), output);
+  for (Vector<String>::const_iterator it = value.begin(),
+       end = value.end(); it != end; ++it) {
+    size += encode_string(*it, output);
+  }
   return size;
 }
 
 inline int32_t encode_bytes(const String& value, String* output) {
   int32_t size = encode_int32(value.size(), output) + value.size();
   output->append(value);
-  return size;
+  return size + value.size();
+}
+
+inline int32_t encode_inet(const Address& value, String* output) {
+  uint8_t buf[16];
+  uint8_t len =  value.to_inet(buf);
+  encode_int8(len, output);
+  for (uint8_t i = 0; i < len; ++i) {
+    output->push_back(static_cast<char>(buf[i]));
+  }
+  encode_int32(value.port(), output);
+  return 1 + len + 4;
+}
+
+static String encode_header(int8_t version, int16_t stream, int8_t opcode, int32_t len) {
+  String header;
+  encode_int8(0x80 | version, &header);
+  encode_int8(0, &header);
+  if (version >= 3) {
+    encode_int16(stream, &header);
+  } else {
+    encode_int8(stream, &header);
+  }
+  encode_int8(opcode, &header);
+  encode_int32(len, &header);
+  return header;
+}
+
+Type Type::text() {
+  return Type(TYPE_VARCHAR);
+}
+
+Type Type::inet() {
+  return Type(TYPE_INET);
+}
+
+Type Type::list(const Type& sub_type) {
+  Type type(TYPE_LIST);
+  type.types_.push_back(sub_type);
+  return type;
+}
+
+void Type::encode(int protocol_version, String* output) const {
+  switch (type_) {
+    case TYPE_VARCHAR:
+    case TYPE_INET:
+      encode_int16(type_, output);
+      break;
+    case TYPE_LIST:
+      encode_int16(type_, output);
+      types_[0].encode(protocol_version, output);
+      break;
+    default:
+      assert(false && "Unsupported type");
+      break;
+  };
+}
+
+void Column::encode(int protocol_version, String* output) const {
+  encode_string(name_, output);
+  type_.encode(protocol_version, output);
+}
+
+void Collection::encode(int protocol_version, String* output) const {
+  encode_int32(values_.size(), output);
+  for (Vector<Value>::const_iterator it = values_.begin(),
+       end = values_.end(); it != end; ++it) {
+    it->encode(protocol_version, output);
+  }
+}
+
+void Value::encode(int protocol_version, String* output) const {
+  if (type_ == NUL) {
+    encode_int32(-1, output);
+  } else if(type_ == VALUE) {
+    encode_bytes(*value_, output);
+  } else if(type_ == COLLECTION) {
+    String buf;
+    collection_->encode(protocol_version, &buf);
+    encode_bytes(buf, output);
+  }
+}
+
+void Row::encode(int protocol_version, cass::String* output) const {
+  for (Vector<Value>::const_iterator it = values_.begin(),
+       end = values_.end(); it != end; ++it) {
+    it->encode(protocol_version, output);
+  }
+}
+
+String ResultSet::encode(int protocol_version) const {
+  String body;
+
+  encode_int32(RESULT_ROWS, &body); // Result type
+
+  encode_int32(RESULT_FLAG_GLOBAL_TABLESPEC, &body); // Flags
+  encode_int32(columns_.size(), &body); // Column count
+  encode_string(keyspace_name_, &body); // Global spec keyspace name
+  encode_string(table_name_, &body); // Global spec table name
+
+  // Columns
+  for (Vector<Column>::const_iterator it = columns_.begin(),
+       end = columns_.end(); it != end; ++it) {
+    it->encode(protocol_version, &body);
+  }
+
+  encode_int32(rows_.size(), &body); // Row count
+
+  // Rows
+  for (Vector<Row>::const_iterator it = rows_.begin(),
+       end = rows_.end(); it != end; ++it) {
+    it->encode(protocol_version, &body);
+  }
+
+  return body;
 }
 
 Action::Builder& Action::Builder::execute(Action* action) {
@@ -922,12 +1070,32 @@ Action::Builder& Action::Builder::supported() {
   return execute(Memory::allocate<SendSupported>());
 }
 
+Action::Builder& Action::Builder::up_event(const Address& address) {
+  return execute(Memory::allocate<SendUpEvent>(address));
+}
+
 Action::Builder& Action::Builder::void_result() {
   return execute(Memory::allocate<VoidResult>());
 }
 
+Action::Builder& Action::Builder::empty_rows_result(int32_t row_count) {
+  return execute(Memory::allocate<EmptyRowsResult>(row_count));
+}
+
 Action::Builder& Action::Builder::no_result() {
   return execute(Memory::allocate<NoResult>());
+}
+
+Action::Builder& Action::Builder::match_query(const Matches& matches) {
+  return execute(Memory::allocate<MatchQuery>(matches));
+}
+
+Action::Builder& Action::Builder::system_local() {
+  return execute(Memory::allocate<SystemLocal>());
+}
+
+Action::Builder& Action::Builder::system_peers() {
+  return execute(Memory::allocate<SystemPeers>());
 }
 
 Action::Builder& Action::Builder::use_keyspace(const cass::String& keyspace) {
@@ -957,6 +1125,14 @@ Action::Builder& Action::Builder::validate_register() {
 
 Action::Builder& Action::Builder::validate_query() {
   return execute(Memory::allocate<ValidateQuery>());
+}
+
+Action::Builder& Action::Builder::set_registered_for_events() {
+  return execute(Memory::allocate<SetRegisteredForEvents>());
+}
+
+Action::Builder& Action::Builder::set_protocol_version() {
+  return execute(Memory::allocate<SetProtocolVersion>());
 }
 
 const Action* Action::Builder::build() {
@@ -1005,7 +1181,11 @@ Request::~Request() {
 }
 
 void Request::write(int8_t opcode, const String& body) {
-  client_->write(encode_header(opcode, body.length()) + body);
+  write(stream_, opcode, body);
+}
+
+void Request::write(int16_t stream, int8_t opcode, const cass::String& body) {
+  client_->write(encode_header(version_, stream, opcode, body.size()) + body);
 }
 
 void Request::error(int32_t code, const String& message) {
@@ -1052,18 +1232,16 @@ bool Request::decode_prepare(String* query, PrepareParameters* params) {
   return decode_prepare_params(version_, decode_long_string(start(), end(), query), end(), params) == end();
 }
 
-String Request::encode_header(int8_t opcode, int32_t len) {
-  String header;
-  encode_int8(0x80 | version_, &header);
-  encode_int8(0, &header);
-  if (version_ >= 3) {
-    encode_int16(stream_, &header);
-  } else {
-    encode_int8(stream_, &header);
-  }
-  encode_int8(opcode, &header);
-  encode_int32(len, &header);
-  return header;
+const Address& Request::address() const {
+  return client_->server()->address();
+}
+
+const Host& Request::host(const Address& address) const {
+  return client_->cluster()->host(address);
+}
+
+Hosts Request::hosts() const {
+  return client_->cluster()->hosts();
 }
 
 void Request::on_timeout(Timer* timer) {
@@ -1109,6 +1287,12 @@ bool SendSupported::on_run(Request* request) const {
   return true;
 }
 
+bool SendUpEvent::on_run(Request* request) const {
+  request->write(-1, OPCODE_EVENT, StatusChangeEvent::encode(StatusChangeEvent::UP, address));
+  run_next(request);
+  return false;
+}
+
 bool VoidResult::on_run(Request* request) const {
   String body;
   encode_int32(RESULT_VOID, &body);
@@ -1116,8 +1300,164 @@ bool VoidResult::on_run(Request* request) const {
   return true;
 }
 
+bool EmptyRowsResult::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+  } else {
+    String body;
+    encode_int32(RESULT_ROWS, &body);
+    encode_int32(0, &body); // Flags
+    encode_int32(0, &body); // Column count
+    encode_int32(row_count, &body); // Row count
+    request->write(OPCODE_RESULT, body);
+  }
+  return true;
+
+  return true;
+}
+
 bool NoResult::on_run(Request* request) const {
   return true;
+}
+
+bool MatchQuery::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+    return true;
+  } else {
+    for (Matches::const_iterator it = matches.begin(),
+         end = matches.end(); it != end; ++it) {
+      if (it->first == query) {
+        request->write(OPCODE_RESULT, it->second.encode(request->version()));
+        return true;
+      }
+    }
+  }
+  run_next(request);
+  return false;
+}
+
+bool SystemLocal::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+    return true;
+  } else {
+    try {
+      if (query == SELECT_LOCAL || query == SELECT_LOCAL_TOKENS) {
+        const Host& host(request->host(request->address()));
+
+        ResultSet local_rs
+            = ResultSet::Builder("system", "local")
+              .column("data_center", Type::text())
+              .column("rack", Type::text())
+              .column("release_version", Type::text())
+              .column("partitioner", Type::text())
+              .column("tokens", Type::list(Type::text()))
+              .row(Row::Builder()
+                   .text(host.dc)
+                   .text(host.rack)
+                   .text(SERVER_VERSION)
+                   .text(host.partitioner)
+                   .collection(Collection::text(host.tokens))
+                   .build())
+              .build();
+
+        request->write(OPCODE_RESULT, local_rs.encode(request->version()));
+        return true;
+      }
+    } catch(const Exception& ex) {
+      request->error(ex.code, ex.message);
+      return true;
+    }
+  }
+  run_next(request);
+  return false;
+}
+
+bool SystemPeers::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+    return true;
+  } else {
+    try {
+      if (query.find(SELECT_PEERS) != String::npos ||
+          query.find(SELECT_PEERS_TOKENS) != String::npos) {
+        const String where_clause(" WHERE peer = '");
+        ResultSet::Builder peers_builder
+            = ResultSet::Builder("system", "peers")
+              .column("peer", Type::inet())
+              .column("data_center", Type::text())
+              .column("rack", Type::text())
+              .column("release_version", Type::text())
+              .column("rpc_address", Type::inet())
+              .column("tokens", Type::list(Type::text()));
+
+        size_t pos = query.find(where_clause);
+        if (pos == String::npos) {
+          Hosts hosts(request->hosts());
+          for (Hosts::const_iterator it = hosts.begin(),
+               end = hosts.end(); it != end; ++it) {
+            const Host& host(*it);
+            if (host.address == request->address()) {
+              continue;
+            }
+            peers_builder
+                .row(Row::Builder()
+                     .inet(host.address)
+                     .text(host.dc)
+                     .text(host.rack)
+                     .text(SERVER_VERSION)
+                     .inet(host.address)
+                     .collection(Collection::text(host.tokens))
+                     .build());
+          }
+          ResultSet peers_rs = peers_builder.build();
+          request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
+          return true;
+        } else {
+          pos += where_clause.size();
+          size_t end_pos = query.find("'", pos);
+          if (end_pos == String::npos) {
+            throw Exception(ERROR_INVALID_QUERY, "Invalid WHERE clause");
+          }
+
+          String ip = query.substr(pos, end_pos - pos);
+          Address address;
+          if (!Address::from_string(ip, request->address().port(), &address)) {
+            throw Exception(ERROR_INVALID_QUERY, "Invalid inet address in WHERE clause");
+          }
+
+          const Host& host(request->host(address));
+          ResultSet peers_rs
+              = peers_builder
+                .row(Row::Builder()
+                     .inet(host.address)
+                     .text(host.dc)
+                     .text(host.rack)
+                     .text(SERVER_VERSION)
+                     .inet(host.address)
+                     .collection(Collection::text(host.tokens))
+                     .build())
+                .build();
+          request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
+          return true;
+        }
+      }
+    } catch(const Exception& ex) {
+      request->error(ex.code, ex.message);
+      return true;
+    }
+  }
+  run_next(request);
+  return false;
 }
 
 bool UseKeyspace::on_run(Request* request) const {
@@ -1180,10 +1520,6 @@ bool PlaintextAuth::on_run(Request* request) const {
   return true;
 }
 
-bool MatchQuery::on_run(Request* request) const {
-  return false;
-}
-
 bool ValidateStartup::on_run(Request* request) const {
   Options options;
   if (!request->decode_startup(&options)) {
@@ -1240,9 +1576,25 @@ bool ValidateQuery::on_run(Request* request) const {
   }
 }
 
-RequestHandler::RequestHandler(RequestHandler::Builder* builder)
+bool SetRegisteredForEvents::on_run(Request* request) const {
+  request->client()->set_registered_for_events();
+  run_next(request);
+  return false;
+}
+
+bool SetProtocolVersion::on_run(Request* request) const {
+  request->client()->set_protocol_version(request->version());
+  run_next(request);
+  return false;
+}
+
+RequestHandler::RequestHandler(RequestHandler::Builder* builder,
+                 int lowest_supported_protocol_version,
+                 int highest_supported_protocol_version)
   : invalid_protocol_(builder->on_invalid_protocol().build())
-  , invalid_opcode_(builder->on_invalid_protocol().build()) {
+  , invalid_opcode_(builder->on_invalid_protocol().build())
+  , lowest_supported_protocol_version_(lowest_supported_protocol_version)
+  , highest_supported_protocol_version_(highest_supported_protocol_version) {
   actions_[OPCODE_STARTUP].reset(builder->on(OPCODE_STARTUP).build());
   actions_[OPCODE_OPTIONS].reset(builder->on(OPCODE_OPTIONS).build());
   actions_[OPCODE_CREDENTIALS].reset(builder->on(OPCODE_CREDENTIALS).build());
@@ -1254,7 +1606,9 @@ RequestHandler::RequestHandler(RequestHandler::Builder* builder)
 }
 
 const RequestHandler* RequestHandler::Builder::build() {
-  return Memory::allocate<RequestHandler>(this);
+  return Memory::allocate<RequestHandler>(this,
+                                          lowest_supported_protocol_version_,
+                                          highest_supported_protocol_version_);
 }
 
 void ProtocolHandler::decode(ClientConnection* client, const char* data, int32_t len) {
@@ -1283,7 +1637,8 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
         // Version requires a single byte and that's guaranteed by the loop check.
         version_ = *pos++;
         remaining--;
-        if (version_ < 1 || version_ > 5) {
+        if (version_ < request_handler_->lowest_supported_protocol_version() ||
+            version_ > request_handler_->highest_supported_protocol_version()) {
           request_handler_->invalid_protocol(Memory::allocate<Request>(version_, flags_, stream_, opcode_, String(), client));
           return len - remaining;
         }
@@ -1310,6 +1665,7 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
       case BODY:
         if (remaining >= length_) {
           decode_body(client, pos, length_);
+          pos += length_;
           remaining -= length_;
         } else {
           return len - remaining;
@@ -1340,19 +1696,118 @@ void ClientConnection::on_read(const char* data, size_t len) {
   handler_.decode(this, data, len);
 }
 
+Event::Event(const cass::String& event_body)
+  : event_body_(event_body) { }
+
+void Event::run(internal::ServerConnection* server_connection) {
+  for (internal::ClientConnections::const_iterator it = server_connection->clients().begin(),
+       end = server_connection->clients().end(); it != end; ++it) {
+    ClientConnection* client = static_cast<ClientConnection*>(*it);
+    if (client->is_registered_for_events() && client->protocol_version() > 0) {
+      client->write(encode_header(client->protocol_version(), -1, OPCODE_EVENT, event_body_.size()) + event_body_);
+    }
+  }
+}
+cass::String TopologyChangeEvent::encode(TopologyChangeEvent::Type type, const cass::Address& address) {
+  String body;
+  encode_string("TOPOLOGY_CHANGE", &body);
+  switch(type) {
+    case NEW_NODE:
+      encode_string("NEW_NODE", &body);
+      break;
+    case MOVED_NODE:
+      encode_string("MOVED_NODE", &body);
+      break;
+    case REMOVED_NODE:
+      encode_string("REMOVED_NODE", &body);
+      break;
+  };
+  encode_inet(address, &body);
+  return body;
+}
+
+String StatusChangeEvent::encode(Type type, const Address& address) {
+  String body;
+  encode_string("STATUS_CHANGE", &body);
+  switch(type) {
+    case UP:
+      encode_string("UP", &body);
+      break;
+    case DOWN:
+      encode_string("DOWN", &body);
+      break;
+  };
+  encode_inet(address, &body);
+  return body;
+}
+
+cass::String SchemaChangeEvent::encode(SchemaChangeEvent::Target target, SchemaChangeEvent::Type type,
+                                       const cass::String& keyspace_name, const cass::String& target_name,
+                                       const Vector<cass::String>& arg_types) {
+  String body;
+  encode_string("SCHEMA_CHANGE", &body);
+  switch (type) {
+    case CREATED:
+      encode_string("CREATED", &body);
+      break;
+    case UPDATED:
+      encode_string("UPDATED", &body);
+      break;
+    case DROPPED:
+      encode_string("DROPPED", &body);
+      break;
+  }
+  switch (target) {
+    case KEYSPACE:
+      encode_string("KEYSPACE", &body);
+      encode_string(keyspace_name, &body);
+      break;
+    case TABLE:
+      encode_string("TABLE", &body);
+      encode_string(keyspace_name, &body);
+      encode_string(target_name, &body);
+      break;;
+    case USER_TYPE:
+      encode_string("TYPE", &body);
+      encode_string(keyspace_name, &body);
+      encode_string(target_name, &body);
+      break;
+    case FUNCTION:
+      encode_string("FUNCTION", &body);
+      encode_string(keyspace_name, &body);
+      encode_string(target_name, &body);
+      encode_string_list(arg_types, &body);
+      break;
+    case AGGREGATE:
+      encode_string("AGGREGATE", &body);
+      encode_string(keyspace_name, &body);
+      encode_string(target_name, &body);
+      encode_string_list(arg_types, &body);
+      break;
+  }
+  return body;
+}
+
 void Cluster::init(AddressGenerator& generator,
                    ClientConnectionFactory& factory,
                    size_t num_nodes) {
+  MT19937_64 token_rng;
   for (size_t i = 0; i < num_nodes; ++i) {
-    Server server(generator.next(),
+    Address address(generator.next());
+    Server server(Host(address, "dc1", "rack1", token_rng),
                   internal::ServerConnection::Ptr(
-                    Memory::allocate<internal::ServerConnection>(factory)));
+                    Memory::allocate<internal::ServerConnection>(address, factory)));
     servers_.push_back(server);
   }
 }
 
+Cluster::Cluster() {
+  uv_mutex_init(&mutex_);
+}
+
 Cluster::~Cluster() {
   stop_all();
+  uv_mutex_destroy(&mutex_);
 }
 
 String Cluster::use_ssl() {
@@ -1380,7 +1835,7 @@ int Cluster::start_all(EventLoopGroup* event_loop_group) {
 void Cluster::start_all_async(cass::EventLoopGroup* event_loop_group) {
   for (size_t i = 0; i < servers_.size(); ++i) {
     Server& server = servers_[i];
-    server.connection->listen(event_loop_group, server.address);
+    server.connection->listen(event_loop_group);
   }
 }
 
@@ -1404,7 +1859,7 @@ int Cluster::start(EventLoopGroup* event_loop_group, size_t node) {
     return -1;
   }
   Server& server = servers_[node - 1];
-  server.connection->listen(event_loop_group, server.address);
+  server.connection->listen(event_loop_group);
   return server.connection->wait_listen();
 }
 
@@ -1413,7 +1868,7 @@ void Cluster::start_async(cass::EventLoopGroup* event_loop_group, size_t node) {
     return;
   }
   Server& server = servers_[node - 1];
-  server.connection->listen(event_loop_group, server.address);
+  server.connection->listen(event_loop_group);
 }
 
 void Cluster::stop(size_t node) {
@@ -1433,11 +1888,81 @@ void Cluster::stop_async(size_t node) {
   server.connection->close();
 }
 
+int Cluster::add(cass::EventLoopGroup* event_loop_group, size_t node) {
+  if (node < 1 || node > servers_.size()) {
+    return -1;
+  }
+  Server& server = servers_[node - 1];
+  ScopedMutex l(&mutex_);
+  server.is_removed = false;
+  server.connection->listen(event_loop_group);
+  return server.connection->wait_listen();
+}
+
+void Cluster::remove(size_t node) {
+  if (node < 1 || node > servers_.size()) {
+    return;
+  }
+  Server& server = servers_[node - 1];
+  ScopedMutex l(&mutex_);
+  server.is_removed = true;
+  server.connection->close();
+  server.connection->wait_close();
+}
+
+const Host& Cluster::host(const Address& address) const {
+  for (Servers::const_iterator it = servers_.begin(),
+       end = servers_.end(); it != end; ++it) {
+    if (it->host.address == address) {
+      return it->host;
+    }
+  }
+  throw Exception(ERROR_PROTOCOL_ERROR,
+                  "Unable to find host " + address.to_string());
+}
+
+Hosts Cluster::hosts() const {
+  Hosts hosts;
+  ScopedMutex l(&mutex_);
+  hosts.reserve(servers_.size());
+  for (Servers::const_iterator it = servers_.begin(),
+       end = servers_.end(); it != end; ++it) {
+    if (!it->is_removed) {
+      hosts.push_back(it->host);
+    }
+  }
+  return hosts;
+}
+
+void Cluster::event(const Event::Ptr& event) {
+  for (Servers::const_iterator it = servers_.begin(),
+       end = servers_.end(); it != end; ++it) {
+    it->connection->run(internal::ServerConnectionTask::Ptr(event));
+  }
+}
+
 Address Ipv4AddressGenerator::next() {
   char buf[32];
   sprintf(buf, "%d.%d.%d.%d", (ip_ >> 24) & 0xff, (ip_ >> 16) & 0xff, (ip_ >> 8) & 0xff, ip_ & 0xff);
   ip_++;
   return Address(buf, port_);
+}
+
+Host::Host(const cass::Address& address,
+           const cass::String& dc,
+           const cass::String& rack,
+           MT19937_64& token_rng,
+           int num_tokens)
+  : address(address)
+  , dc(dc)
+  , rack(rack)
+  , partitioner("org.apache.cassandra.dht.Murmur3Partitioner") {
+  // Only murmur tokens currently supported
+  for (int i = 0; i < num_tokens; ++i) {
+    OStringStream ss;
+    ss << static_cast<int64_t>(token_rng());
+    tokens.push_back(ss.str());
+  }
 }
 
 SimpleEventLoopGroup::SimpleEventLoopGroup(size_t num_threads)
@@ -1457,10 +1982,19 @@ SimpleRequestHandlerBuilder::SimpleRequestHandlerBuilder()
   : RequestHandler::Builder() {
   on(OPCODE_STARTUP).validate_startup().ready();
   on(OPCODE_OPTIONS).supported();
-  on(OPCODE_REGISTER).validate_register().ready();
   on(OPCODE_CREDENTIALS).validate_credentials().ready();
   on(OPCODE_AUTH_RESPONSE).validate_auth_response().auth_success("");
-  on(OPCODE_QUERY).validate_query().void_result();
+  on(OPCODE_REGISTER).validate_register().set_protocol_version().set_registered_for_events().ready();
+  on(OPCODE_QUERY).system_local().system_peers().empty_rows_result(1);
+}
+
+AuthRequestHandlerBuilder::AuthRequestHandlerBuilder(const cass::String& username,
+                                                     const String& password)
+  : SimpleRequestHandlerBuilder() {
+  on(mockssandra::OPCODE_STARTUP)
+      .authenticate("com.datastax.SomeAuthenticator");
+  on(mockssandra::OPCODE_AUTH_RESPONSE)
+      .plaintext_auth(username, password);
 }
 
 } // namespace mockssandra

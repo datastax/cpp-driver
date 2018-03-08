@@ -27,6 +27,7 @@ ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(RequestQueueM
                                                                    void* data, Callback callback)
   : data_(data)
   , callback_(callback)
+  , is_cancelled_(false)
   , remaining_(0)
   , request_queue_manager_(request_queue_manager)
   , protocol_version_(protocol_version)
@@ -48,10 +49,22 @@ void ConnectionPoolManagerInitializer::initialize(const AddressVec& hosts) {
                                                          listener_,
                                                          metrics_,
                                                          settings_));
+
+  ScopedMutex l(&lock_);
   for (AddressVec::const_iterator it = hosts.begin(),
        end = hosts.end(); it != end; ++it) {
     ConnectionPoolConnector::Ptr pool_connector(Memory::allocate<ConnectionPoolConnector>(manager_.get(), *it, this, on_connect));
+    connectors_.push_back(pool_connector);
     pool_connector->connect(manager_->request_queue_manager()->event_loop_group());
+  }
+}
+
+void ConnectionPoolManagerInitializer::cancel() {
+  ScopedMutex l(&lock_);
+  is_cancelled_ = true;
+  for (ConnectionPoolConnector::Vec::const_iterator it = connectors_.begin(),
+       end = connectors_.end(); it != end; ++it) {
+    (*it)->cancel();
   }
 }
 
@@ -80,6 +93,11 @@ ConnectionPoolConnector::Vec ConnectionPoolManagerInitializer::failures() const 
   return failures_;
 }
 
+bool ConnectionPoolManagerInitializer::is_cancelled() {
+  ScopedMutex l(&lock_);
+  return is_cancelled_;
+}
+
 void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_connector) {
   ConnectionPoolManagerInitializer* initializer = static_cast<ConnectionPoolManagerInitializer*>(pool_connector->data());
   initializer->handle_connect(pool_connector);
@@ -89,10 +107,12 @@ void ConnectionPoolManagerInitializer::handle_connect(ConnectionPoolConnector* p
   { // Lock
     ScopedMutex l(&lock_);
 
-    if (pool_connector->is_ok()) {
-      manager_->add_pool(pool_connector->release_pool(), ConnectionPoolManager::Protected());
-    } else {
-      failures_.push_back(ConnectionPoolConnector::Ptr(pool_connector));
+    if (!is_cancelled_) {
+      if (pool_connector->is_ok()) {
+        manager_->add_pool(pool_connector->release_pool(), ConnectionPoolManager::Protected());
+      } else {
+        failures_.push_back(ConnectionPoolConnector::Ptr(pool_connector));
+      }
     }
   }
 

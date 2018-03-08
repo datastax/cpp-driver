@@ -8,10 +8,9 @@
 #include "dse.h"
 
 #include "auth.hpp"
+#include "cluster_config.hpp"
 #include "memory.hpp"
 #include "string.hpp"
-
-#include <cluster.hpp>
 
 static void dse_plaintext_authenticator_cleanup(void* data) {
   cass::Memory::deallocate(static_cast<dse::PlaintextAuthenticatorData*>(data));

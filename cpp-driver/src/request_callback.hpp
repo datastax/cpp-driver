@@ -64,7 +64,7 @@ public:
 
   void init(const Config& config,
             const ExecutionProfile& profile,
-            const PreparedMetadata& prepared_metadata);
+            const PreparedMetadata::Entry::Ptr& prepared_metadata_entry);
 
   const Request::ConstPtr& request() const {
     return request_;

@@ -1548,13 +1548,16 @@ cass_cluster_set_queue_size_io(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] queue_size
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_queue_size_event(CassCluster* cluster,
-                                  unsigned queue_size);
+CASS_DEPRECATED(cass_cluster_set_queue_size_event(CassCluster* cluster,
+                                                  unsigned queue_size));
 
 /**
  * Sets the number of connections made to each server in each
@@ -1580,13 +1583,16 @@ cass_cluster_set_core_connections_per_host(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_connections
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_connections_per_host(CassCluster* cluster,
-                                          unsigned num_connections);
+CASS_DEPRECATED(cass_cluster_set_max_connections_per_host(CassCluster* cluster,
+                                                          unsigned num_connections));
 
 /**
  * Sets the amount of time to wait before attempting to reconnect.
@@ -1611,13 +1617,16 @@ cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_connections
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
-                                         unsigned num_connections);
+CASS_DEPRECATED(cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
+                                                         unsigned num_connections));
 
 /**
  * Sets the threshold for the maximum number of concurrent requests in-flight

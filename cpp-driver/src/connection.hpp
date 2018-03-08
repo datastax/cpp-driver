@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include "event_response.hpp"
 #include "request_callback.hpp"
 #include "socket.hpp"
 #include "stream_manager.hpp"
@@ -66,12 +67,6 @@ private:
 class ConnectionListener {
 public:
   virtual ~ConnectionListener() { }
-  /**
-   * A callback that's called when the connection closes.
-   *
-   * @param connection The closing connection.
-   */
-  virtual void on_close(Connection* connection) = 0;
 
   /**
    * A callback that's called when the connection receives an event. The
@@ -79,7 +74,14 @@ public:
    *
    * @param response The event response data sent from the server.
    */
-  virtual void on_event(const EventResponse* response) { }
+  virtual void on_event(const EventResponse::Ptr& response) { }
+
+  /**
+   * A callback that's called when the connection closes.
+   *
+   * @param connection The closing connection.
+   */
+  virtual void on_close(Connection* connection) = 0;
 };
 
 /**
@@ -164,7 +166,7 @@ public:
    *
    * @param listener The connection listener.
    */
-  void set_listener(ConnectionListener* listener) { listener_ = listener; }
+  void set_listener(ConnectionListener* listener);
 
   /**
    * Start heartbeats to keep the connection alive and to detect a network or
@@ -178,8 +180,8 @@ public:
   void stop_heartbeats();
 
 public:
-  const Address& address() { return socket_->address(); }
-  const String& address_string() { return socket_->address_string(); }
+  const Address& address() const { return socket_->address(); }
+  const String& address_string() const { return socket_->address_string(); }
   int protocol_version() const { return protocol_version_; }
   const String& keyspace() { return keyspace_; }
   uv_loop_t* loop() { return socket_->loop(); }
