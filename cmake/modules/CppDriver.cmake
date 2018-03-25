@@ -105,6 +105,16 @@ macro(CassOptionalDependencies)
   if(CASS_USE_ZLIB)
     CassUseZlib()
   endif()
+
+  # snappy
+  if(CASS_USE_SNAPPY)
+    CassUseSnappy()
+  endif()
+
+  # lz4
+  if(CASS_USE_LZ4)
+    CassUseLZ4()
+  endif()
 endmacro()
 
 #------------------------
@@ -646,7 +656,7 @@ endmacro()
 #------------------------
 # CassUseZlib
 #
-# Add includes and libraries required for using tcmalloc.
+# Add includes and libraries required for using zlib.
 #
 # Input: CASS_INCLUDES and CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
@@ -670,6 +680,44 @@ macro(CassUseZlib)
   else()
     message(WARNING "Could not find zlib, try to set the path to zlib root folder in the system variable ZLIB_ROOT_DIR")
     message(WARNING "zlib libraries will not be linked into build")
+  endif()
+endmacro()
+
+#------------------------
+# CassUseSnappy
+#
+# Add includes and libraries required for using snappy.
+#
+# Input: CASS_INCLUDES and CASS_LIBS
+# Output: CASS_INCLUDES and CASS_LIBS
+#------------------------
+macro(CassUseSnappy)
+  # Ensure snappy was found (assign snappy include/libraries or present warning)
+  find_library(SNAPPY_LIB snappy)
+  if(SNAPPY_LIB)
+    add_definitions(-DHAVE_SNAPPY)
+    set(CASS_LIBS ${CASS_LIBS} ${SNAPPY_LIB})
+  else()
+    message(WARNING "SNAPPY library not found")
+  endif()
+endmacro()
+
+#------------------------
+# CassUseLZ4
+#
+# Add includes and libraries required for using lz4.
+#
+# Input: CASS_INCLUDES and CASS_LIBS
+# Output: CASS_INCLUDES and CASS_LIBS
+#------------------------
+macro(CassUseLZ4)
+  # Ensure lz4 was found (assign lz4 include/libraries or present warning)
+  find_library(LZ4_LIB lz4)
+  if(LZ4_LIB)
+    add_definitions(-DHAVE_LZ4)
+    set(CASS_LIBS ${CASS_LIBS} ${LZ4_LIB})
+  else()
+    message(WARNING "LZ4 library not found")
   endif()
 endmacro()
 

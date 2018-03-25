@@ -23,6 +23,7 @@
 #include "macros.hpp"
 #include "ref_counted.hpp"
 #include "scoped_ptr.hpp"
+#include "compression.hpp"
 
 #include <uv.h>
 
@@ -55,6 +56,10 @@ public:
 
   void set_buffer(size_t size) {
     buffer_ = RefBuffer::Ptr(RefBuffer::create(size));
+  }
+
+  void set_buffer(RefBuffer::Ptr buffer) {
+    buffer_ = buffer;
   }
 
   const CustomPayloadVec& custom_payload() const { return custom_payload_; }
@@ -100,7 +105,7 @@ public:
 
   bool is_body_ready() const { return is_body_ready_; }
 
-  ssize_t decode(char* input, size_t size);
+  ssize_t decode(char* input, size_t size, ICompressor* compressor);
 
 private:
   bool allocate_body(int8_t opcode);

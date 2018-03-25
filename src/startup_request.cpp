@@ -17,6 +17,7 @@
 #include "startup_request.hpp"
 
 #include "serialization.hpp"
+#include "compression.hpp"
 
 namespace cass {
 

@@ -19,6 +19,7 @@
 
 #include "buffer.hpp"
 #include "cassandra.h"
+#include "compression.hpp"
 #include "request_callback.hpp"
 #include "hash.hpp"
 #include "host.hpp"
@@ -323,6 +324,8 @@ private:
   std::string keyspace_;
   const int protocol_version_;
   Listener* listener_;
+
+  SharedRefPtr<ICompressor> compressor_;
 
   ScopedPtr<ResponseMessage> response_;
   StreamManager<RequestCallback*> stream_manager_;

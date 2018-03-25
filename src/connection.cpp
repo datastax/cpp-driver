@@ -433,7 +433,7 @@ void Connection::consume(char* input, size_t size) {
   restart_terminate_timer();
 
   while (remaining != 0 && !is_closing()) {
-    ssize_t consumed = response_->decode(buffer, remaining);
+    ssize_t consumed = response_->decode(buffer, remaining, compressor_.get());
     if (consumed <= 0) {
       notify_error("Error consuming message");
       continue;
@@ -789,12 +789,13 @@ void Connection::on_supported(ResponseMessage* response) {
   SupportedResponse* supported =
       static_cast<SupportedResponse*>(response->response_body().get());
 
-  // TODO(mstump) do something with the supported info
-  (void)supported;
+  compressor_ = get_compressor(supported->get_compression_methods());
+
+  Request::ConstPtr startup_request =
+      Request::ConstPtr(new StartupRequest(compressor_->get_method_name()));
 
   internal_write(RequestCallback::Ptr(
-                   new StartupCallback(Request::ConstPtr(
-                                         new StartupRequest()))));
+              new StartupCallback(startup_request)));
 }
 
 void Connection::on_pending_schema_agreement(Timer* timer) {

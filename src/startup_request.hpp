@@ -28,22 +28,20 @@ namespace cass {
 
 class StartupRequest : public Request {
 public:
-  StartupRequest()
+  StartupRequest(const std::string& compression_method_name)
       : Request(CQL_OPCODE_STARTUP)
       , version_("3.0.0")
-      , compression_("") {}
+      , compression_(compression_method_name) {}
 
   bool encode(size_t reserved, char** output, size_t& size);
 
-  const std::string version() const { return version_; }
-  const std::string compression() const { return compression_; }
+  const std::string& version() const { return version_; }
+  const std::string& compression() const { return compression_; }
 
 private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
-  typedef std::map<std::string, std::string> OptionsMap;
-
   std::string version_;
   std::string compression_;
 };

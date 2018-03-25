@@ -32,6 +32,9 @@ public:
 
   bool decode(int version, char* buffer, size_t size);
 
+  const std::list<std::string>& get_compression_methods() const { return compression_; }
+  const std::list<std::string>& get_versions() const { return versions_; }
+
 private:
   std::list<std::string> compression_;
   std::list<std::string> versions_;

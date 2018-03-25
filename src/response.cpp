@@ -95,7 +95,7 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
   }
 }
 
-ssize_t ResponseMessage::decode(char* input, size_t size) {
+ssize_t ResponseMessage::decode(char* input, size_t size, ICompressor* compressor) {
   char* input_pos = input;
 
   received_ += size;
@@ -162,6 +162,12 @@ ssize_t ResponseMessage::decode(char* input, size_t size) {
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->data() + length_);
 
+    if (flags_ & CASS_FLAG_COMPRESSION) {
+        ICompressor::Buffer uncompressed = compressor->decompress(
+                ICompressor::Buffer(response_body()->buffer(), length_));
+        response_body_->set_buffer(uncompressed.get_buffer());
+        length_ = uncompressed.size();
+    }
     char* pos = response_body()->data();
 
     if (flags_ & CASS_FLAG_WARNING) {
