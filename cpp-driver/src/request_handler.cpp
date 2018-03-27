@@ -109,13 +109,7 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request,
   , metrics_(metrics)
   , listener_(listener)
   , manager_(NULL)
-  , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) {
-  uv_mutex_init(&lock_);
-}
-
-RequestHandler::~RequestHandler() {
-  uv_mutex_destroy(&lock_);
-}
+  , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) { }
 
 void RequestHandler::init(const Config& config, const ExecutionProfile& profile,
                           ConnectionPoolManager* manager, const TokenMap* token_map,
@@ -141,7 +135,6 @@ void RequestHandler::retry(RequestExecution* request_execution, Protected) {
 }
 
 void RequestHandler::start_request(uv_loop_t* loop, Protected) {
-  ScopedMutex l(&lock_);
   if (!is_timer_started_) {
     uint64_t request_timeout_ms = wrapper_.request_timeout_ms();
     if (request_timeout_ms > 0) { // 0 means no timeout
@@ -156,12 +149,10 @@ void RequestHandler::start_request(uv_loop_t* loop, Protected) {
 }
 
 Host::Ptr RequestHandler::next_host(Protected) {
-  ScopedMutex l(&lock_);
   return query_plan_->compute_next();
 }
 
 int64_t RequestHandler::next_execution(const Host::Ptr& current_host, Protected) {
-  ScopedMutex l(&lock_);
   return execution_plan_->next_execution(current_host);
 }
 
@@ -262,7 +253,6 @@ void RequestHandler::on_timeout(Timer* timer) {
 
 void RequestHandler::stop_request() {
   is_canceled_.store(true);
-  ScopedMutex l(&lock_);
   if (is_timer_started_ && timer_thread_id_ == uv_thread_self()) {
     timer_.stop();
   }

@@ -44,7 +44,6 @@ public:
    * @param address The address for this pool.
    */
   ConnectionPool(ConnectionPoolManager* manager, const Address& address);
-  ~ConnectionPool();
 
   /**
    * Find the least busy connection for the pool (thread-safe). The least busy
@@ -131,16 +130,13 @@ private:
   friend class NotifyDownOnRemovePoolOp;
 
 private:
-  void internal_notify_up_or_down(ScopedWriteLock& wl);
-  void internal_notify_critical_error(ScopedWriteLock& wl,
-                                      Connector::ConnectionError code,
+  void internal_notify_up_or_down();
+  void internal_notify_critical_error(Connector::ConnectionError code,
                                       const String& message);
-  void internal_add_connection(ScopedWriteLock& wl,
-                               const PooledConnection::Ptr& connection);
-  void internal_schedule_reconnect(ScopedWriteLock& wl,
-                                   EventLoop* event_loop);
-  void internal_close(ScopedWriteLock& wl);
-  void maybe_closed(ScopedWriteLock& wl);
+  void internal_add_connection(const PooledConnection::Ptr& connection);
+  void internal_schedule_reconnect(EventLoop* event_loop);
+  void internal_close();
+  void maybe_closed();
 
   static void on_reconnect(PooledConnector* connector, EventLoop* loop);
   void handle_reconnect(PooledConnector* connector, EventLoop* event_loop);
@@ -149,7 +145,6 @@ private:
   ConnectionPoolManager* manager_;
   Address address_;
 
-  mutable uv_rwlock_t rwlock_;
   CloseState close_state_;
   NotifyState notify_state_;
   PooledConnection::Vec connections_;

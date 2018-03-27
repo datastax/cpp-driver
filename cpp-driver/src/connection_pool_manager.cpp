@@ -42,7 +42,6 @@ ConnectionPoolManager::ConnectionPoolManager(EventLoop* event_loop,
   , keyspace_(keyspace)
   , metrics_(metrics) {
   inc_ref(); // Reference for the lifetime of the connection pools
-  uv_rwlock_init(&rwlock_);
   uv_rwlock_init(&keyspace_rwlock_);
   pools_.set_empty_key(Address::EMPTY_KEY);
   pools_.set_deleted_key(Address::DELETED_KEY);
@@ -50,26 +49,19 @@ ConnectionPoolManager::ConnectionPoolManager(EventLoop* event_loop,
 }
 
 ConnectionPoolManager::~ConnectionPoolManager() {
-  uv_rwlock_destroy(&rwlock_);
   uv_rwlock_destroy(&keyspace_rwlock_);
 }
 
 PooledConnection::Ptr ConnectionPoolManager::find_least_busy(const Address& address) const {
-  ConnectionPool::Ptr pool;
-  { // Locked
-    ScopedReadLock rl(&rwlock_);
-    ConnectionPool::Map::const_iterator it = pools_.find(address);
-    if (it == pools_.end()) {
-      return PooledConnection::Ptr();
-    }
-    pool = it->second;
+  ConnectionPool::Map::const_iterator it = pools_.find(address);
+  if (it == pools_.end()) {
+    return PooledConnection::Ptr();
   }
-  return pool->find_least_busy();
+  return it->second->find_least_busy();
 }
 
 AddressVec ConnectionPoolManager::available() const {
   AddressVec result;
-  ScopedReadLock rl(&rwlock_);
   result.reserve(pools_.size());
   for (ConnectionPool::Map::const_iterator it = pools_.begin(),
        end = pools_.end(); it != end; ++it) {
@@ -80,7 +72,6 @@ AddressVec ConnectionPoolManager::available() const {
 
 void ConnectionPoolManager::add(const Address& address) {
   // TODO: Potentially used double check here to minimize what's in the lock
-  ScopedWriteLock wl(&rwlock_);
   ConnectionPool::Map::iterator it = pools_.find(address);
   if (it != pools_.end()) return;
 
@@ -99,7 +90,6 @@ void ConnectionPoolManager::add(const Address& address) {
 }
 
 void ConnectionPoolManager::remove(const Address& address) {
-  ScopedReadLock rl(&rwlock_);
   ConnectionPool::Map::iterator it = pools_.find(address);
   if (it == pools_.end()) return;
   // The connection pool will remove itself from the manager when all of its
@@ -108,7 +98,6 @@ void ConnectionPoolManager::remove(const Address& address) {
 }
 
 void ConnectionPoolManager::close() {
-  ScopedWriteLock wl(&rwlock_);
   if (close_state_ == CLOSE_STATE_OPEN) {
     close_state_ = CLOSE_STATE_CLOSING;
     for (ConnectionPool::Map::iterator it = pools_.begin(),
@@ -122,7 +111,7 @@ void ConnectionPoolManager::close() {
     }
   }
   request_queue_.close_handles();
-  maybe_closed(wl);
+  maybe_closed();
 }
 
 String ConnectionPoolManager::keyspace() const {
@@ -136,17 +125,15 @@ void ConnectionPoolManager::set_keyspace(const String& keyspace) {
 }
 
 void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool, Protected) {
-  ScopedWriteLock wl(&rwlock_);
   internal_add_pool(pool);
 }
 
 void ConnectionPoolManager::notify_closed(ConnectionPool* pool, bool should_notify_down, Protected) {
-  ScopedWriteLock wl(&rwlock_);
   pools_.erase(pool->address());
   if (should_notify_down && listener_ != NULL) {
     listener_->on_down(pool->address());
   }
-  maybe_closed(wl);
+  maybe_closed();
 }
 
 void ConnectionPoolManager::notify_up(ConnectionPool* pool, Protected) {
@@ -177,10 +164,9 @@ void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
 
 // This must be the last call in a function because it can potentially
 // deallocate the manager.
-void ConnectionPoolManager::maybe_closed(ScopedWriteLock& wl) {
+void ConnectionPoolManager::maybe_closed() {
   if (close_state_ == CLOSE_STATE_CLOSING && pools_.empty()) {
     close_state_ = CLOSE_STATE_CLOSED;
-    wl.unlock(); // The manager is destroyed in this step it must be unlocked
     if (listener_ != NULL) {
       listener_->on_close();
     }
@@ -194,7 +180,6 @@ void ConnectionPoolManager::on_connect(ConnectionPoolConnector* pool_connector) 
 }
 
 void ConnectionPoolManager::handle_connect(ConnectionPoolConnector* pool_connector) {
-  ScopedWriteLock wl(&rwlock_);
   pending_pools_.erase(std::remove(pending_pools_.begin(), pending_pools_.end(), pool_connector),
                        pending_pools_.end());
   if (pool_connector->is_ok()) {

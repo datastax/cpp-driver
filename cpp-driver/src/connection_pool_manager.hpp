@@ -232,7 +232,7 @@ private:
 
 private:
   void internal_add_pool(const ConnectionPool::Ptr& pool);
-  void maybe_closed(ScopedWriteLock& wl);
+  void maybe_closed();
 
 private:
   static void on_connect(ConnectionPoolConnector* pool_connector);
@@ -246,7 +246,6 @@ private:
   ConnectionPoolManagerListener* const listener_;
   const ConnectionPoolManagerSettings settings_;
 
-  mutable uv_rwlock_t rwlock_;
   CloseState close_state_;
   ConnectionPool::Map pools_;
   ConnectionPoolConnector::Vec pending_pools_;

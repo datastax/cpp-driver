@@ -142,7 +142,6 @@ public:
                  Metrics* metrics = NULL,
                  RequestListener* listener = NULL,
                  const Address* preferred_address = NULL);
-  ~RequestHandler();
 
   void init(const Config& config, const ExecutionProfile& profile,
             ConnectionPoolManager* manager, const TokenMap* token_map,
@@ -208,7 +207,6 @@ private:
   Atomic<bool> is_canceled_;
   Atomic<int> running_executions_;
 
-  uv_mutex_t lock_;
   ScopedPtr<QueryPlan> query_plan_;
   ScopedPtr<SpeculativeExecutionPlan> execution_plan_;
   Timer timer_;
