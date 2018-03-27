@@ -26,10 +26,10 @@ RequestEventLoop::RequestEventLoop()
   : is_flushing_(false) { }
 
 int RequestEventLoop::init(const Config& config,
-                           const String& keyspace,
+                           const String& connect_keyspace,
                            Session* session) {
   config_ = config.new_instance();
-  keyspace_ = keyspace;
+  connect_keyspace_ = connect_keyspace;
   session_ = session;
   metrics_ = session_->metrics();
   return EventLoop::init("Request Event Loop");
@@ -43,8 +43,12 @@ void RequestEventLoop::connect(const Host::Ptr& current_host,
   internal_connect(current_host, protocol_version, hosts);
 }
 
+void RequestEventLoop::keyspace_update(const String& keyspace) {
+  if (manager_) manager_->set_keyspace(keyspace);
+}
+
 void RequestEventLoop::terminate() {
-  manager_->close();
+  internal_terminate();
 }
 
 void RequestEventLoop::notify_host_add_async(const Host::Ptr& host) {
@@ -53,10 +57,6 @@ void RequestEventLoop::notify_host_add_async(const Host::Ptr& host) {
 
 void RequestEventLoop::notify_host_remove_async(const Host::Ptr& host) {
   add(Memory::allocate<NotifyHostRemove>(host));
-}
-
-void RequestEventLoop::notify_keyspace_update_async(const String& keyspace) {
-  add(Memory::allocate<NotifyKeyspaceUpdate>(keyspace));
 }
 
 void RequestEventLoop::notify_token_map_update_async(const TokenMap* token_map) {
@@ -73,11 +73,13 @@ void RequestEventLoop::notify_request_async() {
 }
 
 AddressVec RequestEventLoop::available() const {
-  return manager_->available();
+  if (manager_) return manager_->available();
+  return AddressVec();
 }
 
 PooledConnection::Ptr RequestEventLoop::find_least_busy(const Address& address) const {
-  return manager_->find_least_busy(address);
+  if (manager_) return manager_->find_least_busy(address);
+  return PooledConnection::Ptr();
 }
 
 void RequestEventLoop::on_up(const Address& address) {
@@ -94,7 +96,7 @@ void RequestEventLoop::on_critical_error(const Address& address,
   on_down(address);
 }
 
-void RequestEventLoop::close() {
+void RequestEventLoop::on_close() {
   internal_close();
 }
 
@@ -133,18 +135,30 @@ void RequestEventLoop::internal_connect(const Host::Ptr& current_host,
     initializer
       ->with_settings(ConnectionPoolManagerSettings(config_))
       ->with_listener(this)
-      ->with_keyspace(keyspace_)
+      ->with_keyspace(connect_keyspace_)
       ->with_metrics(metrics_)
       ->initialize(addresses);
   }
 }
 
 void RequestEventLoop::internal_close() {
-  EventLoop::close_handles();
+  while (is_flushing_.load()) {
+    ;; // Wait for flushing to complete
+  }
+
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
        it != policies.end(); ++it) {
     (*it)->close_handles();
+  }
+  EventLoop::close_handles();
+}
+
+void RequestEventLoop::internal_terminate() {
+  if (manager_) {
+    manager_->close();
+  } else {
+    internal_close(); // Manager is not available; however LBPs need to be properly closed
   }
 }
 
@@ -194,7 +208,7 @@ void RequestEventLoop::internal_connection_pool_manager_initialize(const Connect
 
   if (is_keyspace_error) {
     session_->notify_connect_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                                   "Keyspace '" + keyspace_
+                                   "Keyspace '" + connect_keyspace_
                                    + "' does not exist");
   } else if (hosts_.empty()) {
     session_->notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
@@ -325,11 +339,6 @@ void RequestEventLoop::NotifyHostUp::run(EventLoop* event_loop) {
   request_event_loop->internal_host_add_down_up(host, Host::UP);
 }
 
-void RequestEventLoop::NotifyKeyspaceUpdate::run(EventLoop* event_loop) {
-  RequestEventLoop* request_event_loop = static_cast<RequestEventLoop*>(event_loop);
-  request_event_loop->keyspace_ = keyspace_;
-}
-
 void RequestEventLoop::NotifyRequest::run(EventLoop* event_loop) {
   RequestEventLoop* request_event_loop = static_cast<RequestEventLoop*>(event_loop);
   request_event_loop->internal_flush_requests();
@@ -385,13 +394,13 @@ void RoundRobinRequestEventLoopGroup::terminate() {
   }
 }
 
-void RoundRobinRequestEventLoopGroup::host_add(const Host::Ptr& host) {
+void RoundRobinRequestEventLoopGroup::notify_host_add_async(const Host::Ptr& host) {
   for (size_t i = 0; i < threads_.size(); ++i) {
     threads_[i].notify_host_add_async(host);
   }
 }
 
-void RoundRobinRequestEventLoopGroup::host_remove(const Host::Ptr& host) {
+void RoundRobinRequestEventLoopGroup::notify_host_remove_async(const Host::Ptr& host) {
   for (size_t i = 0; i < threads_.size(); ++i) {
     threads_[i].notify_host_remove_async(host);
   }
@@ -399,17 +408,17 @@ void RoundRobinRequestEventLoopGroup::host_remove(const Host::Ptr& host) {
 
 void RoundRobinRequestEventLoopGroup::keyspace_update(const String& keyspace) {
   for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i].notify_keyspace_update_async(keyspace);
+    threads_[i].keyspace_update(keyspace);
   }
 }
 
-void RoundRobinRequestEventLoopGroup::token_map_update(const TokenMap* token_map) {
+void RoundRobinRequestEventLoopGroup::notify_token_map_update_async(const TokenMap* token_map) {
   for (size_t i = 0; i < threads_.size(); ++i) {
     threads_[i].notify_token_map_update_async(token_map->clone());
   }
 }
 
-void RoundRobinRequestEventLoopGroup::notify_request() {
+void RoundRobinRequestEventLoopGroup::notify_request_async() {
   RequestEventLoop* request_event_loop = &threads_[current_.fetch_add(1) % threads_.size()];
   request_event_loop->notify_request_async();
 }

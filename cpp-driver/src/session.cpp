@@ -174,7 +174,8 @@ namespace cass {
 Session::Session()
   : state_(SESSION_STATE_CLOSED)
   , connect_error_code_(CASS_OK)
-  , current_host_mark_(true) {
+  , current_host_mark_(true)
+  , request_event_loops_connected_(0) {
   uv_mutex_init(&state_mutex_);
   uv_mutex_init(&hosts_mutex_);
 }
@@ -365,16 +366,19 @@ void Session::internal_close() {
 }
 
 void Session::notify_connected() {
-  LOG_DEBUG("Session is connected");
+  request_event_loops_connected_.fetch_add(1);
+  if (request_event_loops_connected_.load() == config().thread_count_io()) { // Complete notification when all request event loops are connected
+    LOG_DEBUG("Session is connected");
 
-  ScopedMutex l(&state_mutex_);
+    ScopedMutex l(&state_mutex_);
 
-  if (state_.load(MEMORY_ORDER_RELAXED) == SESSION_STATE_CONNECTING) {
-    state_.store(SESSION_STATE_CONNECTED, MEMORY_ORDER_RELAXED);
-  }
-  if (connect_future_) {
-    connect_future_->set();
-    connect_future_.reset();
+    if (state_.load(MEMORY_ORDER_RELAXED) == SESSION_STATE_CONNECTING) {
+      state_.store(SESSION_STATE_CONNECTED, MEMORY_ORDER_RELAXED);
+    }
+    if (connect_future_) {
+      connect_future_->set();
+      connect_future_.reset();
+    }
   }
 }
 
@@ -498,7 +502,7 @@ void Session::execute(const RequestHandler::Ptr& request_handler) {
 
   request_handler->inc_ref(); // Queue reference
   if (request_queue_->enqueue(request_handler.get())) {
-    request_event_loop_group_->notify_request();
+    request_event_loop_group_->notify_request_async();
   } else {
     request_handler->dec_ref();
     request_handler->set_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
@@ -576,7 +580,7 @@ void Session::load_balancing_policy_host_add_remove(const Host::Ptr& host,
 }
 
 void Session::notify_token_map_update() {
-  request_event_loop_group_->token_map_update(token_map_.get());
+  request_event_loop_group_->notify_token_map_update_async(token_map_.get());
 }
 
 void Session::on_control_connection_ready() {
@@ -676,7 +680,7 @@ void Session::internal_on_add(Host::Ptr host) {
     return;
   }
 
-  if (request_event_loop_group_) request_event_loop_group_->host_add(host);
+  if (request_event_loop_group_) request_event_loop_group_->notify_host_add_async(host);
 }
 
 void Session::on_remove(Host::Ptr host) {
@@ -688,7 +692,7 @@ void Session::on_remove(Host::Ptr host) {
     hosts_.erase(host->address());
   }
 
-  if (request_event_loop_group_) request_event_loop_group_->host_remove(host);
+  if (request_event_loop_group_) request_event_loop_group_->notify_host_remove_async(host);
 }
 
 void Session::on_up(Host::Ptr host) {

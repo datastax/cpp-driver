@@ -44,10 +44,6 @@ public:
   /**
    * Create the request event loop making copies of the cluster configuration
    * settings.
-   *
-   * @param config Cluster configuration settings
-   * @param keyspace Keyspace session is connected to; may be empty
-   * @param session Session instance
    */
   RequestEventLoop();
 
@@ -55,11 +51,13 @@ public:
    * Initialize the request event loop
    *
    * @param config Cluster configuration settings
-   * @param keyspace Keyspace session is connected to; may be empty
+   * @param connect_keyspace Keyspace session is connecting to; may be empty
    * @param session Session instance
    * @return Returns 0 if successful, otherwise an error occurred
    */
-  int init(const Config& config, const String& keyspace, Session* session);
+  int init(const Config& config,
+           const String& connect_keyspace,
+           Session* session);
   /**
    * Connect the request event loop to the pre-established hosts using the
    * given protocol version and initialize the local token map
@@ -74,14 +72,19 @@ public:
                const HostMap& hosts,
                const TokenMap* token_map);
   /**
-   * Terminate the request event loop
+   * Update the current keyspace being used for requests (thread-safe)
+   *
+   * @param keyspace New current keyspace to utilize
+   */
+  void keyspace_update(const String& keyspace);
+  /**
+   * Terminate the request event loops
    */
   void terminate();
 
   /* Notifications to be performed by the request event loop thread */
   void notify_host_add_async(const Host::Ptr& host);
   void notify_host_remove_async(const Host::Ptr& host);
-  void notify_keyspace_update_async(const String& keyspace);
   void notify_token_map_update_async(const TokenMap* token_map);
   void notify_request_async();
 
@@ -106,13 +109,14 @@ public:
   virtual void on_critical_error(const Address& address,
                                  Connector::ConnectionError code,
                                  const String& message);
-  virtual void close();
+  virtual void on_close();
 
 private:
   void internal_connect(const Host::Ptr& current_host,
                         int protocol_version,
                         const HostMap& hosts);
   void internal_close();
+  void internal_terminate();
   void internal_token_map_update(const TokenMap* token_map);
 
   Host::Ptr get_host(const Address& address);
@@ -149,15 +153,6 @@ private:
     virtual void run(EventLoop* event_loop);
   private:
     const Host::Ptr host_;
-  };
-
-  class NotifyKeyspaceUpdate : public Task {
-  public:
-    NotifyKeyspaceUpdate(const String& keyspace)
-      : keyspace_(keyspace) { }
-    virtual void run(EventLoop* event_loop);
-  private:
-    const String& keyspace_;
   };
 
   class NotifyTokenMapUpdate : public Task {
@@ -206,7 +201,7 @@ private:
 
 private:
   Config config_;
-  String keyspace_;
+  String connect_keyspace_;
   HostMap hosts_;
   Metrics* metrics_;
   ScopedPtr<Random> random_;
@@ -284,33 +279,34 @@ public:
                const HostMap& hosts,
                const TokenMap* token_map);
   /**
-   * Terminate the request event loops
-   */
-  void terminate();
-  /**
-   * Add a new host to the request event loops
-   *
-   * @param host New host to be added
-   */
-  void host_add(const Host::Ptr& host);
-  /**
-   * Remove a host from the request event loops
-   *
-   * @param host Host to be removed
-   */
-  void host_remove(const Host::Ptr& host);
-  /**
    * Update the current keyspace being used for requests
    *
    * @param keyspace New current keyspace to utilize
    */
   void keyspace_update(const String& keyspace);
   /**
+   * Terminate the request event loops
+   */
+  void terminate();
+
+  /**
+   * Add a new host to the request event loops
+   *
+   * @param host New host to be added
+   */
+  void notify_host_add_async(const Host::Ptr& host);
+  /**
+   * Remove a host from the request event loops
+   *
+   * @param host Host to be removed
+   */
+  void notify_host_remove_async(const Host::Ptr& host);
+  /**
    * Update the token map being used for the requests
    *
    * @param token_map Update token map (do not clone)
    */
-  void token_map_update(const TokenMap* token_map);
+  void notify_token_map_update_async(const TokenMap* token_map);
   /**
    * Notify one of the request event loops that a new request is available.
    *
@@ -318,7 +314,7 @@ public:
    *       may not be notified if it is currently flushing requests from the
    *       queue.
    */
-  void notify_request();
+  void notify_request_async();
 
 private:
   Atomic<size_t> current_;

@@ -225,6 +225,7 @@ private:
   HostMap hosts_;
   uv_mutex_t hosts_mutex_;
 
+  Atomic<unsigned int> request_event_loops_connected_;
   ScopedPtr<RoundRobinRequestEventLoopGroup> request_event_loop_group_;
   ScopedPtr<MPMCQueue<RequestHandler*> > request_queue_;
 
