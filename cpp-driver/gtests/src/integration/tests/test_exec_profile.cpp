@@ -26,7 +26,8 @@ public:
   ExecutionProfileTest()
     : insert_(NULL)
     , child_retry_policy_(IgnoreRetryPolicy::policy()) // Used for counting retry
-    , logging_retry_policy_(child_retry_policy_) {
+    , logging_retry_policy_(child_retry_policy_)
+    , skip_base_execution_profile_(false) {
     replication_factor_ = 2;
     number_dc1_nodes_ = 2;
   }
@@ -36,21 +37,23 @@ public:
     total_nodes_ = number_dc1_nodes_ + number_dc2_nodes_;
 
     // Create the execution profiles for the test cases
-    profiles_["request_timeout"] = ExecutionProfile::build().with_request_timeout(1);
-    profiles_["consistency"] = ExecutionProfile::build().with_consistency(CASS_CONSISTENCY_SERIAL);
-    profiles_["serial_consistency"] =ExecutionProfile::build().with_serial_consistency(CASS_CONSISTENCY_ONE);
-    profiles_["round_robin"] = ExecutionProfile::build().with_load_balance_round_robin()
-                                                        .with_token_aware_routing(false);
-    profiles_["latency_aware"] = ExecutionProfile::build().with_latency_aware_routing()
-                                                          .with_load_balance_round_robin();
-    profiles_["token_aware"] = ExecutionProfile::build().with_token_aware_routing()
-                                                        .with_load_balance_round_robin();
-    profiles_["blacklist"] = ExecutionProfile::build().with_blacklist_filtering(Options::host_prefix() + "1")
-                                                      .with_load_balance_round_robin();
-    profiles_["whitelist"] = ExecutionProfile::build().with_whitelist_filtering(Options::host_prefix() + "1")
-                                                      .with_load_balance_round_robin();
-    profiles_["retry_policy"] = ExecutionProfile::build().with_retry_policy(logging_retry_policy_)
-                                                         .with_consistency(CASS_CONSISTENCY_THREE);
+    if (!skip_base_execution_profile_) {
+      profiles_["request_timeout"] = ExecutionProfile::build().with_request_timeout(1);
+      profiles_["consistency"] = ExecutionProfile::build().with_consistency(CASS_CONSISTENCY_SERIAL);
+      profiles_["serial_consistency"] = ExecutionProfile::build().with_serial_consistency(CASS_CONSISTENCY_ONE);
+      profiles_["round_robin"] = ExecutionProfile::build().with_load_balance_round_robin()
+        .with_token_aware_routing(false);
+      profiles_["latency_aware"] = ExecutionProfile::build().with_latency_aware_routing()
+        .with_load_balance_round_robin();
+      profiles_["token_aware"] = ExecutionProfile::build().with_token_aware_routing()
+        .with_load_balance_round_robin();
+      profiles_["blacklist"] = ExecutionProfile::build().with_blacklist_filtering(Options::host_prefix() + "1")
+        .with_load_balance_round_robin();
+      profiles_["whitelist"] = ExecutionProfile::build().with_whitelist_filtering(Options::host_prefix() + "1")
+        .with_load_balance_round_robin();
+      profiles_["retry_policy"] = ExecutionProfile::build().with_retry_policy(logging_retry_policy_)
+        .with_consistency(CASS_CONSISTENCY_THREE);
+    }
 
     // Call the parent setup function
     Integration::SetUp();
@@ -86,6 +89,10 @@ protected:
    * Logging retry policy for 'retry_policy' execution profile
    */
   LoggingRetryPolicy logging_retry_policy_;
+  /**
+   * Flag to determine if base execution profiles should be built or not
+   */
+  bool skip_base_execution_profile_;
 
   /**
    * Get the primary replica host/IP address for an executed statement with a
@@ -184,6 +191,7 @@ public:
                                                          .with_consistency(CASS_CONSISTENCY_LOCAL_ONE);
 
     // Call the parent setup function
+    skip_base_execution_profile_ = true;
     ExecutionProfileTest::SetUp();
   }
 };

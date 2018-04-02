@@ -201,6 +201,14 @@ protected:
    */
   std::string contact_points_;
   /**
+   * Setting for password authenticator. True if password authenticator should
+   * be enabled; false otherwise.
+   * (DEFAULT: false)
+   *
+   * NOTE: Username and password is 'cassandra'
+   */
+  bool is_password_authenticator_;
+  /**
    * Setting for client authentication. True if client authentication should be
    * enabled; false otherwise.
    * (DEFAULT: false)
