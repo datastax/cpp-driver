@@ -56,6 +56,19 @@ cass_cluster_set_token_aware_routing(cluster, cass_true);
 cass_cluster_set_token_aware_routing(cluster, cass_false);
 ```
 
+### Compression
+
+```c
+/* Enable compression (this is the default setting) */
+cass_cluster_set_compression(cluster, CASS_CQL_COMPRESSION_ENABLE);
+
+/* Disable compression */
+cass_cluster_set_compression(cluster, CASS_CQL_COMPRESSION_DISABLE);
+
+/* Enable specific compression algorithm only */
+cass_cluster_set_compression(cluster, CASS_CQL_COMPRESSION_SNAPPY);
+```
+
 ### Latency-aware Routing
 
 Latency-aware routing tracks the latency of queries to avoid sending new queries

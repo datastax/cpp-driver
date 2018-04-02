@@ -1845,6 +1845,28 @@ CASS_EXPORT CassError
 cass_cluster_set_prepare_on_all_hosts(CassCluster* cluster,
                                       cass_bool_t enabled);
 
+typedef enum CassCqlCompression_ {
+  CASS_CQL_COMPRESSION_ENABLE,
+  CASS_CQL_COMPRESSION_DISABLE,
+  CASS_CQL_COMPRESSION_LZ4,
+  CASS_CQL_COMPRESSION_SNAPPY
+
+} CassCqlCompression;
+/**
+ * Select compression algorithm.
+ *
+ * <b>Default:</b> cass_true
+ *
+ * @public @memberof CassCluster
+ *
+ * @param cluster
+ * @param compression
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_cluster_set_compression(CassCluster* cluster,
+                             CassCqlCompression compression);
+
 /**
  * Enable pre-preparing cached prepared statements when existing hosts become
  * available again or when new hosts are added to the cluster.

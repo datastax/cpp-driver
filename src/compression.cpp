@@ -85,17 +85,28 @@ class IdentityCompressor final : public ICompressor {
   };
 };
 
-SharedRefPtr<ICompressor> get_compressor(const std::list<std::string>& methods)
+SharedRefPtr<ICompressor> get_compressor(const std::list<std::string>& methods,
+        CassCqlCompression user_preference)
 {
   // keep lz4 before snappy to make it preferred
 #if defined(HAVE_LZ4)
-  if (std::find(methods.begin(), methods.end(), "lz4") != methods.end()) {
+  bool user_choice_lz4 = user_preference == CASS_CQL_COMPRESSION_ENABLE
+                      || user_preference == CASS_CQL_COMPRESSION_LZ4;
+  bool server_allowed_lz4 =
+      std::find(methods.begin(), methods.end(), "lz4") != methods.end();
+
+  if (user_choice_lz4 && server_allowed_lz4) {
     return SharedRefPtr<ICompressor>(new LZ4Compressor);
   }
 #endif
 
 #if defined(HAVE_SNAPPY)
-  if (std::find(methods.begin(), methods.end(), "snappy") != methods.end()) {
+  bool user_choice_snappy = user_preference == CASS_CQL_COMPRESSION_ENABLE
+                         || user_preference == CASS_CQL_COMPRESSION_SNAPPY;
+  bool server_allowed_snappy =
+      std::find(methods.begin(), methods.end(), "snappy") != methods.end();
+
+  if (user_choice_snappy && server_allowed_snappy) {
     return SharedRefPtr<ICompressor>(new SnappyCompressor);
   }
 #endif

@@ -180,7 +180,6 @@ Values such as strings (`const char*`),  bytes and decimals (`const cass_bytes_t
 
 Here are some features that are missing from the C/C++ driver, but are included with other drivers. The schedule for these features can be found on [JIRA](https://datastax-oss.atlassian.net/browse/CPP).
 
-- Compression
 - Query tracing
 - Event registration and notification
 - Callback interfaces for load balancing, authentication, reconnection and retry

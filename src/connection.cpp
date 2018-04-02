@@ -789,7 +789,7 @@ void Connection::on_supported(ResponseMessage* response) {
   SupportedResponse* supported =
       static_cast<SupportedResponse*>(response->response_body().get());
 
-  compressor_ = get_compressor(supported->get_compression_methods());
+  compressor_ = get_compressor(supported->get_compression_methods(), config_.compression());
 
   Request::ConstPtr startup_request =
       Request::ConstPtr(new StartupRequest(compressor_->get_method_name()));

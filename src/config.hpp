@@ -80,7 +80,8 @@ public:
       , use_schema_(true)
       , use_randomized_contact_points_(true)
       , prepare_on_all_hosts_(true)
-      , prepare_on_up_or_add_host_(true) { }
+      , prepare_on_up_or_add_host_(true)
+      , compression_(CASS_CQL_COMPRESSION_ENABLE) { }
 
   Config new_instance() const {
     Config config = *this;
@@ -388,6 +389,10 @@ public:
 
   void set_prepare_on_all_hosts(bool enabled) { prepare_on_all_hosts_ = enabled; }
 
+  CassCqlCompression compression() const { return compression_; }
+
+  void set_compression(CassCqlCompression compression) { compression_ = compression; }
+
   bool prepare_on_up_or_add_host() const { return prepare_on_up_or_add_host_; }
 
   void set_prepare_on_up_or_add_host(bool enabled) {
@@ -441,6 +446,7 @@ private:
   bool use_randomized_contact_points_;
   bool prepare_on_all_hosts_;
   bool prepare_on_up_or_add_host_;
+  CassCqlCompression compression_;
 };
 
 } // namespace cass

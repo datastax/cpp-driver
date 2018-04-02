@@ -5,6 +5,7 @@
 #include <list>
 #include <utility>
 #include "ref_counted.hpp"
+#include "cassandra.h"
 
 namespace cass {
 
@@ -37,7 +38,8 @@ public:
   virtual ~ICompressor() {};
 };
 
-SharedRefPtr<ICompressor> get_compressor(const std::list<std::string>& methods);
+SharedRefPtr<ICompressor> get_compressor(const std::list<std::string>& methods,
+        CassCqlCompression user_preference);
 
 } // namespace cass
 
