@@ -27,15 +27,13 @@
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
 #include "prepared.hpp"
-#include "prepare_host_handler.hpp"
 #include "random.hpp"
 #include "ref_counted.hpp"
-#include "request_event_loop.hpp"
+#include "request_processor_manager_initializer.hpp"
 #include "request_handler.hpp"
 #include "request_queue.hpp"
 #include "resolver.hpp"
 #include "row.hpp"
-#include "schema_agreement_handler.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "speculative_execution.hpp"
@@ -53,9 +51,8 @@ class Future;
 class Request;
 class Statement;
 
-class Session : public EventLoop,
-    public RequestListener,
-    public SchemaAgreementListener {
+class Session : public EventLoop
+              , public RequestProcessorListener {
 public:
   enum State {
     SESSION_STATE_CONNECTING,
@@ -77,11 +74,6 @@ public:
 
 public:
   Host::Ptr get_host(const Address& address);
-  bool dequeue(RequestHandler*& request_handler);
-  bool request_queue_empty();
-
-  void notify_up_async(const Address& address);
-  void notify_down_async(const Address& address);
 
   void connect_async(const Config& config, const String& keyspace, const Future::Ptr& future);
   void close_async(const Future::Ptr& future);
@@ -113,6 +105,10 @@ public:
   void notify_connect_error(CassError code, const String& message);
   void notify_closed();
 
+  void on_keyspace_update(const String& keyspace);
+  void on_prepared_metadata_update(const String& id,
+                                   const PreparedMetadata::Entry::Ptr& entry);
+
 private:
   class NotifyConnect : public Task {
   public:
@@ -121,31 +117,9 @@ private:
 
   void handle_notify_connect();
 
-  class NotifyUp : public Task {
-  public:
-    NotifyUp(const Address& address)
-      : address_(address) { }
-
-    virtual void run(EventLoop* event_loop);
-
-  private:
-    Address address_;
-  };
-
-  class NotifyDown : public Task {
-  public:
-    NotifyDown(const Address& address)
-      : address_(address) { }
-
-    virtual void run(EventLoop* event_loop);
-
-  private:
-    Address address_;
-  };
-
 private:
   void clear(const Config& config);
-  int init(const String& connect_keyspace);
+  int init();
 
   void close_handles();
 
@@ -154,7 +128,6 @@ private:
 
   void execute(const RequestHandler::Ptr& request_handler);
 
-  virtual void on_run();
   virtual void on_after_run();
 
   static void on_resolve(MultiResolver<Session*>::Resolver* resolver);
@@ -166,12 +139,12 @@ private:
   // TODO(mpenick): Consider removing friend access to session
   friend class ControlConnection;
 
-  Host::Ptr add_host(const Address& address, bool is_new_node = false);
+  Host::Ptr add_host(const Address& address);
   void purge_hosts(bool is_initial_connection);
 
   Metadata& metadata() { return metadata_; }
 
-  // Asynchronously notify request event loops of a token map update
+  // Asynchronously notify request processors of a token map update
   void notify_token_map_update();
 
   // Asynchronously prepare all queries on a host
@@ -194,22 +167,9 @@ private:
 
   void on_down(Host::Ptr host);
 
-  // Request listener callbacks
-  virtual void on_result_metadata_changed(const String& prepared_id,
-                                          const String& query,
-                                          const String& keyspace,
-                                          const String& result_metadata_id,
-                                          const ResultResponse::ConstPtr& result_response);
-  virtual void on_keyspace_changed(const String& keyspace);
-  virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
-                                            const Host::Ptr& current_host,
-                                            const Response::Ptr& response);
-  virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
-                              const Host::Ptr& current_host,
-                              const Response::Ptr& response);
-
-  // Schema agreement callback
-  virtual bool on_is_host_up(const Address& address);
+  static void on_request_processor_manager_initialize(RequestProcessorManagerInitializer* initializer);
+  void handle_request_processor_manager_initialize(const RequestProcessorManager::Ptr& request_processor_manager,
+                                                   const RequestProcessor::Vec& failures);
 
 private:
   Atomic<State> state_;
@@ -219,13 +179,14 @@ private:
   ScopedPtr<Metrics> metrics_;
   CassError connect_error_code_;
   String connect_error_message_;
+  String connect_keyspace_;
   Future::Ptr connect_future_;
   Future::Ptr close_future_;
 
   HostMap hosts_;
   uv_mutex_t hosts_mutex_;
 
-  ScopedPtr<RoundRobinRequestEventLoopGroup> request_event_loop_group_;
+  RequestProcessorManager::Ptr request_processor_manager_;
   ScopedPtr<MPMCQueue<RequestHandler*> > request_queue_;
 
   ScopedPtr<TokenMap> token_map_;

@@ -139,13 +139,16 @@ public:
   // TODO: Remove default parameters where possible
   RequestHandler(const Request::ConstPtr& request,
                  const ResponseFuture::Ptr& future,
+                 const PreparedMetadata& prepared_metadata,
                  Metrics* metrics = NULL,
-                 RequestListener* listener = NULL,
                  const Address* preferred_address = NULL);
 
-  void init(const Config& config, const ExecutionProfile& profile,
-            ConnectionPoolManager* manager, const TokenMap* token_map,
-            const PreparedMetadata& prepared_metdata);
+  // TODO: Remove default parameters where possible
+  void init(const Config& config,
+            const ExecutionProfile& profile,
+            ConnectionPoolManager* manager,
+            const TokenMap* token_map,
+            RequestListener* listener);
 
   void execute();
 
@@ -214,8 +217,9 @@ private:
   uv_thread_t timer_thread_id_;
 
   const uint64_t start_time_ns_;
+  const PreparedMetadata& prepared_metadata_;
   Metrics* const metrics_;
-  RequestListener* const listener_;
+  RequestListener* listener_;
   ConnectionPoolManager* manager_;
   const Address preferred_address_;
 };

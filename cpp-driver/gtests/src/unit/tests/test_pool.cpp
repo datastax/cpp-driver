@@ -622,7 +622,6 @@ TEST_F(PoolUnitTest, Reconnect) {
   ConnectionPoolManager::Ptr manager = request_future->manager();
   ASSERT_TRUE(manager);
 
-  int i = 1;
   for (size_t i = 0; i < NUM_NODES; ++i) {
     listener_future.reset(Memory::allocate<ListenerFuture>(1));
     static_cast<Listener*>(manager->listener())->reset(listener_future);
@@ -637,7 +636,6 @@ TEST_F(PoolUnitTest, Reconnect) {
     start(i + 1); // Start node
     EXPECT_EQ(listener_future->count(ListenerFuture::UP), 1u) << listener_future->results();
     run_request(manager, addresses[i]);
-    ++i;
   }
 }
 

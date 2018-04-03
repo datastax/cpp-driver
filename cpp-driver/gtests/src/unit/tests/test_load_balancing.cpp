@@ -41,6 +41,7 @@
 const cass::String LOCAL_DC = "local";
 const cass::String REMOTE_DC = "remote";
 const cass::String BACKUP_DC = "backup";
+const cass::PreparedMetadata PREPARED_METADATA;
 
 #define VECTOR_FROM(t, a) cass::Vector<t>(a, a + sizeof(a)/sizeof(a[0]))
 
@@ -421,7 +422,9 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      new cass::RequestHandler(request,
+                               cass::ResponseFuture::Ptr(),
+                               PREPARED_METADATA));
 
     // Check for only local hosts are used
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
@@ -439,7 +442,9 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      new cass::RequestHandler(request,
+                               cass::ResponseFuture::Ptr(),
+                               PREPARED_METADATA));
 
     // Check for only local hosts are used
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
@@ -508,7 +513,9 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
   cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      new cass::RequestHandler(request,
+                               cass::ResponseFuture::Ptr(),
+                               PREPARED_METADATA));
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -587,7 +594,9 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
   cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      new cass::RequestHandler(request,
+                               cass::ResponseFuture::Ptr(),
+                               PREPARED_METADATA));
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -649,7 +658,9 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
   cass::SharedRefPtr<cass::RequestHandler> request_handler(
-      new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+      new cass::RequestHandler(request,
+                               cass::ResponseFuture::Ptr(),
+                               PREPARED_METADATA));
 
 
   cass::HostVec not_shuffled;

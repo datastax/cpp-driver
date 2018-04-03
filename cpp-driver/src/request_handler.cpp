@@ -96,9 +96,9 @@ void PrepareCallback::on_internal_timeout() {
 
 RequestHandler::RequestHandler(const Request::ConstPtr& request,
                                const ResponseFuture::Ptr& future,
-                               Metrics* metrics,
-                               RequestListener* listener,
-                               const Address* preferred_address)
+                               const PreparedMetadata& prepared_metadata,
+                               Metrics* metrics /*= NULL*/,
+                               const Address* preferred_address /*= NULL*/)
   : wrapper_(request)
   , future_(future)
   , is_cancelled_(false)
@@ -106,16 +106,20 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request,
   , is_timer_started_(false)
   , timer_thread_id_((uv_thread_t)0)
   , start_time_ns_(uv_hrtime())
+  , prepared_metadata_(prepared_metadata)
   , metrics_(metrics)
-  , listener_(listener)
+  , listener_(NULL)
   , manager_(NULL)
   , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) { }
 
-void RequestHandler::init(const Config& config, const ExecutionProfile& profile,
-                          ConnectionPoolManager* manager, const TokenMap* token_map,
-                          const PreparedMetadata& prepared_metdata) {
+void RequestHandler::init(const Config& config,
+                          const ExecutionProfile& profile,
+                          ConnectionPoolManager* manager,
+                          const TokenMap* token_map,
+                          RequestListener* listener) {
   manager_ = manager;
-  wrapper_.init(config, profile, prepared_metdata);
+  listener_ = listener;
+  wrapper_.init(config, profile, prepared_metadata_);
 
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
   const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());

@@ -19,12 +19,11 @@
 #include "batch_request.hpp"
 #include "cluster.hpp"
 #include "config.hpp"
-#include "connection_pool_manager_initializer.hpp"
 #include "constants.hpp"
 #include "execute_request.hpp"
 #include "logger.hpp"
-#include "prepare_all_handler.hpp"
 #include "prepare_request.hpp"
+#include "request_processor_manager_initializer.hpp"
 #include "scoped_lock.hpp"
 #include "statement.hpp"
 #include "timer.hpp"
@@ -196,7 +195,7 @@ void Session::clear(const Config& config) {
     hosts_.clear();
   }
   request_queue_.reset();
-  request_event_loop_group_.reset();
+  request_processor_manager_.reset();
   metadata_.clear();
   control_connection_.clear();
   connect_error_code_ = CASS_OK;
@@ -204,18 +203,8 @@ void Session::clear(const Config& config) {
   current_host_mark_ = true;
 }
 
-int Session::init(const String& connect_keyspace) {
-  int rc = EventLoop::init("Session");
-
-  request_queue_.reset(Memory::allocate<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
-
-  request_event_loop_group_.reset(Memory::allocate<RoundRobinRequestEventLoopGroup>(config_.thread_count_io()));
-  rc = request_event_loop_group_->init(config_,
-                                       connect_keyspace,
-                                       this);
-  if (rc != 0) return rc;
-
-  return rc;
+int Session::init() {
+  return EventLoop::init("Session");
 }
 
 Host::Ptr Session::get_host(const Address& address) {
@@ -228,24 +217,16 @@ Host::Ptr Session::get_host(const Address& address) {
   return it->second;
 }
 
-bool Session::dequeue(RequestHandler*& request_handler) {
-  return request_queue_->dequeue(request_handler);
-}
-
-bool Session::request_queue_empty() {
-  return request_queue_->is_empty();
-}
-
-Host::Ptr Session::add_host(const Address& address, bool is_new_node /*= false*/) {
+Host::Ptr Session::add_host(const Address& address) {
   LOG_DEBUG("Adding new host: %s", address.to_string().c_str());
   Host::Ptr host(Memory::allocate<Host>(address, !current_host_mark_));
   { // Lock hosts
     ScopedMutex l(&hosts_mutex_);
     hosts_[address] = host;
   }
-  if (is_new_node && request_event_loop_group_) {
-    request_event_loop_group_->notify_host_add_async(host);
-  }
+
+  //TODO(CPP-404): Remove NULL check once integrated with CPP-453?
+  if (request_processor_manager_) request_processor_manager_->notify_host_add_async(host);
   return host;
 }
 
@@ -295,14 +276,6 @@ void Session::on_prepare_host_up(const PrepareHostHandler* handler) {
   handler->session()->internal_on_up(handler->host());
 }
 
-void Session::notify_up_async(const Address& address) {
-  add(Memory::allocate<NotifyUp>(address));
-}
-
-void Session::notify_down_async(const Address& address) {
-  add(Memory::allocate<NotifyDown>(address));
-}
-
 void Session::connect_async(const Config& config, const String& keyspace, const Future::Ptr& future) {
   ScopedMutex l(&state_mutex_);
 
@@ -314,13 +287,14 @@ void Session::connect_async(const Config& config, const String& keyspace, const 
 
   clear(config);
 
-  if (init(keyspace) != 0) {
+  if (init() != 0) {
     future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
                       "Error initializing session");
     return;
   }
 
   state_.store(SESSION_STATE_CONNECTING, MEMORY_ORDER_RELAXED);
+  connect_keyspace_ = keyspace;
   connect_future_ = future;
 
   add(Memory::allocate<NotifyConnect>());
@@ -360,7 +334,7 @@ void Session::internal_connect() {
 }
 
 void Session::internal_close() {
-  request_event_loop_group_->close();
+  if (request_processor_manager_) request_processor_manager_->close();
   control_connection_.close();
   close_handles();
 
@@ -414,19 +388,12 @@ void Session::notify_closed() {
 
 void Session::close_handles() {
   EventLoop::close_handles();
-  request_event_loop_group_->close_handles();
+  if (request_processor_manager_) request_processor_manager_->close_handles();
   config().default_profile().load_balancing_policy()->close_handles();
 }
 
-void Session::on_run() {
-  EventLoop::on_run();
-  LOG_DEBUG("Creating %u IO worker threads",
-            static_cast<unsigned int>(config_.thread_count_io()));
-  request_event_loop_group_->run();
-}
-
 void Session::on_after_run() {
-  request_event_loop_group_->join();
+  if (request_processor_manager_) request_processor_manager_->join();
   notify_closed();
 }
 
@@ -462,16 +429,6 @@ void Session::handle_notify_connect() {
   }
 }
 
-void Session::NotifyUp::run(EventLoop* event_loop) {
-  Session* session = static_cast<Session*>(event_loop);
-  session->control_connection_.on_up(address_);
-}
-
-void Session::NotifyDown::run(EventLoop* event_loop) {
-  Session* session = static_cast<Session*>(event_loop);
-  session->control_connection_.on_down(address_);
-}
-
 void Session::on_resolve(MultiResolver<Session*>::Resolver* resolver) {
   Session* session = resolver->data()->data();
   if (resolver->is_success()) {
@@ -502,7 +459,7 @@ void Session::execute(const RequestHandler::Ptr& request_handler) {
 
   request_handler->inc_ref(); // Queue reference
   if (request_queue_->enqueue(request_handler.get())) {
-    request_event_loop_group_->notify_request_async();
+    request_processor_manager_->notify_request_async();
   } else {
     request_handler->dec_ref();
     request_handler->set_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
@@ -513,7 +470,6 @@ void Session::execute(const RequestHandler::Ptr& request_handler) {
 bool Session::token_map_init(const String& partitioner) {
   if (!token_map_) {
     token_map_.reset(TokenMap::from_partitioner(partitioner));
-    notify_token_map_update();
     return true;
   }
   return false;
@@ -571,49 +527,37 @@ void Session::load_balancing_policy_host_add_remove(const Host::Ptr& host,
                                                     bool is_add) {
   LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
   if (is_add) {
-    if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-      default_policy->on_add(host);
-    }
+    default_policy->on_add(host);
   } else {
     default_policy->on_remove(host);
   }
 }
 
 void Session::notify_token_map_update() {
-  request_event_loop_group_->notify_token_map_update_async(token_map_.get());
+  //TODO(CPP-404): Remove NULL check once integrated with CPP-453?
+  if (request_processor_manager_) request_processor_manager_->notify_token_map_update_async(token_map_.get());
 }
 
 void Session::on_control_connection_ready() {
   // No hosts lock necessary (only called on session thread and read-only)
-  LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
   const Host::Ptr connected_host = control_connection_.connected_host();
+  int protocol_version = control_connection_.protocol_version();
   Random* random = random_.get();
-  default_policy->init(connected_host, hosts_, random);
-  default_policy->register_handles(loop());
+  config().default_profile().load_balancing_policy()->init(connected_host, hosts_, random);
+  config().default_profile().load_balancing_policy()->register_handles(loop());
 
-  AddressVec addresses;
-  addresses.reserve(hosts_.size());
-
-  //TODO(fero): Do we need this checkout anymore?
-  // If addresses aren't ignored by the default load balancing policies then add
-  // them to be initialized on the thread pool.
-  for (HostMap::iterator i = hosts_.begin(), end = hosts_.end(); i != end; ++i) {
-    Host::Ptr host(i->second);
-    if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-      addresses.push_back(host->address());
-    }
-  }
-
-  if (addresses.empty()) {
-    notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                         "No hosts available for connection using the current load balancing policy");
-    return;
-  }
-
-  request_event_loop_group_->connect(connected_host,
-                                     control_connection_.protocol_version(),
-                                     hosts_,
-                                     token_map_.get());
+  request_queue_.reset(Memory::allocate<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
+  RequestProcessorManagerInitializer::Ptr initializer(Memory::allocate<RequestProcessorManagerInitializer>(this,
+                                                                                                           on_request_processor_manager_initialize));
+  initializer->with_cluster_config(config_)
+    ->with_connect_keyspace(connect_keyspace_)
+    ->with_hosts(connected_host, hosts_)
+    ->with_listener(this)
+    ->with_metrics(metrics_.get())
+    ->with_protocol_version(protocol_version)
+    ->with_request_queue(request_queue_.get())
+    ->with_token_map(token_map_.get())
+    ->initialize();
 
   // TODO: We really can't do this anymore
   if (config().core_connections_per_host() == 0) {
@@ -632,7 +576,10 @@ Future::Ptr Session::prepare(const char* statement, size_t length) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(metadata_.schema_snapshot(cassandra_version())));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future, metrics_.get(), this)));
+  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare,
+                                                               future,
+                                                               prepared_metadata(),
+                                                               metrics_.get())));
 
   return future;
 }
@@ -655,7 +602,10 @@ Future::Ptr Session::prepare(const Statement* statement) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(metadata_.schema_snapshot(cassandra_version())));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future, metrics_.get(), this)));
+  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare,
+                                                               future,
+                                                               prepared_metadata(),
+                                                               metrics_.get())));
 
   return future;
 }
@@ -672,16 +622,9 @@ void Session::internal_on_add(Host::Ptr host) {
   // Verify that the host is still available
   if (host->is_down()) return;
 
-  LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
-  if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-    default_policy->on_add(host);
-  } else {
-    LOG_DEBUG("Host %s will be ignored by all query plans",
-              host->address_string().c_str());
-    return;
-  }
+  config().default_profile().load_balancing_policy()->on_add(host);
 
-  if (request_event_loop_group_) request_event_loop_group_->notify_host_add_async(host);
+  request_processor_manager_->notify_host_add_async(host);
 }
 
 void Session::on_remove(Host::Ptr host) {
@@ -693,7 +636,7 @@ void Session::on_remove(Host::Ptr host) {
     hosts_.erase(host->address());
   }
 
-  if (request_event_loop_group_) request_event_loop_group_->notify_host_remove_async(host);
+  request_processor_manager_->notify_host_remove_async(host);
 }
 
 void Session::on_up(Host::Ptr host) {
@@ -708,119 +651,54 @@ void Session::internal_on_up(Host::Ptr host) {
   // Verify that the host is still available
   if (host->is_down()) return;
 
-  LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
-  if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-    default_policy->on_up(host);
-  } else {
-    LOG_DEBUG("Host %s will be ignored by query plans for control connection",
-              host->address_string().c_str());
-    return;
-  }
+  config().default_profile().load_balancing_policy()->on_up(host);
 }
 
 void Session::on_down(Host::Ptr host) {
   host->set_down();
 
-  LoadBalancingPolicy::Ptr default_policy = config().default_profile().load_balancing_policy();
-  if (default_policy->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-    default_policy->on_down(host);
+  config().default_profile().load_balancing_policy()->on_down(host);
+}
+
+void Session::on_request_processor_manager_initialize(RequestProcessorManagerInitializer* initializer) {
+  Session* session = static_cast<Session*>(initializer->data());
+  session->handle_request_processor_manager_initialize(initializer->release_manager(),
+                                                       initializer->failures());
+}
+
+void Session::handle_request_processor_manager_initialize(const RequestProcessorManager::Ptr& request_processor_manager,
+                                                          const RequestProcessor::Vec& failures) {
+  request_processor_manager_ = request_processor_manager;
+
+  // Check for failed connection(s) in the request processor(s)
+  if (!failures.empty()) {
+    // All failures should be the same, just pass the first error
+    notify_connect_error(failures[0]->error_code(),
+                         failures[0]->error_message());
   } else {
-    // This permanently removes a host from all IO workers by stopping
-    // any attempt to reconnect to that host if all load balancing policies
-    // ignore the host distance.
-    LOG_DEBUG("Host %s will be ignored by control connection query plans",
-              host->address_string().c_str());
+    notify_connected();
   }
 }
 
-void Session::on_result_metadata_changed(const String& prepared_id,
-                                         const String& query,
-                                         const String& keyspace,
-                                         const String& result_metadata_id,
-                                         const ResultResponse::ConstPtr& result_response) {
-  PreparedMetadata::Entry::Ptr entry(
-        Memory::allocate<PreparedMetadata::Entry>(query,
-                                                  keyspace,
-                                                  result_metadata_id,
-                                                  result_response));
-  prepared_metadata_.set(prepared_id, entry);
+void Session::on_keyspace_update(const String& keyspace) {
+  request_processor_manager_->keyspace_update(keyspace);
 }
 
-void Session::on_keyspace_changed(const String& keyspace) {
-  request_event_loop_group_->keyspace_update(keyspace);
-}
-
-bool Session::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
-                                           const Host::Ptr& current_host,
-                                           const Response::Ptr& response) {
-  SchemaAgreementHandler::Ptr handler(
-        Memory::allocate<SchemaAgreementHandler>(
-          request_handler, current_host, response,
-          this, config_.max_schema_wait_time_ms()));
-
-  PooledConnection::Ptr connection(request_event_loop_group_->find_least_busy(current_host->address()));
-  if (connection && connection->write(handler->callback().get())) {
-    return true;
-  }
-
-  return false;
-}
-
-bool Session::on_prepare_all(const RequestHandler::Ptr& request_handler,
-                             const Host::Ptr& current_host,
-                             const Response::Ptr& response) {
-  if (!config_.prepare_on_all_hosts()) {
-    return false;
-  }
-
-  AddressVec addresses = request_event_loop_group_->available();
-  if (addresses.empty() ||
-      (addresses.size() == 1 && addresses[0] == current_host->address())) {
-    return false;
-  }
-
-  PrepareAllHandler::Ptr prepare_all_handler(
-        new PrepareAllHandler(current_host,
-                              response,
-                              request_handler,
-                              // Subtract the node that's already been prepared
-                              addresses.size() - 1));
-
-  for (AddressVec::const_iterator it = addresses.begin(),
-       end = addresses.end(); it != end; ++it) {
-    const Address& address(*it);
-
-    // Skip over the node we've already prepared
-    if (address == current_host->address()) {
-      continue;
-    }
-
-    // The destructor of `PrepareAllCallback` will decrement the remaining
-    // count in `PrepareAllHandler` even if this is unable to write to a
-    // connection successfully.
-    PrepareAllCallback::Ptr prepare_all_callback(
-          new PrepareAllCallback(address, prepare_all_handler));
-
-    PooledConnection::Ptr connection(request_event_loop_group_->find_least_busy(address));
-    if (connection) {
-      connection->write(prepare_all_callback.get());
-    }
-  }
-
-  return true;
-}
-
-bool Session::on_is_host_up(const Address& address) {
-  Host::Ptr host(get_host(address));
-  return host && host->is_up();
+void Session::on_prepared_metadata_update(const String& id,
+                                          const PreparedMetadata::Entry::Ptr& entry) {
+  // No need for a read-write lock; PreparedMetadata handles this
+  prepared_metadata_.set(id, entry);
 }
 
 Future::Ptr Session::execute(const Request::ConstPtr& request,
                              const Address* preferred_address) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>());
 
-  execute(RequestHandler::Ptr(
-            Memory::allocate<RequestHandler>(request, future, metrics_.get(), this, preferred_address)));
+  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(request,
+                                                               future,
+                                                               prepared_metadata(),
+                                                               metrics_.get(),
+                                                               preferred_address)));
 
   return future;
 }

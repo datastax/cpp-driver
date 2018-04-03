@@ -252,8 +252,10 @@ private:
   ConnectionPool::Map pools_;
   ConnectionPoolConnector::Vec pending_pools_;
 
-  mutable uv_rwlock_t keyspace_rwlock_;
+  // This lock ensures keyspaces are updated as soon as it occurs
+  mutable uv_mutex_t keyspace_mutex_;
   String keyspace_;
+
   Metrics* const metrics_;
 };
 

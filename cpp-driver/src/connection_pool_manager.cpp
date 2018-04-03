@@ -42,14 +42,14 @@ ConnectionPoolManager::ConnectionPoolManager(EventLoop* event_loop,
   , keyspace_(keyspace)
   , metrics_(metrics) {
   inc_ref(); // Reference for the lifetime of the connection pools
-  uv_rwlock_init(&keyspace_rwlock_);
+  uv_mutex_init(&keyspace_mutex_);
   pools_.set_empty_key(Address::EMPTY_KEY);
   pools_.set_deleted_key(Address::DELETED_KEY);
   request_queue_.init(event_loop_, settings_.queue_size_io);
 }
 
 ConnectionPoolManager::~ConnectionPoolManager() {
-  uv_rwlock_destroy(&keyspace_rwlock_);
+  uv_mutex_destroy(&keyspace_mutex_);
 }
 
 PooledConnection::Ptr ConnectionPoolManager::find_least_busy(const Address& address) const {
@@ -114,12 +114,12 @@ void ConnectionPoolManager::close() {
 }
 
 String ConnectionPoolManager::keyspace() const {
-  ScopedReadLock rl(&keyspace_rwlock_);
+  ScopedMutex l(&keyspace_mutex_);
   return keyspace_;
 }
 
 void ConnectionPoolManager::set_keyspace(const String& keyspace) {
-  ScopedWriteLock wl(&keyspace_rwlock_);
+  ScopedMutex l(&keyspace_mutex_);
   keyspace_ = keyspace;
 }
 

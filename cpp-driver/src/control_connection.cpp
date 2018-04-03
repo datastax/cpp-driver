@@ -445,7 +445,7 @@ void ControlConnection::on_event(const EventResponse* response) {
           LOG_INFO("New node %s added", address_str.c_str());
           Host::Ptr host = session_->get_host(response->affected_node());
           if (!host) {
-            host = session_->add_host(response->affected_node(), true);
+            host = session_->add_host(response->affected_node());
             refresh_node_info(host, true, true);
           }
           break;

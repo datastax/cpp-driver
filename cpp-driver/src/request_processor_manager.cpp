@@ -1,0 +1,114 @@
+/*
+  Copyright (c) DataStax, Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+#include "request_processor_manager.hpp"
+
+namespace cass {
+
+RequestProcessorManager::RequestProcessorManager(size_t num_threads)
+  : current_(0)
+  , threads_(num_threads) { }
+
+void RequestProcessorManager::close() {
+  internal_close();
+}
+
+void RequestProcessorManager::close_handles() {
+  internal_close_handles();
+}
+
+void RequestProcessorManager::join() {
+  internal_join();
+}
+
+void RequestProcessorManager::keyspace_update(const String& keyspace) {
+  internal_keyspace_update(keyspace);
+}
+
+void RequestProcessorManager::notify_host_add_async(const Host::Ptr& host) {
+  internal_notify_host_add_async(host);
+}
+
+void RequestProcessorManager::notify_host_remove_async(const Host::Ptr& host) {
+  internal_notify_host_add_async(host);
+}
+
+void RequestProcessorManager::notify_token_map_update_async(const TokenMap* token_map) {
+  internal_notify_token_map_update_async(token_map);
+}
+
+void RequestProcessorManager::notify_request_async() {
+  internal_notify_request_async();
+}
+
+void RequestProcessorManager::add_request_processor(const RequestProcessor::Ptr& request_processor,
+                                                    Protected) {
+  internal_add_request_processor(request_processor);
+}
+
+void RequestProcessorManager::internal_add_request_processor(const RequestProcessor::Ptr& request_processor) {
+  size_t index = current_.fetch_add(1) % threads_.size();
+  threads_[index] = request_processor;
+}
+
+void RequestProcessorManager::internal_close() {
+  for (size_t i = 0; i < threads_.size(); ++i) {
+    threads_[i]->close();
+  }
+}
+
+void RequestProcessorManager::internal_close_handles() {
+  for (size_t i = 0; i < threads_.size(); ++i) {
+    threads_[i]->close_handles();
+  }
+}
+
+void RequestProcessorManager::internal_join() {
+  for (size_t i = 0; i < threads_.size(); ++i) {
+    threads_[i]->join();
+  }
+}
+
+void RequestProcessorManager::internal_notify_host_add_async(const Host::Ptr& host) {
+  for (size_t i = 0; i < threads_.size(); ++i) {
+    threads_[i]->notify_host_add_async(host);
+  }
+}
+
+void RequestProcessorManager::internal_notify_host_remove_async(const Host::Ptr& host) {
+  for (size_t i = 0; i < threads_.size(); ++i) {
+    threads_[i]->notify_host_remove_async(host);
+  }
+}
+
+void RequestProcessorManager::internal_keyspace_update(const String& keyspace) {
+  for (size_t i = 0; i < threads_.size(); ++i) {
+    threads_[i]->keyspace_update(keyspace);
+  }
+}
+
+void RequestProcessorManager::internal_notify_token_map_update_async(const TokenMap* token_map) {
+  for (size_t i = 0; i < threads_.size(); ++i) {
+    threads_[i]->notify_token_map_update_async(token_map->clone());
+  }
+}
+
+void RequestProcessorManager::internal_notify_request_async() {
+  size_t index = current_.fetch_add(1) % threads_.size();
+  threads_[index]->notify_request_async();
+}
+
+}
