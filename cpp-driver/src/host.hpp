@@ -245,6 +245,12 @@ private:
 };
 
 typedef Map<Address, Host::Ptr> HostMap;
+struct GetAddress {
+  typedef std::pair<Address, Host::Ptr> Pair;
+  const Address& operator()(const Pair& pair) const {
+    return pair.first;
+  }
+};
 struct GetHost {
   typedef std::pair<Address, Host::Ptr> Pair;
   Host::Ptr operator()(const Pair& pair) const {

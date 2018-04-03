@@ -39,19 +39,19 @@ ConnectionPoolManagerInitializer::~ConnectionPoolManagerInitializer() {
   uv_mutex_destroy(&lock_);
 }
 
-void ConnectionPoolManagerInitializer::initialize(const HostMap& hosts) {
+void ConnectionPoolManagerInitializer::initialize(const AddressVec& addresses) {
   inc_ref();
-  remaining_.store(hosts.size());
+  remaining_.store(addresses.size());
   manager_.reset(Memory::allocate<ConnectionPoolManager>(event_loop_,
                                                          protocol_version_,
                                                          keyspace_,
                                                          listener_,
                                                          metrics_,
                                                          settings_));
-  for (HostMap::const_iterator it = hosts.begin(),
-       end = hosts.end(); it != end; ++it) {
+  for (AddressVec::const_iterator it = addresses.begin(),
+       end = addresses.end(); it != end; ++it) {
     ConnectionPoolConnector::Ptr pool_connector(Memory::allocate<ConnectionPoolConnector>(manager_.get(),
-                                                                                          it->first,
+                                                                                          *it,
                                                                                           this,
                                                                                           on_connect));
     pool_connector->connect();

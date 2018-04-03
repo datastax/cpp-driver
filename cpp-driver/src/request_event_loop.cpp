@@ -111,8 +111,6 @@ void RequestEventLoop::on_critical_error(const Address& address,
 void RequestEventLoop::internal_connect(const Host::Ptr& current_host,
                                         int protocol_version,
                                         const HostMap& hosts) {
-  hosts_ = hosts;
-
   // This needs to be done on the control connection thread because it could
   //  pause generating a new random seed.
   if (config_.use_randomized_contact_points()) {
@@ -120,25 +118,29 @@ void RequestEventLoop::internal_connect(const Host::Ptr& current_host,
   }
 
   // Initialize the load balancing policies and ensure there are hosts available
-  HostMap valid_hosts;
+  hosts_.clear();
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
   for (LoadBalancingPolicy::Vec::const_iterator lbp = policies.begin(),
        end = policies.end(); lbp != end; ++lbp) {
     // Initialize the load balancing policies
-    (*lbp)->init(current_host, hosts_, random_.get());
+    (*lbp)->init(current_host, hosts, random_.get());
     (*lbp)->register_handles(loop());
 
-    // Ensure there are hosts available
-    for (HostMap::const_iterator pair = hosts_.begin(), end = hosts_.end();
+    // Ensure there are hosts available (update local copy)
+    for (HostMap::const_iterator pair = hosts.begin(), end = hosts.end();
          pair != end; ++pair) {
       const Host::Ptr& host = pair->second;
       if ((*lbp)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-        valid_hosts[pair->first] = host;
+        hosts_[pair->first] = pair->second;
       }
     }
   }
 
-  if (!valid_hosts.empty()) {
+  if (!hosts_.empty()) {
+    AddressVec addresses;
+    addresses.reserve(hosts_.size());
+    std::transform(hosts_.begin(), hosts_.end(), std::back_inserter(addresses), GetAddress());
+
     ConnectionPoolManagerInitializer::Ptr initializer(Memory::allocate<ConnectionPoolManagerInitializer>(this,
                                                       protocol_version,
                                                       this,
@@ -148,7 +150,7 @@ void RequestEventLoop::internal_connect(const Host::Ptr& current_host,
       ->with_listener(this)
       ->with_keyspace(connect_keyspace_)
       ->with_metrics(metrics_)
-      ->initialize(valid_hosts);
+      ->initialize(addresses);
   } else {
     listener_->notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                                     "No hosts available for IO worker using the available load balancing policy(s)");
