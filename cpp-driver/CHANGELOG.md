@@ -1,3 +1,15 @@
+2.9.0
+===========
+
+Features
+--------
+* [CPP-578] Add NO_COMPACT startup option
+
+Other
+--------
+* [CPP-566] Ignore control connection DOWN events if there are open connections
+* [CPP-584] win: Message for Boost v1.66.0+ using CMake v3.10.x or lower
+
 2.8.1
 ===========
 
