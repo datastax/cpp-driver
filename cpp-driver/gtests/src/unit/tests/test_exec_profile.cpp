@@ -13,7 +13,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-
 #include <gtest/gtest.h>
 
 #include "config.hpp"
@@ -25,7 +24,7 @@ TEST(ExecutionProfileUnitTest, Consistency) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(CASS_DEFAULT_CONSISTENCY, profile_lookup.consistency());
@@ -40,7 +39,7 @@ TEST(ExecutionProfileUnitTest, SerialConsistency) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(CASS_DEFAULT_SERIAL_CONSISTENCY, profile_lookup.serial_consistency());
@@ -55,7 +54,7 @@ TEST(ExecutionProfileUnitTest, RequestTimeout) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(CASS_DEFAULT_REQUEST_TIMEOUT_MS, profile_lookup.request_timeout_ms());
@@ -76,7 +75,7 @@ TEST(ExecutionProfileUnitTest, ClusterLoadBalancingPolicy) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(copy_config.default_profile().load_balancing_policy().get(),
@@ -95,7 +94,7 @@ TEST(ExecutionProfileUnitTest, ClusterLoadBalancingPolicies) {
   config.set_execution_profile("profile_2", &profile_2);
   config.set_execution_profile("profile_3", &profile_3);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_1_lookup;
   ASSERT_TRUE(copy_config.profile("profile_1", profile_1_lookup));
   cass::ExecutionProfile profile_2_lookup;
@@ -127,7 +126,7 @@ TEST(ExecutionProfileUnitTest, Blacklist) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(profile.blacklist().size(), profile_lookup.blacklist().size());
@@ -151,7 +150,7 @@ TEST(ExecutionProfileUnitTest, BlacklistDC) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(profile.blacklist_dc().size(), profile_lookup.blacklist_dc().size());
@@ -175,7 +174,7 @@ TEST(ExecutionProfileUnitTest, Whitelist) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(profile.whitelist().size(), profile_lookup.whitelist().size());
@@ -199,7 +198,7 @@ TEST(ExecutionProfileUnitTest, WhitelistDC) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(profile.whitelist_dc().size(), profile_lookup.whitelist_dc().size());
@@ -219,7 +218,7 @@ TEST(ExecutionProfileUnitTest, LatencyAware) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_FALSE(copy_config.default_profile().latency_aware());
@@ -233,7 +232,7 @@ TEST(ExecutionProfileUnitTest, TokenAware) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_TRUE(copy_config.default_profile().token_aware_routing());
@@ -251,7 +250,7 @@ TEST(ExecutionProfileUnitTest, ClusterRetryPolicy) {
   cass::Config config;
   config.set_execution_profile("profile", &profile);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_lookup;
   ASSERT_TRUE(copy_config.profile("profile", profile_lookup));
   ASSERT_EQ(copy_config.default_profile().retry_policy().get(),
@@ -270,7 +269,7 @@ TEST(ExecutionProfileUnitTest, ClusterRetryPolicies) {
   config.set_execution_profile("profile_2", &profile_2);
   config.set_execution_profile("profile_3", &profile_3);
 
-  cass::Config copy_config = config.new_instance();
+  cass::Config copy_config = config.new_instance(false);
   cass::ExecutionProfile profile_1_lookup;
   ASSERT_TRUE(copy_config.profile("profile_1", profile_1_lookup));
   cass::ExecutionProfile profile_2_lookup;

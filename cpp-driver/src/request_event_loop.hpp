@@ -32,6 +32,13 @@ namespace cass {
 class ConnectionPoolManagerInitializer;
 class Session;
 
+class RequestEventLoopListener {
+public:
+  virtual void notify_connected() = 0;
+  virtual void notify_connect_error(CassError code,
+                                      const String& message) = 0;
+};
+
 /**
  * Request event loop for processing client session request(s). This event loop
  * will fetch a request from the queue and process them accordingly by applying
@@ -43,7 +50,7 @@ class RequestEventLoop : public EventLoop
 public:
   /**
    * Create the request event loop making copies of the cluster configuration
-   * settings.
+   * settings
    */
   RequestEventLoop();
 
@@ -59,6 +66,10 @@ public:
            const String& connect_keyspace,
            Session* session);
   /**
+   * Close the request event loop handles
+   */
+  void close_handles();
+  /**
    * Connect the request event loop to the pre-established hosts using the
    * given protocol version and initialize the local token map
    *
@@ -70,7 +81,8 @@ public:
   void connect(const Host::Ptr& connected_host,
                int protocol_version,
                const HostMap& hosts,
-               const TokenMap* token_map);
+               const TokenMap* token_map,
+               RequestEventLoopListener* listener);
   /**
    * Update the current keyspace being used for requests (thread-safe)
    *
@@ -78,9 +90,9 @@ public:
    */
   void keyspace_update(const String& keyspace);
   /**
-   * Terminate the request event loops
+   * Close/Terminate the request event loops
    */
-  void terminate();
+  void close();
 
   /* Notifications to be performed by the request event loop thread */
   void notify_host_add_async(const Host::Ptr& host);
@@ -109,33 +121,18 @@ public:
   virtual void on_critical_error(const Address& address,
                                  Connector::ConnectionError code,
                                  const String& message);
-  virtual void on_close();
 
 private:
   void internal_connect(const Host::Ptr& current_host,
                         int protocol_version,
                         const HostMap& hosts);
   void internal_close();
-  void internal_terminate();
   void internal_token_map_update(const TokenMap* token_map);
 
   Host::Ptr get_host(const Address& address);
   const LoadBalancingPolicy::Vec& load_balancing_policies() const;
 
 private:
-  // Connection pool manager initializer listener callback task for async operations
-  class NotifyConnectionPoolManagerInitalize : public Task {
-  public:
-    NotifyConnectionPoolManagerInitalize(const ConnectionPoolManager::Ptr& manager,
-                                         const ConnectionPoolConnector::Vec& failures)
-      : manager_(manager)
-      , failures_(failures) { }
-    virtual void run(EventLoop* event_loop);
-  private:
-    ConnectionPoolManager::Ptr manager_;
-    ConnectionPoolConnector::Vec failures_;
-  };
-
   // Session/RoundRobinRequestEventLoopGroup tasks for async operations
   class NotifyHostAdd : public Task {
   public:
@@ -208,6 +205,7 @@ private:
   Session* session_;
   ScopedPtr<const TokenMap> token_map_;
 
+  RequestEventLoopListener* listener_;
   ConnectionPoolManager::Ptr manager_;
 
   Atomic<bool> is_flushing_;
@@ -218,7 +216,7 @@ private:
  * A group of request event loops where pre-defined tasks are assigned to all or
  * a specific request event loop using round-robin.
  */
-class RoundRobinRequestEventLoopGroup {
+class RoundRobinRequestEventLoopGroup : public RequestEventLoopListener {
 public:
   /**
    * Constructor
@@ -226,9 +224,7 @@ public:
    * @param num_threads Number of request event loop threads to handle
    *                    processing of the client requests
    */
-  RoundRobinRequestEventLoopGroup(size_t num_threads)
-    : current_(0)
-    , threads_(num_threads) { }
+  RoundRobinRequestEventLoopGroup(size_t num_threads);
 
    /**
     * Initialize the request event loop group
@@ -240,24 +236,28 @@ public:
     */
   int init(const Config& config, const String& keyspace, Session* session);
   /**
-   * Start the request event loop thread.
+   * Start the request event loop thread (thread safe)
    *
-   * @return Returns 0 if successful, otherwise an error occurred.
+   * @return Returns 0 if successful, otherwise an error occurred
    */
   void run();
   /**
-   * Waits for the request event loop thread to exit (thread-safe).
+   * Closes the request event loop handles (thread-safe)
+   */
+  void close_handles();
+  /**
+   * Waits for the request event loop thread to exit (thread-safe)
    */
   void join();
 
   /**
-   * Get addresses for all available hosts (thread-safe).
+   * Get addresses for all available hosts (thread-safe)
    *
-   * @return A vector of addresses.
+   * @return A vector of addresses
    */
   AddressVec available();
   /**
-   * Find the least busy connection for a given host (thread-safe).
+   * Find the least busy connection for a given host (thread-safe)
    *
    * @param address The address of the host to find a least busy connection.
    * @return The least busy connection for a host or null if no connections are
@@ -285,9 +285,9 @@ public:
    */
   void keyspace_update(const String& keyspace);
   /**
-   * Terminate the request event loops
+   * Close/Terminate the request event loops
    */
-  void terminate();
+  void close();
 
   /**
    * Add a new host to the request event loops
@@ -308,7 +308,7 @@ public:
    */
   void notify_token_map_update_async(const TokenMap* token_map);
   /**
-   * Notify one of the request event loops that a new request is available.
+   * Notify one of the request event loops that a new request is available
    *
    * NOTE: The request event loop selected during the round robin process may or
    *       may not be notified if it is currently flushing requests from the
@@ -316,7 +316,14 @@ public:
    */
   void notify_request_async();
 
+
+  virtual void notify_connected();
+  virtual void notify_connect_error(CassError code, const String& message);
+
 private:
+  Session* session_;
+  Atomic<size_t> connected_;
+
   Atomic<size_t> current_;
   DynamicArray<RequestEventLoop> threads_;
 };

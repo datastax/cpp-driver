@@ -78,9 +78,9 @@ public:
     default_profile_.set_retry_policy(Memory::allocate<DefaultRetryPolicy>());
   }
 
-  Config new_instance() const {
+  Config new_instance(bool is_default_only) const {
     Config config = *this;
-    config.init_profiles(); // Builds the LBPs and updates the profiles
+    config.init_profiles(is_default_only); // Builds the LBPs and updates the profiles
     config.set_speculative_execution_policy(speculative_execution_policy_->new_instance());
 
     return config;
@@ -383,7 +383,7 @@ public:
   }
 
 private:
-  void init_profiles();
+  void init_profiles(bool is_default_only);
 
 private:
   int port_;

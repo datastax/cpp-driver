@@ -166,7 +166,7 @@ private:
   // TODO(mpenick): Consider removing friend access to session
   friend class ControlConnection;
 
-  Host::Ptr add_host(const Address& address);
+  Host::Ptr add_host(const Address& address, bool is_new_node = false);
   void purge_hosts(bool is_initial_connection);
 
   Metadata& metadata() { return metadata_; }
@@ -225,7 +225,6 @@ private:
   HostMap hosts_;
   uv_mutex_t hosts_mutex_;
 
-  Atomic<unsigned int> request_event_loops_connected_;
   ScopedPtr<RoundRobinRequestEventLoopGroup> request_event_loop_group_;
   ScopedPtr<MPMCQueue<RequestHandler*> > request_queue_;
 

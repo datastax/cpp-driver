@@ -174,8 +174,7 @@ namespace cass {
 Session::Session()
   : state_(SESSION_STATE_CLOSED)
   , connect_error_code_(CASS_OK)
-  , current_host_mark_(true)
-  , request_event_loops_connected_(0) {
+  , current_host_mark_(true) {
   uv_mutex_init(&state_mutex_);
   uv_mutex_init(&hosts_mutex_);
 }
@@ -187,7 +186,7 @@ Session::~Session() {
 }
 
 void Session::clear(const Config& config) {
-  config_ = config.new_instance();
+  config_ = config.new_instance(true);
   random_.reset();
   metrics_.reset(Memory::allocate<Metrics>(config_.thread_count_io() + 1));
   connect_future_.reset();
@@ -237,12 +236,15 @@ bool Session::request_queue_empty() {
   return request_queue_->is_empty();
 }
 
-Host::Ptr Session::add_host(const Address& address) {
+Host::Ptr Session::add_host(const Address& address, bool is_new_node /*= false*/) {
   LOG_DEBUG("Adding new host: %s", address.to_string().c_str());
   Host::Ptr host(Memory::allocate<Host>(address, !current_host_mark_));
   { // Lock hosts
     ScopedMutex l(&hosts_mutex_);
     hosts_[address] = host;
+  }
+  if (is_new_node && request_event_loop_group_) {
+    request_event_loop_group_->notify_host_add_async(host);
   }
   return host;
 }
@@ -358,7 +360,7 @@ void Session::internal_connect() {
 }
 
 void Session::internal_close() {
-  request_event_loop_group_->terminate();
+  request_event_loop_group_->close();
   control_connection_.close();
   close_handles();
 
@@ -366,19 +368,16 @@ void Session::internal_close() {
 }
 
 void Session::notify_connected() {
-  request_event_loops_connected_.fetch_add(1);
-  if (request_event_loops_connected_.load() == config().thread_count_io()) { // Complete notification when all request event loops are connected
-    LOG_DEBUG("Session is connected");
+  LOG_DEBUG("Session is connected");
 
-    ScopedMutex l(&state_mutex_);
+  ScopedMutex l(&state_mutex_);
 
-    if (state_.load(MEMORY_ORDER_RELAXED) == SESSION_STATE_CONNECTING) {
-      state_.store(SESSION_STATE_CONNECTED, MEMORY_ORDER_RELAXED);
-    }
-    if (connect_future_) {
-      connect_future_->set();
-      connect_future_.reset();
-    }
+  if (state_.load(MEMORY_ORDER_RELAXED) == SESSION_STATE_CONNECTING) {
+    state_.store(SESSION_STATE_CONNECTED, MEMORY_ORDER_RELAXED);
+  }
+  if (connect_future_) {
+    connect_future_->set();
+    connect_future_.reset();
   }
 }
 
@@ -415,6 +414,7 @@ void Session::notify_closed() {
 
 void Session::close_handles() {
   EventLoop::close_handles();
+  request_event_loop_group_->close_handles();
   config().default_profile().load_balancing_policy()->close_handles();
 }
 
@@ -594,6 +594,7 @@ void Session::on_control_connection_ready() {
   AddressVec addresses;
   addresses.reserve(hosts_.size());
 
+  //TODO(fero): Do we need this checkout anymore?
   // If addresses aren't ignored by the default load balancing policies then add
   // them to be initialized on the thread pool.
   for (HostMap::iterator i = hosts_.begin(), end = hosts_.end(); i != end; ++i) {

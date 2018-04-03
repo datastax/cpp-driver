@@ -110,7 +110,6 @@ void ConnectionPoolManager::close() {
       (*it)->cancel();
     }
   }
-  request_queue_.close_handles();
   maybe_closed();
 }
 

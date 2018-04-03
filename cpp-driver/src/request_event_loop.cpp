@@ -28,17 +28,29 @@ RequestEventLoop::RequestEventLoop()
 int RequestEventLoop::init(const Config& config,
                            const String& connect_keyspace,
                            Session* session) {
-  config_ = config.new_instance();
+  config_ = config.new_instance(false);
   connect_keyspace_ = connect_keyspace;
   session_ = session;
   metrics_ = session_->metrics();
   return EventLoop::init("Request Event Loop");
 }
 
+void RequestEventLoop::close_handles() {
+  EventLoop::close_handles();
+  if (manager_) manager_->close_handles();
+  LoadBalancingPolicy::Vec policies = load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    (*it)->close_handles();
+  }
+}
+
 void RequestEventLoop::connect(const Host::Ptr& current_host,
                                int protocol_version,
                                const HostMap& hosts,
-                               const TokenMap* token_map) {
+                               const TokenMap* token_map,
+                               RequestEventLoopListener* listener) {
+  listener_ = listener;
   internal_token_map_update(token_map);
   internal_connect(current_host, protocol_version, hosts);
 }
@@ -47,8 +59,8 @@ void RequestEventLoop::keyspace_update(const String& keyspace) {
   if (manager_) manager_->set_keyspace(keyspace);
 }
 
-void RequestEventLoop::terminate() {
-  internal_terminate();
+void RequestEventLoop::close() {
+  internal_close();
 }
 
 void RequestEventLoop::notify_host_add_async(const Host::Ptr& host) {
@@ -64,7 +76,7 @@ void RequestEventLoop::notify_token_map_update_async(const TokenMap* token_map) 
 }
 
 void RequestEventLoop::notify_request_async() {
-  // Only signal request processing if it's not already processing requests.
+  // Only signal request processing if it's not already processing requests
   bool expected = false;
   if (!is_flushing_.load() &&
       is_flushing_.compare_exchange_strong(expected, true)) {
@@ -96,10 +108,6 @@ void RequestEventLoop::on_critical_error(const Address& address,
   on_down(address);
 }
 
-void RequestEventLoop::on_close() {
-  internal_close();
-}
-
 void RequestEventLoop::internal_connect(const Host::Ptr& current_host,
                                         int protocol_version,
                                         const HostMap& hosts) {
@@ -112,22 +120,25 @@ void RequestEventLoop::internal_connect(const Host::Ptr& current_host,
   }
 
   // Initialize the load balancing policies and ensure there are hosts available
-  AddressVec addresses;
-  addresses.reserve(hosts_.size());
+  HostMap valid_hosts;
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
-  for (HostMap::const_iterator i = hosts_.begin(), end = hosts_.end(); i != end; ++i) {
-    Host::Ptr host(i->second);
-    for (LoadBalancingPolicy::Vec::const_iterator j = policies.begin(),
-         end = policies.end(); j != end; ++j) {
-      if ((*j)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-        addresses.push_back(host->address());
-        (*j)->init(current_host, hosts_, random_.get());
-        (*j)->register_handles(loop());
+  for (LoadBalancingPolicy::Vec::const_iterator lbp = policies.begin(),
+       end = policies.end(); lbp != end; ++lbp) {
+    // Initialize the load balancing policies
+    (*lbp)->init(current_host, hosts_, random_.get());
+    (*lbp)->register_handles(loop());
+
+    // Ensure there are hosts available
+    for (HostMap::const_iterator pair = hosts_.begin(), end = hosts_.end();
+         pair != end; ++pair) {
+      const Host::Ptr& host = pair->second;
+      if ((*lbp)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+        valid_hosts[pair->first] = host;
       }
     }
   }
 
-  if (!addresses.empty()) {
+  if (!valid_hosts.empty()) {
     ConnectionPoolManagerInitializer::Ptr initializer(Memory::allocate<ConnectionPoolManagerInitializer>(this,
                                                       protocol_version,
                                                       this,
@@ -137,33 +148,19 @@ void RequestEventLoop::internal_connect(const Host::Ptr& current_host,
       ->with_listener(this)
       ->with_keyspace(connect_keyspace_)
       ->with_metrics(metrics_)
-      ->initialize(addresses);
+      ->initialize(valid_hosts);
+  } else {
+    listener_->notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                                    "No hosts available for IO worker using the available load balancing policy(s)");
   }
 }
 
 void RequestEventLoop::internal_close() {
-  while (is_flushing_.load()) {
-    ;; // Wait for flushing to complete
-  }
-
-  LoadBalancingPolicy::Vec policies = load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    (*it)->close_handles();
-  }
-  EventLoop::close_handles();
-}
-
-void RequestEventLoop::internal_terminate() {
-  if (manager_) {
-    manager_->close();
-  } else {
-    internal_close(); // Manager is not available; however LBPs need to be properly closed
-  }
+  if (manager_) manager_->close();
 }
 
 void RequestEventLoop::internal_token_map_update(const TokenMap* token_map) {
-  token_map_.reset(token_map);
+  if (token_map_) token_map_.reset(token_map);
 }
 
 Host::Ptr RequestEventLoop::get_host(const Address& address) {
@@ -180,13 +177,8 @@ const LoadBalancingPolicy::Vec& RequestEventLoop::load_balancing_policies() cons
 
 void RequestEventLoop::on_connection_pool_manager_initialize(ConnectionPoolManagerInitializer* initializer) {
   RequestEventLoop* request_event_loop = static_cast<RequestEventLoop*>(initializer->data());
-  request_event_loop->add(Memory::allocate<NotifyConnectionPoolManagerInitalize>(initializer->release_manager(),
-                                                                                 initializer->failures()));
-}
-
-void RequestEventLoop::NotifyConnectionPoolManagerInitalize::run(EventLoop* event_loop) {
-  RequestEventLoop* request_event_loop = static_cast<RequestEventLoop*>(event_loop);
-  request_event_loop->internal_connection_pool_manager_initialize(manager_, failures_);
+  request_event_loop->internal_connection_pool_manager_initialize(initializer->release_manager(),
+                                                                  initializer->failures());
 }
 
 void RequestEventLoop::internal_connection_pool_manager_initialize(const ConnectionPoolManager::Ptr& manager,
@@ -207,18 +199,18 @@ void RequestEventLoop::internal_connection_pool_manager_initialize(const Connect
   }
 
   if (is_keyspace_error) {
-    session_->notify_connect_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                                   "Keyspace '" + connect_keyspace_
-                                   + "' does not exist");
+    listener_->notify_connect_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+                                    "Keyspace '" + connect_keyspace_
+                                    + "' does not exist");
   } else if (hosts_.empty()) {
-    session_->notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                                   "Unable to connect to any hosts");
+    listener_->notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                                    "Unable to connect to any hosts");
   } else {
     for (HostMap::iterator it = hosts_.begin(), end = hosts_.end();
          it != end; ++it) {
       it->second->set_up();
     }
-    session_->notify_connected();
+    listener_->notify_connected();
   }
 }
 
@@ -233,7 +225,6 @@ void RequestEventLoop::internal_host_add_down_up(const Host::Ptr& host,
       switch (state) {
         case Host::ADDED:
           (*it)->on_add(host);
-          manager_->add(host->address());
           break;
         case Host::DOWN:
           (*it)->on_down(host);
@@ -330,13 +321,21 @@ void RequestEventLoop::NotifyHostRemove::run(EventLoop* event_loop) {
 void RequestEventLoop::NotifyHostDown::run(EventLoop* event_loop) {
   RequestEventLoop* request_event_loop = static_cast<RequestEventLoop*>(event_loop);
   Host::Ptr host = request_event_loop->get_host(address_);
-  request_event_loop->internal_host_add_down_up(host, Host::DOWN);
+  if (host) {
+    request_event_loop->internal_host_add_down_up(host, Host::DOWN);
+  } else {
+    LOG_DEBUG("Tried to down host %s that doesn't exist", address_.to_string().c_str());
+  }
 }
 
 void RequestEventLoop::NotifyHostUp::run(EventLoop* event_loop) {
   RequestEventLoop* request_event_loop = static_cast<RequestEventLoop*>(event_loop);
   Host::Ptr host = request_event_loop->get_host(address_);
-  request_event_loop->internal_host_add_down_up(host, Host::UP);
+  if (host) {
+    request_event_loop->internal_host_add_down_up(host, Host::UP);
+  } else {
+    LOG_DEBUG("Tried to up host %s that doesn't exist", address_.to_string().c_str());
+  }
 }
 
 void RequestEventLoop::NotifyRequest::run(EventLoop* event_loop) {
@@ -344,9 +343,17 @@ void RequestEventLoop::NotifyRequest::run(EventLoop* event_loop) {
   request_event_loop->internal_flush_requests();
 }
 
+RoundRobinRequestEventLoopGroup::RoundRobinRequestEventLoopGroup(size_t num_threads)
+  : session_(NULL)
+  , connected_(0)
+  , current_(0)
+  , threads_(num_threads) { }
+
 int RoundRobinRequestEventLoopGroup::init(const Config& config,
                                           const String& keyspace,
                                           Session* session) {
+  session_ = session;
+
   for (size_t i = 0; i < threads_.size(); ++i) {
     int rc = threads_[i].init(config, keyspace, session);
     if (rc != 0) return rc;
@@ -357,6 +364,12 @@ int RoundRobinRequestEventLoopGroup::init(const Config& config,
 void RoundRobinRequestEventLoopGroup::run() {
   for (size_t i = 0; i < threads_.size(); ++i) {
     threads_[i].run();
+  }
+}
+
+void RoundRobinRequestEventLoopGroup::close_handles() {
+  for (size_t i = 0; i < threads_.size(); ++i) {
+    threads_[i].close_handles();
   }
 }
 
@@ -384,13 +397,14 @@ void RoundRobinRequestEventLoopGroup::connect(const Host::Ptr& current_host,
     threads_[i].connect(current_host,
                         protocol_version,
                         hosts,
-                        token_map->clone());
+                        token_map->clone(),
+                        this);
   }
 }
 
-void RoundRobinRequestEventLoopGroup::terminate() {
+void RoundRobinRequestEventLoopGroup::close() {
   for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i].terminate();
+    threads_[i].close();
   }
 }
 
@@ -421,6 +435,19 @@ void RoundRobinRequestEventLoopGroup::notify_token_map_update_async(const TokenM
 void RoundRobinRequestEventLoopGroup::notify_request_async() {
   RequestEventLoop* request_event_loop = &threads_[current_.fetch_add(1) % threads_.size()];
   request_event_loop->notify_request_async();
+}
+
+void RoundRobinRequestEventLoopGroup::notify_connected() {
+  if (connected_.fetch_add(1) + 1 == threads_.size()) {
+    session_->notify_connected();
+  }
+}
+
+void RoundRobinRequestEventLoopGroup::notify_connect_error(CassError code,
+                                                           const String& message) {
+  if (connected_.fetch_add(1) + 1 == threads_.size()) {
+    session_->notify_connect_error(code, message);
+  }
 }
 
 } // namespace cass

@@ -59,9 +59,9 @@ public:
   /**
    * Initialize a connection pool manager use the given hosts.
    *
-   * @param hosts A vector of addresses to connect pools to.
+   * @param hosts A map of host addresses to connect pools to.
    */
-  void initialize(const AddressVec& hosts);
+  void initialize(const HostMap& hosts);
 
   /**
    * Set the keyspace to connect pools with.

@@ -157,6 +157,8 @@ public:
    */
   void close();
 
+  void close_handles() { request_queue_.close_handles(); }
+
 public:
   EventLoop* event_loop() const { return event_loop_; }
   RequestQueue* request_queue() { return &request_queue_; }
