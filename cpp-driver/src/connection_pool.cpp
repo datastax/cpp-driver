@@ -176,7 +176,7 @@ void ConnectionPool::handle_reconnect(PooledConnector* connector, EventLoop* eve
   if (connector->is_ok()) {
     internal_add_connection(connector->release_connection());
     internal_notify_up_or_down();
-  } else if (!connector->is_canceled()) {
+  } else if (!connector->is_cancelled()) {
     if(connector->is_critical_error()) {
       LOG_ERROR("Closing established connection pool to host %s because of the following error: %s",
                 address().to_string().c_str(),

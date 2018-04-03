@@ -146,10 +146,10 @@ public:
     }
   }
 
-  static void on_socket_canceled(SocketConnector* connector) {
-    if (connector->is_canceled()) {
-      bool* is_canceled = static_cast<bool*>(connector->data());
-      *is_canceled = true;
+  static void on_socket_cancelled(SocketConnector* connector) {
+    if (connector->is_cancelled()) {
+      bool* is_cancelled = static_cast<bool*>(connector->data());
+      *is_cancelled = true;
     }
   }
 
@@ -235,11 +235,11 @@ TEST_F(SocketUnitTest, Cancel) {
 
   Vector<SocketConnector::Ptr> connectors;
 
-  bool is_canceled = false;
+  bool is_cancelled = false;
   for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                     static_cast<void*>(&is_canceled),
-                                                                     on_socket_canceled));
+                                                                     static_cast<void*>(&is_cancelled),
+                                                                     on_socket_cancelled));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -253,7 +253,7 @@ TEST_F(SocketUnitTest, Cancel) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_TRUE(is_canceled);
+  EXPECT_TRUE(is_cancelled);
 }
 
 TEST_F(SocketUnitTest, SslCancel) {
@@ -263,11 +263,11 @@ TEST_F(SocketUnitTest, SslCancel) {
 
   Vector<SocketConnector::Ptr> connectors;
 
-  bool is_canceled = false;
+  bool is_cancelled = false;
   for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                     static_cast<void*>(&is_canceled),
-                                                                     on_socket_canceled));
+                                                                     static_cast<void*>(&is_cancelled),
+                                                                     on_socket_cancelled));
     connector->with_settings(settings)
              ->connect(loop());
     connectors.push_back(connector);
@@ -282,5 +282,5 @@ TEST_F(SocketUnitTest, SslCancel) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_TRUE(is_canceled);
+  EXPECT_TRUE(is_cancelled);
 }

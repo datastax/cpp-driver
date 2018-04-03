@@ -103,7 +103,7 @@ void ConnectionPoolConnector::handle_connect(PooledConnector* connector, EventLo
 
     if (connector->is_ok()) {
       pool_->add_connection(connector->release_connection(), ConnectionPool::Protected());
-    } else if (!connector->is_canceled()){
+    } else if (!connector->is_cancelled()){
       LOG_ERROR("Connection pool was unable to connect to host %s because of the following error: %s",
                 pool_->address().to_string().c_str(),
                 connector->error_message().c_str());

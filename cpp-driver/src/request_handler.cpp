@@ -101,7 +101,7 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request,
                                const Address* preferred_address)
   : wrapper_(request)
   , future_(future)
-  , is_canceled_(false)
+  , is_cancelled_(false)
   , running_executions_(0)
   , is_timer_started_(false)
   , timer_thread_id_((uv_thread_t)0)
@@ -252,7 +252,7 @@ void RequestHandler::on_timeout(Timer* timer) {
 }
 
 void RequestHandler::stop_request() {
-  is_canceled_.store(true);
+  is_cancelled_.store(true);
   if (is_timer_started_ && timer_thread_id_ == uv_thread_self()) {
     timer_.stop();
   }
@@ -260,20 +260,20 @@ void RequestHandler::stop_request() {
 
 void RequestHandler::internal_retry(RequestExecution* request_execution) {
   bool is_successful = false;
-  bool is_canceled = is_canceled_.load();
+  bool is_cancelled = is_cancelled_.load();
 
-  while (!is_canceled && request_execution->current_host()) {
+  while (!is_cancelled && request_execution->current_host()) {
     PooledConnection::Ptr connection = manager_->find_least_busy(request_execution->current_host()->address());
     if (connection && connection->write(request_execution)) {
       is_successful = true;
       break;
     }
     request_execution->next_host();
-    is_canceled = is_canceled_.load();
+    is_cancelled = is_cancelled_.load();
   }
 
   if (!is_successful) {
-    if (is_canceled) {
+    if (is_cancelled) {
       LOG_DEBUG("Cancelling speculative execution (%p) for request (%p) on host %s",
                 static_cast<void*>(request_execution),
                 static_cast<void*>(this),

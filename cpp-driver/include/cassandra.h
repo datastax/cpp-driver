@@ -827,7 +827,8 @@ typedef void (*CassAuthenticatorInitialCallback)(CassAuthenticator* auth,
  *
  * Use cass_authenticator_set_response() to set the response token.
  *
- * Use cass_authenticator_set_error() if an error occurred during the challenge.
+ * Use cass_authenticator_set_error() if an error occurred during the
+ * challenge.
  *
  * @param[in] auth
  * @param[in] data

@@ -204,7 +204,7 @@ private:
   RequestWrapper wrapper_;
   SharedRefPtr<ResponseFuture> future_;
 
-  Atomic<bool> is_canceled_;
+  Atomic<bool> is_cancelled_;
   Atomic<int> running_executions_;
 
   ScopedPtr<QueryPlan> query_plan_;

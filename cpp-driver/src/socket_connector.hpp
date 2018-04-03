@@ -65,7 +65,7 @@ public:
 
   enum SocketError {
     SOCKET_OK,
-    SOCKET_CANCELED,
+    SOCKET_CANCELLED,
     SOCKET_ERROR_CLOSE,
     SOCKET_ERROR_CONNECT,
     SOCKET_ERROR_INIT,
@@ -131,8 +131,8 @@ public:
     return error_code_ == SOCKET_OK;
   }
 
-  bool is_canceled() const {
-    return error_code_ == SOCKET_CANCELED;
+  bool is_cancelled() const {
+    return error_code_ == SOCKET_CANCELLED;
   }
 
   bool is_ssl_error() const {
