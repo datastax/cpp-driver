@@ -25,6 +25,8 @@ CassFuture* use_future
 /* Check future result... */
 ```
 
+Be very careful though: if the session is shared by multiple threads, switching the keyspace at runtime could easily cause unexpected query failures.
+
 ## Single Session and Multiple Keyspaces
 
 It is possible to interact with multiple keyspaces using a single session object by fully qualifying the table names in your queries e.g. `keyspace_name.table_name`.

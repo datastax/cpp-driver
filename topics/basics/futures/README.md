@@ -4,7 +4,7 @@ Futures are returned from any driver call that would result in blocking the clie
 
 ## Waiting for Results
 
-Futures results can be waited on indefinitely by either calling a wait method or by attempting to get the result. They can also be waited on for an explicit amount of time or periodically polled without waiting to execute application code.
+Futures results can be waited on indefinitely by either calling the `cass_future_wait()` method or by attempting to get the result with `cass_future_get_result()`. They can also be waited on for an explicit amount of time or periodically polled without waiting to execute application code.
 
 ### Synchronously Waiting on the Future
 ```c
@@ -86,7 +86,7 @@ void on_result(CassFuture* future, void* data) {
 CassFuture* future = /* Some operation */;
 
 /* Set a callback instead of waiting for the result to be returned */
-cass_future_set_callback(on_result, NULL);
+cass_future_set_callback(future, on_result, NULL);
 
 /* The application's reference to the future can be freed immediately */
 cass_future_free(future);

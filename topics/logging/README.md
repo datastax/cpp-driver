@@ -35,7 +35,7 @@ cass_log_set_level(CASS_LOG_INFO);
 
 ## Logging Cleanup
 
-Resources passed to a custom logging callback should be cleaned up after a call to `cass_log_cleanup()`. This shuts down the logging system and ensures that the custom callback will no longer be called.
+Resources passed to a custom logging callback should be cleaned up with a call to `cass_log_cleanup()`. This shuts down the logging system and ensures that the custom callback will no longer be called.
 
 ```c
 /* Close any sessions */

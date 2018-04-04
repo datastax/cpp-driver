@@ -19,7 +19,7 @@ The consistency level determines the number of replicas on which the read/write
 must respond/succeed before returning an acknowledgment to the client
 application. Descriptions and Usage scenarios for each read/write consistency
 level can be found
-[here](http://www.datastax.com/documentation/cassandra/2.0/cassandra/dml/dml_config_consistency_c.html).
+[here](http://docs.datastax.com/en/cassandra/latest/cassandra/dml/dmlConfigConsistency.html).
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
@@ -86,7 +86,7 @@ level can be found
   </tbody>
 </table>
 
-**NOTE:** Consistency level `CASS_CONSISTENCY_ANY` is only valid for read operation statements.
+**NOTE:** Consistency level `CASS_CONSISTENCY_ANY` is only valid for write operation statements.
 
 ## Setting Consistency Level
 
@@ -101,5 +101,5 @@ executed by the session.
 cass_statement_set_consistency(statement, CASS_CONSISTENCY_QUORUM);
 ```
 
-**NOTE:** Consistency is ignored for `USE`, `TRUNCATE`, `CREATE` and `ALTER`
-statements, and some `CASS_CONSISTENCY_ANY` aren’t allowed in all situations.
+**NOTE:** Consistency level is ignored for `USE`, `TRUNCATE`, `CREATE` and `ALTER`
+statements, and some, like `CASS_CONSISTENCY_ANY`, aren’t allowed in all situations.
