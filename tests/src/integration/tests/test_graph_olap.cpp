@@ -7,6 +7,8 @@
 
 #include "dse_integration.hpp"
 #include "options.hpp"
+#include "rest_client.hpp"
+#include "rapidjson/document.h"
 
 #define ALTER_DSE_LEASES_FORMAT "ALTER KEYSPACE dse_leases " \
   " WITH REPLICATION = { " \
@@ -22,7 +24,7 @@
 
 #define SELECT_ALL_SYSTEM_LOCAL_CQL "SELECT * FROM system.local"
 
-#define WAIT_FOR_WORKERS_SLEEP 120000 // 2 minutes
+#define SPARK_PORT 7080
 
 /**
  * Graph OLAP integration tests
@@ -45,7 +47,7 @@ public:
 
     // Wait for the spark master to become available
     ccm_->start_node(1);
-    wait_for_port(1, 7080);
+    wait_for_port(1, SPARK_PORT);
     master_host_ip_address_ = ccm_->cluster_ip_addresses(true)[0];
 
     /*
@@ -54,7 +56,7 @@ public:
      * until all nodes are available, preventing nodes from electing the wrong
      * master node.
      */
-    Cluster cluster = Cluster::build()
+    dse::Cluster cluster = dse::Cluster::build()
       .with_contact_points(master_host_ip_address_);
     try {
       Session session = cluster.connect();
@@ -65,30 +67,28 @@ public:
       FAIL() << e.what();
     }
 
-    // Bootstrap the remaining nodes
+    // Bootstrap the remaining nodes and wait for the spark workers to become available
     for (unsigned int n = 2; n <= number_dc1_nodes_; ++n) {
       ccm_->start_node(n);
       std::stringstream worker_ip_address;
       worker_ip_address << ccm_->get_ip_prefix() << n;
       worker_hosts_ip_addresses_.push_back(worker_ip_address.str());
     }
+    if (wait_for_workers(master_host_ip_address_, number_dc1_nodes_)) {
+      // Create the DSE session
+      cluster = default_cluster()
+        .with_connection_heartbeat_interval(0)
+        .with_request_timeout(GRAPH_OLAP_TIMEOUT);
+      DseIntegration::connect(cluster);
 
-    //TODO: Remove sleep and add parsing of HTML body from spark master to look for live workers
-    TEST_LOG("Waiting for workers: Sleeping " << WAIT_FOR_WORKERS_SLEEP / 1000
-      << "s");
-    msleep(WAIT_FOR_WORKERS_SLEEP);
-
-    // Create the DSE session
-    cluster = default_cluster()
-      .with_connection_heartbeat_interval(0)
-      .with_request_timeout(GRAPH_OLAP_TIMEOUT);
-    DseIntegration::connect(cluster);
-
-    // Create the graph
-    create_graph();
-    CHECK_FAILURE;
-    populate_classic_graph(test_name_);
-    CHECK_FAILURE;
+      // Create the graph
+      create_graph();
+      CHECK_FAILURE;
+      populate_classic_graph(test_name_);
+      CHECK_FAILURE;
+    } else {
+      FAIL() << "Spark workers are not available";
+    }
   }
 
   /**
@@ -141,6 +141,49 @@ protected:
 
 private:
   /**
+   * Representation of a Spark master
+   */
+  struct SparkMaster {
+    struct Slave {
+      std::string host;
+      std::string state;
+
+      Slave(const rapidjson::Value& slave) {
+        if (!slave.IsObject()) {
+          throw Exception("Slave is not an object");
+        }
+        if (!slave.HasMember("host") || !slave.HasMember("state")) {
+          throw Exception("JSON is not a valid slave");
+        }
+
+        host = slave["host"].GetString();
+        state = slave["state"].GetString();
+      }
+    };
+
+    std::vector<Slave> slaves;
+
+    SparkMaster(const rapidjson::Document& master) {
+      if (!master.IsObject()) {
+        throw Exception("JSON document is not an object");
+      }
+      if (!master.HasMember("workers")) {
+        throw Exception("JSON object is not a master object");
+      }
+      const rapidjson::Value& workers = master["workers"];
+      if (!workers.IsArray()) {
+        throw Exception("Slaves are not valid for the master object");
+      }
+
+      for (rapidjson::SizeType i = 0; i < workers.Size(); ++i) {
+        Slave slave(workers[i]);
+        slaves.push_back(slave);
+      }
+    }
+  };
+
+private:
+  /**
    * Wait for the port on a node to become available
    *
    * @param node Node to wait for port availability
@@ -153,6 +196,54 @@ private:
 
     // Wait for the port to become available
     return Utils::wait_for_port(ip_address, port);
+  }
+
+  /**
+   * Wait for the Spark slaves/workers to become available
+   *
+   * @param master_ip_address Spark master IP address
+   * @param number_of_worker Number of workers to look for
+   * @return True if workers are 'ACTIVE'' false otherwise
+   */
+  bool wait_for_workers(const std::string& master_ip_address,
+                        unsigned short number_of_workers) {
+    for (int n = 0; n < 1200; ++n) { // Check for up to 2 minutes (sleep is 100ms)
+      // Create and send a request to the Spark server
+      Request request;
+      request.method = Request::HTTP_METHOD_GET;
+      request.address = master_ip_address;
+      request.port = SPARK_PORT;
+      request.endpoint = "json/";
+      Response rest_response = RestClient::send_request(request);
+
+      // Parse the JSON document from the Spark server
+      rapidjson::Document document;
+      if (document.Parse(rest_response.message.c_str()).HasParseError()) {
+        msleep(100);
+        break; // Attempt to request JSON from Spark master again
+      }
+      SparkMaster master(document);
+
+      // Iterate over the Spark workers and count the active slaves
+      unsigned short active_slaves = 0;
+      for (std::vector<SparkMaster::Slave>::const_iterator it = master.slaves.begin();
+            it != master.slaves.end(); ++it) {
+        SparkMaster::Slave slave = *it;
+        if (to_lower(slave.state).compare("alive") == 0) {
+          ++active_slaves;
+        }
+      }
+
+      // Determine if all the Spark workers are active
+      if (active_slaves >= number_of_workers) {
+        return true;
+      } else {
+        msleep(100);
+      }
+    }
+
+    // Not all Spark workers are active
+    return false;
   }
 };
 

@@ -22,7 +22,7 @@
 #include "exception.hpp"
 #include "priming_requests.hpp"
 #include "shared_ptr.hpp"
-#include "simulacron_rest_client.hpp"
+#include "rest_client.hpp"
 
 #ifdef _CRT_SECURE_NO_WARNINGS
 # undef _CRT_SECURE_NO_WARNINGS

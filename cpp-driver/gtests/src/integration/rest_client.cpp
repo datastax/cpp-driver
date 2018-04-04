@@ -14,32 +14,26 @@
   limitations under the License.
 */
 
-#include "simulacron_rest_client.hpp"
+#include "rest_client.hpp"
 #include "test_utils.hpp"
 
 #include "address.hpp"
 
 #include <sstream>
 
-#if UV_VERSION_MAJOR == 0
-# define UV_ERRSTR(status, loop) std::string(uv_strerror(uv_last_error(loop)))
-#else
-# define UV_ERRSTR(status, loop) std::string(uv_strerror(status))
-#endif
-
 #define HTTP_EOL "\r\n"
 #define OUTPUT_BUFFER_SIZE 10240ul
 
 // Static initializations
-uv_buf_t SimulacronRestClient::write_buf_;
-uv_write_t SimulacronRestClient::write_req_;
+uv_buf_t RestClient::write_buf_;
+uv_write_t RestClient::write_req_;
 
 /**
 + * HTTP request
 + */
 struct HttpRequest {
   /**
-   * HTTP message to submit to the Simulacron REST server
+   * HTTP message to submit to the REST server
    */
   std::string message;
   /**
@@ -52,26 +46,19 @@ struct HttpRequest {
   Response response;
 };
 
-const Response SimulacronRestClient::send_request(const Request& request) {
+const Response RestClient::send_request(const Request& request) {
     // Initialize the loop
-#if UV_VERSION_MAJOR == 0
-  uv_loop_t* loop = uv_loop_new();
-#else
   uv_loop_t loop;
   int error_code = uv_loop_init(&loop);
   if(error_code != 0) {
-    throw Exception("Unable to Send Request: " + UV_ERRSTR(error_code, loop));
+    throw Exception("Unable to Send Request: "
+                    + std::string(uv_strerror(error_code)));
   };
-#endif
 
   // Initialize the HTTP request
   HttpRequest http_request;
   http_request.message = generate_http_message(request);
-#if UV_VERSION_MAJOR == 0
-  http_request.loop = loop;
-#else
   http_request.loop = &loop;
-#endif
 
   // Create the IPv4 socket address
   const cass::Address address(request.address.c_str(),
@@ -80,68 +67,45 @@ const Response SimulacronRestClient::send_request(const Request& request) {
   // Initialize the client TCP request
   uv_tcp_t tcp;
   tcp.data = &http_request;
-#if UV_VERSION_MAJOR == 0
-  int error_code = uv_tcp_init(loop, &tcp);
-#else
   error_code = uv_tcp_init(&loop, &tcp);
-#endif
   if (error_code != 0) {
     TEST_LOG_ERROR("Unable to Initialize TCP Request: "
-      << UV_ERRSTR(error_code, loop));
+                   << std::string(uv_strerror(error_code)));
   }
   error_code = uv_tcp_keepalive(&tcp, 1, 60);
   if (error_code != 0) {
-    TEST_LOG_ERROR("Unable to Set TCP KeepAlive: " << UV_ERRSTR(error_code, loop));
+    TEST_LOG_ERROR("Unable to Set TCP KeepAlive: "
+                   << std::string(uv_strerror(error_code)));
   }
 
   // Start the request and attach the HTTP request to send to the REST server
   uv_connect_t connect;
   connect.data = &http_request;
-#if UV_VERSION_MAJOR == 0
   uv_tcp_connect(&connect, &tcp,
-    *address.addr_in(),
-    handle_connected);
-#else
-  uv_tcp_connect(&connect, &tcp,
-    address.addr(),
-    handle_connected);
-#endif
-
-#if UV_VERSION_MAJOR == 0
-    uv_run(loop, UV_RUN_DEFAULT);
-    uv_loop_delete(loop);
-#else
-    uv_run(&loop, UV_RUN_DEFAULT);
-    uv_loop_close(&loop);
-#endif
+                 address.addr(),
+                 handle_connected);
+  uv_run(&loop, UV_RUN_DEFAULT);
+  uv_loop_close(&loop);
 
   // Return the response from the request
   return http_request.response;
 }
 
-#if UV_VERSION_MAJOR == 0
-uv_buf_t SimulacronRestClient::handle_allocation(uv_handle_t* handle,
-                                                 size_t suggested_size) {
-  return uv_buf_init(reinterpret_cast<char*>(new char[suggested_size],
-                     suggested_size);
-#else
-void SimulacronRestClient::handle_allocation(uv_handle_t* handle,
-                                             size_t suggested_size,
-                                             uv_buf_t* buffer) {
+void RestClient::handle_allocation(uv_handle_t* handle,
+                                   size_t suggested_size,
+                                   uv_buf_t* buffer) {
   buffer->base = new char[OUTPUT_BUFFER_SIZE];
   buffer->len = OUTPUT_BUFFER_SIZE;
-#endif
 }
 
-void SimulacronRestClient::handle_connected(uv_connect_t* req, int status) {
+void RestClient::handle_connected(uv_connect_t* req, int status) {
   HttpRequest* request = static_cast<HttpRequest*>(req->data);
 
   if (status < 0) {
     TEST_LOG_ERROR("Unable to Connect to HTTP Server: "
-      << UV_ERRSTR(status, request->loop));
+                   << std::string(uv_strerror(status)));
     uv_close(reinterpret_cast<uv_handle_t*>(req->handle), NULL);
   } else {
-
     // Create the buffer to write to the stream
     write_buf_.base = const_cast<char*>(request->message.c_str());
     write_buf_.len = request->message.size();
@@ -152,24 +116,14 @@ void SimulacronRestClient::handle_connected(uv_connect_t* req, int status) {
   }
 }
 
-#if UV_VERSION_MAJOR == 0
-void SimulacronRestClient::handle_response(uv_stream_t* stream,
-                                           ssize_t buffer_length,
-                                           uv_buf_t buffer) {
-#else
-void SimulacronRestClient::handle_response(uv_stream_t* stream,
-                                           ssize_t buffer_length,
-                                           const uv_buf_t* buffer) {
-#endif
+void RestClient::handle_response(uv_stream_t* stream,
+                                 ssize_t buffer_length,
+                                 const uv_buf_t* buffer) {
   HttpRequest* request = static_cast<HttpRequest*>(stream->data);
 
   if (buffer_length > 0) {
     // Process the buffer and log it
-#if UV_VERSION_MAJOR == 0
-    std::string server_response = std::string(buffer.base, buffer_length);
-#else
     std::string server_response = std::string(buffer->base, buffer_length);
-#endif
     TEST_LOG_DEBUG(test::Utils::trim(server_response));
 
     // Parse the status code and content of the response
@@ -193,22 +147,14 @@ void SimulacronRestClient::handle_response(uv_stream_t* stream,
       }
     }
   } else if (buffer_length < 0) {
-#if UV_VERSION_MAJOR == 0
-    uv_err_t error = uv_last_error(request->loop);
-    if (error.code == UV_EOF) // uv_close if UV_EOF
-#endif
     uv_close(reinterpret_cast<uv_handle_t*>(stream), NULL);
   }
 
   // Clean up the memory allocated
-#if UV_VERSION_MAJOR == 0
-  delete[] buffer.base;
-#else
   delete[] buffer->base;
-#endif
 }
 
-const std::string SimulacronRestClient::generate_http_message(const Request& request) {
+const std::string RestClient::generate_http_message(const Request& request) {
   // Determine the method of the the request
   std::stringstream message;
   if (request.method == Request::HTTP_METHOD_DELETE) {

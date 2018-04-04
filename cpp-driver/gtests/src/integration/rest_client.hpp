@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __SIMULACRON_REST_CLIENT_HPP__
-#define __SIMULACRON_REST_CLIENT_HPP__
+#ifndef __TEST_REST_CLIENT_HPP__
+#define __TEST_REST_CLIENT_HPP__
 
 #include "exception.hpp"
 
@@ -24,7 +24,7 @@
 #include <uv.h>
 
 /**
- * Simulacron REST request
+ * REST request
  */
 struct Request {
   /**
@@ -59,7 +59,7 @@ struct Request {
 };
 
 /**
- * Simulacron REST response
+ * REST response
  */
 struct Response {
   /**
@@ -76,10 +76,10 @@ struct Response {
 };
 
 /**
- * Simple HTTP client for sending synchronous requests to a HTTP Simulacron
+ * Simple HTTP client for sending synchronous requests to a HTTP REST server
  * REST server
  */
-class SimulacronRestClient {
+class RestClient {
 public:
   class Exception : public test::Exception {
   public:
@@ -88,7 +88,7 @@ public:
   };
 
   /**
-   * Send/Submit the request to the Simulacron REST server
+   * Send/Submit the request to the REST server
    *
    * @param request The request to send
    * @return The response from the request
@@ -107,19 +107,8 @@ private:
   /**
    * Disable the default constructor
    */
-  SimulacronRestClient();
+  RestClient();
 
-#if UV_VERSION_MAJOR == 0
-  /**
-   * Handle the buffer allocation of memory for the requests and server
-   * responses.
-   *
-   * @param handle The libuv handle type
-   * @param suggested_size The size (in bytes) to allocate for the buffer
-   * @return The allocated buffer (must be freed)
-   */
-  static uv_buf_t handle_allocation(uv_handle_t* handle, size_t suggested_size);
-#else
   /**
    * Handle the buffer allocation of memory for the requests and server
    * responses.
@@ -128,13 +117,13 @@ private:
    * @param suggested_size The size (in bytes) to allocate for the buffer
    * @param buf Buffer to be allocated
    */
-  static void handle_allocation(uv_handle_t* handle, size_t suggested_size,
-    uv_buf_t* buffer);
-#endif
+  static void handle_allocation(uv_handle_t* handle,
+                                size_t suggested_size,
+                                uv_buf_t* buffer);
 
   /**
    * Handle the connect (callback) when the connection has been established to
-   * the REST server of Simulacron.
+   * the REST server.
    *
    * @param req Connection request type
    * @param status 0 if connection was successful; < 0 otherwise
@@ -150,13 +139,9 @@ private:
    *              will equal <b>UV_EOF</b>
    * @param buf Buffer to read from
    */
-#if UV_VERSION_MAJOR == 0
-  static void handle_response(uv_stream_t* strean, ssize_t nread, uv_buf_t buf);
-#else
   static void handle_response(uv_stream_t* stream,
                               ssize_t nread,
                               const uv_buf_t* buf);
-#endif
 
   /**
    * Generate the HTTP message for the REST request.
@@ -168,4 +153,4 @@ private:
 
 };
 
-#endif // __SIMULACRON_REST_CLIENT_HPP__
+#endif // __TEST_REST_CLIENT_HPP__
