@@ -332,8 +332,11 @@ void ControlConnection::on_event(EventResponse* response) {
         }
 
         case EventResponse::DOWN: {
-          LOG_INFO("Node %s is down", address_str.c_str());
-          on_down(response->affected_node());
+          // Ignore DOWN events because they could be invalid in cases where
+          // the control connection is on one side of a partition (possibly
+          // by itself).
+          LOG_DEBUG("Received node down event from %s. Ignoring...",
+                    address_str.c_str());
           break;
         }
       }
