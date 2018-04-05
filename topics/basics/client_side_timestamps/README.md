@@ -22,6 +22,8 @@ sessions.
 generator will produce duplicate timestamps.
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 CassTimestampGen* timestamp_gen = cass_timestamp_gen_monotonic_new();
 
 cass_cluster_set_timestamp_gen(cluster, timestamp_gen);
@@ -32,6 +34,8 @@ cass_cluster_set_timestamp_gen(cluster, timestamp_gen);
 
 /* Timestamp generators must be freed */
 cass_timestamp_gen_free(timestamp_gen);
+
+cass_cluster_free(cluster);
 ```
 
 All sessions that connect using this cluster object will share this same

@@ -8,7 +8,9 @@ Futures results can be waited on indefinitely by either calling a wait method or
 
 ### Synchronously Waiting on the Future
 ```c
-CassFuture* future = /* Some operation */
+CassFuture* future = NULL;
+
+/* Do some operation to get a future */
 
 /* Block until a result or error is set */
 cass_future_wait(future);
@@ -18,33 +20,37 @@ cass_future_free(future);
 
 ### Synchronously Waiting for the Result
 ```c
-CassFuture* future = cass_session_execute(session, statement);
+void  wait_for_future(CassSession* session, CassStatement* statement) {
+  CassFuture* future = cass_session_execute(session, statement);
 
-/* Blocks and gets a result */
-const CassResult* result = cass_future_get_result(future);
+  /* Blocks and gets a result */
+  const CassResult* result = cass_future_get_result(future);
 
-/* If there was an error then the result won't be available */
-if (result == NULL) {
-  /* The error code and message will be set instead */
-  CassError error_code = cass_future_error_code(future);
-  const char* error_message;
-  size_t error_message_length;
-  cass_future_error_message(future, &error_message, &error_message_length);
+  /* If there was an error then the result won't be available */
+  if (result == NULL) {
+    /* The error code and message will be set instead */
+    CassError error_code = cass_future_error_code(future);
+    const char* error_message;
+    size_t error_message_length;
+    cass_future_error_message(future, &error_message, &error_message_length);
 
-  /* Handle error */
+    /* Handle error */
+  }
+
+  cass_future_free(future);
 }
-
-cass_future_free(future);
 ```
 
 ### Timed Wait
 ```c
-CassFuture* future = /* Some operation */
+CassFuture* future = NULL;
+
+/* Do some operation to get a future */
 
 cass_duration_t microseconds = 30 * 1000000; /* 30 seconds */
 
 /* Block for a fixed amount of time */
-if (cass_future_wait_timed(future, microseconds) {
+if (cass_future_wait_timed(future, microseconds)) {
   /* A result or error was set during the wait call */
 } else {
   /* The operation hasn't completed yet */
@@ -56,7 +62,9 @@ cass_future_free(future);
 ### Polling
 
 ```c
-CassFuture* future = /* Some operation */
+CassFuture* future = NULL;
+
+/* Do some operation to get a future */
 
 /* Poll to see if the future is ready */
 while (!cass_future_ready(future)) {
@@ -81,16 +89,19 @@ void on_result(CassFuture* future, void* data) {
   printf("%s\n", cass_error_desc(rc));
 }
 
-...
+int main() {
+  CassFuture* future = NULL;
 
-CassFuture* future = /* Some operation */;
+  /* Do some operation to get a future */
 
-/* Set a callback instead of waiting for the result to be returned */
-cass_future_set_callback(on_result, NULL);
+  /* Set a callback instead of waiting for the result to be returned */
+  cass_future_set_callback(future, on_result, NULL);
 
-/* The application's reference to the future can be freed immediately */
-cass_future_free(future);
+  /* The application's reference to the future can be freed immediately */
+  cass_future_free(future);
 
-/* Run other application logic */
+  /* Run other application logic */
+
+}
 ```
 
