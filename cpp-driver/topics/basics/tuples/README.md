@@ -70,24 +70,26 @@ cass_tuple_free(tuple);
 [`CassTuple`]s are consumed using an iterator.
 
 ```c
-/* Retrieve tuple value from column */
-const CassValue* tuple_value = cass_row_get_column_by_name(row, "value1");
+void iterate_tuple(const CassRow* row) {
+  /* Retrieve tuple value from column */
+  const CassValue* tuple_value = cass_row_get_column_by_name(row, "value1");
 
-/* Create an iterator for the UDT value */
-CassIterator* tuple_iterator = cass_iterator_from_tuple(tuple_value);
+  /* Create an iterator for the UDT value */
+  CassIterator* tuple_iterator = cass_iterator_from_tuple(tuple_value);
 
-/* Iterate over the tuple fields */
-while (cass_iterator_next(tuple_iterator)) {
-  const char* field_name;
-  size_t field_name_length;
-  /* Get tuple value */
-  const CassValue* value = cass_iterator_get_value(item);
+  /* Iterate over the tuple fields */
+  while (cass_iterator_next(tuple_iterator)) {
+    const char* field_name;
+    size_t field_name_length;
+    /* Get tuple value */
+    const CassValue* value = cass_iterator_get_value(tuple_iterator);
 
-  /* ... */
+    /* ... */
+  }
+
+  /* The tuple iterator needs to be freed */
+  cass_iterator_free(tuple_iterator);
 }
-
-/* The tuple iterator needs to be freed */
-cass_iterator_free(tuple_iterator);
 ```
 
 [`CassTuple`]: http://datastax.github.io/cpp-driver/api/struct.CassTuple/

@@ -23,24 +23,12 @@ void on_log(const CassLogMessage* message, void* data) {
   /* Handle logging */
 }
 
-...
+int main() {
+  void* log_data = NULL /* Custom log resource */;
+  cass_log_set_callback(on_log, log_data);
+  cass_log_set_level(CASS_LOG_INFO);
 
-void* log_data = /* Custom log resource */;
-cass_log_set_callback(on_log, log_data);
-cass_log_set_level(CASS_LOG_INFO);
+  /* Create cluster and connect session */
 
-/* Create cluster and connect session */
-
-```
-
-## Logging Cleanup
-
-Resources passed to a custom logging callback should be cleaned up after a call to `cass_log_cleanup()`. This shuts down the logging system and ensures that the custom callback will no longer be called.
-
-```c
-/* Close any sessions */
-
-cass_log_cleanup();
-
-/* Free custom logging resources */
+}
 ```

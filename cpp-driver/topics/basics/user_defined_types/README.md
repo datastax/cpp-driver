@@ -15,17 +15,20 @@ describe Cassandra types including UDTs, tuples, collections and all basic types
 (`int`, `bigint`, `uuid`, etc.).
 
 ```c
-const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
+void get_user_type_from_schema(CassSession* session) {
+  const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
 
-const CassKeyspaceMeta* keyspace_meta =
-  cass_schema_meta_keyspace_by_name(schema_meta, "keyspace");
+  const CassKeyspaceMeta* keyspace_meta =
+    cass_schema_meta_keyspace_by_name(schema_meta, "keyspace");
 
-const CassDataType* data_type =
-  cass_keyspace_meta_user_type_by_name(keyspace_meta, "typename");
+  const CassDataType* data_type =
+    cass_keyspace_meta_user_type_by_name(keyspace_meta, "typename");
 
-CassUserType* user_type = cass_user_type_new_from_data_type(data_type);
+  CassUserType* user_type = cass_user_type_new_from_data_type(data_type);
 
-/* Bind values to user type fields and bind user type to a statement */
+  /* Bind values to user type fields and bind user type to a statement */
+
+}
 ```
 
 ## Manually Constructing a UDT Data Type
@@ -63,29 +66,31 @@ A UDT returned from Cassandra is consumed by iterating over its fields similar
 to the way collections or tuples are consumed.
 
 ```c
-/* Retrieve UDT value from column */
-const CassValue* udt_value = cass_row_get_column_by_name(row, "value1");
+void iterate_udt(const CassRow* row) {
+  /* Retrieve UDT value from column */
+  const CassValue* udt_value = cass_row_get_column_by_name(row, "value1");
 
-/* Create an iterator for the UDT value */
-CassIterator* udt_iterator = cass_iterator_fields_from_user_type(udt_value);
+  /* Create an iterator for the UDT value */
+  CassIterator* udt_iterator = cass_iterator_fields_from_user_type(udt_value);
 
-/* Iterate over the UDT fields */
-while (cass_iterator_next(udt_iterator)) {
-  const char* field_name;
-  size_t field_name_length;
-  /* Get UDT field name */
-  cass_iterator_get_user_type_field_name(udt_iterator,
-                                         &field_name, &field_name_length);
+  /* Iterate over the UDT fields */
+  while (cass_iterator_next(udt_iterator)) {
+    const char* field_name;
+    size_t field_name_length;
+    /* Get UDT field name */
+    cass_iterator_get_user_type_field_name(udt_iterator,
+                                           &field_name, &field_name_length);
 
-  /* Get UDT field value */
-  const CassValue* field_value =
-    cass_iterator_get_user_type_field_value(udt_iterator);
+    /* Get UDT field value */
+    const CassValue* field_value =
+      cass_iterator_get_user_type_field_value(udt_iterator);
 
-  /* ... */
+    /* ... */
+  }
+
+  /* The UDT iterator needs to be freed */
+  cass_iterator_free(udt_iterator);
 }
-
-/* The UDT iterator needs to be freed */
-cass_iterator_free(udt_iterator);
 ```
 [`CassSchemaMeta`]: http://datastax.github.io/cpp-driver/api/struct.CassSchemaMeta/
 [`CassUserType`]: http://datastax.github.io/cpp-driver/api/struct.CassUserType/

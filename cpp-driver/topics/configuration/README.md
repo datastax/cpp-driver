@@ -26,6 +26,10 @@ consistency levels are used or if the driver is configured to use remote nodes
 with the [`allow_remote_dcs_for_local_cl`] setting.
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
+const char* local_dc = "dc1"; /* Local datacenter name */
+
 /*
  * Use up to 2 remote datacenter nodes for remote consistency levels
  * or when `allow_remote_dcs_for_local_cl` is enabled.
@@ -36,8 +40,13 @@ unsigned used_hosts_per_remote_dc = 2;
 cass_bool_t allow_remote_dcs_for_local_cl = cass_false;
 
 cass_cluster_set_load_balance_dc_aware(cluster,
+                                       local_dc,
                                        used_hosts_per_remote_dc,
                                        allow_remote_dcs_for_local_cl);
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 ### Token-aware Routing
@@ -49,11 +58,17 @@ can improve query latency and reduce load on the Cassandra nodes. It can be used
 in conjunction with other load balancing and routing policies.
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 /* Enable token-aware routing (this is the default setting) */
 cass_cluster_set_token_aware_routing(cluster, cass_true);
 
 /* Disable token-aware routing */
 cass_cluster_set_token_aware_routing(cluster, cass_false);
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 ### Latency-aware Routing
@@ -63,6 +78,8 @@ to poorly performing Cassandra nodes. It can be used in conjunction with other
 load balancing and routing policies.
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 /* Disable latency-aware routing (this is the default setting) */
 cass_cluster_set_latency_aware_routing(cluster, cass_false);
 
@@ -94,6 +111,10 @@ cass_cluster_set_latency_aware_routing_settings(cluster,
                                                 retry_period_ms,
                                                 update_rate_ms,
                                                 min_measured);
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 ### Filtering
@@ -111,12 +132,18 @@ NOTE: Using this policy to limit the connections of the driver to a predefined
       DC aware in conjunction with the round robin load balancing policy.
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 /* Set the list of predefined hosts the driver is allowed to connect to */
 cass_cluster_set_whitelist_filtering(cluster,
                                      "127.0.0.1, 127.0.0.3, 127.0.0.5");
 
 /* The whitelist can be cleared (and disabled) by using an empty string */
 cass_cluster_set_whitelist_filtering(cluster, "");
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 #### Blacklist
@@ -125,12 +152,18 @@ This policy is the inverse of the whitelist policy where hosts provided in the
 blacklist filter will be ignored and a connection will not be established.
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 /* Set the list of predefined hosts the driver is NOT allowed to connect to */
 cass_cluster_set_blacklist_filtering(cluster,
                                      "127.0.0.1, 127.0.0.3, 127.0.0.5");
 
 /* The blacklist can be cleared (and disabled) by using an empty string */
 cass_cluster_set_blacklist_filtering(cluster, "");
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 #### Datacenter
@@ -139,19 +172,32 @@ Filtering can also be performed on all hosts in a datacenter or multiple
 datacenters when using the whitelist/blacklist datacenter filtering polices.
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 /* Set the list of predefined datacenters the driver is allowed to connect to */
 cass_cluster_set_whitelist_dc_filtering(cluster, "dc2, dc4");
 
 /* The datacenter whitelist can be cleared/disabled by using an empty string */
 cass_cluster_set_whitelist_dc_filtering(cluster, "");
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
+
 /* Set the list of predefined datacenters the driver is NOT allowed to connect to */
 cass_cluster_set_blacklist_dc_filtering(cluster, "dc2, dc4");
 
 /* The datacenter blacklist can be cleared/disabled by using an empty string */
 cass_cluster_set_blacklist_dc_filtering(cluster, "");
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 ## Speculative Execution
@@ -181,7 +227,11 @@ an application to explicitly mark a statement as being idempotent.
 
 ```c
 CassStatement* statement = cass_statement_new( "SELECT * FROM table1", 0);
+
+/* Make the statement idempotent */
 cass_statement_set_is_idempotent(statement, cass_true);
+
+cass_statement_free(statement);
 ```
 
 ### Enabling speculative execution
@@ -197,11 +247,17 @@ with the subsequent executions being created 500 milliseconds apart.
 
 ```c
 CassCluster* cluster = cass_cluster_new();
+
 cass_int64_t constant_delay_ms = 500; /* Delay before a new execution is created */
 int max_speculative_executions = 2;   /* Number of executions */
-cass_cluster_set_constant_speculative_execution_policy(cluster
+
+cass_cluster_set_constant_speculative_execution_policy(cluster,
                                                        constant_delay_ms,
                                                        max_speculative_executions);
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 ### Connection Heartbeats
@@ -213,11 +269,17 @@ driver sends a heartbeat every 30 seconds. This can be changed or disabled (0
 second interval) using the following:
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 /* Change the heartbeat interval to 1 minute */
 cass_cluster_set_connection_heartbeat_interval(cluster, 60);
 
 /* Disable heartbeat requests */
 cass_cluster_set_connection_heartbeat_interval(cluster, 0);
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 Heartbeats are also used to detect unresponsive connections. An idle timeout
 setting controls the amount of time a connection is allowed to be without a
@@ -225,8 +287,14 @@ successful heartbeat before being terminated and scheduled for reconnection. Thi
 interval can be changed from the default of 60 seconds:
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 /* Change the idle timeout to 2 minute */
 cass_cluster_set_connection_idle_timeout(cluster, 120);
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 It can be disabled by setting the value to a very long timeout or by disabling
