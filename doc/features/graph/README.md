@@ -40,32 +40,34 @@ gremlin> peter.addEdge('created', lop, 'weight', 0.2f);
 The "test" graph can then be queried using the driver:
 
 ```c
-/* Create a graph options so that we can set a specific graph name: "test" */
-DseGraphOptions* options = dse_graph_options_new();
+void execute_graph_query(CassSession* session) {
+  /* Create a graph options so that we can set a specific graph name: "test" */
+  DseGraphOptions* options = dse_graph_options_new();
 
-/* Set the graph name */
-dse_graph_options_set_graph_name(options, "test");
+  /* Set the graph name */
+  dse_graph_options_set_graph_name(options, "test");
 
-/* Create a graph query */
-DseGraphStatement* statement =
-  dse_graph_statement_new("g.V().has('name','marko').out('knows').values('name')", options);
+  /* Create a graph query */
+  DseGraphStatement* statement =
+    dse_graph_statement_new("g.V().has('name','marko').out('knows').values('name')", options);
 
-/* Execute the graph query */
-CassFuture* future =
-  cass_session_execute_dse_graph(session, statement);
+  /* Execute the graph query */
+  CassFuture* future =
+    cass_session_execute_dse_graph(session, statement);
 
-/* Check and handle the result */
-if (cass_future_error_code(future) == CASS_OK) {
-  DseGraphResultSet* resultset = cass_future_get_dse_graph_resultset(future);
+  /* Check and handle the result */
+  if (cass_future_error_code(future) == CASS_OK) {
+    DseGraphResultSet* resultset = cass_future_get_dse_graph_resultset(future);
 
-  /* Handle result set */
-} else {
-  /* Handle error */
+    /* Handle result set */
+  } else {
+    /* Handle error */
+  }
+
+  /* Cleanup */
+  cass_future_free(future);
+  dse_graph_statement_free(statement);
 }
-
-/* Cleanup */
-cass_future_free(future);
-dse_graph_statement_free(statement);
 ```
 
 ## Graph options
@@ -75,40 +77,41 @@ accomplished by passing `NULL` for the options argument to
 `dse_graph_statement_new()`.
 
 ```c
-/* Create a system query (note: passing NULL for options) */
-DseGraphStatement* statement =
-  dse_graph_statement_new("system.graph('test').ifNotExists().create()", NULL);
+void execute_graph_query_without_options(CassSession* session) {
+  /* Create a system query (note: passing NULL for options) */
+  DseGraphStatement* statement =
+    dse_graph_statement_new("system.graph('test').ifNotExists().create()", NULL);
 
-/* Create and bind "name" value */
-DseGraphObject* values = dse_graph_object_new();
-dse_graph_object_add_string(values, "name", name);
-dse_graph_object_finish(values);
-dse_graph_statement_bind_values(statement, values);
-dse_graph_object_free(values);
+  /* Create and bind "name" value */
+  DseGraphObject* values = dse_graph_object_new();
+  dse_graph_object_add_string(values, "name", "somevalue");
+  dse_graph_object_finish(values);
+  dse_graph_statement_bind_values(statement, values);
+  dse_graph_object_free(values);
 
-/* Execute the graph query */
-CassFuture* future =
-  cass_session_execute_dse_graph(session, statement);
+  /* Execute the graph query */
+  CassFuture* future =
+    cass_session_execute_dse_graph(session, statement);
 
-/* Handle results... */
+  /* Handle results... */
 
-/* Cleanup */
-cass_future_free(future);
-dse_graph_statement_free(statement);
+  /* Cleanup */
+  cass_future_free(future);
+  dse_graph_statement_free(statement);
+}
 ```
 
 The graph options object should be created once and reused for all graph queries
 that use the same options.
 
 ```c
-DseGraphOptions* test_options = NULL;
 
 int main() {
   /* Create a graph options so that we can set a specific graph name: "test" */
-  test_options = dse_graph_options_new();
+  DseGraphOptions* test_options = dse_graph_options_new();
 
   /* Set the graph name */
-  dse_graph_options_set_graph_name(options, "test");
+  dse_graph_options_set_graph_name(test_options, "test");
 
   /* Run application */
 
@@ -220,21 +223,21 @@ containing result set. `DseGraphResult` objects are invalidated with each call
 to `dse_graph_resultset_next()`.
 
 ```c
-/* ... */
+void handle_graph_resultset(CassFuture* future) {
+  DseGraphResultSet* resultset = cass_future_get_dse_graph_resultset(future);
 
-DseGraphResultSet* resultset = cass_future_get_dse_graph_resultset(future);
+  size_t i, count = dse_graph_resultset_count(resultset);
 
-size_t i, count = dse_graph_resultset_count(resultset);
+  for (i = 0; i < count; ++i) {
+    /* Gets the next result (and invalidateds the previous result */
+    const DseGraphResult* result = dse_graph_resultset_next(resultset);
 
-for (i = 0; i < count; ++i) {
-  /* Gets the next result (and invalidateds the previous result */
-  const DseGraphResult* result = dse_graph_resultset_next(resultset);
+    /* ... */
+  }
 
-  /* ... */
+  /* Frees the result set and all contained `DseGraphResult` objects */
+  dse_graph_resultset_free(resultset);
 }
-
-/* Frees the result set and all contained `DseGraphResult` objects */
-dse_graph_resultset_free(resultset);
 ```
 
 A `DseGraphResult` is a variant type that can represent the following types:
@@ -242,34 +245,33 @@ number (double or an integer),  boolean, string, an array or an object (a
 collection of name/value pairs).
 
 ```c
-
-/* ... */
-
-/* Always check the type of a DseGraphResult */
-if (dse_graph_result_is_double(result)) {
-  cass_double_t value = dse_graph_result_get_double(result);
-
-  /* ... */
-}
-
-if (dse_graph_result_is_array(result)) {
-  /* The count can be used to iterate over the elements in an array */
-  size_t i, count = dse_graph_result_element_count(result);
-  for (i = 0; i < count; ++i) {
-    const DseGraphResult* element = dse_graph_result_element(result, i);
+void handle_graph_result(const DseGraphResult* result) {
+  /* Always check the type of a DseGraphResult */
+  if (dse_graph_result_is_double(result)) {
+    cass_double_t value = dse_graph_result_get_double(result);
 
     /* ... */
   }
-}
 
-if (dse_graph_result_is_object(result)) {
-  /* The count can be used to iterate over the members in an object */
-  size_t i, count = dse_graph_result_member_count(result);
-  for (i = 0; i < count; ++i) {
-    const char* key = dse_graph_result_member_key(result, i, NULL);
-    const DseGraphResult* value = dse_graph_result_member_value(result, i);
+  if (dse_graph_result_is_array(result)) {
+    /* The count can be used to iterate over the elements in an array */
+    size_t i, count = dse_graph_result_element_count(result);
+    for (i = 0; i < count; ++i) {
+      const DseGraphResult* element = dse_graph_result_element(result, i);
 
-    /* ... */
+      /* ... */
+    }
+  }
+
+  if (dse_graph_result_is_object(result)) {
+    /* The count can be used to iterate over the members in an object */
+    size_t i, count = dse_graph_result_member_count(result);
+    for (i = 0; i < count; ++i) {
+      const char* key = dse_graph_result_member_key(result, i, NULL);
+      const DseGraphResult* value = dse_graph_result_member_value(result, i);
+
+      /* ... */
+    }
   }
 }
 ```

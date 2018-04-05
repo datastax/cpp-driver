@@ -8,11 +8,17 @@ following functions:
 * GSSAPI authentication: `cass_cluster_set_dse_gssapi_authenticator()`
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 /* A DSE cluster using plain-text authentication would use: */
 cass_cluster_set_dse_plaintext_authenticator(cluster, "cassandra", "cassandra");
 
 /* A DSE cluster using GSSAPI authentication would use: */
 cass_cluster_set_dse_gssapi_authenticator(cluster, "dse", "cassandra@DATASTAX.COM");
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 ## Proxy Execution
@@ -28,9 +34,18 @@ GRANT PROXY.EXECUTE ON ROLE bob TO service;
 To run a statement as 'bob', the client simply sets the "execute-as" attribute on the statement and executes as usual:
 
 ```c
-CassStatement* statement; // Previously defined statement.
-cass_statement_set_execute_as(statement, "bob");
-future = cass_session_execute(session, statement);
+void execute_as(CassSession* session) {
+  CassStatement* statement = cass_statement_new("SELECT * FROM ...", 0);
+
+  cass_statement_set_execute_as(statement, "bob");
+
+  CassFuture* future = cass_session_execute(session, statement);
+
+  /* ... */
+
+  cass_future_free(future);
+  cass_statement_free(statement);
+}
 ```
 
 ## Proxy Authentication
@@ -47,11 +62,17 @@ GRANT PROXY.LOGIN ON ROLE bob TO service;
 Then the client authenticates with DSE as follows:
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 /* A DSE cluster using plain-text authentication would use: */
 cass_cluster_set_dse_plaintext_authenticator_proxy(cluster, "service", "service-password", "bob");
 
 /* A DSE cluster using GSSAPI authentication would use: */
 cass_cluster_set_dse_gssapi_authenticator_proxy(cluster, "dse", "service@DATASTAX.COM", "bob");
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 Note that if DSE is set up to leverage multiple authentication systems, the authenticated user may come from one system
