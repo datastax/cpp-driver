@@ -26,21 +26,23 @@ data type object can be used to construct a new [`CassUserType`] object using
 [`cass_user_type_new_from_data_type()`].
 
 ```c
-/* Get schema object (this should be cached) */
-const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
+void get_person_data_type_from_keyspace(CassSession* session) {
+  /* Get schema object (this should be cached) */
+  const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
 
-/* Get the keyspace for the user defined type. It doesn't need to be freed */
-const CassKeyspaceMeta* keyspace_meta =
-  cass_schema_meta_keyspace_by_name("examples");
+  /* Get the keyspace for the user defined type. It doesn't need to be freed */
+  const CassKeyspaceMeta* keyspace_meta =
+    cass_schema_meta_keyspace_by_name(schema_meta, "examples");
 
-/* This data type object doesn't need to be freed */
-const DataType* person_data_type =
-  cass_keyspace_meta_user_type_by_name(keyspace_meta, "person");
+  /* This data type object doesn't need to be freed */
+  const CassDataType* person_data_type =
+    cass_keyspace_meta_user_type_by_name(keyspace_meta, "person");
 
-/* ... */
+  /* ... */
 
-/* Schema object must be freed */
-cass_schema_meta_free(schema_meta);
+  /* Schema object must be freed */
+  cass_schema_meta_free(schema_meta);
+}
 ```
 
 Data types can also be retrieved from [`CassResult`], [`CassPrepared`], and
@@ -60,10 +62,9 @@ Data types can also be programmatically constructed. This is useful for applicat
 may have disabled schema metatdata.
 
 ```c
-CassDataType* person_data_type = cass_data_type_new_udt(3);
 CassDataType* address_data_type = cass_data_type_new_type(4);
-CassDataType* phone_numbers_data_type =
-  cass_data_type_new(CASS_VALUE_TYPE_MAP);
+CassDataType* phone_numbers_data_type = cass_data_type_new(2);
+CassDataType* person_data_type = cass_data_type_new_udt(3);
 
 /* Street address, zip code, state/province, and country */
 cass_data_type_add_sub_value_type(address_data_type, CASS_VALUE_TYPE_TEXT);
@@ -76,16 +77,16 @@ cass_data_type_add_sub_value_type(phone_numbers_data_type, CASS_VALUE_TYPE_TEXT)
 cass_data_type_add_sub_value_type(phone_numbers_data_type, CASS_VALUE_TYPE_INT);
 
 /* Add fields to the person data type */
-cass_data_type_add_sub_value_type_by_name(data_type, "name", CASS_VALUE_TYPE_TEXT);
-cass_data_type_add_sub_data_type_by_name(data_type, "address", address_data_type);
-cass_data_type_add_sub_value_type_by_name(data_type, "phone_numbers", phone_numbers_data_type);
+cass_data_type_add_sub_value_type_by_name(person_data_type, "name", CASS_VALUE_TYPE_TEXT);
+cass_data_type_add_sub_data_type_by_name(person_data_type, "address", address_data_type);
+cass_data_type_add_sub_value_type_by_name(person_data_type, "phone_numbers", phone_numbers_data_type);
 
 /* ... */
 
 /* Data types must be freed */
-cass_data_type_free(person_data_type);
 cass_data_type_free(address_data_type);
 cass_data_type_free(phone_numbers_data_type);
+cass_data_type_free(person_data_type);
 ```
 
 ## Creating UDTs, Tuples and Collections Using Data Types
@@ -95,6 +96,10 @@ construct composite data types. The sub-types of a data type can be used to
 construct other nested types.
 
 ```c
+CassDataType* person_data_type = NULL;
+
+/* Construct or lookup data type */
+
 /* Construct a new UDT from a data type */
 CassUserType* person = cass_user_type_new_from_data_type(person_data_type);
 
@@ -102,15 +107,15 @@ CassUserType* person = cass_user_type_new_from_data_type(person_data_type);
 
 /* Construct a new tuple from a nested data type */
 CassTuple* address =
-  cass_tuple_type_new_from_data_type(
+  cass_tuple_new_from_data_type(
      cass_data_type_sub_data_type_by_name(person_data_type, "address"));
 
 /* ... */
 
 /* Construct a new map collection from a nested data type */
 CassCollection* phone_numbers =
-  cass_collection_new_from_data_type
-    cass_data_type_sub_data_type_by_name(person_data_type, "phone_numbers"));
+  cass_collection_new_from_data_type(
+    cass_data_type_sub_data_type_by_name(person_data_type, "phone_numbers"), 2);
 
 /* ... */
 
