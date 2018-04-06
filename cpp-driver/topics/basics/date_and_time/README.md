@@ -65,7 +65,7 @@ void insert_date_time(CassSession* session) {
 #include <time.h>
 
 void select_date_time(CassSession* session) {
-  CassStatement* statement = cass_statement_new("SELECT * FROM examples.date_time WHERE key = ?", 1);
+  CassStatement* statement = cass_statement_new("SELECT * FROM date_time WHERE key = ?", 1);
 
   CassFuture* future = cass_session_execute(session, statement);
 

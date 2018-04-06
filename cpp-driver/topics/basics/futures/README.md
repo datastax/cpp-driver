@@ -20,7 +20,7 @@ cass_future_free(future);
 
 ### Synchronously Waiting for the Result
 ```c
-void  wait_for_future(CassSession* session, CassStatement* statement) {
+void wait_for_future(CassSession* session, CassStatement* statement) {
   CassFuture* future = cass_session_execute(session, statement);
 
   /* Blocks and gets a result */
@@ -35,9 +35,17 @@ void  wait_for_future(CassSession* session, CassStatement* statement) {
     cass_future_error_message(future, &error_message, &error_message_length);
 
     /* Handle error */
+
+    cass_future_free(future);
+    return;
   }
 
+  /* The future can be freed immediately after getting the result object */
   cass_future_free(future);
+
+  /* Use the result object */
+
+  cass_result_free(result);
 }
 ```
 
