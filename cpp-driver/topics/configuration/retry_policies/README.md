@@ -154,8 +154,10 @@ the retry decision of its child policy. The log messages created by this policy
 are done using the [`CASS_LOG_INFO`] level.
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 CassRetryPolicy* default_policy = cass_retry_policy_default_new();
-CassRetryPolicy* logging_policy = cass_retry_policy_logging_new(default_policy)
+CassRetryPolicy* logging_policy = cass_retry_policy_logging_new(default_policy);
 
 cass_cluster_set_retry_policy(cluster, logging_policy);
 
@@ -164,6 +166,8 @@ cass_cluster_set_retry_policy(cluster, logging_policy);
 /* Retry policies must be freed */
 cass_retry_policy_free(default_policy);
 cass_retry_policy_free(logging_policy);
+
+cass_cluster_free(cluster);
 ```
 [`cass_cluster_set_retry_policy()`]: http://datastax.github.io/cpp-driver/api/struct.CassCluster/#cass-cluster-set-retry-policy
 [`cass_statement_set_retry_policy()`]: http://datastax.github.io/cpp-driver/api/struct.CassStatement/#cass-statement-set-retry-policy

@@ -154,8 +154,14 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
 It is possible to load multiple self-signed certificates or CA certificate chains. In the event where self-signed certificates with unique IP addresses are being used this will be required. It is possible to disable the certificate verification process, but it is not recommended.
 
 ```c
+CassSsl* ssl = cass_ssl_new();
+
 // Disable certifcate verifcation
 cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
+
+/* ... */
+
+cass_ssl_free(ssl);
 ```
 
 #### Enabling Cassandra identity verification
@@ -165,6 +171,8 @@ If a unique certificate has been generated for each Cassandra node with the IP a
 **NOTE:** This is disabled by default.
 
 ```c
+CassSsl* ssl = cass_ssl_new();
+
 // Add identity verification flag: CASS_SSL_VERIFY_PEER_IDENTITY (IP address)
 cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY);
 
@@ -178,8 +186,14 @@ If using a domain name to verify the peer's identity then hostname resolution
 **NOTE:** This is also disabled by default.
 
 ```c
+CassCluster* cluster = cass_cluster_new();
+
 // Enable reverse DNS
 cass_cluster_set_use_hostname_resolution(cluster, cass_true);
+
+/* ... */
+
+cass_cluster_free(cluster);
 ```
 
 ### Using Cassandra and the C/C++ driver with client-side certificates
@@ -231,6 +245,7 @@ Now PEM formatted public and private key can be loaded. These files can be loade
 
 ```c
 CassError rc = CASS_OK;
+CassSsl* ssl = cass_ssl_new();
 
 char* cert = NULL;
 size_t cert_size = 0;
@@ -255,6 +270,8 @@ rc = cass_ssl_set_private_key_n(ssl, key, key_size, key_password, strlen(key_pas
 if (rc != CASS_OK) {
   // Handle error
 }
+
+cass_ssl_free(ssl);
 ```
 
 #### Setting up client authentication with Cassandra

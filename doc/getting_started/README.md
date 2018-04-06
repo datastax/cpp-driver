@@ -31,7 +31,7 @@ int main() {
     /* Run queries here */
 
     /* Close the session */
-    close_future = cass_session_close(session);
+    CassFuture* close_future = cass_session_close(session);
     cass_future_wait(close_future);
     cass_future_free(close_future);
   } else {

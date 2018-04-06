@@ -6,11 +6,18 @@ contains several useful metrics for accessing request performance and/or
 debugging issues.
 
 ```c
+CassSession* session = cass_session_new();
+
+/* Connect session */
+
 CassMetrics metrics;
 
 /* Get a snapshot of the driver's metrics */
 cass_session_get_metrics(session, &metrics);
 
+/* Run queries */
+
+cass_session_free(session);
 ```
 
 ## Request metrics

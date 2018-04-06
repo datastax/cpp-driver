@@ -11,41 +11,43 @@ Batches can be used to group multiple mutations (`UPDATE`, `INSERT`, `DELETE`) t
 **Important**: Be careful when using batches as a [performance optimization](http://www.datastax.com/documentation/cql/3.1/cql/cql_using/useBatch.html).
 
 ```c
-/* This logged batch will makes sure that all the mutations eventually succeed */
-CassBatch* batch = cass_batch_new(CASS_BATCH_TYPE_LOGGED);
+void execute_batch(CassSession* session) {
+  /* This logged batch will make sure that all the mutations eventually succeed */
+  CassBatch* batch = cass_batch_new(CASS_BATCH_TYPE_LOGGED);
 
-/* Statements can be immediately freed after being added to the batch */
+  /* Statements can be immediately freed after being added to the batch */
 
-{
-  CassStatement* statement
-    = cass_statement_new("INSERT INTO example1(key, value) VALUES ('a', '1')", 0);
-  cass_batch_add_statement(batch, statement);
-  cass_statement_free(statement);
+  {
+    CassStatement* statement
+      = cass_statement_new("INSERT INTO example1(key, value) VALUES ('a', '1')", 0);
+    cass_batch_add_statement(batch, statement);
+    cass_statement_free(statement);
+  }
+
+  {
+    CassStatement* statement
+      = cass_statement_new("UPDATE example2 set value = '2' WHERE key = 'b'", 0);
+    cass_batch_add_statement(batch, statement);
+    cass_statement_free(statement);
+  }
+
+  {
+    CassStatement* statement
+      = cass_statement_new("DELETE FROM example3 WHERE key = 'c'", 0);
+    cass_batch_add_statement(batch, statement);
+    cass_statement_free(statement);
+  }
+
+  CassFuture* batch_future = cass_session_execute_batch(session, batch);
+
+  /* Batch objects can be freed immediately after being executed */
+  cass_batch_free(batch);
+
+  /* This will block until the query has finished */
+  CassError rc = cass_future_error_code(batch_future);
+
+  printf("Batch result: %s\n", cass_error_desc(rc));
+
+  cass_future_free(batch_future);
 }
-
-{
-  CassStatement* statement
-    = cass_statement_new("UPDATE example2 set value = '2' WHERE key = 'b'", 0);
-  cass_batch_add_statement(batch, statement);
-  cass_statement_free(statement);
-}
-
-{
-  CassStatement* statement
-    = cass_statement_new("DELETE FROM example3 WHERE key = 'c'", 0);
-  cass_batch_add_statement(batch, statement);
-  cass_statement_free(statement);
-}
-
-CassFuture* batch_future = cass_session_execute_batch(session, batch);
-
-/* Batch objects can be freed immediately after being executed */
-cass_batch_free(batch);
-
-/* This will block until the query has finished */
-CassError rc = cass_future_error_code(batch_future);
-
-printf("Batch result: %s\n", cass_error_desc(rc));
-
-cass_future_free(batch_future);
 ```

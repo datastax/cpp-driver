@@ -95,10 +95,14 @@ can have its consistency level altered at anytime before the statement is
 executed by the session.
 
 ```c
+CassStatement* statement = NULL;
+
 /* Create a simple or prepared statment */
 
 /* Ensure the session executed statement has strong consistency */
 cass_statement_set_consistency(statement, CASS_CONSISTENCY_QUORUM);
+
+cass_statement_free(statement);
 ```
 
 **NOTE:** Consistency is ignored for `USE`, `TRUNCATE`, `CREATE` and `ALTER`
