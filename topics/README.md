@@ -34,7 +34,13 @@ int main() {
   /* This operation will block until the result is ready */
   CassError rc = cass_future_error_code(connect_future);
 
-  printf("Connect result: %s\n", cass_error_desc(rc));
+  if (rc != CASS_OK) {
+    /* Display connection error message */
+    const char* message;
+    size_t message_length;
+    cass_future_error_message(connect_future, &message, &message_length);
+    fprintf(stderr, "Connect error: '%.*s'\n", (int)message_length, message);
+  }
 
   /* Run queries... */
 
@@ -121,7 +127,9 @@ void handle_query_result(CassFuture* future) {
 
   /* If there was an error then the result won't be available */
   if (result == NULL) {
+
     /* Handle error */
+
     cass_future_free(future);
     return;
   }
@@ -129,7 +137,7 @@ void handle_query_result(CassFuture* future) {
   /* The future can be freed immediately after getting the result object */
   cass_future_free(future);
 
-  /* This can be used to retrieve on the first row of the result */
+  /* This can be used to retrieve the first row of the result */
   const CassRow* row = cass_result_first_row(result);
 
   /* Now we can retrieve the column values from the row */

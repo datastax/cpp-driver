@@ -63,7 +63,7 @@ void get_values_from_row(const CassRow* row) {
 
   cass_int64_t timestamp_value;
   const CassValue* column2 = cass_row_get_column(row, 1);
-  cass_value_get_int32(column2, &timestamp_value);
+  cass_value_get_int64(column2, &timestamp_value);
 
   const char* string_value;
   size_t string_value_length;

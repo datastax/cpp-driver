@@ -12,7 +12,7 @@ Batches can be used to group multiple mutations (`UPDATE`, `INSERT`, `DELETE`) t
 
 ```c
 void execute_batch(CassSession* session) {
-  /* This logged batch will makes sure that all the mutations eventually succeed */
+  /* This logged batch will make sure that all the mutations eventually succeed */
   CassBatch* batch = cass_batch_new(CASS_BATCH_TYPE_LOGGED);
 
   /* Statements can be immediately freed after being added to the batch */
