@@ -81,6 +81,7 @@ public:
       , use_randomized_contact_points_(true)
       , prepare_on_all_hosts_(true)
       , prepare_on_up_or_add_host_(true)
+      , local_address_("")
       , no_compact_(false) { }
 
   Config new_instance() const {
@@ -395,6 +396,12 @@ public:
     prepare_on_up_or_add_host_ = enabled;
   }
 
+  const std::string& local_address() const { return local_address_; }
+
+  void set_local_address(const std::string& name) {
+    local_address_ = name;
+  }
+
   bool no_compact() const { return no_compact_; }
 
   void set_no_compact(bool enabled) {
@@ -448,6 +455,7 @@ private:
   bool use_randomized_contact_points_;
   bool prepare_on_all_hosts_;
   bool prepare_on_up_or_add_host_;
+  std::string local_address_;
   bool no_compact_;
 };
 

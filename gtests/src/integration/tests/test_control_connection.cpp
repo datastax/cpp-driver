@@ -187,6 +187,67 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests, ConnectUsingInvalidPort) {
 }
 
 /**
+ * Perform session connection using invalid local IP address
+ *
+ * This test will attempt to perform a connection using an invalid local IP
+ * address and ensure the control connection is not established against a
+ * single node cluster.
+ *
+ * @test_category control_connection
+ * @since core:1.0.0
+ * @expected_result Control connection will not be established
+ */
+CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
+                             ConnectUsingInvalidLocalIpAddress) {
+  CHECK_FAILURE;
+
+  // Attempt to connect to the server using an invalid local IP address
+  logger_.add_critera("Unable to establish a control connection to host " \
+                      "1.1.1.1 because of the following error: Connection " \
+                      "timeout");
+  Cluster cluster = default_cluster().with_local_address("1.1.1.1");
+  try {
+    cluster.connect();
+    FAIL() << "Connection was established using invalid local IP address";
+  } catch (Session::Exception& se) {
+    ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
+    ASSERT_GE(logger_.count(), 1u);
+  }
+}
+
+/**
+ * Perform session connection using valid local IP address but invalid
+ * remote address
+ *
+ * This test will attempt to perform a connection using a valid local IP
+ * address and invalid remote address and ensure the control connection is
+ * not established against a single node cluster.
+ *
+ * @test_category control_connection
+ * @since core:1.0.0
+ * @expected_result Control connection will not be established
+ */
+CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
+                             ConnectUsingValidLocalIpAddressButInvalidRemote) {
+  CHECK_FAILURE;
+
+  // Attempt to connect to the server using an valid local IP address
+  // but invalid remote address
+  logger_.add_critera("Unable to establish a control connection to host " \
+                      "1.1.1.1 because of the following error: Connection " \
+                      "timeout");
+  Cluster cluster = Cluster::build().with_contact_points("1.1.1.1")
+    .with_local_address("127.0.0.1");
+  try {
+    cluster.connect();
+    FAIL() << "Connection was established using invalid IP address";
+  } catch (Session::Exception& se) {
+    ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
+    ASSERT_GE(logger_.count(), 1u);
+  }
+}
+
+/**
  * Perform session connection while forcing a control connection reconnect
  *
  * This test will perform a connection and ensure the control connection
