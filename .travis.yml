@@ -14,32 +14,20 @@ cache:
     - ${HOME}/dependencies
 env:
   global:
-    - BOOST_VERSION=1.64.0
-    - BOOST_FILE_VERSION=1_64_0
+    - BOOST_VERSION=1.66.0
+    - BOOST_FILE_VERSION=1_66_0
     - PROCS=2
   matrix:
-    - LIBUV_VERSION=0.10.x EXACT_LIBUV_VERSION=0.10.37
-    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.14.0
+    - LIBUV_VERSION=1.20.0
 install:
   - if [ ! -d "${HOME}/dependencies/libuv-${LIBUV_VERSION}" ]; then
-      wget -q --no-check-certificate http://dist.libuv.org/dist/v${EXACT_LIBUV_VERSION}/libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
-      tar xzf libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
+      wget -q --no-check-certificate http://dist.libuv.org/dist/v${LIBUV_VERSION}/libuv-v${LIBUV_VERSION}.tar.gz;
+      tar xzf libuv-v${LIBUV_VERSION}.tar.gz;
       (
-        cd libuv-v${EXACT_LIBUV_VERSION};
-        if [ "${LIBUV_VERSION}" == "0.10.x" ]; then
-          make -j${PROCS};
-          mkdir -p ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
-          cp libuv* ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
-          cp -r include ${HOME}/dependencies/libuv-${LIBUV_VERSION};
-          (
-            cd ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
-            ln -s libuv.so libuv.so.0.10;
-          )
-        elif [ "${LIBUV_VERSION}" == "1.x" ]; then
-          sh autogen.sh;
-          ./configure --prefix=${HOME}/dependencies/libuv-${LIBUV_VERSION};
-          make -j${PROCS} install;
-        fi;
+        cd libuv-v${LIBUV_VERSION};
+        sh autogen.sh;
+        ./configure --prefix=${HOME}/dependencies/libuv-${LIBUV_VERSION};
+        make -j${PROCS} install;
       )
     else echo "Using Cached libuv v${LIBUV_VERSION}. Dependency does not need to be re-compiled";
     fi
