@@ -22,6 +22,17 @@
  * Control connection integration tests; single node cluster
  */
 class ControlConnectionTests : public Integration {
+
+public:
+
+  void SetUp() {
+    // Call the parent setup function (don't automatically start session,
+    // because we don't want any connections established until we have
+    // set up the cluster).
+    is_session_requested_ = false;
+    Integration::SetUp();
+  }
+
 protected:
   /**
    * Execute multiple requests and ensure the expected nodes are used during
@@ -187,9 +198,30 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests, ConnectUsingInvalidPort) {
 }
 
 /**
- * Perform session connection using invalid local IP address
+ * Perform session connection using unresolvable local IP address
  *
- * This test will attempt to perform a connection using an invalid local IP
+ * This test will attempt to perform a connection using an unresolvable local
+ * IP address and ensure the control connection is not established against a
+ * single node cluster.
+ *
+ * @test_category control_connection
+ * @since core:1.0.0
+ * @expected_result Control connection will not be established
+ */
+CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
+                             ConnectUsingUnresolvableLocalIpAddress) {
+  CHECK_FAILURE;
+
+  // Attempt to connect to the server using an unresolvable local IP address
+  Cluster cluster = default_cluster();
+  EXPECT_EQ(CASS_ERROR_LIB_HOST_RESOLUTION,
+            cass_cluster_set_local_address(cluster.get(), "unknown.invalid"));
+}
+
+/**
+ * Perform session connection using unbindable local IP address
+ *
+ * This test will attempt to perform a connection using an unbindable local IP
  * address and ensure the control connection is not established against a
  * single node cluster.
  *
@@ -198,17 +230,15 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests, ConnectUsingInvalidPort) {
  * @expected_result Control connection will not be established
  */
 CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
-                             ConnectUsingInvalidLocalIpAddress) {
+                             ConnectUsingUnbindableLocalIpAddress) {
   CHECK_FAILURE;
 
-  // Attempt to connect to the server using an invalid local IP address
-  logger_.add_critera("Unable to establish a control connection to host " \
-                      "1.1.1.1 because of the following error: Connection " \
-                      "timeout");
+  // Attempt to connect to the server using an unbindable local IP address
+  logger_.add_critera("Unable to bind local address");
   Cluster cluster = default_cluster().with_local_address("1.1.1.1");
   try {
     cluster.connect();
-    FAIL() << "Connection was established using invalid local IP address";
+    FAIL() << "Connection was established using unbindable local IP address";
   } catch (Session::Exception& se) {
     ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
     ASSERT_GE(logger_.count(), 1u);
@@ -232,10 +262,11 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
   CHECK_FAILURE;
 
   // Attempt to connect to the server using an valid local IP address
-  // but invalid remote address
+  // but invalid remote address. The specified remote is not routable
+  // from the specified local.
   logger_.add_critera("Unable to establish a control connection to host " \
-                      "1.1.1.1 because of the following error: Connection " \
-                      "timeout");
+                      "1.1.1.1 because of the following error: " \
+                      "Connect error 'operation not permitted'");
   Cluster cluster = Cluster::build().with_contact_points("1.1.1.1")
     .with_local_address("127.0.0.1");
   try {
