@@ -232,6 +232,7 @@ Connection::Connection(uv_loop_t* loop,
     , heartbeat_outstanding_(false) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
+  bool ok = true;
 
   if (uv_tcp_nodelay(&socket_,
                      config.tcp_nodelay_enable() ? 1 : 0) != 0) {
@@ -244,9 +245,19 @@ Connection::Connection(uv_loop_t* loop,
     LOG_WARN("Unable to set tcp keepalive");
   }
 
-  SslContext* ssl_context = config_.ssl_context();
-  if (ssl_context != NULL) {
-    ssl_session_.reset(ssl_context->create_session(host));
+  const Address* local_address = config_.local_address();
+  if (local_address) {
+    if (uv_tcp_bind(&socket_, local_address->addr(), 0)) {
+      ok = false;
+      notify_error("Unable to bind local address");
+    }
+  }
+
+  if (ok) {
+    SslContext* ssl_context = config_.ssl_context();
+    if (ssl_context != NULL) {
+      ssl_session_.reset(ssl_context->create_session(host));
+    }
   }
 }
 
@@ -378,7 +389,8 @@ void Connection::set_state(ConnectionState new_state) {
 
   switch (state_) {
     case CONNECTION_STATE_NEW:
-      assert(new_state == CONNECTION_STATE_CONNECTING &&
+      assert((new_state == CONNECTION_STATE_CONNECTING ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
              "Invalid connection state after new");
       state_ = new_state;
       break;
