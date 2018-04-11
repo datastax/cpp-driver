@@ -971,8 +971,8 @@ cass_cluster_set_local_address_n(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] name IP address or hostname to bind, or empty string
- * for no binding.
+ * @param[in] name IP address to bind, or empty string for no binding.
+ * Only numeric addresses are supported; no resolution is done.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
