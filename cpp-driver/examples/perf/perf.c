@@ -53,10 +53,10 @@
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 #pragma pack(push,8)
 typedef struct tagTHREADNAME_INFO {
-  DWORD dwType; // Must be 0x1000.
-  LPCSTR szName; // Pointer to name (in user addr space).
-  DWORD dwThreadID; // Thread ID (-1=caller thread).
-  DWORD dwFlags; // Reserved for future use, must be zero.
+  DWORD dwType; /* Must be 0x1000. */
+  LPCSTR szName; /* Pointer to name (in user addr space). */
+  DWORD dwThreadID; /* Thread ID (-1=caller thread). */
+  DWORD dwFlags; /* Reserved for future use, must be zero. */
 } THREADNAME_INFO;
 #pragma pack(pop)
 void set_thread_name(const char* thread_name) {
@@ -354,6 +354,7 @@ int main(int argc, char* argv[]) {
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
+    cass_uuid_gen_free(uuid_gen);
     return -1;
   }
 

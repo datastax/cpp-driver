@@ -105,7 +105,13 @@ void RequestProcessor::on_up(const Address& address) {
 }
 
 void RequestProcessor::on_down(const Address& address) {
-  add(Memory::allocate<NotifyHostDown>(address));
+  // on_down cannot be performed asynchronously or memory leak could occur
+  Host::Ptr host = get_host(address);
+  if (host) {
+    internal_host_add_down_up(host, Host::DOWN);
+  } else {
+    LOG_DEBUG("Tried to down host %s that doesn't exist", address.to_string().c_str());
+  }
 }
 
 void RequestProcessor::on_critical_error(const Address& address,
@@ -406,16 +412,6 @@ void RequestProcessor::NotifyHostAdd::run(EventLoop* event_loop) {
 void RequestProcessor::NotifyHostRemove::run(EventLoop* event_loop) {
   RequestProcessor* request_processor = static_cast<RequestProcessor*>(event_loop);
   request_processor->internal_host_remove(host_);
-}
-
-void RequestProcessor::NotifyHostDown::run(EventLoop* event_loop) {
-  RequestProcessor* request_processor = static_cast<RequestProcessor*>(event_loop);
-  Host::Ptr host = request_processor->get_host(address_);
-  if (host) {
-    request_processor->internal_host_add_down_up(host, Host::DOWN);
-  } else {
-    LOG_DEBUG("Tried to down host %s that doesn't exist", address_.to_string().c_str());
-  }
 }
 
 void RequestProcessor::NotifyHostUp::run(EventLoop* event_loop) {

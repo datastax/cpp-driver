@@ -227,15 +227,6 @@ private:
   };
 
   // Connection pool manager listener callback tasks for async operations
-  class NotifyHostDown : public Task {
-  public:
-    NotifyHostDown(const Address& address)
-      : address_(address) { }
-    virtual void run(EventLoop* event_loop);
-  private:
-    const Address address_;
-  };
-
   class NotifyHostUp : public Task {
   public:
     NotifyHostUp(const Address& address)
