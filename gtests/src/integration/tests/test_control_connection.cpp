@@ -234,7 +234,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
   CHECK_FAILURE;
 
   // Attempt to connect to the server using an unbindable local IP address
-  logger_.add_critera("Unable to bind local address");
+  logger_.add_critera("Unable to bind local address: address not available");
   Cluster cluster = default_cluster().with_local_address("1.1.1.1");
   try {
     cluster.connect();

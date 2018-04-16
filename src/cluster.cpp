@@ -473,8 +473,9 @@ CassError cass_cluster_set_local_address(CassCluster* cluster,
 CassError cass_cluster_set_local_address_n(CassCluster* cluster,
                                                      const char* name,
                                                      size_t name_length) {
-  cass::Address address;
+  cass::Address address;  // default to AF_UNSPEC
   if (name_length == 0 ||
+      name == NULL ||
       cass::Address::from_string(std::string(name, name_length), 0, &address)) {
     cluster->config().set_local_address(address);
   } else {

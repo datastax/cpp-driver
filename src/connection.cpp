@@ -247,9 +247,10 @@ Connection::Connection(uv_loop_t* loop,
 
   const Address* local_address = config_.local_address();
   if (local_address) {
-    if (uv_tcp_bind(&socket_, local_address->addr(), 0)) {
+    int rc = uv_tcp_bind(&socket_, local_address->addr(), 0);
+    if (rc) {
       ok = false;
-      notify_error("Unable to bind local address");
+      notify_error("Unable to bind local address: " + std::string(UV_ERRSTR(rc, loop_)));
     }
   }
 
