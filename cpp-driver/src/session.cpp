@@ -185,7 +185,7 @@ Session::~Session() {
 }
 
 void Session::clear(const Config& config) {
-  config_ = config.new_instance(true);
+  config_ = config.new_instance();
   random_.reset();
   metrics_.reset(Memory::allocate<Metrics>(config_.thread_count_io() + 1));
   connect_future_.reset();
@@ -549,13 +549,19 @@ void Session::on_control_connection_ready() {
   request_queue_.reset(Memory::allocate<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
   RequestProcessorManagerInitializer::Ptr initializer(Memory::allocate<RequestProcessorManagerInitializer>(this,
                                                                                                            on_request_processor_manager_initialize));
-  initializer->with_cluster_config(config_)
+  initializer->with_settings(RequestProcessorManagerSettings(config_))
     ->with_connect_keyspace(connect_keyspace_)
+    ->with_default_profile(config_.default_profile())
     ->with_hosts(connected_host, hosts_)
     ->with_listener(this)
+    ->with_max_schema_wait_time_ms(config_.max_schema_wait_time_ms())
     ->with_metrics(metrics_.get())
+    ->with_prepare_statements_on_all(config_.prepare_on_all_hosts())
+    ->with_profiles(config_.profiles())
     ->with_protocol_version(protocol_version)
+    ->with_randomized_contact_points(config_.use_randomized_contact_points())
     ->with_request_queue(request_queue_.get())
+    ->with_timestamp_generator(config_.timestamp_gen())
     ->with_token_map(token_map_.get())
     ->initialize();
 

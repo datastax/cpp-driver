@@ -18,9 +18,16 @@
 
 namespace cass {
 
-RequestProcessorManager::RequestProcessorManager(size_t num_threads)
+RequestProcessorManagerSettings::RequestProcessorManagerSettings()
+  : thread_count_io(1) { }
+
+RequestProcessorManagerSettings::RequestProcessorManagerSettings(const Config& config)
+  : connection_pool_manager_settings(config)
+  , thread_count_io(config.thread_count_io()) { }
+
+RequestProcessorManager::RequestProcessorManager(size_t thread_count_io)
   : current_(0)
-  , threads_(num_threads) { }
+  , threads_(thread_count_io) { }
 
 void RequestProcessorManager::close() {
   internal_close();

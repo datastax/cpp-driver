@@ -112,20 +112,20 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request,
   , manager_(NULL)
   , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) { }
 
-void RequestHandler::init(const Config& config,
-                          const ExecutionProfile& profile,
+void RequestHandler::init(const ExecutionProfile& profile,
                           ConnectionPoolManager* manager,
                           const TokenMap* token_map,
+                          TimestampGenerator* timestamp_generator,
                           RequestListener* listener) {
   manager_ = manager;
   listener_ = listener;
-  wrapper_.init(config, profile, prepared_metadata_);
+  wrapper_.init(profile, prepared_metadata_, timestamp_generator);
 
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
   const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());
 
   query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
-  execution_plan_.reset(config.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
+  execution_plan_.reset(profile.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
 }
 
 void RequestHandler::execute() {

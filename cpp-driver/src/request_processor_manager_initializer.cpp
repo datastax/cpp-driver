@@ -23,10 +23,14 @@ RequestProcessorManagerInitializer::RequestProcessorManagerInitializer(void* dat
   : data_(data)
   , callback_(callback)
   , listener_(NULL)
+  , max_schema_wait_time_ms_(10000)
   , metrics_(NULL)
+  , prepare_on_all_hosts_(true)
   , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
   , request_queue_(NULL)
   , token_map_(NULL)
+  , timestamp_generator_(NULL)
+  , use_randomized_contact_points_(true)
 {
   uv_mutex_init(&lock_);
 }
@@ -35,13 +39,18 @@ RequestProcessorManagerInitializer::~RequestProcessorManagerInitializer() {
   uv_mutex_destroy(&lock_);
 }
 
-RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_cluster_config(const Config& config) {
-  config_ = config;
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_settings(const RequestProcessorManagerSettings& settings) {
+  settings_ = settings;
   return this;
 }
 
 RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_connect_keyspace(const String& connect_keyspace) {
   connect_keyspace_ = connect_keyspace;
+  return this;
+}
+
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_default_profile(const ExecutionProfile& default_profile) {
+  default_profile_ = default_profile;
   return this;
 }
 
@@ -57,8 +66,23 @@ RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_lis
   return this;
 }
 
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_max_schema_wait_time_ms(unsigned max_schema_wait_time_ms) {
+  max_schema_wait_time_ms_ = max_schema_wait_time_ms;
+  return this;
+}
+
 RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_metrics(Metrics* metrics) {
   metrics_ = metrics;
+  return this;
+}
+
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_prepare_statements_on_all(bool prepare_on_all_hosts) {
+  prepare_on_all_hosts_ = prepare_on_all_hosts;
+  return this;
+}
+
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_profiles(const ExecutionProfile::Map& profiles) {
+  profiles_ = profiles;
   return this;
 }
 
@@ -67,8 +91,18 @@ RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_pro
   return this;
 }
 
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_randomized_contact_points(bool use_randomized_contact_points) {
+  use_randomized_contact_points_ = use_randomized_contact_points;
+  return this;
+}
+
 RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_request_queue(MPMCQueue<RequestHandler*>* request_queue) {
   request_queue_ = request_queue;
+  return this;
+}
+
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_timestamp_generator(TimestampGenerator* timestamp_generator) {
+  timestamp_generator_ = timestamp_generator;
   return this;
 }
 
@@ -79,25 +113,31 @@ RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_tok
 
 void RequestProcessorManagerInitializer::initialize() {
   inc_ref();
-  remaining_.store(config_.thread_count_io());
+  remaining_.store(settings_.thread_count_io);
 
   LOG_DEBUG("Creating %u IO worker threads",
-            static_cast<unsigned int>(config_.thread_count_io()));
-  manager_.reset(Memory::allocate<RequestProcessorManager>(config_.thread_count_io()));
-  for (unsigned i = 0; i < config_.thread_count_io(); ++i) {
-    RequestProcessor::Ptr request_processor(Memory::allocate<RequestProcessor>(config_,
-                                                                               connect_keyspace_,
+            static_cast<unsigned int>(settings_.thread_count_io));
+  manager_.reset(Memory::allocate<RequestProcessorManager>(settings_.thread_count_io));
+  for (unsigned i = 0; i < settings_.thread_count_io; ++i) {
+    RequestProcessor::Ptr request_processor(Memory::allocate<RequestProcessor>(connect_keyspace_,
                                                                                listener_,
-                                                                               metrics_,
+                                                                               max_schema_wait_time_ms_,
+                                                                               prepare_on_all_hosts_,
                                                                                request_queue_,
-                                                                               token_map_ ? token_map_->clone() : NULL,
+                                                                               timestamp_generator_,
                                                                                this,
                                                                                on_connect));
-    request_processor->init(RequestProcessor::Protected());
+    request_processor->init(default_profile_,
+                            profiles_,
+                            token_map_ ? token_map_->clone() : NULL,
+                            use_randomized_contact_points_,
+                            RequestProcessor::Protected());
     request_processor->run();
     request_processor->connect(connected_host_,
                                hosts_,
+                               metrics_,
                                protocol_version_,
+                               settings_.connection_pool_manager_settings,
                                RequestProcessor::Protected());
   }
 }

@@ -33,6 +33,7 @@
 #include "small_vector.hpp"
 #include "speculative_execution.hpp"
 #include "string.hpp"
+#include "timestamp_generator.hpp"
 
 #include <uv.h>
 
@@ -143,11 +144,10 @@ public:
                  Metrics* metrics = NULL,
                  const Address* preferred_address = NULL);
 
-  // TODO: Remove default parameters where possible
-  void init(const Config& config,
-            const ExecutionProfile& profile,
+  void init(const ExecutionProfile& profile,
             ConnectionPoolManager* manager,
             const TokenMap* token_map,
+            TimestampGenerator* timestamp_generator,
             RequestListener* listener);
 
   void execute();

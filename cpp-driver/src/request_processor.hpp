@@ -58,24 +58,27 @@ public:
   typedef void(*Callback)(RequestProcessor*); // Initialization callback
 
   /**
-   * Create the request processor; Don't use directly use the manager
+   * Create the request processor; Don't use directly use the request processor
+   * manager initializer
    *
-   * @param config Cluster configuration settings (do not create new instance)
    * @param connect_keyspace Keyspace session is connecting to; may be empty
    * @param listener Request processor listener for connection events
-   * @param metrics Metrics associated with the session
+   * @param max_schema_wait_time_ms Maximum schema agreement wait time (in
+   *                                milliseconds)
+   * @param prepare_on_all_hosts True if statements should be prepared on all
+   *                             hosts; false otherwise
    * @param request_queue Request queue associated with the session
-   * @param token_map Initial calculated token map
+   * @param timestamp_generator Session timestamp generator
    * @param data User data that's passed to the callback
    * @param callback A callback that is called when the connection is connected
    *                 or if an error occurred
    */
-  RequestProcessor(const Config& config,
-                   const String& connect_keyspace,
+  RequestProcessor(const String& connect_keyspace,
                    RequestProcessorListener* listener,
-                   Metrics* metrics,
+                   unsigned max_schema_wait_time_ms,
+                   bool prepare_on_all_hosts,
                    MPMCQueue<RequestHandler*>* request_queue,
-                   const TokenMap* token_map,
+                   TimestampGenerator* timestamp_generator,
                    void* data,
                    Callback callback);
 
@@ -110,22 +113,35 @@ public:
   /**
    * Initialize the request processor
    *
+   * @param default_profile Default execution profile
+   * @param profiles Execution profiles (excludes default profile)
+   * @param token_map Initial calculated token map
+   * @param use_randomized_contact_points True if randomized contract points
+   *                                      should be used; false otherwise
    * @param A key to restrict access to the method
    * @return Returns 0 if successful, otherwise an error occurred
    */
-  int init(Protected);
+  int init(const ExecutionProfile& default_profile,
+           const ExecutionProfile::Map& profiles,
+           const TokenMap* token_map,
+           bool use_randomized_contact_points,
+           Protected);
   /**
    * Connect the request processor to the pre-established hosts using the
    * given protocol version
    *
    * @param connected_host Current connected host
    * @param hosts Map of addresses with their associated hosts
+   * @param metrics Metrics associated with the session
    * @param protocol_version Protocol version established
+   * @param settings A manager settings object for the connection pool manager
    * @param A key to restrict access to the method
    */
   void connect(const Host::Ptr& connected_host,
                const HostMap& hosts,
+               Metrics* metrics,
                int protocol_version,
+               const ConnectionPoolManagerSettings& settings,
                Protected);
 
 public:
@@ -185,11 +201,14 @@ public:
 private:
   void internal_connect(const Host::Ptr& current_host,
                         const HostMap& hosts,
-                        int protocol_version);
+                        Metrics* metrics,
+                        int protocol_version,
+                        const ConnectionPoolManagerSettings& settings);
   void internal_close();
   void internal_token_map_update(const TokenMap* token_map);
 
   Host::Ptr get_host(const Address& address);
+  bool execution_profile(const String& name, ExecutionProfile& profile) const;
   const LoadBalancingPolicy::Vec& load_balancing_policies() const;
 
 private:
@@ -226,16 +245,6 @@ private:
     virtual void run(EventLoop* event_loop);
   };
 
-  // Connection pool manager listener callback tasks for async operations
-  class NotifyHostUp : public Task {
-  public:
-    NotifyHostUp(const Address& address)
-      : address_(address) { }
-    virtual void run(EventLoop* event_loop);
-  private:
-    const Address address_;
-  };
-
   static void on_connection_pool_manager_initialize(ConnectionPoolManagerInitializer* initializer);
   void internal_connection_pool_manager_initialize(const ConnectionPoolManager::Ptr& manager,
                                                    const ConnectionPoolConnector::Vec& failures);
@@ -253,13 +262,17 @@ private:
   CassError error_code_;
   String error_message_;
 
-  Config config_;
   String connect_keyspace_;
+  ExecutionProfile default_profile_;
   HostMap hosts_;
   RequestProcessorListener* listener_;
-  Metrics* metrics_;
+  LoadBalancingPolicy::Vec load_balancing_policies_;
+  unsigned max_schema_wait_time_ms_;
+  bool prepare_on_all_hosts_;
+  ExecutionProfile::Map profiles_;
   ScopedPtr<Random> random_;
   MPMCQueue<RequestHandler*>* request_queue_;
+  TimestampGenerator* timestamp_generator_;
   ScopedPtr<const TokenMap> token_map_;
 
   ConnectionPoolManager::Ptr manager_;

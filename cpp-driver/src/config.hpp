@@ -78,9 +78,10 @@ public:
     default_profile_.set_retry_policy(Memory::allocate<DefaultRetryPolicy>());
   }
 
-  Config new_instance(bool is_default_only) const {
+  Config new_instance() const {
     Config config = *this;
-    config.init_profiles(is_default_only); // Builds the LBPs and updates the profiles
+    config.default_profile_.build_load_balancing_policy();
+    config.init_profiles(); // Initializes the profiles from default (if needed)
     config.set_speculative_execution_policy(speculative_execution_policy_->new_instance());
 
     return config;
@@ -244,12 +245,11 @@ public:
   }
 
   const SpeculativeExecutionPolicy::Ptr& speculative_execution_policy() const {
-    return speculative_execution_policy_;
+    return default_profile_.speculative_execution_policy();
   }
 
   void set_speculative_execution_policy(SpeculativeExecutionPolicy* sep) {
-    if (sep == NULL) return;
-    speculative_execution_policy_.reset(sep);
+    default_profile_.set_speculative_execution_policy(sep);
   }
 
   const SslContext::Ptr& ssl_context() const { return ssl_context_; }
@@ -347,20 +347,8 @@ public:
     return default_profile_;
   }
 
-  bool profile(const String& name, ExecutionProfile& profile) const {
-    // Determine if cluster profile should be used
-    if (name.empty()) {
-      profile = default_profile_;
-      return true;
-    }
-
-    // Handle profile lookup
-    ExecutionProfile::Map::const_iterator it = profiles_.find(name);
-    if (it != profiles_.end()) {
-      profile = it->second;
-      return true;
-    }
-    return false;
+  const ExecutionProfile::Map& profiles() const {
+    return profiles_;
   }
 
   void set_execution_profile(const String& name,
@@ -383,7 +371,7 @@ public:
   }
 
 private:
-  void init_profiles(bool is_default_only);
+  void init_profiles();
 
 private:
   int port_;

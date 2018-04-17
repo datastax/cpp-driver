@@ -24,6 +24,26 @@
 namespace cass {
 
 /**
+ * The request processor manager settings
+ */
+struct RequestProcessorManagerSettings {
+  /**
+   * Constructor, default initialization
+   */
+  RequestProcessorManagerSettings();
+
+  /**
+   * Constructor. Initialize manager settings from a config object
+   *
+   * @param config The config object
+   */
+  RequestProcessorManagerSettings(const Config& config);
+
+  ConnectionPoolManagerSettings connection_pool_manager_settings;
+  size_t thread_count_io;
+};
+
+/**
  * A manager for one or more request processor that will process requests from
  * the session
  */
@@ -37,10 +57,10 @@ public:
    * Handles initialization and connections for each request processor to the
    * pre-established hosts from the control connection
    *
-   * @param num_threads Number of request processors to create for handling the
-   *                    processing of client requests
+   * @param thread_count_io Number of request processors to create for handling
+   *                        the processing of client requests
    */
-  RequestProcessorManager(size_t num_threads);
+  RequestProcessorManager(size_t thread_count_io);
 
   /**
    * Close/Terminate the request processors

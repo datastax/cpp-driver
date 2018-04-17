@@ -42,13 +42,13 @@ public:
   ~RequestProcessorManagerInitializer();
 
   /**
-   * Set the cluster configuration setting for each request process to generate
-   * a copy of the load balancing policies
+   * Set the request processor manager settings; which contains the connection
+   * pool manager settings for the request processors
    *
-   * @param config Cluster configuration settings
+   * @param settings A manager settings object
    * @return The initializer to chain calls
    */
-  RequestProcessorManagerInitializer* with_cluster_config(const Config& config);
+  RequestProcessorManagerInitializer* with_settings(const RequestProcessorManagerSettings& settings);
   /**
    * Set the initial keyspace for each request process
    *
@@ -56,6 +56,13 @@ public:
    * @return The initializer to chain calls
    */
   RequestProcessorManagerInitializer* with_connect_keyspace(const String& connect_keyspace);
+  /**
+   * Set the default execution profile
+   *
+   * @param default_profile Default execution profile
+   * @return The initializer to chain calls
+   */
+  RequestProcessorManagerInitializer* with_default_profile(const ExecutionProfile& default_profile);
   /**
    * Set the initial list of hosts to use for establishing connections
    *
@@ -73,12 +80,34 @@ public:
    */
   RequestProcessorManagerInitializer* with_listener(RequestProcessorListener* listener);
   /**
+   * Set the max schema agreement wait time (in milliseconds)
+   *
+   * @param max_schema_wait_time_ms Maximum wait time for schema agreement
+   * @return The initializer to chain calls
+   */
+  RequestProcessorManagerInitializer* with_max_schema_wait_time_ms(unsigned max_schema_wait_time_ms);
+  /**
    * Set the metrics object to use to record metrics
    *
    * @param metrics A metrics object
    * @return The initializer to chain calls
    */
   RequestProcessorManagerInitializer* with_metrics(Metrics* metrics);
+  /**
+   * Set the prepare statements on all available hosts setting
+   *
+   * @param prepare_on_all_hosts True if statements should be prepared on all
+   *                             hosts; false otherwise
+   * @return The initializer to chain calls
+   */
+  RequestProcessorManagerInitializer* with_prepare_statements_on_all(bool prepare_on_all_hosts);
+  /**
+   * Set the execution profiles (excludes default profile)
+   *
+   * @param profiles Execution profiles
+   * @return The initializer to chain calls
+   */
+  RequestProcessorManagerInitializer* with_profiles(const ExecutionProfile::Map& profiles);
   /**
    * Set the protocol version to use for the request processor connections
    *
@@ -87,12 +116,27 @@ public:
    */
   RequestProcessorManagerInitializer* with_protocol_version(int protocol_version);
   /**
+   * Set the use of randomized contact points
+   *
+   * @param use_randomized_contact_points True if randomized contract points
+   *                                      should be used; false otherwise
+   * @return The initializer to chain calls
+   */
+  RequestProcessorManagerInitializer* with_randomized_contact_points(bool use_randomized_contact_points);
+  /**
    * Set session request queue pointer for processing requests
    *
    * @param request_queue Request queue
    * @return The initializer to chain calls
    */
   RequestProcessorManagerInitializer* with_request_queue(MPMCQueue<RequestHandler*>* request_queue);
+  /**
+   * Set the timestamp generator
+   *
+   * @param timestamp_generator Time stamp generator to utilize
+   * @return The initializer to chain calls
+   */
+  RequestProcessorManagerInitializer* with_timestamp_generator(TimestampGenerator* timestamp_generator);
   /**
    * Set the initially constructed token map (do not clone)
    *
@@ -141,15 +185,21 @@ private:
   RequestProcessor::Vec failures_;
   Atomic<size_t> remaining_;
 
-  Config config_;
+  RequestProcessorManagerSettings settings_;
   String connect_keyspace_;
   Host::Ptr connected_host_;
+  ExecutionProfile default_profile_;
   HostMap hosts_;
   RequestProcessorListener* listener_;
+  unsigned max_schema_wait_time_ms_;
   Metrics* metrics_;
+  bool prepare_on_all_hosts_;
+  ExecutionProfile::Map profiles_;
   int protocol_version_;
   MPMCQueue<RequestHandler*>* request_queue_;
+  TimestampGenerator* timestamp_generator_;
   TokenMap* token_map_;
+  bool use_randomized_contact_points_;
 };
 
 } // namespace cass

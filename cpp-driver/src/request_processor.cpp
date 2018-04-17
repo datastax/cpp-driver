@@ -23,31 +23,24 @@
 
 namespace cass {
 
-RequestProcessor::RequestProcessor(const Config& config,
-                                   const String& connect_keyspace,
+RequestProcessor::RequestProcessor(const String& connect_keyspace,
                                    RequestProcessorListener* listener,
-                                   Metrics* metrics,
+                                   unsigned max_schema_wait_time_ms,
+                                   bool prepare_on_all_hosts,
                                    MPMCQueue<RequestHandler*>* request_queue,
-                                   const TokenMap* token_map,
+                                   TimestampGenerator* timestamp_generator,
                                    void* data,
                                    Callback callback)
   : data_(data)
   , callback_(callback)
   , error_code_(CASS_OK)
-  , config_(config.new_instance(false))
   , connect_keyspace_(connect_keyspace)
   , listener_(listener)
-  , metrics_(metrics)
+  , max_schema_wait_time_ms_(max_schema_wait_time_ms)
+  , prepare_on_all_hosts_(prepare_on_all_hosts)
   , request_queue_(request_queue)
-  , is_flushing_(false) {
-  // This needs to be done on the control connection thread because it could
-  // pause generating a new random seed.
-  if (config_.use_randomized_contact_points()) {
-    random_.reset(Memory::allocate<Random>());
-  }
-
-  internal_token_map_update(token_map);
-}
+  , timestamp_generator_(timestamp_generator)
+  , is_flushing_(false) { }
 
 void RequestProcessor::close() {
   internal_close();
@@ -67,16 +60,50 @@ void RequestProcessor::keyspace_update(const String& keyspace) {
   if (manager_) manager_->set_keyspace(keyspace);
 }
 
-int RequestProcessor::init(Protected) {
+int RequestProcessor::init(const ExecutionProfile& default_profile,
+                           const ExecutionProfile::Map& profiles,
+                           const TokenMap* token_map,
+                           bool use_randomized_contact_points,
+                           Protected) {
+  default_profile_ = default_profile;
+  profiles_ = profiles;
+
+  // Build/Assign the load balancing policies from the execution profiles
+  default_profile_.build_load_balancing_policy();
+  load_balancing_policies_.push_back(default_profile_.load_balancing_policy());
+  for (ExecutionProfile::Map::iterator it = profiles_.begin();
+       it != profiles_.end(); ++it) {
+    it->second.build_load_balancing_policy();
+    const LoadBalancingPolicy::Ptr& load_balancing_policy = it->second.load_balancing_policy();
+    if (load_balancing_policy) {
+      LOG_TRACE("Built load balancing policy for '%s' execution profile",
+                it->first.c_str());
+      load_balancing_policies_.push_back(load_balancing_policy);
+    } else {
+      it->second.set_load_balancing_policy(default_profile_.load_balancing_policy().get());
+    }
+  }
+
+  // Initialize the token map
+  internal_token_map_update(token_map);
+
+  // This needs to be done on the control connection thread because it could
+  // pause generating a new random seed.
+  if (use_randomized_contact_points) {
+    random_.reset(Memory::allocate<Random>());
+  }
+
   return EventLoop::init("Request Processor");
 }
 
 void RequestProcessor::connect(const Host::Ptr& current_host,
                                const HostMap& hosts,
+                               Metrics* metrics,
                                int protocol_version,
+                               const ConnectionPoolManagerSettings& settings,
                                Protected) {
   inc_ref();
-  internal_connect(current_host, hosts, protocol_version);
+  internal_connect(current_host, hosts, metrics, protocol_version, settings);
 }
 
 void RequestProcessor::notify_host_add_async(const Host::Ptr& host) {
@@ -101,7 +128,13 @@ void RequestProcessor::notify_request_async() {
 }
 
 void RequestProcessor::on_up(const Address& address) {
-  add(Memory::allocate<NotifyHostUp>(address));
+  // on_up is using the request processor event loop (no need for a task)
+  Host::Ptr host = get_host(address);
+  if (host) {
+    internal_host_add_down_up(host, Host::UP);
+  } else {
+    LOG_DEBUG("Tried to up host %s that doesn't exist", address.to_string().c_str());
+  }
 }
 
 void RequestProcessor::on_down(const Address& address) {
@@ -144,7 +177,7 @@ bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& r
                                                                                current_host,
                                                                                response,
                                                                                this,
-                                                                               config_.max_schema_wait_time_ms()));
+                                                                               max_schema_wait_time_ms_));
 
   PooledConnection::Ptr connection(manager_->find_least_busy(current_host->address()));
   if (connection && connection->write(handler->callback().get())) {
@@ -156,7 +189,7 @@ bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& r
 bool RequestProcessor::on_prepare_all(const RequestHandler::Ptr& request_handler,
                                       const Host::Ptr& current_host,
                                       const Response::Ptr& response) {
-  if (!config_.prepare_on_all_hosts()) {
+  if (!prepare_on_all_hosts_) {
     return false;
   }
 
@@ -207,7 +240,9 @@ bool RequestProcessor::is_ok() {
 
 void RequestProcessor::internal_connect(const Host::Ptr& current_host,
                                         const HostMap& hosts,
-                                        int protocol_version) {
+                                        Metrics* metrics,
+                                        int protocol_version,
+                                        const ConnectionPoolManagerSettings& settings) {
   hosts_ = hosts;
 
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
@@ -227,10 +262,10 @@ void RequestProcessor::internal_connect(const Host::Ptr& current_host,
                                                     this,
                                                     on_connection_pool_manager_initialize));
   initializer
-    ->with_settings(ConnectionPoolManagerSettings(config_))
+    ->with_settings(settings)
     ->with_listener(this)
     ->with_keyspace(connect_keyspace_)
-    ->with_metrics(metrics_)
+    ->with_metrics(metrics)
     ->initialize(addresses);
 }
 
@@ -250,8 +285,24 @@ Host::Ptr RequestProcessor::get_host(const Address& address) {
   return it->second;
 }
 
+bool RequestProcessor::execution_profile(const String& name, ExecutionProfile& profile) const {
+  // Determine if cluster profile should be used
+  if (name.empty()) {
+    profile = default_profile_;
+    return true;
+  }
+
+  // Handle profile lookup
+  ExecutionProfile::Map::const_iterator it = profiles_.find(name);
+  if (it != profiles_.end()) {
+    profile = it->second;
+    return true;
+  }
+  return false;
+}
+
 const LoadBalancingPolicy::Vec& RequestProcessor::load_balancing_policies() const {
-  return config_.load_balancing_policies();
+  return load_balancing_policies_;
 }
 
 void RequestProcessor::on_connection_pool_manager_initialize(ConnectionPoolManagerInitializer* initializer) {
@@ -352,14 +403,14 @@ void RequestProcessor::internal_flush_requests() {
     if (request_handler) {
       const String& profile_name = request_handler->request()->execution_profile_name();
       ExecutionProfile profile;
-      if (config_.profile(profile_name, profile)) {
+      if (execution_profile(profile_name, profile)) {
         if (!profile_name.empty()) {
           LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
         }
-        request_handler->init(config_,
-                              profile,
+        request_handler->init(profile,
                               manager_.get(),
                               token_map_.get(),
+                              timestamp_generator_,
                               this);
         request_handler->execute();
       } else {
@@ -412,16 +463,6 @@ void RequestProcessor::NotifyHostAdd::run(EventLoop* event_loop) {
 void RequestProcessor::NotifyHostRemove::run(EventLoop* event_loop) {
   RequestProcessor* request_processor = static_cast<RequestProcessor*>(event_loop);
   request_processor->internal_host_remove(host_);
-}
-
-void RequestProcessor::NotifyHostUp::run(EventLoop* event_loop) {
-  RequestProcessor* request_processor = static_cast<RequestProcessor*>(event_loop);
-  Host::Ptr host = request_processor->get_host(address_);
-  if (host) {
-    request_processor->internal_host_add_down_up(host, Host::UP);
-  } else {
-    LOG_DEBUG("Tried to up host %s that doesn't exist", address_.to_string().c_str());
-  }
 }
 
 void RequestProcessor::NotifyRequest::run(EventLoop* event_loop) {

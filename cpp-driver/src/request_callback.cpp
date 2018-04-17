@@ -16,7 +16,6 @@
 
 #include "request_callback.hpp"
 
-#include "config.hpp"
 #include "connection.hpp"
 #include "constants.hpp"
 #include "execute_request.hpp"
@@ -30,13 +29,13 @@
 
 namespace cass {
 
-void RequestWrapper::init(const Config& config,
-                          const ExecutionProfile& profile,
-                          const PreparedMetadata& prepared_metadata) {
+void RequestWrapper::init(const ExecutionProfile& profile,
+                          const PreparedMetadata& prepared_metadata,
+                          TimestampGenerator* timestamp_generator) {
   consistency_ = profile.consistency();
   serial_consistency_ = profile.serial_consistency();
   request_timeout_ms_ = profile.request_timeout_ms();
-  timestamp_ = config.timestamp_gen()->next();
+  timestamp_ = timestamp_generator->next();
   retry_policy_ = profile.retry_policy();
 
   if (request()->opcode() == CQL_OPCODE_EXECUTE) {
