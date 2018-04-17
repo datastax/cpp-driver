@@ -199,9 +199,6 @@ limitations under the License.
 [ubuntu-14-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies
 [ubuntu-16-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies
 [windows-dependencies]: http://downloads.datastax.com/cpp-driver/windows/dependencies
-[cpp-driver-2-3-blog-post]: http://www.datastax.com/dev/blog/datastax-c-driver-2-3-ga-released
-[cpp-driver-2-2-blog-post]: http://www.datastax.com/dev/blog/datastax-c-driver-2-2-ga-released
-[cpp-driver-2-0-blog-post]: http://www.datastax.com/dev/blog/datastax-c-driver-2-0-released
 
 [Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures
 [Simple]: http://datastax.github.io/cpp-driver/topics/#executing-queries
@@ -226,7 +223,4 @@ limitations under the License.
 [blacklist DC]: http://datastax.github.io/cpp-driver/topics/configuration/#datacenter
 [Custom]: http://datastax.github.io/cpp-driver/topics/security/#custom
 [Reverse DNS]: http://datastax.github.io/cpp-driver/topics/security/ssl/#enabling-cassandra-identity-verification
-
-[`duration`]: examples/duration/duration.c
 [Speculative execution]: http://datastax.github.io/cpp-driver/topics/configuration/#speculative-execution
-[Idempotent statements]: http://datastax.github.io/cpp-driver/topics/configuration/#query-idempotence
