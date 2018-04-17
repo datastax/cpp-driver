@@ -10,8 +10,6 @@ features for DSE.
 This software can be used solely with DataStax Enterprise. See the [License
 section](#licence) below.
 
-__Note__: DataStax products do not support big-endian systems.
-
 ## Getting the Driver
 
 Binary versions of the driver, available for multiple operating systems and
@@ -19,20 +17,22 @@ multiple architectures, can be obtained from our [download server].
 
 ## Features
 
-### DSE v5.0+
-
 * [DSE authentication]
   * Plaintext/DSE
   * LDAP
   * GSSAPI (Kerberos)
 * [DSE geospatial types]
 * [DSE graph integration]
-
-### DSE v5.1+
-
 * DSE [proxy authentication][DSE Proxy Authentication] and
   [execution][DSE Proxy Execution]
 * [DSE DateRange]
+
+## Compatibility
+
+The DataStax C/C++ driver currently supports DataStax Enterprise 4.8+ and its
+graph integration only supports DataStax Enterprise 5.0+.
+
+__Disclaimer__: DataStax products do not support big-endian systems.
 
 ## Documentation
 
