@@ -39,18 +39,9 @@ void Config::init_profiles() {
     }
 
     //TODO(fero): Create ticket for speculative execution with execution profiles
-    if (!it->second.speculative_execution_policy()) {
+    if (!it->second.speculative_execution_policy() &&
+        default_profile_.speculative_execution_policy()) {
       it->second.set_speculative_execution_policy(default_profile_.speculative_execution_policy()->new_instance());
-    }
-
-    it->second.build_load_balancing_policy();
-    const LoadBalancingPolicy::Ptr& load_balancing_policy = it->second.load_balancing_policy();
-    if (load_balancing_policy) {
-      LOG_TRACE("Built load balancing policy for '%s' execution profile",
-                it->first.c_str());
-      load_balancing_policies_.push_back(load_balancing_policy);
-    } else {
-      it->second.set_load_balancing_policy(default_profile_.load_balancing_policy().get());
     }
   }
 }

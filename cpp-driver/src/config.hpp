@@ -236,10 +236,6 @@ public:
     auth_provider_.reset(Memory::allocate<PlainTextAuthProvider>(username, password));
   }
 
-  const LoadBalancingPolicy::Vec& load_balancing_policies() const {
-    return load_balancing_policies_;
-  }
-
   void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
     default_profile_.set_load_balancing_policy(lbp);
   }
@@ -409,7 +405,6 @@ private:
   unsigned max_reusable_write_objects_;
   ExecutionProfile default_profile_;
   ExecutionProfile::Map profiles_;
-  LoadBalancingPolicy::Vec load_balancing_policies_;
   bool prepare_on_all_hosts_;
   bool prepare_on_up_or_add_host_;
 };
