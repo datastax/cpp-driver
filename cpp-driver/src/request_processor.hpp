@@ -235,8 +235,8 @@ private:
   public:
     NotifyHostAdd(const Host::Ptr host,
                   const RequestProcessor::Ptr& request_processor)
-      : host_(host)
-      , RequestProcessorTask(request_processor) { }
+      : RequestProcessorTask(request_processor)
+      , host_(host) { }
     virtual void run(EventLoop* event_loop);
   private:
     const Host::Ptr host_;
@@ -246,8 +246,8 @@ private:
   public:
     NotifyHostRemove(const Host::Ptr host,
                      const RequestProcessor::Ptr& request_processor)
-      : host_(host)
-      , RequestProcessorTask(request_processor) { }
+      : RequestProcessorTask(request_processor)
+      , host_(host) { }
     virtual void run(EventLoop* event_loop);
   private:
     const Host::Ptr host_;
@@ -257,8 +257,8 @@ private:
   public:
     NotifyTokenMapUpdate(const TokenMap* token_map,
                          const RequestProcessor::Ptr& request_processor)
-      : token_map_(token_map)
-      , RequestProcessorTask(request_processor) { }
+      : RequestProcessorTask(request_processor)
+      , token_map_(token_map) { }
     virtual void run(EventLoop* event_loop);
   private:
     const TokenMap* token_map_;

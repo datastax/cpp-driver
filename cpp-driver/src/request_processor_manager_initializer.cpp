@@ -29,8 +29,8 @@ RequestProcessorManagerInitializer::RequestProcessorManagerInitializer(void* dat
   , prepare_on_all_hosts_(true)
   , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
   , request_queue_(NULL)
-  , token_map_(NULL)
   , timestamp_generator_(NULL)
+  , token_map_(NULL)
   , use_randomized_contact_points_(true)
 {
   uv_mutex_init(&lock_);
