@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "config.hpp"
+#include "memory.hpp"
 
 bool execution_profile(const cass::Config& config,
                        const cass::String& name,
@@ -103,10 +104,10 @@ TEST(ExecutionProfileUnitTest, DISABLED_ClusterLoadBalancingPolicy) {
 //               the test is invalid making the whole test invalid.
 TEST(ExecutionProfileUnitTest, DISABLED_ClusterLoadBalancingPolicies) {
   cass::ExecutionProfile profile_1;
-  profile_1.set_load_balancing_policy(new cass::DCAwarePolicy());
+  profile_1.set_load_balancing_policy(cass::Memory::allocate<cass::DCAwarePolicy>());
   cass::ExecutionProfile profile_2;
   cass::ExecutionProfile profile_3;
-  profile_3.set_load_balancing_policy(new cass::RoundRobinPolicy());
+  profile_3.set_load_balancing_policy(cass::Memory::allocate<cass::RoundRobinPolicy>());
 
   cass::Config config;
   config.set_execution_profile("profile_1", &profile_1);
@@ -277,10 +278,10 @@ TEST(ExecutionProfileUnitTest, ClusterRetryPolicy) {
 
 TEST(ExecutionProfileUnitTest, ClusterRetryPolicies) {
   cass::ExecutionProfile profile_1;
-  profile_1.set_retry_policy(new cass::FallthroughRetryPolicy());
+  profile_1.set_retry_policy(cass::Memory::allocate<cass::FallthroughRetryPolicy>());
   cass::ExecutionProfile profile_2;
   cass::ExecutionProfile profile_3;
-  profile_3.set_retry_policy(new cass::DefaultRetryPolicy());
+  profile_3.set_retry_policy(cass::Memory::allocate<cass::DefaultRetryPolicy>());
 
   cass::Config config;
   config.set_execution_profile("profile_1", &profile_1);
@@ -305,5 +306,76 @@ TEST(ExecutionProfileUnitTest, ClusterRetryPolicies) {
   EXPECT_NE(profile_3_retry_policy, profile_1_retry_policy);
   ASSERT_EQ(copy_config.default_profile().retry_policy().get(),
             profile_2_retry_policy);
+}
+
+TEST(ExecutionProfileUnitTest, NullSpeculativeExecutionPolicy) {
+  cass::ExecutionProfile profile;
+  ASSERT_TRUE(!profile.speculative_execution_policy());
+}
+
+TEST(ExecutionProfileUnitTest, ClusterSpeculativeExecutionPolicy) {
+  cass::ExecutionProfile profile;
+
+  cass::Config config;
+  config.set_speculative_execution_policy(cass::Memory::allocate<cass::NoSpeculativeExecutionPolicy>());
+  config.set_execution_profile("profile", &profile);
+
+  cass::Config copy_config = config.new_instance();
+  cass::ExecutionProfile profile_lookup;
+  ASSERT_TRUE(execution_profile(copy_config, "profile", profile_lookup));
+  ASSERT_NE(copy_config.default_profile().speculative_execution_policy().get(),
+            profile_lookup.speculative_execution_policy().get());
+  ASSERT_EQ(typeid(copy_config.default_profile().speculative_execution_policy().get()),
+            typeid(profile_lookup.speculative_execution_policy().get()));
+}
+
+TEST(ExecutionProfileUnitTest, ClusterSpeculativeExecutionPolicies) {
+  cass::ExecutionProfile profile_1;
+  profile_1.set_speculative_execution_policy(cass::Memory::allocate<cass::ConstantSpeculativeExecutionPolicy>(1, 2));
+  cass::ExecutionProfile profile_2;
+  cass::ExecutionProfile profile_3;
+  profile_3.set_speculative_execution_policy(cass::Memory::allocate<cass::NoSpeculativeExecutionPolicy>());
+
+  cass::Config config;
+  config.set_speculative_execution_policy(cass::Memory::allocate<cass::ConstantSpeculativeExecutionPolicy>(3, 4));
+  config.set_execution_profile("profile_1", &profile_1);
+  config.set_execution_profile("profile_2", &profile_2);
+  config.set_execution_profile("profile_3", &profile_3);
+
+  cass::Config copy_config = config.new_instance();
+  cass::ExecutionProfile profile_1_lookup;
+  ASSERT_TRUE(execution_profile(copy_config, "profile_1", profile_1_lookup));
+  cass::ExecutionProfile profile_2_lookup;
+  ASSERT_TRUE(execution_profile(copy_config, "profile_2", profile_2_lookup));
+  cass::ExecutionProfile profile_3_lookup;
+  ASSERT_TRUE(execution_profile(copy_config, "profile_3", profile_3_lookup));
+  const cass::SpeculativeExecutionPolicy* profile_1_speculative_execution_policy =
+    profile_1_lookup.speculative_execution_policy().get();
+  const cass::SpeculativeExecutionPolicy* profile_2_speculative_execution_policy =
+    profile_2_lookup.speculative_execution_policy().get();
+  const cass::SpeculativeExecutionPolicy* profile_3_speculative_execution_policy =
+    profile_3_lookup.speculative_execution_policy().get();
+  const cass::SpeculativeExecutionPolicy* config_speculative_execution_policy =
+    copy_config.default_profile().speculative_execution_policy().get();
+  EXPECT_NE(profile_1_speculative_execution_policy,
+            profile_2_speculative_execution_policy);
+  EXPECT_NE(profile_2_speculative_execution_policy,
+            profile_3_speculative_execution_policy);
+  EXPECT_NE(profile_3_speculative_execution_policy,
+            profile_1_speculative_execution_policy);
+  ASSERT_NE(config_speculative_execution_policy,
+            profile_2_speculative_execution_policy);
+  ASSERT_EQ(typeid(config_speculative_execution_policy),
+            typeid(profile_2_speculative_execution_policy));
+  ASSERT_EQ(typeid(config_speculative_execution_policy),
+            typeid(profile_1_speculative_execution_policy));
+  ASSERT_EQ(dynamic_cast<const cass::ConstantSpeculativeExecutionPolicy*>(config_speculative_execution_policy)->constant_delay_ms_,
+            dynamic_cast<const cass::ConstantSpeculativeExecutionPolicy*>(profile_2_speculative_execution_policy)->constant_delay_ms_);
+  ASSERT_EQ(dynamic_cast<const cass::ConstantSpeculativeExecutionPolicy*>(config_speculative_execution_policy)->max_speculative_executions_,
+            dynamic_cast<const cass::ConstantSpeculativeExecutionPolicy*>(profile_2_speculative_execution_policy)->max_speculative_executions_);
+  ASSERT_NE(dynamic_cast<const cass::ConstantSpeculativeExecutionPolicy*>(config_speculative_execution_policy)->constant_delay_ms_,
+            dynamic_cast<const cass::ConstantSpeculativeExecutionPolicy*>(profile_1_speculative_execution_policy)->constant_delay_ms_);
+  ASSERT_NE(dynamic_cast<const cass::ConstantSpeculativeExecutionPolicy*>(config_speculative_execution_policy)->max_speculative_executions_,
+            dynamic_cast<const cass::ConstantSpeculativeExecutionPolicy*>(profile_1_speculative_execution_policy)->max_speculative_executions_);
 }
 

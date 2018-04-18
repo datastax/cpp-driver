@@ -38,9 +38,7 @@ void Config::init_profiles() {
       it->second.set_retry_policy(default_profile_.retry_policy().get());
     }
 
-    //TODO(fero): Create ticket for speculative execution with execution profiles
-    if (!it->second.speculative_execution_policy() &&
-        default_profile_.speculative_execution_policy()) {
+    if (!it->second.speculative_execution_policy()) {
       it->second.set_speculative_execution_policy(default_profile_.speculative_execution_policy()->new_instance());
     }
   }

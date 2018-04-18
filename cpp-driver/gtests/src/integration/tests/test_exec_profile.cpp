@@ -42,17 +42,18 @@ public:
       profiles_["consistency"] = ExecutionProfile::build().with_consistency(CASS_CONSISTENCY_SERIAL);
       profiles_["serial_consistency"] = ExecutionProfile::build().with_serial_consistency(CASS_CONSISTENCY_ONE);
       profiles_["round_robin"] = ExecutionProfile::build().with_load_balance_round_robin()
-        .with_token_aware_routing(false);
+                                                          .with_token_aware_routing(false);
       profiles_["latency_aware"] = ExecutionProfile::build().with_latency_aware_routing()
-        .with_load_balance_round_robin();
+                                                            .with_load_balance_round_robin();
       profiles_["token_aware"] = ExecutionProfile::build().with_token_aware_routing()
-        .with_load_balance_round_robin();
+                                                          .with_load_balance_round_robin();
       profiles_["blacklist"] = ExecutionProfile::build().with_blacklist_filtering(Options::host_prefix() + "1")
-        .with_load_balance_round_robin();
+                                                        .with_load_balance_round_robin();
       profiles_["whitelist"] = ExecutionProfile::build().with_whitelist_filtering(Options::host_prefix() + "1")
-        .with_load_balance_round_robin();
+                                                        .with_load_balance_round_robin();
       profiles_["retry_policy"] = ExecutionProfile::build().with_retry_policy(logging_retry_policy_)
-        .with_consistency(CASS_CONSISTENCY_THREE);
+                                                           .with_consistency(CASS_CONSISTENCY_THREE);
+      profiles_["speculative_execution"] = ExecutionProfile::build().with_constant_speculative_execution_policy(100, 20);
     }
 
     // Call the parent setup function
@@ -65,8 +66,8 @@ public:
     // Create the insert statement for later use
     insert_ = Statement(format_string("INSERT INTO %s (key, value) VALUES (?, ?) IF NOT EXISTS",
                                       table_name_.c_str()), 2);
-    insert_.bind<Text>(0, Text(table_name_));
-    insert_.bind<Integer>(1, Integer(0));
+    insert_.bind<Text>(0, Text(test_name_));
+    insert_.bind<Integer>(1, Integer(1000));
 
     // Insert an expected value (if not the serial consistency test)
     session_.execute(insert_);
@@ -615,6 +616,53 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, RetryPolicy) {
   result = session_.execute(statement);
   ASSERT_EQ(CASS_OK, result.error_code());
   ASSERT_EQ(1u, logger_.count());
+}
+
+/**
+ * Utilize the execution profile to override the default speculative execution
+ * policy
+ *
+ * This test will perform a select query using the execution profile
+ * 'speculative_execution' and the default cluster profile configuration.
+ * The default profile will only execute against one node while the execution
+ * profile will execute against all the nodes in the cluster.
+ *
+ * @jira_ticket CPP-404
+ * @test_category execution_profiles
+ * @since DSE 1.6.0
+ * @cassandra_version 2.2.0 (Required only for testing due to UDF usage)
+ * @expected_result Execution profile will execute speculative execution policy
+ *                  and validate attempted hosts.
+ */
+CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, SpeculativeExecutionPolicy) {
+  CHECK_FAILURE;
+  CHECK_VERSION(2.2.0);
+
+  // Create the UDF timeout
+  session_.execute("CREATE OR REPLACE FUNCTION timeout(arg int) "
+                   "RETURNS NULL ON NULL INPUT RETURNS int LANGUAGE java "
+                   "AS $$ long start = System.currentTimeMillis(); "
+                     "while(System.currentTimeMillis() - start < arg) {"
+                       ";;"
+                     "}"
+                     "return arg;"
+                   "$$;");
+
+  // Execute a simple query without assigned profile using timeout UDF
+  Statement statement(format_string("SELECT timeout(value) FROM %s WHERE key='%s'",
+                                    table_name_.c_str(),
+                                    test_name_.c_str()));
+  statement.set_idempotent(true);
+  statement.set_record_attempted_hosts(true);
+  Result result = session_.execute(statement);
+  ASSERT_EQ(CASS_OK, result.error_code());
+  ASSERT_EQ(1u, result.attempted_hosts().size());
+
+  // Execute a simple query with assigned profile
+  statement.set_execution_profile("speculative_execution");
+  result = session_.execute(statement);
+  ASSERT_EQ(CASS_OK, result.error_code());
+  ASSERT_EQ(number_dc1_nodes_, result.attempted_hosts().size());
 }
 
 /**

@@ -55,7 +55,6 @@ public:
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
       , auth_provider_(Memory::allocate<AuthProvider>())
-      , speculative_execution_policy_(Memory::allocate<NoSpeculativeExecutionPolicy>())
       , tcp_nodelay_enable_(true)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0)
@@ -76,13 +75,14 @@ public:
     default_profile_.set_request_timeout(CASS_DEFAULT_REQUEST_TIMEOUT_MS);
     default_profile_.set_load_balancing_policy(Memory::allocate<DCAwarePolicy>());
     default_profile_.set_retry_policy(Memory::allocate<DefaultRetryPolicy>());
+    default_profile_.set_speculative_execution_policy(Memory::allocate<NoSpeculativeExecutionPolicy>());
   }
 
   Config new_instance() const {
     Config config = *this;
     config.default_profile_.build_load_balancing_policy();
     config.init_profiles(); // Initializes the profiles from default (if needed)
-    config.set_speculative_execution_policy(speculative_execution_policy_->new_instance());
+    config.set_speculative_execution_policy(default_profile_.speculative_execution_policy()->new_instance());
 
     return config;
   }
@@ -240,10 +240,6 @@ public:
     default_profile_.set_load_balancing_policy(lbp);
   }
 
-  const SpeculativeExecutionPolicy::Ptr& speculative_execution_policy() const {
-    return default_profile_.speculative_execution_policy();
-  }
-
   void set_speculative_execution_policy(SpeculativeExecutionPolicy* sep) {
     default_profile_.set_speculative_execution_policy(sep);
   }
@@ -391,7 +387,6 @@ private:
   CassLogCallback log_callback_;
   void* log_data_;
   AuthProvider::Ptr auth_provider_;
-  SpeculativeExecutionPolicy::Ptr speculative_execution_policy_;
   SslContext::Ptr ssl_context_;
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;

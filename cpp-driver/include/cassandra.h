@@ -1349,19 +1349,60 @@ cass_execution_profile_set_blacklist_dc_filtering_n(CassExecProfile* profile,
 /**
  * Sets the execution profile's retry policy.
  *
- * @public @memberof CassExecProfile
- *
  * <b>Note:</b> Profile-based retry policy is disabled by default; cluster retry
  * policy is used when profile does not contain a policy unless the retry policy
  * was explicitly set on the batch/statement request.
  *
+ * @public @memberof CassExecProfile
+ *
  * @param[in] profile
  * @param[in] retry_policy NULL will clear retry policy from execution profile
  * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_retry_policy()
  */
 CASS_EXPORT CassError
 cass_execution_profile_set_retry_policy(CassExecProfile* profile,
                                         CassRetryPolicy* retry_policy);
+
+/**
+ * Enable constant speculative executions with the supplied settings for the
+ * execution profile.
+ *
+ * <b>Note:</b> Profile-based speculative execution policy is disabled by
+ * default; cluster speculative execution policy is used when profile does not
+ * contain a policy.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] constant_delay_ms
+ * @param[in] max_speculative_executions
+ * @return CASS_OK if successful, otherwise an error occurred
+ *
+ * @see cass_cluster_set_constant_speculative_execution_policy()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_constant_speculative_execution_policy(CassExecProfile* profile,
+                                                                 cass_int64_t constant_delay_ms,
+                                                                 int max_speculative_executions);
+
+/**
+ * Disable speculative executions for the execution profile.
+ *
+ * <b>Note:</b> Profile-based speculative execution policy is disabled by
+ * default; cluster speculative execution policy is used when profile does not
+ * contain a policy.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @return CASS_OK if successful, otherwise an error occurred
+ *
+ * @see cass_cluster_set_no_speculative_execution_policy()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_no_speculative_execution_policy(CassExecProfile* profile);
 
 /***********************************************************************************
  *
@@ -4720,6 +4761,7 @@ cass_statement_set_request_timeout(CassStatement* statement,
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_cluster_set_constant_speculative_execution_policy()
+ * @see cass_execution_profile_set_constant_speculative_execution_policy()
  */
 CASS_EXPORT CassError
 cass_statement_set_is_idempotent(CassStatement* statement,
@@ -6151,6 +6193,7 @@ cass_batch_set_request_timeout(CassBatch* batch,
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_cluster_set_constant_speculative_execution_policy()
+ * @see cass_execution_profile_set_constant_speculative_execution_policy()
  */
 CASS_EXPORT CassError
 cass_batch_set_is_idempotent(CassBatch* batch,
