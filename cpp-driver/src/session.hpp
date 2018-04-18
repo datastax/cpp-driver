@@ -128,6 +128,7 @@ private:
 
   void execute(const RequestHandler::Ptr& request_handler);
 
+  virtual void on_run();
   virtual void on_after_run();
 
   static void on_resolve(MultiResolver<Session*>::Resolver* resolver);
@@ -186,6 +187,7 @@ private:
   HostMap hosts_;
   uv_mutex_t hosts_mutex_;
 
+  ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
   RequestProcessorManager::Ptr request_processor_manager_;
   ScopedPtr<MPMCQueue<RequestHandler*> > request_queue_;
 

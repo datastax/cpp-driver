@@ -23,7 +23,8 @@
 
 namespace cass {
 
-RequestProcessor::RequestProcessor(const String& connect_keyspace,
+RequestProcessor::RequestProcessor(EventLoop* event_loop,
+                                   const String& connect_keyspace,
                                    RequestProcessorListener* listener,
                                    unsigned max_schema_wait_time_ms,
                                    bool prepare_on_all_hosts,
@@ -40,31 +41,36 @@ RequestProcessor::RequestProcessor(const String& connect_keyspace,
   , prepare_on_all_hosts_(prepare_on_all_hosts)
   , request_queue_(request_queue)
   , timestamp_generator_(timestamp_generator)
-  , is_flushing_(false) { }
+  , event_loop_(event_loop)
+  , is_flushing_(false)
+  , is_closing_(false) { }
 
 void RequestProcessor::close() {
   internal_close();
 }
 
 void RequestProcessor::close_handles() {
-  EventLoop::close_handles();
   if (manager_) manager_->close_handles();
+
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
        it != policies.end(); ++it) {
     (*it)->close_handles();
   }
+
+  is_closing_.store(true);
+  async_.send();
 }
 
 void RequestProcessor::keyspace_update(const String& keyspace) {
   if (manager_) manager_->set_keyspace(keyspace);
 }
 
-int RequestProcessor::init(const ExecutionProfile& default_profile,
-                           const ExecutionProfile::Map& profiles,
-                           const TokenMap* token_map,
-                           bool use_randomized_contact_points,
-                           Protected) {
+void RequestProcessor::init(const ExecutionProfile& default_profile,
+                            const ExecutionProfile::Map& profiles,
+                            const TokenMap* token_map,
+                            bool use_randomized_contact_points,
+                            Protected) {
   default_profile_ = default_profile;
   profiles_ = profiles;
 
@@ -92,8 +98,6 @@ int RequestProcessor::init(const ExecutionProfile& default_profile,
   if (use_randomized_contact_points) {
     random_.reset(Memory::allocate<Random>());
   }
-
-  return EventLoop::init("Request Processor");
 }
 
 void RequestProcessor::connect(const Host::Ptr& current_host,
@@ -106,24 +110,26 @@ void RequestProcessor::connect(const Host::Ptr& current_host,
   internal_connect(current_host, hosts, metrics, protocol_version, settings);
 }
 
+void RequestProcessor::start_async(Protected) {
+  async_.start(event_loop_->loop(), this, on_flush);
+}
+
 void RequestProcessor::notify_host_add_async(const Host::Ptr& host) {
-  add(Memory::allocate<NotifyHostAdd>(host));
+  event_loop_->add(Memory::allocate<NotifyHostAdd>(host, Ptr(this)));
 }
 
 void RequestProcessor::notify_host_remove_async(const Host::Ptr& host) {
-  add(Memory::allocate<NotifyHostRemove>(host));
+  event_loop_->add(Memory::allocate<NotifyHostRemove>(host, Ptr(this)));
 }
 
 void RequestProcessor::notify_token_map_update_async(const TokenMap* token_map) {
-  add(Memory::allocate<NotifyTokenMapUpdate>(token_map));
+  event_loop_->add(Memory::allocate<NotifyTokenMapUpdate>(token_map, Ptr(this)));
 }
 
 void RequestProcessor::notify_request_async() {
   // Only signal request processing if it's not already processing requests
-  bool expected = false;
-  if (!is_flushing_.load() &&
-      is_flushing_.compare_exchange_strong(expected, true)) {
-    add(Memory::allocate<NotifyRequest>());
+  if (!is_flushing_.load()) {
+    async_.send();
   }
 }
 
@@ -250,14 +256,14 @@ void RequestProcessor::internal_connect(const Host::Ptr& current_host,
        it != policies.end(); ++it) {
     // Initialize the load balancing policies
     (*it)->init(current_host, hosts_, random_.get());
-    (*it)->register_handles(loop());
+    (*it)->register_handles(event_loop_->loop());
   }
 
   AddressVec addresses;
   addresses.reserve(hosts_.size());
   std::transform(hosts_.begin(), hosts_.end(), std::back_inserter(addresses), GetAddress());
 
-  ConnectionPoolManagerInitializer::Ptr initializer(Memory::allocate<ConnectionPoolManagerInitializer>(this,
+  ConnectionPoolManagerInitializer::Ptr initializer(Memory::allocate<ConnectionPoolManagerInitializer>(event_loop_,
                                                     protocol_version,
                                                     this,
                                                     on_connection_pool_manager_initialize));
@@ -389,6 +395,11 @@ void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
   }
 }
 
+void RequestProcessor::on_flush(Async* async) {
+  RequestProcessor* request_processor = static_cast<RequestProcessor*>(async->data());
+  request_processor->internal_flush_requests();
+}
+
 void RequestProcessor::on_flush_timer(Timer* timer) {
   RequestProcessor* request_processor = static_cast<RequestProcessor*>(timer->data());
   request_processor->internal_flush_requests();
@@ -421,6 +432,12 @@ void RequestProcessor::internal_flush_requests() {
     }
   }
 
+  if (is_closing_.load()) {
+    async_.close_handle();
+    timer_.close_handle();
+    return;
+  }
+
   // Determine if a another flush should be scheduled
   is_flushing_.store(false);
   bool expected = false;
@@ -432,9 +449,9 @@ void RequestProcessor::internal_flush_requests() {
   uint64_t flush_time_ns = uv_hrtime() - start_time_ns;
   uint64_t processing_time_ns = flush_time_ns * (100 - flush_ratio) / flush_ratio;
   if (processing_time_ns >= 1000000) { // Schedule another flush to be run in the future
-    timer_.start(loop(), (processing_time_ns + 500000) / 1000000, this, on_flush_timer);
+    timer_.start(event_loop_->loop(), (processing_time_ns + 500000) / 1000000, this, on_flush_timer);
   } else {
-    add(Memory::allocate<NotifyRequest>()); // Schedule another flush to be run immediately
+    async_.send(); // Schedule another flush to be run immediately
   }
 }
 
@@ -451,23 +468,15 @@ void* RequestProcessor::data() {
 }
 
 void RequestProcessor::NotifyTokenMapUpdate::run(EventLoop* event_loop) {
-  RequestProcessor* request_processor = static_cast<RequestProcessor*>(event_loop);
-  request_processor->internal_token_map_update(token_map_);
+  request_processor_->internal_token_map_update(token_map_);
 }
 
 void RequestProcessor::NotifyHostAdd::run(EventLoop* event_loop) {
-  RequestProcessor* request_processor = static_cast<RequestProcessor*>(event_loop);
-  request_processor->internal_host_add_down_up(host_, Host::ADDED);
+  request_processor_->internal_host_add_down_up(host_, Host::ADDED);
 }
 
 void RequestProcessor::NotifyHostRemove::run(EventLoop* event_loop) {
-  RequestProcessor* request_processor = static_cast<RequestProcessor*>(event_loop);
-  request_processor->internal_host_remove(host_);
-}
-
-void RequestProcessor::NotifyRequest::run(EventLoop* event_loop) {
-  RequestProcessor* request_processor = static_cast<RequestProcessor*>(event_loop);
-  request_processor->internal_flush_requests();
+  request_processor_->internal_host_remove(host_);
 }
 
 } // namespace cass

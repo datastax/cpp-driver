@@ -184,9 +184,9 @@ void EventLoop::on_prepare(uv_prepare_t* prepare) {
 }
 #endif
 
-int RoundRobinEventLoopGroup::init() {
+int RoundRobinEventLoopGroup::init(const String& thread_name /*= ""*/) {
   for (size_t i = 0; i < threads_.size(); ++i) {
-    int rc = threads_[i].init();
+    int rc = threads_[i].init(thread_name);
     if (rc != 0) return rc;
   }
   return 0;

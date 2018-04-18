@@ -17,6 +17,7 @@
 #ifndef __CASS_REQUEST_PROCESSOR_MANAGER_HPP_INCLUDED__
 #define __CASS_REQUEST_PROCESSOR_MANAGER_HPP_INCLUDED__
 
+#include "event_loop.hpp"
 #include "host.hpp"
 #include "ref_counted.hpp"
 #include "request_processor.hpp"
@@ -40,7 +41,6 @@ struct RequestProcessorManagerSettings {
   RequestProcessorManagerSettings(const Config& config);
 
   ConnectionPoolManagerSettings connection_pool_manager_settings;
-  size_t thread_count_io;
 };
 
 /**
@@ -56,11 +56,8 @@ public:
    *
    * Handles initialization and connections for each request processor to the
    * pre-established hosts from the control connection
-   *
-   * @param thread_count_io Number of request processors to create for handling
-   *                        the processing of client requests
    */
-  RequestProcessorManager(size_t thread_count_io);
+  RequestProcessorManager();
 
   /**
    * Close/Terminate the request processors
@@ -74,17 +71,11 @@ public:
    * @param A key to restrict access to the method
    */
   void close_handles();
-  /**
-   * Waits for the request processor(s) to exit (thread-safe)
-   *
-   * @param A key to restrict access to the method
-   */
-  void join();
 
   /**
-   * Update the current keyspace being used for requests
+   * Update the current keyspace being used for requests (synchronously)
    *
-   * @param keyspace New current keyspace to utilize
+   * @param keyspace New/Current keyspace to utilize
    */
   void keyspace_update(const String& keyspace);
   /**
@@ -134,7 +125,6 @@ private:
   void internal_add_request_processor(const RequestProcessor::Ptr& request_processor);
   void internal_close();
   void internal_close_handles();
-  void internal_join();
   void internal_notify_host_add_async(const Host::Ptr& host);
   void internal_notify_host_remove_async(const Host::Ptr& host);
   void internal_keyspace_update(const String& keyspace);
@@ -143,7 +133,7 @@ private:
 
 private:
   Atomic<size_t> current_;
-  DynamicArray<RequestProcessor::Ptr> threads_;
+  RequestProcessor::Vec request_processors_;
 };
 
 } // namespace cass

@@ -49,7 +49,6 @@ public:
  */
 class RequestProcessor : public RefCounted<RequestProcessor>
                        , public ConnectionPoolManagerListener
-                       , public EventLoop
                        , public RequestListener
                        , public SchemaAgreementListener {
 public:
@@ -61,6 +60,7 @@ public:
    * Create the request processor; Don't use directly use the request processor
    * manager initializer
    *
+   * @param event_loop Event loop to utilize for handling requests
    * @param connect_keyspace Keyspace session is connecting to; may be empty
    * @param listener Request processor listener for connection events
    * @param max_schema_wait_time_ms Maximum schema agreement wait time (in
@@ -73,7 +73,8 @@ public:
    * @param callback A callback that is called when the connection is connected
    *                 or if an error occurred
    */
-  RequestProcessor(const String& connect_keyspace,
+  RequestProcessor(EventLoop* event_loop,
+                   const String& connect_keyspace,
                    RequestProcessorListener* listener,
                    unsigned max_schema_wait_time_ms,
                    bool prepare_on_all_hosts,
@@ -119,13 +120,12 @@ public:
    * @param use_randomized_contact_points True if randomized contract points
    *                                      should be used; false otherwise
    * @param A key to restrict access to the method
-   * @return Returns 0 if successful, otherwise an error occurred
    */
-  int init(const ExecutionProfile& default_profile,
-           const ExecutionProfile::Map& profiles,
-           const TokenMap* token_map,
-           bool use_randomized_contact_points,
-           Protected);
+  void init(const ExecutionProfile& default_profile,
+            const ExecutionProfile::Map& profiles,
+            const TokenMap* token_map,
+            bool use_randomized_contact_points,
+            Protected);
   /**
    * Connect the request processor to the pre-established hosts using the
    * given protocol version
@@ -143,6 +143,12 @@ public:
                int protocol_version,
                const ConnectionPoolManagerSettings& settings,
                Protected);
+  /**
+   * Initialize the async flushing mechanism for the request processor
+   *
+   * @param A key to restrict access to the method
+   */
+  void start_async(Protected);
 
 public:
   /* Connection pool manager listener callbacks */
@@ -212,37 +218,50 @@ private:
   const LoadBalancingPolicy::Vec& load_balancing_policies() const;
 
 private:
-  // Session/RoundRobinProcessorGroup tasks for async operations
-  class NotifyHostAdd : public Task {
+  /**
+   * Task to easily add the request processor executing a task on its event
+   * loop
+   */
+  class RequestProcessorTask : public Task {
   public:
-    NotifyHostAdd(const Host::Ptr host)
-      : host_(host) { }
+    RequestProcessorTask(const RequestProcessor::Ptr& request_processor)
+      : request_processor_(request_processor) { }
+  protected:
+    RequestProcessor::Ptr request_processor_;
+  };
+
+  // Control Connection/Session tasks for async operations
+  class NotifyHostAdd : public RequestProcessorTask {
+  public:
+    NotifyHostAdd(const Host::Ptr host,
+                  const RequestProcessor::Ptr& request_processor)
+      : host_(host)
+      , RequestProcessorTask(request_processor) { }
     virtual void run(EventLoop* event_loop);
   private:
     const Host::Ptr host_;
   };
 
-  class NotifyHostRemove : public Task {
+  class NotifyHostRemove : public RequestProcessorTask {
   public:
-    NotifyHostRemove(const Host::Ptr host)
-      : host_(host) { }
+    NotifyHostRemove(const Host::Ptr host,
+                     const RequestProcessor::Ptr& request_processor)
+      : host_(host)
+      , RequestProcessorTask(request_processor) { }
     virtual void run(EventLoop* event_loop);
   private:
     const Host::Ptr host_;
   };
 
-  class NotifyTokenMapUpdate : public Task {
+  class NotifyTokenMapUpdate : public RequestProcessorTask {
   public:
-    NotifyTokenMapUpdate(const TokenMap* token_map)
-      : token_map_(token_map) { }
+    NotifyTokenMapUpdate(const TokenMap* token_map,
+                         const RequestProcessor::Ptr& request_processor)
+      : token_map_(token_map)
+      , RequestProcessorTask(request_processor) { }
     virtual void run(EventLoop* event_loop);
   private:
     const TokenMap* token_map_;
-  };
-
-  class NotifyRequest : public Task {
-  public:
-    virtual void run(EventLoop* event_loop);
   };
 
   static void on_connection_pool_manager_initialize(ConnectionPoolManagerInitializer* initializer);
@@ -252,6 +271,7 @@ private:
   void internal_host_add_down_up(const Host::Ptr& host, Host::HostState state);
   void internal_host_remove(const Host::Ptr& host);
 
+  static void on_flush(Async* async);
   static void on_flush_timer(Timer* timer);
   void internal_flush_requests();
 
@@ -277,7 +297,10 @@ private:
 
   ConnectionPoolManager::Ptr manager_;
 
+  EventLoop* event_loop_;
   Atomic<bool> is_flushing_;
+  Atomic<bool> is_closing_;
+  Async async_;
   Timer timer_;
 };
 

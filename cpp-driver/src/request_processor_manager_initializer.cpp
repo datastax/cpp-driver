@@ -22,6 +22,7 @@ RequestProcessorManagerInitializer::RequestProcessorManagerInitializer(void* dat
                                                                        Callback callback)
   : data_(data)
   , callback_(callback)
+  , event_loop_group_(NULL)
   , listener_(NULL)
   , max_schema_wait_time_ms_(10000)
   , metrics_(NULL)
@@ -51,6 +52,11 @@ RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_con
 
 RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_default_profile(const ExecutionProfile& default_profile) {
   default_profile_ = default_profile;
+  return this;
+}
+
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_event_loop_group(EventLoopGroup* event_loop_group) {
+  event_loop_group_ = event_loop_group;
   return this;
 }
 
@@ -113,13 +119,14 @@ RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_tok
 
 void RequestProcessorManagerInitializer::initialize() {
   inc_ref();
-  remaining_.store(settings_.thread_count_io);
+  size_t thread_count_io = event_loop_group_->size();
+  remaining_.store(thread_count_io);
 
-  LOG_DEBUG("Creating %u IO worker threads",
-            static_cast<unsigned int>(settings_.thread_count_io));
-  manager_.reset(Memory::allocate<RequestProcessorManager>(settings_.thread_count_io));
-  for (unsigned i = 0; i < settings_.thread_count_io; ++i) {
-    RequestProcessor::Ptr request_processor(Memory::allocate<RequestProcessor>(connect_keyspace_,
+  manager_.reset(Memory::allocate<RequestProcessorManager>());
+  for (unsigned i = 0; i < thread_count_io; ++i) {
+    EventLoop* event_loop = event_loop_group_->get(i);
+    RequestProcessor::Ptr request_processor(Memory::allocate<RequestProcessor>(event_loop,
+                                                                               connect_keyspace_,
                                                                                listener_,
                                                                                max_schema_wait_time_ms_,
                                                                                prepare_on_all_hosts_,
@@ -132,7 +139,6 @@ void RequestProcessorManagerInitializer::initialize() {
                             token_map_ ? token_map_->clone() : NULL,
                             use_randomized_contact_points_,
                             RequestProcessor::Protected());
-    request_processor->run();
     request_processor->connect(connected_host_,
                                hosts_,
                                metrics_,
@@ -167,11 +173,11 @@ void RequestProcessorManagerInitializer::handle_connect(RequestProcessor* reques
     ScopedMutex l(&lock_);
 
     if (request_processor->is_ok()) {
+      request_processor->start_async(RequestProcessor::Protected());
       manager_->add_request_processor(RequestProcessor::Ptr(request_processor),
                                       RequestProcessorManager::Protected());
     } else {
       request_processor->close();
-      request_processor->join();
       failures_.push_back(RequestProcessor::Ptr(request_processor));
     }
   }

@@ -181,7 +181,7 @@ public:
     : current_(0)
     , threads_(num_threads) { }
 
-  int init();
+  int init(const String& thread_name = "");
   void run();
   void close_handles();
   void join();

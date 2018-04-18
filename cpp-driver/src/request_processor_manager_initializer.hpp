@@ -64,6 +64,14 @@ public:
    */
   RequestProcessorManagerInitializer* with_default_profile(const ExecutionProfile& default_profile);
   /**
+   * Set the event loop group for the request processors and connection pools to
+   * utilize
+   *
+   * @param event_loop_group Event loop group
+   * @return The initializer to chain calls
+   */
+  RequestProcessorManagerInitializer* with_event_loop_group(EventLoopGroup* event_loop_group);
+  /**
    * Set the initial list of hosts to use for establishing connections
    *
    * @param connected_host Current control connected host
@@ -189,6 +197,7 @@ private:
   String connect_keyspace_;
   Host::Ptr connected_host_;
   ExecutionProfile default_profile_;
+  EventLoopGroup* event_loop_group_;
   HostMap hosts_;
   RequestProcessorListener* listener_;
   unsigned max_schema_wait_time_ms_;

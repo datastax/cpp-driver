@@ -15,19 +15,17 @@
 */
 
 #include "request_processor_manager.hpp"
+#include "event_loop.hpp"
 
 namespace cass {
 
-RequestProcessorManagerSettings::RequestProcessorManagerSettings()
-  : thread_count_io(1) { }
+RequestProcessorManagerSettings::RequestProcessorManagerSettings() { }
 
 RequestProcessorManagerSettings::RequestProcessorManagerSettings(const Config& config)
-  : connection_pool_manager_settings(config)
-  , thread_count_io(config.thread_count_io()) { }
+  : connection_pool_manager_settings(config) { }
 
-RequestProcessorManager::RequestProcessorManager(size_t thread_count_io)
-  : current_(0)
-  , threads_(thread_count_io) { }
+RequestProcessorManager::RequestProcessorManager()
+  : current_(0) { }
 
 void RequestProcessorManager::close() {
   internal_close();
@@ -35,10 +33,6 @@ void RequestProcessorManager::close() {
 
 void RequestProcessorManager::close_handles() {
   internal_close_handles();
-}
-
-void RequestProcessorManager::join() {
-  internal_join();
 }
 
 void RequestProcessorManager::keyspace_update(const String& keyspace) {
@@ -60,62 +54,54 @@ void RequestProcessorManager::notify_token_map_update_async(const TokenMap* toke
 void RequestProcessorManager::notify_request_async() {
   internal_notify_request_async();
 }
-
 void RequestProcessorManager::add_request_processor(const RequestProcessor::Ptr& request_processor,
                                                     Protected) {
   internal_add_request_processor(request_processor);
 }
 
 void RequestProcessorManager::internal_add_request_processor(const RequestProcessor::Ptr& request_processor) {
-  size_t index = current_.fetch_add(1) % threads_.size();
-  threads_[index] = request_processor;
+  request_processors_.push_back(request_processor);
 }
 
 void RequestProcessorManager::internal_close() {
-  for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i]->close();
+  for (size_t i = 0; i < request_processors_.size(); ++i) {
+    request_processors_[i]->close();
   }
 }
 
 void RequestProcessorManager::internal_close_handles() {
-  for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i]->close_handles();
-  }
-}
-
-void RequestProcessorManager::internal_join() {
-  for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i]->join();
+  for (size_t i = 0; i < request_processors_.size(); ++i) {
+    request_processors_[i]->close_handles();
   }
 }
 
 void RequestProcessorManager::internal_notify_host_add_async(const Host::Ptr& host) {
-  for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i]->notify_host_add_async(host);
+  for (size_t i = 0; i < request_processors_.size(); ++i) {
+    request_processors_[i]->notify_host_add_async(host);
   }
 }
 
 void RequestProcessorManager::internal_notify_host_remove_async(const Host::Ptr& host) {
-  for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i]->notify_host_remove_async(host);
+  for (size_t i = 0; i < request_processors_.size(); ++i) {
+    request_processors_[i]->notify_host_remove_async(host);
   }
 }
 
 void RequestProcessorManager::internal_keyspace_update(const String& keyspace) {
-  for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i]->keyspace_update(keyspace);
+  for (size_t i = 0; i < request_processors_.size(); ++i) {
+    request_processors_[i]->keyspace_update(keyspace);
   }
 }
 
 void RequestProcessorManager::internal_notify_token_map_update_async(const TokenMap* token_map) {
-  for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i]->notify_token_map_update_async(token_map->clone());
+  for (size_t i = 0; i < request_processors_.size(); ++i) {
+    request_processors_[i]->notify_token_map_update_async(token_map->clone());
   }
 }
 
 void RequestProcessorManager::internal_notify_request_async() {
-  size_t index = current_.fetch_add(1) % threads_.size();
-  threads_[index]->notify_request_async();
+  size_t index = current_.fetch_add(1) % request_processors_.size();
+  request_processors_[index]->notify_request_async();
 }
 
-}
+} // namespace cass

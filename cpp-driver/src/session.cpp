@@ -204,7 +204,12 @@ void Session::clear(const Config& config) {
 }
 
 int Session::init() {
-  return EventLoop::init("Session");
+  int rc = EventLoop::init("Session");
+
+  event_loop_group_.reset(Memory::allocate<RoundRobinEventLoopGroup>(config_.thread_count_io()));
+  rc = event_loop_group_->init("Request Processor");
+
+  return rc;
 }
 
 Host::Ptr Session::get_host(const Address& address) {
@@ -389,11 +394,18 @@ void Session::notify_closed() {
 void Session::close_handles() {
   EventLoop::close_handles();
   if (request_processor_manager_) request_processor_manager_->close_handles();
+  event_loop_group_->close_handles();
   config().default_profile().load_balancing_policy()->close_handles();
 }
 
+void Session::on_run() {
+  LOG_DEBUG("Creating %u IO worker threads",
+            static_cast<unsigned int>(config_.thread_count_io()));
+  event_loop_group_->run();
+}
+
 void Session::on_after_run() {
-  if (request_processor_manager_) request_processor_manager_->join();
+  event_loop_group_->join();
   notify_closed();
 }
 
@@ -552,6 +564,7 @@ void Session::on_control_connection_ready() {
   initializer->with_settings(RequestProcessorManagerSettings(config_))
     ->with_connect_keyspace(connect_keyspace_)
     ->with_default_profile(config_.default_profile())
+    ->with_event_loop_group(event_loop_group_.get())
     ->with_hosts(connected_host, hosts_)
     ->with_listener(this)
     ->with_max_schema_wait_time_ms(config_.max_schema_wait_time_ms())
