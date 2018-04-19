@@ -21,6 +21,10 @@
   INTEGRATION_TEST_F(DSE, test_case, test_name)
 #define DSE_INTEGRATION_TYPED_TEST_P(test_case, test_name) \
   INTEGRATION_TYPED_TEST_P(DSE, test_case, test_name)
+#define DSE_INTEGRATION_DISABLED_TEST_F(test_case, test_name) \
+  INTEGRATION_DISABLED_TEST_F(DSE, test_case, test_name)
+#define DSE_INTEGRATION_DISABLED_TYPED_TEST_P(test_case, test_name) \
+  INTEGRATION_DISABLED_TYPED_TEST_P(DSE, test_case, test_name)
 
 /**
  * Extended class to provide common integration test functionality for DSE
