@@ -947,6 +947,21 @@ cass_cluster_set_port(CassCluster* cluster,
                       int port);
 
 /**
+ * Sets the local address to bind when connecting to the cluster,
+ * if desired.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] name IP address to bind, or empty string for no binding.
+ * Only numeric addresses are supported; no resolution is done.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_local_address(CassCluster* cluster,
+                               const char* name);
+
+/**
  * Same as cass_cluster_set_local_address(), but with lengths for string
  * parameters.
  *
@@ -961,23 +976,8 @@ cass_cluster_set_port(CassCluster* cluster,
  */
 CASS_EXPORT CassError
 cass_cluster_set_local_address_n(CassCluster* cluster,
-                      const char* name,
-                      size_t name_length);
-
-/**
- * Sets the local address to bind when connecting to the cluster,
- * if desired.
- *
- * @public @memberof CassCluster
- *
- * @param[in] cluster
- * @param[in] name IP address to bind, or empty string for no binding.
- * Only numeric addresses are supported; no resolution is done.
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_cluster_set_local_address(CassCluster* cluster,
-                      const char* name);
+                                 const char* name,
+                                 size_t name_length);
 
 /**
  * Sets the SSL context and enables SSL.

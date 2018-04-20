@@ -587,6 +587,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
   CHECK_FAILURE;
 
   // Stop the cluster and attempt to perform a request
+  connect();
   ccm_->stop_cluster();
   Result result = session_.execute(SELECT_ALL_SYSTEM_LOCAL_CQL,
                                    CASS_CONSISTENCY_ONE, false, false);
