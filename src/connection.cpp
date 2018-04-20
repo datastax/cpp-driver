@@ -244,6 +244,15 @@ Connection::Connection(uv_loop_t* loop,
     LOG_WARN("Unable to set tcp keepalive");
   }
 
+  const Address* local_address = config_.local_address();
+  if (local_address) {
+    int rc = uv_tcp_bind(&socket_, local_address->addr(), 0);
+    if (rc) {
+      notify_error("Unable to bind local address: " + std::string(UV_ERRSTR(rc, loop_)));
+      return;
+    }
+  }
+
   SslContext* ssl_context = config_.ssl_context();
   if (ssl_context != NULL) {
     ssl_session_.reset(ssl_context->create_session(host));
@@ -378,7 +387,8 @@ void Connection::set_state(ConnectionState new_state) {
 
   switch (state_) {
     case CONNECTION_STATE_NEW:
-      assert(new_state == CONNECTION_STATE_CONNECTING &&
+      assert((new_state == CONNECTION_STATE_CONNECTING ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
              "Invalid connection state after new");
       state_ = new_state;
       break;

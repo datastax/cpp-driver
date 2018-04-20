@@ -395,6 +395,13 @@ public:
     prepare_on_up_or_add_host_ = enabled;
   }
 
+  const Address* local_address() const {
+    return local_address_.is_valid() ? &local_address_ : NULL; }
+
+  void set_local_address(const Address& address) {
+    local_address_ = address;
+  }
+
   bool no_compact() const { return no_compact_; }
 
   void set_no_compact(bool enabled) {
@@ -448,6 +455,7 @@ private:
   bool use_randomized_contact_points_;
   bool prepare_on_all_hosts_;
   bool prepare_on_up_or_add_host_;
+  Address local_address_;
   bool no_compact_;
 };
 

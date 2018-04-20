@@ -135,6 +135,19 @@ public:
   }
 
   /**
+   * Assign the local address to bind; passing an empty string will clear
+   * the local address.
+   *
+   * @param name An IP address or hostname
+   * @return Cluster object
+   */
+  Cluster& with_local_address(const std::string& name) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_local_address(get(),
+      name.c_str()));
+    return *this;
+  }
+
+  /**
    * Assign the number of connections made to each node/server for each
    * connections thread
    *
