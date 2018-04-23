@@ -231,7 +231,7 @@ Host::Ptr Session::add_host(const Address& address) {
   }
 
   //TODO(CPP-404): Remove NULL check once integrated with CPP-453?
-  if (request_processor_manager_) request_processor_manager_->notify_host_add_async(host);
+  if (request_processor_manager_) request_processor_manager_->notify_host_add(host);
   return host;
 }
 
@@ -393,7 +393,6 @@ void Session::notify_closed() {
 
 void Session::close_handles() {
   EventLoop::close_handles();
-  if (request_processor_manager_) request_processor_manager_->close_handles();
   event_loop_group_->close_handles();
   config().default_profile().load_balancing_policy()->close_handles();
 }
@@ -547,7 +546,7 @@ void Session::load_balancing_policy_host_add_remove(const Host::Ptr& host,
 
 void Session::notify_token_map_update() {
   //TODO(CPP-404): Remove NULL check once integrated with CPP-453?
-  if (request_processor_manager_) request_processor_manager_->notify_token_map_update_async(token_map_.get());
+  if (request_processor_manager_) request_processor_manager_->notify_token_map_update(token_map_.get());
 }
 
 void Session::on_control_connection_ready() {
@@ -559,24 +558,20 @@ void Session::on_control_connection_ready() {
   config().default_profile().load_balancing_policy()->register_handles(loop());
 
   request_queue_.reset(Memory::allocate<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
-  RequestProcessorManagerInitializer::Ptr initializer(Memory::allocate<RequestProcessorManagerInitializer>(this,
-                                                                                                           on_request_processor_manager_initialize));
-  initializer->with_settings(RequestProcessorManagerSettings(config_))
-    ->with_connect_keyspace(connect_keyspace_)
-    ->with_default_profile(config_.default_profile())
-    ->with_event_loop_group(event_loop_group_.get())
-    ->with_hosts(connected_host, hosts_)
-    ->with_listener(this)
-    ->with_max_schema_wait_time_ms(config_.max_schema_wait_time_ms())
-    ->with_metrics(metrics_.get())
-    ->with_prepare_statements_on_all(config_.prepare_on_all_hosts())
-    ->with_profiles(config_.profiles())
-    ->with_protocol_version(protocol_version)
-    ->with_randomized_contact_points(config_.use_randomized_contact_points())
-    ->with_request_queue(request_queue_.get())
-    ->with_timestamp_generator(config_.timestamp_gen())
-    ->with_token_map(token_map_.get())
-    ->initialize();
+  RequestProcessorManagerInitializer::Ptr initializer(
+        Memory::allocate<RequestProcessorManagerInitializer>(connected_host,
+                                                             protocol_version,
+                                                             hosts_,
+                                                             request_queue_.get(),
+                                                             this,
+                                                             on_request_processor_manager_initialize));
+  initializer
+      ->with_settings(RequestProcessorSettings(config_))
+      ->with_keyspace(connect_keyspace_)
+      ->with_listener(this)
+      ->with_metrics(metrics_.get())
+      ->with_token_map(token_map_.get())
+      ->initialize(event_loop_group_.get());
 
   // TODO: We really can't do this anymore
   if (config().core_connections_per_host() == 0) {
@@ -643,7 +638,7 @@ void Session::internal_on_add(Host::Ptr host) {
 
   config().default_profile().load_balancing_policy()->on_add(host);
 
-  request_processor_manager_->notify_host_add_async(host);
+  request_processor_manager_->notify_host_add(host);
 }
 
 void Session::on_remove(Host::Ptr host) {
@@ -655,7 +650,7 @@ void Session::on_remove(Host::Ptr host) {
     hosts_.erase(host->address());
   }
 
-  request_processor_manager_->notify_host_remove_async(host);
+  request_processor_manager_->notify_host_remove(host);
 }
 
 void Session::on_up(Host::Ptr host) {
@@ -681,32 +676,60 @@ void Session::on_down(Host::Ptr host) {
 
 void Session::on_request_processor_manager_initialize(RequestProcessorManagerInitializer* initializer) {
   Session* session = static_cast<Session*>(initializer->data());
-  session->handle_request_processor_manager_initialize(initializer->release_manager(),
-                                                       initializer->failures());
+  session->handle_request_processor_manager_initialize(initializer);
 }
 
-void Session::handle_request_processor_manager_initialize(const RequestProcessorManager::Ptr& request_processor_manager,
-                                                          const RequestProcessor::Vec& failures) {
-  request_processor_manager_ = request_processor_manager;
-
+void Session::handle_request_processor_manager_initialize(RequestProcessorManagerInitializer* initializer) {
   // Check for failed connection(s) in the request processor(s)
-  if (!failures.empty()) {
+  if (!initializer->failures().empty()) {
+
     // All failures should be the same, just pass the first error
-    notify_connect_error(failures[0]->error_code(),
-                         failures[0]->error_message());
+    RequestProcessorInitializer::Ptr failure = initializer->failures().front();
+
+    CassError error_code;
+    switch (failure->error_code()) {
+      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_KEYSPACE:
+        error_code = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
+        break;
+      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE:
+        error_code = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
+        break;
+      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT_ASYNC:
+        error_code = CASS_ERROR_LIB_UNABLE_TO_INIT;
+        break;
+      default:
+        error_code = CASS_ERROR_LIB_INTERNAL_ERROR;
+        break;
+    }
+    notify_connect_error(error_code, failure->error_message());
   } else {
+    request_processor_manager_ = initializer->release_manager();
     notify_connected();
   }
 }
 
 void Session::on_keyspace_update(const String& keyspace) {
-  request_processor_manager_->keyspace_update(keyspace);
+  request_processor_manager_->set_keyspace(keyspace);
 }
 
 void Session::on_prepared_metadata_update(const String& id,
                                           const PreparedMetadata::Entry::Ptr& entry) {
   // No need for a read-write lock; PreparedMetadata handles this
   prepared_metadata_.set(id, entry);
+}
+
+void Session::on_pool_up(const Address& address)  {
+  // TODO: Handle
+}
+
+void Session::on_pool_down(const Address& address) {
+  // TODO: Handle
+}
+
+void Session::on_pool_critical_error(const Address& address,
+                                     Connector::ConnectionError code,
+                                     const String& message) {
+  // TODO: Handle
 }
 
 Future::Ptr Session::execute(const Request::ConstPtr& request,

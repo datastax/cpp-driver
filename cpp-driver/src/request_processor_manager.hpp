@@ -25,25 +25,6 @@
 namespace cass {
 
 /**
- * The request processor manager settings
- */
-struct RequestProcessorManagerSettings {
-  /**
-   * Constructor, default initialization
-   */
-  RequestProcessorManagerSettings();
-
-  /**
-   * Constructor. Initialize manager settings from a config object
-   *
-   * @param config The config object
-   */
-  RequestProcessorManagerSettings(const Config& config);
-
-  ConnectionPoolManagerSettings connection_pool_manager_settings;
-};
-
-/**
  * A manager for one or more request processor that will process requests from
  * the session
  */
@@ -65,37 +46,35 @@ public:
    * @param A key to restrict access to the method
    */
   void close();
-  /**
-   * Closes the request processor(s) handles (thread-safe)
-   *
-   * @param A key to restrict access to the method
-   */
-  void close_handles();
 
   /**
    * Update the current keyspace being used for requests (synchronously)
    *
    * @param keyspace New/Current keyspace to utilize
    */
-  void keyspace_update(const String& keyspace);
+  void set_keyspace(const String& keyspace);
+
   /**
    * Add a new host to the request processors
    *
    * @param host New host to be added
    */
-  void notify_host_add_async(const Host::Ptr& host);
+  void notify_host_add(const Host::Ptr& host);
+
   /**
    * Remove a host from the request processors
    *
    * @param host Host to be removed
    */
-  void notify_host_remove_async(const Host::Ptr& host);
+  void notify_host_remove(const Host::Ptr& host);
+
   /**
    * Update the token map being used for the requests
    *
    * @param token_map Update token map (do not clone)
    */
-  void notify_token_map_update_async(const TokenMap* token_map);
+  void notify_token_map_update(const TokenMap* token_map);
+
   /**
    * Notify one of the request processors that a new request is available
    *
@@ -120,16 +99,6 @@ public:
    */
   void add_request_processor(const RequestProcessor::Ptr& request_processor,
                              Protected);
-
-private:
-  void internal_add_request_processor(const RequestProcessor::Ptr& request_processor);
-  void internal_close();
-  void internal_close_handles();
-  void internal_notify_host_add_async(const Host::Ptr& host);
-  void internal_notify_host_remove_async(const Host::Ptr& host);
-  void internal_keyspace_update(const String& keyspace);
-  void internal_notify_token_map_update_async(const TokenMap* token_map);
-  void internal_notify_request_async();
 
 private:
   Atomic<size_t> current_;

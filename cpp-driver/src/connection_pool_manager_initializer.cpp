@@ -26,7 +26,6 @@ ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(int protocol_
   , callback_(callback)
   , remaining_(0)
   , protocol_version_(protocol_version)
-  , listener_(NULL)
   , metrics_(NULL) { }
 
 void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop, const AddressVec& addresses) {
@@ -35,7 +34,6 @@ void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop, const Address
   manager_.reset(Memory::allocate<ConnectionPoolManager>(loop,
                                                          protocol_version_,
                                                          keyspace_,
-                                                         listener_,
                                                          metrics_,
                                                          settings_));
   for (AddressVec::const_iterator it = addresses.begin(),
@@ -50,11 +48,6 @@ void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop, const Address
 
 ConnectionPoolManagerInitializer* ConnectionPoolManagerInitializer::with_keyspace(const String& keyspace) {
   keyspace_ = keyspace;
-  return this;
-}
-
-ConnectionPoolManagerInitializer* ConnectionPoolManagerInitializer::with_listener(ConnectionPoolManagerListener* listener) {
-  listener_ = listener;
   return this;
 }
 

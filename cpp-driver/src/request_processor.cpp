@@ -22,60 +22,102 @@
 
 namespace cass {
 
-RequestProcessor::RequestProcessor(EventLoop* event_loop,
-                                   const String& connect_keyspace,
-                                   RequestProcessorListener* listener,
-                                   unsigned max_schema_wait_time_ms,
-                                   bool prepare_on_all_hosts,
-                                   MPMCQueue<RequestHandler*>* request_queue,
-                                   TimestampGenerator* timestamp_generator,
-                                   void* data,
-                                   Callback callback)
-  : data_(data)
-  , callback_(callback)
-  , error_code_(CASS_OK)
-  , connect_keyspace_(connect_keyspace)
-  , listener_(listener)
-  , max_schema_wait_time_ms_(max_schema_wait_time_ms)
-  , prepare_on_all_hosts_(prepare_on_all_hosts)
-  , request_queue_(request_queue)
-  , timestamp_generator_(timestamp_generator)
-  , event_loop_(event_loop)
-  , is_flushing_(false)
-  , is_closing_(false) { }
+class RunCloseProcessor : public Task {
+public:
+  RunCloseProcessor(const RequestProcessor::Ptr& processor)
+    : processor_(processor) { }
 
-void RequestProcessor::close() {
-  internal_close();
-}
-
-void RequestProcessor::close_handles() {
-  LoadBalancingPolicy::Vec policies = load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    (*it)->close_handles();
+  virtual void run(EventLoop* event_loop) {
+    processor_->internal_close();
   }
 
-  is_closing_.store(true);
-  async_.send();
-}
+private:
+  RequestProcessor::Ptr processor_;
+};
 
-void RequestProcessor::keyspace_update(const String& keyspace) {
-  if (manager_) manager_->set_keyspace(keyspace);
-}
+class NotifyHostAddProcessor : public Task {
+public:
+  NotifyHostAddProcessor(const Host::Ptr host,
+                const RequestProcessor::Ptr& request_processor)
+    : request_processor_(request_processor)
+    , host_(host) { }
+  virtual void run(EventLoop* event_loop) {
+    request_processor_->internal_host_add_down_up(host_, Host::ADDED);
+  }
+private:
+  RequestProcessor::Ptr request_processor_;
+  const Host::Ptr host_;
+};
 
-void RequestProcessor::init(const ExecutionProfile& default_profile,
-                            const ExecutionProfile::Map& profiles,
-                            const TokenMap* token_map,
-                            bool use_randomized_contact_points,
-                            Protected) {
-  default_profile_ = default_profile;
-  profiles_ = profiles;
+class NotifyHostRemoveProcessor : public Task {
+public:
+  NotifyHostRemoveProcessor(const Host::Ptr host,
+                   const RequestProcessor::Ptr& request_processor)
+    : request_processor_(request_processor)
+    , host_(host) { }
+  virtual void run(EventLoop* event_loop) {
+    request_processor_->internal_host_remove(host_);
+  }
+private:
+  RequestProcessor::Ptr request_processor_;
+  const Host::Ptr host_;
+};
+
+class NotifyTokenMapUpdateProcessor : public Task {
+public:
+  NotifyTokenMapUpdateProcessor(const TokenMap* token_map,
+                       const RequestProcessor::Ptr& request_processor)
+    : request_processor_(request_processor)
+    , token_map_(token_map) { }
+  virtual void run(EventLoop* event_loop) {
+    request_processor_->internal_token_map_update(token_map_);
+  }
+private:
+  RequestProcessor::Ptr request_processor_;
+  const TokenMap* token_map_;
+};
+
+class NopRequestProcessorListener : public RequestProcessorListener {
+public:
+  virtual void on_keyspace_update(const String& keyspace) { }
+  virtual void on_prepared_metadata_update(const String& id,
+                                           const PreparedMetadata::Entry::Ptr& entry) { }
+  virtual void on_pool_up(const Address& address)  { }
+  virtual void on_pool_down(const Address& address) { }
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message) { }
+};
+
+NopRequestProcessorListener nop_request_processor_listener__;
+
+RequestProcessor::RequestProcessor(EventLoop* event_loop,
+                                   const ConnectionPoolManager::Ptr& manager,
+                                   const Host::Ptr& current_host,
+                                   const HostMap& hosts,
+                                   TokenMap* token_map,
+                                   RequestProcessorListener* listener,
+                                   const RequestProcessorSettings& settings,
+                                   Random* random,
+                                   MPMCQueue<RequestHandler*>* request_queue)
+  : manager_(manager)
+  , event_loop_(event_loop)
+  , listener_(listener ? listener : &nop_request_processor_listener__)
+  , max_schema_wait_time_ms_(settings.max_schema_wait_time_ms)
+  , prepare_on_all_hosts_(settings.prepare_on_all_hosts)
+  , timestamp_generator_(settings.timestamp_generator)
+  , default_profile_(settings.default_profile)
+  , profiles_(settings.profiles)
+  , request_queue_(request_queue)
+  , is_flushing_(false)
+  , is_closing_(false) {
+  manager_->set_listener(this);
 
   // Build/Assign the load balancing policies from the execution profiles
   default_profile_.build_load_balancing_policy();
   load_balancing_policies_.push_back(default_profile_.load_balancing_policy());
-  for (ExecutionProfile::Map::iterator it = profiles_.begin();
-       it != profiles_.end(); ++it) {
+  for (ExecutionProfile::Map::iterator it = profiles_.begin(),
+       end = profiles_.end();  it != end; ++it) {
     it->second.build_load_balancing_policy();
     const LoadBalancingPolicy::Ptr& load_balancing_policy = it->second.load_balancing_policy();
     if (load_balancing_policy) {
@@ -90,47 +132,50 @@ void RequestProcessor::init(const ExecutionProfile& default_profile,
   // Initialize the token map
   internal_token_map_update(token_map);
 
-  // This needs to be done on the control connection thread because it could
-  // pause generating a new random seed.
-  if (use_randomized_contact_points) {
-    random_.reset(Memory::allocate<Random>());
+  hosts_ = hosts;
+
+  LoadBalancingPolicy::Vec policies = load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    // Initialize the load balancing policies
+    (*it)->init(current_host, hosts_, random);
+    (*it)->register_handles(event_loop_->loop());
   }
+
 }
 
-void RequestProcessor::connect(const Host::Ptr& current_host,
-                               const HostMap& hosts,
-                               Metrics* metrics,
-                               int protocol_version,
-                               const ConnectionPoolManagerSettings& settings,
-                               Protected) {
-  inc_ref();
-  internal_connect(current_host, hosts, metrics, protocol_version, settings);
+void RequestProcessor::close() {
+  event_loop_->add(Memory::allocate<RunCloseProcessor>(Ptr(this)));
 }
 
-void RequestProcessor::start_async(Protected) {
-  async_.start(event_loop_->loop(), this, on_flush);
+void RequestProcessor::set_keyspace(const String& keyspace) {
+  manager_->set_keyspace(keyspace);
 }
 
-void RequestProcessor::notify_host_add_async(const Host::Ptr& host) {
-  event_loop_->add(Memory::allocate<NotifyHostAdd>(host, Ptr(this)));
+void RequestProcessor::notify_host_add(const Host::Ptr& host) {
+  event_loop_->add(Memory::allocate<NotifyHostAddProcessor>(host, Ptr(this)));
 }
 
-void RequestProcessor::notify_host_remove_async(const Host::Ptr& host) {
-  event_loop_->add(Memory::allocate<NotifyHostRemove>(host, Ptr(this)));
+void RequestProcessor::notify_host_remove(const Host::Ptr& host) {
+  event_loop_->add(Memory::allocate<NotifyHostRemoveProcessor>(host, Ptr(this)));
 }
 
-void RequestProcessor::notify_token_map_update_async(const TokenMap* token_map) {
-  event_loop_->add(Memory::allocate<NotifyTokenMapUpdate>(token_map, Ptr(this)));
+void RequestProcessor::notify_token_map_update(const TokenMap* token_map) {
+  event_loop_->add(Memory::allocate<NotifyTokenMapUpdateProcessor>(token_map, Ptr(this)));
 }
 
-void RequestProcessor::notify_request_async() {
+void RequestProcessor::notify_request() {
   // Only signal request processing if it's not already processing requests
   if (!is_flushing_.load()) {
     async_.send();
   }
 }
 
-void RequestProcessor::on_up(const Address& address) {
+int RequestProcessor::init(Protected) {
+  return async_.start(event_loop_->loop(), this, on_flush);
+}
+
+void RequestProcessor::on_pool_up(const Address& address) {
   // on_up is using the request processor event loop (no need for a task)
   Host::Ptr host = get_host(address);
   if (host) {
@@ -138,22 +183,30 @@ void RequestProcessor::on_up(const Address& address) {
   } else {
     LOG_DEBUG("Tried to up host %s that doesn't exist", address.to_string().c_str());
   }
+  listener_->on_pool_up(address);
 }
 
-void RequestProcessor::on_down(const Address& address) {
-  // on_down cannot be performed asynchronously or memory leak could occur
-  Host::Ptr host = get_host(address);
-  if (host) {
-    internal_host_add_down_up(host, Host::DOWN);
-  } else {
-    LOG_DEBUG("Tried to down host %s that doesn't exist", address.to_string().c_str());
+void RequestProcessor::on_pool_down(const Address& address) {
+  internal_pool_down(address);
+  listener_->on_pool_down(address);
+}
+
+void RequestProcessor::on_pool_critical_error(const Address& address,
+                                              Connector::ConnectionError code,
+                                              const String& message) {
+  internal_pool_down(address);
+  listener_->on_pool_critical_error(address, code, message);
+}
+
+void RequestProcessor::on_close(ConnectionPoolManager* manager) {
+  LoadBalancingPolicy::Vec policies = load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    (*it)->close_handles();
   }
-}
 
-void RequestProcessor::on_critical_error(const Address& address,
-                                         Connector::ConnectionError code,
-                                         const String& message) {
-  on_down(address);
+  is_closing_.store(true);
+  async_.send();
 }
 
 void RequestProcessor::on_result_metadata_changed(const String& prepared_id,
@@ -237,47 +290,21 @@ bool RequestProcessor::on_is_host_up(const Address& address) {
   return host && host->is_up();
 }
 
-bool RequestProcessor::is_ok() {
-  return error_code_ == CASS_OK;
-}
-
-void RequestProcessor::internal_connect(const Host::Ptr& current_host,
-                                        const HostMap& hosts,
-                                        Metrics* metrics,
-                                        int protocol_version,
-                                        const ConnectionPoolManagerSettings& settings) {
-  hosts_ = hosts;
-
-  LoadBalancingPolicy::Vec policies = load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    // Initialize the load balancing policies
-    (*it)->init(current_host, hosts_, random_.get());
-    (*it)->register_handles(event_loop_->loop());
-  }
-
-  AddressVec addresses;
-  addresses.reserve(hosts_.size());
-  std::transform(hosts_.begin(), hosts_.end(), std::back_inserter(addresses), GetAddress());
-
-  ConnectionPoolManagerInitializer::Ptr initializer(Memory::allocate<ConnectionPoolManagerInitializer>(
-                                                    protocol_version,
-                                                    this,
-                                                    on_connection_pool_manager_initialize));
-  initializer
-    ->with_settings(settings)
-    ->with_listener(this)
-    ->with_keyspace(connect_keyspace_)
-    ->with_metrics(metrics)
-    ->initialize(event_loop_->loop(), addresses);
-}
-
 void RequestProcessor::internal_close() {
-  if (manager_) manager_->close();
+  manager_->close();
 }
 
 void RequestProcessor::internal_token_map_update(const TokenMap* token_map) {
   token_map_.reset(token_map);
+}
+
+void RequestProcessor::internal_pool_down(const Address& address) {
+  Host::Ptr host = get_host(address);
+  if (host) {
+    internal_host_add_down_up(host, Host::DOWN);
+  } else {
+    LOG_DEBUG("Tried to down host %s that doesn't exist", address.to_string().c_str());
+  }
 }
 
 Host::Ptr RequestProcessor::get_host(const Address& address) {
@@ -306,47 +333,6 @@ bool RequestProcessor::execution_profile(const String& name, ExecutionProfile& p
 
 const LoadBalancingPolicy::Vec& RequestProcessor::load_balancing_policies() const {
   return load_balancing_policies_;
-}
-
-void RequestProcessor::on_connection_pool_manager_initialize(ConnectionPoolManagerInitializer* initializer) {
-  RequestProcessor* request_processor = static_cast<RequestProcessor*>(initializer->data());
-  request_processor->internal_connection_pool_manager_initialize(initializer->release_manager(),
-                                                                 initializer->failures());
-}
-
-void RequestProcessor::internal_connection_pool_manager_initialize(const ConnectionPoolManager::Ptr& manager,
-                                                                   const ConnectionPoolConnector::Vec& failures) {
-  manager_ = manager;
-
-  // Check for failed connection(s)
-  bool is_keyspace_error = false;
-  for (ConnectionPoolConnector::Vec::const_iterator it = failures.begin(),
-       end = failures.end(); it != end; ++it) {
-    ConnectionPoolConnector::Ptr connector(*it);
-    if (connector->is_keyspace_error()) {
-      is_keyspace_error = true;
-      break;
-    } else {
-      hosts_.erase(connector->address());
-    }
-  }
-
-  if (is_keyspace_error) {
-    error_code_ = CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE;
-    error_message_ = "Keyspace '" + connect_keyspace_ + "' does not exist";
-  } else if (hosts_.empty()) {
-    error_code_ = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
-    error_message_ = "Unable to connect to any hosts";
-  } else {
-    for (HostMap::iterator it = hosts_.begin(), end = hosts_.end();
-         it != end; ++it) {
-      it->second->set_up();
-    }
-  }
-
-  // Notify the callback about the initialization of the request processor
-  callback_(this);
-  dec_ref();
 }
 
 void RequestProcessor::internal_host_add_down_up(const Host::Ptr& host,
@@ -418,7 +404,7 @@ void RequestProcessor::internal_flush_requests() {
         request_handler->init(profile,
                               manager_.get(),
                               token_map_.get(),
-                              timestamp_generator_,
+                              timestamp_generator_.get(),
                               this);
         request_handler->execute();
       } else {
@@ -452,30 +438,6 @@ void RequestProcessor::internal_flush_requests() {
   } else {
     async_.send(); // Schedule another flush to be run immediately
   }
-}
-
-CassError RequestProcessor::error_code() const {
-  return error_code_;
-}
-
-String RequestProcessor::error_message() const {
-  return error_message_;
-}
-
-void* RequestProcessor::data() {
-  return data_;
-}
-
-void RequestProcessor::NotifyTokenMapUpdate::run(EventLoop* event_loop) {
-  request_processor_->internal_token_map_update(token_map_);
-}
-
-void RequestProcessor::NotifyHostAdd::run(EventLoop* event_loop) {
-  request_processor_->internal_host_add_down_up(host_, Host::ADDED);
-}
-
-void RequestProcessor::NotifyHostRemove::run(EventLoop* event_loop) {
-  request_processor_->internal_host_remove(host_);
 }
 
 } // namespace cass

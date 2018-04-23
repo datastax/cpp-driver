@@ -69,14 +69,6 @@ public:
   ConnectionPoolManagerInitializer* with_keyspace(const String& keyspace);
 
   /**
-   * Set the listener that handles connection pool events.
-   *
-   * @param listener A listener that handles connection pool events.
-   * @return The initializer to chain calls.
-   */
-  ConnectionPoolManagerInitializer* with_listener(ConnectionPoolManagerListener* listener);
-
-  /**
    * Set the metrics object to use to record metrics.
    *
    * @param metrics A metrics object.
@@ -132,7 +124,6 @@ private:
 
   int protocol_version_;
   String keyspace_;
-  ConnectionPoolManagerListener* listener_;
   Metrics* metrics_;
   ConnectionPoolManagerSettings settings_;
 };

@@ -29,26 +29,23 @@ namespace cass {
 
 class EventLoop;
 
-/**
- * A listener that handles connection pool events.
- */
-class ConnectionPoolManagerListener {
+class ConnectionPoolListener {
 public:
-  virtual ~ConnectionPoolManagerListener() { }
+  virtual ~ConnectionPoolListener() { }
 
   /**
    * A callback that's called when a host is up.
    *
    * @param address The address of the host.
    */
-  virtual void on_up(const Address& address) = 0;
+  virtual void on_pool_up(const Address& address) = 0;
 
   /**
    * A callback that's called when a host is down.
    *
    * @param address The address of the host.
    */
-  virtual void on_down(const Address& address) = 0;
+  virtual void on_pool_down(const Address& address) = 0;
 
   /**
    * A callback that's called when a host has a critical error
@@ -64,14 +61,24 @@ public:
    * @param code The code of the critical error.
    * @param message The message of the critical error.
    */
-  virtual void on_critical_error(const Address& address,
-                                 Connector::ConnectionError code,
-                                 const String& message) = 0;
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message) = 0;
+};
+
+/**
+ * A listener that handles connection pool events.
+ */
+class ConnectionPoolManagerListener : public ConnectionPoolListener {
+public:
+  virtual ~ConnectionPoolManagerListener() { }
 
   /**
    * A callback that's called when a manager is closed.
+   *
+   * @param manager The manager object that's closing.
    */
-  virtual void on_close() { }
+  virtual void on_close(ConnectionPoolManager* manager) = 0;
 };
 
 /**
@@ -109,14 +116,12 @@ public:
    * @param loop Event loop to utilize for handling requests.
    * @param protocol_version The protocol version to use for connections.
    * @param keyspace The current keyspace to use for connections.
-   * @param listener A listener that handles manager events.
    * @param metrics An object for recording metrics.
    * @param settings Settings for the manager and its connections.
    */
   ConnectionPoolManager(uv_loop_t* loop,
                         int protocol_version,
                         const String& keyspace,
-                        ConnectionPoolManagerListener* listener,
                         Metrics* metrics,
                         const ConnectionPoolManagerSettings& settings);
   ~ConnectionPoolManager();
@@ -160,6 +165,13 @@ public:
    * Close all connection pools.
    */
   void close();
+
+  /**
+   * Set the listener that will handle events for the connection pool manager.
+   *
+   * @param listener The connection pool manager listener.
+   */
+  void set_listener(ConnectionPoolManagerListener* listener);
 
 public:
   uv_loop_t* loop() const { return loop_; }
@@ -252,7 +264,7 @@ private:
   uv_loop_t* loop_;
 
   const int protocol_version_;
-  ConnectionPoolManagerListener* const listener_;
+  ConnectionPoolManagerListener* listener_;
   const ConnectionPoolManagerSettings settings_;
 
   CloseState close_state_;

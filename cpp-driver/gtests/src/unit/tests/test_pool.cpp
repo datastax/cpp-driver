@@ -223,17 +223,17 @@ public:
       future_ = future;
     }
 
-    virtual void on_up(const Address& address)  {
+    virtual void on_pool_up(const Address& address)  {
       ScopedMutex l(&mutex_);
       future_->up();
     }
 
-    virtual void on_down(const Address& address) {
+    virtual void on_pool_down(const Address& address) {
       ScopedMutex l(&mutex_);
       future_->down();
     }
 
-    virtual void on_critical_error(const Address& address,
+    virtual void on_pool_critical_error(const Address& address,
                                    Connector::ConnectionError code,
                                    const String& message)  {
       ScopedMutex l(&mutex_);

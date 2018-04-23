@@ -107,6 +107,11 @@ public:
   void on_keyspace_update(const String& keyspace);
   void on_prepared_metadata_update(const String& id,
                                    const PreparedMetadata::Entry::Ptr& entry);
+  virtual void on_pool_up(const Address& address);
+  virtual void on_pool_down(const Address& address);
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message);
 
 private:
   class NotifyConnect : public Task {
@@ -168,8 +173,7 @@ private:
   void on_down(Host::Ptr host);
 
   static void on_request_processor_manager_initialize(RequestProcessorManagerInitializer* initializer);
-  void handle_request_processor_manager_initialize(const RequestProcessorManager::Ptr& request_processor_manager,
-                                                   const RequestProcessor::Vec& failures);
+  void handle_request_processor_manager_initialize(RequestProcessorManagerInitializer* initializer);
 
 private:
   Atomic<State> state_;

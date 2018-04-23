@@ -33,13 +33,32 @@
 namespace cass {
 
 class ConnectionPoolManagerInitializer;
+class RequestProcessor;
 class Session;
 
-class RequestProcessorListener {
+class RequestProcessorListener : public ConnectionPoolListener {
 public:
   virtual void on_keyspace_update(const String& keyspace) = 0;
   virtual void on_prepared_metadata_update(const String& id,
                                            const PreparedMetadata::Entry::Ptr& entry) = 0;
+};
+
+struct RequestProcessorSettings {
+  RequestProcessorSettings();
+
+  RequestProcessorSettings(const Config& config);
+
+  ConnectionPoolManagerSettings connection_pool_manager_settings;
+
+  unsigned max_schema_wait_time_ms;
+
+  bool prepare_on_all_hosts;
+
+  TimestampGenerator::Ptr timestamp_generator;
+
+  ExecutionProfile default_profile;
+
+  ExecutionProfile::Map profiles;
 };
 
 /**
@@ -55,7 +74,6 @@ class RequestProcessor : public RefCounted<RequestProcessor>
 public:
   typedef SharedRefPtr<RequestProcessor> Ptr;
   typedef Vector<Ptr> Vec;
-  typedef void(*Callback)(RequestProcessor*); // Initialization callback
 
   /**
    * Create the request processor; Don't use directly use the request processor
@@ -64,100 +82,61 @@ public:
    * @param event_loop Event loop to utilize for handling requests
    * @param connect_keyspace Keyspace session is connecting to; may be empty
    * @param listener Request processor listener for connection events
-   * @param max_schema_wait_time_ms Maximum schema agreement wait time (in
-   *                                milliseconds)
-   * @param prepare_on_all_hosts True if statements should be prepared on all
-   *                             hosts; false otherwise
    * @param request_queue Request queue associated with the session
-   * @param timestamp_generator Session timestamp generator
    * @param data User data that's passed to the callback
    * @param callback A callback that is called when the connection is connected
    *                 or if an error occurred
    */
   RequestProcessor(EventLoop* event_loop,
-                   const String& connect_keyspace,
+                   const ConnectionPoolManager::Ptr& manager,
+                   const Host::Ptr& current_host,
+                   const HostMap& hosts,
+                   TokenMap* token_map,
                    RequestProcessorListener* listener,
-                   unsigned max_schema_wait_time_ms,
-                   bool prepare_on_all_hosts,
-                   MPMCQueue<RequestHandler*>* request_queue,
-                   TimestampGenerator* timestamp_generator,
-                   void* data,
-                   Callback callback);
+                   const RequestProcessorSettings& settings,
+                   Random* random,
+                   MPMCQueue<RequestHandler*>* request_queue);
 
   /**
    * Close/Terminate the request request processor
    */
   void close();
-  /**
-   * Close the request processor handles
-   */
-  void close_handles();
+
   /**
    * Update the current keyspace being used for requests (thread-safe)
    *
    * @param keyspace New current keyspace to utilize
    */
-  void keyspace_update(const String& keyspace);
+  void set_keyspace(const String& keyspace);
 
   /* Notifications to be performed by the request processor */
-  void notify_host_add_async(const Host::Ptr& host);
-  void notify_host_remove_async(const Host::Ptr& host);
-  void notify_token_map_update_async(const TokenMap* token_map);
-  void notify_request_async();
+  void notify_host_add(const Host::Ptr& host);
+  void notify_host_remove(const Host::Ptr& host);
+  void notify_token_map_update(const TokenMap* token_map);
+  void notify_request();
 
 public:
   class Protected {
-    friend class RequestProcessorManagerInitializer;
+    friend class RequestProcessorInitializer;
     Protected() { }
     Protected(Protected const&) { }
   };
 
   /**
-   * Initialize the request processor
-   *
-   * @param default_profile Default execution profile
-   * @param profiles Execution profiles (excludes default profile)
-   * @param token_map Initial calculated token map
-   * @param use_randomized_contact_points True if randomized contract points
-   *                                      should be used; false otherwise
-   * @param A key to restrict access to the method
-   */
-  void init(const ExecutionProfile& default_profile,
-            const ExecutionProfile::Map& profiles,
-            const TokenMap* token_map,
-            bool use_randomized_contact_points,
-            Protected);
-  /**
-   * Connect the request processor to the pre-established hosts using the
-   * given protocol version
-   *
-   * @param connected_host Current connected host
-   * @param hosts Map of addresses with their associated hosts
-   * @param metrics Metrics associated with the session
-   * @param protocol_version Protocol version established
-   * @param settings A manager settings object for the connection pool manager
-   * @param A key to restrict access to the method
-   */
-  void connect(const Host::Ptr& connected_host,
-               const HostMap& hosts,
-               Metrics* metrics,
-               int protocol_version,
-               const ConnectionPoolManagerSettings& settings,
-               Protected);
-  /**
    * Initialize the async flushing mechanism for the request processor
    *
    * @param A key to restrict access to the method
    */
-  void start_async(Protected);
+  int init(Protected);
 
 public:
   /* Connection pool manager listener callbacks */
-  virtual void on_up(const Address& address);
-  virtual void on_down(const Address& address);
-  virtual void on_critical_error(const Address& address,
+  virtual void on_pool_up(const Address& address);
+  virtual void on_pool_down(const Address& address);
+  virtual void on_pool_critical_error(const Address& address,
                                  Connector::ConnectionError code,
                                  const String& message);
+  virtual void on_close(ConnectionPoolManager* manager);
 
   /* Request listener callbacks */
   virtual void on_result_metadata_changed(const String& prepared_id,
@@ -176,35 +155,6 @@ public:
   /* Schema agreement listener callback */
   virtual bool on_is_host_up(const Address& address);
 
-public:
-  /**
-   * Retrieve the user data
-   *
-   * @return User data
-   */
-  bool is_ok();
-  /**
-   * Get the error code associated with the initialization of the request
-   * processor
-   *
-   * @return Error code
-   */
-  CassError error_code() const;
-  /**
-   * Get the error message associated with the initialization of the request
-   * processor
-   *
-   * @return Error message; may be empty
-   */
-  String error_message() const;
-  /**
-   * Determine if the request processor was successfully initialized
-   *
-   * @return True request processor was successfully initialized; false
-   *         otherwise
-   */
-  void* data();
-
 private:
   void internal_connect(const Host::Ptr& current_host,
                         const HostMap& hosts,
@@ -213,62 +163,19 @@ private:
                         const ConnectionPoolManagerSettings& settings);
   void internal_close();
   void internal_token_map_update(const TokenMap* token_map);
+  void internal_pool_down(const Address& address);
 
   Host::Ptr get_host(const Address& address);
   bool execution_profile(const String& name, ExecutionProfile& profile) const;
   const LoadBalancingPolicy::Vec& load_balancing_policies() const;
 
 private:
-  /**
-   * Task to easily add the request processor executing a task on its event
-   * loop
-   */
-  class RequestProcessorTask : public Task {
-  public:
-    RequestProcessorTask(const RequestProcessor::Ptr& request_processor)
-      : request_processor_(request_processor) { }
-  protected:
-    RequestProcessor::Ptr request_processor_;
-  };
+  friend class RunCloseProcessor;
+  friend class NotifyHostAddProcessor;
+  friend class NotifyHostRemoveProcessor;
+  friend class NotifyTokenMapUpdateProcessor;
 
-  // Control Connection/Session tasks for async operations
-  class NotifyHostAdd : public RequestProcessorTask {
-  public:
-    NotifyHostAdd(const Host::Ptr host,
-                  const RequestProcessor::Ptr& request_processor)
-      : RequestProcessorTask(request_processor)
-      , host_(host) { }
-    virtual void run(EventLoop* event_loop);
-  private:
-    const Host::Ptr host_;
-  };
-
-  class NotifyHostRemove : public RequestProcessorTask {
-  public:
-    NotifyHostRemove(const Host::Ptr host,
-                     const RequestProcessor::Ptr& request_processor)
-      : RequestProcessorTask(request_processor)
-      , host_(host) { }
-    virtual void run(EventLoop* event_loop);
-  private:
-    const Host::Ptr host_;
-  };
-
-  class NotifyTokenMapUpdate : public RequestProcessorTask {
-  public:
-    NotifyTokenMapUpdate(const TokenMap* token_map,
-                         const RequestProcessor::Ptr& request_processor)
-      : RequestProcessorTask(request_processor)
-      , token_map_(token_map) { }
-    virtual void run(EventLoop* event_loop);
-  private:
-    const TokenMap* token_map_;
-  };
-
-  static void on_connection_pool_manager_initialize(ConnectionPoolManagerInitializer* initializer);
-  void internal_connection_pool_manager_initialize(const ConnectionPoolManager::Ptr& manager,
-                                                   const ConnectionPoolConnector::Vec& failures);
-
+private:
   void internal_host_add_down_up(const Host::Ptr& host, Host::HostState state);
   void internal_host_remove(const Host::Ptr& host);
 
@@ -277,28 +184,24 @@ private:
   void internal_flush_requests();
 
 private:
-  void* data_;
-  Callback callback_;
-
   CassError error_code_;
   String error_message_;
 
+  ConnectionPoolManager::Ptr manager_;
   String connect_keyspace_;
-  ExecutionProfile default_profile_;
   HostMap hosts_;
-  RequestProcessorListener* listener_;
+  EventLoop* const event_loop_;
+  RequestProcessorListener* const listener_;
   LoadBalancingPolicy::Vec load_balancing_policies_;
-  unsigned max_schema_wait_time_ms_;
-  bool prepare_on_all_hosts_;
+  const unsigned max_schema_wait_time_ms_;
+  const bool prepare_on_all_hosts_;
+  const TimestampGenerator::Ptr timestamp_generator_;
+  ExecutionProfile default_profile_;
   ExecutionProfile::Map profiles_;
-  ScopedPtr<Random> random_;
-  MPMCQueue<RequestHandler*>* request_queue_;
-  TimestampGenerator* timestamp_generator_;
+  MPMCQueue<RequestHandler*>* const request_queue_;
   ScopedPtr<const TokenMap> token_map_;
 
-  ConnectionPoolManager::Ptr manager_;
 
-  EventLoop* event_loop_;
   Atomic<bool> is_flushing_;
   Atomic<bool> is_closing_;
   Async async_;

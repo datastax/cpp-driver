@@ -30,6 +30,8 @@ namespace cass {
 
 class TimestampGenerator : public RefCounted<TimestampGenerator> {
 public:
+  typedef SharedRefPtr<TimestampGenerator> Ptr;
+
   enum Type {
     SERVER_SIDE,
     MONOTONIC
