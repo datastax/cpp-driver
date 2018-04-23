@@ -46,15 +46,20 @@ public:
   ConnectionPool(ConnectionPoolManager* manager, const Address& address);
 
   /**
-   * Find the least busy connection for the pool (thread-safe). The least busy
-   * connection has the lowest number of outstanding requests.
+   * Find the least busy connection for the pool. The least busy connection has
+   * the lowest number of outstanding requests.
    *
    * @return The least busy connection or null if no connection is available.
    */
   PooledConnection::Ptr find_least_busy() const;
 
   /**
-   * Close the pool (thread-safe).
+   * Flush connections with pending writes.
+   */
+  void flush();
+
+  /**
+   * Close the pool.
    */
   void close();
 
@@ -107,10 +112,16 @@ public:
   /**
    * Schedule a new connection.
    *
-   * @param event_loop The event loop to use for the reconnection.
    * @param A key to restrict access to the method.
    */
-  void schedule_reconnect(EventLoop* event_loop, Protected);
+  void schedule_reconnect(Protected);
+
+  /**
+   * Add a connection to be flushed.
+   *
+   * @param connection A connection with pending writes.
+   */
+  void requires_flush(PooledConnection* connection, Protected);
 
 private:
   enum CloseState {
@@ -134,12 +145,12 @@ private:
   void internal_notify_critical_error(Connector::ConnectionError code,
                                       const String& message);
   void internal_add_connection(const PooledConnection::Ptr& connection);
-  void internal_schedule_reconnect(EventLoop* event_loop);
+  void internal_schedule_reconnect();
   void internal_close();
   void maybe_closed();
 
-  static void on_reconnect(PooledConnector* connector, EventLoop* loop);
-  void handle_reconnect(PooledConnector* connector, EventLoop* event_loop);
+  static void on_reconnect(PooledConnector* connector);
+  void handle_reconnect(PooledConnector* connector);
 
 private:
   ConnectionPoolManager* manager_;
@@ -149,6 +160,7 @@ private:
   NotifyState notify_state_;
   PooledConnection::Vec connections_;
   PooledConnector::Vec pending_connections_;
+  DenseHashSet<PooledConnection*> to_flush_;
 };
 
 } // namespace cass

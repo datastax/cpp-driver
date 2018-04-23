@@ -22,6 +22,7 @@
 #include "connection_pool_manager.hpp"
 #include "event_loop.hpp"
 #include "host.hpp"
+#include "mpmc_queue.hpp"
 #include "prepare_host_handler.hpp"
 #include "random.hpp"
 #include "schema_agreement_handler.hpp"

@@ -22,7 +22,6 @@
 #include "connection_pool.hpp"
 #include "connection_pool_connector.hpp"
 #include "ref_counted.hpp"
-#include "request_queue.hpp"
 
 #include <uv.h>
 
@@ -107,14 +106,14 @@ public:
   /**
    * Constructor. Don't use directly.
    *
-   * @param event_loop Event loop to utilize for handling requests.
+   * @param loop Event loop to utilize for handling requests.
    * @param protocol_version The protocol version to use for connections.
    * @param keyspace The current keyspace to use for connections.
    * @param listener A listener that handles manager events.
    * @param metrics An object for recording metrics.
    * @param settings Settings for the manager and its connections.
    */
-  ConnectionPoolManager(EventLoop* event_loop,
+  ConnectionPoolManager(uv_loop_t* loop,
                         int protocol_version,
                         const String& keyspace,
                         ConnectionPoolManagerListener* listener,
@@ -123,7 +122,7 @@ public:
   ~ConnectionPoolManager();
 
   /**
-   * Find the least busy connection for a given host (thread-safe).
+   * Find the least busy connection for a given host.
    *
    * @param address The address of the host to find a least busy connection.
    * @return The least busy connection for a host or null if no connections are
@@ -132,36 +131,38 @@ public:
   PooledConnection::Ptr find_least_busy(const Address& address) const;
 
   /**
-   * Get addresses for all available hosts (thread-safe).
+   * Flush connection pools with pending writes.
+   */
+  void flush();
+
+  /**
+   * Get addresses for all available hosts.
    *
    * @return A vector of addresses.
    */
   AddressVec available() const;
 
   /**
-   * Add a connection pool for the given host (thread-safe).
+   * Add a connection pool for the given host.
    *
    * @param address The address of the host to add.
    */
   void add(const Address& address);
 
   /**
-   * Remove a connection pool for the given host (thread-safe).
+   * Remove a connection pool for the given host.
    *
    * @param address The address of the host to remove.
    */
   void remove(const Address& address);
 
   /**
-   * Close all connection pools (thread-safe).
+   * Close all connection pools.
    */
   void close();
 
-  void close_handles() { request_queue_.close_handles(); }
-
 public:
-  EventLoop* event_loop() const { return event_loop_; }
-  RequestQueue* request_queue() { return &request_queue_; }
+  uv_loop_t* loop() const { return loop_; }
   int protocol_version() const { return protocol_version_; }
   const ConnectionPoolManagerSettings& settings() const { return settings_; }
   ConnectionPoolManagerListener* listener() const { return listener_; }
@@ -225,6 +226,13 @@ public:
                              const String& message,
                              Protected);
 
+  /**
+   * Add a pool to be flushed.
+   *
+   * @param pool A pool that has connections with pending writes.
+   */
+  void requires_flush(ConnectionPool* pool, Protected);
+
 private:
   enum CloseState {
     CLOSE_STATE_OPEN,
@@ -241,8 +249,7 @@ private:
   void handle_connect(ConnectionPoolConnector* pool_connector);
 
 private:
-  EventLoop* const event_loop_;
-  RequestQueue request_queue_;
+  uv_loop_t* loop_;
 
   const int protocol_version_;
   ConnectionPoolManagerListener* const listener_;
@@ -251,6 +258,7 @@ private:
   CloseState close_state_;
   ConnectionPool::Map pools_;
   ConnectionPoolConnector::Vec pending_pools_;
+  DenseHashSet<ConnectionPool*> to_flush_;
 
   // This lock ensures keyspaces are updated as soon as it occurs
   mutable uv_mutex_t keyspace_mutex_;

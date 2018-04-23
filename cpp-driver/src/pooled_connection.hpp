@@ -19,6 +19,7 @@
 
 #include "atomic.hpp"
 #include "connection.hpp"
+#include "dense_hash_set.hpp"
 #include "ref_counted.hpp"
 #include "vector.hpp"
 
@@ -26,7 +27,6 @@ namespace cass {
 
 class ConnectionPool;
 class EventLoop;
-class RequestQueue;
 class RequestCallback;
 
 /**
@@ -42,15 +42,13 @@ public:
    * Constructor. Don't use directly.
    *
    * @param pool The connection pool of the connection.
-   * @param event_loop The event loop that's handling the connection.
    * @param connection The wrapped connection.
    */
   PooledConnection(ConnectionPool* pool,
-                   EventLoop* event_loop,
                    const Connection::Ptr& connection);
 
   /**
-   * Queues a request to be written to the wrapped connection (thread-safe).
+   * Queues a request to be written to the wrapped connection.
    *
    * The event loop thread automatically handles flushing the connection.
    *
@@ -60,74 +58,31 @@ public:
   bool write(RequestCallback* callback);
 
   /**
-   * Closes the wrapped connection (thread-safe)
+   * Flush pending writes.
+   */
+  void flush();
+
+  /**
+   * Closes the wrapped connection.
    */
   void close();
 
   /**
-   * Get the number of outstanding requests including the number of queued and
-   * written requests.
+   * Get the number of outstanding requests.
    *
-   * *Note:* It's possible for this to go negative, but it shouldn't affect the
-   * intended purpose.
-   *
-   * @return The total number of outstanding requests.
+   * @return The number of outstanding requests.
    */
-  int total_request_count() const;
+  int inflight_request_count() const;
 
 public:
-  EventLoop* event_loop() { return event_loop_; }
   const String& keyspace() const { return connection_->keyspace(); } // Test only
-
-public: // Only to be called on the event loop thread
-  class Protected {
-    friend class RequestQueue;
-    friend class RunClose;
-    Protected() { }
-    Protected(Protected const&) { }
-  };
-
-  /**
-   * Write a request to the connection from the event loop thread.
-   *
-   * @param callback A request callback that will handle the request.
-   * @param A key to restrict access to the method.
-   * @return The number of bytes written, or negative if an error occurred.
-   */
-  int32_t write(RequestCallback* callback, Protected);
-
-  /**
-   * Flush outstanding requests from the event loop thread.
-   *
-   * @param A key to restrict access to the method.
-   */
-  void flush(Protected);
-
-  /**
-   * Determine if the connection is closing.
-   *
-   * @param A key to restrict access to the method.
-   * @return Returns true if closing.
-   */
-  bool is_closing(Protected) const;
-
-  /**
-   * Close the connection from the event loop thread.
-   *
-   * @param A key to restrict access to the method.
-   */
-  void close(Protected);
 
 private:
   virtual void on_close(Connection* connection);
 
 private:
   const Connection::Ptr connection_;
-  RequestQueue* const request_queue_;
   ConnectionPool* const pool_;
-  EventLoop* const event_loop_;
-
-  Atomic<int> pending_request_count_;
 };
 
 } // namespace cass

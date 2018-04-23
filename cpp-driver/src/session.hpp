@@ -31,7 +31,6 @@
 #include "ref_counted.hpp"
 #include "request_processor_manager_initializer.hpp"
 #include "request_handler.hpp"
-#include "request_queue.hpp"
 #include "resolver.hpp"
 #include "row.hpp"
 #include "scoped_lock.hpp"

@@ -18,7 +18,6 @@
 
 #include "connection_pool_manager_initializer.hpp"
 #include "prepare_all_handler.hpp"
-#include "request_queue.hpp"
 #include "session.hpp"
 
 namespace cass {
@@ -50,8 +49,6 @@ void RequestProcessor::close() {
 }
 
 void RequestProcessor::close_handles() {
-  if (manager_) manager_->close_handles();
-
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
        it != policies.end(); ++it) {
@@ -263,7 +260,7 @@ void RequestProcessor::internal_connect(const Host::Ptr& current_host,
   addresses.reserve(hosts_.size());
   std::transform(hosts_.begin(), hosts_.end(), std::back_inserter(addresses), GetAddress());
 
-  ConnectionPoolManagerInitializer::Ptr initializer(Memory::allocate<ConnectionPoolManagerInitializer>(event_loop_,
+  ConnectionPoolManagerInitializer::Ptr initializer(Memory::allocate<ConnectionPoolManagerInitializer>(
                                                     protocol_version,
                                                     this,
                                                     on_connection_pool_manager_initialize));
@@ -272,7 +269,7 @@ void RequestProcessor::internal_connect(const Host::Ptr& current_host,
     ->with_listener(this)
     ->with_keyspace(connect_keyspace_)
     ->with_metrics(metrics)
-    ->initialize(addresses);
+    ->initialize(event_loop_->loop(), addresses);
 }
 
 void RequestProcessor::internal_close() {
@@ -431,6 +428,8 @@ void RequestProcessor::internal_flush_requests() {
       request_handler->dec_ref();
     }
   }
+
+  manager_->flush();
 
   if (is_closing_.load()) {
     async_.close_handle();

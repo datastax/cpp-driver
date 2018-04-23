@@ -18,26 +18,8 @@
 
 #include "connection_pool_manager.hpp"
 #include "query_request.hpp"
-#include "event_loop.hpp"
-#include "request_queue.hpp"
 
 namespace cass {
-
-/**
- * A task for closing the connection from the event loop thread.
- */
-class RunClose : public Task {
-public:
-  RunClose(const PooledConnection::Ptr& connection)
-    : connection_(connection) { }
-
-  void run(EventLoop* event_loop) {
-    connection_->close(PooledConnection::Protected());
-  }
-
-private:
-  PooledConnection::Ptr connection_;
-};
 
 /**
  * A request callback that sets the keyspace then runs the original request
@@ -123,62 +105,46 @@ void ChainedSetKeyspaceCallback::on_result_response(ResponseMessage* response) {
 }
 
 PooledConnection::PooledConnection(ConnectionPool* pool,
-                                   EventLoop* event_loop,
                                    const Connection::Ptr& connection)
   : connection_(connection)
-  , request_queue_(pool->manager()->request_queue())
-  , pool_(pool)
-  , event_loop_(event_loop)
-  , pending_request_count_(0) {
+  , pool_(pool) {
   inc_ref(); // Reference for the connection's lifetime
   connection_->set_listener(this);
 }
 
 bool PooledConnection::write(RequestCallback* callback) {
-  bool result = request_queue_->write(this, callback);
-  if (result) {
-    pending_request_count_.fetch_add(1);
-  }
-  return result;
-}
-
-void PooledConnection::close() {
-  event_loop_->add(Memory::allocate<RunClose>(Ptr(this)));
-}
-
-int PooledConnection::total_request_count() const {
-  return pending_request_count_.load(MEMORY_ORDER_RELAXED) + connection_->inflight_request_count();
-}
-
-int32_t PooledConnection::write(RequestCallback* callback, Protected) {
-  pending_request_count_.fetch_sub(1);
-
+  bool result = false;
   String keyspace(pool_->manager()->keyspace());
   if (keyspace != connection_->keyspace()) {
     LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)",
               keyspace.c_str(),
               static_cast<void*>(connection_.get()),
               static_cast<void*>(pool_));
-    return connection_->write(RequestCallback::Ptr(
-                                Memory::allocate<ChainedSetKeyspaceCallback>(
-                                  connection_.get(),
-                                  keyspace,
-                                  RequestCallback::Ptr(callback))));
+    result = connection_->write(RequestCallback::Ptr(
+                                  Memory::allocate<ChainedSetKeyspaceCallback>(
+                                    connection_.get(),
+                                    keyspace,
+                                    RequestCallback::Ptr(callback))));
   } else {
-    return connection_->write(RequestCallback::Ptr(callback));
+    result = connection_->write(RequestCallback::Ptr(callback));
   }
+
+  if (result) {
+    pool_->requires_flush(this, ConnectionPool::Protected());
+  }
+  return result;
 }
 
-void PooledConnection::flush(Protected) {
+void PooledConnection::flush() {
   connection_->flush();
 }
 
-bool PooledConnection::is_closing(PooledConnection::Protected) const {
-  return connection_->is_closing();
+void PooledConnection::close() {
+  connection_->close();
 }
 
-void PooledConnection::close(Protected) {
-  connection_->close();
+int PooledConnection::inflight_request_count() const {
+  return connection_->inflight_request_count();
 }
 
 void PooledConnection::on_close(Connection* connection) {

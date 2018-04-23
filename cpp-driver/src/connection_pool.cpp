@@ -19,7 +19,7 @@
 #include "connection_pool_manager.hpp"
 #include "memory.hpp"
 #include "metrics.hpp"
-#include "scoped_lock.hpp"
+#include "utils.hpp"
 
 #include <algorithm>
 
@@ -28,7 +28,7 @@ namespace cass {
 
 static inline bool least_busy_comp(const PooledConnection::Ptr& a,
                                    const PooledConnection::Ptr& b) {
-  return a->total_request_count() < b->total_request_count();
+  return a->inflight_request_count() < b->inflight_request_count();
 }
 
 ConnectionPool::ConnectionPool(ConnectionPoolManager* manager,
@@ -38,6 +38,7 @@ ConnectionPool::ConnectionPool(ConnectionPoolManager* manager,
   , close_state_(CLOSE_STATE_OPEN)
   , notify_state_(NOTIFY_STATE_NEW) {
   inc_ref(); // Reference for the lifetime of the pooled connections
+  set_pointer_keys(to_flush_);
 }
 
 PooledConnection::Ptr ConnectionPool::find_least_busy() const {
@@ -48,12 +49,25 @@ PooledConnection::Ptr ConnectionPool::find_least_busy() const {
                            connections_.end(), least_busy_comp);
 }
 
+void ConnectionPool::flush() {
+  for (DenseHashSet<PooledConnection*>::const_iterator it = to_flush_.begin(),
+       end = to_flush_.end(); it != end; ++it) {
+    (*it)->flush();
+  }
+  to_flush_.clear();
+}
+
 void ConnectionPool::close() {
   internal_close();
 }
 
-void ConnectionPool::schedule_reconnect(EventLoop* event_loop, Protected) {
-  internal_schedule_reconnect(event_loop);
+void ConnectionPool::schedule_reconnect(Protected) {
+  internal_schedule_reconnect();
+}
+
+void ConnectionPool::requires_flush(PooledConnection* connection, ConnectionPool::Protected) {
+  manager_->requires_flush(this, ConnectionPoolManager::Protected());
+  to_flush_.insert(connection);
 }
 
 void ConnectionPool::add_connection(const PooledConnection::Ptr& connection, Protected) {
@@ -66,6 +80,7 @@ void ConnectionPool::close_connection(PooledConnection* connection, Protected) {
   }
   connections_.erase(std::remove(connections_.begin(), connections_.end(), connection),
                      connections_.end());
+  to_flush_.erase(connection);
 
   if (close_state_ != CLOSE_STATE_OPEN) {
     maybe_closed();
@@ -75,7 +90,7 @@ void ConnectionPool::close_connection(PooledConnection* connection, Protected) {
   // When there are no more connections available then notify that the host
   // is down.
   internal_notify_up_or_down();
-  internal_schedule_reconnect(connection->event_loop());
+  internal_schedule_reconnect();
 }
 
 void ConnectionPool::notify_up_or_down(ConnectionPool::Protected) {
@@ -89,7 +104,7 @@ void ConnectionPool::notify_critical_error(Connector::ConnectionError code,
 }
 
 // Lock must be held to call this method
-void ConnectionPool::internal_schedule_reconnect(EventLoop* event_loop) {
+void ConnectionPool::internal_schedule_reconnect() {
   // Reschedule a new connection on the same event loop
   LOG_INFO("Scheduling reconnect for host %s in %llu ms on connection pool (%p)",
            address_.to_string().c_str(),
@@ -97,8 +112,7 @@ void ConnectionPool::internal_schedule_reconnect(EventLoop* event_loop) {
            static_cast<void*>(this));
   PooledConnector::Ptr connector(Memory::allocate<PooledConnector>(this, this, on_reconnect));
   pending_connections_.push_back(connector);
-  connector->delayed_connect(event_loop,
-                             manager_->settings().reconnect_wait_time_ms,
+  connector->delayed_connect(manager_->settings().reconnect_wait_time_ms,
                              PooledConnector::Protected());
 }
 
@@ -159,12 +173,12 @@ void ConnectionPool::maybe_closed() {
   }
 }
 
-void ConnectionPool::on_reconnect(PooledConnector* connector, EventLoop* event_loop) {
+void ConnectionPool::on_reconnect(PooledConnector* connector) {
   ConnectionPool* pool = static_cast<ConnectionPool*>(connector->data());
-  pool->handle_reconnect(connector, event_loop);
+  pool->handle_reconnect(connector);
 }
 
-void ConnectionPool::handle_reconnect(PooledConnector* connector, EventLoop* event_loop) {
+void ConnectionPool::handle_reconnect(PooledConnector* connector) {
   pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
                              pending_connections_.end());
 
@@ -188,7 +202,7 @@ void ConnectionPool::handle_reconnect(PooledConnector* connector, EventLoop* eve
       LOG_WARN("Connection pool was unable to reconnect to host %s because of the following error: %s",
                address().to_string().c_str(),
                connector->error_message().c_str());
-      internal_schedule_reconnect(event_loop);
+      internal_schedule_reconnect();
     }
   }
 }

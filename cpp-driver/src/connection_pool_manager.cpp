@@ -19,6 +19,7 @@
 #include "config.hpp"
 #include "memory.hpp"
 #include "scoped_lock.hpp"
+#include "utils.hpp"
 
 namespace cass {
 
@@ -28,13 +29,13 @@ ConnectionPoolManagerSettings::ConnectionPoolManagerSettings(const Config& confi
   , reconnect_wait_time_ms(config.reconnect_wait_time_ms())
   , queue_size_io(config.queue_size_io()) { }
 
-ConnectionPoolManager::ConnectionPoolManager(EventLoop* event_loop,
+ConnectionPoolManager::ConnectionPoolManager(uv_loop_t* loop,
                                              int protocol_version,
                                              const String& keyspace,
                                              ConnectionPoolManagerListener* listener,
                                              Metrics* metrics,
                                              const ConnectionPoolManagerSettings& settings)
-  : event_loop_(event_loop)
+  : loop_(loop)
   , protocol_version_(protocol_version)
   , listener_(listener)
   , settings_(settings)
@@ -45,7 +46,7 @@ ConnectionPoolManager::ConnectionPoolManager(EventLoop* event_loop,
   uv_mutex_init(&keyspace_mutex_);
   pools_.set_empty_key(Address::EMPTY_KEY);
   pools_.set_deleted_key(Address::DELETED_KEY);
-  request_queue_.init(event_loop_, settings_.queue_size_io);
+  set_pointer_keys(to_flush_);
 }
 
 ConnectionPoolManager::~ConnectionPoolManager() {
@@ -58,6 +59,15 @@ PooledConnection::Ptr ConnectionPoolManager::find_least_busy(const Address& addr
     return PooledConnection::Ptr();
   }
   return it->second->find_least_busy();
+}
+
+void ConnectionPoolManager::flush() {
+  for (DenseHashSet<ConnectionPool*>::const_iterator it = to_flush_.begin(),
+       end = to_flush_.end(); it != end; ++it) {
+    (*it)->flush();
+  }
+  to_flush_.clear();
+
 }
 
 AddressVec ConnectionPoolManager::available() const {
@@ -129,6 +139,7 @@ void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool, Protected)
 
 void ConnectionPoolManager::notify_closed(ConnectionPool* pool, bool should_notify_down, Protected) {
   pools_.erase(pool->address());
+  to_flush_.erase(pool);
   if (should_notify_down && listener_ != NULL) {
     listener_->on_down(pool->address());
   }
@@ -154,6 +165,10 @@ void ConnectionPoolManager::notify_critical_error(ConnectionPool* pool,
   if (listener_ != NULL) {
     listener_->on_critical_error(pool->address(), code, message);
   }
+}
+
+void ConnectionPoolManager::requires_flush(ConnectionPool* pool, ConnectionPoolManager::Protected) {
+  to_flush_.insert(pool);
 }
 
 void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {

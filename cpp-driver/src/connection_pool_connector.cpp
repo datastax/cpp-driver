@@ -20,7 +20,6 @@
 #include "event_loop.hpp"
 #include "memory.hpp"
 #include "metrics.hpp"
-#include "scoped_lock.hpp"
 
 namespace cass {
 
@@ -29,18 +28,12 @@ ConnectionPoolConnector::ConnectionPoolConnector(ConnectionPoolManager* manager,
   : pool_(Memory::allocate<ConnectionPool>(manager, address))
   , data_(data)
   , callback_(callback)
-  , remaining_(0) {
-  uv_mutex_init(&lock_);
-}
-
-ConnectionPoolConnector::~ConnectionPoolConnector() {
-  uv_mutex_destroy(&lock_);
-}
+  , remaining_(0) { }
 
 void ConnectionPoolConnector::connect() {
   inc_ref();
   const size_t num_connections_per_host = pool_->manager()->settings().num_connections_per_host;
-  remaining_.store(num_connections_per_host);
+  remaining_ = num_connections_per_host;
   for (size_t i = 0; i < num_connections_per_host; ++i) {
     PooledConnector::Ptr connector(Memory::allocate<PooledConnector>(pool_.get(), this, on_connect));
     pending_connections_.push_back(connector);
@@ -49,7 +42,6 @@ void ConnectionPoolConnector::connect() {
 }
 
 void ConnectionPoolConnector::cancel() {
-  ScopedMutex l(&lock_);
   pool_->close();
   for (PooledConnector::Vec::iterator it = pending_connections_.begin(),
        end = pending_connections_.end(); it != end; ++it) {
@@ -64,12 +56,10 @@ ConnectionPool::Ptr ConnectionPoolConnector::release_pool() {
 }
 
 Connector::ConnectionError ConnectionPoolConnector::error_code() const {
-  ScopedMutex l(&lock_);
   return critical_error_connector_ ?  critical_error_connector_->error_code() : Connector::CONNECTION_OK;
 }
 
 String ConnectionPoolConnector::error_message() const {
-  ScopedMutex l(&lock_);
   return critical_error_connector_ ? critical_error_connector_->error_message() : "";
 }
 
@@ -78,52 +68,47 @@ bool ConnectionPoolConnector::is_ok() const {
 }
 
 bool ConnectionPoolConnector::is_critical_error() const {
-  ScopedMutex l(&lock_);
   return critical_error_connector_;
 }
 
 bool ConnectionPoolConnector::is_keyspace_error() const {
-  ScopedMutex l(&lock_);
   if (critical_error_connector_) {
     return critical_error_connector_->is_keyspace_error();
   }
   return false;
 }
 
-void ConnectionPoolConnector::on_connect(PooledConnector* connector, EventLoop* event_loop) {
+void ConnectionPoolConnector::on_connect(PooledConnector* connector) {
   ConnectionPoolConnector* pool_connector = static_cast<ConnectionPoolConnector*>(connector->data());
-  pool_connector->handle_connect(connector, event_loop);
+  pool_connector->handle_connect(connector);
 }
 
-void ConnectionPoolConnector::handle_connect(PooledConnector* connector, EventLoop* event_loop) {
-  { // Locked
-    ScopedMutex l(&lock_);
-    pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
-                               pending_connections_.end());
+void ConnectionPoolConnector::handle_connect(PooledConnector* connector) {
+  pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
+                             pending_connections_.end());
 
-    if (connector->is_ok()) {
-      pool_->add_connection(connector->release_connection(), ConnectionPool::Protected());
-    } else if (!connector->is_cancelled()){
-      LOG_ERROR("Connection pool was unable to connect to host %s because of the following error: %s",
-                pool_->address().to_string().c_str(),
-                connector->error_message().c_str());
+  if (connector->is_ok()) {
+    pool_->add_connection(connector->release_connection(), ConnectionPool::Protected());
+  } else if (!connector->is_cancelled()){
+    LOG_ERROR("Connection pool was unable to connect to host %s because of the following error: %s",
+              pool_->address().to_string().c_str(),
+              connector->error_message().c_str());
 
-      if (connector->is_critical_error())  {
-        if (!critical_error_connector_) {
-          critical_error_connector_.reset(connector);
-          pool_->close();
-          for (PooledConnector::Vec::iterator it = pending_connections_.begin(),
-               end = pending_connections_.end(); it != end; ++it) {
-            (*it)->cancel();
-          }
+    if (connector->is_critical_error())  {
+      if (!critical_error_connector_) {
+        critical_error_connector_.reset(connector);
+        pool_->close();
+        for (PooledConnector::Vec::iterator it = pending_connections_.begin(),
+             end = pending_connections_.end(); it != end; ++it) {
+          (*it)->cancel();
         }
-      } else {
-        pool_->schedule_reconnect(event_loop, ConnectionPool::Protected());
       }
+    } else {
+      pool_->schedule_reconnect(ConnectionPool::Protected());
     }
   }
 
-  if (remaining_.fetch_sub(1) - 1 == 0) {
+  if (--remaining_ == 0) {
     ConnectionPool::Ptr temp = pool_;
     callback_(this);
     // Notify listener after the callback

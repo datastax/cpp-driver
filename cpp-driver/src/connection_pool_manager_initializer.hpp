@@ -44,24 +44,21 @@ public:
   /**
    * Constructor
    *
-   * @param event_loop A event loop to use for handling requests.
    * @param protocol_version The protocol version to use for connections.
    * @param data User data that's passed to the callback.
    * @param callback A callback that is called when the manager is connected or
    * if an error occurred.
    */
-  ConnectionPoolManagerInitializer(EventLoop* event_loop,
-                                   int protocol_version,
+  ConnectionPoolManagerInitializer(int protocol_version,
                                    void* data,
                                    Callback callback);
-  ~ConnectionPoolManagerInitializer();
 
   /**
    * Initialize a connection pool manager use the given hosts.
    *
    * @param addresses A vector of addresses to connect pools to.
    */
-  void initialize(const AddressVec& addresses);
+  void initialize(uv_loop_t* loop, const AddressVec& addresses);
 
   /**
    * Set the keyspace to connect pools with.
@@ -130,12 +127,8 @@ private:
   void* data_;
   Callback callback_;
 
-  Atomic<size_t> remaining_;
-
-  mutable uv_mutex_t lock_;
+  size_t remaining_;
   ConnectionPoolConnector::Vec failures_;
-
-  EventLoop* const event_loop_;
 
   int protocol_version_;
   String keyspace_;
