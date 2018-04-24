@@ -19,7 +19,6 @@
 
 #include "atomic.hpp"
 #include "connection.hpp"
-#include "dense_hash_set.hpp"
 #include "ref_counted.hpp"
 #include "vector.hpp"
 
