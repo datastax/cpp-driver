@@ -93,7 +93,7 @@ NopRequestProcessorListener nop_request_processor_listener__;
 
 RequestProcessor::RequestProcessor(EventLoop* event_loop,
                                    const ConnectionPoolManager::Ptr& manager,
-                                   const Host::Ptr& current_host,
+                                   const Host::Ptr& connected_host,
                                    const HostMap& hosts,
                                    TokenMap* token_map,
                                    RequestProcessorListener* listener,
@@ -138,7 +138,7 @@ RequestProcessor::RequestProcessor(EventLoop* event_loop,
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
        it != policies.end(); ++it) {
     // Initialize the load balancing policies
-    (*it)->init(current_host, hosts_, random);
+    (*it)->init(connected_host, hosts_, random);
     (*it)->register_handles(event_loop_->loop());
   }
 
@@ -165,8 +165,9 @@ void RequestProcessor::notify_token_map_update(const TokenMap* token_map) {
 }
 
 void RequestProcessor::notify_request() {
-  // Only signal request processing if it's not already processing requests
-  if (!is_flushing_.load()) {
+  // Only signal the request queue if it's not already processing requests.
+  bool expected = false;
+  if (!is_flushing_.load() && is_flushing_.compare_exchange_strong(expected, true)) {
     async_.send();
   }
 }

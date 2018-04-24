@@ -79,17 +79,19 @@ public:
    * Create the request processor; Don't use directly use the request processor
    * manager initializer
    *
-   * @param event_loop Event loop to utilize for handling requests
-   * @param connect_keyspace Keyspace session is connecting to; may be empty
-   * @param listener Request processor listener for connection events
-   * @param request_queue Request queue associated with the session
-   * @param data User data that's passed to the callback
-   * @param callback A callback that is called when the connection is connected
-   *                 or if an error occurred
+   * @param event_loop The event loop the request process is running on.
+   * @param manager A manager of connection pools for handling requests.
+   * @param connected_host The currently connected control connection host.
+   * @param hosts A mapping of the currently available hosts.
+   * @param token_map The current token map.
+   * @param listener A listener for handling processor callbacks.
+   * @param settings The current settings for the request processor.
+   * @param random A RNG for randomizing hosts in the load balancing policies.
+   * @param request_queue A thread-safe queue for processing requests.
    */
   RequestProcessor(EventLoop* event_loop,
                    const ConnectionPoolManager::Ptr& manager,
-                   const Host::Ptr& current_host,
+                   const Host::Ptr& connected_host,
                    const HostMap& hosts,
                    TokenMap* token_map,
                    RequestProcessorListener* listener,
@@ -98,21 +100,46 @@ public:
                    MPMCQueue<RequestHandler*>* request_queue);
 
   /**
-   * Close/Terminate the request request processor
+   * Close/Terminate the request request processor (thread-safe).
    */
   void close();
 
   /**
-   * Update the current keyspace being used for requests (thread-safe)
+   * Set the current keyspace being used for requests
+   * (thread-safe, synchronous).
    *
    * @param keyspace New current keyspace to utilize
    */
   void set_keyspace(const String& keyspace);
 
-  /* Notifications to be performed by the request processor */
+  /**
+   * Notify that a host has been added to the cluster
+   * (thread-safe, asynchronous).
+   *
+   * @param host The host that's been added.
+   */
   void notify_host_add(const Host::Ptr& host);
+
+  /**
+   * Notify that a host has been removed from the cluster
+   * (thread-safe, asynchronous).
+   *
+   * @param host The host that's been removed.
+   */
   void notify_host_remove(const Host::Ptr& host);
+
+  /**
+   * Notify that the token map has been updated
+   * (thread-safe, asynchronous).
+   *
+   * @param token_map The updated token map.
+   */
   void notify_token_map_update(const TokenMap* token_map);
+
+  /**
+   * Notify that a request has been added to the request queue
+   * (thread-safe, asynchronous)).
+   */
   void notify_request();
 
 public:
@@ -129,7 +156,7 @@ public:
    */
   int init(Protected);
 
-public:
+private:
   /* Connection pool manager listener callbacks */
   virtual void on_pool_up(const Address& address);
   virtual void on_pool_down(const Address& address);
@@ -138,6 +165,7 @@ public:
                                  const String& message);
   virtual void on_close(ConnectionPoolManager* manager);
 
+private:
   /* Request listener callbacks */
   virtual void on_result_metadata_changed(const String& prepared_id,
                                           const String& query,
@@ -152,6 +180,7 @@ public:
                               const Host::Ptr& current_host,
                               const Response::Ptr& response);
 
+private:
   /* Schema agreement listener callback */
   virtual bool on_is_host_up(const Address& address);
 

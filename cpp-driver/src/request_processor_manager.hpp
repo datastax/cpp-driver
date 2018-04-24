@@ -41,14 +41,15 @@ public:
   RequestProcessorManager();
 
   /**
-   * Close/Terminate the request processors
+   * Close/Terminate the request processors (thread-safe).
    *
    * @param A key to restrict access to the method
    */
   void close();
 
   /**
-   * Update the current keyspace being used for requests (synchronously)
+   * Update the current keyspace being used for requests
+   * (thread-safe, synchronous).
    *
    * @param keyspace New/Current keyspace to utilize
    */
@@ -56,6 +57,7 @@ public:
 
   /**
    * Add a new host to the request processors
+   * (thread-safe, asynchronous).
    *
    * @param host New host to be added
    */
@@ -63,6 +65,7 @@ public:
 
   /**
    * Remove a host from the request processors
+   * (thread-safe, asynchronous).
    *
    * @param host Host to be removed
    */
@@ -70,6 +73,7 @@ public:
 
   /**
    * Update the token map being used for the requests
+   * (thread-safe, asynchronous).
    *
    * @param token_map Update token map (do not clone)
    */
@@ -77,12 +81,13 @@ public:
 
   /**
    * Notify one of the request processors that a new request is available
+   * (thread-safe, asynchronous).
    *
    * NOTE: The request processor selected during the round robin process may or
    *       may not be notified if it is currently flushing requests from the
    *       queue.
    */
-  void notify_request_async();
+  void notify_request();
 
 public:
   class Protected {

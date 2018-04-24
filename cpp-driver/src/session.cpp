@@ -470,7 +470,7 @@ void Session::execute(const RequestHandler::Ptr& request_handler) {
 
   request_handler->inc_ref(); // Queue reference
   if (request_queue_->enqueue(request_handler.get())) {
-    request_processor_manager_->notify_request_async();
+    request_processor_manager_->notify_request();
   } else {
     request_handler->dec_ref();
     request_handler->set_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
@@ -570,6 +570,7 @@ void Session::on_control_connection_ready() {
       ->with_keyspace(connect_keyspace_)
       ->with_listener(this)
       ->with_metrics(metrics_.get())
+      ->with_random(random_.get())
       ->with_token_map(token_map_.get())
       ->initialize(event_loop_group_.get());
 

@@ -35,6 +35,11 @@ public:
   /**
    * Constructor; uses the builder pattern to initialize the manager
    *
+   * @param current_host The currently connected control connection host.
+   * @param protocol_version The highest negotiated protocol for the cluster.
+   * @param hosts A mapping of available hosts in the cluster.
+   * @param token_map A token map.
+   * @param request_queue A thread-safe queue that is used to process requests.
    * @param data User data that's passed to the callback
    * @param callback A callback that is called when the manager has completed
    *                 its connection for all request processor IO workers
@@ -80,6 +85,12 @@ public:
    */
   RequestProcessorManagerInitializer* with_metrics(Metrics* metrics);
 
+  /**
+   * Set the RNG for use randomizing hosts in load balancing policies.
+   *
+   * @param random A random number generator object.
+   * @return The initializer to chain calls.
+   */
   RequestProcessorManagerInitializer* with_random(Random* random);
 
   /**

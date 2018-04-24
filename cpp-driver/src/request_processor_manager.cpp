@@ -52,7 +52,7 @@ void RequestProcessorManager::notify_token_map_update(const TokenMap* token_map)
   }
 }
 
-void RequestProcessorManager::notify_request_async() {
+void RequestProcessorManager::notify_request() {
   size_t index = current_.fetch_add(1) % request_processors_.size();
   request_processors_[index]->notify_request();
 }

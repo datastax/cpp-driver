@@ -31,6 +31,10 @@ namespace cass {
 class Config;
 class EventLoop;
 
+/**
+ * A request processor initializer. This contains all the logic responsible for
+ * connecting and initializing a request processor object.
+ */
 class RequestProcessorInitializer : public RefCounted<RequestProcessorInitializer> {
 public:
   typedef SharedRefPtr<RequestProcessorInitializer> Ptr;
@@ -44,7 +48,19 @@ public:
     REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT_ASYNC
   };
 
-  RequestProcessorInitializer(const Host::Ptr& current_host,
+  /**
+   * Constructor.
+   *
+   * @param connected_host The currently connected control connection host.
+   * @param protocol_version The highest negotiated protocol for the cluster.
+   * @param hosts A mapping of available hosts in the cluster.
+   * @param token_map A token map.
+   * @param request_queue A thread-safe queue that is used to process requests.
+   * @param data User data that is available from the callback.
+   * @param callback A callback that is called when the processor is initialized
+   * or if an error occurred.
+   */
+  RequestProcessorInitializer(const Host::Ptr& connected_host,
                               int protocol_version,
                               const HostMap& hosts,
                               TokenMap* token_map,
@@ -52,15 +68,60 @@ public:
                               void* data, Callback callback);
   ~RequestProcessorInitializer();
 
+  /**
+   * Initialize the request processor.
+   *
+   * @param event_loop The event loop to run the request processor on.
+   */
   void initialize(EventLoop* event_loop);
 
+  /**
+   * Set the settings for use by the processor.
+   *
+   * @param settings A settings object.
+   * @return The initializer to chain calls.
+   */
   RequestProcessorInitializer* with_settings(const RequestProcessorSettings& setttings);
+
+  /**
+   * Set the listener to be use for handling processor events.
+   *
+   * @param listener A listener for processor events.
+   * @return The initializer to chain calls.
+   */
   RequestProcessorInitializer* with_listener(RequestProcessorListener* listener);
+
+  /**
+   * Set the keyspace to connect with.
+   *
+   * @param keyspace The initial keyspace to connect with.
+   * @return The initializer to chain calls.
+   */
   RequestProcessorInitializer* with_keyspace(const String& keyspace);
+
+  /**
+   * Set the metrics object for recording metrics.
+   *
+   * @param metrics A shared metrics object.
+   * @return The initializer to chain calls.
+   */
   RequestProcessorInitializer* with_metrics(Metrics* metrics);
+
+  /**
+   * Set the RNG for use randomizing hosts in load balancing policies.
+   *
+   * @param random A random number generator object.
+   * @return The initializer to chain calls.
+   */
   RequestProcessorInitializer* with_random(Random* random);
 
-
+  /**
+   * Release the processor from the initializer. If not released in the callback
+   * the processor will automatically be closed.
+   *
+   * @return The processor object for this initializer. This returns a null object
+   * if the processor is not initialized or an error occurred.
+   */
   RequestProcessor::Ptr release_processor();
 
 public:
@@ -93,7 +154,7 @@ private:
   Metrics* metrics_;
   Random* random_;
 
-  const Host::Ptr current_host_;
+  const Host::Ptr connected_host_;
   const int protocol_version_;
   HostMap hosts_;
   TokenMap* const token_map_;

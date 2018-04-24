@@ -48,7 +48,7 @@ RequestProcessorSettings::RequestProcessorSettings(const Config& config)
   , default_profile(config.default_profile())
   , profiles(config.profiles()) { }
 
-RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& current_host,
+RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& connected_host,
                                                          int protocol_version,
                                                          const HostMap& hosts,
                                                          TokenMap* token_map,
@@ -58,7 +58,7 @@ RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& curren
   , listener_(NULL)
   , metrics_(NULL)
   , random_(NULL)
-  , current_host_(current_host)
+  , connected_host_(connected_host)
   , protocol_version_(protocol_version)
   , hosts_(hosts)
   , token_map_(token_map)
@@ -162,7 +162,7 @@ void RequestProcessorInitializer::handle_initialize(ConnectionPoolManagerInitial
   } else {
     processor_.reset(Memory::allocate<RequestProcessor>(event_loop_,
                                                         initializer->release_manager(),
-                                                        current_host_,
+                                                        connected_host_,
                                                         hosts_,
                                                         token_map_,
                                                         listener_,
