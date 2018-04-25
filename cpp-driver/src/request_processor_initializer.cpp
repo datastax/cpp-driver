@@ -63,6 +63,7 @@ RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& connec
   , hosts_(hosts)
   , token_map_(token_map)
   , request_queue_(request_queue)
+  , error_code_(REQUEST_PROCESSOR_OK)
   , data_(data)
   , callback_(callback) {
   uv_mutex_init(&mutex_);

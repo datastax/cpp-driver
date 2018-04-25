@@ -158,7 +158,7 @@ void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool, Protected)
 void ConnectionPoolManager::notify_closed(ConnectionPool* pool, bool should_notify_down, Protected) {
   pools_.erase(pool->address());
   to_flush_.erase(pool);
-  if (should_notify_down && listener_ != NULL) {
+  if (should_notify_down) {
     listener_->on_pool_down(pool->address());
   }
   maybe_closed();
