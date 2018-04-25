@@ -110,7 +110,8 @@ RequestProcessor::RequestProcessor(EventLoop* event_loop,
   , profiles_(settings.profiles)
   , request_queue_(request_queue)
   , is_flushing_(false)
-  , is_closing_(false) {
+  , is_closing_(false)
+  , attempts_without_writes_(0) {
   manager_->set_listener(this);
 
   // Build/Assign the load balancing policies from the execution profiles
@@ -173,7 +174,10 @@ void RequestProcessor::notify_request() {
 }
 
 int RequestProcessor::init(Protected) {
-  return async_.start(event_loop_->loop(), this, on_flush);
+  int rc;
+  rc = async_.start(event_loop_->loop(), this, on_process);
+  if (rc != 0) return rc;
+  return prepare_.start(event_loop_->loop(), this, on_flush);
 }
 
 void RequestProcessor::on_pool_up(const Address& address) {
@@ -379,66 +383,85 @@ void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
   }
 }
 
-void RequestProcessor::on_flush(Async* async) {
+void RequestProcessor::on_process(Async* async) {
   RequestProcessor* request_processor = static_cast<RequestProcessor*>(async->data());
-  request_processor->internal_flush_requests();
+  request_processor->handle_process();
 }
 
-void RequestProcessor::on_flush_timer(Timer* timer) {
+void RequestProcessor::on_process_timer(Timer* timer) {
   RequestProcessor* request_processor = static_cast<RequestProcessor*>(timer->data());
-  request_processor->internal_flush_requests();
+  request_processor->handle_process();
 }
 
-void RequestProcessor::internal_flush_requests() {
-  const int flush_ratio = 90;
+void RequestProcessor::handle_process() {
+  const int new_request_ratio = 90;
   uint64_t start_time_ns = uv_hrtime();
 
-  RequestHandler* request_handler = NULL;
-  while (request_queue_->dequeue(request_handler)) {
-    if (request_handler) {
-      const String& profile_name = request_handler->request()->execution_profile_name();
-      ExecutionProfile profile;
-      if (execution_profile(profile_name, profile)) {
-        if (!profile_name.empty()) {
-          LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
+  while (true) {
+     bool writes_done = false;
+
+    RequestHandler* request_handler = NULL;
+    while (request_queue_->dequeue(request_handler)) {
+      if (request_handler) {
+        const String& profile_name = request_handler->request()->execution_profile_name();
+        ExecutionProfile profile;
+        if (execution_profile(profile_name, profile)) {
+          if (!profile_name.empty()) {
+            LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
+          }
+          request_handler->init(profile,
+                                manager_.get(),
+                                token_map_.get(),
+                                timestamp_generator_.get(),
+                                this);
+          request_handler->execute();
+          writes_done = true;
+        } else {
+          request_handler->set_error(CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID,
+                                     profile_name + " does not exist");
         }
-        request_handler->init(profile,
-                              manager_.get(),
-                              token_map_.get(),
-                              timestamp_generator_.get(),
-                              this);
-        request_handler->execute();
-      } else {
-        request_handler->set_error(CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID,
-                                   profile_name + " does not exist");
+        request_handler->dec_ref();
       }
-      request_handler->dec_ref();
+    }
+
+    if (is_closing_.load()) {
+      async_.close_handle();
+      prepare_.close_handle();
+      timer_.close_handle();
+      return;
+    }
+
+    if (writes_done) {
+      attempts_without_writes_ = 0;
+    } else {
+      if (++attempts_without_writes_ > 5) {
+        attempts_without_writes_ = 0;
+        // Determine if a another flush should be scheduled
+        is_flushing_.store(false);
+        bool expected = false;
+        if (request_queue_->is_empty() ||
+            !is_flushing_.compare_exchange_strong(expected, true)) {
+          return;
+        }
+      }
+    }
+
+    uint64_t flush_time_ns = uv_hrtime() - start_time_ns;
+    uint64_t processing_time_ns = flush_time_ns * (100 - new_request_ratio) / new_request_ratio;
+    if (processing_time_ns >= 1000000) { // Schedule more request processing to be run in the future
+      timer_.start(event_loop_->loop(), (processing_time_ns + 500000) / 1000000, this, on_process_timer);
+      return;
     }
   }
+}
 
+void RequestProcessor::on_flush(Prepare* prepare) {
+  RequestProcessor* processor = static_cast<RequestProcessor*>(prepare->data());
+  processor->handle_flush();
+}
+
+void RequestProcessor::handle_flush() {
   manager_->flush();
-
-  if (is_closing_.load()) {
-    async_.close_handle();
-    timer_.close_handle();
-    return;
-  }
-
-  // Determine if a another flush should be scheduled
-  is_flushing_.store(false);
-  bool expected = false;
-  if (request_queue_->is_empty() ||
-      !is_flushing_.compare_exchange_strong(expected, true)) {
-    return;
-  }
-
-  uint64_t flush_time_ns = uv_hrtime() - start_time_ns;
-  uint64_t processing_time_ns = flush_time_ns * (100 - flush_ratio) / flush_ratio;
-  if (processing_time_ns >= 1000000) { // Schedule another flush to be run in the future
-    timer_.start(event_loop_->loop(), (processing_time_ns + 500000) / 1000000, this, on_flush_timer);
-  } else {
-    async_.send(); // Schedule another flush to be run immediately
-  }
 }
 
 } // namespace cass

@@ -23,6 +23,7 @@
 #include "event_loop.hpp"
 #include "host.hpp"
 #include "mpmc_queue.hpp"
+#include "prepare.hpp"
 #include "prepare_host_handler.hpp"
 #include "random.hpp"
 #include "schema_agreement_handler.hpp"
@@ -208,9 +209,12 @@ private:
   void internal_host_add_down_up(const Host::Ptr& host, Host::HostState state);
   void internal_host_remove(const Host::Ptr& host);
 
-  static void on_flush(Async* async);
-  static void on_flush_timer(Timer* timer);
-  void internal_flush_requests();
+  static void on_process(Async* async);
+  static void on_process_timer(Timer* timer);
+  void handle_process();
+
+  static void on_flush(Prepare* prepare);
+  void handle_flush();
 
 private:
   CassError error_code_;
@@ -230,10 +234,11 @@ private:
   MPMCQueue<RequestHandler*>* const request_queue_;
   ScopedPtr<const TokenMap> token_map_;
 
-
   Atomic<bool> is_flushing_;
   Atomic<bool> is_closing_;
+  int attempts_without_writes_;
   Async async_;
+  Prepare prepare_;
   Timer timer_;
 };
 
