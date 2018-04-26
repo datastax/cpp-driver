@@ -47,11 +47,11 @@ ConnectionPoolManagerSettings::ConnectionPoolManagerSettings(const Config& confi
 ConnectionPoolManager::ConnectionPoolManager(uv_loop_t* loop,
                                              int protocol_version,
                                              const String& keyspace,
+                                             ConnectionPoolManagerListener* listener,
                                              Metrics* metrics,
                                              const ConnectionPoolManagerSettings& settings)
   : loop_(loop)
   , protocol_version_(protocol_version)
-  , listener_(&nop_connection_pool_manager_listener__)
   , settings_(settings)
   , close_state_(CLOSE_STATE_OPEN)
   , keyspace_(keyspace)
@@ -61,6 +61,7 @@ ConnectionPoolManager::ConnectionPoolManager(uv_loop_t* loop,
   pools_.set_empty_key(Address::EMPTY_KEY);
   pools_.set_deleted_key(Address::DELETED_KEY);
   set_pointer_keys(to_flush_);
+  set_listener(listener);
 }
 
 ConnectionPoolManager::~ConnectionPoolManager() {

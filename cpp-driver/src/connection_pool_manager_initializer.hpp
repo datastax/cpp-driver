@@ -70,6 +70,14 @@ public:
   ConnectionPoolManagerInitializer* with_keyspace(const String& keyspace);
 
   /**
+   * Set the listener for the connection pool manager.
+   *
+   * @param listener Connection pool listener object.
+   * @return The initializer to chain calls.
+   */
+  ConnectionPoolManagerInitializer* with_listener(ConnectionPoolManagerListener* listener);
+
+  /**
    * Set the metrics object to use to record metrics.
    *
    * @param metrics A metrics object.
@@ -110,19 +118,6 @@ public:
 public:
   void* data() { return data_; }
 
-  /**
-   * Initialize a connection pool manager use the given hosts.
-   *
-   * Only call this initialize method for testing only (do not use directly)
-   *
-   * @param loop Event loop to utilize for handling requests.
-   * @param addresses A vector of addresses to connect pools to.
-   * @param listener Connection pool listener object
-   */
-  void initialize(uv_loop_t* loop,
-                  const AddressVec& addresses,
-                  ConnectionPoolManagerListener* listener);
-
 private:
   static void on_connect(ConnectionPoolConnector* pool_connector);
   void handle_connect(ConnectionPoolConnector* pool_connector);
@@ -138,6 +133,7 @@ private:
 
   int protocol_version_;
   String keyspace_;
+  ConnectionPoolManagerListener* listener_;
   Metrics* metrics_;
   ConnectionPoolManagerSettings settings_;
 };

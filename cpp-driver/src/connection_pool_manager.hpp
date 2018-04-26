@@ -116,12 +116,14 @@ public:
    * @param loop Event loop to utilize for handling requests.
    * @param protocol_version The protocol version to use for connections.
    * @param keyspace The current keyspace to use for connections.
+   ( @param listener A listener that handles manager events.
    * @param metrics An object for recording metrics.
    * @param settings Settings for the manager and its connections.
    */
   ConnectionPoolManager(uv_loop_t* loop,
                         int protocol_version,
                         const String& keyspace,
+                        ConnectionPoolManagerListener* listener,
                         Metrics* metrics,
                         const ConnectionPoolManagerSettings& settings);
   ~ConnectionPoolManager();
