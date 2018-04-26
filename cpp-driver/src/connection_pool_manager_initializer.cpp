@@ -28,7 +28,14 @@ ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(int protocol_
   , protocol_version_(protocol_version)
   , metrics_(NULL) { }
 
-void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop, const AddressVec& addresses) {
+void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
+                                                  const AddressVec& addresses) {
+  initialize(loop, addresses, NULL);
+}
+
+void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
+                                                  const AddressVec& addresses,
+                                                  ConnectionPoolManagerListener* listener) {
   inc_ref();
   remaining_ = addresses.size();
   manager_.reset(Memory::allocate<ConnectionPoolManager>(loop,
@@ -36,6 +43,7 @@ void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop, const Address
                                                          keyspace_,
                                                          metrics_,
                                                          settings_));
+  if (listener) manager_->set_listener(listener); // Should only be set here for testing
   for (AddressVec::const_iterator it = addresses.begin(),
        end = addresses.end(); it != end; ++it) {
     ConnectionPoolConnector::Ptr pool_connector(Memory::allocate<ConnectionPoolConnector>(manager_.get(),

@@ -60,7 +60,8 @@ struct TestTokenMap {
       const cass::String& key = keys[i];
 
       const cass::CopyOnWriteHostVec& hosts = token_map->get_replicas(keyspace_name, key);
-      ASSERT_GT(hosts && hosts->size(), 0);
+      ASSERT_TRUE(hosts);
+      ASSERT_GT(hosts->size(), 0);
 
       const cass::Host::Ptr& host = get_replica(key);
       ASSERT_TRUE(host);
