@@ -42,7 +42,7 @@ void ConnectionPoolConnector::connect() {
 }
 
 void ConnectionPoolConnector::cancel() {
-  pool_->close();
+  if (pool_) pool_->close();
   for (PooledConnector::Vec::iterator it = pending_connections_.begin(),
        end = pending_connections_.end(); it != end; ++it) {
     (*it)->cancel();

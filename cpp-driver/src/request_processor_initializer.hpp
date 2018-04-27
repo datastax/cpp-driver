@@ -30,6 +30,7 @@ namespace cass {
 
 class Config;
 class EventLoop;
+class RequestProcessorManager;
 
 /**
  * A request processor initializer. This contains all the logic responsible for
@@ -51,6 +52,7 @@ public:
   /**
    * Constructor.
    *
+   * @param manager The manager for the processor.
    * @param connected_host The currently connected control connection host.
    * @param protocol_version The highest negotiated protocol for the cluster.
    * @param hosts A mapping of available hosts in the cluster.
@@ -60,10 +62,11 @@ public:
    * @param callback A callback that is called when the processor is initialized
    * or if an error occurred.
    */
-  RequestProcessorInitializer(const Host::Ptr& connected_host,
+  RequestProcessorInitializer(RequestProcessorManager* manager,
+                              const Host::Ptr& connected_host,
                               int protocol_version,
                               const HostMap& hosts,
-                              TokenMap* token_map,
+                              const TokenMap::Ptr& token_map,
                               MPMCQueue<RequestHandler*>* request_queue,
                               void* data, Callback callback);
   ~RequestProcessorInitializer();
@@ -82,14 +85,6 @@ public:
    * @return The initializer to chain calls.
    */
   RequestProcessorInitializer* with_settings(const RequestProcessorSettings& setttings);
-
-  /**
-   * Set the listener to be use for handling processor events.
-   *
-   * @param listener A listener for processor events.
-   * @return The initializer to chain calls.
-   */
-  RequestProcessorInitializer* with_listener(RequestProcessorListener* listener);
 
   /**
    * Set the keyspace to connect with.
@@ -130,6 +125,7 @@ public:
   const String& error_message() const { return error_message_; }
 
   bool is_ok() const { return error_code_ == REQUEST_PROCESSOR_OK; }
+  bool is_keyspace_error() const { return error_code_ == REQUEST_PROCESSOR_ERROR_KEYSPACE; }
 
 private:
   friend class RunInitializeProcessor;
@@ -148,16 +144,16 @@ private:
   RequestProcessor::Ptr processor_;
 
   EventLoop* event_loop_;
-  RequestProcessorListener* listener_;
   RequestProcessorSettings settings_;
   String keyspace_;
   Metrics* metrics_;
   Random* random_;
 
+  RequestProcessorManager* const manager_;
   const Host::Ptr connected_host_;
   const int protocol_version_;
   HostMap hosts_;
-  TokenMap* const token_map_;
+  const TokenMap::Ptr token_map_;
   MPMCQueue<RequestHandler*>* const request_queue_;
 
   RequestProcessorError error_code_;

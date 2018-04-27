@@ -17,7 +17,7 @@
 #include "driver_utils.hpp"
 
 #include "address.hpp"
-#include "cluster.hpp"
+#include "cluster_config.hpp"
 #include "future.hpp"
 #include "murmur3.hpp"
 #include "request_handler.hpp"

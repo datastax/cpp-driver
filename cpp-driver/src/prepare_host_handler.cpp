@@ -21,7 +21,6 @@
 #include "protocol.hpp"
 #include "query_request.hpp"
 #include "stream_manager.hpp"
-#include "session.hpp"
 
 #include <algorithm>
 
@@ -42,26 +41,21 @@ static int max_prepares_for_protocol_version(int protocol_version,
 }
 
 PrepareHostHandler::PrepareHostHandler(const Host::Ptr& host,
-                                       Session* session,
-                                       int protocol_version)
+                                       const PreparedMetadata::Entry::Vec& prepared_metadata_entries,
+                                       void* data,
+                                       Callback callback,
+                                       int protocol_version,
+                                       unsigned max_requests_per_flush)
   : host_(host)
   , protocol_version_(protocol_version)
-  , session_(session)
-  , callback_(NULL)
+  , data_(data)
+  , callback_(callback)
   , connection_(NULL)
   , prepares_outstanding_(0)
   , max_prepares_outstanding_(max_prepares_for_protocol_version(
                                 protocol_version,
-                                session->config().max_requests_per_flush())) { }
-
-void PrepareHostHandler::prepare(Callback callback) {
-  callback_ = callback;
-  prepared_metadata_entries_ = session_->prepared_metadata_entries();
-
-  if (prepared_metadata_entries_.empty()) {
-    callback_(this);
-    return;
-  }
+                                max_requests_per_flush))
+  , prepared_metadata_entries_(prepared_metadata_entries) {
 
   // Sort by keyspace to minimize the number of times the keyspace
   // needs to be changed.
@@ -70,6 +64,15 @@ void PrepareHostHandler::prepare(Callback callback) {
             CompareEntryKeyspace());
 
   current_entry_it_ = prepared_metadata_entries_.begin();
+}
+
+
+void PrepareHostHandler::prepare(uv_loop_t* loop,
+                                 const ConnectionSettings& settings) {
+  if (prepared_metadata_entries_.empty()) {
+    callback_(this);
+    return;
+  }
 
   inc_ref(); // Reference for the event loop
 
@@ -78,9 +81,9 @@ void PrepareHostHandler::prepare(Callback callback) {
                                                        this,
                                                        on_connect));
 
-  connector->with_settings(ConnectionSettings(session_->config()))
+  connector->with_settings(settings)
            ->with_listener(this)
-           ->connect(session_->loop());
+           ->connect(loop);
 }
 
 void PrepareHostHandler::on_close(Connection* connection) {
@@ -134,7 +137,6 @@ void PrepareHostHandler::prepare_next() {
 
     // Set the keyspace in case per request keyspaces are supported
     prepare_request->set_keyspace(current_keyspace_);
-    prepare_request->set_request_timeout_ms(session_->config().default_profile().request_timeout_ms());
 
     if (!connection_->write(PrepareCallback::Ptr(
                               Memory::allocate<PrepareCallback>(prepare_request, Ptr(this))))) {

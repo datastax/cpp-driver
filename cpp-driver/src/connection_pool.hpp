@@ -35,7 +35,14 @@ class EventLoop;
 class ConnectionPool : public RefCounted<ConnectionPool> {
 public:
   typedef SharedRefPtr<ConnectionPool> Ptr;
-  typedef DenseHashMap<Address, Ptr, AddressHash> Map;
+
+  class Map : public DenseHashMap<Address, Ptr, AddressHash> {
+  public:
+    Map() {
+      set_empty_key(Address::EMPTY_KEY);
+      set_deleted_key(Address::DELETED_KEY);
+    }
+  };
 
   /**
    * Constructor. Don't use directly.

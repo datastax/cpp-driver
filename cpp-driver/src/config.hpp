@@ -35,38 +35,34 @@ void stderr_log_callback(const CassLogMessage* message, void* data);
 class Config {
 public:
   Config()
-      : port_(9042)
+      : port_(CASS_DEFAULT_PORT)
       , protocol_version_(DSE_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
-      , use_beta_protocol_version_(false)
-      , thread_count_io_(1)
-      , queue_size_io_(8192)
-      , queue_size_event_(8192)
-      , queue_size_log_(8192)
-      , core_connections_per_host_(1)
-      , max_connections_per_host_(2)
-      , reconnect_wait_time_ms_(2000)
-      , max_concurrent_creation_(1)
-      , max_requests_per_flush_(128)
-      , max_concurrent_requests_threshold_(100)
-      , connect_timeout_ms_(5000)
-      , resolve_timeout_ms_(2000)
-      , max_schema_wait_time_ms_(10000)
-      , log_level_(CASS_LOG_WARN)
+      , use_beta_protocol_version_(CASS_DEFAULT_USE_BETA_PROTOCOL_VERSION)
+      , thread_count_io_(CASS_DEFAULT_THREAD_COUNT_IO)
+      , queue_size_io_(CASS_DEFAULT_QUEUE_SIZE_IO)
+      , core_connections_per_host_(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
+      , reconnect_wait_time_ms_(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
+      , max_requests_per_flush_(CASS_DEFAULT_MAX_REQUESTS_PER_FLUSH)
+      , max_concurrent_requests_threshold_(CASS_DEFAULT_MAX_CONCURRENT_REQUESTS)
+      , connect_timeout_ms_(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
+      , resolve_timeout_ms_(CASS_DEFAULT_RESOLVE_TIMEOUT_MS)
+      , max_schema_wait_time_ms_(CASS_DEFAULT_MAX_SCHEMA_WAIT_TIME_MS)
+      , log_level_(CASS_DEFAULT_LOG_LEVEL)
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
       , auth_provider_(Memory::allocate<AuthProvider>())
-      , tcp_nodelay_enable_(true)
-      , tcp_keepalive_enable_(false)
-      , tcp_keepalive_delay_secs_(0)
-      , connection_idle_timeout_secs_(60)
-      , connection_heartbeat_interval_secs_(30)
+      , tcp_nodelay_enable_(CASS_DEFAULT_TCP_NO_DELAY_ENABLED)
+      , tcp_keepalive_enable_(CASS_DEFAULT_TCP_KEEPALIVE_ENABLED)
+      , tcp_keepalive_delay_secs_(CASS_DEFAULT_TCP_KEEPALIVE_DELAY_SECS)
+      , connection_idle_timeout_secs_(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
+      , connection_heartbeat_interval_secs_(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
       , timestamp_gen_(Memory::allocate<ServerSideTimestampGenerator>())
-      , use_schema_(true)
-      , use_hostname_resolution_(false)
-      , use_randomized_contact_points_(true)
-      , max_reusable_write_objects_(UINT_MAX)
-      , prepare_on_all_hosts_(true)
-      , prepare_on_up_or_add_host_(true) {
+      , use_schema_(CASS_DEFAULT_USE_SCHEMA)
+      , use_hostname_resolution_(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
+      , use_randomized_contact_points_(CASS_DEFAULT_USE_RANDOMIZED_CONTACT_POINTS)
+      , max_reusable_write_objects_(CASS_DEFAULT_MAX_REUSABLE_WRITE_OBJECTS)
+      , prepare_on_all_hosts_(CASS_DEFAULT_PREPARE_ON_ALL_HOSTS)
+      , prepare_on_up_or_add_host_(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
@@ -107,38 +103,12 @@ public:
     queue_size_io_ = queue_size;
   }
 
-  unsigned queue_size_event() const { return queue_size_event_; }
-
-  void set_queue_size_event(unsigned queue_size) {
-    queue_size_event_ = queue_size;
-  }
-
-  unsigned queue_size_log() const { return queue_size_log_; }
-
-  void set_queue_size_log(unsigned queue_size) {
-    queue_size_log_ = queue_size;
-  }
-
   unsigned core_connections_per_host() const {
     return core_connections_per_host_;
   }
 
   void set_core_connections_per_host(unsigned num_connections) {
     core_connections_per_host_ = num_connections;
-  }
-
-  unsigned max_connections_per_host() const { return max_connections_per_host_; }
-
-  void set_max_connections_per_host(unsigned num_connections) {
-    max_connections_per_host_ = num_connections;
-  }
-
-  unsigned max_concurrent_creation() const {
-    return max_concurrent_creation_;
-  }
-
-  void set_max_concurrent_creation(unsigned num_connections) {
-    max_concurrent_creation_ = num_connections;
   }
 
   unsigned reconnect_wait_time_ms() const { return reconnect_wait_time_ms_; }
@@ -236,6 +206,20 @@ public:
     auth_provider_.reset(Memory::allocate<PlainTextAuthProvider>(username, password));
   }
 
+  const LoadBalancingPolicy::Ptr load_balancing_policy() const {
+    return default_profile().load_balancing_policy();
+  }
+
+  LoadBalancingPolicy::Vec load_balancing_policies() const {
+    LoadBalancingPolicy::Vec policies;
+    policies.push_back(default_profile().load_balancing_policy());
+    for (ExecutionProfile::Map::const_iterator it = profiles_.begin(),
+         end = profiles_.end(); it != end; ++it) {
+      policies.push_back(it->second.load_balancing_policy());
+    }
+    return policies;
+  }
+
   void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
     default_profile_.set_load_balancing_policy(lbp);
   }
@@ -248,6 +232,10 @@ public:
 
   void set_ssl_context(SslContext* ssl_context) {
     ssl_context_.reset(ssl_context);
+  }
+
+  bool token_aware_routing() const {
+    return default_profile().token_aware_routing();
   }
 
   void set_token_aware_routing(bool is_token_aware) {
@@ -372,12 +360,8 @@ private:
   ContactPointList contact_points_;
   unsigned thread_count_io_;
   unsigned queue_size_io_;
-  unsigned queue_size_event_;
-  unsigned queue_size_log_;
   unsigned core_connections_per_host_;
-  unsigned max_connections_per_host_;
   unsigned reconnect_wait_time_ms_;
-  unsigned max_concurrent_creation_;
   unsigned max_requests_per_flush_;
   unsigned max_concurrent_requests_threshold_;
   unsigned connect_timeout_ms_;

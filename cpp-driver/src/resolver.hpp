@@ -21,6 +21,7 @@
 #include "ref_counted.hpp"
 #include "string.hpp"
 #include "timer.hpp"
+#include "vector.hpp"
 
 #include <uv.h>
 
@@ -28,49 +29,73 @@
 
 namespace cass {
 
-template <class T>
-class Resolver {
-  friend class Memory;
-
+class Resolver : public RefCounted<Resolver> {
 public:
+  typedef SharedRefPtr<Resolver> Ptr;
+  typedef Vector<Ptr> Vec;
   typedef void (*Callback)(Resolver*);
 
   enum Status {
+    NEW,
     RESOLVING,
     FAILED_BAD_PARAM,
     FAILED_UNSUPPORTED_ADDRESS_FAMILY,
     FAILED_UNABLE_TO_RESOLVE,
     FAILED_TIMED_OUT,
+    CANCELLED,
     SUCCESS
   };
 
+  Resolver(const String& hostname, int port, void* data, Callback cb)
+      : hostname_(hostname)
+      , port_(port)
+      , status_(NEW)
+      , data_(data)
+      , callback_(cb) {
+    req_.data = this;
+  }
+
+  ~Resolver() { }
+
   const String& hostname() { return hostname_; }
   int port() { return port_; }
+
+  bool is_cancelled() { return status_ == CANCELLED; }
   bool is_success() { return status_ == SUCCESS; }
   bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
   Status status() { return status_; }
+  int uv_status() { return uv_status_; }
+
   const AddressVec& addresses() const { return addresses_; }
-  T& data() { return data_; }
+  void* data() { return data_; }
 
-  static void resolve(uv_loop_t* loop, const String& hostname, int port,
-                      const T& data, Callback cb, uint64_t timeout,
-                      struct addrinfo* hints = NULL) {
-    Resolver* resolver = Memory::allocate<Resolver>(hostname, port, data, cb);
+  void resolve(uv_loop_t* loop, uint64_t timeout, struct addrinfo* hints = NULL) {
+    status_ = RESOLVING;
 
-    OStringStream ss;
-    ss << port;
+    inc_ref(); // For the event loop
 
     if (timeout > 0) {
-      resolver->timer_.start(loop, timeout, resolver, on_timeout);
+      timer_.start(loop, timeout, this, on_timeout);
     }
 
-    int rc = uv_getaddrinfo(loop, &resolver->req_, on_resolve, hostname.c_str(),
+    OStringStream ss;
+    ss << port_;
+    int rc = uv_getaddrinfo(loop, &req_, on_resolve, hostname_.c_str(),
                             ss.str().c_str(), hints);
 
     if (rc != 0) {
-      resolver->status_ = FAILED_BAD_PARAM;
-      resolver->cb_(resolver);
-      Memory::deallocate(resolver);
+      status_ = FAILED_BAD_PARAM;
+      uv_status_ = rc;
+      callback_(this);
+      dec_ref();
+    }
+  }
+
+  void cancel() {
+    if (status_ == RESOLVING) {
+      uv_cancel(reinterpret_cast<uv_req_t*>(&req_));
+      timer_.stop();
+      status_ = CANCELLED;
     }
   }
 
@@ -91,9 +116,9 @@ private:
       }
     }
 
-    resolver->cb_(resolver);
-
-    Memory::deallocate(resolver);
+    resolver->uv_status_ = status;
+    resolver->callback_(resolver);
+    resolver->dec_ref();
     uv_freeaddrinfo(res);
   }
 
@@ -118,70 +143,72 @@ private:
   }
 
 private:
-  Resolver(const String& hostname, int port, const T& data, Callback cb)
-      : hostname_(hostname)
-      , port_(port)
-      , status_(RESOLVING)
-      , data_(data)
-      , cb_(cb) {
-    req_.data = this;
-  }
-
-  ~Resolver() {}
-
   uv_getaddrinfo_t req_;
   Timer timer_;
   String hostname_;
   int port_;
   Status status_;
+  int uv_status_;
   AddressVec addresses_;
-  T data_;
-  Callback cb_;
+  void* data_;
+  Callback callback_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Resolver);
 };
 
-template <class T>
-class MultiResolver : public RefCounted<MultiResolver<T> > {
+class MultiResolver : public RefCounted<MultiResolver> {
 public:
-  typedef SharedRefPtr<MultiResolver<T> > Ptr;
+  typedef SharedRefPtr<MultiResolver> Ptr;
+  typedef void (*Callback)(MultiResolver* resolver);
 
-  typedef cass::Resolver<MultiResolver<T>*> Resolver;
-  typedef void (*ResolveCallback)(Resolver* resolver);
+  MultiResolver(void* data,
+                Callback callback)
+    : remaining_(0)
+    , data_(data)
+    , callback_(callback) { }
 
-  typedef void (*FinishedCallback)(MultiResolver<T>* resolver);
-
-  MultiResolver(const T& data,
-                ResolveCallback resolve_cb,
-                FinishedCallback finished_cb)
-    : data_(data)
-    , resolve_cb_(resolve_cb)
-    , finished_cb_(finished_cb) { }
-
-  ~MultiResolver() {
-    if (finished_cb_) finished_cb_(this);
-  }
-
-  T& data() { return data_; }
+  const Resolver::Vec& resolvers() { return resolvers_; }
+  void* data() { return data_; }
 
   void resolve(uv_loop_t* loop,
                const String& host, int port,
                uint64_t timeout, struct addrinfo* hints = NULL) {
-    this->inc_ref();
-    cass::Resolver<MultiResolver<T>*>::resolve(loop, host, port, this,
-                                               on_resolve, timeout, hints);
+    inc_ref();
+    Resolver::Ptr resolver(Memory::allocate<Resolver>(host, port, this, on_resolve));
+    resolver->resolve(loop, timeout, hints);
+    resolvers_.push_back(resolver);
+    remaining_++;
+  }
+
+  void cancel() {
+    for (Resolver::Vec::iterator it = resolvers_.begin(),
+         end = resolvers_.end(); it != end; ++it) {
+      (*it)->cancel();
+    }
   }
 
 private:
   static void on_resolve(Resolver* resolver) {
-    MultiResolver<T>* multi_resolver = resolver->data();
-    if (multi_resolver->resolve_cb_) multi_resolver->resolve_cb_(resolver);
-    multi_resolver->dec_ref();
+    MultiResolver* multi_resolver = static_cast<MultiResolver*>(resolver->data());
+    multi_resolver->handle_resolve();
+  }
+
+  void handle_resolve() {
+    remaining_--;
+    if (remaining_ <= 0 && callback_) {
+      callback_(this);
+    }
+    dec_ref();
   }
 
 private:
-  T data_;
-  ResolveCallback resolve_cb_;
-  FinishedCallback finished_cb_;
+  Resolver::Vec resolvers_;
+  int remaining_;
+  void* data_;
+  Callback callback_;
 
+private:
   DISALLOW_COPY_AND_ASSIGN(MultiResolver);
 };
 

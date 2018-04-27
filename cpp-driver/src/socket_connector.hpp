@@ -29,12 +29,10 @@ class Config;
  * Socket settings.
  */
 struct SocketSettings {
-  SocketSettings()
-    : hostname_resolution_enabled(false)
-    , resolve_timeout_ms(5000)
-    , tcp_nodelay_enabled(true)
-    , tcp_keepalive_enabled(false)
-    , tcp_keepalive_delay_secs(0) { }
+  /**
+   * Constructor. Initialize with default settings.
+   */
+  SocketSettings();
 
   /**
    * Constructor. Initialize socket settings from a config object.
@@ -48,7 +46,8 @@ struct SocketSettings {
   SslContext::Ptr ssl_context;
   bool tcp_nodelay_enabled;
   bool tcp_keepalive_enabled;
-  unsigned int tcp_keepalive_delay_secs;
+  unsigned tcp_keepalive_delay_secs;
+  unsigned max_reusable_write_objects;
 };
 
 /**

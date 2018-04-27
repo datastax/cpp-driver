@@ -17,6 +17,7 @@
 #include "request_processor.hpp"
 
 #include "connection_pool_manager_initializer.hpp"
+#include "request_processor_manager.hpp"
 #include "prepare_all_handler.hpp"
 #include "session.hpp"
 
@@ -38,7 +39,7 @@ private:
 class NotifyHostAddProcessor : public Task {
 public:
   NotifyHostAddProcessor(const Host::Ptr host,
-                const RequestProcessor::Ptr& request_processor)
+                         const RequestProcessor::Ptr& request_processor)
     : request_processor_(request_processor)
     , host_(host) { }
   virtual void run(EventLoop* event_loop) {
@@ -52,7 +53,7 @@ private:
 class NotifyHostRemoveProcessor : public Task {
 public:
   NotifyHostRemoveProcessor(const Host::Ptr host,
-                   const RequestProcessor::Ptr& request_processor)
+                            const RequestProcessor::Ptr& request_processor)
     : request_processor_(request_processor)
     , host_(host) { }
   virtual void run(EventLoop* event_loop) {
@@ -65,44 +66,31 @@ private:
 
 class NotifyTokenMapUpdateProcessor : public Task {
 public:
-  NotifyTokenMapUpdateProcessor(const TokenMap* token_map,
-                       const RequestProcessor::Ptr& request_processor)
+  NotifyTokenMapUpdateProcessor(const TokenMap::Ptr& token_map,
+                                const RequestProcessor::Ptr& request_processor)
     : request_processor_(request_processor)
     , token_map_(token_map) { }
+
   virtual void run(EventLoop* event_loop) {
-    request_processor_->internal_token_map_update(token_map_);
+    request_processor_->token_map_ = token_map_;
   }
 private:
   RequestProcessor::Ptr request_processor_;
-  const TokenMap* token_map_;
+  const TokenMap::Ptr token_map_;
 };
 
-class NopRequestProcessorListener : public RequestProcessorListener {
-public:
-  virtual void on_keyspace_update(const String& keyspace) { }
-  virtual void on_prepared_metadata_update(const String& id,
-                                           const PreparedMetadata::Entry::Ptr& entry) { }
-  virtual void on_pool_up(const Address& address)  { }
-  virtual void on_pool_down(const Address& address) { }
-  virtual void on_pool_critical_error(const Address& address,
-                                      Connector::ConnectionError code,
-                                      const String& message) { }
-};
-
-NopRequestProcessorListener nop_request_processor_listener__;
-
-RequestProcessor::RequestProcessor(EventLoop* event_loop,
-                                   const ConnectionPoolManager::Ptr& manager,
+RequestProcessor::RequestProcessor(RequestProcessorManager* manager,
+                                   EventLoop* event_loop,
+                                   const ConnectionPoolManager::Ptr& connection_pool_manager,
                                    const Host::Ptr& connected_host,
                                    const HostMap& hosts,
-                                   TokenMap* token_map,
-                                   RequestProcessorListener* listener,
+                                   const TokenMap::Ptr& token_map,
                                    const RequestProcessorSettings& settings,
                                    Random* random,
                                    MPMCQueue<RequestHandler*>* request_queue)
-  : manager_(manager)
+  : connection_pool_manager_(connection_pool_manager)
+  , manager_(manager)
   , event_loop_(event_loop)
-  , listener_(listener ? listener : &nop_request_processor_listener__)
   , max_schema_wait_time_ms_(settings.max_schema_wait_time_ms)
   , prepare_on_all_hosts_(settings.prepare_on_all_hosts)
   , timestamp_generator_(settings.timestamp_generator)
@@ -112,7 +100,7 @@ RequestProcessor::RequestProcessor(EventLoop* event_loop,
   , is_flushing_(false)
   , is_closing_(false)
   , attempts_without_writes_(0) {
-  manager_->set_listener(this);
+  connection_pool_manager_->set_listener(this);
 
   // Build/Assign the load balancing policies from the execution profiles
   default_profile_.build_load_balancing_policy();
@@ -130,9 +118,7 @@ RequestProcessor::RequestProcessor(EventLoop* event_loop,
     }
   }
 
-  // Initialize the token map
-  internal_token_map_update(token_map);
-
+  token_map_ = token_map;
   hosts_ = hosts;
 
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
@@ -150,7 +136,7 @@ void RequestProcessor::close() {
 }
 
 void RequestProcessor::set_keyspace(const String& keyspace) {
-  manager_->set_keyspace(keyspace);
+  connection_pool_manager_->set_keyspace(keyspace);
 }
 
 void RequestProcessor::notify_host_add(const Host::Ptr& host) {
@@ -161,7 +147,7 @@ void RequestProcessor::notify_host_remove(const Host::Ptr& host) {
   event_loop_->add(Memory::allocate<NotifyHostRemoveProcessor>(host, Ptr(this)));
 }
 
-void RequestProcessor::notify_token_map_update(const TokenMap* token_map) {
+void RequestProcessor::notify_token_map_changed(const TokenMap::Ptr& token_map) {
   event_loop_->add(Memory::allocate<NotifyTokenMapUpdateProcessor>(token_map, Ptr(this)));
 }
 
@@ -188,19 +174,20 @@ void RequestProcessor::on_pool_up(const Address& address) {
   } else {
     LOG_DEBUG("Tried to up host %s that doesn't exist", address.to_string().c_str());
   }
-  listener_->on_pool_up(address);
+  manager_->notify_pool_up(address, RequestProcessorManager::Protected());
 }
 
 void RequestProcessor::on_pool_down(const Address& address) {
   internal_pool_down(address);
-  listener_->on_pool_down(address);
+  manager_->notify_pool_down(address, RequestProcessorManager::Protected());
 }
 
 void RequestProcessor::on_pool_critical_error(const Address& address,
                                               Connector::ConnectionError code,
                                               const String& message) {
   internal_pool_down(address);
-  listener_->on_pool_critical_error(address, code, message);
+  manager_->notify_pool_critical_error(address, code, message,
+                                       RequestProcessorManager::Protected());
 }
 
 void RequestProcessor::on_close(ConnectionPoolManager* manager) {
@@ -224,11 +211,12 @@ void RequestProcessor::on_result_metadata_changed(const String& prepared_id,
                                                   keyspace,
                                                   result_metadata_id,
                                                   result_response));
-  listener_->on_prepared_metadata_update(prepared_id, entry);
+  manager_->notify_prepared_metadata_changed(prepared_id, entry,
+                                             RequestProcessorManager::Protected());
 }
 
 void RequestProcessor::on_keyspace_changed(const String& keyspace) {
-  listener_->on_keyspace_update(keyspace);
+  manager_->notify_keyspace_changed(keyspace, RequestProcessorManager::Protected());
 }
 
 bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
@@ -240,7 +228,7 @@ bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& r
                                                                                this,
                                                                                max_schema_wait_time_ms_));
 
-  PooledConnection::Ptr connection(manager_->find_least_busy(current_host->address()));
+  PooledConnection::Ptr connection(connection_pool_manager_->find_least_busy(current_host->address()));
   if (connection && connection->write(handler->callback().get())) {
     return true;
   }
@@ -254,7 +242,7 @@ bool RequestProcessor::on_prepare_all(const RequestHandler::Ptr& request_handler
     return false;
   }
 
-  AddressVec addresses = manager_->available();
+  AddressVec addresses = connection_pool_manager_->available();
   if (addresses.empty() ||
       (addresses.size() == 1 && addresses[0] == current_host->address())) {
     return false;
@@ -281,7 +269,7 @@ bool RequestProcessor::on_prepare_all(const RequestHandler::Ptr& request_handler
     PrepareAllCallback::Ptr prepare_all_callback(Memory::allocate<PrepareAllCallback>(address,
                                                                                       prepare_all_handler));
 
-    PooledConnection::Ptr connection(manager_->find_least_busy(address));
+    PooledConnection::Ptr connection(connection_pool_manager_->find_least_busy(address));
     if (connection) {
       connection->write(prepare_all_callback.get());
     }
@@ -296,11 +284,7 @@ bool RequestProcessor::on_is_host_up(const Address& address) {
 }
 
 void RequestProcessor::internal_close() {
-  manager_->close();
-}
-
-void RequestProcessor::internal_token_map_update(const TokenMap* token_map) {
-  token_map_.reset(token_map);
+  connection_pool_manager_->close();
 }
 
 void RequestProcessor::internal_pool_down(const Address& address) {
@@ -343,7 +327,7 @@ const LoadBalancingPolicy::Vec& RequestProcessor::load_balancing_policies() cons
 void RequestProcessor::internal_host_add_down_up(const Host::Ptr& host,
                                                  Host::HostState state) {
   if (state == Host::ADDED) {
-    manager_->add(host->address());
+    connection_pool_manager_->add(host->address());
   }
 
   bool is_host_ignored = true;
@@ -410,7 +394,7 @@ void RequestProcessor::handle_process() {
             LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
           }
           request_handler->init(profile,
-                                manager_.get(),
+                                connection_pool_manager_.get(),
                                 token_map_.get(),
                                 timestamp_generator_.get(),
                                 this);
@@ -428,6 +412,7 @@ void RequestProcessor::handle_process() {
       async_.close_handle();
       prepare_.close_handle();
       timer_.close_handle();
+      manager_->notify_closed(this, RequestProcessorManager::Protected());
       return;
     }
 
@@ -461,7 +446,7 @@ void RequestProcessor::on_flush(Prepare* prepare) {
 }
 
 void RequestProcessor::handle_flush() {
-  manager_->flush();
+  connection_pool_manager_->flush();
 }
 
 } // namespace cass

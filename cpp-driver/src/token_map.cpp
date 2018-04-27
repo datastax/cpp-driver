@@ -20,16 +20,16 @@
 
 namespace cass {
 
-TokenMap* TokenMap::from_partitioner(StringRef partitioner) {
+TokenMap::Ptr TokenMap::from_partitioner(StringRef partitioner) {
   if (ends_with(partitioner, Murmur3Partitioner::name())) {
-    return Memory::allocate<TokenMapImpl<Murmur3Partitioner> >();
+    return Ptr(Memory::allocate<TokenMapImpl<Murmur3Partitioner> >());
   } else if (ends_with(partitioner, RandomPartitioner::name())) {
-    return Memory::allocate<TokenMapImpl<RandomPartitioner> >();
+    return Ptr(Memory::allocate<TokenMapImpl<RandomPartitioner> >());
   } else if (ends_with(partitioner, ByteOrderedPartitioner::name())) {
-    return Memory::allocate<TokenMapImpl<ByteOrderedPartitioner> >();
+    return Ptr(Memory::allocate<TokenMapImpl<ByteOrderedPartitioner> >());
   } else {
     LOG_WARN("Unsupported partitioner class '%s'", partitioner.to_string().c_str());
-    return NULL;
+    return Ptr();
   }
 }
 

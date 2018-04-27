@@ -272,6 +272,14 @@ void SocketWriteBase::handle_write(uv_write_t* req, int status) {
   socket->flush();
 }
 
+Socket::Socket(const Address& address, size_t max_reusable_write_objects)
+  : is_defunct_(false)
+  , max_reusable_write_objects_(max_reusable_write_objects)
+  , address_(address)
+  , address_string_(address.to_string()) {
+  tcp_.data = this;
+}
+
 Socket::~Socket() {
   cleanup_free_writes();
 }

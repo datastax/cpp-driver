@@ -269,14 +269,10 @@ public:
    * Constructor: Don't use this directly.
    *
    * @param address The address for the socket.
+   * @param max_reusable_write_objects The max limit on the number of write buffer
+   * objects to keep around.
    */
-  Socket(const Address& address)
-    : is_defunct_(false)
-    , max_reusable_write_objects_(UINT_MAX)
-    , address_(address)
-    , address_string_(address.to_string()) {
-    tcp_.data = this;
-  }
+  Socket(const Address& address, size_t max_reusable_write_objects);
 
   /**
    * Destructor. 

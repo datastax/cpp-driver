@@ -52,7 +52,7 @@ RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_key
   return this;
 }
 
-RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_listener(RequestProcessorListener* listener) {
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_listener(RequestProcessorManagerListener* listener) {
   listener_ = listener;
   return this;
 }
@@ -67,7 +67,7 @@ RequestProcessorManagerInitializer*RequestProcessorManagerInitializer::with_rand
   return this;
 }
 
-RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_token_map(TokenMap* token_map) {
+RequestProcessorManagerInitializer* RequestProcessorManagerInitializer::with_token_map(const TokenMap::Ptr& token_map) {
   token_map_ = token_map;
   return this;
 }
@@ -76,20 +76,19 @@ void RequestProcessorManagerInitializer::initialize(EventLoopGroup* event_loop_g
   inc_ref();
   size_t thread_count_io = event_loop_group->size();
   remaining_.store(thread_count_io);
-  manager_.reset(Memory::allocate<RequestProcessorManager>());
+  manager_.reset(Memory::allocate<RequestProcessorManager>(listener_));
   for (size_t i = 0; i < thread_count_io; ++i) {
-    TokenMap* token_map = token_map_ ? token_map_->clone() : NULL;
-    RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(connected_host_,
+    RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(manager_.get(),
+                                                                                               connected_host_,
                                                                                                protocol_version_,
                                                                                                hosts_,
-                                                                                               token_map,
+                                                                                               token_map_,
                                                                                                request_queue_,
                                                                                                this, on_initialize));
     initializers_.push_back(initializer);
     initializer
         ->with_settings(settings_)
         ->with_keyspace(keyspace_)
-        ->with_listener(listener_)
         ->with_metrics(metrics_)
         ->with_random(random_)
         ->initialize(event_loop_group->get(i));
@@ -122,7 +121,7 @@ void RequestProcessorManagerInitializer::handle_initialize(RequestProcessorIniti
     ScopedMutex l(&lock_);
 
     if (initializer->is_ok()) {
-      manager_->add_request_processor(initializer->release_processor(), RequestProcessorManager::Protected());
+      manager_->add_processor(initializer->release_processor(), RequestProcessorManager::Protected());
     } else {
       failures_.push_back(RequestProcessorInitializer::Ptr(initializer));
     }
