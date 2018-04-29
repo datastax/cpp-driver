@@ -269,14 +269,16 @@ void Connection::connect() {
 }
 
 bool Connection::write(const RequestCallback::Ptr& callback, bool flush_immediately) {
-  int32_t result = internal_write(callback, flush_immediately);
+  int32_t result = internal_write(callback, flush_immediately, compressor_.get());
   if (result > 0) {
     restart_heartbeat_timer();
   }
   return result != Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS;
 }
 
-int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool flush_immediately) {
+int32_t Connection::internal_write(const RequestCallback::Ptr& callback,
+        bool flush_immediately, ICompressor* compressor)
+{
   if (callback->state() == RequestCallback::REQUEST_STATE_CANCELLED) {
     return Request::REQUEST_ERROR_CANCELLED;
   }
@@ -299,7 +301,7 @@ int32_t Connection::internal_write(const RequestCallback::Ptr& callback, bool fl
 
   PendingWriteBase *pending_write = pending_writes_.back();
 
-  int32_t request_size = pending_write->write(callback.get());
+  int32_t request_size = pending_write->write(callback.get(), compressor);
   if (request_size < 0) {
     stream_manager_.release(stream);
 
@@ -789,13 +791,22 @@ void Connection::on_supported(ResponseMessage* response) {
   SupportedResponse* supported =
       static_cast<SupportedResponse*>(response->response_body().get());
 
-  compressor_ = get_compressor(supported->get_compression_methods(), config_.compression());
+  ICompressor::Ptr csor = get_compressor(
+          supported->get_compression_methods(),
+          config_.compression());
+
+  const char* compression_meth_name = "";
+  if (csor) {
+    compression_meth_name = csor->get_method_name();
+  }
 
   Request::ConstPtr startup_request =
-      Request::ConstPtr(new StartupRequest(compressor_->get_method_name()));
+      Request::ConstPtr(new StartupRequest(compression_meth_name));
 
   internal_write(RequestCallback::Ptr(
               new StartupCallback(startup_request)));
+
+  compressor_ = csor;
 }
 
 void Connection::on_pending_schema_agreement(Timer* timer) {
@@ -941,9 +952,10 @@ Connection::PendingWriteBase::~PendingWriteBase() {
   cleanup_pending_callbacks(&callbacks_);
 }
 
-int32_t Connection::PendingWriteBase::write(RequestCallback* callback) {
+int32_t Connection::PendingWriteBase::write(RequestCallback* callback, ICompressor* compressor) {
   size_t last_buffer_size = buffers_.size();
-  int32_t request_size = callback->encode(connection_->protocol_version_, 0x00, &buffers_);
+  int32_t request_size = callback->encode(connection_->protocol_version_, 0x00,
+          &buffers_, compressor);
   if (request_size < 0) {
     buffers_.resize(last_buffer_size); // rollback
     return request_size;

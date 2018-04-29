@@ -5,22 +5,33 @@
 #include <list>
 #include <utility>
 #include "ref_counted.hpp"
+#include "buffer.hpp"
 #include "cassandra.h"
 
 namespace cass {
 
 class ICompressor : public RefCounted<ICompressor> {
 public:
+  typedef SharedRefPtr<ICompressor> Ptr;
+
   struct Buffer {
   private:
       RefBuffer::Ptr data_;
       size_t size_;
   public:
+      Buffer(size_t size)
+          : data_(RefBuffer::create(size))
+          , size_(size) {}
+
       Buffer(RefBuffer::Ptr data, size_t size)
           : data_(data)
           , size_(size) {}
 
-      char* data() const {
+      char* data() {
+        return data_->data();
+      }
+
+      const char* data() const {
         return data_->data();
       }
 
@@ -33,12 +44,13 @@ public:
       }
   };
 
+  virtual Buffer compress(const cass::Buffer& data) const = 0;
   virtual Buffer decompress(const Buffer& compressed_data) const = 0;
   virtual const char* get_method_name() const = 0;
   virtual ~ICompressor() {};
 };
 
-SharedRefPtr<ICompressor> get_compressor(const std::list<std::string>& methods,
+ICompressor::Ptr get_compressor(const std::list<std::string>& methods,
         CassCqlCompression user_preference);
 
 } // namespace cass

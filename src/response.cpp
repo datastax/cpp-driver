@@ -163,6 +163,9 @@ ssize_t ResponseMessage::decode(char* input, size_t size, ICompressor* compresso
     assert(body_buffer_pos_ == response_body_->data() + length_);
 
     if (flags_ & CASS_FLAG_COMPRESSION) {
+        if (!compressor) {
+            throw std::runtime_error("Unexpected compressed frame");
+        }
         ICompressor::Buffer uncompressed = compressor->decompress(
                 ICompressor::Buffer(response_body()->buffer(), length_));
         response_body_->set_buffer(uncompressed.get_buffer());

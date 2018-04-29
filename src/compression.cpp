@@ -9,14 +9,14 @@
 namespace cass {
 class LZ4Compressor final : public ICompressor {
   virtual Buffer decompress(const Buffer& buffer) const {
-    char* in_data = buffer.data();
+    const char* in_data = buffer.data();
     size_t in_size = buffer.size();
 
     // cql sends uncompressed size in the first 4 bytes (bigendian)
     if (in_size < 4) {
       throw std::runtime_error("lz4: incomplete payload");
     }
-    unsigned char* size_ptr = reinterpret_cast<unsigned char*>(in_data);
+    const unsigned char* size_ptr = reinterpret_cast<const unsigned char*>(in_data);
     size_t out_size
         = (size_ptr[0] << 24)
         | (size_ptr[1] << 16)
@@ -34,6 +34,24 @@ class LZ4Compressor final : public ICompressor {
     return new_buf;
   };
 
+  virtual Buffer compress(const cass::Buffer& buffer) const {
+    size_t in_size = buffer.size();
+    size_t out_size = 4+LZ4_compressBound(in_size);
+    RefBuffer::Ptr compressed = RefBuffer::Ptr(RefBuffer::create(out_size));
+    char* compressed_ptr = compressed->data();
+    compressed_ptr[0] = (in_size >> 24) & 0xFF;
+    compressed_ptr[1] = (in_size >> 16) & 0xFF;
+    compressed_ptr[2] = (in_size >> 8) & 0xFF;
+    compressed_ptr[3] = (in_size) & 0xFF;
+
+    size_t compressed_size = LZ4_compress(buffer.data(), compressed_ptr + 4, in_size);
+    if(compressed_size == 0) {
+      throw std::runtime_error("lz4: failed to compress");
+    }
+
+    return Buffer(compressed, 4+compressed_size);
+  }
+
   virtual const char* get_method_name() const {
     return "lz4";
   };
@@ -48,7 +66,7 @@ class LZ4Compressor final : public ICompressor {
 namespace cass {
 class SnappyCompressor final : public ICompressor {
   virtual Buffer decompress(const Buffer& buffer) const {
-    char* in_data = buffer.data();
+    const char* in_data = buffer.data();
     size_t in_size = buffer.size();
     size_t out_size;
     if (snappy_uncompressed_length(buffer.data(), in_size, &out_size) != SNAPPY_OK) {
@@ -65,6 +83,18 @@ class SnappyCompressor final : public ICompressor {
     return new_buf;
   };
 
+  virtual Buffer compress(const cass::Buffer& buffer) const {
+    const char* in_data = buffer.data();
+    size_t in_size = buffer.size();
+    size_t compressed_size = snappy_max_compressed_length(in_size);
+    Buffer compressed = Buffer(compressed_size);
+    char* compressed_ptr = compressed.data();
+    if (snappy_compress(in_data, in_size, compressed_ptr, &compressed_size) != SNAPPY_OK) {
+      throw std::runtime_error("snappy: failed to compress");
+    }
+    return Buffer(compressed.get_buffer(), compressed_size);
+  }
+
   virtual const char* get_method_name() const {
     return "snappy";
   };
@@ -74,18 +104,7 @@ class SnappyCompressor final : public ICompressor {
 #endif
 
 namespace cass {
-
-class IdentityCompressor final : public ICompressor {
-  virtual Buffer decompress(const Buffer& buffer) const {
-    return buffer;
-  };
-
-  virtual const char* get_method_name() const {
-    return "";
-  };
-};
-
-SharedRefPtr<ICompressor> get_compressor(const std::list<std::string>& methods,
+ICompressor::Ptr get_compressor(const std::list<std::string>& methods,
         CassCqlCompression user_preference)
 {
   // keep lz4 before snappy to make it preferred
@@ -96,7 +115,7 @@ SharedRefPtr<ICompressor> get_compressor(const std::list<std::string>& methods,
       std::find(methods.begin(), methods.end(), "lz4") != methods.end();
 
   if (user_choice_lz4 && server_allowed_lz4) {
-    return SharedRefPtr<ICompressor>(new LZ4Compressor);
+    return ICompressor::Ptr(new LZ4Compressor);
   }
 #endif
 
@@ -107,11 +126,11 @@ SharedRefPtr<ICompressor> get_compressor(const std::list<std::string>& methods,
       std::find(methods.begin(), methods.end(), "snappy") != methods.end();
 
   if (user_choice_snappy && server_allowed_snappy) {
-    return SharedRefPtr<ICompressor>(new SnappyCompressor);
+    return ICompressor::Ptr(new SnappyCompressor);
   }
 #endif
 
-  return SharedRefPtr<ICompressor>(new IdentityCompressor);
+  return ICompressor::Ptr();
 }
 
 } // namespace cass

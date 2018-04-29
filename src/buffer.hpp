@@ -44,6 +44,19 @@ public:
   }
 
   explicit
+  Buffer(RefBuffer::Ptr buf, size_t size)
+    : size_(size)
+  {
+    if (size_ > FIXED_BUFFER_SIZE) {
+      data_.buffer = buf.get();
+      data_.buffer->inc_ref();
+    } else {
+      memcpy(data_.fixed, buf->data(), size);
+    }
+    size_ = size;
+  }
+
+  explicit
   Buffer(size_t size)
     : size_(size) {
     if (size > FIXED_BUFFER_SIZE) {

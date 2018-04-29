@@ -27,6 +27,7 @@
 #include "response.hpp"
 #include "scoped_ptr.hpp"
 #include "timer.hpp"
+#include "compression.hpp"
 
 #include <string>
 #include <uv.h>
@@ -149,7 +150,9 @@ public:
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_cancel() = 0;
 
-  int32_t encode(int version, int flags, BufferVec* bufs);
+  int32_t encode(int version, int flags, BufferVec* bufs, ICompressor* compressor);
+
+  ICompressor::Buffer compress(const BufferVec& bufs, ICompressor* compressor) const;
 
   const Request* request() const { return wrapper_.request().get(); }
 

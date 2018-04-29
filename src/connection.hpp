@@ -212,7 +212,7 @@ private:
       return size_;
     }
 
-    int32_t write(RequestCallback* callback);
+    int32_t write(RequestCallback* callback, ICompressor* compressor);
 
     virtual void flush() = 0;
 
@@ -260,7 +260,8 @@ private:
     Timer timer;
   };
 
-  int32_t internal_write(const RequestCallback::Ptr& request, bool flush_immediately = true);
+  int32_t internal_write(const RequestCallback::Ptr& request,
+          bool flush_immediately = true, ICompressor* compressor = nullptr);
   void internal_close(ConnectionState close_state);
   void set_state(ConnectionState state);
   void consume(char* input, size_t size);

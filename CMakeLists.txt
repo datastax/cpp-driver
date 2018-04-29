@@ -42,7 +42,7 @@ option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OF
 option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 option(CASS_USE_ZLIB "Use zlib" OFF)
-option(CASS_USE_SNAPPY "Use snappy" OFF)
+option(CASS_USE_SNAPPY "Use snappy" ON)
 option(CASS_USE_LZ4 "Use lz4" ON)
 
 # Handle testing dependencies

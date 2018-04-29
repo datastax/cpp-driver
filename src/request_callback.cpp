@@ -50,7 +50,7 @@ void RequestCallback::start(Connection* connection, int stream) {
   on_start();
 }
 
-int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
+int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs, ICompressor* compressor) {
   size_t index = bufs->size();
   bufs->push_back(Buffer()); // Placeholder
 
@@ -73,6 +73,14 @@ int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
   const size_t header_size
       = (version >= 3) ? CASS_HEADER_SIZE_V3 : CASS_HEADER_SIZE_V1_AND_V2;
 
+  if (compressor) {
+    ICompressor::Buffer compressed_data = compress(*bufs, compressor);
+    bufs->resize(index+1); // keep the header
+    bufs->push_back(Buffer(compressed_data.get_buffer(), compressed_data.size()));
+    flags |= CASS_FLAG_COMPRESSION;
+    length = compressed_data.size();
+  }
+
   Buffer buf(header_size);
   size_t pos = 0;
   pos = buf.encode_byte(pos, version);
@@ -89,6 +97,23 @@ int32_t RequestCallback::encode(int version, int flags, BufferVec* bufs) {
   (*bufs)[index] = buf;
 
   return length + header_size;
+}
+
+ICompressor::Buffer RequestCallback::compress(const BufferVec& bufs, ICompressor* compressor) const {
+  size_t uncompressed_size = 0;
+  for (auto it = bufs.begin() + 1; it < bufs.end(); ++it) {
+    uncompressed_size += it->size();
+  }
+  Buffer uncompressed_data = Buffer(uncompressed_size);
+
+  char* dest = uncompressed_data.data();
+  for (auto it = bufs.begin() + 1; it < bufs.end(); ++it) {
+    const Buffer& buf = *it;
+    memcpy(dest, buf.data(), buf.size());
+    dest += buf.size();
+  }
+
+  return compressor->compress(uncompressed_data);
 }
 
 bool RequestCallback::skip_metadata() const {

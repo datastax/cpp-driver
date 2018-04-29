@@ -10,6 +10,7 @@ addons:
       - libssl-dev
       - libssh2-1-dev
       - liblz4-dev
+      - libsnappy-dev
 cache:
   directories:
     - ${HOME}/dependencies
