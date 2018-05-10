@@ -49,9 +49,9 @@
  */
 
 #define DSE_VERSION_MAJOR 1
-#define DSE_VERSION_MINOR 4
+#define DSE_VERSION_MINOR 6
 #define DSE_VERSION_PATCH 1
-#define DSE_VERSION_SUFFIX ""
+#define DSE_VERSION_SUFFIX "CPP-518"
 
 #ifdef __cplusplus
 extern "C" {
