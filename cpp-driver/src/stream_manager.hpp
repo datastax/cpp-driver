@@ -40,6 +40,12 @@ inline int max_streams_for_protocol_version(int protocol_version) {
   return protocol_version >= 3 ? 32768 : 128;
 }
 
+struct StreamHash {
+  std::size_t operator()(int stream) const {
+    return ((stream & 0x3F) << 10) | (stream >> 6);
+  }
+};
+
 template <class T>
 class StreamManager {
 public:
@@ -52,6 +58,7 @@ public:
     // safe to use negative values for the empty and deleted keys.
     pending_.set_empty_key(-1);
     pending_.set_deleted_key(-2);
+    pending_.max_load_factor(0.4);
   }
 
   int acquire(const T& item) {
@@ -81,7 +88,7 @@ public:
   size_t max_streams() const { return max_streams_; }
 
 private:
-  typedef DenseHashMap<int, T> PendingMap;
+  typedef DenseHashMap<int, T, StreamHash> PendingMap;
 
 #if defined(_MSC_VER) && defined(_M_AMD64)
   typedef __int64 word_t;
