@@ -192,7 +192,7 @@ private:
   void internal_pool_down(const Address& address);
 
   Host::Ptr get_host(const Address& address);
-  bool execution_profile(const String& name, ExecutionProfile& profile) const;
+  const ExecutionProfile* execution_profile(const String& name) const;
   const LoadBalancingPolicy::Vec& load_balancing_policies() const;
 
 private:

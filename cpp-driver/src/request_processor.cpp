@@ -304,20 +304,18 @@ Host::Ptr RequestProcessor::get_host(const Address& address) {
   return it->second;
 }
 
-bool RequestProcessor::execution_profile(const String& name, ExecutionProfile& profile) const {
+const ExecutionProfile* RequestProcessor::execution_profile(const String& name) const {
   // Determine if cluster profile should be used
   if (name.empty()) {
-    profile = default_profile_;
-    return true;
+    return &default_profile_;
   }
 
   // Handle profile lookup
   ExecutionProfile::Map::const_iterator it = profiles_.find(name);
   if (it != profiles_.end()) {
-    profile = it->second;
-    return true;
+    return &it->second;
   }
-  return false;
+  return NULL;
 }
 
 const LoadBalancingPolicy::Vec& RequestProcessor::load_balancing_policies() const {
@@ -388,12 +386,12 @@ void RequestProcessor::handle_process() {
     while (request_queue_->dequeue(request_handler)) {
       if (request_handler) {
         const String& profile_name = request_handler->request()->execution_profile_name();
-        ExecutionProfile profile;
-        if (execution_profile(profile_name, profile)) {
+        const ExecutionProfile* profile(execution_profile(profile_name));
+        if (profile) {
           if (!profile_name.empty()) {
             LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
           }
-          request_handler->init(profile,
+          request_handler->init(*profile,
                                 connection_pool_manager_.get(),
                                 token_map_.get(),
                                 timestamp_generator_.get(),
