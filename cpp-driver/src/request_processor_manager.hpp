@@ -171,6 +171,7 @@ public:
 private:
   Atomic<size_t> current_;
   uv_mutex_t mutex_;
+  int processor_count_;
   RequestProcessor::Vec processors_;
   RequestProcessorManagerListener* const listener_;
 };
