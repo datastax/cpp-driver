@@ -222,7 +222,6 @@ private:
 
   Metrics* const metrics_;
   const Address preferred_address_;
-  PreparedMetadata::Entry::Ptr prepared_metadata_entry_;
 };
 
 class RequestListener {

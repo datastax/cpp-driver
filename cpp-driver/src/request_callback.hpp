@@ -66,8 +66,7 @@ public:
   void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
 
   void init(const ExecutionProfile& profile,
-            TimestampGenerator* timestamp_generator,
-            const PreparedMetadata::Entry::Ptr& entry);
+            TimestampGenerator* timestamp_generator);
 
   const Request::ConstPtr& request() const {
     return request_;

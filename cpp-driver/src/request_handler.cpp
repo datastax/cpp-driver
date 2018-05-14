@@ -122,7 +122,7 @@ void RequestHandler::init(const ExecutionProfile& profile,
                           RequestListener* listener) {
   manager_ = manager;
   listener_ = listener;
-  wrapper_.init(profile, timestamp_generator, prepared_metadata_entry_);
+  wrapper_.init(profile, timestamp_generator);
 
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
   const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());
