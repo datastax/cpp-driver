@@ -103,8 +103,6 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request,
   , future_(future)
   , is_cancelled_(false)
   , running_executions_(0)
-  , is_timer_started_(false)
-  , timer_thread_id_((uv_thread_t)0)
   , start_time_ns_(uv_hrtime())
   , listener_(NULL)
   , manager_(NULL)
@@ -133,7 +131,7 @@ void RequestHandler::init(const ExecutionProfile& profile,
 
 void RequestHandler::execute() {
   RequestExecution::Ptr request_execution(Memory::allocate<RequestExecution>(this));
-  running_executions_.fetch_add(1);
+  running_executions_++;
   internal_retry(request_execution.get());
 }
 
@@ -142,15 +140,13 @@ void RequestHandler::retry(RequestExecution* request_execution, Protected) {
 }
 
 void RequestHandler::start_request(uv_loop_t* loop, Protected) {
-  if (!is_timer_started_) {
+  if (!timer_.is_running()) {
     uint64_t request_timeout_ms = wrapper_.request_timeout_ms();
     if (request_timeout_ms > 0) { // 0 means no timeout
       timer_.start(loop,
                    request_timeout_ms,
                    this,
                    on_timeout);
-      is_timer_started_ = true;
-      timer_thread_id_ = uv_thread_self();
     }
   }
 }
@@ -201,7 +197,7 @@ bool RequestHandler::prepare_all(const Host::Ptr& current_host,
 void RequestHandler::set_response(const Host::Ptr& host,
                                   const Response::Ptr& response) {
   stop_request();
-  running_executions_.fetch_sub(1);
+  running_executions_--;
 
   if (future_->set_response(host->address(), response)) {
     if (metrics_) {
@@ -220,7 +216,7 @@ void RequestHandler::set_response(const Host::Ptr& host,
 void RequestHandler::set_error(CassError code,
                                const String& message) {
   stop_request();
-  bool skip = (code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE && running_executions_.fetch_sub(1) - 1 > 0);
+  bool skip = (code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE && --running_executions_ > 0);
   if (!skip) {
     future_->set_error(code, message);
   }
@@ -229,7 +225,7 @@ void RequestHandler::set_error(CassError code,
 void RequestHandler::set_error(const Host::Ptr& host,
                                CassError code, const String& message) {
   stop_request();
-  bool skip = (code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE && running_executions_.fetch_sub(1) - 1 > 0);
+  bool skip = (code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE && --running_executions_ > 0);
   if (!skip) {
     if (host) {
       future_->set_error_with_address(host->address(), code, message);
@@ -243,7 +239,7 @@ void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
                                                    const Response::Ptr& error,
                                                    CassError code, const String& message) {
   stop_request();
-  running_executions_.fetch_sub(1);
+  running_executions_--;
   future_->set_error_with_response(host->address(), error, code, message);
 }
 
@@ -259,28 +255,24 @@ void RequestHandler::on_timeout(Timer* timer) {
 }
 
 void RequestHandler::stop_request() {
-  is_cancelled_.store(true);
-  if (is_timer_started_ && timer_thread_id_ == uv_thread_self()) {
-    timer_.stop();
-  }
+  is_cancelled_ = true;
+  timer_.stop();
 }
 
 void RequestHandler::internal_retry(RequestExecution* request_execution) {
   bool is_successful = false;
-  bool is_cancelled = is_cancelled_.load();
 
-  while (!is_cancelled && request_execution->current_host()) {
+  while (!is_cancelled_ && request_execution->current_host()) {
     PooledConnection::Ptr connection = manager_->find_least_busy(request_execution->current_host()->address());
     if (connection && connection->write(request_execution)) {
       is_successful = true;
       break;
     }
     request_execution->next_host();
-    is_cancelled = is_cancelled_.load();
   }
 
   if (!is_successful) {
-    if (is_cancelled) {
+    if (is_cancelled_) {
       LOG_DEBUG("Cancelling speculative execution (%p) for request (%p) on host %s",
                 static_cast<void*>(request_execution),
                 static_cast<void*>(this),

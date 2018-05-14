@@ -207,14 +207,12 @@ private:
   RequestWrapper wrapper_;
   SharedRefPtr<ResponseFuture> future_;
 
-  Atomic<bool> is_cancelled_;
-  Atomic<int> running_executions_;
+  bool is_cancelled_;
+  int running_executions_;
 
   ScopedPtr<QueryPlan> query_plan_;
   ScopedPtr<SpeculativeExecutionPlan> execution_plan_;
   Timer timer_;
-  bool is_timer_started_;
-  uv_thread_t timer_thread_id_;
 
   const uint64_t start_time_ns_;
   RequestListener* listener_;
