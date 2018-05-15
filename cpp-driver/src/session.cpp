@@ -358,9 +358,9 @@ void Session::on_initialize(RequestProcessorManagerInitializer* initializer) {
 void Session::handle_initialize(RequestProcessorManagerInitializer* initializer) {
   const RequestProcessorInitializer::Vec& failures = initializer->failures();
 
-  if (!initializer->failures().empty()) {
+  if (!failures.empty()) {
     // All failures are likely to be the same, just pass the first error.
-    RequestProcessorInitializer::Ptr failure(initializer->failures().front());
+    RequestProcessorInitializer::Ptr failure(failures.front());
 
     CassError error_code;
     switch (failure->error_code()) {
