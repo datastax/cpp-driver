@@ -554,7 +554,6 @@ public:
     strategies_.set_deleted_key(String(1, '\0'));
   }
 
-  // TODO: Verify that nothing will break by copying
   TokenMapImpl(const TokenMapImpl& other)
     : tokens_(other.tokens_)
     , hosts_(other.hosts_)

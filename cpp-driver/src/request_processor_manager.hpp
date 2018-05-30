@@ -144,7 +144,7 @@ public:
   void notify_pool_down(const Address& address, Protected);
 
   /**
-   * Notify that a connection pool has encounter a critical error attempting
+   * Notify that a connection pool has encountered a critical error attempting
    * to reconnect.
    *
    * @param address The address of the host with critical error.
