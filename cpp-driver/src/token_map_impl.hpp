@@ -141,8 +141,8 @@ public:
 class HostSet : public DenseHashSet<Host::Ptr, HostHash> {
 public:
   HostSet() {
-    set_empty_key(Host::Ptr(Memory::allocate<Host>(Address::EMPTY_KEY, false)));
-    set_deleted_key(Host::Ptr(Memory::allocate<Host>(Address::DELETED_KEY, false)));
+    set_empty_key(Host::Ptr(Memory::allocate<Host>(Address::EMPTY_KEY)));
+    set_deleted_key(Host::Ptr(Memory::allocate<Host>(Address::DELETED_KEY)));
   }
 };
 
@@ -547,35 +547,33 @@ public:
   typedef DenseHashMap<String, ReplicationStrategy<Partitioner> > KeyspaceStrategyMap;
 
   TokenMapImpl()
-    : no_replicas_(NULL) {
+    : no_replicas_dummy_(NULL) {
     replicas_.set_empty_key(String());
     replicas_.set_deleted_key(String(1, '\0'));
     strategies_.set_empty_key(String());
     strategies_.set_deleted_key(String(1, '\0'));
   }
 
-  TokenMapImpl(const TokenMapImpl& token_map_impl)
-    : tokens_(token_map_impl.tokens_)
-    , hosts_(token_map_impl.hosts_)
-    , datacenters_(token_map_impl.datacenters_)
-    , replicas_(token_map_impl.replicas_)
-    , strategies_(token_map_impl.strategies_)
-    , rack_ids_(token_map_impl.rack_ids_)
-    , dc_ids_(token_map_impl.dc_ids_)
-    , no_replicas_(token_map_impl.no_replicas_) { }
+  TokenMapImpl(const TokenMapImpl& other)
+    : tokens_(other.tokens_)
+    , hosts_(other.hosts_)
+    , replicas_(other.replicas_)
+    , strategies_(other.strategies_)
+    , rack_ids_(other.rack_ids_)
+    , dc_ids_(other.dc_ids_)
+    , no_replicas_dummy_(NULL) { }
 
-  virtual void add_host(const Host::Ptr& host, const Value* tokens);
-  virtual void update_host_and_build(const Host::Ptr& host, const Value* tokens);
+  virtual void add_host(const Host::Ptr& host);
+  virtual void update_host_and_build(const Host::Ptr& host);
   virtual void remove_host_and_build(const Host::Ptr& host);
-  virtual void clear_tokens_and_hosts();
 
   virtual void add_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result);
   virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, const ResultResponse* result);
   virtual void drop_keyspace(const String& keyspace_name);
-  virtual void clear_replicas_and_strategies();
 
   virtual void build();
-  virtual TokenMap* clone() const;
+
+  virtual TokenMap::Ptr copy() const;
 
   virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
                                                  const String& routing_key) const;
@@ -605,23 +603,24 @@ private:
   KeyspaceStrategyMap strategies_;
   IdGenerator rack_ids_;
   IdGenerator dc_ids_;
-  CopyOnWriteHostVec no_replicas_;
+  CopyOnWriteHostVec no_replicas_dummy_;
 };
 
 template <class Partitioner>
-void TokenMapImpl<Partitioner>::add_host(const Host::Ptr& host, const Value* tokens) {
+void TokenMapImpl<Partitioner>::add_host(const Host::Ptr& host) {
   update_host_ids(host);
   hosts_.insert(host);
 
-  CollectionIterator iterator(tokens);
-  while (iterator.next()) {
-    Token token = Partitioner::from_string(iterator.value()->to_string_ref());
+  const Vector<String>& tokens(host->tokens());
+  for (Vector<String>::const_iterator it = tokens.begin(),
+       end = tokens.end(); it != end; ++it) {
+    Token token = Partitioner::from_string(*it);
     tokens_.push_back(TokenHost(token, host.get()));
   }
 }
 
 template <class Partitioner>
-void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host, const Value* tokens) {
+void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host) {
   uint64_t start = uv_hrtime();
   remove_host_tokens(host);
 
@@ -629,9 +628,10 @@ void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host, con
   hosts_.insert(host);
 
   TokenHostVec new_tokens;
-  CollectionIterator iterator(tokens);
-  while (iterator.next()) {
-    Token token = Partitioner::from_string(iterator.value()->to_string_ref());
+  const Vector<String>& tokens(host->tokens());
+  for (Vector<String>::const_iterator it = tokens.begin(),
+       end = tokens.end(); it != end; ++it) {
+    Token token = Partitioner::from_string(*it);
     new_tokens.push_back(TokenHost(token, host.get()));
   }
 
@@ -654,6 +654,7 @@ void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host, con
 
 template <class Partitioner>
 void TokenMapImpl<Partitioner>::remove_host_and_build(const Host::Ptr& host) {
+  if (hosts_.find(host) == hosts_.end()) return;
   uint64_t start = uv_hrtime();
   remove_host_tokens(host);
   hosts_.erase(host);
@@ -663,12 +664,6 @@ void TokenMapImpl<Partitioner>::remove_host_and_build(const Host::Ptr& host) {
             (unsigned int)hosts_.size(),
             (unsigned int)tokens_.size(),
             (double)(uv_hrtime() - start) / (1000.0 * 1000.0));
-}
-
-template <class Partitioner>
-void TokenMapImpl<Partitioner>::clear_tokens_and_hosts() {
-  tokens_.clear();
-  hosts_.clear();
 }
 
 template <class Partitioner>
@@ -690,12 +685,6 @@ void TokenMapImpl<Partitioner>::drop_keyspace(const String& keyspace_name) {
 }
 
 template <class Partitioner>
-void TokenMapImpl<Partitioner>::clear_replicas_and_strategies() {
-  replicas_.clear();
-  strategies_.clear();
-}
-
-template <class Partitioner>
 void TokenMapImpl<Partitioner>::build() {
   uint64_t start = uv_hrtime();
   std::sort(tokens_.begin(), tokens_.end());
@@ -706,9 +695,9 @@ void TokenMapImpl<Partitioner>::build() {
             (double)(uv_hrtime() - start) / (1000.0 * 1000.0));
 }
 
-template <class Partitioner>
-TokenMap* TokenMapImpl<Partitioner>::clone() const {
-  return Memory::allocate<TokenMapImpl<Partitioner> >(*this);
+template<class Partitioner>
+TokenMap::Ptr TokenMapImpl<Partitioner>::copy() const {
+  return Ptr(Memory::allocate<TokenMapImpl<Partitioner> >(*this));
 }
 
 template <class Partitioner>
@@ -720,7 +709,7 @@ const CopyOnWriteHostVec& TokenMapImpl<Partitioner>::get_replicas(const String& 
     Token token = Partitioner::hash(routing_key);
     const TokenReplicasVec& replicas = ks_it->second;
     typename TokenReplicasVec::const_iterator replicas_it = std::upper_bound(replicas.begin(), replicas.end(),
-                                                                             TokenReplicas(token, no_replicas_),
+                                                                             TokenReplicas(token, no_replicas_dummy_),
                                                                              TokenReplicasCompare());
     if (replicas_it != replicas.end()) {
       return replicas_it->second;
@@ -729,7 +718,7 @@ const CopyOnWriteHostVec& TokenMapImpl<Partitioner>::get_replicas(const String& 
     }
   }
 
-  return no_replicas_;
+  return no_replicas_dummy_;
 }
 
 template <class Partitioner>

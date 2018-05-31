@@ -29,6 +29,9 @@
 
 namespace cass {
 
+class Row;
+class Value;
+
 class Address {
 public:
   static const Address EMPTY_KEY;
@@ -105,7 +108,13 @@ struct AddressHash {
 };
 
 typedef Vector<Address> AddressVec;
-typedef DenseHashSet<Address, AddressHash> AddressSet;
+class AddressSet : public DenseHashSet<Address, AddressHash> {
+public:
+  AddressSet() {
+    set_empty_key(Address::EMPTY_KEY);
+    set_deleted_key(Address::DELETED_KEY);
+  }
+};
 
 inline bool operator<(const Address& a, const Address& b) {
   return a.compare(b) < 0;
@@ -118,6 +127,13 @@ inline bool operator==(const Address& a, const Address& b) {
 inline std::ostream& operator<<(std::ostream& os, const Address& addr) {
   return os << addr.to_string();
 }
+
+bool determine_address_for_peer_host(const Address& connected_address,
+                                     const Value* peer_value,
+                                     const Value* rpc_value,
+                                     Address* output);
+
+String determine_listen_address(const Address& address, const Row* row);
 
 } // namespace cass
 

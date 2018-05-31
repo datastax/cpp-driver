@@ -38,11 +38,14 @@ public:
 
 static NopConnectionPoolManagerListener nop_connection_pool_manager_listener__;
 
+ConnectionPoolManagerSettings::ConnectionPoolManagerSettings()
+  : num_connections_per_host(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
+  , reconnect_wait_time_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS) { }
+
 ConnectionPoolManagerSettings::ConnectionPoolManagerSettings(const Config& config)
   : connection_settings(config)
   , num_connections_per_host(config.core_connections_per_host())
-  , reconnect_wait_time_ms(config.reconnect_wait_time_ms())
-  , queue_size_io(config.queue_size_io()) { }
+  , reconnect_wait_time_ms(config.reconnect_wait_time_ms()) { }
 
 ConnectionPoolManager::ConnectionPoolManager(uv_loop_t* loop,
                                              int protocol_version,
@@ -58,8 +61,6 @@ ConnectionPoolManager::ConnectionPoolManager(uv_loop_t* loop,
   , metrics_(metrics) {
   inc_ref(); // Reference for the lifetime of the connection pools
   uv_mutex_init(&keyspace_mutex_);
-  pools_.set_empty_key(Address::EMPTY_KEY);
-  pools_.set_deleted_key(Address::DELETED_KEY);
   set_pointer_keys(to_flush_);
   set_listener(listener);
 }

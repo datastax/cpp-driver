@@ -42,12 +42,12 @@ public:
     SUCCESS
   };
 
-  NameResolver(const Address& address)
+  NameResolver(const Address& address, void* data, Callback callback)
       : address_(address)
       , status_(NEW)
       , uv_status_(-1)
-      , data_(NULL)
-      , callback_(NULL) {
+      , data_(data)
+      , callback_(callback) {
     req_.data = this;
   }
 
@@ -64,9 +64,7 @@ public:
   const String& hostname() const { return hostname_; }
   const String& service() const { return service_; }
 
-  void resolve(uv_loop_t* loop, void* data, Callback callback, uint64_t timeout, int flags = 0) {
-    data_ = data;
-    callback_ = callback;
+  void resolve(uv_loop_t* loop, uint64_t timeout, int flags = 0) {
     status_ = RESOLVING;
 
     inc_ref(); // For the event loop
@@ -81,6 +79,7 @@ public:
       status_ = FAILED_BAD_PARAM;
       uv_status_ = rc;
       callback_(this);
+      dec_ref();
     }
   }
 

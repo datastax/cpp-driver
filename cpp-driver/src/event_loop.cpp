@@ -192,10 +192,12 @@ int RoundRobinEventLoopGroup::init(const String& thread_name /*= ""*/) {
   return 0;
 }
 
-void RoundRobinEventLoopGroup::run() {
+int RoundRobinEventLoopGroup::run() {
   for (size_t i = 0; i < threads_.size(); ++i) {
-    threads_[i].run();
+    int rc = threads_[i].run();
+    if (rc != 0) return rc;
   }
+  return 0;
 }
 
 void RoundRobinEventLoopGroup::close_handles() {

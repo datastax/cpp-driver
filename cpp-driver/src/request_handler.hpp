@@ -137,12 +137,12 @@ class RequestHandler : public RefCounted<RequestHandler> {
 public:
   typedef SharedRefPtr<RequestHandler> Ptr;
 
-  // TODO: Remove default parameters where possible
   RequestHandler(const Request::ConstPtr& request,
                  const ResponseFuture::Ptr& future,
-                 const PreparedMetadata& prepared_metadata,
                  Metrics* metrics = NULL,
                  const Address* preferred_address = NULL);
+
+  void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
 
   void init(const ExecutionProfile& profile,
             ConnectionPoolManager* manager,
@@ -217,15 +217,18 @@ private:
   uv_thread_t timer_thread_id_;
 
   const uint64_t start_time_ns_;
-  const PreparedMetadata& prepared_metadata_;
-  Metrics* const metrics_;
   RequestListener* listener_;
   ConnectionPoolManager* manager_;
+
+  Metrics* const metrics_;
   const Address preferred_address_;
+  PreparedMetadata::Entry::Ptr prepared_metadata_entry_;
 };
 
 class RequestListener {
 public:
+  virtual ~RequestListener() { }
+
   virtual void on_result_metadata_changed(const String& prepared_id,
                                           const String& query,
                                           const String& keyspace,

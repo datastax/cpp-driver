@@ -35,14 +35,8 @@ namespace cass {
 
 class ConnectionPoolManagerInitializer;
 class RequestProcessor;
+class RequestProcessorManager;
 class Session;
-
-class RequestProcessorListener : public ConnectionPoolListener {
-public:
-  virtual void on_keyspace_update(const String& keyspace) = 0;
-  virtual void on_prepared_metadata_update(const String& id,
-                                           const PreparedMetadata::Entry::Ptr& entry) = 0;
-};
 
 struct RequestProcessorSettings {
   RequestProcessorSettings();
@@ -80,22 +74,22 @@ public:
    * Create the request processor; Don't use directly use the request processor
    * manager initializer
    *
+   * @param manager The manager for this processor.
    * @param event_loop The event loop the request process is running on.
-   * @param manager A manager of connection pools for handling requests.
+   * @param connection_pool_manager A manager of connection pools for handling requests.
    * @param connected_host The currently connected control connection host.
    * @param hosts A mapping of the currently available hosts.
    * @param token_map The current token map.
-   * @param listener A listener for handling processor callbacks.
    * @param settings The current settings for the request processor.
    * @param random A RNG for randomizing hosts in the load balancing policies.
    * @param request_queue A thread-safe queue for processing requests.
    */
-  RequestProcessor(EventLoop* event_loop,
-                   const ConnectionPoolManager::Ptr& manager,
+  RequestProcessor(RequestProcessorManager* manager,
+                   EventLoop* event_loop,
+                   const ConnectionPoolManager::Ptr& connection_pool_manager,
                    const Host::Ptr& connected_host,
                    const HostMap& hosts,
-                   TokenMap* token_map,
-                   RequestProcessorListener* listener,
+                   const TokenMap::Ptr& token_map,
                    const RequestProcessorSettings& settings,
                    Random* random,
                    MPMCQueue<RequestHandler*>* request_queue);
@@ -135,7 +129,7 @@ public:
    *
    * @param token_map The updated token map.
    */
-  void notify_token_map_update(const TokenMap* token_map);
+  void notify_token_map_changed(const TokenMap::Ptr& token_map);
 
   /**
    * Notify that a request has been added to the request queue
@@ -158,7 +152,8 @@ public:
   int init(Protected);
 
 private:
-  /* Connection pool manager listener callbacks */
+  // Connection pool manager listener methods
+
   virtual void on_pool_up(const Address& address);
   virtual void on_pool_down(const Address& address);
   virtual void on_pool_critical_error(const Address& address,
@@ -167,7 +162,8 @@ private:
   virtual void on_close(ConnectionPoolManager* manager);
 
 private:
-  /* Request listener callbacks */
+  // Request listener methods
+
   virtual void on_result_metadata_changed(const String& prepared_id,
                                           const String& query,
                                           const String& keyspace,
@@ -182,7 +178,8 @@ private:
                               const Response::Ptr& response);
 
 private:
-  /* Schema agreement listener callback */
+  // Schema agreement listener methods
+
   virtual bool on_is_host_up(const Address& address);
 
 private:
@@ -192,7 +189,6 @@ private:
                         int protocol_version,
                         const ConnectionPoolManagerSettings& settings);
   void internal_close();
-  void internal_token_map_update(const TokenMap* token_map);
   void internal_pool_down(const Address& address);
 
   Host::Ptr get_host(const Address& address);
@@ -220,11 +216,11 @@ private:
   CassError error_code_;
   String error_message_;
 
-  ConnectionPoolManager::Ptr manager_;
+  ConnectionPoolManager::Ptr connection_pool_manager_;
   String connect_keyspace_;
   HostMap hosts_;
+  RequestProcessorManager* const manager_;
   EventLoop* const event_loop_;
-  RequestProcessorListener* const listener_;
   LoadBalancingPolicy::Vec load_balancing_policies_;
   const unsigned max_schema_wait_time_ms_;
   const bool prepare_on_all_hosts_;
@@ -232,7 +228,7 @@ private:
   ExecutionProfile default_profile_;
   ExecutionProfile::Map profiles_;
   MPMCQueue<RequestHandler*>* const request_queue_;
-  ScopedPtr<const TokenMap> token_map_;
+  TokenMap::Ptr token_map_;
 
   Atomic<bool> is_flushing_;
   Atomic<bool> is_closing_;

@@ -85,10 +85,10 @@ public:
  * The connection pool manager settings.
  */
 struct ConnectionPoolManagerSettings {
-  ConnectionPoolManagerSettings()
-    : num_connections_per_host(1)
-    , reconnect_wait_time_ms(2000)
-    , queue_size_io(8192) { }
+  /**
+   * Constructor. Initialize with default settings.
+   */
+  ConnectionPoolManagerSettings();
 
   /**
    * Constructor. Initialize manager settings from a config object.
@@ -100,7 +100,6 @@ struct ConnectionPoolManagerSettings {
   ConnectionSettings connection_settings;
   size_t num_connections_per_host;
   uint64_t reconnect_wait_time_ms;
-  uint64_t queue_size_io;
 };
 
 /**

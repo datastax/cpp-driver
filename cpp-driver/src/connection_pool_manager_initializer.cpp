@@ -24,6 +24,7 @@ ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(int protocol_
                                                                    void* data, Callback callback)
   : data_(data)
   , callback_(callback)
+  , is_cancelled_(false)
   , remaining_(0)
   , protocol_version_(protocol_version)
   , listener_(NULL)
@@ -34,18 +35,24 @@ void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
   inc_ref();
   remaining_ = addresses.size();
   manager_.reset(Memory::allocate<ConnectionPoolManager>(loop,
-                 protocol_version_,
-                 keyspace_,
-                 listener_,
-                 metrics_,
-                 settings_));
+                                                         protocol_version_,
+                                                         keyspace_,
+                                                         listener_,
+                                                         metrics_,
+                                                         settings_));
   for (AddressVec::const_iterator it = addresses.begin(),
        end = addresses.end(); it != end; ++it) {
-    ConnectionPoolConnector::Ptr pool_connector(Memory::allocate<ConnectionPoolConnector>(manager_.get(),
-                                                *it,
-                                                this,
-                                                on_connect));
+    ConnectionPoolConnector::Ptr pool_connector(Memory::allocate<ConnectionPoolConnector>(manager_.get(), *it, this, on_connect));
+    connectors_.push_back(pool_connector);
     pool_connector->connect();
+  }
+}
+
+void ConnectionPoolManagerInitializer::cancel() {
+  is_cancelled_ = true;
+  for (ConnectionPoolConnector::Vec::const_iterator it = connectors_.begin(),
+       end = connectors_.end(); it != end; ++it) {
+    (*it)->cancel();
   }
 }
 
@@ -73,17 +80,23 @@ ConnectionPoolConnector::Vec ConnectionPoolManagerInitializer::failures() const 
   return failures_;
 }
 
+bool ConnectionPoolManagerInitializer::is_cancelled() {
+  return is_cancelled_;
+}
+
 void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_connector) {
   ConnectionPoolManagerInitializer* initializer = static_cast<ConnectionPoolManagerInitializer*>(pool_connector->data());
   initializer->handle_connect(pool_connector);
 }
 
 void ConnectionPoolManagerInitializer::handle_connect(ConnectionPoolConnector* pool_connector) {
-  if (pool_connector->is_ok()) {
-    manager_->add_pool(pool_connector->release_pool(), ConnectionPoolManager::Protected());
-  } else {
-    failures_.push_back(ConnectionPoolConnector::Ptr(pool_connector));
-  }
+    if (!is_cancelled_) {
+      if (pool_connector->is_ok()) {
+        manager_->add_pool(pool_connector->release_pool(), ConnectionPoolManager::Protected());
+      } else {
+        failures_.push_back(ConnectionPoolConnector::Ptr(pool_connector));
+      }
+    }
 
   if (--remaining_ == 0) {
     callback_(this);

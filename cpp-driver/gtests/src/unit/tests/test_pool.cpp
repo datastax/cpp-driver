@@ -440,14 +440,8 @@ TEST_F(PoolUnitTest, Keyspace) {
 }
 
 TEST_F(PoolUnitTest, Auth) {
-  mockssandra::SimpleRequestHandlerBuilder builder;
-  builder
-      .on(mockssandra::OPCODE_STARTUP)
-      .authenticate("com.datastax.SomeAuthenticator");
-  builder
-      .on(mockssandra::OPCODE_AUTH_RESPONSE)
-      .plaintext_auth("cassandra", "cassandra");
-  mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
+  mockssandra::SimpleCluster cluster(
+        mockssandra::AuthRequestHandlerBuilder().build(), NUM_NODES);
   cluster.start_all();
 
   RequestStatusWithManager status(loop());
@@ -707,14 +701,8 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
 }
 
 TEST_F(PoolUnitTest, InvalidAuth) {
-  mockssandra::SimpleRequestHandlerBuilder builder;
-  builder
-      .on(mockssandra::OPCODE_STARTUP)
-      .authenticate("com.datastax.SomeAuthenticator");
-  builder
-      .on(mockssandra::OPCODE_AUTH_RESPONSE)
-      .plaintext_auth("cassandra", "cassandra");
-  mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
+  mockssandra::SimpleCluster cluster(
+        mockssandra::AuthRequestHandlerBuilder().build(), NUM_NODES);
   cluster.start_all();
 
   ListenerStatus listener_status(loop());

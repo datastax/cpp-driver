@@ -48,16 +48,17 @@ RequestProcessorSettings::RequestProcessorSettings(const Config& config)
   , default_profile(config.default_profile())
   , profiles(config.profiles()) { }
 
-RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& connected_host,
+RequestProcessorInitializer::RequestProcessorInitializer(RequestProcessorManager* manager,
+                                                         const Host::Ptr& connected_host,
                                                          int protocol_version,
                                                          const HostMap& hosts,
-                                                         TokenMap* token_map,
+                                                         const TokenMap::Ptr& token_map,
                                                          MPMCQueue<RequestHandler*>* request_queue,
                                                          void* data, Callback callback)
   : event_loop_(NULL)
-  , listener_(NULL)
   , metrics_(NULL)
   , random_(NULL)
+  , manager_(manager)
   , connected_host_(connected_host)
   , protocol_version_(protocol_version)
   , hosts_(hosts)
@@ -84,12 +85,7 @@ RequestProcessorInitializer* RequestProcessorInitializer::with_settings(const Re
   return this;
 }
 
-RequestProcessorInitializer* RequestProcessorInitializer::with_listener(RequestProcessorListener* listener) {
-  listener_ = listener;
-  return this;
-}
-
-RequestProcessorInitializer*RequestProcessorInitializer::with_keyspace(const String& keyspace) {
+RequestProcessorInitializer* RequestProcessorInitializer::with_keyspace(const String& keyspace) {
   keyspace_ = keyspace;
   return this;
 }
@@ -148,7 +144,6 @@ void RequestProcessorInitializer::handle_initialize(ConnectionPoolManagerInitial
       is_keyspace_error = true;
       break;
     } else {
-      if (listener_) listener_->on_pool_down(connector->address());
       hosts_.erase(connector->address());
     }
   }
@@ -161,12 +156,12 @@ void RequestProcessorInitializer::handle_initialize(ConnectionPoolManagerInitial
     error_code_ = REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE;
     error_message_ = "Unable to connect to any hosts";
   } else {
-    processor_.reset(Memory::allocate<RequestProcessor>(event_loop_,
+    processor_.reset(Memory::allocate<RequestProcessor>(manager_,
+                                                        event_loop_,
                                                         initializer->release_manager(),
                                                         connected_host_,
                                                         hosts_,
                                                         token_map_,
-                                                        listener_,
                                                         settings_,
                                                         random_,
                                                         request_queue_));
@@ -176,12 +171,9 @@ void RequestProcessorInitializer::handle_initialize(ConnectionPoolManagerInitial
       error_code_ = REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT_ASYNC;
       error_message_ = "Unable to initialize request processor async";
     } else {
-      if (listener_) {
-        for (HostMap::const_iterator it = hosts_.begin(),
-             end = hosts_.end(); it != end; ++it) {
-          it->second->set_up(); // TODO: We should do this in the cluster object?
-          listener_->on_pool_up(it->first);
-        }
+      for (HostMap::const_iterator it = hosts_.begin(),
+           end = hosts_.end(); it != end; ++it) {
+        it->second->set_up(); // TODO: We should do this in the cluster object?
       }
     }
   }

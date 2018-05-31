@@ -75,7 +75,7 @@ public:
    * @param listener A listener that handles request processor events
    * @return The initializer to chain calls
    */
-  RequestProcessorManagerInitializer* with_listener(RequestProcessorListener* listener);
+  RequestProcessorManagerInitializer* with_listener(RequestProcessorManagerListener* listener);
 
   /**
    * Set the metrics object to use to record metrics
@@ -99,7 +99,7 @@ public:
    * @param token_map Initially calculated token map
    * @return The initializer to chain calls
    */
-  RequestProcessorManagerInitializer* with_token_map(TokenMap* token_map);
+  RequestProcessorManagerInitializer* with_token_map(const TokenMap::Ptr& token_map);
 
   /**
    * Initialize the request processors
@@ -149,11 +149,11 @@ private:
   const Host::Ptr connected_host_;
   const int protocol_version_;
   const HostMap hosts_;
-  RequestProcessorListener* listener_;
+  RequestProcessorManagerListener* listener_;
   Metrics* metrics_;
   Random* random_;
   MPMCQueue<RequestHandler*>* request_queue_;
-  TokenMap* token_map_;
+  TokenMap::Ptr token_map_;
 };
 
 } // namespace cass

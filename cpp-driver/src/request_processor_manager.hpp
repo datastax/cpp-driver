@@ -24,6 +24,16 @@
 
 namespace cass {
 
+class RequestProcessorManager;
+
+class RequestProcessorManagerListener : public ConnectionPoolListener {
+public:
+  virtual void on_prepared_metadata_changed(const String& id,
+                                           const PreparedMetadata::Entry::Ptr& entry) = 0;
+  virtual void on_close(RequestProcessorManager* manager) = 0;
+};
+
+
 /**
  * A manager for one or more request processor that will process requests from
  * the session
@@ -37,8 +47,12 @@ public:
    *
    * Handles initialization and connections for each request processor to the
    * pre-established hosts from the control connection
+   *
+   * @param listener A listener for handling processor events.
    */
-  RequestProcessorManager();
+  RequestProcessorManager(RequestProcessorManagerListener* listener);
+
+  ~RequestProcessorManager();
 
   /**
    * Close/Terminate the request processors (thread-safe).
@@ -46,14 +60,6 @@ public:
    * @param A key to restrict access to the method
    */
   void close();
-
-  /**
-   * Update the current keyspace being used for requests
-   * (thread-safe, synchronous).
-   *
-   * @param keyspace New/Current keyspace to utilize
-   */
-  void set_keyspace(const String& keyspace);
 
   /**
    * Add a new host to the request processors
@@ -77,7 +83,7 @@ public:
    *
    * @param token_map Update token map (do not clone)
    */
-  void notify_token_map_update(const TokenMap* token_map);
+  void notify_token_map_changed(const TokenMap::Ptr& token_map);
 
   /**
    * Notify one of the request processors that a new request is available
@@ -91,23 +97,82 @@ public:
 
 public:
   class Protected {
+    friend class RequestProcessor;
     friend class RequestProcessorManagerInitializer;
     Protected() { }
     Protected(Protected const&) { }
   };
 
   /**
-   * Add request processor to the manager
+   * Add request processor to the manager.
    *
-   * @param request_processor A request processor to add to the manager
-   * @param A key to restrict access to the method
+   * @param request_processor A request processor to add to the manager.
+   * @param A key to restrict access to the method.
    */
-  void add_request_processor(const RequestProcessor::Ptr& request_processor,
-                             Protected);
+  void add_processor(const RequestProcessor::Ptr& processor, Protected);
+
+  /**
+   * Notify that a processor closed.
+   *
+   * @param processor The processor that closed.
+   * @param A key to restrict access to the method.
+   */
+  void notify_closed(RequestProcessor* processor, Protected);
+
+  /**
+   * Notify that the keyspace has changed.
+   *
+   * @param keyspace The new keyspace.
+   * @param A key to restrict access to the method.
+   */
+  void notify_keyspace_changed(const String& keyspace, Protected);
+
+  /**
+   * Notify that a connection pool now has available connections.
+   *
+   * @param address The address of the host that's available.
+   * @param A key to restrict access to the method.
+   */
+  void notify_pool_up(const Address& address, Protected);
+
+  /**
+   * Notify that a connection pool no longer has available connections.
+   *
+   * @param address The address of the host that's not available.
+   * @param A key to restrict access to the method.
+   */
+  void notify_pool_down(const Address& address, Protected);
+
+  /**
+   * Notify that a connection pool has encountered a critical error attempting
+   * to reconnect.
+   *
+   * @param address The address of the host with critical error.
+   * @param code The error code.
+   * @param message The error message.
+   * @param A key to restrict access to the method.
+   */
+  void notify_pool_critical_error(const Address& address,
+                                  Connector::ConnectionError code,
+                                  const String& message,
+                                  Protected);
+
+  /**
+   * Notify that the prepared result metadata has changes.
+   *
+   * @param id The id of the prepared metadata.
+   * @param entry The associated prepared metadata.
+   * @param A key to restrict access to the method.
+   */
+  void notify_prepared_metadata_changed(const String& id,
+                                        const PreparedMetadata::Entry::Ptr& entry,
+                                        Protected);
 
 private:
   Atomic<size_t> current_;
-  RequestProcessor::Vec request_processors_;
+  uv_mutex_t mutex_;
+  RequestProcessor::Vec processors_;
+  RequestProcessorManagerListener* const listener_;
 };
 
 } // namespace cass

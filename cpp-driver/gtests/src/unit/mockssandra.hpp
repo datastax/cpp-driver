@@ -34,6 +34,7 @@
 #include "ref_counted.hpp"
 #include "list.hpp"
 #include "scoped_ptr.hpp"
+#include "third_party/mt19937_64/mt19937_64.hpp"
 
 #if defined(WIN32) || defined(_WIN32)
 #undef ERROR_ALREADY_EXISTS
@@ -47,6 +48,7 @@ using cass::EventLoopGroup;
 using cass::List;
 using cass::Memory;
 using cass::String;
+using cass::Task;
 using cass::Timer;
 using cass::Vector;
 using cass::RefCounted;
@@ -142,25 +144,39 @@ public:
   virtual ClientConnection* create(ServerConnection* server) const = 0;
 };
 
+class ServerConnectionTask : public RefCounted<ServerConnectionTask> {
+public:
+  typedef SharedRefPtr<ServerConnectionTask> Ptr;
+
+  virtual ~ServerConnectionTask() { }
+  virtual void run(ServerConnection* server_connection) = 0;
+};
+
+typedef Vector<ClientConnection*> ClientConnections;
+
 class ServerConnection : public RefCounted<ServerConnection> {
 public:
   typedef SharedRefPtr<ServerConnection> Ptr;
 
-   ServerConnection(const ClientConnectionFactory& factory);
+   ServerConnection(const Address& address, const ClientConnectionFactory& factory);
    ~ServerConnection();
 
-   uv_loop_t* loop() { return event_loop_->loop(); }
+   const Address& address() const { return address_; }
+   uv_loop_t* loop();
    SSL_CTX* ssl_context() { return ssl_context_; }
+   const ClientConnections& clients() const { return clients_; }
 
    bool use_ssl(const String& key,
                 const String& cert,
                 const String& password = "");
 
-   void listen(EventLoopGroup* event_loop_group, const Address& address);
+   void listen(EventLoopGroup* event_loop_group);
    int wait_listen();
 
    void close();
    void wait_close();
+
+   void run(const ServerConnectionTask::Ptr& task);
 
 private:
    friend class ClientConnection;
@@ -171,7 +187,7 @@ private:
    friend class RunListen;
    friend class RunClose;
 
-   void internal_listen(const Address& address);
+   void internal_listen();
    void internal_close();
    void maybe_close();
 
@@ -190,8 +206,6 @@ private:
    static int on_password(char *buf, int size, int rwflag, void *password);
 
 private:
-   typedef Vector<ClientConnection*> Vec;
-
    enum State {
      STATE_CLOSED,
      STATE_CLOSING,
@@ -206,7 +220,8 @@ private:
    int rc_;
    uv_mutex_t mutex_;
    uv_cond_t cond_;
-   Vec connections_;
+   ClientConnections clients_;
+   const Address address_;
    const ClientConnectionFactory& factory_;
    SSL_CTX* ssl_context_;
 };
@@ -279,6 +294,43 @@ enum {
   RESULT_SET_SCHEMA_CHANGE = 0x0005
 };
 
+enum {
+  RESULT_FLAG_GLOBAL_TABLESPEC = 0x00000001,
+  RESULT_FLAG_HAS_MORE_PAGES = 0x00000002,
+  RESULT_FLAG_NO_METADATA = 0x00000004,
+  RESULT_FLAG_METADATA_CHANGED = 0x00000008,
+  RESULT_FLAG_CONTINUOUS_PAGING = 0x40000000,
+  RESULT_FLAG_LAST_CONTINUOUS_PAGE = 0x80000000
+};
+
+enum {
+  TYPE_CUSTOM = 0x0000,
+  TYPE_ASCII = 0x0001,
+  TYPE_BIGINT = 0x0002,
+  TYPE_BLOG = 0x0003,
+  TYPE_BOOLEAN = 0x0004,
+  TYPE_COUNTER = 0x0005,
+  TYPE_DECIMAL = 0x0006,
+  TYPE_DOUBLE = 0x0007,
+  TYPE_FLOAT = 0x0008,
+  TYPE_INT = 0x0009,
+  TYPE_TIMESTAMP = 0x000B,
+  TYPE_UUIT = 0x000C,
+  TYPE_VARCHAR = 0x000D,
+  TYPE_VARINT = 0x000E,
+  TYPE_TIMEUUD = 0x000F,
+  TYPE_INET = 0x0010,
+  TYPE_DATE = 0x0011,
+  TYPE_TIME = 0x0012,
+  TYPE_SMALLINT = 0x0013,
+  TYPE_TINYINT = 0x0014,
+  TYPE_LIST = 0x0020,
+  TYPE_MAP = 0x0021,
+  TYPE_SET = 0x0022,
+  TYPE_UDT = 0x0030,
+  TYPE_TUPLE = 0x0031
+};
+
 typedef std::pair<String, String> Option;
 typedef Vector<Option> Options;
 typedef std::pair<String, String> Credential;
@@ -304,8 +356,254 @@ struct QueryParameters {
   String keyspace;
 };
 
+class Type {
+public:
+  static Type text();
+  static Type inet();
+  static Type list(const Type& sub_type);
+
+  void encode(int protocol_version, String* output) const;
+
+private:
+  Type(int type)
+    : type_(type) { }
+
+private:
+  const int type_;
+  String custom_;
+  Vector<String> names_;
+  Vector<Type> types_;
+};
+
+class Column {
+public:
+  Column(const String& name, const Type type)
+    : name_(name)
+    , type_(type) { }
+
+  void encode(int protocol_version, String* output) const;
+
+private:
+  String name_;
+  Type type_;
+};
+
+class ResultSet;
+class Collection;
+
+class Value {
+private:
+  enum Type {
+    NUL,
+    VALUE,
+    COLLECTION
+  };
+
+public:
+  Value()
+    : type_(NUL) { }
+
+  Value(const String& value)
+    : type_(VALUE)
+    , value_(Memory::allocate<String>(value)) { }
+
+  Value(const Collection& collection)
+    : type_(COLLECTION)
+    , collection_(Memory::allocate<Collection>(collection)){ }
+
+  Value(const Value& other)
+    : type_(other.type_) {
+    if (type_ == VALUE) {
+      value_ = Memory::allocate<String>(*other.value_);
+    } else if (type_ == COLLECTION) {
+      collection_ = Memory::allocate<Collection>(*other.collection_);
+    }
+  }
+
+  ~Value() {
+    if (type_ == VALUE) {
+      Memory::deallocate(value_);
+    } else if (type_ == COLLECTION) {
+      Memory::deallocate(collection_);
+    }
+  }
+
+  void encode(int protocol_version, String* output) const;
+
+private:
+  Type type_;
+  union {
+    String* value_;
+    Collection* collection_;
+  };
+};
+
+class Collection {
+public:
+  class Builder {
+  public:
+    Builder(const Type& sub_type)
+      : sub_type_(sub_type) { }
+
+    Builder& text(const String& text) {
+      values_.push_back(Value(text));
+      return *this;
+    }
+
+    Collection build() {
+      return Collection(sub_type_, values_);
+    }
+
+  private:
+    Type sub_type_;
+    Vector<Value> values_;
+  };
+
+  void encode(int protocol_version, String* output) const;
+
+  static Collection text(const Vector<String>& values) {
+    Collection::Builder builder(Type::text());
+    for (Vector<String>::const_iterator it = values.begin(),
+         end = values.end(); it != end; ++it) {
+      builder.text(*it);
+    }
+    return builder.build();
+  }
+
+private:
+  Collection(const Type& sub_type,
+             const Vector<Value> values)
+    : sub_type_(sub_type)
+    , values_(values) { }
+
+private:
+  const Type sub_type_;
+  const Vector<Value> values_;
+};
+
+class Row {
+public:
+  class Builder {
+  public:
+    Builder& text(const String& text) {
+      values_.push_back(Value(text));
+      return *this;
+    }
+
+    Builder& inet(const Address& inet) {
+      String value;
+      uint8_t buf[16];
+      uint8_t len = inet.to_inet(buf);
+      for (uint8_t i = 0; i < len; ++i) {
+        value.push_back(static_cast<char>(buf[i]));
+      }
+      values_.push_back(Value(value));
+      return *this;
+    }
+
+    Builder& collection(const Collection& collection) {
+      values_.push_back(Value(collection));
+      return *this;
+    }
+
+    Row build() const {
+      return Row(values_);
+    }
+
+  private:
+    Vector<Value> values_;
+  };
+
+  void encode(int protocol_version, String* output) const;
+
+private:
+  Row(const Vector<Value>& values)
+    : values_(values) { }
+
+private:
+  const Vector<Value> values_;
+};
+
+class ResultSet {
+public:
+  class Builder {
+  public:
+    Builder(const String& keyspace_name, const String& table_name)
+      : keyspace_name_(keyspace_name)
+      , table_name_(table_name) { }
+
+    Builder& column(const String& name, const Type& type) {
+      columns_.push_back(Column(name, type));
+      return *this;
+    }
+
+    Builder& row(const Row& row) {
+      rows_.push_back(row);
+      return *this;
+    }
+
+    ResultSet build() const {
+      return ResultSet(keyspace_name_, table_name_, columns_, rows_);
+    }
+
+  private:
+    const String keyspace_name_;
+    const String table_name_;
+    Vector<Column> columns_;
+    Vector<Row> rows_;
+  };
+
+  String encode(int protocol_version) const;
+
+  size_t column_count() const { return columns_.size(); }
+
+private:
+  ResultSet(const String& keyspace_name,
+            const String& table_name,
+            const Vector<Column>& columns,
+            const Vector<Row>& rows)
+    : keyspace_name_(keyspace_name)
+    , table_name_(table_name)
+    , columns_(columns)
+    , rows_(rows) { }
+
+private:
+  const String keyspace_name_;
+  const String table_name_;
+  const Vector<Column> columns_;
+  const Vector<Row> rows_;
+};
+
+struct Exception : public std::exception {
+  Exception(int code, const String& message)
+    : code(code)
+    , message(message) { }
+  const int code;
+  const String message;
+};
+
+struct Host {
+  Host() { }
+  Host(const Address& address,
+       const String& dc,
+       const String& rack,
+       MT19937_64& token_rng,
+       int num_tokens = 2);
+  Address address;
+  String dc;
+  String rack;
+  String partitioner;
+  Vector<String> tokens;
+};
+
+typedef Vector<Host> Hosts;
+
 class ClientConnection;
+class Cluster;
 class Request;
+
+typedef std::pair<String, ResultSet> Match;
+typedef Vector<Match> Matches;
 
 struct Action {
   class Builder {
@@ -321,9 +619,15 @@ struct Action {
     Builder& auth_challenge(const String& token);
     Builder& auth_success(const String& token);
     Builder& supported();
+    Builder& up_event(const Address& address);
 
     Builder& void_result();
+    Builder& empty_rows_result(int32_t row_count);
     Builder& no_result();
+    Builder& match_query(const Matches& matches);
+
+    Builder& system_local();
+    Builder& system_peers();
 
     Builder& use_keyspace(const String& keyspace);
     Builder& plaintext_auth(const String& username,
@@ -334,6 +638,9 @@ struct Action {
     Builder& validate_auth_response();
     Builder& validate_register();
     Builder& validate_query();
+
+    Builder& set_registered_for_events();
+    Builder& set_protocol_version();
 
     const Action* build();
 
@@ -362,9 +669,14 @@ public:
           const String& body, ClientConnection* client);
   ~Request();
 
+  int8_t version() const { return version_; }
+  int16_t stream() const { return stream_; }
   int8_t opcode() const { return opcode_; }
 
+  ClientConnection* client() const { return client_; }
+
   void write(int8_t opcode, const String& body);
+  void write(int16_t stream, int8_t opcode, const String& body);
   void error(int32_t code, const String& message);
   void wait(uint64_t timeout, const Action* action);
   void close();
@@ -377,9 +689,11 @@ public:
   bool decode_execute(String* id, QueryParameters* params);
   bool decode_prepare(String* query, PrepareParameters* params);
 
-private:
-  String encode_header(int8_t opcode_, int32_t len);
+  const Address& address() const;
+  const Host& host(const Address& address) const;
+  Hosts hosts() const;
 
+private:
   static void on_timeout(Timer* timer);
 
   const char* start() { return body_.data(); }
@@ -461,11 +775,40 @@ struct SendSupported : public Action {
   virtual bool on_run(Request* request) const;
 };
 
+struct SendUpEvent : public Action {
+  SendUpEvent(const Address& address)
+    : address(address) { }
+  virtual bool on_run(Request* request) const;
+  Address address;
+};
+
 struct VoidResult : public Action {
   virtual bool on_run(Request* request) const;
 };
 
+struct EmptyRowsResult : public Action {
+  EmptyRowsResult(int row_count)
+    : row_count(row_count) { }
+  virtual bool on_run(Request* request) const;
+  int32_t row_count;
+};
+
 struct NoResult : public Action {
+  virtual bool on_run(Request* request) const;
+};
+
+struct MatchQuery : public Action {
+  MatchQuery(const Matches& matches)
+    : matches(matches) { }
+  virtual bool on_run(Request* request) const;
+  Matches matches;
+};
+
+struct SystemLocal : public Action {
+  virtual bool on_run(Request* request) const;
+};
+
+struct SystemPeers : public Action {
   virtual bool on_run(Request* request) const;
 };
 
@@ -485,10 +828,6 @@ struct PlaintextAuth : public Action {
   String password;
 };
 
-struct MatchQuery : public Action {
-  virtual bool on_run(Request* request) const;
-};
-
 struct ValidateStartup : public Action {
   virtual bool on_run(Request* request) const;
 };
@@ -501,7 +840,7 @@ struct ValidateAuthResponse : public Action {
   virtual bool on_run(Request* request) const;
 };
 
-struct ValidateRegister: public Action {
+struct ValidateRegister : public Action {
   virtual bool on_run(Request* request) const;
 };
 
@@ -509,11 +848,21 @@ struct ValidateQuery : public Action {
   virtual bool on_run(Request* request) const;
 };
 
+struct SetRegisteredForEvents : public Action {
+  virtual bool on_run(Request* request) const;
+};
+
+struct SetProtocolVersion : public Action {
+  virtual bool on_run(Request* request) const;
+};
+
 class RequestHandler {
 public:
   class Builder {
   public:
-    Builder() {
+    Builder()
+      : lowest_supported_protocol_version_(1)
+      , highest_supported_protocol_version_(5) {
       invalid_protocol_.error(ERROR_PROTOCOL_ERROR, "Invalid or unsupported protocol version");
       invalid_opcode_.error(ERROR_PROTOCOL_ERROR, "Invalid opcode (or not implemented)");
     }
@@ -530,14 +879,33 @@ public:
 
     const RequestHandler* build();
 
+    Builder& with_supported_protocol_versions(int lowest, int highest) {
+      assert(highest >= lowest && "Invalid protocol versions");
+      lowest_supported_protocol_version_ = lowest < 0 ? 0 : lowest;
+      highest_supported_protocol_version_ = highest > 5 ? 5 : highest;
+      return *this;
+    }
+
   private:
     Action::Builder actions_[OPCODE_LAST_ENTRY];
     Action::Builder invalid_protocol_;
     Action::Builder invalid_opcode_;
     Action::Builder dummy_;
+    int lowest_supported_protocol_version_;
+    int highest_supported_protocol_version_;
   };
 
-  RequestHandler(Builder* builder);
+  RequestHandler(Builder* builder,
+                 int lowest_supported_protocol_version,
+                 int highest_supported_protocol_version);
+
+  int lowest_supported_protocol_version() const {
+    return lowest_supported_protocol_version_;
+  }
+
+  int highest_supported_protocol_version() const {
+    return highest_supported_protocol_version_;
+  }
 
   void invalid_protocol(Request* request) const {
     invalid_protocol_->run(request);
@@ -556,6 +924,8 @@ private:
   ScopedPtr<const Action> invalid_protocol_;
   ScopedPtr<const Action> invalid_opcode_;
   ScopedPtr<const Action> actions_[OPCODE_LAST_ENTRY];
+  const int lowest_supported_protocol_version_;
+  const int highest_supported_protocol_version_;
 };
 
 
@@ -595,9 +965,13 @@ private:
 
 class ClientConnection : public internal::ClientConnection {
 public:
-  ClientConnection(internal::ServerConnection* server, const RequestHandler* request_handler)
+  ClientConnection(internal::ServerConnection* server, const RequestHandler* request_handler, const Cluster* cluster)
     : internal::ClientConnection(server)
-    , handler_(request_handler) { }
+    , handler_(request_handler)
+    , cluster_(cluster)
+    , protocol_version_(-1)
+    , is_registered_for_events_(false) { }
+
   ~ClientConnection();
 
   virtual void on_read(const char* data, size_t len);
@@ -605,15 +979,26 @@ public:
   void add(Request* request) { requests_.add_to_back(request); }
   void remove(Request* request) { requests_.remove(request); }
 
+  const Cluster* cluster() const { return cluster_; }
+
+  int protocol_version() const { return protocol_version_; }
+  void set_protocol_version(int protocol_version) { protocol_version_  = protocol_version; }
+
+  bool is_registered_for_events() const { return is_registered_for_events_; }
+  void set_registered_for_events() { is_registered_for_events_ = true; }
+
 private:
   ProtocolHandler handler_;
+  const Cluster* cluster_;
   List<Request> requests_;
+  int protocol_version_;
+  bool is_registered_for_events_;
 };
 
 class CloseConnection : public ClientConnection {
 public:
-  CloseConnection(internal::ServerConnection* server, const RequestHandler* request_handler)
-    : ClientConnection(server, request_handler) { }
+  CloseConnection(internal::ServerConnection* server, const RequestHandler* request_handler, const Cluster* cluster)
+    : ClientConnection(server, request_handler, cluster) { }
 
   int on_accept() {
     int rc = accept();
@@ -627,8 +1012,9 @@ public:
 
 class ClientConnectionFactory : public internal::ClientConnectionFactory {
 public:
-  ClientConnectionFactory(const RequestHandler* request_handler)
+  ClientConnectionFactory(const RequestHandler* request_handler, const Cluster* cluster)
     : request_handler_(request_handler)
+    , cluster_(cluster)
     , close_immediately_(false) { }
 
   void use_close_immediately() {
@@ -637,14 +1023,15 @@ public:
 
   virtual internal::ClientConnection* create(internal::ServerConnection* server) const {
     if (close_immediately_) {
-      return Memory::allocate<CloseConnection>(server, request_handler_.get());
+      return Memory::allocate<CloseConnection>(server, request_handler_.get(), cluster_);
     } else {
-      return Memory::allocate<ClientConnection>(server, request_handler_.get());
+      return Memory::allocate<ClientConnection>(server, request_handler_.get(), cluster_);
     }
   }
 
 private:
   ScopedPtr<const RequestHandler> request_handler_;
+  const Cluster* cluster_;
   bool close_immediately_;
 };
 
@@ -666,6 +1053,71 @@ private:
   int port_;
 };
 
+class Event : public internal::ServerConnectionTask {
+public:
+  typedef SharedRefPtr<Event> Ptr;
+
+  Event(const String& event_body);
+
+  virtual void run(internal::ServerConnection* server_connection);
+
+private:
+  String event_body_;
+};
+
+class TopologyChangeEvent : public Event {
+public:
+  enum Type {
+    NEW_NODE,
+    MOVED_NODE,
+    REMOVED_NODE,
+  };
+
+  TopologyChangeEvent(Type type, const Address& address)
+    : Event(encode(type, address)) { }
+
+  static String encode(Type type, const Address& address);
+};
+
+class StatusChangeEvent : public Event {
+public:
+  enum Type {
+    UP,
+    DOWN
+  };
+
+  StatusChangeEvent(Type type, const Address& address)
+    : Event(encode(type, address)) { }
+
+  static String encode(Type type, const Address& address);
+};
+
+class SchemaChangeEvent : public Event {
+public:
+  enum Type {
+    CREATED,
+    UPDATED,
+    DROPPED
+  };
+
+  enum Target {
+    KEYSPACE,
+    TABLE,
+    USER_TYPE,
+    FUNCTION,
+    AGGREGATE
+  };
+
+  SchemaChangeEvent(Target target, Type type,
+                    const String& keyspace_name, const String& target_name = "",
+                    const Vector<String>& args_types = Vector<String>())
+    : Event(encode(target, type, keyspace_name, target_name, args_types)) { }
+
+  static String encode(Target target, Type type,
+                       const String& keyspace_name, const String& target_name,
+                       const Vector<String>& arg_types);
+};
+
 class Cluster {
 protected:
   void init(AddressGenerator& generator,
@@ -673,6 +1125,7 @@ protected:
             size_t num_nodes);
 
 public:
+  Cluster();
   ~Cluster();
 
   String use_ssl();
@@ -689,16 +1142,29 @@ public:
   void stop(size_t node);
   void stop_async(size_t node);
 
+  int add(cass::EventLoopGroup* event_loop_group, size_t node);
+  void remove(size_t node);
+
+  const Host& host(const Address& address) const;
+  Hosts hosts() const;
+
+  void event(const Event::Ptr& event);
+
 private:
   struct Server {
-    Server(const Address& address, const internal::ServerConnection::Ptr& connection)
-      : address(address)
-      , connection(connection) { }
-    Address address;
-    internal::ServerConnection::Ptr connection;
+    Server(const Host& host, const internal::ServerConnection::Ptr& connection)
+      : host(host)
+      , connection(connection)
+      , is_removed(false) { }
+    const Host host;
+    const internal::ServerConnection::Ptr connection;
+    bool is_removed;
   };
+
   typedef Vector<Server> Servers;
 
+private:
+  mutable uv_mutex_t mutex_;
   Servers servers_;
 };
 
@@ -713,11 +1179,17 @@ public:
   SimpleRequestHandlerBuilder();
 };
 
+class AuthRequestHandlerBuilder : public SimpleRequestHandlerBuilder {
+public:
+  AuthRequestHandlerBuilder(const String& username = "cassandra",
+                            const String& password = "cassandra");
+};
+
 class SimpleCluster : public Cluster {
 public:
   SimpleCluster(const RequestHandler* request_handler,
                 size_t num_nodes = 1)
-    : factory_(request_handler)
+    : factory_(request_handler, this)
     , event_loop_group_(1) {
     init(generator_, factory_, num_nodes);
   }
@@ -738,6 +1210,10 @@ public:
     return Cluster::start(&event_loop_group_, node);
   }
 
+  int add(size_t node) {
+    return Cluster::add(&event_loop_group_, node);
+  }
+
 private:
   Ipv4AddressGenerator generator_;
   ClientConnectionFactory factory_;
@@ -746,9 +1222,9 @@ private:
 
 class SimpleEchoServer {
 public:
-  SimpleEchoServer()
+  SimpleEchoServer(const Address& address = Address("127.0.0.1", 8888))
    : event_loop_group_(1)
-   , server_(Memory::allocate<internal::ServerConnection>(factory_)) { }
+   , server_(Memory::allocate<internal::ServerConnection>(address, factory_)) { }
 
   ~SimpleEchoServer() {
     close();
@@ -772,8 +1248,8 @@ public:
     factory_.use_close_immediately();
   }
 
-  int listen(const Address& address = Address("127.0.0.1", 8888)) {
-    server_->listen(&event_loop_group_, address);
+  int listen() {
+    server_->listen(&event_loop_group_);
     return server_->wait_listen();
   }
 
