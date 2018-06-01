@@ -34,26 +34,11 @@ private:
   RequestProcessorInitializer::Ptr initializer_;
 };
 
-RequestProcessorSettings::RequestProcessorSettings()
-  : max_schema_wait_time_ms(10000)
-  , prepare_on_all_hosts(true)
-  , timestamp_generator(Memory::allocate<ServerSideTimestampGenerator>())
-  , default_profile(Config().default_profile()){ }
-
-RequestProcessorSettings::RequestProcessorSettings(const Config& config)
-  : connection_pool_manager_settings(config)
-  , max_schema_wait_time_ms(config.max_schema_wait_time_ms())
-  , prepare_on_all_hosts(config.prepare_on_all_hosts())
-  , timestamp_generator(config.timestamp_gen())
-  , default_profile(config.default_profile())
-  , profiles(config.profiles()) { }
-
 RequestProcessorInitializer::RequestProcessorInitializer(RequestProcessorManager* manager,
                                                          const Host::Ptr& connected_host,
                                                          int protocol_version,
                                                          const HostMap& hosts,
                                                          const TokenMap::Ptr& token_map,
-                                                         MPMCQueue<RequestHandler*>* request_queue,
                                                          void* data, Callback callback)
   : event_loop_(NULL)
   , metrics_(NULL)
@@ -63,7 +48,6 @@ RequestProcessorInitializer::RequestProcessorInitializer(RequestProcessorManager
   , protocol_version_(protocol_version)
   , hosts_(hosts)
   , token_map_(token_map)
-  , request_queue_(request_queue)
   , error_code_(REQUEST_PROCESSOR_OK)
   , data_(data)
   , callback_(callback) {
@@ -163,8 +147,7 @@ void RequestProcessorInitializer::handle_initialize(ConnectionPoolManagerInitial
                                                         hosts_,
                                                         token_map_,
                                                         settings_,
-                                                        random_,
-                                                        request_queue_));
+                                                        random_));
 
     int rc = processor_->init(RequestProcessor::Protected());
     if (rc != 0) {

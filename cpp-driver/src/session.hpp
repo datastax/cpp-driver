@@ -100,7 +100,6 @@ private:
   ScopedPtr<Metrics> metrics_;
   ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
   RequestProcessorManager::Ptr request_processor_manager_;
-  ScopedPtr<MPMCQueue<RequestHandler*> > request_queue_;
 };
 
 class SessionFuture : public Future {

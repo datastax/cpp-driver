@@ -17,7 +17,14 @@
 #include "request_processor_manager.hpp"
 #include "event_loop.hpp"
 
+#include <algorithm>
+
 namespace cass {
+
+static inline bool least_busy_comp(const RequestProcessor::Ptr& a,
+                                   const RequestProcessor::Ptr& b) {
+  return a->request_count() < b->request_count();
+}
 
 class NopRequestProcessorManagerListener : public RequestProcessorManagerListener {
 public:
@@ -69,9 +76,11 @@ void RequestProcessorManager::notify_token_map_changed(const TokenMap::Ptr& toke
   }
 }
 
-void RequestProcessorManager::notify_request() {
-  size_t index = current_.fetch_add(1) % processors_.size();
-  processors_[index]->notify_request();
+void RequestProcessorManager::process_request(const RequestHandler::Ptr& request_handler) {
+  const RequestProcessor::Ptr& processor
+      =  *std::min_element(processors_.begin(), processors_.end(),
+                           least_busy_comp);
+  processor->process_request(request_handler);
 }
 
 void RequestProcessorManager::add_processor(const RequestProcessor::Ptr& processor,

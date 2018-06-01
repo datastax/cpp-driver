@@ -42,11 +42,11 @@ public:
       , queue_size_io_(CASS_DEFAULT_QUEUE_SIZE_IO)
       , core_connections_per_host_(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
       , reconnect_wait_time_ms_(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
-      , max_requests_per_flush_(CASS_DEFAULT_MAX_REQUESTS_PER_FLUSH)
-      , max_concurrent_requests_threshold_(CASS_DEFAULT_MAX_CONCURRENT_REQUESTS)
       , connect_timeout_ms_(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
       , resolve_timeout_ms_(CASS_DEFAULT_RESOLVE_TIMEOUT_MS)
       , max_schema_wait_time_ms_(CASS_DEFAULT_MAX_SCHEMA_WAIT_TIME_MS)
+      , coalesce_delay_us_(CASS_DEFAULT_COALESCE_DELAY)
+      , new_request_ratio_(CASS_DEFAULT_NEW_REQUEST_RATIO)
       , log_level_(CASS_DEFAULT_LOG_LEVEL)
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
@@ -117,20 +117,6 @@ public:
     reconnect_wait_time_ms_ = wait_time_ms;
   }
 
-  unsigned max_requests_per_flush() const { return max_requests_per_flush_; }
-
-  void set_max_requests_per_flush(unsigned num_requests) {
-    max_requests_per_flush_ = num_requests;
-  }
-
-  unsigned max_concurrent_requests_threshold() const {
-    return max_concurrent_requests_threshold_;
-  }
-
-  void set_max_concurrent_requests_threshold(unsigned num_requests) {
-    max_concurrent_requests_threshold_ = num_requests;
-  }
-
   unsigned connect_timeout_ms() const { return connect_timeout_ms_; }
 
   void set_connect_timeout(unsigned timeout_ms) {
@@ -141,6 +127,18 @@ public:
 
   void set_max_schema_wait_time_ms(unsigned time_ms) {
     max_schema_wait_time_ms_ = time_ms;
+  }
+
+  uint64_t coalesce_delay_us() const { return coalesce_delay_us_; }
+
+  void set_coalesce_delay_us(uint64_t delay_us) {
+    coalesce_delay_us_ = delay_us;
+  }
+
+  int new_request_ratio() const { return new_request_ratio_; }
+
+  void set_new_request_ratio(int ratio) {
+    new_request_ratio_ = ratio;
   }
 
   void set_request_timeout(unsigned timeout_ms) {
@@ -362,11 +360,11 @@ private:
   unsigned queue_size_io_;
   unsigned core_connections_per_host_;
   unsigned reconnect_wait_time_ms_;
-  unsigned max_requests_per_flush_;
-  unsigned max_concurrent_requests_threshold_;
   unsigned connect_timeout_ms_;
   unsigned resolve_timeout_ms_;
   unsigned max_schema_wait_time_ms_;
+  uint64_t coalesce_delay_us_;
+  int new_request_ratio_;
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;

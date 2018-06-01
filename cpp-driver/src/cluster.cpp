@@ -139,7 +139,7 @@ ClusterSettings::ClusterSettings()
   , port(CASS_DEFAULT_PORT)
   , reconnect_timeout_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
   , prepare_on_up_or_add_host(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
-  , max_prepares_per_flush(CASS_DEFAULT_MAX_REQUESTS_PER_FLUSH) {
+  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH) {
   load_balancing_polices.push_back(load_balancing_policy);
 }
 
@@ -148,9 +148,9 @@ ClusterSettings::ClusterSettings(const Config& config)
   , load_balancing_policy(config.load_balancing_policy())
   , load_balancing_polices(config.load_balancing_policies())
   , port(config.port())
-  , reconnect_timeout_ms(1000)  // TODO: Make a setting
+  , reconnect_timeout_ms(config.reconnect_wait_time_ms())
   , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
-  , max_prepares_per_flush(config.max_requests_per_flush()) { }
+  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH) { }
 
 Cluster::Cluster(ControlConnector* connector,
                  ClusterListener* listener,

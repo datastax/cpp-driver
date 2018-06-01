@@ -1652,6 +1652,40 @@ cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
                                      unsigned wait_time);
 
 /**
+ * Sets the amount of time, in microseconds, to wait for new requests to
+ * coalesce into a single system call. This should be set to a value around
+ * the latency SLA of your application's requests while also considering the
+ * request's roundtrip time. Larger values should be used for throughput
+ * bound workloads and lower values should be used for latency bound
+ * workloads.
+ *
+ * <b>Default:</b> 500 us
+ *
+ * @param[in] cluster
+ * @param[in] delay_us
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_coalesce_delay(CassCluster* cluster,
+                                cass_int64_t delay_us);
+
+/**
+ * Sets the ratio of time spent processing new requests versus handling the I/O
+ * and processing of outstanding requests. The range of this setting is 1 to 100,
+ * where larger values allocate more time to processing new requests and smaller
+ * values allocate more time to processing outstanding requests.
+ *
+ * <b>Default:</b> 50
+ *
+ * @param[in] cluster
+ * @param[in] ratio
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_new_request_ratio(CassCluster* cluster,
+                                   cass_int32_t ratio);
+
+/**
  * Sets the maximum number of connections that will be created concurrently.
  * Connections are created when the current connections are unable to keep up with
  * request throughput.
@@ -1680,13 +1714,16 @@ CASS_DEPRECATED(cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
-                                                   unsigned num_requests);
+CASS_DEPRECATED(cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
+                                                                   unsigned num_requests));
 
 /**
  * Sets the maximum number of requests processed by an IO worker
@@ -1696,13 +1733,16 @@ cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
-                                        unsigned num_requests);
+CASS_DEPRECATED(cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
+                                                        unsigned num_requests));
 
 /**
  * Sets the high water mark for the number of bytes outstanding

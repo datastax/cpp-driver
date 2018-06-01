@@ -241,6 +241,8 @@ public:
   virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
                               const Host::Ptr& current_host,
                               const Response::Ptr& response) = 0;
+
+  virtual void on_done() = 0;
 };
 
 class RequestExecution : public RequestCallback {

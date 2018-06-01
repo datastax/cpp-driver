@@ -95,6 +95,33 @@ void PrepareCallback::on_internal_timeout() {
   request_execution_->on_retry_next_host();
 }
 
+class NopRequestListener : public RequestListener {
+public:
+  virtual void on_result_metadata_changed(const String& prepared_id,
+                                          const String& query,
+                                          const String& keyspace,
+                                          const String& result_metadata_id,
+                                          const ResultResponse::ConstPtr& result_response) { }
+
+  virtual void on_keyspace_changed(const String& keyspace) { }
+
+  virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
+                                            const Host::Ptr& current_host,
+                                            const Response::Ptr& response) {
+    return false;
+  }
+
+  virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
+                              const Host::Ptr& current_host,
+                              const Response::Ptr& response) {
+    return false;
+  }
+
+  virtual void on_done() { }
+};
+
+static NopRequestListener nop_request_listener__;
+
 RequestHandler::RequestHandler(const Request::ConstPtr& request,
                                const ResponseFuture::Ptr& future,
                                Metrics* metrics,
@@ -104,7 +131,7 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request,
   , is_cancelled_(false)
   , running_executions_(0)
   , start_time_ns_(uv_hrtime())
-  , listener_(NULL)
+  , listener_(&nop_request_listener__)
   , manager_(NULL)
   , metrics_(metrics)
   , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) { }
@@ -119,7 +146,7 @@ void RequestHandler::init(const ExecutionProfile& profile,
                           TimestampGenerator* timestamp_generator,
                           RequestListener* listener) {
   manager_ = manager;
-  listener_ = listener;
+  listener_ = listener ? listener : &nop_request_listener__;
   wrapper_.init(profile, timestamp_generator);
 
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
@@ -168,30 +195,20 @@ void RequestHandler::notify_result_metadata_changed(const String& prepared_id,
                                                     const String& keyspace,
                                                     const String& result_metadata_id,
                                                     const ResultResponse::ConstPtr& result_response, Protected) {
-  if (listener_ != NULL) {
-    listener_->on_result_metadata_changed(prepared_id, query, keyspace, result_metadata_id, result_response);
-  }
+  listener_->on_result_metadata_changed(prepared_id, query, keyspace, result_metadata_id, result_response);
 }
 
 void RequestHandler::notify_keyspace_changed(const String& keyspace) {
-  if (listener_ != NULL) {
-    listener_->on_keyspace_changed(keyspace);
-  }
+  listener_->on_keyspace_changed(keyspace);
 }
 
 bool RequestHandler::wait_for_schema_agreement(const Host::Ptr& current_host, const Response::Ptr& response) {
-  if (listener_ != NULL) {
-    return listener_->on_wait_for_schema_agreement(Ptr(this), current_host, response);
-  }
-  return false;
+  return listener_->on_wait_for_schema_agreement(Ptr(this), current_host, response);
 }
 
 bool RequestHandler::prepare_all(const Host::Ptr& current_host,
                                  const Response::Ptr& response) {
-  if (listener_ != NULL) {
-    return listener_->on_prepare_all(Ptr(this), current_host, response);
-  }
-  return false;
+  return listener_->on_prepare_all(Ptr(this), current_host, response);
 }
 
 void RequestHandler::set_response(const Host::Ptr& host,
@@ -255,6 +272,7 @@ void RequestHandler::on_timeout(Timer* timer) {
 }
 
 void RequestHandler::stop_request() {
+  listener_->on_done();
   is_cancelled_ = true;
   timer_.stop();
 }

@@ -21,7 +21,6 @@ namespace cass {
 RequestProcessorManagerInitializer::RequestProcessorManagerInitializer(const Host::Ptr& connected_host,
                                                                        int protocol_version,
                                                                        const HostMap& hosts,
-                                                                       MPMCQueue<RequestHandler*>* request_queue,
                                                                        void* data,
                                                                        Callback callback)
   : data_(data)
@@ -33,7 +32,6 @@ RequestProcessorManagerInitializer::RequestProcessorManagerInitializer(const Hos
   , listener_(NULL)
   , metrics_(NULL)
   , random_(NULL)
-  , request_queue_(request_queue)
   , token_map_(NULL) {
   uv_mutex_init(&lock_);
 }
@@ -83,7 +81,6 @@ void RequestProcessorManagerInitializer::initialize(EventLoopGroup* event_loop_g
                                                                                                protocol_version_,
                                                                                                hosts_,
                                                                                                token_map_,
-                                                                                               request_queue_,
                                                                                                this, on_initialize));
     initializers_.push_back(initializer);
     initializer

@@ -126,6 +126,8 @@ static void set_pointer_keys(C& container) {
   container.set_deleted_key(reinterpret_cast<typename C::key_type>(0x1));
 }
 
+void thread_yield();
+
 } // namespace cass
 
 #endif

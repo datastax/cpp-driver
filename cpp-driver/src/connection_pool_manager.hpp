@@ -21,7 +21,9 @@
 #include "atomic.hpp"
 #include "connection_pool.hpp"
 #include "connection_pool_connector.hpp"
+#include "histogram_wrapper.hpp"
 #include "ref_counted.hpp"
+#include "string.hpp"
 
 #include <uv.h>
 
@@ -185,6 +187,10 @@ public:
 
   Metrics* metrics() const { return metrics_; }
 
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+  HistogramWrapper& flush_bytes() { return flush_bytes_; }
+#endif
+
 public:
   class Protected {
     friend class ConnectionPool;
@@ -278,6 +284,10 @@ private:
   String keyspace_;
 
   Metrics* const metrics_;
+
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+  HistogramWrapper flush_bytes_;
+#endif
 };
 
 } // namespace cass

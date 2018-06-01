@@ -237,14 +237,7 @@ Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* pr
 }
 
 void Session::execute(const RequestHandler::Ptr& request_handler) {
-  request_handler->inc_ref(); // Queue reference
-  if (request_queue_->enqueue(request_handler.get())) {
-    request_processor_manager_->notify_request();
-  } else {
-    request_handler->dec_ref();
-    request_handler->set_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
-                               "The request queue has reached capacity");
-  }
+  request_processor_manager_->process_request(request_handler);
 }
 
 void Session::on_connect(const Host::Ptr& connected_host,
@@ -281,12 +274,10 @@ void Session::on_connect(const Host::Ptr& connected_host,
 
   metrics_.reset(Memory::allocate<Metrics>(config().thread_count_io() + 1));
 
-  request_queue_.reset(Memory::allocate<MPMCQueue<RequestHandler*> >(config().queue_size_io()));
   RequestProcessorManagerInitializer::Ptr initializer(
         Memory::allocate<RequestProcessorManagerInitializer>(connected_host,
                                                              protocol_version,
                                                              hosts,
-                                                             request_queue_.get(),
                                                              this,
                                                              on_initialize));
 

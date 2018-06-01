@@ -23,7 +23,10 @@
 #include "logger.hpp"
 #include "deque.hpp"
 #include "macros.hpp"
+#include "prepare.hpp"
 #include "scoped_lock.hpp"
+#include "timer.hpp"
+#include "timerfd.hpp"
 #include "utils.hpp"
 
 #include <assert.h>
@@ -47,6 +50,11 @@ public:
  */
 class EventLoop {
 public:
+  class TimerCallback {
+  public:
+    virtual void on_timeout() = 0;
+  };
+
   EventLoop();
 
   virtual ~EventLoop();
@@ -86,6 +94,29 @@ public:
    */
   void add(Task* task);
 
+  /**
+   * Start the loop timer.
+   *
+   * @param timeout_us
+   */
+  void start_timer(uint64_t timeout_us, TimerCallback* callback);
+
+  /**
+   * Stop the loop timer.
+   */
+  void stop_timer();
+
+  /**
+   * Determine if the timer is running.
+   *
+   * @return Returns true if the timer is running.
+   */
+  bool is_timer_running();
+
+  void maybe_start_io_time();
+
+  uint64_t io_time_elapsed() const { return io_time_elapsed_; }
+
 protected:
   /**
    * A callback that's run before the event loop is run.
@@ -116,6 +147,13 @@ private:
   static void internal_on_run(void* data);
   void handle_run();
 
+#ifdef HAVE_TIMERFD
+  static void internal_on_timer(TimerFd* timer);
+#else
+  static void internal_on_timer(Timer* timer);
+#endif
+  void handle_timer();
+
   static void on_task(Async* async);
   void handle_task();
 
@@ -132,7 +170,19 @@ private:
   bool is_joinable_;
   Async async_;
   TaskQueue tasks_;
+
+#ifdef HAVE_TIMERFD
+  TimerFd timer_;
+#else
+  uint64_t timeout_;
+  Timer timer_;
+#endif
+  TimerCallback* timer_callback_;
+
   Atomic<bool> is_closing_;
+
+  uint64_t io_time_start_;
+  uint64_t io_time_elapsed_;
 
 #if defined(_MSC_VER) && defined(_DEBUG)
   String thread_name_;
