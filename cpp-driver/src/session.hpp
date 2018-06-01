@@ -17,186 +17,90 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
-#include "config.hpp"
-#include "control_connection.hpp"
-#include "external.hpp"
-#include "future.hpp"
-#include "host.hpp"
-#include "load_balancing.hpp"
-#include "metadata.hpp"
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
-#include "prepared.hpp"
-#include "random.hpp"
-#include "ref_counted.hpp"
-#include "request_processor_manager_initializer.hpp"
-#include "request_handler.hpp"
-#include "request_queue.hpp"
-#include "resolver.hpp"
-#include "row.hpp"
-#include "scoped_lock.hpp"
-#include "scoped_ptr.hpp"
-#include "speculative_execution.hpp"
-#include "string.hpp"
-#include "token_map.hpp"
-#include "vector.hpp"
-#include "event_loop.hpp"
+#include "request_processor_manager.hpp"
+#include "session_base.hpp"
 
-#include <memory>
 #include <uv.h>
 
 namespace cass {
 
-class Future;
-class Request;
+class RequestProcessorManagerInitializer;
 class Statement;
 
-class Session : public EventLoop
-              , public RequestProcessorListener {
+/**
+ * A
+ */
+class Session
+    : public SessionBase
+    , public RequestProcessorManagerListener {
 public:
-  enum State {
-    SESSION_STATE_CONNECTING,
-    SESSION_STATE_CONNECTED,
-    SESSION_STATE_CLOSING,
-    SESSION_STATE_CLOSED
-  };
-
-  Session();
   ~Session();
 
-  const Config& config() const { return config_; }
-  Metrics* metrics() const { return metrics_.get(); }
-  const PreparedMetadata& prepared_metadata() const { return prepared_metadata_; }
-
-  PreparedMetadata::Entry::Vec prepared_metadata_entries() const {
-    return prepared_metadata_.copy();
-  }
-
-public:
-  Host::Ptr get_host(const Address& address);
-
-  void connect_async(const Config& config, const String& keyspace, const Future::Ptr& future);
-  void close_async(const Future::Ptr& future);
-
   Future::Ptr prepare(const char* statement, size_t length);
+
   Future::Ptr prepare(const Statement* statement);
+
   Future::Ptr execute(const Request::ConstPtr& request,
                       const Address* preferred_address = NULL);
 
-  const Metadata& metadata() const { return metadata_; }
-
-  const VersionNumber& cassandra_version() const {
-    return control_connection_.cassandra_version();
-  }
-
-  bool token_map_init(const String& partitioner);
-  void token_map_host_add(const Host::Ptr& host, const Value* tokens);
-  void token_map_host_update(const Host::Ptr& host, const Value* tokens);
-  void token_map_host_remove(const Host::Ptr& host);
-  void token_map_hosts_cleared();
-  void token_map_keyspaces_add(const VersionNumber& cassandra_version,
-                               const ResultResponse::Ptr& keyspaces);
-  void token_map_keyspaces_update(const VersionNumber& cassandra_version,
-                                  const ResultResponse::Ptr& keyspaces);
-
-  void load_balancing_policy_host_add_remove(const Host::Ptr& host, bool is_add);
-
-  void notify_connected();
-  void notify_connect_error(CassError code, const String& message);
-  void notify_closed();
-
-  void on_keyspace_update(const String& keyspace);
-  void on_prepared_metadata_update(const String& id,
-                                   const PreparedMetadata::Entry::Ptr& entry);
+public:
+  Metrics* metrics() const { return metrics_.get(); }
 
 private:
-  class NotifyConnect : public Task {
-  public:
-    virtual void run(EventLoop* event_loop);
-  };
-
-  void handle_notify_connect();
-
-private:
-  void clear(const Config& config);
-  int init();
-
-  void close_handles();
-
-  void internal_connect();
-  void internal_close();
-
   void execute(const RequestHandler::Ptr& request_handler);
 
-  virtual void on_run();
-  virtual void on_after_run();
+private:
+  // Session base methods
 
-  static void on_resolve(MultiResolver<Session*>::Resolver* resolver);
-  static void on_resolve_done(MultiResolver<Session*>* resolver);
-
-  QueryPlan* new_query_plan();
+  virtual void on_connect(const Host::Ptr& connected_host,
+                          int protocol_version,
+                          const HostMap& hosts,
+                          const TokenMap::Ptr& token_map);
 
 private:
-  // TODO(mpenick): Consider removing friend access to session
-  friend class ControlConnection;
+  // Cluster listener methods
 
-  Host::Ptr add_host(const Address& address);
-  void purge_hosts(bool is_initial_connection);
+  virtual void on_up(const Host::Ptr& host);
 
-  Metadata& metadata() { return metadata_; }
+  virtual void on_down(const Host::Ptr& host);
 
-  // Asynchronously notify request processors of a token map update
-  void notify_token_map_update();
+  virtual void on_add(const Host::Ptr& host);
 
-  // Asynchronously prepare all queries on a host
-  bool prepare_host(const Host::Ptr& host,
-                    PrepareHostHandler::Callback callback);
+  virtual void on_remove(const Host::Ptr& host);
 
-  static void on_prepare_host_add(const PrepareHostHandler* handler);
-  static void on_prepare_host_up(const PrepareHostHandler* handler);
+  virtual void on_update_token_map(const TokenMap::Ptr& token_map);
 
-  void on_control_connection_ready();
-  void on_control_connection_error(CassError code, const String& message);
-
-  void on_add(Host::Ptr host);
-  void internal_on_add(Host::Ptr host);
-
-  void on_remove(Host::Ptr host);
-
-  void on_up(Host::Ptr host);
-  void internal_on_up(Host::Ptr host);
-
-  void on_down(Host::Ptr host);
-
-  static void on_request_processor_manager_initialize(RequestProcessorManagerInitializer* initializer);
-  void handle_request_processor_manager_initialize(const RequestProcessorManager::Ptr& request_processor_manager,
-                                                   const RequestProcessor::Vec& failures);
+  virtual void on_close(Cluster* cluster);
 
 private:
-  Atomic<State> state_;
-  uv_mutex_t state_mutex_;
+  // Request Processor manager listener methods
 
-  Config config_;
+  virtual void on_pool_up(const Address& address);
+
+  virtual void on_pool_down(const Address& address);
+
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message);
+
+  virtual void on_keyspace_changed(const String& keyspace);
+
+  virtual void on_prepared_metadata_changed(const String& id,
+                                           const PreparedMetadata::Entry::Ptr& entry);
+
+  virtual void on_close(RequestProcessorManager* manager);
+
+private:
+  static void on_initialize(RequestProcessorManagerInitializer* initializer);
+  void handle_initialize(RequestProcessorManagerInitializer* initializer);
+
+private:
   ScopedPtr<Metrics> metrics_;
-  CassError connect_error_code_;
-  String connect_error_message_;
-  String connect_keyspace_;
-  Future::Ptr connect_future_;
-  Future::Ptr close_future_;
-
-  HostMap hosts_;
-  uv_mutex_t hosts_mutex_;
-
   ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
   RequestProcessorManager::Ptr request_processor_manager_;
   ScopedPtr<MPMCQueue<RequestHandler*> > request_queue_;
-
-  ScopedPtr<TokenMap> token_map_;
-  Metadata metadata_;
-  PreparedMetadata prepared_metadata_;
-  ScopedPtr<Random> random_;
-  ControlConnection control_connection_;
-  bool current_host_mark_;
 };
 
 class SessionFuture : public Future {
@@ -204,7 +108,7 @@ public:
   typedef SharedRefPtr<SessionFuture> Ptr;
 
   SessionFuture()
-    : Future(FUTURE_TYPE_SESSION) {}
+    : Future(FUTURE_TYPE_SESSION) { }
 };
 
 } // namespace cass

@@ -16,6 +16,10 @@
 
 #include "host.hpp"
 
+#include "row.hpp"
+#include "value.hpp"
+#include "collection_iterator.hpp"
+
 namespace cass {
 
 void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
@@ -69,6 +73,55 @@ void Host::LatencyTracker::update(uint64_t latency_ns) {
 
 bool VersionNumber::parse(const String& version) {
   return sscanf(version.c_str(), "%d.%d.%d", &major_version_, &minor_version_, &patch_version_) >= 2;
+}
+
+void Host::set(const Row* row) {
+  const Value* v;
+
+  String rack;
+  row->get_string_by_name("rack", &rack);
+
+  String dc;
+  row->get_string_by_name("data_center", &dc);
+
+  String release_version;
+  row->get_string_by_name("release_version", &release_version);
+
+  // TODO: Remove this and listen address from Host
+  // This value is not present in the "system.local" query
+  v = row->get_by_name("peer");
+  if (v != NULL) {
+    Address listen_address;
+    if (v->decoder().as_inet(v->size(),
+                             address_.port(),
+                             &listen_address)) {
+      listen_address_ = listen_address.to_string();
+    } else {
+      LOG_WARN("Invalid address format for listen address");
+    }
+  }
+
+  rack_ = rack;
+  dc_ = dc;
+
+  VersionNumber server_version;
+  if (server_version.parse(release_version)) {
+    server_version_ = server_version;
+  } else {
+    LOG_WARN("Invalid release version string \"%s\" on host %s",
+             release_version.c_str(),
+             address().to_string().c_str());
+  }
+
+  row->get_string_by_name("partitioner", &partitioner_);
+
+  v = row->get_by_name("tokens");
+  if (v != NULL && v->is_collection()) {
+    CollectionIterator iterator(v);
+    while (iterator.next()) {
+      tokens_.push_back(iterator.value()->to_string());
+    }
+  }
 }
 
 } // namespace cass

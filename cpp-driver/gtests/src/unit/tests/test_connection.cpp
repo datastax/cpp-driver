@@ -167,15 +167,7 @@ TEST_F(ConnectionUnitTest, Keyspace) {
 }
 
 TEST_F(ConnectionUnitTest, Auth) {
-  mockssandra::SimpleRequestHandlerBuilder builder;
-  builder
-      .on(mockssandra::OPCODE_STARTUP)
-      .authenticate("com.datastax.SomeAuthenticator");
-  builder
-      .on(mockssandra::OPCODE_AUTH_RESPONSE)
-      .plaintext_auth("cassandra", "cassandra");
-
-  mockssandra::SimpleCluster cluster(builder.build());
+  mockssandra::SimpleCluster cluster(mockssandra::AuthRequestHandlerBuilder().build());
   cluster.start_all();
 
   State state;
@@ -399,15 +391,7 @@ TEST_F(ConnectionUnitTest, InvalidProtocol) {
 }
 
 TEST_F(ConnectionUnitTest, InvalidAuth) {
-  mockssandra::SimpleRequestHandlerBuilder builder;
-  builder
-      .on(mockssandra::OPCODE_STARTUP)
-      .authenticate("com.datastax.SomeAuthenticator");
-  builder
-      .on(mockssandra::OPCODE_AUTH_RESPONSE)
-      .plaintext_auth("cassandra", "cassandra");
-
-  mockssandra::SimpleCluster cluster(builder.build());
+  mockssandra::SimpleCluster cluster(mockssandra::AuthRequestHandlerBuilder().build());
   cluster.start_all();
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);

@@ -54,7 +54,6 @@ public:
   ConnectionPoolConnector(ConnectionPoolManager* manager,
                           const Address& address,
                           void* data, Callback callback);
-  ~ConnectionPoolConnector();
 
   /**
    * Connect a pool.
@@ -87,8 +86,8 @@ public:
   bool is_keyspace_error() const;
 
 private:
-  static void on_connect(PooledConnector* connector, EventLoop* event_loop);
-  void handle_connect(PooledConnector* connector, EventLoop* event_loop);
+  static void on_connect(PooledConnector* connector);
+  void handle_connect(PooledConnector* connector);
 
 private:
   ConnectionPool::Ptr pool_;
@@ -96,9 +95,8 @@ private:
   void* data_;
   Callback callback_;
 
-  Atomic<size_t> remaining_;
+  size_t remaining_;
 
-  mutable uv_mutex_t lock_;
   PooledConnector::Vec pending_connections_;
   PooledConnector::Ptr critical_error_connector_;
 };

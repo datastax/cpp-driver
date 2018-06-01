@@ -32,10 +32,10 @@ class RequestCallback;
  * Connection settings.
  */
 struct ConnectionSettings {
-  ConnectionSettings()
-    : connect_timeout_ms(5000)
-    , idle_timeout_secs(60)
-    , heartbeat_interval_secs(30) { }
+  /**
+   * Constructor. Initialize with default settings.
+   */
+  ConnectionSettings();
 
   /**
    * Constructor. Initialize connection settings from a config object.
@@ -193,11 +193,13 @@ public:
 
   SocketConnector::SocketError socket_error_code() { return socket_connector_->error_code(); }
   const String& socket_error_message() { return socket_connector_->error_message(); }
+  CassError ssl_error_code() { return socket_connector_->ssl_error_code(); }
 
 private:
   void finish();
 
-  void on_error(ConnectionError code, const String& message); void on_ready_or_set_keyspace();
+  void on_error(ConnectionError code, const String& message);
+  void on_ready_or_set_keyspace();
   void on_ready_or_register_for_events();
   void on_supported(ResponseMessage* response);
 

@@ -22,6 +22,7 @@
 #include "constants.hpp"
 #include "error_response.hpp"
 #include "execute_request.hpp"
+#include "metrics.hpp"
 #include "prepare_request.hpp"
 #include "protocol.hpp"
 #include "response.hpp"
@@ -96,9 +97,8 @@ void PrepareCallback::on_internal_timeout() {
 
 RequestHandler::RequestHandler(const Request::ConstPtr& request,
                                const ResponseFuture::Ptr& future,
-                               const PreparedMetadata& prepared_metadata,
-                               Metrics* metrics /*= NULL*/,
-                               const Address* preferred_address /*= NULL*/)
+                               Metrics* metrics,
+                               const Address* preferred_address)
   : wrapper_(request)
   , future_(future)
   , is_cancelled_(false)
@@ -106,11 +106,14 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request,
   , is_timer_started_(false)
   , timer_thread_id_((uv_thread_t)0)
   , start_time_ns_(uv_hrtime())
-  , prepared_metadata_(prepared_metadata)
-  , metrics_(metrics)
   , listener_(NULL)
   , manager_(NULL)
+  , metrics_(metrics)
   , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) { }
+
+void RequestHandler::set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry) {
+  wrapper_.set_prepared_metadata(entry);
+}
 
 void RequestHandler::init(const ExecutionProfile& profile,
                           ConnectionPoolManager* manager,
@@ -119,7 +122,7 @@ void RequestHandler::init(const ExecutionProfile& profile,
                           RequestListener* listener) {
   manager_ = manager;
   listener_ = listener;
-  wrapper_.init(profile, prepared_metadata_, timestamp_generator);
+  wrapper_.init(profile, timestamp_generator, prepared_metadata_entry_);
 
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
   const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());

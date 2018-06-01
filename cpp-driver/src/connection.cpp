@@ -62,6 +62,15 @@ void HeartbeatCallback::on_internal_timeout() {
   connection_->heartbeat_outstanding_ = false;
 }
 
+/**
+ * A no operation connection listener. This is used if a listener is not set.
+ */
+class NopConnectionListener : public ConnectionListener {
+  virtual void on_close(Connection* connection) { }
+};
+
+static NopConnectionListener nop_listener__;
+
 void ConnectionHandler::on_read(Socket* socket, ssize_t nread, const uv_buf_t* buf) {
   connection_->on_read(buf->base, nread);
   free_buffer(buf);
@@ -95,7 +104,7 @@ Connection::Connection(const Socket::Ptr& socket,
   , stream_manager_(protocol_version)
   , inflight_request_count_(0)
   , response_(Memory::allocate<ResponseMessage>())
-  , listener_(NULL)
+  , listener_(&nop_listener__)
   , protocol_version_(protocol_version)
   , idle_timeout_secs_(idle_timeout_secs)
   , heartbeat_interval_secs_(heartbeat_interval_secs)
@@ -164,6 +173,10 @@ void Connection::close() {
 void Connection::defunct() {
   stop_heartbeats();
   socket_->defunct();
+}
+
+void Connection::set_listener(ConnectionListener* listener) {
+  listener_ = listener ? listener : &nop_listener__;
 }
 
 void Connection::start_heartbeats() {
@@ -252,9 +265,7 @@ void Connection::on_read(const char* buf, size_t size) {
 
       if (response->stream() < 0) {
         if (response->opcode() == CQL_OPCODE_EVENT) {
-          if (listener_) {
-            listener_->on_event(static_cast<EventResponse*>(response->response_body().get()));
-          }
+          listener_->on_event(response->response_body());
         } else {
           LOG_ERROR("Invalid response opcode for event stream: %s",
                     opcode_to_string(response->opcode()).c_str());
@@ -304,9 +315,7 @@ void Connection::on_close() {
   while (!pending_reads_.is_empty()) {
     pending_reads_.pop_front()->on_close();
   }
-  if (listener_) {
-    listener_->on_close(this);
-  }
+  listener_->on_close(this);
   dec_ref();
 }
 

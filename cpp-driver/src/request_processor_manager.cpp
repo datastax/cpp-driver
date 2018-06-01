@@ -19,89 +19,106 @@
 
 namespace cass {
 
-RequestProcessorManagerSettings::RequestProcessorManagerSettings() { }
+class NopRequestProcessorManagerListener : public RequestProcessorManagerListener {
+public:
+  virtual void on_pool_up(const Address& address)  { }
+  virtual void on_pool_down(const Address& address) { }
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message) { }
+  virtual void on_keyspace_changed(const String& keyspace) { }
+  virtual void on_prepared_metadata_changed(const String& id,
+                                           const PreparedMetadata::Entry::Ptr& entry) { }
+  virtual void on_close(RequestProcessorManager* manager) { }
+};
 
-RequestProcessorManagerSettings::RequestProcessorManagerSettings(const Config& config)
-  : connection_pool_manager_settings(config) { }
+NopRequestProcessorManagerListener nop_request_processor_manager_listener__;
 
-RequestProcessorManager::RequestProcessorManager()
-  : current_(0) { }
+RequestProcessorManager::RequestProcessorManager(RequestProcessorManagerListener* listener)
+  : current_(0)
+  , listener_(listener ? listener : &nop_request_processor_manager_listener__) {
+  uv_mutex_init(&mutex_);
+}
+
+RequestProcessorManager::~RequestProcessorManager() {
+  uv_mutex_destroy(&mutex_);
+}
 
 void RequestProcessorManager::close() {
-  internal_close();
-}
-
-void RequestProcessorManager::close_handles() {
-  internal_close_handles();
-}
-
-void RequestProcessorManager::keyspace_update(const String& keyspace) {
-  internal_keyspace_update(keyspace);
-}
-
-void RequestProcessorManager::notify_host_add_async(const Host::Ptr& host) {
-  internal_notify_host_add_async(host);
-}
-
-void RequestProcessorManager::notify_host_remove_async(const Host::Ptr& host) {
-  internal_notify_host_add_async(host);
-}
-
-void RequestProcessorManager::notify_token_map_update_async(const TokenMap* token_map) {
-  internal_notify_token_map_update_async(token_map);
-}
-
-void RequestProcessorManager::notify_request_async() {
-  internal_notify_request_async();
-}
-void RequestProcessorManager::add_request_processor(const RequestProcessor::Ptr& request_processor,
-                                                    Protected) {
-  internal_add_request_processor(request_processor);
-}
-
-void RequestProcessorManager::internal_add_request_processor(const RequestProcessor::Ptr& request_processor) {
-  request_processors_.push_back(request_processor);
-}
-
-void RequestProcessorManager::internal_close() {
-  for (size_t i = 0; i < request_processors_.size(); ++i) {
-    request_processors_[i]->close();
+  ScopedMutex l(&mutex_);
+  for (size_t i = 0; i < processors_.size(); ++i) {
+    processors_[i]->close();
   }
 }
 
-void RequestProcessorManager::internal_close_handles() {
-  for (size_t i = 0; i < request_processors_.size(); ++i) {
-    request_processors_[i]->close_handles();
+void RequestProcessorManager::notify_host_add(const Host::Ptr& host) {
+  ScopedMutex l(&mutex_);
+  for (size_t i = 0; i < processors_.size(); ++i) {
+    processors_[i]->notify_host_add(host);
   }
 }
 
-void RequestProcessorManager::internal_notify_host_add_async(const Host::Ptr& host) {
-  for (size_t i = 0; i < request_processors_.size(); ++i) {
-    request_processors_[i]->notify_host_add_async(host);
+void RequestProcessorManager::notify_host_remove(const Host::Ptr& host) {
+  ScopedMutex l(&mutex_);
+  for (size_t i = 0; i < processors_.size(); ++i) {
+    processors_[i]->notify_host_remove(host);
   }
 }
 
-void RequestProcessorManager::internal_notify_host_remove_async(const Host::Ptr& host) {
-  for (size_t i = 0; i < request_processors_.size(); ++i) {
-    request_processors_[i]->notify_host_remove_async(host);
+void RequestProcessorManager::notify_token_map_changed(const TokenMap::Ptr& token_map) {
+  ScopedMutex l(&mutex_);
+  for (size_t i = 0; i < processors_.size(); ++i) {
+    processors_[i]->notify_token_map_changed(token_map);
   }
 }
 
-void RequestProcessorManager::internal_keyspace_update(const String& keyspace) {
-  for (size_t i = 0; i < request_processors_.size(); ++i) {
-    request_processors_[i]->keyspace_update(keyspace);
+void RequestProcessorManager::notify_request() {
+  ScopedMutex l(&mutex_);
+  size_t index = current_.fetch_add(1) % processors_.size();
+  processors_[index]->notify_request();
+}
+
+void RequestProcessorManager::add_processor(const RequestProcessor::Ptr& processor,
+                                            Protected) {
+  ScopedMutex l(&mutex_);
+  processors_.push_back(processor);
+}
+
+void RequestProcessorManager::notify_closed(RequestProcessor* processor, Protected) {
+  ScopedMutex l(&mutex_);
+  processors_.erase(std::remove(processors_.begin(), processors_.end(), processor),
+                    processors_.end());
+  if (processors_.empty()) {
+    listener_->on_close(this);
   }
 }
 
-void RequestProcessorManager::internal_notify_token_map_update_async(const TokenMap* token_map) {
-  for (size_t i = 0; i < request_processors_.size(); ++i) {
-    request_processors_[i]->notify_token_map_update_async(token_map->clone());
+void RequestProcessorManager::notify_keyspace_changed(const String& keyspace, Protected) {
+  ScopedMutex l(&mutex_);
+  for (size_t i = 0; i < processors_.size(); ++i) {
+    processors_[i]->set_keyspace(keyspace);
   }
 }
 
-void RequestProcessorManager::internal_notify_request_async() {
-  size_t index = current_.fetch_add(1) % request_processors_.size();
-  request_processors_[index]->notify_request_async();
+void RequestProcessorManager::notify_pool_up(const Address& address, Protected) {
+  listener_->on_pool_up(address);
+}
+
+void RequestProcessorManager::notify_pool_down(const Address& address, Protected) {
+  listener_->on_pool_down(address);
+}
+
+void RequestProcessorManager::notify_pool_critical_error(const Address& address,
+                                                         Connector::ConnectionError code,
+                                                         const String& message,
+                                                         Protected) {
+  listener_->on_pool_critical_error(address, code, message);
+}
+
+void RequestProcessorManager::notify_prepared_metadata_changed(const String& id,
+                                                               const PreparedMetadata::Entry::Ptr& entry,
+                                                               Protected) {
+  listener_->on_prepared_metadata_changed(id, entry);
 }
 
 } // namespace cass

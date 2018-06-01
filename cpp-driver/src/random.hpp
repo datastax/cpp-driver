@@ -27,10 +27,12 @@ namespace cass {
 class Random {
 public:
   Random();
+  ~Random();
 
   uint64_t next(uint64_t max);
 
 private:
+  uv_mutex_t mutex_;
   MT19937_64 rng_;
 };
 

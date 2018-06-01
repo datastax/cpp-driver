@@ -17,32 +17,24 @@
 #include "connection_pool_manager_initializer.hpp"
 
 #include "memory.hpp"
-#include "request_queue.hpp"
-#include "scoped_lock.hpp"
 
 namespace cass {
 
-ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(EventLoop* event_loop,
-                                                                   int protocol_version,
+ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(int protocol_version,
                                                                    void* data, Callback callback)
   : data_(data)
   , callback_(callback)
+  , is_cancelled_(false)
   , remaining_(0)
-  , event_loop_(event_loop)
   , protocol_version_(protocol_version)
   , listener_(NULL)
-  , metrics_(NULL) {
-  uv_mutex_init(&lock_);
-}
+  , metrics_(NULL) { }
 
-ConnectionPoolManagerInitializer::~ConnectionPoolManagerInitializer() {
-  uv_mutex_destroy(&lock_);
-}
-
-void ConnectionPoolManagerInitializer::initialize(const AddressVec& addresses) {
+void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
+                                                  const AddressVec& addresses) {
   inc_ref();
-  remaining_.store(addresses.size());
-  manager_.reset(Memory::allocate<ConnectionPoolManager>(event_loop_,
+  remaining_ = addresses.size();
+  manager_.reset(Memory::allocate<ConnectionPoolManager>(loop,
                                                          protocol_version_,
                                                          keyspace_,
                                                          listener_,
@@ -50,11 +42,17 @@ void ConnectionPoolManagerInitializer::initialize(const AddressVec& addresses) {
                                                          settings_));
   for (AddressVec::const_iterator it = addresses.begin(),
        end = addresses.end(); it != end; ++it) {
-    ConnectionPoolConnector::Ptr pool_connector(Memory::allocate<ConnectionPoolConnector>(manager_.get(),
-                                                                                          *it,
-                                                                                          this,
-                                                                                          on_connect));
+    ConnectionPoolConnector::Ptr pool_connector(Memory::allocate<ConnectionPoolConnector>(manager_.get(), *it, this, on_connect));
+    connectors_.push_back(pool_connector);
     pool_connector->connect();
+  }
+}
+
+void ConnectionPoolManagerInitializer::cancel() {
+  is_cancelled_ = true;
+  for (ConnectionPoolConnector::Vec::const_iterator it = connectors_.begin(),
+       end = connectors_.end(); it != end; ++it) {
+    (*it)->cancel();
   }
 }
 
@@ -79,8 +77,11 @@ ConnectionPoolManagerInitializer* ConnectionPoolManagerInitializer::with_setting
 }
 
 ConnectionPoolConnector::Vec ConnectionPoolManagerInitializer::failures() const {
-  ScopedMutex l(&lock_);
   return failures_;
+}
+
+bool ConnectionPoolManagerInitializer::is_cancelled() {
+  return is_cancelled_;
 }
 
 void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_connector) {
@@ -89,17 +90,15 @@ void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_
 }
 
 void ConnectionPoolManagerInitializer::handle_connect(ConnectionPoolConnector* pool_connector) {
-  { // Lock
-    ScopedMutex l(&lock_);
-
-    if (pool_connector->is_ok()) {
-      manager_->add_pool(pool_connector->release_pool(), ConnectionPoolManager::Protected());
-    } else {
-      failures_.push_back(ConnectionPoolConnector::Ptr(pool_connector));
+    if (!is_cancelled_) {
+      if (pool_connector->is_ok()) {
+        manager_->add_pool(pool_connector->release_pool(), ConnectionPoolManager::Protected());
+      } else {
+        failures_.push_back(ConnectionPoolConnector::Ptr(pool_connector));
+      }
     }
-  }
 
-  if (remaining_.fetch_sub(1) - 1 == 0) {
+  if (--remaining_ == 0) {
     callback_(this);
     // If the manager hasn't been released then close it.
     if (manager_) manager_->close();

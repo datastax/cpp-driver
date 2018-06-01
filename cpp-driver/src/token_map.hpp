@@ -19,6 +19,7 @@
 
 #include "host.hpp"
 #include "memory.hpp"
+#include "ref_counted.hpp"
 #include "string.hpp"
 
 namespace cass {
@@ -28,24 +29,25 @@ class Value;
 class ResultResponse;
 class StringRef;
 
-class TokenMap {
+class TokenMap : public RefCounted<TokenMap> {
 public:
-  static TokenMap* from_partitioner(StringRef partitioner);
+  typedef SharedRefPtr<TokenMap> Ptr;
+
+  static TokenMap::Ptr from_partitioner(StringRef partitioner);
 
   virtual ~TokenMap() { }
 
-  virtual void add_host(const Host::Ptr& host, const Value* tokens) = 0;
-  virtual void update_host_and_build(const Host::Ptr& host, const Value* tokens) = 0;
+  virtual void add_host(const Host::Ptr& host) = 0;
+  virtual void update_host_and_build(const Host::Ptr& host) = 0;
   virtual void remove_host_and_build(const Host::Ptr& host) = 0;
-  virtual void clear_tokens_and_hosts() = 0;
 
   virtual void add_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result) = 0;
   virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, const ResultResponse* result) = 0;
   virtual void drop_keyspace(const String& keyspace_name) = 0;
-  virtual void clear_replicas_and_strategies() = 0;
 
   virtual void build() = 0;
-  virtual TokenMap* clone() const = 0;
+
+  virtual TokenMap::Ptr copy() const = 0;
 
   virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
                                                  const String& routing_key) const = 0;

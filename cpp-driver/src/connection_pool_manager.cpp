@@ -19,33 +19,50 @@
 #include "config.hpp"
 #include "memory.hpp"
 #include "scoped_lock.hpp"
+#include "utils.hpp"
 
 namespace cass {
+
+class NopConnectionPoolManagerListener : public ConnectionPoolManagerListener {
+public:
+  virtual void on_pool_up(const Address& address) { }
+
+  virtual void on_pool_down(const Address& address) { }
+
+  virtual void on_pool_critical_error(const Address& address,
+                                 Connector::ConnectionError code,
+                                 const String& message) { }
+
+  virtual void on_close(ConnectionPoolManager* manager) { }
+};
+
+static NopConnectionPoolManagerListener nop_connection_pool_manager_listener__;
+
+ConnectionPoolManagerSettings::ConnectionPoolManagerSettings()
+  : num_connections_per_host(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
+  , reconnect_wait_time_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS) { }
 
 ConnectionPoolManagerSettings::ConnectionPoolManagerSettings(const Config& config)
   : connection_settings(config)
   , num_connections_per_host(config.core_connections_per_host())
-  , reconnect_wait_time_ms(config.reconnect_wait_time_ms())
-  , queue_size_io(config.queue_size_io()) { }
+  , reconnect_wait_time_ms(config.reconnect_wait_time_ms()) { }
 
-ConnectionPoolManager::ConnectionPoolManager(EventLoop* event_loop,
+ConnectionPoolManager::ConnectionPoolManager(uv_loop_t* loop,
                                              int protocol_version,
                                              const String& keyspace,
                                              ConnectionPoolManagerListener* listener,
                                              Metrics* metrics,
                                              const ConnectionPoolManagerSettings& settings)
-  : event_loop_(event_loop)
+  : loop_(loop)
   , protocol_version_(protocol_version)
-  , listener_(listener)
   , settings_(settings)
   , close_state_(CLOSE_STATE_OPEN)
   , keyspace_(keyspace)
   , metrics_(metrics) {
   inc_ref(); // Reference for the lifetime of the connection pools
   uv_mutex_init(&keyspace_mutex_);
-  pools_.set_empty_key(Address::EMPTY_KEY);
-  pools_.set_deleted_key(Address::DELETED_KEY);
-  request_queue_.init(event_loop_, settings_.queue_size_io);
+  set_pointer_keys(to_flush_);
+  set_listener(listener);
 }
 
 ConnectionPoolManager::~ConnectionPoolManager() {
@@ -58,6 +75,15 @@ PooledConnection::Ptr ConnectionPoolManager::find_least_busy(const Address& addr
     return PooledConnection::Ptr();
   }
   return it->second->find_least_busy();
+}
+
+void ConnectionPoolManager::flush() {
+  for (DenseHashSet<ConnectionPool*>::const_iterator it = to_flush_.begin(),
+       end = to_flush_.end(); it != end; ++it) {
+    (*it)->flush();
+  }
+  to_flush_.clear();
+
 }
 
 AddressVec ConnectionPoolManager::available() const {
@@ -113,6 +139,10 @@ void ConnectionPoolManager::close() {
   maybe_closed();
 }
 
+void ConnectionPoolManager::set_listener(ConnectionPoolManagerListener* listener) {
+  listener_ = listener ? listener : &nop_connection_pool_manager_listener__;
+}
+
 String ConnectionPoolManager::keyspace() const {
   ScopedMutex l(&keyspace_mutex_);
   return keyspace_;
@@ -129,31 +159,30 @@ void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool, Protected)
 
 void ConnectionPoolManager::notify_closed(ConnectionPool* pool, bool should_notify_down, Protected) {
   pools_.erase(pool->address());
-  if (should_notify_down && listener_ != NULL) {
-    listener_->on_down(pool->address());
+  to_flush_.erase(pool);
+  if (should_notify_down) {
+    listener_->on_pool_down(pool->address());
   }
   maybe_closed();
 }
 
 void ConnectionPoolManager::notify_up(ConnectionPool* pool, Protected) {
-  if (listener_ != NULL) {
-    listener_->on_up(pool->address());
-  }
+  listener_->on_pool_up(pool->address());
 }
 
 void ConnectionPoolManager::notify_down(ConnectionPool* pool, Protected) {
-  if (listener_ != NULL) {
-    listener_->on_down(pool->address());
-  }
+  listener_->on_pool_down(pool->address());
 }
 
 void ConnectionPoolManager::notify_critical_error(ConnectionPool* pool,
                                                   Connector::ConnectionError code,
                                                   const String& message,
                                                   Protected) {
-  if (listener_ != NULL) {
-    listener_->on_critical_error(pool->address(), code, message);
-  }
+  listener_->on_pool_critical_error(pool->address(), code, message);
+}
+
+void ConnectionPoolManager::requires_flush(ConnectionPool* pool, ConnectionPoolManager::Protected) {
+  to_flush_.insert(pool);
 }
 
 void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
@@ -166,9 +195,7 @@ void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
 void ConnectionPoolManager::maybe_closed() {
   if (close_state_ == CLOSE_STATE_CLOSING && pools_.empty()) {
     close_state_ = CLOSE_STATE_CLOSED;
-    if (listener_ != NULL) {
-      listener_->on_close();
-    }
+    listener_->on_close(this);
     dec_ref();
   }
 }
@@ -183,10 +210,10 @@ void ConnectionPoolManager::handle_connect(ConnectionPoolConnector* pool_connect
                        pending_pools_.end());
   if (pool_connector->is_ok()) {
     internal_add_pool(pool_connector->release_pool());
-  } else if (listener_) {
-      listener_->on_critical_error(pool_connector->address(),
-                                   pool_connector->error_code(),
-                                   pool_connector->error_message());
+  } else {
+    listener_->on_pool_critical_error(pool_connector->address(),
+                                      pool_connector->error_code(),
+                                      pool_connector->error_message());
   }
 }
 

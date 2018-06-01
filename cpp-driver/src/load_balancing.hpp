@@ -73,7 +73,9 @@ public:
   }
 };
 
-class LoadBalancingPolicy : public Host::StateListener, public RefCounted<LoadBalancingPolicy> {
+class LoadBalancingPolicy
+    : public HostListener
+    , public RefCounted<LoadBalancingPolicy> {
 public:
   typedef SharedRefPtr<LoadBalancingPolicy> Ptr;
   typedef Vector<Ptr> Vec;

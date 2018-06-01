@@ -63,9 +63,11 @@ public:
     , request_timeout_ms_(request_timeout_ms)
     , timestamp_(CASS_INT64_MIN) { }
 
+  void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
+
   void init(const ExecutionProfile& profile,
-            const PreparedMetadata& prepared_metadata,
-            TimestampGenerator* timestamp_generator);
+            TimestampGenerator* timestamp_generator,
+            const PreparedMetadata::Entry::Ptr& entry);
 
   const Request::ConstPtr& request() const {
     return request_;
