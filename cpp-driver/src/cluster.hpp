@@ -121,14 +121,6 @@ struct ClusterSettings {
   ClusterSettings(const Config& config);
 
   /**
-   * Determine if host is ignored by load balancing policies.
-   *
-   * @param host A host
-   * @return true if the host is ignored, otherwise false.
-   */
-  bool is_host_ignored(const Host::Ptr& host) const;
-
-  /**
    * The settings for the underlying control connection.
    */
   ControlConnectionSettings control_connection_settings;
@@ -272,6 +264,9 @@ private:
                         const String& partitioner,
                         const ControlConnectionSchema& schema);
 
+  bool is_host_ignored(const Host::Ptr& host) const;
+  bool is_host_ignored(const LoadBalancingPolicy::Vec& policies, const Host::Ptr& host) const;
+
   void schedule_reconnect();
 
   static void on_schedule_reconnect(Timer* timer);
@@ -324,6 +319,7 @@ private:
   ClusterListener* const listener_;
   EventLoop* const event_loop_;
   const LoadBalancingPolicy::Ptr load_balancing_policy_;
+  LoadBalancingPolicy::Vec load_balancing_policies_;
   const ClusterSettings settings_;
   ScopedPtr<QueryPlan> query_plan_;
   bool is_closing_;

@@ -152,16 +152,6 @@ ClusterSettings::ClusterSettings(const Config& config)
   , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
   , max_prepares_per_flush(config.max_requests_per_flush()) { }
 
-bool ClusterSettings::is_host_ignored(const Host::Ptr& host) const {
-  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_polices.begin(),
-       end = load_balancing_polices.end(); it != end; ++it) {
-    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-      return false;
-    }
-  }
-  return true;
-}
-
 Cluster::Cluster(ControlConnector* connector,
                  ClusterListener* listener,
                  EventLoop* event_loop,
@@ -179,7 +169,7 @@ Cluster::Cluster(ControlConnector* connector,
   const HostMap& hosts(connector->hosts());
   for (HostMap::const_iterator it = hosts.begin(),
        end = hosts.end(); it != end; ++it) {
-    if (!settings_.is_host_ignored(it->second)) {
+    if (!is_host_ignored(settings.load_balancing_polices, it->second)) {
       hosts_[it->first] = it->second;
     }
   }
@@ -189,6 +179,13 @@ Cluster::Cluster(ControlConnector* connector,
 
   load_balancing_policy_->init(connected_host_, hosts_, random);
   query_plan_.reset(load_balancing_policy_->new_query_plan("", NULL, NULL));
+
+  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
+       end = settings_.load_balancing_polices.end(); it != end; ++it) {
+    LoadBalancingPolicy::Ptr policy((*it)->new_instance());
+    policy->register_handles(event_loop_->loop());
+    load_balancing_policies_.push_back(policy);
+  }
 
   update_schema(connector->schema());
   update_token_map(connector->hosts(),
@@ -233,7 +230,7 @@ void Cluster::update_hosts(const HostMap& hosts) {
 
   for (HostMap::const_iterator it = hosts.begin(),
        end = hosts.end(); it != end; ++it) {
-    if (!settings_.is_host_ignored(it->second)) {
+    if (!is_host_ignored(it->second)) {
       HostMap::iterator find_it = existing.find(it->first);
       if (find_it != existing.end()) {
         existing.erase(find_it); // Already exists mark as visited
@@ -305,6 +302,21 @@ void Cluster::update_token_map(const HostMap& hosts,
     }
     token_map_->build();
   }
+}
+
+bool Cluster::is_host_ignored(const Host::Ptr& host) const {
+  return is_host_ignored(load_balancing_policies_, host);
+}
+
+bool Cluster::is_host_ignored(const LoadBalancingPolicy::Vec& policies,
+                              const Host::Ptr& host) const {
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
+       end = policies.end(); it != end; ++it) {
+    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void Cluster::schedule_reconnect() {
@@ -395,7 +407,7 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
 
   Host::Ptr host(it->second);
 
-  if (settings_.is_host_ignored(host)) {
+  if (is_host_ignored(host)) {
     return; // Ignore host
   }
 
@@ -459,7 +471,7 @@ void Cluster::notify_add(const Host::Ptr& host) {
     listener_->on_remove(it->second);
   }
 
-  if (settings_.is_host_ignored(host)) {
+  if (is_host_ignored(host)) {
     return; // Ignore host
   }
 
@@ -621,6 +633,10 @@ void Cluster::on_close(ControlConnection* connection) {
              connection_->address_string().c_str());
     schedule_reconnect();
   } else {
+    for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+         end = load_balancing_policies_.end(); it != end; ++it) {
+      (*it)->close_handles();
+    }
     listener_->on_close(this);
     dec_ref();
   }

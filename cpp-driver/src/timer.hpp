@@ -30,47 +30,68 @@ public:
 
   Timer()
     : handle_(NULL)
+    , state_(CLOSED)
     , data_(NULL) { }
 
   ~Timer() {
     close_handle();
   }
 
-  uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
-  void* data() const { return data_; }
-
-  bool is_running() const {
-    if (handle_ == NULL) return false;
-    return uv_is_active(reinterpret_cast<uv_handle_t*>(handle_)) != 0;
-  }
-
-  void start(uv_loop_t* loop, uint64_t timeout, void* data,
-             Callback cb) {
+  int start(uv_loop_t* loop, uint64_t timeout, void* data, Callback callback) {
+    int rc = 0;
     if (handle_ == NULL) {
       handle_ = Memory::allocate<uv_timer_t>();
+      handle_->loop = NULL;
       handle_->data = this;
-      uv_timer_init(loop, handle_);
+    }
+    if (state_ == CLOSED) {
+      rc = uv_timer_init(loop, handle_);
+      if (rc != 0) return rc;
+      state_ = STOPPED;
+    }
+    if (state_ == STOPPED) {
+      rc = uv_timer_start(handle_, on_timeout, timeout, 0);
+      if (rc != 0) return rc;
+      state_ = STARTED;
     }
     data_ = data;
-    cb_ = cb;
-    uv_timer_start(handle_, on_timeout, timeout, 0);
+    callback_ = callback;
+    return 0;
   }
 
   void stop() {
-    close_handle();
+    if (state_ == STARTED) {
+      state_ = STOPPED;
+      uv_timer_stop(handle_);
+    }
   }
 
   void close_handle() {
-    if (handle_ == NULL) return;
-    // This also stops the timer
-    uv_close(reinterpret_cast<uv_handle_t*>(handle_), Timer::on_close);
-    handle_ = NULL;
+    if (handle_ != NULL) {
+      if (state_ == CLOSED) { // The handle was allocate, but initialization failed.
+        Memory::deallocate(handle_);
+      } else { // If initialized or started then close the handle properly.
+        uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
+      }
+      state_ = CLOSED;
+      handle_ = NULL;
+    }
   }
 
+public:
+  bool is_running() const { return state_ == STARTED; }
+  uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
+  void* data() const { return data_; }
+
+private:
   static void on_timeout(uv_timer_t* handle) {
     Timer* timer = static_cast<Timer*>(handle->data);
-    timer->close_handle();
-    timer->cb_(timer);
+    timer->handle_timeout();
+  }
+
+  void handle_timeout() {
+    state_ = STOPPED;
+    callback_(this);
   }
 
   static void on_close(uv_handle_t* handle) {
@@ -78,9 +99,17 @@ public:
   }
 
 private:
+  enum State {
+    CLOSED,
+    STOPPED,
+    STARTED
+  };
+
+private:
   uv_timer_t* handle_;
+  State state_;
   void* data_;
-  Callback cb_;
+  Callback callback_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Timer);

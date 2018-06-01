@@ -61,8 +61,6 @@ public:
                    void* data,
                    Callback callback);
 
-  ~ClusterConnector();
-
   /**
    * Set the cluster listener to use for handle cluster events.
    *
