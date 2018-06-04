@@ -17,6 +17,7 @@
 #ifndef __CASS_PREPARE_HPP_INCLUDED__
 #define __CASS_PREPARE_HPP_INCLUDED__
 
+#include "callback.hpp"
 #include "macros.hpp"
 #include "memory.hpp"
 
@@ -30,12 +31,11 @@ namespace cass {
  */
 class Prepare {
 public:
-  typedef void (*Callback)(Prepare*);
+  typedef cass::Callback<void, Prepare*> Callback;
 
   Prepare()
     : handle_(NULL)
-    , state_(CLOSED)
-    , data_(NULL) { }
+    , state_(CLOSED) { }
 
   ~Prepare() {
     close_handle();
@@ -45,10 +45,9 @@ public:
    * Start the prepare handle.
    *
    * @param loop The event loop that will process the handle.
-   * @param data User data that's pass to the callback.
    * @param callback A callback that handles prepare events.
    */
-  int start(uv_loop_t* loop, void* data, Callback callback) {
+  int start(uv_loop_t* loop, const Callback& callback) {
     int rc = 0;
     if (handle_ == NULL) {
       handle_ = Memory::allocate<uv_prepare_t>();
@@ -65,7 +64,6 @@ public:
       if (rc != 0) return rc;
       state_ = STARTED;
     }
-    data_ = data;
     callback_ = callback;
     return 0;
   }
@@ -98,7 +96,6 @@ public:
 public:
   bool is_running() const { return state_ == STARTED; }
   uv_loop_t* loop() {  return handle_ ? handle_->loop : NULL;  }
-  void* data() const { return data_; }
 
 private:
   static void on_prepare(uv_prepare_t* handle) {
@@ -120,7 +117,6 @@ private:
 private:
   uv_prepare_t* handle_;
   State state_;
-  void* data_;
   Callback callback_;
 
 private:

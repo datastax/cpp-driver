@@ -20,6 +20,7 @@
 #include <uv.h>
 
 #include "address.hpp"
+#include "callback.hpp"
 #include "memory.hpp"
 #include "ref_counted.hpp"
 
@@ -32,7 +33,7 @@ class TcpConnector : public RefCounted<TcpConnector> {
 public:
   typedef SharedRefPtr<TcpConnector> Ptr;
 
-  typedef void (*Callback)(TcpConnector*);
+  typedef cass::Callback<void, TcpConnector*> Callback;
 
   enum Status {
     NEW,
@@ -50,8 +51,6 @@ public:
    */
   TcpConnector(const Address& address)
       : address_(address)
-      , data_(NULL)
-      , callback_(NULL)
       , status_(NEW)
       , uv_status_(-1) {
     req_.data = this;
@@ -61,16 +60,14 @@ public:
    * Connect the given TCP handle.
    *
    * @param handle The handle to connect.
-   * @param data User data that's pass to the callback.
    * @param callback A callback that's called when the handle is connected or
    * an error occurs.
    */
-  void connect(uv_tcp_t* handle, void* data, Callback callback) {
+  void connect(uv_tcp_t* handle, const Callback& callback) {
     int rc = 0;
 
     inc_ref(); // For the event loop
 
-    data_ = data;
     callback_ = callback;
     status_ = CONNECTING;
 
@@ -95,7 +92,6 @@ public:
 
 public:
   uv_loop_t* loop() { return req_.handle->loop;  }
-  void* data() { return data_; }
 
   bool is_success() { return status_ == SUCCESS; }
   bool is_canceled() { return status_ == CANCELED; }
@@ -124,7 +120,6 @@ private:
 private:
   uv_connect_t req_;
   Address address_;
-  void* data_;
   Callback callback_;
   Status status_;
   int uv_status_;

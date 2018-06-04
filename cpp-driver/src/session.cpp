@@ -278,8 +278,7 @@ void Session::on_connect(const Host::Ptr& connected_host,
         Memory::allocate<RequestProcessorManagerInitializer>(connected_host,
                                                              protocol_version,
                                                              hosts,
-                                                             this,
-                                                             on_initialize));
+                                                             bind_member_func(&Session::on_initialize, this)));
 
   initializer
       ->with_settings(RequestProcessorSettings(config()))
@@ -342,11 +341,6 @@ void Session::on_close(RequestProcessorManager* manager) {
 }
 
 void Session::on_initialize(RequestProcessorManagerInitializer* initializer) {
-  Session* session = static_cast<Session*>(initializer->data());
-  session->handle_initialize(initializer);
-}
-
-void Session::handle_initialize(RequestProcessorManagerInitializer* initializer) {
   const RequestProcessorInitializer::Vec& failures = initializer->failures();
 
   if (!failures.empty()) {

@@ -95,26 +95,22 @@ public:
     mockssandra::SimpleClusterTest::TearDown();
   }
 
-  static void on_connection_connected(Connector* connector) {
+  static void on_connection_connected(Connector* connector, State* state) {
     ASSERT_TRUE(connector->is_ok());
-    State* state = static_cast<State*>(connector->data());
     state->status = STATUS_CONNECTED;
     state->connection = connector->release_connection();
     state->connection->start_heartbeats();
     state->connection->write_and_flush(RequestCallback::Ptr(Memory::allocate<RequestCallback>(state->connection.get(), state)));
   }
 
-  static void on_connection_error_code(Connector* connector) {
-    Connector::ConnectionError *error_code =
-        static_cast<Connector::ConnectionError*>(connector->data());
+  static void on_connection_error_code(Connector* connector, Connector::ConnectionError* error_code) {
     if (!connector->is_ok()) {
       *error_code = connector->error_code();
     }
   }
 
-  static void on_connection_close(Connector* connector) {
+  static void on_connection_close(Connector* connector, bool* is_closed) {
     if (connector->error_code() == Connector::CONNECTION_ERROR_CLOSE) {
-      bool* is_closed = static_cast<bool*>(connector->data());
       *is_closed = true;
     }
   }
@@ -130,8 +126,7 @@ TEST_F(ConnectionUnitTest, Simple) {
   State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&state),
-                                                       on_connection_connected));
+                                                       bind_func(on_connection_connected, &state)));
 
   connector->connect(loop());
 
@@ -152,8 +147,7 @@ TEST_F(ConnectionUnitTest, Keyspace) {
   State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&state),
-                                                       on_connection_connected));
+                                                       bind_func(on_connection_connected, &state)));
 
   connector
       ->with_keyspace("foo")
@@ -173,8 +167,7 @@ TEST_F(ConnectionUnitTest, Auth) {
   State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&state),
-                                                       on_connection_connected));
+                                                       bind_func(on_connection_connected, &state)));
 
   ConnectionSettings settings;
   settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
@@ -196,8 +189,7 @@ TEST_F(ConnectionUnitTest, Ssl) {
   State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&state),
-                                                       on_connection_connected));
+                                                       bind_func(on_connection_connected, &state)));
   connector
       ->with_settings(settings)
       ->connect(loop());
@@ -213,8 +205,7 @@ TEST_F(ConnectionUnitTest, Refused) {
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&error_code),
-                                                       on_connection_error_code));
+                                                       bind_func(on_connection_error_code, &error_code)));
   connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
@@ -232,8 +223,7 @@ TEST_F(ConnectionUnitTest, Close) {
   for (size_t i = 0; i < 10; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
-                                                         static_cast<void*>(&is_closed),
-                                                         on_connection_close));
+                                                         bind_func(on_connection_close, &is_closed)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -255,8 +245,7 @@ TEST_F(ConnectionUnitTest, SslClose) {
   for (size_t i = 0; i < 10; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
-                                                         static_cast<void*>(&is_closed),
-                                                         on_connection_close));
+                                                         bind_func(on_connection_close, &is_closed)));
     connector
         ->with_settings(settings)
         ->connect(loop());
@@ -277,8 +266,7 @@ TEST_F(ConnectionUnitTest, Cancel) {
   for (size_t i = 0; i < 10; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
-                                                         static_cast<void*>(&error_code),
-                                                         on_connection_error_code));
+                                                         bind_func(on_connection_error_code, &error_code)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -306,8 +294,7 @@ TEST_F(ConnectionUnitTest, SslCancel) {
   for (size_t i = 0; i < 10; ++i) {
     Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                          PROTOCOL_VERSION,
-                                                         static_cast<void*>(&error_code),
-                                                         on_connection_error_code));
+                                                         bind_func(on_connection_error_code, &error_code)));
     connector
         ->with_settings(settings)
         ->connect(loop());
@@ -336,8 +323,7 @@ TEST_F(ConnectionUnitTest, Timeout) {
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&error_code),
-                                                       on_connection_error_code));
+                                                       bind_func(on_connection_error_code, &error_code)));
 
   ConnectionSettings settings;
   settings.connect_timeout_ms = 200;
@@ -363,8 +349,7 @@ TEST_F(ConnectionUnitTest, InvalidKeyspace) {
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&error_code),
-                                                       on_connection_error_code));
+                                                       bind_func(on_connection_error_code, &error_code)));
   connector
       ->with_keyspace("invalid")
       ->connect(loop());
@@ -380,8 +365,7 @@ TEST_F(ConnectionUnitTest, InvalidProtocol) {
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        0x7F, // Invalid protocol version
-                                                       static_cast<void*>(&error_code),
-                                                       on_connection_error_code));
+                                                       bind_func(on_connection_error_code, &error_code)));
   connector
       ->connect(loop());
 
@@ -397,8 +381,7 @@ TEST_F(ConnectionUnitTest, InvalidAuth) {
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&error_code),
-                                                       on_connection_error_code));
+                                                       bind_func(on_connection_error_code, &error_code)));
 
   ConnectionSettings settings;
   settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
@@ -418,8 +401,7 @@ TEST_F(ConnectionUnitTest, InvalidNoSsl) {
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&error_code),
-                                                       on_connection_error_code));
+                                                       bind_func(on_connection_error_code, &error_code)));
 
   SslContext::Ptr ssl_context(SslContextFactory::create());
 
@@ -443,8 +425,7 @@ TEST_F(ConnectionUnitTest, InvalidSsl) {
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
                                                        PROTOCOL_VERSION,
-                                                       static_cast<void*>(&error_code),
-                                                       on_connection_error_code));
+                                                       bind_func(on_connection_error_code, &error_code)));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 

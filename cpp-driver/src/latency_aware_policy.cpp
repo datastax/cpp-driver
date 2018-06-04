@@ -37,10 +37,8 @@ void LatencyAwarePolicy::init(const Host::Ptr& connected_host,
 }
 
 void LatencyAwarePolicy::register_handles(uv_loop_t* loop) {
-  timer_.start(loop,
-               settings_.update_rate_ms,
-               this,
-               on_timer);
+  timer_.start(loop, settings_.update_rate_ms,
+               bind_member_func(&LatencyAwarePolicy::on_timer, this));
 }
 
 void LatencyAwarePolicy::close_handles() {
@@ -77,7 +75,7 @@ void LatencyAwarePolicy::on_down(const Host::Ptr& host) {
   ChainedLoadBalancingPolicy::on_down(host);
 }
 
-void LatencyAwarePolicy::calculate_min_average() {
+void LatencyAwarePolicy::on_timer(Timer* timer) {
   const CopyOnWriteHostVec& hosts(hosts_);
 
   int64_t new_min_average = CASS_INT64_MAX;
@@ -97,11 +95,6 @@ void LatencyAwarePolicy::calculate_min_average() {
     LOG_TRACE("Calculated new minimum: %f", static_cast<double>(new_min_average) / 1e6);
     min_average_.store(new_min_average);
   }
-}
-
-void LatencyAwarePolicy::on_timer(Timer* timer) {
-  LatencyAwarePolicy* policy = static_cast<LatencyAwarePolicy*>(timer->data());
-  policy->calculate_min_average();
 }
 
 Host::Ptr LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {

@@ -18,6 +18,7 @@
 #define __CASS_REQUEST_PROCESSOR_INITIALIZER_HPP_INCLUDED__
 
 #include "atomic.hpp"
+#include "callback.hpp"
 #include "connection_pool_manager_initializer.hpp"
 #include "ref_counted.hpp"
 #include "request_processor.hpp"
@@ -40,7 +41,7 @@ class RequestProcessorInitializer : public RefCounted<RequestProcessorInitialize
 public:
   typedef SharedRefPtr<RequestProcessorInitializer> Ptr;
   typedef Vector<Ptr> Vec;
-  typedef void (*Callback)(RequestProcessorInitializer*);
+  typedef cass::Callback<void, RequestProcessorInitializer*> Callback;
 
   enum RequestProcessorError {
     REQUEST_PROCESSOR_OK,
@@ -57,7 +58,6 @@ public:
    * @param protocol_version The highest negotiated protocol for the cluster.
    * @param hosts A mapping of available hosts in the cluster.
    * @param token_map A token map.
-   * @param data User data that is available from the callback.
    * @param callback A callback that is called when the processor is initialized
    * or if an error occurred.
    */
@@ -66,7 +66,7 @@ public:
                               int protocol_version,
                               const HostMap& hosts,
                               const TokenMap::Ptr& token_map,
-                              void* data, Callback callback);
+                              const Callback& callback);
   ~RequestProcessorInitializer();
 
   /**
@@ -118,7 +118,6 @@ public:
   RequestProcessor::Ptr release_processor();
 
 public:
-  void* data() { return data_; }
   RequestProcessorError error_code() const { return error_code_; }
   const String& error_message() const { return error_message_; }
 
@@ -132,8 +131,7 @@ private:
   void internal_intialize();
 
 private:
-  static void on_initialize(ConnectionPoolManagerInitializer* initializer);
-  void handle_initialize(ConnectionPoolManagerInitializer* initializer);
+  void on_initialize(ConnectionPoolManagerInitializer* initializer);
 
 private:
   uv_mutex_t mutex_;
@@ -156,7 +154,6 @@ private:
   RequestProcessorError error_code_;
   String error_message_;
 
-  void* data_;
   Callback callback_;
 
   Atomic<size_t> remaining_;

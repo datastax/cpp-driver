@@ -17,6 +17,7 @@
 #ifndef __CASS_TIMER_HPP_INCLUDED__
 #define __CASS_TIMER_HPP_INCLUDED__
 
+#include "callback.hpp"
 #include "macros.hpp"
 #include "memory.hpp"
 
@@ -26,18 +27,17 @@ namespace cass {
 
 class Timer {
 public:
-  typedef void (*Callback)(Timer*);
+  typedef cass::Callback<void, Timer*> Callback;
 
   Timer()
     : handle_(NULL)
-    , state_(CLOSED)
-    , data_(NULL) { }
+    , state_(CLOSED) { }
 
   ~Timer() {
     close_handle();
   }
 
-  int start(uv_loop_t* loop, uint64_t timeout, void* data, Callback callback) {
+  int start(uv_loop_t* loop, uint64_t timeout, const Callback& callback) {
     int rc = 0;
     if (handle_ == NULL) {
       handle_ = Memory::allocate<uv_timer_t>();
@@ -54,7 +54,6 @@ public:
       if (rc != 0) return rc;
       state_ = STARTED;
     }
-    data_ = data;
     callback_ = callback;
     return 0;
   }
@@ -81,7 +80,6 @@ public:
 public:
   bool is_running() const { return state_ == STARTED; }
   uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
-  void* data() const { return data_; }
 
 private:
   static void on_timeout(uv_timer_t* handle) {
@@ -108,7 +106,6 @@ private:
 private:
   uv_timer_t* handle_;
   State state_;
-  void* data_;
   Callback callback_;
 
 private:

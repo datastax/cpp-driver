@@ -78,10 +78,10 @@ void SessionBase::connect(const Config& config,
     random_.reset();
   }
 
-  cluster_connector_.reset(Memory::allocate<ClusterConnector>(config_.contact_points(),
-                                                              config_.protocol_version(),
-                                                              this,
-                                                              on_initialize));
+  cluster_connector_.reset(
+        Memory::allocate<ClusterConnector>(config_.contact_points(),
+                                           config_.protocol_version(),
+                                           bind_member_func(&SessionBase::on_initialize, this)));
 
   cluster_connector_
       ->with_listener(this)
@@ -147,11 +147,6 @@ void SessionBase::on_close(Cluster* cluster) {
 }
 
 void SessionBase::on_initialize(ClusterConnector* connector) {
-  SessionBase* session = static_cast<SessionBase*>(connector->data());
-  session->handle_initialize(connector);
-}
-
-void SessionBase::handle_initialize(ClusterConnector* connector) {
   if (connector->is_ok()) {
     cluster_ = connector->release_cluster();
     on_connect(cluster_->connected_host(),

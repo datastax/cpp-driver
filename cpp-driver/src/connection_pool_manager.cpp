@@ -112,8 +112,7 @@ void ConnectionPoolManager::add(const Address& address) {
   ConnectionPoolConnector::Ptr connector(
         Memory::allocate<ConnectionPoolConnector>(this,
                                                   address,
-                                                  this,
-                                                  on_connect));
+                                                  bind_member_func(&ConnectionPoolManager::on_connect, this)));
   pending_pools_.push_back(connector);
   connector->connect();
 }
@@ -129,6 +128,9 @@ void ConnectionPoolManager::remove(const Address& address) {
 void ConnectionPoolManager::close() {
   if (close_state_ == CLOSE_STATE_OPEN) {
     close_state_ = CLOSE_STATE_CLOSING;
+    if (maybe_closed()) {
+      return;
+    }
     for (ConnectionPool::Map::iterator it = pools_.begin(),
          end = pools_.end(); it != end; ++it) {
       it->second->close();
@@ -139,7 +141,6 @@ void ConnectionPoolManager::close() {
       (*it)->cancel();
     }
   }
-  maybe_closed();
 }
 
 void ConnectionPoolManager::set_listener(ConnectionPoolManagerListener* listener) {
@@ -195,20 +196,17 @@ void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
 
 // This must be the last call in a function because it can potentially
 // deallocate the manager.
-void ConnectionPoolManager::maybe_closed() {
+bool ConnectionPoolManager::maybe_closed() {
   if (close_state_ == CLOSE_STATE_CLOSING && pools_.empty()) {
     close_state_ = CLOSE_STATE_CLOSED;
     listener_->on_close(this);
     dec_ref();
+    return true;
   }
+  return false;
 }
 
 void ConnectionPoolManager::on_connect(ConnectionPoolConnector* pool_connector) {
-  ConnectionPoolManager* manager = static_cast<ConnectionPoolManager*>(pool_connector->data());
-  manager->handle_connect(pool_connector);
-}
-
-void ConnectionPoolManager::handle_connect(ConnectionPoolConnector* pool_connector) {
   pending_pools_.erase(std::remove(pending_pools_.begin(), pending_pools_.end(), pool_connector),
                        pending_pools_.end());
   if (pool_connector->is_ok()) {

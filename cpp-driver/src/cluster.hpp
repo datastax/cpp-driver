@@ -269,11 +269,10 @@ private:
 
   void schedule_reconnect();
 
-  static void on_schedule_reconnect(Timer* timer);
+  void on_schedule_reconnect(Timer* timer);
   void handle_schedule_reconnect();
 
-  static void on_reconnect(ControlConnector* connector);
-  void handle_reconnect(ControlConnector* connector);
+  void on_reconnect(ControlConnector* connector);
 
 private:
   void internal_close();
@@ -290,10 +289,10 @@ private:
 
 private:
   bool prepare_host(const Host::Ptr& host,
-                    PrepareHostHandler::Callback callback);
+                    const  PrepareHostHandler::Callback& callback);
 
-  static void on_prepare_host_add(const PrepareHostHandler* handler);
-  static void on_prepare_host_up(const PrepareHostHandler* handler);
+  void on_prepare_host_add(const PrepareHostHandler* handler);
+  void on_prepare_host_up(const PrepareHostHandler* handler);
 
 private:
   virtual void on_update_schema(SchemaType type,

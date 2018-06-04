@@ -19,6 +19,7 @@
 
 #include "address.hpp"
 #include "atomic.hpp"
+#include "callback.hpp"
 #include "connection_pool.hpp"
 #include "pooled_connector.hpp"
 #include "ref_counted.hpp"
@@ -40,20 +41,19 @@ public:
   typedef SharedRefPtr<ConnectionPoolConnector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef void (*Callback)(ConnectionPoolConnector*);
+  typedef cass::Callback<void, ConnectionPoolConnector*> Callback;
 
   /**
    * Constructor
    *
    * @param manager The manager for the pool.
    * @param address The address to connect to.
-   * @param data User data that's passed to the callback.
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
   ConnectionPoolConnector(ConnectionPoolManager* manager,
                           const Address& address,
-                          void* data, Callback callback);
+                          const Callback& callback);
 
   /**
    * Connect a pool.
@@ -76,7 +76,6 @@ public:
 
 public:
   const Address& address() const { return pool_->address(); }
-  void* data() { return data_; }
 
   Connector::ConnectionError error_code() const;
   String error_message() const;
@@ -86,15 +85,11 @@ public:
   bool is_keyspace_error() const;
 
 private:
-  static void on_connect(PooledConnector* connector);
-  void handle_connect(PooledConnector* connector);
+  void on_connect(PooledConnector* connector);
 
 private:
   ConnectionPool::Ptr pool_;
-
-  void* data_;
   Callback callback_;
-
   size_t remaining_;
 
   PooledConnector::Vec pending_connections_;

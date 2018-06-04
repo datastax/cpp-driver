@@ -186,8 +186,7 @@ void SimpleRequestCallback::on_write(Connection* connection) {
   if (request_timeout_ms > 0) { // 0 means no timeout
     timer_.start(connection->loop(),
                  request_timeout_ms,
-                 this,
-                 on_timeout);
+                 bind_member_func(&SimpleRequestCallback::on_timeout, this));
   }
   on_internal_write(connection);
 }
@@ -212,8 +211,7 @@ void SimpleRequestCallback::on_retry_next_host() {
 }
 
 void SimpleRequestCallback::on_timeout(Timer* timer) {
-  SimpleRequestCallback* callback = static_cast<SimpleRequestCallback*>(timer->data());
-  callback->on_internal_timeout();
+  on_internal_timeout();
   LOG_DEBUG("Request timed out (internal)");
 }
 

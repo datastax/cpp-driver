@@ -54,14 +54,12 @@ private:
 
 ClusterConnector::ClusterConnector(const ContactPointList& contact_points,
                                    int protocol_version,
-                                   void* data,
-                                   Callback callback)
+                                   const Callback& callback)
   : contact_points_(contact_points)
   , protocol_version_(protocol_version)
   , listener_(NULL)
   , event_loop_(NULL)
   , random_(NULL)
-  , data_(data)
   , callback_(callback)
   , error_code_(CLUSTER_OK) { }
 
@@ -101,7 +99,9 @@ void ClusterConnector::internal_resolve_and_connect() {
       contact_points_resolved_.push_back(address);
     } else {
       if (!resolver_) {
-        resolver_.reset(Memory::allocate<MultiResolver>(this, on_resolve));
+        resolver_.reset(
+              Memory::allocate<MultiResolver>(
+                bind_member_func(&ClusterConnector::on_resolve, this)));
       }
       resolver_->resolve(event_loop_->loop(),
                          contact_point,
@@ -123,8 +123,7 @@ void ClusterConnector::internal_connect() {
   }
   connector_.reset(Memory::allocate<ControlConnector>(*contact_points_resolved_it_,
                                                       protocol_version_,
-                                                      this,
-                                                      on_connect));
+                                                      bind_member_func(&ClusterConnector::on_connect, this)));
   connector_
       ->with_settings(settings_.control_connection_settings)
       ->connect(event_loop_->loop());
@@ -153,11 +152,6 @@ void ClusterConnector::on_error(ClusterConnector::ClusterError code,
 }
 
 void ClusterConnector::on_resolve(MultiResolver* resolver) {
-  ClusterConnector* cluster_connector = static_cast<ClusterConnector*>(resolver->data());
-  cluster_connector->handle_resolve(resolver);
-}
-
-void ClusterConnector::handle_resolve(MultiResolver* resolver) {
   if (is_canceled())  {
     finish();
     return;
@@ -192,11 +186,6 @@ void ClusterConnector::handle_resolve(MultiResolver* resolver) {
 }
 
 void ClusterConnector::on_connect(ControlConnector* connector) {
-  ClusterConnector* cluster_connector = static_cast<ClusterConnector*>(connector->data());
-  cluster_connector->handle_connect(connector);
-}
-
-void ClusterConnector::handle_connect(ControlConnector* connector) {
   if (is_canceled()) {
     finish();
     return;

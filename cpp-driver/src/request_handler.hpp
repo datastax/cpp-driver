@@ -197,7 +197,7 @@ public:
                                      CassError code, const String& message);
 
 private:
-  static void on_timeout(Timer* timer);
+  void on_timeout(Timer* timer);
 
 private:
   void stop_request();
@@ -263,7 +263,7 @@ public:
   virtual void on_retry_next_host();
 
 private:
-  static void on_execute_next(Timer* timer);
+  void on_execute_next(Timer* timer);
 
   void retry_current_host();
   void retry_next_host();

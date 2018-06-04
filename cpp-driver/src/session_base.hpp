@@ -135,8 +135,7 @@ protected:
   virtual void on_close(Cluster* cluster);
 
 private:
-  static void on_initialize(ClusterConnector* connector);
-  void handle_initialize(ClusterConnector* connector);
+  void on_initialize(ClusterConnector* connector);
 
 private:
   mutable uv_mutex_t mutex_;

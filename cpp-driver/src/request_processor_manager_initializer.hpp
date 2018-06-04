@@ -17,6 +17,7 @@
 #ifndef __CASS_REQUEST_PROCESSOR_MANAGER_INITIALIZER_HPP_INCLUDED__
 #define __CASS_REQUEST_PROCESSOR_MANAGER_INITIALIZER_HPP_INCLUDED__
 
+#include "callback.hpp"
 #include "ref_counted.hpp"
 #include "request_processor_initializer.hpp"
 #include "request_processor_manager.hpp"
@@ -30,7 +31,8 @@ namespace cass {
 class RequestProcessorManagerInitializer : public RefCounted<RequestProcessorManagerInitializer> {
 public:
   typedef SharedRefPtr<RequestProcessorManagerInitializer> Ptr;
-  typedef void (*Callback)(RequestProcessorManagerInitializer*);
+
+  typedef cass::Callback<void, RequestProcessorManagerInitializer*> Callback;
 
   /**
    * Constructor; uses the builder pattern to initialize the manager
@@ -40,15 +42,13 @@ public:
    * @param hosts A mapping of available hosts in the cluster.
    * @param token_map A token map.
    * @param request_queue A thread-safe queue that is used to process requests.
-   * @param data User data that's passed to the callback
    * @param callback A callback that is called when the manager has completed
    *                 its connection for all request processor IO workers
    */
   RequestProcessorManagerInitializer(const Host::Ptr& connected_host,
                                      int protocol_version,
                                      const HostMap& hosts,
-                                     void* data,
-                                     Callback callback);
+                                     const Callback& callback);
   ~RequestProcessorManagerInitializer();
 
   /**
@@ -107,13 +107,6 @@ public:
 
 public:
   /**
-   * Get the user data passed in for the callback
-   *
-   * @return User data
-   */
-  void* data();
-
-  /**
    * Critical failures that happened during the initialization process.
    *
    * @return A vector of request processors that failed
@@ -129,14 +122,12 @@ public:
   RequestProcessorManager::Ptr release_manager();
 
 private:
-  static void on_initialize(RequestProcessorInitializer* initializer);
-  void handle_initialize(RequestProcessorInitializer* initializer);
+  void on_initialize(RequestProcessorInitializer* initializer);
 
 private:
   RequestProcessorManager::Ptr manager_;
   RequestProcessorInitializer::Vec initializers_;
 
-  void* data_;
   Callback callback_;
 
   mutable uv_mutex_t lock_;

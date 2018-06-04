@@ -43,12 +43,7 @@ static void consume_blocked_sigpipe() {
 }
 #endif
 
-class NopTimerCallback : public EventLoop::TimerCallback {
-public:
-  virtual void on_timeout()  { }
-};
-
-static NopTimerCallback nop_timer_callback__;
+static void nop_timer_callback__(EventLoop*) {  }
 
 EventLoop::EventLoop()
   : is_loop_initialized_(false)
@@ -56,7 +51,7 @@ EventLoop::EventLoop()
 #ifndef HAVE_TIMERFD
   , timeout_(0)
 #endif
-  , timer_callback_(&nop_timer_callback__)
+  , timer_callback_(bind_func(&nop_timer_callback__))
   , is_closing_(false)
   , io_time_start_(0)
   , io_time_elapsed_(0) {
@@ -77,7 +72,7 @@ int EventLoop::init(const String& thread_name /*= ""*/) {
   int rc = 0;
   rc = uv_loop_init(&loop_);
   if (rc != 0) return rc;
-  rc = async_.start(loop(), this, on_task);
+  rc = async_.start(loop(), bind_member_func(&EventLoop::on_task, this));
   if (rc != 0) return rc;
   is_loop_initialized_ = true;
 
@@ -117,14 +112,14 @@ void EventLoop::add(Task* task) {
   async_.send();
 }
 
-void EventLoop::start_timer(uint64_t timeout_us, TimerCallback* callback) {
+void EventLoop::start_timer(uint64_t timeout_us, const TimerCallback& callback) {
 #ifdef HAVE_TIMERFD
-  timer_.start(loop(), timeout_us, this, internal_on_timer);
+  timer_.start(loop(), timeout_us, bind_member_func(&EventLoop::on_timer, this));
 #else
   timeout_ = uv_hrtime() + timeout_us * 1000;
 #endif
 
-  timer_callback_ = callback ? callback : &nop_timer_callback__;
+  timer_callback_ = callback ? callback : bind_func(&nop_timer_callback__);
 }
 
 void EventLoop::stop_timer() {
@@ -192,8 +187,8 @@ bool EventLoop::TaskQueue::is_empty() {
   return queue_.empty();
 }
 
-void EventLoop::internal_on_run(void* data) {
-  EventLoop* thread = static_cast<EventLoop*>(data);
+void EventLoop::internal_on_run(void* arg) {
+  EventLoop* thread = static_cast<EventLoop*>(arg);
   thread->handle_run();
 }
 
@@ -215,7 +210,7 @@ void EventLoop::handle_run() {
         if (ms == 0) {
           ms = 1;
         }
-        timer_.start(loop(), ms, this, internal_on_timer);
+        timer_.start(loop(), ms, bind_callback(&EventLoop::on_timer, this));
       } else {
         mode = UV_RUN_NOWAIT; // Spin
       }
@@ -244,34 +239,19 @@ void EventLoop::handle_run() {
 }
 
 #ifdef HAVE_TIMERFD
-void EventLoop::internal_on_timer(TimerFd* timer) {
-  EventLoop* thread = static_cast<EventLoop*>(timer->data());
-  thread->handle_timer();
+void EventLoop::on_timer(TimerFd* timer) {
+  timer_callback_(this);
 }
 #else
-void EventLoop::internal_on_timer(Timer* timer) {
-  EventLoop* thread = static_cast<EventLoop*>(timer->data());
-  thread->handle_timer();
-}
-#endif
-
-void EventLoop::handle_timer() {
-#ifdef HAVE_TIMERFD
-    timer_callback_->on_timeout();
-#else
+void EventLoop::on_timer(Timer* timer) {
   if (timeout_ != 0 && timeout_ <= uv_hrtime()) {
     timeout_ = 0;
-    timer_callback_->on_timeout();
+    timer_callback_(this);
   }
-#endif
 }
+#endif
 
 void EventLoop::on_task(Async* async) {
-  EventLoop* thread = static_cast<EventLoop*>(async->data());
-  thread->handle_task();
-}
-
-void EventLoop::handle_task() {
   Task* task;
   while (tasks_.dequeue(task)) {
     task->run(this);

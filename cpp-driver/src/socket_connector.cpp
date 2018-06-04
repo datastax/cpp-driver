@@ -79,9 +79,8 @@ SocketSettings::SocketSettings(const Config& config)
   , tcp_keepalive_delay_secs(config.tcp_keepalive_delay_secs())
   , max_reusable_write_objects(config.max_reusable_write_objects()) { }
 
-SocketConnector::SocketConnector(const Address& address, void* data, Callback callback)
+SocketConnector::SocketConnector(const Address& address, const Callback& callback)
   : address_(address)
-  , data_(data)
   , callback_(callback)
   , error_code_(SOCKET_OK)
   , ssl_error_code_(CASS_OK) { }
@@ -96,7 +95,9 @@ void SocketConnector::connect(uv_loop_t* loop) {
 
   if (settings_.hostname_resolution_enabled) {
     // Run hostname resolution then connect.
-    resolver_.reset(Memory::allocate<NameResolver>(address_, this, on_resolve));
+    resolver_.reset(
+          Memory::allocate<NameResolver>(address_,
+                                         bind_member_func(&SocketConnector::on_resolve, this)));
     resolver_->resolve(loop, settings_.resolve_timeout_ms);
   } else {
     internal_connect(loop);
@@ -145,7 +146,8 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
   }
 
   connector_.reset(Memory::allocate<TcpConnector>(address_));
-  connector_->connect(socket_->handle(), this, on_connect);
+  connector_->connect(socket_->handle(),
+                      bind_member_func(&SocketConnector::on_connect, this));
 }
 
 void SocketConnector::ssl_handshake() {
@@ -204,11 +206,6 @@ void SocketConnector::on_error(SocketError code, const String& message) {
 }
 
 void SocketConnector::on_connect(TcpConnector* tcp_connector) {
-  SocketConnector* connector = static_cast<SocketConnector*>(tcp_connector->data());
-  connector->handle_connect(tcp_connector);
-}
-
-void SocketConnector::handle_connect(TcpConnector* tcp_connector) {
   if (tcp_connector->is_success()) {
     LOG_DEBUG("Connected to host %s on socket(%p)",
               address_.to_string().c_str(),
@@ -245,11 +242,6 @@ void SocketConnector::handle_connect(TcpConnector* tcp_connector) {
 }
 
 void SocketConnector::on_resolve(NameResolver* resolver) {
-  SocketConnector* connector = static_cast<SocketConnector*>(resolver->data());
-  connector->handle_resolve(resolver);
-}
-
-void SocketConnector::handle_resolve(NameResolver* resolver) {
   if (resolver->is_success()) {
     LOG_DEBUG("Resolved the hostname %s for address %s",
               resolver->hostname().c_str(),

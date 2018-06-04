@@ -15,6 +15,7 @@
 */
 
 #include "auth.hpp"
+#include "callback.hpp"
 #include "connection.hpp"
 #include "socket_connector.hpp"
 
@@ -62,7 +63,7 @@ public:
   typedef SharedRefPtr<Connector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef void (*Callback)(Connector*);
+  typedef cass::Callback<void, Connector*> Callback;
 
   enum ConnectionError {
     CONNECTION_OK,
@@ -87,14 +88,12 @@ public:
    *
    * @param address The address to connect to.
    * @param protocol_version The protocol version to use for the connection.
-   * @param data User data that is available from the callback.
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
   Connector(const Address& address,
             int protocol_version,
-            void* data,
-            Callback callback);
+            const Callback& callback);
 
   /**
    * Set the keyspace to connect with. Calls "USE <keyspace>" after
@@ -159,7 +158,6 @@ public:
   Connection::Ptr release_connection();
 
 public:
-  void* data() { return data_; }
   uv_loop_t* loop() { return loop_; }
 
   const Address& address() const { return socket_connector_->address(); }
@@ -212,14 +210,10 @@ private:
 
   virtual void on_close(Connection* connection);
 
-  static void on_connect(SocketConnector* socket_connector);
-  void handle_connect(SocketConnector* socket_connector);
-
-  static void on_timeout(Timer* timer);
-  void handle_timeout(Timer* timer);
+  void on_connect(SocketConnector* socket_connector);
+  void on_timeout(Timer* timer);
 
 private:
-  void* data_;
   Callback callback_;
   uv_loop_t* loop_;
 

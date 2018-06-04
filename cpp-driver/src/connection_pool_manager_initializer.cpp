@@ -21,9 +21,8 @@
 namespace cass {
 
 ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(int protocol_version,
-                                                                   void* data, Callback callback)
-  : data_(data)
-  , callback_(callback)
+                                                                   const Callback& callback)
+  : callback_(callback)
   , is_canceled_(false)
   , remaining_(0)
   , protocol_version_(protocol_version)
@@ -42,7 +41,9 @@ void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
                                                          settings_));
   for (AddressVec::const_iterator it = addresses.begin(),
        end = addresses.end(); it != end; ++it) {
-    ConnectionPoolConnector::Ptr pool_connector(Memory::allocate<ConnectionPoolConnector>(manager_.get(), *it, this, on_connect));
+    ConnectionPoolConnector::Ptr pool_connector(
+          Memory::allocate<ConnectionPoolConnector>(manager_.get(), *it,
+                                                    bind_member_func(&ConnectionPoolManagerInitializer::on_connect, this)));
     connectors_.push_back(pool_connector);
     pool_connector->connect();
   }
@@ -85,18 +86,13 @@ bool ConnectionPoolManagerInitializer::is_canceled() {
 }
 
 void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_connector) {
-  ConnectionPoolManagerInitializer* initializer = static_cast<ConnectionPoolManagerInitializer*>(pool_connector->data());
-  initializer->handle_connect(pool_connector);
-}
-
-void ConnectionPoolManagerInitializer::handle_connect(ConnectionPoolConnector* pool_connector) {
-    if (!is_canceled_) {
-      if (pool_connector->is_ok()) {
-        manager_->add_pool(pool_connector->release_pool(), ConnectionPoolManager::Protected());
-      } else {
-        failures_.push_back(ConnectionPoolConnector::Ptr(pool_connector));
-      }
+  if (!is_canceled_) {
+    if (pool_connector->is_ok()) {
+      manager_->add_pool(pool_connector->release_pool(), ConnectionPoolManager::Protected());
+    } else {
+      failures_.push_back(ConnectionPoolConnector::Ptr(pool_connector));
     }
+  }
 
   if (--remaining_ == 0) {
     callback_(this);

@@ -72,8 +72,7 @@ struct RequestProcessorSettings {
 class RequestProcessor : public RefCounted<RequestProcessor>
                        , public ConnectionPoolManagerListener
                        , public RequestListener
-                       , public SchemaAgreementListener
-                       , public EventLoop::TimerCallback {
+                       , public SchemaAgreementListener {
 public:
   typedef SharedRefPtr<RequestProcessor> Ptr;
   typedef Vector<Ptr> Vec;
@@ -196,8 +195,7 @@ private:
   virtual bool on_is_host_up(const Address& address);
 
 private:
-  // Event loop timer callback
-  virtual void on_timeout();
+  void on_timeout(EventLoop* event_loop);
 
 private:
   void internal_connect(const Host::Ptr& current_host,
@@ -222,11 +220,8 @@ private:
   void internal_host_add_down_up(const Host::Ptr& host, Host::HostState state);
   void internal_host_remove(const Host::Ptr& host);
 
-  static void on_async(Async* async);
-  void handle_async();
-
-  static void on_prepare(Prepare* prepare);
-  void handle_prepare();
+  void on_async(Async* async);
+  void on_prepare(Prepare* prepare);
 
   void maybe_close(int request_count);
   int process_requests(uint64_t processing_time);

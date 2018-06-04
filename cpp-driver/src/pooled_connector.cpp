@@ -23,11 +23,10 @@
 
 namespace cass {
 
-PooledConnector::PooledConnector(ConnectionPool* pool,
-                                 void* data, Callback callback)
+PooledConnector::PooledConnector(ConnectionPool* pool, const Callback& callback)
   : pool_(pool)
-  , connector_(Memory::allocate<Connector>(pool->address(), pool->manager()->protocol_version(), this, on_connect))
-  , data_(data)
+  , connector_(Memory::allocate<Connector>(pool->address(), pool->manager()->protocol_version(),
+                                           bind_member_func(&PooledConnector::on_connect, this)))
   , callback_(callback)
   , is_canceled_(false) { }
 
@@ -78,7 +77,8 @@ void PooledConnector::delayed_connect(uint64_t wait_time_ms, Protected) {
   } else {
     inc_ref();
     if (wait_time_ms > 0) {
-      delayed_connect_timer_.start(pool_->manager()->loop(), wait_time_ms, this, on_delayed_connect);
+      delayed_connect_timer_.start(pool_->manager()->loop(), wait_time_ms,
+                                   bind_member_func(&PooledConnector::on_delayed_connect, this));
     } else {
       internal_connect();
     }
@@ -94,11 +94,6 @@ void PooledConnector::internal_connect() {
 }
 
 void PooledConnector::on_connect(Connector* connector) {
-  PooledConnector* pooled_connector = static_cast<PooledConnector*>(connector->data());
-  pooled_connector->handle_connect(connector);
-}
-
-void PooledConnector::handle_connect(Connector* connector) {
   if (!is_canceled_ && connector_->is_ok()) {
     connection_.reset(Memory::allocate<PooledConnection>(pool_,
                                                          connector->release_connection()));
@@ -110,11 +105,6 @@ void PooledConnector::handle_connect(Connector* connector) {
 }
 
 void PooledConnector::on_delayed_connect(Timer* timer) {
-  PooledConnector* pooled_connector = static_cast<PooledConnector*>(timer->data());
-  pooled_connector->handle_delayed_connect(timer);
-}
-
-void PooledConnector::handle_delayed_connect(Timer* timer) {
   if (is_canceled_) {
     callback_(this);
     dec_ref();

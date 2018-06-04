@@ -92,9 +92,7 @@ private:
     size_t skipped_index_;
   };
 
-  void calculate_min_average();
-
-  static void on_timer(Timer* timer);
+  void on_timer(Timer* timer);
 
   Atomic<int64_t> min_average_;
   Timer timer_;

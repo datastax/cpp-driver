@@ -261,11 +261,10 @@ private:
 
 private:
   void internal_add_pool(const ConnectionPool::Ptr& pool);
-  void maybe_closed();
+  bool maybe_closed();
 
 private:
-  static void on_connect(ConnectionPoolConnector* pool_connector);
-  void handle_connect(ConnectionPoolConnector* pool_connector);
+  void on_connect(ConnectionPoolConnector* pool_connector);
 
 private:
   uv_loop_t* loop_;

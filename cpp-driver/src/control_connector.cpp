@@ -101,10 +101,10 @@ ControlConnectionSettings::ControlConnectionSettings(const Config& config)
 
 ControlConnector::ControlConnector(const Address& address,
                                    int protocol_version,
-                                   void* data,
-                                   ControlConnector::Callback callback)
-  : connector_(Memory::allocate<Connector>(address, protocol_version, this, on_connect))
-  , data_(data)
+                                   const Callback& callback)
+  : connector_(Memory::allocate<Connector>(address,
+                                           protocol_version,
+                                           bind_member_func(&ControlConnector::on_connect, this)))
   , callback_(callback)
   , error_code_(CONTROL_CONNECTION_OK)
   , listener_(NULL) { }
@@ -186,11 +186,6 @@ void ControlConnector::on_error(ControlConnector::ControlConnectionError code,
 }
 
 void ControlConnector::on_connect(Connector* connector) {
-  ControlConnector* control_connector = static_cast<ControlConnector*>(connector->data());
-  control_connector->handle_connect(connector);
-}
-
-void ControlConnector::handle_connect(Connector* connector) {
   if (!is_canceled() && connector->is_ok()) {
     connection_ = connector->release_connection();
     connection_->set_listener(this);

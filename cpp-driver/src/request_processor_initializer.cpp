@@ -39,7 +39,7 @@ RequestProcessorInitializer::RequestProcessorInitializer(RequestProcessorManager
                                                          int protocol_version,
                                                          const HostMap& hosts,
                                                          const TokenMap::Ptr& token_map,
-                                                         void* data, Callback callback)
+                                                         const Callback& callback)
   : event_loop_(NULL)
   , metrics_(NULL)
   , random_(NULL)
@@ -49,7 +49,6 @@ RequestProcessorInitializer::RequestProcessorInitializer(RequestProcessorManager
   , hosts_(hosts)
   , token_map_(token_map)
   , error_code_(REQUEST_PROCESSOR_OK)
-  , data_(data)
   , callback_(callback) {
   uv_mutex_init(&mutex_);
 }
@@ -94,8 +93,7 @@ void RequestProcessorInitializer::internal_intialize() {
   inc_ref();
   connection_pool_manager_initializer_.reset(
         Memory::allocate<ConnectionPoolManagerInitializer>(protocol_version_,
-                                                           this,
-                                                           on_initialize));
+                                                           bind_member_func(&RequestProcessorInitializer::on_initialize, this)));
 
     AddressVec addresses;
     addresses.reserve(addresses.size());
@@ -112,11 +110,6 @@ void RequestProcessorInitializer::internal_intialize() {
 }
 
 void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer* initializer) {
-  RequestProcessorInitializer* processor_initializer = static_cast<RequestProcessorInitializer*>(initializer->data());
-  processor_initializer->handle_initialize(initializer);
-}
-
-void RequestProcessorInitializer::handle_initialize(ConnectionPoolManagerInitializer* initializer) {
   bool is_keyspace_error = false;
 
   // Prune hosts

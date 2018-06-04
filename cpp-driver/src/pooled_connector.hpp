@@ -17,6 +17,7 @@
 #ifndef __CASS_POOLED_CONNECTOR_HPP_INCLUDED__
 #define __CASS_POOLED_CONNECTOR_HPP_INCLUDED__
 
+#include "callback.hpp"
 #include "connector.hpp"
 #include "pooled_connection.hpp"
 #include "ref_counted.hpp"
@@ -37,19 +38,17 @@ public:
   typedef SharedRefPtr<PooledConnector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef void (*Callback)(PooledConnector*);
+  typedef cass::Callback<void, PooledConnector*> Callback;
 
   /**
    * Constructor
    *
    * @param pool The pool for this connection.
-   * @param data User data that's passed to the callback.
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
   PooledConnector(ConnectionPool* pool,
-                  void* data,
-                  Callback callback);
+                  const Callback& callback);
 
   /**
    * Connect a pooled connection.
@@ -71,8 +70,6 @@ public:
   PooledConnection::Ptr release_connection();
 
 public:
-  void* data() { return data_; }
-
   bool is_canceled() const;
   bool is_ok() const;
   bool is_critical_error() const;
@@ -99,18 +96,14 @@ public: // Only to be called on the event loop thread
 private:
   void internal_connect();
 
-  static void on_connect(Connector* connector);
-  void handle_connect(Connector* connector);
-
-  static void on_delayed_connect(Timer* timer);
-  void handle_delayed_connect(Timer* timer);
+  void on_connect(Connector* connector);
+  void on_delayed_connect(Timer* timer);
 
 private:
   ConnectionPool* pool_;
   PooledConnection::Ptr connection_;
   Connector::Ptr connector_;
 
-  void* data_;
   Callback callback_;
 
   Timer delayed_connect_timer_;

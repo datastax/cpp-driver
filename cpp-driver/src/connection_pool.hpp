@@ -154,10 +154,9 @@ private:
   void internal_add_connection(const PooledConnection::Ptr& connection);
   void internal_schedule_reconnect();
   void internal_close();
-  void maybe_closed();
+  bool maybe_closed();
 
-  static void on_reconnect(PooledConnector* connector);
-  void handle_reconnect(PooledConnector* connector);
+  void on_reconnect(PooledConnector* connector);
 
 private:
   ConnectionPoolManager* manager_;

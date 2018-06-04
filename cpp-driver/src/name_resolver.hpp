@@ -18,6 +18,7 @@
 #define __CASS_NAME_RESOLVER_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "callback.hpp"
 #include "ref_counted.hpp"
 #include "string.hpp"
 #include "timer.hpp"
@@ -30,7 +31,7 @@ class NameResolver : public RefCounted<NameResolver> {
 public:
   typedef SharedRefPtr<NameResolver> Ptr;
 
-  typedef void (*Callback)(NameResolver*);
+  typedef cass::Callback<void, NameResolver*> Callback;
 
   enum Status {
     NEW,
@@ -42,17 +43,15 @@ public:
     SUCCESS
   };
 
-  NameResolver(const Address& address, void* data, Callback callback)
+  NameResolver(const Address& address, const Callback& callback)
       : address_(address)
       , status_(NEW)
       , uv_status_(-1)
-      , data_(data)
       , callback_(callback) {
     req_.data = this;
   }
 
   uv_loop_t* loop() { return req_.loop;  }
-  void* data() { return data_; }
 
   bool is_success() { return status_ == SUCCESS; }
   bool is_canceled() { return status_ == CANCELED; }
@@ -70,7 +69,8 @@ public:
     inc_ref(); // For the event loop
 
     if (timeout > 0) {
-      timer_.start(loop, timeout, this, on_timeout);
+      timer_.start(loop, timeout,
+                   bind_member_func(&NameResolver::on_timeout, this));
     }
 
     int rc = uv_getnameinfo(loop, &req_, on_resolve, static_cast<const Address>(address_).addr(), flags);
@@ -117,10 +117,9 @@ private:
     resolver->dec_ref();
   }
 
-  static void on_timeout(Timer* timer) {
-    NameResolver* resolver = static_cast<NameResolver*>(timer->data());
-    resolver->status_ = FAILED_TIMED_OUT;
-    uv_cancel(reinterpret_cast<uv_req_t*>(&resolver->req_));
+  void on_timeout(Timer* timer) {
+    status_ = FAILED_TIMED_OUT;
+    uv_cancel(reinterpret_cast<uv_req_t*>(&req_));
   }
 
 private:
@@ -131,7 +130,6 @@ private:
   int uv_status_;
   String hostname_;
   String service_;
-  void* data_;
   Callback callback_;
 };
 

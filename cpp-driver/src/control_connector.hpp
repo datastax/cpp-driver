@@ -17,6 +17,7 @@
 #ifndef __CASS_CONTROL_CONNECTOR_HPP_INCLUDED__
 #define __CASS_CONTROL_CONNECTOR_HPP_INCLUDED__
 
+#include "callback.hpp"
 #include "control_connection.hpp"
 #include "ref_counted.hpp"
 #include "event_response.hpp"
@@ -116,7 +117,7 @@ class ControlConnector : public RefCounted<ControlConnector>
 public:
   typedef SharedRefPtr<ControlConnector> Ptr;
   typedef Vector<Ptr> Vec;
-  typedef void (*Callback)(ControlConnector*);
+  typedef cass::Callback<void, ControlConnector*> Callback;
 
   enum ControlConnectionError {
     CONTROL_CONNECTION_OK,
@@ -133,13 +134,11 @@ public:
    * @param address The address to connect to.
    * @param protocol_version The initial protocol version to use for the
    * connection.
-   * @param data
    * @param callback
    */
   ControlConnector(const Address& address,
                    int protocol_version,
-                   void* data,
-                   Callback callback);
+                   const Callback& callback);
 
   /**
    * Sets the listener to use after the control connection has been
@@ -209,8 +208,6 @@ public:
   const ControlConnectionSchema& schema() const { return schema_; }
 
 public:
-  void* data() { return data_; }
-
   const Address& address() const {
     return connector_->address();
   }
@@ -247,7 +244,7 @@ private:
   void on_success();
   void on_error(ControlConnectionError code, const String& message);
 
-  static void on_connect(Connector* connector);
+  void on_connect(Connector* connector);
   void handle_connect(Connector* connector);
 
   void query_hosts();
@@ -275,7 +272,6 @@ private:
   ListenAddressMap listen_addresses_;
   ControlConnectionSchema schema_;
 
-  void* data_;
   Callback callback_;
 
   ControlConnectionError error_code_;

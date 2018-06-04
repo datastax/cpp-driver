@@ -209,7 +209,8 @@ public:
     void next()  {
       if (!is_done()) {
         if (action_it_->timeout > 0) {
-          timer_.start(loop_, action_it_->timeout, this, on_timeout);
+          timer_.start(loop_, action_it_->timeout,
+                       cass::bind_member_func(&OutagePlan::on_timeout, this));
         } else {
           handle_timeout();
         }
@@ -217,9 +218,8 @@ public:
     }
 
   private:
-    static void on_timeout(Timer* timer) {
-      OutagePlan* outage_plan = static_cast<OutagePlan*>(timer->data());
-      outage_plan->handle_timeout();
+    void on_timeout(Timer* timer) {
+      handle_timeout();
     }
 
     void handle_timeout() {
@@ -308,8 +308,7 @@ public:
     OutagePlan* outage_plan_;
   };
 
-  static void on_connection_connected(ClusterConnector* connector) {
-    Future* future = static_cast<Future*>(connector->data());
+  static void on_connection_connected(ClusterConnector* connector, Future* future) {
     if (connector->is_ok()) {
       future->set();
     } else {
@@ -342,8 +341,7 @@ public:
     }
   }
 
-  static void on_connection_reconnect(ClusterConnector* connector) {
-    Future* future = static_cast<Future*>(connector->data());
+  static void on_connection_reconnect(ClusterConnector* connector, Future* future) {
     if (connector->is_ok()) {
       future->set_cluster(connector->release_cluster()); // Keep the cluster alive
     } else {
@@ -365,8 +363,7 @@ TEST_F(ClusterUnitTest, Simple) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -383,8 +380,7 @@ TEST_F(ClusterUnitTest, Resolve) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
   connector->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
@@ -402,8 +398,7 @@ TEST_F(ClusterUnitTest, Auth) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.auth_provider.reset(
@@ -429,8 +424,7 @@ TEST_F(ClusterUnitTest, Ssl) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
 
   connector
       ->with_settings(settings)
@@ -455,8 +449,7 @@ TEST_F(ClusterUnitTest, Cancel) {
     Future::Ptr connect_future(Memory::allocate<Future>());
     ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                        PROTOCOL_VERSION,
-                                                                       static_cast<void*>(connect_future.get()),
-                                                                       on_connection_connected));
+                                                                       bind_func(on_connection_connected, connect_future.get())));
     connector->connect(event_loop());
     connectors.push_back(connector);
     connect_futures.push_back(connect_future);
@@ -501,8 +494,7 @@ TEST_F(ClusterUnitTest, ReconnectToDiscoveredHosts) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_reconnect));
+                                                                     bind_func(on_connection_reconnect, connect_future.get())));
   ReconnectClusterListener::Ptr listener(
         Memory::allocate<ReconnectClusterListener>(close_future, &outage_plan));
 
@@ -549,8 +541,7 @@ TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_reconnect));
+                                                                     bind_func(on_connection_reconnect, connect_future.get())));
   ReconnectClusterListener::Ptr listener(
         Memory::allocate<ReconnectClusterListener>(close_future, &outage_plan));
 
@@ -594,8 +585,7 @@ TEST_F(ClusterUnitTest, NotifyDownUp) {
   Future::Ptr down_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_reconnect));
+                                                                     bind_func(on_connection_reconnect, connect_future.get())));
 
   UpDownListener::Ptr listener(Memory::allocate<UpDownListener>(close_future, up_future, down_future));
 
@@ -636,8 +626,7 @@ TEST_F(ClusterUnitTest, ProtocolNegotiation) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -659,8 +648,7 @@ TEST_F(ClusterUnitTest, NoSupportedProtocols) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -680,8 +668,7 @@ TEST_F(ClusterUnitTest, FindValidHost) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -701,8 +688,7 @@ TEST_F(ClusterUnitTest, NoHostsAvailable) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -722,8 +708,7 @@ TEST_F(ClusterUnitTest, InvalidAuth) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.auth_provider.reset(
@@ -748,8 +733,7 @@ TEST_F(ClusterUnitTest, InvalidSsl) {
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(connect_future.get()),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, connect_future.get())));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 

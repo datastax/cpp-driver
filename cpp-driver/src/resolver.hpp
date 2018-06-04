@@ -18,6 +18,7 @@
 #define __CASS_RESOLVER_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "callback.hpp"
 #include "ref_counted.hpp"
 #include "string.hpp"
 #include "timer.hpp"
@@ -33,7 +34,7 @@ class Resolver : public RefCounted<Resolver> {
 public:
   typedef SharedRefPtr<Resolver> Ptr;
   typedef Vector<Ptr> Vec;
-  typedef void (*Callback)(Resolver*);
+  typedef cass::Callback<void, Resolver*> Callback;
 
   enum Status {
     NEW,
@@ -46,12 +47,11 @@ public:
     SUCCESS
   };
 
-  Resolver(const String& hostname, int port, void* data, Callback cb)
+  Resolver(const String& hostname, int port, const Callback& callback)
       : hostname_(hostname)
       , port_(port)
       , status_(NEW)
-      , data_(data)
-      , callback_(cb) {
+      , callback_(callback) {
     req_.data = this;
   }
 
@@ -67,7 +67,6 @@ public:
   int uv_status() { return uv_status_; }
 
   const AddressVec& addresses() const { return addresses_; }
-  void* data() { return data_; }
 
   void resolve(uv_loop_t* loop, uint64_t timeout, struct addrinfo* hints = NULL) {
     status_ = RESOLVING;
@@ -75,7 +74,8 @@ public:
     inc_ref(); // For the event loop
 
     if (timeout > 0) {
-      timer_.start(loop, timeout, this, on_timeout);
+      timer_.start(loop, timeout,
+                   bind_member_func(&Resolver::on_timeout, this));
     }
 
     OStringStream ss;
@@ -122,10 +122,9 @@ private:
     uv_freeaddrinfo(res);
   }
 
-  static void on_timeout(Timer* timer) {
-    Resolver* resolver = static_cast<Resolver*>(timer->data());
-    resolver->status_ = FAILED_TIMED_OUT;
-    uv_cancel(reinterpret_cast<uv_req_t*>(&resolver->req_));
+  void on_timeout(Timer* timer) {
+    status_ = FAILED_TIMED_OUT;
+    uv_cancel(reinterpret_cast<uv_req_t*>(&req_));
   }
 
 private:
@@ -150,7 +149,6 @@ private:
   Status status_;
   int uv_status_;
   AddressVec addresses_;
-  void* data_;
   Callback callback_;
 
 private:
@@ -160,22 +158,21 @@ private:
 class MultiResolver : public RefCounted<MultiResolver> {
 public:
   typedef SharedRefPtr<MultiResolver> Ptr;
-  typedef void (*Callback)(MultiResolver* resolver);
+  typedef cass::Callback<void, MultiResolver*> Callback;
 
-  MultiResolver(void* data,
-                Callback callback)
+  MultiResolver(const Callback& callback)
     : remaining_(0)
-    , data_(data)
     , callback_(callback) { }
 
   const Resolver::Vec& resolvers() { return resolvers_; }
-  void* data() { return data_; }
 
   void resolve(uv_loop_t* loop,
                const String& host, int port,
                uint64_t timeout, struct addrinfo* hints = NULL) {
     inc_ref();
-    Resolver::Ptr resolver(Memory::allocate<Resolver>(host, port, this, on_resolve));
+    Resolver::Ptr resolver(
+          Memory::allocate<Resolver>(host, port,
+                                     bind_member_func(&MultiResolver::on_resolve, this)));
     resolver->resolve(loop, timeout, hints);
     resolvers_.push_back(resolver);
     remaining_++;
@@ -189,12 +186,7 @@ public:
   }
 
 private:
-  static void on_resolve(Resolver* resolver) {
-    MultiResolver* multi_resolver = static_cast<MultiResolver*>(resolver->data());
-    multi_resolver->handle_resolve();
-  }
-
-  void handle_resolve() {
+  void on_resolve(Resolver* resolver) {
     remaining_--;
     if (remaining_ <= 0 && callback_) {
       callback_(this);
@@ -205,7 +197,6 @@ private:
 private:
   Resolver::Vec resolvers_;
   int remaining_;
-  void* data_;
   Callback callback_;
 
 private:

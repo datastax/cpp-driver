@@ -254,7 +254,7 @@ protected:
   virtual void on_error(CassError code, const String& message);
 
 private:
-  static void on_timeout(Timer* timer);
+  void on_timeout(Timer* timer);
 
 private:
   Timer timer_;

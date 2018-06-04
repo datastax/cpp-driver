@@ -81,11 +81,8 @@ private:
   void finish();
 
 private:
-  static void on_retry_timeout(Timer* timer);
-  void handle_retry_timeout();
-
-  static void on_timeout(Timer* timer);
-  void handle_timeout();
+  void on_retry_timeout(Timer* timer);
+  void on_timeout(Timer* timer);
 
 private:
   Timer timer_;

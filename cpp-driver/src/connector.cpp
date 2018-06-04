@@ -164,12 +164,12 @@ ConnectionSettings::ConnectionSettings(const Config& config)
 
 Connector::Connector(const Address& address,
                      int protocol_version,
-                     void* data,
-                     Callback callback)
-  : data_(data)
-  , callback_(callback)
+                     const Callback& callback)
+  : callback_(callback)
   , loop_(NULL)
-  , socket_connector_(Memory::allocate<SocketConnector>(address, this, on_connect))
+  , socket_connector_(
+      Memory::allocate<SocketConnector>(address,
+                                        bind_member_func(&Connector::on_connect, this)))
   , error_code_(CONNECTION_OK)
   , protocol_version_(protocol_version)
   , event_types_(0)
@@ -213,7 +213,8 @@ void Connector::connect(uv_loop_t* loop) {
       ->with_settings(settings_.socket_settings)
       ->connect(loop);
   if (settings_.connect_timeout_ms > 0) {
-    timer_.start(loop, settings_.connect_timeout_ms, this, on_timeout);
+    timer_.start(loop, settings_.connect_timeout_ms,
+                 bind_member_func(&Connector::on_timeout, this));
   }
 }
 
@@ -374,11 +375,6 @@ void Connector::on_close(Connection* connection) {
 }
 
 void Connector::on_connect(SocketConnector* socket_connector) {
-  Connector* connector = static_cast<Connector*>(socket_connector->data());
-  connector->handle_connect(socket_connector);
-}
-
-void Connector::handle_connect(SocketConnector* socket_connector) {
   if (socket_connector->is_ok()) {
     Socket::Ptr socket(socket_connector->release_socket());
 
@@ -428,11 +424,6 @@ void Connector::handle_connect(SocketConnector* socket_connector) {
 }
 
 void Connector::on_timeout(Timer* timer) {
-  Connector* connector = static_cast<Connector*>(timer->data());
-  connector->handle_timeout(timer);
-}
-
-void Connector::handle_timeout(Timer* timer) {
   if (metrics_) {
     metrics_->connection_timeouts.inc();
   }

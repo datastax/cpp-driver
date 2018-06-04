@@ -21,10 +21,8 @@ namespace cass {
 RequestProcessorManagerInitializer::RequestProcessorManagerInitializer(const Host::Ptr& connected_host,
                                                                        int protocol_version,
                                                                        const HostMap& hosts,
-                                                                       void* data,
-                                                                       Callback callback)
-  : data_(data)
-  , callback_(callback)
+                                                                       const Callback& callback)
+  : callback_(callback)
   , remaining_(0)
   , connected_host_(connected_host)
   , protocol_version_(protocol_version)
@@ -81,7 +79,7 @@ void RequestProcessorManagerInitializer::initialize(EventLoopGroup* event_loop_g
                                                                                                protocol_version_,
                                                                                                hosts_,
                                                                                                token_map_,
-                                                                                               this, on_initialize));
+                                                                                               bind_member_func(&RequestProcessorManagerInitializer::on_initialize, this)));
     initializers_.push_back(initializer);
     initializer
         ->with_settings(settings_)
@@ -90,10 +88,6 @@ void RequestProcessorManagerInitializer::initialize(EventLoopGroup* event_loop_g
         ->with_random(random_)
         ->initialize(event_loop_group->get(i));
   }
-}
-
-void* RequestProcessorManagerInitializer::data() {
-  return data_;
 }
 
 RequestProcessorInitializer::Vec RequestProcessorManagerInitializer::failures() const {
@@ -108,12 +102,6 @@ RequestProcessorManager::Ptr RequestProcessorManagerInitializer::release_manager
 }
 
 void RequestProcessorManagerInitializer::on_initialize(RequestProcessorInitializer* initializer) {
-  RequestProcessorManagerInitializer* manager_initializer
-      = static_cast<RequestProcessorManagerInitializer*>(initializer->data());
-  manager_initializer->handle_initialize(initializer);
-}
-
-void RequestProcessorManagerInitializer::handle_initialize(RequestProcessorInitializer* initializer) {
   { // Lock
     ScopedMutex l(&lock_);
 

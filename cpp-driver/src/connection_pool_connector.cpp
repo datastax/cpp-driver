@@ -23,10 +23,10 @@
 
 namespace cass {
 
-ConnectionPoolConnector::ConnectionPoolConnector(ConnectionPoolManager* manager, const Address& address,
-                                                 void* data, Callback callback)
+ConnectionPoolConnector::ConnectionPoolConnector(ConnectionPoolManager* manager,
+                                                 const Address& address,
+                                                 const Callback& callback)
   : pool_(Memory::allocate<ConnectionPool>(manager, address))
-  , data_(data)
   , callback_(callback)
   , remaining_(0) { }
 
@@ -35,7 +35,9 @@ void ConnectionPoolConnector::connect() {
   const size_t num_connections_per_host = pool_->manager()->settings().num_connections_per_host;
   remaining_ = num_connections_per_host;
   for (size_t i = 0; i < num_connections_per_host; ++i) {
-    PooledConnector::Ptr connector(Memory::allocate<PooledConnector>(pool_.get(), this, on_connect));
+    PooledConnector::Ptr connector(
+          Memory::allocate<PooledConnector>(pool_.get(),
+                                            bind_member_func(&ConnectionPoolConnector::on_connect, this)));
     pending_connections_.push_back(connector);
     connector->connect();
   }
@@ -79,11 +81,6 @@ bool ConnectionPoolConnector::is_keyspace_error() const {
 }
 
 void ConnectionPoolConnector::on_connect(PooledConnector* connector) {
-  ConnectionPoolConnector* pool_connector = static_cast<ConnectionPoolConnector*>(connector->data());
-  pool_connector->handle_connect(connector);
-}
-
-void ConnectionPoolConnector::handle_connect(PooledConnector* connector) {
   pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
                              pending_connections_.end());
 

@@ -170,10 +170,8 @@ void RequestHandler::start_request(uv_loop_t* loop, Protected) {
   if (!timer_.is_running()) {
     uint64_t request_timeout_ms = wrapper_.request_timeout_ms();
     if (request_timeout_ms > 0) { // 0 means no timeout
-      timer_.start(loop,
-                   request_timeout_ms,
-                   this,
-                   on_timeout);
+      timer_.start(loop, request_timeout_ms,
+                   bind_member_func(&RequestHandler::on_timeout, this));
     }
   }
 }
@@ -261,13 +259,11 @@ void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
 }
 
 void RequestHandler::on_timeout(Timer* timer) {
-  RequestHandler* request_handler =
-      static_cast<RequestHandler*>(timer->data());
-  if (request_handler->metrics_) {
-    request_handler->metrics_->request_timeouts.inc();
+  if (metrics_) {
+    metrics_->request_timeouts.inc();
   }
-  request_handler->set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
-                             "Request timed out");
+  set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
+            "Request timed out");
   LOG_DEBUG("Request timed out");
 }
 
@@ -311,8 +307,7 @@ RequestExecution::RequestExecution(RequestHandler* request_handler)
   , start_time_ns_(uv_hrtime()) { }
 
 void RequestExecution::on_execute_next(Timer* timer) {
-  RequestExecution* request_execution = static_cast<RequestExecution*>(timer->data());
-  request_execution->request_handler_->execute();
+  request_handler_->execute();
 }
 
 void RequestExecution::on_retry_current_host() {
@@ -347,7 +342,8 @@ void RequestExecution::on_write(Connection* connection) {
     if (timeout == 0) {
       request_handler_->execute();
     } else if (timeout > 0) {
-      schedule_timer_.start(connection->loop(), timeout, this, on_execute_next);
+      schedule_timer_.start(connection->loop(), timeout,
+                            bind_member_func(&RequestExecution::on_execute_next, this));
     }
   }
 }

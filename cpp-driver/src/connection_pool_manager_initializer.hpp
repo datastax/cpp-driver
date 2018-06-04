@@ -19,6 +19,7 @@
 
 #include "address.hpp"
 #include "atomic.hpp"
+#include "callback.hpp"
 #include "connection_pool_connector.hpp"
 #include "connection_pool_manager.hpp"
 #include "ref_counted.hpp"
@@ -39,19 +40,17 @@ class ConnectionPoolManagerInitializer : public RefCounted<ConnectionPoolManager
 public:
   typedef SharedRefPtr<ConnectionPoolManagerInitializer> Ptr;
 
-  typedef void (*Callback)(ConnectionPoolManagerInitializer*);
+  typedef cass::Callback<void, ConnectionPoolManagerInitializer*> Callback;
 
   /**
    * Constructor
    *
    * @param protocol_version The protocol version to use for connections.
-   * @param data User data that's passed to the callback.
    * @param callback A callback that is called when the manager is connected or
    * if an error occurred.
    */
   ConnectionPoolManagerInitializer(int protocol_version,
-                                   void* data,
-                                   Callback callback);
+                                   const Callback& callback);
 
   /**
    * Initialize a connection pool manager use the given hosts.
@@ -127,15 +126,10 @@ public:
     return temp;
   }
 
-public:
-  void* data() { return data_; }
+private:
+  void on_connect(ConnectionPoolConnector* pool_connector);
 
 private:
-  static void on_connect(ConnectionPoolConnector* pool_connector);
-  void handle_connect(ConnectionPoolConnector* pool_connector);
-
-private:
-  void* data_;
   Callback callback_;
 
   ConnectionPoolManager::Ptr manager_;

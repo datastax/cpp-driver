@@ -42,13 +42,11 @@ static int max_prepares_for_protocol_version(int protocol_version,
 
 PrepareHostHandler::PrepareHostHandler(const Host::Ptr& host,
                                        const PreparedMetadata::Entry::Vec& prepared_metadata_entries,
-                                       void* data,
-                                       Callback callback,
+                                       const Callback& callback,
                                        int protocol_version,
                                        unsigned max_requests_per_flush)
   : host_(host)
   , protocol_version_(protocol_version)
-  , data_(data)
   , callback_(callback)
   , connection_(NULL)
   , prepares_outstanding_(0)
@@ -78,8 +76,7 @@ void PrepareHostHandler::prepare(uv_loop_t* loop,
 
   Connector::Ptr connector(Memory::allocate<Connector>(host_->address(),
                                                        protocol_version_,
-                                                       this,
-                                                       on_connect));
+                                                       bind_member_func(&PrepareHostHandler::on_connect, this)));
 
   connector->with_settings(settings)
            ->with_listener(this)
@@ -93,17 +90,11 @@ void PrepareHostHandler::on_close(Connection* connection) {
 }
 
 void PrepareHostHandler::on_connect(Connector* connector) {
-  PrepareHostHandler* handler = static_cast<PrepareHostHandler*>(connector->data());
-  handler->handle_connect(connector);
-}
-
-void PrepareHostHandler::handle_connect(Connector* connector) {
   if (connector->is_ok()) {
     connection_ = connector->release_connection().get();
     prepare_next();
   } else {
     callback_(this);
-
     dec_ref(); // The event loop is done with this handler
   }
 }

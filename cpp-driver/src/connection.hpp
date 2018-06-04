@@ -203,10 +203,10 @@ private:
 
 private:
   void restart_heartbeat_timer();
-  static void on_heartbeat(Timer* timer);
+  void on_heartbeat(Timer* timer);
 
   void restart_terminate_timer();
-  static void on_terminate(Timer* timer);
+  void on_terminate(Timer* timer);
 
 private:
   Socket::Ptr socket_;

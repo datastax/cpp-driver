@@ -1197,7 +1197,8 @@ void Request::error(int32_t code, const String& message) {
 
 void Request::wait(uint64_t timeout, const Action* action) {
   timer_action_ = action;
-  timer_.start(client_->server()->loop(), timeout, this, on_timeout);
+  timer_.start(client_->server()->loop(), timeout,
+               cass::bind_member_func(&Request::on_timeout, this));
 }
 
 void Request::close() {
@@ -1245,8 +1246,7 @@ Hosts Request::hosts() const {
 }
 
 void Request::on_timeout(Timer* timer) {
-  Request* request = static_cast<Request*>(timer->data());
-  request->timer_action_->run_next(request);
+  timer_action_->run_next(this);
 }
 
 bool SendError::on_run(Request* request) const {

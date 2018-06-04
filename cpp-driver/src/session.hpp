@@ -93,8 +93,7 @@ private:
   virtual void on_close(RequestProcessorManager* manager);
 
 private:
-  static void on_initialize(RequestProcessorManagerInitializer* initializer);
-  void handle_initialize(RequestProcessorManagerInitializer* initializer);
+  void on_initialize(RequestProcessorManagerInitializer* initializer);
 
 private:
   ScopedPtr<Metrics> metrics_;

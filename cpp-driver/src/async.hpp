@@ -17,6 +17,7 @@
 #ifndef __CASS_ASYNC_HPP_INCLUDED__
 #define __CASS_ASYNC_HPP_INCLUDED__
 
+#include "callback.hpp"
 #include "macros.hpp"
 #include "memory.hpp"
 
@@ -30,11 +31,10 @@ namespace cass {
  */
 class Async {
 public:
-  typedef void (*Callback)(Async*);
+  typedef cass::Callback<void, Async*> Callback;
 
   Async()
-    : handle_(NULL)
-    , data_(NULL) { }
+    : handle_(NULL) { }
 
   ~Async() {
     close_handle();
@@ -44,17 +44,15 @@ public:
    * Start the async handle.
    *
    * @param loop The event loop that will process the handle.
-   * @param data User data that's pass to the callback.
    * @param callback A callback that handles async send events.
    */
-  int start(uv_loop_t* loop, void* data, Callback callback) {
+  int start(uv_loop_t* loop, const Callback& callback) {
     if (handle_ == NULL) {
       handle_ = Memory::allocate<uv_async_t>();
       handle_->data = this;
       int rc = uv_async_init(loop, handle_, on_async);
       if (rc != 0) return rc;
     }
-    data_ = data;
     callback_ = callback;
     return 0;
   }
@@ -88,7 +86,6 @@ public:
 
 public:
   uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
-  void* data() const { return data_; }
 
 private:
   static void on_async(uv_async_t* handle) {
@@ -102,7 +99,6 @@ private:
 
 private:
   uv_async_t* handle_;
-  void* data_;
   Callback callback_;
 
 private:

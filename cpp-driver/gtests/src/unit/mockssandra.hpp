@@ -694,7 +694,7 @@ public:
   Hosts hosts() const;
 
 private:
-  static void on_timeout(Timer* timer);
+  void on_timeout(Timer* timer);
 
   const char* start() { return body_.data(); }
   const char* end() { return body_.data() + body_.size(); }

@@ -110,7 +110,9 @@ void ConnectionPool::internal_schedule_reconnect() {
            address_.to_string().c_str(),
            static_cast<unsigned long long>(manager_->settings().reconnect_wait_time_ms),
            static_cast<void*>(this));
-  PooledConnector::Ptr connector(Memory::allocate<PooledConnector>(this, this, on_reconnect));
+  PooledConnector::Ptr connector(
+        Memory::allocate<PooledConnector>(this,
+                                          bind_member_func(&ConnectionPool::on_reconnect, this)));
   pending_connections_.push_back(connector);
   connector->delayed_connect(manager_->settings().reconnect_wait_time_ms,
                              PooledConnector::Protected());
@@ -148,6 +150,9 @@ void ConnectionPool::internal_add_connection(const PooledConnection::Ptr& connec
 void ConnectionPool::internal_close() {
   if (close_state_ == CLOSE_STATE_OPEN) {
     close_state_ = CLOSE_STATE_CLOSING;
+    if (maybe_closed()) {
+      return;
+    }
     for (PooledConnection::Vec::iterator it = connections_.begin(),
          end = connections_.end(); it != end; ++it) {
       (*it)->close();
@@ -157,10 +162,9 @@ void ConnectionPool::internal_close() {
       (*it)->cancel();
     }
   }
-  maybe_closed();
 }
 
-void ConnectionPool::maybe_closed() {
+bool ConnectionPool::maybe_closed() {
   // Remove the pool once all current connections and pending connections
   // are terminated.
   if (close_state_ == CLOSE_STATE_CLOSING && connections_.empty() && pending_connections_.empty()) {
@@ -170,19 +174,17 @@ void ConnectionPool::maybe_closed() {
     bool should_notify_down = (notify_state_ == NOTIFY_STATE_UP);
     manager_->notify_closed(this, should_notify_down, ConnectionPoolManager::Protected());
     dec_ref();
+    return true;
   }
+
+  return false;
 }
 
 void ConnectionPool::on_reconnect(PooledConnector* connector) {
-  ConnectionPool* pool = static_cast<ConnectionPool*>(connector->data());
-  pool->handle_reconnect(connector);
-}
-
-void ConnectionPool::handle_reconnect(PooledConnector* connector) {
   pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
                              pending_connections_.end());
 
-  if (close_state_ !=  CLOSE_STATE_OPEN) {
+  if (close_state_ != CLOSE_STATE_OPEN) {
     maybe_closed();
     return;
   }

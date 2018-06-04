@@ -17,8 +17,8 @@
 #ifndef __CASS_CLUSTER_CONNECTOR_HPP_INCLUDED__
 #define __CASS_CLUSTER_CONNECTOR_HPP_INCLUDED__
 
+#include "callback.hpp"
 #include "cluster.hpp"
-
 #include "resolver.hpp"
 
 namespace cass {
@@ -35,7 +35,8 @@ class Random;
 class ClusterConnector : public RefCounted<ClusterConnector> {
 public:
   typedef SharedRefPtr<ClusterConnector> Ptr;
-  typedef void (*Callback)(ClusterConnector*);
+
+  typedef cass::Callback<void, ClusterConnector*> Callback;
 
   enum ClusterError {
     CLUSTER_OK,
@@ -52,14 +53,12 @@ public:
    * @param contact_points A list of hosts (IP addresses or hostname strings)
    * that seed connection to the cluster.
    * @param protocol_version The initial protocol version to try.
-   * @param data User data that is available from the callback.
    * @param callback A callback that is called when a connection to a contact
    * point is established, if an error occurred, or all contact points failed.
    */
   ClusterConnector(const ContactPointList& contact_points,
                    int protocol_version,
-                   void* data,
-                   Callback callback);
+                   const Callback& callback);
 
   /**
    * Set the cluster listener to use for handle cluster events.
@@ -118,8 +117,6 @@ public:
   Cluster::Ptr release_cluster();
 
 public:
-  void* data() { return data_; }
-
   int protocol_version() const { return protocol_version_; }
 
   bool is_ok() const { return error_code_ == CLUSTER_OK; }
@@ -141,12 +138,8 @@ private:
   void finish();
 
   void on_error(ClusterError code, const String& message);
-
-  static void on_resolve(MultiResolver* resolver);
-  void handle_resolve(MultiResolver* resolver);
-
-  static void on_connect(ControlConnector* connector);
-  void handle_connect(ControlConnector* connector);
+  void on_resolve(MultiResolver* resolver);
+  void on_connect(ControlConnector* connector);
 
 private:
   Cluster::Ptr cluster_;
@@ -161,7 +154,6 @@ private:
   Random* random_;
   ClusterSettings settings_;
 
-  void* data_;
   Callback callback_;
 
   ClusterError error_code_;

@@ -173,23 +173,20 @@ public:
     mockssandra::SimpleClusterTest::TearDown();
   }
 
-  static void on_connection_connected(ControlConnector* connector) {
+  static void on_connection_connected(ControlConnector* connector, bool* is_connected) {
     if (connector->is_ok()) {
-      bool* is_connected = static_cast<bool*>(connector->data());
       *is_connected = true;
     }
   }
 
-  static void on_connection_close(ControlConnector* connector) {
+  static void on_connection_close(ControlConnector* connector, bool* is_closed) {
     if (connector->error_code() == ControlConnector::CONTROL_CONNECTION_ERROR_CLOSE) {
-      bool* is_closed = static_cast<bool*>(connector->data());
       *is_closed = true;
     }
   }
 
-  static void on_connection_error_code(ControlConnector* connector) {
-    ControlConnector::ControlConnectionError* error_code =
-        static_cast<ControlConnector::ControlConnectionError*>(connector->data());
+  static void on_connection_error_code(ControlConnector* connector,
+                                       ControlConnector::ControlConnectionError* error_code) {
     if (!connector->is_ok()) {
       *error_code = connector->error_code();
     }
@@ -258,8 +255,7 @@ public:
     ControlConnection::Ptr connection_;
   };
 
-  static void on_connection_event(ControlConnector* connector) {
-    EventListener* listener = static_cast<EventListener*>(connector->data());
+  static void on_connection_event(ControlConnector* connector, EventListener* listener) {
     listener->trigger_events(connector->release_connection());
   }
 
@@ -273,8 +269,7 @@ TEST_F(ControlConnectionUnitTest, Simple) {
   bool is_connected = false;
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(&is_connected),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, &is_connected)));
   connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
@@ -290,8 +285,7 @@ TEST_F(ControlConnectionUnitTest, Auth) {
   bool is_connected = false;
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(&is_connected),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, &is_connected)));
   ControlConnectionSettings settings;
   settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
 
@@ -314,8 +308,7 @@ TEST_F(ControlConnectionUnitTest, Ssl) {
   bool is_connected = false;
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(&is_connected),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, &is_connected)));
   connector
       ->with_settings(settings)
       ->connect(loop());
@@ -335,8 +328,7 @@ TEST_F(ControlConnectionUnitTest, Close) {
   for (size_t i = 0; i < 10; ++i) {
     ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
                                                                        PROTOCOL_VERSION,
-                                                                       static_cast<void*>(&is_closed),
-                                                                       on_connection_close));
+                                                                       bind_func(on_connection_close, &is_closed)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -355,8 +347,7 @@ TEST_F(ControlConnectionUnitTest, Cancel) {
   for (size_t i = 0; i < 10; ++i) {
     ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
                                                                        PROTOCOL_VERSION,
-                                                                       static_cast<void*>(&error_code),
-                                                                       on_connection_error_code));
+                                                                       bind_func(on_connection_error_code, &error_code)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -390,8 +381,7 @@ TEST_F(ControlConnectionUnitTest, StatusChangeEvents) {
 
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(address,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(&listener),
-                                                                     on_connection_event));
+                                                                     bind_func(on_connection_event, &listener)));
   connector
       ->with_listener(&listener)
       ->connect(loop());
@@ -427,8 +417,7 @@ TEST_F(ControlConnectionUnitTest, TopologyChangeEvents) {
 
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(address1,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(&listener),
-                                                                     on_connection_event));
+                                                                     bind_func(on_connection_event, &listener)));
   connector
       ->with_listener(&listener)
       ->connect(loop());
@@ -500,8 +489,7 @@ TEST_F(ControlConnectionUnitTest, SchemaChangeEvents) {
 
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(address,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(&listener),
-                                                                     on_connection_event));
+                                                                     bind_func(on_connection_event, &listener)));
   connector
       ->with_listener(&listener)
       ->connect(loop());
@@ -599,8 +587,7 @@ TEST_F(ControlConnectionUnitTest, EventDuringStartup) {
   bool is_connected;
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(address,
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(&is_connected),
-                                                                     on_connection_connected));
+                                                                     bind_func(on_connection_connected, &is_connected)));
   connector
       ->with_listener(&listener)
       ->connect(loop());
@@ -621,8 +608,7 @@ TEST_F(ControlConnectionUnitTest, InvalidProtocol) {
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
                                                                      0x7F, // Invalid protocol version
-                                                                     static_cast<void*>(&error_code),
-                                                                     on_connection_error_code));
+                                                                     bind_func(on_connection_error_code, &error_code)));
   connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
@@ -639,8 +625,7 @@ TEST_F(ControlConnectionUnitTest, InvalidAuth) {
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(&error_code),
-                                                                     on_connection_error_code));
+                                                                     bind_func(on_connection_error_code, &error_code)));
 
   ControlConnectionSettings settings;
   settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
@@ -662,8 +647,7 @@ TEST_F(ControlConnectionUnitTest, InvalidSsl) {
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
                                                                      PROTOCOL_VERSION,
-                                                                     static_cast<void*>(&error_code),
-                                                                     on_connection_error_code));
+                                                                     bind_func(on_connection_error_code, &error_code)));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 

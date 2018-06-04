@@ -114,14 +114,16 @@ public:
     Logger::set_log_level(saved_log_level_);
   }
 
-  static void on_socket_connected(SocketConnector* connector) {
+  static void on_socket_connected(SocketConnector* connector, String* result) {
     Socket::Ptr socket = connector->release_socket();
     if (connector->error_code() == SocketConnector::SOCKET_OK) {
       if (connector->ssl_session()) {
-        socket->set_handler(Memory::allocate<SslTestSocketHandler>(connector->ssl_session().release(),
-                                                                                static_cast<String*>(connector->data())));
+        socket->set_handler(
+              Memory::allocate<SslTestSocketHandler>(
+                connector->ssl_session().release(), result));
       } else {
-        socket->set_handler(Memory::allocate<TestSocketHandler>(static_cast<String*>(connector->data())));
+        socket->set_handler(
+              Memory::allocate<TestSocketHandler>(result));
       }
       const char* data = "The socket is sucessfully connected and wrote data - ";
       socket->write(Memory::allocate<BufferSocketRequest>(Buffer(data, strlen(data))));
@@ -132,23 +134,20 @@ public:
     }
   }
 
-  static void on_socket_refused(SocketConnector* connector) {
+  static void on_socket_refused(SocketConnector* connector, bool* is_refused) {
     if (connector->error_code() == SocketConnector::SOCKET_ERROR_CONNECT) {
-      bool* is_refused = static_cast<bool*>(connector->data());
       *is_refused = true;
     }
   }
 
-  static void on_socket_closed(SocketConnector* connector) {
+  static void on_socket_closed(SocketConnector* connector, bool* is_closed) {
     if (connector->error_code() == SocketConnector::SOCKET_ERROR_CLOSE) {
-      bool* is_closed = static_cast<bool*>(connector->data());
       *is_closed = true;
     }
   }
 
-  static void on_socket_canceled(SocketConnector* connector) {
+  static void on_socket_canceled(SocketConnector* connector, bool* is_canceled) {
     if (connector->is_canceled()) {
-      bool* is_canceled = static_cast<bool*>(connector->data());
       *is_canceled = true;
     }
   }
@@ -164,8 +163,7 @@ TEST_F(SocketUnitTest, Simple) {
 
   String result;
   SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                   static_cast<void*>(&result),
-                                                                   on_socket_connected));
+                                                                   cass::bind_func(on_socket_connected, &result)));
 
   connector->connect(loop());
 
@@ -181,8 +179,7 @@ TEST_F(SocketUnitTest, Ssl) {
 
   String result;
   SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                   static_cast<void*>(&result),
-                                                                   on_socket_connected));
+                                                                   cass::bind_func(on_socket_connected, &result)));
 
 
   connector->with_settings(settings)
@@ -196,8 +193,7 @@ TEST_F(SocketUnitTest, Ssl) {
 TEST_F(SocketUnitTest, Refused) {
   bool is_refused = false;
   SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                   static_cast<void*>(&is_refused),
-                                                                   on_socket_refused));
+                                                                   cass::bind_func(on_socket_refused, &is_refused)));
   connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
@@ -216,8 +212,7 @@ TEST_F(SocketUnitTest, SslClose) {
   bool is_closed = false;
   for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                     static_cast<void*>(&is_closed),
-                                                                     on_socket_closed));
+                                                                     cass::bind_func(on_socket_closed, &is_closed)));
 
     connector
         ->with_settings(settings)
@@ -238,8 +233,7 @@ TEST_F(SocketUnitTest, Cancel) {
   bool is_canceled = false;
   for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                     static_cast<void*>(&is_canceled),
-                                                                     on_socket_canceled));
+                                                                     cass::bind_func(on_socket_canceled, &is_canceled)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -266,8 +260,7 @@ TEST_F(SocketUnitTest, SslCancel) {
   bool is_canceled = false;
   for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                     static_cast<void*>(&is_canceled),
-                                                                     on_socket_canceled));
+                                                                     cass::bind_func(on_socket_canceled, &is_canceled)));
     connector->with_settings(settings)
              ->connect(loop());
     connectors.push_back(connector);

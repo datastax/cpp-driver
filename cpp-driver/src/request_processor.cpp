@@ -198,9 +198,11 @@ void RequestProcessor::process_request(const RequestHandler::Ptr& request_handle
 }
 
 int RequestProcessor::init(Protected) {
-  int rc = async_.start(event_loop_->loop(), this, on_async);
+  int rc = async_.start(event_loop_->loop(),
+                        bind_member_func(&RequestProcessor::on_async, this));
   if (rc != 0) return rc;
-  return prepare_.start(event_loop_->loop(), this, on_prepare);
+  return prepare_.start(event_loop_->loop(),
+                        bind_member_func(&RequestProcessor::on_prepare, this));
 }
 
 void RequestProcessor::on_pool_up(const Address& address) {
@@ -408,7 +410,7 @@ void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
   }
 }
 
-void RequestProcessor::on_timeout() {
+void RequestProcessor::on_timeout(EventLoop* event_loop) {
   int processed = process_requests((io_time_during_coalesce_ * new_request_ratio_) / 100);
   io_time_during_coalesce_ = 0;
 
@@ -435,30 +437,22 @@ void RequestProcessor::on_timeout() {
     }
   }
 
-  event_loop_->start_timer(coalesce_delay_us_, this);
+  event_loop_->start_timer(coalesce_delay_us_,
+                           bind_member_func(&RequestProcessor::on_timeout, this));
 }
 
 void RequestProcessor::on_async(Async* async) {
-  RequestProcessor* processor = static_cast<RequestProcessor*>(async->data());
-  processor->handle_async();
-}
-
-void RequestProcessor::handle_async() {
   if (process_requests(0) > 0) {
     connection_pool_manager_->flush();
   }
 
   if (!event_loop_->is_timer_running()) {
-    event_loop_->start_timer(coalesce_delay_us_, this);
+    event_loop_->start_timer(coalesce_delay_us_,
+                             bind_member_func(&RequestProcessor::on_timeout, this));
   }
 }
 
 void RequestProcessor::on_prepare(Prepare* prepare) {
-  RequestProcessor* processor = static_cast<RequestProcessor*>(prepare->data());
-  processor->handle_prepare();
-}
-
-void RequestProcessor::handle_prepare() {
   io_time_during_coalesce_ += event_loop_->io_time_elapsed();
 }
 

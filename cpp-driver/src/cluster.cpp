@@ -322,15 +322,14 @@ bool Cluster::is_host_ignored(const LoadBalancingPolicy::Vec& policies,
 void Cluster::schedule_reconnect() {
   if (settings_.reconnect_timeout_ms > 0) {
     timer_.start(connection_->loop(), settings_.reconnect_timeout_ms,
-                 this, on_schedule_reconnect);
+                 bind_member_func(&Cluster::on_schedule_reconnect, this));
   } else {
     handle_schedule_reconnect();
   }
 }
 
 void Cluster::on_schedule_reconnect(Timer* timer) {
-  Cluster* cluster = static_cast<Cluster*>(timer->data());
-  cluster->handle_schedule_reconnect();
+  handle_schedule_reconnect();
 }
 
 void Cluster::handle_schedule_reconnect() {
@@ -338,8 +337,7 @@ void Cluster::handle_schedule_reconnect() {
   if (host) {
     reconnector_.reset(Memory::allocate<ControlConnector>(host->address(),
                                                           connection_->protocol_version(),
-                                                          this,
-                                                          on_reconnect));
+                                                          bind_member_func(&Cluster::on_reconnect, this)));
     reconnector_
         ->with_settings(settings_.control_connection_settings)
         ->connect(connection_->loop());
@@ -353,11 +351,6 @@ void Cluster::handle_schedule_reconnect() {
 }
 
 void Cluster::on_reconnect(ControlConnector* connector) {
-  Cluster* cluster = static_cast<Cluster*>(connector->data());
-  cluster->handle_reconnect(connector);
-}
-
-void Cluster::handle_reconnect(ControlConnector* connector) {
   if (connector->is_ok()) {
     connection_ = connector->release_connection();
     connection_->set_listener(this);
@@ -428,7 +421,8 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
   host->set_up();
   load_balancing_policy_->on_up(host);
 
-  if (!prepare_host(host, on_prepare_host_up)) {
+  if (!prepare_host(host,
+                    bind_member_func(&Cluster::on_prepare_host_up, this))) {
     notify_up_after_prepare(host);
   }
 }
@@ -478,7 +472,8 @@ void Cluster::notify_add(const Host::Ptr& host) {
   hosts_[host->address()] = host;
   load_balancing_policy_->on_add(host);
 
-  if (!prepare_host(host, on_prepare_host_add)) {
+  if (!prepare_host(host,
+                    bind_member_func(&Cluster::on_prepare_host_add, this))) {
     notify_add_after_prepare(host);
   }
 }
@@ -515,12 +510,11 @@ void Cluster::notify_remove(const Address& address) {
 }
 
 bool Cluster::prepare_host(const Host::Ptr& host,
-                           PrepareHostHandler::Callback callback) {
+                           const PrepareHostHandler::Callback& callback) {
   if (settings_.prepare_on_up_or_add_host) {
     PrepareHostHandler::Ptr prepare_host_handler(
           Memory::allocate<PrepareHostHandler>(host,
                                                prepared_metadata_.copy(),
-                                               this,
                                                callback,
                                                connection_->protocol_version(),
                                                settings_.max_prepares_per_flush));
@@ -533,13 +527,11 @@ bool Cluster::prepare_host(const Host::Ptr& host,
 }
 
 void Cluster::on_prepare_host_add(const PrepareHostHandler* handler) {
-  Cluster* cluster = static_cast<Cluster*>(handler->data());
-  cluster->notify_add_after_prepare(handler->host());
+  notify_add_after_prepare(handler->host());
 }
 
 void Cluster::on_prepare_host_up(const PrepareHostHandler* handler) {
-  Cluster* cluster = static_cast<Cluster*>(handler->data());
-  cluster->notify_up_after_prepare(handler->host());
+  notify_up_after_prepare(handler->host());
 }
 
 void Cluster::on_update_schema(SchemaType type,

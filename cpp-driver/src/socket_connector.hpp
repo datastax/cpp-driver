@@ -17,6 +17,7 @@
 #ifndef __CASS_SOCKET_CONNECTOR_HPP_INCLUDED__
 #define __CASS_SOCKET_CONNECTOR_HPP_INCLUDED__
 
+#include "callback.hpp"
 #include "name_resolver.hpp"
 #include "socket.hpp"
 #include "tcp_connector.hpp"
@@ -60,7 +61,7 @@ class SocketConnector : public RefCounted<SocketConnector> {
 public:
   typedef SharedRefPtr<SocketConnector> Ptr;
 
-  typedef void (*Callback)(SocketConnector*);
+  typedef cass::Callback<void, SocketConnector*> Callback;
 
   enum SocketError {
     SOCKET_OK,
@@ -80,11 +81,10 @@ public:
    * Constructor
    *
    * @param address The address to connect to.
-   * @param data User data that is available from the callback.
    * @param callback A callback that is called when the socket is connected or
    * if an error occurred.
    */
-  SocketConnector(const Address& address, void* data, Callback callback);
+  SocketConnector(const Address& address, const Callback& callback);
 
   /**
    * Set the socket settings.
@@ -118,8 +118,6 @@ public:
   const Address& address() { return address_; }
   const String& hostname() { return hostname_; }
 
-  void* data() { return data_; }
-
   ScopedPtr<SslSession>& ssl_session() { return ssl_session_; }
 
   SocketError error_code() { return error_code_; }
@@ -145,17 +143,12 @@ private:
   void finish();
 
   void on_error(SocketError code, const String& message);
-
-  static void on_connect(TcpConnector* tcp_connecter);
-  void handle_connect(TcpConnector* tcp_connector);
-
-  static void on_resolve(NameResolver* resolver);
-  void handle_resolve(NameResolver* resolver);
+  void on_connect(TcpConnector* tcp_connecter);
+  void on_resolve(NameResolver* resolver);
 
 private:
   Address address_;
   String hostname_;
-  void* data_;
   Callback callback_;
 
   Socket::Ptr socket_;

@@ -20,6 +20,7 @@
 #include "cassconfig.hpp"
 
 #ifdef HAVE_TIMERFD
+#include "callback.hpp"
 #include "macros.hpp"
 #include "memory.hpp"
 
@@ -32,19 +33,18 @@ namespace cass {
 
 class TimerFd {
 public:
-  typedef void (*Callback)(TimerFd*);
+  typedef cass::Callback<void, TimerFd*> Callback;
 
   TimerFd()
     : handle_(NULL)
     , fd_(-1)
-    , state_(CLOSED)
-    , data_(NULL) { }
+    , state_(CLOSED) { }
 
   ~TimerFd() {
     close_handle();
   }
 
-  int start(uv_loop_t* loop, uint64_t timeout_us, void* data, Callback callback) {
+  int start(uv_loop_t* loop, uint64_t timeout_us, const Callback& callback) {
     int rc = 0;
     if (fd_ == -1) {
       fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
@@ -66,7 +66,6 @@ public:
       set_time(timeout_us);
       state_ = STARTED;
     }
-    data_ = data;
     callback_ = callback;
     return rc;
   }
@@ -97,7 +96,6 @@ public:
 public:
   bool is_running() const { return state_ == STARTED; }
   uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
-  void* data() { return data_; }
 
 private:
   void set_time(uint64_t timeout_us) {
@@ -136,7 +134,6 @@ private:
   uv_poll_t* handle_;
   int fd_;
   State state_;
-  void* data_;
   Callback callback_;
 };
 

@@ -50,10 +50,7 @@ public:
  */
 class EventLoop {
 public:
-  class TimerCallback {
-  public:
-    virtual void on_timeout() = 0;
-  };
+  typedef cass::Callback<void, EventLoop*> TimerCallback;
 
   EventLoop();
 
@@ -99,7 +96,7 @@ public:
    *
    * @param timeout_us
    */
-  void start_timer(uint64_t timeout_us, TimerCallback* callback);
+  void start_timer(uint64_t timeout_us, const TimerCallback& callback);
 
   /**
    * Stop the loop timer.
@@ -144,18 +141,16 @@ private:
   };
 
 private:
-  static void internal_on_run(void* data);
+  static void internal_on_run(void* arg);
   void handle_run();
 
 #ifdef HAVE_TIMERFD
-  static void internal_on_timer(TimerFd* timer);
+  void on_timer(TimerFd* timer);
 #else
-  static void internal_on_timer(Timer* timer);
+  void on_timer(Timer* timer);
 #endif
-  void handle_timer();
 
-  static void on_task(Async* async);
-  void handle_task();
+  void on_task(Async* async);
 
   uv_loop_t loop_;
   bool is_loop_initialized_;
@@ -177,7 +172,7 @@ private:
   uint64_t timeout_;
   Timer timer_;
 #endif
-  TimerCallback* timer_callback_;
+  TimerCallback timer_callback_;
 
   Atomic<bool> is_closing_;
 

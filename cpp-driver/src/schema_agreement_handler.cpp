@@ -135,14 +135,16 @@ void SchemaAgreementHandler::start(Connection* connection) {
   if (!connection_) { // Start only once
     inc_ref(); // Reference for the event loop
     connection_.reset(connection);
-    timer_.start(connection_->loop(), max_schema_wait_time_ms_, this, on_timeout);
+    timer_.start(connection_->loop(), max_schema_wait_time_ms_,
+                 bind_member_func(&SchemaAgreementHandler::on_timeout, this));
   }
 }
 
 void SchemaAgreementHandler::schedule() {
   LOG_DEBUG("Schema still not up-to-date on some live nodes. "
             "Trying again in %d ms", RETRY_SCHEMA_AGREEMENT_WAIT_MS);
-  retry_timer_.start(connection_->loop(), RETRY_SCHEMA_AGREEMENT_WAIT_MS, this, on_retry_timeout);
+  retry_timer_.start(connection_->loop(), RETRY_SCHEMA_AGREEMENT_WAIT_MS,
+                     bind_member_func(&SchemaAgreementHandler::on_retry_timeout, this));
 }
 
 void SchemaAgreementHandler::finish() {
@@ -158,11 +160,6 @@ void SchemaAgreementHandler::finish() {
 }
 
 void SchemaAgreementHandler::on_retry_timeout(Timer* timer) {
-  SchemaAgreementHandler* handler = static_cast<SchemaAgreementHandler*>(timer->data());
-  handler->handle_retry_timeout();
-}
-
-void SchemaAgreementHandler::handle_retry_timeout() {
   if (connection_->is_closing()) {
     LOG_WARN("Connection closed while attempting to check schema agreement");
     finish();
@@ -173,11 +170,6 @@ void SchemaAgreementHandler::handle_retry_timeout() {
 }
 
 void SchemaAgreementHandler::on_timeout(Timer* timer) {
-  SchemaAgreementHandler* handler = static_cast<SchemaAgreementHandler*>(timer->data());
-  handler->handle_timeout();
-}
-
-void SchemaAgreementHandler::handle_timeout() {
   LOG_WARN("No schema agreement on live nodes after %llu ms. "
            "Schema may not be up-to-date on some nodes.",
            static_cast<unsigned long long>(max_schema_wait_time_ms_));

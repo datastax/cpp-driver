@@ -325,29 +325,26 @@ void Connection::on_close() {
 
 void Connection::restart_heartbeat_timer() {
   if (!is_closing() && heartbeat_interval_secs_ > 0) {
-    heartbeat_timer_.start(socket_->loop(),
-                           1000 * heartbeat_interval_secs_,
-                           this, on_heartbeat);
+    heartbeat_timer_.start(socket_->loop(), 1000 * heartbeat_interval_secs_,
+                           bind_member_func(&Connection::on_heartbeat, this));
   }
 }
 
 void Connection::on_heartbeat(Timer* timer) {
-  Connection* connection = static_cast<Connection*>(timer->data());
-
-  if (!connection->heartbeat_outstanding_) {
-    if (!connection->write_and_flush(RequestCallback::Ptr(Memory::allocate<HeartbeatCallback>(connection)))) {
+  if (!heartbeat_outstanding_) {
+    if (!write_and_flush(RequestCallback::Ptr(Memory::allocate<HeartbeatCallback>(this)))) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests
       // that never returned and as a result timed out.
       LOG_ERROR("No streams IDs available for heartbeat request. "
                 "Terminating connection...");
-      connection->defunct();
+      defunct();
       return;
     }
-    connection->heartbeat_outstanding_ = true;
+    heartbeat_outstanding_ = true;
   }
 
-  connection->restart_heartbeat_timer();
+  restart_heartbeat_timer();
 }
 
 void Connection::restart_terminate_timer() {
@@ -355,17 +352,15 @@ void Connection::restart_terminate_timer() {
   // otherwise connections would be terminated in periods of request inactivity.
   if (!is_closing() && heartbeat_interval_secs_ > 0 &&
       idle_timeout_secs_ > 0) {
-    terminate_timer_.start(socket_->loop(),
-                           1000 * idle_timeout_secs_,
-                           this, on_terminate);
+    terminate_timer_.start(socket_->loop(), 1000 * idle_timeout_secs_,
+                           bind_member_func(&Connection::on_terminate, this));
   }
 }
 
 void Connection::on_terminate(Timer* timer) {
-  Connection* connection = static_cast<Connection*>(timer->data());
   LOG_ERROR("Failed to send a heartbeat within connection idle interval. "
             "Terminating connection...");
-  connection->defunct();
+  defunct();
 }
 
 } // namespace cass
