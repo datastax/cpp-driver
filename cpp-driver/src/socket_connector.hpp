@@ -110,7 +110,7 @@ public:
    * the socket automatically be closed.
    *
    * @return The socket object for this connector. This returns a null object
-   * if the socket is not connected or an error occured.
+   * if the socket is not connected or an error occurred.
    */
   Socket::Ptr release_socket();
 

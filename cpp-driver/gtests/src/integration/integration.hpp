@@ -47,6 +47,10 @@
   GROUP_TEST_F(Integration##_##server_type, test_case, test_name)
 #define INTEGRATION_TYPED_TEST_P(server_type, test_case, test_name) \
   GROUP_TYPED_TEST_P(Integration##_##server_type, test_case, test_name)
+#define INTEGRATION_DISABLED_TEST_F(server_type, test_case, test_name) \
+  GROUP_TEST_F(DISABLED##_##Integration##_##server_type, test_case, test_name)
+#define INTEGRATION_DISABLED_TYPED_TEST_P(server_type, test_case, test_name) \
+  GROUP_TYPED_TEST_P(DISABLED##_##Integration##_##server_type, test_case, est_name)
 
 // Macros to use for grouping Cassandra integration tests together
 #define CASSANDRA_TEST_NAME(test_name) Integration##_##Cassandra##_##test_name
@@ -54,6 +58,10 @@
   INTEGRATION_TEST_F(Cassandra, test_case, test_name)
 #define CASSANDRA_INTEGRATION_TYPED_TEST_P(test_case, test_name) \
   INTEGRATION_TYPED_TEST_P(Cassandra, test_case, test_name)
+#define CASSANDRA_INTEGRATION_DISABLED_TEST_F(test_case, test_name) \
+  INTEGRATION_DISABLED_TEST_F(Cassandra, test_case, test_name)
+#define CASSANDRA_INTEGRATION_DISABLED_TYPED_TEST_P(test_case, test_name) \
+  INTEGRATION_DISABLED_TYPED_TEST_P(Cassandra, test_case, test_name)
 
 //TODO: Create SKIP_SUITE macro; reduces noise and makes sense for certain suites
 
@@ -200,6 +208,14 @@ protected:
    * Default contact points generated based on the number of nodes requested
    */
   std::string contact_points_;
+  /**
+   * Setting for password authenticator. True if password authenticator should
+   * be enabled; false otherwise.
+   * (DEFAULT: false)
+   *
+   * NOTE: Username and password is 'cassandra'
+   */
+  bool is_password_authenticator_;
   /**
    * Setting for client authentication. True if client authentication should be
    * enabled; false otherwise.

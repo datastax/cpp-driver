@@ -149,6 +149,15 @@ public:
     retry_policy_.reset(retry_policy);
   }
 
+  const SpeculativeExecutionPolicy::Ptr& speculative_execution_policy() const {
+    return speculative_execution_policy_;
+  }
+
+  void set_speculative_execution_policy(SpeculativeExecutionPolicy* sep) {
+    if (sep == NULL) return;
+    speculative_execution_policy_.reset(sep);
+  }
+
 private:
   cass_uint64_t request_timeout_ms_;
   CassConsistency consistency_;
@@ -164,6 +173,7 @@ private:
   DcList whitelist_dc_;
   LoadBalancingPolicy::Ptr load_balancing_policy_;
   RetryPolicy::Ptr retry_policy_;
+  SpeculativeExecutionPolicy::Ptr speculative_execution_policy_;
 };
 
 } // namespace cass

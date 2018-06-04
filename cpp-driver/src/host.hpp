@@ -147,11 +147,6 @@ public:
     return tokens_;
   }
 
-  const String& listen_address() const { return listen_address_; }
-  void set_listen_address(const String& listen_address) {
-    listen_address_ = listen_address;
-  }
-
   const VersionNumber& server_version() const { return server_version_; }
   void set_server_version(const VersionNumber& server_version) {
     server_version_ = server_version;
@@ -230,7 +225,6 @@ private:
   uint32_t dc_id_;
   Atomic<HostState> state_;
   String address_string_;
-  String listen_address_;
   VersionNumber server_version_;
   String hostname_;
   String rack_;
@@ -282,6 +276,13 @@ public:
 };
 
 typedef Map<Address, Host::Ptr> HostMap;
+
+struct GetAddress {
+  typedef std::pair<Address, Host::Ptr> Pair;
+  const Address& operator()(const Pair& pair) const {
+    return pair.first;
+  }
+};
 
 struct GetHost {
   typedef std::pair<Address, Host::Ptr> Pair;

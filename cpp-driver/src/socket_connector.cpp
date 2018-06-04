@@ -122,7 +122,7 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
                                  settings_.max_reusable_write_objects));
 
   if (uv_tcp_init(loop, socket->handle()) != 0) {
-    on_error(SOCKET_ERROR_INIT, "Unable to initalize TCP object");
+    on_error(SOCKET_ERROR_INIT, "Unable to initialize TCP object");
     return;
   }
 
@@ -217,7 +217,7 @@ void SocketConnector::handle_connect(TcpConnector* tcp_connector) {
 #ifdef HAVE_NOSIGPIPE
     uv_tcp_t* tcp = &socket_->tcp_;
 
-    // This must be done after the socket is intialized, which is done in the
+    // This must be done after the socket is initialized, which is done in the
     // connection process, for the socket file descriptor to be valid.
     uv_os_fd_t fd = 0;
     int enabled = 1;

@@ -11,5 +11,6 @@
 #cmakedefine HAVE_BUILTIN_BSWAP64
 #cmakedefine HAVE_ARC4RANDOM
 #cmakedefine HAVE_GETRANDOM
+#cmakedefine HAVE_TIMERFD
 
 #endif

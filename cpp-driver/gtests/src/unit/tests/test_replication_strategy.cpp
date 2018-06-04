@@ -49,7 +49,7 @@ struct MockTokenMap {
   cass::DatacenterMap datacenters;
 
   void init_simple_strategy(size_t replication_factor) {
-    cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
+    cass::DataType::ConstPtr varchar_data_type(cass::Memory::allocate<cass::DataType>(CASS_VALUE_TYPE_VARCHAR));
 
     ColumnMetadataVec column_metadata;
     column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
@@ -72,7 +72,7 @@ struct MockTokenMap {
   }
 
   void init_network_topology_strategy(ReplicationMap& replication) {
-    cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
+    cass::DataType::ConstPtr varchar_data_type(cass::Memory::allocate<cass::DataType>(CASS_VALUE_TYPE_VARCHAR));
 
     ColumnMetadataVec column_metadata;
     column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
@@ -115,7 +115,7 @@ struct MockTokenMap {
   cass::Host* create_host(const cass::String& address,
                           const cass::String& rack = "",
                           const cass::String& dc = "") {
-    cass::Host::Ptr host(new cass::Host(cass::Address(address, 9042)));
+    cass::Host::Ptr host(cass::Memory::allocate<cass::Host>(cass::Address(address, 9042)));
     host->set_rack_and_dc(rack, dc);
     host->set_rack_and_dc_ids(rack_ids.get(rack), dc_ids.get(dc));
     cass::HostSet::iterator i = hosts.find(host);

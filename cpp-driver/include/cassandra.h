@@ -812,7 +812,8 @@ typedef struct CassAuthenticator_ CassAuthenticator;
  *
  * Use cass_authenticator_set_response() to set the response token.
  *
- * Use cass_authenticator_set_error() if an error occured during initialization.
+ * Use cass_authenticator_set_error() if an error occurred during
+ * initialization.
  *
  * @param[in] auth
  * @param[in] data
@@ -826,7 +827,8 @@ typedef void (*CassAuthenticatorInitialCallback)(CassAuthenticator* auth,
  *
  * Use cass_authenticator_set_response() to set the response token.
  *
- * Use cass_authenticator_set_error() if an error occured during the challenge.
+ * Use cass_authenticator_set_error() if an error occurred during the
+ * challenge.
  *
  * @param[in] auth
  * @param[in] data
@@ -841,7 +843,7 @@ typedef void (*CassAuthenticatorChallengeCallback)(CassAuthenticator* auth,
  * A callback used to indicate the success of the authentication
  * exchange.
  *
- * Use cass_authenticator_set_error() if an error occured while evaluating
+ * Use cass_authenticator_set_error() if an error occurred while evaluating
  * the success token.
  *
  * @param[in] auth
@@ -1347,19 +1349,60 @@ cass_execution_profile_set_blacklist_dc_filtering_n(CassExecProfile* profile,
 /**
  * Sets the execution profile's retry policy.
  *
- * @public @memberof CassExecProfile
- *
  * <b>Note:</b> Profile-based retry policy is disabled by default; cluster retry
  * policy is used when profile does not contain a policy unless the retry policy
  * was explicitly set on the batch/statement request.
  *
+ * @public @memberof CassExecProfile
+ *
  * @param[in] profile
  * @param[in] retry_policy NULL will clear retry policy from execution profile
  * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_retry_policy()
  */
 CASS_EXPORT CassError
 cass_execution_profile_set_retry_policy(CassExecProfile* profile,
                                         CassRetryPolicy* retry_policy);
+
+/**
+ * Enable constant speculative executions with the supplied settings for the
+ * execution profile.
+ *
+ * <b>Note:</b> Profile-based speculative execution policy is disabled by
+ * default; cluster speculative execution policy is used when profile does not
+ * contain a policy.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @param[in] constant_delay_ms
+ * @param[in] max_speculative_executions
+ * @return CASS_OK if successful, otherwise an error occurred
+ *
+ * @see cass_cluster_set_constant_speculative_execution_policy()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_constant_speculative_execution_policy(CassExecProfile* profile,
+                                                                 cass_int64_t constant_delay_ms,
+                                                                 int max_speculative_executions);
+
+/**
+ * Disable speculative executions for the execution profile.
+ *
+ * <b>Note:</b> Profile-based speculative execution policy is disabled by
+ * default; cluster speculative execution policy is used when profile does not
+ * contain a policy.
+ *
+ * @public @memberof CassExecProfile
+ *
+ * @param[in] profile
+ * @return CASS_OK if successful, otherwise an error occurred
+ *
+ * @see cass_cluster_set_no_speculative_execution_policy()
+ */
+CASS_EXPORT CassError
+cass_execution_profile_set_no_speculative_execution_policy(CassExecProfile* profile);
 
 /***********************************************************************************
  *
@@ -1609,6 +1652,40 @@ cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
                                      unsigned wait_time);
 
 /**
+ * Sets the amount of time, in microseconds, to wait for new requests to
+ * coalesce into a single system call. This should be set to a value around
+ * the latency SLA of your application's requests while also considering the
+ * request's roundtrip time. Larger values should be used for throughput
+ * bound workloads and lower values should be used for latency bound
+ * workloads.
+ *
+ * <b>Default:</b> 500 us
+ *
+ * @param[in] cluster
+ * @param[in] delay_us
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_coalesce_delay(CassCluster* cluster,
+                                cass_int64_t delay_us);
+
+/**
+ * Sets the ratio of time spent processing new requests versus handling the I/O
+ * and processing of outstanding requests. The range of this setting is 1 to 100,
+ * where larger values allocate more time to processing new requests and smaller
+ * values allocate more time to processing outstanding requests.
+ *
+ * <b>Default:</b> 50
+ *
+ * @param[in] cluster
+ * @param[in] ratio
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_new_request_ratio(CassCluster* cluster,
+                                   cass_int32_t ratio);
+
+/**
  * Sets the maximum number of connections that will be created concurrently.
  * Connections are created when the current connections are unable to keep up with
  * request throughput.
@@ -1637,13 +1714,16 @@ CASS_DEPRECATED(cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
-                                                   unsigned num_requests);
+CASS_DEPRECATED(cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
+                                                                   unsigned num_requests));
 
 /**
  * Sets the maximum number of requests processed by an IO worker
@@ -1653,13 +1733,16 @@ cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
  *
  * @public @memberof CassCluster
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a future release.
+ *
  * @param[in] cluster
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
-                                        unsigned num_requests);
+CASS_DEPRECATED(cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
+                                                        unsigned num_requests));
 
 /**
  * Sets the high water mark for the number of bytes outstanding
@@ -4727,6 +4810,7 @@ cass_statement_set_request_timeout(CassStatement* statement,
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_cluster_set_constant_speculative_execution_policy()
+ * @see cass_execution_profile_set_constant_speculative_execution_policy()
  */
 CASS_EXPORT CassError
 cass_statement_set_is_idempotent(CassStatement* statement,
@@ -6158,6 +6242,7 @@ cass_batch_set_request_timeout(CassBatch* batch,
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_cluster_set_constant_speculative_execution_policy()
+ * @see cass_execution_profile_set_constant_speculative_execution_policy()
  */
 CASS_EXPORT CassError
 cass_batch_set_is_idempotent(CassBatch* batch,

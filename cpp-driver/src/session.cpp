@@ -18,7 +18,6 @@
 
 #include "batch_request.hpp"
 #include "cluster_config.hpp"
-#include "connection_pool_manager_initializer.hpp"
 #include "constants.hpp"
 #include "execute_request.hpp"
 #include "external.hpp"
@@ -26,6 +25,7 @@
 #include "metrics.hpp"
 #include "prepare_all_handler.hpp"
 #include "prepare_request.hpp"
+#include "request_processor_manager_initializer.hpp"
 #include "scoped_lock.hpp"
 #include "statement.hpp"
 #include "timer.hpp"
@@ -175,19 +175,11 @@ void  cass_session_get_speculative_execution_metrics(const CassSession* session,
 
 namespace cass {
 
-Session::Session() {
-  uv_rwlock_init(&policy_rwlock_);
-}
-
 Session::~Session() {
-  if (request_queue_manager_) {
-    request_queue_manager_->close_handles();
-  }
   if (event_loop_group_) {
     event_loop_group_->close_handles();
     event_loop_group_->join();
   }
-  uv_rwlock_destroy(&policy_rwlock_);
 }
 
 Future::Ptr Session::prepare(const char* statement, size_t length) {
@@ -196,9 +188,8 @@ Future::Ptr Session::prepare(const char* statement, size_t length) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(cluster()->schema_snapshot()));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future,
-                                                               connection_pool_manager_.get(), metrics_.get(),
-                                                               this)));
+  execute(RequestHandler::Ptr(
+            Memory::allocate<RequestHandler>(prepare, future, metrics_.get())));
 
   return future;
 }
@@ -221,9 +212,8 @@ Future::Ptr Session::prepare(const Statement* statement) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(cluster()->schema_snapshot()));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(prepare, future,
-                                                               connection_pool_manager_.get(), metrics_.get(),
-                                                               this)));
+  execute(RequestHandler::Ptr(
+            Memory::allocate<RequestHandler>(prepare, future, metrics_.get())));
 
   return future;
 }
@@ -231,46 +221,23 @@ Future::Ptr Session::prepare(const Statement* statement) {
 Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* preferred_address) {
   ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>());
 
-  execute(RequestHandler::Ptr(Memory::allocate<RequestHandler>(request, future,
-                                                               connection_pool_manager_.get(), metrics_.get(),
-                                                               this, preferred_address)));
+  RequestHandler::Ptr request_handler(
+            Memory::allocate<RequestHandler>(request, future,
+                                             metrics_.get(), preferred_address));
+
+
+  if (request_handler->request()->opcode() == CQL_OPCODE_EXECUTE) {
+    const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request_handler->request());
+    request_handler->set_prepared_metadata(cluster()->prepared(execute->prepared()->id()));
+  }
+
+  execute(request_handler);
 
   return future;
 }
 
 void Session::execute(const RequestHandler::Ptr& request_handler) {
-  const String& profile_name = request_handler->request()->execution_profile_name();
-  ExecutionProfile profile;
-  if (config().profile(profile_name, profile)) {
-    if (!profile_name.empty()) {
-      LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
-    }
-
-    QueryPlan* query_plan = NULL;
-    SpeculativeExecutionPlan* execution_plan = NULL;
-    {
-      ScopedReadLock rl(&policy_rwlock_);
-      query_plan = profile.load_balancing_policy()->new_query_plan(keyspace_, request_handler.get(), token_map_.get());
-      execution_plan = config().speculative_execution_policy()->new_plan(keyspace_, request_handler->request());
-    }
-
-    PreparedMetadata::Entry::Ptr prepared_metadata_entry;
-    if (request_handler->request()->opcode() == CQL_OPCODE_EXECUTE) {
-      const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request_handler->request());
-      prepared_metadata_entry = cluster()->prepared(execute->prepared()->id());
-    }
-
-    request_handler->init(config(),
-                          profile,
-                          prepared_metadata_entry,
-                          query_plan,
-                          execution_plan);
-
-    request_handler->execute();
-  } else {
-    request_handler->set_error(CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID,
-                               profile_name + " does not exist");
-  }
+  request_processor_manager_->process_request(request_handler);
 }
 
 void Session::on_connect(const Host::Ptr& connected_host,
@@ -283,6 +250,11 @@ void Session::on_connect(const Host::Ptr& connected_host,
     notify_connect_failed(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                           "No hosts provided or no hosts resolved");
     return;
+  }
+
+  if (event_loop_group_) {
+    event_loop_group_->close_handles();
+    event_loop_group_->join();
   }
 
   event_loop_group_.reset(Memory::allocate<RoundRobinEventLoopGroup>(config().thread_count_io()));
@@ -300,215 +272,47 @@ void Session::on_connect(const Host::Ptr& connected_host,
     return;
   }
 
-  request_queue_manager_.reset(Memory::allocate<RequestQueueManager>(event_loop_group_.get()));
-  rc = request_queue_manager_->init(config().queue_size_io());
-  if (rc != 0) {
-    notify_connect_failed(CASS_ERROR_LIB_UNABLE_TO_INIT,
-                          "Unable to run event loop group threads");
-    return;
-  }
-
-  {
-    ScopedWriteLock wl(&policy_rwlock_);
-    const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-    for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
-         end = policies.end(); it != end; ++it) {
-      (*it)->init(connected_host, hosts, random());
-    }
-  }
-
-  connection_pool_manager_initializer_.reset(Memory::allocate<ConnectionPoolManagerInitializer>(request_queue_manager_.get(),
-                                                                                                protocol_version,
-                                                                                                this,
-                                                                                                on_initialize));
-
   metrics_.reset(Memory::allocate<Metrics>(config().thread_count_io() + 1));
 
-  addresses_.clear();
-  for (HostMap::const_iterator it = hosts.begin(),
-       end = hosts.end(); it != end; ++it) {
-    addresses_.insert(it->first);
-  }
+  RequestProcessorManagerInitializer::Ptr initializer(
+        Memory::allocate<RequestProcessorManagerInitializer>(connected_host,
+                                                             protocol_version,
+                                                             hosts,
+                                                             this,
+                                                             on_initialize));
 
-  connection_pool_manager_initializer_
-      ->with_settings(ConnectionPoolManagerSettings(config()))
+  initializer
+      ->with_settings(RequestProcessorSettings(config()))
+      ->with_keyspace(connect_keyspace())
       ->with_listener(this)
       ->with_metrics(metrics_.get())
-      ->with_keyspace(connect_keyspace())
-      ->initialize(AddressVec(addresses_.begin(), addresses_.end()));
-}
-
-void Session::on_result_metadata_changed(const String& prepared_id,
-                                         const String& query,
-                                         const String& keyspace,
-                                         const String& result_metadata_id,
-                                         const ResultResponse::ConstPtr& result_response) {
-  cluster()->prepared(prepared_id, query, keyspace, result_metadata_id, result_response);
-}
-
-void Session::on_keyspace_changed(const String& keyspace) {
-  connection_pool_manager_->set_keyspace(keyspace);
-  ScopedWriteLock wl(&policy_rwlock_);
-  keyspace_ = keyspace;
-}
-
-bool Session::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
-                                           const Host::Ptr& current_host,
-                                           const Response::Ptr& response)  {
-  SchemaAgreementHandler::Ptr handler(
-        Memory::allocate<SchemaAgreementHandler>(
-          request_handler, current_host, response,
-          this, config().max_schema_wait_time_ms()));
-
-  PooledConnection::Ptr connection(connection_pool_manager_->find_least_busy(current_host->address()));
-  if (connection && connection->write(handler->callback().get())) {
-    return true;
-  }
-
-  return false;
-}
-
-bool Session::on_prepare_all(const RequestHandler::Ptr& request_handler,
-                             const Host::Ptr& current_host,
-                             const Response::Ptr& response)  {
-  if (!config().prepare_on_all_hosts()) {
-    return false;
-  }
-
-  AddressVec addresses = connection_pool_manager_->available();
-  if (addresses.empty() ||
-      (addresses.size() == 1 && addresses[0] == current_host->address())) {
-    return false;
-  }
-
-  PrepareAllHandler::Ptr prepare_all_handler(
-        new PrepareAllHandler(current_host,
-                              response,
-                              request_handler,
-                              // Subtract the node that's already been prepared
-                              addresses.size() - 1));
-
-  for (AddressVec::const_iterator it = addresses.begin(),
-       end = addresses.end(); it != end; ++it) {
-    const Address& address(*it);
-
-    // Skip over the node we've already prepared
-    if (address == current_host->address()) {
-      continue;
-    }
-
-    // The destructor of `PrepareAllCallback` will decrement the remaining
-    // count in `PrepareAllHandler` even if this is unable to write to a
-    // connection successfully.
-    PrepareAllCallback::Ptr prepare_all_callback(
-          new PrepareAllCallback(address, prepare_all_handler));
-
-    PooledConnection::Ptr connection(connection_pool_manager_->find_least_busy(address));
-    if (connection) {
-      connection->write(prepare_all_callback.get());
-    }
-  }
-
-  return true;
-}
-
-bool Session::on_is_host_up(const Address& address) {
-  return cluster()->host(address)->is_up();
+      ->with_random(random())
+      ->with_token_map(token_map)
+      ->initialize(event_loop_group_.get());
 }
 
 void Session::on_up(const Host::Ptr& host) {
-  ScopedWriteLock wl(&policy_rwlock_);
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
-       end = policies.end(); it != end; ++it) {
-    (*it)->on_up(host);
-  }
 }
 
 void Session::on_down(const Host::Ptr& host) {
-  ScopedWriteLock wl(&policy_rwlock_);
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
-       end = policies.end(); it != end; ++it) {
-    (*it)->on_down(host);
-  }
 }
 
 void Session::on_add(const Host::Ptr& host) {
-  connection_pool_manager_->add(host->address());
-  ScopedWriteLock wl(&policy_rwlock_);
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
-       end = policies.end(); it != end; ++it) {
-    (*it)->on_add(host);
-  }
+  request_processor_manager_->notify_host_add(host);
 }
 
 void Session::on_remove(const Host::Ptr& host)  {
-  connection_pool_manager_->remove(host->address());
-  ScopedWriteLock wl(&policy_rwlock_);
-  const LoadBalancingPolicy::Vec& policies = config().load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
-       end = policies.end(); it != end; ++it) {
-    (*it)->on_remove(host);
-  }
+  request_processor_manager_->notify_host_remove(host);
 }
 
 void Session::on_update_token_map(const TokenMap::Ptr& token_map) {
-  ScopedWriteLock wl(&policy_rwlock_);
-  token_map_ = token_map;
+  request_processor_manager_->notify_token_map_changed(token_map);
 }
 
 void Session::on_close(Cluster* cluster) {
-  if (connection_pool_manager_initializer_) {
-    connection_pool_manager_initializer_->cancel();
+  if (request_processor_manager_) {
+    request_processor_manager_->close();
   }
-  if (connection_pool_manager_) {
-    connection_pool_manager_->close();
-  }
-}
-
-void Session::on_initialize(ConnectionPoolManagerInitializer* initializer) {
-  Session* session = static_cast<Session*>(initializer->data());
-  session->handle_initialize(initializer);
-}
-
-void Session::handle_initialize(ConnectionPoolManagerInitializer* initializer) {
-  bool is_keyspace_error = false;
-
-  // Prune hosts
-  const ConnectionPoolConnector::Vec& failures = initializer->failures();
-  for (ConnectionPoolConnector::Vec::const_iterator it = failures.begin(),
-       end = failures.end(); it != end; ++it) {
-    ConnectionPoolConnector::Ptr connector(*it);
-    if (connector->is_keyspace_error()) {
-      is_keyspace_error = true;
-      break;
-    } else {
-      cluster()->notify_down(connector->address());
-      addresses_.erase(connector->address());
-    }
-  }
-
-  // Handle errors and set hosts as up
-  if (is_keyspace_error) {
-    notify_connect_failed(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                          "Keyspace '" + connect_keyspace() + "' does not exist");
-  } else if (addresses_.empty()) {
-    notify_connect_failed(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                          "Unable to connect to any hosts");
-  } else {
-    for (AddressSet::const_iterator it = addresses_.begin(),
-         end = addresses_.end(); it != end; ++it) {
-      cluster()->notify_up(*it);
-    }
-  }
-
-  connection_pool_manager_ = initializer->release_manager();
-
-  connection_pool_manager_initializer_.reset();
-  addresses_.clear();
-  notify_connected();
 }
 
 void Session::on_pool_up(const Address& address) {
@@ -525,8 +329,51 @@ void Session::on_pool_critical_error(const Address& address,
   cluster()->notify_down(address);
 }
 
-void Session::on_close(ConnectionPoolManager* manager) {
+void Session::on_keyspace_changed(const String& keyspace) {
+}
+
+void Session::on_prepared_metadata_changed(const String& id,
+                                           const PreparedMetadata::Entry::Ptr& entry) {
+  cluster()->prepared(id, entry);
+}
+
+void Session::on_close(RequestProcessorManager* manager) {
   notify_closed();
+}
+
+void Session::on_initialize(RequestProcessorManagerInitializer* initializer) {
+  Session* session = static_cast<Session*>(initializer->data());
+  session->handle_initialize(initializer);
+}
+
+void Session::handle_initialize(RequestProcessorManagerInitializer* initializer) {
+  const RequestProcessorInitializer::Vec& failures = initializer->failures();
+
+  if (!failures.empty()) {
+    // All failures are likely to be the same, just pass the first error.
+    RequestProcessorInitializer::Ptr failure(failures.front());
+
+    CassError error_code;
+    switch (failure->error_code()) {
+      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_KEYSPACE:
+        error_code = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
+        break;
+      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE:
+        error_code = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
+        break;
+      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT_ASYNC:
+        error_code = CASS_ERROR_LIB_UNABLE_TO_INIT;
+        break;
+      default:
+        error_code = CASS_ERROR_LIB_INTERNAL_ERROR;
+        break;
+    }
+
+    notify_connect_failed(error_code, failure->error_message());
+  } else {
+    request_processor_manager_ = initializer->release_manager();
+    notify_connected();
+  }
 }
 
 } // namespace cass

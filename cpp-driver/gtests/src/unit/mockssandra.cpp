@@ -1967,7 +1967,7 @@ Host::Host(const cass::Address& address,
 
 SimpleEventLoopGroup::SimpleEventLoopGroup(size_t num_threads)
   : cass::RoundRobinEventLoopGroup(num_threads) {
-  int rc = init();
+  int rc = init("mockssandra");
   UNUSED_(rc);
   assert(rc == 0 && "Unable to initialize simple event loop");
   run();

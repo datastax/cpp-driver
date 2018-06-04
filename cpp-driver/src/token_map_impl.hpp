@@ -554,7 +554,6 @@ public:
     strategies_.set_deleted_key(String(1, '\0'));
   }
 
-  // TODO: Verify that nothing will break by copying
   TokenMapImpl(const TokenMapImpl& other)
     : tokens_(other.tokens_)
     , hosts_(other.hosts_)
@@ -574,7 +573,7 @@ public:
 
   virtual void build();
 
-  virtual TokenMap::Ptr copy();
+  virtual TokenMap::Ptr copy() const;
 
   virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
                                                  const String& routing_key) const;
@@ -697,7 +696,7 @@ void TokenMapImpl<Partitioner>::build() {
 }
 
 template<class Partitioner>
-TokenMap::Ptr TokenMapImpl<Partitioner>::copy() {
+TokenMap::Ptr TokenMapImpl<Partitioner>::copy() const {
   return Ptr(Memory::allocate<TokenMapImpl<Partitioner> >(*this));
 }
 

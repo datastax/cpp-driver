@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TIMER_HPP_INCLUDED__
-#define __CASS_TIMER_HPP_INCLUDED__
+#ifndef __CASS_PREPARE_HPP_INCLUDED__
+#define __CASS_PREPARE_HPP_INCLUDED__
 
 #include "macros.hpp"
 #include "memory.hpp"
@@ -24,33 +24,44 @@
 
 namespace cass {
 
-class Timer {
+/**
+ * A wrapper for uv_prepare. This is useful for processing that needs to be
+ * done before the event loop goes back into waiting.
+ */
+class Prepare {
 public:
-  typedef void (*Callback)(Timer*);
+  typedef void (*Callback)(Prepare*);
 
-  Timer()
+  Prepare()
     : handle_(NULL)
     , state_(CLOSED)
     , data_(NULL) { }
 
-  ~Timer() {
+  ~Prepare() {
     close_handle();
   }
 
-  int start(uv_loop_t* loop, uint64_t timeout, void* data, Callback callback) {
+  /**
+   * Start the prepare handle.
+   *
+   * @param loop The event loop that will process the handle.
+   * @param data User data that's pass to the callback.
+   * @param callback A callback that handles prepare events.
+   */
+  int start(uv_loop_t* loop, void* data, Callback callback) {
     int rc = 0;
     if (handle_ == NULL) {
-      handle_ = Memory::allocate<uv_timer_t>();
+      handle_ = Memory::allocate<uv_prepare_t>();
       handle_->loop = NULL;
       handle_->data = this;
     }
     if (state_ == CLOSED) {
-      rc = uv_timer_init(loop, handle_);
+      rc = uv_prepare_init(loop, handle_);
       if (rc != 0) return rc;
       state_ = STOPPED;
     }
     if (state_ == STOPPED) {
-      rc = uv_timer_start(handle_, on_timeout, timeout, 0);
+      rc = uv_prepare_start(handle_, on_prepare);
       if (rc != 0) return rc;
       state_ = STARTED;
     }
@@ -59,13 +70,19 @@ public:
     return 0;
   }
 
+  /**
+   * Stop the prepare handle.
+   */
   void stop() {
     if (state_ == STARTED) {
       state_ = STOPPED;
-      uv_timer_stop(handle_);
+      uv_prepare_stop(handle_);
     }
   }
 
+  /**
+   * Close the prepare handle.
+   */
   void close_handle() {
     if (handle_ != NULL) {
       if (state_ == CLOSED) { // The handle was allocate, but initialization failed.
@@ -80,22 +97,17 @@ public:
 
 public:
   bool is_running() const { return state_ == STARTED; }
-  uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
+  uv_loop_t* loop() {  return handle_ ? handle_->loop : NULL;  }
   void* data() const { return data_; }
 
 private:
-  static void on_timeout(uv_timer_t* handle) {
-    Timer* timer = static_cast<Timer*>(handle->data);
-    timer->handle_timeout();
-  }
-
-  void handle_timeout() {
-    state_ = STOPPED;
-    callback_(this);
+  static void on_prepare(uv_prepare_t* handle) {
+    Prepare* prepare = static_cast<Prepare*>(handle->data);
+    prepare->callback_(prepare);
   }
 
   static void on_close(uv_handle_t* handle) {
-    Memory::deallocate(reinterpret_cast<uv_timer_t*>(handle));
+    Memory::deallocate(reinterpret_cast<uv_prepare_t*>(handle));
   }
 
 private:
@@ -106,13 +118,13 @@ private:
   };
 
 private:
-  uv_timer_t* handle_;
+  uv_prepare_t* handle_;
   State state_;
   void* data_;
   Callback callback_;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Timer);
+  DISALLOW_COPY_AND_ASSIGN(Prepare);
 };
 
 } // namespace cass

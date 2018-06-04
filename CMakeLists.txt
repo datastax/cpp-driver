@@ -52,6 +52,7 @@ option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF
 option(DSE_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
 option(DSE_USE_ZLIB "Use zlib" OFF)
+option(DSE_USE_TIMERFD "Use timerfd (Linux only)" ON)
 
 # Handle testing dependencies
 if(DSE_BUILD_TESTS)
@@ -85,7 +86,7 @@ endif()
 
 # Set CASS options based on DSE options.
 foreach(key USE_STATIC_LIBS USE_BOOST_ATOMIC USE_STD_ATOMIC USE_OPENSSL
-            USE_TCMALLOC USE_SPARSEHASH USE_ZLIB USE_LIBSSH2 DEBUG_CUSTOM_ALLOC)
+            USE_TCMALLOC USE_SPARSEHASH USE_ZLIB USE_LIBSSH2 USE_TIMERFD DEBUG_CUSTOM_ALLOC)
   set(CASS_${key} ${DSE_${key}})
 endforeach()
 

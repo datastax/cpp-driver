@@ -30,7 +30,6 @@
 namespace cass {
 
 class ConnectionPoolManager;
-class EventLoopGroup;
 
 /**
  * A connector for a connection pool. This handles the connection process for a
@@ -55,14 +54,11 @@ public:
   ConnectionPoolConnector(ConnectionPoolManager* manager,
                           const Address& address,
                           void* data, Callback callback);
-  ~ConnectionPoolConnector();
 
   /**
    * Connect a pool.
-   *
-   * @param event_loop_group An event loop group to use run the connection process.
    */
-  void connect(EventLoopGroup* event_loop_group);
+  void connect();
 
   /**
    * Cancel the connection process.
@@ -74,7 +70,7 @@ public:
    * the pool automatically be closed.
    *
    * @return The pool object for this connector. This returns a null object
-   * if the pool is not connected or an error occured.
+   * if the pool is not connected or an error occurred.
    */
   ConnectionPool::Ptr release_pool();
 
@@ -90,8 +86,8 @@ public:
   bool is_keyspace_error() const;
 
 private:
-  static void on_connect(PooledConnector* connector, EventLoop* event_loop);
-  void handle_connect(PooledConnector* connector, EventLoop* event_loop);
+  static void on_connect(PooledConnector* connector);
+  void handle_connect(PooledConnector* connector);
 
 private:
   ConnectionPool::Ptr pool_;
@@ -99,9 +95,8 @@ private:
   void* data_;
   Callback callback_;
 
-  Atomic<size_t> remaining_;
+  size_t remaining_;
 
-  mutable uv_mutex_t lock_;
   PooledConnector::Vec pending_connections_;
   PooledConnector::Ptr critical_error_connector_;
 };

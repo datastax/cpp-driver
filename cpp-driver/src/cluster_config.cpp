@@ -131,26 +131,39 @@ void cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
   cluster->config().set_reconnect_wait_time(wait_time_ms);
 }
 
+CassError cass_cluster_set_coalesce_delay(CassCluster* cluster,
+                                          cass_int64_t delay_us) {
+  if (delay_us < 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_coalesce_delay_us(delay_us);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_new_request_ratio(CassCluster* cluster,
+                                             cass_int32_t ratio) {
+  if (ratio <= 0 || ratio > 100) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_new_request_ratio(ratio);
+  return CASS_OK;
+}
+
 CassError cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
                                                    unsigned num_connections) {
+  // Deprecated
   return CASS_OK;
 }
 
 CassError cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
                                                              unsigned num_requests) {
-  if (num_requests == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_max_concurrent_requests_threshold(num_requests);
+  // Deprecated
   return CASS_OK;
 }
 
 CassError cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
                                                   unsigned num_requests) {
-  if (num_requests == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_max_requests_per_flush(num_requests);
+  // Deprecated
   return CASS_OK;
 }
 

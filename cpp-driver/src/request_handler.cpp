@@ -95,43 +95,70 @@ void PrepareCallback::on_internal_timeout() {
   request_execution_->on_retry_next_host();
 }
 
+class NopRequestListener : public RequestListener {
+public:
+  virtual void on_result_metadata_changed(const String& prepared_id,
+                                          const String& query,
+                                          const String& keyspace,
+                                          const String& result_metadata_id,
+                                          const ResultResponse::ConstPtr& result_response) { }
+
+  virtual void on_keyspace_changed(const String& keyspace) { }
+
+  virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
+                                            const Host::Ptr& current_host,
+                                            const Response::Ptr& response) {
+    return false;
+  }
+
+  virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
+                              const Host::Ptr& current_host,
+                              const Response::Ptr& response) {
+    return false;
+  }
+
+  virtual void on_done() { }
+};
+
+static NopRequestListener nop_request_listener__;
+
 RequestHandler::RequestHandler(const Request::ConstPtr& request,
                                const ResponseFuture::Ptr& future,
-                               ConnectionPoolManager* manager,
                                Metrics* metrics,
-                               RequestListener* listener,
                                const Address* preferred_address)
   : wrapper_(request)
   , future_(future)
   , is_cancelled_(false)
   , running_executions_(0)
-  , is_timer_started_(false)
-  , timer_thread_id_((uv_thread_t)0)
   , start_time_ns_(uv_hrtime())
+  , listener_(&nop_request_listener__)
+  , manager_(NULL)
   , metrics_(metrics)
-  , listener_(listener)
-  , manager_(manager)
-  , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) {
-  uv_mutex_init(&lock_);
+  , preferred_address_(preferred_address != NULL ? *preferred_address : Address()) { }
+
+void RequestHandler::set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry) {
+  wrapper_.set_prepared_metadata(entry);
 }
 
-RequestHandler::~RequestHandler() {
-  uv_mutex_destroy(&lock_);
-}
+void RequestHandler::init(const ExecutionProfile& profile,
+                          ConnectionPoolManager* manager,
+                          const TokenMap* token_map,
+                          TimestampGenerator* timestamp_generator,
+                          RequestListener* listener) {
+  manager_ = manager;
+  listener_ = listener ? listener : &nop_request_listener__;
+  wrapper_.init(profile, timestamp_generator);
 
-void RequestHandler::init(const Config& config,
-                          const ExecutionProfile& profile,
-                          const PreparedMetadata::Entry::Ptr& prepared_metdata_entry,
-                          QueryPlan* query_plan,
-                          SpeculativeExecutionPlan* execution_plan) {
-  wrapper_.init(config, profile, prepared_metdata_entry);
-  query_plan_.reset(query_plan);
-  execution_plan_.reset(execution_plan);
+  // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
+  const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());
+
+  query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
+  execution_plan_.reset(profile.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
 }
 
 void RequestHandler::execute() {
   RequestExecution::Ptr request_execution(Memory::allocate<RequestExecution>(this));
-  running_executions_.fetch_add(1);
+  running_executions_++;
   internal_retry(request_execution.get());
 }
 
@@ -140,27 +167,22 @@ void RequestHandler::retry(RequestExecution* request_execution, Protected) {
 }
 
 void RequestHandler::start_request(uv_loop_t* loop, Protected) {
-  ScopedMutex l(&lock_);
-  if (!is_timer_started_) {
+  if (!timer_.is_running()) {
     uint64_t request_timeout_ms = wrapper_.request_timeout_ms();
     if (request_timeout_ms > 0) { // 0 means no timeout
       timer_.start(loop,
                    request_timeout_ms,
                    this,
                    on_timeout);
-      is_timer_started_ = true;
-      timer_thread_id_ = uv_thread_self();
     }
   }
 }
 
 Host::Ptr RequestHandler::next_host(Protected) {
-  ScopedMutex l(&lock_);
   return query_plan_->compute_next();
 }
 
 int64_t RequestHandler::next_execution(const Host::Ptr& current_host, Protected) {
-  ScopedMutex l(&lock_);
   return execution_plan_->next_execution(current_host);
 }
 
@@ -173,36 +195,26 @@ void RequestHandler::notify_result_metadata_changed(const String& prepared_id,
                                                     const String& keyspace,
                                                     const String& result_metadata_id,
                                                     const ResultResponse::ConstPtr& result_response, Protected) {
-  if (listener_ != NULL) {
-    listener_->on_result_metadata_changed(prepared_id, query, keyspace, result_metadata_id, result_response);
-  }
+  listener_->on_result_metadata_changed(prepared_id, query, keyspace, result_metadata_id, result_response);
 }
 
 void RequestHandler::notify_keyspace_changed(const String& keyspace) {
-  if (listener_ != NULL) {
-    listener_->on_keyspace_changed(keyspace);
-  }
+  listener_->on_keyspace_changed(keyspace);
 }
 
 bool RequestHandler::wait_for_schema_agreement(const Host::Ptr& current_host, const Response::Ptr& response) {
-  if (listener_ != NULL) {
-    return listener_->on_wait_for_schema_agreement(Ptr(this), current_host, response);
-  }
-  return false;
+  return listener_->on_wait_for_schema_agreement(Ptr(this), current_host, response);
 }
 
 bool RequestHandler::prepare_all(const Host::Ptr& current_host,
                                  const Response::Ptr& response) {
-  if (listener_ != NULL) {
-    return listener_->on_prepare_all(Ptr(this), current_host, response);
-  }
-  return false;
+  return listener_->on_prepare_all(Ptr(this), current_host, response);
 }
 
 void RequestHandler::set_response(const Host::Ptr& host,
                                   const Response::Ptr& response) {
   stop_request();
-  running_executions_.fetch_sub(1);
+  running_executions_--;
 
   if (future_->set_response(host->address(), response)) {
     if (metrics_) {
@@ -221,7 +233,7 @@ void RequestHandler::set_response(const Host::Ptr& host,
 void RequestHandler::set_error(CassError code,
                                const String& message) {
   stop_request();
-  bool skip = (code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE && running_executions_.fetch_sub(1) - 1 > 0);
+  bool skip = (code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE && --running_executions_ > 0);
   if (!skip) {
     future_->set_error(code, message);
   }
@@ -230,7 +242,7 @@ void RequestHandler::set_error(CassError code,
 void RequestHandler::set_error(const Host::Ptr& host,
                                CassError code, const String& message) {
   stop_request();
-  bool skip = (code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE && running_executions_.fetch_sub(1) - 1 > 0);
+  bool skip = (code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE && --running_executions_ > 0);
   if (!skip) {
     if (host) {
       future_->set_error_with_address(host->address(), code, message);
@@ -244,7 +256,7 @@ void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
                                                    const Response::Ptr& error,
                                                    CassError code, const String& message) {
   stop_request();
-  running_executions_.fetch_sub(1);
+  running_executions_--;
   future_->set_error_with_response(host->address(), error, code, message);
 }
 
@@ -260,29 +272,25 @@ void RequestHandler::on_timeout(Timer* timer) {
 }
 
 void RequestHandler::stop_request() {
-  is_cancelled_.store(true);
-  ScopedMutex l(&lock_);
-  if (is_timer_started_ && timer_thread_id_ == uv_thread_self()) {
-    timer_.stop();
-  }
+  listener_->on_done();
+  is_cancelled_ = true;
+  timer_.stop();
 }
 
 void RequestHandler::internal_retry(RequestExecution* request_execution) {
   bool is_successful = false;
-  bool is_cancelled = is_cancelled_.load();
 
-  while (!is_cancelled && request_execution->current_host()) {
+  while (!is_cancelled_ && request_execution->current_host()) {
     PooledConnection::Ptr connection = manager_->find_least_busy(request_execution->current_host()->address());
     if (connection && connection->write(request_execution)) {
       is_successful = true;
       break;
     }
     request_execution->next_host();
-    is_cancelled = is_cancelled_.load();
   }
 
   if (!is_successful) {
-    if (is_cancelled) {
+    if (is_cancelled_) {
       LOG_DEBUG("Cancelling speculative execution (%p) for request (%p) on host %s",
                 static_cast<void*>(request_execution),
                 static_cast<void*>(this),

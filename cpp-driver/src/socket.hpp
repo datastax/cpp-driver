@@ -237,7 +237,7 @@ public:
   /**
    * Flush the outstanding requests to the socket.
    */
-  virtual void flush() = 0;
+  virtual size_t flush() = 0;
 
 protected:
   static void on_write(uv_write_t* req, int status);
@@ -306,7 +306,7 @@ public:
   /**
    * Flush all outstanding requests.
    */
-  void flush();
+  size_t flush();
 
   /**
    * Determine if the socket is closing.

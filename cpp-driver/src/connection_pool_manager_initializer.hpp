@@ -30,7 +30,6 @@ namespace cass {
 
 class Config;
 class Metrics;
-class RequestQueueManager;
 
 /**
  * An initializer for a connection pool manager. This connects many connection
@@ -45,23 +44,22 @@ public:
   /**
    * Constructor
    *
-   * @param request_queue_manager A request queue manager to use for handling requests.
    * @param protocol_version The protocol version to use for connections.
    * @param data User data that's passed to the callback.
    * @param callback A callback that is called when the manager is connected or
    * if an error occurred.
    */
-  ConnectionPoolManagerInitializer(RequestQueueManager* request_queue_manager,
-                                   int protocol_version,
-                                   void* data, Callback callback);
-  ~ConnectionPoolManagerInitializer();
+  ConnectionPoolManagerInitializer(int protocol_version,
+                                   void* data,
+                                   Callback callback);
 
   /**
    * Initialize a connection pool manager use the given hosts.
    *
-   * @param hosts A vector of addresses to connect pools to.
+   * @param loop Event loop to utilize for handling requests.
+   * @param addresses A vector of addresses to connect pools to.
    */
-  void initialize(const AddressVec& hosts);
+  void initialize(uv_loop_t* loop, const AddressVec& addresses);
 
   /**
    * Cancel the initialization process of the manager.
@@ -77,9 +75,9 @@ public:
   ConnectionPoolManagerInitializer* with_keyspace(const String& keyspace);
 
   /**
-   * Set the listener that handles connection pool events.
+   * Set the listener for the connection pool manager.
    *
-   * @param listener A listener that handles connection pool events.
+   * @param listener Connection pool listener object.
    * @return The initializer to chain calls.
    */
   ConnectionPoolManagerInitializer* with_listener(ConnectionPoolManagerListener* listener);
@@ -109,7 +107,7 @@ public:
    */
   ConnectionPoolConnector::Vec failures() const;
 
-  /**
+ /**
    * Determines if the initializer has been cancelled.
    *
    * @return Returns true if cancelled.
@@ -117,11 +115,11 @@ public:
   bool is_cancelled();
 
   /**
-   * Release the manager from the intializer. If not released in the callback
-   * the manager automatically be closed.
+   * Release the manager from the initializer. If not released in the callback
+   * the manager will automatically be closed.
    *
    * @return The manager object for this initializer. This returns a null object
-   * if the manager is not connected or an error occured.
+   * if the manager is not connected or an error occurred.
    */
   ConnectionPoolManager::Ptr release_manager() {
     ConnectionPoolManager::Ptr temp = manager_;
@@ -145,12 +143,8 @@ private:
 
   bool is_cancelled_;
 
-  Atomic<size_t> remaining_;
-
-  mutable uv_mutex_t lock_;
+  size_t remaining_;
   ConnectionPoolConnector::Vec failures_;
-
-  RequestQueueManager* const request_queue_manager_;
 
   int protocol_version_;
   String keyspace_;

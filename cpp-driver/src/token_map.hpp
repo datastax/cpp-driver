@@ -47,7 +47,7 @@ public:
 
   virtual void build() = 0;
 
-  virtual TokenMap::Ptr copy() = 0;
+  virtual TokenMap::Ptr copy() const = 0;
 
   virtual const CopyOnWriteHostVec& get_replicas(const String& keyspace_name,
                                                  const String& routing_key) const = 0;

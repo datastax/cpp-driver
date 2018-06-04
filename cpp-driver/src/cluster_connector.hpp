@@ -26,7 +26,7 @@ namespace cass {
 class Random;
 
 /**
- * A connector that handle connecting to a cluster. It handles DNS and error
+ * A connector that handles connecting to a cluster. It handles DNS and error
  * handling for multiple contact points. It attempts to connect to multiple
  * contact points and returns after the first successful connection or it fails
  * if no connections can be made. It also handles negotiating the highest
@@ -60,8 +60,6 @@ public:
                    int protocol_version,
                    void* data,
                    Callback callback);
-
-  ~ClusterConnector();
 
   /**
    * Set the cluster listener to use for handle cluster events.

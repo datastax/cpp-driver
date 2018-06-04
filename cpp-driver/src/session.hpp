@@ -17,26 +17,25 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
-#include "connection_pool_manager_initializer.hpp"
 #include "metrics.hpp"
+#include "mpmc_queue.hpp"
+#include "request_processor_manager.hpp"
 #include "session_base.hpp"
 
 #include <uv.h>
 
 namespace cass {
 
+class RequestProcessorManagerInitializer;
 class Statement;
 
 /**
- * A basic Session integration with Cluster and ConnectionPoolManager.
+ * A
  */
 class Session
     : public SessionBase
-    , public ConnectionPoolManagerListener
-    , public RequestListener
-    , public SchemaAgreementListener {
+    , public RequestProcessorManagerListener {
 public:
-  Session();
   ~Session();
 
   Future::Ptr prepare(const char* statement, size_t length);
@@ -76,54 +75,31 @@ private:
   virtual void on_close(Cluster* cluster);
 
 private:
-  static void on_initialize(ConnectionPoolManagerInitializer* initializer);
-
-  void handle_initialize(ConnectionPoolManagerInitializer* initializer);
-
-private:
-  // Cluster manager listener methods
+  // Request Processor manager listener methods
 
   virtual void on_pool_up(const Address& address);
 
   virtual void on_pool_down(const Address& address);
 
   virtual void on_pool_critical_error(const Address& address,
-                                 Connector::ConnectionError code,
-                                 const String& message);
-
-  virtual void on_close(ConnectionPoolManager* manager);
-
-private:
-  // Request listener methods
-
-  virtual void on_result_metadata_changed(const String& prepared_id,
-                                          const String& query,
-                                          const String& keyspace,
-                                          const String& result_metadata_id,
-                                          const ResultResponse::ConstPtr& result_response);
+                                      Connector::ConnectionError code,
+                                      const String& message);
 
   virtual void on_keyspace_changed(const String& keyspace);
 
-  virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
-                                            const Host::Ptr& current_host,
-                                            const Response::Ptr& response);
+  virtual void on_prepared_metadata_changed(const String& id,
+                                           const PreparedMetadata::Entry::Ptr& entry);
 
-  virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
-                              const Host::Ptr& current_host,
-                              const Response::Ptr& response);
-
-  virtual bool on_is_host_up(const Address& address);
+  virtual void on_close(RequestProcessorManager* manager);
 
 private:
-  uv_rwlock_t policy_rwlock_;
-  String keyspace_;
-  TokenMap::Ptr token_map_;
+  static void on_initialize(RequestProcessorManagerInitializer* initializer);
+  void handle_initialize(RequestProcessorManagerInitializer* initializer);
+
+private:
   ScopedPtr<Metrics> metrics_;
-  ConnectionPoolManager::Ptr connection_pool_manager_;
-  ConnectionPoolManagerInitializer::Ptr connection_pool_manager_initializer_;
   ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
-  ScopedPtr<RequestQueueManager> request_queue_manager_;
-  AddressSet addresses_;
+  RequestProcessorManager::Ptr request_processor_manager_;
 };
 
 class SessionFuture : public Future {
@@ -131,7 +107,7 @@ public:
   typedef SharedRefPtr<SessionFuture> Ptr;
 
   SessionFuture()
-    : Future(FUTURE_TYPE_SESSION) {}
+    : Future(FUTURE_TYPE_SESSION) { }
 };
 
 } // namespace cass

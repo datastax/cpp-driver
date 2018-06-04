@@ -29,6 +29,7 @@
 #include "socket.hpp"
 #include "string.hpp"
 #include "timer.hpp"
+#include "timestamp_generator.hpp"
 #include "utils.hpp"
 
 #include <uv.h>
@@ -62,9 +63,10 @@ public:
     , request_timeout_ms_(request_timeout_ms)
     , timestamp_(CASS_INT64_MIN) { }
 
-  void init(const Config& config,
-            const ExecutionProfile& profile,
-            const PreparedMetadata::Entry::Ptr& prepared_metadata_entry);
+  void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
+
+  void init(const ExecutionProfile& profile,
+            TimestampGenerator* timestamp_generator);
 
   const Request::ConstPtr& request() const {
     return request_;

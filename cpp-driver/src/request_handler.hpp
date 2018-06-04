@@ -33,6 +33,7 @@
 #include "small_vector.hpp"
 #include "speculative_execution.hpp"
 #include "string.hpp"
+#include "timestamp_generator.hpp"
 
 #include <uv.h>
 
@@ -136,20 +137,18 @@ class RequestHandler : public RefCounted<RequestHandler> {
 public:
   typedef SharedRefPtr<RequestHandler> Ptr;
 
-  // TODO: Remove default parameters where possible
   RequestHandler(const Request::ConstPtr& request,
                  const ResponseFuture::Ptr& future,
-                 ConnectionPoolManager* manager = NULL,
                  Metrics* metrics = NULL,
-                 RequestListener* listener = NULL,
                  const Address* preferred_address = NULL);
-  ~RequestHandler();
 
-  void init(const Config& config,
-            const ExecutionProfile& profile,
-            const PreparedMetadata::Entry::Ptr& prepared_metdata_entry,
-            QueryPlan* query_plan,
-            SpeculativeExecutionPlan* execution_plan);
+  void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
+
+  void init(const ExecutionProfile& profile,
+            ConnectionPoolManager* manager,
+            const TokenMap* token_map,
+            TimestampGenerator* timestamp_generator,
+            RequestListener* listener);
 
   void execute();
 
@@ -161,8 +160,8 @@ public:
 public:
   class Protected {
     friend class RequestExecution;
-    Protected() {}
-    Protected(Protected const&) {}
+    Protected() { }
+    Protected(Protected const&) { }
   };
 
   void retry(RequestExecution* request_execution, Protected);
@@ -208,20 +207,18 @@ private:
   RequestWrapper wrapper_;
   SharedRefPtr<ResponseFuture> future_;
 
-  Atomic<bool> is_cancelled_;
-  Atomic<int> running_executions_;
+  bool is_cancelled_;
+  int running_executions_;
 
-  uv_mutex_t lock_;
   ScopedPtr<QueryPlan> query_plan_;
   ScopedPtr<SpeculativeExecutionPlan> execution_plan_;
   Timer timer_;
-  bool is_timer_started_;
-  uv_thread_t timer_thread_id_;
 
   const uint64_t start_time_ns_;
+  RequestListener* listener_;
+  ConnectionPoolManager* manager_;
+
   Metrics* const metrics_;
-  RequestListener* const listener_;
-  ConnectionPoolManager* const manager_;
   const Address preferred_address_;
 };
 
@@ -244,6 +241,8 @@ public:
   virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
                               const Host::Ptr& current_host,
                               const Response::Ptr& response) = 0;
+
+  virtual void on_done() = 0;
 };
 
 class RequestExecution : public RequestCallback {

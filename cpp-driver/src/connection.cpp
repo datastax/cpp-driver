@@ -161,8 +161,8 @@ int32_t Connection::write_and_flush(const RequestCallback::Ptr& callback) {
   return result;
 }
 
-void Connection::flush() {
-  socket_->flush();
+size_t Connection::flush() {
+  return socket_->flush();
 }
 
 void Connection::close() {
@@ -200,6 +200,8 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
 }
 
 void Connection::on_write(int status, RequestCallback* callback) {
+  listener_->on_write();
+
   // A successful write means that a heartbeat doesn't need to be sent so the
   // timer can be reset.
   if (status == 0) {
@@ -238,6 +240,8 @@ void Connection::on_write(int status, RequestCallback* callback) {
 }
 
 void Connection::on_read(const char* buf, size_t size) {
+  listener_->on_read();
+
   const char* pos = buf;
   size_t remaining = size;
 

@@ -25,7 +25,6 @@
 #include "metadata.hpp"
 #include "prepared.hpp"
 #include "prepare_host_handler.hpp"
-#include "request_queue.hpp"
 
 #include <uv.h>
 
@@ -120,14 +119,6 @@ struct ClusterSettings {
    * @param config The config object.
    */
   ClusterSettings(const Config& config);
-
-  /**
-   * Determine if host is ignored by load balancing policies.
-   *
-   * @param host A host
-   * @return true if the host is ignored, otherwise false.
-   */
-  bool is_host_ignored(const Host::Ptr& host) const;
 
   /**
    * The settings for the underlying control connection.
@@ -248,16 +239,10 @@ public:
    * Set the prepared metadata for a given prepared ID (thread-safe).
    *
    * @param id A prepared ID.
-   * @param query The query for the prepared statement.
-   * @param keyspace The current keyspace that the statement was prepare with.
-   * @param result_metadata_id The result metadata ID.
-   * @param result_response The actual result response data.
+   * @param entry A prepared metadata entry.
    */
   void prepared(const String& id,
-                const String& query,
-                const String& keyspace,
-                const String& result_metadata_id,
-                const ResultResponse::ConstPtr& result_response);
+                const PreparedMetadata::Entry::Ptr& entry);
 
 public:
   int protocol_version() const { return connection_->protocol_version(); }
@@ -278,6 +263,9 @@ private:
   void update_token_map(const HostMap& hosts,
                         const String& partitioner,
                         const ControlConnectionSchema& schema);
+
+  bool is_host_ignored(const Host::Ptr& host) const;
+  bool is_host_ignored(const LoadBalancingPolicy::Vec& policies, const Host::Ptr& host) const;
 
   void schedule_reconnect();
 
@@ -331,6 +319,7 @@ private:
   ClusterListener* const listener_;
   EventLoop* const event_loop_;
   const LoadBalancingPolicy::Ptr load_balancing_policy_;
+  LoadBalancingPolicy::Vec load_balancing_policies_;
   const ClusterSettings settings_;
   ScopedPtr<QueryPlan> query_plan_;
   bool is_closing_;

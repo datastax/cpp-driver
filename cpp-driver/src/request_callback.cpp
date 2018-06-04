@@ -16,7 +16,6 @@
 
 #include "request_callback.hpp"
 
-#include "config.hpp"
 #include "connection.hpp"
 #include "constants.hpp"
 #include "execute_request.hpp"
@@ -30,15 +29,17 @@
 
 namespace cass {
 
-void RequestWrapper::init(const Config& config,
-                          const ExecutionProfile& profile,
-                          const PreparedMetadata::Entry::Ptr& prepared_metadata_entry) {
+void RequestWrapper::set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry) {
+  prepared_metadata_entry_ = entry;
+}
+
+void RequestWrapper::init(const ExecutionProfile& profile,
+                          TimestampGenerator* timestamp_generator) {
   consistency_ = profile.consistency();
   serial_consistency_ = profile.serial_consistency();
   request_timeout_ms_ = profile.request_timeout_ms();
-  timestamp_ = config.timestamp_gen()->next();
+  timestamp_ = timestamp_generator->next();
   retry_policy_ = profile.retry_policy();
-  prepared_metadata_entry_ = prepared_metadata_entry;
 }
 
 void RequestCallback::notify_write(Connection* connection,

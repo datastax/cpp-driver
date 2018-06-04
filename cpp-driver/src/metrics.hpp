@@ -24,21 +24,13 @@
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
 #include "scoped_lock.hpp"
+#include "utils.hpp"
 #include "vector.hpp"
 
 #include "third_party/hdr_histogram/hdr_histogram.hpp"
 
 #include <uv.h>
 #include <stdlib.h>
-
-#if defined(WIN32) || defined(_WIN32)
-#ifndef _WINSOCKAPI_
-#define _WINSOCKAPI_
-#endif
-#include <Windows.h>
-#else
-#include <sched.h>
-#endif
 
 #include <math.h>
 
@@ -386,11 +378,7 @@ public:
             is_caught_up = (even_end_epoch_.load() == start_value_at_flip);
           }
           if (!is_caught_up) {
-#if defined(WIN32) || defined(_WIN32)
-            SwitchToThread();
-#else
-            sched_yield();
-#endif
+            thread_yield();
           }
         } while(!is_caught_up);
       }

@@ -23,8 +23,6 @@
 #include "string.hpp"
 #include "vector.hpp"
 
-#include <uv.h>
-
 namespace cass {
 
 class ConnectionPool;
@@ -39,7 +37,7 @@ public:
   typedef SharedRefPtr<PooledConnector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef void (*Callback)(PooledConnector*, EventLoop* event_loop);
+  typedef void (*Callback)(PooledConnector*);
 
   /**
    * Constructor
@@ -52,7 +50,6 @@ public:
   PooledConnector(ConnectionPool* pool,
                   void* data,
                   Callback callback);
-  ~PooledConnector();
 
   /**
    * Connect a pooled connection.
@@ -69,7 +66,7 @@ public:
    * the connection automatically be closed.
    *
    * @return The connection object for this connector. This returns a null object
-   * if the connection is not connected or an error occured.
+   * if the connection is not connected or an error occurred.
    */
   PooledConnection::Ptr release_connection();
 
@@ -87,34 +84,17 @@ public:
 public: // Only to be called on the event loop thread
   class Protected {
     friend class ConnectionPool;
-    friend class RunConnect;
-    friend class RunCancel;
     Protected() { }
     Protected(Protected const&) { }
   };
 
   /**
-   * Connect the pooled connection from the event loop thread.
-   *
-   * @param A key to restrict access to the method.
-   */
-  void connect(Protected);
-
-  /**
    * Connect the pooled connection after a delay from the event loop thread.
    *
-   * @param event_loop The event loop to run the connection process.
    * @param wait_time_ms The amount of time to delay.
    * @param A key to restrict access to the method.
    */
-  void delayed_connect(EventLoop* event_loop, uint64_t wait_time_ms, Protected);
-
-  /**
-   * Cancel the connection process from the event loop thread.
-   *
-   * @param A key to restrict access to the method.
-   */
-  void cancel(Protected);
+  void delayed_connect(uint64_t wait_time_ms, Protected);
 
 private:
   void internal_connect();
@@ -135,9 +115,6 @@ private:
 
   Timer delayed_connect_timer_;
   bool is_cancelled_;
-
-  uv_mutex_t lock_;
-  EventLoop* event_loop_;
 };
 
 } // namespace cass

@@ -18,10 +18,25 @@
 
 #include "config.hpp"
 #include "memory.hpp"
-#include "request_queue.hpp"
 #include "scoped_lock.hpp"
+#include "utils.hpp"
 
 namespace cass {
+
+class NopConnectionPoolManagerListener : public ConnectionPoolManagerListener {
+public:
+  virtual void on_pool_up(const Address& address) { }
+
+  virtual void on_pool_down(const Address& address) { }
+
+  virtual void on_pool_critical_error(const Address& address,
+                                 Connector::ConnectionError code,
+                                 const String& message) { }
+
+  virtual void on_close(ConnectionPoolManager* manager) { }
+};
+
+static NopConnectionPoolManagerListener nop_connection_pool_manager_listener__;
 
 ConnectionPoolManagerSettings::ConnectionPoolManagerSettings()
   : num_connections_per_host(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
@@ -32,45 +47,51 @@ ConnectionPoolManagerSettings::ConnectionPoolManagerSettings(const Config& confi
   , num_connections_per_host(config.core_connections_per_host())
   , reconnect_wait_time_ms(config.reconnect_wait_time_ms()) { }
 
-ConnectionPoolManager::ConnectionPoolManager(RequestQueueManager* request_queue_manager,
+ConnectionPoolManager::ConnectionPoolManager(uv_loop_t* loop,
                                              int protocol_version,
                                              const String& keyspace,
                                              ConnectionPoolManagerListener* listener,
                                              Metrics* metrics,
                                              const ConnectionPoolManagerSettings& settings)
-  : request_queue_manager_(request_queue_manager)
+  : loop_(loop)
   , protocol_version_(protocol_version)
-  , listener_(listener)
   , settings_(settings)
   , close_state_(CLOSE_STATE_OPEN)
   , keyspace_(keyspace)
-  , metrics_(metrics) {
+  , metrics_(metrics)
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+  , flush_bytes_("flushed")
+#endif
+{
   inc_ref(); // Reference for the lifetime of the connection pools
-  uv_rwlock_init(&rwlock_);
-  uv_rwlock_init(&keyspace_rwlock_);
+  uv_mutex_init(&keyspace_mutex_);
+  set_pointer_keys(to_flush_);
+  set_listener(listener);
 }
 
 ConnectionPoolManager::~ConnectionPoolManager() {
-  uv_rwlock_destroy(&rwlock_);
-  uv_rwlock_destroy(&keyspace_rwlock_);
+  uv_mutex_destroy(&keyspace_mutex_);
 }
 
 PooledConnection::Ptr ConnectionPoolManager::find_least_busy(const Address& address) const {
-  ConnectionPool::Ptr pool;
-  { // Locked
-    ScopedReadLock rl(&rwlock_);
-    ConnectionPool::Map::const_iterator it = pools_.find(address);
-    if (it == pools_.end()) {
-      return PooledConnection::Ptr();
-    }
-    pool = it->second;
+  ConnectionPool::Map::const_iterator it = pools_.find(address);
+  if (it == pools_.end()) {
+    return PooledConnection::Ptr();
   }
-  return pool->find_least_busy();
+  return it->second->find_least_busy();
+}
+
+void ConnectionPoolManager::flush() {
+  for (DenseHashSet<ConnectionPool*>::const_iterator it = to_flush_.begin(),
+       end = to_flush_.end(); it != end; ++it) {
+    (*it)->flush();
+  }
+  to_flush_.clear();
+
 }
 
 AddressVec ConnectionPoolManager::available() const {
   AddressVec result;
-  ScopedReadLock rl(&rwlock_);
   result.reserve(pools_.size());
   for (ConnectionPool::Map::const_iterator it = pools_.begin(),
        end = pools_.end(); it != end; ++it) {
@@ -80,8 +101,6 @@ AddressVec ConnectionPoolManager::available() const {
 }
 
 void ConnectionPoolManager::add(const Address& address) {
-  // TODO: Potentially used double check here to minimize what's in the lock
-  ScopedWriteLock wl(&rwlock_);
   ConnectionPool::Map::iterator it = pools_.find(address);
   if (it != pools_.end()) return;
 
@@ -96,11 +115,10 @@ void ConnectionPoolManager::add(const Address& address) {
                                                   this,
                                                   on_connect));
   pending_pools_.push_back(connector);
-  connector->connect(request_queue_manager_->event_loop_group());
+  connector->connect();
 }
 
 void ConnectionPoolManager::remove(const Address& address) {
-  ScopedReadLock rl(&rwlock_);
   ConnectionPool::Map::iterator it = pools_.find(address);
   if (it == pools_.end()) return;
   // The connection pool will remove itself from the manager when all of its
@@ -109,7 +127,6 @@ void ConnectionPoolManager::remove(const Address& address) {
 }
 
 void ConnectionPoolManager::close() {
-  ScopedWriteLock wl(&rwlock_);
   if (close_state_ == CLOSE_STATE_OPEN) {
     close_state_ = CLOSE_STATE_CLOSING;
     for (ConnectionPool::Map::iterator it = pools_.begin(),
@@ -122,56 +139,53 @@ void ConnectionPoolManager::close() {
       (*it)->cancel();
     }
   }
-  maybe_closed(wl);
+  maybe_closed();
 }
 
-EventLoopGroup* ConnectionPoolManager::event_loop_group() const {
-  return request_queue_manager_->event_loop_group();
+void ConnectionPoolManager::set_listener(ConnectionPoolManagerListener* listener) {
+  listener_ = listener ? listener : &nop_connection_pool_manager_listener__;
 }
 
 String ConnectionPoolManager::keyspace() const {
-  ScopedReadLock rl(&keyspace_rwlock_);
+  ScopedMutex l(&keyspace_mutex_);
   return keyspace_;
 }
 
 void ConnectionPoolManager::set_keyspace(const String& keyspace) {
-  ScopedWriteLock wl(&keyspace_rwlock_);
+  ScopedMutex l(&keyspace_mutex_);
   keyspace_ = keyspace;
 }
 
 void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool, Protected) {
-  ScopedWriteLock wl(&rwlock_);
   internal_add_pool(pool);
 }
 
 void ConnectionPoolManager::notify_closed(ConnectionPool* pool, bool should_notify_down, Protected) {
-  ScopedWriteLock wl(&rwlock_);
   pools_.erase(pool->address());
-  if (should_notify_down && listener_ != NULL) {
+  to_flush_.erase(pool);
+  if (should_notify_down) {
     listener_->on_pool_down(pool->address());
   }
-  maybe_closed(wl);
+  maybe_closed();
 }
 
 void ConnectionPoolManager::notify_up(ConnectionPool* pool, Protected) {
-  if (listener_ != NULL) {
-    listener_->on_pool_up(pool->address());
-  }
+  listener_->on_pool_up(pool->address());
 }
 
 void ConnectionPoolManager::notify_down(ConnectionPool* pool, Protected) {
-  if (listener_ != NULL) {
-    listener_->on_pool_down(pool->address());
-  }
+  listener_->on_pool_down(pool->address());
 }
 
 void ConnectionPoolManager::notify_critical_error(ConnectionPool* pool,
                                                   Connector::ConnectionError code,
                                                   const String& message,
                                                   Protected) {
-  if (listener_ != NULL) {
-    listener_->on_pool_critical_error(pool->address(), code, message);
-  }
+  listener_->on_pool_critical_error(pool->address(), code, message);
+}
+
+void ConnectionPoolManager::requires_flush(ConnectionPool* pool, ConnectionPoolManager::Protected) {
+  to_flush_.insert(pool);
 }
 
 void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
@@ -181,13 +195,10 @@ void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
 
 // This must be the last call in a function because it can potentially
 // deallocate the manager.
-void ConnectionPoolManager::maybe_closed(ScopedWriteLock& wl) {
+void ConnectionPoolManager::maybe_closed() {
   if (close_state_ == CLOSE_STATE_CLOSING && pools_.empty()) {
     close_state_ = CLOSE_STATE_CLOSED;
-    wl.unlock(); // The manager is destroyed in this step it must be unlocked
-    if (listener_ != NULL) {
-      listener_->on_close(this);
-    }
+    listener_->on_close(this);
     dec_ref();
   }
 }
@@ -198,15 +209,14 @@ void ConnectionPoolManager::on_connect(ConnectionPoolConnector* pool_connector) 
 }
 
 void ConnectionPoolManager::handle_connect(ConnectionPoolConnector* pool_connector) {
-  ScopedWriteLock wl(&rwlock_);
   pending_pools_.erase(std::remove(pending_pools_.begin(), pending_pools_.end(), pool_connector),
                        pending_pools_.end());
   if (pool_connector->is_ok()) {
     internal_add_pool(pool_connector->release_pool());
-  } else if (listener_) {
-      listener_->on_pool_critical_error(pool_connector->address(),
-                                   pool_connector->error_code(),
-                                   pool_connector->error_message());
+  } else {
+    listener_->on_pool_critical_error(pool_connector->address(),
+                                      pool_connector->error_code(),
+                                      pool_connector->error_message());
   }
 }
 

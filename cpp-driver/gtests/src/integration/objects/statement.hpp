@@ -50,7 +50,7 @@ public:
    * @param statement Native driver object
    */
   Statement(CassStatement* statement)
-    : Object<CassStatement, cass_statement_free>(statement) {}
+    : Object<CassStatement, cass_statement_free>(statement) { }
 
   /**
    * Create the statement object from the shared reference
@@ -58,7 +58,7 @@ public:
    * @param statement Shared reference
    */
   Statement(Ptr statement)
-    : Object<CassStatement, cass_statement_free>(statement) {}
+    : Object<CassStatement, cass_statement_free>(statement) { }
 
   /**
    * Create the statement object from a query
@@ -69,7 +69,7 @@ public:
    */
   Statement(const std::string& query, size_t parameter_count = 0)
     : Object<CassStatement, cass_statement_free>(cass_statement_new(query.c_str(),
-      parameter_count)) {}
+      parameter_count)) { }
 
   /**
    * Add a key index specifier to the statement.

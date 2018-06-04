@@ -175,6 +175,17 @@ public:
   }
 
   /**
+   * Assign/Set the profile no speculative executions
+   *
+   * @return Execution profile object
+   */
+  ExecutionProfile& with_no_speculative_execution_policy() {
+    EXPECT_EQ(CASS_OK,
+              cass_execution_profile_set_no_speculative_execution_policy(get()));
+    return *this;
+  }
+
+  /**
    * Assign/Set the profile timeout for statement/batch execution
    *
    * @param timeout_ms Timeout in milliseconds
@@ -208,6 +219,24 @@ public:
   ExecutionProfile& with_serial_consistency(CassConsistency serial_consistency) {
     EXPECT_EQ(CASS_OK,
               cass_execution_profile_set_serial_consistency(get(),serial_consistency));
+    return *this;
+  }
+
+  /**
+   * Assign/Set the profile constant speculative executions
+   *
+   * @param constant_delay_ms Constant delay before speculatively executing
+   *                          idempotent request
+   * @param max_speculative_executions Maximum number of times to speculatively
+   *                                   execute a idempotent request
+   * @return Execution profile object
+   */
+  ExecutionProfile& with_constant_speculative_execution_policy(cass_int64_t constant_delay_ms,
+                                                               int max_speculative_executions) {
+    EXPECT_EQ(CASS_OK,
+              cass_execution_profile_set_constant_speculative_execution_policy(get(),
+                                                                               constant_delay_ms,
+                                                                               max_speculative_executions));
     return *this;
   }
 

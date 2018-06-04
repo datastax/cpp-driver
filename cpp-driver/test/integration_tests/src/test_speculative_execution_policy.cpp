@@ -418,7 +418,7 @@ BOOST_AUTO_TEST_CASE(without_speculative_execution_policy) {
 /**
  * Speculative execution policy; all nodes attempted with timeout
  *
- * This test will ensure that one node is attempted when executing a query
+ * This test will ensure that all nodes are attempted when executing a query
  * using the speculative execution policy.
  *
  * @since 2.5.0
