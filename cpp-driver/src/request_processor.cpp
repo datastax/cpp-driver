@@ -20,6 +20,7 @@
 #include "request_processor_manager.hpp"
 #include "prepare_all_handler.hpp"
 #include "session.hpp"
+#include "utils.hpp"
 
 namespace cass {
 
@@ -79,6 +80,26 @@ private:
   const TokenMap::Ptr token_map_;
 };
 
+RequestProcessorSettings::RequestProcessorSettings()
+  : max_schema_wait_time_ms(10000)
+  , prepare_on_all_hosts(true)
+  , timestamp_generator(Memory::allocate<ServerSideTimestampGenerator>())
+  , default_profile(Config().default_profile())
+  , request_queue_size(8192)
+  , coalesce_delay_us(CASS_DEFAULT_COALESCE_DELAY)
+  , new_request_ratio(CASS_DEFAULT_NEW_REQUEST_RATIO) { }
+
+RequestProcessorSettings::RequestProcessorSettings(const Config& config)
+  : connection_pool_manager_settings(config)
+  , max_schema_wait_time_ms(config.max_schema_wait_time_ms())
+  , prepare_on_all_hosts(config.prepare_on_all_hosts())
+  , timestamp_generator(config.timestamp_gen())
+  , default_profile(config.default_profile())
+  , profiles(config.profiles())
+  , request_queue_size(config.queue_size_io())
+  , coalesce_delay_us(config.coalesce_delay_us())
+  , new_request_ratio(config.new_request_ratio()) { }
+
 RequestProcessor::RequestProcessor(RequestProcessorManager* manager,
                                    EventLoop* event_loop,
                                    const ConnectionPoolManager::Ptr& connection_pool_manager,
@@ -86,20 +107,29 @@ RequestProcessor::RequestProcessor(RequestProcessorManager* manager,
                                    const HostMap& hosts,
                                    const TokenMap::Ptr& token_map,
                                    const RequestProcessorSettings& settings,
-                                   Random* random,
-                                   MPMCQueue<RequestHandler*>* request_queue)
+                                   Random* random)
   : connection_pool_manager_(connection_pool_manager)
   , manager_(manager)
   , event_loop_(event_loop)
   , max_schema_wait_time_ms_(settings.max_schema_wait_time_ms)
   , prepare_on_all_hosts_(settings.prepare_on_all_hosts)
   , timestamp_generator_(settings.timestamp_generator)
+  , coalesce_delay_us_(settings.coalesce_delay_us)
+  , new_request_ratio_(settings.new_request_ratio)
   , default_profile_(settings.default_profile)
   , profiles_(settings.profiles)
-  , request_queue_(request_queue)
-  , is_flushing_(false)
+  , request_queue_(Memory::allocate<MPMCQueue<RequestHandler*> >(settings.request_queue_size))
   , is_closing_(false)
-  , attempts_without_writes_(0) {
+  , is_processing_(false)
+  , attempts_without_requests_(0)
+  , io_time_during_coalesce_(0)
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+  , reads_during_coalesce_(0)
+  , writes_during_coalesce_(0)
+  , writes_per_("writes")
+  , reads_per_("reads")
+#endif
+{
   connection_pool_manager_->set_listener(this);
 
   // Build/Assign the load balancing policies from the execution profiles
@@ -126,9 +156,7 @@ RequestProcessor::RequestProcessor(RequestProcessorManager* manager,
        it != policies.end(); ++it) {
     // Initialize the load balancing policies
     (*it)->init(connected_host, hosts_, random);
-    (*it)->register_handles(event_loop_->loop());
   }
-
 }
 
 void RequestProcessor::close() {
@@ -151,19 +179,28 @@ void RequestProcessor::notify_token_map_changed(const TokenMap::Ptr& token_map) 
   event_loop_->add(Memory::allocate<NotifyTokenMapUpdateProcessor>(token_map, Ptr(this)));
 }
 
-void RequestProcessor::notify_request() {
-  // Only signal the request queue if it's not already processing requests.
-  bool expected = false;
-  if (!is_flushing_.load() && is_flushing_.compare_exchange_strong(expected, true)) {
-    async_.send();
+void RequestProcessor::process_request(const RequestHandler::Ptr& request_handler) {
+  request_handler->inc_ref(); // Queue reference
+
+  if (request_queue_->enqueue(request_handler.get())) {
+    request_count_.fetch_add(1);
+    // Only signal the request queue if it's not already processing requests.
+    bool expected = false;
+    if (!is_processing_.load(MEMORY_ORDER_RELAXED) &&
+        is_processing_.compare_exchange_strong(expected, true)) {
+      async_.send();
+     }
+  } else {
+    request_handler->dec_ref();
+    request_handler->set_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
+                               "The request queue has reached capacity");
   }
 }
 
 int RequestProcessor::init(Protected) {
-  int rc;
-  rc = async_.start(event_loop_->loop(), this, on_process);
+  int rc = async_.start(event_loop_->loop(), this, on_async);
   if (rc != 0) return rc;
-  return prepare_.start(event_loop_->loop(), this, on_flush);
+  return prepare_.start(event_loop_->loop(), this, on_prepare);
 }
 
 void RequestProcessor::on_pool_up(const Address& address) {
@@ -191,14 +228,9 @@ void RequestProcessor::on_pool_critical_error(const Address& address,
 }
 
 void RequestProcessor::on_close(ConnectionPoolManager* manager) {
-  LoadBalancingPolicy::Vec policies = load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    (*it)->close_handles();
-  }
-
-  is_closing_.store(true);
-  async_.send();
+  async_.close_handle();
+  prepare_.close_handle();
+  manager_->notify_closed(this, RequestProcessorManager::Protected());
 }
 
 void RequestProcessor::on_result_metadata_changed(const String& prepared_id,
@@ -275,7 +307,17 @@ bool RequestProcessor::on_prepare_all(const RequestHandler::Ptr& request_handler
     }
   }
 
+  connection_pool_manager_->flush();
+
   return true;
+}
+
+
+void RequestProcessor::on_done() {
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+  reads_during_coalesce_++;
+#endif
+  maybe_close(request_count_.fetch_sub(1) - 1);
 }
 
 bool RequestProcessor::on_is_host_up(const Address& address) {
@@ -284,7 +326,8 @@ bool RequestProcessor::on_is_host_up(const Address& address) {
 }
 
 void RequestProcessor::internal_close() {
-  connection_pool_manager_->close();
+  is_closing_ = true;
+  maybe_close(request_count_.load());
 }
 
 void RequestProcessor::internal_pool_down(const Address& address) {
@@ -304,20 +347,18 @@ Host::Ptr RequestProcessor::get_host(const Address& address) {
   return it->second;
 }
 
-bool RequestProcessor::execution_profile(const String& name, ExecutionProfile& profile) const {
+const ExecutionProfile* RequestProcessor::execution_profile(const String& name) const {
   // Determine if cluster profile should be used
   if (name.empty()) {
-    profile = default_profile_;
-    return true;
+    return &default_profile_;
   }
 
   // Handle profile lookup
   ExecutionProfile::Map::const_iterator it = profiles_.find(name);
   if (it != profiles_.end()) {
-    profile = it->second;
-    return true;
+    return &it->second;
   }
-  return false;
+  return NULL;
 }
 
 const LoadBalancingPolicy::Vec& RequestProcessor::load_balancing_policies() const {
@@ -367,86 +408,106 @@ void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
   }
 }
 
-void RequestProcessor::on_process(Async* async) {
-  RequestProcessor* request_processor = static_cast<RequestProcessor*>(async->data());
-  request_processor->handle_process();
-}
+void RequestProcessor::on_timeout() {
+  int processed = process_requests((io_time_during_coalesce_ * new_request_ratio_) / 100);
+  io_time_during_coalesce_ = 0;
 
-void RequestProcessor::on_process_timer(Timer* timer) {
-  RequestProcessor* request_processor = static_cast<RequestProcessor*>(timer->data());
-  request_processor->handle_process();
-}
+  if (processed > 0) {
+    attempts_without_requests_ = 0;
+    connection_pool_manager_->flush();
 
-void RequestProcessor::handle_process() {
-  const int new_request_ratio = 90;
-  uint64_t start_time_ns = uv_hrtime();
-
-  while (true) {
-     bool writes_done = false;
-
-    RequestHandler* request_handler = NULL;
-    while (request_queue_->dequeue(request_handler)) {
-      if (request_handler) {
-        const String& profile_name = request_handler->request()->execution_profile_name();
-        ExecutionProfile profile;
-        if (execution_profile(profile_name, profile)) {
-          if (!profile_name.empty()) {
-            LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
-          }
-          request_handler->init(profile,
-                                connection_pool_manager_.get(),
-                                token_map_.get(),
-                                timestamp_generator_.get(),
-                                this);
-          request_handler->execute();
-          writes_done = true;
-        } else {
-          request_handler->set_error(CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID,
-                                     profile_name + " does not exist");
-        }
-        request_handler->dec_ref();
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+    reads_per_.record_value(reads_during_coalesce_);
+    writes_per_.record_value(writes_during_coalesce_);
+    reads_during_coalesce_ = 0;
+    writes_during_coalesce_ = 0;
+#endif
+  } else {
+    attempts_without_requests_++;
+    if (attempts_without_requests_ > 5) {
+      attempts_without_requests_ = 0;
+      is_processing_.store(false);
+      bool expected = false;
+      if (request_queue_->is_empty() ||
+          !is_processing_.compare_exchange_strong(expected, true)) {
+        return;
       }
     }
+  }
 
-    if (is_closing_.load()) {
-      async_.close_handle();
-      prepare_.close_handle();
-      timer_.close_handle();
-      manager_->notify_closed(this, RequestProcessorManager::Protected());
-      return;
-    }
+  event_loop_->start_timer(coalesce_delay_us_, this);
+}
 
-    if (writes_done) {
-      attempts_without_writes_ = 0;
-    } else {
-      if (++attempts_without_writes_ > 5) {
-        attempts_without_writes_ = 0;
-        // Determine if a another flush should be scheduled
-        is_flushing_.store(false);
-        bool expected = false;
-        if (request_queue_->is_empty() ||
-            !is_flushing_.compare_exchange_strong(expected, true)) {
-          return;
-        }
-      }
-    }
+void RequestProcessor::on_async(Async* async) {
+  RequestProcessor* processor = static_cast<RequestProcessor*>(async->data());
+  processor->handle_async();
+}
 
-    uint64_t flush_time_ns = uv_hrtime() - start_time_ns;
-    uint64_t processing_time_ns = flush_time_ns * (100 - new_request_ratio) / new_request_ratio;
-    if (processing_time_ns >= 1000000) { // Schedule more request processing to be run in the future
-      timer_.start(event_loop_->loop(), (processing_time_ns + 500000) / 1000000, this, on_process_timer);
-      return;
-    }
+void RequestProcessor::handle_async() {
+  if (process_requests(0) > 0) {
+    connection_pool_manager_->flush();
+  }
+
+  if (!event_loop_->is_timer_running()) {
+    event_loop_->start_timer(coalesce_delay_us_, this);
   }
 }
 
-void RequestProcessor::on_flush(Prepare* prepare) {
+void RequestProcessor::on_prepare(Prepare* prepare) {
   RequestProcessor* processor = static_cast<RequestProcessor*>(prepare->data());
-  processor->handle_flush();
+  processor->handle_prepare();
 }
 
-void RequestProcessor::handle_flush() {
-  connection_pool_manager_->flush();
+void RequestProcessor::handle_prepare() {
+  io_time_during_coalesce_ += event_loop_->io_time_elapsed();
+}
+
+void RequestProcessor::maybe_close(int request_count) {
+  if (is_closing_ &&
+      request_count <= 0 &&
+      request_queue_->is_empty()) {
+    connection_pool_manager_->close();
+  }
+}
+
+int RequestProcessor::process_requests(uint64_t processing_time) {
+  uint64_t finish_time = uv_hrtime() + processing_time;
+
+  int processed = 0;
+  RequestHandler* request_handler = NULL;
+  while (request_queue_->dequeue(request_handler)) {
+    if (request_handler) {
+      const String& profile_name = request_handler->request()->execution_profile_name();
+      const ExecutionProfile* profile(execution_profile(profile_name));
+      if (profile) {
+        if (!profile_name.empty()) {
+          LOG_TRACE("Using execution profile '%s'", profile_name.c_str());
+        }
+        request_handler->init(*profile,
+                              connection_pool_manager_.get(),
+                              token_map_.get(),
+                              timestamp_generator_.get(),
+                              this);
+        request_handler->execute();
+        processed++;
+      } else {
+        request_handler->set_error(CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID,
+                                   profile_name + " does not exist");
+      }
+      request_handler->dec_ref();
+    }
+
+    if ((processed & 0x3F) == 0 && // Check the finish time every 64 requests
+        uv_hrtime() >= finish_time) {
+      break;
+    }
+  }
+
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+  writes_during_coalesce_ += processed;
+#endif
+
+  return processed;
 }
 
 } // namespace cass

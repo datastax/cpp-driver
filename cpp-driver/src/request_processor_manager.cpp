@@ -17,7 +17,14 @@
 #include "request_processor_manager.hpp"
 #include "event_loop.hpp"
 
+#include <algorithm>
+
 namespace cass {
+
+static inline bool least_busy_comp(const RequestProcessor::Ptr& a,
+                                   const RequestProcessor::Ptr& b) {
+  return a->request_count() < b->request_count();
+}
 
 class NopRequestProcessorManagerListener : public RequestProcessorManagerListener {
 public:
@@ -36,6 +43,7 @@ NopRequestProcessorManagerListener nop_request_processor_manager_listener__;
 
 RequestProcessorManager::RequestProcessorManager(RequestProcessorManagerListener* listener)
   : current_(0)
+  , processor_count_(0)
   , listener_(listener ? listener : &nop_request_processor_manager_listener__) {
   uv_mutex_init(&mutex_);
 }
@@ -45,56 +53,53 @@ RequestProcessorManager::~RequestProcessorManager() {
 }
 
 void RequestProcessorManager::close() {
-  ScopedMutex l(&mutex_);
   for (size_t i = 0; i < processors_.size(); ++i) {
     processors_[i]->close();
   }
 }
 
 void RequestProcessorManager::notify_host_add(const Host::Ptr& host) {
-  ScopedMutex l(&mutex_);
   for (size_t i = 0; i < processors_.size(); ++i) {
     processors_[i]->notify_host_add(host);
   }
 }
 
 void RequestProcessorManager::notify_host_remove(const Host::Ptr& host) {
-  ScopedMutex l(&mutex_);
   for (size_t i = 0; i < processors_.size(); ++i) {
     processors_[i]->notify_host_remove(host);
   }
 }
 
 void RequestProcessorManager::notify_token_map_changed(const TokenMap::Ptr& token_map) {
-  ScopedMutex l(&mutex_);
   for (size_t i = 0; i < processors_.size(); ++i) {
     processors_[i]->notify_token_map_changed(token_map);
   }
 }
 
-void RequestProcessorManager::notify_request() {
-  ScopedMutex l(&mutex_);
-  size_t index = current_.fetch_add(1) % processors_.size();
-  processors_[index]->notify_request();
+void RequestProcessorManager::process_request(const RequestHandler::Ptr& request_handler) {
+  const RequestProcessor::Ptr& processor
+      =  *std::min_element(processors_.begin(), processors_.end(),
+                           least_busy_comp);
+  processor->process_request(request_handler);
 }
 
 void RequestProcessorManager::add_processor(const RequestProcessor::Ptr& processor,
                                             Protected) {
   ScopedMutex l(&mutex_);
+  processor_count_++;
   processors_.push_back(processor);
 }
 
 void RequestProcessorManager::notify_closed(RequestProcessor* processor, Protected) {
   ScopedMutex l(&mutex_);
-  processors_.erase(std::remove(processors_.begin(), processors_.end(), processor),
-                    processors_.end());
-  if (processors_.empty()) {
+  if (processor_count_ <= 0) {
+    return;
+  } else if (--processor_count_ == 0) {
     listener_->on_close(this);
   }
 }
 
 void RequestProcessorManager::notify_keyspace_changed(const String& keyspace, Protected) {
-  ScopedMutex l(&mutex_);
   for (size_t i = 0; i < processors_.size(); ++i) {
     processors_[i]->set_keyspace(keyspace);
   }

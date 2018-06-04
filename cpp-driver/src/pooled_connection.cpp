@@ -17,6 +17,7 @@
 #include "pooled_connection.hpp"
 
 #include "connection_pool_manager.hpp"
+#include "event_loop.hpp"
 #include "query_request.hpp"
 
 namespace cass {
@@ -107,7 +108,9 @@ void ChainedSetKeyspaceCallback::on_result_response(ResponseMessage* response) {
 PooledConnection::PooledConnection(ConnectionPool* pool,
                                    const Connection::Ptr& connection)
   : connection_(connection)
-  , pool_(pool) {
+  , pool_(pool)
+  // If the user data is set then use it to start the I/O timer.
+  , event_loop_(static_cast<EventLoop*>(pool->manager()->loop()->data)) {
   inc_ref(); // Reference for the connection's lifetime
   connection_->set_listener(this);
 }
@@ -136,7 +139,14 @@ bool PooledConnection::write(RequestCallback* callback) {
 }
 
 void PooledConnection::flush() {
-  connection_->flush();
+  size_t bytes_flushed = connection_->flush();
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+  if (bytes_flushed > 0) {
+    pool_->manager()->flush_bytes().record_value(bytes_flushed);
+  }
+#else
+  UNUSED_(bytes_flushed);
+#endif
 }
 
 void PooledConnection::close() {
@@ -145,6 +155,18 @@ void PooledConnection::close() {
 
 int PooledConnection::inflight_request_count() const {
   return connection_->inflight_request_count();
+}
+
+void PooledConnection::on_read() {
+  if (event_loop_) {
+    event_loop_->maybe_start_io_time();
+  }
+}
+
+void PooledConnection::on_write() {
+  if (event_loop_) {
+    event_loop_->maybe_start_io_time();
+  }
 }
 
 void PooledConnection::on_close(Connection* connection) {

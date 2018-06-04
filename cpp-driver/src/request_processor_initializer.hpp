@@ -57,7 +57,6 @@ public:
    * @param protocol_version The highest negotiated protocol for the cluster.
    * @param hosts A mapping of available hosts in the cluster.
    * @param token_map A token map.
-   * @param request_queue A thread-safe queue that is used to process requests.
    * @param data User data that is available from the callback.
    * @param callback A callback that is called when the processor is initialized
    * or if an error occurred.
@@ -67,7 +66,6 @@ public:
                               int protocol_version,
                               const HostMap& hosts,
                               const TokenMap::Ptr& token_map,
-                              MPMCQueue<RequestHandler*>* request_queue,
                               void* data, Callback callback);
   ~RequestProcessorInitializer();
 
@@ -154,7 +152,6 @@ private:
   const int protocol_version_;
   HostMap hosts_;
   const TokenMap::Ptr token_map_;
-  MPMCQueue<RequestHandler*>* const request_queue_;
 
   RequestProcessorError error_code_;
   String error_message_;

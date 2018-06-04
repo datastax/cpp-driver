@@ -14,59 +14,75 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TIMER_HPP_INCLUDED__
-#define __CASS_TIMER_HPP_INCLUDED__
+#ifndef __CASS_TIMERFD_HPP_INCLUDED__
+#define __CASS_TIMERFD_HPP_INCLUDED__
 
+#include "cassconfig.hpp"
+
+#ifdef HAVE_TIMERFD
 #include "macros.hpp"
 #include "memory.hpp"
 
+#include <string.h>
+#include <sys/timerfd.h>
+#include <unistd.h>
 #include <uv.h>
 
 namespace cass {
 
-class Timer {
+class TimerFd {
 public:
-  typedef void (*Callback)(Timer*);
+  typedef void (*Callback)(TimerFd*);
 
-  Timer()
+  TimerFd()
     : handle_(NULL)
+    , fd_(-1)
     , state_(CLOSED)
     , data_(NULL) { }
 
-  ~Timer() {
+  ~TimerFd() {
     close_handle();
   }
 
-  int start(uv_loop_t* loop, uint64_t timeout, void* data, Callback callback) {
+  int start(uv_loop_t* loop, uint64_t timeout_us, void* data, Callback callback) {
     int rc = 0;
+    if (fd_ == -1) {
+      fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+      if (fd_ == -1)  return errno;
+    }
     if (handle_ == NULL) {
-      handle_ = Memory::allocate<uv_timer_t>();
+      handle_ = Memory::allocate<uv_poll_t>();
       handle_->loop = NULL;
       handle_->data = this;
     }
     if (state_ == CLOSED) {
-      rc = uv_timer_init(loop, handle_);
+      rc = uv_poll_init(loop, handle_, fd_);
+      if (rc != 0) return rc;
+      rc = uv_poll_start(handle_, UV_READABLE, on_timeout);
       if (rc != 0) return rc;
       state_ = STOPPED;
     }
     if (state_ == STOPPED) {
-      rc = uv_timer_start(handle_, on_timeout, timeout, 0);
-      if (rc != 0) return rc;
+      set_time(timeout_us);
       state_ = STARTED;
     }
     data_ = data;
     callback_ = callback;
-    return 0;
+    return rc;
   }
 
   void stop() {
     if (state_ == STARTED) {
       state_ = STOPPED;
-      uv_timer_stop(handle_);
+      set_time(0);
     }
   }
 
   void close_handle() {
+    if (fd_ != -1) {
+      close(fd_);
+      fd_ = -1;
+    }
     if (handle_ != NULL) {
       if (state_ == CLOSED) { // The handle was allocate, but initialization failed.
         Memory::deallocate(handle_);
@@ -81,21 +97,32 @@ public:
 public:
   bool is_running() const { return state_ == STARTED; }
   uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
-  void* data() const { return data_; }
+  void* data() { return data_; }
 
 private:
-  static void on_timeout(uv_timer_t* handle) {
-    Timer* timer = static_cast<Timer*>(handle->data);
+  void set_time(uint64_t timeout_us) {
+    struct itimerspec ts;
+    memset(&ts.it_interval, 0, sizeof(struct timespec));
+    ts.it_value.tv_sec = timeout_us / (1000 * 1000);
+    ts.it_value.tv_nsec = (timeout_us % (1000 * 1000))  * 1000;
+    timerfd_settime(fd_, 0, &ts, NULL);
+  }
+
+  static void on_timeout(uv_poll_t* poll, int status, int events) {
+    TimerFd* timer = static_cast<TimerFd*>(poll->data);
     timer->handle_timeout();
   }
 
   void handle_timeout() {
+    uint64_t count;
+    int result = read(fd_, &count, sizeof(count));
+    UNUSED_(result);
     state_ = STOPPED;
     callback_(this);
   }
 
   static void on_close(uv_handle_t* handle) {
-    Memory::deallocate(reinterpret_cast<uv_timer_t*>(handle));
+    Memory::deallocate(reinterpret_cast<uv_poll_t*>(handle));
   }
 
 private:
@@ -106,15 +133,15 @@ private:
   };
 
 private:
-  uv_timer_t* handle_;
+  uv_poll_t* handle_;
+  int fd_;
   State state_;
   void* data_;
   Callback callback_;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(Timer);
 };
 
 } // namespace cass
+
+#endif // HAVE_TIMERFD
 
 #endif

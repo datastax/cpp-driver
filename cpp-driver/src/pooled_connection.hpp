@@ -77,11 +77,14 @@ public:
   const String& keyspace() const { return connection_->keyspace(); } // Test only
 
 private:
+  virtual void on_read();
+  virtual void on_write();
   virtual void on_close(Connection* connection);
 
 private:
   const Connection::Ptr connection_;
   ConnectionPool* const pool_;
+  EventLoop* const event_loop_;
 };
 
 } // namespace cass

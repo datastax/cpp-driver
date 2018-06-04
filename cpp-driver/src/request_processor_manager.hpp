@@ -86,14 +86,12 @@ public:
   void notify_token_map_changed(const TokenMap::Ptr& token_map);
 
   /**
-   * Notify one of the request processors that a new request is available
-   * (thread-safe, asynchronous).
+   * Enqueue a request to be processed on the least busy request processor.
    *
-   * NOTE: The request processor selected during the round robin process may or
-   *       may not be notified if it is currently flushing requests from the
-   *       queue.
+   * (thread-safe, asynchronous)).
+   * @param request_handler
    */
-  void notify_request();
+  void process_request(const RequestHandler::Ptr& request_handler);
 
 public:
   class Protected {
@@ -171,6 +169,7 @@ public:
 private:
   Atomic<size_t> current_;
   uv_mutex_t mutex_;
+  int processor_count_;
   RequestProcessor::Vec processors_;
   RequestProcessorManagerListener* const listener_;
 };

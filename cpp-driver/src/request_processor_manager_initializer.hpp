@@ -47,7 +47,6 @@ public:
   RequestProcessorManagerInitializer(const Host::Ptr& connected_host,
                                      int protocol_version,
                                      const HostMap& hosts,
-                                     MPMCQueue<RequestHandler*>* request_queue,
                                      void* data,
                                      Callback callback);
   ~RequestProcessorManagerInitializer();
@@ -152,7 +151,6 @@ private:
   RequestProcessorManagerListener* listener_;
   Metrics* metrics_;
   Random* random_;
-  MPMCQueue<RequestHandler*>* request_queue_;
   TokenMap::Ptr token_map_;
 };
 

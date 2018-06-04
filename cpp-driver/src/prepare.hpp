@@ -34,6 +34,7 @@ public:
 
   Prepare()
     : handle_(NULL)
+    , state_(CLOSED)
     , data_(NULL) { }
 
   ~Prepare() {
@@ -48,14 +49,21 @@ public:
    * @param callback A callback that handles prepare events.
    */
   int start(uv_loop_t* loop, void* data, Callback callback) {
+    int rc = 0;
     if (handle_ == NULL) {
-      int rc;
       handle_ = Memory::allocate<uv_prepare_t>();
+      handle_->loop = NULL;
       handle_->data = this;
+    }
+    if (state_ == CLOSED) {
       rc = uv_prepare_init(loop, handle_);
       if (rc != 0) return rc;
+      state_ = STOPPED;
+    }
+    if (state_ == STOPPED) {
       rc = uv_prepare_start(handle_, on_prepare);
       if (rc != 0) return rc;
+      state_ = STARTED;
     }
     data_ = data;
     callback_ = callback;
@@ -66,32 +74,30 @@ public:
    * Stop the prepare handle.
    */
   void stop() {
-    if (handle_ == NULL) return;
-    uv_prepare_stop(handle_);
+    if (state_ == STARTED) {
+      state_ = STOPPED;
+      uv_prepare_stop(handle_);
+    }
   }
 
   /**
    * Close the prepare handle.
    */
   void close_handle() {
-    if (handle_ == NULL) return;
-    uv_prepare_stop(handle_);
-    uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
-    handle_ = NULL;
-  }
-
-  /**
-   * Determines if the prepare handle is currently running.
-   *
-   * @return Returns true if processing notifications.
-   */
-  bool is_running() const {
-    if (handle_ == NULL) return false;
-    return uv_is_active(reinterpret_cast<uv_handle_t*>(handle_)) != 0;
+    if (handle_ != NULL) {
+      if (state_ == CLOSED) { // The handle was allocate, but initialization failed.
+        Memory::deallocate(handle_);
+      } else { // If initialized or started then close the handle properly.
+        uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
+      }
+      state_ = CLOSED;
+      handle_ = NULL;
+    }
   }
 
 public:
-  uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
+  bool is_running() const { return state_ == STARTED; }
+  uv_loop_t* loop() {  return handle_ ? handle_->loop : NULL;  }
   void* data() const { return data_; }
 
 private:
@@ -105,7 +111,15 @@ private:
   }
 
 private:
+  enum State {
+    CLOSED,
+    STOPPED,
+    STARTED
+  };
+
+private:
   uv_prepare_t* handle_;
+  State state_;
   void* data_;
   Callback callback_;
 

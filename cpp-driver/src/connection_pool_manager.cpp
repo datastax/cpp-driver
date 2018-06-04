@@ -58,7 +58,11 @@ ConnectionPoolManager::ConnectionPoolManager(uv_loop_t* loop,
   , settings_(settings)
   , close_state_(CLOSE_STATE_OPEN)
   , keyspace_(keyspace)
-  , metrics_(metrics) {
+  , metrics_(metrics)
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+  , flush_bytes_("flushed")
+#endif
+{
   inc_ref(); // Reference for the lifetime of the connection pools
   uv_mutex_init(&keyspace_mutex_);
   set_pointer_keys(to_flush_);
@@ -97,7 +101,6 @@ AddressVec ConnectionPoolManager::available() const {
 }
 
 void ConnectionPoolManager::add(const Address& address) {
-  // TODO: Potentially used double check here to minimize what's in the lock
   ConnectionPool::Map::iterator it = pools_.find(address);
   if (it != pools_.end()) return;
 

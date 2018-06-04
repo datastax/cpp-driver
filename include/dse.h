@@ -51,7 +51,7 @@
 #define DSE_VERSION_MAJOR 1
 #define DSE_VERSION_MINOR 6
 #define DSE_VERSION_PATCH 1
-#define DSE_VERSION_SUFFIX "CPP-404-merged"
+#define DSE_VERSION_SUFFIX "CPP-404-coalescing"
 
 #ifdef __cplusplus
 extern "C" {

@@ -207,14 +207,12 @@ private:
   RequestWrapper wrapper_;
   SharedRefPtr<ResponseFuture> future_;
 
-  Atomic<bool> is_cancelled_;
-  Atomic<int> running_executions_;
+  bool is_cancelled_;
+  int running_executions_;
 
   ScopedPtr<QueryPlan> query_plan_;
   ScopedPtr<SpeculativeExecutionPlan> execution_plan_;
   Timer timer_;
-  bool is_timer_started_;
-  uv_thread_t timer_thread_id_;
 
   const uint64_t start_time_ns_;
   RequestListener* listener_;
@@ -222,7 +220,6 @@ private:
 
   Metrics* const metrics_;
   const Address preferred_address_;
-  PreparedMetadata::Entry::Ptr prepared_metadata_entry_;
 };
 
 class RequestListener {
@@ -244,6 +241,8 @@ public:
   virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
                               const Host::Ptr& current_host,
                               const Response::Ptr& response) = 0;
+
+  virtual void on_done() = 0;
 };
 
 class RequestExecution : public RequestCallback {

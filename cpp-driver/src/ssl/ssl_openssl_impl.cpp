@@ -658,8 +658,6 @@ void OpenSslContextFactory::internal_init() {
 void OpenSslContextFactory::internal_thread_cleanup() {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   ERR_remove_thread_state(NULL);
-#else
-  OPENSSL_thread_stop();
 #endif
 }
 
@@ -673,7 +671,9 @@ void OpenSslContextFactory::internal_cleanup() {
   CRYPTO_cleanup_all_ex_data();
   CRYPTO_set_locking_callback(NULL);
   CRYPTO_set_id_callback(NULL);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L && OPENSSL_VERSION_NUMBER > 0x10002000L
   SSL_COMP_free_compression_methods();
+#endif
 
   thread_cleanup();
 

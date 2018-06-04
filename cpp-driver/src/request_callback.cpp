@@ -34,14 +34,12 @@ void RequestWrapper::set_prepared_metadata(const PreparedMetadata::Entry::Ptr& e
 }
 
 void RequestWrapper::init(const ExecutionProfile& profile,
-                          TimestampGenerator* timestamp_generator,
-                          const PreparedMetadata::Entry::Ptr& entry) {
+                          TimestampGenerator* timestamp_generator) {
   consistency_ = profile.consistency();
   serial_consistency_ = profile.serial_consistency();
   request_timeout_ms_ = profile.request_timeout_ms();
   timestamp_ = timestamp_generator->next();
   retry_policy_ = profile.retry_policy();
-  prepared_metadata_entry_ = entry;
 }
 
 void RequestCallback::notify_write(Connection* connection,

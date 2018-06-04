@@ -25,6 +25,7 @@
 #if (defined(WIN32) || defined(_WIN32))
   #include <windows.h>
 #else
+  #include <sched.h>
   #include <unistd.h>
 #endif
 
@@ -172,12 +173,19 @@ String& to_cql_id(String& str) {
   return str;
 }
 
-int32_t get_pid()
-{
+int32_t get_pid() {
 #if (defined(WIN32) || defined(_WIN32))
   return static_cast<int32_t>(GetCurrentProcessId());
 #else
   return static_cast<int32_t>(getpid());
+#endif
+}
+
+void thread_yield() {
+#if defined(WIN32) || defined(_WIN32)
+  SwitchToThread();
+#else
+  sched_yield();
 #endif
 }
 

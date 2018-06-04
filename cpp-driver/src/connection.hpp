@@ -76,6 +76,10 @@ public:
    */
   virtual void on_event(const EventResponse::Ptr& response) { }
 
+  virtual void on_read() { }
+
+  virtual void on_write() { }
+
   /**
    * A callback that's called when the connection closes.
    *
@@ -135,7 +139,7 @@ public:
   /**
    * Flush all outstanding requests.
    */
-  void flush();
+  size_t flush();
 
   /**
    * Determine if the connection is closing.

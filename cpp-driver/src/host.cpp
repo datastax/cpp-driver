@@ -87,20 +87,6 @@ void Host::set(const Row* row) {
   String release_version;
   row->get_string_by_name("release_version", &release_version);
 
-  // TODO: Remove this and listen address from Host
-  // This value is not present in the "system.local" query
-  v = row->get_by_name("peer");
-  if (v != NULL) {
-    Address listen_address;
-    if (v->decoder().as_inet(v->size(),
-                             address_.port(),
-                             &listen_address)) {
-      listen_address_ = listen_address.to_string();
-    } else {
-      LOG_WARN("Invalid address format for listen address");
-    }
-  }
-
   rack_ = rack;
   dc_ = dc;
 

@@ -21,6 +21,7 @@
 #include "config.hpp"
 #include "connection_pool_manager.hpp"
 #include "event_loop.hpp"
+#include "histogram_wrapper.hpp"
 #include "host.hpp"
 #include "mpmc_queue.hpp"
 #include "prepare.hpp"
@@ -54,6 +55,12 @@ struct RequestProcessorSettings {
   ExecutionProfile default_profile;
 
   ExecutionProfile::Map profiles;
+
+  unsigned request_queue_size;
+
+  uint64_t coalesce_delay_us;
+
+  int new_request_ratio;
 };
 
 /**
@@ -65,7 +72,8 @@ struct RequestProcessorSettings {
 class RequestProcessor : public RefCounted<RequestProcessor>
                        , public ConnectionPoolManagerListener
                        , public RequestListener
-                       , public SchemaAgreementListener {
+                       , public SchemaAgreementListener
+                       , public EventLoop::TimerCallback {
 public:
   typedef SharedRefPtr<RequestProcessor> Ptr;
   typedef Vector<Ptr> Vec;
@@ -82,7 +90,6 @@ public:
    * @param token_map The current token map.
    * @param settings The current settings for the request processor.
    * @param random A RNG for randomizing hosts in the load balancing policies.
-   * @param request_queue A thread-safe queue for processing requests.
    */
   RequestProcessor(RequestProcessorManager* manager,
                    EventLoop* event_loop,
@@ -91,8 +98,7 @@ public:
                    const HostMap& hosts,
                    const TokenMap::Ptr& token_map,
                    const RequestProcessorSettings& settings,
-                   Random* random,
-                   MPMCQueue<RequestHandler*>* request_queue);
+                   Random* random);
 
   /**
    * Close/Terminate the request request processor (thread-safe).
@@ -132,10 +138,16 @@ public:
   void notify_token_map_changed(const TokenMap::Ptr& token_map);
 
   /**
-   * Notify that a request has been added to the request queue
+   * Enqueue a request to be processed.
    * (thread-safe, asynchronous)).
+   *
+   * @param request_handler
    */
-  void notify_request();
+  void process_request(const RequestHandler::Ptr& request_handler);
+
+  int request_count() const {
+    return request_count_.load(MEMORY_ORDER_RELAXED);
+  }
 
 public:
   class Protected {
@@ -176,11 +188,16 @@ private:
   virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
                               const Host::Ptr& current_host,
                               const Response::Ptr& response);
+  virtual void on_done();
 
 private:
   // Schema agreement listener methods
 
   virtual bool on_is_host_up(const Address& address);
+
+private:
+  // Event loop timer callback
+  virtual void on_timeout();
 
 private:
   void internal_connect(const Host::Ptr& current_host,
@@ -192,7 +209,7 @@ private:
   void internal_pool_down(const Address& address);
 
   Host::Ptr get_host(const Address& address);
-  bool execution_profile(const String& name, ExecutionProfile& profile) const;
+  const ExecutionProfile* execution_profile(const String& name) const;
   const LoadBalancingPolicy::Vec& load_balancing_policies() const;
 
 private:
@@ -205,17 +222,16 @@ private:
   void internal_host_add_down_up(const Host::Ptr& host, Host::HostState state);
   void internal_host_remove(const Host::Ptr& host);
 
-  static void on_process(Async* async);
-  static void on_process_timer(Timer* timer);
-  void handle_process();
+  static void on_async(Async* async);
+  void handle_async();
 
-  static void on_flush(Prepare* prepare);
-  void handle_flush();
+  static void on_prepare(Prepare* prepare);
+  void handle_prepare();
+
+  void maybe_close(int request_count);
+  int process_requests(uint64_t processing_time);
 
 private:
-  CassError error_code_;
-  String error_message_;
-
   ConnectionPoolManager::Ptr connection_pool_manager_;
   String connect_keyspace_;
   HostMap hosts_;
@@ -225,17 +241,28 @@ private:
   const unsigned max_schema_wait_time_ms_;
   const bool prepare_on_all_hosts_;
   const TimestampGenerator::Ptr timestamp_generator_;
+  const uint64_t coalesce_delay_us_;
+  const int new_request_ratio_;
   ExecutionProfile default_profile_;
   ExecutionProfile::Map profiles_;
-  MPMCQueue<RequestHandler*>* const request_queue_;
+  Atomic<int> request_count_;
+  ScopedPtr<MPMCQueue<RequestHandler*> > const request_queue_;
   TokenMap::Ptr token_map_;
 
-  Atomic<bool> is_flushing_;
-  Atomic<bool> is_closing_;
-  int attempts_without_writes_;
+  bool is_closing_;
+  Atomic<bool> is_processing_;
+  int attempts_without_requests_;
+  uint64_t io_time_during_coalesce_;
   Async async_;
   Prepare prepare_;
-  Timer timer_;
+
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+  int reads_during_coalesce_;
+  int writes_during_coalesce_;
+
+  HistogramWrapper writes_per_;
+  HistogramWrapper reads_per_;
+#endif
 };
 
 } // namespace cass
