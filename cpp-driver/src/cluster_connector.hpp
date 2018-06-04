@@ -39,7 +39,7 @@ public:
 
   enum ClusterError {
     CLUSTER_OK,
-    CLUSTER_CANCELLED,
+    CLUSTER_CANCELED,
     CLUSTER_ERROR_INVALID_PROTOCOL,
     CLUSTER_ERROR_SSL_ERROR,
     CLUSTER_ERROR_AUTH_ERROR,
@@ -123,7 +123,7 @@ public:
   int protocol_version() const { return protocol_version_; }
 
   bool is_ok() const { return error_code_ == CLUSTER_OK; }
-  bool is_cancelled() const { return error_code_ == CLUSTER_CANCELLED; }
+  bool is_canceled() const { return error_code_ == CLUSTER_CANCELED; }
 
   ClusterError error_code() const { return error_code_; }
   const String& error_message() const { return error_message_; }

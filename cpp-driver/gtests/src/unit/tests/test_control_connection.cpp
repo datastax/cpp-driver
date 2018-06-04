@@ -370,7 +370,7 @@ TEST_F(ControlConnectionUnitTest, Cancel) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(ControlConnector::CONTROL_CONNECTION_CANCELLED, error_code);
+  EXPECT_EQ(ControlConnector::CONTROL_CONNECTION_CANCELED, error_code);
 }
 
 TEST_F(ControlConnectionUnitTest, StatusChangeEvents) {

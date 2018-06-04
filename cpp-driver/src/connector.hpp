@@ -66,7 +66,7 @@ public:
 
   enum ConnectionError {
     CONNECTION_OK,
-    CONNECTION_CANCELLED,
+    CONNECTION_CANCELED,
     CONNECTION_ERROR_AUTH,
     CONNECTION_ERROR_CONNECT,
     CONNECTION_ERROR_CLOSE,
@@ -168,8 +168,8 @@ public:
   bool is_ok() const {
     return error_code_ == CONNECTION_OK;
   }
-  bool is_cancelled() const {
-    return error_code_ == CONNECTION_CANCELLED;
+  bool is_canceled() const {
+    return error_code_ == CONNECTION_CANCELED;
   }
   bool is_invalid_protocol() const {
     return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL;

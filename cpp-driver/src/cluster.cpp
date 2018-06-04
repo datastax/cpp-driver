@@ -383,7 +383,7 @@ void Cluster::handle_reconnect(ControlConnector* connector) {
              connected_host_->address_string().c_str());
 
     listener_->on_reconnect(this);
-  } else if (!connector->is_cancelled()) {
+  } else if (!connector->is_canceled()) {
     LOG_ERROR("Unable to reestablish a control connection to host %s because of the following error: %s",
               connector->address().to_string().c_str(),
               connector->error_message().c_str());

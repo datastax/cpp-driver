@@ -37,7 +37,7 @@ private:
 };
 
 /**
- * A task for cancelling the connection process.
+ * A task for canceling the connection process.
  */
 class RunCancelCluster : public Task {
 public:
@@ -131,7 +131,7 @@ void ClusterConnector::internal_connect() {
 }
 
 void ClusterConnector::internal_cancel() {
-  error_code_ = CLUSTER_CANCELLED;
+  error_code_ = CLUSTER_CANCELED;
   if (resolver_) resolver_->cancel();
   if (connector_) connector_->cancel();
 }
@@ -158,7 +158,7 @@ void ClusterConnector::on_resolve(MultiResolver* resolver) {
 }
 
 void ClusterConnector::handle_resolve(MultiResolver* resolver) {
-  if (is_cancelled())  {
+  if (is_canceled())  {
     finish();
     return;
   }
@@ -181,7 +181,7 @@ void ClusterConnector::handle_resolve(MultiResolver* resolver) {
     } else if (resolver->is_timed_out()) {
       LOG_ERROR("Timed out attempting to resolve address for %s:%d\n",
                 resolver->hostname().c_str(), resolver->port());
-    } else if (!resolver->is_cancelled()) {
+    } else if (!resolver->is_canceled()) {
       LOG_ERROR("Unable to resolve address for %s:%d\n",
                 resolver->hostname().c_str(), resolver->port());
     }
@@ -197,7 +197,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
 }
 
 void ClusterConnector::handle_connect(ControlConnector* connector) {
-  if (is_cancelled()) {
+  if (is_canceled()) {
     finish();
     return;
   }

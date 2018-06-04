@@ -42,7 +42,7 @@ public:
     FAILED_UNSUPPORTED_ADDRESS_FAMILY,
     FAILED_UNABLE_TO_RESOLVE,
     FAILED_TIMED_OUT,
-    CANCELLED,
+    CANCELED,
     SUCCESS
   };
 
@@ -60,7 +60,7 @@ public:
   const String& hostname() { return hostname_; }
   int port() { return port_; }
 
-  bool is_cancelled() { return status_ == CANCELLED; }
+  bool is_canceled() { return status_ == CANCELED; }
   bool is_success() { return status_ == SUCCESS; }
   bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
   Status status() { return status_; }
@@ -95,7 +95,7 @@ public:
     if (status_ == RESOLVING) {
       uv_cancel(reinterpret_cast<uv_req_t*>(&req_));
       timer_.stop();
-      status_ = CANCELLED;
+      status_ = CANCELED;
     }
   }
 

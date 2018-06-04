@@ -125,7 +125,7 @@ void ControlConnector::connect(uv_loop_t* loop) {
 }
 
 void ControlConnector::cancel() {
-  error_code_ = CONTROL_CONNECTION_CANCELLED;
+  error_code_ = CONTROL_CONNECTION_CANCELED;
   connector_->cancel();
   if (connection_) connection_->close();
   if (control_connection_) control_connection_->close();
@@ -147,7 +147,7 @@ void ControlConnector::finish() {
 }
 
 void ControlConnector::on_success() {
-  if (is_cancelled()) {
+  if (is_canceled()) {
     finish();
     return;
   }
@@ -191,11 +191,11 @@ void ControlConnector::on_connect(Connector* connector) {
 }
 
 void ControlConnector::handle_connect(Connector* connector) {
-  if (!is_cancelled() && connector->is_ok()) {
+  if (!is_canceled() && connector->is_ok()) {
     connection_ = connector->release_connection();
     connection_->set_listener(this);
     query_hosts();
-  } else if (is_cancelled() || connector->is_cancelled()) {
+  } else if (is_canceled() || connector->is_canceled()) {
     finish();
   } else if (connector->error_code() == Connector::CONNECTION_ERROR_CLOSE) {
     on_error(CONTROL_CONNECTION_ERROR_CLOSE, connector->error_message());
@@ -319,7 +319,7 @@ void ControlConnector::handle_query_schema(SchemaConnectorRequestCallback* callb
 }
 
 void ControlConnector::on_close(Connection* connection) {
-  if (is_cancelled()) {
+  if (is_canceled()) {
     finish();
   } else {
     on_error(CONTROL_CONNECTION_ERROR_CLOSE,

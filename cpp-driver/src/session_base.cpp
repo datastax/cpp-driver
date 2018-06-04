@@ -159,7 +159,7 @@ void SessionBase::handle_initialize(ClusterConnector* connector) {
                cluster_->hosts(),
                cluster_->token_map());
   } else {
-    assert(!connector->is_cancelled() && "Cluster connection process cancelled");
+    assert(!connector->is_canceled() && "Cluster connection process canceled");
     switch (connector->error_code()) {
       case ClusterConnector::CLUSTER_ERROR_INVALID_PROTOCOL:
         on_connect_failed(CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL,

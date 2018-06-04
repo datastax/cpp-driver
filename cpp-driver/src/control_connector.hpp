@@ -120,7 +120,7 @@ public:
 
   enum ControlConnectionError {
     CONTROL_CONNECTION_OK,
-    CONTROL_CONNECTION_CANCELLED,
+    CONTROL_CONNECTION_CANCELED,
     CONTROL_CONNECTION_ERROR_CLOSE,
     CONTROL_CONNECTION_ERROR_CONNECTION,
     CONTROL_CONNECTION_ERROR_HOSTS,
@@ -216,7 +216,7 @@ public:
   }
 
   bool is_ok() const { return error_code_ == CONTROL_CONNECTION_OK; }
-  bool is_cancelled() const { return error_code_ == CONTROL_CONNECTION_CANCELLED; }
+  bool is_canceled() const { return error_code_ == CONTROL_CONNECTION_CANCELED; }
   bool is_invalid_protocol() const {
     return error_code_ == CONTROL_CONNECTION_ERROR_CONNECTION &&
         connector_->is_invalid_protocol();

@@ -108,11 +108,11 @@ public:
   ConnectionPoolConnector::Vec failures() const;
 
  /**
-   * Determines if the initializer has been cancelled.
+   * Determines if the initializer has been canceled.
    *
-   * @return Returns true if cancelled.
+   * @return Returns true if canceled.
    */
-  bool is_cancelled();
+  bool is_canceled();
 
   /**
    * Release the manager from the initializer. If not released in the callback
@@ -141,7 +141,7 @@ private:
   ConnectionPoolManager::Ptr manager_;
   ConnectionPoolConnector::Vec connectors_;
 
-  bool is_cancelled_;
+  bool is_canceled_;
 
   size_t remaining_;
   ConnectionPoolConnector::Vec failures_;

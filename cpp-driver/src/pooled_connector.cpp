@@ -29,7 +29,7 @@ PooledConnector::PooledConnector(ConnectionPool* pool,
   , connector_(Memory::allocate<Connector>(pool->address(), pool->manager()->protocol_version(), this, on_connect))
   , data_(data)
   , callback_(callback)
-  , is_cancelled_(false) { }
+  , is_canceled_(false) { }
 
 void PooledConnector::connect() {
   inc_ref();
@@ -37,7 +37,7 @@ void PooledConnector::connect() {
 }
 
 void PooledConnector::cancel() {
-  is_cancelled_ = true;
+  is_canceled_ = true;
   if (delayed_connect_timer_.is_running()) {
     delayed_connect_timer_.stop();
     callback_(this);
@@ -53,12 +53,12 @@ PooledConnection::Ptr PooledConnector::release_connection() {
   return temp;
 }
 
-bool PooledConnector::is_cancelled() const {
-  return is_cancelled_;
+bool PooledConnector::is_canceled() const {
+  return is_canceled_;
 }
 
 bool PooledConnector::is_ok() const {
-  return !is_cancelled() && connector_->is_ok();
+  return !is_canceled() && connector_->is_ok();
 }
 
 bool PooledConnector::is_critical_error() const {
@@ -73,7 +73,7 @@ bool PooledConnector::is_keyspace_error() const {
 }
 
 void PooledConnector::delayed_connect(uint64_t wait_time_ms, Protected) {
-  if (is_cancelled_) {
+  if (is_canceled_) {
     callback_(this);
   } else {
     inc_ref();
@@ -99,7 +99,7 @@ void PooledConnector::on_connect(Connector* connector) {
 }
 
 void PooledConnector::handle_connect(Connector* connector) {
-  if (!is_cancelled_ && connector_->is_ok()) {
+  if (!is_canceled_ && connector_->is_ok()) {
     connection_.reset(Memory::allocate<PooledConnection>(pool_,
                                                          connector->release_connection()));
   }
@@ -115,7 +115,7 @@ void PooledConnector::on_delayed_connect(Timer* timer) {
 }
 
 void PooledConnector::handle_delayed_connect(Timer* timer) {
-  if (is_cancelled_) {
+  if (is_canceled_) {
     callback_(this);
     dec_ref();
   } else {

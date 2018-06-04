@@ -218,7 +218,7 @@ void Connector::connect(uv_loop_t* loop) {
 }
 
 void Connector::cancel() {
-  error_code_ = CONNECTION_CANCELLED;
+  error_code_ = CONNECTION_CANCELED;
   socket_connector_->cancel();
   if (connection_) connection_->close();
 }
@@ -366,7 +366,7 @@ void Connector::on_auth_success(const AuthResponseRequest* request, const String
 }
 
 void Connector::on_close(Connection* connection) {
-  if (is_cancelled() || is_timeout_error()) {
+  if (is_canceled() || is_timeout_error()) {
     finish();
   } else {
     on_error(CONNECTION_ERROR_CLOSE, "Connection closed prematurely");
@@ -411,7 +411,7 @@ void Connector::handle_connect(SocketConnector* socket_connector) {
                                               Request::ConstPtr(
                                                 Memory::allocate<StartupRequest>()))));
 #endif
-  } else if (socket_connector->is_cancelled() || is_timeout_error()) {
+  } else if (socket_connector->is_canceled() || is_timeout_error()) {
     finish();
   } else if (socket_connector->error_code() == SocketConnector::SOCKET_ERROR_CONNECT) {
     on_error(CONNECTION_ERROR_CONNECT, socket_connector->error_message());

@@ -330,9 +330,9 @@ public:
           future->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                             "Unable to connect to any contact points");
           break;
-        case ClusterConnector::CLUSTER_CANCELLED:
+        case ClusterConnector::CLUSTER_CANCELED:
           future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
-                            "Cancelled");
+                            "Canceled");
           break;
         default:
           future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
@@ -467,18 +467,18 @@ TEST_F(ClusterUnitTest, Cancel) {
     (*it)->cancel();
   }
 
-  bool is_cancelled = false;
+  bool is_canceled = false;
   for (Vector<Future::Ptr>::const_iterator it = connect_futures.begin(),
        end = connect_futures.end(); it != end; ++it) {
     ASSERT_TRUE((*it)->wait_for(WAIT_FOR_TIME));
     if ((*it)->error() &&
         (*it)->error()->code == CASS_ERROR_LIB_UNABLE_TO_CONNECT &&
-        (*it)->error()->message == "Cancelled") {
-      is_cancelled = true;
+        (*it)->error()->message == "Canceled") {
+      is_canceled = true;
     }
   }
 
-  EXPECT_TRUE(is_cancelled);
+  EXPECT_TRUE(is_canceled);
 }
 
 TEST_F(ClusterUnitTest, ReconnectToDiscoveredHosts) {
