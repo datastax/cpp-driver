@@ -104,7 +104,7 @@ ControlConnector::ControlConnector(const Address& address,
                                    const Callback& callback)
   : connector_(Memory::allocate<Connector>(address,
                                            protocol_version,
-                                           bind_member_func(&ControlConnector::on_connect, this)))
+                                           bind_callback(&ControlConnector::on_connect, this)))
   , callback_(callback)
   , error_code_(CONTROL_CONNECTION_OK)
   , listener_(NULL) { }

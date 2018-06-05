@@ -93,7 +93,7 @@ void RequestProcessorInitializer::internal_intialize() {
   inc_ref();
   connection_pool_manager_initializer_.reset(
         Memory::allocate<ConnectionPoolManagerInitializer>(protocol_version_,
-                                                           bind_member_func(&RequestProcessorInitializer::on_initialize, this)));
+                                                           bind_callback(&RequestProcessorInitializer::on_initialize, this)));
 
     AddressVec addresses;
     addresses.reserve(addresses.size());

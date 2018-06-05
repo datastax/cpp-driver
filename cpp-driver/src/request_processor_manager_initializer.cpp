@@ -79,7 +79,7 @@ void RequestProcessorManagerInitializer::initialize(EventLoopGroup* event_loop_g
                                                                                                protocol_version_,
                                                                                                hosts_,
                                                                                                token_map_,
-                                                                                               bind_member_func(&RequestProcessorManagerInitializer::on_initialize, this)));
+                                                                                               bind_callback(&RequestProcessorManagerInitializer::on_initialize, this)));
     initializers_.push_back(initializer);
     initializer
         ->with_settings(settings_)

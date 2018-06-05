@@ -322,7 +322,7 @@ bool Cluster::is_host_ignored(const LoadBalancingPolicy::Vec& policies,
 void Cluster::schedule_reconnect() {
   if (settings_.reconnect_timeout_ms > 0) {
     timer_.start(connection_->loop(), settings_.reconnect_timeout_ms,
-                 bind_member_func(&Cluster::on_schedule_reconnect, this));
+                 bind_callback(&Cluster::on_schedule_reconnect, this));
   } else {
     handle_schedule_reconnect();
   }
@@ -337,7 +337,7 @@ void Cluster::handle_schedule_reconnect() {
   if (host) {
     reconnector_.reset(Memory::allocate<ControlConnector>(host->address(),
                                                           connection_->protocol_version(),
-                                                          bind_member_func(&Cluster::on_reconnect, this)));
+                                                          bind_callback(&Cluster::on_reconnect, this)));
     reconnector_
         ->with_settings(settings_.control_connection_settings)
         ->connect(connection_->loop());
@@ -422,7 +422,7 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
   load_balancing_policy_->on_up(host);
 
   if (!prepare_host(host,
-                    bind_member_func(&Cluster::on_prepare_host_up, this))) {
+                    bind_callback(&Cluster::on_prepare_host_up, this))) {
     notify_up_after_prepare(host);
   }
 }
@@ -473,7 +473,7 @@ void Cluster::notify_add(const Host::Ptr& host) {
   load_balancing_policy_->on_add(host);
 
   if (!prepare_host(host,
-                    bind_member_func(&Cluster::on_prepare_host_add, this))) {
+                    bind_callback(&Cluster::on_prepare_host_add, this))) {
     notify_add_after_prepare(host);
   }
 }

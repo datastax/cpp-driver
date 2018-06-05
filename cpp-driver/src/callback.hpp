@@ -28,7 +28,7 @@ namespace cass {
 template <class R, class Arg, size_t MaxSize = 4 * sizeof(void*)>
 class Callback {
 public:
-  struct Dummy { };
+  struct FunctionWithDataDummy { };
 
   Callback()
     : invoker_(NULL) { }
@@ -50,7 +50,7 @@ public:
   }
 
   template <class F, class D>
-  Callback(F func, const D& data, Dummy)
+  Callback(F func, const D& data, FunctionWithDataDummy)
     : invoker_(new (&storage_) FunctionWithDataInvoker<F, D>(func, data)) {
     typedef FunctionWithDataInvoker<F, D> FunctionWithDataInvoker;
     STATIC_ASSERT(sizeof(Storage) >= sizeof(FunctionWithDataInvoker));
@@ -137,18 +137,18 @@ private:
 };
 
 template <class R, class Arg, class T>
-Callback<R, Arg> bind_member_func(R (T::*func)(Arg), T* object) {
+Callback<R, Arg> bind_callback(R (T::*func)(Arg), T* object) {
   return Callback<R, Arg>(func, object);
 }
 
 template <class R, class Arg>
-Callback<R, Arg> bind_func(R (*func)(Arg)) {
+Callback<R, Arg> bind_callback(R (*func)(Arg)) {
   return Callback<R, Arg>(func);
 }
 
 template <class R, class Arg, class D>
-Callback<R, Arg> bind_func(R (*func)(Arg, D), const D& data) {
-  static typename Callback<R, Arg>::Dummy dummy;
+Callback<R, Arg> bind_callback(R (*func)(Arg, D), const D& data) {
+  static typename Callback<R, Arg>::FunctionWithDataDummy dummy;
   return Callback<R, Arg>(func, data, dummy);
 }
 

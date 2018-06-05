@@ -43,7 +43,7 @@ void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
        end = addresses.end(); it != end; ++it) {
     ConnectionPoolConnector::Ptr pool_connector(
           Memory::allocate<ConnectionPoolConnector>(manager_.get(), *it,
-                                                    bind_member_func(&ConnectionPoolManagerInitializer::on_connect, this)));
+                                                    bind_callback(&ConnectionPoolManagerInitializer::on_connect, this)));
     connectors_.push_back(pool_connector);
     pool_connector->connect();
   }

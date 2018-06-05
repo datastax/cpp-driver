@@ -112,7 +112,7 @@ void ConnectionPoolManager::add(const Address& address) {
   ConnectionPoolConnector::Ptr connector(
         Memory::allocate<ConnectionPoolConnector>(this,
                                                   address,
-                                                  bind_member_func(&ConnectionPoolManager::on_connect, this)));
+                                                  bind_callback(&ConnectionPoolManager::on_connect, this)));
   pending_pools_.push_back(connector);
   connector->connect();
 }

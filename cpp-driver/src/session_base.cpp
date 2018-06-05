@@ -81,7 +81,7 @@ void SessionBase::connect(const Config& config,
   cluster_connector_.reset(
         Memory::allocate<ClusterConnector>(config_.contact_points(),
                                            config_.protocol_version(),
-                                           bind_member_func(&SessionBase::on_initialize, this)));
+                                           bind_callback(&SessionBase::on_initialize, this)));
 
   cluster_connector_
       ->with_listener(this)

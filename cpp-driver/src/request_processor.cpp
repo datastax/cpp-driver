@@ -199,10 +199,10 @@ void RequestProcessor::process_request(const RequestHandler::Ptr& request_handle
 
 int RequestProcessor::init(Protected) {
   int rc = async_.start(event_loop_->loop(),
-                        bind_member_func(&RequestProcessor::on_async, this));
+                        bind_callback(&RequestProcessor::on_async, this));
   if (rc != 0) return rc;
   return prepare_.start(event_loop_->loop(),
-                        bind_member_func(&RequestProcessor::on_prepare, this));
+                        bind_callback(&RequestProcessor::on_prepare, this));
 }
 
 void RequestProcessor::on_pool_up(const Address& address) {
@@ -438,7 +438,7 @@ void RequestProcessor::on_timeout(EventLoop* event_loop) {
   }
 
   event_loop_->start_timer(coalesce_delay_us_,
-                           bind_member_func(&RequestProcessor::on_timeout, this));
+                           bind_callback(&RequestProcessor::on_timeout, this));
 }
 
 void RequestProcessor::on_async(Async* async) {
@@ -448,7 +448,7 @@ void RequestProcessor::on_async(Async* async) {
 
   if (!event_loop_->is_timer_running()) {
     event_loop_->start_timer(coalesce_delay_us_,
-                             bind_member_func(&RequestProcessor::on_timeout, this));
+                             bind_callback(&RequestProcessor::on_timeout, this));
   }
 }
 

@@ -76,7 +76,7 @@ void PrepareHostHandler::prepare(uv_loop_t* loop,
 
   Connector::Ptr connector(Memory::allocate<Connector>(host_->address(),
                                                        protocol_version_,
-                                                       bind_member_func(&PrepareHostHandler::on_connect, this)));
+                                                       bind_callback(&PrepareHostHandler::on_connect, this)));
 
   connector->with_settings(settings)
            ->with_listener(this)

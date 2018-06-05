@@ -37,7 +37,7 @@ void on_timer_repeat(cass::Timer* timer) {
   repeat_data.count++;
   if (repeat_data.count == 1) {
     timer->start(repeat_data.loop, 1,
-                 cass::bind_func(on_timer_repeat));
+                 cass::bind_callback(on_timer_repeat));
   }
 }
 
@@ -51,7 +51,7 @@ TEST(TimerUnitTest, Once)
   cass::Timer timer;
 
   timer.start(loop, 1,
-              cass::bind_func(on_timer_once));
+              cass::bind_callback(on_timer_once));
 
   EXPECT_TRUE(timer.is_running());
 
@@ -76,7 +76,7 @@ TEST(TimerUnitTest, Repeat)
   repeat_data.count = 0;
 
   timer.start(loop, 1,
-              cass::bind_func(on_timer_repeat));
+              cass::bind_callback(on_timer_repeat));
 
   EXPECT_TRUE(timer.is_running());
 

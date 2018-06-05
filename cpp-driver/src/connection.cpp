@@ -326,7 +326,7 @@ void Connection::on_close() {
 void Connection::restart_heartbeat_timer() {
   if (!is_closing() && heartbeat_interval_secs_ > 0) {
     heartbeat_timer_.start(socket_->loop(), 1000 * heartbeat_interval_secs_,
-                           bind_member_func(&Connection::on_heartbeat, this));
+                           bind_callback(&Connection::on_heartbeat, this));
   }
 }
 
@@ -353,7 +353,7 @@ void Connection::restart_terminate_timer() {
   if (!is_closing() && heartbeat_interval_secs_ > 0 &&
       idle_timeout_secs_ > 0) {
     terminate_timer_.start(socket_->loop(), 1000 * idle_timeout_secs_,
-                           bind_member_func(&Connection::on_terminate, this));
+                           bind_callback(&Connection::on_terminate, this));
   }
 }
 

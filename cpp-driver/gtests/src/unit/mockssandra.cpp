@@ -1198,7 +1198,7 @@ void Request::error(int32_t code, const String& message) {
 void Request::wait(uint64_t timeout, const Action* action) {
   timer_action_ = action;
   timer_.start(client_->server()->loop(), timeout,
-               cass::bind_member_func(&Request::on_timeout, this));
+               cass::bind_callback(&Request::on_timeout, this));
 }
 
 void Request::close() {

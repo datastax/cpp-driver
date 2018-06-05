@@ -37,7 +37,7 @@ void ConnectionPoolConnector::connect() {
   for (size_t i = 0; i < num_connections_per_host; ++i) {
     PooledConnector::Ptr connector(
           Memory::allocate<PooledConnector>(pool_.get(),
-                                            bind_member_func(&ConnectionPoolConnector::on_connect, this)));
+                                            bind_callback(&ConnectionPoolConnector::on_connect, this)));
     pending_connections_.push_back(connector);
     connector->connect();
   }

@@ -70,7 +70,7 @@ public:
 
     if (timeout > 0) {
       timer_.start(loop, timeout,
-                   bind_member_func(&NameResolver::on_timeout, this));
+                   bind_callback(&NameResolver::on_timeout, this));
     }
 
     int rc = uv_getnameinfo(loop, &req_, on_resolve, static_cast<const Address>(address_).addr(), flags);

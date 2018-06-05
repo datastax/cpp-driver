@@ -51,7 +51,7 @@ EventLoop::EventLoop()
 #ifndef HAVE_TIMERFD
   , timeout_(0)
 #endif
-  , timer_callback_(bind_func(&nop_timer_callback__))
+  , timer_callback_(bind_callback(&nop_timer_callback__))
   , is_closing_(false)
   , io_time_start_(0)
   , io_time_elapsed_(0) {
@@ -72,7 +72,7 @@ int EventLoop::init(const String& thread_name /*= ""*/) {
   int rc = 0;
   rc = uv_loop_init(&loop_);
   if (rc != 0) return rc;
-  rc = async_.start(loop(), bind_member_func(&EventLoop::on_task, this));
+  rc = async_.start(loop(), bind_callback(&EventLoop::on_task, this));
   if (rc != 0) return rc;
   is_loop_initialized_ = true;
 
@@ -114,12 +114,12 @@ void EventLoop::add(Task* task) {
 
 void EventLoop::start_timer(uint64_t timeout_us, const TimerCallback& callback) {
 #ifdef HAVE_TIMERFD
-  timer_.start(loop(), timeout_us, bind_member_func(&EventLoop::on_timer, this));
+  timer_.start(loop(), timeout_us, bind_callback(&EventLoop::on_timer, this));
 #else
   timeout_ = uv_hrtime() + timeout_us * 1000;
 #endif
 
-  timer_callback_ = callback ? callback : bind_func(&nop_timer_callback__);
+  timer_callback_ = callback ? callback : bind_callback(&nop_timer_callback__);
 }
 
 void EventLoop::stop_timer() {

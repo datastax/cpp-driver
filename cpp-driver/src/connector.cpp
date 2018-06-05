@@ -169,7 +169,7 @@ Connector::Connector(const Address& address,
   , loop_(NULL)
   , socket_connector_(
       Memory::allocate<SocketConnector>(address,
-                                        bind_member_func(&Connector::on_connect, this)))
+                                        bind_callback(&Connector::on_connect, this)))
   , error_code_(CONNECTION_OK)
   , protocol_version_(protocol_version)
   , event_types_(0)
@@ -214,7 +214,7 @@ void Connector::connect(uv_loop_t* loop) {
       ->connect(loop);
   if (settings_.connect_timeout_ms > 0) {
     timer_.start(loop, settings_.connect_timeout_ms,
-                 bind_member_func(&Connector::on_timeout, this));
+                 bind_callback(&Connector::on_timeout, this));
   }
 }
 

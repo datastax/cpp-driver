@@ -38,7 +38,7 @@ void LatencyAwarePolicy::init(const Host::Ptr& connected_host,
 
 void LatencyAwarePolicy::register_handles(uv_loop_t* loop) {
   timer_.start(loop, settings_.update_rate_ms,
-               bind_member_func(&LatencyAwarePolicy::on_timer, this));
+               bind_callback(&LatencyAwarePolicy::on_timer, this));
 }
 
 void LatencyAwarePolicy::close_handles() {

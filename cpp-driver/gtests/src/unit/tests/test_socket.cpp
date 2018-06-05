@@ -163,7 +163,7 @@ TEST_F(SocketUnitTest, Simple) {
 
   String result;
   SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                   cass::bind_func(on_socket_connected, &result)));
+                                                                   cass::bind_callback(on_socket_connected, &result)));
 
   connector->connect(loop());
 
@@ -179,7 +179,7 @@ TEST_F(SocketUnitTest, Ssl) {
 
   String result;
   SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                   cass::bind_func(on_socket_connected, &result)));
+                                                                   cass::bind_callback(on_socket_connected, &result)));
 
 
   connector->with_settings(settings)
@@ -193,7 +193,7 @@ TEST_F(SocketUnitTest, Ssl) {
 TEST_F(SocketUnitTest, Refused) {
   bool is_refused = false;
   SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                   cass::bind_func(on_socket_refused, &is_refused)));
+                                                                   cass::bind_callback(on_socket_refused, &is_refused)));
   connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
@@ -212,7 +212,7 @@ TEST_F(SocketUnitTest, SslClose) {
   bool is_closed = false;
   for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                     cass::bind_func(on_socket_closed, &is_closed)));
+                                                                     cass::bind_callback(on_socket_closed, &is_closed)));
 
     connector
         ->with_settings(settings)
@@ -233,7 +233,7 @@ TEST_F(SocketUnitTest, Cancel) {
   bool is_canceled = false;
   for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                     cass::bind_func(on_socket_canceled, &is_canceled)));
+                                                                     cass::bind_callback(on_socket_canceled, &is_canceled)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -260,7 +260,7 @@ TEST_F(SocketUnitTest, SslCancel) {
   bool is_canceled = false;
   for (size_t i = 0; i < 10; ++i) {
     SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
-                                                                     cass::bind_func(on_socket_canceled, &is_canceled)));
+                                                                     cass::bind_callback(on_socket_canceled, &is_canceled)));
     connector->with_settings(settings)
              ->connect(loop());
     connectors.push_back(connector);

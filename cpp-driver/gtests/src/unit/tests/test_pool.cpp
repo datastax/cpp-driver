@@ -386,7 +386,7 @@ TEST_F(PoolUnitTest, Simple) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_connected, &status)));
+          bind_callback(on_pool_connected, &status)));
 
   initializer
       ->initialize(loop(), addresses());
@@ -411,7 +411,7 @@ TEST_F(PoolUnitTest, Keyspace) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_connected, &status)));
+          bind_callback(on_pool_connected, &status)));
 
   AddressVec addresses = this->addresses();
 
@@ -445,7 +445,7 @@ TEST_F(PoolUnitTest, Auth) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_connected, &status)));
+          bind_callback(on_pool_connected, &status)));
 
   ConnectionPoolManagerSettings settings;
   settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
@@ -468,7 +468,7 @@ TEST_F(PoolUnitTest, Ssl) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_connected, &status)));
+          bind_callback(on_pool_connected, &status)));
 
   initializer
       ->with_settings(settings)
@@ -488,7 +488,7 @@ TEST_F(PoolUnitTest, Listener) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   initializer
       ->with_listener(listener.get())
@@ -509,7 +509,7 @@ TEST_F(PoolUnitTest, ListenerDown) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   initializer
       ->with_listener(listener.get())
@@ -533,7 +533,7 @@ TEST_F(PoolUnitTest, AddRemove) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   AddressVec addresses = this->addresses();
 
@@ -575,7 +575,7 @@ TEST_F(PoolUnitTest, Reconnect) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   AddressVec addresses = this->addresses();
 
@@ -626,7 +626,7 @@ TEST_F(PoolUnitTest, Timeout) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   ConnectionPoolManagerSettings settings;
   settings.connection_settings.connect_timeout_ms = 200;
@@ -651,7 +651,7 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           0x7F,  // Invalid protocol version
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   initializer
       ->with_listener(listener.get())
@@ -686,7 +686,7 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   initializer
       ->with_keyspace("invalid")
@@ -709,7 +709,7 @@ TEST_F(PoolUnitTest, InvalidAuth) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   ConnectionPoolManagerSettings settings;
   settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
@@ -733,7 +733,7 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   SslContext::Ptr ssl_context(SslContextFactory::create());
 
@@ -761,7 +761,7 @@ TEST_F(PoolUnitTest, InvalidSsl) {
   ConnectionPoolManagerInitializer::Ptr initializer(
         Memory::allocate<ConnectionPoolManagerInitializer>(
           PROTOCOL_VERSION,
-          bind_func(on_pool_nop, &request_status)));
+          bind_callback(on_pool_nop, &request_status)));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 

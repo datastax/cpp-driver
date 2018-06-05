@@ -186,7 +186,7 @@ void SimpleRequestCallback::on_write(Connection* connection) {
   if (request_timeout_ms > 0) { // 0 means no timeout
     timer_.start(connection->loop(),
                  request_timeout_ms,
-                 bind_member_func(&SimpleRequestCallback::on_timeout, this));
+                 bind_callback(&SimpleRequestCallback::on_timeout, this));
   }
   on_internal_write(connection);
 }

@@ -101,7 +101,7 @@ void ClusterConnector::internal_resolve_and_connect() {
       if (!resolver_) {
         resolver_.reset(
               Memory::allocate<MultiResolver>(
-                bind_member_func(&ClusterConnector::on_resolve, this)));
+                bind_callback(&ClusterConnector::on_resolve, this)));
       }
       resolver_->resolve(event_loop_->loop(),
                          contact_point,
@@ -123,7 +123,7 @@ void ClusterConnector::internal_connect() {
   }
   connector_.reset(Memory::allocate<ControlConnector>(*contact_points_resolved_it_,
                                                       protocol_version_,
-                                                      bind_member_func(&ClusterConnector::on_connect, this)));
+                                                      bind_callback(&ClusterConnector::on_connect, this)));
   connector_
       ->with_settings(settings_.control_connection_settings)
       ->connect(event_loop_->loop());

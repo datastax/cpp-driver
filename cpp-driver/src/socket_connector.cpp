@@ -97,7 +97,7 @@ void SocketConnector::connect(uv_loop_t* loop) {
     // Run hostname resolution then connect.
     resolver_.reset(
           Memory::allocate<NameResolver>(address_,
-                                         bind_member_func(&SocketConnector::on_resolve, this)));
+                                         bind_callback(&SocketConnector::on_resolve, this)));
     resolver_->resolve(loop, settings_.resolve_timeout_ms);
   } else {
     internal_connect(loop);
@@ -147,7 +147,7 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
 
   connector_.reset(Memory::allocate<TcpConnector>(address_));
   connector_->connect(socket_->handle(),
-                      bind_member_func(&SocketConnector::on_connect, this));
+                      bind_callback(&SocketConnector::on_connect, this));
 }
 
 void SocketConnector::ssl_handshake() {

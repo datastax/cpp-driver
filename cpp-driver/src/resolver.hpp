@@ -75,7 +75,7 @@ public:
 
     if (timeout > 0) {
       timer_.start(loop, timeout,
-                   bind_member_func(&Resolver::on_timeout, this));
+                   bind_callback(&Resolver::on_timeout, this));
     }
 
     OStringStream ss;
@@ -172,7 +172,7 @@ public:
     inc_ref();
     Resolver::Ptr resolver(
           Memory::allocate<Resolver>(host, port,
-                                     bind_member_func(&MultiResolver::on_resolve, this)));
+                                     bind_callback(&MultiResolver::on_resolve, this)));
     resolver->resolve(loop, timeout, hints);
     resolvers_.push_back(resolver);
     remaining_++;

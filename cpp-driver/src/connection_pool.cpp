@@ -112,7 +112,7 @@ void ConnectionPool::internal_schedule_reconnect() {
            static_cast<void*>(this));
   PooledConnector::Ptr connector(
         Memory::allocate<PooledConnector>(this,
-                                          bind_member_func(&ConnectionPool::on_reconnect, this)));
+                                          bind_callback(&ConnectionPool::on_reconnect, this)));
   pending_connections_.push_back(connector);
   connector->delayed_connect(manager_->settings().reconnect_wait_time_ms,
                              PooledConnector::Protected());

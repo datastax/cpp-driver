@@ -278,7 +278,7 @@ void Session::on_connect(const Host::Ptr& connected_host,
         Memory::allocate<RequestProcessorManagerInitializer>(connected_host,
                                                              protocol_version,
                                                              hosts,
-                                                             bind_member_func(&Session::on_initialize, this)));
+                                                             bind_callback(&Session::on_initialize, this)));
 
   initializer
       ->with_settings(RequestProcessorSettings(config()))

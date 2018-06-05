@@ -171,7 +171,7 @@ void RequestHandler::start_request(uv_loop_t* loop, Protected) {
     uint64_t request_timeout_ms = wrapper_.request_timeout_ms();
     if (request_timeout_ms > 0) { // 0 means no timeout
       timer_.start(loop, request_timeout_ms,
-                   bind_member_func(&RequestHandler::on_timeout, this));
+                   bind_callback(&RequestHandler::on_timeout, this));
     }
   }
 }
@@ -343,7 +343,7 @@ void RequestExecution::on_write(Connection* connection) {
       request_handler_->execute();
     } else if (timeout > 0) {
       schedule_timer_.start(connection->loop(), timeout,
-                            bind_member_func(&RequestExecution::on_execute_next, this));
+                            bind_callback(&RequestExecution::on_execute_next, this));
     }
   }
 }

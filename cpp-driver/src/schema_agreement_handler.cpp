@@ -136,7 +136,7 @@ void SchemaAgreementHandler::start(Connection* connection) {
     inc_ref(); // Reference for the event loop
     connection_.reset(connection);
     timer_.start(connection_->loop(), max_schema_wait_time_ms_,
-                 bind_member_func(&SchemaAgreementHandler::on_timeout, this));
+                 bind_callback(&SchemaAgreementHandler::on_timeout, this));
   }
 }
 
@@ -144,7 +144,7 @@ void SchemaAgreementHandler::schedule() {
   LOG_DEBUG("Schema still not up-to-date on some live nodes. "
             "Trying again in %d ms", RETRY_SCHEMA_AGREEMENT_WAIT_MS);
   retry_timer_.start(connection_->loop(), RETRY_SCHEMA_AGREEMENT_WAIT_MS,
-                     bind_member_func(&SchemaAgreementHandler::on_retry_timeout, this));
+                     bind_callback(&SchemaAgreementHandler::on_retry_timeout, this));
 }
 
 void SchemaAgreementHandler::finish() {

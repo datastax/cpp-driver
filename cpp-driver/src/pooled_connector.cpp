@@ -26,7 +26,7 @@ namespace cass {
 PooledConnector::PooledConnector(ConnectionPool* pool, const Callback& callback)
   : pool_(pool)
   , connector_(Memory::allocate<Connector>(pool->address(), pool->manager()->protocol_version(),
-                                           bind_member_func(&PooledConnector::on_connect, this)))
+                                           bind_callback(&PooledConnector::on_connect, this)))
   , callback_(callback)
   , is_canceled_(false) { }
 
@@ -78,7 +78,7 @@ void PooledConnector::delayed_connect(uint64_t wait_time_ms, Protected) {
     inc_ref();
     if (wait_time_ms > 0) {
       delayed_connect_timer_.start(pool_->manager()->loop(), wait_time_ms,
-                                   bind_member_func(&PooledConnector::on_delayed_connect, this));
+                                   bind_callback(&PooledConnector::on_delayed_connect, this));
     } else {
       internal_connect();
     }
