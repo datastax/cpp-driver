@@ -58,7 +58,7 @@ public:
     // safe to use negative values for the empty and deleted keys.
     pending_.set_empty_key(-1);
     pending_.set_deleted_key(-2);
-    pending_.max_load_factor(0.4);
+    pending_.max_load_factor(0.4f);
   }
 
   int acquire(const T& item) {

@@ -216,7 +216,7 @@ void EventLoop::handle_run() {
       }
     } else {
       timeout_ = 0;
-      timer_callback_->on_timeout();
+      timer_callback_(this);
       // The timeout could change in the callback so it needs to be checked
       // again.
       continue;

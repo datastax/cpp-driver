@@ -25,7 +25,7 @@
 
 namespace cass {
 
-template <class R, class Arg, size_t MaxSize = 4 * sizeof(void*)>
+template <class R, class Arg>
 class Callback {
 public:
   struct FunctionWithDataDummy { };
@@ -72,7 +72,12 @@ public:
   }
 
 private:
-  typedef AlignedStorage<MaxSize, ALIGN_OF(void*)> Storage;
+  // This needs to be big enough to fit:
+  // - A vtable pointer (8 bytes).
+  // - A member function pointer or a function pointer (this can be a fat
+  //   pointer of up to 16 bytes).
+  // - A pointer/int data parameter (8 bytes).
+  typedef AlignedStorage<32, 8> Storage;
 
   struct Invoker {
     virtual R invoke(const Arg& arg) = 0;
