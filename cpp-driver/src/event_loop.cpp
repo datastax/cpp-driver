@@ -61,7 +61,11 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop() {
   if (is_loop_initialized_) {
-    uv_loop_close(&loop_);
+    int rc = uv_loop_close(loop());
+    while (rc != 0) {
+      uv_run(loop(), UV_RUN_DEFAULT);
+      rc = uv_loop_close(loop());
+    }
   }
 }
 
@@ -201,25 +205,28 @@ void EventLoop::handle_run() {
     uv_run_mode mode = UV_RUN_ONCE;
 
 #ifndef HAVE_TIMERFD
-    if (timeout_ > now) {
-      uint64_t delta =  timeout_ - now;
-      // Don't busy UV_RUN_NOWAIT if the timeout is greater than a
-      // millisecond (within 5%).
-      if (delta > 950 * 1000) {
-        uint64_t ms = delta / (1000 * 1000); // Convert to milliseconds
-        if (ms == 0) {
-          ms = 1;
+recheck_timeout:
+    if (timeout_ != 0) {
+      if (timeout_ > now) {
+        uint64_t delta =  timeout_ - now;
+        // Don't busy UV_RUN_NOWAIT if the timeout is greater than a
+        // millisecond (within 5%).
+        if (delta > 950 * 1000) {
+          uint64_t ms = delta / (1000 * 1000); // Convert to milliseconds
+          if (ms == 0) {
+            ms = 1;
+          }
+          timer_.start(loop(), ms, bind_callback(&EventLoop::on_timer, this));
+        } else {
+          mode = UV_RUN_NOWAIT; // Spin
         }
-        timer_.start(loop(), ms, bind_callback(&EventLoop::on_timer, this));
       } else {
-        mode = UV_RUN_NOWAIT; // Spin
+        timeout_ = 0;
+        timer_callback_(this);
+        // The timeout could change in the callback so it needs to be checked
+        // again.
+        goto recheck_timeout;
       }
-    } else {
-      timeout_ = 0;
-      timer_callback_(this);
-      // The timeout could change in the callback so it needs to be checked
-      // again.
-      continue;
     }
 #endif
 

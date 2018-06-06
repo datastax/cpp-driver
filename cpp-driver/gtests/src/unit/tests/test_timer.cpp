@@ -14,11 +14,13 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
 #include "timer.hpp"
 
+#include "loop_test.hpp"
+
 static bool was_timer_called = false;
+
+class TimerUnitTest : public LoopTest { };
 
 void on_timer_once(cass::Timer* timer) {
   was_timer_called = true;
@@ -41,49 +43,35 @@ void on_timer_repeat(cass::Timer* timer) {
   }
 }
 
-TEST(TimerUnitTest, Once)
+TEST_F(TimerUnitTest, Once)
 {
-  uv_loop_t* loop;
-  uv_loop_t loop_storage__;
-  loop = &loop_storage__;
-  uv_loop_init(loop);
-
   cass::Timer timer;
 
-  timer.start(loop, 1,
+  timer.start(loop(), 1,
               cass::bind_callback(on_timer_once));
 
   EXPECT_TRUE(timer.is_running());
 
-  uv_run(loop, UV_RUN_DEFAULT);
+  uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_FALSE(timer.is_running());
   EXPECT_TRUE(was_timer_called);
-
-  uv_loop_close(loop);
 }
 
-TEST(TimerUnitTest, Repeat)
+TEST_F(TimerUnitTest, Repeat)
 {
-  uv_loop_t* loop;
-  uv_loop_t loop_storage__;
-  loop = &loop_storage__;
-  uv_loop_init(loop);
-
   cass::Timer timer;
 
-  repeat_data.loop = loop;
+  repeat_data.loop = loop();
   repeat_data.count = 0;
 
-  timer.start(loop, 1,
+  timer.start(loop(), 1,
               cass::bind_callback(on_timer_repeat));
 
   EXPECT_TRUE(timer.is_running());
 
-  uv_run(loop, UV_RUN_DEFAULT);
+  uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_FALSE(timer.is_running());
   EXPECT_EQ(repeat_data.count, 2);
-
-  uv_loop_close(loop);
 }

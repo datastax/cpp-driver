@@ -29,11 +29,13 @@ SimpleClusterTest::SimpleClusterTest(size_t num_nodes,
   , saved_log_level_(CASS_LOG_DISABLED) { }
 
 void SimpleClusterTest::SetUp() {
+  LoopTest::SetUp();
   saved_log_level_ = cass::Logger::log_level();
   set_log_level(CASS_LOG_DISABLED);
 }
 
 void SimpleClusterTest::TearDown() {
+  LoopTest::TearDown();
   stop_all();
   cass::Logger::set_log_level(saved_log_level_);
 }

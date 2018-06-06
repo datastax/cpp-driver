@@ -161,18 +161,6 @@ private:
 
 class ControlConnectionUnitTest : public mockssandra::SimpleClusterTest {
 public:
-  uv_loop_t* loop() { return &loop_; }
-
-  virtual void SetUp() {
-    mockssandra::SimpleClusterTest::SetUp();
-    uv_loop_init(loop());
-  }
-
-  virtual void TearDown() {
-    uv_loop_close(loop());
-    mockssandra::SimpleClusterTest::TearDown();
-  }
-
   static void on_connection_connected(ControlConnector* connector, bool* is_connected) {
     if (connector->is_ok()) {
       *is_connected = true;
@@ -258,9 +246,6 @@ public:
   static void on_connection_event(ControlConnector* connector, EventListener* listener) {
     listener->trigger_events(connector->release_connection());
   }
-
-private:
-  uv_loop_t loop_;
 };
 
 TEST_F(ControlConnectionUnitTest, Simple) {

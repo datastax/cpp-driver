@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "mockssandra.hpp"
+#include "loop_test.hpp"
 
 #include "connector.hpp"
 #include "socket_connector.hpp"
@@ -72,10 +73,8 @@ private:
   String* result_;
 };
 
-class SocketUnitTest : public testing::Test {
+class SocketUnitTest : public LoopTest {
 public:
-  uv_loop_t* loop() { return &loop_; }
-
   SocketSettings use_ssl() {
     SslContext::Ptr ssl_context(SslContextFactory::create());
 
@@ -103,13 +102,13 @@ public:
   }
 
   virtual void SetUp() {
-    uv_loop_init(loop());
+    LoopTest::SetUp();
     saved_log_level_ = Logger::log_level();
     Logger::set_log_level(CASS_LOG_DISABLED);
   }
 
   virtual void TearDown() {
-    uv_loop_close(loop());
+    LoopTest::TearDown();
     close();
     Logger::set_log_level(saved_log_level_);
   }
@@ -153,7 +152,6 @@ public:
   }
 
 private:
-  uv_loop_t loop_;
   mockssandra::SimpleEchoServer server_;
   CassLogLevel saved_log_level_;
 };

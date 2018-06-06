@@ -83,18 +83,6 @@ public:
     Connection* connection_;
   };
 
-  uv_loop_t* loop() { return &loop_; }
-
-  virtual void SetUp() {
-    mockssandra::SimpleClusterTest::SetUp();
-    uv_loop_init(loop());
-  }
-
-  virtual void TearDown() {
-    uv_loop_close(loop());
-    mockssandra::SimpleClusterTest::TearDown();
-  }
-
   static void on_connection_connected(Connector* connector, State* state) {
     ASSERT_TRUE(connector->is_ok());
     state->status = STATUS_CONNECTED;
@@ -114,9 +102,6 @@ public:
       *is_closed = true;
     }
   }
-
-private:
-  uv_loop_t loop_;
 };
 
 

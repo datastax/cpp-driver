@@ -14,22 +14,22 @@
   limitations under the License.
 */
 
+#ifndef MOCKSSANDRA_TEST_HPP
+#define MOCKSSANDRA_TEST_HPP
+
 #include "mockssandra.hpp"
 
 #include "cassandra.h"
 #include "connector.hpp"
 
-#include <gtest/gtest.h>
-
-#ifndef MOCKSSANDRA_TEST_HPP
-#define MOCKSSANDRA_TEST_HPP
+#include "loop_test.hpp"
 
 namespace mockssandra {
 
 /**
  * A test that create a simple mockssandra cluster.
  */
-class SimpleClusterTest : public testing::Test {
+class SimpleClusterTest : public LoopTest {
 public:
   /**
    * Construct a cluster with a specified number of nodes and request handler.
