@@ -62,9 +62,13 @@ EventLoop::EventLoop()
 EventLoop::~EventLoop() {
   if (is_loop_initialized_) {
     int rc = uv_loop_close(loop());
-    while (rc != 0) {
+    if (rc != 0) {
       uv_run(loop(), UV_RUN_DEFAULT);
       rc = uv_loop_close(loop());
+      if (rc != 0) {
+        uv_print_all_handles(loop(), stderr);
+        assert(false && "Event loop still has pending handles");
+      }
     }
   }
 }
