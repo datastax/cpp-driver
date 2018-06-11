@@ -237,6 +237,12 @@ Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* pr
 }
 
 void Session::execute(const RequestHandler::Ptr& request_handler) {
+  if (state() == SESSION_STATE_CLOSED) {
+    request_handler->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                               "Session is not connected");
+    return;
+  }
+
   request_processor_manager_->process_request(request_handler);
 }
 

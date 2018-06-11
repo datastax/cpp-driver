@@ -77,6 +77,7 @@ public:
   const Config& config() const { return config_; }
   Cluster::Ptr cluster() const { return cluster_; }
   Random* random() const { return random_.get(); }
+  State state() const { return state_; }
 
 protected:
   /**
