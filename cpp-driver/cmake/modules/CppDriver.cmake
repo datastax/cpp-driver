@@ -370,7 +370,9 @@ macro(CassUseLibuv)
     LIBUV_LIBRARY
     LIBUV_INCLUDE_DIR)
 
-  if (EXISTS "${LIBUV_INCLUDE_DIR}/uv-version.h")
+  if (EXISTS "${LIBUV_INCLUDE_DIR}/uv/version.h")
+    set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv/version.h")
+  elseif (EXISTS "${LIBUV_INCLUDE_DIR}/uv-version.h")
     set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv-version.h")
   else()
     set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv.h")
