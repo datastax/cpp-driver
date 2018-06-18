@@ -118,6 +118,7 @@ RequestProcessor::RequestProcessor(RequestProcessorManager* manager,
   , new_request_ratio_(settings.new_request_ratio)
   , default_profile_(settings.default_profile)
   , profiles_(settings.profiles)
+  , request_count_(0)
   , request_queue_(Memory::allocate<MPMCQueue<RequestHandler*> >(settings.request_queue_size))
   , is_closing_(false)
   , is_processing_(false)
