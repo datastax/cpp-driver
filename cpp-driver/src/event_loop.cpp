@@ -151,14 +151,12 @@ void EventLoop::maybe_start_io_time() {
 }
 
 void EventLoop::on_run() {
+  if (name_.empty()) name_ = "Event Loop";
+#if defined(_MSC_VER)
   char temp[64];
-  unsigned long thread_id = static_cast<unsigned long>(GetThreadId(uv_thread_self()));
-  if (name_.empty()) {
-    sprintf(temp, "Event Loop - %lu", thread_id);
-  } else {
-    sprintf(temp, "%s - %lu", name_.c_str(), thread_id);
-  }
+  sprintf(temp, "%s - %lu", name_.c_str(), static_cast<unsigned long>(GetThreadId(uv_thread_self())));
   name_ = temp;
+#endif
   set_thread_name(name_);
 }
 
@@ -205,9 +203,8 @@ void EventLoop::handle_run() {
     uv_run_mode mode = UV_RUN_ONCE;
 
 #ifndef HAVE_TIMERFD
-    bool is_recheck_timeout = false;
+    bool recheck_timeout = false;
     do {
-      is_recheck_timeout = false;
       if (timeout_ != 0) {
         if (timeout_ > now) {
           uint64_t delta = timeout_ - now;
@@ -227,10 +224,10 @@ void EventLoop::handle_run() {
           timer_callback_(this);
           // The timeout could change in the callback so it needs to be checked
           // again.
-          is_recheck_timeout = true;
+          recheck_timeout = true;
         }
       }
-    } while (is_recheck_timeout);
+    } while (recheck_timeout);
 #endif
 
     result = uv_run(loop(), mode);
