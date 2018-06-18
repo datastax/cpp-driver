@@ -274,6 +274,7 @@ private:
 
 private:
   void internal_close();
+  void handle_close();
 
   void internal_notify_up(const Address& address, const Host::Ptr& refreshed = Host::Ptr());
   void notify_up_after_prepare(const Host::Ptr& host);
