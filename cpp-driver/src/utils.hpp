@@ -116,9 +116,7 @@ inline size_t vint_size(int64_t value) {
 
 int32_t get_pid();
 
-#if defined(_MSC_VER) && defined(_DEBUG)
 void set_thread_name(const String& thread_name);
-#endif
 
 template <class C>
 static void set_pointer_keys(C& container) {

@@ -275,7 +275,7 @@ public:
   Socket(const Address& address, size_t max_reusable_write_objects);
 
   /**
-   * Destructor. 
+   * Destructor.
    */
   ~Socket();
 

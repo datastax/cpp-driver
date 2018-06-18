@@ -775,7 +775,7 @@ void ControlConnection::on_event(const EventResponse::Ptr& response) {
         return;
       }
 
-      LOG_DEBUG("Schema change (%d): %.*s %.*s\n",
+      LOG_DEBUG("Schema change (%d): %.*s %.*s",
                 response->schema_change(),
                 (int)response->keyspace().size(), response->keyspace().data(),
                 (int)response->target().size(), response->target().data());

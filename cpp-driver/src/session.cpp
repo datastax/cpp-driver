@@ -28,7 +28,6 @@
 #include "request_processor_manager_initializer.hpp"
 #include "scoped_lock.hpp"
 #include "statement.hpp"
-#include "timer.hpp"
 
 extern "C" {
 
@@ -176,10 +175,7 @@ void  cass_session_get_speculative_execution_metrics(const CassSession* session,
 namespace cass {
 
 Session::~Session() {
-  if (event_loop_group_) {
-    event_loop_group_->close_handles();
-    event_loop_group_->join();
-  }
+  close_event_loop_group();
 }
 
 Future::Ptr Session::prepare(const char* statement, size_t length) {
@@ -216,6 +212,13 @@ Future::Ptr Session::prepare(const Statement* statement) {
             Memory::allocate<RequestHandler>(prepare, future, metrics_.get())));
 
   return future;
+}
+
+void Session::close_event_loop_group() {
+  if (event_loop_group_) {
+    event_loop_group_->close_handles();
+    event_loop_group_->join();
+  }
 }
 
 Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* preferred_address) {
@@ -258,13 +261,9 @@ void Session::on_connect(const Host::Ptr& connected_host,
     return;
   }
 
-  if (event_loop_group_) {
-    event_loop_group_->close_handles();
-    event_loop_group_->join();
-  }
-
+  close_event_loop_group();
   event_loop_group_.reset(Memory::allocate<RoundRobinEventLoopGroup>(config().thread_count_io()));
-  rc = event_loop_group_->init();
+  rc = event_loop_group_->init("Request Processor");
   if (rc != 0) {
     notify_connect_failed(CASS_ERROR_LIB_UNABLE_TO_INIT,
                           "Unable to initialize event loop group");

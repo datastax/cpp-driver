@@ -372,7 +372,7 @@ void Cluster::on_reconnect(ControlConnector* connector) {
       listener_->on_update_token_map(token_map_);
     }
 
-    LOG_INFO("Control connection connected to %s\n",
+    LOG_INFO("Control connection connected to %s",
              connected_host_->address_string().c_str());
 
     listener_->on_reconnect(this);

@@ -201,7 +201,9 @@ typedef struct tagTHREADNAME_INFO {
   DWORD dwFlags; // Reserved for future use, must be zero.
 } THREADNAME_INFO;
 #pragma pack(pop)
+#endif
 void set_thread_name(const String& thread_name) {
+#if defined(_MSC_VER) && defined(_DEBUG)
   THREADNAME_INFO info;
   info.dwType = 0x1000;
   info.szName = thread_name.c_str();
@@ -216,7 +218,7 @@ void set_thread_name(const String& thread_name) {
                    reinterpret_cast<ULONG_PTR*>(&info));
   } __except (EXCEPTION_EXECUTE_HANDLER) { }
 #pragma warning(pop)
-}
 #endif
+}
 
 } // namespace cass

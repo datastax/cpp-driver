@@ -20,8 +20,8 @@
 #include "async.hpp"
 #include "atomic.hpp"
 #include "cassconfig.hpp"
-#include "logger.hpp"
 #include "deque.hpp"
+#include "logger.hpp"
 #include "macros.hpp"
 #include "prepare.hpp"
 #include "scoped_lock.hpp"
@@ -110,9 +110,24 @@ public:
    */
   bool is_timer_running();
 
+  /**
+   * Start the IO time (if not started; 0)
+   */
   void maybe_start_io_time();
 
+  /**
+   * Get the elapsed time for the processing of IO
+   *
+   * @return Elapsed IO processing time (in milliseconds)
+   */
   uint64_t io_time_elapsed() const { return io_time_elapsed_; }
+
+  /**
+   * Get the event loop name; useful for debugging
+   *
+   * @return Name of the event loop
+   */
+  const String& name() const { return name_; }
 
 protected:
   /**
@@ -179,9 +194,7 @@ private:
   uint64_t io_time_start_;
   uint64_t io_time_elapsed_;
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-  String thread_name_;
-#endif
+  String name_;
 };
 
 /**
@@ -206,7 +219,6 @@ public:
    * @return The event loop at index.
    */
   virtual EventLoop* get(size_t index) = 0;
-
 
   /**
    * Get the number of event loops in this group.

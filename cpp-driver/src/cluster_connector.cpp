@@ -66,7 +66,6 @@ ClusterConnector::ClusterConnector(const ContactPointList& contact_points,
 void ClusterConnector::connect(EventLoop* event_loop) {
   event_loop_ = event_loop;
   event_loop_->add(Memory::allocate<RunResolveAndConnectCluster>(Ptr(this)));
-
 }
 
 void ClusterConnector::cancel() {

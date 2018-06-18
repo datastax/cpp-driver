@@ -51,7 +51,7 @@ void SessionBase::connect(const Config& config,
     int rc = 0;
     event_loop_.reset(Memory::allocate<EventLoop>());
 
-    rc = event_loop_->init();
+    rc = event_loop_->init("Session/Control Connection");
     if (rc != 0) {
       future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
                         "Unable to initialize cluster event loop");

@@ -144,6 +144,11 @@ public:
    */
   void process_request(const RequestHandler::Ptr& request_handler);
 
+  /**
+   * Get the number of requests the processor is handling
+   *
+   * @return Request count
+   */
   int request_count() const {
     return request_count_.load(MEMORY_ORDER_RELAXED);
   }
@@ -198,11 +203,6 @@ private:
   void on_timeout(EventLoop* event_loop);
 
 private:
-  void internal_connect(const Host::Ptr& current_host,
-                        const HostMap& hosts,
-                        Metrics* metrics,
-                        int protocol_version,
-                        const ConnectionPoolManagerSettings& settings);
   void internal_close();
   void internal_pool_down(const Address& address);
 

@@ -256,8 +256,6 @@ private:
   friend class NotifyDownCluster;
 
 private:
-  void initialize(ControlConnector* connector);
-
   void update_hosts(const HostMap& hosts);
   void update_schema(const ControlConnectionSchema& schema);
   void update_token_map(const HostMap& hosts,

@@ -49,6 +49,7 @@ public:
   Metrics* metrics() const { return metrics_.get(); }
 
 private:
+  void close_event_loop_group();
   void execute(const RequestHandler::Ptr& request_handler);
 
 private:
