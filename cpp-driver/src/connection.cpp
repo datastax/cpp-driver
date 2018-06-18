@@ -199,7 +199,7 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
   }
 }
 
-void Connection::on_write(int status, RequestCallback* callback) {
+void Connection::on_write(int status, RequestCallback* request) {
   listener_->on_write();
 
   // A successful write means that a heartbeat doesn't need to be sent so the
@@ -208,29 +208,32 @@ void Connection::on_write(int status, RequestCallback* callback) {
     restart_heartbeat_timer();
   }
 
+  // Keep alive after releasing from the stream manager.
+  RequestCallback::Ptr callback(request);
+
   switch (callback->state()) {
     case RequestCallback::REQUEST_STATE_WRITING:
       if (status == 0) {
         callback->set_state(RequestCallback::REQUEST_STATE_READING);
-        pending_reads_.add_to_back(callback);
+        pending_reads_.add_to_back(request);
       } else {
+        stream_manager_.release(callback->stream());
+        inflight_request_count_.fetch_sub(1);
         callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
         callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
                            "Unable to write to socket");
-        stream_manager_.release(callback->stream());
-        inflight_request_count_.fetch_sub(1);
       }
       break;
 
     case RequestCallback::REQUEST_STATE_READ_BEFORE_WRITE:
+      stream_manager_.release(callback->stream());
+      inflight_request_count_.fetch_sub(1);
       // The read callback happened before the write callback
       // returned. This is now responsible for finishing the request.
       callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
       // Use the response saved in the read callback
       maybe_set_keyspace(callback->read_before_write_response());
       callback->on_set(callback->read_before_write_response());
-      stream_manager_.release(callback->stream());
-      inflight_request_count_.fetch_sub(1);
       break;
 
     default:
@@ -283,11 +286,11 @@ void Connection::on_read(const char* buf, size_t size) {
           switch (callback->state()) {
             case RequestCallback::REQUEST_STATE_READING:
               pending_reads_.remove(callback.get());
+              stream_manager_.release(callback->stream());
+              inflight_request_count_.fetch_sub(1);
               callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
               maybe_set_keyspace(response.get());
               callback->on_set(response.get());
-              stream_manager_.release(callback->stream());
-              inflight_request_count_.fetch_sub(1);
               break;
 
             case RequestCallback::REQUEST_STATE_WRITING:

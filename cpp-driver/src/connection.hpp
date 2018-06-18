@@ -197,7 +197,7 @@ public:
 private:
   void maybe_set_keyspace(ResponseMessage* response);
 
-  void on_write(int status, RequestCallback* callback);
+  void on_write(int status, RequestCallback* request);
   void on_read(const char* buf, size_t size);
   void on_close();
 

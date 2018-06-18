@@ -70,6 +70,7 @@ public:
 
   void release(int stream) {
     assert(stream >= 0 && static_cast<size_t>(stream) < max_streams_);
+    assert(pending_.count(stream) > 0);
     pending_.erase(stream);
     release_stream(stream);
   }
@@ -123,17 +124,20 @@ private:
 
     for (size_t i = 0; i < num_words; ++i) {
       size_t index = (i + offset) % num_words;
-      int stream = get_and_set_first_available_stream(index);
-      if (stream >= 0) return stream + (NUM_BITS_PER_WORD * index);
+      int bit = get_and_set_first_available_stream(index);
+      if (bit >= 0) {
+        return bit + (NUM_BITS_PER_WORD * index);
+      }
     }
 
     return -1;
   }
 
   inline void release_stream(int stream) {
-    assert((words_[stream / NUM_BITS_PER_WORD] & (static_cast<word_t>(1) << (stream % NUM_BITS_PER_WORD))) == 0);
-    words_[stream / NUM_BITS_PER_WORD] |=
-        (static_cast<word_t>(1) << (stream % NUM_BITS_PER_WORD));
+    size_t index = stream / NUM_BITS_PER_WORD;
+    int bit = stream % NUM_BITS_PER_WORD;
+    assert((words_[index] & (static_cast<word_t>(1) << (bit))) == 0);
+    words_[index] |= (static_cast<word_t>(1) << (bit));
   }
 
   inline int get_and_set_first_available_stream(size_t index) {
