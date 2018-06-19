@@ -308,6 +308,46 @@ public:
     OutagePlan* outage_plan_;
   };
 
+  class CloseDuringReconnectListener : public Listener {
+  public:
+    typedef SharedRefPtr<CloseDuringReconnectListener> Ptr;
+
+    CloseDuringReconnectListener(const Future::Ptr& close_future,
+                              uv_loop_t* loop,
+                              mockssandra::SimpleCluster* cluster)
+      : Listener(close_future)
+      , loop_(loop)
+      , simple_cluster_(cluster) { }
+
+    virtual void on_reconnect(Cluster* cluster) {
+      cluster_.reset(cluster);
+      simple_cluster_->stop(1); // Force reconnection by stopping the node.
+      // Wait for the node to disconnect before closing.
+      timer_.start(loop_,
+                   500,
+                   cass::bind_callback(&CloseDuringReconnectListener::on_timeout, this));
+    }
+
+    virtual void on_up(const Host::Ptr& host) { }
+    virtual void on_down(const Host::Ptr& host) { }
+
+    virtual void on_add(const Host::Ptr& host) { }
+    virtual void on_remove(const Host::Ptr& host) { }
+
+    virtual void on_update_token_map(const TokenMap::Ptr& token_map) { }
+
+  private:
+    void on_timeout(Timer* timer) {
+      cluster_->close();
+    }
+
+  private:
+    Cluster::Ptr cluster_;
+    uv_loop_t* loop_;
+    mockssandra::SimpleCluster* simple_cluster_;
+    Timer timer_;
+  };
+
   static void on_connection_connected(ClusterConnector* connector, Future* future) {
     if (connector->is_ok()) {
       future->set();
@@ -571,6 +611,39 @@ TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
   EXPECT_EQ(listener->events()[0].address, Address("127.0.0.2", PORT));
   EXPECT_EQ(listener->events()[1].type, ReconnectClusterListener::Event::NODE_ADD);
   EXPECT_EQ(listener->events()[1].address, Address("127.0.0.2", PORT));
+}
+
+TEST_F(ClusterUnitTest, CloseDuringReconnect) {
+  mockssandra::SimpleCluster cluster(
+        mockssandra::SimpleRequestHandlerBuilder().build(), 1);
+  cluster.start_all();
+
+  ContactPointList contact_points;
+  contact_points.push_back("127.0.0.1");
+
+  Future::Ptr close_future(Memory::allocate<Future>());
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
+                                                                     PROTOCOL_VERSION,
+                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+
+  CloseDuringReconnectListener::Ptr listener(
+        Memory::allocate<CloseDuringReconnectListener>(close_future,
+                                                       event_loop()->loop(),
+                                                       &cluster));
+
+  ClusterSettings settings;
+  settings.reconnect_timeout_ms = 100000; // Make sure we're reconnecting when we close.
+
+  connector
+      ->with_settings(settings)
+      ->with_listener(listener.get())
+      ->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
 }
 
 TEST_F(ClusterUnitTest, NotifyDownUp) {

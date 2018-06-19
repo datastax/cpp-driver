@@ -404,6 +404,7 @@ void RequestProcessor::internal_host_add_down_up(const Host::Ptr& host,
 }
 
 void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
+  connection_pool_manager_->remove(host->address());
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
        it != policies.end(); ++it) {

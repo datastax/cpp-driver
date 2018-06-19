@@ -386,7 +386,21 @@ void Cluster::on_reconnect(ControlConnector* connector) {
 
 void Cluster::internal_close() {
   is_closing_ = true;
-  connection_->close();
+  if (timer_.is_running()) {
+    timer_.stop();
+    handle_close();
+  } else {
+    connection_->close();
+  }
+}
+
+void Cluster::handle_close() {
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
+    (*it)->close_handles();
+  }
+  listener_->on_close(this);
+  dec_ref();
 }
 
 void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refreshed) {
@@ -625,12 +639,7 @@ void Cluster::on_close(ControlConnection* connection) {
              connection_->address_string().c_str());
     schedule_reconnect();
   } else {
-    for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
-         end = load_balancing_policies_.end(); it != end; ++it) {
-      (*it)->close_handles();
-    }
-    listener_->on_close(this);
-    dec_ref();
+    handle_close();
   }
 }
 
