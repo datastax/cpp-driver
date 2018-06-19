@@ -25,7 +25,7 @@ EOF
   echo "$version"
 }
 
-check_command "dch" "debhelper"
+check_command "dch" "devscripts"
 check_command "lsb_release" "lsb-release"
 
 version=$(header_version "../include/cassandra.h")
