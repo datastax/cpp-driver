@@ -24,7 +24,7 @@
 #include "histogram_wrapper.hpp"
 #include "host.hpp"
 #include "mpmc_queue.hpp"
-#include "prepare.hpp"
+#include "loop_watcher.hpp"
 #include "prepare_host_handler.hpp"
 #include "random.hpp"
 #include "schema_agreement_handler.hpp"
