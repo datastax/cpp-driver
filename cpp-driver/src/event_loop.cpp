@@ -46,9 +46,6 @@ static void consume_blocked_sigpipe() {
 EventLoop::EventLoop()
   : is_loop_initialized_(false)
   , is_joinable_(false)
-#ifndef HAVE_TIMERFD
-  , timeout_(0)
-#endif
   , is_closing_(false)
   , io_time_start_(0)
   , io_time_elapsed_(0) {
@@ -126,11 +123,7 @@ void EventLoop::stop_timer() {
 }
 
 bool EventLoop::is_timer_running() {
-#ifdef HAVE_TIMERFD
   return timer_.is_running();
-#else
-  return timeout_ != 0;
-#endif
 }
 
 void EventLoop::maybe_start_io_time() {

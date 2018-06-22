@@ -49,11 +49,11 @@ int MicroTimer::start(uv_loop_t* loop,
   if (state_ == CLOSED) {
     rc = uv_poll_init(loop, handle_, fd_);
     if (rc != 0) return rc;
-    rc = uv_poll_start(handle_, UV_READABLE, on_timeout);
-    if (rc != 0) return rc;
     state_ = STOPPED;
   }
   if (state_ == STOPPED) {
+    rc = uv_poll_start(handle_, UV_READABLE, on_timeout);
+    if (rc != 0) return rc;
     set_time(timeout_us);
     state_ = STARTED;
   }
@@ -65,6 +65,7 @@ void MicroTimer::stop() {
   if (state_ == STARTED) {
     state_ = STOPPED;
     set_time(0);
+    uv_poll_stop(handle_);
   }
 }
 
@@ -106,6 +107,7 @@ void MicroTimer::handle_timeout() {
   int result = read(fd_, &count, sizeof(count));
   UNUSED_(result);
   state_ = STOPPED;
+  uv_poll_stop(handle_);
   callback_(this);
 }
 
@@ -167,7 +169,7 @@ bool MicroTimer::is_running() const {
 
 void MicroTimer::on_timeout(Timer* timer) {
   uint64_t now = uv_hrtime();
-  if (timeout_ns_ >= now) {
+  if (now >= timeout_ns_) {
     // The goal timeout was reached using the timer, trigger the callback.
     callback_(this);
   } else {
@@ -179,7 +181,7 @@ void MicroTimer::on_timeout(Timer* timer) {
 
 void MicroTimer::on_idle(Idle* idle) {
   uint64_t now = uv_hrtime();
-  if (timeout_ns_ >= now) {
+  if (now >= timeout_ns_) {
     // The goal timeout was reached by idling the loop, trigger the callback.
     idle_.stop();
     callback_(this);
