@@ -25,11 +25,11 @@
 
 namespace cass {
 
-template<class T>
+template<class Type, class HType>
 class LoopWatcher {
 public:
-  typedef cass::Callback<void, T*> Callback;
-  typedef typename T::HandleType HandleType;
+  typedef cass::Callback<void, Type*> Callback;
+  typedef HType HandleType;
 
   LoopWatcher()
     : handle_(NULL)
@@ -53,12 +53,12 @@ public:
       handle_->data = this;
     }
     if (state_ == CLOSED) {
-      rc = T::init_handle(loop, handle_);
+      rc = Type::init_handle(loop, handle_);
       if (rc != 0) return rc;
       state_ = STOPPED;
     }
     if (state_ == STOPPED) {
-      rc = T::start_handle(handle_, on_run);
+      rc = Type::start_handle(handle_, on_run);
       if (rc != 0) return rc;
       state_ = STARTED;
     }
@@ -72,7 +72,7 @@ public:
   void stop() {
     if (state_ == STARTED) {
       state_ = STOPPED;
-      T::stop_handle(handle_);
+      Type::stop_handle(handle_);
     }
   }
 
@@ -97,7 +97,7 @@ public:
 
 private:
   static void on_run(HandleType* handle) {
-    T* watcher = static_cast<T*>(handle->data);
+    Type* watcher = static_cast<Type*>(handle->data);
     watcher->callback_(watcher);
   }
 
@@ -122,26 +122,69 @@ private:
 };
 
 /**
- * A wrapper for uv_prepare. This is useful for processing that needs to be
- * done before the event loop goes back into waiting.
+ * A wrapper for uv_prepare. This is useful for running a callback right before
+ * the event loop begins polling.
  */
-class Prepare : public LoopWatcher<Prepare> {
+class Prepare : public LoopWatcher<Prepare, uv_prepare_t> {
 private:
-  friend class LoopWatcher<Prepare>;
+  typedef uv_prepare_cb HandleCallback;
+  friend class LoopWatcher<Prepare, HandleType>;
 
-  typedef uv_prepare_t HandleType;
-  typedef uv_prepare_cb CallbackType;
-
-  int init_handle(uv_loop_t* loop, HandleType* handle) {
+  static int init_handle(uv_loop_t* loop, HandleType* handle) {
     return uv_prepare_init(loop, handle);
   }
 
-  int start_handle(HandleType* handle, CallbackType callback) {
+  static int start_handle(HandleType* handle, HandleCallback callback) {
     return uv_prepare_start(handle, callback);
   }
 
-  void stop_handle(HandleType* handle) {
+  static void stop_handle(HandleType* handle) {
     uv_prepare_stop(handle);
+  }
+};
+
+/**
+ * A wrapper for uv_check. This is useful for running a callback right after
+ * the event loop returns from polling.
+ */
+class Check : public LoopWatcher<Check, uv_check_t> {
+private:
+  typedef uv_check_cb HandleCallback;
+  friend class LoopWatcher<Check, HandleType>;
+
+  static int init_handle(uv_loop_t* loop, HandleType* handle) {
+    return uv_check_init(loop, handle);
+  }
+
+  static int start_handle(HandleType* handle, HandleCallback callback) {
+    return uv_check_start(handle, callback);
+  }
+
+  static void stop_handle(HandleType* handle) {
+    uv_check_stop(handle);
+  }
+};
+
+/**
+ * A wrapper for uv_idle. This is useful for running a callback once per loop
+ * iteration, and happens right before prepare handles are run. This prevents
+ * the loop from blocking.
+ */
+class Idle : public LoopWatcher<Idle, uv_idle_t> {
+private:
+  typedef uv_idle_cb HandleCallback;
+  friend class LoopWatcher<Idle, HandleType>;
+
+  static int init_handle(uv_loop_t* loop, HandleType* handle) {
+    return uv_idle_init(loop, handle);
+  }
+
+  static int start_handle(HandleType* handle, HandleCallback callback) {
+    return uv_idle_start(handle, callback);
+  }
+
+  static void stop_handle(HandleType* handle) {
+    uv_idle_stop(handle);
   }
 };
 
