@@ -28,6 +28,9 @@
 
 #include <uv.h>
 
+// Only affects busy wait timer version
+#define CASS_PERCENT_OF_MILLSECOND_THRESHOLD 95
+
 namespace cass {
 
 /**

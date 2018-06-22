@@ -116,8 +116,6 @@ void MicroTimer::on_close(uv_handle_t* handle) {
 }
 #else
 
-#define PERCENT_OF_MILLSECOND_TO_USE_TIMER 95
-
 MicroTimer::MicroTimer()
   : timeout_ns_(0) { }
 
@@ -134,7 +132,7 @@ int MicroTimer::start(uv_loop_t* loop,
   timeout_ns_ = uv_hrtime() + timeout_us * 1000; // Convert to nanoseconds
   callback_ = callback;
 
-  if (us >= (1000 * PERCENT_OF_MILLSECOND_TO_USE_TIMER) / 100) {
+  if (us >= (1000 * CASS_PERCENT_OF_MILLSECOND_THRESHOLD) / 100) {
     // If the requested sub-millisecond part of the timeout is within a certain
     // percentage of a millisecond then round up to the next millisecond and use
     // the timer.
