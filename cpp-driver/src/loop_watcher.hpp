@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARE_HPP_INCLUDED__
-#define __CASS_PREPARE_HPP_INCLUDED__
+#ifndef __CASS_LOOP_WATCHER_HPP_INCLUDED__
+#define __CASS_LOOP_WATCHER_HPP_INCLUDED__
 
 #include "callback.hpp"
 #include "macros.hpp"
