@@ -23,10 +23,9 @@
 #include "deque.hpp"
 #include "logger.hpp"
 #include "macros.hpp"
+#include "micro_timer.hpp"
 #include "loop_watcher.hpp"
 #include "scoped_lock.hpp"
-#include "timer.hpp"
-#include "timerfd.hpp"
 #include "utils.hpp"
 
 #include <assert.h>
@@ -95,8 +94,9 @@ public:
    * Start the loop timer.
    *
    * @param timeout_us
+   * @param callback
    */
-  void start_timer(uint64_t timeout_us, const TimerCallback& callback);
+  void start_timer(uint64_t timeout_us, const MicroTimer::Callback& callback);
 
   /**
    * Stop the loop timer.
@@ -159,12 +159,8 @@ private:
   static void internal_on_run(void* arg);
   void handle_run();
 
-#ifdef HAVE_TIMERFD
-  void on_timer(TimerFd* timer);
-#else
-  void on_timer(Timer* timer);
-#endif
-
+  void on_timeout(MicroTimer* timer);
+  void on_check(Check* check);
   void on_task(Async* async);
 
   uv_loop_t loop_;
@@ -181,16 +177,11 @@ private:
   Async async_;
   TaskQueue tasks_;
 
-#ifdef HAVE_TIMERFD
-  TimerFd timer_;
-#else
-  uint64_t timeout_;
-  Timer timer_;
-#endif
-  TimerCallback timer_callback_;
+  MicroTimer timer_;
 
   Atomic<bool> is_closing_;
 
+  Check check_;
   uint64_t io_time_start_;
   uint64_t io_time_elapsed_;
 

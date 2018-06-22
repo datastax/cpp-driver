@@ -43,15 +43,12 @@ static void consume_blocked_sigpipe() {
 }
 #endif
 
-static void nop_timer_callback__(EventLoop*) {  }
-
 EventLoop::EventLoop()
   : is_loop_initialized_(false)
   , is_joinable_(false)
 #ifndef HAVE_TIMERFD
   , timeout_(0)
 #endif
-  , timer_callback_(bind_callback(&nop_timer_callback__))
   , is_closing_(false)
   , io_time_start_(0)
   , io_time_elapsed_(0) {
@@ -118,22 +115,14 @@ void EventLoop::add(Task* task) {
   async_.send();
 }
 
-void EventLoop::start_timer(uint64_t timeout_us, const TimerCallback& callback) {
-#ifdef HAVE_TIMERFD
-  timer_.start(loop(), timeout_us, bind_callback(&EventLoop::on_timer, this));
-#else
-  timeout_ = uv_hrtime() + timeout_us * 1000;
-#endif
+void EventLoop::start_timer(uint64_t timeout_us,
+                            const MicroTimer::Callback& callback) {
 
-  timer_callback_ = callback ? callback : bind_callback(&nop_timer_callback__);
+  timer_.start(loop(), timeout_us, callback);
 }
 
 void EventLoop::stop_timer() {
-#ifdef HAVE_TIMERFD
   timer_.stop();
-#else
-  timeout_ = 0;
-#endif
 }
 
 bool EventLoop::is_timer_running() {
@@ -195,68 +184,21 @@ void EventLoop::internal_on_run(void* arg) {
 }
 
 void EventLoop::handle_run() {
-  int result = 0;
   on_run();
-
-  uint64_t now = uv_hrtime();
-  do {
-    uv_run_mode mode = UV_RUN_ONCE;
-
-#ifndef HAVE_TIMERFD
-    bool recheck_timeout = false;
-    do {
-      if (timeout_ != 0) {
-        if (timeout_ > now) {
-          uint64_t delta = timeout_ - now;
-          // Don't busy UV_RUN_NOWAIT if the timeout is greater than a
-          // millisecond (within 5%).
-          if (delta > 950 * 1000) {
-            uint64_t ms = delta / (1000 * 1000); // Convert to milliseconds
-            if (ms == 0) {
-              ms = 1;
-            }
-            timer_.start(loop(), ms, bind_callback(&EventLoop::on_timer, this));
-          } else {
-            mode = UV_RUN_NOWAIT; // Spin
-          }
-        } else {
-          timeout_ = 0;
-          timer_callback_(this);
-          // The timeout could change in the callback so it needs to be checked
-          // again.
-          recheck_timeout = true;
-        }
-      }
-    } while (recheck_timeout);
-#endif
-
-    result = uv_run(loop(), mode);
-    now = uv_hrtime();
-
-    if (io_time_start_ > 0) {
-      io_time_elapsed_ = now - io_time_start_;
-      io_time_start_ = 0;
-    } else {
-      io_time_elapsed_ = 0;
-    }
-  } while (result != 0);
-
+  uv_run(loop(), UV_RUN_DEFAULT);
   on_after_run();
   SslContextFactory::thread_cleanup();
 }
 
-#ifdef HAVE_TIMERFD
-void EventLoop::on_timer(TimerFd* timer) {
-  timer_callback_(this);
-}
-#else
-void EventLoop::on_timer(Timer* timer) {
-  if (timeout_ != 0 && timeout_ <= uv_hrtime()) {
-    timeout_ = 0;
-    timer_callback_(this);
+void EventLoop::on_check(Check *check) {
+  uint64_t now = uv_hrtime();
+  if (io_time_start_ > 0) {
+    io_time_elapsed_ = now - io_time_start_;
+    io_time_start_ = 0;
+  } else {
+    io_time_elapsed_ = 0;
   }
 }
-#endif
 
 void EventLoop::on_task(Async* async) {
   Task* task;

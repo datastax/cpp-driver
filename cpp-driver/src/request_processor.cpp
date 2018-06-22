@@ -412,7 +412,7 @@ void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
   }
 }
 
-void RequestProcessor::on_timeout(EventLoop* event_loop) {
+void RequestProcessor::on_timeout(MicroTimer* timer) {
   int processed = process_requests((io_time_during_coalesce_ * new_request_ratio_) / 100);
   io_time_during_coalesce_ = 0;
 

@@ -200,7 +200,7 @@ private:
   virtual bool on_is_host_up(const Address& address);
 
 private:
-  void on_timeout(EventLoop* event_loop);
+  void on_timeout(MicroTimer* timer);
 
 private:
   void internal_close();
