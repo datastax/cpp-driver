@@ -49,7 +49,7 @@ EventLoop::EventLoop()
   , is_closing_(false)
   , io_time_start_(0)
   , io_time_elapsed_(0) {
-  // Set user data for PooledConnection to start the I/O timer.
+  // Set user data for PooledConnection to start the I/O elapsed time.
   loop_.data = this;
 }
 
@@ -110,20 +110,6 @@ void EventLoop::join() {
 void EventLoop::add(Task* task) {
   tasks_.enqueue(task);
   async_.send();
-}
-
-void EventLoop::start_timer(uint64_t timeout_us,
-                            const MicroTimer::Callback& callback) {
-
-  timer_.start(loop(), timeout_us, callback);
-}
-
-void EventLoop::stop_timer() {
-  timer_.stop();
-}
-
-bool EventLoop::is_timer_running() {
-  return timer_.is_running();
 }
 
 void EventLoop::maybe_start_io_time() {
@@ -202,7 +188,6 @@ void EventLoop::on_task(Async* async) {
 
   if (is_closing_.load() && tasks_.is_empty()) {
     async_.close_handle();
-    timer_.close_handle();
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
     uv_prepare_stop(&prepare_);
     uv_close(reinterpret_cast<uv_handle_t*>(&prepare_), NULL);

@@ -155,6 +155,9 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
   }
 
   callback_(this);
+  if (processor_) processor_->close();
+  // Explicitly release resources on the event loop thread.
+  connection_pool_manager_initializer_.reset();
   dec_ref();
 }
 

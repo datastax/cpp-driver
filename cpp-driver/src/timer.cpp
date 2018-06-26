@@ -58,7 +58,7 @@ void Timer::stop() {
 
 void Timer::close_handle() {
   if (handle_ != NULL) {
-    if (state_ == CLOSED) { // The handle was allocate, but initialization failed.
+    if (state_ == CLOSED) { // The handle was allocated, but initialization failed.
       Memory::deallocate(handle_);
     } else { // If initialized or started then close the handle properly.
       uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);

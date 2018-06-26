@@ -23,7 +23,6 @@
 #include "deque.hpp"
 #include "logger.hpp"
 #include "macros.hpp"
-#include "micro_timer.hpp"
 #include "loop_watcher.hpp"
 #include "scoped_lock.hpp"
 #include "utils.hpp"
@@ -49,8 +48,6 @@ public:
  */
 class EventLoop {
 public:
-  typedef cass::Callback<void, EventLoop*> TimerCallback;
-
   EventLoop();
 
   virtual ~EventLoop();
@@ -89,26 +86,6 @@ public:
    * @param task A task to run on the event loop.
    */
   void add(Task* task);
-
-  /**
-   * Start the loop timer.
-   *
-   * @param timeout_us
-   * @param callback
-   */
-  void start_timer(uint64_t timeout_us, const MicroTimer::Callback& callback);
-
-  /**
-   * Stop the loop timer.
-   */
-  void stop_timer();
-
-  /**
-   * Determine if the timer is running.
-   *
-   * @return Returns true if the timer is running.
-   */
-  bool is_timer_running();
 
   /**
    * Start the IO time (if not started; 0)
@@ -159,7 +136,6 @@ private:
   static void internal_on_run(void* arg);
   void handle_run();
 
-  void on_timeout(MicroTimer* timer);
   void on_check(Check* check);
   void on_task(Async* async);
 
@@ -176,8 +152,6 @@ private:
   bool is_joinable_;
   Async async_;
   TaskQueue tasks_;
-
-  MicroTimer timer_;
 
   Atomic<bool> is_closing_;
 
