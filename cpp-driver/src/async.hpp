@@ -19,7 +19,6 @@
 
 #include "callback.hpp"
 #include "macros.hpp"
-#include "memory.hpp"
 
 #include <uv.h>
 
@@ -33,12 +32,9 @@ class Async {
 public:
   typedef cass::Callback<void, Async*> Callback;
 
-  Async()
-    : handle_(NULL) { }
+  Async();
 
-  ~Async() {
-    close_handle();
-  }
+  ~Async();
 
   /**
    * Start the async handle.
@@ -46,56 +42,31 @@ public:
    * @param loop The event loop that will process the handle.
    * @param callback A callback that handles async send events.
    */
-  int start(uv_loop_t* loop, const Callback& callback) {
-    if (handle_ == NULL) {
-      handle_ = Memory::allocate<uv_async_t>();
-      handle_->data = this;
-      int rc = uv_async_init(loop, handle_, on_async);
-      if (rc != 0) return rc;
-    }
-    callback_ = callback;
-    return 0;
-  }
+  int start(uv_loop_t* loop, const Callback& callback);
 
   /**
    * Notify the event loop. The callback will be run.
    */
-  void send() {
-    if (handle_ == NULL) return;
-    uv_async_send(handle_);
-  }
+  void send();
 
   /**
    * Close the async handle.
    */
-  void close_handle() {
-    if (handle_ == NULL) return;
-    uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
-    handle_ = NULL;
-  }
+  void close_handle();
 
   /**
    * Determines if the async handle is currently processing notifications.
    *
    * @return Returns true if processing notifications.
    */
-  bool is_running() const {
-    if (handle_ == NULL) return false;
-    return uv_is_active(reinterpret_cast<uv_handle_t*>(handle_)) != 0;
-  }
+  bool is_running() const;
 
 public:
   uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
 
 private:
-  static void on_async(uv_async_t* handle) {
-    Async* async = static_cast<Async*>(handle->data);
-    async->callback_(async);
-  }
-
-  static void on_close(uv_handle_t* handle) {
-    Memory::deallocate(reinterpret_cast<uv_async_t*>(handle));
-  }
+  static void on_async(uv_async_t* handle);
+  static void on_close(uv_handle_t* handle);
 
 private:
   uv_async_t* handle_;
