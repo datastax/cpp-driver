@@ -24,7 +24,8 @@ using namespace cass;
 class MicroTimerUnitTest : public LoopTest {
 public:
   MicroTimerUnitTest()
-    : count_(0) { }
+    : count_(0)
+    , repeat_timeout_us_(0) { }
 
   void test_once(uint64_t timeout_us) {
     MicroTimer timer;
@@ -43,6 +44,8 @@ public:
   void test_repeat(uint64_t timeout_us) {
     MicroTimer timer;
 
+    repeat_timeout_us_ = timeout_us;
+
     timer.start(loop(), timeout_us,
                 bind_callback(&MicroTimerUnitTest::on_timer_repeat, this));
 
@@ -52,6 +55,24 @@ public:
 
     EXPECT_FALSE(timer.is_running());
     EXPECT_EQ(count_, 2);
+  }
+
+  void test_stop() {
+    MicroTimer timer;
+
+    timer.start(loop(), 1,
+                bind_callback(&MicroTimerUnitTest::on_timer_once, this));
+
+    EXPECT_TRUE(timer.is_running());
+
+    timer.stop();
+
+    EXPECT_FALSE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(timer.is_running());
+    EXPECT_EQ(count_, 0);
   }
 
 
@@ -65,17 +86,23 @@ private:
     EXPECT_FALSE(timer->is_running());
     count_++;
     if (count_ == 1) {
-      timer->start(loop(), 1,
+      timer->start(loop(), repeat_timeout_us_,
                    bind_callback(&MicroTimerUnitTest::on_timer_repeat, this));
     }
   }
 
   int count_;
+  uint64_t repeat_timeout_us_;
 };
 
 TEST_F(MicroTimerUnitTest, Once)
 {
   test_once(2000);
+}
+
+TEST_F(MicroTimerUnitTest, OnceZero)
+{
+  test_once(0);
 }
 
 TEST_F(MicroTimerUnitTest, OnceMilliAndMicroSec)
@@ -103,6 +130,11 @@ TEST_F(MicroTimerUnitTest, Repeat)
   test_repeat(2000);
 }
 
+TEST_F(MicroTimerUnitTest, RepeatZero)
+{
+  test_repeat(0);
+}
+
 TEST_F(MicroTimerUnitTest, RepeatMilliAndMicroSec)
 {
   test_repeat(1200);
@@ -121,4 +153,8 @@ TEST_F(MicroTimerUnitTest, RepeatMilliAndNearThreshold)
 TEST_F(MicroTimerUnitTest, RepeatMicroSec)
 {
   test_repeat(1);
+}
+
+TEST_F(MicroTimerUnitTest, Stop) {
+  test_stop();
 }

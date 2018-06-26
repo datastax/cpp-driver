@@ -18,18 +18,20 @@
 
 #include "loop_test.hpp"
 
+using namespace cass;
 
 class TimerUnitTest : public LoopTest {
 public:
 
   TimerUnitTest()
-    : count_(0) { }
+    : count_(0)
+    , repeat_timeout_(0) { }
 
   void test_once(uint64_t timeout) {
-    cass::Timer timer;
+    Timer timer;
 
     timer.start(loop(), timeout,
-                cass::bind_callback(&TimerUnitTest::on_timer_once, this));
+                bind_callback(&TimerUnitTest::on_timer_once, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -40,10 +42,12 @@ public:
   }
 
   void test_repeat(uint64_t timeout) {
-    cass::Timer timer;
+    Timer timer;
+
+    repeat_timeout_ = timeout;
 
     timer.start(loop(), timeout,
-                cass::bind_callback(&TimerUnitTest::on_timer_repeat, this));
+                bind_callback(&TimerUnitTest::on_timer_repeat, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -53,22 +57,41 @@ public:
     EXPECT_EQ(count_, 2);
   }
 
+  void test_stop() {
+    Timer timer;
+
+    timer.start(loop(), 1,
+                bind_callback(&TimerUnitTest::on_timer_once, this));
+
+    EXPECT_TRUE(timer.is_running());
+
+    timer.stop();
+
+    EXPECT_FALSE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(timer.is_running());
+    EXPECT_EQ(count_, 0);
+  }
+
 private:
-  void on_timer_once(cass::Timer* timer) {
+  void on_timer_once(Timer* timer) {
     count_++;
     EXPECT_FALSE(timer->is_running());
   }
 
-  void on_timer_repeat(cass::Timer* timer) {
+  void on_timer_repeat(Timer* timer) {
     EXPECT_FALSE(timer->is_running());
     count_++;
     if (count_ == 1) {
-      timer->start(loop(), 1,
-                   cass::bind_callback(&TimerUnitTest::on_timer_repeat, this));
+      timer->start(loop(), repeat_timeout_,
+                   bind_callback(&TimerUnitTest::on_timer_repeat, this));
     }
   }
 
   int count_;
+  uint64_t repeat_timeout_;
 };
 
 TEST_F(TimerUnitTest, Once)
@@ -76,7 +99,22 @@ TEST_F(TimerUnitTest, Once)
   test_once(1);
 }
 
+TEST_F(TimerUnitTest, OnceZero)
+{
+  test_once(0);
+}
+
 TEST_F(TimerUnitTest, Repeat)
 {
   test_repeat(1);
+}
+
+TEST_F(TimerUnitTest, RepeatZero)
+{
+  test_repeat(0);
+}
+
+TEST_F(TimerUnitTest, Stop)
+{
+  test_stop();
 }
