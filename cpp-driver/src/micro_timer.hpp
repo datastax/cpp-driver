@@ -92,7 +92,6 @@ private:
   static void on_close(uv_handle_t* handle);
 #else
   void on_timeout(Timer* timer);
-  void on_idle(Idle* idle);
 #endif
 
 private:
@@ -108,7 +107,6 @@ private:
   State state_;
 #else
   uint64_t timeout_ns_; // Nanoseconds
-  Idle idle_;
   Timer timer_;
 #endif
 

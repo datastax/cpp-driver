@@ -138,51 +138,36 @@ int MicroTimer::start(uv_loop_t* loop,
     // the timer.
     return timer_.start(loop, ms + 1,
                         bind_callback(&MicroTimer::on_timeout, this));
-  } else if (ms > 0) {
-    // There are whole milliseconds to wait for and possibly a sub-millisecond
-    // part to wait for after the timer.
+  } else {
+    // Note: This can potentially wait for 0 milliseconds and in that case the
+    // loop will busy spin until the sub-millsecond part of the timeout is
+    // reached.
     return timer_.start(loop, ms,
                         bind_callback(&MicroTimer::on_timeout, this));
-  } else {
-    // Otherwise, idle (i.e. busy wait) the loop until our sub-millisecond timeout
-    // is reached.
-    return idle_.start(loop,
-                       bind_callback(&MicroTimer::on_idle, this));
   }
 }
 
 void MicroTimer::stop() {
-  idle_.stop();
   timer_.stop();
 }
 
 void MicroTimer::close_handle() {
-  idle_.close_handle();
   timer_.close_handle();
 }
 
 bool MicroTimer::is_running() const {
-  return idle_.is_running() || timer_.is_running();
+  return timer_.is_running();
 }
 
 void MicroTimer::on_timeout(Timer* timer) {
   uint64_t now = uv_hrtime();
   if (now >= timeout_ns_) {
-    // The goal timeout was reached using the timer, trigger the callback.
+    // The goal timeout was reached, trigger the callback.
     callback_(this);
   } else {
-    // There's still a sub-millisecond part to wait for so idle the loop until
+    // There's still a sub-millisecond part to wait for so spin the loop until
     // the timeout is reached.
-    idle_.start(timer_.loop(), bind_callback(&MicroTimer::on_idle, this));
-  }
-}
-
-void MicroTimer::on_idle(Idle* idle) {
-  uint64_t now = uv_hrtime();
-  if (now >= timeout_ns_) {
-    // The goal timeout was reached by idling the loop, trigger the callback.
-    idle_.stop();
-    callback_(this);
+    timer_.start(timer_.loop(), 0, bind_callback(&MicroTimer::on_timeout, this));
   }
 }
 

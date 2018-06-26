@@ -81,7 +81,7 @@ public:
    */
   void close_handle() {
     if (handle_ != NULL) {
-      if (state_ == CLOSED) { // The handle was allocate, but initialization failed.
+      if (state_ == CLOSED) { // The handle was allocated, but initialization failed.
         Memory::deallocate(handle_);
       } else { // If initialized or started then close the handle properly.
         uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
@@ -162,29 +162,6 @@ private:
 
   static void stop_handle(HandleType* handle) {
     uv_check_stop(handle);
-  }
-};
-
-/**
- * A wrapper for uv_idle. This is useful for running a callback once per loop
- * iteration, and happens right before prepare handles are run. This prevents
- * the loop from blocking.
- */
-class Idle : public LoopWatcher<Idle, uv_idle_t> {
-private:
-  typedef uv_idle_cb HandleCallback;
-  friend class LoopWatcher<Idle, HandleType>;
-
-  static int init_handle(uv_loop_t* loop, HandleType* handle) {
-    return uv_idle_init(loop, handle);
-  }
-
-  static int start_handle(HandleType* handle, HandleCallback callback) {
-    return uv_idle_start(handle, callback);
-  }
-
-  static void stop_handle(HandleType* handle) {
-    uv_idle_stop(handle);
   }
 };
 
