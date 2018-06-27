@@ -355,7 +355,7 @@ void Session::on_initialize(RequestProcessorManagerInitializer* initializer) {
     CassError error_code;
     switch (failure->error_code()) {
       case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_KEYSPACE:
-        error_code = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
+        error_code = CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE;
         break;
       case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE:
         error_code = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
