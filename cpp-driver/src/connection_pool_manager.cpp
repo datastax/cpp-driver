@@ -131,13 +131,19 @@ void ConnectionPoolManager::close() {
     if (maybe_closed()) {
       return;
     }
-    for (ConnectionPool::Map::iterator it = pools_.begin(),
-         end = pools_.end(); it != end; ++it) {
+
+    // Make copies of pool/connector data structures to prevent iterator
+    // invalidation.
+
+    ConnectionPool::Map pools(pools_);
+    for (ConnectionPool::Map::iterator it = pools.begin(),
+         end = pools.end(); it != end; ++it) {
       it->second->close();
     }
 
-    for (ConnectionPoolConnector::Vec::iterator it = pending_pools_.begin(),
-         end = pending_pools_.end(); it != end; ++it) {
+    ConnectionPoolConnector::Vec pending_pools(pending_pools_);
+    for (ConnectionPoolConnector::Vec::iterator it = pending_pools.begin(),
+         end = pending_pools.end(); it != end; ++it) {
       (*it)->cancel();
     }
   }

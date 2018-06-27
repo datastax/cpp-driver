@@ -153,12 +153,19 @@ void ConnectionPool::internal_close() {
     if (maybe_closed()) {
       return;
     }
-    for (PooledConnection::Vec::iterator it = connections_.begin(),
-         end = connections_.end(); it != end; ++it) {
+
+    // Make copies of connection/connector data structures to prevent iterator
+    // invalidation.
+
+    PooledConnection::Vec connections(connections_);
+    for (PooledConnection::Vec::iterator it = connections.begin(),
+         end = connections.end(); it != end; ++it) {
       (*it)->close();
     }
-    for (PooledConnector::Vec::iterator it = pending_connections_.begin(),
-         end = pending_connections_.end(); it != end; ++it) {
+
+    PooledConnector::Vec pending_connections(pending_connections_);
+    for (PooledConnector::Vec::iterator it = pending_connections.begin(),
+         end = pending_connections.end(); it != end; ++it) {
       (*it)->cancel();
     }
   }
