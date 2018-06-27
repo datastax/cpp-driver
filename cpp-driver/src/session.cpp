@@ -302,15 +302,21 @@ void Session::on_down(const Host::Ptr& host) {
 }
 
 void Session::on_add(const Host::Ptr& host) {
-  request_processor_manager_->notify_host_add(host);
+  if (request_processor_manager_) {
+    request_processor_manager_->notify_host_add(host);
+  }
 }
 
 void Session::on_remove(const Host::Ptr& host)  {
-  request_processor_manager_->notify_host_remove(host);
+  if (request_processor_manager_) {
+    request_processor_manager_->notify_host_remove(host);
+  }
 }
 
 void Session::on_update_token_map(const TokenMap::Ptr& token_map) {
-  request_processor_manager_->notify_token_map_changed(token_map);
+  if (request_processor_manager_) {
+    request_processor_manager_->notify_token_map_changed(token_map);
+  }
 }
 
 void Session::on_close(Cluster* cluster) {
