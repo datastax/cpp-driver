@@ -97,11 +97,8 @@ void PrepareCallback::on_internal_timeout() {
 
 class NopRequestListener : public RequestListener {
 public:
-  virtual void on_result_metadata_changed(const String& prepared_id,
-                                          const String& query,
-                                          const String& keyspace,
-                                          const String& result_metadata_id,
-                                          const ResultResponse::ConstPtr& result_response) { }
+  virtual void on_prepared_metadata_changed(const String& id,
+                                            const PreparedMetadata::Entry::Ptr& entry) { }
 
   virtual void on_keyspace_changed(const String& keyspace) { }
 
@@ -193,7 +190,12 @@ void RequestHandler::notify_result_metadata_changed(const String& prepared_id,
                                                     const String& keyspace,
                                                     const String& result_metadata_id,
                                                     const ResultResponse::ConstPtr& result_response, Protected) {
-  listener_->on_result_metadata_changed(prepared_id, query, keyspace, result_metadata_id, result_response);
+  PreparedMetadata::Entry::Ptr entry(
+        Memory::allocate<PreparedMetadata::Entry>(query,
+                                                  keyspace,
+                                                  result_metadata_id,
+                                                  result_response));
+  listener_->on_prepared_metadata_changed(prepared_id, entry);
 }
 
 void RequestHandler::notify_keyspace_changed(const String& keyspace) {

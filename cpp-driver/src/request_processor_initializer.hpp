@@ -53,7 +53,6 @@ public:
   /**
    * Constructor.
    *
-   * @param manager The manager for the processor.
    * @param connected_host The currently connected control connection host.
    * @param protocol_version The highest negotiated protocol for the cluster.
    * @param hosts A mapping of available hosts in the cluster.
@@ -61,8 +60,7 @@ public:
    * @param callback A callback that is called when the processor is initialized
    * or if an error occurred.
    */
-  RequestProcessorInitializer(RequestProcessorManager* manager,
-                              const Host::Ptr& connected_host,
+  RequestProcessorInitializer(const Host::Ptr& connected_host,
                               int protocol_version,
                               const HostMap& hosts,
                               const TokenMap::Ptr& token_map,
@@ -83,6 +81,14 @@ public:
    * @return The initializer to chain calls.
    */
   RequestProcessorInitializer* with_settings(const RequestProcessorSettings& setttings);
+
+  /**
+   * Set the listener to handle events for the processor.
+   *
+   * @param settings A processor listener.
+   * @return The initializer to chain calls.
+   */
+  RequestProcessorInitializer* with_listener(RequestProcessorListener* listener);
 
   /**
    * Set the keyspace to connect with.
@@ -141,11 +147,11 @@ private:
 
   EventLoop* event_loop_;
   RequestProcessorSettings settings_;
+  RequestProcessorListener* listener_;
   String keyspace_;
   Metrics* metrics_;
   Random* random_;
 
-  RequestProcessorManager* const manager_;
   const Host::Ptr connected_host_;
   const int protocol_version_;
   HostMap hosts_;

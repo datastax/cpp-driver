@@ -39,7 +39,7 @@ public:
   virtual void on_close(RequestProcessorManager* manager) { }
 };
 
-NopRequestProcessorManagerListener nop_request_processor_manager_listener__;
+static NopRequestProcessorManagerListener nop_request_processor_manager_listener__;
 
 RequestProcessorManager::RequestProcessorManager(RequestProcessorManagerListener* listener)
   : current_(0)
@@ -90,7 +90,7 @@ void RequestProcessorManager::add_processor(const RequestProcessor::Ptr& process
   processors_.push_back(processor);
 }
 
-void RequestProcessorManager::notify_closed(RequestProcessor* processor, Protected) {
+void RequestProcessorManager::on_close(RequestProcessor* processor) {
   ScopedMutex l(&mutex_);
   if (processor_count_ <= 0) {
     return;
@@ -99,30 +99,28 @@ void RequestProcessorManager::notify_closed(RequestProcessor* processor, Protect
   }
 }
 
-void RequestProcessorManager::notify_keyspace_changed(const String& keyspace, Protected) {
+void RequestProcessorManager::on_keyspace_changed(const String& keyspace) {
   for (size_t i = 0; i < processors_.size(); ++i) {
     processors_[i]->set_keyspace(keyspace);
   }
 }
 
-void RequestProcessorManager::notify_pool_up(const Address& address, Protected) {
+void RequestProcessorManager::on_pool_up(const Address& address) {
   listener_->on_pool_up(address);
 }
 
-void RequestProcessorManager::notify_pool_down(const Address& address, Protected) {
+void RequestProcessorManager::on_pool_down(const Address& address) {
   listener_->on_pool_down(address);
 }
 
-void RequestProcessorManager::notify_pool_critical_error(const Address& address,
-                                                         Connector::ConnectionError code,
-                                                         const String& message,
-                                                         Protected) {
+void RequestProcessorManager::on_pool_critical_error(const Address& address,
+                                                     Connector::ConnectionError code,
+                                                     const String& message) {
   listener_->on_pool_critical_error(address, code, message);
 }
 
-void RequestProcessorManager::notify_prepared_metadata_changed(const String& id,
-                                                               const PreparedMetadata::Entry::Ptr& entry,
-                                                               Protected) {
+void RequestProcessorManager::on_prepared_metadata_changed(const String& id,
+                                                           const PreparedMetadata::Entry::Ptr& entry) {
   listener_->on_prepared_metadata_changed(id, entry);
 }
 

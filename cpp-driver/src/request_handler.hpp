@@ -129,7 +129,6 @@ private:
 
 class RequestExecution;
 class RequestListener;
-class PreparedMetadata;
 
 class RequestHandler : public RefCounted<RequestHandler> {
   friend class Memory;
@@ -222,17 +221,19 @@ private:
   const Address preferred_address_;
 };
 
-class RequestListener {
+class RequestChangeListener {
 public:
-  virtual ~RequestListener() { }
+  virtual ~RequestChangeListener() { }
 
-  virtual void on_result_metadata_changed(const String& prepared_id,
-                                          const String& query,
-                                          const String& keyspace,
-                                          const String& result_metadata_id,
-                                          const ResultResponse::ConstPtr& result_response) = 0;
+  virtual void on_prepared_metadata_changed(const String& id,
+                                            const PreparedMetadata::Entry::Ptr& entry) = 0;
 
   virtual void on_keyspace_changed(const String& keyspace) = 0;
+};
+
+class RequestListener : public RequestChangeListener {
+public:
+  virtual ~RequestListener() { }
 
   virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                             const Host::Ptr& current_host,

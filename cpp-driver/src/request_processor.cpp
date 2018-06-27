@@ -80,6 +80,21 @@ private:
   const TokenMap::Ptr token_map_;
 };
 
+class NopRequestProcessorListener : public RequestProcessorListener {
+public:
+  virtual void on_pool_up(const Address& address)  { }
+  virtual void on_pool_down(const Address& address) { }
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message) { }
+  virtual void on_keyspace_changed(const String& keyspace) { }
+  virtual void on_prepared_metadata_changed(const String& id,
+                                           const PreparedMetadata::Entry::Ptr& entry) { }
+  virtual void on_close(RequestProcessor* processor) { }
+};
+
+static NopRequestProcessorListener nop_request_processor_listener__;
+
 RequestProcessorSettings::RequestProcessorSettings()
   : max_schema_wait_time_ms(10000)
   , prepare_on_all_hosts(true)
@@ -100,7 +115,7 @@ RequestProcessorSettings::RequestProcessorSettings(const Config& config)
   , coalesce_delay_us(config.coalesce_delay_us())
   , new_request_ratio(config.new_request_ratio()) { }
 
-RequestProcessor::RequestProcessor(RequestProcessorManager* manager,
+RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
                                    EventLoop* event_loop,
                                    const ConnectionPoolManager::Ptr& connection_pool_manager,
                                    const Host::Ptr& connected_host,
@@ -109,7 +124,7 @@ RequestProcessor::RequestProcessor(RequestProcessorManager* manager,
                                    const RequestProcessorSettings& settings,
                                    Random* random)
   : connection_pool_manager_(connection_pool_manager)
-  , manager_(manager)
+  , listener_(listener ? listener : &nop_request_processor_listener__)
   , event_loop_(event_loop)
   , max_schema_wait_time_ms_(settings.max_schema_wait_time_ms)
   , prepare_on_all_hosts_(settings.prepare_on_all_hosts)
@@ -215,46 +230,36 @@ void RequestProcessor::on_pool_up(const Address& address) {
   } else {
     LOG_DEBUG("Tried to up host %s that doesn't exist", address.to_string().c_str());
   }
-  manager_->notify_pool_up(address, RequestProcessorManager::Protected());
+  listener_->on_pool_up(address);
 }
 
 void RequestProcessor::on_pool_down(const Address& address) {
   internal_pool_down(address);
-  manager_->notify_pool_down(address, RequestProcessorManager::Protected());
+  listener_->on_pool_down(address);
 }
 
 void RequestProcessor::on_pool_critical_error(const Address& address,
                                               Connector::ConnectionError code,
                                               const String& message) {
   internal_pool_down(address);
-  manager_->notify_pool_critical_error(address, code, message,
-                                       RequestProcessorManager::Protected());
+  listener_->on_pool_critical_error(address, code, message);
 }
 
 void RequestProcessor::on_close(ConnectionPoolManager* manager) {
   async_.close_handle();
   prepare_.close_handle();
   timer_.close_handle();
-  manager_->notify_closed(this, RequestProcessorManager::Protected());
+  listener_->on_close(this);
   dec_ref();
 }
 
-void RequestProcessor::on_result_metadata_changed(const String& prepared_id,
-                                                  const String& query,
-                                                  const String& keyspace,
-                                                  const String& result_metadata_id,
-                                                  const ResultResponse::ConstPtr& result_response) {
-  PreparedMetadata::Entry::Ptr entry(
-        Memory::allocate<PreparedMetadata::Entry>(query,
-                                                  keyspace,
-                                                  result_metadata_id,
-                                                  result_response));
-  manager_->notify_prepared_metadata_changed(prepared_id, entry,
-                                             RequestProcessorManager::Protected());
+void RequestProcessor::on_prepared_metadata_changed(const String& id,
+                                                    const PreparedMetadata::Entry::Ptr& entry) {
+  listener_->on_prepared_metadata_changed(id, entry);
 }
 
 void RequestProcessor::on_keyspace_changed(const String& keyspace) {
-  manager_->notify_keyspace_changed(keyspace, RequestProcessorManager::Protected());
+  listener_->on_keyspace_changed(keyspace);
 }
 
 bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,

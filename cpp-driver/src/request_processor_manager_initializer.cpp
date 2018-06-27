@@ -74,8 +74,7 @@ void RequestProcessorManagerInitializer::initialize(EventLoopGroup* event_loop_g
   remaining_.store(thread_count_io);
   manager_.reset(Memory::allocate<RequestProcessorManager>(listener_));
   for (size_t i = 0; i < thread_count_io; ++i) {
-    RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(manager_.get(),
-                                                                                               connected_host_,
+    RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(connected_host_,
                                                                                                protocol_version_,
                                                                                                hosts_,
                                                                                                token_map_,
@@ -83,6 +82,7 @@ void RequestProcessorManagerInitializer::initialize(EventLoopGroup* event_loop_g
     initializers_.push_back(initializer);
     initializer
         ->with_settings(settings_)
+        ->with_listener(manager_.get())
         ->with_keyspace(keyspace_)
         ->with_metrics(metrics_)
         ->with_random(random_)

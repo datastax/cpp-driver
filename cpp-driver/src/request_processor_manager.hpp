@@ -26,19 +26,20 @@ namespace cass {
 
 class RequestProcessorManager;
 
-class RequestProcessorManagerListener : public ConnectionPoolListener {
+class RequestProcessorManagerListener
+    : public ConnectionPoolListener
+    , public RequestChangeListener {
 public:
-  virtual void on_prepared_metadata_changed(const String& id,
-                                           const PreparedMetadata::Entry::Ptr& entry) = 0;
   virtual void on_close(RequestProcessorManager* manager) = 0;
 };
-
 
 /**
  * A manager for one or more request processor that will process requests from
  * the session
  */
-class RequestProcessorManager : public RefCounted<RequestProcessorManager> {
+class RequestProcessorManager
+    : public RefCounted<RequestProcessorManager>
+    , public RequestProcessorListener {
 public:
   typedef SharedRefPtr<RequestProcessorManager> Ptr;
 
@@ -109,62 +110,19 @@ public:
    */
   void add_processor(const RequestProcessor::Ptr& processor, Protected);
 
-  /**
-   * Notify that a processor closed.
-   *
-   * @param processor The processor that closed.
-   * @param A key to restrict access to the method.
-   */
-  void notify_closed(RequestProcessor* processor, Protected);
 
-  /**
-   * Notify that the keyspace has changed.
-   *
-   * @param keyspace The new keyspace.
-   * @param A key to restrict access to the method.
-   */
-  void notify_keyspace_changed(const String& keyspace, Protected);
+private:
+  // Request processor listener methods
 
-  /**
-   * Notify that a connection pool now has available connections.
-   *
-   * @param address The address of the host that's available.
-   * @param A key to restrict access to the method.
-   */
-  void notify_pool_up(const Address& address, Protected);
-
-  /**
-   * Notify that a connection pool no longer has available connections.
-   *
-   * @param address The address of the host that's not available.
-   * @param A key to restrict access to the method.
-   */
-  void notify_pool_down(const Address& address, Protected);
-
-  /**
-   * Notify that a connection pool has encountered a critical error attempting
-   * to reconnect.
-   *
-   * @param address The address of the host with critical error.
-   * @param code The error code.
-   * @param message The error message.
-   * @param A key to restrict access to the method.
-   */
-  void notify_pool_critical_error(const Address& address,
-                                  Connector::ConnectionError code,
-                                  const String& message,
-                                  Protected);
-
-  /**
-   * Notify that the prepared result metadata has changes.
-   *
-   * @param id The id of the prepared metadata.
-   * @param entry The associated prepared metadata.
-   * @param A key to restrict access to the method.
-   */
-  void notify_prepared_metadata_changed(const String& id,
-                                        const PreparedMetadata::Entry::Ptr& entry,
-                                        Protected);
+  void on_close(RequestProcessor* processor);
+  void on_keyspace_changed(const String& keyspace);
+  void on_pool_up(const Address& address);
+  void on_pool_down(const Address& address);
+  void on_pool_critical_error(const Address& address,
+                              Connector::ConnectionError code,
+                              const String& message);
+  void on_prepared_metadata_changed(const String& id,
+                                    const PreparedMetadata::Entry::Ptr& entry);
 
 private:
   Atomic<size_t> current_;

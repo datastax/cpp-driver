@@ -34,16 +34,15 @@ private:
   RequestProcessorInitializer::Ptr initializer_;
 };
 
-RequestProcessorInitializer::RequestProcessorInitializer(RequestProcessorManager* manager,
-                                                         const Host::Ptr& connected_host,
+RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& connected_host,
                                                          int protocol_version,
                                                          const HostMap& hosts,
                                                          const TokenMap::Ptr& token_map,
                                                          const Callback& callback)
   : event_loop_(NULL)
+  , listener_(NULL)
   , metrics_(NULL)
   , random_(NULL)
-  , manager_(manager)
   , connected_host_(connected_host)
   , protocol_version_(protocol_version)
   , hosts_(hosts)
@@ -65,6 +64,11 @@ void RequestProcessorInitializer::initialize(EventLoop* event_loop) {
 
 RequestProcessorInitializer* RequestProcessorInitializer::with_settings(const RequestProcessorSettings& settings) {
   settings_ = settings;
+  return this;
+}
+
+RequestProcessorInitializer* RequestProcessorInitializer::with_listener(RequestProcessorListener* listener) {
+  listener_ = listener;
   return this;
 }
 
@@ -133,7 +137,7 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
     error_code_ = REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE;
     error_message_ = "Unable to connect to any hosts";
   } else {
-    processor_.reset(Memory::allocate<RequestProcessor>(manager_,
+    processor_.reset(Memory::allocate<RequestProcessor>(listener_,
                                                         event_loop_,
                                                         initializer->release_manager(),
                                                         connected_host_,

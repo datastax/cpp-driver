@@ -40,6 +40,13 @@ class RequestProcessor;
 class RequestProcessorManager;
 class Session;
 
+class RequestProcessorListener
+    : public ConnectionPoolListener
+    , public RequestChangeListener {
+public:
+  virtual void on_close(RequestProcessor* processor) = 0;
+};
+
 struct RequestProcessorSettings {
   RequestProcessorSettings();
 
@@ -82,7 +89,7 @@ public:
    * Create the request processor; Don't use directly use the request processor
    * manager initializer
    *
-   * @param manager The manager for this processor.
+   * @param listener A listener that handles the events for the processor.
    * @param event_loop The event loop the request process is running on.
    * @param connection_pool_manager A manager of connection pools for handling requests.
    * @param connected_host The currently connected control connection host.
@@ -91,7 +98,7 @@ public:
    * @param settings The current settings for the request processor.
    * @param random A RNG for randomizing hosts in the load balancing policies.
    */
-  RequestProcessor(RequestProcessorManager* manager,
+  RequestProcessor(RequestProcessorListener* listener,
                    EventLoop* event_loop,
                    const ConnectionPoolManager::Ptr& connection_pool_manager,
                    const Host::Ptr& connected_host,
@@ -181,11 +188,8 @@ private:
 private:
   // Request listener methods
 
-  virtual void on_result_metadata_changed(const String& prepared_id,
-                                          const String& query,
-                                          const String& keyspace,
-                                          const String& result_metadata_id,
-                                          const ResultResponse::ConstPtr& result_response);
+  virtual void on_prepared_metadata_changed(const String& id,
+                                            const PreparedMetadata::Entry::Ptr& entry);
   virtual void on_keyspace_changed(const String& keyspace);
   virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                             const Host::Ptr& current_host,
@@ -231,7 +235,7 @@ private:
   ConnectionPoolManager::Ptr connection_pool_manager_;
   String connect_keyspace_;
   HostMap hosts_;
-  RequestProcessorManager* const manager_;
+  RequestProcessorListener* const listener_;
   EventLoop* const event_loop_;
   LoadBalancingPolicy::Vec load_balancing_policies_;
   const unsigned max_schema_wait_time_ms_;
