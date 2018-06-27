@@ -233,6 +233,7 @@ void RequestProcessor::on_pool_critical_error(const Address& address,
 void RequestProcessor::on_close(ConnectionPoolManager* manager) {
   async_.close_handle();
   prepare_.close_handle();
+  timer_.close_handle();
   manager_->notify_closed(this, RequestProcessorManager::Protected());
 }
 
@@ -412,7 +413,7 @@ void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
   }
 }
 
-void RequestProcessor::on_timeout(EventLoop* event_loop) {
+void RequestProcessor::on_timeout(MicroTimer* timer) {
   int processed = process_requests((io_time_during_coalesce_ * new_request_ratio_) / 100);
   io_time_during_coalesce_ = 0;
 
@@ -439,8 +440,8 @@ void RequestProcessor::on_timeout(EventLoop* event_loop) {
     }
   }
 
-  event_loop_->start_timer(coalesce_delay_us_,
-                           bind_callback(&RequestProcessor::on_timeout, this));
+  timer_.start(event_loop_->loop(), coalesce_delay_us_,
+               bind_callback(&RequestProcessor::on_timeout, this));
 }
 
 void RequestProcessor::on_async(Async* async) {
@@ -448,9 +449,9 @@ void RequestProcessor::on_async(Async* async) {
     connection_pool_manager_->flush();
   }
 
-  if (!event_loop_->is_timer_running()) {
-    event_loop_->start_timer(coalesce_delay_us_,
-                             bind_callback(&RequestProcessor::on_timeout, this));
+  if (!timer_.is_running()) {
+    timer_.start(event_loop_->loop(), coalesce_delay_us_,
+                 bind_callback(&RequestProcessor::on_timeout, this));
   }
 }
 

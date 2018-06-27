@@ -23,10 +23,8 @@
 #include "deque.hpp"
 #include "logger.hpp"
 #include "macros.hpp"
-#include "prepare.hpp"
+#include "loop_watcher.hpp"
 #include "scoped_lock.hpp"
-#include "timer.hpp"
-#include "timerfd.hpp"
 #include "utils.hpp"
 
 #include <assert.h>
@@ -50,8 +48,6 @@ public:
  */
 class EventLoop {
 public:
-  typedef cass::Callback<void, EventLoop*> TimerCallback;
-
   EventLoop();
 
   virtual ~EventLoop();
@@ -90,25 +86,6 @@ public:
    * @param task A task to run on the event loop.
    */
   void add(Task* task);
-
-  /**
-   * Start the loop timer.
-   *
-   * @param timeout_us
-   */
-  void start_timer(uint64_t timeout_us, const TimerCallback& callback);
-
-  /**
-   * Stop the loop timer.
-   */
-  void stop_timer();
-
-  /**
-   * Determine if the timer is running.
-   *
-   * @return Returns true if the timer is running.
-   */
-  bool is_timer_running();
 
   /**
    * Start the IO time (if not started; 0)
@@ -159,12 +136,7 @@ private:
   static void internal_on_run(void* arg);
   void handle_run();
 
-#ifdef HAVE_TIMERFD
-  void on_timer(TimerFd* timer);
-#else
-  void on_timer(Timer* timer);
-#endif
-
+  void on_check(Check* check);
   void on_task(Async* async);
 
   uv_loop_t loop_;
@@ -181,16 +153,9 @@ private:
   Async async_;
   TaskQueue tasks_;
 
-#ifdef HAVE_TIMERFD
-  TimerFd timer_;
-#else
-  uint64_t timeout_;
-  Timer timer_;
-#endif
-  TimerCallback timer_callback_;
-
   Atomic<bool> is_closing_;
 
+  Check check_;
   uint64_t io_time_start_;
   uint64_t io_time_elapsed_;
 

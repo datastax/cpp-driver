@@ -23,8 +23,9 @@
 #include "event_loop.hpp"
 #include "histogram_wrapper.hpp"
 #include "host.hpp"
+#include "micro_timer.hpp"
 #include "mpmc_queue.hpp"
-#include "prepare.hpp"
+#include "loop_watcher.hpp"
 #include "prepare_host_handler.hpp"
 #include "random.hpp"
 #include "schema_agreement_handler.hpp"
@@ -200,7 +201,7 @@ private:
   virtual bool on_is_host_up(const Address& address);
 
 private:
-  void on_timeout(EventLoop* event_loop);
+  void on_timeout(MicroTimer* timer);
 
 private:
   void internal_close();
@@ -250,6 +251,7 @@ private:
   uint64_t io_time_during_coalesce_;
   Async async_;
   Prepare prepare_;
+  MicroTimer timer_;
 
 #ifdef CASS_INTERNAL_DIAGNOSTICS
   int reads_during_coalesce_;

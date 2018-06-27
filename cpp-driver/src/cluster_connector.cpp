@@ -137,6 +137,9 @@ void ClusterConnector::internal_cancel() {
 void ClusterConnector::finish() {
   callback_(this);
   if (cluster_) cluster_->close();
+  // Explicitly release resources on the event loop thread.
+  resolver_.reset();
+  connector_.reset();
   dec_ref();
 }
 

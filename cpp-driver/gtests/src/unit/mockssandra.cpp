@@ -347,7 +347,7 @@ ServerConnection::ServerConnection(const Address& address,
 
 ServerConnection::~ServerConnection() {
   uv_mutex_destroy(&mutex_);
-  uv_cond_init(&cond_);
+  uv_cond_destroy(&cond_);
   if (ssl_context_) {
     SSL_CTX_free(ssl_context_);
   }

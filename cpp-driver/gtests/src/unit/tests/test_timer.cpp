@@ -18,60 +18,103 @@
 
 #include "loop_test.hpp"
 
-static bool was_timer_called = false;
+using namespace cass;
 
-class TimerUnitTest : public LoopTest { };
+class TimerUnitTest : public LoopTest {
+public:
 
-void on_timer_once(cass::Timer* timer) {
-  was_timer_called = true;
-  EXPECT_FALSE(timer->is_running());
-}
+  TimerUnitTest()
+    : count_(0)
+    , repeat_timeout_(0) { }
 
-struct RepeatData {
-  uv_loop_t* loop;
-  int count;
-};
+  void test_once(uint64_t timeout) {
+    Timer timer;
 
-RepeatData repeat_data;
+    timer.start(loop(), timeout,
+                bind_callback(&TimerUnitTest::on_timer_once, this));
 
-void on_timer_repeat(cass::Timer* timer) {
-  EXPECT_FALSE(timer->is_running());
-  repeat_data.count++;
-  if (repeat_data.count == 1) {
-    timer->start(repeat_data.loop, 1,
-                 cass::bind_callback(on_timer_repeat));
+    EXPECT_TRUE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(timer.is_running());
+    EXPECT_EQ(count_, 1);
   }
-}
+
+  void test_repeat(uint64_t timeout) {
+    Timer timer;
+
+    repeat_timeout_ = timeout;
+
+    timer.start(loop(), timeout,
+                bind_callback(&TimerUnitTest::on_timer_repeat, this));
+
+    EXPECT_TRUE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(timer.is_running());
+    EXPECT_EQ(count_, 2);
+  }
+
+  void test_stop() {
+    Timer timer;
+
+    timer.start(loop(), 1,
+                bind_callback(&TimerUnitTest::on_timer_once, this));
+
+    EXPECT_TRUE(timer.is_running());
+
+    timer.stop();
+
+    EXPECT_FALSE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(timer.is_running());
+    EXPECT_EQ(count_, 0);
+  }
+
+private:
+  void on_timer_once(Timer* timer) {
+    count_++;
+    EXPECT_FALSE(timer->is_running());
+  }
+
+  void on_timer_repeat(Timer* timer) {
+    EXPECT_FALSE(timer->is_running());
+    count_++;
+    if (count_ == 1) {
+      timer->start(loop(), repeat_timeout_,
+                   bind_callback(&TimerUnitTest::on_timer_repeat, this));
+    }
+  }
+
+  int count_;
+  uint64_t repeat_timeout_;
+};
 
 TEST_F(TimerUnitTest, Once)
 {
-  cass::Timer timer;
+  test_once(1);
+}
 
-  timer.start(loop(), 1,
-              cass::bind_callback(on_timer_once));
-
-  EXPECT_TRUE(timer.is_running());
-
-  uv_run(loop(), UV_RUN_DEFAULT);
-
-  EXPECT_FALSE(timer.is_running());
-  EXPECT_TRUE(was_timer_called);
+TEST_F(TimerUnitTest, OnceZero)
+{
+  test_once(0);
 }
 
 TEST_F(TimerUnitTest, Repeat)
 {
-  cass::Timer timer;
+  test_repeat(1);
+}
 
-  repeat_data.loop = loop();
-  repeat_data.count = 0;
+TEST_F(TimerUnitTest, RepeatZero)
+{
+  test_repeat(0);
+}
 
-  timer.start(loop(), 1,
-              cass::bind_callback(on_timer_repeat));
-
-  EXPECT_TRUE(timer.is_running());
-
-  uv_run(loop(), UV_RUN_DEFAULT);
-
-  EXPECT_FALSE(timer.is_running());
-  EXPECT_EQ(repeat_data.count, 2);
+TEST_F(TimerUnitTest, Stop)
+{
+  test_stop();
 }
