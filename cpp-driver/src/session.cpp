@@ -368,7 +368,7 @@ void Session::on_initialize(RequestProcessorManagerInitializer* initializer) {
       case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE:
         error_code = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
         break;
-      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT_ASYNC:
+      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT:
         error_code = CASS_ERROR_LIB_UNABLE_TO_INIT;
         break;
       default:

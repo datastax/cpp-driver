@@ -17,13 +17,10 @@
 #include <gtest/gtest.h>
 
 #include "mockssandra_test.hpp"
+#include "test_utils.hpp"
 
 #include "cluster_connector.hpp"
 #include "ref_counted.hpp"
-
-#ifdef WIN32
-#undef STATUS_TIMEOUT
-#endif
 
 using namespace cass;
 
@@ -58,6 +55,12 @@ public:
     Future()
       : cass::Future(FUTURE_TYPE_GENERIC) { }
 
+    ~Future() {
+      if (cluster_) {
+        cluster_->close();
+      }
+    }
+
     const Cluster::Ptr& cluster() const { return cluster_; }
 
     void set_cluster(const Cluster::Ptr& cluster) {
@@ -74,6 +77,8 @@ public:
       : public RefCounted<Listener>
       , public ClusterListener {
   public:
+    typedef SharedRefPtr<Listener> Ptr;
+
     Listener(const Future::Ptr& close_future = Future::Ptr())
       : close_future_(close_future) {
       inc_ref(); // Might leak during an error, but won't allow a stale pointer
@@ -306,46 +311,6 @@ public:
     HostVec connected_hosts_;
     Events events_;
     OutagePlan* outage_plan_;
-  };
-
-  class CloseDuringReconnectListener : public Listener {
-  public:
-    typedef SharedRefPtr<CloseDuringReconnectListener> Ptr;
-
-    CloseDuringReconnectListener(const Future::Ptr& close_future,
-                              uv_loop_t* loop,
-                              mockssandra::SimpleCluster* cluster)
-      : Listener(close_future)
-      , loop_(loop)
-      , simple_cluster_(cluster) { }
-
-    virtual void on_reconnect(Cluster* cluster) {
-      cluster_.reset(cluster);
-      simple_cluster_->stop(1); // Force reconnection by stopping the node.
-      // Wait for the node to disconnect before closing.
-      timer_.start(loop_,
-                   500,
-                   cass::bind_callback(&CloseDuringReconnectListener::on_timeout, this));
-    }
-
-    virtual void on_up(const Host::Ptr& host) { }
-    virtual void on_down(const Host::Ptr& host) { }
-
-    virtual void on_add(const Host::Ptr& host) { }
-    virtual void on_remove(const Host::Ptr& host) { }
-
-    virtual void on_update_token_map(const TokenMap::Ptr& token_map) { }
-
-  private:
-    void on_timeout(Timer* timer) {
-      cluster_->close();
-    }
-
-  private:
-    Cluster::Ptr cluster_;
-    uv_loop_t* loop_;
-    mockssandra::SimpleCluster* simple_cluster_;
-    Timer timer_;
   };
 
   static void on_connection_connected(ClusterConnector* connector, Future* future) {
@@ -614,9 +579,9 @@ TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
 }
 
 TEST_F(ClusterUnitTest, CloseDuringReconnect) {
-  mockssandra::SimpleCluster cluster(
+  mockssandra::SimpleCluster mock_cluster(
         mockssandra::SimpleRequestHandlerBuilder().build(), 1);
-  cluster.start_all();
+  mock_cluster.start_all();
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
@@ -627,10 +592,7 @@ TEST_F(ClusterUnitTest, CloseDuringReconnect) {
                                                                      PROTOCOL_VERSION,
                                                                      bind_callback(on_connection_reconnect, connect_future.get())));
 
-  CloseDuringReconnectListener::Ptr listener(
-        Memory::allocate<CloseDuringReconnectListener>(close_future,
-                                                       event_loop()->loop(),
-                                                       &cluster));
+  Listener::Ptr listener(Memory::allocate<Listener>(close_future));
 
   ClusterSettings settings;
   settings.reconnect_timeout_ms = 100000; // Make sure we're reconnecting when we close.
@@ -642,6 +604,12 @@ TEST_F(ClusterUnitTest, CloseDuringReconnect) {
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
+
+  Cluster::Ptr cluster(connect_future->cluster());
+
+  mock_cluster.stop(1);
+  test::Utils::msleep(200); // Give time for the reconnect to start
+  cluster->close();
 
   ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
 }

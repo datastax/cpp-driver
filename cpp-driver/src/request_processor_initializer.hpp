@@ -37,7 +37,9 @@ class RequestProcessorManager;
  * A request processor initializer. This contains all the logic responsible for
  * connecting and initializing a request processor object.
  */
-class RequestProcessorInitializer : public RefCounted<RequestProcessorInitializer> {
+class RequestProcessorInitializer
+    : public RefCounted<RequestProcessorInitializer>
+    , public ConnectionPoolManagerListener {
 public:
   typedef SharedRefPtr<RequestProcessorInitializer> Ptr;
   typedef Vector<Ptr> Vec;
@@ -47,7 +49,7 @@ public:
     REQUEST_PROCESSOR_OK,
     REQUEST_PROCESSOR_ERROR_KEYSPACE,
     REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE,
-    REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT_ASYNC
+    REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT
   };
 
   /**
@@ -132,6 +134,16 @@ public:
 
 private:
   friend class RunInitializeProcessor;
+
+private:
+  // Connection pool manager listener methods
+
+  virtual void on_pool_up(const Address& address);
+  virtual void on_pool_down(const Address& address);
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message);
+  virtual void on_close(ConnectionPoolManager* manager);
 
 private:
   void internal_intialize();

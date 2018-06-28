@@ -102,7 +102,9 @@ RequestProcessorSettings::RequestProcessorSettings()
   , default_profile(Config().default_profile())
   , request_queue_size(8192)
   , coalesce_delay_us(CASS_DEFAULT_COALESCE_DELAY)
-  , new_request_ratio(CASS_DEFAULT_NEW_REQUEST_RATIO) { }
+  , new_request_ratio(CASS_DEFAULT_NEW_REQUEST_RATIO) {
+    profiles.set_empty_key("");
+  }
 
 RequestProcessorSettings::RequestProcessorSettings(const Config& config)
   : connection_pool_manager_settings(config)

@@ -93,6 +93,30 @@ RequestProcessor::Ptr RequestProcessorInitializer::release_processor() {
   return temp;
 }
 
+void RequestProcessorInitializer::on_pool_up(const Address& address) {
+  if (listener_) {
+    listener_->on_pool_up(address);
+  }
+}
+
+void RequestProcessorInitializer::on_pool_down(const Address& address) {
+  if (listener_) {
+    listener_->on_pool_down(address);
+  }
+}
+
+void RequestProcessorInitializer::on_pool_critical_error(const Address& address,
+                                                         Connector::ConnectionError code,
+                                                         const String& message) {
+  if (listener_) {
+    listener_->on_pool_critical_error(address, code, message);
+  }
+}
+
+void RequestProcessorInitializer::on_close(ConnectionPoolManager* manager) {
+  // Ignore
+}
+
 void RequestProcessorInitializer::internal_intialize() {
   inc_ref();
   connection_pool_manager_initializer_.reset(
@@ -108,6 +132,7 @@ void RequestProcessorInitializer::internal_intialize() {
 
   connection_pool_manager_initializer_
       ->with_settings(settings_.connection_pool_manager_settings)
+      ->with_listener(this)
       ->with_keyspace(keyspace_)
       ->with_metrics(metrics_)
       ->initialize(event_loop_->loop(), addresses);
@@ -148,8 +173,8 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
 
     int rc = processor_->init(RequestProcessor::Protected());
     if (rc != 0) {
-      error_code_ = REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT_ASYNC;
-      error_message_ = "Unable to initialize request processor async";
+      error_code_ = REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT;
+      error_message_ = "Unable to initialize request processor";
     } else {
       for (HostMap::const_iterator it = hosts_.begin(),
            end = hosts_.end(); it != end; ++it) {
