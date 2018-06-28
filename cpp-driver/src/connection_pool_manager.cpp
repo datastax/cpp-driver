@@ -203,7 +203,8 @@ void ConnectionPoolManager::internal_add_pool(const ConnectionPool::Ptr& pool) {
 // This must be the last call in a function because it can potentially
 // deallocate the manager.
 bool ConnectionPoolManager::maybe_closed() {
-  if (close_state_ == CLOSE_STATE_CLOSING && pools_.empty()) {
+  // Close the manager once all current and pending pools are terminated.
+  if (close_state_ == CLOSE_STATE_CLOSING && pools_.empty() && pending_pools_.empty()) {
     close_state_ = CLOSE_STATE_CLOSED;
     listener_->on_close(this);
     dec_ref();
@@ -215,6 +216,12 @@ bool ConnectionPoolManager::maybe_closed() {
 void ConnectionPoolManager::on_connect(ConnectionPoolConnector* pool_connector) {
   pending_pools_.erase(std::remove(pending_pools_.begin(), pending_pools_.end(), pool_connector),
                        pending_pools_.end());
+
+  if (close_state_ != CLOSE_STATE_OPEN) {
+    maybe_closed();
+    return;
+  }
+
   if (pool_connector->is_ok()) {
     internal_add_pool(pool_connector->release_pool());
   } else {
