@@ -131,6 +131,7 @@ RequestProcessor::RequestProcessor(RequestProcessorManager* manager,
   , reads_per_("reads")
 #endif
 {
+  inc_ref(); // For the connection pool manager
   connection_pool_manager_->set_listener(this);
 
   // Build/Assign the load balancing policies from the execution profiles
@@ -235,6 +236,7 @@ void RequestProcessor::on_close(ConnectionPoolManager* manager) {
   prepare_.close_handle();
   timer_.close_handle();
   manager_->notify_closed(this, RequestProcessorManager::Protected());
+  dec_ref();
 }
 
 void RequestProcessor::on_result_metadata_changed(const String& prepared_id,
