@@ -330,12 +330,14 @@ void Integration::connect() {
   connect(cluster_);
 }
 
-test::driver::Cluster Integration::default_cluster() {
+test::driver::Cluster Integration::default_cluster(bool is_with_default_contact_points /*= true*/) {
   // Create the default cluster object
   Cluster cluster = Cluster::build()
-    .with_contact_points(contact_points_)
     .with_randomized_contact_points(is_randomized_contact_points_)
     .with_schema_metadata(is_schema_metadata_);
+  if (is_with_default_contact_points) {
+    cluster.with_contact_points(contact_points_);
+  }
   if (server_version_ >= "3.10" &&
       protocol_version_ == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
     cluster.with_beta_protocol(true);
