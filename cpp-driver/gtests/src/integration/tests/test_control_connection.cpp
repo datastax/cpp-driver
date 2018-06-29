@@ -308,7 +308,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests,
    * to ensure all nodes can be accessed during request execution
    */
   Cluster cluster = default_cluster()
-    .with_load_balance_round_robin();
+    .with_load_balance_round_robin()
+    .with_reconnect_wait_time(10); // Ensure reconnect timeout is quick
   Session session = cluster.connect();
 
   // Ensure all hosts are actively used
@@ -471,14 +472,16 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
   update_system_table
     << "UPDATE system.peers SET rpc_address = null WHERE peer = '"
     << ccm_->get_ip_prefix() << "3'";
-  session_.execute(update_system_table.str());
+  for (int i = 0; i < 3; ++i) { // Ensure all the nodes in the cluster are updated
+    session_.execute(update_system_table.str());
+  }
 
   /*
    * Create a new session connection using the round robin load balancing policy
    * and ensure only the first node is used as the contact point for automatic
    * node discovery
    */
-  Cluster cluster = default_cluster()
+  Cluster cluster = default_cluster(false)
     .with_load_balance_round_robin()
     .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
   Session session = cluster.connect();

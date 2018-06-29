@@ -277,6 +277,17 @@ public:
   }
 
   /**
+   * Sets the amount of time to wait before attempting to reconnect.
+   *
+   * @param wait_time_ms Wait time in milliseconds (default: 2000)
+   * @return Cluster object
+   */
+  Cluster& with_reconnect_wait_time(unsigned int wait_time_ms) {
+    cass_cluster_set_reconnect_wait_time(get(), wait_time_ms);
+    return *this;
+  }
+
+  /**
    * Sets the timeout (in milliseconds) for waiting for a response from a node
    *
    * @param timeout_ms Request timeout in milliseconds; 0 to disable timeout
