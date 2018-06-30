@@ -256,7 +256,8 @@ To perform advanced build configuration, execute the batch script with the
 Usage: VC_BUILD.BAT [OPTION...]
 
     --DEBUG                           Enable debug build
-    --RELEASE                         Enable release build (default)
+    --RELEASE                         Enable release build
+    --RELEASE-WITH-DEBUG-INFO         Enable release w/ dbginfo build (default)
     --DISABLE-CLEAN                   Disable clean build
     --DEPENDENCIES-ONLY               Build dependencies only
     --OPENSSL-VERSION                 OpenSSL version 1.0, 1.1 (default: 1.0)
