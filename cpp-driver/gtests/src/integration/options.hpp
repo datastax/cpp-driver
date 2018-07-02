@@ -53,6 +53,13 @@ public:
    */
   static bool is_help();
   /**
+   * Flag to determine if integration tests should remove the server cluster(s)
+   * after completion
+   *
+   * @return True if clusters should be removed; false otherwise
+   */
+  static bool keep_clusters();
+  /**
    * Flag to determine if integration tests should log the driver logs to a file
    * for each test
    *
@@ -204,6 +211,10 @@ private:
    * Flag to determine if the help flag was indicated
    */
   static bool is_help_;
+  /**
+   * Flag to indicate if the cluster(s) should remain after tests are completed
+   */
+  static bool is_keep_clusters_;
   /**
    * Flag to indicate if log messages should be generated for each test
    */
