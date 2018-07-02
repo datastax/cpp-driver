@@ -29,15 +29,10 @@ namespace cass {
 class RequestProcessorManagerInitializer;
 class Statement;
 
-/**
- * A
- */
 class Session
     : public SessionBase
     , public RequestProcessorManagerListener {
 public:
-  ~Session();
-
   Future::Ptr prepare(const char* statement, size_t length);
 
   Future::Ptr prepare(const Statement* statement);
@@ -45,12 +40,15 @@ public:
   Future::Ptr execute(const Request::ConstPtr& request,
                       const Address* preferred_address = NULL);
 
+  void join();
+
 public:
   Metrics* metrics() const { return metrics_.get(); }
 
 private:
-  void close_event_loop_group();
   void execute(const RequestHandler::Ptr& request_handler);
+
+  void internal_join();
 
 private:
   // Session base methods

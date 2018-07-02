@@ -31,10 +31,6 @@ SessionBase::SessionBase()
 
 SessionBase::~SessionBase() {
   uv_mutex_destroy(&mutex_);
-  if (event_loop_) {
-    event_loop_->close_handles();
-    event_loop_->join();
-  }
 }
 
 void SessionBase::connect(const Config& config,
@@ -66,7 +62,6 @@ void SessionBase::connect(const Config& config,
     }
   }
 
-  inc_ref();
   config_ = config.new_instance();
   connect_keyspace_ = keyspace;
   connect_future_ = future;
@@ -102,6 +97,13 @@ void SessionBase::close(const Future::Ptr& future) {
   cluster_->close();
 }
 
+void SessionBase::join() {
+  if (event_loop_) {
+    event_loop_->close_handles();
+    event_loop_->join();
+  }
+}
+
 void SessionBase::notify_connected() {
   ScopedMutex l(&mutex_);
   if (state_ == SESSION_STATE_CONNECTING) {
@@ -127,7 +129,6 @@ void SessionBase::notify_closed() {
     close_future_->set();
     close_future_.reset();
     l.unlock();
-    dec_ref();
   }
 }
 

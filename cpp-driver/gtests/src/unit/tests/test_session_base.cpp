@@ -31,6 +31,10 @@ public:
     , failed_(0)
     , closed_(0) { }
 
+  ~TestSessionBase() {
+    join();
+  }
+
   virtual void on_up(const cass::Host::Ptr& host) { }
   virtual void on_down(const cass::Host::Ptr& host) { }
   virtual void on_add(const cass::Host::Ptr& host) { }
@@ -180,7 +184,7 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsIp) {
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_STREQ(KEYSPACE, session_base.connect_keyspace().c_str());
   ASSERT_NE(&session_base.config(), &config);
-  ASSERT_TRUE(session_base.random() != NULL);
+  ASSERT_TRUE(session_base.random() == NULL);
   ASSERT_EQ(1, session_base.connected());
   ASSERT_EQ(0, session_base.failed());
   ASSERT_EQ(0, session_base.closed());

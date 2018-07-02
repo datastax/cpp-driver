@@ -31,9 +31,7 @@ class Random;
  * A base class for implementing a session. It manages the state machine for
  * connecting and closing a session.
  */
-class SessionBase
-    : public RefCounted<SessionBase>
-    , public ClusterListener {
+class SessionBase : public ClusterListener {
 public:
   enum State {
     SESSION_STATE_CONNECTING,
@@ -71,6 +69,11 @@ public:
    * @param future
    */
   void close(const Future::Ptr& future);
+
+  /**
+   * Wait for the event loop thread to join.
+   */
+  void join();
 
 public:
   String connect_keyspace() const { return connect_keyspace_; }
