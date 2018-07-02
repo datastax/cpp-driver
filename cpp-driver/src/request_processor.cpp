@@ -497,6 +497,7 @@ int RequestProcessor::process_requests(uint64_t processing_time) {
         request_handler->execute();
         processed++;
       } else {
+        maybe_close(request_count_.fetch_sub(1) - 1);
         request_handler->set_error(CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID,
                                    profile_name + " does not exist");
       }
