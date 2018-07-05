@@ -95,6 +95,7 @@ void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_
   }
 
   if (--remaining_ == 0) {
+    if (manager_) manager_->set_listener(NULL);
     callback_(this);
     // If the manager hasn't been released then close it.
     if (manager_) manager_->close();

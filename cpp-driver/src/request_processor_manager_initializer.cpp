@@ -116,6 +116,7 @@ void RequestProcessorManagerInitializer::on_initialize(RequestProcessorInitializ
     callback_(this);
     // If the request processor manager hasn't been released then close it
     if (manager_) manager_->close();
+    manager_.reset();
     dec_ref();
   }
 }

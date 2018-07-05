@@ -160,6 +160,8 @@ private:
   ScopedPtr<Random> random_;
   ScopedPtr<Metrics> metrics_;
   String connect_keyspace_;
+  CassError connect_error_code_;
+  String connect_error_message_;
   Future::Ptr connect_future_;
   Future::Ptr close_future_;
 };

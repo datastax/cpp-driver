@@ -118,8 +118,12 @@ void SessionBase::notify_connected() {
 }
 
 void SessionBase::notify_connect_failed(CassError code, const String& message) {
-  ScopedMutex l(&mutex_);
-  if (state_ == SESSION_STATE_CONNECTING) {
+  if (cluster_) {
+    connect_error_code_ = code;
+    connect_error_message_ = message;
+    cluster_->close();
+  } else {
+    ScopedMutex l(&mutex_);
     state_ = SESSION_STATE_CLOSED;
     connect_future_->set_error(code, message);
     connect_future_.reset();
@@ -151,7 +155,10 @@ void SessionBase::on_close(Cluster* cluster) {
     state_ = SESSION_STATE_CLOSED;
     close_future_->set();
     close_future_.reset();
-    l.unlock();
+  } else if (state_ == SESSION_STATE_CONNECTING) {
+    state_ = SESSION_STATE_CLOSED;
+    connect_future_->set_error(connect_error_code_, connect_error_message_);
+    connect_future_.reset();
   }
 }
 
