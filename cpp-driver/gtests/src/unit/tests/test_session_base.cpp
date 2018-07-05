@@ -68,19 +68,10 @@ protected:
   }
 
 
-  virtual void on_close(cass::Cluster* cluster) {
+  virtual void on_close() {
     ++closed_;
-    ASSERT_EQ(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, cluster->protocol_version());
-    if (connected_ > 0) {
-      ASSERT_STREQ("127.0.0.1", cluster->connected_host()->address_string().c_str());
-      ASSERT_EQ(1, cluster->hosts().size());
-    } else {
-      ASSERT_STREQ("", cluster->connected_host()->address_string().c_str());
-      ASSERT_EQ(0, cluster->hosts().size());
-    }
     ASSERT_EQ(state(), SESSION_STATE_CLOSING);
     notify_closed();
-    ASSERT_EQ(state(), SESSION_STATE_CLOSED);
   }
 
 private:
