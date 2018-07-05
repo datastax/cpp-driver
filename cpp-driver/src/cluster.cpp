@@ -99,7 +99,8 @@ public:
 
 static NopClusterListener nop_cluster_listener__;
 
-LockedHostMap::LockedHostMap() {
+LockedHostMap::LockedHostMap(const HostMap& hosts)
+  : hosts_(hosts) {
   uv_mutex_init(&mutex_);
 }
 
@@ -156,23 +157,17 @@ Cluster::Cluster(ControlConnector* connector,
                  ClusterListener* listener,
                  EventLoop* event_loop,
                  Random* random,
+                 const HostMap& hosts,
                  const ClusterSettings& settings)
   : listener_(listener ? listener : &nop_cluster_listener__)
   , event_loop_(event_loop)
   , load_balancing_policy_(settings.load_balancing_policy->new_instance())
   , settings_(settings)
-  , is_closing_(false) {
+  , is_closing_(false)
+  , hosts_(hosts) {
   inc_ref();
   connection_ = connector->release_connection();
   connection_->set_listener(this);
-
-  const HostMap& hosts(connector->hosts());
-  for (HostMap::const_iterator it = hosts.begin(),
-       end = hosts.end(); it != end; ++it) {
-    if (!is_host_ignored(settings.load_balancing_polices, it->second)) {
-      hosts_[it->first] = it->second;
-    }
-  }
 
   connected_host_ = hosts_[connection_->address()];
   assert(connected_host_ && "Connected host not found in hosts map");
@@ -305,18 +300,7 @@ void Cluster::update_token_map(const HostMap& hosts,
 }
 
 bool Cluster::is_host_ignored(const Host::Ptr& host) const {
-  return is_host_ignored(load_balancing_policies_, host);
-}
-
-bool Cluster::is_host_ignored(const LoadBalancingPolicy::Vec& policies,
-                              const Host::Ptr& host) const {
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
-       end = policies.end(); it != end; ++it) {
-    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-      return false;
-    }
-  }
-  return true;
+  return cass::is_host_ignored(load_balancing_policies_, host);
 }
 
 void Cluster::schedule_reconnect() {

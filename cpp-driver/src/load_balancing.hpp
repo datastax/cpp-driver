@@ -99,6 +99,16 @@ public:
   virtual LoadBalancingPolicy* new_instance() = 0;
 };
 
+inline bool is_host_ignored(const LoadBalancingPolicy::Vec& policies,
+  const Host::Ptr& host) {
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
+    end = policies.end(); it != end; ++it) {
+    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+      return false;
+    }
+  }
+  return true;
+}
 
 class ChainedLoadBalancingPolicy : public LoadBalancingPolicy {
 public:

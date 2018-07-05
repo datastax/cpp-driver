@@ -37,7 +37,7 @@ public:
   typedef HostMap::iterator iterator;
   typedef HostMap::const_iterator const_iterator;
 
-  LockedHostMap();
+  LockedHostMap(const HostMap& hosts);
   ~LockedHostMap();
 
   operator const HostMap&() const { return hosts_; }
@@ -179,6 +179,8 @@ public:
    * @param listener A listener to handle events.
    * @param load_balancing_policy A load balancing policy that's used to handle
    * reconnecting the control connection.
+   * @param hosts Available hosts for the cluster (based on load balancing
+   * policies)
    * @param settings The control connection settings to use for reconnecting the
    * control connection.
    */
@@ -186,6 +188,7 @@ public:
           ClusterListener* listener,
           EventLoop* event_loop,
           Random* random,
+          const HostMap& hosts,
           const ClusterSettings& settings);
 
   /**
@@ -263,7 +266,6 @@ private:
                         const ControlConnectionSchema& schema);
 
   bool is_host_ignored(const Host::Ptr& host) const;
-  bool is_host_ignored(const LoadBalancingPolicy::Vec& policies, const Host::Ptr& host) const;
 
   void schedule_reconnect();
 

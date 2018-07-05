@@ -171,7 +171,7 @@ void SessionBase::on_initialize(ClusterConnector* connector) {
         break;
       case ClusterConnector::CLUSTER_ERROR_NO_HOSTS_AVILABLE:
         on_connect_failed(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                          "Unable to connect to any contact points");
+                          connector->error_message());
         break;
       default:
         // This shouldn't happen, but let's handle it

@@ -194,10 +194,29 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
   }
 
   if (connector->is_ok()) {
+    // Gather the available hosts for the load balancing policies
+    const HostMap& hosts(connector->hosts());
+    HostMap available_hosts;
+    for (HostMap::const_iterator it = hosts.begin(), end = hosts.end();
+         it != end; ++it) {
+      if (!is_host_ignored(settings_.load_balancing_polices, it->second)) {
+        available_hosts[it->first] = it->second;
+      }
+    }
+
+    if (available_hosts.empty()) {
+      //TODO(fero): Check for DC aware policy to give more informative message (e.g. invalid DC)
+      on_error(CLUSTER_ERROR_NO_HOSTS_AVILABLE,
+               "No hosts available for connection using the current load " \
+               "balancing policy(s)");
+      return;
+    }
+
     cluster_.reset(Memory::allocate<Cluster>(connector,
                                              listener_,
                                              event_loop_,
                                              random_,
+                                             available_hosts,
                                              settings_));
     finish();
   } else if (connector->is_invalid_protocol()) {
