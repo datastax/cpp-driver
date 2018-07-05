@@ -295,6 +295,14 @@ void Session::on_connect(const Host::Ptr& connected_host,
       ->initialize(event_loop_group_.get());
 }
 
+void Session::on_close() {
+  if (request_processor_manager_) {
+    request_processor_manager_->close();
+  } else {
+    notify_closed();
+  }
+}
+
 void Session::on_up(const Host::Ptr& host) {
 }
 
@@ -316,12 +324,6 @@ void Session::on_remove(const Host::Ptr& host)  {
 void Session::on_update_token_map(const TokenMap::Ptr& token_map) {
   if (request_processor_manager_) {
     request_processor_manager_->notify_token_map_changed(token_map);
-  }
-}
-
-void Session::on_close(Cluster* cluster) {
-  if (request_processor_manager_) {
-    request_processor_manager_->close();
   }
 }
 

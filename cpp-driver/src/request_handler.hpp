@@ -206,7 +206,7 @@ private:
   RequestWrapper wrapper_;
   SharedRefPtr<ResponseFuture> future_;
 
-  bool is_canceled_;
+  bool is_done_;
   int running_executions_;
 
   ScopedPtr<QueryPlan> query_plan_;

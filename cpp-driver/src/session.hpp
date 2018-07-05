@@ -55,6 +55,8 @@ private:
                           const HostMap& hosts,
                           const TokenMap::Ptr& token_map);
 
+  virtual void on_close();
+
 private:
   // Cluster listener methods
 
@@ -67,8 +69,6 @@ private:
   virtual void on_remove(const Host::Ptr& host);
 
   virtual void on_update_token_map(const TokenMap::Ptr& token_map);
-
-  virtual void on_close(Cluster* cluster);
 
 private:
   // Request Processor manager listener methods

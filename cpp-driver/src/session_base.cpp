@@ -98,7 +98,7 @@ void SessionBase::close(const Future::Ptr& future) {
   }
   state_ = SESSION_STATE_CLOSING;
   close_future_ = future;
-  cluster_->close();
+  on_close();
 }
 
 void SessionBase::join() {
@@ -127,13 +127,7 @@ void SessionBase::notify_connect_failed(CassError code, const String& message) {
 }
 
 void SessionBase::notify_closed() {
-  ScopedMutex l(&mutex_);
-  if (state_ == SESSION_STATE_CLOSING) {
-    state_ = SESSION_STATE_CLOSED;
-    close_future_->set();
-    close_future_.reset();
-    l.unlock();
-  }
+  cluster_->close();
 }
 
 void SessionBase::on_connect(const Host::Ptr& connected_host,
@@ -147,8 +141,18 @@ void SessionBase::on_connect_failed(CassError code, const String& message) {
   notify_connect_failed(code, message);
 }
 
-void SessionBase::on_close(Cluster* cluster) {
+void SessionBase::on_close() {
   notify_closed();
+}
+
+void SessionBase::on_close(Cluster* cluster) {
+  ScopedMutex l(&mutex_);
+  if (state_ == SESSION_STATE_CLOSING) {
+    state_ = SESSION_STATE_CLOSED;
+    close_future_->set();
+    close_future_.reset();
+    l.unlock();
+  }
 }
 
 void SessionBase::on_initialize(ClusterConnector* connector) {

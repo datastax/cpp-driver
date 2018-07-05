@@ -125,7 +125,7 @@ RequestHandler::RequestHandler(const Request::ConstPtr& request,
                                const Address* preferred_address)
   : wrapper_(request)
   , future_(future)
-  , is_canceled_(false)
+  , is_done_(false)
   , running_executions_(0)
   , start_time_ns_(uv_hrtime())
   , listener_(&nop_request_listener__)
@@ -270,15 +270,25 @@ void RequestHandler::on_timeout(Timer* timer) {
 }
 
 void RequestHandler::stop_request() {
-  listener_->on_done();
-  is_canceled_ = true;
+  if (!is_done_) {
+    listener_->on_done();
+    is_done_ = true;
+  }
   timer_.stop();
 }
 
 void RequestHandler::internal_retry(RequestExecution* request_execution) {
-  bool is_successful = false;
+  if (is_done_) {
+    LOG_DEBUG("Canceling speculative execution (%p) for request (%p) on host %s",
+              static_cast<void*>(request_execution),
+              static_cast<void*>(this),
+              request_execution->current_host() ? request_execution->current_host()->address_string().c_str()
+                                                : "<no current host>");
+    return;
+  }
 
-  while (!is_canceled_ && request_execution->current_host()) {
+  bool is_successful = false;
+  while (request_execution->current_host()) {
     PooledConnection::Ptr connection = manager_->find_least_busy(request_execution->current_host()->address());
     if (connection && connection->write(request_execution)) {
       is_successful = true;
@@ -288,13 +298,6 @@ void RequestHandler::internal_retry(RequestExecution* request_execution) {
   }
 
   if (!is_successful) {
-    if (is_canceled_) {
-      LOG_DEBUG("Canceling speculative execution (%p) for request (%p) on host %s",
-                static_cast<void*>(request_execution),
-                static_cast<void*>(this),
-                request_execution->current_host() ? request_execution->current_host()->address_string().c_str()
-                                                  : "<no current host>");
-    }
     set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
               "All hosts in current policy attempted "
               "and were either unavailable or failed");
