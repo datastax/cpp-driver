@@ -94,11 +94,21 @@ void DCAwarePolicy::on_remove(const Host::Ptr& host) {
 }
 
 void DCAwarePolicy::on_up(const Host::Ptr& host) {
-  on_add(host);
+  const std::string& dc = host->dc();
+  if (dc == local_dc_) {
+    change_host_status(local_dc_live_hosts_, host, Host::UP);
+  } else {
+    per_remote_dc_live_hosts_.change_host_status(dc, host, Host::UP);
+  }
 }
 
 void DCAwarePolicy::on_down(const Host::Ptr& host) {
-  on_remove(host);
+  const std::string& dc = host->dc();
+  if (dc == local_dc_) {
+    change_host_status(local_dc_live_hosts_, host, Host::DOWN);
+  } else {
+    per_remote_dc_live_hosts_.change_host_status(dc, host, Host::DOWN);
+  }
 }
 
 void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const std::string& dc, const Host::Ptr& host) {
@@ -118,6 +128,15 @@ void DCAwarePolicy::PerDCHostMap::remove_host_from_dc(const std::string& dc, con
   Map::iterator i = map_.find(dc);
   if (i != map_.end()) {
     remove_host(i->second, host);
+  }
+}
+
+void DCAwarePolicy::PerDCHostMap::change_host_status(const std::string& dc, const Host::Ptr& host, Host::HostState state)
+{
+  ScopedWriteLock wl(&rwlock_);
+  Map::iterator i = map_.find(dc);
+  if (i != map_.end()) {
+    cass::change_host_status(i->second, host, state);
   }
 }
 

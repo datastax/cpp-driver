@@ -41,6 +41,20 @@ void remove_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
   }
 }
 
+void change_host_status(CopyOnWriteHostVec& hosts, const Host::Ptr& host, Host::HostState state) {
+  HostVec::iterator i;
+  for (i = hosts->begin(); i != hosts->end(); ++i) {
+    if ((*i)->address() == host->address()) {
+      if (state == Host::DOWN) {
+        (*i)->set_down();
+      } else {
+        (*i)->set_up();
+      }
+      break;
+    }
+  }
+}
+
 void Host::LatencyTracker::update(uint64_t latency_ns) {
   uint64_t now = uv_hrtime();
 

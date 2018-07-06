@@ -79,6 +79,7 @@ private:
 
     void add_host_to_dc(const std::string& dc, const Host::Ptr& host);
     void remove_host_from_dc(const std::string& dc, const Host::Ptr& host);
+    void change_host_status(const std::string& dc, const Host::Ptr& host, Host::HostState state);
     const CopyOnWriteHostVec& get_hosts(const std::string& dc) const;
     void copy_dcs(KeySet* dcs) const;
 

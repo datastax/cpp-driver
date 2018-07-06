@@ -259,6 +259,7 @@ typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 
 void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host);
 void remove_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host);
+void change_host_status(CopyOnWriteHostVec& hosts, const Host::Ptr& host, Host::HostState state);
 
 } // namespace cass
 
