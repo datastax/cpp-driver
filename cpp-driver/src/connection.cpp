@@ -185,8 +185,8 @@ void Connection::start_heartbeats() {
 }
 
 void Connection::stop_heartbeats() {
-  heartbeat_timer_.stop();
-  terminate_timer_.stop();
+  heartbeat_timer_.close_handle();
+  terminate_timer_.close_handle();
 }
 
 void Connection::maybe_set_keyspace(ResponseMessage* response) {

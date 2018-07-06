@@ -70,11 +70,6 @@ public:
    */
   void close(const Future::Ptr& future);
 
-  /**
-   * Wait for the event loop thread to join.
-   */
-  void join();
-
 public:
   String connect_keyspace() const { return connect_keyspace_; }
   const Config& config() const { return config_; }

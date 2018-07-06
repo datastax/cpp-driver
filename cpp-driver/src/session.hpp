@@ -33,6 +33,8 @@ class Session
     : public SessionBase
     , public RequestProcessorManagerListener {
 public:
+  ~Session();
+
   Future::Ptr prepare(const char* statement, size_t length);
 
   Future::Ptr prepare(const Statement* statement);
@@ -40,12 +42,10 @@ public:
   Future::Ptr execute(const Request::ConstPtr& request,
                       const Address* preferred_address = NULL);
 
-  void join();
-
 private:
   void execute(const RequestHandler::Ptr& request_handler);
 
-  void internal_join();
+  void join();
 
 private:
   // Session base methods

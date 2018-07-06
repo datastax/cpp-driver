@@ -31,6 +31,10 @@ SessionBase::SessionBase()
 
 SessionBase::~SessionBase() {
   uv_mutex_destroy(&mutex_);
+  if (event_loop_) {
+    event_loop_->close_handles();
+    event_loop_->join();
+  }
 }
 
 void SessionBase::connect(const Config& config,
@@ -99,13 +103,6 @@ void SessionBase::close(const Future::Ptr& future) {
   state_ = SESSION_STATE_CLOSING;
   close_future_ = future;
   on_close();
-}
-
-void SessionBase::join() {
-  if (event_loop_) {
-    event_loop_->close_handles();
-    event_loop_->join();
-  }
 }
 
 void SessionBase::notify_connected() {

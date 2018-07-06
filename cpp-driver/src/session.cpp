@@ -44,7 +44,6 @@ void cass_session_free(CassSession* session) {
   session->close(future);
   future->wait();
 
-  session->join();
   cass::Memory::deallocate(session->from());
 }
 
@@ -175,6 +174,10 @@ void  cass_session_get_speculative_execution_metrics(const CassSession* session,
 
 namespace cass {
 
+Session::~Session() {
+  join();
+}
+
 Future::Ptr Session::prepare(const char* statement, size_t length) {
   PrepareRequest::Ptr prepare(Memory::allocate<PrepareRequest>(String(statement, length)));
 
@@ -229,11 +232,6 @@ Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* pr
   return future;
 }
 
-void Session::join() {
-  SessionBase::join();
-  internal_join();
-}
-
 void Session::execute(const RequestHandler::Ptr& request_handler) {
   if (state() != SESSION_STATE_CONNECTED) {
     request_handler->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
@@ -244,10 +242,11 @@ void Session::execute(const RequestHandler::Ptr& request_handler) {
   request_processor_manager_->process_request(request_handler);
 }
 
-void Session::internal_join() {
+void Session::join() {
   if (event_loop_group_) {
     event_loop_group_->close_handles();
     event_loop_group_->join();
+    event_loop_group_.reset();
   }
 }
 
@@ -263,7 +262,7 @@ void Session::on_connect(const Host::Ptr& connected_host,
     return;
   }
 
-  internal_join();
+  join();
   event_loop_group_.reset(Memory::allocate<RoundRobinEventLoopGroup>(config().thread_count_io()));
   rc = event_loop_group_->init("Request Processor");
   if (rc != 0) {

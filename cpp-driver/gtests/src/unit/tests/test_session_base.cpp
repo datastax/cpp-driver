@@ -31,10 +31,6 @@ public:
     , failed_(0)
     , closed_(0) { }
 
-  ~TestSessionBase() {
-    join();
-  }
-
   virtual void on_up(const cass::Host::Ptr& host) { }
   virtual void on_down(const cass::Host::Ptr& host) { }
   virtual void on_add(const cass::Host::Ptr& host) { }
