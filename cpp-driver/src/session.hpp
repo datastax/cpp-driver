@@ -70,6 +70,10 @@ private:
 
   virtual void on_update_token_map(const TokenMap::Ptr& token_map);
 
+  // Tell the compiler that we're intentionally using an overloaded virtual
+  // method.
+  using SessionBase::on_close;
+
 private:
   // Request Processor manager listener methods
 
