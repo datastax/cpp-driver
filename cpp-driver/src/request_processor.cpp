@@ -258,6 +258,7 @@ void RequestProcessor::on_close(ConnectionPoolManager* manager) {
   async_.close_handle();
   prepare_.close_handle();
   timer_.close_handle();
+  connection_pool_manager_.reset();
   listener_->on_close(this);
   dec_ref();
 }

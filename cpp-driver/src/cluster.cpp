@@ -377,6 +377,7 @@ void Cluster::handle_close() {
        end = load_balancing_policies_.end(); it != end; ++it) {
     (*it)->close_handles();
   }
+  connection_.reset();
   listener_->on_close(this);
   dec_ref();
 }
