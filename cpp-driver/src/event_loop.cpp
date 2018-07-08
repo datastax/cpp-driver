@@ -74,6 +74,7 @@ int EventLoop::init(const String& thread_name /*= ""*/) {
   if (rc != 0) return rc;
   rc = async_.start(loop(), bind_callback(&EventLoop::on_task, this));
   if (rc != 0) return rc;
+  rc = check_.start(loop(), bind_callback(&EventLoop::on_check, this));
   is_loop_initialized_ = true;
 
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
@@ -188,6 +189,7 @@ void EventLoop::on_task(Async* async) {
 
   if (is_closing_.load() && tasks_.is_empty()) {
     async_.close_handle();
+    check_.close_handle();
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
     uv_prepare_stop(&prepare_);
     uv_close(reinterpret_cast<uv_handle_t*>(&prepare_), NULL);
