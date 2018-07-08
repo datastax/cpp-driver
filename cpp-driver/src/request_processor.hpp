@@ -183,6 +183,7 @@ private:
   virtual void on_pool_critical_error(const Address& address,
                                  Connector::ConnectionError code,
                                  const String& message);
+  virtual void on_requires_flush();
   virtual void on_close(ConnectionPoolManager* manager);
 
 private:
@@ -225,6 +226,7 @@ private:
   void internal_host_add_down_up(const Host::Ptr& host, Host::HostState state);
   void internal_host_remove(const Host::Ptr& host);
 
+  void start_coalescing();
   void on_async(Async* async);
   void on_prepare(Prepare* prepare);
 

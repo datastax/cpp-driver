@@ -76,6 +76,12 @@ public:
   virtual ~ConnectionPoolManagerListener() { }
 
   /**
+   * A callback that's called when one of the manager's connections requires a
+   * flush. It's only called once on the first write to the connection.
+   */
+  virtual void on_requires_flush() { }
+
+  /**
    * A callback that's called when a manager is closed.
    *
    * @param manager The manager object that's closing.

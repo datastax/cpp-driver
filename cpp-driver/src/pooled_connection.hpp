@@ -47,12 +47,12 @@ public:
                    const Connection::Ptr& connection);
 
   /**
-   * Queues a request to be written to the wrapped connection.
+   * Writes a request to a connection, but it's not written to the socket until
+   * the connection pool manager flushes the request.
    *
-   * The event loop thread automatically handles flushing the connection.
-   *
-   * @param callback A request callback that will handle the request.
-   * @return Returns true if the request was queued, otherwise the queue is full.
+   * @param callback A request callback that handlets the request.
+   * @return Returns true if the request was written, otherwise, an error
+   * occurred.
    */
   bool write(RequestCallback* callback);
 

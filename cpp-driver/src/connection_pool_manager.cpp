@@ -192,6 +192,9 @@ void ConnectionPoolManager::notify_critical_error(ConnectionPool* pool,
 }
 
 void ConnectionPoolManager::requires_flush(ConnectionPool* pool, ConnectionPoolManager::Protected) {
+  if (to_flush_.empty()) {
+    listener_->on_requires_flush();
+  }
   to_flush_.insert(pool);
 }
 

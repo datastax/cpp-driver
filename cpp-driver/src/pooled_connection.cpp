@@ -76,6 +76,9 @@ void ChainedSetKeyspaceCallback::on_internal_set(ResponseMessage* response) {
                                   "Unable to set keyspace");
       break;
     default:
+      connection_->defunct();
+      chained_callback_->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
+                                  "Unexpected response");
       break;
   }
 }
