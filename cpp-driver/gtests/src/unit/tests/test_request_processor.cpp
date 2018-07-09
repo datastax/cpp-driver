@@ -229,6 +229,45 @@ TEST_F(RequestProcessorUnitTest, Simple) {
   try_request(connect_future->processor());
 }
 
+TEST_F(RequestProcessorUnitTest, CloseWithRequestsPending) {
+  start_all();
+
+  HostMap hosts(generate_hosts());
+
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
+                                                                                             PROTOCOL_VERSION,
+                                                                                             hosts,
+                                                                                             TokenMap::Ptr(),
+                                                                                             bind_callback(on_connected, connect_future.get())));
+
+  initializer->initialize(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+
+  Vector<ResponseFuture::Ptr> futures;
+  RequestProcessor::Ptr processor(connect_future->processor());
+
+  for (int i = 0; i < 4096; ++i) {
+    ResponseFuture::Ptr response_future(Memory::allocate<ResponseFuture>());
+    Request::ConstPtr request(Memory::allocate<QueryRequest>("SELECT * FROM table"));
+    RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request, response_future));
+
+    processor->process_request(request_handler);
+    futures.push_back(response_future);
+  }
+
+  processor->close();
+
+  for (Vector<ResponseFuture::Ptr>::const_iterator it = futures.begin(),
+       end = futures.end(); it != end; ++it) {
+    ResponseFuture::Ptr response_future(*it);
+    ASSERT_TRUE(response_future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(response_future->error());
+  }
+}
+
 TEST_F(RequestProcessorUnitTest, Auth) {
   mockssandra::SimpleCluster cluster(
         mockssandra::AuthRequestHandlerBuilder().build(), 3);

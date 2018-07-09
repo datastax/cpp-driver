@@ -33,6 +33,8 @@ class Session
     : public SessionBase
     , public RequestProcessorManagerListener {
 public:
+  ~Session();
+
   Future::Ptr prepare(const char* statement, size_t length);
 
   Future::Ptr prepare(const Statement* statement);
@@ -40,12 +42,10 @@ public:
   Future::Ptr execute(const Request::ConstPtr& request,
                       const Address* preferred_address = NULL);
 
-  void join();
-
 private:
   void execute(const RequestHandler::Ptr& request_handler);
 
-  void internal_join();
+  void join();
 
 private:
   // Session base methods
@@ -54,6 +54,8 @@ private:
                           int protocol_version,
                           const HostMap& hosts,
                           const TokenMap::Ptr& token_map);
+
+  virtual void on_close();
 
 private:
   // Cluster listener methods
@@ -68,7 +70,9 @@ private:
 
   virtual void on_update_token_map(const TokenMap::Ptr& token_map);
 
-  virtual void on_close(Cluster* cluster);
+  // Tell the compiler that we're intentionally using an overloaded virtual
+  // method.
+  using SessionBase::on_close;
 
 private:
   // Request Processor manager listener methods

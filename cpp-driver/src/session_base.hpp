@@ -70,11 +70,6 @@ public:
    */
   void close(const Future::Ptr& future);
 
-  /**
-   * Wait for the event loop thread to join.
-   */
-  void join();
-
 public:
   String connect_keyspace() const { return connect_keyspace_; }
   const Config& config() const { return config_; }
@@ -133,6 +128,14 @@ protected:
   virtual void on_connect_failed(CassError code,
                                  const String& message);
 
+  /**
+   * A callback called at the start of the close process. By default this closes
+   * the cluster object. Override to handle something more complex, but
+   * `notify_close()` must be caused in the overridden method to properly close
+   * the cluster object and notify the close future.
+   */
+  virtual void on_close();
+
 protected:
   /**
    * If overridden the override method must call `notify_closed()`.
@@ -152,6 +155,8 @@ private:
   ScopedPtr<Random> random_;
   ScopedPtr<Metrics> metrics_;
   String connect_keyspace_;
+  CassError connect_error_code_;
+  String connect_error_message_;
   Future::Ptr connect_future_;
   Future::Ptr close_future_;
 };

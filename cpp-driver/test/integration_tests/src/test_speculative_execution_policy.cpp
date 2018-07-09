@@ -440,7 +440,7 @@ BOOST_AUTO_TEST_CASE(execute_on_all_nodes_with_timeout) {
     tester.initialize();
 
     // Execute a query and ensure all nodes are tested and timeout occurs
-    test_utils::CassFuturePtr future = tester.query(true, 500,
+    test_utils::CassFuturePtr future = tester.query(true, 300,
       CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     std::vector<std::string> attempted_hosts = tester.attempted_hosts(future);
     BOOST_REQUIRE_EQUAL(3, attempted_hosts.size());

@@ -247,10 +247,18 @@ void RequestProcessor::on_pool_critical_error(const Address& address,
   listener_->on_pool_critical_error(address, code, message);
 }
 
+void RequestProcessor::on_requires_flush() {
+  if (!timer_.is_running()) {
+    is_processing_.store(true);
+    start_coalescing();
+  }
+}
+
 void RequestProcessor::on_close(ConnectionPoolManager* manager) {
   async_.close_handle();
   prepare_.close_handle();
   timer_.close_handle();
+  connection_pool_manager_.reset();
   listener_->on_close(this);
   dec_ref();
 }
@@ -320,11 +328,8 @@ bool RequestProcessor::on_prepare_all(const RequestHandler::Ptr& request_handler
     }
   }
 
-  connection_pool_manager_->flush();
-
   return true;
 }
-
 
 void RequestProcessor::on_done() {
 #ifdef CASS_INTERNAL_DIAGNOSTICS
@@ -422,13 +427,22 @@ void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
   }
 }
 
-void RequestProcessor::on_timeout(MicroTimer* timer) {
-  int processed = process_requests((io_time_during_coalesce_ * new_request_ratio_) / 100);
+void RequestProcessor::start_coalescing() {
   io_time_during_coalesce_ = 0;
+  timer_.start(event_loop_->loop(), coalesce_delay_us_,
+               bind_callback(&RequestProcessor::on_timeout, this));
+}
+
+void RequestProcessor::on_timeout(MicroTimer* timer) {
+  // Don't process for more time than the coalesce delay.
+  uint64_t processing_time = std::min((io_time_during_coalesce_ * new_request_ratio_) / 100,
+                                      coalesce_delay_us_ * 1000);
+  int processed = process_requests(processing_time);
+
+  connection_pool_manager_->flush();
 
   if (processed > 0) {
     attempts_without_requests_ = 0;
-    connection_pool_manager_->flush();
 
 #ifdef CASS_INTERNAL_DIAGNOSTICS
     reads_per_.record_value(reads_during_coalesce_);
@@ -437,6 +451,8 @@ void RequestProcessor::on_timeout(MicroTimer* timer) {
     writes_during_coalesce_ = 0;
 #endif
   } else {
+    // Keep trying to process more requests before for a few iterations before
+    // putting the loop back to sleep.
     attempts_without_requests_++;
     if (attempts_without_requests_ > 5) {
       attempts_without_requests_ = 0;
@@ -447,21 +463,13 @@ void RequestProcessor::on_timeout(MicroTimer* timer) {
         return;
       }
     }
+    start_coalescing();
   }
-
-  timer_.start(event_loop_->loop(), coalesce_delay_us_,
-               bind_callback(&RequestProcessor::on_timeout, this));
 }
 
 void RequestProcessor::on_async(Async* async) {
-  if (process_requests(0) > 0) {
-    connection_pool_manager_->flush();
-  }
-
-  if (!timer_.is_running()) {
-    timer_.start(event_loop_->loop(), coalesce_delay_us_,
-                 bind_callback(&RequestProcessor::on_timeout, this));
-  }
+  process_requests(0);
+  connection_pool_manager_->flush();
 }
 
 void RequestProcessor::on_prepare(Prepare* prepare) {

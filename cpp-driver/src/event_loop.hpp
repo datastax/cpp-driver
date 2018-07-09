@@ -95,7 +95,7 @@ public:
   /**
    * Get the elapsed time for the processing of IO
    *
-   * @return Elapsed IO processing time (in milliseconds)
+   * @return Elapsed IO processing time (in nanoseconds)
    */
   uint64_t io_time_elapsed() const { return io_time_elapsed_; }
 

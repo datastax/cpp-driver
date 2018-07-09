@@ -31,6 +31,10 @@ SessionBase::SessionBase()
 
 SessionBase::~SessionBase() {
   uv_mutex_destroy(&mutex_);
+  if (event_loop_) {
+    event_loop_->close_handles();
+    event_loop_->join();
+  }
 }
 
 void SessionBase::connect(const Config& config,
@@ -98,14 +102,7 @@ void SessionBase::close(const Future::Ptr& future) {
   }
   state_ = SESSION_STATE_CLOSING;
   close_future_ = future;
-  cluster_->close();
-}
-
-void SessionBase::join() {
-  if (event_loop_) {
-    event_loop_->close_handles();
-    event_loop_->join();
-  }
+  on_close();
 }
 
 void SessionBase::notify_connected() {
@@ -118,8 +115,12 @@ void SessionBase::notify_connected() {
 }
 
 void SessionBase::notify_connect_failed(CassError code, const String& message) {
-  ScopedMutex l(&mutex_);
-  if (state_ == SESSION_STATE_CONNECTING) {
+  if (cluster_) {
+    connect_error_code_ = code;
+    connect_error_message_ = message;
+    cluster_->close();
+  } else {
+    ScopedMutex l(&mutex_);
     state_ = SESSION_STATE_CLOSED;
     connect_future_->set_error(code, message);
     connect_future_.reset();
@@ -127,13 +128,7 @@ void SessionBase::notify_connect_failed(CassError code, const String& message) {
 }
 
 void SessionBase::notify_closed() {
-  ScopedMutex l(&mutex_);
-  if (state_ == SESSION_STATE_CLOSING) {
-    state_ = SESSION_STATE_CLOSED;
-    close_future_->set();
-    close_future_.reset();
-    l.unlock();
-  }
+  cluster_->close();
 }
 
 void SessionBase::on_connect(const Host::Ptr& connected_host,
@@ -147,8 +142,21 @@ void SessionBase::on_connect_failed(CassError code, const String& message) {
   notify_connect_failed(code, message);
 }
 
-void SessionBase::on_close(Cluster* cluster) {
+void SessionBase::on_close() {
   notify_closed();
+}
+
+void SessionBase::on_close(Cluster* cluster) {
+  ScopedMutex l(&mutex_);
+  if (state_ == SESSION_STATE_CLOSING) {
+    state_ = SESSION_STATE_CLOSED;
+    close_future_->set();
+    close_future_.reset();
+  } else if (state_ == SESSION_STATE_CONNECTING) {
+    state_ = SESSION_STATE_CLOSED;
+    connect_future_->set_error(connect_error_code_, connect_error_message_);
+    connect_future_.reset();
+  }
 }
 
 void SessionBase::on_initialize(ClusterConnector* connector) {

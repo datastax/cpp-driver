@@ -163,7 +163,7 @@ void SchemaAgreementHandler::on_retry_timeout(Timer* timer) {
   if (connection_->is_closing()) {
     LOG_WARN("Connection closed while attempting to check schema agreement");
     finish();
-  } else if (connection_->write(callback()) == Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS) {
+  } else if (connection_->write_and_flush(callback()) == Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS) {
     LOG_WARN("No stream available when attempting to check schema agreement");
     finish();
   }
