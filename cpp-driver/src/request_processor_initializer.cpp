@@ -131,7 +131,7 @@ void RequestProcessorInitializer::internal_intialize() {
     }
 
   connection_pool_manager_initializer_
-      ->with_settings(settings_.connection_pool_manager_settings)
+      ->with_settings(settings_.connection_pool_settings)
       ->with_listener(this)
       ->with_keyspace(keyspace_)
       ->with_metrics(metrics_)

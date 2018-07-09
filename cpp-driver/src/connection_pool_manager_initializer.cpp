@@ -39,7 +39,6 @@ void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
     ConnectionPoolConnector::Ptr pool_connector(
           Memory::allocate<ConnectionPoolConnector>(*it,
                                                     protocol_version_,
-                                                    settings_.num_connections_per_host,
                                                     bind_callback(&ConnectionPoolManagerInitializer::on_connect, this)));
     pending_pools_.push_back(pool_connector);
     pool_connector

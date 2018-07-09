@@ -107,7 +107,7 @@ RequestProcessorSettings::RequestProcessorSettings()
   }
 
 RequestProcessorSettings::RequestProcessorSettings(const Config& config)
-  : connection_pool_manager_settings(config)
+  : connection_pool_settings(config)
   , max_schema_wait_time_ms(config.max_schema_wait_time_ms())
   , prepare_on_all_hosts(config.prepare_on_all_hosts())
   , timestamp_generator(config.timestamp_gen())

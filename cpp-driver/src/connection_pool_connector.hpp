@@ -48,13 +48,11 @@ public:
    *
    * @param address The address to connect to.
    * @param protocol_version
-   * @param num_connections_per_host
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
   ConnectionPoolConnector(const Address& address,
                           int protocol_version,
-                          size_t num_connections_per_host,
                           const Callback& callback);
 
   /**
@@ -133,12 +131,11 @@ private:
   Connection::Vec connections_;
   Connector::Ptr critical_error_connector_;
 
-  ConnectionPoolListener* listener_;
   const Address address_;
   const int protocol_version_;
-  const size_t num_connections_per_host_;
   ConnectionPoolSettings settings_;
   String keyspace_;
+  ConnectionPoolListener* listener_;
   Metrics* metrics_;
 };
 

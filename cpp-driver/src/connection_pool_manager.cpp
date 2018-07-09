@@ -47,8 +47,8 @@ ConnectionPoolManager::ConnectionPoolManager(const ConnectionPool::Map& pools,
   : loop_(loop)
   , protocol_version_(protocol_version)
   , settings_(settings)
+  , listener_(listener ? listener : &nop_connection_pool_manager_listener__)
   , close_state_(CLOSE_STATE_OPEN)
-  , pools_(pools)
   , keyspace_(keyspace)
   , metrics_(metrics)
 #ifdef CASS_INTERNAL_DIAGNOSTICS
@@ -59,11 +59,10 @@ ConnectionPoolManager::ConnectionPoolManager(const ConnectionPool::Map& pools,
   uv_mutex_init(&keyspace_mutex_);
   set_pointer_keys(to_flush_);
 
-  set_listener(listener);
-  for (ConnectionPool::Map::iterator it = pools_.begin(),
-       end= pools_.end(); it != end; ++it) {
+  for (ConnectionPool::Map::const_iterator it = pools.begin(),
+       end= pools.end(); it != end; ++it) {
     it->second->set_listener(this);
-    it->second->set_manager(this);
+    add_pool(it->second);
   }
 }
 
@@ -110,7 +109,6 @@ void ConnectionPoolManager::add(const Address& address) {
   ConnectionPoolConnector::Ptr connector(
         Memory::allocate<ConnectionPoolConnector>(address,
                                                   protocol_version_,
-                                                  settings_.num_connections_per_host,
                                                   bind_callback(&ConnectionPoolManager::on_connect, this)));
   pending_pools_.push_back(connector);
   connector
@@ -196,6 +194,7 @@ void ConnectionPoolManager::on_close(ConnectionPool* pool) {
 
 void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool) {
   LOG_DEBUG("Adding pool for host %s", pool->address().to_string().c_str());
+  pool->set_manager(this);
   pools_[pool->address()] = pool;
 }
 

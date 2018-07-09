@@ -176,8 +176,8 @@ private:
   uv_loop_t* loop_;
 
   const int protocol_version_;
-  ConnectionPoolManagerListener* listener_;
   const ConnectionPoolSettings settings_;
+  ConnectionPoolManagerListener* listener_;
 
   CloseState close_state_;
   ConnectionPool::Map pools_;

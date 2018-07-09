@@ -52,7 +52,7 @@ struct RequestProcessorSettings {
 
   RequestProcessorSettings(const Config& config);
 
-  ConnectionPoolSettings connection_pool_manager_settings;
+  ConnectionPoolSettings connection_pool_settings;
 
   unsigned max_schema_wait_time_ms;
 

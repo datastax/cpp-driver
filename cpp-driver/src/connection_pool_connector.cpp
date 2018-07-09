@@ -24,16 +24,14 @@ namespace cass {
 
 ConnectionPoolConnector::ConnectionPoolConnector(const Address& address,
                                                  int protocol_version,
-                                                 size_t num_connections_per_host,
                                                  const Callback& callback)
   : loop_(NULL)
   , callback_(callback)
   , is_canceled_(false)
   , remaining_(0)
-  , listener_(NULL)
   , address_(address)
   , protocol_version_(protocol_version)
-  , num_connections_per_host_(num_connections_per_host)
+  , listener_(NULL)
   , metrics_(NULL) { }
 
 ConnectionPoolConnector* ConnectionPoolConnector::with_listener(ConnectionPoolListener* listener) {
@@ -59,8 +57,8 @@ ConnectionPoolConnector* ConnectionPoolConnector::with_settings(const Connection
 void ConnectionPoolConnector::connect(uv_loop_t*  loop) {
   inc_ref();
   loop_ = loop;
-  remaining_ = num_connections_per_host_;
-  for (size_t i = 0; i < num_connections_per_host_; ++i) {
+  remaining_ = settings_.num_connections_per_host;
+  for (size_t i = 0; i < settings_.num_connections_per_host; ++i) {
     Connector::Ptr connector(
           Memory::allocate<Connector>(address_, protocol_version_,
                                       bind_callback(&ConnectionPoolConnector::on_connect, this)));

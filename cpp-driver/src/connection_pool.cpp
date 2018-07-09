@@ -79,8 +79,8 @@ ConnectionPool::ConnectionPool(const Connection::Vec& connections,
        end = connections.end(); it != end; ++it) {
     const Connection::Ptr& connection(*it);
     if (!connection->is_closing()) {
-      connections_.push_back(PooledConnection::Ptr(
-                               Memory::allocate<PooledConnection>(this, connection)));
+      add_connection(PooledConnection::Ptr(
+                       Memory::allocate<PooledConnection>(this, connection)));
     }
   }
 
