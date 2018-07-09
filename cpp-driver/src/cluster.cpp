@@ -368,11 +368,7 @@ void Cluster::internal_close() {
     timer_.stop();
     handle_close();
   } else {
-    if (connection_) {
-      connection_->close();
-    } else {
-      LOG_WARN("Control connection already closing or closed");
-    }
+    if (connection_) connection_->close();
   }
 }
 
