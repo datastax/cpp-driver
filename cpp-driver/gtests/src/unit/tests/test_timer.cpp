@@ -25,7 +25,8 @@ public:
 
   TimerUnitTest()
     : count_(0)
-    , repeat_timeout_(0) { }
+    , repeat_timeout_(0)
+    , restart_count_(0) { }
 
   void test_once(uint64_t timeout) {
     Timer timer;
@@ -75,6 +76,28 @@ public:
     EXPECT_EQ(count_, 0);
   }
 
+
+  void test_restart() {
+    Timer timer;
+
+    restart_timer_.start(loop(), 10,
+                             bind_callback(&TimerUnitTest::on_timer_once, this));
+
+    timer.start(loop(), 1,
+                bind_callback(&TimerUnitTest::on_timer_restart, this));
+
+    EXPECT_TRUE(restart_timer_.is_running());
+    EXPECT_TRUE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(restart_timer_.is_running());
+    EXPECT_FALSE(timer.is_running());
+
+    EXPECT_EQ(restart_count_, 10);
+    EXPECT_EQ(count_, 0); // Make sure the timer was never triggered
+  }
+
 private:
   void on_timer_once(Timer* timer) {
     count_++;
@@ -90,8 +113,24 @@ private:
     }
   }
 
+  void on_timer_restart(Timer* timer) {
+    restart_count_++;
+    if  (restart_count_ == 10) {
+      restart_timer_.close_handle();
+    } else {
+      restart_timer_.start(loop(), 10,
+                             bind_callback(&TimerUnitTest::on_timer_once, this));
+
+      timer->start(loop(), 1,
+                   bind_callback(&TimerUnitTest::on_timer_restart, this));
+    }
+  }
+
   int count_;
   uint64_t repeat_timeout_;
+
+  int restart_count_;
+  Timer restart_timer_;
 };
 
 TEST_F(TimerUnitTest, Once)
@@ -117,4 +156,9 @@ TEST_F(TimerUnitTest, RepeatZero)
 TEST_F(TimerUnitTest, Stop)
 {
   test_stop();
+}
+
+TEST_F(TimerUnitTest, Restart)
+{
+  test_restart();
 }

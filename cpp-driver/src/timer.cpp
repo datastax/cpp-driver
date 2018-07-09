@@ -40,11 +40,9 @@ int Timer::start(uv_loop_t* loop, uint64_t timeout, const Timer::Callback& callb
     if (rc != 0) return rc;
     state_ = STOPPED;
   }
-  if (state_ == STOPPED) {
-    rc = uv_timer_start(handle_, on_timeout, timeout, 0);
-    if (rc != 0) return rc;
-    state_ = STARTED;
-  }
+  rc = uv_timer_start(handle_, on_timeout, timeout, 0);
+  if (rc != 0) return rc;
+  state_ = STARTED;
   callback_ = callback;
   return 0;
 }

@@ -55,6 +55,9 @@ public:
   /**
    * Start the timer.
    *
+   * Important: Unlike `Timer` this cannot be restarted by calling this method
+   * when a the timer is currently running.
+   *
    * @param loop The event loop where the timer should run.
    * @param timeout_us The timeout in microseconds.
    * @param callback The callback that handles the timeout.
