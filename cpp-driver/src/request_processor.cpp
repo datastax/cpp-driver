@@ -463,13 +463,23 @@ void RequestProcessor::on_timeout(MicroTimer* timer) {
         return;
       }
     }
+  }
+
+  if (!timer_.is_running()) {
     start_coalescing();
   }
 }
 
 void RequestProcessor::on_async(Async* async) {
   process_requests(0);
+
   connection_pool_manager_->flush();
+
+  // Always attempt to coalesce even if no requests are written so that
+  // processing is properly terminated.
+  if (!timer_.is_running()) {
+    start_coalescing();
+  }
 }
 
 void RequestProcessor::on_prepare(Prepare* prepare) {
