@@ -92,7 +92,8 @@ void SessionBase::close(const Future::Ptr& future) {
   ScopedMutex l(&mutex_);
   if (state_ == SESSION_STATE_CLOSED ||
       state_ == SESSION_STATE_CLOSING) {
-    future->set();
+    future->set_error(CASS_ERROR_LIB_UNABLE_TO_CLOSE,
+                      "Already closing or closed");
     return;
   }
   state_ = SESSION_STATE_CLOSING;
