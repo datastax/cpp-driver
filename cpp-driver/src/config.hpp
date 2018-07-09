@@ -210,7 +210,6 @@ public:
 
   LoadBalancingPolicy::Vec load_balancing_policies() const {
     LoadBalancingPolicy::Vec policies;
-    policies.push_back(default_profile().load_balancing_policy());
     for (ExecutionProfile::Map::const_iterator it = profiles_.begin(),
          end = profiles_.end(); it != end; ++it) {
       if (it->second.load_balancing_policy()) {

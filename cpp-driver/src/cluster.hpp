@@ -175,21 +175,29 @@ public:
   /**
    * Constructor. Don't use directly.
    *
-   * @param connector The connector for the control connection.
+   * @param connection The current control connection.
    * @param listener A listener to handle events.
-   * @param load_balancing_policy A load balancing policy that's used to handle
-   * reconnecting the control connection.
+   * @param event_loop The event loop.
+   * @param connected_host The currently connected host.
    * @param hosts Available hosts for the cluster (based on load balancing
    * policies)
+   * @param schema Current schema metadata.
+   * @param load_balancing_policy The default load balancing policy to use for
+   * determining the next control connection host.
+   * @param load_balancing_policies
    * @param settings The control connection settings to use for reconnecting the
    * control connection.
    */
-  Cluster(ControlConnector* connector,
+  Cluster(const ControlConnection::Ptr& connection,
           ClusterListener* listener,
           EventLoop* event_loop,
-          Random* random,
+          const Host::Ptr& connected_host,
           const HostMap& hosts,
+          const ControlConnectionSchema& schema,
+          const LoadBalancingPolicy::Ptr& load_balancing_policy,
+          const LoadBalancingPolicy::Vec& load_balancing_policies,
           const ClusterSettings& settings);
+
 
   /**
    * Close the current connection and stop the re-connection process (thread-safe).

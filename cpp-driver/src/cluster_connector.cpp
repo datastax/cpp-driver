@@ -194,12 +194,45 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
   }
 
   if (connector->is_ok()) {
-    // Gather the available hosts for the load balancing policies
+    ControlConnection::Ptr connection = connector->release_connection();
     const HostMap& hosts(connector->hosts());
+    LoadBalancingPolicy::Vec policies;
+
+    HostMap::const_iterator host_it = hosts.find(connection->address());
+    if (host_it == hosts.end()) {
+      // This error is unlikely to happen and it likely means that the local
+      // metadata is corrupt or missing and the control connection process
+      // would've probably failed before this happens.
+      LOG_ERROR("Current control connection host %s not found in hosts metadata",
+                connection->address_string().c_str());
+
+      ++contact_points_resolved_it_; // Move to the next contact point
+      internal_connect();
+      return;
+    }
+    Host::Ptr connected_host(host_it->second);
+
+    // Build policies list including the default policy
+    LoadBalancingPolicy::Ptr default_policy(settings_.load_balancing_policy->new_instance());
+    policies.push_back(default_policy);
+    for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
+         end = settings_.load_balancing_polices.end(); it != end; ++it) {
+      policies.push_back(LoadBalancingPolicy::Ptr((*it)->new_instance()));
+    }
+
+    // Initialize all created policies
+    for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
+         end = policies.end(); it != end; ++it) {
+      LoadBalancingPolicy::Ptr policy(*it);
+      policy->init(connected_host, hosts, random_);
+      policy->register_handles(event_loop_->loop());
+    }
+
+    // Gather the available hosts for the load balancing policies
     HostMap available_hosts;
     for (HostMap::const_iterator it = hosts.begin(), end = hosts.end();
          it != end; ++it) {
-      if (!is_host_ignored(settings_.load_balancing_polices, it->second)) {
+      if (!is_host_ignored(policies, it->second)) {
         available_hosts[it->first] = it->second;
       }
     }
@@ -212,11 +245,14 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
       return;
     }
 
-    cluster_.reset(Memory::allocate<Cluster>(connector,
+    cluster_.reset(Memory::allocate<Cluster>(connection,
                                              listener_,
                                              event_loop_,
-                                             random_,
+                                             connected_host,
                                              available_hosts,
+                                             connector->schema(),
+                                             default_policy,
+                                             policies,
                                              settings_));
     finish();
   } else if (connector->is_invalid_protocol()) {

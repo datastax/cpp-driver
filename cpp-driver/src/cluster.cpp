@@ -153,39 +153,33 @@ ClusterSettings::ClusterSettings(const Config& config)
   , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
   , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH) { }
 
-Cluster::Cluster(ControlConnector* connector,
+Cluster::Cluster(const ControlConnection::Ptr& connection,
                  ClusterListener* listener,
                  EventLoop* event_loop,
-                 Random* random,
+                 const Host::Ptr& connected_host,
                  const HostMap& hosts,
+                 const ControlConnectionSchema& schema,
+                 const LoadBalancingPolicy::Ptr& load_balancing_policy,
+                 const LoadBalancingPolicy::Vec& load_balancing_policies,
                  const ClusterSettings& settings)
-  : listener_(listener ? listener : &nop_cluster_listener__)
+  : connection_(connection)
+  , listener_(listener ? listener : &nop_cluster_listener__)
   , event_loop_(event_loop)
-  , load_balancing_policy_(settings.load_balancing_policy->new_instance())
+  , load_balancing_policy_(load_balancing_policy)
+  , load_balancing_policies_(load_balancing_policies)
   , settings_(settings)
   , is_closing_(false)
+  , connected_host_(connected_host)
   , hosts_(hosts) {
   inc_ref();
-  connection_ = connector->release_connection();
   connection_->set_listener(this);
 
-  connected_host_ = hosts_[connection_->address()];
-  assert(connected_host_ && "Connected host not found in hosts map");
-
-  load_balancing_policy_->init(connected_host_, hosts_, random);
   query_plan_.reset(load_balancing_policy_->new_query_plan("", NULL, NULL));
 
-  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
-       end = settings_.load_balancing_polices.end(); it != end; ++it) {
-    LoadBalancingPolicy::Ptr policy((*it)->new_instance());
-    policy->register_handles(event_loop_->loop());
-    load_balancing_policies_.push_back(policy);
-  }
-
-  update_schema(connector->schema());
-  update_token_map(connector->hosts(),
+  update_schema(schema);
+  update_token_map(hosts,
                    connected_host_->partitioner(),
-                   connector->schema());
+                   schema);
 
   listener_->on_reconnect(this);
 }
