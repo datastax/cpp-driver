@@ -411,7 +411,10 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
   }
 
   host->set_up();
-  load_balancing_policy_->on_up(host);
+  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
+       end = settings_.load_balancing_polices.end(); it != end; ++it) {
+    (*it)->on_up(host);
+  }
 
   if (!prepare_host(host,
                     bind_callback(&Cluster::on_prepare_host_up, this))) {
@@ -440,21 +443,27 @@ void Cluster::internal_notify_down(const Address& address) {
   }
 
   host->set_down();
-  load_balancing_policy_->on_down(host);
+  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
+       end = settings_.load_balancing_polices.end(); it != end; ++it) {
+    (*it)->on_down(host);
+  }
 
   listener_->on_down(host);
 }
 
 void Cluster::notify_add(const Host::Ptr& host) {
-  LockedHostMap::const_iterator it = hosts_.find(host->address());
+  LockedHostMap::const_iterator host_it = hosts_.find(host->address());
 
-  if (it != hosts_.end()) {
+  if (host_it != hosts_.end()) {
     LOG_WARN("Attempting to add host %s that we already have",
              host->address_string().c_str());
     // If an entry already exists then notify that the node has been removed
     // then re-add it.
-    load_balancing_policy_->on_remove(it->second);
-    listener_->on_remove(it->second);
+    for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
+         end = settings_.load_balancing_polices.end(); it != end; ++it) {
+      (*it)->on_remove(host_it->second);
+    }
+    listener_->on_remove(host_it->second);
   }
 
   if (is_host_ignored(host)) {
@@ -462,7 +471,10 @@ void Cluster::notify_add(const Host::Ptr& host) {
   }
 
   hosts_[host->address()] = host;
-  load_balancing_policy_->on_add(host);
+  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
+       end = settings_.load_balancing_polices.end(); it != end; ++it) {
+    (*it)->on_add(host);
+  }
 
   if (!prepare_host(host,
                     bind_callback(&Cluster::on_prepare_host_add, this))) {
@@ -497,7 +509,10 @@ void Cluster::notify_remove(const Address& address) {
   }
 
   hosts_.erase(host->address());
-  load_balancing_policy_->on_remove(host);
+  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
+       end = settings_.load_balancing_polices.end(); it != end; ++it) {
+    (*it)->on_remove(host);
+  }
   listener_->on_remove(host);
 }
 

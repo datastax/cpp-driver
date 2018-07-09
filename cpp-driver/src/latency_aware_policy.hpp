@@ -75,6 +75,9 @@ public:
   }
 
 private:
+  void start_timer(uv_loop_t* loop);
+
+private:
   class LatencyAwareQueryPlan : public QueryPlan {
   public:
     LatencyAwareQueryPlan(LatencyAwarePolicy* policy, QueryPlan* child_plan)

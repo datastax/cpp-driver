@@ -336,6 +336,7 @@ public:
     // This is required as their is no exposed API to set this chained policy
     ExecutionProfile copy = *profile;
     copy.set_host_targeting(default_profile_.host_targeting());
+    copy.build_load_balancing_policy();
     profiles_[name] = copy;
   }
 
