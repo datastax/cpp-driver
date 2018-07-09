@@ -31,47 +31,10 @@ namespace cass {
 
 class EventLoop;
 
-class ConnectionPoolListener {
-public:
-  virtual ~ConnectionPoolListener() { }
-
-  /**
-   * A callback that's called when a host is up.
-   *
-   * @param address The address of the host.
-   */
-  virtual void on_pool_up(const Address& address) = 0;
-
-  /**
-   * A callback that's called when a host is down.
-   *
-   * @param address The address of the host.
-   */
-  virtual void on_pool_down(const Address& address) = 0;
-
-  /**
-   * A callback that's called when a host has a critical error
-   * during reconnection.
-   *
-   * The following are critical errors:
-   * * Invalid keyspace
-   * * Invalid protocol version
-   * * Authentication failure
-   * * SSL failure
-   *
-   * @param address The address of the host.
-   * @param code The code of the critical error.
-   * @param message The message of the critical error.
-   */
-  virtual void on_pool_critical_error(const Address& address,
-                                      Connector::ConnectionError code,
-                                      const String& message) = 0;
-};
-
 /**
  * A listener that handles connection pool events.
  */
-class ConnectionPoolManagerListener : public ConnectionPoolListener {
+class ConnectionPoolManagerListener : public ConnectionPoolStateListener {
 public:
   virtual ~ConnectionPoolManagerListener() { }
 
@@ -90,36 +53,18 @@ public:
 };
 
 /**
- * The connection pool manager settings.
- */
-struct ConnectionPoolManagerSettings {
-  /**
-   * Constructor. Initialize with default settings.
-   */
-  ConnectionPoolManagerSettings();
-
-  /**
-   * Constructor. Initialize manager settings from a config object.
-   *
-   * @param config The config object.
-   */
-  ConnectionPoolManagerSettings(const Config& config);
-
-  ConnectionSettings connection_settings;
-  size_t num_connections_per_host;
-  uint64_t reconnect_wait_time_ms;
-};
-
-/**
  * A manager for one or more connection pools to different hosts.
  */
-class ConnectionPoolManager : public RefCounted<ConnectionPoolManager> {
+class ConnectionPoolManager
+    : public RefCounted<ConnectionPoolManager>
+    , public ConnectionPoolListener {
 public:
   typedef SharedRefPtr<ConnectionPoolManager> Ptr;
 
   /**
    * Constructor. Don't use directly.
    *
+   * @param pools
    * @param loop Event loop to utilize for handling requests.
    * @param protocol_version The protocol version to use for connections.
    * @param keyspace The current keyspace to use for connections.
@@ -127,12 +72,13 @@ public:
    * @param metrics An object for recording metrics.
    * @param settings Settings for the manager and its connections.
    */
-  ConnectionPoolManager(uv_loop_t* loop,
+  ConnectionPoolManager(const ConnectionPool::Map& pools,
+                        uv_loop_t* loop,
                         int protocol_version,
                         const String& keyspace,
                         ConnectionPoolManagerListener* listener,
                         Metrics* metrics,
-                        const ConnectionPoolManagerSettings& settings);
+                        const ConnectionPoolSettings& settings);
   ~ConnectionPoolManager();
 
   /**
@@ -185,7 +131,7 @@ public:
 public:
   uv_loop_t* loop() const { return loop_; }
   int protocol_version() const { return protocol_version_; }
-  const ConnectionPoolManagerSettings& settings() const { return settings_; }
+  const ConnectionPoolSettings& settings() const { return settings_; }
   ConnectionPoolManagerListener* listener() const { return listener_; }
 
   String keyspace() const;
@@ -197,66 +143,20 @@ public:
   HistogramWrapper& flush_bytes() { return flush_bytes_; }
 #endif
 
-public:
-  class Protected {
-    friend class ConnectionPool;
-    friend class ConnectionPoolManagerInitializer;
-    Protected() { }
-    Protected(Protected const&) { }
-  };
+private:
+  // Connection pool listener methods
 
-  /**
-   * Add a connection pool from the event loop thread.
-   *
-   * @param pool A pool to add.
-   * @param A key to restrict access to the method.
-   */
-  void add_pool(const ConnectionPool::Ptr& pool, Protected);
+  virtual void on_pool_up(const Address& address);
 
-  /**
-   * Notify that a pool is closed.
-   *
-   * @param pool A pool to remove.
-   * @param should_notify_down Notify the listener that the connection is down if true.
-   * @param A key to restrict access to the method.
-   */
-  void notify_closed(ConnectionPool* pool, bool should_notify_down, Protected);
+  virtual void on_pool_down(const Address& address);
 
-  /**
-   * Notify that a pool is up.
-   *
-   * @param pool A pool that now has connections available.
-   * @param A key to restrict access to the method.
-   */
-  void notify_up(ConnectionPool* pool, Protected);
+  virtual void on_pool_critical_error(const Address& address,
+                                 Connector::ConnectionError code,
+                                 const String& message);
 
-  /**
-   * Notify that a pool is down.
-   *
-   * @param pool A pool that now has no more connection available.
-   * @param A key to restrict access to the method.
-   */
-  void notify_down(ConnectionPool* pool, Protected);
+  virtual void on_requires_flush(ConnectionPool* pool);
 
-  /**
-   * Notify that a pool has had a critical error.
-   *
-   * @param pool A pool that had a critical error.
-   * @param code The code of the critical error.
-   * @param message The message of the critical error.
-   * @param A key to restrict access to the method.
-   */
-  void notify_critical_error(ConnectionPool* pool,
-                             Connector::ConnectionError code,
-                             const String& message,
-                             Protected);
-
-  /**
-   * Add a pool to be flushed.
-   *
-   * @param pool A pool that has connections with pending writes.
-   */
-  void requires_flush(ConnectionPool* pool, Protected);
+  virtual void on_close(ConnectionPool* pool);
 
 private:
   enum CloseState {
@@ -266,7 +166,7 @@ private:
   };
 
 private:
-  void internal_add_pool(const ConnectionPool::Ptr& pool);
+  void add_pool(const ConnectionPool::Ptr& pool);
   bool maybe_closed();
 
 private:
@@ -277,7 +177,7 @@ private:
 
   const int protocol_version_;
   ConnectionPoolManagerListener* listener_;
-  const ConnectionPoolManagerSettings settings_;
+  const ConnectionPoolSettings settings_;
 
   CloseState close_state_;
   ConnectionPool::Map pools_;

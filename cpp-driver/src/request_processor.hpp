@@ -41,7 +41,7 @@ class RequestProcessorManager;
 class Session;
 
 class RequestProcessorListener
-    : public ConnectionPoolListener
+    : public ConnectionPoolStateListener
     , public RequestChangeListener {
 public:
   virtual void on_close(RequestProcessor* processor) = 0;
@@ -52,7 +52,7 @@ struct RequestProcessorSettings {
 
   RequestProcessorSettings(const Config& config);
 
-  ConnectionPoolManagerSettings connection_pool_manager_settings;
+  ConnectionPoolSettings connection_pool_manager_settings;
 
   unsigned max_schema_wait_time_ms;
 

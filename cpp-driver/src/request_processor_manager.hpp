@@ -27,7 +27,7 @@ namespace cass {
 class RequestProcessorManager;
 
 class RequestProcessorManagerListener
-    : public ConnectionPoolListener
+    : public ConnectionPoolStateListener
     , public RequestChangeListener {
 public:
   virtual void on_close(RequestProcessorManager* manager) = 0;

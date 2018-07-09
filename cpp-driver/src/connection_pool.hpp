@@ -18,16 +18,83 @@
 #define __CASS_CONNECTION_POOL_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "delayed_connector.hpp"
 #include "pooled_connection.hpp"
-#include "pooled_connector.hpp"
 
 #include <uv.h>
 
 namespace cass {
 
+class ConnectionPool;
 class ConnectionPoolConnector;
 class ConnectionPoolManager;
 class EventLoop;
+
+class ConnectionPoolStateListener {
+public:
+  virtual ~ConnectionPoolStateListener() { }
+
+  /**
+   * A callback that's called when a host is up.
+   *
+   * @param address The address of the host.
+   */
+  virtual void on_pool_up(const Address& address) = 0;
+
+  /**
+   * A callback that's called when a host is down.
+   *
+   * @param address The address of the host.
+   */
+  virtual void on_pool_down(const Address& address) = 0;
+
+  /**
+   * A callback that's called when a host has a critical error
+   * during reconnection.
+   *
+   * The following are critical errors:
+   * * Invalid keyspace
+   * * Invalid protocol version
+   * * Authentication failure
+   * * SSL failure
+   *
+   * @param address The address of the host.
+   * @param code The code of the critical error.
+   * @param message The message of the critical error.
+   */
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message) = 0;
+};
+
+
+class ConnectionPoolListener : public ConnectionPoolStateListener {
+public:
+  virtual void on_requires_flush(ConnectionPool* pool) { }
+
+  virtual void on_close(ConnectionPool* pool) = 0;
+};
+
+/**
+ * The connection pool settings.
+ */
+struct ConnectionPoolSettings {
+  /**
+   * Constructor. Initialize with default settings.
+   */
+  ConnectionPoolSettings();
+
+  /**
+   * Constructor. Initialize the pool settings from a config object.
+   *
+   * @param config The config object.
+   */
+  ConnectionPoolSettings(const Config& config);
+
+  ConnectionSettings connection_settings;
+  size_t num_connections_per_host;
+  uint64_t reconnect_wait_time_ms;
+};
 
 /**
  * A pool of connections to the same host.
@@ -47,10 +114,21 @@ public:
   /**
    * Constructor. Don't use directly.
    *
-   * @param manager The manager for this pool.
-   * @param address The address for this pool.
+   * @param connections
+   * @param listener
+   * @param loop
+   * @param address
+   * @param protocol_version
+   * @param settings
+   * @param metrics
    */
-  ConnectionPool(ConnectionPoolManager* manager, const Address& address);
+  ConnectionPool(const Connection::Vec& connections,
+                 ConnectionPoolListener* listener,
+                 uv_loop_t* loop,
+                 const Address& address,
+                 int protocol_version,
+                 const ConnectionPoolSettings& settings,
+                 Metrics* metrics);
 
   /**
    * Find the least busy connection for the pool. The least busy connection has
@@ -70,9 +148,28 @@ public:
    */
   void close();
 
+  /**
+   * Set the listener that will handle events for the pool.
+   *
+   * @param listener The pool listener.
+   */
+  void set_listener(ConnectionPoolListener* listener);
+
+  /**
+   * Set the connection pool manager for this connection. The manager is only
+   * used to get the current keyspace. This is kind of a hack and in the
+   * future we should synchronously propagate the keyspace in an event loop
+   * task and wait using a future.
+   *
+   * @param manager The manager to use for determining the keyspace.
+   */
+  void set_manager(ConnectionPoolManager* manager);
+
 public:
-  ConnectionPoolManager* manager() const { return manager_; }
+  const uv_loop_t* loop() const { return loop_; }
   const Address& address() const { return  address_; }
+  int protocol_version() const { return protocol_version_; }
+  String keyspace() const;
 
 public:
   class Protected {
@@ -83,45 +180,12 @@ public:
   };
 
   /**
-   * Add connection to the pool.
-   *
-   * @param connection A connection to add to the pool.
-   * @param A key to restrict access to the method.
-   */
-  void add_connection(const PooledConnection::Ptr& connection, Protected);
-
-  /**
    * Remove the connection and schedule a reconnection.
    *
    * @param connection A connection that closed.
    * @param A key to restrict access to the method.
    */
   void close_connection(PooledConnection* connection, Protected);
-
-  /**
-   * Notify the pool manager that the host is up/down
-   *
-   * @param A key to restrict access to the method.
-   */
-  void notify_up_or_down(Protected);
-
-  /**
-   * Notify the pool manager that the host is critical
-   *
-   * @param code The code of the critical error.
-   * @param message The message of the critical error.
-   * @param A key to restrict access to the method.
-   */
-  void notify_critical_error(Connector::ConnectionError code,
-                             const String& message,
-                             Protected);
-
-  /**
-   * Schedule a new connection.
-   *
-   * @param A key to restrict access to the method.
-   */
-  void schedule_reconnect(Protected);
 
   /**
    * Add a connection to be flushed.
@@ -148,24 +212,29 @@ private:
   friend class NotifyDownOnRemovePoolOp;
 
 private:
-  void internal_notify_up_or_down();
-  void internal_notify_critical_error(Connector::ConnectionError code,
-                                      const String& message);
-  void internal_add_connection(const PooledConnection::Ptr& connection);
-  void internal_schedule_reconnect();
+  void notify_up_or_down();
+  void notify_critical_error(Connector::ConnectionError code,
+                             const String& message);
+  void add_connection(const PooledConnection::Ptr& connection);
+  void schedule_reconnect();
   void internal_close();
   bool maybe_closed();
 
-  void on_reconnect(PooledConnector* connector);
+  void on_reconnect(DelayedConnector* connector);
 
 private:
+  ConnectionPoolListener* listener_;
   ConnectionPoolManager* manager_;
-  Address address_;
+  uv_loop_t* const loop_;
+  const Address address_;
+  const int protocol_version_;
+  const ConnectionPoolSettings settings_;
+  Metrics* const metrics_;
 
   CloseState close_state_;
   NotifyState notify_state_;
   PooledConnection::Vec connections_;
-  PooledConnector::Vec pending_connections_;
+  DelayedConnector::Vec pending_connections_;
   DenseHashSet<PooledConnection*> to_flush_;
 };
 

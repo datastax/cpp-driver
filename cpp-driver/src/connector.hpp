@@ -185,6 +185,10 @@ public:
   bool is_keyspace_error() const {
     return error_code_ == CONNECTION_ERROR_KEYSPACE;
   }
+  bool is_critical_error() const {
+    return is_auth_error() || is_ssl_error() ||
+        is_invalid_protocol() || is_keyspace_error();
+  }
 
   ConnectionError error_code() { return error_code_; }
   const String& error_message() { return error_message_; }

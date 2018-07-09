@@ -36,7 +36,9 @@ class Metrics;
  * An initializer for a connection pool manager. This connects many connection
  * pools to different hosts.
  */
-class ConnectionPoolManagerInitializer : public RefCounted<ConnectionPoolManagerInitializer> {
+class ConnectionPoolManagerInitializer
+    : public RefCounted<ConnectionPoolManagerInitializer>
+    , public ConnectionPoolListener {
 public:
   typedef SharedRefPtr<ConnectionPoolManagerInitializer> Ptr;
 
@@ -96,7 +98,7 @@ public:
    * @param settings A manager settings object.
    * @return The initializer to chain calls.
    */
-  ConnectionPoolManagerInitializer* with_settings(const ConnectionPoolManagerSettings& settings);
+  ConnectionPoolManagerInitializer* with_settings(const ConnectionPoolSettings& settings);
 
 
   /**
@@ -105,13 +107,6 @@ public:
    * @return A vector of pool connectors that failed.
    */
   ConnectionPoolConnector::Vec failures() const;
-
- /**
-   * Determines if the initializer has been canceled.
-   *
-   * @return Returns true if canceled.
-   */
-  bool is_canceled();
 
   /**
    * Release the manager from the initializer. If not released in the callback
@@ -127,24 +122,37 @@ public:
   }
 
 private:
+  // Connection pool listener methods
+
+  virtual void on_pool_up(const Address& address);
+
+  virtual void on_pool_down(const Address& address);
+
+  virtual void on_pool_critical_error(const Address& address,
+                                 Connector::ConnectionError code,
+                                 const String& message);
+
+  virtual void on_close(ConnectionPool* pool);
+
+private:
   void on_connect(ConnectionPoolConnector* pool_connector);
 
 private:
-  Callback callback_;
-
+  uv_loop_t* loop_;
   ConnectionPoolManager::Ptr manager_;
-  ConnectionPoolConnector::Vec connectors_;
-
+  Callback callback_;
   bool is_canceled_;
-
   size_t remaining_;
+
+  ConnectionPool::Map pools_;
+  ConnectionPoolConnector::Vec pending_pools_;
   ConnectionPoolConnector::Vec failures_;
 
   int protocol_version_;
   String keyspace_;
   ConnectionPoolManagerListener* listener_;
   Metrics* metrics_;
-  ConnectionPoolManagerSettings settings_;
+  ConnectionPoolSettings settings_;
 };
 
 } // namespace cass

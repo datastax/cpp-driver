@@ -14,12 +14,11 @@
   limitations under the License.
 */
 
-#ifndef __CASS_POOLED_CONNECTOR_HPP_INCLUDED__
-#define __CASS_POOLED_CONNECTOR_HPP_INCLUDED__
+#ifndef __CASS_DELAYED_CONNECTOR_HPP_INCLUDED__
+#define __CASS_DELAYED_CONNECTOR_HPP_INCLUDED__
 
 #include "callback.hpp"
 #include "connector.hpp"
-#include "pooled_connection.hpp"
 #include "ref_counted.hpp"
 #include "string.hpp"
 #include "vector.hpp"
@@ -30,30 +29,55 @@ class ConnectionPool;
 class EventLoop;
 
 /**
- * A connector for a pooled connection. This handles the connection process for
- * a pooled connection.
+ * A connector that starts the connection process after some delay.
  */
-class PooledConnector : public RefCounted<PooledConnector> {
+class DelayedConnector : public RefCounted<DelayedConnector> {
 public:
-  typedef SharedRefPtr<PooledConnector> Ptr;
+  typedef SharedRefPtr<DelayedConnector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef cass::Callback<void, PooledConnector*> Callback;
+  typedef cass::Callback<void, DelayedConnector*> Callback;
 
   /**
    * Constructor
    *
-   * @param pool The pool for this connection.
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  PooledConnector(ConnectionPool* pool,
-                  const Callback& callback);
+  DelayedConnector(const Address& address, int protocol_version,
+                   const Callback& callback);
 
   /**
-   * Connect a pooled connection.
+   * Same as Connector::with_keyspace()
+   *
+   * @param keyspace
+   * @return
    */
-  void connect();
+  DelayedConnector* with_keyspace(const String& keyspace);
+
+  /**
+   * Same as Connector::with_metrics()
+   *
+   * @param metrics
+   * @return
+   */
+  DelayedConnector* with_metrics(Metrics* metrics);
+
+  /**
+   * Same as Connector::with_settings()
+   *
+   * @param settings
+   * @return
+   */
+  DelayedConnector* with_settings(const ConnectionSettings& settings);
+
+  /**
+   * Connect to a host after a delay.
+   *
+   * @param wait_time_ms The amount of time to delay.
+   * @param A key to restrict access to the method.
+   */
+  void delayed_connect(uv_loop_t* loop, uint64_t wait_time_ms);
 
   /**
    * Cancel the connection process.
@@ -67,7 +91,7 @@ public:
    * @return The connection object for this connector. This returns a null object
    * if the connection is not connected or an error occurred.
    */
-  PooledConnection::Ptr release_connection();
+  Connection::Ptr release_connection();
 
 public:
   bool is_canceled() const;
@@ -78,30 +102,13 @@ public:
   Connector::ConnectionError error_code() const { return connector_->error_code(); }
   const String& error_message() const { return connector_->error_message(); }
 
-public: // Only to be called on the event loop thread
-  class Protected {
-    friend class ConnectionPool;
-    Protected() { }
-    Protected(Protected const&) { }
-  };
-
-  /**
-   * Connect the pooled connection after a delay from the event loop thread.
-   *
-   * @param wait_time_ms The amount of time to delay.
-   * @param A key to restrict access to the method.
-   */
-  void delayed_connect(uint64_t wait_time_ms, Protected);
-
 private:
-  void internal_connect();
+  void internal_connect(uv_loop_t* loop);
 
   void on_connect(Connector* connector);
   void on_delayed_connect(Timer* timer);
 
 private:
-  ConnectionPool* pool_;
-  PooledConnection::Ptr connection_;
   Connector::Ptr connector_;
 
   Callback callback_;

@@ -16,38 +16,76 @@
 
 #include "connection_pool_connector.hpp"
 
-#include "connection_pool_manager.hpp"
 #include "event_loop.hpp"
 #include "memory.hpp"
 #include "metrics.hpp"
 
 namespace cass {
 
-ConnectionPoolConnector::ConnectionPoolConnector(ConnectionPoolManager* manager,
-                                                 const Address& address,
+ConnectionPoolConnector::ConnectionPoolConnector(const Address& address,
+                                                 int protocol_version,
+                                                 size_t num_connections_per_host,
                                                  const Callback& callback)
-  : pool_(Memory::allocate<ConnectionPool>(manager, address))
+  : loop_(NULL)
   , callback_(callback)
-  , remaining_(0) { }
+  , is_canceled_(false)
+  , remaining_(0)
+  , listener_(NULL)
+  , address_(address)
+  , protocol_version_(protocol_version)
+  , num_connections_per_host_(num_connections_per_host)
+  , metrics_(NULL) { }
 
-void ConnectionPoolConnector::connect() {
+ConnectionPoolConnector* ConnectionPoolConnector::with_listener(ConnectionPoolListener* listener) {
+  listener_ = listener;
+  return this;
+}
+
+ConnectionPoolConnector* ConnectionPoolConnector::with_keyspace(const String& keyspace) {
+  keyspace_ = keyspace;
+  return this;
+}
+
+ConnectionPoolConnector* ConnectionPoolConnector::with_metrics(Metrics* metrics) {
+  metrics_ = metrics;
+  return this;
+}
+
+ConnectionPoolConnector* ConnectionPoolConnector::with_settings(const ConnectionPoolSettings& settings) {
+  settings_ = settings;
+  return this;
+}
+
+void ConnectionPoolConnector::connect(uv_loop_t*  loop) {
   inc_ref();
-  const size_t num_connections_per_host = pool_->manager()->settings().num_connections_per_host;
-  remaining_ = num_connections_per_host;
-  for (size_t i = 0; i < num_connections_per_host; ++i) {
-    PooledConnector::Ptr connector(
-          Memory::allocate<PooledConnector>(pool_.get(),
-                                            bind_callback(&ConnectionPoolConnector::on_connect, this)));
+  loop_ = loop;
+  remaining_ = num_connections_per_host_;
+  for (size_t i = 0; i < num_connections_per_host_; ++i) {
+    Connector::Ptr connector(
+          Memory::allocate<Connector>(address_, protocol_version_,
+                                      bind_callback(&ConnectionPoolConnector::on_connect, this)));
     pending_connections_.push_back(connector);
-    connector->connect();
+    connector
+        ->with_keyspace(keyspace_)
+        ->with_metrics(metrics_)
+        ->with_settings(settings_.connection_settings)
+        ->connect(loop);
   }
 }
 
 void ConnectionPoolConnector::cancel() {
-  if (pool_) pool_->close();
-  for (PooledConnector::Vec::iterator it = pending_connections_.begin(),
-       end = pending_connections_.end(); it != end; ++it) {
-    (*it)->cancel();
+  is_canceled_ = true;
+  if (pool_) {
+    pool_->close();
+  } else  {
+    for (Connector::Vec::iterator it = pending_connections_.begin(),
+         end = pending_connections_.end(); it != end; ++it) {
+      (*it)->cancel();
+    }
+    for (Connection::Vec::iterator it = connections_.begin(),
+         end = connections_.end(); it != end; ++it) {
+      (*it)->close();
+    }
   }
 }
 
@@ -80,42 +118,52 @@ bool ConnectionPoolConnector::is_keyspace_error() const {
   return false;
 }
 
-void ConnectionPoolConnector::on_connect(PooledConnector* connector) {
+void ConnectionPoolConnector::on_connect(Connector* connector) {
   pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
                              pending_connections_.end());
 
   if (connector->is_ok()) {
-    pool_->add_connection(connector->release_connection(), ConnectionPool::Protected());
+    connections_.push_back(connector->release_connection());
   } else if (!connector->is_canceled()){
     LOG_ERROR("Connection pool was unable to connect to host %s because of the following error: %s",
-              pool_->address().to_string().c_str(),
+              address_.to_string().c_str(),
               connector->error_message().c_str());
 
     if (connector->is_critical_error())  {
       if (!critical_error_connector_) {
         critical_error_connector_.reset(connector);
-        pool_->close();
-        for (PooledConnector::Vec::iterator it = pending_connections_.begin(),
+        for (Connector::Vec::iterator it = pending_connections_.begin(),
              end = pending_connections_.end(); it != end; ++it) {
           (*it)->cancel();
         }
       }
-    } else {
-      pool_->schedule_reconnect(ConnectionPool::Protected());
     }
   }
 
   if (--remaining_ == 0) {
-    if (!critical_error_connector_) {
-      pool_->notify_up_or_down(ConnectionPool::Protected());
-    } else {
-      pool_->notify_critical_error(critical_error_connector_->error_code(),
-                                  critical_error_connector_->error_message(),
-                                  ConnectionPool::Protected());
+    if (!is_canceled_) {
+      if (!critical_error_connector_) {
+        pool_.reset(Memory::allocate<ConnectionPool>(connections_,
+                                                     listener_,
+                                                     loop_,
+                                                     address_,
+                                                     protocol_version_,
+                                                     settings_,
+                                                     metrics_));
+      } else {
+        if (listener_) {
+          listener_->on_pool_critical_error(address_,
+                                            critical_error_connector_->error_code(),
+                                            critical_error_connector_->error_message());
+        }
+      }
     }
     callback_(this);
     // If the pool hasn't been released then close it.
-    if (pool_) pool_->close();
+    if (pool_) {
+      pool_->set_listener(NULL);
+      pool_->close();
+    }
     dec_ref();
   }
 }

@@ -147,7 +147,7 @@ void RequestHandler::init(const ExecutionProfile& profile,
   wrapper_.init(profile, timestamp_generator);
 
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
-  const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());
+  String keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());
 
   query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
   execution_plan_.reset(profile.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
