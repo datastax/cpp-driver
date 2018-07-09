@@ -80,6 +80,7 @@ public:
   const Config& config() const { return config_; }
   Cluster::Ptr cluster() const { return cluster_; }
   Random* random() const { return random_.get(); }
+  Metrics* metrics() const { return metrics_.get(); }
   State state() const { return state_; }
 
 protected:
@@ -149,6 +150,7 @@ private:
   ClusterConnector::Ptr cluster_connector_;
   Config config_;
   ScopedPtr<Random> random_;
+  ScopedPtr<Metrics> metrics_;
   String connect_keyspace_;
   Future::Ptr connect_future_;
   Future::Ptr close_future_;

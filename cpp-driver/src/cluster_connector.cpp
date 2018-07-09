@@ -60,6 +60,7 @@ ClusterConnector::ClusterConnector(const ContactPointList& contact_points,
   , listener_(NULL)
   , event_loop_(NULL)
   , random_(NULL)
+  , metrics_(NULL)
   , callback_(callback)
   , error_code_(CLUSTER_OK) { }
 
@@ -124,6 +125,7 @@ void ClusterConnector::internal_connect() {
                                                       protocol_version_,
                                                       bind_callback(&ClusterConnector::on_connect, this)));
   connector_
+      ->with_metrics(metrics_)
       ->with_settings(settings_.control_connection_settings)
       ->connect(event_loop_->loop());
 }

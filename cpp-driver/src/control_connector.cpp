@@ -107,7 +107,8 @@ ControlConnector::ControlConnector(const Address& address,
                                            bind_callback(&ControlConnector::on_connect, this)))
   , callback_(callback)
   , error_code_(CONTROL_CONNECTION_OK)
-  , listener_(NULL) { }
+  , listener_(NULL)
+  , metrics_(NULL) { }
 
 void ControlConnector::connect(uv_loop_t* loop) {
   inc_ref();
@@ -119,6 +120,7 @@ void ControlConnector::connect(uv_loop_t* loop) {
     event_types = CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE;
   }
   connector_
+      ->with_metrics(metrics_)
       ->with_settings(settings_.connection_settings)
       ->with_event_types(event_types)
       ->connect(loop);

@@ -24,6 +24,7 @@
 namespace cass {
 
 class Random;
+class Metrics;
 
 /**
  * A connector that handles connecting to a cluster. It handles DNS and error
@@ -83,6 +84,18 @@ public:
     random_ = random;
     return this;
   }
+
+  /**
+   * Set the metrics object to use to record metrics for the control connection.
+   *
+   * @param metrics A metrics object.
+   * @return The connector to chain calls.
+   */
+  ClusterConnector* with_metrics(Metrics* metrics) {
+    metrics_ = metrics;
+    return this;
+  }
+
 
   /**
    * Set the cluster and underlying control connection settings.
@@ -152,6 +165,7 @@ private:
   ClusterListener* listener_;
   EventLoop* event_loop_;
   Random* random_;
+  Metrics* metrics_;
   ClusterSettings settings_;
 
   Callback callback_;

@@ -116,7 +116,7 @@ const CassSchemaMeta* cass_session_get_schema_meta(const CassSession* session) {
           session->cluster()->schema_snapshot()));
 }
 
-void  cass_session_get_metrics(const CassSession* session,
+void cass_session_get_metrics(const CassSession* session,
                                CassMetrics* metrics) {
   const cass::Metrics* internal_metrics = session->metrics();
 
@@ -182,7 +182,7 @@ Future::Ptr Session::prepare(const char* statement, size_t length) {
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
   execute(RequestHandler::Ptr(
-            Memory::allocate<RequestHandler>(prepare, future, metrics_.get())));
+            Memory::allocate<RequestHandler>(prepare, future, metrics())));
 
   return future;
 }
@@ -206,7 +206,7 @@ Future::Ptr Session::prepare(const Statement* statement) {
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
   execute(RequestHandler::Ptr(
-            Memory::allocate<RequestHandler>(prepare, future, metrics_.get())));
+            Memory::allocate<RequestHandler>(prepare, future, metrics())));
 
   return future;
 }
@@ -216,7 +216,7 @@ Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* pr
 
   RequestHandler::Ptr request_handler(
             Memory::allocate<RequestHandler>(request, future,
-                                             metrics_.get(), preferred_address));
+                                             metrics(), preferred_address));
 
 
   if (request_handler->request()->opcode() == CQL_OPCODE_EXECUTE) {
@@ -279,8 +279,6 @@ void Session::on_connect(const Host::Ptr& connected_host,
     return;
   }
 
-  metrics_.reset(Memory::allocate<Metrics>(config().thread_count_io() + 1));
-
   RequestProcessorManagerInitializer::Ptr initializer(
         Memory::allocate<RequestProcessorManagerInitializer>(connected_host,
                                                              protocol_version,
@@ -291,7 +289,7 @@ void Session::on_connect(const Host::Ptr& connected_host,
       ->with_settings(RequestProcessorSettings(config()))
       ->with_keyspace(connect_keyspace())
       ->with_listener(this)
-      ->with_metrics(metrics_.get())
+      ->with_metrics(metrics())
       ->with_random(random())
       ->with_token_map(token_map)
       ->initialize(event_loop_group_.get());

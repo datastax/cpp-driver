@@ -25,6 +25,7 @@
 namespace cass {
 
 class HostsConnectorRequestCallback;
+class Metrics;
 class SchemaConnectorRequestCallback;
 
 /**
@@ -149,6 +150,17 @@ public:
    */
   ControlConnector* with_listener(ControlConnectionListener* listener) {
     listener_ = listener;
+    return this;
+  }
+
+  /**
+   * Set the metrics object to use to record metrics for the connection.
+   *
+   * @param metrics A metrics object.
+   * @return The connector to chain calls.
+   */
+  ControlConnector* with_metrics(Metrics* metrics) {
+    metrics_ = metrics;
     return this;
   }
 
@@ -278,6 +290,7 @@ private:
   String error_message_;
 
   ControlConnectionListener* listener_;
+  Metrics* metrics_;
   ControlConnectionSettings settings_;
 };
 

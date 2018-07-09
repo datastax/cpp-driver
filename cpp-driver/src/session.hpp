@@ -42,9 +42,6 @@ public:
 
   void join();
 
-public:
-  Metrics* metrics() const { return metrics_.get(); }
-
 private:
   void execute(const RequestHandler::Ptr& request_handler);
 
@@ -95,7 +92,6 @@ private:
   void on_initialize(RequestProcessorManagerInitializer* initializer);
 
 private:
-  ScopedPtr<Metrics> metrics_;
   ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
   RequestProcessorManager::Ptr request_processor_manager_;
 };

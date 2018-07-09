@@ -73,6 +73,8 @@ void SessionBase::connect(const Config& config,
     random_.reset();
   }
 
+  metrics_.reset(Memory::allocate<Metrics>(config.thread_count_io() + 1));
+
   cluster_connector_.reset(
         Memory::allocate<ClusterConnector>(config_.contact_points(),
                                            config_.protocol_version(),
@@ -82,6 +84,7 @@ void SessionBase::connect(const Config& config,
       ->with_listener(this)
       ->with_settings(ClusterSettings(config_))
       ->with_random(random_.get())
+      ->with_metrics(metrics_.get())
       ->connect(event_loop_.get());
 }
 
