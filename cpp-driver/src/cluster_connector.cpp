@@ -118,7 +118,7 @@ void ClusterConnector::internal_resolve_and_connect() {
 
 void ClusterConnector::internal_connect() {
   if (contact_points_resolved_it_ == contact_points_resolved_.end()) {
-    on_error(CLUSTER_ERROR_NO_HOSTS_AVILABLE, "Unable to connect to any contact points");
+    on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE, "Unable to connect to any contact points");
     return;
   }
   connector_.reset(Memory::allocate<ControlConnector>(*contact_points_resolved_it_,
@@ -241,7 +241,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
 
     if (available_hosts.empty()) {
       //TODO(fero): Check for DC aware policy to give more informative message (e.g. invalid DC)
-      on_error(CLUSTER_ERROR_NO_HOSTS_AVILABLE,
+      on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE,
                "No hosts available for connection using the current load " \
                "balancing policy(s)");
       return;
