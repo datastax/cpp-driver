@@ -762,7 +762,7 @@ TEST(LatencyAwareLoadBalancingUnitTest, MovingAverage) {
               2.0 * one_ms);
 }
 
-#ifdef _MSC_VER == 1700 && _M_IX86
+#if _MSC_VER == 1700 && _M_IX86
 TEST(LatencyAwareLoadBalancingUnitTest, DISABLED_Simple) { // Disabled: See https://datastax-oss.atlassian.net/browse/CPP-654
 #else
 TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
