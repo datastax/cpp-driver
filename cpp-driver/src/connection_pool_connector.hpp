@@ -21,7 +21,7 @@
 #include "atomic.hpp"
 #include "callback.hpp"
 #include "connection_pool.hpp"
-#include "pooled_connector.hpp"
+#include "connector.hpp"
 #include "ref_counted.hpp"
 #include "string.hpp"
 #include "vector.hpp"
@@ -46,19 +46,52 @@ public:
   /**
    * Constructor
    *
-   * @param manager The manager for the pool.
    * @param address The address to connect to.
+   * @param protocol_version
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  ConnectionPoolConnector(ConnectionPoolManager* manager,
-                          const Address& address,
+  ConnectionPoolConnector(const Address& address,
+                          int protocol_version,
                           const Callback& callback);
+
+  /**
+   * Set the pool listener.
+   *
+   * @param listener A listener that handles pool events.
+   * @return The connector to chain calls.
+   */
+  ConnectionPoolConnector* with_listener(ConnectionPoolListener* listener);
+
+  /**
+   * Set the keyspace to connect with. Calls "USE <keyspace>" after
+   * the connection is connected and protocol handshake is completed.
+   *
+   * @param keyspace A keyspace to register after connection.
+   * @return The connector to chain calls.
+   */
+  ConnectionPoolConnector* with_keyspace(const String& keyspace);
+
+  /**
+   * Set the metrics object to use to record metrics.
+   *
+   * @param metrics A metrics object.
+   * @return The connector to chain calls.
+   */
+  ConnectionPoolConnector* with_metrics(Metrics* metrics);
+
+  /**
+   * Set the connection pool settings.
+   *
+   * @param The settings to use for connecting and maintaining the connection pools.
+   * @return The connector to chain calls.
+   */
+  ConnectionPoolConnector* with_settings(const ConnectionPoolSettings& settings);
 
   /**
    * Connect a pool.
    */
-  void connect();
+  void connect(uv_loop_t* loop);
 
   /**
    * Cancel the connection process.
@@ -75,7 +108,7 @@ public:
   ConnectionPool::Ptr release_pool();
 
 public:
-  const Address& address() const { return pool_->address(); }
+  const Address& address() const { return address_; }
 
   Connector::ConnectionError error_code() const;
   String error_message() const;
@@ -85,15 +118,25 @@ public:
   bool is_keyspace_error() const;
 
 private:
-  void on_connect(PooledConnector* connector);
+  void on_connect(Connector* connector);
 
 private:
+  uv_loop_t* loop_;
   ConnectionPool::Ptr pool_;
   Callback callback_;
+  bool is_canceled_;
   size_t remaining_;
 
-  PooledConnector::Vec pending_connections_;
-  PooledConnector::Ptr critical_error_connector_;
+  Connector::Vec pending_connections_;
+  Connection::Vec connections_;
+  Connector::Ptr critical_error_connector_;
+
+  const Address address_;
+  const int protocol_version_;
+  ConnectionPoolSettings settings_;
+  String keyspace_;
+  ConnectionPoolListener* listener_;
+  Metrics* metrics_;
 };
 
 } // namespace cass

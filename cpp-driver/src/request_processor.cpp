@@ -107,7 +107,7 @@ RequestProcessorSettings::RequestProcessorSettings()
   }
 
 RequestProcessorSettings::RequestProcessorSettings(const Config& config)
-  : connection_pool_manager_settings(config)
+  : connection_pool_settings(config)
   , max_schema_wait_time_ms(config.max_schema_wait_time_ms())
   , prepare_on_all_hosts(config.prepare_on_all_hosts())
   , timestamp_generator(config.timestamp_gen())
@@ -490,7 +490,7 @@ void RequestProcessor::maybe_close(int request_count) {
   if (is_closing_ &&
       request_count <= 0 &&
       request_queue_->is_empty()) {
-    connection_pool_manager_->close();
+    if (connection_pool_manager_) connection_pool_manager_->close();
   }
 }
 

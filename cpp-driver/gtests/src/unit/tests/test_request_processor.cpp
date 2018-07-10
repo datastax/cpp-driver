@@ -283,7 +283,7 @@ TEST_F(RequestProcessorUnitTest, Auth) {
                                                                                              bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_manager_settings.connection_settings.auth_provider.reset(
+  settings.connection_pool_settings.connection_settings.auth_provider.reset(
         Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
 
   initializer
@@ -298,7 +298,7 @@ TEST_F(RequestProcessorUnitTest, Auth) {
 
 TEST_F(RequestProcessorUnitTest, Ssl) {
   RequestProcessorSettings settings;
-  settings.connection_pool_manager_settings.connection_settings =  use_ssl();
+  settings.connection_pool_settings.connection_settings =  use_ssl();
 
   start_all();
 
@@ -339,7 +339,7 @@ TEST_F(RequestProcessorUnitTest, NotifyAddRemoveHost) {
                                                                                              bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_manager_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
+  settings.connection_pool_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
 
   UpDownListener::Ptr listener(Memory::allocate<UpDownListener>(up_future, down_future, to_add_remove));
 
@@ -374,7 +374,7 @@ TEST_F(RequestProcessorUnitTest, CloseDuringReconnect) {
                                                                                              bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_manager_settings.reconnect_wait_time_ms = 100000; // Make sure we're reconnecting when we close.
+  settings.connection_pool_settings.reconnect_wait_time_ms = 100000; // Make sure we're reconnecting when we close.
 
   CloseListener::Ptr listener(Memory::allocate<CloseListener>(close_future));
 
@@ -478,7 +478,7 @@ TEST_F(RequestProcessorUnitTest, PoolUp) {
                                                                                              bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_manager_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
+  settings.connection_pool_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
 
   UpDownListener::Ptr listener(Memory::allocate<UpDownListener>(up_future, down_future, target_host));
 
@@ -511,7 +511,7 @@ TEST_F(RequestProcessorUnitTest, InvalidAuth) {
                                                                                              bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_manager_settings.connection_settings.auth_provider.reset(
+  settings.connection_pool_settings.connection_settings.auth_provider.reset(
         Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
 
   CriticalErrorListener listener; // Use stack allocation because it's never closed
@@ -543,7 +543,7 @@ TEST_F(RequestProcessorUnitTest, InvalidSsl) {
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
   RequestProcessorSettings settings;
-  settings.connection_pool_manager_settings.connection_settings.socket_settings.ssl_context = ssl_context;
+  settings.connection_pool_settings.connection_settings.socket_settings.ssl_context = ssl_context;
 
   CriticalErrorListener listener; // Use stack allocation because it's never closed
 

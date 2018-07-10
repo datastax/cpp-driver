@@ -284,8 +284,8 @@ public:
     return addresses;
   }
 
-  ConnectionPoolManagerSettings use_ssl() {
-    ConnectionPoolManagerSettings settings;
+  ConnectionPoolSettings use_ssl() {
+    ConnectionPoolSettings settings;
     settings.connection_settings = mockssandra::SimpleClusterTest::use_ssl();
     return settings;
   }
@@ -447,7 +447,7 @@ TEST_F(PoolUnitTest, Auth) {
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
-  ConnectionPoolManagerSettings settings;
+  ConnectionPoolSettings settings;
   settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
 
   initializer
@@ -459,7 +459,7 @@ TEST_F(PoolUnitTest, Auth) {
 }
 
 TEST_F(PoolUnitTest, Ssl) {
-  ConnectionPoolManagerSettings settings(use_ssl());
+  ConnectionPoolSettings settings(use_ssl());
 
   start_all();
 
@@ -579,7 +579,7 @@ TEST_F(PoolUnitTest, Reconnect) {
 
   AddressVec addresses = this->addresses();
 
-  ConnectionPoolManagerSettings settings;
+  ConnectionPoolSettings settings;
   settings.reconnect_wait_time_ms = 0; // Reconnect immediately
 
   initializer
@@ -628,7 +628,7 @@ TEST_F(PoolUnitTest, Timeout) {
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
-  ConnectionPoolManagerSettings settings;
+  ConnectionPoolSettings settings;
   settings.connection_settings.connect_timeout_ms = 200;
 
   initializer
@@ -658,7 +658,7 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
       ->initialize(loop(), addresses());
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(listener_status.count(ListenerStatus::CRITICAL_ERROR_INVALID_PROTOCOL), NUM_NODES) << listener_status.results();
+  EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_INVALID_PROTOCOL), 0u) << listener_status.results();
 
   ConnectionPoolConnector::Vec failures = initializer->failures();
   EXPECT_EQ(failures.size(), NUM_NODES);
@@ -711,7 +711,7 @@ TEST_F(PoolUnitTest, InvalidAuth) {
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
-  ConnectionPoolManagerSettings settings;
+  ConnectionPoolSettings settings;
   settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
 
   initializer
@@ -720,7 +720,7 @@ TEST_F(PoolUnitTest, InvalidAuth) {
       ->initialize(loop(), addresses());
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(listener_status.count(ListenerStatus::CRITICAL_ERROR_AUTH), NUM_NODES) << listener_status.results();
+  EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_AUTH), 0u) << listener_status.results();
 }
 
 TEST_F(PoolUnitTest, InvalidNoSsl) {
@@ -737,7 +737,7 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
 
   SslContext::Ptr ssl_context(SslContextFactory::create());
 
-  ConnectionPoolManagerSettings settings;
+  ConnectionPoolSettings settings;
   settings.connection_settings.socket_settings.ssl_context = ssl_context;
   settings.connection_settings.socket_settings.hostname_resolution_enabled = true;
 
@@ -747,7 +747,7 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
       ->initialize(loop(), addresses());
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(listener_status.count(ListenerStatus::CRITICAL_ERROR_SSL_HANDSHAKE), NUM_NODES) << listener_status.results();
+  EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_SSL_HANDSHAKE), 0u) << listener_status.results();
 }
 
 TEST_F(PoolUnitTest, InvalidSsl) {
@@ -765,7 +765,7 @@ TEST_F(PoolUnitTest, InvalidSsl) {
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
-  ConnectionPoolManagerSettings settings;
+  ConnectionPoolSettings settings;
   settings.connection_settings.socket_settings.ssl_context = ssl_context;
   settings.connection_settings.socket_settings.hostname_resolution_enabled = true;
 
@@ -775,7 +775,7 @@ TEST_F(PoolUnitTest, InvalidSsl) {
       ->initialize(loop(), addresses());
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(listener_status.count(ListenerStatus::CRITICAL_ERROR_SSL_VERIFY), NUM_NODES) << listener_status.results();
+  EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_SSL_VERIFY), 0u) << listener_status.results();
 }
 
 TEST_F(PoolUnitTest, PartialReconnect) {

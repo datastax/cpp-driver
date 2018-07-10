@@ -113,14 +113,14 @@ PooledConnection::PooledConnection(ConnectionPool* pool,
   : connection_(connection)
   , pool_(pool)
   // If the user data is set then use it to start the I/O timer.
-  , event_loop_(static_cast<EventLoop*>(pool->manager()->loop()->data)) {
+  , event_loop_(static_cast<EventLoop*>(pool->loop()->data)) {
   inc_ref(); // Reference for the connection's lifetime
   connection_->set_listener(this);
 }
 
 bool PooledConnection::write(RequestCallback* callback) {
   bool result = false;
-  String keyspace(pool_->manager()->keyspace());
+  String keyspace(pool_->keyspace());
   if (keyspace != connection_->keyspace()) {
     LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)",
               keyspace.c_str(),
