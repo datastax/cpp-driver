@@ -714,7 +714,7 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   }
 }
 
-TEST(LatencyAwaryLoadBalancingUnitTest, ThreadholdToAccount) {
+TEST(LatencyAwareLoadBalancingUnitTest, ThreadholdToAccount) {
   const uint64_t scale = 100LL;
   const uint64_t min_measured = 15LL;
   const uint64_t threshold_to_account = (30LL * min_measured) / 100LL;
@@ -737,7 +737,7 @@ TEST(LatencyAwaryLoadBalancingUnitTest, ThreadholdToAccount) {
   EXPECT_EQ(current.average, static_cast<int64_t>(one_ms));
 }
 
-TEST(LatencyAwaryLoadBalancingUnitTest, MovingAverage) {
+TEST(LatencyAwareLoadBalancingUnitTest, MovingAverage) {
   const uint64_t one_ms = 1000000LL; // 1 ms in ns
 
   // Verify average is approx. the same when recording the same latency twice
@@ -762,13 +762,17 @@ TEST(LatencyAwaryLoadBalancingUnitTest, MovingAverage) {
               2.0 * one_ms);
 }
 
-TEST(LatencyAwaryLoadBalancingUnitTest, Simple) {
+#ifdef _MSC_VER == 1700 && _M_IX86
+TEST(LatencyAwareLoadBalancingUnitTest, DISABLED_Simple) { // Disabled: See https://datastax-oss.atlassian.net/browse/CPP-654
+#else
+TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
+#endif
   cass::LatencyAwarePolicy::Settings settings;
 
   // Disable min_measured
   settings.min_measured = 0L;
 
-  // Latencies can't excceed 2x the minimum latency
+  // Latencies can't exceed 2x the minimum latency
   settings.exclusion_threshold = 2.0;
 
   // Set the retry period to 1 second
@@ -788,7 +792,7 @@ TEST(LatencyAwaryLoadBalancingUnitTest, Simple) {
   hosts[cass::Address("1.0.0.0", 9042)]->update_latency(100);
   hosts[cass::Address("4.0.0.0", 9042)]->update_latency(150);
 
-  // Hosts 2 and 3 will excceed the exclusion threshold
+  // Hosts 2 and 3 will exceed the exclusion threshold
   hosts[cass::Address("2.0.0.0", 9042)]->update_latency(201);
   hosts[cass::Address("3.0.0.0", 9042)]->update_latency(1000);
 
@@ -816,7 +820,7 @@ TEST(LatencyAwaryLoadBalancingUnitTest, Simple) {
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   }
 
-  // Excceed retry period
+  // Exceed retry period
   test::Utils::msleep(1000); // 1 second
 
   // After waiting no hosts should be skipped (notice 2 and 3 tried first)
@@ -827,7 +831,11 @@ TEST(LatencyAwaryLoadBalancingUnitTest, Simple) {
   }
 }
 
-TEST(LatencyAwaryLoadBalancingUnitTest, MinAverageUnderMinMeasured) {
+#if _MSC_VER == 1700 && _M_IX86
+TEST(LatencyAwareLoadBalancingUnitTest, DISABLED_MinAverageUnderMinMeasured) { // Disabled: See https://datastax-oss.atlassian.net/browse/CPP-654
+#else
+TEST(LatencyAwareLoadBalancingUnitTest, MinAverageUnderMinMeasured) {
+#endif
   cass::LatencyAwarePolicy::Settings settings;
 
   const int64_t num_hosts = 4;
