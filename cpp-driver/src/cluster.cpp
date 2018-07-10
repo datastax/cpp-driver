@@ -141,13 +141,13 @@ ClusterSettings::ClusterSettings()
   , reconnect_timeout_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
   , prepare_on_up_or_add_host(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
   , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH) {
-  load_balancing_polices.push_back(load_balancing_policy);
+  load_balancing_policies.push_back(load_balancing_policy);
 }
 
 ClusterSettings::ClusterSettings(const Config& config)
   : control_connection_settings(config)
   , load_balancing_policy(config.load_balancing_policy())
-  , load_balancing_polices(config.load_balancing_policies())
+  , load_balancing_policies(config.load_balancing_policies())
   , port(config.port())
   , reconnect_timeout_ms(config.reconnect_wait_time_ms())
   , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
@@ -412,8 +412,8 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
   }
 
   host->set_up();
-  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
-       end = settings_.load_balancing_polices.end(); it != end; ++it) {
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
     (*it)->on_up(host);
   }
 
@@ -444,8 +444,8 @@ void Cluster::internal_notify_down(const Address& address) {
   }
 
   host->set_down();
-  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
-       end = settings_.load_balancing_polices.end(); it != end; ++it) {
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
     (*it)->on_down(host);
   }
 
@@ -460,8 +460,8 @@ void Cluster::notify_add(const Host::Ptr& host) {
              host->address_string().c_str());
     // If an entry already exists then notify that the node has been removed
     // then re-add it.
-    for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
-         end = settings_.load_balancing_polices.end(); it != end; ++it) {
+    for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+         end = load_balancing_policies_.end(); it != end; ++it) {
       (*it)->on_remove(host_it->second);
     }
     listener_->on_remove(host_it->second);
@@ -472,8 +472,8 @@ void Cluster::notify_add(const Host::Ptr& host) {
   }
 
   hosts_[host->address()] = host;
-  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
-       end = settings_.load_balancing_polices.end(); it != end; ++it) {
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
     (*it)->on_add(host);
   }
 
@@ -510,8 +510,8 @@ void Cluster::notify_remove(const Address& address) {
   }
 
   hosts_.erase(host->address());
-  for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
-       end = settings_.load_balancing_polices.end(); it != end; ++it) {
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
     (*it)->on_remove(host);
   }
   listener_->on_remove(host);

@@ -134,7 +134,7 @@ struct ClusterSettings {
   /**
    * Load balancing policies for all profiles.
    */
-  LoadBalancingPolicy::Vec load_balancing_polices;
+  LoadBalancingPolicy::Vec load_balancing_policies;
 
   /**
    * The port to use for the contact points. This setting is spread to

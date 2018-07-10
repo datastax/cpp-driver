@@ -217,8 +217,8 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
     // Build policies list including the default policy
     LoadBalancingPolicy::Ptr default_policy(settings_.load_balancing_policy->new_instance());
     policies.push_back(default_policy);
-    for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_polices.begin(),
-         end = settings_.load_balancing_polices.end(); it != end; ++it) {
+    for (LoadBalancingPolicy::Vec::const_iterator it = settings_.load_balancing_policies.begin(),
+         end = settings_.load_balancing_policies.end(); it != end; ++it) {
       policies.push_back(LoadBalancingPolicy::Ptr((*it)->new_instance()));
     }
 
