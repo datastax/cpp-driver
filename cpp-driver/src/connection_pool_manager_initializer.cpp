@@ -67,7 +67,7 @@ void ConnectionPoolManagerInitializer::cancel() {
 }
 
 ConnectionPoolManagerInitializer* ConnectionPoolManagerInitializer::with_keyspace(const String& keyspace) {
-  keyspace_ = keyspace;CLUSTER_ERROR_NO_HOSTS_AVILABLE
+  keyspace_ = keyspace;
   return this;
 }
 
