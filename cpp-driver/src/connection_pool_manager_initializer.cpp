@@ -140,6 +140,8 @@ void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_
     callback_(this);
     // If the manager hasn't been released then close it.
     if (manager_)  {
+      // If the callback doesn't take possession of the manager then we should
+      // also clear the listener.
       manager_->set_listener(NULL);
       manager_->close();
     }

@@ -159,6 +159,8 @@ void ConnectionPoolConnector::on_connect(Connector* connector) {
     callback_(this);
     // If the pool hasn't been released then close it.
     if (pool_) {
+      // If the callback doesn't take possession of the pool then we should
+      // also clear the listener.
       pool_->set_listener(NULL);
       pool_->close();
     }
