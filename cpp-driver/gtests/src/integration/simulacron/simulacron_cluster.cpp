@@ -458,7 +458,7 @@ const std::string test::SimulacronCluster::generate_node_endpoint(unsigned int n
       std::stringstream message;
       message << "Insufficient Nodes in Cluster: Cluster contains "
         << current_nodes.size() << "; " << node << " is invalid";
-      throw new Exception(message.str());
+      throw Exception(message.str());
     }
     endpoint << "/" << current_nodes[node - 1].data_center_id << "/"
       << current_nodes[node - 1].id;

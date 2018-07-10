@@ -152,7 +152,7 @@ protected:
   /**
    * Handle for interacting with CCM
    */
-  SharedPtr<CCM::Bridge> ccm_;
+  SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > ccm_;
   /**
    * Logger instance for handling driver log messages
    */

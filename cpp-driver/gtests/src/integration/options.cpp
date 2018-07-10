@@ -489,7 +489,7 @@ const std::string& Options::private_key() {
   return private_key_;
 }
 
-SharedPtr<CCM::Bridge> Options::ccm() {
+SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > Options::ccm() {
   return new CCM::Bridge( \
     Options::server_version(),
     Options::use_git(), Options::branch_tag(), \

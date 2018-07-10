@@ -79,7 +79,7 @@ SIMULACRON_INTEGRATION_TEST_F(IdempotentTest, WriteTimeoutNonIdempotentNoRetry) 
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Simulate a write timeout on node 1
-  prime_mock_query_with_result(new prime::WriteTimeout(), 1);
+  prime_mock_query_with_result(cass::Memory::allocate<prime::WriteTimeout>(), 1);
 
   // Loop through all the nodes in the cluster execute the mock query
   for (unsigned int n = 0; n < number_dc1_nodes_; ++n) {
@@ -108,7 +108,7 @@ SIMULACRON_INTEGRATION_TEST_F(IdempotentTest, WriteTimeoutIdempotentRetry) {
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Simulate a write timeout on node 1
-  prime_mock_query_with_result(new prime::WriteTimeout(), 1);
+  prime_mock_query_with_result(cass::Memory::allocate<prime::WriteTimeout>(), 1);
 
   // Loop through all the nodes in the cluster execute the mock query
   bool was_node_one_attempted = false;
@@ -141,7 +141,7 @@ SIMULACRON_INTEGRATION_TEST_F(IdempotentTest, ClosedConnectionNonIdempotentNoRet
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Simulate a closed connection on node 1
-  prime_mock_query_with_result(new prime::CloseConnection(), 1);
+  prime_mock_query_with_result(cass::Memory::allocate<prime::CloseConnection>(), 1);
 
   // Loop through all the nodes in the cluster execute the mock query
   for (unsigned int n = 0; n < number_dc1_nodes_; ++n) {
@@ -171,7 +171,7 @@ SIMULACRON_INTEGRATION_TEST_F(IdempotentTest, ClosedConnectionIdempotentRetry) {
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Simulate a closed connection on node 1
-  prime_mock_query_with_result(new prime::CloseConnection(), 1);
+  prime_mock_query_with_result(cass::Memory::allocate<prime::CloseConnection>(), 1);
 
   // Loop through all the nodes in the cluster execute the mock query
   bool was_node_one_attempted = false;

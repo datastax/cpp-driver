@@ -19,6 +19,11 @@
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 
+template <class T>
+struct StdDeleter {
+  void operator()(T* ptr) const { delete ptr; }
+};
+
 /**
  * Reference counted objects container
  */
@@ -57,7 +62,7 @@ public:
   SharedPtr(T* ptr = NULL)
     : object_(NULL) {
     if (ptr) {
-      ObjectRef<T, D>* object_ref = new ObjectRef<T, D>(ptr);
+      ObjectRef<T, D>* object_ref = cass::Memory::allocate<ObjectRef<T, D> >(ptr);
       object_ = cass::SharedRefPtr<ObjectRef<T, D> >(object_ref);
     }
   }
