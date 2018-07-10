@@ -62,7 +62,13 @@ private:
   };
 
 private:
-  typedef DenseHashMap<Address, Host::Ptr, AddressHash> HostMap;
+  class HostMap : public DenseHashMap<Address, Host::Ptr, AddressHash> {
+  public:
+    HostMap() {
+      set_empty_key(Address::EMPTY_KEY);
+      set_deleted_key(Address::DELETED_KEY);
+    }
+  };
   HostMap available_hosts_;
 };
 
