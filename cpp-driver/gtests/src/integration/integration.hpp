@@ -372,9 +372,11 @@ protected:
   /**
    * Get the default cluster configuration
    *
+   * @param is_with_default_contact_points True if default contact points
+                                           should be added to the cluster
    * @return Cluster object (default)
    */
-  virtual Cluster default_cluster();
+  virtual Cluster default_cluster(bool is_with_default_contact_points = true);
 
   /**
    * Enable/Disable tracing on the cluster
