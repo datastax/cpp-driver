@@ -209,8 +209,8 @@ after_build:
       Push-AppveyorArtifact build/cpp-driver/test/integration_tests/$env:CONFIGURATION/cassandra_integration_tests.exe -DeploymentName "DataStax C/C++ Driver Integration Tests (Boost)"
 
 test_script:
-  - ps: Start-Process -FilePath "build/$env:CONFIGURATION/dse-unit-tests.exe" -ArgumentList "--gtest_output=xml:unit-tests-gtest-results.xml" -Wait -NoNewWindow
-  - ps: Start-Process -FilePath "build/$env:CONFIGURATION/cassandra-unit-tests.exe" -ArgumentList "--gtest_output=xml:cass-unit-tests-gtest-results.xml" -Wait -NoNewWindow
+  - build\%CONFIGURATION%\dse-unit-tests.exe --gtest_output=xml:unit-tests-gtest-results.xml
+  - build\%CONFIGURATION%\cassandra-unit-tests.exe --gtest_output=xml:cass-unit-tests-gtest-results.xml
 
 on_finish:
   - ps: |
