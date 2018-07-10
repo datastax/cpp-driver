@@ -108,7 +108,7 @@ public:
   ConnectionPool::Ptr release_pool();
 
 public:
-  const Address& address() const { return pool_->address(); }
+  const Address& address() const { return address_; }
 
   Connector::ConnectionError error_code() const;
   String error_message() const;
