@@ -130,9 +130,6 @@ void ConnectionPoolManager::remove(const Address& address) {
 void ConnectionPoolManager::close() {
   if (close_state_ == CLOSE_STATE_OPEN) {
     close_state_ = CLOSE_STATE_CLOSING;
-    if (maybe_closed()) {
-      return;
-    }
 
     // Make copies of pool/connector data structures to prevent iterator
     // invalidation.
@@ -148,6 +145,9 @@ void ConnectionPoolManager::close() {
          end = pending_pools.end(); it != end; ++it) {
       (*it)->cancel();
     }
+
+    close_state_ = CLOSE_STATE_WAITING_FOR_POOLS;
+    maybe_closed();
   }
 }
 
@@ -200,15 +200,13 @@ void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool) {
 
 // This must be the last call in a function because it can potentially
 // deallocate the manager.
-bool ConnectionPoolManager::maybe_closed() {
+void ConnectionPoolManager::maybe_closed() {
   // Close the manager once all current and pending pools are terminated.
-  if (close_state_ == CLOSE_STATE_CLOSING && pools_.empty() && pending_pools_.empty()) {
+  if (close_state_ == CLOSE_STATE_WAITING_FOR_POOLS && pools_.empty() && pending_pools_.empty()) {
     close_state_ = CLOSE_STATE_CLOSED;
     listener_->on_close(this);
     dec_ref();
-    return true;
   }
-  return false;
 }
 
 void ConnectionPoolManager::on_connect(ConnectionPoolConnector* pool_connector) {

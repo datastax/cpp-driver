@@ -202,9 +202,6 @@ void ConnectionPool::schedule_reconnect() {
 void ConnectionPool::internal_close() {
   if (close_state_ == CLOSE_STATE_OPEN) {
     close_state_ = CLOSE_STATE_CLOSING;
-    if (maybe_closed()) {
-      return;
-    }
 
     // Make copies of connection/connector data structures to prevent iterator
     // invalidation.
@@ -220,13 +217,16 @@ void ConnectionPool::internal_close() {
          end = pending_connections.end(); it != end; ++it) {
       (*it)->cancel();
     }
+
+    close_state_ = CLOSE_STATE_WAITING_FOR_CONNECTIONS;
+    maybe_closed();
   }
 }
 
-bool ConnectionPool::maybe_closed() {
+void ConnectionPool::maybe_closed() {
   // Remove the pool once all current connections and pending connections
   // are terminated.
-  if (close_state_ == CLOSE_STATE_CLOSING && connections_.empty() && pending_connections_.empty()) {
+  if (close_state_ == CLOSE_STATE_WAITING_FOR_CONNECTIONS && connections_.empty() && pending_connections_.empty()) {
     close_state_ = CLOSE_STATE_CLOSED;
     // Only mark DOWN if it's UP otherwise we might get multiple DOWN events
     // when connecting the pool.
@@ -235,10 +235,7 @@ bool ConnectionPool::maybe_closed() {
     }
     listener_->on_close(this);
     dec_ref();
-    return true;
   }
-
-  return false;
 }
 
 void ConnectionPool::on_reconnect(DelayedConnector* connector) {

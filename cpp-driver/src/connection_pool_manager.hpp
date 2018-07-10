@@ -162,12 +162,13 @@ private:
   enum CloseState {
     CLOSE_STATE_OPEN,
     CLOSE_STATE_CLOSING,
+    CLOSE_STATE_WAITING_FOR_POOLS,
     CLOSE_STATE_CLOSED
   };
 
 private:
   void add_pool(const ConnectionPool::Ptr& pool);
-  bool maybe_closed();
+  void maybe_closed();
 
 private:
   void on_connect(ConnectionPoolConnector* pool_connector);
