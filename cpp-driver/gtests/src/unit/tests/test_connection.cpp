@@ -20,6 +20,7 @@
 
 #include "auth.hpp"
 #include "connector.hpp"
+#include "delayed_connector.hpp"
 #include "constants.hpp"
 #include "request_callback.hpp"
 #include "ssl.hpp"
@@ -100,6 +101,20 @@ public:
   static void on_connection_close(Connector* connector, bool* is_closed) {
     if (connector->error_code() == Connector::CONNECTION_ERROR_CLOSE) {
       *is_closed = true;
+    }
+  }
+
+  static void on_delayed_connected(DelayedConnector* connector, State* state) {
+    ASSERT_TRUE(connector->is_ok());
+    state->status = STATUS_CONNECTED;
+    state->connection = connector->release_connection();
+    state->connection->start_heartbeats();
+    state->connection->write_and_flush(RequestCallback::Ptr(Memory::allocate<RequestCallback>(state->connection.get(), state)));
+  }
+
+  static void on_delayed_error_code(DelayedConnector* connector, Connector::ConnectionError* error_code) {
+    if (!connector->is_ok()) {
+      *error_code = connector->error_code();
     }
   }
 };
@@ -425,4 +440,58 @@ TEST_F(ConnectionUnitTest, InvalidSsl) {
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(Connector::CONNECTION_ERROR_SSL_VERIFY, error_code);
+}
+
+TEST_F(ConnectionUnitTest, Delayed) {
+  start_all();
+
+  State state;
+  DelayedConnector::Ptr connector(Memory::allocate<DelayedConnector>(Address("127.0.0.1", PORT),
+                                                                     PROTOCOL_VERSION,
+                                                                     bind_callback(on_delayed_connected, &state)));
+
+  connector->delayed_connect(loop(), 500);
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(state.status, STATUS_SUCCESS);
+}
+
+TEST_F(ConnectionUnitTest, DelayedCancel) {
+  start_all();
+
+  State state;
+  DelayedConnector::Ptr connector(Memory::allocate<DelayedConnector>(Address("127.0.0.1", PORT),
+                                                                     PROTOCOL_VERSION,
+                                                                     bind_callback(on_delayed_connected, &state)));
+
+  connector->delayed_connect(loop(), 500);
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(state.status, STATUS_SUCCESS);
+
+  start_all();
+
+  Vector<DelayedConnector::Ptr> connectors;
+
+  Connector::ConnectionError error_code(Connector::CONNECTION_OK);
+  for (size_t i = 0; i < 10; ++i) {
+    DelayedConnector::Ptr connector(Memory::allocate<DelayedConnector>(Address("127.0.0.1", PORT),
+                                                                       PROTOCOL_VERSION,
+                                                                       bind_callback(on_delayed_error_code, &error_code)));
+    connector->delayed_connect(loop(), 500);
+    connectors.push_back(connector);
+  }
+
+  Vector<DelayedConnector::Ptr>::iterator it = connectors.begin();
+  while (it != connectors.end()) {
+    (*it)->cancel();
+    uv_run(loop(), UV_RUN_NOWAIT);
+    it++;
+  }
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(Connector::CONNECTION_CANCELED, error_code);
 }

@@ -77,11 +77,18 @@ bool DelayedConnector::is_ok() const {
 }
 
 bool DelayedConnector::is_critical_error() const {
-  return connector_->is_critical_error();
+  return !is_canceled() && connector_->is_critical_error();
 }
 
 bool DelayedConnector::is_keyspace_error() const {
-  return connector_->is_keyspace_error();
+  return !is_canceled() && connector_->is_keyspace_error();
+}
+
+Connector::ConnectionError DelayedConnector::error_code() const {
+  if (is_canceled()) {
+    return Connector::CONNECTION_CANCELED;
+  }
+  return connector_->error_code();
 }
 
 void DelayedConnector::internal_connect(uv_loop_t* loop) {
@@ -94,12 +101,7 @@ void DelayedConnector::on_connect(Connector* connector) {
 }
 
 void DelayedConnector::on_delayed_connect(Timer* timer) {
-  if (is_canceled_) {
-    callback_(this);
-    dec_ref();
-  } else {
-    internal_connect(timer->loop());
-  }
+  internal_connect(timer->loop());
 }
 
 } // namespace cass
