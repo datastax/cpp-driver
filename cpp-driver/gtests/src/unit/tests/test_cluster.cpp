@@ -711,7 +711,12 @@ TEST_F(ClusterUnitTest, FindValidHost) {
                                                                      PROTOCOL_VERSION,
                                                                      bind_callback(on_connection_connected, connect_future.get())));
 
-  connector->connect(event_loop());
+  ClusterSettings settings;
+  settings.control_connection_settings.connection_settings.connect_timeout_ms = 100;
+
+  connector
+      ->with_settings(settings)
+      ->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
