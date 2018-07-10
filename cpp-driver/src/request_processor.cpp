@@ -490,7 +490,7 @@ void RequestProcessor::maybe_close(int request_count) {
   if (is_closing_ &&
       request_count <= 0 &&
       request_queue_->is_empty()) {
-    connection_pool_manager_->close();
+    if (connection_pool_manager_) connection_pool_manager_->close();
   }
 }
 
