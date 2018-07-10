@@ -122,7 +122,7 @@ CASSANDRA_INTEGRATION_TEST_F(AsyncTests, Simple) {
  * @since core:1.0.0
  * @expected_result Asynchronous inserts complete and are validated
  */
-CASSANDRA_INTEGRATION_DISABLED_TEST_F(AsyncTests, Close) {
+CASSANDRA_INTEGRATION_TEST_F(AsyncTests, Close) {
   CHECK_FAILURE;
 
   std::vector<TimeUuid> keys;
