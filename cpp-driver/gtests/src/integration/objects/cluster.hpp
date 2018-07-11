@@ -239,6 +239,20 @@ public:
   }
 
   /**
+   * Enable NO_COMPACT in the STARTUP OPTIONS for the connection
+   *
+   * @param enable True if NO_COMPACT should be enable; false otherwise
+   *              (default: true)
+   * @return Cluster object
+   */
+  Cluster& with_no_compact(bool enable = true) {
+    EXPECT_EQ(CASS_OK,
+              cass_cluster_set_no_compact(get(),
+                                          enable == true ? cass_true : cass_false));
+    return *this;
+  }
+
+  /**
    * Sets the port
    *
    * @param port Port number to set
@@ -273,6 +287,17 @@ public:
   Cluster& with_randomized_contact_points(bool enable = true) {
     cass_cluster_set_use_randomized_contact_points(get(),
       (enable == true ? cass_true : cass_false));
+    return *this;
+  }
+
+  /**
+   * Sets the amount of time to wait before attempting to reconnect.
+   *
+   * @param wait_time_ms Wait time in milliseconds (default: 2000)
+   * @return Cluster object
+   */
+  Cluster& with_reconnect_wait_time(unsigned int wait_time_ms) {
+    cass_cluster_set_reconnect_wait_time(get(), wait_time_ms);
     return *this;
   }
 

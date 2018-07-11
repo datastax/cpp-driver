@@ -461,13 +461,15 @@ namespace CCM {
         return CassVersion("3.0.12-1656");
       } else if (*this == "5.0.9") {
         return CassVersion("3.0.13-1735");
-      } else if ((*this == "5.0.10" || *this >= "5.0.11") && *this < "5.1.0") {
-        if (*this > "5.0.11") {
+      } else if (*this == "5.0.10" || *this == "5.0.11") {
+        return CassVersion("3.0.14-1862");
+      } else if (*this >= "5.0.12" && *this < "5.1.0") {
+        if (*this > "5.0.12") {
           std::cerr << "Cassandra Version is not Defined: "
             << "Add Cassandra version for DSE v" << this->to_string()
             << std::endl;
         }
-        return CassVersion("3.0.14-1862");
+        return CassVersion("3.0.15-2128");
       } else if (*this == "5.1.0") {
         return CassVersion("3.10.0-1652");
       } else if (*this == "5.1.1") {
@@ -476,14 +478,22 @@ namespace CCM {
         return CassVersion("3.11.0-1758");
       } else if (*this == "5.1.3") {
         return CassVersion("3.11.0-1855");
-      } else if ((*this == "5.1.4" || *this >= "5.1.5") && *this < "6.0.0") {
-        if (*this > "5.1.5") {
-          std::cerr << "Cassandra Version is not Defined: "
-                    << "Add Cassandra version for DSE v" << this->to_string()
-                    << std::endl;
-        }
+      } else if (*this == "5.1.4" || *this >= "5.1.5") {
         return CassVersion("3.11.0-1900");
-      } else  if (*this >= "6.0.0" && *this < "7.0.0") {
+      } else if (*this == "5.1.6") {
+        return CassVersion("3.11.1-2070");
+      } else if (*this == "5.1.7") {
+        return CassVersion("3.11.1-2130");
+      } else if (*this == "5.1.8" || *this == "5.1.9") {
+        return CassVersion("3.11.1-2261");
+      } else if (*this == "5.1.10" && *this < "6.0.0") {
+        if (*this > "5.1.10") {
+          std::cerr << "Cassandra Version is not Defined: "
+            << "Add Cassandra version for DSE v" << this->to_string()
+            << std::endl;
+        }
+        return CassVersion("3.11.1-2323");
+      } else if (*this >= "6.0.0" && *this < "7.0.0") {
         return CassVersion("4.0.0");
       }
 

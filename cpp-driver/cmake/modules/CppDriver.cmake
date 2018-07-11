@@ -547,6 +547,21 @@ macro(CassUseBoost)
 
   # Determine if Boost components are available for test executables
   if(CASS_BUILD_INTEGRATION_TESTS)
+    # Handle new required version of CMake for Boost v1.66.0 (Windows only)
+    if(WIN32)
+      find_package(Boost)
+      if (Boost_FOUND)
+        if(Boost_VERSION GREATER 106600 OR Boost_VERSION EQUAL 106600)
+          # Ensure CMake version is v3.11.0+
+          if (CMAKE_VERSION VERSION_LESS 3.11.0)
+            message(FATAL_ERROR "Boost v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} requires CMake v3.11.0+."
+              "Updgrade CMake or downgrade Boost to v${CASS_MINIMUM_BOOST_VERSION} - v1.65.1.")
+          endif()
+        endif()
+      endif()
+    endif()
+
+    # Ensure Boost components are available
     find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono system thread unit_test_framework)
     if(NOT Boost_FOUND)
       # Ensure Boost was not found due to minimum version requirement

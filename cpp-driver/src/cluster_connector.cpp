@@ -118,7 +118,7 @@ void ClusterConnector::internal_resolve_and_connect() {
 
 void ClusterConnector::internal_connect() {
   if (contact_points_resolved_it_ == contact_points_resolved_.end()) {
-    on_error(CLUSTER_ERROR_NO_HOSTS_AVILABLE, "Unable to connect to any contact points");
+    on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE, "Unable to connect to any contact points");
     return;
   }
   connector_.reset(Memory::allocate<ControlConnector>(*contact_points_resolved_it_,
@@ -134,6 +134,7 @@ void ClusterConnector::internal_cancel() {
   error_code_ = CLUSTER_CANCELED;
   if (resolver_) resolver_->cancel();
   if (connector_) connector_->cancel();
+  if (cluster_) cluster_->close();
 }
 
 void ClusterConnector::finish() {
@@ -196,18 +197,16 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
   }
 
   if (connector->is_ok()) {
-    ControlConnection::Ptr connection = connector->release_connection();
     const HostMap& hosts(connector->hosts());
     LoadBalancingPolicy::Vec policies;
 
-    HostMap::const_iterator host_it = hosts.find(connection->address());
+    HostMap::const_iterator host_it = hosts.find(connector->address());
     if (host_it == hosts.end()) {
       // This error is unlikely to happen and it likely means that the local
       // metadata is corrupt or missing and the control connection process
       // would've probably failed before this happens.
       LOG_ERROR("Current control connection host %s not found in hosts metadata",
-                connection->address_string().c_str());
-
+                connector_->address().to_string().c_str());
       ++contact_points_resolved_it_; // Move to the next contact point
       internal_connect();
       return;
@@ -241,13 +240,13 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
 
     if (available_hosts.empty()) {
       //TODO(fero): Check for DC aware policy to give more informative message (e.g. invalid DC)
-      on_error(CLUSTER_ERROR_NO_HOSTS_AVILABLE,
+      on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE,
                "No hosts available for connection using the current load " \
                "balancing policy(s)");
       return;
     }
 
-    cluster_.reset(Memory::allocate<Cluster>(connection,
+    cluster_.reset(Memory::allocate<Cluster>(connector->release_connection(),
                                              listener_,
                                              event_loop_,
                                              connected_host,

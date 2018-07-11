@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __SIMULACRON_REST_CLIENT_HPP__
-#define __SIMULACRON_REST_CLIENT_HPP__
+#ifndef __TEST_REST_CLIENT_HPP__
+#define __TEST_REST_CLIENT_HPP__
 
 #include "exception.hpp"
 
@@ -24,7 +24,7 @@
 #include <uv.h>
 
 /**
- * Simulacron REST request
+ * REST request
  */
 struct Request {
   /**
@@ -59,7 +59,7 @@ struct Request {
 };
 
 /**
- * Simulacron REST response
+ * REST response
  */
 struct Response {
   /**
@@ -76,10 +76,10 @@ struct Response {
 };
 
 /**
- * Simple HTTP client for sending synchronous requests to a HTTP Simulacron
+ * Simple HTTP client for sending synchronous requests to a HTTP REST server
  * REST server
  */
-class SimulacronRestClient {
+class RestClient {
 public:
   class Exception : public test::Exception {
   public:
@@ -88,7 +88,7 @@ public:
   };
 
   /**
-   * Send/Submit the request to the Simulacron REST server
+   * Send/Submit the request to the REST server
    *
    * @param request The request to send
    * @return The response from the request
@@ -107,7 +107,7 @@ private:
   /**
    * Disable the default constructor
    */
-  SimulacronRestClient();
+  RestClient();
 
   /**
    * Handle the buffer allocation of memory for the requests and server
@@ -122,7 +122,7 @@ private:
 
   /**
    * Handle the connect (callback) when the connection has been established to
-   * the REST server of Simulacron.
+   * the REST server.
    *
    * @param req Connection request type
    * @param status 0 if connection was successful; < 0 otherwise
@@ -152,4 +152,4 @@ private:
 
 };
 
-#endif // __SIMULACRON_REST_CLIENT_HPP__
+#endif // __TEST_REST_CLIENT_HPP__

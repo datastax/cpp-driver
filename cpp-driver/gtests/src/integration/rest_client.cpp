@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "simulacron_rest_client.hpp"
+#include "rest_client.hpp"
 #include "test_utils.hpp"
 
 #include "address.hpp"
@@ -25,15 +25,15 @@
 #define OUTPUT_BUFFER_SIZE 10240ul
 
 // Static initializations
-uv_buf_t SimulacronRestClient::write_buf_;
-uv_write_t SimulacronRestClient::write_req_;
+uv_buf_t RestClient::write_buf_;
+uv_write_t RestClient::write_req_;
 
 /**
 + * HTTP request
 + */
 struct HttpRequest {
   /**
-   * HTTP message to submit to the Simulacron REST server
+   * HTTP message to submit to the REST server
    */
   std::string message;
   /**
@@ -46,7 +46,7 @@ struct HttpRequest {
   Response response;
 };
 
-const Response SimulacronRestClient::send_request(const Request& request) {
+const Response RestClient::send_request(const Request& request) {
     // Initialize the loop
   uv_loop_t loop;
   int error_code = uv_loop_init(&loop);
@@ -91,14 +91,14 @@ const Response SimulacronRestClient::send_request(const Request& request) {
   return http_request.response;
 }
 
-void SimulacronRestClient::handle_allocation(uv_handle_t* handle,
-                                             size_t suggested_size,
-                                             uv_buf_t* buffer) {
+void RestClient::handle_allocation(uv_handle_t* handle,
+                                   size_t suggested_size,
+                                   uv_buf_t* buffer) {
   buffer->base = new char[OUTPUT_BUFFER_SIZE];
   buffer->len = OUTPUT_BUFFER_SIZE;
 }
 
-void SimulacronRestClient::handle_connected(uv_connect_t* req, int status) {
+void RestClient::handle_connected(uv_connect_t* req, int status) {
   HttpRequest* request = static_cast<HttpRequest*>(req->data);
 
   if (status < 0) {
@@ -106,7 +106,6 @@ void SimulacronRestClient::handle_connected(uv_connect_t* req, int status) {
       << uv_strerror(status));
     uv_close(reinterpret_cast<uv_handle_t*>(req->handle), NULL);
   } else {
-
     // Create the buffer to write to the stream
     write_buf_.base = const_cast<char*>(request->message.c_str());
     write_buf_.len = request->message.size();
@@ -117,9 +116,9 @@ void SimulacronRestClient::handle_connected(uv_connect_t* req, int status) {
   }
 }
 
-void SimulacronRestClient::handle_response(uv_stream_t* stream,
-                                           ssize_t buffer_length,
-                                           const uv_buf_t* buffer) {
+void RestClient::handle_response(uv_stream_t* stream,
+                                 ssize_t buffer_length,
+                                 const uv_buf_t* buffer) {
   HttpRequest* request = static_cast<HttpRequest*>(stream->data);
 
   if (buffer_length > 0) {
@@ -155,7 +154,7 @@ void SimulacronRestClient::handle_response(uv_stream_t* stream,
   delete[] buffer->base;
 }
 
-const std::string SimulacronRestClient::generate_http_message(const Request& request) {
+const std::string RestClient::generate_http_message(const Request& request) {
   // Determine the method of the the request
   std::stringstream message;
   if (request.method == Request::HTTP_METHOD_DELETE) {

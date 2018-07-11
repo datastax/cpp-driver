@@ -1,3 +1,32 @@
+1.6.0-beta1
+===========
+
+Features
+--------
+* [CPP-404] - Performance: Shared-nothing I/O workers (new internal architecture)
+* [CPP-441] - Move IO thread request scheduling to a "pull" model
+* [CPP-453] - Move token map calculation off the session thread
+* [CPP-515] - Remove support for libuv v0.10.x
+* [CPP-518] - Thread and connection pool refactor
+* [CPP-616] - Handle libuv v1.20.4+ version file updates
+
+Bug Fixes
+--------
+* [CPP-589] - Pathological hashing behavior in stream manager
+* [CPP-590] - Execution profiles are copied for every request (expensive to copy)
+
+1.5.0
+===========
+
+Features
+--------
+* [CPP-578] Add NO_COMPACT startup option
+
+Other
+--------
+* [CPP-566] Ignore control connection DOWN events if there are open connections
+* [CPP-584] win: Message for Boost v1.66.0+ using CMake v3.10.x or lower
+
 1.4.1
 ===========
 

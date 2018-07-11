@@ -217,8 +217,8 @@ DSE_INTEGRATION_TEST_F(GraphConsistencyTest, ReadOneNodeDown) {
   dse::GraphResultSet result_set = execute_read_query(CASS_CONSISTENCY_ALL,
                                                       false);
   ASSERT_NE(CASS_OK, result_set.error_code());
-  ASSERT_TRUE(contains(result_set.error_message(),
-                       "Cannot achieve consistency level"));
+  ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level") ||
+              contains(result_set.error_message(), "Operation timed out"));
   result_set = execute_read_query(CASS_CONSISTENCY_THREE, false);
   ASSERT_NE(CASS_OK, result_set.error_code());
 }
@@ -303,7 +303,8 @@ DSE_INTEGRATION_TEST_F(GraphConsistencyTest, WriteOneNodeDown) {
   dse::GraphResultSet result_set =
     execute_write_query(CASS_CONSISTENCY_ALL, false);
   ASSERT_NE(CASS_OK, result_set.error_code());
-  ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level"));
+  ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level") ||
+              contains(result_set.error_message(), "Operation timed out"));
   result_set = execute_write_query(CASS_CONSISTENCY_THREE, false);
   ASSERT_NE(CASS_OK, result_set.error_code());
 }

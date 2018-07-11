@@ -25,6 +25,7 @@ execution.
 
 ```c
 /* Create a cluster object */
+CassCluster* cluster = cass_cluster_new();
 
 /* Create a new execution profile */
 CassExecProfile* exec_profile = cass_execution_profile_new();
@@ -63,14 +64,24 @@ during the session connection process.. To use an execution profile the name
 must be assigned to a statement.
 
 ```c
-/* Create a simple or prepared statement */
+void execute_with_a_profile(CassSession* session) {
+  CassStatement* statement = cass_statement_new("SELECT * FROM ...", 0);
 
-/* Assign the execution profile to the statement */
-cass_statement_set_execution_profile(statement, "long_query");
+  /* OR create a prepared statement */
 
-/* Execute the statement */
-CassFuture* query_future = cass_session_execute(session, statement);
+  /* Assign the execution profile to the statement */
+  cass_statement_set_execution_profile(statement, "long_query");
+
+  /* Execute the statement */
+  CassFuture* query_future = cass_session_execute(session, statement);
+
+  /* ... */
+
+  cass_future_free(query_future);
+  cass_statement_free(statement);
+}
 ```
+
 
 __Note__: Use `cass_batch_set_execution_profile(batch, "name")` for batch
           statements.
@@ -83,6 +94,12 @@ defined an execution profile and are being re-used can pass a `NULL` or empty
 string `""` when assigning the execution profile.
 
 ```c
+CassStatement* statement = cass_statement_new("SELECT * FROM ...", 0);
+
 /* Remove the assigned execution profile */
 cass_statement_set_execution_profile(statement, NULL);
+
+/* ... */
+
+cass_statement_free(statement);
 ```

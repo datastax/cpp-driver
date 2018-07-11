@@ -50,6 +50,7 @@ struct ConnectionSettings {
   AuthProvider::Ptr auth_provider;
   unsigned int idle_timeout_secs;
   unsigned int heartbeat_interval_secs;
+  bool no_compact;
 };
 
 /**

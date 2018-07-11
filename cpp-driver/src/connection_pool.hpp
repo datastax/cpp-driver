@@ -198,6 +198,7 @@ private:
   enum CloseState {
     CLOSE_STATE_OPEN,
     CLOSE_STATE_CLOSING,
+    CLOSE_STATE_WAITING_FOR_CONNECTIONS,
     CLOSE_STATE_CLOSED
   };
 
@@ -218,7 +219,7 @@ private:
   void add_connection(const PooledConnection::Ptr& connection);
   void schedule_reconnect();
   void internal_close();
-  bool maybe_closed();
+  void maybe_closed();
 
   void on_reconnect(DelayedConnector* connector);
 

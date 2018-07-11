@@ -330,7 +330,7 @@ public:
           future->set_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
                             connector->error_message());
           break;
-        case ClusterConnector::CLUSTER_ERROR_NO_HOSTS_AVILABLE:
+        case ClusterConnector::CLUSTER_ERROR_NO_HOSTS_AVAILABLE:
           future->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                             "Unable to connect to any contact points");
           break;

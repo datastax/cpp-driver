@@ -220,6 +220,7 @@ std::string Integration::default_keyspace() {
 
   // Clean up the initial keyspace name (remove category information)
   keyspace_name_ = to_lower(test_case_name_) + "_" + to_lower(test_name_);
+  keyspace_name_ = replace_all(keyspace_name_, "tests", ""); //TODO: Rename integration tests (remove 's' or add 's')
   keyspace_name_ = replace_all(keyspace_name_, "test", "");
   keyspace_name_ = replace_all(keyspace_name_, "integration", "");
   for (TestCategory::iterator iterator = TestCategory::begin();
@@ -279,7 +280,9 @@ std::string Integration::default_table() {
   if (!table_name_.empty()) {
     return table_name_;
   }
+
   table_name_ = to_lower(test_name_);
+  table_name_ = replace_all(table_name_, "integration_", "");
   maybe_shrink_name(table_name_);
   return table_name_;
 }
@@ -330,12 +333,14 @@ void Integration::connect() {
   connect(cluster_);
 }
 
-test::driver::Cluster Integration::default_cluster() {
+test::driver::Cluster Integration::default_cluster(bool is_with_default_contact_points /*= true*/) {
   // Create the default cluster object
   Cluster cluster = Cluster::build()
-    .with_contact_points(contact_points_)
     .with_randomized_contact_points(is_randomized_contact_points_)
     .with_schema_metadata(is_schema_metadata_);
+  if (is_with_default_contact_points) {
+    cluster.with_contact_points(contact_points_);
+  }
   if (server_version_ >= "3.10" &&
       protocol_version_ == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
     cluster.with_beta_protocol(true);

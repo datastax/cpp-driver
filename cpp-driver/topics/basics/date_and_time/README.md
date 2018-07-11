@@ -28,34 +28,35 @@ CREATE TABLE date_time (key text PRIMARY KEY,
 ```c
 #include <time.h>
 
-/* ... */
+void insert_date_time(CassSession* session) {
 
-CassStatement* statement = cass_statement_new("INSERT INTO date_time (key, year_month_day, time_of_day) "
-                                              "VALUES (?, ?, ?)");
+  CassStatement* statement = cass_statement_new("INSERT INTO date_time (key, year_month_day, time_of_day) "
+                                                "VALUES (?, ?, ?)", 3);
 
-time_t now = time(NULL); /* Time in seconds from Epoch */
+  time_t now = time(NULL); /* Time in seconds from Epoch */
 
-/* Converts the time since the Epoch in seconds to the 'date' type */
-cass_uint_32_t year_month_day = cass_date_from_epoch(now);
+  /* Converts the time since the Epoch in seconds to the 'date' type */
+  cass_uint32_t year_month_day = cass_date_from_epoch(now);
 
-/* Converts the time since the Epoch in seconds to the 'time' type */
-cass_int64_t time_of_day = cass_time_from_epoch(now);
+  /* Converts the time since the Epoch in seconds to the 'time' type */
+  cass_int64_t time_of_day = cass_time_from_epoch(now);
 
-cass_statement_bind_string(statement, 0, "xyz");
+  cass_statement_bind_string(statement, 0, "xyz");
 
-/* 'date' uses an unsigned 32-bit integer */
-cass_statement_bind_uint32(statement, 1, year_month_day);
+  /* 'date' uses an unsigned 32-bit integer */
+  cass_statement_bind_uint32(statement, 1, year_month_day);
 
-/* 'time' uses a signed 64-bit integer */
-cass_statement_bind_int64(statement, 2, time_of_day)
+  /* 'time' uses a signed 64-bit integer */
+  cass_statement_bind_int64(statement, 2, time_of_day);
 
-CassFuture* future = cass_session_execute(session, statement);
+  CassFuture* future = cass_session_execute(session, statement);
 
-/* Handle future result */
+  /* Handle future result */
 
-/* CassStatement and CassFuture both need to be freed */
-cass_statement_free(statement);
-cass_future_free(future);
+  /* CassStatement and CassFuture both need to be freed */
+  cass_statement_free(statement);
+  cass_future_free(future);
+}
 ```
 
 ## `SELECT`ing the `date` and `time` Types
@@ -63,33 +64,33 @@ cass_future_free(future);
 ```c
 #include <time.h>
 
-/* ... */
+void select_date_time(CassSession* session) {
+  CassStatement* statement = cass_statement_new("SELECT * FROM date_time WHERE key = ?", 1);
 
-CassStatement* statement = cass_statement_new("SELECT * FROM examples.date_time WHERE key = ?");
+  CassFuture* future = cass_session_execute(session, statement);
 
-CassFuture* future = cass_session_execute(session, statement);
+  const CassResult* result = cass_future_get_result(future);
+  /* Make sure there's a valid result */
+  if (result != NULL && cass_result_row_count(result) > 0) {
+    const CassRow* row = cass_result_first_row(result);
 
-const CassResult* result = cass_future_get_result(future);
-/* Make sure there's a valid result */
-if (result != NULL && cass_result_row_count(resut) > 0) {
-  const CassRow* row = cass_result_first_row(result);
+    /* Get the value of the "year_month_day" column */
+    cass_uint32_t year_month_day;
+    cass_value_get_uint32(cass_row_get_column(row, 1), &year_month_day);
 
-  /* Get the value of the "year_month_day" column */
-  cass_uint32_t year_month_day;
-  cass_value_get_uint32(cass_row_get_column(row, 1), &year_month_day);
+    /* Get the value of the "time_of_day" column */
+    cass_int64_t time_of_day;
+    cass_value_get_int64(cass_row_get_column(row, 2), &time_of_day);
 
-  /* Get the value of the "time_of_day" column */
-  cass_int64_t time_of_day;
-  cass_value_get_int64(cass_row_get_column(row, 2), &time_of_day);
+    /* Convert 'date' and 'time' to Epoch time */
+    time_t time = (time_t)cass_date_time_to_epoch(year_month_day, time_of_day);
+    printf("Date and time: %s", asctime(localtime(&time)));
+  } else {
+    /* Handle error */
+  }
 
-  /* Convert 'date' and 'time' to Epoch time */
-  time_t time = (time_t)cass_date_time_to_epoch(year_month_day, time_of_day);
-  printf("Date and time: %s", asctime(localtime(&time)))
-} else {
-  /* Handle error */
+  /* CassStatement and CassFuture both need to be freed */
+  cass_statement_free(statement);
+  cass_future_free(future);
 }
-
-/* CassStatement and CassFuture both need to be freed */
-cass_statement_free(statement);
-cass_future_free(future);
 ```

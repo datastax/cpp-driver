@@ -78,14 +78,19 @@
   }
 
 #define SKIP_TEST_VERSION(server_version_string, version_string) \
-  SKIP_TEST("Unsupported for Server Version " \
-  << server_version_string << ": Server version " \
-  << version_string << "+ is required")
+  SKIP_TEST("Unsupported for Apache Cassandra Version " \
+    << server_version_string << ": Server version " \
+    << version_string << "+ is required")
 
-#define CHECK_VERSION(version) \
-  if (this->server_version_ < #version) { \
-    SKIP_TEST_VERSION(this->server_version_.to_string(), #version) \
-  }
+#define CHECK_VERSION(version) do { \
+  CCM::CassVersion cass_version = this->server_version_; \
+  if (Options::is_dse()) { \
+    cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
+  } \
+  if (cass_version < #version) { \
+    SKIP_TEST_VERSION(cass_version.to_string(), #version) \
+  } \
+} while(0)
 
 #define CHECK_OPTIONS_VERSION(version) \
   if (Options::server_version() < #version) { \
@@ -152,7 +157,7 @@ protected:
   /**
    * Handle for interacting with CCM
    */
-  SharedPtr<CCM::Bridge> ccm_;
+  SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > ccm_;
   /**
    * Logger instance for handling driver log messages
    */
@@ -372,9 +377,11 @@ protected:
   /**
    * Get the default cluster configuration
    *
+   * @param is_with_default_contact_points True if default contact points
+                                           should be added to the cluster
    * @return Cluster object (default)
    */
-  virtual Cluster default_cluster();
+  virtual Cluster default_cluster(bool is_with_default_contact_points = true);
 
   /**
    * Enable/Disable tracing on the cluster

@@ -13,20 +13,20 @@ cass_statement_bind_string(statement, 0, "abc");
 cass_statement_free(statement);
 ```
 
-Variables can only be bound by name for prepared statements. This limitation exists because query metadata provided by Cassandra is required to map the variable name to the variable’s marker index.
+Variables also could be bound by name, where name could be inferred from query, or explicitly specified as `:name`. (Until Cassandra 2.1, bind by name might be done only for [prepared statements](../prepared_statements/). This limitation did exist because query metadata provided by Cassandra is required to map the variable name to the variable’s marker index.)
 
 ```c
-/* Prepare statment */
+void execute_prepared_statement(const CassPrepared* prepared) {
+  /* The prepared query allocates the correct number of paramters automatically */
+  CassStatement* statement = cass_prepared_bind(prepared);
 
-/* The prepared query allocates the correct number of paramters automatically */
-CassStatement* statement = cass_prepared_bind(prepared);
+  /* The parameter can now be bound by name */
+  cass_statement_bind_string_by_name(statement, "column1", "abc");
 
-/* The parameter can now be bound by name */
-cass_statement_bind_string_by_name(statement, "column1", "abc");
+  /* Execute statement */
 
-/* Execute statement */
-
-cass_statement_free(statement);
+  cass_statement_free(statement);
+}
 ```
 
 ## Unbound parameters
@@ -44,6 +44,8 @@ Collections are supported using [`CassCollection`](http://datastax.github.io/cpp
 **Important**: Values appended to the collection can be freed immediately afterward because the values are copied.
 
 ```c
+const char* query = "SELECT * FROM ...";
+
 CassStatement* statement = cass_statement_new(query, 1);
 
 CassCollection* list = cass_collection_new(CASS_COLLECTION_TYPE_LIST, 3);
@@ -61,6 +63,8 @@ cass_collection_free(list);
 Maps are built similarly, but the key and value need to be interleaved as they are appended to the collection.
 
 ```c
+const char* query = "SELECT * FROM ...";
+
 CassStatement* statement = cass_statement_new(query, 1);
 
 CassCollection* map = cass_collection_new(CASS_COLLECTION_TYPE_MAP, 2);

@@ -57,6 +57,10 @@ links:
     href:  https://academy.datastax.com/slack
 
 versions:
+  - name: 1.6-beta1
+    ref: 1.6.0-beta1
+  - name: 1.5
+    ref: 1.5.0
   - name: 1.4
     ref: 1.4.1
   - name: 1.3

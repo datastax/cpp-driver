@@ -23,8 +23,8 @@
 #include <algorithm>
 #include <iostream>
 
-#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.1")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("5.1.5")
+#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.2")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.1")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
@@ -489,7 +489,7 @@ const std::string& Options::private_key() {
   return private_key_;
 }
 
-SharedPtr<CCM::Bridge> Options::ccm() {
+SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > Options::ccm() {
   return new CCM::Bridge( \
     Options::server_version(),
     Options::use_git(), Options::branch_tag(), \

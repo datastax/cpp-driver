@@ -99,7 +99,7 @@ public:
   bool is_critical_error() const;
   bool is_keyspace_error() const;
 
-  Connector::ConnectionError error_code() const { return connector_->error_code(); }
+  Connector::ConnectionError error_code() const;
   const String& error_message() const { return connector_->error_message(); }
 
 private:
