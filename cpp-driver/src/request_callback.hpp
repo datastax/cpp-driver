@@ -131,7 +131,7 @@ public:
     REQUEST_STATE_WRITING,
     REQUEST_STATE_READING,
     REQUEST_STATE_READ_BEFORE_WRITE,
-    REQUEST_STATE_FINISHED,
+    REQUEST_STATE_FINISHED
   };
 
   RequestCallback(const RequestWrapper& wrapper)
