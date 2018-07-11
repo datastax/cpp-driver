@@ -1661,6 +1661,8 @@ cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
  *
  * <b>Default:</b> 500 us
  *
+ * @public @memberof CassCluster
+ *
  * @param[in] cluster
  * @param[in] delay_us
  * @return CASS_OK if successful, otherwise an error occurred.
@@ -1676,6 +1678,8 @@ cass_cluster_set_coalesce_delay(CassCluster* cluster,
  * values allocate more time to processing outstanding requests.
  *
  * <b>Default:</b> 50
+ *
+ * @public @memberof CassCluster
  *
  * @param[in] cluster
  * @param[in] ratio

@@ -40,6 +40,7 @@ sections:
 rewrites:
   - http://datastax.github.io/cpp-driver/: http://docs.datastax.com/en/developer/cpp-driver/latest
   - https://github.com/datastax/cpp-dse-driver/tree/master/examples: https://github.com/datastax/cpp-dse-driver-examples
+  - https://web.mit.edu/kerberos: http://web.mit.edu/kerberos
   - ^examples/date_range/date_range.c$: https://github.com/datastax/cpp-dse-driver-examples/blob/v1.0.0/dse/examples/date_range/date_range.c
   - ^cpp-driver$: http://docs.datastax.com/en/developer/cpp-driver/latest
   - ^cpp-driver-dse$: http://docs.datastax.com/en/developer/cpp-dse-driver/latest
@@ -57,10 +58,11 @@ links:
     href:  https://academy.datastax.com/slack
 
 versions:
-  - name: 1.6-beta1
-    ref: 1.6.0-beta1
   - name: 1.5
     ref: 1.5.0
+  - name: 1.6-beta1
+    ref: 1.6.0-beta1
+    prerelease: true
   - name: 1.4
     ref: 1.4.1
   - name: 1.3
