@@ -14,7 +14,7 @@
   "schema.vertexLabel(vertex_label).properties(property_name).create();" \
   "schema.vertexLabel(vertex_label).index(property_name + 'Index').secondary().by(property_name).add();"
 
-#define GRAPH_DATA_TYPE_INSERT "g.addV(label, vertex_label, property_name, value_field);"
+#define GRAPH_DATA_TYPE_INSERT "g.addV(vertex_label).property(property_name, value_field);"
 
 #define GRAPH_DATA_TYPE_SELECT "g.V().hasLabel(vertex_label).has(property_name, value_field).next();"
 

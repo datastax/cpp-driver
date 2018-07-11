@@ -7,8 +7,20 @@ A session can be initially connected using a supplied keyspace.
 **Performance Tip:**  An application should create a single session object per keyspace as a session object is designed to be created once, reused, and shared by multiple threads within the application.
 
 ```c
-CassFuture* connect_future 
+CassSession* session = cass_session_new();
+CassCluster* cluster = cass_cluster_new();
+
+/* Configure cluster */
+
+CassFuture* connect_future
   = cass_session_connect_keyspace(session, cluster, "keyspace1");
+
+/* Handle connect future */
+
+cass_future_free(connect_future);
+
+cass_session_free(session);
+cass_cluster_free(cluster);
 ```
 
 ## Changing Keyspaces
@@ -16,14 +28,21 @@ CassFuture* connect_future
 You can specify a keyspace to change to by executing a `USE` statement on a connection session object.
 
 ```c
-CassStatement use_statment 
-  = cass_statement_new("USE keyspace1", 0);
+void use_keyspace(CassSession* session) {
+  CassStatement* use_statement
+    = cass_statement_new("USE keyspace1", 0);
 
-CassFuture* use_future 
-  = cass_session_execute(session, use_statement);
+  CassFuture* use_future
+    = cass_session_execute(session, use_statement);
 
-/* Check future result... */
+  /* Check future result... */
+
+  cass_statement_free(use_statement);
+  cass_future_free(use_future);
+}
 ```
+
+Be very careful though: if the session is shared by multiple threads, switching the keyspace at runtime could easily cause unexpected query failures.
 
 ## Single Session and Multiple Keyspaces
 

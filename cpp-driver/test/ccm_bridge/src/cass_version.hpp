@@ -461,13 +461,15 @@ namespace CCM {
         return CassVersion("3.0.12-1656");
       } else if (*this == "5.0.9") {
         return CassVersion("3.0.13-1735");
-      } else if ((*this == "5.0.10" || *this >= "5.0.11") && *this < "5.1.0") {
-        if (*this > "5.0.11") {
+      } else if (*this == "5.0.10" || *this == "5.0.11") {
+        return CassVersion("3.0.14-1862");
+      } else if (*this >= "5.0.12" && *this < "5.1.0") {
+        if (*this > "5.0.12") {
           std::cerr << "Cassandra Version is not Defined: "
             << "Add Cassandra version for DSE v" << this->to_string()
             << std::endl;
         }
-        return CassVersion("3.0.14-1862");
+        return CassVersion("3.0.15-2128");
       } else if (*this == "5.1.0") {
         return CassVersion("3.10.0-1652");
       } else if (*this == "5.1.1") {

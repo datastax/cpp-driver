@@ -416,7 +416,7 @@ Response test::SimulacronCluster::send_request(Request::Method method,
   if (method == Request::HTTP_METHOD_POST && !content.empty()) {
     request.content = content;
   }
-  return SimulacronRestClient::send_request(request);
+  return RestClient::send_request(request);
 }
 
 bool test::SimulacronCluster::is_node_available(unsigned int node) {

@@ -153,14 +153,16 @@ void StartupCallback::on_result_response(ResponseMessage* response) {
 ConnectionSettings::ConnectionSettings()
   : connect_timeout_ms(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
   , idle_timeout_secs(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
-  , heartbeat_interval_secs(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS) { }
+  , heartbeat_interval_secs(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
+  , no_compact(CASS_DEFAULT_NO_COMPACT) { }
 
 ConnectionSettings::ConnectionSettings(const Config& config)
   : socket_settings(config)
   , connect_timeout_ms(config.connect_timeout_ms())
   , auth_provider(config.auth_provider())
   , idle_timeout_secs(config.connection_idle_timeout_secs())
-  , heartbeat_interval_secs(config.connection_heartbeat_interval_secs()) { }
+  , heartbeat_interval_secs(config.connection_heartbeat_interval_secs())
+  , no_compact(config.no_compact()) { }
 
 Connector::Connector(const Address& address,
                      int protocol_version,
@@ -296,7 +298,7 @@ void ConnectionConnector::on_supported(ResponseMessage* response) {
         RequestCallback::Ptr(
           Memory::allocate<StartupCallback>(this,
                                             Request::ConstPtr(
-                                              Memory::allocate<StartupRequest>()))));
+                                              Memory::allocate<StartupRequest>(settings_.no_compact)))));
 }
 #endif
 
@@ -405,7 +407,7 @@ void Connector::on_connect(SocketConnector* socket_connector) {
           RequestCallback::Ptr(
             Memory::allocate<StartupCallback>(this,
                                               Request::ConstPtr(
-                                                Memory::allocate<StartupRequest>()))));
+                                                Memory::allocate<StartupRequest>(settings_.no_compact)))));
 #endif
   } else if (socket_connector->is_canceled() || is_timeout_error()) {
     finish();

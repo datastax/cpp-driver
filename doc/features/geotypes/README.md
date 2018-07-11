@@ -69,7 +69,7 @@ dse_polygon_add_point(polygon, 0, 0);
 /* Tell the polygon string we are not going to add any more rings or points */
 dse_polygon_finish(polygon);
 
-cass_statement_bind_string(statement, 0, key);
+cass_statement_bind_string(statement, 0, "key");
 
 /* Bind the polygon */
 cass_statement_bind_dse_polygon(statement, 1, polygon);

@@ -36,7 +36,7 @@ with more complex authentication systems such as Kerberos.
 typedef struct Credentials_ {
   const char* password;
   const char* username;
-} Credential;
+} Credentials;
 
 void on_auth_initial(CassAuthenticator* auth, void* data) {
   /*
@@ -98,6 +98,8 @@ void on_auth_cleanup(CassAuthenticator* auth, void* data) {
 }
 
 int main() {
+  CassCluster* cluster = cass_cluster_new();
+
   /* ... */
 
   /* Setup authentication callbacks and credentials */
@@ -128,7 +130,10 @@ int main() {
                                            &credentials);
 
   /* ... */
+
+  cass_cluster_free(cluster);
 }
 ```
 
 
+[`cass_cluster_set_credentials()`]: http://datastax.github.io/cpp-driver/api/struct.CassCluster/#function-cass_cluster_set_credentials_n
