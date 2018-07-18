@@ -28,7 +28,7 @@ class RequestProcessorManager;
 
 class RequestProcessorManagerListener
     : public ConnectionPoolStateListener
-    , public RequestChangeListener {
+    , public PreparedMetadataListener {
 public:
   virtual void on_close(RequestProcessorManager* manager) = 0;
 };
@@ -115,12 +115,13 @@ private:
   // Request processor listener methods
 
   void on_close(RequestProcessor* processor);
-  void on_keyspace_changed(const String& keyspace);
   void on_pool_up(const Address& address);
   void on_pool_down(const Address& address);
   void on_pool_critical_error(const Address& address,
                               Connector::ConnectionError code,
                               const String& message);
+  void on_keyspace_changed(const String& keyspace,
+                           const KeyspaceChangedHandler::Ptr& handler);
   void on_prepared_metadata_changed(const String& id,
                                     const PreparedMetadata::Entry::Ptr& entry);
 

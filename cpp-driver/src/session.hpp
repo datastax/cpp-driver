@@ -85,8 +85,6 @@ private:
                                       Connector::ConnectionError code,
                                       const String& message);
 
-  virtual void on_keyspace_changed(const String& keyspace);
-
   virtual void on_prepared_metadata_changed(const String& id,
                                            const PreparedMetadata::Entry::Ptr& entry);
 

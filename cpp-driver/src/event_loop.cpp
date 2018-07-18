@@ -119,6 +119,10 @@ void EventLoop::maybe_start_io_time() {
   }
 }
 
+bool EventLoop::is_running_on() const {
+  return uv_thread_self() == thread_;
+}
+
 void EventLoop::on_run() {
   if (name_.empty()) name_ = "Event Loop";
 #if defined(_MSC_VER)

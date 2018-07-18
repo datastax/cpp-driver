@@ -340,9 +340,6 @@ void Session::on_pool_critical_error(const Address& address,
   cluster()->notify_down(address);
 }
 
-void Session::on_keyspace_changed(const String& keyspace) {
-}
-
 void Session::on_prepared_metadata_changed(const String& id,
                                            const PreparedMetadata::Entry::Ptr& entry) {
   cluster()->prepared(id, entry);
