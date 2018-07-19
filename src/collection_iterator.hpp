@@ -26,23 +26,24 @@ namespace cass {
 
 class ValueIterator : public Iterator {
 public:
-  ValueIterator(CassIteratorType type)
-    : Iterator(type) { }
+  ValueIterator(CassIteratorType type, Decoder decoder)
+    : Iterator(type)
+    , decoder_(decoder) { }
 
   const Value* value() const {
     return &value_;
   }
 
 protected:
+  Decoder decoder_;
   Value value_;
 };
 
 class CollectionIterator : public ValueIterator {
 public:
   CollectionIterator(const Value* collection)
-      : ValueIterator(CASS_ITERATOR_TYPE_COLLECTION)
+      : ValueIterator(CASS_ITERATOR_TYPE_COLLECTION, collection->decoder())
       , collection_(collection)
-      , position_(collection->data())
       , index_(-1)
       , count_(collection_->value_type() == CASS_VALUE_TYPE_MAP
                    ? (2 * collection_->count())
@@ -51,12 +52,11 @@ public:
   virtual bool next();
 
 private:
-  char* decode_value(char* position);
+  bool decode_value();
 
 private:
   const Value* collection_;
 
-  char* position_;
   int32_t index_;
   const int32_t count_;
 };
@@ -64,9 +64,7 @@ private:
 class TupleIterator : public ValueIterator {
 public:
   TupleIterator(const Value* tuple)
-      : ValueIterator(CASS_ITERATOR_TYPE_TUPLE)
-      , tuple_(tuple)
-      , position_(tuple->data()) {
+      : ValueIterator(CASS_ITERATOR_TYPE_TUPLE, tuple->decoder()) {
     CollectionType::ConstPtr collection_type(tuple->data_type());
     next_ = collection_type->types().begin();
     end_ = collection_type->types().end();
@@ -75,12 +73,6 @@ public:
   virtual bool next();
 
 private:
-  char* decode_value(char* position);
-
-private:
-  const Value* tuple_;
-
-  char* position_;
   DataType::Vec::const_iterator next_;
   DataType::Vec::const_iterator current_;
   DataType::Vec::const_iterator end_;

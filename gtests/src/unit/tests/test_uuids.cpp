@@ -132,14 +132,14 @@ TEST(UuidUnitTest, V4)
 TEST(UuidUnitTest, FromString)
 {
   CassUuid uuid;
-  const std::string expected = "c3b54ca0-7b01-11e4-aea6-c30dd51eaa64";
+  const cass::String expected = "c3b54ca0-7b01-11e4-aea6-c30dd51eaa64";
   char actual[CASS_UUID_STRING_LENGTH];
 
   EXPECT_EQ(cass_uuid_from_string(expected.c_str(), &uuid), CASS_OK);
   cass_uuid_string(uuid, actual);
   EXPECT_EQ(expected, actual);
 
-  std::string upper  = expected;
+  cass::String upper  = expected;
   std::transform(upper.begin(), upper.end(), upper.begin(), toupper);
   EXPECT_EQ(cass_uuid_from_string(upper.c_str(), &uuid), CASS_OK);
   cass_uuid_string(uuid, actual);

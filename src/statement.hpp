@@ -27,9 +27,8 @@
 #include "result_response.hpp"
 #include "retry_policy.hpp"
 #include "scoped_ptr.hpp"
-
-#include <vector>
-#include <string>
+#include "string.hpp"
+#include "vector.hpp"
 
 namespace cass {
 
@@ -49,7 +48,7 @@ public:
   // Used to get the original query string from a simple statement. To get the
   // query from a execute request (bound statement) cast it and get it from the
   // prepared object.
-  std::string query() const;
+  String query() const;
 
   void set_has_names_for_values(bool has_names_for_values) {
     if (has_names_for_values) {
@@ -67,9 +66,9 @@ public:
 
   void set_page_size(int32_t page_size) { page_size_ = page_size; }
 
-  const std::string& paging_state() const { return paging_state_; }
+  const String& paging_state() const { return paging_state_; }
 
-  void set_paging_state(const std::string& paging_state) {
+  void set_paging_state(const String& paging_state) {
     paging_state_ = paging_state;
   }
 
@@ -80,7 +79,7 @@ public:
 
   void add_key_index(size_t index) { key_indices_.push_back(index); }
 
-  virtual bool get_routing_key(std::string* routing_key) const {
+  virtual bool get_routing_key(String* routing_key) const {
     return calculate_routing_key(key_indices_, routing_key);
   }
 
@@ -97,14 +96,14 @@ protected:
   int32_t encode_values(int version, RequestCallback* callback, BufferVec* bufs) const;
   int32_t encode_end(int version, RequestCallback* callback, BufferVec* bufs) const;
 
-  bool calculate_routing_key(const std::vector<size_t>& key_indices, std::string* routing_key) const;
+  bool calculate_routing_key(const Vector<size_t>& key_indices, String* routing_key) const;
 
 private:
   Buffer query_or_id_;
   int32_t flags_;
   int32_t page_size_;
-  std::string paging_state_;
-  std::vector<size_t> key_indices_;
+  String paging_state_;
+  Vector<size_t> key_indices_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Statement);

@@ -1,5 +1,4 @@
  git clone https://github.com/miloyip/rapidjson.git /tmp/rapidjson
  cp -R /tmp/rapidjson/include/rapidjson /tmp/rapidjson/license.txt .
 
- One patch to make it compile without c++11:
- patch -p0 < patches/remove_comma_c++11.diff
+ patch -p2 < patches/fix_allocator_new.diff

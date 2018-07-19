@@ -19,10 +19,10 @@
 
 #include "cassandra.h"
 #include "get_time.hpp"
+#include "string.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <string>
 
 namespace cass {
 

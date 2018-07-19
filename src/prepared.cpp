@@ -27,7 +27,7 @@ void cass_prepared_free(const CassPrepared* prepared) {
 }
 
 CassStatement* cass_prepared_bind(const CassPrepared* prepared) {
-  cass::ExecuteRequest* execute = new cass::ExecuteRequest(prepared);
+  cass::ExecuteRequest* execute = cass::Memory::allocate<cass::ExecuteRequest>(prepared);
   execute->inc_ref();
   return CassStatement::to(execute);
 }

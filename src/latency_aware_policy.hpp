@@ -20,8 +20,8 @@
 #include "atomic.hpp"
 #include "load_balancing.hpp"
 #include "macros.hpp"
-#include "periodic_task.hpp"
 #include "scoped_ptr.hpp"
+#include "timer.hpp"
 
 namespace cass {
 
@@ -45,9 +45,8 @@ public:
   LatencyAwarePolicy(LoadBalancingPolicy* child_policy, const Settings& settings)
     : ChainedLoadBalancingPolicy(child_policy)
     , min_average_(-1)
-    , calculate_min_average_task_(NULL)
     , settings_(settings)
-    , hosts_(new HostVec) {}
+    , hosts_(Memory::allocate<HostVec>()) {}
 
   virtual ~LatencyAwarePolicy() {}
 
@@ -56,12 +55,12 @@ public:
   virtual void register_handles(uv_loop_t* loop);
   virtual void close_handles();
 
-  virtual QueryPlan* new_query_plan(const std::string& keyspace,
+  virtual QueryPlan* new_query_plan(const String& keyspace,
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
   virtual LoadBalancingPolicy* new_instance() {
-    return new LatencyAwarePolicy(child_policy_->new_instance(), settings_);
+    return Memory::allocate<LatencyAwarePolicy>(child_policy_->new_instance(), settings_);
   }
 
   virtual void on_add(const Host::Ptr& host);
@@ -74,6 +73,9 @@ public:
   int64_t min_average() const {
     return min_average_.load();
   }
+
+private:
+  void start_timer(uv_loop_t* loop);
 
 private:
   class LatencyAwareQueryPlan : public QueryPlan {
@@ -93,11 +95,10 @@ private:
     size_t skipped_index_;
   };
 
-  static void on_work(PeriodicTask* task);
-  static void on_after_work(PeriodicTask* task);
+  void on_timer(Timer* timer);
 
   Atomic<int64_t> min_average_;
-  PeriodicTask::Ptr calculate_min_average_task_;
+  Timer timer_;
   Settings settings_;
   CopyOnWriteHostVec hosts_;
 

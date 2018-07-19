@@ -56,13 +56,17 @@ public:
       Options::print_settings();
       is_settings_displayed_ = true;
     }
-    Options::ccm()->remove_all_clusters();
+    if (!Options::keep_clusters()) {
+      Options::ccm()->remove_all_clusters();
+    }
     std::cout << "Category: " << category_ << std::endl;
   }
 
   void OnTestProgramEnd(const testing::UnitTest& unit_test) {
     std::cout << std::endl;
-    Options::ccm()->remove_all_clusters();
+    if (!Options::keep_clusters()) {
+      Options::ccm()->remove_all_clusters();
+    }
   }
 
 private:

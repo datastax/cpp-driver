@@ -21,8 +21,6 @@
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"
 
-#include <sstream>
-
 #define REVERSED_TYPE "org.apache.cassandra.db.marshal.ReversedType"
 #define FROZEN_TYPE "org.apache.cassandra.db.marshal.FrozenType"
 #define COMPOSITE_TYPE "org.apache.cassandra.db.marshal.CompositeType"
@@ -47,7 +45,7 @@ int hex_value(int c) {
   return -1;
 }
 
-bool from_hex(const std::string& hex, std::string* result) {
+bool from_hex(const String& hex, String* result) {
   if ((hex.length() & 1) == 1) { // Invalid if not divisible by 2
     return false;
   }
@@ -64,12 +62,12 @@ bool from_hex(const std::string& hex, std::string* result) {
   return true;
 }
 
-DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
+DataType::ConstPtr DataTypeCqlNameParser::parse(const String& type,
                                                 SimpleDataTypeCache& cache,
                                                 KeyspaceMetadata* keyspace,
                                                 bool is_frozen) {
   Parser parser(type, 0);
-  std::string type_name;
+  String type_name;
   Parser::TypeParamsVec params;
 
   parser.parse_type_name(&type_name);
@@ -122,7 +120,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
          i != end;  ++i) {
       types.push_back(parse(*i, cache, keyspace));
     }
-    return DataType::ConstPtr(new TupleType(types, is_frozen));
+    return DataType::ConstPtr(Memory::allocate<TupleType>(types, is_frozen));
   }
 
   if (iequals(type_name, "frozen")) {
@@ -139,27 +137,27 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
   }
 
   if (iequals(type_name, "empty")) {
-    return DataType::ConstPtr(new CustomType(EMPTY_TYPE));
+    return DataType::ConstPtr(Memory::allocate<CustomType>(EMPTY_TYPE));
   }
 
   if (type_name[0] == '\'') {
     // Remove single quotes
-    return DataType::ConstPtr(new CustomType(type_name.substr(1, type_name.size() - 2)));
+    return DataType::ConstPtr(Memory::allocate<CustomType>(type_name.substr(1, type_name.size() - 2)));
   }
 
   UserType::ConstPtr user_type(keyspace->get_or_create_user_type(type_name, is_frozen));
 
   if (user_type->is_frozen() != is_frozen) {
-    return UserType::Ptr(new UserType(user_type->keyspace(),
-                                      user_type->type_name(),
-                                      user_type->fields(),
-                                      is_frozen));
+    return UserType::Ptr(Memory::allocate<UserType>(user_type->keyspace(),
+                                                    user_type->type_name(),
+                                                    user_type->fields(),
+                                                    is_frozen));
   }
 
   return user_type;
 }
 
-void DataTypeCqlNameParser::Parser::parse_type_name(std::string* name) {
+void DataTypeCqlNameParser::Parser::parse_type_name(String* name) {
   skip_blank();
   read_next_identifier(name);
 }
@@ -179,8 +177,8 @@ void DataTypeCqlNameParser::Parser::parse_type_parameters(TypeParamsVec* params)
 
   ++index_; // Skip '<'
 
-  std::string name;
-  std::string args;
+  String name;
+  String args;
   while (skip_blank_and_comma()) {
     if (str_[index_] == '>') {
       ++index_;
@@ -193,7 +191,7 @@ void DataTypeCqlNameParser::Parser::parse_type_parameters(TypeParamsVec* params)
   }
 }
 
-void DataTypeCqlNameParser::Parser::read_next_identifier(std::string* name) {
+void DataTypeCqlNameParser::Parser::read_next_identifier(String* name) {
   size_t start_index = index_;
   if (str_[start_index] == '"') {
     ++index_;
@@ -219,7 +217,7 @@ void DataTypeCqlNameParser::Parser::read_next_identifier(std::string* name) {
   name->assign(str_.begin() + start_index, str_.begin() + index_);
 }
 
-bool DataTypeCqlNameParser::Parser::read_raw_type_parameters(std::string* params) {
+bool DataTypeCqlNameParser::Parser::read_raw_type_parameters(String* params) {
   skip_blank();
 
   params->clear();
@@ -261,34 +259,34 @@ bool DataTypeCqlNameParser::Parser::read_raw_type_parameters(std::string* params
   return true;
 }
 
-bool DataTypeClassNameParser::is_reversed(const std::string& type) {
+bool DataTypeClassNameParser::is_reversed(const String& type) {
   return starts_with(type, REVERSED_TYPE);
 }
 
-bool DataTypeClassNameParser::is_frozen(const std::string& type) {
+bool DataTypeClassNameParser::is_frozen(const String& type) {
   return starts_with(type, FROZEN_TYPE);
 }
 
-bool DataTypeClassNameParser::is_composite(const std::string& type) {
+bool DataTypeClassNameParser::is_composite(const String& type) {
   return starts_with(type, COMPOSITE_TYPE);
 }
 
-bool DataTypeClassNameParser::is_collection(const std::string& type) {
+bool DataTypeClassNameParser::is_collection(const String& type) {
   return starts_with(type, COLLECTION_TYPE);
 }
 
-bool DataTypeClassNameParser::is_user_type(const std::string& type) {
+bool DataTypeClassNameParser::is_user_type(const String& type) {
   return starts_with(type, UDT_TYPE);
 }
 
-bool DataTypeClassNameParser::is_tuple_type(const std::string& type) {
+bool DataTypeClassNameParser::is_tuple_type(const String& type) {
   return starts_with(type, TUPLE_TYPE);
 }
 
-DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, SimpleDataTypeCache& cache) {
+DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, SimpleDataTypeCache& cache) {
   bool is_frozen = DataTypeClassNameParser::is_frozen(type);
 
-  std::string class_name;
+  String class_name;
 
   if (is_reversed(type) || is_frozen) {
     if (!get_nested_class_name(type, &class_name)) {
@@ -299,7 +297,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, S
   }
 
   Parser parser(class_name, 0);
-  std::string next;
+  String next;
 
   parser.get_next_name(&next);
 
@@ -344,18 +342,18 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, S
   if (is_user_type(next)) {
     parser.skip(); // Skip '('
 
-    std::string keyspace;
+    String keyspace;
     if (!parser.read_one(&keyspace)) {
       return DataType::ConstPtr();
     }
     parser.skip_blank_and_comma();
 
-    std::string hex;
+    String hex;
     if (!parser.read_one(&hex)) {
       return DataType::ConstPtr();
     }
 
-    std::string type_name;
+    String type_name;
     if (!from_hex(hex, &type_name)) {
       LOG_ERROR("Invalid hex string \"%s\" for parameter", hex.c_str());
       return DataType::ConstPtr();
@@ -382,7 +380,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, S
       fields.push_back(UserType::Field(i->first, data_type));
     }
 
-    return DataType::ConstPtr(new UserType(keyspace, type_name, fields, true));
+    return DataType::ConstPtr(Memory::allocate<UserType>(keyspace, type_name, fields, true));
   }
 
   if (is_tuple_type(type)) {
@@ -401,7 +399,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, S
       types.push_back(data_type);
     }
 
-    return DataType::ConstPtr(new TupleType(types, true));
+    return DataType::ConstPtr(Memory::allocate<TupleType>(types, true));
   }
 
   DataType::ConstPtr simple_type(cache.by_class(next));
@@ -409,13 +407,13 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, S
     return simple_type;
   }
 
-  return DataType::ConstPtr(new CustomType(next));
+  return DataType::ConstPtr(Memory::allocate<CustomType>(next));
 }
 
-ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const std::string& type, SimpleDataTypeCache& cache) {
+ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const String& type, SimpleDataTypeCache& cache) {
   Parser parser(type, 0);
 
-  std::string next;
+  String next;
   parser.get_next_name(&next);
 
   if (!is_composite(next)) {
@@ -423,7 +421,7 @@ ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const std::string
     if (!data_type) {
       return ParseResult::Ptr();
     }
-    return ParseResult::Ptr(new ParseResult(data_type, is_reversed(next)));
+    return ParseResult::Ptr(Memory::allocate<ParseResult>(data_type, is_reversed(next)));
   }
 
   TypeParamsVec sub_class_names;
@@ -438,7 +436,7 @@ ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const std::string
   }
 
   ParseResult::CollectionMap collections;
-  const std::string& last = sub_class_names.back();
+  const String& last = sub_class_names.back();
   size_t count = sub_class_names.size();
   if (is_collection(last)) {
     count--;
@@ -471,10 +469,10 @@ ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const std::string
     reversed.push_back(is_reversed(sub_class_names[i]));
   }
 
-  return ParseResult::Ptr(new ParseResult(true, types, reversed, collections));
+  return ParseResult::Ptr(Memory::allocate<ParseResult>(true, types, reversed, collections));
 }
 
-bool DataTypeClassNameParser::get_nested_class_name(const std::string& type, std::string* class_name) {
+bool DataTypeClassNameParser::get_nested_class_name(const String& type, String* class_name) {
   Parser parser(type, 0);
   parser.get_next_name();
   TypeParamsVec params;
@@ -486,10 +484,10 @@ bool DataTypeClassNameParser::get_nested_class_name(const std::string& type, std
   return true;
 }
 
-bool DataTypeClassNameParser::Parser::read_one(std::string* name_and_args) {
-  std::string name;
+bool DataTypeClassNameParser::Parser::read_one(String* name_and_args) {
+  String name;
   get_next_name(&name);
-  std::string args;
+  String args;
   if (!read_raw_arguments(&args)) {
     return false;
   }
@@ -497,7 +495,7 @@ bool DataTypeClassNameParser::Parser::read_one(std::string* name_and_args) {
   return true;
 }
 
-void DataTypeClassNameParser::Parser::get_next_name(std::string* name) {
+void DataTypeClassNameParser::Parser::get_next_name(String* name) {
   skip_blank();
   read_next_identifier(name);
 }
@@ -521,7 +519,7 @@ bool DataTypeClassNameParser::Parser::get_type_params(TypeParamsVec* params) {
       return true;
     }
 
-    std::string param;
+    String param;
     if (!read_one(&param)) {
       return false;
     }
@@ -539,10 +537,10 @@ bool DataTypeClassNameParser::Parser::get_name_and_type_params(NameAndTypeParams
       return true;
     }
 
-    std::string hex;
+    String hex;
     read_next_identifier(&hex);
 
-    std::string name;
+    String name;
     if (!from_hex(hex, &name)) {
       LOG_ERROR("Invalid hex string \"%s\" for parameter", hex.c_str());
       return DataType::ConstPtr();
@@ -558,7 +556,7 @@ bool DataTypeClassNameParser::Parser::get_name_and_type_params(NameAndTypeParams
     ++index_;
     skip_blank();
 
-    std::string type;
+    String type;
 
     if (!read_one(&type)) {
       return false;
@@ -587,7 +585,7 @@ bool DataTypeClassNameParser::Parser::get_collection_params(NameAndTypeParamsVec
   return get_name_and_type_params(params);
 }
 
-bool DataTypeClassNameParser::Parser::read_raw_arguments(std::string* args) {
+bool DataTypeClassNameParser::Parser::read_raw_arguments(String* args) {
   skip_blank();
 
   if (is_eos() || str_[index_] == ')' || str_[index_] == ',') {
@@ -622,7 +620,7 @@ bool DataTypeClassNameParser::Parser::read_raw_arguments(std::string* args) {
   return true;
 }
 
-void DataTypeClassNameParser::Parser::read_next_identifier(std::string* name) {
+void DataTypeClassNameParser::Parser::read_next_identifier(String* name) {
   size_t i = index_;
   while (!is_eos() && is_identifier_char(str_[index_]))
     ++index_;
@@ -635,7 +633,7 @@ void DataTypeClassNameParser::Parser::read_next_identifier(std::string* name) {
   }
 }
 
-void DataTypeClassNameParser::Parser::parse_error(const std::string& str,
+void DataTypeClassNameParser::Parser::parse_error(const String& str,
                                      size_t index,
                                      const char* error) {
   LOG_ERROR("Error parsing '%s' at %u index: %s",

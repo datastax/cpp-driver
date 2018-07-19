@@ -46,9 +46,15 @@ namespace cass {
 Random::Random()
  // Use high resolution time if we can't get a real random seed
   : rng_(get_random_seed(uv_hrtime())) {
+  uv_mutex_init(&mutex_);
+}
+
+Random::~Random() {
+  uv_mutex_destroy(&mutex_);
 }
 
 uint64_t Random::next(uint64_t max) {
+  ScopedMutex l(&mutex_);
   const uint64_t limit = CASS_UINT64_MAX - CASS_UINT64_MAX % max;
   uint64_t r;
   do {

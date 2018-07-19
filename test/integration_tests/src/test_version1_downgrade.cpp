@@ -33,9 +33,10 @@ BOOST_AUTO_TEST_SUITE(version1_downgrade)
 
 BOOST_AUTO_TEST_CASE(query_after_downgrade)
 {
+  test_utils::CassLog::set_output_log_level(CASS_LOG_DEBUG);
   CCM::CassVersion version = test_utils::get_version();
   if (version < "2.0.0" ) {
-    test_utils::CassLog::reset("does not support protocol version 2. Trying protocol version 1...");
+    test_utils::CassLog::reset("does not support protocol version v2. Trying protocol version v1...");
 
     size_t row_count;
 

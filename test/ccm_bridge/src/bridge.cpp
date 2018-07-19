@@ -13,6 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+
 #ifdef _WIN32
 // Local execution command
 #include <io.h>
@@ -553,12 +554,18 @@ ClusterStatus CCM::Bridge::cluster_status() {
 }
 
 bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
-  bool with_vnodes /*= false*/, bool is_ssl /*= false*/,
-  bool is_client_authentication /*= false*/) {
+                                 bool with_vnodes /*= false*/,
+                                 bool is_password_authenticator /*= false*/,
+                                 bool is_ssl /*= false*/,
+                                 bool is_client_authentication /*= false*/) {
   // Generate the cluster name and determine if it needs to be created
   std::string active_cluster_name = get_active_cluster();
-  std::string cluster_name = generate_cluster_name(cassandra_version_, data_center_nodes,
-    with_vnodes, is_ssl, is_client_authentication);
+  std::string cluster_name = generate_cluster_name(cassandra_version_,
+                                                   data_center_nodes,
+                                                   with_vnodes,
+                                                   is_password_authenticator,
+                                                   is_ssl,
+                                                   is_client_authentication);
   for (std::vector<DseWorkload>::iterator iterator = dse_workload_.begin();
     iterator != dse_workload_.end(); ++iterator) {
     if (use_dse_ && *iterator != DSE_WORKLOAD_CASSANDRA) {
@@ -607,7 +614,11 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
     }
     create_command.push_back("-b");
 
-    // Determine if SSL and client authentication should be enabled
+    // Determine if password authenticator or SSL and client authentication
+    // should be enabled
+    if (is_password_authenticator) {
+      create_command.push_back("--pwd-auth");
+    }
     if (is_ssl) {
       create_command.push_back("--ssl=ssl");
       if (is_client_authentication) {
@@ -656,15 +667,20 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
 }
 
 bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
-  unsigned short data_center_two_nodes /*= 0*/, bool with_vnodes /*= false*/,
-  bool is_ssl /*= false*/, bool is_client_authentication /*= false*/) {
+                                 unsigned short data_center_two_nodes /*= 0*/,
+                                 bool with_vnodes /*= false*/,
+                                 bool is_ssl /*= false*/,
+                                 bool is_client_authentication /*= false*/) {
   // Create the data center nodes from the two data centers
   std::vector<unsigned short> data_center_nodes;
   data_center_nodes.push_back(data_center_one_nodes);
   data_center_nodes.push_back(data_center_two_nodes);
 
-  return create_cluster(data_center_nodes, with_vnodes, is_ssl,
-    is_client_authentication);
+  return create_cluster(data_center_nodes,
+                        with_vnodes,
+                        false, // Not valid for deprecated create cluster (Boost tests)
+                        is_ssl,
+                        is_client_authentication);
 }
 
 bool CCM::Bridge::is_cluster_down() {
@@ -1765,8 +1781,11 @@ std::vector<std::string> CCM::Bridge::get_available_clusters(std::string& active
 }
 
 std::string CCM::Bridge::generate_cluster_name(CassVersion cassandra_version,
-  std::vector<unsigned short> data_center_nodes,
-  bool with_vnodes, bool is_ssl, bool is_client_authentication) {
+                                               std::vector<unsigned short> data_center_nodes,
+                                               bool with_vnodes,
+                                               bool is_password_authenticator,
+                                               bool is_ssl,
+                                               bool is_client_authentication) {
   std::stringstream cluster_name;
   std::string server_version = use_dse_ ? dse_version_.to_string(false) : cassandra_version.to_string(false);
   std::replace(server_version.begin(), server_version.end(), '.', '-');
@@ -1775,6 +1794,9 @@ std::string CCM::Bridge::generate_cluster_name(CassVersion cassandra_version,
                << generate_cluster_nodes(data_center_nodes, '-');
   if (with_vnodes) {
     cluster_name << "-vnodes";
+  }
+  if (is_password_authenticator) {
+    cluster_name << "-password_authenticator";
   }
   if (is_ssl) {
     cluster_name << "-ssl";

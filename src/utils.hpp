@@ -19,12 +19,12 @@
 
 #include "cassandra.h"
 #include "macros.hpp"
+#include "string.hpp"
+#include "vector.hpp"
 
 #include <stddef.h>
 #include <stdint.h>
-#include <string>
 #include <string.h>
-#include <vector>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -35,32 +35,8 @@ namespace cass {
 class BufferPiece;
 class Value;
 
-typedef std::vector<std::string> ContactPointList;
-typedef std::vector<std::string> DcList;
-
-template<class From, class To>
-#if _MSC_VER && !__INTEL_COMPILER
-class IsConvertible : public std::is_convertible<From, To> { };
-#else
-class IsConvertible {
-  private:
-    typedef char Yes;
-    typedef struct { char not_used[2]; } No;
-
-    struct Helper {
-      static Yes test(To);
-      static No test(...);
-      static From& check();
-    };
-
-  public:
-    static const bool value;
-};
-
-template<class From, class To>
-const bool IsConvertible<From, To>::value
-  = sizeof(IsConvertible<From, To>::Helper::test(IsConvertible<From, To>::Helper::check())) == sizeof(typename IsConvertible<From, To>::Yes);
-#endif
+typedef Vector<String> ContactPointList;
+typedef Vector<String> DcList;
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated
 // types reference the same memory location and strict aliasing is enabled.
@@ -88,17 +64,19 @@ inline size_t next_pow_2(size_t num) {
   return next;
 }
 
-std::string opcode_to_string(int opcode);
+String opcode_to_string(int opcode);
 
-void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter = ',');
+String protocol_version_to_string(int version);
 
-std::string& trim(std::string& str);
+void explode(const String& str, Vector<String>& vec, const char delimiter = ',');
 
-bool is_valid_cql_id(const std::string& str);
+String& trim(String& str);
 
-std::string& to_cql_id(std::string& str);
+bool is_valid_cql_id(const String& str);
 
-std::string& escape_id(std::string& str);
+String& to_cql_id(String& str);
+
+String& escape_id(String& str);
 
 inline size_t num_leading_zeros(int64_t value) {
   if (value == 0)
@@ -137,6 +115,16 @@ inline size_t vint_size(int64_t value) {
 }
 
 int32_t get_pid();
+
+void set_thread_name(const String& thread_name);
+
+template <class C>
+static void set_pointer_keys(C& container) {
+  container.set_empty_key(reinterpret_cast<typename C::key_type>(0x0));
+  container.set_deleted_key(reinterpret_cast<typename C::key_type>(0x1));
+}
+
+void thread_yield();
 
 } // namespace cass
 

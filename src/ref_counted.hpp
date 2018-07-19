@@ -19,6 +19,7 @@
 
 #include "atomic.hpp"
 #include "macros.hpp"
+#include "memory.hpp"
 
 #include <assert.h>
 #include <new>
@@ -47,7 +48,7 @@ public:
     assert(new_ref_count >= 1);
     if (new_ref_count == 1) {
       atomic_thread_fence(MEMORY_ORDER_ACQUIRE);
-      delete static_cast<const T*>(this);
+      Memory::deallocate(static_cast<const T*>(this));
     }
   }
 
@@ -150,14 +151,14 @@ public:
   }
 
   void operator delete(void* ptr) {
-    ::operator delete(ptr);
+    Memory::free(ptr);
   }
 
 private:
   RefBuffer() { }
 
   void* operator new(size_t size, size_t extra) {
-    return ::operator new(size + extra);
+    return Memory::malloc(size + extra);
   }
 
   DISALLOW_COPY_AND_ASSIGN(RefBuffer);

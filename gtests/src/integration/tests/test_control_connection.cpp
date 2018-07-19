@@ -22,9 +22,7 @@
  * Control connection integration tests; single node cluster
  */
 class ControlConnectionTests : public Integration {
-
 public:
-
   void SetUp() {
     // Call the parent setup function (don't automatically start session,
     // because we don't want any connections established until we have
@@ -68,19 +66,22 @@ protected:
   }
 
   /**
-   * Update the logger criteria to listen for driver reconnect messages
+   * Update the logger criteria to listen for driver messages pertaining to
+   * nodes.
    *
+   * @param prefix Message prefix for logger criteria
    * @param nodes List of nodes to listen for
+   * @param suffix Message suffix for logger criteria (optional)
    */
-  void reset_logger_criteria_for_reconnect(
-    const std::set<unsigned short>& nodes) {
+  void reset_logger_criteria(const std::string& prefix,
+                             const std::set<unsigned short>& nodes,
+                             const std::string& suffix = "") {
     logger_.reset();
     for (std::set<unsigned short>::const_iterator it = nodes.begin();
          it != nodes.end(); ++it) {
       std::stringstream node_ip_address;
       node_ip_address << ccm_->get_ip_prefix() << *it;
-      logger_.add_critera("Host " + node_ip_address.str() + " already present " \
-                          "attempting to initiate immediate connection");
+      logger_.add_critera(prefix + node_ip_address.str() + suffix);
     }
   }
 
@@ -97,7 +98,7 @@ protected:
     while (elapsed_time() < 10000u && logger_.count() < expected_count) {
       msleep(LOGGER_WAIT_FOR_NAP);
     }
-    return logger_.count() == expected_count;
+    return logger_.count() >= expected_count;
   }
 };
 
@@ -161,8 +162,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
 
   // Attempt to connect to the server using an invalid IP address
   logger_.add_critera("Unable to establish a control connection to host " \
-                      "1.1.1.1 because of the following error: Connection " \
-                      "timeout");
+                      "1.1.1.1 because of the following error: Underlying " \
+                      "connection error: Connection timeout");
   Cluster cluster = Cluster::build().with_contact_points("1.1.1.1");
   try {
     cluster.connect();
@@ -390,7 +391,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests,
    * to ensure all nodes can be accessed during request execution
    */
   Cluster cluster = default_cluster()
-    .with_load_balance_round_robin();
+    .with_load_balance_round_robin()
+    .with_reconnect_wait_time(10); // Ensure reconnect timeout is quick
   Session session = cluster.connect();
 
   // Ensure all hosts are actively used
@@ -400,12 +402,18 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests,
   check_hosts(session, expected_nodes);
 
   // Stop the second node and ensure only the first node is actively used
+  std::set<unsigned short> logger_nodes;
+  logger_nodes.insert(2);
+  reset_logger_criteria("Node ", logger_nodes, " is down");
   stop_node(2); // Triggers a `DOWN` event
+  ASSERT_TRUE(wait_for_logger(logger_nodes.size()));
   expected_nodes.erase(2);
   check_hosts(session, expected_nodes);
 
   // Restart the second node and ensure all hosts are actively used
+  reset_logger_criteria("Node ", logger_nodes, " is up");
   ccm_->start_node(2); // Triggers a `UP` event
+  ASSERT_TRUE(wait_for_logger(logger_nodes.size()));
   expected_nodes.insert(2);
   check_hosts(session, expected_nodes);
 }
@@ -466,12 +474,12 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
    * policy, initial invalid IP addresses, and ensure only the first node is
    * used as the valid contact point for automatic node discovery
    */
-  logger_.add_critera("Unable to reach contact point 192.0.2.");
-  Cluster cluster = default_cluster()
+  logger_.add_critera("Unable to establish a control connection to host 192.0.2.");
+  Cluster cluster = default_cluster(false) // Do not add the default contact points
     .with_load_balance_round_robin()
     .with_contact_points(generate_contact_points("192.0.2.", 3)) // Invalid IPs
     .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1)) // Single valid contact point
-    .with_connect_timeout(60000u); // Handle initial invalid IPs
+    .with_connect_timeout(1000u); // Handle initial invalid IPs
   Session session = cluster.connect();
 
   // Ensure the invalid IPs were not reached
@@ -542,22 +550,24 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
   is_test_chaotic_ = true; // Destroy the cluster after the test completes
 
   // Remove the `rpc_address` from the third node in the system table
+  connect(); // Create the default session
   std::stringstream update_system_table;
   update_system_table
     << "UPDATE system.peers SET rpc_address = null WHERE peer = '"
     << ccm_->get_ip_prefix() << "3'";
-  session_.execute(update_system_table.str());
+  for (int i = 0; i < 3; ++i) { // Ensure all the nodes in the cluster are updated
+    session_.execute(update_system_table.str());
+  }
 
   /*
    * Create a new session connection using the round robin load balancing policy
    * and ensure only the first node is used as the contact point for automatic
    * node discovery
    */
-  Cluster cluster = default_cluster()
+  Cluster cluster = default_cluster(false)
     .with_load_balance_round_robin()
     .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
   Session session = cluster.connect();
-  session_ = cluster.connect();
 
   // Ensure nodes one and two are actively used
   std::set<unsigned short> expected_nodes;
@@ -585,9 +595,9 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
 CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
                              FullOutage) {
   CHECK_FAILURE;
+  connect(); // Create the default session
 
   // Stop the cluster and attempt to perform a request
-  connect();
   ccm_->stop_cluster();
   Result result = session_.execute(SELECT_ALL_SYSTEM_LOCAL_CQL,
                                    CASS_CONSISTENCY_ONE, false, false);
@@ -599,7 +609,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
   for (unsigned short i = 0; i < cluster_ip_addresses.size(); ++i) {
     nodes.insert(i + 1);
   }
-  reset_logger_criteria_for_reconnect(nodes);
+  reset_logger_criteria("Scheduling reconnect for host ", nodes);
 
   // Restart the cluster and wait for the nodes to reconnect
   ccm_->start_cluster();
@@ -629,16 +639,13 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
 CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests,
                              NodeDecommission) {
   CHECK_FAILURE;
-
-  // Create a session connection
-  Cluster cluster = default_cluster();
-  Session session = cluster.connect();
+  connect(); // Create the default session
 
   //Ensure all hosts are actively used
   std::set<unsigned short> expected_nodes;
   expected_nodes.insert(1);
   expected_nodes.insert(2);
-  check_hosts(session, expected_nodes);
+  check_hosts(session_, expected_nodes);
 
   /*
    * Decommission the control connection node and ensure reconnect is not
@@ -737,7 +744,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionSingleNodeDataCentersClusterTests,
   } catch (Session::Exception& se) {
     ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
     ASSERT_STREQ("No hosts available for connection using the current load " \
-                 "balancing policy", se.error_message().c_str());
+                 "balancing policy(s)", se.error_message().c_str());
   }
 }
 
@@ -761,33 +768,33 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionSingleNodeDataCentersClusterTests,
 CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
                              TerminatedUsingMultipleIoThreadsWithError) {
   CHECK_FAILURE;
+  std::string inavlid_keyspace_name = "invalid_keyspace";
 
   // Create multiple session connection while incrementing the I/O threads used
-  for (int i = 2; i <= 16; ++i) {
+  for (size_t i = 2; i <= 2; ++i) {
 
     // Update the logger criteria for the expected driver messages
     logger_.reset();
     std::stringstream expected_message;
     // Message to validate number of I/O worker threads
-    expected_message << "Creating " << i << " IO worker threads";
+    expected_message << "Unable to connect to host " << ccm_->get_ip_prefix()
+      << "1 because of the following error: Received error response "
+      << "'Keyspace '" << inavlid_keyspace_name << "' does not exist'";
     logger_.add_critera(expected_message.str());
     // Message to validate connection/host is ready/up
     expected_message.str("");
-    expected_message << "Connection ready on host " << ccm_->get_ip_prefix()
-      << "1";
+    expected_message << "Built token map";
     logger_.add_critera(expected_message.str());
-    // Message to validate the session has been disconnected (will not hang)
-    logger_.add_critera("Session is disconnected");
 
 
     // Create a new session connection using increasing number of I/O threads
     Cluster cluster = default_cluster().with_num_threads_io(i);
     try {
-      Session session = cluster.connect("invalid_keyspace");
+      Session session = cluster.connect(inavlid_keyspace_name);
       FAIL() << "Connection was established using invalid keyspace";
     } catch (Session::Exception& se) {
       ASSERT_EQ(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, se.error_code());
-      ASSERT_EQ(3u, logger_.count());
+      ASSERT_EQ(i + 1, logger_.count());
     }
   }
 }

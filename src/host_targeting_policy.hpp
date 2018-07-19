@@ -18,36 +18,32 @@
 #define __CASS_HOST_TARGETING_POLICY_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "dense_hash_map.hpp"
 #include "load_balancing.hpp"
 #include "request_handler.hpp"
-
-#include <sparsehash/dense_hash_map>
 
 namespace cass {
 
 class HostTargetingPolicy : public ChainedLoadBalancingPolicy {
 public:
   HostTargetingPolicy(LoadBalancingPolicy* child_policy)
-    : ChainedLoadBalancingPolicy(child_policy) {
-    available_hosts_.set_empty_key(Address::EMPTY_KEY);
-    available_hosts_.set_deleted_key(Address::DELETED_KEY);
-  }
+    : ChainedLoadBalancingPolicy(child_policy) { }
 
   virtual void init(const SharedRefPtr<Host>& connected_host,
                     const cass::HostMap& hosts, Random* random);
 
-  virtual QueryPlan* new_query_plan(const std::string& keyspace,
+  virtual QueryPlan* new_query_plan(const String& keyspace,
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
   virtual LoadBalancingPolicy* new_instance() {
-    return new HostTargetingPolicy(child_policy_->new_instance());
+    return Memory::allocate<HostTargetingPolicy>(child_policy_->new_instance());
   }
 
-  virtual void on_add(const SharedRefPtr<Host>& host);
-  virtual void on_remove(const SharedRefPtr<Host>& host);
-  virtual void on_up(const SharedRefPtr<Host>& host);
-  virtual void on_down(const SharedRefPtr<Host>& host);
+  virtual void on_add(const Host::Ptr& host);
+  virtual void on_remove(const Host::Ptr& host);
+  virtual void on_up(const Host::Ptr& host);
+  virtual void on_down(const Host::Ptr& host);
 
 private:
   class HostTargetingQueryPlan : public QueryPlan {
@@ -66,7 +62,13 @@ private:
   };
 
 private:
-  typedef sparsehash::dense_hash_map<Address, Host::Ptr, AddressHash> HostMap;
+  class HostMap : public DenseHashMap<Address, Host::Ptr, AddressHash> {
+  public:
+    HostMap() {
+      set_empty_key(Address::EMPTY_KEY);
+      set_deleted_key(Address::DELETED_KEY);
+    }
+  };
   HostMap available_hosts_;
 };
 

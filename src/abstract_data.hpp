@@ -25,6 +25,7 @@
 #include "request.hpp"
 #include "string_ref.hpp"
 #include "types.hpp"
+#include "vector.hpp"
 
 #define CASS_CHECK_INDEX_AND_TYPE(Index, Value) do { \
   CassError rc = check(Index, Value);               \
@@ -80,7 +81,7 @@ public:
     SharedRefPtr<const Collection> collection_;
   };
 
-  typedef std::vector<Element> ElementVec;
+  typedef Vector<Element> ElementVec;
 
 public:
   AbstractData(size_t count)

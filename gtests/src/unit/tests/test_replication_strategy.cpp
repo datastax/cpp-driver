@@ -15,12 +15,11 @@
 */
 
 #include <gtest/gtest.h>
-#include <set>
-#include <sstream>
-#include <string>
-#include <vector>
 
 #include "test_token_map_utils.hpp"
+#include "set.hpp"
+#include "string.hpp"
+#include "vector.hpp"
 
 namespace {
 
@@ -50,7 +49,7 @@ struct MockTokenMap {
   cass::DatacenterMap datacenters;
 
   void init_simple_strategy(size_t replication_factor) {
-    cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
+    cass::DataType::ConstPtr varchar_data_type(cass::Memory::allocate<cass::DataType>(CASS_VALUE_TYPE_VARCHAR));
 
     ColumnMetadataVec column_metadata;
     column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
@@ -60,7 +59,7 @@ struct MockTokenMap {
     ReplicationMap replication;
     replication["class"] = CASS_SIMPLE_STRATEGY;
 
-    std::ostringstream ss;
+    cass::OStringStream ss;
     ss << replication_factor;
     replication["replication_factor"] = ss.str();
 
@@ -73,7 +72,7 @@ struct MockTokenMap {
   }
 
   void init_network_topology_strategy(ReplicationMap& replication) {
-    cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
+    cass::DataType::ConstPtr varchar_data_type(cass::Memory::allocate<cass::DataType>(CASS_VALUE_TYPE_VARCHAR));
 
     ColumnMetadataVec column_metadata;
     column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
@@ -90,9 +89,9 @@ struct MockTokenMap {
   }
 
   void add_token(Token token,
-                 const std::string& address,
-                 const std::string& rack = "",
-                 const std::string& dc = "") {
+                 const cass::String& address,
+                 const cass::String& rack = "",
+                 const cass::String& dc = "") {
     tokens.push_back(TokenHost(token, create_host(address, rack, dc)));
   }
 
@@ -113,10 +112,10 @@ struct MockTokenMap {
     return NO_REPLICAS;
   }
 
-  cass::Host* create_host(const std::string& address,
-                          const std::string& rack = "",
-                          const std::string& dc = "") {
-    cass::Host::Ptr host(new cass::Host(cass::Address(address, 9042), false));
+  cass::Host* create_host(const cass::String& address,
+                          const cass::String& rack = "",
+                          const cass::String& dc = "") {
+    cass::Host::Ptr host(cass::Memory::allocate<cass::Host>(cass::Address(address, 9042)));
     host->set_rack_and_dc(rack, dc);
     host->set_rack_and_dc_ids(rack_ids.get(rack), dc_ids.get(dc));
     cass::HostSet::iterator i = hosts.find(host);
@@ -130,9 +129,9 @@ struct MockTokenMap {
 };
 
 void check_host(const cass::SharedRefPtr<cass::Host>& host,
-                const std::string& ip,
-                const std::string& rack = "",
-                const std::string& dc = "") {
+                const cass::String& ip,
+                const cass::String& rack = "",
+                const cass::String& dc = "") {
   EXPECT_EQ(host->address(), cass::Address(ip, 9042));
   EXPECT_EQ(host->rack(), rack);
   EXPECT_EQ(host->dc(), dc);

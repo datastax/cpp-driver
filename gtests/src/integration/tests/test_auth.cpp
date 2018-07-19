@@ -33,6 +33,7 @@ public:
   void SetUp() {
     // Call the parent setup function (override startup and session connection)
     is_ccm_start_requested_ = false;
+    is_password_authenticator_ = true;
     is_session_requested_ = false;
     Integration::SetUp();
 

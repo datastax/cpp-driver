@@ -19,9 +19,8 @@
 
 #include "constants.hpp"
 #include "response.hpp"
+#include "string.hpp"
 #include "string_ref.hpp"
-
-#include <string>
 
 namespace cass {
 
@@ -30,12 +29,12 @@ public:
   AuthenticateResponse()
     : Response(CQL_OPCODE_AUTHENTICATE) { }
 
-  const std::string& class_name() const { return class_name_; }
+  const String& class_name() const { return class_name_; }
 
-  bool decode(int version, char* buffer, size_t size);
+  virtual bool decode(Decoder& decoder);
 
 private:
-  std::string class_name_;
+  String class_name_;
 };
 
 class AuthChallengeResponse : public Response {
@@ -43,12 +42,12 @@ public:
   AuthChallengeResponse()
     : Response(CQL_OPCODE_AUTH_CHALLENGE) { }
 
-  const std::string& token() const { return token_; }
+  const String& token() const { return token_; }
 
-  bool decode(int version, char* buffer, size_t size);
+  virtual bool decode(Decoder& decoder);
 
 private:
-  std::string token_;
+  String token_;
 };
 
 class AuthSuccessResponse : public Response {
@@ -56,12 +55,12 @@ public:
   AuthSuccessResponse()
     : Response(CQL_OPCODE_AUTH_SUCCESS) { }
 
-  const std::string& token() const { return token_; }
+  const String& token() const { return token_; }
 
-  bool decode(int version, char* buffer, size_t size);
+  virtual bool decode(Decoder& decoder);
 
 private:
-  std::string token_;
+  String token_;
 };
 
 } // namespace cass

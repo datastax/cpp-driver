@@ -25,15 +25,7 @@ bool UserTypeFieldIterator::next() {
     return false;
   }
   current_ = next_++;
-  position_ = decode_field(position_);
-  return true;
-}
-
-char* UserTypeFieldIterator::decode_field(char* position) {
-  int32_t size;
-  char* buffer = decode_int32(position, size);
-  value_ = Value(user_type_value_->protocol_version(), current_->type, buffer, size);
-  return size > 0 ? buffer + size : buffer;
+  return decoder_.decode_value(current_->type, value_);
 }
 
 } // namespace cass

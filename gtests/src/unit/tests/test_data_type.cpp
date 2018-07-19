@@ -54,10 +54,10 @@ TEST(DataTypeUnitTest, KeyspaceAndTypeName) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_keyspace(data_type, &name, &name_length), CASS_OK);
-    EXPECT_EQ(std::string(name, name_length), "keyspace1");
+    EXPECT_EQ(cass::String(name, name_length), "keyspace1");
 
     ASSERT_EQ(cass_data_type_type_name(data_type, &name, &name_length), CASS_OK);
-    EXPECT_EQ(std::string(name, name_length), "type_name1");
+    EXPECT_EQ(cass::String(name, name_length), "type_name1");
   }
 
   // Invalid type
@@ -94,7 +94,7 @@ TEST(DataTypeUnitTest, ClassName) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_class_name(data_type, &name, &name_length), CASS_OK);
-    EXPECT_EQ(std::string(name, name_length), "class_name1");
+    EXPECT_EQ(cass::String(name, name_length), "class_name1");
   }
 
   // Invalid type
@@ -129,7 +129,7 @@ TEST(DataTypeUnitTest, FromExisting) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_class_name(data_type_copy, &name, &name_length), CASS_OK);
-    EXPECT_EQ(std::string(name, name_length), "class_name1");
+    EXPECT_EQ(cass::String(name, name_length), "class_name1");
   }
 
   // From an existing tuple
@@ -193,10 +193,10 @@ TEST(DataTypeUnitTest, FromExisting) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_keyspace(data_type_copy, &name, &name_length), CASS_OK);
-    EXPECT_EQ(std::string(name, name_length), "keyspace1");
+    EXPECT_EQ(cass::String(name, name_length), "keyspace1");
 
     ASSERT_EQ(cass_data_type_type_name(data_type_copy, &name, &name_length), CASS_OK);
-    EXPECT_EQ(std::string(name, name_length), "type_name1");
+    EXPECT_EQ(cass::String(name, name_length), "type_name1");
   }
 }
 
@@ -368,13 +368,13 @@ TEST(DataTypeUnitTest, CheckSubValueType) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_sub_type_name(data_type, 0, &name, &name_length), CASS_OK);
-    EXPECT_EQ(std::string(name, name_length), "field1");
+    EXPECT_EQ(cass::String(name, name_length), "field1");
 
     ASSERT_EQ(cass_data_type_sub_type_name(data_type, 1, &name, &name_length), CASS_OK);
-    EXPECT_EQ(std::string(name, name_length), "field2");
+    EXPECT_EQ(cass::String(name, name_length), "field2");
 
     ASSERT_EQ(cass_data_type_sub_type_name(data_type, 2, &name, &name_length), CASS_OK);
-    EXPECT_EQ(std::string(name, name_length), "field3");
+    EXPECT_EQ(cass::String(name, name_length), "field3");
   }
 }
 
@@ -389,7 +389,7 @@ TEST(DataTypeUnitTest, CheckValueTypeByClass) {
 
 TEST(DataTypeUnitTest, CheckValueTypeByClassCaseInsensitive) {
 #define XX_VALUE_TYPE(name, type, cql, klass) {                              \
-    std::string upper(klass);                                                \
+    cass::String upper(klass);                                                \
     std::transform(upper.begin(), upper.end(), upper.begin(), toupper);      \
     EXPECT_TRUE(upper.empty() || cass::ValueTypes::by_class(upper) == name); \
   }
@@ -409,7 +409,7 @@ TEST(DataTypeUnitTest, CheckValueTypesByCql) {
 
 TEST(DataTypeUnitTest, CheckValueTypesByCqlCasInsensitive) {
 #define XX_VALUE_TYPE(name, type, cql, klass) {                            \
-    std::string upper(cql);                                                \
+    cass::String upper(cql);                                                \
     std::transform(upper.begin(), upper.end(), upper.begin(), toupper);    \
     EXPECT_TRUE(upper.empty() || cass::ValueTypes::by_cql(upper) == name); \
   }

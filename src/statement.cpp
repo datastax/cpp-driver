@@ -42,7 +42,7 @@ CassStatement* cass_statement_new_n(const char* query,
                                     size_t query_length,
                                     size_t parameter_count) {
   cass::QueryRequest* query_request
-      = new cass::QueryRequest(query, query_length, parameter_count);
+      = cass::Memory::allocate<cass::QueryRequest>(query, query_length, parameter_count);
   query_request->inc_ref();
   return CassStatement::to(query_request);
 }
@@ -70,7 +70,7 @@ CassError cass_statement_set_keyspace_n(CassStatement* statement,
   if (statement->opcode() == CQL_OPCODE_EXECUTE) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  statement->set_keyspace(std::string(keyspace, keyspace_length));
+  statement->set_keyspace(cass::String(keyspace, keyspace_length));
   return CASS_OK;
 }
 
@@ -105,7 +105,7 @@ CassError cass_statement_set_paging_state(CassStatement* statement,
 CassError cass_statement_set_paging_state_token(CassStatement* statement,
                                               const char* paging_state,
                                               size_t paging_state_size) {
-  statement->set_paging_state(std::string(paging_state, paging_state_size));
+  statement->set_paging_state(cass::String(paging_state, paging_state_size));
   return CASS_OK;
 }
 
@@ -250,6 +250,24 @@ CassError cass_statement_bind_custom_by_name_n(CassStatement* statement,
                                          value, value_size));
 }
 
+CassError cass_statement_set_execution_profile(CassStatement* statement,
+                                               const char* name) {
+  return cass_statement_set_execution_profile_n(statement,
+                                                name,
+                                                SAFE_STRLEN(name));
+}
+
+CassError cass_statement_set_execution_profile_n(CassStatement* statement,
+                                                 const char* name,
+                                                 size_t name_length) {
+  if (name_length > 0) {
+    statement->set_execution_profile_name(cass::String(name, name_length));
+  } else {
+    statement->set_execution_profile_name(cass::String());
+  }
+  return CASS_OK;
+}
+
 } // extern "C"
 
 namespace cass {
@@ -271,7 +289,7 @@ Statement::Statement(const Prepared* prepared)
   , flags_(0)
   , page_size_(-1) {
   // <id> [short bytes] (or [string])
-  const std::string& id = prepared->id();
+  const String& id = prepared->id();
   query_or_id_.encode_string(0, id.data(), id.size());
   // Inherit settings and keyspace from the prepared statement
   set_settings(prepared->request_settings());
@@ -282,12 +300,12 @@ Statement::Statement(const Prepared* prepared)
   }
 }
 
-std::string Statement::query() const {
+String Statement::query() const {
   if (opcode() == CQL_OPCODE_QUERY) {
-    return std::string(query_or_id_.data() + sizeof(int32_t),
-                       query_or_id_.size() - sizeof(int32_t));
+    return String(query_or_id_.data() + sizeof(int32_t),
+                  query_or_id_.size() - sizeof(int32_t));
   }
-  return std::string();
+  return String();
 }
 
 // Format: <kind><string_or_id><n><value_1>...<value_n>
@@ -464,7 +482,7 @@ int32_t Statement::encode_values(int version, RequestCallback* callback, BufferV
       if (version >= 4) {
         bufs->push_back(cass::encode_with_length(CassUnset()));
       } else {
-        std::stringstream ss;
+        OStringStream ss;
         ss << "Query parameter at index " << i << " was not set";
         callback->on_error(CASS_ERROR_LIB_PARAMETER_UNSET, ss.str());
         return Request::REQUEST_ERROR_PARAMETER_UNSET;
@@ -539,7 +557,7 @@ int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec*
   return length;
 }
 
-bool Statement::calculate_routing_key(const std::vector<size_t>& key_indices, std::string* routing_key) const {
+bool Statement::calculate_routing_key(const Vector<size_t>& key_indices, String* routing_key) const {
   if (key_indices.empty()) return false;
 
   if (key_indices.size() == 1) {
@@ -554,7 +572,7 @@ bool Statement::calculate_routing_key(const std::vector<size_t>& key_indices, st
   } else {
     size_t length = 0;
 
-    for (std::vector<size_t>::const_iterator i = key_indices.begin();
+    for (Vector<size_t>::const_iterator i = key_indices.begin();
          i != key_indices.end(); ++i) {
       assert(*i < elements().size());
       const AbstractData::Element& element(elements()[*i]);
@@ -568,7 +586,7 @@ bool Statement::calculate_routing_key(const std::vector<size_t>& key_indices, st
     routing_key->clear();
     routing_key->reserve(length);
 
-    for (std::vector<size_t>::const_iterator i = key_indices.begin();
+    for (Vector<size_t>::const_iterator i = key_indices.begin();
          i != key_indices.end(); ++i) {
       const AbstractData::Element& element(elements()[*i]);
       Buffer buf(element.get_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION));

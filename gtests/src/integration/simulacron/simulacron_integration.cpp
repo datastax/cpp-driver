@@ -33,7 +33,7 @@ SimulacronIntegration::~SimulacronIntegration() {
 
 void SimulacronIntegration::SetUpTestCase() {
   try {
-    sc_ = new test::SimulacronCluster();
+    sc_ = cass::Memory::allocate<test::SimulacronCluster>();
   } catch (SimulacronCluster::Exception scce) {
     TEST_LOG_ERROR(scce.what());
   }

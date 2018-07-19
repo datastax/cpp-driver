@@ -14,94 +14,151 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
 #include "timer.hpp"
 
-void on_timer_once(cass::Timer* timer) {
-  bool* was_timer_called = static_cast<bool*>(timer->data());
-  *was_timer_called = true;
-  EXPECT_FALSE(timer->is_running());
-}
+#include "loop_test.hpp"
 
-struct RepeatData {
-  uv_loop_t* loop;
-  int count;
+using namespace cass;
+
+class TimerUnitTest : public LoopTest {
+public:
+
+  TimerUnitTest()
+    : count_(0)
+    , repeat_timeout_(0)
+    , restart_count_(0) { }
+
+  void test_once(uint64_t timeout) {
+    Timer timer;
+
+    timer.start(loop(), timeout,
+                bind_callback(&TimerUnitTest::on_timer_once, this));
+
+    EXPECT_TRUE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(timer.is_running());
+    EXPECT_EQ(count_, 1);
+  }
+
+  void test_repeat(uint64_t timeout) {
+    Timer timer;
+
+    repeat_timeout_ = timeout;
+
+    timer.start(loop(), timeout,
+                bind_callback(&TimerUnitTest::on_timer_repeat, this));
+
+    EXPECT_TRUE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(timer.is_running());
+    EXPECT_EQ(count_, 2);
+  }
+
+  void test_stop() {
+    Timer timer;
+
+    timer.start(loop(), 1,
+                bind_callback(&TimerUnitTest::on_timer_once, this));
+
+    EXPECT_TRUE(timer.is_running());
+
+    timer.stop();
+
+    EXPECT_FALSE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(timer.is_running());
+    EXPECT_EQ(count_, 0);
+  }
+
+
+  void test_restart() {
+    Timer timer;
+
+    restart_timer_.start(loop(), 10,
+                             bind_callback(&TimerUnitTest::on_timer_once, this));
+
+    timer.start(loop(), 1,
+                bind_callback(&TimerUnitTest::on_timer_restart, this));
+
+    EXPECT_TRUE(restart_timer_.is_running());
+    EXPECT_TRUE(timer.is_running());
+
+    uv_run(loop(), UV_RUN_DEFAULT);
+
+    EXPECT_FALSE(restart_timer_.is_running());
+    EXPECT_FALSE(timer.is_running());
+
+    EXPECT_EQ(restart_count_, 10);
+    EXPECT_EQ(count_, 0); // Make sure the timer was never triggered
+  }
+
+private:
+  void on_timer_once(Timer* timer) {
+    count_++;
+    EXPECT_FALSE(timer->is_running());
+  }
+
+  void on_timer_repeat(Timer* timer) {
+    EXPECT_FALSE(timer->is_running());
+    count_++;
+    if (count_ == 1) {
+      timer->start(loop(), repeat_timeout_,
+                   bind_callback(&TimerUnitTest::on_timer_repeat, this));
+    }
+  }
+
+  void on_timer_restart(Timer* timer) {
+    restart_count_++;
+    if  (restart_count_ == 10) {
+      restart_timer_.close_handle();
+    } else {
+      restart_timer_.start(loop(), 10,
+                             bind_callback(&TimerUnitTest::on_timer_once, this));
+
+      timer->start(loop(), 1,
+                   bind_callback(&TimerUnitTest::on_timer_restart, this));
+    }
+  }
+
+  int count_;
+  uint64_t repeat_timeout_;
+
+  int restart_count_;
+  Timer restart_timer_;
 };
 
-void on_timer_repeat(cass::Timer* timer) {
-  RepeatData* data = static_cast<RepeatData*>(timer->data());
-  EXPECT_FALSE(timer->is_running());
-  data->count++;
-  if (data->count == 1) {
-    timer->start(data->loop, 1, data, on_timer_repeat);
-  }
+TEST_F(TimerUnitTest, Once)
+{
+  test_once(1);
 }
 
-TEST(TimerUnitTest, Once)
+TEST_F(TimerUnitTest, OnceZero)
 {
-  uv_loop_t* loop;
-
-#if UV_VERSION_MAJOR == 0
-  loop = uv_loop_new();
-#else
-  uv_loop_t loop_storage__;
-  loop = &loop_storage__;
-  uv_loop_init(loop);
-#endif
-
-  cass::Timer timer;
-
-  bool was_timer_called = false;
-
-  timer.start(loop, 1, &was_timer_called, on_timer_once);
-
-  EXPECT_TRUE(timer.is_running());
-
-  uv_run(loop, UV_RUN_DEFAULT);
-
-  EXPECT_FALSE(timer.is_running());
-  EXPECT_TRUE(was_timer_called);
-
-#if UV_VERSION_MAJOR == 0
-  uv_loop_delete(loop);
-#else
-  uv_loop_close(loop);
-#endif
-
+  test_once(0);
 }
 
-TEST(TimerUnitTest, Repeat)
+TEST_F(TimerUnitTest, Repeat)
 {
-  uv_loop_t* loop;
+  test_repeat(1);
+}
 
-#if UV_VERSION_MAJOR == 0
-  loop = uv_loop_new();
-#else
-  uv_loop_t loop_storage__;
-  loop = &loop_storage__;
-  uv_loop_init(loop);
-#endif
+TEST_F(TimerUnitTest, RepeatZero)
+{
+  test_repeat(0);
+}
 
-  cass::Timer timer;
+TEST_F(TimerUnitTest, Stop)
+{
+  test_stop();
+}
 
-  RepeatData data;
-  data.loop = loop;
-  data.count = 0;
-
-  timer.start(loop, 1, &data, on_timer_repeat);
-
-  EXPECT_TRUE(timer.is_running());
-
-  uv_run(loop, UV_RUN_DEFAULT);
-
-  EXPECT_FALSE(timer.is_running());
-  EXPECT_EQ(data.count, 2);
-
-#if UV_VERSION_MAJOR == 0
-  uv_loop_delete(loop);
-#else
-  uv_loop_close(loop);
-#endif
-
+TEST_F(TimerUnitTest, Restart)
+{
+  test_restart();
 }

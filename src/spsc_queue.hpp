@@ -43,11 +43,9 @@ public:
   SPSCQueue(size_t size)
       : size_(next_pow_2(size))
       , mask_(size_ - 1)
-      , buffer_(new T[size_])
+      , buffer_(size_)
       , tail_(0)
       , head_(0) {}
-
-  ~SPSCQueue() { delete[] buffer_; }
 
   bool enqueue(const T& input) {
     const size_t pos = tail_.load(MEMORY_ORDER_RELAXED);
@@ -91,7 +89,7 @@ private:
   cache_line_pad_t pad0_;
   const size_t size_;
   const size_t mask_;
-  T* const buffer_;
+  DynamicArray<T> buffer_;
 
   cache_line_pad_t pad1_;
   Atomic<size_t> tail_;

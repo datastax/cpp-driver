@@ -21,11 +21,10 @@
 extern "C" {
 
 CassCustomPayload* cass_custom_payload_new() {
-  cass::CustomPayload* payload = new cass::CustomPayload();
+  cass::CustomPayload* payload = cass::Memory::allocate<cass::CustomPayload>();
   payload->inc_ref();
   return CassCustomPayload::to(payload);
 }
-
 
 void cass_custom_payload_set(CassCustomPayload* payload,
                                 const char* name,
@@ -65,14 +64,11 @@ void CustomPayload::set(const char* name, size_t name_length, const uint8_t* val
   Buffer buf(sizeof(uint16_t) + name_length + sizeof(int32_t) + value_size);
   size_t pos = buf.encode_string(0, name, name_length);
   buf.encode_bytes(pos, reinterpret_cast<const char*>(value), value_size);
-  items_[std::string(name, name_length)] = buf;
+  items_[String(name, name_length)] = buf;
 }
 
 int32_t CustomPayload::encode(BufferVec* bufs) const {
-  int32_t length = sizeof(uint16_t);
-  Buffer buf(sizeof(uint16_t));
-  buf.encode_uint16(0, items_.size());
-  bufs->push_back(buf);
+  int32_t length = 0;
   for (ItemMap::const_iterator i = items_.begin(), end = items_.end();
        i != end;
        ++i) {

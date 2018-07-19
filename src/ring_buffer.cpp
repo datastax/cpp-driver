@@ -51,7 +51,7 @@ RingBuffer::~RingBuffer() {
   Buffer* current = head_.next_;
   while (current != &head_) {
     Buffer* next = current->next_;
-    delete current;
+    Memory::deallocate(current);
     current = next;
   }
 
@@ -132,7 +132,7 @@ void RingBuffer::free_empty() {
     assert(cur->write_pos_ == cur->read_pos_);
 
     Buffer* next = cur->next_;
-    delete cur;
+    Memory::deallocate(cur);
     cur = next;
   }
   assert(prev == child || prev == &head_);
@@ -248,7 +248,7 @@ void RingBuffer::try_allocate_for_write() {
   if (write_head_->write_pos_ == BUFFER_LENGTH &&
       (write_head_->next_ == read_head_ ||
        write_head_->next_->write_pos_ != 0)) {
-    Buffer* next = new Buffer();
+    Buffer* next = Memory::allocate<Buffer>();
     next->next_ = write_head_->next_;
     write_head_->next_ = next;
   }
