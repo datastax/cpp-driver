@@ -87,8 +87,6 @@ public:
 private:
 #ifdef HAVE_TIMERFD
 private:
-  void set_time(uint64_t timeout_us);
-
   static void on_timeout(uv_poll_t* poll, int status, int events);
   void handle_timeout();
 

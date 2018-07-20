@@ -67,7 +67,7 @@ public:
 
   operator bool() const { return invoker_; }
 
-  R operator()(const Arg& arg) {
+  R operator()(const Arg& arg) const {
     return invoker_->invoke(arg);
   }
 
@@ -80,7 +80,7 @@ private:
   typedef AlignedStorage<32, 8> Storage;
 
   struct Invoker {
-    virtual R invoke(const Arg& arg) = 0;
+    virtual R invoke(const Arg& arg) const = 0;
     virtual Invoker* copy(Storage* storage) = 0;
   };
 
@@ -90,7 +90,7 @@ private:
       : func(func)
       , object(object) { }
 
-    R invoke(const Arg& arg) {
+    R invoke(const Arg& arg) const {
       return (object->*func)(arg);
     }
 
@@ -107,7 +107,7 @@ private:
     FunctionInvoker(F func)
       : func(func) { }
 
-    R invoke(const Arg& arg) {
+    R invoke(const Arg& arg) const {
       return func(arg);
     }
 
@@ -124,7 +124,7 @@ private:
       : func(func)
       , data(data) { }
 
-    R invoke(const Arg& arg) {
+    R invoke(const Arg& arg) const {
       return func(arg, data);
     }
 

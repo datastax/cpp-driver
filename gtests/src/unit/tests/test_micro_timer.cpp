@@ -20,7 +20,6 @@
 
 using namespace cass;
 
-
 class MicroTimerUnitTest : public LoopTest {
 public:
   MicroTimerUnitTest()
