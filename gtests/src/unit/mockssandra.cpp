@@ -54,7 +54,7 @@ String Ssl::generate_key() {
 String Ssl::generate_cert(const String& key, const String& cn) {
   EVP_PKEY* pkey = NULL;
   { // Read key from string
-    BIO* bio = BIO_new_mem_buf(key.c_str(), key.length());
+    BIO* bio = BIO_new_mem_buf(const_cast<char*>(key.c_str()), key.length());
     if (!PEM_read_bio_PrivateKey(bio, &pkey, NULL, NULL)) {
       BIO_free(bio);
       return "";
@@ -375,7 +375,7 @@ bool ServerConnection::use_ssl(const String& key,
 
   X509* x509 = NULL;
   { // Read cert from string
-    BIO* bio = BIO_new_mem_buf(cert.c_str(), cert.length());
+    BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert.c_str()), cert.length());
     if (PEM_read_bio_X509(bio, &x509, NULL, NULL) == NULL) {
       print_ssl_error();
       BIO_free(bio);
@@ -393,7 +393,7 @@ bool ServerConnection::use_ssl(const String& key,
 
   EVP_PKEY* pkey = NULL;
   { // Read key from string
-    BIO* bio = BIO_new_mem_buf(key.c_str(), key.length());
+    BIO* bio = BIO_new_mem_buf(const_cast<char*>(key.c_str()), key.length());
     if (PEM_read_bio_PrivateKey(bio, &pkey, on_password, (void*)password.c_str()) == NULL) {
       print_ssl_error();
       BIO_free(bio);
