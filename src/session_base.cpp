@@ -30,11 +30,11 @@ SessionBase::SessionBase()
 }
 
 SessionBase::~SessionBase() {
-  uv_mutex_destroy(&mutex_);
   if (event_loop_) {
     event_loop_->close_handles();
     event_loop_->join();
   }
+  uv_mutex_destroy(&mutex_);
 }
 
 void SessionBase::connect(const Config& config,
