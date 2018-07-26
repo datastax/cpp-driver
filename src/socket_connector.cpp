@@ -101,7 +101,12 @@ void SocketConnector::connect(uv_loop_t* loop) {
                                          bind_callback(&SocketConnector::on_resolve, this)));
     resolver_->resolve(loop, settings_.resolve_timeout_ms);
   } else {
-    internal_connect(loop);
+    // Postpone the connection process until after this method ends because it
+    // can call the callback (via on_error() when when the socket fails to
+    // init/bind) and destroy its parent.
+    no_resolve_timer_.start(loop,
+                            0, // Run connect immediately after.
+                            bind_callback(&SocketConnector::on_no_resolve, this));
   }
 }
 
@@ -127,7 +132,11 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
     on_error(SOCKET_ERROR_INIT, "Unable to initialize TCP object");
     return;
   }
-  
+
+  socket_ = socket;
+  socket_->inc_ref(); // For the event loop
+
+  // This needs to be done after setting the socket to properly cleanup.
   const Address& local_address = settings_.local_address;
   if (local_address.is_valid()) {
     int rc = uv_tcp_bind(socket->handle(), local_address.addr(), 0);
@@ -138,9 +147,6 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
       return;
     }
   }
-
-  socket_ = socket;
-  socket_->inc_ref(); // For the event loop
 
   if (uv_tcp_nodelay(socket_->handle(),
                      settings_.tcp_nodelay_enabled ? 1 : 0) != 0) {
@@ -271,6 +277,14 @@ void SocketConnector::on_resolve(NameResolver* resolver) {
              "Unable to resolve hostname '" +
              String(uv_strerror(resolver->uv_status())) +
              "'");
+  }
+}
+
+void SocketConnector::on_no_resolve(Timer* timer) {
+  if (is_canceled()) {
+    finish();
+  } else {
+    internal_connect(timer->loop());
   }
 }
 

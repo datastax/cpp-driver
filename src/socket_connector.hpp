@@ -147,6 +147,7 @@ private:
   void on_error(SocketError code, const String& message);
   void on_connect(TcpConnector* tcp_connecter);
   void on_resolve(NameResolver* resolver);
+  void on_no_resolve(Timer* timer);
 
 private:
   Address address_;
@@ -156,6 +157,7 @@ private:
   Socket::Ptr socket_;
   TcpConnector::Ptr connector_;
   NameResolver::Ptr resolver_;
+  Timer no_resolve_timer_;
 
   SocketError error_code_;
   String error_message_;
