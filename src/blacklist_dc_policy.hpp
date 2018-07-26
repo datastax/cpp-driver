@@ -34,7 +34,7 @@ public:
   virtual ~BlacklistDCPolicy() {}
 
   BlacklistDCPolicy* new_instance() {
-    return new BlacklistDCPolicy(child_policy_->new_instance(), dcs_);
+    return Memory::allocate<BlacklistDCPolicy>(child_policy_->new_instance(), dcs_);
   }
 
 private:

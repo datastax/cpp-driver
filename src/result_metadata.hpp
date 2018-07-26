@@ -20,17 +20,12 @@
 #include "cassandra.h"
 #include "data_type.hpp"
 #include "hash_table.hpp"
-#include "list.hpp"
 #include "ref_counted.hpp"
-#include "small_vector.hpp"
 #include "string_ref.hpp"
 
 #include <uv.h>
 
 #include <algorithm>
-#include <map>
-#include <string>
-#include <vector>
 
 namespace cass {
 

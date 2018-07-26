@@ -15,36 +15,42 @@
 */
 
 #include <gtest/gtest.h>
-#include <map>
-#include <set>
 
 #include "test_token_map_utils.hpp"
+#include "map.hpp"
+#include "set.hpp"
 
 namespace {
 
 template <class Partitioner>
 struct TestTokenMap {
   typedef typename cass::ReplicationStrategy<Partitioner>::Token Token;
-  typedef std::map<Token, cass::Host::Ptr> TokenHostMap;
+  typedef cass::Map<Token, cass::Host::Ptr> TokenHostMap;
 
   TokenHostMap tokens;
-  cass::ScopedPtr<cass::TokenMap> token_map;
+  cass::TokenMap::Ptr token_map;
 
   TestTokenMap()
     : token_map(cass::TokenMap::from_partitioner(Partitioner::name())) { }
 
-  void build(const std::string& keyspace_name = "ks", size_t replication_factor = 3) {
+  void add_host(const cass::Host::Ptr& host) {
+    for (cass::Vector<cass::String>::const_iterator i = host->tokens().begin(),
+         end = host->tokens().end(); i != end; ++i) {
+      const cass::String v(*i);
+      tokens[Partitioner::from_string(*i)] = host;
+    }
+  }
+
+  void build(const cass::String& keyspace_name = "ks", size_t replication_factor = 3) {
     add_keyspace_simple(keyspace_name, replication_factor, token_map.get());
     for (typename TokenHostMap::const_iterator i = tokens.begin(),
          end = tokens.end(); i != end; ++i) {
-      TokenCollectionBuilder builder;
-      builder.append_token(i->first);
-      token_map->add_host(i->second, builder.finish());
+      token_map->add_host(i->second);
     }
     token_map->build();
   }
 
-  const cass::Host::Ptr& get_replica(const std::string& key) {
+  const cass::Host::Ptr& get_replica(const cass::String& key) {
     typename TokenHostMap::const_iterator i = tokens.upper_bound(Partitioner::hash(key));
     if (i != tokens.end()) {
       return i->second;
@@ -53,14 +59,15 @@ struct TestTokenMap {
     }
   }
 
-  void verify(const std::string& keyspace_name = "ks") {
-    const std::string keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
+  void verify(const cass::String& keyspace_name = "ks") {
+    const cass::String keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
     for (size_t i = 0; i < sizeof(keys)/sizeof(keys[0]); ++i) {
-      const std::string& key = keys[i];
+      const cass::String& key = keys[i];
 
       const cass::CopyOnWriteHostVec& hosts = token_map->get_replicas(keyspace_name, key);
-      ASSERT_GT(hosts && hosts->size(), 0);
+      ASSERT_TRUE(hosts);
+      ASSERT_GT(hosts->size(), 0);
 
       const cass::Host::Ptr& host = get_replica(key);
       ASSERT_TRUE(host);
@@ -76,9 +83,9 @@ TEST(TokenMapUnitTest, Murmur3)
 {
   TestTokenMap<cass::Murmur3Partitioner> test_murmur3;
 
-  test_murmur3.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
-  test_murmur3.tokens[0]                  = create_host("1.0.0.2");
-  test_murmur3.tokens[CASS_INT64_MAX / 2] = create_host("1.0.0.3");
+  test_murmur3.add_host(create_host("1.0.0.1", single_token(CASS_INT64_MIN / 2)));
+  test_murmur3.add_host(create_host("1.0.0.2", single_token(0)));
+  test_murmur3.add_host(create_host("1.0.0.3", single_token(CASS_INT64_MAX / 2)));
 
   test_murmur3.build();
   test_murmur3.verify();
@@ -89,20 +96,12 @@ TEST(TokenMapUnitTest, Murmur3MultipleTokensPerHost)
   TestTokenMap<cass::Murmur3Partitioner> test_murmur3;
 
   const size_t tokens_per_host = 256;
-
-  cass::HostVec hosts;
-  hosts.push_back(create_host("1.0.0.1"));
-  hosts.push_back(create_host("1.0.0.2"));
-  hosts.push_back(create_host("1.0.0.3"));
-  hosts.push_back(create_host("1.0.0.4"));
-
   MT19937_64 rng;
 
-  for (cass::HostVec::iterator i = hosts.begin(); i != hosts.end(); ++i) {
-    for (size_t j = 0; j < tokens_per_host; ++j) {
-      test_murmur3.tokens[rng()] = *i;
-    }
-  }
+  test_murmur3.add_host(create_host("1.0.0.1", random_murmur3_tokens(rng, tokens_per_host)));
+  test_murmur3.add_host(create_host("1.0.0.2", random_murmur3_tokens(rng, tokens_per_host)));
+  test_murmur3.add_host(create_host("1.0.0.3", random_murmur3_tokens(rng, tokens_per_host)));
+  test_murmur3.add_host(create_host("1.0.0.4", random_murmur3_tokens(rng, tokens_per_host)));
 
   test_murmur3.build();
   test_murmur3.verify();
@@ -121,7 +120,6 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes)
   ReplicationMap replication;
   MT19937_64 rng;
   cass::TokenMap* token_map = test_murmur3.token_map.get();
-  TestTokenMap<cass::Murmur3Partitioner>::TokenHostMap& tokens = test_murmur3.tokens;
 
   // Populate tokens
   int host_count = 1;
@@ -141,15 +139,13 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes)
         sprintf(ip, "127.0.%d.%d", host_count / 255, host_count % 255);
         host_count++;
 
-        cass::Host::Ptr host(create_host(ip, rack, dc));
+        cass::Host::Ptr host(create_host(ip,
+                                         random_murmur3_tokens(rng, num_vnodes),
+                                         cass::Murmur3Partitioner::name().to_string(),
+                                         rack, dc));
 
-        TokenCollectionBuilder builder;
-        for (size_t i = 0;  i < num_vnodes; ++i) {
-          cass::Murmur3Partitioner::Token token = rng();
-          builder.append_token(token);
-          tokens[token] = host;
-        }
-        token_map->add_host(host, builder.finish());
+        test_murmur3.add_host(host);
+        token_map->add_host(host);
       }
     }
   }
@@ -158,15 +154,15 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes)
   add_keyspace_network_topology("ks1", replication, token_map);
   token_map->build();
 
-  const std::string keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
+  const cass::String keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
   for (size_t i = 0; i < sizeof(keys)/sizeof(keys[0]); ++i) {
-    const std::string& key = keys[i];
+    const cass::String& key = keys[i];
 
     const cass::CopyOnWriteHostVec& hosts = token_map->get_replicas("ks1", key);
     ASSERT_TRUE(hosts && hosts->size() == replication_factor * num_dcs);
 
-    typedef std::map<std::string, std::set<std::string> > DcRackMap;
+    typedef cass::Map<cass::String, cass::Set<cass::String> > DcRackMap;
 
     // Verify rack counts
     DcRackMap dc_racks;
@@ -192,13 +188,13 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes)
 
 TEST(TokenMapUnitTest, Random)
 {
-  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::RandomPartitioner::name()));
+  cass::TokenMap::Ptr token_map(cass::TokenMap::from_partitioner(cass::RandomPartitioner::name()));
 
   TestTokenMap<cass::RandomPartitioner> test_random;
 
-  test_random.tokens[create_random_token("42535295865117307932921825928971026432")] = create_host("1.0.0.1");  // 2^127 / 4
-  test_random.tokens[create_random_token("85070591730234615865843651857942052864")] = create_host("1.0.0.2");  // 2^127 / 2
-  test_random.tokens[create_random_token("1605887595351923798765477786913079296")]  = create_host("1.0.0.3"); // 2^127 * 3 / 4
+  test_random.add_host(create_host("1.0.0.1", single_token(create_random_token("42535295865117307932921825928971026432")))); // 2^127 / 4
+  test_random.add_host(create_host("1.0.0.2", single_token(create_random_token("85070591730234615865843651857942052864")))); // 2^127 / 2
+  test_random.add_host(create_host("1.0.0.3", single_token(create_random_token("1605887595351923798765477786913079296")))); // 2^127 * 3 / 4
 
   test_random.build();
   test_random.verify();
@@ -206,13 +202,13 @@ TEST(TokenMapUnitTest, Random)
 
 TEST(TokenMapUnitTest, ByteOrdered)
 {
-  cass::ScopedPtr<cass::TokenMap> token_map(cass::TokenMap::from_partitioner(cass::ByteOrderedPartitioner::name()));
+  cass::TokenMap::Ptr token_map(cass::TokenMap::from_partitioner(cass::ByteOrderedPartitioner::name()));
 
   TestTokenMap<cass::ByteOrderedPartitioner> test_byte_ordered;
 
-  test_byte_ordered.tokens[create_byte_ordered_token("g")] = create_host("1.0.0.1");
-  test_byte_ordered.tokens[create_byte_ordered_token("m")] = create_host("1.0.0.2");
-  test_byte_ordered.tokens[create_byte_ordered_token("s")] = create_host("1.0.0.3");
+  test_byte_ordered.add_host(create_host("1.0.0.1", single_token(create_byte_ordered_token("g"))));
+  test_byte_ordered.add_host(create_host("1.0.0.2", single_token(create_byte_ordered_token("m"))));
+  test_byte_ordered.add_host(create_host("1.0.0.3", single_token(create_byte_ordered_token("s"))));
 
   test_byte_ordered.build();
   test_byte_ordered.verify();
@@ -222,9 +218,9 @@ TEST(TokenMapUnitTest, RemoveHost)
 {
   TestTokenMap<cass::Murmur3Partitioner> test_remove_host;
 
-  test_remove_host.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
-  test_remove_host.tokens[0]                  = create_host("1.0.0.2");
-  test_remove_host.tokens[CASS_INT64_MAX / 2] = create_host("1.0.0.3");
+  test_remove_host.add_host(create_host("1.0.0.1", single_token(CASS_INT64_MIN / 2)));
+  test_remove_host.add_host(create_host("1.0.0.2", single_token(0)));
+  test_remove_host.add_host(create_host("1.0.0.3", single_token(CASS_INT64_MAX / 2)));
 
   test_remove_host.build("ks", 2);
   test_remove_host.verify();
@@ -275,8 +271,8 @@ TEST(TokenMapUnitTest, UpdateHost)
 {
   TestTokenMap<cass::Murmur3Partitioner> test_update_host;
 
-  test_update_host.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
-  test_update_host.tokens[CASS_INT64_MIN / 4] = create_host("1.0.0.2");
+  test_update_host.add_host(create_host("1.0.0.1", single_token(CASS_INT64_MIN / 2)));
+  test_update_host.add_host(create_host("1.0.0.2", single_token(CASS_INT64_MIN / 4)));
 
   test_update_host.build("ks", 4);
   test_update_host.verify();
@@ -292,14 +288,9 @@ TEST(TokenMapUnitTest, UpdateHost)
   }
 
   {
-    cass::Murmur3Partitioner::Token token = 0;
-    cass::Host::Ptr host(create_host("1.0.0.3"));
-
-    test_update_host.tokens[token] = host;
-
-    TokenCollectionBuilder builder;
-    builder.append_token(token);
-    token_map->update_host_and_build(host, builder.finish());
+    cass::Host::Ptr host(create_host("1.0.0.3", single_token(0)));
+    test_update_host.add_host(host);
+    token_map->update_host_and_build(host);
   }
 
   {
@@ -312,14 +303,9 @@ TEST(TokenMapUnitTest, UpdateHost)
   }
 
   {
-    cass::Murmur3Partitioner::Token token = CASS_INT64_MAX / 2;
-    cass::Host::Ptr host(create_host("1.0.0.4"));
-
-    test_update_host.tokens[token] = host;
-
-    TokenCollectionBuilder builder;
-    builder.append_token(token);
-    token_map->update_host_and_build(host, builder.finish());
+    cass::Host::Ptr host(create_host("1.0.0.4", single_token(CASS_INT64_MAX / 2)));
+    test_update_host.add_host(host);
+    token_map->update_host_and_build(host);
   }
 
   {
@@ -348,25 +334,31 @@ TEST(TokenMapUnitTest, UpdateRemoveHostsMurmur3)
   cass::TokenMapImpl<cass::Murmur3Partitioner> token_map;
 
   // Add hosts and build token map
-  cass::Host::Ptr host1(create_host("1.0.0.1", "rack1", "dc1"));
+  Murmur3TokenVec tokens1;
+  tokens1.push_back(-3LL);
+  tokens1.push_back(-1LL);
+  tokens1.push_back(1LL);
+  tokens1.push_back(3LL);
 
-  TokenCollectionBuilder builder1;
-  builder1.append_token(-3LL);
-  builder1.append_token(-1LL);
-  builder1.append_token(1LL);
-  builder1.append_token(3LL);
+  cass::Host::Ptr host1(create_host("1.0.0.1",
+                                    murmur3_tokens(tokens1),
+                                    cass::Murmur3Partitioner::name().to_string(),
+                                    "rack1", "dc1"));
 
-  token_map.add_host(host1, builder1.finish());
+  token_map.add_host(host1);
 
-  cass::Host::Ptr host2(create_host("1.0.0.2", "rack1", "dc2"));
+  Murmur3TokenVec tokens2;
+  tokens2.push_back(-4LL);
+  tokens2.push_back(-2LL);
+  tokens2.push_back(2LL);
+  tokens2.push_back(4LL);
 
-  TokenCollectionBuilder builder2;
-  builder2.append_token(-4LL);
-  builder2.append_token(-2LL);
-  builder2.append_token(2LL);
-  builder2.append_token(4LL);
+  cass::Host::Ptr host2(create_host("1.0.0.2",
+                                    murmur3_tokens(tokens2),
+                                    cass::Murmur3Partitioner::name().to_string(),
+                                    "rack1", "dc2"));
 
-  token_map.add_host(host2, builder2.finish());
+  token_map.add_host(host2);
 
   ReplicationMap replication;
 
@@ -402,7 +394,7 @@ TEST(TokenMapUnitTest, UpdateRemoveHostsMurmur3)
   EXPECT_TRUE(token_map.contains(4LL));
 
   // Add host1 and check that its tokens have been added (same as the initial state)
-  token_map.update_host_and_build(host1, builder1.finish());
+  token_map.update_host_and_build(host1);
 
   EXPECT_TRUE(token_map.contains(-3LL));
   EXPECT_TRUE(token_map.contains(-1LL));
@@ -428,7 +420,7 @@ TEST(TokenMapUnitTest, UpdateRemoveHostsMurmur3)
   EXPECT_FALSE(token_map.contains(4LL));
 
   // Add host2 and check that its tokens have been added (same as the initial state)
-  token_map.update_host_and_build(host2, builder2.finish());
+  token_map.update_host_and_build(host2);
 
   EXPECT_TRUE(token_map.contains(-3LL));
   EXPECT_TRUE(token_map.contains(-1LL));
@@ -445,9 +437,9 @@ TEST(TokenMapUnitTest, DropKeyspace)
 {
   TestTokenMap<cass::Murmur3Partitioner> test_drop_keyspace;
 
-  test_drop_keyspace.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
-  test_drop_keyspace.tokens[0]                  = create_host("1.0.0.2");
-  test_drop_keyspace.tokens[CASS_INT64_MAX / 2] = create_host("1.0.0.3");
+  test_drop_keyspace.add_host(create_host("1.0.0.1", single_token(CASS_INT64_MIN / 2)));
+  test_drop_keyspace.add_host(create_host("1.0.0.2", single_token(0)));
+  test_drop_keyspace.add_host(create_host("1.0.0.3", single_token(CASS_INT64_MAX / 2)));
 
   test_drop_keyspace.build("ks", 2);
   test_drop_keyspace.verify();

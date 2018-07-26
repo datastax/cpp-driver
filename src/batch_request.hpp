@@ -20,13 +20,12 @@
 #include "cassandra.h"
 #include "constants.hpp"
 #include "external.hpp"
+#include "map.hpp"
 #include "request.hpp"
 #include "ref_counted.hpp"
 #include "statement.hpp"
-
-#include <map>
-#include <string>
-#include <vector>
+#include "string.hpp"
+#include "vector.hpp"
 
 namespace cass {
 
@@ -34,7 +33,7 @@ class ExecuteRequest;
 
 class BatchRequest : public RoutableRequest {
 public:
-  typedef std::vector<Statement::Ptr> StatementVec;
+  typedef Vector<Statement::Ptr> StatementVec;
 
   BatchRequest(uint8_t type_)
       : RoutableRequest(CQL_OPCODE_BATCH)
@@ -46,9 +45,9 @@ public:
 
   void add_statement(Statement* statement);
 
-  bool find_prepared_query(const std::string& id, std::string* query) const;
+  bool find_prepared_query(const String& id, String* query) const;
 
-  virtual bool get_routing_key(std::string* routing_key) const;
+  virtual bool get_routing_key(String* routing_key) const;
 
 private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;

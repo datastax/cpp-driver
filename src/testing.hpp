@@ -18,28 +18,26 @@
 #define __CASS_TESTING_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "string.hpp"
+#include "vector.hpp"
 
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 namespace cass {
 
-CASS_EXPORT std::string get_host_from_future(CassFuture* future);
+CASS_EXPORT String get_host_from_future(CassFuture* future);
 
 CASS_EXPORT unsigned get_connect_timeout_from_cluster(CassCluster* cluster);
 
 CASS_EXPORT int get_port_from_cluster(CassCluster* cluster);
 
-CASS_EXPORT std::string get_contact_points_from_cluster(CassCluster* cluster);
+CASS_EXPORT String get_contact_points_from_cluster(CassCluster* cluster);
 
-CASS_EXPORT std::vector<std::string> get_user_data_type_field_names(const CassSchemaMeta* schema_meta, const std::string& keyspace, const std::string& udt_name);
-
-CASS_EXPORT int64_t create_murmur3_hash_from_string(const std::string &value);
+CASS_EXPORT int64_t create_murmur3_hash_from_string(const String &value);
 
 CASS_EXPORT uint64_t get_time_since_epoch_in_ms();
 
-CASS_EXPORT uint64_t get_host_latency_average(CassSession* session, std::string ip_address, int port);
+CASS_EXPORT uint64_t get_host_latency_average(CassSession* session, String ip_address, int port);
 
 } // namespace cass
 

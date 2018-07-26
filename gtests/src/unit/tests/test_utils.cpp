@@ -24,40 +24,40 @@
 
 TEST(UtilsUnitTest, CqlId)
 {
-  std::string s;
+  cass::String s;
 
   // valid id
   s = "abc";
-  EXPECT_EQ(cass::to_cql_id(s), std::string("abc"));
+  EXPECT_EQ(cass::to_cql_id(s), cass::String("abc"));
 
   // test lower cassing
   s = "ABC";
-  EXPECT_EQ(cass::to_cql_id(s), std::string("abc"));
+  EXPECT_EQ(cass::to_cql_id(s), cass::String("abc"));
 
   // quoted
   s = "\"aBc\"";
-  EXPECT_EQ(cass::to_cql_id(s), std::string("aBc"));
+  EXPECT_EQ(cass::to_cql_id(s), cass::String("aBc"));
 
   // invalid chars
   s = "!@#";
-  EXPECT_EQ(cass::to_cql_id(s), std::string("!@#"));
+  EXPECT_EQ(cass::to_cql_id(s), cass::String("!@#"));
 }
 
 TEST(UtilsUnitTest, EscapeId)
 {
-  std::string s;
+  cass::String s;
 
   s = "abc";
-  EXPECT_EQ(cass::escape_id(s), std::string("abc"));
+  EXPECT_EQ(cass::escape_id(s), cass::String("abc"));
 
   s = "aBc";
-  EXPECT_EQ(cass::escape_id(s), std::string("\"aBc\""));
+  EXPECT_EQ(cass::escape_id(s), cass::String("\"aBc\""));
 
   s = "\"";
-  EXPECT_EQ(cass::escape_id(s), std::string("\"\"\"\""));
+  EXPECT_EQ(cass::escape_id(s), cass::String("\"\"\"\""));
 
   s = "a\"Bc";
-  EXPECT_EQ(cass::escape_id(s), std::string("\"a\"\"Bc\""));
+  EXPECT_EQ(cass::escape_id(s), cass::String("\"a\"\"Bc\""));
 }
 
 TEST(UtilsUnitTest, NumLeadingZeros)

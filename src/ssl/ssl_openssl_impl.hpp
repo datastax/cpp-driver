@@ -27,7 +27,8 @@ namespace cass {
 
 class OpenSslSession : public SslSession {
 public:
-  OpenSslSession(const Host::ConstPtr& host,
+  OpenSslSession(const Address& address,
+                 const String& hostname,
                  int flags,
                  SSL_CTX* ssl_ctx);
   ~OpenSslSession();
@@ -58,8 +59,7 @@ public:
 
   ~OpenSslContext();
 
-  virtual SslSession* create_session(const Host::ConstPtr& host);
-
+  virtual SslSession* create_session(const Address& address, const String& hostname);
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length);
   virtual CassError set_cert(const char* cert, size_t cert_length);
   virtual CassError set_private_key(const char* key,
@@ -72,10 +72,12 @@ private:
   X509_STORE* trusted_store_;
 };
 
-class OpenSslContextFactory : SslContextFactoryBase<OpenSslContextFactory> {
+class OpenSslContextFactory : public SslContextFactoryBase<OpenSslContextFactory> {
 public:
   static SslContext::Ptr create();
-  static void init();
+  static void internal_init();
+  static void internal_thread_cleanup();
+  static void internal_cleanup();
 };
 
 typedef SslContextFactoryBase<OpenSslContextFactory> SslContextFactory;

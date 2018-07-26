@@ -34,17 +34,17 @@ CassDataType* cass_data_type_new(CassValueType type) {
     case CASS_VALUE_TYPE_SET:
     case CASS_VALUE_TYPE_TUPLE:
     case CASS_VALUE_TYPE_MAP:
-      data_type = new cass::CollectionType(type, false);
+      data_type = cass::Memory::allocate<cass::CollectionType>(type, false);
       data_type->inc_ref();
       break;
 
     case CASS_VALUE_TYPE_UDT:
-      data_type = new cass::UserType(false);
+      data_type = cass::Memory::allocate<cass::UserType>(false);
       data_type->inc_ref();
       break;
 
     case CASS_VALUE_TYPE_CUSTOM:
-      data_type = new cass::CustomType();
+      data_type = cass::Memory::allocate<cass::CustomType>();
       data_type->inc_ref();
       break;
 
@@ -54,7 +54,7 @@ CassDataType* cass_data_type_new(CassValueType type) {
 
     default:
       if (type < CASS_VALUE_TYPE_LAST_ENTRY) {
-        data_type = new cass::DataType(type);
+        data_type = cass::Memory::allocate<cass::DataType>(type);
         data_type->inc_ref();
       }
       break;
@@ -70,13 +70,13 @@ CassDataType* cass_data_type_new_from_existing(const CassDataType* data_type) {
 
 CassDataType* cass_data_type_new_tuple(size_t item_count) {
   cass::DataType* data_type
-      = new cass::CollectionType(CASS_VALUE_TYPE_TUPLE, item_count);
+      = cass::Memory::allocate<cass::CollectionType>(CASS_VALUE_TYPE_TUPLE, item_count);
   data_type->inc_ref();
   return CassDataType::to(data_type);
 }
 
 CassDataType* cass_data_type_new_udt(size_t field_count) {
-  cass::DataType* data_type = new cass::UserType(field_count);
+  cass::DataType* data_type = cass::Memory::allocate<cass::UserType>(field_count);
   data_type->inc_ref();
   return CassDataType::to(data_type);
 }
@@ -164,7 +164,7 @@ CassError cass_data_type_set_type_name_n(CassDataType* data_type,
   cass::UserType* user_type
       = static_cast<cass::UserType*>(data_type->from());
 
-  user_type->set_type_name(std::string(type_name, type_name_length));
+  user_type->set_type_name(cass::String(type_name, type_name_length));
 
   return CASS_OK;
 }
@@ -201,7 +201,7 @@ CassError cass_data_type_set_keyspace_n(CassDataType* data_type,
   cass::UserType* user_type
       = static_cast<cass::UserType*>(data_type->from());
 
-  user_type->set_keyspace(std::string(keyspace, keyspace_length));
+  user_type->set_keyspace(cass::String(keyspace, keyspace_length));
 
   return CASS_OK;
 }
@@ -238,7 +238,7 @@ CassError cass_data_type_set_class_name_n(CassDataType* data_type,
   cass::CustomType* custom_type
       = static_cast<cass::CustomType*>(data_type->from());
 
-  custom_type->set_class_name(std::string(class_name, class_name_length));
+  custom_type->set_class_name(cass::String(class_name, class_name_length));
 
   return CASS_OK;
 }
@@ -339,7 +339,7 @@ CassError cass_data_type_add_sub_type_by_name_n(CassDataType* data_type,
   cass::UserType* user_type
       = static_cast<cass::UserType*>(data_type->from());
 
-  user_type->add_field(std::string(name, name_length),
+  user_type->add_field(cass::String(name, name_length),
                        cass::DataType::ConstPtr(sub_data_type));
 
   return CASS_OK;
@@ -349,7 +349,7 @@ CassError cass_data_type_add_sub_type_by_name_n(CassDataType* data_type,
 CassError cass_data_type_add_sub_value_type(CassDataType* data_type,
                                             CassValueType sub_value_type) {
   cass::DataType::ConstPtr sub_data_type(
-        new cass::DataType(sub_value_type));
+        cass::Memory::allocate<cass::DataType>(sub_value_type));
   return cass_data_type_add_sub_type(data_type,
                                      CassDataType::to(sub_data_type.get()));
 }
@@ -359,7 +359,7 @@ CassError cass_data_type_add_sub_value_type_by_name(CassDataType* data_type,
                                                     const char* name,
                                                     CassValueType sub_value_type) {
   cass::DataType::ConstPtr sub_data_type(
-        new cass::DataType(sub_value_type));
+        cass::Memory::allocate<cass::DataType>(sub_value_type));
   return cass_data_type_add_sub_type_by_name(data_type, name,
                                              CassDataType::to(sub_data_type.get()));
 }
@@ -369,7 +369,7 @@ CassError cass_data_type_add_sub_value_type_by_name_n(CassDataType* data_type,
                                                       size_t name_length,
                                                       CassValueType sub_value_type) {
   cass::DataType::ConstPtr sub_data_type(
-        new cass::DataType(sub_value_type));
+        cass::Memory::allocate<cass::DataType>(sub_value_type));
   return cass_data_type_add_sub_type_by_name_n(data_type, name, name_length,
                                                CassDataType::to(sub_data_type.get()));
 }
@@ -389,7 +389,7 @@ DataType::ConstPtr DataType::create_by_class(StringRef name) {
   if (value_type == CASS_VALUE_TYPE_UNKNOWN) {
     return DataType::NIL;
   }
-  return ConstPtr(new DataType(value_type));
+  return ConstPtr(Memory::allocate<DataType>(value_type));
 }
 
 DataType::ConstPtr DataType::create_by_cql(StringRef name) {
@@ -397,7 +397,7 @@ DataType::ConstPtr DataType::create_by_cql(StringRef name) {
   if (value_type == CASS_VALUE_TYPE_UNKNOWN) {
     return DataType::NIL;
   }
-  return ConstPtr(new DataType(value_type));
+  return ConstPtr(Memory::allocate<DataType>(value_type));
 }
 
 ValueTypes::HashMap ValueTypes::value_types_by_class_;
@@ -410,8 +410,8 @@ ValueTypes::ValueTypes() {
   value_types_by_cql_.set_empty_key("");
 
 #define XX_VALUE_TYPE(name, type, cql, klass)                   \
-    if (strlen(klass) > 0) value_types_by_class_[klass] = name; \
-    if (strlen(cql) > 0) value_types_by_cql_[cql] = name;
+    if (sizeof(klass) - 1 > 0) value_types_by_class_[klass] = name; \
+    if (sizeof(cql) - 1 > 0) value_types_by_cql_[cql] = name;
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
 #undef XX_VALUE_TYPE
@@ -447,7 +447,7 @@ const DataType::ConstPtr& SimpleDataTypeCache::by_value_type(uint16_t value_type
   DataType::ConstPtr& data_type = cache_[value_type];
   if (!data_type) {
     data_type = DataType::ConstPtr(
-                  new DataType(static_cast<CassValueType>(value_type)));
+                  Memory::allocate<DataType>(static_cast<CassValueType>(value_type)));
   }
   return data_type;
 }

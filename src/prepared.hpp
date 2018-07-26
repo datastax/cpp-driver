@@ -26,11 +26,10 @@
 #include "metadata.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
+#include "string.hpp"
+#include "dense_hash_map.hpp"
 
-#include <sparsehash/dense_hash_set>
-#include <string>
 #include <uv.h>
-#include <vector>
 
 namespace cass {
 
@@ -43,17 +42,17 @@ public:
            const Metadata::SchemaSnapshot& schema_metadata);
 
   const ResultResponse::ConstPtr& result() const { return result_; }
-  const std::string& id() const { return id_; }
-  const std::string& query() const { return query_; }
-  const std::string& keyspace() const { return keyspace_; }
+  const String& id() const { return id_; }
+  const String& query() const { return query_; }
+  const String& keyspace() const { return keyspace_; }
   const RequestSettings& request_settings() const { return request_settings_; }
   const ResultResponse::PKIndexVec& key_indices() const { return key_indices_; }
 
 private:
   ResultResponse::ConstPtr result_;
-  std::string id_;
-  std::string query_;
-  std::string keyspace_;
+  String id_;
+  String query_;
+  String keyspace_;
   RequestSettings request_settings_;
   ResultResponse::PKIndexVec key_indices_;
 };
@@ -63,11 +62,11 @@ public:
   class Entry : public RefCounted<Entry> {
   public:
     typedef SharedRefPtr<const Entry> Ptr;
-    typedef std::vector<Ptr> Vec;
+    typedef Vector<Ptr> Vec;
 
-    Entry(const std::string& query,
-          const std::string& keyspace,
-          const std::string& result_metadata_id,
+    Entry(const String& query,
+          const String& keyspace,
+          const String& result_metadata_id,
           const ResultResponse::ConstPtr& result)
       : query_(query)
       , keyspace_(keyspace)
@@ -78,20 +77,20 @@ public:
                                         result_metadata_id.size());
     }
 
-    const std::string& query() const { return query_; }
-    const std::string& keyspace() const { return keyspace_; }
+    const String& query() const { return query_; }
+    const String& keyspace() const { return keyspace_; }
     const Buffer& result_metadata_id() const { return result_metadata_id_; }
     const ResultResponse::ConstPtr& result() const { return result_; }
 
   private:
-    std::string query_;
-    std::string keyspace_;
+    String query_;
+    String keyspace_;
     Buffer result_metadata_id_;
     ResultResponse::ConstPtr result_;
   };
 
   PreparedMetadata() {
-    metadata_.set_empty_key(std::string());
+    metadata_.set_empty_key(String());
     uv_rwlock_init(&rwlock_);
   }
 
@@ -99,7 +98,7 @@ public:
     uv_rwlock_destroy(&rwlock_);
   }
 
-   Entry::Ptr get(const std::string& prepared_id) const {
+   Entry::Ptr get(const String& prepared_id) const {
     ScopedReadLock rl(&rwlock_);
     Map::const_iterator i = metadata_.find(prepared_id);
     if (i != metadata_.end()) {
@@ -108,7 +107,7 @@ public:
     return Entry::Ptr();
   }
 
-  void set(const std::string& prepared_id, const PreparedMetadata::Entry::Ptr& entry) {
+  void set(const String& prepared_id, const PreparedMetadata::Entry::Ptr& entry) {
     ScopedWriteLock wl(&rwlock_);
     metadata_[prepared_id] = entry;
   }
@@ -125,7 +124,7 @@ public:
   }
 
 private:
-  typedef sparsehash::dense_hash_map<std::string, Entry::Ptr> Map;
+  typedef DenseHashMap<String, Entry::Ptr> Map;
 
   mutable uv_rwlock_t rwlock_;
   Map metadata_;

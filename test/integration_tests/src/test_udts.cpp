@@ -39,6 +39,11 @@ private:
   test_utils::CassSchemaMetaPtr schema_meta_;
 
   /**
+   * Test keyspace
+   */
+  std::string keyspace_;
+
+  /**
    * Update the session schema metadata
    */
   void update_schema() {
@@ -56,7 +61,7 @@ private:
     const CassDataType* datatype = NULL;
     while (udt_field_names.empty() && ++count <= 10) {
       update_schema();
-      const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta_.get(), test_utils::SIMPLE_KEYSPACE.c_str());
+      const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta_.get(), keyspace_.c_str());
       BOOST_REQUIRE(keyspace_meta != NULL);
       datatype = cass_keyspace_meta_user_type_by_name(keyspace_meta, udt_name.c_str());
       if (datatype == NULL) {
@@ -67,16 +72,19 @@ private:
   }
 
 public:
-  UDTTests() : test_utils::SingleSessionTest(1, 0), schema_meta_(NULL) {
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
-    test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  UDTTests()
+    : test_utils::SingleSessionTest(1, 0)
+    , schema_meta_(NULL)
+    , keyspace_(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen))) {
+    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % keyspace_ % "1"));
+    test_utils::execute_query(session, str(boost::format("USE %s") % keyspace_));
   }
 
   ~UDTTests() {
     // Drop the keyspace (ignore any and all errors)
     test_utils::execute_query_with_error(session,
       str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-      % test_utils::SIMPLE_KEYSPACE));
+      % keyspace_));
   }
 
   /**
@@ -97,7 +105,7 @@ public:
    */
   test_utils::CassUserTypePtr new_udt(const std::string &udt_name) {
     verify_user_type(udt_name);
-    const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta_.get(), test_utils::SIMPLE_KEYSPACE.c_str());
+    const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta_.get(), keyspace_.c_str());
     BOOST_REQUIRE(keyspace_meta != NULL);
     const CassDataType* datatype = cass_keyspace_meta_user_type_by_name(keyspace_meta, udt_name.c_str());
     BOOST_REQUIRE(datatype != NULL);

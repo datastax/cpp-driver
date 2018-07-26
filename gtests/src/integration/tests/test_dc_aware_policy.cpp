@@ -26,24 +26,26 @@ public:
     // Create a cluster with 2 DCs with 2 nodes in each
     number_dc1_nodes_ = 2;
     number_dc2_nodes_ = 2;
+    is_session_requested_ = false;
     Integration::SetUp();
-
-    // Create a test table and add test data to it
-    session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "text"));
-    session_.execute(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(),  "1", "'one'"));
-    session_.execute(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(),  "2", "'two'"));
   }
 
-  std::vector<std::string> validate(Session session) {
+  void initialize() {
+    session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "text"));
+    session_.execute(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "1", "'one'"));
+    session_.execute(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "2", "'two'"));
+  }
+
+  std::vector<std::string> validate() {
     std::vector<std::string> attempted_hosts, temp;
     Result result;
 
-    result = session.execute(select_statement("1"));
+    result = session_.execute(select_statement("1"));
     temp = result.attempted_hosts();
     std::copy(temp.begin(), temp.end(), std::back_inserter(attempted_hosts));
     EXPECT_EQ(result.first_row().next().as<Varchar>(), Varchar("one"));
 
-    result = session.execute(select_statement("2"));
+    result = session_.execute(select_statement("2"));
     temp = result.attempted_hosts();
     std::copy(temp.begin(), temp.end(), std::back_inserter(attempted_hosts));
     EXPECT_EQ(result.first_row().next().as<Varchar>(), Varchar("two"));
@@ -77,15 +79,16 @@ public:
 CASSANDRA_INTEGRATION_TEST_F(DcAwarePolicyTest, UsedHostsRemoteDc) {
   CHECK_FAILURE
 
-  Cluster cluster(default_cluster());
-
   // Use up to one of the remote DC nodes if no local nodes are available.
-  ASSERT_EQ(cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", 1, cass_false), CASS_OK);
+  cluster_ = default_cluster();
+  cluster_.with_load_balance_dc_aware("dc1", 1, false);
+  connect(cluster_);
 
-  Session session = cluster.connect(keyspace_name_);
+  // Create a test table and add test data to it
+  initialize();
 
   { // Run queries using the local DC
-    std::vector<std::string> attempted_hosts = validate(session);
+    std::vector<std::string> attempted_hosts = validate();
 
     // Verify that local DC hosts were used
     EXPECT_TRUE(contains(ccm_->get_ip_prefix() + "1", attempted_hosts) || contains(ccm_->get_ip_prefix() + "2", attempted_hosts));
@@ -99,7 +102,7 @@ CASSANDRA_INTEGRATION_TEST_F(DcAwarePolicyTest, UsedHostsRemoteDc) {
   ccm_->stop_node(2, true);
 
   { // Run queries using the remote DC
-    std::vector<std::string> attempted_hosts = validate(session);
+    std::vector<std::string> attempted_hosts = validate();
 
     // Verify that remote DC hosts were used
     EXPECT_TRUE(contains(ccm_->get_ip_prefix() + "3", attempted_hosts) || contains(ccm_->get_ip_prefix() + "4", attempted_hosts));

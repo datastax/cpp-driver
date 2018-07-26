@@ -16,11 +16,11 @@
 
 #include "prepare_host_handler.hpp"
 
+#include "memory.hpp"
 #include "prepare_request.hpp"
 #include "protocol.hpp"
 #include "query_request.hpp"
 #include "stream_manager.hpp"
-#include "session.hpp"
 
 #include <algorithm>
 
@@ -41,26 +41,19 @@ static int max_prepares_for_protocol_version(int protocol_version,
 }
 
 PrepareHostHandler::PrepareHostHandler(const Host::Ptr& host,
-                                       Session* session,
-                                       int protocol_version)
+                                       const PreparedMetadata::Entry::Vec& prepared_metadata_entries,
+                                       const Callback& callback,
+                                       int protocol_version,
+                                       unsigned max_requests_per_flush)
   : host_(host)
   , protocol_version_(protocol_version)
-  , session_(session)
-  , callback_(NULL)
+  , callback_(callback)
   , connection_(NULL)
   , prepares_outstanding_(0)
   , max_prepares_outstanding_(max_prepares_for_protocol_version(
                                 protocol_version,
-                                session->config().max_requests_per_flush())) { }
-
-void PrepareHostHandler::prepare(Callback callback) {
-  callback_ = callback;
-  prepared_metadata_entries_ = session_->prepared_metadata_entries();
-
-  if (prepared_metadata_entries_.empty()) {
-    callback_(this);
-    return;
-  }
+                                max_requests_per_flush))
+  , prepared_metadata_entries_(prepared_metadata_entries) {
 
   // Sort by keyspace to minimize the number of times the keyspace
   // needs to be changed.
@@ -69,28 +62,41 @@ void PrepareHostHandler::prepare(Callback callback) {
             CompareEntryKeyspace());
 
   current_entry_it_ = prepared_metadata_entries_.begin();
+}
 
-  connection_ = new Connection(session_->loop(),
-                               session_->config(),
-                               session_->metrics(),
-                               host_,
-                               "", // No keyspace
-                               protocol_version_,
-                               this);
+
+void PrepareHostHandler::prepare(uv_loop_t* loop,
+                                 const ConnectionSettings& settings) {
+  if (prepared_metadata_entries_.empty()) {
+    callback_(this);
+    return;
+  }
 
   inc_ref(); // Reference for the event loop
 
-  connection_->connect();
-}
+  Connector::Ptr connector(Memory::allocate<Connector>(host_->address(),
+                                                       protocol_version_,
+                                                       bind_callback(&PrepareHostHandler::on_connect, this)));
 
-void PrepareHostHandler::on_ready(Connection* connection) {
-  prepare_next();
+  connector->with_settings(settings)
+           ->with_listener(this)
+           ->connect(loop);
 }
 
 void PrepareHostHandler::on_close(Connection* connection) {
   callback_(this);
 
   dec_ref(); // The event loop is done with this handler
+}
+
+void PrepareHostHandler::on_connect(Connector* connector) {
+  if (connector->is_ok()) {
+    connection_ = connector->release_connection().get();
+    prepare_next();
+  } else {
+    callback_(this);
+    dec_ref(); // The event loop is done with this handler
+  }
 }
 
 // This is the main loop for preparing statements. It's called after each
@@ -117,16 +123,14 @@ void PrepareHostHandler::prepare_next() {
   while (!is_done() &&
          check_and_set_keyspace() &&
          prepares_outstanding_ < max_prepares_outstanding_) {
-    const std::string& query((*current_entry_it_)->query());
-    PrepareRequest::Ptr prepare_request(new PrepareRequest(query));
+    const String& query((*current_entry_it_)->query());
+    PrepareRequest::Ptr prepare_request(Memory::allocate<PrepareRequest>(query));
 
     // Set the keyspace in case per request keyspaces are supported
     prepare_request->set_keyspace(current_keyspace_);
-    prepare_request->set_request_timeout_ms(session_->config().request_timeout_ms());
 
     if (!connection_->write(PrepareCallback::Ptr(
-                              new PrepareCallback(prepare_request, Ptr(this))),
-                            false)) { // Flush after we write all prepare requests
+                              Memory::allocate<PrepareCallback>(prepare_request, Ptr(this))))) {
       LOG_WARN("Failed to write prepare request while preparing all queries on host %s",
                host_->address_string().c_str());
       close();
@@ -145,11 +149,11 @@ bool PrepareHostHandler::check_and_set_keyspace() {
     return true;
   }
 
-  const std::string& keyspace((*current_entry_it_)->keyspace());
+  const String& keyspace((*current_entry_it_)->keyspace());
 
   if (keyspace != current_keyspace_) {
-    if (!connection_->write(PrepareCallback::Ptr(
-                              new SetKeyspaceCallback(keyspace, Ptr(this))))) {
+    if (!connection_->write_and_flush(PrepareCallback::Ptr(
+                                        Memory::allocate<SetKeyspaceCallback>(keyspace, Ptr(this))))) {
       LOG_WARN("Failed to write \"USE\" keyspace request while preparing all queries on host %s",
                host_->address_string().c_str());
       close();
@@ -182,7 +186,7 @@ void PrepareHostHandler::PrepareCallback::on_internal_set(ResponseMessage* respo
   handler_->prepare_next();
 }
 
-void PrepareHostHandler::PrepareCallback::on_internal_error(CassError code, const std::string& message) {
+void PrepareHostHandler::PrepareCallback::on_internal_error(CassError code, const String& message) {
   LOG_WARN("Prepare request failed on host %s while attempting to prepare all queries: %s (%s)",
            handler_->host_->address_string().c_str(),
            message.c_str(),
@@ -196,10 +200,10 @@ void PrepareHostHandler::PrepareCallback::on_internal_timeout() {
   handler_->close();
 }
 
-PrepareHostHandler::SetKeyspaceCallback::SetKeyspaceCallback(const std::string& keyspace,
+PrepareHostHandler::SetKeyspaceCallback::SetKeyspaceCallback(const String& keyspace,
                                                              const PrepareHostHandler::Ptr& handler)
   : SimpleRequestCallback(Request::ConstPtr(
-                            new QueryRequest("USE " + keyspace)))
+                            Memory::allocate<QueryRequest>("USE " + keyspace)))
   , handler_(handler) { }
 
 void PrepareHostHandler::SetKeyspaceCallback::on_internal_set(ResponseMessage* response) {
@@ -209,7 +213,7 @@ void PrepareHostHandler::SetKeyspaceCallback::on_internal_set(ResponseMessage* r
   handler_->prepare_next();
 }
 
-void PrepareHostHandler::SetKeyspaceCallback::on_internal_error(CassError code, const std::string& message) {
+void PrepareHostHandler::SetKeyspaceCallback::on_internal_error(CassError code, const String& message) {
   LOG_WARN("\"USE\" keyspace request failed on host %s while attempting to prepare all queries: %s (%s)",
            handler_->host_->address_string().c_str(),
            message.c_str(),

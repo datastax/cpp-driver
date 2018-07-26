@@ -48,6 +48,35 @@
 #define DO_SELECTS 1
 #define USE_PREPARED 1
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+#include <windows.h>
+const DWORD MS_VC_EXCEPTION = 0x406D1388;
+#pragma pack(push,8)
+typedef struct tagTHREADNAME_INFO {
+  DWORD dwType; /* Must be 0x1000. */
+  LPCSTR szName; /* Pointer to name (in user addr space). */
+  DWORD dwThreadID; /* Thread ID (-1=caller thread). */
+  DWORD dwFlags; /* Reserved for future use, must be zero. */
+} THREADNAME_INFO;
+#pragma pack(pop)
+void set_thread_name(const char* thread_name) {
+  THREADNAME_INFO info;
+  info.dwType = 0x1000;
+  info.szName = thread_name;
+  info.dwThreadID = -1;
+  info.dwFlags = 0;
+#pragma warning(push)
+#pragma warning(disable: 6320 6322)
+  __try {
+    RaiseException(MS_VC_EXCEPTION,
+                   0,
+                   sizeof(info) / sizeof(ULONG_PTR),
+                   (ULONG_PTR*) &info);
+  } __except (EXCEPTION_EXECUTE_HANDLER) { }
+#pragma warning(pop)
+}
+#endif
+
 const char* big_string = "0123456701234567012345670123456701234567012345670123456701234567"
                          "0123456701234567012345670123456701234567012345670123456701234567"
                          "0123456701234567012345670123456701234567012345670123456701234567"
@@ -283,6 +312,12 @@ void run_select_queries(void* data) {
   const CassPrepared* select_prepared = NULL;
   const char* select_query = "SELECT * FROM stress.songs WHERE id = a98d21b2-1900-11e4-b97b-e5e358e71e0d";
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+  char thread_name[32];
+  sprintf(thread_name, "Perf - %lu", (unsigned long) (GetThreadId(uv_thread_self())));
+  set_thread_name(thread_name);
+#endif
+
 #if USE_PREPARED
   if (prepare_query(session, select_query, &select_prepared) == CASS_OK) {
 #endif
@@ -319,6 +354,7 @@ int main(int argc, char* argv[]) {
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
+    cass_uuid_gen_free(uuid_gen);
     return -1;
   }
 

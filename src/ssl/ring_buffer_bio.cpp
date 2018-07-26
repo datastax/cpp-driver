@@ -81,6 +81,10 @@ void RingBufferBio::initialize() {
     BIO_meth_set_destroy(method_, RingBufferBio::destroy);
   }
 }
+
+void RingBufferBio::cleanup() {
+  BIO_meth_free(method_);
+}
 #endif
 
 BIO* RingBufferBio::create(RingBufferState* state) {

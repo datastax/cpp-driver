@@ -15,11 +15,11 @@
 */
 
 #include <gtest/gtest.h>
-#include <string>
 
 #include "logger.hpp"
 #include "murmur3.hpp"
 #include "query_request.hpp"
+#include "string.hpp"
 #include "token_map.hpp"
 
 // The java-driver was used as a reference for the hash value
@@ -42,7 +42,7 @@ TEST_F(RoutingKeyUnitTest, Single)
     query.set(0, uuid);
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -56,7 +56,7 @@ TEST_F(RoutingKeyUnitTest, Single)
     query.set(0, value);
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -70,7 +70,7 @@ TEST_F(RoutingKeyUnitTest, Single)
     query.set(0, value);
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -83,7 +83,7 @@ TEST_F(RoutingKeyUnitTest, Single)
     query.set(0, cass_true);
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -97,7 +97,7 @@ TEST_F(RoutingKeyUnitTest, Single)
     query.set(0, cass::CassString(value, strlen(value)));
     query.add_key_index(0);
 
-    std::string routing_key;
+    cass::String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -109,7 +109,7 @@ TEST_F(RoutingKeyUnitTest, EmptyAndNull)
 {
   cass::QueryRequest query("", 1);
 
-  std::string routing_key;
+  cass::String routing_key;
   EXPECT_FALSE(query.get_routing_key(&routing_key));
 
   query.set(0, cass::CassNull());
@@ -136,7 +136,7 @@ TEST_F(RoutingKeyUnitTest, Composite)
     query.set(2, cass::CassString(value, strlen(value)));
     query.add_key_index(2);
 
-    std::string routing_key;
+    cass::String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
@@ -156,7 +156,7 @@ TEST_F(RoutingKeyUnitTest, Composite)
     query.set(2, cass::CassString(value, strlen(value)));
     query.add_key_index(2);
 
-    std::string routing_key;
+    cass::String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);

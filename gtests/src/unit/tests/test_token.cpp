@@ -25,7 +25,7 @@
 
 namespace {
 
-std::string to_string(cass::RandomPartitioner::Token token) {
+cass::String to_string(cass::RandomPartitioner::Token token) {
   return numeric::uint128_t(token.lo, token.hi).to_string();
 }
 

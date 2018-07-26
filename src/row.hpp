@@ -17,11 +17,10 @@
 #ifndef __CASS_ROW_HPP_INCLUDED__
 #define __CASS_ROW_HPP_INCLUDED__
 
+#include "decoder.hpp"
 #include "external.hpp"
 #include "string_ref.hpp"
 #include "value.hpp"
-
-#include <vector>
 
 namespace cass {
 
@@ -39,7 +38,7 @@ public:
 
   const Value* get_by_name(const StringRef& name) const;
 
-  bool get_string_by_name(const StringRef& name, std::string* out) const;
+  bool get_string_by_name(const StringRef& name, String* out) const;
 
   const ResultResponse* result() const { return result_; }
 
@@ -49,7 +48,8 @@ private:
   const ResultResponse* result_;
 };
 
-char* decode_row(char* row, const ResultResponse* result, OutputValueVec& output);
+bool decode_row(Decoder& decoder, const ResultResponse* result,
+                OutputValueVec& output);
 
 } // namespace cass
 
