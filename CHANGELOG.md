@@ -13,6 +13,7 @@ Features
 * [CPP-466] Token aware routing replicas are now randomly shuffled by default
   instead of using a random index
 * [CPP-492] Support execution profiles
+* [CPP-499] Allow binding local address of connections
 * [CPP-515] Remove support for libuv v0.10.x
 * [CPP-518] Thread and connection pool refactor
 * [CPP-616] Handle libuv v1.20.4+ version file updates
