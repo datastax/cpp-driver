@@ -19,6 +19,7 @@
 
 #include "third_party/mt19937_64/mt19937_64.hpp"
 
+#include <algorithm>
 #include <uv.h>
 
 namespace cass {
@@ -26,14 +27,26 @@ namespace cass {
 class Random {
 public:
   Random();
+  ~Random();
 
   uint64_t next(uint64_t max);
 
 private:
+  uv_mutex_t mutex_;
   MT19937_64 rng_;
 };
 
 uint64_t get_random_seed(uint64_t seed);
+
+template <class RandomAccessIterator>
+void random_shuffle(RandomAccessIterator first,
+                    RandomAccessIterator last,
+                    Random* random) {
+  size_t size = last - first;
+  for (size_t i = size - 1; i > 0; --i) {
+    std::swap(first[i], first[random->next(i + 1)]);
+  }
+}
 
 } // namespace cass
 

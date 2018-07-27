@@ -16,10 +16,12 @@
 
 #include "address.hpp"
 
+#include "logger.hpp"
 #include "macros.hpp"
+#include "row.hpp"
+#include "value.hpp"
 
 #include <assert.h>
-#include <sstream>
 #include <string.h>
 
 namespace cass {
@@ -34,42 +36,26 @@ Address::Address() {
   memset(&addr_, 0, sizeof(addr_));
 }
 
-Address::Address(const std::string& ip, int port) {
+Address::Address(const String& ip, int port) {
   init();
   bool result = from_string(ip, port, this);
   UNUSED_(result);
   assert(result);
 }
 
-bool Address::from_string(const std::string& ip, int port, Address* output) {
+bool Address::from_string(const String& ip, int port, Address* output) {
   char buf[sizeof(struct in6_addr)];
-#if UV_VERSION_MAJOR == 0
-  if (uv_inet_pton(AF_INET, ip.c_str(), &buf).code == UV_OK) {
-#else
   if (uv_inet_pton(AF_INET, ip.c_str(), &buf) == 0) {
-#endif
     if (output != NULL) {
       struct sockaddr_in addr;
-#if UV_VERSION_MAJOR == 0
-      addr = uv_ip4_addr(ip.c_str(), port);
-#else
       uv_ip4_addr(ip.c_str(), port, &addr);
-#endif
       output->init(&addr);
     }
     return true;
-#if UV_VERSION_MAJOR == 0
-  } else if (uv_inet_pton(AF_INET6, ip.c_str(), &buf).code == UV_OK) {
-#else
   } else if (uv_inet_pton(AF_INET6, ip.c_str(), &buf) == 0) {
-#endif
     if (output != NULL) {
       struct sockaddr_in6 addr;
-#if UV_VERSION_MAJOR == 0
-      addr = uv_ip6_addr(ip.c_str(), port);
-#else
       uv_ip6_addr(ip.c_str(), port, &addr);
-#endif
       output->init(&addr);
     }
     return true;
@@ -82,40 +68,24 @@ bool Address::from_inet(const char* data, size_t size, int port, Address* output
 
   if (size == 4) {
     char buf[INET_ADDRSTRLEN];
-#if UV_VERSION_MAJOR == 0
-    if (uv_inet_ntop(AF_INET, data, buf, sizeof(buf)).code != UV_OK) {
-#else
     if (uv_inet_ntop(AF_INET, data, buf, sizeof(buf)) != 0) {
-#endif
       return false;
     }
     if (output != NULL) {
       struct sockaddr_in addr;
-#if UV_VERSION_MAJOR == 0
-      addr = uv_ip4_addr(buf, port);
-#else
       uv_ip4_addr(buf, port, &addr);
-#endif
       output->init(&addr);
     }
 
     return true;
   } else {
     char buf[INET6_ADDRSTRLEN];
-#if UV_VERSION_MAJOR == 0
-    if (uv_inet_ntop(AF_INET6, data, buf, sizeof(buf)).code != UV_OK) {
-#else
     if (uv_inet_ntop(AF_INET6, data, buf, sizeof(buf)) != 0) {
-#endif
       return false;
     }
     if (output != NULL) {
       struct sockaddr_in6 addr;
-#if UV_VERSION_MAJOR == 0
-      addr = uv_ip6_addr(buf, port);
-#else
       uv_ip6_addr(buf, port, &addr);
-#endif
       output->init(&addr);
     }
 
@@ -152,8 +122,8 @@ int Address::port() const {
   return -1;
 }
 
-std::string Address::to_string(bool with_port) const {
-  std::stringstream ss;
+String Address::to_string(bool with_port) const {
+  OStringStream ss;
   char host[INET6_ADDRSTRLEN + 1] = {'\0'};
   if (family() == AF_INET) {
     uv_ip4_name(const_cast<struct sockaddr_in*>(addr_in()), host,
@@ -197,6 +167,60 @@ int Address::compare(const Address& a, bool with_port) const {
                   sizeof(addr_in6()->sin6_addr));
   }
   return 0;
+}
+
+bool determine_address_for_peer_host(const Address& connected_address,
+                                     const Value* peer_value,
+                                     const Value* rpc_value,
+                                     Address* output) {
+  Address peer_address;
+  if (!peer_value || !peer_value->decoder().as_inet(peer_value->size(),
+                                                    connected_address.port(),
+                                                    &peer_address)) {
+    LOG_WARN("Invalid address format for peer address");
+    return false;
+  }
+  if (rpc_value && !rpc_value->is_null()) {
+    if (!rpc_value->decoder().as_inet(rpc_value->size(),
+                                      connected_address.port(),
+                                      output)) {
+      LOG_WARN("Invalid address format for rpc address");
+      return false;
+    }
+    if (connected_address == *output || connected_address == peer_address) {
+      LOG_DEBUG("system.peers on %s contains a line with rpc_address for itself. "
+                "This is not normal, but is a known problem for some versions of DSE. "
+                "Ignoring this entry.", connected_address.to_string(false).c_str());
+      return false;
+    }
+    if (Address::BIND_ANY_IPV4.compare(*output, false) == 0 ||
+        Address::BIND_ANY_IPV6.compare(*output, false) == 0) {
+      LOG_WARN("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact instead. "
+               "If this is incorrect you should configure a specific interface for rpc_address on the server.",
+               peer_address.to_string(false).c_str());
+      *output = peer_address;
+    }
+  } else {
+    LOG_WARN("No rpc_address for host %s in system.peers on %s. "
+             "Ignoring this entry.", peer_address.to_string(false).c_str(),
+             connected_address.to_string(false).c_str());
+    return false;
+  }
+  return true;
+}
+
+String determine_listen_address(const Address& address, const Row* row) {
+  const Value* v = row->get_by_name("peer");
+  if (v != NULL) {
+    Address listen_address;
+    if (v->decoder().as_inet(v->size(), address.port(), &listen_address)) {
+      return listen_address.to_string();
+    } else {
+      LOG_WARN("Invalid address format for listen address for host %s",
+               address.to_string().c_str());
+    }
+  }
+  return "";
 }
 
 } // namespace cass

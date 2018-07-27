@@ -29,7 +29,7 @@ public:
   MapIterator(const Value* map)
       : Iterator(CASS_ITERATOR_TYPE_MAP)
       , map_(map)
-      , position_(map->data())
+      , decoder_(map->decoder())
       , index_(-1)
       , count_(map_->count()) {}
 
@@ -46,11 +46,11 @@ public:
   }
 
 private:
-  char* decode_pair(char* position);
+  bool decode_pair();
 
 private:
   const Value* map_;
-  char* position_;
+  Decoder decoder_;
   Value key_;
   Value value_;
   int32_t index_;

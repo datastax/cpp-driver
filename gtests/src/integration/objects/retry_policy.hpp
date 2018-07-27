@@ -59,21 +59,6 @@ public:
 };
 
 /**
- * Wrapped logging retry policy
- */
-class LoggingRetryPolicy : public RetryPolicy {
-public:
-  /**
-   * Create the logging retry policy object from the native driver logging retry
-   * policy object with the given child policy
-   *
-   * @param child_policy Child retry policy being logged (CASS_LOG_INFO)
-   */
-  LoggingRetryPolicy(RetryPolicy child_policy)
-    : RetryPolicy(cass_retry_policy_logging_new(child_policy.get())) {}
-};
-
-/**
  * Wrapped downgrading consistency retry policy
  */
 class DowngradingConsistencyRetryPolicy : public RetryPolicy {
@@ -97,6 +82,21 @@ public:
    */
   FallthroughRetryPolicy()
     : RetryPolicy(cass_retry_policy_fallthrough_new()) {}
+};
+
+/**
+ * Wrapped logging retry policy
+ */
+class LoggingRetryPolicy : public RetryPolicy {
+public:
+  /**
+   * Create the logging retry policy object from the native driver logging retry
+   * policy object with the given child policy
+   *
+   * @param child_policy Child retry policy being logged (CASS_LOG_INFO)
+   */
+  LoggingRetryPolicy(RetryPolicy child_policy)
+    : RetryPolicy(cass_retry_policy_logging_new(child_policy.get())) {}
 };
 
 } // namespace driver

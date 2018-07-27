@@ -20,28 +20,33 @@
 #include "buffer.hpp"
 #include "cassandra.h"
 #include "constants.hpp"
-#include "utils.hpp"
+#include "dense_hash_map.hpp"
 #include "list.hpp"
 #include "prepared.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include "scoped_ptr.hpp"
+#include "socket.hpp"
+#include "string.hpp"
 #include "timer.hpp"
+#include "timestamp_generator.hpp"
+#include "utils.hpp"
 
-#include <string>
 #include <uv.h>
 
 namespace cass {
 
 class Config;
 class Connection;
+class ExecutionProfile;
 class Metrics;
 class Pool;
+class PooledConnection;
 class PreparedMetadata;
 class ResponseMessage;
 class ResultResponse;
 
-typedef std::vector<uv_buf_t> UvBufVec;
+typedef Vector<uv_buf_t> UvBufVec;
 
 /**
  * A wrapper class for keeping a request's state grouped together with the
@@ -50,15 +55,18 @@ typedef std::vector<uv_buf_t> UvBufVec;
  */
 class RequestWrapper {
 public:
-  RequestWrapper(const Request::ConstPtr &request)
+  RequestWrapper(const Request::ConstPtr &request,
+                 uint64_t request_timeout_ms = CASS_DEFAULT_REQUEST_TIMEOUT_MS)
     : request_(request)
     , consistency_(CASS_DEFAULT_CONSISTENCY)
     , serial_consistency_(CASS_DEFAULT_SERIAL_CONSISTENCY)
-    , request_timeout_ms_(CASS_DEFAULT_REQUEST_TIMEOUT_MS)
+    , request_timeout_ms_(request_timeout_ms)
     , timestamp_(CASS_INT64_MIN) { }
 
-  void init(const Config& config,
-            const PreparedMetadata& prepared_metadata);
+  void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
+
+  void init(const ExecutionProfile& profile,
+            TimestampGenerator* timestamp_generator);
 
   const Request::ConstPtr& request() const {
     return request_;
@@ -113,44 +121,47 @@ private:
   PreparedMetadata::Entry::Ptr prepared_metadata_entry_;
 };
 
-class RequestCallback : public RefCounted<RequestCallback>, public List<RequestCallback>::Node {
+class RequestCallback : public RefCounted<RequestCallback>, public SocketRequest {
 public:
   typedef SharedRefPtr<RequestCallback> Ptr;
-  typedef std::vector<Ptr> Vec;
+  typedef Vector<Ptr> Vec;
 
   enum State {
     REQUEST_STATE_NEW,
     REQUEST_STATE_WRITING,
     REQUEST_STATE_READING,
     REQUEST_STATE_READ_BEFORE_WRITE,
-    REQUEST_STATE_FINISHED,
-    REQUEST_STATE_CANCELLED,
-    REQUEST_STATE_CANCELLED_WRITING,
-    REQUEST_STATE_CANCELLED_READING,
-    REQUEST_STATE_CANCELLED_READ_BEFORE_WRITE
+    REQUEST_STATE_FINISHED
   };
 
   RequestCallback(const RequestWrapper& wrapper)
     : wrapper_(wrapper)
-    , connection_(NULL)
+    , protocol_version_(0)
     , stream_(-1)
     , state_(REQUEST_STATE_NEW)
     , retry_consistency_(CASS_CONSISTENCY_UNKNOWN) { }
 
   virtual ~RequestCallback() { }
 
-  void start(Connection* connection, int stream);
+  void notify_write(Connection* connection,
+                    int protocol_version,
+                    int stream);
 
+public:
+  // Called to retry a request on a different connection
   virtual void on_retry_current_host() = 0;
   virtual void on_retry_next_host() = 0;
 
-  // One of these methods is called to finish a request
+protected:
+  // Called right before a request is written to a connection
+  virtual void on_write(Connection* connection) = 0;
+
+public:
+  // Called to finish a request
   virtual void on_set(ResponseMessage* response) = 0;
-  virtual void on_error(CassError code, const std::string& message) = 0;
-  virtual void on_cancel() = 0;
+  virtual void on_error(CassError code, const String& message) = 0;
 
-  int32_t encode(int version, int flags, BufferVec* bufs);
-
+public:
   const Request* request() const { return wrapper_.request().get(); }
 
   bool skip_metadata() const;
@@ -185,8 +196,6 @@ public:
 
   void set_retry_consistency(CassConsistency cl) { retry_consistency_ = cl; }
 
-  Connection* connection() const { return connection_; }
-
   int stream() const { return stream_; }
 
   State state() const { return state_; }
@@ -200,13 +209,13 @@ public:
     read_before_write_response_.reset(response);
   }
 
-protected:
-  // Called right before a request is written to a host.
-  virtual void on_start() = 0;
+private:
+  virtual int32_t encode(BufferVec* bufs);
+  virtual void on_close();
 
 private:
   const RequestWrapper wrapper_;
-  Connection* connection_;
+  int protocol_version_;
   int stream_;
   State state_;
   CassConsistency retry_consistency_;
@@ -218,75 +227,156 @@ private:
 
 class SimpleRequestCallback : public RequestCallback {
 public:
-  SimpleRequestCallback(const Request::ConstPtr& request)
-    : RequestCallback(RequestWrapper(request)) { }
+  SimpleRequestCallback(const String& query,
+                        uint64_t request_timeout_ms = CASS_DEFAULT_REQUEST_TIMEOUT_MS);
+
+  SimpleRequestCallback(const Request::ConstPtr& request,
+                        uint64_t request_timeout_ms = CASS_DEFAULT_REQUEST_TIMEOUT_MS)
+    : RequestCallback(RequestWrapper(request, request_timeout_ms)) { }
+
+  SimpleRequestCallback(const RequestWrapper& wrapper)
+    : RequestCallback(wrapper) { }
 
 protected:
+  virtual void on_internal_write(Connection* connection) { }
   virtual void on_internal_set(ResponseMessage* response) = 0;
-  virtual void on_internal_error(CassError code, const std::string& message) = 0;
+  virtual void on_internal_error(CassError code, const String& message) = 0;
   virtual void on_internal_timeout() = 0;
 
 private:
-  virtual void on_start();
-
   virtual void on_retry_current_host();
   virtual void on_retry_next_host();
 
-  virtual void on_set(ResponseMessage* response);
-  virtual void on_error(CassError code, const std::string& message);
-  virtual void on_cancel();
+  virtual void on_write(Connection* connection);
 
-  static void on_timeout(Timer* timer);
+protected:
+  virtual void on_set(ResponseMessage* response);
+  virtual void on_error(CassError code, const String& message);
+
+private:
+  void on_timeout(Timer* timer);
 
 private:
   Timer timer_;
 };
 
-class MultipleRequestCallback : public RefCounted<MultipleRequestCallback> {
+/**
+ * A request callback that chains multiple requests together as a single
+ * request.
+ */
+class ChainedRequestCallback : public SimpleRequestCallback {
 public:
-  typedef SharedRefPtr<MultipleRequestCallback> Ptr;
-  typedef std::map<std::string, Response::Ptr> ResponseMap;
+  typedef SharedRefPtr<ChainedRequestCallback> Ptr;
+  typedef DenseHashMap<String, Response::Ptr> Map;
 
-  MultipleRequestCallback(Connection* connection)
-    : connection_(connection)
-    , has_errors_or_timeouts_(false)
-    , remaining_(0) { }
+  /**
+   * Constructor for a simple query.
+   *
+   * @param key A key to map the response to the query.
+   * @param query The actual query to run.
+   * @param chain A request that's chained to this request. Don't use directly
+   * instead use the chain() method.
+   */
+  ChainedRequestCallback(const String& key, const String& query, const Ptr& chain = Ptr());
 
-  virtual ~MultipleRequestCallback() { }
+  /**
+   * Constructor for any type of request.
+   *
+   * @param key A key to map the response to the request.
+   * @param request The actual request to run.
+   * @param chain A request that's chained to this request. Don't use directly
+   * instead use the chain() method.
+   */
+  ChainedRequestCallback(const String& key, const Request::ConstPtr& request, const Ptr& chain = Ptr());
 
-  static bool get_result_response(const ResponseMap& responses,
-                                  const std::string& index,
-                                  ResultResponse** response);
+  /**
+   * Add a chained query to this request callback.
+   *
+   * Note: The last request in the chain must be executed for all prior chained
+   * requests to execute properly.
+   *
+   * @param key A key to map the response to the query.
+   * @param query The actual query to chain.
+   * @return Returns the new chained request callback so that another request
+   * can be chained. e.g. callback->chain(...)->chain(...)
+   */
+  ChainedRequestCallback::Ptr chain(const String& key, const String& query);
 
-  void execute_query(const std::string& index, const std::string& query);
+  /**
+   * Add a chained request to this request callback.
+   *
+   * Note: The last request in the chain must be executed for all prior chained
+   * requests to execute properly.
+   *
+   * @param key A key to map the response to the request.
+   * @param request The actual request to run.
+   * @return Returns the new chained request callback so that another request
+   * can be chained. e.g. callback->chain(...)->chain(...)
+   */
+  ChainedRequestCallback::Ptr chain(const String& key, const Request::ConstPtr& request);
 
-  virtual void on_set(const ResponseMap& responses) = 0;
-  virtual void on_error(CassError code, const std::string& message) = 0;
-  virtual void on_timeout() = 0;
+  /**
+   * The responses for the chained callbacks.
+   *
+   * @return A map of the responses by key.
+   */
+  const Map& responses() const { return responses_; }
 
-  Connection* connection() { return connection_; }
+  /**
+   * Get the result response for a key.
+   *
+   * @param The key the query/request was created with.
+   * @return  The result response for the chained request, null if not a
+   * result response or if the key doesn't exist.
+   */
+  ResultResponse::Ptr result(const String& key) const;
+
+protected:
+  /**
+   * A callback for when the chained request is written to a connection.
+   *
+   * @param connection The connection the callback was written to.
+   */
+  virtual void on_chain_write(Connection* connection) { }
+
+  /**
+   * A callback for when all responses have been received.
+   */
+  virtual void on_chain_set() { }
+
+  /**
+   * A callback for when an error occurs. A single error causes the whole
+   * chain to fail.
+   *
+   * @param code The error code.
+   * @param message The error message.
+   */
+  virtual void on_chain_error(CassError code, const String& message) { }
+
+  /**
+   * A callback for a request timeout. A single timeout causes the whole
+   * chain to fail.
+   */
+  virtual void on_chain_timeout() { }
 
 private:
-  class InternalCallback : public SimpleRequestCallback {
-  public:
-    InternalCallback(const MultipleRequestCallback::Ptr& parent,
-                     const Request::ConstPtr& request,
-                     const std::string& index);
+  virtual void on_internal_write(Connection* connection);
+  virtual void on_internal_set(ResponseMessage* response);
+  virtual void on_internal_error(CassError code, const String& message);
+  virtual void on_internal_timeout();
 
-  private:
-    virtual void on_internal_set(ResponseMessage* response);
-    virtual void on_internal_error(CassError code, const std::string& message);
-    virtual void on_internal_timeout();
+private:
+  void set_chain_responses(Map& responses);
 
-  private:
-    MultipleRequestCallback::Ptr parent_;
-    std::string index_;
-  };
+  bool is_finished() const;
+  void maybe_finish();
 
-  Connection* connection_;
-  bool has_errors_or_timeouts_;
-  int remaining_;
-  ResponseMap responses_;
+private:
+  const ChainedRequestCallback::Ptr chain_;
+  bool has_pending_;
+  String key_;
+  Response::Ptr response_;
+  Map responses_;
 };
 
 } // namespace cass

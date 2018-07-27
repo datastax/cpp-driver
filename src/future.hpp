@@ -24,36 +24,37 @@
 #include "macros.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
+#include "string.hpp"
 #include "ref_counted.hpp"
 
 #include <uv.h>
 #include <assert.h>
-#include <string>
 
 namespace cass {
 
 struct Error;
-
-enum FutureType {
-  CASS_FUTURE_TYPE_SESSION,
-  CASS_FUTURE_TYPE_RESPONSE
-};
 
 class Future : public RefCounted<Future> {
 public:
   typedef SharedRefPtr<Future> Ptr;
   typedef void (*Callback)(CassFuture*, void*);
 
+  enum Type {
+    FUTURE_TYPE_GENERIC,
+    FUTURE_TYPE_SESSION,
+    FUTURE_TYPE_RESPONSE
+  };
+
   struct Error {
-    Error(CassError code, const std::string& message)
+    Error(CassError code, const String& message)
         : code(code)
         , message(message) {}
 
     CassError code;
-    std::string message;
+    String message;
   };
 
-  Future(FutureType type)
+  Future(Type type)
       : is_set_(false)
       , type_(type)
       , callback_(NULL) {
@@ -66,7 +67,7 @@ public:
     uv_cond_destroy(&cond_);
   }
 
-  FutureType type() const { return type_; }
+  Type type() const { return type_; }
 
   bool ready() {
     ScopedMutex lock(&mutex_);
@@ -94,7 +95,7 @@ public:
     internal_set(lock);
   }
 
-  bool set_error(CassError code, const std::string& message) {
+  bool set_error(CassError code, const String& message) {
     ScopedMutex lock(&mutex_);
     if (!is_set_) {
       internal_set_error(code, message, lock);
@@ -125,8 +126,8 @@ protected:
 
   void internal_set(ScopedMutex& lock);
 
-  void internal_set_error(CassError code, const std::string& message, ScopedMutex& lock) {
-    error_.reset(new Error(code, message));
+  void internal_set_error(CassError code, const String& message, ScopedMutex& lock) {
+    error_.reset(Memory::allocate<Error>(code, message));
     internal_set(lock);
   }
 
@@ -135,7 +136,7 @@ protected:
 private:
   bool is_set_;
   uv_cond_t cond_;
-  FutureType type_;
+  Type type_;
   ScopedPtr<Error> error_;
   Callback callback_;
   void* data_;

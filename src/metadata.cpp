@@ -21,28 +21,30 @@
 #include "collection_iterator.hpp"
 #include "external.hpp"
 #include "iterator.hpp"
+#include "json.hpp"
 #include "logger.hpp"
 #include "map_iterator.hpp"
 #include "result_iterator.hpp"
 #include "row.hpp"
 #include "row_iterator.hpp"
 #include "scoped_lock.hpp"
+#include "string.hpp"
 #include "data_type_parser.hpp"
 #include "utils.hpp"
 #include "value.hpp"
 
-#include "third_party/rapidjson/rapidjson/document.h"
-
 #include <algorithm>
 #include <cmath>
 #include <ctype.h>
+#include <iterator>
 
-static std::string& append_arguments(std::string& full_name, const std::string& arguments) {
+static cass::String& append_arguments(cass::String& full_name,
+                                      const cass::String& arguments) {
   full_name.push_back('(');
   bool first = true;
-  std::istringstream stream(arguments);
+  cass::IStringStream stream(arguments);
   while (!stream.eof()) {
-    std::string argument;
+    cass::String argument;
     std::getline(stream, argument, ',');
     // Remove white-space
     argument.erase(std::remove_if(argument.begin(), argument.end(), ::isspace),
@@ -60,7 +62,7 @@ static std::string& append_arguments(std::string& full_name, const std::string& 
 extern "C" {
 
 void cass_schema_meta_free(const CassSchemaMeta* schema_meta) {
-  delete schema_meta->from();
+  cass::Memory::deallocate(schema_meta->from());
 }
 
 cass_uint32_t cass_schema_meta_snapshot_version(const CassSchemaMeta* schema_meta) {
@@ -69,9 +71,9 @@ cass_uint32_t cass_schema_meta_snapshot_version(const CassSchemaMeta* schema_met
 
 CassVersion cass_schema_meta_version(const CassSchemaMeta* schema_meta) {
   CassVersion version;
-  version.major_version = schema_meta->cassandra_version().major_version();
-  version.minor_version = schema_meta->cassandra_version().minor_version();
-  version.patch_version = schema_meta->cassandra_version().patch_version();
+  version.major_version = schema_meta->server_version().major_version();
+  version.minor_version = schema_meta->server_version().minor_version();
+  version.patch_version = schema_meta->server_version().patch_version();
   return version;
 }
 
@@ -83,7 +85,7 @@ const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name(const CassSchemaMeta* 
 const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name_n(const CassSchemaMeta* schema_meta,
                                                             const char* keyspace,
                                                             size_t keyspace_length) {
-  return CassKeyspaceMeta::to(schema_meta->get_keyspace(std::string(keyspace, keyspace_length)));
+  return CassKeyspaceMeta::to(schema_meta->get_keyspace(cass::String(keyspace, keyspace_length)));
 }
 
 void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
@@ -101,7 +103,7 @@ const CassTableMeta* cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* 
                                                         const char* table,
                                                         size_t table_length) {
 
-  return CassTableMeta::to(keyspace_meta->get_table(std::string(table, table_length)));
+  return CassTableMeta::to(keyspace_meta->get_table(cass::String(table, table_length)));
 }
 
 const CassMaterializedViewMeta* cass_keyspace_meta_materialized_view_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -113,7 +115,7 @@ const CassMaterializedViewMeta* cass_keyspace_meta_materialized_view_by_name_n(c
                                                                                const char* view,
                                                                                size_t view_length) {
 
-  return CassMaterializedViewMeta::to(keyspace_meta->get_view(std::string(view, view_length)));
+  return CassMaterializedViewMeta::to(keyspace_meta->get_view(cass::String(view, view_length)));
 }
 
 const CassDataType* cass_keyspace_meta_user_type_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -124,7 +126,7 @@ const CassDataType* cass_keyspace_meta_user_type_by_name(const CassKeyspaceMeta*
 const CassDataType* cass_keyspace_meta_user_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                                   const char* type,
                                                   size_t type_length) {
-  return CassDataType::to(keyspace_meta->get_user_type(std::string(type, type_length)));
+  return CassDataType::to(keyspace_meta->get_user_type(cass::String(type, type_length)));
 }
 
 const CassFunctionMeta* cass_keyspace_meta_function_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -141,9 +143,9 @@ const CassFunctionMeta* cass_keyspace_meta_function_by_name_n(const CassKeyspace
                                                               size_t name_length,
                                                               const char* arguments,
                                                               size_t arguments_length) {
-  std::string full_function_name(name, name_length);
+  cass::String full_function_name(name, name_length);
   return CassFunctionMeta::to(keyspace_meta->get_function(
-                                append_arguments(full_function_name, std::string(arguments, arguments_length))));
+                                append_arguments(full_function_name, cass::String(arguments, arguments_length))));
 }
 
 const CassAggregateMeta* cass_keyspace_meta_aggregate_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -159,9 +161,9 @@ const CassAggregateMeta* cass_keyspace_meta_aggregate_by_name_n(const CassKeyspa
                                                                 size_t name_length,
                                                                 const char* arguments,
                                                                 size_t arguments_length) {
-  std::string full_aggregate_name(name, name_length);
+  cass::String full_aggregate_name(name, name_length);
   return CassAggregateMeta::to(keyspace_meta->get_aggregate(
-                                 append_arguments(full_aggregate_name, std::string(arguments, arguments_length))));
+                                 append_arguments(full_aggregate_name, cass::String(arguments, arguments_length))));
 }
 
 const CassValue* cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -171,7 +173,7 @@ const CassValue* cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspa
 
 const CassValue* cass_keyspace_meta_field_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                                     const char* name, size_t name_length) {
-  return CassValue::to(keyspace_meta->get_field(std::string(name, name_length)));
+  return CassValue::to(keyspace_meta->get_field(cass::String(name, name_length)));
 }
 
 void cass_table_meta_name(const CassTableMeta* table_meta,
@@ -188,7 +190,7 @@ const CassColumnMeta* cass_table_meta_column_by_name(const CassTableMeta* table_
 const CassColumnMeta* cass_table_meta_column_by_name_n(const CassTableMeta* table_meta,
                                                        const char* column,
                                                        size_t column_length) {
-  return CassColumnMeta::to(table_meta->get_column(std::string(column, column_length)));
+  return CassColumnMeta::to(table_meta->get_column(cass::String(column, column_length)));
 }
 
 size_t cass_table_meta_column_count(const CassTableMeta* table_meta) {
@@ -211,7 +213,7 @@ const CassIndexMeta* cass_table_meta_index_by_name(const CassTableMeta* table_me
 const CassIndexMeta* cass_table_meta_index_by_name_n(const CassTableMeta* table_meta,
                                                      const char* index,
                                                      size_t index_length) {
-  return CassIndexMeta::to(table_meta->get_index(std::string(index, index_length)));
+  return CassIndexMeta::to(table_meta->get_index(cass::String(index, index_length)));
 }
 
 size_t cass_table_meta_index_count(const CassTableMeta* table_meta) {
@@ -234,7 +236,7 @@ const CassMaterializedViewMeta* cass_table_meta_materialized_view_by_name(const 
 const CassMaterializedViewMeta* cass_table_meta_materialized_view_by_name_n(const CassTableMeta* table_meta,
                                                                             const char* view,
                                                                             size_t view_length) {
-  return CassMaterializedViewMeta::to(table_meta->get_view(std::string(view, view_length)));
+  return CassMaterializedViewMeta::to(table_meta->get_view(cass::String(view, view_length)));
 }
 
 size_t cass_table_meta_materialized_view_count(const CassTableMeta* table_meta) {
@@ -288,7 +290,7 @@ const CassValue* cass_table_meta_field_by_name(const CassTableMeta* table_meta,
 
 const CassValue* cass_table_meta_field_by_name_n(const CassTableMeta* table_meta,
                                                  const char* name, size_t name_length) {
-  return CassValue::to(table_meta->get_field(std::string(name, name_length)));
+  return CassValue::to(table_meta->get_field(cass::String(name, name_length)));
 }
 
 const CassColumnMeta* cass_materialized_view_meta_column_by_name(const CassMaterializedViewMeta* view_meta,
@@ -299,7 +301,7 @@ const CassColumnMeta* cass_materialized_view_meta_column_by_name(const CassMater
 const CassColumnMeta* cass_materialized_view_meta_column_by_name_n(const CassMaterializedViewMeta* view_meta,
                                                                    const char* column,
                                                                    size_t column_length) {
-  return CassColumnMeta::to(view_meta->get_column(std::string(column, column_length)));
+  return CassColumnMeta::to(view_meta->get_column(cass::String(column, column_length)));
 }
 
 void cass_materialized_view_meta_name(const CassMaterializedViewMeta* view_meta,
@@ -319,7 +321,7 @@ const CassValue* cass_materialized_view_meta_field_by_name(const CassMaterialize
 
 const CassValue* cass_materialized_view_meta_field_by_name_n(const CassMaterializedViewMeta* view_meta,
                                                              const char* name, size_t name_length) {
-  return CassValue::to(view_meta->get_field(std::string(name, name_length)));
+  return CassValue::to(view_meta->get_field(cass::String(name, name_length)));
 }
 
 size_t cass_materialized_view_meta_column_count(const CassMaterializedViewMeta* view_meta) {
@@ -389,7 +391,7 @@ cass_column_meta_field_by_name(const CassColumnMeta* column_meta,
 const CassValue*
 cass_column_meta_field_by_name_n(const CassColumnMeta* column_meta,
                                  const char* name, size_t name_length) {
-  return CassValue::to(column_meta->get_field(std::string(name, name_length)));
+  return CassValue::to(column_meta->get_field(cass::String(name, name_length)));
 }
 
 void cass_index_meta_name(const CassIndexMeta* index_meta,
@@ -421,7 +423,7 @@ cass_index_meta_field_by_name(const CassIndexMeta* index_meta,
 const CassValue*
 cass_index_meta_field_by_name_n(const CassIndexMeta* index_meta,
                              const char* name, size_t name_length) {
-  return CassValue::to(index_meta->get_field(std::string(name, name_length)));
+  return CassValue::to(index_meta->get_field(cass::String(name, name_length)));
 }
 
 void cass_function_meta_name(const CassFunctionMeta* function_meta,
@@ -498,7 +500,7 @@ const CassValue* cass_function_meta_field_by_name(const CassFunctionMeta* functi
 const CassValue* cass_function_meta_field_by_name_n(const CassFunctionMeta* function_meta,
                                                     const char* name,
                                                     size_t name_length) {
-  return CassValue::to(function_meta->get_field(std::string(name, name_length)));
+  return CassValue::to(function_meta->get_field(cass::String(name, name_length)));
 }
 
 void cass_aggregate_meta_name(const CassAggregateMeta* aggregate_meta,
@@ -555,7 +557,7 @@ const CassValue* cass_aggregate_meta_field_by_name(const CassAggregateMeta* aggr
 const CassValue* cass_aggregate_meta_field_by_name_n(const CassAggregateMeta* aggregate_meta,
                                                      const char* name,
                                                      size_t name_length) {
-  return CassValue::to(aggregate_meta->get_field(std::string(name, name_length)));
+  return CassValue::to(aggregate_meta->get_field(cass::String(name, name_length)));
 }
 
 CassIterator* cass_iterator_keyspaces_from_schema_meta(const CassSchemaMeta* schema_meta) {
@@ -724,42 +726,25 @@ const CassValue* cass_iterator_get_meta_field_value(const CassIterator* iterator
 
 namespace cass {
 
-static const char* table_column_name(const cass::VersionNumber& cassandra_version) {
-  return cassandra_version >= VersionNumber(3, 0, 0) ? "table_name" : "columnfamily_name";
+static const char* table_column_name(const cass::VersionNumber& server_version) {
+  return server_version >= VersionNumber(3, 0, 0) ? "table_name" : "columnfamily_name";
 }
 
-static const char* signature_column_name(const cass::VersionNumber& cassandra_version) {
-  return cassandra_version >= VersionNumber(3, 0, 0) ? "argument_types" : "signature";
+static const char* signature_column_name(const cass::VersionNumber& server_version) {
+  return server_version >= VersionNumber(3, 0, 0) ? "argument_types" : "signature";
 }
 
 template <class T>
 const T& as_const(const T& x) { return x; }
 
-struct ColumnCompare {
-  typedef CassColumnMeta::Ptr argument_type;
-  bool operator()(const CassColumnMeta::Ptr& a, const CassColumnMeta::Ptr& b) const {
-    bool result;
-    if (a->type() == b->type()) {
-      result = (a->type() == CASS_COLUMN_TYPE_PARTITION_KEY ||
-                a->type() == CASS_COLUMN_TYPE_CLUSTERING_KEY) &&
-               a->position() < b->position();
-    } else {
-      result = a->type() == CASS_COLUMN_TYPE_PARTITION_KEY ||
-               (a->type() == CASS_COLUMN_TYPE_CLUSTERING_KEY &&
-                b->type() != CASS_COLUMN_TYPE_PARTITION_KEY);
-    }
-    return result;
-  }
-};
-
-const KeyspaceMetadata* Metadata::SchemaSnapshot::get_keyspace(const std::string& name) const {
+const KeyspaceMetadata* Metadata::SchemaSnapshot::get_keyspace(const String& name) const {
   KeyspaceMetadata::Map::const_iterator i = keyspaces_->find(name);
   if (i == keyspaces_->end()) return NULL;
   return &i->second;
 }
 
-const UserType* Metadata::SchemaSnapshot::get_user_type(const std::string& keyspace_name,
-                                                        const std::string& type_name) const
+const UserType* Metadata::SchemaSnapshot::get_user_type(const String& keyspace_name,
+                                                        const String& type_name) const
 {
   KeyspaceMetadata::Map::const_iterator i = keyspaces_->find(keyspace_name);
   if (i == keyspaces_->end()) {
@@ -768,12 +753,12 @@ const UserType* Metadata::SchemaSnapshot::get_user_type(const std::string& keysp
   return i->second.get_user_type(type_name);
 }
 
-std::string Metadata::full_function_name(const std::string& name, const StringVec& signature) {
-  std::string full_function_name(name);
+String Metadata::full_function_name(const String& name, const StringVec& signature) {
+  String full_function_name(name);
   full_function_name.push_back('(');
   for (StringVec::const_iterator i = signature.begin(),
        end = signature.end(); i != end; ++i) {
-    std::string argument(*i);
+    String argument(*i);
     // Remove white-space
     argument.erase(std::remove_if(argument.begin(), argument.end(), ::isspace),
                    argument.end());
@@ -786,109 +771,108 @@ std::string Metadata::full_function_name(const std::string& name, const StringVe
   return full_function_name;
 }
 
-Metadata::SchemaSnapshot Metadata::schema_snapshot(int protocol_version, const VersionNumber& cassandra_version) const {
+Metadata::SchemaSnapshot Metadata::schema_snapshot() const {
   ScopedMutex l(&mutex_);
   return SchemaSnapshot(schema_snapshot_version_,
-                        protocol_version,
-                        cassandra_version,
+                        server_version_,
                         front_.keyspaces());
 }
 
-void Metadata::update_keyspaces(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_keyspaces(const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_keyspaces(protocol_version, cassandra_version, result);
+    updating_->update_keyspaces(server_version_, result);
   } else {
-    updating_->update_keyspaces(protocol_version, cassandra_version, result);
+    updating_->update_keyspaces(server_version_, result);
   }
 }
 
-void Metadata::update_tables(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_tables(const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_tables(protocol_version, cassandra_version, result);
+    updating_->update_tables(server_version_, result);
   } else {
-    updating_->update_tables(protocol_version, cassandra_version, result);
+    updating_->update_tables(server_version_, result);
   }
 }
 
-void Metadata::update_views(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_views(const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_views(protocol_version, cassandra_version, result);
+    updating_->update_views(server_version_, result);
   } else {
-    updating_->update_views(protocol_version, cassandra_version, result);
+    updating_->update_views(server_version_, result);
   }
 }
 
-void Metadata::update_columns(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_columns(const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_columns(protocol_version, cassandra_version, cache_, result);
-    if (cassandra_version < VersionNumber(3, 0, 0)) {
-      updating_->update_legacy_indexes(protocol_version, cassandra_version, result);
+    updating_->update_columns(server_version_, cache_, result);
+    if (server_version_ < VersionNumber(3, 0, 0)) {
+      updating_->update_legacy_indexes(server_version_, result);
     }
   } else {
-    updating_->update_columns(protocol_version, cassandra_version, cache_, result);
-    if (cassandra_version < VersionNumber(3, 0, 0)) {
-      updating_->update_legacy_indexes(protocol_version, cassandra_version, result);
+    updating_->update_columns(server_version_, cache_, result);
+    if (server_version_ < VersionNumber(3, 0, 0)) {
+      updating_->update_legacy_indexes(server_version_, result);
     }
   }
 }
 
-void Metadata::update_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_indexes(const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_indexes(protocol_version, cassandra_version, result);
+    updating_->update_indexes(server_version_, result);
   } else {
-    updating_->update_indexes(protocol_version, cassandra_version, result);
+    updating_->update_indexes(server_version_, result);
   }
 }
 
-void Metadata::update_user_types(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_user_types(const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_user_types(protocol_version, cassandra_version, cache_, result);
+    updating_->update_user_types(server_version_, cache_, result);
   } else {
-    updating_->update_user_types(protocol_version, cassandra_version, cache_, result);
+    updating_->update_user_types(server_version_, cache_, result);
   }
 }
 
-void Metadata::update_functions(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_functions(const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_functions(protocol_version, cassandra_version, cache_, result);
+    updating_->update_functions(server_version_, cache_, result);
   } else {
-    updating_->update_functions(protocol_version, cassandra_version, cache_, result);
+    updating_->update_functions(server_version_, cache_, result);
   }
 }
 
-void Metadata::update_aggregates(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::update_aggregates(const ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_aggregates(protocol_version, cassandra_version, cache_, result);
+    updating_->update_aggregates(server_version_, cache_, result);
   } else {
-    updating_->update_aggregates(protocol_version, cassandra_version, cache_, result);
+    updating_->update_aggregates(server_version_, cache_, result);
   }
 }
 
-void Metadata::drop_keyspace(const std::string& keyspace_name) {
+void Metadata::drop_keyspace(const String& keyspace_name) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -899,7 +883,7 @@ void Metadata::drop_keyspace(const std::string& keyspace_name) {
   }
 }
 
-void Metadata::drop_table_or_view(const std::string& keyspace_name, const std::string& table_or_view_name) {
+void Metadata::drop_table_or_view(const String& keyspace_name, const String& table_or_view_name) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -910,7 +894,7 @@ void Metadata::drop_table_or_view(const std::string& keyspace_name, const std::s
   }
 }
 
-void Metadata::drop_user_type(const std::string& keyspace_name, const std::string& type_name) {
+void Metadata::drop_user_type(const String& keyspace_name, const String& type_name) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -921,7 +905,7 @@ void Metadata::drop_user_type(const std::string& keyspace_name, const std::strin
   }
 }
 
-void Metadata::drop_function(const std::string& keyspace_name, const std::string& full_function_name) {
+void Metadata::drop_function(const String& keyspace_name, const String& full_function_name) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -932,7 +916,7 @@ void Metadata::drop_function(const std::string& keyspace_name, const std::string
   }
 }
 
-void Metadata::drop_aggregate(const std::string& keyspace_name, const std::string& full_aggregate_name) {
+void Metadata::drop_aggregate(const String& keyspace_name, const String& full_aggregate_name) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
@@ -943,7 +927,11 @@ void Metadata::drop_aggregate(const std::string& keyspace_name, const std::strin
   }
 }
 
-void Metadata::clear_and_update_back(const VersionNumber& cassandra_version) {
+void Metadata::clear_and_update_back(const VersionNumber& server_version) {
+  {
+    ScopedMutex l(&mutex_);
+    server_version_ = server_version;
+  }
   back_.clear();
   updating_ = &back_;
 }
@@ -967,22 +955,22 @@ void Metadata::clear() {
   back_.clear();
 }
 
-const Value* MetadataBase::get_field(const std::string& name) const {
+const Value* MetadataBase::get_field(const String& name) const {
   MetadataField::Map::const_iterator it = fields_.find(name);
   if (it == fields_.end()) return NULL;
   return it->second.value();
 }
 
-std::string MetadataBase::get_string_field(const std::string& name) const {
+String MetadataBase::get_string_field(const String& name) const {
   const Value* value = get_field(name);
-  if (value == NULL) return std::string();
+  if (value == NULL) return String();
   return value->to_string();
 }
 
-const Value* MetadataBase::add_field(const RefBuffer::Ptr& buffer, const Row* row, const std::string& name) {
+const Value* MetadataBase::add_field(const RefBuffer::Ptr& buffer, const Row* row, const String& name) {
   const Value* value = row->get_by_name(name);
   if (value == NULL) return NULL;
-  if (value->size() <= 0) {
+  if (value->is_null()) {
     fields_[name] = MetadataField(name);
     return NULL; // Return NULL for "null" columns
   } else {
@@ -991,25 +979,21 @@ const Value* MetadataBase::add_field(const RefBuffer::Ptr& buffer, const Row* ro
   }
 }
 
-void MetadataBase::add_field(const RefBuffer::Ptr& buffer, const Value& value, const std::string& name) {
+void MetadataBase::add_field(const RefBuffer::Ptr& buffer, const Value& value, const String& name) {
   fields_[name] = MetadataField(name, value, buffer);
 }
 
-void MetadataBase::add_json_list_field(int protocol_version, const Row* row, const std::string& name) {
+void MetadataBase::add_json_list_field(const Row* row, const String& name) {
   const Value* value = row->get_by_name(name);
   if (value == NULL) return;
-  if (value->size() <= 0) {
+  if (value->is_null()) {
     fields_[name] = MetadataField(name);
     return;
   }
 
-  int32_t buffer_size = value->size();
-  ScopedPtr<char[]> buf(new char[buffer_size + 1]);
-  memcpy(buf.get(), value->data(), buffer_size);
-  buf[buffer_size] = '\0';
-
-  rapidjson::Document d;
-  d.ParseInsitu(buf.get());
+  Vector<char> buf = value->decoder().as_vector();
+  json::Document d;
+  d.ParseInsitu(&buf[0]);
 
   if (d.HasParseError()) {
     LOG_ERROR("Unable to parse JSON (array) for column '%s'", name.c_str());
@@ -1022,39 +1006,34 @@ void MetadataBase::add_json_list_field(int protocol_version, const Row* row, con
     return;
   }
 
-  Collection collection(CollectionType::list(DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)), false),
+  Collection collection(CollectionType::list(DataType::Ptr(Memory::allocate<DataType>(CASS_VALUE_TYPE_TEXT)), false),
                         d.Size());
-  for (rapidjson::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
+  for (json::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
     collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
   }
 
-  size_t encoded_size = collection.get_items_size(protocol_version);
+  size_t encoded_size = collection.get_items_size(value->protocol_version());
   RefBuffer::Ptr encoded(RefBuffer::create(encoded_size));
 
-  collection.encode_items(protocol_version, encoded->data());
+  collection.encode_items(value->protocol_version(), encoded->data());
 
-  Value list(protocol_version,
-             collection.data_type(),
+  Value list(collection.data_type(),
              d.Size(),
-             encoded->data(),
-             encoded_size);
+             Decoder(encoded->data(), encoded_size,
+                     value->protocol_version()));
   fields_[name] = MetadataField(name, list, encoded);
 }
 
-const Value* MetadataBase::add_json_map_field(int protocol_version, const Row* row, const std::string& name) {
+const Value* MetadataBase::add_json_map_field(const Row* row, const String& name) {
   const Value* value = row->get_by_name(name);
   if (value == NULL) return NULL;
-  if (value->size() <= 0) {
+  if (value->is_null()) {
     return (fields_[name] = MetadataField(name)).value();
   }
 
-  int32_t buffer_size = value->size();
-  ScopedPtr<char[]> buf(new char[buffer_size + 1]);
-  memcpy(buf.get(), value->data(), buffer_size);
-  buf[buffer_size] = '\0';
-
-  rapidjson::Document d;
-  d.ParseInsitu(buf.get());
+  Vector<char> buf = value->decoder().as_vector();
+  json::Document d;
+  d.ParseInsitu(&buf[0]);
 
   if (d.HasParseError()) {
     LOG_ERROR("Unable to parse JSON (object) for column '%s'", name.c_str());
@@ -1067,36 +1046,35 @@ const Value* MetadataBase::add_json_map_field(int protocol_version, const Row* r
     return (fields_[name] = MetadataField(name)).value();
   }
 
-  Collection collection(CollectionType::map(DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)),
-                                            DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)),
+  Collection collection(CollectionType::map(DataType::Ptr(Memory::allocate<DataType>(CASS_VALUE_TYPE_TEXT)),
+                                            DataType::Ptr(Memory::allocate<DataType>(CASS_VALUE_TYPE_TEXT)),
                                             false),
                         2 * d.MemberCount());
-  for (rapidjson::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
+  for (json::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
     collection.append(CassString(i->name.GetString(), i->name.GetStringLength()));
     collection.append(CassString(i->value.GetString(), i->value.GetStringLength()));
   }
 
-  size_t encoded_size = collection.get_items_size(protocol_version);
+  size_t encoded_size = collection.get_items_size(value->protocol_version());
   RefBuffer::Ptr encoded(RefBuffer::create(encoded_size));
 
-  collection.encode_items(protocol_version, encoded->data());
+  collection.encode_items(value->protocol_version(), encoded->data());
 
-  Value map(protocol_version,
-            collection.data_type(),
+  Value map(collection.data_type(),
             d.MemberCount(),
-            encoded->data(),
-            encoded_size);
+            Decoder(encoded->data(), encoded_size,
+                    value->protocol_version()));
 
   return (fields_[name] = MetadataField(name, map, encoded)).value();
 }
 
-const TableMetadata* KeyspaceMetadata::get_table(const std::string& name) const {
+const TableMetadata* KeyspaceMetadata::get_table(const String& name) const {
   TableMetadata::Map::const_iterator i = tables_->find(name);
   if (i == tables_->end()) return NULL;
   return i->second.get();
 }
 
-const TableMetadata::Ptr& KeyspaceMetadata::get_table(const std::string& name) {
+const TableMetadata::Ptr& KeyspaceMetadata::get_table(const String& name) {
   TableMetadata::Map::iterator i = tables_->find(name);
   if (i == tables_->end()) return TableMetadata::NIL;
   return i->second;
@@ -1120,23 +1098,21 @@ void KeyspaceMetadata::internal_add_table(const TableMetadata::Ptr& table,
                                           const ViewMetadata::Vec& views) {
   // Copy all the views and update the table and keyspace views
   for (ViewMetadata::Vec::const_iterator i = views.begin();
-        i != views.end(); ++i) {
-    ViewMetadata::Ptr view(new ViewMetadata(**i, table.get()));
+       i != views.end(); ++i) {
+    ViewMetadata::Ptr view(Memory::allocate<ViewMetadata>(**i, table.get()));
     table->add_view(view);
     (*views_)[view->name()] = view;
   }
   (*tables_)[table->name()] = table;
 }
 
-
-
-const ViewMetadata* KeyspaceMetadata::get_view(const std::string& name) const {
+const ViewMetadata* KeyspaceMetadata::get_view(const String& name) const {
   ViewMetadata::Map::const_iterator i = views_->find(name);
   if (i == views_->end()) return NULL;
   return i->second.get();
 }
 
-const ViewMetadata::Ptr& KeyspaceMetadata::get_view(const std::string& name) {
+const ViewMetadata::Ptr& KeyspaceMetadata::get_view(const String& name) {
   ViewMetadata::Map::iterator i = views_->find(name);
   if (i == views_->end()) return ViewMetadata::NIL;
   return i->second;
@@ -1148,7 +1124,7 @@ void KeyspaceMetadata::add_view(const ViewMetadata::Ptr& view) {
   (*views_)[view->name()] = view;
 }
 
-void KeyspaceMetadata::drop_table_or_view(const std::string& table_or_view_name) {
+void KeyspaceMetadata::drop_table_or_view(const String& table_or_view_name) {
   TableMetadata::Map::iterator table_it = tables_->find(table_or_view_name);
   if (table_it != tables_->end()) { // The name is for a table, remove the
                                     // table and views from keyspace
@@ -1174,7 +1150,7 @@ void KeyspaceMetadata::drop_table_or_view(const std::string& table_or_view_name)
       }
 
       // Create and add a new copy of the base table
-      TableMetadata::Ptr table(new TableMetadata(*view->base_table()));
+      TableMetadata::Ptr table(Memory::allocate<TableMetadata>(*view->base_table()));
       internal_add_table(table, views);
 
       // Remove the dropped view
@@ -1183,26 +1159,26 @@ void KeyspaceMetadata::drop_table_or_view(const std::string& table_or_view_name)
   }
 }
 
-const UserType::Ptr& KeyspaceMetadata::get_or_create_user_type(const std::string& name, bool is_frozen) {
+const UserType::Ptr& KeyspaceMetadata::get_or_create_user_type(const String& name, bool is_frozen) {
   UserType::Map::iterator i = user_types_->find(name);
   if (i == user_types_->end()) {
     i = user_types_->insert(std::make_pair(name,
-                                           UserType::Ptr(new UserType(MetadataBase::name(), name,
-                                                                      is_frozen)))).first;
+                                           UserType::Ptr(Memory::allocate<UserType>(MetadataBase::name(), name,
+                                                                                    is_frozen)))).first;
   }
   return i->second;
 }
 
-const UserType* KeyspaceMetadata::get_user_type(const std::string& name) const {
+const UserType* KeyspaceMetadata::get_user_type(const String& name) const {
   UserType::Map::const_iterator i = user_types_->find(name);
   if (i == user_types_->end()) return NULL;
   return i->second.get();
 }
 
-void KeyspaceMetadata::update(int protocol_version, const VersionNumber& cassandra_version, const RefBuffer::Ptr& buffer, const Row* row) {
+void KeyspaceMetadata::update(const VersionNumber& server_version, const RefBuffer::Ptr& buffer, const Row* row) {
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "durable_writes");
-  if (cassandra_version >= VersionNumber(3, 0, 0))  {
+  if (server_version >= VersionNumber(3, 0, 0))  {
     const Value* map = add_field(buffer, row, "replication");
     if (map != NULL &&
         map->value_type() == CASS_VALUE_TYPE_MAP &&
@@ -1224,14 +1200,14 @@ void KeyspaceMetadata::update(int protocol_version, const VersionNumber& cassand
         is_string_type(value->value_type())) {
       strategy_class_ = value->to_string_ref();
     }
-    const Value* map = add_json_map_field(protocol_version, row, "strategy_options");
+    const Value* map = add_json_map_field(row, "strategy_options");
     if (map != NULL) {
       strategy_options_ = *map;
     }
   }
 }
 
-void KeyspaceMetadata::drop_user_type(const std::string& type_name) {
+void KeyspaceMetadata::drop_user_type(const String& type_name) {
   user_types_->erase(type_name);
 }
 
@@ -1239,17 +1215,17 @@ void KeyspaceMetadata::add_function(const FunctionMetadata::Ptr& function) {
   (*functions_)[function->name()] = function;
 }
 
-const FunctionMetadata* KeyspaceMetadata::get_function(const std::string& full_function_name) const {
+const FunctionMetadata* KeyspaceMetadata::get_function(const String& full_function_name) const {
   FunctionMetadata::Map::const_iterator i = functions_->find(full_function_name);
   if (i == functions_->end()) return NULL;
   return i->second.get();
 }
 
-void KeyspaceMetadata::drop_function(const std::string& full_function_name) {
+void KeyspaceMetadata::drop_function(const String& full_function_name) {
   functions_->erase(full_function_name);
 }
 
-const AggregateMetadata* KeyspaceMetadata::get_aggregate(const std::string& full_aggregate_name) const {
+const AggregateMetadata* KeyspaceMetadata::get_aggregate(const String& full_aggregate_name) const {
   AggregateMetadata::Map::const_iterator i = aggregates_->find(full_aggregate_name);
   if (i == aggregates_->end()) return NULL;
   return i->second.get();
@@ -1259,12 +1235,12 @@ void KeyspaceMetadata::add_aggregate(const AggregateMetadata::Ptr& aggregate) {
   (*aggregates_)[aggregate->name()] = aggregate;
 }
 
-void KeyspaceMetadata::drop_aggregate(const std::string& full_aggregate_name) {
+void KeyspaceMetadata::drop_aggregate(const String& full_aggregate_name) {
   aggregates_->erase(full_aggregate_name);
 }
 
-TableMetadataBase::TableMetadataBase(int protocol_version, const VersionNumber& cassandra_version,
-                                     const std::string& name, const RefBuffer::Ptr& buffer, const Row* row)
+TableMetadataBase::TableMetadataBase(const VersionNumber& server_version,
+                                     const String& name, const RefBuffer::Ptr& buffer, const Row* row)
   : MetadataBase(name) {
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "bloom_filter_fp_chance");
@@ -1279,7 +1255,7 @@ TableMetadataBase::TableMetadataBase(int protocol_version, const VersionNumber& 
   add_field(buffer, row, "memtable_flush_period_in_ms");
   add_field(buffer, row, "read_repair_chance");
 
-  if (cassandra_version >= VersionNumber(3, 0, 0)) {
+  if (server_version >= VersionNumber(3, 0, 0)) {
     add_field(buffer, row, "dclocal_read_repair_chance");
     add_field(buffer, row, "crc_check_chance");
     add_field(buffer, row, "compaction");
@@ -1290,15 +1266,15 @@ TableMetadataBase::TableMetadataBase(int protocol_version, const VersionNumber& 
     add_field(buffer, row, "local_read_repair_chance");
 
     add_field(buffer, row, "compaction_strategy_class");
-    add_json_map_field(protocol_version, row, "compaction_strategy_options");
-    add_json_map_field(protocol_version, row, "compression_parameters");
+    add_json_map_field(row, "compaction_strategy_options");
+    add_json_map_field(row, "compression_parameters");
 
-    add_json_list_field(protocol_version, row, "column_aliases");
+    add_json_list_field(row, "column_aliases");
     add_field(buffer, row, "comparator");
     add_field(buffer, row, "subcomparator");
     add_field(buffer, row, "default_validator");
     add_field(buffer, row, "key_alias");
-    add_json_list_field(protocol_version, row, "key_aliases");
+    add_json_list_field(row, "key_aliases");
     add_field(buffer, row, "value_alias");
     add_field(buffer, row, "key_validator");
     add_field(buffer, row, "type");
@@ -1313,13 +1289,13 @@ TableMetadataBase::TableMetadataBase(int protocol_version, const VersionNumber& 
   }
 }
 
-const ColumnMetadata* TableMetadataBase::get_column(const std::string& name) const {
+const ColumnMetadata* TableMetadataBase::get_column(const String& name) const {
   ColumnMetadata::Map::const_iterator i = columns_by_name_.find(name);
   if (i == columns_by_name_.end()) return NULL;
   return i->second.get();
 }
 
-void TableMetadataBase::add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column) {
+void TableMetadataBase::add_column(const VersionNumber& server_version, const ColumnMetadata::Ptr& column) {
   if (columns_by_name_.insert(std::make_pair(column->name(), column)).second) {
     columns_.push_back(column);
   }
@@ -1341,19 +1317,19 @@ size_t get_column_count(const ColumnMetadata::Vec& columns, CassColumnType type)
   return count;
 }
 
-void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache) {
+void TableMetadataBase::build_keys_and_sort(const VersionNumber& server_version, SimpleDataTypeCache& cache) {
   // Also, Reorders columns so that the order is:
   // 1) Parition key
   // 2) Clustering keys
   // 3) Other columns
 
-  if (cassandra_version.major_version() >= 2) {
+  if (server_version.major_version() >= 2) {
     partition_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_PARTITION_KEY));
     clustering_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_CLUSTERING_KEY));
     clustering_key_order_.resize(clustering_key_.size(), CASS_CLUSTERING_ORDER_NONE);
     for (ColumnMetadata::Vec::const_iterator i = columns_.begin(),
          end = columns_.end(); i != end; ++i) {
-      ColumnMetadata::Ptr column(*i);
+      const ColumnMetadata::Ptr& column(*i);
       if (column->type() == CASS_COLUMN_TYPE_PARTITION_KEY &&
           column->position() >= 0 &&
           static_cast<size_t>(column->position()) < partition_key_.size()) {
@@ -1367,7 +1343,22 @@ void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionN
       }
     }
 
-    std::stable_sort(columns_.begin(), columns_.end(), ColumnCompare());
+    ColumnMetadata::Vec columns;
+    columns.reserve(columns_.size());
+
+    std::copy(partition_key_.begin(), partition_key_.end(), std::back_inserter<ColumnMetadata::Vec>(columns));
+    std::copy(clustering_key_.begin(), clustering_key_.end(), std::back_inserter<ColumnMetadata::Vec>(columns));
+
+    for (ColumnMetadata::Vec::const_iterator i = columns_.begin(),
+         end = columns_.end(); i != end; ++i) {
+      const ColumnMetadata::Ptr& column(*i);
+      if (column->type() != CASS_COLUMN_TYPE_PARTITION_KEY &&
+          column->type() != CASS_COLUMN_TYPE_CLUSTERING_KEY) {
+        columns.push_back(column);
+      }
+    }
+
+    columns_.swap(columns);
   } else {
     // Cassandra 1.2 requires a lot more work because "system.schema_columns" only
     // contains regular columns.
@@ -1388,20 +1379,20 @@ void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionN
       size_t size = key_validator->types().size();
       partition_key_.reserve(size);
       for (size_t i = 0; i < size; ++i) {
-        std::string key_alias;
+        String key_alias;
         if (i < key_aliases.size()) {
           key_alias = key_aliases[i].to_string();
         } else {
-          std::ostringstream ss("key");
+          OStringStream ss("key");
           if (i > 0) {
             ss << i + 1;
           }
           key_alias = ss.str();
         }
-        partition_key_.push_back(ColumnMetadata::Ptr(new ColumnMetadata(key_alias,
-                                                                        partition_key_.size(),
-                                                                        CASS_COLUMN_TYPE_PARTITION_KEY,
-                                                                        key_validator->types()[i])));
+        partition_key_.push_back(ColumnMetadata::Ptr(Memory::allocate<ColumnMetadata>(key_alias,
+                                                                                      partition_key_.size(),
+                                                                                      CASS_COLUMN_TYPE_PARTITION_KEY,
+                                                                                      key_validator->types()[i])));
       }
     }
 
@@ -1430,20 +1421,20 @@ void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionN
       }
       clustering_key_.reserve(size);
       for (size_t i = 0; i < size; ++i) {
-        std::string column_alias;
+        String column_alias;
         if (i < column_aliases.size()) {
           column_alias = column_aliases[i].to_string();
         } else {
-          std::ostringstream ss("column");
+          OStringStream ss("column");
           if (i > 0) {
             ss << i + 1;
           }
           column_alias = ss.str();
         }
-        clustering_key_.push_back(ColumnMetadata::Ptr(new ColumnMetadata(column_alias,
-                                                                         clustering_key_.size(),
-                                                                         CASS_COLUMN_TYPE_CLUSTERING_KEY,
-                                                                         comparator->types()[i])));
+        clustering_key_.push_back(ColumnMetadata::Ptr(Memory::allocate<ColumnMetadata>(column_alias,
+                                                                                       clustering_key_.size(),
+                                                                                       CASS_COLUMN_TYPE_CLUSTERING_KEY,
+                                                                                       comparator->types()[i])));
         clustering_key_order_.push_back(comparator->reversed()[i] ? CASS_CLUSTERING_ORDER_DESC
                                                                   : CASS_CLUSTERING_ORDER_ASC);
       }
@@ -1464,17 +1455,17 @@ void TableMetadataBase::build_keys_and_sort(int protocol_version, const VersionN
 
 const TableMetadata::Ptr TableMetadata::NIL;
 
-TableMetadata::TableMetadata(int protocol_version, const VersionNumber& cassandra_version,
-                             const std::string& name, const RefBuffer::Ptr& buffer, const Row* row)
-  : TableMetadataBase(protocol_version, cassandra_version, name, buffer, row) {
-  add_field(buffer, row, table_column_name(cassandra_version));
-  if (cassandra_version >= VersionNumber(3, 0, 0)) {
+TableMetadata::TableMetadata(const VersionNumber& server_version,
+                             const String& name, const RefBuffer::Ptr& buffer, const Row* row)
+  : TableMetadataBase(server_version, name, buffer, row) {
+  add_field(buffer, row, table_column_name(server_version));
+  if (server_version >= VersionNumber(3, 0, 0)) {
     add_field(buffer, row, "flags");
   }
 }
 
-void TableMetadata::add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column) {
-  if (cassandra_version >= VersionNumber(3, 0, 0)) {
+void TableMetadata::add_column(const VersionNumber& server_version, const ColumnMetadata::Ptr& column) {
+  if (server_version >= VersionNumber(3, 0, 0)) {
     if (column->type() == CASS_COLUMN_TYPE_REGULAR && column->data_type()->is_custom()) {
       const CustomType *customType = static_cast<const CustomType *>(column->data_type().get());
       if (customType->class_name() == EMPTY_TYPE) {
@@ -1488,10 +1479,10 @@ void TableMetadata::add_column(const VersionNumber& cassandra_version, const Col
     // should not be exposed to the user.
     return;
   }
-  TableMetadataBase::add_column(cassandra_version, column);
+  TableMetadataBase::add_column(server_version, column);
 }
 
-const ViewMetadata* TableMetadata::get_view(const std::string& name) const {
+const ViewMetadata* TableMetadata::get_view(const String& name) const {
  ViewMetadata::Vec::const_iterator i = std::lower_bound(views_.begin(), views_.end(), name);
   if (i == views_.end() || (*i)->name() != name) return NULL;
   return i->get();
@@ -1518,7 +1509,7 @@ void TableMetadata::key_aliases(SimpleDataTypeCache& cache, KeyAliases* output) 
     ParseResult::Ptr key_validator_type
         = DataTypeClassNameParser::parse_with_composite(get_string_field("key_validator"), cache);
     const size_t count = key_validator_type->types().size();
-    std::ostringstream ss("key");
+    OStringStream ss("key");
     for (size_t i = 0; i < count; ++i) {
       if (i > 0) {
         ss.seekp(3);// position after "key"
@@ -1531,10 +1522,10 @@ void TableMetadata::key_aliases(SimpleDataTypeCache& cache, KeyAliases* output) 
 
 const ViewMetadata::Ptr ViewMetadata::NIL;
 
-ViewMetadata::ViewMetadata(int protocol_version, const VersionNumber& cassandra_version,
+ViewMetadata::ViewMetadata(const VersionNumber& server_version,
                            const TableMetadata* table,
-                           const std::string& name, const RefBuffer::Ptr& buffer, const Row* row)
-  : TableMetadataBase(protocol_version, cassandra_version, name, buffer, row)
+                           const String& name, const RefBuffer::Ptr& buffer, const Row* row)
+  : TableMetadataBase(server_version, name, buffer, row)
   , base_table_(table) {
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "view_name");
@@ -1544,7 +1535,7 @@ ViewMetadata::ViewMetadata(int protocol_version, const VersionNumber& cassandra_
   add_field(buffer, row, "where_clause");
 }
 
-const IndexMetadata* TableMetadata::get_index(const std::string& name) const {
+const IndexMetadata* TableMetadata::get_index(const String& name) const {
   IndexMetadata::Map::const_iterator i = indexes_by_name_.find(name);
   if (i == indexes_by_name_.end()) return NULL;
   return i->second.get();
@@ -1561,8 +1552,8 @@ void TableMetadata::clear_indexes() {
   indexes_by_name_.clear();
 }
 
-FunctionMetadata::FunctionMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
-                                   const std::string& name, const Value* signature,
+FunctionMetadata::FunctionMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
+                                   const String& name, const Value* signature,
                                    KeyspaceMetadata* keyspace,
                                    const RefBuffer::Ptr& buffer, const Row* row)
   : MetadataBase(Metadata::full_function_name(name, signature->as_stringlist()))
@@ -1583,7 +1574,7 @@ FunctionMetadata::FunctionMetadata(int protocol_version, const VersionNumber& ca
       value2->primary_value_type() == CASS_VALUE_TYPE_VARCHAR) {
     CollectionIterator iterator1(value1);
     CollectionIterator iterator2(value2);
-    if (cassandra_version >= VersionNumber(3, 0, 0)) {
+    if (server_version >= VersionNumber(3, 0, 0)) {
       while (iterator1.next() && iterator2.next()) {
         StringRef arg_name(iterator1.value()->to_string_ref());
         DataType::ConstPtr arg_type(DataTypeCqlNameParser::parse(iterator2.value()->to_string(), cache, keyspace));
@@ -1601,7 +1592,7 @@ FunctionMetadata::FunctionMetadata(int protocol_version, const VersionNumber& ca
   value1 = add_field(buffer, row, "return_type");
   if (value1 != NULL &&
       value1->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-    if (cassandra_version >= VersionNumber(3, 0, 0)) {
+    if (server_version >= VersionNumber(3, 0, 0)) {
       return_type_ = DataTypeCqlNameParser::parse(value1->to_string(), cache, keyspace);
     } else {
       return_type_ = DataTypeClassNameParser::parse_one(value1->to_string(), cache);
@@ -1633,8 +1624,8 @@ const DataType* FunctionMetadata::get_arg_type(StringRef name) const {
   return i->type.get();
 }
 
-AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
-                                     const std::string& name, const Value* signature,
+AggregateMetadata::AggregateMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
+                                     const String& name, const Value* signature,
                                      KeyspaceMetadata* keyspace,
                                      const RefBuffer::Ptr& buffer, const Row* row)
   : MetadataBase(Metadata::full_function_name(name, signature->as_stringlist()))
@@ -1650,7 +1641,7 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
       value->value_type() == CASS_VALUE_TYPE_LIST &&
       value->primary_value_type() == CASS_VALUE_TYPE_VARCHAR) {
     CollectionIterator iterator(value);
-    if (cassandra_version >= VersionNumber(3, 0, 0)) {
+    if (server_version >= VersionNumber(3, 0, 0)) {
       while (iterator.next()) {
         arg_types_.push_back(DataTypeCqlNameParser::parse(iterator.value()->to_string(), cache, keyspace));
       }
@@ -1664,7 +1655,7 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
   value = add_field(buffer, row, "return_type");
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-    if (cassandra_version >= VersionNumber(3, 0, 0)) {
+    if (server_version >= VersionNumber(3, 0, 0)) {
       return_type_ = DataTypeCqlNameParser::parse(value->to_string(), cache, keyspace);
     } else {
       return_type_ = DataTypeClassNameParser::parse_one(value->to_string(), cache);
@@ -1674,7 +1665,7 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
   value = add_field(buffer, row, "state_type");
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-    if (cassandra_version >= VersionNumber(3, 0, 0)) {
+    if (server_version >= VersionNumber(3, 0, 0)) {
       state_type_ = DataTypeCqlNameParser::parse(value->to_string(), cache, keyspace);
     } else {
       state_type_ = DataTypeClassNameParser::parse_one(value->to_string(), cache);
@@ -1686,7 +1677,7 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
     StringVec final_func_signature;
     final_func_signature.push_back(state_type_->to_string());
-    std::string full_final_func_name(Metadata::full_function_name(value->to_string(), final_func_signature));
+    String full_final_func_name(Metadata::full_function_name(value->to_string(), final_func_signature));
     FunctionMetadata::Map::const_iterator i = functions.find(full_final_func_name);
     if (i != functions.end()) final_func_ = i->second;
   }
@@ -1700,7 +1691,7 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
     while (iterator.next()) {
       state_func_signature.push_back(iterator.value()->to_string());
     }
-    std::string full_state_func_name(Metadata::full_function_name(value->to_string(), state_func_signature));
+    String full_state_func_name(Metadata::full_function_name(value->to_string(), state_func_signature));
     FunctionMetadata::Map::const_iterator i = functions.find(full_state_func_name);
     if (i != functions.end()) state_func_ = i->second;
   }
@@ -1708,19 +1699,19 @@ AggregateMetadata::AggregateMetadata(int protocol_version, const VersionNumber& 
   value = add_field(buffer, row, "initcond");
   if (value != NULL) {
     if (value->value_type() == CASS_VALUE_TYPE_BLOB) {
-      init_cond_ = Value(protocol_version, state_type_, value->data(), value->size());
-    } else if (cassandra_version >= VersionNumber(3, 0, 0) &&
+      init_cond_ = Value(state_type_, value->decoder());
+    } else if (server_version >= VersionNumber(3, 0, 0) &&
                value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-      init_cond_ = Value(protocol_version,
-                         cache.by_value_type(CASS_VALUE_TYPE_VARCHAR),
-                         value->data(), value->size());
+      init_cond_ = Value(cache.by_value_type(CASS_VALUE_TYPE_VARCHAR),
+                         value->decoder());
     }
+
   }
 }
 
-IndexMetadata::Ptr IndexMetadata::from_row(const std::string& index_name,
+IndexMetadata::Ptr IndexMetadata::from_row(const String& index_name,
                                            const RefBuffer::Ptr& buffer, const Row* row) {
-  IndexMetadata::Ptr index(new IndexMetadata(index_name));
+  IndexMetadata::Ptr index(Memory::allocate<IndexMetadata>(index_name));
 
   StringRef kind;
   const Value* value = index->add_field(buffer, row, "kind");
@@ -1751,10 +1742,9 @@ void IndexMetadata::update(StringRef kind, const Value* options) {
   options_ = *options;
 }
 
-IndexMetadata::Ptr IndexMetadata::from_legacy(int protocol_version,
-                                              const std::string& index_name, const ColumnMetadata* column,
+IndexMetadata::Ptr IndexMetadata::from_legacy(const String& index_name, const ColumnMetadata* column,
                                               const RefBuffer::Ptr& buffer, const Row* row) {
-  IndexMetadata::Ptr index(new IndexMetadata(index_name));
+  IndexMetadata::Ptr index(Memory::allocate<IndexMetadata>(index_name));
 
   index->add_field(buffer, row, "index_name");
 
@@ -1765,7 +1755,7 @@ IndexMetadata::Ptr IndexMetadata::from_legacy(int protocol_version,
     index_type = value->to_string_ref();
   }
 
-  const Value* options = index->add_json_map_field(protocol_version, row, "index_options");
+  const Value* options = index->add_json_map_field(row, "index_options");
   index->update_legacy(index_type, column, options);
 
   return index;
@@ -1777,9 +1767,9 @@ void IndexMetadata::update_legacy(StringRef index_type, const ColumnMetadata* co
   options_ = *options;
 }
 
-std::string IndexMetadata::target_from_legacy(const ColumnMetadata* column,
+String IndexMetadata::target_from_legacy(const ColumnMetadata* column,
                                               const Value* options) {
-  std::string column_name(column->name());
+  String column_name(column->name());
 
   escape_id(column_name);
 
@@ -1788,10 +1778,10 @@ std::string IndexMetadata::target_from_legacy(const ColumnMetadata* column,
     MapIterator iterator(options);
 
     while (iterator.next()) {
-      std::string key(iterator.key()->to_string());
-      if (key.find("index_keys") != std::string::npos) {
+      String key(iterator.key()->to_string());
+      if (key.find("index_keys") != String::npos) {
         return "keys("  + column_name + ")";
-      } else if (key.find("index_keys_and_values") != std::string::npos) {
+      } else if (key.find("index_keys_and_values") != String::npos) {
         return "entries("  + column_name + ")";
       } else  if (column->data_type()->is_collection()) { // TODO(mpenick): && is_frozen()
         return "full("  + column_name + ")";
@@ -1813,8 +1803,8 @@ CassIndexType IndexMetadata::index_type_from_string(StringRef index_type) {
   return CASS_INDEX_TYPE_UNKNOWN;
 }
 
-ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
-                               const std::string& name,
+ColumnMetadata::ColumnMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
+                               const String& name,
                                KeyspaceMetadata* keyspace,
                                const RefBuffer::Ptr& buffer, const Row* row)
   : MetadataBase(name)
@@ -1824,10 +1814,10 @@ ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassan
   const Value* value;
 
   add_field(buffer, row, "keyspace_name");
-  add_field(buffer, row, table_column_name(cassandra_version));
+  add_field(buffer, row, table_column_name(server_version));
   add_field(buffer, row, "column_name");
 
-  if (cassandra_version >= VersionNumber(3, 0, 0)) {
+  if (server_version >= VersionNumber(3, 0, 0)) {
     value = add_field(buffer, row, "clustering_order");
     if (value != NULL &&
         value->value_type() == CASS_VALUE_TYPE_VARCHAR &&
@@ -1862,7 +1852,7 @@ ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassan
     value = add_field(buffer, row, "type");
     if (value != NULL &&
         value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-      std::string type(value->to_string());
+      String type(value->to_string());
       data_type_ = DataTypeCqlNameParser::parse(type, cache, keyspace);
     }
   } else {
@@ -1894,24 +1884,24 @@ ColumnMetadata::ColumnMetadata(int protocol_version, const VersionNumber& cassan
     value = add_field(buffer, row, "validator");
     if (value != NULL &&
         value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-      std::string validator(value->to_string());
+      String validator(value->to_string());
       data_type_ = DataTypeClassNameParser::parse_one(validator, cache);
       is_reversed_ = DataTypeClassNameParser::is_reversed(validator);
     }
 
     add_field(buffer, row, "index_type");
     add_field(buffer, row, "index_name");
-    add_json_map_field(protocol_version, row, "index_options");
+    add_json_map_field(row, "index_options");
   }
 }
 
-void Metadata::InternalData::update_keyspaces(int protocol_version, const VersionNumber& cassandra_version,
-                                              ResultResponse* result) {
+void Metadata::InternalData::update_keyspaces(const VersionNumber& server_version,
+                                              const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
   ResultIterator rows(result);
 
   while (rows.next()) {
-    std::string keyspace_name;
+    String keyspace_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &keyspace_name)) {
@@ -1920,27 +1910,27 @@ void Metadata::InternalData::update_keyspaces(int protocol_version, const Versio
     }
 
     KeyspaceMetadata* keyspace = get_or_create_keyspace(keyspace_name);
-    keyspace->update(protocol_version, cassandra_version, buffer, row);
+    keyspace->update(server_version, buffer, row);
   }
 }
 
-void Metadata::InternalData::update_tables(int protocol_version, const VersionNumber& cassandra_version,
-                                           ResultResponse* result) {
+void Metadata::InternalData::update_tables(const VersionNumber& server_version,
+                                           const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
-  std::string keyspace_name;
-  std::string table_name;
+  String keyspace_name;
+  String table_name;
   KeyspaceMetadata* keyspace = NULL;
 
   while (rows.next()) {
-    std::string temp_keyspace_name;
+    String temp_keyspace_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
-        !row->get_string_by_name(table_column_name(cassandra_version), &table_name)) {
-      LOG_ERROR("Unable to get column value for 'keyspace_name' or '%s'", table_column_name(cassandra_version));
+        !row->get_string_by_name(table_column_name(server_version), &table_name)) {
+      LOG_ERROR("Unable to get column value for 'keyspace_name' or '%s'", table_column_name(server_version));
       continue;
     }
 
@@ -1949,25 +1939,27 @@ void Metadata::InternalData::update_tables(int protocol_version, const VersionNu
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace->add_table(TableMetadata::Ptr(new TableMetadata(protocol_version, cassandra_version, table_name, buffer, row)));
+    keyspace->add_table(TableMetadata::Ptr(Memory::allocate<TableMetadata>(server_version,
+                                                                           table_name,
+                                                                           buffer, row)));
   }
 }
 
-void Metadata::InternalData::update_views(int protocol_version, const VersionNumber& cassandra_version,
-                                          ResultResponse* result) {
+void Metadata::InternalData::update_views(const VersionNumber& server_version,
+                                          const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
-  std::string keyspace_name;
-  std::string view_name;
+  String keyspace_name;
+  String view_name;
   KeyspaceMetadata* keyspace = NULL;
 
   TableMetadata::Vec updated_tables;
 
   while (rows.next()) {
-    std::string temp_keyspace_name;
-    std::string base_table_name;
+    String temp_keyspace_name;
+    String base_table_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
@@ -1992,7 +1984,10 @@ void Metadata::InternalData::update_views(int protocol_version, const VersionNum
       continue;
     }
 
-    ViewMetadata::Ptr view(new ViewMetadata(protocol_version, cassandra_version, table.get(), view_name, buffer, row));
+    ViewMetadata::Ptr view(Memory::allocate<ViewMetadata>(server_version,
+                                                          table.get(),
+                                                          view_name,
+                                                          buffer, row));
     keyspace->add_view(view);
     table->add_view(view);
     updated_tables.push_back(table);
@@ -2004,15 +1999,16 @@ void Metadata::InternalData::update_views(int protocol_version, const VersionNum
   }
 }
 
-void Metadata::InternalData::update_user_types(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result) {
+void Metadata::InternalData::update_user_types(const VersionNumber& server_version,
+                                               SimpleDataTypeCache& cache, const ResultResponse* result) {
   ResultIterator rows(result);
 
-  std::string keyspace_name;
+  String keyspace_name;
   KeyspaceMetadata* keyspace = NULL;
 
   while (rows.next()) {
-    std::string temp_keyspace_name;
-    std::string type_name;
+    String temp_keyspace_name;
+    String type_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
@@ -2061,11 +2057,11 @@ void Metadata::InternalData::update_user_types(int protocol_version, const Versi
         break;
       }
 
-      std::string field_name(name->to_string());
+      String field_name(name->to_string());
 
       DataType::ConstPtr data_type;
 
-      if (cassandra_version >= VersionNumber(3, 0, 0)) {
+      if (server_version >= VersionNumber(3, 0, 0)) {
         data_type = DataTypeCqlNameParser::parse(type->to_string(), cache, keyspace);
       } else {
         data_type = DataTypeClassNameParser::parse_one(type->to_string(), cache);
@@ -2086,21 +2082,21 @@ void Metadata::InternalData::update_user_types(int protocol_version, const Versi
   }
 }
 
-void Metadata::InternalData::update_functions(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
-                                              ResultResponse* result) {
+void Metadata::InternalData::update_functions(const VersionNumber& server_version,
+                                              SimpleDataTypeCache& cache, const ResultResponse *result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
-  std::string keyspace_name;
+  String keyspace_name;
   KeyspaceMetadata* keyspace = NULL;
 
   while (rows.next()) {
-    std::string temp_keyspace_name;
-    std::string function_name;
+    String temp_keyspace_name;
+    String function_name;
     const Row* row = rows.row();
 
-    const Value* signature = row->get_by_name(signature_column_name(cassandra_version));
+    const Value* signature = row->get_by_name(signature_column_name(server_version));
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("function_name", &function_name) ||
         signature == NULL) {
@@ -2113,28 +2109,29 @@ void Metadata::InternalData::update_functions(int protocol_version, const Versio
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace->add_function(FunctionMetadata::Ptr(new FunctionMetadata(protocol_version, cassandra_version, cache,
-                                                                      function_name, signature,
-                                                                      keyspace,
-                                                                      buffer, row)));
+    keyspace->add_function(FunctionMetadata::Ptr(Memory::allocate<FunctionMetadata>(server_version, cache,
+                                                                                    function_name, signature,
+                                                                                    keyspace,
+                                                                                    buffer, row)));
 
   }
 }
 
-void Metadata::InternalData::update_aggregates(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result) {
+void Metadata::InternalData::update_aggregates(const VersionNumber& server_version,
+                                               SimpleDataTypeCache& cache, const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
-  std::string keyspace_name;
+  String keyspace_name;
   KeyspaceMetadata* keyspace = NULL;
 
   while (rows.next()) {
-    std::string temp_keyspace_name;
-    std::string aggregate_name;
+    String temp_keyspace_name;
+    String aggregate_name;
     const Row* row = rows.row();
 
-    const Value* signature = row->get_by_name(signature_column_name(cassandra_version));
+    const Value* signature = row->get_by_name(signature_column_name(server_version));
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("aggregate_name", &aggregate_name) ||
         signature == NULL) {
@@ -2147,64 +2144,65 @@ void Metadata::InternalData::update_aggregates(int protocol_version, const Versi
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace->add_aggregate(AggregateMetadata::Ptr(new AggregateMetadata(protocol_version, cassandra_version, cache,
-                                                                         aggregate_name, signature,
-                                                                         keyspace,
-                                                                         buffer, row)));
+    keyspace->add_aggregate(AggregateMetadata::Ptr(Memory::allocate<AggregateMetadata>(server_version, cache,
+                                                                                       aggregate_name, signature,
+                                                                                       keyspace,
+                                                                                       buffer, row)));
   }
 }
 
-void Metadata::InternalData::drop_keyspace(const std::string& keyspace_name) {
+void Metadata::InternalData::drop_keyspace(const String& keyspace_name) {
   keyspaces_->erase(keyspace_name);
 }
 
-void Metadata::InternalData::drop_table_or_view(const std::string& keyspace_name,
-                                                const std::string& table_or_view_name) {
+void Metadata::InternalData::drop_table_or_view(const String& keyspace_name,
+                                                const String& table_or_view_name) {
   KeyspaceMetadata::Map::iterator i = keyspaces_->find(keyspace_name);
   if (i == keyspaces_->end()) return;
   i->second.drop_table_or_view(table_or_view_name);
 }
 
-void Metadata::InternalData::drop_user_type(const std::string& keyspace_name, const std::string& type_name) {
+void Metadata::InternalData::drop_user_type(const String& keyspace_name, const String& type_name) {
   KeyspaceMetadata::Map::iterator i = keyspaces_->find(keyspace_name);
   if (i == keyspaces_->end()) return;
   i->second.drop_user_type(type_name);
 }
 
-void Metadata::InternalData::drop_function(const std::string& keyspace_name, const std::string& full_function_name) {
+void Metadata::InternalData::drop_function(const String& keyspace_name, const String& full_function_name) {
   KeyspaceMetadata::Map::iterator i = keyspaces_->find(keyspace_name);
   if (i == keyspaces_->end()) return;
   i->second.drop_function(full_function_name);
 }
 
-void Metadata::InternalData::drop_aggregate(const std::string& keyspace_name, const std::string& full_aggregate_name) {
+void Metadata::InternalData::drop_aggregate(const String& keyspace_name, const String& full_aggregate_name) {
   KeyspaceMetadata::Map::iterator i = keyspaces_->find(keyspace_name);
   if (i == keyspaces_->end()) return;
   i->second.drop_aggregate(full_aggregate_name);
 }
 
-void Metadata::InternalData::update_columns(int protocol_version, const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, ResultResponse* result) {
+void Metadata::InternalData::update_columns(const VersionNumber& server_version,
+                                            SimpleDataTypeCache& cache, const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
-  std::string keyspace_name;
-  std::string table_or_view_name;
-  std::string column_name;
+  String keyspace_name;
+  String table_or_view_name;
+  String column_name;
 
   KeyspaceMetadata* keyspace = NULL;
   TableMetadataBase::Ptr table_or_view;
 
   while (rows.next()) {
-    std::string temp_keyspace_name;
-    std::string temp_table_or_view_name;
+    String temp_keyspace_name;
+    String temp_table_or_view_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
-        !row->get_string_by_name(table_column_name(cassandra_version), &temp_table_or_view_name) ||
+        !row->get_string_by_name(table_column_name(server_version), &temp_table_or_view_name) ||
         !row->get_string_by_name("column_name", &column_name)) {
       LOG_ERROR("Unable to get column value for 'keyspace_name', '%s' or 'column_name'",
-                table_column_name(cassandra_version));
+                table_column_name(server_version));
       continue;
     }
 
@@ -2217,7 +2215,7 @@ void Metadata::InternalData::update_columns(int protocol_version, const VersionN
     if (table_or_view_name != temp_table_or_view_name) {
       // Build keys for the previous table
       if (table_or_view) {
-        table_or_view->build_keys_and_sort(protocol_version, cassandra_version, cache);
+        table_or_view->build_keys_and_sort(server_version, cache);
       }
       table_or_view_name = temp_table_or_view_name;
       table_or_view = TableMetadataBase::Ptr(keyspace->get_table(table_or_view_name));
@@ -2229,41 +2227,42 @@ void Metadata::InternalData::update_columns(int protocol_version, const VersionN
     }
 
     if (table_or_view) {
-      table_or_view->add_column(cassandra_version,
-                                ColumnMetadata::Ptr(new ColumnMetadata(protocol_version, cassandra_version, cache, column_name,
-                                                                       keyspace, buffer, row))
-      );
+      table_or_view->add_column(server_version,
+                                ColumnMetadata::Ptr(Memory::allocate<ColumnMetadata>(server_version,
+                                                                                     cache, column_name,
+                                                                                     keyspace, buffer, row)));
     }
   }
 
   // Build keys for the last table
   if (table_or_view) {
-    table_or_view->build_keys_and_sort(protocol_version, cassandra_version, cache);
+    table_or_view->build_keys_and_sort(server_version, cache);
   }
 }
 
-void Metadata::InternalData::update_legacy_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::InternalData::update_legacy_indexes(const VersionNumber& server_version,
+                                                   const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
-  std::string keyspace_name;
-  std::string table_name;
-  std::string column_name;
+  String keyspace_name;
+  String table_name;
+  String column_name;
 
   KeyspaceMetadata* keyspace = NULL;
   TableMetadata::Ptr table;
 
   while (rows.next()) {
-    std::string temp_keyspace_name;
-    std::string temp_table_name;
+    String temp_keyspace_name;
+    String temp_table_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
-        !row->get_string_by_name(table_column_name(cassandra_version), &temp_table_name) ||
+        !row->get_string_by_name(table_column_name(server_version), &temp_table_name) ||
         !row->get_string_by_name("column_name", &column_name)) {
       LOG_ERROR("Unable to get column value for 'keyspace_name', '%s' or 'column_name'",
-                table_column_name(cassandra_version));
+                table_column_name(server_version));
       continue;
     }
 
@@ -2286,29 +2285,30 @@ void Metadata::InternalData::update_legacy_indexes(int protocol_version, const V
         const Value* index_type = column->get_field("index_type");
         if (index_type != NULL &&
             index_type->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-          std::string index_name = column->get_string_field("index_name");
-          table->add_index(IndexMetadata::from_legacy(protocol_version, index_name, column, buffer, row));
+          String index_name = column->get_string_field("index_name");
+          table->add_index(IndexMetadata::from_legacy(index_name, column, buffer, row));
         }
       }
     }
   }
 }
 
-void Metadata::InternalData::update_indexes(int protocol_version, const VersionNumber& cassandra_version, ResultResponse* result) {
+void Metadata::InternalData::update_indexes(const VersionNumber& server_version,
+                                            const ResultResponse* result) {
   RefBuffer::Ptr buffer = result->buffer();
 
   ResultIterator rows(result);
 
-  std::string keyspace_name;
-  std::string table_name;
-  std::string index_name;
+  String keyspace_name;
+  String table_name;
+  String index_name;
 
   KeyspaceMetadata* keyspace = NULL;
   TableMetadata::Ptr table;
 
   while (rows.next()) {
-    std::string temp_keyspace_name;
-    std::string temp_table_name;
+    String temp_keyspace_name;
+    String temp_table_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
@@ -2335,7 +2335,7 @@ void Metadata::InternalData::update_indexes(int protocol_version, const VersionN
   }
 }
 
-KeyspaceMetadata* Metadata::InternalData::get_or_create_keyspace(const std::string& name) {
+KeyspaceMetadata* Metadata::InternalData::get_or_create_keyspace(const String& name) {
   KeyspaceMetadata::Map::iterator i = keyspaces_->find(name);
   if (i == keyspaces_->end()) {
     i = keyspaces_->insert(std::make_pair(name, KeyspaceMetadata(name))).first;

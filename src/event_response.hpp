@@ -22,11 +22,15 @@
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"
+#include "vector.hpp"
 
 namespace cass {
 
 class EventResponse : public Response {
 public:
+  typedef SharedRefPtr<EventResponse> Ptr;
+  typedef Vector<Ptr> Vec;
+
   enum TopologyChange {
     NEW_NODE = 1,
     REMOVED_NODE,
@@ -60,7 +64,7 @@ public:
       , schema_change_(0)
       , schema_change_target_(0) { }
 
-  bool decode(int version, char* buffer, size_t size);
+  virtual bool decode(Decoder& decoder);
 
   int event_type() const { return event_type_; }
   int topology_change() const { return topology_change_; }

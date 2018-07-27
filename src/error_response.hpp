@@ -18,17 +18,17 @@
 #define __CASS_ERROR_RESPONSE_HPP_INCLUDED__
 
 #include "external.hpp"
-#include "response.hpp"
 #include "constants.hpp"
-#include "scoped_ptr.hpp"
-#include "string_ref.hpp"
+#include "response.hpp"
 #include "retry_policy.hpp"
+#include "scoped_ptr.hpp"
+#include "string.hpp"
+#include "string_ref.hpp"
+#include "vector.hpp"
 
 #include <uv.h>
 
 #include <string.h>
-#include <string>
-#include <vector>
 
 namespace cass {
 
@@ -58,21 +58,9 @@ public:
   StringRef function() const { return function_; }
   const StringRefVec& arg_types() const { return arg_types_; }
 
-  std::string error_message() const;
+  String error_message() const;
 
-  bool decode(int version, char* buffer, size_t size);
-
-private:
-  char* decode_failures(char* pos);
-  void decode_write_type(char* pos);
-
-private:
-  struct Failure {
-    CassInet endpoint;
-    uint16_t failurecode;
-  };
-
-  typedef std::vector<Failure> FailureVec;
+  virtual bool decode(Decoder& decoder);
 
 private:
   int32_t code_;
@@ -91,8 +79,8 @@ private:
   StringRefVec arg_types_;
 };
 
-bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected_opcode,
-                                     Response* response);
+bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opcode,
+                                     const Response* response);
 
 } // namespace cass
 

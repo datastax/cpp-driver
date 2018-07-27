@@ -31,7 +31,7 @@ endmacro()
 # with 'prefix'. Parse the discovered version and set ${project_name}_VERSION_*
 # variables.
 #
-# Output: ${project_name}_VERSION_MAJOR, ${project_name}_VERSION_MINOR, 
+# Output: ${project_name}_VERSION_MAJOR, ${project_name}_VERSION_MINOR,
 #         ${project_name}_VERSION_PATCH, ${project_name}_VERSION_STRING
 #------------------------
 macro(CassExtractHeaderVersion project_name version_header_file prefix)
@@ -40,11 +40,11 @@ macro(CassExtractHeaderVersion project_name version_header_file prefix)
       REGEX "^#define[ \t]+${prefix}_VERSION_(MAJOR|MINOR|PATCH)[ \t]+[0-9]+$")
 
   foreach(part MAJOR MINOR PATCH)
-    string(REGEX MATCH "${prefix}_VERSION_${part}[ \t]+[0-9]+" 
+    string(REGEX MATCH "${prefix}_VERSION_${part}[ \t]+[0-9]+"
            ${project_name}_VERSION_${part} ${_VERSION_PARTS})
     # Extract version numbers
     if (${project_name}_VERSION_${part})
-      string(REGEX REPLACE "${prefix}_VERSION_${part}[ \t]+([0-9]+)" "\\1" 
+      string(REGEX REPLACE "${prefix}_VERSION_${part}[ \t]+([0-9]+)" "\\1"
              ${project_name}_VERSION_${part} ${${project_name}_VERSION_${part}})
     endif()
   endforeach()
@@ -54,10 +54,10 @@ macro(CassExtractHeaderVersion project_name version_header_file prefix)
     message(FATAL_ERROR "Unable to retrieve ${project_name} version from ${version_header_file}")
   endif()
 
-  set(${project_name}_VERSION_STRING 
+  set(${project_name}_VERSION_STRING
       ${${project_name}_VERSION_MAJOR}.${${project_name}_VERSION_MINOR})
   if(NOT ${project_name}_VERSION_PATCH STREQUAL "")
-    set(${project_name}_VERSION_STRING 
+    set(${project_name}_VERSION_STRING
         "${${project_name}_VERSION_STRING}.${${project_name}_VERSION_PATCH}")
   endif()
 
@@ -370,10 +370,10 @@ macro(CassUseLibuv)
     LIBUV_LIBRARY
     LIBUV_INCLUDE_DIR)
 
-  if (EXISTS "${LIBUV_INCLUDE_DIR}/uv-version.h")
-    set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv-version.h")
-  elseif (EXISTS "${LIBUV_INCLUDE_DIR}/uv/version.h")
+  if (EXISTS "${LIBUV_INCLUDE_DIR}/uv/version.h")
     set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv/version.h")
+  elseif (EXISTS "${LIBUV_INCLUDE_DIR}/uv-version.h")
+    set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv-version.h")
   else()
     set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv.h")
   endif()
@@ -381,9 +381,9 @@ macro(CassUseLibuv)
   CassExtractHeaderVersion("LIBUV" ${LIBUV_VERSION_HEADER_FILE} "UV")
 
   if (LIBUV_VERSION_STRING VERSION_LESS "1.0")
-    message(WARNING "Libuv version ${LIBUV_VERSION_STRING} does not support reverse "
-    "name lookup. Hostname resolution will not work (version 1.0 or greater "
-    "required)")
+    message(FATAL_ERROR "Libuv version ${LIBUV_VERSION_STRING} is not "
+      " supported. Please updgrade to libuv version 1.0 or greater in order to "
+      "utilize the driver.")
   endif()
 
   if (LIBUV_VERSION_STRING VERSION_LESS "1.6")
@@ -998,6 +998,9 @@ macro(CassConfigure)
   # Determine random availability
   if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     check_symbol_exists(GRND_NONBLOCK "linux/random.h" HAVE_GETRANDOM)
+    if(CASS_USE_TIMERFD)
+      check_symbol_exists(timerfd_create "sys/timerfd.h" HAVE_TIMERFD)
+    endif()
   else()
     check_symbol_exists(arc4random_buf "stdlib.h" HAVE_ARC4RANDOM)
   endif()
@@ -1007,6 +1010,7 @@ macro(CassConfigure)
   if (NOT WIN32 AND NOT HAVE_NOSIGPIPE AND NOT HAVE_SIGTIMEDWAIT)
     message(WARNING "Unable to handle SIGPIPE on your platform")
   endif()
+
 
   # Determine if hash is in the tr1 namespace
   string(REPLACE "::" ";" HASH_NAMESPACE_LIST ${HASH_NAMESPACE})

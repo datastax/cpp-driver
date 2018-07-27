@@ -23,7 +23,7 @@ namespace cass {
 int RegisterRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   // <events> [string list]
   size_t length = sizeof(uint16_t);
-  std::vector<std::string> events;
+  Vector<String> events;
 
   if (event_types_ & CASS_EVENT_TOPOLOGY_CHANGE) {
     events.push_back("TOPOLOGY_CHANGE");

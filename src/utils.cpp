@@ -21,17 +21,17 @@
 #include <algorithm>
 #include <assert.h>
 #include <functional>
-#include <sstream>
 
 #if (defined(WIN32) || defined(_WIN32))
   #include <windows.h>
 #else
+  #include <sched.h>
   #include <unistd.h>
 #endif
 
 namespace cass {
 
-std::string opcode_to_string(int opcode) {
+String opcode_to_string(int opcode) {
   switch (opcode) {
     case CQL_OPCODE_ERROR:
       return "CQL_OPCODE_ERROR";
@@ -72,10 +72,16 @@ std::string opcode_to_string(int opcode) {
   return "";
 }
 
-void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter /* = ',' */) {
-  std::istringstream stream(str);
+String protocol_version_to_string(int version) {
+  OStringStream ss;
+  ss << "v" << version;
+  return ss.str();
+}
+
+void explode(const String& str, Vector<String>& vec, const char delimiter /* = ',' */) {
+  IStringStream stream(str);
   while (!stream.eof()) {
-    std::string token;
+    String token;
     std::getline(stream, token, delimiter);
     if (!trim(token).empty()) {
       vec.push_back(token);
@@ -83,7 +89,7 @@ void explode(const std::string& str, std::vector<std::string>& vec, const char d
   }
 }
 
-std::string& trim(std::string& str) {
+String& trim(String& str) {
   // Trim front
   str.erase(str.begin(),
             std::find_if(str.begin(), str.end(),
@@ -105,8 +111,8 @@ static bool is_lower_word_char(int c) {
          (c >= '0' && c <= '9') || c == '_';
 }
 
-bool is_valid_cql_id(const std::string& str) {
-  for (std::string::const_iterator i = str.begin(),
+bool is_valid_cql_id(const String& str) {
+  for (String::const_iterator i = str.begin(),
        end = str.end(); i != end; ++i) {
     if (!is_word_char(*i)) {
       return false;
@@ -115,12 +121,12 @@ bool is_valid_cql_id(const std::string& str) {
   return true;
 }
 
-bool is_valid_lower_cql_id(const std::string& str) {
+bool is_valid_lower_cql_id(const String& str) {
   if (str.empty() || !is_lower_word_char(str[0])) {
     return false;
   }
   if (str.size() > 1) {
-    for (std::string::const_iterator i = str.begin() + 1,
+    for (String::const_iterator i = str.begin() + 1,
          end = str.end(); i != end; ++i) {
       if (!is_lower_word_char(*i)) {
         return false;
@@ -130,11 +136,11 @@ bool is_valid_lower_cql_id(const std::string& str) {
   return true;
 }
 
-std::string& quote_id(std::string& str) {
-  std::string temp(str);
+String& quote_id(String& str) {
+  String temp(str);
   str.clear();
   str.push_back('"');
-  for (std::string::const_iterator i = temp.begin(),
+  for (String::const_iterator i = temp.begin(),
        end = temp.end(); i != end; ++i) {
     if (*i == '"') {
       str.push_back('"');
@@ -148,11 +154,11 @@ std::string& quote_id(std::string& str) {
   return str;
 }
 
-std::string& escape_id(std::string& str) {
+String& escape_id(String& str) {
   return is_valid_lower_cql_id(str) ?  str : quote_id(str);
 }
 
-std::string& to_cql_id(std::string& str) {
+String& to_cql_id(String& str) {
   if (is_valid_cql_id(str)) {
     std::transform(str.begin(), str.end(), str.begin(), tolower);
     return str;
@@ -163,12 +169,51 @@ std::string& to_cql_id(std::string& str) {
   return str;
 }
 
-int32_t get_pid()
-{
+int32_t get_pid() {
 #if (defined(WIN32) || defined(_WIN32))
   return static_cast<int32_t>(GetCurrentProcessId());
 #else
   return static_cast<int32_t>(getpid());
+#endif
+}
+
+void thread_yield() {
+#if defined(WIN32) || defined(_WIN32)
+  SwitchToThread();
+#else
+  sched_yield();
+#endif
+}
+
+// Code was taken from MSDN documentation
+// see https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
+#if defined(_MSC_VER) && defined(_DEBUG)
+const DWORD MS_VC_EXCEPTION = 0x406D1388;
+#pragma pack(push,8)
+typedef struct tagTHREADNAME_INFO {
+  DWORD dwType; // Must be 0x1000.
+  LPCSTR szName; // Pointer to name (in user addr space).
+  DWORD dwThreadID; // Thread ID (-1=caller thread).
+  DWORD dwFlags; // Reserved for future use, must be zero.
+} THREADNAME_INFO;
+#pragma pack(pop)
+#endif
+void set_thread_name(const String& thread_name) {
+#if defined(_MSC_VER) && defined(_DEBUG)
+  THREADNAME_INFO info;
+  info.dwType = 0x1000;
+  info.szName = thread_name.c_str();
+  info.dwThreadID = -1;
+  info.dwFlags = 0;
+#pragma warning(push)
+#pragma warning(disable: 6320 6322)
+  __try {
+    RaiseException(MS_VC_EXCEPTION,
+                   0,
+                   sizeof(info) / sizeof(ULONG_PTR),
+                   reinterpret_cast<ULONG_PTR*>(&info));
+  } __except (EXCEPTION_EXECUTE_HANDLER) { }
+#pragma warning(pop)
 #endif
 }
 

@@ -19,9 +19,9 @@
 #include "hash_table.hpp"
 
 struct TestEntry : cass::HashTableEntry<TestEntry> {
-  TestEntry(const std::string& name)
+  TestEntry(const cass::String& name)
     : name(name) { }
-  std::string name;
+  cass::String name;
 };
 
 TEST(HashTableUnitTests, Simple) {
@@ -80,7 +80,7 @@ TEST(HashTableUnitTests, Resize) {
   cass::CaseInsensitiveHashTable<TestEntry> ht(0);
 
   for (int i = 0; i < 26; ++i) {
-    std::string s;
+    cass::String s;
     s.push_back('a' + i);
     ht.add(TestEntry(s));
   }

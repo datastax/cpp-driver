@@ -180,9 +180,9 @@ private:
 
       if (!is_error_) {
         // Get the host latency
-        std::string host_ip_address = cass::get_host_from_future(future.get());
+        std::string host_ip_address = cass::get_host_from_future(future.get()).c_str();
         double host_latency = static_cast<double>(cass::get_host_latency_average(session_.get(),
-                                                                                 host_ip_address,
+                                                                                 host_ip_address.c_str(),
                                                                                  DEFAULT_CASSANDRA_NODE_PORT)) / 1e6;
 
         // Update the max latency incurred

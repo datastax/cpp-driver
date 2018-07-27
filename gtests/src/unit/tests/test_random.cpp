@@ -15,10 +15,10 @@
 */
 
 #include <gtest/gtest.h>
-#include <vector>
 
 #include "random.hpp"
 #include "third_party/hdr_histogram/hdr_histogram.hpp"
+#include "vector.hpp"
 
 // 626 of the first numbers generated with the default seed of 5489LL using boost::mt19937_64
 uint64_t random_numbers[] = {
@@ -101,6 +101,30 @@ uint64_t random_numbers[] = {
   2743533500235068318ULL,7917895244279791454ULL,9194839772540541837ULL,8170679394364395846ULL,2830213237197365734ULL,7353896603754987224ULL,17634372441601249827ULL,8515117661105161813ULL,
   5818937363197514778ULL,8536843065945835629ULL,2920190566549352463ULL,4206179361653770600ULL,15470355568872211976ULL,8427825008315838911ULL,5786540713287383830ULL,15547153445796060183ULL,
   12329720415526259303ULL,5557519966701086911ULL };
+
+TEST(RandomUnitTest, RandomShuffle) {
+  cass::Random r;
+
+  const int num_elements = 8;
+  const int max_iterations = num_elements * num_elements;
+
+  std::vector<int> previous;
+  for (int i = 0; i < num_elements; ++i) {
+    previous.push_back(i);
+  }
+
+  // Verify that the values have been shuffled
+  int count;
+  for (count = 0; count < max_iterations; ++count) {
+    std::vector<int> copy(previous);
+    cass::random_shuffle(copy.begin(), copy.end(), &r);
+    if (copy != previous) {
+      break;
+    }
+  }
+
+  ASSERT_NE(count, max_iterations);
+}
 
 TEST(RandomUnitTest, RandomSeed) {
   const int max_iterations = 10;

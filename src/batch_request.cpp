@@ -27,7 +27,7 @@
 extern "C" {
 
 CassBatch* cass_batch_new(CassBatchType type) {
-  cass::BatchRequest* batch = new cass::BatchRequest(type);
+  cass::BatchRequest* batch = cass::Memory::allocate<cass::BatchRequest>(type);
   batch->inc_ref();
   return CassBatch::to(batch);
 }
@@ -43,7 +43,7 @@ CassError cass_batch_set_keyspace(CassBatch* batch, const char* keyspace) {
 CassError cass_batch_set_keyspace_n(CassBatch* batch,
                                     const char* keyspace,
                                     size_t keyspace_length) {
-  batch->set_keyspace(std::string(keyspace, keyspace_length));
+  batch->set_keyspace(cass::String(keyspace, keyspace_length));
   return CASS_OK;
 }
 
@@ -91,6 +91,24 @@ CassError cass_batch_set_custom_payload(CassBatch* batch,
 
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
+  return CASS_OK;
+}
+
+CassError cass_batch_set_execution_profile(CassBatch* batch,
+                                           const char* name) {
+  return cass_batch_set_execution_profile_n(batch,
+                                            name,
+                                            SAFE_STRLEN(name));
+}
+
+CassError cass_batch_set_execution_profile_n(CassBatch* batch,
+                                             const char* name,
+                                             size_t name_length) {
+  if (name_length > 0) {
+    batch->set_execution_profile_name(cass::String(name, name_length));
+  } else {
+    batch->set_execution_profile_name(cass::String());
+  }
   return CASS_OK;
 }
 
@@ -210,7 +228,7 @@ void BatchRequest::add_statement(Statement* statement) {
   statements_.push_back(Statement::Ptr(statement));
 }
 
-bool BatchRequest::find_prepared_query(const std::string& id, std::string* query) const {
+bool BatchRequest::find_prepared_query(const String& id, String* query) const {
   for (StatementVec::const_iterator it = statements_.begin(),
        end = statements_.end(); it != end; ++it) {
     const Statement::Ptr& statement(*it);
@@ -225,7 +243,7 @@ bool BatchRequest::find_prepared_query(const std::string& id, std::string* query
   return false;
 }
 
-bool BatchRequest::get_routing_key(std::string* routing_key) const {
+bool BatchRequest::get_routing_key(String* routing_key) const {
   for (BatchRequest::StatementVec::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
     if ((*i)->get_routing_key(routing_key)) {

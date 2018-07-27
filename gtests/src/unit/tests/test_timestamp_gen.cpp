@@ -23,9 +23,9 @@
 #include <utility>
 
 static void clock_skew_log_callback(const CassLogMessage* message, void* data) {
-  std::string msg(message->message);
+  cass::String msg(message->message);
   int* counter = reinterpret_cast<int*>(data);
-  if (msg.find("Clock skew detected") != std::string::npos) {
+  if (msg.find("Clock skew detected") != cass::String::npos) {
     (*counter)++;
   }
 }

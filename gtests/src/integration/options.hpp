@@ -53,6 +53,13 @@ public:
    */
   static bool is_help();
   /**
+   * Flag to determine if integration tests should remove the server cluster(s)
+   * after completion
+   *
+   * @return True if clusters should be removed; false otherwise
+   */
+  static bool keep_clusters();
+  /**
    * Flag to determine if integration tests should log the driver logs to a file
    * for each test
    *
@@ -146,6 +153,19 @@ public:
    */
   static const std::string& host();
   /**
+   * Get the IP address to use when establishing SSH connection for remote CCM
+   * command execution and/or IP address to use for server connection IP
+   * generation.
+   *
+   * @return Host to use for server (and SSH connection for remote deployment)
+   */
+  /**
+   * Get the IP address prefix from the host IP address
+   *
+   * @return IP address prefix
+   */
+  static std::string host_prefix();
+  /**
    * Get the TCP/IP port for SSH connection
    *
    * @return SSH port to use
@@ -180,7 +200,7 @@ public:
    *
    * @return CCM instance
    */
-  static SharedPtr<CCM::Bridge> ccm();
+  static SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > ccm();
 
 private:
   /**
@@ -191,6 +211,10 @@ private:
    * Flag to determine if the help flag was indicated
    */
   static bool is_help_;
+  /**
+   * Flag to indicate if the cluster(s) should remain after tests are completed
+   */
+  static bool is_keep_clusters_;
   /**
    * Flag to indicate if log messages should be generated for each test
    */

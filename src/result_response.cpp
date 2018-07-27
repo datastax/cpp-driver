@@ -105,15 +105,14 @@ namespace cass {
 
 class DataTypeDecoder {
 public:
-  DataTypeDecoder(char* input, SimpleDataTypeCache& cache)
-    : buffer_(input)
+  DataTypeDecoder(Decoder& decoder, SimpleDataTypeCache& cache)
+    : decoder_(decoder)
     , cache_(cache) { }
 
-  char* buffer() const { return buffer_; }
-
   DataType::ConstPtr decode() {
+    decoder_.set_type("data type");
     uint16_t value_type;
-    buffer_ = decode_uint16(buffer_, value_type);
+    if (!decoder_.decode_uint16(value_type)) return DataType::NIL;
 
     switch (value_type) {
       case CASS_VALUE_TYPE_CUSTOM:
@@ -133,20 +132,18 @@ public:
       default:
         return cache_.by_value_type(value_type);
     }
-
-    return DataType::NIL;
   }
 
 private:
   DataType::ConstPtr decode_custom() {
     StringRef class_name;
-    buffer_ = decode_string(buffer_, &class_name);
+    if (!decoder_.decode_string(&class_name)) return DataType::NIL;
 
     DataType::ConstPtr type = cache_.by_class(class_name);
     if (type) return type;
 
     // If no mapping exists, return an actual custom type.
-    return DataType::ConstPtr(new CustomType(class_name.to_string()));
+    return DataType::ConstPtr(Memory::allocate<CustomType>(class_name.to_string()));
   }
 
   DataType::ConstPtr decode_collection(CassValueType collection_type) {
@@ -155,107 +152,121 @@ private:
     if (collection_type == CASS_VALUE_TYPE_MAP) {
       types.push_back(decode());
     }
-    return DataType::ConstPtr(new CollectionType(collection_type, types, false));
+    return DataType::ConstPtr(Memory::allocate<CollectionType>(collection_type, types, false));
   }
 
   DataType::ConstPtr decode_user_type() {
     StringRef keyspace;
-    buffer_ = decode_string(buffer_, &keyspace);
+    if (!decoder_.decode_string(&keyspace)) return DataType::NIL;
 
     StringRef type_name;
-    buffer_ = decode_string(buffer_, &type_name);
+    if (!decoder_.decode_string(&type_name)) return DataType::NIL;
 
     uint16_t n;
-    buffer_ = decode_uint16(buffer_, n);
+    if (!decoder_.decode_uint16(n)) return DataType::NIL;
 
     UserType::FieldVec fields;
     for (uint16_t i = 0; i < n; ++i) {
       StringRef field_name;
-      buffer_ = decode_string(buffer_, &field_name);
+      if (!decoder_.decode_string(&field_name)) return DataType::NIL;
       fields.push_back(UserType::Field(field_name.to_string(), decode()));
     }
-    return DataType::ConstPtr(new UserType(keyspace.to_string(),
-                                           type_name.to_string(),
-                                           fields,
-                                           false));
+    return DataType::ConstPtr(Memory::allocate<UserType>(keyspace.to_string(),
+                                                         type_name.to_string(),
+                                                         fields,
+                                                         false));
   }
 
   DataType::ConstPtr decode_tuple() {
     uint16_t n;
-    buffer_ = decode_uint16(buffer_, n);
+    if (!decoder_.decode_uint16(n)) return DataType::NIL;
 
     DataType::Vec types;
     for (uint16_t i = 0; i < n; ++i) {
       types.push_back(decode());
     }
-    return DataType::ConstPtr(new TupleType(types, false));
+    return DataType::ConstPtr(Memory::allocate<TupleType>(types, false));
   }
 
 private:
-  char* buffer_;
+  Decoder& decoder_;
   SimpleDataTypeCache& cache_;
 };
 
-bool ResultResponse::decode(int version, char* input, size_t size) {
-  protocol_version_ = version;
+void ResultResponse::set_metadata(ResultMetadata* metadata) {
+  metadata_.reset(metadata);
+  decode_first_row();
+}
 
-  char* buffer = decode_int32(input, kind_);
+bool ResultResponse::decode(Decoder& decoder) {
+  protocol_version_ = decoder.protocol_version();
+  decoder.set_type("result");
+  bool is_valid = false;
+
+  CHECK_RESULT(decoder.decode_int32(kind_));
 
   switch (kind_) {
     case CASS_RESULT_KIND_VOID:
-      return true;
+      is_valid = true;
       break;
 
     case CASS_RESULT_KIND_ROWS:
-      return decode_rows(version, buffer);
+      is_valid = decode_rows(decoder);
       break;
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
-      return decode_set_keyspace(buffer);
+      is_valid =  decode_set_keyspace(decoder);
       break;
 
     case CASS_RESULT_KIND_PREPARED:
-      return decode_prepared(version, buffer);
+      is_valid = decode_prepared(decoder);
       break;
 
     case CASS_RESULT_KIND_SCHEMA_CHANGE:
-      return decode_schema_change(buffer);
+      is_valid = decode_schema_change(decoder);
       break;
 
     default:
       assert(false);
+      break;
   }
-  return false;
+
+  if (!is_valid) decoder.maybe_log_remaining();
+  return is_valid;
 }
 
-char* ResultResponse::decode_metadata(int version,
-                                      char* input, ResultMetadata::Ptr* metadata,
-                                      bool has_pk_indices) {
+bool ResultResponse::decode_metadata(Decoder& decoder,
+                                     ResultMetadata::Ptr* metadata,
+                                     bool has_pk_indices) {
   int32_t flags = 0;
-  char* buffer = decode_int32(input, flags);
+  CHECK_RESULT(decoder.decode_int32(flags));
 
   int32_t column_count = 0;
-  buffer = decode_int32(buffer, column_count);
+  CHECK_RESULT(decoder.decode_int32(column_count));
 
-  if (supports_result_metadata_id(version)) {
-    if (flags & CASS_RESULT_FLAG_METADATA_CHANGED) {
-      buffer = decode_string(buffer, &new_metadata_id_);
+  if (flags & CASS_RESULT_FLAG_METADATA_CHANGED) {
+    if (supports_result_metadata_id(decoder.protocol_version())) {
+      CHECK_RESULT(decoder.decode_string(&new_metadata_id_))
+    } else {
+      LOG_ERROR("Metadata changed flag set with invalid protocol version %d",
+                decoder.protocol_version());
+      return false;
     }
   }
 
   if (has_pk_indices) {
     int32_t pk_count = 0;
-    buffer = decode_int32(buffer, pk_count);
+    CHECK_RESULT(decoder.decode_int32(pk_count));
     for (int i = 0; i < pk_count; ++i) {
       uint16_t pk_index = 0;
-      buffer = decode_uint16(buffer, pk_index);
+      CHECK_RESULT(decoder.decode_uint16(pk_index));
       pk_indices_.push_back(pk_index);
     }
   }
 
   if (flags & CASS_RESULT_FLAG_HAS_MORE_PAGES) {
     has_more_pages_ = true;
-    buffer = decode_bytes(buffer, &paging_state_);
+    CHECK_RESULT(decoder.decode_bytes(&paging_state_));
   } else {
     has_more_pages_ = false;
   }
@@ -264,11 +275,11 @@ char* ResultResponse::decode_metadata(int version,
     bool global_table_spec = flags & CASS_RESULT_FLAG_GLOBAL_TABLESPEC;
 
     if (global_table_spec) {
-      buffer = decode_string(buffer, &keyspace_);
-      buffer = decode_string(buffer, &table_);
+      CHECK_RESULT(decoder.decode_string(&keyspace_));
+      CHECK_RESULT(decoder.decode_string(&table_));
     }
 
-    metadata->reset(new ResultMetadata(column_count));
+    metadata->reset(Memory::allocate<ResultMetadata>(column_count));
 
     SimpleDataTypeCache cache;
 
@@ -278,59 +289,63 @@ char* ResultResponse::decode_metadata(int version,
       def.index = i;
 
       if (!global_table_spec) {
-        buffer = decode_string(buffer, &def.keyspace);
-        buffer = decode_string(buffer, &def.table);
+        CHECK_RESULT(decoder.decode_string(&def.keyspace));
+        CHECK_RESULT(decoder.decode_string(&def.table));
+
       }
 
-      buffer = decode_string(buffer, &def.name);
+      CHECK_RESULT(decoder.decode_string(&def.name));
 
-      DataTypeDecoder type_decoder(buffer, cache);
+      DataTypeDecoder type_decoder(decoder, cache);
       def.data_type = DataType::ConstPtr(type_decoder.decode());
-      buffer = type_decoder.buffer();
+      if (def.data_type == DataType::NIL) return false;
 
       (*metadata)->add(def);
     }
   }
-  return buffer;
+  return true;
 }
 
-void ResultResponse::decode_first_row() {
+bool ResultResponse::decode_first_row() {
   if (row_count_ > 0 &&
       metadata_ && // Valid metadata required for column count
       first_row_.values.empty()) { // Only decode the first row once
     first_row_.values.reserve(column_count());
-    rows_ = decode_row(rows_, this, first_row_.values);
-  }
-}
-
-bool ResultResponse::decode_rows(int version, char* input) {
-  char* buffer = decode_metadata(version, input, &metadata_);
-  rows_ = decode_int32(buffer, row_count_);
-  decode_first_row();
-  return true;
-}
-
-bool ResultResponse::decode_set_keyspace(char* input) {
-  decode_string(input, &keyspace_);
-  return true;
-}
-
-bool ResultResponse::decode_prepared(int version, char* input) {
-  char* buffer = decode_string(input, &prepared_id_);
-  if (supports_result_metadata_id(version)) {
-    buffer = decode_string(buffer, &result_metadata_id_);
-  }
-  buffer = decode_metadata(version, buffer, &metadata_, version >= 4);
-  if (version > 1) {
-    decode_metadata(version, buffer, &result_metadata_);
+    return decode_row(row_decoder_, this, first_row_.values);
   }
   return true;
 }
 
-bool ResultResponse::decode_schema_change(char* input) {
-  char* buffer = decode_string(input, &change_);
-  buffer = decode_string(buffer, &keyspace_);
-  buffer = decode_string(buffer, &table_);
+bool ResultResponse::decode_rows(Decoder& decoder) {
+  CHECK_RESULT(decode_metadata(decoder, &metadata_));
+  CHECK_RESULT(decoder.decode_int32(row_count_));
+  row_decoder_ = decoder;
+  CHECK_RESULT(decode_first_row());
+  return true;
+}
+
+bool ResultResponse::decode_set_keyspace(Decoder& decoder) {
+  CHECK_RESULT(decoder.decode_string(&keyspace_));
+  return true;
+}
+
+bool ResultResponse::decode_prepared(Decoder& decoder) {
+  CHECK_RESULT(decoder.decode_string(&prepared_id_));
+  if (supports_result_metadata_id(decoder.protocol_version())) {
+    CHECK_RESULT(decoder.decode_string(&result_metadata_id_));
+  }
+  CHECK_RESULT(decode_metadata(decoder, &metadata_,
+                               decoder.protocol_version() >= 4));
+  if (decoder.protocol_version() > 1) {
+    CHECK_RESULT(decode_metadata(decoder, &result_metadata_));
+  }
+  return true;
+}
+
+bool ResultResponse::decode_schema_change(Decoder& decoder) {
+  CHECK_RESULT(decoder.decode_string(&change_));
+  CHECK_RESULT(decoder.decode_string(&keyspace_));
+  CHECK_RESULT(decoder.decode_string(&table_));
   return true;
 }
 

@@ -21,10 +21,9 @@
 #include "external.hpp"
 #include "host.hpp"
 #include "macros.hpp"
+#include "map.hpp"
 #include "ref_counted.hpp"
-
-#include <map>
-#include <string>
+#include "string.hpp"
 
 namespace cass {
 
@@ -33,7 +32,7 @@ public:
   V1Authenticator() { }
   virtual ~V1Authenticator() { }
 
-  typedef std::map<std::string, std::string> Credentials;
+  typedef Map<String, String> Credentials;
   virtual void get_credentials(Credentials* credentials) = 0;
 
 private:
@@ -47,15 +46,15 @@ public:
   Authenticator() { }
   virtual ~Authenticator() { }
 
-  const std::string& error() { return error_; }
-  void set_error(const std::string& error) { error_ = error; }
+  const String& error() { return error_; }
+  void set_error(const String& error) { error_ = error; }
 
-  virtual bool initial_response(std::string* response) = 0;
-  virtual bool evaluate_challenge(const std::string& token, std::string* response) = 0;
-  virtual bool success(const std::string& token) = 0;
+  virtual bool initial_response(String* response) = 0;
+  virtual bool evaluate_challenge(const String& token, String* response) = 0;
+  virtual bool success(const String& token) = 0;
 
 protected:
-  std::string error_;
+  String error_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Authenticator);
@@ -63,20 +62,20 @@ private:
 
 class PlainTextAuthenticator : public V1Authenticator, public Authenticator {
 public:
-  PlainTextAuthenticator(const std::string& username,
-                         const std::string& password)
+  PlainTextAuthenticator(const String& username,
+                         const String& password)
     : username_(username)
     , password_(password) { }
 
   virtual void get_credentials(Credentials* credentials);
 
-  virtual bool initial_response(std::string* response);
-  virtual bool evaluate_challenge(const std::string& token, std::string* response);
-  virtual bool success(const std::string& token);
+  virtual bool initial_response(String* response);
+  virtual bool evaluate_challenge(const String& token, String* response);
+  virtual bool success(const String& token);
 
 private:
-  const std::string& username_;
-  const std::string& password_;
+  const String& username_;
+  const String& password_;
 };
 
 class AuthProvider : public RefCounted<AuthProvider> {
@@ -88,13 +87,15 @@ public:
 
   virtual ~AuthProvider() { }
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host,
-                                                const std::string& class_name) const {
+  virtual V1Authenticator* new_authenticator_v1(const Address& address,
+                                                const String& hostname,
+                                                const String& class_name) const {
     return NULL;
   }
 
-  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
-                                               const std::string& class_name) const {
+  virtual Authenticator::Ptr new_authenticator(const Address& address,
+                                               const String& hostname,
+                                               const String& class_name) const {
     return Authenticator::Ptr();
   }
 
@@ -104,30 +105,31 @@ private:
 
 class ExternalAuthenticator : public Authenticator {
 public:
-  ExternalAuthenticator(const Host::ConstPtr& host, const std::string& class_name,
+  ExternalAuthenticator(const Address& address, const String& hostname,
+                        const String& class_name,
                         const CassAuthenticatorCallbacks* callbacks, void* data);
 
   ~ExternalAuthenticator();
 
   const Address& address() const { return address_; }
 
-  const std::string& hostname() const { return hostname_; }
-  const std::string& class_name() const { return class_name_; }
+  const String& hostname() const { return hostname_; }
+  const String& class_name() const { return class_name_; }
 
-  std::string* response() { return response_; }
+  String* response() { return response_; }
 
   void* exchange_data() const { return exchange_data_; }
   void set_exchange_data(void* exchange_data) { exchange_data_ = exchange_data; }
 
-  virtual bool initial_response(std::string* response);
-  virtual bool evaluate_challenge(const std::string& token, std::string* response);
-  virtual bool success(const std::string& token);
+  virtual bool initial_response(String* response);
+  virtual bool evaluate_challenge(const String& token, String* response);
+  virtual bool success(const String& token);
 
 private:
   const Address address_;
-  const std::string hostname_;
-  const std::string class_name_;
-  std::string* response_;
+  const String hostname_;
+  const String class_name_;
+  String* response_;
   const CassAuthenticatorCallbacks* callbacks_;
   void* data_;
   void* exchange_data_;
@@ -148,9 +150,14 @@ public:
     }
   }
 
-  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
-                                               const std::string& class_name) const {
-    return Authenticator::Ptr(new ExternalAuthenticator(host, class_name, &exchange_callbacks_, data_));
+  virtual Authenticator::Ptr new_authenticator(const Address& address,
+                                               const String& hostname,
+                                               const String& class_name) const {
+    return Authenticator::Ptr(Memory::allocate<ExternalAuthenticator>(address,
+                                                                      hostname,
+                                                                      class_name,
+                                                                      &exchange_callbacks_,
+                                                                      data_));
   }
 
 private:
@@ -161,24 +168,26 @@ private:
 
 class PlainTextAuthProvider : public AuthProvider {
 public:
-  PlainTextAuthProvider(const std::string& username,
-                        const std::string& password)
+  PlainTextAuthProvider(const String& username,
+                        const String& password)
     : username_(username)
     , password_(password) { }
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host,
-                                                const std::string& class_name) const {
-    return new PlainTextAuthenticator(username_, password_);
+  virtual V1Authenticator* new_authenticator_v1(const Address& address,
+                                                const String& hostname,
+                                                const String& class_name) const {
+    return Memory::allocate<PlainTextAuthenticator>(username_, password_);
   }
 
-  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
-                                               const std::string& class_name) const {
-    return Authenticator::Ptr(new PlainTextAuthenticator(username_, password_));
+  virtual Authenticator::Ptr new_authenticator(const Address& address,
+                                               const String& hostname,
+                                               const String& class_name) const {
+    return Authenticator::Ptr(Memory::allocate<PlainTextAuthenticator>(username_, password_));
   }
 
 private:
-  std::string username_;
-  std::string password_;
+  String username_;
+  String password_;
 };
 
 } // namespace cass
