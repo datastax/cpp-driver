@@ -192,7 +192,7 @@ after_build:
       Push-AppveyorArtifact build/$env:CONFIGURATION/cassandra-unit-tests.exe -DeploymentName "DataStax C/C++ Driver Unit Tests (Google)"
 
 test_script:
-  - ps: Start-Process -FilePath "build/$env:CONFIGURATION/cassandra-unit-tests.exe" -ArgumentList "--gtest_output=xml:unit-tests-gtest-results.xml" -Wait -NoNewWindow
+  - build\%CONFIGURATION%\cassandra-unit-tests.exe --gtest_output=xml:cass-unit-tests-gtest-results.xml
 
 on_finish:
   - ps: |
