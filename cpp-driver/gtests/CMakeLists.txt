@@ -37,7 +37,6 @@ GtestFramework()
 #------------------------------
 if(CASS_BUILD_INTEGRATION_TESTS)
   CassSimulacron()
-  CassCcmBridge()
   CassRapidJson()
 
   set(INTEGRATION_TESTS_NAME "cassandra-integration-tests")
@@ -82,10 +81,13 @@ if(CASS_BUILD_INTEGRATION_TESTS)
   )
   if(CMAKE_VERSION VERSION_LESS "2.8.11")
     include_directories(${INTEGRATION_TESTS_SOURCE_DIR})
+    include_directories(${CCM_BRIDGE_INCLUDES})
   else()
     target_include_directories(${INTEGRATION_TESTS_NAME} PUBLIC ${INTEGRATION_TESTS_SOURCE_DIR})
+    target_include_directories(${INTEGRATION_TESTS_NAME} PUBLIC ${CCM_BRIDGE_INCLUDES})
   endif()
   target_link_libraries(${INTEGRATION_TESTS_NAME}
+    CCMBridge
     ${CCM_BRIDGE_LIBRARIES}
     ${GOOGLE_TEST_LIBRARIES}
     ${CASS_LIBS}
@@ -93,6 +95,9 @@ if(CASS_BUILD_INTEGRATION_TESTS)
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY PROJECT_LABEL ${INTEGRATION_TESTS_DISPLAY_NAME})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY FOLDER "Tests")
   set_property(TARGET ${INTEGRATION_TESTS_NAME} APPEND PROPERTY COMPILE_FLAGS ${TEST_CXX_FLAGS})
+  if(LIBSSH2_LIBRARY_NAME)
+    add_dependencies(${INTEGRATION_TESTS_NAME} ${LIBSSH2_LIBRARY_NAME})
+  endif()
 
   # Copy the test related dependencies to their proper locations
   if(EXISTS ${SIMULACRON_SERVER_JAR})
@@ -100,9 +105,12 @@ if(CASS_BUILD_INTEGRATION_TESTS)
     configure_file(${SIMULACRON_SERVER_JAR} ${CMAKE_BINARY_DIR} COPYONLY)
     if(WIN32)
       # Copy Simulacron server to additional locations for use with IDE
+      if(NOT EXISTS ${CMAKE_BINARY_DIR}/tests)
+        file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+      endif()
       get_filename_component(SIMULACRON_SERVER_JAR_FILENAME
-          ${SIMULACRON_SERVER_JAR}
-          NAME)
+                             ${SIMULACRON_SERVER_JAR}
+                             NAME)
       configure_file(${SIMULACRON_SERVER_JAR} ${CMAKE_BINARY_DIR}/tests COPYONLY)
     endif()
   endif()
@@ -112,5 +120,5 @@ endif()
 # Unit test executable
 #------------------------------
 if(CASS_BUILD_UNIT_TESTS)
-  GtestUnitTests("cassandra" "")
+  GtestUnitTests("cassandra" "" "")
 endif()

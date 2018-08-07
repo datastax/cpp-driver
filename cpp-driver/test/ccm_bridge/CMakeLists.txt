@@ -27,47 +27,74 @@ endif()
 set(CCM_BRIDGE_CONFIGURATION_FILE ${PROJECT_SOURCE_DIR}/data/config.txt) # CCM configuration file
 
 # Gather the header and source files
-file(GLOB CCM_BRIDGE_INC_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
+file(GLOB CCM_BRIDGE_INCLUDE_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
 file(GLOB CCM_BRIDGE_SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
-
-# Build up the include paths
-set(INTEGRATION_TESTS_INCLUDES ${PROJECT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS})
-if(LIBSSH2_FOUND)
-  set(INTEGRATION_TESTS_INCLUDES ${INTEGRATION_TESTS_INCLUDES} ${LIBSSH2_INCLUDE_DIRS})
-endif()
-
-# Assign the include directories
-include_directories(${INTEGRATION_TESTS_INCLUDES})
-
-# Build up the libraries paths
-set(INTEGRATION_TESTS_LIBS ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES})
-if(LIBSSH2_FOUND)
-  set(INTEGRATION_TEST_LIBS ${INTEGRATION_TEST_LIBS} ${LIBSSH2_LIBRARIES})
-endif()
-if(ZLIB_FOUND)
-  set(INTEGRATION_TESTS_LIBS ${INTEGRATION_TESTS_LIBS} ${ZLIB_LIBRARIES})
-endif()
-
-# Set platform conditional compilation flags
-# Define WIN32 on windows, and UNIX on Linux/OS X/Unix
-if(WIN32)
-  # Assign additional library requirements for Windows (winsock2)
-  set(INTEGRATION_TESTS_LIBS ${INTEGRATION_TESTS_LIBS} wsock32 ws2_32)
-
-  # Add preprocessor definition for Windows
-  add_definitions(-DWIN32)
-elseif(UNIX)
-  # Add preprocessor definition for *nix
-  add_definitions(-DUNIX)
-endif()
 
 # Create header and source groups (mainly for Visual Studio generator)
 source_group("Source Files" FILES ${CCM_BRIDGE_SRC_FILES})
-source_group("Header Files" FILES ${CCM_BRIDGE_INC_FILES})
+source_group("Header Files" FILES ${CCM_BRIDGE_INCLUDE_FILES})
+
+if(CASS_USE_LIBSSH2)
+  # Allow for boost directory to be specified on the command line
+  if(NOT LIBSSH2_ROOT)
+    if(EXISTS "${PROJECT_SOURCE_DIR}/lib/libssh2/")
+      set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
+    elseif(EXISTS "${PROJECT_SOURCE_DIR}/build/libs/libssh2/")
+      set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/build/libs/libssh2/")
+    elseif(DEFINED ENV{LIBSSH2_ROOT} AND
+           EXISTS "$ENV{LIBSSH2_ROOT}")
+      set(LIBSSH2_ROOT "$ENV{LIBSSH2_ROOT}")
+    endif()
+  endif()
+  if(LIBSSH2_ROOT_DIR)
+    if(EXISTS ${LIBSSH2_ROOT_DIR})
+      set(LIBSSH2_ROOT ${LIBSSH2_ROOT_DIR})
+    endif()
+  endif()
+
+  # Check for libssh2 availability (build if necessary on Windows)
+  if(WIN32 AND LIBSSH2_VERSION) # Store the current version of libssh2 to prevent corruption
+    set(SAVED_LIBSSH2_VERSION ${LIBSSH2_VERSION})
+  endif()
+  find_package(LIBSSH2 QUIET)
+  if(WIN32 AND NOT LIBSSH2_FOUND)
+    message(STATUS "Unable to Locate libssh2: Third party build step will be performed")
+    if(SAVED_LIBSSH2_VERSION)
+      set(LIBSSH2_VERSION ${SAVED_LIBSSH2_VERSION})
+    endif()
+    include(ExternalProject-libssh2)
+  elseif(NOT LIBSSH2_FOUND)
+    message(STATUS "libssh2 is Unavailable: Building integration tests without libssh2 support")
+  endif()
+endif()
+if(LIBSSH2_FOUND OR LIBSSH2_INCLUDE_DIRS)
+  # Build up the includes and libraries for CCM dependencies
+  set(CCM_BRIDGE_INCLUDES ${PROJECT_SOURCE_DIR}/src ${LIBSSH2_INCLUDE_DIRS})
+  set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} ${LIBSSH2_LIBRARIES})
+  add_definitions(-DCASS_USE_LIBSSH2 -DOPENSSL_CLEANUP)
+  file(GLOB LIBSSH2_INCLUDE_FILES ${LIBSSH2_INCLUDE_DIRS}/*.h)
+  source_group("Header Files\\ccm_bridge\\libssh2" FILES ${LIBSSH2_INCLUDE_FILES})
+
+  if(WIN32)
+    add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS)
+    set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} wsock32 ws2_32 PARENT_SCOPE)
+  elseif(UNIX)
+    set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} pthread PARENT_SCOPE)
+  endif()
+endif()
+
+# Assign the include directories
+include_directories(${CCM_BRIDGE_INCLUDES})
 
 # Build the CCM bridge static library
-add_library(CCMBridge STATIC ${CCM_BRIDGE_SRC_FILES} ${CCM_BRIDGE_INC_FILES} ${CCM_BRIDGE_CONFIGURATION_FILE})
-target_link_libraries(CCMBridge ${INTEGRATION_TESTS_LIBS})
+add_library(CCMBridge STATIC ${CCM_BRIDGE_SRC_FILES}
+                             ${CCM_BRIDGE_INCLUDE_FILES}
+                             ${CCM_BRIDGE_CONFIGURATION_FILE}
+                             ${LIBSSH2_INCLUDE_FILES})
+if(LIBSSH2_LIBRARY_NAME)
+  add_dependencies(CCMBridge ${LIBSSH2_LIBRARY_NAME})
+  add_definitions(-DLIBSSH2_NO_OPENSSL)
+endif()
 
 # Copy data file to output directory
 configure_file(${CCM_BRIDGE_CONFIGURATION_FILE} ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)

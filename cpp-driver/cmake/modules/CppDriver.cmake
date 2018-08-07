@@ -81,7 +81,8 @@ endmacro()
 #------------------------
 # CassOptionalDependencies
 #
-# Configure enabled optional dependencies.
+# Configure enabled optional dependencies if found or if Windows use an
+# external project to build Boost, OpenSSL, zlib.
 #
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
@@ -140,6 +141,9 @@ macro(CassConfigureShared prefix)
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
+  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES
+      COMPILE_PDB_NAME "${PROJECT_LIB_NAME}"
+      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   set_property(
       TARGET ${PROJECT_LIB_NAME}
       APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DCASS_BUILDING")
@@ -162,6 +166,9 @@ macro(CassConfigureStatic prefix)
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES
+      COMPILE_PDB_NAME "${PROJECT_LIB_NAME_STATIC}"
+      COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   set_property(
       TARGET ${PROJECT_LIB_NAME_STATIC}
       APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DCASS_STATIC")
@@ -271,6 +278,13 @@ macro(CassConfigureInstall var_prefix pkg_config_stem)
       endif()
     endif()
   endif()
+
+  if(WIN32)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/${PROJECT_LIB_NAME}.pdb"
+        DESTINATION "${INSTALL_DLL_EXE_DIR}" OPTIONAL)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/${PROJECT_LIB_NAME_STATIC}.pdb"
+        DESTINATION "${INSTALL_DLL_EXE_DIR}" OPTIONAL)
+  endif()
 endmacro()
 
 
@@ -341,59 +355,45 @@ endmacro()
 #------------------------
 # CassUseLibuv
 #
-# Add includes and  libraries required for using libuv.
+# Add includes and libraries required for using libuv if found or if Windows
+# use an external project to build libuv.
 #
 # Input: CASS_INCLUDES and CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
 macro(CassUseLibuv)
   # Setup the paths and hints for libuv
-  set(_LIBUV_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/libuv/")
-  set(_LIBUV_ROOT_HINTS ${LIBUV_ROOT_DIR} $ENV{LIBUV_ROOT_DIR})
-  if(NOT WIN32)
-    set(_LIBUV_ROOT_PATHS "${_LIBUV_ROOT_PATHS}" "/usr/" "/usr/local/")
+  if(NOT LIBUV_ROOT_DIR)
+    if(EXISTS "${PROJECT_SOURCE_DIR}/lib/openssl/")
+      set(LIBUV_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/openssl/")
+    elseif(EXISTS "${PROJECT_SOURCE_DIR}/build/libs/openssl/")
+      set(LIBUV_ROOT_DIR "${PROJECT_SOURCE_DIR}/build/libs/openssl/")
+    endif()
   endif()
-  set(_LIBUV_ROOT_HINTS_AND_PATHS HINTS
-    HINTS ${_LIBUV_ROOT_HINTS}
-    PATHS ${_LIBUV_ROOT_PATHS})
 
   # Ensure libuv was found
-  find_path(LIBUV_INCLUDE_DIR
-    NAMES uv.h
-    HINTS ${_LIBUV_INCLUDEDIR} ${_LIBUV_ROOT_HINTS_AND_PATHS}
-    PATH_SUFFIXES include)
-  find_library(LIBUV_LIBRARY
-    NAMES uv libuv
-    HINTS ${_LIBUV_LIBDIR} ${_LIBUV_ROOT_HINTS_AND_PATHS}
-    PATH_SUFFIXES lib)
-  find_package_handle_standard_args(Libuv "Could NOT find libuv, try to set the path to the libuv root folder in the system variable LIBUV_ROOT_DIR"
-    LIBUV_LIBRARY
-    LIBUV_INCLUDE_DIR)
-
-  if (EXISTS "${LIBUV_INCLUDE_DIR}/uv/version.h")
-    set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv/version.h")
-  elseif (EXISTS "${LIBUV_INCLUDE_DIR}/uv-version.h")
-    set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv-version.h")
-  else()
-    set(LIBUV_VERSION_HEADER_FILE "${LIBUV_INCLUDE_DIR}/uv.h")
+  find_package(LIBUV QUIET "1.0.0")
+  if(WIN32 AND NOT LIBUV_FOUND)
+    message(STATUS "Unable to Locate libuv: Third party build step will be performed")
+    include(ExternalProject-libuv)
+  elseif(NOT LIBUV_FOUND)
+    message(FATAL_ERROR "Unable to Locate libuv: libuv v1.0.0+ is required")
   endif()
 
-  CassExtractHeaderVersion("LIBUV" ${LIBUV_VERSION_HEADER_FILE} "UV")
-
-  if (LIBUV_VERSION_STRING VERSION_LESS "1.0")
-    message(FATAL_ERROR "Libuv version ${LIBUV_VERSION_STRING} is not "
+  if (LIBUV_VERSION VERSION_LESS "1.0")
+    message(FATAL_ERROR "Libuv version ${LIBUV_VERSION} is not "
       " supported. Please updgrade to libuv version 1.0 or greater in order to "
       "utilize the driver.")
   endif()
 
-  if (LIBUV_VERSION_STRING VERSION_LESS "1.6")
-    message(WARNING "Libuv version ${LIBUV_VERSION_STRING} does not support custom "
+  if (LIBUV_VERSION VERSION_LESS "1.6")
+    message(WARNING "Libuv version ${LIBUV_VERSION} does not support custom "
     "memory allocators (version 1.6 or greater required)")
   endif()
 
   # Assign libuv include and libraries
-  set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIR})
-  set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARY})
+  set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIRS})
+  set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARIES})
 endmacro()
 
 #------------------------
@@ -402,57 +402,6 @@ endmacro()
 
 # Minimum supported version of Boost
 set(CASS_MINIMUM_BOOST_VERSION 1.59.0)
-
-#------------------------
-# CassCcmBridge
-#
-# Add includes and libraries needed for CCM Bridge.
-#
-# Input: CASS_ROOT_DIR, CASS_USE_LIBSSH2, OPENSSL_FOUND, OPENSSL_LIBRARIES,
-#        PROJECT_SOURCE_DIR, ZLIB_FOUND, ZLIB_LIBRARIES
-# Output: CCM_BRIDGE_DIR, CCM_BRIDGE_HEADER_FILES, CCM_BRIDGE_LIBRARIES,
-#         CCM_BRIDGE_SOURCE_DIR, CCM_BRIDGE_SOURCE_FILES, LIBSSH2_FOUND
-#------------------------
-macro(CassCcmBridge)
-  # Add CCM bridge functionality from the Core driver
-  set(CCM_BRIDGE_DIR ${CASS_ROOT_DIR}/test/ccm_bridge)
-  set(CCM_BRIDGE_SOURCE_DIR ${CCM_BRIDGE_DIR}/src)
-  file(GLOB CCM_BRIDGE_HEADER_FILES ${CCM_BRIDGE_SOURCE_DIR}/*.hpp)
-  file(GLOB CCM_BRIDGE_SOURCE_FILES ${CCM_BRIDGE_SOURCE_DIR}/*.cpp)
-  if(CASS_USE_LIBSSH2)
-    if(OPENSSL_FOUND)
-      set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/" $ENV{LIBSSH2_ROOT})
-      set(LIBSSH2_ROOT ${LIBSSH2_ROOT} ${LIBSSH2_ROOT_DIR} $ENV{LIBSSH2_ROOT_DIR})
-      find_package(LIBSSH2)
-      if(LIBSSH2_FOUND)
-        # Build up the includes and libraries for CCM dependencies
-        include_directories(${LIBSSH2_INCLUDE_DIRS})
-        include_directories(${OPENSSL_INCLUDE_DIR})
-        set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} ${LIBSSH2_LIBRARIES} ${OPENSSL_LIBRARIES})
-        if(ZLIB_FOUND)
-          set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} ${ZLIB_LIBRARIES})
-        endif()
-        if(UNIX)
-          set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} pthread)
-        endif()
-        add_definitions(-DCASS_USE_LIBSSH2 -DOPENSSL_CLEANUP)
-        file(GLOB LIBSSH2_INCLUDE_FILES ${LIBSSH2_INCLUDE_DIRS}/*.h)
-        source_group("Header Files\\ccm_bridge\\libssh2" FILES ${LIBSSH2_INCLUDE_FILES})
-      else()
-        message(STATUS "libssh2 is Unavailable: Building integration tests without libssh2 support")
-      endif()
-    else()
-      message(STATUS "OpenSSL is Unavailable: Building integration tests without libssh2 support")
-    endif()
-  endif()
-  if(WIN32)
-    add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS)
-    set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} wsock32 ws2_32)
-  endif()
-  include_directories(${CCM_BRIDGE_SOURCE_DIR})
-  source_group("Header Files\\ccm_bridge" FILES ${CCM_BRIDGE_HEADER_FILES})
-  source_group("Source Files\\ccm_bridge" FILES ${CCM_BRIDGE_SOURCE_FILES})
-endmacro()
 
 #------------------------
 # CassRapidJson
@@ -504,17 +453,25 @@ endmacro()
 #------------------------
 # CassUseBoost
 #
-# Add includes, libraries, define flags required for using Boost.
+# Add includes, libraries, define flags required for using Boost if found or if
+# Windows use an external project to build Boost.
 #
 # Input: CASS_USE_STATIC_LIBS, CASS_USE_BOOST_ATOMIC, CASS_INCLUDES, CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
 macro(CassUseBoost)
-
   # Allow for boost directory to be specified on the command line
-  set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/lib/boost/")
+  if(NOT DEFINED ENV{BOOST_ROOT})
+    if(EXISTS "${PROJECT_SOURCE_DIR}/lib/boost/")
+      set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/lib/boost/")
+    elseif(EXISTS "${PROJECT_SOURCE_DIR}/build/libs/boost/")
+      set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/build/libs/boost/")
+    endif()
+  endif()
   if(BOOST_ROOT_DIR)
-    set(ENV{BOOST_ROOT} ${BOOST_ROOT_DIR})
+    if(EXISTS ${BOOST_ROOT_DIR})
+      set(ENV{BOOST_ROOT} ${BOOST_ROOT_DIR})
+    endif()
   endif()
 
   # Ensure Boost auto linking is disabled (defaults to auto linking on Windows)
@@ -523,7 +480,8 @@ macro(CassUseBoost)
   endif()
 
   # Determine if shared or static boost libraries should be used
-  if(CASS_USE_STATIC_LIBS)
+  if(CASS_USE_STATIC_LIBS OR
+     (WIN32 AND CASS_BUILD_INTEGRATION_TESTS)) # Force the use of Boost static libraries for Windows (e.g. executables)
     set(Boost_USE_STATIC_LIBS ON)
   else()
     set(Boost_USE_STATIC_LIBS OFF)
@@ -533,50 +491,56 @@ macro(CassUseBoost)
   set(Boost_USE_MULTITHREADED ON)
   add_definitions(-DBOOST_THREAD_USES_MOVE)
 
-  # Ensure the driver components exist (optional)
-  if(CASS_USE_BOOST_ATOMIC)
-    find_package(Boost ${CASS_MINIMUM_BOOST_VERSION})
-    if(NOT Boost_INCLUDE_DIR)
-      message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
+  # Check for general Boost availability
+  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} QUIET)
+  if ((WIN32 AND NOT Boost_FOUND) AND
+      (CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS))
+    message(STATUS "Unable to Locate Boost: Third party build step will be performed")
+    include(ExternalProject-Boost)
+  else()
+    message(STATUS "Boost version: v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
+    # Ensure the driver components exist (optional)
+    if(CASS_USE_BOOST_ATOMIC)
+      if(NOT Boost_INCLUDE_DIRS)
+        message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
+      endif()
+
+      # Assign Boost include for atomics
+      set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
     endif()
 
-    # Assign Boost include and libraries
-    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
-    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
-  endif()
-
-  # Determine if Boost components are available for test executables
-  if(CASS_BUILD_INTEGRATION_TESTS)
-    # Handle new required version of CMake for Boost v1.66.0 (Windows only)
-    if(WIN32)
-      find_package(Boost)
-      if (Boost_FOUND)
-        if(Boost_VERSION GREATER 106600 OR Boost_VERSION EQUAL 106600)
-          # Ensure CMake version is v3.11.0+
-          if (CMAKE_VERSION VERSION_LESS 3.11.0)
-            message(FATAL_ERROR "Boost v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} requires CMake v3.11.0+."
-              "Updgrade CMake or downgrade Boost to v${CASS_MINIMUM_BOOST_VERSION} - v1.65.1.")
+    # Determine if Boost components are available for test executables
+    if(CASS_BUILD_INTEGRATION_TESTS)
+      # Handle new required version of CMake for Boost v1.66.0 (Windows only)
+      if(WIN32)
+        if(Boost_FOUND)
+          if(Boost_VERSION GREATER 106600 OR Boost_VERSION EQUAL 106600)
+            # Ensure CMake version is v3.11.0+
+            if(CMAKE_VERSION VERSION_LESS 3.11.0)
+              message(FATAL_ERROR "Boost v${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} requires CMake v3.11.0+."
+                "Updgrade CMake or downgrade Boost to v${CASS_MINIMUM_BOOST_VERSION} - v1.65.1.")
+            endif()
           endif()
         endif()
       endif()
-    endif()
 
-    # Ensure Boost components are available
-    find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono system thread unit_test_framework)
-    if(NOT Boost_FOUND)
-      # Ensure Boost was not found due to minimum version requirement
-      set(CASS_FOUND_BOOST_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-      if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "${CASS_MINIMUM_BOOST_VERSION}")
-        OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "${CASS_MINIMUM_BOOST_VERSION}"))
-        message(FATAL_ERROR "Boost [chrono, system, thread, and unit_test_framework] are required to build tests")
-      else()
-        message(FATAL_ERROR "Boost v${CASS_FOUND_BOOST_VERSION} Found: v${CASS_MINIMUM_BOOST_VERSION} or greater required")
+      # Ensure Boost components are available
+      find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono system thread unit_test_framework)
+      if(NOT Boost_FOUND)
+        # Ensure Boost was not found due to minimum version requirement
+        set(CASS_FOUND_BOOST_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
+        if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "${CASS_MINIMUM_BOOST_VERSION}")
+          OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "${CASS_MINIMUM_BOOST_VERSION}"))
+          message(FATAL_ERROR "Boost [chrono, system, thread, and unit_test_framework] are required to build tests")
+        else()
+          message(FATAL_ERROR "Boost v${CASS_FOUND_BOOST_VERSION} Found: v${CASS_MINIMUM_BOOST_VERSION} or greater required")
+        endif()
       endif()
-    endif()
 
-    # Assign Boost include and libraries
-    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
-    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
+      # Assign Boost include and libraries
+      set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
+      set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
+    endif()
   endif()
 
   # Determine if additional Boost definitions are required for driver/executables
@@ -589,21 +553,44 @@ endmacro()
 #------------------------
 # CassUseOpenSSL
 #
-# Add includes and libraries required for using OpenSSL.
+# Add includes and libraries required for using OpenSSL if found or if Windows
+# use an external project to build OpenSSL.
 #
 # Input: CASS_INCLUDES and CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
 macro(CassUseOpenSSL)
-  # Setup the paths and hints for OpenSSL
-  set(_OPENSSL_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/openssl/")
-  set(_OPENSSL_ROOT_HINTS ${OPENSSL_ROOT_DIR} $ENV{OPENSSL_ROOT_DIR})
-  set(_OPENSSL_ROOT_HINTS_AND_PATHS
-    HINTS ${_OPENSSL_ROOT_HINTS}
-  PATHS ${_OPENSSL_ROOT_PATHS})
+  if(NOT WIN32)
+    set(_OPENSSL_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/openssl/")
+    set(_OPENSSL_ROOT_HINTS ${OPENSSL_ROOT_DIR} $ENV{OPENSSL_ROOT_DIR})
+    set(_OPENSSL_ROOT_HINTS_AND_PATHS
+        HINTS ${_OPENSSL_ROOT_HINTS}
+        PATHS ${_OPENSSL_ROOT_PATHS})
+  else()
+    if(NOT DEFINED OPENSSL_ROOT_DIR)
+      # FindOpenSSL overrides _OPENSSL_ROOT_HINTS and _OPENSSL_ROOT_PATHS on Windows
+      # however it utilizes OPENSSL_ROOT_DIR when it sets these values
+      set(OPENSSL_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/openssl/"
+                           "${PROJECT_SOURCE_DIR}/build/libs/openssl/")
+    endif()
+  endif()
 
   # Discover OpenSSL and assign OpenSSL include and libraries
-  find_package(OpenSSL REQUIRED)
+  if(WIN32 AND OPENSSL_VERSION) # Store the current version of OpenSSL to prevent corruption
+    set(SAVED_OPENSSL_VERSION ${OPENSSL_VERSION})
+  endif()
+  find_package(OpenSSL QUIET)
+  if(WIN32 AND NOT OpenSSL_FOUND)
+    message(STATUS "Unable to Locate OpenSSL: Third party build step will be performed")
+    if(SAVED_OPENSSL_VERSION)
+      set(OPENSSL_VERSION ${SAVED_OPENSSL_VERSION})
+    endif()
+    include(ExternalProject-OpenSSL)
+  elseif(NOT OpenSSL_FOUND)
+    message(FATAL_ERROR "Unable to Locate OpenSSL: Ensure OpenSSL is installed in order to build the driver")
+  else()
+    message(STATUS "OpenSSL version: v${OPENSSL_VERSION}")
+  endif()
 
   set(CASS_INCLUDES ${CASS_INCLUDES} ${OPENSSL_INCLUDE_DIR})
   set(CASS_LIBS ${CASS_LIBS} ${OPENSSL_LIBRARIES})
@@ -643,30 +630,38 @@ endmacro()
 #------------------------
 # CassUseZlib
 #
-# Add includes and libraries required for using tcmalloc.
+# Add includes and libraries required for using zlib if found or if Windows use
+# an external project to build zlib.
 #
 # Input: CASS_INCLUDES and CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
 macro(CassUseZlib)
-  # Setup the root directory for zlib
-  set(ZLIB_ROOT "${PROJECT_SOURCE_DIR}/lib/zlib/")
-  set(ZLIB_ROOT ${ZLIB_ROOT} ${ZLIB_ROOT_DIR} $ENV{ZLIB_ROOT_DIR})
+  if(NOT ZLIB_LIBRARY_NAME)
+    # Setup the root directory for zlib
+    set(ZLIB_ROOT "${PROJECT_SOURCE_DIR}/lib/zlib/"
+                  "${PROJECT_SOURCE_DIR}/build/libs/zlib/")
+    set(ZLIB_ROOT ${ZLIB_ROOT} ${ZLIB_ROOT_DIR} $ENV{ZLIB_ROOT_DIR})
 
-  # Ensure zlib was found (assign zlib include/libraries or present warning)
-  find_package(ZLIB)
-  if(ZLIB_FOUND)
-    # Determine if the static library needs to be used for Windows
-    if(WIN32 AND CASS_USE_STATIC_LIBS)
-      string(REPLACE "zlib.lib" "zlibstatic.lib" ZLIB_LIBRARIES "${ZLIB_LIBRARIES}")
+    # Ensure zlib was found (assign zlib include/libraries or present warning)
+    find_package(ZLIB)
+    if(ZLIB_FOUND)
+      # Determine if the static library needs to be used for Windows
+      if(WIN32 AND CASS_USE_STATIC_LIBS)
+        string(REPLACE "zlib.lib" "zlibstatic.lib" ZLIB_LIBRARIES "${ZLIB_LIBRARIES}")
+      endif()
+
+      # Assign zlib properties
+      set(CASS_INCLUDES ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS})
+      set(CASS_LIBS ${CASS_LIBS} ${ZLIB_LIBRARIES})
+    else()
+      message(WARNING "Could not find zlib, try to set the path to zlib root folder in the system variable ZLIB_ROOT_DIR")
+      message(WARNING "zlib libraries will not be linked into build")
     endif()
-
+  else()
     # Assign zlib properties
     set(CASS_INCLUDES ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS})
     set(CASS_LIBS ${CASS_LIBS} ${ZLIB_LIBRARIES})
-  else()
-    message(WARNING "Could not find zlib, try to set the path to zlib root folder in the system variable ZLIB_ROOT_DIR")
-    message(WARNING "zlib libraries will not be linked into build")
   endif()
 endmacro()
 
