@@ -34,7 +34,6 @@ CassRapidJson()
 # Integration test executable
 #------------------------------
 if(DSE_BUILD_INTEGRATION_TESTS)
-  CassCcmBridge()
   set(INTEGRATION_TESTS_NAME "${PROJECT_NAME_STRING}-integration-tests")
   set(INTEGRATION_TESTS_DISPLAY_NAME "Integration Tests (${PROJECT_NAME_STRING})")
 
@@ -64,27 +63,36 @@ if(DSE_BUILD_INTEGRATION_TESTS)
 
   GtestCommonIntegrationTestSourceFiles()
   add_executable(${INTEGRATION_TESTS_NAME}
-    ${DSE_API_HEADER_FILES}
-    ${RAPIDJSON_HEADER_FILES}
-    ${COMMON_INTEGRATION_TEST_SOURCE_FILES}
+                 ${DSE_API_HEADER_FILES}
+                 ${RAPIDJSON_HEADER_FILES}
+                 ${COMMON_INTEGRATION_TEST_SOURCE_FILES}
   )
   if(CMAKE_VERSION VERSION_LESS "2.8.11")
     include_directories(${INTEGRATION_TESTS_SOURCE_DIR})
+    include_directories(${CCM_BRIDGE_INCLUDES})
   else()
     target_include_directories(${INTEGRATION_TESTS_NAME} PUBLIC ${INTEGRATION_TESTS_SOURCE_DIR})
+    target_include_directories(${INTEGRATION_TESTS_NAME} PUBLIC ${CCM_BRIDGE_INCLUDES})
   endif()
   target_link_libraries(${INTEGRATION_TESTS_NAME}
-    ${CCM_BRIDGE_LIBRARIES}
-    ${GOOGLE_TEST_LIBRARIES}
-    ${DSE_LIBS}
-    ${PROJECT_LIB_NAME_TARGET})
+                        CCMBridge
+                        ${CCM_BRIDGE_LIBRARIES}
+                        ${GOOGLE_TEST_LIBRARIES}
+                        ${DSE_LIBS}
+                        ${PROJECT_LIB_NAME_TARGET})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY PROJECT_LABEL ${INTEGRATION_TESTS_DISPLAY_NAME})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY FOLDER "Tests")
   set_property(TARGET ${INTEGRATION_TESTS_NAME} APPEND PROPERTY COMPILE_FLAGS ${TEST_CXX_FLAGS})
+  if(LIBSSH2_LIBRARY_NAME)
+    add_dependencies(${INTEGRATION_TESTS_NAME} ${LIBSSH2_LIBRARY_NAME})
+  endif()
 
   configure_file(embedded-ads.jar ${CMAKE_BINARY_DIR} COPYONLY)
   if(WIN32)
     # Copy the embedded ADS to additional locations for use with IDE
+    if(NOT EXISTS ${CMAKE_BINARY_DIR}/tests)
+      file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+    endif()
     configure_file(embedded-ads.jar ${CMAKE_BINARY_DIR}/tests COPYONLY)
   endif()
 endif()
@@ -93,6 +101,5 @@ endif()
 # Unit test executable
 #------------------------------
 if(DSE_BUILD_UNIT_TESTS)
-  set(DSE_EXTRAS ${DSE_API_HEADER_FILES} ${DSE_INCLUDES})
-  GtestUnitTests("dse" "${DSE_EXTRAS}")
+  GtestUnitTests("dse" "${DSE_API_HEADER_FILES}" "${DSE_INCLUDES}")
 endif()

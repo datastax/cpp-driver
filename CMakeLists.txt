@@ -44,6 +44,7 @@ option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(DSE_DEBUG_CUSTOM_ALLOC "Debug custom allocator" OFF)
 option(DSE_INSTALL_HEADER "Install header file" ON)
 option(DSE_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
+option(DSE_MULTICORE_COMPILATION "Enable multicore compilation" ON)
 option(DSE_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
 option(DSE_USE_LIBSSH2 "Use libssh2" OFF)
 option(DSE_USE_OPENSSL "Use OpenSSL" ON)
@@ -65,6 +66,11 @@ if(DSE_BUILD_INTEGRATION_TESTS)
   # Enable integration tests for core driver
   set(CASS_BUILD_INTEGRATION_TESTS ON)
   set(CASS_USE_OPENSSL ON) # Required for integration tests
+  if(WIN32)
+    set(DSE_USE_STATIC_LIBS ON) # Force static linking for executables on Windows
+    set(DSE_BUILD_SHARED OFF) # Disable shared lib (not needed)
+    set(BUILD_SHARED_LIBS OFF) # Force external projects to build static libs
+  endif()
 endif()
 
 if(DSE_BUILD_UNIT_TESTS)
@@ -86,7 +92,8 @@ endif()
 
 # Set CASS options based on DSE options.
 foreach(key USE_STATIC_LIBS USE_BOOST_ATOMIC USE_STD_ATOMIC USE_OPENSSL
-            USE_TCMALLOC USE_SPARSEHASH USE_ZLIB USE_LIBSSH2 USE_TIMERFD DEBUG_CUSTOM_ALLOC)
+            USE_TCMALLOC USE_SPARSEHASH USE_ZLIB USE_LIBSSH2 USE_TIMERFD
+            DEBUG_CUSTOM_ALLOC MULTICORE_COMPILATION)
   set(CASS_${key} ${DSE_${key}})
 endforeach()
 
@@ -171,6 +178,12 @@ if(DSE_BUILD_SHARED)
   # warns that policy CMP0042 is violated.
   add_library(${PROJECT_LIB_NAME} SHARED ${DSE_ALL_SOURCE_FILES})
   set(DSE_DRIVER_CXX_FLAGS "${DSE_DRIVER_CXX_FLAGS} -DDSE_BUILDING")
+  if(LIBUV_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME} ${LIBUV_LIBRARY_NAME})
+  endif()
+  if(OPENSSL_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME} ${OPENSSL_LIBRARY_NAME})
+  endif()
   CassConfigureShared("DSE")
   set_property(TARGET ${PROJECT_LIB_NAME} PROPERTY FOLDER "Driver/DSE")
 endif()
@@ -181,12 +194,19 @@ if(DSE_BUILD_STATIC)
   # macro, but if you do, something goes wrong and the cmake output
   # warns that policy CMP0042 is violated.
   add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${DSE_ALL_SOURCE_FILES})
+  set(DSE_DRIVER_CXX_FLAGS "${DSE_DRIVER_CXX_FLAGS} -DDSE_STATIC")
+  if(LIBUV_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME_STATIC} ${LIBUV_LIBRARY_NAME})
+  endif()
+  if(OPENSSL_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME_STATIC} ${OPENSSL_LIBRARY_NAME})
+  endif()
   CassConfigureStatic("DSE")
 
   # Update the test flags to indicate the use of the static library
   if(DSE_USE_STATIC_LIBS)
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DDSE_STATIC -DCASS_STATIC")
-    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DCASS_STATIC")
+    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DDSE_STATIC -DCASS_STATIC")
   endif()
 
   set_property(TARGET ${PROJECT_LIB_NAME_STATIC} PROPERTY FOLDER "Driver/DSE")
@@ -195,18 +215,12 @@ endif()
 #-----------------------------
 # Unit and Integration Tests
 #-----------------------------
+
+CassConfigureTests(${CASS_ROOT_DIR})
 if (DSE_BUILD_INTEGRATION_TESTS OR DSE_BUILD_UNIT_TESTS)
   add_subdirectory(tests)
 endif()
 
-if(CASS_BUILD_INTEGRATION_TESTS)
-  set(CASS_TEST_LIBS ${Boost_LIBRARIES})
-  if(UNIX)
-    set(CASS_TEST_LIBS ${CASS_TEST_LIBS} pthread)
-  endif()
-endif()
-
-CassConfigureTests(${CASS_ROOT_DIR})
 
 #-----------
 # Examples
