@@ -275,6 +275,13 @@ void ControlConnector::query_schema() {
                  ->chain("user_types", SELECT_USERTYPES_30)
                  ->chain("functions", SELECT_FUNCTIONS_30)
                  ->chain("aggregates", SELECT_AGGREGATES_30);
+
+      if (server_version_ >= VersionNumber(4, 0, 0)) {
+        callback = callback
+                   ->chain("virtual_keyspaces", SELECT_VIRTUAL_KEYSPACES_40)
+                   ->chain("virtual_tables", SELECT_VIRTUAL_TABLES_40)
+                   ->chain("virtual_columns", SELECT_VIRTUAL_COLUMNS_40);
+      }
     }
   } else {
     callback = ChainedRequestCallback::Ptr(Memory::allocate<SchemaConnectorRequestCallback>(
@@ -311,6 +318,9 @@ void ControlConnector::handle_query_schema(SchemaConnectorRequestCallback* callb
   schema_.user_types = callback->result("types");
   schema_.functions = callback->result("functions");
   schema_.aggregates = callback->result("aggregates");
+  schema_.virtual_keyspaces = callback->result("virtual_keyspaces");
+  schema_.virtual_tables = callback->result("virtual_tables");
+  schema_.virtual_columns = callback->result("virtual_columns");
 
   on_success();
 }

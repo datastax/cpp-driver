@@ -106,6 +106,9 @@ struct ControlConnectionSchema {
   ResultResponse::Ptr user_types;
   ResultResponse::Ptr functions;
   ResultResponse::Ptr aggregates;
+  ResultResponse::Ptr virtual_keyspaces;
+  ResultResponse::Ptr virtual_tables;
+  ResultResponse::Ptr virtual_columns;
 };
 
 /**

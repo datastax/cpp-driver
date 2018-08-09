@@ -2920,6 +2920,18 @@ cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
                         const char** name,
                         size_t* name_length);
 
+
+/**
+ * Determine if the keyspace is a virtual keyspace.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @return cass_true is the keyspace is virtual, otherwise cass_false
+ */
+CASS_EXPORT cass_bool_t
+cass_keyspace_meta_is_virtual(const CassKeyspaceMeta* keyspace_meta);
+
 /**
  * Gets the table metadata for the provided table name.
  *
@@ -3155,6 +3167,17 @@ CASS_EXPORT void
 cass_table_meta_name(const CassTableMeta* table_meta,
                      const char** name,
                      size_t* name_length);
+
+/**
+ * Determine if the table is a virtual table.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @return cass_true is the table is virtual, otherwise cass_false
+ */
+CASS_EXPORT cass_bool_t
+cass_table_meta_is_virtual(const CassTableMeta* table_meta);
 
 /**
  * Gets the column metadata for the provided column name.

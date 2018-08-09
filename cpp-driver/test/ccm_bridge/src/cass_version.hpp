@@ -478,7 +478,7 @@ namespace CCM {
         return CassVersion("3.11.0-1758");
       } else if (*this == "5.1.3") {
         return CassVersion("3.11.0-1855");
-      } else if (*this == "5.1.4" || *this >= "5.1.5") {
+      } else if (*this == "5.1.4" || *this == "5.1.5") {
         return CassVersion("3.11.0-1900");
       } else if (*this == "5.1.6") {
         return CassVersion("3.11.1-2070");

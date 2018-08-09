@@ -53,6 +53,10 @@
 #define SELECT_FUNCTIONS_30 "SELECT * FROM system_schema.functions"
 #define SELECT_AGGREGATES_30 "SELECT * FROM system_schema.aggregates"
 
+#define SELECT_VIRTUAL_KEYSPACES_40 "SELECT * FROM system_virtual_schema.keyspaces"
+#define SELECT_VIRTUAL_TABLES_40 "SELECT * FROM system_virtual_schema.tables"
+#define SELECT_VIRTUAL_COLUMNS_40 "SELECT * FROM system_virtual_schema.columns"
+
 namespace cass {
 
 class ChainedControlRequestCallback;
