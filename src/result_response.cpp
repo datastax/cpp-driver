@@ -20,6 +20,7 @@
 #include "logger.hpp"
 #include "protocol.hpp"
 #include "result_metadata.hpp"
+#include "result_response.hpp"
 #include "serialization.hpp"
 
 extern "C" {
@@ -196,6 +197,11 @@ private:
   SimpleDataTypeCache& cache_;
 };
 
+void ResultResponse::set_metadata(const ResultMetadata::Ptr& metadata) {
+  metadata_ = metadata;
+  decode_first_row();
+}
+
 bool ResultResponse::decode(int version, char* input, size_t size) {
   protocol_version_ = version;
 
@@ -268,7 +274,7 @@ char* ResultResponse::decode_metadata(int version,
       buffer = decode_string(buffer, &table_);
     }
 
-    metadata->reset(new ResultMetadata(column_count));
+    metadata->reset(new ResultMetadata(column_count, this->buffer()));
 
     SimpleDataTypeCache cache;
 

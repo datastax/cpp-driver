@@ -45,7 +45,8 @@ class ResultMetadata : public RefCounted<ResultMetadata> {
 public:
   typedef SharedRefPtr<ResultMetadata> Ptr;
 
-  ResultMetadata(size_t column_count);
+  ResultMetadata(size_t column_count,
+                 const RefBuffer::Ptr& buffer = RefBuffer::Ptr());
 
   const ColumnDefinition& get_column_definition(size_t index) const { return defs_[index]; }
 
@@ -57,6 +58,7 @@ public:
 
 private:
   CaseInsensitiveHashTable<ColumnDefinition> defs_;
+  RefBuffer::Ptr buffer_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ResultMetadata);
