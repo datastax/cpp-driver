@@ -1081,28 +1081,6 @@ const TableMetadata::Ptr& KeyspaceMetadata::get_table(const String& name) {
 }
 
 void KeyspaceMetadata::add_table(const TableMetadata::Ptr& table) {
-  TableMetadata::Map::iterator table_it = tables_->find(table->name());
-
-  // If there's a previous version of this table then copy its views
-  // to the new version of the table, and update the table back-refs
-  // in the views.
-  if (table_it != tables_->end()) {
-    TableMetadata::Ptr old_table(table_it->second);
-    internal_add_table(table, old_table->views());
-  } else {
-    (*tables_)[table->name()] = table; // Add new table
-  }
-}
-
-void KeyspaceMetadata::internal_add_table(const TableMetadata::Ptr& table,
-                                          const ViewMetadata::Vec& views) {
-  // Copy all the views and update the table and keyspace views
-  for (ViewMetadata::Vec::const_iterator i = views.begin();
-       i != views.end(); ++i) {
-    ViewMetadata::Ptr view(Memory::allocate<ViewMetadata>(**i, table.get()));
-    table->add_view(view);
-    (*views_)[view->name()] = view;
-  }
   (*tables_)[table->name()] = table;
 }
 
@@ -1119,8 +1097,6 @@ const ViewMetadata::Ptr& KeyspaceMetadata::get_view(const String& name) {
 }
 
 void KeyspaceMetadata::add_view(const ViewMetadata::Ptr& view) {
-  // Properly remove the previous view if it exists
-  drop_table_or_view(view->name());
   (*views_)[view->name()] = view;
 }
 
@@ -1151,7 +1127,8 @@ void KeyspaceMetadata::drop_table_or_view(const String& table_or_view_name) {
 
       // Create and add a new copy of the base table
       TableMetadata::Ptr table(Memory::allocate<TableMetadata>(*view->base_table()));
-      internal_add_table(table, views);
+      table->set_views(views);
+      (*tables_)[table->name()] = table;
 
       // Remove the dropped view
       views_->erase(view_it);
@@ -1488,12 +1465,8 @@ const ViewMetadata* TableMetadata::get_view(const String& name) const {
   return i->get();
 }
 
-void TableMetadata::add_view(const ViewMetadata::Ptr& view) {
-  views_.push_back(view);
-}
-
-void TableMetadata::sort_views() {
-  std::sort(views_.begin(), views_.end());
+void TableMetadata::set_views(const ViewMetadata::Vec& views) {
+  views_ = views;
 }
 
 void TableMetadata::key_aliases(SimpleDataTypeCache& cache, KeyAliases* output) const {
@@ -1938,10 +1911,31 @@ void Metadata::InternalData::update_tables(const VersionNumber& server_version,
       keyspace_name = temp_keyspace_name;
       keyspace = get_or_create_keyspace(keyspace_name);
     }
+    TableMetadata::Ptr new_table(Memory::allocate<TableMetadata>(server_version,
+                                                                 table_name,
+                                                                 buffer, row));
 
-    keyspace->add_table(TableMetadata::Ptr(Memory::allocate<TableMetadata>(server_version,
-                                                                           table_name,
-                                                                           buffer, row)));
+    // If there's a previous version of this table then copy its views
+    // to the new version of the table, and update the table back-refs
+    // in the views.
+    ViewMetadata::Vec views;
+    TableMetadata::Ptr table(keyspace->get_table(table_name));
+    if (table) {
+      // Copy all the views and update the table and keyspace views.
+      for (ViewMetadata::Vec::const_iterator i = table->views().begin();
+           i != table->views().end(); ++i) {
+        views.push_back(ViewMetadata::Ptr(Memory::allocate<ViewMetadata>(**i, new_table.get())));
+      }
+    }
+    new_table->set_views(views);
+
+
+    // Add the new views and table after everything's constructed.
+    for (ViewMetadata::Vec::const_iterator i = views.begin(),
+         end = views.end(); i != end; ++i) {
+      keyspace->add_view(*i);
+    }
+    keyspace->add_table(new_table);
   }
 }
 
@@ -1954,8 +1948,6 @@ void Metadata::InternalData::update_views(const VersionNumber& server_version,
   String keyspace_name;
   String view_name;
   KeyspaceMetadata* keyspace = NULL;
-
-  TableMetadata::Vec updated_tables;
 
   while (rows.next()) {
     String temp_keyspace_name;
@@ -1984,18 +1976,30 @@ void Metadata::InternalData::update_views(const VersionNumber& server_version,
       continue;
     }
 
-    ViewMetadata::Ptr view(Memory::allocate<ViewMetadata>(server_version,
-                                                          table.get(),
-                                                          view_name,
-                                                          buffer, row));
-    keyspace->add_view(view);
-    table->add_view(view);
-    updated_tables.push_back(table);
-  }
+    TableMetadata::Ptr new_table(Memory::allocate<TableMetadata>(*table));
 
-  for (TableMetadata::Vec::iterator i = updated_tables.begin(),
-       end = updated_tables.end(); i != end; ++i) {
-    (*i)->sort_views();
+    ViewMetadata::Ptr new_view(Memory::allocate<ViewMetadata>(server_version,
+                                                              new_table.get(),
+                                                              view_name,
+                                                              buffer, row));
+
+    // If there's a previous version of the view then replace it with the new
+    // view.
+    ViewMetadata::Vec views(table->views());
+    ViewMetadata::Vec::iterator i
+        = std::lower_bound(views.begin(), views.end(), view_name);
+    if (i != views.end()) {
+      *i = new_view;
+    } else {
+      views.push_back(new_view);
+      // If a new view is added then sort the views by name.
+      std::sort(views.begin(), views.end());
+    }
+    new_table->set_views(views);
+
+    // Add the updated view and table after everything's constructed.
+    keyspace->add_view(new_view);
+    keyspace->add_table(new_table);
   }
 }
 
