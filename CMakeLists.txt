@@ -65,12 +65,7 @@ endif()
 if(DSE_BUILD_INTEGRATION_TESTS)
   # Enable integration tests for core driver
   set(CASS_BUILD_INTEGRATION_TESTS ON)
-  set(CASS_USE_OPENSSL ON) # Required for integration tests
-  if(WIN32)
-    set(DSE_USE_STATIC_LIBS ON) # Force static linking for executables on Windows
-    set(DSE_BUILD_SHARED OFF) # Disable shared lib (not needed)
-    set(BUILD_SHARED_LIBS OFF) # Force external projects to build static libs
-  endif()
+  set(DSE_USE_OPENSSL ON) # Required for integration tests
 endif()
 
 if(DSE_BUILD_UNIT_TESTS)
@@ -86,6 +81,12 @@ endif()
 # Determine which driver target should be used as a dependency
 set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
 if(DSE_USE_STATIC_LIBS)
+  set(DSE_BUILD_STATIC ON)
+  set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
+endif()
+if(DSE_USE_STATIC_LIBS OR
+   (WIN32 AND (CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)))
+  set(DSE_USE_STATIC_LIBS ON) # Not all driver internals are exported for test executable (e.g. DSE_EXPORT)
   set(DSE_BUILD_STATIC ON)
   set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
 endif()
