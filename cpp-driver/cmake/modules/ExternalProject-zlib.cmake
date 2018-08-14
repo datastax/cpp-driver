@@ -60,13 +60,14 @@ set(ZLIB_ROOT_DIR "${ZLIB_INSTALL_DIR}" CACHE STRING "zlib root directory" FORCE
 set(ZLIB_PACKAGE_NAME "zlib-${ZLIB_VERSION}-${PACKAGE_ARCH_TYPE}-msvc${VS_INTERNAL_VERSION}.zip" CACHE STRING "zlib package name" FORCE)
 
 # Create an additional install script step for zlib
+file(TO_NATIVE_PATH ${ZLIB_LIBRARY_DIR} ZLIB_NATIVE_LIBRARY_DIR)
 set(ZLIB_INSTALL_EXTRAS_SCRIPT "${ZLIB_PROJECT_PREFIX}/scripts/install_zlib_extras.bat")
 file(REMOVE ${ZLIB_INSTALL_EXTRAS_SCRIPT})
 file(WRITE ${ZLIB_INSTALL_EXTRAS_SCRIPT}
   "@REM Generated install script for zlib\r\n"
   "@ECHO OFF\r\n"
   "IF EXIST zlibstatic.dir\\RelWithDebInfo\\*.pdb (\r\n"
-  "  COPY /Y zlibstatic.dir\\RelWithDebInfo\\*.pdb \"${ZLIB_BINARY_DIR}\"\r\n"
+  "  COPY /Y zlibstatic.dir\\RelWithDebInfo\\*.pdb \"${ZLIB_NATIVE_LIBRARY_DIR}\"\r\n"
   "  IF NOT %ERRORLEVEL% EQU 0 (\r\n"
   "    EXIT /B 1\r\n"
   "  )\r\n"
@@ -80,8 +81,7 @@ externalproject_add(${ZLIB_LIBRARY_NAME}
   URL ${ZLIB_ARCHIVE_URL}
   DOWNLOAD_DIR ${ZLIB_PROJECT_PREFIX}
   INSTALL_DIR ${ZLIB_INSTALL_DIR}
-  CMAKE_ARGS -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    -DCMAKE_INSTALL_PREFIX=${ZLIB_INSTALL_DIR}
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${ZLIB_INSTALL_DIR}
     -DBUILD_SHARED_LIBS=On
     -DASM686=Off # Disable assembly compiling (does not build on all compilers)
     -DASM64=Off # Disable assembly compiling (does not build on all compilers)

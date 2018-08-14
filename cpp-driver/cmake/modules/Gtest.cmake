@@ -55,6 +55,12 @@ macro(GtestOptions)
       add_definitions(-DUSE_VISUAL_LEAK_DETECTOR)
     endif()
   endif()
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    if(MSVC_VERSION GREATER 1800 OR MSVC_VERSION EQUAL 1800) # VS2013+/VS 12.0+
+      add_definitions(-DGTEST_LANG_CXX11=1)
+      add_definitions(-DGTEST_HAS_TR1_TUPLE=0)
+    endif()
+  endif()
 endmacro()
 
 #------------------------

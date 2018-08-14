@@ -22,7 +22,7 @@ if(NOT LIBUV_INSTALL_PREFIX)
 endif()
 option(LIBUV_VERSION "libuv version to build and install")
 if(NOT LIBUV_VERSION)
-  set(LIBUV_VERSION "1.22.0")
+  set(LIBUV_VERSION "1.23.0")
 endif()
 set(LIBUV_VERSION ${LIBUV_VERSION} CACHE STRING "libuv version to build and install" FORCE)
 
@@ -78,7 +78,7 @@ file(WRITE ${LIBUV_INSTALL_EXTRAS_SCRIPT}
   "  )\r\n"
   ")\r\n"
   "IF EXIST uv_a.dir\\RelWithDebInfo\\*.pdb (\r\n"
-  "  COPY /Y uv_a.dir\\RelWithDebInfo\\*.pdb \"${LIBUV_NATIVE_BINARY_DIR}\"\r\n"
+  "  COPY /Y uv_a.dir\\RelWithDebInfo\\*.pdb \"${LIBUV_NATIVE_LIBRARY_DIR}\"\r\n"
   "  IF NOT %ERRORLEVEL% EQU 0 (\r\n"
   "    EXIT /B 1\r\n"
   "  )\r\n"
@@ -98,8 +98,7 @@ externalproject_add(${LIBUV_LIBRARY_NAME}
   URL ${LIBUV_ARCHIVE_URL}
   DOWNLOAD_DIR ${LIBUV_PROJECT_PREFIX}
   INSTALL_DIR ${LIBUV_INSTALL_DIR}
-  CMAKE_ARGS -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    -DCMAKE_INSTALL_PREFIX=${LIBUV_INSTALL_DIR}
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${LIBUV_INSTALL_DIR}
     -DBUILD_SHARED_LIBS=On
     -DBUILD_TESTING=Off
   BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config RelWithDebInfo

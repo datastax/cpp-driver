@@ -23,7 +23,7 @@ if(NOT BOOST_INSTALL_PREFIX)
 endif()
 option(BOOST_VERSION "Boost version to build and install")
 if(NOT BOOST_VERSION)
-  set(BOOST_VERSION "1.67.0")
+  set(BOOST_VERSION "1.68.0")
 endif()
 set(BOOST_VERSION ${BOOST_VERSION} CACHE STRING "Boost version to build and install" FORCE)
 
@@ -82,8 +82,11 @@ set(BOOST_DEBUG_LIBRARIES ${BOOST_LIBRARY_DIR}/libboost_atomic-${BOOST_DEBUG_LIB
                           CACHE STRING "Boost debug libraries" FORCE)
 
 # Aliases to stay consistent with FindBoost
+set(BOOST_ROOT "${BOOST_INSTALL_DIR}" CACHE STRING "Boost root directory" FORCE)
+set(BOOST_INCLUDEDIR "${BOOST_INCLUDE_DIR}" CACHE STRING "Boost include directory" FORCE)
 set(Boost_INCLUDE_DIR "${BOOST_INCLUDE_DIR}" CACHE STRING "Boost include directory" FORCE)
 set(Boost_INCLUDE_DIRS "${BOOST_INCLUDE_DIR}" CACHE STRING "Boost include directory" FORCE)
+set(BOOST_LIBRARYDIR "${BOOST_LIBRARY_DIR}" CACHE STRING "Boost library directory" FORCE)
 set(Boost_LIBRARY_DIRS "${BOOST_LIBRARY_DIR}" CACHE STRING "Boost library directory" FORCE)
 set(Boost_LIBRARY_DIR_RELEASE "${BOOST_LIBRARY_DIR}" CACHE STRING "Boost release library directory" FORCE)
 set(Boost_LIBRARY_DIR_DEBUG "${BOOST_LIBRARY_DIR}" CACHE STRING "Boost debug library directory" FORCE)

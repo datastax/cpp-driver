@@ -31,7 +31,17 @@ endif()
 # Determine if Visual Studio is available
 if(MSVC_VERSION)
   # Get the internal and toolset version and VC root directory
-  string(REPLACE "v" "" VS_INTERNAL_VERSION ${CMAKE_VS_PLATFORM_TOOLSET})
+  if(CMAKE_VS_PLATFORM_TOOLSET)
+    string(REPLACE "v" "" VS_INTERNAL_VERSION ${CMAKE_VS_PLATFORM_TOOLSET})
+  endif()
+  if(DEFINED ENV{APPVEYOR} AND DEFINED ENV{VISUAL_STUDIO_INTERNAL_VERSION})
+    if (CMAKE_CL_64 AND
+        ($ENV{VISUAL_STUDIO_INTERNAL_VERSION} EQUAL 100 OR
+         $ENV{VISUAL_STUDIO_INTERNAL_VERSION} EQUAL 110))
+      # Attempt to handle express/community editions (VS 2010) on AppVeyor
+      set(VS_INTERNAL_VERSION $ENV{VISUAL_STUDIO_INTERNAL_VERSION})
+    endif()
+  endif()
   string(LENGTH ${VS_INTERNAL_VERSION} VS_INTERNAL_VERSION_LENGTH)
   math(EXPR VS_TOOLSET_MAJOR_VERSION_LENGTH "${VS_INTERNAL_VERSION_LENGTH} - 1")
   string(SUBSTRING ${VS_INTERNAL_VERSION} 0 ${VS_TOOLSET_MAJOR_VERSION_LENGTH} VS_TOOLSET_MAJOR_VERSION)
@@ -39,6 +49,13 @@ if(MSVC_VERSION)
   set(VS_TOOLSET_VERSION "${VS_TOOLSET_MAJOR_VERSION}.${VS_TOOLSET_MINOR_VERSION}")
 
   # Get the command VC directories for environment scripts
+  if(DEFINED ENV{APPVEYOR} AND DEFINED ENV{VISUAL_STUDIO_INTERNAL_VERSION})
+    if($ENV{VISUAL_STUDIO_INTERNAL_VERSION} EQUAL 100 OR
+       $ENV{VISUAL_STUDIO_INTERNAL_VERSION} EQUAL 110)
+      # Attempt to handle express/community editions (VS 2010/2012) on AppVeyor
+      set(CMAKE_VS_DEVENV_COMMAND "$ENV{ProgramFiles}/Microsoft Visual Studio ${VS_TOOLSET_VERSION}/Common7/IDE/devenv.exe")
+    endif()
+  endif()
   get_filename_component(DEVENV_DIR ${CMAKE_VS_DEVENV_COMMAND} DIRECTORY)
   get_filename_component(VS_VC_DIR ${DEVENV_DIR}/../../VC ABSOLUTE)
   get_filename_component(VS_TOOLS_DIR ${DEVENV_DIR}/../../Common7/Tools ABSOLUTE)
@@ -54,8 +71,13 @@ if(MSVC_VERSION)
     endif()
   else()
     # Determine if we are in a CI environment
-    if(DEFINED $ENV{APPVEYOR})
+    if(DEFINED ENV{APPVEYOR})
       set(MSVC_ENVIRONMENT_SCRIPT "${VS_VC_DIR}/vcvarsall.bat" CACHE STRING "Visual Studio environment script" FORCE)
+      if(CMAKE_CL_64)
+        set(MSVC_ENVIRONMENT_ARCH "x86_amd64" CACHE STRING "Visual Studio environment architecture" FORCE)
+      else()
+        set(MSVC_ENVIRONMENT_ARCH "x86" CACHE STRING "Visual Studio environment architecture" FORCE)
+      endif()
     else()
       # Determine the target architecture for the Visual Studio environment
       if(CMAKE_CL_64)

@@ -63,8 +63,7 @@ file(WRITE ${LIBSSH2_INSTALL_EXTRAS_SCRIPT}
   "@REM Generated install script for libssh2\r\n"
   "@ECHO OFF\r\n"
   "IF EXIST src\\libssh2.dir\\RelWithDebInfo\\*.pdb (\r\n"
-  "IF NOT EXIST \"${LIBSSH2_NATIVE_BINARY_DIR}\" MKDIR \"${LIBSSH2_NATIVE_BINARY_DIR}\"\r\n"
-  "  COPY /Y src\\libssh2.dir\\RelWithDebInfo\\*.pdb \"${LIBSSH2_NATIVE_BINARY_DIR}\"\r\n"
+  "  COPY /Y src\\libssh2.dir\\RelWithDebInfo\\*.pdb \"${LIBSSH2_NATIVE_LIBRARY_DIR}\"\r\n"
   "  IF NOT %ERRORLEVEL% EQU 0 (\r\n"
   "    EXIT /B 1\r\n"
   "  )\r\n"
@@ -78,8 +77,7 @@ externalproject_add(${LIBSSH2_LIBRARY_NAME}
   URL ${LIBSSH2_ARCHIVE_URL}
   DOWNLOAD_DIR ${LIBSSH2_PROJECT_PREFIX}
   INSTALL_DIR ${LIBSSH2_INSTALL_DIR}
-  CMAKE_ARGS -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    -DCMAKE_INSTALL_PREFIX=${LIBSSH2_INSTALL_DIR}
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${LIBSSH2_INSTALL_DIR}
     -DBUILD_SHARED_LIBS=Off # Only build static for test linking
     -DBUILD_EXAMPLES=Off
     -DBUILD_TESTING=Off

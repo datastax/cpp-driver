@@ -249,7 +249,7 @@ macro(CassConfigureInstall var_prefix pkg_config_stem)
   # Install the dynamic/shared library
   if(${var_prefix}_BUILD_SHARED)
     install(TARGETS ${PROJECT_LIB_NAME}
-        RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
+        RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable/pdb files
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
     if(${var_prefix}_INSTALL_PKG_CONFIG)
@@ -261,11 +261,16 @@ macro(CassConfigureInstall var_prefix pkg_config_stem)
         endif()
       endif()
     endif()
+    if(WIN32)
+      install(FILES $<TARGET_PDB_FILE:${PROJECT_LIB_NAME}>
+        DESTINATION "${INSTALL_DLL_EXE_DIR}"
+        OPTIONAL)
+    endif()
   endif()
 
   if(${var_prefix}_BUILD_STATIC)
     install(TARGETS ${PROJECT_LIB_NAME_STATIC}
-        RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
+        RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable/pdb files
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
     if(${var_prefix}_INSTALL_PKG_CONFIG)
@@ -277,13 +282,6 @@ macro(CassConfigureInstall var_prefix pkg_config_stem)
         endif()
       endif()
     endif()
-  endif()
-
-  if(WIN32)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/${PROJECT_LIB_NAME}.pdb"
-        DESTINATION "${INSTALL_DLL_EXE_DIR}" OPTIONAL)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/${PROJECT_LIB_NAME_STATIC}.pdb"
-        DESTINATION "${INSTALL_DLL_EXE_DIR}" OPTIONAL)
   endif()
 endmacro()
 
@@ -536,10 +534,6 @@ macro(CassUseBoost)
           message(FATAL_ERROR "Boost v${CASS_FOUND_BOOST_VERSION} Found: v${CASS_MINIMUM_BOOST_VERSION} or greater required")
         endif()
       endif()
-
-      # Assign Boost include and libraries
-      set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
-      set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
     endif()
   endif()
 
@@ -792,16 +786,24 @@ macro(CassSetCompilerFlags)
       add_definitions("/MP")
     endif()
 
-    # Remove/Replace linker flags in the event they are present
-    string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-    string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    # Enable link time optimization for all MSVC build configurations
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
+    set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
 
-    # Create specific linker flags
-    set(WINDOWS_LINKER_FLAGS "/INCREMENTAL:NO /LTCG /NODEFAULTLIB:LIBCMT.LIB /NODEFAULTLIB:LIBCMTD.LIB")
-    if(CASS_USE_STATIC_LIBS)
-      set(PROJECT_CXX_LINKER_FLAGS "${WINDOWS_LINKER_FLAGS}")
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${WINDOWS_LINKER_FLAGS}")
-    endif()
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /GL")
+    string(REGEX REPLACE "[-/]INCREMENTAL" "/INCREMENTAL:NO" CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO}")
+    set(CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO} /LTCG")
+    string(REGEX REPLACE "[-/]INCREMENTAL" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO}")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} /LTCG")
+    string(REGEX REPLACE "[-/]INCREMENTAL" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}")
+    set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} /LTCG")
+
+    set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /GL")
+    set(CMAKE_STATIC_LINKER_FLAGS_MINSIZEREL "${CMAKE_STATIC_LINKER_FLAGS_MINSIZEREL} /LTCG")
+    set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "${CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL} /LTCG")
+    set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "${CMAKE_EXE_LINKER_FLAGS_MINSIZEREL} /LTCG")
 
     # On Visual C++ -pedantic flag is not used,
     # -fPIC is not used on Windows platform (all DLLs are
@@ -816,6 +818,7 @@ macro(CassSetCompilerFlags)
     # Add preprocessor definitions for proper compilation
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)  # Remove warnings for not using safe functions (TODO: Fix codebase to be more secure for Visual Studio)
     add_definitions(-DNOMINMAX)                 # Does not define min/max macros
+    add_definitions(-D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING) # Remove warnings for TR1 deprecation (Visual Studio 15 2017); caused by sparsehash
 
     # Create the project, example, and test flags
     set(CASS_DRIVER_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
