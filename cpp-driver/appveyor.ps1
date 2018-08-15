@@ -568,7 +568,8 @@ Function Build-Driver {
 
   # Ensure Boost atomic is used for Visual Studio 2010 (increased performance)
   $use_boost_atomic = "Off"
-  If ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "100") {
+  If ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "100" -Or
+      ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "110" -And $Env:Platform -Like "x86")) {
     $use_boost_atomic = "On" # Enable Boost atomic usage
   }
 
