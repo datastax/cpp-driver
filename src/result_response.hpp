@@ -61,10 +61,7 @@ public:
 
   const ResultMetadata::Ptr& metadata() const { return metadata_; }
 
-  void set_metadata(ResultMetadata* metadata) {
-    metadata_.reset(metadata);
-    decode_first_row();
-  }
+  void set_metadata(const ResultMetadata::Ptr& metadata);
 
   const ResultMetadata::Ptr& result_metadata() const { return result_metadata_; }
 
