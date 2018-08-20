@@ -54,7 +54,18 @@ int MicroTimer::start(uv_loop_t* loop,
   if (state_ == STOPPED) {
     rc = uv_poll_start(handle_, UV_READABLE, on_timeout);
     if (rc != 0) return rc;
-    set_time(timeout_us);
+    struct itimerspec ts;
+    memset(&ts.it_interval, 0, sizeof(struct timespec));
+    if (timeout_us > 0) {
+      ts.it_value.tv_sec = timeout_us / (1000 * 1000);
+      ts.it_value.tv_nsec = (timeout_us % (1000 * 1000))  * 1000;
+    } else {
+      // If the timeout is 0 then set the smallest possible timeout (1 ns)
+      // because all zeros disables the timer.
+      ts.it_value.tv_sec = 0;
+      ts.it_value.tv_nsec = 1;
+    }
+    timerfd_settime(fd_, 0, &ts, NULL);
     state_ = STARTED;
   }
   callback_ = callback;
@@ -64,7 +75,9 @@ int MicroTimer::start(uv_loop_t* loop,
 void MicroTimer::stop() {
   if (state_ == STARTED) {
     state_ = STOPPED;
-    set_time(0);
+    struct itimerspec ts;
+    memset(&ts.it_interval, 0, sizeof(struct timespec));
+    timerfd_settime(fd_, 0, &ts, NULL);
     uv_poll_stop(handle_);
   }
 }
@@ -87,14 +100,6 @@ void MicroTimer::close_handle() {
 
 bool MicroTimer::is_running() const {
   return state_ == STARTED;
-}
-
-void MicroTimer::set_time(uint64_t timeout_us) {
-  struct itimerspec ts;
-  memset(&ts.it_interval, 0, sizeof(struct timespec));
-  ts.it_value.tv_sec = timeout_us / (1000 * 1000);
-  ts.it_value.tv_nsec = (timeout_us % (1000 * 1000))  * 1000;
-  timerfd_settime(fd_, 0, &ts, NULL);
 }
 
 void MicroTimer::on_timeout(uv_poll_t* poll, int status, int events) {

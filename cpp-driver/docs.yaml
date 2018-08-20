@@ -44,12 +44,14 @@ rewrites:
   - http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.x86_64.rpm: http://dl.fedoraproject.org/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm
   - ../../vc_build.bat: https://github.com/datastax/cpp-driver/blob/master/vc_build.bat
   - https://github.com/datastax/cpp-driver/tree/2.6.0/examples/duration/duration.c: https://github.com/datastax/cpp-driver/blob/master/examples/duration/duration.c
-  - examples/(.*): https://github.com/datastax/cpp-driver/blob/master/examples/\1
+  - http://www.datastax.com/documentation/cassandra/2.0/cassandra/dml/dml_config_consistency_c.html: https://docs.datastax.com/en/cassandra/3.0/cassandra/dml/dmlConfigConsistency.html
+  - ^examples/(.*): https://github.com/datastax/cpp-driver/blob/master/examples/\1
 versions:
-  - name: 2.10-beta1
-    ref: 2.10.0-beta1
   - name: 2.9
     ref: 2.9.0
+  - name: 2.10-beta1
+    ref: 2.10.0-beta1
+    prerelease: true
   - name: 2.8
     ref: 2.8.1
   - name: 2.7

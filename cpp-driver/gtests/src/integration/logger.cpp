@@ -142,3 +142,4 @@ void test::driver::Logger::reset_count() {
   cass::ScopedMutex lock(&mutex_);
   count_ = 0;
 }
+

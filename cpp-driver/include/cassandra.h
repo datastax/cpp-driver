@@ -1487,6 +1487,39 @@ cass_cluster_set_port(CassCluster* cluster,
                       int port);
 
 /**
+ * Sets the local address to bind when connecting to the cluster,
+ * if desired.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] name IP address to bind, or empty string for no binding.
+ * Only numeric addresses are supported; no resolution is done.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_local_address(CassCluster* cluster,
+                               const char* name);
+
+/**
+ * Same as cass_cluster_set_local_address(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_cluster_set_local_address()
+ *
+ * @see cass_cluster_set_local_address()
+ */
+CASS_EXPORT CassError
+cass_cluster_set_local_address_n(CassCluster* cluster,
+                                 const char* name,
+                                 size_t name_length);
+
+/**
  * Sets the SSL context and enables SSL.
  *
  * @public @memberof CassCluster
@@ -1550,6 +1583,36 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
                                            cass_bool_t enable);
+
+/**
+ * Sets default consistency level of statement.
+ *
+ * <b>Default:</b> CASS_CONSISTENCY_LOCAL_ONE
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_consistency(CassCluster* cluster,
+                             CassConsistency consistency);
+
+/**
+ * Sets default serial consistency level of statement.
+ *
+ * <b>Default:</b> CASS_CONSISTENCY_ANY
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_serial_consistency(CassCluster* cluster,
+                                    CassConsistency consistency);
 
 /**
  * Sets the number of IO threads. This is the number of threads

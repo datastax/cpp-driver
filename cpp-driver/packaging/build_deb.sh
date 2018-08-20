@@ -15,17 +15,23 @@ function header_version {
   /CASS_VERSION_MAJOR/ { major=$3 }
   /CASS_VERSION_MINOR/ { minor=$3 }
   /CASS_VERSION_PATCH/ { patch=$3 }
-  END { printf "%s.%s.%s", major, minor, patch }
+  /CASS_VERSION_SUFFIX/ { suffix=$3; gsub(/"/, "", suffix) }
+  END {
+    if (length(suffix) > 0)
+      printf "%s.%s.%s~%s", major, minor, patch, suffix
+    else
+      printf "%s.%s.%s", major, minor, patch
+  }
 EOF
-  version=$(grep '#define[ \t]\+CASS_VERSION_\(MAJOR\|MINOR\|PATCH\)' $1 | awk "$version_script")
-  if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  version=$(grep '#define[ \t]\+CASS_VERSION_\(MAJOR\|MINOR\|PATCH\|SUFFIX\)' $1 | awk "$version_script")
+  if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(~[a-zA-Z0-9_\-]+)?$ ]]; then
     echo "Unable to extract version from $1"
     exit 1
   fi
   echo "$version"
 }
 
-check_command "dch" "debhelper"
+check_command "dch" "devscripts"
 check_command "lsb_release" "lsb-release"
 
 version=$(header_version "../include/cassandra.h")

@@ -26,32 +26,6 @@ provided with the distribution:
 * [Ubuntu 16.04][ubuntu-16-04-dependencies]
 * [Windows][windows-dependencies]
 
-__Note__: DataStax products do not support big-endian systems.
-
-## What's New in 2.5/2.6
-
-* Support for [`duration`]
-* [Speculative execution]
-* [Idempotent statements]
-* [SSL] can be enabled without re-initializing the underlying library
-  (e.g. OpenSSL)
-
-More information about features included in 2.3 can be found in this [blog
-post][cpp-driver-2-3-blog-post].
-
-## Upgrading from 2.0 or 2.1 to 2.2+
-
-The new schema metadata API in 2.2 required some breaking API changes.
-Applications that used the previous schema metadata API from 2.0 and 2.1 will
-require some small modifications to use the new API. More information about the
-new schema metadata API can be found in this
-[blog post][cpp-driver-2-2-blog-post].
-
-## Upgrading from 1.0 to 2.0+
-
-There were a couple breaking API changes between 1.0 and 2.0 that are documented
-[here][cpp-driver-2-0-blog-post].
-
 ## Features
 
 * [Asynchronous API]
@@ -78,6 +52,7 @@ There were a couple breaking API changes between 1.0 and 2.0 that are documented
 * [Custom] authenticators
 * [Reverse DNS] with SSL peer identity verification support
 * Randomized contact points
+* [Speculative execution]
 
 ## Compatibility
 
@@ -91,6 +66,8 @@ Cassandra's native protocol. The current version works with:
 If using [DataStax Enterprise] the [DSE C/C++ driver] provides more features and
 better compatibility. A complete compatibility matrix for both Apache Cassandra
 and DataStax Enterprise can be found [here][cpp-driver-compatability-matrix].
+
+__Disclaimer__: DataStax products do not support big-endian systems.
 
 ## Documentation
 
@@ -222,9 +199,6 @@ limitations under the License.
 [ubuntu-14-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies
 [ubuntu-16-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies
 [windows-dependencies]: http://downloads.datastax.com/cpp-driver/windows/dependencies
-[cpp-driver-2-3-blog-post]: http://www.datastax.com/dev/blog/datastax-c-driver-2-3-ga-released
-[cpp-driver-2-2-blog-post]: http://www.datastax.com/dev/blog/datastax-c-driver-2-2-ga-released
-[cpp-driver-2-0-blog-post]: http://www.datastax.com/dev/blog/datastax-c-driver-2-0-released
 
 [Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures
 [Simple]: http://datastax.github.io/cpp-driver/topics/#executing-queries
@@ -249,7 +223,4 @@ limitations under the License.
 [blacklist DC]: http://datastax.github.io/cpp-driver/topics/configuration/#datacenter
 [Custom]: http://datastax.github.io/cpp-driver/topics/security/#custom
 [Reverse DNS]: http://datastax.github.io/cpp-driver/topics/security/ssl/#enabling-cassandra-identity-verification
-
-[`duration`]: examples/duration/duration.c
 [Speculative execution]: http://datastax.github.io/cpp-driver/topics/configuration/#speculative-execution
-[Idempotent statements]: http://datastax.github.io/cpp-driver/topics/configuration/#query-idempotence

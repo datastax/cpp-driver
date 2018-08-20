@@ -43,7 +43,7 @@
 
 #include <string.h>
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 #define BIO_set_data(b, p) ((b)->ptr = p)
 #define BIO_get_shutdown(b) ((b)->shutdown)
 #define BIO_set_shutdown(b, s) ((b)->shutdown = s)
@@ -53,7 +53,7 @@
 namespace cass {
 namespace rb {
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 const BIO_METHOD RingBufferBio::method_ = {
   BIO_TYPE_MEM,
   "ring buffer",
@@ -90,7 +90,7 @@ void RingBufferBio::cleanup() {
 BIO* RingBufferBio::create(RingBufferState* state) {
   // The const_cast doesn't violate const correctness.  OpenSSL's usage of
   // BIO_METHOD is effectively const but BIO_new() takes a non-const argument.
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
   BIO* bio = BIO_new(const_cast<BIO_METHOD*>(&method_));
 #else
   BIO* bio = BIO_new(method_);
