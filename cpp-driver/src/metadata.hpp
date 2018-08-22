@@ -488,8 +488,7 @@ public:
   Iterator* iterator_views() const { return Memory::allocate<ViewIteratorVec>(views_); }
   const ViewMetadata* get_view(const String& name) const;
   virtual void add_column(const VersionNumber& server_version, const ColumnMetadata::Ptr& column);
-  void add_view(const ViewMetadata::Ptr& view);
-  void sort_views();
+  void set_views(const ViewMetadata::Vec& views);
 
   Iterator* iterator_indexes() const { return Memory::allocate<IndexIterator>(indexes_); }
   const IndexMetadata* get_index(const String& name) const;
@@ -580,10 +579,6 @@ public:
 
   StringRef strategy_class() const { return strategy_class_; }
   const Value* strategy_options() const { return &strategy_options_; }
-
-private:
-  void internal_add_table(const TableMetadata::Ptr& table,
-                          const ViewMetadata::Vec& views);
 
 private:
   StringRef strategy_class_;
