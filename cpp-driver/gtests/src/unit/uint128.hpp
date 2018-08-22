@@ -31,6 +31,7 @@
 #include <iostream>
 #include <climits>
 #include <stdint.h>
+#include <string>
 
 namespace numeric {
 

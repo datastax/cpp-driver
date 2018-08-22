@@ -70,6 +70,24 @@ CassError cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
   return CASS_OK;
 }
 
+CassError cass_cluster_set_consistency(CassCluster* cluster,
+                                       CassConsistency consistency) {
+  if (consistency == CASS_CONSISTENCY_UNKNOWN) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_consistency(consistency);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_serial_consistency(CassCluster* cluster,
+                                              CassConsistency consistency) {
+  if (consistency == CASS_CONSISTENCY_UNKNOWN) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_serial_consistency(consistency);
+  return CASS_OK;
+}
+
 CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
                                           unsigned num_threads) {
   if (num_threads == 0) {
@@ -475,6 +493,25 @@ CassError cass_cluster_set_prepare_on_all_hosts(CassCluster* cluster,
 CassError cass_cluster_set_prepare_on_up_or_add_host(CassCluster* cluster,
                                                      cass_bool_t enabled) {
   cluster->config().set_prepare_on_up_or_add_host(enabled == cass_true);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_local_address(CassCluster* cluster,
+                                                     const char* name) {
+  return cass_cluster_set_local_address_n(cluster, name, SAFE_STRLEN(name));
+}
+
+CassError cass_cluster_set_local_address_n(CassCluster* cluster,
+                                                     const char* name,
+                                                     size_t name_length) {
+  cass::Address address;  // default to AF_UNSPEC
+  if (name_length == 0 ||
+      name == NULL ||
+      cass::Address::from_string(cass::String(name, name_length), 0, &address)) {
+    cluster->config().set_local_address(address);
+  } else {
+    return CASS_ERROR_LIB_HOST_RESOLUTION;
+  }
   return CASS_OK;
 }
 

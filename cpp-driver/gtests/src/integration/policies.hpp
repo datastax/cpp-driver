@@ -21,3 +21,4 @@
 #include "policies/next_host_retry_policy.hpp"
 
 #endif // __TEST_POLICIES_HPP__
+

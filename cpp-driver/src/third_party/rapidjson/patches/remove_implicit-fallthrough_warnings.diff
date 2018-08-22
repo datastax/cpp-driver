@@ -1,0 +1,23 @@
+diff -rup /tmp/rapidjson/include/rapidjson/reader.h
+--- /tmp/rapidjson/include/rapidjson/reader.h	2017-08-25 16:42:26.786046697 +0000
++++ rapidjson/reader.h	2017-08-25 16:45:04.950919345 +0000
+@@ -495,8 +495,7 @@ private:
+                 case '}': 
+                     if (!handler.EndObject(memberCount))
+                         RAPIDJSON_PARSE_ERROR(kParseErrorTermination, is.Tell());
+-                    else
+-                        return;
++                    return;
+                 default:  RAPIDJSON_PARSE_ERROR(kParseErrorObjectMissCommaOrCurlyBracket, is.Tell());
+             }
+         }
+@@ -532,8 +531,7 @@ private:
+                 case ']': 
+                     if (!handler.EndArray(elementCount))
+                         RAPIDJSON_PARSE_ERROR(kParseErrorTermination, is.Tell());
+-                    else
+-                        return;
++                    return;
+                 default:  RAPIDJSON_PARSE_ERROR(kParseErrorArrayMissCommaOrSquareBracket, is.Tell());
+             }
+         }

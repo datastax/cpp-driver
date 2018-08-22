@@ -30,7 +30,7 @@
 
 #define DEBUG_SSL 0
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 #define ASN1_STRING_get0_data ASN1_STRING_data
 #else
 #define SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE SSL_F_USE_CERTIFICATE_CHAIN_FILE
@@ -171,7 +171,7 @@ static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
     int r;
     unsigned long err;
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
     if (ctx->extra_certs != NULL) {
       sk_X509_pop_free(ctx->extra_certs, X509_free);
       ctx->extra_certs = NULL;
@@ -181,7 +181,7 @@ static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
 #endif
 
     while ((ca = PEM_read_bio_X509(in, NULL, pem_password_callback, NULL)) != NULL) {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
       r = SSL_CTX_add_extra_chain_cert(ctx, ca);
 #else
       r = SSL_CTX_add0_chain_cert(ctx, ca);

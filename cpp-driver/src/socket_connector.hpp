@@ -49,6 +49,7 @@ struct SocketSettings {
   bool tcp_keepalive_enabled;
   unsigned tcp_keepalive_delay_secs;
   unsigned max_reusable_write_objects;
+  Address local_address;
 };
 
 /**
@@ -69,6 +70,7 @@ public:
     SOCKET_ERROR_CLOSE,
     SOCKET_ERROR_CONNECT,
     SOCKET_ERROR_INIT,
+    SOCKET_ERROR_BIND,
     SOCKET_ERROR_RESOLVE,
     SOCKET_ERROR_RESOLVE_TIMEOUT,
     SOCKET_ERROR_SSL_HANDSHAKE,
@@ -145,6 +147,7 @@ private:
   void on_error(SocketError code, const String& message);
   void on_connect(TcpConnector* tcp_connecter);
   void on_resolve(NameResolver* resolver);
+  void on_no_resolve(Timer* timer);
 
 private:
   Address address_;
@@ -154,6 +157,7 @@ private:
   Socket::Ptr socket_;
   TcpConnector::Ptr connector_;
   NameResolver::Ptr resolver_;
+  Timer no_resolve_timer_;
 
   SocketError error_code_;
   String error_message_;

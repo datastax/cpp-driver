@@ -1145,7 +1145,7 @@ void KeyspaceMetadata::drop_table_or_view(const String& table_or_view_name) {
       // Remove view from the base table's views
       ViewMetadata::Vec views(view->base_table()->views());
       ViewMetadata::Vec::iterator i = std::lower_bound(views.begin(), views.end(), table_or_view_name);
-      if (i != views.end() &&  (*i)->name() == table_or_view_name) {
+      if (i != views.end() && (*i)->name() == table_or_view_name) {
         views.erase(i);
       }
 

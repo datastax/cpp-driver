@@ -112,3 +112,4 @@ private:
 } // namespace test
 
 #endif // __TEST_LOGGER_HPP__
+

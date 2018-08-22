@@ -205,7 +205,7 @@ public:
     auth_provider_.reset(Memory::allocate<PlainTextAuthProvider>(username, password));
   }
 
-  const LoadBalancingPolicy::Ptr load_balancing_policy() const {
+  const LoadBalancingPolicy::Ptr& load_balancing_policy() const {
     return default_profile().load_balancing_policy();
   }
 
@@ -351,6 +351,12 @@ public:
     prepare_on_up_or_add_host_ = enabled;
   }
 
+  const Address& local_address() const { return local_address_; }
+
+  void set_local_address(const Address& address) {
+    local_address_ = address;
+  }
+
   bool no_compact() const { return no_compact_; }
 
   void set_no_compact(bool enabled) {
@@ -393,6 +399,7 @@ private:
   ExecutionProfile::Map profiles_;
   bool prepare_on_all_hosts_;
   bool prepare_on_up_or_add_host_;
+  Address local_address_;
   bool no_compact_;
 };
 

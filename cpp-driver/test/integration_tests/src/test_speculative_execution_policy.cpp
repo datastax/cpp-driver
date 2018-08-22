@@ -67,6 +67,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
    * query execution.
    */
   void initialize() {
+    cass_cluster_set_use_beta_protocol_version(cluster, cass_false);
     create_session();
     test_utils::execute_query(session, str(boost::format(
       test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)

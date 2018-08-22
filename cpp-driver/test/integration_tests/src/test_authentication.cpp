@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(empty_credentials)
   invalid_credentials(3, NULL, "pass", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   invalid_credentials(4, NULL, "pass", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 
-  expected_error = "and/or password are incorrect"; // Handle multuple versions of Cassandra and DSE
+  expected_error = "and/or password are incorrect"; // Handle multiple versions of Cassandra and DSE
   invalid_credentials(3, "user", NULL, expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
   invalid_credentials(4, "user", NULL, expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
 }
