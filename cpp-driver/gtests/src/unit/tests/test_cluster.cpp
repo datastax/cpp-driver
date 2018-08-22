@@ -188,6 +188,10 @@ public:
       next();
     }
 
+    void close_handle() {
+      timer_.close_handle();
+    }
+
     bool is_done() {
       return (action_it_ == actions_.end());
     }
@@ -271,6 +275,7 @@ public:
         outage_plan_->run();
       } else {
         if (outage_plan_->is_done()) {
+          outage_plan_->close_handle(); // Stop and clean up outage plan timer handle on the original event loop thread.
           cluster->close();
         }
       }
@@ -488,7 +493,7 @@ TEST_F(ClusterUnitTest, ReconnectToDiscoveredHosts) {
 
   ClusterSettings settings;
   settings.reconnect_timeout_ms = 1; // Reconnect immediately
-  settings.control_connection_settings.connection_settings.connect_timeout_ms = 100;
+  settings.control_connection_settings.connection_settings.connect_timeout_ms = 200; // Give enough time for the connection to complete
 
   connector
       ->with_settings(settings)
@@ -534,7 +539,7 @@ TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
 
   ClusterSettings settings;
   settings.reconnect_timeout_ms = 1; // Reconnect immediately
-  settings.control_connection_settings.connection_settings.connect_timeout_ms = 100;
+  settings.control_connection_settings.connection_settings.connect_timeout_ms = 200; // Give enough time for the connection to complete
 
   connector
       ->with_settings(settings)
