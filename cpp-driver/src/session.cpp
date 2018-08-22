@@ -119,6 +119,13 @@ void cass_session_get_metrics(const CassSession* session,
                                CassMetrics* metrics) {
   const cass::Metrics* internal_metrics = session->metrics();
 
+  if (internal_metrics == NULL)  {
+    LOG_WARN("Attempted to get metrics before connecting session object");
+    CassMetrics zeroed_metrics = { };
+    *metrics = zeroed_metrics;
+    return;
+  }
+
   cass::Metrics::Histogram::Snapshot requests_snapshot;
   internal_metrics->request_latencies.get_snapshot(&requests_snapshot);
 
@@ -150,6 +157,13 @@ void cass_session_get_metrics(const CassSession* session,
 void  cass_session_get_speculative_execution_metrics(const CassSession* session,
                                                      CassSpeculativeExecutionMetrics* metrics) {
   const cass::Metrics* internal_metrics = session->metrics();
+
+  if (internal_metrics == NULL)  {
+    LOG_WARN("Attempted to get speculative execution metrics before connecting session object");
+    CassSpeculativeExecutionMetrics zeroed_metrics = { };
+    *metrics = zeroed_metrics;
+    return;
+  }
 
   cass::Metrics::Histogram::Snapshot speculative_snapshot;
   internal_metrics->speculative_request_latencies.get_snapshot(&speculative_snapshot);
