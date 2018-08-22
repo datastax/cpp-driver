@@ -16,11 +16,11 @@ function header_version {
   /DSE_VERSION_MINOR/ { minor=$3 }
   /DSE_VERSION_PATCH/ { patch=$3 }
   /DSE_VERSION_SUFFIX/ { suffix=$3; gsub(/"/, "", suffix) }
-  END { 
+  END {
     if (length(suffix) > 0)
       printf "%s.%s.%s~%s", major, minor, patch, suffix
     else
-      printf "%s.%s.%s", major, minor, patch 
+      printf "%s.%s.%s", major, minor, patch
   }
 EOF
   version=$(grep '#define[ \t]\+DSE_VERSION_\(MAJOR\|MINOR\|PATCH\|SUFFIX\)' $1 | awk "$version_script")
@@ -43,7 +43,7 @@ files="CMakeLists.txt include src cmake cpp-driver/include cpp-driver/src cpp-dr
 
 echo "Building version $version"
 
-libuv_version=$(dpkg -s libuv | grep 'Version' | awk '{ print $2 }')
+libuv_version=$(dpkg -s libuv1 | grep 'Version' | awk '{ print $2 }')
 
 if [[ -e $libuv_version ]]; then
   echo "'libuv' required, but not installed"

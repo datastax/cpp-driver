@@ -6,6 +6,7 @@ schedules:
 architecture:
   - x64
 os:
+  - ubuntu/bionic64/cpp
   - ubuntu/trusty64/cpp
   - ubuntu/xenial64
   - centos/6-64
@@ -26,6 +27,8 @@ release:
             TOKENS=($(echo ${OS_VERSION} | tr "/" " "))
             DISTRO=${TOKENS[0]}
             RELEASE=${TOKENS[1]}
+            SHA=$(echo $GIT_COMMIT | cut -c1-7)
+            HEADER_FILE="include/dse.h"
 
             if [ "${DISTRO}" = "ubuntu" ]; then
               NAME=$(echo ${RELEASE%??})
@@ -36,6 +39,8 @@ release:
                 RELEASE=14.04
               elif [ "${NAME}" = "xenial" ]; then
                 RELEASE=16.04
+              elif [ "${NAME}" = "bionic" ] || [ "${NAME}" = "bionic64" ]; then
+                RELEASE=18.04
               else
                 printf "Unsupported Ubuntu Version: %s\n" ${RELEASE}
                 exit 1
@@ -52,9 +57,28 @@ release:
               exit 1
             fi
 
+            # Extract driver version from the header file
+            DRIVER_VERSION=$(grep '#define[ \t]\+DSE_VERSION_\(MAJOR\|MINOR\|PATCH\|SUFFIX\)' $HEADER_FILE  | awk '
+            BEGIN { major="?"; minor="?"; patch="?" }
+            /DSE_VERSION_MAJOR/ { major=$3 }
+            /DSE_VERSION_MINOR/ { minor=$3 }
+            /DSE_VERSION_PATCH/ { patch=$3 }
+            /DSE_VERSION_SUFFIX/ { suffix=$3; gsub(/"/, "", suffix) }
+            END {
+              if (length(suffix) > 0)
+                printf "%s.%s.%s-%s", major, minor, patch, suffix
+              else
+                printf "%s.%s.%s", major, minor, patch
+              }
+            ')
+             if [[ ! $DRIVER_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9_\-]+)?$ ]]; then
+              echo "Unable to extract version from $HEADER_FILE"
+              exit 1
+            fi
+
             pushd packaging
 
-            mkdir packages
+            mkdir -p packages
 
             # Build libuv, install, and copy to "packages"
             echo "Building libuv Packages [${LIBUV_VERSION}] ...\n"
@@ -103,8 +127,8 @@ release:
             fi
 
             # Uploading driver packages
-            curl -$ARTIFACTORY_CREDS -T "{$(echo dse-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-dse-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/dse/v$version/"
+            curl -$ARTIFACTORY_CREDS -T "{$(echo dse-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-dse-driver/builds/$version/$SHA/$DISTRO/$RELEASE/dse/v$DRIVER_VERSION/"
 
             # Uploading libuv packages
-            curl -$ARTIFACTORY_CREDS -T "{$(echo libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-dse-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
+            curl -$ARTIFACTORY_CREDS -T "{$(echo libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-dse-driver/builds/$version/$SHA/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
             popd
