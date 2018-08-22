@@ -14,9 +14,9 @@
   limitations under the License.
 */
 
-#include "timer.hpp"
-
 #include "loop_test.hpp"
+
+#include "timer.hpp"
 
 using namespace cass;
 

@@ -17,10 +17,10 @@
 #ifndef LOOP_TEST_HPP
 #define LOOP_TEST_HPP
 
-#include <gtest/gtest.h>
+#include "unit.hpp"
 #include <uv.h>
 
-class LoopTest : public testing::Test {
+class LoopTest : public Unit {
 public:
   uv_loop_t* loop() { return &loop_; }
 

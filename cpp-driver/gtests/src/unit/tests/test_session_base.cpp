@@ -16,12 +16,12 @@
 
 #include <gtest/gtest.h>
 
+#include "unit.hpp"
+
 #include "cluster.hpp"
 #include "query_request.hpp"
-#include "mockssandra_test.hpp"
 #include "session_base.hpp"
 
-#define WAIT_FOR_TIME 5 * 1000 * 1000 // 5 seconds
 #define KEYSPACE "datastax"
 
 class TestSessionBase : public cass::SessionBase {
@@ -48,7 +48,7 @@ protected:
                           const cass::TokenMap::Ptr& token_map) {
     ++connected_;
     ASSERT_STREQ("127.0.0.1", connected_host->address_string().c_str());
-    ASSERT_EQ(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, protocol_version);
+    ASSERT_EQ(PROTOCOL_VERSION, protocol_version);
     ASSERT_EQ(1, hosts.size());
     ASSERT_EQ(state(), SESSION_STATE_CONNECTING);
     notify_connected();
@@ -74,10 +74,11 @@ private:
   int closed_;
 };
 
-class SessionBaseUnitTest : public mockssandra::SimpleClusterTest { };
+class SessionBaseUnitTest : public Unit { };
 
 TEST_F(SessionBaseUnitTest, Simple) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
@@ -103,7 +104,8 @@ TEST_F(SessionBaseUnitTest, Simple) {
 }
 
 TEST_F(SessionBaseUnitTest, SimpleEmptyKeyspaceWithoutRandom) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
@@ -130,9 +132,10 @@ TEST_F(SessionBaseUnitTest, SimpleEmptyKeyspaceWithoutRandom) {
 }
 
 TEST_F(SessionBaseUnitTest, Ssl) {
+  mockssandra::SimpleCluster cluster(simple());
   cass::ClusterSettings settings;
-  settings.control_connection_settings.connection_settings = use_ssl();
-  start_all();
+  settings.control_connection_settings.connection_settings = use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
@@ -159,7 +162,8 @@ TEST_F(SessionBaseUnitTest, Ssl) {
 }
 
 TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsIp) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.set_use_randomized_contact_points(false);
@@ -186,7 +190,8 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsIp) {
 }
 
 TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsHostname) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("doesnotexist.dne");
@@ -214,8 +219,8 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsHostname) {
 TEST_F(SessionBaseUnitTest, InvalidProtocol) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   builder.with_supported_protocol_versions(0, 0); // Don't support any valid protocol version
-  mockssandra::SimpleCluster cluster(builder.build(), 1);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(builder.build());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
@@ -231,9 +236,9 @@ TEST_F(SessionBaseUnitTest, InvalidProtocol) {
 }
 
 TEST_F(SessionBaseUnitTest, SslError) {
-  cass::ClusterSettings settings;
-  settings.control_connection_settings.connection_settings = use_ssl();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::SslContext::Ptr invalid_ssl_context(cass::SslContextFactory::create());
   invalid_ssl_context->set_verify_flags(CASS_SSL_VERIFY_PEER_CERT);
@@ -252,8 +257,8 @@ TEST_F(SessionBaseUnitTest, SslError) {
 }
 
 TEST_F(SessionBaseUnitTest, BadCredentials) {
-  mockssandra::SimpleCluster cluster(mockssandra::AuthRequestHandlerBuilder().build());
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");

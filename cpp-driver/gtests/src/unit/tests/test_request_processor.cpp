@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "mockssandra_test.hpp"
+#include "unit.hpp"
 #include "test_utils.hpp"
 
 #include "event_loop.hpp"
@@ -25,28 +25,22 @@
 #include "request_processor_initializer.hpp"
 #include "ref_counted.hpp"
 
+#define NUM_NODES 3
+
 using namespace cass;
 
-#define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
-#define PORT 9042
-#define WAIT_FOR_TIME 5 * 1000 * 1000 // 5 seconds
-
-class RequestProcessorUnitTest : public mockssandra::SimpleClusterTest {
+class RequestProcessorUnitTest : public Unit {
 public:
-  RequestProcessorUnitTest()
-    : mockssandra::SimpleClusterTest(3,
-                                     mockssandra::SimpleRequestHandlerBuilder().build()) { }
-
   EventLoop* event_loop() { return &event_loop_; }
 
   virtual void SetUp() {
-    mockssandra::SimpleClusterTest::SetUp();
+    Unit::SetUp();
     ASSERT_EQ(0, event_loop_.init());
     ASSERT_EQ(0, event_loop_.run());
   }
 
   virtual void TearDown() {
-    mockssandra::SimpleClusterTest::TearDown();
+    Unit::TearDown();
     event_loop_.close_handles();
     event_loop_.join();
   }
@@ -212,7 +206,8 @@ private:
 };
 
 TEST_F(RequestProcessorUnitTest, Simple) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 
@@ -232,7 +227,8 @@ TEST_F(RequestProcessorUnitTest, Simple) {
 }
 
 TEST_F(RequestProcessorUnitTest, CloseWithRequestsPending) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 
@@ -271,9 +267,8 @@ TEST_F(RequestProcessorUnitTest, CloseWithRequestsPending) {
 }
 
 TEST_F(RequestProcessorUnitTest, Auth) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::AuthRequestHandlerBuilder().build(), 3);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 
@@ -299,10 +294,10 @@ TEST_F(RequestProcessorUnitTest, Auth) {
 }
 
 TEST_F(RequestProcessorUnitTest, Ssl) {
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.connection_settings =  use_ssl();
-
-  start_all();
+  settings.connection_pool_settings.connection_settings =  use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 
@@ -324,7 +319,8 @@ TEST_F(RequestProcessorUnitTest, Ssl) {
 }
 
 TEST_F(RequestProcessorUnitTest, NotifyAddRemoveHost) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 
@@ -363,7 +359,8 @@ TEST_F(RequestProcessorUnitTest, NotifyAddRemoveHost) {
 }
 
 TEST_F(RequestProcessorUnitTest, CloseDuringReconnect) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 
@@ -390,7 +387,7 @@ TEST_F(RequestProcessorUnitTest, CloseDuringReconnect) {
 
   RequestProcessor::Ptr processor(connect_future->processor());
 
-  stop(1);
+  cluster.stop(1);
   test::Utils::msleep(200); // Give time for the reconnect to start
   processor->close();
 
@@ -398,7 +395,8 @@ TEST_F(RequestProcessorUnitTest, CloseDuringReconnect) {
 }
 
 TEST_F(RequestProcessorUnitTest, CloseDuringAddNewHost) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 
@@ -431,7 +429,8 @@ TEST_F(RequestProcessorUnitTest, CloseDuringAddNewHost) {
 }
 
 TEST_F(RequestProcessorUnitTest, PoolDown) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
   Host::Ptr target_host(hosts.find(Address("127.0.0.1", PORT))->second);
@@ -457,14 +456,15 @@ TEST_F(RequestProcessorUnitTest, PoolDown) {
 
   ASSERT_TRUE(up_future->wait_for(WAIT_FOR_TIME));
 
-  stop(1);
+  cluster.stop(1);
   ASSERT_TRUE(down_future->wait_for(WAIT_FOR_TIME));
 }
 
 TEST_F(RequestProcessorUnitTest, PoolUp) {
   // Only start specific nodes
-  start(2);
-  start(3);
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start(2), 0);
+  ASSERT_EQ(cluster.start(3), 0);
 
   HostMap hosts(generate_hosts());
   Host::Ptr target_host(hosts.find(Address("127.0.0.1", PORT))->second);
@@ -494,14 +494,13 @@ TEST_F(RequestProcessorUnitTest, PoolUp) {
 
   ASSERT_TRUE(down_future->wait_for(WAIT_FOR_TIME));
 
-  start(1);
+  ASSERT_EQ(cluster.start(1), 0);
   ASSERT_TRUE(up_future->wait_for(WAIT_FOR_TIME));
 }
 
 TEST_F(RequestProcessorUnitTest, InvalidAuth) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::AuthRequestHandlerBuilder().build(), 3);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 
@@ -530,8 +529,9 @@ TEST_F(RequestProcessorUnitTest, InvalidAuth) {
 }
 
 TEST_F(RequestProcessorUnitTest, InvalidSsl) {
-  use_ssl();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 

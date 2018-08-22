@@ -16,9 +16,8 @@
 
 #include <gtest/gtest.h>
 
-#include "mockssandra.hpp"
 #include "loop_test.hpp"
-
+#
 #include "connector.hpp"
 #include "socket_connector.hpp"
 #include "ssl.hpp"
@@ -101,16 +100,9 @@ public:
     server_.use_close_immediately();
   }
 
-  virtual void SetUp() {
-    LoopTest::SetUp();
-    saved_log_level_ = Logger::log_level();
-    Logger::set_log_level(CASS_LOG_DISABLED);
-  }
-
   virtual void TearDown() {
-    LoopTest::TearDown();
+    Unit::TearDown();
     close();
-    Logger::set_log_level(saved_log_level_);
   }
 
   static void on_socket_connected(SocketConnector* connector, String* result) {
@@ -124,7 +116,7 @@ public:
         socket->set_handler(
               Memory::allocate<TestSocketHandler>(result));
       }
-      const char* data = "The socket is sucessfully connected and wrote data - ";
+      const char* data = "The socket is successfully connected and wrote data - ";
       socket->write(Memory::allocate<BufferSocketRequest>(Buffer(data, strlen(data))));
       socket->write(Memory::allocate<BufferSocketRequest>(Buffer("Closed", sizeof("Closed") - 1)));
       socket->flush();
@@ -167,7 +159,7 @@ TEST_F(SocketUnitTest, Simple) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(result, "The socket is sucessfully connected and wrote data - Closed");
+  EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
 }
 
 TEST_F(SocketUnitTest, Ssl) {
@@ -185,7 +177,7 @@ TEST_F(SocketUnitTest, Ssl) {
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
-  EXPECT_EQ(result, "The socket is sucessfully connected and wrote data - Closed");
+  EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
 }
 
 TEST_F(SocketUnitTest, Refused) {

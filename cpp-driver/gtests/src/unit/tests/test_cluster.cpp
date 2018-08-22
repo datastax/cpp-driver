@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "mockssandra_test.hpp"
+#include "unit.hpp"
 #include "test_utils.hpp"
 
 #include "cluster_connector.hpp"
@@ -24,26 +24,16 @@
 
 using namespace cass;
 
-#define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
-#define PORT 9042
-#define WAIT_FOR_TIME 5 * 1000 * 1000 // 5 seconds
-
-class ClusterUnitTest : public mockssandra::SimpleClusterTest {
+class ClusterUnitTest : public Unit {
 public:
-  ClusterUnitTest()
-    : mockssandra::SimpleClusterTest(3,
-                                     mockssandra::SimpleRequestHandlerBuilder().build()) { }
-
   EventLoop* event_loop() { return &event_loop_; }
 
   virtual void SetUp() {
-    mockssandra::SimpleClusterTest::SetUp();
-    ASSERT_EQ(0, event_loop_.init());
+    ASSERT_EQ(0, event_loop_.init("ClusterUnitTest"));
     ASSERT_EQ(0, event_loop_.run());
   }
 
   virtual void TearDown() {
-    mockssandra::SimpleClusterTest::TearDown();
     event_loop_.close_handles();
     event_loop_.join();
   }
@@ -191,14 +181,6 @@ public:
 
     void remove_node(size_t node, uint64_t timeout = 500) {
       actions_.push_back(Action(REMOVE_NODE, node, timeout));
-    }
-
-    void remove_host(size_t node) {
-      cluster_->remove(node);
-    }
-
-    void add_host(size_t node) {
-      cluster_->add(node);
     }
 
     void run() {
@@ -360,7 +342,8 @@ private:
 };
 
 TEST_F(ClusterUnitTest, Simple) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), 3);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
@@ -377,7 +360,8 @@ TEST_F(ClusterUnitTest, Simple) {
 }
 
 TEST_F(ClusterUnitTest, Resolve) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), 3);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ContactPointList contact_points;
   contact_points.push_back("localhost");
@@ -393,9 +377,8 @@ TEST_F(ClusterUnitTest, Resolve) {
 }
 
 TEST_F(ClusterUnitTest, Auth) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::AuthRequestHandlerBuilder().build());
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
@@ -418,10 +401,10 @@ TEST_F(ClusterUnitTest, Auth) {
 }
 
 TEST_F(ClusterUnitTest, Ssl) {
+  mockssandra::SimpleCluster cluster(simple(), 3);
   ClusterSettings settings;
-  settings.control_connection_settings.connection_settings = use_ssl();
-
-  start_all();
+  settings.control_connection_settings.connection_settings = use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
@@ -440,7 +423,8 @@ TEST_F(ClusterUnitTest, Ssl) {
 }
 
 TEST_F(ClusterUnitTest, Cancel) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), 3);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Vector<Future::Ptr> connect_futures;
   Vector<ClusterConnector::Ptr> connectors;
@@ -480,9 +464,8 @@ TEST_F(ClusterUnitTest, Cancel) {
 }
 
 TEST_F(ClusterUnitTest, ReconnectToDiscoveredHosts) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::SimpleRequestHandlerBuilder().build(), 3);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(simple(), 3);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   OutagePlan outage_plan(event_loop()->loop(), &cluster);
 
@@ -525,9 +508,8 @@ TEST_F(ClusterUnitTest, ReconnectToDiscoveredHosts) {
 }
 
 TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::SimpleRequestHandlerBuilder().build(), 3);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(simple(), 3);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   OutagePlan outage_plan(event_loop()->loop(), &cluster);
 
@@ -579,8 +561,7 @@ TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
 }
 
 TEST_F(ClusterUnitTest, CloseDuringReconnect) {
-  mockssandra::SimpleCluster mock_cluster(
-        mockssandra::SimpleRequestHandlerBuilder().build(), 1);
+  mockssandra::SimpleCluster mock_cluster(simple());
   mock_cluster.start_all();
 
   ContactPointList contact_points;
@@ -615,7 +596,8 @@ TEST_F(ClusterUnitTest, CloseDuringReconnect) {
 }
 
 TEST_F(ClusterUnitTest, NotifyDownUp) {
-  start_all();
+  mockssandra::SimpleCluster mock_cluster(simple(), 3);
+  mock_cluster.start_all();
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
@@ -658,8 +640,8 @@ TEST_F(ClusterUnitTest, NotifyDownUp) {
 TEST_F(ClusterUnitTest, ProtocolNegotiation) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   builder.with_supported_protocol_versions(1, PROTOCOL_VERSION - 1); // Support one less than our current version
-  mockssandra::SimpleCluster cluster(builder.build(), 1);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(builder.build());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
@@ -680,8 +662,8 @@ TEST_F(ClusterUnitTest, ProtocolNegotiation) {
 TEST_F(ClusterUnitTest, NoSupportedProtocols) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   builder.with_supported_protocol_versions(0, 0); // Don't support any valid protocol version
-  mockssandra::SimpleCluster cluster(builder.build(), 1);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(builder.build());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
@@ -699,7 +681,8 @@ TEST_F(ClusterUnitTest, NoSupportedProtocols) {
 }
 
 TEST_F(ClusterUnitTest, FindValidHost) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), 3);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ContactPointList contact_points;
   contact_points.push_back("127.99.99.1"); // Invalid
@@ -744,9 +727,8 @@ TEST_F(ClusterUnitTest, NoHostsAvailable) {
 }
 
 TEST_F(ClusterUnitTest, InvalidAuth) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::AuthRequestHandlerBuilder().build());
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
@@ -770,8 +752,9 @@ TEST_F(ClusterUnitTest, InvalidAuth) {
 }
 
 TEST_F(ClusterUnitTest, InvalidSsl) {
-  use_ssl();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), 3);
+  use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");

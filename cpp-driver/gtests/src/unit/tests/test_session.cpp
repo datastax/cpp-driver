@@ -16,15 +16,16 @@
 
 #include <gtest/gtest.h>
 
-#include "mockssandra.hpp"
+#include "unit.hpp"
 #include "query_request.hpp"
 #include "session.hpp"
 
-#define WAIT_FOR_TIME 5 * 1000 * 1000 // 5 seconds
 #define KEYSPACE "datastax"
 #define PORT 9042
 
-TEST(SessionUnitTest, ExecuteQueryNotConnected) {
+class SessionUnitTest : public Unit { };
+
+TEST_F(SessionUnitTest, ExecuteQueryNotConnected) {
   cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
 
   cass::Session session;
@@ -32,7 +33,7 @@ TEST(SessionUnitTest, ExecuteQueryNotConnected) {
   ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, future->error()->code);
 }
 
-TEST(SessionUnitTest, InvalidKeyspace) {
+TEST_F(SessionUnitTest, InvalidKeyspace) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   builder.on(mockssandra::OPCODE_QUERY)
     .system_local()
@@ -40,14 +41,13 @@ TEST(SessionUnitTest, InvalidKeyspace) {
     .use_keyspace("blah")
     .empty_rows_result(1);
   mockssandra::SimpleCluster cluster(builder.build());
-  cluster.start_all();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
   cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   cass::Session session;
 
-  cass::Logger::set_log_level(CASS_LOG_DISABLED);
   session.connect(config, "invalid", connect_future);
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, connect_future->error()->code);
@@ -57,10 +57,9 @@ TEST(SessionUnitTest, InvalidKeyspace) {
   ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
 }
 
-TEST(SessionUnitTest, InvalidDataCenter) {
-  mockssandra::SimpleRequestHandlerBuilder builder;
-  mockssandra::SimpleCluster cluster(builder.build());
-  cluster.start_all();
+TEST_F(SessionUnitTest, InvalidDataCenter) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
@@ -71,7 +70,6 @@ TEST(SessionUnitTest, InvalidDataCenter) {
   cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   cass::Session session;
 
-  cass::Logger::set_log_level(CASS_LOG_DISABLED);
   session.connect(config, "", connect_future);
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
@@ -82,7 +80,7 @@ TEST(SessionUnitTest, InvalidDataCenter) {
 }
 
 
-TEST(SessionUnitTest, InvalidLocalAddress) {
+TEST_F(SessionUnitTest, InvalidLocalAddress) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   mockssandra::SimpleCluster cluster(builder.build());
   cluster.start_all();

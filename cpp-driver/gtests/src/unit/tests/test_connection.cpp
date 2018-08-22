@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "mockssandra_test.hpp"
+#include "loop_test.hpp"
 
 #include "auth.hpp"
 #include "connector.hpp"
@@ -31,10 +31,7 @@
 
 using namespace cass;
 
-#define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
-#define PORT 9042
-
-class ConnectionUnitTest : public mockssandra::SimpleClusterTest {
+class ConnectionUnitTest : public LoopTest {
 public:
   enum Status {
     STATUS_NEW,
@@ -121,7 +118,8 @@ public:
 
 
 TEST_F(ConnectionUnitTest, Simple) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -142,7 +140,7 @@ TEST_F(ConnectionUnitTest, Keyspace) {
       .use_keyspace("foo")
       .validate_query().void_result();
   mockssandra::SimpleCluster cluster(builder.build());
-  cluster.start_all();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -161,8 +159,8 @@ TEST_F(ConnectionUnitTest, Keyspace) {
 }
 
 TEST_F(ConnectionUnitTest, Auth) {
-  mockssandra::SimpleCluster cluster(mockssandra::AuthRequestHandlerBuilder().build());
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -182,9 +180,9 @@ TEST_F(ConnectionUnitTest, Auth) {
 }
 
 TEST_F(ConnectionUnitTest, Ssl) {
-  ConnectionSettings settings(use_ssl());
-
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ConnectionSettings settings(use_ssl(&cluster));
+  ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -214,8 +212,9 @@ TEST_F(ConnectionUnitTest, Refused) {
 }
 
 TEST_F(ConnectionUnitTest, Close) {
-  use_close_immediately();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  cluster.use_close_immediately();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Vector<Connector::Ptr> connectors;
 
@@ -234,10 +233,10 @@ TEST_F(ConnectionUnitTest, Close) {
 }
 
 TEST_F(ConnectionUnitTest, SslClose) {
-  ConnectionSettings settings(use_ssl());
-
-  use_close_immediately();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ConnectionSettings settings(use_ssl(&cluster));
+  cluster.use_close_immediately();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Vector<Connector::Ptr> connectors;
 
@@ -258,7 +257,8 @@ TEST_F(ConnectionUnitTest, SslClose) {
 }
 
 TEST_F(ConnectionUnitTest, Cancel) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Vector<Connector::Ptr> connectors;
 
@@ -284,9 +284,9 @@ TEST_F(ConnectionUnitTest, Cancel) {
 }
 
 TEST_F(ConnectionUnitTest, SslCancel) {
-  ConnectionSettings settings(use_ssl());
-
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ConnectionSettings settings(use_ssl(&cluster));
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Vector<Connector::Ptr> connectors;
 
@@ -316,9 +316,8 @@ TEST_F(ConnectionUnitTest, SslCancel) {
 TEST_F(ConnectionUnitTest, Timeout) {
   mockssandra::RequestHandler::Builder builder;
   builder.on(mockssandra::OPCODE_STARTUP).no_result(); // Don't return a response
-
   mockssandra::SimpleCluster cluster(builder.build());
-  cluster.start_all();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -344,7 +343,7 @@ TEST_F(ConnectionUnitTest, InvalidKeyspace) {
       .use_keyspace("foo")
       .validate_query().void_result();
   mockssandra::SimpleCluster cluster(builder.build());
-  cluster.start_all();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -360,7 +359,8 @@ TEST_F(ConnectionUnitTest, InvalidKeyspace) {
 }
 
 TEST_F(ConnectionUnitTest, InvalidProtocol) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -375,8 +375,8 @@ TEST_F(ConnectionUnitTest, InvalidProtocol) {
 }
 
 TEST_F(ConnectionUnitTest, InvalidAuth) {
-  mockssandra::SimpleCluster cluster(mockssandra::AuthRequestHandlerBuilder().build());
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -396,7 +396,8 @@ TEST_F(ConnectionUnitTest, InvalidAuth) {
 }
 
 TEST_F(ConnectionUnitTest, InvalidNoSsl) {
-  start_all(); // Start without ssl
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0); // Start without ssl
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -419,8 +420,9 @@ TEST_F(ConnectionUnitTest, InvalidNoSsl) {
 }
 
 TEST_F(ConnectionUnitTest, InvalidSsl) {
-  use_ssl();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
@@ -443,7 +445,8 @@ TEST_F(ConnectionUnitTest, InvalidSsl) {
 }
 
 TEST_F(ConnectionUnitTest, Delayed) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
   DelayedConnector::Ptr connector(Memory::allocate<DelayedConnector>(Address("127.0.0.1", PORT),
@@ -458,7 +461,8 @@ TEST_F(ConnectionUnitTest, Delayed) {
 }
 
 TEST_F(ConnectionUnitTest, DelayedCancel) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
   DelayedConnector::Ptr connector(Memory::allocate<DelayedConnector>(Address("127.0.0.1", PORT),
@@ -471,7 +475,7 @@ TEST_F(ConnectionUnitTest, DelayedCancel) {
 
   EXPECT_EQ(state.status, STATUS_SUCCESS);
 
-  start_all();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Vector<DelayedConnector::Ptr> connectors;
 
