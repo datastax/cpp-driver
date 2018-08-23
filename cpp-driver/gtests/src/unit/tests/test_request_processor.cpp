@@ -116,7 +116,8 @@ public:
     virtual void on_pool_critical_error(const Address& address,
                                         Connector::ConnectionError code,
                                         const String& message) { }
-    virtual void on_keyspace_changed(const String& keyspace) { }
+    virtual void on_keyspace_changed(const String& keyspace,
+                                     const KeyspaceChangedHandler::Ptr& handler) { }
     virtual void on_prepared_metadata_changed(const String& id,
                                               const PreparedMetadata::Entry::Ptr& entry) { }
 
@@ -144,7 +145,8 @@ public:
                                         const String& message) {
       error_codes_.push_back(code);
     }
-    virtual void on_keyspace_changed(const String& keyspace) { }
+    virtual void on_keyspace_changed(const String& keyspace,
+                                     const KeyspaceChangedHandler::Ptr& handler) { }
     virtual void on_prepared_metadata_changed(const String& id,
                                               const PreparedMetadata::Entry::Ptr& entry) { }
     virtual void on_close(RequestProcessor* processor) { }

@@ -79,7 +79,6 @@ public:
                         ConnectionPoolManagerListener* listener,
                         Metrics* metrics,
                         const ConnectionPoolSettings& settings);
-  ~ConnectionPoolManager();
 
   /**
    * Find the least busy connection for a given host.
@@ -133,8 +132,8 @@ public:
   int protocol_version() const { return protocol_version_; }
   const ConnectionPoolSettings& settings() const { return settings_; }
   ConnectionPoolManagerListener* listener() const { return listener_; }
+  const String& keyspace() const { return keyspace_; }
 
-  String keyspace() const;
   void set_keyspace(const String& keyspace);
 
   Metrics* metrics() const { return metrics_; }
@@ -185,8 +184,6 @@ private:
   ConnectionPoolConnector::Vec pending_pools_;
   DenseHashSet<ConnectionPool*> to_flush_;
 
-  // This lock ensures keyspaces are updated as soon as it occurs
-  mutable uv_mutex_t keyspace_mutex_;
   String keyspace_;
 
   Metrics* const metrics_;

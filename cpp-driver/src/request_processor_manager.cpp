@@ -33,7 +33,6 @@ public:
   virtual void on_pool_critical_error(const Address& address,
                                       Connector::ConnectionError code,
                                       const String& message) { }
-  virtual void on_keyspace_changed(const String& keyspace) { }
   virtual void on_prepared_metadata_changed(const String& id,
                                            const PreparedMetadata::Entry::Ptr& entry) { }
   virtual void on_close(RequestProcessorManager* manager) { }
@@ -99,12 +98,6 @@ void RequestProcessorManager::on_close(RequestProcessor* processor) {
   }
 }
 
-void RequestProcessorManager::on_keyspace_changed(const String& keyspace) {
-  for (size_t i = 0; i < processors_.size(); ++i) {
-    processors_[i]->set_keyspace(keyspace);
-  }
-}
-
 void RequestProcessorManager::on_pool_up(const Address& address) {
   listener_->on_pool_up(address);
 }
@@ -117,6 +110,13 @@ void RequestProcessorManager::on_pool_critical_error(const Address& address,
                                                      Connector::ConnectionError code,
                                                      const String& message) {
   listener_->on_pool_critical_error(address, code, message);
+}
+
+void RequestProcessorManager::on_keyspace_changed(const String& keyspace,
+                                                  const KeyspaceChangedHandler::Ptr& handler) {
+  for (size_t i = 0; i < processors_.size(); ++i) {
+    processors_[i]->set_keyspace(keyspace, handler);
+  }
 }
 
 void RequestProcessorManager::on_prepared_metadata_changed(const String& id,

@@ -80,6 +80,24 @@ private:
   const TokenMap::Ptr token_map_;
 };
 
+class SetKeyspaceProcessor : public Task {
+public:
+  SetKeyspaceProcessor(const ConnectionPoolManager::Ptr& manager,
+                       const String& keyspace,
+                       const KeyspaceChangedHandler::Ptr& handler)
+    : manager_(manager)
+    , keyspace_(keyspace)
+    , handler_(handler) { }
+
+  virtual void run(EventLoop* event_loop) {
+    manager_->set_keyspace(keyspace_);
+  }
+private:
+  ConnectionPoolManager::Ptr manager_;
+  const String keyspace_;
+  KeyspaceChangedHandler::Ptr handler_;
+};
+
 class NopRequestProcessorListener : public RequestProcessorListener {
 public:
   virtual void on_pool_up(const Address& address)  { }
@@ -87,7 +105,8 @@ public:
   virtual void on_pool_critical_error(const Address& address,
                                       Connector::ConnectionError code,
                                       const String& message) { }
-  virtual void on_keyspace_changed(const String& keyspace) { }
+  virtual void on_keyspace_changed(const String& keyspace,
+                                   const KeyspaceChangedHandler::Ptr& handler) { }
   virtual void on_prepared_metadata_changed(const String& id,
                                            const PreparedMetadata::Entry::Ptr& entry) { }
   virtual void on_close(RequestProcessor* processor) { }
@@ -182,8 +201,16 @@ void RequestProcessor::close() {
   event_loop_->add(Memory::allocate<RunCloseProcessor>(Ptr(this)));
 }
 
-void RequestProcessor::set_keyspace(const String& keyspace) {
-  connection_pool_manager_->set_keyspace(keyspace);
+void RequestProcessor::set_keyspace(const String& keyspace,
+                                    const KeyspaceChangedHandler::Ptr& handler) {
+  // If running on the the current event loop then just set the keyspace,
+  // otherwise we're on a different thread so we'll wait for the keyspace
+  // to be set in a task on the event loop thread.
+  if (event_loop_->is_running_on()) {
+    connection_pool_manager_->set_keyspace(keyspace);
+  } else {
+    event_loop_->add(Memory::allocate<SetKeyspaceProcessor>(connection_pool_manager_, keyspace, handler));
+  }
 }
 
 void RequestProcessor::notify_host_add(const Host::Ptr& host) {
@@ -268,8 +295,11 @@ void RequestProcessor::on_prepared_metadata_changed(const String& id,
   listener_->on_prepared_metadata_changed(id, entry);
 }
 
-void RequestProcessor::on_keyspace_changed(const String& keyspace) {
-  listener_->on_keyspace_changed(keyspace);
+void RequestProcessor::on_keyspace_changed(const String& keyspace,
+                                           KeyspaceChangedResponse response) {
+  listener_->on_keyspace_changed(keyspace,
+                                 KeyspaceChangedHandler::Ptr(
+                                   Memory::allocate<KeyspaceChangedHandler>(event_loop_, response)));
 }
 
 bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,

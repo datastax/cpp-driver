@@ -56,7 +56,6 @@ ConnectionPoolManager::ConnectionPoolManager(const ConnectionPool::Map& pools,
 #endif
 {
   inc_ref(); // Reference for the lifetime of the connection pools
-  uv_mutex_init(&keyspace_mutex_);
   set_pointer_keys(to_flush_);
 
   for (ConnectionPool::Map::const_iterator it = pools.begin(),
@@ -64,10 +63,6 @@ ConnectionPoolManager::ConnectionPoolManager(const ConnectionPool::Map& pools,
     it->second->set_listener(this);
     add_pool(it->second);
   }
-}
-
-ConnectionPoolManager::~ConnectionPoolManager() {
-  uv_mutex_destroy(&keyspace_mutex_);
 }
 
 PooledConnection::Ptr ConnectionPoolManager::find_least_busy(const Address& address) const {
@@ -155,14 +150,12 @@ void ConnectionPoolManager::set_listener(ConnectionPoolManagerListener* listener
   listener_ = listener ? listener : &nop_connection_pool_manager_listener__;
 }
 
-String ConnectionPoolManager::keyspace() const {
-  ScopedMutex l(&keyspace_mutex_);
-  return keyspace_;
-}
-
 void ConnectionPoolManager::set_keyspace(const String& keyspace) {
-  ScopedMutex l(&keyspace_mutex_);
   keyspace_ = keyspace;
+  for (ConnectionPool::Map::iterator it = pools_.begin(),
+       end = pools_.end(); it != end; ++it) {
+    it->second->set_keyspace(keyspace);
+  }
 }
 
 void ConnectionPoolManager::on_pool_up(const Address& address) {
@@ -194,7 +187,6 @@ void ConnectionPoolManager::on_close(ConnectionPool* pool) {
 
 void ConnectionPoolManager::add_pool(const ConnectionPool::Ptr& pool) {
   LOG_DEBUG("Adding pool for host %s", pool->address().to_string().c_str());
-  pool->set_manager(this);
   pools_[pool->address()] = pool;
 }
 
