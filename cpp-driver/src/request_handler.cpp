@@ -439,7 +439,7 @@ void RequestExecution::on_result_response(Connection* connection, ResponseMessag
                      "Expected metadata but no metadata in response (see CASSANDRA-8054)");
             return;
           }
-          result->set_metadata(prepared_metadata_entry()->result()->result_metadata().get());
+          result->set_metadata(prepared_metadata_entry()->result()->result_metadata());
         } else if (result->metadata_changed()) {
           notify_result_metadata_changed(request(), result);
         }
