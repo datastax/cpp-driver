@@ -9,12 +9,28 @@
 # LIBSSH2_VERSION_MINOR - The minor version of libssh2.
 # LIBSSH2_VERSION_PATCH - The patch version of libssh2.
 
+if(UNIX)
+  if(CMAKE_VERSION VERSION_LESS "2.8.0")
+    find_package(PkgConfig)
+    pkg_check_modules(_LIBSSH2 libssh2)
+  else()
+    find_package(PkgConfig QUIET)
+    pkg_check_modules(_LIBSSH2 QUIET libssh2)
+  endif()
+endif()
+
+
 if(NOT LIBSSH2_INCLUDE_DIRS AND NOT LIBSSH2_LIBRARIES)
   set(_LIBSSH2_ROOT_HINTS ${LIBSSH2_ROOT_DIR} ${LIBSSH2_ROOT}
                           $ENV{LIBSSH2_ROOT_DIR} $ENV{LIBSSH2_ROOT})
   if(NOT WIN32)
     set(_LIBSSH2_ROOT_PATHS "/usr/"
                             "/usr/local/")
+    if(_LIBSSH2_FOUND)
+      set(_LIBSSH2_ROOT_PATHS ${_LIBSSH2_ROOT_PATHS}
+                              ${_LIBSSH2_LIBDIR})
+    endif()
+
   endif()
   set(_LIBSSH2_ROOT_HINTS_AND_PATHS
       HINTS ${_LIBSSH2_ROOT_HINTS}
@@ -25,6 +41,15 @@ if(NOT LIBSSH2_INCLUDE_DIRS AND NOT LIBSSH2_LIBRARIES)
             ${_LIBSSH2_ROOT_HINTS_AND_PATHS}
             PATH_SUFFIXES include
             NO_DEFAULT_PATH)
+
+  if(CASS_USE_STATIC_LIBS)
+    set(_LIBSSH2_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    if(WIN32)
+      set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    else()
+      set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+    endif()
+  endif()
   find_library(LIBSSH2_LIBRARY
                NAMES libssh2 ssh2
                ${_LIBSSH2_ROOT_HINTS_AND_PATHS}
@@ -57,9 +82,32 @@ endif()
 unset(_LIBSSH2_VERSION_STRING)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LIBSSH2 DEFAULT_MSG
-                                  LIBSSH2_INCLUDE_DIR
-                                  LIBSSH2_LIBRARY)
+set(_LIBSSH2_FAIL_MESSAGE "Could NOT find libssh2, try to set the path to libssh2 root folder in the system variable LIBSSH2_ROOT_DIR")
+if(LIBSSH2_VERSION)
+ if(CMAKE_VERSION VERSION_LESS "2.8.0")
+    find_package_handle_standard_args(Libssh2
+                                      REQUIRED_VARS
+                                        LIBSSH2_FOUND
+                                        LIBSSH2_LIBRARY
+                                        LIBSSH2_INCLUDE_DIR)
+    if(NOT LIBSSH2_FOUND)
+      message(FATAL_ERROR "${_LIBSSH2_FAIL_MESSAGE}")
+    endif()
+  else()
+    find_package_handle_standard_args(Libssh2
+                                      REQUIRED_VARS
+                                        LIBSSH2_LIBRARY
+                                        LIBSSH2_INCLUDE_DIR
+                                      VERSION_VAR
+                                        LIBSSH2_VERSION)
+  endif()
+else()
+  find_package_handle_standard_args(Libssh2
+                                    "${_LIBSSH2_FAIL_MESSAGE}"
+                                    LIBSSH2_LIBRARY
+                                    LIBSSH2_INCLUDE_DIR)
+endif()
+
 if(LIBSSH2_FOUND)
   set(LIBSSH2_INCLUDE_DIRS ${LIBSSH2_INCLUDE_DIR})
   set(LIBSSH2_LIBRARIES ${LIBSSH2_LIBRARY})
@@ -70,3 +118,8 @@ mark_as_advanced(LIBSSH2_INCLUDE_DIRS
                  LIBSSH2_VERSION_MAJOR
                  LIBSSH2_VERSION_MINOR
                  LIBSSH2_VERSION_PATCH)
+
+# Restore the original find library ordering
+if(CASS_USE_STATIC_LIBS)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${_LIBSSH2_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
+endif()
