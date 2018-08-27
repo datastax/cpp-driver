@@ -206,14 +206,12 @@ macro(GtestUnitTests project_name extra_files extra_includes)
                  ${GOOGLE_TEST_SOURCE_FILES})
   if(CMAKE_VERSION VERSION_LESS "2.8.11")
     include_directories(${extra_includes}
-                        ${COMMON_INTEGRATION_TEST_INCLUDE_FILES}
                         ${UNIT_TESTS_SOURCE_DIR}
                         ${INTEGRATION_TESTS_SOURCE_DIR}
                         ${CCM_BRIDGE_SOURCE_DIR})
   else()
     target_include_directories(${UNIT_TESTS_NAME}
                                PUBLIC ${extra_includes}
-                                      ${COMMON_INTEGRATION_TEST_INCLUDE_FILES}
                                       ${UNIT_TESTS_SOURCE_DIR}
                                       ${INTEGRATION_TESTS_SOURCE_DIR}
                                       ${CCM_BRIDGE_SOURCE_DIR})
