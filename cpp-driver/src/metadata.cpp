@@ -1128,8 +1128,6 @@ const ViewMetadata::Ptr& KeyspaceMetadata::get_view(const String& name) {
 }
 
 void KeyspaceMetadata::add_view(const ViewMetadata::Ptr& view) {
-  // Properly remove the previous view if it exists
-  drop_table_or_view(view->name());
   (*views_)[view->name()] = view;
 }
 
@@ -1993,6 +1991,11 @@ void Metadata::InternalData::update_views(const VersionNumber& server_version,
       LOG_ERROR("Unable to get column value for 'base_table_name'");
       continue;
     }
+
+    // Properly remove the previous view if it exists. This needs to be done
+    // before the next step of finding the table because it could create a
+    // new copy of the old table.
+    keyspace->drop_table_or_view(view_name);
 
     TableMetadata::Ptr table(keyspace->get_table(base_table_name));
     if (!table) {
