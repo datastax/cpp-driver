@@ -56,7 +56,7 @@ if(CASS_USE_LIBSSH2)
   if(WIN32 AND LIBSSH2_VERSION) # Store the current version of libssh2 to prevent corruption
     set(SAVED_LIBSSH2_VERSION ${LIBSSH2_VERSION})
   endif()
-  find_package(LIBSSH2 QUIET)
+  find_package(Libssh2 QUIET)
   if(WIN32 AND NOT LIBSSH2_FOUND)
     message(STATUS "Unable to Locate libssh2: Third party build step will be performed")
     if(SAVED_LIBSSH2_VERSION)
