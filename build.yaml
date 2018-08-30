@@ -1,6 +1,8 @@
 schedules:
   adhoc:
     schedule: adhoc
+    notify:
+      slack: cpp-driver-dev-bots
     branches:
       include: [master]
 architecture:
@@ -18,6 +20,8 @@ package:
   include: # list of files and glob paths to include in the artifact, relative to the current working directory
     - packaging/packages/*
 release:
+    notify:
+      slack: cpp-driver-dev-bots
     after:
       each:
         - script: |
