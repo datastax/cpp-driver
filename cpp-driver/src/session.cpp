@@ -121,8 +121,7 @@ void cass_session_get_metrics(const CassSession* session,
 
   if (internal_metrics == NULL)  {
     LOG_WARN("Attempted to get metrics before connecting session object");
-    CassMetrics zeroed_metrics = { };
-    *metrics = zeroed_metrics;
+    memset(metrics, 0, sizeof(CassMetrics));
     return;
   }
 
@@ -160,8 +159,7 @@ void  cass_session_get_speculative_execution_metrics(const CassSession* session,
 
   if (internal_metrics == NULL)  {
     LOG_WARN("Attempted to get speculative execution metrics before connecting session object");
-    CassSpeculativeExecutionMetrics zeroed_metrics = { };
-    *metrics = zeroed_metrics;
+    memset(metrics, 0, sizeof(CassSpeculativeExecutionMetrics));
     return;
   }
 
