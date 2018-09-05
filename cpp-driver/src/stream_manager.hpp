@@ -17,6 +17,7 @@
 #ifndef __CASS_STREAM_MANAGER_HPP_INCLUDED__
 #define __CASS_STREAM_MANAGER_HPP_INCLUDED__
 
+#include "constants.hpp"
 #include "dense_hash_map.hpp"
 #include "macros.hpp"
 #include "scoped_ptr.hpp"
@@ -31,15 +32,6 @@
 
 namespace cass {
 
-inline int max_streams_for_protocol_version(int protocol_version) {
-  // Note: Only half the range because negative values are reserved for
-  // responses.
-
-  // Protocol v3+: 2 ^ (16 - 1) (2 bytes)
-  // Protocol v1 and v2: 2 ^ (8 - 1) (1 byte)
-  return protocol_version >= 3 ? 32768 : 128;
-}
-
 struct StreamHash {
   std::size_t operator()(int stream) const {
     return ((stream & 0x3F) << 10) | (stream >> 6);
@@ -49,8 +41,8 @@ struct StreamHash {
 template <class T>
 class StreamManager {
 public:
-  StreamManager(int protocol_version)
-      : max_streams_(max_streams_for_protocol_version(protocol_version))
+  StreamManager()
+      : max_streams_(CASS_MAX_STREAMS)
       , num_words_(max_streams_ / NUM_BITS_PER_WORD)
       , offset_(0)
       , words_(num_words_, ~static_cast<word_t>(0)) {

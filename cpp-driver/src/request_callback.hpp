@@ -144,7 +144,6 @@ public:
   virtual ~RequestCallback() { }
 
   void notify_write(Connection* connection,
-                    int protocol_version,
                     int stream);
 
 public:

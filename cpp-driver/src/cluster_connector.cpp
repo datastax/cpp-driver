@@ -257,18 +257,18 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
                                              settings_));
     finish();
   } else if (connector->is_invalid_protocol()) {
-    if (protocol_version_ <= 1) {
-      LOG_ERROR("Host %s does not support any valid protocol version",
-                contact_points_resolved_it_->to_string().c_str());
-      on_error(CLUSTER_ERROR_INVALID_PROTOCOL, "Not even protocol version 1 is supported");
+    if (protocol_version_ <= CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
+      LOG_ERROR("Host %s does not support any valid protocol version (lowest supported version is %s)",
+                contact_points_resolved_it_->to_string().c_str(),
+                protocol_version_to_string(CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION).c_str());
+      on_error(CLUSTER_ERROR_INVALID_PROTOCOL, "Unable to find supported protocol version");
       return;
     }
 
     int previous_version = protocol_version_;
     bool is_dse_version = protocol_version_ & DSE_PROTOCOL_VERSION_BIT;
     if (is_dse_version) {
-      int dse_version = protocol_version_ & DSE_PROTOCOL_VERSION_MASK;
-      if (dse_version <= 1) {
+      if (protocol_version_ <= CASS_PROTOCOL_VERSION_DSEV1) {
         // Start trying Cassandra protocol versions
         protocol_version_ = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
       } else {

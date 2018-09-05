@@ -206,9 +206,6 @@ private:
   void on_ready_or_register_for_events();
   void on_supported(ResponseMessage* response);
 
-  void send_credentials(const String& class_name);
-  void send_initial_auth_response(const String& class_name);
-
   void on_authenticate(const String& class_name);
   void on_auth_challenge(const AuthResponseRequest* request, const String& token);
   void on_auth_success(const AuthResponseRequest* request, const String& token);

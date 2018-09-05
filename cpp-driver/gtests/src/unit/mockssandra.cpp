@@ -1639,7 +1639,10 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
         remaining--;
         if (version_ < request_handler_->lowest_supported_protocol_version() ||
             version_ > request_handler_->highest_supported_protocol_version()) {
-          request_handler_->invalid_protocol(Memory::allocate<Request>(version_, flags_, stream_, opcode_, String(), client));
+          // Respond using the highest supported protocol that the server
+          // supports (don't use the request's version because it's not supported)
+          request_handler_->invalid_protocol(Memory::allocate<Request>(request_handler_->highest_supported_protocol_version(),
+                                                                       flags_, stream_, opcode_, String(), client));
           return len - remaining;
         }
         state_ = HEADER;

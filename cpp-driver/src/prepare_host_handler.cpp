@@ -33,13 +33,6 @@ struct CompareEntryKeyspace {
   }
 };
 
-static int max_prepares_for_protocol_version(int protocol_version,
-                                             unsigned max_prepares_per_flush) {
-  return static_cast<int>(std::max(max_prepares_per_flush,
-                                   static_cast<unsigned>(max_streams_for_protocol_version(protocol_version))));
-
-}
-
 PrepareHostHandler::PrepareHostHandler(const Host::Ptr& host,
                                        const PreparedMetadata::Entry::Vec& prepared_metadata_entries,
                                        const Callback& callback,
@@ -50,9 +43,7 @@ PrepareHostHandler::PrepareHostHandler(const Host::Ptr& host,
   , callback_(callback)
   , connection_(NULL)
   , prepares_outstanding_(0)
-  , max_prepares_outstanding_(max_prepares_for_protocol_version(
-                                protocol_version,
-                                max_requests_per_flush))
+  , max_prepares_outstanding_(CASS_MAX_STREAMS)
   , prepared_metadata_entries_(prepared_metadata_entries) {
 
   // Sort by keyspace to minimize the number of times the keyspace

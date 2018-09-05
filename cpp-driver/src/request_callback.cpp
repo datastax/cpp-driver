@@ -42,10 +42,8 @@ void RequestWrapper::init(const ExecutionProfile& profile,
   retry_policy_ = profile.retry_policy();
 }
 
-void RequestCallback::notify_write(Connection* connection,
-                                   int protocol_version,
-                                   int stream) {
-  protocol_version_ = protocol_version;
+void RequestCallback::notify_write(Connection* connection, int stream) {
+  protocol_version_ = connection->protocol_version();
   stream_ = stream;
   on_write(connection);
 }
@@ -58,11 +56,15 @@ bool RequestCallback::skip_metadata() const {
 }
 
 int32_t RequestCallback::encode(BufferVec* bufs) {
+  const int version = protocol_version_;
+  if (version < CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
+    return Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
+  }
+
   size_t index = bufs->size();
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
-  int version = protocol_version_;
   int flags = 0;
   int32_t length = 0;
 
@@ -70,7 +72,7 @@ int32_t RequestCallback::encode(BufferVec* bufs) {
     flags |= CASS_FLAG_BETA;
   }
 
-  if (version >= 4 && req->has_custom_payload()) {
+  if (version >= CASS_PROTOCOL_VERSION_V4 && req->has_custom_payload()) {
     flags |= CASS_FLAG_CUSTOM_PAYLOAD;
     length += req->encode_custom_payload(bufs);
   }
@@ -79,19 +81,14 @@ int32_t RequestCallback::encode(BufferVec* bufs) {
   if (result < 0) return result;
   length += result;
 
-  const size_t header_size
-      = (version >= 3) ? CASS_HEADER_SIZE_V3 : CASS_HEADER_SIZE_V1_AND_V2;
+  const size_t header_size = CASS_HEADER_SIZE_V3;
 
   Buffer buf(header_size);
   size_t pos = 0;
   pos = buf.encode_byte(pos, version);
   pos = buf.encode_byte(pos, flags);
 
-  if (version >= 3) {
-    pos = buf.encode_int16(pos, stream_);
-  } else {
-    pos = buf.encode_byte(pos, stream_);
-  }
+  pos = buf.encode_int16(pos, stream_);
 
   pos = buf.encode_byte(pos, req->opcode());
   buf.encode_int32(pos, length);

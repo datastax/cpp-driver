@@ -374,6 +374,24 @@ TEST_F(ConnectionUnitTest, InvalidProtocol) {
   EXPECT_EQ(Connector::CONNECTION_ERROR_INVALID_PROTOCOL, error_code);
 }
 
+TEST_F(ConnectionUnitTest, DeprecatedProtocol) {
+  mockssandra::SimpleCluster cluster(mockssandra::SimpleRequestHandlerBuilder()
+                                     .with_supported_protocol_versions(1, 2)
+                                     .build());
+  cluster.start_all();
+
+  Connector::ConnectionError error_code(Connector::CONNECTION_OK);
+  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_error_code, &error_code)));
+  connector
+      ->connect(loop());
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(Connector::CONNECTION_ERROR_INVALID_PROTOCOL, error_code);
+}
+
 TEST_F(ConnectionUnitTest, InvalidAuth) {
   mockssandra::SimpleCluster cluster(auth());
   ASSERT_EQ(cluster.start_all(), 0);

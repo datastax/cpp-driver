@@ -336,10 +336,8 @@ bool ResultResponse::decode_prepared(Decoder& decoder) {
     CHECK_RESULT(decoder.decode_string(&result_metadata_id_));
   }
   CHECK_RESULT(decode_metadata(decoder, &metadata_,
-                               decoder.protocol_version() >= 4));
-  if (decoder.protocol_version() > 1) {
-    CHECK_RESULT(decode_metadata(decoder, &result_metadata_));
-  }
+                               decoder.protocol_version() >= CASS_PROTOCOL_VERSION_V4));
+  CHECK_RESULT(decode_metadata(decoder, &result_metadata_));
   return true;
 }
 

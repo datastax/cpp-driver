@@ -1021,10 +1021,10 @@ void MetadataBase::add_json_list_field(const Row* row, const String& name) {
     collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
   }
 
-  size_t encoded_size = collection.get_items_size(value->protocol_version());
+  size_t encoded_size = collection.get_items_size();
   RefBuffer::Ptr encoded(RefBuffer::create(encoded_size));
 
-  collection.encode_items(value->protocol_version(), encoded->data());
+  collection.encode_items(encoded->data());
 
   Value list(collection.data_type(),
              d.Size(),
@@ -1064,10 +1064,10 @@ const Value* MetadataBase::add_json_map_field(const Row* row, const String& name
     collection.append(CassString(i->value.GetString(), i->value.GetStringLength()));
   }
 
-  size_t encoded_size = collection.get_items_size(value->protocol_version());
+  size_t encoded_size = collection.get_items_size();
   RefBuffer::Ptr encoded(RefBuffer::create(encoded_size));
 
-  collection.encode_items(value->protocol_version(), encoded->data());
+  collection.encode_items(encoded->data());
 
   Value map(collection.data_type(),
             d.MemberCount(),

@@ -38,7 +38,7 @@ void cass_cluster_set_ssl(CassCluster* cluster,
 
 CassError cass_cluster_set_protocol_version(CassCluster* cluster,
                                             int protocol_version) {
-  if (protocol_version < 1) {
+  if (protocol_version < CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   bool is_dse_version = protocol_version & DSE_PROTOCOL_VERSION_BIT;

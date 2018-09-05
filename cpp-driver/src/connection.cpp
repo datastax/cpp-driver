@@ -101,7 +101,6 @@ Connection::Connection(const Socket::Ptr& socket,
                        unsigned int idle_timeout_secs,
                        unsigned int heartbeat_interval_secs)
   : socket_(socket)
-  , stream_manager_(protocol_version)
   , inflight_request_count_(0)
   , response_(Memory::allocate<ResponseMessage>())
   , listener_(&nop_listener__)
@@ -118,7 +117,7 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
     return Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS;
   }
 
-  callback->notify_write(this, protocol_version_,  stream);
+  callback->notify_write(this, stream);
 
   int32_t request_size = socket_->write(callback.get());
 

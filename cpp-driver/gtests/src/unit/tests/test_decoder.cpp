@@ -827,46 +827,6 @@ TEST_F(DecoderUnitTest, DecodeUuid) {
   ASSERT_TRUE(failure_logged_);
 }
 
-TEST_F(DecoderUnitTest, DecodeSize2Bytes) {
-  const char input[4] = { 0, 0,
-                          -1, -1 };
-  TestDecoder decoder(input, 4, 1);
-  int32_t value = 0;
-
-  // SUCCESS
-  ASSERT_TRUE(decoder.decode_size(value));
-  ASSERT_EQ(&input[2], decoder.buffer());
-  ASSERT_EQ(2ul, decoder.remaining());
-  ASSERT_EQ(std::numeric_limits<uint16_t>::min(), value);
-  ASSERT_TRUE(decoder.decode_size(value));
-  ASSERT_EQ(0ul, decoder.remaining());
-  ASSERT_EQ(std::numeric_limits<uint16_t>::max(), value);
-
-  // FAIL
-  ASSERT_FALSE(decoder.decode_size(value));
-  ASSERT_TRUE(failure_logged_);
-}
-
-TEST_F(DecoderUnitTest, DecodeSize4Bytes) {
-  const char input[8] = { -128, 0, 0, 0,
-                           127, -1, -1, -1 };
-  TestDecoder decoder(input, 8);
-  int32_t value = 0;
-
-  // SUCCESS
-  ASSERT_TRUE(decoder.decode_size(value));
-  ASSERT_EQ(&input[4], decoder.buffer());
-  ASSERT_EQ(4ul, decoder.remaining());
-  ASSERT_EQ(std::numeric_limits<int32_t>::min(), value);
-  ASSERT_TRUE(decoder.decode_size(value));
-  ASSERT_EQ(0ul, decoder.remaining());
-  ASSERT_EQ(std::numeric_limits<int32_t>::max(), value);
-
-  // FAIL
-  ASSERT_FALSE(decoder.decode_size(value));
-  ASSERT_TRUE(failure_logged_);
-}
-
 TEST_F(DecoderUnitTest, AsDecimal) {
   const char input[8] = { 0, 0, 0, 4, 0, 1, 2, 3 };
   TestDecoder decoder(input, 8);
