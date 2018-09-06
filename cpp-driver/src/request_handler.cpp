@@ -278,8 +278,7 @@ void RequestHandler::stop_request() {
     listener_->on_done();
     is_done_ = true;
   }
-  // Stop and clean up handle on the original event loop thread.
-  timer_.close_handle();
+  timer_.stop();
 }
 
 void RequestHandler::internal_retry(RequestExecution* request_execution) {

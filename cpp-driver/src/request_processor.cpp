@@ -288,7 +288,7 @@ void RequestProcessor::on_requires_flush() {
 void RequestProcessor::on_close(ConnectionPoolManager* manager) {
   async_.close_handle();
   prepare_.close_handle();
-  timer_.close_handle();
+  timer_.stop();
   connection_pool_manager_.reset();
   listener_->on_close(this);
   dec_ref();

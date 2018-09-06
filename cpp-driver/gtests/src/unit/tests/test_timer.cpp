@@ -70,10 +70,15 @@ public:
 
     EXPECT_FALSE(timer.is_running());
 
+    timer.start(loop(), 1,
+                bind_callback(&TimerUnitTest::on_timer_once, this));
+
+    EXPECT_TRUE(timer.is_running());
+
     uv_run(loop(), UV_RUN_DEFAULT);
 
     EXPECT_FALSE(timer.is_running());
-    EXPECT_EQ(count_, 0);
+    EXPECT_EQ(count_, 1);
   }
 
 
@@ -116,7 +121,7 @@ private:
   void on_timer_restart(Timer* timer) {
     restart_count_++;
     if  (restart_count_ == 10) {
-      restart_timer_.close_handle();
+      restart_timer_.stop();
     } else {
       restart_timer_.start(loop(), 10,
                              bind_callback(&TimerUnitTest::on_timer_once, this));

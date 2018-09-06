@@ -188,8 +188,8 @@ public:
       next();
     }
 
-    void close_handle() {
-      timer_.close_handle();
+    void stop() {
+      timer_.stop();
     }
 
     bool is_done() {
@@ -275,7 +275,7 @@ public:
         outage_plan_->run();
       } else {
         if (outage_plan_->is_done()) {
-          outage_plan_->close_handle(); // Stop and clean up outage plan timer handle on the original event loop thread.
+          outage_plan_->stop(); // Stop and clean up outage plan timer handle on the original event loop thread.
           cluster->close();
         }
       }
