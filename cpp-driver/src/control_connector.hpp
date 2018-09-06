@@ -29,32 +29,6 @@ class Metrics;
 class SchemaConnectorRequestCallback;
 
 /**
- * A listener that handles recording events to be processed later.
- */
-class RecordingConnectionListener : public ConnectionListener {
-public:
-  const EventResponse::Vec& events() const { return events_; }
-
-  virtual void on_event(const EventResponse::Ptr& response) {
-    events_.push_back(response);
-  }
-
-  virtual void on_close(Connection* connection) = 0;
-
-  /**
-   * Process the recorded events through a control connection listener.
-   *
-   * @param events The events to replay.
-   * @param listener The listener that will receive the events.
-   */
-  static void process_events(const EventResponse::Vec& events,
-                             ConnectionListener* listener);
-
-private:
-  EventResponse::Vec events_;
-};
-
-/**
  * Control connection settings.
  */
 struct ControlConnectionSettings {

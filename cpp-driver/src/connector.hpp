@@ -57,7 +57,9 @@ struct ConnectionSettings {
  * A connector. This contains all the initialization code to connect a
  * connection.
  */
-class Connector : public RefCounted<Connector>, public ConnectionListener {
+class Connector
+    : public RefCounted<Connector>
+    , public RecordingConnectionListener {
   friend class StartupCallback;
 
 public:

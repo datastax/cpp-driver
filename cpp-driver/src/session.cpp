@@ -25,7 +25,7 @@
 #include "metrics.hpp"
 #include "prepare_all_handler.hpp"
 #include "prepare_request.hpp"
-#include "request_processor_manager_initializer.hpp"
+#include "request_processor_initializer.hpp"
 #include "scoped_lock.hpp"
 #include "statement.hpp"
 
@@ -188,8 +188,113 @@ void  cass_session_get_speculative_execution_metrics(const CassSession* session,
 
 namespace cass {
 
+static inline bool least_busy_comp(const RequestProcessor::Ptr& a,
+                                   const RequestProcessor::Ptr& b) {
+  return a->request_count() < b->request_count();
+}
+
+/**
+ * An initialize helper class for `Session`. This keeps the initialization
+ * logic and data out of the core class itself.
+ */
+class SessionInitializer : public RefCounted<SessionInitializer> {
+public:
+  typedef SharedRefPtr<SessionInitializer> Ptr;
+
+  SessionInitializer(Session* session)
+    : session_(session)
+    , remaining_(0)
+    , error_code_(CASS_OK) {
+    uv_mutex_init(&mutex_);
+  }
+
+  SessionInitializer() {
+    uv_mutex_destroy(&mutex_);
+  }
+
+  void initialize(const Host::Ptr& connected_host,
+                  int protocol_version,
+                  const HostMap& hosts,
+                  const TokenMap::Ptr& token_map) {
+    inc_ref();
+    const size_t thread_count_io = remaining_ = session_->config().thread_count_io();
+    for (size_t i = 0; i < thread_count_io; ++i) {
+      RequestProcessorInitializer::Ptr initializer(
+            Memory::allocate<RequestProcessorInitializer>(connected_host,
+                                                          protocol_version,
+                                                          hosts,
+                                                          token_map,
+                                                          bind_callback(&SessionInitializer::on_initialize, this)));
+      initializer
+          ->with_settings(RequestProcessorSettings(session_->config()))
+          ->with_listener(session_)
+          ->with_keyspace(session_->connect_keyspace())
+          ->with_metrics(session_->metrics())
+          ->with_random(session_->random())
+          ->initialize(session_->event_loop_group_->get(i));
+    }
+  }
+
+private:
+  void on_initialize(RequestProcessorInitializer* initializer) {
+    // A lock is required because request processors are initialized on
+    // different threads .
+    ScopedMutex l(&mutex_);
+
+    if (initializer->is_ok()) {
+      request_processors_.push_back(initializer->release_processor());
+    } else {
+      switch (initializer->error_code()) {
+        case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_KEYSPACE:
+          error_code_ = CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE;
+          break;
+        case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE:
+          error_code_ = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
+          break;
+        case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT:
+          error_code_ = CASS_ERROR_LIB_UNABLE_TO_INIT;
+          break;
+        default:
+          error_code_ = CASS_ERROR_LIB_INTERNAL_ERROR;
+          break;
+      }
+      error_message_ = initializer->error_message();
+    }
+
+    if (--remaining_ == 0) {
+      { // This requires locking because cluster events can happen during
+        // initialization.
+        ScopedMutex l(&session_->request_processor_mutex_);
+        session_->request_processor_count_ = request_processors_.size();
+        session_->request_processors_ = request_processors_;
+      }
+      if (error_code_ != CASS_OK) {
+        session_->notify_connect_failed(error_code_, error_message_);
+      } else {
+        session_->notify_connected();
+      }
+      l.unlock(); // Unlock before destroying the object
+      dec_ref();
+    }
+  }
+
+private:
+  uv_mutex_t mutex_;
+  Session* session_;
+  size_t remaining_;
+  CassError error_code_;
+  String error_message_;
+  RequestProcessor::Vec request_processors_;
+};
+
+Session::Session()
+  : request_processor_count_(0) {
+  uv_mutex_init(&request_processor_mutex_);
+}
+
 Session::~Session() {
   join();
+  uv_mutex_destroy(&request_processor_mutex_);
 }
 
 Future::Ptr Session::prepare(const char* statement, size_t length) {
@@ -253,7 +358,15 @@ void Session::execute(const RequestHandler::Ptr& request_handler) {
     return;
   }
 
-  request_processor_manager_->process_request(request_handler);
+
+  // This intentionally doesn't lock the request processors. The processors will
+  // be populated before the connect future returns and calling execute during
+  // the connection process is undefined behavior. Locking would cause unecessary
+  // overhead for something that's constant once the session is connected.
+  const RequestProcessor::Ptr& request_processor
+      =  *std::min_element(request_processors_.begin(), request_processors_.end(),
+                           least_busy_comp);
+  request_processor->process_request(request_handler);
 }
 
 void Session::join() {
@@ -292,51 +405,60 @@ void Session::on_connect(const Host::Ptr& connected_host,
     return;
   }
 
-  RequestProcessorManagerInitializer::Ptr initializer(
-        Memory::allocate<RequestProcessorManagerInitializer>(connected_host,
-                                                             protocol_version,
-                                                             hosts,
-                                                             bind_callback(&Session::on_initialize, this)));
-
-  initializer
-      ->with_settings(RequestProcessorSettings(config()))
-      ->with_keyspace(connect_keyspace())
-      ->with_listener(this)
-      ->with_metrics(metrics())
-      ->with_random(random())
-      ->with_token_map(token_map)
-      ->initialize(event_loop_group_.get());
+  SessionInitializer::Ptr initializer(Memory::allocate<SessionInitializer>(this));
+  initializer->initialize(connected_host,
+                          protocol_version,
+                          hosts,
+                          token_map);
 }
 
 void Session::on_close() {
-  if (request_processor_manager_) {
-    request_processor_manager_->close();
+  // If there are request processors still connected those need to be closed
+  // first before sending the close notification.
+  ScopedMutex l(&request_processor_mutex_);
+  if (request_processor_count_ > 0) {
+    for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+         end = request_processors_.end(); it != end; ++it) {
+      (*it)->close();
+    }
   } else {
     notify_closed();
   }
 }
 
 void Session::on_up(const Host::Ptr& host) {
+  // Ignore up events from the control connection. The connection pools will
+  // reconnect themselves when the host becomes available.
 }
 
 void Session::on_down(const Host::Ptr& host) {
+  // Ignore down events from the control connection. The connection pools can
+  // determine if a host is down themselves. The control connection host
+  // can become partitioned from the rest of the cluster and in that scenario a
+  // down event from the control connection would be invalid.
 }
 
 void Session::on_add(const Host::Ptr& host) {
-  if (request_processor_manager_) {
-    request_processor_manager_->notify_host_add(host);
+  ScopedMutex l(&request_processor_mutex_);
+  for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+       end = request_processors_.end(); it != end; ++it) {
+    (*it)->notify_host_add(host);
   }
 }
 
 void Session::on_remove(const Host::Ptr& host)  {
-  if (request_processor_manager_) {
-    request_processor_manager_->notify_host_remove(host);
+  ScopedMutex l(&request_processor_mutex_);
+  for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+       end = request_processors_.end(); it != end; ++it) {
+    (*it)->notify_host_remove(host);
   }
 }
 
 void Session::on_update_token_map(const TokenMap::Ptr& token_map) {
-  if (request_processor_manager_) {
-    request_processor_manager_->notify_token_map_changed(token_map);
+  ScopedMutex l(&request_processor_mutex_);
+  for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+       end = request_processors_.end(); it != end; ++it) {
+    (*it)->notify_token_map_changed(token_map);
   }
 }
 
@@ -354,42 +476,26 @@ void Session::on_pool_critical_error(const Address& address,
   cluster()->notify_down(address);
 }
 
+void Session::on_keyspace_changed(const String& keyspace,
+                                  const KeyspaceChangedHandler::Ptr& handler) {
+  ScopedMutex l(&request_processor_mutex_);
+  for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+       end = request_processors_.end(); it != end; ++it) {
+    (*it)->set_keyspace(keyspace, handler);
+  }
+}
+
 void Session::on_prepared_metadata_changed(const String& id,
                                            const PreparedMetadata::Entry::Ptr& entry) {
   cluster()->prepared(id, entry);
 }
 
-void Session::on_close(RequestProcessorManager* manager) {
-  notify_closed();
-}
-
-void Session::on_initialize(RequestProcessorManagerInitializer* initializer) {
-  const RequestProcessorInitializer::Vec& failures = initializer->failures();
-
-  if (!failures.empty()) {
-    // All failures are likely to be the same, just pass the first error.
-    RequestProcessorInitializer::Ptr failure(failures.front());
-
-    CassError error_code;
-    switch (failure->error_code()) {
-      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_KEYSPACE:
-        error_code = CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE;
-        break;
-      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE:
-        error_code = CASS_ERROR_LIB_NO_HOSTS_AVAILABLE;
-        break;
-      case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT:
-        error_code = CASS_ERROR_LIB_UNABLE_TO_INIT;
-        break;
-      default:
-        error_code = CASS_ERROR_LIB_INTERNAL_ERROR;
-        break;
-    }
-
-    notify_connect_failed(error_code, failure->error_message());
-  } else {
-    request_processor_manager_ = initializer->release_manager();
-    notify_connected();
+void Session::on_close(RequestProcessor* processor) {
+  // Requires a lock because the close callback is called from several
+  // different request processor threads.
+  ScopedMutex l(&request_processor_mutex_);
+  if (--request_processor_count_ == 0) {
+    notify_closed();
   }
 }
 

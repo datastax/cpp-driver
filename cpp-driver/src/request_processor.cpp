@@ -17,8 +17,8 @@
 #include "request_processor.hpp"
 
 #include "connection_pool_manager_initializer.hpp"
-#include "request_processor_manager.hpp"
 #include "prepare_all_handler.hpp"
+#include "request_processor.hpp"
 #include "session.hpp"
 #include "utils.hpp"
 
@@ -199,6 +199,10 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
 
 void RequestProcessor::close() {
   event_loop_->add(Memory::allocate<RunCloseProcessor>(Ptr(this)));
+}
+
+void RequestProcessor::set_listener(RequestProcessorListener* listener) {
+  listener_ = listener ? listener : &nop_request_processor_listener__;
 }
 
 void RequestProcessor::set_keyspace(const String& keyspace,

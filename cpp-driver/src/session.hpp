@@ -19,20 +19,21 @@
 
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
-#include "request_processor_manager.hpp"
+#include "request_processor.hpp"
 #include "session_base.hpp"
 
 #include <uv.h>
 
 namespace cass {
 
-class RequestProcessorManagerInitializer;
+class RequestProcessorInitializer;
 class Statement;
 
 class Session
     : public SessionBase
-    , public RequestProcessorManagerListener {
+    , public RequestProcessorListener {
 public:
+  Session();
   ~Session();
 
   Future::Ptr prepare(const char* statement, size_t length);
@@ -75,7 +76,7 @@ private:
   using SessionBase::on_close;
 
 private:
-  // Request Processor manager listener methods
+  // Request processor listener methods
 
   virtual void on_pool_up(const Address& address);
 
@@ -85,17 +86,22 @@ private:
                                       Connector::ConnectionError code,
                                       const String& message);
 
+  virtual void on_keyspace_changed(const String& keyspace,
+                                   const KeyspaceChangedHandler::Ptr& handler);
+
   virtual void on_prepared_metadata_changed(const String& id,
                                            const PreparedMetadata::Entry::Ptr& entry);
 
-  virtual void on_close(RequestProcessorManager* manager);
+  virtual void on_close(RequestProcessor* processor);
 
 private:
-  void on_initialize(RequestProcessorManagerInitializer* initializer);
+  friend class SessionInitializer;
 
 private:
   ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
-  RequestProcessorManager::Ptr request_processor_manager_;
+  RequestProcessor::Vec request_processors_;
+  uv_mutex_t request_processor_mutex_;
+  size_t request_processor_count_;
 };
 
 class SessionFuture : public Future {

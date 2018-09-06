@@ -184,7 +184,13 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
   }
 
   callback_(this);
-  if (processor_) processor_->close();
+  // If the processor hasn't been released then close it.
+  if (processor_) {
+    processor_->close();
+    // If the callback doesn't take possession of the processor then we should
+    // also clear the listener.
+    processor_->set_listener(NULL);
+  }
   // Explicitly release resources on the event loop thread.
   connection_pool_manager_initializer_.reset();
   dec_ref();

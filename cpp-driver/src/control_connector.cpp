@@ -80,14 +80,6 @@ private:
   ControlConnector* connector_;
 };
 
-void RecordingConnectionListener::process_events(const EventResponse::Vec& events,
-                                                 ConnectionListener* listener) {
-  for (EventResponse::Vec::const_iterator it = events.begin(),
-       end = events.end(); it != end; ++it) {
-    listener->on_event(*it);
-  }
-}
-
 ControlConnectionSettings::ControlConnectionSettings()
   : use_schema(CASS_DEFAULT_USE_SCHEMA)
   , token_aware_routing(CASS_DEFAULT_TOKEN_AWARE_ROUTING)
@@ -191,6 +183,10 @@ void ControlConnector::on_connect(Connector* connector) {
   if (!is_canceled() && connector->is_ok()) {
     connection_ = connector->release_connection();
     connection_->set_listener(this);
+
+    // Propagate any events that happened during the connection process.
+    Connector::process_events(connector->events(), this);
+
     query_hosts();
   } else if (is_canceled() || connector->is_canceled()) {
     finish();

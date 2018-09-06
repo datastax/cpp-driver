@@ -96,6 +96,14 @@ void SslConnectionHandler::on_close() {
   connection_->on_close();
 }
 
+void RecordingConnectionListener::process_events(const EventResponse::Vec& events,
+                                                 ConnectionListener* listener) {
+  for (EventResponse::Vec::const_iterator it = events.begin(),
+       end = events.end(); it != end; ++it) {
+    listener->on_event(*it);
+  }
+}
+
 Connection::Connection(const Socket::Ptr& socket,
                        int protocol_version,
                        unsigned int idle_timeout_secs,

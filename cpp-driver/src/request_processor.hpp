@@ -164,11 +164,19 @@ public:
   void close();
 
   /**
+   * Set the listener that will handle events for the processor
+   * (*NOT* thread-safe).
+   *
+   * @param listener The processor listener.
+   */
+  void set_listener(RequestProcessorListener* listener);
+
+  /**
    * Set the current keyspace being used for requests
    * (thread-safe, asynchronous).
    *
    * @param keyspace New current keyspace to utilize
-   * @param response TODO
+   * @param handler A keyspace handler to trigger a response to a "USE" query.
    */
   void set_keyspace(const String& keyspace,
                     const KeyspaceChangedHandler::Ptr& handler);
@@ -291,7 +299,7 @@ private:
   ConnectionPoolManager::Ptr connection_pool_manager_;
   String connect_keyspace_;
   HostMap hosts_;
-  RequestProcessorListener* const listener_;
+  RequestProcessorListener* listener_;
   EventLoop* const event_loop_;
   LoadBalancingPolicy::Vec load_balancing_policies_;
   const unsigned max_schema_wait_time_ms_;

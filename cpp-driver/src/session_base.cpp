@@ -118,7 +118,7 @@ void SessionBase::notify_connect_failed(CassError code, const String& message) {
   if (cluster_) {
     connect_error_code_ = code;
     connect_error_message_ = message;
-    cluster_->close();
+    on_close();
   } else {
     ScopedMutex l(&mutex_);
     state_ = SESSION_STATE_CLOSED;
