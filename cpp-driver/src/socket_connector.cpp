@@ -204,6 +204,7 @@ void SocketConnector::finish() {
   callback_(this);
   // If the socket hasn't been released then close it.
   if (socket_) socket_->close();
+  no_resolve_timer_.stop();
   dec_ref();
 }
 

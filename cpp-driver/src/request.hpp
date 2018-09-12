@@ -25,6 +25,7 @@
 #include "map.hpp"
 #include "ref_counted.hpp"
 #include "retry_policy.hpp"
+#include "socket.hpp"
 #include "string_ref.hpp"
 
 #include <stdint.h>
@@ -83,11 +84,10 @@ public:
   typedef SharedRefPtr<const Request> ConstPtr;
 
   enum {
-    REQUEST_ERROR_UNSUPPORTED_PROTOCOL = -1,
-    REQUEST_ERROR_BATCH_WITH_NAMED_VALUES = -2,
-    REQUEST_ERROR_PARAMETER_UNSET = -3,
-    REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS = -4,
-    REQUEST_ERROR_CANCELED = -5
+    REQUEST_ERROR_UNSUPPORTED_PROTOCOL = SocketRequest::SOCKET_REQUEST_ERROR_LAST_ENTRY,
+    REQUEST_ERROR_BATCH_WITH_NAMED_VALUES,
+    REQUEST_ERROR_PARAMETER_UNSET,
+    REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS,
   };
 
   Request(uint8_t opcode)

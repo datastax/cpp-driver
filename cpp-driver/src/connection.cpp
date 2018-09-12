@@ -133,14 +133,29 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
     stream_manager_.release(stream);
 
     switch (request_size) {
+      case SocketRequest::SOCKET_REQUEST_ERROR_CLOSED:
+        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
+                           "Unable to write to close socket");
+        break;
+
+      case SocketRequest::SOCKET_REQUEST_ERROR_NO_HANDLER:
+        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
+                           "Socket is not properly configured with a handler");
+        break;
+
       case Request::REQUEST_ERROR_BATCH_WITH_NAMED_VALUES:
       case Request::REQUEST_ERROR_PARAMETER_UNSET:
-        // Already handled
+        // Already handled with a specific error.
+        break;
+
+      case Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL:
+        callback->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
+                           "Operation unsupported by this protocol version");
         break;
 
       default:
-        callback->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                           "Operation unsupported by this protocol version");
+        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
+                           "Unspecified write error occurred");
         break;
     }
 
@@ -173,12 +188,10 @@ size_t Connection::flush() {
 }
 
 void Connection::close() {
-  stop_heartbeats();
   socket_->close();
 }
 
 void Connection::defunct() {
-  stop_heartbeats();
   socket_->defunct();
 }
 
@@ -189,11 +202,6 @@ void Connection::set_listener(ConnectionListener* listener) {
 void Connection::start_heartbeats() {
   restart_heartbeat_timer();
   restart_terminate_timer();
-}
-
-void Connection::stop_heartbeats() {
-  heartbeat_timer_.stop();
-  terminate_timer_.stop();
 }
 
 void Connection::maybe_set_keyspace(ResponseMessage* response) {
@@ -326,6 +334,8 @@ void Connection::on_read(const char* buf, size_t size) {
 }
 
 void Connection::on_close() {
+  heartbeat_timer_.stop();
+  terminate_timer_.stop();
   while (!pending_reads_.is_empty()) {
     pending_reads_.pop_front()->on_close();
   }
@@ -341,7 +351,7 @@ void Connection::restart_heartbeat_timer() {
 }
 
 void Connection::on_heartbeat(Timer* timer) {
-  if (!heartbeat_outstanding_) {
+  if (!heartbeat_outstanding_ && !socket_->is_closing()) {
     if (!write_and_flush(RequestCallback::Ptr(Memory::allocate<HeartbeatCallback>(this)))) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests

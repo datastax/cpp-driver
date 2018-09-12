@@ -204,11 +204,6 @@ public:
    */
   void start_heartbeats();
 
-  /**
-   * Stop heartbeats.
-   */
-  void stop_heartbeats();
-
 public:
   const Address& address() const { return socket_->address(); }
   const String& address_string() const { return socket_->address_string(); }

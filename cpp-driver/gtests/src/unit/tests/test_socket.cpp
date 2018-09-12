@@ -101,7 +101,7 @@ public:
   }
 
   virtual void TearDown() {
-    Unit::TearDown();
+    LoopTest::TearDown();
     close();
   }
 
