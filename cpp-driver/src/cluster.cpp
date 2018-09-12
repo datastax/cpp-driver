@@ -341,6 +341,12 @@ void Cluster::handle_schedule_reconnect() {
 }
 
 void Cluster::on_reconnect(ControlConnector* connector) {
+  reconnector_.reset();
+  if (is_closing_) {
+    handle_close();
+    return;
+  }
+
   if (connector->is_ok()) {
     connection_ = connector->release_connection();
     connection_->set_listener(this);
@@ -379,8 +385,10 @@ void Cluster::internal_close() {
   if (timer_.is_running()) {
     timer_.stop();
     handle_close();
-  } else {
-    if (connection_) connection_->close();
+  } else if (reconnector_) {
+    reconnector_->cancel();
+  } else if (connection_)  {
+    connection_->close();
   }
 }
 
