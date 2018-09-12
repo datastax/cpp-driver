@@ -341,6 +341,52 @@ request can complete. In multi-datacenter configurations, consistency levels suc
 datacenter network link.  More information about setting the consistency level
 can be found [here](http://datastax.github.io/cpp-driver/topics/basics/consistency/).
 
+### Driver Tuning
+
+Beyond the performance tips and best practices considered in the previous
+section your application might consider tuning the more fine-grain driver
+settings in this section to achieve optimal performance for your application's
+specific workload.
+
+#### Increasing core connections
+
+In some workloads, throughput can be increased by increasing the number of core
+connections. By default, the driver uses a single core connection per host. It's
+recommended that you try increasing the core connections to two and slowly
+increase this number while doing performance testing. Two core connections is
+often a good setting and increasing the core connections too high will decrease
+performance because having multiple connections to a single host inhibits the
+driver's ability to coalesce multiple requests into a fewer number of system
+calls.
+
+#### Coalesce delay
+
+The coalesce delay is an optimization to reduce the number of system calls
+required to process requests. This setting controls how long the driver's I/O
+threads wait for requests to accumulate before flushing them on to the wire.
+Larger values for coalesce delay are preferred for throughput-based workloads as
+it can significantly reduce the number of system calls required to process
+requests.
+
+In general, the coalesce delay should be increased for throughput-based
+workloads and can be decreased for latency-based workloads. Most importantly,
+the delay should consider the responsiveness guarantees of your application.
+
+Note: Single, sporadic requests are not generally affected by this delay and
+are processed immediately.
+
+#### New request ratio
+
+The new request ratio controls how much time an I/O thread spends processing new
+requests versus handling outstanding requests. This value is a percentage (with
+a value from 1 to 100), where larger values will dedicate more time to
+processing new requests and less time on outstanding requests. The goal of this
+setting is to balance the time spent processing new/outstanding requests and
+prevent either from fully monopolizing the I/O thread's processing time. It's
+recommended that your application decrease this value if computationally
+expensive or long-running future callbacks are used (via
+`cass_future_set_callback()`), otherwise this can be left unchanged.
+
 [`allow_remote_dcs_for_local_cl`]: http://datastax.github.io/cpp-driver/api/struct.CassCluster/#1a46b9816129aaa5ab61a1363489dccfd0
 [`OPTIONS`]: https://github.com/apache/cassandra/blob/cassandra-3.0/doc/native_protocol_v3.spec
 [token-aware]: http://datastax.github.io/cpp-driver/topics/configuration/#latency-aware-routing
