@@ -14,8 +14,6 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
 #include "loop_test.hpp"
 
 #include "control_connector.hpp"

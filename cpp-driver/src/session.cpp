@@ -359,7 +359,7 @@ void Session::execute(const RequestHandler::Ptr& request_handler) {
 
   // This intentionally doesn't lock the request processors. The processors will
   // be populated before the connect future returns and calling execute during
-  // the connection process is undefined behavior. Locking would cause unecessary
+  // the connection process is undefined behavior. Locking would cause unnecessary
   // overhead for something that's constant once the session is connected.
   const RequestProcessor::Ptr& request_processor
       =  *std::min_element(request_processors_.begin(), request_processors_.end(),

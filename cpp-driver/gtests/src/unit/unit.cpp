@@ -15,6 +15,92 @@
 */
 #include "unit.hpp"
 
+#include "scoped_lock.hpp"
+
+Unit::OutagePlan::Action::Action(Type type, size_t node, uint64_t delay_ms)
+  : type(type)
+  , node(node)
+  , delay_ms(delay_ms) { }
+
+Unit::OutagePlan::OutagePlan(uv_loop_t* loop, mockssandra::SimpleCluster* cluster)
+  : loop_(loop)
+  , cluster_(cluster) { }
+
+void Unit::OutagePlan::start_node(size_t node, uint64_t delay_ms /*= DEFAULT_OUTAGE_PLAN_DELAY*/) {
+  actions_.push_back(Action(START_NODE, node, delay_ms));
+  action_it_ = actions_.begin();
+}
+
+void Unit::OutagePlan::stop_node(size_t node, uint64_t delay_ms /*= DEFAULT_OUTAGE_PLAN_DELAY*/) {
+  actions_.push_back(Action(STOP_NODE, node, delay_ms));
+  action_it_ = actions_.begin();
+}
+
+void Unit::OutagePlan::add_node(size_t node, uint64_t delay_ms /*= DEFAULT_OUTAGE_PLAN_DELAY*/) {
+  actions_.push_back(Action(ADD_NODE, node, delay_ms));
+  action_it_ = actions_.begin();
+}
+
+void Unit::OutagePlan::remove_node(size_t node, uint64_t delay_ms /*= DEFAULT_OUTAGE_PLAN_DELAY*/) {
+  actions_.push_back(Action(REMOVE_NODE, node, delay_ms));
+  action_it_ = actions_.begin();
+}
+
+void Unit::OutagePlan::run(cass::Future::Ptr future /*= cass::Future::Ptr()*/) {
+  if (future) future_ = future;
+  next();
+}
+
+void Unit::OutagePlan::stop() {
+  timer_.stop();
+}
+
+bool Unit::OutagePlan::is_done() {
+  return (action_it_ == actions_.end());
+}
+
+void Unit::OutagePlan::next() {
+  if (!is_done()) {
+    if (action_it_->delay_ms > 0 && loop_ != NULL) {
+      ASSERT_EQ(0, timer_.start(loop_, action_it_->delay_ms,
+                cass::bind_callback(&OutagePlan::on_timeout, this)));
+    } else {
+      handle_timeout();
+    }
+  } else {
+    if (future_) {
+      stop();
+      future_->set();
+    }
+  }
+}
+
+void Unit::OutagePlan::on_timeout(Timer* timer) {
+  handle_timeout();
+}
+
+void Unit::OutagePlan::handle_timeout() {
+  switch (action_it_->type) {
+    case START_NODE:
+      cluster_->start(action_it_->node);
+      break;
+    case STOP_NODE:
+      cluster_->stop(action_it_->node);
+      break;
+    case ADD_NODE:
+      cluster_->add(action_it_->node);
+      break;
+    case REMOVE_NODE:
+      cluster_->remove(action_it_->node);
+      break;
+  };
+  action_it_++;
+  next();
+}
+
+Unit::Unit()
+  : saved_log_level_(cass::Logger::log_level()) { }
+
 void Unit::SetUp() {
   saved_log_level_ = cass::Logger::log_level();
   set_log_level(CASS_LOG_DISABLED);

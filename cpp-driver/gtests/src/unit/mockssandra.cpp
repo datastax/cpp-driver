@@ -1804,13 +1804,8 @@ void Cluster::init(AddressGenerator& generator,
   }
 }
 
-Cluster::Cluster() {
-  uv_mutex_init(&mutex_);
-}
-
 Cluster::~Cluster() {
   stop_all();
-  uv_mutex_destroy(&mutex_);
 }
 
 String Cluster::use_ssl() {
@@ -1896,8 +1891,7 @@ int Cluster::add(cass::EventLoopGroup* event_loop_group, size_t node) {
     return -1;
   }
   Server& server = servers_[node - 1];
-  ScopedMutex l(&mutex_);
-  server.is_removed = false;
+  server.is_removed.store(false);
   server.connection->listen(event_loop_group);
   return server.connection->wait_listen();
 }
@@ -1907,8 +1901,7 @@ void Cluster::remove(size_t node) {
     return;
   }
   Server& server = servers_[node - 1];
-  ScopedMutex l(&mutex_);
-  server.is_removed = true;
+  server.is_removed.store(true);
   server.connection->close();
   server.connection->wait_close();
 }
@@ -1926,11 +1919,10 @@ const Host& Cluster::host(const Address& address) const {
 
 Hosts Cluster::hosts() const {
   Hosts hosts;
-  ScopedMutex l(&mutex_);
   hosts.reserve(servers_.size());
   for (Servers::const_iterator it = servers_.begin(),
        end = servers_.end(); it != end; ++it) {
-    if (!it->is_removed) {
+    if (!it->is_removed.load()) {
       hosts.push_back(it->host);
     }
   }

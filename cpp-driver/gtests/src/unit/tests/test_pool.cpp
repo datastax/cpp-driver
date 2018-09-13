@@ -11,8 +11,6 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
 #include "loop_test.hpp"
 
 #include "connection_pool_manager_initializer.hpp"

@@ -14,8 +14,6 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
 #include "unit.hpp"
 
 #include "murmur3.hpp"

@@ -197,9 +197,6 @@ private:
    static void on_connection(uv_stream_t* stream, int status);
    void handle_connection(int status);
 
-   static void on_async(uv_async_t* async);
-   void handle_async();
-
    static void on_close(uv_handle_t* handle);
    void handle_close();
 
@@ -1125,7 +1122,6 @@ protected:
             size_t num_nodes);
 
 public:
-  Cluster();
   ~Cluster();
 
   String use_ssl();
@@ -1156,15 +1152,18 @@ private:
       : host(host)
       , connection(connection)
       , is_removed(false) { }
+    Server(const Server& server)
+      : host(server.host)
+      , connection(server.connection)
+      , is_removed(server.is_removed.load()) { }
     const Host host;
     const internal::ServerConnection::Ptr connection;
-    bool is_removed;
+    cass::Atomic<bool> is_removed;
   };
 
   typedef Vector<Server> Servers;
 
 private:
-  mutable uv_mutex_t mutex_;
   Servers servers_;
 };
 

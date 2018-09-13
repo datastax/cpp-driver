@@ -14,9 +14,7 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
-#include "unit.hpp"
+#include "event_loop_test.hpp"
 #include "test_utils.hpp"
 
 #include "cluster_connector.hpp"
@@ -24,19 +22,10 @@
 
 using namespace cass;
 
-class ClusterUnitTest : public Unit {
+class ClusterUnitTest : public EventLoopTest {
 public:
-  EventLoop* event_loop() { return &event_loop_; }
-
-  virtual void SetUp() {
-    ASSERT_EQ(0, event_loop_.init("ClusterUnitTest"));
-    ASSERT_EQ(0, event_loop_.run());
-  }
-
-  virtual void TearDown() {
-    event_loop_.close_handles();
-    event_loop_.join();
-  }
+  ClusterUnitTest()
+    : EventLoopTest("ClusterUnitTest") { }
 
   class Future : public cass::Future {
   public:
@@ -140,106 +129,6 @@ public:
     Address address_;
   };
 
-  class OutagePlan {
-  public:
-    enum Type {
-      START_NODE,
-      STOP_NODE,
-      ADD_NODE,
-      REMOVE_NODE,
-    };
-    struct Action {
-      Action(Type type,
-             size_t node,
-             uint64_t timeout)
-        : type(type)
-        , node(node)
-        , timeout(timeout) { }
-
-      Type type;
-      size_t node;
-      uint64_t timeout;
-    };
-
-    typedef Vector<Action> Actions;
-
-    OutagePlan(uv_loop_t* loop, mockssandra::SimpleCluster* cluster)
-      : loop_(loop)
-      , cluster_(cluster) { }
-
-    void start_node(size_t node, uint64_t timeout = 500) {
-      actions_.push_back(Action(START_NODE, node, timeout));
-    }
-
-    void stop_node(size_t node, uint64_t timeout = 500) {
-      actions_.push_back(Action(STOP_NODE, node, timeout));
-    }
-
-    void add_node(size_t node, uint64_t timeout = 500) {
-      actions_.push_back(Action(ADD_NODE, node, timeout));
-    }
-
-    void remove_node(size_t node, uint64_t timeout = 500) {
-      actions_.push_back(Action(REMOVE_NODE, node, timeout));
-    }
-
-    void run() {
-      action_it_ = actions_.begin();
-      next();
-    }
-
-    void stop() {
-      timer_.stop();
-    }
-
-    bool is_done() {
-      return (action_it_ == actions_.end());
-    }
-
-  private:
-    void next()  {
-      if (!is_done()) {
-        if (action_it_->timeout > 0) {
-          timer_.start(loop_, action_it_->timeout,
-                       cass::bind_callback(&OutagePlan::on_timeout, this));
-        } else {
-          handle_timeout();
-        }
-      }
-    }
-
-  private:
-    void on_timeout(Timer* timer) {
-      handle_timeout();
-    }
-
-    void handle_timeout() {
-      switch (action_it_->type) {
-        case START_NODE:
-          cluster_->start(action_it_->node);
-          break;
-        case STOP_NODE:
-          cluster_->stop(action_it_->node);
-          break;
-        case ADD_NODE:
-          cluster_->add(action_it_->node);
-          break;
-        case REMOVE_NODE:
-          cluster_->remove(action_it_->node);
-          break;
-      };
-      action_it_++;
-      next();
-    }
-
-  private:
-    Timer timer_;
-    Actions::const_iterator action_it_;
-    Actions actions_;
-    uv_loop_t* loop_;
-    mockssandra::SimpleCluster* cluster_;
-  };
-
   class ReconnectClusterListener : public Listener {
   public:
     typedef SharedRefPtr<ReconnectClusterListener> Ptr;
@@ -341,9 +230,6 @@ public:
                         connector->error_message());
     }
   }
-
-private:
-  EventLoop event_loop_;
 };
 
 TEST_F(ClusterUnitTest, Simple) {

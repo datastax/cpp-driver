@@ -14,10 +14,7 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
-#include "unit.hpp"
-#include "test_utils.hpp"
+#include "event_loop_test.hpp"
 
 #include "event_loop.hpp"
 #include "query_request.hpp"
@@ -29,21 +26,10 @@
 
 using namespace cass;
 
-class RequestProcessorUnitTest : public Unit {
+class RequestProcessorUnitTest : public EventLoopTest {
 public:
-  EventLoop* event_loop() { return &event_loop_; }
-
-  virtual void SetUp() {
-    Unit::SetUp();
-    ASSERT_EQ(0, event_loop_.init());
-    ASSERT_EQ(0, event_loop_.run());
-  }
-
-  virtual void TearDown() {
-    Unit::TearDown();
-    event_loop_.close_handles();
-    event_loop_.join();
-  }
+  RequestProcessorUnitTest()
+    : EventLoopTest("RequestProcessorUnitTest") { }
 
   HostMap generate_hosts() {
     HostMap hosts;
@@ -56,15 +42,19 @@ public:
     return hosts;
   }
 
-  void try_request(const RequestProcessor::Ptr& processor) {
+  void try_request(const RequestProcessor::Ptr& processor,
+                   uint64_t wait_for_time_us = WAIT_FOR_TIME) {
     ResponseFuture::Ptr response_future(Memory::allocate<ResponseFuture>());
-    Request::ConstPtr request(Memory::allocate<QueryRequest>("SELECT * FROM table"));
+    QueryRequest::Ptr query_request(Memory::allocate<QueryRequest>("SELECT * FROM table"));
+    query_request->set_is_idempotent(true);
+    Request::ConstPtr request(query_request);
     RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request, response_future));
 
     processor->process_request(request_handler);
-
-    ASSERT_TRUE(response_future->wait_for(WAIT_FOR_TIME));
-    EXPECT_FALSE(response_future->error());
+    ASSERT_TRUE(response_future->wait_for(wait_for_time_us)) << "Timed out waiting for response";
+    ASSERT_FALSE(response_future->error())
+      << cass_error_desc(response_future->error()->code) << ": "
+      << response_future->error()->message;;
   }
 
   class Future : public cass::Future {
@@ -200,9 +190,6 @@ public:
       }
     }
   }
-
-private:
-  EventLoop event_loop_;
 };
 
 TEST_F(RequestProcessorUnitTest, Simple) {
@@ -558,4 +545,126 @@ TEST_F(RequestProcessorUnitTest, InvalidSsl) {
   ASSERT_TRUE(connect_future->error());
   EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
   EXPECT_EQ(3u, listener.count(Connector::CONNECTION_ERROR_SSL_VERIFY));
+}
+
+TEST_F(RequestProcessorUnitTest, RollingRestart) {
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  OutagePlan outage_plan(loop(), &cluster);
+  // Multiple rolling restarts
+  for (int i = 1; i <= NUM_NODES * 3; ++i) {
+    int node = i % NUM_NODES;
+    outage_plan.stop_node(node);
+    outage_plan.start_node(node);
+  }
+
+  Future::Ptr close_future(Memory::allocate<Future>());
+  CloseListener::Ptr listener(Memory::allocate<CloseListener>(close_future));
+
+  HostMap hosts(generate_hosts());
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
+                                               PROTOCOL_VERSION,
+                                               hosts,
+                                               TokenMap::Ptr(),
+                                               bind_callback(on_connected, connect_future.get())));
+
+  RequestProcessorSettings settings;
+  settings.connection_pool_settings.reconnect_wait_time_ms = 10; // Reconnect immediately
+
+  initializer
+    ->with_settings(settings)
+    ->with_listener(listener.get())
+    ->initialize(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+  RequestProcessor::Ptr processor(connect_future->processor());
+  cass::Future::Ptr outage_future = execute_outage_plan(&outage_plan);
+
+  while (!outage_future->wait_for(1000)) { // 1 millisecond wait
+    try_request(processor, WAIT_FOR_TIME * 3); // Increase wait time for chaotic tests
+  }
+
+  processor->close();
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+}
+
+TEST_F(RequestProcessorUnitTest, NoHostsAvailable) {
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Future::Ptr close_future(Memory::allocate<Future>());
+  CloseListener::Ptr listener(Memory::allocate<CloseListener>(close_future));
+
+  HostMap hosts(generate_hosts());
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
+                                               PROTOCOL_VERSION,
+                                               hosts,
+                                               TokenMap::Ptr(),
+                                               bind_callback(on_connected, connect_future.get())));
+
+  initializer
+    ->with_listener(listener.get())
+    ->initialize(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+  RequestProcessor::Ptr processor(connect_future->processor());
+
+  ResponseFuture::Ptr response_future(Memory::allocate<ResponseFuture>());
+  Request::ConstPtr request(Memory::allocate<QueryRequest>("SELECT * FROM table"));
+  RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request, response_future));
+
+  cluster.stop_all();
+
+  processor->process_request(request_handler);
+  ASSERT_TRUE(response_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(response_future->error());
+  ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, response_future->error()->code);
+
+  processor->close();
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+}
+
+TEST_F(RequestProcessorUnitTest, RequestTimeout) {
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(mockssandra::OPCODE_QUERY).wait(100); // Create a delay for all queries
+  mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Future::Ptr close_future(Memory::allocate<Future>());
+  CloseListener::Ptr listener(Memory::allocate<CloseListener>(close_future));
+
+  HostMap hosts(generate_hosts());
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
+                                               PROTOCOL_VERSION,
+                                               hosts,
+                                               TokenMap::Ptr(),
+                                               bind_callback(on_connected, connect_future.get())));
+
+  initializer
+    ->with_listener(listener.get())
+    ->initialize(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+  RequestProcessor::Ptr processor(connect_future->processor());
+
+  ResponseFuture::Ptr response_future(Memory::allocate<ResponseFuture>());
+  QueryRequest::Ptr query_request(Memory::allocate<QueryRequest>("SELECT * FROM table"));
+  query_request->set_request_timeout_ms(50); // Small request timeout window (smaller than delay)
+  Request::ConstPtr request(query_request);
+  RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request, response_future));
+
+  processor->process_request(request_handler);
+  ASSERT_TRUE(response_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(response_future->error());
+  ASSERT_EQ(CASS_ERROR_LIB_REQUEST_TIMED_OUT, response_future->error()->code);
+
+  processor->close();
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
 }
