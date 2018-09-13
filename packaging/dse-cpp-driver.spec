@@ -89,5 +89,5 @@ rm -rf %{buildroot}
 %{_libdir}/pkgconfig/*.pc
 
 %changelog
-* Wed Jun 01 2015 Michael Penick <michael.penick@datastax.com> - 1.0.0eap1-1
-- eap release
+* Mon Sep 24 2018 Michael Penick <michael.penick@datastax.com> - 1.6.0-1
+- Performance refactor release
