@@ -150,7 +150,6 @@ private:
   State state_;
   ScopedPtr<EventLoop> event_loop_;
   Cluster::Ptr cluster_;
-  ClusterConnector::Ptr cluster_connector_;
   Config config_;
   ScopedPtr<Random> random_;
   ScopedPtr<Metrics> metrics_;

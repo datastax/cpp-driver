@@ -99,8 +99,8 @@ private:
 
 private:
   ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
-  RequestProcessor::Vec request_processors_;
   uv_mutex_t request_processor_mutex_;
+  RequestProcessor::Vec request_processors_;
   size_t request_processor_count_;
 };
 
