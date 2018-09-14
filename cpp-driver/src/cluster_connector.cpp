@@ -143,6 +143,7 @@ void ClusterConnector::finish() {
   // Explicitly release resources on the event loop thread.
   resolver_.reset();
   connector_.reset();
+  cluster_.reset();
   dec_ref();
 }
 

@@ -403,6 +403,8 @@ void Session::on_connect(const Host::Ptr& connected_host,
     return;
   }
 
+  request_processors_.clear();
+  request_processor_count_ = 0;
   SessionInitializer::Ptr initializer(Memory::allocate<SessionInitializer>(this));
   initializer->initialize(connected_host,
                           protocol_version,

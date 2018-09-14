@@ -216,6 +216,7 @@ ChainedRequestCallback::ChainedRequestCallback(const String& key, const String& 
   : SimpleRequestCallback(query)
   , chain_(chain)
   , has_pending_(false)
+  , has_error_or_timeout_(false)
   , key_(key) {
   responses_.set_empty_key(String());
 }
@@ -224,6 +225,7 @@ ChainedRequestCallback::ChainedRequestCallback(const String& key, const Request:
   : SimpleRequestCallback(request)
   , chain_(chain)
   , has_pending_(false)
+  , has_error_or_timeout_(false)
   , key_(key) { }
 
 ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const String& query) {
@@ -263,18 +265,24 @@ void ChainedRequestCallback::on_internal_set(ResponseMessage* response) {
 }
 
 void ChainedRequestCallback::on_internal_error(CassError code, const String& message) {
-  if (chain_) {
-    chain_->on_error(code, message);
-  } else {
-    on_chain_error(code, message);
+  if (!has_error_or_timeout_) {
+    has_error_or_timeout_ = true;
+    if (chain_) {
+      chain_->on_error(code, message);
+    } else {
+      on_chain_error(code, message);
+    }
   }
 }
 
 void ChainedRequestCallback::on_internal_timeout() {
-  if (chain_) {
-    chain_->on_internal_timeout();
-  } else {
-    on_chain_timeout();
+  if (!has_error_or_timeout_) {
+    has_error_or_timeout_ = true;
+    if (chain_) {
+      chain_->on_internal_timeout();
+    } else {
+      on_chain_timeout();
+    }
   }
 }
 
@@ -284,7 +292,9 @@ void ChainedRequestCallback::set_chain_responses(Map& responses) {
 }
 
 bool ChainedRequestCallback::is_finished() const {
-  return response_ && ((has_pending_ && !responses_.empty()) || !has_pending_);
+  return response_ &&
+      !has_error_or_timeout_ &&
+      ((has_pending_ && !responses_.empty()) || !has_pending_);
 }
 
 void ChainedRequestCallback::maybe_finish() {
