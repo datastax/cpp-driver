@@ -132,6 +132,19 @@ inline std::ostream& operator<<(std::ostream& os, const Address& addr) {
   return os << addr.to_string();
 }
 
+inline std::ostream& operator<<(std::ostream& os, const AddressVec& v) {
+  os << "[";
+  bool first = true;
+  for (AddressVec::const_iterator it = v.begin(),
+       end = v.end(); it != end; ++it) {
+    if (!first) os << ", ";
+    first = false;
+    os << *it;
+  }
+  os << "]";
+  return os;
+}
+
 bool determine_address_for_peer_host(const Address& connected_address,
                                      const Value* peer_value,
                                      const Value* rpc_value,
