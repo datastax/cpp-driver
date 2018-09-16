@@ -1349,7 +1349,7 @@ bool SystemLocal::on_run(Request* request) const {
     return true;
   } else {
     try {
-      if (query == SELECT_LOCAL || query == SELECT_LOCAL_TOKENS) {
+      if (query.find(SELECT_LOCAL) != String::npos) {
         const Host& host(request->host(request->address()));
 
         ResultSet local_rs
@@ -1388,8 +1388,7 @@ bool SystemPeers::on_run(Request* request) const {
     return true;
   } else {
     try {
-      if (query.find(SELECT_PEERS) != String::npos ||
-          query.find(SELECT_PEERS_TOKENS) != String::npos) {
+      if (query.find(SELECT_PEERS) != String::npos) {
         const String where_clause(" WHERE peer = '");
         ResultSet::Builder peers_builder
             = ResultSet::Builder("system", "peers")

@@ -113,17 +113,7 @@ public:
   const Address& address() const { return address_; }
   const String& address_string() const { return address_string_; }
 
-  void set(const Row* row);
-
-  const String hostname() const { return hostname_; }
-  void set_hostname(const String& hostname) {
-    if (!hostname.empty() && hostname[hostname.size() - 1] == '.') {
-      // Strip off trailing dot for hostcheck comparison
-      hostname_ = hostname.substr(0, hostname.size() - 1);
-    } else {
-      hostname_ = hostname;
-    }
-  }
+  void set(const Row* row, bool use_tokens);
 
   const String& rack() const { return rack_; }
   const String& dc() const { return dc_; }
@@ -147,9 +137,8 @@ public:
     return tokens_;
   }
 
-  const VersionNumber& server_version() const { return server_version_; }
-  void set_server_version(const VersionNumber& server_version) {
-    server_version_ = server_version;
+  const VersionNumber& server_version() const {
+    return server_version_;
   }
 
   bool was_just_added() const { return state() == ADDED; }
@@ -226,7 +215,6 @@ private:
   Atomic<HostState> state_;
   String address_string_;
   VersionNumber server_version_;
-  String hostname_;
   String rack_;
   String dc_;
   String partitioner_;

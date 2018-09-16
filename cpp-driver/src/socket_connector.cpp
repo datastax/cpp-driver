@@ -265,8 +265,13 @@ void SocketConnector::on_resolve(NameResolver* resolver) {
     LOG_DEBUG("Resolved the hostname %s for address %s",
               resolver->hostname().c_str(),
               resolver->address().to_string().c_str());
-
-    hostname_ = resolver->hostname();
+    const String& hostname = resolver->hostname();
+    if (!hostname.empty() && hostname[hostname.size() - 1] == '.') {
+      // Strip off trailing dot for hostcheck comparison
+      hostname_ = hostname.substr(0, hostname.size() - 1);
+    } else {
+      hostname_ = hostname;
+    }
     internal_connect(resolver->loop());
   } else if (is_canceled() || resolver->is_canceled()) {
     finish();
