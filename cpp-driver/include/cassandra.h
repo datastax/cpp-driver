@@ -1722,7 +1722,7 @@ cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
  * bound workloads and lower values should be used for latency bound
  * workloads.
  *
- * <b>Default:</b> 500 us
+ * <b>Default:</b> 200 us
  *
  * @public @memberof CassCluster
  *
