@@ -214,9 +214,12 @@ public:
    * a SSL context, a SSL certificate, and hostname resolution enabled.
    *
    * @param cluster Mockssandra cluster to apply SSL settings to
+   * @param cn SSL common name (e.g. hostname or IP address depending on SSL
+   *           peer verification)
    * @return A connection settings object setup to use SSL.
    */
-  cass::ConnectionSettings use_ssl(mockssandra::Cluster* cluster);
+  cass::ConnectionSettings use_ssl(mockssandra::Cluster* cluster,
+                                   const cass::String& cn = "");
 
 private:
   CassLogLevel saved_log_level_;

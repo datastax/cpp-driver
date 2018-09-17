@@ -8,6 +8,8 @@ cache:
 platform:
   - x86
   - x64
+hosts:
+  cpp-driver.hostname.: 127.254.254.254
 environment:
   ARTIFACTORY_BASE_URI:
     secure: JgzXEe8SETmb1jGeufZM87ov61t4gvBp/Gq0Q9lCfi41fMgV2z/21SiCobd+twf224OSSA3ShzXXujOhyFxdx8kCtrABN+nJBt2uDNw3tnc=

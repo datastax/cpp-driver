@@ -32,10 +32,12 @@ public:
   uv_loop_t* loop() { return &loop_; }
 
   virtual void SetUp() {
+    Unit::SetUp();
     uv_loop_init(loop());
   }
 
   virtual void TearDown() {
+    Unit::TearDown();
     int rc = uv_loop_close(loop());
     if (rc != 0) {
       uv_run(loop(), UV_RUN_DEFAULT);

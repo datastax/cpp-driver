@@ -22,6 +22,10 @@
 #include "scoped_lock.hpp"
 #include "control_connection.hpp" // For host queries
 
+#ifdef WIN32
+#  include "winsock.h"
+#endif
+
 using cass::ScopedMutex;
 using cass::OStringStream;
 
@@ -51,7 +55,18 @@ String Ssl::generate_key() {
   return result;
 }
 
-String Ssl::generate_cert(const String& key, const String& cn) {
+String Ssl::generate_cert(const String& key, String cn) {
+  // Assign the proper default hostname
+  if (cn.empty()) {
+#ifdef WIN32
+    char win_hostname[64];
+    gethostname(win_hostname, 64);
+    cn = win_hostname;
+#else
+    cn = "localhost";
+#endif
+  }
+
   EVP_PKEY* pkey = NULL;
   { // Read key from string
     BIO* bio = BIO_new_mem_buf(const_cast<char*>(key.c_str()), key.length());
@@ -1807,9 +1822,9 @@ Cluster::~Cluster() {
   stop_all();
 }
 
-String Cluster::use_ssl() {
+String Cluster::use_ssl(const String& cn /*= ""*/) {
   String key(Ssl::generate_key());
-  String cert(Ssl::generate_cert(key));
+  String cert(Ssl::generate_cert(key, cn));
   for (size_t i = 0; i < servers_.size(); ++i) {
     Server& server = servers_[i];
     if (!server.connection->use_ssl(key, cert)) {

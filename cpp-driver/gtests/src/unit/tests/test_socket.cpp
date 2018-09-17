@@ -20,6 +20,10 @@
 #include "socket_connector.hpp"
 #include "ssl.hpp"
 
+#define SSL_VERIFY_PEER_DNS_RELATIVE_HOSTNAME "cpp-driver.hostname"
+#define SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME SSL_VERIFY_PEER_DNS_RELATIVE_HOSTNAME "."
+#define SSL_VERIFY_PEER_DNS_IP_ADDRESS "127.254.254.254"
+
 using namespace cass;
 
 class TestSocketHandler : public SocketHandler {
@@ -72,10 +76,10 @@ private:
 
 class SocketUnitTest : public LoopTest {
 public:
-  SocketSettings use_ssl() {
+  SocketSettings use_ssl(const String& cn = "") {
     SslContext::Ptr ssl_context(SslContextFactory::create());
 
-    String cert = server_.use_ssl();
+    String cert = server_.use_ssl(cn);
     EXPECT_FALSE(cert.empty()) << "Unable to enable SSL";
     EXPECT_EQ(ssl_context->add_trusted_cert(cert.data(), cert.size()), CASS_OK);
 
@@ -88,6 +92,10 @@ public:
 
   void listen() {
     ASSERT_EQ(server_.listen(), 0);
+  }
+
+  void reset(const Address& address) {
+    server_.reset(address);
   }
 
   void close() {
@@ -138,6 +146,22 @@ public:
   static void on_socket_canceled(SocketConnector* connector, bool* is_canceled) {
     if (connector->is_canceled()) {
       *is_canceled = true;
+    }
+  }
+
+  static void on_request(uv_getnameinfo_t* handle,
+                         int status,
+                         const char* hostname,
+                         const char* service) {
+    if(status) {
+      FAIL()
+        << "Unable to Execute Test SocketUnitTest.SslVerifyIdentityDns: "
+        << "Add /etc/hosts entry " << SSL_VERIFY_PEER_DNS_IP_ADDRESS << "\t"
+        << SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME;
+    } else if (String(hostname) != String(SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME)) {
+      FAIL()
+        << "Invalid /etc/hosts entry for: '" << hostname << "' != '"
+        << SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME << "'";
     }
   }
 
@@ -264,4 +288,55 @@ TEST_F(SocketUnitTest, SslCancel) {
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_TRUE(is_canceled);
+}
+
+TEST_F(SocketUnitTest, SslVerifyIdentity) {
+  listen();
+
+  SocketSettings settings(use_ssl("127.0.0.1"));
+  settings.ssl_context->set_verify_flags(CASS_SSL_VERIFY_PEER_IDENTITY);
+
+  String result;
+  SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address("127.0.0.1", 8888),
+                                 cass::bind_callback(on_socket_connected, &result)));
+
+  connector->with_settings(settings)
+    ->connect(loop());
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
+}
+
+TEST_F(SocketUnitTest, SslVerifyIdentityDns) {
+  // Verify address can be resolved
+  Address verify_entry;
+  Address::from_string(SSL_VERIFY_PEER_DNS_IP_ADDRESS, 8888, &verify_entry);
+  uv_getnameinfo_t request;
+  ASSERT_EQ(0, uv_getnameinfo(loop(),
+                              &request,
+                              on_request,
+                              static_cast<const Address>(verify_entry).addr(),
+                              0));
+  uv_run(loop(), UV_RUN_DEFAULT);
+  if (this->HasFailure()) { // Make test fail due to DNS not configured
+    return;
+  }
+
+  reset(Address(SSL_VERIFY_PEER_DNS_IP_ADDRESS, 8888)); // Ensure the echo server is listening on the correct address
+  listen();
+
+  SocketSettings settings(use_ssl(SSL_VERIFY_PEER_DNS_RELATIVE_HOSTNAME));
+  settings.ssl_context->set_verify_flags(CASS_SSL_VERIFY_PEER_IDENTITY_DNS);
+
+  String result;
+  SocketConnector::Ptr connector(Memory::allocate<SocketConnector>(Address(SSL_VERIFY_PEER_DNS_IP_ADDRESS, 8888),
+                                 cass::bind_callback(on_socket_connected, &result)));
+
+  connector->with_settings(settings)
+    ->connect(loop());
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
 }

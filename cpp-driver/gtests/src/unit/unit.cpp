@@ -122,10 +122,11 @@ const mockssandra::RequestHandler* Unit::auth() {
   return mockssandra::AuthRequestHandlerBuilder().build();
 }
 
-cass::ConnectionSettings Unit::use_ssl(mockssandra::Cluster* cluster) {
+cass::ConnectionSettings Unit::use_ssl(mockssandra::Cluster* cluster,
+                                       const cass::String& cn /*= ""*/) {
   cass::SslContext::Ptr ssl_context(cass::SslContextFactory::create());
 
-  String cert = cluster->use_ssl();
+  String cert = cluster->use_ssl(cn);
   EXPECT_FALSE(cert.empty()) << "Unable to enable SSL";
   EXPECT_EQ(ssl_context->add_trusted_cert(cert.data(), cert.size()), CASS_OK);
 
