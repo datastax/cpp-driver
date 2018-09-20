@@ -1,6 +1,26 @@
 branches:
   except:
     - gh-pages
+skip_commits:
+  files:
+    - '**/*.bat'
+    - '**/*.info'
+    - '**/*.jar'
+    - '**/*.nav'
+    - '**/*.md'
+    - '**/*.txt'
+    - '**/.clang-format'
+    - '**/.documenter_local_last_run'
+    - '**/.gitignore'
+    - '**/.travis.yml'
+    - '**/build.yaml'
+    - '**/docs.yaml'
+    - '**/Doxyfile.in'
+    - '**/AUTHORS'
+    - '**/COPYING'
+    - '**/LICENSE'
+    - packaging/
+    - test/ccm_bridge/data/
 shallow_clone: false
 cache:
   - C:\projects\dependencies\bin -> appveyor.ps1
