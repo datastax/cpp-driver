@@ -9,20 +9,21 @@ Pre-built packages are available for CentOS 6/7 (64-bit only), Ubuntu
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
-    <tr>
-      <th>Version</th>
-      <th>URL</th>
-    </tr>
+  <tr>
+   <th>Version</th>
+   <th>URL</th>
+  </tr>
   </thead>
+
   <tbody>
-    <tr>
-      <td>CentOS 6</td>
-      <td>http://downloads.datastax.com/cpp-driver/centos/6/dse</td>
-    </tr>
-    <tr>
-      <td>CentOS 7</td>
-      <td>http://downloads.datastax.com/cpp-driver/centos/7/dse</td>
-    </tr>
+  <tr>
+   <td>CentOS 6</td>
+   <td>http://downloads.datastax.com/cpp-driver/centos/6/dse</td>
+  </tr>
+  <tr>
+   <td>CentOS 7</td>
+   <td>http://downloads.datastax.com/cpp-driver/centos/7/dse</td>
+  </tr>
   </tbody>
 </table>
 
@@ -32,20 +33,21 @@ CentOS doesn't have up-to-date versions of libuv so we provide current packages.
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
-    <tr>
-      <th>Version</th>
-      <th>URL</th>
-    </tr>
+  <tr>
+   <th>Version</th>
+   <th>URL</th>
+  </tr>
   </thead>
+
   <tbody>
-    <tr>
-      <td>CentOS 6</td>
-      <td>http://downloads.datastax.com/cpp-driver/centos/6/dependencies</td>
-    </tr>
-    <tr>
-      <td>CentOS 7</td>
-      <td>http://downloads.datastax.com/cpp-driver/centos/7/dependencies</td>
-    </tr>
+  <tr>
+   <td>CentOS 6</td>
+   <td>http://downloads.datastax.com/cpp-driver/centos/6/dependencies</td>
+  </tr>
+  <tr>
+   <td>CentOS 7</td>
+   <td>http://downloads.datastax.com/cpp-driver/centos/7/dependencies</td>
+  </tr>
   </tbody>
 </table>
 
@@ -78,24 +80,25 @@ rpm -Uvh dse-cpp-driver-debuginfo-<version>.rpm
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
-    <tr>
-      <th>Version</th>
-      <th>URL</th>
-    </tr>
+  <tr>
+   <th>Version</th>
+   <th>URL</th>
+  </tr>
   </thead>
+
   <tbody>
-    <tr>
-      <td>Ubuntu 12.04</td>
-      <td>http://downloads.datastax.com/cpp-driver/ubuntu/12.04/dse</td>
-    </tr>
-    <tr>
-      <td>Ubuntu 14.04</td>
-      <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dse</td>
-    </tr>
-    <tr>
-      <td>Ubuntu 16.04</td>
-      <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dse</td>
-    </tr>
+  <tr>
+   <td>Ubuntu 12.04</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/12.04/dse</td>
+  </tr>
+  <tr>
+   <td>Ubuntu 14.04</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dse</td>
+  </tr>
+  <tr>
+   <td>Ubuntu 16.04</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dse</td>
+  </tr>
   </tbody>
 </table>
 
@@ -105,24 +108,25 @@ Ubuntu doesn't have up-to-date versions of libuv so we provide current packages.
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
-    <tr>
-      <th>Version</th>
-      <th>URL</th>
-    </tr>
+  <tr>
+   <th>Version</th>
+   <th>URL</th>
+  </tr>
   </thead>
+
   <tbody>
-    <tr>
-      <td>Ubuntu 12.04</td>
-      <td>http://downloads.datastax.com/cpp-driver/ubuntu/12.04/dependencies</td>
-    </tr>
-    <tr>
-      <td>Ubuntu 14.04</td>
-      <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies</td>
-    </tr>
-    <tr>
-      <td>Ubuntu 16.04</td>
-      <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies</td>
-    </tr>
+  <tr>
+   <td>Ubuntu 12.04</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/12.04/dependencies</td>
+  </tr>
+  <tr>
+   <td>Ubuntu 14.04</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies</td>
+  </tr>
+  <tr>
+   <td>Ubuntu 16.04</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies</td>
+  </tr>
   </tbody>
 </table>
 
@@ -155,16 +159,17 @@ dpkg -i dse-cpp-driver-dbg_<version>.deb
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
-    <tr>
-      <th>Version</th>
-      <th>URL</th>
-    </tr>
+  <tr>
+   <th>Version</th>
+    <th>URL</th>
+  </tr>
   </thead>
+
   <tbody>
-    <tr>
-      <td>Windows</td>
-      <td>http://downloads.datastax.com/cpp-driver/windows/dse</td>
-    </tr>
+  <tr>
+   <td>Windows</td>
+   <td>http://downloads.datastax.com/cpp-driver/windows/dse</td>
+  </tr>
   </tbody>
 </table>
 
@@ -175,16 +180,17 @@ Kerberos) on Windows because they can be difficult to install/build.
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
-    <tr>
-      <th>Version</th>
-      <th>URL</th>
-    </tr>
+  <tr>
+   <th>Version</th>
+   <th>URL</th>
+  </tr>
   </thead>
+
   <tbody>
-    <tr>
-      <td>Windows</td>
-      <td>http://downloads.datastax.com/cpp-driver/windows/dependencies</td>
-    </tr>
+  <tr>
+   <td>Windows</td>
+   <td>http://downloads.datastax.com/cpp-driver/windows/dependencies</td>
+  </tr>
   </tbody>
 </table>
 
