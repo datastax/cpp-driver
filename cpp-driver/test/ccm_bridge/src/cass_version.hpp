@@ -434,13 +434,15 @@ namespace CCM {
         return CassVersion("2.1.17-1439");
       } else if (*this == "4.8.13") {
         return CassVersion("2.1.17-1448");
-      } else if ((*this == "4.8.14" || *this >= "4.8.15") && *this < "5.0.0") {
-        if (*this > "4.8.15") {
+      } else if (*this == "4.8.14" || *this == "4.8.15") {
+        return CassVersion("2.1.18-1463");
+      } else if (*this >= "4.8.16" && *this < "5.0.0") {
+        if (*this > "4.8.16") {
           std::cerr << "Cassandra Version is not Defined: "
             << "Add Cassandra version for DSE v" << this->to_string()
             << std::endl;
         }
-        return CassVersion("2.1.18-1463");
+        return CassVersion("2.1.19-1484");
       } else if (*this == "5.0.0") {
         return CassVersion("3.0.7.1158");
       } else if (*this == "5.0.1") {
@@ -463,8 +465,10 @@ namespace CCM {
         return CassVersion("3.0.13-1735");
       } else if (*this == "5.0.10" || *this == "5.0.11") {
         return CassVersion("3.0.14-1862");
-      } else if (*this >= "5.0.12" && *this < "5.1.0") {
-        if (*this > "5.0.12") {
+      } else if (*this == "5.0.12" || *this == "5.0.13") {
+        return CassVersion("3.0.15-2128");
+      } else if (*this >= "5.0.14" && *this < "5.1.0") {
+        if (*this > "5.0.14") {
           std::cerr << "Cassandra Version is not Defined: "
             << "Add Cassandra version for DSE v" << this->to_string()
             << std::endl;
@@ -486,14 +490,18 @@ namespace CCM {
         return CassVersion("3.11.1-2130");
       } else if (*this == "5.1.8" || *this == "5.1.9") {
         return CassVersion("3.11.1-2261");
-      } else if (*this == "5.1.10" && *this < "6.0.0") {
-        if (*this > "5.1.10") {
+      } else if (*this == "5.1.10") {
+        return CassVersion("3.11.1-2323");
+      } else if (*this >= "5.1.11" && *this < "6.0.0") {
+        if (*this > "5.1.11") {
           std::cerr << "Cassandra Version is not Defined: "
             << "Add Cassandra version for DSE v" << this->to_string()
             << std::endl;
         }
-        return CassVersion("3.11.1-2323");
-      } else if (*this >= "6.0.0" && *this < "7.0.0") {
+        return CassVersion("3.11.2-5111");
+      } else if (*this >= "6.0.0" && *this < "6.7.0") {
+        return CassVersion("3.11.2-5111"); // Versions before DSE 6.7 erroneously return they support Cassandra 4.0.0
+      } else if (*this >= "6.7.0" && *this < "7.0.0") {
         return CassVersion("4.0.0");
       }
 
