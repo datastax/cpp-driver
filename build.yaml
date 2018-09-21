@@ -25,7 +25,7 @@ release:
     after:
       each:
         - script: |
-            LIBUV_VERSION=1.20.0
+            LIBUV_VERSION=1.23.0
             CC=gcc
             TEST_PROGRAM=$(mktemp)
             TOKENS=($(echo ${OS_VERSION} | tr "/" " "))
@@ -86,7 +86,7 @@ release:
 
             # Build libuv, install, and copy to "packages"
             echo "Building libuv Packages [${LIBUV_VERSION}] ...\n"
-            git clone --depth 1 https://github.com/mpenick/libuv-packaging.git libuv-packaging
+            git clone --depth 1 https://github.com/mikefero/libuv-packaging.git libuv-packaging
 
             pushd libuv-packaging
             ./build_${PACKAGE_TYPE}.sh ${LIBUV_VERSION}
