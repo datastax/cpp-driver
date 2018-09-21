@@ -145,11 +145,8 @@ bool Decoder::decode_value(const DataType::ConstPtr& data_type, Value& output,
   const char* buffer = NULL;
   int32_t size = 0;
 
-  // Handle special case for determining size inside of collection (v1/v2 protocol)
-  if (is_inside_collection) {
-    if (!decode_size(size)) return false;
-  } else {
-    if (!decode_int32(size)) return false;
+  if (!decode_int32(size)) {
+    return false;
   }
 
   if (size >= 0) {
@@ -160,7 +157,7 @@ bool Decoder::decode_value(const DataType::ConstPtr& data_type, Value& output,
 
     if (data_type->is_collection()) {
       int32_t count;
-      if (!decoder.decode_size(count)) return false;
+      if (!decoder.decode_int32(count)) return false;
       output = Value(data_type, count, decoder);
     } else {
       output = Value(data_type, decoder);

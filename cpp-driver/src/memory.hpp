@@ -92,6 +92,24 @@ public:
     return new (ptr) T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
   }
 
+  template <class T, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Arg6, class Arg7, class Arg8, class Arg9>
+  static T* allocate(const Arg1& arg1, const Arg2& arg2, const Arg3& arg3, const Arg4& arg4, const Arg5& arg5, const Arg6& arg6, const Arg7& arg7, const Arg8& arg8, const Arg9& arg9) {
+    T* ptr = reinterpret_cast<T*>(malloc(sizeof(T)));
+    return new (ptr) T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+  }
+
+  template <class T, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Arg6, class Arg7, class Arg8, class Arg9, class Arg10>
+  static T* allocate(const Arg1& arg1, const Arg2& arg2, const Arg3& arg3, const Arg4& arg4, const Arg5& arg5, const Arg6& arg6, const Arg7& arg7, const Arg8& arg8, const Arg9& arg9, const Arg10& arg10) {
+    T* ptr = reinterpret_cast<T*>(malloc(sizeof(T)));
+    return new (ptr) T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+  }
+
+  template <class T, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Arg6, class Arg7, class Arg8, class Arg9, class Arg10, class Arg11>
+  static T* allocate(const Arg1& arg1, const Arg2& arg2, const Arg3& arg3, const Arg4& arg4, const Arg5& arg5, const Arg6& arg6, const Arg7& arg7, const Arg8& arg8, const Arg9& arg9, const Arg10& arg10, const Arg11& arg11) {
+    T* ptr = reinterpret_cast<T*>(malloc(sizeof(T)));
+    return new (ptr) T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+  }
+
   template <class T, class Arg1>
   static T* allocate(Arg1& arg1) {
     T* ptr = reinterpret_cast<T*>(malloc(sizeof(T)));
@@ -138,6 +156,24 @@ public:
   static T* allocate(Arg1& arg1, Arg2& arg2, Arg3& arg3, Arg4& arg4, Arg5& arg5, Arg6& arg6, Arg7& arg7, Arg8& arg8) {
     T* ptr = reinterpret_cast<T*>(malloc(sizeof(T)));
     return new (ptr) T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+  }
+
+  template <class T, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Arg6, class Arg7, class Arg8, class Arg9>
+  static T* allocate(Arg1& arg1, Arg2& arg2, Arg3& arg3, Arg4& arg4, Arg5& arg5, Arg6& arg6, Arg7& arg7, Arg8& arg8, Arg9& arg9) {
+    T* ptr = reinterpret_cast<T*>(malloc(sizeof(T)));
+    return new (ptr) T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+  }
+
+  template <class T, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Arg6, class Arg7, class Arg8, class Arg9, class Arg10>
+  static T* allocate(Arg1& arg1, Arg2& arg2, Arg3& arg3, Arg4& arg4, Arg5& arg5, Arg6& arg6, Arg7& arg7, Arg8& arg8, Arg9& arg9, Arg10& arg10) {
+    T* ptr = reinterpret_cast<T*>(malloc(sizeof(T)));
+    return new (ptr) T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+  }
+
+  template <class T, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Arg6, class Arg7, class Arg8, class Arg9, class Arg10, class Arg11>
+  static T* allocate(Arg1& arg1, Arg2& arg2, Arg3& arg3, Arg4& arg4, Arg5& arg5, Arg6& arg6, Arg7& arg7, Arg8& arg8, Arg9& arg9, Arg10& arg10, Arg11& arg11) {
+    T* ptr = reinterpret_cast<T*>(malloc(sizeof(T)));
+    return new (ptr) T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
   }
 
   template <class T>

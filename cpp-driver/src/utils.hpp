@@ -38,30 +38,6 @@ class Value;
 typedef Vector<String> ContactPointList;
 typedef Vector<String> DcList;
 
-template<class From, class To>
-#if _MSC_VER && !__INTEL_COMPILER
-class IsConvertible : public std::is_convertible<From, To> { };
-#else
-class IsConvertible {
-  private:
-    typedef char Yes;
-    typedef struct { char not_used[2]; } No;
-
-    struct Helper {
-      static Yes test(To);
-      static No test(...);
-      static From& check();
-    };
-
-  public:
-    static const bool value;
-};
-
-template<class From, class To>
-const bool IsConvertible<From, To>::value
-  = sizeof(IsConvertible<From, To>::Helper::test(IsConvertible<From, To>::Helper::check())) == sizeof(typename IsConvertible<From, To>::Yes);
-#endif
-
 // copy_cast<> prevents incorrect code from being generated when two unrelated
 // types reference the same memory location and strict aliasing is enabled.
 // The type "char*" is an exception and is allowed to alias any other
@@ -139,6 +115,16 @@ inline size_t vint_size(int64_t value) {
 }
 
 int32_t get_pid();
+
+void set_thread_name(const String& thread_name);
+
+template <class C>
+static void set_pointer_keys(C& container) {
+  container.set_empty_key(reinterpret_cast<typename C::key_type>(0x0));
+  container.set_deleted_key(reinterpret_cast<typename C::key_type>(0x1));
+}
+
+void thread_yield();
 
 } // namespace cass
 

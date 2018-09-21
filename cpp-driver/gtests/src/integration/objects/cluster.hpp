@@ -135,6 +135,19 @@ public:
   }
 
   /**
+   * Assign the local address to bind; passing an empty string will clear
+   * the local address.
+   *
+   * @param name An IP address or hostname
+   * @return Cluster object
+   */
+  Cluster& with_local_address(const std::string& name) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_local_address(get(),
+      name.c_str()));
+    return *this;
+  }
+
+  /**
    * Assign the number of connections made to each node/server for each
    * connections thread
    *
@@ -181,8 +194,6 @@ public:
    *
    * This is useful for authentication (Kerberos) or encryption (SSL)
    * services that require a valid hostname for verification.
-   *
-   * NOTE: Not available if using libuv 0.10.x or earlier
    *
    * @param enable True if hostname resolution should be enabled; false
    *               otherwise (default: true)
@@ -289,6 +300,17 @@ public:
   Cluster& with_randomized_contact_points(bool enable = true) {
     cass_cluster_set_use_randomized_contact_points(get(),
       (enable == true ? cass_true : cass_false));
+    return *this;
+  }
+
+  /**
+   * Sets the amount of time to wait before attempting to reconnect.
+   *
+   * @param wait_time_ms Wait time in milliseconds (default: 2000)
+   * @return Cluster object
+   */
+  Cluster& with_reconnect_wait_time(unsigned int wait_time_ms) {
+    cass_cluster_set_reconnect_wait_time(get(), wait_time_ms);
     return *this;
   }
 

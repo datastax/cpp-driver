@@ -35,39 +35,35 @@ void stderr_log_callback(const CassLogMessage* message, void* data);
 class Config {
 public:
   Config()
-      : port_(9042)
+      : port_(CASS_DEFAULT_PORT)
       , protocol_version_(DSE_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
-      , use_beta_protocol_version_(false)
-      , thread_count_io_(1)
-      , queue_size_io_(8192)
-      , queue_size_event_(8192)
-      , queue_size_log_(8192)
-      , core_connections_per_host_(1)
-      , max_connections_per_host_(2)
-      , reconnect_wait_time_ms_(2000)
-      , max_concurrent_creation_(1)
-      , max_requests_per_flush_(128)
-      , max_concurrent_requests_threshold_(100)
-      , connect_timeout_ms_(5000)
-      , resolve_timeout_ms_(2000)
-      , log_level_(CASS_LOG_WARN)
+      , use_beta_protocol_version_(CASS_DEFAULT_USE_BETA_PROTOCOL_VERSION)
+      , thread_count_io_(CASS_DEFAULT_THREAD_COUNT_IO)
+      , queue_size_io_(CASS_DEFAULT_QUEUE_SIZE_IO)
+      , core_connections_per_host_(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
+      , reconnect_wait_time_ms_(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
+      , connect_timeout_ms_(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
+      , resolve_timeout_ms_(CASS_DEFAULT_RESOLVE_TIMEOUT_MS)
+      , max_schema_wait_time_ms_(CASS_DEFAULT_MAX_SCHEMA_WAIT_TIME_MS)
+      , coalesce_delay_us_(CASS_DEFAULT_COALESCE_DELAY)
+      , new_request_ratio_(CASS_DEFAULT_NEW_REQUEST_RATIO)
+      , log_level_(CASS_DEFAULT_LOG_LEVEL)
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
       , auth_provider_(Memory::allocate<AuthProvider>())
-      , speculative_execution_policy_(Memory::allocate<NoSpeculativeExecutionPolicy>())
-      , tcp_nodelay_enable_(true)
-      , tcp_keepalive_enable_(false)
-      , tcp_keepalive_delay_secs_(0)
-      , connection_idle_timeout_secs_(60)
-      , connection_heartbeat_interval_secs_(30)
+      , tcp_nodelay_enable_(CASS_DEFAULT_TCP_NO_DELAY_ENABLED)
+      , tcp_keepalive_enable_(CASS_DEFAULT_TCP_KEEPALIVE_ENABLED)
+      , tcp_keepalive_delay_secs_(CASS_DEFAULT_TCP_KEEPALIVE_DELAY_SECS)
+      , connection_idle_timeout_secs_(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
+      , connection_heartbeat_interval_secs_(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
       , timestamp_gen_(Memory::allocate<ServerSideTimestampGenerator>())
-      , use_schema_(true)
-      , use_hostname_resolution_(false)
-      , use_randomized_contact_points_(true)
-      , max_reusable_write_objects_(UINT_MAX)
-      , prepare_on_all_hosts_(true)
-      , prepare_on_up_or_add_host_(true)
-      , no_compact_(false) {
+      , use_schema_(CASS_DEFAULT_USE_SCHEMA)
+      , use_hostname_resolution_(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
+      , use_randomized_contact_points_(CASS_DEFAULT_USE_RANDOMIZED_CONTACT_POINTS)
+      , max_reusable_write_objects_(CASS_DEFAULT_MAX_REUSABLE_WRITE_OBJECTS)
+      , prepare_on_all_hosts_(CASS_DEFAULT_PREPARE_ON_ALL_HOSTS)
+      , prepare_on_up_or_add_host_(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
+      , no_compact_(CASS_DEFAULT_NO_COMPACT) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
@@ -76,12 +72,14 @@ public:
     default_profile_.set_request_timeout(CASS_DEFAULT_REQUEST_TIMEOUT_MS);
     default_profile_.set_load_balancing_policy(Memory::allocate<DCAwarePolicy>());
     default_profile_.set_retry_policy(Memory::allocate<DefaultRetryPolicy>());
+    default_profile_.set_speculative_execution_policy(Memory::allocate<NoSpeculativeExecutionPolicy>());
   }
 
   Config new_instance() const {
     Config config = *this;
-    config.init_profiles(); // Builds the LBPs and updates the profiles
-    config.set_speculative_execution_policy(speculative_execution_policy_->new_instance());
+    config.default_profile_.build_load_balancing_policy();
+    config.init_profiles(); // Initializes the profiles from default (if needed)
+    config.set_speculative_execution_policy(default_profile_.speculative_execution_policy()->new_instance());
 
     return config;
   }
@@ -106,18 +104,6 @@ public:
     queue_size_io_ = queue_size;
   }
 
-  unsigned queue_size_event() const { return queue_size_event_; }
-
-  void set_queue_size_event(unsigned queue_size) {
-    queue_size_event_ = queue_size;
-  }
-
-  unsigned queue_size_log() const { return queue_size_log_; }
-
-  void set_queue_size_log(unsigned queue_size) {
-    queue_size_log_ = queue_size;
-  }
-
   unsigned core_connections_per_host() const {
     return core_connections_per_host_;
   }
@@ -126,44 +112,34 @@ public:
     core_connections_per_host_ = num_connections;
   }
 
-  unsigned max_connections_per_host() const { return max_connections_per_host_; }
-
-  void set_max_connections_per_host(unsigned num_connections) {
-    max_connections_per_host_ = num_connections;
-  }
-
-  unsigned max_concurrent_creation() const {
-    return max_concurrent_creation_;
-  }
-
-  void set_max_concurrent_creation(unsigned num_connections) {
-    max_concurrent_creation_ = num_connections;
-  }
-
   unsigned reconnect_wait_time_ms() const { return reconnect_wait_time_ms_; }
 
   void set_reconnect_wait_time(unsigned wait_time_ms) {
     reconnect_wait_time_ms_ = wait_time_ms;
   }
 
-  unsigned max_requests_per_flush() const { return max_requests_per_flush_; }
-
-  void set_max_requests_per_flush(unsigned num_requests) {
-    max_requests_per_flush_ = num_requests;
-  }
-
-  unsigned max_concurrent_requests_threshold() const {
-    return max_concurrent_requests_threshold_;
-  }
-
-  void set_max_concurrent_requests_threshold(unsigned num_requests) {
-    max_concurrent_requests_threshold_ = num_requests;
-  }
-
   unsigned connect_timeout_ms() const { return connect_timeout_ms_; }
 
   void set_connect_timeout(unsigned timeout_ms) {
     connect_timeout_ms_ = timeout_ms;
+  }
+
+  unsigned max_schema_wait_time_ms() const { return max_schema_wait_time_ms_; }
+
+  void set_max_schema_wait_time_ms(unsigned time_ms) {
+    max_schema_wait_time_ms_ = time_ms;
+  }
+
+  uint64_t coalesce_delay_us() const { return coalesce_delay_us_; }
+
+  void set_coalesce_delay_us(uint64_t delay_us) {
+    coalesce_delay_us_ = delay_us;
+  }
+
+  int new_request_ratio() const { return new_request_ratio_; }
+
+  void set_new_request_ratio(int ratio) {
+    new_request_ratio_ = ratio;
   }
 
   void set_request_timeout(unsigned timeout_ms) {
@@ -229,27 +205,37 @@ public:
     auth_provider_.reset(Memory::allocate<PlainTextAuthProvider>(username, password));
   }
 
-  const LoadBalancingPolicy::Vec& load_balancing_policies() const {
-    return load_balancing_policies_;
+  const LoadBalancingPolicy::Ptr& load_balancing_policy() const {
+    return default_profile().load_balancing_policy();
+  }
+
+  LoadBalancingPolicy::Vec load_balancing_policies() const {
+    LoadBalancingPolicy::Vec policies;
+    for (ExecutionProfile::Map::const_iterator it = profiles_.begin(),
+         end = profiles_.end(); it != end; ++it) {
+      if (it->second.load_balancing_policy()) {
+        policies.push_back(it->second.load_balancing_policy());
+      }
+    }
+    return policies;
   }
 
   void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
     default_profile_.set_load_balancing_policy(lbp);
   }
 
-  const SpeculativeExecutionPolicy::Ptr& speculative_execution_policy() const {
-    return speculative_execution_policy_;
-  }
-
   void set_speculative_execution_policy(SpeculativeExecutionPolicy* sep) {
-    if (sep == NULL) return;
-    speculative_execution_policy_.reset(sep);
+    default_profile_.set_speculative_execution_policy(sep);
   }
 
-  SslContext* ssl_context() const { return ssl_context_.get(); }
+  const SslContext::Ptr& ssl_context() const { return ssl_context_; }
 
   void set_ssl_context(SslContext* ssl_context) {
     ssl_context_.reset(ssl_context);
+  }
+
+  bool token_aware_routing() const {
+    return default_profile().token_aware_routing();
   }
 
   void set_token_aware_routing(bool is_token_aware) {
@@ -341,20 +327,8 @@ public:
     return default_profile_;
   }
 
-  bool profile(const String& name, ExecutionProfile& profile) const {
-    // Determine if cluster profile should be used
-    if (name.empty()) {
-      profile = default_profile_;
-      return true;
-    }
-
-    // Handle profile lookup
-    ExecutionProfile::Map::const_iterator it = profiles_.find(name);
-    if (it != profiles_.end()) {
-      profile = it->second;
-      return true;
-    }
-    return false;
+  const ExecutionProfile::Map& profiles() const {
+    return profiles_;
   }
 
   void set_execution_profile(const String& name,
@@ -363,6 +337,7 @@ public:
     // This is required as their is no exposed API to set this chained policy
     ExecutionProfile copy = *profile;
     copy.set_host_targeting(default_profile_.host_targeting());
+    copy.build_load_balancing_policy();
     profiles_[name] = copy;
   }
 
@@ -374,6 +349,12 @@ public:
 
   void set_prepare_on_up_or_add_host(bool enabled) {
     prepare_on_up_or_add_host_ = enabled;
+  }
+
+  const Address& local_address() const { return local_address_; }
+
+  void set_local_address(const Address& address) {
+    local_address_ = address;
   }
 
   bool no_compact() const { return no_compact_; }
@@ -392,21 +373,17 @@ private:
   ContactPointList contact_points_;
   unsigned thread_count_io_;
   unsigned queue_size_io_;
-  unsigned queue_size_event_;
-  unsigned queue_size_log_;
   unsigned core_connections_per_host_;
-  unsigned max_connections_per_host_;
   unsigned reconnect_wait_time_ms_;
-  unsigned max_concurrent_creation_;
-  unsigned max_requests_per_flush_;
-  unsigned max_concurrent_requests_threshold_;
   unsigned connect_timeout_ms_;
   unsigned resolve_timeout_ms_;
+  unsigned max_schema_wait_time_ms_;
+  uint64_t coalesce_delay_us_;
+  int new_request_ratio_;
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;
   AuthProvider::Ptr auth_provider_;
-  SpeculativeExecutionPolicy::Ptr speculative_execution_policy_;
   SslContext::Ptr ssl_context_;
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;
@@ -420,9 +397,9 @@ private:
   unsigned max_reusable_write_objects_;
   ExecutionProfile default_profile_;
   ExecutionProfile::Map profiles_;
-  LoadBalancingPolicy::Vec load_balancing_policies_;
   bool prepare_on_all_hosts_;
   bool prepare_on_up_or_add_host_;
+  Address local_address_;
   bool no_compact_;
 };
 

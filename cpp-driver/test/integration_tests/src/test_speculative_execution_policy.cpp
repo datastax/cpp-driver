@@ -67,6 +67,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
    * query execution.
    */
   void initialize() {
+    cass_cluster_set_use_beta_protocol_version(cluster, cass_false);
     create_session();
     test_utils::execute_query(session, str(boost::format(
       test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
@@ -130,7 +131,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     // Gather and return the attempted hosts from the response
     std::vector<std::string> attempted_hosts;
     cass::Future* native_future = static_cast<cass::Future*>(future.get());
-    if (native_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
+    if (native_future->type() == cass::Future::FUTURE_TYPE_RESPONSE) {
       cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
       cass::AddressVec attempted_addresses = native_response_future->attempted_addresses();
       for (cass::AddressVec::iterator iterator = attempted_addresses.begin();
@@ -151,7 +152,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
   std::string executed_host(test_utils::CassFuturePtr future) {
     std::string host;
     cass::Future* native_future = static_cast<cass::Future*>(future.get());
-    if (native_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
+    if (native_future->type() == cass::Future::FUTURE_TYPE_RESPONSE) {
       cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
       host = native_response_future->address().to_string().c_str();
     }
@@ -418,7 +419,7 @@ BOOST_AUTO_TEST_CASE(without_speculative_execution_policy) {
 /**
  * Speculative execution policy; all nodes attempted with timeout
  *
- * This test will ensure that one node is attempted when executing a query
+ * This test will ensure that all nodes are attempted when executing a query
  * using the speculative execution policy.
  *
  * @since 2.5.0
@@ -440,7 +441,7 @@ BOOST_AUTO_TEST_CASE(execute_on_all_nodes_with_timeout) {
     tester.initialize();
 
     // Execute a query and ensure all nodes are tested and timeout occurs
-    test_utils::CassFuturePtr future = tester.query(true, 500,
+    test_utils::CassFuturePtr future = tester.query(true, 300,
       CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     std::vector<std::string> attempted_hosts = tester.attempted_hosts(future);
     BOOST_REQUIRE_EQUAL(3, attempted_hosts.size());

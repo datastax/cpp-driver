@@ -350,42 +350,6 @@ bool Statement::with_keyspace(int version) const {
       opcode() != CQL_OPCODE_EXECUTE && !keyspace().empty();
 }
 
-// Format: <string_or_id>[<n><value_1>...<value_n>]<consistency>
-// where:
-// <string_or_id> is a [long string] for <string> and a [short bytes] for <id>
-// <n> is a [short] (only for execute statements)
-// <value> is a [bytes] (only for execute statements)
-// <consistency> is a [short]
-int32_t Statement::encode_v1(RequestCallback* callback, BufferVec* bufs) const {
-  int32_t length = 0;
-  const int version = 1;
-
-  bufs->push_back(query_or_id_);
-  length += query_or_id_.size();
-
-  if (opcode() == CQL_OPCODE_EXECUTE) {
-    { // <n> [short]
-      Buffer buf(sizeof(uint16_t));
-      buf.encode_uint16(0, elements().size());
-      bufs->push_back(buf);
-      length += sizeof(uint16_t);
-    }
-    // <value_1>...<value_n>
-    int32_t result = encode_values(version, callback, bufs);
-    if (result < 0) return result;
-    length += result;
-  }
-
-  { // <consistency> [short]
-    Buffer buf(sizeof(uint16_t));
-    buf.encode_uint16(0, callback->consistency());
-    bufs->push_back(buf);
-    length += sizeof(uint16_t);
-  }
-
-  return length;
-}
-
 // For query statements the format is:
 // <query><consistency><flags><n>
 // where:
@@ -419,7 +383,7 @@ int32_t Statement::encode_begin(int version, uint16_t element_count,
 
   query_params_buf_size += sizeof(uint16_t); // <consistency> [short]
 
-  if (version >= 5) {
+  if (version >= CASS_PROTOCOL_VERSION_V5) {
     query_params_buf_size += sizeof(int32_t); // <flags> [int]
   } else {
     query_params_buf_size += sizeof(uint8_t); // <flags> [byte]
@@ -442,7 +406,7 @@ int32_t Statement::encode_begin(int version, uint16_t element_count,
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
-  if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {
+  if (callback->timestamp() != CASS_INT64_MIN) {
     flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
   }
 
@@ -456,7 +420,7 @@ int32_t Statement::encode_begin(int version, uint16_t element_count,
   Buffer& buf = bufs->back();
   size_t pos = buf.encode_uint16(0, callback->consistency());
 
-  if (version >= 5) {
+  if (version >= CASS_PROTOCOL_VERSION_V5) {
     pos = buf.encode_int32(pos, flags);
   } else {
     pos = buf.encode_byte(pos, flags);
@@ -477,9 +441,9 @@ int32_t Statement::encode_values(int version, RequestCallback* callback, BufferV
   for (size_t i = 0; i < elements().size(); ++i) {
     const Element& element = elements()[i];
     if (!element.is_unset()) {
-      bufs->push_back(element.get_buffer(version));
+      bufs->push_back(element.get_buffer());
     } else  {
-      if (version >= 4) {
+      if (version >= CASS_PROTOCOL_VERSION_V4) {
         bufs->push_back(cass::encode_with_length(CassUnset()));
       } else {
         OStringStream ss;
@@ -518,7 +482,7 @@ int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec*
     paging_buf_size += sizeof(uint16_t); // [short]
   }
 
-  if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {
+  if (callback->timestamp() != CASS_INT64_MIN) {
     paging_buf_size += sizeof(int64_t); // [long]
   }
 
@@ -545,7 +509,7 @@ int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec*
       pos = buf.encode_uint16(pos, callback->serial_consistency());
     }
 
-    if (version >= 3 && callback->timestamp() != CASS_INT64_MIN) {
+    if (callback->timestamp() != CASS_INT64_MIN) {
       pos = buf.encode_int64(pos, callback->timestamp());
     }
 
@@ -566,7 +530,7 @@ bool Statement::calculate_routing_key(const Vector<size_t>& key_indices, String*
     if (element.is_unset() || element.is_null()) {
       return false;
     }
-    Buffer buf(element.get_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION));
+    Buffer buf(element.get_buffer());
     routing_key->assign(buf.data() + sizeof(int32_t),
                         buf.size() - sizeof(int32_t));
   } else {
@@ -579,7 +543,7 @@ bool Statement::calculate_routing_key(const Vector<size_t>& key_indices, String*
       if (element.is_unset() || element.is_null()) {
         return false;
       }
-      size_t size = element.get_size(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) - sizeof(int32_t);
+      size_t size = element.get_size() - sizeof(int32_t);
       length += sizeof(uint16_t) + size + 1;
     }
 
@@ -589,7 +553,7 @@ bool Statement::calculate_routing_key(const Vector<size_t>& key_indices, String*
     for (Vector<size_t>::const_iterator i = key_indices.begin();
          i != key_indices.end(); ++i) {
       const AbstractData::Element& element(elements()[*i]);
-      Buffer buf(element.get_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION));
+      Buffer buf(element.get_buffer());
       size_t size = buf.size() - sizeof(int32_t);
 
       char size_buf[sizeof(uint16_t)];

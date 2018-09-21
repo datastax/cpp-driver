@@ -22,7 +22,7 @@
 #include "cass_version.hpp"
 #include "deployment_type.hpp"
 #include "dse_credentials_type.hpp"
-#include "socket.hpp"
+#include "tsocket.hpp"
 
 #include <map>
 #include <string>
@@ -44,7 +44,7 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 
 // Default values
 #define DEFAULT_CASSANDRA_VERSION CassVersion("3.11.2")
-#define DEFAULT_DSE_VERSION DseVersion("5.1.7")
+#define DEFAULT_DSE_VERSION DseVersion("6.0.1")
 #define DEFAULT_USE_GIT false
 #define DEFAULT_USE_INSTALL_DIR false
 #define DEFAULT_USE_DSE false
@@ -259,6 +259,9 @@ namespace CCM {
      * @param data_center_nodes Vector of data center nodes
      * @param with_vnodes True if vnodes tokens should be used; false otherwise
      *                   (default: false)
+     * @param is_password_authenticator True if password authenticator is
+     *                                  enabled; false otherwise
+     *                                  (default: false)
      * @param is_ssl True if SSL should be enabled; false otherwise
      *               (default: false)
      * @param is_client_authentication True if client authentication should be
@@ -267,8 +270,10 @@ namespace CCM {
      * @throws BridgeException
      */
     bool create_cluster(std::vector<unsigned short> data_center_nodes,
-      bool with_vnodes = false, bool is_ssl = false,
-      bool is_client_authentication = false);
+                        bool with_vnodes = false,
+                        bool is_password_authenticator = false,
+                        bool is_ssl = false,
+                        bool is_client_authentication = false);
 
     /**
      * Create a Cassandra cluster
@@ -958,14 +963,19 @@ namespace CCM {
      * @param cassandra_version Cassandra version being used
      * @param data_center_nodes Vector of nodes for each data center
      * @param with_vnodes True if vnodes are enabled; false otherwise
+     * @param is_password_authenticator True if password authenticator is
+     *                                  enabled; false otherwise
      * @param is_ssl True if SSL is enabled; false otherwise
      * @param is_client_authentication True if client authentication is enabled;
      *                                false otherwise
      * @return Cluster name
      */
     std::string generate_cluster_name(CassVersion cassandra_version,
-      std::vector<unsigned short> data_center_nodes,
-      bool with_vnodes, bool is_ssl, bool is_client_authentication);
+                                      std::vector<unsigned short> data_center_nodes,
+                                      bool with_vnodes,
+                                      bool is_password_authenticator,
+                                      bool is_ssl,
+                                      bool is_client_authentication);
 
     /**
      * Generate the nodes parameter for theCassandra cluster based on the number

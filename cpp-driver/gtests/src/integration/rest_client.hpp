@@ -117,9 +117,8 @@ private:
    * @param suggested_size The size (in bytes) to allocate for the buffer
    * @param buf Buffer to be allocated
    */
-  static void handle_allocation(uv_handle_t* handle,
-                                size_t suggested_size,
-                                uv_buf_t* buffer);
+  static void handle_allocation(uv_handle_t* handle, size_t suggested_size,
+    uv_buf_t* buffer);
 
   /**
    * Handle the connect (callback) when the connection has been established to

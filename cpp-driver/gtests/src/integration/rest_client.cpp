@@ -51,8 +51,8 @@ const Response RestClient::send_request(const Request& request) {
   uv_loop_t loop;
   int error_code = uv_loop_init(&loop);
   if(error_code != 0) {
-    throw Exception("Unable to Send Request: "
-                    + std::string(uv_strerror(error_code)));
+    throw Exception("Unable to Send Request: " +
+                    std::string(uv_strerror(error_code)));
   };
 
   // Initialize the HTTP request
@@ -70,22 +70,22 @@ const Response RestClient::send_request(const Request& request) {
   error_code = uv_tcp_init(&loop, &tcp);
   if (error_code != 0) {
     TEST_LOG_ERROR("Unable to Initialize TCP Request: "
-                   << std::string(uv_strerror(error_code)));
+      << uv_strerror(error_code));
   }
   error_code = uv_tcp_keepalive(&tcp, 1, 60);
   if (error_code != 0) {
-    TEST_LOG_ERROR("Unable to Set TCP KeepAlive: "
-                   << std::string(uv_strerror(error_code)));
+    TEST_LOG_ERROR("Unable to Set TCP KeepAlive: " << uv_strerror(error_code));
   }
 
   // Start the request and attach the HTTP request to send to the REST server
   uv_connect_t connect;
   connect.data = &http_request;
   uv_tcp_connect(&connect, &tcp,
-                 address.addr(),
-                 handle_connected);
-  uv_run(&loop, UV_RUN_DEFAULT);
-  uv_loop_close(&loop);
+    address.addr(),
+    handle_connected);
+
+    uv_run(&loop, UV_RUN_DEFAULT);
+    uv_loop_close(&loop);
 
   // Return the response from the request
   return http_request.response;
@@ -103,7 +103,7 @@ void RestClient::handle_connected(uv_connect_t* req, int status) {
 
   if (status < 0) {
     TEST_LOG_ERROR("Unable to Connect to HTTP Server: "
-                   << std::string(uv_strerror(status)));
+      << uv_strerror(status));
     uv_close(reinterpret_cast<uv_handle_t*>(req->handle), NULL);
   } else {
     // Create the buffer to write to the stream

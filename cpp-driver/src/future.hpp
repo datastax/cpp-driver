@@ -34,15 +34,16 @@ namespace cass {
 
 struct Error;
 
-enum FutureType {
-  CASS_FUTURE_TYPE_SESSION,
-  CASS_FUTURE_TYPE_RESPONSE
-};
-
 class Future : public RefCounted<Future> {
 public:
   typedef SharedRefPtr<Future> Ptr;
   typedef void (*Callback)(CassFuture*, void*);
+
+  enum Type {
+    FUTURE_TYPE_GENERIC,
+    FUTURE_TYPE_SESSION,
+    FUTURE_TYPE_RESPONSE
+  };
 
   struct Error {
     Error(CassError code, const String& message)
@@ -53,7 +54,7 @@ public:
     String message;
   };
 
-  Future(FutureType type)
+  Future(Type type)
       : is_set_(false)
       , type_(type)
       , callback_(NULL) {
@@ -66,7 +67,7 @@ public:
     uv_cond_destroy(&cond_);
   }
 
-  FutureType type() const { return type_; }
+  Type type() const { return type_; }
 
   bool ready() {
     ScopedMutex lock(&mutex_);
@@ -135,7 +136,7 @@ protected:
 private:
   bool is_set_;
   uv_cond_t cond_;
-  FutureType type_;
+  Type type_;
   ScopedPtr<Error> error_;
   Callback callback_;
   void* data_;

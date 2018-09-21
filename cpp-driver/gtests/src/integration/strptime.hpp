@@ -13,6 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+
 #ifndef __STRPTIME_HPP__
 #define __STRPTIME_HPP__
 

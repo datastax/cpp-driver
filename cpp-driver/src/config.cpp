@@ -19,13 +19,9 @@
 namespace cass {
 
 void Config::init_profiles() {
-  // Build the cluster profile load balancing policy
-  default_profile_.build_load_balancing_policy();
-  load_balancing_policies_.push_back(default_profile_.load_balancing_policy());
-
-  // Build/Assign the load balancing policies and update profile settings
+  // Initialize the profile settings (if needed)
   for (ExecutionProfile::Map::iterator it = profiles_.begin();
-       it != profiles_.end(); ++it) {
+        it != profiles_.end(); ++it) {
     if (it->second.consistency() == CASS_CONSISTENCY_UNKNOWN) {
       it->second.set_consistency(default_profile_.consistency());
     }
@@ -38,18 +34,12 @@ void Config::init_profiles() {
       it->second.set_request_timeout(default_profile_.request_timeout_ms());
     }
 
-    it->second.build_load_balancing_policy();
-    const LoadBalancingPolicy::Ptr& load_balancing_policy = it->second.load_balancing_policy();
-    if (load_balancing_policy) {
-      LOG_TRACE("Built load balancing policy for '%s' execution profile",
-                it->first.c_str());
-      load_balancing_policies_.push_back(it->second.load_balancing_policy());
-    } else {
-      it->second.set_load_balancing_policy(default_profile_.load_balancing_policy().get());
-    }
-
     if (!it->second.retry_policy()) {
       it->second.set_retry_policy(default_profile_.retry_policy().get());
+    }
+
+    if (!it->second.speculative_execution_policy()) {
+      it->second.set_speculative_execution_policy(default_profile_.speculative_execution_policy()->new_instance());
     }
   }
 }

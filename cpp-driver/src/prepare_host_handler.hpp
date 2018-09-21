@@ -17,7 +17,8 @@
 #ifndef __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
 #define __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
 
-#include "connection.hpp"
+#include "callback.hpp"
+#include "connector.hpp"
 #include "host.hpp"
 #include "prepared.hpp"
 #include "ref_counted.hpp"
@@ -25,35 +26,33 @@
 
 namespace cass {
 
-class Session;
+class Connector;
 
 /**
  * A handler for pre-preparing statements on a newly available host.
  */
 class PrepareHostHandler : public RefCounted<PrepareHostHandler>
-                         , public Connection::Listener {
+                         , public ConnectionListener {
 public:
-  typedef void (*Callback)(const PrepareHostHandler*);
+  typedef cass::Callback<void, const PrepareHostHandler*> Callback;
 
   typedef SharedRefPtr<PrepareHostHandler> Ptr;
 
   PrepareHostHandler(const Host::Ptr& host,
-                     Session* session,
-                     int protocol_version);
+                     const PreparedMetadata::Entry::Vec& prepared_metadata_entries,
+                     const Callback& callback,
+                     int protocol_version,
+                     unsigned max_requests_per_flush);
 
-  Session* session() const { return session_; }
   const Host::Ptr host() const { return host_; }
 
-  void prepare(Callback callback);
+  void prepare(uv_loop_t* loop,
+               const ConnectionSettings& settings);
 
 private:
-  virtual void on_ready(Connection* connection);
-
   virtual void on_close(Connection* connection);
 
-  virtual void on_availability_change(Connection* connection) { }
-
-  virtual void on_event(const EventResponse* response) { }
+  void on_connect(Connector* connector);
 
 private:
   /**
@@ -110,8 +109,7 @@ private:
 
 private:
   const Host::Ptr host_;
-  int protocol_version_;
-  Session* session_;
+  const int protocol_version_;
   Callback callback_;
   Connection* connection_;
   String current_keyspace_;

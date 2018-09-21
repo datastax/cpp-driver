@@ -131,7 +131,7 @@ CassError Tuple::set(size_t index, const Tuple* value) {
 
 CassError Tuple::set(size_t index, const Collection* value) {
   CASS_TUPLE_CHECK_INDEX_AND_TYPE(index, value);
-  items_[index] = value->encode_with_length(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
+  items_[index] = value->encode_with_length();
   return CASS_OK;
 }
 

@@ -36,13 +36,18 @@ class ErrorResponse : public Response {
 public:
   ErrorResponse()
       : Response(CQL_OPCODE_ERROR)
-      , code_(0xFFFFFFFF)
+      , code_(-1)
       , cl_(CASS_CONSISTENCY_UNKNOWN)
       , received_(-1)
       , required_(-1)
       , num_failures_(-1)
       , data_present_(0)
       , write_type_(CASS_WRITE_TYPE_UNKNOWN) { }
+
+  ErrorResponse(int32_t code, StringRef message)
+    : Response (CQL_OPCODE_ERROR)
+    , code_(code)
+    , message_(message) { }
 
   int32_t code() const { return code_; }
   StringRef message() const { return message_; }

@@ -376,15 +376,6 @@ private:
    */
   static bool is_running_;
 
-#if UV_VERSION_MAJOR == 0
-  /**
-   * uv_read_start callback for allocating memory for the buffer in the pipe
-   *
-   * @param handle Handle information for the pipe being read
-   * @param suggested_size Suggested size for the buffer
-   */
-  static uv_buf_t handle_allocation(uv_handle_t* handle, size_t suggested_size);
-#else
   /**
    * uv_read_start callback for allocating memory for the buffer in the pipe
    *
@@ -395,7 +386,6 @@ private:
   static void handle_allocation(uv_handle_t* handle,
                                 size_t suggested_size,
                                 uv_buf_t* buffer);
-#endif
 
   /**
    * uv_spawn callback for handling the completion of the process
@@ -404,15 +394,9 @@ private:
    * @param error_code Error/Exit code
    * @param term_signal Terminating signal
    */
-#if UV_VERSION_MAJOR == 0
-  static void handle_exit(uv_process_t* process,
-                          int error_code,
-                          int term_signal);
-#else
   static void handle_exit(uv_process_t* process,
                           int64_t error_code,
                           int term_signal);
-#endif
 
   /**
    * uv_read_start callback for processing the buffer in the pipe
@@ -421,15 +405,9 @@ private:
    * @param buffer_length Length of the buffer
    * @param buffer Buffer to process
    */
-#if UV_VERSION_MAJOR == 0
-  static void handle_read(uv_stream_t* stream,
-                          ssize_t buffer_length,
-                          uv_buf_t buffer);
-#else
   static void handle_read(uv_stream_t* stream,
                           ssize_t buffer_length,
                           const uv_buf_t* buffer);
-#endif
 
   /**
    * uv_thread_create callback for executing the Simulacron process
@@ -509,6 +487,6 @@ private:
 
 } // namespace test
 
-#endif
+#endif // USE_SIMULACRON_SERVER
 
 #endif // __TEST_SIMULACRON_CLUSTER_HPP__

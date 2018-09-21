@@ -17,7 +17,7 @@
 #include "testing.hpp"
 
 #include "address.hpp"
-#include "cluster.hpp"
+#include "cluster_config.hpp"
 #include "external.hpp"
 #include "future.hpp"
 #include "get_time.hpp"
@@ -31,7 +31,7 @@
 namespace cass {
 
 String get_host_from_future(CassFuture* future) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
     return "";
   }
   cass::ResponseFuture* response_future =
@@ -76,7 +76,7 @@ uint64_t get_time_since_epoch_in_ms() {
 uint64_t get_host_latency_average(CassSession* session, String ip_address, int port) {
   Address address;
   if (Address::from_string(ip_address, port, &address)) {
-    return session->get_host(address)->get_current_average().average;
+    return session->cluster()->host(address)->get_current_average().average;
   }
   return 0;
 }

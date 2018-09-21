@@ -88,8 +88,6 @@ public:
 protected:
   bool with_keyspace(int version) const;
 
-  int32_t encode_v1(RequestCallback* callback, BufferVec* bufs) const;
-
   int32_t encode_query_or_id(BufferVec* bufs) const;
   int32_t encode_begin(int version, uint16_t element_count,
                        RequestCallback* callback, BufferVec* bufs) const;

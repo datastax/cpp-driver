@@ -19,18 +19,12 @@
 #include "test_utils.hpp"
 
 #include "scoped_lock.hpp"
-#include "socket.hpp"
+#include "tsocket.hpp"
 #include "values/uuid.hpp"
 #include "objects/uuid_gen.hpp"
 
 #include <algorithm>
 #include <sstream>
-
-#if UV_VERSION_MAJOR == 0
-# define UV_ERRSTR(status, loop) std::string(uv_strerror(uv_last_error(loop)))
-#else
-# define UV_ERRSTR(status, loop) std::string(uv_strerror(status))
-#endif
 
 #define SIMULACRON_LISTEN_ADDRESS "127.0.0.1"
 #define SIMULACRON_ADMIN_PORT 8187
@@ -277,58 +271,37 @@ void test::SimulacronCluster::remove_primed_queries(unsigned int node /*= 0*/) {
   send_delete(endpoint.str());
 }
 
-#if UV_VERSION_MAJOR == 0
-void test::SimulacronCluster::handle_exit(uv_process_t* process, int error_code,
-  int term_signal) {
-#else
 void test::SimulacronCluster::handle_exit(uv_process_t* process,
-  int64_t error_code, int term_signal) {
-#endif
+                                          int64_t error_code,
+                                          int term_signal) {
   cass::ScopedMutex lock(&mutex_);
   TEST_LOG("Process " << process->pid << " Terminated: " << error_code);
   uv_close(reinterpret_cast<uv_handle_t*>(process), NULL);
 }
 
-#if UV_VERSION_MAJOR == 0
-uv_buf_t test::SimulacronCluster::handle_allocation(uv_handle_t* handle,
-                                                    size_t suggested_size) {
-  cass::ScopedMutex lock(&mutex_);
-  return uv_buf_init(reinterpret_cast<char*>(new char[suggested_size],
-                     suggested_size);
-#else
 void test::SimulacronCluster::handle_allocation(uv_handle_t* handle,
                                                 size_t suggested_size,
                                                 uv_buf_t* buffer) {
   cass::ScopedMutex lock(&mutex_);
   buffer->base = new char[OUTPUT_BUFFER_SIZE];
   buffer->len = OUTPUT_BUFFER_SIZE;
-#endif
 }
 
 void test::SimulacronCluster::handle_thread_create(void* arg) {
   // Initialize the loop and process arguments
-#if UV_VERSION_MAJOR == 0
-  uv_loop_t* loop = uv_loop_new();
-#else
   uv_loop_t loop;
   if(uv_loop_init(&loop) != 0) {
     throw Exception("Unable to Create Simulacron Process: libuv loop " \
       "initialization failed");
   };
-#endif
   uv_process_options_t options;
   memset(&options, 0, sizeof(uv_process_options_t));
 
   // Create the options for reading information from the spawn pipes
   uv_pipe_t standard_output;
   uv_pipe_t error_output;
-#if UV_VERSION_MAJOR == 0
-  uv_pipe_init(loop, &standard_output, 0);
-  uv_pipe_init(loop, &error_output, 0);
-#else
   uv_pipe_init(&loop, &standard_output, 0);
   uv_pipe_init(&loop, &error_output, 0);
-#endif
   uv_stdio_container_t stdio[3];
   options.stdio_count = 3;
   options.stdio = stdio;
@@ -355,11 +328,7 @@ void test::SimulacronCluster::handle_thread_create(void* arg) {
 
   // Start the process
   uv_process_t process;
-#if UV_VERSION_MAJOR == 0
-  int error_code = uv_spawn(loop, &process, options);
-#else
   int error_code = uv_spawn(&loop, &process, &options);
-#endif
   if (error_code == 0) {
     TEST_LOG("Launched " << spawn_command[0] << " with ID "
       << process.pid);
@@ -372,34 +341,20 @@ void test::SimulacronCluster::handle_thread_create(void* arg) {
 
     // Start the process loop
     is_running_ = true;
-#if UV_VERSION_MAJOR == 0
-    uv_run(loop, UV_RUN_DEFAULT);
-    uv_loop_delete(loop);
-#else
     uv_run(&loop, UV_RUN_DEFAULT);
     uv_loop_close(&loop);
-#endif
     is_running_ = false;
   } else {
-    TEST_LOG_ERROR(UV_ERRSTR(error_code, loop));
+    TEST_LOG_ERROR(uv_strerror(error_code));
   }
 }
 
-#if UV_VERSION_MAJOR == 0
-void test::SimulacronCluster::handle_read(uv_stream_t* stream,
-  ssize_t buffer_length, uv_buf_t buffer) {
-#else
 void test::SimulacronCluster::handle_read(uv_stream_t* stream,
   ssize_t buffer_length, const uv_buf_t* buffer) {
-#endif
   cass::ScopedMutex lock(&mutex_);
   if (buffer_length > 0) {
     // Process the buffer and log it
-#if UV_VERSION_MAJOR == 0
-    std::string message(buffer.base, buffer_length);
-#else
     std::string message(buffer->base, buffer_length);
-#endif
     TEST_LOG(Utils::trim(message));
 
     // Check to see if Simulacron is ready to accept connections
@@ -407,19 +362,11 @@ void test::SimulacronCluster::handle_read(uv_stream_t* stream,
       is_ready_ = true;
     }
   } else if (buffer_length < 0) {
-#if UV_VERSION_MAJOR == 0
-    uv_err_t error = uv_last_error(stream->loop);
-    if (error.code == UV_EOF) // uv_close if UV_EOF
-#endif
     uv_close(reinterpret_cast<uv_handle_t*>(stream), NULL);
   }
 
   // Clean up the memory allocated
-#if UV_VERSION_MAJOR == 0
-  delete[] buffer.base;
-#else
   delete[] buffer->base;
-#endif
 }
 
 void test::SimulacronCluster::send_delete(const std::string& endpoint) {
@@ -511,7 +458,7 @@ const std::string test::SimulacronCluster::generate_node_endpoint(unsigned int n
       std::stringstream message;
       message << "Insufficient Nodes in Cluster: Cluster contains "
         << current_nodes.size() << "; " << node << " is invalid";
-      throw new Exception(message.str());
+      throw Exception(message.str());
     }
     endpoint << "/" << current_nodes[node - 1].data_center_id << "/"
       << current_nodes[node - 1].id;

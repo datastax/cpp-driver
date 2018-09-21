@@ -1,3 +1,64 @@
+2.10.0
+===========
+
+Bug Fixes
+--------
+* [CPP-648] Attempting to get the metrics before the session is connected will crash (existing issue)
+* [CPP-654] Use Boost atomics when building drivers for Visual Studio 2012 x86
+* [CPP-666] Metadata crash in schema metadata null tests
+* [CPP-667] Timer handles still referenced
+* [CPP-668] Unit test `ClusterUnitTest.ReconnectUpdateHosts` can hang
+* [CPP-669] Result response's metadata can reference a prepared response that's already been freed
+* [CPP-672] Fix memory issues found via `-fstanitize=address`
+* [CPP-673] Cluster can hang attempting to close during reconnection
+* [CPP-675] Chained callback should only call a single callback once
+* [CPP-678] Fix Cassandra version for DSE 6.X releases
+
+Other
+--------
+* [CPP-611] Reduce coalesce delay to better support latency workloads
+* [CPP-615] Remove support for protocols v1 and v2
+* [CPP-652] Decouple listeners from connection/initialization
+* [CPP-653] Synchronously propagate keyspace updates
+
+2.10.0-beta1
+===========
+
+Features
+--------
+* [CPP-360] Added the ability to specify custom memory allocators using
+  `cass_alloc_set_functions()`
+* [CPP-417] Added speculative execution metrics which can be obtained using
+  `cass_session_get_speculative_execution_metrics()`
+* [CPP-404] Performance: Shared-nothing I/O workers (new internal architecture)
+* [CPP-441] Move IO thread request scheduling to a "pull" model
+* [CPP-453] Move token map calculation off the session thread
+* [CPP-466] Token aware routing replicas are now randomly shuffled by default
+  instead of using a random index
+* [CPP-492] Support execution profiles
+* [CPP-499] Allow binding local address of connections
+* [CPP-515] Remove support for libuv v0.10.x
+* [CPP-518] Thread and connection pool refactor
+* [CPP-616] Handle libuv v1.20.4+ version file updates
+
+Bug Fixes
+--------
+* [CPP-437] Fixed batch encoding performance regression
+* [CPP-477] Native protocol "support" messages are now properly decoded, but
+  still remain unused
+* [CPP-589] Pathological hashing behavior in stream manager
+* [CPP-590] Execution profiles are copied for every request (expensive to copy)
+* [CPP-662] The timerfd version of MicroTimer doesn't handle zero timeout
+* [CPP-663] Mutex in SessionBase can be destroyed while it's still locked
+* [CPP-665] Memory issue when socket fails to initialize
+
+Other
+--------
+* [CPP-136] Decoding now verifies buffer sizes when processing server responses
+* [CPP-440] Improved encoding performance by preallocating buffers
+* [CPP-444] Fixed const correctness of serialization functions
+* [CPP-476] Replaced `strlen()` with `sizeof()` for static strings
+
 2.9.0
 ===========
 

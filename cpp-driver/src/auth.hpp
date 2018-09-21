@@ -27,18 +27,6 @@
 
 namespace cass {
 
-class V1Authenticator {
-public:
-  V1Authenticator() { }
-  virtual ~V1Authenticator() { }
-
-  typedef Map<String, String> Credentials;
-  virtual void get_credentials(Credentials* credentials) = 0;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(V1Authenticator);
-};
-
 class Authenticator : public RefCounted<Authenticator> {
 public:
   typedef SharedRefPtr<Authenticator> Ptr;
@@ -60,14 +48,12 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Authenticator);
 };
 
-class PlainTextAuthenticator : public V1Authenticator, public Authenticator {
+class PlainTextAuthenticator : public Authenticator {
 public:
   PlainTextAuthenticator(const String& username,
                          const String& password)
     : username_(username)
     , password_(password) { }
-
-  virtual void get_credentials(Credentials* credentials);
 
   virtual bool initial_response(String* response);
   virtual bool evaluate_challenge(const String& token, String* response);
@@ -87,12 +73,8 @@ public:
 
   virtual ~AuthProvider() { }
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host,
-                                                const String& class_name) const {
-    return NULL;
-  }
-
-  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
+  virtual Authenticator::Ptr new_authenticator(const Address& address,
+                                               const String& hostname,
                                                const String& class_name) const {
     return Authenticator::Ptr();
   }
@@ -103,7 +85,8 @@ private:
 
 class ExternalAuthenticator : public Authenticator {
 public:
-  ExternalAuthenticator(const Host::ConstPtr& host, const String& class_name,
+  ExternalAuthenticator(const Address& address, const String& hostname,
+                        const String& class_name,
                         const CassAuthenticatorCallbacks* callbacks, void* data);
 
   ~ExternalAuthenticator();
@@ -147,9 +130,14 @@ public:
     }
   }
 
-  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
+  virtual Authenticator::Ptr new_authenticator(const Address& address,
+                                               const String& hostname,
                                                const String& class_name) const {
-    return Authenticator::Ptr(Memory::allocate<ExternalAuthenticator>(host, class_name, &exchange_callbacks_, data_));
+    return Authenticator::Ptr(Memory::allocate<ExternalAuthenticator>(address,
+                                                                      hostname,
+                                                                      class_name,
+                                                                      &exchange_callbacks_,
+                                                                      data_));
   }
 
 private:
@@ -165,12 +153,8 @@ public:
     : username_(username)
     , password_(password) { }
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host,
-                                                const String& class_name) const {
-    return Memory::allocate<PlainTextAuthenticator>(username_, password_);
-  }
-
-  virtual Authenticator::Ptr new_authenticator(const Host::ConstPtr& host,
+  virtual Authenticator::Ptr new_authenticator(const Address& address,
+                                               const String& hostname,
                                                const String& class_name) const {
     return Authenticator::Ptr(Memory::allocate<PlainTextAuthenticator>(username_, password_));
   }

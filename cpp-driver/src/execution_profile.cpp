@@ -190,4 +190,21 @@ CassError cass_execution_profile_set_retry_policy(CassExecProfile* profile,
   return CASS_OK;
 }
 
+CassError cass_execution_profile_set_constant_speculative_execution_policy(CassExecProfile* profile,
+                                                                           cass_int64_t constant_delay_ms,
+                                                                           int max_speculative_executions) {
+  if (constant_delay_ms < 0 || max_speculative_executions < 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  profile->set_speculative_execution_policy(
+    cass::Memory::allocate<cass::ConstantSpeculativeExecutionPolicy>(constant_delay_ms,
+                                                                     max_speculative_executions));
+  return CASS_OK;
+}
+
+CassError cass_execution_profile_set_no_speculative_execution_policy(CassExecProfile* profile) {
+  profile->set_speculative_execution_policy(cass::Memory::allocate<cass::NoSpeculativeExecutionPolicy>());
+  return CASS_OK;
+}
+
 } // extern "C"

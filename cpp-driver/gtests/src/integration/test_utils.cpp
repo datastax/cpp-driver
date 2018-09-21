@@ -17,7 +17,7 @@
 #include "test_utils.hpp"
 
 #include "exception.hpp"
-#include "socket.hpp"
+#include "tsocket.hpp"
 
 #include <uv.h>
 
@@ -57,11 +57,7 @@ bool test::Utils::contains(const std::string& input, const std::string& search) 
 std::string test::Utils::cwd() {
   char cwd[FILE_PATH_SIZE] = { 0 };
   size_t cwd_length = sizeof(cwd);
-#if UV_VERSION_MAJOR == 0
-  uv_cwd(cwd, cwd_length);
-#else
   uv_cwd(cwd, &cwd_length);
-#endif
   return std::string(cwd, cwd_length);
 }
 
@@ -153,15 +149,7 @@ std::vector<std::string> test::Utils::explode(const std::string& input,
 
 bool test::Utils::file_exists(const std::string& filename) {
   uv_fs_t request;
-#if UV_VERSION_MAJOR == 0
-  uv_loop_t* loop = uv_loop_new();
-  int error_code = uv_fs_open(loop, &request, filename.c_str(), O_RDONLY, 0, NULL);
-  uv_err_t error = uv_last_error(loop);
-  error_code = error.code;
-  uv_loop_delete(loop);
-#else
   int error_code = uv_fs_open(NULL, &request, filename.c_str(), O_RDONLY, 0, NULL);
-#endif
   uv_fs_req_cleanup(&request);
   return error_code != UV_ENOENT;
 }
@@ -183,34 +171,17 @@ std::string test::Utils::indent(const std::string& input, unsigned int indent) {
 
 void test::Utils::mkdir(const std::string& path) {
   // Create a synchronous libuv file system call to create the path
-#if UV_VERSION_MAJOR == 0
-  uv_loop_t* loop = uv_loop_new();
-#else
   uv_loop_t loop;
   uv_loop_init(&loop);
-#endif
   uv_fs_t request;
   int error_code;
   std::string error_message;
-#if UV_VERSION_MAJOR == 0
-  error_code = uv_fs_mkdir(loop, &request, path.c_str(), FILE_MODE, NULL);
-  if (error_code != 0) {
-    uv_err_t error = uv_last_error(loop);
-    error_code = error.code;
-    if (error_code != UV_EEXIST) {
-      error_message = uv_strerror(error);
-    }
-  }
-  uv_run(loop, UV_RUN_DEFAULT);
-  uv_loop_delete(loop);
-#else
   error_code = uv_fs_mkdir(&loop, &request, path.c_str(), FILE_MODE, NULL);
   if (error_code != 0 && error_code != UV_EEXIST) {
     error_message = uv_strerror(error_code);
   }
   uv_run(&loop, UV_RUN_DEFAULT);
   uv_loop_close(&loop);
-#endif
   uv_fs_req_cleanup(&request);
 
   // Determine if there was an issue creating the directory

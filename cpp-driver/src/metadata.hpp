@@ -200,7 +200,7 @@ public:
     DataType::ConstPtr type;
   };
 
-  FunctionMetadata(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+  FunctionMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
                    const String& name, const Value* signature,
                    KeyspaceMetadata* keyspace,
                    const RefBuffer::Ptr& buffer, const Row* row);
@@ -233,7 +233,7 @@ public:
   typedef cass::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
 
-  AggregateMetadata(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+  AggregateMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
                     const String& name, const Value* signature,
                     KeyspaceMetadata* keyspace,
                     const RefBuffer::Ptr& buffer, const Row* row);
@@ -315,7 +315,7 @@ public:
     , data_type_(data_type)
     , is_reversed_(false) { }
 
-  ColumnMetadata(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+  ColumnMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
                  const String& name,
                  KeyspaceMetadata* keyspace,
                  const RefBuffer::Ptr& buffer, const Row* row);
@@ -351,12 +351,14 @@ public:
     const ColumnMetadata* column() const { return impl_.item().get(); }
   };
 
-  TableMetadataBase(const VersionNumber& cassandra_version,
-                    const String& name, const RefBuffer::Ptr& buffer, const Row* row);
+  TableMetadataBase(const VersionNumber& server_version,
+                    const String& name, const RefBuffer::Ptr& buffer, const Row* row,
+                    bool is_virtual);
 
   TableMetadataBase(const TableMetadataBase& other)
     : MetadataBase(other)
     , RefCounted<TableMetadataBase>()
+    , is_virtual_(other.is_virtual_)
     , columns_(other.columns_)
     , columns_by_name_(other.columns_by_name_)
     , partition_key_(other.partition_key_)
@@ -365,6 +367,8 @@ public:
 
   virtual ~TableMetadataBase() { }
 
+  bool is_virtual() const { return is_virtual_; }
+
   const ColumnMetadata::Vec& columns() const { return columns_; }
   const ColumnMetadata::Vec& partition_key() const { return partition_key_; }
   const ColumnMetadata::Vec& clustering_key() const { return clustering_key_; }
@@ -372,11 +376,13 @@ public:
 
   Iterator* iterator_columns() const { return Memory::allocate<ColumnIterator>(columns_); }
   const ColumnMetadata* get_column(const String& name) const;
-  virtual void add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column);
+  virtual void add_column(const VersionNumber& server_version, const ColumnMetadata::Ptr& column);
   void clear_columns();
-  void build_keys_and_sort(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache);
+  void build_keys_and_sort(const VersionNumber& server_version, SimpleDataTypeCache& cache);
 
 protected:
+  const bool is_virtual_;
+
   ColumnMetadata::Vec columns_;
   ColumnMetadata::Map columns_by_name_;
   ColumnMetadata::Vec partition_key_;
@@ -392,10 +398,11 @@ public:
 
   static const ViewMetadata::Ptr NIL;
 
-  ViewMetadata(const VersionNumber& cassandra_version,
+  ViewMetadata(const VersionNumber& server_version,
                const TableMetadata* table,
                const String& name,
-               const RefBuffer::Ptr& buffer, const Row* row);
+               const RefBuffer::Ptr& buffer, const Row* row,
+               bool is_virtual);
 
   ViewMetadata(const ViewMetadata& other,
                const TableMetadata* table)
@@ -474,8 +481,9 @@ public:
     const IndexMetadata* index() const { return impl_.item().get(); }
   };
 
-  TableMetadata(const VersionNumber& cassandra_version, const String& name,
-                const RefBuffer::Ptr& buffer, const Row* row);
+  TableMetadata(const VersionNumber& server_version, const String& name,
+                const RefBuffer::Ptr& buffer, const Row* row,
+                bool is_virtual);
 
   TableMetadata(const TableMetadata& other)
     : TableMetadataBase(other)
@@ -487,7 +495,7 @@ public:
 
   Iterator* iterator_views() const { return Memory::allocate<ViewIteratorVec>(views_); }
   const ViewMetadata* get_view(const String& name) const;
-  virtual void add_column(const VersionNumber& cassandra_version, const ColumnMetadata::Ptr& column);
+  virtual void add_column(const VersionNumber& server_version, const ColumnMetadata::Ptr& column);
   void add_view(const ViewMetadata::Ptr& view);
   void sort_views();
 
@@ -537,16 +545,19 @@ public:
     const AggregateMetadata* aggregate() const { return impl_.item().get(); }
   };
 
-  KeyspaceMetadata(const String& name)
+  KeyspaceMetadata(const String& name, bool is_virtual = false)
     : MetadataBase(name)
+    , is_virtual_(is_virtual)
     , tables_(Memory::allocate<TableMetadata::Map>())
     , views_(Memory::allocate<ViewMetadata::Map>())
     , user_types_(Memory::allocate<UserType::Map>())
     , functions_(Memory::allocate<FunctionMetadata::Map>())
     , aggregates_(Memory::allocate<AggregateMetadata::Map>()) { }
 
-  void update(const VersionNumber& cassandra_version,
+  void update(const VersionNumber& server_version,
               const RefBuffer::Ptr& buffer, const Row* row);
+
+  bool is_virtual() const { return is_virtual_; }
 
   const FunctionMetadata::Map& functions() const { return *functions_; }
   const UserType::Map& user_types() const { return *user_types_; }
@@ -586,6 +597,7 @@ private:
                           const ViewMetadata::Vec& views);
 
 private:
+  const bool is_virtual_;
   StringRef strategy_class_;
   Value strategy_options_;
 
@@ -608,14 +620,14 @@ public:
   class SchemaSnapshot {
   public:
     SchemaSnapshot(uint32_t version,
-                   const VersionNumber& cassandra_version,
+                   const VersionNumber& server_version,
                    const KeyspaceMetadata::MapPtr& keyspaces)
       : version_(version)
-      , cassandra_version_(cassandra_version)
+      , server_version_(server_version)
       , keyspaces_(keyspaces) { }
 
     uint32_t version() const { return version_; }
-    VersionNumber cassandra_version() const { return cassandra_version_; }
+    VersionNumber server_version() const { return server_version_; }
 
     const KeyspaceMetadata* get_keyspace(const String& name) const;
     Iterator* iterator_keyspaces() const { return Memory::allocate<KeyspaceIterator>(*keyspaces_); }
@@ -625,7 +637,7 @@ public:
 
   private:
     uint32_t version_;
-    VersionNumber cassandra_version_;
+    VersionNumber server_version_;
     KeyspaceMetadata::MapPtr keyspaces_;
   };
 
@@ -642,16 +654,16 @@ public:
     uv_mutex_destroy(&mutex_);
   }
 
-  SchemaSnapshot schema_snapshot(const VersionNumber& cassandra_version) const;
+  SchemaSnapshot schema_snapshot() const;
 
-  void update_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_tables(const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_views(const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_columns(const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_indexes(const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_user_types(const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_functions(const VersionNumber& cassandra_version, const ResultResponse* result);
-  void update_aggregates(const VersionNumber& cassandra_version, const ResultResponse* result);
+  void update_keyspaces(const ResultResponse* result, bool is_virtual);
+  void update_tables(const ResultResponse* result);
+  void update_views(const ResultResponse* result);
+  void update_columns(const ResultResponse* result);
+  void update_indexes(const ResultResponse* result);
+  void update_user_types(const ResultResponse* result);
+  void update_functions(const ResultResponse* result);
+  void update_aggregates(const ResultResponse* result);
 
   void drop_keyspace(const String& keyspace_name);
   void drop_table_or_view(const String& keyspace_name, const String& table_or_view_name);
@@ -661,7 +673,7 @@ public:
 
   // This clears and allows updates to the back buffer while preserving
   // the front buffer for snapshots.
-  void clear_and_update_back(const VersionNumber& cassandra_version);
+  void clear_and_update_back(const VersionNumber& server_version);
 
   // This swaps the back buffer to the front and makes incremental updates
   // happen directly to the front buffer.
@@ -680,17 +692,17 @@ private:
 
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
-    void update_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_tables(const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_views(const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_columns(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache, const ResultResponse* result);
-    void update_legacy_indexes(const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_indexes(const VersionNumber& cassandra_version, const ResultResponse* result);
-    void update_user_types(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+    void update_keyspaces(const VersionNumber& server_version, const ResultResponse* result, bool is_virtual);
+    void update_tables(const VersionNumber& server_version, const ResultResponse* result);
+    void update_views(const VersionNumber& server_version, const ResultResponse* result);
+    void update_columns(const VersionNumber& server_version, SimpleDataTypeCache& cache, const ResultResponse* result);
+    void update_legacy_indexes(const VersionNumber& server_version, const ResultResponse* result);
+    void update_indexes(const VersionNumber& server_version, const ResultResponse* result);
+    void update_user_types(const VersionNumber& server_version, SimpleDataTypeCache& cache,
                            const ResultResponse* result);
-    void update_functions(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+    void update_functions(const VersionNumber& server_version, SimpleDataTypeCache& cache,
                           const ResultResponse* result);
-    void update_aggregates(const VersionNumber& cassandra_version, SimpleDataTypeCache& cache,
+    void update_aggregates(const VersionNumber& server_version, SimpleDataTypeCache& cache,
                            const ResultResponse* result);
 
     void drop_keyspace(const String& keyspace_name);
@@ -708,7 +720,7 @@ private:
     }
 
   private:
-    KeyspaceMetadata* get_or_create_keyspace(const String& name);
+    KeyspaceMetadata* get_or_create_keyspace(const String& name, bool is_virtual = false);
 
   private:
     CopyOnWritePtr<KeyspaceMetadata::Map> keyspaces_;
@@ -721,6 +733,7 @@ private:
   InternalData front_;
   InternalData back_;
 
+  VersionNumber server_version_;
   uint32_t schema_snapshot_version_;
 
   // This lock prevents partial snapshots when updating metadata

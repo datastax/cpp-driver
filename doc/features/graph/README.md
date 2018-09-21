@@ -127,52 +127,53 @@ version of the driver there are some known limitations for some data types:
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
-    <tr>
-      <th>DSE Graph Data Type</th>
-      <th>Limitations</th>
-    </tr>
+  <tr>
+   <th>DSE Graph Data Type</th>
+   <th>Limitations</th>
+  </tr>
   </thead>
+
   <tbody>
-    <tr>
-      <td><code>blob</code></td>
-      <td>Returned as a base64 string</td>
-    </tr>
-    <tr>
-      <td><code>decimal</code></td>
-      <td>Truncated to a double precision floating point number or may not be handled</td>
-    </tr>
-    <tr>
-      <td><code>duration</code></td>
-      <td>Returned as a string using this format: https://en.wikipedia.org/wiki/ISO_8601#Durations</td>
-    </tr>
-    <tr>
-      <td><code>inet</code></td>
-      <td>Returned as a string</td>
-    </tr>
-    <tr>
-      <td><code>varint</code></td>
-      <td>Truncated to a double precision floating point number, 64-bit integer, or may not be handled</td>
-    </tr>
-    <tr>
-      <td><code>linestring</code></td>
-      <td>Returned as a string using Well-known text (https://en.wikipedia.org/wiki/Well-known_text)</td>
-    </tr>
-    <tr>
-      <td><code>point</code></td>
-      <td>Returned as a string using Well-known text (https://en.wikipedia.org/wiki/Well-known_text)</td>
-    </tr>
-    <tr>
-      <td><code>polygon</code></td>
-      <td>Returned as a string using Well-known text (https://en.wikipedia.org/wiki/Well-known_text)</td>
-    </tr>
-    <tr>
-      <td><code>timestamp</code></td>
-      <td>Returned as a string using this format: https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations</td>
-    </tr>
-    <tr>
-      <td><code>uuid</code></td>
-      <td>Returned as a string</td>
-    </tr>
+  <tr>
+   <td><code>blob</code></td>
+   <td>Returned as a base64 string</td>
+  </tr>
+  <tr>
+   <td><code>decimal</code></td>
+   <td>Truncated to a double precision floating point number or may not be handled</td>
+  </tr>
+  <tr>
+   <td><code>duration</code></td>
+   <td>Returned as a string using this format: https://en.wikipedia.org/wiki/ISO_8601#Durations</td>
+  </tr>
+  <tr>
+   <td><code>inet</code></td>
+   <td>Returned as a string</td>
+  </tr>
+  <tr>
+   <td><code>varint</code></td>
+   <td>Truncated to a double precision floating point number, 64-bit integer, or may not be handled</td>
+  </tr>
+  <tr>
+   <td><code>linestring</code></td>
+   <td>Returned as a string using Well-known text (https://en.wikipedia.org/wiki/Well-known_text)</td>
+  </tr>
+  <tr>
+   <td><code>point</code></td>
+   <td>Returned as a string using Well-known text (https://en.wikipedia.org/wiki/Well-known_text)</td>
+  </tr>
+  <tr>
+   <td><code>polygon</code></td>
+   <td>Returned as a string using Well-known text (https://en.wikipedia.org/wiki/Well-known_text)</td>
+  </tr>
+  <tr>
+   <td><code>timestamp</code></td>
+   <td>Returned as a string using this format: https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations</td>
+  </tr>
+  <tr>
+   <td><code>uuid</code></td>
+   <td>Returned as a string</td>
+  </tr>
   </tbody>
 </table>
 

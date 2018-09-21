@@ -24,11 +24,12 @@
 #include <iostream>
 
 #define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.2")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("5.1.7")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.1")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
 bool Options::is_help_ = false;
+bool Options::is_keep_clusters_ = false;
 bool Options::is_log_tests_ = true;
 CCM::CassVersion Options::server_version_ = DEFAULT_OPTIONS_CASSSANDRA_VERSION;
 bool Options::is_dse_ = false;
@@ -85,6 +86,14 @@ bool Options::initialize(int argc, char* argv[]) {
         value = option[1];
       }
       // Integration test options
+      if (key.compare("--keep-clusters") == 0) {
+        if (!value.empty()) {
+          is_keep_clusters_ = bool_value(value);
+        }
+        else {
+          std::cerr << "Missing Keep Cluster(s) Boolean: Using default " << is_keep_clusters_ << std::endl;
+        }
+      }
       if (key.compare("--log-tests") == 0) {
         if (!value.empty()) {
           is_log_tests_ = bool_value(value);
@@ -330,6 +339,9 @@ void Options::print_help() {
 }
 
 void Options::print_settings() {
+  if (keep_clusters()) {
+    std::cout << "  Keep clusters" << std::endl;
+  }
   if (log_tests()) {
     std::cout << "  Logging driver messages" << std::endl;
   }
@@ -375,6 +387,10 @@ void Options::print_settings() {
 
 bool Options::is_help() {
   return is_help_;
+}
+
+bool Options::keep_clusters() {
+  return is_keep_clusters_;
 }
 
 bool Options::log_tests() {
@@ -473,7 +489,7 @@ const std::string& Options::private_key() {
   return private_key_;
 }
 
-SharedPtr<CCM::Bridge> Options::ccm() {
+SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > Options::ccm() {
   return new CCM::Bridge( \
     Options::server_version(),
     Options::use_git(), Options::branch_tag(), \

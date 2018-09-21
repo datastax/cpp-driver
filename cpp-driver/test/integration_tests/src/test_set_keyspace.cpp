@@ -169,12 +169,12 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
     BOOST_REQUIRE(future);
     BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
 
-    const CassResult* result = cass_future_get_result(future.get());
-    BOOST_REQUIRE(result != NULL);
-    BOOST_REQUIRE_EQUAL(cass_result_row_count(result), 1u);
-    BOOST_REQUIRE_EQUAL(cass_result_column_count(result), 1u);
+    test_utils::CassResultPtr result(cass_future_get_result(future.get()));
+    BOOST_REQUIRE(result);
+    BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1u);
+    BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 1u);
 
-    const CassRow* row = cass_result_first_row(result);
+    const CassRow* row = cass_result_first_row(result.get());
     BOOST_REQUIRE(row != NULL);
 
     const char* value;

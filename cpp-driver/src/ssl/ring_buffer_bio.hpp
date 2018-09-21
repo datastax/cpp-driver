@@ -47,7 +47,7 @@
 #include <assert.h>
 #include <openssl/bio.h>
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 #define BIO_get_data(b) ((b)->ptr)
 #endif
 
@@ -78,6 +78,7 @@ public:
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
   static void initialize();
+  static void cleanup();
 #endif
 
 private:
@@ -89,7 +90,7 @@ private:
   static int gets(BIO* bio, char* out, int size);
   static long ctrl(BIO* bio, int cmd, long num, void* ptr);
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
   static const BIO_METHOD method_;
 #else
   static BIO_METHOD *method_;

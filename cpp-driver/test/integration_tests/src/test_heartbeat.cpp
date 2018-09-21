@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(interval) {
   test_utils::CassLog::reset("Heartbeat completed on host " + ccm->get_ip_prefix());
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
-    execute_system_query(30, session);
+    execute_system_query(5, session);
   }
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 0);
 
@@ -90,8 +90,8 @@ BOOST_AUTO_TEST_CASE(interval) {
   cass_uint64_t start_total_connections = 0;
   cass_uint64_t end_total_connections = 0;
   cass_cluster_set_load_balance_round_robin(cluster);
-  cass_cluster_set_connection_idle_timeout(cluster, 5000);
-  cass_cluster_set_connection_heartbeat_interval(cluster, 1000);
+  cass_cluster_set_connection_idle_timeout(cluster, 5);
+  cass_cluster_set_connection_heartbeat_interval(cluster, 1);
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
     start_total_connections = get_total_connections(session);

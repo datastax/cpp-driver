@@ -20,6 +20,7 @@
 #include "logger.hpp"
 #include "protocol.hpp"
 #include "result_metadata.hpp"
+#include "result_response.hpp"
 #include "serialization.hpp"
 
 extern "C" {
@@ -193,8 +194,8 @@ private:
   SimpleDataTypeCache& cache_;
 };
 
-void ResultResponse::set_metadata(ResultMetadata* metadata) {
-  metadata_.reset(metadata);
+void ResultResponse::set_metadata(const ResultMetadata::Ptr& metadata) {
+  metadata_ = metadata;
   decode_first_row();
 }
 
@@ -279,7 +280,7 @@ bool ResultResponse::decode_metadata(Decoder& decoder,
       CHECK_RESULT(decoder.decode_string(&table_));
     }
 
-    metadata->reset(Memory::allocate<ResultMetadata>(column_count));
+    metadata->reset(Memory::allocate<ResultMetadata>(column_count, this->buffer()));
 
     SimpleDataTypeCache cache;
 
@@ -335,10 +336,8 @@ bool ResultResponse::decode_prepared(Decoder& decoder) {
     CHECK_RESULT(decoder.decode_string(&result_metadata_id_));
   }
   CHECK_RESULT(decode_metadata(decoder, &metadata_,
-                               decoder.protocol_version() >= 4));
-  if (decoder.protocol_version() > 1) {
-    CHECK_RESULT(decode_metadata(decoder, &result_metadata_));
-  }
+                               decoder.protocol_version() >= CASS_PROTOCOL_VERSION_V4));
+  CHECK_RESULT(decode_metadata(decoder, &result_metadata_));
   return true;
 }
 

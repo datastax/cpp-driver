@@ -2,14 +2,15 @@ require "formula"
 
 class CassandraCppDriver < Formula
   homepage "http://datastax.github.io/cpp-driver/"
-  url "https://github.com/datastax/cpp-driver/archive/2.2.0-beta1.tar.gz"
-  sha1 "6159f1a5e31a044fb70567f849286572afa57174"
-  version "2.2.0-beta1"
+  url "https://github.com/datastax/cpp-driver/archive/2.7.0.tar.gz"
+  sha256 "44a97679e719b2b046ef90323beab4fe3a491ae79396e7f28e6a9677b618a0e4"
+  version "2.7.0"
 
   head "git://github.com:datastax/cpp-driver.git", :branch => "master"
 
   depends_on "cmake" => :build
   depends_on "libuv"
+  depends_on "openssl"
 
   def install
     mkdir 'build' do

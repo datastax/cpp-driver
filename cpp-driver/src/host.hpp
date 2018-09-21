@@ -34,6 +34,8 @@
 
 namespace cass {
 
+class Row;
+
 struct TimestampedAverage {
   TimestampedAverage()
     : average(-1)
@@ -95,44 +97,23 @@ public:
   typedef SharedRefPtr<Host> Ptr;
   typedef SharedRefPtr<const Host> ConstPtr;
 
-  class StateListener {
-  public:
-    virtual ~StateListener() { }
-    virtual void on_add(const Ptr& host) = 0;
-    virtual void on_remove(const Ptr& host) = 0;
-    virtual void on_up(const Ptr& host) = 0;
-    virtual void on_down(const Ptr& host) = 0;
-  };
-
   enum HostState {
     ADDED,
     UP,
     DOWN
   };
 
-  Host(const Address& address, bool mark)
+  Host(const Address& address)
       : address_(address)
       , rack_id_(0)
       , dc_id_(0)
-      , mark_(mark)
       , state_(ADDED)
       , address_string_(address.to_string()) { }
 
   const Address& address() const { return address_; }
   const String& address_string() const { return address_string_; }
 
-  bool mark() const { return mark_; }
-  void set_mark(bool mark) { mark_ = mark; }
-
-  const String hostname() const { return hostname_; }
-  void set_hostname(const String& hostname) {
-    if (!hostname.empty() && hostname[hostname.size() - 1] == '.') {
-      // Strip off trailing dot for hostcheck comparison
-      hostname_ = hostname.substr(0, hostname.size() - 1);
-    } else {
-      hostname_ = hostname;
-    }
-  }
+  void set(const Row* row, bool use_tokens);
 
   const String& rack() const { return rack_; }
   const String& dc() const { return dc_; }
@@ -148,14 +129,16 @@ public:
     dc_id_ = dc_id;
   }
 
-  const String& listen_address() const { return listen_address_; }
-  void set_listen_address(const String& listen_address) {
-    listen_address_ = listen_address;
+  const String& partitioner() const {
+    return partitioner_;
   }
 
-  const VersionNumber& cassandra_version() const { return cassandra_version_; }
-  void set_cassaandra_version(const VersionNumber& cassandra_version) {
-    cassandra_version_ = cassandra_version;
+  const Vector<String>& tokens() const {
+    return tokens_;
+  }
+
+  const VersionNumber& server_version() const {
+    return server_version_;
   }
 
   bool was_just_added() const { return state() == ADDED; }
@@ -229,14 +212,13 @@ private:
   Address address_;
   uint32_t rack_id_;
   uint32_t dc_id_;
-  bool mark_;
   Atomic<HostState> state_;
   String address_string_;
-  String listen_address_;
-  VersionNumber cassandra_version_;
-  String hostname_;
+  VersionNumber server_version_;
   String rack_;
   String dc_;
+  String partitioner_;
+  Vector<String> tokens_;
 
   ScopedPtr<LatencyTracker> latency_tracker_;
 
@@ -244,13 +226,59 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Host);
 };
 
+/**
+ * A listener that handles cluster topology and host status changes.
+ */
+class HostListener {
+public:
+  virtual ~HostListener() { }
+
+  /**
+   * A callback that's called when a host is marked as being UP.
+   *
+   * @param address The address of the host.
+   * @param refreshed The fully populated host if refreshes on UP are enabled.
+   */
+  virtual void on_up(const Host::Ptr& host) = 0;
+
+  /**
+   * A callback that's called when a host is marked as being DOWN.
+   *
+   * @param address The address of the host.
+   */
+  virtual void on_down(const Host::Ptr& host) = 0;
+
+  /**
+   * A callback that's called when a new host is added to the cluster.
+   *
+   * @param host A fully populated host object.
+   */
+  virtual void on_add(const Host::Ptr& host) = 0;
+
+  /**
+   * A callback that's called when a host is removed from a cluster.
+   *
+   * @param address The address of the host.
+   */
+  virtual void on_remove(const Host::Ptr& host) = 0;
+};
+
 typedef Map<Address, Host::Ptr> HostMap;
+
+struct GetAddress {
+  typedef std::pair<Address, Host::Ptr> Pair;
+  const Address& operator()(const Pair& pair) const {
+    return pair.first;
+  }
+};
+
 struct GetHost {
   typedef std::pair<Address, Host::Ptr> Pair;
   Host::Ptr operator()(const Pair& pair) const {
     return pair.second;
   }
 };
+
 typedef std::pair<Address, Host::Ptr> HostPair;
 typedef Vector<Host::Ptr> HostVec;
 typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;

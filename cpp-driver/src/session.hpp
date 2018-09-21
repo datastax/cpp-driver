@@ -17,224 +17,91 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
-#include "config.hpp"
-#include "control_connection.hpp"
-#include "event_thread.hpp"
-#include "external.hpp"
-#include "future.hpp"
-#include "host.hpp"
-#include "io_worker.hpp"
-#include "load_balancing.hpp"
-#include "metadata.hpp"
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
-#include "prepared.hpp"
-#include "prepare_host_handler.hpp"
-#include "random.hpp"
-#include "ref_counted.hpp"
-#include "request_handler.hpp"
-#include "resolver.hpp"
-#include "row.hpp"
-#include "scoped_lock.hpp"
-#include "scoped_ptr.hpp"
-#include "speculative_execution.hpp"
-#include "string.hpp"
-#include "token_map.hpp"
-#include "vector.hpp"
+#include "request_processor.hpp"
+#include "session_base.hpp"
 
-#include <memory>
 #include <uv.h>
 
 namespace cass {
 
-class Future;
-class IOWorker;
-class Request;
+class RequestProcessorInitializer;
 class Statement;
 
-struct SessionEvent {
-  enum Type {
-    INVALID,
-    CONNECT,
-    NOTIFY_READY,
-    NOTIFY_KEYSPACE_ERROR,
-    NOTIFY_WORKER_CLOSED,
-    NOTIFY_UP,
-    NOTIFY_DOWN
-  };
-
-  SessionEvent()
-    : type(INVALID) { }
-
-  Type type;
-  Address address;
-};
-
-class Session : public EventThread<SessionEvent>, public RequestListener {
+class Session
+    : public SessionBase
+    , public RequestProcessorListener {
 public:
-  enum State {
-    SESSION_STATE_CONNECTING,
-    SESSION_STATE_CONNECTED,
-    SESSION_STATE_CLOSING,
-    SESSION_STATE_CLOSED
-  };
-
   Session();
   ~Session();
 
-  const Config& config() const { return config_; }
-  Metrics* metrics() const { return metrics_.get(); }
-
-  PreparedMetadata::Entry::Vec prepared_metadata_entries() const {
-    return prepared_metadata_.copy();
-  }
-
-private:
-  String keyspace() const;
-  void set_keyspace(const String& keyspace);
-
-public:
-  void broadcast_keyspace_change(const String& keyspace,
-                                 const IOWorker* calling_io_worker);
-
-  Host::Ptr get_host(const Address& address);
-
-  bool notify_ready_async();
-  bool notify_keyspace_error_async();
-  bool notify_worker_closed_async();
-  bool notify_up_async(const Address& address);
-  bool notify_down_async(const Address& address);
-
-  void connect_async(const Config& config, const String& keyspace, const Future::Ptr& future);
-  void close_async(const Future::Ptr& future);
-
   Future::Ptr prepare(const char* statement, size_t length);
+
   Future::Ptr prepare(const Statement* statement);
+
   Future::Ptr execute(const Request::ConstPtr& request,
                       const Address* preferred_address = NULL);
 
-  const Metadata& metadata() const { return metadata_; }
-
-  const VersionNumber& cassandra_version() const {
-    return control_connection_.cassandra_version();
-  }
-
 private:
-  void clear(const Config& config);
-  int init();
-
-  void close_handles();
-
-  void internal_connect();
-  void internal_close();
-
-  void notify_connected();
-  void notify_connect_error(CassError code, const String& message);
-  void notify_closed();
-
   void execute(const RequestHandler::Ptr& request_handler);
 
-  virtual void on_run();
-  virtual void on_after_run();
-  virtual void on_event(const SessionEvent& event);
-
-  static void on_resolve(MultiResolver<Session*>::Resolver* resolver);
-  static void on_resolve_done(MultiResolver<Session*>* resolver);
-
-#if UV_VERSION_MAJOR >= 1
-  struct ResolveNameData {
-    ResolveNameData(Session* session,
-                    const Host::Ptr& host,
-                    bool is_initial_connection)
-      : session(session)
-      , host(host)
-      , is_initial_connection(is_initial_connection) { }
-    Session* session;
-    Host::Ptr host;
-    bool is_initial_connection;
-  };
-  typedef cass::NameResolver<ResolveNameData> NameResolver;
-
-  static void on_resolve_name(MultiResolver<Session*>::NameResolver* resolver);
-  static void on_add_resolve_name(NameResolver* resolver);
-#endif
-
-#if UV_VERSION_MAJOR == 0
-  static void on_execute(uv_async_t* data, int status);
-#else
-  static void on_execute(uv_async_t* data);
-#endif
-
-  QueryPlan* new_query_plan();
-
-  void on_reconnect(Timer* timer);
+  void join();
 
 private:
-  // TODO(mpenick): Consider removing friend access to session
-  friend class ControlConnection;
+  // Session base methods
 
-  Host::Ptr add_host(const Address& address);
-  void purge_hosts(bool is_initial_connection);
+  virtual void on_connect(const Host::Ptr& connected_host,
+                          int protocol_version,
+                          const HostMap& hosts,
+                          const TokenMap::Ptr& token_map);
 
-  Metadata& metadata() { return metadata_; }
-
-  // Asynchronously prepare all queries on a host
-  bool prepare_host(const Host::Ptr& host,
-                    PrepareHostHandler::Callback callback);
-
-  static void on_prepare_host_add(const PrepareHostHandler* handler);
-  static void on_prepare_host_up(const PrepareHostHandler* handler);
-
-  void on_control_connection_ready();
-  void on_control_connection_error(CassError code, const String& message);
-
-  void on_add(Host::Ptr host, bool is_initial_connection);
-  void internal_on_add(Host::Ptr host, bool is_initial_connection);
-
-  void on_remove(Host::Ptr host);
-
-  void on_up(Host::Ptr host);
-  void internal_on_up(Host::Ptr host);
-
-  void on_down(Host::Ptr host);
-
-  virtual void on_result_metadata_changed(const String& prepared_id,
-                                          const String& query,
-                                          const String& keyspace,
-                                          const String& result_metadata_id,
-                                          const ResultResponse::ConstPtr& result_response);
+  virtual void on_close();
 
 private:
-  typedef Vector<IOWorker::Ptr > IOWorkerVec;
+  // Cluster listener methods
 
-  Atomic<State> state_;
-  uv_mutex_t state_mutex_;
+  virtual void on_up(const Host::Ptr& host);
 
-  Config config_;
-  ScopedPtr<Metrics> metrics_;
-  CassError connect_error_code_;
-  String connect_error_message_;
-  Future::Ptr connect_future_;
-  Future::Ptr close_future_;
+  virtual void on_down(const Host::Ptr& host);
 
-  HostMap hosts_;
-  uv_mutex_t hosts_mutex_;
+  virtual void on_add(const Host::Ptr& host);
 
-  IOWorkerVec io_workers_;
-  ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
+  virtual void on_remove(const Host::Ptr& host);
 
-  ScopedPtr<TokenMap> token_map_;
-  Metadata metadata_;
-  PreparedMetadata prepared_metadata_;
-  ScopedPtr<Random> random_;
-  ControlConnection control_connection_;
-  bool current_host_mark_;
-  int pending_pool_count_;
-  int pending_workers_count_;
-  int current_io_worker_;
+  virtual void on_update_token_map(const TokenMap::Ptr& token_map);
 
-  String keyspace_;
-  mutable uv_mutex_t keyspace_mutex_;
+  // Tell the compiler that we're intentionally using an overloaded virtual
+  // method.
+  using SessionBase::on_close;
+
+private:
+  // Request processor listener methods
+
+  virtual void on_pool_up(const Address& address);
+
+  virtual void on_pool_down(const Address& address);
+
+  virtual void on_pool_critical_error(const Address& address,
+                                      Connector::ConnectionError code,
+                                      const String& message);
+
+  virtual void on_keyspace_changed(const String& keyspace,
+                                   const KeyspaceChangedHandler::Ptr& handler);
+
+  virtual void on_prepared_metadata_changed(const String& id,
+                                           const PreparedMetadata::Entry::Ptr& entry);
+
+  virtual void on_close(RequestProcessor* processor);
+
+private:
+  friend class SessionInitializer;
+
+private:
+  ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
+  uv_mutex_t request_processor_mutex_;
+  RequestProcessor::Vec request_processors_;
+  size_t request_processor_count_;
 };
 
 class SessionFuture : public Future {
@@ -242,7 +109,7 @@ public:
   typedef SharedRefPtr<SessionFuture> Ptr;
 
   SessionFuture()
-      : Future(CASS_FUTURE_TYPE_SESSION) {}
+    : Future(FUTURE_TYPE_SESSION) { }
 };
 
 } // namespace cass

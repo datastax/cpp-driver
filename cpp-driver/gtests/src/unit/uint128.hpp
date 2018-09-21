@@ -31,8 +31,7 @@
 #include <iostream>
 #include <climits>
 #include <stdint.h>
-
-#include <boost/operators.hpp>
+#include <string>
 
 namespace numeric {
 
@@ -49,7 +48,6 @@ static void divide(const T &numerator, const T &denominator, T &quotient, T &rem
 		T d      = denominator;
 		T x      = 1;
 		T answer = 0;
-
 
 		while((n >= d) && (((d >> (bits - 1)) & 1) == 0)) {
 			x <<= 1;
@@ -76,7 +74,7 @@ static void divide(const T &numerator, const T &denominator, T &quotient, T &rem
 // convinience macro
 #define U128_C(s) uint128(#s)
 
-class uint128 : boost::operators<uint128>, boost::shiftable<uint128> {
+class uint128 {
 public:
 	typedef uint64_t base_type;
 
@@ -106,7 +104,7 @@ public:
 			int radix = 10;
 			bool minus = false;
 
-      cass::String::const_iterator i = sz.begin();
+			cass::String::const_iterator i = sz.begin();
 
 			// check for minus sign, i suppose technically this should only apply
 			// to base 10, but who says that -0x1 should be invalid?
@@ -183,8 +181,16 @@ public: // comparison operators
 		return hi == o.hi && lo == o.lo;
 	}
 
+	bool operator!=(const uint128 &o) const {
+		return !(*this == o);
+	}
+
 	bool operator<(const uint128 &o) const {
 		return (hi == o.hi) ? lo < o.lo : hi < o.hi;
+	}
+
+	bool operator>=(const uint128 &o) const {
+		return !(*this < o);
 	}
 
 public: // unary operators
@@ -240,6 +246,10 @@ public: // basic math operators
 		return *this += -b;
     }
 
+    uint128 operator+(const uint128& b) const {
+			return uint128(*this) += b;
+		}
+
     uint128 &operator*=(const uint128 &b) {
 
 		// check for multiply by 0
@@ -262,7 +272,7 @@ public: // basic math operators
             		*this += (a << i);
 				}
 
-        		t >>= 1;
+				 t >>= 1;
     		}
 		}
 
@@ -281,10 +291,14 @@ public: // basic math operators
     	return *this;
 	}
 
-    uint128 &operator^=(const uint128 &b) {
-    	hi ^= b.hi;
-    	lo ^= b.lo;
-    	return *this;
+    uint128 operator&(const uint128 &b) const {
+			return uint128(*this) &= b;
+		}
+
+		uint128 &operator^=(const uint128 &b) {
+			hi ^= b.hi;
+			lo ^= b.lo;
+			return *this;
 	}
 
     uint128 &operator/=(const uint128 &b) {
@@ -332,6 +346,10 @@ public: // basic math operators
     	return *this;
 	}
 
+  uint128 operator<<(const uint128& rhs) const {
+		return uint128(*this) <<= rhs;
+	}
+
     uint128 &operator>>=(const uint128& rhs) {
 
 		unsigned int n = rhs.to_integer();
@@ -364,6 +382,10 @@ public: // basic math operators
 		}
 
     	return *this;
+	}
+
+  uint128 operator>>(const uint128 &rhs) const {
+		return uint128(*this) >>= rhs;
 	}
 
 public:

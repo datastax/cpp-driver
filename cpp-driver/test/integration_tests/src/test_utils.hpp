@@ -324,6 +324,15 @@ struct Deleter<const CassResult> {
 };
 
 template<>
+struct Deleter<const CassErrorResult> {
+  void operator()(const CassErrorResult* ptr) {
+    if (ptr != NULL) {
+      cass_error_result_free(ptr);
+    }
+  }
+};
+
+template<>
 struct Deleter<CassIterator> {
   void operator()(CassIterator* ptr) {
     if (ptr != NULL) {
@@ -434,6 +443,7 @@ typedef CassSharedPtr<CassSession> CassSessionPtr;
 typedef CassSharedPtr<CassFuture> CassFuturePtr;
 typedef CassSharedPtr<CassStatement> CassStatementPtr;
 typedef CassSharedPtr<const CassResult> CassResultPtr;
+typedef CassSharedPtr<const CassErrorResult> CassErrorResultPtr;
 typedef CassSharedPtr<CassIterator> CassIteratorPtr;
 typedef CassSharedPtr<CassCollection> CassCollectionPtr;
 typedef CassSharedPtr<CassDataType> CassDataTypePtr;

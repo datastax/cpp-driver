@@ -15,7 +15,7 @@ libcassandra.so*
 
 # cmake output
 src/third_party/sparsehash/src/sparsehash/internal/sparseconfig.h
-*.cmake
+cmake_*.cmake
 !Find*.cmake
 *.build
 *.xcodeproj

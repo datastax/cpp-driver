@@ -147,7 +147,10 @@ BOOST_AUTO_TEST_CASE(reconnection)
   ccm->stop_node(1);
 
   // Add a new node to make sure the node gets added on the new control connection to node 2
-  int node = ccm->bootstrap_node("\"-Dcassandra.consistent.rangemovement=false -Dcassandra.ring_delay_ms=1000\""); // Allow this node to come up without node1
+  std::vector<std::string> jvm_arguments;
+  jvm_arguments.push_back("-Dcassandra.consistent.rangemovement=false");
+  jvm_arguments.push_back("-Dcassandra.ring_delay_ms=10000");
+  int node = ccm->bootstrap_node(jvm_arguments); // Allow this node to come up without node1
   test_utils::wait_for_node_connection(ip_prefix, node);
 
   // Stop the other node

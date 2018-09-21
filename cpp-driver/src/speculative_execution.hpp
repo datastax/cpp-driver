@@ -59,7 +59,9 @@ public:
     return Memory::allocate<NoSpeculativeExecutionPlan>();
   }
 
-  virtual SpeculativeExecutionPolicy* new_instance()  { return this; }
+  virtual SpeculativeExecutionPolicy* new_instance()  {
+    return  Memory::allocate<NoSpeculativeExecutionPolicy>();
+  }
 };
 
 class ConstantSpeculativeExecutionPlan : public SpeculativeExecutionPlan {
@@ -89,7 +91,10 @@ public:
                                                               max_speculative_executions_);
   }
 
-  virtual SpeculativeExecutionPolicy* new_instance()  { return this; }
+  virtual SpeculativeExecutionPolicy* new_instance()  {
+    return Memory::allocate<ConstantSpeculativeExecutionPolicy>(constant_delay_ms_,
+                                                                max_speculative_executions_);
+  }
 
   const int64_t constant_delay_ms_;
   const int max_speculative_executions_;

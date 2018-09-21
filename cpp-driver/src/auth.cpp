@@ -81,12 +81,6 @@ void cass_authenticator_set_error_n(CassAuthenticator* auth,
 
 namespace cass {
 
-void PlainTextAuthenticator::get_credentials(V1Authenticator::Credentials* credentials) {
-  credentials->insert(std::pair<String, String>("username", username_));
-  credentials->insert(std::pair<String, String>("password", password_));
-
-}
-
 bool PlainTextAuthenticator::initial_response(String* response) {
   response->reserve(username_.size() + password_.size() + 2);
   response->push_back(0);
@@ -106,12 +100,13 @@ bool PlainTextAuthenticator::success(const String& token) {
   return true;
 }
 
-ExternalAuthenticator::ExternalAuthenticator(const Host::ConstPtr& host,
+ExternalAuthenticator::ExternalAuthenticator(const Address& address,
+                                             const String& hostname,
                                              const String& class_name,
                                              const CassAuthenticatorCallbacks* callbacks,
                                              void* data)
-  : address_(host->address())
-  , hostname_(host->hostname())
+  : address_(address)
+  , hostname_(hostname)
   , class_name_(class_name)
   , response_(NULL)
   , callbacks_(callbacks)

@@ -11,10 +11,6 @@
 
 #include <utility>
 
-#if UV_VERSION_MAJOR == 0
-# define CHECK_FOR_SKIPPED_TEST \
-    SKIP_TEST("Test requires libuv v1.x+: Hostname resolution required");
-#else
 //TODO: Update test to work with remote deployments
 # ifdef _WIN32
 #   define CHECK_FOR_SKIPPED_TEST \
@@ -27,7 +23,6 @@
 # else
 #   define CHECK_FOR_SKIPPED_TEST ((void)0)
 # endif
-#endif
 
 #define ADS_WAIT_ATTEMPTS 500
 #define DEFAULT_KEY "DataStax Enterprise"
