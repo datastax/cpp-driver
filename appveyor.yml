@@ -8,7 +8,6 @@ skip_commits:
     - '**/*.jar'
     - '**/*.nav'
     - '**/*.md'
-    - '**/*.txt'
     - '**/.clang-format'
     - '**/.documenter_local_last_run'
     - '**/.gitignore'
@@ -19,6 +18,7 @@ skip_commits:
     - '**/AUTHORS'
     - '**/COPYING'
     - '**/LICENSE'
+    - '**/LICENSE.txt'
     - packaging/
     - cpp-driver/packaging/
     - cpp-driver/test/ccm_bridge/data/
