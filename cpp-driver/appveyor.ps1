@@ -733,20 +733,30 @@ Function Publish-Artifact-To-Artifactory {
   $username = "$($Env:ARTIFACTORY_USERNAME)"
   $password = ConvertTo-SecureString -String "$($Env:ARTIFACTORY_PASSWORD)" -AsPlainText -Force
   $credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $username, $password
-  $md5_hash = Get-FileHash "$($FilePath)" -Algorithm MD5
-  $sha1_hash = Get-FileHash "$($FilePath)" -Algorithm SHA1
+  $md5_hash = $(Get-FileHash "$($FilePath)" -Algorithm MD5).Hash
+  $sha1_hash = $(Get-FileHash "$($FilePath)" -Algorithm SHA1).Hash
+  $sha256_hash = $(Get-FileHash "$($FilePath)" -Algorithm SHA256).Hash
   $headers = @{
-    "X-Checksum-Deploy" = "true"
-    "X-Checksum-Md5" = "$($md5_hash.Hash.ToLower())"
-    "X-Checksum-Sha1" = "$($sha1_hash.Hash.ToLower())"
+#    "X-Checksum-Deploy" = $True
+    "X-Checksum-Md5" = $md5_hash
+    "X-Checksum-Sha1" = $sha1_hash
+    "X-Checksum-Sha256" = $sha256_hash
   }
 
   # Publish the artifacts to artifactory
-  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 # Ensure TLS v1.2 is enabled
   Try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 # Ensure TLS v1.2 is enabled
     $result = Invoke-RestMethod -Headers $headers -Uri "$($Uri)" -Method Put -InFile "$($FilePath)" -Credential $credential -ContentType "multipart/form-data" -TimeoutSec $TimeoutSec
   } Catch {
-    return $_.Exception.Response.StatusCode.value__
+    $error_code = $_.Exception.Response.StatusCode.value__
+    $message = $_.Exception.Message
+    $filename = Split-Path $FilePath -leaf
+    If ($Env:APPVEYOR -Like "True") {
+      Add-AppveyorMessage -Category Error -Message "Unable to Upload $($filename) [$($error_code)]" -Details "$($message)"
+    } Else {
+      Write-Error -Message "Unable to Upload $($filename) [$($error_code)]: $($message)"
+    }
+    return $error_code
   }
   return 0
 }
