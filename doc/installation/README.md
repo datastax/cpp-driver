@@ -88,16 +88,16 @@ rpm -Uvh dse-cpp-driver-debuginfo-<version>.rpm
 
   <tbody>
   <tr>
-   <td>Ubuntu 12.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/12.04/dse</td>
-  </tr>
-  <tr>
    <td>Ubuntu 14.04</td>
    <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dse</td>
   </tr>
   <tr>
    <td>Ubuntu 16.04</td>
    <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dse</td>
+  </tr>
+  <tr>
+   <td>Ubuntu 18.04</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dse</td>
   </tr>
   </tbody>
 </table>
@@ -116,16 +116,16 @@ Ubuntu doesn't have up-to-date versions of libuv so we provide current packages.
 
   <tbody>
   <tr>
-   <td>Ubuntu 12.04</td>
-   <td>http://downloads.datastax.com/cpp-driver/ubuntu/12.04/dependencies</td>
-  </tr>
-  <tr>
    <td>Ubuntu 14.04</td>
    <td>http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies</td>
   </tr>
   <tr>
    <td>Ubuntu 16.04</td>
    <td>http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies</td>
+  </tr>
+  <tr>
+   <td>Ubuntu 18.04</td>
+   <td>http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies</td>
   </tr>
   </tbody>
 </table>
