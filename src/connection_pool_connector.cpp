@@ -143,6 +143,7 @@ void ConnectionPoolConnector::on_connect(Connector* connector) {
       if (!critical_error_connector_) {
         pool_.reset(Memory::allocate<ConnectionPool>(connections_,
                                                      listener_,
+                                                     keyspace_,
                                                      loop_,
                                                      address_,
                                                      protocol_version_,

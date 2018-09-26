@@ -27,18 +27,6 @@
 
 namespace cass {
 
-class V1Authenticator {
-public:
-  V1Authenticator() { }
-  virtual ~V1Authenticator() { }
-
-  typedef Map<String, String> Credentials;
-  virtual void get_credentials(Credentials* credentials) = 0;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(V1Authenticator);
-};
-
 class Authenticator : public RefCounted<Authenticator> {
 public:
   typedef SharedRefPtr<Authenticator> Ptr;
@@ -60,14 +48,12 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Authenticator);
 };
 
-class PlainTextAuthenticator : public V1Authenticator, public Authenticator {
+class PlainTextAuthenticator : public Authenticator {
 public:
   PlainTextAuthenticator(const String& username,
                          const String& password)
     : username_(username)
     , password_(password) { }
-
-  virtual void get_credentials(Credentials* credentials);
 
   virtual bool initial_response(String* response);
   virtual bool evaluate_challenge(const String& token, String* response);
@@ -86,12 +72,6 @@ public:
     : RefCounted<AuthProvider>() { }
 
   virtual ~AuthProvider() { }
-
-  virtual V1Authenticator* new_authenticator_v1(const Address& address,
-                                                const String& hostname,
-                                                const String& class_name) const {
-    return NULL;
-  }
 
   virtual Authenticator::Ptr new_authenticator(const Address& address,
                                                const String& hostname,
@@ -172,12 +152,6 @@ public:
                         const String& password)
     : username_(username)
     , password_(password) { }
-
-  virtual V1Authenticator* new_authenticator_v1(const Address& address,
-                                                const String& hostname,
-                                                const String& class_name) const {
-    return Memory::allocate<PlainTextAuthenticator>(username_, password_);
-  }
 
   virtual Authenticator::Ptr new_authenticator(const Address& address,
                                                const String& hostname,

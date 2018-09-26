@@ -451,25 +451,6 @@ public:
     return true;
   }
 
-  inline bool decode_size(int32_t& output) {
-    // Decoding size is different depending on the protocol version utilized
-    size_t bytes = sizeof(int32_t);
-    if (protocol_version_ < 3) {
-      bytes = sizeof(uint16_t);
-    }
-
-    if (remaining_ < bytes) {
-      char detail[64];
-      snprintf(detail, 64, "size for native protocol v%d", protocol_version_);
-      notify_error(detail, bytes);
-      return false;
-    }
-
-    input_ = cass::decode_size(protocol_version_, input_, output);
-    remaining_ -= bytes;
-    return true;
-  }
-
   inline bool decode_vint(uint64_t& output) {
     CHECK_REMAINING(sizeof(uint8_t), "vint extra bytes");
 
@@ -573,7 +554,7 @@ public:
     // where:
     // <endpoint> is a [inetaddr]
     // <failurecode> is a [short]
-    if (protocol_version_ >= 5) {
+    if (protocol_version_ >= CASS_PROTOCOL_VERSION_V5) {
       output.reserve(output_size);
       for (int32_t i = 0; i < output_size; ++i) {
         Failure failure;

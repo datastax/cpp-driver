@@ -100,7 +100,8 @@ public:
   virtual void on_prepared_metadata_changed(const String& id,
                                             const PreparedMetadata::Entry::Ptr& entry) { }
 
-  virtual void on_keyspace_changed(const String& keyspace) { }
+  virtual void on_keyspace_changed(const String& keyspace,
+                                   KeyspaceChangedResponse response) { }
 
   virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                             const Host::Ptr& current_host,
@@ -147,7 +148,7 @@ void RequestHandler::init(const ExecutionProfile& profile,
   wrapper_.init(profile, timestamp_generator);
 
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
-  String keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());
+  const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());
 
   query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
   execution_plan_.reset(profile.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
@@ -198,8 +199,11 @@ void RequestHandler::notify_result_metadata_changed(const String& prepared_id,
   listener_->on_prepared_metadata_changed(prepared_id, entry);
 }
 
-void RequestHandler::notify_keyspace_changed(const String& keyspace) {
-  listener_->on_keyspace_changed(keyspace);
+void RequestHandler::notify_keyspace_changed(const String& keyspace,
+                                             const Host::Ptr& current_host,
+                                             const Response::Ptr& response) {
+  listener_->on_keyspace_changed(keyspace,
+                                 KeyspaceChangedResponse(RequestHandler::Ptr(this), current_host, response));
 }
 
 bool RequestHandler::wait_for_schema_agreement(const Host::Ptr& current_host, const Response::Ptr& response) {
@@ -434,7 +438,7 @@ void RequestExecution::on_result_response(Connection* connection, ResponseMessag
                      "Expected metadata but no metadata in response (see CASSANDRA-8054)");
             return;
           }
-          result->set_metadata(prepared_metadata_entry()->result()->result_metadata().get());
+          result->set_metadata(prepared_metadata_entry()->result()->result_metadata());
         } else if (result->metadata_changed()) {
           notify_result_metadata_changed(request(), result);
         }
@@ -451,8 +455,10 @@ void RequestExecution::on_result_response(Connection* connection, ResponseMessag
     }
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
-      request_handler_->notify_keyspace_changed(result->keyspace().to_string());
-      set_response(response->response_body());
+      // The response is set after the keyspace is propagated to all threads.
+      request_handler_->notify_keyspace_changed(result->keyspace().to_string(),
+                                                current_host_,
+                                                response->response_body());
       break;
 
     case CASS_RESULT_KIND_PREPARED:

@@ -23,7 +23,7 @@
 #include "vector.hpp"
 
 TEST(CopyOnWriteUnitTest, Simple) {
-  cass::Vector<int>* ptr = new cass::Vector<int>;
+  cass::Vector<int>* ptr = cass::Memory::allocate<cass::Vector<int>>();
   cass::CopyOnWritePtr<cass::Vector<int> > vec(ptr);
 
   // Only a single reference so no copy should be made

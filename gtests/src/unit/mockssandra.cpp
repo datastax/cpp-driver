@@ -22,6 +22,10 @@
 #include "scoped_lock.hpp"
 #include "control_connection.hpp" // For host queries
 
+#ifdef WIN32
+#  include "winsock.h"
+#endif
+
 using cass::ScopedMutex;
 using cass::OStringStream;
 
@@ -51,7 +55,18 @@ String Ssl::generate_key() {
   return result;
 }
 
-String Ssl::generate_cert(const String& key, const String& cn) {
+String Ssl::generate_cert(const String& key, String cn) {
+  // Assign the proper default hostname
+  if (cn.empty()) {
+#ifdef WIN32
+    char win_hostname[64];
+    gethostname(win_hostname, 64);
+    cn = win_hostname;
+#else
+    cn = "localhost";
+#endif
+  }
+
   EVP_PKEY* pkey = NULL;
   { // Read key from string
     BIO* bio = BIO_new_mem_buf(const_cast<char*>(key.c_str()), key.length());
@@ -1349,7 +1364,7 @@ bool SystemLocal::on_run(Request* request) const {
     return true;
   } else {
     try {
-      if (query == SELECT_LOCAL || query == SELECT_LOCAL_TOKENS) {
+      if (query.find(SELECT_LOCAL) != String::npos) {
         const Host& host(request->host(request->address()));
 
         ResultSet local_rs
@@ -1388,8 +1403,7 @@ bool SystemPeers::on_run(Request* request) const {
     return true;
   } else {
     try {
-      if (query.find(SELECT_PEERS) != String::npos ||
-          query.find(SELECT_PEERS_TOKENS) != String::npos) {
+      if (query.find(SELECT_PEERS) != String::npos) {
         const String where_clause(" WHERE peer = '");
         ResultSet::Builder peers_builder
             = ResultSet::Builder("system", "peers")
@@ -1639,7 +1653,10 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
         remaining--;
         if (version_ < request_handler_->lowest_supported_protocol_version() ||
             version_ > request_handler_->highest_supported_protocol_version()) {
-          request_handler_->invalid_protocol(Memory::allocate<Request>(version_, flags_, stream_, opcode_, String(), client));
+          // Respond using the highest supported protocol that the server
+          // supports (don't use the request's version because it's not supported)
+          request_handler_->invalid_protocol(Memory::allocate<Request>(request_handler_->highest_supported_protocol_version(),
+                                                                       flags_, stream_, opcode_, String(), client));
           return len - remaining;
         }
         state_ = HEADER;
@@ -1801,18 +1818,13 @@ void Cluster::init(AddressGenerator& generator,
   }
 }
 
-Cluster::Cluster() {
-  uv_mutex_init(&mutex_);
-}
-
 Cluster::~Cluster() {
   stop_all();
-  uv_mutex_destroy(&mutex_);
 }
 
-String Cluster::use_ssl() {
+String Cluster::use_ssl(const String& cn /*= ""*/) {
   String key(Ssl::generate_key());
-  String cert(Ssl::generate_cert(key));
+  String cert(Ssl::generate_cert(key, cn));
   for (size_t i = 0; i < servers_.size(); ++i) {
     Server& server = servers_[i];
     if (!server.connection->use_ssl(key, cert)) {
@@ -1893,8 +1905,7 @@ int Cluster::add(cass::EventLoopGroup* event_loop_group, size_t node) {
     return -1;
   }
   Server& server = servers_[node - 1];
-  ScopedMutex l(&mutex_);
-  server.is_removed = false;
+  server.is_removed.store(false);
   server.connection->listen(event_loop_group);
   return server.connection->wait_listen();
 }
@@ -1904,8 +1915,7 @@ void Cluster::remove(size_t node) {
     return;
   }
   Server& server = servers_[node - 1];
-  ScopedMutex l(&mutex_);
-  server.is_removed = true;
+  server.is_removed.store(true);
   server.connection->close();
   server.connection->wait_close();
 }
@@ -1923,11 +1933,10 @@ const Host& Cluster::host(const Address& address) const {
 
 Hosts Cluster::hosts() const {
   Hosts hosts;
-  ScopedMutex l(&mutex_);
   hosts.reserve(servers_.size());
   for (Servers::const_iterator it = servers_.begin(),
        end = servers_.end(); it != end; ++it) {
-    if (!it->is_removed) {
+    if (!it->is_removed.load()) {
       hosts.push_back(it->host);
     }
   }

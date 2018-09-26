@@ -143,6 +143,7 @@ void ClusterConnector::finish() {
   // Explicitly release resources on the event loop thread.
   resolver_.reset();
   connector_.reset();
+  cluster_.reset();
   dec_ref();
 }
 
@@ -257,10 +258,11 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
                                              settings_));
     finish();
   } else if (connector->is_invalid_protocol()) {
-    if (protocol_version_ <= 1) {
-      LOG_ERROR("Host %s does not support any valid protocol version",
-                contact_points_resolved_it_->to_string().c_str());
-      on_error(CLUSTER_ERROR_INVALID_PROTOCOL, "Not even protocol version 1 is supported");
+    if (protocol_version_ <= CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
+      LOG_ERROR("Host %s does not support any valid protocol version (lowest supported version is %s)",
+                contact_points_resolved_it_->to_string().c_str(),
+                protocol_version_to_string(CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION).c_str());
+      on_error(CLUSTER_ERROR_INVALID_PROTOCOL, "Unable to find supported protocol version");
       return;
     }
 

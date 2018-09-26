@@ -42,10 +42,8 @@ void RequestWrapper::init(const ExecutionProfile& profile,
   retry_policy_ = profile.retry_policy();
 }
 
-void RequestCallback::notify_write(Connection* connection,
-                                   int protocol_version,
-                                   int stream) {
-  protocol_version_ = protocol_version;
+void RequestCallback::notify_write(Connection* connection, int stream) {
+  protocol_version_ = connection->protocol_version();
   stream_ = stream;
   on_write(connection);
 }
@@ -58,11 +56,15 @@ bool RequestCallback::skip_metadata() const {
 }
 
 int32_t RequestCallback::encode(BufferVec* bufs) {
+  const int version = protocol_version_;
+  if (version < CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
+    return Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
+  }
+
   size_t index = bufs->size();
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
-  int version = protocol_version_;
   int flags = 0;
   int32_t length = 0;
 
@@ -70,7 +72,7 @@ int32_t RequestCallback::encode(BufferVec* bufs) {
     flags |= CASS_FLAG_BETA;
   }
 
-  if (version >= 4 && req->has_custom_payload()) {
+  if (version >= CASS_PROTOCOL_VERSION_V4 && req->has_custom_payload()) {
     flags |= CASS_FLAG_CUSTOM_PAYLOAD;
     length += req->encode_custom_payload(bufs);
   }
@@ -79,19 +81,14 @@ int32_t RequestCallback::encode(BufferVec* bufs) {
   if (result < 0) return result;
   length += result;
 
-  const size_t header_size
-      = (version >= 3) ? CASS_HEADER_SIZE_V3 : CASS_HEADER_SIZE_V1_AND_V2;
+  const size_t header_size = CASS_HEADER_SIZE_V3;
 
   Buffer buf(header_size);
   size_t pos = 0;
   pos = buf.encode_byte(pos, version);
   pos = buf.encode_byte(pos, flags);
 
-  if (version >= 3) {
-    pos = buf.encode_int16(pos, stream_);
-  } else {
-    pos = buf.encode_byte(pos, stream_);
-  }
+  pos = buf.encode_int16(pos, stream_);
 
   pos = buf.encode_byte(pos, req->opcode());
   buf.encode_int32(pos, length);
@@ -219,6 +216,7 @@ ChainedRequestCallback::ChainedRequestCallback(const String& key, const String& 
   : SimpleRequestCallback(query)
   , chain_(chain)
   , has_pending_(false)
+  , has_error_or_timeout_(false)
   , key_(key) {
   responses_.set_empty_key(String());
 }
@@ -227,6 +225,7 @@ ChainedRequestCallback::ChainedRequestCallback(const String& key, const Request:
   : SimpleRequestCallback(request)
   , chain_(chain)
   , has_pending_(false)
+  , has_error_or_timeout_(false)
   , key_(key) { }
 
 ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const String& query) {
@@ -266,18 +265,24 @@ void ChainedRequestCallback::on_internal_set(ResponseMessage* response) {
 }
 
 void ChainedRequestCallback::on_internal_error(CassError code, const String& message) {
-  if (chain_) {
-    chain_->on_error(code, message);
-  } else {
-    on_chain_error(code, message);
+  if (!has_error_or_timeout_) {
+    has_error_or_timeout_ = true;
+    if (chain_) {
+      chain_->on_error(code, message);
+    } else {
+      on_chain_error(code, message);
+    }
   }
 }
 
 void ChainedRequestCallback::on_internal_timeout() {
-  if (chain_) {
-    chain_->on_internal_timeout();
-  } else {
-    on_chain_timeout();
+  if (!has_error_or_timeout_) {
+    has_error_or_timeout_ = true;
+    if (chain_) {
+      chain_->on_internal_timeout();
+    } else {
+      on_chain_timeout();
+    }
   }
 }
 
@@ -287,7 +292,9 @@ void ChainedRequestCallback::set_chain_responses(Map& responses) {
 }
 
 bool ChainedRequestCallback::is_finished() const {
-  return response_ && ((has_pending_ && !responses_.empty()) || !has_pending_);
+  return response_ &&
+      !has_error_or_timeout_ &&
+      ((has_pending_ && !responses_.empty()) || !has_pending_);
 }
 
 void ChainedRequestCallback::maybe_finish() {

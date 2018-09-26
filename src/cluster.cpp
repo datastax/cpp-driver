@@ -241,7 +241,7 @@ void Cluster::update_schema(const ControlConnectionSchema& schema) {
   metadata_.clear_and_update_back(connection_->server_version());
 
   if (schema.keyspaces) {
-    metadata_.update_keyspaces(schema.keyspaces.get());
+    metadata_.update_keyspaces(schema.keyspaces.get(), false);
   }
 
   if (schema.tables) {
@@ -270,6 +270,18 @@ void Cluster::update_schema(const ControlConnectionSchema& schema) {
 
   if (schema.aggregates) {
     metadata_.update_aggregates(schema.aggregates.get());
+  }
+
+  if (schema.virtual_keyspaces) {
+    metadata_.update_keyspaces(schema.virtual_keyspaces.get(), true);
+  }
+
+  if (schema.virtual_tables) {
+    metadata_.update_tables(schema.virtual_tables.get());
+  }
+
+  if (schema.virtual_columns) {
+    metadata_.update_columns(schema.virtual_columns.get());
   }
 
   metadata_.swap_to_back_and_update_front();
@@ -329,6 +341,12 @@ void Cluster::handle_schedule_reconnect() {
 }
 
 void Cluster::on_reconnect(ControlConnector* connector) {
+  reconnector_.reset();
+  if (is_closing_) {
+    handle_close();
+    return;
+  }
+
   if (connector->is_ok()) {
     connection_ = connector->release_connection();
     connection_->set_listener(this);
@@ -367,8 +385,10 @@ void Cluster::internal_close() {
   if (timer_.is_running()) {
     timer_.stop();
     handle_close();
-  } else {
-    if (connection_) connection_->close();
+  } else if (reconnector_) {
+    reconnector_->cancel();
+  } else if (connection_)  {
+    connection_->close();
   }
 }
 
@@ -548,7 +568,8 @@ void Cluster::on_update_schema(SchemaType type,
                                const String& target_name) {
   switch (type) {
     case KEYSPACE:
-      metadata_.update_keyspaces(result.get());
+      // Virtual keyspaces are not updated (always false)
+      metadata_.update_keyspaces(result.get(), false);
       if (token_map_) {
         token_map_ = token_map_->copy();
         token_map_->update_keyspaces_and_build(connection_->server_version(), result.get());

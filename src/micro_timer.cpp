@@ -73,16 +73,6 @@ int MicroTimer::start(uv_loop_t* loop,
 }
 
 void MicroTimer::stop() {
-  if (state_ == STARTED) {
-    state_ = STOPPED;
-    struct itimerspec ts;
-    memset(&ts.it_interval, 0, sizeof(struct timespec));
-    timerfd_settime(fd_, 0, &ts, NULL);
-    uv_poll_stop(handle_);
-  }
-}
-
-void MicroTimer::close_handle() {
   if (fd_ != -1) {
     close(fd_);
     fd_ = -1;
@@ -154,10 +144,6 @@ int MicroTimer::start(uv_loop_t* loop,
 
 void MicroTimer::stop() {
   timer_.stop();
-}
-
-void MicroTimer::close_handle() {
-  timer_.close_handle();
 }
 
 bool MicroTimer::is_running() const {

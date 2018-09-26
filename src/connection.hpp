@@ -89,6 +89,32 @@ public:
 };
 
 /**
+ * A listener that handles recording events to be processed later.
+ */
+class RecordingConnectionListener : public ConnectionListener {
+public:
+  const EventResponse::Vec& events() const { return events_; }
+
+  virtual void on_event(const EventResponse::Ptr& response) {
+    events_.push_back(response);
+  }
+
+  virtual void on_close(Connection* connection) = 0;
+
+  /**
+   * Process the recorded events through a connection listener.
+   *
+   * @param events The events to replay.
+   * @param listener The listener that will receive the events.
+   */
+  static void process_events(const EventResponse::Vec& events,
+                             ConnectionListener* listener);
+
+private:
+  EventResponse::Vec events_;
+};
+
+/**
  * A connection. It's a socket wrapper that handles Cassandra/DSE specific
  * functionality such as decoding responses and heartbeats. It can not be
  * connected directly instead use a Connector object.
@@ -177,11 +203,6 @@ public:
    * server-side failure.
    */
   void start_heartbeats();
-
-  /**
-   * Stop heartbeats.
-   */
-  void stop_heartbeats();
 
 public:
   const Address& address() const { return socket_->address(); }

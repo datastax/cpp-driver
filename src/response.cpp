@@ -26,6 +26,22 @@
 
 namespace cass {
 
+
+/**
+ * A dummy invalid protocol error response that's used to handle responses
+ * encoded with deprecated protocol versions.
+ */
+class InvalidProtocolErrorResponse : public ErrorResponse {
+public:
+  InvalidProtocolErrorResponse()
+    : ErrorResponse(CQL_ERROR_PROTOCOL_ERROR,
+                    "Invalid or unsupported protocol version") { }
+
+  virtual bool decode(Decoder& decoder) {
+    return true; //  Ignore decoding the body
+  }
+};
+
 bool Response::decode_custom_payload(Decoder& decoder) {
   return decoder.decode_custom_payload(custom_payload_);
 }
@@ -87,7 +103,7 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
         return -1;
       }
       version_ = input[0] & 0x7F; // "input" will always have at least 1 bytes
-      if (version_ >= 3) {
+      if (version_ >= CASS_PROTOCOL_VERSION_V3) {
         header_size_  = CASS_HEADER_SIZE_V3;
       } else {
         header_size_ = CASS_HEADER_SIZE_V1_AND_V2;
@@ -107,7 +123,7 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
       const char* buffer = header_buffer_ + 1; // Skip over "version" byte
       flags_ = *(buffer++);
 
-      if (version_ >= 3) {
+      if (version_ >= CASS_PROTOCOL_VERSION_V3) {
         buffer = decode_int16(buffer, stream_);
       } else {
         stream_ = *(buffer++);
@@ -118,7 +134,11 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
 
       is_header_received_ = true;
 
-      if (!allocate_body(opcode_) || !response_body_) {
+      // If a deprecated version of the protocol is encountered then we fake
+      // an invalid protocol error.
+      if (version_ < CASS_PROTOCOL_VERSION_V3) {
+        response_body_.reset(Memory::allocate<InvalidProtocolErrorResponse>());
+      } else if (!allocate_body(opcode_) || !response_body_) {
         return -1;
       }
 

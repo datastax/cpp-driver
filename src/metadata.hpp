@@ -352,11 +352,13 @@ public:
   };
 
   TableMetadataBase(const VersionNumber& server_version,
-                    const String& name, const RefBuffer::Ptr& buffer, const Row* row);
+                    const String& name, const RefBuffer::Ptr& buffer, const Row* row,
+                    bool is_virtual);
 
   TableMetadataBase(const TableMetadataBase& other)
     : MetadataBase(other)
     , RefCounted<TableMetadataBase>()
+    , is_virtual_(other.is_virtual_)
     , columns_(other.columns_)
     , columns_by_name_(other.columns_by_name_)
     , partition_key_(other.partition_key_)
@@ -364,6 +366,8 @@ public:
     , clustering_key_order_(other.clustering_key_order_) { }
 
   virtual ~TableMetadataBase() { }
+
+  bool is_virtual() const { return is_virtual_; }
 
   const ColumnMetadata::Vec& columns() const { return columns_; }
   const ColumnMetadata::Vec& partition_key() const { return partition_key_; }
@@ -377,6 +381,8 @@ public:
   void build_keys_and_sort(const VersionNumber& server_version, SimpleDataTypeCache& cache);
 
 protected:
+  const bool is_virtual_;
+
   ColumnMetadata::Vec columns_;
   ColumnMetadata::Map columns_by_name_;
   ColumnMetadata::Vec partition_key_;
@@ -395,7 +401,8 @@ public:
   ViewMetadata(const VersionNumber& server_version,
                const TableMetadata* table,
                const String& name,
-               const RefBuffer::Ptr& buffer, const Row* row);
+               const RefBuffer::Ptr& buffer, const Row* row,
+               bool is_virtual);
 
   ViewMetadata(const ViewMetadata& other,
                const TableMetadata* table)
@@ -475,7 +482,8 @@ public:
   };
 
   TableMetadata(const VersionNumber& server_version, const String& name,
-                const RefBuffer::Ptr& buffer, const Row* row);
+                const RefBuffer::Ptr& buffer, const Row* row,
+                bool is_virtual);
 
   TableMetadata(const TableMetadata& other)
     : TableMetadataBase(other)
@@ -537,8 +545,9 @@ public:
     const AggregateMetadata* aggregate() const { return impl_.item().get(); }
   };
 
-  KeyspaceMetadata(const String& name)
+  KeyspaceMetadata(const String& name, bool is_virtual = false)
     : MetadataBase(name)
+    , is_virtual_(is_virtual)
     , tables_(Memory::allocate<TableMetadata::Map>())
     , views_(Memory::allocate<ViewMetadata::Map>())
     , user_types_(Memory::allocate<UserType::Map>())
@@ -547,6 +556,8 @@ public:
 
   void update(const VersionNumber& server_version,
               const RefBuffer::Ptr& buffer, const Row* row);
+
+  bool is_virtual() const { return is_virtual_; }
 
   const FunctionMetadata::Map& functions() const { return *functions_; }
   const UserType::Map& user_types() const { return *user_types_; }
@@ -586,6 +597,7 @@ private:
                           const ViewMetadata::Vec& views);
 
 private:
+  const bool is_virtual_;
   StringRef strategy_class_;
   Value strategy_options_;
 
@@ -644,7 +656,7 @@ public:
 
   SchemaSnapshot schema_snapshot() const;
 
-  void update_keyspaces(const ResultResponse* result);
+  void update_keyspaces(const ResultResponse* result, bool is_virtual);
   void update_tables(const ResultResponse* result);
   void update_views(const ResultResponse* result);
   void update_columns(const ResultResponse* result);
@@ -680,7 +692,7 @@ private:
 
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
-    void update_keyspaces(const VersionNumber& server_version, const ResultResponse* result);
+    void update_keyspaces(const VersionNumber& server_version, const ResultResponse* result, bool is_virtual);
     void update_tables(const VersionNumber& server_version, const ResultResponse* result);
     void update_views(const VersionNumber& server_version, const ResultResponse* result);
     void update_columns(const VersionNumber& server_version, SimpleDataTypeCache& cache, const ResultResponse* result);
@@ -708,7 +720,7 @@ private:
     }
 
   private:
-    KeyspaceMetadata* get_or_create_keyspace(const String& name);
+    KeyspaceMetadata* get_or_create_keyspace(const String& name, bool is_virtual = false);
 
   private:
     CopyOnWritePtr<KeyspaceMetadata::Map> keyspaces_;

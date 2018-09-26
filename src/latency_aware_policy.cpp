@@ -41,7 +41,7 @@ void LatencyAwarePolicy::register_handles(uv_loop_t* loop) {
 }
 
 void LatencyAwarePolicy::close_handles() {
-  timer_.close_handle();
+  timer_.stop();
 }
 
 QueryPlan* LatencyAwarePolicy::new_query_plan(const String& keyspace,

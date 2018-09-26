@@ -73,7 +73,7 @@ size_t AbstractData::get_buffers_size() const {
   for (ElementVec::const_iterator i = elements_.begin(),
        end = elements_.end(); i != end; ++i) {
     if (!i->is_unset()) {
-      size += i->get_size(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
+      size += i->get_size();
     } else {
       size += sizeof(int32_t); // null
     }
@@ -85,25 +85,25 @@ void AbstractData::encode_buffers(size_t pos, Buffer* buf) const {
   for (ElementVec::const_iterator i = elements_.begin(),
        end = elements_.end(); i != end; ++i) {
     if (!i->is_unset()) {
-      pos = i->copy_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, pos, buf);
+      pos = i->copy_buffer(pos, buf);
     } else {
       pos = buf->encode_int32(pos, -1); // null
     }
   }
 }
 
-size_t AbstractData::Element::get_size(int version) const {
+size_t AbstractData::Element::get_size() const {
   if (type_ == COLLECTION) {
-    return collection_->get_size_with_length(version);
+    return collection_->get_size_with_length();
   } else {
     assert(type_ == BUFFER || type_ == NUL);
     return buf_.size();
   }
 }
 
-size_t AbstractData::Element::copy_buffer(int version, size_t pos, Buffer* buf) const {
+size_t AbstractData::Element::copy_buffer(size_t pos, Buffer* buf) const {
   if (type_ == COLLECTION) {
-    Buffer encoded(collection_->encode_with_length(version));
+    Buffer encoded(collection_->encode_with_length());
     return buf->copy(pos, encoded.data(), encoded.size());
   } else {
     assert(type_ == BUFFER || type_ == NUL);
@@ -111,9 +111,9 @@ size_t AbstractData::Element::copy_buffer(int version, size_t pos, Buffer* buf) 
   }
 }
 
-Buffer AbstractData::Element::get_buffer(int version) const {
+Buffer AbstractData::Element::get_buffer() const {
   if (type_ == COLLECTION) {
-    return collection_->encode_with_length(version);
+    return collection_->encode_with_length();
   } else {
     assert(type_ == BUFFER || type_ == NUL);
     return buf_;

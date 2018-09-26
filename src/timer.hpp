@@ -33,7 +33,6 @@ public:
 
   int start(uv_loop_t* loop, uint64_t timeout, const Callback& callback);
   void stop();
-  void close_handle();
 
 public:
   bool is_running() const { return state_ == STARTED; }

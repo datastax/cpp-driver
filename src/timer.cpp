@@ -25,7 +25,7 @@ Timer::Timer()
   , state_(CLOSED) { }
 
 Timer::~Timer() {
-  close_handle();
+  stop();
 }
 
 int Timer::start(uv_loop_t* loop, uint64_t timeout, const Timer::Callback& callback) {
@@ -48,13 +48,6 @@ int Timer::start(uv_loop_t* loop, uint64_t timeout, const Timer::Callback& callb
 }
 
 void Timer::stop() {
-  if (state_ == STARTED) {
-    state_ = STOPPED;
-    uv_timer_stop(handle_);
-  }
-}
-
-void Timer::close_handle() {
   if (handle_ != NULL) {
     if (state_ == CLOSED) { // The handle was allocated, but initialization failed.
       Memory::deallocate(handle_);

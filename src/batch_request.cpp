@@ -130,10 +130,6 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
   int length = 0;
   uint32_t flags = 0;
 
-  if (version == 1) {
-    return REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
-  }
-
   {
     // <type> [byte] + <n> [short]
     size_t buf_size = sizeof(uint8_t) + sizeof(uint16_t);
@@ -165,51 +161,48 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
   {
     // <consistency> [short]
     size_t buf_size = sizeof(uint16_t);
-    if (version >= 3) {
-      // <flags>[<serial_consistency><timestamp><keyspace>]
-      if (version >= 5) {
-        buf_size += sizeof(int32_t); // [int]
-      } else {
-        buf_size += sizeof(uint8_t); // [byte]
-      }
 
-      if (callback->serial_consistency() != 0) {
-        buf_size += sizeof(uint16_t); // [short]
-        flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
-      }
+    // <flags>[<serial_consistency><timestamp><keyspace>]
+    if (version >= CASS_PROTOCOL_VERSION_V5) {
+      buf_size += sizeof(int32_t); // [int]
+    } else {
+      buf_size += sizeof(uint8_t); // [byte]
+    }
 
-      if (callback->timestamp() != CASS_INT64_MIN) {
-        buf_size += sizeof(int64_t); // [long]
-        flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
-      }
+    if (callback->serial_consistency() != 0) {
+      buf_size += sizeof(uint16_t); // [short]
+      flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
+    }
 
-      if (supports_set_keyspace(version) && !keyspace().empty()) {
-        buf_size += sizeof(uint16_t) + keyspace().size();
-        flags |= CASS_QUERY_FLAG_WITH_KEYSPACE;
-      }
+    if (callback->timestamp() != CASS_INT64_MIN) {
+      buf_size += sizeof(int64_t); // [long]
+      flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+    }
+
+    if (supports_set_keyspace(version) && !keyspace().empty()) {
+      buf_size += sizeof(uint16_t) + keyspace().size();
+      flags |= CASS_QUERY_FLAG_WITH_KEYSPACE;
     }
 
     Buffer buf(buf_size);
 
     size_t pos = buf.encode_uint16(0, callback->consistency());
-    if (version >= 3) {
-      if (version >= 5) {
-        pos = buf.encode_int32(pos, flags);
-      } else {
-        pos = buf.encode_byte(pos, flags);
-      }
+    if (version >= CASS_PROTOCOL_VERSION_V5) {
+      pos = buf.encode_int32(pos, flags);
+    } else {
+      pos = buf.encode_byte(pos, flags);
+    }
 
-      if (callback->serial_consistency() != 0) {
-        pos = buf.encode_uint16(pos, callback->serial_consistency());
-      }
+    if (callback->serial_consistency() != 0) {
+      pos = buf.encode_uint16(pos, callback->serial_consistency());
+    }
 
-      if (callback->timestamp() != CASS_INT64_MIN) {
-        pos = buf.encode_int64(pos, callback->timestamp());
-      }
+    if (callback->timestamp() != CASS_INT64_MIN) {
+      pos = buf.encode_int64(pos, callback->timestamp());
+    }
 
-      if (supports_set_keyspace(version) && !keyspace().empty()) {
-        pos = buf.encode_string(pos, keyspace().data(), keyspace().size());
-      }
+    if (supports_set_keyspace(version) && !keyspace().empty()) {
+      pos = buf.encode_string(pos, keyspace().data(), keyspace().size());
     }
 
     bufs->push_back(buf);

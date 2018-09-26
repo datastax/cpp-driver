@@ -81,7 +81,8 @@ public:
   /**
    * Default constructor
    */
-  Keyspace() {}
+  Keyspace()
+    : keyspace_meta_(NULL) {}
 
   /**
    * Create the keyspace object
@@ -92,6 +93,16 @@ public:
   Keyspace(const CassKeyspaceMeta* keyspace_meta, const Schema& parent)
     : keyspace_meta_(keyspace_meta)
     , parent_(parent) {}
+
+
+  /**
+   * Determine if the keyspace is virtual
+   *
+   * @return true if virtual, otherwise false
+   */
+  bool is_virtual() const {
+    return cass_keyspace_meta_is_virtual(keyspace_meta_) == cass_true;
+  }
 
   /**
    * Get the UserType type object for a given user type
@@ -110,6 +121,8 @@ public:
   Table table(const std::string& name);
 
   const CassKeyspaceMeta* get() const { return keyspace_meta_; }
+
+  operator bool() const { return keyspace_meta_ != NULL; }
 
 private:
   /**
@@ -130,7 +143,8 @@ public:
   /*
    * Default constructor
    */
-  Table() {}
+  Table()
+    : table_meta_(NULL) {}
 
   /**
    * Create the table object
@@ -142,7 +156,18 @@ public:
     : table_meta_(table_meta)
     , parent_(parent) {}
 
+  /**
+   * Determine if the table is virtual
+   *
+   * @return true if virtual, otherwise false
+   */
+  bool is_virtual() const {
+    return cass_table_meta_is_virtual(table_meta_) == cass_true;
+  }
+
   const CassTableMeta* get() const { return table_meta_; }
+
+  operator bool() const { return table_meta_ != NULL; }
 
 private:
   /**

@@ -215,19 +215,6 @@ inline const char* decode_uuid(const char* input, CassUuid* output) {
   return input + 16;
 }
 
-inline const char* decode_size(int protocol_version, const char* input,
-                               int32_t& size) {
-  const char* pos;
-  if (protocol_version >= 3) {
-    pos = decode_int32(input, size);
-  } else {
-    uint16_t temp;
-    pos = decode_uint16(input, temp);
-    size = temp;
-  }
-  return pos;
-}
-
 inline int64_t decode_zig_zag(uint64_t n) {
   // n is an unsigned long because we want a logical shift right
   // (it should 0-fill high order bits), not arithmetic shift right.

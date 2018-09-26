@@ -143,23 +143,3 @@ TEST(SerializationTest, DecodeUuid) {
   ASSERT_EQ(std::numeric_limits<uint64_t>::min(), value.clock_seq_and_node);
   ASSERT_EQ(std::numeric_limits<uint64_t>::min(), value.time_and_version);
 }
-
-TEST(SerializationTest, DecodeSize) {
-  const char input[12] = { -128, 0, 0, 0,
-                           0, 0,
-                           127, -1, -1, -1,
-                           -1, -1 };
-  int32_t value = 0;
-
-  const char *pos = cass::decode_size(3, &input[0], value);
-  ASSERT_EQ(&input[4], pos);
-  ASSERT_EQ(std::numeric_limits<int32_t>::min(), value);
-  pos = cass::decode_size(1, pos, value);
-  ASSERT_EQ(&input[6], pos);
-  ASSERT_EQ(std::numeric_limits<uint16_t>::min(), value);
-  pos = cass::decode_size(4, pos, value);
-  ASSERT_EQ(&input[10], pos);
-  ASSERT_EQ(std::numeric_limits<int32_t>::max(), value);
-  pos = cass::decode_size(2, pos, value);
-  ASSERT_EQ(std::numeric_limits<uint16_t>::max(), value);
-}

@@ -302,24 +302,7 @@ void ConnectionConnector::on_supported(ResponseMessage* response) {
 }
 #endif
 
-void Connector::send_credentials(const String& class_name) {
-  ScopedPtr<V1Authenticator> v1_auth(settings_.auth_provider->new_authenticator_v1(socket_connector_->address(),
-                                                                                   socket_connector_->hostname(),
-                                                                                   class_name));
-  if (v1_auth) {
-    V1Authenticator::Credentials credentials;
-    v1_auth->get_credentials(&credentials);
-    connection_->write_and_flush(
-          RequestCallback::Ptr(
-            Memory::allocate<StartupCallback>(this,
-                                              Request::ConstPtr(
-                                                Memory::allocate<CredentialsRequest>(credentials)))));
-  } else {
-    send_initial_auth_response(class_name);
-  }
-}
-
-void Connector::send_initial_auth_response(const String& class_name) {
+void Connector::on_authenticate(const String& class_name) {
   Authenticator::Ptr auth(settings_.auth_provider->new_authenticator(socket_connector_->address(),
                                                                      socket_connector_->hostname(),
                                                                      class_name));
@@ -336,14 +319,6 @@ void Connector::send_initial_auth_response(const String& class_name) {
             Memory::allocate<StartupCallback>(this,
                                               Request::ConstPtr(
                                                 Memory::allocate<AuthResponseRequest>(response, auth)))));
-  }
-}
-
-void Connector::on_authenticate(const String& class_name) {
-  if (protocol_version_ == 1) {
-    send_credentials(class_name);
-  } else {
-    send_initial_auth_response(class_name);
   }
 }
 

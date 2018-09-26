@@ -50,7 +50,7 @@ public:
   typedef cass::Callback<void, MicroTimer*> Callback;
 
   MicroTimer();
-  ~MicroTimer() { close_handle(); }
+  ~MicroTimer() { stop(); }
 
   /**
    * Start the timer.
@@ -68,14 +68,9 @@ public:
             const Callback& callback);
 
   /**
-   * Stop the timer.
+   * Stop the timer and cleanup its handles.
    */
   void stop();
-
-  /**
-   * Close the internal handles.
-   */
-  void close_handle();
 
   /**
    * Gets the status of the timer.

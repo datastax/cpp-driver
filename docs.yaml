@@ -47,11 +47,10 @@ rewrites:
   - http://www.datastax.com/documentation/cassandra/2.0/cassandra/dml/dml_config_consistency_c.html: https://docs.datastax.com/en/cassandra/3.0/cassandra/dml/dmlConfigConsistency.html
   - ^examples/(.*): https://github.com/datastax/cpp-driver/blob/master/examples/\1
 versions:
+  - name: 2.10
+    ref: 2.10.0
   - name: 2.9
     ref: 2.9.0
-  - name: 2.10-beta1
-    ref: 2.10.0-beta1
-    prerelease: true
   - name: 2.8
     ref: 2.8.1
   - name: 2.7

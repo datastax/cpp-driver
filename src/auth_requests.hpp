@@ -24,19 +24,6 @@
 
 namespace cass {
 
-class CredentialsRequest : public Request {
-public:
-  CredentialsRequest(const V1Authenticator::Credentials& credentials)
-    : Request(CQL_OPCODE_CREDENTIALS)
-    , credentials_(credentials) { }
-
-private:
-  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
-
-private:
-  V1Authenticator::Credentials credentials_;
-};
-
 class AuthResponseRequest : public Request {
 public:
   AuthResponseRequest(const String& token,

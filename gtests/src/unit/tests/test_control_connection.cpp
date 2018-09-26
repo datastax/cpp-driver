@@ -14,9 +14,7 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
-#include "mockssandra_test.hpp"
+#include "loop_test.hpp"
 
 #include "control_connector.hpp"
 #include "constants.hpp"
@@ -26,9 +24,6 @@
 #endif
 
 using namespace cass;
-
-#define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
-#define PORT 9042
 
 struct RecordedEvent {
   enum Type {
@@ -159,7 +154,7 @@ private:
   RecordedEventVec events_;
 };
 
-class ControlConnectionUnitTest : public mockssandra::SimpleClusterTest {
+class ControlConnectionUnitTest : public LoopTest {
 public:
   static void on_connection_connected(ControlConnector* connector, bool* is_connected) {
     if (connector->is_ok()) {
@@ -249,7 +244,8 @@ public:
 };
 
 TEST_F(ControlConnectionUnitTest, Simple) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   bool is_connected = false;
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
@@ -263,8 +259,7 @@ TEST_F(ControlConnectionUnitTest, Simple) {
 }
 
 TEST_F(ControlConnectionUnitTest, Auth) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::AuthRequestHandlerBuilder().build());
+  mockssandra::SimpleCluster cluster(auth());
   ASSERT_EQ(cluster.start_all(), 0);
 
   bool is_connected = false;
@@ -284,11 +279,10 @@ TEST_F(ControlConnectionUnitTest, Auth) {
 }
 
 TEST_F(ControlConnectionUnitTest, Ssl) {
+  mockssandra::SimpleCluster cluster(simple());
   ControlConnectionSettings settings;
-
-  settings.connection_settings = use_ssl();
-
-  start_all();
+  settings.connection_settings = use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   bool is_connected = false;
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
@@ -304,8 +298,9 @@ TEST_F(ControlConnectionUnitTest, Ssl) {
 }
 
 TEST_F(ControlConnectionUnitTest, Close) {
-  use_close_immediately();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  cluster.use_close_immediately();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Vector<ControlConnector::Ptr> connectors;
 
@@ -324,7 +319,8 @@ TEST_F(ControlConnectionUnitTest, Close) {
 }
 
 TEST_F(ControlConnectionUnitTest, Cancel) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   Vector<ControlConnector::Ptr> connectors;
 
@@ -350,8 +346,7 @@ TEST_F(ControlConnectionUnitTest, Cancel) {
 }
 
 TEST_F(ControlConnectionUnitTest, StatusChangeEvents) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::SimpleRequestHandlerBuilder().build());
+  mockssandra::SimpleCluster cluster(simple());
   ASSERT_EQ(cluster.start_all(), 0);
 
   Address address("127.0.0.1", PORT);
@@ -385,8 +380,7 @@ TEST_F(ControlConnectionUnitTest, StatusChangeEvents) {
 }
 
 TEST_F(ControlConnectionUnitTest, TopologyChangeEvents) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::SimpleRequestHandlerBuilder().build(), 2);
+  mockssandra::SimpleCluster cluster(simple(), 2);
   ASSERT_EQ(cluster.start_all(), 0);
 
   Address address1("127.0.0.1", PORT);
@@ -424,8 +418,7 @@ TEST_F(ControlConnectionUnitTest, TopologyChangeEvents) {
 }
 
 TEST_F(ControlConnectionUnitTest, SchemaChangeEvents) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::SimpleRequestHandlerBuilder().build());
+  mockssandra::SimpleCluster cluster(simple());
   ASSERT_EQ(cluster.start_all(), 0);
 
   Address address("127.0.0.1", PORT);
@@ -561,10 +554,7 @@ TEST_F(ControlConnectionUnitTest, EventDuringStartup) {
       .system_local()
       .system_peers()
       .empty_rows_result(1);
-
-  mockssandra::SimpleCluster cluster(
-       builder.build());
-
+  mockssandra::SimpleCluster cluster(builder.build());
   ASSERT_EQ(cluster.start_all(), 0);
 
   RecordingControlConnectionListener listener;
@@ -588,7 +578,8 @@ TEST_F(ControlConnectionUnitTest, EventDuringStartup) {
 }
 
 TEST_F(ControlConnectionUnitTest, InvalidProtocol) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),
@@ -603,8 +594,7 @@ TEST_F(ControlConnectionUnitTest, InvalidProtocol) {
 }
 
 TEST_F(ControlConnectionUnitTest, InvalidAuth) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::AuthRequestHandlerBuilder().build());
+  mockssandra::SimpleCluster cluster(auth());
   ASSERT_EQ(cluster.start_all(), 0);
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
@@ -626,8 +616,9 @@ TEST_F(ControlConnectionUnitTest, InvalidAuth) {
 }
 
 TEST_F(ControlConnectionUnitTest, InvalidSsl) {
-  use_ssl();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(Address("127.0.0.1", PORT),

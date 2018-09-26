@@ -80,14 +80,6 @@ private:
   ControlConnector* connector_;
 };
 
-void RecordingConnectionListener::process_events(const EventResponse::Vec& events,
-                                                 ConnectionListener* listener) {
-  for (EventResponse::Vec::const_iterator it = events.begin(),
-       end = events.end(); it != end; ++it) {
-    listener->on_event(*it);
-  }
-}
-
 ControlConnectionSettings::ControlConnectionSettings()
   : use_schema(CASS_DEFAULT_USE_SCHEMA)
   , token_aware_routing(CASS_DEFAULT_TOKEN_AWARE_ROUTING)
@@ -191,6 +183,10 @@ void ControlConnector::on_connect(Connector* connector) {
   if (!is_canceled() && connector->is_ok()) {
     connection_ = connector->release_connection();
     connection_->set_listener(this);
+
+    // Propagate any events that happened during the connection process.
+    Connector::process_events(connector->events(), this);
+
     query_hosts();
   } else if (is_canceled() || connector->is_canceled()) {
     finish();
@@ -208,8 +204,8 @@ void ControlConnector::query_hosts() {
   // schema metadata queries are executed.
   ChainedRequestCallback::Ptr callback(
         Memory::allocate<HostsConnectorRequestCallback>(
-          "local", settings_.token_aware_routing ? SELECT_LOCAL_TOKENS : SELECT_LOCAL, this)
-        ->chain("peers", settings_.token_aware_routing ? SELECT_PEERS_TOKENS : SELECT_PEERS));
+          "local", SELECT_LOCAL, this)
+        ->chain("peers", SELECT_PEERS));
 
   if (connection_->write_and_flush(callback) < 0) {
     on_error(CONTROL_CONNECTION_ERROR_HOSTS,
@@ -221,7 +217,7 @@ void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callbac
   ResultResponse::Ptr local_result(callback->result("local"));
   if (local_result && local_result->row_count() > 0) {
     Host::Ptr host(Memory::allocate<Host>(connection_->address()));
-    host->set(&local_result->first_row());
+    host->set(&local_result->first_row(), settings_.token_aware_routing);
     host->set_up();
     hosts_[host->address()] = host;
     server_version_ = host->server_version();
@@ -245,7 +241,7 @@ void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callbac
       }
 
       Host::Ptr host(Memory::allocate<Host>(address));
-      host->set(rows.row());
+      host->set(rows.row(), settings_.token_aware_routing);
       host->set_up();
       listen_addresses_[host->address()] = determine_listen_address(address, row);
       hosts_[host->address()] = host;
@@ -275,6 +271,13 @@ void ControlConnector::query_schema() {
                  ->chain("user_types", SELECT_USERTYPES_30)
                  ->chain("functions", SELECT_FUNCTIONS_30)
                  ->chain("aggregates", SELECT_AGGREGATES_30);
+
+      if (server_version_ >= VersionNumber(4, 0, 0)) {
+        callback = callback
+                   ->chain("virtual_keyspaces", SELECT_VIRTUAL_KEYSPACES_40)
+                   ->chain("virtual_tables", SELECT_VIRTUAL_TABLES_40)
+                   ->chain("virtual_columns", SELECT_VIRTUAL_COLUMNS_40);
+      }
     }
   } else {
     callback = ChainedRequestCallback::Ptr(Memory::allocate<SchemaConnectorRequestCallback>(
@@ -311,6 +314,9 @@ void ControlConnector::handle_query_schema(SchemaConnectorRequestCallback* callb
   schema_.user_types = callback->result("types");
   schema_.functions = callback->result("functions");
   schema_.aggregates = callback->result("aggregates");
+  schema_.virtual_keyspaces = callback->result("virtual_keyspaces");
+  schema_.virtual_tables = callback->result("virtual_tables");
+  schema_.virtual_columns = callback->result("virtual_columns");
 
   on_success();
 }

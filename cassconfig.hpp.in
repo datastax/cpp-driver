@@ -7,6 +7,8 @@
 #cmakedefine HAVE_NOSIGPIPE
 #cmakedefine HAVE_SIGTIMEDWAIT
 #cmakedefine HASH_IN_TR1
+#cmakedefine HAVE_BUILTIN_BSWAP32
+#cmakedefine HAVE_BUILTIN_BSWAP64
 #cmakedefine HAVE_ARC4RANDOM
 #cmakedefine HAVE_GETRANDOM
 #cmakedefine HAVE_TIMERFD

@@ -120,7 +120,7 @@ PooledConnection::PooledConnection(ConnectionPool* pool,
 
 bool PooledConnection::write(RequestCallback* callback) {
   bool result = false;
-  String keyspace(pool_->keyspace());
+  const String& keyspace(pool_->keyspace());
   if (keyspace != connection_->keyspace()) {
     LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)",
               keyspace.c_str(),
