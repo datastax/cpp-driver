@@ -24,8 +24,9 @@
 
 #include <openssl/crypto.h>
 #include <openssl/err.h>
-#include <openssl/x509v3.h>
 #include <openssl/engine.h>
+#include <openssl/x509v3.h>
+#include <openssl/rand.h>
 #include <string.h>
 
 #define DEBUG_SSL 0
@@ -115,7 +116,7 @@ static int pem_password_callback(char* buf, int size, int rwflag, void* u) {
   return len;
 }
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 static uv_rwlock_t* crypto_locks = NULL;
 
 static void crypto_locking_callback(int mode, int n, const char* file, int line) {
@@ -595,7 +596,7 @@ SslContext::Ptr OpenSslContextFactory::create() {
 
 namespace openssl {
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
   void* malloc(size_t size) {
     return Memory::malloc(size);
   }
@@ -632,7 +633,7 @@ void OpenSslContextFactory::internal_init() {
   SSL_load_error_strings();
   OpenSSL_add_all_algorithms();
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
   // We have to set the lock/id callbacks for use of OpenSSL thread safety.
   // It's not clear what's thread-safe in OpenSSL. Writing/Reading to
   // a single "SSL" object is NOT and we don't do that, but we do create multiple
@@ -656,7 +657,7 @@ void OpenSslContextFactory::internal_init() {
 }
 
 void OpenSslContextFactory::internal_thread_cleanup() {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
   ERR_remove_thread_state(NULL);
 #endif
 }
@@ -677,7 +678,7 @@ void OpenSslContextFactory::internal_cleanup() {
 
   thread_cleanup();
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
   if (crypto_locks != NULL) {
     int num_locks = CRYPTO_num_locks();
     for (int i = 0; i < num_locks; ++i) {
