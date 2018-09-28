@@ -48,6 +48,9 @@ target_link_libraries(${PROJECT_INTEGRATION_TESTS_NAME}
         ${Boost_SYSTEM_LIBRARY_DEBUG}
         ${Boost_THREAD_LIBRARY_DEBUG}
         ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY_DEBUG})
+if(UNIX)
+  target_link_libraries(${PROJECT_INTEGRATION_TESTS_NAME} pthread) # test_basics requires pthread
+endif()
 set_property(
   TARGET ${PROJECT_INTEGRATION_TESTS_NAME}
   APPEND PROPERTY COMPILE_FLAGS ${CASS_TEST_CXX_FLAGS})
