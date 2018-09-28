@@ -70,6 +70,10 @@ if(CASS_BUILD_INTEGRATION_TESTS)
     include_directories(${TESTS_SIMULACRON_SOURCE_DIR})
   endif()
 
+  if(LIBSSH2_FOUND)
+    add_definitions(-DCASS_USE_LIBSSH2)
+  endif()
+
   GtestIntegrationTestSourceGroups()
   GtestCommonIntegrationTestSourceFiles()
   add_executable(${INTEGRATION_TESTS_NAME}

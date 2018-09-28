@@ -83,6 +83,7 @@ if(LIBSSH2_FOUND OR LIBSSH2_INCLUDE_DIRS)
   endif()
 endif()
 set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} CACHE INTERNAL "CCM Bridge Libraries" FORCE)
+set(LIBSSH2_FOUND ${LIBSSH2_FOUND} CACHE INTERNAL "Libssh2 found" FORCE)
 
 # Assign the include directories
 include_directories(${CCM_BRIDGE_INCLUDES})
