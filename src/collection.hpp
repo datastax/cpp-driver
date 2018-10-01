@@ -85,13 +85,14 @@ public:
   CassError append(const Tuple* value);
   CassError append(const UserTypeValue* value);
 
-  size_t get_items_size(int version) const;
-  void encode_items(int version, char* buf) const;
+  size_t get_items_size() const;
+  void encode_items(char* buf) const;
 
-  size_t get_size_with_length(int version) const;
+  size_t get_size() const;
+  size_t get_size_with_length() const;
 
   Buffer encode() const;
-  Buffer encode_with_length(int version) const;
+  Buffer encode_with_length() const;
 
   void clear() {
     items_.clear();
@@ -125,11 +126,6 @@ private:
   int32_t get_count() const {
     return ((type() == CASS_COLLECTION_TYPE_MAP) ? items_.size() / 2 : items_.size());
   }
-
-  size_t get_items_size(size_t num_bytes_for_size) const;
-
-  void encode_items_int32(char* buf) const;
-  void encode_items_uint16(char* buf) const;
 
 private:
   CollectionType::ConstPtr data_type_;

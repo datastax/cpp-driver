@@ -85,6 +85,7 @@ public:
 
     if (rc != 0) {
       status_ = FAILED_BAD_PARAM;
+      timer_.stop();
       uv_status_ = rc;
       callback_(this);
       dec_ref();
@@ -123,6 +124,7 @@ private:
   }
 
   void on_timeout(Timer* timer) {
+    timer_.stop();
     status_ = FAILED_TIMED_OUT;
     uv_cancel(reinterpret_cast<uv_req_t*>(&req_));
   }

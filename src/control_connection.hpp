@@ -32,10 +32,8 @@
 
 #include <stdint.h>
 
-#define SELECT_LOCAL "SELECT data_center, rack, release_version FROM system.local WHERE key='local'"
-#define SELECT_LOCAL_TOKENS "SELECT data_center, rack, release_version, partitioner, tokens FROM system.local WHERE key='local'"
-#define SELECT_PEERS "SELECT peer, data_center, rack, release_version, rpc_address FROM system.peers"
-#define SELECT_PEERS_TOKENS "SELECT peer, data_center, rack, release_version, rpc_address, tokens FROM system.peers"
+#define SELECT_LOCAL "SELECT * FROM system.local WHERE key='local'"
+#define SELECT_PEERS "SELECT * FROM system.peers"
 
 #define SELECT_KEYSPACES_20 "SELECT * FROM system.schema_keyspaces"
 #define SELECT_COLUMN_FAMILIES_20 "SELECT * FROM system.schema_columnfamilies"
@@ -52,6 +50,10 @@
 #define SELECT_USERTYPES_30 "SELECT * FROM system_schema.types"
 #define SELECT_FUNCTIONS_30 "SELECT * FROM system_schema.functions"
 #define SELECT_AGGREGATES_30 "SELECT * FROM system_schema.aggregates"
+
+#define SELECT_VIRTUAL_KEYSPACES_40 "SELECT * FROM system_virtual_schema.keyspaces"
+#define SELECT_VIRTUAL_TABLES_40 "SELECT * FROM system_virtual_schema.tables"
+#define SELECT_VIRTUAL_COLUMNS_40 "SELECT * FROM system_virtual_schema.columns"
 
 namespace cass {
 

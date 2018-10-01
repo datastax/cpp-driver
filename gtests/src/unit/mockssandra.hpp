@@ -60,7 +60,7 @@ namespace mockssandra {
 class Ssl {
 public:
   static String generate_key();
-  static String generate_cert(const String& key, const String& cn = "localhost");
+  static String generate_cert(const String& key, String cn = "");
 };
 
 namespace internal {
@@ -196,9 +196,6 @@ private:
 
    static void on_connection(uv_stream_t* stream, int status);
    void handle_connection(int status);
-
-   static void on_async(uv_async_t* async);
-   void handle_async();
 
    static void on_close(uv_handle_t* handle);
    void handle_close();
@@ -1125,10 +1122,9 @@ protected:
             size_t num_nodes);
 
 public:
-  Cluster();
   ~Cluster();
 
-  String use_ssl();
+  String use_ssl(const String& cn = "");
 
   int start_all(EventLoopGroup* event_loop_group);
   void start_all_async(EventLoopGroup* event_loop_group);
@@ -1156,15 +1152,18 @@ private:
       : host(host)
       , connection(connection)
       , is_removed(false) { }
+    Server(const Server& server)
+      : host(server.host)
+      , connection(server.connection)
+      , is_removed(server.is_removed.load()) { }
     const Host host;
     const internal::ServerConnection::Ptr connection;
-    bool is_removed;
+    cass::Atomic<bool> is_removed;
   };
 
   typedef Vector<Server> Servers;
 
 private:
-  mutable uv_mutex_t mutex_;
   Servers servers_;
 };
 
@@ -1235,9 +1234,9 @@ public:
     server_->wait_close();
   }
 
-  String use_ssl() {
+  String use_ssl(const String& cn = "") {
     String key(Ssl::generate_key());
-    String cert(Ssl::generate_cert(key));
+    String cert(Ssl::generate_cert(key, cn));
     if (!server_->use_ssl(key, cert)) {
       return "";
     }
@@ -1251,6 +1250,10 @@ public:
   int listen() {
     server_->listen(&event_loop_group_);
     return server_->wait_listen();
+  }
+
+  void reset(const Address& address) {
+    server_.reset(Memory::allocate<internal::ServerConnection>(address, factory_));
   }
 
 private:

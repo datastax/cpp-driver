@@ -77,6 +77,7 @@ public:
 
     if (rc != 0) {
       status_ = FAILED_BAD_PARAM;
+      timer_.stop();
       uv_status_ = rc;
       callback_(this);
       dec_ref();

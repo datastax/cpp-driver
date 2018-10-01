@@ -14,14 +14,12 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
+#include "unit.hpp"
 
 #include "cluster.hpp"
 #include "query_request.hpp"
-#include "mockssandra_test.hpp"
 #include "session_base.hpp"
 
-#define WAIT_FOR_TIME 5 * 1000 * 1000 // 5 seconds
 #define KEYSPACE "datastax"
 
 class TestSessionBase : public cass::SessionBase {
@@ -48,7 +46,7 @@ protected:
                           const cass::TokenMap::Ptr& token_map) {
     ++connected_;
     ASSERT_STREQ("127.0.0.1", connected_host->address_string().c_str());
-    ASSERT_EQ(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, protocol_version);
+    ASSERT_EQ(PROTOCOL_VERSION, protocol_version);
     ASSERT_EQ(1, hosts.size());
     ASSERT_EQ(state(), SESSION_STATE_CONNECTING);
     notify_connected();
@@ -60,7 +58,6 @@ protected:
     notify_connect_failed(code, message);
     ASSERT_EQ(state(), SESSION_STATE_CLOSED);
   }
-
 
   virtual void on_close() {
     ++closed_;
@@ -74,10 +71,11 @@ private:
   int closed_;
 };
 
-class SessionBaseUnitTest : public mockssandra::SimpleClusterTest { };
+class SessionBaseUnitTest : public Unit { };
 
 TEST_F(SessionBaseUnitTest, Simple) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
@@ -103,7 +101,8 @@ TEST_F(SessionBaseUnitTest, Simple) {
 }
 
 TEST_F(SessionBaseUnitTest, SimpleEmptyKeyspaceWithoutRandom) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
@@ -130,13 +129,13 @@ TEST_F(SessionBaseUnitTest, SimpleEmptyKeyspaceWithoutRandom) {
 }
 
 TEST_F(SessionBaseUnitTest, Ssl) {
-  cass::ClusterSettings settings;
-  settings.control_connection_settings.connection_settings = use_ssl();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  cass::ConnectionSettings settings(use_ssl(&cluster));
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
-  config.set_ssl_context(settings.control_connection_settings.connection_settings.socket_settings.ssl_context.get());
+  config.set_ssl_context(settings.socket_settings.ssl_context.get());
   cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
@@ -159,7 +158,8 @@ TEST_F(SessionBaseUnitTest, Ssl) {
 }
 
 TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsIp) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.set_use_randomized_contact_points(false);
@@ -186,7 +186,8 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsIp) {
 }
 
 TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsHostname) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("doesnotexist.dne");
@@ -214,8 +215,8 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsHostname) {
 TEST_F(SessionBaseUnitTest, InvalidProtocol) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   builder.with_supported_protocol_versions(0, 0); // Don't support any valid protocol version
-  mockssandra::SimpleCluster cluster(builder.build(), 1);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(builder.build());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
@@ -231,9 +232,9 @@ TEST_F(SessionBaseUnitTest, InvalidProtocol) {
 }
 
 TEST_F(SessionBaseUnitTest, SslError) {
-  cass::ClusterSettings settings;
-  settings.control_connection_settings.connection_settings = use_ssl();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple());
+  use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::SslContext::Ptr invalid_ssl_context(cass::SslContextFactory::create());
   invalid_ssl_context->set_verify_flags(CASS_SSL_VERIFY_PEER_CERT);
@@ -251,9 +252,35 @@ TEST_F(SessionBaseUnitTest, SslError) {
   EXPECT_EQ(0, session_base.closed());
 }
 
+TEST_F(SessionBaseUnitTest, Auth) {
+  mockssandra::SimpleCluster cluster(auth());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  cass::Config config;
+  config.contact_points().push_back("127.0.0.1");
+  config.set_credentials("cassandra", "cassandra");
+  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
+  TestSessionBase session_base;
+
+  session_base.connect(config, KEYSPACE, connect_future);
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+  EXPECT_EQ(1, session_base.connected());
+  EXPECT_EQ(0, session_base.failed());
+  EXPECT_EQ(0, session_base.closed());
+
+  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
+  session_base.close(close_future);
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(close_future->error());
+  EXPECT_EQ(1, session_base.connected());
+  EXPECT_EQ(0, session_base.failed());
+  EXPECT_EQ(1, session_base.closed());
+}
+
 TEST_F(SessionBaseUnitTest, BadCredentials) {
-  mockssandra::SimpleCluster cluster(mockssandra::AuthRequestHandlerBuilder().build());
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth());
+  ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
@@ -279,5 +306,84 @@ TEST_F(SessionBaseUnitTest, NoHostsAvailable) {
   EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
   EXPECT_EQ(0, session_base.connected());
   EXPECT_EQ(1, session_base.failed());
+  EXPECT_EQ(0, session_base.closed());
+}
+
+TEST_F(SessionBaseUnitTest, ConnectWhenAlreadyConnected) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  cass::Config config;
+  config.contact_points().push_back("127.0.0.1");
+  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
+  TestSessionBase session_base;
+
+  session_base.connect(config, "", connect_future);
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(1, session_base.connected());
+  EXPECT_EQ(0, session_base.failed());
+  EXPECT_EQ(0, session_base.closed());
+
+  // Attempt second session connection
+  cass::Future::Ptr connect_future_2(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
+  session_base.connect(config, "", connect_future_2);
+  ASSERT_TRUE(connect_future_2->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_CONNECT, connect_future_2->error()->code);
+  EXPECT_EQ(1, session_base.connected());
+  EXPECT_EQ(0, session_base.failed());
+  EXPECT_EQ(0, session_base.closed());
+
+  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
+  session_base.close(close_future);
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(1, session_base.connected());
+  EXPECT_EQ(0, session_base.failed());
+  EXPECT_EQ(1, session_base.closed());
+}
+
+TEST_F(SessionBaseUnitTest, CloseWhenAlreadyClosed) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  cass::Config config;
+  config.contact_points().push_back("127.0.0.1");
+  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
+  TestSessionBase session_base;
+
+  session_base.connect(config, "", connect_future);
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(1, session_base.connected());
+  EXPECT_EQ(0, session_base.failed());
+  EXPECT_EQ(0, session_base.closed());
+
+  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
+  session_base.close(close_future);
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(1, session_base.connected());
+  EXPECT_EQ(0, session_base.failed());
+  EXPECT_EQ(1, session_base.closed());
+
+  // Attempt second session close
+  cass::Future::Ptr close_future_2(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
+  session_base.close(close_future_2);
+  ASSERT_TRUE(close_future_2->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_CLOSE, close_future_2->error()->code);
+  EXPECT_EQ(1, session_base.connected());
+  EXPECT_EQ(0, session_base.failed());
+  EXPECT_EQ(1, session_base.closed());
+}
+
+TEST_F(SessionBaseUnitTest, CloseWhenNotConnected) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
+  TestSessionBase session_base;
+
+  session_base.close(close_future);
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_CLOSE, close_future->error()->code);
+  EXPECT_EQ(0, session_base.connected());
+  EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(0, session_base.closed());
 }

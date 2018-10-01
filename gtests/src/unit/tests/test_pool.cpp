@@ -11,21 +11,16 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
-#include "mockssandra_test.hpp"
+#include "loop_test.hpp"
 
 #include "connection_pool_manager_initializer.hpp"
 #include "constants.hpp"
 #include "ssl.hpp"
 
 #define NUM_NODES 3
-#define PROTOCOL_VERSION CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION
-#define WAIT_FOR_TIME 5 * 1000 * 1000 // 5 seconds
-
 using namespace cass;
 
-class PoolUnitTest : public mockssandra::SimpleClusterTest {
+class PoolUnitTest : public LoopTest {
 public:
   template <class State>
   class Status {
@@ -270,9 +265,8 @@ public:
     RequestStatus* status_;
   };
 
-  PoolUnitTest()
-    : mockssandra::SimpleClusterTest(NUM_NODES) {
-    loop_.data = NULL;
+  PoolUnitTest() {
+    loop()->data = NULL;
   }
 
   AddressVec addresses() const {
@@ -282,26 +276,6 @@ public:
       addresses.push_back(generator.next());
     }
     return addresses;
-  }
-
-  ConnectionPoolSettings use_ssl() {
-    ConnectionPoolSettings settings;
-    settings.connection_settings = mockssandra::SimpleClusterTest::use_ssl();
-    return settings;
-  }
-
-  virtual void SetUp() {
-    mockssandra::SimpleClusterTest::SetUp();
-    ASSERT_EQ(0, uv_loop_init(&loop_));
-  }
-
-  virtual void TearDown() {
-    uv_loop_close(&loop_);
-    mockssandra::SimpleClusterTest::TearDown();
-  }
-
-  uv_loop_t* loop() {
-    return &loop_;
   }
 
   void run_request(const ConnectionPoolManager::Ptr& manager, const Address& address) {
@@ -341,9 +315,6 @@ public:
     ConnectionPoolManager::Ptr manager = initializer->release_manager();
     status->set_manager(manager);
   }
-
-private:
-  uv_loop_t loop_;
 };
 
 std::ostream& operator<<(std::ostream& os, const Vector<PoolUnitTest::RequestState::Enum>& states) {
@@ -379,7 +350,8 @@ std::ostream& operator<<(std::ostream& os, const Vector<PoolUnitTest::ListenerSt
 }
 
 TEST_F(PoolUnitTest, Simple) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   RequestStatusWithManager status(loop());
 
@@ -403,8 +375,7 @@ TEST_F(PoolUnitTest, Keyspace) {
       .use_keyspace("foo")
       .validate_query().void_result();
   mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
-
-  cluster.start_all();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   RequestStatusWithManager status(loop());
 
@@ -436,9 +407,8 @@ TEST_F(PoolUnitTest, Keyspace) {
 }
 
 TEST_F(PoolUnitTest, Auth) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::AuthRequestHandlerBuilder().build(), NUM_NODES);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   RequestStatusWithManager status(loop());
 
@@ -459,9 +429,10 @@ TEST_F(PoolUnitTest, Auth) {
 }
 
 TEST_F(PoolUnitTest, Ssl) {
-  ConnectionPoolSettings settings(use_ssl());
-
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ConnectionPoolSettings settings;
+  settings.connection_settings = use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   RequestStatusWithManager status(loop());
 
@@ -479,7 +450,8 @@ TEST_F(PoolUnitTest, Ssl) {
 }
 
 TEST_F(PoolUnitTest, Listener) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
   ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
@@ -500,7 +472,8 @@ TEST_F(PoolUnitTest, Listener) {
 }
 
 TEST_F(PoolUnitTest, ListenerDown) {
-  start(1);
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start(1), 0);
 
   ListenerStatus listener_status(loop());
   ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
@@ -522,7 +495,8 @@ TEST_F(PoolUnitTest, ListenerDown) {
 }
 
 TEST_F(PoolUnitTest, AddRemove) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
   ListenerStatus add_remove_listener_status(loop(), 1);
@@ -565,7 +539,8 @@ TEST_F(PoolUnitTest, AddRemove) {
 }
 
 TEST_F(PoolUnitTest, Reconnect) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
   ListenerStatus reconnect_listener_status(loop(), 1);
@@ -597,13 +572,13 @@ TEST_F(PoolUnitTest, Reconnect) {
   for (size_t i = 0; i < NUM_NODES; ++i) {
     reconnect_listener_status.reset();
 
-    stop(i + 1); // Stop node
+    cluster.stop(i + 1); // Stop node
     uv_run(loop(), UV_RUN_DEFAULT);
     EXPECT_FALSE(manager->find_least_busy(addresses[i]));
 
     reconnect_listener_status.reset();
 
-    start(i + 1); // Start node
+    ASSERT_EQ(cluster.start(i + 1), 0); // Start node
     uv_run(loop(), UV_RUN_DEFAULT);
     run_request(manager, addresses[i]);
   }
@@ -615,9 +590,8 @@ TEST_F(PoolUnitTest, Reconnect) {
 TEST_F(PoolUnitTest, Timeout) {
   mockssandra::RequestHandler::Builder builder;
   builder.on(mockssandra::OPCODE_STARTUP).no_result(); // Don't return a response
-
   mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
-  cluster.start_all();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
   ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
@@ -642,7 +616,8 @@ TEST_F(PoolUnitTest, Timeout) {
 
 
 TEST_F(PoolUnitTest, InvalidProtocol) {
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
   ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
@@ -676,8 +651,7 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
       .use_keyspace("foo")
       .validate_query().void_result();
   mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
-
-  cluster.start_all();
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
   ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
@@ -698,9 +672,8 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
 }
 
 TEST_F(PoolUnitTest, InvalidAuth) {
-  mockssandra::SimpleCluster cluster(
-        mockssandra::AuthRequestHandlerBuilder().build(), NUM_NODES);
-  cluster.start_all();
+  mockssandra::SimpleCluster cluster(auth(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
   ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
@@ -724,7 +697,8 @@ TEST_F(PoolUnitTest, InvalidAuth) {
 }
 
 TEST_F(PoolUnitTest, InvalidNoSsl) {
-  start_all(); // Start without ssl
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  ASSERT_EQ(cluster.start_all(), 0); // Start without ssl
 
   ListenerStatus listener_status(loop());
   ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
@@ -751,8 +725,9 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
 }
 
 TEST_F(PoolUnitTest, InvalidSsl) {
-  use_ssl();
-  start_all();
+  mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
+  use_ssl(&cluster);
+  ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
   ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));

@@ -116,6 +116,7 @@ public:
    *
    * @param connections
    * @param listener
+   * @param keyspace
    * @param loop
    * @param address
    * @param protocol_version
@@ -124,6 +125,7 @@ public:
    */
   ConnectionPool(const Connection::Vec& connections,
                  ConnectionPoolListener* listener,
+                 const String& keyspace,
                  uv_loop_t* loop,
                  const Address& address,
                  int protocol_version,
@@ -155,21 +157,13 @@ public:
    */
   void set_listener(ConnectionPoolListener* listener);
 
-  /**
-   * Set the connection pool manager for this connection. The manager is only
-   * used to get the current keyspace. This is kind of a hack and in the
-   * future we should synchronously propagate the keyspace in an event loop
-   * task and wait using a future.
-   *
-   * @param manager The manager to use for determining the keyspace.
-   */
-  void set_manager(ConnectionPoolManager* manager);
-
 public:
   const uv_loop_t* loop() const { return loop_; }
   const Address& address() const { return  address_; }
   int protocol_version() const { return protocol_version_; }
-  String keyspace() const;
+  const String& keyspace() const { return keyspace_; }
+
+  void set_keyspace(const String& keyspace);
 
 public:
   class Protected {
@@ -225,7 +219,7 @@ private:
 
 private:
   ConnectionPoolListener* listener_;
-  ConnectionPoolManager* manager_;
+  String keyspace_;
   uv_loop_t* const loop_;
   const Address address_;
   const int protocol_version_;

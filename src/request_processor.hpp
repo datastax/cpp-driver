@@ -40,9 +40,60 @@ class RequestProcessor;
 class RequestProcessorManager;
 class Session;
 
+
+/**
+ * A wrapper around a keyspace change response that makes sure the final
+ * processing for the request happens on the original event loop. This
+ * needs to be reference counted so that the last processing thread triggers
+ * setting the response on the request's future.
+ */
+class KeyspaceChangedHandler : public RefCounted<KeyspaceChangedHandler> {
+public:
+  typedef SharedRefPtr<KeyspaceChangedHandler> Ptr;
+
+  KeyspaceChangedHandler(EventLoop* event_loop,
+                         const KeyspaceChangedResponse& response)
+    : event_loop_(event_loop)
+    , response_(response) { }
+
+  ~KeyspaceChangedHandler() {
+    event_loop_->add(Memory::allocate<Task>(response_));
+  }
+
+private:
+  /**
+   * An internal task that keeps the original keyspace change handler
+   * alive so that processing happens on the original event loop.
+   */
+  class Task : public cass::Task {
+  public:
+    Task(const KeyspaceChangedResponse& response)
+      : response_(response) { }
+    virtual void run(EventLoop* event_loop) {
+      response_.set_response();
+    }
+  private:
+    KeyspaceChangedResponse response_;
+  };
+
+private:
+  EventLoop* const event_loop_;
+  KeyspaceChangedResponse response_;
+};
+
+
+class KeyspaceChangedListener {
+public:
+  virtual ~KeyspaceChangedListener() { }
+
+  virtual void on_keyspace_changed(const String& keyspace,
+                                   const KeyspaceChangedHandler::Ptr& handler) = 0;
+};
+
 class RequestProcessorListener
     : public ConnectionPoolStateListener
-    , public RequestChangeListener {
+    , public PreparedMetadataListener
+    , public KeyspaceChangedListener {
 public:
   virtual void on_close(RequestProcessor* processor) = 0;
 };
@@ -113,12 +164,22 @@ public:
   void close();
 
   /**
+   * Set the listener that will handle events for the processor
+   * (*NOT* thread-safe).
+   *
+   * @param listener The processor listener.
+   */
+  void set_listener(RequestProcessorListener* listener);
+
+  /**
    * Set the current keyspace being used for requests
-   * (thread-safe, synchronous).
+   * (thread-safe, asynchronous).
    *
    * @param keyspace New current keyspace to utilize
+   * @param handler A keyspace handler to trigger a response to a "USE" query.
    */
-  void set_keyspace(const String& keyspace);
+  void set_keyspace(const String& keyspace,
+                    const KeyspaceChangedHandler::Ptr& handler);
 
   /**
    * Notify that a host has been added to the cluster
@@ -191,7 +252,8 @@ private:
 
   virtual void on_prepared_metadata_changed(const String& id,
                                             const PreparedMetadata::Entry::Ptr& entry);
-  virtual void on_keyspace_changed(const String& keyspace);
+  virtual void on_keyspace_changed(const String& keyspace,
+                                   KeyspaceChangedResponse handler);
   virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                             const Host::Ptr& current_host,
                                             const Response::Ptr& response);
@@ -237,7 +299,7 @@ private:
   ConnectionPoolManager::Ptr connection_pool_manager_;
   String connect_keyspace_;
   HostMap hosts_;
-  RequestProcessorListener* const listener_;
+  RequestProcessorListener* listener_;
   EventLoop* const event_loop_;
   LoadBalancingPolicy::Vec load_balancing_policies_;
   const unsigned max_schema_wait_time_ms_;

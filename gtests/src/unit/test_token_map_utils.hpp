@@ -334,7 +334,7 @@ inline cass::Host::Ptr create_host(const cass::Address& address,
   RowResultResponseBuilder builder(column_metadata);
   builder.append_local_peers_row_v3(tokens, partitioner, dc, rack, release_version);
 
-  host->set(&builder.finish()->first_row());
+  host->set(&builder.finish()->first_row(), true);
   host->set_up();
 
   return host;

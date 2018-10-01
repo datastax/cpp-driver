@@ -16,50 +16,52 @@
 
 #ifdef _WIN32
 // Local execution command
-#include <io.h>
-#define FILENO _fileno
-#define POPEN _popen
-#define PCLOSE _pclose
-#define READ _read
+#  include <io.h>
+#  define FILENO _fileno
+#  define POPEN _popen
+#  define PCLOSE _pclose
+#  define READ _read
 
 // Enable memory leak detection
-# define _CRTDBG_MAP_ALLOC
-# include <stdlib.h>
-# include <crtdbg.h>
+#  define _CRTDBG_MAP_ALLOC
+#  include <stdlib.h>
+#  include <crtdbg.h>
 
 // Enable memory leak detection for new operator
-# ifdef _DEBUG
-#   ifndef DBG_NEW
-#     define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-#     define new DBG_NEW
-#   endif
-# endif
+#  ifdef _DEBUG
+#    ifndef DBG_NEW
+#      define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
+#      define new DBG_NEW
+#    endif
+#  endif
 #else
 // Local execution command
-#define FILENO fileno
-#define POPEN popen
-#define PCLOSE pclose
-#define READ read
+#  define FILENO fileno
+#  define POPEN popen
+#  define PCLOSE pclose
+#  define READ read
 
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #include "bridge.hpp"
 
 #ifdef CASS_USE_LIBSSH2
-#include <libssh2.h>
-#define LIBSSH2_INIT_ALL 0
-#ifdef OPENSSL_CLEANUP
-# define PID_UNKNOWN 0
-# include <openssl/ssl.h>
-# include <openssl/rand.h>
-# include <openssl/engine.h>
-# include <openssl/conf.h>
-#endif
+#  include <libssh2.h>
+#  define LIBSSH2_INIT_ALL 0
+#  ifndef LIBSSH2_NO_OPENSSL
+#    ifdef OPENSSL_CLEANUP
+#      define PID_UNKNOWN 0
+#      include <openssl/ssl.h>
+#      include <openssl/rand.h>
+#      include <openssl/engine.h>
+#      include <openssl/conf.h>
+#    endif
+#  endif
 #else
-#ifdef _MSC_VER
-// ssize_t is defined in libssh2 and used by local command execution
-typedef SSIZE_T ssize_t;
-#endif
+#  ifdef _MSC_VER
+     // ssize_t is defined in libssh2 and used by local command execution
+     typedef SSIZE_T ssize_t;
+#  endif
 #endif
 
 #include <errno.h>
@@ -78,12 +80,12 @@ typedef SSIZE_T ssize_t;
 #define CCM_PREFIX_MESSAGE "CCM: "
 #define CCM_SUFFIX_LOG std::endl
 #ifdef CCM_VERBOSE_LOGGING
-# define CCM_LOG(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << message << CCM_SUFFIX_LOG
-# define CCM_LOG_WARN(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << "WARN: " << message << CCM_SUFFIX_LOG
+#  define CCM_LOG(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << message << CCM_SUFFIX_LOG
+#  define CCM_LOG_WARN(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << "WARN: " << message << CCM_SUFFIX_LOG
 #else
-# define CCM_LOG_DISABLED do {} while (false)
-# define CCM_LOG(message) CCM_LOG_DISABLED
-# define CCM_LOG_WARN(message) CCM_LOG_DISABLED
+#  define CCM_LOG_DISABLED do {} while (false)
+#  define CCM_LOG(message) CCM_LOG_DISABLED
+#  define CCM_LOG_WARN(message) CCM_LOG_DISABLED
 #endif
 #define CCM_LOG_ERROR(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << "ERROR: " \
                            << __FILE__ << "(" << __LINE__ << "): " \
@@ -91,10 +93,10 @@ typedef SSIZE_T ssize_t;
 
 // Create FALSE/TRUE defines for easier code readability
 #ifndef FALSE
-# define FALSE 0
+#  define FALSE 0
 #endif
 #ifndef TRUE
-# define TRUE 1
+#  define TRUE 1
 #endif
 
 #define TRIM_DELIMETERS " \f\n\r\t\v"
@@ -1584,7 +1586,8 @@ void CCM::Bridge::finalize_libssh2() {
   // Free up remaining libssh2 memory
   libssh2_exit();
 
-#ifdef OPENSSL_CLEANUP
+#ifndef LIBSSH2_NO_OPENSSL
+#  ifdef OPENSSL_CLEANUP
   // Free OpenSSL resources
   RAND_cleanup();
   ENGINE_cleanup();
@@ -1594,6 +1597,7 @@ void CCM::Bridge::finalize_libssh2() {
   ERR_free_strings();
   ERR_remove_state(PID_UNKNOWN);
   CRYPTO_cleanup_all_ex_data();
+#  endif
 #endif
 }
 

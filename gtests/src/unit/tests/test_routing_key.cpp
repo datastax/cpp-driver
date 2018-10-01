@@ -14,9 +14,8 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
+#include "unit.hpp"
 
-#include "logger.hpp"
 #include "murmur3.hpp"
 #include "query_request.hpp"
 #include "string.hpp"
@@ -25,11 +24,7 @@
 // The java-driver was used as a reference for the hash value
 // below.
 
-struct RoutingKeyUnitTest : public ::testing::Test  {
-  static void SetUpTestCase() {
-    cass::Logger::set_log_level(CASS_LOG_DISABLED);
-  }
-};
+struct RoutingKeyUnitTest : public Unit { };
 
 TEST_F(RoutingKeyUnitTest, Single)
 {

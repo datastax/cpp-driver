@@ -79,12 +79,13 @@ void SessionBase::connect(const Config& config,
 
   metrics_.reset(Memory::allocate<Metrics>(config.thread_count_io() + 1));
 
-  cluster_connector_.reset(
+  cluster_.reset();
+  ClusterConnector::Ptr connector(
         Memory::allocate<ClusterConnector>(config_.contact_points(),
                                            config_.protocol_version(),
                                            bind_callback(&SessionBase::on_initialize, this)));
 
-  cluster_connector_
+  connector
       ->with_listener(this)
       ->with_settings(ClusterSettings(config_))
       ->with_random(random_.get())
@@ -118,7 +119,7 @@ void SessionBase::notify_connect_failed(CassError code, const String& message) {
   if (cluster_) {
     connect_error_code_ = code;
     connect_error_message_ = message;
-    cluster_->close();
+    on_close();
   } else {
     ScopedMutex l(&mutex_);
     state_ = SESSION_STATE_CLOSED;

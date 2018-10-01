@@ -1,3 +1,26 @@
+2.10.0
+===========
+
+Bug Fixes
+--------
+* [CPP-648] Attempting to get the metrics before the session is connected will crash (existing issue)
+* [CPP-654] Use Boost atomics when building drivers for Visual Studio 2012 x86
+* [CPP-666] Metadata crash in schema metadata null tests
+* [CPP-667] Timer handles still referenced
+* [CPP-668] Unit test `ClusterUnitTest.ReconnectUpdateHosts` can hang
+* [CPP-669] Result response's metadata can reference a prepared response that's already been freed
+* [CPP-672] Fix memory issues found via `-fstanitize=address`
+* [CPP-673] Cluster can hang attempting to close during reconnection
+* [CPP-675] Chained callback should only call a single callback once
+* [CPP-678] Fix Cassandra version for DSE 6.X releases
+
+Other
+--------
+* [CPP-611] Reduce coalesce delay to better support latency workloads
+* [CPP-615] Remove support for protocols v1 and v2
+* [CPP-652] Decouple listeners from connection/initialization
+* [CPP-653] Synchronously propagate keyspace updates
+
 2.10.0-beta1
 ===========
 
@@ -25,6 +48,9 @@ Bug Fixes
   still remain unused
 * [CPP-589] Pathological hashing behavior in stream manager
 * [CPP-590] Execution profiles are copied for every request (expensive to copy)
+* [CPP-662] The timerfd version of MicroTimer doesn't handle zero timeout
+* [CPP-663] Mutex in SessionBase can be destroyed while it's still locked
+* [CPP-665] Memory issue when socket fails to initialize
 
 Other
 --------

@@ -99,6 +99,14 @@ public:
    */
   uint64_t io_time_elapsed() const { return io_time_elapsed_; }
 
+
+  /**
+   * Determines if we're running on this event loop.
+   *
+   * @return true if currently running on this event loop.
+   */
+  bool is_running_on() const;
+
   /**
    * Get the event loop name; useful for debugging
    *

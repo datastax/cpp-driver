@@ -302,7 +302,13 @@ void Socket::set_handler(SocketHandlerBase* handler) {
 }
 
 int32_t Socket::write(SocketRequest* request) {
-  if (!handler_) return 0;
+  if (!handler_)  {
+    return SocketRequest::SOCKET_REQUEST_ERROR_NO_HANDLER;
+  }
+
+  if (is_closing()) {
+    return SocketRequest::SOCKET_REQUEST_ERROR_CLOSED;
+  }
 
   if (pending_writes_.is_empty() || pending_writes_.back()->is_flushed()) {
     if (!free_writes_.empty()) {

@@ -54,7 +54,7 @@
 #define CASS_VERSION_MAJOR 2
 #define CASS_VERSION_MINOR 10
 #define CASS_VERSION_PATCH 0
-#define CASS_VERSION_SUFFIX "beta1"
+#define CASS_VERSION_SUFFIX ""
 
 #ifdef __cplusplus
 extern "C" {
@@ -622,8 +622,8 @@ typedef enum CassSslVerifyFlags_ {
 } CassSslVerifyFlags;
 
 typedef enum CassProtocolVersion_ {
-  CASS_PROTOCOL_VERSION_V1    = 0x01,
-  CASS_PROTOCOL_VERSION_V2    = 0x02,
+  CASS_PROTOCOL_VERSION_V1    = 0x01, /**< Deprecated */
+  CASS_PROTOCOL_VERSION_V2    = 0x02, /**< Deprecated */
   CASS_PROTOCOL_VERSION_V3    = 0x03,
   CASS_PROTOCOL_VERSION_V4    = 0x04,
   CASS_PROTOCOL_VERSION_V5    = 0x05
@@ -1720,7 +1720,7 @@ cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
  * bound workloads and lower values should be used for latency bound
  * workloads.
  *
- * <b>Default:</b> 500 us
+ * <b>Default:</b> 200 us
  *
  * @public @memberof CassCluster
  *
@@ -2918,6 +2918,18 @@ cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
                         const char** name,
                         size_t* name_length);
 
+
+/**
+ * Determine if the keyspace is a virtual keyspace.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @return cass_true is the keyspace is virtual, otherwise cass_false
+ */
+CASS_EXPORT cass_bool_t
+cass_keyspace_meta_is_virtual(const CassKeyspaceMeta* keyspace_meta);
+
 /**
  * Gets the table metadata for the provided table name.
  *
@@ -3153,6 +3165,17 @@ CASS_EXPORT void
 cass_table_meta_name(const CassTableMeta* table_meta,
                      const char** name,
                      size_t* name_length);
+
+/**
+ * Determine if the table is a virtual table.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @return cass_true is the table is virtual, otherwise cass_false
+ */
+CASS_EXPORT cass_bool_t
+cass_table_meta_is_virtual(const CassTableMeta* table_meta);
 
 /**
  * Gets the column metadata for the provided column name.

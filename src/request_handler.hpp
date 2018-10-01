@@ -178,7 +178,9 @@ public:
                                       const String& result_metadata_id,
                                       const ResultResponse::ConstPtr& result_response, Protected);
 
-  void notify_keyspace_changed(const String& keyspace);
+  void notify_keyspace_changed(const String& keyspace,
+                               const Host::Ptr& current_host,
+                               const Response::Ptr& response);
 
   bool wait_for_schema_agreement(const Host::Ptr& current_host,
                                  const Response::Ptr& response);
@@ -221,19 +223,46 @@ private:
   const Address preferred_address_;
 };
 
-class RequestChangeListener {
+class KeyspaceChangedResponse {
 public:
-  virtual ~RequestChangeListener() { }
+  KeyspaceChangedResponse(const RequestHandler::Ptr& request_handler,
+                          const Host::Ptr& current_host,
+                          const Response::Ptr& response)
+    : request_handler_(request_handler)
+    , current_host_(current_host)
+    , response_(response) { }
+
+  void set_response() {
+    request_handler_->set_response(current_host_, response_);
+  }
+
+private:
+  RequestHandler::Ptr request_handler_;
+  Host::Ptr current_host_;
+  Response::Ptr response_;
+};
+
+class PreparedMetadataListener {
+public:
+  virtual ~PreparedMetadataListener() { }
 
   virtual void on_prepared_metadata_changed(const String& id,
                                             const PreparedMetadata::Entry::Ptr& entry) = 0;
-
-  virtual void on_keyspace_changed(const String& keyspace) = 0;
 };
 
-class RequestListener : public RequestChangeListener {
+class RequestListener : public PreparedMetadataListener {
 public:
   virtual ~RequestListener() { }
+
+  /**
+   * A callback called when the keyspace has changed.
+   *
+   * @param keyspace The new keyspace.
+   * @param response The response for the keyspace change. `set_response()`
+   * must be called when the callback is done processing the keyspace change.
+   */
+  virtual void on_keyspace_changed(const String& keyspace,
+                                   KeyspaceChangedResponse response) = 0;
 
   virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                             const Host::Ptr& current_host,

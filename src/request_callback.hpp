@@ -144,7 +144,6 @@ public:
   virtual ~RequestCallback() { }
 
   void notify_write(Connection* connection,
-                    int protocol_version,
                     int stream);
 
 public:
@@ -374,6 +373,7 @@ private:
 private:
   const ChainedRequestCallback::Ptr chain_;
   bool has_pending_;
+  bool has_error_or_timeout_;
   String key_;
   Response::Ptr response_;
   Map responses_;

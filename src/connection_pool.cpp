@@ -58,13 +58,14 @@ NopConnectionPoolListener nop_connection_pool_listener__;
 
 ConnectionPool::ConnectionPool(const Connection::Vec& connections,
                                ConnectionPoolListener* listener,
+                               const String& keyspace,
                                uv_loop_t* loop,
                                const Address& address,
                                int protocol_version,
                                const ConnectionPoolSettings& settings,
                                Metrics* metrics)
   : listener_(listener ? listener : &nop_connection_pool_listener__)
-  , manager_(NULL)
+  , keyspace_(keyspace)
   , loop_(loop)
   , address_(address)
   , protocol_version_(protocol_version)
@@ -118,15 +119,8 @@ void ConnectionPool::set_listener(ConnectionPoolListener* listener) {
   listener_ = listener ? listener : &nop_connection_pool_listener__;
 }
 
-void ConnectionPool::set_manager(ConnectionPoolManager* manager) {
-  manager_ = manager;
-}
-
-String ConnectionPool::keyspace() const {
-  if (manager_) {
-    return manager_->keyspace();
-  }
-  return String();
+void ConnectionPool::set_keyspace(const String& keyspace) {
+  keyspace_ = keyspace;
 }
 
 void ConnectionPool::requires_flush(PooledConnection* connection, ConnectionPool::Protected) {

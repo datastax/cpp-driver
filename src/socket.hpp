@@ -18,6 +18,7 @@
 #define __CASS_SOCKET_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "constants.hpp"
 #include "tcp_connector.hpp"
 #include "list.hpp"
 #include "stack.hpp"
@@ -41,6 +42,12 @@ class SocketWriteBase;
 class SocketRequest : public List<SocketRequest>::Node {
 public:
   virtual ~SocketRequest() { }
+
+  enum {
+    SOCKET_REQUEST_ERROR_CLOSED = CASS_INT32_MIN,
+    SOCKET_REQUEST_ERROR_NO_HANDLER,
+    SOCKET_REQUEST_ERROR_LAST_ENTRY
+  };
 
   /**
    * Encode a request into buffers.

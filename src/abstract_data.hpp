@@ -71,9 +71,9 @@ public:
       return type_ == NUL;
     }
 
-    size_t get_size(int version) const;
-    size_t copy_buffer(int version, size_t pos, Buffer* buf) const;
-    Buffer get_buffer(int version) const;
+    size_t get_size() const;
+    size_t copy_buffer(size_t pos, Buffer* buf) const;
+    Buffer get_buffer() const;
 
   private:
     Type type_;

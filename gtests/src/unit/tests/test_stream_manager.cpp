@@ -20,17 +20,12 @@
 
 TEST(StreamManagerUnitTest, MaxStreams)
 {
-  ASSERT_EQ(cass::StreamManager<int>(1).max_streams(), 128u);
-  ASSERT_EQ(cass::StreamManager<int>(2).max_streams(), 128u);
-  ASSERT_EQ(cass::StreamManager<int>(3).max_streams(), 32768u);
+  ASSERT_EQ(cass::StreamManager<int>().max_streams(), 32768u);
 }
 
 TEST(StreamManagerUnitTest, Simple)
 {
-  const int protocol_versions[] = { 1, 3, 0 };
-
-  for (const int* version = protocol_versions; *version > 0; ++version) {
-    cass::StreamManager<int> streams(*version);
+    cass::StreamManager<int> streams;
 
     for (size_t i = 0; i < streams.max_streams(); ++i) {
       int stream = streams.acquire(i);
@@ -54,32 +49,27 @@ TEST(StreamManagerUnitTest, Simple)
 
     // Verify there are no more streams left
     EXPECT_LT(streams.acquire(streams.max_streams()), 0);
-  }
 }
 
 TEST(StreamManagerUnitTest, Release)
 {
-  const int protocol_versions[] = { 1, 3, 0 };
+  cass::StreamManager<int> streams;
 
-  for (const int* version = protocol_versions; *version > 0; ++version) {
-    cass::StreamManager<int> streams(*version);
-
-    for (size_t i = 0; i < streams.max_streams(); ++i) {
-      int stream = streams.acquire(i);
-      ASSERT_GE(stream, 0);
-    }
-
-    // Verify there are no more streams left
-    EXPECT_LT(streams.acquire(streams.max_streams()), 0);
-
-    // Verify that the stream the was previously release is re-acquired
-    for (size_t i = 0; i < streams.max_streams(); ++i) {
-      streams.release(i);
-      int stream = streams.acquire(i);
-      ASSERT_EQ(static_cast<size_t>(stream), i);
-    }
-
-    // Verify there are no more streams left
-    ASSERT_LT(streams.acquire(streams.max_streams()), 0);
+  for (size_t i = 0; i < streams.max_streams(); ++i) {
+    int stream = streams.acquire(i);
+    ASSERT_GE(stream, 0);
   }
+
+  // Verify there are no more streams left
+  EXPECT_LT(streams.acquire(streams.max_streams()), 0);
+
+  // Verify that the stream the was previously release is re-acquired
+  for (size_t i = 0; i < streams.max_streams(); ++i) {
+    streams.release(i);
+    int stream = streams.acquire(i);
+    ASSERT_EQ(static_cast<size_t>(stream), i);
+  }
+
+  // Verify there are no more streams left
+  ASSERT_LT(streams.acquire(streams.max_streams()), 0);
 }

@@ -94,6 +94,10 @@ void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
   *name_length = keyspace_meta->name().size();
 }
 
+cass_bool_t cass_keyspace_meta_is_virtual(const CassKeyspaceMeta* keyspace_meta) {
+  return keyspace_meta->is_virtual() ? cass_true : cass_false;
+}
+
 const CassTableMeta* cass_keyspace_meta_table_by_name(const CassKeyspaceMeta* keyspace_meta,
                                                       const char* table) {
   return cass_keyspace_meta_table_by_name_n(keyspace_meta, table, SAFE_STRLEN(table));
@@ -180,6 +184,10 @@ void cass_table_meta_name(const CassTableMeta* table_meta,
                           const char** name, size_t* name_length) {
   *name = table_meta->name().data();
   *name_length = table_meta->name().size();
+}
+
+cass_bool_t cass_table_meta_is_virtual(const CassTableMeta* table_meta) {
+  return table_meta->is_virtual() ? cass_true : cass_false;
 }
 
 const CassColumnMeta* cass_table_meta_column_by_name(const CassTableMeta* table_meta,
@@ -778,14 +786,15 @@ Metadata::SchemaSnapshot Metadata::schema_snapshot() const {
                         front_.keyspaces());
 }
 
-void Metadata::update_keyspaces(const ResultResponse* result) {
+void Metadata::update_keyspaces(const ResultResponse* result,
+                                bool is_virtual) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_keyspaces(server_version_, result);
+    updating_->update_keyspaces(server_version_, result, is_virtual);
   } else {
-    updating_->update_keyspaces(server_version_, result);
+    updating_->update_keyspaces(server_version_, result, is_virtual);
   }
 }
 
@@ -1012,10 +1021,10 @@ void MetadataBase::add_json_list_field(const Row* row, const String& name) {
     collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
   }
 
-  size_t encoded_size = collection.get_items_size(value->protocol_version());
+  size_t encoded_size = collection.get_items_size();
   RefBuffer::Ptr encoded(RefBuffer::create(encoded_size));
 
-  collection.encode_items(value->protocol_version(), encoded->data());
+  collection.encode_items(encoded->data());
 
   Value list(collection.data_type(),
              d.Size(),
@@ -1055,10 +1064,10 @@ const Value* MetadataBase::add_json_map_field(const Row* row, const String& name
     collection.append(CassString(i->value.GetString(), i->value.GetStringLength()));
   }
 
-  size_t encoded_size = collection.get_items_size(value->protocol_version());
+  size_t encoded_size = collection.get_items_size();
   RefBuffer::Ptr encoded(RefBuffer::create(encoded_size));
 
-  collection.encode_items(value->protocol_version(), encoded->data());
+  collection.encode_items(encoded->data());
 
   Value map(collection.data_type(),
             d.MemberCount(),
@@ -1119,8 +1128,6 @@ const ViewMetadata::Ptr& KeyspaceMetadata::get_view(const String& name) {
 }
 
 void KeyspaceMetadata::add_view(const ViewMetadata::Ptr& view) {
-  // Properly remove the previous view if it exists
-  drop_table_or_view(view->name());
   (*views_)[view->name()] = view;
 }
 
@@ -1240,8 +1247,10 @@ void KeyspaceMetadata::drop_aggregate(const String& full_aggregate_name) {
 }
 
 TableMetadataBase::TableMetadataBase(const VersionNumber& server_version,
-                                     const String& name, const RefBuffer::Ptr& buffer, const Row* row)
-  : MetadataBase(name) {
+                                     const String& name, const RefBuffer::Ptr& buffer, const Row* row,
+                                     bool is_virtual)
+  : MetadataBase(name)
+  , is_virtual_(is_virtual) {
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "bloom_filter_fp_chance");
   add_field(buffer, row, "caching");
@@ -1456,8 +1465,9 @@ void TableMetadataBase::build_keys_and_sort(const VersionNumber& server_version,
 const TableMetadata::Ptr TableMetadata::NIL;
 
 TableMetadata::TableMetadata(const VersionNumber& server_version,
-                             const String& name, const RefBuffer::Ptr& buffer, const Row* row)
-  : TableMetadataBase(server_version, name, buffer, row) {
+                             const String& name, const RefBuffer::Ptr& buffer, const Row* row,
+                             bool is_virtual)
+  : TableMetadataBase(server_version, name, buffer, row, is_virtual) {
   add_field(buffer, row, table_column_name(server_version));
   if (server_version >= VersionNumber(3, 0, 0)) {
     add_field(buffer, row, "flags");
@@ -1524,8 +1534,10 @@ const ViewMetadata::Ptr ViewMetadata::NIL;
 
 ViewMetadata::ViewMetadata(const VersionNumber& server_version,
                            const TableMetadata* table,
-                           const String& name, const RefBuffer::Ptr& buffer, const Row* row)
-  : TableMetadataBase(server_version, name, buffer, row)
+                           const String& name, const RefBuffer::Ptr& buffer,
+                           const Row* row,
+                           bool is_virtual)
+  : TableMetadataBase(server_version, name, buffer, row, is_virtual)
   , base_table_(table) {
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "view_name");
@@ -1896,7 +1908,8 @@ ColumnMetadata::ColumnMetadata(const VersionNumber& server_version, SimpleDataTy
 }
 
 void Metadata::InternalData::update_keyspaces(const VersionNumber& server_version,
-                                              const ResultResponse* result) {
+                                              const ResultResponse* result,
+                                              bool is_virtual) {
   RefBuffer::Ptr buffer = result->buffer();
   ResultIterator rows(result);
 
@@ -1909,7 +1922,7 @@ void Metadata::InternalData::update_keyspaces(const VersionNumber& server_versio
       continue;
     }
 
-    KeyspaceMetadata* keyspace = get_or_create_keyspace(keyspace_name);
+    KeyspaceMetadata* keyspace = get_or_create_keyspace(keyspace_name, is_virtual);
     keyspace->update(server_version, buffer, row);
   }
 }
@@ -1941,7 +1954,8 @@ void Metadata::InternalData::update_tables(const VersionNumber& server_version,
 
     keyspace->add_table(TableMetadata::Ptr(Memory::allocate<TableMetadata>(server_version,
                                                                            table_name,
-                                                                           buffer, row)));
+                                                                           buffer, row,
+                                                                           keyspace->is_virtual())));
   }
 }
 
@@ -1978,6 +1992,11 @@ void Metadata::InternalData::update_views(const VersionNumber& server_version,
       continue;
     }
 
+    // Properly remove the previous view if it exists. This needs to be done
+    // before the next step of finding the table because it could create a
+    // new copy of the old table.
+    keyspace->drop_table_or_view(view_name);
+
     TableMetadata::Ptr table(keyspace->get_table(base_table_name));
     if (!table) {
       LOG_ERROR("No table metadata for view with base table name '%s'", base_table_name.c_str());
@@ -1987,7 +2006,8 @@ void Metadata::InternalData::update_views(const VersionNumber& server_version,
     ViewMetadata::Ptr view(Memory::allocate<ViewMetadata>(server_version,
                                                           table.get(),
                                                           view_name,
-                                                          buffer, row));
+                                                          buffer, row,
+                                                          keyspace->is_virtual()));
     keyspace->add_view(view);
     table->add_view(view);
     updated_tables.push_back(table);
@@ -2335,10 +2355,10 @@ void Metadata::InternalData::update_indexes(const VersionNumber& server_version,
   }
 }
 
-KeyspaceMetadata* Metadata::InternalData::get_or_create_keyspace(const String& name) {
+KeyspaceMetadata* Metadata::InternalData::get_or_create_keyspace(const String& name, bool is_virtual) {
   KeyspaceMetadata::Map::iterator i = keyspaces_->find(name);
   if (i == keyspaces_->end()) {
-    i = keyspaces_->insert(std::make_pair(name, KeyspaceMetadata(name))).first;
+    i = keyspaces_->insert(std::make_pair(name, KeyspaceMetadata(name, is_virtual))).first;
   }
   return &i->second;
 }

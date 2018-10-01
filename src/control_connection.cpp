@@ -372,15 +372,15 @@ void ControlConnection::refresh_node(RefreshNodeType type, const Address& addres
   String listen_address(listen_addresses_[address]);
 
   if (is_connected_host) {
-    query.assign(token_aware_routing_ ? SELECT_LOCAL_TOKENS : SELECT_LOCAL);
+    query.assign(SELECT_LOCAL);
   } else if (!listen_address.empty()) {
-    query.assign(token_aware_routing_ ? SELECT_PEERS_TOKENS : SELECT_PEERS);
+    query.assign(SELECT_PEERS);
     query.append(" WHERE peer = '");
     query.append(listen_address);
     query.append("'");
   } else {
     is_all_peers = true;
-    query.assign(token_aware_routing_ ? SELECT_PEERS_TOKENS : SELECT_PEERS);
+    query.assign(SELECT_PEERS);
   }
 
   LOG_DEBUG("Refresh node: %s", query.c_str());
@@ -413,7 +413,7 @@ void ControlConnection::handle_refresh_node(RefreshNodeCallback* callback) {
 
   Host::Ptr host(Memory::allocate<Host>(callback->address));
   if (!callback->is_all_peers) {
-    host->set(&result->first_row());
+    host->set(&result->first_row(), token_aware_routing_);
     host->set_up();
     listen_addresses_[callback->address]
         = determine_listen_address(callback->address, &result->first_row());
@@ -429,7 +429,7 @@ void ControlConnection::handle_refresh_node(RefreshNodeCallback* callback) {
                                             row->get_by_name("rpc_address"),
                                             &address);
       if (is_valid_address && callback->address == address) {
-        host->set(row);
+        host->set(row, token_aware_routing_);
         host->set_up();
         listen_addresses_[callback->address]
             = determine_listen_address(callback->address, row);

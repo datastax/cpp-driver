@@ -34,9 +34,9 @@ option(CASS_BUILD_UNIT_TESTS "Build unit tests" OFF)
 option(CASS_DEBUG_CUSTOM_ALLOC "Debug custom allocator" OFF)
 option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
-option(CASS_MULTICORE_COMPILATION "Enable multicore compilation" OFF)
+option(CASS_MULTICORE_COMPILATION "Enable multicore compilation" ON)
 option(CASS_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
-option(CASS_USE_LIBSSH2 "Use libssh2 for integration tests" ON)
+option(CASS_USE_LIBSSH2 "Use libssh2 for integration tests" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
@@ -55,13 +55,15 @@ if(CASS_BUILD_INTEGRATION_TESTS)
   set(CASS_USE_OPENSSL ON) # Required for integration tests
 endif()
 
-if(CASS_BUILD_UNIT_TESTS)
-  set(CASS_BUILD_STATIC ON) # Required for unit tests
+if(CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
+  set(CASS_BUILD_STATIC ON) # Required for tests
 endif()
 
 # Determine which driver target should be used as a dependency
 set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
-if(CASS_USE_STATIC_LIBS)
+if(CASS_USE_STATIC_LIBS OR
+   (WIN32 AND (CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)))
+  set(CASS_USE_STATIC_LIBS ON) # Not all driver internals are exported for test executable (e.g. CASS_EXPORT)
   set(CASS_BUILD_STATIC ON)
   set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
 endif()
@@ -85,32 +87,6 @@ CassUseLibuv()
 # Optional Dependencies
 #------------------------
 CassOptionalDependencies()
-
-#--------------------
-# Test Dependencies
-#--------------------
-
-# libssh2
-if(CASS_BUILD_INTEGRATION_TESTS)
-  if(CASS_USE_LIBSSH2)
-    # Setup the root directory for libssh2
-    set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/" $ENV{LIBSSH2_ROOT})
-    set(LIBSSH2_ROOT ${LIBSSH2_ROOT} ${LIBSSH2_ROOT_DIR} $ENV{LIBSSH2_ROOT_DIR})
-
-    # Discover libssh2
-    find_package(LIBSSH2 QUIET)
-    if(LIBSSH2_FOUND)
-      # Assign test libraries (additional boost and libssh2 dependencies)
-      set(CASS_TEST_LIBS ${Boost_LIBRARIES} ${LIBSSH2_LIBRARIES})
-      if(UNIX)
-        set(CASS_TEST_LIBS ${CASS_TEST_LIBS} pthread)
-      endif()
-      add_definitions(-DCASS_USE_LIBSSH2)
-    else()
-      message(STATUS "libssh2 is Unavailable: Building integration tests without libssh2 support")
-    endif()
-  endif()
-endif()
 
 #----------------------
 # Generating API docs
@@ -142,6 +118,15 @@ include_directories(${CASS_INCLUDES})
 # Determine if the dynamic/shared library should be built
 if(CASS_BUILD_SHARED)
   add_library(${PROJECT_LIB_NAME} SHARED ${CASS_ALL_SOURCE_FILES})
+  if(CASS_USE_BOOST_ATOMIC AND BOOST_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME} ${BOOST_LIBRARY_NAME})
+  endif()
+  if(LIBUV_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME} ${LIBUV_LIBRARY_NAME})
+  endif()
+  if(OPENSSL_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME} ${OPENSSL_LIBRARY_NAME})
+  endif()
   CassConfigureShared("CASS")
   set_property(TARGET ${PROJECT_LIB_NAME} PROPERTY FOLDER "Driver/Cassandra")
 endif()
@@ -149,6 +134,15 @@ endif()
 # Determine if the static library should be built
 if(CASS_BUILD_STATIC)
   add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${CASS_ALL_SOURCE_FILES})
+  if(CASS_USE_BOOST_ATOMIC AND BOOST_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME_STATIC} ${BOOST_LIBRARY_NAME})
+  endif()
+  if(LIBUV_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME_STATIC} ${LIBUV_LIBRARY_NAME})
+  endif()
+  if(OPENSSL_LIBRARY_NAME)
+    add_dependencies(${PROJECT_LIB_NAME_STATIC} ${OPENSSL_LIBRARY_NAME})
+  endif()
   CassConfigureStatic("CASS")
 
   # Update the test flags to indicate the use of the static library

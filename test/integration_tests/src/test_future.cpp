@@ -48,9 +48,9 @@ BOOST_AUTO_TEST_CASE(error)
   BOOST_REQUIRE_NE(cass_future_error_code(future.get()), CASS_OK);
 
   // Should not be set
-  BOOST_CHECK(cass_future_get_result(future.get()) == NULL);
-  BOOST_CHECK(cass_future_get_prepared(future.get()) == NULL);
-  BOOST_CHECK(cass_future_get_error_result(future.get()) != NULL);
+  BOOST_CHECK(!test_utils::CassResultPtr(cass_future_get_result(future.get())));
+  BOOST_CHECK(!test_utils::CassPreparedPtr(cass_future_get_prepared(future.get())));
+  BOOST_CHECK(test_utils::CassErrorResultPtr(cass_future_get_error_result(future.get())));
 
   BOOST_CHECK_EQUAL(cass_future_custom_payload_item_count(future.get()), 0);
   {
@@ -75,11 +75,11 @@ BOOST_AUTO_TEST_CASE(result_response)
 
   // Expected
   BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
-  BOOST_CHECK(cass_future_get_result(future.get()) != NULL);
+  BOOST_CHECK(test_utils::CassResultPtr(cass_future_get_result(future.get())));
 
   // Should not be set
-  BOOST_CHECK(cass_future_get_error_result(future.get()) == NULL);
-  BOOST_CHECK(cass_future_get_prepared(future.get()) == NULL);
+  BOOST_CHECK(!test_utils::CassErrorResultPtr(cass_future_get_error_result(future.get())));
+  BOOST_CHECK(!test_utils::CassPreparedPtr(cass_future_get_prepared(future.get())));
 
   BOOST_CHECK_EQUAL(cass_future_custom_payload_item_count(future.get()), 0);
   {
@@ -103,14 +103,14 @@ BOOST_AUTO_TEST_CASE(prepare_response)
 
   // Expected
   BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
-  BOOST_CHECK(cass_future_get_prepared(future.get()) != NULL);
+  BOOST_CHECK(test_utils::CassPreparedPtr(cass_future_get_prepared(future.get())));
 
   // This returns a value but probably shouldn't. We should consider fixing
   // this, but it could break existing applications.
-  BOOST_CHECK(cass_future_get_result(future.get()) != NULL);
+  BOOST_CHECK(test_utils::CassResultPtr(cass_future_get_result(future.get())));
 
   // Should not be set
-  BOOST_CHECK(cass_future_get_error_result(future.get()) == NULL);
+  BOOST_CHECK(!test_utils::CassErrorResultPtr(cass_future_get_error_result(future.get())));
 
   BOOST_CHECK_EQUAL(cass_future_custom_payload_item_count(future.get()), 0);
   {

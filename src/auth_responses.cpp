@@ -32,9 +32,6 @@ bool AuthenticateResponse::decode(Decoder& decoder) {
 
 bool cass::AuthChallengeResponse::decode(Decoder& decoder) {
   decoder.set_type("authentication challenge");
-  if (decoder.protocol_version() < 2) {
-    return false;
-  }
   StringRef token;
 
   CHECK_RESULT(decoder.decode_bytes(&token));
@@ -45,11 +42,7 @@ bool cass::AuthChallengeResponse::decode(Decoder& decoder) {
 
 bool cass::AuthSuccessResponse::decode(Decoder& decoder) {
   decoder.set_type("authentication success");
-  if (decoder.protocol_version() < 2) {
-    return false;
-  }
   StringRef token;
-
 
   CHECK_RESULT(decoder.decode_bytes(&token));
   token_ = token.to_string();

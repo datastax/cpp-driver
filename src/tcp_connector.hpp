@@ -77,6 +77,7 @@ public:
       status_ = FAILED_BAD_PARAM;
       uv_status_ = rc;
       callback_(this);
+      dec_ref();
     }
   }
 

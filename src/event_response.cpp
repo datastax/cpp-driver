@@ -69,42 +69,35 @@ bool EventResponse::decode(Decoder& decoder) {
       return false;
     }
 
-    if (decoder.protocol_version() <= 2) {
-      // Version 1 and 2: ...<keyspace><table> ([string][string])
-      CHECK_RESULT(decoder.decode_string(&keyspace_));
-      CHECK_RESULT(decoder.decode_string(&target_));
-      schema_change_target_ = target_.size() == 0 ? KEYSPACE : TABLE;
+    // Version 3+: ...<target><options>
+    // <target> = [string]
+    // <options> = [string] OR [string][string]
+
+    StringRef target;
+    CHECK_RESULT(decoder.decode_string(&target));
+    if (target == "KEYSPACE") {
+      schema_change_target_ = KEYSPACE;
+    } else if (target == "TABLE") {
+      schema_change_target_ = TABLE;
+    } else if (target == "TYPE") {
+      schema_change_target_ = TYPE;
+    } else if (target == "FUNCTION") {
+      schema_change_target_ = FUNCTION;
+    } else if (target == "AGGREGATE") {
+      schema_change_target_ = AGGREGATE;
     } else {
-      // Version 3+: ...<target><options>
-      // <target> = [string]
-      // <options> = [string] OR [string][string]
+      return false;
+    }
 
-      StringRef target;
-      CHECK_RESULT(decoder.decode_string(&target));
-      if (target == "KEYSPACE") {
-        schema_change_target_ = KEYSPACE;
-      } else if (target == "TABLE") {
-        schema_change_target_ = TABLE;
-      } else if (target == "TYPE") {
-        schema_change_target_ = TYPE;
-      } else if (target == "FUNCTION") {
-        schema_change_target_ = FUNCTION;
-      } else if (target == "AGGREGATE") {
-        schema_change_target_ = AGGREGATE;
-      } else {
-        return false;
-      }
+    CHECK_RESULT(decoder.decode_string(&keyspace_));
 
-      CHECK_RESULT(decoder.decode_string(&keyspace_));
-
-      if (schema_change_target_ == TABLE ||
-          schema_change_target_ == TYPE) {
-        CHECK_RESULT(decoder.decode_string(&target_));
-      } else if (schema_change_target_ == FUNCTION ||
-                 schema_change_target_ == AGGREGATE) {
-        CHECK_RESULT(decoder.decode_string(&target_));
-        CHECK_RESULT(decoder.decode_stringlist(arg_types_));
-      }
+    if (schema_change_target_ == TABLE ||
+        schema_change_target_ == TYPE) {
+      CHECK_RESULT(decoder.decode_string(&target_));
+    } else if (schema_change_target_ == FUNCTION ||
+               schema_change_target_ == AGGREGATE) {
+      CHECK_RESULT(decoder.decode_string(&target_));
+      CHECK_RESULT(decoder.decode_stringlist(arg_types_));
     }
   } else {
     return false;
