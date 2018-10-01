@@ -369,7 +369,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, StatementFunctions) {
 
   statement = cass_statement_new(
     format_string("SELECT * FROM %s", table_name_.c_str()).c_str(), 0);
-  EXPECT_EQ(NULL, cass_statement_set_keyspace(statement.get(), NULL));
+  EXPECT_EQ(CASS_OK, cass_statement_set_keyspace(statement.get(), NULL));
   EXPECT_EQ(CASS_OK, session_.execute(statement, false).error_code());
 
   // Test that when the session does not have the keyspace set, running
@@ -383,7 +383,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, StatementFunctions) {
   const char* query = query_string.c_str();
 
   statement = cass_statement_new(query, 1);
-  EXPECT_EQ(NULL, cass_statement_bind_null_by_name(statement.get(), NULL));
+  EXPECT_EQ(CASS_OK, cass_statement_bind_null_by_name(statement.get(), NULL));
   EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
     session_.execute(statement, false).error_code());
 
