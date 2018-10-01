@@ -19,8 +19,6 @@
 #set -x #Trace
 #set -n #Check Syntax
 
-WORKING_DIRECTORY="$(pwd)"
-BASH_FILENAME="$(basename $0)"
 BOOST_FILE_VERSION=${BOOST_VERSION//./_}
 
 get_procs() {
