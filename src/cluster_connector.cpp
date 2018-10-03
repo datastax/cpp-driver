@@ -230,16 +230,8 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
       policy->register_handles(event_loop_->loop());
     }
 
-    // Gather the available hosts for the load balancing policies
-    HostMap available_hosts;
-    for (HostMap::const_iterator it = hosts.begin(), end = hosts.end();
-         it != end; ++it) {
-      if (!is_host_ignored(policies, it->second)) {
-        available_hosts[it->first] = it->second;
-      }
-    }
-
-    if (available_hosts.empty()) {
+    ScopedPtr<QueryPlan> query_plan(default_policy->new_query_plan("", NULL, NULL));
+    if (!query_plan->compute_next()) { // No hosts in the query plan
       //TODO(fero): Check for DC aware policy to give more informative message (e.g. invalid DC)
       on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE,
                "No hosts available for connection using the current load " \
@@ -251,7 +243,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
                                              listener_,
                                              event_loop_,
                                              connected_host,
-                                             available_hosts,
+                                             hosts,
                                              connector->schema(),
                                              default_policy,
                                              policies,

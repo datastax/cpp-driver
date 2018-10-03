@@ -213,19 +213,28 @@ void Cluster::prepared(const String& id,
   prepared_metadata_.set(id, entry);
 }
 
+HostMap Cluster::available_hosts() const {
+  HostMap available;
+  for (HostMap::const_iterator it = hosts_.begin(),
+       end = hosts_.end(); it != end; ++it) {
+    if (!is_host_ignored(it->second)) {
+      available[it->first] = it->second;
+    }
+  }
+  return available;
+}
+
 void Cluster::update_hosts(const HostMap& hosts) {
   // Update the hosts and properly notify the listener
   HostMap existing(hosts_);
 
   for (HostMap::const_iterator it = hosts.begin(),
        end = hosts.end(); it != end; ++it) {
-    if (!is_host_ignored(it->second)) {
-      HostMap::iterator find_it = existing.find(it->first);
-      if (find_it != existing.end()) {
-        existing.erase(find_it); // Already exists mark as visited
-      } else {
-        notify_add(it->second); // A new host has been added
-      }
+    HostMap::iterator find_it = existing.find(it->first);
+    if (find_it != existing.end()) {
+      existing.erase(find_it); // Already exists mark as visited
+    } else {
+      notify_add(it->second); // A new host has been added
     }
   }
 
@@ -305,6 +314,10 @@ void Cluster::update_token_map(const HostMap& hosts,
   }
 }
 
+// All hosts from the cluster are included in the host map and in the load
+// balancing policies (LBP) so that LBPs return the correct host distance (esp.
+// important for DC-aware). This method prevents connection pools from being
+// created to ignored hosts.
 bool Cluster::is_host_ignored(const Host::Ptr& host) const {
   return cass::is_host_ignored(load_balancing_policies_, host);
 }
@@ -413,10 +426,6 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
 
   Host::Ptr host(it->second);
 
-  if (is_host_ignored(host)) {
-    return; // Ignore host
-  }
-
   if (refreshed){
     if (token_map_) {
       token_map_ = token_map_->copy();
@@ -435,6 +444,10 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
        end = load_balancing_policies_.end(); it != end; ++it) {
     (*it)->on_up(host);
+  }
+
+  if (is_host_ignored(host)) {
+    return; // Ignore host
   }
 
   if (!prepare_host(host,
@@ -487,14 +500,14 @@ void Cluster::notify_add(const Host::Ptr& host) {
     listener_->on_remove(host_it->second);
   }
 
-  if (is_host_ignored(host)) {
-    return; // Ignore host
-  }
-
   hosts_[host->address()] = host;
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
        end = load_balancing_policies_.end(); it != end; ++it) {
     (*it)->on_add(host);
+  }
+
+  if (is_host_ignored(host)) {
+    return; // Ignore host
   }
 
   if (!prepare_host(host,
