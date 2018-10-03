@@ -1807,11 +1807,18 @@ cass::String SchemaChangeEvent::encode(SchemaChangeEvent::Target target, SchemaC
 
 void Cluster::init(AddressGenerator& generator,
                    ClientConnectionFactory& factory,
-                   size_t num_nodes) {
+                   size_t num_nodes_dc1, size_t num_nodes_dc2) {
   MT19937_64 token_rng;
-  for (size_t i = 0; i < num_nodes; ++i) {
+  for (size_t i = 0; i < num_nodes_dc1; ++i) {
     Address address(generator.next());
     Server server(Host(address, "dc1", "rack1", token_rng),
+                  internal::ServerConnection::Ptr(
+                    Memory::allocate<internal::ServerConnection>(address, factory)));
+    servers_.push_back(server);
+  }
+  for (size_t i = 0; i < num_nodes_dc2; ++i) {
+    Address address(generator.next());
+    Server server(Host(address, "dc2", "rack1", token_rng),
                   internal::ServerConnection::Ptr(
                     Memory::allocate<internal::ServerConnection>(address, factory)));
     servers_.push_back(server);

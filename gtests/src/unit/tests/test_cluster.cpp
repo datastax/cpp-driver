@@ -189,6 +189,32 @@ public:
     OutagePlan* outage_plan_;
   };
 
+  class RecoverClusterListener : public UpDownListener {
+  public:
+    typedef SharedRefPtr<RecoverClusterListener> Ptr;
+
+    RecoverClusterListener(const Future::Ptr& close_future,
+                           const Future::Ptr& up_future,
+                           const Future::Ptr& recover_future)
+      : UpDownListener(close_future, up_future, Future::Ptr())
+      , recover_future_(recover_future) { }
+
+    const HostVec& connected_hosts() const {
+      return connected_hosts_;
+    }
+
+    virtual void on_reconnect(Cluster* cluster) {
+      connected_hosts_.push_back(cluster->connected_host());
+      if (connected_hosts_.size() > 1 && recover_future_) {
+        recover_future_->set();
+      }
+    }
+
+  private:
+    HostVec connected_hosts_;
+    Future::Ptr recover_future_;
+  };
+
   static void on_connection_connected(ClusterConnector* connector, Future* future) {
     if (connector->is_ok()) {
       future->set();
@@ -667,4 +693,63 @@ TEST_F(ClusterUnitTest, InvalidSsl) {
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_TRUE(connect_future->error());
   EXPECT_EQ(CASS_ERROR_SSL_INVALID_PEER_CERT, connect_future->error()->code);
+}
+
+TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
+  mockssandra::SimpleCluster cluster(simple(), 1, 1); // 2 DCs with a single node each
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Address local_address("127.0.0.1", 9042);
+  Address remote_address("127.0.0.2", 9042);
+
+  ContactPointList contact_points;
+  contact_points.push_back(local_address.to_string());
+
+  Future::Ptr close_future(Memory::allocate<Future>());
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
+                                                                     PROTOCOL_VERSION,
+                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+
+  Future::Ptr up_future(Memory::allocate<Future>());
+  Future::Ptr recover_future(Memory::allocate<Future>());
+  RecoverClusterListener::Ptr listener(
+        Memory::allocate<RecoverClusterListener>(close_future, up_future, recover_future));
+
+  ClusterSettings settings;
+  settings.load_balancing_policy.reset(Memory::allocate<DCAwarePolicy>("dc1", 1, false)); // Allow connection to a single remote host
+  settings.load_balancing_policies.clear();
+  settings.load_balancing_policies.push_back(settings.load_balancing_policy);
+  settings.reconnect_timeout_ms = 1; // Reconnect immediately
+  settings.control_connection_settings.connection_settings.connect_timeout_ms = 200; // Give enough time for the connection to complete
+
+  connector
+      ->with_settings(settings)
+      ->with_listener(listener.get())
+      ->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+
+  // Notify every host as down
+  connect_future->cluster()->notify_down(local_address);
+  connect_future->cluster()->notify_down(remote_address);
+
+  // Notify the remote host as up
+  connect_future->cluster()->notify_up(remote_address);
+
+  // Verify that the remote host was marked as up
+  ASSERT_TRUE(up_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(remote_address, listener->address());
+
+  cluster.stop(1); // Stop local node to very that remote host is tried for reconnection.
+
+  ASSERT_TRUE(recover_future->wait_for(WAIT_FOR_TIME));
+
+  connect_future->cluster()->close();
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+
+  ASSERT_EQ(listener->connected_hosts().size(), 2u);
+  EXPECT_EQ(listener->connected_hosts()[0]->address(), Address("127.0.0.1", PORT));
+  EXPECT_EQ(listener->connected_hosts()[1]->address(), Address("127.0.0.2", PORT)); // Connected to remove host.
 }

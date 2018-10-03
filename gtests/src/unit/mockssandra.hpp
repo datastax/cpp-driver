@@ -1119,7 +1119,7 @@ class Cluster {
 protected:
   void init(AddressGenerator& generator,
             ClientConnectionFactory& factory,
-            size_t num_nodes);
+            size_t num_nodes_dc1, size_t num_nodes_dc2);
 
 public:
   ~Cluster();
@@ -1187,10 +1187,10 @@ public:
 class SimpleCluster : public Cluster {
 public:
   SimpleCluster(const RequestHandler* request_handler,
-                size_t num_nodes = 1)
+                size_t num_nodes_dc1 = 1, size_t num_nodes_dc2 = 0)
     : factory_(request_handler, this)
     , event_loop_group_(1) {
-    init(generator_, factory_, num_nodes);
+    init(generator_, factory_, num_nodes_dc1, num_nodes_dc2);
   }
 
   ~SimpleCluster() {
