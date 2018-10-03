@@ -234,8 +234,8 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
     ScopedPtr<QueryPlan> query_plan(default_policy->new_query_plan("", NULL, NULL));
     if (!query_plan->compute_next()) { // No hosts in the query plan
       const char* message;
-      if (dynamic_cast<DCAwarePolicy*>(query_plan.get()) != NULL) { // Check if DC-aware
-        message = "No hosts available for control connection using the " \
+      if (dynamic_cast<DCAwarePolicy::DCAwareQueryPlan*>(query_plan.get()) != NULL) { // Check if DC-aware
+        message = "No hosts available for the control connection using the " \
                   "DC-aware load balancing policy. " \
                   "Check to see if the configured local datacenter is valid";
       } else {

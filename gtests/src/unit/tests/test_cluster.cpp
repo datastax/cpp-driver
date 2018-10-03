@@ -234,7 +234,7 @@ public:
           break;
         case ClusterConnector::CLUSTER_ERROR_NO_HOSTS_AVAILABLE:
           future->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                            "Unable to connect to any contact points");
+                            connector->error_message());
           break;
         case ClusterConnector::CLUSTER_CANCELED:
           future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
@@ -752,4 +752,31 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
   ASSERT_EQ(listener->connected_hosts().size(), 2u);
   EXPECT_EQ(listener->connected_hosts()[0]->address(), Address("127.0.0.1", PORT));
   EXPECT_EQ(listener->connected_hosts()[1]->address(), Address("127.0.0.2", PORT)); // Connected to remove host.
+}
+
+TEST_F(ClusterUnitTest, InvalidDC) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  ContactPointList contact_points;
+  contact_points.push_back("127.0.0.1");
+
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
+                                                                     PROTOCOL_VERSION,
+                                                                     bind_callback(on_connection_connected, connect_future.get())));
+
+  ClusterSettings settings;
+  settings.load_balancing_policy.reset(Memory::allocate<DCAwarePolicy>("dc3", 0, false)); // Invalid DC and no using remote hosts
+  settings.load_balancing_policies.clear();
+  settings.load_balancing_policies.push_back(settings.load_balancing_policy);
+
+  connector
+      ->with_settings(settings)
+      ->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(connect_future->error());
+  EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
+  EXPECT_TRUE(connect_future->error()->message.find("Check to see if the configured local datacenter is valid") != String::npos);
 }
