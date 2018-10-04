@@ -751,7 +751,7 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
 
   ASSERT_EQ(listener->connected_hosts().size(), 2u);
   EXPECT_EQ(listener->connected_hosts()[0]->address(), Address("127.0.0.1", PORT));
-  EXPECT_EQ(listener->connected_hosts()[1]->address(), Address("127.0.0.2", PORT)); // Connected to remove host.
+  EXPECT_EQ(listener->connected_hosts()[1]->address(), Address("127.0.0.2", PORT)); // Connected to remote host.
 }
 
 TEST_F(ClusterUnitTest, InvalidDC) {
