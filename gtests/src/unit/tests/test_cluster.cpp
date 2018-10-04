@@ -742,7 +742,7 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
   ASSERT_TRUE(up_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(remote_address, listener->address());
 
-  cluster.stop(1); // Stop local node to very that remote host is tried for reconnection.
+  cluster.stop(1); // Stop local node to verify that remote host is tried for reconnection.
 
   ASSERT_TRUE(recover_future->wait_for(WAIT_FOR_TIME));
 
@@ -767,7 +767,7 @@ TEST_F(ClusterUnitTest, InvalidDC) {
                                                                      bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
-  settings.load_balancing_policy.reset(Memory::allocate<DCAwarePolicy>("dc3", 0, false)); // Invalid DC and no using remote hosts
+  settings.load_balancing_policy.reset(Memory::allocate<DCAwarePolicy>("invalid_dc", 0, false)); // Invalid DC and not using remote hosts
   settings.load_balancing_policies.clear();
   settings.load_balancing_policies.push_back(settings.load_balancing_policy);
 

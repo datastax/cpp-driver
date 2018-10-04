@@ -1807,7 +1807,8 @@ cass::String SchemaChangeEvent::encode(SchemaChangeEvent::Target target, SchemaC
 
 void Cluster::init(AddressGenerator& generator,
                    ClientConnectionFactory& factory,
-                   size_t num_nodes_dc1, size_t num_nodes_dc2) {
+                   size_t num_nodes_dc1,
+                   size_t num_nodes_dc2) {
   MT19937_64 token_rng;
   for (size_t i = 0; i < num_nodes_dc1; ++i) {
     Address address(generator.next());
