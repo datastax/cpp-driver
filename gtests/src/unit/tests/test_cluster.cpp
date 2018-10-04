@@ -743,7 +743,6 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
   EXPECT_EQ(remote_address, listener->address());
 
   cluster.stop(1); // Stop local node to verify that remote host is tried for reconnection.
-
   ASSERT_TRUE(recover_future->wait_for(WAIT_FOR_TIME));
 
   connect_future->cluster()->close();
