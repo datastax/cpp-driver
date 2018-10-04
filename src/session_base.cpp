@@ -165,7 +165,7 @@ void SessionBase::on_initialize(ClusterConnector* connector) {
     cluster_ = connector->release_cluster();
     on_connect(cluster_->connected_host(),
                cluster_->protocol_version(),
-               cluster_->hosts(),
+               cluster_->available_hosts(),
                cluster_->token_map());
   } else {
     assert(!connector->is_canceled() && "Cluster connection process canceled");

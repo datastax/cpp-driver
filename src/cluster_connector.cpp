@@ -15,6 +15,7 @@
 */
 
 #include "cluster_connector.hpp"
+#include "dc_aware_policy.hpp"
 #include "random.hpp"
 #include "round_robin_policy.hpp"
 
@@ -230,20 +231,18 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
       policy->register_handles(event_loop_->loop());
     }
 
-    // Gather the available hosts for the load balancing policies
-    HostMap available_hosts;
-    for (HostMap::const_iterator it = hosts.begin(), end = hosts.end();
-         it != end; ++it) {
-      if (!is_host_ignored(policies, it->second)) {
-        available_hosts[it->first] = it->second;
+    ScopedPtr<QueryPlan> query_plan(default_policy->new_query_plan("", NULL, NULL));
+    if (!query_plan->compute_next()) { // No hosts in the query plan
+      const char* message;
+      if (dynamic_cast<DCAwarePolicy::DCAwareQueryPlan*>(query_plan.get()) != NULL) { // Check if DC-aware
+        message = "No hosts available for the control connection using the " \
+                  "DC-aware load balancing policy. " \
+                  "Check to see if the configured local datacenter is valid";
+      } else {
+        message = "No hosts available for the control connection using the " \
+                  "configured load balancing policy";
       }
-    }
-
-    if (available_hosts.empty()) {
-      //TODO(fero): Check for DC aware policy to give more informative message (e.g. invalid DC)
-      on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE,
-               "No hosts available for connection using the current load " \
-               "balancing policy(s)");
+      on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE, message);
       return;
     }
 
@@ -251,7 +250,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
                                              listener_,
                                              event_loop_,
                                              connected_host,
-                                             available_hosts,
+                                             hosts,
                                              connector->schema(),
                                              default_policy,
                                              policies,

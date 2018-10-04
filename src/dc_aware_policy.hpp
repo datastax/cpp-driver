@@ -93,6 +93,7 @@ private:
   const CopyOnWriteHostVec& get_local_dc_hosts() const;
   void get_remote_dcs(PerDCHostMap::KeySet* remote_dcs) const;
 
+public:
   class DCAwareQueryPlan : public QueryPlan {
   public:
     DCAwareQueryPlan(const DCAwarePolicy* policy,
@@ -111,6 +112,7 @@ private:
     size_t index_;
   };
 
+private:
   String local_dc_;
   size_t used_hosts_per_remote_dc_;
   bool skip_remote_dcs_for_local_cl_;
