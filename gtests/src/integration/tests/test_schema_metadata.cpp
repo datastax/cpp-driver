@@ -27,6 +27,7 @@ public:
   }
 
   void SetUp() {
+    CHECK_VERSION(2.2.0);
     Integration::SetUp();
     populateSchema();
     schema_meta_ = session_.schema();
@@ -84,6 +85,7 @@ protected:
 };
 
 CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, Views) {
+  CHECK_VERSION(3.0.0);
   Keyspace keyspace_meta = schema_meta_.keyspace(keyspace_name_);
   Table table_meta = keyspace_meta.table(table_name_);
 
@@ -116,6 +118,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, Views) {
 }
 
 CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, DropView) {
+  CHECK_VERSION(3.0.0);
   Table table_meta = schema_meta_.keyspace(keyspace_name_).table(table_name_);
 
   // Verify that the table contains the view
@@ -134,6 +137,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, DropView) {
 }
 
 CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, RegularMetadataNotMarkedVirtual) {
+  CHECK_VERSION(2.2.0);
   // Check non-virtual keyspace/table is correctly not set
   Keyspace keyspace_meta = schema_meta_.keyspace("system");
   ASSERT_TRUE(keyspace_meta);

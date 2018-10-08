@@ -266,8 +266,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
   // but invalid remote address. The specified remote is not routable
   // from the specified local.
   logger_.add_critera("Unable to establish a control connection to host " \
-                      "1.1.1.1 because of the following error: " \
-                      "Connect error 'operation not permitted'");
+                      "1.1.1.1 because of the following error:");
   Cluster cluster = Cluster::build().with_contact_points("1.1.1.1")
     .with_local_address("127.0.0.1");
   try {
@@ -355,6 +354,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests, TopologyChange) {
 
   // Bootstrap a second node and ensure all hosts are actively used
   unsigned int node_2 = ccm_->bootstrap_node(); // Triggers a `NEW_NODE` event
+  msleep(3000); //TODO: Remove static sleep and check driver logs for reduced wait
   std::set<unsigned short> expected_nodes;
   expected_nodes.insert(1);
   expected_nodes.insert(node_2);
@@ -614,6 +614,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
   // Restart the cluster and wait for the nodes to reconnect
   ccm_->start_cluster();
   ASSERT_TRUE(wait_for_logger(nodes.size()));
+  msleep(3000); //TODO: Remove static sleep and check driver logs for reduced wait
 
   // Ensure all nodes are actively used
   std::set<unsigned short> expected_nodes;
@@ -743,8 +744,10 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionSingleNodeDataCentersClusterTests,
     FAIL() << "Connection was established using invalid data center";
   } catch (Session::Exception& se) {
     ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
-    ASSERT_STREQ("No hosts available for connection using the current load " \
-                 "balancing policy(s)", se.error_message().c_str());
+    ASSERT_STREQ("No hosts available for the control connection using the " \
+                 "DC-aware load balancing policy. Check to see if the " \
+                 "configured local datacenter is valid",
+                 se.error_message().c_str());
   }
 }
 
