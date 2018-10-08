@@ -4,7 +4,14 @@
 
 CentOS, Ubuntu and Windows. Packages for the dependencies, libuv (1.x) and
 OpenSSL, are also provided and can be found under the "dependencies" directory
-for each platform e.g. [CentOS 7], [Ubuntu 14.04], [Windows].
+for each platform:
+
+* [CentOS 6]
+* [CentOS 7]
+* [Ubuntu 14.04]
+* [Ubuntu 16.04]
+* [Ubuntu 18.04]
+* [Windows]
 
 *Note*: CentOS and Ubuntu use the version of OpenSSL provided with the
 distribution.
@@ -238,8 +245,11 @@ with other drivers. The schedule for these features can be found on [JIRA].
 - Event registration and notification
 - Callback interfaces for load balancing, authentication, reconnection and retry
 
+[CentOS 6]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies/
 [CentOS 7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/
 [Ubuntu 14.04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/
+[Ubuntu 16.04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/
+[Ubuntu 18.04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies/
 [Windows]: http://downloads.datastax.com/cpp-driver/windows/dependencies/
 [built from source]: http://datastax.github.io/cpp-driver/topics/building/
 [prepared statements]: http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/
