@@ -319,6 +319,9 @@ void cass_materialized_view_meta_name(const CassMaterializedViewMeta* view_meta,
 }
 
 const CassTableMeta* cass_materialized_view_meta_base_table(const CassMaterializedViewMeta* view_meta) {
+  if (view_meta == NULL) { // Materialized views may be NULL (Cassandra < v3.0.0)
+    return NULL;
+  }
   return CassTableMeta::to(view_meta->base_table());
 }
 
