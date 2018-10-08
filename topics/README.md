@@ -2,16 +2,28 @@
 
 ## Installation
 
-CentOS, Ubuntu and Windows. Packages for the dependencies, libuv (1.x) and
-OpenSSL, are also provided and can be found under the "dependencies" directory
-for each platform:
+### Driver
 
-* [CentOS 6]
-* [CentOS 7]
-* [Ubuntu 14.04]
-* [Ubuntu 16.04]
-* [Ubuntu 18.04]
-* [Windows]
+Packages are available for the following platforms:
+
+* [CentOS 6][cpp-driver-centos6]
+* [CentOS 7][cpp-driver-centos7]
+* [Ubuntu 14.04 LTS][cpp-driver-ubuntu14-04]
+* [Ubuntu 16.04 LTS][cpp-driver-ubuntu16-04]
+* [Ubuntu 18.04 LTS][cpp-driver-ubuntu18-04]
+* [Windows][cpp-driver-windows]
+
+### Dependencies
+
+Packages for the dependencies, libuv (1.x) and OpenSSL are also provided and
+can be found under the "dependencies" directory for each platform:
+
+* [CentOS 6][cpp-driver-dependencies-centos6]
+* [CentOS 7][cpp-driver-dependencies-centos7]
+* [Ubuntu 14.04 LTS][cpp-driver-dependencies-ubuntu14-04]
+* [Ubuntu 16.04 LTS][cpp-driver-dependencies-ubuntu16-04]
+* [Ubuntu 18.04 LTS][cpp-driver-dependencies-ubuntu18-04]
+* [Windows][cpp-driver-dependencies-windows]
 
 *Note*: CentOS and Ubuntu use the version of OpenSSL provided with the
 distribution.
@@ -245,12 +257,18 @@ with other drivers. The schedule for these features can be found on [JIRA].
 - Event registration and notification
 - Callback interfaces for load balancing, authentication, reconnection and retry
 
-[CentOS 6]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies/
-[CentOS 7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/
-[Ubuntu 14.04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/
-[Ubuntu 16.04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/
-[Ubuntu 18.04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies/
-[Windows]: http://downloads.datastax.com/cpp-driver/windows/dependencies/
+[cpp-driver-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/cassandra
+[cpp-driver-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/cassandra
+[cpp-driver-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/cassandra
+[cpp-driver-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/cassandra
+[cpp-driver-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/cassandra
+[cpp-driver-windows]: http://downloads.datastax.com/cpp-driver/windows/cassandra
+[cpp-driver-dependencies-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies/
+[cpp-driver-dependencies-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/
+[cpp-driver-dependencies-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/
+[cpp-driver-dependencies-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/
+[cpp-driver-dependencies-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies/
+[cpp-driver-dependencies-windows]: http://downloads.datastax.com/cpp-driver/windows/dependencies/
 [built from source]: http://datastax.github.io/cpp-driver/topics/building/
 [prepared statements]: http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/
 [`cass_int32_t`]: http://datastax.github.io/cpp-driver/api/cassandra.h/#cass-int32-t
