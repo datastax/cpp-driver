@@ -46,7 +46,7 @@ public:
       START_NODE,
       STOP_NODE,
       ADD_NODE,
-      REMOVE_NODE,
+      REMOVE_NODE
     };
 
     /**

@@ -171,15 +171,15 @@ public:
       future->set_processor(initializer->release_processor());
     } else {
       switch (initializer->error_code()) {
-        case RequestProcessorInitializer::RequestProcessorError::REQUEST_PROCESSOR_ERROR_KEYSPACE:
+        case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_KEYSPACE:
           future->set_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
                             initializer->error_message());
           break;
-        case RequestProcessorInitializer::RequestProcessorError::REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE:
+        case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE:
           future->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                             "Unable to connect to any contact points");
           break;
-        case RequestProcessorInitializer::RequestProcessorError::REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT:
+        case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT:
           future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
                             initializer->error_message());
           break;
