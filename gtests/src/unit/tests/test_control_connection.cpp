@@ -200,7 +200,7 @@ public:
                                 const String& target_name) {
       RecordingControlConnectionListener::on_update_schema(type, result,
                                                            keyspace_name, target_name);
-      if (type == SchemaType::COLUMN || type == SchemaType::INDEX) return;
+      if (type == COLUMN || type == INDEX) return;
       if (--remaining_ <= 0) connection_->close();
     }
 
