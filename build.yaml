@@ -3,8 +3,12 @@ schedules:
     schedule: adhoc
     notify:
       slack: cpp-driver-dev-bots
+  commit:
+    schedule: per_commit
+    notify:
+      slack: cpp-driver-dev-bots
     branches:
-      include: [master]
+      include: ["/CPP-\\d+/", "master"]
 architecture:
   - x64
 os:
@@ -13,120 +17,36 @@ os:
   - ubuntu/xenial64
   - centos/6-64
   - centos/7-64
+env:
+  LIBUV_VERSION: 1.23.0
 build:
   - script: |
-      echo "Running packaging job"
+      . .build.sh
+      configure_environment
+      install_dependencies
+
+      build_driver 'CASS'
+
+      FUNCTIONS+=($(grep -Eoh '^cass_\s*(\w+)\s*\(' include/cassandra.h | awk -F '(' '{print $1}'))
+      check_driver_exports 'build/libcassandra_static.a' "${FUNCTIONS[@]}"
+
+      build/cassandra-unit-tests --gtest_output=xml:cassandra-unit-test-results.xml
+
+      install_driver
+      test_installed_driver 'cassandra'
+
+  - xunit:
+    - "*unit-test-results.xml"
 package:
   include: # list of files and glob paths to include in the artifact, relative to the current working directory
     - packaging/packages/*
 release:
-    notify:
-      slack: cpp-driver-dev-bots
-    after:
-      each:
-        - script: |
-            LIBUV_VERSION=1.23.0
-            CC=gcc
-            TEST_PROGRAM=$(mktemp)
-            TOKENS=($(echo ${OS_VERSION} | tr "/" " "))
-            DISTRO=${TOKENS[0]}
-            RELEASE=${TOKENS[1]}
-            SHA=$(echo $GIT_COMMIT | cut -c1-7)
-            HEADER_FILE="include/cassandra.h"
-
-            if [ "${DISTRO}" = "ubuntu" ]; then
-              NAME=$(echo ${RELEASE%??})
-              ARCHITECTURE=${RELEASE:-2}
-              PACKAGE_TYPE=deb
-              PACKAGE_INSTALL="dpkg -i"
-              if [ "${NAME}" = "trusty" ]; then
-                RELEASE=14.04
-              elif [ "${NAME}" = "xenial" ]; then
-                RELEASE=16.04
-              elif [ "${NAME}" = "bionic" ] || [ "${NAME}" = "bionic64" ]; then
-                RELEASE=18.04
-              else
-                printf "Unsupported Ubuntu Version: %s\n" ${RELEASE}
-                exit 1
-              fi
-            elif [ "${DISTRO}" = "centos" ]; then
-              TOKENS=($(echo ${RELEASE} | tr "-" " "))
-              NAME=${DISTRO}
-              RELEASE=${TOKENS[0]}
-              ARCHITECTURE=${TOKENS[1]}
-              PACKAGE_TYPE=rpm
-              PACKAGE_INSTALL="rpm -i"
-            else
-              printf "Unsupported OS: %s\n" ${OS_VERSION}
-              exit 1
-            fi
-
-            # Extract driver version from the header file
-            DRIVER_VERSION=$(grep '#define[ \t]\+CASS_VERSION_\(MAJOR\|MINOR\|PATCH\|SUFFIX\)' $HEADER_FILE  | awk '
-            BEGIN { major="?"; minor="?"; patch="?" }
-            /CASS_VERSION_MAJOR/ { major=$3 }
-            /CASS_VERSION_MINOR/ { minor=$3 }
-            /CASS_VERSION_PATCH/ { patch=$3 }
-            /CASS_VERSION_SUFFIX/ { suffix=$3; gsub(/"/, "", suffix) }
-            END {
-              if (length(suffix) > 0)
-                printf "%s.%s.%s-%s", major, minor, patch, suffix
-              else
-                printf "%s.%s.%s", major, minor, patch
-              }
-            ')
-
-            if [[ ! $DRIVER_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9_\-]+)?$ ]]; then
-              echo "Unable to extract version from $HEADER_FILE"
-              exit 1
-            fi
-
-            pushd packaging
-            mkdir -p packages
-
-            echo "Building libuv Packages [${LIBUV_VERSION}] ...\n"
-            git clone --depth 1 https://github.com/datastax/libuv-packaging.git libuv-packaging
-            pushd libuv-packaging
-            ./build_${PACKAGE_TYPE}.sh ${LIBUV_VERSION}
-            popd
-            find libuv-packaging/build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
-            sudo ${PACKAGE_INSTALL} packages/libuv*.${PACKAGE_TYPE}
-
-            echo "Building DataStax C/C++ driver ..."
-            ./build_${PACKAGE_TYPE}.sh
-            find build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
-            sudo ${PACKAGE_INSTALL} packages/cassandra*.${PACKAGE_TYPE}
-
-            # Create test file against cpp-driver and try to connect.
-            # Should compile and throw a connection error when executed.
-            $CC -x c -o $TEST_PROGRAM - -Wno-implicit-function-declaration -lcassandra - <<EOF
-            #include <cassandra.h>
-            int main(int argc, char* argv[]) {
-            CassFuture* connect_future = NULL;
-            CassCluster* cluster = cass_cluster_new();
-            CassSession* session = cass_session_new();
-            cass_cluster_set_contact_points(cluster, "127.0.0.1");
-            connect_future = cass_session_connect(session, cluster);
-            cass_future_wait(connect_future);
-            printf("Success\n");
-            return 0;
-            }
-            EOF
-
-            # Throw error if either compilation or test run fails
-            if [ $? -ne 0 ] ; then
-              echo "Connection test compilation failed. Marking build as failure."
-              exit 1
-            fi
-
-            if [ "$($TEST_PROGRAM)" != "Success" ] ; then
-              echo "Connection test did not return success. Marking build as failure."
-              exit 1
-            fi
-
-            # Uploading driver packages
-            curl -$ARTIFACTORY_CREDS -T "{$(echo packages/cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/$version/$SHA/$DISTRO/$RELEASE/cassandra/v$DRIVER_VERSION/"
-
-            # Uploading libuv packages
-            curl -$ARTIFACTORY_CREDS -T "{$(echo packages/libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/$version/$SHA/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
-            popd
+  after:
+    each:
+      - script: |
+          . .build.sh
+          DRIVER_VERSION=$(get_driver_version 'include/cassandra.h' 'CASS')
+          # Uploading driver packages
+          curl -$ARTIFACTORY_CREDS -T "{$(echo packaging/packages/cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/$version/$SHA/$DISTRO/$RELEASE/cassandra/v$DRIVER_VERSION/"
+          # Uploading libuv packages
+          curl -$ARTIFACTORY_CREDS -T "{$(echo packaging/packages/libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/$version/$SHA/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
