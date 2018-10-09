@@ -9,10 +9,14 @@ Bug Fixes
 * [CPP-667] Timer handles still referenced
 * [CPP-668] Unit test `ClusterUnitTest.ReconnectUpdateHosts` can hang
 * [CPP-669] Result response's metadata can reference a prepared response that's already been freed
+* [CPP-670] Unresolved references when built against libressl
 * [CPP-672] Fix memory issues found via `-fstanitize=address`
 * [CPP-673] Cluster can hang attempting to close during reconnection
 * [CPP-675] Chained callback should only call a single callback once
 * [CPP-678] Fix Cassandra version for DSE 6.X releases
+* [CPP-687] Fixing recovery of remote DC host
+* [CPP-692] Fix C++98 compiler issues
+* [CPP-693] Ensure materialized view metadata is valid before retrieving base table
 
 Other
 --------
