@@ -208,7 +208,7 @@ private:
      STATE_CLOSING,
      STATE_ERROR,
      STATE_PENDING,
-     STATE_LISTENING,
+     STATE_LISTENING
    };
 
    Tcp tcp_;
@@ -254,7 +254,7 @@ enum {
   QUERY_FLAG_SERIAL_CONSISTENCY = 0x10,
   QUERY_FLAG_TIMESTAMP = 0x20,
   QUERY_FLAG_NAMES_FOR_VALUES = 0x40,
-  QUERY_FLAG_KEYSPACE = 0x80,
+  QUERY_FLAG_KEYSPACE = 0x80
 };
 
 enum {
@@ -362,11 +362,16 @@ public:
   void encode(int protocol_version, String* output) const;
 
 private:
+  Type()
+    : type_(-1) { }
+
   Type(int type)
     : type_(type) { }
 
+  friend class Vector<Type>;
+
 private:
-  const int type_;
+  int type_;
   String custom_;
   Vector<String> names_;
   Vector<Type> types_;
@@ -518,7 +523,7 @@ private:
     : values_(values) { }
 
 private:
-  const Vector<Value> values_;
+  Vector<Value> values_;
 };
 
 class ResultSet {
@@ -575,6 +580,7 @@ struct Exception : public std::exception {
   Exception(int code, const String& message)
     : code(code)
     , message(message) { }
+  virtual ~Exception() throw() { }
   const int code;
   const String message;
 };
@@ -1067,7 +1073,7 @@ public:
   enum Type {
     NEW_NODE,
     MOVED_NODE,
-    REMOVED_NODE,
+    REMOVED_NODE
   };
 
   TopologyChangeEvent(Type type, const Address& address)
@@ -1152,12 +1158,21 @@ private:
       : host(host)
       , connection(connection)
       , is_removed(false) { }
+
     Server(const Server& server)
       : host(server.host)
       , connection(server.connection)
       , is_removed(server.is_removed.load()) { }
-    const Host host;
-    const internal::ServerConnection::Ptr connection;
+
+    Server& operator=(const Server& server) {
+      host = server.host;
+      connection = server.connection;
+      is_removed.store(server.is_removed.load());
+      return *this;
+    }
+
+    Host host;
+    internal::ServerConnection::Ptr connection;
     cass::Atomic<bool> is_removed;
   };
 

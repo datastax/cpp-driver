@@ -76,12 +76,11 @@ public:
       , public Status<RequestState::Enum> {
   public:
     RequestStatus(uv_loop_t* loop, int num_nodes = NUM_NODES)
-      : Status()
-      , loop_(loop)
+      : loop_(loop)
       , remaining_(num_nodes) { }
 
     virtual void set(RequestState::Enum state) {
-      Status::set(state);
+      Status<RequestStatus::Enum>::set(state);
       if (--remaining_ == 0) uv_stop(loop_);
     }
 
@@ -176,7 +175,7 @@ public:
 
   private:
     virtual void set(ListenerState::Enum state) {
-      Status::set(state);
+      Status<ListenerState::Enum>::set(state);
       if (--remaining_ == 0) uv_stop(loop_);
     }
 

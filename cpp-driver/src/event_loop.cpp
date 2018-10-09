@@ -185,10 +185,12 @@ void EventLoop::on_check(Check *check) {
 }
 
 void EventLoop::on_task(Async* async) {
-  Task* task;
+  Task* task = NULL;
   while (tasks_.dequeue(task)) {
-    task->run(this);
-    Memory::deallocate(task);
+    if (task) {
+      task->run(this);
+      Memory::deallocate(task);
+    }
   }
 
   if (is_closing_.load() && tasks_.is_empty()) {

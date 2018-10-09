@@ -136,13 +136,13 @@ public:
     struct Event {
       enum Type {
         NODE_ADD,
-        NODE_REMOVE,
+        NODE_REMOVE
       };
       Event(Type type, const Address& address)
         : type(type)
         , address(address) { }
-      const Type type;
-      const Address address;
+      Type type;
+      Address address;
     };
     typedef Vector<Event> Events;
 

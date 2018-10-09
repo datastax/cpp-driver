@@ -41,24 +41,24 @@ void start_timer(void* arg) {
 }
 
 TEST(FutureUnitTest, Types) {
-  cass::Future generic(cass::Future::Type::FUTURE_TYPE_GENERIC);
-  cass::Future session(cass::Future::Type::FUTURE_TYPE_SESSION);
-  cass::Future response(cass::Future::Type::FUTURE_TYPE_RESPONSE);
+  cass::Future generic(cass::Future::FUTURE_TYPE_GENERIC);
+  cass::Future session(cass::Future::FUTURE_TYPE_SESSION);
+  cass::Future response(cass::Future::FUTURE_TYPE_RESPONSE);
 
-  ASSERT_EQ(cass::Future::Type::FUTURE_TYPE_GENERIC, generic.type());
-  ASSERT_EQ(cass::Future::Type::FUTURE_TYPE_SESSION, session.type());
-  ASSERT_EQ(cass::Future::Type::FUTURE_TYPE_RESPONSE, response.type());
+  ASSERT_EQ(cass::Future::FUTURE_TYPE_GENERIC, generic.type());
+  ASSERT_EQ(cass::Future::FUTURE_TYPE_SESSION, session.type());
+  ASSERT_EQ(cass::Future::FUTURE_TYPE_RESPONSE, response.type());
 }
 
 TEST(FutureUnitTest, Ready) {
-  cass::Future future(cass::Future::Type::FUTURE_TYPE_GENERIC);
+  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
   ASSERT_FALSE(future.ready());
   future.set();
   ASSERT_TRUE(future.ready());
 }
 
 TEST(FutureUnitTest, Wait) {
-  cass::Future future(cass::Future::Type::FUTURE_TYPE_GENERIC);
+  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
   uv_thread_t thread;
   ASSERT_EQ(0, uv_thread_create(&thread, start_timer, &future));
 
@@ -69,7 +69,7 @@ TEST(FutureUnitTest, Wait) {
 }
 
 TEST(FutureUnitTest, WaitFor) {
-  cass::Future future(cass::Future::Type::FUTURE_TYPE_GENERIC);
+  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
   uv_thread_t thread;
   ASSERT_EQ(0, uv_thread_create(&thread, start_timer, &future));
 
@@ -85,7 +85,7 @@ TEST(FutureUnitTest, WaitFor) {
 }
 
 TEST(FutureUnitTest, Error) {
-  cass::Future future(cass::Future::Type::FUTURE_TYPE_GENERIC);
+  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
   future.set_error(CASS_ERROR_LIB_BAD_PARAMS, "FutureUnitTest error message");
   ASSERT_TRUE(future.ready());
   ASSERT_TRUE(future.error());
@@ -95,7 +95,7 @@ TEST(FutureUnitTest, Error) {
 
 TEST(FutureUnitTest, Callback) {
   bool is_future_callback_called = false;
-  cass::Future future(cass::Future::Type::FUTURE_TYPE_GENERIC);
+  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
   ASSERT_TRUE(future.set_callback(&on_future_callback, &is_future_callback_called));
 
   ASSERT_FALSE(is_future_callback_called);
@@ -105,14 +105,14 @@ TEST(FutureUnitTest, Callback) {
 }
 
 TEST(FutureUnitTest, CallbackAlreadyAssigned) {
-  cass::Future future(cass::Future::Type::FUTURE_TYPE_GENERIC);
+  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
   ASSERT_TRUE(future.set_callback(&on_future_callback, NULL));
   ASSERT_FALSE(future.set_callback(&on_future_callback, NULL));
 }
 
 TEST(FutureUnitTest, CallbackAfterFutureIsSet) {
   bool is_future_callback_called = false;
-  cass::Future future(cass::Future::Type::FUTURE_TYPE_GENERIC);
+  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
 
   ASSERT_FALSE(is_future_callback_called);
   future.set();
