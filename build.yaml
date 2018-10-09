@@ -21,7 +21,7 @@ env:
   LIBUV_VERSION: 1.23.0
 build:
   - script: |
-      . ./cpp-driver/.build.sh
+      . .build.sh
       configure_environment
       install_dependencies
 
@@ -44,7 +44,7 @@ release:
   after:
     each:
       - script: |
-          . ./cpp-driver/.build.sh
+          . .build.sh
           DRIVER_VERSION=$(get_driver_version 'include/cassandra.h' 'CASS')
           # Uploading driver packages
           curl -$ARTIFACTORY_CREDS -T "{$(echo packaging/packages/cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/$version/$SHA/$DISTRO/$RELEASE/cassandra/v$DRIVER_VERSION/"
