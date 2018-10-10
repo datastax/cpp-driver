@@ -22,18 +22,18 @@
 #include "constants.hpp"
 #include "external.hpp"
 #include "macros.hpp"
+#include "map.hpp"
 #include "ref_counted.hpp"
 #include "retry_policy.hpp"
+#include "socket.hpp"
 #include "string_ref.hpp"
 
 #include <stdint.h>
 #include <utility>
-#include <map>
 
 namespace cass {
 
 class RequestCallback;
-class RequestMessage;
 
 class CustomPayload : public RefCounted<CustomPayload> {
 public:
@@ -45,13 +45,20 @@ public:
            const uint8_t* value, size_t value_size);
 
   void remove(const char* name, size_t name_length) {
-    items_.erase(std::string(name, name_length));
+    items_.erase(String(name, name_length));
   }
 
   int32_t encode(BufferVec* bufs) const;
 
+  inline bool empty() const {
+    return items_.empty();
+  }
+
+  inline size_t size() const {
+    return items_.size();
+  }
 private:
-  typedef std::map<std::string, Buffer> ItemMap;
+  typedef Map<String, Buffer> ItemMap;
   ItemMap items_;
 };
 
@@ -69,7 +76,7 @@ struct RequestSettings {
   uint64_t request_timeout_ms;
   RetryPolicy::Ptr retry_policy;
   bool is_idempotent;
-  std::string keyspace;
+  String keyspace;
 };
 
 class Request : public RefCounted<Request> {
@@ -77,11 +84,10 @@ public:
   typedef SharedRefPtr<const Request> ConstPtr;
 
   enum {
-    REQUEST_ERROR_UNSUPPORTED_PROTOCOL = -1,
-    REQUEST_ERROR_BATCH_WITH_NAMED_VALUES = -2,
-    REQUEST_ERROR_PARAMETER_UNSET = -3,
-    REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS = -4,
-    REQUEST_ERROR_CANCELLED = -5
+    REQUEST_ERROR_UNSUPPORTED_PROTOCOL = SocketRequest::SOCKET_REQUEST_ERROR_LAST_ENTRY,
+    REQUEST_ERROR_BATCH_WITH_NAMED_VALUES,
+    REQUEST_ERROR_PARAMETER_UNSET,
+    REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS
   };
 
   Request(uint8_t opcode)
@@ -129,9 +135,9 @@ public:
 
   void set_is_idempotent(bool is_idempotent) { settings_.is_idempotent = is_idempotent; }
 
-  const std::string& keyspace() const { return settings_.keyspace; }
+  const String& keyspace() const { return settings_.keyspace; }
 
-  void set_keyspace(const std::string& keyspace) { settings_.keyspace = keyspace; }
+  void set_keyspace(const String& keyspace) { settings_.keyspace = keyspace; }
 
   int64_t timestamp() const { return timestamp_; }
 
@@ -147,8 +153,43 @@ public:
     return custom_payload_;
   }
 
+  bool has_custom_payload() const {
+    return custom_payload_ || !custom_payload_extra_.empty();
+  }
+
   void set_custom_payload(const CustomPayload* payload) {
     custom_payload_.reset(payload);
+  }
+
+  void set_custom_payload(const char* key, const uint8_t* value, size_t value_len) {
+    custom_payload_extra_.set(key, strlen(key), value, value_len);
+  }
+
+  bool has_execution_profile() const {
+    return !profile_name_.empty();
+  }
+
+  const String& execution_profile_name() const { return profile_name_; }
+
+  void set_execution_profile_name(const String& name) {
+    profile_name_ = name;
+  }
+
+  int32_t encode_custom_payload(BufferVec* bufs) const {
+    int32_t length = sizeof(uint16_t);
+    uint16_t count = 0;
+
+    Buffer buf(sizeof(uint16_t));
+    count += custom_payload_ ? custom_payload_->size() : 0;
+    count += custom_payload_extra_.size();
+    buf.encode_uint16(0, count);
+    bufs->push_back(buf);
+
+    if (custom_payload_) {
+      length += custom_payload_->encode(bufs);
+    }
+    length += custom_payload_extra_.encode(bufs);
+    return length;
   }
 
   virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const = 0;
@@ -159,6 +200,8 @@ private:
   int64_t timestamp_;
   bool record_attempted_addresses_;
   CustomPayload::ConstPtr custom_payload_;
+  CustomPayload custom_payload_extra_;
+  String profile_name_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);
@@ -169,7 +212,7 @@ public:
   RoutableRequest(uint8_t opcode)
     : Request(opcode) { }
 
-  virtual bool get_routing_key(std::string* routing_key) const = 0;
+  virtual bool get_routing_key(String* routing_key) const = 0;
 };
 
 } // namespace cass

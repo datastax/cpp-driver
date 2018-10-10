@@ -21,18 +21,10 @@
  */
 class AuthenticationTests : public Integration {
 public:
-  AuthenticationTests()
-    : starting_protocol_version_(1) {
-    // Determine starting protocol version (based on server version used)
-    if (server_version_ >= "2.2.0") {
-      // Handle deprecated and removed protocol versions [CASSANDRA-10146]
-      starting_protocol_version_ = 3;
-    }
-  }
-
   void SetUp() {
     // Call the parent setup function (override startup and session connection)
     is_ccm_start_requested_ = false;
+    is_password_authenticator_ = true;
     is_session_requested_ = false;
     Integration::SetUp();
 
@@ -43,11 +35,6 @@ public:
   }
 
 protected:
-  /**
-   * Starting protocol version to use for most tests
-   */
-  int starting_protocol_version_;
-
   /**
    * Establish a connection with the given protocol version and credentials
    *
@@ -93,7 +80,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, ProtocolVersions) {
   CHECK_FAILURE;
 
   // Iterate over all known/supported protocol versions
-  for (int i = starting_protocol_version_;
+  for (int i = CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION;
        i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION; ++i) {
     // Establish a connection using the protocol version
     Session session = connect_using_credentials(i, "cassandra", "cassandra");
@@ -124,7 +111,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidEmptyCredentials) {
 
   // Iterate over all known/supported protocol versions
   logger_.add_critera("Key may not be empty");
-  for (int i = starting_protocol_version_;
+  for (int i = CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION;
        i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION; ++i) {
     /*
      * This is a case that could be guarded in the API entry point, or error out
@@ -155,7 +142,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidNullUsernameCredentials
 
   // Iterate over all known/supported protocol versions
   logger_.add_critera("Key may not be empty");
-  for (int i = starting_protocol_version_;
+  for (int i = CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION;
        i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION; ++i) {
     /*
      * This is a case that could be guarded in the API entry point, or error out
@@ -186,7 +173,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidNullPasswordCredentials
 
   // Iterate over all known/supported protocol versions
   logger_.add_critera("and/or password are incorrect");
-  for (int i = starting_protocol_version_;
+  for (int i = CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION;
        i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION; ++i) {
     /*
      * This is a case that could be guarded in the API entry point, or error out
@@ -223,7 +210,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, BadCredentials) {
   }
 
   // Iterate over all known/supported protocol versions
-  for (int i = starting_protocol_version_;
+  for (int i = CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION;
        i <= CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION; ++i) {
     /*
      * This is a case that could be guarded in the API entry point, or error out

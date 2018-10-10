@@ -37,26 +37,20 @@ void LatencyAwarePolicy::init(const Host::Ptr& connected_host,
 }
 
 void LatencyAwarePolicy::register_handles(uv_loop_t* loop) {
-  calculate_min_average_task_ = PeriodicTask::start(loop,
-                                                    settings_.update_rate_ms,
-                                                    this,
-                                                    LatencyAwarePolicy::on_work,
-                                                    LatencyAwarePolicy::on_after_work);
+  start_timer(loop);
 }
 
 void LatencyAwarePolicy::close_handles() {
-  if (calculate_min_average_task_) {
-    PeriodicTask::stop(calculate_min_average_task_);
-  }
+  timer_.stop();
 }
 
-QueryPlan* LatencyAwarePolicy::new_query_plan(const std::string& keyspace,
+QueryPlan* LatencyAwarePolicy::new_query_plan(const String& keyspace,
                                               RequestHandler* request_handler,
                                               const TokenMap* token_map) {
-  return new LatencyAwareQueryPlan(this,
-                                   child_policy_->new_query_plan(keyspace,
-                                                                 request_handler,
-                                                                 token_map));
+  return Memory::allocate<LatencyAwareQueryPlan>(this,
+                                                 child_policy_->new_query_plan(keyspace,
+                                                                               request_handler,
+                                                                               token_map));
 }
 
 void LatencyAwarePolicy::on_add(const Host::Ptr& host) {
@@ -78,6 +72,35 @@ void LatencyAwarePolicy::on_up(const Host::Ptr& host) {
 void LatencyAwarePolicy::on_down(const Host::Ptr& host) {
   remove_host(hosts_, host);
   ChainedLoadBalancingPolicy::on_down(host);
+}
+
+void LatencyAwarePolicy::start_timer(uv_loop_t* loop) {
+  timer_.start(loop, settings_.update_rate_ms,
+               bind_callback(&LatencyAwarePolicy::on_timer, this));
+}
+
+void LatencyAwarePolicy::on_timer(Timer* timer) {
+  const CopyOnWriteHostVec& hosts(hosts_);
+
+  int64_t new_min_average = CASS_INT64_MAX;
+  int64_t now = uv_hrtime();
+
+  for (HostVec::const_iterator i = hosts->begin(),
+       end = hosts->end(); i != end; ++i) {
+    TimestampedAverage latency = (*i)->get_current_average();
+    if (latency.average >= 0
+        && latency.num_measured >= settings_.min_measured
+        && (now - latency.timestamp) <= settings_.retry_period_ns) {
+      new_min_average = std::min(new_min_average, latency.average);
+    }
+  }
+
+  if (new_min_average != CASS_INT64_MAX) {
+    LOG_TRACE("Calculated new minimum: %f", static_cast<double>(new_min_average) / 1e6);
+    min_average_.store(new_min_average);
+  }
+
+  start_timer(timer_.loop());
 }
 
 Host::Ptr LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
@@ -108,35 +131,6 @@ Host::Ptr LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
   }
 
   return Host::Ptr();
-}
-
-void LatencyAwarePolicy::on_work(PeriodicTask* task) {
-  LatencyAwarePolicy* policy = static_cast<LatencyAwarePolicy*>(task->data());
-
-  const Settings& settings = policy->settings_;
-  const CopyOnWriteHostVec& hosts = policy->hosts_;
-
-  int64_t new_min_average = CASS_INT64_MAX;
-  int64_t now = uv_hrtime();
-
-  for (HostVec::const_iterator i = hosts->begin(),
-       end = hosts->end(); i != end; ++i) {
-    TimestampedAverage latency = (*i)->get_current_average();
-    if (latency.average >= 0
-        && latency.num_measured >= settings.min_measured
-        && (now - latency.timestamp) <= settings.retry_period_ns) {
-      new_min_average = std::min(new_min_average, latency.average);
-    }
-  }
-
-  if (new_min_average != CASS_INT64_MAX) {
-    LOG_TRACE("Calculated new minimum: %f", static_cast<double>(new_min_average) / 1e6);
-    policy->min_average_.store(new_min_average);
-  }
-}
-
-void LatencyAwarePolicy::on_after_work(PeriodicTask* task) {
-  // no-op
 }
 
 } // namespace cass

@@ -27,7 +27,7 @@ template <class T>
 class CopyOnWritePtr {
 public:
   CopyOnWritePtr(T* t)
-    : ptr_(new Referenced(t)) {}
+    : ptr_(Memory::allocate<Referenced>(t)) {}
 
   CopyOnWritePtr(const SharedRefPtr<T>& shared)
     : ptr_(shared) {}
@@ -71,7 +71,7 @@ private:
   void detach() {
     Referenced* temp = ptr_.get();
     if (temp->ref != NULL && temp->ref_count() > 1) {
-      ptr_ = SharedRefPtr<Referenced>(new Referenced(new T(*(temp->ref))));
+      ptr_ = SharedRefPtr<Referenced>(Memory::allocate<Referenced>(Memory::allocate<T>(*(temp->ref))));
     }
   }
 
@@ -82,7 +82,7 @@ private:
       : ref(ref) {}
 
     ~Referenced() {
-      delete ref;
+      Memory::deallocate(ref);
     }
 
     T* ref;

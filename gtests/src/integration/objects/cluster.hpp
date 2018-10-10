@@ -125,7 +125,7 @@ public:
    * the contact points
    *
    * @param contact_points A comma delimited list of hosts (addresses or
-   *                       names
+   *                       names)
    * @return Cluster object
    */
   Cluster& with_contact_points(const std::string& contact_points) {
@@ -176,15 +176,27 @@ public:
   }
 
   /**
+   * Set/Add a execution profile
+   *
+   * @param name Name for the execution profile
+   * @param profile Execution profile to add to the cluster
+   * @return Cluster object
+   */
+  Cluster& with_execution_profile(const std::string& name,
+                                  ExecutionProfile profile) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_execution_profile(get(),
+              name.c_str(), profile.get()));
+    return *this;
+  }
+
+  /**
    * Enable/Disable the use of hostname resolution
    *
    * This is useful for authentication (Kerberos) or encryption (SSL)
    * services that require a valid hostname for verification.
    *
-   * NOTE: Not available if using libuv 0.10.x or earlier
-   *
-   * @param enable True if hostname resolution should be enable; false
-   *               otherwise (default: false)
+   * @param enable True if hostname resolution should be enabled; false
+   *               otherwise (default: true)
    * @return Cluster object
    */
   Cluster& with_hostname_resolution(bool enable = true) {
@@ -288,6 +300,17 @@ public:
   Cluster& with_randomized_contact_points(bool enable = true) {
     cass_cluster_set_use_randomized_contact_points(get(),
       (enable == true ? cass_true : cass_false));
+    return *this;
+  }
+
+  /**
+   * Sets the amount of time to wait before attempting to reconnect.
+   *
+   * @param wait_time_ms Wait time in milliseconds (default: 2000)
+   * @return Cluster object
+   */
+  Cluster& with_reconnect_wait_time(unsigned int wait_time_ms) {
+    cass_cluster_set_reconnect_wait_time(get(), wait_time_ms);
     return *this;
   }
 

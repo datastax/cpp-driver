@@ -123,6 +123,25 @@ TEST(MetricsUnitTest, Histogram) {
   EXPECT_EQ(snapshot.stddev, 28);
 }
 
+TEST(MetricsUnitTest, HistogramEmpty) {
+  cass::Metrics::ThreadState thread_state(1);
+  cass::Metrics::Histogram histogram(&thread_state);
+
+  cass::Metrics::Histogram::Snapshot snapshot;
+  histogram.get_snapshot(&snapshot);
+
+  EXPECT_EQ(snapshot.min, 0);
+  EXPECT_EQ(snapshot.max, 0);
+  EXPECT_EQ(snapshot.mean, 0);
+  EXPECT_EQ(snapshot.stddev, 0);
+  EXPECT_EQ(snapshot.median, 0);
+  EXPECT_EQ(snapshot.percentile_75th, 0);
+  EXPECT_EQ(snapshot.percentile_95th, 0);
+  EXPECT_EQ(snapshot.percentile_98th, 0);
+  EXPECT_EQ(snapshot.percentile_99th, 0);
+  EXPECT_EQ(snapshot.percentile_999th, 0);
+}
+
 TEST(MetricsUnitTest, HistogramWithThreads) {
   HistogramThreadArgs args[NUM_THREADS];
 
@@ -180,6 +199,26 @@ TEST(MetricsUnitTest, Meter) {
   EXPECT_NEAR(meter.one_minute_rate(), expected, abs_error);
   EXPECT_NEAR(meter.five_minute_rate(), expected, abs_error);
   EXPECT_NEAR(meter.fifteen_minute_rate(), expected, abs_error);
+}
+
+TEST(MetricsUnitTest, MeterSpeculative) {
+  cass::Metrics::ThreadState thread_state(1);
+  cass::Metrics::Meter meter(&thread_state);
+
+  // Emulate a situation where for a total of 60 requests sent on the wire,
+  // where 15 are unique requests and 45 are dups (speculative executions).
+
+  for (int i = 0; i < 15; ++i) {
+    meter.mark();
+  }
+
+  // Test "no speculative execution configured" case while we're here.
+  EXPECT_EQ(0.0, meter.speculative_request_percent());
+  for (int i = 0; i < 45; ++i) {
+    meter.mark_speculative();
+  }
+
+  EXPECT_EQ(75.0, meter.speculative_request_percent());
 }
 
 TEST(MetricsUnitTest, MeterWithThreads) {

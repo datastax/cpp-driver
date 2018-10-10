@@ -13,52 +13,55 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+
 #ifdef _WIN32
 // Local execution command
-#include <io.h>
-#define FILENO _fileno
-#define POPEN _popen
-#define PCLOSE _pclose
-#define READ _read
+#  include <io.h>
+#  define FILENO _fileno
+#  define POPEN _popen
+#  define PCLOSE _pclose
+#  define READ _read
 
 // Enable memory leak detection
-# define _CRTDBG_MAP_ALLOC
-# include <stdlib.h>
-# include <crtdbg.h>
+#  define _CRTDBG_MAP_ALLOC
+#  include <stdlib.h>
+#  include <crtdbg.h>
 
 // Enable memory leak detection for new operator
-# ifdef _DEBUG
-#   ifndef DBG_NEW
-#     define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-#     define new DBG_NEW
-#   endif
-# endif
+#  ifdef _DEBUG
+#    ifndef DBG_NEW
+#      define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
+#      define new DBG_NEW
+#    endif
+#  endif
 #else
 // Local execution command
-#define FILENO fileno
-#define POPEN popen
-#define PCLOSE pclose
-#define READ read
+#  define FILENO fileno
+#  define POPEN popen
+#  define PCLOSE pclose
+#  define READ read
 
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #include "bridge.hpp"
 
 #ifdef CASS_USE_LIBSSH2
-#include <libssh2.h>
-#define LIBSSH2_INIT_ALL 0
-#ifdef OPENSSL_CLEANUP
-# define PID_UNKNOWN 0
-# include <openssl/ssl.h>
-# include <openssl/rand.h>
-# include <openssl/engine.h>
-# include <openssl/conf.h>
-#endif
+#  include <libssh2.h>
+#  define LIBSSH2_INIT_ALL 0
+#  ifndef LIBSSH2_NO_OPENSSL
+#    ifdef OPENSSL_CLEANUP
+#      define PID_UNKNOWN 0
+#      include <openssl/ssl.h>
+#      include <openssl/rand.h>
+#      include <openssl/engine.h>
+#      include <openssl/conf.h>
+#    endif
+#  endif
 #else
-#ifdef _MSC_VER
-// ssize_t is defined in libssh2 and used by local command execution
-typedef SSIZE_T ssize_t;
-#endif
+#  ifdef _MSC_VER
+     // ssize_t is defined in libssh2 and used by local command execution
+     typedef SSIZE_T ssize_t;
+#  endif
 #endif
 
 #include <errno.h>
@@ -77,12 +80,12 @@ typedef SSIZE_T ssize_t;
 #define CCM_PREFIX_MESSAGE "CCM: "
 #define CCM_SUFFIX_LOG std::endl
 #ifdef CCM_VERBOSE_LOGGING
-# define CCM_LOG(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << message << CCM_SUFFIX_LOG
-# define CCM_LOG_WARN(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << "WARN: " << message << CCM_SUFFIX_LOG
+#  define CCM_LOG(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << message << CCM_SUFFIX_LOG
+#  define CCM_LOG_WARN(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << "WARN: " << message << CCM_SUFFIX_LOG
 #else
-# define CCM_LOG_DISABLED do {} while (false)
-# define CCM_LOG(message) CCM_LOG_DISABLED
-# define CCM_LOG_WARN(message) CCM_LOG_DISABLED
+#  define CCM_LOG_DISABLED do {} while (false)
+#  define CCM_LOG(message) CCM_LOG_DISABLED
+#  define CCM_LOG_WARN(message) CCM_LOG_DISABLED
 #endif
 #define CCM_LOG_ERROR(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << "ERROR: " \
                            << __FILE__ << "(" << __LINE__ << "): " \
@@ -90,10 +93,10 @@ typedef SSIZE_T ssize_t;
 
 // Create FALSE/TRUE defines for easier code readability
 #ifndef FALSE
-# define FALSE 0
+#  define FALSE 0
 #endif
 #ifndef TRUE
-# define TRUE 1
+#  define TRUE 1
 #endif
 
 #define TRIM_DELIMETERS " \f\n\r\t\v"
@@ -553,12 +556,18 @@ ClusterStatus CCM::Bridge::cluster_status() {
 }
 
 bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
-  bool with_vnodes /*= false*/, bool is_ssl /*= false*/,
-  bool is_client_authentication /*= false*/) {
+                                 bool with_vnodes /*= false*/,
+                                 bool is_password_authenticator /*= false*/,
+                                 bool is_ssl /*= false*/,
+                                 bool is_client_authentication /*= false*/) {
   // Generate the cluster name and determine if it needs to be created
   std::string active_cluster_name = get_active_cluster();
-  std::string cluster_name = generate_cluster_name(cassandra_version_, data_center_nodes,
-    with_vnodes, is_ssl, is_client_authentication);
+  std::string cluster_name = generate_cluster_name(cassandra_version_,
+                                                   data_center_nodes,
+                                                   with_vnodes,
+                                                   is_password_authenticator,
+                                                   is_ssl,
+                                                   is_client_authentication);
   for (std::vector<DseWorkload>::iterator iterator = dse_workload_.begin();
     iterator != dse_workload_.end(); ++iterator) {
     if (use_dse_ && *iterator != DSE_WORKLOAD_CASSANDRA) {
@@ -607,7 +616,11 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
     }
     create_command.push_back("-b");
 
-    // Determine if SSL and client authentication should be enabled
+    // Determine if password authenticator or SSL and client authentication
+    // should be enabled
+    if (is_password_authenticator) {
+      create_command.push_back("--pwd-auth");
+    }
     if (is_ssl) {
       create_command.push_back("--ssl=ssl");
       if (is_client_authentication) {
@@ -656,15 +669,20 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
 }
 
 bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
-  unsigned short data_center_two_nodes /*= 0*/, bool with_vnodes /*= false*/,
-  bool is_ssl /*= false*/, bool is_client_authentication /*= false*/) {
+                                 unsigned short data_center_two_nodes /*= 0*/,
+                                 bool with_vnodes /*= false*/,
+                                 bool is_ssl /*= false*/,
+                                 bool is_client_authentication /*= false*/) {
   // Create the data center nodes from the two data centers
   std::vector<unsigned short> data_center_nodes;
   data_center_nodes.push_back(data_center_one_nodes);
   data_center_nodes.push_back(data_center_two_nodes);
 
-  return create_cluster(data_center_nodes, with_vnodes, is_ssl,
-    is_client_authentication);
+  return create_cluster(data_center_nodes,
+                        with_vnodes,
+                        false, // Not valid for deprecated create cluster (Boost tests)
+                        is_ssl,
+                        is_client_authentication);
 }
 
 bool CCM::Bridge::is_cluster_down() {
@@ -1568,7 +1586,8 @@ void CCM::Bridge::finalize_libssh2() {
   // Free up remaining libssh2 memory
   libssh2_exit();
 
-#ifdef OPENSSL_CLEANUP
+#ifndef LIBSSH2_NO_OPENSSL
+#  ifdef OPENSSL_CLEANUP
   // Free OpenSSL resources
   RAND_cleanup();
   ENGINE_cleanup();
@@ -1578,6 +1597,7 @@ void CCM::Bridge::finalize_libssh2() {
   ERR_free_strings();
   ERR_remove_state(PID_UNKNOWN);
   CRYPTO_cleanup_all_ex_data();
+#  endif
 #endif
 }
 
@@ -1765,8 +1785,11 @@ std::vector<std::string> CCM::Bridge::get_available_clusters(std::string& active
 }
 
 std::string CCM::Bridge::generate_cluster_name(CassVersion cassandra_version,
-  std::vector<unsigned short> data_center_nodes,
-  bool with_vnodes, bool is_ssl, bool is_client_authentication) {
+                                               std::vector<unsigned short> data_center_nodes,
+                                               bool with_vnodes,
+                                               bool is_password_authenticator,
+                                               bool is_ssl,
+                                               bool is_client_authentication) {
   std::stringstream cluster_name;
   std::string server_version = use_dse_ ? dse_version_.to_string(false) : cassandra_version.to_string(false);
   std::replace(server_version.begin(), server_version.end(), '.', '-');
@@ -1775,6 +1798,9 @@ std::string CCM::Bridge::generate_cluster_name(CassVersion cassandra_version,
                << generate_cluster_nodes(data_center_nodes, '-');
   if (with_vnodes) {
     cluster_name << "-vnodes";
+  }
+  if (is_password_authenticator) {
+    cluster_name << "-password_authenticator";
   }
   if (is_ssl) {
     cluster_name << "-ssl";

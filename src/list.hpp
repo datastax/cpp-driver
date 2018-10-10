@@ -80,6 +80,13 @@ public:
     return static_cast<T*>(data_.prev_);
   }
 
+  T* pop_front() {
+    T* first = front();
+    if (first != NULL)
+      remove(first);
+    return first;
+  }
+
   size_t size() const { return size_; }
   bool is_empty() { return data_.next_ == &data_; }
   Iterator<T> iterator() { return Iterator<T>(data_.next_, &data_); }

@@ -27,7 +27,7 @@
 extern "C" {
 
 CassBatch* cass_batch_new(CassBatchType type) {
-  cass::BatchRequest* batch = new cass::BatchRequest(type);
+  cass::BatchRequest* batch = cass::Memory::allocate<cass::BatchRequest>(type);
   batch->inc_ref();
   return CassBatch::to(batch);
 }
@@ -43,7 +43,7 @@ CassError cass_batch_set_keyspace(CassBatch* batch, const char* keyspace) {
 CassError cass_batch_set_keyspace_n(CassBatch* batch,
                                     const char* keyspace,
                                     size_t keyspace_length) {
-  batch->set_keyspace(std::string(keyspace, keyspace_length));
+  batch->set_keyspace(cass::String(keyspace, keyspace_length));
   return CASS_OK;
 }
 
@@ -94,6 +94,24 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   return CASS_OK;
 }
 
+CassError cass_batch_set_execution_profile(CassBatch* batch,
+                                           const char* name) {
+  return cass_batch_set_execution_profile_n(batch,
+                                            name,
+                                            SAFE_STRLEN(name));
+}
+
+CassError cass_batch_set_execution_profile_n(CassBatch* batch,
+                                             const char* name,
+                                             size_t name_length) {
+  if (name_length > 0) {
+    batch->set_execution_profile_name(cass::String(name, name_length));
+  } else {
+    batch->set_execution_profile_name(cass::String());
+  }
+  return CASS_OK;
+}
+
 } // extern "C"
 
 namespace cass {
@@ -111,10 +129,6 @@ namespace cass {
 int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
   int length = 0;
   uint32_t flags = 0;
-
-  if (version == 1) {
-    return REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
-  }
 
   {
     // <type> [byte] + <n> [short]
@@ -147,51 +161,48 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
   {
     // <consistency> [short]
     size_t buf_size = sizeof(uint16_t);
-    if (version >= 3) {
-      // <flags>[<serial_consistency><timestamp><keyspace>]
-      if (version >= 5) {
-        buf_size += sizeof(int32_t); // [int]
-      } else {
-        buf_size += sizeof(uint8_t); // [byte]
-      }
 
-      if (callback->serial_consistency() != 0) {
-        buf_size += sizeof(uint16_t); // [short]
-        flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
-      }
+    // <flags>[<serial_consistency><timestamp><keyspace>]
+    if (version >= CASS_PROTOCOL_VERSION_V5) {
+      buf_size += sizeof(int32_t); // [int]
+    } else {
+      buf_size += sizeof(uint8_t); // [byte]
+    }
 
-      if (callback->timestamp() != CASS_INT64_MIN) {
-        buf_size += sizeof(int64_t); // [long]
-        flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
-      }
+    if (callback->serial_consistency() != 0) {
+      buf_size += sizeof(uint16_t); // [short]
+      flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
+    }
 
-      if (supports_set_keyspace(version) && !keyspace().empty()) {
-        buf_size += sizeof(uint16_t) + keyspace().size();
-        flags |= CASS_QUERY_FLAG_WITH_KEYSPACE;
-      }
+    if (callback->timestamp() != CASS_INT64_MIN) {
+      buf_size += sizeof(int64_t); // [long]
+      flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+    }
+
+    if (supports_set_keyspace(version) && !keyspace().empty()) {
+      buf_size += sizeof(uint16_t) + keyspace().size();
+      flags |= CASS_QUERY_FLAG_WITH_KEYSPACE;
     }
 
     Buffer buf(buf_size);
 
     size_t pos = buf.encode_uint16(0, callback->consistency());
-    if (version >= 3) {
-      if (version >= 5) {
-        pos = buf.encode_int32(pos, flags);
-      } else {
-        pos = buf.encode_byte(pos, flags);
-      }
+    if (version >= CASS_PROTOCOL_VERSION_V5) {
+      pos = buf.encode_int32(pos, flags);
+    } else {
+      pos = buf.encode_byte(pos, flags);
+    }
 
-      if (callback->serial_consistency() != 0) {
-        pos = buf.encode_uint16(pos, callback->serial_consistency());
-      }
+    if (callback->serial_consistency() != 0) {
+      pos = buf.encode_uint16(pos, callback->serial_consistency());
+    }
 
-      if (callback->timestamp() != CASS_INT64_MIN) {
-        pos = buf.encode_int64(pos, callback->timestamp());
-      }
+    if (callback->timestamp() != CASS_INT64_MIN) {
+      pos = buf.encode_int64(pos, callback->timestamp());
+    }
 
-      if (supports_set_keyspace(version) && !keyspace().empty()) {
-        pos = buf.encode_string(pos, keyspace().data(), keyspace().size());
-      }
+    if (supports_set_keyspace(version) && !keyspace().empty()) {
+      pos = buf.encode_string(pos, keyspace().data(), keyspace().size());
     }
 
     bufs->push_back(buf);
@@ -210,7 +221,7 @@ void BatchRequest::add_statement(Statement* statement) {
   statements_.push_back(Statement::Ptr(statement));
 }
 
-bool BatchRequest::find_prepared_query(const std::string& id, std::string* query) const {
+bool BatchRequest::find_prepared_query(const String& id, String* query) const {
   for (StatementVec::const_iterator it = statements_.begin(),
        end = statements_.end(); it != end; ++it) {
     const Statement::Ptr& statement(*it);
@@ -225,7 +236,7 @@ bool BatchRequest::find_prepared_query(const std::string& id, std::string* query
   return false;
 }
 
-bool BatchRequest::get_routing_key(std::string* routing_key) const {
+bool BatchRequest::get_routing_key(String* routing_key) const {
   for (BatchRequest::StatementVec::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
     if ((*i)->get_routing_key(routing_key)) {

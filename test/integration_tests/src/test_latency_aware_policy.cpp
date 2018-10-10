@@ -50,13 +50,6 @@ public:
     test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 3);
     cass_cluster_set_latency_aware_routing(cluster_.get(), cass_true);
     cass_cluster_set_latency_aware_routing_settings(cluster_.get(), 1e6, 1, 1, 1, 1);
-    // Handle deprecated and removed protocol versions [CASSANDRA-10146]
-    // https://issues.apache.org/jira/browse/CASSANDRA-10146
-    int protocol_version = 1;
-    if (test_utils::get_version() >= "3.0.0") {
-      protocol_version = 3;
-    }
-    cass_cluster_set_protocol_version(cluster_.get(), protocol_version); // Protocol for this test doesn't matter so simply support all C* versions
 
     // Connect to the cluster
     session_ = test_utils::create_session(cluster_.get());
@@ -180,9 +173,9 @@ private:
 
       if (!is_error_) {
         // Get the host latency
-        std::string host_ip_address = cass::get_host_from_future(future.get());
+        std::string host_ip_address = cass::get_host_from_future(future.get()).c_str();
         double host_latency = static_cast<double>(cass::get_host_latency_average(session_.get(),
-                                                                                 host_ip_address,
+                                                                                 host_ip_address.c_str(),
                                                                                  DEFAULT_CASSANDRA_NODE_PORT)) / 1e6;
 
         // Update the max latency incurred

@@ -24,10 +24,7 @@
 #include "response.hpp"
 #include "row.hpp"
 #include "string_ref.hpp"
-
-#include <map>
-#include <string>
-#include <vector>
+#include "vector.hpp"
 
 namespace cass {
 
@@ -37,21 +34,20 @@ class ResultResponse : public Response {
 public:
   typedef SharedRefPtr<ResultResponse> Ptr;
   typedef SharedRefPtr<const ResultResponse> ConstPtr;
-  typedef std::vector<size_t> PKIndexVec;
+  typedef Vector<size_t> PKIndexVec;
 
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
-      , protocol_version_(0)
       , kind_(CASS_RESULT_KIND_VOID)
+      , protocol_version_(-1)
       , has_more_pages_(false)
-      , row_count_(0)
-      , rows_(NULL) {
+      , row_count_(0) {
     first_row_.set_result(this);
   }
 
-  int protocol_version() const{ return protocol_version_; }
-
   int32_t kind() const { return kind_; }
+
+  int protocol_version() const { return protocol_version_; }
 
   bool has_more_pages() const { return has_more_pages_; }
 
@@ -61,10 +57,7 @@ public:
 
   const ResultMetadata::Ptr& metadata() const { return metadata_; }
 
-  void set_metadata(ResultMetadata* metadata) {
-    metadata_.reset(metadata);
-    decode_first_row();
-  }
+  void set_metadata(const ResultMetadata::Ptr& metadata);
 
   const ResultMetadata::Ptr& result_metadata() const { return result_metadata_; }
 
@@ -77,7 +70,7 @@ public:
   bool metadata_changed() { return new_metadata_id_.size() > 0; }
   StringRef new_metadata_id() const { return new_metadata_id_; }
 
-  char* rows() const { return rows_; }
+  const Decoder& row_decoder() const { return row_decoder_; }
 
   int32_t row_count() const { return row_count_; }
 
@@ -85,26 +78,25 @@ public:
 
   const PKIndexVec& pk_indices() const { return pk_indices_; }
 
-  bool decode(int version, char* input, size_t size);
+  virtual bool decode(Decoder& decoder);
 
 private:
-  char* decode_metadata(int version,
-                        char* input, ResultMetadata::Ptr* metadata,
-                        bool has_pk_indices = false);
+  bool decode_metadata(Decoder& decoder, ResultMetadata::Ptr* metadata,
+                       bool has_pk_indices = false);
 
-  void decode_first_row();
+  bool decode_first_row();
 
-  bool decode_rows(int version, char* input);
+  bool decode_rows(Decoder& decoder);
 
-  bool decode_set_keyspace(char* input);
+  bool decode_set_keyspace(Decoder& decoder);
 
-  bool decode_prepared(int version, char* input);
+  bool decode_prepared(Decoder& decoder);
 
-  bool decode_schema_change(char* input);
+  bool decode_schema_change(Decoder& decoder);
 
 private:
-  int protocol_version_;
   int32_t kind_;
+  int protocol_version_;
   bool has_more_pages_; // row data
   ResultMetadata::Ptr metadata_;
   ResultMetadata::Ptr result_metadata_;
@@ -116,7 +108,7 @@ private:
   StringRef table_; // rows, and schema change
   StringRef new_metadata_id_; // rows result, protocol v5/DSEv2
   int32_t row_count_;
-  char* rows_;
+  Decoder row_decoder_;
   Row first_row_;
   PKIndexVec pk_indices_;
 

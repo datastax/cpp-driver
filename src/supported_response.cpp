@@ -20,18 +20,26 @@
 
 namespace cass {
 
-bool SupportedResponse::decode(int version, char* buffer, size_t size) {
+bool SupportedResponse::decode(Decoder& decoder) {
+  decoder.set_type("supported");
   StringMultimap supported;
 
-  decode_string_multimap(buffer, supported);
+  CHECK_RESULT(decoder.decode_string_multimap(supported));
+  decoder.maybe_log_remaining();
+
   StringMultimap::const_iterator it = supported.find("COMPRESSION");
   if (it != supported.end()) {
     compression_ = it->second;
   }
 
-  it = supported.find("CASS_VERSION");
+  it = supported.find("CQL_VERSIONS");
   if (it != supported.end()) {
-    versions_ = it->second;
+    cql_versions_ = it->second;
+  }
+
+  it = supported.find("PROTOCOL_VERSIONS");
+  if (it != supported.end()) {
+    protocol_versions_ = it->second;
   }
   return true;
 }

@@ -26,8 +26,10 @@
 
 namespace cass {
 
-ResultMetadata::ResultMetadata(size_t column_count)
-  : defs_(column_count) { }
+ResultMetadata::ResultMetadata(size_t column_count,
+                               const RefBuffer::Ptr& buffer)
+  : defs_(column_count)
+  , buffer_(buffer) { }
 
 size_t ResultMetadata::get_indices(StringRef name, IndexVec* result) const{
   return defs_.get_indices(name, result);

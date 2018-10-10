@@ -27,6 +27,7 @@ public:
   }
 
   void SetUp() {
+    CHECK_VERSION(2.2.0);
     Integration::SetUp();
     populateSchema();
     schema_meta_ = session_.schema();
@@ -84,6 +85,7 @@ protected:
 };
 
 CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, Views) {
+  CHECK_VERSION(3.0.0);
   Keyspace keyspace_meta = schema_meta_.keyspace(keyspace_name_);
   Table table_meta = keyspace_meta.table(table_name_);
 
@@ -116,6 +118,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, Views) {
 }
 
 CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, DropView) {
+  CHECK_VERSION(3.0.0);
   Table table_meta = schema_meta_.keyspace(keyspace_name_).table(table_name_);
 
   // Verify that the table contains the view
@@ -131,4 +134,79 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, DropView) {
 
   // Verify that a new table metadata instance has been created
   EXPECT_NE(table_meta.get(), new_table_meta.get());
+}
+
+CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, RegularMetadataNotMarkedVirtual) {
+  CHECK_VERSION(2.2.0);
+  // Check non-virtual keyspace/table is correctly not set
+  Keyspace keyspace_meta = schema_meta_.keyspace("system");
+  ASSERT_TRUE(keyspace_meta);
+  EXPECT_FALSE(keyspace_meta.is_virtual());
+
+  Table table_meta = keyspace_meta.table("peers");
+  ASSERT_TRUE(table_meta);
+  EXPECT_FALSE(table_meta.is_virtual());
+}
+
+CASSANDRA_INTEGRATION_TEST_F(SchemaMetadataTest, VirtualMetadata) {
+  CHECK_VERSION(4.0.0);
+
+  // Check virtual keyspace/table is correctly set
+  Keyspace keyspace_meta = schema_meta_.keyspace("system_views");
+  ASSERT_TRUE(keyspace_meta);
+  EXPECT_TRUE(keyspace_meta.is_virtual());
+
+  Table table_meta = keyspace_meta.table("sstable_tasks");
+  ASSERT_TRUE(table_meta);
+  EXPECT_TRUE(table_meta.is_virtual());
+
+  // Verify virtual table's metadata
+  EXPECT_EQ(cass_table_meta_column_count(table_meta.get()), 7u);
+  EXPECT_EQ(cass_table_meta_index_count(table_meta.get()), 0u);
+  EXPECT_EQ(cass_table_meta_materialized_view_count(table_meta.get()), 0u);
+
+  EXPECT_EQ(cass_table_meta_partition_key_count(table_meta.get()), 1u);
+  EXPECT_EQ(cass_table_meta_clustering_key_count(table_meta.get()), 2u);
+
+  EXPECT_EQ(cass_table_meta_clustering_key_order(table_meta.get(), 0),
+            CASS_CLUSTERING_ORDER_ASC);
+  EXPECT_EQ(cass_table_meta_clustering_key_order(table_meta.get(), 1),
+            CASS_CLUSTERING_ORDER_ASC);
+
+  const CassColumnMeta* column_meta;
+
+  column_meta = cass_table_meta_column_by_name(table_meta.get(), "keyspace_name");
+  ASSERT_TRUE(column_meta);
+  EXPECT_EQ(cass_data_type_type(cass_column_meta_data_type(column_meta)),
+            CASS_VALUE_TYPE_TEXT);
+
+  column_meta = cass_table_meta_column_by_name(table_meta.get(), "table_name");
+  ASSERT_TRUE(column_meta);
+  EXPECT_EQ(cass_data_type_type(cass_column_meta_data_type(column_meta)),
+            CASS_VALUE_TYPE_TEXT);
+
+  column_meta = cass_table_meta_column_by_name(table_meta.get(), "task_id");
+  ASSERT_TRUE(column_meta);
+  EXPECT_EQ(cass_data_type_type(cass_column_meta_data_type(column_meta)),
+            CASS_VALUE_TYPE_UUID);
+
+  column_meta = cass_table_meta_column_by_name(table_meta.get(), "kind");
+  ASSERT_TRUE(column_meta);
+  EXPECT_EQ(cass_data_type_type(cass_column_meta_data_type(column_meta)),
+            CASS_VALUE_TYPE_TEXT);
+
+  column_meta = cass_table_meta_column_by_name(table_meta.get(), "progress");
+  ASSERT_TRUE(column_meta);
+  EXPECT_EQ(cass_data_type_type(cass_column_meta_data_type(column_meta)),
+            CASS_VALUE_TYPE_BIGINT);
+
+  column_meta = cass_table_meta_column_by_name(table_meta.get(), "total");
+  ASSERT_TRUE(column_meta);
+  EXPECT_EQ(cass_data_type_type(cass_column_meta_data_type(column_meta)),
+            CASS_VALUE_TYPE_BIGINT);
+
+  column_meta = cass_table_meta_column_by_name(table_meta.get(), "unit");
+  ASSERT_TRUE(column_meta);
+  EXPECT_EQ(cass_data_type_type(cass_column_meta_data_type(column_meta)),
+            CASS_VALUE_TYPE_TEXT);
 }

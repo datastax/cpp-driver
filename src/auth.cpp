@@ -16,6 +16,7 @@
 
 #include "auth.hpp"
 #include "external.hpp"
+#include "string.hpp"
 
 #include "cassandra.h"
 
@@ -49,7 +50,7 @@ void cass_authenticator_set_exchange_data(CassAuthenticator* auth, void* exchang
 }
 
 char* cass_authenticator_response(CassAuthenticator* auth, size_t size) {
-  std::string* response = auth->response();
+  cass::String* response = auth->response();
 
   if (response != NULL) {
     response->resize(size, 0);
@@ -73,20 +74,14 @@ void cass_authenticator_set_error(CassAuthenticator* auth,
 
 void cass_authenticator_set_error_n(CassAuthenticator* auth,
                                     const char* message, size_t message_length) {
-  auth->set_error(std::string(message, message_length));
+  auth->set_error(cass::String(message, message_length));
 }
 
 } // extern "C"
 
 namespace cass {
 
-void PlainTextAuthenticator::get_credentials(V1Authenticator::Credentials* credentials) {
-  credentials->insert(std::pair<std::string, std::string>("username", username_));
-  credentials->insert(std::pair<std::string, std::string>("password", password_));
-
-}
-
-bool PlainTextAuthenticator::initial_response(std::string* response) {
+bool PlainTextAuthenticator::initial_response(String* response) {
   response->reserve(username_.size() + password_.size() + 2);
   response->push_back(0);
   response->append(username_);
@@ -95,22 +90,23 @@ bool PlainTextAuthenticator::initial_response(std::string* response) {
   return true;
 }
 
-bool PlainTextAuthenticator::evaluate_challenge(const std::string& token, std::string* response) {
+bool PlainTextAuthenticator::evaluate_challenge(const String& token, String* response) {
   // no-op
   return true;
 }
 
-bool PlainTextAuthenticator::success(const std::string& token) {
+bool PlainTextAuthenticator::success(const String& token) {
   // no-op
   return true;
 }
 
-ExternalAuthenticator::ExternalAuthenticator(const Host::ConstPtr& host,
-                                             const std::string& class_name,
+ExternalAuthenticator::ExternalAuthenticator(const Address& address,
+                                             const String& hostname,
+                                             const String& class_name,
                                              const CassAuthenticatorCallbacks* callbacks,
                                              void* data)
-  : address_(host->address())
-  , hostname_(host->hostname())
+  : address_(address)
+  , hostname_(hostname)
   , class_name_(class_name)
   , response_(NULL)
   , callbacks_(callbacks)
@@ -124,7 +120,7 @@ ExternalAuthenticator::~ExternalAuthenticator() {
   }
 }
 
-bool ExternalAuthenticator::initial_response(std::string* response) {
+bool ExternalAuthenticator::initial_response(String* response) {
   if (callbacks_->initial_callback == NULL) {
     return true;
   }
@@ -134,7 +130,7 @@ bool ExternalAuthenticator::initial_response(std::string* response) {
   return error_.empty();
 }
 
-bool ExternalAuthenticator::evaluate_challenge(const std::string& token, std::string* response) {
+bool ExternalAuthenticator::evaluate_challenge(const String& token, String* response) {
   if (callbacks_->challenge_callback == NULL) {
     return true;
   }
@@ -145,7 +141,7 @@ bool ExternalAuthenticator::evaluate_challenge(const std::string& token, std::st
   return error_.empty();
 }
 
-bool ExternalAuthenticator::success(const std::string& token) {
+bool ExternalAuthenticator::success(const String& token) {
   if (callbacks_->success_callback == NULL) {
     return true;
   }

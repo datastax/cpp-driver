@@ -17,6 +17,7 @@
 #ifndef __CASS_TIMER_HPP_INCLUDED__
 #define __CASS_TIMER_HPP_INCLUDED__
 
+#include "callback.hpp"
 #include "macros.hpp"
 
 #include <uv.h>
@@ -25,65 +26,35 @@ namespace cass {
 
 class Timer {
 public:
-  typedef void (*Callback)(Timer*);
+  typedef cass::Callback<void, Timer*> Callback;
 
-  Timer()
-    : handle_(NULL)
-    , data_(NULL) { }
+  Timer();
+  ~Timer();
 
-  ~Timer() {
-    stop();
-  }
+  int start(uv_loop_t* loop, uint64_t timeout, const Callback& callback);
+  void stop();
 
-  void* data() const { return data_; }
+public:
+  bool is_running() const { return state_ == STARTED; }
+  uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
 
-  bool is_running() const {
-    if (handle_ == NULL) return false;
-    return uv_is_active(reinterpret_cast<uv_handle_t*>(handle_)) != 0;
-  }
+private:
+  static void on_timeout(uv_timer_t* handle);
+  void handle_timeout();
 
-  void start(uv_loop_t* loop, uint64_t timeout, void* data,
-             Callback cb) {
-    if (handle_ == NULL) {
-      handle_ = new uv_timer_t;
-      handle_->data = this;
-      uv_timer_init(loop, handle_);
-    }
-    data_ = data;
-    cb_ = cb;
-    uv_timer_start(handle_, on_timeout, timeout, 0);
-  }
+  static void on_close(uv_handle_t* handle);
 
-  void stop() {
-    if (handle_ == NULL) return;
-    // This also stops the timer
-    uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
-    handle_ = NULL;
-  }
-
-#if UV_VERSION_MAJOR == 0
-  static void on_timeout(uv_timer_t* handle, int status) {
-#else
-  static void on_timeout(uv_timer_t* handle) {
-#endif
-    Timer* timer = static_cast<Timer*>(handle->data);
-    // The timer handle needs to be closed everytime because a stopped timer
-    // will not prevent uv_run() from exiting the event loop and the handle
-    // can't be deleted immediately because the event loop is still using the
-    // memory. Closing the handle everytime guarantees it will be cleaned up
-    // properly without crashing the event loop.
-    timer->stop();
-    timer->cb_(timer);
-  }
-
-  static void on_close(uv_handle_t* handle) {
-    delete reinterpret_cast<uv_timer_t*>(handle);
-  }
+private:
+  enum State {
+    CLOSED,
+    STOPPED,
+    STARTED
+  };
 
 private:
   uv_timer_t* handle_;
-  void* data_;
-  Callback cb_;
+  State state_;
+  Callback callback_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Timer);

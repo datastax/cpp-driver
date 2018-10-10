@@ -55,6 +55,12 @@ macro(GtestOptions)
       add_definitions(-DUSE_VISUAL_LEAK_DETECTOR)
     endif()
   endif()
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    if(MSVC_VERSION GREATER 1800 OR MSVC_VERSION EQUAL 1800) # VS2013+/VS 12.0+
+      add_definitions(-DGTEST_LANG_CXX11=1)
+      add_definitions(-DGTEST_HAS_TR1_TUPLE=0)
+    endif()
+  endif()
 endmacro()
 
 #------------------------
@@ -103,6 +109,7 @@ endmacro()
 macro(GtestIntegrationTestFiles integration_tests_source_dir prefix)
   file(GLOB ${prefix}_INTEGRATION_TESTS_INCLUDE_FILES ${integration_tests_source_dir}/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES ${integration_tests_source_dir}/objects/*.hpp)
+  file(GLOB ${prefix}_INTEGRATION_TESTS_POLICIES_INCLUDE_FILES ${integration_tests_source_dir}/policies/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_VALUES_INCLUDE_FILES ${integration_tests_source_dir}/values/*.hpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_SOURCE_FILES ${integration_tests_source_dir}/*.cpp)
   file(GLOB ${prefix}_INTEGRATION_TESTS_OBJECTS_SOURCE_FILES ${integration_tests_source_dir}/objects/*.cpp)
@@ -121,6 +128,7 @@ endmacro()
 macro(GtestIntegrationTestSourceGroups)
   source_group("Header Files" FILES ${INTEGRATION_TESTS_INCLUDE_FILES})
   source_group("Header Files\\objects" FILES ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES})
+  source_group("Header Files\\policies" FILES ${INTEGRATION_TESTS_POLICIES_INCLUDE_FILES})
   source_group("Header Files\\values" FILES ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES})
   source_group("Source Files" FILES ${INTEGRATION_TESTS_SOURCE_FILES})
   source_group("Source Files\\objects" FILES ${INTEGRATION_TESTS_OBJECTS_SOURCE_FILES})
@@ -137,27 +145,25 @@ endmacro()
 # Output: COMMON_INTEGRATION_TEST_SOURCE_FILES
 #------------------------
 macro(GtestCommonIntegrationTestSourceFiles)
-  set(COMMON_INTEGRATION_TEST_SOURCE_FILES
-    ${INTEGRATION_TESTS_SOURCE_FILES}
-    ${INTEGRATION_TESTS_OBJECTS_SOURCE_FILES}
-    ${INTEGRATION_TESTS_TESTS_SOURCE_FILES}
-    ${CPP_DRIVER_SOURCE_FILES}
-    ${INTEGRATION_TESTS_INCLUDE_FILES}
-    ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES}
-    ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES}
-    ${CCM_INCLUDE_FILES}
-    ${CASS_API_HEADER_FILES}
-    ${CPP_DRIVER_INCLUDE_FILES}
-    ${CPP_DRIVER_HEADER_SOURCE_FILES}
-    ${CPP_DRIVER_HEADER_SOURCE_ATOMIC_FILES}
-    ${CCM_BRIDGE_HEADER_FILES}
-    ${CCM_BRIDGE_SOURCE_FILES}
-    ${GOOGLE_TEST_HEADER_FILES}
-    ${GOOGLE_TEST_SOURCE_FILES}
-    ${LIBUV_INCLUDE_FILES}
-    ${LIBSSH2_INCLUDE_FILES}
-    ${OPENSSL_INCLUDE_FILES}
-  )
+  set(COMMON_INTEGRATION_TEST_INCLUDE_FILES ${INTEGRATION_TESTS_INCLUDE_FILES}
+                                            ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES}
+                                            ${INTEGRATION_TESTS_POLICIES_INCLUDE_FILES}
+                                            ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES}
+                                            ${CCM_INCLUDE_FILES}
+                                            ${CASS_API_HEADER_FILES}
+                                            ${CPP_DRIVER_INCLUDE_FILES}
+                                            ${CPP_DRIVER_HEADER_SOURCE_FILES}
+                                            ${CPP_DRIVER_HEADER_SOURCE_ATOMIC_FILES}
+                                            ${CCM_BRIDGE_HEADER_FILES}
+                                            ${GOOGLE_TEST_HEADER_FILES}
+                                            ${LIBUV_INCLUDE_FILES}
+                                            ${LIBSSH2_INCLUDE_FILES}
+                                            ${OPENSSL_INCLUDE_FILES})
+  set(COMMON_INTEGRATION_TEST_SOURCE_FILES ${INTEGRATION_TESTS_SOURCE_FILES}
+                                           ${INTEGRATION_TESTS_OBJECTS_SOURCE_FILES}
+                                           ${INTEGRATION_TESTS_TESTS_SOURCE_FILES}
+                                           ${CPP_DRIVER_SOURCE_FILES}
+                                           ${GOOGLE_TEST_SOURCE_FILES})
 endmacro()
 
 #------------------------
@@ -166,24 +172,24 @@ endmacro()
 # Configure unit tests to be built.
 #
 # Arguments:
-#   project_name - Name of project that has Google Test unit tests.
-#   extra_source_files - List of extra source files to build into the
-#      test executable, if any.
+#   project_name   - Name of project that has Google Test unit tests.
+#   extra_files    - List of extra files to build into the test executable, if
+#                    any.
+#   extra_includes - List of extra includes to include into the text
+#                    executable, if any.
 #------------------------
-macro(GtestUnitTests project_name extra_source_files)
+macro(GtestUnitTests project_name extra_files extra_includes)
   set(UNIT_TESTS_NAME "${project_name}-unit-tests")
   set(UNIT_TESTS_DISPLAY_NAME "Unit Tests (${project_name})")
   set(UNIT_TESTS_SOURCE_DIR "${TESTS_SOURCE_DIR}/unit")
 
   # The unit tests use `test::Utils::msleep()` and this is the minimum include
   # and source files required to shared that code.
-  set(INTEGRATION_TESTS_SOURCE_DIR "${CASS_ROOT_DIR}/gtests/src/integration")
-  set(CCM_BRIDGE_SOURCE_DIR "${CASS_ROOT_DIR}/test/ccm_bridge/src")
-  set(INTEGRATION_TESTS_SOURCE_FILES
-    "${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp"
-    "${INTEGRATION_TESTS_SOURCE_DIR}/driver_utils.cpp")
-  set(CCM_BRIDGE_SOURCE_FILES "${CCM_BRIDGE_SOURCE_DIR}/socket.cpp")
-
+  set(INTEGRATION_TESTS_SOURCE_DIR ${CASS_ROOT_DIR}/gtests/src/integration)
+  set(CCM_BRIDGE_SOURCE_DIR ${CASS_ROOT_DIR}/test/ccm_bridge/src)
+  set(INTEGRATION_TESTS_SOURCE_FILES ${INTEGRATION_TESTS_SOURCE_DIR}/test_utils.cpp
+                                     ${INTEGRATION_TESTS_SOURCE_DIR}/driver_utils.cpp)
+  set(CCM_BRIDGE_SOURCE_FILES "${CCM_BRIDGE_SOURCE_DIR}/tsocket.cpp")
   file(GLOB UNIT_TESTS_INCLUDE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.hpp )
   file(GLOB UNIT_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.cpp)
   file(GLOB UNIT_TESTS_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/tests/*.cpp)
@@ -191,29 +197,35 @@ macro(GtestUnitTests project_name extra_source_files)
   source_group("Source Files" FILES ${UNIT_TESTS_SOURCE_FILES})
   source_group("Source Files\\tests" FILES ${UNIT_TESTS_TESTS_SOURCE_FILES})
   add_executable(${UNIT_TESTS_NAME}
-      ${extra_source_files}
-      ${UNIT_TESTS_SOURCE_FILES}
-      ${UNIT_TESTS_TESTS_SOURCE_FILES}
-      ${CPP_DRIVER_SOURCE_FILES}
-      ${UNIT_TESTS_INCLUDE_FILES}
-      ${INTEGRATION_TESTS_SOURCE_FILES}
-      ${CCM_BRIDGE_SOURCE_FILES}
-      ${CASS_API_HEADER_FILES}
-      ${CPP_DRIVER_INCLUDE_FILES}
-      ${CPP_DRIVER_HEADER_SOURCE_FILES}
-      ${CPP_DRIVER_HEADER_SOURCE_ATOMIC_FILES}
-      ${GOOGLE_TEST_HEADER_FILES}
-      ${GOOGLE_TEST_SOURCE_FILES}
-      ${LIBUV_INCLUDE_FILES})
+                 ${extra_files}
+                 ${UNIT_TESTS_SOURCE_FILES}
+                 ${UNIT_TESTS_TESTS_SOURCE_FILES}
+                 ${INTEGRATION_TESTS_SOURCE_FILES}
+                 ${CCM_BRIDGE_SOURCE_FILES}
+                 ${CPP_DRIVER_SOURCE_FILES}
+                 ${UNIT_TESTS_INCLUDE_FILES}
+                 ${CASS_API_HEADER_FILES}
+                 ${CPP_DRIVER_INCLUDE_FILES}
+                 ${CPP_DRIVER_HEADER_SOURCE_FILES}
+                 ${CPP_DRIVER_HEADER_SOURCE_ATOMIC_FILES}
+                 ${GOOGLE_TEST_HEADER_FILES}
+                 ${GOOGLE_TEST_SOURCE_FILES})
   if(CMAKE_VERSION VERSION_LESS "2.8.11")
-    include_directories(${UNIT_TESTS_SOURCE_DIR} ${INTEGRATION_TESTS_SOURCE_DIR} ${CCM_BRIDGE_SOURCE_DIR})
+    include_directories(${extra_includes}
+                        ${UNIT_TESTS_SOURCE_DIR}
+                        ${INTEGRATION_TESTS_SOURCE_DIR}
+                        ${CCM_BRIDGE_SOURCE_DIR})
   else()
-    target_include_directories(${UNIT_TESTS_NAME} PUBLIC ${UNIT_TESTS_SOURCE_DIR} ${INTEGRATION_TESTS_SOURCE_DIR} ${CCM_BRIDGE_SOURCE_DIR})
+    target_include_directories(${UNIT_TESTS_NAME}
+                               PUBLIC ${extra_includes}
+                                      ${UNIT_TESTS_SOURCE_DIR}
+                                      ${INTEGRATION_TESTS_SOURCE_DIR}
+                                      ${CCM_BRIDGE_SOURCE_DIR})
   endif()
   target_link_libraries(${UNIT_TESTS_NAME}
-      ${GOOGLE_TEST_LIBRARIES}
-      ${DSE_LIBS}
-      ${PROJECT_LIB_NAME_TARGET})
+                        ${GOOGLE_TEST_LIBRARIES}
+                        ${DSE_LIBS}
+                        ${PROJECT_LIB_NAME_TARGET})
   set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY PROJECT_LABEL ${UNIT_TESTS_DISPLAY_NAME})
   set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY FOLDER "Tests")
   set_property(TARGET ${UNIT_TESTS_NAME} APPEND PROPERTY COMPILE_FLAGS ${TEST_CXX_FLAGS})

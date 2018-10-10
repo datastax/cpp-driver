@@ -2,7 +2,7 @@ Source: cassandra-cpp-driver
 Priority: extra
 Maintainer: Michael Penick <michael.penick@datastax.com>
 Build-Depends: debhelper (>= 9.0.0), dh-exec, cmake, make,
-        libuv-dev (>= 1.0.0),
+        libuv1-dev (>= 1.0.0),
         libssl-dev
 Standards-Version: 3.9.2
 Section: libs

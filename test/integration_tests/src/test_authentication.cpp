@@ -87,12 +87,6 @@ BOOST_FIXTURE_TEST_SUITE(authentication, AuthenticationTests)
 
 BOOST_AUTO_TEST_CASE(protocol_versions)
 {
-  // Handle deprecated and removed protocol versions [CASSANDRA-10146]
-  // https://issues.apache.org/jira/browse/CASSANDRA-10146
-  if (version < "2.2.0") {
-    auth(1);
-    auth(2);
-  }
   auth(3);
   auth(4);
 }

@@ -23,35 +23,31 @@
 #include "ready_response.hpp"
 #include "result_response.hpp"
 #include "supported_response.hpp"
-#include "serialization.hpp"
 
 namespace cass {
 
-char* Response::decode_custom_payload(char* buffer, size_t size) {
-  uint16_t item_count;
-  char* pos = decode_uint16(buffer, item_count);
-  for (uint16_t i = 0; i < item_count; ++i) {
-    StringRef name;
-    StringRef value;
-    pos = decode_string(pos, &name);
-    pos = decode_bytes(pos, &value);
-    custom_payload_.push_back(CustomPayloadItem(name, value));
-  }
 
-  return pos;
+/**
+ * A dummy invalid protocol error response that's used to handle responses
+ * encoded with deprecated protocol versions.
+ */
+class InvalidProtocolErrorResponse : public ErrorResponse {
+public:
+  InvalidProtocolErrorResponse()
+    : ErrorResponse(CQL_ERROR_PROTOCOL_ERROR,
+                    "Invalid or unsupported protocol version") { }
+
+  virtual bool decode(Decoder& decoder) {
+    return true; //  Ignore decoding the body
+  }
+};
+
+bool Response::decode_custom_payload(Decoder& decoder) {
+  return decoder.decode_custom_payload(custom_payload_);
 }
 
-char* Response::decode_warnings(char* buffer, size_t size) {
-  uint16_t warning_count;
-  char* pos = decode_uint16(buffer, warning_count);
-
-  for (uint16_t i = 0; i < warning_count; ++i) {
-    StringRef warning;
-    pos = decode_string(pos, &warning);
-    LOG_WARN("Server-side warning: %.*s", (int)warning.size(), warning.data());
-  }
-
-  return pos;
+bool Response::decode_warnings(Decoder& decoder) {
+  return decoder.decode_warnings(warnings_);
 }
 
 bool ResponseMessage::allocate_body(int8_t opcode) {
@@ -59,35 +55,35 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
   switch (opcode) {
 
     case CQL_OPCODE_ERROR:
-      response_body_.reset(new ErrorResponse());
+      response_body_.reset(Memory::allocate<ErrorResponse>());
       return true;
 
     case CQL_OPCODE_READY:
-      response_body_.reset(new ReadyResponse());
+      response_body_.reset(Memory::allocate<ReadyResponse>());
       return true;
 
     case CQL_OPCODE_AUTHENTICATE:
-      response_body_.reset(new AuthenticateResponse());
+      response_body_.reset(Memory::allocate<AuthenticateResponse>());
       return true;
 
     case CQL_OPCODE_SUPPORTED:
-      response_body_.reset(new SupportedResponse());
+      response_body_.reset(Memory::allocate<SupportedResponse>());
       return true;
 
     case CQL_OPCODE_RESULT:
-      response_body_.reset(new ResultResponse());
+      response_body_.reset(Memory::allocate<ResultResponse>());
       return true;
 
     case CQL_OPCODE_EVENT:
-      response_body_.reset(new EventResponse());
+      response_body_.reset(Memory::allocate<EventResponse>());
       return true;
 
     case CQL_OPCODE_AUTH_CHALLENGE:
-      response_body_.reset(new AuthChallengeResponse());
+      response_body_.reset(Memory::allocate<AuthChallengeResponse>());
       return true;
 
     case CQL_OPCODE_AUTH_SUCCESS:
-      response_body_.reset(new AuthSuccessResponse());
+      response_body_.reset(Memory::allocate<AuthSuccessResponse>());
       return true;
 
     default:
@@ -95,15 +91,19 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
   }
 }
 
-ssize_t ResponseMessage::decode(char* input, size_t size) {
-  char* input_pos = input;
+ssize_t ResponseMessage::decode(const char* input, size_t size) {
+  const char* input_pos = input;
 
   received_ += size;
 
   if (!is_header_received_) {
     if (version_ == 0) {
+      if (received_ < 1) {
+        LOG_ERROR("Expected at least 1 byte to decode header version");
+        return -1;
+      }
       version_ = input[0] & 0x7F; // "input" will always have at least 1 bytes
-      if (version_ >= 3) {
+      if (version_ >= CASS_PROTOCOL_VERSION_V3) {
         header_size_  = CASS_HEADER_SIZE_V3;
       } else {
         header_size_ = CASS_HEADER_SIZE_V1_AND_V2;
@@ -120,10 +120,10 @@ ssize_t ResponseMessage::decode(char* input, size_t size) {
       input_pos += needed;
       assert(header_buffer_pos_ == header_buffer_ + header_size_);
 
-      char* buffer = header_buffer_ + 1; // Skip over "version" byte
+      const char* buffer = header_buffer_ + 1; // Skip over "version" byte
       flags_ = *(buffer++);
 
-      if (version_ >= 3) {
+      if (version_ >= CASS_PROTOCOL_VERSION_V3) {
         buffer = decode_int16(buffer, stream_);
       } else {
         stream_ = *(buffer++);
@@ -134,7 +134,11 @@ ssize_t ResponseMessage::decode(char* input, size_t size) {
 
       is_header_received_ = true;
 
-      if (!allocate_body(opcode_) || !response_body_) {
+      // If a deprecated version of the protocol is encountered then we fake
+      // an invalid protocol error.
+      if (version_ < CASS_PROTOCOL_VERSION_V3) {
+        response_body_.reset(Memory::allocate<InvalidProtocolErrorResponse>());
+      } else if (!allocate_body(opcode_) || !response_body_) {
         return -1;
       }
 
@@ -161,18 +165,17 @@ ssize_t ResponseMessage::decode(char* input, size_t size) {
     body_buffer_pos_ += needed;
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->data() + length_);
-
-    char* pos = response_body()->data();
+    Decoder decoder(response_body_->data(), length_, version_);
 
     if (flags_ & CASS_FLAG_WARNING) {
-      pos = response_body()->decode_warnings(pos, length_);
+      if (!response_body_->decode_warnings(decoder)) return -1;
     }
 
     if (flags_ & CASS_FLAG_CUSTOM_PAYLOAD) {
-      pos = response_body()->decode_custom_payload(pos, length_);
+      if (!response_body_->decode_custom_payload(decoder)) return -1;
     }
 
-    if (!response_body_->decode(version_, pos, length_)) {
+    if (!response_body_->decode(decoder)) {
       is_body_error_ = true;
       return -1;
     }

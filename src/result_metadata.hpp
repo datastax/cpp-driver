@@ -20,17 +20,12 @@
 #include "cassandra.h"
 #include "data_type.hpp"
 #include "hash_table.hpp"
-#include "list.hpp"
 #include "ref_counted.hpp"
-#include "small_vector.hpp"
 #include "string_ref.hpp"
 
 #include <uv.h>
 
 #include <algorithm>
-#include <map>
-#include <string>
-#include <vector>
 
 namespace cass {
 
@@ -45,7 +40,8 @@ class ResultMetadata : public RefCounted<ResultMetadata> {
 public:
   typedef SharedRefPtr<ResultMetadata> Ptr;
 
-  ResultMetadata(size_t column_count);
+  ResultMetadata(size_t column_count,
+                 const RefBuffer::Ptr& buffer);
 
   const ColumnDefinition& get_column_definition(size_t index) const { return defs_[index]; }
 
@@ -57,6 +53,7 @@ public:
 
 private:
   CaseInsensitiveHashTable<ColumnDefinition> defs_;
+  RefBuffer::Ptr buffer_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ResultMetadata);

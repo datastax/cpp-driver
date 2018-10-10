@@ -24,20 +24,13 @@
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
 #include "scoped_lock.hpp"
+#include "utils.hpp"
+#include "vector.hpp"
 
 #include "third_party/hdr_histogram/hdr_histogram.hpp"
 
 #include <uv.h>
 #include <stdlib.h>
-
-#if defined(WIN32) || defined(_WIN32)
-#ifndef _WINSOCKAPI_
-#define _WINSOCKAPI_
-#endif
-#include <Windows.h>
-#else
-#include <sched.h>
-#endif
 
 #include <math.h>
 
@@ -47,31 +40,21 @@ class Metrics {
 public:
   class ThreadState {
   public:
-#if UV_VERSION_MAJOR == 0
-    ThreadState(size_t max_threads)
-      : max_threads_(1) {}
-#else
     ThreadState(size_t max_threads)
       : max_threads_(max_threads)
       , thread_count_(1) {
       uv_key_create(&thread_id_key_);
     }
-#endif
 
-#if UV_VERSION_MAJOR >= 1
     ~ThreadState() {
       uv_key_delete(&thread_id_key_);
     }
-#endif
 
     size_t max_threads() const {
       return max_threads_;
     }
 
     size_t current_thread_id() {
-#if UV_VERSION_MAJOR == 0
-      return 0;
-#else
       void* id = uv_key_get(&thread_id_key_);
       if (id == NULL) {
         size_t thread_id = thread_count_.fetch_add(1);
@@ -80,22 +63,19 @@ public:
         uv_key_set(&thread_id_key_, id);
       }
       return reinterpret_cast<size_t>(id) - 1;
-#endif
     }
 
   private:
     const size_t max_threads_;
-#if UV_VERSION_MAJOR >= 1
     Atomic<size_t> thread_count_;
     uv_key_t thread_id_key_;
-#endif
   };
 
   class Counter {
   public:
     Counter(ThreadState* thread_state)
       : thread_state_(thread_state)
-      , counters_(new PerThreadCounter[thread_state->max_threads()]) {}
+      , counters_(thread_state->max_threads()) {}
 
     void inc() {
       counters_[thread_state_->current_thread_id()].add(1LL);
@@ -153,7 +133,7 @@ public:
 
   private:
     ThreadState* thread_state_;
-    ScopedPtr<PerThreadCounter[]> counters_;
+    DynamicArray<PerThreadCounter> counters_;
 
   private:
     DISALLOW_COPY_AND_ASSIGN(Counter);
@@ -204,6 +184,7 @@ public:
         , five_minute_rate_(1.0 - exp(-static_cast<double>(ExponentiallyWeightedMovingAverage::INTERVAL) / 60.0 / 5), thread_state)
         , fifteen_minute_rate_(1.0 - exp(-static_cast<double>(ExponentiallyWeightedMovingAverage::INTERVAL) / 60.0 / 15), thread_state)
         , count_(thread_state)
+        , speculative_request_count_(thread_state)
         , start_time_(uv_hrtime())
         , last_tick_(start_time_) {}
 
@@ -213,6 +194,10 @@ public:
         one_minute_rate_.update();
         five_minute_rate_.update();
         fifteen_minute_rate_.update();
+      }
+
+      void mark_speculative() {
+        speculative_request_count_.inc();
       }
 
       double one_minute_rate() const { return one_minute_rate_.rate(); }
@@ -230,6 +215,24 @@ public:
 
       uint64_t count() const {
         return count_.sum();
+      }
+
+      uint64_t speculative_request_count() const {
+        return speculative_request_count_.sum();
+      }
+
+      double speculative_request_percent() const {
+        // count() gives us the number of requests that we successfully handled.
+        //
+        // speculative_request_count() give us the number of requests sent on
+        // the wire but were aborted after we received a good response.
+
+        uint64_t spec_count = speculative_request_count();
+        uint64_t total_requests = spec_count + count();
+
+        // Be wary of div by 0.
+        return total_requests ?
+               static_cast<double>(spec_count) / total_requests * 100 : 0;
       }
 
     private:
@@ -257,6 +260,7 @@ public:
       ExponentiallyWeightedMovingAverage five_minute_rate_;
       ExponentiallyWeightedMovingAverage fifteen_minute_rate_;
       Counter count_;
+      Counter speculative_request_count_;
       const uint64_t start_time_;
       Atomic<uint64_t> last_tick_;
 
@@ -283,7 +287,7 @@ public:
 
     Histogram(ThreadState* thread_state)
       : thread_state_(thread_state)
-      , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
+      , histograms_(thread_state->max_threads()) {
       hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
       uv_mutex_init(&mutex_);
     }
@@ -294,10 +298,6 @@ public:
     }
 
     void record_value(int64_t value) {
-      // All threads share the same histogram so access needs to be synchronized
-#if UV_VERSION_MAJOR == 0
-      ScopedMutex l(&mutex_);
-#endif
       histograms_[thread_state_->current_thread_id()].record_value(value);
     }
 
@@ -307,43 +307,34 @@ public:
       for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
         histograms_[i].add(h);
       }
-      snapshot->min = hdr_min(h);
-      snapshot->max = hdr_max(h);
-      snapshot->mean = static_cast<int64_t>(hdr_mean(h));
-      snapshot->stddev = static_cast<int64_t>(hdr_stddev(h));
-      snapshot->median = hdr_value_at_percentile(h, 50.0);
-      snapshot->percentile_75th = hdr_value_at_percentile(h, 75.0);
-      snapshot->percentile_95th = hdr_value_at_percentile(h, 95.0);
-      snapshot->percentile_98th = hdr_value_at_percentile(h, 98.0);
-      snapshot->percentile_99th = hdr_value_at_percentile(h, 99.0);
-      snapshot->percentile_999th = hdr_value_at_percentile(h, 99.9);
+
+      if (h->total_count == 0) {
+        // There is no data; default to 0 for the stats.
+        snapshot->max = 0;
+        snapshot->min = 0;
+        snapshot->mean = 0;
+        snapshot->stddev = 0;
+        snapshot->median = 0;
+        snapshot->percentile_75th = 0;
+        snapshot->percentile_95th = 0;
+        snapshot->percentile_98th = 0;
+        snapshot->percentile_99th = 0;
+        snapshot->percentile_999th = 0;
+      } else {
+        snapshot->max = hdr_max(h);
+        snapshot->min = hdr_min(h);
+        snapshot->mean = static_cast<int64_t>(hdr_mean(h));
+        snapshot->stddev = static_cast<int64_t>(hdr_stddev(h));
+        snapshot->median = hdr_value_at_percentile(h, 50.0);
+        snapshot->percentile_75th = hdr_value_at_percentile(h, 75.0);
+        snapshot->percentile_95th = hdr_value_at_percentile(h, 95.0);
+        snapshot->percentile_98th = hdr_value_at_percentile(h, 98.0);
+        snapshot->percentile_99th = hdr_value_at_percentile(h, 99.0);
+        snapshot->percentile_999th = hdr_value_at_percentile(h, 99.9);
+      }
     }
 
   private:
-#if UV_VERSION_MAJOR == 0
-    class PerThreadHistogram {
-    public:
-      PerThreadHistogram() {
-        hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
-      }
-
-      ~PerThreadHistogram() {
-        free(histogram_);
-      }
-
-      void record_value(int64_t value) {
-        hdr_record_value(histogram_, value);
-
-      }
-
-      void add(hdr_histogram* to) {
-        hdr_add(to, histogram_);
-      }
-
-    private:
-      hdr_histogram* histogram_;
-    };
-#else
     class WriterReaderPhaser {
     public:
       WriterReaderPhaser()
@@ -387,11 +378,7 @@ public:
             is_caught_up = (even_end_epoch_.load() == start_value_at_flip);
           }
           if (!is_caught_up) {
-#if defined(WIN32) || defined(_WIN32)
-            SwitchToThread();
-#else
-            sched_yield();
-#endif
+            thread_yield();
           }
         } while(!is_caught_up);
       }
@@ -422,7 +409,7 @@ public:
         phaser_.writer_critical_section_end(critical_value_enter);
       }
 
-      void add(hdr_histogram* to) {
+      void add(hdr_histogram* to) const {
         int inactive_index = active_index_.exchange(!active_index_.load());
         hdr_histogram* from = histograms_[inactive_index];
         phaser_.flip_phase();
@@ -432,13 +419,12 @@ public:
 
     private:
       hdr_histogram* histograms_[2];
-      Atomic<int> active_index_;
-      WriterReaderPhaser phaser_;
+      mutable Atomic<int> active_index_;
+      mutable WriterReaderPhaser phaser_;
     };
-#endif
 
     ThreadState* thread_state_;
-    ScopedPtr<PerThreadHistogram[]> histograms_;
+    DynamicArray<PerThreadHistogram> histograms_;
     hdr_histogram* histogram_;
     mutable uv_mutex_t mutex_;
 
@@ -447,21 +433,9 @@ public:
   };
 
   Metrics(size_t max_threads)
-  // Note: For best performance use libuv 1.X!
-
-  // libuv 0.10.X doesn't support thread-local variables so that means
-  // per-thread counters and histograms are disabled which means
-  // that these shared objects need to have their access synchronized
-  // (and means increased contention). Counters already uses an atomic
-  // type so this doesn't need any update, but it means that all threads
-  // use the same counter. Histogram uses a shared lock instead
-  // of accumulating latencies from per-thread instances.
-#if UV_VERSION_MAJOR == 0
     : thread_state_(max_threads)
-#else
-    : thread_state_(max_threads)
-#endif
     , request_latencies(&thread_state_)
+    , speculative_request_latencies(&thread_state_)
     , request_rates(&thread_state_)
     , total_connections(&thread_state_)
     , connection_timeouts(&thread_state_)
@@ -474,11 +448,17 @@ public:
     request_rates.mark();
   }
 
+  void record_speculative_request(uint64_t latency_ns) {
+    // Final measurement is in microseconds
+    speculative_request_latencies.record_value(latency_ns / 1000);
+    request_rates.mark_speculative();
+  }
 private:
   ThreadState thread_state_;
 
 public:
   Histogram request_latencies;
+  Histogram speculative_request_latencies;
   Meter request_rates;
 
   Counter total_connections;

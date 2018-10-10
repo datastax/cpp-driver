@@ -20,479 +20,655 @@
 #include "dc_aware_policy.hpp"
 #include "external.hpp"
 #include "logger.hpp"
+#include "resolver.hpp"
 #include "round_robin_policy.hpp"
 #include "speculative_execution.hpp"
 #include "utils.hpp"
 
-#include <sstream>
+namespace cass {
 
-extern "C" {
+/**
+ * A task for initiating the cluster close process.
+ */
+class RunCloseCluster : public Task {
+public:
+  RunCloseCluster(const Cluster::Ptr& cluster)
+    : cluster_(cluster) { }
 
-CassCluster* cass_cluster_new() {
-  return CassCluster::to(new cass::Cluster());
-}
-
-CassError cass_cluster_set_port(CassCluster* cluster,
-                                int port) {
-  if (port <= 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
+  void run(EventLoop* event_loop) {
+    cluster_->internal_close();
   }
-  cluster->config().set_port(port);
-  return CASS_OK;
-}
 
-void cass_cluster_set_ssl(CassCluster* cluster,
-                          CassSsl* ssl) {
-  cluster->config().set_ssl_context(ssl->from());
-}
+private:
+  Cluster::Ptr cluster_;
+};
 
-CassError cass_cluster_set_protocol_version(CassCluster* cluster,
-                                            int protocol_version) {
-  if (protocol_version < 1) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
+/**
+ * A task for marking a node as UP.
+ */
+class NotifyUpCluster : public Task {
+public:
+  NotifyUpCluster(const Cluster::Ptr& cluster, const Address& address)
+    : cluster_(cluster)
+    , address_(address) { }
+
+  void run(EventLoop* event_loop) {
+    cluster_->internal_notify_up(address_);
   }
-  if (cluster->config().use_beta_protocol_version()) {
-    LOG_ERROR("The protocol version is already set to the newest beta version v%d "
-              "and cannot be explicitly set.", CASS_NEWEST_BETA_PROTOCOL_VERSION);
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  } else if (protocol_version > CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
-    LOG_ERROR("Protocol version v%d is higher than the highest supported "
-              "protocol version v%d (consider using the newest beta protocol version).",
-              protocol_version, CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
-    return CASS_ERROR_LIB_BAD_PARAMS;
+
+private:
+  Cluster::Ptr cluster_;
+  Address address_;
+};
+
+/**
+ * A task for marking a node as DOWN.
+ */
+class NotifyDownCluster : public Task {
+public:
+  NotifyDownCluster(const Cluster::Ptr& cluster, const Address& address)
+    : cluster_(cluster)
+    , address_(address) { }
+
+  void run(EventLoop* event_loop) {
+    cluster_->internal_notify_down(address_);
   }
-  cluster->config().set_protocol_version(protocol_version);
-  return CASS_OK;
+
+private:
+  Cluster::Ptr cluster_;
+  Address address_;
+};
+
+/**
+ * A no operation cluster listener. This is used when a listener is not set.
+ */
+class NopClusterListener : public ClusterListener {
+public:
+  virtual void on_connect(Cluster* cluster) { }
+
+  virtual void on_up(const Host::Ptr& host) { }
+  virtual void on_down(const Host::Ptr& host) { }
+
+  virtual void on_add(const Host::Ptr& host) { }
+  virtual void on_remove(const Host::Ptr& host) { }
+
+  virtual void on_update_token_map(const TokenMap::Ptr& token_map) { }
+
+  virtual void on_close(Cluster* cluster) { }
+};
+
+static NopClusterListener nop_cluster_listener__;
+
+LockedHostMap::LockedHostMap(const HostMap& hosts)
+  : hosts_(hosts) {
+  uv_mutex_init(&mutex_);
 }
 
-CassError cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
-                                                     cass_bool_t enable) {
-  cluster->config().set_use_beta_protocol_version(enable == cass_true);
-  cluster->config().set_protocol_version(enable ? CASS_NEWEST_BETA_PROTOCOL_VERSION
-                                                : CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
-  return CASS_OK;
+LockedHostMap::~LockedHostMap() {
+  uv_mutex_destroy(&mutex_);
 }
 
-CassError cass_cluster_set_consistency(CassCluster* cluster,
-                                       CassConsistency consistency) {
-  if (consistency == CASS_CONSISTENCY_UNKNOWN) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
+LockedHostMap::const_iterator LockedHostMap::find(const Address& address) const {
+  return hosts_.find(address);
+}
+
+Host::Ptr LockedHostMap::get(const Address& address) const {
+  ScopedMutex l(&mutex_);
+  const_iterator it = find(address);
+  if (it == end()) return Host::Ptr();
+  return it->second;
+}
+
+void LockedHostMap::erase(const Address& address) {
+  ScopedMutex l(&mutex_);
+  hosts_.erase(address);
+}
+
+Host::Ptr& LockedHostMap::operator[](const Address& address) {
+  ScopedMutex l(&mutex_);
+  return hosts_[address];
+}
+
+LockedHostMap&LockedHostMap::operator=(const HostMap& hosts) {
+  ScopedMutex l(&mutex_);
+  hosts_ = hosts;
+  return *this;
+}
+
+ClusterSettings::ClusterSettings()
+  : load_balancing_policy(Memory::allocate<RoundRobinPolicy>())
+  , port(CASS_DEFAULT_PORT)
+  , reconnect_timeout_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
+  , prepare_on_up_or_add_host(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
+  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH) {
+  load_balancing_policies.push_back(load_balancing_policy);
+}
+
+ClusterSettings::ClusterSettings(const Config& config)
+  : control_connection_settings(config)
+  , load_balancing_policy(config.load_balancing_policy())
+  , load_balancing_policies(config.load_balancing_policies())
+  , port(config.port())
+  , reconnect_timeout_ms(config.reconnect_wait_time_ms())
+  , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
+  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH) { }
+
+Cluster::Cluster(const ControlConnection::Ptr& connection,
+                 ClusterListener* listener,
+                 EventLoop* event_loop,
+                 const Host::Ptr& connected_host,
+                 const HostMap& hosts,
+                 const ControlConnectionSchema& schema,
+                 const LoadBalancingPolicy::Ptr& load_balancing_policy,
+                 const LoadBalancingPolicy::Vec& load_balancing_policies,
+                 const ClusterSettings& settings)
+  : connection_(connection)
+  , listener_(listener ? listener : &nop_cluster_listener__)
+  , event_loop_(event_loop)
+  , load_balancing_policy_(load_balancing_policy)
+  , load_balancing_policies_(load_balancing_policies)
+  , settings_(settings)
+  , is_closing_(false)
+  , connected_host_(connected_host)
+  , hosts_(hosts) {
+  inc_ref();
+  connection_->set_listener(this);
+
+  query_plan_.reset(load_balancing_policy_->new_query_plan("", NULL, NULL));
+
+  update_schema(schema);
+  update_token_map(hosts,
+                   connected_host_->partitioner(),
+                   schema);
+
+  listener_->on_reconnect(this);
+}
+
+void Cluster::close() {
+  event_loop_->add(Memory::allocate<RunCloseCluster>(Ptr(this)));
+}
+
+void Cluster::notify_up(const Address& address) {
+  event_loop_->add(Memory::allocate<NotifyUpCluster>(Ptr(this), address));
+}
+
+void Cluster::notify_down(const Address& address) {
+  event_loop_->add(Memory::allocate<NotifyDownCluster>(Ptr(this), address));
+}
+
+Metadata::SchemaSnapshot Cluster::schema_snapshot() {
+  return metadata_.schema_snapshot();
+}
+
+Host::Ptr Cluster::host(const Address& address) const {
+  return hosts_.get(address);
+}
+
+PreparedMetadata::Entry::Ptr Cluster::prepared(const String& id) const {
+  return prepared_metadata_.get(id);
+}
+
+void Cluster::prepared(const String& id,
+                       const PreparedMetadata::Entry::Ptr& entry) {
+  prepared_metadata_.set(id, entry);
+}
+
+HostMap Cluster::available_hosts() const {
+  HostMap available;
+  for (HostMap::const_iterator it = hosts_.begin(),
+       end = hosts_.end(); it != end; ++it) {
+    if (!is_host_ignored(it->second)) {
+      available[it->first] = it->second;
+    }
   }
-  cluster->config().set_consistency(consistency);
-  return CASS_OK;
+  return available;
 }
 
-CassError cass_cluster_set_serial_consistency(CassCluster* cluster,
-                                              CassConsistency consistency) {
-  if (consistency == CASS_CONSISTENCY_UNKNOWN) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
+void Cluster::update_hosts(const HostMap& hosts) {
+  // Update the hosts and properly notify the listener
+  HostMap existing(hosts_);
+
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
+    HostMap::iterator find_it = existing.find(it->first);
+    if (find_it != existing.end()) {
+      existing.erase(find_it); // Already exists mark as visited
+    } else {
+      notify_add(it->second); // A new host has been added
+    }
   }
-  cluster->config().set_serial_consistency(consistency);
-  return CASS_OK;
-}
 
-CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
-                                          unsigned num_threads) {
-  if (num_threads == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
+  // Any hosts that existed before, but aren't in the new hosts
+  // need to be marked as removed.
+  for (HostMap::const_iterator it = existing.begin(),
+       end = existing.end(); it != end; ++it) {
+    notify_remove(it->first);
   }
-  cluster->config().set_thread_count_io(num_threads);
-  return CASS_OK;
 }
 
-CassError cass_cluster_set_queue_size_io(CassCluster* cluster,
-                                         unsigned queue_size) {
-  if (queue_size == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
+void Cluster::update_schema(const ControlConnectionSchema& schema) {
+  metadata_.clear_and_update_back(connection_->server_version());
+
+  if (schema.keyspaces) {
+    metadata_.update_keyspaces(schema.keyspaces.get(), false);
   }
-  cluster->config().set_queue_size_io(queue_size);
-  return CASS_OK;
-}
 
-CassError cass_cluster_set_queue_size_event(CassCluster* cluster,
-                                            unsigned queue_size) {
-  if (queue_size == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
+  if (schema.tables) {
+    metadata_.update_tables(schema.tables.get());
   }
-  cluster->config().set_queue_size_event(queue_size);
-  return CASS_OK;
+
+  if (schema.views) {
+    metadata_.update_views(schema.views.get());
+  }
+
+  if (schema.columns) {
+    metadata_.update_columns(schema.columns.get());
+  }
+
+  if (schema.indexes) {
+    metadata_.update_indexes(schema.indexes.get());
+  }
+
+  if (schema.user_types) {
+    metadata_.update_user_types(schema.user_types.get());
+  }
+
+  if (schema.functions) {
+    metadata_.update_functions(schema.functions.get());
+  }
+
+  if (schema.aggregates) {
+    metadata_.update_aggregates(schema.aggregates.get());
+  }
+
+  if (schema.virtual_keyspaces) {
+    metadata_.update_keyspaces(schema.virtual_keyspaces.get(), true);
+  }
+
+  if (schema.virtual_tables) {
+    metadata_.update_tables(schema.virtual_tables.get());
+  }
+
+  if (schema.virtual_columns) {
+    metadata_.update_columns(schema.virtual_columns.get());
+  }
+
+  metadata_.swap_to_back_and_update_front();
 }
 
-CassError cass_cluster_set_contact_points(CassCluster* cluster,
-                                          const char* contact_points) {
-  return cass_cluster_set_contact_points_n(cluster,
-                                           contact_points,
-                                           SAFE_STRLEN(contact_points));
+void Cluster::update_token_map(const HostMap& hosts,
+                               const String& partitioner,
+                               const ControlConnectionSchema& schema) {
+  if (settings_.control_connection_settings.token_aware_routing && schema.keyspaces) {
+    // Create a new token map and populate it
+    token_map_ = TokenMap::from_partitioner(partitioner);
+    if (!token_map_) {
+      return; // Partition is not supported
+    }
+    token_map_->add_keyspaces(connection_->server_version(), schema.keyspaces.get());
+    for (HostMap::const_iterator it = hosts.begin(),
+         end = hosts.end(); it != end; ++it) {
+      token_map_->add_host(it->second);
+    }
+    token_map_->build();
+  }
 }
 
-CassError cass_cluster_set_contact_points_n(CassCluster* cluster,
-                                            const char* contact_points,
-                                            size_t contact_points_length) {
-  if (contact_points_length == 0) {
-    cluster->config().contact_points().clear();
+// All hosts from the cluster are included in the host map and in the load
+// balancing policies (LBP) so that LBPs return the correct host distance (esp.
+// important for DC-aware). This method prevents connection pools from being
+// created to ignored hosts.
+bool Cluster::is_host_ignored(const Host::Ptr& host) const {
+  return cass::is_host_ignored(load_balancing_policies_, host);
+}
+
+void Cluster::schedule_reconnect() {
+  if (settings_.reconnect_timeout_ms > 0) {
+    timer_.start(connection_->loop(), settings_.reconnect_timeout_ms,
+                 bind_callback(&Cluster::on_schedule_reconnect, this));
   } else {
-    cass::explode(std::string(contact_points, contact_points_length),
-                  cluster->config().contact_points());
+    handle_schedule_reconnect();
   }
-  return CASS_OK;
 }
 
-CassError cass_cluster_set_core_connections_per_host(CassCluster* cluster,
-                                                     unsigned num_connections) {
-  if (num_connections == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_core_connections_per_host(num_connections);
-  return CASS_OK;
+void Cluster::on_schedule_reconnect(Timer* timer) {
+  handle_schedule_reconnect();
 }
 
-CassError cass_cluster_set_max_connections_per_host(CassCluster* cluster,
-                                                    unsigned num_connections) {
-  if (num_connections == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_max_connections_per_host(num_connections);
-  return CASS_OK;
-}
-
-void cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
-                                          unsigned wait_time_ms) {
-  cluster->config().set_reconnect_wait_time(wait_time_ms);
-}
-
-CassError cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
-                                                   unsigned num_connections) {
-  if (num_connections == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_max_concurrent_creation(num_connections);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
-                                                             unsigned num_requests) {
-  if (num_requests == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_max_concurrent_requests_threshold(num_requests);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
-                                                  unsigned num_requests) {
-  if (num_requests == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_max_requests_per_flush(num_requests);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
-                                                       unsigned num_bytes) {
-  // Deprecated
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
-                                                      unsigned num_bytes) {
-  // Deprecated
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
-                                                            unsigned num_requests) {
-  // Deprecated
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
-                                                           unsigned num_requests) {
-  // Deprecated
-  return CASS_OK;
-}
-
-void cass_cluster_set_connect_timeout(CassCluster* cluster,
-                                      unsigned timeout_ms) {
-  cluster->config().set_connect_timeout(timeout_ms);
-}
-
-void cass_cluster_set_request_timeout(CassCluster* cluster,
-                                      unsigned timeout_ms) {
-  cluster->config().set_request_timeout(timeout_ms);
-}
-
-void cass_cluster_set_resolve_timeout(CassCluster* cluster,
-                                      unsigned timeout_ms) {
-  cluster->config().set_resolve_timeout(timeout_ms);
-}
-
-void cass_cluster_set_credentials(CassCluster* cluster,
-                                  const char* username,
-                                  const char* password) {
-  return cass_cluster_set_credentials_n(cluster,
-                                        username, SAFE_STRLEN(username),
-                                        password, SAFE_STRLEN(password));
-}
-
-void cass_cluster_set_credentials_n(CassCluster* cluster,
-                                    const char* username,
-                                    size_t username_length,
-                                    const char* password,
-                                    size_t password_length) {
-  cluster->config().set_credentials(std::string(username, username_length),
-                                    std::string(password, password_length));
-}
-
-void cass_cluster_set_load_balance_round_robin(CassCluster* cluster) {
-  cluster->config().set_load_balancing_policy(new cass::RoundRobinPolicy());
-}
-
-CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
-                                                 const char* local_dc,
-                                                 unsigned used_hosts_per_remote_dc,
-                                                 cass_bool_t allow_remote_dcs_for_local_cl) {
-  if (local_dc == NULL) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  return cass_cluster_set_load_balance_dc_aware_n(cluster,
-                                                  local_dc,
-                                                  SAFE_STRLEN(local_dc),
-                                                  used_hosts_per_remote_dc,
-                                                  allow_remote_dcs_for_local_cl);
-}
-
-CassError cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
-                                                   const char* local_dc,
-                                                   size_t local_dc_length,
-                                                   unsigned used_hosts_per_remote_dc,
-                                                   cass_bool_t allow_remote_dcs_for_local_cl) {
-  if (local_dc == NULL || local_dc_length == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_load_balancing_policy(
-        new cass::DCAwarePolicy(std::string(local_dc, local_dc_length),
-                                used_hosts_per_remote_dc,
-                                !allow_remote_dcs_for_local_cl));
-  return CASS_OK;
-}
-
-void cass_cluster_set_token_aware_routing(CassCluster* cluster,
-                                          cass_bool_t enabled) {
-  cluster->config().set_token_aware_routing(enabled == cass_true);
-}
-
-void cass_cluster_set_latency_aware_routing(CassCluster* cluster,
-                                            cass_bool_t enabled) {
-  cluster->config().set_latency_aware_routing(enabled == cass_true);
-}
-
-void cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
-                                                     cass_double_t exclusion_threshold,
-                                                     cass_uint64_t scale_ms,
-                                                     cass_uint64_t retry_period_ms,
-                                                     cass_uint64_t update_rate_ms,
-                                                     cass_uint64_t min_measured) {
-  cass::LatencyAwarePolicy::Settings settings;
-  settings.exclusion_threshold = exclusion_threshold;
-  settings.scale_ns = scale_ms * 1000 * 1000;
-  settings.retry_period_ns = retry_period_ms * 1000 * 1000;
-  settings.update_rate_ms = update_rate_ms;
-  settings.min_measured = min_measured;
-  cluster->config().set_latency_aware_routing_settings(settings);
-}
-
-void cass_cluster_set_whitelist_filtering(CassCluster* cluster,
-                                          const char* hosts) {
-  cass_cluster_set_whitelist_filtering_n(cluster,
-                                         hosts,
-                                         SAFE_STRLEN(hosts));
-}
-
-void cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
-                                            const char* hosts,
-                                            size_t hosts_length) {
-  if (hosts_length == 0) {
-    cluster->config().whitelist().clear();
+void Cluster::handle_schedule_reconnect() {
+  const Host::Ptr& host = query_plan_->compute_next();
+  if (host) {
+    reconnector_.reset(Memory::allocate<ControlConnector>(host->address(),
+                                                          connection_->protocol_version(),
+                                                          bind_callback(&Cluster::on_reconnect, this)));
+    reconnector_
+        ->with_settings(settings_.control_connection_settings)
+        ->connect(connection_->loop());
   } else {
-    cass::explode(std::string(hosts, hosts_length),
-                  cluster->config().whitelist());
+    // No more hosts, refresh the query plan and schedule a re-connection
+    LOG_TRACE("Control connection query plan has no more hosts. "
+              "Reset query plan and schedule reconnect");
+    query_plan_.reset(load_balancing_policy_->new_query_plan("", NULL, NULL));
+    schedule_reconnect();
   }
 }
 
-void cass_cluster_set_blacklist_filtering(CassCluster* cluster,
-                                          const char* hosts) {
-  cass_cluster_set_blacklist_filtering_n(cluster,
-                                         hosts,
-                                         SAFE_STRLEN(hosts));
+void Cluster::on_reconnect(ControlConnector* connector) {
+  reconnector_.reset();
+  if (is_closing_) {
+    handle_close();
+    return;
+  }
+
+  if (connector->is_ok()) {
+    connection_ = connector->release_connection();
+    connection_->set_listener(this);
+
+    // Incrementally update the hosts  (notifying the listener)
+    update_hosts(connector->hosts());
+
+    // Get the newly connected host
+    connected_host_ = hosts_[connection_->address()];
+    assert(connected_host_ && "Connected host not found in hosts map");
+
+    update_schema(connector->schema());
+    update_token_map(connector->hosts(),
+                     connected_host_->partitioner(),
+                     connector->schema());
+
+    // Notify the listener that we've built a new token map
+    if (token_map_) {
+      listener_->on_update_token_map(token_map_);
+    }
+
+    LOG_INFO("Control connection connected to %s",
+             connected_host_->address_string().c_str());
+
+    listener_->on_reconnect(this);
+  } else if (!connector->is_canceled()) {
+    LOG_ERROR("Unable to reestablish a control connection to host %s because of the following error: %s",
+              connector->address().to_string().c_str(),
+              connector->error_message().c_str());
+    schedule_reconnect();
+  }
 }
 
-void cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
-                                            const char* hosts,
-                                            size_t hosts_length) {
-  if (hosts_length == 0) {
-    cluster->config().blacklist().clear();
+void Cluster::internal_close() {
+  is_closing_ = true;
+  if (timer_.is_running()) {
+    timer_.stop();
+    handle_close();
+  } else if (reconnector_) {
+    reconnector_->cancel();
+  } else if (connection_)  {
+    connection_->close();
+  }
+}
+
+void Cluster::handle_close() {
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
+    (*it)->close_handles();
+  }
+  connection_.reset();
+  listener_->on_close(this);
+  dec_ref();
+}
+
+void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refreshed) {
+  LockedHostMap::const_iterator it = hosts_.find(address);
+
+  if (it == hosts_.end()) {
+    LOG_WARN("Attempting to mark host %s that we don't have as UP",
+             address.to_string().c_str());
+    return;
+  }
+
+  Host::Ptr host(it->second);
+
+  if (refreshed){
+    if (token_map_) {
+      token_map_ = token_map_->copy();
+      token_map_->update_host_and_build(refreshed);
+      listener_->on_update_token_map(token_map_);
+    }
+    hosts_[address] = host = refreshed;
+  }
+
+  if (host->is_up()) { // Check the state of the previously existing host.
+    // Already marked up so don't repeat duplicate notifications.
+    return;
+  }
+
+  host->set_up();
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
+    (*it)->on_up(host);
+  }
+
+  if (is_host_ignored(host)) {
+    return; // Ignore host
+  }
+
+  if (!prepare_host(host,
+                    bind_callback(&Cluster::on_prepare_host_up, this))) {
+    notify_up_after_prepare(host);
+  }
+}
+
+void Cluster::notify_up_after_prepare(const Host::Ptr& host) {
+  listener_->on_up(host);
+}
+
+void Cluster::internal_notify_down(const Address& address) {
+  LockedHostMap::const_iterator it = hosts_.find(address);
+
+  if (it == hosts_.end()) {
+    LOG_WARN("Attempting to mark host %s that we don't have as DOWN",
+             address.to_string().c_str());
+    return;
+  }
+
+  Host::Ptr host(it->second);
+
+  if (host->is_down()) {
+    // Already marked down so don't repeat duplicate notifications.
+    return;
+  }
+
+  host->set_down();
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
+    (*it)->on_down(host);
+  }
+
+  listener_->on_down(host);
+}
+
+void Cluster::notify_add(const Host::Ptr& host) {
+  LockedHostMap::const_iterator host_it = hosts_.find(host->address());
+
+  if (host_it != hosts_.end()) {
+    LOG_WARN("Attempting to add host %s that we already have",
+             host->address_string().c_str());
+    // If an entry already exists then notify that the node has been removed
+    // then re-add it.
+    for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+         end = load_balancing_policies_.end(); it != end; ++it) {
+      (*it)->on_remove(host_it->second);
+    }
+    listener_->on_remove(host_it->second);
+  }
+
+  hosts_[host->address()] = host;
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
+    (*it)->on_add(host);
+  }
+
+  if (is_host_ignored(host)) {
+    return; // Ignore host
+  }
+
+  if (!prepare_host(host,
+                    bind_callback(&Cluster::on_prepare_host_add, this))) {
+    notify_add_after_prepare(host);
+  }
+}
+
+void Cluster::notify_add_after_prepare(const Host::Ptr& host) {
+  if (token_map_) {
+    token_map_ = token_map_->copy();
+    token_map_->update_host_and_build(host);
+    listener_->on_update_token_map(token_map_);
+  }
+  listener_->on_add(host);
+}
+
+void Cluster::notify_remove(const Address& address) {
+  LockedHostMap::const_iterator it = hosts_.find(address);
+
+  if (it == hosts_.end()) {
+    LOG_WARN("Attempting removing host %s that we don't have",
+             address.to_string().c_str());
+    return;
+  }
+
+  Host::Ptr host(it->second);
+
+  if (token_map_) {
+    token_map_ = token_map_->copy();
+    token_map_->remove_host_and_build(host);
+    listener_->on_update_token_map(token_map_);
+  }
+
+  hosts_.erase(host->address());
+  for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
+       end = load_balancing_policies_.end(); it != end; ++it) {
+    (*it)->on_remove(host);
+  }
+  listener_->on_remove(host);
+}
+
+bool Cluster::prepare_host(const Host::Ptr& host,
+                           const PrepareHostHandler::Callback& callback) {
+  if (settings_.prepare_on_up_or_add_host) {
+    PrepareHostHandler::Ptr prepare_host_handler(
+          Memory::allocate<PrepareHostHandler>(host,
+                                               prepared_metadata_.copy(),
+                                               callback,
+                                               connection_->protocol_version(),
+                                               settings_.max_prepares_per_flush));
+
+    prepare_host_handler->prepare(connection_->loop(),
+                                  settings_.control_connection_settings.connection_settings);
+    return true;
+  }
+  return false;
+}
+
+void Cluster::on_prepare_host_add(const PrepareHostHandler* handler) {
+  notify_add_after_prepare(handler->host());
+}
+
+void Cluster::on_prepare_host_up(const PrepareHostHandler* handler) {
+  notify_up_after_prepare(handler->host());
+}
+
+void Cluster::on_update_schema(SchemaType type,
+                               const ResultResponse::Ptr& result,
+                               const String& keyspace_name,
+                               const String& target_name) {
+  switch (type) {
+    case KEYSPACE:
+      // Virtual keyspaces are not updated (always false)
+      metadata_.update_keyspaces(result.get(), false);
+      if (token_map_) {
+        token_map_ = token_map_->copy();
+        token_map_->update_keyspaces_and_build(connection_->server_version(), result.get());
+        listener_->on_update_token_map(token_map_);
+      }
+      break;
+    case TABLE:
+      metadata_.update_tables(result.get());
+      break;
+    case VIEW:
+      metadata_.update_views(result.get());
+      break;
+    case COLUMN:
+      metadata_.update_columns(result.get());
+      break;
+    case INDEX:
+      metadata_.update_indexes(result.get());
+      break;
+    case USER_TYPE:
+      metadata_.update_user_types(result.get());
+      break;
+    case FUNCTION:
+      metadata_.update_functions(result.get());
+      break;
+    case AGGREGATE:
+      metadata_.update_aggregates(result.get());
+      break;
+  }
+}
+
+void Cluster::on_drop_schema(SchemaType type,
+                             const String& keyspace_name,
+                             const String& target_name) {
+  switch (type) {
+    case KEYSPACE:
+      metadata_.drop_keyspace(keyspace_name);
+      if (token_map_) {
+        token_map_ = token_map_->copy();
+        token_map_->drop_keyspace(keyspace_name);
+        listener_->on_update_token_map(token_map_);
+      }
+      break;
+    case TABLE:
+      metadata_.drop_table_or_view(keyspace_name, target_name);
+      break;
+    case VIEW:
+      metadata_.drop_table_or_view(keyspace_name, target_name);
+      break;
+    case USER_TYPE:
+      metadata_.drop_user_type(keyspace_name, target_name);
+      break;
+    case FUNCTION:
+      metadata_.drop_function(keyspace_name, target_name);
+      break;
+    case AGGREGATE:
+      metadata_.drop_aggregate(keyspace_name, target_name);
+      break;
+    default:
+      break;
+  }
+}
+
+void Cluster::on_up(const Address& address, const Host::Ptr& refreshed) {
+  internal_notify_up(address, refreshed);
+}
+
+void Cluster::on_down(const Address& address) {
+  // Ignore on down events
+}
+
+void Cluster::on_add(const Host::Ptr& host) {
+  notify_add(host);
+}
+
+void Cluster::on_remove(const Address& address) {
+  notify_remove(address);
+}
+
+void Cluster::on_close(ControlConnection* connection) {
+  if (!is_closing_) {
+    LOG_WARN("Lost control connection to host %s",
+             connection_->address_string().c_str());
+    schedule_reconnect();
   } else {
-    cass::explode(std::string(hosts, hosts_length),
-                  cluster->config().blacklist());
+    handle_close();
   }
 }
 
-void cass_cluster_set_whitelist_dc_filtering(CassCluster* cluster,
-                                             const char* dcs) {
-  cass_cluster_set_whitelist_dc_filtering_n(cluster,
-                                            dcs,
-                                            SAFE_STRLEN(dcs));
-}
-
-void cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
-                                               const char* dcs,
-                                               size_t dcs_length) {
-  if (dcs_length == 0) {
-    cluster->config().whitelist_dc().clear();
-  } else {
-    cass::explode(std::string(dcs, dcs_length),
-                  cluster->config().whitelist_dc());
-  }
-}
-
-void cass_cluster_set_blacklist_dc_filtering(CassCluster* cluster,
-                                             const char* dcs) {
-  cass_cluster_set_blacklist_dc_filtering_n(cluster,
-                                            dcs,
-                                            SAFE_STRLEN(dcs));
-}
-
-void cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
-                                               const char* dcs,
-                                               size_t dcs_length) {
-  if (dcs_length == 0) {
-    cluster->config().blacklist_dc().clear();
-  } else {
-    cass::explode(std::string(dcs, dcs_length),
-                  cluster->config().blacklist_dc());
-  }
-}
-
-void cass_cluster_set_tcp_nodelay(CassCluster* cluster,
-                                  cass_bool_t enabled) {
-  cluster->config().set_tcp_nodelay(enabled == cass_true);
-}
-
-void cass_cluster_set_tcp_keepalive(CassCluster* cluster,
-                                    cass_bool_t enabled,
-                                    unsigned delay_secs) {
-  cluster->config().set_tcp_keepalive(enabled == cass_true, delay_secs);
-}
-
-CassError cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
-                                                   const CassAuthenticatorCallbacks* exchange_callbacks,
-                                                   CassAuthenticatorDataCleanupCallback cleanup_callback,
-                                                   void* data) {
-  cluster->config().set_auth_provider(cass::AuthProvider::Ptr(
-                                        new cass::ExternalAuthProvider(exchange_callbacks,
-                                                                       cleanup_callback, data)));
-  return CASS_OK;
-}
-
-void cass_cluster_set_connection_heartbeat_interval(CassCluster* cluster,
-                                                    unsigned interval_secs) {
-  cluster->config().set_connection_heartbeat_interval_secs(interval_secs);
-}
-
-void cass_cluster_set_connection_idle_timeout(CassCluster* cluster,
-                                              unsigned timeout_secs) {
-  cluster->config().set_connection_idle_timeout_secs(timeout_secs);
-}
-
-void cass_cluster_set_retry_policy(CassCluster* cluster,
-                                   CassRetryPolicy* retry_policy) {
-  cluster->config().set_retry_policy(retry_policy);
-}
-
-void cass_cluster_set_timestamp_gen(CassCluster* cluster,
-                                    CassTimestampGen* timestamp_gen) {
-  cluster->config().set_timestamp_gen(timestamp_gen);
-}
-
-void cass_cluster_set_use_schema(CassCluster* cluster,
-                                 cass_bool_t enabled) {
-  cluster->config().set_use_schema(enabled == cass_true);
-}
-
-CassError cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
-                                              cass_bool_t enabled) {
-#if UV_VERSION_MAJOR >= 1
-  cluster->config().set_use_hostname_resolution(enabled == cass_true);
-  return CASS_OK;
-#else
-  return CASS_ERROR_LIB_NOT_IMPLEMENTED;
-#endif
-}
-
-CassError cass_cluster_set_use_randomized_contact_points(CassCluster* cluster,
-                                                         cass_bool_t enabled) {
-  cluster->config().set_use_randomized_contact_points(enabled);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_constant_speculative_execution_policy(CassCluster* cluster,
-                                                                 cass_int64_t constant_delay_ms,
-                                                                 int max_speculative_executions) {
-  if (constant_delay_ms < 0 || max_speculative_executions < 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_speculative_execution_policy(
-        new cass::ConstantSpeculativeExecutionPolicy(constant_delay_ms,
-                                                     max_speculative_executions));
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_no_speculative_execution_policy(CassCluster* cluster) {
-  cluster->config().set_speculative_execution_policy(
-        new cass::NoSpeculativeExecutionPolicy());
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_prepare_on_all_hosts(CassCluster* cluster,
-                                                cass_bool_t enabled){
-  cluster->config().set_prepare_on_all_hosts(enabled == cass_true);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_prepare_on_up_or_add_host(CassCluster* cluster,
-                                                     cass_bool_t enabled) {
-  cluster->config().set_prepare_on_up_or_add_host(enabled == cass_true);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_local_address(CassCluster* cluster,
-                                                     const char* name) {
-  return cass_cluster_set_local_address_n(cluster, name, SAFE_STRLEN(name));
-}
-
-CassError cass_cluster_set_local_address_n(CassCluster* cluster,
-                                                     const char* name,
-                                                     size_t name_length) {
-  cass::Address address;  // default to AF_UNSPEC
-  if (name_length == 0 ||
-      name == NULL ||
-      cass::Address::from_string(std::string(name, name_length), 0, &address)) {
-    cluster->config().set_local_address(address);
-  } else {
-    return CASS_ERROR_LIB_HOST_RESOLUTION;
-  }
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_no_compact(CassCluster* cluster,
-                                 cass_bool_t enabled) {
-  cluster->config().set_no_compact(enabled == cass_true);
-  return CASS_OK;
-}
-
-
-void cass_cluster_free(CassCluster* cluster) {
-  delete cluster->from();
-}
-
-} // extern "C"
+} // namespace cass

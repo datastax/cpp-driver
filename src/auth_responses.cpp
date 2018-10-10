@@ -20,30 +20,33 @@
 
 namespace cass {
 
-bool AuthenticateResponse::decode(int version, char* buffer, size_t size) {
+bool AuthenticateResponse::decode(Decoder& decoder) {
+  decoder.set_type("authentication");
   StringRef class_name;
-  decode_string(buffer, &class_name);
+
+  CHECK_RESULT(decoder.decode_string(&class_name));
   class_name_ = class_name.to_string();
+  decoder.maybe_log_remaining();
   return true;
 }
 
-bool cass::AuthChallengeResponse::decode(int version, char* buffer, size_t size) {
-  if (version < 2) {
-    return false;
-  }
+bool cass::AuthChallengeResponse::decode(Decoder& decoder) {
+  decoder.set_type("authentication challenge");
   StringRef token;
-  decode_bytes(buffer, &token);
+
+  CHECK_RESULT(decoder.decode_bytes(&token));
   token_ = token.to_string();
+  decoder.maybe_log_remaining();
   return true;
 }
 
-bool cass::AuthSuccessResponse::decode(int version, char* buffer, size_t size) {
-  if (version < 2) {
-    return false;
-  }
+bool cass::AuthSuccessResponse::decode(Decoder& decoder) {
+  decoder.set_type("authentication success");
   StringRef token;
-  decode_bytes(buffer, &token);
+
+  CHECK_RESULT(decoder.decode_bytes(&token));
   token_ = token.to_string();
+  decoder.maybe_log_remaining();
   return true;
 }
 

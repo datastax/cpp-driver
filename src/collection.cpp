@@ -28,7 +28,7 @@ extern "C" {
 
 CassCollection* cass_collection_new(CassCollectionType type,
                                     size_t item_count) {
-  cass::Collection* collection = new cass::Collection(type, item_count);
+  cass::Collection* collection = cass::Memory::allocate<cass::Collection>(type, item_count);
   collection->inc_ref();
   return CassCollection::to(collection);
 }
@@ -39,7 +39,7 @@ CassCollection* cass_collection_new_from_data_type(const CassDataType* data_type
     return NULL;
   }
   cass::Collection* collection
-      = new cass::Collection(cass::DataType::ConstPtr(data_type),
+      = cass::Memory::allocate<cass::Collection>(cass::DataType::ConstPtr(data_type),
                              item_count);
   collection->inc_ref();
   return CassCollection::to(collection);
@@ -140,75 +140,17 @@ CassError Collection::append(const UserTypeValue* value) {
   return CASS_OK;
 }
 
-size_t Collection::get_items_size(int version) const {
-  if (version >= 3) {
-    return get_items_size(sizeof(int32_t));
-  } else {
-    return get_items_size(sizeof(uint16_t));
-  }
-}
-
-void Collection::encode_items(int version, char* buf) const {
-  if (version >= 3) {
-    encode_items_int32(buf);
-  } else {
-    encode_items_uint16(buf);
-  }
-}
-
-size_t Collection::get_size_with_length(int version) const {
-  size_t internal_size = sizeof(int32_t);
-  if (version >= 3) {
-    internal_size += sizeof(int32_t) + get_items_size(sizeof(int32_t));
-  } else {
-    internal_size += sizeof(uint16_t) + get_items_size(sizeof(uint16_t));
-  }
-  return internal_size;
-}
-
-Buffer Collection::encode() const {
-  // Inner types are always encoded using the v3+ (int32_t) encoding
-  Buffer buf(sizeof(int32_t) + get_items_size(sizeof(int32_t)));
-  size_t pos = buf.encode_int32(0, get_count());
-  encode_items_int32(buf.data() + pos);
-  return buf;
-}
-
-Buffer Collection::encode_with_length(int version) const {
-  size_t internal_size;
-
-  if (version >= 3) {
-    internal_size = sizeof(int32_t) + get_items_size(sizeof(int32_t));
-  } else {
-    internal_size = sizeof(uint16_t) + get_items_size(sizeof(uint16_t));
-  }
-
-  Buffer buf(sizeof(int32_t) + internal_size);
-
-  size_t pos = buf.encode_int32(0, internal_size);
-
-  if (version >= 3) {
-    pos = buf.encode_int32(pos, get_count());
-    encode_items_int32(buf.data() + pos);
-  } else {
-    pos = buf.encode_uint16(pos, get_count());
-    encode_items_uint16(buf.data() + pos);
-  }
-
-  return buf;
-}
-
-size_t Collection::get_items_size(size_t num_bytes_for_size) const {
+size_t Collection::get_items_size() const {
   size_t size = 0;
   for (BufferVec::const_iterator i = items_.begin(),
        end = items_.end(); i != end; ++i) {
-    size += num_bytes_for_size;
+    size += sizeof(int32_t);
     size += i->size();
   }
   return size;
 }
 
-void Collection::encode_items_int32(char* buf) const {
+void Collection::encode_items(char* buf) const {
   for (BufferVec::const_iterator i = items_.begin(),
        end = items_.end(); i != end; ++i) {
     encode_int32(buf, i->size());
@@ -218,14 +160,28 @@ void Collection::encode_items_int32(char* buf) const {
   }
 }
 
-void Collection::encode_items_uint16(char* buf) const {
-  for (BufferVec::const_iterator i = items_.begin(),
-       end = items_.end(); i != end; ++i) {
-    encode_uint16(buf, i->size());
-    buf += sizeof(uint16_t);
-    memcpy(buf, i->data(), i->size());
-    buf += i->size();
-  }
+size_t Collection::get_size() const {
+  return sizeof(int32_t) + get_items_size();
+}
+
+size_t Collection::get_size_with_length() const {
+  return sizeof(int32_t) + get_size();
+}
+
+Buffer Collection::encode() const {
+  Buffer buf(get_size());
+  size_t pos = buf.encode_int32(0, get_count());
+  encode_items(buf.data() + pos);
+  return buf;
+}
+
+Buffer Collection::encode_with_length() const {
+  size_t internal_size = get_size();
+  Buffer buf(sizeof(int32_t) + internal_size);
+  size_t pos = buf.encode_int32(0, internal_size);
+  pos = buf.encode_int32(pos, get_count());
+  encode_items(buf.data() + pos);
+  return buf;
 }
 
 }  // namespace cass

@@ -22,7 +22,9 @@ cass::SharedRefPtr<cass::ResultMetadata> create_metadata(const char* column_name
   size_t count = 0;
   while (column_names[count] != NULL) { count++; }
 
-  cass::SharedRefPtr<cass::ResultMetadata> metadata(new cass::ResultMetadata(count));
+  cass::ResultMetadata::Ptr metadata(
+        cass::Memory::allocate<cass::ResultMetadata>(count,
+                                                     cass::RefBuffer::Ptr()));
 
   for (size_t i = 0; column_names[i] != NULL; ++i) {
     cass::ColumnDefinition def;
@@ -53,7 +55,7 @@ TEST(ResultMetadataUnitTest, CaseSensitive) {
 
   for (size_t i = 0; column_names[i] != NULL; ++i) {
     cass::IndexVec indices;
-    std::string name;
+    cass::String name;
     name.push_back('"');
     name.append(column_names[i]);
     name.push_back('"');

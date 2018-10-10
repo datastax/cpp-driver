@@ -14,48 +14,45 @@
   limitations under the License.
 */
 
-
 #ifndef __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
 #define __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
 
-#include "connection.hpp"
+#include "callback.hpp"
+#include "connector.hpp"
 #include "host.hpp"
 #include "prepared.hpp"
 #include "ref_counted.hpp"
-
-#include <string>
+#include "string.hpp"
 
 namespace cass {
 
-class Session;
+class Connector;
 
 /**
  * A handler for pre-preparing statements on a newly available host.
  */
 class PrepareHostHandler : public RefCounted<PrepareHostHandler>
-                         , public Connection::Listener {
+                         , public ConnectionListener {
 public:
-  typedef void (*Callback)(const PrepareHostHandler*);
+  typedef cass::Callback<void, const PrepareHostHandler*> Callback;
 
   typedef SharedRefPtr<PrepareHostHandler> Ptr;
 
   PrepareHostHandler(const Host::Ptr& host,
-                     Session* session,
-                     int protocol_version);
+                     const PreparedMetadata::Entry::Vec& prepared_metadata_entries,
+                     const Callback& callback,
+                     int protocol_version,
+                     unsigned max_requests_per_flush);
 
-  Session* session() const { return session_; }
   const Host::Ptr host() const { return host_; }
 
-  void prepare(Callback callback);
+  void prepare(uv_loop_t* loop,
+               const ConnectionSettings& settings);
 
 private:
-  virtual void on_ready(Connection* connection);
-
   virtual void on_close(Connection* connection);
 
-  virtual void on_availability_change(Connection* connection) { }
-
-  virtual void on_event(EventResponse* response) { }
+  void on_connect(Connector* connector);
 
 private:
   /**
@@ -70,7 +67,7 @@ private:
 
     virtual void on_internal_set(ResponseMessage* response);
 
-    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_error(CassError code, const String& message);
 
     virtual void on_internal_timeout();
 
@@ -86,12 +83,12 @@ private:
    */
   class SetKeyspaceCallback : public SimpleRequestCallback {
   public:
-    SetKeyspaceCallback(const std::string& keyspace,
+    SetKeyspaceCallback(const String& keyspace,
                         const PrepareHostHandler::Ptr& handler);
 
     virtual void on_internal_set(ResponseMessage* response);
 
-    virtual void on_internal_error(CassError code, const std::string& message);
+    virtual void on_internal_error(CassError code, const String& message);
 
     virtual void on_internal_timeout();
 
@@ -112,11 +109,10 @@ private:
 
 private:
   const Host::Ptr host_;
-  int protocol_version_;
-  Session* session_;
+  const int protocol_version_;
   Callback callback_;
   Connection* connection_;
-  std::string current_keyspace_;
+  String current_keyspace_;
   int prepares_outstanding_;
   const int max_prepares_outstanding_;
   PreparedMetadata::Entry::Vec prepared_metadata_entries_;

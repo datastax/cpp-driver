@@ -28,7 +28,7 @@
 extern "C" {
 
 CassTuple* cass_tuple_new(size_t item_count) {
-  return CassTuple::to(new cass::Tuple(item_count));
+  return CassTuple::to(cass::Memory::allocate<cass::Tuple>(item_count));
 }
 
 CassTuple* cass_tuple_new_from_data_type(const CassDataType* data_type) {
@@ -36,12 +36,12 @@ CassTuple* cass_tuple_new_from_data_type(const CassDataType* data_type) {
     return NULL;
   }
   return CassTuple::to(
-        new cass::Tuple(
+        cass::Memory::allocate<cass::Tuple>(
           cass::DataType::ConstPtr(data_type)));
 }
 
 void cass_tuple_free(CassTuple* tuple) {
-  delete tuple->from();
+  cass::Memory::deallocate(tuple->from());
 }
 
 const CassDataType* cass_tuple_data_type(const CassTuple* tuple) {
@@ -131,7 +131,7 @@ CassError Tuple::set(size_t index, const Tuple* value) {
 
 CassError Tuple::set(size_t index, const Collection* value) {
   CASS_TUPLE_CHECK_INDEX_AND_TYPE(index, value);
-  items_[index] = value->encode_with_length(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
+  items_[index] = value->encode_with_length();
   return CASS_OK;
 }
 

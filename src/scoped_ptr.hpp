@@ -27,12 +27,7 @@ namespace cass {
 
 template <class T>
 struct DefaultDeleter {
-  void operator()(T* ptr) const { delete ptr; }
-};
-
-template <class T>
-struct DefaultDeleter<T[]> {
-  void operator()(T* ptr) const { delete[] ptr; }
+  void operator()(T* ptr) const { Memory::deallocate(ptr); }
 };
 
 template <class T, class D = DefaultDeleter<T> >
@@ -41,9 +36,6 @@ public:
   typedef T type;
   typedef D deleter;
 
-  // Prevent RefCounted<> objects from using ScopedPtr<>, that would be bad
-  STATIC_ASSERT((!IsConvertible<T, RefCountedBase>::value));
-
   explicit ScopedPtr(type* ptr = NULL)
       : ptr_(ptr) {}
 
@@ -66,46 +58,6 @@ public:
   type& operator*() const { return *ptr_; }
   type * operator->() const { return ptr_; }
   operator bool() const { return ptr_ != NULL; }
-
-private:
-  type* ptr_;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(ScopedPtr);
-};
-
-template <class T, class D>
-class ScopedPtr<T[], D> {
-public:
-public:
-  typedef T type;
-  typedef D deleter;
-
-  explicit ScopedPtr(type* ptr = NULL)
-      : ptr_(ptr) {}
-
-  ~ScopedPtr() { deleter()(ptr_); }
-
-  void reset(type* ptr = NULL) {
-    if (ptr_ != NULL) {
-      deleter()(ptr_);
-    }
-    ptr_ = ptr;
-  }
-
-  type* release() {
-    type* temp = ptr_;
-    ptr_ = NULL;
-    return temp;
-  }
-
-  type* get() const { return ptr_; }
-  type& operator*() const { return *ptr_; }
-  type * operator->() const { return ptr_; }
-  operator bool() const { return ptr_ != NULL; }
-
-  type& operator[](size_t index) { return ptr_[index]; }
-  type& operator[](size_t index) const { return ptr_[index]; }
 
 private:
   type* ptr_;

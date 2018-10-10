@@ -39,12 +39,19 @@ void TokenAwarePolicy::init(const Host::Ptr& connected_host,
                             const HostMap& hosts,
                             Random* random) {
   if (random != NULL) {
-    index_ = random->next(std::max(static_cast<size_t>(1), hosts.size()));
+    if (shuffle_replicas_) {
+      // Store random so that it can be used to shuffle replicas.
+      random_ = random;
+    } else {
+      // Make sure that different instances of the token aware policy (e.g. different sessions)
+      // don't use the same host order.
+      index_ = random->next(std::max(static_cast<size_t>(1), hosts.size()));
+    }
   }
   ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
 }
 
-QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& keyspace,
+QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace,
                                             RequestHandler* request_handler,
                                             const TokenMap* token_map) {
   if (request_handler != NULL) {
@@ -54,17 +61,20 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& keyspace,
       case CQL_OPCODE_QUERY:
       case CQL_OPCODE_EXECUTE:
       case CQL_OPCODE_BATCH:
-        std::string routing_key;
+        String routing_key;
         if (request->get_routing_key(&routing_key) && !keyspace.empty()) {
           if (token_map != NULL) {
             CopyOnWriteHostVec replicas = token_map->get_replicas(keyspace, routing_key);
             if (replicas && !replicas->empty()) {
-              return new TokenAwareQueryPlan(child_policy_.get(),
-                                             child_policy_->new_query_plan(keyspace,
-                                                                           request_handler,
-                                                                           token_map),
-                                             replicas,
-                                             index_++);
+              if (random_ != NULL) {
+                random_shuffle(replicas->begin(), replicas->end(), random_);
+              }
+              return Memory::allocate<TokenAwareQueryPlan>(child_policy_.get(),
+                                                           child_policy_->new_query_plan(keyspace,
+                                                                                         request_handler,
+                                                                                         token_map),
+                                                           replicas,
+                                                           index_);
             }
           }
         }

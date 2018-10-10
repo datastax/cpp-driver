@@ -18,18 +18,9 @@
 
 namespace cass {
 
-char* MapIterator::decode_pair(char* position) {
-  int protocol_version = map_->protocol_version();
-
-  int32_t size;
-
-  position = decode_size(protocol_version, position, size);
-  key_ = Value(protocol_version, map_->primary_data_type(), position, size);
-
-  position = decode_size(protocol_version, position + size, size);
-  value_ = Value(protocol_version, map_->secondary_data_type(), position, size);
-
-  return position + size;
+bool MapIterator::decode_pair() {
+  if (!decoder_.decode_value(map_->primary_data_type(), key_, true)) return false;
+  return decoder_.decode_value(map_->secondary_data_type(), value_, true);
 }
 
 bool MapIterator::next() {
@@ -37,8 +28,7 @@ bool MapIterator::next() {
     return false;
   }
   ++index_;
-  position_ = decode_pair(position_);
-  return true;
+  return decode_pair();
 }
 
 } // namespace cass

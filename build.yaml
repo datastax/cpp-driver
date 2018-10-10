@@ -1,110 +1,52 @@
 schedules:
   adhoc:
     schedule: adhoc
+    notify:
+      slack: cpp-driver-dev-bots
+  commit:
+    schedule: per_commit
+    notify:
+      slack: cpp-driver-dev-bots
     branches:
-      include: [master]
+      include: ["/CPP-\\d+/", "master"]
 architecture:
   - x64
 os:
+  - ubuntu/bionic64/cpp
   - ubuntu/trusty64/cpp
   - ubuntu/xenial64
   - centos/6-64
   - centos/7-64
+env:
+  LIBUV_VERSION: 1.23.0
 build:
   - script: |
-      echo "Running packaging job"
+      . .build.sh
+      configure_environment
+      install_dependencies
+
+      build_driver 'CASS'
+
+      FUNCTIONS+=($(grep -Eoh '^cass_\s*(\w+)\s*\(' include/cassandra.h | awk -F '(' '{print $1}'))
+      check_driver_exports 'build/libcassandra_static.a' "${FUNCTIONS[@]}"
+
+      build/cassandra-unit-tests --gtest_output=xml:cassandra-unit-test-results.xml
+
+      install_driver
+      test_installed_driver 'cassandra'
+
+  - xunit:
+    - "*unit-test-results.xml"
 package:
   include: # list of files and glob paths to include in the artifact, relative to the current working directory
     - packaging/packages/*
 release:
-    after:
-      each:
-        - script: |
-            LIBUV_VERSION=1.20.0
-            CC=gcc
-            TEST_PROGRAM=$(mktemp)
-            TOKENS=($(echo ${OS_VERSION} | tr "/" " "))
-            DISTRO=${TOKENS[0]}
-            RELEASE=${TOKENS[1]}
-
-            if [ "${DISTRO}" = "ubuntu" ]; then
-              NAME=$(echo ${RELEASE%??})
-              ARCHITECTURE=${RELEASE:-2}
-              PACKAGE_TYPE=deb
-              PACKAGE_INSTALL="dpkg -i"
-              if [ "${NAME}" = "trusty" ]; then
-                RELEASE=14.04
-              elif [ "${NAME}" = "xenial" ]; then
-                RELEASE=16.04
-              else
-                printf "Unsupported Ubuntu Version: %s\n" ${RELEASE}
-                exit 1
-              fi
-            elif [ "${DISTRO}" = "centos" ]; then
-              TOKENS=($(echo ${RELEASE} | tr "-" " "))
-              NAME=${DISTRO}
-              RELEASE=${TOKENS[0]}
-              ARCHITECTURE=${TOKENS[1]}
-              PACKAGE_TYPE=rpm
-              PACKAGE_INSTALL="rpm -i"
-            else
-              printf "Unsupported OS: %s\n" ${OS_VERSION}
-              exit 1
-            fi
-
-            pushd packaging
-
-            mkdir packages
-
-            # Build libuv, install, and copy to "packages"
-            echo "Building libuv Packages [${LIBUV_VERSION}] ...\n"
-            git clone --depth 1 https://github.com/mpenick/libuv-packaging.git libuv-packaging
-
-            pushd libuv-packaging
-            ./build_${PACKAGE_TYPE}.sh ${LIBUV_VERSION}
-            popd
-            find libuv-packaging/build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
-            sudo ${PACKAGE_INSTALL} packages/libuv*.${PACKAGE_TYPE}
-
-            # Build, package and upload DataStax C/C++ driver
-            echo "Building DataStax C/C++ driver ..."
-            ./build_${PACKAGE_TYPE}.sh
-            find build -type f -name "*.${PACKAGE_TYPE}" -exec mv {} packages \;
-            pushd packages
-
-            # Install cpp-driver packages
-            sudo ${PACKAGE_INSTALL} cassandra*.${PACKAGE_TYPE}
-
-            # Create test file against cpp-driver and try to connect.
-            # Should compile and throw a connection error when executed.
-            $CC -x c -o $TEST_PROGRAM - -Wno-implicit-function-declaration -lcassandra - <<EOF
-            #include <cassandra.h>
-            int main(int argc, char* argv[]) {
-            CassFuture* connect_future = NULL;
-            CassCluster* cluster = cass_cluster_new();
-            CassSession* session = cass_session_new();
-            cass_cluster_set_contact_points(cluster, "127.0.0.1");
-            connect_future = cass_session_connect(session, cluster);
-            cass_future_wait(connect_future);
-            printf("Success\n");
-            return 0;
-            }
-            EOF
-
-            # Throw error if either compilation or test run fails
-            if [ $? -ne 0 ] ; then
-              echo "Connection test compilation failed. Marking build as failure."
-              exit 1
-            fi
-
-            if [ "$($TEST_PROGRAM)" != "Success" ] ; then
-              echo "Connection test did not return success. Marking build as failure."
-              exit 1
-            fi
-
-            # Uploading driver packages
-            curl -$ARTIFACTORY_CREDS -T "{$(echo cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/cassandra/v$version/"
-
-            # Uploading libuv packages
-            curl -$ARTIFACTORY_CREDS -T "{$(echo libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/{$BUILD_NUMBER}/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"
-            popd
+  after:
+    each:
+      - script: |
+          . .build.sh
+          DRIVER_VERSION=$(get_driver_version 'include/cassandra.h' 'CASS')
+          # Uploading driver packages
+          curl -$ARTIFACTORY_CREDS -T "{$(echo packaging/packages/cassandra-cpp-driver* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/$version/$SHA/$DISTRO/$RELEASE/cassandra/v$DRIVER_VERSION/"
+          # Uploading libuv packages
+          curl -$ARTIFACTORY_CREDS -T "{$(echo packaging/packages/libuv* | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/cpp-php-drivers/cpp-driver/builds/$version/$SHA/$DISTRO/$RELEASE/dependencies/libuv/v$LIBUV_VERSION/"

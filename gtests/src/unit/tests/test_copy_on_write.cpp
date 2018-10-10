@@ -15,28 +15,29 @@
 */
 
 #include <gtest/gtest.h>
-#include <string>
-#include <vector>
 
 #include "copy_on_write_ptr.hpp"
+#include "map.hpp"
 #include "ref_counted.hpp"
+#include "string.hpp"
+#include "vector.hpp"
 
 TEST(CopyOnWriteUnitTest, Simple) {
-  std::vector<int>* ptr = new std::vector<int>;
-  cass::CopyOnWritePtr<std::vector<int> > vec(ptr);
+  cass::Vector<int>* ptr = cass::Memory::allocate<cass::Vector<int> >();
+  cass::CopyOnWritePtr<cass::Vector<int> > vec(ptr);
 
   // Only a single reference so no copy should be made
-  EXPECT_EQ(static_cast<const cass::CopyOnWritePtr<std::vector<int> >&>(vec).operator->(),  ptr);
+  EXPECT_EQ(static_cast<const cass::CopyOnWritePtr<cass::Vector<int> >&>(vec).operator->(),  ptr);
   vec->push_back(1);
-  EXPECT_EQ(static_cast<const cass::CopyOnWritePtr<std::vector<int> >&>(vec).operator->(),  ptr);
+  EXPECT_EQ(static_cast<const cass::CopyOnWritePtr<cass::Vector<int> >&>(vec).operator->(),  ptr);
 
   // Make const reference to object
-  const cass::CopyOnWritePtr<std::vector<int> > const_vec(vec);
+  const cass::CopyOnWritePtr<cass::Vector<int> > const_vec(vec);
   EXPECT_EQ((*const_vec)[0], 1);
   EXPECT_EQ(const_vec.operator->(),  ptr);
 
   // Force copy to be made
   vec->push_back(2);
-  EXPECT_NE(static_cast<const cass::CopyOnWritePtr<std::vector<int> >&>(vec).operator->(), ptr);
+  EXPECT_NE(static_cast<const cass::CopyOnWritePtr<cass::Vector<int> >&>(vec).operator->(), ptr);
   EXPECT_EQ(const_vec.operator->(), ptr);
 }

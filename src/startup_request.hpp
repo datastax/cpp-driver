@@ -19,10 +19,9 @@
 
 #include "request.hpp"
 #include "constants.hpp"
+#include "map.hpp"
 #include "scoped_ptr.hpp"
-
-#include <map>
-#include <string>
+#include "string.hpp"
 
 namespace cass {
 
@@ -34,18 +33,18 @@ public:
       , compression_("")
       , no_compact_enabled_(no_compact_enabled) { }
 
-  const std::string version() const { return version_; }
-  const std::string compression() const { return compression_; }
+  const String version() const { return version_; }
+  const String compression() const { return compression_; }
   bool no_compact_enabled() const { return no_compact_enabled_; }
 
 private:
   int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
-  typedef std::map<std::string, std::string> OptionsMap;
+  typedef Map<String, String> OptionsMap;
 
-  std::string version_;
-  std::string compression_;
+  String version_;
+  String compression_;
   bool no_compact_enabled_;
 };
 

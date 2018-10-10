@@ -16,6 +16,49 @@
 
 #include "pretty_print.hpp"
 
+void PrintTo(CassConsistency consistency, std::ostream* output_stream) {
+  switch (consistency) {
+    case CASS_CONSISTENCY_UNKNOWN:
+      *output_stream << "CASS_CONSISTENCY_UNKNOWN";
+      break;
+    case CASS_CONSISTENCY_ANY:
+      *output_stream << "CASS_CONSISTENCY_ANY";
+      break;
+    case CASS_CONSISTENCY_ONE:
+      *output_stream << "CASS_CONSISTENCY_ONE";
+      break;
+    case CASS_CONSISTENCY_TWO:
+      *output_stream << "CASS_CONSISTENCY_TWO";
+      break;
+    case CASS_CONSISTENCY_THREE:
+      *output_stream << "CASS_CONSISTENCY_THREE";
+      break;
+    case CASS_CONSISTENCY_QUORUM:
+      *output_stream << "CASS_CONSISTENCY_QUORUM";
+      break;
+    case CASS_CONSISTENCY_ALL:
+      *output_stream << "CASS_CONSISTENCY_ALL";
+      break;
+    case CASS_CONSISTENCY_LOCAL_QUORUM:
+      *output_stream << "CASS_CONSISTENCY_LOCAL_QUORUM";
+      break;
+    case CASS_CONSISTENCY_EACH_QUORUM:
+      *output_stream << "CASS_CONSISTENCY_EACH_QUORUM";
+      break;
+    case CASS_CONSISTENCY_SERIAL:
+      *output_stream << "CASS_CONSISTENCY_SERIAL";
+      break;
+    case CASS_CONSISTENCY_LOCAL_SERIAL:
+      *output_stream << "CASS_CONSISTENCY_LOCAL_SERIAL";
+      break;
+    case CASS_CONSISTENCY_LOCAL_ONE:
+      *output_stream << "CASS_CONSISTENCY_LOCAL_ONE";
+      break;
+    default:
+      *output_stream << "CASS CONSISTENCY NEEDS TO BE ADDED";
+  }
+}
+
 void PrintTo(CassError error_code, std::ostream* output_stream) {
   switch (error_code) {
     case CASS_OK:
@@ -116,6 +159,9 @@ void PrintTo(CassError error_code, std::ostream* output_stream) {
       break;
     case CASS_ERROR_LIB_INVALID_STATE:
       *output_stream << "CASS_ERROR_LIB_INVALID_STATE";
+      break;
+    case CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID:
+      *output_stream << "CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID";
       break;
     case CASS_ERROR_SERVER_SERVER_ERROR:
       *output_stream << "CASS_ERROR_SERVER_SERVER_ERROR";

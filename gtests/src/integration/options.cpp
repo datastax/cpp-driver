@@ -23,12 +23,13 @@
 #include <algorithm>
 #include <iostream>
 
-#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.2")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("5.1.7")
+#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.3")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.3")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
 bool Options::is_help_ = false;
+bool Options::is_keep_clusters_ = false;
 bool Options::is_log_tests_ = true;
 CCM::CassVersion Options::server_version_ = DEFAULT_OPTIONS_CASSSANDRA_VERSION;
 bool Options::is_dse_ = false;
@@ -85,7 +86,10 @@ bool Options::initialize(int argc, char* argv[]) {
         value = option[1];
       }
       // Integration test options
-      if (key.compare("--log-tests") == 0) {
+      if (key.compare("--keep-clusters") == 0) {
+        is_keep_clusters_ = true;
+      }
+      else if (key.compare("--log-tests") == 0) {
         if (!value.empty()) {
           is_log_tests_ = bool_value(value);
         } else {
@@ -297,10 +301,10 @@ void Options::print_help() {
     << "Password to use for DSE download authentication." << std::endl;
   std::cout << "  --git" << std::endl << "      "
     << "Indicate Cassandra/DSE server download should be obtained from" << std::endl
-    << "     ASF/GitHub." << std::endl;
+    << "      ASF/GitHub." << std::endl;
   std::cout << "  --git=[BRANCH_OR_TAG]" << std::endl << "      "
     << "Indicate Cassandra/DSE server branch/tag should be obtained from" << std::endl
-    <<"      ASF/GitHub." << std::endl;
+    << "      ASF/GitHub." << std::endl;
   std::cout << "  --install-dir=[INSTALL_DIR]" << std::endl << "      "
     << "Indicate Cassandra/DSE installation directory to use." << std::endl;
   std::cout << "  --prefix=[PREFIX]" << std::endl << "      "
@@ -326,10 +330,16 @@ void Options::print_help() {
     << "Private key filename to use for remote deployment. The default is" << std::endl
     << "      " << private_key() << "." << std::endl;
 #endif
+  std::cout << "  --keep-clusters" << std::endl << "      "
+    << "Indicate CCM clusters should not be removed after tests terminate."
+    << std::endl;
   std::cout << std::endl;
 }
 
 void Options::print_settings() {
+  if (keep_clusters()) {
+    std::cout << "  Keep clusters" << std::endl;
+  }
   if (log_tests()) {
     std::cout << "  Logging driver messages" << std::endl;
   }
@@ -375,6 +385,10 @@ void Options::print_settings() {
 
 bool Options::is_help() {
   return is_help_;
+}
+
+bool Options::keep_clusters() {
+  return is_keep_clusters_;
 }
 
 bool Options::log_tests() {
@@ -449,6 +463,10 @@ const std::string& Options::host() {
   return host_;
 }
 
+std::string Options::host_prefix() {
+  return host_.substr(0, host_.size() - 1);
+}
+
 short Options::port() {
   return port_;
 }
@@ -469,7 +487,7 @@ const std::string& Options::private_key() {
   return private_key_;
 }
 
-SharedPtr<CCM::Bridge> Options::ccm() {
+SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > Options::ccm() {
   return new CCM::Bridge( \
     Options::server_version(),
     Options::use_git(), Options::branch_tag(), \

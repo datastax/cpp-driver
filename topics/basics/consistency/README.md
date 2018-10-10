@@ -23,66 +23,57 @@ level can be found
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
-    <tr>
-      <th>Level</th>
-      <th>Driver</th>
-    </tr>
+  <tr>
+   <th>Level</th>
+   <th>Driver</th>
+  </tr>
   </thead>
+
   <tbody>
-    <tr>
-      <td>All</td>
-      <td><code>CASS_CONSISTENCY_ALL</code></td>
-    </tr>
-
-    <tr>
-      <td>Each Quorum</td>
-      <td><code>CASS_CONSISTENCY_EACH_QUORUM</code></td>
-    </tr>
-
-    <tr>
-      <td>Quorum</td>
-      <td><code>CASS_CONSISTENCY_QUORUM</code></td>
-    </tr>
-
-    <tr>
-      <td>Local Quorum</td>
-      <td><code>CASS_CONSISTENCY_LOCAL_QUORUM</code></td>
-    </tr>
-
-    <tr>
-      <td><b>One</b></td>
-      <td><code><b>CASS_CONSISTENCY_ONE</b></code></td>
-    </tr>
-
-    <tr>
-      <td>Two</td>
-      <td><code>CASS_CONSISTENCY_TWO</code></td>
-    </tr>
-
-    <tr>
-      <td>Three</td>
-      <td><code>CASS_CONSISTENCY_THREE</code></td>
-    </tr>
-
-    <tr>
-      <td>Local One</td>
-      <td><code>CASS_CONSISTENCY_LOCAL_ONE</code></td>
-    </tr>
-
-    <tr>
-      <td>Any</td>
-      <td><code>CASS_CONSISTENCY_ANY</code></td>
-    </tr>
-
-    <tr>
-      <td>Serial</td>
-      <td><code>CASS_CONSISTENCY_SERIAL</code></td>
-    </tr>
-
-    <tr>
-      <td>Local Serial</td>
-      <td><code>CASS_CONSISTENCY_LOCAL_SERIAL</code></td>
-    </tr>
+  <tr>
+   <td>All</td>
+   <td><code>CASS_CONSISTENCY_ALL</code></td>
+  </tr>
+  <tr>
+   <td>Each Quorum</td>
+   <td><code>CASS_CONSISTENCY_EACH_QUORUM</code></td>
+  </tr>
+  <tr>
+   <td>Quorum</td>
+   <td><code>CASS_CONSISTENCY_QUORUM</code></td>
+  </tr>
+  <tr>
+   <td>Local Quorum</td>
+   <td><code>CASS_CONSISTENCY_LOCAL_QUORUM</code></td>
+  </tr>
+  <tr>
+   <td><b>One</b></td>
+   <td><code><b>CASS_CONSISTENCY_ONE</b></code></td>
+  </tr>
+  <tr>
+   <td>Two</td>
+   <td><code>CASS_CONSISTENCY_TWO</code></td>
+  </tr>
+  <tr>
+   <td>Three</td>
+   <td><code>CASS_CONSISTENCY_THREE</code></td>
+  </tr>
+  <tr>
+   <td>Local One</td>
+   <td><code>CASS_CONSISTENCY_LOCAL_ONE</code></td>
+  </tr>
+  <tr>
+   <td>Any</td>
+   <td><code>CASS_CONSISTENCY_ANY</code></td>
+  </tr>
+  <tr>
+   <td>Serial</td>
+   <td><code>CASS_CONSISTENCY_SERIAL</code></td>
+  </tr>
+  <tr>
+   <td>Local Serial</td>
+   <td><code>CASS_CONSISTENCY_LOCAL_SERIAL</code></td>
+  </tr>
   </tbody>
 </table>
 

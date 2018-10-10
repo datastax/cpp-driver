@@ -43,6 +43,7 @@ Integration::Integration()
   , replication_factor_(0)
   , replication_strategy_("")
   , contact_points_("")
+  , is_password_authenticator_(false)
   , is_client_authentication_(false)
   , is_ssl_(false)
   , is_with_vnodes_(false)
@@ -52,6 +53,7 @@ Integration::Integration()
   , is_ccm_start_node_individually_(false)
   , is_session_requested_(true)
   , is_test_chaotic_(false)
+  , is_beta_protocol_(true)
   , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
   , create_keyspace_query_("")
   , start_time_(0ull) {
@@ -144,16 +146,27 @@ void Integration::SetUp() {
       Options::host(), Options::port(),
       Options::username(), Options::password(),
       Options::public_key(), Options::private_key());
-    if (ccm_->create_cluster(data_center_nodes, is_with_vnodes_, is_ssl_,
-      is_client_authentication_)) {
+    if (ccm_->create_cluster(data_center_nodes,
+                             is_with_vnodes_,
+                             is_password_authenticator_,
+                             is_ssl_,
+                             is_client_authentication_)) {
       if (is_ccm_start_requested_) {
         if (is_ccm_start_node_individually_) {
           for (unsigned short node = 1;
             node <= (number_dc1_nodes_ + number_dc2_nodes_); ++node) {
-            ccm_->start_node(node);
+            if (is_password_authenticator_) {
+              ccm_->start_node(node, "-Dcassandra.superuser_setup_delay_ms=0");
+            } else {
+              ccm_->start_node(node);
+            }
           }
         } else {
-          ccm_->start_cluster();
+          if (is_password_authenticator_) {
+            ccm_->start_cluster("-Dcassandra.superuser_setup_delay_ms=0");
+          } else {
+            ccm_->start_cluster();
+          }
         }
       }
     }
@@ -321,19 +334,26 @@ void Integration::connect() {
   connect(cluster_);
 }
 
-test::driver::Cluster Integration::default_cluster() {
+test::driver::Cluster Integration::default_cluster(bool is_with_default_contact_points /*= true*/) {
   // Create the default cluster object
   Cluster cluster = Cluster::build()
-    .with_contact_points(contact_points_)
     .with_randomized_contact_points(is_randomized_contact_points_)
     .with_schema_metadata(is_schema_metadata_);
+  if (is_with_default_contact_points) {
+    cluster.with_contact_points(contact_points_);
+  }
   if (server_version_ >= "3.10" &&
       protocol_version_ == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
-    cluster.with_beta_protocol(true);
+    cluster.with_beta_protocol(is_beta_protocol_);
   } else {
     cluster.with_protocol_version(protocol_version_);
   }
 
+  // Assign the execution profiles to the cluster object (if available)
+  for(ExecutionProfile::Map::iterator it = profiles_.begin();
+      it != profiles_.end(); ++it) {
+    cluster.with_execution_profile(it->first, it->second);
+  }
   return cluster;
 }
 

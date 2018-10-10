@@ -27,7 +27,7 @@ void cass_prepared_free(const CassPrepared* prepared) {
 }
 
 CassStatement* cass_prepared_bind(const CassPrepared* prepared) {
-  cass::ExecuteRequest* execute = new cass::ExecuteRequest(prepared);
+  cass::ExecuteRequest* execute = cass::Memory::allocate<cass::ExecuteRequest>(prepared);
   execute->inc_ref();
   return CassStatement::to(execute);
 }
@@ -87,7 +87,7 @@ Prepared::Prepared(const ResultResponse::Ptr& result,
   , keyspace_(prepare_request->keyspace())
   , request_settings_(prepare_request->settings()) {
   assert(result->protocol_version() > 0 && "The protocol version should be set");
-  if (result->protocol_version() >= 4) {
+  if (result->protocol_version() >= CASS_PROTOCOL_VERSION_V4) {
     key_indices_ = result->pk_indices();
   } else {
     const KeyspaceMetadata* keyspace = schema_metadata.get_keyspace(result->keyspace().to_string());

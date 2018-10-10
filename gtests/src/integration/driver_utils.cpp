@@ -17,7 +17,7 @@
 #include "driver_utils.hpp"
 
 #include "address.hpp"
-#include "cluster.hpp"
+#include "cluster_config.hpp"
 #include "future.hpp"
 #include "murmur3.hpp"
 #include "request_handler.hpp"
@@ -27,16 +27,16 @@ std::vector<std::string> test::driver::internals::Utils::attempted_hosts(
   CassFuture* future) {
   std::vector<std::string> attempted_hosts;
   if (future) {
-  cass::Future* cass_future = static_cast<cass::Future*>(future);
-  if (cass_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
-    cass::ResponseFuture* response = static_cast<cass::ResponseFuture*>(cass_future);
-    cass::AddressVec attempted_addresses = response->attempted_addresses();
-    for (cass::AddressVec::iterator iterator = attempted_addresses.begin();
-      iterator != attempted_addresses.end(); ++iterator) {
-      attempted_hosts.push_back(iterator->to_string().c_str());
+    cass::Future* cass_future = static_cast<cass::Future*>(future);
+    if (cass_future->type() == cass::Future::FUTURE_TYPE_RESPONSE) {
+      cass::ResponseFuture* response = static_cast<cass::ResponseFuture*>(cass_future);
+      cass::AddressVec attempted_addresses = response->attempted_addresses();
+      for (cass::AddressVec::iterator iterator = attempted_addresses.begin();
+        iterator != attempted_addresses.end(); ++iterator) {
+        attempted_hosts.push_back(iterator->to_string().c_str());
+      }
+      std::sort(attempted_hosts.begin(), attempted_hosts.end());
     }
-    std::sort(attempted_hosts.begin(), attempted_hosts.end());
-  }
   }
   return attempted_hosts;
 }
@@ -62,7 +62,7 @@ std::string test::driver::internals::Utils::contact_points(CassCluster* cluster)
 std::string test::driver::internals::Utils::host(CassFuture* future) {
   if (future) {
     cass::Future* cass_future = static_cast<cass::Future*>(future);
-    if (cass_future->type() == cass::CASS_FUTURE_TYPE_RESPONSE) {
+    if (cass_future->type() == cass::Future::FUTURE_TYPE_RESPONSE) {
       return static_cast<cass::ResponseFuture*>(cass_future)->address().to_string().c_str();
     }
   }

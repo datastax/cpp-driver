@@ -19,7 +19,7 @@
 namespace cass {
 
 bool WhitelistDCPolicy::is_valid_host(const Host::Ptr& host) const {
-  const std::string& host_dc = host->dc();
+  const String& host_dc = host->dc();
   for (DcList::const_iterator it = dcs_.begin(),
       end = dcs_.end(); it != end; ++it) {
     if (host_dc.compare(*it) == 0) {

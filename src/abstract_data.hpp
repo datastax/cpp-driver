@@ -25,6 +25,7 @@
 #include "request.hpp"
 #include "string_ref.hpp"
 #include "types.hpp"
+#include "vector.hpp"
 
 #define CASS_CHECK_INDEX_AND_TYPE(Index, Value) do { \
   CassError rc = check(Index, Value);               \
@@ -70,9 +71,9 @@ public:
       return type_ == NUL;
     }
 
-    size_t get_size(int version) const;
-    size_t copy_buffer(int version, size_t pos, Buffer* buf) const;
-    Buffer get_buffer(int version) const;
+    size_t get_size() const;
+    size_t copy_buffer(size_t pos, Buffer* buf) const;
+    Buffer get_buffer() const;
 
   private:
     Type type_;
@@ -80,7 +81,7 @@ public:
     SharedRefPtr<const Collection> collection_;
   };
 
-  typedef std::vector<Element> ElementVec;
+  typedef Vector<Element> ElementVec;
 
 public:
   AbstractData(size_t count)
