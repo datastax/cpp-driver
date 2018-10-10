@@ -1,6 +1,10 @@
 2.10.0
 ===========
 
+Features
+--------
+* [CPP-657] Support virtual tables (aka system views)
+
 Bug Fixes
 --------
 * [CPP-648] Attempting to get the metrics before the session is connected will crash (existing issue)
