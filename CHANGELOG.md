@@ -12,6 +12,7 @@ Bug Fixes
 * [CPP-670] Unresolved references when built against libressl
 * [CPP-672] Fix memory issues found via `-fstanitize=address`
 * [CPP-673] Cluster can hang attempting to close during reconnection
+* [CPP-674] C/C++ driver 2.10.0-beta1 build failure (GCC 8)
 * [CPP-675] Chained callback should only call a single callback once
 * [CPP-678] Fix Cassandra version for DSE 6.X releases
 * [CPP-687] Fixing recovery of remote DC host
