@@ -45,9 +45,10 @@ rewrites:
   - ../../vc_build.bat: https://github.com/datastax/cpp-driver/blob/master/vc_build.bat
   - https://github.com/datastax/cpp-driver/tree/2.6.0/examples/duration/duration.c: https://github.com/datastax/cpp-driver/blob/master/examples/duration/duration.c
   - http://www.datastax.com/documentation/cassandra/2.0/cassandra/dml/dml_config_consistency_c.html: https://docs.datastax.com/en/cassandra/3.0/cassandra/dml/dmlConfigConsistency.html
+  - http://dl.fedoraproject.org/pub/epel/5/: https://archives.fedoraproject.org/pub/archive/epel/5/
   - ^examples/(.*): https://github.com/datastax/cpp-driver/blob/master/examples/\1
 versions:
-  - name: 2.10
+  - name: "2.10"
     ref: 2.10.0
   - name: 2.9
     ref: 2.9.0
