@@ -24,6 +24,7 @@ provided with the distribution:
 * [CentOS 7][centos-7-dependencies]
 * [Ubuntu 14.04][ubuntu-14-04-dependencies]
 * [Ubuntu 16.04][ubuntu-16-04-dependencies]
+* [Ubuntu 18.04][ubuntu-18-04-dependencies]
 * [Windows][windows-dependencies]
 
 ## Features
@@ -198,6 +199,7 @@ limitations under the License.
 [centos-7-dependencies]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies
 [ubuntu-14-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies
 [ubuntu-16-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies
+[ubuntu-18-04-dependencies]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies
 [windows-dependencies]: http://downloads.datastax.com/cpp-driver/windows/dependencies
 
 [Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures
