@@ -74,7 +74,7 @@ public:
    */
   ConnectionPoolManager(const ConnectionPool::Map& pools,
                         uv_loop_t* loop,
-                        int protocol_version,
+                        ProtocolVersion protocol_version,
                         const String& keyspace,
                         ConnectionPoolManagerListener* listener,
                         Metrics* metrics,
@@ -129,7 +129,7 @@ public:
 
 public:
   uv_loop_t* loop() const { return loop_; }
-  int protocol_version() const { return protocol_version_; }
+  ProtocolVersion protocol_version() const { return protocol_version_; }
   const ConnectionPoolSettings& settings() const { return settings_; }
   ConnectionPoolManagerListener* listener() const { return listener_; }
   const String& keyspace() const { return keyspace_; }
@@ -175,7 +175,7 @@ private:
 private:
   uv_loop_t* loop_;
 
-  const int protocol_version_;
+  const ProtocolVersion protocol_version_;
   const ConnectionPoolSettings settings_;
   ConnectionPoolManagerListener* listener_;
 

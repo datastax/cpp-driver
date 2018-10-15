@@ -626,7 +626,11 @@ typedef enum CassProtocolVersion_ {
   CASS_PROTOCOL_VERSION_V2    = 0x02, /**< Deprecated */
   CASS_PROTOCOL_VERSION_V3    = 0x03,
   CASS_PROTOCOL_VERSION_V4    = 0x04,
-  CASS_PROTOCOL_VERSION_V5    = 0x05
+  CASS_PROTOCOL_VERSION_V5    = 0x05,
+  CASS_PROTOCOL_VERSION_DSEV1 = 0x41, /**< Only supported when using the DSE
+                                           driver with DataStax Enterprise */
+  CASS_PROTOCOL_VERSION_DSEV2 = 0x42  /**< Only supported when using the DSE
+                                           driver with DataStax Enterprise */
 } CassProtocolVersion;
 
 typedef enum  CassErrorSource_ {
@@ -1549,10 +1553,11 @@ cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
                                          void* data);
 
 /**
- * Sets the protocol version. This will automatically downgrade to the lowest
+ * Sets the protocol version. The driver will automatically downgrade to the lowest
  * supported protocol version.
  *
- * <b>Default:</b> CASS_PROTOCOL_VERSION_V4
+ * <b>Default:</b> CASS_PROTOCOL_VERSION_V4 or CASS_PROTOCOL_VERSION_DSEV1 when
+ * using the DSE driver with DataStax Enterprise.
  *
  * @public @memberof CassCluster
  *
@@ -1568,7 +1573,8 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
 
 /**
  * Use the newest beta protocol version. This currently enables the use of
- * protocol version v5 (CASS_PROTOCOL_VERSION_V5).
+ * protocol version v5 (CASS_PROTOCOL_VERSION_V5) or DSEv2 (CASS_PROTOCOL_VERSION_DSEV2)
+ * when using the DSE driver with DataStax Enterprise.
  *
  * <b>Default:</b> cass_false
  *

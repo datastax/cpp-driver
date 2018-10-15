@@ -51,7 +51,7 @@ public:
    * @param callback A callback that is called when the manager is connected or
    * if an error occurred.
    */
-  ConnectionPoolManagerInitializer(int protocol_version,
+  ConnectionPoolManagerInitializer(ProtocolVersion protocol_version,
                                    const Callback& callback);
 
   /**
@@ -148,7 +148,7 @@ private:
   ConnectionPoolConnector::Vec pending_pools_;
   ConnectionPoolConnector::Vec failures_;
 
-  int protocol_version_;
+  ProtocolVersion protocol_version_;
   String keyspace_;
   ConnectionPoolManagerListener* listener_;
   Metrics* metrics_;

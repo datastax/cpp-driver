@@ -92,7 +92,7 @@ ControlConnectionSettings::ControlConnectionSettings(const Config& config)
   , refresh_node_info_on_up(false) { }
 
 ControlConnector::ControlConnector(const Address& address,
-                                   int protocol_version,
+                                   ProtocolVersion protocol_version,
                                    const Callback& callback)
   : connector_(Memory::allocate<Connector>(address,
                                            protocol_version,

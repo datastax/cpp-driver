@@ -35,10 +35,10 @@ public:
                size_t value_count)
     : Statement(query, query_length, value_count) { }
 
-  virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
+  virtual int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
-  int32_t encode_values_with_names(int version, RequestCallback* callback, BufferVec* bufs) const;
+  int32_t encode_values_with_names(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
   virtual size_t get_indices(StringRef name, IndexVec* indices);
 

@@ -211,7 +211,7 @@ public:
   }
 
   void initialize(const Host::Ptr& connected_host,
-                  int protocol_version,
+                  ProtocolVersion protocol_version,
                   const HostMap& hosts,
                   const TokenMap::Ptr& token_map) {
     inc_ref();
@@ -376,7 +376,7 @@ void Session::join() {
 }
 
 void Session::on_connect(const Host::Ptr& connected_host,
-                         int protocol_version,
+                         ProtocolVersion protocol_version,
                          const HostMap& hosts,
                          const TokenMap::Ptr& token_map) {
   int rc = 0;

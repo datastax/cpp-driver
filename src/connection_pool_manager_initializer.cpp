@@ -20,7 +20,7 @@
 
 namespace cass {
 
-ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(int protocol_version,
+ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(ProtocolVersion protocol_version,
                                                                    const Callback& callback)
   : callback_(callback)
   , is_canceled_(false)

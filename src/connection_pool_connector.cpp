@@ -23,7 +23,7 @@
 namespace cass {
 
 ConnectionPoolConnector::ConnectionPoolConnector(const Address& address,
-                                                 int protocol_version,
+                                                 ProtocolVersion protocol_version,
                                                  const Callback& callback)
   : loop_(NULL)
   , callback_(callback)

@@ -192,7 +192,7 @@ public:
     return length;
   }
 
-  virtual int encode(int version, RequestCallback* callback, BufferVec* bufs) const = 0;
+  virtual int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const = 0;
 
 private:
   uint8_t opcode_;

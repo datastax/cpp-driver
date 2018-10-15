@@ -165,7 +165,7 @@ ConnectionSettings::ConnectionSettings(const Config& config)
   , no_compact(config.no_compact()) { }
 
 Connector::Connector(const Address& address,
-                     int protocol_version,
+                     ProtocolVersion protocol_version,
                      const Callback& callback)
   : callback_(callback)
   , loop_(NULL)
