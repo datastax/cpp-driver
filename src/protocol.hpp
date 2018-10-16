@@ -37,7 +37,7 @@ public:
    * Constructs a protocol version from a value. Use `is_valid()` to check if
    * the value is valid.
    *
-   * @see `is_valid()`
+   * @see is_valid()
    *
    * @param value The value to use for the protocol version.
    */
@@ -74,7 +74,10 @@ public:
   int value() const;
 
   /**
-   * Check to see if the protocol version's value is valid.
+   * Check to see if the protocol version's value is valid. Beta versions
+   * are valid but will return false. Use `is_beta()` for beta versions.
+   *
+   * @see is_beta()
    *
    * @return true if valid, otherwise false.
    */

@@ -124,5 +124,5 @@ endif()
 # Unit test executable
 #------------------------------
 if(CASS_BUILD_UNIT_TESTS)
-  GtestUnitTests("cassandra" "" "")
+  GtestUnitTests("cassandra" "" "" "${CASS_EXCLUDED_UNIT_TEST_FILES}")
 endif()

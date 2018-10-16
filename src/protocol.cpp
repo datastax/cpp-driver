@@ -18,6 +18,9 @@
 
 #include "logger.hpp"
 
+#define DSE_PROTOCOL_VERSION_BIT  0x40
+#define DSE_PROTOCOL_VERSION_MASK 0x3F
+
 namespace cass {
 
 ProtocolVersion::ProtocolVersion()
@@ -66,7 +69,11 @@ bool ProtocolVersion::is_beta() const {
 String ProtocolVersion::to_string() const {
   if (value_ > 0) {
     OStringStream ss;
-    ss << "v" << value_;
+    if (value_ & DSE_PROTOCOL_VERSION_BIT) {
+      ss << "DSEv" << (value_ & DSE_PROTOCOL_VERSION_MASK);
+   } else {
+      ss << "v" << value_;
+    }
     return ss.str();
   } else {
     return "<invalid>";
