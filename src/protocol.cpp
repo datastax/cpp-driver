@@ -64,7 +64,7 @@ bool ProtocolVersion::is_beta() const {
 }
 
 String ProtocolVersion::to_string() const {
-  if (is_valid()) {
+  if (value_ > 0) {
     OStringStream ss;
     ss << "v" << value_;
     return ss.str();
