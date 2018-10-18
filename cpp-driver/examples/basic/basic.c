@@ -201,8 +201,8 @@ int main(int argc, char* argv[]) {
   cass_future_wait(close_future);
   cass_future_free(close_future);
 
-  cass_cluster_free(cluster);
   cass_session_free(session);
+  cass_cluster_free(cluster);
 
   return 0;
 }
