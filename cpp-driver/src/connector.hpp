@@ -95,7 +95,7 @@ public:
    * if an error occurred.
    */
   Connector(const Address& address,
-            int protocol_version,
+            ProtocolVersion protocol_version,
             const Callback& callback);
 
   /**
@@ -228,7 +228,7 @@ private:
   ConnectionError error_code_;
   String error_message_;
 
-  int protocol_version_;
+  ProtocolVersion protocol_version_;
   String keyspace_;
   int event_types_;
   ConnectionListener* listener_;

@@ -242,7 +242,7 @@ BOOST_FIXTURE_TEST_SUITE(set_keyspace, SetKeyspaceTests)
  */
 BOOST_AUTO_TEST_CASE(query_not_supported_by_older_protocol) {
   BOOST_CHECK_EQUAL(cass_cluster_set_use_beta_protocol_version(cluster, cass_false), CASS_OK);
-  BOOST_CHECK_EQUAL(cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_DSEV1), CASS_OK);
+  BOOST_CHECK_EQUAL(cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4), CASS_OK);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
@@ -304,7 +304,7 @@ BOOST_AUTO_TEST_CASE(query_with_same_session_keyspace) {
  */
 BOOST_AUTO_TEST_CASE(prepared_not_supported_by_older_protocol) {
   BOOST_CHECK_EQUAL(cass_cluster_set_use_beta_protocol_version(cluster, cass_false), CASS_OK);
-  BOOST_CHECK_EQUAL(cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_DSEV1), CASS_OK);
+  BOOST_CHECK_EQUAL(cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4), CASS_OK);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
@@ -460,7 +460,7 @@ BOOST_AUTO_TEST_CASE(batch_with_keyspace_from_prepared) {
  */
 BOOST_AUTO_TEST_CASE(batch_not_supported_by_older_protocol) {
   BOOST_CHECK_EQUAL(cass_cluster_set_use_beta_protocol_version(cluster, cass_false), CASS_OK);
-  BOOST_CHECK_EQUAL(cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_DSEV1), CASS_OK);
+  BOOST_CHECK_EQUAL(cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4), CASS_OK);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 

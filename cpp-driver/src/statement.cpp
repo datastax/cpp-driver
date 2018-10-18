@@ -314,7 +314,7 @@ String Statement::query() const {
 // <string_or_id> is a [long string] for <string> and a [short bytes] for <id>
 // <n> is a [short]
 // <value> is a [bytes]
-int32_t Statement::encode_batch(int version, RequestCallback* callback, BufferVec* bufs) const {
+int32_t Statement::encode_batch(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   int32_t length = 0;
 
   { // <kind> [byte]
@@ -343,8 +343,8 @@ int32_t Statement::encode_batch(int version, RequestCallback* callback, BufferVe
   return length;
 }
 
-bool Statement::with_keyspace(int version) const {
-  return supports_set_keyspace(version) &&
+bool Statement::with_keyspace(ProtocolVersion version) const {
+  return version.supports_set_keyspace() &&
       // Execute requests (bound statements) use the keyspace
       // from the time of prepare.
       opcode() != CQL_OPCODE_EXECUTE && !keyspace().empty();
@@ -371,7 +371,7 @@ int32_t Statement::encode_query_or_id(BufferVec* bufs) const {
   return query_or_id_.size();
 }
 
-int32_t Statement::encode_begin(int version, uint16_t element_count,
+int32_t Statement::encode_begin(ProtocolVersion version, uint16_t element_count,
                                 RequestCallback* callback, BufferVec* bufs) const {
   int32_t length = 0;
   size_t query_params_buf_size = 0;
@@ -436,7 +436,7 @@ int32_t Statement::encode_begin(int version, uint16_t element_count,
 // Format: [<value_1>...<value_n>]
 // where:
 // <value> is a [bytes]
-int32_t Statement::encode_values(int version, RequestCallback* callback, BufferVec* bufs) const {
+int32_t Statement::encode_values(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   int32_t length = 0;
   for (size_t i = 0; i < elements().size(); ++i) {
     const Element& element = elements()[i];
@@ -464,7 +464,7 @@ int32_t Statement::encode_values(int version, RequestCallback* callback, BufferV
 // <serial_consistency> is a [short]
 // <timestamp> is a [long]
 // <keyspace> is a [string]
-int32_t Statement::encode_end(int version, RequestCallback* callback, BufferVec* bufs) const {
+int32_t Statement::encode_end(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   int32_t length = 0;
   size_t paging_buf_size = 0;
 

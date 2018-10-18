@@ -126,7 +126,7 @@ namespace cass {
 // <flags> is a [byte] (or [int] for protocol v5)
 // <serial_consistency> is a [short]
 // <timestamp> is a [long]
-int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
+int BatchRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   int length = 0;
   uint32_t flags = 0;
 
@@ -179,7 +179,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
       flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
     }
 
-    if (supports_set_keyspace(version) && !keyspace().empty()) {
+    if (version.supports_set_keyspace() && !keyspace().empty()) {
       buf_size += sizeof(uint16_t) + keyspace().size();
       flags |= CASS_QUERY_FLAG_WITH_KEYSPACE;
     }
@@ -201,7 +201,7 @@ int BatchRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
       pos = buf.encode_int64(pos, callback->timestamp());
     }
 
-    if (supports_set_keyspace(version) && !keyspace().empty()) {
+    if (version.supports_set_keyspace() && !keyspace().empty()) {
       pos = buf.encode_string(pos, keyspace().data(), keyspace().size());
     }
 

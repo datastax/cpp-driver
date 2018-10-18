@@ -21,13 +21,13 @@
 
 namespace cass {
 
-int PrepareRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
+int PrepareRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   // <query> [long string]
   size_t length = sizeof(int32_t) +  query_.size();
   bufs->push_back(Buffer(length));
   bufs->back().encode_long_string(0, query_.data(), query().size());
 
-  if (supports_set_keyspace(version)) {
+  if (version.supports_set_keyspace()) {
     // <flags> [int] [<keyspace> [string]]
     int32_t flags = 0;
     size_t flags_keyspace_buf_size = sizeof(int32_t); // <flags> [int]

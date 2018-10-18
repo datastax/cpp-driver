@@ -35,7 +35,7 @@ private:
 };
 
 RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& connected_host,
-                                                         int protocol_version,
+                                                         ProtocolVersion protocol_version,
                                                          const HostMap& hosts,
                                                          const TokenMap::Ptr& token_map,
                                                          const Callback& callback)

@@ -66,8 +66,6 @@ inline size_t next_pow_2(size_t num) {
 
 String opcode_to_string(int opcode);
 
-String protocol_version_to_string(int version);
-
 void explode(const String& str, Vector<String>& vec, const char delimiter = ',');
 
 String& trim(String& str);

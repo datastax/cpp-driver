@@ -11,6 +11,7 @@ skip_commits:
     - '**/.clang-format'
     - '**/.documenter_local_last_run'
     - '**/.gitignore'
+    - '**/.travis.sh'
     - '**/.travis.yml'
     - '**/build.yaml'
     - '**/docs.yaml'
@@ -38,6 +39,7 @@ environment:
   ARTIFACTORY_PASSWORD:
     secure: h28bN22Py3CZPqrWoZWEjIFnpes+kslusCKP1mRYdUqBEf+OO1kFEQTZ9DGD7tuCSIIRDI3Mf9LX8zgUdmdlZA==
   APPVEYOR_BUILD_WORKER_CLOUD: gce
+  APPVEYOR_IGNORE_COMMIT_FILTERING_ON_TAG: true
   DRIVER_TYPE: CASS
   BOOST_VERSION: 1.68.0
   LIBSSH2_VERSION: 1.8.0

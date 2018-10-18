@@ -52,7 +52,7 @@ public:
    * if an error occurred.
    */
   ConnectionPoolConnector(const Address& address,
-                          int protocol_version,
+                          ProtocolVersion protocol_version,
                           const Callback& callback);
 
   /**
@@ -132,7 +132,7 @@ private:
   Connector::Ptr critical_error_connector_;
 
   const Address address_;
-  const int protocol_version_;
+  const ProtocolVersion protocol_version_;
   ConnectionPoolSettings settings_;
   String keyspace_;
   ConnectionPoolListener* listener_;

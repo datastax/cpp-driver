@@ -61,7 +61,7 @@ ConnectionPool::ConnectionPool(const Connection::Vec& connections,
                                const String& keyspace,
                                uv_loop_t* loop,
                                const Address& address,
-                               int protocol_version,
+                               ProtocolVersion protocol_version,
                                const ConnectionPoolSettings& settings,
                                Metrics* metrics)
   : listener_(listener ? listener : &nop_connection_pool_listener__)

@@ -128,7 +128,7 @@ public:
                  const String& keyspace,
                  uv_loop_t* loop,
                  const Address& address,
-                 int protocol_version,
+                 ProtocolVersion protocol_version,
                  const ConnectionPoolSettings& settings,
                  Metrics* metrics);
 
@@ -160,7 +160,7 @@ public:
 public:
   const uv_loop_t* loop() const { return loop_; }
   const Address& address() const { return  address_; }
-  int protocol_version() const { return protocol_version_; }
+  ProtocolVersion protocol_version() const { return protocol_version_; }
   const String& keyspace() const { return keyspace_; }
 
   void set_keyspace(const String& keyspace);
@@ -222,7 +222,7 @@ private:
   String keyspace_;
   uv_loop_t* const loop_;
   const Address address_;
-  const int protocol_version_;
+  const ProtocolVersion protocol_version_;
   const ConnectionPoolSettings settings_;
   Metrics* const metrics_;
 

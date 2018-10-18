@@ -58,7 +58,7 @@ public:
    * point is established, if an error occurred, or all contact points failed.
    */
   ClusterConnector(const ContactPointList& contact_points,
-                   int protocol_version,
+                   ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**
@@ -130,7 +130,7 @@ public:
   Cluster::Ptr release_cluster();
 
 public:
-  int protocol_version() const { return protocol_version_; }
+  ProtocolVersion protocol_version() const { return protocol_version_; }
 
   bool is_ok() const { return error_code_ == CLUSTER_OK; }
   bool is_canceled() const { return error_code_ == CLUSTER_CANCELED; }
@@ -161,7 +161,7 @@ private:
   ContactPointList contact_points_;
   AddressVec contact_points_resolved_;
   AddressVec::const_iterator contact_points_resolved_it_;
-  int protocol_version_;
+  ProtocolVersion protocol_version_;
   ClusterListener* listener_;
   EventLoop* event_loop_;
   Random* random_;

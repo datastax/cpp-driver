@@ -53,6 +53,7 @@ Integration::Integration()
   , is_ccm_start_node_individually_(false)
   , is_session_requested_(true)
   , is_test_chaotic_(false)
+  , is_beta_protocol_(true)
   , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
   , create_keyspace_query_("")
   , start_time_(0ull) {
@@ -343,7 +344,7 @@ test::driver::Cluster Integration::default_cluster(bool is_with_default_contact_
   }
   if (server_version_ >= "3.10" &&
       protocol_version_ == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
-    cluster.with_beta_protocol(true);
+    cluster.with_beta_protocol(is_beta_protocol_);
   } else {
     cluster.with_protocol_version(protocol_version_);
   }

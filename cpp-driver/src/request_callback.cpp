@@ -56,7 +56,7 @@ bool RequestCallback::skip_metadata() const {
 }
 
 int32_t RequestCallback::encode(BufferVec* bufs) {
-  const int version = protocol_version_;
+  const ProtocolVersion version = protocol_version_;
   if (version < CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
     return Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
   }
@@ -68,7 +68,7 @@ int32_t RequestCallback::encode(BufferVec* bufs) {
   int flags = 0;
   int32_t length = 0;
 
-  if (version == CASS_NEWEST_BETA_PROTOCOL_VERSION) {
+  if (version.is_beta()) {
     flags |= CASS_FLAG_BETA;
   }
 
@@ -85,7 +85,7 @@ int32_t RequestCallback::encode(BufferVec* bufs) {
 
   Buffer buf(header_size);
   size_t pos = 0;
-  pos = buf.encode_byte(pos, version);
+  pos = buf.encode_byte(pos, version.value());
   pos = buf.encode_byte(pos, flags);
 
   pos = buf.encode_int16(pos, stream_);

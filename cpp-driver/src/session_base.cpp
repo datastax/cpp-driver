@@ -133,7 +133,7 @@ void SessionBase::notify_closed() {
 }
 
 void SessionBase::on_connect(const Host::Ptr& connected_host,
-                             int protocol_version,
+                             ProtocolVersion protocol_version,
                              const HostMap& hosts,
                              const TokenMap::Ptr& token_map) {
   notify_connected();
@@ -165,7 +165,7 @@ void SessionBase::on_initialize(ClusterConnector* connector) {
     cluster_ = connector->release_cluster();
     on_connect(cluster_->connected_host(),
                cluster_->protocol_version(),
-               cluster_->hosts(),
+               cluster_->available_hosts(),
                cluster_->token_map());
   } else {
     assert(!connector->is_canceled() && "Cluster connection process canceled");

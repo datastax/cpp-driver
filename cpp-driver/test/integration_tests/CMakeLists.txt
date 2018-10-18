@@ -29,6 +29,9 @@ source_group("Header Files" FILES ${INTEGRATION_TESTS_INC_FILES})
 
 # Build integreation tests
 add_definitions(-DBOOST_TEST_IGNORE_NON_ZERO_CHILD_CODE) # Ignore system calls that might have a non-zero exit code
+if(LIBSSH2_FOUND)
+  add_definitions(-DCASS_USE_LIBSSH2)
+endif()
 add_executable(${PROJECT_INTEGRATION_TESTS_NAME}
                ${CCM_BRIDGE_HEADER_FILES}
                ${CCM_BRIDGE_SOURCE_FILES}
@@ -48,6 +51,9 @@ target_link_libraries(${PROJECT_INTEGRATION_TESTS_NAME}
         ${Boost_SYSTEM_LIBRARY_DEBUG}
         ${Boost_THREAD_LIBRARY_DEBUG}
         ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY_DEBUG})
+if(UNIX)
+  target_link_libraries(${PROJECT_INTEGRATION_TESTS_NAME} pthread) # test_basics requires pthread
+endif()
 set_property(
   TARGET ${PROJECT_INTEGRATION_TESTS_NAME}
   APPEND PROPERTY COMPILE_FLAGS ${CASS_TEST_CXX_FLAGS})

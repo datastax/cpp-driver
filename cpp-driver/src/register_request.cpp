@@ -20,7 +20,7 @@
 
 namespace cass {
 
-int RegisterRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
+int RegisterRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   // <events> [string list]
   size_t length = sizeof(uint16_t);
   Vector<String> events;

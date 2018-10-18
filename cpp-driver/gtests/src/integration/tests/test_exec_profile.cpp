@@ -30,6 +30,7 @@ public:
     , skip_base_execution_profile_(false) {
     replication_factor_ = 2;
     number_dc1_nodes_ = 2;
+    is_beta_protocol_ = false; // Issue with beta protocol v5 and functions on Cassandra v3.10.0+
   }
 
   void SetUp() {

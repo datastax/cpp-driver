@@ -41,7 +41,7 @@ public:
   PrepareHostHandler(const Host::Ptr& host,
                      const PreparedMetadata::Entry::Vec& prepared_metadata_entries,
                      const Callback& callback,
-                     int protocol_version,
+                     ProtocolVersion protocol_version,
                      unsigned max_requests_per_flush);
 
   const Host::Ptr host() const { return host_; }
@@ -109,7 +109,7 @@ private:
 
 private:
   const Host::Ptr host_;
-  const int protocol_version_;
+  const ProtocolVersion protocol_version_;
   Callback callback_;
   Connection* connection_;
   String current_keyspace_;

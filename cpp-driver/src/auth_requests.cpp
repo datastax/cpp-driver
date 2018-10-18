@@ -18,7 +18,7 @@
 
 namespace cass {
 
-int AuthResponseRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
+int AuthResponseRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   // <token> [bytes]
   size_t length = sizeof(int32_t) + token_.size();
 
