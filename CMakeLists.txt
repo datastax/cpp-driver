@@ -164,6 +164,12 @@ set(DSE_ALL_SOURCE_FILES
   ${DSE_SRC_FILES} ${DSE_API_HEADER_FILES}
   ${DSE_INC_FILES} ${CASS_ALL_SOURCE_FILES})
 
+# Use the DSE driver's implementation of protocol handling and associated unit
+# tests.
+list(REMOVE_ITEM DSE_ALL_SOURCE_FILES
+  "${PROJECT_SOURCE_DIR}/cpp-driver/src/protocol.cpp")
+set(CASS_EXCLUDED_UNIT_TEST_FILES "test_protocol_version.cpp")
+
 # Assign the include directories
 include_directories(${DSE_INCLUDES})
 include_directories(${CASS_SRC_DIR})
