@@ -136,7 +136,6 @@ public:
 
   RequestCallback(const RequestWrapper& wrapper)
     : wrapper_(wrapper)
-    , protocol_version_(0)
     , stream_(-1)
     , state_(REQUEST_STATE_NEW)
     , retry_consistency_(CASS_CONSISTENCY_UNKNOWN) { }
@@ -214,7 +213,7 @@ private:
 
 private:
   const RequestWrapper wrapper_;
-  int protocol_version_;
+  ProtocolVersion protocol_version_;
   int stream_;
   State state_;
   CassConsistency retry_consistency_;

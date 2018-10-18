@@ -23,7 +23,7 @@
 
 namespace cass {
 
-int QueryRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
+int QueryRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   int32_t result;
   int32_t length = encode_query_or_id(bufs);
   if (has_names_for_values()) {
@@ -43,7 +43,7 @@ int QueryRequest::encode(int version, RequestCallback* callback, BufferVec* bufs
 // where:
 // <name> is a [string]
 // <value> is a [bytes]
-int32_t QueryRequest::encode_values_with_names(int version, RequestCallback* callback, BufferVec* bufs) const {
+int32_t QueryRequest::encode_values_with_names(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   int32_t size = 0;
   for (size_t i = 0; i < value_names_->size(); ++i) {
     const Buffer& name_buf = (*value_names_)[i].buf;

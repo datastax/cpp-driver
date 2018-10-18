@@ -63,7 +63,7 @@ public:
    * or if an error occurred.
    */
   RequestProcessorInitializer(const Host::Ptr& connected_host,
-                              int protocol_version,
+                              ProtocolVersion protocol_version,
                               const HostMap& hosts,
                               const TokenMap::Ptr& token_map,
                               const Callback& callback);
@@ -165,7 +165,7 @@ private:
   Random* random_;
 
   const Host::Ptr connected_host_;
-  const int protocol_version_;
+  const ProtocolVersion protocol_version_;
   HostMap hosts_;
   const TokenMap::Ptr token_map_;
 

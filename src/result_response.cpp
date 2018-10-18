@@ -246,11 +246,11 @@ bool ResultResponse::decode_metadata(Decoder& decoder,
   CHECK_RESULT(decoder.decode_int32(column_count));
 
   if (flags & CASS_RESULT_FLAG_METADATA_CHANGED) {
-    if (supports_result_metadata_id(decoder.protocol_version())) {
+    if (decoder.protocol_version().supports_result_metadata_id()) {
       CHECK_RESULT(decoder.decode_string(&new_metadata_id_))
     } else {
-      LOG_ERROR("Metadata changed flag set with invalid protocol version %d",
-                decoder.protocol_version());
+      LOG_ERROR("Metadata changed flag set with invalid protocol version %s",
+                decoder.protocol_version().to_string().c_str());
       return false;
     }
   }
@@ -332,7 +332,7 @@ bool ResultResponse::decode_set_keyspace(Decoder& decoder) {
 
 bool ResultResponse::decode_prepared(Decoder& decoder) {
   CHECK_RESULT(decoder.decode_string(&prepared_id_));
-  if (supports_result_metadata_id(decoder.protocol_version())) {
+  if (decoder.protocol_version().supports_result_metadata_id()) {
     CHECK_RESULT(decoder.decode_string(&result_metadata_id_));
   }
   CHECK_RESULT(decode_metadata(decoder, &metadata_,

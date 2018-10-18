@@ -133,7 +133,7 @@ void SessionBase::notify_closed() {
 }
 
 void SessionBase::on_connect(const Host::Ptr& connected_host,
-                             int protocol_version,
+                             ProtocolVersion protocol_version,
                              const HostMap& hosts,
                              const TokenMap::Ptr& token_map) {
   notify_connected();

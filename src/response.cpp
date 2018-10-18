@@ -165,7 +165,7 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
     body_buffer_pos_ += needed;
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->data() + length_);
-    Decoder decoder(response_body_->data(), length_, version_);
+    Decoder decoder(response_body_->data(), length_, ProtocolVersion(version_));
 
     if (flags_ & CASS_FLAG_WARNING) {
       if (!response_body_->decode_warnings(decoder)) return -1;

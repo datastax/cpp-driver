@@ -41,7 +41,7 @@ public:
   }
 
 private:
-  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
+  int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   String query_;

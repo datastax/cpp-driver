@@ -38,7 +38,7 @@ public:
   bool no_compact_enabled() const { return no_compact_enabled_; }
 
 private:
-  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
+  int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   typedef Map<String, String> OptionsMap;

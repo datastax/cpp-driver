@@ -44,7 +44,7 @@ public:
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  DelayedConnector(const Address& address, int protocol_version,
+  DelayedConnector(const Address& address, ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**

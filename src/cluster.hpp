@@ -264,7 +264,7 @@ public:
   HostMap available_hosts() const;
 
 public:
-  int protocol_version() const { return connection_->protocol_version(); }
+  ProtocolVersion protocol_version() const { return connection_->protocol_version(); }
   const Host::Ptr& connected_host() const { return connected_host_; }
   const TokenMap::Ptr& token_map() const { return token_map_; }
 

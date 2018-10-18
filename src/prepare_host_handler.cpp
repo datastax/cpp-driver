@@ -36,7 +36,7 @@ struct CompareEntryKeyspace {
 PrepareHostHandler::PrepareHostHandler(const Host::Ptr& host,
                                        const PreparedMetadata::Entry::Vec& prepared_metadata_entries,
                                        const Callback& callback,
-                                       int protocol_version,
+                                       ProtocolVersion protocol_version,
                                        unsigned max_requests_per_flush)
   : host_(host)
   , protocol_version_(protocol_version)
@@ -136,7 +136,7 @@ void PrepareHostHandler::prepare_next() {
 }
 
 bool PrepareHostHandler::check_and_set_keyspace() {
-  if (supports_set_keyspace(protocol_version_)) {
+  if (protocol_version_.supports_set_keyspace()) {
     return true;
   }
 

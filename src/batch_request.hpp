@@ -50,7 +50,7 @@ public:
   virtual bool get_routing_key(String* routing_key) const;
 
 private:
-  int encode(int version, RequestCallback* callback, BufferVec* bufs) const;
+  int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   uint8_t type_;

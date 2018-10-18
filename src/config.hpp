@@ -21,6 +21,7 @@
 #include "cassandra.h"
 #include "constants.hpp"
 #include "execution_profile.hpp"
+#include "protocol.hpp"
 #include "ssl.hpp"
 #include "timestamp_generator.hpp"
 #include "speculative_execution.hpp"
@@ -36,7 +37,7 @@ class Config {
 public:
   Config()
       : port_(CASS_DEFAULT_PORT)
-      , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
+      , protocol_version_(ProtocolVersion::highest_supported())
       , use_beta_protocol_version_(CASS_DEFAULT_USE_BETA_PROTOCOL_VERSION)
       , thread_count_io_(CASS_DEFAULT_THREAD_COUNT_IO)
       , queue_size_io_(CASS_DEFAULT_QUEUE_SIZE_IO)
@@ -166,10 +167,10 @@ public:
     port_ = port;
   }
 
-  int protocol_version() const { return protocol_version_; }
+  ProtocolVersion protocol_version() const { return protocol_version_; }
 
-  void set_protocol_version(int protocol_version) {
-    protocol_version_ = protocol_version;
+  void set_protocol_version(ProtocolVersion version) {
+    protocol_version_ = version;
   }
 
   bool use_beta_protocol_version() const {
@@ -368,7 +369,7 @@ private:
 
 private:
   int port_;
-  int protocol_version_;
+  ProtocolVersion protocol_version_;
   bool use_beta_protocol_version_;
   ContactPointList contact_points_;
   unsigned thread_count_io_;

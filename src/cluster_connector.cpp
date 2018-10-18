@@ -16,6 +16,7 @@
 
 #include "cluster_connector.hpp"
 #include "dc_aware_policy.hpp"
+#include "protocol.hpp"
 #include "random.hpp"
 #include "round_robin_policy.hpp"
 
@@ -54,7 +55,7 @@ private:
 };
 
 ClusterConnector::ClusterConnector(const ContactPointList& contact_points,
-                                   int protocol_version,
+                                   ProtocolVersion protocol_version,
                                    const Callback& callback)
   : contact_points_(contact_points)
   , protocol_version_(protocol_version)
@@ -257,21 +258,10 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
                                              settings_));
     finish();
   } else if (connector->is_invalid_protocol()) {
-    if (protocol_version_ <= CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
-      LOG_ERROR("Host %s does not support any valid protocol version (lowest supported version is %s)",
-                contact_points_resolved_it_->to_string().c_str(),
-                protocol_version_to_string(CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION).c_str());
+    if (!protocol_version_.attempt_lower_supported(contact_points_resolved_it_->to_string())) {
       on_error(CLUSTER_ERROR_INVALID_PROTOCOL, "Unable to find supported protocol version");
       return;
     }
-
-    int previous_version = protocol_version_--;
-    LOG_WARN("Host %s does not support protocol version %s. "
-             "Trying protocol version %s...",
-             contact_points_resolved_it_->to_string().c_str(),
-             protocol_version_to_string(previous_version).c_str(),
-             protocol_version_to_string(protocol_version_).c_str());
-
     internal_connect();
   } else if(connector->is_ssl_error()) {
     on_error(CLUSTER_ERROR_SSL_ERROR, connector->error_message());

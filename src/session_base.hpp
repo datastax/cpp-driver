@@ -112,7 +112,7 @@ protected:
    * @param token_map The token map for the cluster.
    */
   virtual void on_connect(const Host::Ptr& connected_host,
-                          int protocol_version,
+                          ProtocolVersion protocol_version,
                           const HostMap& hosts,
                           const TokenMap::Ptr& token_map);
 

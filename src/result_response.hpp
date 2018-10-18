@@ -39,7 +39,6 @@ public:
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
       , kind_(CASS_RESULT_KIND_VOID)
-      , protocol_version_(-1)
       , has_more_pages_(false)
       , row_count_(0) {
     first_row_.set_result(this);
@@ -47,7 +46,7 @@ public:
 
   int32_t kind() const { return kind_; }
 
-  int protocol_version() const { return protocol_version_; }
+  ProtocolVersion protocol_version() const { return protocol_version_; }
 
   bool has_more_pages() const { return has_more_pages_; }
 
@@ -96,7 +95,7 @@ private:
 
 private:
   int32_t kind_;
-  int protocol_version_;
+  ProtocolVersion protocol_version_;
   bool has_more_pages_; // row data
   ResultMetadata::Ptr metadata_;
   ResultMetadata::Ptr result_metadata_;

@@ -39,7 +39,7 @@ static NopConnectionPoolManagerListener nop_connection_pool_manager_listener__;
 
 ConnectionPoolManager::ConnectionPoolManager(const ConnectionPool::Map& pools,
                                              uv_loop_t* loop,
-                                             int protocol_version,
+                                             ProtocolVersion protocol_version,
                                              const String& keyspace,
                                              ConnectionPoolManagerListener* listener,
                                              Metrics* metrics,

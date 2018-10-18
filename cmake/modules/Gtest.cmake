@@ -172,13 +172,14 @@ endmacro()
 # Configure unit tests to be built.
 #
 # Arguments:
-#   project_name   - Name of project that has Google Test unit tests.
-#   extra_files    - List of extra files to build into the test executable, if
-#                    any.
-#   extra_includes - List of extra includes to include into the text
-#                    executable, if any.
+#   project_name        - Name of project that has Google Test unit tests.
+#   extra_files         - List of extra files to build into the test executable, if
+#                         any.
+#   extra_includes      - List of extra includes to include into the text
+#                         executable, if any.
+#   excluded_test_files - List of test files to exclude from the build.
 #------------------------
-macro(GtestUnitTests project_name extra_files extra_includes)
+macro(GtestUnitTests project_name extra_files extra_includes excluded_test_files)
   set(UNIT_TESTS_NAME "${project_name}-unit-tests")
   set(UNIT_TESTS_DISPLAY_NAME "Unit Tests (${project_name})")
   set(UNIT_TESTS_SOURCE_DIR "${TESTS_SOURCE_DIR}/unit")
@@ -193,6 +194,11 @@ macro(GtestUnitTests project_name extra_files extra_includes)
   file(GLOB UNIT_TESTS_INCLUDE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.hpp )
   file(GLOB UNIT_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/*.cpp)
   file(GLOB UNIT_TESTS_TESTS_SOURCE_FILES ${UNIT_TESTS_SOURCE_DIR}/tests/*.cpp)
+  foreach(excluded_test_file ${excluded_test_files})
+    list(REMOVE_ITEM
+      UNIT_TESTS_TESTS_SOURCE_FILES
+      "${UNIT_TESTS_SOURCE_DIR}/tests/${excluded_test_file}")
+  endforeach()
   source_group("Header Files" FILES ${UNIT_TESTS_INCLUDE_FILES})
   source_group("Source Files" FILES ${UNIT_TESTS_SOURCE_FILES})
   source_group("Source Files\\tests" FILES ${UNIT_TESTS_TESTS_SOURCE_FILES})
