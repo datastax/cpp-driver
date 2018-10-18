@@ -23,7 +23,7 @@
 class TestDecoder : public cass::Decoder {
 public:
   TestDecoder(const char* input, size_t length,
-          int protocol_version = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
+              cass::ProtocolVersion protocol_version = cass::ProtocolVersion::highest_supported())
       : cass::Decoder(input, length, protocol_version) { }
 
   inline const char* buffer() const { return cass::Decoder::buffer(); }

@@ -15,6 +15,8 @@
 */
 
 #include "cluster_connector.hpp"
+#include "dc_aware_policy.hpp"
+#include "protocol.hpp"
 #include "random.hpp"
 #include "round_robin_policy.hpp"
 
@@ -53,7 +55,7 @@ private:
 };
 
 ClusterConnector::ClusterConnector(const ContactPointList& contact_points,
-                                   int protocol_version,
+                                   ProtocolVersion protocol_version,
                                    const Callback& callback)
   : contact_points_(contact_points)
   , protocol_version_(protocol_version)
@@ -230,20 +232,18 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
       policy->register_handles(event_loop_->loop());
     }
 
-    // Gather the available hosts for the load balancing policies
-    HostMap available_hosts;
-    for (HostMap::const_iterator it = hosts.begin(), end = hosts.end();
-         it != end; ++it) {
-      if (!is_host_ignored(policies, it->second)) {
-        available_hosts[it->first] = it->second;
+    ScopedPtr<QueryPlan> query_plan(default_policy->new_query_plan("", NULL, NULL));
+    if (!query_plan->compute_next()) { // No hosts in the query plan
+      const char* message;
+      if (dynamic_cast<DCAwarePolicy::DCAwareQueryPlan*>(query_plan.get()) != NULL) { // Check if DC-aware
+        message = "No hosts available for the control connection using the " \
+                  "DC-aware load balancing policy. " \
+                  "Check to see if the configured local datacenter is valid";
+      } else {
+        message = "No hosts available for the control connection using the " \
+                  "configured load balancing policy";
       }
-    }
-
-    if (available_hosts.empty()) {
-      //TODO(fero): Check for DC aware policy to give more informative message (e.g. invalid DC)
-      on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE,
-               "No hosts available for connection using the current load " \
-               "balancing policy(s)");
+      on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE, message);
       return;
     }
 
@@ -251,40 +251,17 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
                                              listener_,
                                              event_loop_,
                                              connected_host,
-                                             available_hosts,
+                                             hosts,
                                              connector->schema(),
                                              default_policy,
                                              policies,
                                              settings_));
     finish();
   } else if (connector->is_invalid_protocol()) {
-    if (protocol_version_ <= CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
-      LOG_ERROR("Host %s does not support any valid protocol version (lowest supported version is %s)",
-                contact_points_resolved_it_->to_string().c_str(),
-                protocol_version_to_string(CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION).c_str());
+    if (!protocol_version_.attempt_lower_supported(contact_points_resolved_it_->to_string())) {
       on_error(CLUSTER_ERROR_INVALID_PROTOCOL, "Unable to find supported protocol version");
       return;
     }
-
-    int previous_version = protocol_version_;
-    bool is_dse_version = protocol_version_ & DSE_PROTOCOL_VERSION_BIT;
-    if (is_dse_version) {
-      if (protocol_version_ <= CASS_PROTOCOL_VERSION_DSEV1) {
-        // Start trying Cassandra protocol versions
-        protocol_version_ = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
-      } else {
-        protocol_version_--;
-      }
-    } else {
-      protocol_version_--;
-    }
-
-    LOG_WARN("Host %s does not support protocol version %s. "
-             "Trying protocol version %s...",
-             contact_points_resolved_it_->to_string().c_str(),
-             protocol_version_to_string(previous_version).c_str(),
-             protocol_version_to_string(protocol_version_).c_str());
-
     internal_connect();
   } else if(connector->is_ssl_error()) {
     on_error(CLUSTER_ERROR_SSL_ERROR, connector->error_message());

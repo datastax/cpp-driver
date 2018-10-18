@@ -336,8 +336,17 @@ function(from_hex HEX DEC)
 endfunction()
 
 if(OPENSSL_INCLUDE_DIR AND EXISTS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h")
-  file(STRINGS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h" openssl_version_str
-       REGEX "^#[\t ]*define[\t ]+OPENSSL_VERSION_NUMBER[\t ]+0x([0-9a-fA-F])+.*")
+  file(STRINGS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h" libressl_version_str
+       REGEX "^#[\t ]*define[\t ]+LIBRESSL_VERSION_NUMBER[\t ]+0x([0-9a-fA-F])+.*")
+  if(libressl_version_str)
+    set(openssl_version_str ${libressl_version_str})
+    set(openssl_version_define "LIBRESSL_VERSION_NUMBER")
+    set(LIBRESSL_FOUND TRUE)
+  else()
+    file(STRINGS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h" openssl_version_str
+         REGEX "^#[\t ]*define[\t ]+OPENSSL_VERSION_NUMBER[\t ]+0x([0-9a-fA-F])+.*")
+    set(openssl_version_define "OPENSSL_VERSION_NUMBER")
+  endif()
 
   if(openssl_version_str)
     # The version number is encoded as 0xMNNFFPPS: major minor fix patch status
@@ -347,7 +356,7 @@ if(OPENSSL_INCLUDE_DIR AND EXISTS "${OPENSSL_INCLUDE_DIR}/openssl/opensslv.h")
     # indicates the bug fix state, which 00 -> nothing, 01 -> a, 02 -> b and so
     # on.
 
-    string(REGEX REPLACE "^.*OPENSSL_VERSION_NUMBER[\t ]+0x([0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F]).*$"
+    string(REGEX REPLACE "^.*${openssl_version_define}[\t ]+0x([0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F]).*$"
            "\\1;\\2;\\3;\\4;\\5" OPENSSL_VERSION_LIST "${openssl_version_str}")
     list(GET OPENSSL_VERSION_LIST 0 OPENSSL_VERSION_MAJOR)
     list(GET OPENSSL_VERSION_LIST 1 OPENSSL_VERSION_MINOR)
@@ -382,7 +391,11 @@ if (OPENSSL_VERSION)
         OPENSSL_INCLUDE_DIR
         )
     if(OPENSSL_FOUND)
-      message(STATUS "Found OpenSSL: ${OPENSSL_LIBRARIES} (found version ${OPENSSL_VERSION})")
+      set(openssl_name "OpenSSL")
+      if(LIBRESSL_FOUND)
+        set(openssl_name "LibreSSL")
+      endif()
+      message(STATUS "Found ${openssl_name}: ${OPENSSL_LIBRARIES} (found version ${OPENSSL_VERSION})")
     else()
       message(FATAL_ERROR "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR")
     endif()

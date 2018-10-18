@@ -392,7 +392,7 @@ void RequestExecution::notify_result_metadata_changed(const Request* request,
   // Attempt to use the per-query keyspace first (v5+/DSEv2+ only) then
   // the keyspace in the result metadata.
   String keyspace;
-  if (supports_set_keyspace(result_response->protocol_version()) &&
+  if (result_response->protocol_version().supports_set_keyspace() &&
       !request->keyspace().empty()) {
     keyspace = request->keyspace();
   } else {

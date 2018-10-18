@@ -26,9 +26,9 @@ ExecuteRequest::ExecuteRequest(const Prepared* prepared)
   : Statement(prepared)
   , prepared_(prepared) { }
 
-int ExecuteRequest::encode(int version, RequestCallback* callback, BufferVec* bufs) const {
+int ExecuteRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   int32_t length = encode_query_or_id(bufs);
-  if (supports_result_metadata_id(version)) {
+  if (version.supports_result_metadata_id()) {
     if (callback->prepared_metadata_entry()) {
       const Buffer& result_metadata_id(callback->prepared_metadata_entry()->result_metadata_id());
       bufs->push_back(result_metadata_id);

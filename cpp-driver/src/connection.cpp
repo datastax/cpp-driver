@@ -105,7 +105,7 @@ void RecordingConnectionListener::process_events(const EventResponse::Vec& event
 }
 
 Connection::Connection(const Socket::Ptr& socket,
-                       int protocol_version,
+                       ProtocolVersion protocol_version,
                        unsigned int idle_timeout_secs,
                        unsigned int heartbeat_interval_secs)
   : socket_(socket)

@@ -23,8 +23,8 @@
 #include <algorithm>
 #include <iostream>
 
-#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.2")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.1")
+#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.3")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.3")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
@@ -87,14 +87,9 @@ bool Options::initialize(int argc, char* argv[]) {
       }
       // Integration test options
       if (key.compare("--keep-clusters") == 0) {
-        if (!value.empty()) {
-          is_keep_clusters_ = bool_value(value);
-        }
-        else {
-          std::cerr << "Missing Keep Cluster(s) Boolean: Using default " << is_keep_clusters_ << std::endl;
-        }
+        is_keep_clusters_ = true;
       }
-      if (key.compare("--log-tests") == 0) {
+      else if (key.compare("--log-tests") == 0) {
         if (!value.empty()) {
           is_log_tests_ = bool_value(value);
         } else {
@@ -306,10 +301,10 @@ void Options::print_help() {
     << "Password to use for DSE download authentication." << std::endl;
   std::cout << "  --git" << std::endl << "      "
     << "Indicate Cassandra/DSE server download should be obtained from" << std::endl
-    << "     ASF/GitHub." << std::endl;
+    << "      ASF/GitHub." << std::endl;
   std::cout << "  --git=[BRANCH_OR_TAG]" << std::endl << "      "
     << "Indicate Cassandra/DSE server branch/tag should be obtained from" << std::endl
-    <<"      ASF/GitHub." << std::endl;
+    << "      ASF/GitHub." << std::endl;
   std::cout << "  --install-dir=[INSTALL_DIR]" << std::endl << "      "
     << "Indicate Cassandra/DSE installation directory to use." << std::endl;
   std::cout << "  --prefix=[PREFIX]" << std::endl << "      "
@@ -335,6 +330,9 @@ void Options::print_help() {
     << "Private key filename to use for remote deployment. The default is" << std::endl
     << "      " << private_key() << "." << std::endl;
 #endif
+  std::cout << "  --keep-clusters" << std::endl << "      "
+    << "Indicate CCM clusters should not be removed after tests terminate."
+    << std::endl;
   std::cout << std::endl;
 }
 

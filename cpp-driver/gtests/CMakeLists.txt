@@ -70,6 +70,10 @@ if(CASS_BUILD_INTEGRATION_TESTS)
     include_directories(${TESTS_SIMULACRON_SOURCE_DIR})
   endif()
 
+  if(LIBSSH2_FOUND)
+    add_definitions(-DCASS_USE_LIBSSH2)
+  endif()
+
   GtestIntegrationTestSourceGroups()
   GtestCommonIntegrationTestSourceFiles()
   add_executable(${INTEGRATION_TESTS_NAME}
@@ -120,5 +124,5 @@ endif()
 # Unit test executable
 #------------------------------
 if(CASS_BUILD_UNIT_TESTS)
-  GtestUnitTests("cassandra" "" "")
+  GtestUnitTests("cassandra" "" "" "${CASS_EXCLUDED_UNIT_TEST_FILES}")
 endif()

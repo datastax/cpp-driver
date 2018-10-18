@@ -1,6 +1,10 @@
 2.10.0
 ===========
 
+Features
+--------
+* [CPP-657] Support virtual tables (aka system views)
+
 Bug Fixes
 --------
 * [CPP-648] Attempting to get the metrics before the session is connected will crash (existing issue)
@@ -9,10 +13,15 @@ Bug Fixes
 * [CPP-667] Timer handles still referenced
 * [CPP-668] Unit test `ClusterUnitTest.ReconnectUpdateHosts` can hang
 * [CPP-669] Result response's metadata can reference a prepared response that's already been freed
+* [CPP-670] Unresolved references when built against libressl
 * [CPP-672] Fix memory issues found via `-fstanitize=address`
 * [CPP-673] Cluster can hang attempting to close during reconnection
+* [CPP-674] C/C++ driver 2.10.0-beta1 build failure (GCC 8)
 * [CPP-675] Chained callback should only call a single callback once
 * [CPP-678] Fix Cassandra version for DSE 6.X releases
+* [CPP-687] Fixing recovery of remote DC host
+* [CPP-692] Fix C++98 compiler issues
+* [CPP-693] Ensure materialized view metadata is valid before retrieving base table
 
 Other
 --------

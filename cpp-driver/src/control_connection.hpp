@@ -234,7 +234,7 @@ public:
     return connection_->address_string();
   }
 
-  int protocol_version() const {
+  ProtocolVersion protocol_version() const {
     return connection_->protocol_version();
   }
 

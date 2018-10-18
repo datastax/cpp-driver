@@ -118,8 +118,10 @@ Function Initialize-Build-Environment {
 
   # Determine which header file to use for determine driver version
   $driver_header_file = "cassandra.h"
+  $driver_archive_prefix = "cassandra"
   If ($Env:DRIVER_TYPE -Like "dse") {
     $driver_header_file = "dse.h"
+    $driver_archive_prefix = "dse"
   }
 
   # Get the driver version number from the header file
@@ -183,15 +185,15 @@ Function Initialize-Build-Environment {
   # Generate the archive name for the driver test and examples artifacts
   $build_version = "$($Env:APPVEYOR_BUILD_NUMBER)-$($Env:APPVEYOR_REPO_BRANCH)"
   # TODO: Re-enable OpenSSL version appending if multiple OpenSSL versions are enabled
-  #$Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($Env:DRIVER_TYPE.ToLower())-cpp-driver-$($Env:DRIVER_VERSION)-examples-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  #$Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($Env:DRIVER_TYPE.ToLower())-cpp-driver-$($Env:DRIVER_VERSION)-tests-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($Env:DRIVER_TYPE.ToLower())-cpp-driver-$($Env:DRIVER_VERSION)-examples-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($Env:DRIVER_TYPE.ToLower())-cpp-driver-$($Env:DRIVER_VERSION)-tests-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  #$Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  #$Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
 
   # Generate the archive name for the driver packaging
   # TODO: Re-enable OpenSSL version appending if multiple OpenSSL versions are enabled
-  #$Env:DRIVER_ARTIFACT_ARCHIVE = "$($Env:DRIVER_TYPE.ToLower())-cpp-driver-$($Env:DRIVER_VERSION)-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:DRIVER_ARTIFACT_ARCHIVE = "$($Env:DRIVER_TYPE.ToLower())-cpp-driver-$($Env:DRIVER_VERSION)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  #$Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
 
   # Generate additional download/install environments for third party build requirements
   $Env:BISON_BINARIES_ARCHIVE = "bison-$($bison_version)-bin.zip"

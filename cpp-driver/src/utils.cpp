@@ -72,16 +72,6 @@ String opcode_to_string(int opcode) {
   return "";
 }
 
-String protocol_version_to_string(int version) {
-  OStringStream ss;
-  if (version & DSE_PROTOCOL_VERSION_BIT) {
-    ss << "DSEv" << (version & DSE_PROTOCOL_VERSION_MASK);
-  } else {
-    ss << "v" << version;
-  }
-  return ss.str();
-}
-
 void explode(const String& str, Vector<String>& vec, const char delimiter /* = ',' */) {
   IStringStream stream(str);
   while (!stream.eof()) {

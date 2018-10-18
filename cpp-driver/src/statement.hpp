@@ -83,16 +83,16 @@ public:
     return calculate_routing_key(key_indices_, routing_key);
   }
 
-  int32_t encode_batch(int version, RequestCallback* callback, BufferVec* bufs) const;
+  int32_t encode_batch(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
 protected:
-  bool with_keyspace(int version) const;
+  bool with_keyspace(ProtocolVersion version) const;
 
   int32_t encode_query_or_id(BufferVec* bufs) const;
-  int32_t encode_begin(int version, uint16_t element_count,
+  int32_t encode_begin(ProtocolVersion version, uint16_t element_count,
                        RequestCallback* callback, BufferVec* bufs) const;
-  int32_t encode_values(int version, RequestCallback* callback, BufferVec* bufs) const;
-  int32_t encode_end(int version, RequestCallback* callback, BufferVec* bufs) const;
+  int32_t encode_values(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
+  int32_t encode_end(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
   bool calculate_routing_key(const Vector<size_t>& key_indices, String* routing_key) const;
 

@@ -21,7 +21,7 @@
 
 namespace cass {
 
-DelayedConnector::DelayedConnector(const Address& address, int protocol_version,
+DelayedConnector::DelayedConnector(const Address& address, ProtocolVersion protocol_version,
                                    const Callback& callback)
   : connector_(Memory::allocate<Connector>(address, protocol_version,
                                            bind_callback(&DelayedConnector::on_connect, this)))

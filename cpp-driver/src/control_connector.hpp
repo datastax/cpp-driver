@@ -115,7 +115,7 @@ public:
    * @param callback
    */
   ControlConnector(const Address& address,
-                   int protocol_version,
+                   ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**

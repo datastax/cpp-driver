@@ -49,7 +49,7 @@ public:
       , is_null_(false) { }
 
   Decoder decoder() const { return decoder_; }
-  int protocol_version() const { return decoder_.protocol_version(); }
+  ProtocolVersion protocol_version() const { return decoder_.protocol_version(); }
   int64_t size() const { return (is_null_ ? -1 : decoder_.remaining()); }
 
   CassValueType value_type() const {

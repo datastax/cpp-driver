@@ -141,7 +141,7 @@ public:
    * @param heartbeat_interval_secs The interval (in seconds) to send a heartbeat.
    */
   Connection(const Socket::Ptr& socket,
-             int protocol_version,
+             ProtocolVersion protocol_version,
              unsigned int idle_timeout_secs,
              unsigned int heartbeat_interval_secs);
 
@@ -207,7 +207,7 @@ public:
 public:
   const Address& address() const { return socket_->address(); }
   const String& address_string() const { return socket_->address_string(); }
-  int protocol_version() const { return protocol_version_; }
+  ProtocolVersion protocol_version() const { return protocol_version_; }
   const String& keyspace() { return keyspace_; }
   uv_loop_t* loop() { return socket_->loop(); }
 
@@ -239,7 +239,7 @@ private:
 
   ConnectionListener* listener_;
 
-  int protocol_version_;
+  ProtocolVersion protocol_version_;
   String keyspace_;
 
   unsigned int idle_timeout_secs_;

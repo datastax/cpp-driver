@@ -19,6 +19,7 @@
 
 #include "constants.hpp"
 #include "data_type.hpp"
+#include "protocol.hpp"
 #include "serialization.hpp"
 #include "small_vector.hpp"
 
@@ -65,14 +66,13 @@ class Decoder {
 friend class Value;
 public:
   Decoder()
-      : protocol_version_(-1)
-      , input_(NULL)
+      : input_(NULL)
       , length_(0)
       , remaining_(0)
       , type_("") { }
 
   Decoder(const char* input, size_t length,
-          int protocol_version = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
+          ProtocolVersion protocol_version = ProtocolVersion::highest_supported())
       : protocol_version_(protocol_version)
       , input_(input)
       , length_(length)
@@ -93,7 +93,7 @@ public:
     return buffer;
   }
 
-  inline int protocol_version() const { return protocol_version_; }
+  inline ProtocolVersion protocol_version() const { return protocol_version_; }
 
   inline void set_type(const char* type) {
     type_ = type;
@@ -581,7 +581,7 @@ protected:
   inline size_t remaining() const { return remaining_; }
 
 private:
-  int protocol_version_;
+  ProtocolVersion protocol_version_;
   const char* input_;
   size_t length_;
   size_t remaining_;

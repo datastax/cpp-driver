@@ -101,5 +101,15 @@ endif()
 # Unit test executable
 #------------------------------
 if(DSE_BUILD_UNIT_TESTS)
-  GtestUnitTests("dse" "${DSE_API_HEADER_FILES}" "${DSE_INCLUDES}")
+  set(DSE_UNIT_TEST_EXTRA_FILES
+    "${DSE_API_HEADER_FILES}"
+    "${CASS_ROOT_DIR}/gtests/src/unit/unit.cpp"
+    "${CASS_ROOT_DIR}/gtests/src/unit/mockssandra.cpp")
+  set(DSE_UNIT_TEST_EXTRA_INCLUDES
+    "${DSE_INCLUDES}"
+    "${CASS_ROOT_DIR}/gtests/src/unit/")
+  GtestUnitTests("dse"
+    "${DSE_UNIT_TEST_EXTRA_FILES}"
+    "${DSE_UNIT_TEST_EXTRA_INCLUDES}"
+    "")
 endif()

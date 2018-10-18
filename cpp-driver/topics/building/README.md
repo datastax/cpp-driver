@@ -7,6 +7,7 @@ platforms. Packages are available for the following platforms:
 * [CentOS 7][cpp-driver-centos7]
 * [Ubuntu 14.04 LTS][cpp-driver-ubuntu14-04]
 * [Ubuntu 16.04 LTS][cpp-driver-ubuntu16-04]
+* [Ubuntu 18.04 LTS][cpp-driver-ubuntu18-04]
 * [Windows][cpp-driver-windows]
 
 __NOTE__: The build procedures only need to be performed for driver development
@@ -29,7 +30,8 @@ The C/C++ driver depends on the following software:
 ## Linux/Mac OS
 
 The driver is known to build on CentOS/RHEL 6/7, Mac OS X 10.10/10.11 (Yosemite
-and El Capitan), Mac OS 10.12 (Sierra), and Ubuntu 14.04/16.04 LTS.
+and El Capitan), Mac OS 10.12/10.13 (Sierra and High Sierra), and Ubuntu
+14.04/16.04/18.04 LTS.
 
 __NOTE__: The driver will also build on most standard Unix-like systems using
           GCC 4.1.2+ or Clang 3.4+.
@@ -77,6 +79,7 @@ Packages are available from our [download server]:
 * [CentOS 7][libuv-centos7]
 * [Ubuntu 14.04 LTS][libuv-ubuntu14-04]
 * [Ubuntu 16.04 LTS][libuv-ubuntu16-04]
+* [Ubuntu 18.04 LTS][libuv-ubuntu18-04]
 
 ##### Mac OS (Brew)
 
@@ -91,9 +94,9 @@ your system._
 
 ```bash
 pushd /tmp
-wget http://dist.libuv.org/dist/v1.14.0/libuv-v1.14.0.tar.gz
-tar xzf libuv-v1.14.0.tar.gz
-pushd libuv-v1.14.0
+wget http://dist.libuv.org/dist/v1.23.0/libuv-v1.23.0.tar.gz
+tar xzf libuv-v1.23.0.tar.gz
+pushd libuv-v1.23.0
 sh autogen.sh
 ./configure
 make install
@@ -121,9 +124,9 @@ apt-get install libssl-dev
 brew install openssl
 ```
 
-__Note__: For Mac OS X 10.11 (El Capitan) and Mac OS 10.12 (Sierra) a link
-          needs to be created in order to make OpenSSL available to the
-          building libraries:
+__Note__: For Mac OS X 10.11 (El Capitan) and Mac OS 10.12/10.13 (Sierra and
+          High Sierra) a link needs to be created in order to make OpenSSL
+          available to the building libraries:
 
 ```bash
 brew link --force openssl
@@ -133,9 +136,9 @@ brew link --force openssl
 
 ```bash
 pushd /tmp
-wget --no-check-certificate https://www.openssl.org/source/openssl-1.0.2l.tar.gz
-tar xzf openssl-1.0.2l.tar.gz
-pushd openssl-1.0.2l
+wget --no-check-certificate https://www.openssl.org/source/openssl-1.0.2o.tar.gz
+tar xzf openssl-1.0.2o.tar.gz
+pushd openssl-1.0.2o
 CFLAGS=-fpic ./config shared
 make
 make install
@@ -182,9 +185,9 @@ __Note__: Ensure previous version of Boost has been removed before proceeding.
 
 ```bash
 pushd /tmp
-wget http://sourceforge.net/projects/boost/files/boost/1.64.0/boost_1_64_0.tar.gz/download -O boost_1_64_0.tar.gz
-tar xzf boost_1_64_0.tar.gz
-pushd boost_1_64_0
+wget http://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz/download -O boost_1_68_0.tar.gz
+tar xzf boost_1_68_0.tar.gz
+pushd boost_1_68_0
 ./bootstrap.sh --with-libraries=atomic,chrono,system,thread,test
 sudo ./b2 cxxflags="-fPIC" install
 popd
@@ -301,11 +304,13 @@ __Note__: When overriding installation directory using `--INSTALL-DIR`, the
 [cpp-driver-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/cassandra
 [cpp-driver-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/cassandra
 [cpp-driver-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/cassandra
+[cpp-driver-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/cassandra
 [cpp-driver-windows]: http://downloads.datastax.com/cpp-driver/windows/cassandra
 [libuv-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/dependencies/libuv
 [libuv-centos7]: http://downloads.datastax.com/cpp-driver/centos/7/dependencies/libuv
 [libuv-ubuntu14-04]: http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/libuv
 [libuv-ubuntu16-04]: http://downloads.datastax.com/cpp-driver/ubuntu/16.04/dependencies/libuv
+[libuv-ubuntu18-04]: http://downloads.datastax.com/cpp-driver/ubuntu/18.04/dependencies/libuv
 [batch script]: ../../vc_build.bat
 [Homebrew]: https://brew.sh
 [Bison]: http://gnuwin32.sourceforge.net/downlinks/bison.php
@@ -316,13 +321,13 @@ __Note__: When overriding installation directory using `--INSTALL-DIR`, the
 [libuv]: http://libuv.org
 [OpenSSL]: https://www.openssl.org
 [Boost]: http://www.boost.org
-[boost-msvc-100-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-10.0-32.exe/download
-[boost-msvc-100-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-10.0-64.exe/download
-[boost-msvc-110-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-11.0-32.exe/download
-[boost-msvc-110-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-11.0-64.exe/download
-[boost-msvc-120-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-12.0-32.exe/download
-[boost-msvc-120-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-12.0-64.exe/download
-[boost-msvc-140-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-14.0-32.exe/download
-[boost-msvc-140-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-14.0-64.exe/download
-[boost-msvc-141-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-14.1-32.exe/download
+[boost-msvc-100-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.68.0/boost_1_68_0-msvc-10.0-32.exe/download
+[boost-msvc-100-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.68.0/boost_1_68_0-msvc-10.0-64.exe/download
+[boost-msvc-110-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.68.0/boost_1_68_0-msvc-11.0-32.exe/download
+[boost-msvc-110-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.68.0/boost_1_68_0-msvc-11.0-64.exe/download
+[boost-msvc-120-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.68.0/boost_1_68_0-msvc-12.0-32.exe/download
+[boost-msvc-120-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.68.0/boost_1_68_0-msvc-12.0-64.exe/download
+[boost-msvc-140-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.68.0/boost_1_68_0-msvc-14.0-32.exe/download
+[boost-msvc-140-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.68.0/boost_1_68_0-msvc-14.0-64.exe/download
+[boost-msvc-141-32-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.68.0/boost_1_68_0-msvc-14.1-32.exe/download
 [boost-msvc-141-64-bit]: http://sourceforge.net/projects/boost/files/boost-binaries/1.64.0/boost_1_64_0-msvc-14.1-64.exe/download
