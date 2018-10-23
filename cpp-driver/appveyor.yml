@@ -11,8 +11,6 @@ skip_commits:
     - '**/.clang-format'
     - '**/.documenter_local_last_run'
     - '**/.gitignore'
-    - '**/.travis.sh'
-    - '**/.travis.yml'
     - '**/build.yaml'
     - '**/docs.yaml'
     - '**/Doxyfile.in'
