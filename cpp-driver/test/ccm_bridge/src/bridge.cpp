@@ -586,7 +586,6 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
         } else {
           create_command.push_back(dse_version_.to_string());
         }
-        create_command.push_back("--dse");
         if (dse_credentials_type_ == DseCredentialsType::USERNAME_PASSWORD) {
           create_command.push_back("--dse-username=" + dse_username_);
           create_command.push_back("--dse-password=" + dse_password_);
@@ -602,6 +601,9 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
           create_command.push_back(cassandra_version_.to_string());
         }
       }
+    }
+    if (use_dse_) {
+      create_command.push_back("--dse");
     }
     create_command.push_back("-b");
 
