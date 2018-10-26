@@ -18,6 +18,7 @@
 #define __TEST_OBJECT_BASE_HPP__
 #include "exception.hpp"
 #include "shared_ptr.hpp"
+#include "tlog.hpp"
 
 namespace test {
 namespace driver {

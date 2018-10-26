@@ -28,11 +28,12 @@
 #include "bridge.hpp"
 #include "logger.hpp"
 #include "objects.hpp"
+#include "options.hpp"
 #include "policies.hpp"
 #include "pretty_print.hpp"
 #include "test_utils.hpp"
+#include "tlog.hpp"
 #include "values.hpp"
-#include "options.hpp"
 
 // Macros for grouping tests together
 #define GROUP_TEST_F(group_name, test_case, test_name) \

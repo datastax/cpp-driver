@@ -9,6 +9,7 @@
 #define __TEST_DSE_POLYGON_HPP__
 
 #include "values/dse_line_string.hpp"
+#include "tlog.hpp"
 
 #include <algorithm>
 

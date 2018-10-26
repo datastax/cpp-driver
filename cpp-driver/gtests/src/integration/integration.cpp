@@ -145,7 +145,8 @@ void Integration::SetUp() {
       Options::deployment_type(), Options::authentication_type(),
       Options::host(), Options::port(),
       Options::username(), Options::password(),
-      Options::public_key(), Options::private_key());
+      Options::public_key(), Options::private_key(),
+      Options::is_verbose_ccm());
     if (ccm_->create_cluster(data_center_nodes,
                              is_with_vnodes_,
                              is_password_authenticator_,

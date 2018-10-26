@@ -196,6 +196,19 @@ public:
    */
   static const std::string& private_key();
   /**
+   * Flag to determine if verbose CCM output should enabled
+   *
+   * @return True if verbose CCM output should be enabled; false otherwise
+   */
+  static bool is_verbose_ccm();
+  /**
+   * Flag to determine if verbose integration output should enabled
+   *
+   * @return True if verbose integration output should be enabled; false
+   *         otherwise
+   */
+  static bool is_verbose_integration();
+  /**
    * Get a CCM instance based on the options
    *
    * @return CCM instance
@@ -304,6 +317,14 @@ private:
    * authentication
    */
   static std::string private_key_;
+  /**
+   * Flag to determine if verbose CCM output should enabled
+   */
+  static bool is_verbose_ccm_;
+  /**
+   * Flag to determine if verbose integration output should enabled
+   */
+  static bool is_verbose_integration_;
 
   /**
    * Hidden default constructor

@@ -46,6 +46,10 @@
 # Uncomment to specify deployment type (defaults to local)
 ##
 #DEPLOYMENT_TYPE=local
+##
+# Flag to determine if CCM should enable verbose output
+##
+#VERBOSE=true
 
 ###############################################################################
 # DSE Options                                                                 #
@@ -64,7 +68,7 @@
 #
 # Uncomment to specify DSE version
 ##
-#DSE_VERSION=6.0.3
+#DSE_VERSION=6.0.4
 ##
 # CCM DSE Credentials Type (username_password|ini_file)
 #

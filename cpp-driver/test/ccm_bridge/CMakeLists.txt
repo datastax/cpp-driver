@@ -86,7 +86,8 @@ set(CCM_BRIDGE_LIBRARIES ${CCM_BRIDGE_LIBRARIES} CACHE INTERNAL "CCM Bridge Libr
 set(LIBSSH2_FOUND ${LIBSSH2_FOUND} CACHE INTERNAL "Libssh2 found" FORCE)
 
 # Assign the include directories
-include_directories(${CCM_BRIDGE_INCLUDES})
+include_directories(${CCM_BRIDGE_INCLUDES}
+                    ${LIBUV_INCLUDE_DIRS})
 
 # Build the CCM bridge static library
 add_library(CCMBridge STATIC ${CCM_BRIDGE_SRC_FILES}
@@ -96,6 +97,11 @@ add_library(CCMBridge STATIC ${CCM_BRIDGE_SRC_FILES}
 if(LIBSSH2_LIBRARY_NAME)
   add_dependencies(CCMBridge ${LIBSSH2_LIBRARY_NAME})
   add_definitions(-DLIBSSH2_NO_OPENSSL)
+endif()
+if(LIBUV_LIBRARY_NAME)
+  add_dependencies(CCMBridge ${LIBUV_LIBRARY_NAME})
+else()
+  add_dependencies(CCMBridge ${LIBUV_LIBRARIES})
 endif()
 
 # Copy data file to output directory

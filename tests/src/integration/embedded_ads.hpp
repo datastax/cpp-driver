@@ -19,6 +19,7 @@
 #include "exception.hpp"
 #include "options.hpp"
 #include "test_utils.hpp"
+#include "tlog.hpp"
 
 #include "scoped_lock.hpp"
 
