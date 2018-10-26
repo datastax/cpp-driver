@@ -17,6 +17,7 @@
 #ifndef __PROCESS_HPP__
 #define __PROCESS_HPP__
 
+#include <assert.h>
 #include <stdint.h>
 #include <exception>
 #include <string>
