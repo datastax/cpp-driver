@@ -10609,6 +10609,11 @@ cass_retry_policy_default_new();
  * persisted and a read will succeed if there's some data available even
  * if it increases the risk of reading stale data.
  *
+ * @deprecated This still works, but should not be used in new applications. It
+ * can lead to unexpected behavior when the cluster is in a degraded state.
+ * Instead, applications should prefer using the lowest consistency level on
+ * statements that can be tolerated by a specific use case.
+ *
  * @public @memberof CassRetryPolicy
  *
  * @return Returns a retry policy that must be freed.
@@ -10616,7 +10621,7 @@ cass_retry_policy_default_new();
  * @see cass_retry_policy_free()
  */
 CASS_EXPORT CassRetryPolicy*
-cass_retry_policy_downgrading_consistency_new();
+CASS_DEPRECATED(cass_retry_policy_downgrading_consistency_new());
 
 /**
  * Creates a new fallthrough retry policy.
