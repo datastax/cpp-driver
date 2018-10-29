@@ -1665,9 +1665,9 @@ cass_cluster_set_queue_size_io(CassCluster* cluster,
  * @param[in] queue_size
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_queue_size_event(CassCluster* cluster,
-                                                  unsigned queue_size));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_queue_size_event(CassCluster* cluster,
+                                  unsigned queue_size));
 
 /**
  * Sets the number of connections made to each server in each
@@ -1700,9 +1700,9 @@ cass_cluster_set_core_connections_per_host(CassCluster* cluster,
  * @param[in] num_connections
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_max_connections_per_host(CassCluster* cluster,
-                                                          unsigned num_connections));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_max_connections_per_host(CassCluster* cluster,
+                                          unsigned num_connections));
 
 /**
  * Sets the amount of time to wait before attempting to reconnect.
@@ -1772,9 +1772,9 @@ cass_cluster_set_new_request_ratio(CassCluster* cluster,
  * @param[in] num_connections
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
-                                                         unsigned num_connections));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
+                                         unsigned num_connections));
 
 /**
  * Sets the threshold for the maximum number of concurrent requests in-flight
@@ -1792,9 +1792,9 @@ CASS_DEPRECATED(cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
-                                                                   unsigned num_requests));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
+                                                   unsigned num_requests));
 
 /**
  * Sets the maximum number of requests processed by an IO worker
@@ -1811,9 +1811,9 @@ CASS_DEPRECATED(cass_cluster_set_max_concurrent_requests_threshold(CassCluster* 
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
-                                                        unsigned num_requests));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
+                                        unsigned num_requests));
 
 /**
  * Sets the high water mark for the number of bytes outstanding
@@ -1831,9 +1831,9 @@ CASS_DEPRECATED(cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
  * @param[in] num_bytes
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
-                                                             unsigned num_bytes));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
+                                             unsigned num_bytes));
 
 /**
  * Sets the low water mark for number of bytes outstanding on a
@@ -1851,9 +1851,9 @@ CASS_DEPRECATED(cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluste
  * @param[in] num_bytes
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
-                                                            unsigned num_bytes));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
+                                            unsigned num_bytes));
 
 /**
  * Sets the high water mark for the number of requests queued waiting
@@ -1872,9 +1872,9 @@ CASS_DEPRECATED(cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
-                                                                  unsigned num_requests));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
+                                                  unsigned num_requests));
 
 /**
  * Sets the low water mark for the number of requests queued waiting
@@ -1893,9 +1893,9 @@ CASS_DEPRECATED(cass_cluster_set_pending_requests_high_water_mark(CassCluster* c
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
-                                                                 unsigned num_requests));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
+                                                 unsigned num_requests));
 
 /**
  * Sets the timeout for connecting to a node.
@@ -6689,8 +6689,8 @@ cass_data_type_sub_type_count(const CassDataType* data_type);
 /**
  * @deprecated Use cass_data_type_sub_type_count()
  */
-CASS_EXPORT size_t
-CASS_DEPRECATED(cass_data_sub_type_count(const CassDataType* data_type));
+CASS_EXPORT CASS_DEPRECATED(size_t
+cass_data_sub_type_count(const CassDataType* data_type));
 
 /**
  * Gets the sub-data type count of a UDT (user defined type), tuple
@@ -10620,8 +10620,8 @@ cass_retry_policy_default_new();
  *
  * @see cass_retry_policy_free()
  */
-CASS_EXPORT CassRetryPolicy*
-CASS_DEPRECATED(cass_retry_policy_downgrading_consistency_new());
+CASS_EXPORT CASS_DEPRECATED(CassRetryPolicy*
+cass_retry_policy_downgrading_consistency_new());
 
 /**
  * Creates a new fallthrough retry policy.
@@ -10828,8 +10828,8 @@ cass_error_desc(CassError error);
  * @deprecated This is no longer useful and does nothing. Expect this to be
  * removed in a future release.
  */
-CASS_EXPORT void
-CASS_DEPRECATED(cass_log_cleanup());
+CASS_EXPORT CASS_DEPRECATED(void
+cass_log_cleanup());
 
 /**
  * Sets the log level.
@@ -10873,8 +10873,8 @@ cass_log_set_callback(CassLogCallback callback,
  *
  * @param[in] queue_size
  */
-CASS_EXPORT void
-CASS_DEPRECATED(cass_log_set_queue_size(size_t queue_size));
+CASS_EXPORT CASS_DEPRECATED(void
+cass_log_set_queue_size(size_t queue_size));
 
 /**
  * Gets the string for a log level.
