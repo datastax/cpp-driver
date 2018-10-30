@@ -1,6 +1,7 @@
 title:  DataStax Enterprise C/C++ Driver
 summary: A C/C++ Driver built for DataStax Enterprise
 homepage: http://docs.datastax.com/en/developer/cpp-driver-dse/latest
+swiftype_drivers: cppdrivers
 sections:
   - title:     Getting Started
     prefix:    /getting-started
