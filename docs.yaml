@@ -18,15 +18,25 @@ sections:
   - title:     Features
     prefix:    /features
     type:      markdown
+    files:     ['cpp-driver/topics/README.md',
+                'cpp-driver/topics/basics/**/*.md',
+                'cpp-driver/topics/configuration/**/*.md',
+                'cpp-driver/topics/logging/**/*.md',
+                'cpp-driver/topics/metics/**/*.md',
+                'cpp-driver/topics/security/**/*.md']
+  - title:     DSE Features
+    prefix:    /dse_features
+    type:      markdown
     files:     'doc/features/**/*.md'
   - title:     Changelog
     prefix:    /changelog
     type:      markdown
     files:     'CHANGELOG.md'
-  - title:     API reference
+  - title:     API Reference
     prefix:    /api
     type:      doxygen
-    directory: ['include/', 'cpp-driver/include/']
+    directory: ['include/',
+                'cpp-driver/include/']
     config: |
       PREDEFINED = "DSE_EXPORT=" "CASS_EXPORT="
       EXCLUDE_SYMBOLS = XX* DSE_DEPRECATED CASS_ERROR CASS_ERROR_MAP CASS_ERROR_LAST_ENTRY CASS_LOG_LEVEL_MAP CASS_LOG_LAST_ENTRY CASS_DEPRECATED
@@ -38,14 +48,23 @@ sections:
       EXTRACT_ALL = YES
       INLINE_SOURCES = NO
       ALIASES = dse{1}="<b>Requires DSE:</b> \1" cassandra{1}="<b>Requires Cassandra:</b> \1"
+nanoc_config:
+  checks:
+    external_links:
+      exclude:
+        - '^https?://travis-ci.org/*'
+        - '^https?://ci.appveyor.com/*'
 rewrites:
-  - http://datastax.github.io/cpp-driver/: http://docs.datastax.com/en/developer/cpp-driver/latest
+  - http://datastax.github.io/cpp-driver/: http://docs.datastax.com/en/developer/cpp-driver/latest/
   - https://github.com/datastax/cpp-dse-driver/tree/master/examples: https://github.com/datastax/cpp-dse-driver-examples
   - https://web.mit.edu/kerberos: http://web.mit.edu/kerberos
   - ^examples/date_range/date_range.c$: https://github.com/datastax/cpp-dse-driver-examples/blob/v1.0.0/dse/examples/date_range/date_range.c
   - ^cpp-driver$: http://docs.datastax.com/en/developer/cpp-driver/latest
   - ^cpp-driver-dse$: http://docs.datastax.com/en/developer/cpp-dse-driver/latest
   - ^examples$: https://github.com/datastax/cpp-dse-driver-examples
+  - ^/features/: /dse_features/
+  - http://www.datastax.com/documentation/cql/3.1: https://docs.datastax.com/en/archived/cql/3.1
+  - http://www.datastax.com/documentation/cassandra/2.: https://docs.datastax.com/en/archived/cassandra/2.
 links:
   - title: Releases
     href:  http://downloads.datastax.com/cpp-driver
@@ -57,6 +76,8 @@ links:
     href:  https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
   - title: Slack
     href:  https://academy.datastax.com/slack
+rules:
+  use_path_nav_files_only: true
 
 versions:
   - name: 1.6
