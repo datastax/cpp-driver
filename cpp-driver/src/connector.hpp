@@ -164,6 +164,7 @@ public:
   uv_loop_t* loop() { return loop_; }
 
   const Address& address() const { return socket_connector_->address(); }
+  const ProtocolVersion protocol_version() const { return protocol_version_; }
 
 
   bool is_ok() const {

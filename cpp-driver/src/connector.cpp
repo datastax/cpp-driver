@@ -152,6 +152,7 @@ void StartupCallback::on_result_response(ResponseMessage* response) {
 
 ConnectionSettings::ConnectionSettings()
   : connect_timeout_ms(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
+  , auth_provider(Memory::allocate<AuthProvider>())
   , idle_timeout_secs(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
   , heartbeat_interval_secs(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
   , no_compact(CASS_DEFAULT_NO_COMPACT) { }

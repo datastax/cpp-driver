@@ -201,6 +201,10 @@ public:
     return connector_->address();
   }
 
+  const ProtocolVersion protocol_version() const {
+    return connector_->protocol_version();
+  }
+
   bool is_ok() const { return error_code_ == CONTROL_CONNECTION_OK; }
   bool is_canceled() const { return error_code_ == CONTROL_CONNECTION_CANCELED; }
   bool is_invalid_protocol() const {

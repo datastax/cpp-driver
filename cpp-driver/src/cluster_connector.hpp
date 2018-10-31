@@ -137,7 +137,7 @@ public:
 
   ClusterError error_code() const { return error_code_; }
   const String& error_message() const { return error_message_; }
-  CassError ssl_error_code() { return connector_->ssl_error_code(); }
+  CassError ssl_error_code() { return ssl_error_code_; }
 
 private:
   friend class RunResolveAndConnectCluster;
@@ -145,22 +145,33 @@ private:
 
 private:
   void internal_resolve_and_connect();
-  void internal_connect();
+  void internal_connect(const Address& address, ProtocolVersion version);
+  void internal_connect_all();
   void internal_cancel();
 
   void finish();
+  void maybe_finish();
 
   void on_error(ClusterError code, const String& message);
   void on_resolve(MultiResolver* resolver);
   void on_connect(ControlConnector* connector);
 
 private:
+  class ConnectorMap : public DenseHashMap<Address, ControlConnector::Ptr, AddressHash> {
+  public:
+    ConnectorMap() {
+      set_empty_key(Address::EMPTY_KEY);
+      set_deleted_key(Address::DELETED_KEY);
+    }
+  };
+
+private:
   Cluster::Ptr cluster_;
   MultiResolver::Ptr resolver_;
-  ControlConnector::Ptr connector_;
+  ConnectorMap connectors_;
+  size_t remaining_connector_count_;
   ContactPointList contact_points_;
   AddressVec contact_points_resolved_;
-  AddressVec::const_iterator contact_points_resolved_it_;
   ProtocolVersion protocol_version_;
   ClusterListener* listener_;
   EventLoop* event_loop_;
@@ -172,6 +183,7 @@ private:
 
   ClusterError error_code_;
   String error_message_;
+  CassError ssl_error_code_;
 };
 
 } // namespace cass
