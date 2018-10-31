@@ -1,4 +1,6 @@
+ SHA: 67fac85e96220f69076121d569abd15471abb6bf
+ URL: https://github.com/Tencent/rapidjson/tree/67fac85e96220f69076121d569abd15471abb6bf
+ Commit Date: 2018/10/08
+
  git clone https://github.com/miloyip/rapidjson.git /tmp/rapidjson
  cp -R /tmp/rapidjson/include/rapidjson /tmp/rapidjson/license.txt .
-
- patch -p2 < patches/fix_allocator_new.diff
