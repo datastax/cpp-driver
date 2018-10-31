@@ -124,11 +124,11 @@ public:
   void add_double(cass_double_t value) { Double(value); }
 
   void add_string(const char* string, size_t length) {
-    String(string, static_cast<rapidjson::SizeType>(length));
+    String(string, static_cast<cass::rapidjson::SizeType>(length));
   }
 
   void add_key(const char* key, size_t length) {
-    Key(key, static_cast<rapidjson::SizeType>(length));
+    Key(key, static_cast<cass::rapidjson::SizeType>(length));
   }
 
   void add_point(cass_double_t x, cass_double_t y);
@@ -141,7 +141,7 @@ public:
     String(polygon->to_wkt().c_str());
   }
 
-  void add_writer(const GraphWriter* writer, rapidjson::Type type) {
+  void add_writer(const GraphWriter* writer, cass::rapidjson::Type type) {
     size_t length = writer->buffer_.GetSize();
     Prefix(type);
     memcpy(os_->Push(length), writer->buffer_.GetString(), length);

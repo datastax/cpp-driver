@@ -392,7 +392,7 @@ CassError dse_graph_object_add_object_n(DseGraphObject* object,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   object->add_key(name, name_length);
-  object->add_writer(value, rapidjson::kObjectType);
+  object->add_writer(value, cass::rapidjson::kObjectType);
   return CASS_OK;
 }
 
@@ -412,7 +412,7 @@ CassError dse_graph_object_add_array_n(DseGraphObject* object,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   object->add_key(name, name_length);
-  object->add_writer(value, rapidjson::kArrayType);
+  object->add_writer(value, cass::rapidjson::kArrayType);
   return CASS_OK;
 }
 
@@ -556,7 +556,7 @@ CassError dse_graph_array_add_object(DseGraphArray* array,
   if (array->is_complete() || !value->is_complete()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  array->add_writer(value, rapidjson::kObjectType);
+  array->add_writer(value, cass::rapidjson::kObjectType);
   return CASS_OK;
 }
 
@@ -565,7 +565,7 @@ CassError dse_graph_array_add_array(DseGraphArray* array,
   if (array->is_complete() || !value->is_complete()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  array->add_writer(value, rapidjson::kArrayType);
+  array->add_writer(value, cass::rapidjson::kArrayType);
   return CASS_OK;
 }
 
@@ -610,13 +610,13 @@ const DseGraphResult* dse_graph_resultset_next(DseGraphResultSet* resultset) {
 
 DseGraphResultType dse_graph_result_type(const DseGraphResult* result) {
   switch (result->GetType()) {
-    case rapidjson::kNullType: return DSE_GRAPH_RESULT_TYPE_NULL;
-    case rapidjson::kFalseType: // Intentional fallthrough
-    case rapidjson::kTrueType: return DSE_GRAPH_RESULT_TYPE_BOOL;
-    case rapidjson::kNumberType: return DSE_GRAPH_RESULT_TYPE_NUMBER;
-    case rapidjson::kStringType: return DSE_GRAPH_RESULT_TYPE_STRING;
-    case rapidjson::kObjectType: return DSE_GRAPH_RESULT_TYPE_OBJECT;
-    case rapidjson::kArrayType: return DSE_GRAPH_RESULT_TYPE_ARRAY;
+    case cass::rapidjson::kNullType: return DSE_GRAPH_RESULT_TYPE_NULL;
+    case cass::rapidjson::kFalseType: // Intentional fallthrough
+    case cass::rapidjson::kTrueType: return DSE_GRAPH_RESULT_TYPE_BOOL;
+    case cass::rapidjson::kNumberType: return DSE_GRAPH_RESULT_TYPE_NUMBER;
+    case cass::rapidjson::kStringType: return DSE_GRAPH_RESULT_TYPE_STRING;
+    case cass::rapidjson::kObjectType: return DSE_GRAPH_RESULT_TYPE_OBJECT;
+    case cass::rapidjson::kArrayType: return DSE_GRAPH_RESULT_TYPE_ARRAY;
   }
 
   // Path should never be executed
