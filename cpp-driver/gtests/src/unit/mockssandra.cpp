@@ -1044,9 +1044,28 @@ String ResultSet::encode(int protocol_version) const {
   return body;
 }
 
+Action::Builder& Action::Builder::reset() {
+  first_.reset();
+  last_ = NULL;
+  return *this;
+}
+
 Action::Builder& Action::Builder::execute(Action* action) {
-  action_.reset(action);
-  return builder();
+  if (!first_) {
+    first_.reset(action);
+  }
+  if (last_) {
+    last_->next = action;
+  }
+  last_ = action;
+  return *this;
+}
+
+Action::Builder& Action::Builder::execute_if(Action* action) {
+  if (last_ && last_->is_predicate()) {
+    static_cast<Predicate*>(last_)->then = action;
+  }
+  return *this;
 }
 
 Action::Builder& Action::Builder::nop() {
@@ -1063,6 +1082,14 @@ Action::Builder& Action::Builder::close() {
 
 Action::Builder& Action::Builder::error(int32_t code, const String& message) {
   return execute(Memory::allocate<SendError>(code, message));
+}
+
+Action::Builder&Action::Builder::invalid_protocol() {
+  return error(ERROR_PROTOCOL_ERROR, "Invalid or unsupported protocol version");
+}
+
+Action::Builder&Action::Builder::invalid_opcode() {
+  return error(ERROR_PROTOCOL_ERROR, "Invalid opcode (or not implemented)");
 }
 
 Action::Builder& Action::Builder::ready() {
@@ -1118,7 +1145,7 @@ Action::Builder& Action::Builder::use_keyspace(const cass::String& keyspace) {
 }
 
 Action::Builder& Action::Builder::plaintext_auth(const cass::String& username,
-                                                const cass::String& password) {
+                                                 const cass::String& password) {
   return execute((Memory::allocate<PlaintextAuth>(username, password)));
 }
 
@@ -1150,31 +1177,25 @@ Action::Builder& Action::Builder::set_protocol_version() {
   return execute(Memory::allocate<SetProtocolVersion>());
 }
 
-const Action* Action::Builder::build() {
-  if (action_ && builder_) {
-    action_->next = builder_->build();
-  }
-  return action_.release();
+Action* Action::Builder::build() {
+  return first_.release();
 }
 
-Action::Builder& Action::Builder::builder() {
-  if (!builder_) {
-    builder_.reset(Memory::allocate<Builder>());
-  }
-  return *builder_;
+Action::PredicateBuilder Action::Builder::is_address(const cass::Address& address) {
+  return PredicateBuilder(execute(Memory::allocate<IsAddress>(address)));
+}
+
+Action::PredicateBuilder Action::Builder::is_address(const cass::String& address, int port) {
+  return PredicateBuilder(execute(Memory::allocate<IsAddress>(Address(address, port))));
 }
 
 void Action::run(Request* request) const {
-  if (on_run(request)) {
-    Memory::deallocate(request);
-  }
+  on_run(request);
 }
 
 void Action::run_next(Request* request) const {
   if (next) {
-    next->run(request);
-  } else {
-    Memory::deallocate(request);
+    next->on_run(request);
   }
 }
 
@@ -1264,58 +1285,50 @@ void Request::on_timeout(Timer* timer) {
   timer_action_->run_next(this);
 }
 
-bool SendError::on_run(Request* request) const {
+void SendError::on_run(Request* request) const {
   request->error(code, message);
-  return true;
 }
 
-bool SendReady::on_run(Request* request) const {
+void SendReady::on_run(Request* request) const {
   request->write(OPCODE_READY, String());
-  return true;
 }
 
-bool SendAuthenticate::on_run(Request* request) const {
+void SendAuthenticate::on_run(Request* request) const {
   String body;
   encode_string(class_name, &body);
   request->write(OPCODE_AUTHENTICATE, body);
-  return true;
 }
 
-bool SendAuthChallenge::on_run(Request* request) const {
+void SendAuthChallenge::on_run(Request* request) const {
   String body;
   encode_string(token, &body);
   request->write(OPCODE_AUTH_CHALLENGE, body);
-  return true;
 }
 
-bool SendAuthSuccess::on_run(Request* request) const {
+void SendAuthSuccess::on_run(Request* request) const {
   String body;
   encode_string(token, &body);
   request->write(OPCODE_AUTH_SUCCESS, body);
-  return true;
 }
 
-bool SendSupported::on_run(Request* request) const {
+void SendSupported::on_run(Request* request) const {
   String body;
   encode_uint16(0, &body);
   request->write(OPCODE_SUPPORTED, body);
-  return true;
 }
 
-bool SendUpEvent::on_run(Request* request) const {
+void SendUpEvent::on_run(Request* request) const {
   request->write(-1, OPCODE_EVENT, StatusChangeEvent::encode(StatusChangeEvent::UP, address));
   run_next(request);
-  return false;
 }
 
-bool VoidResult::on_run(Request* request) const {
+void VoidResult::on_run(Request* request) const {
   String body;
   encode_int32(RESULT_VOID, &body);
   request->write(OPCODE_RESULT, body);
-  return true;
 }
 
-bool EmptyRowsResult::on_run(Request* request) const {
+void EmptyRowsResult::on_run(Request* request) const {
   String query;
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
@@ -1328,40 +1341,33 @@ bool EmptyRowsResult::on_run(Request* request) const {
     encode_int32(row_count, &body); // Row count
     request->write(OPCODE_RESULT, body);
   }
-  return true;
-
-  return true;
 }
 
-bool NoResult::on_run(Request* request) const {
-  return true;
-}
+void NoResult::on_run(Request* request) const { }
 
-bool MatchQuery::on_run(Request* request) const {
+void MatchQuery::on_run(Request* request) const {
   String query;
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
-    return true;
+    return;
   } else {
     for (Matches::const_iterator it = matches.begin(),
          end = matches.end(); it != end; ++it) {
       if (it->first == query) {
         request->write(OPCODE_RESULT, it->second.encode(request->version()));
-        return true;
+        return;
       }
     }
   }
   run_next(request);
-  return false;
 }
 
-bool SystemLocal::on_run(Request* request) const {
+void SystemLocal::on_run(Request* request) const {
   String query;
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
-    return true;
   } else {
     try {
       if (query.find(SELECT_LOCAL) != String::npos) {
@@ -1384,23 +1390,22 @@ bool SystemLocal::on_run(Request* request) const {
               .build();
 
         request->write(OPCODE_RESULT, local_rs.encode(request->version()));
-        return true;
+        return;
       }
     } catch(const Exception& ex) {
       request->error(ex.code, ex.message);
-      return true;
+      return;
     }
   }
   run_next(request);
-  return false;
 }
 
-bool SystemPeers::on_run(Request* request) const {
+void SystemPeers::on_run(Request* request) const {
   String query;
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
-    return true;
+    return;
   } else {
     try {
       if (query.find(SELECT_PEERS) != String::npos) {
@@ -1435,7 +1440,7 @@ bool SystemPeers::on_run(Request* request) const {
           }
           ResultSet peers_rs = peers_builder.build();
           request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
-          return true;
+          return;
         } else {
           pos += where_clause.size();
           size_t end_pos = query.find("'", pos);
@@ -1462,19 +1467,18 @@ bool SystemPeers::on_run(Request* request) const {
                      .build())
                 .build();
           request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
-          return true;
+          return;
         }
       }
     } catch(const Exception& ex) {
       request->error(ex.code, ex.message);
-      return true;
+      return;
     }
   }
   run_next(request);
-  return false;
 }
 
-bool UseKeyspace::on_run(Request* request) const {
+void UseKeyspace::on_run(Request* request) const {
   String query;
   QueryParameters params;
   if (request->decode_query(&query, &params)) {
@@ -1490,18 +1494,15 @@ bool UseKeyspace::on_run(Request* request) const {
       } else {
         request->error(ERROR_INVALID_QUERY, "Keyspace '" + keyspace + "' does not exist");
       }
-      return true;
     } else {
       run_next(request);
-      return false;
     }
   } else {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
-    return true;
   }
 }
 
-bool PlaintextAuth::on_run(Request* request) const {
+void PlaintextAuth::on_run(Request* request) const {
   String token;
   if (request->decode_auth_response(&token)) {
     String username, password;
@@ -1531,98 +1532,91 @@ bool PlaintextAuth::on_run(Request* request) const {
   } else {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid auth response message");
   }
-  return true;
 }
 
-bool ValidateStartup::on_run(Request* request) const {
+void ValidateStartup::on_run(Request* request) const {
   Options options;
   if (!request->decode_startup(&options)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid startup message");
-    return true;
   } else {
     run_next(request);
-    return false;
   }
 }
 
-bool ValidateCredentials::on_run(Request* request) const {
+void ValidateCredentials::on_run(Request* request) const {
   Credentials creds;
   if (!request->decode_credentials(&creds)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid credentials message");
-    return true;
   } else {
     run_next(request);
-    return false;
   }
 }
 
-bool ValidateAuthResponse::on_run(Request* request) const {
+void ValidateAuthResponse::on_run(Request* request) const {
   String token;
   if (!request->decode_auth_response(&token)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid auth response message");
-    return true;
   } else {
     run_next(request);
-    return false;
   }
 }
 
-bool ValidateRegister::on_run(Request* request) const {
+void ValidateRegister::on_run(Request* request) const {
   EventTypes types;
   if (!request->decode_register(&types)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid register message");
-    return true;
   } else {
     run_next(request);
-    return false;
   }
 }
 
-bool ValidateQuery::on_run(Request* request) const {
+void ValidateQuery::on_run(Request* request) const {
   String query;
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
-    return true;
   } else {
     run_next(request);
-    return false;
   }
 }
 
-bool SetRegisteredForEvents::on_run(Request* request) const {
+void SetRegisteredForEvents::on_run(Request* request) const {
   request->client()->set_registered_for_events();
   run_next(request);
-  return false;
 }
 
-bool SetProtocolVersion::on_run(Request* request) const {
+void SetProtocolVersion::on_run(Request* request) const {
   request->client()->set_protocol_version(request->version());
   run_next(request);
-  return false;
+}
+
+bool IsAddress::is_true(Request* request) const {
+  return request->client()->server()->address() == address;
 }
 
 RequestHandler::RequestHandler(RequestHandler::Builder* builder,
                  int lowest_supported_protocol_version,
                  int highest_supported_protocol_version)
   : invalid_protocol_(builder->on_invalid_protocol().build())
-  , invalid_opcode_(builder->on_invalid_protocol().build())
+  , invalid_opcode_(builder->on_invalid_opcode().build())
   , lowest_supported_protocol_version_(lowest_supported_protocol_version)
-  , highest_supported_protocol_version_(highest_supported_protocol_version) {
-  actions_[OPCODE_STARTUP].reset(builder->on(OPCODE_STARTUP).build());
-  actions_[OPCODE_OPTIONS].reset(builder->on(OPCODE_OPTIONS).build());
-  actions_[OPCODE_CREDENTIALS].reset(builder->on(OPCODE_CREDENTIALS).build());
-  actions_[OPCODE_QUERY].reset(builder->on(OPCODE_QUERY).build());
-  actions_[OPCODE_PREPARE].reset(builder->on(OPCODE_PREPARE).build());
-  actions_[OPCODE_EXECUTE].reset(builder->on(OPCODE_EXECUTE).build());
-  actions_[OPCODE_REGISTER].reset(builder->on(OPCODE_REGISTER).build());
-  actions_[OPCODE_AUTH_RESPONSE].reset(builder->on(OPCODE_AUTH_RESPONSE).build());
-}
+  , highest_supported_protocol_version_(highest_supported_protocol_version) { }
 
 const RequestHandler* RequestHandler::Builder::build() {
-  return Memory::allocate<RequestHandler>(this,
-                                          lowest_supported_protocol_version_,
-                                          highest_supported_protocol_version_);
+  RequestHandler* handler(Memory::allocate<RequestHandler>(this,
+                                                           lowest_supported_protocol_version_,
+                                                           highest_supported_protocol_version_));
+
+  handler->actions_[OPCODE_STARTUP].reset(actions_[OPCODE_STARTUP].build());
+  handler->actions_[OPCODE_OPTIONS].reset(actions_[OPCODE_OPTIONS].build());
+  handler->actions_[OPCODE_CREDENTIALS].reset(actions_[OPCODE_CREDENTIALS].build());
+  handler->actions_[OPCODE_QUERY].reset(actions_[OPCODE_QUERY].build());
+  handler->actions_[OPCODE_PREPARE].reset(actions_[OPCODE_PREPARE].build());
+  handler->actions_[OPCODE_EXECUTE].reset(actions_[OPCODE_EXECUTE].build());
+  handler->actions_[OPCODE_REGISTER].reset(actions_[OPCODE_REGISTER].build());
+  handler->actions_[OPCODE_AUTH_RESPONSE].reset(actions_[OPCODE_AUTH_RESPONSE].build());
+
+  return handler;
 }
 
 void ProtocolHandler::decode(ClientConnection* client, const char* data, int32_t len) {
@@ -2009,8 +2003,10 @@ AuthRequestHandlerBuilder::AuthRequestHandlerBuilder(const cass::String& usernam
                                                      const String& password)
   : SimpleRequestHandlerBuilder() {
   on(mockssandra::OPCODE_STARTUP)
+      .validate_startup()
       .authenticate("com.datastax.SomeAuthenticator");
   on(mockssandra::OPCODE_AUTH_RESPONSE)
+      .validate_auth_response()
       .plaintext_auth(username, password);
 }
 
