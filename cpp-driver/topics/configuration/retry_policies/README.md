@@ -64,51 +64,16 @@ cass_retry_policy_free(default_policy);
 
 ## Downgrading Consistency Retry Policy
 
-This policy will retry in all the same scenarios as the default policy, and it
-will also retry in cases where there is a chance to save the request at the cost
-of lower the consistency. The goal of this policy is to be robust in the face of
-transient failures. Read requests will succeed as long as there's a single copy available
-and write wills succeed if there's at least a single copy persisted.
-
-**Important:** This policy may attempt to retry request with a lower consistency
-level. Using this policy can break consistency guarantees and shouldn't not be
-used in application that required strong consistency.
-
-<table class="table table-striped table-hover table-condensed">
-  <thead>
-  <tr>
-   <th>Failure Type</th>
-   <th>Action</th>
-  </tr>
-  </thead>
-
-  <tbody>
-  <tr>
-   <td>Read Timeout</td>
-   <td>Retry with a lower consistency if some at least some replicas responded.</td>
-  </tr>
-  <tr>
-   <td>Write Timeout</td>
-   <td>Retry unlogged batches at a lower consistency level if at least one
-       replica responded. For single queries and other batch types if any replicas
-       responded then consider the request successful and ignore the error.</td>
-  </tr>
-  <tr>
-   <td>Unavailable</td>
-   <td>Retry with a lower consistency if some at least some replicas responded.</td>
-  </tr>
-  </tbody>
-</table>
-
-```c
-CassRetryPolicy* downgrading_policy =
-cass_retry_policy_downgrading_consistency_new();
-
-/* ... */
-
-/* Retry policies must be freed */
-cass_retry_policy_free(downgrading_policy);
-```
+**Deprecated:** Please do not use this policy in new applications. The use of
+this policy can lead to unexpected behavior. Application errors can happen when
+the consistency level is unexpectedly changed because the cluster is in a
+degraded state. The assumptions made at the normal operating consistency level
+may no longer apply when the consistency level is downgraded. Instead,
+applications should always use the lowest consistency that can be tolerated by a
+specific use case. The consistency level can be set per cluster using
+`cass_cluster_set_consistency()`, per execution profile using
+`cass_execution_profile_set_consistency(), or per statement using
+`cass_statement_set_consistency()`.
 
 ## Fallthrough Retry Policy
 
