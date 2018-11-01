@@ -1368,6 +1368,7 @@ void SystemLocal::on_run(Request* request) const {
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+    return;
   } else {
     try {
       if (query.find(SELECT_LOCAL) != String::npos) {
