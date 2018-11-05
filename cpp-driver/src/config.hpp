@@ -57,7 +57,7 @@ public:
       , tcp_keepalive_delay_secs_(CASS_DEFAULT_TCP_KEEPALIVE_DELAY_SECS)
       , connection_idle_timeout_secs_(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
       , connection_heartbeat_interval_secs_(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
-      , timestamp_gen_(Memory::allocate<ServerSideTimestampGenerator>())
+      , timestamp_gen_(Memory::allocate<MonotonicTimestampGenerator>())
       , use_schema_(CASS_DEFAULT_USE_SCHEMA)
       , use_hostname_resolution_(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
       , use_randomized_contact_points_(CASS_DEFAULT_USE_RANDOMIZED_CONTACT_POINTS)

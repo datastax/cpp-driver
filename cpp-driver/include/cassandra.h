@@ -2335,7 +2335,7 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
  * Sets the timestamp generator used to assign timestamps to all requests
  * unless overridden by setting the timestamp on a statement or a batch.
  *
- * <b>Default:</b> server-side timestamp generator.
+ * <b>Default:</b> Monotonically increasing, client-side timestamp generator.
  *
  * @cassandra{2.1+}
  *
@@ -10533,7 +10533,7 @@ cass_timestamp_gen_monotonic_new();
  * @param warning_threshold_us The amount of clock skew, in microseconds, that
  * must be detected before a warning is triggered. A threshold less than 0 can
  * be used to disable warnings.
- * @param warning_interval_ms The amount of time, in milliseonds, to wait before
+ * @param warning_interval_ms The amount of time, in milliseconds, to wait before
  * warning again about clock skew. An interval value less than or equal to 0 allows
  * the warning to be triggered every millisecond.
  * @return Returns a timestamp generator that must be freed.
