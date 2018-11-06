@@ -51,6 +51,9 @@ struct ConnectionSettings {
   unsigned int idle_timeout_secs;
   unsigned int heartbeat_interval_secs;
   bool no_compact;
+  String application_name;
+  String application_version;
+  String client_id;
 };
 
 /**

@@ -220,8 +220,12 @@ public:
                                                           hosts,
                                                           token_map,
                                                           bind_callback(&SessionInitializer::on_initialize, this)));
+
+      RequestProcessorSettings settings(session_->config());
+      settings.connection_pool_settings.connection_settings.client_id = to_string(session_->client_id());
+
       initializer
-          ->with_settings(RequestProcessorSettings(session_->config()))
+          ->with_settings(RequestProcessorSettings(settings))
           ->with_listener(session_)
           ->with_keyspace(session_->connect_keyspace())
           ->with_metrics(session_->metrics())

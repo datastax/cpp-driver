@@ -163,7 +163,9 @@ ConnectionSettings::ConnectionSettings(const Config& config)
   , auth_provider(config.auth_provider())
   , idle_timeout_secs(config.connection_idle_timeout_secs())
   , heartbeat_interval_secs(config.connection_heartbeat_interval_secs())
-  , no_compact(config.no_compact()) { }
+  , no_compact(config.no_compact())
+  , application_name(config.application_name())
+  , application_version(config.application_version()) { }
 
 Connector::Connector(const Address& address,
                      ProtocolVersion protocol_version,
@@ -299,7 +301,10 @@ void ConnectionConnector::on_supported(ResponseMessage* response) {
         RequestCallback::Ptr(
           Memory::allocate<StartupCallback>(this,
                                             Request::ConstPtr(
-                                              Memory::allocate<StartupRequest>(settings_.no_compact)))));
+                                              Memory::allocate<StartupRequest>(settings_.application_name,
+                                                                               settings_.application_version,
+                                                                               settings_.client_id,
+                                                                               settings_.no_compact)))));
 }
 #endif
 
@@ -383,7 +388,10 @@ void Connector::on_connect(SocketConnector* socket_connector) {
           RequestCallback::Ptr(
             Memory::allocate<StartupCallback>(this,
                                               Request::ConstPtr(
-                                                Memory::allocate<StartupRequest>(settings_.no_compact)))));
+                                                Memory::allocate<StartupRequest>(settings_.application_name,
+                                                                                 settings_.application_version,
+                                                                                 settings_.client_id,
+                                                                                 settings_.no_compact)))));
 #endif
   } else if (socket_connector->is_canceled() || is_timeout_error()) {
     finish();

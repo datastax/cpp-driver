@@ -159,7 +159,7 @@ public:
 
 public:
   const uv_loop_t* loop() const { return loop_; }
-  const Address& address() const { return  address_; }
+  const Address& address() const { return address_; }
   ProtocolVersion protocol_version() const { return protocol_version_; }
   const String& keyspace() const { return keyspace_; }
 

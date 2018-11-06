@@ -79,4 +79,7 @@ struct StaticNextPow2 {
   enum { value = StaticNextPow2Helper<8 * sizeof(size_t) - 1, N>::value };
 };
 
+#define STRINGIFY_HELPER(s) #s
+#define STRINGIFY(s) STRINGIFY_HELPER(s)
+
 #endif

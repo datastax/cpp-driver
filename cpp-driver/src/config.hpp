@@ -385,6 +385,18 @@ public:
     no_compact_ = enabled;
   }
 
+  const String& application_name() const { return application_name_; }
+
+  void set_application_name(const String& application_name) {
+    application_name_ = application_name;
+  }
+
+  const String& application_version() const { return application_version_; }
+
+  void set_application_version(const String& application_version) {
+    application_version_ = application_version;
+  }
+
 private:
   void init_profiles();
 
@@ -426,6 +438,8 @@ private:
   bool prepare_on_up_or_add_host_;
   Address local_address_;
   bool no_compact_;
+  String application_name_;
+  String application_version_;
 };
 
 } // namespace cass

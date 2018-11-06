@@ -21,6 +21,8 @@
 #include "prepare_all_handler.hpp"
 #include "random.hpp"
 #include "request_handler.hpp"
+#include "utils.hpp"
+#include "uuids.hpp"
 
 namespace cass {
 
@@ -35,6 +37,9 @@ public:
 SessionBase::SessionBase()
   : state_(SESSION_STATE_CLOSED) {
   uv_mutex_init(&mutex_);
+
+  UuidGen generator;
+  generator.generate_random(&client_id_);
 }
 
 SessionBase::~SessionBase() {
@@ -75,6 +80,8 @@ Future::Ptr SessionBase::connect(const Config& config,
     }
   }
 
+  LOG_INFO("Client id is %s", to_string(client_id_).c_str());
+
   config_ = config.new_instance();
   connect_keyspace_ = keyspace;
   connect_future_ = future;
@@ -94,9 +101,12 @@ Future::Ptr SessionBase::connect(const Config& config,
                                            config_.protocol_version(),
                                            bind_callback(&SessionBase::on_initialize, this)));
 
+  ClusterSettings settings(config_);
+  settings.control_connection_settings.connection_settings.client_id = to_string(client_id_);
+
   connector
       ->with_listener(this)
-      ->with_settings(ClusterSettings(config_))
+      ->with_settings(settings)
       ->with_random(random_.get())
       ->with_metrics(metrics_.get())
       ->connect(event_loop_.get());

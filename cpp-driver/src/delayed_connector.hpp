@@ -41,10 +41,13 @@ public:
   /**
    * Constructor
    *
+   * @param address The address to connect to.
+   * @param protocol_version The protocol version to use for the connection.
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  DelayedConnector(const Address& address, ProtocolVersion protocol_version,
+  DelayedConnector(const Address& address,
+                   ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**

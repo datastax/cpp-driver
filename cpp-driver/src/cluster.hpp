@@ -153,7 +153,6 @@ struct ClusterSettings {
    */
   bool prepare_on_up_or_add_host;
 
-
   /**
    * Max number of requests to be written out to the socket per write system call.
    */

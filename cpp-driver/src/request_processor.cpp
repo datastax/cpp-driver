@@ -109,7 +109,7 @@ public:
   virtual void on_keyspace_changed(const String& keyspace,
                                    const KeyspaceChangedHandler::Ptr& handler) { }
   virtual void on_prepared_metadata_changed(const String& id,
-                                           const PreparedMetadata::Entry::Ptr& entry) { }
+                                            const PreparedMetadata::Entry::Ptr& entry) { }
   virtual void on_close(RequestProcessor* processor) { }
 };
 
