@@ -167,6 +167,7 @@ set(DSE_ALL_SOURCE_FILES
 # Use the DSE driver's implementation of protocol handling and associated unit
 # tests.
 list(REMOVE_ITEM DSE_ALL_SOURCE_FILES
+  "${PROJECT_SOURCE_DIR}/cpp-driver/src/driver_info.cpp"
   "${PROJECT_SOURCE_DIR}/cpp-driver/src/protocol.cpp")
 set(CASS_EXCLUDED_UNIT_TEST_FILES "test_protocol_version.cpp")
 

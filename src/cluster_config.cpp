@@ -106,4 +106,31 @@ CassError cass_cluster_set_dse_gssapi_authenticator_proxy_n(CassCluster* cluster
                                                                                                        cass::String(authorization_id, authorization_id_length)));
 }
 
+void cass_cluster_set_application_name(CassCluster* cluster,
+                                       const char* application_name) {
+  cass_cluster_set_application_name_n(cluster,
+                                      application_name, SAFE_STRLEN(application_name));
+}
+
+void cass_cluster_set_application_name_n(CassCluster* cluster,
+                                         const char* application_name,
+                                         size_t application_name_length) {
+  cluster->config().set_application_name(cass::String(application_name,
+                                                      application_name_length));
+}
+
+void cass_cluster_set_application_version(CassCluster* cluster,
+                                          const char* application_version) {
+  cass_cluster_set_application_version_n(cluster,
+                                         application_version, SAFE_STRLEN(application_version));
+}
+
+void cass_cluster_set_application_version_n(CassCluster* cluster,
+                                            const char* application_version,
+                                            size_t application_version_length) {
+  cluster->config().set_application_version(cass::String(application_version,
+                                                         application_version_length));
+}
+
+
 } // extern "C"
