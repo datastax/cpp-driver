@@ -97,13 +97,19 @@ void Unit::OutagePlan::handle_timeout() {
 }
 
 Unit::Unit()
-  : logging_criteria_count_(0) {
-  cass_log_set_level(CASS_LOG_TRACE);
-  cass_log_set_callback(on_log, this);
+  : log_output_level_(CASS_LOG_DISABLED)
+  , logging_criteria_count_(0) {
+  cass::Logger::set_log_level(CASS_LOG_TRACE);
+  cass::Logger::set_callback(on_log, this);
 }
 
 Unit::~Unit() {
-  cass_log_set_callback(NULL, NULL);
+  cass::Logger::set_log_level(CASS_LOG_DISABLED);
+  cass::Logger::set_callback(NULL, NULL);
+}
+
+void Unit::set_log_output_level(CassLogLevel log_output_level) {
+  log_output_level_ = log_output_level;
 }
 
 const mockssandra::RequestHandler* Unit::simple() {
@@ -137,14 +143,24 @@ int Unit::logging_criteria_count() {
   return logging_criteria_count_.load();
 }
 
-void Unit::on_log(const CassLogMessage* log, void* data) {
+void Unit::on_log(const CassLogMessage* message, void* data) {
   Unit* instance = static_cast<Unit*>(data);
-  cass::String message = log->message;
+
+  if (message->severity <= instance->log_output_level_) {
+    fprintf(stderr, "%u.%03u [%s] (%s:%d:%s): %s\n",
+            static_cast<unsigned int>(message->time_ms / 1000),
+            static_cast<unsigned int>(message->time_ms % 1000),
+            cass_log_level_string(message->severity),
+            message->file,
+            message->line,
+            message->function,
+            message->message);
+  }
 
   // Determine if the log message matches any of the criteria
   for (Vector<cass::String>::const_iterator it = instance->logging_criteria_.begin(),
     end = instance->logging_criteria_.end(); it != end; ++it) {
-    if (message.find(*it) != std::string::npos) {
+    if (strstr(message->message, it->c_str()) != NULL) {
       instance->logging_criteria_count_.fetch_add(1);
     }
   }

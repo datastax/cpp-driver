@@ -182,6 +182,14 @@ public:
   virtual ~Unit();
 
   /**
+   * Set the log output level for the test. This output log messages to stderr
+   * that meet the log level provided.
+   *
+   * @param log_output_level The log level to output to stderr.
+   */
+  void set_log_output_level(CassLogLevel log_output_level);
+
+  /**
    * Create the default simple request handler for use with mockssandra.
    *
    * @return Simple request handler instance.
@@ -221,14 +229,15 @@ public:
 
 private:
   /**
-   * Log the message from the driver (callback)
+   * Log the message from the driver (callback).
    *
-   * @param log Log message structure from the driver
-   * @param data Object passed from the driver (Unit class instance)
+   * @param message Log message structure from the driver.
+   * @param data Object passed from the driver (Unit class instance).
    */
-  static void on_log(const CassLogMessage* log, void* data);
+  static void on_log(const CassLogMessage* message, void* data);
 
 private:
+  CassLogLevel log_output_level_;
   cass::Vector<cass::String> logging_criteria_;
   cass::Atomic<int> logging_criteria_count_;
 };
