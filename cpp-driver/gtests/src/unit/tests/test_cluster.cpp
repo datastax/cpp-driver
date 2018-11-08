@@ -296,7 +296,13 @@ TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1"); // Good
   contact_points.push_back("127.0.0.2"); // Invalid auth
+  add_logging_critera("Unable to connect to host 127.0.0.2 because of the "
+                      "following error: Received error response 'Invalid "
+                      "credentials'");
   contact_points.push_back("127.0.0.3"); // Invalid protocol
+  add_logging_critera("Unable to connect to host 127.0.0.3 because of the "
+                      "following error: Received error response 'Invalid or "
+                      "unsupported protocol version'");
 
   mockssandra::SimpleCluster cluster(builder.build(), 3);
   ASSERT_EQ(cluster.start_all(), 0);
@@ -316,6 +322,7 @@ TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
+  EXPECT_GE(logging_criteria_count(), 2); // Invalid or unsupported protocol may retry with different protocol before connection
 }
 
 TEST_F(ClusterUnitTest, Resolve) {

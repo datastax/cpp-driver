@@ -15,8 +15,6 @@
 */
 #include "unit.hpp"
 
-#include "scoped_lock.hpp"
-
 Unit::OutagePlan::Action::Action(Type type, size_t node, uint64_t delay_ms)
   : type(type)
   , node(node)
@@ -99,19 +97,13 @@ void Unit::OutagePlan::handle_timeout() {
 }
 
 Unit::Unit()
-  : saved_log_level_(cass::Logger::log_level()) { }
-
-void Unit::SetUp() {
-  saved_log_level_ = cass::Logger::log_level();
-  set_log_level(CASS_LOG_DISABLED);
+  : logging_criteria_count_(0) {
+  cass_log_set_level(CASS_LOG_TRACE);
+  cass_log_set_callback(on_log, this);
 }
 
-void Unit::TearDown() {
-  cass::Logger::set_log_level(saved_log_level_);
-}
-
-void Unit::set_log_level(CassLogLevel log_level) {
-  cass::Logger::set_log_level(log_level);
+Unit::~Unit() {
+  cass_log_set_callback(NULL, NULL);
 }
 
 const mockssandra::RequestHandler* Unit::simple() {
@@ -135,4 +127,25 @@ cass::ConnectionSettings Unit::use_ssl(mockssandra::Cluster* cluster,
   settings.socket_settings.hostname_resolution_enabled = true;
 
   return settings;
+}
+
+void Unit::add_logging_critera(const cass::String& criteria) {
+  logging_criteria_.push_back(criteria);
+}
+
+int Unit::logging_criteria_count() {
+  return logging_criteria_count_.load();
+}
+
+void Unit::on_log(const CassLogMessage* log, void* data) {
+  Unit* instance = static_cast<Unit*>(data);
+  cass::String message = log->message;
+
+  // Determine if the log message matches any of the criteria
+  for (Vector<cass::String>::const_iterator it = instance->logging_criteria_.begin(),
+    end = instance->logging_criteria_.end(); it != end; ++it) {
+    if (message.find(*it) != std::string::npos) {
+      instance->logging_criteria_count_.fetch_add(1);
+    }
+  }
 }
