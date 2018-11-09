@@ -97,7 +97,7 @@ void Unit::OutagePlan::handle_timeout() {
 }
 
 Unit::Unit()
-  : log_output_level_(CASS_LOG_DISABLED)
+  : output_log_level_(CASS_LOG_DISABLED)
   , logging_criteria_count_(0) {
   cass::Logger::set_log_level(CASS_LOG_TRACE);
   cass::Logger::set_callback(on_log, this);
@@ -108,8 +108,8 @@ Unit::~Unit() {
   cass::Logger::set_callback(NULL, NULL);
 }
 
-void Unit::set_log_output_level(CassLogLevel log_output_level) {
-  log_output_level_ = log_output_level;
+void Unit::set_output_log_level(CassLogLevel output_log_level) {
+  output_log_level_ = output_log_level;
 }
 
 const mockssandra::RequestHandler* Unit::simple() {
@@ -146,7 +146,7 @@ int Unit::logging_criteria_count() {
 void Unit::on_log(const CassLogMessage* message, void* data) {
   Unit* instance = static_cast<Unit*>(data);
 
-  if (message->severity <= instance->log_output_level_) {
+  if (message->severity <= instance->output_log_level_) {
     fprintf(stderr, "%u.%03u [%s] (%s:%d:%s): %s\n",
             static_cast<unsigned int>(message->time_ms / 1000),
             static_cast<unsigned int>(message->time_ms % 1000),
