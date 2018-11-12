@@ -99,9 +99,10 @@ private:
 
 private:
   ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
-  uv_mutex_t request_processor_mutex_;
+  uv_mutex_t mutex_;
   RequestProcessor::Vec request_processors_;
   size_t request_processor_count_;
+  bool is_closing_;
 };
 
 } // namespace cass

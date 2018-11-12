@@ -263,6 +263,34 @@ public:
   virtual void on_remove(const Host::Ptr& host) = 0;
 };
 
+class DefaultHostListener
+    : public HostListener
+    , public RefCounted<DefaultHostListener> {
+public:
+  typedef SharedRefPtr<DefaultHostListener> Ptr;
+
+  virtual void on_up(const Host::Ptr& host) { }
+  virtual void on_down(const Host::Ptr& host) { }
+  virtual void on_add(const Host::Ptr& host) { }
+  virtual void on_remove(const Host::Ptr& host) { }
+};
+
+class ExternalHostListener : public DefaultHostListener  {
+public:
+  typedef SharedRefPtr<ExternalHostListener> Ptr;
+  ExternalHostListener(const CassHostListenerCallback callback,
+                       void *data);
+
+  virtual void on_up(const Host::Ptr& host);
+  virtual void on_down(const Host::Ptr& host);
+  virtual void on_add(const Host::Ptr& host);
+  virtual void on_remove(const Host::Ptr& host);
+
+private:
+  const CassHostListenerCallback callback_;
+  void* data_;
+};
+
 typedef Map<Address, Host::Ptr> HostMap;
 
 struct GetAddress {

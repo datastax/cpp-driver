@@ -133,4 +133,33 @@ void Host::set(const Row* row, bool use_tokens) {
   }
 }
 
+ExternalHostListener::ExternalHostListener(const CassHostListenerCallback callback,
+                                           void *data)
+  : callback_(callback)
+  , data_(data) { }
+
+void ExternalHostListener::on_up(const Host::Ptr& host) {
+  CassInet address;
+  address.address_length = host->address().to_inet(address.address);
+  callback_(CASS_HOST_LISTENER_EVENT_UP, address, data_);
+}
+
+void ExternalHostListener::on_down(const Host::Ptr& host) {
+  CassInet address;
+  address.address_length = host->address().to_inet(address.address);
+  callback_(CASS_HOST_LISTENER_EVENT_DOWN, address, data_);
+}
+
+void ExternalHostListener::on_add(const Host::Ptr& host) {
+  CassInet address;
+  address.address_length = host->address().to_inet(address.address);
+  callback_(CASS_HOST_LISTENER_EVENT_ADD, address, data_);
+}
+
+void ExternalHostListener::on_remove(const Host::Ptr& host) {
+  CassInet address;
+  address.address_length = host->address().to_inet(address.address);
+  callback_(CASS_HOST_LISTENER_EVENT_REMOVE, address, data_);
+}
+
 } // namespace cass

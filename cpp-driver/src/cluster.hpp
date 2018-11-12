@@ -210,7 +210,7 @@ public:
    * Constructor. Don't use directly.
    *
    * @param connection The current control connection.
-   * @param listener A listener to handle events.
+   * @param listener A listener to handle cluster events.
    * @param event_loop The event loop.
    * @param connected_host The currently connected host.
    * @param hosts Available hosts for the cluster (based on load balancing

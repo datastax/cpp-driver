@@ -67,7 +67,8 @@ public:
       , max_reusable_write_objects_(CASS_DEFAULT_MAX_REUSABLE_WRITE_OBJECTS)
       , prepare_on_all_hosts_(CASS_DEFAULT_PREPARE_ON_ALL_HOSTS)
       , prepare_on_up_or_add_host_(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
-      , no_compact_(CASS_DEFAULT_NO_COMPACT) {
+      , no_compact_(CASS_DEFAULT_NO_COMPACT)
+      , host_listener_(Memory::allocate<DefaultHostListener>()) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
@@ -397,6 +398,16 @@ public:
     application_version_ = application_version;
   }
 
+  const DefaultHostListener::Ptr& host_listener() const { return host_listener_; }
+  
+  void set_host_listener(const DefaultHostListener::Ptr& listener) {
+    if (listener) {
+      host_listener_ = listener;
+    } else {
+      host_listener_.reset(Memory::allocate<DefaultHostListener>());
+    }
+  }
+
 private:
   void init_profiles();
 
@@ -440,6 +451,7 @@ private:
   bool no_compact_;
   String application_name_;
   String application_version_;
+  DefaultHostListener::Ptr host_listener_;
 };
 
 } // namespace cass

@@ -809,7 +809,6 @@ typedef void (*CassFreeFunction)(void* ptr);
  */
 typedef struct CassAuthenticator_ CassAuthenticator;
 
-
 /**
  * A callback used to initiate an authentication exchange.
  *
@@ -869,7 +868,6 @@ typedef void (*CassAuthenticatorSuccessCallback)(CassAuthenticator* auth,
 typedef void (*CassAuthenticatorCleanupCallback)(CassAuthenticator* auth,
                                                  void* data);
 
-
 /**
  * A callback used to cleanup resources.
  *
@@ -886,6 +884,25 @@ typedef struct CassAuthenticatorCallbacks_ {
   CassAuthenticatorSuccessCallback success_callback;
   CassAuthenticatorCleanupCallback cleanup_callback;
 } CassAuthenticatorCallbacks;
+
+typedef enum CassHostListenerEvent_ {
+  CASS_HOST_LISTENER_EVENT_UP,
+  CASS_HOST_LISTENER_EVENT_DOWN,
+  CASS_HOST_LISTENER_EVENT_ADD,
+  CASS_HOST_LISTENER_EVENT_REMOVE
+} CassHostListenerEvent;
+
+/**
+ * A callback used to indicate the host state for a node in the cluster.
+ *
+ * @param[in] event
+ * @param[in] address
+ * @param[in] data
+ * @see cass_cluster_set_host_listener_callback()
+ */
+typedef void(*CassHostListenerCallback)(CassHostListenerEvent event,
+                                        const CassInet address,
+                                        void* data);
 
 /***********************************************************************************
  *
@@ -2654,6 +2671,24 @@ cass_cluster_set_prepare_on_up_or_add_host(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_no_compact(CassCluster* cluster,
                             cass_bool_t enabled);
+
+/**
+ * Sets a callback for handling host state changes in the cluster.
+ *
+ * <b>Note:</b> The callback is invoked only when state changes in the cluster
+ * are applicable to the configured load balancing policy(s).
+ *
+ * @public @memberor CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] callback
+ * @param[in] data
+ * @return CASS_OK if successful, otherwise and error occurred
+ */
+CASS_EXPORT CassError
+cass_cluster_set_host_listener_callback(CassCluster* cluster,
+                                        CassHostListenerCallback callback,
+                                        void* data);
 
 /***********************************************************************************
  *
