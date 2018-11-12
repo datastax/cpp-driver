@@ -19,8 +19,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "scoped_lock.hpp"
 #include "control_connection.hpp" // For host queries
+#include "scoped_lock.hpp"
 
 #ifdef WIN32
 #  include "winsock.h"
@@ -212,7 +212,7 @@ void ClientConnection::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_
 void ClientConnection::handle_read(ssize_t nread, const uv_buf_t* buf) {
   if (nread < 0) {
     if (nread != UV_EOF && nread != UV_ECONNRESET) {
-      fprintf(stderr, "Read failure: %s", uv_strerror(nread));
+      fprintf(stderr, "Read failure: %s\n", uv_strerror(nread));
     }
     close();
     return;
@@ -232,7 +232,7 @@ void ClientConnection::on_write(uv_write_t* req, int status) {
 
 void ClientConnection::handle_write(int status) {
   if (status != 0) {
-    fprintf(stderr, "Write failure: %s", uv_strerror(status));
+    fprintf(stderr, "Write failure: %s\n", uv_strerror(status));
     close();
     return;
   }
@@ -479,6 +479,7 @@ private:
 void ServerConnection::listen(EventLoopGroup* event_loop_group) {
   ScopedMutex l(&mutex_);
   if (state_ != STATE_CLOSED) return;
+  rc_ = 0;
   state_ = STATE_PENDING;
   event_loop_ = event_loop_group->add(Memory::allocate<RunListen>(this));
 }
@@ -521,9 +522,12 @@ void ServerConnection::internal_listen() {
     return;
   }
 
+  inc_ref(); // For the TCP handle
+
   rc = tcp_.bind(address_.addr());
   if (rc != 0) {
     fprintf(stderr, "Unable to bind address %s\n", address_.to_string(true).c_str());
+    uv_close(tcp_.as_handle(), on_close);
     signal_listen(rc);
     return;
   }
@@ -531,11 +535,11 @@ void ServerConnection::internal_listen() {
   rc = uv_listen(tcp_.as_stream(), 128, on_connection);
   if (rc != 0) {
     fprintf(stderr, "Unable to listen on address %s\n", address_.to_string(true).c_str());
+    uv_close(tcp_.as_handle(), on_close);
     signal_listen(rc);
     return;
   }
 
-  inc_ref();
   signal_listen(rc);
 }
 
@@ -571,7 +575,7 @@ void ServerConnection::signal_listen(int rc) {
   ScopedMutex l(&mutex_);
   if (rc != 0) {
     rc_ = rc;
-    state_ = STATE_ERROR;
+    state_ = STATE_CLOSING;
   } else {
     state_ = STATE_LISTENING;
   }
@@ -582,7 +586,6 @@ void ServerConnection::signal_close() {
   ScopedMutex l(&mutex_);
   event_loop_ = NULL;
   state_ = STATE_CLOSED;
-  rc_ = 0;
   uv_cond_signal(&cond_);
 }
 
@@ -593,7 +596,7 @@ void ServerConnection::on_connection(uv_stream_t* server, int status) {
 
 void ServerConnection::handle_connection(int status) {
   if (status != 0) {
-    fprintf(stderr, "Listen failure: %s", uv_strerror(status));
+    fprintf(stderr, "Listen failure: %s\n", uv_strerror(status));
     return;
   }
 

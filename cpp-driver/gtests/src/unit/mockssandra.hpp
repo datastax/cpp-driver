@@ -206,7 +206,6 @@ private:
    enum State {
      STATE_CLOSED,
      STATE_CLOSING,
-     STATE_ERROR,
      STATE_PENDING,
      STATE_LISTENING
    };
