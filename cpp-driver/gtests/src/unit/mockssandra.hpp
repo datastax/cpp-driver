@@ -206,7 +206,6 @@ private:
    enum State {
      STATE_CLOSED,
      STATE_CLOSING,
-     STATE_ERROR,
      STATE_PENDING,
      STATE_LISTENING
    };
@@ -608,19 +607,32 @@ class Request;
 typedef std::pair<String, ResultSet> Match;
 typedef Vector<Match> Matches;
 
+struct Predicate;
+
 struct Action {
+  class PredicateBuilder;
+
   class Builder {
   public:
+    Builder()
+      : last_(NULL) { }
+
+    Builder& reset();
+
     Builder& execute(Action* action);
+    Builder& execute_if(Action* action);
+
     Builder& nop();
     Builder& wait(uint64_t timeout);
     Builder& close();
     Builder& error(int32_t code, const String& message);
+    Builder& invalid_protocol();
+    Builder& invalid_opcode();
 
     Builder& ready();
     Builder& authenticate(const String& class_name);
     Builder& auth_challenge(const String& token);
-    Builder& auth_success(const String& token);
+    Builder& auth_success(const String& token = "");
     Builder& supported();
     Builder& up_event(const Address& address);
 
@@ -633,8 +645,8 @@ struct Action {
     Builder& system_peers();
 
     Builder& use_keyspace(const String& keyspace);
-    Builder& plaintext_auth(const String& username,
-                            const String& password);
+    Builder& plaintext_auth(const String& username = "cassandra",
+                            const String& password = "cassandra");
 
     Builder& validate_startup();
     Builder& validate_credentials();
@@ -645,14 +657,31 @@ struct Action {
     Builder& set_registered_for_events();
     Builder& set_protocol_version();
 
-    const Action* build();
+    PredicateBuilder is_address(const Address& address);
+    PredicateBuilder is_address(const String& address, int port = 9042);
+
+     Action* build();
 
   private:
-    Builder& builder();
+    ScopedPtr<Action> first_;
+    Action* last_;
+  };
+
+  class PredicateBuilder {
+  public:
+    PredicateBuilder(Builder& builder)
+      : builder_(builder) { }
+
+    Builder& then(Builder& builder) {
+      return then(builder.build());
+    }
+
+    Builder& then(Action* action) {
+      return builder_.execute_if(action);
+    }
 
   private:
-    ScopedPtr<Builder> builder_;
-    ScopedPtr<Action> action_;
+    Builder& builder_;
   };
 
   Action() : next(NULL) { }
@@ -661,10 +690,32 @@ struct Action {
   void run(Request* request) const;
   void run_next(Request* request) const;
 
-  virtual bool on_run(Request* request) const = 0;
+  virtual bool is_predicate() const { return false; }
+  virtual void on_run(Request* request) const = 0;
 
   const Action* next;
 };
+
+struct Predicate : public Action {
+  Predicate() : then(NULL) { }
+  virtual ~Predicate() { Memory::deallocate(then); }
+
+  virtual bool is_predicate() const { return true; }
+  virtual bool is_true(Request* request) const = 0;
+
+  virtual void on_run(Request* request) const {
+    if (is_true(request)) {
+      if (then) {
+        then->run(request);
+      }
+    } else {
+      run_next(request);
+    }
+  }
+
+  const Action* then;
+};
+
 
 class Request : public List<Request>::Node {
 public:
@@ -714,27 +765,23 @@ private:
 };
 
 struct Nop : public Action {
-  virtual bool on_run(Request* request) const {
-    return true;
-  }
+  virtual void on_run(Request* request) const { }
 };
 
 struct Wait : public Action {
   Wait(uint64_t timeout)
     : timeout(timeout) { }
 
-  virtual bool on_run(Request* request) const {
+  virtual void on_run(Request* request) const {
     request->wait(timeout, this);
-    return false;
   }
 
   const uint64_t timeout;
 };
 
 struct Close : public Action {
-  virtual bool on_run(Request* request) const {
+  virtual void on_run(Request* request) const {
     request->close();
-    return true;
   }
 };
 
@@ -743,82 +790,82 @@ struct SendError : public Action {
     : code(code)
     , message(message) { }
 
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 
   int32_t code;
   String message;
 };
 
 struct SendReady : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct SendAuthenticate : public Action {
   SendAuthenticate(const String& class_name)
     : class_name(class_name) { }
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
   String class_name;
 };
 
 struct SendAuthChallenge : public Action {
   SendAuthChallenge(const String& token)
     : token(token) { }
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
   String token;
 };
 
 struct SendAuthSuccess : public Action {
   SendAuthSuccess(const String& token)
     : token(token) { }
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
   String token;
 };
 
 struct SendSupported : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct SendUpEvent : public Action {
   SendUpEvent(const Address& address)
     : address(address) { }
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
   Address address;
 };
 
 struct VoidResult : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct EmptyRowsResult : public Action {
   EmptyRowsResult(int row_count)
     : row_count(row_count) { }
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
   int32_t row_count;
 };
 
 struct NoResult : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct MatchQuery : public Action {
   MatchQuery(const Matches& matches)
     : matches(matches) { }
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
   Matches matches;
 };
 
 struct SystemLocal : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct SystemPeers : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct UseKeyspace : public Action {
   UseKeyspace(const String& keyspace)
     : keyspace(keyspace) { }
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
   String keyspace;
 };
 
@@ -826,37 +873,44 @@ struct PlaintextAuth : public Action {
   PlaintextAuth (const String& username, const String& password)
     : username(username)
     , password(password) { }
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
   String username;
   String password;
 };
 
 struct ValidateStartup : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct ValidateCredentials : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct ValidateAuthResponse : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct ValidateRegister : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct ValidateQuery : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct SetRegisteredForEvents : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
 };
 
 struct SetProtocolVersion : public Action {
-  virtual bool on_run(Request* request) const;
+  virtual void on_run(Request* request) const;
+};
+
+struct IsAddress : public Predicate {
+  IsAddress(const Address& address)
+    : address(address) { }
+  virtual bool is_true(Request* request) const;
+  const Address address;
 };
 
 class RequestHandler {
@@ -866,15 +920,15 @@ public:
     Builder()
       : lowest_supported_protocol_version_(1)
       , highest_supported_protocol_version_(5) {
-      invalid_protocol_.error(ERROR_PROTOCOL_ERROR, "Invalid or unsupported protocol version");
-      invalid_opcode_.error(ERROR_PROTOCOL_ERROR, "Invalid opcode (or not implemented)");
+      invalid_protocol_.invalid_protocol();
+      invalid_opcode_.invalid_opcode();
     }
 
     Action::Builder& on(int8_t opcode) {
       if (opcode < OPCODE_LAST_ENTRY) {
-        return actions_[opcode];
+        return actions_[opcode].reset();
       }
-      return dummy_;
+      return dummy_.reset();
     }
 
     Action::Builder& on_invalid_protocol() { return invalid_protocol_; }
@@ -921,6 +975,7 @@ public:
     } else {
       invalid_opcode_->run(request);
     }
+    Memory::deallocate(request);
   }
 
 private:

@@ -264,6 +264,8 @@ TEST_F(ClusterUnitTest, Simple) {
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
+  contact_points.push_back("127.0.0.2");
+  contact_points.push_back("127.0.0.3");
 
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
@@ -274,6 +276,53 @@ TEST_F(ClusterUnitTest, Simple) {
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
+}
+
+TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
+  // Setup a cluster with multiple critical failures and one good node. The
+  // cluster should connect to the good node and ignore the failures.
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(mockssandra::OPCODE_STARTUP)
+      .validate_startup()
+        .is_address("127.0.0.2").then(mockssandra::Action::Builder().authenticate("com.dataxtax.SomeAuthenticator"))
+        .is_address("127.0.0.3").then(mockssandra::Action::Builder().invalid_protocol())
+      .ready();
+
+  builder.on(mockssandra::OPCODE_AUTH_RESPONSE)
+      .validate_auth_response()
+        .is_address("127.0.0.2").then(mockssandra::Action::Builder().plaintext_auth())
+      .auth_success();
+
+  ContactPointList contact_points;
+  contact_points.push_back("127.0.0.1"); // Good
+  contact_points.push_back("127.0.0.2"); // Invalid auth
+  add_logging_critera("Unable to connect to host 127.0.0.2 because of the "
+                      "following error: Received error response 'Invalid "
+                      "credentials'");
+  contact_points.push_back("127.0.0.3"); // Invalid protocol
+  add_logging_critera("Unable to connect to host 127.0.0.3 because of the "
+                      "following error: Received error response 'Invalid or "
+                      "unsupported protocol version'");
+
+  mockssandra::SimpleCluster cluster(builder.build(), 3);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
+                                                                     PROTOCOL_VERSION,
+                                                                     bind_callback(on_connection_connected, connect_future.get())));
+
+  ClusterSettings settings;
+  settings.control_connection_settings.connection_settings.auth_provider.reset(
+        Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
+
+  connector
+      ->with_settings(settings)
+      ->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+  EXPECT_GE(logging_criteria_count(), 2); // Invalid or unsupported protocol may retry with different protocol before connection
 }
 
 TEST_F(ClusterUnitTest, Resolve) {

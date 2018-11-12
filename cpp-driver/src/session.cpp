@@ -259,7 +259,7 @@ private:
       error_message_ = initializer->error_message();
     }
 
-    if (--remaining_ == 0) {
+    if (remaining_ > 0 && --remaining_ == 0) {
       { // This requires locking because cluster events can happen during
         // initialization.
         ScopedMutex l(&session_->request_processor_mutex_);
@@ -494,7 +494,7 @@ void Session::on_close(RequestProcessor* processor) {
   // Requires a lock because the close callback is called from several
   // different request processor threads.
   ScopedMutex l(&request_processor_mutex_);
-  if (--request_processor_count_ == 0) {
+  if (request_processor_count_ > 0 && --request_processor_count_ == 0) {
     notify_closed();
   }
 }

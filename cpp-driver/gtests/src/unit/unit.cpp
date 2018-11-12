@@ -15,8 +15,6 @@
 */
 #include "unit.hpp"
 
-#include "scoped_lock.hpp"
-
 Unit::OutagePlan::Action::Action(Type type, size_t node, uint64_t delay_ms)
   : type(type)
   , node(node)
@@ -99,19 +97,19 @@ void Unit::OutagePlan::handle_timeout() {
 }
 
 Unit::Unit()
-  : saved_log_level_(cass::Logger::log_level()) { }
-
-void Unit::SetUp() {
-  saved_log_level_ = cass::Logger::log_level();
-  set_log_level(CASS_LOG_DISABLED);
+  : output_log_level_(CASS_LOG_DISABLED)
+  , logging_criteria_count_(0) {
+  cass::Logger::set_log_level(CASS_LOG_TRACE);
+  cass::Logger::set_callback(on_log, this);
 }
 
-void Unit::TearDown() {
-  cass::Logger::set_log_level(saved_log_level_);
+Unit::~Unit() {
+  cass::Logger::set_log_level(CASS_LOG_DISABLED);
+  cass::Logger::set_callback(NULL, NULL);
 }
 
-void Unit::set_log_level(CassLogLevel log_level) {
-  cass::Logger::set_log_level(log_level);
+void Unit::set_output_log_level(CassLogLevel output_log_level) {
+  output_log_level_ = output_log_level;
 }
 
 const mockssandra::RequestHandler* Unit::simple() {
@@ -135,4 +133,35 @@ cass::ConnectionSettings Unit::use_ssl(mockssandra::Cluster* cluster,
   settings.socket_settings.hostname_resolution_enabled = true;
 
   return settings;
+}
+
+void Unit::add_logging_critera(const cass::String& criteria) {
+  logging_criteria_.push_back(criteria);
+}
+
+int Unit::logging_criteria_count() {
+  return logging_criteria_count_.load();
+}
+
+void Unit::on_log(const CassLogMessage* message, void* data) {
+  Unit* instance = static_cast<Unit*>(data);
+
+  if (message->severity <= instance->output_log_level_) {
+    fprintf(stderr, "%u.%03u [%s] (%s:%d:%s): %s\n",
+            static_cast<unsigned int>(message->time_ms / 1000),
+            static_cast<unsigned int>(message->time_ms % 1000),
+            cass_log_level_string(message->severity),
+            message->file,
+            message->line,
+            message->function,
+            message->message);
+  }
+
+  // Determine if the log message matches any of the criteria
+  for (Vector<cass::String>::const_iterator it = instance->logging_criteria_.begin(),
+    end = instance->logging_criteria_.end(); it != end; ++it) {
+    if (strstr(message->message, it->c_str()) != NULL) {
+      instance->logging_criteria_count_.fetch_add(1);
+    }
+  }
 }

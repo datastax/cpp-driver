@@ -38,7 +38,7 @@ public:
 
   virtual void on_chain_error(CassError code, const String& message) {
     connector_->on_error(ControlConnector::CONTROL_CONNECTION_ERROR_HOSTS,
-                         "Error running host queries on control connection " + message);
+                         "Error running host queries on control connection: " + message);
   }
 
   virtual void on_chain_timeout() {
