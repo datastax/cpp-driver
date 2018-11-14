@@ -595,6 +595,16 @@ protected:
    */
   void maybe_shrink_name(std::string& name);
 
+  /**
+   * Wait for the logger count to reach expected count
+   *
+   * NOTE: This may wait up to LOGGER_MAXIMUM_WAIT_TIME_MS
+   *
+   * @param expected_count Expected logger count
+   * @return True if expected count is equal to logger count; false otherwise
+   */
+  bool wait_for_logger(size_t expected_count);
+
 private:
   /**
    * Keyspace creation query (generated via SetUp)

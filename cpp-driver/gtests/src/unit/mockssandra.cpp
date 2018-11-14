@@ -2014,20 +2014,11 @@ void Cluster::init(AddressGenerator& generator,
                    ClientConnectionFactory& factory,
                    size_t num_nodes_dc1,
                    size_t num_nodes_dc2) {
-  MT19937_64 token_rng;
   for (size_t i = 0; i < num_nodes_dc1; ++i) {
-    Address address(generator.next());
-    Server server(Host(address, "dc1", "rack1", token_rng),
-                  internal::ServerConnection::Ptr(
-                    Memory::allocate<internal::ServerConnection>(address, factory)));
-    servers_.push_back(server);
+    create_and_add_server(generator, factory, "dc1");
   }
   for (size_t i = 0; i < num_nodes_dc2; ++i) {
-    Address address(generator.next());
-    Server server(Host(address, "dc2", "rack1", token_rng),
-                  internal::ServerConnection::Ptr(
-                    Memory::allocate<internal::ServerConnection>(address, factory)));
-    servers_.push_back(server);
+    create_and_add_server(generator, factory, "dc2");
   }
 }
 
@@ -2118,9 +2109,16 @@ int Cluster::add(cass::EventLoopGroup* event_loop_group, size_t node) {
     return -1;
   }
   Server& server = servers_[node - 1];
-  server.is_removed.store(false);
+  bool is_removed = server.is_removed.exchange(false);
   server.connection->listen(event_loop_group);
-  return server.connection->wait_listen();
+  int rc = server.connection->wait_listen();
+
+  // Send the added node event after starting the socket
+  if (is_removed) { // Only send topology change event if node was previously removed
+    event(TopologyChangeEvent::new_node(server.connection->address()));
+  }
+
+  return rc;
 }
 
 void Cluster::remove(size_t node) {
@@ -2128,7 +2126,13 @@ void Cluster::remove(size_t node) {
     return;
   }
   Server& server = servers_[node - 1];
-  server.is_removed.store(true);
+  bool is_removed = server.is_removed.exchange(true);
+
+  // Send the remove node event before closing the socket
+  if (!is_removed) { // Only send the topology change event if node was previously active
+    event(TopologyChangeEvent::removed_node(server.connection->address()));
+  }
+
   server.connection->close();
   server.connection->wait_close();
 }
@@ -2140,6 +2144,7 @@ const Host& Cluster::host(const Address& address) const {
       return it->host;
     }
   }
+
   throw Exception(ERROR_PROTOCOL_ERROR,
                   "Unable to find host " + address.to_string());
 }
@@ -2154,6 +2159,18 @@ Hosts Cluster::hosts() const {
     }
   }
   return hosts;
+}
+
+int Cluster::create_and_add_server(AddressGenerator& generator,
+                                   ClientConnectionFactory& factory,
+                                   const String& dc) {
+  Address address(generator.next());
+  Server server(Host(address, dc, "rack1", token_rng_),
+                internal::ServerConnection::Ptr(
+                Memory::allocate<internal::ServerConnection>(address, factory)));
+
+  servers_.push_back(server);
+  return static_cast<int>(servers_.size());
 }
 
 void Cluster::event(const Event::Ptr& event) {

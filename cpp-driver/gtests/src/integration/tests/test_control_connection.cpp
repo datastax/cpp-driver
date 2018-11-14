@@ -16,8 +16,6 @@
 
 #include "integration.hpp"
 
-#define LOGGER_WAIT_FOR_NAP 100
-
 /**
  * Control connection integration tests; single node cluster
  */
@@ -83,22 +81,6 @@ protected:
       node_ip_address << ccm_->get_ip_prefix() << *it;
       logger_.add_critera(prefix + node_ip_address.str() + suffix);
     }
-  }
-
-  /**
-   * Wait for the logger count to reach expected count
-   *
-   * NOTE: This may wait up to 10s
-   *
-   * @param expected_count Expected logger count
-   * @return True if expected count is equal to logger count; false otherwise
-   */
-  bool wait_for_logger(size_t expected_count) {
-    start_timer();
-    while (elapsed_time() < 10000u && logger_.count() < expected_count) {
-      msleep(LOGGER_WAIT_FOR_NAP);
-    }
-    return logger_.count() >= expected_count;
   }
 };
 
@@ -353,19 +335,20 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests, TopologyChange) {
   Session session = cluster.connect();
 
   // Bootstrap a second node and ensure all hosts are actively used
-  unsigned int node_2 = ccm_->bootstrap_node(); // Triggers a `NEW_NODE` event
-  msleep(3000); //TODO: Remove static sleep and check driver logs for reduced wait
+  logger_.add_critera("New node " + (ccm_->get_ip_prefix() + "2") + " added");
+  EXPECT_EQ(2, ccm_->bootstrap_node()); // Triggers a `NEW_NODE` event
+  EXPECT_TRUE(wait_for_logger(1));
   std::set<unsigned short> expected_nodes;
   expected_nodes.insert(1);
-  expected_nodes.insert(node_2);
+  expected_nodes.insert(2);
   check_hosts(session, expected_nodes);
 
   /*
    * Decommission the bootstrapped node and ensure only the first node is
    * actively used
    */
-  force_decommission_node(node_2); // Triggers a `REMOVE_NODE` event
-  expected_nodes.erase(node_2);
+  force_decommission_node(2); // Triggers a `REMOVE_NODE` event
+  expected_nodes.erase(2);
   check_hosts(session, expected_nodes);
 }
 
@@ -474,7 +457,9 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
    * policy, initial invalid IP addresses, and ensure only the first node is
    * used as the valid contact point for automatic node discovery
    */
-  logger_.add_critera("Unable to establish a control connection to host 192.0.2.");
+  logger_.add_critera("to host 192.0.2.1 closed");
+  logger_.add_critera("to host 192.0.2.2 closed");
+  logger_.add_critera("to host 192.0.2.3 closed");
   Cluster cluster = default_cluster(false) // Do not add the default contact points
     .with_load_balance_round_robin()
     .with_contact_points(generate_contact_points("192.0.2.", 3)) // Invalid IPs

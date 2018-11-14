@@ -20,7 +20,8 @@ Unit::OutagePlan::Action::Action(Type type, size_t node, uint64_t delay_ms)
   , node(node)
   , delay_ms(delay_ms) { }
 
-Unit::OutagePlan::OutagePlan(uv_loop_t* loop, mockssandra::SimpleCluster* cluster)
+Unit::OutagePlan::OutagePlan(uv_loop_t* loop,
+                             mockssandra::SimpleCluster* cluster)
   : loop_(loop)
   , cluster_(cluster) { }
 

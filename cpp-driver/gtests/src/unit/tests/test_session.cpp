@@ -54,6 +54,16 @@ public:
     }
   }
 
+  static void connect(const cass::Config& config,
+                      cass::Session* session,
+                      uint64_t wait_for_time_us = WAIT_FOR_TIME) {
+    cass::Future::Ptr connect_future(session->connect(config));
+    ASSERT_TRUE(connect_future->wait_for(wait_for_time_us)) << "Timed out waiting for session to connect";
+    ASSERT_FALSE(connect_future->error())
+      << cass_error_desc(connect_future->error()->code) << ": "
+      << connect_future->error()->message;
+  }
+
   static void connect(cass::Session* session,
                       cass::SslContext* ssl_context = NULL,
                       uint64_t wait_for_time_us = WAIT_FOR_TIME) {
@@ -65,11 +75,7 @@ public:
     if (ssl_context) {
       config.set_ssl_context(ssl_context);
     }
-    cass::Future::Ptr connect_future(session->connect(config));
-    ASSERT_TRUE(connect_future->wait_for(wait_for_time_us)) << "Timed out waiting for session to connect";
-    ASSERT_FALSE(connect_future->error())
-      << cass_error_desc(connect_future->error()->code) << ": "
-      << connect_future->error()->message;
+    connect(config, session, wait_for_time_us);
   }
 
   static void close(cass::Session* session,
@@ -97,6 +103,112 @@ public:
     cass::Session* session = static_cast<cass::Session*>(arg);
     query(session);
   }
+
+  class HostEventFuture : public cass::Future {
+  public:
+    typedef SharedRefPtr<HostEventFuture> Ptr;
+
+    enum Type {
+      INVALID,
+      START_NODE,
+      STOP_NODE,
+      ADD_NODE,
+      REMOVE_NODE
+    };
+
+    typedef std::pair<Type, Address> Event;
+
+    HostEventFuture()
+      : cass::Future(cass::Future::FUTURE_TYPE_GENERIC) { }
+
+    Type type() { return event_.first; }
+
+    void set_event(Type type, const Address& host) {
+      cass::ScopedMutex lock(&mutex_);
+      if (!is_set()) {
+        event_ = Event(type, host);
+        internal_set(lock);
+      }
+    }
+
+    Event wait_for_event(uint64_t timeout_us) {
+      cass::ScopedMutex lock(&mutex_);
+      return internal_wait_for(lock, timeout_us) ? event_ : Event(INVALID,
+                                                                  Address());
+    }
+
+  private:
+    Event event_;
+  };
+
+  class TestHostListener : public cass::DefaultHostListener {
+  public:
+    typedef cass::SharedRefPtr<TestHostListener> Ptr;
+
+    TestHostListener() {
+      events_.push_back(
+        HostEventFuture::Ptr(
+        Memory::allocate<HostEventFuture>()));
+      uv_mutex_init(&mutex_);
+    }
+
+    ~TestHostListener() {
+      uv_mutex_destroy(&mutex_);
+    }
+
+    virtual void on_up(const cass::Host::Ptr& host) {
+      push_back(HostEventFuture::START_NODE, host);
+    }
+
+    virtual void on_down(const cass::Host::Ptr& host) {
+      push_back(HostEventFuture::STOP_NODE, host);
+    }
+
+    virtual void on_add(const cass::Host::Ptr& host) {
+      push_back(HostEventFuture::ADD_NODE, host);
+    }
+
+    virtual void on_remove(const cass::Host::Ptr& host) {
+      push_back(HostEventFuture::REMOVE_NODE, host);
+    }
+
+    HostEventFuture::Event wait_for_event(uint64_t timeout_us) {
+      HostEventFuture::Event event(front()->wait_for_event(timeout_us));
+      pop_front();
+      return event;
+    }
+
+    size_t event_count() {
+      cass::ScopedMutex lock(&mutex_);
+      size_t count = events_.size();
+      return events_.front()->ready() ? count : count - 1;
+    }
+
+  private:
+    typedef cass::Deque<HostEventFuture::Ptr> EventQueue;
+
+    HostEventFuture::Ptr front() {
+      cass::ScopedMutex lock(&mutex_);
+      return events_.front();
+    }
+
+    void pop_front() {
+      cass::ScopedMutex lock(&mutex_);
+      events_.pop_front();
+    }
+
+    void push_back(HostEventFuture::Type type, const cass::Host::Ptr& host) {
+      cass::ScopedMutex lock(&mutex_);
+      events_.back()->set_event(type, host->address());
+      events_.push_back(
+        HostEventFuture::Ptr(
+        Memory::allocate<HostEventFuture>()));
+    }
+
+  private:
+    uv_mutex_t mutex_;
+    EventQueue events_;
+  };
 };
 
 TEST_F(SessionUnitTest, ExecuteQueryNotConnected) {
@@ -333,4 +445,53 @@ TEST_F(SessionUnitTest, ExecuteQueryWithThreadsUsingSslChaotic) {
   }
 
   close(&session);
+}
+
+TEST_F(SessionUnitTest, HostListener) {
+  mockssandra::SimpleCluster cluster(simple(), 2);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(cass::Memory::allocate<TestHostListener>());
+
+  cass::Config config;
+  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.contact_points().push_back("127.0.0.2");
+  config.set_host_listener(listener);
+
+  cass::Session session;
+  connect(config, &session);
+
+  EXPECT_EQ(0u, listener->event_count());
+
+  {
+    cluster.remove(1);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::REMOVE_NODE,
+                                     Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  {
+    cluster.add(1);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+                                     Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  {
+    cluster.stop(2);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
+                                     Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  {
+    cluster.start(2);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+                                     Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
 }

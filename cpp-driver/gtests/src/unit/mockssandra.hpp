@@ -1275,8 +1275,13 @@ private:
 
   typedef Vector<Server> Servers;
 
+  int create_and_add_server(AddressGenerator& generator,
+                            ClientConnectionFactory& factory,
+                            const String& dc);
+
 private:
   Servers servers_;
+  MT19937_64 token_rng_;
 };
 
 class SimpleEventLoopGroup : public cass::RoundRobinEventLoopGroup {
