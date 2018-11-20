@@ -676,6 +676,7 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_STATE, 32, "Invalid state") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_CUSTOM_PAYLOAD, 33, "No custom payload") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID, 34, "Invalid execution profile specified") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_TRACING_ID, 35, "No tracing ID") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -1953,6 +1954,46 @@ cass_cluster_set_resolve_timeout(CassCluster* cluster,
 CASS_EXPORT void
 cass_cluster_set_max_schema_wait_time(CassCluster* cluster,
                                       unsigned wait_time_ms);
+
+
+/**
+ * Sets the maximum time to wait for tracing data to become available.
+ *
+ * <b>Default:</b> 15 milliseconds
+ *
+ * @param[in] cluster
+ * @param[in] max_wait_time_ms
+ */
+CASS_EXPORT void
+cass_cluster_set_max_tracing_wait_time(CassCluster* cluster,
+                                       unsigned max_wait_time_ms);
+
+/**
+ * Sets the amount of time to wait between attempts to check to see if tracing is
+ * available.
+ *
+ * <b>Default:</b> 3 milliseconds
+ *
+ * @param[in] cluster
+ * @param[in] retry_wait_time_ms
+ */
+CASS_EXPORT void
+cass_cluster_set_retry_tracing_wait_time(CassCluster* cluster,
+                                         unsigned retry_wait_time_ms);
+
+/**
+ * Sets the consistency level to use for checking to see if tracing data is
+ * available.
+ *
+ * <b>Default:</b> CASS_CONSISTENCY_ONE
+ *
+ * @param cluster[in]
+ * @param consistency[in]
+ */
+CASS_EXPORT void
+cass_cluster_set_tracing_consistency(CassCluster* cluster,
+                                     CassConsistency consistency);
+
 
 /**
  * Sets credentials for plain text authentication.
@@ -4635,6 +4676,19 @@ cass_future_error_message(CassFuture* future,
                           size_t* message_length);
 
 /**
+ * Gets the tracing ID associated with the request.
+ *
+ * @public @memberof CassFuture
+ *
+ * @param[in] future
+ * @param[out] tracing_id
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_future_tracing_id(CassFuture* future,
+                       CassUuid* tracing_id);
+
+/**
  * Gets a the number of custom payload items from a response future. If the future is not
  * ready this method will wait for the future to be set.
  *
@@ -4959,6 +5013,21 @@ cass_statement_set_retry_policy(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_set_custom_payload(CassStatement* statement,
                                   const CassCustomPayload* payload);
+
+/**
+ * Sets whether the statement should use tracing.
+ *
+ * @cassandra{2.2+}
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] enabled
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_tracing(CassStatement* statement,
+                           cass_bool_t enabled);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -6393,6 +6462,21 @@ cass_batch_set_retry_policy(CassBatch* batch,
 CASS_EXPORT CassError
 cass_batch_set_custom_payload(CassBatch* batch,
                               const CassCustomPayload* payload);
+
+/**
+ * Sets whether the batch should use tracing.
+ *
+ * @cassandra{2.2+}
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] batch
+ * @param[in] enabled
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_tracing(CassBatch* batch,
+                       cass_bool_t enabled);
 
 /**
  * Adds a statement to a batch.

@@ -120,6 +120,12 @@ struct RequestProcessorSettings {
   uint64_t coalesce_delay_us;
 
   int new_request_ratio;
+
+  uint64_t max_tracing_wait_time_ms;
+
+  uint64_t retry_tracing_wait_time_ms;
+
+  CassConsistency tracing_consistency;
 };
 
 /**
@@ -254,6 +260,9 @@ private:
                                             const PreparedMetadata::Entry::Ptr& entry);
   virtual void on_keyspace_changed(const String& keyspace,
                                    KeyspaceChangedResponse handler);
+  virtual bool on_wait_for_tracing_data(const RequestHandler::Ptr& request_handler,
+                                        const Host::Ptr& current_host,
+                                        const Response::Ptr& response);
   virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                             const Host::Ptr& current_host,
                                             const Response::Ptr& response);
@@ -295,6 +304,10 @@ private:
   void maybe_close(int request_count);
   int process_requests(uint64_t processing_time);
 
+  bool write_wait_callback(const RequestHandler::Ptr& request_handler,
+                           const Host::Ptr& current_host,
+                           const RequestCallback::Ptr& callback);
+
 private:
   ConnectionPoolManager::Ptr connection_pool_manager_;
   String connect_keyspace_;
@@ -302,11 +315,7 @@ private:
   RequestProcessorListener* listener_;
   EventLoop* const event_loop_;
   LoadBalancingPolicy::Vec load_balancing_policies_;
-  const unsigned max_schema_wait_time_ms_;
-  const bool prepare_on_all_hosts_;
-  const TimestampGenerator::Ptr timestamp_generator_;
-  const uint64_t coalesce_delay_us_;
-  const int new_request_ratio_;
+  const RequestProcessorSettings settings_;
   ExecutionProfile default_profile_;
   ExecutionProfile::Map profiles_;
   Atomic<int> request_count_;

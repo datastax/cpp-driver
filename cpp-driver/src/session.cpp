@@ -40,9 +40,7 @@ void cass_session_free(CassSession* session) {
   // This attempts to close the session because the joining will
   // hang indefinitely otherwise. This causes minimal delay
   // if the session is already closed.
-  cass::SharedRefPtr<cass::Future> future(cass::Memory::allocate<cass::SessionFuture>());
-  session->close(future);
-  future->wait();
+  session->close()->wait();
 
   cass::Memory::deallocate(session->from());
 }
@@ -64,17 +62,16 @@ CassFuture* cass_session_connect_keyspace_n(CassSession* session,
                                             const CassCluster* cluster,
                                             const char* keyspace,
                                             size_t keyspace_length) {
-  cass::SessionFuture::Ptr connect_future(cass::Memory::allocate<cass::SessionFuture>());
-  session->connect(cluster->config(), cass::String(keyspace, keyspace_length), connect_future);
-  connect_future->inc_ref();
-  return CassFuture::to(connect_future.get());
+  cass::Future::Ptr future(
+        session->connect(cluster->config(), cass::String(keyspace, keyspace_length)));
+  future->inc_ref();
+  return CassFuture::to(future.get());
 }
 
 CassFuture* cass_session_close(CassSession* session) {
-  cass::SessionFuture::Ptr close_future(cass::Memory::allocate<cass::SessionFuture>());
-  session->close(close_future);
-  close_future->inc_ref();
-  return CassFuture::to(close_future.get());
+  cass::Future::Ptr future(session->close());
+  future->inc_ref();
+  return CassFuture::to(future.get());
 }
 
 CassFuture* cass_session_prepare(CassSession* session, const char* query) {

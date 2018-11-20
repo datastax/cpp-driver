@@ -103,6 +103,12 @@ public:
   virtual void on_keyspace_changed(const String& keyspace,
                                    KeyspaceChangedResponse response) { }
 
+  virtual bool on_wait_for_tracing_data(const RequestHandler::Ptr& request_handler,
+                                        const Host::Ptr& current_host,
+                                        const Response::Ptr& response) {
+    return false;
+  }
+
   virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                             const Host::Ptr& current_host,
                                             const Response::Ptr& response) {
@@ -206,7 +212,13 @@ void RequestHandler::notify_keyspace_changed(const String& keyspace,
                                  KeyspaceChangedResponse(RequestHandler::Ptr(this), current_host, response));
 }
 
-bool RequestHandler::wait_for_schema_agreement(const Host::Ptr& current_host, const Response::Ptr& response) {
+bool RequestHandler::wait_for_tracing_data(const Host::Ptr& current_host,
+                                           const Response::Ptr& response) {
+  return listener_->on_wait_for_tracing_data(Ptr(this), current_host, response);
+}
+
+bool RequestHandler::wait_for_schema_agreement(const Host::Ptr& current_host,
+                                               const Response::Ptr& response) {
   return listener_->on_wait_for_schema_agreement(Ptr(this), current_host, response);
 }
 
@@ -264,12 +276,15 @@ void RequestHandler::set_error_with_error_response(const Host::Ptr& host,
   future_->set_error_with_response(host->address(), error, code, message);
 }
 
+void RequestHandler::stop_timer() {
+  timer_.stop();
+}
+
 void RequestHandler::on_timeout(Timer* timer) {
   if (metrics_) {
     metrics_->request_timeouts.inc();
   }
-  set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT,
-            "Request timed out");
+  set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT, "Request timed out");
   LOG_DEBUG("Request timed out");
 }
 
@@ -443,7 +458,12 @@ void RequestExecution::on_result_response(Connection* connection, ResponseMessag
           notify_result_metadata_changed(request(), result);
         }
       }
-      set_response(response->response_body());
+
+      if (!response->response_body()->has_tracing_id() ||
+          !request_handler_->wait_for_tracing_data(current_host(),
+                                                   response->response_body())) {
+        set_response(response->response_body());
+      }
       break;
 
     case CASS_RESULT_KIND_SCHEMA_CHANGE: {

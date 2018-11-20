@@ -139,6 +139,12 @@ CassError cass_statement_set_custom_payload(CassStatement* statement,
   return CASS_OK;
 }
 
+CassError cass_statement_set_tracing(CassStatement* statement,
+                                     cass_bool_t enabled) {
+  statement->set_tracing(enabled == cass_true);
+  return CASS_OK;
+}
+
 #define CASS_STATEMENT_BIND(Name, Params, Value)                                \
   CassError cass_statement_bind_##Name(CassStatement* statement,                \
                                       size_t index Params) {                    \

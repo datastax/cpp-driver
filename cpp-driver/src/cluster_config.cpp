@@ -220,6 +220,21 @@ void cass_cluster_set_max_schema_wait_time(CassCluster* cluster,
   cluster->config().set_max_schema_wait_time_ms(wait_time_ms);
 }
 
+void cass_cluster_set_max_tracing_wait_time(CassCluster* cluster,
+                                           unsigned wait_time_ms) {
+  cluster->config().set_max_tracing_wait_time_ms(wait_time_ms);
+}
+
+void cass_cluster_set_retry_tracing_wait_time(CassCluster* cluster,
+                                           unsigned wait_time_ms) {
+  cluster->config().set_retry_tracing_wait_time_ms(wait_time_ms);
+}
+
+void cass_cluster_set_tracing_consistency(CassCluster* cluster,
+                                          CassConsistency consistency) {
+  cluster->config().set_tracing_consistency(consistency);
+}
+
 void cass_cluster_set_credentials(CassCluster* cluster,
                                   const char* username,
                                   const char* password) {

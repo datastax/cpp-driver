@@ -104,14 +104,6 @@ private:
   size_t request_processor_count_;
 };
 
-class SessionFuture : public Future {
-public:
-  typedef SharedRefPtr<SessionFuture> Ptr;
-
-  SessionFuture()
-    : Future(FUTURE_TYPE_SESSION) { }
-};
-
 } // namespace cass
 
 EXTERNAL_TYPE(cass::Session, CassSession)

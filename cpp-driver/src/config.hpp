@@ -46,6 +46,9 @@ public:
       , connect_timeout_ms_(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
       , resolve_timeout_ms_(CASS_DEFAULT_RESOLVE_TIMEOUT_MS)
       , max_schema_wait_time_ms_(CASS_DEFAULT_MAX_SCHEMA_WAIT_TIME_MS)
+      , max_tracing_wait_time_ms_(CASS_DEFAULT_MAX_TRACING_DATA_WAIT_TIME_MS)
+      , retry_tracing_wait_time_ms_(CASS_DEFAULT_RETRY_TRACING_DATA_WAIT_TIME_MS)
+      , tracing_consistency_(CASS_DEFAULT_TRACING_CONSISTENCY)
       , coalesce_delay_us_(CASS_DEFAULT_COALESCE_DELAY)
       , new_request_ratio_(CASS_DEFAULT_NEW_REQUEST_RATIO)
       , log_level_(CASS_DEFAULT_LOG_LEVEL)
@@ -129,6 +132,24 @@ public:
 
   void set_max_schema_wait_time_ms(unsigned time_ms) {
     max_schema_wait_time_ms_ = time_ms;
+  }
+
+  unsigned max_tracing_wait_time_ms() const { return max_tracing_wait_time_ms_; }
+
+  void set_max_tracing_wait_time_ms(unsigned time_ms) {
+    max_tracing_wait_time_ms_ = time_ms;
+  }
+
+  unsigned retry_tracing_wait_time_ms() const { return retry_tracing_wait_time_ms_; }
+
+  void set_retry_tracing_wait_time_ms(unsigned time_ms) {
+    retry_tracing_wait_time_ms_ = time_ms;
+  }
+
+  CassConsistency tracing_consistency() const { return tracing_consistency_; }
+
+  void set_tracing_consistency(CassConsistency consistency) {
+    tracing_consistency_ = consistency;
   }
 
   uint64_t coalesce_delay_us() const { return coalesce_delay_us_; }
@@ -379,6 +400,9 @@ private:
   unsigned connect_timeout_ms_;
   unsigned resolve_timeout_ms_;
   unsigned max_schema_wait_time_ms_;
+  unsigned max_tracing_wait_time_ms_;
+  unsigned retry_tracing_wait_time_ms_;
+  CassConsistency tracing_consistency_;
   uint64_t coalesce_delay_us_;
   int new_request_ratio_;
   CassLogLevel log_level_;

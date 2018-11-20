@@ -21,6 +21,8 @@
 
 #include "control_connection.hpp" // For host queries
 #include "scoped_lock.hpp"
+#include "tracing_data_handler.hpp" // For tracing query
+#include "uuids.hpp"
 
 #ifdef WIN32
 #  include "winsock.h"
@@ -702,6 +704,25 @@ inline const char* decode_bytes(const char* input, const char* end, String* outp
   return pos + len;
 }
 
+inline const char* decode_uuid(const char* input, CassUuid* output) {
+  output->time_and_version  = static_cast<uint64_t>(static_cast<uint8_t>(input[3]));
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[2])) << 8;
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[1])) << 16;
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[0])) << 24;
+
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[5])) << 32;
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[4])) << 40;
+
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[7])) << 48;
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[6])) << 56;
+
+  output->clock_seq_and_node = 0;
+  for (size_t i = 0; i < 8; ++i) {
+    output->clock_seq_and_node |= static_cast<uint64_t>(static_cast<uint8_t>(input[15 - i])) << (8 * i);
+  }
+  return input + 16;
+}
+
 inline const char* decode_string_map(const char* input,
                                      const char* end,
                                      Vector<std::pair<String, String> >* output) {
@@ -886,7 +907,6 @@ const char* decode_prepare_params(int version, const char* input, const char* en
   return pos;
 }
 
-
 inline int32_t encode_int8(int8_t value, String* output) {
   output->push_back(static_cast<char>(value));
   return 1;
@@ -944,17 +964,56 @@ inline int32_t encode_inet(const Address& value, String* output) {
   return 1 + len + 4;
 }
 
-static String encode_header(int8_t version, int16_t stream, int8_t opcode, int32_t len) {
+inline int32_t encode_uuid(CassUuid uuid, String* output) {
+  uint64_t time_and_version = uuid.time_and_version;
+  char buf[16];
+  buf[3] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  buf[2] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  buf[1] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  buf[0] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+
+  buf[5] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  buf[4] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+
+  buf[7] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  buf[6] = static_cast<char>(time_and_version & 0x000000000000000FFLL);
+
+  uint64_t clock_seq_and_node = uuid.clock_seq_and_node;
+  for (size_t i = 0; i < 8; ++i) {
+    buf[15 - i] = static_cast<char>(clock_seq_and_node & 0x00000000000000FFL);
+    clock_seq_and_node >>= 8;
+  }
+  output->append(buf, 16);
+  return 16;
+}
+
+static String encode_header(int8_t version, int8_t flags, int16_t stream, int8_t opcode, int32_t len) {
   String header;
   encode_int8(0x80 | version, &header);
-  encode_int8(0, &header);
+  encode_int8(flags, &header);
   if (version >= 3) {
     encode_int16(stream, &header);
   } else {
     encode_int8(stream, &header);
   }
   encode_int8(opcode, &header);
+  if (flags & FLAG_TRACING) {
+    len += 16; // Add enough space for the tracing ID
+  }
   encode_int32(len, &header);
+  if (flags & FLAG_TRACING) {
+    cass::UuidGen gen;
+    CassUuid tracing_id;
+    gen.generate_random(&tracing_id);
+    encode_uuid(tracing_id, &header);
+  }
   return header;
 }
 
@@ -964,6 +1023,10 @@ Type Type::text() {
 
 Type Type::inet() {
   return Type(TYPE_INET);
+}
+
+Type Type::uuid() {
+  return Type(TYPE_UUID);
 }
 
 Type Type::list(const Type& sub_type) {
@@ -976,6 +1039,7 @@ void Type::encode(int protocol_version, String* output) const {
   switch (type_) {
     case TYPE_VARCHAR:
     case TYPE_INET:
+    case TYPE_UUID:
       encode_int16(type_, output);
       break;
     case TYPE_LIST:
@@ -1011,6 +1075,34 @@ void Value::encode(int protocol_version, String* output) const {
     collection_->encode(protocol_version, &buf);
     encode_bytes(buf, output);
   }
+}
+
+Row::Builder& Row::Builder::text(const cass::String& text) {
+  values_.push_back(Value(text));
+  return *this;
+}
+
+Row::Builder& Row::Builder::inet(const cass::Address& inet) {
+  String value;
+  uint8_t buf[16];
+  uint8_t len = inet.to_inet(buf);
+  for (uint8_t i = 0; i < len; ++i) {
+    value.push_back(static_cast<char>(buf[i]));
+  }
+  values_.push_back(Value(value));
+  return *this;
+}
+
+Row::Builder& Row::Builder::uuid(const CassUuid& uuid) {
+  String value;
+  encode_uuid(uuid, &value);
+  values_.push_back(Value(value));
+  return *this;
+}
+
+Row::Builder& Row::Builder::collection(const Collection& collection) {
+  values_.push_back(Value(collection));
+  return *this;
 }
 
 void Row::encode(int protocol_version, cass::String* output) const {
@@ -1143,6 +1235,10 @@ Action::Builder& Action::Builder::system_peers() {
   return execute(Memory::allocate<SystemPeers>());
 }
 
+Action::Builder& Action::Builder::system_traces() {
+  return execute(Memory::allocate<SystemTraces>());
+}
+
 Action::Builder& Action::Builder::use_keyspace(const cass::String& keyspace) {
   return execute((Memory::allocate<UseKeyspace>(keyspace)));
 }
@@ -1192,6 +1288,10 @@ Action::PredicateBuilder Action::Builder::is_address(const cass::String& address
   return PredicateBuilder(execute(Memory::allocate<IsAddress>(Address(address, port))));
 }
 
+Action::PredicateBuilder Action::Builder::is_query(const cass::String& query) {
+  return PredicateBuilder(execute(Memory::allocate<IsQuery>(query)));
+}
+
 void Action::run(Request* request) const {
   on_run(request);
 }
@@ -1224,7 +1324,7 @@ void Request::write(int8_t opcode, const String& body) {
 }
 
 void Request::write(int16_t stream, int8_t opcode, const cass::String& body) {
-  client_->write(encode_header(version_, stream, opcode, body.size()) + body);
+  client_->write(encode_header(version_, flags_, stream, opcode, body.size()) + body);
 }
 
 void Request::error(int32_t code, const String& message) {
@@ -1371,37 +1471,29 @@ void SystemLocal::on_run(Request* request) const {
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
-    return;
+  } else if (query.find(SELECT_LOCAL) != String::npos) {
+    const Host& host(request->host(request->address()));
+
+    ResultSet local_rs
+        = ResultSet::Builder("system", "local")
+          .column("data_center", Type::text())
+          .column("rack", Type::text())
+          .column("release_version", Type::text())
+          .column("partitioner", Type::text())
+          .column("tokens", Type::list(Type::text()))
+          .row(Row::Builder()
+               .text(host.dc)
+               .text(host.rack)
+               .text(SERVER_VERSION)
+               .text(host.partitioner)
+               .collection(Collection::text(host.tokens))
+               .build())
+          .build();
+
+    request->write(OPCODE_RESULT, local_rs.encode(request->version()));
   } else {
-    try {
-      if (query.find(SELECT_LOCAL) != String::npos) {
-        const Host& host(request->host(request->address()));
-
-        ResultSet local_rs
-            = ResultSet::Builder("system", "local")
-              .column("data_center", Type::text())
-              .column("rack", Type::text())
-              .column("release_version", Type::text())
-              .column("partitioner", Type::text())
-              .column("tokens", Type::list(Type::text()))
-              .row(Row::Builder()
-                   .text(host.dc)
-                   .text(host.rack)
-                   .text(SERVER_VERSION)
-                   .text(host.partitioner)
-                   .collection(Collection::text(host.tokens))
-                   .build())
-              .build();
-
-        request->write(OPCODE_RESULT, local_rs.encode(request->version()));
-        return;
-      }
-    } catch(const Exception& ex) {
-      request->error(ex.code, ex.message);
-      return;
-    }
+    run_next(request);
   }
-  run_next(request);
 }
 
 void SystemPeers::on_run(Request* request) const {
@@ -1409,77 +1501,95 @@ void SystemPeers::on_run(Request* request) const {
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
-    return;
-  } else {
-    try {
-      if (query.find(SELECT_PEERS) != String::npos) {
-        const String where_clause(" WHERE peer = '");
-        ResultSet::Builder peers_builder
-            = ResultSet::Builder("system", "peers")
-              .column("peer", Type::inet())
-              .column("data_center", Type::text())
-              .column("rack", Type::text())
-              .column("release_version", Type::text())
-              .column("rpc_address", Type::inet())
-              .column("tokens", Type::list(Type::text()));
+  } else if (query.find(SELECT_PEERS) != String::npos) {
+    const String where_clause(" WHERE peer = '");
+    ResultSet::Builder peers_builder
+        = ResultSet::Builder("system", "peers")
+          .column("peer", Type::inet())
+          .column("data_center", Type::text())
+          .column("rack", Type::text())
+          .column("release_version", Type::text())
+          .column("rpc_address", Type::inet())
+          .column("tokens", Type::list(Type::text()));
 
-        size_t pos = query.find(where_clause);
-        if (pos == String::npos) {
-          Hosts hosts(request->hosts());
-          for (Hosts::const_iterator it = hosts.begin(),
-               end = hosts.end(); it != end; ++it) {
-            const Host& host(*it);
-            if (host.address == request->address()) {
-              continue;
-            }
-            peers_builder
-                .row(Row::Builder()
-                     .inet(host.address)
-                     .text(host.dc)
-                     .text(host.rack)
-                     .text(SERVER_VERSION)
-                     .inet(host.address)
-                     .collection(Collection::text(host.tokens))
-                     .build());
-          }
-          ResultSet peers_rs = peers_builder.build();
-          request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
-          return;
-        } else {
-          pos += where_clause.size();
-          size_t end_pos = query.find("'", pos);
-          if (end_pos == String::npos) {
-            throw Exception(ERROR_INVALID_QUERY, "Invalid WHERE clause");
-          }
-
-          String ip = query.substr(pos, end_pos - pos);
-          Address address;
-          if (!Address::from_string(ip, request->address().port(), &address)) {
-            throw Exception(ERROR_INVALID_QUERY, "Invalid inet address in WHERE clause");
-          }
-
-          const Host& host(request->host(address));
-          ResultSet peers_rs
-              = peers_builder
-                .row(Row::Builder()
-                     .inet(host.address)
-                     .text(host.dc)
-                     .text(host.rack)
-                     .text(SERVER_VERSION)
-                     .inet(host.address)
-                     .collection(Collection::text(host.tokens))
-                     .build())
-                .build();
-          request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
-          return;
+    size_t pos = query.find(where_clause);
+    if (pos == String::npos) {
+      Hosts hosts(request->hosts());
+      for (Hosts::const_iterator it = hosts.begin(),
+           end = hosts.end(); it != end; ++it) {
+        const Host& host(*it);
+        if (host.address == request->address()) {
+          continue;
         }
+        peers_builder
+            .row(Row::Builder()
+                 .inet(host.address)
+                 .text(host.dc)
+                 .text(host.rack)
+                 .text(SERVER_VERSION)
+                 .inet(host.address)
+                 .collection(Collection::text(host.tokens))
+                 .build());
       }
-    } catch(const Exception& ex) {
-      request->error(ex.code, ex.message);
+      ResultSet peers_rs = peers_builder.build();
+      request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
+    } else {
+      pos += where_clause.size();
+      size_t end_pos = query.find("'", pos);
+      if (end_pos == String::npos) {
+        request->error(ERROR_INVALID_QUERY, "Invalid WHERE clause");
+        return;
+      }
+
+      String ip = query.substr(pos, end_pos - pos);
+      Address address;
+      if (!Address::from_string(ip, request->address().port(), &address)) {
+        request->error(ERROR_INVALID_QUERY, "Invalid inet address in WHERE clause");
+        return;
+      }
+
+      const Host& host(request->host(address));
+      ResultSet peers_rs
+          = peers_builder
+            .row(Row::Builder()
+                 .inet(host.address)
+                 .text(host.dc)
+                 .text(host.rack)
+                 .text(SERVER_VERSION)
+                 .inet(host.address)
+                 .collection(Collection::text(host.tokens))
+                 .build())
+            .build();
+      request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
+    }
+  } else {
+    run_next(request);
+  }
+}
+
+void SystemTraces::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+  } else if (query.find(SELECT_TRACES_SESSION) != String::npos) {
+    if (params.values.empty() || params.values.front().size() < 16) {
+      request->error(ERROR_INVALID_QUERY, "Query expects a UUID parameter (tracing)");
       return;
     }
+    CassUuid tracing_id;
+    decode_uuid(params.values.front().data(), &tracing_id);
+    ResultSet session_rs
+        = ResultSet::Builder("system_traces", "session")
+          .column("session_id", Type::uuid())
+          .row(Row::Builder()
+               .uuid(tracing_id)
+               .build())
+          .build();
+    request->write(OPCODE_RESULT, session_rs.encode(request->version()));
+  } else {
+    run_next(request);
   }
-  run_next(request);
 }
 
 void UseKeyspace::on_run(Request* request) const {
@@ -1596,6 +1706,12 @@ void SetProtocolVersion::on_run(Request* request) const {
 
 bool IsAddress::is_true(Request* request) const {
   return request->client()->server()->address() == address;
+}
+
+bool IsQuery::is_true(Request* request) const {
+  String query;
+  QueryParameters params;
+  return request->decode_query(&query, &params) && query == this->query;
 }
 
 RequestHandler::RequestHandler(RequestHandler::Builder* builder,
@@ -1719,7 +1835,7 @@ void Event::run(internal::ServerConnection* server_connection) {
        end = server_connection->clients().end(); it != end; ++it) {
     ClientConnection* client = static_cast<ClientConnection*>(*it);
     if (client->is_registered_for_events() && client->protocol_version() > 0) {
-      client->write(encode_header(client->protocol_version(), -1, OPCODE_EVENT, event_body_.size()) + event_body_);
+      client->write(encode_header(client->protocol_version(), 0, -1, OPCODE_EVENT, event_body_.size()) + event_body_);
     }
   }
 }

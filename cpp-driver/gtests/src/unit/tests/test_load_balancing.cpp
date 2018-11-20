@@ -418,7 +418,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     // Set local CL
-    cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 0));
+    cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
       cass::Memory::allocate<cass::RequestHandler>(request, cass::ResponseFuture::Ptr()));
@@ -436,7 +436,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
     // Set local CL
-    cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 0));
+    cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
     cass::SharedRefPtr<cass::RequestHandler> request_handler(
       cass::Memory::allocate<cass::RequestHandler>(request, cass::ResponseFuture::Ptr()));
@@ -513,7 +513,7 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   cass::TokenAwarePolicy policy(cass::Memory::allocate<cass::RoundRobinPolicy>(), false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
-  cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 1));
+  cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("", 1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
@@ -589,7 +589,7 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   cass::TokenAwarePolicy policy(cass::Memory::allocate<cass::DCAwarePolicy>(LOCAL_DC, num_hosts / 2, false), false);
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
-  cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 1));
+  cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("", 1));
   const char* value = "abc"; // hash: -5434086359492102041
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);
@@ -656,7 +656,7 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   add_keyspace_simple("test", 3, token_map.get());
   token_map->build();
 
-  cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("", 1));
+  cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("", 1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
   request->set(0, cass::CassString(value, strlen(value)));
   request->add_key_index(0);

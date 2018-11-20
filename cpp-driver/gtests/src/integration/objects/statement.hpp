@@ -192,6 +192,16 @@ public:
     ASSERT_EQ(CASS_OK, cass_statement_set_serial_consistency(get(),
       serial_consistency));
   }
+
+  /**
+   * Enable/Disable tracing.
+   *
+   * @param enabled
+   */
+  void set_tracing(bool enabled) {
+    ASSERT_EQ(CASS_OK,
+              cass_statement_set_tracing(get(), enabled ? cass_true : cass_false));
+  }
 };
 
 /**

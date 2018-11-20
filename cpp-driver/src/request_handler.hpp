@@ -182,6 +182,8 @@ public:
                                const Host::Ptr& current_host,
                                const Response::Ptr& response);
 
+  bool wait_for_tracing_data(const Host::Ptr& current_host,
+                             const Response::Ptr& response);
   bool wait_for_schema_agreement(const Host::Ptr& current_host,
                                  const Response::Ptr& response);
 
@@ -196,6 +198,8 @@ public:
   void set_error_with_error_response(const Host::Ptr& host,
                                      const Response::Ptr& error,
                                      CassError code, const String& message);
+
+  void stop_timer();
 
 private:
   void on_timeout(Timer* timer);
@@ -263,6 +267,10 @@ public:
    */
   virtual void on_keyspace_changed(const String& keyspace,
                                    KeyspaceChangedResponse response) = 0;
+
+  virtual bool on_wait_for_tracing_data(const RequestHandler::Ptr& request_handler,
+                                        const Host::Ptr& current_host,
+                                        const Response::Ptr& response) = 0;
 
   virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                             const Host::Ptr& current_host,

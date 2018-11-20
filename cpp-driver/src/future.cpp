@@ -125,6 +125,22 @@ void cass_future_error_message(CassFuture* future,
   }
 }
 
+CassError cass_future_tracing_id(CassFuture* future, CassUuid* tracing_id) {
+  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
+    return CASS_ERROR_LIB_INVALID_FUTURE_TYPE;
+  }
+
+  cass::Response::Ptr response(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
+  if (!response || !response->has_tracing_id())  {
+    return CASS_ERROR_LIB_NO_TRACING_ID;
+  }
+
+  *tracing_id = response->tracing_id();
+
+  return CASS_OK;
+}
+
 size_t cass_future_custom_payload_item_count(CassFuture* future) {
   if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
     return 0;

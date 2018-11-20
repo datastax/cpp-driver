@@ -24,6 +24,14 @@
 
 namespace cass {
 
+class SessionFuture : public Future {
+public:
+  typedef SharedRefPtr<SessionFuture> Ptr;
+
+  SessionFuture()
+    : Future(FUTURE_TYPE_SESSION) { }
+};
+
 SessionBase::SessionBase()
   : state_(SESSION_STATE_CLOSED) {
   uv_mutex_init(&mutex_);
@@ -37,14 +45,15 @@ SessionBase::~SessionBase() {
   uv_mutex_destroy(&mutex_);
 }
 
-void SessionBase::connect(const Config& config,
-                          const String& keyspace,
-                          const Future::Ptr& future) {
+Future::Ptr SessionBase::connect(const Config& config,
+                                 const String& keyspace) {
+  cass::Future::Ptr future(cass::Memory::allocate<SessionFuture>());
+
   ScopedMutex l(&mutex_);
   if (state_ != SESSION_STATE_CLOSED) {
     future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
                       "Already connecting, closing, or connected");
-    return;
+    return future;
   }
 
   if (!event_loop_) {
@@ -55,14 +64,14 @@ void SessionBase::connect(const Config& config,
     if (rc != 0) {
       future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
                         "Unable to initialize cluster event loop");
-      return;
+      return future;
     }
 
     rc = event_loop_->run();
     if (rc != 0) {
       future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
                         "Unable to run cluster event loop");
-      return;
+      return future;
     }
   }
 
@@ -91,19 +100,24 @@ void SessionBase::connect(const Config& config,
       ->with_random(random_.get())
       ->with_metrics(metrics_.get())
       ->connect(event_loop_.get());
+
+  return future;
 }
 
-void SessionBase::close(const Future::Ptr& future) {
+Future::Ptr SessionBase::close() {
+  cass::Future::Ptr future(cass::Memory::allocate<SessionFuture>());
+
   ScopedMutex l(&mutex_);
   if (state_ == SESSION_STATE_CLOSED ||
       state_ == SESSION_STATE_CLOSING) {
     future->set_error(CASS_ERROR_LIB_UNABLE_TO_CLOSE,
                       "Already closing or closed");
-    return;
+    return future;
   }
   state_ = SESSION_STATE_CLOSING;
   close_future_ = future;
   on_close();
+  return future;
 }
 
 void SessionBase::notify_connected() {
@@ -129,7 +143,7 @@ void SessionBase::notify_connect_failed(CassError code, const String& message) {
 }
 
 void SessionBase::notify_closed() {
-  cluster_->close();
+  if (cluster_) cluster_->close();
 }
 
 void SessionBase::on_connect(const Host::Ptr& connected_host,

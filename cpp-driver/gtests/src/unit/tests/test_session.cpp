@@ -65,8 +65,7 @@ public:
     if (ssl_context) {
       config.set_ssl_context(ssl_context);
     }
-    cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-    session->connect(config, "", connect_future);
+    cass::Future::Ptr connect_future(session->connect(config));
     ASSERT_TRUE(connect_future->wait_for(wait_for_time_us)) << "Timed out waiting for session to connect";
     ASSERT_FALSE(connect_future->error())
       << cass_error_desc(connect_future->error()->code) << ": "
@@ -75,8 +74,7 @@ public:
 
   static void close(cass::Session* session,
                     uint64_t wait_for_time_us = WAIT_FOR_TIME) {
-    cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-    session->close(close_future);
+    cass::Future::Ptr close_future(session->close());
     ASSERT_TRUE(close_future->wait_for(wait_for_time_us)) << "Timed out waiting for session to close";
     ASSERT_FALSE(close_future->error())
       << cass_error_desc(close_future->error()->code) << ": "
@@ -84,7 +82,7 @@ public:
   }
 
   static void query(cass::Session* session) {
-    cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+    cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
     request->set_is_idempotent(true);
 
     cass::Future::Ptr future = session->execute(request, NULL);
@@ -102,7 +100,7 @@ public:
 };
 
 TEST_F(SessionUnitTest, ExecuteQueryNotConnected) {
-  cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
 
   cass::Session session;
   cass::Future::Ptr future = session.execute(request, NULL);
@@ -121,16 +119,13 @@ TEST_F(SessionUnitTest, InvalidKeyspace) {
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   cass::Session session;
 
-  session.connect(config, "invalid", connect_future);
+  cass::Future::Ptr connect_future(session.connect(config, "invalid"));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, connect_future->error()->code);
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(session.close()->wait_for(WAIT_FOR_TIME));
 }
 
 TEST_F(SessionUnitTest, InvalidDataCenter) {
@@ -143,16 +138,13 @@ TEST_F(SessionUnitTest, InvalidDataCenter) {
                                      "invalid_data_center",
                                      0,
                                      false));
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   cass::Session session;
 
-  session.connect(config, "", connect_future);
+  cass::Future::Ptr connect_future(session.connect(config));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(session.close()->wait_for(WAIT_FOR_TIME));
 }
 
 
@@ -167,16 +159,13 @@ TEST_F(SessionUnitTest, InvalidLocalAddress) {
                                      "invalid_data_center",
                                      0,
                                      false));
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   cass::Session session;
 
-  session.connect(config, "", connect_future);
+  cass::Future::Ptr connect_future(session.connect(config, "invalid"));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(session.close()->wait_for(WAIT_FOR_TIME));
 }
 
 TEST_F(SessionUnitTest, ExecuteQueryReusingSession) {
@@ -246,7 +235,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithCompleteOutage) {
 
   // Full outage
   cluster.stop_all();
-  cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
   cass::Future::Ptr future = session.execute(request, NULL);
   ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, future->error()->code);
@@ -275,7 +264,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithCompleteOutageSpinDown) {
   cluster.stop(2);
 
   // Full outage
-  cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
   cass::Future::Ptr future = session.execute(request, NULL);
   ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, future->error()->code);

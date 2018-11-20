@@ -265,7 +265,13 @@ private:
 class ChainedRequestCallback : public SimpleRequestCallback {
 public:
   typedef SharedRefPtr<ChainedRequestCallback> Ptr;
-  typedef DenseHashMap<String, Response::Ptr> Map;
+
+  class Map : public DenseHashMap<String, Response::Ptr> {
+  public:
+    Map() {
+      set_empty_key(String());
+    }
+  };
 
   /**
    * Constructor for a simple query.

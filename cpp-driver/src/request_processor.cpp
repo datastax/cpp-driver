@@ -20,6 +20,7 @@
 #include "prepare_all_handler.hpp"
 #include "request_processor.hpp"
 #include "session.hpp"
+#include "tracing_data_handler.hpp"
 #include "utils.hpp"
 
 namespace cass {
@@ -121,7 +122,10 @@ RequestProcessorSettings::RequestProcessorSettings()
   , default_profile(Config().default_profile())
   , request_queue_size(8192)
   , coalesce_delay_us(CASS_DEFAULT_COALESCE_DELAY)
-  , new_request_ratio(CASS_DEFAULT_NEW_REQUEST_RATIO) {
+  , new_request_ratio(CASS_DEFAULT_NEW_REQUEST_RATIO)
+  , max_tracing_wait_time_ms(CASS_DEFAULT_MAX_TRACING_DATA_WAIT_TIME_MS)
+  , retry_tracing_wait_time_ms(CASS_DEFAULT_RETRY_TRACING_DATA_WAIT_TIME_MS)
+  , tracing_consistency(CASS_DEFAULT_TRACING_CONSISTENCY) {
     profiles.set_empty_key("");
   }
 
@@ -134,7 +138,10 @@ RequestProcessorSettings::RequestProcessorSettings(const Config& config)
   , profiles(config.profiles())
   , request_queue_size(config.queue_size_io())
   , coalesce_delay_us(config.coalesce_delay_us())
-  , new_request_ratio(config.new_request_ratio()) { }
+  , new_request_ratio(config.new_request_ratio())
+  , max_tracing_wait_time_ms(config.max_tracing_wait_time_ms())
+  , retry_tracing_wait_time_ms(config.retry_tracing_wait_time_ms())
+  , tracing_consistency(config.tracing_consistency()) { }
 
 RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
                                    EventLoop* event_loop,
@@ -147,11 +154,7 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
   : connection_pool_manager_(connection_pool_manager)
   , listener_(listener ? listener : &nop_request_processor_listener__)
   , event_loop_(event_loop)
-  , max_schema_wait_time_ms_(settings.max_schema_wait_time_ms)
-  , prepare_on_all_hosts_(settings.prepare_on_all_hosts)
-  , timestamp_generator_(settings.timestamp_generator)
-  , coalesce_delay_us_(settings.coalesce_delay_us)
-  , new_request_ratio_(settings.new_request_ratio)
+  , settings_(settings)
   , default_profile_(settings.default_profile)
   , profiles_(settings.profiles)
   , request_count_(0)
@@ -306,6 +309,19 @@ void RequestProcessor::on_keyspace_changed(const String& keyspace,
                                    Memory::allocate<KeyspaceChangedHandler>(event_loop_, response)));
 }
 
+bool RequestProcessor::on_wait_for_tracing_data(const RequestHandler::Ptr& request_handler,
+                                                const Host::Ptr& current_host,
+                                                const Response::Ptr& response) {
+  TracingDataHandler::Ptr handler(Memory::allocate<TracingDataHandler>(request_handler,
+                                                                       current_host,
+                                                                       response,
+                                                                       settings_.tracing_consistency,
+                                                                       settings_.max_tracing_wait_time_ms,
+                                                                       settings_.retry_tracing_wait_time_ms));
+
+  return write_wait_callback(request_handler, current_host, handler->callback());
+}
+
 bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                                     const Host::Ptr& current_host,
                                                     const Response::Ptr& response) {
@@ -313,19 +329,15 @@ bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& r
                                                                                current_host,
                                                                                response,
                                                                                this,
-                                                                               max_schema_wait_time_ms_));
+                                                                               settings_.max_schema_wait_time_ms));
 
-  PooledConnection::Ptr connection(connection_pool_manager_->find_least_busy(current_host->address()));
-  if (connection && connection->write(handler->callback().get())) {
-    return true;
-  }
-  return false;
+  return write_wait_callback(request_handler, current_host, handler->callback());
 }
 
 bool RequestProcessor::on_prepare_all(const RequestHandler::Ptr& request_handler,
                                       const Host::Ptr& current_host,
                                       const Response::Ptr& response) {
-  if (!prepare_on_all_hosts_) {
+  if (!settings_.prepare_on_all_hosts) {
     return false;
   }
 
@@ -463,14 +475,14 @@ void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
 
 void RequestProcessor::start_coalescing() {
   io_time_during_coalesce_ = 0;
-  timer_.start(event_loop_->loop(), coalesce_delay_us_,
+  timer_.start(event_loop_->loop(), settings_.coalesce_delay_us,
                bind_callback(&RequestProcessor::on_timeout, this));
 }
 
 void RequestProcessor::on_timeout(MicroTimer* timer) {
   // Don't process for more time than the coalesce delay.
-  uint64_t processing_time = std::min((io_time_during_coalesce_ * new_request_ratio_) / 100,
-                                      coalesce_delay_us_ * 1000);
+  uint64_t processing_time = std::min((io_time_during_coalesce_ * settings_.new_request_ratio) / 100,
+                                      settings_.coalesce_delay_us * 1000);
   int processed = process_requests(processing_time);
 
   connection_pool_manager_->flush();
@@ -544,7 +556,7 @@ int RequestProcessor::process_requests(uint64_t processing_time) {
         request_handler->init(*profile,
                               connection_pool_manager_.get(),
                               token_map_.get(),
-                              timestamp_generator_.get(),
+                              settings_.timestamp_generator.get(),
                               this);
         request_handler->execute();
         processed++;
@@ -567,6 +579,19 @@ int RequestProcessor::process_requests(uint64_t processing_time) {
 #endif
 
   return processed;
+}
+
+bool RequestProcessor::write_wait_callback(const RequestHandler::Ptr& request_handler,
+                                           const Host::Ptr& current_host,
+                                           const RequestCallback::Ptr& callback) {
+  PooledConnection::Ptr connection(connection_pool_manager_->find_least_busy(current_host->address()));
+  if (connection && connection->write(callback.get())) {
+    // Stop the original request timer now that we have a response and
+    // are waiting for the maximum wait time of the handler.
+    request_handler->stop_timer();
+    return true;
+  }
+  return false;
 }
 
 } // namespace cass

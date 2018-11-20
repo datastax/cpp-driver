@@ -225,6 +225,14 @@ private:
 } // namespace internal
 
 enum {
+  FLAG_COMPRESSION = 0x01,
+  FLAG_TRACING = 0x02,
+  FLAG_CUSTOM_PAYLOAD  = 0x04,
+  FLAG_WARNING = 0x08,
+  FLAG_BETA = 0x10
+};
+
+enum {
   OPCODE_ERROR = 0x00,
   OPCODE_STARTUP = 0x01,
   OPCODE_READY = 0x02,
@@ -311,7 +319,7 @@ enum {
   TYPE_FLOAT = 0x0008,
   TYPE_INT = 0x0009,
   TYPE_TIMESTAMP = 0x000B,
-  TYPE_UUIT = 0x000C,
+  TYPE_UUID = 0x000C,
   TYPE_VARCHAR = 0x000D,
   TYPE_VARINT = 0x000E,
   TYPE_TIMEUUD = 0x000F,
@@ -356,6 +364,7 @@ class Type {
 public:
   static Type text();
   static Type inet();
+  static Type uuid();
   static Type list(const Type& sub_type);
 
   void encode(int protocol_version, String* output) const;
@@ -486,26 +495,13 @@ class Row {
 public:
   class Builder {
   public:
-    Builder& text(const String& text) {
-      values_.push_back(Value(text));
-      return *this;
-    }
+    Builder& text(const String& text);
 
-    Builder& inet(const Address& inet) {
-      String value;
-      uint8_t buf[16];
-      uint8_t len = inet.to_inet(buf);
-      for (uint8_t i = 0; i < len; ++i) {
-        value.push_back(static_cast<char>(buf[i]));
-      }
-      values_.push_back(Value(value));
-      return *this;
-    }
+    Builder& inet(const Address& inet);
 
-    Builder& collection(const Collection& collection) {
-      values_.push_back(Value(collection));
-      return *this;
-    }
+    Builder& uuid(const CassUuid& uuid);
+
+    Builder& collection(const Collection& collection);
 
     Row build() const {
       return Row(values_);
@@ -643,6 +639,7 @@ struct Action {
 
     Builder& system_local();
     Builder& system_peers();
+    Builder& system_traces();
 
     Builder& use_keyspace(const String& keyspace);
     Builder& plaintext_auth(const String& username = "cassandra",
@@ -659,6 +656,8 @@ struct Action {
 
     PredicateBuilder is_address(const Address& address);
     PredicateBuilder is_address(const String& address, int port = 9042);
+
+    PredicateBuilder is_query(const String& query);
 
      Action* build();
 
@@ -862,6 +861,10 @@ struct SystemPeers : public Action {
   virtual void on_run(Request* request) const;
 };
 
+struct SystemTraces : public Action {
+  virtual void on_run(Request* request) const;
+};
+
 struct UseKeyspace : public Action {
   UseKeyspace(const String& keyspace)
     : keyspace(keyspace) { }
@@ -911,6 +914,13 @@ struct IsAddress : public Predicate {
     : address(address) { }
   virtual bool is_true(Request* request) const;
   const Address address;
+};
+
+struct IsQuery : public Predicate {
+  IsQuery(const String& query)
+    : query(query) { }
+  virtual bool is_true(Request* request) const;
+  const String query;
 };
 
 class RequestHandler {

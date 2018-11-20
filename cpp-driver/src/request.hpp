@@ -92,12 +92,23 @@ public:
 
   Request(uint8_t opcode)
       : opcode_(opcode)
+      , flags_(0)
       , timestamp_(CASS_INT64_MIN)
       , record_attempted_addresses_(false) { }
 
   virtual ~Request() { }
 
   uint8_t opcode() const { return opcode_; }
+
+  uint8_t flags() const { return flags_; }
+
+  void set_tracing(bool is_tracing) {
+    if (is_tracing) {
+      flags_ |= CASS_FLAG_TRACING;
+    } else {
+      flags_ &= ~CASS_FLAG_TRACING;
+    }
+  }
 
   const RequestSettings& settings() const { return settings_; }
 
@@ -196,6 +207,7 @@ public:
 
 private:
   uint8_t opcode_;
+  uint8_t flags_;
   RequestSettings settings_;
   int64_t timestamp_;
   bool record_attempted_addresses_;

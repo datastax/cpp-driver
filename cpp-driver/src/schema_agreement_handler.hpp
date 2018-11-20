@@ -17,11 +17,7 @@
 #ifndef __CASS_SCHEMA_CHANGE_HANDLER_HPP_INCLUDED__
 #define __CASS_SCHEMA_CHANGE_HANDLER_HPP_INCLUDED__
 
-#include "connection.hpp"
-#include "ref_counted.hpp"
-#include "request_handler.hpp"
-#include "request_callback.hpp"
-#include "response.hpp"
+#include "wait_for_handler.hpp"
 
 #include <uv.h>
 
@@ -48,7 +44,7 @@ public:
  * schema to propagate to all nodes then it sets the future of the request that
  * originally made the schema change.
  */
-class SchemaAgreementHandler : public RefCounted<SchemaAgreementHandler> {
+class SchemaAgreementHandler : public WaitForHandler {
 public:
   typedef SharedRefPtr<SchemaAgreementHandler> Ptr;
 
@@ -59,12 +55,14 @@ public:
    * @param current_host The host that processed the schema change.
    * @param response The original response for the schema change.
    * @param listener A listener for determining host liveness.
+   * @param max_wait_time_ms The maximum amount of time to wait for the data to
+   * become available.
    */
   SchemaAgreementHandler(const RequestHandler::Ptr& request_handler,
                          const Host::Ptr& current_host,
                          const Response::Ptr& response,
                          SchemaAgreementListener* listener,
-                         uint64_t max_schema_wait_time_ms);
+                         uint64_t max_wait_time_ms);
 
   /**
    * Gets a request callback for executing queries on behalf of the handler.
@@ -74,27 +72,11 @@ public:
   ChainedRequestCallback::Ptr callback();
 
 private:
-  friend class SchemaAgreementCallback;
-
-  void start(Connection* connection);
-  void schedule();
-  void finish();
+  virtual bool on_set(const ChainedRequestCallback::Ptr& callback);
+  virtual void on_error(WaitForError code, const String& message);
 
 private:
-  void on_retry_timeout(Timer* timer);
-  void on_timeout(Timer* timer);
-
-private:
-  Timer timer_;
-  Timer retry_timer_;
-  bool is_finished_;
-  Connection::Ptr connection_; // The connection could close so keep a reference
-  const uint64_t start_time_ms_;
-  const uint64_t max_schema_wait_time_ms_;
   SchemaAgreementListener* const listener_;
-  const RequestHandler::Ptr request_handler_;
-  const Host::Ptr current_host_;
-  const Response::Ptr response_;
 };
 
 } // namespace cass
