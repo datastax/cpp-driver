@@ -34,6 +34,21 @@
 
 namespace cass {
 
+class SingleHostQueryPlan : public QueryPlan {
+public:
+  SingleHostQueryPlan(const Address& address)
+    : host_(Memory::allocate<Host>(address)) { }
+
+  virtual Host::Ptr compute_next() {
+    Host::Ptr temp = host_;
+    host_.reset(); // Only return the host once
+    return temp;
+  }
+
+private:
+  Host::Ptr host_;
+};
+
 class PrepareCallback : public SimpleRequestCallback {
 public:
   PrepareCallback(const String& query, RequestExecution* request_execution);
@@ -156,7 +171,14 @@ void RequestHandler::init(const ExecutionProfile& profile,
   // Attempt to use the statement's keyspace first then if not set then use the session's keyspace
   const String& keyspace(!request()->keyspace().empty() ? request()->keyspace() : manager_->keyspace());
 
-  query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
+  // If a specific host is set then bypass the load balancing policy and use a
+  // specialized single host query plan.
+  if (request()->host()) {
+    query_plan_.reset(Memory::allocate<SingleHostQueryPlan>(*request()->host()));
+  } else {
+    query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
+  }
+
   execution_plan_.reset(profile.speculative_execution_policy()->new_plan(keyspace, wrapper_.request().get()));
 }
 

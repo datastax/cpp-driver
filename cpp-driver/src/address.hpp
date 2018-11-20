@@ -46,7 +46,7 @@ public:
   static bool from_string(const String& ip, int port,
                           Address* output = NULL);
 
-  static bool from_inet(const char* data, size_t size, int port,
+  static bool from_inet(const void* data, size_t size, int port,
                         Address* output = NULL);
 
   bool init(const struct sockaddr* addr);

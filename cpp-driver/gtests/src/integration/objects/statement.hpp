@@ -202,6 +202,28 @@ public:
     ASSERT_EQ(CASS_OK,
               cass_statement_set_tracing(get(), enabled ? cass_true : cass_false));
   }
+
+  /**
+   * Set host to run statement on.
+   *
+   * @param host
+   * @param port
+   */
+  void set_host(const std::string& host, int port) {
+    ASSERT_EQ(CASS_OK,
+              cass_statement_set_host(get(), host.c_str(), port));
+  }
+
+  /**
+   * Set host to run statement on using `CassInet` type.
+   *
+   * @param host
+   * @param port
+   */
+  void set_host(const CassInet* host, int port) {
+    ASSERT_EQ(CASS_OK,
+              cass_statement_set_host_inet(get(), host, port));
+  }
 };
 
 /**

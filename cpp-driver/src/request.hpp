@@ -203,6 +203,11 @@ public:
     return length;
   }
 
+  void set_host(const Address& host) {
+    host_.reset(Memory::allocate<Address>(host));
+  }
+  const Address* host() const { return host_.get(); }
+
   virtual int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const = 0;
 
 private:
@@ -214,6 +219,7 @@ private:
   CustomPayload::ConstPtr custom_payload_;
   CustomPayload custom_payload_extra_;
   String profile_name_;
+  ScopedPtr<Address> host_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);

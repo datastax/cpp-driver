@@ -139,9 +139,60 @@ CassError cass_statement_set_custom_payload(CassStatement* statement,
   return CASS_OK;
 }
 
+CassError cass_statement_set_execution_profile(CassStatement* statement,
+                                               const char* name) {
+  return cass_statement_set_execution_profile_n(statement,
+                                                name,
+                                                SAFE_STRLEN(name));
+}
+
+CassError cass_statement_set_execution_profile_n(CassStatement* statement,
+                                                 const char* name,
+                                                 size_t name_length) {
+  if (name_length > 0) {
+    statement->set_execution_profile_name(cass::String(name, name_length));
+  } else {
+    statement->set_execution_profile_name(cass::String());
+  }
+  return CASS_OK;
+}
+
 CassError cass_statement_set_tracing(CassStatement* statement,
                                      cass_bool_t enabled) {
   statement->set_tracing(enabled == cass_true);
+  return CASS_OK;
+}
+
+CassError cass_statement_set_host(CassStatement* statement,
+                                  const char* host,
+                                  int port) {
+  return cass_statement_set_host_n(statement, host, SAFE_STRLEN(host), port);
+}
+
+CassError cass_statement_set_host_n(CassStatement* statement,
+                                    const char* host,
+                                    size_t host_length,
+                                    int port) {
+  cass::Address address;
+  if (!cass::Address::from_string(cass::String(host, host_length),
+                                  port,
+                                  &address)) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  statement->set_host(address);
+  return CASS_OK;
+}
+
+CassError cass_statement_set_host_inet(CassStatement* statement,
+                                       const CassInet* host,
+                                       int port) {
+  cass::Address address;
+  if (!cass::Address::from_inet(host->address,
+                                host->address_length,
+                                port, &address)) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  statement->set_host(address);
   return CASS_OK;
 }
 
@@ -254,24 +305,6 @@ CassError cass_statement_bind_custom_by_name_n(CassStatement* statement,
   return statement->set(cass::StringRef(name, name_length),
                         cass::CassCustom(cass::StringRef(class_name, class_name_length),
                                          value, value_size));
-}
-
-CassError cass_statement_set_execution_profile(CassStatement* statement,
-                                               const char* name) {
-  return cass_statement_set_execution_profile_n(statement,
-                                                name,
-                                                SAFE_STRLEN(name));
-}
-
-CassError cass_statement_set_execution_profile_n(CassStatement* statement,
-                                                 const char* name,
-                                                 size_t name_length) {
-  if (name_length > 0) {
-    statement->set_execution_profile_name(cass::String(name, name_length));
-  } else {
-    statement->set_execution_profile_name(cass::String());
-  }
-  return CASS_OK;
 }
 
 } // extern "C"

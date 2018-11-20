@@ -5015,6 +5015,41 @@ cass_statement_set_custom_payload(CassStatement* statement,
                                   const CassCustomPayload* payload);
 
 /**
+ * Sets the execution profile to execute the statement with.
+ *
+ * <b>Note:</b> NULL or empty string will clear execution profile from statement
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_statement_set_execution_profile(CassStatement* statement,
+                                     const char* name);
+
+/**
+ * Same as cass_statement_set_execution_profile(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_statement_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_statement_set_execution_profile_n(CassStatement* statement,
+                                       const char* name,
+                                       size_t name_length);
+
+/**
  * Sets whether the statement should use tracing.
  *
  * @cassandra{2.2+}
@@ -5028,6 +5063,61 @@ cass_statement_set_custom_payload(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_set_tracing(CassStatement* statement,
                            cass_bool_t enabled);
+
+/**
+ * Sets a specific host that should run the query.
+ *
+ * In general, this should not be used, but it can be useful in the following
+ * situations:
+ * * To query node-local tables such as system and virtual tables.
+ * * To apply a sequence of schema changes where it makes sense for all the
+ *   changes to be applied on a single node.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] host
+ * @param[in] port
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_host(CassStatement* statement,
+                        const char* host,
+                        int port);
+
+/**
+ * Same as cass_statement_set_host(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] host
+ * @param[in] host_length
+ * @param[in] port
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_host_n(CassStatement* statement,
+                          const char* host,
+                          size_t host_length,
+                          int port);
+
+/**
+ * Same as cass_statement_set_host(), but with the `CassInet` type
+ * for the host instead of a string.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] host
+ * @param[in] port
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_host_inet(CassStatement* statement,
+                             const CassInet* host,
+                             int port);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -6152,41 +6242,6 @@ cass_statement_bind_user_type_by_name_n(CassStatement* statement,
                                         const char* name,
                                         size_t name_length,
                                         const CassUserType* user_type);
-
-/**
- * Sets the execution profile to execute the statement with.
- *
- * <b>Note:</b> NULL or empty string will clear execution profile from statement
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] name
- * @return CASS_OK if successful, otherwise an error occurred.
- *
- * @see cass_cluster_set_execution_profile()
- */
-CASS_EXPORT CassError
-cass_statement_set_execution_profile(CassStatement* statement,
-                                     const char* name);
-
-/**
- * Same as cass_statement_set_execution_profile(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] name
- * @param[in] name_length
- * @return CASS_OK if successful, otherwise an error occurred.
- *
- * @see cass_statement_set_execution_profile()
- */
-CASS_EXPORT CassError
-cass_statement_set_execution_profile_n(CassStatement* statement,
-                                       const char* name,
-                                       size_t name_length);
 
 /***********************************************************************************
  *
