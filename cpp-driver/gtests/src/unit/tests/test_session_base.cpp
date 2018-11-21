@@ -47,7 +47,7 @@ protected:
     ++connected_;
     ASSERT_STREQ("127.0.0.1", connected_host->address_string().c_str());
     ASSERT_EQ(cass::ProtocolVersion(PROTOCOL_VERSION), protocol_version);
-    ASSERT_EQ(1, hosts.size());
+    ASSERT_EQ(1u, hosts.size());
     ASSERT_EQ(state(), SESSION_STATE_CONNECTING);
     notify_connected();
   }
