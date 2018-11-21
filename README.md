@@ -2,6 +2,8 @@
 
 [![Build Status: Linux](https://travis-ci.org/datastax/cpp-driver.svg?branch=master)](https://travis-ci.org/datastax/cpp-driver)
 [![Build Status: Windows](https://ci.appveyor.com/api/projects/status/ec0x0vuk59as28r6/branch/master?svg=true)](https://ci.appveyor.com/project/DataStax/cpp-driver)
+[![Code Quality: Cpp](https://img.shields.io/lgtm/grade/cpp/g/datastax/cpp-driver.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/datastax/cpp-driver/context:cpp)
+[![Total Alerts](https://img.shields.io/lgtm/alerts/g/datastax/cpp-driver.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/datastax/cpp-driver/alerts)
 
 A modern, feature-rich] and highly tunable C/C++ client library for
 [Apache Cassandra] 2.1+ using exclusively Cassandra's binary protocol and
