@@ -1807,8 +1807,6 @@ std::vector<std::string> CCM::Bridge::generate_create_updateconf_command(CassVer
     updateconf_command.push_back("hinted_handoff_enabled:false");
     updateconf_command.push_back("dynamic_snitch_update_interval_in_ms:1000");
     updateconf_command.push_back("native_transport_max_threads:1");
-    updateconf_command.push_back("rpc_min_threads:1");
-    updateconf_command.push_back("rpc_max_threads:1");
     updateconf_command.push_back("concurrent_reads:2");
     updateconf_command.push_back("concurrent_writes:2");
     updateconf_command.push_back("concurrent_compactors:1");
@@ -1832,6 +1830,13 @@ std::vector<std::string> CCM::Bridge::generate_create_updateconf_command(CassVer
     // Create Cassandra version specific updates (C* < v2.1)
     if (cassandra_version < "2.1.0") {
       updateconf_command.push_back("in_memory_compaction_limit_in_mb:1");
+    }
+
+
+    // Create Cassandra version specific updates (C* < v4.0)
+    if (cassandra_version < "4.0.0") {
+      updateconf_command.push_back("rpc_min_threads:1");
+      updateconf_command.push_back("rpc_max_threads:1");
     }
   }
 

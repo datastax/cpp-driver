@@ -42,6 +42,8 @@
 #undef X509_NAME
 #endif
 
+#define CLIENT_OPTIONS_QUERY "client.options"
+
 using cass::Address;
 using cass::EventLoop;
 using cass::EventLoopGroup;
@@ -637,6 +639,8 @@ struct Action {
     Builder& no_result();
     Builder& match_query(const Matches& matches);
 
+    Builder& client_options();
+
     Builder& system_local();
     Builder& system_peers();
     Builder& system_traces();
@@ -853,6 +857,10 @@ struct MatchQuery : public Action {
   Matches matches;
 };
 
+struct ClientOptions : public Action {
+  virtual void on_run(Request* request) const;
+};
+
 struct SystemLocal : public Action {
   virtual void on_run(Request* request) const;
 };
@@ -1054,6 +1062,8 @@ public:
 
   bool is_registered_for_events() const { return is_registered_for_events_; }
   void set_registered_for_events() { is_registered_for_events_ = true; }
+  const Options& options() const { return options_; }
+  void set_options(const Options& options) { options_ = options; }
 
 private:
   ProtocolHandler handler_;
@@ -1061,6 +1071,7 @@ private:
   List<Request> requests_;
   int protocol_version_;
   bool is_registered_for_events_;
+  Options options_;
 };
 
 class CloseConnection : public ClientConnection {

@@ -1227,6 +1227,10 @@ Action::Builder& Action::Builder::match_query(const Matches& matches) {
   return execute(Memory::allocate<MatchQuery>(matches));
 }
 
+Action::Builder& Action::Builder::client_options() {
+  return execute(Memory::allocate<ClientOptions>());
+}
+
 Action::Builder& Action::Builder::system_local() {
   return execute(Memory::allocate<SystemLocal>());
 }
@@ -1312,7 +1316,7 @@ Request::Request(int8_t version, int8_t flags, int16_t stream, int8_t opcode,
   , client_(client)
   , timer_action_(NULL) {
   client->add(this);
-  (void)flags_; // TODO: Implement custom playload etc.
+  (void)flags_; // TODO: Implement custom payload etc.
 }
 
 Request::~Request() {
@@ -1461,6 +1465,28 @@ void MatchQuery::on_run(Request* request) const {
         request->write(OPCODE_RESULT, it->second.encode(request->version()));
         return;
       }
+    }
+  }
+  run_next(request);
+}
+
+void ClientOptions::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+  } else {
+    if (query == CLIENT_OPTIONS_QUERY) {
+      ResultSet::Builder builder("client", "options");
+      Row::Builder row_builder;
+      for (Options::const_iterator it = request->client()->options().begin(),
+        end = request->client()->options().end(); it != end; ++it) {
+          builder.column((*it).first, Type::text());
+          row_builder.text((*it).second);
+      }
+      ResultSet client_options = builder.row(row_builder.build()).build();
+
+      request->write(OPCODE_RESULT, client_options.encode(request->version()));
     }
   }
   run_next(request);
@@ -1657,6 +1683,7 @@ void ValidateStartup::on_run(Request* request) const {
   if (!request->decode_startup(&options)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid startup message");
   } else {
+    request->client()->set_options(options);
     run_next(request);
   }
 }
