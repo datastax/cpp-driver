@@ -1870,6 +1870,19 @@ void Event::run(internal::ServerConnection* server_connection) {
     }
   }
 }
+
+Event::Ptr TopologyChangeEvent::new_node(const Address& address) {
+  return Ptr(Memory::allocate<TopologyChangeEvent>(NEW_NODE, address));
+}
+
+Event::Ptr TopologyChangeEvent::moved_node(const Address& address) {
+  return Ptr(Memory::allocate<TopologyChangeEvent>(MOVED_NODE, address));
+}
+
+Event::Ptr TopologyChangeEvent::removed_node(const Address& address) {
+  return Ptr(Memory::allocate<TopologyChangeEvent>(REMOVED_NODE, address));
+}
+
 cass::String TopologyChangeEvent::encode(TopologyChangeEvent::Type type, const cass::Address& address) {
   String body;
   encode_string("TOPOLOGY_CHANGE", &body);
@@ -1888,6 +1901,14 @@ cass::String TopologyChangeEvent::encode(TopologyChangeEvent::Type type, const c
   return body;
 }
 
+Event::Ptr StatusChangeEvent::up(const Address& address) {
+  return Ptr(Memory::allocate<StatusChangeEvent>(UP, address));
+}
+
+Event::Ptr StatusChangeEvent::down(const cass::Address& address) {
+  return Ptr(Memory::allocate<StatusChangeEvent>(DOWN, address));
+}
+
 String StatusChangeEvent::encode(Type type, const Address& address) {
   String body;
   encode_string("STATUS_CHANGE", &body);
@@ -1901,6 +1922,45 @@ String StatusChangeEvent::encode(Type type, const Address& address) {
   };
   encode_inet(address, &body);
   return body;
+}
+
+Event::Ptr SchemaChangeEvent::keyspace(SchemaChangeEvent::Type type,
+                                       const String& keyspace_name) {
+  return Ptr(Memory::allocate<SchemaChangeEvent>(KEYSPACE,
+                                                 type,
+                                                 keyspace_name));
+}
+
+Event::Ptr SchemaChangeEvent::table(SchemaChangeEvent::Type type,
+                                    const String& keyspace_name,
+                                    const String& table_name) {
+  return Ptr(Memory::allocate<SchemaChangeEvent>(TABLE, type,
+                                                 keyspace_name, table_name));
+}
+
+Event::Ptr SchemaChangeEvent::user_type(SchemaChangeEvent::Type type,
+                                        const String& keyspace_name,
+                                        const String& user_type_name) {
+  return Ptr(Memory::allocate<SchemaChangeEvent>(USER_TYPE, type,
+                                                 keyspace_name, user_type_name));
+}
+
+Event::Ptr SchemaChangeEvent::function(SchemaChangeEvent::Type type,
+                                       const String& keyspace_name,
+                                       const String& function_name,
+                                       const Vector<String>& args_types) {
+  return Ptr(Memory::allocate<SchemaChangeEvent>(FUNCTION, type,
+                                                 keyspace_name, function_name,
+                                                 args_types));
+}
+
+Event::Ptr SchemaChangeEvent::aggregate(SchemaChangeEvent::Type type,
+                                        const String& keyspace_name,
+                                        const String& aggregate_name,
+                                        const Vector<String>& args_types) {
+  return Ptr(Memory::allocate<SchemaChangeEvent>(AGGREGATE, type,
+                                                 keyspace_name, aggregate_name,
+                                                 args_types));
 }
 
 cass::String SchemaChangeEvent::encode(SchemaChangeEvent::Target target, SchemaChangeEvent::Type type,

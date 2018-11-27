@@ -288,10 +288,10 @@ private:
   const LoadBalancingPolicy::Vec& load_balancing_policies() const;
 
 private:
-  friend class RunCloseProcessor;
-  friend class NotifyHostAddProcessor;
-  friend class NotifyHostRemoveProcessor;
-  friend class NotifyTokenMapUpdateProcessor;
+  friend class ProcessorRunClose;
+  friend class ProcessorNotifyHostAdd;
+  friend class ProcessorNotifyHostRemove;
+  friend class ProcessorNotifyTokenMapUpdate;
 
 private:
   void internal_host_add_down_up(const Host::Ptr& host, Host::HostState state);

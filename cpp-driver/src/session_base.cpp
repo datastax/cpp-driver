@@ -103,6 +103,7 @@ Future::Ptr SessionBase::connect(const Config& config,
 
   ClusterSettings settings(config_);
   settings.control_connection_settings.connection_settings.client_id = to_string(client_id_);
+  settings.disable_events_on_startup = true;
 
   connector
       ->with_listener(this)
@@ -136,6 +137,7 @@ void SessionBase::notify_connected() {
     state_ = SESSION_STATE_CONNECTED;
     connect_future_->set();
     connect_future_.reset();
+    cluster_->start_events();
   }
 }
 

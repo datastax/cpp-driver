@@ -62,7 +62,7 @@ struct ConnectionSettings {
  */
 class Connector
     : public RefCounted<Connector>
-    , public RecordingConnectionListener {
+    , public ConnectionListener {
   friend class StartupCallback;
 
 public:

@@ -215,6 +215,34 @@ public:
     Future::Ptr recover_future_;
   };
 
+  class DisableEventsListener : public Listener {
+  public:
+    typedef SharedRefPtr<DisableEventsListener> Ptr;
+
+    DisableEventsListener(const Future::Ptr& close_future, mockssandra::Cluster& simple_cluster)
+      : Listener(close_future)
+      , event_future_(Memory::allocate<Future>())
+      , simple_cluster_(simple_cluster) { }
+
+    Future::Ptr& event_future() { return event_future_; }
+
+    virtual void on_reconnect(Cluster* cluster) {
+      // Trigger an ADD event right after cluster connection.
+      simple_cluster_.event(
+            mockssandra::TopologyChangeEvent::new_node(cass::Address("127.0.0.2", 9042)));
+    }
+
+    virtual void on_up(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_down(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_add(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_remove(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_update_token_map(const TokenMap::Ptr& token_map) { event_future_->set(); }
+
+  public:
+    Future::Ptr event_future_;
+    mockssandra::Cluster& simple_cluster_;
+  };
+
   static void on_connection_connected(ClusterConnector* connector, Future* future) {
     if (connector->is_ok()) {
       future->set();
@@ -827,4 +855,46 @@ TEST_F(ClusterUnitTest, InvalidDC) {
   ASSERT_TRUE(connect_future->error());
   EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
   EXPECT_TRUE(connect_future->error()->message.find("Check to see if the configured local datacenter is valid") != String::npos);
+}
+
+TEST_F(ClusterUnitTest, DisableEventsOnStartup) {
+  // A 2 node cluster required to properly populate "system.peers".
+  mockssandra::SimpleCluster cluster(simple(), 2);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  ContactPointList contact_points;
+  contact_points.push_back("127.0.0.1");
+
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
+                                                                     PROTOCOL_VERSION,
+                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+
+  ClusterSettings settings;
+  settings.disable_events_on_startup = true; // Disable events to start
+
+  Future::Ptr close_future(Memory::allocate<Future>());
+  DisableEventsListener::Ptr listener(
+        cass::Memory::allocate<DisableEventsListener>(close_future, cluster));
+
+  connector
+      ->with_listener(listener.get())
+      ->with_settings(settings)
+      ->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_FALSE(connect_future->error());
+
+  // Wait for a small amount of time to ensure no events are sent when they're
+  // disabled.
+  ASSERT_FALSE(listener->event_future()->wait_for(500 * 1000)); // 0.5 ms
+
+  // Start events so that the ADD event propagates.
+  connect_future->cluster()->start_events();
+
+  // Expect at least the ADD event.
+  EXPECT_TRUE(listener->event_future()->wait_for(WAIT_FOR_TIME));
+
+  connect_future->cluster()->close();
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
 }

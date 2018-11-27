@@ -25,9 +25,9 @@
 
 namespace cass {
 
-class RunCloseProcessor : public Task {
+class ProcessorRunClose : public Task {
 public:
-  RunCloseProcessor(const RequestProcessor::Ptr& processor)
+  ProcessorRunClose(const RequestProcessor::Ptr& processor)
     : processor_(processor) { }
 
   virtual void run(EventLoop* event_loop) {
@@ -38,9 +38,9 @@ private:
   RequestProcessor::Ptr processor_;
 };
 
-class NotifyHostAddProcessor : public Task {
+class ProcessorNotifyHostAdd : public Task {
 public:
-  NotifyHostAddProcessor(const Host::Ptr host,
+  ProcessorNotifyHostAdd(const Host::Ptr host,
                          const RequestProcessor::Ptr& request_processor)
     : request_processor_(request_processor)
     , host_(host) { }
@@ -52,9 +52,9 @@ private:
   const Host::Ptr host_;
 };
 
-class NotifyHostRemoveProcessor : public Task {
+class ProcessorNotifyHostRemove : public Task {
 public:
-  NotifyHostRemoveProcessor(const Host::Ptr host,
+  ProcessorNotifyHostRemove(const Host::Ptr host,
                             const RequestProcessor::Ptr& request_processor)
     : request_processor_(request_processor)
     , host_(host) { }
@@ -66,9 +66,9 @@ private:
   const Host::Ptr host_;
 };
 
-class NotifyTokenMapUpdateProcessor : public Task {
+class ProcessorNotifyTokenMapUpdate : public Task {
 public:
-  NotifyTokenMapUpdateProcessor(const TokenMap::Ptr& token_map,
+  ProcessorNotifyTokenMapUpdate(const TokenMap::Ptr& token_map,
                                 const RequestProcessor::Ptr& request_processor)
     : request_processor_(request_processor)
     , token_map_(token_map) { }
@@ -201,7 +201,7 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
 }
 
 void RequestProcessor::close() {
-  event_loop_->add(Memory::allocate<RunCloseProcessor>(Ptr(this)));
+  event_loop_->add(Memory::allocate<ProcessorRunClose>(Ptr(this)));
 }
 
 void RequestProcessor::set_listener(RequestProcessorListener* listener) {
@@ -221,15 +221,15 @@ void RequestProcessor::set_keyspace(const String& keyspace,
 }
 
 void RequestProcessor::notify_host_add(const Host::Ptr& host) {
-  event_loop_->add(Memory::allocate<NotifyHostAddProcessor>(host, Ptr(this)));
+  event_loop_->add(Memory::allocate<ProcessorNotifyHostAdd>(host, Ptr(this)));
 }
 
 void RequestProcessor::notify_host_remove(const Host::Ptr& host) {
-  event_loop_->add(Memory::allocate<NotifyHostRemoveProcessor>(host, Ptr(this)));
+  event_loop_->add(Memory::allocate<ProcessorNotifyHostRemove>(host, Ptr(this)));
 }
 
 void RequestProcessor::notify_token_map_changed(const TokenMap::Ptr& token_map) {
-  event_loop_->add(Memory::allocate<NotifyTokenMapUpdateProcessor>(token_map, Ptr(this)));
+  event_loop_->add(Memory::allocate<ProcessorNotifyTokenMapUpdate>(token_map, Ptr(this)));
 }
 
 void RequestProcessor::process_request(const RequestHandler::Ptr& request_handler) {

@@ -156,7 +156,6 @@ void ControlConnector::on_success() {
                                             listen_addresses_));
 
   control_connection_->set_listener(listener_);
-  connection_->set_listener(control_connection_.get());
 
   // Process any events that happened during control connection setup. It's
   // important to capture any changes that happened during retrieving the
@@ -182,10 +181,11 @@ void ControlConnector::on_error(ControlConnector::ControlConnectionError code,
 void ControlConnector::on_connect(Connector* connector) {
   if (!is_canceled() && connector->is_ok()) {
     connection_ = connector->release_connection();
-    connection_->set_listener(this);
 
-    // Propagate any events that happened during the connection process.
-    Connector::process_events(connector->events(), this);
+    // It's important to record any events that happen while querying the hosts
+    // and schema. The recorded events are replayed after the initial hosts
+    // and schema are returned and processed.
+    connection_->set_listener(this);
 
     query_hosts();
   } else if (is_canceled() || connector->is_canceled()) {

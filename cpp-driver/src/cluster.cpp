@@ -30,9 +30,9 @@ namespace cass {
 /**
  * A task for initiating the cluster close process.
  */
-class RunCloseCluster : public Task {
+class ClusterRunClose : public Task {
 public:
-  RunCloseCluster(const Cluster::Ptr& cluster)
+  ClusterRunClose(const Cluster::Ptr& cluster)
     : cluster_(cluster) { }
 
   void run(EventLoop* event_loop) {
@@ -46,9 +46,9 @@ private:
 /**
  * A task for marking a node as UP.
  */
-class NotifyUpCluster : public Task {
+class ClusterNotifyUp : public Task {
 public:
-  NotifyUpCluster(const Cluster::Ptr& cluster, const Address& address)
+  ClusterNotifyUp(const Cluster::Ptr& cluster, const Address& address)
     : cluster_(cluster)
     , address_(address) { }
 
@@ -64,9 +64,9 @@ private:
 /**
  * A task for marking a node as DOWN.
  */
-class NotifyDownCluster : public Task {
+class ClusterNotifyDown : public Task {
 public:
-  NotifyDownCluster(const Cluster::Ptr& cluster, const Address& address)
+  ClusterNotifyDown(const Cluster::Ptr& cluster, const Address& address)
     : cluster_(cluster)
     , address_(address) { }
 
@@ -77,6 +77,19 @@ public:
 private:
   Cluster::Ptr cluster_;
   Address address_;
+};
+
+class ClusterStartEvents : public Task {
+public:
+  ClusterStartEvents(const Cluster::Ptr& cluster)
+    : cluster_(cluster) { }
+
+  void run(EventLoop* event_loop) {
+    cluster_->internal_start_events();
+  }
+
+private:
+  Cluster::Ptr cluster_;
 };
 
 /**
@@ -96,6 +109,35 @@ public:
 
   virtual void on_close(Cluster* cluster) { }
 };
+
+void ClusterEvent::process_event(const ClusterEvent& event,
+                                 ClusterListener* listener) {
+  switch(event.type) {
+    case HOST_UP:
+      listener->on_up(event.host);
+      break;
+    case HOST_DOWN:
+      listener->on_down(event.host);
+      break;
+    case HOST_ADD:
+      listener->on_add(event.host);
+      break;
+    case HOST_REMOVE:
+      listener->on_remove(event.host);
+      break;
+    case TOKEN_MAP_UPDATE:
+      listener->on_update_token_map(event.token_map);
+      break;
+  }
+}
+
+void ClusterEvent::process_events(const ClusterEvent::Vec& events,
+                                  ClusterListener* listener) {
+  for (ClusterEvent::Vec::const_iterator it = events.begin(),
+       end = events.end(); it != end; ++it) {
+    process_event(*it, listener);
+  }
+}
 
 static NopClusterListener nop_cluster_listener__;
 
@@ -140,7 +182,8 @@ ClusterSettings::ClusterSettings()
   , port(CASS_DEFAULT_PORT)
   , reconnect_timeout_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
   , prepare_on_up_or_add_host(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
-  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH) {
+  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
+  , disable_events_on_startup(false) {
   load_balancing_policies.push_back(load_balancing_policy);
 }
 
@@ -151,7 +194,8 @@ ClusterSettings::ClusterSettings(const Config& config)
   , port(config.port())
   , reconnect_timeout_ms(config.reconnect_wait_time_ms())
   , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
-  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH) { }
+  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
+  , disable_events_on_startup(false) { }
 
 Cluster::Cluster(const ControlConnection::Ptr& connection,
                  ClusterListener* listener,
@@ -170,7 +214,8 @@ Cluster::Cluster(const ControlConnection::Ptr& connection,
   , settings_(settings)
   , is_closing_(false)
   , connected_host_(connected_host)
-  , hosts_(hosts) {
+  , hosts_(hosts)
+  , is_recording_events_(settings.disable_events_on_startup) {
   inc_ref();
   connection_->set_listener(this);
 
@@ -185,15 +230,19 @@ Cluster::Cluster(const ControlConnection::Ptr& connection,
 }
 
 void Cluster::close() {
-  event_loop_->add(Memory::allocate<RunCloseCluster>(Ptr(this)));
+  event_loop_->add(Memory::allocate<ClusterRunClose>(Ptr(this)));
 }
 
 void Cluster::notify_up(const Address& address) {
-  event_loop_->add(Memory::allocate<NotifyUpCluster>(Ptr(this), address));
+  event_loop_->add(Memory::allocate<ClusterNotifyUp>(Ptr(this), address));
 }
 
 void Cluster::notify_down(const Address& address) {
-  event_loop_->add(Memory::allocate<NotifyDownCluster>(Ptr(this), address));
+  event_loop_->add(Memory::allocate<ClusterNotifyDown>(Ptr(this), address));
+}
+
+void Cluster::start_events() {
+  event_loop_->add(Memory::allocate<ClusterStartEvents>(Ptr(this)));
 }
 
 Metadata::SchemaSnapshot Cluster::schema_snapshot() {
@@ -378,7 +427,7 @@ void Cluster::on_reconnect(ControlConnector* connector) {
 
     // Notify the listener that we've built a new token map
     if (token_map_) {
-      listener_->on_update_token_map(token_map_);
+      notify_or_record(ClusterEvent(token_map_));
     }
 
     LOG_INFO("Control connection connected to %s",
@@ -430,7 +479,7 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
     if (token_map_) {
       token_map_ = token_map_->copy();
       token_map_->update_host_and_build(refreshed);
-      listener_->on_update_token_map(token_map_);
+      notify_or_record(ClusterEvent(token_map_));
     }
     hosts_[address] = host = refreshed;
   }
@@ -457,7 +506,7 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
 }
 
 void Cluster::notify_up_after_prepare(const Host::Ptr& host) {
-  listener_->on_up(host);
+  notify_or_record(ClusterEvent(ClusterEvent::HOST_UP, host));
 }
 
 void Cluster::internal_notify_down(const Address& address) {
@@ -482,7 +531,16 @@ void Cluster::internal_notify_down(const Address& address) {
     (*it)->on_down(host);
   }
 
-  listener_->on_down(host);
+  notify_or_record(ClusterEvent(ClusterEvent::HOST_DOWN, host));
+}
+
+void Cluster::internal_start_events() {
+  // Ignore if closing or already processed events
+  if (!is_closing_ && is_recording_events_) {
+    is_recording_events_ = false;
+    ClusterEvent::process_events(recorded_events_, listener_);
+    recorded_events_.clear();
+  }
 }
 
 void Cluster::notify_add(const Host::Ptr& host) {
@@ -497,7 +555,7 @@ void Cluster::notify_add(const Host::Ptr& host) {
          end = load_balancing_policies_.end(); it != end; ++it) {
       (*it)->on_remove(host_it->second);
     }
-    listener_->on_remove(host_it->second);
+    notify_or_record(ClusterEvent(ClusterEvent::HOST_REMOVE, host));
   }
 
   hosts_[host->address()] = host;
@@ -520,9 +578,9 @@ void Cluster::notify_add_after_prepare(const Host::Ptr& host) {
   if (token_map_) {
     token_map_ = token_map_->copy();
     token_map_->update_host_and_build(host);
-    listener_->on_update_token_map(token_map_);
+    notify_or_record(ClusterEvent(token_map_));
   }
-  listener_->on_add(host);
+  notify_or_record(ClusterEvent(ClusterEvent::HOST_ADD, host));
 }
 
 void Cluster::notify_remove(const Address& address) {
@@ -539,7 +597,7 @@ void Cluster::notify_remove(const Address& address) {
   if (token_map_) {
     token_map_ = token_map_->copy();
     token_map_->remove_host_and_build(host);
-    listener_->on_update_token_map(token_map_);
+    notify_or_record(ClusterEvent(token_map_));
   }
 
   hosts_.erase(host->address());
@@ -547,7 +605,15 @@ void Cluster::notify_remove(const Address& address) {
        end = load_balancing_policies_.end(); it != end; ++it) {
     (*it)->on_remove(host);
   }
-  listener_->on_remove(host);
+  notify_or_record(ClusterEvent(ClusterEvent::HOST_REMOVE, host));
+}
+
+void Cluster::notify_or_record(const ClusterEvent& event) {
+  if (is_recording_events_) {
+    recorded_events_.push_back(event);
+  } else {
+    ClusterEvent::process_event(event, listener_);
+  }
 }
 
 bool Cluster::prepare_host(const Host::Ptr& host,
@@ -586,7 +652,7 @@ void Cluster::on_update_schema(SchemaType type,
       if (token_map_) {
         token_map_ = token_map_->copy();
         token_map_->update_keyspaces_and_build(connection_->server_version(), result.get());
-        listener_->on_update_token_map(token_map_);
+        notify_or_record(ClusterEvent(token_map_));
       }
       break;
     case TABLE:
@@ -622,7 +688,7 @@ void Cluster::on_drop_schema(SchemaType type,
       if (token_map_) {
         token_map_ = token_map_->copy();
         token_map_->drop_keyspace(keyspace_name);
-        listener_->on_update_token_map(token_map_);
+        notify_or_record(ClusterEvent(token_map_));
       }
       break;
     case TABLE:

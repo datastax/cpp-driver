@@ -340,6 +340,7 @@ ControlConnection::ControlConnection(const Connection::Ptr& connection,
   , server_version_(server_version)
   , listen_addresses_(listen_addresses)
   , listener_(&nop_listener__) {
+  connection_->set_listener(this);
   inc_ref();
 }
 

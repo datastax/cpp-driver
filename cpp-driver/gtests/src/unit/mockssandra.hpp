@@ -1155,6 +1155,10 @@ public:
   TopologyChangeEvent(Type type, const Address& address)
     : Event(encode(type, address)) { }
 
+  static Ptr new_node(const Address& address);
+  static Ptr moved_node(const Address& address);
+  static Ptr removed_node(const Address& address);
+
   static String encode(Type type, const Address& address);
 };
 
@@ -1167,6 +1171,9 @@ public:
 
   StatusChangeEvent(Type type, const Address& address)
     : Event(encode(type, address)) { }
+
+  static Ptr up(const Address& address);
+  static Ptr down(const Address& address);
 
   static String encode(Type type, const Address& address);
 };
@@ -1191,6 +1198,19 @@ public:
                     const String& keyspace_name, const String& target_name = "",
                     const Vector<String>& args_types = Vector<String>())
     : Event(encode(target, type, keyspace_name, target_name, args_types)) { }
+
+  static Ptr keyspace(Type type,
+                      const String& keyspace_name);
+  static Ptr table(Type type,
+                   const String& keyspace_name, const String& table_name);
+  static Ptr user_type(Type type,
+                       const String& keyspace_name, const String& user_type_name);
+  static Ptr function(Type type,
+                      const String& keyspace_name, const String& function_name,
+                      const Vector<String>& args_types);
+  static Ptr aggregate(Type type,
+                       const String& keyspace_name, const String& aggregate_name,
+                       const Vector<String>& args_types);
 
   static String encode(Target target, Type type,
                        const String& keyspace_name, const String& target_name,
