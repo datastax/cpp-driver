@@ -6,6 +6,7 @@ Apache Cassandra] includes the following features:
 * [DSE plaintext and GSSAPI authentication](/features/authentication)
 * [DSE geospatial types](/features/geotypes/)
 * [DSE graph integration](/features/graph/)
+* [Client configuration](/features/client_configuration/)
 
 This documentation only includes DSE specific features. Documentation for the
 core driver can be found [here](http://datastax.github.io/cpp-driver/).
