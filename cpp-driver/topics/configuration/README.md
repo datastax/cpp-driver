@@ -300,6 +300,50 @@ cass_cluster_free(cluster);
 It can be disabled by setting the value to a very long timeout or by disabling
 heartbeats.
 
+### Host State Changes
+
+The status and membership of a node can change within the life-cycle of the
+cluster. A host listener callback can be used to detect these changes.
+
+**Important**: The driver runs the host listener callback on a thread that is
+               different from the application. Any data accessed in the
+               callback must be immutable or synchronized with a mutex,
+               semaphore, etc.
+
+```c
+void on_host_listener(CassHostListenerEvent event, CassInet inet, void* data) {
+  /* Get the string representation of the inet address */
+  char address[CASS_INET_STRING_LENGTH];
+  cass_inet_string(inet, address);
+
+  /* Perform application logic for host listener event */
+  if (event == CASS_HOST_LISTENER_EVENT_ADD) {
+    printf("Host %s has been ADDED\n", address);
+   } else if (event == CASS_HOST_LISTENER_EVENT_REMOVE) {
+    printf("Host %s has been REMOVED\n", address);
+   } else if (event == CASS_HOST_LISTENER_EVENT_UP) {
+    printf("Host %s is UP\n", address);
+   } else if (event == CASS_HOST_LISTENER_EVENT_DOWN) {
+    printf("Host %s is DOWN\n", address);
+   }
+}
+
+int main() {
+  CassCluster* cluster = cass_cluster_new();
+
+  /* Register the host listener callback */
+  cass_cluster_set_host_listener_callback(cluster, on_host_listener, NULL);
+
+  /* ... */
+
+  cass_cluster_free(cluster);
+}
+```
+
+**Note**: Expensive (e.g. slow) operations should not be performed in host
+          listener callbacks. Performing expensive operations in a callback
+          will block or slow the driver's normal operation.
+
 ### Performance Tips
 
 #### Use a single persistent session
