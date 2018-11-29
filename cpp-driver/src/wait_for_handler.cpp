@@ -99,8 +99,10 @@ void WaitForHandler::start(Connection* connection) {
 }
 
 void WaitForHandler::schedule() {
-  retry_timer_.start(connection_->loop(), retry_wait_time_ms_,
-                     bind_callback(&WaitForHandler::on_retry_timeout, this));
+  if (!is_finished_) { // Don't schedule a retry if the handler is finished.
+    retry_timer_.start(connection_->loop(), retry_wait_time_ms_,
+                       bind_callback(&WaitForHandler::on_retry_timeout, this));
+  }
 }
 
 void WaitForHandler::finish() {
