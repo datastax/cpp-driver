@@ -143,7 +143,6 @@ CassError select_from(CassSession* session, const char* key) {
 int main(int argc, char* argv[]) {
   CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
-  CassFuture* close_future = NULL;
   char* hosts = "127.0.0.1";
 
   if (argc > 1) {
@@ -175,10 +174,6 @@ int main(int argc, char* argv[]) {
   select_from(session, "zero");
   select_from(session, "one_month_two_days_three_seconds");
   select_from(session, "negative_one_month_two_days_three_seconds");
-
-  close_future = cass_session_close(session);
-  cass_future_wait(close_future);
-  cass_future_free(close_future);
 
   cass_cluster_free(cluster);
   cass_session_free(session);

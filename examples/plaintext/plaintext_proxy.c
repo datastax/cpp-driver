@@ -82,8 +82,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
   return rc;
 }
 
-void connect_and_run(const char* hosts, const char* proxy_user)
-{
+void connect_and_run(const char* hosts, const char* proxy_user) {
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
 

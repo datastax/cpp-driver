@@ -132,14 +132,7 @@ int main(int argc, char* argv[]) {
   connect_future = cass_session_connect(session, cluster);
 
   if (cass_future_error_code(connect_future) == CASS_OK) {
-    CassFuture* close_future = NULL;
-
     printf("Successfully connected!\n");
-
-    /* Close the session */
-    close_future = cass_session_close(session);
-    cass_future_wait(close_future);
-    cass_future_free(close_future);
   } else {
     /* Handle error */
     const char* message;

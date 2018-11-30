@@ -139,7 +139,6 @@ int main(int argc, char* argv[]) {
   connect_future = cass_session_connect(session, cluster);
 
   if (cass_future_error_code(connect_future) == CASS_OK) {
-    CassFuture* close_future = NULL;
     const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
     CassVersion version = cass_schema_meta_version(schema_meta);
 
@@ -198,11 +197,6 @@ int main(int argc, char* argv[]) {
     print_aggregate(session, "examples", "average", "int");
 
     cass_schema_meta_free(schema_meta);
-
-    /* Close the session */
-    close_future = cass_session_close(session);
-    cass_future_wait(close_future);
-    cass_future_free(close_future);
   } else {
     print_error(connect_future);
   }
