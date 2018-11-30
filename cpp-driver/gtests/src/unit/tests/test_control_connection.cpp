@@ -123,13 +123,9 @@ protected:
     events_.push_back(event);
   }
 
-  virtual void on_up(const Address& address, const Host::Ptr& refreshed) {
+  virtual void on_up(const Address& address) {
     RecordedEvent event(RecordedEvent::NODE_UP);
-    if (refreshed) {
-      event.host = refreshed;
-    } else {
-      event.host.reset(Memory::allocate<Host>(address));
-    }
+    event.host.reset(Memory::allocate<Host>(address));
     events_.push_back(event);
   }
 
@@ -214,8 +210,8 @@ public:
       if (--remaining_ <= 0) connection_->close();
     }
 
-    virtual void on_up(const Address& address, const Host::Ptr& refreshed) {
-      RecordingControlConnectionListener::on_up(address, refreshed);
+    virtual void on_up(const Address& address) {
+      RecordingControlConnectionListener::on_up(address);
       if (--remaining_ <= 0) connection_->close();
     }
 

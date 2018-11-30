@@ -67,10 +67,7 @@ public:
    * @param listener A listener that handles cluster events.
    * @return The connector to chain calls.
    */
-  ClusterConnector* with_listener(ClusterListener*  listener) {
-    listener_ = listener;
-    return this;
-  }
+  ClusterConnector* with_listener(ClusterListener*  listener);
 
   /**
    * Set the random object to use for shuffling the contact points and load
@@ -80,10 +77,7 @@ public:
    * @param random A random object.
    * @return The connector to chain calls.
    */
-  ClusterConnector* with_random(Random* random) {
-    random_ = random;
-    return this;
-  }
+  ClusterConnector* with_random(Random* random);
 
   /**
    * Set the metrics object to use to record metrics for the control connection.
@@ -91,10 +85,7 @@ public:
    * @param metrics A metrics object.
    * @return The connector to chain calls.
    */
-  ClusterConnector* with_metrics(Metrics* metrics) {
-    metrics_ = metrics;
-    return this;
-  }
+  ClusterConnector* with_metrics(Metrics* metrics);
 
 
   /**

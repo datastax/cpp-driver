@@ -58,7 +58,6 @@ cass::SharedRefPtr<cass::Host> host_for_addr(const cass::Address addr,
                                              const cass::String& rack = "rack",
                                              const cass::String& dc = "dc") {
   cass::SharedRefPtr<cass::Host>host(cass::Memory::allocate<cass::Host>(addr));
-  host->set_up();
   host->set_rack_and_dc(rack, dc);
   return host;
 }
@@ -194,7 +193,8 @@ TEST(RoundRobinLoadBalancingUnitTest, OnAdd) {
   const size_t seq_new = 5;
   cass::Address addr_new = addr_for_sequence(seq_new);
   cass::SharedRefPtr<cass::Host> host = host_for_addr(addr_new);
-  policy.on_add(host);
+  policy.on_host_added(host);
+  policy.on_host_up(host->address());
 
   cass::ScopedPtr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
   const size_t seq2[] = {2, seq_new, 1};
@@ -210,16 +210,14 @@ TEST(RoundRobinLoadBalancingUnitTest, OnRemove) {
 
   cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
   cass::SharedRefPtr<cass::Host> host = hosts.begin()->second;
-  policy.on_remove(host);
+  policy.on_host_removed(host);
 
   cass::ScopedPtr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
 
-  // first query plan has it
-  // (note: not manipulating Host::state_ for dynamic removal)
-  const size_t seq1[] = {1, 2, 3};
+  // Both should not have the removed host
+  const size_t seq1[] = {2, 3};
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
 
-  // second one does not
   const size_t seq2[] = {3, 2};
   verify_sequence(qp2.get(), VECTOR_FROM(size_t, seq2));
 }
@@ -234,7 +232,6 @@ TEST(RoundRobinLoadBalancingUnitTest, OnUpAndDown) {
   cass::ScopedPtr<cass::QueryPlan> qp_before1(policy.new_query_plan("ks", NULL, NULL));
   cass::ScopedPtr<cass::QueryPlan> qp_before2(policy.new_query_plan("ks", NULL, NULL));
   cass::SharedRefPtr<cass::Host> host = hosts.begin()->second;
-  policy.on_down(host);
 
   // 'before' qp both have the down host
   // Ahead of set_down, it will be returned
@@ -243,7 +240,7 @@ TEST(RoundRobinLoadBalancingUnitTest, OnUpAndDown) {
     verify_sequence(qp_before1.get(), VECTOR_FROM(size_t, seq));
   }
 
-  host->set_down();
+  policy.on_host_down(host->address());
   // Following set_down, it is dynamically excluded
   {
     const size_t seq[] = {2, 3};
@@ -251,22 +248,22 @@ TEST(RoundRobinLoadBalancingUnitTest, OnUpAndDown) {
   }
 
   // host is added to the list, but not 'up'
-  policy.on_up(host);
+  policy.on_host_up(host->address());
 
   cass::ScopedPtr<cass::QueryPlan> qp_after1(policy.new_query_plan("ks", NULL, NULL));
   cass::ScopedPtr<cass::QueryPlan> qp_after2(policy.new_query_plan("ks", NULL, NULL));
 
+  policy.on_host_down(host->address());
   // 1 is dynamically excluded from plan
   {
-    const size_t seq[] = {2, 3};
+    const size_t seq[] = {3, 2};
     verify_sequence(qp_after1.get(), VECTOR_FROM(size_t, seq));
   }
 
-  host->set_up();
-
+  policy.on_host_up(host->address());
   // now included
   {
-    const size_t seq[] = {2, 3, 1};
+    const size_t seq[] = {1, 2, 3};
     verify_sequence(qp_after2.get(), VECTOR_FROM(size_t, seq));
   }
 }
@@ -297,17 +294,17 @@ TEST(DatacenterAwareLoadBalancingUnitTest, SingleLocalDown) {
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::ScopedPtr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
-  target_host->set_down();
-  policy.on_down(target_host);
   cass::ScopedPtr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
 
+  policy.on_host_down(target_host->address());
   {
     const size_t seq[] = {2, 3, 4};
     verify_sequence(qp_before.get(), VECTOR_FROM(size_t, seq));
   }
 
+  policy.on_host_up(target_host->address());
   {
-    const size_t seq[] = {3, 2, 4};// local dc wrapped before remote offered
+    const size_t seq[] = {2, 3, 1, 4}; // local dc wrapped before remote offered
     verify_sequence(qp_after.get(), VECTOR_FROM(size_t, seq));
   }
 }
@@ -322,8 +319,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllLocalRemovedReturned) {
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::ScopedPtr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
-  target_host->set_down();
-  policy.on_down(target_host);
+  policy.on_host_down(target_host->address());
   cass::ScopedPtr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
 
   {
@@ -332,8 +328,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllLocalRemovedReturned) {
     verify_sequence(qp_after.get(), VECTOR_FROM(size_t, seq));
   }
 
-  target_host->set_up();
-  policy.on_up(target_host);
+  policy.on_host_up(target_host->address());
 
   // make sure we get the local node first after on_up
   cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
@@ -354,8 +349,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, RemoteRemovedReturned) {
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
 
   cass::ScopedPtr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
-  target_host->set_down();
-  policy.on_down(target_host);
+  policy.on_host_down(target_host->address());
   cass::ScopedPtr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
 
   {
@@ -364,8 +358,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, RemoteRemovedReturned) {
     verify_sequence(qp_after.get(), VECTOR_FROM(size_t, seq));
   }
 
-  target_host->set_up();
-  policy.on_up(target_host);
+  policy.on_host_up(target_host->address());
 
   // make sure we get both nodes, correct order after
   cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
@@ -528,7 +521,7 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
 
   // Bring down the first host
   cass::HostMap::iterator curr_host_it = hosts.begin(); // 1.0.0.0
-  curr_host_it->second->set_down();
+  policy.on_host_down(curr_host_it->second->address());
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -537,11 +530,11 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   }
 
   // Restore the first host and bring down the first token aware replica
-  curr_host_it->second->set_up();
+  policy.on_host_up(curr_host_it->second->address());
   ++curr_host_it; // 2.0.0.0
   ++curr_host_it; // 3.0.0.0
   ++curr_host_it; // 4.0.0.0
-  curr_host_it->second->set_down();
+  policy.on_host_down(curr_host_it->second->address());
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -604,7 +597,7 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
 
   // Bring down the first host
   cass::HostMap::iterator curr_host_it = hosts.begin(); // 1.0.0.0
-  curr_host_it->second->set_down();
+  policy.on_host_down(curr_host_it->second->address());
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -613,10 +606,10 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   }
 
   // Restore the first host and bring down the first token aware replica
-  curr_host_it->second->set_up();
+  policy.on_host_up(curr_host_it->second->address());
   ++curr_host_it; // 2.0.0.0
   ++curr_host_it; // 3.0.0.0
-  curr_host_it->second->set_down();
+  policy.on_host_down(curr_host_it->second->address());
 
   {
     cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));

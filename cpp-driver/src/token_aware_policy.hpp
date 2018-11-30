@@ -32,7 +32,7 @@ public:
       , index_(0)
       , shuffle_replicas_(shuffle_replicas) {}
 
-  virtual ~TokenAwarePolicy() {}
+  virtual ~TokenAwarePolicy() { }
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
 
@@ -47,12 +47,15 @@ public:
 private:
   class TokenAwareQueryPlan : public QueryPlan {
   public:
-    TokenAwareQueryPlan(LoadBalancingPolicy* child_policy, QueryPlan* child_plan, const CopyOnWriteHostVec& replicas, size_t start_index)
+    TokenAwareQueryPlan(LoadBalancingPolicy* child_policy,
+                        QueryPlan* child_plan,
+                        const CopyOnWriteHostVec& replicas,
+                        size_t start_index)
       : child_policy_(child_policy)
       , child_plan_(child_plan)
       , replicas_(replicas)
       , index_(start_index)
-      , remaining_(replicas->size()) {}
+      , remaining_(replicas->size()) { }
 
     Host::Ptr compute_next();
 

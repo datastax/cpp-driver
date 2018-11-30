@@ -19,22 +19,16 @@
 
 class SessionTest : public Integration {
 public:
-  SessionTest()
-    : added_(0)
-    , removed_(0)
-    , up_(0)
-    , down_(0) { }
+  typedef std::pair<CassHostListenerEvent, std::string> Event;
+  typedef std::vector<Event> Events;
 
   void SetUp() {
     is_session_requested_ = false;
     Integration::SetUp();
   }
 
-  const std::string& address() const { return address_; }
-  int added() const { return added_; }
-  int removed() const { return removed_; }
-  int up() const { return up_; }
-  int down() const { return down_; }
+  size_t event_count() { return events_.size(); }
+  const Events& events() const { return events_; }
 
 protected:
   static void on_host_listener(CassHostListenerEvent event,
@@ -46,29 +40,11 @@ protected:
     uv_inet_ntop(inet.address_length == CASS_INET_V4_LENGTH ? AF_INET : AF_INET6,
                  inet.address,
                  address, CASS_INET_STRING_LENGTH);
-    instance->address_ = address;
-
-    if (event == CASS_HOST_LISTENER_EVENT_ADD) {
-      TEST_LOG("Added node " << address);
-      ++instance->added_;
-    } else if (event == CASS_HOST_LISTENER_EVENT_REMOVE) {
-      TEST_LOG("Removed node " << address);
-      ++instance->removed_;
-    } else if (event == CASS_HOST_LISTENER_EVENT_UP) {
-      TEST_LOG("Up node " << address);
-      ++instance->up_;
-    } else if (event == CASS_HOST_LISTENER_EVENT_DOWN) {
-      TEST_LOG("Down node " << address);
-      ++instance->down_;
-    }
+    instance->events_.push_back(Event(event, address));
   }
 
 private:
-  std::string address_;
-  int added_;
-  int removed_;
-  int up_;
-  int down_;
+  Events events_;
 };
 
 CASSANDRA_INTEGRATION_TEST_F(SessionTest, MetricsWithoutConnecting) {
@@ -102,33 +78,26 @@ CASSANDRA_INTEGRATION_TEST_F(SessionTest, ExternalHostListener) {
     .with_host_listener_callback(on_host_listener, this);
   Session session = cluster.connect();
 
-  // Sanity check
-  EXPECT_EQ(0, added());
-  EXPECT_EQ(0, removed());
-  EXPECT_EQ(0, up());
-  EXPECT_EQ(0, down());
+  ASSERT_EQ(0u, event_count());
 
-  logger_.add_critera("New node " + (ccm_->get_ip_prefix() + "2") + " added");
   EXPECT_EQ(2, ccm_->bootstrap_node());
-  EXPECT_TRUE(wait_for_logger(1));
-  EXPECT_EQ(1, added());
-  EXPECT_STREQ((ccm_->get_ip_prefix() + "2").c_str(), address().c_str());
-
   stop_node(1);
-  EXPECT_EQ(1, down());
-  EXPECT_STREQ((ccm_->get_ip_prefix() + "1").c_str(), address().c_str());
-
   ccm_->start_node(1);
-  EXPECT_EQ(1, up());
-  EXPECT_STREQ((ccm_->get_ip_prefix() + "1").c_str(), address().c_str());
-
   force_decommission_node(1);
-  EXPECT_EQ(1, removed());
-  EXPECT_STREQ((ccm_->get_ip_prefix() + "1").c_str(), address().c_str());
 
-  // Sanity check
-  EXPECT_EQ(1, added());
-  EXPECT_EQ(1, removed());
-  EXPECT_EQ(1, up());
-  EXPECT_EQ(1, down());
+  session.close();
+
+  ASSERT_EQ(6u, event_count());
+  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_ADD, events()[0].first);
+  EXPECT_EQ(ccm_->get_ip_prefix() + "2", events()[0].second);
+  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_UP, events()[1].first);
+  EXPECT_EQ(ccm_->get_ip_prefix() + "2", events()[1].second);
+  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_DOWN, events()[2].first);
+  EXPECT_EQ(ccm_->get_ip_prefix() + "1", events()[2].second);
+  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_UP, events()[3].first);
+  EXPECT_EQ(ccm_->get_ip_prefix() + "1", events()[3].second);
+  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_DOWN, events()[4].first);
+  EXPECT_EQ(ccm_->get_ip_prefix() + "1", events()[4].second);
+  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_REMOVE, events()[5].first);
+  EXPECT_EQ(ccm_->get_ip_prefix() + "1", events()[5].second);
 }

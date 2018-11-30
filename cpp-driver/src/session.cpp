@@ -430,14 +430,14 @@ void Session::on_close() {
   }
 }
 
-void Session::on_up(const Host::Ptr& host) {
+void Session::on_host_up(const Host::Ptr& host) {
   // Ignore up events from the control connection; however external host
   // listeners should still be notified. The connection pools will reconnect
   // themselves when the host becomes available.
-  config().host_listener()->on_up(host);
+  config().host_listener()->on_host_up(host);
 }
 
-void Session::on_down(const Host::Ptr& host) {
+void Session::on_host_down(const Host::Ptr& host) {
   // Ignore down events from the control connection; however external host
   // listeners should still be notified. The connection pools can determine if a
   // host is down themselves. The control connection host can become partitioned
@@ -446,52 +446,68 @@ void Session::on_down(const Host::Ptr& host) {
   ScopedMutex l(&mutex_);
   if (!is_closing_) { // Refrain from host down events while session is closing
     l.unlock();
-    config().host_listener()->on_down(host);
+    config().host_listener()->on_host_down(host);
   }
 }
 
-void Session::on_add(const Host::Ptr& host) {
+void Session::on_host_added(const Host::Ptr& host) {
   { // Lock for request processor
     ScopedMutex l(&mutex_);
     for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
          end = request_processors_.end(); it != end; ++it) {
-      (*it)->notify_host_add(host);
+      (*it)->notify_host_added(host);
     }
   }
-  config().host_listener()->on_add(host);
+  config().host_listener()->on_host_added(host);
 }
 
-void Session::on_remove(const Host::Ptr& host)  {
+void Session::on_host_removed(const Host::Ptr& host)  {
   { // Lock for request processor
     ScopedMutex l(&mutex_);
     for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
          end = request_processors_.end(); it != end; ++it) {
-      (*it)->notify_host_remove(host);
+      (*it)->notify_host_removed(host);
     }
   }
-  config().host_listener()->on_remove(host);
+  config().host_listener()->on_host_removed(host);
 }
 
-void Session::on_update_token_map(const TokenMap::Ptr& token_map) {
+void Session::on_token_map_updated(const TokenMap::Ptr& token_map) {
   ScopedMutex l(&mutex_);
   for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
        end = request_processors_.end(); it != end; ++it) {
-    (*it)->notify_token_map_changed(token_map);
+    (*it)->notify_token_map_updated(token_map);
+  }
+}
+
+void Session::on_host_maybe_up(const Host::Ptr& host) {
+  ScopedMutex l(&mutex_);
+  for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+       end = request_processors_.end(); it != end; ++it) {
+    (*it)->notify_host_maybe_up(host->address());
+  }
+}
+
+void Session::on_host_ready(const Host::Ptr& host) {
+  ScopedMutex l(&mutex_);
+  for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+       end = request_processors_.end(); it != end; ++it) {
+    (*it)->notify_host_ready(host);
   }
 }
 
 void Session::on_pool_up(const Address& address) {
-  cluster()->notify_up(address);
+  cluster()->notify_host_up(address);
 }
 
 void Session::on_pool_down(const Address& address) {
-  cluster()->notify_down(address);
+  cluster()->notify_host_down(address);
 }
 
 void Session::on_pool_critical_error(const Address& address,
                                 Connector::ConnectionError code,
                                 const String& message) {
-  cluster()->notify_down(address);
+  cluster()->notify_host_down(address);
 }
 
 void Session::on_keyspace_changed(const String& keyspace,

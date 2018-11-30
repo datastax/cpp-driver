@@ -68,6 +68,21 @@ ClusterConnector::ClusterConnector(const ContactPointList& contact_points,
   , error_code_(CLUSTER_OK)
   , ssl_error_code_(CASS_OK) { }
 
+ClusterConnector* ClusterConnector::with_listener(ClusterListener* listener) {
+  listener_ = listener;
+  return this;
+}
+
+ClusterConnector* ClusterConnector::with_random(Random* random) {
+  random_ = random;
+  return this;
+}
+
+ClusterConnector* ClusterConnector::with_metrics(Metrics* metrics) {
+  metrics_ = metrics;
+  return this;
+}
+
 void ClusterConnector::connect(EventLoop* event_loop) {
   event_loop_ = event_loop;
   event_loop_->add(Memory::allocate<RunResolveAndConnectCluster>(Ptr(this)));
@@ -156,7 +171,12 @@ void ClusterConnector::internal_cancel() {
 
 void ClusterConnector::finish() {
   callback_(this);
-  if (cluster_) cluster_->close();
+  if (cluster_) {
+    // If the callback doesn't take possession of the cluster then we should
+    // also clear the listener.
+    cluster_->set_listener();
+    cluster_->close();
+  }
   // Explicitly release resources on the event loop thread.
   resolver_.reset();
   connectors_.clear();

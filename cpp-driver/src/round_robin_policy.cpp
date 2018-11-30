@@ -15,17 +15,32 @@
 */
 
 #include "round_robin_policy.hpp"
+#include "scoped_lock.hpp"
 
 #include <algorithm>
 #include <iterator>
 
 namespace cass {
 
+RoundRobinPolicy::RoundRobinPolicy()
+  : hosts_(Memory::allocate<HostVec>())
+  , index_(0) {
+  uv_rwlock_init(&available_rwlock_);
+}
+
+RoundRobinPolicy::~RoundRobinPolicy() {
+  uv_rwlock_destroy(&available_rwlock_);
+}
+
 void RoundRobinPolicy::init(const Host::Ptr& connected_host,
                             const HostMap& hosts,
                             Random* random) {
+  available_.resize(hosts.size());
+  std::transform(hosts.begin(), hosts.end(),
+                 std::inserter(available_, available_.begin()), GetAddress());
   hosts_->reserve(hosts.size());
   std::transform(hosts.begin(), hosts.end(), std::back_inserter(*hosts_), GetHost());
+
   if (random != NULL) {
     index_ = random->next(std::max(static_cast<size_t>(1), hosts.size()));
   }
@@ -38,30 +53,40 @@ CassHostDistance RoundRobinPolicy::distance(const Host::Ptr& host) const {
 QueryPlan* RoundRobinPolicy::new_query_plan(const String& keyspace,
                                             RequestHandler* request_handler,
                                             const TokenMap* token_map) {
-  return Memory::allocate<RoundRobinQueryPlan>(hosts_, index_++);
+  return Memory::allocate<RoundRobinQueryPlan>(this, hosts_, index_++);
 }
 
-void RoundRobinPolicy::on_add(const Host::Ptr& host) {
+bool RoundRobinPolicy::is_host_up(const Address& address) const {
+  ScopedReadLock rl(&available_rwlock_);
+  return available_.count(address) > 0;
+}
+
+void RoundRobinPolicy::on_host_added(const Host::Ptr& host) {
   add_host(hosts_, host);
 }
 
-void RoundRobinPolicy::on_remove(const Host::Ptr& host) {
+void RoundRobinPolicy::on_host_removed(const Host::Ptr& host) {
   remove_host(hosts_, host);
+
+  ScopedWriteLock wl(&available_rwlock_);
+  available_.erase(host->address());
 }
 
-void RoundRobinPolicy::on_up(const Host::Ptr& host) {
-  on_add(host);
+void RoundRobinPolicy::on_host_up(const Address& address) {
+  ScopedWriteLock wl(&available_rwlock_);
+  available_.insert(address);
 }
 
-void RoundRobinPolicy::on_down(const Host::Ptr& host) {
-  on_remove(host);
+void RoundRobinPolicy::on_host_down(const Address& address) {
+  ScopedWriteLock wl(&available_rwlock_);
+  available_.erase(address);
 }
 
 Host::Ptr RoundRobinPolicy::RoundRobinQueryPlan::compute_next() {
   while (remaining_ > 0) {
     --remaining_;
     const Host::Ptr& host((*hosts_)[index_++ % hosts_->size()]);
-    if (host->is_up()) {
+    if (policy_->is_host_up(host->address())) {
       return host;
     }
   }

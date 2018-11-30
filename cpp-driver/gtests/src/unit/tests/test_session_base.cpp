@@ -29,11 +29,11 @@ public:
     , failed_(0)
     , closed_(0) { }
 
-  virtual void on_up(const cass::Host::Ptr& host) { }
-  virtual void on_down(const cass::Host::Ptr& host) { }
-  virtual void on_add(const cass::Host::Ptr& host) { }
-  virtual void on_remove(const cass::Host::Ptr& host) { }
-  virtual void on_update_token_map(const cass::TokenMap::Ptr& token_map) { }
+  virtual void on_host_up(const cass::Host::Ptr& host) { }
+  virtual void on_host_down(const cass::Host::Ptr& host) { }
+  virtual void on_host_added(const cass::Host::Ptr& host) { }
+  virtual void on_host_removed(const cass::Host::Ptr& host) { }
+  virtual void on_token_map_updated(const cass::TokenMap::Ptr& token_map) { }
 
   int connected() { return connected_; }
   int failed() { return failed_; }

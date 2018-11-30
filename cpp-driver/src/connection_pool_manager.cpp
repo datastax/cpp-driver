@@ -73,6 +73,11 @@ PooledConnection::Ptr ConnectionPoolManager::find_least_busy(const Address& addr
   return it->second->find_least_busy();
 }
 
+bool ConnectionPoolManager::has_connections(const Address& address) const {
+  ConnectionPool::Map::const_iterator it = pools_.find(address);
+  return it != pools_.end() && it->second->has_connections();
+}
+
 void ConnectionPoolManager::flush() {
   for (DenseHashSet<ConnectionPool*>::const_iterator it = to_flush_.begin(),
        end = to_flush_.end(); it != end; ++it) {
@@ -144,6 +149,12 @@ void ConnectionPoolManager::close() {
     close_state_ = CLOSE_STATE_WAITING_FOR_POOLS;
     maybe_closed();
   }
+}
+
+void ConnectionPoolManager::attempt_immediate_connect(const Address& address) {
+  ConnectionPool::Map::iterator it = pools_.find(address);
+  if (it == pools_.end()) return;
+  it->second->attempt_immediate_connect();
 }
 
 void ConnectionPoolManager::set_listener(ConnectionPoolManagerListener* listener) {

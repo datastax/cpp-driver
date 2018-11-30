@@ -138,25 +138,25 @@ ExternalHostListener::ExternalHostListener(const CassHostListenerCallback callba
   : callback_(callback)
   , data_(data) { }
 
-void ExternalHostListener::on_up(const Host::Ptr& host) {
+void ExternalHostListener::on_host_up(const Host::Ptr& host) {
   CassInet address;
   address.address_length = host->address().to_inet(address.address);
   callback_(CASS_HOST_LISTENER_EVENT_UP, address, data_);
 }
 
-void ExternalHostListener::on_down(const Host::Ptr& host) {
+void ExternalHostListener::on_host_down(const Host::Ptr& host) {
   CassInet address;
   address.address_length = host->address().to_inet(address.address);
   callback_(CASS_HOST_LISTENER_EVENT_DOWN, address, data_);
 }
 
-void ExternalHostListener::on_add(const Host::Ptr& host) {
+void ExternalHostListener::on_host_added(const Host::Ptr& host) {
   CassInet address;
   address.address_length = host->address().to_inet(address.address);
   callback_(CASS_HOST_LISTENER_EVENT_ADD, address, data_);
 }
 
-void ExternalHostListener::on_remove(const Host::Ptr& host) {
+void ExternalHostListener::on_host_removed(const Host::Ptr& host) {
   CassInet address;
   address.address_length = host->address().to_inet(address.address);
   callback_(CASS_HOST_LISTENER_EVENT_REMOVE, address, data_);

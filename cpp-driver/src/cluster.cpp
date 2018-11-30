@@ -53,7 +53,7 @@ public:
     , address_(address) { }
 
   void run(EventLoop* event_loop) {
-    cluster_->internal_notify_up(address_);
+    cluster_->internal_notify_host_up(address_);
   }
 
 private:
@@ -71,7 +71,7 @@ public:
     , address_(address) { }
 
   void run(EventLoop* event_loop) {
-    cluster_->internal_notify_down(address_);
+    cluster_->internal_notify_host_down(address_);
   }
 
 private:
@@ -99,13 +99,13 @@ class NopClusterListener : public ClusterListener {
 public:
   virtual void on_connect(Cluster* cluster) { }
 
-  virtual void on_up(const Host::Ptr& host) { }
-  virtual void on_down(const Host::Ptr& host) { }
+  virtual void on_host_up(const Host::Ptr& host) { }
+  virtual void on_host_down(const Host::Ptr& host) { }
 
-  virtual void on_add(const Host::Ptr& host) { }
-  virtual void on_remove(const Host::Ptr& host) { }
+  virtual void on_host_added(const Host::Ptr& host) { }
+  virtual void on_host_removed(const Host::Ptr& host) { }
 
-  virtual void on_update_token_map(const TokenMap::Ptr& token_map) { }
+  virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { }
 
   virtual void on_close(Cluster* cluster) { }
 };
@@ -114,19 +114,25 @@ void ClusterEvent::process_event(const ClusterEvent& event,
                                  ClusterListener* listener) {
   switch(event.type) {
     case HOST_UP:
-      listener->on_up(event.host);
+      listener->on_host_up(event.host);
       break;
     case HOST_DOWN:
-      listener->on_down(event.host);
+      listener->on_host_down(event.host);
       break;
     case HOST_ADD:
-      listener->on_add(event.host);
+      listener->on_host_added(event.host);
       break;
     case HOST_REMOVE:
-      listener->on_remove(event.host);
+      listener->on_host_removed(event.host);
+      break;
+    case HOST_MAYBE_UP:
+      listener->on_host_maybe_up(event.host);
+      break;
+    case HOST_READY:
+      listener->on_host_ready(event.host);
       break;
     case TOKEN_MAP_UPDATE:
-      listener->on_update_token_map(event.token_map);
+      listener->on_token_map_updated(event.token_map);
       break;
   }
 }
@@ -233,11 +239,11 @@ void Cluster::close() {
   event_loop_->add(Memory::allocate<ClusterRunClose>(Ptr(this)));
 }
 
-void Cluster::notify_up(const Address& address) {
+void Cluster::notify_host_up(const Address& address) {
   event_loop_->add(Memory::allocate<ClusterNotifyUp>(Ptr(this), address));
 }
 
-void Cluster::notify_down(const Address& address) {
+void Cluster::notify_host_down(const Address& address) {
   event_loop_->add(Memory::allocate<ClusterNotifyDown>(Ptr(this), address));
 }
 
@@ -249,7 +255,7 @@ Metadata::SchemaSnapshot Cluster::schema_snapshot() {
   return metadata_.schema_snapshot();
 }
 
-Host::Ptr Cluster::host(const Address& address) const {
+Host::Ptr Cluster::find_host(const Address& address) const {
   return hosts_.get(address);
 }
 
@@ -273,6 +279,10 @@ HostMap Cluster::available_hosts() const {
   return available;
 }
 
+void Cluster::set_listener(ClusterListener* listener) {
+  listener_ = listener ? listener : &nop_cluster_listener__;
+}
+
 void Cluster::update_hosts(const HostMap& hosts) {
   // Update the hosts and properly notify the listener
   HostMap existing(hosts_);
@@ -283,7 +293,7 @@ void Cluster::update_hosts(const HostMap& hosts) {
     if (find_it != existing.end()) {
       existing.erase(find_it); // Already exists mark as visited
     } else {
-      notify_add(it->second); // A new host has been added
+      notify_host_add(it->second); // A new host has been added
     }
   }
 
@@ -291,7 +301,7 @@ void Cluster::update_hosts(const HostMap& hosts) {
   // need to be marked as removed.
   for (HostMap::const_iterator it = existing.begin(),
        end = existing.end(); it != end; ++it) {
-    notify_remove(it->first);
+    notify_host_remove(it->first);
   }
 }
 
@@ -464,7 +474,7 @@ void Cluster::handle_close() {
   dec_ref();
 }
 
-void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refreshed) {
+void Cluster::internal_notify_host_up(const Address& address) {
   LockedHostMap::const_iterator it = hosts_.find(address);
 
   if (it == hosts_.end()) {
@@ -475,24 +485,17 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
 
   Host::Ptr host(it->second);
 
-  if (refreshed){
-    if (token_map_) {
-      token_map_ = token_map_->copy();
-      token_map_->update_host_and_build(refreshed);
-      notify_or_record(ClusterEvent(token_map_));
-    }
-    hosts_[address] = host = refreshed;
-  }
-
-  if (host->is_up()) { // Check the state of the previously existing host.
+  if (load_balancing_policy_->is_host_up(address)) {
     // Already marked up so don't repeat duplicate notifications.
+    if (!is_host_ignored(host)) {
+      notify_or_record(ClusterEvent(ClusterEvent::HOST_READY, host));
+    }
     return;
   }
 
-  host->set_up();
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
        end = load_balancing_policies_.end(); it != end; ++it) {
-    (*it)->on_up(host);
+    (*it)->on_host_up(address);
   }
 
   if (is_host_ignored(host)) {
@@ -501,34 +504,36 @@ void Cluster::internal_notify_up(const Address& address, const Host::Ptr& refres
 
   if (!prepare_host(host,
                     bind_callback(&Cluster::on_prepare_host_up, this))) {
-    notify_up_after_prepare(host);
+    notify_host_up_after_prepare(host);
   }
 }
 
-void Cluster::notify_up_after_prepare(const Host::Ptr& host) {
+void Cluster::notify_host_up_after_prepare(const Host::Ptr& host) {
+  notify_or_record(ClusterEvent(ClusterEvent::HOST_READY, host));
   notify_or_record(ClusterEvent(ClusterEvent::HOST_UP, host));
 }
 
-void Cluster::internal_notify_down(const Address& address) {
+void Cluster::internal_notify_host_down(const Address& address) {
   LockedHostMap::const_iterator it = hosts_.find(address);
 
   if (it == hosts_.end()) {
-    LOG_WARN("Attempting to mark host %s that we don't have as DOWN",
-             address.to_string().c_str());
+    // Using DEBUG level here because this can happen normally as the result of
+    // a remove event.
+    LOG_DEBUG("Attempting to mark host %s that we don't have as DOWN",
+              address.to_string().c_str());
     return;
   }
 
   Host::Ptr host(it->second);
 
-  if (host->is_down()) {
+  if (!load_balancing_policy_->is_host_up(address)) {
     // Already marked down so don't repeat duplicate notifications.
     return;
   }
 
-  host->set_down();
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
        end = load_balancing_policies_.end(); it != end; ++it) {
-    (*it)->on_down(host);
+    (*it)->on_host_down(address);
   }
 
   notify_or_record(ClusterEvent(ClusterEvent::HOST_DOWN, host));
@@ -543,7 +548,7 @@ void Cluster::internal_start_events() {
   }
 }
 
-void Cluster::notify_add(const Host::Ptr& host) {
+void Cluster::notify_host_add(const Host::Ptr& host) {
   LockedHostMap::const_iterator host_it = hosts_.find(host->address());
 
   if (host_it != hosts_.end()) {
@@ -553,7 +558,7 @@ void Cluster::notify_add(const Host::Ptr& host) {
     // then re-add it.
     for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
          end = load_balancing_policies_.end(); it != end; ++it) {
-      (*it)->on_remove(host_it->second);
+      (*it)->on_host_removed(host_it->second);
     }
     notify_or_record(ClusterEvent(ClusterEvent::HOST_REMOVE, host));
   }
@@ -561,7 +566,7 @@ void Cluster::notify_add(const Host::Ptr& host) {
   hosts_[host->address()] = host;
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
        end = load_balancing_policies_.end(); it != end; ++it) {
-    (*it)->on_add(host);
+    (*it)->on_host_added(host);
   }
 
   if (is_host_ignored(host)) {
@@ -570,11 +575,11 @@ void Cluster::notify_add(const Host::Ptr& host) {
 
   if (!prepare_host(host,
                     bind_callback(&Cluster::on_prepare_host_add, this))) {
-    notify_add_after_prepare(host);
+    notify_host_add_after_prepare(host);
   }
 }
 
-void Cluster::notify_add_after_prepare(const Host::Ptr& host) {
+void Cluster::notify_host_add_after_prepare(const Host::Ptr& host) {
   if (token_map_) {
     token_map_ = token_map_->copy();
     token_map_->update_host_and_build(host);
@@ -583,7 +588,7 @@ void Cluster::notify_add_after_prepare(const Host::Ptr& host) {
   notify_or_record(ClusterEvent(ClusterEvent::HOST_ADD, host));
 }
 
-void Cluster::notify_remove(const Address& address) {
+void Cluster::notify_host_remove(const Address& address) {
   LockedHostMap::const_iterator it = hosts_.find(address);
 
   if (it == hosts_.end()) {
@@ -600,11 +605,17 @@ void Cluster::notify_remove(const Address& address) {
     notify_or_record(ClusterEvent(token_map_));
   }
 
-  hosts_.erase(host->address());
+  // If not marked down yet then explicitly trigger the event.
+  if (load_balancing_policy_->is_host_up(address)) {
+    notify_or_record(ClusterEvent(ClusterEvent::HOST_DOWN, host));
+  }
+
+  hosts_.erase(address);
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
        end = load_balancing_policies_.end(); it != end; ++it) {
-    (*it)->on_remove(host);
+    (*it)->on_host_removed(host);
   }
+
   notify_or_record(ClusterEvent(ClusterEvent::HOST_REMOVE, host));
 }
 
@@ -618,7 +629,7 @@ void Cluster::notify_or_record(const ClusterEvent& event) {
 
 bool Cluster::prepare_host(const Host::Ptr& host,
                            const PrepareHostHandler::Callback& callback) {
-  if (settings_.prepare_on_up_or_add_host) {
+  if (connection_ && settings_.prepare_on_up_or_add_host) {
     PrepareHostHandler::Ptr prepare_host_handler(
           Memory::allocate<PrepareHostHandler>(host,
                                                prepared_metadata_.copy(),
@@ -634,11 +645,11 @@ bool Cluster::prepare_host(const Host::Ptr& host,
 }
 
 void Cluster::on_prepare_host_add(const PrepareHostHandler* handler) {
-  notify_add_after_prepare(handler->host());
+  notify_host_add_after_prepare(handler->host());
 }
 
 void Cluster::on_prepare_host_up(const PrepareHostHandler* handler) {
-  notify_up_after_prepare(handler->host());
+  notify_host_up_after_prepare(handler->host());
 }
 
 void Cluster::on_update_schema(SchemaType type,
@@ -711,20 +722,29 @@ void Cluster::on_drop_schema(SchemaType type,
   }
 }
 
-void Cluster::on_up(const Address& address, const Host::Ptr& refreshed) {
-  internal_notify_up(address, refreshed);
+void Cluster::on_up(const Address& address) {
+  LockedHostMap::const_iterator it = hosts_.find(address);
+
+  if (it == hosts_.end()) {
+    LOG_WARN("Received UP event for an unknown host %s",
+             address.to_string().c_str());
+    return;
+  }
+
+  notify_or_record(ClusterEvent(ClusterEvent::HOST_MAYBE_UP, it->second));
 }
 
 void Cluster::on_down(const Address& address) {
-  // Ignore on down events
+  // Ignore down events from the control connection. Use the method
+  // `notify_host_down()` to trigger the DOWN status.
 }
 
 void Cluster::on_add(const Host::Ptr& host) {
-  notify_add(host);
+  notify_host_add(host);
 }
 
 void Cluster::on_remove(const Address& address) {
-  notify_remove(address);
+  notify_host_remove(address);
 }
 
 void Cluster::on_close(ControlConnection* connection) {

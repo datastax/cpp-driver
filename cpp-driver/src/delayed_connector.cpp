@@ -55,6 +55,13 @@ void DelayedConnector::delayed_connect(uv_loop_t* loop, uint64_t wait_time_ms) {
   }
 }
 
+void DelayedConnector::attempt_immediate_connect() {
+  if (delayed_connect_timer_.is_running() && !is_canceled_) {
+    internal_connect(delayed_connect_timer_.loop());
+    delayed_connect_timer_.stop();
+  }
+}
+
 void DelayedConnector::cancel() {
   is_canceled_ = true;
   if (delayed_connect_timer_.is_running()) {

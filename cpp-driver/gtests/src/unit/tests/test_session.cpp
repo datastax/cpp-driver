@@ -156,19 +156,19 @@ public:
       uv_mutex_destroy(&mutex_);
     }
 
-    virtual void on_up(const cass::Host::Ptr& host) {
+    virtual void on_host_up(const cass::Host::Ptr& host) {
       push_back(HostEventFuture::START_NODE, host);
     }
 
-    virtual void on_down(const cass::Host::Ptr& host) {
+    virtual void on_host_down(const cass::Host::Ptr& host) {
       push_back(HostEventFuture::STOP_NODE, host);
     }
 
-    virtual void on_add(const cass::Host::Ptr& host) {
+    virtual void on_host_added(const cass::Host::Ptr& host) {
       push_back(HostEventFuture::ADD_NODE, host);
     }
 
-    virtual void on_remove(const cass::Host::Ptr& host) {
+    virtual void on_host_removed(const cass::Host::Ptr& host) {
       push_back(HostEventFuture::REMOVE_NODE, host);
     }
 
@@ -350,7 +350,9 @@ TEST_F(SessionUnitTest, ExecuteQueryWithCompleteOutage) {
   cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
   cass::Future::Ptr future = session.execute(request, NULL);
   ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME));
-  ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, future->error()->code);
+  ASSERT_TRUE(future->error());
+  EXPECT_TRUE(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE == future->error()->code ||
+              CASS_ERROR_LIB_REQUEST_TIMED_OUT == future->error()->code);
 
   // Restart a node and execute query to ensure session recovers
   ASSERT_EQ(cluster.start(2), 0);
@@ -465,6 +467,9 @@ TEST_F(SessionUnitTest, HostListener) {
 
   {
     cluster.remove(1);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
+                                     Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
     EXPECT_EQ(HostEventFuture::Event(HostEventFuture::REMOVE_NODE,
                                      Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
@@ -473,6 +478,9 @@ TEST_F(SessionUnitTest, HostListener) {
   {
     cluster.add(1);
     EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+                                     Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
                                      Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }

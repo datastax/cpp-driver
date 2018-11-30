@@ -163,7 +163,7 @@ void ConnectionPoolConnector::on_connect(Connector* connector) {
     if (pool_) {
       // If the callback doesn't take possession of the pool then we should
       // also clear the listener.
-      pool_->set_listener(NULL);
+      pool_->set_listener();
       pool_->close();
     }
     dec_ref();

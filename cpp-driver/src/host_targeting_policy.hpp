@@ -40,10 +40,8 @@ public:
     return Memory::allocate<HostTargetingPolicy>(child_policy_->new_instance());
   }
 
-  virtual void on_add(const Host::Ptr& host);
-  virtual void on_remove(const Host::Ptr& host);
-  virtual void on_up(const Host::Ptr& host);
-  virtual void on_down(const Host::Ptr& host);
+  virtual void on_host_added(const Host::Ptr& host);
+  virtual void on_host_removed(const Host::Ptr& host);
 
 private:
   class HostTargetingQueryPlan : public QueryPlan {
@@ -69,7 +67,7 @@ private:
       set_deleted_key(Address::DELETED_KEY);
     }
   };
-  HostMap available_hosts_;
+  HostMap hosts_;
 };
 
 } // namespace cass

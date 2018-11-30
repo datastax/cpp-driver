@@ -175,21 +175,16 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
     if (rc != 0) {
       error_code_ = REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT;
       error_message_ = "Unable to initialize request processor";
-    } else {
-      for (HostMap::const_iterator it = hosts_.begin(),
-           end = hosts_.end(); it != end; ++it) {
-        it->second->set_up(); // TODO: We should do this in the cluster object?
-      }
     }
   }
 
   callback_(this);
   // If the processor hasn't been released then close it.
   if (processor_) {
-    processor_->close();
     // If the callback doesn't take possession of the processor then we should
     // also clear the listener.
-    processor_->set_listener(NULL);
+    processor_->set_listener();
+    processor_->close();
   }
   // Explicitly release resources on the event loop thread.
   connection_pool_manager_initializer_.reset();

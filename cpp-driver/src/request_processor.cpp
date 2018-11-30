@@ -35,7 +35,7 @@ public:
   }
 
 private:
-  RequestProcessor::Ptr processor_;
+  const RequestProcessor::Ptr processor_;
 };
 
 class ProcessorNotifyHostAdd : public Task {
@@ -45,10 +45,10 @@ public:
     : request_processor_(request_processor)
     , host_(host) { }
   virtual void run(EventLoop* event_loop) {
-    request_processor_->internal_host_add_down_up(host_, Host::ADDED);
+    request_processor_->internal_host_add(host_);
   }
 private:
-  RequestProcessor::Ptr request_processor_;
+  const RequestProcessor::Ptr request_processor_;
   const Host::Ptr host_;
 };
 
@@ -66,6 +66,34 @@ private:
   const Host::Ptr host_;
 };
 
+class ProcessorNotifyHostReady : public Task {
+public:
+  ProcessorNotifyHostReady(const Host::Ptr& host,
+                           const RequestProcessor::Ptr& request_processor)
+    : request_processor_(request_processor)
+    , host_(host) { }
+  virtual void run(EventLoop* event_loop) {
+    request_processor_->internal_host_ready(host_);
+  }
+private:
+  const RequestProcessor::Ptr request_processor_;
+  const Host::Ptr host_;
+};
+
+class ProcessorNotifyMaybeHostUp : public Task {
+public:
+  ProcessorNotifyMaybeHostUp(const Address& address,
+                             const RequestProcessor::Ptr& request_processor)
+    : request_processor_(request_processor)
+    , address_(address) { }
+  virtual void run(EventLoop* event_loop) {
+    request_processor_->internal_host_maybe_up(address_);
+  }
+private:
+  const RequestProcessor::Ptr request_processor_;
+  const Address address_;
+};
+
 class ProcessorNotifyTokenMapUpdate : public Task {
 public:
   ProcessorNotifyTokenMapUpdate(const TokenMap::Ptr& token_map,
@@ -77,7 +105,7 @@ public:
     request_processor_->token_map_ = token_map_;
   }
 private:
-  RequestProcessor::Ptr request_processor_;
+  const RequestProcessor::Ptr request_processor_;
   const TokenMap::Ptr token_map_;
 };
 
@@ -190,14 +218,15 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
   }
 
   token_map_ = token_map;
-  hosts_ = hosts;
 
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
        it != policies.end(); ++it) {
     // Initialize the load balancing policies
-    (*it)->init(connected_host, hosts_, random);
+    (*it)->init(connected_host, hosts, random);
   }
+
+  listener_->on_connect(this);
 }
 
 void RequestProcessor::close() {
@@ -220,15 +249,23 @@ void RequestProcessor::set_keyspace(const String& keyspace,
   }
 }
 
-void RequestProcessor::notify_host_add(const Host::Ptr& host) {
+void RequestProcessor::notify_host_added(const Host::Ptr& host) {
   event_loop_->add(Memory::allocate<ProcessorNotifyHostAdd>(host, Ptr(this)));
 }
 
-void RequestProcessor::notify_host_remove(const Host::Ptr& host) {
+void RequestProcessor::notify_host_removed(const Host::Ptr& host) {
   event_loop_->add(Memory::allocate<ProcessorNotifyHostRemove>(host, Ptr(this)));
 }
 
-void RequestProcessor::notify_token_map_changed(const TokenMap::Ptr& token_map) {
+void RequestProcessor::notify_host_ready(const Host::Ptr& host) {
+  event_loop_->add(Memory::allocate<ProcessorNotifyHostReady>(host, Ptr(this)));
+}
+
+void RequestProcessor::notify_host_maybe_up(const Address& address) {
+  event_loop_->add(Memory::allocate<ProcessorNotifyMaybeHostUp>(address, Ptr(this)));
+}
+
+void RequestProcessor::notify_token_map_updated(const TokenMap::Ptr& token_map) {
   event_loop_->add(Memory::allocate<ProcessorNotifyTokenMapUpdate>(token_map, Ptr(this)));
 }
 
@@ -259,13 +296,9 @@ int RequestProcessor::init(Protected) {
 }
 
 void RequestProcessor::on_pool_up(const Address& address) {
-  // on_up is using the request processor event loop (no need for a task)
-  Host::Ptr host = get_host(address);
-  if (host) {
-    internal_host_add_down_up(host, Host::UP);
-  } else {
-    LOG_DEBUG("Tried to up host %s that doesn't exist", address.to_string().c_str());
-  }
+  // Don't immediately update the load balancing policies. Give the listener
+  // a chance to process the up status and it should call `notify_host_ready()`
+  // when it's ready.
   listener_->on_pool_up(address);
 }
 
@@ -385,8 +418,7 @@ void RequestProcessor::on_done() {
 }
 
 bool RequestProcessor::on_is_host_up(const Address& address) {
-  Host::Ptr host(get_host(address));
-  return host && host->is_up();
+  return default_profile_.load_balancing_policy()->is_host_up(address);
 }
 
 void RequestProcessor::internal_close() {
@@ -395,20 +427,11 @@ void RequestProcessor::internal_close() {
 }
 
 void RequestProcessor::internal_pool_down(const Address& address) {
-  Host::Ptr host = get_host(address);
-  if (host) {
-    internal_host_add_down_up(host, Host::DOWN);
-  } else {
-    LOG_DEBUG("Tried to down host %s that doesn't exist", address.to_string().c_str());
+  LoadBalancingPolicy::Vec policies = load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    (*it)->on_host_down(address);
   }
-}
-
-Host::Ptr RequestProcessor::get_host(const Address& address) {
-  HostMap::iterator it = hosts_.find(address);
-  if (it == hosts_.end()) {
-    return Host::Ptr();
-  }
-  return it->second;
 }
 
 const ExecutionProfile* RequestProcessor::execution_profile(const String& name) const {
@@ -429,47 +452,52 @@ const LoadBalancingPolicy::Vec& RequestProcessor::load_balancing_policies() cons
   return load_balancing_policies_;
 }
 
-void RequestProcessor::internal_host_add_down_up(const Host::Ptr& host,
-                                                 Host::HostState state) {
-  if (state == Host::ADDED) {
-    connection_pool_manager_->add(host->address());
-  }
-
-  bool is_host_ignored = true;
-  LoadBalancingPolicy::Vec policies = load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-      is_host_ignored = false;
-      switch (state) {
-        case Host::ADDED:
-          (*it)->on_add(host);
-          break;
-        case Host::DOWN:
-          (*it)->on_down(host);
-          break;
-        case Host::UP:
-          (*it)->on_up(host);
-          break;
-        default:
-          assert(false && "Invalid host state");
-          break;
+void RequestProcessor::internal_host_add(const Host::Ptr& host) {
+  if (connection_pool_manager_) {
+    LoadBalancingPolicy::Vec policies = load_balancing_policies();
+    if (!is_host_ignored(policies, host)) {
+      connection_pool_manager_->add(host->address());
+      for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+           it != policies.end(); ++it) {
+        if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+          (*it)->on_host_added(host);
+        }
       }
+    } else {
+      LOG_DEBUG("Host %s will be ignored by all query plans",
+                host->address_string().c_str());
     }
-  }
-
-  if (is_host_ignored) {
-    LOG_DEBUG("Host %s will be ignored by all query plans",
-              host->address_string().c_str());
   }
 }
 
 void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
-  connection_pool_manager_->remove(host->address());
-  LoadBalancingPolicy::Vec policies = load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    (*it)->on_remove(host);
+  if (connection_pool_manager_) {
+    connection_pool_manager_->remove(host->address());
+    LoadBalancingPolicy::Vec policies = load_balancing_policies();
+    for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+         it != policies.end(); ++it) {
+      (*it)->on_host_removed(host);
+    }
+  }
+}
+
+void RequestProcessor::internal_host_ready(const Host::Ptr& host) {
+  // Only mark the host as up if it has connections.
+  if (connection_pool_manager_ &&
+      connection_pool_manager_->has_connections(host->address())) {
+    LoadBalancingPolicy::Vec policies = load_balancing_policies();
+    for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+         it != policies.end(); ++it) {
+      if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+        (*it)->on_host_up(host->address());
+      }
+    }
+  }
+}
+
+void RequestProcessor::internal_host_maybe_up(const Address& address) {
+  if (connection_pool_manager_) {
+    connection_pool_manager_->attempt_immediate_connect(address);
   }
 }
 

@@ -65,13 +65,13 @@ public:
 
     virtual ~Listener() { }
 
-    virtual void on_up(const Host::Ptr& host) { }
-    virtual void on_down(const Host::Ptr& host) { }
+    virtual void on_host_up(const Host::Ptr& host) { }
+    virtual void on_host_down(const Host::Ptr& host) { }
 
-    virtual void on_add(const Host::Ptr& host) { }
-    virtual void on_remove(const Host::Ptr& host) { }
+    virtual void on_host_added(const Host::Ptr& host) { }
+    virtual void on_host_removed(const Host::Ptr& host) { }
 
-    virtual void on_update_token_map(const TokenMap::Ptr& token_map) { }
+    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { }
 
     virtual void on_close(Cluster* cluster)  {
       if (close_future_) {
@@ -106,7 +106,7 @@ public:
       return address_;
     }
 
-    virtual void on_up(const Host::Ptr& host) {
+    virtual void on_host_up(const Host::Ptr& host) {
       if (up_future_) {
         ScopedMutex l(&mutex_);
         address_ = host->address();
@@ -114,7 +114,7 @@ public:
       }
     }
 
-    virtual void on_down(const Host::Ptr& host) {
+    virtual void on_host_down(const Host::Ptr& host) {
       if (down_future_) {
         ScopedMutex l(&mutex_);
         address_ = host->address();
@@ -148,7 +148,8 @@ public:
 
     ReconnectClusterListener(const Future::Ptr& close_future, OutagePlan* outage_plan)
       : Listener(close_future)
-      , outage_plan_(outage_plan) { }
+      , outage_plan_(outage_plan)
+      , cluster_(NULL) { }
 
     const HostVec& connected_hosts() const {
       return connected_hosts_;
@@ -159,6 +160,7 @@ public:
     }
 
     virtual void on_reconnect(Cluster* cluster) {
+      cluster_ = cluster;
       connected_hosts_.push_back(cluster->connected_host());
       if (connected_hosts_.size() == 1) { // First host
         outage_plan_->run();
@@ -170,23 +172,29 @@ public:
       }
     }
 
-    virtual void on_up(const Host::Ptr& host) { }
-    virtual void on_down(const Host::Ptr& host) { }
+    virtual void on_host_up(const Host::Ptr& host) { }
+    virtual void on_host_down(const Host::Ptr& host) { }
 
-    virtual void on_add(const Host::Ptr& host) {
+    virtual void on_host_added(const Host::Ptr& host) {
       events_.push_back(Event(Event::NODE_ADD, host->address()));
+      // In the absence of RequestProcessor objects the cluster must notify
+      // itself that a host is UP.
+      if (cluster_) {
+        cluster_->notify_host_up(host->address());
+      }
     }
 
-    virtual void on_remove(const Host::Ptr& host) {
+    virtual void on_host_removed(const Host::Ptr& host) {
       events_.push_back(Event(Event::NODE_REMOVE, host->address()));
     }
 
-    virtual void on_update_token_map(const TokenMap::Ptr& token_map) { }
+    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { }
 
   private:
     HostVec connected_hosts_;
     Events events_;
     OutagePlan* outage_plan_;
+    Cluster* cluster_;
   };
 
   class RecoverClusterListener : public UpDownListener {
@@ -232,11 +240,11 @@ public:
             mockssandra::TopologyChangeEvent::new_node(cass::Address("127.0.0.2", 9042)));
     }
 
-    virtual void on_up(const Host::Ptr& host) { event_future_->set(); }
-    virtual void on_down(const Host::Ptr& host) { event_future_->set(); }
-    virtual void on_add(const Host::Ptr& host) { event_future_->set(); }
-    virtual void on_remove(const Host::Ptr& host) { event_future_->set(); }
-    virtual void on_update_token_map(const TokenMap::Ptr& token_map) { event_future_->set(); }
+    virtual void on_host_up(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_host_down(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_host_added(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_host_removed(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { event_future_->set(); }
 
   public:
     Future::Ptr event_future_;
@@ -619,11 +627,11 @@ TEST_F(ClusterUnitTest, NotifyDownUp) {
 
   // We need to mark the host as DOWN first otherwise an UP event won't be
   // triggered.
-  cluster->notify_down(address);
+  cluster->notify_host_down(address);
   ASSERT_TRUE(down_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(address, listener->address());
 
-  cluster->notify_up(address);
+  cluster->notify_host_up(address);
   ASSERT_TRUE(up_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(address, listener->address());
 
@@ -809,11 +817,11 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
   EXPECT_FALSE(connect_future->error());
 
   // Notify every host as down
-  connect_future->cluster()->notify_down(local_address);
-  connect_future->cluster()->notify_down(remote_address);
+  connect_future->cluster()->notify_host_down(local_address);
+  connect_future->cluster()->notify_host_down(remote_address);
 
   // Notify the remote host as up
-  connect_future->cluster()->notify_up(remote_address);
+  connect_future->cluster()->notify_host_up(remote_address);
 
   // Verify that the remote host was marked as up
   ASSERT_TRUE(up_future->wait_for(WAIT_FOR_TIME));

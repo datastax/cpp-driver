@@ -241,8 +241,12 @@ void Connector::finish() {
     connection_->set_listener(is_ok() ? listener_ : NULL);
   }
   callback_(this);
-  // If the connection hasn't been released then close it.
-  if (connection_) connection_->close();
+  if (connection_) {
+    // If the callback doesn't take possession of the connection then we should
+    // also clear the listener.
+    connection_->set_listener();
+    connection_->close();
+  }
   dec_ref();
 }
 
