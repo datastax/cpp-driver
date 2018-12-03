@@ -66,12 +66,15 @@ public:
 
   static void connect(cass::Session* session,
                       cass::SslContext* ssl_context = NULL,
-                      uint64_t wait_for_time_us = WAIT_FOR_TIME) {
+                      uint64_t wait_for_time_us = WAIT_FOR_TIME,
+                      size_t num_nodes = 3) {
     cass::Config config;
     config.set_reconnect_wait_time(100); // Faster reconnect time to handle cluster starts and stops
-    config.contact_points().push_back("127.0.0.1");
-    config.contact_points().push_back("127.0.0.2"); // Handle three node clusters (for chaotic scenarios)
-    config.contact_points().push_back("127.0.0.3");
+    for (size_t i = 1; i <= num_nodes; ++i) {
+      cass::OStringStream ss;
+      ss << "127.0.0." << i;
+      config.contact_points().push_back(ss.str());
+    }
     if (ssl_context) {
       config.set_ssl_context(ssl_context);
     }
@@ -306,7 +309,7 @@ TEST_F(SessionUnitTest, ExecuteQueryReusingSessionUsingSsl) {
 }
 
 TEST_F(SessionUnitTest, ExecuteQueryReusingSessionChaotic) {
-  mockssandra::SimpleCluster cluster(simple(), 3);
+  mockssandra::SimpleCluster cluster(simple(), 4);
   ASSERT_EQ(cluster.start_all(), 0);
 
   OutagePlan outage_plan(loop(), &cluster);
@@ -315,14 +318,14 @@ TEST_F(SessionUnitTest, ExecuteQueryReusingSessionChaotic) {
   cass::Session session;
   cass::Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
-    connect(&session, NULL, WAIT_FOR_TIME * 3);
+    connect(&session, NULL, WAIT_FOR_TIME * 3, 4);
     query(&session);
     close(&session, WAIT_FOR_TIME * 3);
   }
 }
 
 TEST_F(SessionUnitTest, ExecuteQueryReusingSessionUsingSslChaotic) {
-  mockssandra::SimpleCluster cluster(simple(), 3);
+  mockssandra::SimpleCluster cluster(simple(), 4);
   cass::SslContext::Ptr ssl_context = use_ssl(&cluster).socket_settings.ssl_context;
   ASSERT_EQ(cluster.start_all(), 0);
 
@@ -332,7 +335,7 @@ TEST_F(SessionUnitTest, ExecuteQueryReusingSessionUsingSslChaotic) {
   cass::Session session;
   cass::Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
-    connect(&session, ssl_context.get(), WAIT_FOR_TIME * 3);
+    connect(&session, ssl_context.get(), WAIT_FOR_TIME * 3, 4);
     query(&session);
     close(&session, WAIT_FOR_TIME * 3);
   }
@@ -413,7 +416,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithThreadsUsingSsl) {
 }
 
 TEST_F(SessionUnitTest, ExecuteQueryWithThreadsChaotic) {
-  mockssandra::SimpleCluster cluster(simple(), 3);
+  mockssandra::SimpleCluster cluster(simple(), 4);
   ASSERT_EQ(cluster.start_all(), 0);
 
   cass::Session session;
@@ -431,7 +434,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithThreadsChaotic) {
 }
 
 TEST_F(SessionUnitTest, ExecuteQueryWithThreadsUsingSslChaotic) {
-  mockssandra::SimpleCluster cluster(simple(), 3);
+  mockssandra::SimpleCluster cluster(simple(), 4);
   cass::SslContext::Ptr ssl_context = use_ssl(&cluster).socket_settings.ssl_context;
   ASSERT_EQ(cluster.start_all(), 0);
 
