@@ -1982,7 +1982,7 @@ cass_cluster_set_max_schema_wait_time(CassCluster* cluster,
  * @param[in] max_wait_time_ms
  */
 CASS_EXPORT void
-cass_cluster_set_max_tracing_wait_time(CassCluster* cluster,
+cass_cluster_set_tracing_max_wait_time(CassCluster* cluster,
                                        unsigned max_wait_time_ms);
 
 /**
@@ -1995,7 +1995,7 @@ cass_cluster_set_max_tracing_wait_time(CassCluster* cluster,
  * @param[in] retry_wait_time_ms
  */
 CASS_EXPORT void
-cass_cluster_set_retry_tracing_wait_time(CassCluster* cluster,
+cass_cluster_set_tracing_retry_wait_time(CassCluster* cluster,
                                          unsigned retry_wait_time_ms);
 
 /**

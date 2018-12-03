@@ -220,12 +220,12 @@ void cass_cluster_set_max_schema_wait_time(CassCluster* cluster,
   cluster->config().set_max_schema_wait_time_ms(wait_time_ms);
 }
 
-void cass_cluster_set_max_tracing_wait_time(CassCluster* cluster,
+void cass_cluster_set_tracing_max_wait_time(CassCluster* cluster,
                                            unsigned wait_time_ms) {
   cluster->config().set_max_tracing_wait_time_ms(wait_time_ms);
 }
 
-void cass_cluster_set_retry_tracing_wait_time(CassCluster* cluster,
+void cass_cluster_set_tracing_retry_wait_time(CassCluster* cluster,
                                            unsigned wait_time_ms) {
   cluster->config().set_retry_tracing_wait_time_ms(wait_time_ms);
 }
