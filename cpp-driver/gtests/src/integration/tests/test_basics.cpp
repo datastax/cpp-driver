@@ -340,6 +340,11 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, NoCompactEnabledConnection) {
   CHECK_VERSION(3.11.2);
   CCM::CassVersion cass_version = server_version_;
   if (Options::is_dse()) {
+    if (server_version_ >= "6.0.0") {
+      SKIP_TEST("Unsupported for DataStax Enterprise Version " << server_version_.to_string()
+                << ": Apache Cassandra server version must be used and less than"
+                << " v4.0.0 and either 3.0.16+ or 3.11.2+ in order to execute");
+    }
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
   }
   if (cass_version >= "4.0.0") {
