@@ -182,7 +182,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, InvalidNullPasswordCredentials
      */
     Session session = connect_using_credentials(i, "user", NULL);
     ASSERT_EQ(session.connect_error_code(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
-    ASSERT_EQ(logger_.count(), 1u);
+    ASSERT_GE(logger_.count(), 1u);
     logger_.reset_count();
   }
 }
@@ -219,7 +219,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, BadCredentials) {
      */
     Session session = connect_using_credentials(i, "invalid", "invalid");
     ASSERT_EQ(session.connect_error_code(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
-    ASSERT_EQ(logger_.count(), 1u);
+    ASSERT_GE(logger_.count(), 1u);
     logger_.reset_count();
   }
 }
@@ -258,5 +258,5 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, AuthenticatorSetErrorNull) {
   Session session = connect_using_credentials(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION,
                                               "invalid", "invalid");
   ASSERT_EQ(session.connect_error_code(), CASS_ERROR_SERVER_BAD_CREDENTIALS);
-  ASSERT_EQ(logger_.count(), 1u);
+  ASSERT_GE(logger_.count(), 1u);
 }
