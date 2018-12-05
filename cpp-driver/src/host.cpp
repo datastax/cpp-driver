@@ -36,13 +36,18 @@ void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
 }
 
 void remove_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
+  remove_host(hosts, host->address());
+}
+
+bool remove_host(CopyOnWriteHostVec& hosts, const Address& address) {
   HostVec::iterator i;
   for (i = hosts->begin(); i != hosts->end(); ++i) {
-    if ((*i)->address() == host->address()) {
+    if ((*i)->address() == address) {
       hosts->erase(i);
-      break;
+      return true;
     }
   }
+  return false;
 }
 
 void Host::LatencyTracker::update(uint64_t latency_ns) {

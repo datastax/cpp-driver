@@ -495,7 +495,7 @@ void Cluster::internal_notify_host_up(const Address& address) {
 
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
        end = load_balancing_policies_.end(); it != end; ++it) {
-    (*it)->on_host_up(address);
+    (*it)->on_host_up(host);
   }
 
   if (is_host_ignored(host)) {

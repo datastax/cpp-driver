@@ -94,7 +94,7 @@ public:
   virtual bool is_host_up(const Address& address) const = 0;
   virtual void on_host_added(const Host::Ptr& host) = 0;
   virtual void on_host_removed(const Host::Ptr& host) = 0;
-  virtual void on_host_up(const Address& address) = 0;
+  virtual void on_host_up(const Host::Ptr& host) = 0;
   virtual void on_host_down(const Address& address) = 0;
 
   virtual QueryPlan* new_query_plan(const String& keyspace,
@@ -134,7 +134,7 @@ public:
 
   virtual void on_host_added(const Host::Ptr& host) { child_policy_->on_host_added(host); }
   virtual void on_host_removed(const Host::Ptr& host) { child_policy_->on_host_removed(host); }
-  virtual void on_host_up(const Address& address) { child_policy_->on_host_up(address); }
+  virtual void on_host_up(const Host::Ptr& host) { child_policy_->on_host_up(host); }
   virtual void on_host_down(const Address& address) { child_policy_->on_host_down(address); }
 
 protected:

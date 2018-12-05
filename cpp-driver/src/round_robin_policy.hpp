@@ -42,7 +42,7 @@ public:
 
   virtual void on_host_added(const Host::Ptr& host);
   virtual void on_host_removed(const Host::Ptr& host);
-  virtual void on_host_up(const Address& address);
+  virtual void on_host_up(const Host::Ptr& host);
   virtual void on_host_down(const Address& address);
 
   virtual LoadBalancingPolicy* new_instance() { return Memory::allocate<RoundRobinPolicy>(); }

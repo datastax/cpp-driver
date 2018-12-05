@@ -49,7 +49,7 @@ public:
 
   virtual void on_host_added(const Host::Ptr& host);
   virtual void on_host_removed(const Host::Ptr& host);
-  virtual void on_host_up(const Address& address);
+  virtual void on_host_up(const Host::Ptr& host);
   virtual void on_host_down(const Address& address);
 
   virtual LoadBalancingPolicy* new_instance() {
@@ -71,6 +71,7 @@ private:
 
     void add_host_to_dc(const String& dc, const Host::Ptr& host);
     void remove_host_from_dc(const String& dc, const Host::Ptr& host);
+    bool remove_host(const Address& address);
     const CopyOnWriteHostVec& get_hosts(const String& dc) const;
     void copy_dcs(KeySet* dcs) const;
 

@@ -66,18 +66,22 @@ void RoundRobinPolicy::on_host_added(const Host::Ptr& host) {
 }
 
 void RoundRobinPolicy::on_host_removed(const Host::Ptr& host) {
-  remove_host(hosts_, host);
-
-  ScopedWriteLock wl(&available_rwlock_);
-  available_.erase(host->address());
+  on_host_down(host->address());
 }
 
-void RoundRobinPolicy::on_host_up(const Address& address) {
+void RoundRobinPolicy::on_host_up(const Host::Ptr& host) {
+  add_host(hosts_, host);
+
   ScopedWriteLock wl(&available_rwlock_);
-  available_.insert(address);
+  available_.insert(host->address());
 }
 
 void RoundRobinPolicy::on_host_down(const Address& address) {
+  if (remove_host(hosts_, address)) {
+    LOG_DEBUG("Attempted to remove or mark host %s as DOWN, but it doesn't exist",
+              address.to_string().c_str());
+  }
+
   ScopedWriteLock wl(&available_rwlock_);
   available_.erase(address);
 }

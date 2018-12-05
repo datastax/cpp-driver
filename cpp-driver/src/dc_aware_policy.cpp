@@ -119,12 +119,20 @@ void DCAwarePolicy::on_host_removed(const Host::Ptr& host) {
   available_.erase(host->address());
 }
 
-void DCAwarePolicy::on_host_up(const Address& address) {
+void DCAwarePolicy::on_host_up(const Host::Ptr& host) {
+  on_host_added(host);
+
   ScopedWriteLock wl(&available_rwlock_);
-  available_.insert(address);
+  available_.insert(host->address());
 }
 
 void DCAwarePolicy::on_host_down(const Address& address) {
+  if (!remove_host(local_dc_live_hosts_, address) &&
+      !per_remote_dc_live_hosts_.remove_host(address)) {
+    LOG_DEBUG("Attempted to mark host %s as DOWN, but it doesn't exist",
+              address.to_string().c_str());
+  }
+
   ScopedWriteLock wl(&available_rwlock_);
   available_.erase(address);
 }
@@ -145,8 +153,19 @@ void DCAwarePolicy::PerDCHostMap::remove_host_from_dc(const String& dc, const Ho
   ScopedWriteLock wl(&rwlock_);
   Map::iterator i = map_.find(dc);
   if (i != map_.end()) {
-    remove_host(i->second, host);
+    cass::remove_host(i->second, host);
   }
+}
+
+bool DCAwarePolicy::PerDCHostMap::remove_host(const Address& address) {
+  ScopedWriteLock wl(&rwlock_);
+  for (Map::iterator i = map_.begin(),
+       end = map_.end(); i != end; ++i) {
+    if (cass::remove_host(i->second, address)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 const CopyOnWriteHostVec& DCAwarePolicy::PerDCHostMap::get_hosts(const String& dc) const {
