@@ -48,7 +48,6 @@ void WaitForCallback::on_chain_write(Connection* connection) {
 }
 
 void WaitForCallback::on_chain_set() {
-  assert(handler_->connection_);
   if (handler_->on_set(Ptr(this))) {
     handler_->finish();
   } else {
@@ -58,8 +57,8 @@ void WaitForCallback::on_chain_set() {
 
 void WaitForCallback::on_chain_error(CassError code, const String& message) {
   OStringStream ss;
-  ss <<  message
-      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
+  ss << message
+     << " (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
   handler_->on_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_ERROR, ss.str());
   handler_->finish();
 }
@@ -90,7 +89,7 @@ WaitForHandler::WaitForRequest WaitForHandler::make_request(const String& key, c
 }
 
 void WaitForHandler::start(Connection* connection) {
-  if (!connection_) { // Start only once
+  if (!connection_ && !is_finished_) { // Start only once
     inc_ref(); // Reference for the event loop
     connection_.reset(connection);
     timer_.start(connection_->loop(), max_wait_time_ms_,
@@ -99,7 +98,7 @@ void WaitForHandler::start(Connection* connection) {
 }
 
 void WaitForHandler::schedule() {
-  if (!is_finished_) { // Don't schedule a retry if the handler is finished.
+  if (connection_ && !is_finished_) { // Don't schedule a retry if the handler is finished.
     retry_timer_.start(connection_->loop(), retry_wait_time_ms_,
                        bind_callback(&WaitForHandler::on_retry_timeout, this));
   }
@@ -110,6 +109,7 @@ void WaitForHandler::finish() {
     is_finished_ = true;
     request_handler_->set_response(current_host_, response_);
     if (connection_) {
+      connection_.reset();
       retry_timer_.stop();
       timer_.stop();
       dec_ref();
