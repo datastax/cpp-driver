@@ -53,7 +53,7 @@ endif()
 find_library(LIBUV_LIBRARY
   NAMES ${_LIBUV_NAMES}
   ${_LIBUV_ROOT_HINTS_AND_PATHS}
-  PATH_SUFFIXES lib
+  PATH_SUFFIXES lib lib/${CMAKE_LIBRARY_ARCHITECTURE}
   NO_DEFAULT_PATH)
 
 # Extract version number if possible.

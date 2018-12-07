@@ -92,7 +92,7 @@
 #define CCM_CONFIGURATION_KEY_USE_INSTALL_DIR "use_install_dir"
 #define CCM_CONFIGURATION_KEY_INSTALL_DIR "install_dir"
 #define CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE "deployment_type"
-#define CCM_CONFIGURATION_VERBOSE "verbose"
+#define CCM_CONFIGURATION_KEY_VERBOSE "verbose"
 #define CCM_CONFIGURATION_KEY_USE_DSE "use_dse"
 #define CCM_CONFIGURATION_KEY_DSE_VERSION "dse_version"
 #define CCM_CONFIGURATION_KEY_DSE_CREDENTIALS_TYPE "dse_credentials_type"
@@ -355,14 +355,14 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
           } else if (key.compare(CCM_CONFIGURATION_KEY_SSH_PRIVATE_KEY) == 0) {
             private_key = value;
 #endif
-          } else if (key.compare(CCM_CONFIGURATION_VERBOSE) == 0) {
+          } else if (key.compare(CCM_CONFIGURATION_KEY_VERBOSE) == 0) {
             //Convert the value
             std::stringstream ss(value);
             if (!(ss >> std::boolalpha >> is_verbose_).fail()) {
               continue;
             } else {
               LOG_ERROR("Invalid flag \"" << value << "\" for "
-                        << CCM_CONFIGURATION_VERBOSE << "; defaulting to \""
+                        << CCM_CONFIGURATION_KEY_VERBOSE << "; defaulting to \""
                         << (DEFAULT_IS_VERBOSE ? "true" : "false") << "\"");
               is_verbose_ = DEFAULT_IS_VERBOSE;
             }
