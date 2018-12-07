@@ -90,9 +90,8 @@ public:
    * A callback that's called when a host is marked as being UP.
    *
    * @param address The address of the host.
-   * @param refreshed The fully populated host if refreshes on UP are enabled.
    */
-  virtual void on_up(const Address& address, const Host::Ptr& refreshed) = 0;
+  virtual void on_up(const Address& address) = 0;
 
   /**
    * A callback that's called when a host is marked as being DOWN.
@@ -175,27 +174,25 @@ public:
 
   enum RefreshNodeType {
     NEW_NODE,
-    MOVED_NODE,
-    UP_WITH_REFRESH
+    MOVED_NODE
   };
 
   /**
    * Constructor. Don't use directly.
    *
    * @param connection The wrapped connection.
+   * @param listener A listener to handle events.
    * @param use_schema If true then connection will get additional data for
    * schema events, otherwise it will ignore those events.
    * @param token_aware_routing If true the connection will get additional data
    * for keyspace schema changes, otherwise it will ignore those events.
-   * @param refresh_node_info_on_up If true then connection will refresh node
-   * data for UP events.
    * @param server_version The version number of the server implementation.
    * @param listen_addresses The current state of the listen addresses map.
    */
   ControlConnection(const Connection::Ptr& connection,
+                    ControlConnectionListener* listener,
                     bool use_schema,
                     bool token_aware_routing,
-                    bool refresh_node_info_on_up,
                     const VersionNumber& server_version,
                     ListenAddressMap listen_addresses);
 
@@ -223,7 +220,7 @@ public:
    *
    * @param listener The listener.
    */
-  void set_listener(ControlConnectionListener* listener);
+  void set_listener(ControlConnectionListener* listener = NULL);
 
 public:
   const Address& address() const {
@@ -286,7 +283,6 @@ private:
   Connection::Ptr connection_;
   bool use_schema_;
   bool token_aware_routing_;
-  bool refresh_node_info_on_up_;
   VersionNumber server_version_;
   ListenAddressMap listen_addresses_;
   ControlConnectionListener* listener_;

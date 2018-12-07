@@ -20,13 +20,14 @@
 #include "prepare_all_handler.hpp"
 #include "request_processor.hpp"
 #include "session.hpp"
+#include "tracing_data_handler.hpp"
 #include "utils.hpp"
 
 namespace cass {
 
-class RunCloseProcessor : public Task {
+class ProcessorRunClose : public Task {
 public:
-  RunCloseProcessor(const RequestProcessor::Ptr& processor)
+  ProcessorRunClose(const RequestProcessor::Ptr& processor)
     : processor_(processor) { }
 
   virtual void run(EventLoop* event_loop) {
@@ -34,26 +35,26 @@ public:
   }
 
 private:
-  RequestProcessor::Ptr processor_;
+  const RequestProcessor::Ptr processor_;
 };
 
-class NotifyHostAddProcessor : public Task {
+class ProcessorNotifyHostAdd : public Task {
 public:
-  NotifyHostAddProcessor(const Host::Ptr host,
+  ProcessorNotifyHostAdd(const Host::Ptr host,
                          const RequestProcessor::Ptr& request_processor)
     : request_processor_(request_processor)
     , host_(host) { }
   virtual void run(EventLoop* event_loop) {
-    request_processor_->internal_host_add_down_up(host_, Host::ADDED);
+    request_processor_->internal_host_add(host_);
   }
 private:
-  RequestProcessor::Ptr request_processor_;
+  const RequestProcessor::Ptr request_processor_;
   const Host::Ptr host_;
 };
 
-class NotifyHostRemoveProcessor : public Task {
+class ProcessorNotifyHostRemove : public Task {
 public:
-  NotifyHostRemoveProcessor(const Host::Ptr host,
+  ProcessorNotifyHostRemove(const Host::Ptr host,
                             const RequestProcessor::Ptr& request_processor)
     : request_processor_(request_processor)
     , host_(host) { }
@@ -65,9 +66,37 @@ private:
   const Host::Ptr host_;
 };
 
-class NotifyTokenMapUpdateProcessor : public Task {
+class ProcessorNotifyHostReady : public Task {
 public:
-  NotifyTokenMapUpdateProcessor(const TokenMap::Ptr& token_map,
+  ProcessorNotifyHostReady(const Host::Ptr& host,
+                           const RequestProcessor::Ptr& request_processor)
+    : request_processor_(request_processor)
+    , host_(host) { }
+  virtual void run(EventLoop* event_loop) {
+    request_processor_->internal_host_ready(host_);
+  }
+private:
+  const RequestProcessor::Ptr request_processor_;
+  const Host::Ptr host_;
+};
+
+class ProcessorNotifyMaybeHostUp : public Task {
+public:
+  ProcessorNotifyMaybeHostUp(const Address& address,
+                             const RequestProcessor::Ptr& request_processor)
+    : request_processor_(request_processor)
+    , address_(address) { }
+  virtual void run(EventLoop* event_loop) {
+    request_processor_->internal_host_maybe_up(address_);
+  }
+private:
+  const RequestProcessor::Ptr request_processor_;
+  const Address address_;
+};
+
+class ProcessorNotifyTokenMapUpdate : public Task {
+public:
+  ProcessorNotifyTokenMapUpdate(const TokenMap::Ptr& token_map,
                                 const RequestProcessor::Ptr& request_processor)
     : request_processor_(request_processor)
     , token_map_(token_map) { }
@@ -76,7 +105,7 @@ public:
     request_processor_->token_map_ = token_map_;
   }
 private:
-  RequestProcessor::Ptr request_processor_;
+  const RequestProcessor::Ptr request_processor_;
   const TokenMap::Ptr token_map_;
 };
 
@@ -108,7 +137,7 @@ public:
   virtual void on_keyspace_changed(const String& keyspace,
                                    const KeyspaceChangedHandler::Ptr& handler) { }
   virtual void on_prepared_metadata_changed(const String& id,
-                                           const PreparedMetadata::Entry::Ptr& entry) { }
+                                            const PreparedMetadata::Entry::Ptr& entry) { }
   virtual void on_close(RequestProcessor* processor) { }
 };
 
@@ -121,7 +150,10 @@ RequestProcessorSettings::RequestProcessorSettings()
   , default_profile(Config().default_profile())
   , request_queue_size(8192)
   , coalesce_delay_us(CASS_DEFAULT_COALESCE_DELAY)
-  , new_request_ratio(CASS_DEFAULT_NEW_REQUEST_RATIO) {
+  , new_request_ratio(CASS_DEFAULT_NEW_REQUEST_RATIO)
+  , max_tracing_wait_time_ms(CASS_DEFAULT_MAX_TRACING_DATA_WAIT_TIME_MS)
+  , retry_tracing_wait_time_ms(CASS_DEFAULT_RETRY_TRACING_DATA_WAIT_TIME_MS)
+  , tracing_consistency(CASS_DEFAULT_TRACING_CONSISTENCY) {
     profiles.set_empty_key("");
   }
 
@@ -134,7 +166,10 @@ RequestProcessorSettings::RequestProcessorSettings(const Config& config)
   , profiles(config.profiles())
   , request_queue_size(config.queue_size_io())
   , coalesce_delay_us(config.coalesce_delay_us())
-  , new_request_ratio(config.new_request_ratio()) { }
+  , new_request_ratio(config.new_request_ratio())
+  , max_tracing_wait_time_ms(config.max_tracing_wait_time_ms())
+  , retry_tracing_wait_time_ms(config.retry_tracing_wait_time_ms())
+  , tracing_consistency(config.tracing_consistency()) { }
 
 RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
                                    EventLoop* event_loop,
@@ -147,11 +182,7 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
   : connection_pool_manager_(connection_pool_manager)
   , listener_(listener ? listener : &nop_request_processor_listener__)
   , event_loop_(event_loop)
-  , max_schema_wait_time_ms_(settings.max_schema_wait_time_ms)
-  , prepare_on_all_hosts_(settings.prepare_on_all_hosts)
-  , timestamp_generator_(settings.timestamp_generator)
-  , coalesce_delay_us_(settings.coalesce_delay_us)
-  , new_request_ratio_(settings.new_request_ratio)
+  , settings_(settings)
   , default_profile_(settings.default_profile)
   , profiles_(settings.profiles)
   , request_count_(0)
@@ -187,18 +218,19 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
   }
 
   token_map_ = token_map;
-  hosts_ = hosts;
 
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
        it != policies.end(); ++it) {
     // Initialize the load balancing policies
-    (*it)->init(connected_host, hosts_, random);
+    (*it)->init(connected_host, hosts, random);
   }
+
+  listener_->on_connect(this);
 }
 
 void RequestProcessor::close() {
-  event_loop_->add(Memory::allocate<RunCloseProcessor>(Ptr(this)));
+  event_loop_->add(Memory::allocate<ProcessorRunClose>(Ptr(this)));
 }
 
 void RequestProcessor::set_listener(RequestProcessorListener* listener) {
@@ -217,16 +249,24 @@ void RequestProcessor::set_keyspace(const String& keyspace,
   }
 }
 
-void RequestProcessor::notify_host_add(const Host::Ptr& host) {
-  event_loop_->add(Memory::allocate<NotifyHostAddProcessor>(host, Ptr(this)));
+void RequestProcessor::notify_host_added(const Host::Ptr& host) {
+  event_loop_->add(Memory::allocate<ProcessorNotifyHostAdd>(host, Ptr(this)));
 }
 
-void RequestProcessor::notify_host_remove(const Host::Ptr& host) {
-  event_loop_->add(Memory::allocate<NotifyHostRemoveProcessor>(host, Ptr(this)));
+void RequestProcessor::notify_host_removed(const Host::Ptr& host) {
+  event_loop_->add(Memory::allocate<ProcessorNotifyHostRemove>(host, Ptr(this)));
 }
 
-void RequestProcessor::notify_token_map_changed(const TokenMap::Ptr& token_map) {
-  event_loop_->add(Memory::allocate<NotifyTokenMapUpdateProcessor>(token_map, Ptr(this)));
+void RequestProcessor::notify_host_ready(const Host::Ptr& host) {
+  event_loop_->add(Memory::allocate<ProcessorNotifyHostReady>(host, Ptr(this)));
+}
+
+void RequestProcessor::notify_host_maybe_up(const Address& address) {
+  event_loop_->add(Memory::allocate<ProcessorNotifyMaybeHostUp>(address, Ptr(this)));
+}
+
+void RequestProcessor::notify_token_map_updated(const TokenMap::Ptr& token_map) {
+  event_loop_->add(Memory::allocate<ProcessorNotifyTokenMapUpdate>(token_map, Ptr(this)));
 }
 
 void RequestProcessor::process_request(const RequestHandler::Ptr& request_handler) {
@@ -256,13 +296,9 @@ int RequestProcessor::init(Protected) {
 }
 
 void RequestProcessor::on_pool_up(const Address& address) {
-  // on_up is using the request processor event loop (no need for a task)
-  Host::Ptr host = get_host(address);
-  if (host) {
-    internal_host_add_down_up(host, Host::UP);
-  } else {
-    LOG_DEBUG("Tried to up host %s that doesn't exist", address.to_string().c_str());
-  }
+  // Don't immediately update the load balancing policies. Give the listener
+  // a chance to process the up status and it should call `notify_host_ready()`
+  // when it's ready.
   listener_->on_pool_up(address);
 }
 
@@ -306,6 +342,19 @@ void RequestProcessor::on_keyspace_changed(const String& keyspace,
                                    Memory::allocate<KeyspaceChangedHandler>(event_loop_, response)));
 }
 
+bool RequestProcessor::on_wait_for_tracing_data(const RequestHandler::Ptr& request_handler,
+                                                const Host::Ptr& current_host,
+                                                const Response::Ptr& response) {
+  TracingDataHandler::Ptr handler(Memory::allocate<TracingDataHandler>(request_handler,
+                                                                       current_host,
+                                                                       response,
+                                                                       settings_.tracing_consistency,
+                                                                       settings_.max_tracing_wait_time_ms,
+                                                                       settings_.retry_tracing_wait_time_ms));
+
+  return write_wait_callback(request_handler, current_host, handler->callback());
+}
+
 bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                                     const Host::Ptr& current_host,
                                                     const Response::Ptr& response) {
@@ -313,19 +362,15 @@ bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& r
                                                                                current_host,
                                                                                response,
                                                                                this,
-                                                                               max_schema_wait_time_ms_));
+                                                                               settings_.max_schema_wait_time_ms));
 
-  PooledConnection::Ptr connection(connection_pool_manager_->find_least_busy(current_host->address()));
-  if (connection && connection->write(handler->callback().get())) {
-    return true;
-  }
-  return false;
+  return write_wait_callback(request_handler, current_host, handler->callback());
 }
 
 bool RequestProcessor::on_prepare_all(const RequestHandler::Ptr& request_handler,
                                       const Host::Ptr& current_host,
                                       const Response::Ptr& response) {
-  if (!prepare_on_all_hosts_) {
+  if (!settings_.prepare_on_all_hosts) {
     return false;
   }
 
@@ -373,8 +418,7 @@ void RequestProcessor::on_done() {
 }
 
 bool RequestProcessor::on_is_host_up(const Address& address) {
-  Host::Ptr host(get_host(address));
-  return host && host->is_up();
+  return default_profile_.load_balancing_policy()->is_host_up(address);
 }
 
 void RequestProcessor::internal_close() {
@@ -383,20 +427,11 @@ void RequestProcessor::internal_close() {
 }
 
 void RequestProcessor::internal_pool_down(const Address& address) {
-  Host::Ptr host = get_host(address);
-  if (host) {
-    internal_host_add_down_up(host, Host::DOWN);
-  } else {
-    LOG_DEBUG("Tried to down host %s that doesn't exist", address.to_string().c_str());
+  LoadBalancingPolicy::Vec policies = load_balancing_policies();
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+       it != policies.end(); ++it) {
+    (*it)->on_host_down(address);
   }
-}
-
-Host::Ptr RequestProcessor::get_host(const Address& address) {
-  HostMap::iterator it = hosts_.find(address);
-  if (it == hosts_.end()) {
-    return Host::Ptr();
-  }
-  return it->second;
 }
 
 const ExecutionProfile* RequestProcessor::execution_profile(const String& name) const {
@@ -417,60 +452,65 @@ const LoadBalancingPolicy::Vec& RequestProcessor::load_balancing_policies() cons
   return load_balancing_policies_;
 }
 
-void RequestProcessor::internal_host_add_down_up(const Host::Ptr& host,
-                                                 Host::HostState state) {
-  if (state == Host::ADDED) {
-    connection_pool_manager_->add(host->address());
-  }
-
-  bool is_host_ignored = true;
-  LoadBalancingPolicy::Vec policies = load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
-      is_host_ignored = false;
-      switch (state) {
-        case Host::ADDED:
-          (*it)->on_add(host);
-          break;
-        case Host::DOWN:
-          (*it)->on_down(host);
-          break;
-        case Host::UP:
-          (*it)->on_up(host);
-          break;
-        default:
-          assert(false && "Invalid host state");
-          break;
+void RequestProcessor::internal_host_add(const Host::Ptr& host) {
+  if (connection_pool_manager_) {
+    LoadBalancingPolicy::Vec policies = load_balancing_policies();
+    if (!is_host_ignored(policies, host)) {
+      connection_pool_manager_->add(host->address());
+      for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+           it != policies.end(); ++it) {
+        if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+          (*it)->on_host_added(host);
+        }
       }
+    } else {
+      LOG_DEBUG("Host %s will be ignored by all query plans",
+                host->address_string().c_str());
     }
-  }
-
-  if (is_host_ignored) {
-    LOG_DEBUG("Host %s will be ignored by all query plans",
-              host->address_string().c_str());
   }
 }
 
 void RequestProcessor::internal_host_remove(const Host::Ptr& host) {
-  connection_pool_manager_->remove(host->address());
-  LoadBalancingPolicy::Vec policies = load_balancing_policies();
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
-       it != policies.end(); ++it) {
-    (*it)->on_remove(host);
+  if (connection_pool_manager_) {
+    connection_pool_manager_->remove(host->address());
+    LoadBalancingPolicy::Vec policies = load_balancing_policies();
+    for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+         it != policies.end(); ++it) {
+      (*it)->on_host_removed(host);
+    }
+  }
+}
+
+void RequestProcessor::internal_host_ready(const Host::Ptr& host) {
+  // Only mark the host as up if it has connections.
+  if (connection_pool_manager_ &&
+      connection_pool_manager_->has_connections(host->address())) {
+    LoadBalancingPolicy::Vec policies = load_balancing_policies();
+    for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
+         it != policies.end(); ++it) {
+      if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
+        (*it)->on_host_up(host);
+      }
+    }
+  }
+}
+
+void RequestProcessor::internal_host_maybe_up(const Address& address) {
+  if (connection_pool_manager_) {
+    connection_pool_manager_->attempt_immediate_connect(address);
   }
 }
 
 void RequestProcessor::start_coalescing() {
   io_time_during_coalesce_ = 0;
-  timer_.start(event_loop_->loop(), coalesce_delay_us_,
+  timer_.start(event_loop_->loop(), settings_.coalesce_delay_us,
                bind_callback(&RequestProcessor::on_timeout, this));
 }
 
 void RequestProcessor::on_timeout(MicroTimer* timer) {
   // Don't process for more time than the coalesce delay.
-  uint64_t processing_time = std::min((io_time_during_coalesce_ * new_request_ratio_) / 100,
-                                      coalesce_delay_us_ * 1000);
+  uint64_t processing_time = std::min((io_time_during_coalesce_ * settings_.new_request_ratio) / 100,
+                                      settings_.coalesce_delay_us * 1000);
   int processed = process_requests(processing_time);
 
   connection_pool_manager_->flush();
@@ -544,7 +584,7 @@ int RequestProcessor::process_requests(uint64_t processing_time) {
         request_handler->init(*profile,
                               connection_pool_manager_.get(),
                               token_map_.get(),
-                              timestamp_generator_.get(),
+                              settings_.timestamp_generator.get(),
                               this);
         request_handler->execute();
         processed++;
@@ -567,6 +607,19 @@ int RequestProcessor::process_requests(uint64_t processing_time) {
 #endif
 
   return processed;
+}
+
+bool RequestProcessor::write_wait_callback(const RequestHandler::Ptr& request_handler,
+                                           const Host::Ptr& current_host,
+                                           const RequestCallback::Ptr& callback) {
+  PooledConnection::Ptr connection(connection_pool_manager_->find_least_busy(current_host->address()));
+  if (connection && connection->write(callback.get())) {
+    // Stop the original request timer now that we have a response and
+    // are waiting for the maximum wait time of the handler.
+    request_handler->stop_timer();
+    return true;
+  }
+  return false;
 }
 
 } // namespace cass

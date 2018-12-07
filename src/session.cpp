@@ -40,9 +40,7 @@ void cass_session_free(CassSession* session) {
   // This attempts to close the session because the joining will
   // hang indefinitely otherwise. This causes minimal delay
   // if the session is already closed.
-  cass::SharedRefPtr<cass::Future> future(cass::Memory::allocate<cass::SessionFuture>());
-  session->close(future);
-  future->wait();
+  session->close()->wait();
 
   cass::Memory::deallocate(session->from());
 }
@@ -64,17 +62,16 @@ CassFuture* cass_session_connect_keyspace_n(CassSession* session,
                                             const CassCluster* cluster,
                                             const char* keyspace,
                                             size_t keyspace_length) {
-  cass::SessionFuture::Ptr connect_future(cass::Memory::allocate<cass::SessionFuture>());
-  session->connect(cluster->config(), cass::String(keyspace, keyspace_length), connect_future);
-  connect_future->inc_ref();
-  return CassFuture::to(connect_future.get());
+  cass::Future::Ptr future(
+        session->connect(cluster->config(), cass::String(keyspace, keyspace_length)));
+  future->inc_ref();
+  return CassFuture::to(future.get());
 }
 
 CassFuture* cass_session_close(CassSession* session) {
-  cass::SessionFuture::Ptr close_future(cass::Memory::allocate<cass::SessionFuture>());
-  session->close(close_future);
-  close_future->inc_ref();
-  return CassFuture::to(close_future.get());
+  cass::Future::Ptr future(session->close());
+  future->inc_ref();
+  return CassFuture::to(future.get());
 }
 
 CassFuture* cass_session_prepare(CassSession* session, const char* query) {
@@ -223,8 +220,12 @@ public:
                                                           hosts,
                                                           token_map,
                                                           bind_callback(&SessionInitializer::on_initialize, this)));
+
+      RequestProcessorSettings settings(session_->config());
+      settings.connection_pool_settings.connection_settings.client_id = to_string(session_->client_id());
+
       initializer
-          ->with_settings(RequestProcessorSettings(session_->config()))
+          ->with_settings(RequestProcessorSettings(settings))
           ->with_listener(session_)
           ->with_keyspace(session_->connect_keyspace())
           ->with_metrics(session_->metrics())
@@ -259,10 +260,10 @@ private:
       error_message_ = initializer->error_message();
     }
 
-    if (--remaining_ == 0) {
+    if (remaining_ > 0 && --remaining_ == 0) {
       { // This requires locking because cluster events can happen during
         // initialization.
-        ScopedMutex l(&session_->request_processor_mutex_);
+        ScopedMutex l(&session_->mutex_);
         session_->request_processor_count_ = request_processors_.size();
         session_->request_processors_ = request_processors_;
       }
@@ -286,13 +287,14 @@ private:
 };
 
 Session::Session()
-  : request_processor_count_(0) {
-  uv_mutex_init(&request_processor_mutex_);
+  : request_processor_count_(0)
+  , is_closing_(false) {
+  uv_mutex_init(&mutex_);
 }
 
 Session::~Session() {
   join();
-  uv_mutex_destroy(&request_processor_mutex_);
+  uv_mutex_destroy(&mutex_);
 }
 
 Future::Ptr Session::prepare(const char* statement, size_t length) {
@@ -405,6 +407,7 @@ void Session::on_connect(const Host::Ptr& connected_host,
 
   request_processors_.clear();
   request_processor_count_ = 0;
+  is_closing_ = false;
   SessionInitializer::Ptr initializer(Memory::allocate<SessionInitializer>(this));
   initializer->initialize(connected_host,
                           protocol_version,
@@ -415,7 +418,8 @@ void Session::on_connect(const Host::Ptr& connected_host,
 void Session::on_close() {
   // If there are request processors still connected those need to be closed
   // first before sending the close notification.
-  ScopedMutex l(&request_processor_mutex_);
+  ScopedMutex l(&mutex_);
+  is_closing_ = true;
   if (request_processor_count_ > 0) {
     for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
          end = request_processors_.end(); it != end; ++it) {
@@ -426,59 +430,89 @@ void Session::on_close() {
   }
 }
 
-void Session::on_up(const Host::Ptr& host) {
-  // Ignore up events from the control connection. The connection pools will
-  // reconnect themselves when the host becomes available.
+void Session::on_host_up(const Host::Ptr& host) {
+  // Ignore up events from the control connection; however external host
+  // listeners should still be notified. The connection pools will reconnect
+  // themselves when the host becomes available.
+  config().host_listener()->on_host_up(host);
 }
 
-void Session::on_down(const Host::Ptr& host) {
-  // Ignore down events from the control connection. The connection pools can
-  // determine if a host is down themselves. The control connection host
-  // can become partitioned from the rest of the cluster and in that scenario a
+void Session::on_host_down(const Host::Ptr& host) {
+  // Ignore down events from the control connection; however external host
+  // listeners should still be notified. The connection pools can determine if a
+  // host is down themselves. The control connection host can become partitioned
+  // from the rest of the cluster and in that scenario a down event from the
   // down event from the control connection would be invalid.
-}
-
-void Session::on_add(const Host::Ptr& host) {
-  ScopedMutex l(&request_processor_mutex_);
-  for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
-       end = request_processors_.end(); it != end; ++it) {
-    (*it)->notify_host_add(host);
+  ScopedMutex l(&mutex_);
+  if (!is_closing_) { // Refrain from host down events while session is closing
+    l.unlock();
+    config().host_listener()->on_host_down(host);
   }
 }
 
-void Session::on_remove(const Host::Ptr& host)  {
-  ScopedMutex l(&request_processor_mutex_);
+void Session::on_host_added(const Host::Ptr& host) {
+  { // Lock for request processor
+    ScopedMutex l(&mutex_);
+    for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+         end = request_processors_.end(); it != end; ++it) {
+      (*it)->notify_host_added(host);
+    }
+  }
+  config().host_listener()->on_host_added(host);
+}
+
+void Session::on_host_removed(const Host::Ptr& host)  {
+  { // Lock for request processor
+    ScopedMutex l(&mutex_);
+    for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+         end = request_processors_.end(); it != end; ++it) {
+      (*it)->notify_host_removed(host);
+    }
+  }
+  config().host_listener()->on_host_removed(host);
+}
+
+void Session::on_token_map_updated(const TokenMap::Ptr& token_map) {
+  ScopedMutex l(&mutex_);
   for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
        end = request_processors_.end(); it != end; ++it) {
-    (*it)->notify_host_remove(host);
+    (*it)->notify_token_map_updated(token_map);
   }
 }
 
-void Session::on_update_token_map(const TokenMap::Ptr& token_map) {
-  ScopedMutex l(&request_processor_mutex_);
+void Session::on_host_maybe_up(const Host::Ptr& host) {
+  ScopedMutex l(&mutex_);
   for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
        end = request_processors_.end(); it != end; ++it) {
-    (*it)->notify_token_map_changed(token_map);
+    (*it)->notify_host_maybe_up(host->address());
+  }
+}
+
+void Session::on_host_ready(const Host::Ptr& host) {
+  ScopedMutex l(&mutex_);
+  for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
+       end = request_processors_.end(); it != end; ++it) {
+    (*it)->notify_host_ready(host);
   }
 }
 
 void Session::on_pool_up(const Address& address) {
-  cluster()->notify_up(address);
+  cluster()->notify_host_up(address);
 }
 
 void Session::on_pool_down(const Address& address) {
-  cluster()->notify_down(address);
+  cluster()->notify_host_down(address);
 }
 
 void Session::on_pool_critical_error(const Address& address,
                                 Connector::ConnectionError code,
                                 const String& message) {
-  cluster()->notify_down(address);
+  cluster()->notify_host_down(address);
 }
 
 void Session::on_keyspace_changed(const String& keyspace,
                                   const KeyspaceChangedHandler::Ptr& handler) {
-  ScopedMutex l(&request_processor_mutex_);
+  ScopedMutex l(&mutex_);
   for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
        end = request_processors_.end(); it != end; ++it) {
     (*it)->set_keyspace(keyspace, handler);
@@ -493,8 +527,8 @@ void Session::on_prepared_metadata_changed(const String& id,
 void Session::on_close(RequestProcessor* processor) {
   // Requires a lock because the close callback is called from several
   // different request processor threads.
-  ScopedMutex l(&request_processor_mutex_);
-  if (--request_processor_count_ == 0) {
+  ScopedMutex l(&mutex_);
+  if (request_processor_count_ > 0 && --request_processor_count_ == 0) {
     notify_closed();
   }
 }

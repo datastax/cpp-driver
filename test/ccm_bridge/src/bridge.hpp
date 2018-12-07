@@ -22,6 +22,7 @@
 #include "cass_version.hpp"
 #include "deployment_type.hpp"
 #include "dse_credentials_type.hpp"
+#include "process.hpp"
 #include "tsocket.hpp"
 
 #include <map>
@@ -44,7 +45,7 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 
 // Default values
 #define DEFAULT_CASSANDRA_VERSION CassVersion("3.11.3")
-#define DEFAULT_DSE_VERSION DseVersion("6.0.3")
+#define DEFAULT_DSE_VERSION DseVersion("6.0.4")
 #define DEFAULT_USE_GIT false
 #define DEFAULT_USE_INSTALL_DIR false
 #define DEFAULT_USE_DSE false
@@ -56,6 +57,7 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 #define DEFAULT_REMOTE_DEPLOYMENT_PORT 22
 #define DEFAULT_REMOTE_DEPLOYMENT_USERNAME "vagrant"
 #define DEFAULT_REMOTE_DEPLOYMENT_PASSWORD "vagrant"
+#define DEFAULT_IS_VERBOSE false
 #define DEFAULT_JVM_ARGUMENTS std::vector<std::string>()
 
 // Define the node limit for a cluster
@@ -89,11 +91,11 @@ struct ClusterStatus {
   /**
    * Constructor
    */
-  ClusterStatus() : node_count(0) {}
+  ClusterStatus()
+    : node_count(0) { }
 };
 
 namespace CCM {
-
   /**
    * Enumeration for a DSE workload
    */
@@ -184,6 +186,8 @@ namespace CCM {
      *                   and password authentication (default: Empty)
      * @param private_key Private key for authentication; Empty if using
      *                   username and password authentication (default: Empty)
+     * @param is_verbose True if verbose output should be enabled; false
+     *                   otherwise (default: false)
      * @throws BridgeException
      */
     Bridge(CassVersion cassandra_version = DEFAULT_CASSANDRA_VERSION,
@@ -204,7 +208,8 @@ namespace CCM {
       const std::string& username = DEFAULT_REMOTE_DEPLOYMENT_USERNAME,
       const std::string& password = DEFAULT_REMOTE_DEPLOYMENT_PASSWORD,
       const std::string& public_key = "",
-      const std::string& private_key = "");
+      const std::string& private_key = "",
+      bool is_verbose = DEFAULT_IS_VERBOSE);
 
     /**
      * Constructor
@@ -819,6 +824,10 @@ namespace CCM {
      * generation
      */
     std::string host_;
+    /**
+     * Flag to determine if verbose output is enabled
+     */
+    bool is_verbose_;
 #ifdef CASS_USE_LIBSSH2
     /**
      * SSH session handle for establishing connection
@@ -902,14 +911,6 @@ namespace CCM {
      */
     std::string execute_libssh2_command(const std::vector<std::string>& command);
 #endif
-
-    /**
-     * Execute a local command
-     *
-     * @param command Command array to execute ([0] = command, [1-n] arguments)
-     * @return Output from executed command
-     */
-    std::string execute_local_command(const std::vector<std::string>& command);
 
 #ifdef CASS_USE_LIBSSH2
     /**

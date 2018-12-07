@@ -29,11 +29,11 @@ public:
     , failed_(0)
     , closed_(0) { }
 
-  virtual void on_up(const cass::Host::Ptr& host) { }
-  virtual void on_down(const cass::Host::Ptr& host) { }
-  virtual void on_add(const cass::Host::Ptr& host) { }
-  virtual void on_remove(const cass::Host::Ptr& host) { }
-  virtual void on_update_token_map(const cass::TokenMap::Ptr& token_map) { }
+  virtual void on_host_up(const cass::Host::Ptr& host) { }
+  virtual void on_host_down(const cass::Host::Ptr& host) { }
+  virtual void on_host_added(const cass::Host::Ptr& host) { }
+  virtual void on_host_removed(const cass::Host::Ptr& host) { }
+  virtual void on_token_map_updated(const cass::TokenMap::Ptr& token_map) { }
 
   int connected() { return connected_; }
   int failed() { return failed_; }
@@ -47,7 +47,7 @@ protected:
     ++connected_;
     ASSERT_STREQ("127.0.0.1", connected_host->address_string().c_str());
     ASSERT_EQ(cass::ProtocolVersion(PROTOCOL_VERSION), protocol_version);
-    ASSERT_EQ(1, hosts.size());
+    ASSERT_EQ(1u, hosts.size());
     ASSERT_EQ(state(), SESSION_STATE_CONNECTING);
     notify_connected();
   }
@@ -79,10 +79,9 @@ TEST_F(SessionBaseUnitTest, Simple) {
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, KEYSPACE, connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(session_base.state(), cass::SessionBase::SESSION_STATE_CONNECTED);
   EXPECT_STREQ(KEYSPACE, session_base.connect_keyspace().c_str());
@@ -92,9 +91,7 @@ TEST_F(SessionBaseUnitTest, Simple) {
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(0, session_base.closed());
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(session_base.close()->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(1, session_base.closed());
@@ -107,10 +104,9 @@ TEST_F(SessionBaseUnitTest, SimpleEmptyKeyspaceWithoutRandom) {
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
   config.set_use_randomized_contact_points(false);
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, "", connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(session_base.state(), cass::SessionBase::SESSION_STATE_CONNECTED);
   EXPECT_TRUE(session_base.connect_keyspace().empty());
@@ -120,9 +116,7 @@ TEST_F(SessionBaseUnitTest, SimpleEmptyKeyspaceWithoutRandom) {
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(0, session_base.closed());
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(session_base.close()->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(1, session_base.closed());
@@ -136,10 +130,9 @@ TEST_F(SessionBaseUnitTest, Ssl) {
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
   config.set_ssl_context(settings.socket_settings.ssl_context.get());
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, KEYSPACE, connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(session_base.state(), cass::SessionBase::SESSION_STATE_CONNECTED);
   EXPECT_STREQ(KEYSPACE, session_base.connect_keyspace().c_str());
@@ -149,9 +142,7 @@ TEST_F(SessionBaseUnitTest, Ssl) {
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(0, session_base.closed());
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(session_base.close()->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(1, session_base.closed());
@@ -165,10 +156,9 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsIp) {
   config.set_use_randomized_contact_points(false);
   config.contact_points().push_back("123.456.789.012");
   config.contact_points().push_back("127.0.0.1");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, KEYSPACE, connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_STREQ(KEYSPACE, session_base.connect_keyspace().c_str());
   EXPECT_NE(&session_base.config(), &config);
@@ -177,9 +167,7 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsIp) {
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(0, session_base.closed());
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(session_base.close()->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(1, session_base.closed());
@@ -192,10 +180,9 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsHostname) {
   cass::Config config;
   config.contact_points().push_back("doesnotexist.dne");
   config.contact_points().push_back("localhost");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, KEYSPACE, connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_STREQ(KEYSPACE, session_base.connect_keyspace().c_str());
   EXPECT_NE(&session_base.config(), &config);
@@ -204,9 +191,7 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsHostname) {
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(0, session_base.closed());
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(session_base.close()->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(1, session_base.closed());
@@ -220,10 +205,9 @@ TEST_F(SessionBaseUnitTest, InvalidProtocol) {
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, KEYSPACE, connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL, connect_future->error()->code);
   EXPECT_EQ(0, session_base.connected());
@@ -241,10 +225,9 @@ TEST_F(SessionBaseUnitTest, SslError) {
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
   config.set_ssl_context(invalid_ssl_context.get());
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, KEYSPACE, connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(CASS_ERROR_SSL_INVALID_PEER_CERT, connect_future->error()->code);
   EXPECT_EQ(0, session_base.connected());
@@ -259,20 +242,16 @@ TEST_F(SessionBaseUnitTest, Auth) {
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
   config.set_credentials("cassandra", "cassandra");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, KEYSPACE, connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(0, session_base.closed());
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
-  EXPECT_FALSE(close_future->error());
+  ASSERT_TRUE(session_base.close()->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(1, session_base.closed());
@@ -284,10 +263,9 @@ TEST_F(SessionBaseUnitTest, BadCredentials) {
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, KEYSPACE, connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, connect_future->error()->code);
   EXPECT_EQ(0, session_base.connected());
@@ -298,10 +276,9 @@ TEST_F(SessionBaseUnitTest, BadCredentials) {
 TEST_F(SessionBaseUnitTest, NoHostsAvailable) {
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, KEYSPACE, connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
   EXPECT_EQ(0, session_base.connected());
@@ -315,30 +292,29 @@ TEST_F(SessionBaseUnitTest, ConnectWhenAlreadyConnected) {
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, "", connect_future);
-  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
-  EXPECT_EQ(1, session_base.connected());
-  EXPECT_EQ(0, session_base.failed());
-  EXPECT_EQ(0, session_base.closed());
+  {
+    cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
+    ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+    EXPECT_EQ(1, session_base.connected());
+    EXPECT_EQ(0, session_base.failed());
+    EXPECT_EQ(0, session_base.closed());
+  }
 
-  // Attempt second session connection
-  cass::Future::Ptr connect_future_2(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.connect(config, "", connect_future_2);
-  ASSERT_TRUE(connect_future_2->wait_for(WAIT_FOR_TIME));
-  EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_CONNECT, connect_future_2->error()->code);
-  EXPECT_EQ(1, session_base.connected());
-  EXPECT_EQ(0, session_base.failed());
-  EXPECT_EQ(0, session_base.closed());
+  {// Attempt second session connection
+    cass::Future::Ptr connect_future(session_base.connect(config, ""));
+    ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+    EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_CONNECT, connect_future->error()->code);
+    EXPECT_EQ(1, session_base.connected());
+    EXPECT_EQ(0, session_base.failed());
+    EXPECT_EQ(0, session_base.closed());
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
-  EXPECT_EQ(1, session_base.connected());
-  EXPECT_EQ(0, session_base.failed());
-  EXPECT_EQ(1, session_base.closed());
+    ASSERT_TRUE(session_base.close()->wait_for(WAIT_FOR_TIME));
+    EXPECT_EQ(1, session_base.connected());
+    EXPECT_EQ(0, session_base.failed());
+    EXPECT_EQ(1, session_base.closed());
+  }
 }
 
 TEST_F(SessionBaseUnitTest, CloseWhenAlreadyClosed) {
@@ -347,27 +323,23 @@ TEST_F(SessionBaseUnitTest, CloseWhenAlreadyClosed) {
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
-  cass::Future::Ptr connect_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.connect(config, "", connect_future);
+  cass::Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(0, session_base.closed());
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.close(close_future);
-  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_TRUE(session_base.close()->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(1, session_base.closed());
 
   // Attempt second session close
-  cass::Future::Ptr close_future_2(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
-  session_base.close(close_future_2);
-  ASSERT_TRUE(close_future_2->wait_for(WAIT_FOR_TIME));
-  EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_CLOSE, close_future_2->error()->code);
+  cass::Future::Ptr close_future(session_base.close());
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_CLOSE, close_future->error()->code);
   EXPECT_EQ(1, session_base.connected());
   EXPECT_EQ(0, session_base.failed());
   EXPECT_EQ(1, session_base.closed());
@@ -377,10 +349,9 @@ TEST_F(SessionBaseUnitTest, CloseWhenNotConnected) {
   mockssandra::SimpleCluster cluster(simple());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  cass::Future::Ptr close_future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_SESSION));
   TestSessionBase session_base;
 
-  session_base.close(close_future);
+  cass::Future::Ptr close_future(session_base.close());
   ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_CLOSE, close_future->error()->code);
   EXPECT_EQ(0, session_base.connected());

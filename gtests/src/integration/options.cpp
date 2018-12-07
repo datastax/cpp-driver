@@ -24,7 +24,7 @@
 #include <iostream>
 
 #define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.3")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.3")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.4")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
@@ -46,6 +46,8 @@ std::string Options::username_ = "vagrant";
 std::string Options::password_ = "vagrant";
 std::string Options::public_key_ = "public.key";
 std::string Options::private_key_ = "private.key";
+bool Options::is_verbose_ccm_ = false;
+bool Options::is_verbose_integration_ = false;
 
 // Static initialization is not guaranteed for the following types
 CCM::DseCredentialsType Options::dse_credentials_type_;
@@ -63,7 +65,7 @@ bool Options::initialize(int argc, char* argv[]) {
 
     // Check for the help argument first (keeps defaults for help display)
     for (int i = 1; i < argc; ++i) {
-      if (std::string(argv[i]).compare("--help") == 0) {
+      if (std::string(argv[i]) == "--help") {
         print_help();
         is_help_ = true;
         return false;
@@ -72,7 +74,7 @@ bool Options::initialize(int argc, char* argv[]) {
 
     // Check for the DSE argument (update default server version)
     for (int i = 1; i < argc; ++i) {
-      if (std::string(argv[i]).compare("--dse") == 0) {
+      if (std::string(argv[i]) == "--dse") {
         server_version_ = DEFAULT_OPTIONS_DSE_VERSION;
       }
     }
@@ -86,10 +88,10 @@ bool Options::initialize(int argc, char* argv[]) {
         value = option[1];
       }
       // Integration test options
-      if (key.compare("--keep-clusters") == 0) {
+      if (key == "--keep-clusters") {
         is_keep_clusters_ = true;
       }
-      else if (key.compare("--log-tests") == 0) {
+      else if (key == "--log-tests") {
         if (!value.empty()) {
           is_log_tests_ = bool_value(value);
         } else {
@@ -97,23 +99,23 @@ bool Options::initialize(int argc, char* argv[]) {
         }
       }
       // CCM bridge specific options
-      else if (key.compare("--version") == 0) {
+      else if (key == "--version") {
         if (!value.empty()) {
           server_version_ = CCM::CassVersion(value);
         } else {
           std::cerr << "Missing Server Version: Using default " << server_version_.to_string() << std::endl;
         }
-      } else if (key.compare("--dse") == 0) {
+      } else if (key == "--dse") {
         is_dse_ = true;
-      } else if (key.compare("--dse-username") == 0) {
+      } else if (key == "--dse-username") {
         if (!value.empty()) {
           dse_username_ = value;
         }
-      } else if (key.compare("--dse-password") == 0) {
+      } else if (key == "--dse-password") {
         if (!value.empty()) {
           dse_password_ = value;
         }
-      } else if (key.compare("--dse-credentials") == 0) {
+      } else if (key == "--dse-credentials") {
         bool is_found = false;
         if (!value.empty()) {
           for (CCM::DseCredentialsType::iterator iterator = CCM::DseCredentialsType::begin(); iterator != CCM::DseCredentialsType::end(); ++iterator) {
@@ -127,12 +129,12 @@ bool Options::initialize(int argc, char* argv[]) {
         if (!is_found) {
           std::cerr << "Invalid DSE Credentials Type: Using default " << dse_credentials_type_.to_string() << std::endl;
         }
-      } else if (key.compare("--git") == 0) {
+      } else if (key == "--git") {
         use_git_ = true;
         if (!value.empty()) {
           branch_tag_ = value;
         }
-      } else if (key.compare("--install-dir") == 0) {
+      } else if (key == "--install-dir") {
         use_install_dir_ = true;
         if (value.empty()) {
           std::cerr << "Disabling the Use of the Installation Directory: Installation directory must not be empty" << std::endl;
@@ -140,13 +142,13 @@ bool Options::initialize(int argc, char* argv[]) {
         } else {
           install_dir_ = value;
         }
-      } else if (key.compare("--prefix") == 0) {
+      } else if (key == "--prefix") {
         if (!value.empty()) {
           cluster_prefix_ = value;
         } else {
           std::cerr << "Missing Cluster Prefix: Using default " << cluster_prefix_ << std::endl;
         }
-      } else if (key.compare("--category") == 0) {
+      } else if (key == "--category") {
         if (!value.empty()) {
           std::vector<std::string> categories = test::Utils::explode(value, ':');
           for (std::vector<std::string>::iterator iterator = categories.begin();
@@ -161,9 +163,27 @@ bool Options::initialize(int argc, char* argv[]) {
         } else {
           std::cerr << "Missing Category: All applicable tests will run" << std::endl;
         }
+      } else if (key == "--verbose") {
+        if (!value.empty() && !bool_value(value)) {
+          std::vector<std::string> components = test::Utils::explode(value, ',');
+          for (std::vector<std::string>::iterator it = components.begin(),
+              end = components.end(); it != end; ++it) {
+            std::string component = test::Utils::to_lower(*it);
+            if (component == "ccm") {
+              is_verbose_ccm_ = true;
+            } else if (component == "integration") {
+              is_verbose_integration_ = true;
+            } else {
+              std::cerr << "Invalid Component \"" << *it << "\": Available components are [ccm, integration]" << std::endl;
+            }
+          }
+        } else {
+          is_verbose_ccm_ = true;
+          is_verbose_integration_ = true;
+        }
       }
 #ifdef CASS_USE_LIBSSH2
-      else if (key.compare("--authentication") == 0) {
+      else if (key == "--authentication") {
         bool is_found = false;
         if (!value.empty()) {
           for (CCM::AuthenticationType::iterator iterator = CCM::AuthenticationType::begin(); iterator != CCM::AuthenticationType::end(); ++iterator) {
@@ -177,7 +197,7 @@ bool Options::initialize(int argc, char* argv[]) {
         if (!is_found) {
           std::cerr << "Invalid Authentication Type: Using default " << authentication_type_.to_string() << std::endl;
         }
-      } else if (key.compare("--deployment") == 0) {
+      } else if (key == "--deployment") {
         bool is_found = false;
         if (!value.empty()) {
           for (CCM::DeploymentType::iterator iterator = CCM::DeploymentType::begin(); iterator != CCM::DeploymentType::end(); ++iterator) {
@@ -191,13 +211,13 @@ bool Options::initialize(int argc, char* argv[]) {
         if (!is_found) {
           std::cerr << "Invalid Deployment Type: Using default " << deployment_type_.to_string() << std::endl;
         }
-      } else if (key.compare("--host") == 0) {
+      } else if (key == "--host") {
         if (!value.empty()) {
           host_ = value;
         } else {
           std::cerr << "Missing Host: Using default " << host_ << std::endl;
         }
-      } else if (key.compare("--port") == 0) {
+      } else if (key == "--port") {
         //Convert the value
         if (!value.empty()) {
           std::stringstream ss(value);
@@ -207,25 +227,25 @@ bool Options::initialize(int argc, char* argv[]) {
             std::cerr << "Invalid Port: Using default [" << port_ << "]";
           }
         }
-      } else if (key.compare("--username") == 0) {
+      } else if (key == "--username") {
         if (!value.empty()) {
           username_ = value;
         } else {
           std::cerr << "Missing Username: Using default " << username_ << std::endl;
         }
-      } else if (key.compare("--password") == 0) {
+      } else if (key == "--password") {
         if (!value.empty()) {
           password_ = value;
         } else {
           std::cerr << "Missing Password: Using default " << password_ << std::endl;
         }
-      } else if (key.compare("--public-key") == 0) {
+      } else if (key == "--public-key") {
         if (!value.empty()) {
           public_key_ = value;
         } else {
           std::cerr << "Missing Public Key Filename: Using default " << public_key_ << std::endl;
         }
-      } else if (key.compare("--private-key") == 0) {
+      } else if (key == "--private-key") {
         if (!value.empty()) {
           private_key_ = value;
         } else {
@@ -333,6 +353,8 @@ void Options::print_help() {
   std::cout << "  --keep-clusters" << std::endl << "      "
     << "Indicate CCM clusters should not be removed after tests terminate."
     << std::endl;
+  std::cout << "  --verbose(=ccm,integration)" << std::endl << "      "
+    << "Enable verbose output for component(s)." << std::endl;
   std::cout << std::endl;
 }
 
@@ -499,7 +521,16 @@ SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > Options::ccm() {
     Options::deployment_type(), Options::authentication_type(), \
     Options::host(), Options::port(), \
     Options::username(), Options::password(), \
-    Options::public_key(), Options::private_key());
+    Options::public_key(), Options::private_key(),
+    Options::is_verbose_ccm());
+}
+
+bool Options::is_verbose_ccm() {
+  return is_verbose_ccm_;
+}
+
+bool Options::is_verbose_integration() {
+  return is_verbose_integration_;
 }
 
 Options::Options() {
@@ -507,8 +538,8 @@ Options::Options() {
 
 bool Options::bool_value(const std::string& value) {
   std::string lower_value = test::Utils::to_lower(value);
-  if (lower_value.compare("yes") == 0 || lower_value.compare("true") == 0 ||
-      lower_value.compare("on") == 0 || lower_value.compare("0") == 0) {
+  if (lower_value == "yes" || lower_value == "true" ||
+      lower_value == "on" || lower_value == "0") {
     return true;
   }
   return false;

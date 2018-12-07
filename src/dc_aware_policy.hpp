@@ -31,20 +31,11 @@ namespace cass {
 
 class DCAwarePolicy : public LoadBalancingPolicy {
 public:
-  DCAwarePolicy()
-      : used_hosts_per_remote_dc_(0)
-      , skip_remote_dcs_for_local_cl_(true)
-      , local_dc_live_hosts_(Memory::allocate<HostVec>())
-      , index_(0) { }
+  DCAwarePolicy(const String& local_dc = "",
+                size_t used_hosts_per_remote_dc = 0,
+                bool skip_remote_dcs_for_local_cl = true);
 
-  DCAwarePolicy(const String& local_dc,
-                size_t used_hosts_per_remote_dc,
-                bool skip_remote_dcs_for_local_cl)
-      : local_dc_(local_dc)
-      , used_hosts_per_remote_dc_(used_hosts_per_remote_dc)
-      , skip_remote_dcs_for_local_cl_(skip_remote_dcs_for_local_cl)
-      , local_dc_live_hosts_(Memory::allocate<HostVec>())
-      , index_(0) { }
+  ~DCAwarePolicy();
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
 
@@ -54,10 +45,12 @@ public:
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
-  virtual void on_add(const Host::Ptr& host);
-  virtual void on_remove(const Host::Ptr& host);
-  virtual void on_up(const Host::Ptr& host);
-  virtual void on_down(const Host::Ptr& host);
+  virtual bool is_host_up(const Address& address) const;
+
+  virtual void on_host_added(const Host::Ptr& host);
+  virtual void on_host_removed(const Host::Ptr& host);
+  virtual void on_host_up(const Host::Ptr& host);
+  virtual void on_host_down(const Address& address);
 
   virtual LoadBalancingPolicy* new_instance() {
     return Memory::allocate<DCAwarePolicy>(local_dc_,
@@ -78,6 +71,7 @@ private:
 
     void add_host_to_dc(const String& dc, const Host::Ptr& host);
     void remove_host_from_dc(const String& dc, const Host::Ptr& host);
+    bool remove_host(const Address& address);
     const CopyOnWriteHostVec& get_hosts(const String& dc) const;
     void copy_dcs(KeySet* dcs) const;
 
@@ -113,6 +107,9 @@ public:
   };
 
 private:
+  mutable uv_rwlock_t available_rwlock_;
+  AddressSet available_;
+
   String local_dc_;
   size_t used_hosts_per_remote_dc_;
   bool skip_remote_dcs_for_local_cl_;

@@ -54,6 +54,20 @@ public:
   static std::string contact_points(CassCluster* cluster);
 
   /**
+   * Get the driver name as configured by the driver
+   *
+   * @return Driver name
+   */
+  static std::string driver_name();
+
+  /**
+   * Get the driver version as configured by the driver
+   *
+   * @return Driver version
+   */
+  static std::string driver_version();
+
+  /**
    * Get the host/address of the future
    *
    * @param future Future to retrieve hosts/addresses from

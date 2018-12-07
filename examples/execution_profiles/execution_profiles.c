@@ -183,7 +183,6 @@ int main(int argc, char* argv[]) {
   /* Setup default objects */
   CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
-  CassFuture* close_future = NULL;
   CassExecProfile* profile = NULL;
   cass_bool_t value = cass_false;
   const char* hosts = "127.0.0.1,127.0.0.2,127.0.0.3";
@@ -242,10 +241,6 @@ int main(int argc, char* argv[]) {
   assert(value == cass_false);
   select_from_examples(session, "quorum", "five", &value);
   assert(value == cass_true);
-
-  close_future = cass_session_close(session);
-  cass_future_wait(close_future);
-  cass_future_free(close_future);
 
   cass_cluster_free(cluster);
   cass_session_free(session);

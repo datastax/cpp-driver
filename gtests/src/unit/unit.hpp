@@ -176,25 +176,18 @@ public:
    * Constructor.
    */
   Unit();
-
   /**
-   * Test setup method. This remembers the current state of log level.
+   * Destructor.
    */
-  virtual void SetUp();
+  virtual ~Unit();
 
   /**
-   * Test tear down method. This restores the previous log level state and stops
-   * all cluster nodes.
-   */
-  virtual void TearDown();
-
-  /**
-   * Set the log level for the test. The log level will be restored
-   * to its previous state at the end of each test.
+   * Set the output log level for the test. This will output log messages to
+   * stderr that meet the log level provided.
    *
-   * @param log_level The log level.
+   * @param output_log_level The log level to output to stderr.
    */
-  void set_log_level(CassLogLevel log_level);
+  void set_output_log_level(CassLogLevel output_log_level);
 
   /**
    * Create the default simple request handler for use with mockssandra.
@@ -221,8 +214,32 @@ public:
   cass::ConnectionSettings use_ssl(mockssandra::Cluster* cluster,
                                    const cass::String& cn = "");
 
+  /**
+   * Add criteria to the search criteria for incoming log messages
+   *
+   * @param criteria Criteria to add
+   */
+  void add_logging_critera(const cass::String& criteria);
+  /**
+   * Get the number of log messages that matched the search criteria
+   *
+   * @return Number of matched log messages
+   */
+  int logging_criteria_count();
+
 private:
-  CassLogLevel saved_log_level_;
+  /**
+   * Log the message from the driver (callback).
+   *
+   * @param message Log message structure from the driver.
+   * @param data Object passed from the driver (Unit class instance).
+   */
+  static void on_log(const CassLogMessage* message, void* data);
+
+private:
+  CassLogLevel output_log_level_;
+  cass::Vector<cass::String> logging_criteria_;
+  cass::Atomic<int> logging_criteria_count_;
 };
 
 #endif // UNIT_TEST_HPP

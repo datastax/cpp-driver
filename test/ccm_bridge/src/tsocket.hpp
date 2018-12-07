@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __SOCKET_HPP__
-#define __SOCKET_HPP__
+#ifndef __TSOCKET_HPP__
+#define __TSOCKET_HPP__
 
 #ifdef _WIN32
 # include <winsock2.h>
@@ -87,4 +87,4 @@ private:
   std::string get_error_message(int error_code) const;
 };
 
-#endif // __SOCKET_HPP__
+#endif // __TSOCKET_HPP__

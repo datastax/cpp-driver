@@ -28,11 +28,12 @@
 #include "bridge.hpp"
 #include "logger.hpp"
 #include "objects.hpp"
+#include "options.hpp"
 #include "policies.hpp"
 #include "pretty_print.hpp"
 #include "test_utils.hpp"
+#include "tlog.hpp"
 #include "values.hpp"
-#include "options.hpp"
 
 // Macros for grouping tests together
 #define GROUP_TEST_F(group_name, test_case, test_name) \
@@ -593,6 +594,16 @@ protected:
    * @param name Name to shrink if name too long
    */
   void maybe_shrink_name(std::string& name);
+
+  /**
+   * Wait for the logger count to reach expected count
+   *
+   * NOTE: This may wait up to LOGGER_MAXIMUM_WAIT_TIME_MS
+   *
+   * @param expected_count Expected logger count
+   * @return True if expected count is equal to logger count; false otherwise
+   */
+  bool wait_for_logger(size_t expected_count);
 
 private:
   /**

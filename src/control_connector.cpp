@@ -38,7 +38,7 @@ public:
 
   virtual void on_chain_error(CassError code, const String& message) {
     connector_->on_error(ControlConnector::CONTROL_CONNECTION_ERROR_HOSTS,
-                         "Error running host queries on control connection " + message);
+                         "Error running host queries on control connection: " + message);
   }
 
   virtual void on_chain_timeout() {
@@ -82,14 +82,12 @@ private:
 
 ControlConnectionSettings::ControlConnectionSettings()
   : use_schema(CASS_DEFAULT_USE_SCHEMA)
-  , token_aware_routing(CASS_DEFAULT_TOKEN_AWARE_ROUTING)
-  , refresh_node_info_on_up(CASS_DEFAULT_REFRESH_NODE_INFO_ON_UP) { }
+  , token_aware_routing(CASS_DEFAULT_TOKEN_AWARE_ROUTING) { }
 
 ControlConnectionSettings::ControlConnectionSettings(const Config& config)
   : connection_settings(config)
   , use_schema(config.use_schema())
-  , token_aware_routing(config.token_aware_routing())
-  , refresh_node_info_on_up(false) { }
+  , token_aware_routing(config.token_aware_routing()) { }
 
 ControlConnector::ControlConnector(const Address& address,
                                    ProtocolVersion protocol_version,
@@ -101,6 +99,21 @@ ControlConnector::ControlConnector(const Address& address,
   , error_code_(CONTROL_CONNECTION_OK)
   , listener_(NULL)
   , metrics_(NULL) { }
+
+ControlConnector* ControlConnector::with_listener(ControlConnectionListener* listener) {
+  listener_ = listener;
+  return this;
+}
+
+ControlConnector* ControlConnector::with_metrics(Metrics* metrics) {
+  metrics_ = metrics;
+  return this;
+}
+
+ControlConnector* ControlConnector::with_settings(const ControlConnectionSettings& settings) {
+  settings_ = settings;
+  return this;
+}
 
 void ControlConnector::connect(uv_loop_t* loop) {
   inc_ref();
@@ -132,11 +145,16 @@ ControlConnection::Ptr ControlConnector::release_connection() {
 }
 
 void ControlConnector::finish() {
-  if (connection_) connection_->set_listener(NULL);
+  if (connection_) connection_->set_listener();
   callback_(this);
   // If the connections haven't been released then close them.
   if (connection_) connection_->close();
-  if (control_connection_) control_connection_->close();
+  if (control_connection_) {
+    // If the callback doesn't take possession of the connection then we should
+    // also clear the listener.
+    control_connection_->set_listener();
+    control_connection_->close();
+  }
   dec_ref();
 }
 
@@ -149,14 +167,13 @@ void ControlConnector::on_success() {
   // Transfer ownership of the connection to the control connection.
   control_connection_.reset(
         Memory::allocate<ControlConnection>(connection_,
+                                            listener_,
                                             settings_.use_schema,
                                             settings_.token_aware_routing,
-                                            settings_.refresh_node_info_on_up,
                                             server_version_,
                                             listen_addresses_));
 
   control_connection_->set_listener(listener_);
-  connection_->set_listener(control_connection_.get());
 
   // Process any events that happened during control connection setup. It's
   // important to capture any changes that happened during retrieving the
@@ -182,10 +199,11 @@ void ControlConnector::on_error(ControlConnector::ControlConnectionError code,
 void ControlConnector::on_connect(Connector* connector) {
   if (!is_canceled() && connector->is_ok()) {
     connection_ = connector->release_connection();
-    connection_->set_listener(this);
 
-    // Propagate any events that happened during the connection process.
-    Connector::process_events(connector->events(), this);
+    // It's important to record any events that happen while querying the hosts
+    // and schema. The recorded events are replayed after the initial hosts
+    // and schema are returned and processed.
+    connection_->set_listener(this);
 
     query_hosts();
   } else if (is_canceled() || connector->is_canceled()) {
@@ -218,7 +236,6 @@ void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callbac
   if (local_result && local_result->row_count() > 0) {
     Host::Ptr host(Memory::allocate<Host>(connection_->address()));
     host->set(&local_result->first_row(), settings_.token_aware_routing);
-    host->set_up();
     hosts_[host->address()] = host;
     server_version_ = host->server_version();
   } else {
@@ -242,7 +259,6 @@ void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callbac
 
       Host::Ptr host(Memory::allocate<Host>(address));
       host->set(rows.row(), settings_.token_aware_routing);
-      host->set_up();
       listen_addresses_[host->address()] = determine_listen_address(address, row);
       hosts_[host->address()] = host;
     }

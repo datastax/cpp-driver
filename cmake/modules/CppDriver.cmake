@@ -35,16 +35,16 @@ endmacro()
 #         ${project_name}_VERSION_PATCH, ${project_name}_VERSION_STRING
 #------------------------
 macro(CassExtractHeaderVersion project_name version_header_file prefix)
-  # Retrieve version from header file
+  # Retrieve version from header file (include string suffix)
   file(STRINGS ${version_header_file} _VERSION_PARTS
-      REGEX "^#define[ \t]+${prefix}_VERSION_(MAJOR|MINOR|PATCH)[ \t]+[0-9]+$")
+      REGEX "^#define[ \t]+${prefix}_VERSION_(MAJOR|MINOR|PATCH|SUFFIX)[ \t]+([0-9]+|\"([^\"]+)\")$")
 
-  foreach(part MAJOR MINOR PATCH)
-    string(REGEX MATCH "${prefix}_VERSION_${part}[ \t]+[0-9]+"
+  foreach(part MAJOR MINOR PATCH SUFFIX)
+    string(REGEX MATCH "${prefix}_VERSION_${part}[ \t]+([0-9]+|\"([^\"]+)\")"
            ${project_name}_VERSION_${part} ${_VERSION_PARTS})
     # Extract version numbers
     if (${project_name}_VERSION_${part})
-      string(REGEX REPLACE "${prefix}_VERSION_${part}[ \t]+([0-9]+)" "\\1"
+      string(REGEX REPLACE "${prefix}_VERSION_${part}[ \t]+([0-9]+|\"([^\"]+)\")" "\\1"
              ${project_name}_VERSION_${part} ${${project_name}_VERSION_${part}})
     endif()
   endforeach()
@@ -59,6 +59,12 @@ macro(CassExtractHeaderVersion project_name version_header_file prefix)
   if(NOT ${project_name}_VERSION_PATCH STREQUAL "")
     set(${project_name}_VERSION_STRING
         "${${project_name}_VERSION_STRING}.${${project_name}_VERSION_PATCH}")
+  endif()
+  if(NOT ${project_name}_VERSION_SUFFIX STREQUAL "")
+    string(REPLACE "\"" ""
+        ${project_name}_VERSION_SUFFIX ${${project_name}_VERSION_SUFFIX})
+    set(${project_name}_VERSION_STRING
+      "${${project_name}_VERSION_STRING}-${${project_name}_VERSION_SUFFIX}")
   endif()
 
   message(STATUS "${project_name} version: ${${project_name}_VERSION_STRING}")

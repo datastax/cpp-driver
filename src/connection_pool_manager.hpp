@@ -68,7 +68,7 @@ public:
    * @param loop Event loop to utilize for handling requests.
    * @param protocol_version The protocol version to use for connections.
    * @param keyspace The current keyspace to use for connections.
-   ( @param listener A listener that handles manager events.
+   * @param listener A listener that handles manager events.
    * @param metrics An object for recording metrics.
    * @param settings Settings for the manager and its connections.
    */
@@ -88,6 +88,15 @@ public:
    * available.
    */
   PooledConnection::Ptr find_least_busy(const Address& address) const;
+
+
+  /**
+   * Determine if a pool has any valid connections.
+   *
+   * @param address An address to check for valid connections.
+   * @return Returns true if the pool has valid connections.
+   */
+  bool has_connections(const Address& address) const;
 
   /**
    * Flush connection pools with pending writes.
@@ -116,6 +125,13 @@ public:
   void remove(const Address& address);
 
   /**
+   * Trigger immediate connection of any delayed (reconnecting) connections.
+   *
+   * @param address An address to trigger immediate connections.
+   */
+  void attempt_immediate_connect(const Address& address);
+
+  /**
    * Close all connection pools.
    */
   void close();
@@ -125,7 +141,7 @@ public:
    *
    * @param listener The connection pool manager listener.
    */
-  void set_listener(ConnectionPoolManagerListener* listener);
+  void set_listener(ConnectionPoolManagerListener* listener = NULL);
 
 public:
   uv_loop_t* loop() const { return loop_; }

@@ -152,6 +152,7 @@ void StartupCallback::on_result_response(ResponseMessage* response) {
 
 ConnectionSettings::ConnectionSettings()
   : connect_timeout_ms(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
+  , auth_provider(Memory::allocate<AuthProvider>())
   , idle_timeout_secs(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
   , heartbeat_interval_secs(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
   , no_compact(CASS_DEFAULT_NO_COMPACT) { }
@@ -162,7 +163,9 @@ ConnectionSettings::ConnectionSettings(const Config& config)
   , auth_provider(config.auth_provider())
   , idle_timeout_secs(config.connection_idle_timeout_secs())
   , heartbeat_interval_secs(config.connection_heartbeat_interval_secs())
-  , no_compact(config.no_compact()) { }
+  , no_compact(config.no_compact())
+  , application_name(config.application_name())
+  , application_version(config.application_version()) { }
 
 Connector::Connector(const Address& address,
                      ProtocolVersion protocol_version,
@@ -238,8 +241,12 @@ void Connector::finish() {
     connection_->set_listener(is_ok() ? listener_ : NULL);
   }
   callback_(this);
-  // If the connection hasn't been released then close it.
-  if (connection_) connection_->close();
+  if (connection_) {
+    // If the callback doesn't take possession of the connection then we should
+    // also clear the listener.
+    connection_->set_listener();
+    connection_->close();
+  }
   dec_ref();
 }
 
@@ -298,7 +305,10 @@ void ConnectionConnector::on_supported(ResponseMessage* response) {
         RequestCallback::Ptr(
           Memory::allocate<StartupCallback>(this,
                                             Request::ConstPtr(
-                                              Memory::allocate<StartupRequest>(settings_.no_compact)))));
+                                              Memory::allocate<StartupRequest>(settings_.application_name,
+                                                                               settings_.application_version,
+                                                                               settings_.client_id,
+                                                                               settings_.no_compact)))));
 }
 #endif
 
@@ -382,7 +392,10 @@ void Connector::on_connect(SocketConnector* socket_connector) {
           RequestCallback::Ptr(
             Memory::allocate<StartupCallback>(this,
                                               Request::ConstPtr(
-                                                Memory::allocate<StartupRequest>(settings_.no_compact)))));
+                                                Memory::allocate<StartupRequest>(settings_.application_name,
+                                                                                 settings_.application_version,
+                                                                                 settings_.client_id,
+                                                                                 settings_.no_compact)))));
 #endif
   } else if (socket_connector->is_canceled() || is_timeout_error()) {
     finish();

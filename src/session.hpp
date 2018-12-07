@@ -58,22 +58,24 @@ private:
 
   virtual void on_close();
 
+  using SessionBase::on_close; // Intentional overload
+
 private:
   // Cluster listener methods
 
-  virtual void on_up(const Host::Ptr& host);
+  virtual void on_host_up(const Host::Ptr& host);
 
-  virtual void on_down(const Host::Ptr& host);
+  virtual void on_host_down(const Host::Ptr& host);
 
-  virtual void on_add(const Host::Ptr& host);
+  virtual void on_host_added(const Host::Ptr& host);
 
-  virtual void on_remove(const Host::Ptr& host);
+  virtual void on_host_removed(const Host::Ptr& host);
 
-  virtual void on_update_token_map(const TokenMap::Ptr& token_map);
+  virtual void on_token_map_updated(const TokenMap::Ptr& token_map);
 
-  // Tell the compiler that we're intentionally using an overloaded virtual
-  // method.
-  using SessionBase::on_close;
+  virtual void on_host_maybe_up(const Host::Ptr& host);
+
+  virtual void on_host_ready(const Host::Ptr& host);
 
 private:
   // Request processor listener methods
@@ -94,22 +96,17 @@ private:
 
   virtual void on_close(RequestProcessor* processor);
 
+  using RequestProcessorListener::on_connect; // Intentional overload
+
 private:
   friend class SessionInitializer;
 
 private:
   ScopedPtr<RoundRobinEventLoopGroup> event_loop_group_;
-  uv_mutex_t request_processor_mutex_;
+  uv_mutex_t mutex_;
   RequestProcessor::Vec request_processors_;
   size_t request_processor_count_;
-};
-
-class SessionFuture : public Future {
-public:
-  typedef SharedRefPtr<SessionFuture> Ptr;
-
-  SessionFuture()
-    : Future(FUTURE_TYPE_SESSION) { }
+  bool is_closing_;
 };
 
 } // namespace cass

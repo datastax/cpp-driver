@@ -17,8 +17,9 @@ os:
   - ubuntu/xenial64
   - centos/6-64
   - centos/7-64
+  - osx/high-sierra
 env:
-  LIBUV_VERSION: 1.23.0
+  LIBUV_VERSION: 1.24.0
 build:
   - script: |
       . .build.sh
@@ -38,6 +39,7 @@ build:
   - xunit:
     - "*unit-test-results.xml"
 package:
+  allow_empty: true
   include: # list of files and glob paths to include in the artifact, relative to the current working directory
     - packaging/packages/*
 release:

@@ -21,9 +21,11 @@
 
 namespace cass {
 
-DelayedConnector::DelayedConnector(const Address& address, ProtocolVersion protocol_version,
+DelayedConnector::DelayedConnector(const Address& address,
+                                   ProtocolVersion protocol_version,
                                    const Callback& callback)
-  : connector_(Memory::allocate<Connector>(address, protocol_version,
+  : connector_(Memory::allocate<Connector>(address,
+                                           protocol_version,
                                            bind_callback(&DelayedConnector::on_connect, this)))
   , callback_(callback)
   , is_canceled_(false) { }
@@ -50,6 +52,13 @@ void DelayedConnector::delayed_connect(uv_loop_t* loop, uint64_t wait_time_ms) {
                                  bind_callback(&DelayedConnector::on_delayed_connect, this));
   } else {
     internal_connect(loop);
+  }
+}
+
+void DelayedConnector::attempt_immediate_connect() {
+  if (delayed_connect_timer_.is_running() && !is_canceled_) {
+    internal_connect(delayed_connect_timer_.loop());
+    delayed_connect_timer_.stop();
   }
 }
 

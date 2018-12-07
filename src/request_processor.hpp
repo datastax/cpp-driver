@@ -40,7 +40,6 @@ class RequestProcessor;
 class RequestProcessorManager;
 class Session;
 
-
 /**
  * A wrapper around a keyspace change response that makes sure the final
  * processing for the request happens on the original event loop. This
@@ -81,7 +80,6 @@ private:
   KeyspaceChangedResponse response_;
 };
 
-
 class KeyspaceChangedListener {
 public:
   virtual ~KeyspaceChangedListener() { }
@@ -95,6 +93,20 @@ class RequestProcessorListener
     , public PreparedMetadataListener
     , public KeyspaceChangedListener {
 public:
+  /**
+   * A callback that's called when the processor connects.
+   *
+   * Note: This is mostly for testing.
+   *
+   * @param processor The processor object.
+   */
+  virtual void on_connect(RequestProcessor* processor) { }
+
+  /**
+   * A callback that's called when the processor has closed.
+   *
+   * @param processor The processor object.
+   */
   virtual void on_close(RequestProcessor* processor) = 0;
 };
 
@@ -120,6 +132,12 @@ struct RequestProcessorSettings {
   uint64_t coalesce_delay_us;
 
   int new_request_ratio;
+
+  uint64_t max_tracing_wait_time_ms;
+
+  uint64_t retry_tracing_wait_time_ms;
+
+  CassConsistency tracing_consistency;
 };
 
 /**
@@ -169,7 +187,7 @@ public:
    *
    * @param listener The processor listener.
    */
-  void set_listener(RequestProcessorListener* listener);
+  void set_listener(RequestProcessorListener* listener = NULL);
 
   /**
    * Set the current keyspace being used for requests
@@ -187,7 +205,7 @@ public:
    *
    * @param host The host that's been added.
    */
-  void notify_host_add(const Host::Ptr& host);
+  void notify_host_added(const Host::Ptr& host);
 
   /**
    * Notify that a host has been removed from the cluster
@@ -195,7 +213,27 @@ public:
    *
    * @param host The host that's been removed.
    */
-  void notify_host_remove(const Host::Ptr& host);
+  void notify_host_removed(const Host::Ptr& host);
+
+  /**
+   * Notify that a host is now available to handle queries. This has no effect
+   * if the host has no connections available.
+   *
+   * (thread-safe, asynchronous).
+   *
+   * @param host A host that's ready to be marked up.
+   */
+  void notify_host_ready(const Host::Ptr& host);
+
+  /**
+   * Notify that a host might be available. This expedites the reconnection
+   * process for the provided host.
+   *
+   * (thread-safe, asynchronous).
+   *
+   * @param address An address of the host might be UP.
+   */
+  void notify_host_maybe_up(const Address& address);
 
   /**
    * Notify that the token map has been updated
@@ -203,7 +241,7 @@ public:
    *
    * @param token_map The updated token map.
    */
-  void notify_token_map_changed(const TokenMap::Ptr& token_map);
+  void notify_token_map_updated(const TokenMap::Ptr& token_map);
 
   /**
    * Enqueue a request to be processed.
@@ -254,6 +292,9 @@ private:
                                             const PreparedMetadata::Entry::Ptr& entry);
   virtual void on_keyspace_changed(const String& keyspace,
                                    KeyspaceChangedResponse handler);
+  virtual bool on_wait_for_tracing_data(const RequestHandler::Ptr& request_handler,
+                                        const Host::Ptr& current_host,
+                                        const Response::Ptr& response);
   virtual bool on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                             const Host::Ptr& current_host,
                                             const Response::Ptr& response);
@@ -274,19 +315,22 @@ private:
   void internal_close();
   void internal_pool_down(const Address& address);
 
-  Host::Ptr get_host(const Address& address);
   const ExecutionProfile* execution_profile(const String& name) const;
   const LoadBalancingPolicy::Vec& load_balancing_policies() const;
 
 private:
-  friend class RunCloseProcessor;
-  friend class NotifyHostAddProcessor;
-  friend class NotifyHostRemoveProcessor;
-  friend class NotifyTokenMapUpdateProcessor;
+  friend class ProcessorRunClose;
+  friend class ProcessorNotifyHostAdd;
+  friend class ProcessorNotifyHostRemove;
+  friend class ProcessorNotifyHostReady;
+  friend class ProcessorNotifyMaybeHostUp;
+  friend class ProcessorNotifyTokenMapUpdate;
 
 private:
-  void internal_host_add_down_up(const Host::Ptr& host, Host::HostState state);
+  void internal_host_add(const Host::Ptr& host);
   void internal_host_remove(const Host::Ptr& host);
+  void internal_host_ready(const Host::Ptr& host);
+  void internal_host_maybe_up(const Address& address);
 
   void start_coalescing();
   void on_async(Async* async);
@@ -295,18 +339,17 @@ private:
   void maybe_close(int request_count);
   int process_requests(uint64_t processing_time);
 
+  bool write_wait_callback(const RequestHandler::Ptr& request_handler,
+                           const Host::Ptr& current_host,
+                           const RequestCallback::Ptr& callback);
+
 private:
   ConnectionPoolManager::Ptr connection_pool_manager_;
   String connect_keyspace_;
-  HostMap hosts_;
   RequestProcessorListener* listener_;
   EventLoop* const event_loop_;
   LoadBalancingPolicy::Vec load_balancing_policies_;
-  const unsigned max_schema_wait_time_ms_;
-  const bool prepare_on_all_hosts_;
-  const TimestampGenerator::Ptr timestamp_generator_;
-  const uint64_t coalesce_delay_us_;
-  const int new_request_ratio_;
+  const RequestProcessorSettings settings_;
   ExecutionProfile default_profile_;
   ExecutionProfile::Map profiles_;
   Atomic<int> request_count_;

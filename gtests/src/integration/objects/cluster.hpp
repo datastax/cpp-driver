@@ -190,6 +190,21 @@ public:
   }
 
   /**
+   * Sets a callback for handling host state changes in the cluster
+   *
+   * @param callback Callback to use for cluster host state changes
+   * @param data User data supplied to the callback (default: NULL)
+   * @return Cluster object
+   */
+  Cluster& with_host_listener_callback(CassHostListenerCallback callback,
+                                       void* data = NULL) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_host_listener_callback(get(),
+                                                               callback,
+                                                               data));
+    return *this;
+  }
+
+  /**
    * Enable/Disable the use of hostname resolution
    *
    * This is useful for authentication (Kerberos) or encryption (SSL)

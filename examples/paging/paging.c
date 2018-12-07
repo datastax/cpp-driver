@@ -171,7 +171,6 @@ int main(int argc, char* argv[]) {
   CassUuidGen* uuid_gen = cass_uuid_gen_new();
   CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
-  CassFuture* close_future = NULL;
   char* hosts = "127.0.0.1";
   if (argc > 1) {
     hosts = argv[1];
@@ -198,10 +197,6 @@ int main(int argc, char* argv[]) {
 
   insert_into_paging(session, uuid_gen);
   select_from_paging(session);
-
-  close_future = cass_session_close(session);
-  cass_future_wait(close_future);
-  cass_future_free(close_future);
 
   cass_uuid_gen_free(uuid_gen);
   cass_cluster_free(cluster);

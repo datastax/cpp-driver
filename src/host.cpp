@@ -36,13 +36,18 @@ void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
 }
 
 void remove_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
+  remove_host(hosts, host->address());
+}
+
+bool remove_host(CopyOnWriteHostVec& hosts, const Address& address) {
   HostVec::iterator i;
   for (i = hosts->begin(); i != hosts->end(); ++i) {
-    if ((*i)->address() == host->address()) {
+    if ((*i)->address() == address) {
       hosts->erase(i);
-      break;
+      return true;
     }
   }
+  return false;
 }
 
 void Host::LatencyTracker::update(uint64_t latency_ns) {
@@ -131,6 +136,35 @@ void Host::set(const Row* row, bool use_tokens) {
       }
     }
   }
+}
+
+ExternalHostListener::ExternalHostListener(const CassHostListenerCallback callback,
+                                           void *data)
+  : callback_(callback)
+  , data_(data) { }
+
+void ExternalHostListener::on_host_up(const Host::Ptr& host) {
+  CassInet address;
+  address.address_length = host->address().to_inet(address.address);
+  callback_(CASS_HOST_LISTENER_EVENT_UP, address, data_);
+}
+
+void ExternalHostListener::on_host_down(const Host::Ptr& host) {
+  CassInet address;
+  address.address_length = host->address().to_inet(address.address);
+  callback_(CASS_HOST_LISTENER_EVENT_DOWN, address, data_);
+}
+
+void ExternalHostListener::on_host_added(const Host::Ptr& host) {
+  CassInet address;
+  address.address_length = host->address().to_inet(address.address);
+  callback_(CASS_HOST_LISTENER_EVENT_ADD, address, data_);
+}
+
+void ExternalHostListener::on_host_removed(const Host::Ptr& host) {
+  CassInet address;
+  address.address_length = host->address().to_inet(address.address);
+  callback_(CASS_HOST_LISTENER_EVENT_REMOVE, address, data_);
 }
 
 } // namespace cass

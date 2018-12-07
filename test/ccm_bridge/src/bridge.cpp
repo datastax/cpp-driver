@@ -15,13 +15,6 @@
 */
 
 #ifdef _WIN32
-// Local execution command
-#  include <io.h>
-#  define FILENO _fileno
-#  define POPEN _popen
-#  define PCLOSE _pclose
-#  define READ _read
-
 // Enable memory leak detection
 #  define _CRTDBG_MAP_ALLOC
 #  include <stdlib.h>
@@ -35,12 +28,6 @@
 #    endif
 #  endif
 #else
-// Local execution command
-#  define FILENO fileno
-#  define POPEN popen
-#  define PCLOSE pclose
-#  define READ read
-
 #  include <unistd.h>
 #endif
 #include "bridge.hpp"
@@ -57,11 +44,6 @@
 #      include <openssl/conf.h>
 #    endif
 #  endif
-#else
-#  ifdef _MSC_VER
-     // ssize_t is defined in libssh2 and used by local command execution
-     typedef SSIZE_T ssize_t;
-#  endif
 #endif
 
 #include <errno.h>
@@ -76,20 +58,11 @@
 #include <sstream>
 
 // Create simple console logging functions
-#define CCM_PREFIX_LOG std::cout
-#define CCM_PREFIX_MESSAGE "CCM: "
-#define CCM_SUFFIX_LOG std::endl
-#ifdef CCM_VERBOSE_LOGGING
-#  define CCM_LOG(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << message << CCM_SUFFIX_LOG
-#  define CCM_LOG_WARN(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << "WARN: " << message << CCM_SUFFIX_LOG
-#else
-#  define CCM_LOG_DISABLED do {} while (false)
-#  define CCM_LOG(message) CCM_LOG_DISABLED
-#  define CCM_LOG_WARN(message) CCM_LOG_DISABLED
-#endif
-#define CCM_LOG_ERROR(message) CCM_PREFIX_LOG << CCM_PREFIX_MESSAGE << "ERROR: " \
-                           << __FILE__ << "(" << __LINE__ << "): " \
-                           << message << CCM_SUFFIX_LOG
+#define LOG_MESSAGE(message, is_output) if (is_output) { \
+  std::cerr << "ccm> " << message << std::endl; \
+}
+#define LOG(message) LOG_MESSAGE(message, is_verbose_)
+#define LOG_ERROR(message) LOG_MESSAGE(message, true)
 
 // Create FALSE/TRUE defines for easier code readability
 #ifndef FALSE
@@ -119,6 +92,7 @@
 #define CCM_CONFIGURATION_KEY_USE_INSTALL_DIR "use_install_dir"
 #define CCM_CONFIGURATION_KEY_INSTALL_DIR "install_dir"
 #define CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE "deployment_type"
+#define CCM_CONFIGURATION_VERBOSE "verbose"
 #define CCM_CONFIGURATION_KEY_USE_DSE "use_dse"
 #define CCM_CONFIGURATION_KEY_DSE_VERSION "dse_version"
 #define CCM_CONFIGURATION_KEY_DSE_CREDENTIALS_TYPE "dse_credentials_type"
@@ -171,7 +145,8 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   const std::string& username /*= DEFAULT_USERNAME*/,
   const std::string& password /*= DEFAULT_PASSWORD*/,
   const std::string& public_key /*= ""*/,
-  const std::string& private_key /*= ""*/)
+  const std::string& private_key /*= ""*/,
+  bool is_verbose /*= DEFAULT_IS_VERBOSE*/)
   : cassandra_version_(server_version)
   , dse_version_(DEFAULT_DSE_VERSION)
   , use_git_(use_git)
@@ -190,12 +165,13 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   , host_(host)
   , session_(NULL)
   , channel_(NULL)
-  , socket_(NULL) {
+  , socket_(NULL)
 #else
   // Force local deployment only
   , deployment_type_(DeploymentType::LOCAL)
-  , host_("127.0.0.1") {
+  , host_("127.0.0.1")
 #endif
+  , is_verbose_(is_verbose) {
 #ifdef _WIN32
 # ifdef _DEBUG
   // Enable automatic execution of the memory leak detection upon exit
@@ -210,7 +186,7 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
 
   // Determine if installation directory can be used
   if (use_install_dir_ && install_dir_.empty()) {
-    throw BridgeException("Unable to use Installation Directory: Directory must not be blank");
+    throw BridgeException("Directory must not be blank");
   }
 #ifdef CASS_USE_LIBSSH2
   // Determine if libssh2 needs to be initialized
@@ -248,12 +224,13 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   , host_(DEFAULT_HOST)
   , session_(NULL)
   , channel_(NULL)
-  , socket_(NULL) {
+  , socket_(NULL)
 #else
   // Force local
   , deployment_type_(DeploymentType::LOCAL)
-  , host_("127.0.0.1") {
+  , host_("127.0.0.1")
 #endif
+  , is_verbose_(DEFAULT_IS_VERBOSE) {
   // Initialize the default remote configuration settings
   short port = DEFAULT_REMOTE_DEPLOYMENT_PORT;
   std::string username = DEFAULT_REMOTE_DEPLOYMENT_USERNAME;
@@ -286,7 +263,9 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             if (!(ss >> std::boolalpha >> use_git_).fail()) {
               continue;
             } else {
-              CCM_LOG_ERROR("Invalid Flag [" << value << "] for Use git: Using default [" << DEFAULT_USE_GIT << "]");
+              LOG_ERROR("Invalid flag \"" << value << "\" for "
+                        << CCM_CONFIGURATION_KEY_USE_GIT << "; defaulting to \""
+                        << (DEFAULT_USE_GIT ? "true" : "false") << "\"");
               use_git_ = DEFAULT_USE_GIT;
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_BRANCH_TAG) == 0) {
@@ -297,7 +276,10 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             if (!(ss >> std::boolalpha >> use_install_dir_).fail()) {
               continue;
             } else {
-              CCM_LOG_ERROR("Invalid Flag [" << value << "] for Use Install Directory: Using default [" << DEFAULT_USE_INSTALL_DIR << "]");
+              LOG_ERROR("Invalid flag \"" << value << "\" for "
+                        << CCM_CONFIGURATION_KEY_USE_INSTALL_DIR
+                        << "; defaulting to \""
+                        << (DEFAULT_USE_INSTALL_DIR ? "true" : "false") << "\"");
               use_install_dir_ = DEFAULT_USE_INSTALL_DIR;
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_INSTALL_DIR) == 0) {
@@ -308,21 +290,20 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             if (!(ss >> std::boolalpha >> use_dse_).fail()) {
               continue;
             } else {
-              CCM_LOG_ERROR("Invalid Flag [" << value << "] for Use DSE: Using default [" << DEFAULT_USE_DSE << "]");
+              LOG_ERROR("Invalid flag \"" << value << "\" for "
+                        << CCM_CONFIGURATION_KEY_USE_DSE << "; defaulting to \""
+                        << (DEFAULT_USE_DSE ? "true" : "false") << "\"");
               use_dse_ = DEFAULT_USE_DSE;
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_DSE_CREDENTIALS_TYPE) == 0) {
             // Determine the DSE credentials type
-            bool is_found = false;
             for (DseCredentialsType::iterator iterator = DseCredentialsType::begin(); iterator != DseCredentialsType::end(); ++iterator) {
               if (*iterator == value) {
                 dse_credentials_type_ = *iterator;
-                is_found = true;
                 break;
+              } else {
+                LOG_ERROR("Invalid DSE credential type \"" << value << "\"");
               }
-            }
-            if (!is_found) {
-              CCM_LOG_ERROR("Invalid DSE Credentials Type [" << value << "]: Using default " << DEFAULT_DSE_CREDENTIALS.to_string());
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_DSE_USERNAME) == 0) {
             dse_username_ = value;
@@ -331,30 +312,24 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
 #ifdef CASS_USE_LIBSSH2
           } else if (key.compare(CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE) == 0) {
             // Determine the deployment type
-            bool is_found = false;
             for (DeploymentType::iterator iterator = DeploymentType::begin(); iterator != DeploymentType::end(); ++iterator) {
               if (*iterator == value) {
                 deployment_type_ = *iterator;
-                is_found = true;
                 break;
+              } else {
+                LOG_ERROR("Invalid deployment type \"" << value << "\"");
               }
-            }
-            if (!is_found) {
-              CCM_LOG_ERROR("Invalid Deployment Type: Using default " << DEFAULT_DEPLOYMENT.to_string());
             }
 #endif
           } else if (key.compare(CCM_CONFIGURATION_KEY_AUTHENTICATION_TYPE) == 0) {
             // Determine the authentication type
-            bool is_found = false;
             for (AuthenticationType::iterator iterator = AuthenticationType::begin(); iterator != AuthenticationType::end(); ++iterator) {
               if (*iterator == value) {
                 authentication_type_ = *iterator;
-                is_found = true;
                 break;
+              } else {
+                LOG_ERROR("Invalid authentication type \"" << value << "\"");
               }
-            }
-            if (!is_found) {
-              CCM_LOG_ERROR("Invalid Authentication Type [" << value << "]: Using default " << DEFAULT_AUTHENTICATION.to_string());
             }
 #ifdef CASS_USE_LIBSSH2
           } else if (key.compare(CCM_CONFIGURATION_KEY_HOST) == 0) {
@@ -366,7 +341,8 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             if (!(ss >> port).fail()) {
               continue;
             } else {
-              CCM_LOG_ERROR("Invalid Port: Using default [" << DEFAULT_REMOTE_DEPLOYMENT_PORT << "]");
+              LOG_ERROR("Invalid port \"" << value << "\"; defaulting to \""
+                        << DEFAULT_REMOTE_DEPLOYMENT_PORT << "\"");
               port = DEFAULT_REMOTE_DEPLOYMENT_PORT;
             }
 #ifdef CASS_USE_LIBSSH2
@@ -379,16 +355,28 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
           } else if (key.compare(CCM_CONFIGURATION_KEY_SSH_PRIVATE_KEY) == 0) {
             private_key = value;
 #endif
+          } else if (key.compare(CCM_CONFIGURATION_VERBOSE) == 0) {
+            //Convert the value
+            std::stringstream ss(value);
+            if (!(ss >> std::boolalpha >> is_verbose_).fail()) {
+              continue;
+            } else {
+              LOG_ERROR("Invalid flag \"" << value << "\" for "
+                        << CCM_CONFIGURATION_VERBOSE << "; defaulting to \""
+                        << (DEFAULT_IS_VERBOSE ? "true" : "false") << "\"");
+              is_verbose_ = DEFAULT_IS_VERBOSE;
+            }
           } else {
-            CCM_LOG_ERROR("Invalid Configuration Option: Key " << key << " with value " << value);
+            LOG_ERROR("Invalid configuration option \"" << key << "=" << value << "\"");
           }
         } else {
-          CCM_LOG_ERROR("Invalid Key/Value Pair [" << current_line << "]: Configuration item will be skipped");
+          LOG_ERROR("Invalid key/value pair \"" << current_line << "\"");
         }
       }
     }
   } else {
-    CCM_LOG_WARN("Unable to Open Configuration File [" << configuration_file << "]: Defaults will be used");
+    LOG_ERROR("Unable to open configuration file \"" << configuration_file
+              << "\"; defaults will be used");
   }
 
   // Determine if DSE is being used
@@ -398,33 +386,33 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
 
   // Determine if installation directory can be used
   if (use_install_dir_ && install_dir_.empty()) {
-    throw BridgeException("Unable to use Installation Directory: Directory must not be blank");
+    throw BridgeException("Directory must not be blank");
   }
 
   // Display the configuration settings being used
-  CCM_LOG("Host: " << host_);
-  CCM_LOG("Cassandra Version: " << cassandra_version_.to_string());
+  LOG("Host: " << host_);
+  LOG("Cassandra Version: " << cassandra_version_.to_string());
   if (use_dse_) {
-    CCM_LOG("DSE Version: " << dse_version_.to_string());
+    LOG("DSE Version: " << dse_version_.to_string());
   }
   if (use_git_ && !branch_tag_.empty()) {
-    CCM_LOG("  Branch/Tag: " << branch_tag_);
+    LOG("  Branch/Tag: " << branch_tag_);
   }
   if (use_install_dir_ && !install_dir_.empty()) {
-    CCM_LOG("  Installation Directory: " << install_dir_);
+    LOG("  Installation Directory: " << install_dir_);
   }
-  CCM_LOG("Cluster Prefix: " << cluster_prefix_);
-  CCM_LOG("Deployment Type: " << deployment_type_.to_string());
+  LOG("Cluster Prefix: " << cluster_prefix_);
+  LOG("Deployment Type: " << deployment_type_.to_string());
 #ifdef CASS_USE_LIBSSH2
   if (deployment_type_ == DeploymentType::REMOTE) {
-    CCM_LOG("Authentication Type: " << authentication_type_.to_string());
-    CCM_LOG("Port: " << port);
-    CCM_LOG("Username: " << username);
+    LOG("Authentication Type: " << authentication_type_.to_string());
+    LOG("Port: " << port);
+    LOG("Username: " << username);
     if (authentication_type_ == AuthenticationType::USERNAME_PASSWORD) {
-      CCM_LOG("Password: " << password);
+      LOG("Password: " << password);
     } else {
-      CCM_LOG("Public Key: " << public_key);
-      CCM_LOG("Private Key: " << private_key);
+      LOG("Public Key: " << public_key);
+      LOG("Private Key: " << private_key);
     }
   }
 #endif
@@ -544,10 +532,11 @@ ClusterStatus CCM::Bridge::cluster_status() {
           } else if (node_status.compare(CCM_NODE_STATUS_UP) == 0) {
             status.nodes_up.push_back(node_ip_address);
           } else {
-            CCM_LOG_ERROR("Node Status Not Valid: Unknown status " << node_status);
+            LOG_ERROR("Node status \"" << node_status << "\" is not valid");
           }
         } else {
-          CCM_LOG_ERROR("Node Status Cannot be Determined: To many tokens in status line [" << current_line << "]");
+          LOG_ERROR("To many tokens detected in \"" << current_line <<
+                        "\" to determine node status");
         }
       }
     }
@@ -1150,7 +1139,8 @@ CassVersion CCM::Bridge::get_cassandra_version() {
   }
 
   // Unable to determine version information from active cluster
-  throw BridgeException("Unable to Determine Version Information from Active Cluster: " + get_active_cluster());
+  throw BridgeException("Unable to determine version information from active Cassandra cluster \"" +
+                        get_active_cluster() + "\"");
 }
 
 CassVersion CCM::Bridge::get_cassandra_version(const std::string& configuration_file) {
@@ -1209,7 +1199,8 @@ DseVersion CCM::Bridge::get_dse_version() {
   }
 
   // Unable to determine version information from active cluster
-  throw BridgeException("Unable to Determine Version Information from Active Cluster: " + get_active_cluster());
+  throw BridgeException("Unable to determine version information from active DSE cluster \"" +
+                        get_active_cluster() + "\"");
 }
 
 DseVersion CCM::Bridge::get_dse_version(const std::string& configuration_file) {
@@ -1262,8 +1253,8 @@ bool CCM::Bridge::set_dse_workloads(unsigned int node,
   // Determine if the node is currently active/up
   bool was_node_active = false;
   if (!is_node_down(node)) {
-    CCM_LOG("Stopping Active Node to Set Workload: " << dse_workloads
-      << " workload on node " << node);
+    LOG("Stopping active node \"" << node << "\" and assigning workload(s) \""
+        << dse_workloads << "\"");
     stop_node(node, is_kill);
     was_node_active = true;
   }
@@ -1277,8 +1268,8 @@ bool CCM::Bridge::set_dse_workloads(unsigned int node,
 
   // Determine if the node should be restarted
   if (was_node_active) {
-    CCM_LOG("Restarting Node to Apply Workload: " << dse_workloads
-      << " workload on node " << node);
+    LOG("Restarting node \"" << node << "\" to applying workload(s) \""
+        << dse_workloads << "\"");
     start_node(node);
   }
 
@@ -1301,9 +1292,11 @@ bool CCM::Bridge::set_dse_workloads(std::vector<DseWorkload> workloads,
 
   // Determine if the cluster is currently active/up
   bool was_cluster_active = false;
+  std::string cluster = get_active_cluster();
   if (!is_cluster_down()) {
-    CCM_LOG("Stopping Active Cluster to Set Workload: " <<
-      generate_dse_workloads(workloads) << " workload");
+    LOG("Stopping active cluster \"" << cluster
+        << "\" and assigning workload(s) \""
+        << generate_dse_workloads(workloads) << "\"");
     stop_cluster(is_kill);
     was_cluster_active = true;
   }
@@ -1316,8 +1309,9 @@ bool CCM::Bridge::set_dse_workloads(std::vector<DseWorkload> workloads,
 
   // Determine if the cluster should be restarted
   if (was_cluster_active) {
-    CCM_LOG("Restarting Cluster to Apply Workload: " <<
-      generate_dse_workloads(workloads) << " workload");
+    LOG("Restarting cluster \"" << cluster
+        << "\" and applying workload(s) \""
+        << generate_dse_workloads(workloads) << "\"");
     start_cluster();
   }
 
@@ -1345,7 +1339,9 @@ bool CCM::Bridge::is_node_down(unsigned int node) {
     if (!is_node_availabe(node)) {
       return true;
     } else {
-      CCM_LOG("Connected to Node " << node << " in Cluster " << get_active_cluster() << ": Rechecking node down status [" << number_of_retries << "]");
+      std::string cluster = get_active_cluster();
+      LOG("[#" << number_of_retries << "] - Attempting to recheck node down "
+          "status for node \"" << node << "\" in cluster \"" << cluster << "\"");
       msleep(CCM_NAP);
     }
   }
@@ -1360,7 +1356,9 @@ bool CCM::Bridge::is_node_up(unsigned int node) {
     if (is_node_availabe(node)) {
       return true;
     } else {
-      CCM_LOG("Unable to Connect to Node " << node << " in Cluster " << get_active_cluster() << ": Rechecking node up status [" << number_of_retries << "]");
+      std::string cluster = get_active_cluster();
+      LOG("[#" << number_of_retries << "] - Attempting to recheck node up "
+          "status for node \"" << node << "\" in cluster \"" << cluster << "\"");
       msleep(CCM_NAP);
     }
   }
@@ -1396,11 +1394,11 @@ void CCM::Bridge::synchronize_socket() {
 
 void CCM::Bridge::initialize_libssh2() {
   // Initialize libssh2
-  int error_code = libssh2_init(LIBSSH2_INIT_ALL);
-  if (error_code) {
+  int rc = libssh2_init(LIBSSH2_INIT_ALL);
+  if (rc) {
     finalize_libssh2();
     std::stringstream message;
-    message << "libssh2 Initialization Failed: " << error_code;
+    message << "[libssh2] Failed initialization with error code \"" << rc << "\"";
     throw BridgeException(message.str());
   }
 
@@ -1408,41 +1406,41 @@ void CCM::Bridge::initialize_libssh2() {
   session_ = libssh2_session_init();
   if (!session_) {
     finalize_libssh2();
-    throw BridgeException("libssh2 Session Initialization Failed");
+    throw BridgeException("[libssh2] Failed session failed");
   }
 
   // Disable blocking on the session
   libssh2_session_set_blocking(session_, FALSE);
 
   // Perform the session handshake; trade banners, exchange keys, setup cyrpto
-  while ((error_code = libssh2_session_handshake(session_, socket_->get_handle())) == LIBSSH2_ERROR_EAGAIN) {
+  while ((rc = libssh2_session_handshake(session_, socket_->get_handle())) == LIBSSH2_ERROR_EAGAIN) {
     ; // no-op
   }
-  if (error_code) {
+  if (rc) {
     // Determine error that occurred
     std::stringstream message;
-    message << "libssh2 Session Handshake Failed: ";
-    switch (error_code) {
+    message << "[libssh2] Failed session handshake with error ";
+    switch (rc) {
       case LIBSSH2_ERROR_SOCKET_NONE:
-        message << "The socket is invalid";
+        message << "\"the socket is invalid\"";
         break;
       case LIBSSH2_ERROR_BANNER_SEND:
-        message << "Unable to send banner to remote host";
+        message << "\"unable to send banner to remote host\"";
         break;
       case LIBSSH2_ERROR_KEX_FAILURE:
-        message << "Encryption key exchange with the remote host failed";
+        message << "\"encryption key exchange with the remote host failed\"";
         break;
       case LIBSSH2_ERROR_SOCKET_SEND:
-        message << "Unable to send data on socket";
+        message << "\"unable to send data on socket\"";
         break;
       case LIBSSH2_ERROR_SOCKET_DISCONNECT:
-        message << "The socket was disconnected";
+        message << "\"the socket was disconnected\"";
         break;
       case LIBSSH2_ERROR_PROTO:
-        message << "An invalid SSH protocol response was received on the socket";
+        message << "\"an invalid SSH protocol response was received on the socket\"";
         break;
       default:
-        message << error_code;
+        message << " code \"" << rc << "\"";
         break;
     }
     finalize_libssh2();
@@ -1453,50 +1451,50 @@ void CCM::Bridge::initialize_libssh2() {
 void CCM::Bridge::establish_libssh2_connection(AuthenticationType authentication_type,
   const std::string& username, const std::string& password,
   const std::string& public_key, const std::string& private_key) {
-  int error_code = 0;
+  int rc = 0;
 
   // Determine authentication mechanism
   if (authentication_type == AuthenticationType::USERNAME_PASSWORD) {
     // Perform username and password authentication
-    while ((error_code = libssh2_userauth_password(session_, username.c_str(), password.c_str())) == LIBSSH2_ERROR_EAGAIN) {
+    while ((rc = libssh2_userauth_password(session_, username.c_str(), password.c_str())) == LIBSSH2_ERROR_EAGAIN) {
       ; // no-op
     }
   } else {
-    while ((error_code = libssh2_userauth_publickey_fromfile(session_, username.c_str(), public_key.c_str(), private_key.c_str(), "")) == LIBSSH2_ERROR_EAGAIN) {
+    while ((rc = libssh2_userauth_publickey_fromfile(session_, username.c_str(), public_key.c_str(), private_key.c_str(), "")) == LIBSSH2_ERROR_EAGAIN) {
       ; //no-op
     }
   }
 
-  if (error_code) {
+  if (rc) {
     // Determine error that occurred
     std::stringstream message;
-    message << "libssh2 Username and Password Authentication Failed: ";
-    switch (error_code) {
+    message << "[libssh2] Failed username/password authentication with error ";
+    switch (rc) {
     case LIBSSH2_ERROR_ALLOC:
-      message << "An internal memory allocation call failed";
+      message << "\"an internal memory allocation call failed\"";
       break;
     case LIBSSH2_ERROR_SOCKET_SEND:
-      message << "Unable to send data on socket";
+      message << "\"unable to send data on socket\"";
       break;
     case LIBSSH2_ERROR_SOCKET_TIMEOUT:
-      message << "Timed out waiting for response";
+      message << "\"timed out waiting for response\"";
       break;
     case LIBSSH2_ERROR_PASSWORD_EXPIRED:
-      message << "Password has expired";
+      message << "\"password has expired\"";
       break;
     case LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED:
-      message << "The username/public key combination was invalid";
+      message << "\"the username/public key combination was invalid\"";
       break;
     case LIBSSH2_ERROR_AUTHENTICATION_FAILED:
       // Ensure error message is displayed for the authentication type
       if (authentication_type == AuthenticationType::USERNAME_PASSWORD) {
-        message << "Invalid username/password";
+        message << "\"invalid username/password\"";
       } else {
-        message << "Authentication using the supplied public key was not accepted";
+        message << "\"authentication using the supplied public key was not accepted\"";
       }
       break;
     default:
-      message << error_code;
+      message << "code \"" << rc << "\"";
       break;
     }
     finalize_libssh2();
@@ -1512,18 +1510,19 @@ void CCM::Bridge::open_libssh2_terminal() {
   }
   if (!channel_) {
     // Determine error that occurred
-    int error_code = libssh2_session_last_error(session_, NULL, NULL, FALSE);
-    std::string message("libssh2 Opening Session Channel Failed: ");
-    switch (error_code) {
+    int rc = libssh2_session_last_error(session_, NULL, NULL, FALSE);
+    std::string message("[libssh2] Failed opening session channel with error \"");
+    switch (rc) {
       case LIBSSH2_ERROR_ALLOC:
-        message += "An internal memory allocation call failed";
+        message.append("an internal memory allocation call failed");
         break;
       case LIBSSH2_ERROR_SOCKET_SEND:
-        message += "Unable to send data on socket";
+        message.append("unable to send data on socket");
         break;
       case LIBSSH2_ERROR_CHANNEL_FAILURE:
-        message += "Unable to open channel";
+        message.append("unable to open channel");
     }
+    message.append("\"");
     finalize_libssh2();
     throw BridgeException(message);
   }
@@ -1532,28 +1531,31 @@ void CCM::Bridge::open_libssh2_terminal() {
 void CCM::Bridge::close_libssh2_terminal() {
   if (channel_) {
     // Close the libssh2 channel/terminal
-    int error_code = 0;
-    while ((error_code = libssh2_channel_close(channel_)) == LIBSSH2_ERROR_EAGAIN) {
+    int rc = 0;
+    while ((rc = libssh2_channel_close(channel_)) == LIBSSH2_ERROR_EAGAIN) {
       synchronize_socket();
     }
-    if (error_code == 0) {
+    if (rc == 0) {
       char* exit_signal = NULL;
       libssh2_channel_get_exit_status(channel_);
       libssh2_channel_get_exit_signal(channel_, &exit_signal, NULL, NULL, NULL, NULL, NULL);
       if (exit_signal) {
-        CCM_LOG_ERROR("libssh2 Unable to Close Channel: " << exit_signal);
+        LOG_ERROR("[libssh2] Failed to close channel with exit signal \""
+                  << exit_signal << "\"");
       }
     }
-    if (error_code) {
-      CCM_LOG_ERROR("libssh2 Unable to Close Channel: " << error_code);
+    if (rc) {
+      LOG_ERROR("[libssh2] Failed to close channel with error code \""
+                << rc << "\"");
     }
 
     // Free the channel/terminal resources
-    while ((error_code = libssh2_channel_free(channel_)) == LIBSSH2_ERROR_EAGAIN) {
+    while ((rc = libssh2_channel_free(channel_)) == LIBSSH2_ERROR_EAGAIN) {
       ; // no-op
     }
-    if (error_code) {
-      CCM_LOG_ERROR("libssh2 Unable to Free Channel Resources: " << error_code);
+    if (rc) {
+      LOG_ERROR("[libssh2] Failed to free channel resources with error code \""
+                << rc << "\"");
     }
     channel_ = NULL;
   }
@@ -1563,18 +1565,20 @@ void CCM::Bridge::finalize_libssh2() {
   // Free the libssh2 session
   if (session_) {
     // Perform session disconnection
-    int error_code = 0;
-    while ((error_code = libssh2_session_disconnect(session_, "Shutting Down libssh2 CCM Bridge Session")) == LIBSSH2_ERROR_EAGAIN) {
+    int rc = 0;
+    while ((rc = libssh2_session_disconnect(session_, "Shutting down libssh2 CCM bridge session")) == LIBSSH2_ERROR_EAGAIN) {
       ; // no-op
     }
-    if (error_code) {
-      CCM_LOG_ERROR("Unable to Perform libssh2 Session Disconnect: " << error_code);
+    if (rc) {
+      LOG_ERROR("[libssh2] Failed to disconnect session with error code \""
+                << rc << "\"");
     }
-    while ((error_code = libssh2_session_free(session_)) == LIBSSH2_ERROR_EAGAIN) {
+    while ((rc = libssh2_session_free(session_)) == LIBSSH2_ERROR_EAGAIN) {
       ; // no-op
     }
-    if (error_code) {
-      CCM_LOG_ERROR("Unable to Free libssh2 Session Resources: " << error_code);
+    if (rc) {
+      LOG_ERROR("[libssh2] Failed to free session resources with error code \""
+                << rc << "\"");
     }
     session_ = NULL;
   }
@@ -1604,38 +1608,38 @@ void CCM::Bridge::finalize_libssh2() {
 std::string CCM::Bridge::execute_libssh2_command(const std::vector<std::string>& command) {
   // Make sure the libssh2 session wasn't terminated
   if (!session_) {
-    throw BridgeException("Command Cannot be Executed: libssh2 session is invalid/terminated");
+    throw BridgeException("[libssh2] Session is invalid/terminated");
   }
 
   // Create/Open libssh2 terminal
   open_libssh2_terminal();
 
   // Execute the command
-  int error_code = 0;
+  int rc = 0;
   std::string full_command = implode(command);
-  while ((error_code = libssh2_channel_exec(channel_, full_command.c_str())) == LIBSSH2_ERROR_EAGAIN) {
+  while ((rc = libssh2_channel_exec(channel_, full_command.c_str())) == LIBSSH2_ERROR_EAGAIN) {
     synchronize_socket();
   }
-  if (error_code) {
+  if (rc) {
     // Determine error that occurred
-      std::stringstream message;
-      message << "libssh2 Command Execute Failed: ";
-      switch (error_code) {
-        case LIBSSH2_ERROR_ALLOC:
-          message << "An internal memory allocation call failed";
-          break;
-        case LIBSSH2_ERROR_SOCKET_SEND:
-          message << "Unable to send data on socket";
-          break;
-        case LIBSSH2_ERROR_CHANNEL_REQUEST_DENIED:
-          message << "Request denied";
-          break;
-        default:
-          message << error_code;
-          break;
-      }
-      finalize_libssh2();
-      throw BridgeException(message.str());
+    std::stringstream message;
+    message << "[libssh2] Failed to execute command with error ";
+    switch (rc) {
+      case LIBSSH2_ERROR_ALLOC:
+        message << "\"An internal memory allocation call failed\"";
+        break;
+      case LIBSSH2_ERROR_SOCKET_SEND:
+        message << "\"Unable to send data on socket\"";
+        break;
+      case LIBSSH2_ERROR_CHANNEL_REQUEST_DENIED:
+        message << "\"Request denied\"";
+        break;
+      default:
+        message << "code \"" << rc << "\"";
+        break;
+    }
+    finalize_libssh2();
+    throw BridgeException(message.str());
   }
 
   // Get the terminal output, close the terminal and return the output
@@ -1645,66 +1649,21 @@ std::string CCM::Bridge::execute_libssh2_command(const std::vector<std::string>&
 }
 #endif
 
-std::string CCM::Bridge::execute_local_command(const std::vector<std::string>& command) {
-  // Execute the command locally
-#ifdef _WIN32
-  if (!use_dse_) {
-#endif
-    std::string output;
-    std::string full_command = implode(command) + " 2>&1";
-    FILE* pipe = POPEN(full_command.c_str(), "r"); // stdout only
-    int file_descriptor = FILENO(pipe);
-
-#ifndef _WIN32
-  // Ensure the pipe is non-blocking
-    fcntl(file_descriptor, F_SETFL, O_NONBLOCK);
-#endif
-
-  // Ensure the command was execute (ignoring error codes)
-    if (pipe) {
-      // Get the command output
-      while (!feof(pipe)) {
-        char buffer[128];
-        memset(buffer, '\0', sizeof(char) * sizeof(buffer));
-        ssize_t bytes_read = READ(file_descriptor, buffer, sizeof(buffer));
-        if (bytes_read == -1 && errno == EAGAIN) {
-          msleep(CCM_NAP);
-          continue;
-        } else if (bytes_read > 0) {
-          output += std::string(buffer, bytes_read);
-        } else {
-          break;
-        }
-      }
-    }
-
-    // Close the pip and return the output
-    PCLOSE(pipe);
-    return output;
-#ifdef _WIN32
-  } else {
-    CCM_LOG_ERROR("DSE v" << dse_version_.to_string() << " cannot be launched on Windows platform");
-  }
-
-  return "";
-#endif
-}
-
 #ifdef CASS_USE_LIBSSH2
 std::string CCM::Bridge::read_libssh2_terminal() {
-  ssize_t bytes_read_error_code = 0;
+  ssize_t nread = 0;
   char buffer[512];
   memset(buffer, '\0', sizeof(char) * 512);
   std::string output;
 
   // Read stdout
   while (true) {
-    while ((bytes_read_error_code = libssh2_channel_read(channel_, buffer, sizeof(buffer))) > 0) {
-      if (bytes_read_error_code > 0) {
-        output += std::string(buffer, bytes_read_error_code);
+    while ((nread = libssh2_channel_read(channel_, buffer, sizeof(buffer))) > 0) {
+      if (nread > 0) {
+        output.append(buffer, nread);
       }
     }
-    if (bytes_read_error_code == LIBSSH2_ERROR_EAGAIN) {
+    if (nread == LIBSSH2_ERROR_EAGAIN) {
       synchronize_socket();
       msleep(CCM_NAP);
     } else {
@@ -1714,12 +1673,12 @@ std::string CCM::Bridge::read_libssh2_terminal() {
 
   // Read stderr
   while (true) {
-    while ((bytes_read_error_code = libssh2_channel_read_stderr(channel_, buffer, sizeof(buffer))) > 0) {
-      if (bytes_read_error_code > 0) {
-        output += std::string(buffer, bytes_read_error_code);
+    while ((nread = libssh2_channel_read_stderr(channel_, buffer, sizeof(buffer))) > 0) {
+      if (nread > 0) {
+        output.append(buffer, nread);
       }
     }
-    if (bytes_read_error_code == LIBSSH2_ERROR_EAGAIN) {
+    if (nread == LIBSSH2_ERROR_EAGAIN) {
       synchronize_socket();
       msleep(CCM_NAP);
     } else {
@@ -1736,20 +1695,29 @@ std::string CCM::Bridge::execute_ccm_command(const std::vector<std::string>& com
   std::vector<std::string> ccm_command;
   ccm_command.push_back("ccm");
   ccm_command.insert(ccm_command.end(), command.begin(), command.end());
-  CCM_LOG(implode(ccm_command));
+  LOG(implode(ccm_command));
 
   // Determine how to execute the command
   std::string output;
   if (deployment_type_ == DeploymentType::LOCAL) {
-    output = execute_local_command(ccm_command);
-  }
-#ifdef CASS_USE_LIBSSH2
-  else if (deployment_type_ == DeploymentType::REMOTE) {
-    output = execute_libssh2_command(ccm_command);
-  }
+#ifdef _WIN32
+    if (use_dse_) {
+      throw BridgeException("DSE v" + dse_version_.to_string()
+                            + " cannot be launched on Windows platform");
+    }
 #endif
+    utils::Process::Result result = utils::Process::execute(ccm_command);
+    if (result.exit_status != 0) {
+      throw BridgeException(result.standard_error);
+    }
+    output = result.standard_output;
+#ifdef CASS_USE_LIBSSH2
+  } else if (deployment_type_ == DeploymentType::REMOTE) {
+    output = execute_libssh2_command(ccm_command);
+    if (!output.empty()) LOG(trim(output));
+#endif
+  }
 
-  if (!output.empty()) CCM_LOG(trim(output));
   return output;
 }
 
@@ -1839,8 +1807,6 @@ std::vector<std::string> CCM::Bridge::generate_create_updateconf_command(CassVer
     updateconf_command.push_back("hinted_handoff_enabled:false");
     updateconf_command.push_back("dynamic_snitch_update_interval_in_ms:1000");
     updateconf_command.push_back("native_transport_max_threads:1");
-    updateconf_command.push_back("rpc_min_threads:1");
-    updateconf_command.push_back("rpc_max_threads:1");
     updateconf_command.push_back("concurrent_reads:2");
     updateconf_command.push_back("concurrent_writes:2");
     updateconf_command.push_back("concurrent_compactors:1");
@@ -1864,6 +1830,13 @@ std::vector<std::string> CCM::Bridge::generate_create_updateconf_command(CassVer
     // Create Cassandra version specific updates (C* < v2.1)
     if (cassandra_version < "2.1.0") {
       updateconf_command.push_back("in_memory_compaction_limit_in_mb:1");
+    }
+
+
+    // Create Cassandra version specific updates (C* < v4.0)
+    if (cassandra_version < "4.0.0") {
+      updateconf_command.push_back("rpc_min_threads:1");
+      updateconf_command.push_back("rpc_max_threads:1");
     }
   }
 
@@ -1902,7 +1875,10 @@ unsigned int CCM::Bridge::get_next_available_node() {
   ClusterStatus status = cluster_status();
   unsigned int next_available_node = status.node_count + 1;
   if (next_available_node > CLUSTER_NODE_LIMIT) {
-    throw BridgeException("No Nodes are Available: Limiting total nodes for CCM to " + CLUSTER_NODE_LIMIT);
+    std::stringstream message;
+    message << "Failed to get next available node; cluster limit of \"" <<
+               CLUSTER_NODE_LIMIT << "\" nodes reached";
+    throw BridgeException(message.str());
   }
 
   return next_available_node;
@@ -1986,3 +1962,4 @@ void CCM::Bridge::msleep(unsigned int milliseconds) {
   }
 #endif
 }
+

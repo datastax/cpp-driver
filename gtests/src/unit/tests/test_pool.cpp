@@ -17,7 +17,7 @@
 #include "constants.hpp"
 #include "ssl.hpp"
 
-#define NUM_NODES 3
+#define NUM_NODES 3u
 using namespace cass;
 
 class PoolUnitTest : public LoopTest {
@@ -271,7 +271,7 @@ public:
   AddressVec addresses() const {
     mockssandra::Ipv4AddressGenerator generator;
     AddressVec addresses;
-    for (int i = 0; i < NUM_NODES; ++i) {
+    for (size_t i = 0; i < NUM_NODES; ++i) {
       addresses.push_back(generator.next());
     }
     return addresses;
@@ -296,7 +296,7 @@ public:
     ConnectionPoolManager::Ptr manager = initializer->release_manager();
     status->set_manager(manager);
 
-    for (int i = 0; i < NUM_NODES; ++i) {
+    for (size_t i = 0; i < NUM_NODES; ++i) {
       PooledConnection::Ptr connection = manager->find_least_busy(generator.next());
       if (connection) {
         RequestCallback::Ptr callback(Memory::allocate<RequestCallback>(status));

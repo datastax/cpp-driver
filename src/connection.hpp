@@ -196,7 +196,7 @@ public:
    *
    * @param listener The connection listener.
    */
-  void set_listener(ConnectionListener* listener);
+  void set_listener(ConnectionListener* listener = NULL);
 
   /**
    * Start heartbeats to keep the connection alive and to detect a network or

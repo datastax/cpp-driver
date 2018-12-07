@@ -240,10 +240,10 @@ BOOST_AUTO_TEST_CASE(generator)
 }
 
 /**
- * Test the default timestamp generator.
+ * Test the server-side generator.
  *
- * Verifies that the timestamp is set by the server when no timestamp
- * generator is set and the timestamp is not set directly on the statement.
+ * Verifies that the timestamp is set by the server when using the server-side
+ * generator and the timestamp is not set directly on the statement.
  *
  * @since 2.1.0
  * @jira_ticket CPP-266
@@ -255,6 +255,9 @@ BOOST_AUTO_TEST_CASE(server_side)
   CCM::CassVersion version = test_utils::get_version();
   if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     TimestampsTest tester;
+    CassTimestampGen* gen = cass_timestamp_gen_server_side_new();
+    cass_cluster_set_timestamp_gen(tester.cluster, gen);
+    cass_timestamp_gen_free(gen);
     tester.create_session();
     // Server-side is the default timestamp generator
     std::string table_name("table_" + test_utils::generate_unique_str(tester.uuid_gen));

@@ -253,8 +253,7 @@ Here are some features that are missing from the C/C++ driver, but are included
 with other drivers. The schedule for these features can be found on [JIRA].
 
 - Compression
-- Query tracing
-- Event registration and notification
+- Schema event registration and notification
 - Callback interfaces for load balancing, authentication, reconnection and retry
 
 [cpp-driver-centos6]: http://downloads.datastax.com/cpp-driver/centos/6/cassandra

@@ -53,25 +53,15 @@ QueryPlan* LatencyAwarePolicy::new_query_plan(const String& keyspace,
                                                                                token_map));
 }
 
-void LatencyAwarePolicy::on_add(const Host::Ptr& host) {
+void LatencyAwarePolicy::on_host_added(const Host::Ptr& host) {
   host->enable_latency_tracking(settings_.scale_ns, settings_.min_measured);
   add_host(hosts_, host);
-  ChainedLoadBalancingPolicy::on_add(host);
+  ChainedLoadBalancingPolicy::on_host_added(host);
 }
 
-void LatencyAwarePolicy::on_remove(const Host::Ptr& host) {
+void LatencyAwarePolicy::on_host_removed(const Host::Ptr& host) {
   remove_host(hosts_, host);
-  ChainedLoadBalancingPolicy::on_remove(host);
-}
-
-void LatencyAwarePolicy::on_up(const Host::Ptr& host) {
-  add_host(hosts_, host);
-  ChainedLoadBalancingPolicy::on_up(host);
-}
-
-void LatencyAwarePolicy::on_down(const Host::Ptr& host) {
-  remove_host(hosts_, host);
-  ChainedLoadBalancingPolicy::on_down(host);
+  ChainedLoadBalancingPolicy::on_host_removed(host);
 }
 
 void LatencyAwarePolicy::start_timer(uv_loop_t* loop) {

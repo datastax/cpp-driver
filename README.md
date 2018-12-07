@@ -1,8 +1,5 @@
 # DataStax C/C++ Driver for Apache Cassandra
 
-[![Build Status: Linux](https://travis-ci.org/datastax/cpp-driver.svg?branch=master)](https://travis-ci.org/datastax/cpp-driver)
-[![Build Status: Windows](https://ci.appveyor.com/api/projects/status/ec0x0vuk59as28r6/branch/master?svg=true)](https://ci.appveyor.com/project/DataStax/cpp-driver)
-
 A modern, feature-rich] and highly tunable C/C++ client library for
 [Apache Cassandra] 2.1+ using exclusively Cassandra's binary protocol and
 Cassandra Query Language v3. __Use the [DSE C/C++ driver] for better

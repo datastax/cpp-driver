@@ -167,7 +167,6 @@ public:
 
 private:
   mockssandra::SimpleEchoServer server_;
-  CassLogLevel saved_log_level_;
 };
 
 TEST_F(SocketUnitTest, Simple) {

@@ -311,8 +311,7 @@ public:
                       Address* output) const {
     CassInet inet;
     if (!as_inet(address_length, &inet)) return false;
-    return Address::from_inet(reinterpret_cast<const char*>(&inet.address),
-                              inet.address_length, port, output);
+    return Address::from_inet(&inet.address, inet.address_length, port, output);
   }
 
   inline bool decode_string_map(Map<String, String>& map) {

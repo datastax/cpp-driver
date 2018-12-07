@@ -21,9 +21,9 @@ namespace cass {
 void HostTargetingPolicy::init(const SharedRefPtr<Host>& connected_host,
                                const cass::HostMap& hosts,
                                Random* random) {
-  for (cass::HostMap::const_iterator i = hosts.begin(),
-       end = hosts.end(); i != end; ++i) {
-    available_hosts_[i->first] = i->second;
+  for (cass::HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
+    hosts_[it->first] = it->second;
   }
   ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
 }
@@ -39,32 +39,22 @@ QueryPlan* HostTargetingPolicy::new_query_plan(const String& keyspace,
     return child_plan;
   }
 
-  HostMap::const_iterator i = available_hosts_.find(request_handler->preferred_address());
-  if (i == available_hosts_.end()) {
+  HostMap::const_iterator it = hosts_.find(request_handler->preferred_address());
+  if (it == hosts_.end() || !is_host_up(it->first)) {
     return child_plan;
   }
 
-  return Memory::allocate<HostTargetingQueryPlan>(i->second, child_plan);
+  return Memory::allocate<HostTargetingQueryPlan>(it->second, child_plan);
 }
 
-void HostTargetingPolicy::on_add(const SharedRefPtr<Host>& host) {
-  available_hosts_[host->address()] = host;
-  ChainedLoadBalancingPolicy::on_add(host);
+void HostTargetingPolicy::on_host_added(const SharedRefPtr<Host>& host) {
+  hosts_[host->address()] = host;
+  ChainedLoadBalancingPolicy::on_host_added(host);
 }
 
-void HostTargetingPolicy::on_remove(const SharedRefPtr<Host>& host) {
-  available_hosts_.erase(host->address());
-  ChainedLoadBalancingPolicy::on_remove(host);
-}
-
-void HostTargetingPolicy::on_up(const SharedRefPtr<Host>& host) {
-  available_hosts_[host->address()] = host;
-  ChainedLoadBalancingPolicy::on_up(host);
-}
-
-void HostTargetingPolicy::on_down(const SharedRefPtr<Host>& host) {
-  available_hosts_.erase(host->address());
-  ChainedLoadBalancingPolicy::on_down(host);
+void HostTargetingPolicy::on_host_removed(const SharedRefPtr<Host>& host) {
+  hosts_.erase(host->address());
+  ChainedLoadBalancingPolicy::on_host_removed(host);
 }
 
 SharedRefPtr<Host> HostTargetingPolicy::HostTargetingQueryPlan::compute_next() {

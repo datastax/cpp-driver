@@ -37,7 +37,6 @@
 uv_mutex_t mutex;
 uv_cond_t cond;
 int exit_flag = 0;
-CassFuture* close_future = NULL;
 CassUuidGen* uuid_gen = NULL;
 
 void wait_exit() {
@@ -46,17 +45,10 @@ void wait_exit() {
     uv_cond_wait(&cond, &mutex);
   }
   uv_mutex_unlock(&mutex);
-  if (close_future) {
-    cass_future_wait(close_future);
-    cass_future_free(close_future);
-  }
 }
 
-void signal_exit(CassSession* session) {
+void signal_exit() {
   uv_mutex_lock(&mutex);
-  if (session) {
-    close_future = cass_session_close(session);
-  }
   exit_flag = 1;
   uv_cond_signal(&cond);
   uv_mutex_unlock(&mutex);
@@ -70,7 +62,6 @@ void on_insert(CassFuture* future, void* data);
 void on_select(CassFuture* future, void* data);
 
 void on_session_connect(CassFuture* future, void* data);
-void on_session_close(CassFuture* future, void* data);
 
 void print_error(CassFuture* future) {
   const char* message;
@@ -106,7 +97,7 @@ void on_session_connect(CassFuture* future, void* data) {
 
   if (code != CASS_OK) {
     print_error(future);
-    signal_exit(NULL);
+    signal_exit();
     return;
   }
 
@@ -169,7 +160,7 @@ void on_insert(CassFuture* future, void* data) {
   CassError code = cass_future_error_code(future);
   if (code != CASS_OK) {
     print_error(future);
-    signal_exit((CassSession*)data);
+    signal_exit();
   } else {
     const char* select_query = "SELECT * FROM callbacks";
     CassStatement* statement
@@ -208,7 +199,7 @@ void on_select(CassFuture* future, void* data) {
     cass_result_free(result);
   }
 
-  signal_exit((CassSession*)data);
+  signal_exit();
 }
 
 int main(int argc, char* argv[]) {

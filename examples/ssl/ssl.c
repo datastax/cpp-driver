@@ -88,8 +88,6 @@ int main(int argc, char* argv[]) {
   connect_future = cass_session_connect(session, cluster);
 
   if (cass_future_error_code(connect_future) == CASS_OK) {
-    CassFuture* close_future = NULL;
-
     /* Build statement and execute query */
     const char* query = "SELECT release_version FROM system.local";
     CassStatement* statement = cass_statement_new(query, 0);
@@ -123,11 +121,6 @@ int main(int argc, char* argv[]) {
 
     cass_statement_free(statement);
     cass_future_free(result_future);
-
-    /* Close the session */
-    close_future = cass_session_close(session);
-    cass_future_wait(close_future);
-    cass_future_free(close_future);
   } else {
       /* Handle error */
       const char* message;

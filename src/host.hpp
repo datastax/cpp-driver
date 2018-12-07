@@ -97,17 +97,10 @@ public:
   typedef SharedRefPtr<Host> Ptr;
   typedef SharedRefPtr<const Host> ConstPtr;
 
-  enum HostState {
-    ADDED,
-    UP,
-    DOWN
-  };
-
   Host(const Address& address)
       : address_(address)
       , rack_id_(0)
       , dc_id_(0)
-      , state_(ADDED)
       , address_string_(address.to_string()) { }
 
   const Address& address() const { return address_; }
@@ -140,13 +133,6 @@ public:
   const VersionNumber& server_version() const {
     return server_version_;
   }
-
-  bool was_just_added() const { return state() == ADDED; }
-
-  bool is_up() const { return state() == UP; }
-  void set_up() { set_state(UP); }
-  bool is_down() const { return state() == DOWN; }
-  void set_down() { set_state(DOWN); }
 
   String to_string() const {
     OStringStream ss;
@@ -201,18 +187,9 @@ private:
   };
 
 private:
-  HostState state() const {
-    return state_.load(MEMORY_ORDER_ACQUIRE);
-  }
-
-  void set_state(HostState state) {
-    state_.store(state, MEMORY_ORDER_RELEASE);
-  }
-
   Address address_;
   uint32_t rack_id_;
   uint32_t dc_id_;
-  Atomic<HostState> state_;
   String address_string_;
   VersionNumber server_version_;
   String rack_;
@@ -236,31 +213,58 @@ public:
   /**
    * A callback that's called when a host is marked as being UP.
    *
-   * @param address The address of the host.
-   * @param refreshed The fully populated host if refreshes on UP are enabled.
+   * @param host A fully populated host object.
    */
-  virtual void on_up(const Host::Ptr& host) = 0;
+  virtual void on_host_up(const Host::Ptr& host) = 0;
 
   /**
    * A callback that's called when a host is marked as being DOWN.
    *
-   * @param address The address of the host.
+   * @param host A fully populated host object.
    */
-  virtual void on_down(const Host::Ptr& host) = 0;
+  virtual void on_host_down(const Host::Ptr& host) = 0;
 
   /**
    * A callback that's called when a new host is added to the cluster.
    *
    * @param host A fully populated host object.
    */
-  virtual void on_add(const Host::Ptr& host) = 0;
+  virtual void on_host_added(const Host::Ptr& host) = 0;
 
   /**
    * A callback that's called when a host is removed from a cluster.
    *
    * @param address The address of the host.
    */
-  virtual void on_remove(const Host::Ptr& host) = 0;
+  virtual void on_host_removed(const Host::Ptr& host) = 0;
+};
+
+class DefaultHostListener
+    : public HostListener
+    , public RefCounted<DefaultHostListener> {
+public:
+  typedef SharedRefPtr<DefaultHostListener> Ptr;
+
+  virtual void on_host_up(const Host::Ptr& host) { }
+  virtual void on_host_down(const Host::Ptr& host) { }
+  virtual void on_host_added(const Host::Ptr& host) { }
+  virtual void on_host_removed(const Host::Ptr& host) { }
+};
+
+class ExternalHostListener : public DefaultHostListener  {
+public:
+  typedef SharedRefPtr<ExternalHostListener> Ptr;
+  ExternalHostListener(const CassHostListenerCallback callback,
+                       void *data);
+
+  virtual void on_host_up(const Host::Ptr& host);
+  virtual void on_host_down(const Host::Ptr& host);
+  virtual void on_host_added(const Host::Ptr& host);
+  virtual void on_host_removed(const Host::Ptr& host);
+
+private:
+  const CassHostListenerCallback callback_;
+  void* data_;
 };
 
 typedef Map<Address, Host::Ptr> HostMap;
@@ -285,6 +289,7 @@ typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 
 void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host);
 void remove_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host);
+bool remove_host(CopyOnWriteHostVec& hosts, const Address& address);
 
 } // namespace cass
 

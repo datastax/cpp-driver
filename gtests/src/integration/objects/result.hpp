@@ -192,6 +192,19 @@ public:
     return custom_payload_;
   }
 
+  /**
+   * Get the tracing ID from the result's future.
+   *
+   * @return The tracing ID.
+   */
+  Uuid tracing_id() {
+    CassUuid id;
+    if (future_ && cass_future_tracing_id(future_.get(), &id) == CASS_OK) {
+      return Uuid(id);
+    }
+    return Uuid();
+  }
+
 private:
   /**
    * Future wrapped object

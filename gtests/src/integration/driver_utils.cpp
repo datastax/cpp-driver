@@ -18,6 +18,7 @@
 
 #include "address.hpp"
 #include "cluster_config.hpp"
+#include "driver_info.hpp"
 #include "future.hpp"
 #include "murmur3.hpp"
 #include "request_handler.hpp"
@@ -57,6 +58,14 @@ std::string test::driver::internals::Utils::contact_points(CassCluster* cluster)
     contact_points.append((*it).c_str());
   }
   return contact_points;
+}
+
+std::string test::driver::internals::Utils::driver_name() {
+  return cass::driver_name();
+}
+
+std::string test::driver::internals::Utils::driver_version() {
+  return cass::driver_version();
 }
 
 std::string test::driver::internals::Utils::host(CassFuture* future) {

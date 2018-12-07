@@ -110,7 +110,7 @@ void PrepareHostHandler::prepare_next() {
   prepares_outstanding_ = 0;
 
   // Write prepare requests until there's no more left, the keyspace changes,
-  // or the maximum number of oustanding prepares is reached.
+  // or the maximum number of outstanding prepares is reached.
   while (!is_done() &&
          check_and_set_keyspace() &&
          prepares_outstanding_ < max_prepares_outstanding_) {
