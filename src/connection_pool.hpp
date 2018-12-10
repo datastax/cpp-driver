@@ -141,6 +141,18 @@ public:
   PooledConnection::Ptr find_least_busy() const;
 
   /**
+   * Determine if the pool has any valid connections.
+   *
+   * @return Returns true if the pool has valid connections.
+   */
+  bool has_connections() const;
+
+  /**
+   * Trigger immediate connection of any delayed (reconnecting) connections.
+   */
+  void attempt_immediate_connect();
+
+  /**
    * Flush connections with pending writes.
    */
   void flush();
@@ -155,11 +167,11 @@ public:
    *
    * @param listener The pool listener.
    */
-  void set_listener(ConnectionPoolListener* listener);
+  void set_listener(ConnectionPoolListener* listener = NULL);
 
 public:
   const uv_loop_t* loop() const { return loop_; }
-  const Address& address() const { return  address_; }
+  const Address& address() const { return address_; }
   ProtocolVersion protocol_version() const { return protocol_version_; }
   const String& keyspace() const { return keyspace_; }
 

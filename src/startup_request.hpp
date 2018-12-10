@@ -27,24 +27,32 @@ namespace cass {
 
 class StartupRequest : public Request {
 public:
-  StartupRequest(bool no_compact_enabled)
+  StartupRequest(const String& application_name,
+                 const String& application_version,
+                 const String& client_id,
+                 bool no_compact_enabled)
       : Request(CQL_OPCODE_STARTUP)
-      , version_("3.0.0")
-      , compression_("")
+      , application_name_(application_name)
+      , application_version_(application_version)
+      , client_id_(client_id)
       , no_compact_enabled_(no_compact_enabled) { }
 
-  const String version() const { return version_; }
-  const String compression() const { return compression_; }
+  const String& application_name() const { return application_name_; }
+  const String& application_version() const { return application_version_; }
+  const String& client_id() const { return client_id_; }
   bool no_compact_enabled() const { return no_compact_enabled_; }
 
 private:
-  int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
+  int encode(ProtocolVersion version,
+             RequestCallback* callback,
+             BufferVec* bufs) const;
 
 private:
   typedef Map<String, String> OptionsMap;
 
-  String version_;
-  String compression_;
+  String application_name_;
+  String application_version_;
+  String client_id_;
   bool no_compact_enabled_;
 };
 

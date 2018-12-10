@@ -65,13 +65,13 @@ public:
 
     virtual ~Listener() { }
 
-    virtual void on_up(const Host::Ptr& host) { }
-    virtual void on_down(const Host::Ptr& host) { }
+    virtual void on_host_up(const Host::Ptr& host) { }
+    virtual void on_host_down(const Host::Ptr& host) { }
 
-    virtual void on_add(const Host::Ptr& host) { }
-    virtual void on_remove(const Host::Ptr& host) { }
+    virtual void on_host_added(const Host::Ptr& host) { }
+    virtual void on_host_removed(const Host::Ptr& host) { }
 
-    virtual void on_update_token_map(const TokenMap::Ptr& token_map) { }
+    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { }
 
     virtual void on_close(Cluster* cluster)  {
       if (close_future_) {
@@ -106,7 +106,7 @@ public:
       return address_;
     }
 
-    virtual void on_up(const Host::Ptr& host) {
+    virtual void on_host_up(const Host::Ptr& host) {
       if (up_future_) {
         ScopedMutex l(&mutex_);
         address_ = host->address();
@@ -114,7 +114,7 @@ public:
       }
     }
 
-    virtual void on_down(const Host::Ptr& host) {
+    virtual void on_host_down(const Host::Ptr& host) {
       if (down_future_) {
         ScopedMutex l(&mutex_);
         address_ = host->address();
@@ -148,7 +148,8 @@ public:
 
     ReconnectClusterListener(const Future::Ptr& close_future, OutagePlan* outage_plan)
       : Listener(close_future)
-      , outage_plan_(outage_plan) { }
+      , outage_plan_(outage_plan)
+      , cluster_(NULL) { }
 
     const HostVec& connected_hosts() const {
       return connected_hosts_;
@@ -159,6 +160,7 @@ public:
     }
 
     virtual void on_reconnect(Cluster* cluster) {
+      cluster_ = cluster;
       connected_hosts_.push_back(cluster->connected_host());
       if (connected_hosts_.size() == 1) { // First host
         outage_plan_->run();
@@ -170,23 +172,29 @@ public:
       }
     }
 
-    virtual void on_up(const Host::Ptr& host) { }
-    virtual void on_down(const Host::Ptr& host) { }
+    virtual void on_host_up(const Host::Ptr& host) { }
+    virtual void on_host_down(const Host::Ptr& host) { }
 
-    virtual void on_add(const Host::Ptr& host) {
+    virtual void on_host_added(const Host::Ptr& host) {
       events_.push_back(Event(Event::NODE_ADD, host->address()));
+      // In the absence of RequestProcessor objects the cluster must notify
+      // itself that a host is UP.
+      if (cluster_) {
+        cluster_->notify_host_up(host->address());
+      }
     }
 
-    virtual void on_remove(const Host::Ptr& host) {
+    virtual void on_host_removed(const Host::Ptr& host) {
       events_.push_back(Event(Event::NODE_REMOVE, host->address()));
     }
 
-    virtual void on_update_token_map(const TokenMap::Ptr& token_map) { }
+    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { }
 
   private:
     HostVec connected_hosts_;
     Events events_;
     OutagePlan* outage_plan_;
+    Cluster* cluster_;
   };
 
   class RecoverClusterListener : public UpDownListener {
@@ -213,6 +221,34 @@ public:
   private:
     HostVec connected_hosts_;
     Future::Ptr recover_future_;
+  };
+
+  class DisableEventsListener : public Listener {
+  public:
+    typedef SharedRefPtr<DisableEventsListener> Ptr;
+
+    DisableEventsListener(const Future::Ptr& close_future, mockssandra::Cluster& simple_cluster)
+      : Listener(close_future)
+      , event_future_(Memory::allocate<Future>())
+      , simple_cluster_(simple_cluster) { }
+
+    Future::Ptr& event_future() { return event_future_; }
+
+    virtual void on_reconnect(Cluster* cluster) {
+      // Trigger an ADD event right after cluster connection.
+      simple_cluster_.event(
+            mockssandra::TopologyChangeEvent::new_node(cass::Address("127.0.0.2", 9042)));
+    }
+
+    virtual void on_host_up(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_host_down(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_host_added(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_host_removed(const Host::Ptr& host) { event_future_->set(); }
+    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { event_future_->set(); }
+
+  public:
+    Future::Ptr event_future_;
+    mockssandra::Cluster& simple_cluster_;
   };
 
   static void on_connection_connected(ClusterConnector* connector, Future* future) {
@@ -264,6 +300,8 @@ TEST_F(ClusterUnitTest, Simple) {
 
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
+  contact_points.push_back("127.0.0.2");
+  contact_points.push_back("127.0.0.3");
 
   Future::Ptr connect_future(Memory::allocate<Future>());
   ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
@@ -274,6 +312,53 @@ TEST_F(ClusterUnitTest, Simple) {
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
+}
+
+TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
+  // Setup a cluster with multiple critical failures and one good node. The
+  // cluster should connect to the good node and ignore the failures.
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(mockssandra::OPCODE_STARTUP)
+      .validate_startup()
+        .is_address("127.0.0.2").then(mockssandra::Action::Builder().authenticate("com.dataxtax.SomeAuthenticator"))
+        .is_address("127.0.0.3").then(mockssandra::Action::Builder().invalid_protocol())
+      .ready();
+
+  builder.on(mockssandra::OPCODE_AUTH_RESPONSE)
+      .validate_auth_response()
+        .is_address("127.0.0.2").then(mockssandra::Action::Builder().plaintext_auth())
+      .auth_success();
+
+  ContactPointList contact_points;
+  contact_points.push_back("127.0.0.1"); // Good
+  contact_points.push_back("127.0.0.2"); // Invalid auth
+  add_logging_critera("Unable to connect to host 127.0.0.2 because of the "
+                      "following error: Received error response 'Invalid "
+                      "credentials'");
+  contact_points.push_back("127.0.0.3"); // Invalid protocol
+  add_logging_critera("Unable to connect to host 127.0.0.3 because of the "
+                      "following error: Received error response 'Invalid or "
+                      "unsupported protocol version'");
+
+  mockssandra::SimpleCluster cluster(builder.build(), 3);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
+                                                                     PROTOCOL_VERSION,
+                                                                     bind_callback(on_connection_connected, connect_future.get())));
+
+  ClusterSettings settings;
+  settings.control_connection_settings.connection_settings.auth_provider.reset(
+        Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
+
+  connector
+      ->with_settings(settings)
+      ->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+  EXPECT_GE(logging_criteria_count(), 2); // Invalid or unsupported protocol may retry with different protocol before connection
 }
 
 TEST_F(ClusterUnitTest, Resolve) {
@@ -542,11 +627,11 @@ TEST_F(ClusterUnitTest, NotifyDownUp) {
 
   // We need to mark the host as DOWN first otherwise an UP event won't be
   // triggered.
-  cluster->notify_down(address);
+  cluster->notify_host_down(address);
   ASSERT_TRUE(down_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(address, listener->address());
 
-  cluster->notify_up(address);
+  cluster->notify_host_up(address);
   ASSERT_TRUE(up_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(address, listener->address());
 
@@ -732,11 +817,11 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
   EXPECT_FALSE(connect_future->error());
 
   // Notify every host as down
-  connect_future->cluster()->notify_down(local_address);
-  connect_future->cluster()->notify_down(remote_address);
+  connect_future->cluster()->notify_host_down(local_address);
+  connect_future->cluster()->notify_host_down(remote_address);
 
   // Notify the remote host as up
-  connect_future->cluster()->notify_up(remote_address);
+  connect_future->cluster()->notify_host_up(remote_address);
 
   // Verify that the remote host was marked as up
   ASSERT_TRUE(up_future->wait_for(WAIT_FOR_TIME));
@@ -778,4 +863,46 @@ TEST_F(ClusterUnitTest, InvalidDC) {
   ASSERT_TRUE(connect_future->error());
   EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
   EXPECT_TRUE(connect_future->error()->message.find("Check to see if the configured local datacenter is valid") != String::npos);
+}
+
+TEST_F(ClusterUnitTest, DisableEventsOnStartup) {
+  // A 2 node cluster required to properly populate "system.peers".
+  mockssandra::SimpleCluster cluster(simple(), 2);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  ContactPointList contact_points;
+  contact_points.push_back("127.0.0.1");
+
+  Future::Ptr connect_future(Memory::allocate<Future>());
+  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
+                                                                     PROTOCOL_VERSION,
+                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+
+  ClusterSettings settings;
+  settings.disable_events_on_startup = true; // Disable events to start
+
+  Future::Ptr close_future(Memory::allocate<Future>());
+  DisableEventsListener::Ptr listener(
+        cass::Memory::allocate<DisableEventsListener>(close_future, cluster));
+
+  connector
+      ->with_listener(listener.get())
+      ->with_settings(settings)
+      ->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  ASSERT_FALSE(connect_future->error());
+
+  // Wait for a small amount of time to ensure no events are sent when they're
+  // disabled.
+  ASSERT_FALSE(listener->event_future()->wait_for(500 * 1000)); // 0.5 ms
+
+  // Start events so that the ADD event propagates.
+  connect_future->cluster()->start_events();
+
+  // Expect at least the ADD event.
+  EXPECT_TRUE(listener->event_future()->wait_for(WAIT_FOR_TIME));
+
+  connect_future->cluster()->close();
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
 }

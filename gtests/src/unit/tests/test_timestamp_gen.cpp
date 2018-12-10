@@ -42,7 +42,7 @@ public:
     int timestamp_count = 0;
     int warn_count = 0;
 
-    set_log_level(CASS_LOG_WARN);
+    cass::Logger::set_log_level(CASS_LOG_WARN);
     cass::Logger::set_callback(clock_skew_log_callback, &warn_count);
 
     uint64_t start = cass::get_time_since_epoch_ms();

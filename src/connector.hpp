@@ -51,6 +51,9 @@ struct ConnectionSettings {
   unsigned int idle_timeout_secs;
   unsigned int heartbeat_interval_secs;
   bool no_compact;
+  String application_name;
+  String application_version;
+  String client_id;
 };
 
 /**
@@ -59,7 +62,7 @@ struct ConnectionSettings {
  */
 class Connector
     : public RefCounted<Connector>
-    , public RecordingConnectionListener {
+    , public ConnectionListener {
   friend class StartupCallback;
 
 public:
@@ -164,6 +167,7 @@ public:
   uv_loop_t* loop() { return loop_; }
 
   const Address& address() const { return socket_connector_->address(); }
+  const ProtocolVersion protocol_version() const { return protocol_version_; }
 
 
   bool is_ok() const {

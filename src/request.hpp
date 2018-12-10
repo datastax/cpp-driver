@@ -92,12 +92,23 @@ public:
 
   Request(uint8_t opcode)
       : opcode_(opcode)
+      , flags_(0)
       , timestamp_(CASS_INT64_MIN)
       , record_attempted_addresses_(false) { }
 
   virtual ~Request() { }
 
   uint8_t opcode() const { return opcode_; }
+
+  uint8_t flags() const { return flags_; }
+
+  void set_tracing(bool is_tracing) {
+    if (is_tracing) {
+      flags_ |= CASS_FLAG_TRACING;
+    } else {
+      flags_ &= ~CASS_FLAG_TRACING;
+    }
+  }
 
   const RequestSettings& settings() const { return settings_; }
 
@@ -192,16 +203,23 @@ public:
     return length;
   }
 
+  void set_host(const Address& host) {
+    host_.reset(Memory::allocate<Address>(host));
+  }
+  const Address* host() const { return host_.get(); }
+
   virtual int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const = 0;
 
 private:
   uint8_t opcode_;
+  uint8_t flags_;
   RequestSettings settings_;
   int64_t timestamp_;
   bool record_attempted_addresses_;
   CustomPayload::ConstPtr custom_payload_;
   CustomPayload custom_payload_extra_;
   String profile_name_;
+  ScopedPtr<Address> host_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);

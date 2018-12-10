@@ -1,15 +1,26 @@
 /*
   Copyright (c) DataStax, Inc.
 
-  This software can be used solely with DataStax Enterprise. Please consult the
-  license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 */
 
-#ifndef __DSE_JSON_HPP_INCLUDED__
-#define __DSE_JSON_HPP_INCLUDED__
+#ifndef __CASS_JSON_HPP_INCLUDED__
+#define __CASS_JSON_HPP_INCLUDED__
 
 #include "memory.hpp"
-
+#define RAPIDJSON_NAMESPACE cass::rapidjson
+#define RAPIDJSON_NAMESPACE_BEGIN namespace cass { namespace rapidjson {
+#define RAPIDJSON_NAMESPACE_END } }
 #define RAPIDJSON_NEW(x) cass::Memory::allocate<x>
 #define RAPIDJSON_DELETE(x) cass::Memory::deallocate(x)
 
@@ -36,14 +47,14 @@ public:
     }
 };
 
-typedef rapidjson::GenericDocument<rapidjson::UTF8<>, rapidjson::MemoryPoolAllocator<json::Allocator>, json::Allocator> Document;
-typedef rapidjson::GenericValue<rapidjson::UTF8<>, rapidjson::MemoryPoolAllocator<json::Allocator> > Value;
-typedef rapidjson::GenericStringBuffer<rapidjson::UTF8<>, json::Allocator> StringBuffer;
+typedef cass::rapidjson::GenericDocument<cass::rapidjson::UTF8<>, cass::rapidjson::MemoryPoolAllocator<json::Allocator>, json::Allocator> Document;
+typedef cass::rapidjson::GenericValue<cass::rapidjson::UTF8<>, cass::rapidjson::MemoryPoolAllocator<json::Allocator> > Value;
+typedef cass::rapidjson::GenericStringBuffer<cass::rapidjson::UTF8<>, json::Allocator> StringBuffer;
 
-template<typename OutputStream, typename SourceEncoding = rapidjson::UTF8<>, typename TargetEncoding = rapidjson::UTF8<>, typename StackAllocator = json::Allocator, unsigned writeFlags = rapidjson::kWriteDefaultFlags>
-class Writer : public rapidjson::Writer<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> {
+template<typename OutputStream, typename SourceEncoding = cass::rapidjson::UTF8<>, typename TargetEncoding = cass::rapidjson::UTF8<>, typename StackAllocator = json::Allocator, unsigned writeFlags = cass::rapidjson::kWriteDefaultFlags>
+class Writer : public cass::rapidjson::Writer<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> {
 public:
-    typedef rapidjson::Writer<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> Type;
+    typedef cass::rapidjson::Writer<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> Type;
 
     explicit Writer(OutputStream& os, StackAllocator* stackAllocator = 0, size_t levelDepth = Type::kDefaultLevelDepth) :
         Type(os, stackAllocator, levelDepth) { }
@@ -54,4 +65,4 @@ public:
 
 } } // namespace cass::json
 
-#endif
+#endif // __CASS_JSON_HPP_INCLUDED__

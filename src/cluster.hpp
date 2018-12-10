@@ -72,7 +72,7 @@ public:
    *
    * @param token_map The updated token map.
    */
-  virtual void on_update_token_map(const TokenMap::Ptr& token_map) = 0;
+  virtual void on_token_map_updated(const TokenMap::Ptr& token_map) = 0;
 };
 
 /**
@@ -87,8 +87,27 @@ public:
   virtual ~ClusterListener() { }
 
   /**
-   * A callback that's called when the cluster object connects or reconnects
-   * to a host.
+   * A callback that's called when the control connection receives an up event.
+   * It means that the host might be available to handle queries, but not
+   * necessarily.
+   *
+   * @param host A host that may be available.
+   */
+  virtual void on_host_maybe_up(const Host::Ptr& host) { }
+
+  /**
+   * A callback that's called as the result of `Cluster::notify_host_up()`.
+   * It's *always* called for a valid (not ignored) host that's ready to
+   * receive queries. The ready state means the host has had any previously
+   * prepared queries setup on the newly available server. If the host was
+   * previously ready the callback is just called.
+   *
+   * @param host A host that's ready to receive queries.
+   */
+  virtual void on_host_ready(const Host::Ptr& host) { }
+
+  /**
+   * A callback that's called when the cluster connects or reconnects to a host.
    *
    * Note: This is mostly for testing.
    *
@@ -102,6 +121,37 @@ public:
    * @param cluster The cluster object.
    */
   virtual void on_close(Cluster* cluster) = 0;
+};
+
+/**
+ * A class for recording host and token map events so they can be replayed.
+ */
+struct ClusterEvent {
+  typedef Vector<ClusterEvent> Vec;
+  enum Type {
+    HOST_UP,
+    HOST_DOWN,
+    HOST_ADD,
+    HOST_REMOVE,
+    HOST_MAYBE_UP,
+    HOST_READY,
+    TOKEN_MAP_UPDATE
+  };
+
+  ClusterEvent(Type type, const Host::Ptr& host)
+    : type(type)
+    , host(host) { }
+
+  ClusterEvent(const TokenMap::Ptr& token_map)
+    : type(TOKEN_MAP_UPDATE)
+    , token_map(token_map) { }
+
+  static void process_event(const ClusterEvent& event, ClusterListener* listener);
+  static void process_events(const Vec& events, ClusterListener* listener);
+
+  Type type;
+  Host::Ptr host;
+  TokenMap::Ptr token_map;
 };
 
 /**
@@ -153,11 +203,16 @@ struct ClusterSettings {
    */
   bool prepare_on_up_or_add_host;
 
-
   /**
    * Max number of requests to be written out to the socket per write system call.
    */
   unsigned max_prepares_per_flush;
+
+  /**
+   * If true then events are disabled on startup. Events can be explicitly
+   * started by calling `Cluster::start_events()`.
+   */
+  bool disable_events_on_startup;
 };
 
 /**
@@ -176,7 +231,7 @@ public:
    * Constructor. Don't use directly.
    *
    * @param connection The current control connection.
-   * @param listener A listener to handle events.
+   * @param listener A listener to handle cluster events.
    * @param event_loop The event loop.
    * @param connected_host The currently connected host.
    * @param hosts Available hosts for the cluster (based on load balancing
@@ -198,7 +253,14 @@ public:
           const LoadBalancingPolicy::Vec& load_balancing_policies,
           const ClusterSettings& settings);
 
-
+  /**
+   * Set the listener that will handle events for the cluster
+   * (*NOT* thread-safe).
+   *
+   * @param listener The cluster listener.
+   */
+  void set_listener(ClusterListener* listener = NULL);
+  
   /**
    * Close the current connection and stop the re-connection process (thread-safe).
    */
@@ -210,7 +272,7 @@ public:
    *
    * @param address The address of the host that is now available.
    */
-  void notify_up(const Address& address);
+  void notify_host_up(const Address& address);
 
   /**
    * Notify that a node has been determined to be down via an external source.
@@ -219,7 +281,13 @@ public:
    *
    * @param address That address of the host that is now unavailable.
    */
-  void notify_down(const Address& address);
+  void notify_host_down(const Address& address);
+
+  /**
+   * Start host and token map events. Events that occurred during startup will be
+   * replayed (thread-safe).
+   */
+  void start_events();
 
   /**
    * Get the latest snapshot of the schema metadata (thread-safe).
@@ -235,7 +303,7 @@ public:
    * @return The host object for the specified address or a null object pointer
    * if the host doesn't exist.
    */
-  Host::Ptr host(const Address& address) const;
+  Host::Ptr find_host(const Address& address) const;
 
   /**
    * Get a prepared metadata entry for a prepared ID (thread-safe).
@@ -269,9 +337,10 @@ public:
   const TokenMap::Ptr& token_map() const { return token_map_; }
 
 private:
-  friend class RunCloseCluster;
-  friend class NotifyUpCluster;
-  friend class NotifyDownCluster;
+  friend class ClusterRunClose;
+  friend class ClusterNotifyUp;
+  friend class ClusterNotifyDown;
+  friend class ClusterStartEvents;
 
 private:
   void update_hosts(const HostMap& hosts);
@@ -293,24 +362,31 @@ private:
   void internal_close();
   void handle_close();
 
-  void internal_notify_up(const Address& address, const Host::Ptr& refreshed = Host::Ptr());
-  void notify_up_after_prepare(const Host::Ptr& host);
+  void internal_notify_host_up(const Address& address);
+  void notify_host_up_after_prepare(const Host::Ptr& host);
 
-  void internal_notify_down(const Address& address);
+  void internal_notify_host_down(const Address& address);
 
-  void notify_add(const Host::Ptr& host);
-  void notify_add_after_prepare(const Host::Ptr& host);
+  void internal_start_events();
+  
+  void notify_host_add(const Host::Ptr& host);
+  void notify_host_add_after_prepare(const Host::Ptr& host);
 
-  void notify_remove(const Address& address);
+  void notify_host_remove(const Address& address);
+
+private:
+  void notify_or_record(const ClusterEvent& event);
 
 private:
   bool prepare_host(const Host::Ptr& host,
-                    const  PrepareHostHandler::Callback& callback);
+                    const PrepareHostHandler::Callback& callback);
 
   void on_prepare_host_add(const PrepareHostHandler* handler);
   void on_prepare_host_up(const PrepareHostHandler* handler);
 
 private:
+  // Control connection listener methods
+
   virtual void on_update_schema(SchemaType type,
                                 const ResultResponse::Ptr& result,
                                 const String& keyspace_name,
@@ -320,7 +396,7 @@ private:
                               const String& keyspace_name,
                               const String& target_name);
 
-  virtual void on_up(const Address& address, const Host::Ptr& refreshed);
+  virtual void on_up(const Address& address);
   virtual void on_down(const Address& address);
 
   virtual void on_add(const Host::Ptr& host);
@@ -331,7 +407,7 @@ private:
 private:
   ControlConnection::Ptr connection_;
   ControlConnector::Ptr reconnector_;
-  ClusterListener* const listener_;
+  ClusterListener* listener_;
   EventLoop* const event_loop_;
   const LoadBalancingPolicy::Ptr load_balancing_policy_;
   LoadBalancingPolicy::Vec load_balancing_policies_;
@@ -344,6 +420,8 @@ private:
   PreparedMetadata prepared_metadata_;
   TokenMap::Ptr token_map_;
   Timer timer_;
+  bool is_recording_events_;
+  ClusterEvent::Vec recorded_events_;
 };
 
 } // namespace cass

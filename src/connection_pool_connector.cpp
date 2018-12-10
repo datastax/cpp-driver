@@ -60,7 +60,8 @@ void ConnectionPoolConnector::connect(uv_loop_t*  loop) {
   remaining_ = settings_.num_connections_per_host;
   for (size_t i = 0; i < settings_.num_connections_per_host; ++i) {
     Connector::Ptr connector(
-          Memory::allocate<Connector>(address_, protocol_version_,
+          Memory::allocate<Connector>(address_,
+                                      protocol_version_,
                                       bind_callback(&ConnectionPoolConnector::on_connect, this)));
     pending_connections_.push_back(connector);
     connector
@@ -162,7 +163,7 @@ void ConnectionPoolConnector::on_connect(Connector* connector) {
     if (pool_) {
       // If the callback doesn't take possession of the pool then we should
       // also clear the listener.
-      pool_->set_listener(NULL);
+      pool_->set_listener();
       pool_->close();
     }
     dec_ref();

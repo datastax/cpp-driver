@@ -24,6 +24,9 @@
 #endif
 
 using namespace cass;
+using mockssandra::SchemaChangeEvent;
+using mockssandra::StatusChangeEvent;
+using mockssandra::TopologyChangeEvent;
 
 struct RecordedEvent {
   enum Type {
@@ -120,13 +123,9 @@ protected:
     events_.push_back(event);
   }
 
-  virtual void on_up(const Address& address, const Host::Ptr& refreshed) {
+  virtual void on_up(const Address& address) {
     RecordedEvent event(RecordedEvent::NODE_UP);
-    if (refreshed) {
-      event.host = refreshed;
-    } else {
-      event.host.reset(Memory::allocate<Host>(address));
-    }
+    event.host.reset(Memory::allocate<Host>(address));
     events_.push_back(event);
   }
 
@@ -181,8 +180,8 @@ public:
       : remaining_(0)
       , cluster_(cluster) { }
 
-    void add_event(mockssandra::Event* event) {
-      events_.push_back(mockssandra::Event::Ptr(event));
+    void add_event(const mockssandra::Event::Ptr& event) {
+      events_.push_back(event);
     }
 
     void trigger_events(const ControlConnection::Ptr& connection) {
@@ -211,8 +210,8 @@ public:
       if (--remaining_ <= 0) connection_->close();
     }
 
-    virtual void on_up(const Address& address, const Host::Ptr& refreshed) {
-      RecordingControlConnectionListener::on_up(address, refreshed);
+    virtual void on_up(const Address& address) {
+      RecordingControlConnectionListener::on_up(address);
       if (--remaining_ <= 0) connection_->close();
     }
 
@@ -353,11 +352,8 @@ TEST_F(ControlConnectionUnitTest, StatusChangeEvents) {
 
   EventListener listener(&cluster);
 
-  listener.add_event(Memory::allocate<mockssandra::StatusChangeEvent>(
-                       mockssandra::StatusChangeEvent::UP, address));
-
-  listener.add_event(Memory::allocate<mockssandra::StatusChangeEvent>(
-                       mockssandra::StatusChangeEvent::DOWN, address));
+  listener.add_event(StatusChangeEvent::up(address));
+  listener.add_event(StatusChangeEvent::down(address));
 
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(address,
                                                                      PROTOCOL_VERSION,
@@ -388,11 +384,8 @@ TEST_F(ControlConnectionUnitTest, TopologyChangeEvents) {
 
   EventListener listener(&cluster);
 
-  listener.add_event(Memory::allocate<mockssandra::TopologyChangeEvent>(
-                       mockssandra::TopologyChangeEvent::NEW_NODE, address2));
-
-  listener.add_event(Memory::allocate<mockssandra::TopologyChangeEvent>(
-                       mockssandra::TopologyChangeEvent::REMOVED_NODE, address2));
+  listener.add_event(TopologyChangeEvent::new_node(address2));
+  listener.add_event(TopologyChangeEvent::removed_node(address2));
 
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(address1,
                                                                      PROTOCOL_VERSION,
@@ -425,45 +418,24 @@ TEST_F(ControlConnectionUnitTest, SchemaChangeEvents) {
 
   EventListener listener(&cluster);
 
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::KEYSPACE,
-                       mockssandra::SchemaChangeEvent::UPDATED, "keyspace1"));
+  listener.add_event(SchemaChangeEvent::keyspace(SchemaChangeEvent::UPDATED, "keyspace1"));
+  listener.add_event(SchemaChangeEvent::keyspace(SchemaChangeEvent::DROPPED, "keyspace1"));
 
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::KEYSPACE,
-                       mockssandra::SchemaChangeEvent::DROPPED, "keyspace1"));
+  listener.add_event(SchemaChangeEvent::table(SchemaChangeEvent::UPDATED, "keyspace1", "table1"));
+  listener.add_event(SchemaChangeEvent::table(SchemaChangeEvent::DROPPED, "keyspace1", "table1"));
 
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::TABLE,
-                       mockssandra::SchemaChangeEvent::UPDATED, "keyspace1", "table1"));
+  listener.add_event(SchemaChangeEvent::user_type(SchemaChangeEvent::UPDATED, "keyspace1", "type1"));
+  listener.add_event(SchemaChangeEvent::user_type(SchemaChangeEvent::DROPPED, "keyspace1", "type1"));
 
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::TABLE,
-                       mockssandra::SchemaChangeEvent::DROPPED, "keyspace1", "table1"));
+  listener.add_event(SchemaChangeEvent::function(SchemaChangeEvent::UPDATED, "keyspace1",
+                                                 "function1", Vector<String>(1, "int")));
+  listener.add_event(SchemaChangeEvent::function(SchemaChangeEvent::DROPPED, "keyspace1",
+                                                 "function1", Vector<String>(1, "int")));
 
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::USER_TYPE,
-                       mockssandra::SchemaChangeEvent::UPDATED, "keyspace1", "type1"));
-
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::USER_TYPE,
-                       mockssandra::SchemaChangeEvent::DROPPED, "keyspace1", "type1"));
-
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::FUNCTION,
-                       mockssandra::SchemaChangeEvent::UPDATED, "keyspace1", "function1", Vector<String>(1, "int")));
-
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::FUNCTION,
-                       mockssandra::SchemaChangeEvent::DROPPED, "keyspace1", "function1", Vector<String>(1, "int")));
-
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::AGGREGATE,
-                       mockssandra::SchemaChangeEvent::UPDATED, "keyspace1", "aggregate1", Vector<String>(1, "varchar")));
-
-  listener.add_event(Memory::allocate<mockssandra::SchemaChangeEvent>(
-                       mockssandra::SchemaChangeEvent::AGGREGATE,
-                       mockssandra::SchemaChangeEvent::DROPPED, "keyspace1", "aggregate1", Vector<String>(1, "varchar")));
+  listener.add_event(SchemaChangeEvent::aggregate(SchemaChangeEvent::UPDATED, "keyspace1",
+                                                  "aggregate1", Vector<String>(1, "varchar")));
+  listener.add_event(SchemaChangeEvent::aggregate(SchemaChangeEvent::DROPPED, "keyspace1",
+                                                  "aggregate1", Vector<String>(1, "varchar")));
 
   ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(address,
                                                                      PROTOCOL_VERSION,

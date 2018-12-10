@@ -72,7 +72,6 @@ void on_log(const CassLogMessage* message, void* data) {
 int main(int argc, char* argv[]) {
   CassCluster* cluster = NULL;
   CassSession* session = NULL;
-  CassFuture* close_future = NULL;
   char* hosts = "127.0.0.1";
 
   FILE* log_file = fopen("driver.log", "w+");
@@ -95,10 +94,6 @@ int main(int argc, char* argv[]) {
     cass_session_free(session);
     return -1;
   }
-
-  close_future = cass_session_close(session);
-  cass_future_wait(close_future);
-  cass_future_free(close_future);
 
   cass_cluster_free(cluster);
   cass_session_free(session);

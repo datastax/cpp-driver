@@ -65,7 +65,7 @@ int32_t RequestCallback::encode(BufferVec* bufs) {
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
-  int flags = 0;
+  int flags = req->flags();
   int32_t length = 0;
 
   if (version.is_beta()) {
@@ -217,9 +217,7 @@ ChainedRequestCallback::ChainedRequestCallback(const String& key, const String& 
   , chain_(chain)
   , has_pending_(false)
   , has_error_or_timeout_(false)
-  , key_(key) {
-  responses_.set_empty_key(String());
-}
+  , key_(key) { }
 
 ChainedRequestCallback::ChainedRequestCallback(const String& key, const Request::ConstPtr& request, const Ptr& chain)
   : SimpleRequestCallback(request)
@@ -300,8 +298,14 @@ bool ChainedRequestCallback::is_finished() const {
 void ChainedRequestCallback::maybe_finish() {
   if (is_finished()) {
     if (response_->opcode() == CQL_OPCODE_ERROR) {
-      LOG_ERROR("Chained error response %s",
-                static_cast<const ErrorResponse*>(response_.get())->error_message().c_str());
+      if (request()->opcode() == CQL_OPCODE_QUERY) {
+        LOG_ERROR("Chained error response %s for query \"%s\"",
+                  static_cast<const ErrorResponse*>(response_.get())->error_message().c_str(),
+                  static_cast<const QueryRequest*>(request())->query().c_str());
+      } else {
+        LOG_ERROR("Chained error response %s",
+                  static_cast<const ErrorResponse*>(response_.get())->error_message().c_str());
+      }
     }
     responses_[key_] = response_;
     if (chain_) {

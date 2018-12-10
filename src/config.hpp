@@ -46,6 +46,9 @@ public:
       , connect_timeout_ms_(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
       , resolve_timeout_ms_(CASS_DEFAULT_RESOLVE_TIMEOUT_MS)
       , max_schema_wait_time_ms_(CASS_DEFAULT_MAX_SCHEMA_WAIT_TIME_MS)
+      , max_tracing_wait_time_ms_(CASS_DEFAULT_MAX_TRACING_DATA_WAIT_TIME_MS)
+      , retry_tracing_wait_time_ms_(CASS_DEFAULT_RETRY_TRACING_DATA_WAIT_TIME_MS)
+      , tracing_consistency_(CASS_DEFAULT_TRACING_CONSISTENCY)
       , coalesce_delay_us_(CASS_DEFAULT_COALESCE_DELAY)
       , new_request_ratio_(CASS_DEFAULT_NEW_REQUEST_RATIO)
       , log_level_(CASS_DEFAULT_LOG_LEVEL)
@@ -57,14 +60,15 @@ public:
       , tcp_keepalive_delay_secs_(CASS_DEFAULT_TCP_KEEPALIVE_DELAY_SECS)
       , connection_idle_timeout_secs_(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
       , connection_heartbeat_interval_secs_(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
-      , timestamp_gen_(Memory::allocate<ServerSideTimestampGenerator>())
+      , timestamp_gen_(Memory::allocate<MonotonicTimestampGenerator>())
       , use_schema_(CASS_DEFAULT_USE_SCHEMA)
       , use_hostname_resolution_(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
       , use_randomized_contact_points_(CASS_DEFAULT_USE_RANDOMIZED_CONTACT_POINTS)
       , max_reusable_write_objects_(CASS_DEFAULT_MAX_REUSABLE_WRITE_OBJECTS)
       , prepare_on_all_hosts_(CASS_DEFAULT_PREPARE_ON_ALL_HOSTS)
       , prepare_on_up_or_add_host_(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
-      , no_compact_(CASS_DEFAULT_NO_COMPACT) {
+      , no_compact_(CASS_DEFAULT_NO_COMPACT)
+      , host_listener_(Memory::allocate<DefaultHostListener>()) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
@@ -129,6 +133,24 @@ public:
 
   void set_max_schema_wait_time_ms(unsigned time_ms) {
     max_schema_wait_time_ms_ = time_ms;
+  }
+
+  unsigned max_tracing_wait_time_ms() const { return max_tracing_wait_time_ms_; }
+
+  void set_max_tracing_wait_time_ms(unsigned time_ms) {
+    max_tracing_wait_time_ms_ = time_ms;
+  }
+
+  unsigned retry_tracing_wait_time_ms() const { return retry_tracing_wait_time_ms_; }
+
+  void set_retry_tracing_wait_time_ms(unsigned time_ms) {
+    retry_tracing_wait_time_ms_ = time_ms;
+  }
+
+  CassConsistency tracing_consistency() const { return tracing_consistency_; }
+
+  void set_tracing_consistency(CassConsistency consistency) {
+    tracing_consistency_ = consistency;
   }
 
   uint64_t coalesce_delay_us() const { return coalesce_delay_us_; }
@@ -364,6 +386,28 @@ public:
     no_compact_ = enabled;
   }
 
+  const String& application_name() const { return application_name_; }
+
+  void set_application_name(const String& application_name) {
+    application_name_ = application_name;
+  }
+
+  const String& application_version() const { return application_version_; }
+
+  void set_application_version(const String& application_version) {
+    application_version_ = application_version;
+  }
+
+  const DefaultHostListener::Ptr& host_listener() const { return host_listener_; }
+  
+  void set_host_listener(const DefaultHostListener::Ptr& listener) {
+    if (listener) {
+      host_listener_ = listener;
+    } else {
+      host_listener_.reset(Memory::allocate<DefaultHostListener>());
+    }
+  }
+
 private:
   void init_profiles();
 
@@ -379,6 +423,9 @@ private:
   unsigned connect_timeout_ms_;
   unsigned resolve_timeout_ms_;
   unsigned max_schema_wait_time_ms_;
+  unsigned max_tracing_wait_time_ms_;
+  unsigned retry_tracing_wait_time_ms_;
+  CassConsistency tracing_consistency_;
   uint64_t coalesce_delay_us_;
   int new_request_ratio_;
   CassLogLevel log_level_;
@@ -402,6 +449,9 @@ private:
   bool prepare_on_up_or_add_host_;
   Address local_address_;
   bool no_compact_;
+  String application_name_;
+  String application_version_;
+  DefaultHostListener::Ptr host_listener_;
 };
 
 } // namespace cass

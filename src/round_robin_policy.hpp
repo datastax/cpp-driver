@@ -27,9 +27,8 @@ namespace cass {
 
 class RoundRobinPolicy : public LoadBalancingPolicy {
 public:
-  RoundRobinPolicy()
-    : hosts_(Memory::allocate<HostVec>())
-    , index_(0) { }
+  RoundRobinPolicy();
+  ~RoundRobinPolicy();
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
 
@@ -39,28 +38,37 @@ public:
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
-  virtual void on_add(const Host::Ptr& host);
-  virtual void on_remove(const Host::Ptr& host);
-  virtual void on_up(const Host::Ptr& host);
-  virtual void on_down(const Host::Ptr& host);
+  virtual bool is_host_up(const Address& address) const;
+
+  virtual void on_host_added(const Host::Ptr& host);
+  virtual void on_host_removed(const Host::Ptr& host);
+  virtual void on_host_up(const Host::Ptr& host);
+  virtual void on_host_down(const Address& address);
 
   virtual LoadBalancingPolicy* new_instance() { return Memory::allocate<RoundRobinPolicy>(); }
 
 private:
   class RoundRobinQueryPlan : public QueryPlan {
   public:
-    RoundRobinQueryPlan(const CopyOnWriteHostVec& hosts, size_t start_index)
-      : hosts_(hosts)
+    RoundRobinQueryPlan(const RoundRobinPolicy* policy,
+                        const CopyOnWriteHostVec& hosts,
+                        size_t start_index)
+      : policy_(policy)
+      , hosts_(hosts)
       , index_(start_index)
       , remaining_(hosts->size()) { }
 
     virtual Host::Ptr compute_next();
 
   private:
+    const RoundRobinPolicy* policy_;
     const CopyOnWriteHostVec hosts_;
     size_t index_;
     size_t remaining_;
   };
+
+  mutable uv_rwlock_t available_rwlock_;
+  AddressSet available_;
 
   CopyOnWriteHostVec hosts_;
   size_t index_;

@@ -103,6 +103,10 @@ PooledConnection::Ptr ConnectionPool::find_least_busy() const {
                            connections_.end(), least_busy_comp);
 }
 
+bool ConnectionPool::has_connections() const {
+  return !connections_.empty();
+}
+
 void ConnectionPool::flush() {
   for (DenseHashSet<PooledConnection*>::const_iterator it = to_flush_.begin(),
        end = to_flush_.end(); it != end; ++it) {
@@ -113,6 +117,13 @@ void ConnectionPool::flush() {
 
 void ConnectionPool::close() {
   internal_close();
+}
+
+void ConnectionPool::attempt_immediate_connect() {
+  for (DelayedConnector::Vec::iterator it = pending_connections_.begin(),
+       end = pending_connections_.end(); it != end; ++it) {
+    (*it)->attempt_immediate_connect();
+  }
 }
 
 void ConnectionPool::set_listener(ConnectionPoolListener* listener) {
@@ -220,7 +231,9 @@ void ConnectionPool::internal_close() {
 void ConnectionPool::maybe_closed() {
   // Remove the pool once all current connections and pending connections
   // are terminated.
-  if (close_state_ == CLOSE_STATE_WAITING_FOR_CONNECTIONS && connections_.empty() && pending_connections_.empty()) {
+  if (close_state_ == CLOSE_STATE_WAITING_FOR_CONNECTIONS &&
+      connections_.empty() &&
+      pending_connections_.empty()) {
     close_state_ = CLOSE_STATE_CLOSED;
     // Only mark DOWN if it's UP otherwise we might get multiple DOWN events
     // when connecting the pool.

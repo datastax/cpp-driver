@@ -72,6 +72,12 @@ String opcode_to_string(int opcode) {
   return "";
 }
 
+String to_string(const CassUuid& uuid) {
+  char str[CASS_UUID_STRING_LENGTH];
+  cass_uuid_string(uuid, str);
+  return String(str);
+}
+
 void explode(const String& str, Vector<String>& vec, const char delimiter /* = ',' */) {
   IStringStream stream(str);
   while (!stream.eof()) {

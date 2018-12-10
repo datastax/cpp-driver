@@ -24,8 +24,9 @@
 #include "result_response.hpp"
 #include "supported_response.hpp"
 
-namespace cass {
+#include <cstring>
 
+namespace cass {
 
 /**
  * A dummy invalid protocol error response that's used to handle responses
@@ -41,6 +42,19 @@ public:
     return true; //  Ignore decoding the body
   }
 };
+
+Response::Response(uint8_t opcode)
+  : opcode_(opcode) {
+  memset(&tracing_id_, 0, sizeof(CassUuid));
+}
+
+bool Response::has_tracing_id() const {
+  return tracing_id_.time_and_version != 0;
+}
+
+bool Response::decode_trace_id(Decoder& decoder) {
+  return decoder.decode_uuid(&tracing_id_);
+}
 
 bool Response::decode_custom_payload(Decoder& decoder) {
   return decoder.decode_custom_payload(custom_payload_);
@@ -166,6 +180,10 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->data() + length_);
     Decoder decoder(response_body_->data(), length_, ProtocolVersion(version_));
+
+    if (flags_ & CASS_FLAG_TRACING) {
+      if (!response_body_->decode_trace_id(decoder)) return -1;
+    }
 
     if (flags_ & CASS_FLAG_WARNING) {
       if (!response_body_->decode_warnings(decoder)) return -1;

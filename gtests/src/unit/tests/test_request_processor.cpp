@@ -89,13 +89,25 @@ public:
     typedef SharedRefPtr<CloseListener> Ptr;
 
     CloseListener(const Future::Ptr& close_future = Future::Ptr())
-      : close_future_(close_future) {
+      : close_future_(close_future)
+      , processor_(NULL) {
       inc_ref();
     }
 
     virtual ~CloseListener() { }
 
-    virtual void on_pool_up(const Address& address)  { }
+    virtual void on_connect(RequestProcessor* processor) {
+      processor_ = processor;
+    }
+
+    virtual void on_pool_up(const Address& address)  {
+      // In the absence of a Cluster object the processor must notify itself
+      // that a host is ready.
+      if (processor_) {
+        processor_->notify_host_ready(
+              Host::Ptr(Memory::allocate<Host>(address)));
+      }
+    }
     virtual void on_pool_down(const Address& address) { }
     virtual void on_pool_critical_error(const Address& address,
                                         Connector::ConnectionError code,
@@ -114,6 +126,7 @@ public:
 
   private:
     Future::Ptr close_future_;
+    RequestProcessor* processor_;
   };
 
   class CriticalErrorListener : public RequestProcessorListener {
@@ -338,10 +351,10 @@ TEST_F(RequestProcessorUnitTest, NotifyAddRemoveHost) {
 
   RequestProcessor::Ptr processor(connect_future->processor());
 
-  processor->notify_host_add(to_add_remove);
+  processor->notify_host_added(to_add_remove);
   ASSERT_TRUE(up_future->wait_for(WAIT_FOR_TIME));
 
-  processor->notify_host_remove(to_add_remove);
+  processor->notify_host_removed(to_add_remove);
   ASSERT_TRUE(down_future->wait_for(WAIT_FOR_TIME));
 }
 
@@ -409,7 +422,7 @@ TEST_F(RequestProcessorUnitTest, CloseDuringAddNewHost) {
 
   RequestProcessor::Ptr processor(connect_future->processor());
 
-  processor->notify_host_add(to_add);
+  processor->notify_host_added(to_add);
   processor->close();
 
   ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));

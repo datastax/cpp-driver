@@ -66,6 +66,8 @@ inline size_t next_pow_2(size_t num) {
 
 String opcode_to_string(int opcode);
 
+String to_string(const CassUuid& uuid);
+
 void explode(const String& str, Vector<String>& vec, const char delimiter = ',');
 
 String& trim(String& str);

@@ -151,7 +151,6 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
 int main(int argc, char* argv[]) {
   CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
-  CassFuture* close_future = NULL;
   const CassPrepared* prepared = NULL;
   char* hosts = "127.0.0.1";
 
@@ -183,10 +182,6 @@ int main(int argc, char* argv[]) {
   }
 
   cass_prepared_free(prepared);
-
-  close_future = cass_session_close(session);
-  cass_future_wait(close_future);
-  cass_future_free(close_future);
 
   cass_cluster_free(cluster);
   cass_session_free(session);

@@ -64,7 +64,7 @@ bool Address::from_string(const String& ip, int port, Address* output) {
   }
 }
 
-bool Address::from_inet(const char* data, size_t size, int port, Address* output) {
+bool Address::from_inet(const void* data, size_t size, int port, Address* output) {
 
   if (size == 4) {
     char buf[INET_ADDRSTRLEN];
@@ -78,7 +78,7 @@ bool Address::from_inet(const char* data, size_t size, int port, Address* output
     }
 
     return true;
-  } else {
+  } else if (size == 16) {
     char buf[INET6_ADDRSTRLEN];
     if (uv_inet_ntop(AF_INET6, data, buf, sizeof(buf)) != 0) {
       return false;

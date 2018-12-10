@@ -59,12 +59,6 @@ struct ControlConnectionSettings {
    * events. This is needed for the keyspaces replication strategy.
    */
   bool token_aware_routing;
-
-  /**
-   * If true then the node's information will be refreshed for UP events i.e.
-   * the host object will be fully populated.
-   */
-  bool refresh_node_info_on_up;
 };
 
 /**
@@ -125,10 +119,7 @@ public:
    * @param listener The control connection listener.
    * @return The connector to chain calls.
    */
-  ControlConnector* with_listener(ControlConnectionListener* listener) {
-    listener_ = listener;
-    return this;
-  }
+  ControlConnector* with_listener(ControlConnectionListener* listener);
 
   /**
    * Set the metrics object to use to record metrics for the connection.
@@ -136,10 +127,7 @@ public:
    * @param metrics A metrics object.
    * @return The connector to chain calls.
    */
-  ControlConnector* with_metrics(Metrics* metrics) {
-    metrics_ = metrics;
-    return this;
-  }
+  ControlConnector* with_metrics(Metrics* metrics);
 
   /**
    * Sets the control connection settings as well as the underlying settings
@@ -148,10 +136,7 @@ public:
    * @param settings The settings to be used for the connection process.
    * @return The connector to chain calls.
    */
-  ControlConnector* with_settings(const ControlConnectionSettings& settings) {
-    settings_ = settings;
-    return this;
-  }
+  ControlConnector* with_settings(const ControlConnectionSettings& settings);
 
   /**
    * Start the connection process.
@@ -199,6 +184,10 @@ public:
 public:
   const Address& address() const {
     return connector_->address();
+  }
+
+  const ProtocolVersion protocol_version() const {
+    return connector_->protocol_version();
   }
 
   bool is_ok() const { return error_code_ == CONTROL_CONNECTION_OK; }

@@ -36,8 +36,7 @@ class Response : public RefCounted<Response> {
 public:
   typedef SharedRefPtr<Response> Ptr;
 
-  Response(uint8_t opcode)
-      : opcode_(opcode) { }
+  Response(uint8_t opcode);
 
   virtual ~Response() { }
 
@@ -51,9 +50,15 @@ public:
     buffer_ = RefBuffer::Ptr(RefBuffer::create(size));
   }
 
+  bool has_tracing_id() const;
+
+  const CassUuid& tracing_id() const { return tracing_id_; }
+
   const CustomPayloadVec& custom_payload() const { return custom_payload_; }
 
   const WarningVec& warnings() const { return warnings_; }
+
+  bool decode_trace_id(Decoder& decoder);
 
   bool decode_custom_payload(Decoder& decoder);
 
@@ -64,6 +69,7 @@ public:
 private:
   uint8_t opcode_;
   RefBuffer::Ptr buffer_;
+  CassUuid tracing_id_;
   CustomPayloadVec custom_payload_;
   WarningVec warnings_;
 

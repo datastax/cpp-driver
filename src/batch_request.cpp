@@ -89,6 +89,12 @@ CassError cass_batch_set_custom_payload(CassBatch* batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_tracing(CassBatch* batch,
+                                 cass_bool_t enabled) {
+  batch->set_tracing(enabled == cass_true);
+  return CASS_OK;
+}
+
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;

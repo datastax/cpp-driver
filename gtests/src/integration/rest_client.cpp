@@ -16,6 +16,7 @@
 
 #include "rest_client.hpp"
 #include "test_utils.hpp"
+#include "tlog.hpp"
 
 #include "address.hpp"
 
@@ -69,12 +70,13 @@ const Response RestClient::send_request(const Request& request) {
   tcp.data = &http_request;
   error_code = uv_tcp_init(&loop, &tcp);
   if (error_code != 0) {
-    TEST_LOG_ERROR("Unable to Initialize TCP Request: "
-      << uv_strerror(error_code));
+    TEST_LOG_ERROR("Unable to Initialize TCP Request: " +
+      std::string(uv_strerror(error_code)));
   }
   error_code = uv_tcp_keepalive(&tcp, 1, 60);
   if (error_code != 0) {
-    TEST_LOG_ERROR("Unable to Set TCP KeepAlive: " << uv_strerror(error_code));
+    TEST_LOG_ERROR("Unable to Set TCP KeepAlive: " +
+      std::string(uv_strerror(error_code)));
   }
 
   // Start the request and attach the HTTP request to send to the REST server
@@ -124,7 +126,7 @@ void RestClient::handle_response(uv_stream_t* stream,
   if (buffer_length > 0) {
     // Process the buffer and log it
     std::string server_response = std::string(buffer->base, buffer_length);
-    TEST_LOG_DEBUG(test::Utils::trim(server_response));
+    TEST_LOG(test::Utils::trim(server_response));
 
     // Parse the status code and content of the response
     std::istringstream lines(server_response);
@@ -176,6 +178,6 @@ const std::string RestClient::generate_http_message(const Request& request) {
     << (is_post ? request.content : "");
 
   // Return the HTTP message
-  TEST_LOG_DEBUG("[HTTP Message]: " << message.str());
+  TEST_LOG("[HTTP Message]: " << message.str());
   return message.str();
 }

@@ -24,24 +24,6 @@
 #include "cassandra.h"
 #include "exception.hpp"
 
-// Create simple console logging functions
-#define TEST_PREFIX_LOG std::cout
-#define TEST_PREFIX_MESSAGE "Integration Tests: "
-#define TEST_SUFFIX_LOG std::endl
-#ifdef INTEGRATION_VERBOSE_LOGGING
-# define TEST_LOG(message) TEST_PREFIX_LOG << TEST_PREFIX_MESSAGE << message << TEST_SUFFIX_LOG
-# define TEST_LOG_DEBUG(message) TEST_PREFIX_LOG << TEST_PREFIX_MESSAGE << "DEBUG: " << message << TEST_SUFFIX_LOG
-# define TEST_LOG_WARN(message) TEST_PREFIX_LOG << TEST_PREFIX_MESSAGE << "WARN: " << message << TEST_SUFFIX_LOG
-#else
-# define TEST_LOG_DISABLED do {} while (false)
-# define TEST_LOG(message) TEST_LOG_DISABLED
-# define TEST_LOG_DEBUG(message) TEST_LOG_DISABLED
-# define TEST_LOG_WARN(message) TEST_LOG_DISABLED
-#endif
-#define TEST_LOG_ERROR(message) TEST_PREFIX_LOG << TEST_PREFIX_MESSAGE << "ERROR: " \
-                           << __FILE__ << "(" << __LINE__ << "): " \
-                           << message << TEST_SUFFIX_LOG
-
 #define ARRAY_LEN(array) (sizeof(array) / sizeof(array[0]))
 
 namespace test {

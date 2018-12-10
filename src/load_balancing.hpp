@@ -74,8 +74,7 @@ public:
 };
 
 class LoadBalancingPolicy
-    : public HostListener
-    , public RefCounted<LoadBalancingPolicy> {
+    : public RefCounted<LoadBalancingPolicy> {
 public:
   typedef SharedRefPtr<LoadBalancingPolicy> Ptr;
   typedef Vector<Ptr> Vec;
@@ -92,6 +91,12 @@ public:
 
   virtual CassHostDistance distance(const Host::Ptr& host) const = 0;
 
+  virtual bool is_host_up(const Address& address) const = 0;
+  virtual void on_host_added(const Host::Ptr& host) = 0;
+  virtual void on_host_removed(const Host::Ptr& host) = 0;
+  virtual void on_host_up(const Host::Ptr& host) = 0;
+  virtual void on_host_down(const Address& address) = 0;
+
   virtual QueryPlan* new_query_plan(const String& keyspace,
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map) = 0;
@@ -100,9 +105,9 @@ public:
 };
 
 inline bool is_host_ignored(const LoadBalancingPolicy::Vec& policies,
-  const Host::Ptr& host) {
+                            const Host::Ptr& host) {
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
-    end = policies.end(); it != end; ++it) {
+       end = policies.end(); it != end; ++it) {
     if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
       return false;
     }
@@ -123,13 +128,14 @@ public:
 
   virtual CassHostDistance distance(const Host::Ptr& host) const { return child_policy_->distance(host); }
 
-  virtual void on_add(const Host::Ptr& host) { child_policy_->on_add(host); }
+  virtual bool is_host_up(const Address& address) const {
+    return child_policy_->is_host_up(address);
+  }
 
-  virtual void on_remove(const Host::Ptr& host) { child_policy_->on_remove(host); }
-
-  virtual void on_up(const Host::Ptr& host) { child_policy_->on_up(host); }
-
-  virtual void on_down(const Host::Ptr& host) { child_policy_->on_down(host); }
+  virtual void on_host_added(const Host::Ptr& host) { child_policy_->on_host_added(host); }
+  virtual void on_host_removed(const Host::Ptr& host) { child_policy_->on_host_removed(host); }
+  virtual void on_host_up(const Host::Ptr& host) { child_policy_->on_host_up(host); }
+  virtual void on_host_down(const Address& address) { child_policy_->on_host_down(address); }
 
 protected:
   LoadBalancingPolicy::Ptr child_policy_;

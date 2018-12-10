@@ -22,7 +22,7 @@ if(NOT LIBUV_INSTALL_PREFIX)
 endif()
 option(LIBUV_VERSION "libuv version to build and install")
 if(NOT LIBUV_VERSION)
-  set(LIBUV_VERSION "1.23.0")
+  set(LIBUV_VERSION "1.24.0")
 endif()
 set(LIBUV_VERSION ${LIBUV_VERSION} CACHE STRING "libuv version to build and install" FORCE)
 

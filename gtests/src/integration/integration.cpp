@@ -26,6 +26,8 @@
 #define SIMPLE_KEYSPACE_FORMAT "CREATE KEYSPACE IF NOT EXISTS %s WITH replication = %s"
 #define REPLICATION_STRATEGY "{ 'class': %s }"
 #define SELECT_SERVER_VERSION "SELECT release_version FROM system.local"
+#define LOGGER_MAXIMUM_WAIT_TIME_MS 10000u
+#define LOGGER_WAIT_FOR_NAP_MS 100
 
 // Initialize static variables
 bool Integration::skipped_message_displayed_ = false;
@@ -53,7 +55,7 @@ Integration::Integration()
   , is_ccm_start_node_individually_(false)
   , is_session_requested_(true)
   , is_test_chaotic_(false)
-  , is_beta_protocol_(true)
+  , is_beta_protocol_(Options::is_beta_protocol())
   , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
   , create_keyspace_query_("")
   , start_time_(0ull) {
@@ -145,7 +147,8 @@ void Integration::SetUp() {
       Options::deployment_type(), Options::authentication_type(),
       Options::host(), Options::port(),
       Options::username(), Options::password(),
-      Options::public_key(), Options::private_key());
+      Options::public_key(), Options::private_key(),
+      Options::is_verbose_ccm());
     if (ccm_->create_cluster(data_center_nodes,
                              is_with_vnodes_,
                              is_password_authenticator_,
@@ -432,4 +435,13 @@ void Integration::maybe_shrink_name(std::string& name)
     std::string id = uuid_octets[0] + uuid_octets[3];
     name = name.substr(0, ENTITY_MAXIMUM_LENGTH - id.size()) + id;
   }
+}
+
+bool Integration::wait_for_logger(size_t expected_count) {
+  start_timer();
+  while (elapsed_time() < LOGGER_MAXIMUM_WAIT_TIME_MS
+         && logger_.count() < expected_count) {
+    msleep(LOGGER_WAIT_FOR_NAP_MS);
+  }
+  return logger_.count() >= expected_count;
 }

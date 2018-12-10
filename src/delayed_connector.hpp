@@ -41,10 +41,13 @@ public:
   /**
    * Constructor
    *
+   * @param address The address to connect to.
+   * @param protocol_version The protocol version to use for the connection.
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  DelayedConnector(const Address& address, ProtocolVersion protocol_version,
+  DelayedConnector(const Address& address,
+                   ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**
@@ -78,6 +81,13 @@ public:
    * @param A key to restrict access to the method.
    */
   void delayed_connect(uv_loop_t* loop, uint64_t wait_time_ms);
+
+  /**
+   * Attempt immediate connection if the connector is currently waiting to
+   * connect. If the connection process is canceled or already in-progress this
+   * has no effect.
+   */
+  void attempt_immediate_connect();
 
   /**
    * Cancel the connection process.

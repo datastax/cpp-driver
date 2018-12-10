@@ -55,22 +55,21 @@ public:
    * @param cluster_config A cluster configuration object.
    * @param keyspace The keyspace to connect with. Use the empty string if no
    * keyspace should be used.
-   * @param future The future to set.
+   * @return A future object for monitoring the connection progress.
    */
-  void connect(const Config& config,
-               const String& keyspace,
-               const Future::Ptr& future);
+  Future::Ptr connect(const Config& config,
+                      const String& keyspace = "");
 
   /**
    * Close the session. There are not any failure conditions for closing a
    * session. If the session is already closing/closed the future is simply
    * set without error.
-   *
-   * @param future
+   * @return A future object for monitoring the closing progress.
    */
-  void close(const Future::Ptr& future);
+  Future::Ptr close();
 
 public:
+  CassUuid client_id() const { return client_id_; }
   String connect_keyspace() const { return connect_keyspace_; }
   const Config& config() const { return config_; }
   Cluster::Ptr cluster() const { return cluster_; }
@@ -158,6 +157,7 @@ private:
   String connect_error_message_;
   Future::Ptr connect_future_;
   Future::Ptr close_future_;
+  CassUuid client_id_;
 };
 
 } // namespace cass

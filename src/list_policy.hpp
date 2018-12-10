@@ -38,10 +38,8 @@ public:
                                     RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
-  virtual void on_add(const Host::Ptr& host);
-  virtual void on_remove(const Host::Ptr& host);
-  virtual void on_up(const Host::Ptr& host);
-  virtual void on_down(const Host::Ptr& host);
+  virtual void on_host_added(const Host::Ptr& host);
+  virtual void on_host_removed(const Host::Ptr& host);
 
   virtual ListPolicy* new_instance() = 0;
 

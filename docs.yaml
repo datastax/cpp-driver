@@ -26,10 +26,12 @@ sections:
       EXTRACT_ALL = YES
       INLINE_SOURCES = NO
       ALIASES = cassandra{1}="<b>Requires Cassandra:</b> \1"
-checks:
-  external_links:
-    exclude:
-    - 'https://ci.appveyor.com/api/projects/status/ec0x0vuk59as28r6/branch/master'
+nanoc_config:
+  checks:
+    external_links:
+      exclude:
+        - '^https?://travis-ci.org/*'
+        - '^https?://ci.appveyor.com/*'
 rewrites:
   - http://datastax.github.io/cpp-driver/: /
   - https://datastax.github.io/cpp-driver/: /
@@ -48,6 +50,11 @@ rewrites:
   - http://www.datastax.com/documentation/cassandra/2.0/cassandra/dml/dml_config_consistency_c.html: https://docs.datastax.com/en/cassandra/3.0/cassandra/dml/dmlConfigConsistency.html
   - http://dl.fedoraproject.org/pub/epel/5/: https://archives.fedoraproject.org/pub/archive/epel/5/
   - ^examples/(.*): https://github.com/datastax/cpp-driver/blob/master/examples/\1
+  - http://www.datastax.com/documentation/cql/3.1: https://docs.datastax.com/en/archived/cql/3.1
+  - http://www.datastax.com/documentation/cassandra/2.: https://docs.datastax.com/en/archived/cassandra/2.
+rules:
+  use_path_nav_files_only: true
+
 versions:
   - name: "2.10"
     ref: 2.10.0

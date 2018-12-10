@@ -52,7 +52,7 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 10
+#define CASS_VERSION_MINOR 11
 #define CASS_VERSION_PATCH 0
 #define CASS_VERSION_SUFFIX ""
 
@@ -676,6 +676,7 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_STATE, 32, "Invalid state") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_CUSTOM_PAYLOAD, 33, "No custom payload") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_EXECUTION_PROFILE_INVALID, 34, "Invalid execution profile specified") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_TRACING_ID, 35, "No tracing ID") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -808,7 +809,6 @@ typedef void (*CassFreeFunction)(void* ptr);
  */
 typedef struct CassAuthenticator_ CassAuthenticator;
 
-
 /**
  * A callback used to initiate an authentication exchange.
  *
@@ -868,7 +868,6 @@ typedef void (*CassAuthenticatorSuccessCallback)(CassAuthenticator* auth,
 typedef void (*CassAuthenticatorCleanupCallback)(CassAuthenticator* auth,
                                                  void* data);
 
-
 /**
  * A callback used to cleanup resources.
  *
@@ -885,6 +884,25 @@ typedef struct CassAuthenticatorCallbacks_ {
   CassAuthenticatorSuccessCallback success_callback;
   CassAuthenticatorCleanupCallback cleanup_callback;
 } CassAuthenticatorCallbacks;
+
+typedef enum CassHostListenerEvent_ {
+  CASS_HOST_LISTENER_EVENT_UP,
+  CASS_HOST_LISTENER_EVENT_DOWN,
+  CASS_HOST_LISTENER_EVENT_ADD,
+  CASS_HOST_LISTENER_EVENT_REMOVE
+} CassHostListenerEvent;
+
+/**
+ * A callback used to indicate the host state for a node in the cluster.
+ *
+ * @param[in] event
+ * @param[in] address
+ * @param[in] data
+ * @see cass_cluster_set_host_listener_callback()
+ */
+typedef void(*CassHostListenerCallback)(CassHostListenerEvent event,
+                                        const CassInet address,
+                                        void* data);
 
 /***********************************************************************************
  *
@@ -1665,9 +1683,9 @@ cass_cluster_set_queue_size_io(CassCluster* cluster,
  * @param[in] queue_size
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_queue_size_event(CassCluster* cluster,
-                                                  unsigned queue_size));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_queue_size_event(CassCluster* cluster,
+                                  unsigned queue_size));
 
 /**
  * Sets the number of connections made to each server in each
@@ -1700,9 +1718,9 @@ cass_cluster_set_core_connections_per_host(CassCluster* cluster,
  * @param[in] num_connections
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_max_connections_per_host(CassCluster* cluster,
-                                                          unsigned num_connections));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_max_connections_per_host(CassCluster* cluster,
+                                          unsigned num_connections));
 
 /**
  * Sets the amount of time to wait before attempting to reconnect.
@@ -1772,9 +1790,9 @@ cass_cluster_set_new_request_ratio(CassCluster* cluster,
  * @param[in] num_connections
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
-                                                         unsigned num_connections));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
+                                         unsigned num_connections));
 
 /**
  * Sets the threshold for the maximum number of concurrent requests in-flight
@@ -1792,9 +1810,9 @@ CASS_DEPRECATED(cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
-                                                                   unsigned num_requests));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
+                                                   unsigned num_requests));
 
 /**
  * Sets the maximum number of requests processed by an IO worker
@@ -1811,9 +1829,9 @@ CASS_DEPRECATED(cass_cluster_set_max_concurrent_requests_threshold(CassCluster* 
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
-                                                        unsigned num_requests));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
+                                        unsigned num_requests));
 
 /**
  * Sets the high water mark for the number of bytes outstanding
@@ -1831,9 +1849,9 @@ CASS_DEPRECATED(cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
  * @param[in] num_bytes
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
-                                                             unsigned num_bytes));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
+                                             unsigned num_bytes));
 
 /**
  * Sets the low water mark for number of bytes outstanding on a
@@ -1851,9 +1869,9 @@ CASS_DEPRECATED(cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluste
  * @param[in] num_bytes
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
-                                                            unsigned num_bytes));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
+                                            unsigned num_bytes));
 
 /**
  * Sets the high water mark for the number of requests queued waiting
@@ -1872,9 +1890,9 @@ CASS_DEPRECATED(cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
-                                                                  unsigned num_requests));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
+                                                  unsigned num_requests));
 
 /**
  * Sets the low water mark for the number of requests queued waiting
@@ -1893,9 +1911,9 @@ CASS_DEPRECATED(cass_cluster_set_pending_requests_high_water_mark(CassCluster* c
  * @param[in] num_requests
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
-CASS_DEPRECATED(cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
-                                                                 unsigned num_requests));
+CASS_EXPORT CASS_DEPRECATED(CassError
+cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
+                                                 unsigned num_requests));
 
 /**
  * Sets the timeout for connecting to a node.
@@ -1953,6 +1971,46 @@ cass_cluster_set_resolve_timeout(CassCluster* cluster,
 CASS_EXPORT void
 cass_cluster_set_max_schema_wait_time(CassCluster* cluster,
                                       unsigned wait_time_ms);
+
+
+/**
+ * Sets the maximum time to wait for tracing data to become available.
+ *
+ * <b>Default:</b> 15 milliseconds
+ *
+ * @param[in] cluster
+ * @param[in] max_wait_time_ms
+ */
+CASS_EXPORT void
+cass_cluster_set_tracing_max_wait_time(CassCluster* cluster,
+                                       unsigned max_wait_time_ms);
+
+/**
+ * Sets the amount of time to wait between attempts to check to see if tracing is
+ * available.
+ *
+ * <b>Default:</b> 3 milliseconds
+ *
+ * @param[in] cluster
+ * @param[in] retry_wait_time_ms
+ */
+CASS_EXPORT void
+cass_cluster_set_tracing_retry_wait_time(CassCluster* cluster,
+                                         unsigned retry_wait_time_ms);
+
+/**
+ * Sets the consistency level to use for checking to see if tracing data is
+ * available.
+ *
+ * <b>Default:</b> CASS_CONSISTENCY_ONE
+ *
+ * @param cluster[in]
+ * @param consistency[in]
+ */
+CASS_EXPORT void
+cass_cluster_set_tracing_consistency(CassCluster* cluster,
+                                     CassConsistency consistency);
+
 
 /**
  * Sets credentials for plain text authentication.
@@ -2335,7 +2393,7 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
  * Sets the timestamp generator used to assign timestamps to all requests
  * unless overridden by setting the timestamp on a statement or a batch.
  *
- * <b>Default:</b> server-side timestamp generator.
+ * <b>Default:</b> Monotonically increasing, client-side timestamp generator.
  *
  * @cassandra{2.1+}
  *
@@ -2613,6 +2671,24 @@ cass_cluster_set_prepare_on_up_or_add_host(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_no_compact(CassCluster* cluster,
                             cass_bool_t enabled);
+
+/**
+ * Sets a callback for handling host state changes in the cluster.
+ *
+ * <b>Note:</b> The callback is invoked only when state changes in the cluster
+ * are applicable to the configured load balancing policy(s).
+ *
+ * @public @memberor CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] callback
+ * @param[in] data
+ * @return CASS_OK if successful, otherwise and error occurred
+ */
+CASS_EXPORT CassError
+cass_cluster_set_host_listener_callback(CassCluster* cluster,
+                                        CassHostListenerCallback callback,
+                                        void* data);
 
 /***********************************************************************************
  *
@@ -4635,6 +4711,19 @@ cass_future_error_message(CassFuture* future,
                           size_t* message_length);
 
 /**
+ * Gets the tracing ID associated with the request.
+ *
+ * @public @memberof CassFuture
+ *
+ * @param[in] future
+ * @param[out] tracing_id
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_future_tracing_id(CassFuture* future,
+                       CassUuid* tracing_id);
+
+/**
  * Gets a the number of custom payload items from a response future. If the future is not
  * ready this method will wait for the future to be set.
  *
@@ -4959,6 +5048,111 @@ cass_statement_set_retry_policy(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_set_custom_payload(CassStatement* statement,
                                   const CassCustomPayload* payload);
+
+/**
+ * Sets the execution profile to execute the statement with.
+ *
+ * <b>Note:</b> NULL or empty string will clear execution profile from statement
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_statement_set_execution_profile(CassStatement* statement,
+                                     const char* name);
+
+/**
+ * Same as cass_statement_set_execution_profile(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_statement_set_execution_profile()
+ */
+CASS_EXPORT CassError
+cass_statement_set_execution_profile_n(CassStatement* statement,
+                                       const char* name,
+                                       size_t name_length);
+
+/**
+ * Sets whether the statement should use tracing.
+ *
+ * @cassandra{2.2+}
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] enabled
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_tracing(CassStatement* statement,
+                           cass_bool_t enabled);
+
+/**
+ * Sets a specific host that should run the query.
+ *
+ * In general, this should not be used, but it can be useful in the following
+ * situations:
+ * * To query node-local tables such as system and virtual tables.
+ * * To apply a sequence of schema changes where it makes sense for all the
+ *   changes to be applied on a single node.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] host
+ * @param[in] port
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_host(CassStatement* statement,
+                        const char* host,
+                        int port);
+
+/**
+ * Same as cass_statement_set_host(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] host
+ * @param[in] host_length
+ * @param[in] port
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_host_n(CassStatement* statement,
+                          const char* host,
+                          size_t host_length,
+                          int port);
+
+/**
+ * Same as cass_statement_set_host(), but with the `CassInet` type
+ * for the host instead of a string.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] host
+ * @param[in] port
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_host_inet(CassStatement* statement,
+                             const CassInet* host,
+                             int port);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -6084,41 +6278,6 @@ cass_statement_bind_user_type_by_name_n(CassStatement* statement,
                                         size_t name_length,
                                         const CassUserType* user_type);
 
-/**
- * Sets the execution profile to execute the statement with.
- *
- * <b>Note:</b> NULL or empty string will clear execution profile from statement
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] name
- * @return CASS_OK if successful, otherwise an error occurred.
- *
- * @see cass_cluster_set_execution_profile()
- */
-CASS_EXPORT CassError
-cass_statement_set_execution_profile(CassStatement* statement,
-                                     const char* name);
-
-/**
- * Same as cass_statement_set_execution_profile(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] name
- * @param[in] name_length
- * @return CASS_OK if successful, otherwise an error occurred.
- *
- * @see cass_statement_set_execution_profile()
- */
-CASS_EXPORT CassError
-cass_statement_set_execution_profile_n(CassStatement* statement,
-                                       const char* name,
-                                       size_t name_length);
-
 /***********************************************************************************
  *
  * Prepared
@@ -6393,6 +6552,21 @@ cass_batch_set_retry_policy(CassBatch* batch,
 CASS_EXPORT CassError
 cass_batch_set_custom_payload(CassBatch* batch,
                               const CassCustomPayload* payload);
+
+/**
+ * Sets whether the batch should use tracing.
+ *
+ * @cassandra{2.2+}
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] batch
+ * @param[in] enabled
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_tracing(CassBatch* batch,
+                       cass_bool_t enabled);
 
 /**
  * Adds a statement to a batch.
@@ -6689,8 +6863,8 @@ cass_data_type_sub_type_count(const CassDataType* data_type);
 /**
  * @deprecated Use cass_data_type_sub_type_count()
  */
-CASS_EXPORT size_t
-CASS_DEPRECATED(cass_data_sub_type_count(const CassDataType* data_type));
+CASS_EXPORT CASS_DEPRECATED(size_t
+cass_data_sub_type_count(const CassDataType* data_type));
 
 /**
  * Gets the sub-data type count of a UDT (user defined type), tuple
@@ -10533,7 +10707,7 @@ cass_timestamp_gen_monotonic_new();
  * @param warning_threshold_us The amount of clock skew, in microseconds, that
  * must be detected before a warning is triggered. A threshold less than 0 can
  * be used to disable warnings.
- * @param warning_interval_ms The amount of time, in milliseonds, to wait before
+ * @param warning_interval_ms The amount of time, in milliseconds, to wait before
  * warning again about clock skew. An interval value less than or equal to 0 allows
  * the warning to be triggered every millisecond.
  * @return Returns a timestamp generator that must be freed.
@@ -10609,14 +10783,19 @@ cass_retry_policy_default_new();
  * persisted and a read will succeed if there's some data available even
  * if it increases the risk of reading stale data.
  *
+ * @deprecated This still works, but should not be used in new applications. It
+ * can lead to unexpected behavior when the cluster is in a degraded state.
+ * Instead, applications should prefer using the lowest consistency level on
+ * statements that can be tolerated by a specific use case.
+ *
  * @public @memberof CassRetryPolicy
  *
  * @return Returns a retry policy that must be freed.
  *
  * @see cass_retry_policy_free()
  */
-CASS_EXPORT CassRetryPolicy*
-cass_retry_policy_downgrading_consistency_new();
+CASS_EXPORT CASS_DEPRECATED(CassRetryPolicy*
+cass_retry_policy_downgrading_consistency_new());
 
 /**
  * Creates a new fallthrough retry policy.
@@ -10823,8 +11002,8 @@ cass_error_desc(CassError error);
  * @deprecated This is no longer useful and does nothing. Expect this to be
  * removed in a future release.
  */
-CASS_EXPORT void
-CASS_DEPRECATED(cass_log_cleanup());
+CASS_EXPORT CASS_DEPRECATED(void
+cass_log_cleanup());
 
 /**
  * Sets the log level.
@@ -10868,8 +11047,8 @@ cass_log_set_callback(CassLogCallback callback,
  *
  * @param[in] queue_size
  */
-CASS_EXPORT void
-CASS_DEPRECATED(cass_log_set_queue_size(size_t queue_size));
+CASS_EXPORT CASS_DEPRECATED(void
+cass_log_set_queue_size(size_t queue_size));
 
 /**
  * Gets the string for a log level.

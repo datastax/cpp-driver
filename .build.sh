@@ -21,10 +21,18 @@
 set -e #Fail fast on non-zero exit status
 
 WORKER_INFORMATION=($(echo ${OS_VERSION} | tr "/" " "))
-DISTRO=${WORKER_INFORMATION[0]}
+OS_NAME=${WORKER_INFORMATION[0]}
 RELEASE=${WORKER_INFORMATION[1]}
 SHA=$(echo ${GIT_COMMIT} | cut -c1-7)
-PROCS=$(grep -e '^processor' -c /proc/cpuinfo)
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+if [ "${OS_NAME}" = "osx" ]; then
+  PROCS=$(sysctl -n hw.logicalcpu)
+  . ${SCRIPT_DIR}/.build.osx.sh
+else
+  PROCS=$(grep -e '^processor' -c /proc/cpuinfo)
+  . ${SCRIPT_DIR}/.build.linux.sh
+fi
 
 get_driver_version() {
   local header_file=$1
@@ -50,104 +58,23 @@ get_driver_version() {
   echo "${driver_version}"
 }
 
-configure_environment() {
-  if ! grep -lq "127.254.254.254" /etc/hosts; then
-    printf "\n\n%s\n" "127.254.254.254  cpp-driver.hostname." | sudo tee -a /etc/hosts
-  fi
-  sudo cat /etc/hosts
-}
-
-install_libuv() {
-  (
-    cd packaging
-    git clone --depth 1 https://github.com/datastax/libuv-packaging.git
-
-    (
-      cd libuv-packaging
-      if [ "${DISTRO}" = "ubuntu" ]; then
-        ./build_deb.sh ${LIBUV_VERSION}
-      else
-        ./build_rpm.sh ${LIBUV_VERSION}
-      fi
-    )
-
-    [[ -d packages ]] || mkdir packages
-    find libuv-packaging/build -type f \( -name "*.deb" -o -name "*.rpm" \) -exec mv {} packages \;
-
-    if [ "${DISTRO}" = "ubuntu" ]; then
-      sudo dpkg -i packages/libuv*.deb
-    else
-      sudo rpm -i packages/libuv*.rpm
-    fi
-  )
-}
-
 install_dependencies() {
   install_libuv
+  install_openssl
 }
 
 build_driver() {
   local driver_prefix=$1
 
+  # Ensure build directory is cleaned (static nodes are not cleaned)
+  [[ -d build ]] && rm -rf build
+  mkdir build
+
   (
-    [[ -d build ]] || mkdir build
     cd build
     cmake -DCMAKE_BUILD_TYPE=Release -D${driver_prefix}_BUILD_SHARED=On -D${driver_prefix}_BUILD_STATIC=On -D${driver_prefix}_BUILD_EXAMPLES=On -D${driver_prefix}_BUILD_UNIT_TESTS=On ..
     make -j${PROCS}
   )
-}
-
-install_driver() {
-  (
-    cd packaging
-
-    (
-      if [ "${DISTRO}" = "ubuntu" ]; then
-        ./build_deb.sh
-      else
-        ./build_rpm.sh
-      fi
-    )
-
-    [[ -d packages ]] || mkdir packages
-    find build -type f \( -name "*.deb" -o -name "*.rpm" \) -exec mv {} packages \;
-
-    if [ "${DISTRO}" = "ubuntu" ]; then
-      sudo dpkg -i packages/*cpp-driver*.deb
-    else
-      sudo rpm -i packages/*cpp-driver*.rpm
-    fi
-  )
-}
-
-test_installed_driver() {
-  local driver=$1
-
-  local test_program=$(mktemp)
-  gcc -x c -o ${test_program} - -Wno-implicit-function-declaration -l${driver} - <<EOF
-#include <${driver}.h>
-
-int main(int argc, char* argv[]) {
-  CassFuture* connect_future = NULL;
-  CassCluster* cluster = cass_cluster_new();
-  CassSession* session = cass_session_new();
-
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
-  connect_future = cass_session_connect(session, cluster);
-  cass_future_wait(connect_future);
-  printf("Success");
-  return 0;
-}
-EOF
-
-  if [ $? -ne 0 ] ; then
-    echo "Connection test compilation failed. Marking build as failure."
-    exit 1
-  fi
-  if [ "$($test_program)" != "Success" ] ; then
-    echo "Connection test did not return success. Marking build as failure."
-    exit 1
-  fi
 }
 
 check_driver_exports() {(

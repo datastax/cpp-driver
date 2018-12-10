@@ -1196,6 +1196,7 @@ struct MultipleNodesTest {
     bool is_ssl = false);
 
   bool check_version(const std::string& required);
+  bool is_beta_protocol();
 
   virtual ~MultipleNodesTest();
 

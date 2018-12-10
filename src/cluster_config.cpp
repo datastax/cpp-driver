@@ -220,6 +220,21 @@ void cass_cluster_set_max_schema_wait_time(CassCluster* cluster,
   cluster->config().set_max_schema_wait_time_ms(wait_time_ms);
 }
 
+void cass_cluster_set_tracing_max_wait_time(CassCluster* cluster,
+                                           unsigned wait_time_ms) {
+  cluster->config().set_max_tracing_wait_time_ms(wait_time_ms);
+}
+
+void cass_cluster_set_tracing_retry_wait_time(CassCluster* cluster,
+                                           unsigned wait_time_ms) {
+  cluster->config().set_retry_tracing_wait_time_ms(wait_time_ms);
+}
+
+void cass_cluster_set_tracing_consistency(CassCluster* cluster,
+                                          CassConsistency consistency) {
+  cluster->config().set_tracing_consistency(consistency);
+}
+
 void cass_cluster_set_credentials(CassCluster* cluster,
                                   const char* username,
                                   const char* password) {
@@ -419,7 +434,7 @@ void cass_cluster_set_use_schema(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
-                                              cass_bool_t enabled) {
+                                                   cass_bool_t enabled) {
   cluster->config().set_use_hostname_resolution(enabled == cass_true);
   return CASS_OK;
 }
@@ -464,9 +479,9 @@ CassError cass_cluster_set_execution_profile(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_execution_profile_n(CassCluster* cluster,
-                                             const char* name,
-                                             size_t name_length,
-                                             CassExecProfile* profile) {
+                                              const char* name,
+                                              size_t name_length,
+                                              CassExecProfile* profile) {
   if (name_length == 0 || !profile) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
@@ -488,13 +503,13 @@ CassError cass_cluster_set_prepare_on_up_or_add_host(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_local_address(CassCluster* cluster,
-                                                     const char* name) {
+                                         const char* name) {
   return cass_cluster_set_local_address_n(cluster, name, SAFE_STRLEN(name));
 }
 
 CassError cass_cluster_set_local_address_n(CassCluster* cluster,
-                                                     const char* name,
-                                                     size_t name_length) {
+                                           const char* name,
+                                           size_t name_length) {
   cass::Address address;  // default to AF_UNSPEC
   if (name_length == 0 ||
       name == NULL ||
@@ -509,6 +524,15 @@ CassError cass_cluster_set_local_address_n(CassCluster* cluster,
 CassError cass_cluster_set_no_compact(CassCluster* cluster,
                                       cass_bool_t enabled) {
   cluster->config().set_no_compact(enabled == cass_true);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_host_listener_callback(CassCluster* cluster,
+                                                  CassHostListenerCallback callback,
+                                                  void* data) {
+  cluster->config().set_host_listener(
+      cass::DefaultHostListener::Ptr(
+        cass::Memory::allocate<cass::ExternalHostListener>(callback, data)));
   return CASS_OK;
 }
 

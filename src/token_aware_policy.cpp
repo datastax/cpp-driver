@@ -94,7 +94,8 @@ Host::Ptr TokenAwarePolicy::TokenAwareQueryPlan::compute_next()  {
   while (remaining_ > 0) {
     --remaining_;
     const Host::Ptr& host((*replicas_)[index_++ % replicas_->size()]);
-    if (host->is_up() && child_policy_->distance(host) == CASS_HOST_DISTANCE_LOCAL) {
+    if (child_policy_->is_host_up(host->address()) &&
+        child_policy_->distance(host) == CASS_HOST_DISTANCE_LOCAL) {
       return host;
     }
   }
