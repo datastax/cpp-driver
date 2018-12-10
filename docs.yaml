@@ -22,7 +22,8 @@ sections:
                 'cpp-driver/topics/basics/**/*.md',
                 'cpp-driver/topics/configuration/**/*.md',
                 'cpp-driver/topics/logging/**/*.md',
-                'cpp-driver/topics/metics/**/*.md',
+                'cpp-driver/topics/metrics/**/*.md',
+                'cpp-driver/topics/tracing/**/*.md',
                 'cpp-driver/topics/security/**/*.md']
   - title:     DSE Features
     prefix:    /dse_features
