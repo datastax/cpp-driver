@@ -246,7 +246,8 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1,
   cass_cluster_set_max_concurrent_creation(cluster, 8);
   if (version.major_version >= 3 && version.minor_version >= 10 &&
       protocol_version == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
-    cass_cluster_set_use_beta_protocol_version(cluster, cass_true);
+    cass_cluster_set_use_beta_protocol_version(cluster,
+                                               is_beta_protocol() ? cass_true : cass_false);
   } else {
     cass_cluster_set_protocol_version(cluster, protocol_version);
   }
@@ -257,6 +258,16 @@ bool MultipleNodesTest::check_version(const std::string& required) {
   if (version >= required) return true;
   BOOST_TEST_MESSAGE("Cassandra version " << required << " required for this test");
   return false;
+}
+
+bool MultipleNodesTest::is_beta_protocol() {
+  std::string value;
+  char* temp = getenv("BETA_PROTOCOL");
+  if (temp) {
+    value.assign(temp);
+    std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+  }
+  return !value.empty() && value != "0" && value != "false";
 }
 
 MultipleNodesTest::~MultipleNodesTest() {

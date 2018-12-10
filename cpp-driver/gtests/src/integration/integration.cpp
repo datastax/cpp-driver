@@ -55,7 +55,7 @@ Integration::Integration()
   , is_ccm_start_node_individually_(false)
   , is_session_requested_(true)
   , is_test_chaotic_(false)
-  , is_beta_protocol_(true)
+  , is_beta_protocol_(Options::is_beta_protocol())
   , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
   , create_keyspace_query_("")
   , start_time_(0ull) {

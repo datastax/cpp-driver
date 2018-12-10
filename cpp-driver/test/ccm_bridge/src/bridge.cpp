@@ -92,7 +92,7 @@
 #define CCM_CONFIGURATION_KEY_USE_INSTALL_DIR "use_install_dir"
 #define CCM_CONFIGURATION_KEY_INSTALL_DIR "install_dir"
 #define CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE "deployment_type"
-#define CCM_CONFIGURATION_VERBOSE "verbose"
+#define CCM_CONFIGURATION_KEY_VERBOSE "verbose"
 #define CCM_CONFIGURATION_KEY_USE_DSE "use_dse"
 #define CCM_CONFIGURATION_KEY_DSE_VERSION "dse_version"
 #define CCM_CONFIGURATION_KEY_DSE_CREDENTIALS_TYPE "dse_credentials_type"
@@ -355,14 +355,14 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
           } else if (key.compare(CCM_CONFIGURATION_KEY_SSH_PRIVATE_KEY) == 0) {
             private_key = value;
 #endif
-          } else if (key.compare(CCM_CONFIGURATION_VERBOSE) == 0) {
+          } else if (key.compare(CCM_CONFIGURATION_KEY_VERBOSE) == 0) {
             //Convert the value
             std::stringstream ss(value);
             if (!(ss >> std::boolalpha >> is_verbose_).fail()) {
               continue;
             } else {
               LOG_ERROR("Invalid flag \"" << value << "\" for "
-                        << CCM_CONFIGURATION_VERBOSE << "; defaulting to \""
+                        << CCM_CONFIGURATION_KEY_VERBOSE << "; defaulting to \""
                         << (DEFAULT_IS_VERBOSE ? "true" : "false") << "\"");
               is_verbose_ = DEFAULT_IS_VERBOSE;
             }
@@ -586,7 +586,6 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
         } else {
           create_command.push_back(dse_version_.to_string());
         }
-        create_command.push_back("--dse");
         if (dse_credentials_type_ == DseCredentialsType::USERNAME_PASSWORD) {
           create_command.push_back("--dse-username=" + dse_username_);
           create_command.push_back("--dse-password=" + dse_password_);
@@ -602,6 +601,9 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
           create_command.push_back(cassandra_version_.to_string());
         }
       }
+    }
+    if (use_dse_) {
+      create_command.push_back("--dse");
     }
     create_command.push_back("-b");
 

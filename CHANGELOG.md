@@ -1,3 +1,29 @@
+1.7.0
+===========
+
+Features
+--------
+* [CPP-108] Add tracing support
+* [CPP-402] Add support for host event callback
+* [CPP-524] Add client configuration information to STARTUP message
+* [CPP-597] Provide a means of sending query to a specific node to facilitate virtual table queries
+
+Bug Fixes
+--------
+* [CPP-632] It's possible for RequestProcessor to miss add/remove event during initialization
+* [CPP-701] Don't use Host::is_up() flag inside of load balancing policies
+* [CPP-711] Memory leak in `WaitForHandler`/`SchemaChangeHandler` (reference cycle)
+
+Other
+--------
+* [CPP-183] Concurrent Control Connection Establishment
+* [CPP-405] Namespace rapidjson to avoid conflicts with other rapidjson usages
+* [CPP-413] Enable Client Timestamps by Default
+* [CPP-510] Try all contact points until one succeeds
+* [CPP-585] Deprecate DowngradingConsistencyRetryPolicy
+* [CPP-686] Pull in the latest rapidjson changes from master
+* [CPP-688] Use plugin architecture for protocol version handling
+
 1.6.0
 ===========
 

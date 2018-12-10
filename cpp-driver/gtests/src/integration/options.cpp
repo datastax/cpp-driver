@@ -48,6 +48,7 @@ std::string Options::public_key_ = "public.key";
 std::string Options::private_key_ = "private.key";
 bool Options::is_verbose_ccm_ = false;
 bool Options::is_verbose_integration_ = false;
+bool Options::is_beta_protocol_ = true;
 
 // Static initialization is not guaranteed for the following types
 CCM::DseCredentialsType Options::dse_credentials_type_;
@@ -181,6 +182,8 @@ bool Options::initialize(int argc, char* argv[]) {
           is_verbose_ccm_ = true;
           is_verbose_integration_ = true;
         }
+      } else if (key == "--disable-beta-protocol") {
+        is_beta_protocol_ = false;
       }
 #ifdef CASS_USE_LIBSSH2
       else if (key == "--authentication") {
@@ -355,6 +358,9 @@ void Options::print_help() {
     << std::endl;
   std::cout << "  --verbose(=ccm,integration)" << std::endl << "      "
     << "Enable verbose output for component(s)." << std::endl;
+  std::cout << "  --disable-beta-protocol" << std::endl << "      "
+    << "Disable beta protocol use by default." << std::endl << "      "
+    << "NOTE: Individual tests may override this setting." << std::endl;
   std::cout << std::endl;
 }
 
@@ -531,6 +537,10 @@ bool Options::is_verbose_ccm() {
 
 bool Options::is_verbose_integration() {
   return is_verbose_integration_;
+}
+
+bool Options::is_beta_protocol() {
+  return is_beta_protocol_;
 }
 
 Options::Options() {
