@@ -45,6 +45,9 @@ package:
   include: # list of files and glob paths to include in the artifact, relative to the current working directory
     - packaging/packages/*
 release:
+  matrix:
+    exclude:
+      - os: [ osx/high-sierra ]
   after:
     each:
       - script: |
