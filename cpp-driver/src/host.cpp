@@ -111,11 +111,10 @@ void Host::set(const Row* row, bool use_tokens) {
     String dse_version_str;
     row->get_string_by_name("dse_version", &dse_version_str);
 
-    VersionNumber dse_version;
-    if (dse_version.parse(dse_version_str)) {
+    if (dse_server_version_.parse(dse_version_str)) {
       // Versions before DSE 6.7 erroneously return they support Cassandra 4.0.0
       // features even though they don't.
-      if (dse_version < VersionNumber(6, 7, 0)) {
+      if (dse_server_version_ < VersionNumber(6, 7, 0)) {
         server_version_ = VersionNumber(3, 11, 0);
       }
     } else {

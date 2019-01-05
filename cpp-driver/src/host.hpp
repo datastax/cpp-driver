@@ -102,7 +102,8 @@ public:
       : address_(address)
       , rack_id_(0)
       , dc_id_(0)
-      , address_string_(address.to_string()) { }
+      , address_string_(address.to_string())
+      , inflight_request_count_(0) { }
 
   const Address& address() const { return address_; }
   const String& address_string() const { return address_string_; }
@@ -135,6 +136,10 @@ public:
     return server_version_;
   }
 
+  const VersionNumber& dse_server_version() const {
+    return dse_server_version_;
+  }
+
   String to_string() const {
     OStringStream ss;
     ss << address_string_;
@@ -162,6 +167,18 @@ public:
       return latency_tracker_->get();
     }
     return TimestampedAverage();
+  }
+
+  void increment_inflight_requests() {
+    inflight_request_count_.fetch_add(1, MEMORY_ORDER_RELAXED);
+  }
+
+  void decrement_inflight_requests() {
+    inflight_request_count_.fetch_sub(1, MEMORY_ORDER_RELAXED);
+  }
+
+  int32_t inflight_request_count() const {
+    return inflight_request_count_.load(MEMORY_ORDER_RELAXED);
   }
 
 private:
@@ -193,10 +210,12 @@ private:
   uint32_t dc_id_;
   String address_string_;
   VersionNumber server_version_;
+  VersionNumber dse_server_version_;
   String rack_;
   String dc_;
   String partitioner_;
   Vector<String> tokens_;
+  Atomic<int32_t> inflight_request_count_;
 
   ScopedPtr<LatencyTracker> latency_tracker_;
 

@@ -240,6 +240,7 @@ private:
   Connection::Ptr connection_;
   ControlConnection::Ptr control_connection_;
   VersionNumber server_version_;
+  VersionNumber dse_server_version_;
   HostMap hosts_;
 
   /**

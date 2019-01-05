@@ -69,7 +69,8 @@ public:
       , prepare_on_up_or_add_host_(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
       , no_compact_(CASS_DEFAULT_NO_COMPACT)
       , is_client_id_set_(false)
-      , host_listener_(new DefaultHostListener()) {
+      , host_listener_(new DefaultHostListener())
+      , monitor_reporting_interval_secs_(CASS_DEFAULT_CLIENT_MONITOR_EVENTS_INTERVAL_SECS) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
@@ -90,10 +91,12 @@ public:
     return config;
   }
 
+  CassConsistency consistency() { return default_profile_.consistency(); }
   void set_consistency(CassConsistency consistency) {
     default_profile_.set_consistency(consistency);
   }
 
+  CassConsistency serial_consistency() { return default_profile_.serial_consistency(); }
   void set_serial_consistency(CassConsistency serial_consistency) {
     default_profile_.set_serial_consistency(serial_consistency);
   }
@@ -166,6 +169,7 @@ public:
     new_request_ratio_ = ratio;
   }
 
+  unsigned request_timeout() { return default_profile_.request_timeout_ms(); }
   void set_request_timeout(unsigned timeout_ms) {
     default_profile_.set_request_timeout(timeout_ms);
   }
@@ -417,6 +421,11 @@ public:
     }
   }
 
+  unsigned monitor_reporting_interval_secs() const { return monitor_reporting_interval_secs_; }
+  void set_monitor_reporting_interval_secs(unsigned interval_secs) {
+    monitor_reporting_interval_secs_ = interval_secs;
+  };
+
 private:
   void init_profiles();
 
@@ -463,6 +472,7 @@ private:
   bool is_client_id_set_;
   CassUuid client_id_;
   DefaultHostListener::Ptr host_listener_;
+  unsigned monitor_reporting_interval_secs_;
 };
 
 } // namespace cass

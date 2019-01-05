@@ -198,7 +198,8 @@ protected:
     }
 
     // Create the user type from the data type
-    Object::set(cass_user_type_new_from_data_type(data_type));
+    Object<CassUserType, cass_user_type_free>::set(
+      cass_user_type_new_from_data_type(data_type));
   }
 };
 

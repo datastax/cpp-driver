@@ -210,6 +210,7 @@ public:
   ProtocolVersion protocol_version() const { return protocol_version_; }
   const String& keyspace() { return keyspace_; }
   uv_loop_t* loop() { return socket_->loop(); }
+  const uv_tcp_t* handle() const { return socket_->handle(); }
 
   int inflight_request_count() const {
     return inflight_request_count_.load(MEMORY_ORDER_RELAXED);

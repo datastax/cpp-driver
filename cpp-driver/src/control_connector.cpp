@@ -171,6 +171,7 @@ void ControlConnector::on_success() {
                               settings_.use_schema,
                               settings_.token_aware_routing,
                               server_version_,
+                              dse_server_version_,
                               listen_addresses_));
 
   control_connection_->set_listener(listener_);
@@ -238,6 +239,7 @@ void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callbac
     host->set(&local_result->first_row(), settings_.token_aware_routing);
     hosts_[host->address()] = host;
     server_version_ = host->server_version();
+    dse_server_version_ = host->dse_server_version();
   } else {
     on_error(CONTROL_CONNECTION_ERROR_HOSTS,
              "No row found in " + connection_->address_string() + "'s local system table");

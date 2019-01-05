@@ -34,7 +34,9 @@ using cass::ScopedMutex;
 using cass::OStringStream;
 
 #define SSL_BUF_SIZE 8192
-#define SERVER_VERSION "3.11.2"
+#define CASSANDRA_VERSION "3.11.4"
+#define DSE_VERSION "6.7.1"
+#define DSE_CASSANDRA_VERSION "4.0.0.671"
 
 namespace mockssandra {
 
@@ -1265,8 +1267,16 @@ Action::Builder& Action::Builder::system_local() {
   return execute(new SystemLocal());
 }
 
+Action::Builder& Action::Builder::system_local_dse() {
+  return execute(new SystemLocalDse());
+}
+
 Action::Builder& Action::Builder::system_peers() {
   return execute(new SystemPeers());
+}
+
+Action::Builder& Action::Builder::system_peers_dse() {
+  return execute(new SystemPeersDse());
 }
 
 Action::Builder& Action::Builder::system_traces() {
@@ -1345,12 +1355,7 @@ Request::Request(int8_t version, int8_t flags, int16_t stream, int8_t opcode,
   , body_(body)
   , client_(client)
   , timer_action_(NULL) {
-  client->add(this);
   (void)flags_; // TODO: Implement custom payload etc.
-}
-
-Request::~Request() {
-  client_->remove(this);
 }
 
 void Request::write(int8_t opcode, const String& body) {
@@ -1369,6 +1374,7 @@ void Request::error(int32_t code, const String& message) {
 }
 
 void Request::wait(uint64_t timeout, const Action* action) {
+  inc_ref();
   timer_action_ = action;
   timer_.start(client_->server()->loop(), timeout,
                cass::bind_callback(&Request::on_timeout, this));
@@ -1420,6 +1426,7 @@ Hosts Request::hosts() const {
 
 void Request::on_timeout(Timer* timer) {
   timer_action_->run_next(this);
+  dec_ref();
 }
 
 void SendError::on_run(Request* request) const {
@@ -1505,21 +1512,20 @@ void ClientOptions::on_run(Request* request) const {
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
-  } else {
-    if (query == CLIENT_OPTIONS_QUERY) {
-      ResultSet::Builder builder("client", "options");
-      Row::Builder row_builder;
-      for (Options::const_iterator it = request->client()->options().begin(),
-        end = request->client()->options().end(); it != end; ++it) {
-          builder.column((*it).first, Type::text());
-          row_builder.text((*it).second);
-      }
-      ResultSet client_options = builder.row(row_builder.build()).build();
-
-      request->write(OPCODE_RESULT, client_options.encode(request->version()));
+  } else if (query == CLIENT_OPTIONS_QUERY) {
+    ResultSet::Builder builder("client", "options");
+    Row::Builder row_builder;
+    for (Options::const_iterator it = request->client()->options().begin(),
+      end = request->client()->options().end(); it != end; ++it) {
+        builder.column((*it).first, Type::text());
+        row_builder.text((*it).second);
     }
+    ResultSet client_options = builder.row(row_builder.build()).build();
+
+    request->write(OPCODE_RESULT, client_options.encode(request->version()));
+  } else {
+    run_next(request);
   }
-  run_next(request);
 }
 
 void SystemLocal::on_run(Request* request) const {
@@ -1543,7 +1549,43 @@ void SystemLocal::on_run(Request* request) const {
                .text(request->client()->server()->address().to_string())
                .text(host.dc)
                .text(host.rack)
-               .text(SERVER_VERSION)
+               .text(CASSANDRA_VERSION)
+               .inet(request->client()->server()->address())
+               .text(host.partitioner)
+               .collection(Collection::text(host.tokens))
+               .build())
+          .build();
+
+    request->write(OPCODE_RESULT, local_rs.encode(request->version()));
+  } else {
+    run_next(request);
+  }
+}
+
+void SystemLocalDse::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+  } else if (query.find(SELECT_LOCAL) != String::npos) {
+    const Host& host(request->host(request->address()));
+
+    ResultSet local_rs
+        = ResultSet::Builder("system", "local")
+          .column("key", Type::text())
+          .column("data_center", Type::text())
+          .column("rack", Type::text())
+          .column("dse_version", Type::text())
+          .column("release_version", Type::text())
+          .column("rpc_address", Type::inet())
+          .column("partitioner", Type::text())
+          .column("tokens", Type::list(Type::text()))
+          .row(Row::Builder()
+               .text(request->client()->server()->address().to_string())
+               .text(host.dc)
+               .text(host.rack)
+               .text(DSE_VERSION)
+               .text(DSE_CASSANDRA_VERSION)
                .inet(request->client()->server()->address())
                .text(host.partitioner)
                .collection(Collection::text(host.tokens))
@@ -1586,7 +1628,7 @@ void SystemPeers::on_run(Request* request) const {
                  .inet(host.address)
                  .text(host.dc)
                  .text(host.rack)
-                 .text(SERVER_VERSION)
+                 .text(CASSANDRA_VERSION)
                  .inet(host.address)
                  .collection(Collection::text(host.tokens))
                  .build());
@@ -1615,7 +1657,80 @@ void SystemPeers::on_run(Request* request) const {
                  .inet(host.address)
                  .text(host.dc)
                  .text(host.rack)
-                 .text(SERVER_VERSION)
+                 .text(CASSANDRA_VERSION)
+                 .inet(host.address)
+                 .collection(Collection::text(host.tokens))
+                 .build())
+            .build();
+      request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
+    }
+  } else {
+    run_next(request);
+  }
+}
+
+void SystemPeersDse::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+  } else if (query.find(SELECT_PEERS) != String::npos) {
+    const String where_clause(" WHERE peer = '");
+    ResultSet::Builder peers_builder
+        = ResultSet::Builder("system", "peers")
+          .column("peer", Type::inet())
+          .column("data_center", Type::text())
+          .column("rack", Type::text())
+          .column("dse_version", Type::text())
+          .column("release_version", Type::text())
+          .column("rpc_address", Type::inet())
+          .column("tokens", Type::list(Type::text()));
+
+    size_t pos = query.find(where_clause);
+    if (pos == String::npos) {
+      Hosts hosts(request->hosts());
+      for (Hosts::const_iterator it = hosts.begin(),
+           end = hosts.end(); it != end; ++it) {
+        const Host& host(*it);
+        if (host.address == request->address()) {
+          continue;
+        }
+        peers_builder
+            .row(Row::Builder()
+                 .inet(host.address)
+                 .text(host.dc)
+                 .text(host.rack)
+                 .text(DSE_VERSION)
+                 .text(DSE_CASSANDRA_VERSION)
+                 .inet(host.address)
+                 .collection(Collection::text(host.tokens))
+                 .build());
+      }
+      ResultSet peers_rs = peers_builder.build();
+      request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
+    } else {
+      pos += where_clause.size();
+      size_t end_pos = query.find("'", pos);
+      if (end_pos == String::npos) {
+        request->error(ERROR_INVALID_QUERY, "Invalid WHERE clause");
+        return;
+      }
+
+      String ip = query.substr(pos, end_pos - pos);
+      Address address;
+      if (!Address::from_string(ip, request->address().port(), &address)) {
+        request->error(ERROR_INVALID_QUERY, "Invalid inet address in WHERE clause");
+        return;
+      }
+
+      const Host& host(request->host(address));
+      ResultSet peers_rs
+          = peers_builder
+            .row(Row::Builder()
+                 .inet(host.address)
+                 .text(host.dc)
+                 .text(host.rack)
+                 .text(CASSANDRA_VERSION)
                  .inet(host.address)
                  .collection(Collection::text(host.tokens))
                  .build())
@@ -1830,8 +1945,9 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
             version_ > request_handler_->highest_supported_protocol_version()) {
           // Respond using the highest supported protocol that the server
           // supports (don't use the request's version because it's not supported)
-          request_handler_->invalid_protocol(new Request(request_handler_->highest_supported_protocol_version(),
-                                                         flags_, stream_, opcode_, String(), client));
+          Request::Ptr request(new Request(request_handler_->highest_supported_protocol_version(),
+                                           flags_, stream_, opcode_, String(), client));
+          request_handler_->invalid_protocol(request.get());
           return len - remaining;
         }
         state_ = HEADER;
@@ -1875,13 +1991,8 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
 }
 
 void ProtocolHandler::decode_body(ClientConnection* client, const char* body, int32_t len) {
-  request_handler_->run(new Request(version_, flags_, stream_, opcode_, String(body, len), client));
-}
-
-ClientConnection::~ClientConnection() {
-  while(!requests_.is_empty()) {
-    delete requests_.front(); // Removes itself from the list
-  }
+  Request::Ptr request(new Request(version_, flags_, stream_, opcode_, String(body, len), client));
+  request_handler_->run(request.get());
 }
 
 void ClientConnection::on_read(const char* data, size_t len) {

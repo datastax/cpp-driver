@@ -7,8 +7,9 @@
 
 #include "dse.h"
 
-#include "auth.hpp"
+#include "dse_auth.hpp"
 #include "cluster_config.hpp"
+#include "memory.hpp"
 #include "string.hpp"
 
 static void dse_plaintext_authenticator_cleanup(void* data) {
@@ -58,12 +59,22 @@ CassError cass_cluster_set_dse_plaintext_authenticator_proxy_n(CassCluster* clus
                                                                const char* username, size_t username_length,
                                                                const char* password, size_t password_length,
                                                                const char* authorization_id, size_t authorization_id_length) {
-  return cass_cluster_set_authenticator_callbacks(cluster,
-                                                  dse::PlaintextAuthenticatorData::callbacks(),
-                                                  dse_plaintext_authenticator_cleanup,
-                                                  new dse::PlaintextAuthenticatorData(cass::String(username, username_length),
-                                                                                      cass::String(password, password_length),
-                                                                                      cass::String(authorization_id, authorization_id_length)));
+  CassError rc = cass_cluster_set_authenticator_callbacks(cluster,
+                                                          dse::PlaintextAuthenticatorData::callbacks(),
+                                                          dse_plaintext_authenticator_cleanup,
+                                                          new dse::PlaintextAuthenticatorData(cass::String(username, username_length),
+                                                                                              cass::String(password, password_length),
+                                                                                              cass::String(authorization_id, authorization_id_length)));
+
+  if (rc == CASS_OK) {
+    cass::String name = "DSEPlainTextAuthProvider";
+    if (authorization_id_length > 0) {
+      name.append(" (Proxy)");
+    }
+    cluster->config().auth_provider()->set_name(name);
+  }
+
+  return rc;
 }
 
 CassError cass_cluster_set_dse_gssapi_authenticator(CassCluster* cluster,
@@ -97,12 +108,21 @@ CassError cass_cluster_set_dse_gssapi_authenticator_proxy_n(CassCluster* cluster
                                                             const char* service, size_t service_length,
                                                             const char* principal, size_t principal_length,
                                                             const char* authorization_id, size_t authorization_id_length) {
-  return cass_cluster_set_authenticator_callbacks(cluster,
-                                                  dse::GssapiAuthenticatorData::callbacks(),
-                                                  dse_gssapi_authenticator_cleanup,
-                                                  new dse::GssapiAuthenticatorData(cass::String(service, service_length),
-                                                                                   cass::String(principal, principal_length),
-                                                                                   cass::String(authorization_id, authorization_id_length)));
+  CassError rc = cass_cluster_set_authenticator_callbacks(cluster,
+                                                          dse::GssapiAuthenticatorData::callbacks(),
+                                                          dse_gssapi_authenticator_cleanup,
+                                                          new dse::GssapiAuthenticatorData(cass::String(service, service_length),
+                                                                                           cass::String(principal, principal_length),
+                                                                                           cass::String(authorization_id, authorization_id_length)));
+  if (rc == CASS_OK) {
+    cass::String name = "DSEGSSAPIAuthProvider";
+    if (authorization_id_length > 0) {
+      name.append(" (Proxy)");
+    }
+    cluster->config().auth_provider()->set_name(name);
+  }
+
+  return rc;
 }
 
 void cass_cluster_set_application_name(CassCluster* cluster,
@@ -133,6 +153,11 @@ void cass_cluster_set_application_version_n(CassCluster* cluster,
 
 void cass_cluster_set_client_id(CassCluster* cluster, CassUuid client_id) {
   cluster->config().set_client_id(client_id);
+}
+
+void cass_cluster_set_monitor_reporting_interval(CassCluster* cluster,
+                                                 unsigned interval_secs) {
+  cluster->config().set_monitor_reporting_interval_secs(interval_secs);
 }
 
 } // extern "C"

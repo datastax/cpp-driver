@@ -86,6 +86,9 @@ public:
   void set_verify_flags(int flags) {
     verify_flags_ = flags;
   }
+  bool is_cert_validation_enabled() {
+    return verify_flags_ != CASS_SSL_VERIFY_NONE;
+  }
 
   virtual SslSession* create_session(const Address& address, const String& hostname) = 0;
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length) = 0;

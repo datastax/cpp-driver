@@ -126,7 +126,13 @@ public:
     return child_policy_->init(connected_host, hosts, random);
   }
 
-  virtual CassHostDistance distance(const Host::Ptr& host) const { return child_policy_->distance(host); }
+  virtual const LoadBalancingPolicy::Ptr& child_policy() const {
+    return child_policy_;
+  }
+
+  virtual CassHostDistance distance(const Host::Ptr& host) const {
+    return child_policy_->distance(host);
+  }
 
   virtual bool is_host_up(const Address& address) const {
     return child_policy_->is_host_up(address);

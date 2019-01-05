@@ -332,11 +332,13 @@ ControlConnection::ControlConnection(const Connection::Ptr& connection,
                                      bool use_schema,
                                      bool token_aware_routing,
                                      const VersionNumber& server_version,
+                                     const VersionNumber& dse_server_version,
                                      ListenAddressMap listen_addresses)
   : connection_(connection)
   , use_schema_(use_schema)
   , token_aware_routing_(token_aware_routing)
   , server_version_(server_version)
+  , dse_server_version_(dse_server_version)
   , listen_addresses_(listen_addresses)
   , listener_(listener ? listener : &nop_listener__) {
   connection_->set_listener(this);

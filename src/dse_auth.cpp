@@ -6,7 +6,7 @@
 */
 
 #include "allocated.hpp"
-#include "auth.hpp"
+#include "dse_auth.hpp"
 #include "logger.hpp"
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"

@@ -8,6 +8,7 @@
 
 #include "dse.h"
 #include "string.hpp"
+#include "ssl.hpp"
 
 #if defined(_WIN32) && defined(_DEBUG)
 # ifdef USE_VISUAL_LEAK_DETECTOR
@@ -138,15 +139,22 @@ class BootstrapListener : public testing::EmptyTestEventListener {
     // TODO: Handle the ending of unit tests
     std::cout << "Finishing DataStax C/C++ Driver Unit Test" << std::endl;
   }
+
+  void OnTestStart(const testing::TestInfo& test_information) {
+    cass::SslContextFactory::init();
+  }
+
+  void OnTestEnd(const testing::TestInfo& test_information) {
+    cass::SslContextFactory::cleanup();
+  }
 };
 
 int main(int argc, char* argv[]) {
   // Initialize the Google testing framework
   testing::InitGoogleTest(&argc, argv);
 
-  // Add a bootstrap mechanism for program start and finish
+  // Add listeners for program start and finish events
   testing::TestEventListeners& listeners = testing::UnitTest::GetInstance()->listeners();
-  listeners.Append(new BootstrapListener());
 
 #if defined(_WIN32) && defined(_DEBUG)
   // Add the memory leak checking to the listener callbacks
@@ -156,6 +164,8 @@ int main(int argc, char* argv[]) {
   VLDMarkAllLeaksAsReported();
 # endif
 #endif
+
+  listeners.Append(new BootstrapListener());
 
   // Run the unit tests
   return RUN_ALL_TESTS();

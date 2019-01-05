@@ -221,9 +221,9 @@ void RequestHandler::notify_result_metadata_changed(const String& prepared_id,
                                                     const ResultResponse::ConstPtr& result_response, Protected) {
   PreparedMetadata::Entry::Ptr entry(
         new PreparedMetadata::Entry(query,
-                                                  keyspace,
-                                                  result_metadata_id,
-                                                  result_response));
+                                    keyspace,
+                                    result_metadata_id,
+                                    result_response));
   listener_->on_prepared_metadata_changed(prepared_id, entry);
 }
 
@@ -361,6 +361,7 @@ void RequestExecution::on_retry_current_host() {
 }
 
 void RequestExecution::on_retry_next_host() {
+  current_host_->decrement_inflight_requests();
   retry_next_host();
 }
 
@@ -378,6 +379,7 @@ void RequestExecution::retry_next_host() {
 
 void RequestExecution::on_write(Connection* connection) {
   assert(current_host_ && "Tried to start on a non-existent host");
+  current_host_->increment_inflight_requests();
   connection_ = connection;
   if (request()->record_attempted_addresses()) {
     request_handler_->add_attempted_address(current_host_->address(), RequestHandler::Protected());
@@ -398,6 +400,7 @@ void RequestExecution::on_set(ResponseMessage* response) {
   assert(connection_ != NULL);
   assert(current_host_ && "Tried to set on a non-existent host");
 
+  current_host_->decrement_inflight_requests();
   Connection* connection = connection_;
 
   switch (response->opcode()) {
@@ -415,6 +418,8 @@ void RequestExecution::on_set(ResponseMessage* response) {
 }
 
 void RequestExecution::on_error(CassError code, const String& message) {
+  current_host_->decrement_inflight_requests();
+
   // Handle recoverable errors by retrying with the next host
   if (code == CASS_ERROR_LIB_WRITE_ERROR ||
       code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {

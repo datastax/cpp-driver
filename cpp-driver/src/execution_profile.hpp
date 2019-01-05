@@ -61,8 +61,14 @@ public:
   ContactPointList& blacklist() {
     return blacklist_;
   }
+  const ContactPointList& blacklist() const {
+    return blacklist_;
+  }
 
   DcList& blacklist_dc() {
+    return blacklist_dc_;
+  }
+  const DcList& blacklist_dc() const {
     return blacklist_dc_;
   }
 
@@ -82,6 +88,10 @@ public:
     latency_aware_routing_settings_ = settings;
   }
 
+  LatencyAwarePolicy::Settings latency_aware_routing_settings() const {
+    return latency_aware_routing_settings_;
+  }
+
   bool token_aware_routing() const { return token_aware_routing_; }
 
   void set_token_aware_routing(bool is_token_aware) {
@@ -92,11 +102,21 @@ public:
     token_aware_routing_shuffle_replicas_ = shuffle_replicas;
   }
 
+  bool token_aware_routing_shuffle_replicas() const {
+    return token_aware_routing_shuffle_replicas_;
+  }
+
   ContactPointList& whitelist() {
+    return whitelist_;
+  }
+  const ContactPointList& whitelist() const {
     return whitelist_;
   }
 
   DcList& whitelist_dc() {
+    return whitelist_dc_;
+  }
+  const DcList& whitelist_dc() const {
     return whitelist_dc_;
   }
 

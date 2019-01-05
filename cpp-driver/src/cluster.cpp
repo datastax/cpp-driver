@@ -92,6 +92,28 @@ private:
   Cluster::Ptr cluster_;
 };
 
+class ClusterStartClientMonitor : public Task {
+public:
+  ClusterStartClientMonitor(const Cluster::Ptr& cluster,
+                            const String& client_id,
+                            const String& session_id,
+                            const Config& config)
+    : cluster_(cluster)
+    , client_id_(client_id)
+    , session_id_(session_id)
+    , config_(config) { }
+
+  void run(EventLoop* event_loop) {
+    cluster_->internal_start_monitor_reporting(client_id_, session_id_, config_);
+  }
+
+private:
+  Cluster::Ptr cluster_;
+  String client_id_;
+  String session_id_;
+  Config config_;
+};
+
 /**
  * A no operation cluster listener. This is used when a listener is not set.
  */
@@ -249,6 +271,15 @@ void Cluster::notify_host_down(const Address& address) {
 
 void Cluster::start_events() {
   event_loop_->add(new ClusterStartEvents(Ptr(this)));
+}
+
+void Cluster::start_monitor_reporting(const String& client_id,
+                                      const String& session_id,
+                                      const Config& config) {
+  event_loop_->add(new ClusterStartClientMonitor(Ptr(this),
+                                                 client_id,
+                                                 session_id,
+                                                 config));
 }
 
 Metadata::SchemaSnapshot Cluster::schema_snapshot() {
@@ -454,6 +485,7 @@ void Cluster::on_reconnect(ControlConnector* connector) {
 
 void Cluster::internal_close() {
   is_closing_ = true;
+  monitor_reporting_timer_.stop();
   if (timer_.is_running()) {
     timer_.stop();
     handle_close();
@@ -545,6 +577,35 @@ void Cluster::internal_start_events() {
     is_recording_events_ = false;
     ClusterEvent::process_events(recorded_events_, listener_);
     recorded_events_.clear();
+  }
+}
+
+void Cluster::internal_start_monitor_reporting(const String& client_id,
+                                            const String& session_id,
+                                            const Config& config) {
+  monitor_reporting_.reset(create_monitor_reporting(client_id,
+                                                    session_id,
+                                                    config));
+
+  if (!is_closing_ &&
+      monitor_reporting_->interval_ms(connection_->dse_server_version()) > 0) {
+    monitor_reporting_->send_startup_message(connection_->connection(),
+                                          config,
+                                          available_hosts(),
+                                          load_balancing_policies_);
+    monitor_reporting_timer_.start(event_loop_->loop(),
+                                   monitor_reporting_->interval_ms(connection_->dse_server_version()),
+                                   bind_callback(&Cluster::on_monitor_reporting, this));
+  }
+}
+
+void Cluster::on_monitor_reporting(Timer* timer) {
+  if (!is_closing_) {
+    monitor_reporting_->send_status_message(connection_->connection(),
+                                            available_hosts());
+    monitor_reporting_timer_.start(event_loop_->loop(),
+                                   monitor_reporting_->interval_ms(connection_->dse_server_version()),
+                                   bind_callback(&Cluster::on_monitor_reporting, this));
   }
 }
 

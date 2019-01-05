@@ -533,6 +533,20 @@ cass_cluster_set_application_version_n(CassCluster* cluster,
 CASS_EXPORT void
 cass_cluster_set_client_id(CassCluster* cluster, CassUuid client_id);
 
+/**
+ * Sets the amount of time between monitor reporting event messages.
+ *
+ * <b>Default:</b> 300 seconds.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] interval_secs Use 0 to disable monitor reporting event messages.
+ */
+CASS_EXPORT void
+cass_cluster_set_monitor_reporting_interval(CassCluster* cluster,
+                                            unsigned interval_secs);
+
 /***********************************************************************************
  *
  * Session

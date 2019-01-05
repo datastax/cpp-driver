@@ -187,6 +187,7 @@ public:
    * @param token_aware_routing If true the connection will get additional data
    * for keyspace schema changes, otherwise it will ignore those events.
    * @param server_version The version number of the server implementation.
+   * @param dse_server_version The version number of the DSE server implementation.
    * @param listen_addresses The current state of the listen addresses map.
    */
   ControlConnection(const Connection::Ptr& connection,
@@ -194,6 +195,7 @@ public:
                     bool use_schema,
                     bool token_aware_routing,
                     const VersionNumber& server_version,
+                    const VersionNumber& dse_server_version,
                     ListenAddressMap listen_addresses);
 
   /**
@@ -239,7 +241,12 @@ public:
     return server_version_;
   }
 
+  const VersionNumber& dse_server_version() {
+    return dse_server_version_;
+  }
+
   uv_loop_t* loop() { return connection_->loop(); }
+  const Connection::Ptr& connection() const { return connection_; }
 
 private:
   friend class ControlConnector;
@@ -284,6 +291,7 @@ private:
   bool use_schema_;
   bool token_aware_routing_;
   VersionNumber server_version_;
+  VersionNumber dse_server_version_;
   ListenAddressMap listen_addresses_;
   ControlConnectionListener* listener_;
 };

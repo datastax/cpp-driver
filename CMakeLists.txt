@@ -131,6 +131,9 @@ set(DSE_INCLUDES ${DSE_INCLUDES} ${CASS_INCLUDES})
 
 # Build up libraries
 set(DSE_LIBS ${CASS_LIBS})
+if(WIN32)
+  set(DSE_LIBS ${DSE_LIBS} version) # Required for GetFileVersionInfo/GetFileVersionSize usage
+endif()
 
 # Kerberos
 find_package(Kerberos REQUIRED)
@@ -168,6 +171,7 @@ set(DSE_ALL_SOURCE_FILES
 # tests.
 list(REMOVE_ITEM DSE_ALL_SOURCE_FILES
   "${PROJECT_SOURCE_DIR}/cpp-driver/src/driver_info.cpp"
+  "${PROJECT_SOURCE_DIR}/cpp-driver/src/monitor_reporting.cpp"
   "${PROJECT_SOURCE_DIR}/cpp-driver/src/protocol.cpp")
 set(CASS_EXCLUDED_UNIT_TEST_FILES "test_protocol_version.cpp")
 

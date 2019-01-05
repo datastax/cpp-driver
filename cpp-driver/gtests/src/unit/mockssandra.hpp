@@ -618,7 +618,9 @@ struct Action {
     Builder& client_options();
 
     Builder& system_local();
+    Builder& system_local_dse();
     Builder& system_peers();
+    Builder& system_peers_dse();
     Builder& system_traces();
 
     Builder& use_keyspace(const String& keyspace);
@@ -696,11 +698,13 @@ struct Predicate : public Action {
 };
 
 
-class Request : public List<Request>::Node {
+class Request : public List<Request>::Node
+              , public RefCounted<Request> {
 public:
+  typedef SharedRefPtr<Request> Ptr;
+
   Request(int8_t version, int8_t flags, int16_t stream, int8_t opcode,
           const String& body, ClientConnection* client);
-  ~Request();
 
   int8_t version() const { return version_; }
   int16_t stream() const { return stream_; }
@@ -841,7 +845,15 @@ struct SystemLocal : public Action {
   virtual void on_run(Request* request) const;
 };
 
+struct SystemLocalDse : public Action {
+  virtual void on_run(Request* request) const;
+};
+
 struct SystemPeers : public Action {
+  virtual void on_run(Request* request) const;
+};
+
+struct SystemPeersDse : public Action {
   virtual void on_run(Request* request) const;
 };
 
@@ -969,7 +981,6 @@ public:
     } else {
       invalid_opcode_->run(request);
     }
-    delete request;
   }
 
 private:
@@ -1024,12 +1035,7 @@ public:
     , protocol_version_(-1)
     , is_registered_for_events_(false) { }
 
-  ~ClientConnection();
-
   virtual void on_read(const char* data, size_t len);
-
-  void add(Request* request) { requests_.add_to_back(request); }
-  void remove(Request* request) { requests_.remove(request); }
 
   const Cluster* cluster() const { return cluster_; }
 
@@ -1044,7 +1050,6 @@ public:
 private:
   ProtocolHandler handler_;
   const Cluster* cluster_;
-  List<Request> requests_;
   int protocol_version_;
   bool is_registered_for_events_;
   Options options_;

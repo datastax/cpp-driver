@@ -23,6 +23,7 @@
 #include "external.hpp"
 #include "logger.hpp"
 #include "metrics.hpp"
+#include "monitor_reporting.hpp"
 #include "prepare_all_handler.hpp"
 #include "prepare_request.hpp"
 #include "request_processor_initializer.hpp"
@@ -271,6 +272,9 @@ private:
         session_->notify_connect_failed(error_code_, error_message_);
       } else {
         session_->notify_connected();
+        session_->cluster()->start_monitor_reporting(to_string(session_->client_id()),
+                                                     to_string(session_->session_id()),
+                                                     session_->config());
       }
       l.unlock(); // Unlock before destroying the object
       dec_ref();

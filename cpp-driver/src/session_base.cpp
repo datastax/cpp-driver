@@ -40,6 +40,7 @@ SessionBase::SessionBase()
 
   UuidGen generator;
   generator.generate_random(&client_id_);
+  generator.generate_random(&session_id_);
 }
 
 SessionBase::~SessionBase() {
@@ -84,6 +85,7 @@ Future::Ptr SessionBase::connect(const Config& config,
     client_id_ = config.client_id();
   }
   LOG_INFO("Client id is %s", to_string(client_id_).c_str());
+  LOG_INFO("Session id is %s", to_string(session_id_).c_str());
 
   config_ = config.new_instance();
   connect_keyspace_ = keyspace;

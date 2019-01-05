@@ -68,8 +68,9 @@ class AuthProvider : public RefCounted<AuthProvider> {
 public:
   typedef SharedRefPtr<AuthProvider> Ptr;
 
-  AuthProvider()
-    : RefCounted<AuthProvider>() { }
+  AuthProvider(const String& name = "")
+    : RefCounted<AuthProvider>()
+    , name_(name) { }
 
   virtual ~AuthProvider() { }
 
@@ -79,8 +80,15 @@ public:
     return Authenticator::Ptr();
   }
 
+  // TODO: CPP-749; make the `name` immutable
+  const String& name() { return name_; }
+  void set_name(const String& name) { name_ = name; }
+
 private:
   DISALLOW_COPY_AND_ASSIGN(AuthProvider);
+
+private:
+  String name_;
 };
 
 class ExternalAuthenticator : public Authenticator {
@@ -120,7 +128,8 @@ public:
   ExternalAuthProvider(const CassAuthenticatorCallbacks* exchange_callbacks,
                        CassAuthenticatorDataCleanupCallback cleanup_callback,
                        void* data)
-    : exchange_callbacks_(*exchange_callbacks)
+    : AuthProvider("ExternalAuthProvider")
+    , exchange_callbacks_(*exchange_callbacks)
     , cleanup_callback_(cleanup_callback)
     , data_(data) { }
 
@@ -150,7 +159,8 @@ class PlainTextAuthProvider : public AuthProvider {
 public:
   PlainTextAuthProvider(const String& username,
                         const String& password)
-    : username_(username)
+    : AuthProvider("PlainTextAuthProvider")
+    , username_(username)
     , password_(password) { }
 
   virtual Authenticator::Ptr new_authenticator(const Address& address,

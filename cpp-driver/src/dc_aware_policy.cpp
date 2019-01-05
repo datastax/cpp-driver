@@ -140,6 +140,21 @@ void DCAwarePolicy::on_host_down(const Address& address) {
   available_.erase(address);
 }
 
+bool DCAwarePolicy::skip_remote_dcs_for_local_cl() const {
+  ScopedReadLock rl(&available_rwlock_);
+  return skip_remote_dcs_for_local_cl_;
+}
+
+size_t DCAwarePolicy::used_hosts_per_remote_dc() const {
+  ScopedReadLock rl(&available_rwlock_);
+  return used_hosts_per_remote_dc_;
+}
+
+const String& DCAwarePolicy::local_dc() const {
+  ScopedReadLock rl(&available_rwlock_);
+  return local_dc_;
+}
+
 void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const String& dc, const Host::Ptr& host) {
   ScopedWriteLock wl(&rwlock_);
   Map::iterator i = map_.find(dc);
