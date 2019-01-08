@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
+#include "allocated.hpp"
 #include "auth.hpp"
-#include "memory.hpp"
 #include "logger.hpp"
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"
@@ -157,7 +157,7 @@ public:
   }
 };
 
-class GssapiAuthenticator {
+class GssapiAuthenticator : public cass::Allocated {
 public:
   enum State {
     NEGOTIATION,
@@ -595,7 +595,7 @@ void GssapiAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
       service.append(hostname);
     }
 
-    gssapi_auth = cass::Memory::allocate<GssapiAuthenticator>(gssapi_auth_data->authorization_id());
+    gssapi_auth = new GssapiAuthenticator(gssapi_auth_data->authorization_id());
     cass_authenticator_set_exchange_data(auth, static_cast<void*>(gssapi_auth));
 
     if (gssapi_auth->init(service,
@@ -647,7 +647,7 @@ void GssapiAuthenticatorData::on_challenge(CassAuthenticator* auth, void* data,
 void GssapiAuthenticatorData::on_cleanup(CassAuthenticator* auth, void* data) {
   GssapiAuthenticator* gssapi_auth
       = static_cast<GssapiAuthenticator*>(cass_authenticator_exchange_data(auth));
-  cass::Memory::deallocate(gssapi_auth);
+  delete gssapi_auth;
 }
 
 CassAuthenticatorCallbacks GssapiAuthenticatorData::callbacks_ = {

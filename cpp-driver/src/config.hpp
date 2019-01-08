@@ -54,13 +54,13 @@ public:
       , log_level_(CASS_DEFAULT_LOG_LEVEL)
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
-      , auth_provider_(Memory::allocate<AuthProvider>())
+      , auth_provider_(new AuthProvider())
       , tcp_nodelay_enable_(CASS_DEFAULT_TCP_NO_DELAY_ENABLED)
       , tcp_keepalive_enable_(CASS_DEFAULT_TCP_KEEPALIVE_ENABLED)
       , tcp_keepalive_delay_secs_(CASS_DEFAULT_TCP_KEEPALIVE_DELAY_SECS)
       , connection_idle_timeout_secs_(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
       , connection_heartbeat_interval_secs_(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
-      , timestamp_gen_(Memory::allocate<MonotonicTimestampGenerator>())
+      , timestamp_gen_(new MonotonicTimestampGenerator())
       , use_schema_(CASS_DEFAULT_USE_SCHEMA)
       , use_hostname_resolution_(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
       , use_randomized_contact_points_(CASS_DEFAULT_USE_RANDOMIZED_CONTACT_POINTS)
@@ -68,16 +68,16 @@ public:
       , prepare_on_all_hosts_(CASS_DEFAULT_PREPARE_ON_ALL_HOSTS)
       , prepare_on_up_or_add_host_(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
       , no_compact_(CASS_DEFAULT_NO_COMPACT)
-      , host_listener_(Memory::allocate<DefaultHostListener>()) {
+      , host_listener_(new DefaultHostListener()) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
     default_profile_.set_consistency(CASS_DEFAULT_CONSISTENCY);
     default_profile_.set_serial_consistency(CASS_DEFAULT_SERIAL_CONSISTENCY);
     default_profile_.set_request_timeout(CASS_DEFAULT_REQUEST_TIMEOUT_MS);
-    default_profile_.set_load_balancing_policy(Memory::allocate<DCAwarePolicy>());
-    default_profile_.set_retry_policy(Memory::allocate<DefaultRetryPolicy>());
-    default_profile_.set_speculative_execution_policy(Memory::allocate<NoSpeculativeExecutionPolicy>());
+    default_profile_.set_load_balancing_policy(new DCAwarePolicy());
+    default_profile_.set_retry_policy(new DefaultRetryPolicy());
+    default_profile_.set_speculative_execution_policy(new NoSpeculativeExecutionPolicy());
   }
 
   Config new_instance() const {
@@ -221,11 +221,11 @@ public:
   const AuthProvider::Ptr& auth_provider() const { return auth_provider_; }
 
   void set_auth_provider(const AuthProvider::Ptr& auth_provider) {
-    auth_provider_ = (!auth_provider ? AuthProvider::Ptr(Memory::allocate<AuthProvider>()) : auth_provider);
+    auth_provider_ = (!auth_provider ? AuthProvider::Ptr(new AuthProvider()) : auth_provider);
   }
 
   void set_credentials(const String& username, const String& password) {
-    auth_provider_.reset(Memory::allocate<PlainTextAuthProvider>(username, password));
+    auth_provider_.reset(new PlainTextAuthProvider(username, password));
   }
 
   const LoadBalancingPolicy::Ptr& load_balancing_policy() const {
@@ -404,7 +404,7 @@ public:
     if (listener) {
       host_listener_ = listener;
     } else {
-      host_listener_.reset(Memory::allocate<DefaultHostListener>());
+      host_listener_.reset(new DefaultHostListener());
     }
   }
 

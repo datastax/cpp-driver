@@ -92,9 +92,9 @@ ControlConnectionSettings::ControlConnectionSettings(const Config& config)
 ControlConnector::ControlConnector(const Address& address,
                                    ProtocolVersion protocol_version,
                                    const Callback& callback)
-  : connector_(Memory::allocate<Connector>(address,
-                                           protocol_version,
-                                           bind_callback(&ControlConnector::on_connect, this)))
+  : connector_(new Connector(address,
+                             protocol_version,
+                             bind_callback(&ControlConnector::on_connect, this)))
   , callback_(callback)
   , error_code_(CONTROL_CONNECTION_OK)
   , listener_(NULL)
@@ -166,12 +166,12 @@ void ControlConnector::on_success() {
 
   // Transfer ownership of the connection to the control connection.
   control_connection_.reset(
-        Memory::allocate<ControlConnection>(connection_,
-                                            listener_,
-                                            settings_.use_schema,
-                                            settings_.token_aware_routing,
-                                            server_version_,
-                                            listen_addresses_));
+        new ControlConnection(connection_,
+                              listener_,
+                              settings_.use_schema,
+                              settings_.token_aware_routing,
+                              server_version_,
+                              listen_addresses_));
 
   control_connection_->set_listener(listener_);
 
@@ -221,9 +221,9 @@ void ControlConnector::query_hosts() {
   // a valid server version because this version determines which follow up
   // schema metadata queries are executed.
   ChainedRequestCallback::Ptr callback(
-        Memory::allocate<HostsConnectorRequestCallback>(
-          "local", SELECT_LOCAL, this)
-        ->chain("peers", SELECT_PEERS));
+        new HostsConnectorRequestCallback(
+          "local", SELECT_LOCAL, this));
+  callback = callback->chain("peers", SELECT_PEERS);
 
   if (connection_->write_and_flush(callback) < 0) {
     on_error(CONTROL_CONNECTION_ERROR_HOSTS,
@@ -234,7 +234,7 @@ void ControlConnector::query_hosts() {
 void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callback) {
   ResultResponse::Ptr local_result(callback->result("local"));
   if (local_result && local_result->row_count() > 0) {
-    Host::Ptr host(Memory::allocate<Host>(connection_->address()));
+    Host::Ptr host(new Host(connection_->address()));
     host->set(&local_result->first_row(), settings_.token_aware_routing);
     hosts_[host->address()] = host;
     server_version_ = host->server_version();
@@ -257,7 +257,7 @@ void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callbac
         continue;
       }
 
-      Host::Ptr host(Memory::allocate<Host>(address));
+      Host::Ptr host(new Host(address));
       host->set(rows.row(), settings_.token_aware_routing);
       listen_addresses_[host->address()] = determine_listen_address(address, row);
       hosts_[host->address()] = host;
@@ -276,7 +276,7 @@ void ControlConnector::query_schema() {
   ChainedRequestCallback::Ptr callback;
 
   if (server_version_ >= VersionNumber(3, 0, 0)) {
-    callback = ChainedRequestCallback::Ptr(Memory::allocate<SchemaConnectorRequestCallback>(
+    callback = ChainedRequestCallback::Ptr(new SchemaConnectorRequestCallback(
                                              "keyspaces", SELECT_KEYSPACES_30, this));
     if (settings_.use_schema) {
       callback = callback
@@ -296,7 +296,7 @@ void ControlConnector::query_schema() {
       }
     }
   } else {
-    callback = ChainedRequestCallback::Ptr(Memory::allocate<SchemaConnectorRequestCallback>(
+    callback = ChainedRequestCallback::Ptr(new SchemaConnectorRequestCallback(
                                              "keyspaces", SELECT_KEYSPACES_20, this));
     if (settings_.use_schema) {
       callback = callback

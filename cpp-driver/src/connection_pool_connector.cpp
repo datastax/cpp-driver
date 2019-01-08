@@ -17,7 +17,6 @@
 #include "connection_pool_connector.hpp"
 
 #include "event_loop.hpp"
-#include "memory.hpp"
 #include "metrics.hpp"
 
 namespace cass {
@@ -60,9 +59,9 @@ void ConnectionPoolConnector::connect(uv_loop_t*  loop) {
   remaining_ = settings_.num_connections_per_host;
   for (size_t i = 0; i < settings_.num_connections_per_host; ++i) {
     Connector::Ptr connector(
-          Memory::allocate<Connector>(address_,
-                                      protocol_version_,
-                                      bind_callback(&ConnectionPoolConnector::on_connect, this)));
+          new Connector(address_,
+                        protocol_version_,
+                        bind_callback(&ConnectionPoolConnector::on_connect, this)));
     pending_connections_.push_back(connector);
     connector
         ->with_keyspace(keyspace_)
@@ -142,14 +141,14 @@ void ConnectionPoolConnector::on_connect(Connector* connector) {
   if (--remaining_ == 0) {
     if (!is_canceled_) {
       if (!critical_error_connector_) {
-        pool_.reset(Memory::allocate<ConnectionPool>(connections_,
-                                                     listener_,
-                                                     keyspace_,
-                                                     loop_,
-                                                     address_,
-                                                     protocol_version_,
-                                                     settings_,
-                                                     metrics_));
+        pool_.reset(new ConnectionPool(connections_,
+                                       listener_,
+                                       keyspace_,
+                                       loop_,
+                                       address_,
+                                       protocol_version_,
+                                       settings_,
+                                       metrics_));
       } else {
         if (listener_) {
           listener_->on_pool_critical_error(address_,

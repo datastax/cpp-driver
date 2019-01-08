@@ -207,8 +207,8 @@ public:
     }
 
     virtual void on_pool_critical_error(const Address& address,
-                                   Connector::ConnectionError code,
-                                   const String& message)  {
+                                        Connector::ConnectionError code,
+                                        const String& message)  {
       switch (code) {
         case Connector::CONNECTION_ERROR_INVALID_PROTOCOL:
           status_->critical_error_invalid_protocol();
@@ -281,7 +281,7 @@ public:
     PooledConnection::Ptr connection = manager->find_least_busy(address);
     if (connection) {
       RequestStatus status(manager->loop(), 1);
-      RequestCallback::Ptr callback(Memory::allocate<RequestCallback>(&status));
+      RequestCallback::Ptr callback(new RequestCallback(&status));
       EXPECT_TRUE(connection->write(callback.get())) << "Unable to write request to connection " << address.to_string();
       connection->flush(); // Flush requests to avoid unnecessary timeouts
       uv_run(loop(), UV_RUN_DEFAULT);
@@ -299,7 +299,7 @@ public:
     for (size_t i = 0; i < NUM_NODES; ++i) {
       PooledConnection::Ptr connection = manager->find_least_busy(generator.next());
       if (connection) {
-        RequestCallback::Ptr callback(Memory::allocate<RequestCallback>(status));
+        RequestCallback::Ptr callback(new RequestCallback(status));
         if(!connection->write(callback.get())) {
           status->error_failed_write();
         }
@@ -355,7 +355,7 @@ TEST_F(PoolUnitTest, Simple) {
   RequestStatusWithManager status(loop());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
@@ -379,7 +379,7 @@ TEST_F(PoolUnitTest, Keyspace) {
   RequestStatusWithManager status(loop());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
@@ -412,12 +412,12 @@ TEST_F(PoolUnitTest, Auth) {
   RequestStatusWithManager status(loop());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
   ConnectionPoolSettings settings;
-  settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
+  settings.connection_settings.auth_provider.reset(new PlainTextAuthProvider("cassandra", "cassandra"));
 
   initializer
       ->with_settings(settings)
@@ -436,7 +436,7 @@ TEST_F(PoolUnitTest, Ssl) {
   RequestStatusWithManager status(loop());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
@@ -453,11 +453,11 @@ TEST_F(PoolUnitTest, Listener) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -475,11 +475,11 @@ TEST_F(PoolUnitTest, ListenerDown) {
   ASSERT_EQ(cluster.start(1), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -499,12 +499,12 @@ TEST_F(PoolUnitTest, AddRemove) {
 
   ListenerStatus listener_status(loop());
   ListenerStatus add_remove_listener_status(loop(), 1);
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
 
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -543,11 +543,11 @@ TEST_F(PoolUnitTest, Reconnect) {
 
   ListenerStatus listener_status(loop());
   ListenerStatus reconnect_listener_status(loop(), 1);
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -593,11 +593,11 @@ TEST_F(PoolUnitTest, Timeout) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -619,11 +619,11 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           0x7F,  // Invalid protocol version
           bind_callback(on_pool_nop, &request_status)));
 
@@ -653,11 +653,11 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -675,16 +675,16 @@ TEST_F(PoolUnitTest, InvalidAuth) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
   ConnectionPoolSettings settings;
-  settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
+  settings.connection_settings.auth_provider.reset(new PlainTextAuthProvider("invalid", "invalid"));
 
   initializer
       ->with_settings(settings)
@@ -700,11 +700,11 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
   ASSERT_EQ(cluster.start_all(), 0); // Start without ssl
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -729,11 +729,11 @@ TEST_F(PoolUnitTest, InvalidSsl) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 

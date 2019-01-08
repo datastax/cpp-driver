@@ -60,7 +60,7 @@ int32_t QueryRequest::encode_values_with_names(ProtocolVersion version, RequestC
 size_t QueryRequest::get_indices(StringRef name, IndexVec* indices) {
   if (!value_names_) {
     set_has_names_for_values(true);
-    value_names_.reset(Memory::allocate<ValueNameHashTable>(elements().size()));
+    value_names_.reset(new ValueNameHashTable(elements().size()));
   }
 
   if (value_names_->get_indices(name, indices) == 0) {

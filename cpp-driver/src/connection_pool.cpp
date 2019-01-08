@@ -18,7 +18,6 @@
 
 #include "config.hpp"
 #include "connection_pool_manager.hpp"
-#include "memory.hpp"
 #include "metrics.hpp"
 #include "utils.hpp"
 
@@ -48,8 +47,8 @@ public:
   virtual void on_pool_down(const Address& address) { }
 
   virtual void on_pool_critical_error(const Address& address,
-                                 Connector::ConnectionError code,
-                                 const String& message) { }
+                                      Connector::ConnectionError code,
+                                      const String& message) { }
 
   virtual void on_close(ConnectionPool* pool) { }
 };
@@ -81,7 +80,7 @@ ConnectionPool::ConnectionPool(const Connection::Vec& connections,
     const Connection::Ptr& connection(*it);
     if (!connection->is_closing()) {
       add_connection(PooledConnection::Ptr(
-                       Memory::allocate<PooledConnection>(this, connection)));
+                       new PooledConnection(this, connection)));
     }
   }
 
@@ -180,7 +179,7 @@ void ConnectionPool::notify_up_or_down() {
 }
 
 void ConnectionPool::notify_critical_error(Connector::ConnectionError code,
-                                                    const String& message) {
+                                           const String& message) {
   if (notify_state_ != NOTIFY_STATE_CRITICAL) {
     notify_state_ = NOTIFY_STATE_CRITICAL;
     listener_->on_pool_critical_error(address_, code, message);
@@ -193,9 +192,9 @@ void ConnectionPool::schedule_reconnect() {
            static_cast<unsigned long long>(settings_.reconnect_wait_time_ms),
            static_cast<void*>(this));
   DelayedConnector::Ptr connector(
-        Memory::allocate<DelayedConnector>(address_,
-                                           protocol_version_,
-                                           bind_callback(&ConnectionPool::on_reconnect, this)));
+        new DelayedConnector(address_,
+                             protocol_version_,
+                             bind_callback(&ConnectionPool::on_reconnect, this)));
   pending_connections_.push_back(connector);
   connector
       ->with_keyspace(keyspace())
@@ -257,7 +256,7 @@ void ConnectionPool::on_reconnect(DelayedConnector* connector) {
   if (connector->is_ok()) {
     add_connection(
           PooledConnection::Ptr(
-            Memory::allocate<PooledConnection>(this, connector->release_connection())));
+            new PooledConnection(this, connector->release_connection())));
     notify_up_or_down();
   } else if (!connector->is_canceled()) {
     if(connector->is_critical_error()) {
@@ -265,7 +264,7 @@ void ConnectionPool::on_reconnect(DelayedConnector* connector) {
                 address().to_string().c_str(),
                 connector->error_message().c_str());
       notify_critical_error(connector->error_code(),
-                                     connector->error_message());
+                            connector->error_message());
       internal_close();
     } else {
       LOG_WARN("Connection pool was unable to reconnect to host %s because of the following error: %s",

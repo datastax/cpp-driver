@@ -146,7 +146,7 @@ static NopRequestProcessorListener nop_request_processor_listener__;
 RequestProcessorSettings::RequestProcessorSettings()
   : max_schema_wait_time_ms(10000)
   , prepare_on_all_hosts(true)
-  , timestamp_generator(Memory::allocate<ServerSideTimestampGenerator>())
+  , timestamp_generator(new ServerSideTimestampGenerator())
   , default_profile(Config().default_profile())
   , request_queue_size(8192)
   , coalesce_delay_us(CASS_DEFAULT_COALESCE_DELAY)
@@ -186,7 +186,7 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
   , default_profile_(settings.default_profile)
   , profiles_(settings.profiles)
   , request_count_(0)
-  , request_queue_(Memory::allocate<MPMCQueue<RequestHandler*> >(settings.request_queue_size))
+  , request_queue_(new MPMCQueue<RequestHandler*>(settings.request_queue_size))
   , is_closing_(false)
   , is_processing_(false)
   , attempts_without_requests_(0)
@@ -230,7 +230,7 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener,
 }
 
 void RequestProcessor::close() {
-  event_loop_->add(Memory::allocate<ProcessorRunClose>(Ptr(this)));
+  event_loop_->add(new ProcessorRunClose(Ptr(this)));
 }
 
 void RequestProcessor::set_listener(RequestProcessorListener* listener) {
@@ -245,28 +245,28 @@ void RequestProcessor::set_keyspace(const String& keyspace,
   if (event_loop_->is_running_on()) {
     connection_pool_manager_->set_keyspace(keyspace);
   } else {
-    event_loop_->add(Memory::allocate<SetKeyspaceProcessor>(connection_pool_manager_, keyspace, handler));
+    event_loop_->add(new SetKeyspaceProcessor(connection_pool_manager_, keyspace, handler));
   }
 }
 
 void RequestProcessor::notify_host_added(const Host::Ptr& host) {
-  event_loop_->add(Memory::allocate<ProcessorNotifyHostAdd>(host, Ptr(this)));
+  event_loop_->add(new ProcessorNotifyHostAdd(host, Ptr(this)));
 }
 
 void RequestProcessor::notify_host_removed(const Host::Ptr& host) {
-  event_loop_->add(Memory::allocate<ProcessorNotifyHostRemove>(host, Ptr(this)));
+  event_loop_->add(new ProcessorNotifyHostRemove(host, Ptr(this)));
 }
 
 void RequestProcessor::notify_host_ready(const Host::Ptr& host) {
-  event_loop_->add(Memory::allocate<ProcessorNotifyHostReady>(host, Ptr(this)));
+  event_loop_->add(new ProcessorNotifyHostReady(host, Ptr(this)));
 }
 
 void RequestProcessor::notify_host_maybe_up(const Address& address) {
-  event_loop_->add(Memory::allocate<ProcessorNotifyMaybeHostUp>(address, Ptr(this)));
+  event_loop_->add(new ProcessorNotifyMaybeHostUp(address, Ptr(this)));
 }
 
 void RequestProcessor::notify_token_map_updated(const TokenMap::Ptr& token_map) {
-  event_loop_->add(Memory::allocate<ProcessorNotifyTokenMapUpdate>(token_map, Ptr(this)));
+  event_loop_->add(new ProcessorNotifyTokenMapUpdate(token_map, Ptr(this)));
 }
 
 void RequestProcessor::process_request(const RequestHandler::Ptr& request_handler) {
@@ -279,7 +279,7 @@ void RequestProcessor::process_request(const RequestHandler::Ptr& request_handle
     if (!is_processing_.load(MEMORY_ORDER_RELAXED) &&
         is_processing_.compare_exchange_strong(expected, true)) {
       async_.send();
-     }
+    }
   } else {
     request_handler->dec_ref();
     request_handler->set_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
@@ -339,18 +339,18 @@ void RequestProcessor::on_keyspace_changed(const String& keyspace,
                                            KeyspaceChangedResponse response) {
   listener_->on_keyspace_changed(keyspace,
                                  KeyspaceChangedHandler::Ptr(
-                                   Memory::allocate<KeyspaceChangedHandler>(event_loop_, response)));
+                                   new KeyspaceChangedHandler(event_loop_, response)));
 }
 
 bool RequestProcessor::on_wait_for_tracing_data(const RequestHandler::Ptr& request_handler,
                                                 const Host::Ptr& current_host,
                                                 const Response::Ptr& response) {
-  TracingDataHandler::Ptr handler(Memory::allocate<TracingDataHandler>(request_handler,
-                                                                       current_host,
-                                                                       response,
-                                                                       settings_.tracing_consistency,
-                                                                       settings_.max_tracing_wait_time_ms,
-                                                                       settings_.retry_tracing_wait_time_ms));
+  TracingDataHandler::Ptr handler(new TracingDataHandler(request_handler,
+                                                         current_host,
+                                                         response,
+                                                         settings_.tracing_consistency,
+                                                         settings_.max_tracing_wait_time_ms,
+                                                         settings_.retry_tracing_wait_time_ms));
 
   return write_wait_callback(request_handler, current_host, handler->callback());
 }
@@ -358,11 +358,11 @@ bool RequestProcessor::on_wait_for_tracing_data(const RequestHandler::Ptr& reque
 bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                                     const Host::Ptr& current_host,
                                                     const Response::Ptr& response) {
-  SchemaAgreementHandler::Ptr handler(Memory::allocate<SchemaAgreementHandler>(request_handler,
-                                                                               current_host,
-                                                                               response,
-                                                                               this,
-                                                                               settings_.max_schema_wait_time_ms));
+  SchemaAgreementHandler::Ptr handler(new SchemaAgreementHandler(request_handler,
+                                                                 current_host,
+                                                                 response,
+                                                                 this,
+                                                                 settings_.max_schema_wait_time_ms));
 
   return write_wait_callback(request_handler, current_host, handler->callback());
 }
@@ -380,11 +380,11 @@ bool RequestProcessor::on_prepare_all(const RequestHandler::Ptr& request_handler
     return false;
   }
 
-  PrepareAllHandler::Ptr prepare_all_handler(Memory::allocate<PrepareAllHandler>(current_host,
-                                                                                 response,
-                                                                                 request_handler,
-                                                                                 // Subtract the node that's already been prepared
-                                                                                 addresses.size() - 1));
+  PrepareAllHandler::Ptr prepare_all_handler(new PrepareAllHandler(current_host,
+                                                                   response,
+                                                                   request_handler,
+                                                                   // Subtract the node that's already been prepared
+                                                                   addresses.size() - 1));
 
   for (AddressVec::const_iterator it = addresses.begin(),
        end = addresses.end(); it != end; ++it) {
@@ -398,8 +398,8 @@ bool RequestProcessor::on_prepare_all(const RequestHandler::Ptr& request_handler
     // The destructor of `PrepareAllCallback` will decrement the remaining
     // count in `PrepareAllHandler` even if this is unable to write to a
     // connection successfully.
-    PrepareAllCallback::Ptr prepare_all_callback(Memory::allocate<PrepareAllCallback>(address,
-                                                                                      prepare_all_handler));
+    PrepareAllCallback::Ptr prepare_all_callback(new PrepareAllCallback(address,
+                                                                        prepare_all_handler));
 
     PooledConnection::Ptr connection(connection_pool_manager_->find_least_busy(address));
     if (connection) {

@@ -53,9 +53,9 @@ public:
   virtual void on_host_down(const Address& address);
 
   virtual LoadBalancingPolicy* new_instance() {
-    return Memory::allocate<DCAwarePolicy>(local_dc_,
-                                           used_hosts_per_remote_dc_,
-                                           skip_remote_dcs_for_local_cl_);
+    return new DCAwarePolicy(local_dc_,
+                             used_hosts_per_remote_dc_,
+                             skip_remote_dcs_for_local_cl_);
   }
 
 private:
@@ -64,7 +64,7 @@ private:
     typedef cass::Map<String, CopyOnWriteHostVec> Map;
     typedef Set<String> KeySet;
 
-    PerDCHostMap() : no_hosts_(Memory::allocate<HostVec>()) {
+    PerDCHostMap() : no_hosts_(new HostVec()) {
       uv_rwlock_init(&rwlock_);
     }
     ~PerDCHostMap() { uv_rwlock_destroy(&rwlock_); }

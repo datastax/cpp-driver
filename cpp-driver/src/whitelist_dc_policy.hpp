@@ -34,7 +34,7 @@ public:
   virtual ~WhitelistDCPolicy() {}
 
   WhitelistDCPolicy* new_instance() {
-    return Memory::allocate<WhitelistDCPolicy>(child_policy_->new_instance(), dcs_);
+    return new WhitelistDCPolicy(child_policy_->new_instance(), dcs_);
   }
 
 private:

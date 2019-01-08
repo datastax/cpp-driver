@@ -17,8 +17,8 @@
 #ifndef __CASS_SPECULATIVE_EXECUTION_HPP_INCLUDED__
 #define __CASS_SPECULATIVE_EXECUTION_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "host.hpp"
-#include "memory.hpp"
 #include "ref_counted.hpp"
 #include "string.hpp"
 
@@ -28,7 +28,7 @@ namespace cass {
 
 class Request;
 
-class SpeculativeExecutionPlan {
+class SpeculativeExecutionPlan : public Allocated {
 public:
   virtual ~SpeculativeExecutionPlan() { }
 
@@ -56,11 +56,11 @@ class NoSpeculativeExecutionPolicy : public SpeculativeExecutionPolicy {
 public:
   virtual SpeculativeExecutionPlan* new_plan(const String& keyspace,
                                              const Request* request) {
-    return Memory::allocate<NoSpeculativeExecutionPlan>();
+    return new NoSpeculativeExecutionPlan();
   }
 
   virtual SpeculativeExecutionPolicy* new_instance()  {
-    return  Memory::allocate<NoSpeculativeExecutionPolicy>();
+    return  new NoSpeculativeExecutionPolicy();
   }
 };
 
@@ -87,13 +87,13 @@ public:
 
   virtual SpeculativeExecutionPlan* new_plan(const String& keyspace,
                                              const Request* request) {
-    return Memory::allocate<ConstantSpeculativeExecutionPlan>(constant_delay_ms_,
-                                                              max_speculative_executions_);
+    return new ConstantSpeculativeExecutionPlan(constant_delay_ms_,
+                                                max_speculative_executions_);
   }
 
   virtual SpeculativeExecutionPolicy* new_instance()  {
-    return Memory::allocate<ConstantSpeculativeExecutionPolicy>(constant_delay_ms_,
-                                                                max_speculative_executions_);
+    return new ConstantSpeculativeExecutionPolicy(constant_delay_ms_,
+                                                  max_speculative_executions_);
   }
 
   const int64_t constant_delay_ms_;

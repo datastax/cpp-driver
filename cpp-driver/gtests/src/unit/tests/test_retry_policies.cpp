@@ -213,7 +213,7 @@ TEST(RetryPoliciesUnitTest, Fallthrough)
 TEST(RetryPoliciesUnitTest, Logging)
 {
   cass::SharedRefPtr<cass::DefaultRetryPolicy> policy(
-        cass::Memory::allocate<cass::DefaultRetryPolicy>());
+        new cass::DefaultRetryPolicy());
   cass::LoggingRetryPolicy logging_policy(policy);
   cass_log_set_level(CASS_LOG_INFO);
   check_default(logging_policy);

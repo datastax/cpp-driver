@@ -37,7 +37,7 @@ public:
                                     const TokenMap* token_map);
 
   virtual LoadBalancingPolicy* new_instance() {
-    return Memory::allocate<HostTargetingPolicy>(child_policy_->new_instance());
+    return new HostTargetingPolicy(child_policy_->new_instance());
   }
 
   virtual void on_host_added(const Host::Ptr& host);

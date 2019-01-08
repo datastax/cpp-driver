@@ -70,7 +70,7 @@ TEST_F(StatementUnitTest, SetHost) {
   for (int i = 0; i < 2; ++i) {
     cass::Address expected_host(gen.next());
 
-    cass::Statement::Ptr request(cass::Memory::allocate<cass::QueryRequest>(SELECT_LOCAL, 0));
+    cass::Statement::Ptr request(new cass::QueryRequest(SELECT_LOCAL, 0));
     request->set_host(expected_host);
 
     cass::ResponseFuture::Ptr future(session.execute(cass::Request::ConstPtr(request)));
@@ -91,7 +91,7 @@ TEST_F(StatementUnitTest, SetHostWithInvalidPort) {
 
   cass::Address expected_host(cass::Address("127.0.0.1", 8888)); // Invalid port
 
-  cass::Statement::Ptr request(cass::Memory::allocate<cass::QueryRequest>(SELECT_LOCAL, 0));
+  cass::Statement::Ptr request(new cass::QueryRequest(SELECT_LOCAL, 0));
   request->set_host(expected_host);
 
   cass::ResponseFuture::Ptr future(session.execute(cass::Request::ConstPtr(request)));
@@ -111,7 +111,7 @@ TEST_F(StatementUnitTest, SetHostWhereHostIsDown) {
 
   cass::Address expected_host(cass::Address("127.0.0.1", 9042));
 
-  cass::Statement::Ptr request(cass::Memory::allocate<cass::QueryRequest>(SELECT_LOCAL, 0));
+  cass::Statement::Ptr request(new cass::QueryRequest(SELECT_LOCAL, 0));
   request->set_host(expected_host);
 
   cass::ResponseFuture::Ptr future(session.execute(cass::Request::ConstPtr(request)));

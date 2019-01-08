@@ -84,7 +84,7 @@ public:
     state->status = STATUS_CONNECTED;
     state->connection = connector->release_connection();
     state->connection->start_heartbeats();
-    state->connection->write_and_flush(RequestCallback::Ptr(Memory::allocate<RequestCallback>(state->connection.get(), state)));
+    state->connection->write_and_flush(RequestCallback::Ptr(new RequestCallback(state->connection.get(), state)));
   }
 
   static void on_connection_error_code(Connector* connector, Connector::ConnectionError* error_code) {
@@ -104,7 +104,7 @@ public:
     state->status = STATUS_CONNECTED;
     state->connection = connector->release_connection();
     state->connection->start_heartbeats();
-    state->connection->write_and_flush(RequestCallback::Ptr(Memory::allocate<RequestCallback>(state->connection.get(), state)));
+    state->connection->write_and_flush(RequestCallback::Ptr(new RequestCallback(state->connection.get(), state)));
   }
 
   static void on_delayed_error_code(DelayedConnector* connector, Connector::ConnectionError* error_code) {
@@ -120,9 +120,9 @@ TEST_F(ConnectionUnitTest, Simple) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, &state)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_connected, &state)));
 
   connector->connect(loop());
 
@@ -141,9 +141,9 @@ TEST_F(ConnectionUnitTest, Keyspace) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, &state)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_connected, &state)));
 
   connector
       ->with_keyspace("foo")
@@ -161,12 +161,12 @@ TEST_F(ConnectionUnitTest, Auth) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, &state)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_connected, &state)));
 
   ConnectionSettings settings;
-  settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
+  settings.auth_provider.reset(new PlainTextAuthProvider("cassandra", "cassandra"));
 
   connector
       ->with_settings(settings)
@@ -183,9 +183,9 @@ TEST_F(ConnectionUnitTest, Ssl) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, &state)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_connected, &state)));
   connector
       ->with_settings(settings)
       ->connect(loop());
@@ -199,9 +199,9 @@ TEST_F(ConnectionUnitTest, Refused) {
   // Don't start cluster
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_error_code, &error_code)));
   connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
@@ -218,9 +218,9 @@ TEST_F(ConnectionUnitTest, Close) {
 
   bool is_closed(false);
   for (size_t i = 0; i < 10; ++i) {
-    Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                         PROTOCOL_VERSION,
-                                                         bind_callback(on_connection_close, &is_closed)));
+    Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                           PROTOCOL_VERSION,
+                                           bind_callback(on_connection_close, &is_closed)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -240,9 +240,9 @@ TEST_F(ConnectionUnitTest, SslClose) {
 
   bool is_closed(false);
   for (size_t i = 0; i < 10; ++i) {
-    Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                         PROTOCOL_VERSION,
-                                                         bind_callback(on_connection_close, &is_closed)));
+    Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                           PROTOCOL_VERSION,
+                                           bind_callback(on_connection_close, &is_closed)));
     connector
         ->with_settings(settings)
         ->connect(loop());
@@ -262,9 +262,9 @@ TEST_F(ConnectionUnitTest, Cancel) {
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   for (size_t i = 0; i < 10; ++i) {
-    Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                         PROTOCOL_VERSION,
-                                                         bind_callback(on_connection_error_code, &error_code)));
+    Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                           PROTOCOL_VERSION,
+                                           bind_callback(on_connection_error_code, &error_code)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -290,9 +290,9 @@ TEST_F(ConnectionUnitTest, SslCancel) {
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   for (size_t i = 0; i < 10; ++i) {
-    Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                         PROTOCOL_VERSION,
-                                                         bind_callback(on_connection_error_code, &error_code)));
+    Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                           PROTOCOL_VERSION,
+                                           bind_callback(on_connection_error_code, &error_code)));
     connector
         ->with_settings(settings)
         ->connect(loop());
@@ -318,9 +318,9 @@ TEST_F(ConnectionUnitTest, Timeout) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_error_code, &error_code)));
 
   ConnectionSettings settings;
   settings.connect_timeout_ms = 200;
@@ -344,9 +344,9 @@ TEST_F(ConnectionUnitTest, InvalidKeyspace) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_error_code, &error_code)));
   connector
       ->with_keyspace("invalid")
       ->connect(loop());
@@ -361,9 +361,9 @@ TEST_F(ConnectionUnitTest, InvalidProtocol) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       0x7F, // Invalid protocol version
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         0x7F, // Invalid protocol version
+                                         bind_callback(on_connection_error_code, &error_code)));
   connector
       ->connect(loop());
 
@@ -379,9 +379,9 @@ TEST_F(ConnectionUnitTest, DeprecatedProtocol) {
   cluster.start_all();
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_error_code, &error_code)));
   connector
       ->connect(loop());
 
@@ -395,12 +395,12 @@ TEST_F(ConnectionUnitTest, InvalidAuth) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_error_code, &error_code)));
 
   ConnectionSettings settings;
-  settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
+  settings.auth_provider.reset(new PlainTextAuthProvider("invalid", "invalid"));
 
   connector
       ->with_settings(settings)
@@ -416,9 +416,9 @@ TEST_F(ConnectionUnitTest, InvalidNoSsl) {
   ASSERT_EQ(cluster.start_all(), 0); // Start without ssl
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_error_code, &error_code)));
 
   SslContext::Ptr ssl_context(SslContextFactory::create());
 
@@ -441,9 +441,9 @@ TEST_F(ConnectionUnitTest, InvalidSsl) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
-  Connector::Ptr connector(Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  Connector::Ptr connector(new Connector(Address("127.0.0.1", PORT),
+                                         PROTOCOL_VERSION,
+                                         bind_callback(on_connection_error_code, &error_code)));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
@@ -465,9 +465,9 @@ TEST_F(ConnectionUnitTest, Delayed) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
-  DelayedConnector::Ptr connector(Memory::allocate<DelayedConnector>(Address("127.0.0.1", PORT),
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_delayed_connected, &state)));
+  DelayedConnector::Ptr connector(new DelayedConnector(Address("127.0.0.1", PORT),
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_delayed_connected, &state)));
 
   connector->delayed_connect(loop(), 500);
 
@@ -481,9 +481,9 @@ TEST_F(ConnectionUnitTest, DelayedCancel) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
-  DelayedConnector::Ptr connector(Memory::allocate<DelayedConnector>(Address("127.0.0.1", PORT),
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_delayed_connected, &state)));
+  DelayedConnector::Ptr connector(new DelayedConnector(Address("127.0.0.1", PORT),
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_delayed_connected, &state)));
 
   connector->delayed_connect(loop(), 500);
 
@@ -497,9 +497,9 @@ TEST_F(ConnectionUnitTest, DelayedCancel) {
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   for (size_t i = 0; i < 10; ++i) {
-    DelayedConnector::Ptr connector(Memory::allocate<DelayedConnector>(Address("127.0.0.1", PORT),
-                                                                       PROTOCOL_VERSION,
-                                                                       bind_callback(on_delayed_error_code, &error_code)));
+    DelayedConnector::Ptr connector(new DelayedConnector(Address("127.0.0.1", PORT),
+                                                         PROTOCOL_VERSION,
+                                                         bind_callback(on_delayed_error_code, &error_code)));
     connector->delayed_connect(loop(), 500);
     connectors.push_back(connector);
   }

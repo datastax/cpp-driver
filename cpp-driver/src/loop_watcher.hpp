@@ -17,9 +17,9 @@
 #ifndef __CASS_LOOP_WATCHER_HPP_INCLUDED__
 #define __CASS_LOOP_WATCHER_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "callback.hpp"
 #include "macros.hpp"
-#include "memory.hpp"
 
 #include <uv.h>
 
@@ -48,7 +48,7 @@ public:
   int start(uv_loop_t* loop, const Callback& callback) {
     int rc = 0;
     if (handle_ == NULL) {
-      handle_ = Memory::allocate<HandleType>();
+      handle_ = new AllocatedT<HandleType>();
       handle_->loop = NULL;
       handle_->data = this;
     }
@@ -82,7 +82,7 @@ public:
   void close_handle() {
     if (handle_ != NULL) {
       if (state_ == CLOSED) { // The handle was allocated, but initialization failed.
-        Memory::deallocate(handle_);
+        delete handle_;
       } else { // If initialized or started then close the handle properly.
         uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
       }
@@ -102,7 +102,7 @@ private:
   }
 
   static void on_close(uv_handle_t* handle) {
-    Memory::deallocate(reinterpret_cast<HandleType*>(handle));
+    delete reinterpret_cast<AllocatedT<HandleType>*>(handle);
   }
 
 private:
@@ -113,7 +113,7 @@ private:
   };
 
 private:
-  HandleType* handle_;
+  AllocatedT<HandleType>* handle_;
   State state_;
   Callback callback_;
 

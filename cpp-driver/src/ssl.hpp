@@ -17,6 +17,7 @@
 #ifndef __CASS_SSL_HPP_INCLUDED__
 #define __CASS_SSL_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "address.hpp"
 #include "cassandra.h"
 #include "cassconfig.hpp"
@@ -29,7 +30,7 @@
 
 namespace cass {
 
-class SslSession {
+class SslSession : public Allocated {
 public:
   SslSession(const Address& address,
              const String& hostname,

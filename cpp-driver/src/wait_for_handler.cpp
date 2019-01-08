@@ -74,7 +74,7 @@ ChainedRequestCallback::Ptr WaitForHandler::callback(const WaitforRequestVec& re
   for (WaitforRequestVec::const_iterator it = requests.begin(),
        end = requests.end(); it != end; ++it) {
     if (!chain) {
-      chain.reset(Memory::allocate<WaitForCallback>(it->first, it->second, Ptr(this)));
+      chain.reset(new WaitForCallback(it->first, it->second, Ptr(this)));
     } else {
       chain = chain->chain(it->first, it->second);
     }
@@ -83,7 +83,7 @@ ChainedRequestCallback::Ptr WaitForHandler::callback(const WaitforRequestVec& re
 }
 
 WaitForHandler::WaitForRequest WaitForHandler::make_request(const String& key, const String& query) {
-  QueryRequest::Ptr request(Memory::allocate<QueryRequest>(query));
+  QueryRequest::Ptr request(new QueryRequest(query));
   request->set_request_timeout_ms(request_timeout_ms());
   return WaitForRequest(key, request);
 }

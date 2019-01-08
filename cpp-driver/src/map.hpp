@@ -8,6 +8,7 @@
 #ifndef __DSE_MAP_HPP_INCLUDED__
 #define __DSE_MAP_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "allocator.hpp"
 
 #include <map>
@@ -15,7 +16,9 @@
 namespace cass {
 
 template <class K, class V, class Compare = std::less<K> >
-class Map : public std::map<K, V, Compare, cass::Allocator<std::pair<const K, V> > > {
+class Map :
+    public Allocated,
+    public std::map<K, V, Compare, cass::Allocator<std::pair<const K, V> > > {
 public:
   typedef cass::Allocator<std::pair<const K, V> > Allocator;
 

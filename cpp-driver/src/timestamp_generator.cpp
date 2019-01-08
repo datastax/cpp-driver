@@ -23,13 +23,13 @@
 extern "C" {
 
 CassTimestampGen* cass_timestamp_gen_server_side_new() {
-  cass::TimestampGenerator* timestamp_gen = cass::Memory::allocate<cass::ServerSideTimestampGenerator>();
+  cass::TimestampGenerator* timestamp_gen = new cass::ServerSideTimestampGenerator();
   timestamp_gen->inc_ref();
   return CassTimestampGen::to(timestamp_gen);
 }
 
 CassTimestampGen* cass_timestamp_gen_monotonic_new() {
-  cass::TimestampGenerator* timestamp_gen = cass::Memory::allocate<cass::MonotonicTimestampGenerator>();
+  cass::TimestampGenerator* timestamp_gen = new cass::MonotonicTimestampGenerator();
   timestamp_gen->inc_ref();
   return CassTimestampGen::to(timestamp_gen);
 }
@@ -37,8 +37,8 @@ CassTimestampGen* cass_timestamp_gen_monotonic_new() {
 CassTimestampGen* cass_timestamp_gen_monotonic_new_with_settings(int64_t warning_threshold_us,
                                                                  int64_t warning_interval_ms) {
   cass::TimestampGenerator* timestamp_gen
-      = cass::Memory::allocate<cass::MonotonicTimestampGenerator>(warning_threshold_us,
-                                                                  warning_interval_ms);
+      = new cass::MonotonicTimestampGenerator(warning_threshold_us,
+                                              warning_interval_ms);
   timestamp_gen->inc_ref();
   return CassTimestampGen::to(timestamp_gen);
 }

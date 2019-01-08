@@ -6,7 +6,6 @@
 */
 
 #include "line_string.hpp"
-#include "memory.hpp"
 #include "validate.hpp"
 
 #include <string_ref.hpp>
@@ -18,11 +17,11 @@
 extern "C" {
 
 DseLineString* dse_line_string_new() {
-  return DseLineString::to(cass::Memory::allocate<dse::LineString>());
+  return DseLineString::to(new dse::LineString());
 }
 
 void dse_line_string_free(DseLineString* line_string) {
-  cass::Memory::deallocate(line_string->from());
+  delete line_string->from();
 }
 
 void dse_line_string_reset(DseLineString* line_string) {
@@ -45,11 +44,11 @@ CassError dse_line_string_finish(DseLineString* line_string) {
 }
 
 DseLineStringIterator* dse_line_string_iterator_new() {
-  return DseLineStringIterator::to(cass::Memory::allocate<dse::LineStringIterator>());
+  return DseLineStringIterator::to(new dse::LineStringIterator());
 }
 
 void dse_line_string_iterator_free(DseLineStringIterator* iterator) {
-  cass::Memory::deallocate(iterator->from());
+  delete iterator->from();
 }
 
 CassError dse_line_string_iterator_reset(DseLineStringIterator *iterator, const CassValue *value) {

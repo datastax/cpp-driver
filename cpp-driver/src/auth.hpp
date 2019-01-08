@@ -118,8 +118,8 @@ private:
 class ExternalAuthProvider : public AuthProvider {
 public:
   ExternalAuthProvider(const CassAuthenticatorCallbacks* exchange_callbacks,
-                   CassAuthenticatorDataCleanupCallback cleanup_callback,
-                   void* data)
+                       CassAuthenticatorDataCleanupCallback cleanup_callback,
+                       void* data)
     : exchange_callbacks_(*exchange_callbacks)
     , cleanup_callback_(cleanup_callback)
     , data_(data) { }
@@ -133,11 +133,11 @@ public:
   virtual Authenticator::Ptr new_authenticator(const Address& address,
                                                const String& hostname,
                                                const String& class_name) const {
-    return Authenticator::Ptr(Memory::allocate<ExternalAuthenticator>(address,
-                                                                      hostname,
-                                                                      class_name,
-                                                                      &exchange_callbacks_,
-                                                                      data_));
+    return Authenticator::Ptr(new ExternalAuthenticator(address,
+                                                        hostname,
+                                                        class_name,
+                                                        &exchange_callbacks_,
+                                                        data_));
   }
 
 private:
@@ -156,7 +156,7 @@ public:
   virtual Authenticator::Ptr new_authenticator(const Address& address,
                                                const String& hostname,
                                                const String& class_name) const {
-    return Authenticator::Ptr(Memory::allocate<PlainTextAuthenticator>(username_, password_));
+    return Authenticator::Ptr(new PlainTextAuthenticator(username_, password_));
   }
 
 private:

@@ -69,35 +69,35 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
   switch (opcode) {
 
     case CQL_OPCODE_ERROR:
-      response_body_.reset(Memory::allocate<ErrorResponse>());
+      response_body_.reset(new ErrorResponse());
       return true;
 
     case CQL_OPCODE_READY:
-      response_body_.reset(Memory::allocate<ReadyResponse>());
+      response_body_.reset(new ReadyResponse());
       return true;
 
     case CQL_OPCODE_AUTHENTICATE:
-      response_body_.reset(Memory::allocate<AuthenticateResponse>());
+      response_body_.reset(new AuthenticateResponse());
       return true;
 
     case CQL_OPCODE_SUPPORTED:
-      response_body_.reset(Memory::allocate<SupportedResponse>());
+      response_body_.reset(new SupportedResponse());
       return true;
 
     case CQL_OPCODE_RESULT:
-      response_body_.reset(Memory::allocate<ResultResponse>());
+      response_body_.reset(new ResultResponse());
       return true;
 
     case CQL_OPCODE_EVENT:
-      response_body_.reset(Memory::allocate<EventResponse>());
+      response_body_.reset(new EventResponse());
       return true;
 
     case CQL_OPCODE_AUTH_CHALLENGE:
-      response_body_.reset(Memory::allocate<AuthChallengeResponse>());
+      response_body_.reset(new AuthChallengeResponse());
       return true;
 
     case CQL_OPCODE_AUTH_SUCCESS:
-      response_body_.reset(Memory::allocate<AuthSuccessResponse>());
+      response_body_.reset(new AuthSuccessResponse());
       return true;
 
     default:
@@ -151,7 +151,7 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
       // If a deprecated version of the protocol is encountered then we fake
       // an invalid protocol error.
       if (version_ < CASS_PROTOCOL_VERSION_V3) {
-        response_body_.reset(Memory::allocate<InvalidProtocolErrorResponse>());
+        response_body_.reset(new InvalidProtocolErrorResponse());
       } else if (!allocate_body(opcode_) || !response_body_) {
         return -1;
       }

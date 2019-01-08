@@ -17,10 +17,10 @@
 #ifndef __CASS_LOAD_BALANCING_HPP_INCLUDED__
 #define __CASS_LOAD_BALANCING_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "cassandra.h"
 #include "constants.hpp"
 #include "host.hpp"
-#include "memory.hpp"
 #include "request.hpp"
 #include "string.hpp"
 #include "vector.hpp"
@@ -58,7 +58,7 @@ inline bool is_dc_local(CassConsistency cl) {
   return cl == CASS_CONSISTENCY_LOCAL_ONE || cl == CASS_CONSISTENCY_LOCAL_QUORUM;
 }
 
-class QueryPlan {
+class QueryPlan : public Allocated {
 public:
   virtual ~QueryPlan() {}
   virtual Host::Ptr compute_next() = 0;

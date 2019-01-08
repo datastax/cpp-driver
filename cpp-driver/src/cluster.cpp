@@ -184,7 +184,7 @@ LockedHostMap&LockedHostMap::operator=(const HostMap& hosts) {
 }
 
 ClusterSettings::ClusterSettings()
-  : load_balancing_policy(Memory::allocate<RoundRobinPolicy>())
+  : load_balancing_policy(new RoundRobinPolicy())
   , port(CASS_DEFAULT_PORT)
   , reconnect_timeout_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
   , prepare_on_up_or_add_host(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
@@ -236,19 +236,19 @@ Cluster::Cluster(const ControlConnection::Ptr& connection,
 }
 
 void Cluster::close() {
-  event_loop_->add(Memory::allocate<ClusterRunClose>(Ptr(this)));
+  event_loop_->add(new ClusterRunClose(Ptr(this)));
 }
 
 void Cluster::notify_host_up(const Address& address) {
-  event_loop_->add(Memory::allocate<ClusterNotifyUp>(Ptr(this), address));
+  event_loop_->add(new ClusterNotifyUp(Ptr(this), address));
 }
 
 void Cluster::notify_host_down(const Address& address) {
-  event_loop_->add(Memory::allocate<ClusterNotifyDown>(Ptr(this), address));
+  event_loop_->add(new ClusterNotifyDown(Ptr(this), address));
 }
 
 void Cluster::start_events() {
-  event_loop_->add(Memory::allocate<ClusterStartEvents>(Ptr(this)));
+  event_loop_->add(new ClusterStartEvents(Ptr(this)));
 }
 
 Metadata::SchemaSnapshot Cluster::schema_snapshot() {
@@ -397,9 +397,9 @@ void Cluster::on_schedule_reconnect(Timer* timer) {
 void Cluster::handle_schedule_reconnect() {
   const Host::Ptr& host = query_plan_->compute_next();
   if (host) {
-    reconnector_.reset(Memory::allocate<ControlConnector>(host->address(),
-                                                          connection_->protocol_version(),
-                                                          bind_callback(&Cluster::on_reconnect, this)));
+    reconnector_.reset(new ControlConnector(host->address(),
+                                            connection_->protocol_version(),
+                                            bind_callback(&Cluster::on_reconnect, this)));
     reconnector_
         ->with_settings(settings_.control_connection_settings)
         ->connect(connection_->loop());
@@ -631,11 +631,11 @@ bool Cluster::prepare_host(const Host::Ptr& host,
                            const PrepareHostHandler::Callback& callback) {
   if (connection_ && settings_.prepare_on_up_or_add_host) {
     PrepareHostHandler::Ptr prepare_host_handler(
-          Memory::allocate<PrepareHostHandler>(host,
-                                               prepared_metadata_.copy(),
-                                               callback,
-                                               connection_->protocol_version(),
-                                               settings_.max_prepares_per_flush));
+          new PrepareHostHandler(host,
+                                 prepared_metadata_.copy(),
+                                 callback,
+                                 connection_->protocol_version(),
+                                 settings_.max_prepares_per_flush));
 
     prepare_host_handler->prepare(connection_->loop(),
                                   settings_.control_connection_settings.connection_settings);

@@ -37,7 +37,7 @@ namespace cass {
 class SingleHostQueryPlan : public QueryPlan {
 public:
   SingleHostQueryPlan(const Address& address)
-    : host_(Memory::allocate<Host>(address)) { }
+    : host_(new Host(address)) { }
 
   virtual Host::Ptr compute_next() {
     Host::Ptr temp = host_;
@@ -77,7 +77,7 @@ private:
 PrepareCallback::PrepareCallback(const String& query, RequestExecution* request_execution)
   : SimpleRequestCallback(
       Request::ConstPtr(
-        Memory::allocate<PrepareRequest>(query,
+        new PrepareRequest(query,
                                          request_execution->request()->keyspace(),
                                          request_execution->request_timeout_ms())))
   , request_execution_(request_execution) { }
@@ -174,7 +174,7 @@ void RequestHandler::init(const ExecutionProfile& profile,
   // If a specific host is set then bypass the load balancing policy and use a
   // specialized single host query plan.
   if (request()->host()) {
-    query_plan_.reset(Memory::allocate<SingleHostQueryPlan>(*request()->host()));
+    query_plan_.reset(new SingleHostQueryPlan(*request()->host()));
   } else {
     query_plan_.reset(profile.load_balancing_policy()->new_query_plan(keyspace, this, token_map));
   }
@@ -183,7 +183,7 @@ void RequestHandler::init(const ExecutionProfile& profile,
 }
 
 void RequestHandler::execute() {
-  RequestExecution::Ptr request_execution(Memory::allocate<RequestExecution>(this));
+  RequestExecution::Ptr request_execution(new RequestExecution(this));
   running_executions_++;
   internal_retry(request_execution.get());
 }
@@ -220,7 +220,7 @@ void RequestHandler::notify_result_metadata_changed(const String& prepared_id,
                                                     const String& result_metadata_id,
                                                     const ResultResponse::ConstPtr& result_response, Protected) {
   PreparedMetadata::Entry::Ptr entry(
-        Memory::allocate<PreparedMetadata::Entry>(query,
+        new PreparedMetadata::Entry(query,
                                                   keyspace,
                                                   result_metadata_id,
                                                   result_response));
@@ -615,7 +615,7 @@ void RequestExecution::on_error_response(Connection* connection, ResponseMessage
       break;
 
     case RetryPolicy::RetryDecision::IGNORE:
-      set_response(Response::Ptr(Memory::allocate<ResultResponse>()));
+      set_response(Response::Ptr(new ResultResponse()));
       break;
   }
 }
@@ -642,7 +642,7 @@ void RequestExecution::on_error_unprepared(Connection* connection, ErrorResponse
   }
 
   if (!connection->write_and_flush(RequestCallback::Ptr(
-                                     Memory::allocate<PrepareCallback>(query, this)))) {
+                                     new PrepareCallback(query, this)))) {
     // Try to prepare on the same host but on a different connection
     retry_current_host();
   }

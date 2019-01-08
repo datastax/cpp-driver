@@ -62,7 +62,7 @@ public:
   SharedPtr(T* ptr = NULL)
     : object_(NULL) {
     if (ptr) {
-      ObjectRef<T, D>* object_ref = cass::Memory::allocate<ObjectRef<T, D> >(ptr);
+      ObjectRef<T, D>* object_ref = new ObjectRef<T, D>(ptr);
       object_ = cass::SharedRefPtr<ObjectRef<T, D> >(object_ref);
     }
   }

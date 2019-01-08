@@ -42,7 +42,7 @@ CassStatement* cass_statement_new_n(const char* query,
                                     size_t query_length,
                                     size_t parameter_count) {
   cass::QueryRequest* query_request
-      = cass::Memory::allocate<cass::QueryRequest>(query, query_length, parameter_count);
+      = new cass::QueryRequest(query, query_length, parameter_count);
   query_request->inc_ref();
   return CassStatement::to(query_request);
 }

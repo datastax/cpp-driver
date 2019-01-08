@@ -85,12 +85,12 @@ ClusterConnector* ClusterConnector::with_metrics(Metrics* metrics) {
 
 void ClusterConnector::connect(EventLoop* event_loop) {
   event_loop_ = event_loop;
-  event_loop_->add(Memory::allocate<RunResolveAndConnectCluster>(Ptr(this)));
+  event_loop_->add(new RunResolveAndConnectCluster(Ptr(this)));
 }
 
 void ClusterConnector::cancel() {
   if (event_loop_) {
-    event_loop_->add(Memory::allocate<RunCancelCluster>(Ptr(this)));
+    event_loop_->add(new RunCancelCluster(Ptr(this)));
   }
 }
 
@@ -119,7 +119,7 @@ void ClusterConnector::internal_resolve_and_connect() {
     } else {
       if (!resolver_) {
         resolver_.reset(
-              Memory::allocate<MultiResolver>(
+              new MultiResolver(
                 bind_callback(&ClusterConnector::on_resolve, this)));
       }
       resolver_->resolve(event_loop_->loop(),
@@ -135,9 +135,9 @@ void ClusterConnector::internal_resolve_and_connect() {
 }
 
 void ClusterConnector::internal_connect(const Address& address, ProtocolVersion version) {
-  ControlConnector::Ptr connector(Memory::allocate<ControlConnector>(address,
-                                                                     version,
-                                                                     bind_callback(&ClusterConnector::on_connect, this)));
+  ControlConnector::Ptr connector(new ControlConnector(address,
+                                                       version,
+                                                       bind_callback(&ClusterConnector::on_connect, this)));
   connectors_[address] = connector; // Keep track of the connectors so they can be canceled.
   connector
       ->with_metrics(metrics_)
@@ -299,15 +299,15 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
       return;
     }
 
-    cluster_.reset(Memory::allocate<Cluster>(connector->release_connection(),
-                                             listener_,
-                                             event_loop_,
-                                             connected_host,
-                                             hosts,
-                                             connector->schema(),
-                                             default_policy,
-                                             policies,
-                                             settings_));
+    cluster_.reset(new Cluster(connector->release_connection(),
+                               listener_,
+                               event_loop_,
+                               connected_host,
+                               hosts,
+                               connector->schema(),
+                               default_policy,
+                               policies,
+                               settings_));
 
     // Clear any connection errors and set the final negotiated protocol version.
     error_code_ = CLUSTER_OK;

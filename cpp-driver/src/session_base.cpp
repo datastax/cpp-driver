@@ -52,7 +52,7 @@ SessionBase::~SessionBase() {
 
 Future::Ptr SessionBase::connect(const Config& config,
                                  const String& keyspace) {
-  cass::Future::Ptr future(cass::Memory::allocate<SessionFuture>());
+  cass::Future::Ptr future(new SessionFuture());
 
   ScopedMutex l(&mutex_);
   if (state_ != SESSION_STATE_CLOSED) {
@@ -63,7 +63,7 @@ Future::Ptr SessionBase::connect(const Config& config,
 
   if (!event_loop_) {
     int rc = 0;
-    event_loop_.reset(Memory::allocate<EventLoop>());
+    event_loop_.reset(new EventLoop());
 
     rc = event_loop_->init("Session/Control Connection");
     if (rc != 0) {
@@ -88,18 +88,18 @@ Future::Ptr SessionBase::connect(const Config& config,
   state_ = SESSION_STATE_CONNECTING;
 
   if (config.use_randomized_contact_points()) {
-    random_.reset(Memory::allocate<Random>());
+    random_.reset(new Random());
   } else {
     random_.reset();
   }
 
-  metrics_.reset(Memory::allocate<Metrics>(config.thread_count_io() + 1));
+  metrics_.reset(new Metrics(config.thread_count_io() + 1));
 
   cluster_.reset();
   ClusterConnector::Ptr connector(
-        Memory::allocate<ClusterConnector>(config_.contact_points(),
-                                           config_.protocol_version(),
-                                           bind_callback(&SessionBase::on_initialize, this)));
+        new ClusterConnector(config_.contact_points(),
+                             config_.protocol_version(),
+                             bind_callback(&SessionBase::on_initialize, this)));
 
   ClusterSettings settings(config_);
   settings.control_connection_settings.connection_settings.client_id = to_string(client_id_);
@@ -116,7 +116,7 @@ Future::Ptr SessionBase::connect(const Config& config,
 }
 
 Future::Ptr SessionBase::close() {
-  cass::Future::Ptr future(cass::Memory::allocate<SessionFuture>());
+  cass::Future::Ptr future(new SessionFuture());
 
   ScopedMutex l(&mutex_);
   if (state_ == SESSION_STATE_CLOSED ||

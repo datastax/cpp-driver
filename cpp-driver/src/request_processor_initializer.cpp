@@ -59,7 +59,7 @@ RequestProcessorInitializer::~RequestProcessorInitializer() {
 void RequestProcessorInitializer::initialize(EventLoop* event_loop) {
   ScopedMutex l(&mutex_);
   event_loop_ = event_loop;
-  event_loop_->add(Memory::allocate<RunInitializeProcessor>(Ptr(this)));
+  event_loop_->add(new RunInitializeProcessor(Ptr(this)));
 }
 
 RequestProcessorInitializer* RequestProcessorInitializer::with_settings(const RequestProcessorSettings& settings) {
@@ -120,15 +120,15 @@ void RequestProcessorInitializer::on_close(ConnectionPoolManager* manager) {
 void RequestProcessorInitializer::internal_intialize() {
   inc_ref();
   connection_pool_manager_initializer_.reset(
-        Memory::allocate<ConnectionPoolManagerInitializer>(protocol_version_,
-                                                           bind_callback(&RequestProcessorInitializer::on_initialize, this)));
+        new ConnectionPoolManagerInitializer(protocol_version_,
+                                             bind_callback(&RequestProcessorInitializer::on_initialize, this)));
 
-    AddressVec addresses;
-    addresses.reserve(addresses.size());
-    for (HostMap::const_iterator it = hosts_.begin(),
-         end = hosts_.end(); it != end; ++it) {
-      addresses.push_back(it->first);
-    }
+  AddressVec addresses;
+  addresses.reserve(addresses.size());
+  for (HostMap::const_iterator it = hosts_.begin(),
+       end = hosts_.end(); it != end; ++it) {
+    addresses.push_back(it->first);
+  }
 
   connection_pool_manager_initializer_
       ->with_settings(settings_.connection_pool_settings)
@@ -162,14 +162,14 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
     error_code_ = REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE;
     error_message_ = "Unable to connect to any hosts";
   } else {
-    processor_.reset(Memory::allocate<RequestProcessor>(listener_,
-                                                        event_loop_,
-                                                        initializer->release_manager(),
-                                                        connected_host_,
-                                                        hosts_,
-                                                        token_map_,
-                                                        settings_,
-                                                        random_));
+    processor_.reset(new RequestProcessor(listener_,
+                                          event_loop_,
+                                          initializer->release_manager(),
+                                          connected_host_,
+                                          hosts_,
+                                          token_map_,
+                                          settings_,
+                                          random_));
 
     int rc = processor_->init(RequestProcessor::Protected());
     if (rc != 0) {

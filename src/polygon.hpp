@@ -10,6 +10,7 @@
 
 #include "dse.h"
 
+#include "allocated.hpp"
 #include "serialization.hpp"
 #include "string.hpp"
 #include "wkt.hpp"
@@ -18,7 +19,7 @@
 
 namespace dse {
 
-class Polygon {
+class Polygon : public cass::Allocated {
 public:
   Polygon() {
     reset();
@@ -88,7 +89,7 @@ private:
   Bytes bytes_;
 };
 
-class PolygonIterator {
+class PolygonIterator : public cass::Allocated {
 private:
   enum State {
     STATE_NUM_POINTS,
@@ -121,7 +122,7 @@ public:
   }
 
 private:
-  class Iterator {
+  class Iterator : public cass::Allocated {
   public:
     virtual ~Iterator() { }
     virtual CassError next_num_points(cass_uint32_t* num_points) = 0;

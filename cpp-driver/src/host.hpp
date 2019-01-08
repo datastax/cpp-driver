@@ -18,6 +18,7 @@
 #define __CASS_HOST_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "allocated.hpp"
 #include "atomic.hpp"
 #include "copy_on_write_ptr.hpp"
 #include "get_time.hpp"
@@ -145,7 +146,7 @@ public:
 
   void enable_latency_tracking(uint64_t scale, uint64_t min_measured) {
     if (!latency_tracker_) {
-      latency_tracker_.reset(Memory::allocate<LatencyTracker>(scale, (30LL * min_measured) / 100LL));
+      latency_tracker_.reset(new LatencyTracker(scale, (30LL * min_measured) / 100LL));
     }
   }
 
@@ -164,7 +165,7 @@ public:
   }
 
 private:
-  class LatencyTracker {
+  class LatencyTracker : public Allocated {
   public:
     LatencyTracker(uint64_t scale_ns, uint64_t threshold_to_account)
       : scale_ns_(scale_ns)

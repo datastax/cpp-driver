@@ -44,7 +44,7 @@ public:
   }
 
   virtual void on_write(Socket* socket, int status, SocketRequest* request) {
-    Memory::deallocate(request);
+    delete request;
     if (status != 0) {
       connector_->on_error(SocketConnector::SOCKET_ERROR_WRITE, "Write error");
     }
@@ -97,8 +97,8 @@ void SocketConnector::connect(uv_loop_t* loop) {
   if (settings_.hostname_resolution_enabled) {
     // Run hostname resolution then connect.
     resolver_.reset(
-          Memory::allocate<NameResolver>(address_,
-                                         bind_callback(&SocketConnector::on_resolve, this)));
+          new NameResolver(address_,
+                           bind_callback(&SocketConnector::on_resolve, this)));
     resolver_->resolve(loop, settings_.resolve_timeout_ms);
   } else {
     // Postpone the connection process until after this method ends because it
@@ -125,8 +125,8 @@ Socket::Ptr SocketConnector::release_socket() {
 
 void SocketConnector::internal_connect(uv_loop_t* loop) {
   Socket::Ptr socket(
-        Memory::allocate<Socket>(address_,
-                                 settings_.max_reusable_write_objects));
+        new Socket(address_,
+                   settings_.max_reusable_write_objects));
 
   if (uv_tcp_init(loop, socket->handle()) != 0) {
     on_error(SOCKET_ERROR_INIT, "Unable to initialize TCP object");
@@ -163,7 +163,7 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
     ssl_session_.reset(settings_.ssl_context->create_session(address_, hostname_));
   }
 
-  connector_.reset(Memory::allocate<TcpConnector>(address_));
+  connector_.reset(new TcpConnector(address_));
   connector_->connect(socket_->handle(),
                       bind_callback(&SocketConnector::on_connect, this));
 }
@@ -184,7 +184,7 @@ void SocketConnector::ssl_handshake() {
   char buf[SSL_HANDSHAKE_MAX_BUFFER_SIZE];
   size_t size = ssl_session_->outgoing().read(buf, SSL_HANDSHAKE_MAX_BUFFER_SIZE);
   if (size > 0) {
-    socket_->write_and_flush(Memory::allocate<BufferSocketRequest>(Buffer(buf, size)));
+    socket_->write_and_flush(new BufferSocketRequest(Buffer(buf, size)));
   }
 
   // If the handshake process is done then verify the certificate and finish.
@@ -245,7 +245,7 @@ void SocketConnector::on_connect(TcpConnector* tcp_connector) {
 #endif
 
     if (ssl_session_) {
-      socket_->set_handler(Memory::allocate<SslHandshakeHandler>(this));
+      socket_->set_handler(new SslHandshakeHandler(this));
       ssl_handshake();
     } else {
       finish();

@@ -33,10 +33,10 @@ public:
     TestWaitForHandler(uint64_t max_wait_time = 2000,
                        uint64_t retry_wait_time = 200)
       : WaitForHandler(RequestHandler::Ptr(
-                         Memory::allocate<RequestHandler>(
-                           QueryRequest::Ptr(Memory::allocate<QueryRequest>("")),
-                           ResponseFuture::Ptr(Memory::allocate<ResponseFuture>()))),
-                       Host::Ptr(Memory::allocate<Host>(Address())),
+                         new RequestHandler(
+                           QueryRequest::Ptr(new QueryRequest("")),
+                           ResponseFuture::Ptr(new ResponseFuture()))),
+                       Host::Ptr(new Host(Address())),
                        Response::Ptr(), max_wait_time, retry_wait_time) { }
 
     virtual RequestCallback::Ptr callback() = 0;
@@ -67,8 +67,8 @@ public:
   public:
     virtual RequestCallback::Ptr callback() {
       WaitforRequestVec requests;
-      QueryRequest::Ptr local_request(Memory::allocate<QueryRequest>("SELECT * FROM system.local WHERE key='local'"));
-      QueryRequest::Ptr peers_request(Memory::allocate<QueryRequest>("SELECT * FROM system.peers"));
+      QueryRequest::Ptr local_request(new QueryRequest("SELECT * FROM system.local WHERE key='local'"));
+      QueryRequest::Ptr peers_request(new QueryRequest("SELECT * FROM system.peers"));
       local_request->set_is_idempotent(true);
       peers_request->set_is_idempotent(true);
       requests.push_back(WaitForRequest("local", local_request));
@@ -91,9 +91,9 @@ public:
     timeout_ = timeout;
 
     Connector::Ptr connector(
-          Memory::allocate<Connector>(Address("127.0.0.1", PORT),
-                                      PROTOCOL_VERSION,
-                                      bind_callback(&WaitForHandlerUnitTest::on_connected, this)));
+          new Connector(Address("127.0.0.1", PORT),
+                        PROTOCOL_VERSION,
+                        bind_callback(&WaitForHandlerUnitTest::on_connected, this)));
     connector->connect(loop());
 
     uv_run(loop(), UV_RUN_DEFAULT);
@@ -106,7 +106,7 @@ private:
 
     void on_timeout(Timer* timer) {
       connection->close();
-      Memory::deallocate(this);
+      delete this;
     }
 
     void start(uint64_t timeout) {
@@ -120,7 +120,7 @@ private:
   };
 
   static void close(const Connection::Ptr& connection, uint64_t timeout) {
-    CloseConnectionHandler* handler(Memory::allocate<CloseConnectionHandler>(connection));
+    CloseConnectionHandler* handler(new CloseConnectionHandler(connection));
     handler->start(timeout);
   }
 
@@ -145,17 +145,17 @@ private:
 };
 
 TEST_F(WaitForHandlerUnitTest, CloseImmediatelyWhileWaiting) {
-  run(TestWaitForHandler::Ptr(Memory::allocate<RegularQueryHandler>()));
+  run(TestWaitForHandler::Ptr(new RegularQueryHandler()));
 }
 
 TEST_F(WaitForHandlerUnitTest, CloseAfterTimeoutWhileWaiting) {
-  run(TestWaitForHandler::Ptr(Memory::allocate<RegularQueryHandler>()), 500);
+  run(TestWaitForHandler::Ptr(new RegularQueryHandler()), 500);
 }
 
 TEST_F(WaitForHandlerUnitTest, CloseIdempotentImmediatelyWhileWaiting) {
-  run(TestWaitForHandler::Ptr(Memory::allocate<IdempotentQueryHandler>()));
+  run(TestWaitForHandler::Ptr(new IdempotentQueryHandler()));
 }
 
 TEST_F(WaitForHandlerUnitTest, CloseIdempotentAfterTimeoutWhileWaiting) {
-  run(TestWaitForHandler::Ptr(Memory::allocate<IdempotentQueryHandler>()), 500);
+  run(TestWaitForHandler::Ptr(new IdempotentQueryHandler()), 500);
 }

@@ -17,6 +17,7 @@
 #ifndef __CASS_HASH_INDEX_HPP_INCLUDED__
 #define __CASS_HASH_INDEX_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "hash.hpp"
 #include "macros.hpp"
 #include "small_vector.hpp"
@@ -45,7 +46,7 @@ struct HashTableEntry {
 };
 
 template<class T>
-class CaseInsensitiveHashTable {
+class CaseInsensitiveHashTable : public Allocated {
 public:
   typedef SmallVector<T, 16> EntryVec;
 

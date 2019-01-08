@@ -32,7 +32,7 @@
 extern "C" {
 
 CassSession* cass_session_new() {
-  cass::Session* session = cass::Memory::allocate<cass::Session>();
+  cass::Session* session = new cass::Session();
   return CassSession::to(session);
 }
 
@@ -42,7 +42,7 @@ void cass_session_free(CassSession* session) {
   // if the session is already closed.
   session->close()->wait();
 
-  cass::Memory::deallocate(session->from());
+  delete session->from();
 }
 
 CassFuture* cass_session_connect(CassSession* session, const CassCluster* cluster) {
@@ -108,7 +108,7 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
 
 const CassSchemaMeta* cass_session_get_schema_meta(const CassSession* session) {
   return CassSchemaMeta::to(
-        cass::Memory::allocate<cass::Metadata::SchemaSnapshot>(
+        new cass::Metadata::SchemaSnapshot(
           session->cluster()->schema_snapshot()));
 }
 
@@ -215,7 +215,7 @@ public:
     const size_t thread_count_io = remaining_ = session_->config().thread_count_io();
     for (size_t i = 0; i < thread_count_io; ++i) {
       RequestProcessorInitializer::Ptr initializer(
-            Memory::allocate<RequestProcessorInitializer>(connected_host,
+            new RequestProcessorInitializer(connected_host,
                                                           protocol_version,
                                                           hosts,
                                                           token_map,
@@ -298,13 +298,13 @@ Session::~Session() {
 }
 
 Future::Ptr Session::prepare(const char* statement, size_t length) {
-  PrepareRequest::Ptr prepare(Memory::allocate<PrepareRequest>(String(statement, length)));
+  PrepareRequest::Ptr prepare(new PrepareRequest(String(statement, length)));
 
-  ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(cluster()->schema_snapshot()));
+  ResponseFuture::Ptr future(new ResponseFuture(cluster()->schema_snapshot()));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
   execute(RequestHandler::Ptr(
-            Memory::allocate<RequestHandler>(prepare, future, metrics())));
+            new RequestHandler(prepare, future, metrics())));
 
   return future;
 }
@@ -318,26 +318,26 @@ Future::Ptr Session::prepare(const Statement* statement) {
     query = static_cast<const ExecuteRequest*>(statement)->prepared()->query();
   }
 
-  PrepareRequest::Ptr prepare(Memory::allocate<PrepareRequest>(query));
+  PrepareRequest::Ptr prepare(new PrepareRequest(query));
 
   // Inherit the settings of the existing statement. These will in turn be
   // inherited by bound statements.
   prepare->set_settings(statement->settings());
 
-  ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>(cluster()->schema_snapshot()));
+  ResponseFuture::Ptr future(new ResponseFuture(cluster()->schema_snapshot()));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
   execute(RequestHandler::Ptr(
-            Memory::allocate<RequestHandler>(prepare, future, metrics())));
+            new RequestHandler(prepare, future, metrics())));
 
   return future;
 }
 
 Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* preferred_address) {
-  ResponseFuture::Ptr future(Memory::allocate<ResponseFuture>());
+  ResponseFuture::Ptr future(new ResponseFuture());
 
   RequestHandler::Ptr request_handler(
-            Memory::allocate<RequestHandler>(request, future,
+            new RequestHandler(request, future,
                                              metrics(), preferred_address));
 
 
@@ -390,7 +390,7 @@ void Session::on_connect(const Host::Ptr& connected_host,
   }
 
   join();
-  event_loop_group_.reset(Memory::allocate<RoundRobinEventLoopGroup>(config().thread_count_io()));
+  event_loop_group_.reset(new RoundRobinEventLoopGroup(config().thread_count_io()));
   rc = event_loop_group_->init("Request Processor");
   if (rc != 0) {
     notify_connect_failed(CASS_ERROR_LIB_UNABLE_TO_INIT,
@@ -408,7 +408,7 @@ void Session::on_connect(const Host::Ptr& connected_host,
   request_processors_.clear();
   request_processor_count_ = 0;
   is_closing_ = false;
-  SessionInitializer::Ptr initializer(Memory::allocate<SessionInitializer>(this));
+  SessionInitializer::Ptr initializer(new SessionInitializer(this));
   initializer->initialize(connected_host,
                           protocol_version,
                           hosts,
@@ -505,8 +505,8 @@ void Session::on_pool_down(const Address& address) {
 }
 
 void Session::on_pool_critical_error(const Address& address,
-                                Connector::ConnectionError code,
-                                const String& message) {
+                                     Connector::ConnectionError code,
+                                     const String& message) {
   cluster()->notify_host_down(address);
 }
 

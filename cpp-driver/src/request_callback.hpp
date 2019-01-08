@@ -180,13 +180,13 @@ public:
     return wrapper_.request_timeout_ms();
   }
 
- int64_t timestamp() {
-   return wrapper_.timestamp();
- }
+  int64_t timestamp() {
+    return wrapper_.timestamp();
+  }
 
- const RetryPolicy::Ptr& retry_policy() {
-   return wrapper_.retry_policy();
- }
+  const RetryPolicy::Ptr& retry_policy() {
+    return wrapper_.retry_policy();
+  }
 
   const PreparedMetadata::Entry::Ptr& prepared_metadata_entry() const {
     return wrapper_.prepared_metadata_entry();

@@ -386,7 +386,7 @@ void ControlConnection::refresh_node(RefreshNodeType type, const Address& addres
   LOG_DEBUG("Refresh node: %s", query.c_str());
 
   if (write_and_flush(RequestCallback::Ptr(
-                        Memory::allocate<RefreshNodeCallback>(
+                        new RefreshNodeCallback(
                           address, type, is_all_peers, query, this))) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh node info");
     defunct();
@@ -411,7 +411,7 @@ void ControlConnection::handle_refresh_node(RefreshNodeCallback* callback) {
     return;
   }
 
-  Host::Ptr host(Memory::allocate<Host>(callback->address));
+  Host::Ptr host(new Host(callback->address));
   if (!callback->is_all_peers) {
     host->set(&result->first_row(), token_aware_routing_);
     listen_addresses_[callback->address]
@@ -469,14 +469,14 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
     query.assign(SELECT_KEYSPACES_20);
   }
   query.append(" WHERE keyspace_name='")
-       .append(keyspace_name.data(), keyspace_name.size())
-       .append("'");
+      .append(keyspace_name.data(), keyspace_name.size())
+      .append("'");
 
   LOG_DEBUG("Refreshing keyspace %s", query.c_str());
 
   if (write_and_flush(
         RequestCallback::Ptr(
-          Memory::allocate<RefreshKeyspaceCallback>(
+          new RefreshKeyspaceCallback(
             keyspace_name.to_string(), query, this))) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh keyspace info");
     defunct();
@@ -524,7 +524,7 @@ void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
         .append("' AND table_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
 
     LOG_DEBUG("Refreshing table/view %s; %s; %s; %s", table_query.c_str(), view_query.c_str(),
-                                                      column_query.c_str(), index_query.c_str());
+              column_query.c_str(), index_query.c_str());
   } else {
     table_query.assign(SELECT_COLUMN_FAMILIES_20);
     table_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
@@ -538,7 +538,7 @@ void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
   }
 
   ChainedRequestCallback::Ptr callback(
-        Memory::allocate<RefreshTableCallback>(
+        new RefreshTableCallback(
           keyspace_name.to_string(), table_or_view_name.to_string(),
           "tables", table_query, this));
 
@@ -608,7 +608,7 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name,
 
   if (!write_and_flush(
         RequestCallback::Ptr(
-          Memory::allocate<RefreshTypeCallback>(
+          new RefreshTypeCallback(
             keyspace_name.to_string(), type_name.to_string(),
             query, this)))) {
     LOG_ERROR("No more stream available while attempting to refresh type info");
@@ -661,8 +661,8 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
             Metadata::full_function_name(function_name.to_string(), to_strings(arg_types)).c_str(),
             String(keyspace_name.data(), keyspace_name.length()).c_str());
 
-  SharedRefPtr<QueryRequest> request(Memory::allocate<QueryRequest>(query, 3));
-  SharedRefPtr<Collection> signature(Memory::allocate<Collection>(CASS_COLLECTION_TYPE_LIST, arg_types.size()));
+  SharedRefPtr<QueryRequest> request(new QueryRequest(query, 3));
+  SharedRefPtr<Collection> signature(new Collection(CASS_COLLECTION_TYPE_LIST, arg_types.size()));
 
   for (StringRefVec::const_iterator i = arg_types.begin(),
        end = arg_types.end();
@@ -677,7 +677,7 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
 
   if (!write_and_flush(
         RequestCallback::Ptr(
-          Memory::allocate<RefreshFunctionCallback>(
+          new RefreshFunctionCallback(
             keyspace_name.to_string(), function_name.to_string(),
             to_strings(arg_types), is_aggregate,
             request, this)))) {

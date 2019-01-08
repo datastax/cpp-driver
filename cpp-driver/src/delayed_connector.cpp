@@ -17,16 +17,15 @@
 #include "delayed_connector.hpp"
 
 #include "event_loop.hpp"
-#include "memory.hpp"
 
 namespace cass {
 
 DelayedConnector::DelayedConnector(const Address& address,
                                    ProtocolVersion protocol_version,
                                    const Callback& callback)
-  : connector_(Memory::allocate<Connector>(address,
-                                           protocol_version,
-                                           bind_callback(&DelayedConnector::on_connect, this)))
+  : connector_(new Connector(address,
+                             protocol_version,
+                             bind_callback(&DelayedConnector::on_connect, this)))
   , callback_(callback)
   , is_canceled_(false) { }
 

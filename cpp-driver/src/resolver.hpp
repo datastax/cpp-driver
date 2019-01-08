@@ -48,10 +48,10 @@ public:
   };
 
   Resolver(const String& hostname, int port, const Callback& callback)
-      : hostname_(hostname)
-      , port_(port)
-      , status_(NEW)
-      , callback_(callback) {
+    : hostname_(hostname)
+    , port_(port)
+    , status_(NEW)
+    , callback_(callback) {
     req_.data = this;
   }
 
@@ -173,8 +173,8 @@ public:
                uint64_t timeout, struct addrinfo* hints = NULL) {
     inc_ref();
     Resolver::Ptr resolver(
-          Memory::allocate<Resolver>(host, port,
-                                     bind_callback(&MultiResolver::on_resolve, this)));
+          new Resolver(host, port,
+                       bind_callback(&MultiResolver::on_resolve, this)));
     resolver->resolve(loop, timeout, hints);
     resolvers_.push_back(resolver);
     remaining_++;

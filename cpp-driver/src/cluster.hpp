@@ -19,7 +19,6 @@
 
 #include "config.hpp"
 #include "control_connector.hpp"
-#include "memory.hpp"
 #include "external.hpp"
 #include "event_loop.hpp"
 #include "metadata.hpp"

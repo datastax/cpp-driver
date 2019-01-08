@@ -57,7 +57,7 @@ public:
   }
 
   cass::Map<cass::String, cass::String> client_options() {
-    cass::SharedRefPtr<cass::QueryRequest> request(cass::Memory::allocate<cass::QueryRequest>(CLIENT_OPTIONS_QUERY, 0));
+    cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(CLIENT_OPTIONS_QUERY, 0));
     cass::ResponseFuture::Ptr future = static_cast<cass::ResponseFuture::Ptr>(session_.execute(request, NULL));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out executing query";
     EXPECT_FALSE(future->error())

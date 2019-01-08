@@ -16,8 +16,6 @@
 
 #include "async.hpp"
 
-#include "memory.hpp"
-
 namespace cass {
 
 Async::Async()
@@ -29,7 +27,7 @@ Async::~Async() {
 
 int Async::start(uv_loop_t* loop, const Async::Callback& callback) {
   if (handle_ == NULL) {
-    handle_ = Memory::allocate<uv_async_t>();
+    handle_ = new AllocatedT<uv_async_t>();
     handle_->data = this;
     int rc = uv_async_init(loop, handle_, on_async);
     if (rc != 0) return rc;
@@ -60,7 +58,7 @@ void Async::on_async(uv_async_t* handle) {
 }
 
 void Async::on_close(uv_handle_t* handle) {
-  Memory::deallocate(reinterpret_cast<uv_async_t*>(handle));
+  delete reinterpret_cast<AllocatedT<uv_async_t>*>(handle);
 }
 
 } // namespace cass

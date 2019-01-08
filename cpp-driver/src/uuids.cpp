@@ -46,15 +46,15 @@ static uint64_t set_version(uint64_t timestamp, uint8_t version) {
 extern "C" {
 
 CassUuidGen* cass_uuid_gen_new() {
-  return CassUuidGen::to(cass::Memory::allocate<cass::UuidGen>());
+  return CassUuidGen::to(new cass::UuidGen());
 }
 
 CassUuidGen* cass_uuid_gen_new_with_node(cass_uint64_t node) {
-  return CassUuidGen::to(cass::Memory::allocate<cass::UuidGen>(node));
+  return CassUuidGen::to(new cass::UuidGen(node));
 }
 
 void cass_uuid_gen_free(CassUuidGen* uuid_gen) {
-  cass::Memory::deallocate(uuid_gen->from());
+  delete uuid_gen->from();
 }
 
 void cass_uuid_gen_time(CassUuidGen* uuid_gen, CassUuid* output) {

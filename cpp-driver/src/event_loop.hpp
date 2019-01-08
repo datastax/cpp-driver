@@ -17,6 +17,7 @@
 #ifndef __CASS_THREAD_HPP_INCLUDED__
 #define __CASS_THREAD_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "async.hpp"
 #include "atomic.hpp"
 #include "cassconfig.hpp"
@@ -25,6 +26,7 @@
 #include "macros.hpp"
 #include "loop_watcher.hpp"
 #include "scoped_lock.hpp"
+#include "scoped_ptr.hpp"
 #include "utils.hpp"
 
 #include <assert.h>
@@ -37,7 +39,7 @@ class EventLoop;
 /**
  * A task executed on an event loop thread.
  */
-class Task {
+class Task : public Allocated {
 public:
   virtual ~Task() { }
   virtual void run(EventLoop* event_loop) = 0;
@@ -46,7 +48,7 @@ public:
 /**
  * An event loop thread. Use tasks to run logic on an event loop.
  */
-class EventLoop {
+class EventLoop : public Allocated {
 public:
   EventLoop();
 
@@ -173,7 +175,7 @@ private:
 /**
  * A generic group of event loop threads.
  */
-class EventLoopGroup {
+class EventLoopGroup : public Allocated {
 public:
   virtual ~EventLoopGroup() { }
 
@@ -209,7 +211,8 @@ class RoundRobinEventLoopGroup : public EventLoopGroup {
 public:
   RoundRobinEventLoopGroup(size_t num_threads)
     : current_(0)
-    , threads_(num_threads) { }
+    , threads_(new EventLoop[num_threads])
+    , num_threads_(num_threads) { }
 
   int init(const String& thread_name = "");
   int run();
@@ -218,11 +221,12 @@ public:
 
   virtual EventLoop* add(Task* task);
   virtual EventLoop* get(size_t index) { return &threads_[index]; }
-  virtual size_t size() const { return threads_.size(); }
+  virtual size_t size() const { return num_threads_; }
 
 private:
   Atomic<size_t> current_;
-  DynamicArray<EventLoop> threads_;
+  ScopedArray<EventLoop> threads_;
+  size_t num_threads_;
 };
 
 } // namespace cass

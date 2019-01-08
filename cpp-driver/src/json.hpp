@@ -18,16 +18,36 @@
 #define __CASS_JSON_HPP_INCLUDED__
 
 #include "memory.hpp"
+
+namespace cass {
+namespace json {
+
+template <class T>
+static T* new_() {
+  T* ptr = reinterpret_cast<T*>(Memory::malloc(sizeof(T)));
+  return new (ptr) T();
+}
+
+// Doesn't work for polymorphic types
+// TODO: Add static_assert() for !is_polymorphic<T>
+template <class T>
+static void delete_(T* ptr) {
+  if (!ptr) return;
+  ptr->~T();
+  Memory::free(ptr);
+}
+
+} } // namespace cass::json
+
 #define RAPIDJSON_NAMESPACE cass::rapidjson
 #define RAPIDJSON_NAMESPACE_BEGIN namespace cass { namespace rapidjson {
 #define RAPIDJSON_NAMESPACE_END } }
-#define RAPIDJSON_NEW(x) cass::Memory::allocate<x>
-#define RAPIDJSON_DELETE(x) cass::Memory::deallocate(x)
+#define RAPIDJSON_NEW(x) cass::json::new_<x>
+#define RAPIDJSON_DELETE(x) cass::json::delete_(x)
 
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
-
 
 namespace cass {
 namespace json {

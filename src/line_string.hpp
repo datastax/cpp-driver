@@ -10,6 +10,7 @@
 
 #include "dse.h"
 
+#include "allocated.hpp"
 #include "serialization.hpp"
 #include "string.hpp"
 #include "wkt.hpp"
@@ -18,7 +19,7 @@
 
 namespace dse {
 
-class LineString {
+class LineString : public cass::Allocated {
 public:
   LineString() {
     reset();
@@ -63,7 +64,7 @@ private:
   Bytes bytes_;
 };
 
-class LineStringIterator {
+class LineStringIterator : public cass::Allocated {
 public:
   LineStringIterator()
     : num_points_(0)
@@ -82,7 +83,7 @@ public:
   }
 
 private:
-  class Iterator {
+  class Iterator : public cass::Allocated {
   public:
     virtual ~Iterator() { }
     virtual CassError next_point(cass_double_t *x, cass_double_t *y) = 0;

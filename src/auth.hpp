@@ -8,6 +8,7 @@
 #ifndef __DSE_AUTH_HPP_INCLUDED__
 #define __DSE_AUTH_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "dse.h"
 #include "string.hpp"
 
@@ -15,7 +16,7 @@
 
 namespace dse {
 
-class PlaintextAuthenticatorData {
+class PlaintextAuthenticatorData : public cass::Allocated {
 public:
   PlaintextAuthenticatorData(const cass::String& username,
                              const cass::String& password,
@@ -40,7 +41,7 @@ private:
   cass::String authorization_id_;
 };
 
-class GssapiAuthenticatorData {
+class GssapiAuthenticatorData : public cass::Allocated {
 public:
   GssapiAuthenticatorData(const cass::String& service,
                           const cass::String& principal,

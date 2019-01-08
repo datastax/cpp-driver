@@ -24,7 +24,6 @@
 #include "deque.hpp"
 #include "json.hpp"
 #include "map_iterator.hpp"
-#include "memory.hpp"
 #include "result_iterator.hpp"
 #include "result_response.hpp"
 #include "row.hpp"
@@ -141,8 +140,8 @@ public:
 class HostSet : public DenseHashSet<Host::Ptr, HostHash> {
 public:
   HostSet() {
-    set_empty_key(Host::Ptr(Memory::allocate<Host>(Address::EMPTY_KEY)));
-    set_deleted_key(Host::Ptr(Memory::allocate<Host>(Address::DELETED_KEY)));
+    set_empty_key(Host::Ptr(new Host(Address::EMPTY_KEY)));
+    set_deleted_key(Host::Ptr(new Host(Address::DELETED_KEY)));
   }
 };
 
@@ -402,7 +401,7 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(const Tok
     Token token = i->first;
     typename TokenHostVec::const_iterator token_it = i;
 
-    CopyOnWriteHostVec replicas(Memory::allocate<HostVec>());
+    CopyOnWriteHostVec replicas(new HostVec());
     replicas->reserve(num_replicas);
 
     // Clear datacenter and rack information for the next token
@@ -484,7 +483,7 @@ void ReplicationStrategy<Partitioner>::build_replicas_simple(const TokenHostVec&
   size_t num_replicas = std::min<size_t>(it->second.count, tokens.size());
   for (typename TokenHostVec::const_iterator i = tokens.begin(),
        end = tokens.end(); i != end; ++i) {
-    CopyOnWriteHostVec replicas(Memory::allocate<HostVec>());
+    CopyOnWriteHostVec replicas(new HostVec());
     typename TokenHostVec::const_iterator token_it = i;
     do {
       replicas->push_back(Host::Ptr(token_it->second));
@@ -501,7 +500,7 @@ template <class Partitioner>
 void ReplicationStrategy<Partitioner>::build_replicas_non_replicated(const TokenHostVec& tokens, const DatacenterMap& not_used,
                                                                      TokenReplicasVec& result) const {
   for (typename TokenHostVec::const_iterator i = tokens.begin(); i != tokens.end(); ++i) {
-    CopyOnWriteHostVec replicas(Memory::allocate<HostVec>(1, Host::Ptr(i->second)));
+    CopyOnWriteHostVec replicas(new HostVec(1, Host::Ptr(i->second)));
     result.push_back(TokenReplicas(i->first, replicas));
   }
 }
@@ -697,7 +696,7 @@ void TokenMapImpl<Partitioner>::build() {
 
 template<class Partitioner>
 TokenMap::Ptr TokenMapImpl<Partitioner>::copy() const {
-  return Ptr(Memory::allocate<TokenMapImpl<Partitioner> >(*this));
+  return Ptr(new TokenMapImpl<Partitioner>(*this));
 }
 
 template <class Partitioner>

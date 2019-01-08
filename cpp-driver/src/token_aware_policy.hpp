@@ -41,7 +41,7 @@ public:
                                     const TokenMap* token_map);
 
   LoadBalancingPolicy* new_instance() {
-    return Memory::allocate<TokenAwarePolicy>(child_policy_->new_instance(), shuffle_replicas_);
+    return new TokenAwarePolicy(child_policy_->new_instance(), shuffle_replicas_);
   }
 
 private:

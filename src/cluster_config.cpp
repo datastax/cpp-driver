@@ -9,15 +9,14 @@
 
 #include "auth.hpp"
 #include "cluster_config.hpp"
-#include "memory.hpp"
 #include "string.hpp"
 
 static void dse_plaintext_authenticator_cleanup(void* data) {
-  cass::Memory::deallocate(static_cast<dse::PlaintextAuthenticatorData*>(data));
+  delete static_cast<dse::PlaintextAuthenticatorData*>(data);
 }
 
 static void dse_gssapi_authenticator_cleanup(void* data) {
-  cass::Memory::deallocate(static_cast<dse::GssapiAuthenticatorData*>(data));
+  delete static_cast<dse::GssapiAuthenticatorData*>(data);
 }
 
 extern "C" {
@@ -62,9 +61,9 @@ CassError cass_cluster_set_dse_plaintext_authenticator_proxy_n(CassCluster* clus
   return cass_cluster_set_authenticator_callbacks(cluster,
                                                   dse::PlaintextAuthenticatorData::callbacks(),
                                                   dse_plaintext_authenticator_cleanup,
-                                                  cass::Memory::allocate<dse::PlaintextAuthenticatorData>(cass::String(username, username_length),
-                                                                                                          cass::String(password, password_length),
-                                                                                                          cass::String(authorization_id, authorization_id_length)));
+                                                  new dse::PlaintextAuthenticatorData(cass::String(username, username_length),
+                                                                                      cass::String(password, password_length),
+                                                                                      cass::String(authorization_id, authorization_id_length)));
 }
 
 CassError cass_cluster_set_dse_gssapi_authenticator(CassCluster* cluster,
@@ -101,9 +100,9 @@ CassError cass_cluster_set_dse_gssapi_authenticator_proxy_n(CassCluster* cluster
   return cass_cluster_set_authenticator_callbacks(cluster,
                                                   dse::GssapiAuthenticatorData::callbacks(),
                                                   dse_gssapi_authenticator_cleanup,
-                                                  cass::Memory::allocate<dse::GssapiAuthenticatorData>(cass::String(service, service_length),
-                                                                                                       cass::String(principal, principal_length),
-                                                                                                       cass::String(authorization_id, authorization_id_length)));
+                                                  new dse::GssapiAuthenticatorData(cass::String(service, service_length),
+                                                                                   cass::String(principal, principal_length),
+                                                                                   cass::String(authorization_id, authorization_id_length)));
 }
 
 void cass_cluster_set_application_name(CassCluster* cluster,

@@ -10,6 +10,7 @@
 
 #include "dse.h"
 
+#include "allocated.hpp"
 #include "json.hpp"
 #include "line_string.hpp"
 #include "polygon.hpp"
@@ -35,7 +36,7 @@ namespace dse {
 
 class GraphStatement;
 
-class GraphOptions {
+class GraphOptions : public cass::Allocated {
 public:
   GraphOptions()
     : payload_(cass_custom_payload_new())
@@ -107,7 +108,9 @@ private:
   int64_t request_timeout_ms_;
 };
 
-class GraphWriter : private cass::json::Writer<cass::json::StringBuffer> {
+class GraphWriter
+    : public cass::Allocated
+    , private cass::json::Writer<cass::json::StringBuffer> {
 public:
   GraphWriter()
     : cass::json::Writer<cass::json::StringBuffer>(buffer_) { }
@@ -195,7 +198,7 @@ public:
   }
 };
 
-class GraphStatement {
+class GraphStatement : public cass::Allocated {
 public:
   GraphStatement(const char* query, size_t length,
                  const GraphOptions* options)
@@ -246,7 +249,7 @@ private:
 
 typedef cass::json::Value GraphResult;
 
-class GraphResultSet {
+class GraphResultSet : public cass::Allocated {
 public:
   GraphResultSet(const CassResult* result)
     : rows_(cass_iterator_from_result(result))
