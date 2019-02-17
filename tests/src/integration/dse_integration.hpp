@@ -74,6 +74,10 @@ public:
 
 protected:
   /**
+   * Configured DSE cluster
+   */
+  dse::Cluster dse_cluster_;
+  /**
    * Connected database DSE session
    */
   dse::Session dse_session_;

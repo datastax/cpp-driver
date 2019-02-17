@@ -131,5 +131,8 @@ void cass_cluster_set_application_version_n(CassCluster* cluster,
                                                          application_version_length));
 }
 
+void cass_cluster_set_client_id(CassCluster* cluster, CassUuid client_id) {
+  cluster->config().set_client_id(client_id);
+}
 
 } // extern "C"

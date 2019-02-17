@@ -459,8 +459,6 @@ cass_cluster_set_dse_plaintext_authenticator_proxy_n(CassCluster* cluster,
  * that can aid in debugging issues with larger clusters where there are a lot
  * of client (or application) connections.
  *
- * @dse{6.0.0+}
- *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
@@ -473,8 +471,6 @@ cass_cluster_set_application_name(CassCluster* cluster,
 /**
  * Same as cass_cluster_set_application_name(), but with lengths for string
  * parameters.
- *
- * @dse{6.0.0+}
  *
  * @public @memberof CassCluster
  *
@@ -495,8 +491,6 @@ cass_cluster_set_application_name_n(CassCluster* cluster,
  * a lot of client (or application) connections that may have different
  * versions in use.
  *
- * @dse{6.0.0+}
- *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
@@ -511,8 +505,6 @@ cass_cluster_set_application_version(CassCluster* cluster,
  * Same as cass_cluster_set_application_version(), but with lengths for string
  * parameters.
  *
- * @dse{6.0.0+}
- *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
@@ -523,6 +515,23 @@ CASS_EXPORT void
 cass_cluster_set_application_version_n(CassCluster* cluster,
                                        const char* application_version,
                                        size_t application_version_length);
+
+/**
+ * Set the client id.
+ *
+ * This is optional; however it provides the server with the client ID that can
+ * aid in debugging issues with large clusters where there are a lot of client
+ * connections.
+ *
+ * Default: UUID v4 generated (@see cass_session_get_client_id())
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] client_id
+ */
+CASS_EXPORT void
+cass_cluster_set_client_id(CassCluster* cluster, CassUuid client_id);
 
 /***********************************************************************************
  *
@@ -547,13 +556,6 @@ cass_session_execute_dse_graph(CassSession* session,
 
 /**
  * Get the client id.
- *
- * This can help with debugging issues in large clusters where there are a lot
- * of client connections. A session's unique identifier (UUID) is constant for
- * its lifetime and does not change when re-establishing connection to a
- * cluster.
- *
- * @dse{6.0.0+}
  *
  * @public @memberof CassSession
  *

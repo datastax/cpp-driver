@@ -68,6 +68,7 @@ public:
       , prepare_on_all_hosts_(CASS_DEFAULT_PREPARE_ON_ALL_HOSTS)
       , prepare_on_up_or_add_host_(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
       , no_compact_(CASS_DEFAULT_NO_COMPACT)
+      , is_client_id_set_(false)
       , host_listener_(new DefaultHostListener()) {
     profiles_.set_empty_key(String());
 
@@ -398,8 +399,16 @@ public:
     application_version_ = application_version;
   }
 
+  CassUuid client_id() const { return client_id_; }
+  bool is_client_id_set() const { return is_client_id_set_; }
+
+  void set_client_id(CassUuid client_id) {
+    client_id_ = client_id;
+    is_client_id_set_ = true;
+  }
+
   const DefaultHostListener::Ptr& host_listener() const { return host_listener_; }
-  
+
   void set_host_listener(const DefaultHostListener::Ptr& listener) {
     if (listener) {
       host_listener_ = listener;
@@ -451,6 +460,8 @@ private:
   bool no_compact_;
   String application_name_;
   String application_version_;
+  bool is_client_id_set_;
+  CassUuid client_id_;
   DefaultHostListener::Ptr host_listener_;
 };
 

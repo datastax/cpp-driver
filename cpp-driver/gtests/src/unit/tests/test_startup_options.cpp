@@ -19,10 +19,19 @@
 #include "driver_info.hpp"
 #include "query_request.hpp"
 #include "session.hpp"
-
+#include "testing.hpp"
 
 #define APPLICATION_NAME "DataStax C/C++ Test Harness"
 #define APPLICATION_VERSION "1.0.0"
+
+inline bool operator==(const CassUuid& rhs, const CassUuid& lhs) {
+  return rhs.clock_seq_and_node == lhs.clock_seq_and_node &&
+    rhs.time_and_version == lhs.time_and_version;
+}
+
+inline bool operator!=(const CassUuid& rhs, const CassUuid& lhs) {
+  return !(rhs == lhs);
+}
 
 class StartupRequestUnitTest : public Unit {
 public:
@@ -31,6 +40,7 @@ public:
     Unit::TearDown();
   }
 
+  cass::Session& session() { return session_; }
   const cass::String& client_id() const { return client_id_; }
   cass::Config& config() { return config_; }
   const mockssandra::RequestHandler* simple_with_client_options() {
@@ -125,6 +135,30 @@ TEST_F(StartupRequestUnitTest, Application) {
   ASSERT_EQ(APPLICATION_NAME, options["APPLICATION_NAME"]);
   ASSERT_EQ(APPLICATION_VERSION, options["APPLICATION_VERSION"]);
   ASSERT_EQ(client_id(), options["CLIENT_ID"]);
+  ASSERT_EQ(CASS_DEFAULT_CQL_VERSION, options["CQL_VERSION"]);
+  ASSERT_EQ(cass::driver_name(), options["DRIVER_NAME"]);
+  ASSERT_EQ(cass::driver_version(), options["DRIVER_VERSION"]);
+}
+
+TEST_F(StartupRequestUnitTest, SetClientId) {
+  mockssandra::SimpleCluster cluster(simple_with_client_options());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  CassUuid generated_client_id = session().client_id();
+  CassUuid assigned_client_id;
+  ASSERT_EQ(CASS_OK,
+            cass_uuid_from_string("03398c99-c635-4fad-b30a-3b2c49f785c2",
+                                  &assigned_client_id));
+  config().set_client_id(assigned_client_id);
+
+  connect();
+  CassUuid current_client_id = session().client_id();
+  ASSERT_EQ(assigned_client_id, current_client_id);
+  ASSERT_NE(generated_client_id, current_client_id);
+  cass::Map<cass::String, cass::String> options = client_options();
+  ASSERT_EQ(4u, options.size());
+
+  ASSERT_EQ("03398c99-c635-4fad-b30a-3b2c49f785c2", options["CLIENT_ID"]);
   ASSERT_EQ(CASS_DEFAULT_CQL_VERSION, options["CQL_VERSION"]);
   ASSERT_EQ(cass::driver_name(), options["DRIVER_NAME"]);
   ASSERT_EQ(cass::driver_version(), options["DRIVER_VERSION"]);

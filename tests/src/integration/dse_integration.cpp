@@ -65,7 +65,8 @@ void DseIntegration::connect(dse::Cluster cluster) {
 void DseIntegration::connect() {
   // Create the cluster configuration and establish the session connection
   cluster_ = default_cluster();
-  connect(cluster_);
+  dse_cluster_ = cluster_;
+  connect(dse_cluster_);
 }
 
 Cluster DseIntegration::default_cluster() {

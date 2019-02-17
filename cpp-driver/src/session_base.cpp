@@ -80,6 +80,9 @@ Future::Ptr SessionBase::connect(const Config& config,
     }
   }
 
+  if (config.is_client_id_set()) {
+    client_id_ = config.client_id();
+  }
   LOG_INFO("Client id is %s", to_string(client_id_).c_str());
 
   config_ = config.new_instance();
