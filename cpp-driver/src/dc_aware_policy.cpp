@@ -33,6 +33,10 @@ DCAwarePolicy::DCAwarePolicy(const String& local_dc,
   , local_dc_live_hosts_(new HostVec())
   , index_(0) {
   uv_rwlock_init(&available_rwlock_);
+  if (used_hosts_per_remote_dc_ > 0 || !skip_remote_dcs_for_local_cl) {
+    LOG_WARN("Remote multi-dc settings have been deprecated and will be removed"
+             " in the next major release");
+  }
 }
 
 DCAwarePolicy::~DCAwarePolicy() {
