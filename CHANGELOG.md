@@ -1,3 +1,24 @@
+1.8.0
+===========
+
+Features
+--------
+[CPP-722] Insightful monitoring (Insights) startup message
+[CPP-723] Insightful monitoring (Insights) status event message
+[CPP-741] Allow user to configure client ID
+[CPP-751] Call host listener callback for the initial set of hosts
+
+Bug Fixes
+--------
+[CPP-755] UDT metadata not being properly populated/updated
+
+Other
+--------
+[CPP-705] Deprecate DC-aware multi-DC settings (`used_hosts_per_remote_dc`
+          and `allowRemoteDCsForLocalConsistencyLevel `)
+[CPP-720] Streamline custom allocator
+[CPP-752] Add connection count to Host
+
 1.7.0
 ===========
 

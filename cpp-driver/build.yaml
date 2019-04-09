@@ -14,12 +14,12 @@ architecture:
 os:
   - ubuntu/bionic64/cpp
   - ubuntu/trusty64/cpp
-  - ubuntu/xenial64
-  - centos/6-64
-  - centos/7-64
+  - ubuntu/xenial64/cpp
+  - centos/6-64/cpp
+  - centos/7-64/cpp
   - osx/high-sierra
 env:
-  LIBUV_VERSION: 1.24.0
+  LIBUV_VERSION: 1.26.0
 build:
   - script: |
       . .build.sh
