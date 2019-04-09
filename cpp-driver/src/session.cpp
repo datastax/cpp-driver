@@ -213,6 +213,7 @@ public:
                   const HostMap& hosts,
                   const TokenMap::Ptr& token_map) {
     inc_ref();
+
     const size_t thread_count_io = remaining_ = session_->config().thread_count_io();
     for (size_t i = 0; i < thread_count_io; ++i) {
       RequestProcessorInitializer::Ptr initializer(
@@ -407,6 +408,13 @@ void Session::on_connect(const Host::Ptr& connected_host,
     notify_connect_failed(CASS_ERROR_LIB_UNABLE_TO_INIT,
                           "Unable to run event loop group");
     return;
+  }
+
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
+    const Host::Ptr& host = it->second;
+    config().host_listener()->on_host_added(host);
+    config().host_listener()->on_host_up(host); // If host is down it will be marked down later in the connection process
   }
 
   request_processors_.clear();

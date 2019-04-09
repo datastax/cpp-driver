@@ -177,7 +177,7 @@ public:
 
     HostEventFuture::Event wait_for_event(uint64_t timeout_us) {
       HostEventFuture::Event event(front()->wait_for_event(timeout_us));
-      pop_front();
+      if (event.first != HostEventFuture::INVALID) pop_front();
       return event;
     }
 
@@ -466,7 +466,20 @@ TEST_F(SessionUnitTest, HostListener) {
   cass::Session session;
   connect(config, &session);
 
-  EXPECT_EQ(0u, listener->event_count());
+  { // Initial nodes available from peers table
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
 
   {
     cluster.remove(1);
@@ -499,6 +512,153 @@ TEST_F(SessionUnitTest, HostListener) {
     cluster.start(2);
     EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
                                      Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, HostListenerDCAwareLocal) {
+  mockssandra::SimpleCluster cluster(simple(), 2, 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  cass::Config config;
+  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.contact_points().push_back("127.0.0.1");
+  config.set_host_listener(listener);
+
+  cass::Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  { // Node 3 is DC2 should be ignored
+    cluster.stop(3);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::INVALID,
+              Address()),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+// TODO: Remove HostListenerDCAwareRemote after remote DC settings are removed from API
+TEST_F(SessionUnitTest, HostListenerDCAwareRemote) {
+  mockssandra::SimpleCluster cluster(simple(), 2, 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  cass::Config config;
+  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.contact_points().push_back("127.0.0.1");
+  config.set_load_balancing_policy(new cass::DCAwarePolicy(
+                                   "dc1",
+                                   1,
+                                   false));
+  config.set_host_listener(listener);
+
+  cass::Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  {
+    cluster.stop(3);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, HostListenerNodeDown) {
+  mockssandra::SimpleCluster cluster(simple(), 3);
+  ASSERT_EQ(cluster.start(1), 0);
+  ASSERT_EQ(cluster.start(3), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  cass::Config config;
+  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.contact_points().push_back("127.0.0.1");
+  config.set_host_listener(listener);
+
+  cass::Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  { // Node 2 connection should not be established (node down event)
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  {
+    cluster.start(2);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
