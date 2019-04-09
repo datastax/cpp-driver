@@ -329,7 +329,7 @@ void ControlConnector::handle_query_schema(SchemaConnectorRequestCallback* callb
   schema_.views = callback->result("views");
   schema_.columns = callback->result("columns");
   schema_.indexes = callback->result("indexes");
-  schema_.user_types = callback->result("types");
+  schema_.user_types = callback->result("user_types");
   schema_.functions = callback->result("functions");
   schema_.aggregates = callback->result("aggregates");
   schema_.virtual_keyspaces = callback->result("virtual_keyspaces");
