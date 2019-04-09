@@ -123,19 +123,12 @@ void RequestProcessorInitializer::internal_intialize() {
         new ConnectionPoolManagerInitializer(protocol_version_,
                                              bind_callback(&RequestProcessorInitializer::on_initialize, this)));
 
-  AddressVec addresses;
-  addresses.reserve(addresses.size());
-  for (HostMap::const_iterator it = hosts_.begin(),
-       end = hosts_.end(); it != end; ++it) {
-    addresses.push_back(it->first);
-  }
-
   connection_pool_manager_initializer_
       ->with_settings(settings_.connection_pool_settings)
       ->with_listener(this)
       ->with_keyspace(keyspace_)
       ->with_metrics(metrics_)
-      ->initialize(event_loop_->loop(), addresses);
+      ->initialize(event_loop_->loop(), hosts_);
 }
 
 void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer* initializer) {

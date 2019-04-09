@@ -64,7 +64,7 @@ void PrepareHostHandler::prepare(uv_loop_t* loop,
 
   inc_ref(); // Reference for the event loop
 
-  Connector::Ptr connector(new Connector(host_->address(),
+  Connector::Ptr connector(new Connector(host_,
                                          protocol_version_,
                                          bind_callback(&PrepareHostHandler::on_connect, this)));
 

@@ -96,17 +96,17 @@ AddressVec ConnectionPoolManager::available() const {
   return result;
 }
 
-void ConnectionPoolManager::add(const Address& address) {
-  ConnectionPool::Map::iterator it = pools_.find(address);
+void ConnectionPoolManager::add(const Host::Ptr& host) {
+  ConnectionPool::Map::iterator it = pools_.find(host->address());
   if (it != pools_.end()) return;
 
   for (ConnectionPoolConnector::Vec::iterator it = pending_pools_.begin(),
        end = pending_pools_.end(); it != end; ++it) {
-    if ((*it)->address() == address) return;
+    if ((*it)->address() == host->address()) return;
   }
 
   ConnectionPoolConnector::Ptr connector(
-        new ConnectionPoolConnector(address,
+        new ConnectionPoolConnector(host,
                                     protocol_version_,
                                     bind_callback(&ConnectionPoolManager::on_connect, this)));
   pending_pools_.push_back(connector);

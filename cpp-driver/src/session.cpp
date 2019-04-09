@@ -217,10 +217,10 @@ public:
     for (size_t i = 0; i < thread_count_io; ++i) {
       RequestProcessorInitializer::Ptr initializer(
             new RequestProcessorInitializer(connected_host,
-                                                          protocol_version,
-                                                          hosts,
-                                                          token_map,
-                                                          bind_callback(&SessionInitializer::on_initialize, this)));
+                                            protocol_version,
+                                            hosts,
+                                            token_map,
+                                            bind_callback(&SessionInitializer::on_initialize, this)));
 
       RequestProcessorSettings settings(session_->config());
       settings.connection_pool_settings.connection_settings.client_id = to_string(session_->client_id());

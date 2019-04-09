@@ -268,13 +268,14 @@ public:
     loop()->data = NULL;
   }
 
-  AddressVec addresses() const {
+  HostMap hosts() const {
     mockssandra::Ipv4AddressGenerator generator;
-    AddressVec addresses;
+    HostMap hosts;
     for (size_t i = 0; i < NUM_NODES; ++i) {
-      addresses.push_back(generator.next());
+      Host::Ptr host(new Host(generator.next()));
+      hosts[host->address()] = host;
     }
-    return addresses;
+    return hosts;
   }
 
   void run_request(const ConnectionPoolManager::Ptr& manager, const Address& address) {
@@ -360,7 +361,7 @@ TEST_F(PoolUnitTest, Simple) {
           bind_callback(on_pool_connected, &status)));
 
   initializer
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
@@ -383,11 +384,12 @@ TEST_F(PoolUnitTest, Keyspace) {
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
-  AddressVec addresses = this->addresses();
+  HostMap hosts = this->hosts();
+  ASSERT_EQ(hosts.size(), NUM_NODES);
 
   initializer
       ->with_keyspace("foo")
-      ->initialize(loop(), addresses);
+      ->initialize(loop(), hosts);
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
@@ -395,12 +397,14 @@ TEST_F(PoolUnitTest, Keyspace) {
   ConnectionPoolManager::Ptr manager = status.manager();
   ASSERT_TRUE(manager);
 
-  for (size_t i = 0; i < NUM_NODES; ++i) {
-    PooledConnection::Ptr connection = manager->find_least_busy(addresses[i]);
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
+    const Address& address = it->first;
+    PooledConnection::Ptr connection = manager->find_least_busy(address);
     if (connection) {
       EXPECT_EQ(connection->keyspace(), "foo");
     } else {
-      EXPECT_TRUE(false) << "Unable to get connection for " << addresses[i].to_string();
+      EXPECT_TRUE(false) << "Unable to get connection for " << address.to_string();
     }
   }
 }
@@ -421,7 +425,7 @@ TEST_F(PoolUnitTest, Auth) {
 
   initializer
       ->with_settings(settings)
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
@@ -442,7 +446,7 @@ TEST_F(PoolUnitTest, Ssl) {
 
   initializer
       ->with_settings(settings)
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
@@ -463,7 +467,7 @@ TEST_F(PoolUnitTest, Listener) {
 
   initializer
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::UP), NUM_NODES) << listener_status.results();
@@ -485,7 +489,7 @@ TEST_F(PoolUnitTest, ListenerDown) {
 
   initializer
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::UP), 1u) << listener_status.results();
@@ -508,11 +512,12 @@ TEST_F(PoolUnitTest, AddRemove) {
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
-  AddressVec addresses = this->addresses();
+  HostMap hosts = this->hosts();
+  ASSERT_EQ(hosts.size(), NUM_NODES);
 
   initializer
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses);
+      ->initialize(loop(), hosts);
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::UP), NUM_NODES) << listener_status.results();
@@ -521,16 +526,19 @@ TEST_F(PoolUnitTest, AddRemove) {
   ASSERT_TRUE(manager);
 
   listener->reset(&add_remove_listener_status);
-  for (size_t i = 0; i < NUM_NODES; ++i) {
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
+    const Address& address = it->first;
+    const Host::Ptr& host = it->second;
     add_remove_listener_status.reset();
-    manager->remove(addresses[i]); // Remove node
+    manager->remove(address); // Remove node
     uv_run(loop(), UV_RUN_DEFAULT);
-    EXPECT_FALSE(manager->find_least_busy(addresses[i]));
+    EXPECT_FALSE(manager->find_least_busy(address));
 
     add_remove_listener_status.reset();
-    manager->add(addresses[i]); // Add node
+    manager->add(host); // Add node
     uv_run(loop(), UV_RUN_DEFAULT);
-    run_request(manager, addresses[i]);
+    run_request(manager, address);
   }
 
   EXPECT_EQ(add_remove_listener_status.count(ListenerStatus::DOWN), 3u) << add_remove_listener_status.results();
@@ -551,7 +559,8 @@ TEST_F(PoolUnitTest, Reconnect) {
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
-  AddressVec addresses = this->addresses();
+  HostMap hosts = this->hosts();
+  ASSERT_EQ(hosts.size(), NUM_NODES);
 
   ConnectionPoolSettings settings;
   settings.reconnect_wait_time_ms = 0; // Reconnect immediately
@@ -559,7 +568,7 @@ TEST_F(PoolUnitTest, Reconnect) {
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses);
+      ->initialize(loop(), hosts);
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::UP), NUM_NODES) << listener_status.results();
@@ -568,18 +577,22 @@ TEST_F(PoolUnitTest, Reconnect) {
   ASSERT_TRUE(manager);
 
   listener->reset(&reconnect_listener_status);
-  for (size_t i = 0; i < NUM_NODES; ++i) {
+  size_t node = 1;
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
+    const Address& address = it->first;
     reconnect_listener_status.reset();
 
-    cluster.stop(i + 1); // Stop node
+    cluster.stop(node); // Stop node
     uv_run(loop(), UV_RUN_DEFAULT);
-    EXPECT_FALSE(manager->find_least_busy(addresses[i]));
+    EXPECT_FALSE(manager->find_least_busy(address));
 
     reconnect_listener_status.reset();
 
-    ASSERT_EQ(cluster.start(i + 1), 0); // Start node
+    ASSERT_EQ(cluster.start(node), 0); // Start node
     uv_run(loop(), UV_RUN_DEFAULT);
-    run_request(manager, addresses[i]);
+    run_request(manager, address);
+    ++node;
   }
 
   EXPECT_EQ(reconnect_listener_status.count(ListenerStatus::DOWN), 3u) << reconnect_listener_status.results();
@@ -607,7 +620,7 @@ TEST_F(PoolUnitTest, Timeout) {
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::DOWN), NUM_NODES) << listener_status.results();
@@ -629,7 +642,7 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
 
   initializer
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_INVALID_PROTOCOL), 0u) << listener_status.results();
@@ -664,7 +677,7 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
   initializer
       ->with_keyspace("invalid")
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::CRITICAL_ERROR_KEYSPACE), NUM_NODES) << listener_status.results();
@@ -689,7 +702,7 @@ TEST_F(PoolUnitTest, InvalidAuth) {
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_AUTH), 0u) << listener_status.results();
@@ -717,7 +730,7 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_SSL_HANDSHAKE), 0u) << listener_status.results();
@@ -746,7 +759,7 @@ TEST_F(PoolUnitTest, InvalidSsl) {
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_SSL_VERIFY), 0u) << listener_status.results();

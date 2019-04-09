@@ -167,13 +167,14 @@ ConnectionSettings::ConnectionSettings(const Config& config)
   , application_name(config.application_name())
   , application_version(config.application_version()) { }
 
-Connector::Connector(const Address& address,
+Connector::Connector(const Host::Ptr& host,
                      ProtocolVersion protocol_version,
                      const Callback& callback)
   : callback_(callback)
   , loop_(NULL)
+  , host_(host)
   , socket_connector_(
-      new SocketConnector(address,
+      new SocketConnector(host->address(),
                           bind_callback(&Connector::on_connect, this)))
   , error_code_(CONNECTION_OK)
   , protocol_version_(protocol_version)
@@ -366,6 +367,7 @@ void Connector::on_connect(SocketConnector* socket_connector) {
     Socket::Ptr socket(socket_connector->release_socket());
 
     connection_.reset(new Connection(socket,
+                                     host_,
                                      protocol_version_,
                                      settings_.idle_timeout_secs,
                                      settings_.heartbeat_interval_secs));

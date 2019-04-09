@@ -92,12 +92,12 @@ public:
   /**
    * Constructor
    *
-   * @param address The address to connect to.
+   * @param host The host to connect to.
    * @param protocol_version The protocol version to use for the connection.
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  Connector(const Address& address,
+  Connector(const Host::Ptr& host,
             ProtocolVersion protocol_version,
             const Callback& callback);
 
@@ -224,6 +224,7 @@ private:
 private:
   Callback callback_;
   uv_loop_t* loop_;
+  Host::Ptr host_;
 
   Connection::Ptr connection_;
   SocketConnector::Ptr socket_connector_;

@@ -113,9 +113,9 @@ public:
   /**
    * Add a connection pool for the given host.
    *
-   * @param address The address of the host to add.
+   * @param host The host to add.
    */
-  void add(const Address& address);
+  void add(const Host::Ptr& host);
 
   /**
    * Remove a connection pool for the given host.

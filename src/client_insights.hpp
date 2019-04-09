@@ -31,7 +31,7 @@ public:
 
   ClientInsights(const cass::String& client_id,
                  const cass::String& session_id,
-                 const cass::Config& config);
+                 unsigned interval_secs);
   virtual ~ClientInsights() { }
 
   virtual uint64_t interval_ms(const cass::VersionNumber& dse_server_version) const;
@@ -45,8 +45,6 @@ public:
 private:
   const cass::String client_id_;
   const cass::String session_id_;
-  const unsigned core_connections_per_host_;
-  const unsigned thread_count_io_;
   const uint64_t interval_ms_;
 };
 

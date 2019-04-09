@@ -28,14 +28,14 @@ ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(ProtocolVersi
   , metrics_(NULL) { }
 
 void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
-                                                  const AddressVec& addresses) {
+                                                  const HostMap& hosts) {
   inc_ref();
   loop_ = loop;
-  remaining_ = addresses.size();
-  for (AddressVec::const_iterator it = addresses.begin(),
-       end = addresses.end(); it != end; ++it) {
+  remaining_ = hosts.size();
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
     ConnectionPoolConnector::Ptr pool_connector(
-          new ConnectionPoolConnector(*it,
+          new ConnectionPoolConnector(it->second,
                                       protocol_version_,
                                       bind_callback(&ConnectionPoolManagerInitializer::on_connect, this)));
     pending_pools_.push_back(pool_connector);

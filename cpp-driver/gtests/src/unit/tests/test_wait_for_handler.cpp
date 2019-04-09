@@ -91,7 +91,7 @@ public:
     timeout_ = timeout;
 
     Connector::Ptr connector(
-          new Connector(Address("127.0.0.1", PORT),
+          new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                         PROTOCOL_VERSION,
                         bind_callback(&WaitForHandlerUnitTest::on_connected, this)));
     connector->connect(loop());

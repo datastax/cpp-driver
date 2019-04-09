@@ -135,7 +135,8 @@ void ClusterConnector::internal_resolve_and_connect() {
 }
 
 void ClusterConnector::internal_connect(const Address& address, ProtocolVersion version) {
-  ControlConnector::Ptr connector(new ControlConnector(address,
+  Host::Ptr host(new Host(address));
+  ControlConnector::Ptr connector(new ControlConnector(host,
                                                        version,
                                                        bind_callback(&ClusterConnector::on_connect, this)));
   connectors_[address] = connector; // Keep track of the connectors so they can be canceled.

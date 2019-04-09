@@ -456,7 +456,7 @@ void RequestProcessor::internal_host_add(const Host::Ptr& host) {
   if (connection_pool_manager_) {
     LoadBalancingPolicy::Vec policies = load_balancing_policies();
     if (!is_host_ignored(policies, host)) {
-      connection_pool_manager_->add(host->address());
+      connection_pool_manager_->add(host);
       for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin();
            it != policies.end(); ++it) {
         if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {

@@ -89,10 +89,10 @@ ControlConnectionSettings::ControlConnectionSettings(const Config& config)
   , use_schema(config.use_schema())
   , token_aware_routing(config.token_aware_routing()) { }
 
-ControlConnector::ControlConnector(const Address& address,
+ControlConnector::ControlConnector(const Host::Ptr& host,
                                    ProtocolVersion protocol_version,
                                    const Callback& callback)
-  : connector_(new Connector(address,
+  : connector_(new Connector(host,
                              protocol_version,
                              bind_callback(&ControlConnector::on_connect, this)))
   , callback_(callback)
@@ -235,7 +235,7 @@ void ControlConnector::query_hosts() {
 void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callback) {
   ResultResponse::Ptr local_result(callback->result("local"));
   if (local_result && local_result->row_count() > 0) {
-    Host::Ptr host(new Host(connection_->address()));
+    const Host::Ptr& host = connection_->host();
     host->set(&local_result->first_row(), settings_.token_aware_routing);
     hosts_[host->address()] = host;
     server_version_ = host->server_version();

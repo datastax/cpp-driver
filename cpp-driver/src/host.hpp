@@ -103,6 +103,7 @@ public:
       , rack_id_(0)
       , dc_id_(0)
       , address_string_(address.to_string())
+      , connection_count_(0)
       , inflight_request_count_(0) { }
 
   const Address& address() const { return address_; }
@@ -169,6 +170,18 @@ public:
     return TimestampedAverage();
   }
 
+  void increment_connection_count() {
+    connection_count_.fetch_add(1, MEMORY_ORDER_RELAXED);
+  }
+
+  void decrement_connection_count() {
+    connection_count_.fetch_sub(1, MEMORY_ORDER_RELAXED);
+  }
+
+  int32_t connection_count() const {
+    return connection_count_.load(MEMORY_ORDER_RELAXED);
+  }
+
   void increment_inflight_requests() {
     inflight_request_count_.fetch_add(1, MEMORY_ORDER_RELAXED);
   }
@@ -215,6 +228,7 @@ private:
   String dc_;
   String partitioner_;
   Vector<String> tokens_;
+  Atomic<int32_t> connection_count_;
   Atomic<int32_t> inflight_request_count_;
 
   ScopedPtr<LatencyTracker> latency_tracker_;

@@ -51,10 +51,11 @@ MonitorReporting* create_monitor_reporting(const String& client_id,
                                            const String& session_id,
                                            const cass::Config& config) {
   // Ensure the client monitor events should be enabled
-  if (config.monitor_reporting_interval_secs() > 0) {
+  unsigned interval_secs = config.monitor_reporting_interval_secs();
+  if (interval_secs > 0) {
     return new dse::ClientInsights(client_id,
                                    session_id,
-                                   config);
+                                   interval_secs);
   }
   return new NopMonitorReporting();
 }
@@ -937,12 +938,10 @@ private:
 
 ClientInsights::ClientInsights(const cass::String& client_id,
                                const cass::String& session_id,
-                               const cass::Config& config)
+                               unsigned interval_secs)
   : client_id_(client_id)
   , session_id_(session_id)
-  , core_connections_per_host_(config.core_connections_per_host())
-  , thread_count_io_(config.thread_count_io())
-  , interval_ms_(config.monitor_reporting_interval_secs() * 1000) { }
+  , interval_ms_(interval_secs * 1000) { }
 
 uint64_t ClientInsights::interval_ms(const cass::VersionNumber& dse_server_version) const {
   // DSE v5.1.13+ (backported)
@@ -995,7 +994,7 @@ void ClientInsights::send_status_message(const cass::Connection::Ptr& connection
     writer.Key(address_with_port.c_str());
     writer.StartObject();
     writer.Key("connections");
-    writer.Int(core_connections_per_host_ * thread_count_io_);
+    writer.Int(host->connection_count());
     writer.Key("inFlightQueries");
     writer.Int(host->inflight_request_count());
     writer.EndObject(); // address_with_port

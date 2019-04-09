@@ -779,6 +779,7 @@ TEST_F(ClientInsightsUnitTest, StatusData) {
   config_.contact_points().push_back("localhost");
   config_.set_core_connections_per_host(2);
   config_.set_thread_count_io(5);
+  config_.set_use_randomized_contact_points(false);
   connect();
 
   cass::String message = status_message();
@@ -819,7 +820,8 @@ TEST_F(ClientInsightsUnitTest, StatusData) {
       ASSERT_TRUE(node.IsObject());
       ASSERT_EQ(2u, node.MemberCount());
       ASSERT_TRUE(node.HasMember("connections"));
-      ASSERT_EQ(10, node["connections"].GetInt());
+      int expected_connections (i == 1 ? 11 : 10); // Handle control connection
+      ASSERT_EQ(expected_connections, node["connections"].GetInt());
       ASSERT_TRUE(node.HasMember("inFlightQueries"));
       ASSERT_NEAR(0, node["inFlightQueries"].GetInt(), 5); // Relaxed memory ordering for inflight request count
     }
@@ -829,6 +831,8 @@ TEST_F(ClientInsightsUnitTest, StatusData) {
 TEST_F(ClientInsightsUnitTest, StatusDataConnectedNodesRemovedNode) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call(2), 3);
   ASSERT_EQ(cluster.start_all(), 0);
+
+  config_.set_use_randomized_contact_points(false);
   connect();
 
   cass::String message = status_message();
@@ -842,7 +846,9 @@ TEST_F(ClientInsightsUnitTest, StatusDataConnectedNodesRemovedNode) {
     for (unsigned i = 1; i <= value.MemberCount(); ++i) {
       cass::OStringStream ip_with_port;
       ip_with_port << "127.0.0." << i << ":" << config_.port();
-      ASSERT_EQ(1, value[ip_with_port.str().c_str()]["connections"].GetInt());
+      int expected_connections (i == 1 ? 2 : 1); // Handle control connection
+      ASSERT_EQ(expected_connections,
+                value[ip_with_port.str().c_str()]["connections"].GetInt());
     }
   }
 
@@ -857,7 +863,7 @@ TEST_F(ClientInsightsUnitTest, StatusDataConnectedNodesRemovedNode) {
       cass::OStringStream ip_with_port;
       ip_with_port << "127.0.0.1:" << config_.port();
       const cass::json::Value& node = value[ip_with_port.str().c_str()]["connections"];
-      ASSERT_EQ(1, node.GetInt());
+      EXPECT_EQ(2, node.GetInt()); // Ensure the control connection has moved to node 2
     }
     {
       cass::OStringStream ip_with_port;

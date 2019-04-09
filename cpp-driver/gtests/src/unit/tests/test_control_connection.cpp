@@ -247,7 +247,7 @@ TEST_F(ControlConnectionUnitTest, Simple) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   bool is_connected = false;
-  ControlConnector::Ptr connector(new ControlConnector(Address("127.0.0.1", PORT),
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                                        PROTOCOL_VERSION,
                                                        bind_callback(on_connection_connected, &is_connected)));
   connector->connect(loop());
@@ -262,7 +262,7 @@ TEST_F(ControlConnectionUnitTest, Auth) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   bool is_connected = false;
-  ControlConnector::Ptr connector(new ControlConnector(Address("127.0.0.1", PORT),
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                                        PROTOCOL_VERSION,
                                                        bind_callback(on_connection_connected, &is_connected)));
   ControlConnectionSettings settings;
@@ -284,7 +284,7 @@ TEST_F(ControlConnectionUnitTest, Ssl) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   bool is_connected = false;
-  ControlConnector::Ptr connector(new ControlConnector(Address("127.0.0.1", PORT),
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                                        PROTOCOL_VERSION,
                                                        bind_callback(on_connection_connected, &is_connected)));
   connector
@@ -305,7 +305,7 @@ TEST_F(ControlConnectionUnitTest, Close) {
 
   bool is_closed(false);
   for (size_t i = 0; i < 10; ++i) {
-    ControlConnector::Ptr connector(new ControlConnector(Address("127.0.0.1", PORT),
+    ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                                          PROTOCOL_VERSION,
                                                          bind_callback(on_connection_close, &is_closed)));
     connector->connect(loop());
@@ -325,7 +325,7 @@ TEST_F(ControlConnectionUnitTest, Cancel) {
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
   for (size_t i = 0; i < 10; ++i) {
-    ControlConnector::Ptr connector(new ControlConnector(Address("127.0.0.1", PORT),
+    ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                                          PROTOCOL_VERSION,
                                                          bind_callback(on_connection_error_code, &error_code)));
     connector->connect(loop());
@@ -355,7 +355,7 @@ TEST_F(ControlConnectionUnitTest, StatusChangeEvents) {
   listener.add_event(StatusChangeEvent::up(address));
   listener.add_event(StatusChangeEvent::down(address));
 
-  ControlConnector::Ptr connector(new ControlConnector(address,
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(address)),
                                                        PROTOCOL_VERSION,
                                                        bind_callback(on_connection_event, &listener)));
   connector
@@ -387,7 +387,7 @@ TEST_F(ControlConnectionUnitTest, TopologyChangeEvents) {
   listener.add_event(TopologyChangeEvent::new_node(address2));
   listener.add_event(TopologyChangeEvent::removed_node(address2));
 
-  ControlConnector::Ptr connector(new ControlConnector(address1,
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(address1)),
                                                        PROTOCOL_VERSION,
                                                        bind_callback(on_connection_event, &listener)));
   connector
@@ -437,7 +437,7 @@ TEST_F(ControlConnectionUnitTest, SchemaChangeEvents) {
   listener.add_event(SchemaChangeEvent::aggregate(SchemaChangeEvent::DROPPED, "keyspace1",
                                                   "aggregate1", Vector<String>(1, "varchar")));
 
-  ControlConnector::Ptr connector(new ControlConnector(address,
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(address)),
                                                        PROTOCOL_VERSION,
                                                        bind_callback(on_connection_event, &listener)));
   connector
@@ -532,7 +532,7 @@ TEST_F(ControlConnectionUnitTest, EventDuringStartup) {
   RecordingControlConnectionListener listener;
 
   bool is_connected;
-  ControlConnector::Ptr connector(new ControlConnector(address,
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(address)),
                                                        PROTOCOL_VERSION,
                                                        bind_callback(on_connection_connected, &is_connected)));
   connector
@@ -554,7 +554,7 @@ TEST_F(ControlConnectionUnitTest, InvalidProtocol) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
-  ControlConnector::Ptr connector(new ControlConnector(Address("127.0.0.1", PORT),
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                                        0x7F, // Invalid protocol version
                                                        bind_callback(on_connection_error_code, &error_code)));
   connector->connect(loop());
@@ -570,7 +570,7 @@ TEST_F(ControlConnectionUnitTest, InvalidAuth) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
-  ControlConnector::Ptr connector(new ControlConnector(Address("127.0.0.1", PORT),
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                                        PROTOCOL_VERSION,
                                                        bind_callback(on_connection_error_code, &error_code)));
 
@@ -593,7 +593,7 @@ TEST_F(ControlConnectionUnitTest, InvalidSsl) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
-  ControlConnector::Ptr connector(new ControlConnector(Address("127.0.0.1", PORT),
+  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                                        PROTOCOL_VERSION,
                                                        bind_callback(on_connection_error_code, &error_code)));
 

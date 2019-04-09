@@ -118,7 +118,7 @@ public:
    * @param listener
    * @param keyspace
    * @param loop
-   * @param address
+   * @param host
    * @param protocol_version
    * @param settings
    * @param metrics
@@ -127,7 +127,7 @@ public:
                  ConnectionPoolListener* listener,
                  const String& keyspace,
                  uv_loop_t* loop,
-                 const Address& address,
+                 const Host::Ptr& host,
                  ProtocolVersion protocol_version,
                  const ConnectionPoolSettings& settings,
                  Metrics* metrics);
@@ -171,7 +171,7 @@ public:
 
 public:
   const uv_loop_t* loop() const { return loop_; }
-  const Address& address() const { return address_; }
+  const Address& address() const { return host_->address(); }
   ProtocolVersion protocol_version() const { return protocol_version_; }
   const String& keyspace() const { return keyspace_; }
 
@@ -233,7 +233,7 @@ private:
   ConnectionPoolListener* listener_;
   String keyspace_;
   uv_loop_t* const loop_;
-  const Address address_;
+  const Host::Ptr host_;
   const ProtocolVersion protocol_version_;
   const ConnectionPoolSettings settings_;
   Metrics* const metrics_;

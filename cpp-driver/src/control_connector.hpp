@@ -103,12 +103,12 @@ public:
   /**
    * Constructor
    *
-   * @param address The address to connect to.
+   * @param host The host to connect to.
    * @param protocol_version The initial protocol version to use for the
    * connection.
    * @param callback
    */
-  ControlConnector(const Address& address,
+  ControlConnector(const Host::Ptr& host,
                    ProtocolVersion protocol_version,
                    const Callback& callback);
 
@@ -258,6 +258,7 @@ private:
 
   ControlConnectionListener* listener_;
   Metrics* metrics_;
+  Host::Ptr host_;
   ControlConnectionSettings settings_;
 };
 

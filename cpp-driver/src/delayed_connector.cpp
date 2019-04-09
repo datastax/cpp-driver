@@ -20,10 +20,10 @@
 
 namespace cass {
 
-DelayedConnector::DelayedConnector(const Address& address,
+DelayedConnector::DelayedConnector(const Host::Ptr& host,
                                    ProtocolVersion protocol_version,
                                    const Callback& callback)
-  : connector_(new Connector(address,
+  : connector_(new Connector(host,
                              protocol_version,
                              bind_callback(&DelayedConnector::on_connect, this)))
   , callback_(callback)

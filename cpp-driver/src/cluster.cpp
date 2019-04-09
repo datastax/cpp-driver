@@ -428,7 +428,7 @@ void Cluster::on_schedule_reconnect(Timer* timer) {
 void Cluster::handle_schedule_reconnect() {
   const Host::Ptr& host = query_plan_->compute_next();
   if (host) {
-    reconnector_.reset(new ControlConnector(host->address(),
+    reconnector_.reset(new ControlConnector(host,
                                             connection_->protocol_version(),
                                             bind_callback(&Cluster::on_reconnect, this)));
     reconnector_

@@ -105,10 +105,12 @@ void RecordingConnectionListener::process_events(const EventResponse::Vec& event
 }
 
 Connection::Connection(const Socket::Ptr& socket,
+                       const Host::Ptr& host,
                        ProtocolVersion protocol_version,
                        unsigned int idle_timeout_secs,
                        unsigned int heartbeat_interval_secs)
   : socket_(socket)
+  , host_(host)
   , inflight_request_count_(0)
   , response_(new ResponseMessage())
   , listener_(&nop_listener__)
@@ -117,6 +119,13 @@ Connection::Connection(const Socket::Ptr& socket,
   , heartbeat_interval_secs_(heartbeat_interval_secs)
   , heartbeat_outstanding_(false) {
   inc_ref(); // For the event loop
+
+  assert(host_->address() == socket_->address() && "Host doesn't match socket address");
+  host_->increment_connection_count();
+}
+
+Connection::~Connection() {
+  host_->decrement_connection_count();
 }
 
 int32_t Connection::write(const RequestCallback::Ptr& callback) {
