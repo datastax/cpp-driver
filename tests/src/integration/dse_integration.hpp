@@ -29,6 +29,13 @@
     SKIP_TEST_VERSION(this->server_version_.to_string(), #version) \
   }
 
+#undef CHECK_VALUE_TYPE_VERSION
+#define CHECK_VALUE_TYPE_VERSION(type) \
+  if (this->server_version_ < type::supported_server_version()) { \
+    SKIP_TEST_VERSION(this->server_version_.to_string(), \
+                      type::supported_server_version()) \
+  }
+
 // Macros to use for grouping DSE integration tests together
 #define DSE_TEST_NAME(test_name) Integration##_##DSE##_##test_name
 #define DSE_INTEGRATION_TEST_F(test_case, test_name) \

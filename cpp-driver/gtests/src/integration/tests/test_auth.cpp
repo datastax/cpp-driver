@@ -203,7 +203,11 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, BadCredentials) {
   CHECK_FAILURE;
 
   // Add the proper logging criteria (based on server version)
-  if (server_version_ >= "3.10") {
+  CCM::CassVersion cass_version = this->server_version_;
+  if (Options::is_dse()) {
+    cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
+  }
+  if (cass_version >= "3.10") {
     logger_.add_critera("Provided username invalid and/or password are incorrect");
   } else {
     logger_.add_critera("Username and/or password are incorrect");
@@ -241,7 +245,11 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, AuthenticatorSetErrorNull) {
   CHECK_FAILURE;
 
   // Add the proper logging criteria (based on server version)
-  if (server_version_ >= "3.10") {
+  CCM::CassVersion cass_version = this->server_version_;
+  if (Options::is_dse()) {
+    cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
+  }
+  if (cass_version >= "3.10") {
     logger_.add_critera("Provided username invalid and/or password are incorrect");
   } else {
     logger_.add_critera("Username and/or password are incorrect");

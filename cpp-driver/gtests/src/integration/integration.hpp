@@ -99,8 +99,12 @@
   }
 
 #define CHECK_VALUE_TYPE_VERSION(type) \
-  if (this->server_version_ < type::supported_server_version()) { \
-    SKIP_TEST_VERSION(this->server_version_.to_string(), \
+  CCM::CassVersion cass_version = this->server_version_; \
+  if (Options::is_dse()) { \
+    cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
+  } \
+  if (cass_version < type::supported_server_version()) { \
+    SKIP_TEST_VERSION(cass_version.to_string(), \
                       type::supported_server_version()) \
   }
 
@@ -424,13 +428,25 @@ protected:
   virtual bool force_decommission_node(unsigned int node);
 
   /**
+   * Start a node that was previously stopped to ensure that it is not restarted
+   * after test is completed
+   *
+   * @param node Node that should be started
+   * @return True if node was started; false otherwise (the node is invalid or
+   *         was already started)
+   */
+  virtual bool start_node(unsigned int node);
+
+  /**
    * Stop a node that should be restarted after test is completed
    *
    * @param node Node that should be stopped
+   * @param is_kill True if forced termination requested; false otherwise
+   *                (default: false)
    * @return True if node was stopped; false otherwise (the node is invalid or
    *         was already stopped)
    */
-  virtual bool stop_node(unsigned int node);
+  virtual bool stop_node(unsigned int node, bool is_kill = false);
 
   /**
    * Generate the contact points for the cluster

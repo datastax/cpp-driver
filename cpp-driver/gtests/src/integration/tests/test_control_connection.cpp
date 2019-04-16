@@ -336,7 +336,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests, TopologyChange) {
 
   // Bootstrap a second node and ensure all hosts are actively used
   logger_.add_critera("New node " + (ccm_->get_ip_prefix() + "2") + " added");
-  EXPECT_EQ(2, ccm_->bootstrap_node()); // Triggers a `NEW_NODE` event
+  EXPECT_EQ(2u, ccm_->bootstrap_node()); // Triggers a `NEW_NODE` event
   EXPECT_TRUE(wait_for_logger(1));
   std::set<unsigned short> expected_nodes;
   expected_nodes.insert(1);
@@ -395,7 +395,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests,
 
   // Restart the second node and ensure all hosts are actively used
   reset_logger_criteria("Node ", logger_nodes, " is up");
-  ccm_->start_node(2); // Triggers a `UP` event
+  start_node(2); // Triggers a `UP` event
   ASSERT_TRUE(wait_for_logger(logger_nodes.size()));
   expected_nodes.insert(2);
   check_hosts(session, expected_nodes);
