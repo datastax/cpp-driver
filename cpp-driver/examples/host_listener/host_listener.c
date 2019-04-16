@@ -72,13 +72,13 @@ void on_host_listener(CassHostListenerEvent event, CassInet inet, void* data) {
   cass_inet_string(inet, address);
   if (event == CASS_HOST_LISTENER_EVENT_ADD) {
     printf("Host %s has been ADDED\n", address);
-   } else if (event == CASS_HOST_LISTENER_EVENT_REMOVE) {
+  } else if (event == CASS_HOST_LISTENER_EVENT_REMOVE) {
     printf("Host %s has been REMOVED\n", address);
-   } else if (event == CASS_HOST_LISTENER_EVENT_UP) {
+  } else if (event == CASS_HOST_LISTENER_EVENT_UP) {
     printf("Host %s is UP\n", address);
-   } else if (event == CASS_HOST_LISTENER_EVENT_DOWN) {
+  } else if (event == CASS_HOST_LISTENER_EVENT_DOWN) {
     printf("Host %s is DOWN\n", address);
-   }
+  }
 }
 
 int main(int argc, char* argv[]) {
