@@ -8,6 +8,7 @@
 #ifndef __CASS_EXECUTION_PROFILE_HPP_INCLUDED__
 #define __CASS_EXECUTION_PROFILE_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "blacklist_policy.hpp"
 #include "blacklist_dc_policy.hpp"
 #include "cassandra.h"
@@ -24,7 +25,7 @@
 
 namespace cass {
 
-class ExecutionProfile {
+class ExecutionProfile : public Allocated {
 public:
   typedef DenseHashMap<String, ExecutionProfile> Map;
 
@@ -60,8 +61,14 @@ public:
   ContactPointList& blacklist() {
     return blacklist_;
   }
+  const ContactPointList& blacklist() const {
+    return blacklist_;
+  }
 
   DcList& blacklist_dc() {
+    return blacklist_dc_;
+  }
+  const DcList& blacklist_dc() const {
     return blacklist_dc_;
   }
 
@@ -81,6 +88,10 @@ public:
     latency_aware_routing_settings_ = settings;
   }
 
+  LatencyAwarePolicy::Settings latency_aware_routing_settings() const {
+    return latency_aware_routing_settings_;
+  }
+
   bool token_aware_routing() const { return token_aware_routing_; }
 
   void set_token_aware_routing(bool is_token_aware) {
@@ -91,11 +102,21 @@ public:
     token_aware_routing_shuffle_replicas_ = shuffle_replicas;
   }
 
+  bool token_aware_routing_shuffle_replicas() const {
+    return token_aware_routing_shuffle_replicas_;
+  }
+
   ContactPointList& whitelist() {
+    return whitelist_;
+  }
+  const ContactPointList& whitelist() const {
     return whitelist_;
   }
 
   DcList& whitelist_dc() {
+    return whitelist_dc_;
+  }
+  const DcList& whitelist_dc() const {
     return whitelist_dc_;
   }
 
@@ -114,27 +135,27 @@ public:
       LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
 
       if (!blacklist_.empty()) {
-        chain = Memory::allocate<BlacklistPolicy>(chain, blacklist_);
+        chain = new BlacklistPolicy(chain, blacklist_);
       }
       if (!whitelist_.empty()) {
-        chain = Memory::allocate<WhitelistPolicy>(chain, whitelist_);
+        chain = new WhitelistPolicy(chain, whitelist_);
       }
       if (!blacklist_dc_.empty()) {
-        chain = Memory::allocate<BlacklistDCPolicy>(chain, blacklist_dc_);
+        chain = new BlacklistDCPolicy(chain, blacklist_dc_);
       }
       if (!whitelist_dc_.empty()) {
-        chain = Memory::allocate<WhitelistDCPolicy>(chain, whitelist_dc_);
+        chain = new WhitelistDCPolicy(chain, whitelist_dc_);
       }
       if (token_aware_routing()) {
-        chain = Memory::allocate<TokenAwarePolicy>(chain,
-                                                   token_aware_routing_shuffle_replicas_);
+        chain = new TokenAwarePolicy(chain,
+                                     token_aware_routing_shuffle_replicas_);
       }
       if (latency_aware()) {
-        chain = Memory::allocate<LatencyAwarePolicy>(chain,
-                                                     latency_aware_routing_settings_);
+        chain = new LatencyAwarePolicy(chain,
+                                       latency_aware_routing_settings_);
       }
       if (host_targeting()) {
-        chain = Memory::allocate<HostTargetingPolicy>(chain);
+        chain = new HostTargetingPolicy(chain);
       }
 
       load_balancing_policy_.reset(chain);

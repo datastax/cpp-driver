@@ -23,7 +23,7 @@
 namespace cass {
 
 RoundRobinPolicy::RoundRobinPolicy()
-  : hosts_(Memory::allocate<HostVec>())
+  : hosts_(new HostVec())
   , index_(0) {
   uv_rwlock_init(&available_rwlock_);
 }
@@ -53,7 +53,7 @@ CassHostDistance RoundRobinPolicy::distance(const Host::Ptr& host) const {
 QueryPlan* RoundRobinPolicy::new_query_plan(const String& keyspace,
                                             RequestHandler* request_handler,
                                             const TokenMap* token_map) {
-  return Memory::allocate<RoundRobinQueryPlan>(this, hosts_, index_++);
+  return new RoundRobinQueryPlan(this, hosts_, index_++);
 }
 
 bool RoundRobinPolicy::is_host_up(const Address& address) const {

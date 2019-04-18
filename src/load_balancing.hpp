@@ -17,10 +17,10 @@
 #ifndef __CASS_LOAD_BALANCING_HPP_INCLUDED__
 #define __CASS_LOAD_BALANCING_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "cassandra.h"
 #include "constants.hpp"
 #include "host.hpp"
-#include "memory.hpp"
 #include "request.hpp"
 #include "string.hpp"
 #include "vector.hpp"
@@ -58,7 +58,7 @@ inline bool is_dc_local(CassConsistency cl) {
   return cl == CASS_CONSISTENCY_LOCAL_ONE || cl == CASS_CONSISTENCY_LOCAL_QUORUM;
 }
 
-class QueryPlan {
+class QueryPlan : public Allocated {
 public:
   virtual ~QueryPlan() {}
   virtual Host::Ptr compute_next() = 0;
@@ -126,7 +126,13 @@ public:
     return child_policy_->init(connected_host, hosts, random);
   }
 
-  virtual CassHostDistance distance(const Host::Ptr& host) const { return child_policy_->distance(host); }
+  virtual const LoadBalancingPolicy::Ptr& child_policy() const {
+    return child_policy_;
+  }
+
+  virtual CassHostDistance distance(const Host::Ptr& host) const {
+    return child_policy_->distance(host);
+  }
 
   virtual bool is_host_up(const Address& address) const {
     return child_policy_->is_host_up(address);

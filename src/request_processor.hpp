@@ -56,7 +56,7 @@ public:
     , response_(response) { }
 
   ~KeyspaceChangedHandler() {
-    event_loop_->add(Memory::allocate<Task>(response_));
+    event_loop_->add(new Task(response_));
   }
 
 private:

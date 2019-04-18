@@ -25,7 +25,7 @@ NoSslSession::NoSslSession(const Address& address, const String& hostname)
 }
 
 SslSession* cass::NoSslContext::create_session(const Address& address, const String& hostname) {
-  return Memory::allocate<NoSslSession>(address, hostname);
+  return new NoSslSession(address, hostname);
 }
 
 CassError cass::NoSslContext::add_trusted_cert(const char* cert,
@@ -46,7 +46,7 @@ CassError cass::NoSslContext::set_private_key(const char* key,
 }
 
 SslContext::Ptr NoSslContextFactory::create() {
-  return SslContext::Ptr(Memory::allocate<NoSslContext>());
+  return SslContext::Ptr(new NoSslContext());
 }
 
 

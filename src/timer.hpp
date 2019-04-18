@@ -17,6 +17,7 @@
 #ifndef __CASS_TIMER_HPP_INCLUDED__
 #define __CASS_TIMER_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "callback.hpp"
 #include "macros.hpp"
 
@@ -52,7 +53,7 @@ private:
   };
 
 private:
-  uv_timer_t* handle_;
+  AllocatedT<uv_timer_t>* handle_;
   State state_;
   Callback callback_;
 

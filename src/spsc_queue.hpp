@@ -31,6 +31,7 @@
 #include "atomic.hpp"
 #include "cassconfig.hpp"
 #include "macros.hpp"
+#include "scoped_ptr.hpp"
 #include "utils.hpp"
 
 namespace cass {
@@ -43,7 +44,7 @@ public:
   SPSCQueue(size_t size)
       : size_(next_pow_2(size))
       , mask_(size_ - 1)
-      , buffer_(size_)
+      , buffer_(new T[size])
       , tail_(0)
       , head_(0) {}
 
@@ -89,7 +90,7 @@ private:
   cache_line_pad_t pad0_;
   const size_t size_;
   const size_t mask_;
-  DynamicArray<T> buffer_;
+  ScopedArray<T> buffer_;
 
   cache_line_pad_t pad1_;
   Atomic<size_t> tail_;

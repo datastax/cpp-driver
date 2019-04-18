@@ -23,19 +23,19 @@
 extern "C" {
 
 CassRetryPolicy* cass_retry_policy_default_new() {
-  cass::RetryPolicy* policy = cass::Memory::allocate<cass::DefaultRetryPolicy>();
+  cass::RetryPolicy* policy = new cass::DefaultRetryPolicy();
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
 
 CassRetryPolicy* cass_retry_policy_downgrading_consistency_new() {
-  cass::RetryPolicy* policy = cass::Memory::allocate<cass::DowngradingConsistencyRetryPolicy>();
+  cass::RetryPolicy* policy = new cass::DowngradingConsistencyRetryPolicy();
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
 
 CassRetryPolicy* cass_retry_policy_fallthrough_new() {
-  cass::RetryPolicy* policy = cass::Memory::allocate<cass::FallthroughRetryPolicy>();
+  cass::RetryPolicy* policy = new cass::FallthroughRetryPolicy();
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
@@ -45,7 +45,7 @@ CassRetryPolicy* cass_retry_policy_logging_new(CassRetryPolicy* child_retry_poli
     return NULL;
   }
   cass::RetryPolicy* policy
-      = cass::Memory::allocate<cass::LoggingRetryPolicy>(
+      = new cass::LoggingRetryPolicy(
           cass::SharedRefPtr<cass::RetryPolicy>(child_retry_policy));
   policy->inc_ref();
   return CassRetryPolicy::to(policy);

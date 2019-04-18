@@ -8,6 +8,7 @@
 #ifndef __DSE_VECTOR_HPP_INCLUDED__
 #define __DSE_VECTOR_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "allocator.hpp"
 
 #include <vector>
@@ -15,7 +16,9 @@
 namespace cass {
 
 template <class T>
-class Vector : public std::vector<T, cass::Allocator<T> > {
+class Vector
+    : public Allocated
+    , public std::vector<T, cass::Allocator<T> > {
 public:
   typedef cass::Allocator<T> Allocator;
 

@@ -47,10 +47,10 @@ void LatencyAwarePolicy::close_handles() {
 QueryPlan* LatencyAwarePolicy::new_query_plan(const String& keyspace,
                                               RequestHandler* request_handler,
                                               const TokenMap* token_map) {
-  return Memory::allocate<LatencyAwareQueryPlan>(this,
-                                                 child_policy_->new_query_plan(keyspace,
-                                                                               request_handler,
-                                                                               token_map));
+  return new LatencyAwareQueryPlan(this,
+                                   child_policy_->new_query_plan(keyspace,
+                                                                 request_handler,
+                                                                 token_map));
 }
 
 void LatencyAwarePolicy::on_host_added(const Host::Ptr& host) {

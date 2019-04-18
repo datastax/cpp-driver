@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(generator)
   CCM::CassVersion version = test_utils::get_version();
   if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     TimestampsTest tester;
-    cass::SharedRefPtr<TestTimestampGenerator> gen(cass::Memory::allocate<TestTimestampGenerator>(1234));
+    cass::SharedRefPtr<TestTimestampGenerator> gen(new TestTimestampGenerator(1234));
 
     cass_cluster_set_timestamp_gen(tester.cluster, CassTimestampGen::to(gen.get()));
     tester.create_session();
@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(server_side)
 BOOST_AUTO_TEST_CASE(monotonic_generator)
 {
   TimestampsTest tester;
-  cass::SharedRefPtr<TestMonotonicTimestampGenerator> gen(cass::Memory::allocate<TestMonotonicTimestampGenerator>()); // mimics cass_timestamp_gen_monotonic_new())
+  cass::SharedRefPtr<TestMonotonicTimestampGenerator> gen(new TestMonotonicTimestampGenerator()); // mimics cass_timestamp_gen_monotonic_new())
   cass_cluster_set_timestamp_gen(tester.cluster, CassTimestampGen::to(gen.get()));
   tester.create_session();
 
@@ -331,7 +331,7 @@ BOOST_AUTO_TEST_CASE(monotonic_generator)
 BOOST_AUTO_TEST_CASE(monotonic_generator_warnings)
 {
   TimestampsTest tester;
-  cass::SharedRefPtr<TestMonotonicTimestampGenerator> gen(cass::Memory::allocate<TestMonotonicTimestampGenerator>(1, 1000)); // mimics cass_timestamp_gen_monotonic_new_with_settings())
+  cass::SharedRefPtr<TestMonotonicTimestampGenerator> gen(new TestMonotonicTimestampGenerator(1, 1000)); // mimics cass_timestamp_gen_monotonic_new_with_settings())
   cass_cluster_set_timestamp_gen(tester.cluster, CassTimestampGen::to(gen.get()));
   tester.create_session();
 

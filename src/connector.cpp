@@ -152,7 +152,7 @@ void StartupCallback::on_result_response(ResponseMessage* response) {
 
 ConnectionSettings::ConnectionSettings()
   : connect_timeout_ms(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
-  , auth_provider(Memory::allocate<AuthProvider>())
+  , auth_provider(new AuthProvider())
   , idle_timeout_secs(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
   , heartbeat_interval_secs(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
   , no_compact(CASS_DEFAULT_NO_COMPACT) { }
@@ -167,14 +167,15 @@ ConnectionSettings::ConnectionSettings(const Config& config)
   , application_name(config.application_name())
   , application_version(config.application_version()) { }
 
-Connector::Connector(const Address& address,
+Connector::Connector(const Host::Ptr& host,
                      ProtocolVersion protocol_version,
                      const Callback& callback)
   : callback_(callback)
   , loop_(NULL)
+  , host_(host)
   , socket_connector_(
-      Memory::allocate<SocketConnector>(address,
-                                        bind_callback(&Connector::on_connect, this)))
+      new SocketConnector(host->address(),
+                          bind_callback(&Connector::on_connect, this)))
   , error_code_(CONNECTION_OK)
   , protocol_version_(protocol_version)
   , event_types_(0)
@@ -207,7 +208,7 @@ Connector* Connector::with_settings(const ConnectionSettings& settings) {
   // authentication.
   settings_.socket_settings.hostname_resolution_enabled
       = settings.socket_settings.hostname_resolution_enabled &&
-      (settings.auth_provider || settings.socket_settings.ssl_context);
+        (settings.auth_provider || settings.socket_settings.ssl_context);
   return this;
 }
 
@@ -269,9 +270,9 @@ void Connector::on_ready_or_set_keyspace() {
   } else {
     connection_->write_and_flush(
           RequestCallback::Ptr(
-            Memory::allocate<StartupCallback>(this,
-                                              Request::ConstPtr(
-                                                Memory::allocate<QueryRequest>("USE " + keyspace_)))));
+            new StartupCallback(this,
+                                Request::ConstPtr(
+                                  new QueryRequest("USE " + keyspace_)))));
   }
 }
 
@@ -279,9 +280,9 @@ void Connector::on_ready_or_register_for_events() {
   if (event_types_ != 0) {
     connection_->write_and_flush(
           RequestCallback::Ptr(
-            Memory::allocate<StartupCallback>(this,
-                                              Request::ConstPtr(
-                                                Memory::allocate<RegisterRequest>(event_types_)))));
+            new StartupCallback(this,
+                                Request::ConstPtr(
+                                  new RegisterRequest(event_types_)))));
     // REGISTER requests also returns a READY response so this needs to be reset
     // to prevent a loop.
     event_types_ = 0;
@@ -303,12 +304,12 @@ void ConnectionConnector::on_supported(ResponseMessage* response) {
 
   connection_->write_and_flush(
         RequestCallback::Ptr(
-          Memory::allocate<StartupCallback>(this,
-                                            Request::ConstPtr(
-                                              Memory::allocate<StartupRequest>(settings_.application_name,
-                                                                               settings_.application_version,
-                                                                               settings_.client_id,
-                                                                               settings_.no_compact)))));
+          new StartupCallback(this,
+                              Request::ConstPtr(
+                                new StartupRequest(settings_.application_name,
+                                                   settings_.application_version,
+                                                   settings_.client_id,
+                                                   settings_.no_compact)))));
 }
 #endif
 
@@ -326,9 +327,9 @@ void Connector::on_authenticate(const String& class_name) {
     }
     connection_->write_and_flush(
           RequestCallback::Ptr(
-            Memory::allocate<StartupCallback>(this,
-                                              Request::ConstPtr(
-                                                Memory::allocate<AuthResponseRequest>(response, auth)))));
+            new StartupCallback(this,
+                                Request::ConstPtr(
+                                  new AuthResponseRequest(response, auth)))));
   }
 }
 
@@ -340,9 +341,9 @@ void Connector::on_auth_challenge(const AuthResponseRequest* request, const Stri
   }
   connection_->write_and_flush(
         RequestCallback::Ptr(
-          Memory::allocate<StartupCallback>(this,
-                                            Request::ConstPtr(
-                                              Memory::allocate<AuthResponseRequest>(response, request->auth())))));
+          new StartupCallback(this,
+                              Request::ConstPtr(
+                                new AuthResponseRequest(response, request->auth())))));
 }
 
 void Connector::on_auth_success(const AuthResponseRequest* request, const String& token) {
@@ -365,37 +366,38 @@ void Connector::on_connect(SocketConnector* socket_connector) {
   if (socket_connector->is_ok()) {
     Socket::Ptr socket(socket_connector->release_socket());
 
-    connection_.reset(Memory::allocate<Connection>(socket,
-                                                   protocol_version_,
-                                                   settings_.idle_timeout_secs,
-                                                   settings_.heartbeat_interval_secs));
+    connection_.reset(new Connection(socket,
+                                     host_,
+                                     protocol_version_,
+                                     settings_.idle_timeout_secs,
+                                     settings_.heartbeat_interval_secs));
     connection_->set_listener(this);
 
     if (socket_connector->ssl_session()) {
       socket->set_handler(
-            Memory::allocate<SslConnectionHandler>(
+            new SslConnectionHandler(
               socket_connector->ssl_session().release(),
               connection_.get()));
     } else {
       socket->set_handler(
-            Memory::allocate<ConnectionHandler>(connection_.get()));
+            new ConnectionHandler(connection_.get()));
     }
 
 #ifdef CASS_USE_OPTIONS
     connection_->write_and_flush(
           RequestCallback::Ptr(
-            Memory::allocate<StartupCallback>(this,
-                                              Request::ConstPtr(
-                                                Memory::allocate<OptionsRequest>()))));
+            new StartupCallback(this,
+                                Request::ConstPtr(
+                                  new OptionsRequest()))));
 #else
     connection_->write_and_flush(
           RequestCallback::Ptr(
-            Memory::allocate<StartupCallback>(this,
-                                              Request::ConstPtr(
-                                                Memory::allocate<StartupRequest>(settings_.application_name,
-                                                                                 settings_.application_version,
-                                                                                 settings_.client_id,
-                                                                                 settings_.no_compact)))));
+            new StartupCallback(this,
+                                Request::ConstPtr(
+                                  new StartupRequest(settings_.application_name,
+                                                     settings_.application_version,
+                                                     settings_.client_id,
+                                                     settings_.no_compact)))));
 #endif
   } else if (socket_connector->is_canceled() || is_timeout_error()) {
     finish();

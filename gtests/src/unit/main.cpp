@@ -156,8 +156,7 @@ int main(int argc, char* argv[]) {
   // Initialize the Google testing framework
   testing::InitGoogleTest(&argc, argv);
 
-
-  // Add a bootstrap mechanism for program start and finish
+  // Add listeners for program start and finish events
   testing::TestEventListeners& listeners = testing::UnitTest::GetInstance()->listeners();
 
 #if defined(_WIN32) && defined(_DEBUG)

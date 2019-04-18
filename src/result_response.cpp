@@ -90,8 +90,8 @@ cass_bool_t cass_result_has_more_pages(const CassResult* result) {
 }
 
 CassError cass_result_paging_state_token(const CassResult* result,
-                                   const char** paging_state,
-                                   size_t* paging_state_size) {
+                                         const char** paging_state,
+                                         size_t* paging_state_size) {
   if (!result->has_more_pages()) {
     return CASS_ERROR_LIB_NO_PAGING_STATE;
   }
@@ -144,7 +144,7 @@ private:
     if (type) return type;
 
     // If no mapping exists, return an actual custom type.
-    return DataType::ConstPtr(Memory::allocate<CustomType>(class_name.to_string()));
+    return DataType::ConstPtr(new CustomType(class_name.to_string()));
   }
 
   DataType::ConstPtr decode_collection(CassValueType collection_type) {
@@ -153,7 +153,7 @@ private:
     if (collection_type == CASS_VALUE_TYPE_MAP) {
       types.push_back(decode());
     }
-    return DataType::ConstPtr(Memory::allocate<CollectionType>(collection_type, types, false));
+    return DataType::ConstPtr(new CollectionType(collection_type, types, false));
   }
 
   DataType::ConstPtr decode_user_type() {
@@ -172,10 +172,10 @@ private:
       if (!decoder_.decode_string(&field_name)) return DataType::NIL;
       fields.push_back(UserType::Field(field_name.to_string(), decode()));
     }
-    return DataType::ConstPtr(Memory::allocate<UserType>(keyspace.to_string(),
-                                                         type_name.to_string(),
-                                                         fields,
-                                                         false));
+    return DataType::ConstPtr(new UserType(keyspace.to_string(),
+                                           type_name.to_string(),
+                                           fields,
+                                           false));
   }
 
   DataType::ConstPtr decode_tuple() {
@@ -186,7 +186,7 @@ private:
     for (uint16_t i = 0; i < n; ++i) {
       types.push_back(decode());
     }
-    return DataType::ConstPtr(Memory::allocate<TupleType>(types, false));
+    return DataType::ConstPtr(new TupleType(types, false));
   }
 
 private:
@@ -280,7 +280,7 @@ bool ResultResponse::decode_metadata(Decoder& decoder,
       CHECK_RESULT(decoder.decode_string(&table_));
     }
 
-    metadata->reset(Memory::allocate<ResultMetadata>(column_count, this->buffer()));
+    metadata->reset(new ResultMetadata(column_count, this->buffer()));
 
     SimpleDataTypeCache cache;
 

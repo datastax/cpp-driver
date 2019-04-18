@@ -21,7 +21,6 @@
 
 #include "address.hpp"
 #include "callback.hpp"
-#include "memory.hpp"
 #include "ref_counted.hpp"
 
 namespace cass {

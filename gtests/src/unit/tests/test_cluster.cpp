@@ -229,7 +229,7 @@ public:
 
     DisableEventsListener(const Future::Ptr& close_future, mockssandra::Cluster& simple_cluster)
       : Listener(close_future)
-      , event_future_(Memory::allocate<Future>())
+      , event_future_(new Future())
       , simple_cluster_(simple_cluster) { }
 
     Future::Ptr& event_future() { return event_future_; }
@@ -303,10 +303,10 @@ TEST_F(ClusterUnitTest, Simple) {
   contact_points.push_back("127.0.0.2");
   contact_points.push_back("127.0.0.3");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -320,13 +320,13 @@ TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   builder.on(mockssandra::OPCODE_STARTUP)
       .validate_startup()
-        .is_address("127.0.0.2").then(mockssandra::Action::Builder().authenticate("com.dataxtax.SomeAuthenticator"))
-        .is_address("127.0.0.3").then(mockssandra::Action::Builder().invalid_protocol())
+      .is_address("127.0.0.2").then(mockssandra::Action::Builder().authenticate("com.dataxtax.SomeAuthenticator"))
+      .is_address("127.0.0.3").then(mockssandra::Action::Builder().invalid_protocol())
       .ready();
 
   builder.on(mockssandra::OPCODE_AUTH_RESPONSE)
       .validate_auth_response()
-        .is_address("127.0.0.2").then(mockssandra::Action::Builder().plaintext_auth())
+      .is_address("127.0.0.2").then(mockssandra::Action::Builder().plaintext_auth())
       .auth_success();
 
   ContactPointList contact_points;
@@ -343,14 +343,14 @@ TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
   mockssandra::SimpleCluster cluster(builder.build(), 3);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.auth_provider.reset(
-        Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
+        new PlainTextAuthProvider("invalid", "invalid"));
 
   connector
       ->with_settings(settings)
@@ -368,10 +368,10 @@ TEST_F(ClusterUnitTest, Resolve) {
   ContactPointList contact_points;
   contact_points.push_back("localhost");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
   connector->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
@@ -385,14 +385,14 @@ TEST_F(ClusterUnitTest, Auth) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.auth_provider.reset(
-        Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
+        new PlainTextAuthProvider("cassandra", "cassandra"));
 
   connector
       ->with_settings(settings)
@@ -411,10 +411,10 @@ TEST_F(ClusterUnitTest, Ssl) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   connector
       ->with_settings(settings)
@@ -437,10 +437,10 @@ TEST_F(ClusterUnitTest, Cancel) {
   contact_points.push_back("doesnotexist.dne");
 
   for (size_t i = 0; i < 10; ++i) {
-    Future::Ptr connect_future(Memory::allocate<Future>());
-    ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                       PROTOCOL_VERSION,
-                                                                       bind_callback(on_connection_connected, connect_future.get())));
+    Future::Ptr connect_future(new Future());
+    ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                         PROTOCOL_VERSION,
+                                                         bind_callback(on_connection_connected, connect_future.get())));
     connector->connect(event_loop());
     connectors.push_back(connector);
     connect_futures.push_back(connect_future);
@@ -480,13 +480,13 @@ TEST_F(ClusterUnitTest, ReconnectToDiscoveredHosts) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+  Future::Ptr close_future(new Future());
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_reconnect, connect_future.get())));
   ReconnectClusterListener::Ptr listener(
-        Memory::allocate<ReconnectClusterListener>(close_future, &outage_plan));
+        new ReconnectClusterListener(close_future, &outage_plan));
 
   ClusterSettings settings;
   settings.reconnect_timeout_ms = 1; // Reconnect immediately
@@ -526,13 +526,13 @@ TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+  Future::Ptr close_future(new Future());
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_reconnect, connect_future.get())));
   ReconnectClusterListener::Ptr listener(
-        Memory::allocate<ReconnectClusterListener>(close_future, &outage_plan));
+        new ReconnectClusterListener(close_future, &outage_plan));
 
   ClusterSettings settings;
   settings.reconnect_timeout_ms = 1; // Reconnect immediately
@@ -569,13 +569,13 @@ TEST_F(ClusterUnitTest, CloseDuringReconnect) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+  Future::Ptr close_future(new Future());
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_reconnect, connect_future.get())));
 
-  Listener::Ptr listener(Memory::allocate<Listener>(close_future));
+  Listener::Ptr listener(new Listener(close_future));
 
   ClusterSettings settings;
   settings.reconnect_timeout_ms = 100000; // Make sure we're reconnecting when we close.
@@ -604,15 +604,15 @@ TEST_F(ClusterUnitTest, NotifyDownUp) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  Future::Ptr up_future(Memory::allocate<Future>());
-  Future::Ptr down_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+  Future::Ptr close_future(new Future());
+  Future::Ptr connect_future(new Future());
+  Future::Ptr up_future(new Future());
+  Future::Ptr down_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_reconnect, connect_future.get())));
 
-  UpDownListener::Ptr listener(Memory::allocate<UpDownListener>(close_future, up_future, down_future));
+  UpDownListener::Ptr listener(new UpDownListener(close_future, up_future, down_future));
 
   connector
       ->with_listener(listener.get())
@@ -648,10 +648,10 @@ TEST_F(ClusterUnitTest, ProtocolNegotiation) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -670,10 +670,10 @@ TEST_F(ClusterUnitTest, NoSupportedProtocols) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -691,10 +691,10 @@ TEST_F(ClusterUnitTest, FindValidHost) {
   contact_points.push_back("127.99.99.2"); // Invalid
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.connect_timeout_ms = 100;
@@ -716,10 +716,10 @@ TEST_F(ClusterUnitTest, NoHostsAvailable) {
   contact_points.push_back("127.0.0.2");
   contact_points.push_back("127.0.0.3");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -735,14 +735,14 @@ TEST_F(ClusterUnitTest, InvalidAuth) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.auth_provider.reset(
-        Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
+        new PlainTextAuthProvider("invalid", "invalid"));
 
   connector
       ->with_settings(settings)
@@ -761,10 +761,10 @@ TEST_F(ClusterUnitTest, InvalidSsl) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
@@ -790,19 +790,19 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
   ContactPointList contact_points;
   contact_points.push_back(local_address.to_string());
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+  Future::Ptr close_future(new Future());
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_reconnect, connect_future.get())));
 
-  Future::Ptr up_future(Memory::allocate<Future>());
-  Future::Ptr recover_future(Memory::allocate<Future>());
+  Future::Ptr up_future(new Future());
+  Future::Ptr recover_future(new Future());
   RecoverClusterListener::Ptr listener(
-        Memory::allocate<RecoverClusterListener>(close_future, up_future, recover_future));
+        new RecoverClusterListener(close_future, up_future, recover_future));
 
   ClusterSettings settings;
-  settings.load_balancing_policy.reset(Memory::allocate<DCAwarePolicy>("dc1", 1, false)); // Allow connection to a single remote host
+  settings.load_balancing_policy.reset(new DCAwarePolicy("dc1", 1, false)); // Allow connection to a single remote host
   settings.load_balancing_policies.clear();
   settings.load_balancing_policies.push_back(settings.load_balancing_policy);
   settings.reconnect_timeout_ms = 1; // Reconnect immediately
@@ -845,13 +845,13 @@ TEST_F(ClusterUnitTest, InvalidDC) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
-  settings.load_balancing_policy.reset(Memory::allocate<DCAwarePolicy>("invalid_dc", 0, false)); // Invalid DC and not using remote hosts
+  settings.load_balancing_policy.reset(new DCAwarePolicy("invalid_dc", 0, false)); // Invalid DC and not using remote hosts
   settings.load_balancing_policies.clear();
   settings.load_balancing_policies.push_back(settings.load_balancing_policy);
 
@@ -873,17 +873,17 @@ TEST_F(ClusterUnitTest, DisableEventsOnStartup) {
   ContactPointList contact_points;
   contact_points.push_back("127.0.0.1");
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  ClusterConnector::Ptr connector(Memory::allocate<ClusterConnector>(contact_points,
-                                                                     PROTOCOL_VERSION,
-                                                                     bind_callback(on_connection_reconnect, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
+                                                       PROTOCOL_VERSION,
+                                                       bind_callback(on_connection_reconnect, connect_future.get())));
 
   ClusterSettings settings;
   settings.disable_events_on_startup = true; // Disable events to start
 
-  Future::Ptr close_future(Memory::allocate<Future>());
+  Future::Ptr close_future(new Future());
   DisableEventsListener::Ptr listener(
-        cass::Memory::allocate<DisableEventsListener>(close_future, cluster));
+        new DisableEventsListener(close_future, cluster));
 
   connector
       ->with_listener(listener.get())

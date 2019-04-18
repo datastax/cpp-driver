@@ -18,6 +18,7 @@
 #define __CASS_HOST_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "allocated.hpp"
 #include "atomic.hpp"
 #include "copy_on_write_ptr.hpp"
 #include "get_time.hpp"
@@ -101,7 +102,9 @@ public:
       : address_(address)
       , rack_id_(0)
       , dc_id_(0)
-      , address_string_(address.to_string()) { }
+      , address_string_(address.to_string())
+      , connection_count_(0)
+      , inflight_request_count_(0) { }
 
   const Address& address() const { return address_; }
   const String& address_string() const { return address_string_; }
@@ -134,6 +137,10 @@ public:
     return server_version_;
   }
 
+  const VersionNumber& dse_server_version() const {
+    return dse_server_version_;
+  }
+
   String to_string() const {
     OStringStream ss;
     ss << address_string_;
@@ -145,7 +152,7 @@ public:
 
   void enable_latency_tracking(uint64_t scale, uint64_t min_measured) {
     if (!latency_tracker_) {
-      latency_tracker_.reset(Memory::allocate<LatencyTracker>(scale, (30LL * min_measured) / 100LL));
+      latency_tracker_.reset(new LatencyTracker(scale, (30LL * min_measured) / 100LL));
     }
   }
 
@@ -163,8 +170,32 @@ public:
     return TimestampedAverage();
   }
 
+  void increment_connection_count() {
+    connection_count_.fetch_add(1, MEMORY_ORDER_RELAXED);
+  }
+
+  void decrement_connection_count() {
+    connection_count_.fetch_sub(1, MEMORY_ORDER_RELAXED);
+  }
+
+  int32_t connection_count() const {
+    return connection_count_.load(MEMORY_ORDER_RELAXED);
+  }
+
+  void increment_inflight_requests() {
+    inflight_request_count_.fetch_add(1, MEMORY_ORDER_RELAXED);
+  }
+
+  void decrement_inflight_requests() {
+    inflight_request_count_.fetch_sub(1, MEMORY_ORDER_RELAXED);
+  }
+
+  int32_t inflight_request_count() const {
+    return inflight_request_count_.load(MEMORY_ORDER_RELAXED);
+  }
+
 private:
-  class LatencyTracker {
+  class LatencyTracker : public Allocated {
   public:
     LatencyTracker(uint64_t scale_ns, uint64_t threshold_to_account)
       : scale_ns_(scale_ns)
@@ -192,10 +223,13 @@ private:
   uint32_t dc_id_;
   String address_string_;
   VersionNumber server_version_;
+  VersionNumber dse_server_version_;
   String rack_;
   String dc_;
   String partitioner_;
   Vector<String> tokens_;
+  Atomic<int32_t> connection_count_;
+  Atomic<int32_t> inflight_request_count_;
 
   ScopedPtr<LatencyTracker> latency_tracker_;
 

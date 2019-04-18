@@ -62,7 +62,7 @@ static cass::String& append_arguments(cass::String& full_name,
 extern "C" {
 
 void cass_schema_meta_free(const CassSchemaMeta* schema_meta) {
-  cass::Memory::deallocate(schema_meta->from());
+  delete schema_meta->from();
 }
 
 cass_uint32_t cass_schema_meta_snapshot_version(const CassSchemaMeta* schema_meta) {
@@ -78,7 +78,7 @@ CassVersion cass_schema_meta_version(const CassSchemaMeta* schema_meta) {
 }
 
 const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name(const CassSchemaMeta* schema_meta,
-                                               const char* keyspace) {
+                                                          const char* keyspace) {
   return cass_schema_meta_keyspace_by_name_n(schema_meta, keyspace, SAFE_STRLEN(keyspace));
 }
 
@@ -128,8 +128,8 @@ const CassDataType* cass_keyspace_meta_user_type_by_name(const CassKeyspaceMeta*
 }
 
 const CassDataType* cass_keyspace_meta_user_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
-                                                  const char* type,
-                                                  size_t type_length) {
+                                                           const char* type,
+                                                           size_t type_length) {
   return CassDataType::to(keyspace_meta->get_user_type(cass::String(type, type_length)));
 }
 
@@ -406,7 +406,7 @@ cass_column_meta_field_by_name_n(const CassColumnMeta* column_meta,
 }
 
 void cass_index_meta_name(const CassIndexMeta* index_meta,
-                           const char** name, size_t* name_length) {
+                          const char** name, size_t* name_length) {
   *name = index_meta->name().data();
   *name_length = index_meta->name().size();
 }
@@ -433,34 +433,34 @@ cass_index_meta_field_by_name(const CassIndexMeta* index_meta,
 
 const CassValue*
 cass_index_meta_field_by_name_n(const CassIndexMeta* index_meta,
-                             const char* name, size_t name_length) {
+                                const char* name, size_t name_length) {
   return CassValue::to(index_meta->get_field(cass::String(name, name_length)));
 }
 
 void cass_function_meta_name(const CassFunctionMeta* function_meta,
-                        const char** name,
-                        size_t* name_length) {
+                             const char** name,
+                             size_t* name_length) {
   *name = function_meta->simple_name().data();
   *name_length = function_meta->simple_name().size();
 }
 
 void cass_function_meta_full_name(const CassFunctionMeta* function_meta,
-                             const char** full_name,
-                             size_t* full_name_length) {
+                                  const char** full_name,
+                                  size_t* full_name_length) {
   *full_name = function_meta->name().data();
   *full_name_length = function_meta->name().size();
 }
 
 void cass_function_meta_body(const CassFunctionMeta* function_meta,
-                        const char** body,
-                        size_t* body_length) {
+                             const char** body,
+                             size_t* body_length) {
   *body = function_meta->body().data();
   *body_length = function_meta->body().size();
 }
 
 void cass_function_meta_language(const CassFunctionMeta* function_meta,
-                            const char** language,
-                            size_t* language_length) {
+                                 const char** language,
+                                 size_t* language_length) {
   *language = function_meta->language().data();
   *language_length = function_meta->language().size();
 }
@@ -712,8 +712,8 @@ const CassIndexMeta* cass_iterator_get_index_meta(const CassIterator* iterator) 
 }
 
 CassError cass_iterator_get_meta_field_name(const CassIterator* iterator,
-                                       const char** name,
-                                       size_t* name_length) {
+                                            const char** name,
+                                            size_t* name_length) {
   if (iterator->type() != CASS_ITERATOR_TYPE_META_FIELD) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
@@ -1018,7 +1018,7 @@ void MetadataBase::add_json_list_field(const Row* row, const String& name) {
     return;
   }
 
-  Collection collection(CollectionType::list(DataType::Ptr(Memory::allocate<DataType>(CASS_VALUE_TYPE_TEXT)), false),
+  Collection collection(CollectionType::list(DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)), false),
                         d.Size());
   for (json::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
     collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
@@ -1058,8 +1058,8 @@ const Value* MetadataBase::add_json_map_field(const Row* row, const String& name
     return (fields_[name] = MetadataField(name)).value();
   }
 
-  Collection collection(CollectionType::map(DataType::Ptr(Memory::allocate<DataType>(CASS_VALUE_TYPE_TEXT)),
-                                            DataType::Ptr(Memory::allocate<DataType>(CASS_VALUE_TYPE_TEXT)),
+  Collection collection(CollectionType::map(DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)),
+                                            DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)),
                                             false),
                         2 * d.MemberCount());
   for (json::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
@@ -1111,7 +1111,7 @@ void KeyspaceMetadata::internal_add_table(const TableMetadata::Ptr& table,
   // Copy all the views and update the table and keyspace views
   for (ViewMetadata::Vec::const_iterator i = views.begin();
        i != views.end(); ++i) {
-    ViewMetadata::Ptr view(Memory::allocate<ViewMetadata>(**i, table.get()));
+    ViewMetadata::Ptr view(new ViewMetadata(**i, table.get()));
     table->add_view(view);
     (*views_)[view->name()] = view;
   }
@@ -1137,7 +1137,7 @@ void KeyspaceMetadata::add_view(const ViewMetadata::Ptr& view) {
 void KeyspaceMetadata::drop_table_or_view(const String& table_or_view_name) {
   TableMetadata::Map::iterator table_it = tables_->find(table_or_view_name);
   if (table_it != tables_->end()) { // The name is for a table, remove the
-                                    // table and views from keyspace
+    // table and views from keyspace
     TableMetadata::Ptr table(table_it->second);
     // Cassandra doesn't allow for tables to be dropped while it has active
     // views, but it could be possible for the drop events to arrive out of
@@ -1160,7 +1160,7 @@ void KeyspaceMetadata::drop_table_or_view(const String& table_or_view_name) {
       }
 
       // Create and add a new copy of the base table
-      TableMetadata::Ptr table(Memory::allocate<TableMetadata>(*view->base_table()));
+      TableMetadata::Ptr table(new TableMetadata(*view->base_table()));
       internal_add_table(table, views);
 
       // Remove the dropped view
@@ -1173,8 +1173,8 @@ const UserType::Ptr& KeyspaceMetadata::get_or_create_user_type(const String& nam
   UserType::Map::iterator i = user_types_->find(name);
   if (i == user_types_->end()) {
     i = user_types_->insert(std::make_pair(name,
-                                           UserType::Ptr(Memory::allocate<UserType>(MetadataBase::name(), name,
-                                                                                    is_frozen)))).first;
+                                           UserType::Ptr(new UserType(MetadataBase::name(), name,
+                                                                      is_frozen)))).first;
   }
   return i->second;
 }
@@ -1401,10 +1401,10 @@ void TableMetadataBase::build_keys_and_sort(const VersionNumber& server_version,
           }
           key_alias = ss.str();
         }
-        partition_key_.push_back(ColumnMetadata::Ptr(Memory::allocate<ColumnMetadata>(key_alias,
-                                                                                      partition_key_.size(),
-                                                                                      CASS_COLUMN_TYPE_PARTITION_KEY,
-                                                                                      key_validator->types()[i])));
+        partition_key_.push_back(ColumnMetadata::Ptr(new ColumnMetadata(key_alias,
+                                                                        partition_key_.size(),
+                                                                        CASS_COLUMN_TYPE_PARTITION_KEY,
+                                                                        key_validator->types()[i])));
       }
     }
 
@@ -1443,10 +1443,10 @@ void TableMetadataBase::build_keys_and_sort(const VersionNumber& server_version,
           }
           column_alias = ss.str();
         }
-        clustering_key_.push_back(ColumnMetadata::Ptr(Memory::allocate<ColumnMetadata>(column_alias,
-                                                                                       clustering_key_.size(),
-                                                                                       CASS_COLUMN_TYPE_CLUSTERING_KEY,
-                                                                                       comparator->types()[i])));
+        clustering_key_.push_back(ColumnMetadata::Ptr(new ColumnMetadata(column_alias,
+                                                                         clustering_key_.size(),
+                                                                         CASS_COLUMN_TYPE_CLUSTERING_KEY,
+                                                                         comparator->types()[i])));
         clustering_key_order_.push_back(comparator->reversed()[i] ? CASS_CLUSTERING_ORDER_DESC
                                                                   : CASS_CLUSTERING_ORDER_ASC);
       }
@@ -1496,7 +1496,7 @@ void TableMetadata::add_column(const VersionNumber& server_version, const Column
 }
 
 const ViewMetadata* TableMetadata::get_view(const String& name) const {
- ViewMetadata::Vec::const_iterator i = std::lower_bound(views_.begin(), views_.end(), name);
+  ViewMetadata::Vec::const_iterator i = std::lower_bound(views_.begin(), views_.end(), name);
   if (i == views_.end() || (*i)->name() != name) return NULL;
   return i->get();
 }
@@ -1617,13 +1617,13 @@ FunctionMetadata::FunctionMetadata(const VersionNumber& server_version, SimpleDa
   value1 = add_field(buffer, row, "body");
   if (value1 != NULL &&
       value1->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-     body_ = value1->to_string_ref();
+    body_ = value1->to_string_ref();
   }
 
   value1 = add_field(buffer, row, "language");
   if (value1 != NULL &&
       value1->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-     language_ = value1->to_string_ref();
+    language_ = value1->to_string_ref();
   }
 
   value1 = add_field(buffer, row, "called_on_null_input");
@@ -1726,7 +1726,7 @@ AggregateMetadata::AggregateMetadata(const VersionNumber& server_version, Simple
 
 IndexMetadata::Ptr IndexMetadata::from_row(const String& index_name,
                                            const RefBuffer::Ptr& buffer, const Row* row) {
-  IndexMetadata::Ptr index(Memory::allocate<IndexMetadata>(index_name));
+  IndexMetadata::Ptr index(new IndexMetadata(index_name));
 
   StringRef kind;
   const Value* value = index->add_field(buffer, row, "kind");
@@ -1759,7 +1759,7 @@ void IndexMetadata::update(StringRef kind, const Value* options) {
 
 IndexMetadata::Ptr IndexMetadata::from_legacy(const String& index_name, const ColumnMetadata* column,
                                               const RefBuffer::Ptr& buffer, const Row* row) {
-  IndexMetadata::Ptr index(Memory::allocate<IndexMetadata>(index_name));
+  IndexMetadata::Ptr index(new IndexMetadata(index_name));
 
   index->add_field(buffer, row, "index_name");
 
@@ -1783,7 +1783,7 @@ void IndexMetadata::update_legacy(StringRef index_type, const ColumnMetadata* co
 }
 
 String IndexMetadata::target_from_legacy(const ColumnMetadata* column,
-                                              const Value* options) {
+                                         const Value* options) {
   String column_name(column->name());
 
   escape_id(column_name);
@@ -1955,10 +1955,10 @@ void Metadata::InternalData::update_tables(const VersionNumber& server_version,
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace->add_table(TableMetadata::Ptr(Memory::allocate<TableMetadata>(server_version,
-                                                                           table_name,
-                                                                           buffer, row,
-                                                                           keyspace->is_virtual())));
+    keyspace->add_table(TableMetadata::Ptr(new TableMetadata(server_version,
+                                                             table_name,
+                                                             buffer, row,
+                                                             keyspace->is_virtual())));
   }
 }
 
@@ -2006,11 +2006,11 @@ void Metadata::InternalData::update_views(const VersionNumber& server_version,
       continue;
     }
 
-    ViewMetadata::Ptr view(Memory::allocate<ViewMetadata>(server_version,
-                                                          table.get(),
-                                                          view_name,
-                                                          buffer, row,
-                                                          keyspace->is_virtual()));
+    ViewMetadata::Ptr view(new ViewMetadata(server_version,
+                                            table.get(),
+                                            view_name,
+                                            buffer, row,
+                                            keyspace->is_virtual()));
     keyspace->add_view(view);
     table->add_view(view);
     updated_tables.push_back(table);
@@ -2132,10 +2132,10 @@ void Metadata::InternalData::update_functions(const VersionNumber& server_versio
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace->add_function(FunctionMetadata::Ptr(Memory::allocate<FunctionMetadata>(server_version, cache,
-                                                                                    function_name, signature,
-                                                                                    keyspace,
-                                                                                    buffer, row)));
+    keyspace->add_function(FunctionMetadata::Ptr(new FunctionMetadata(server_version, cache,
+                                                                      function_name, signature,
+                                                                      keyspace,
+                                                                      buffer, row)));
 
   }
 }
@@ -2167,10 +2167,10 @@ void Metadata::InternalData::update_aggregates(const VersionNumber& server_versi
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace->add_aggregate(AggregateMetadata::Ptr(Memory::allocate<AggregateMetadata>(server_version, cache,
-                                                                                       aggregate_name, signature,
-                                                                                       keyspace,
-                                                                                       buffer, row)));
+    keyspace->add_aggregate(AggregateMetadata::Ptr(new AggregateMetadata(server_version, cache,
+                                                                         aggregate_name, signature,
+                                                                         keyspace,
+                                                                         buffer, row)));
   }
 }
 
@@ -2251,9 +2251,9 @@ void Metadata::InternalData::update_columns(const VersionNumber& server_version,
 
     if (table_or_view) {
       table_or_view->add_column(server_version,
-                                ColumnMetadata::Ptr(Memory::allocate<ColumnMetadata>(server_version,
-                                                                                     cache, column_name,
-                                                                                     keyspace, buffer, row)));
+                                ColumnMetadata::Ptr(new ColumnMetadata(server_version,
+                                                                       cache, column_name,
+                                                                       keyspace, buffer, row)));
     }
   }
 

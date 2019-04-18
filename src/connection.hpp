@@ -135,15 +135,18 @@ public:
    * Constructor. Don't use directly.
    *
    * @param socket The wrapped socket.
+   * @param host The host associated with the connection.
    * @param protocol_version The protocol version to use for the connection.
    * @param idle_timeout_secs The amount of time (in seconds) without a write or heartbeat
    * where the connection is considered idle and is terminated.
    * @param heartbeat_interval_secs The interval (in seconds) to send a heartbeat.
    */
   Connection(const Socket::Ptr& socket,
+             const Host::Ptr& host,
              ProtocolVersion protocol_version,
              unsigned int idle_timeout_secs,
              unsigned int heartbeat_interval_secs);
+  ~Connection();
 
   /**
    * Write a request to the connection and coalesce with outstanding requests. This
@@ -207,9 +210,11 @@ public:
 public:
   const Address& address() const { return socket_->address(); }
   const String& address_string() const { return socket_->address_string(); }
+  const Host::Ptr& host() const { return host_; }
   ProtocolVersion protocol_version() const { return protocol_version_; }
   const String& keyspace() { return keyspace_; }
   uv_loop_t* loop() { return socket_->loop(); }
+  const uv_tcp_t* handle() const { return socket_->handle(); }
 
   int inflight_request_count() const {
     return inflight_request_count_.load(MEMORY_ORDER_RELAXED);
@@ -231,6 +236,7 @@ private:
 
 private:
   Socket::Ptr socket_;
+  const Host::Ptr host_;
   StreamManager<RequestCallback::Ptr> stream_manager_;
   Atomic<int> inflight_request_count_;
 

@@ -17,6 +17,7 @@
 #ifndef __CASS_SSL_HPP_INCLUDED__
 #define __CASS_SSL_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "address.hpp"
 #include "cassandra.h"
 #include "cassconfig.hpp"
@@ -29,7 +30,7 @@
 
 namespace cass {
 
-class SslSession {
+class SslSession : public Allocated {
 public:
   SslSession(const Address& address,
              const String& hostname,
@@ -84,6 +85,9 @@ public:
 
   void set_verify_flags(int flags) {
     verify_flags_ = flags;
+  }
+  bool is_cert_validation_enabled() {
+    return verify_flags_ != CASS_SSL_VERIFY_NONE;
   }
 
   virtual SslSession* create_session(const Address& address, const String& hostname) = 0;

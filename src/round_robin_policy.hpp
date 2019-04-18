@@ -45,7 +45,7 @@ public:
   virtual void on_host_up(const Host::Ptr& host);
   virtual void on_host_down(const Address& address);
 
-  virtual LoadBalancingPolicy* new_instance() { return Memory::allocate<RoundRobinPolicy>(); }
+  virtual LoadBalancingPolicy* new_instance() { return new RoundRobinPolicy(); }
 
 private:
   class RoundRobinQueryPlan : public QueryPlan {

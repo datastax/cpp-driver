@@ -23,8 +23,8 @@ cass::SharedRefPtr<cass::ResultMetadata> create_metadata(const char* column_name
   while (column_names[count] != NULL) { count++; }
 
   cass::ResultMetadata::Ptr metadata(
-        cass::Memory::allocate<cass::ResultMetadata>(count,
-                                                     cass::RefBuffer::Ptr()));
+        new cass::ResultMetadata(count,
+                                 cass::RefBuffer::Ptr()));
 
   for (size_t i = 0; column_names[i] != NULL; ++i) {
     cass::ColumnDefinition def;

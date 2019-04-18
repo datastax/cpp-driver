@@ -23,7 +23,7 @@ if(NOT BOOST_INSTALL_PREFIX)
 endif()
 option(BOOST_VERSION "Boost version to build and install")
 if(NOT BOOST_VERSION)
-  set(BOOST_VERSION "1.68.0")
+  set(BOOST_VERSION "1.69.0")
 endif()
 set(BOOST_VERSION ${BOOST_VERSION} CACHE STRING "Boost version to build and install" FORCE)
 

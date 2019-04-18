@@ -38,7 +38,7 @@ public:
    * @return Driver ready retry policy
    */
   static ::test::driver::RetryPolicy policy() {
-    cass::RetryPolicy* policy = cass::Memory::allocate<NextHostRetryPolicy>();
+    cass::RetryPolicy* policy = new NextHostRetryPolicy();
     policy->inc_ref();
     return CassRetryPolicy::to(policy);
   }

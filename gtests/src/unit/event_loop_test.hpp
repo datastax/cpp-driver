@@ -55,8 +55,8 @@ public:
    * @return Generic future instance.
    */
   cass::Future::Ptr execute_outage_plan(OutagePlan* outage_plan) {
-    cass::Future::Ptr future(cass::Memory::allocate<cass::Future>(cass::Future::FUTURE_TYPE_GENERIC));
-    add_task(cass::Memory::allocate<ExecuteOutagePlan>(outage_plan, future));
+    cass::Future::Ptr future(new cass::Future(cass::Future::FUTURE_TYPE_GENERIC));
+    add_task(new ExecuteOutagePlan(outage_plan, future));
     return future;
   }
 

@@ -17,6 +17,7 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
 #include "request_processor.hpp"
@@ -30,7 +31,8 @@ class RequestProcessorInitializer;
 class Statement;
 
 class Session
-    : public SessionBase
+    : public Allocated
+    , public SessionBase
     , public RequestProcessorListener {
 public:
   Session();

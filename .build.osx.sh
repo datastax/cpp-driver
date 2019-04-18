@@ -22,7 +22,7 @@ configure_environment() {
 install_libuv() {
   if brew ls --versions libuv > /dev/null; then
     if ! brew outdated libuv; then
-      brew upgrade --cleanup libuv
+      brew upgrade libuv
     fi
   else
     brew install libuv
@@ -32,7 +32,7 @@ install_libuv() {
 install_openssl() {
   if brew ls --versions openssl > /dev/null; then
     if ! brew outdated openssl; then
-      brew upgrade --cleanup openssl
+      brew upgrade openssl
     fi
   else
     brew install openssl

@@ -27,7 +27,6 @@
 
 #include "address.hpp"
 #include "event_loop.hpp"
-#include "memory.hpp"
 #include "string.hpp"
 #include "vector.hpp"
 #include "timer.hpp"
@@ -48,7 +47,6 @@ using cass::Address;
 using cass::EventLoop;
 using cass::EventLoopGroup;
 using cass::List;
-using cass::Memory;
 using cass::String;
 using cass::Task;
 using cass::Timer;
@@ -412,33 +410,11 @@ private:
   };
 
 public:
-  Value()
-    : type_(NUL) { }
-
-  Value(const String& value)
-    : type_(VALUE)
-    , value_(Memory::allocate<String>(value)) { }
-
-  Value(const Collection& collection)
-    : type_(COLLECTION)
-    , collection_(Memory::allocate<Collection>(collection)){ }
-
-  Value(const Value& other)
-    : type_(other.type_) {
-    if (type_ == VALUE) {
-      value_ = Memory::allocate<String>(*other.value_);
-    } else if (type_ == COLLECTION) {
-      collection_ = Memory::allocate<Collection>(*other.collection_);
-    }
-  }
-
-  ~Value() {
-    if (type_ == VALUE) {
-      Memory::deallocate(value_);
-    } else if (type_ == COLLECTION) {
-      Memory::deallocate(collection_);
-    }
-  }
+  Value();
+  Value(const String& value);
+  Value(const Collection& collection);
+  Value(const Value& other);
+  ~Value();
 
   void encode(int protocol_version, String* output) const;
 
@@ -642,7 +618,9 @@ struct Action {
     Builder& client_options();
 
     Builder& system_local();
+    Builder& system_local_dse();
     Builder& system_peers();
+    Builder& system_peers_dse();
     Builder& system_traces();
 
     Builder& use_keyspace(const String& keyspace);
@@ -688,7 +666,7 @@ struct Action {
   };
 
   Action() : next(NULL) { }
-  virtual ~Action() { Memory::deallocate(next); }
+  virtual ~Action() { delete next; }
 
   void run(Request* request) const;
   void run_next(Request* request) const;
@@ -701,7 +679,7 @@ struct Action {
 
 struct Predicate : public Action {
   Predicate() : then(NULL) { }
-  virtual ~Predicate() { Memory::deallocate(then); }
+  virtual ~Predicate() { delete then; }
 
   virtual bool is_predicate() const { return true; }
   virtual bool is_true(Request* request) const = 0;
@@ -720,11 +698,13 @@ struct Predicate : public Action {
 };
 
 
-class Request : public List<Request>::Node {
+class Request : public List<Request>::Node
+              , public RefCounted<Request> {
 public:
+  typedef SharedRefPtr<Request> Ptr;
+
   Request(int8_t version, int8_t flags, int16_t stream, int8_t opcode,
           const String& body, ClientConnection* client);
-  ~Request();
 
   int8_t version() const { return version_; }
   int16_t stream() const { return stream_; }
@@ -865,7 +845,15 @@ struct SystemLocal : public Action {
   virtual void on_run(Request* request) const;
 };
 
+struct SystemLocalDse : public Action {
+  virtual void on_run(Request* request) const;
+};
+
 struct SystemPeers : public Action {
+  virtual void on_run(Request* request) const;
+};
+
+struct SystemPeersDse : public Action {
   virtual void on_run(Request* request) const;
 };
 
@@ -993,7 +981,6 @@ public:
     } else {
       invalid_opcode_->run(request);
     }
-    Memory::deallocate(request);
   }
 
 private:
@@ -1048,12 +1035,7 @@ public:
     , protocol_version_(-1)
     , is_registered_for_events_(false) { }
 
-  ~ClientConnection();
-
   virtual void on_read(const char* data, size_t len);
-
-  void add(Request* request) { requests_.add_to_back(request); }
-  void remove(Request* request) { requests_.remove(request); }
 
   const Cluster* cluster() const { return cluster_; }
 
@@ -1068,7 +1050,6 @@ public:
 private:
   ProtocolHandler handler_;
   const Cluster* cluster_;
-  List<Request> requests_;
   int protocol_version_;
   bool is_registered_for_events_;
   Options options_;
@@ -1102,9 +1083,9 @@ public:
 
   virtual internal::ClientConnection* create(internal::ServerConnection* server) const {
     if (close_immediately_) {
-      return Memory::allocate<CloseConnection>(server, request_handler_.get(), cluster_);
+      return new CloseConnection(server, request_handler_.get(), cluster_);
     } else {
-      return Memory::allocate<ClientConnection>(server, request_handler_.get(), cluster_);
+      return new ClientConnection(server, request_handler_.get(), cluster_);
     }
   }
 
@@ -1341,7 +1322,7 @@ class SimpleEchoServer {
 public:
   SimpleEchoServer(const Address& address = Address("127.0.0.1", 8888))
    : event_loop_group_(1)
-   , server_(Memory::allocate<internal::ServerConnection>(address, factory_)) { }
+   , server_(new internal::ServerConnection(address, factory_)) { }
 
   ~SimpleEchoServer() {
     close();
@@ -1371,7 +1352,7 @@ public:
   }
 
   void reset(const Address& address) {
-    server_.reset(Memory::allocate<internal::ServerConnection>(address, factory_));
+    server_.reset(new internal::ServerConnection(address, factory_));
   }
 
 private:
@@ -1411,9 +1392,9 @@ private:
 
     virtual internal::ClientConnection* create(internal::ServerConnection* server) const {
       if (close_immediately_) {
-        return Memory::allocate<CloseConnection>(server);
+        return new CloseConnection(server);
       } else {
-        return Memory::allocate<EchoConnection>(server);
+        return new EchoConnection(server);
       }
     }
 

@@ -17,6 +17,7 @@
 #ifndef __CASS_ASYNC_HPP_INCLUDED__
 #define __CASS_ASYNC_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "callback.hpp"
 #include "macros.hpp"
 
@@ -69,7 +70,7 @@ private:
   static void on_close(uv_handle_t* handle);
 
 private:
-  uv_async_t* handle_;
+  AllocatedT<uv_async_t>* handle_;
   Callback callback_;
 
 private:

@@ -27,7 +27,7 @@
 extern "C" {
 
 CassBatch* cass_batch_new(CassBatchType type) {
-  cass::BatchRequest* batch = cass::Memory::allocate<cass::BatchRequest>(type);
+  cass::BatchRequest* batch = new cass::BatchRequest(type);
   batch->inc_ref();
   return CassBatch::to(batch);
 }

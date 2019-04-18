@@ -17,6 +17,7 @@
 #ifndef __CASS_MICRO_TIMER_HPP_INCLUDED__
 #define __CASS_MICRO_TIMER_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "callback.hpp"
 #include "cassconfig.hpp"
 #include "macros.hpp"
@@ -98,7 +99,7 @@ private:
     STARTED
   };
 
-  uv_poll_t* handle_;
+  AllocatedT<uv_poll_t>* handle_;
   int fd_;
   State state_;
 #else

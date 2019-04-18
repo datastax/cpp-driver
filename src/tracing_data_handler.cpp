@@ -34,7 +34,7 @@ TracingDataHandler::TracingDataHandler(const RequestHandler::Ptr& request_handle
 
 ChainedRequestCallback::Ptr TracingDataHandler::callback() {
   WaitforRequestVec requests;
-  QueryRequest::Ptr request(Memory::allocate<QueryRequest>(SELECT_TRACES_SESSION, 1));
+  QueryRequest::Ptr request(new QueryRequest(SELECT_TRACES_SESSION, 1));
   request->set_request_timeout_ms(request_timeout_ms());
   request->set_consistency(consistency_);
   request->set(0, response()->tracing_id());

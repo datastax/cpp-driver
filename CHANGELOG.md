@@ -1,3 +1,20 @@
+2.12.0
+===========
+
+Features
+--------
+[CPP-751] Call host listener callback for the initial set of hosts
+
+Bug Fixes
+--------
+[CPP-755] UDT metadata not being properly populated/updated
+
+Other
+--------
+[CPP-705] Deprecate DC-aware multi-DC settings (`used_hosts_per_remote_dc`
+          and `allowRemoteDCsForLocalConsistencyLevel `)
+[CPP-720] Streamline custom allocator
+
 2.11.0
 ===========
 

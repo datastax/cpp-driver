@@ -16,8 +16,6 @@
 
 #include "timer.hpp"
 
-#include "memory.hpp"
-
 namespace cass {
 
 Timer::Timer()
@@ -31,7 +29,7 @@ Timer::~Timer() {
 int Timer::start(uv_loop_t* loop, uint64_t timeout, const Timer::Callback& callback) {
   int rc = 0;
   if (handle_ == NULL) {
-    handle_ = Memory::allocate<uv_timer_t>();
+    handle_ = new AllocatedT<uv_timer_t>();
     handle_->loop = NULL;
     handle_->data = this;
   }
@@ -50,7 +48,7 @@ int Timer::start(uv_loop_t* loop, uint64_t timeout, const Timer::Callback& callb
 void Timer::stop() {
   if (handle_ != NULL) {
     if (state_ == CLOSED) { // The handle was allocated, but initialization failed.
-      Memory::deallocate(handle_);
+      delete handle_;
     } else { // If initialized or started then close the handle properly.
       uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
     }
@@ -70,7 +68,7 @@ void Timer::handle_timeout() {
 }
 
 void Timer::on_close(uv_handle_t* handle) {
-  Memory::deallocate(reinterpret_cast<uv_timer_t*>(handle));
+  delete reinterpret_cast<AllocatedT<uv_timer_t>*>(handle);
 }
 
 } // namespace cass

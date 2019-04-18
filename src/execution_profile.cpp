@@ -6,18 +6,17 @@
 */
 
 #include "execution_profile.hpp"
-#include "memory.hpp"
 
 extern "C" {
 
 CassExecProfile* cass_execution_profile_new() {
   cass::ExecutionProfile* profile =
-    cass::Memory::allocate<cass::ExecutionProfile>();
+      new cass::ExecutionProfile();
   return CassExecProfile::to(profile);
 }
 
 void cass_execution_profile_free(CassExecProfile* profile) {
-  cass::Memory::deallocate(profile->from());
+  delete profile->from();
 }
 
 CassError cass_execution_profile_set_request_timeout(CassExecProfile* profile,
@@ -40,7 +39,7 @@ CassError cass_execution_profile_set_serial_consistency(CassExecProfile* profile
 
 CassError cass_execution_profile_set_load_balance_round_robin(CassExecProfile* profile) {
   profile->set_load_balancing_policy(
-    cass::Memory::allocate<cass::RoundRobinPolicy>());
+        new cass::RoundRobinPolicy());
   return CASS_OK;
 }
 
@@ -67,9 +66,9 @@ CassError cass_execution_profile_set_load_balance_dc_aware_n(CassExecProfile* pr
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   profile->set_load_balancing_policy(
-        cass::Memory::allocate<cass::DCAwarePolicy>(cass::String(local_dc, local_dc_length),
-                                                    used_hosts_per_remote_dc,
-                                                    !allow_remote_dcs_for_local_cl));
+        new cass::DCAwarePolicy(cass::String(local_dc, local_dc_length),
+                                used_hosts_per_remote_dc,
+                                !allow_remote_dcs_for_local_cl));
   return CASS_OK;
 }
 
@@ -197,13 +196,13 @@ CassError cass_execution_profile_set_constant_speculative_execution_policy(CassE
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   profile->set_speculative_execution_policy(
-    cass::Memory::allocate<cass::ConstantSpeculativeExecutionPolicy>(constant_delay_ms,
-                                                                     max_speculative_executions));
+        new cass::ConstantSpeculativeExecutionPolicy(constant_delay_ms,
+                                                     max_speculative_executions));
   return CASS_OK;
 }
 
 CassError cass_execution_profile_set_no_speculative_execution_policy(CassExecProfile* profile) {
-  profile->set_speculative_execution_policy(cass::Memory::allocate<cass::NoSpeculativeExecutionPolicy>());
+  profile->set_speculative_execution_policy(new cass::NoSpeculativeExecutionPolicy());
   return CASS_OK;
 }
 

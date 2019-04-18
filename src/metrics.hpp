@@ -20,12 +20,12 @@
 #ifndef __CASS_METRICS_HPP_INCLUDED__
 #define __CASS_METRICS_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "atomic.hpp"
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
 #include "scoped_lock.hpp"
 #include "utils.hpp"
-#include "vector.hpp"
 
 #include "third_party/hdr_histogram/hdr_histogram.hpp"
 
@@ -36,7 +36,7 @@
 
 namespace cass {
 
-class Metrics {
+class Metrics : public Allocated {
 public:
   class ThreadState {
   public:
@@ -75,7 +75,7 @@ public:
   public:
     Counter(ThreadState* thread_state)
       : thread_state_(thread_state)
-      , counters_(thread_state->max_threads()) {}
+      , counters_(new PerThreadCounter[thread_state->max_threads()]) {}
 
     void inc() {
       counters_[thread_state_->current_thread_id()].add(1LL);
@@ -102,7 +102,7 @@ public:
     }
 
   private:
-    class PerThreadCounter {
+    class PerThreadCounter : public Allocated {
     public:
       PerThreadCounter()
         : value_(0) {}
@@ -133,7 +133,7 @@ public:
 
   private:
     ThreadState* thread_state_;
-    DynamicArray<PerThreadCounter> counters_;
+    ScopedArray<PerThreadCounter> counters_;
 
   private:
     DISALLOW_COPY_AND_ASSIGN(Counter);
@@ -287,7 +287,7 @@ public:
 
     Histogram(ThreadState* thread_state)
       : thread_state_(thread_state)
-      , histograms_(thread_state->max_threads()) {
+      , histograms_(new PerThreadHistogram[thread_state->max_threads()]) {
       hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
       uv_mutex_init(&mutex_);
     }
@@ -389,7 +389,7 @@ public:
       Atomic<int64_t> odd_end_epoch_;
     };
 
-    class PerThreadHistogram {
+    class PerThreadHistogram : public Allocated {
     public:
       PerThreadHistogram()
         : active_index_(0) {
@@ -424,7 +424,7 @@ public:
     };
 
     ThreadState* thread_state_;
-    DynamicArray<PerThreadHistogram> histograms_;
+    ScopedArray<PerThreadHistogram> histograms_;
     hdr_histogram* histogram_;
     mutable uv_mutex_t mutex_;
 

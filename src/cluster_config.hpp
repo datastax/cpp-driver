@@ -17,6 +17,7 @@
 #ifndef __CASS_CLUSTER_CONFIG_HPP_INCLUDED__
 #define __CASS_CLUSTER_CONFIG_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "config.hpp"
 #include "external.hpp"
 
@@ -24,7 +25,7 @@
 
 namespace cass {
 
-class ClusterConfig {
+class ClusterConfig : public Allocated {
 public:
   const Config& config() const { return config_; }
   Config& config() { return config_; }

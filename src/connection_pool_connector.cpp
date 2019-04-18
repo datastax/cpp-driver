@@ -17,19 +17,18 @@
 #include "connection_pool_connector.hpp"
 
 #include "event_loop.hpp"
-#include "memory.hpp"
 #include "metrics.hpp"
 
 namespace cass {
 
-ConnectionPoolConnector::ConnectionPoolConnector(const Address& address,
+ConnectionPoolConnector::ConnectionPoolConnector(const Host::Ptr& host,
                                                  ProtocolVersion protocol_version,
                                                  const Callback& callback)
   : loop_(NULL)
   , callback_(callback)
   , is_canceled_(false)
   , remaining_(0)
-  , address_(address)
+  , host_(host)
   , protocol_version_(protocol_version)
   , listener_(NULL)
   , metrics_(NULL) { }
@@ -60,9 +59,9 @@ void ConnectionPoolConnector::connect(uv_loop_t*  loop) {
   remaining_ = settings_.num_connections_per_host;
   for (size_t i = 0; i < settings_.num_connections_per_host; ++i) {
     Connector::Ptr connector(
-          Memory::allocate<Connector>(address_,
-                                      protocol_version_,
-                                      bind_callback(&ConnectionPoolConnector::on_connect, this)));
+          new Connector(host_,
+                        protocol_version_,
+                        bind_callback(&ConnectionPoolConnector::on_connect, this)));
     pending_connections_.push_back(connector);
     connector
         ->with_keyspace(keyspace_)
@@ -125,7 +124,7 @@ void ConnectionPoolConnector::on_connect(Connector* connector) {
     connections_.push_back(connector->release_connection());
   } else if (!connector->is_canceled()){
     LOG_ERROR("Connection pool was unable to connect to host %s because of the following error: %s",
-              address_.to_string().c_str(),
+              host_->address().to_string().c_str(),
               connector->error_message().c_str());
 
     if (connector->is_critical_error())  {
@@ -142,17 +141,17 @@ void ConnectionPoolConnector::on_connect(Connector* connector) {
   if (--remaining_ == 0) {
     if (!is_canceled_) {
       if (!critical_error_connector_) {
-        pool_.reset(Memory::allocate<ConnectionPool>(connections_,
-                                                     listener_,
-                                                     keyspace_,
-                                                     loop_,
-                                                     address_,
-                                                     protocol_version_,
-                                                     settings_,
-                                                     metrics_));
+        pool_.reset(new ConnectionPool(connections_,
+                                       listener_,
+                                       keyspace_,
+                                       loop_,
+                                       host_,
+                                       protocol_version_,
+                                       settings_,
+                                       metrics_));
       } else {
         if (listener_) {
-          listener_->on_pool_critical_error(address_,
+          listener_->on_pool_critical_error(host_->address(),
                                             critical_error_connector_->error_code(),
                                             critical_error_connector_->error_message());
         }

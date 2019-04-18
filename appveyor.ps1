@@ -342,7 +342,7 @@ add_dependencies(`${PROJECT_NAME} `${LIBUV_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring libuv"
-    cmake -G "$($cmake_generator)" -DBUILD_SHARED_LIBS=On "-DLIBUV_VERSION=$($Env:LIBUV_VERSION)" "-DLIBUV_INSTALL_PREFIX=$($Env:LIBUV_ROOT_DIR)"
+    cmake -G "$($cmake_generator)" -DBUILD_SHARED_LIBS=On "-DLIBUV_VERSION=$($Env:LIBUV_VERSION)" "-DLIBUV_INSTALL_PREFIX=$($Env:LIBUV_ROOT_DIR)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "libuv Output Log"
@@ -395,7 +395,7 @@ add_dependencies(`${PROJECT_NAME} `${OPENSSL_LIBRARY_NAME})
       if ("$_" -Like "shared") {
         $shared_libs = "On"
       }
-      cmake -G "$($cmake_generator)" "-DBUILD_SHARED_LIBS=$($shared_libs)" "-DOPENSSL_VERSION=$($Env:OPENSSL_VERSION)" "-DOPENSSL_INSTALL_PREFIX=$($Env:OPENSSL_BASE_DIR)/$_"
+      cmake -G "$($cmake_generator)" "-DBUILD_SHARED_LIBS=$($shared_libs)" "-DOPENSSL_VERSION=$($Env:OPENSSL_VERSION)" "-DOPENSSL_INSTALL_PREFIX=$($Env:OPENSSL_BASE_DIR)/$_" .
       If ($LastExitCode -ne 0) {
         If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
           Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "OpenSSL Output Log"
@@ -476,7 +476,7 @@ add_dependencies(`${PROJECT_NAME} `${BOOST_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring Boost"
-    cmake -G "$($cmake_generator)" "-DBOOST_VERSION=$($Env:BOOST_VERSION)" "-DBOOST_INSTALL_PREFIX=$($Env:BOOST_ROOT)"
+    cmake -G "$($cmake_generator)" "-DBOOST_VERSION=$($Env:BOOST_VERSION)" "-DBOOST_INSTALL_PREFIX=$($Env:BOOST_ROOT)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "Boost Output Log"
@@ -524,7 +524,7 @@ add_dependencies(`${PROJECT_NAME} `${LIBSSH2_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring libssh2"
-    cmake -G "$($cmake_generator)" "-DLIBSSH2_VERSION=$($Env:LIBSSH2_VERSION)" "-DLIBSSH2_INSTALL_PREFIX=$($Env:LIBSSH2_ROOT_DIR)"
+    cmake -G "$($cmake_generator)" "-DLIBSSH2_VERSION=$($Env:LIBSSH2_VERSION)" "-DLIBSSH2_INSTALL_PREFIX=$($Env:LIBSSH2_ROOT_DIR)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "libssh2 Output Log"

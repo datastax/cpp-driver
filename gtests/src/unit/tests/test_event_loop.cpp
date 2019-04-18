@@ -111,7 +111,7 @@ TEST_F(EventLoopUnitTest, ExecuteTask) {
   ASSERT_EQ(0, event_loop.run());
 
   ASSERT_FALSE(is_task_completed());
-  event_loop.add(cass::Memory::allocate<MarkTaskCompleted>(this));
+  event_loop.add(new MarkTaskCompleted(this));
 
   event_loop.close_handles();
   event_loop.join();
@@ -125,7 +125,7 @@ TEST_F(EventLoopUnitTest, ThreadRunningOn) {
   ASSERT_EQ(0, event_loop.run());
 
   ASSERT_FALSE(is_running_on());
-  event_loop.add(cass::Memory::allocate<MarkIsRunningOn>(this, &event_loop));
+  event_loop.add(new MarkIsRunningOn(this, &event_loop));
 
   event_loop.close_handles();
   event_loop.join();
@@ -144,7 +144,7 @@ TEST_F(EventLoopUnitTest, ThreadNotRunningOn) {
   ASSERT_EQ(0, event_loop_2.init("EventLoopUnitTest::ThreadNotRunningOn (EventLoop 2)"));
   ASSERT_STREQ("EventLoopUnitTest::ThreadNotRunningOn (EventLoop 2)", event_loop_2.name().c_str());
   ASSERT_EQ(0, event_loop_2.run());
-  event_loop_2.add(cass::Memory::allocate<MarkIsRunningOn>(this, &event_loop));
+  event_loop_2.add(new MarkIsRunningOn(this, &event_loop));
   event_loop_2.close_handles();
   event_loop_2.join();
 

@@ -60,8 +60,8 @@ ChainedSetKeyspaceCallback::ChainedSetKeyspaceCallback(Connection* connection,
                                                        const RequestCallback::Ptr& chained_callback)
   : SimpleRequestCallback(
       Request::ConstPtr(
-        Memory::allocate<SetKeyspaceRequest>(keyspace,
-                                             chained_callback->request_timeout_ms())))
+        new SetKeyspaceRequest(keyspace,
+                               chained_callback->request_timeout_ms())))
   , connection_(connection)
   , chained_callback_(chained_callback) { }
 
@@ -127,7 +127,7 @@ bool PooledConnection::write(RequestCallback* callback) {
               static_cast<void*>(connection_.get()),
               static_cast<void*>(pool_));
     result = connection_->write(RequestCallback::Ptr(
-                                  Memory::allocate<ChainedSetKeyspaceCallback>(
+                                  new ChainedSetKeyspaceCallback(
                                     connection_.get(),
                                     keyspace,
                                     RequestCallback::Ptr(callback))));

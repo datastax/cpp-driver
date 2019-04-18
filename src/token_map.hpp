@@ -18,7 +18,6 @@
 #define __CASS_TOKEN_MAP_HPP_INCLUDED__
 
 #include "host.hpp"
-#include "memory.hpp"
 #include "ref_counted.hpp"
 #include "string.hpp"
 

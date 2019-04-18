@@ -16,7 +16,6 @@
 #include <gtest/gtest.h>
 
 #include "config.hpp"
-#include "memory.hpp"
 
 bool execution_profile(const cass::Config& config,
                        const cass::String& name,
@@ -104,10 +103,10 @@ TEST(ExecutionProfileUnitTest, DISABLED_ClusterLoadBalancingPolicy) {
 //               the test is invalid making the whole test invalid.
 TEST(ExecutionProfileUnitTest, DISABLED_ClusterLoadBalancingPolicies) {
   cass::ExecutionProfile profile_1;
-  profile_1.set_load_balancing_policy(cass::Memory::allocate<cass::DCAwarePolicy>());
+  profile_1.set_load_balancing_policy(new cass::DCAwarePolicy());
   cass::ExecutionProfile profile_2;
   cass::ExecutionProfile profile_3;
-  profile_3.set_load_balancing_policy(cass::Memory::allocate<cass::RoundRobinPolicy>());
+  profile_3.set_load_balancing_policy(new cass::RoundRobinPolicy());
 
   cass::Config config;
   config.set_execution_profile("profile_1", &profile_1);
@@ -278,10 +277,10 @@ TEST(ExecutionProfileUnitTest, ClusterRetryPolicy) {
 
 TEST(ExecutionProfileUnitTest, ClusterRetryPolicies) {
   cass::ExecutionProfile profile_1;
-  profile_1.set_retry_policy(cass::Memory::allocate<cass::FallthroughRetryPolicy>());
+  profile_1.set_retry_policy(new cass::FallthroughRetryPolicy());
   cass::ExecutionProfile profile_2;
   cass::ExecutionProfile profile_3;
-  profile_3.set_retry_policy(cass::Memory::allocate<cass::DefaultRetryPolicy>());
+  profile_3.set_retry_policy(new cass::DefaultRetryPolicy());
 
   cass::Config config;
   config.set_execution_profile("profile_1", &profile_1);
@@ -317,7 +316,7 @@ TEST(ExecutionProfileUnitTest, ClusterSpeculativeExecutionPolicy) {
   cass::ExecutionProfile profile;
 
   cass::Config config;
-  config.set_speculative_execution_policy(cass::Memory::allocate<cass::NoSpeculativeExecutionPolicy>());
+  config.set_speculative_execution_policy(new cass::NoSpeculativeExecutionPolicy());
   config.set_execution_profile("profile", &profile);
 
   cass::Config copy_config = config.new_instance();
@@ -331,13 +330,13 @@ TEST(ExecutionProfileUnitTest, ClusterSpeculativeExecutionPolicy) {
 
 TEST(ExecutionProfileUnitTest, ClusterSpeculativeExecutionPolicies) {
   cass::ExecutionProfile profile_1;
-  profile_1.set_speculative_execution_policy(cass::Memory::allocate<cass::ConstantSpeculativeExecutionPolicy>(1, 2));
+  profile_1.set_speculative_execution_policy(new cass::ConstantSpeculativeExecutionPolicy(1, 2));
   cass::ExecutionProfile profile_2;
   cass::ExecutionProfile profile_3;
-  profile_3.set_speculative_execution_policy(cass::Memory::allocate<cass::NoSpeculativeExecutionPolicy>());
+  profile_3.set_speculative_execution_policy(new cass::NoSpeculativeExecutionPolicy());
 
   cass::Config config;
-  config.set_speculative_execution_policy(cass::Memory::allocate<cass::ConstantSpeculativeExecutionPolicy>(3, 4));
+  config.set_speculative_execution_policy(new cass::ConstantSpeculativeExecutionPolicy(3, 4));
   config.set_execution_profile("profile_1", &profile_1);
   config.set_execution_profile("profile_2", &profile_2);
   config.set_execution_profile("profile_3", &profile_3);

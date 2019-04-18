@@ -17,8 +17,8 @@
 #ifndef __CASS_ADDRESS_HPP_INCLUDED__
 #define __CASS_ADDRESS_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "hash.hpp"
-#include "memory.hpp"
 #include "string.hpp"
 #include "vector.hpp"
 #include "dense_hash_set.hpp"
@@ -32,7 +32,7 @@ namespace cass {
 class Row;
 class Value;
 
-class Address {
+class Address : public Allocated {
 public:
   static const Address EMPTY_KEY;
   static const Address DELETED_KEY;

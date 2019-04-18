@@ -44,7 +44,7 @@ QueryPlan* HostTargetingPolicy::new_query_plan(const String& keyspace,
     return child_plan;
   }
 
-  return Memory::allocate<HostTargetingQueryPlan>(it->second, child_plan);
+  return new HostTargetingQueryPlan(it->second, child_plan);
 }
 
 void HostTargetingPolicy::on_host_added(const SharedRefPtr<Host>& host) {

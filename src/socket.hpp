@@ -17,6 +17,7 @@
 #ifndef __CASS_SOCKET_HPP_INCLUDED__
 #define __CASS_SOCKET_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "buffer.hpp"
 #include "constants.hpp"
 #include "tcp_connector.hpp"
@@ -39,7 +40,9 @@ class SocketWriteBase;
  * A generic socket request that handles encoding data to be written to a
  * socket.
  */
-class SocketRequest : public List<SocketRequest>::Node {
+class SocketRequest
+    : public Allocated
+    , public List<SocketRequest>::Node {
 public:
   virtual ~SocketRequest() { }
 
@@ -93,7 +96,7 @@ private:
  * incoming/outgoing data streams e.g. encryption/decryption,
  * compression/decompression, etc.
  */
-class SocketHandlerBase {
+class SocketHandlerBase : public Allocated {
 public:
   virtual ~SocketHandlerBase() { }
 
@@ -192,7 +195,9 @@ private:
  * A generic write handler. This is used to coalesce several write requests
  * into a flush (a write() system call).
  */
-class SocketWriteBase : public List<SocketWriteBase>::Node {
+class SocketWriteBase
+    : public Allocated
+    , public List<SocketWriteBase>::Node {
 public:
   typedef cass::List<SocketWriteBase> List;
 
