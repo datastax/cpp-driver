@@ -98,8 +98,8 @@ CASSANDRA_INTEGRATION_TEST_F(DcAwarePolicyTest, UsedHostsRemoteDc) {
   }
 
   // Stop the whole local DC
-  ccm_->stop_node(1, true);
-  ccm_->stop_node(2, true);
+  stop_node(1, true);
+  stop_node(2, true);
 
   { // Run queries using the remote DC
     std::vector<std::string> attempted_hosts = validate();

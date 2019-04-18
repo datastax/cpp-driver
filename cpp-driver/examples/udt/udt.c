@@ -248,8 +248,6 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  schema_meta = cass_session_get_schema_meta(session);
-
   execute_query(session,
                 "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' }");
@@ -262,6 +260,8 @@ int main(int argc, char* argv[]) {
 
   execute_query(session,
                 "CREATE TABLE examples.udt (id timeuuid, address frozen<address>, PRIMARY KEY(id))");
+
+  schema_meta = cass_session_get_schema_meta(session);
 
   insert_into_udt(session);
   select_from_udt(session);

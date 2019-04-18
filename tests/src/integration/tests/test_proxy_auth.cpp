@@ -129,24 +129,22 @@ protected:
       update_configuration.push_back("authorizer:com.datastax.bdp.cassandra.auth.DseAuthorizer");
       update_configuration.push_back("authenticator:com.datastax.bdp.cassandra.auth.DseAuthenticator");
       update_dse_configuration.push_back("authorization_options.enabled:true");
-      update_dse_configuration.push_back("kerberos_options.service_principal:"
-        + std::string(DSE_SERVICE_PRINCIPAL));
-      update_dse_configuration.push_back("kerberos_options.keytab:"
-        + ads_->get_dse_keytab_file());
+      update_dse_configuration.push_back("audit_logging_options.enabled:true");
+      update_dse_configuration.push_back("kerberos_options.service_principal:" + std::string(DSE_SERVICE_PRINCIPAL));
+      update_dse_configuration.push_back("kerberos_options.http_principal:" + std::string(DSE_SERVICE_PRINCIPAL));
+      update_dse_configuration.push_back("kerberos_options.keytab:" + ads_->get_dse_keytab_file());
       update_dse_configuration.push_back("kerberos_options.qop:auth");
-      std::string update_dse_configuration_yaml = "authentication_options:\n" \
-        "  allow_digest_with_kerberos: true\n" \
-        "  default_scheme: kerberos\n" \
+      std::string update_dse_configuration_authentication_options_yaml =
+	"authentication_options:\n" \
         "  enabled: true\n" \
+        "  default_scheme: kerberos\n" \
         "  other_schemes:\n" \
-        "    - internal\n" \
-        "  scheme_permissions: true\n" \
-        "  transitional_mode: normal";
+        "    - internal";
 
       // Apply the configuration options
       ccm_->update_cluster_configuration(update_configuration);
       ccm_->update_cluster_configuration(update_dse_configuration, true);
-      ccm_->update_cluster_configuration_yaml(update_dse_configuration_yaml, true);
+      ccm_->update_cluster_configuration_yaml(update_dse_configuration_authentication_options_yaml, true);
 
       // Start the cluster
       std::vector<std::string> jvm_arguments;
@@ -420,8 +418,9 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyUnauthorizedUserLo
     query(session);
   } catch (test::CassException &ce) {
     TEST_LOG(ce.what());
-    ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
-      << "Error code is not 'Unauthorized'";
+    ASSERT_TRUE(CASS_ERROR_SERVER_UNAUTHORIZED == ce.error_code() ||
+		CASS_ERROR_SERVER_BAD_CREDENTIALS == ce.error_code())
+      << "Error code is not 'Unauthorized|Bad credentials'";
     is_session_failure = true;
   }
   ASSERT_EQ(true, is_session_failure) << "Session connection established";

@@ -46,7 +46,7 @@ public:
     DseIntegration::SetUp();
 
     // Wait for the spark master to become available
-    ccm_->start_node(1);
+    start_node(1);
     wait_for_port(1, SPARK_PORT);
     master_host_ip_address_ = ccm_->cluster_ip_addresses(true)[0];
 
@@ -69,7 +69,7 @@ public:
 
     // Bootstrap the remaining nodes and wait for the spark workers to become available
     for (unsigned int n = 2; n <= number_dc1_nodes_; ++n) {
-      ccm_->start_node(n);
+      start_node(n);
       std::stringstream worker_ip_address;
       worker_ip_address << ccm_->get_ip_prefix() << n;
       worker_hosts_ip_addresses_.push_back(worker_ip_address.str());

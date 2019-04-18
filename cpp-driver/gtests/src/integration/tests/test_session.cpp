@@ -15,35 +15,83 @@
 */
 
 #include "integration.hpp"
+
 #include "cassandra.h"
+#include "scoped_lock.hpp"
+
+#include <queue>
+
+#define EVENT_MAXIMUM_WAIT_TIME_MS 5000
+#define EVENT_WAIT_FOR_NAP_MS 100
 
 class SessionTest : public Integration {
 public:
   typedef std::pair<CassHostListenerEvent, std::string> Event;
-  typedef std::vector<Event> Events;
+  typedef std::queue<Event> Events;
+
+  SessionTest() {
+    uv_mutex_init(&mutex_);
+  }
+  ~SessionTest() {
+    uv_mutex_destroy(&mutex_);
+  }
 
   void SetUp() {
     is_session_requested_ = false;
     Integration::SetUp();
   }
 
-  size_t event_count() { return events_.size(); }
-  const Events& events() const { return events_; }
+  void check_event(CassHostListenerEvent expected_event, short expected_node) {
+    cass::ScopedMutex l(&mutex_);
+    std::stringstream expected_address;
+    expected_address << ccm_->get_ip_prefix() << expected_node;
+    Event event = events_.front();
+    EXPECT_EQ(expected_event, event.first);
+    EXPECT_EQ(expected_address.str().c_str(), event.second);
+    events_.pop();
+  }
+  bool wait_for_event(size_t expected_count) {
+    start_timer();
+    while (elapsed_time() < EVENT_MAXIMUM_WAIT_TIME_MS
+           && event_count() < expected_count) {
+      msleep(EVENT_WAIT_FOR_NAP_MS);
+    }
+    return event_count() >= expected_count;
+  }
 
 protected:
+  size_t event_count() {
+    cass::ScopedMutex l(&mutex_);
+    return events_.size();
+  }
+  void add_event(CassHostListenerEvent event, CassInet inet) {
+    cass::ScopedMutex l(&mutex_);
+    char address[CASS_INET_STRING_LENGTH];
+
+    cass_inet_string(inet, address);
+    if (event == CASS_HOST_LISTENER_EVENT_ADD) {
+      TEST_LOG("Host " << address << " has been ADDED");
+    } else if (event == CASS_HOST_LISTENER_EVENT_REMOVE) {
+      TEST_LOG("Host " << address << " has been REMOVED");
+    } else if (event == CASS_HOST_LISTENER_EVENT_UP) {
+      TEST_LOG("Host " << address << " is UP");
+    } else if (event == CASS_HOST_LISTENER_EVENT_DOWN) {
+      TEST_LOG("Host " << address << " is DOWN");
+    } else {
+      TEST_LOG_ERROR("Invalid event [" << event << "] for " << address);
+    }
+
+    events_.push(Event(event, address));
+  }
   static void on_host_listener(CassHostListenerEvent event,
                                CassInet inet,
                                void* data) {
     SessionTest* instance = static_cast<SessionTest*>(data);
-
-    char address[CASS_INET_STRING_LENGTH];
-    uv_inet_ntop(inet.address_length == CASS_INET_V4_LENGTH ? AF_INET : AF_INET6,
-                 inet.address,
-                 address, CASS_INET_STRING_LENGTH);
-    instance->events_.push_back(Event(event, address));
+    instance->add_event(event, inet);
   }
 
 private:
+  uv_mutex_t mutex_;
   Events events_;
 };
 
@@ -78,26 +126,42 @@ CASSANDRA_INTEGRATION_TEST_F(SessionTest, ExternalHostListener) {
     .with_host_listener_callback(on_host_listener, this);
   Session session = cluster.connect();
 
-  ASSERT_EQ(0u, event_count());
+  // Initial node 1 events (add and up)
+  ASSERT_TRUE(wait_for_event(2u));
+  check_event(CASS_HOST_LISTENER_EVENT_ADD, 1);
+  check_event(CASS_HOST_LISTENER_EVENT_UP, 1);
 
-  EXPECT_EQ(2, ccm_->bootstrap_node());
+  // Bootstrap node 2 (add and up events)
+  EXPECT_EQ(2u, ccm_->bootstrap_node());
+  ASSERT_TRUE(wait_for_event(2u));
+  check_event(CASS_HOST_LISTENER_EVENT_ADD, 2);
+  check_event(CASS_HOST_LISTENER_EVENT_UP, 2);
+
+  // Stop node 1 (down event)
   stop_node(1);
+  ASSERT_TRUE(wait_for_event(1u));
+  check_event(CASS_HOST_LISTENER_EVENT_DOWN, 1);
+
+  // Restart node 1 (up event)
   ccm_->start_node(1);
+  CCM::CassVersion cass_version = this->server_version_;
+  if (Options::is_dse()) {
+    cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
+  }
+  if (cass_version >= "2.2") {
+    ASSERT_TRUE(wait_for_event(1u));
+  } else {
+    ASSERT_TRUE(wait_for_event(3u)); // C* <= 2.1 fires remove and add event on restart
+    check_event(CASS_HOST_LISTENER_EVENT_REMOVE, 1);
+    check_event(CASS_HOST_LISTENER_EVENT_ADD, 1);
+  }
+  check_event(CASS_HOST_LISTENER_EVENT_UP, 1);
+
+  // Decomission node 1 (down and remove events)
   force_decommission_node(1);
+  ASSERT_TRUE(wait_for_event(1u));
+  check_event(CASS_HOST_LISTENER_EVENT_DOWN, 1);
+  check_event(CASS_HOST_LISTENER_EVENT_REMOVE, 1);
 
   session.close();
-
-  ASSERT_EQ(6u, event_count());
-  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_ADD, events()[0].first);
-  EXPECT_EQ(ccm_->get_ip_prefix() + "2", events()[0].second);
-  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_UP, events()[1].first);
-  EXPECT_EQ(ccm_->get_ip_prefix() + "2", events()[1].second);
-  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_DOWN, events()[2].first);
-  EXPECT_EQ(ccm_->get_ip_prefix() + "1", events()[2].second);
-  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_UP, events()[3].first);
-  EXPECT_EQ(ccm_->get_ip_prefix() + "1", events()[3].second);
-  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_DOWN, events()[4].first);
-  EXPECT_EQ(ccm_->get_ip_prefix() + "1", events()[4].second);
-  EXPECT_EQ(CASS_HOST_LISTENER_EVENT_REMOVE, events()[5].first);
-  EXPECT_EQ(ccm_->get_ip_prefix() + "1", events()[5].second);
 }

@@ -738,9 +738,11 @@ namespace CCM {
      * NOTE: This method may check the status of the node multiple times
      *
      * @param node Node to check `DOWN` status
+     * @param is_quick_check True if `DOWN` status is checked once; false
+     *        otherwise (default: false)
      * @return True if node is no longer accepting connections; false otherwise
      */
-    bool is_node_down(unsigned int node);
+    bool is_node_down(unsigned int node, bool is_quick_check = false);
 
     /**
      * Check to see if a node is ready to accept connections
@@ -748,9 +750,11 @@ namespace CCM {
      * NOTE: This method may check the status of the node multiple times
      *
      * @param node Node to check `UP` status
+     * @param is_quick_check True if `UP` status is checked once; false
+     *        otherwise (default: false)
      * @return True if node is ready to accept connections; false otherwise
      */
-    bool is_node_up(unsigned int node);
+    bool is_node_up(unsigned int node, bool is_quick_check = false);
 
   private:
     /**
