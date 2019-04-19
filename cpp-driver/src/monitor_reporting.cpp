@@ -24,4 +24,4 @@ MonitorReporting* create_monitor_reporting(const String& client_id,
   return new NopMonitorReporting();
 }
 
-}; // namespace cass
+} // namespace cass
