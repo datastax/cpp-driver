@@ -21,7 +21,6 @@
 #include "cassandra.h"
 #include "data_type.hpp"
 #include "external.hpp"
-#include "memory.hpp"
 #include "ref_counted.hpp"
 
 namespace cass {

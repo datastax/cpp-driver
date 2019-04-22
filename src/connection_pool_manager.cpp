@@ -16,7 +16,6 @@
 
 #include "connection_pool_manager.hpp"
 
-#include "memory.hpp"
 #include "scoped_lock.hpp"
 #include "utils.hpp"
 
@@ -29,8 +28,8 @@ public:
   virtual void on_pool_down(const Address& address) { }
 
   virtual void on_pool_critical_error(const Address& address,
-                                 Connector::ConnectionError code,
-                                 const String& message) { }
+                                      Connector::ConnectionError code,
+                                      const String& message) { }
 
   virtual void on_close(ConnectionPoolManager* manager) { }
 };
@@ -51,9 +50,9 @@ ConnectionPoolManager::ConnectionPoolManager(const ConnectionPool::Map& pools,
   , close_state_(CLOSE_STATE_OPEN)
   , keyspace_(keyspace)
   , metrics_(metrics)
-#ifdef CASS_INTERNAL_DIAGNOSTICS
+  #ifdef CASS_INTERNAL_DIAGNOSTICS
   , flush_bytes_("flushed")
-#endif
+  #endif
 {
   inc_ref(); // Reference for the lifetime of the connection pools
   set_pointer_keys(to_flush_);
@@ -97,19 +96,19 @@ AddressVec ConnectionPoolManager::available() const {
   return result;
 }
 
-void ConnectionPoolManager::add(const Address& address) {
-  ConnectionPool::Map::iterator it = pools_.find(address);
+void ConnectionPoolManager::add(const Host::Ptr& host) {
+  ConnectionPool::Map::iterator it = pools_.find(host->address());
   if (it != pools_.end()) return;
 
   for (ConnectionPoolConnector::Vec::iterator it = pending_pools_.begin(),
        end = pending_pools_.end(); it != end; ++it) {
-    if ((*it)->address() == address) return;
+    if ((*it)->address() == host->address()) return;
   }
 
   ConnectionPoolConnector::Ptr connector(
-        Memory::allocate<ConnectionPoolConnector>(address,
-                                                  protocol_version_,
-                                                  bind_callback(&ConnectionPoolManager::on_connect, this)));
+        new ConnectionPoolConnector(host,
+                                    protocol_version_,
+                                    bind_callback(&ConnectionPoolManager::on_connect, this)));
   pending_pools_.push_back(connector);
   connector
       ->with_listener(this)

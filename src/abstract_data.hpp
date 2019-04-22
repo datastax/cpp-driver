@@ -17,6 +17,7 @@
 #ifndef __CASS_ABSTRACT_DATA_HPP_INCLUDED__
 #define __CASS_ABSTRACT_DATA_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "buffer.hpp"
 #include "collection.hpp"
 #include "data_type.hpp"
@@ -37,7 +38,7 @@ namespace cass {
 class Tuple;
 class UserTypeValue;
 
-class AbstractData {
+class AbstractData : public Allocated {
 public:
   class Element {
   public:

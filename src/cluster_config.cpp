@@ -19,7 +19,7 @@
 extern "C" {
 
 CassCluster* cass_cluster_new() {
-  return CassCluster::to(cass::Memory::allocate<cass::ClusterConfig>());
+  return CassCluster::to(new cass::ClusterConfig());
 }
 
 CassError cass_cluster_set_port(CassCluster* cluster,
@@ -221,12 +221,12 @@ void cass_cluster_set_max_schema_wait_time(CassCluster* cluster,
 }
 
 void cass_cluster_set_tracing_max_wait_time(CassCluster* cluster,
-                                           unsigned wait_time_ms) {
+                                            unsigned wait_time_ms) {
   cluster->config().set_max_tracing_wait_time_ms(wait_time_ms);
 }
 
 void cass_cluster_set_tracing_retry_wait_time(CassCluster* cluster,
-                                           unsigned wait_time_ms) {
+                                              unsigned wait_time_ms) {
   cluster->config().set_retry_tracing_wait_time_ms(wait_time_ms);
 }
 
@@ -253,7 +253,7 @@ void cass_cluster_set_credentials_n(CassCluster* cluster,
 }
 
 void cass_cluster_set_load_balance_round_robin(CassCluster* cluster) {
-  cluster->config().set_load_balancing_policy(cass::Memory::allocate<cass::RoundRobinPolicy>());
+  cluster->config().set_load_balancing_policy(new cass::RoundRobinPolicy());
 }
 
 CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
@@ -279,9 +279,9 @@ CassError cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_load_balancing_policy(
-        cass::Memory::allocate<cass::DCAwarePolicy>(cass::String(local_dc, local_dc_length),
-                                                    used_hosts_per_remote_dc,
-                                                    !allow_remote_dcs_for_local_cl));
+        new cass::DCAwarePolicy(cass::String(local_dc, local_dc_length),
+                                used_hosts_per_remote_dc,
+                                !allow_remote_dcs_for_local_cl));
   return CASS_OK;
 }
 
@@ -403,8 +403,8 @@ CassError cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
                                                    CassAuthenticatorDataCleanupCallback cleanup_callback,
                                                    void* data) {
   cluster->config().set_auth_provider(cass::AuthProvider::Ptr(
-                                        cass::Memory::allocate<cass::ExternalAuthProvider>(exchange_callbacks,
-                                                                                           cleanup_callback, data)));
+                                        new cass::ExternalAuthProvider(exchange_callbacks,
+                                                                       cleanup_callback, data)));
   return CASS_OK;
 }
 
@@ -452,14 +452,14 @@ CassError cass_cluster_set_constant_speculative_execution_policy(CassCluster* cl
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_speculative_execution_policy(
-        cass::Memory::allocate<cass::ConstantSpeculativeExecutionPolicy>(constant_delay_ms,
-                                                                         max_speculative_executions));
+        new cass::ConstantSpeculativeExecutionPolicy(constant_delay_ms,
+                                                     max_speculative_executions));
   return CASS_OK;
 }
 
 CassError cass_cluster_set_no_speculative_execution_policy(CassCluster* cluster) {
   cluster->config().set_speculative_execution_policy(
-        cass::Memory::allocate<cass::NoSpeculativeExecutionPolicy>());
+        new cass::NoSpeculativeExecutionPolicy());
   return CASS_OK;
 }
 
@@ -473,15 +473,15 @@ CassError cass_cluster_set_execution_profile(CassCluster* cluster,
                                              const char* name,
                                              CassExecProfile* profile) {
   return cass_cluster_set_execution_profile_n(cluster,
-                                             name,
-                                             SAFE_STRLEN(name),
+                                              name,
+                                              SAFE_STRLEN(name),
                                               profile);
 }
 
 CassError cass_cluster_set_execution_profile_n(CassCluster* cluster,
-                                              const char* name,
-                                              size_t name_length,
-                                              CassExecProfile* profile) {
+                                               const char* name,
+                                               size_t name_length,
+                                               CassExecProfile* profile) {
   if (name_length == 0 || !profile) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
@@ -531,13 +531,13 @@ CassError cass_cluster_set_host_listener_callback(CassCluster* cluster,
                                                   CassHostListenerCallback callback,
                                                   void* data) {
   cluster->config().set_host_listener(
-      cass::DefaultHostListener::Ptr(
-        cass::Memory::allocate<cass::ExternalHostListener>(callback, data)));
+        cass::DefaultHostListener::Ptr(
+          new cass::ExternalHostListener(callback, data)));
   return CASS_OK;
 }
 
 void cass_cluster_free(CassCluster* cluster) {
-  cass::Memory::deallocate(cluster->from());
+  delete cluster->from();
 }
 
 } // extern "C"

@@ -276,7 +276,7 @@ inline void add_keyspace_simple(const cass::String& keyspace_name,
                                 size_t replication_factor,
                                 cass::TokenMap* token_map) {
 
-  cass::DataType::ConstPtr varchar_data_type(cass::Memory::allocate<cass::DataType>(CASS_VALUE_TYPE_VARCHAR));
+  cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
 
   ColumnMetadataVec column_metadata;
   column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
@@ -298,7 +298,7 @@ inline void add_keyspace_network_topology(const cass::String& keyspace_name,
                                           ReplicationMap& replication,
                                           cass::TokenMap* token_map) {
 
-  cass::DataType::ConstPtr varchar_data_type(cass::Memory::allocate<cass::DataType>(CASS_VALUE_TYPE_VARCHAR));
+  cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
 
   ColumnMetadataVec column_metadata;
   column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
@@ -318,9 +318,9 @@ inline cass::Host::Ptr create_host(const cass::Address& address,
                                    const cass::String& dc = "dc",
                                    const cass::String& rack = "rack",
                                    const cass::String& release_version = "3.11") {
-  cass::Host::Ptr host(cass::Memory::allocate<cass::Host>(address));
+  cass::Host::Ptr host(new cass::Host(address));
 
-  cass::DataType::ConstPtr varchar_data_type(cass::Memory::allocate<cass::DataType>(CASS_VALUE_TYPE_VARCHAR));
+  cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
 
   ColumnMetadataVec column_metadata;
   column_metadata.push_back(ColumnMetadata("data_center", varchar_data_type));

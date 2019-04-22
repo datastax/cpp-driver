@@ -38,8 +38,8 @@ public:
 
   NameResolver::Ptr create(const Address& address) {
     return NameResolver::Ptr(
-          Memory::allocate<NameResolver>(address,
-                                         bind_callback(&NameResolverUnitTest::on_resolve, this)));
+          new NameResolver(address,
+                           bind_callback(&NameResolverUnitTest::on_resolve, this)));
   }
 
   NameResolver::Status status() const {

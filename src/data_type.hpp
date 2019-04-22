@@ -110,7 +110,7 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return Ptr(Memory::allocate<DataType>(value_type_));
+    return Ptr(new DataType(value_type_));
   }
 
   virtual String to_string() const {
@@ -157,7 +157,7 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return DataType::Ptr(Memory::allocate<CustomType>(class_name_));
+    return DataType::Ptr(new CustomType(class_name_));
   }
 
   virtual String to_string() const {
@@ -250,7 +250,7 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return DataType::Ptr(Memory::allocate<CollectionType>(value_type(), types_, is_frozen()));
+    return DataType::Ptr(new CollectionType(value_type(), types_, is_frozen()));
   }
 
 public:
@@ -258,14 +258,14 @@ public:
                                  bool is_frozen) {
     DataType::Vec types;
     types.push_back(element_type);
-    return DataType::ConstPtr(Memory::allocate<CollectionType>(CASS_VALUE_TYPE_LIST, types, is_frozen));
+    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_LIST, types, is_frozen));
   }
 
   static DataType::ConstPtr set(DataType::ConstPtr element_type,
                                 bool is_frozen) {
     DataType::Vec types;
     types.push_back(element_type);
-    return DataType::ConstPtr(Memory::allocate<CollectionType>(CASS_VALUE_TYPE_SET, types, is_frozen));
+    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_SET, types, is_frozen));
   }
 
   static DataType::ConstPtr map(DataType::ConstPtr key_type,
@@ -274,7 +274,7 @@ public:
     DataType::Vec types;
     types.push_back(key_type);
     types.push_back(value_type);
-    return DataType::ConstPtr(Memory::allocate<CollectionType>(CASS_VALUE_TYPE_MAP, types, is_frozen));
+    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_MAP, types, is_frozen));
   }
 };
 
@@ -314,7 +314,7 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return DataType::Ptr(Memory::allocate<TupleType>(types_, is_frozen()));
+    return DataType::Ptr(new TupleType(types_, is_frozen()));
   }
 };
 
@@ -418,7 +418,7 @@ public:
   }
 
   virtual DataType::Ptr copy() const {
-    return DataType::Ptr(Memory::allocate<UserType>(keyspace_, type_name_, fields_.entries(), is_frozen()));
+    return DataType::Ptr(new UserType(keyspace_, type_name_, fields_.entries(), is_frozen()));
   }
 
   virtual String to_string() const {

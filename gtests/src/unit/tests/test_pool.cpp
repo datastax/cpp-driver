@@ -207,8 +207,8 @@ public:
     }
 
     virtual void on_pool_critical_error(const Address& address,
-                                   Connector::ConnectionError code,
-                                   const String& message)  {
+                                        Connector::ConnectionError code,
+                                        const String& message)  {
       switch (code) {
         case Connector::CONNECTION_ERROR_INVALID_PROTOCOL:
           status_->critical_error_invalid_protocol();
@@ -268,20 +268,21 @@ public:
     loop()->data = NULL;
   }
 
-  AddressVec addresses() const {
+  HostMap hosts() const {
     mockssandra::Ipv4AddressGenerator generator;
-    AddressVec addresses;
+    HostMap hosts;
     for (size_t i = 0; i < NUM_NODES; ++i) {
-      addresses.push_back(generator.next());
+      Host::Ptr host(new Host(generator.next()));
+      hosts[host->address()] = host;
     }
-    return addresses;
+    return hosts;
   }
 
   void run_request(const ConnectionPoolManager::Ptr& manager, const Address& address) {
     PooledConnection::Ptr connection = manager->find_least_busy(address);
     if (connection) {
       RequestStatus status(manager->loop(), 1);
-      RequestCallback::Ptr callback(Memory::allocate<RequestCallback>(&status));
+      RequestCallback::Ptr callback(new RequestCallback(&status));
       EXPECT_TRUE(connection->write(callback.get())) << "Unable to write request to connection " << address.to_string();
       connection->flush(); // Flush requests to avoid unnecessary timeouts
       uv_run(loop(), UV_RUN_DEFAULT);
@@ -299,7 +300,7 @@ public:
     for (size_t i = 0; i < NUM_NODES; ++i) {
       PooledConnection::Ptr connection = manager->find_least_busy(generator.next());
       if (connection) {
-        RequestCallback::Ptr callback(Memory::allocate<RequestCallback>(status));
+        RequestCallback::Ptr callback(new RequestCallback(status));
         if(!connection->write(callback.get())) {
           status->error_failed_write();
         }
@@ -355,12 +356,12 @@ TEST_F(PoolUnitTest, Simple) {
   RequestStatusWithManager status(loop());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
   initializer
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
@@ -379,15 +380,16 @@ TEST_F(PoolUnitTest, Keyspace) {
   RequestStatusWithManager status(loop());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
-  AddressVec addresses = this->addresses();
+  HostMap hosts = this->hosts();
+  ASSERT_EQ(hosts.size(), NUM_NODES);
 
   initializer
       ->with_keyspace("foo")
-      ->initialize(loop(), addresses);
+      ->initialize(loop(), hosts);
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
@@ -395,12 +397,14 @@ TEST_F(PoolUnitTest, Keyspace) {
   ConnectionPoolManager::Ptr manager = status.manager();
   ASSERT_TRUE(manager);
 
-  for (size_t i = 0; i < NUM_NODES; ++i) {
-    PooledConnection::Ptr connection = manager->find_least_busy(addresses[i]);
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
+    const Address& address = it->first;
+    PooledConnection::Ptr connection = manager->find_least_busy(address);
     if (connection) {
       EXPECT_EQ(connection->keyspace(), "foo");
     } else {
-      EXPECT_TRUE(false) << "Unable to get connection for " << addresses[i].to_string();
+      EXPECT_TRUE(false) << "Unable to get connection for " << address.to_string();
     }
   }
 }
@@ -412,16 +416,16 @@ TEST_F(PoolUnitTest, Auth) {
   RequestStatusWithManager status(loop());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
   ConnectionPoolSettings settings;
-  settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
+  settings.connection_settings.auth_provider.reset(new PlainTextAuthProvider("cassandra", "cassandra"));
 
   initializer
       ->with_settings(settings)
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
@@ -436,13 +440,13 @@ TEST_F(PoolUnitTest, Ssl) {
   RequestStatusWithManager status(loop());
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_connected, &status)));
 
   initializer
       ->with_settings(settings)
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(status.count(RequestStatus::SUCCESS), NUM_NODES) << status.results();
@@ -453,17 +457,17 @@ TEST_F(PoolUnitTest, Listener) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
   initializer
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::UP), NUM_NODES) << listener_status.results();
@@ -475,17 +479,17 @@ TEST_F(PoolUnitTest, ListenerDown) {
   ASSERT_EQ(cluster.start(1), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
   initializer
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::UP), 1u) << listener_status.results();
@@ -499,20 +503,21 @@ TEST_F(PoolUnitTest, AddRemove) {
 
   ListenerStatus listener_status(loop());
   ListenerStatus add_remove_listener_status(loop(), 1);
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
 
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
-  AddressVec addresses = this->addresses();
+  HostMap hosts = this->hosts();
+  ASSERT_EQ(hosts.size(), NUM_NODES);
 
   initializer
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses);
+      ->initialize(loop(), hosts);
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::UP), NUM_NODES) << listener_status.results();
@@ -521,16 +526,19 @@ TEST_F(PoolUnitTest, AddRemove) {
   ASSERT_TRUE(manager);
 
   listener->reset(&add_remove_listener_status);
-  for (size_t i = 0; i < NUM_NODES; ++i) {
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
+    const Address& address = it->first;
+    const Host::Ptr& host = it->second;
     add_remove_listener_status.reset();
-    manager->remove(addresses[i]); // Remove node
+    manager->remove(address); // Remove node
     uv_run(loop(), UV_RUN_DEFAULT);
-    EXPECT_FALSE(manager->find_least_busy(addresses[i]));
+    EXPECT_FALSE(manager->find_least_busy(address));
 
     add_remove_listener_status.reset();
-    manager->add(addresses[i]); // Add node
+    manager->add(host); // Add node
     uv_run(loop(), UV_RUN_DEFAULT);
-    run_request(manager, addresses[i]);
+    run_request(manager, address);
   }
 
   EXPECT_EQ(add_remove_listener_status.count(ListenerStatus::DOWN), 3u) << add_remove_listener_status.results();
@@ -543,15 +551,16 @@ TEST_F(PoolUnitTest, Reconnect) {
 
   ListenerStatus listener_status(loop());
   ListenerStatus reconnect_listener_status(loop(), 1);
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
-  AddressVec addresses = this->addresses();
+  HostMap hosts = this->hosts();
+  ASSERT_EQ(hosts.size(), NUM_NODES);
 
   ConnectionPoolSettings settings;
   settings.reconnect_wait_time_ms = 0; // Reconnect immediately
@@ -559,7 +568,7 @@ TEST_F(PoolUnitTest, Reconnect) {
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses);
+      ->initialize(loop(), hosts);
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::UP), NUM_NODES) << listener_status.results();
@@ -568,18 +577,22 @@ TEST_F(PoolUnitTest, Reconnect) {
   ASSERT_TRUE(manager);
 
   listener->reset(&reconnect_listener_status);
-  for (size_t i = 0; i < NUM_NODES; ++i) {
+  size_t node = 1;
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
+    const Address& address = it->first;
     reconnect_listener_status.reset();
 
-    cluster.stop(i + 1); // Stop node
+    cluster.stop(node); // Stop node
     uv_run(loop(), UV_RUN_DEFAULT);
-    EXPECT_FALSE(manager->find_least_busy(addresses[i]));
+    EXPECT_FALSE(manager->find_least_busy(address));
 
     reconnect_listener_status.reset();
 
-    ASSERT_EQ(cluster.start(i + 1), 0); // Start node
+    ASSERT_EQ(cluster.start(node), 0); // Start node
     uv_run(loop(), UV_RUN_DEFAULT);
-    run_request(manager, addresses[i]);
+    run_request(manager, address);
+    ++node;
   }
 
   EXPECT_EQ(reconnect_listener_status.count(ListenerStatus::DOWN), 3u) << reconnect_listener_status.results();
@@ -593,11 +606,11 @@ TEST_F(PoolUnitTest, Timeout) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -607,7 +620,7 @@ TEST_F(PoolUnitTest, Timeout) {
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::DOWN), NUM_NODES) << listener_status.results();
@@ -619,17 +632,17 @@ TEST_F(PoolUnitTest, InvalidProtocol) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           0x7F,  // Invalid protocol version
           bind_callback(on_pool_nop, &request_status)));
 
   initializer
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_INVALID_PROTOCOL), 0u) << listener_status.results();
@@ -653,18 +666,18 @@ TEST_F(PoolUnitTest, InvalidKeyspace) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
   initializer
       ->with_keyspace("invalid")
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(listener_status.count(ListenerStatus::CRITICAL_ERROR_KEYSPACE), NUM_NODES) << listener_status.results();
@@ -675,21 +688,21 @@ TEST_F(PoolUnitTest, InvalidAuth) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
   ConnectionPoolSettings settings;
-  settings.connection_settings.auth_provider.reset(Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
+  settings.connection_settings.auth_provider.reset(new PlainTextAuthProvider("invalid", "invalid"));
 
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_AUTH), 0u) << listener_status.results();
@@ -700,11 +713,11 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
   ASSERT_EQ(cluster.start_all(), 0); // Start without ssl
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -717,7 +730,7 @@ TEST_F(PoolUnitTest, InvalidNoSsl) {
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_SSL_HANDSHAKE), 0u) << listener_status.results();
@@ -729,11 +742,11 @@ TEST_F(PoolUnitTest, InvalidSsl) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ListenerStatus listener_status(loop());
-  ScopedPtr<Listener> listener(Memory::allocate<Listener>(&listener_status));
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
   RequestStatusWithManager request_status(loop(), 0);
 
   ConnectionPoolManagerInitializer::Ptr initializer(
-        Memory::allocate<ConnectionPoolManagerInitializer>(
+        new ConnectionPoolManagerInitializer(
           PROTOCOL_VERSION,
           bind_callback(on_pool_nop, &request_status)));
 
@@ -746,7 +759,7 @@ TEST_F(PoolUnitTest, InvalidSsl) {
   initializer
       ->with_settings(settings)
       ->with_listener(listener.get())
-      ->initialize(loop(), addresses());
+      ->initialize(loop(), hosts());
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_SSL_VERIFY), 0u) << listener_status.results();

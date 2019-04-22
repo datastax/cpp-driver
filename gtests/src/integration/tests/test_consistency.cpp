@@ -196,6 +196,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleLocalQuorum) 
  */
 CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleEachQuorum) {
   CHECK_FAILURE;
+  CHECK_VERSION(3.0.0);
 
   // Assign the consistency level for the test
   insert_.set_consistency(CASS_CONSISTENCY_EACH_QUORUM);

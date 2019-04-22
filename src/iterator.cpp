@@ -26,7 +26,7 @@
 extern "C" {
 
 void cass_iterator_free(CassIterator* iterator) {
-  cass::Memory::deallocate(iterator->from());
+  delete iterator->from();
 }
 
 cass_bool_t cass_iterator_next(CassIterator* iterator) {
@@ -38,39 +38,39 @@ CassIteratorType cass_iterator_type(CassIterator* iterator) {
 }
 
 CassIterator* cass_iterator_from_result(const CassResult* result) {
-  return CassIterator::to(cass::Memory::allocate<cass::ResultIterator>(result));
+  return CassIterator::to(new cass::ResultIterator(result));
 }
 
 CassIterator* cass_iterator_from_row(const CassRow* row) {
-  return CassIterator::to(cass::Memory::allocate<cass::RowIterator>(row));
+  return CassIterator::to(new cass::RowIterator(row));
 }
 
 CassIterator* cass_iterator_from_collection(const CassValue* value) {
   if (value->is_null() || !value->is_collection()) {
     return NULL;
   }
-  return CassIterator::to(cass::Memory::allocate<cass::CollectionIterator>(value));
+  return CassIterator::to(new cass::CollectionIterator(value));
 }
 
 CassIterator* cass_iterator_from_tuple(const CassValue* value) {
   if (value->is_null() || !value->is_tuple()) {
     return NULL;
   }
-  return CassIterator::to(cass::Memory::allocate<cass::TupleIterator>(value));
+  return CassIterator::to(new cass::TupleIterator(value));
 }
 
 CassIterator* cass_iterator_from_map(const CassValue* value) {
   if (value->is_null() || !value->is_map()) {
     return NULL;
   }
-  return CassIterator::to(cass::Memory::allocate<cass::MapIterator>(value));
+  return CassIterator::to(new cass::MapIterator(value));
 }
 
 CassIterator* cass_iterator_fields_from_user_type(const CassValue* value) {
   if (value->is_null() || !value->is_user_type()) {
     return NULL;
   }
-  return CassIterator::to(cass::Memory::allocate<cass::UserTypeFieldIterator>(value));
+  return CassIterator::to(new cass::UserTypeFieldIterator(value));
 }
 
 CassError cass_iterator_get_user_type_field_name(const CassIterator* iterator,

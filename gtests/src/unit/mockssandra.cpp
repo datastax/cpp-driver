@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #include "control_connection.hpp" // For host queries
+#include "memory.hpp"
 #include "scoped_lock.hpp"
 #include "tracing_data_handler.hpp" // For tracing query
 #include "uuids.hpp"
@@ -28,11 +29,14 @@
 #  include "winsock.h"
 #endif
 
+using cass::Memory;
 using cass::ScopedMutex;
 using cass::OStringStream;
 
 #define SSL_BUF_SIZE 8192
-#define SERVER_VERSION "3.11.2"
+#define CASSANDRA_VERSION "3.11.4"
+#define DSE_VERSION "6.7.1"
+#define DSE_CASSANDRA_VERSION "4.0.0.671"
 
 namespace mockssandra {
 
@@ -197,7 +201,7 @@ void ClientConnection::on_close(uv_handle_t* handle) {
 void ClientConnection::handle_close() {
   on_close();
   server_->remove(this);
-  Memory::deallocate(this);
+  delete this;
 }
 
 void ClientConnection::on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
@@ -229,7 +233,7 @@ void ClientConnection::handle_read(ssize_t nread, const uv_buf_t* buf) {
 void ClientConnection::on_write(uv_write_t* req, int status) {
   WriteReq* write = static_cast<WriteReq*>(req->data);
   write->connection->handle_write(status);
-  Memory::deallocate(write);
+  delete write;
 }
 
 void ClientConnection::handle_write(int status) {
@@ -257,12 +261,12 @@ void ClientConnection::handle_write(int status) {
 
 int ClientConnection::internal_write(const char* data, size_t len) {
   uv_buf_t buf;
-  WriteReq* write = Memory::allocate<WriteReq>(data, len, this);
+  WriteReq* write = new WriteReq(data, len, this);
   buf.base = const_cast<char*>(write->data.data());
   buf.len = write->data.length();
   int rc = uv_write(&write->req, tcp_.as_stream(), &buf, 1, on_write);
   if (rc != 0) {
-    Memory::deallocate(write);
+    delete write;
   }
   return rc;
 }
@@ -483,7 +487,7 @@ void ServerConnection::listen(EventLoopGroup* event_loop_group) {
   if (state_ != STATE_CLOSED) return;
   rc_ = 0;
   state_ = STATE_PENDING;
-  event_loop_ = event_loop_group->add(Memory::allocate<RunListen>(this));
+  event_loop_ = event_loop_group->add(new RunListen(this));
 }
 
 int ServerConnection::wait_listen() {
@@ -498,7 +502,7 @@ void ServerConnection::close() {
   ScopedMutex l(&mutex_);
   if (state_ != STATE_LISTENING && state_ != STATE_PENDING) return;
   state_ = STATE_CLOSING;
-  event_loop_->add(Memory::allocate<RunClose>(this));
+  event_loop_->add(new RunClose(this));
 }
 
 void ServerConnection::wait_close() {
@@ -511,7 +515,7 @@ void ServerConnection::wait_close() {
 void ServerConnection::run(const ServerConnectionTask::Ptr& task) {
   ScopedMutex l(&mutex_);
   if (state_ != STATE_LISTENING) return;
-  event_loop_->add(Memory::allocate<RunTask>(task, Ptr(this)));
+  event_loop_->add(new RunTask(task, Ptr(this)));
 }
 
 void ServerConnection::internal_listen() {
@@ -604,7 +608,7 @@ void ServerConnection::handle_connection(int status) {
 
   ClientConnection* connection = factory_.create(this);
   if (connection && connection->on_accept() != 0) {
-    Memory::deallocate(connection);
+    delete connection;
     return;
   }
   clients_.push_back(connection);
@@ -1065,6 +1069,34 @@ void Collection::encode(int protocol_version, String* output) const {
   }
 }
 
+Value::Value()
+  : type_(NUL) { }
+
+Value::Value(const cass::String& value)
+  : type_(VALUE)
+  , value_(new String(value)) { }
+
+Value::Value(const Collection& collection)
+  : type_(COLLECTION)
+  , collection_(new Collection(collection)){ }
+
+Value::Value(const Value& other)
+  : type_(other.type_) {
+  if (type_ == VALUE) {
+    value_ = new String(*other.value_);
+  } else if (type_ == COLLECTION) {
+    collection_ = new Collection(*other.collection_);
+  }
+}
+
+Value::~Value() {
+  if (type_ == VALUE) {
+    delete value_;
+  } else if (type_ == COLLECTION) {
+    delete collection_;
+  }
+}
+
 void Value::encode(int protocol_version, String* output) const {
   if (type_ == NUL) {
     encode_int32(-1, output);
@@ -1164,19 +1196,19 @@ Action::Builder& Action::Builder::execute_if(Action* action) {
 }
 
 Action::Builder& Action::Builder::nop() {
-  return execute(Memory::allocate<Nop>());
+  return execute(new Nop());
 }
 
 Action::Builder& Action::Builder::wait(uint64_t timeout) {
-  return execute(Memory::allocate<Wait>(timeout));
+  return execute(new Wait(timeout));
 }
 
 Action::Builder& Action::Builder::close() {
-  return execute(Memory::allocate<Close>());
+  return execute(new Close());
 }
 
 Action::Builder& Action::Builder::error(int32_t code, const String& message) {
-  return execute(Memory::allocate<SendError>(code, message));
+  return execute(new SendError(code, message));
 }
 
 Action::Builder&Action::Builder::invalid_protocol() {
@@ -1188,96 +1220,104 @@ Action::Builder&Action::Builder::invalid_opcode() {
 }
 
 Action::Builder& Action::Builder::ready() {
-  return execute(Memory::allocate<SendReady>());
+  return execute(new SendReady());
 }
 
 Action::Builder& Action::Builder::authenticate(const String& class_name) {
-  return execute(Memory::allocate<SendAuthenticate>(class_name));
+  return execute(new SendAuthenticate(class_name));
 }
 
 Action::Builder& Action::Builder::auth_challenge(const String& token) {
-  return execute(Memory::allocate<SendAuthChallenge>(token));
+  return execute(new SendAuthChallenge(token));
 }
 
 Action::Builder& Action::Builder::auth_success(const String& token) {
-  return execute(Memory::allocate<SendAuthSuccess>(token));
+  return execute(new SendAuthSuccess(token));
 }
 
 Action::Builder& Action::Builder::supported() {
-  return execute(Memory::allocate<SendSupported>());
+  return execute(new SendSupported());
 }
 
 Action::Builder& Action::Builder::up_event(const Address& address) {
-  return execute(Memory::allocate<SendUpEvent>(address));
+  return execute(new SendUpEvent(address));
 }
 
 Action::Builder& Action::Builder::void_result() {
-  return execute(Memory::allocate<VoidResult>());
+  return execute(new VoidResult());
 }
 
 Action::Builder& Action::Builder::empty_rows_result(int32_t row_count) {
-  return execute(Memory::allocate<EmptyRowsResult>(row_count));
+  return execute(new EmptyRowsResult(row_count));
 }
 
 Action::Builder& Action::Builder::no_result() {
-  return execute(Memory::allocate<NoResult>());
+  return execute(new NoResult());
 }
 
 Action::Builder& Action::Builder::match_query(const Matches& matches) {
-  return execute(Memory::allocate<MatchQuery>(matches));
+  return execute(new MatchQuery(matches));
 }
 
 Action::Builder& Action::Builder::client_options() {
-  return execute(Memory::allocate<ClientOptions>());
+  return execute(new ClientOptions());
 }
 
 Action::Builder& Action::Builder::system_local() {
-  return execute(Memory::allocate<SystemLocal>());
+  return execute(new SystemLocal());
+}
+
+Action::Builder& Action::Builder::system_local_dse() {
+  return execute(new SystemLocalDse());
 }
 
 Action::Builder& Action::Builder::system_peers() {
-  return execute(Memory::allocate<SystemPeers>());
+  return execute(new SystemPeers());
+}
+
+Action::Builder& Action::Builder::system_peers_dse() {
+  return execute(new SystemPeersDse());
 }
 
 Action::Builder& Action::Builder::system_traces() {
-  return execute(Memory::allocate<SystemTraces>());
+  return execute(new SystemTraces());
 }
 
 Action::Builder& Action::Builder::use_keyspace(const cass::String& keyspace) {
-  return execute((Memory::allocate<UseKeyspace>(keyspace)));
+  return execute((new UseKeyspace(keyspace)));
 }
 
 Action::Builder& Action::Builder::plaintext_auth(const cass::String& username,
                                                  const cass::String& password) {
-  return execute((Memory::allocate<PlaintextAuth>(username, password)));
+  return execute((new PlaintextAuth(username, password)));
 }
 
 Action::Builder& Action::Builder::validate_startup() {
-  return execute(Memory::allocate<ValidateStartup>());
+  return execute(new ValidateStartup());
 }
 
 Action::Builder& Action::Builder::validate_credentials() {
-  return execute(Memory::allocate<ValidateCredentials>());
+  return execute(new ValidateCredentials());
 }
 
 Action::Builder& Action::Builder::validate_auth_response() {
-  return execute(Memory::allocate<ValidateAuthResponse>());
+  return execute(new ValidateAuthResponse());
 }
 
 Action::Builder& Action::Builder::validate_register() {
-  return execute(Memory::allocate<ValidateRegister>());
+  return execute(new ValidateRegister());
 }
 
 Action::Builder& Action::Builder::validate_query() {
-  return execute(Memory::allocate<ValidateQuery>());
+  return execute(new ValidateQuery());
 }
 
 Action::Builder& Action::Builder::set_registered_for_events() {
-  return execute(Memory::allocate<SetRegisteredForEvents>());
+  return execute(new SetRegisteredForEvents());
 }
 
 Action::Builder& Action::Builder::set_protocol_version() {
-  return execute(Memory::allocate<SetProtocolVersion>());
+  return execute(new SetProtocolVersion());
 }
 
 Action* Action::Builder::build() {
@@ -1285,15 +1325,15 @@ Action* Action::Builder::build() {
 }
 
 Action::PredicateBuilder Action::Builder::is_address(const cass::Address& address) {
-  return PredicateBuilder(execute(Memory::allocate<IsAddress>(address)));
+  return PredicateBuilder(execute(new IsAddress(address)));
 }
 
 Action::PredicateBuilder Action::Builder::is_address(const cass::String& address, int port) {
-  return PredicateBuilder(execute(Memory::allocate<IsAddress>(Address(address, port))));
+  return PredicateBuilder(execute(new IsAddress(Address(address, port))));
 }
 
 Action::PredicateBuilder Action::Builder::is_query(const cass::String& query) {
-  return PredicateBuilder(execute(Memory::allocate<IsQuery>(query)));
+  return PredicateBuilder(execute(new IsQuery(query)));
 }
 
 void Action::run(Request* request) const {
@@ -1315,12 +1355,7 @@ Request::Request(int8_t version, int8_t flags, int16_t stream, int8_t opcode,
   , body_(body)
   , client_(client)
   , timer_action_(NULL) {
-  client->add(this);
   (void)flags_; // TODO: Implement custom payload etc.
-}
-
-Request::~Request() {
-  client_->remove(this);
 }
 
 void Request::write(int8_t opcode, const String& body) {
@@ -1339,6 +1374,7 @@ void Request::error(int32_t code, const String& message) {
 }
 
 void Request::wait(uint64_t timeout, const Action* action) {
+  inc_ref();
   timer_action_ = action;
   timer_.start(client_->server()->loop(), timeout,
                cass::bind_callback(&Request::on_timeout, this));
@@ -1390,6 +1426,7 @@ Hosts Request::hosts() const {
 
 void Request::on_timeout(Timer* timer) {
   timer_action_->run_next(this);
+  dec_ref();
 }
 
 void SendError::on_run(Request* request) const {
@@ -1475,21 +1512,20 @@ void ClientOptions::on_run(Request* request) const {
   QueryParameters params;
   if (!request->decode_query(&query, &params)) {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
-  } else {
-    if (query == CLIENT_OPTIONS_QUERY) {
-      ResultSet::Builder builder("client", "options");
-      Row::Builder row_builder;
-      for (Options::const_iterator it = request->client()->options().begin(),
-        end = request->client()->options().end(); it != end; ++it) {
-          builder.column((*it).first, Type::text());
-          row_builder.text((*it).second);
-      }
-      ResultSet client_options = builder.row(row_builder.build()).build();
-
-      request->write(OPCODE_RESULT, client_options.encode(request->version()));
+  } else if (query == CLIENT_OPTIONS_QUERY) {
+    ResultSet::Builder builder("client", "options");
+    Row::Builder row_builder;
+    for (Options::const_iterator it = request->client()->options().begin(),
+      end = request->client()->options().end(); it != end; ++it) {
+        builder.column((*it).first, Type::text());
+        row_builder.text((*it).second);
     }
+    ResultSet client_options = builder.row(row_builder.build()).build();
+
+    request->write(OPCODE_RESULT, client_options.encode(request->version()));
+  } else {
+    run_next(request);
   }
-  run_next(request);
 }
 
 void SystemLocal::on_run(Request* request) const {
@@ -1513,7 +1549,43 @@ void SystemLocal::on_run(Request* request) const {
                .text(request->client()->server()->address().to_string())
                .text(host.dc)
                .text(host.rack)
-               .text(SERVER_VERSION)
+               .text(CASSANDRA_VERSION)
+               .inet(request->client()->server()->address())
+               .text(host.partitioner)
+               .collection(Collection::text(host.tokens))
+               .build())
+          .build();
+
+    request->write(OPCODE_RESULT, local_rs.encode(request->version()));
+  } else {
+    run_next(request);
+  }
+}
+
+void SystemLocalDse::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+  } else if (query.find(SELECT_LOCAL) != String::npos) {
+    const Host& host(request->host(request->address()));
+
+    ResultSet local_rs
+        = ResultSet::Builder("system", "local")
+          .column("key", Type::text())
+          .column("data_center", Type::text())
+          .column("rack", Type::text())
+          .column("dse_version", Type::text())
+          .column("release_version", Type::text())
+          .column("rpc_address", Type::inet())
+          .column("partitioner", Type::text())
+          .column("tokens", Type::list(Type::text()))
+          .row(Row::Builder()
+               .text(request->client()->server()->address().to_string())
+               .text(host.dc)
+               .text(host.rack)
+               .text(DSE_VERSION)
+               .text(DSE_CASSANDRA_VERSION)
                .inet(request->client()->server()->address())
                .text(host.partitioner)
                .collection(Collection::text(host.tokens))
@@ -1556,7 +1628,7 @@ void SystemPeers::on_run(Request* request) const {
                  .inet(host.address)
                  .text(host.dc)
                  .text(host.rack)
-                 .text(SERVER_VERSION)
+                 .text(CASSANDRA_VERSION)
                  .inet(host.address)
                  .collection(Collection::text(host.tokens))
                  .build());
@@ -1585,7 +1657,80 @@ void SystemPeers::on_run(Request* request) const {
                  .inet(host.address)
                  .text(host.dc)
                  .text(host.rack)
-                 .text(SERVER_VERSION)
+                 .text(CASSANDRA_VERSION)
+                 .inet(host.address)
+                 .collection(Collection::text(host.tokens))
+                 .build())
+            .build();
+      request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
+    }
+  } else {
+    run_next(request);
+  }
+}
+
+void SystemPeersDse::on_run(Request* request) const {
+  String query;
+  QueryParameters params;
+  if (!request->decode_query(&query, &params)) {
+    request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
+  } else if (query.find(SELECT_PEERS) != String::npos) {
+    const String where_clause(" WHERE peer = '");
+    ResultSet::Builder peers_builder
+        = ResultSet::Builder("system", "peers")
+          .column("peer", Type::inet())
+          .column("data_center", Type::text())
+          .column("rack", Type::text())
+          .column("dse_version", Type::text())
+          .column("release_version", Type::text())
+          .column("rpc_address", Type::inet())
+          .column("tokens", Type::list(Type::text()));
+
+    size_t pos = query.find(where_clause);
+    if (pos == String::npos) {
+      Hosts hosts(request->hosts());
+      for (Hosts::const_iterator it = hosts.begin(),
+           end = hosts.end(); it != end; ++it) {
+        const Host& host(*it);
+        if (host.address == request->address()) {
+          continue;
+        }
+        peers_builder
+            .row(Row::Builder()
+                 .inet(host.address)
+                 .text(host.dc)
+                 .text(host.rack)
+                 .text(DSE_VERSION)
+                 .text(DSE_CASSANDRA_VERSION)
+                 .inet(host.address)
+                 .collection(Collection::text(host.tokens))
+                 .build());
+      }
+      ResultSet peers_rs = peers_builder.build();
+      request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
+    } else {
+      pos += where_clause.size();
+      size_t end_pos = query.find("'", pos);
+      if (end_pos == String::npos) {
+        request->error(ERROR_INVALID_QUERY, "Invalid WHERE clause");
+        return;
+      }
+
+      String ip = query.substr(pos, end_pos - pos);
+      Address address;
+      if (!Address::from_string(ip, request->address().port(), &address)) {
+        request->error(ERROR_INVALID_QUERY, "Invalid inet address in WHERE clause");
+        return;
+      }
+
+      const Host& host(request->host(address));
+      ResultSet peers_rs
+          = peers_builder
+            .row(Row::Builder()
+                 .inet(host.address)
+                 .text(host.dc)
+                 .text(host.rack)
+                 .text(CASSANDRA_VERSION)
                  .inet(host.address)
                  .collection(Collection::text(host.tokens))
                  .build())
@@ -1754,9 +1899,9 @@ RequestHandler::RequestHandler(RequestHandler::Builder* builder,
   , highest_supported_protocol_version_(highest_supported_protocol_version) { }
 
 const RequestHandler* RequestHandler::Builder::build() {
-  RequestHandler* handler(Memory::allocate<RequestHandler>(this,
-                                                           lowest_supported_protocol_version_,
-                                                           highest_supported_protocol_version_));
+  RequestHandler* handler(new RequestHandler(this,
+                                             lowest_supported_protocol_version_,
+                                             highest_supported_protocol_version_));
 
   handler->actions_[OPCODE_STARTUP].reset(actions_[OPCODE_STARTUP].build());
   handler->actions_[OPCODE_OPTIONS].reset(actions_[OPCODE_OPTIONS].build());
@@ -1800,8 +1945,9 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
             version_ > request_handler_->highest_supported_protocol_version()) {
           // Respond using the highest supported protocol that the server
           // supports (don't use the request's version because it's not supported)
-          request_handler_->invalid_protocol(Memory::allocate<Request>(request_handler_->highest_supported_protocol_version(),
-                                                                       flags_, stream_, opcode_, String(), client));
+          Request::Ptr request(new Request(request_handler_->highest_supported_protocol_version(),
+                                           flags_, stream_, opcode_, String(), client));
+          request_handler_->invalid_protocol(request.get());
           return len - remaining;
         }
         state_ = HEADER;
@@ -1845,13 +1991,8 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
 }
 
 void ProtocolHandler::decode_body(ClientConnection* client, const char* body, int32_t len) {
-  request_handler_->run(Memory::allocate<Request>(version_, flags_, stream_, opcode_, String(body, len), client));
-}
-
-ClientConnection::~ClientConnection() {
-  while(!requests_.is_empty()) {
-    Memory::deallocate(requests_.front()); // Removes itself from the list
-  }
+  Request::Ptr request(new Request(version_, flags_, stream_, opcode_, String(body, len), client));
+  request_handler_->run(request.get());
 }
 
 void ClientConnection::on_read(const char* data, size_t len) {
@@ -1872,15 +2013,15 @@ void Event::run(internal::ServerConnection* server_connection) {
 }
 
 Event::Ptr TopologyChangeEvent::new_node(const Address& address) {
-  return Ptr(Memory::allocate<TopologyChangeEvent>(NEW_NODE, address));
+  return Ptr(new TopologyChangeEvent(NEW_NODE, address));
 }
 
 Event::Ptr TopologyChangeEvent::moved_node(const Address& address) {
-  return Ptr(Memory::allocate<TopologyChangeEvent>(MOVED_NODE, address));
+  return Ptr(new TopologyChangeEvent(MOVED_NODE, address));
 }
 
 Event::Ptr TopologyChangeEvent::removed_node(const Address& address) {
-  return Ptr(Memory::allocate<TopologyChangeEvent>(REMOVED_NODE, address));
+  return Ptr(new TopologyChangeEvent(REMOVED_NODE, address));
 }
 
 cass::String TopologyChangeEvent::encode(TopologyChangeEvent::Type type, const cass::Address& address) {
@@ -1902,11 +2043,11 @@ cass::String TopologyChangeEvent::encode(TopologyChangeEvent::Type type, const c
 }
 
 Event::Ptr StatusChangeEvent::up(const Address& address) {
-  return Ptr(Memory::allocate<StatusChangeEvent>(UP, address));
+  return Ptr(new StatusChangeEvent(UP, address));
 }
 
 Event::Ptr StatusChangeEvent::down(const cass::Address& address) {
-  return Ptr(Memory::allocate<StatusChangeEvent>(DOWN, address));
+  return Ptr(new StatusChangeEvent(DOWN, address));
 }
 
 String StatusChangeEvent::encode(Type type, const Address& address) {
@@ -1926,22 +2067,22 @@ String StatusChangeEvent::encode(Type type, const Address& address) {
 
 Event::Ptr SchemaChangeEvent::keyspace(SchemaChangeEvent::Type type,
                                        const String& keyspace_name) {
-  return Ptr(Memory::allocate<SchemaChangeEvent>(KEYSPACE,
-                                                 type,
-                                                 keyspace_name));
+  return Ptr(new SchemaChangeEvent(KEYSPACE,
+                                   type,
+                                   keyspace_name));
 }
 
 Event::Ptr SchemaChangeEvent::table(SchemaChangeEvent::Type type,
                                     const String& keyspace_name,
                                     const String& table_name) {
-  return Ptr(Memory::allocate<SchemaChangeEvent>(TABLE, type,
-                                                 keyspace_name, table_name));
+  return Ptr(new SchemaChangeEvent(TABLE, type,
+                                   keyspace_name, table_name));
 }
 
 Event::Ptr SchemaChangeEvent::user_type(SchemaChangeEvent::Type type,
                                         const String& keyspace_name,
                                         const String& user_type_name) {
-  return Ptr(Memory::allocate<SchemaChangeEvent>(USER_TYPE, type,
+  return Ptr(new SchemaChangeEvent(USER_TYPE, type,
                                                  keyspace_name, user_type_name));
 }
 
@@ -1949,7 +2090,7 @@ Event::Ptr SchemaChangeEvent::function(SchemaChangeEvent::Type type,
                                        const String& keyspace_name,
                                        const String& function_name,
                                        const Vector<String>& args_types) {
-  return Ptr(Memory::allocate<SchemaChangeEvent>(FUNCTION, type,
+  return Ptr(new SchemaChangeEvent(FUNCTION, type,
                                                  keyspace_name, function_name,
                                                  args_types));
 }
@@ -1958,7 +2099,7 @@ Event::Ptr SchemaChangeEvent::aggregate(SchemaChangeEvent::Type type,
                                         const String& keyspace_name,
                                         const String& aggregate_name,
                                         const Vector<String>& args_types) {
-  return Ptr(Memory::allocate<SchemaChangeEvent>(AGGREGATE, type,
+  return Ptr(new SchemaChangeEvent(AGGREGATE, type,
                                                  keyspace_name, aggregate_name,
                                                  args_types));
 }
@@ -2167,7 +2308,7 @@ int Cluster::create_and_add_server(AddressGenerator& generator,
   Address address(generator.next());
   Server server(Host(address, dc, "rack1", token_rng_),
                 internal::ServerConnection::Ptr(
-                Memory::allocate<internal::ServerConnection>(address, factory)));
+                new internal::ServerConnection(address, factory)));
 
   servers_.push_back(server);
   return static_cast<int>(servers_.size());

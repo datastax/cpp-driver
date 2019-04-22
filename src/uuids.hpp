@@ -17,10 +17,10 @@
 #ifndef __CASS_UUIDS_HPP_INCLUDED__
 #define __CASS_UUIDS_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "atomic.hpp"
 #include "cassandra.h"
 #include "external.hpp"
-#include "memory.hpp"
 #include "random.hpp"
 
 #include <uv.h>
@@ -29,7 +29,7 @@
 
 namespace cass {
 
-class UuidGen {
+class UuidGen : public Allocated {
 public:
   UuidGen();
   UuidGen(uint64_t node);

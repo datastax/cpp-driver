@@ -65,28 +65,28 @@ private:
 };
 
 TEST_F(TcpConnectorUnitTest, Simple) {
-  TcpConnector::Ptr connector(Memory::allocate<TcpConnector>(Address("127.0.0.1", 8888)));
+  TcpConnector::Ptr connector(new TcpConnector(Address("127.0.0.1", 8888)));
   connect(connector);
   run_loop();
   EXPECT_EQ(TcpConnector::SUCCESS, status());
 }
 
 TEST_F(TcpConnectorUnitTest, Invalid) {
-  TcpConnector::Ptr connector(Memory::allocate<TcpConnector>(Address("127.99.0.99", 8888)));
+  TcpConnector::Ptr connector(new TcpConnector(Address("127.99.0.99", 8888)));
   connect(connector);
   run_loop();
   EXPECT_EQ(TcpConnector::FAILED_TO_CONNECT, status());
 }
 
 TEST_F(TcpConnectorUnitTest, InvalidPort) {
-  TcpConnector::Ptr connector(Memory::allocate<TcpConnector>(Address("127.0.0.1", 9999)));
+  TcpConnector::Ptr connector(new TcpConnector(Address("127.0.0.1", 9999)));
   connect(connector);
   run_loop();
   EXPECT_EQ(TcpConnector::FAILED_TO_CONNECT, status());
 }
 
 TEST_F(TcpConnectorUnitTest, Cancel) {
-  TcpConnector::Ptr connector(Memory::allocate<TcpConnector>(Address("127.0.0.1", 8888)));
+  TcpConnector::Ptr connector(new TcpConnector(Address("127.0.0.1", 8888)));
   connect(connector);
   connector->cancel();
   run_loop();

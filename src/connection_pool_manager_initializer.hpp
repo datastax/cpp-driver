@@ -58,9 +58,9 @@ public:
    * Initialize a connection pool manager use the given hosts.
    *
    * @param loop Event loop to utilize for handling requests.
-   * @param addresses A vector of addresses to connect pools to.
+   * @param hosts A map of hosts to connect pools to.
    */
-  void initialize(uv_loop_t* loop, const AddressVec& addresses);
+  void initialize(uv_loop_t* loop, const HostMap& hosts);
 
   /**
    * Cancel the initialization process of the manager.

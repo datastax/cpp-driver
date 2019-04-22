@@ -33,9 +33,9 @@ public:
 
   HostMap generate_hosts() {
     HostMap hosts;
-    Host::Ptr host1(Memory::allocate<Host>(Address("127.0.0.1", PORT)));
-    Host::Ptr host2(Memory::allocate<Host>(Address("127.0.0.2", PORT)));
-    Host::Ptr host3(Memory::allocate<Host>(Address("127.0.0.3", PORT)));
+    Host::Ptr host1(new Host(Address("127.0.0.1", PORT)));
+    Host::Ptr host2(new Host(Address("127.0.0.2", PORT)));
+    Host::Ptr host3(new Host(Address("127.0.0.3", PORT)));
     hosts[host1->address()] = host1;
     hosts[host2->address()] = host2;
     hosts[host3->address()] = host3;
@@ -44,17 +44,17 @@ public:
 
   void try_request(const RequestProcessor::Ptr& processor,
                    uint64_t wait_for_time_us = WAIT_FOR_TIME) {
-    ResponseFuture::Ptr response_future(Memory::allocate<ResponseFuture>());
-    QueryRequest::Ptr query_request(Memory::allocate<QueryRequest>("SELECT * FROM table"));
+    ResponseFuture::Ptr response_future(new ResponseFuture());
+    QueryRequest::Ptr query_request(new QueryRequest("SELECT * FROM table"));
     query_request->set_is_idempotent(true);
     Request::ConstPtr request(query_request);
-    RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request, response_future));
+    RequestHandler::Ptr request_handler(new RequestHandler(request, response_future));
 
     processor->process_request(request_handler);
     ASSERT_TRUE(response_future->wait_for(wait_for_time_us)) << "Timed out waiting for response";
     ASSERT_FALSE(response_future->error())
-      << cass_error_desc(response_future->error()->code) << ": "
-      << response_future->error()->message;;
+        << cass_error_desc(response_future->error()->code) << ": "
+        << response_future->error()->message;;
   }
 
   class Future : public cass::Future {
@@ -105,7 +105,7 @@ public:
       // that a host is ready.
       if (processor_) {
         processor_->notify_host_ready(
-              Host::Ptr(Memory::allocate<Host>(address)));
+              Host::Ptr(new Host(address)));
       }
     }
     virtual void on_pool_down(const Address& address) { }
@@ -211,12 +211,12 @@ TEST_F(RequestProcessorUnitTest, Simple) {
 
   HostMap hosts(generate_hosts());
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   initializer->initialize(event_loop());
 
@@ -232,12 +232,12 @@ TEST_F(RequestProcessorUnitTest, CloseWithRequestsPending) {
 
   HostMap hosts(generate_hosts());
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   initializer->initialize(event_loop());
 
@@ -248,9 +248,9 @@ TEST_F(RequestProcessorUnitTest, CloseWithRequestsPending) {
   RequestProcessor::Ptr processor(connect_future->processor());
 
   for (int i = 0; i < 4096; ++i) {
-    ResponseFuture::Ptr response_future(Memory::allocate<ResponseFuture>());
-    Request::ConstPtr request(Memory::allocate<QueryRequest>("SELECT * FROM table"));
-    RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request, response_future));
+    ResponseFuture::Ptr response_future(new ResponseFuture());
+    Request::ConstPtr request(new QueryRequest("SELECT * FROM table"));
+    RequestHandler::Ptr request_handler(new RequestHandler(request, response_future));
 
     processor->process_request(request_handler);
     futures.push_back(response_future);
@@ -272,16 +272,16 @@ TEST_F(RequestProcessorUnitTest, Auth) {
 
   HostMap hosts(generate_hosts());
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
   settings.connection_pool_settings.connection_settings.auth_provider.reset(
-        Memory::allocate<PlainTextAuthProvider>("cassandra", "cassandra"));
+        new PlainTextAuthProvider("cassandra", "cassandra"));
 
   initializer
       ->with_settings(settings)
@@ -301,12 +301,12 @@ TEST_F(RequestProcessorUnitTest, Ssl) {
 
   HostMap hosts(generate_hosts());
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   initializer
       ->with_settings(settings)
@@ -327,19 +327,19 @@ TEST_F(RequestProcessorUnitTest, NotifyAddRemoveHost) {
   Host::Ptr to_add_remove(hosts.begin()->second);
   hosts.erase(to_add_remove->address()); // Remove to add/remove it back later
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  Future::Ptr up_future(Memory::allocate<Future>());
-  Future::Ptr down_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  Future::Ptr up_future(new Future());
+  Future::Ptr down_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
   settings.connection_pool_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
 
-  UpDownListener::Ptr listener(Memory::allocate<UpDownListener>(up_future, down_future, to_add_remove));
+  UpDownListener::Ptr listener(new UpDownListener(up_future, down_future, to_add_remove));
 
   initializer
       ->with_settings(settings)
@@ -364,18 +364,18 @@ TEST_F(RequestProcessorUnitTest, CloseDuringReconnect) {
 
   HostMap hosts(generate_hosts());
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr close_future(new Future());
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
   settings.connection_pool_settings.reconnect_wait_time_ms = 100000; // Make sure we're reconnecting when we close.
 
-  CloseListener::Ptr listener(Memory::allocate<CloseListener>(close_future));
+  CloseListener::Ptr listener(new CloseListener(close_future));
 
   initializer
       ->with_settings(settings)
@@ -403,15 +403,15 @@ TEST_F(RequestProcessorUnitTest, CloseDuringAddNewHost) {
   Host::Ptr to_add(hosts.begin()->second);
   hosts.erase(to_add->address()); // Remove to add it back later
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr close_future(new Future());
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
-  CloseListener::Ptr listener(Memory::allocate<CloseListener>(close_future));
+  CloseListener::Ptr listener(new CloseListener(close_future));
 
   initializer
       ->with_listener(listener.get())
@@ -436,16 +436,16 @@ TEST_F(RequestProcessorUnitTest, PoolDown) {
   Host::Ptr target_host(hosts.find(Address("127.0.0.1", PORT))->second);
   ASSERT_TRUE(target_host);
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  Future::Ptr up_future(Memory::allocate<Future>());
-  Future::Ptr down_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  Future::Ptr up_future(new Future());
+  Future::Ptr down_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
-  UpDownListener::Ptr listener(Memory::allocate<UpDownListener>(up_future, down_future, target_host));
+  UpDownListener::Ptr listener(new UpDownListener(up_future, down_future, target_host));
 
   initializer
       ->with_listener(listener.get())
@@ -470,19 +470,19 @@ TEST_F(RequestProcessorUnitTest, PoolUp) {
   Host::Ptr target_host(hosts.find(Address("127.0.0.1", PORT))->second);
   ASSERT_TRUE(target_host);
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  Future::Ptr up_future(Memory::allocate<Future>());
-  Future::Ptr down_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  Future::Ptr up_future(new Future());
+  Future::Ptr down_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
   settings.connection_pool_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
 
-  UpDownListener::Ptr listener(Memory::allocate<UpDownListener>(up_future, down_future, target_host));
+  UpDownListener::Ptr listener(new UpDownListener(up_future, down_future, target_host));
 
   initializer
       ->with_settings(settings)
@@ -504,16 +504,16 @@ TEST_F(RequestProcessorUnitTest, InvalidAuth) {
 
   HostMap hosts(generate_hosts());
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
   settings.connection_pool_settings.connection_settings.auth_provider.reset(
-        Memory::allocate<PlainTextAuthProvider>("invalid", "invalid"));
+        new PlainTextAuthProvider("invalid", "invalid"));
 
   CriticalErrorListener listener; // Use stack allocation because it's never closed
 
@@ -535,12 +535,12 @@ TEST_F(RequestProcessorUnitTest, InvalidSsl) {
 
   HostMap hosts(generate_hosts());
 
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                                                                             PROTOCOL_VERSION,
-                                                                                             hosts,
-                                                                                             TokenMap::Ptr(),
-                                                                                             bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
@@ -572,24 +572,24 @@ TEST_F(RequestProcessorUnitTest, RollingRestart) {
     outage_plan.start_node(node);
   }
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  CloseListener::Ptr listener(Memory::allocate<CloseListener>(close_future));
+  Future::Ptr close_future(new Future());
+  CloseListener::Ptr listener(new CloseListener(close_future));
 
   HostMap hosts(generate_hosts());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                               PROTOCOL_VERSION,
-                                               hosts,
-                                               TokenMap::Ptr(),
-                                               bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
   settings.connection_pool_settings.reconnect_wait_time_ms = 10; // Reconnect immediately
 
   initializer
-    ->with_settings(settings)
-    ->with_listener(listener.get())
-    ->initialize(event_loop());
+      ->with_settings(settings)
+      ->with_listener(listener.get())
+      ->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -608,28 +608,28 @@ TEST_F(RequestProcessorUnitTest, NoHostsAvailable) {
   mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  CloseListener::Ptr listener(Memory::allocate<CloseListener>(close_future));
+  Future::Ptr close_future(new Future());
+  CloseListener::Ptr listener(new CloseListener(close_future));
 
   HostMap hosts(generate_hosts());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                               PROTOCOL_VERSION,
-                                               hosts,
-                                               TokenMap::Ptr(),
-                                               bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   initializer
-    ->with_listener(listener.get())
-    ->initialize(event_loop());
+      ->with_listener(listener.get())
+      ->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
   RequestProcessor::Ptr processor(connect_future->processor());
 
-  ResponseFuture::Ptr response_future(Memory::allocate<ResponseFuture>());
-  Request::ConstPtr request(Memory::allocate<QueryRequest>("SELECT * FROM table"));
-  RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request, response_future));
+  ResponseFuture::Ptr response_future(new ResponseFuture());
+  Request::ConstPtr request(new QueryRequest("SELECT * FROM table"));
+  RequestHandler::Ptr request_handler(new RequestHandler(request, response_future));
 
   cluster.stop_all();
 
@@ -648,30 +648,30 @@ TEST_F(RequestProcessorUnitTest, RequestTimeout) {
   mockssandra::SimpleCluster cluster(builder.build(), NUM_NODES);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  Future::Ptr close_future(Memory::allocate<Future>());
-  CloseListener::Ptr listener(Memory::allocate<CloseListener>(close_future));
+  Future::Ptr close_future(new Future());
+  CloseListener::Ptr listener(new CloseListener(close_future));
 
   HostMap hosts(generate_hosts());
-  Future::Ptr connect_future(Memory::allocate<Future>());
-  RequestProcessorInitializer::Ptr initializer(Memory::allocate<RequestProcessorInitializer>(hosts.begin()->second,
-                                               PROTOCOL_VERSION,
-                                               hosts,
-                                               TokenMap::Ptr(),
-                                               bind_callback(on_connected, connect_future.get())));
+  Future::Ptr connect_future(new Future());
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
+                                                                               PROTOCOL_VERSION,
+                                                                               hosts,
+                                                                               TokenMap::Ptr(),
+                                                                               bind_callback(on_connected, connect_future.get())));
 
   initializer
-    ->with_listener(listener.get())
-    ->initialize(event_loop());
+      ->with_listener(listener.get())
+      ->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
   RequestProcessor::Ptr processor(connect_future->processor());
 
-  ResponseFuture::Ptr response_future(Memory::allocate<ResponseFuture>());
-  QueryRequest::Ptr query_request(Memory::allocate<QueryRequest>("SELECT * FROM table"));
+  ResponseFuture::Ptr response_future(new ResponseFuture());
+  QueryRequest::Ptr query_request(new QueryRequest("SELECT * FROM table"));
   query_request->set_request_timeout_ms(50); // Small request timeout window (smaller than delay)
   Request::ConstPtr request(query_request);
-  RequestHandler::Ptr request_handler(Memory::allocate<RequestHandler>(request, response_future));
+  RequestHandler::Ptr request_handler(new RequestHandler(request, response_future));
 
   processor->process_request(request_handler);
   ASSERT_TRUE(response_future->wait_for(WAIT_FOR_TIME));

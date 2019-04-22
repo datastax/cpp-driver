@@ -28,10 +28,14 @@ typedef struct uv_buf_t uv_buf_t;
 typedef struct uv_handle_s uv_handle_t;
 typedef struct uv_process_s uv_process_t;
 typedef struct uv_stream_s uv_stream_t;
-#if defined(_MSC_VER) && !defined(_SSIZE_T_DEFINED)
-#include <basetsd.h>
-typedef SSIZE_T ssize_t;
-# define _SSIZE_T_DEFINED
+#ifdef _MSC_VER
+# include <basetsd.h>
+# ifndef _SSIZE_T_DEFINED
+    typedef SSIZE_T ssize_t;
+#   define _SSIZE_T_DEFINED
+# endif
+#else
+# include <sys/types.h>
 #endif
 
 namespace utils {

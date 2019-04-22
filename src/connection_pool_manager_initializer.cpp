@@ -16,8 +16,6 @@
 
 #include "connection_pool_manager_initializer.hpp"
 
-#include "memory.hpp"
-
 namespace cass {
 
 ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(ProtocolVersion protocol_version,
@@ -30,16 +28,16 @@ ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(ProtocolVersi
   , metrics_(NULL) { }
 
 void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
-                                                  const AddressVec& addresses) {
+                                                  const HostMap& hosts) {
   inc_ref();
   loop_ = loop;
-  remaining_ = addresses.size();
-  for (AddressVec::const_iterator it = addresses.begin(),
-       end = addresses.end(); it != end; ++it) {
+  remaining_ = hosts.size();
+  for (HostMap::const_iterator it = hosts.begin(),
+       end = hosts.end(); it != end; ++it) {
     ConnectionPoolConnector::Ptr pool_connector(
-          Memory::allocate<ConnectionPoolConnector>(*it,
-                                                    protocol_version_,
-                                                    bind_callback(&ConnectionPoolManagerInitializer::on_connect, this)));
+          new ConnectionPoolConnector(it->second,
+                                      protocol_version_,
+                                      bind_callback(&ConnectionPoolManagerInitializer::on_connect, this)));
     pending_pools_.push_back(pool_connector);
     pool_connector
         ->with_listener(this)
@@ -129,13 +127,13 @@ void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_
 
   if (--remaining_ == 0) {
     if (!is_canceled_) {
-      manager_.reset(Memory::allocate<ConnectionPoolManager>(pools_,
-                                                             loop_,
-                                                             protocol_version_,
-                                                             keyspace_,
-                                                             listener_,
-                                                             metrics_,
-                                                             settings_));
+      manager_.reset(new ConnectionPoolManager(pools_,
+                                               loop_,
+                                               protocol_version_,
+                                               keyspace_,
+                                               listener_,
+                                               metrics_,
+                                               settings_));
     }
     callback_(this);
     // If the manager hasn't been released then close it.

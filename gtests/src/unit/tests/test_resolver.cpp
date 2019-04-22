@@ -36,14 +36,14 @@ public:
 
   Resolver::Ptr create(const String& hostname, int port = 9042) {
     return Resolver::Ptr(
-          Memory::allocate<Resolver>(hostname,
-                                     port,
-                                     bind_callback(&ResolverUnitTest::on_resolve, this)));
+          new Resolver(hostname,
+                       port,
+                       bind_callback(&ResolverUnitTest::on_resolve, this)));
   }
 
   MultiResolver::Ptr create_multi() {
     return MultiResolver::Ptr(
-          Memory::allocate<MultiResolver>(bind_callback(&ResolverUnitTest::on_multi_resolve, this)));
+          new MultiResolver(bind_callback(&ResolverUnitTest::on_multi_resolve, this)));
   }
 
   Resolver::Status status() const {

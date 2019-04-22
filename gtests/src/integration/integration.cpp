@@ -17,6 +17,7 @@
 #include "integration.hpp"
 #include "options.hpp"
 
+#include <algorithm>
 #include <cstdarg>
 #include <iostream>
 #include <sys/stat.h>
@@ -60,7 +61,12 @@ Integration::Integration()
   , create_keyspace_query_("")
   , start_time_(0ull) {
   // Determine if the schema keyspaces table should be updated
-  if (server_version_ >= "3.0.0") {
+  // TODO: Make cass_version (and dse_version) available for all tests
+  CCM::CassVersion cass_version = server_version_;
+  if (Options::is_dse()) {
+    cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
+  }
+  if (cass_version >= "3.0.0") {
     system_schema_keyspaces_ = "system_schema.keyspaces";
   }
 
@@ -391,13 +397,31 @@ bool Integration::force_decommission_node(unsigned int node) {
   return decommission_node(node, true);
 }
 
-bool Integration::stop_node(unsigned int node) {
+bool Integration::start_node(unsigned int node) {
   // Stop the requested node
-  bool status = ccm_->stop_node(node);
-  if (status) {
-    stopped_nodes_.push_back(node);
+  if (ccm_->is_node_down(node, true)) {
+    bool status = ccm_->start_node(node);
+    std::vector<unsigned int>::iterator it = std::find(stopped_nodes_.begin(),
+                                                       stopped_nodes_.end(),
+                                                       node);
+    if (it != stopped_nodes_.end()) {
+      stopped_nodes_.erase(it);
+    }
+    return status;
   }
-  return status;
+  return false;
+}
+
+bool Integration::stop_node(unsigned int node, bool is_kill /*= false*/) {
+  // Stop the requested node
+  if (ccm_->is_node_up(node, true)) {
+    bool status = ccm_->stop_node(node, is_kill);
+    if (status) {
+      stopped_nodes_.push_back(node);
+    }
+    return status;
+  }
+  return false;
 }
 
 std::string Integration::generate_contact_points(const std::string& ip_prefix,

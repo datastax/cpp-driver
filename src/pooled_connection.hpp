@@ -50,7 +50,7 @@ public:
    * Writes a request to a connection, but it's not written to the socket until
    * the connection pool manager flushes the request.
    *
-   * @param callback A request callback that handlets the request.
+   * @param callback A request callback that handles the request.
    * @return Returns true if the request was written, otherwise, an error
    * occurred.
    */

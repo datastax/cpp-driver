@@ -17,6 +17,7 @@
 #ifndef __CASS_SCHEMA_METADATA_HPP_INCLUDED__
 #define __CASS_SCHEMA_METADATA_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "copy_on_write_ptr.hpp"
 #include "external.hpp"
 #include "host.hpp"
@@ -151,7 +152,7 @@ public:
 
   const Value* get_field(const String& name) const;
   String get_string_field(const String& name) const;
-  Iterator* iterator_fields() const { return Memory::allocate<MetadataFieldIterator>(fields_); }
+  Iterator* iterator_fields() const { return new MetadataFieldIterator(fields_); }
 
   void swap_fields(MetadataBase& meta) {
     fields_.swap(meta.fields_);
@@ -374,7 +375,7 @@ public:
   const ColumnMetadata::Vec& clustering_key() const { return clustering_key_; }
   const ClusteringOrderVec& clustering_key_order() const { return clustering_key_order_; }
 
-  Iterator* iterator_columns() const { return Memory::allocate<ColumnIterator>(columns_); }
+  Iterator* iterator_columns() const { return new ColumnIterator(columns_); }
   const ColumnMetadata* get_column(const String& name) const;
   virtual void add_column(const VersionNumber& server_version, const ColumnMetadata::Ptr& column);
   void clear_columns();
@@ -493,13 +494,13 @@ public:
   const ViewMetadata::Vec& views() const { return views_; }
   const IndexMetadata::Vec& indexes() const { return indexes_; }
 
-  Iterator* iterator_views() const { return Memory::allocate<ViewIteratorVec>(views_); }
+  Iterator* iterator_views() const { return new ViewIteratorVec(views_); }
   const ViewMetadata* get_view(const String& name) const;
   virtual void add_column(const VersionNumber& server_version, const ColumnMetadata::Ptr& column);
   void add_view(const ViewMetadata::Ptr& view);
   void sort_views();
 
-  Iterator* iterator_indexes() const { return Memory::allocate<IndexIterator>(indexes_); }
+  Iterator* iterator_indexes() const { return new IndexIterator(indexes_); }
   const IndexMetadata* get_index(const String& name) const;
   void add_index(const IndexMetadata::Ptr& index);
   void clear_indexes();
@@ -548,11 +549,11 @@ public:
   KeyspaceMetadata(const String& name, bool is_virtual = false)
     : MetadataBase(name)
     , is_virtual_(is_virtual)
-    , tables_(Memory::allocate<TableMetadata::Map>())
-    , views_(Memory::allocate<ViewMetadata::Map>())
-    , user_types_(Memory::allocate<UserType::Map>())
-    , functions_(Memory::allocate<FunctionMetadata::Map>())
-    , aggregates_(Memory::allocate<AggregateMetadata::Map>()) { }
+    , tables_(new TableMetadata::Map())
+    , views_(new ViewMetadata::Map())
+    , user_types_(new UserType::Map())
+    , functions_(new FunctionMetadata::Map())
+    , aggregates_(new AggregateMetadata::Map()) { }
 
   void update(const VersionNumber& server_version,
               const RefBuffer::Ptr& buffer, const Row* row);
@@ -562,29 +563,29 @@ public:
   const FunctionMetadata::Map& functions() const { return *functions_; }
   const UserType::Map& user_types() const { return *user_types_; }
 
-  Iterator* iterator_tables() const { return Memory::allocate<TableIterator>(*tables_); }
+  Iterator* iterator_tables() const { return new TableIterator(*tables_); }
   const TableMetadata* get_table(const String& name) const;
   const TableMetadata::Ptr& get_table(const String& name);
   void add_table(const TableMetadata::Ptr& table);
 
-  Iterator* iterator_views() const { return Memory::allocate<ViewIteratorMap>(*views_); }
+  Iterator* iterator_views() const { return new ViewIteratorMap(*views_); }
   const ViewMetadata* get_view(const String& name) const;
   const ViewMetadata::Ptr& get_view(const String& name);
   void add_view(const ViewMetadata::Ptr& view);
 
   void drop_table_or_view(const String& table_name);
 
-  Iterator* iterator_user_types() const { return Memory::allocate<TypeIterator>(*user_types_); }
+  Iterator* iterator_user_types() const { return new TypeIterator(*user_types_); }
   const UserType* get_user_type(const String& type_name) const;
   const UserType::Ptr& get_or_create_user_type(const String& name, bool is_frozen);
   void drop_user_type(const String& type_name);
 
-  Iterator* iterator_functions() const { return Memory::allocate<FunctionIterator>(*functions_); }
+  Iterator* iterator_functions() const { return new FunctionIterator(*functions_); }
   const FunctionMetadata* get_function(const String& full_function_name) const;
   void add_function(const FunctionMetadata::Ptr& function);
   void drop_function(const String& full_function_name);
 
-  Iterator* iterator_aggregates() const { return Memory::allocate<AggregateIterator>(*aggregates_); }
+  Iterator* iterator_aggregates() const { return new AggregateIterator(*aggregates_); }
   const AggregateMetadata* get_aggregate(const String& full_aggregate_name) const;
   void add_aggregate(const AggregateMetadata::Ptr& aggregate);
   void drop_aggregate(const String& full_aggregate_name);
@@ -617,7 +618,7 @@ public:
     const KeyspaceMetadata* keyspace() const { return &impl_.item(); }
   };
 
-  class SchemaSnapshot {
+  class SchemaSnapshot : public Allocated {
   public:
     SchemaSnapshot(uint32_t version,
                    const VersionNumber& server_version,
@@ -630,7 +631,7 @@ public:
     VersionNumber server_version() const { return server_version_; }
 
     const KeyspaceMetadata* get_keyspace(const String& name) const;
-    Iterator* iterator_keyspaces() const { return Memory::allocate<KeyspaceIterator>(*keyspaces_); }
+    Iterator* iterator_keyspaces() const { return new KeyspaceIterator(*keyspaces_); }
 
     const UserType* get_user_type(const String& keyspace_name,
                                   const String& type_name) const;
@@ -688,7 +689,7 @@ private:
   class InternalData {
   public:
     InternalData()
-      : keyspaces_(Memory::allocate<KeyspaceMetadata::Map>()) { }
+      : keyspaces_(new KeyspaceMetadata::Map()) { }
 
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 

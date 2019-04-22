@@ -17,9 +17,9 @@
 #ifndef __CASS_CLUSTER_HPP_INCLUDED__
 #define __CASS_CLUSTER_HPP_INCLUDED__
 
+#include "monitor_reporting.hpp"
 #include "config.hpp"
 #include "control_connector.hpp"
-#include "memory.hpp"
 #include "external.hpp"
 #include "event_loop.hpp"
 #include "metadata.hpp"
@@ -235,7 +235,7 @@ public:
    * @param event_loop The event loop.
    * @param connected_host The currently connected host.
    * @param hosts Available hosts for the cluster (based on load balancing
-   * policies)
+   * policies).
    * @param schema Current schema metadata.
    * @param load_balancing_policy The default load balancing policy to use for
    * determining the next control connection host.
@@ -260,7 +260,7 @@ public:
    * @param listener The cluster listener.
    */
   void set_listener(ClusterListener* listener = NULL);
-  
+
   /**
    * Close the current connection and stop the re-connection process (thread-safe).
    */
@@ -288,6 +288,17 @@ public:
    * replayed (thread-safe).
    */
   void start_events();
+
+  /**
+   * Start the client monitor events (thread-safe).
+   *
+   * @param client_id Client ID associated with the session.
+   * @param session_id Session ID associated with the session.
+   * @param config The config object.
+   */
+  void start_monitor_reporting(const String& client_id,
+                               const String& session_id,
+                               const Config& config);
 
   /**
    * Get the latest snapshot of the schema metadata (thread-safe).
@@ -335,12 +346,14 @@ public:
   ProtocolVersion protocol_version() const { return connection_->protocol_version(); }
   const Host::Ptr& connected_host() const { return connected_host_; }
   const TokenMap::Ptr& token_map() const { return token_map_; }
+  const VersionNumber& dse_server_version() const { return connection_->dse_server_version(); }
 
 private:
   friend class ClusterRunClose;
   friend class ClusterNotifyUp;
   friend class ClusterNotifyDown;
   friend class ClusterStartEvents;
+  friend class ClusterStartClientMonitor;
 
 private:
   void update_hosts(const HostMap& hosts);
@@ -368,7 +381,12 @@ private:
   void internal_notify_host_down(const Address& address);
 
   void internal_start_events();
-  
+  void internal_start_monitor_reporting(const String& client_id,
+                                        const String& session_id,
+                                        const Config& config);
+
+  void on_monitor_reporting(Timer* timer);
+
   void notify_host_add(const Host::Ptr& host);
   void notify_host_add_after_prepare(const Host::Ptr& host);
 
@@ -422,6 +440,8 @@ private:
   Timer timer_;
   bool is_recording_events_;
   ClusterEvent::Vec recorded_events_;
+  ScopedPtr<MonitorReporting> monitor_reporting_;
+  Timer monitor_reporting_timer_;
 };
 
 } // namespace cass

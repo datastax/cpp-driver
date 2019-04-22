@@ -54,13 +54,13 @@ public:
       , log_level_(CASS_DEFAULT_LOG_LEVEL)
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
-      , auth_provider_(Memory::allocate<AuthProvider>())
+      , auth_provider_(new AuthProvider())
       , tcp_nodelay_enable_(CASS_DEFAULT_TCP_NO_DELAY_ENABLED)
       , tcp_keepalive_enable_(CASS_DEFAULT_TCP_KEEPALIVE_ENABLED)
       , tcp_keepalive_delay_secs_(CASS_DEFAULT_TCP_KEEPALIVE_DELAY_SECS)
       , connection_idle_timeout_secs_(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
       , connection_heartbeat_interval_secs_(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
-      , timestamp_gen_(Memory::allocate<MonotonicTimestampGenerator>())
+      , timestamp_gen_(new MonotonicTimestampGenerator())
       , use_schema_(CASS_DEFAULT_USE_SCHEMA)
       , use_hostname_resolution_(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
       , use_randomized_contact_points_(CASS_DEFAULT_USE_RANDOMIZED_CONTACT_POINTS)
@@ -68,16 +68,18 @@ public:
       , prepare_on_all_hosts_(CASS_DEFAULT_PREPARE_ON_ALL_HOSTS)
       , prepare_on_up_or_add_host_(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
       , no_compact_(CASS_DEFAULT_NO_COMPACT)
-      , host_listener_(Memory::allocate<DefaultHostListener>()) {
+      , is_client_id_set_(false)
+      , host_listener_(new DefaultHostListener())
+      , monitor_reporting_interval_secs_(CASS_DEFAULT_CLIENT_MONITOR_EVENTS_INTERVAL_SECS) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
     default_profile_.set_consistency(CASS_DEFAULT_CONSISTENCY);
     default_profile_.set_serial_consistency(CASS_DEFAULT_SERIAL_CONSISTENCY);
     default_profile_.set_request_timeout(CASS_DEFAULT_REQUEST_TIMEOUT_MS);
-    default_profile_.set_load_balancing_policy(Memory::allocate<DCAwarePolicy>());
-    default_profile_.set_retry_policy(Memory::allocate<DefaultRetryPolicy>());
-    default_profile_.set_speculative_execution_policy(Memory::allocate<NoSpeculativeExecutionPolicy>());
+    default_profile_.set_load_balancing_policy(new DCAwarePolicy());
+    default_profile_.set_retry_policy(new DefaultRetryPolicy());
+    default_profile_.set_speculative_execution_policy(new NoSpeculativeExecutionPolicy());
   }
 
   Config new_instance() const {
@@ -89,10 +91,12 @@ public:
     return config;
   }
 
+  CassConsistency consistency() { return default_profile_.consistency(); }
   void set_consistency(CassConsistency consistency) {
     default_profile_.set_consistency(consistency);
   }
 
+  CassConsistency serial_consistency() { return default_profile_.serial_consistency(); }
   void set_serial_consistency(CassConsistency serial_consistency) {
     default_profile_.set_serial_consistency(serial_consistency);
   }
@@ -165,6 +169,7 @@ public:
     new_request_ratio_ = ratio;
   }
 
+  unsigned request_timeout() { return default_profile_.request_timeout_ms(); }
   void set_request_timeout(unsigned timeout_ms) {
     default_profile_.set_request_timeout(timeout_ms);
   }
@@ -221,11 +226,11 @@ public:
   const AuthProvider::Ptr& auth_provider() const { return auth_provider_; }
 
   void set_auth_provider(const AuthProvider::Ptr& auth_provider) {
-    auth_provider_ = (!auth_provider ? AuthProvider::Ptr(Memory::allocate<AuthProvider>()) : auth_provider);
+    auth_provider_ = (!auth_provider ? AuthProvider::Ptr(new AuthProvider()) : auth_provider);
   }
 
   void set_credentials(const String& username, const String& password) {
-    auth_provider_.reset(Memory::allocate<PlainTextAuthProvider>(username, password));
+    auth_provider_.reset(new PlainTextAuthProvider(username, password));
   }
 
   const LoadBalancingPolicy::Ptr& load_balancing_policy() const {
@@ -398,15 +403,28 @@ public:
     application_version_ = application_version;
   }
 
+  CassUuid client_id() const { return client_id_; }
+  bool is_client_id_set() const { return is_client_id_set_; }
+
+  void set_client_id(CassUuid client_id) {
+    client_id_ = client_id;
+    is_client_id_set_ = true;
+  }
+
   const DefaultHostListener::Ptr& host_listener() const { return host_listener_; }
-  
+
   void set_host_listener(const DefaultHostListener::Ptr& listener) {
     if (listener) {
       host_listener_ = listener;
     } else {
-      host_listener_.reset(Memory::allocate<DefaultHostListener>());
+      host_listener_.reset(new DefaultHostListener());
     }
   }
+
+  unsigned monitor_reporting_interval_secs() const { return monitor_reporting_interval_secs_; }
+  void set_monitor_reporting_interval_secs(unsigned interval_secs) {
+    monitor_reporting_interval_secs_ = interval_secs;
+  };
 
 private:
   void init_profiles();
@@ -451,7 +469,10 @@ private:
   bool no_compact_;
   String application_name_;
   String application_version_;
+  bool is_client_id_set_;
+  CassUuid client_id_;
   DefaultHostListener::Ptr host_listener_;
+  unsigned monitor_reporting_interval_secs_;
 };
 
 } // namespace cass

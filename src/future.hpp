@@ -45,7 +45,7 @@ public:
     FUTURE_TYPE_RESPONSE
   };
 
-  struct Error {
+  struct Error : public Allocated {
     Error(CassError code, const String& message)
         : code(code)
         , message(message) {}
@@ -127,7 +127,7 @@ protected:
   void internal_set(ScopedMutex& lock);
 
   void internal_set_error(CassError code, const String& message, ScopedMutex& lock) {
-    error_.reset(Memory::allocate<Error>(code, message));
+    error_.reset(new Error(code, message));
     internal_set(lock);
   }
 

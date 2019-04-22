@@ -17,12 +17,13 @@
 #ifndef __CASS_ITERATOR_HPP_INCLUDED__
 #define __CASS_ITERATOR_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "cassandra.h"
 #include "external.hpp"
 
 namespace cass {
 
-class Iterator {
+class Iterator : public Allocated {
 public:
   Iterator(CassIteratorType type)
       : type_(type) {}

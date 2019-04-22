@@ -34,7 +34,7 @@ public:
   virtual ~WhitelistPolicy() {}
 
   WhitelistPolicy* new_instance() {
-    return Memory::allocate<WhitelistPolicy>(child_policy_->new_instance(), hosts_);
+    return new WhitelistPolicy(child_policy_->new_instance(), hosts_);
   }
 
 private:

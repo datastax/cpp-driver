@@ -21,8 +21,8 @@ endif()
 # OpenSSL related CMake options
 option(OPENSSL_VERSION "OpenSSL version to build and install")
 if(NOT OPENSSL_VERSION)
-  # TODO: Should we default to OpenSSL 1.1 (e.g. 1.1.1a)?
-  set(OPENSSL_VERSION "1.0.2q")
+  # TODO: Should we default to OpenSSL 1.1 (e.g. 1.1.1b)?
+  set(OPENSSL_VERSION "1.0.2r")
 endif()
 option(OPENSSL_INSTALL_PREFIX "OpenSSL installation prefix location")
 if(CASS_USE_ZLIB)

@@ -189,7 +189,7 @@ void EventLoop::on_task(Async* async) {
   while (tasks_.dequeue(task)) {
     if (task) {
       task->run(this);
-      Memory::deallocate(task);
+      delete task;
     }
   }
 
@@ -211,7 +211,7 @@ void EventLoop::on_prepare(uv_prepare_t* prepare) {
 #endif
 
 int RoundRobinEventLoopGroup::init(const String& thread_name /*= ""*/) {
-  for (size_t i = 0; i < threads_.size(); ++i) {
+  for (size_t i = 0; i < num_threads_; ++i) {
     int rc = threads_[i].init(thread_name);
     if (rc != 0) return rc;
   }
@@ -219,7 +219,7 @@ int RoundRobinEventLoopGroup::init(const String& thread_name /*= ""*/) {
 }
 
 int RoundRobinEventLoopGroup::run() {
-  for (size_t i = 0; i < threads_.size(); ++i) {
+  for (size_t i = 0; i < num_threads_; ++i) {
     int rc = threads_[i].run();
     if (rc != 0) return rc;
   }
@@ -227,19 +227,19 @@ int RoundRobinEventLoopGroup::run() {
 }
 
 void RoundRobinEventLoopGroup::close_handles() {
-  for (size_t i = 0; i < threads_.size(); ++i) {
+  for (size_t i = 0; i < num_threads_; ++i) {
     threads_[i].close_handles();
   }
 }
 
 void RoundRobinEventLoopGroup::join() {
-  for (size_t i = 0; i < threads_.size(); ++i) {
+  for (size_t i = 0; i < num_threads_; ++i) {
     threads_[i].join();
   }
 }
 
 EventLoop* RoundRobinEventLoopGroup::add(Task* task) {
-  EventLoop* event_loop = &threads_[current_.fetch_add(1) % threads_.size()];
+  EventLoop* event_loop = &threads_[current_.fetch_add(1) % num_threads_];
   event_loop->add(task);
   return event_loop;
 }

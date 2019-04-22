@@ -70,6 +70,7 @@ public:
 
 public:
   CassUuid client_id() const { return client_id_; }
+  CassUuid session_id() const { return session_id_; }
   String connect_keyspace() const { return connect_keyspace_; }
   const Config& config() const { return config_; }
   Cluster::Ptr cluster() const { return cluster_; }
@@ -158,6 +159,7 @@ private:
   Future::Ptr connect_future_;
   Future::Ptr close_future_;
   CassUuid client_id_;
+  CassUuid session_id_;
 };
 
 } // namespace cass

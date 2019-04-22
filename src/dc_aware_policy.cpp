@@ -17,7 +17,6 @@
 #include "dc_aware_policy.hpp"
 
 #include "logger.hpp"
-#include "memory.hpp"
 #include "request_handler.hpp"
 #include "scoped_lock.hpp"
 
@@ -31,9 +30,13 @@ DCAwarePolicy::DCAwarePolicy(const String& local_dc,
   : local_dc_(local_dc)
   , used_hosts_per_remote_dc_(used_hosts_per_remote_dc)
   , skip_remote_dcs_for_local_cl_(skip_remote_dcs_for_local_cl)
-  , local_dc_live_hosts_(Memory::allocate<HostVec>())
+  , local_dc_live_hosts_(new HostVec())
   , index_(0) {
   uv_rwlock_init(&available_rwlock_);
+  if (used_hosts_per_remote_dc_ > 0 || !skip_remote_dcs_for_local_cl) {
+    LOG_WARN("Remote multi-dc settings have been deprecated and will be removed"
+             " in the next major release");
+  }
 }
 
 DCAwarePolicy::~DCAwarePolicy() {
@@ -83,7 +86,7 @@ QueryPlan* DCAwarePolicy::new_query_plan(const String& keyspace,
                                          RequestHandler* request_handler,
                                          const TokenMap* token_map) {
   CassConsistency cl = request_handler != NULL ? request_handler->consistency() : CASS_DEFAULT_CONSISTENCY;
-  return Memory::allocate<DCAwareQueryPlan>(this, cl, index_++);
+  return new DCAwareQueryPlan(this, cl, index_++);
 }
 
 bool DCAwarePolicy::is_host_up(const Address& address) const {
@@ -137,11 +140,26 @@ void DCAwarePolicy::on_host_down(const Address& address) {
   available_.erase(address);
 }
 
+bool DCAwarePolicy::skip_remote_dcs_for_local_cl() const {
+  ScopedReadLock rl(&available_rwlock_);
+  return skip_remote_dcs_for_local_cl_;
+}
+
+size_t DCAwarePolicy::used_hosts_per_remote_dc() const {
+  ScopedReadLock rl(&available_rwlock_);
+  return used_hosts_per_remote_dc_;
+}
+
+const String& DCAwarePolicy::local_dc() const {
+  ScopedReadLock rl(&available_rwlock_);
+  return local_dc_;
+}
+
 void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const String& dc, const Host::Ptr& host) {
   ScopedWriteLock wl(&rwlock_);
   Map::iterator i = map_.find(dc);
   if (i == map_.end()) {
-    CopyOnWriteHostVec hosts(Memory::allocate<HostVec>());
+    CopyOnWriteHostVec hosts(new HostVec());
     hosts->push_back(host);
     map_.insert(Map::value_type(dc, hosts));
   } else {
@@ -223,7 +241,7 @@ Host::Ptr DCAwarePolicy::DCAwareQueryPlan::compute_next() {
   }
 
   if (!remote_dcs_) {
-    remote_dcs_.reset(Memory::allocate<PerDCHostMap::KeySet>());
+    remote_dcs_.reset(new PerDCHostMap::KeySet());
     policy_->per_remote_dc_live_hosts_.copy_dcs(remote_dcs_.get());
   }
 

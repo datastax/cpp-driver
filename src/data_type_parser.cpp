@@ -120,7 +120,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const String& type,
          i != end;  ++i) {
       types.push_back(parse(*i, cache, keyspace));
     }
-    return DataType::ConstPtr(Memory::allocate<TupleType>(types, is_frozen));
+    return DataType::ConstPtr(new TupleType(types, is_frozen));
   }
 
   if (iequals(type_name, "frozen")) {
@@ -137,21 +137,21 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const String& type,
   }
 
   if (iequals(type_name, "empty")) {
-    return DataType::ConstPtr(Memory::allocate<CustomType>(EMPTY_TYPE));
+    return DataType::ConstPtr(new CustomType(EMPTY_TYPE));
   }
 
   if (type_name[0] == '\'') {
     // Remove single quotes
-    return DataType::ConstPtr(Memory::allocate<CustomType>(type_name.substr(1, type_name.size() - 2)));
+    return DataType::ConstPtr(new CustomType(type_name.substr(1, type_name.size() - 2)));
   }
 
   UserType::ConstPtr user_type(keyspace->get_or_create_user_type(type_name, is_frozen));
 
   if (user_type->is_frozen() != is_frozen) {
-    return UserType::Ptr(Memory::allocate<UserType>(user_type->keyspace(),
-                                                    user_type->type_name(),
-                                                    user_type->fields(),
-                                                    is_frozen));
+    return UserType::Ptr(new UserType(user_type->keyspace(),
+                                      user_type->type_name(),
+                                      user_type->fields(),
+                                      is_frozen));
   }
 
   return user_type;
@@ -380,7 +380,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, Simple
       fields.push_back(UserType::Field(i->first, data_type));
     }
 
-    return DataType::ConstPtr(Memory::allocate<UserType>(keyspace, type_name, fields, true));
+    return DataType::ConstPtr(new UserType(keyspace, type_name, fields, true));
   }
 
   if (is_tuple_type(type)) {
@@ -399,7 +399,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, Simple
       types.push_back(data_type);
     }
 
-    return DataType::ConstPtr(Memory::allocate<TupleType>(types, true));
+    return DataType::ConstPtr(new TupleType(types, true));
   }
 
   DataType::ConstPtr simple_type(cache.by_class(next));
@@ -407,7 +407,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, Simple
     return simple_type;
   }
 
-  return DataType::ConstPtr(Memory::allocate<CustomType>(next));
+  return DataType::ConstPtr(new CustomType(next));
 }
 
 ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const String& type, SimpleDataTypeCache& cache) {
@@ -421,7 +421,7 @@ ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const String& typ
     if (!data_type) {
       return ParseResult::Ptr();
     }
-    return ParseResult::Ptr(Memory::allocate<ParseResult>(data_type, is_reversed(next)));
+    return ParseResult::Ptr(new ParseResult(data_type, is_reversed(next)));
   }
 
   TypeParamsVec sub_class_names;
@@ -469,7 +469,7 @@ ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const String& typ
     reversed.push_back(is_reversed(sub_class_names[i]));
   }
 
-  return ParseResult::Ptr(Memory::allocate<ParseResult>(true, types, reversed, collections));
+  return ParseResult::Ptr(new ParseResult(true, types, reversed, collections));
 }
 
 bool DataTypeClassNameParser::get_nested_class_name(const String& type, String* class_name) {
@@ -634,8 +634,8 @@ void DataTypeClassNameParser::Parser::read_next_identifier(String* name) {
 }
 
 void DataTypeClassNameParser::Parser::parse_error(const String& str,
-                                     size_t index,
-                                     const char* error) {
+                                                  size_t index,
+                                                  const char* error) {
   LOG_ERROR("Error parsing '%s' at %u index: %s",
             str.c_str(),
             static_cast<unsigned int>(index),

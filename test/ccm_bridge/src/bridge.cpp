@@ -627,6 +627,9 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
 
     // Generate the cluster update configuration command and execute
     execute_ccm_command(generate_create_updateconf_command(cassandra_version_));
+    if (dse_version_ >= "6.7.0") {
+      update_cluster_configuration("user_defined_function_fail_micros", "5000000");
+    }
 
     // Create the cluster populate command and execute
     std::string cluster_nodes = generate_cluster_nodes(data_center_nodes);
@@ -800,15 +803,16 @@ bool CCM::Bridge::switch_cluster(const std::string& cluster_name) {
   if (active_cluster.compare(trim(cluster_name)) != 0) {
     // Ensure the cluster is in the list
     if (std::find(clusters.begin(), clusters.end(), cluster_name) != clusters.end()) {
-      // Kill and clear the data on the current active cluster
-      kill_cluster();
-      clear_cluster_data();
+      if (!active_cluster.empty()) {
+        kill_cluster();
+      }
 
-      // Create the cluster switch command and execute
+      // Create the cluster switch command and clear the data
       std::vector<std::string> switch_command;
       switch_command.push_back("switch");
       switch_command.push_back(cluster_name);
       execute_ccm_command(switch_command);
+      clear_cluster_data();
       return true;
     }
   } else {
@@ -851,7 +855,7 @@ void CCM::Bridge::update_cluster_configuration_yaml(const std::string& yaml, boo
   std::vector<std::string> updateconf_command;
   updateconf_command.push_back(is_dse ? "updatedseconf" : "updateconf");
   updateconf_command.push_back("-y");
-  updateconf_command.push_back("'" + yaml + "'");
+  updateconf_command.push_back(yaml);
   execute_ccm_command(updateconf_command);
 }
 
@@ -1064,7 +1068,7 @@ bool CCM::Bridge::start_node(unsigned int node,
        iterator != jvm_arguments.end(); ++iterator) {
     std::string jvm_argument = trim(*iterator);
     if (!jvm_argument.empty()) {
-      start_node_command.push_back("--jvm_arg=\"" + *iterator + "\"");
+      start_node_command.push_back("--jvm_arg=" + *iterator);
     }
   }
   execute_ccm_command(start_node_command);
@@ -1335,7 +1339,11 @@ bool CCM::Bridge::is_node_decommissioned(unsigned int node) {
   return false;
 }
 
-bool CCM::Bridge::is_node_down(unsigned int node) {
+bool CCM::Bridge::is_node_down(unsigned int node, bool is_quick_check /*= false*/) {
+  if (is_quick_check) {
+    return !is_node_availabe(node);
+  }
+
   unsigned int number_of_retries = 0;
   while (number_of_retries++ < CCM_RETRIES) {
     if (!is_node_availabe(node)) {
@@ -1352,7 +1360,11 @@ bool CCM::Bridge::is_node_down(unsigned int node) {
   return false;
 }
 
-bool CCM::Bridge::is_node_up(unsigned int node) {
+bool CCM::Bridge::is_node_up(unsigned int node, bool is_quick_check /*= false*/) {
+  if (is_quick_check) {
+    return is_node_availabe(node);
+  }
+
   unsigned int number_of_retries = 0;
   while (number_of_retries++ < CCM_RETRIES) {
     if (is_node_availabe(node)) {

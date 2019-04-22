@@ -17,6 +17,7 @@
 #ifndef __CASS_RANDOM_HPP_INCLUDED__
 #define __CASS_RANDOM_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "third_party/mt19937_64/mt19937_64.hpp"
 
 #include <algorithm>
@@ -24,7 +25,7 @@
 
 namespace cass {
 
-class Random {
+class Random : public Allocated {
 public:
   Random();
   ~Random();

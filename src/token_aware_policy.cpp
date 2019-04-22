@@ -59,26 +59,26 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace,
     switch (request->opcode()) {
       {
       case CQL_OPCODE_QUERY:
-      case CQL_OPCODE_EXECUTE:
-      case CQL_OPCODE_BATCH:
-        String routing_key;
-        if (request->get_routing_key(&routing_key) && !keyspace.empty()) {
-          if (token_map != NULL) {
-            CopyOnWriteHostVec replicas = token_map->get_replicas(keyspace, routing_key);
-            if (replicas && !replicas->empty()) {
-              if (random_ != NULL) {
-                random_shuffle(replicas->begin(), replicas->end(), random_);
+        case CQL_OPCODE_EXECUTE:
+        case CQL_OPCODE_BATCH:
+          String routing_key;
+          if (request->get_routing_key(&routing_key) && !keyspace.empty()) {
+            if (token_map != NULL) {
+              CopyOnWriteHostVec replicas = token_map->get_replicas(keyspace, routing_key);
+              if (replicas && !replicas->empty()) {
+                if (random_ != NULL) {
+                  random_shuffle(replicas->begin(), replicas->end(), random_);
+                }
+                return new TokenAwareQueryPlan(child_policy_.get(),
+                                               child_policy_->new_query_plan(keyspace,
+                                                                             request_handler,
+                                                                             token_map),
+                                               replicas,
+                                               index_);
               }
-              return Memory::allocate<TokenAwareQueryPlan>(child_policy_.get(),
-                                                           child_policy_->new_query_plan(keyspace,
-                                                                                         request_handler,
-                                                                                         token_map),
-                                                           replicas,
-                                                           index_);
             }
           }
-        }
-        break;
+          break;
       }
 
       default:

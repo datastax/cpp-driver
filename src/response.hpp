@@ -17,14 +17,13 @@
 #ifndef __CASS_RESPONSE_HPP_INCLUDED__
 #define __CASS_RESPONSE_HPP_INCLUDED__
 
-#include "utils.hpp"
+#include "allocated.hpp"
 #include "constants.hpp"
 #include "decoder.hpp"
 #include "hash_table.hpp"
 #include "macros.hpp"
-#include "memory.hpp"
 #include "ref_counted.hpp"
-#include "scoped_ptr.hpp"
+#include "utils.hpp"
 
 #include <uv.h>
 
@@ -77,7 +76,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Response);
 };
 
-class ResponseMessage {
+class ResponseMessage : public Allocated {
 public:
   ResponseMessage()
       : version_(0)

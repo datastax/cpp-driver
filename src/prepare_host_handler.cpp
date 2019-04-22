@@ -16,7 +16,6 @@
 
 #include "prepare_host_handler.hpp"
 
-#include "memory.hpp"
 #include "prepare_request.hpp"
 #include "protocol.hpp"
 #include "query_request.hpp"
@@ -65,13 +64,13 @@ void PrepareHostHandler::prepare(uv_loop_t* loop,
 
   inc_ref(); // Reference for the event loop
 
-  Connector::Ptr connector(Memory::allocate<Connector>(host_->address(),
-                                                       protocol_version_,
-                                                       bind_callback(&PrepareHostHandler::on_connect, this)));
+  Connector::Ptr connector(new Connector(host_,
+                                         protocol_version_,
+                                         bind_callback(&PrepareHostHandler::on_connect, this)));
 
   connector->with_settings(settings)
-           ->with_listener(this)
-           ->connect(loop);
+      ->with_listener(this)
+      ->connect(loop);
 }
 
 void PrepareHostHandler::on_close(Connection* connection) {
@@ -115,13 +114,13 @@ void PrepareHostHandler::prepare_next() {
          check_and_set_keyspace() &&
          prepares_outstanding_ < max_prepares_outstanding_) {
     const String& query((*current_entry_it_)->query());
-    PrepareRequest::Ptr prepare_request(Memory::allocate<PrepareRequest>(query));
+    PrepareRequest::Ptr prepare_request(new PrepareRequest(query));
 
     // Set the keyspace in case per request keyspaces are supported
     prepare_request->set_keyspace(current_keyspace_);
 
     if (!connection_->write(PrepareCallback::Ptr(
-                              Memory::allocate<PrepareCallback>(prepare_request, Ptr(this))))) {
+                              new PrepareCallback(prepare_request, Ptr(this))))) {
       LOG_WARN("Failed to write prepare request while preparing all queries on host %s",
                host_->address_string().c_str());
       close();
@@ -144,7 +143,7 @@ bool PrepareHostHandler::check_and_set_keyspace() {
 
   if (keyspace != current_keyspace_) {
     if (!connection_->write_and_flush(PrepareCallback::Ptr(
-                                        Memory::allocate<SetKeyspaceCallback>(keyspace, Ptr(this))))) {
+                                        new SetKeyspaceCallback(keyspace, Ptr(this))))) {
       LOG_WARN("Failed to write \"USE\" keyspace request while preparing all queries on host %s",
                host_->address_string().c_str());
       close();
@@ -194,7 +193,7 @@ void PrepareHostHandler::PrepareCallback::on_internal_timeout() {
 PrepareHostHandler::SetKeyspaceCallback::SetKeyspaceCallback(const String& keyspace,
                                                              const PrepareHostHandler::Ptr& handler)
   : SimpleRequestCallback(Request::ConstPtr(
-                            Memory::allocate<QueryRequest>("USE " + keyspace)))
+                            new QueryRequest("USE " + keyspace)))
   , handler_(handler) { }
 
 void PrepareHostHandler::SetKeyspaceCallback::on_internal_set(ResponseMessage* response) {

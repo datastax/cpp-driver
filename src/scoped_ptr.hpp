@@ -18,7 +18,6 @@
 #define __CASS_SCOPED_PTR_HPP_INCLUDED__
 
 #include "macros.hpp"
-#include "ref_counted.hpp"
 #include "utils.hpp"
 
 #include <stddef.h>
@@ -27,7 +26,7 @@ namespace cass {
 
 template <class T>
 struct DefaultDeleter {
-  void operator()(T* ptr) const { Memory::deallocate(ptr); }
+  void operator()(T* ptr) const { delete ptr; }
 };
 
 template <class T, class D = DefaultDeleter<T> >
@@ -64,6 +63,46 @@ private:
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ScopedPtr);
+};
+
+template <class T>
+struct DefaultArrayDeleter {
+  void operator()(T* ptr) const { delete[] ptr; }
+};
+
+template <class T, class D = DefaultArrayDeleter<T> >
+class ScopedArray {
+public:
+  typedef T type;
+  typedef D deleter;
+
+  explicit ScopedArray(type* ptr = NULL)
+      : ptr_(ptr) {}
+
+  ~ScopedArray() { deleter()(ptr_); }
+
+  void reset(type* ptr = NULL) {
+    if (ptr_ != NULL) {
+      deleter()(ptr_);
+    }
+    ptr_ = ptr;
+  }
+
+  type* release() {
+    type* temp = ptr_;
+    ptr_ = NULL;
+    return temp;
+  }
+
+  type* get() const { return ptr_; }
+  type& operator[](size_t index) const { return ptr_[index]; }
+  operator bool() const { return ptr_ != NULL; }
+
+private:
+  type* ptr_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(ScopedArray);
 };
 
 } // namespace cass

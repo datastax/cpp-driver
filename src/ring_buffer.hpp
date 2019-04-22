@@ -42,6 +42,7 @@
 #ifndef __CASS_RING_BUFFER_HPP_INCLUDED__
 #define __CASS_RING_BUFFER_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "small_vector.hpp"
 
 #include <uv.h>
@@ -55,7 +56,7 @@ class RingBuffer {
   // to fit whole ClientHello into one Buffer of RingBuffer.
   static const size_t BUFFER_LENGTH = 16 * 1024 + 5;
 
-  class Buffer {
+  class Buffer : public Allocated {
    public:
     Buffer() : read_pos_(0), write_pos_(0), next_(NULL) {
     }

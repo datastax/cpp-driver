@@ -46,12 +46,12 @@ public:
   /**
    * Constructor
    *
-   * @param address The address to connect to.
+   * @param host The host to connect to.
    * @param protocol_version
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  ConnectionPoolConnector(const Address& address,
+  ConnectionPoolConnector(const Host::Ptr& host,
                           ProtocolVersion protocol_version,
                           const Callback& callback);
 
@@ -108,7 +108,7 @@ public:
   ConnectionPool::Ptr release_pool();
 
 public:
-  const Address& address() const { return address_; }
+  const Address& address() const { return host_->address(); }
 
   Connector::ConnectionError error_code() const;
   String error_message() const;
@@ -131,7 +131,7 @@ private:
   Connection::Vec connections_;
   Connector::Ptr critical_error_connector_;
 
-  const Address address_;
+  Host::Ptr host_;
   const ProtocolVersion protocol_version_;
   ConnectionPoolSettings settings_;
   String keyspace_;

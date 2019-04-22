@@ -119,7 +119,7 @@ public:
  * each
  */
 class ControlConnectionSingleNodeDataCentersClusterTests
-  : public ControlConnectionTests {
+    : public ControlConnectionTests {
 public:
   ControlConnectionSingleNodeDataCentersClusterTests() {
     number_dc1_nodes_ = 1;
@@ -250,7 +250,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
   logger_.add_critera("Unable to establish a control connection to host " \
                       "1.1.1.1 because of the following error:");
   Cluster cluster = Cluster::build().with_contact_points("1.1.1.1")
-    .with_local_address("127.0.0.1");
+                    .with_local_address("127.0.0.1");
   try {
     cluster.connect();
     FAIL() << "Connection was established using invalid IP address";
@@ -289,8 +289,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests,
    * node discovery of the second node
    */
   Cluster cluster = default_cluster()
-    .with_load_balance_round_robin()
-    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
+                    .with_load_balance_round_robin()
+                    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
   Session session = cluster.connect();
 
   // Stop the first node and bootstrap a third node into the cluster
@@ -331,12 +331,12 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests, TopologyChange) {
    * to ensure all nodes can be accessed during request execution
    */
   Cluster cluster = default_cluster()
-    .with_load_balance_round_robin();
+                    .with_load_balance_round_robin();
   Session session = cluster.connect();
 
   // Bootstrap a second node and ensure all hosts are actively used
   logger_.add_critera("New node " + (ccm_->get_ip_prefix() + "2") + " added");
-  EXPECT_EQ(2, ccm_->bootstrap_node()); // Triggers a `NEW_NODE` event
+  EXPECT_EQ(2u, ccm_->bootstrap_node()); // Triggers a `NEW_NODE` event
   EXPECT_TRUE(wait_for_logger(1));
   std::set<unsigned short> expected_nodes;
   expected_nodes.insert(1);
@@ -374,8 +374,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests,
    * to ensure all nodes can be accessed during request execution
    */
   Cluster cluster = default_cluster()
-    .with_load_balance_round_robin()
-    .with_reconnect_wait_time(10); // Ensure reconnect timeout is quick
+                    .with_load_balance_round_robin()
+                    .with_reconnect_wait_time(10); // Ensure reconnect timeout is quick
   Session session = cluster.connect();
 
   // Ensure all hosts are actively used
@@ -395,7 +395,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests,
 
   // Restart the second node and ensure all hosts are actively used
   reset_logger_criteria("Node ", logger_nodes, " is up");
-  ccm_->start_node(2); // Triggers a `UP` event
+  start_node(2); // Triggers a `UP` event
   ASSERT_TRUE(wait_for_logger(logger_nodes.size()));
   expected_nodes.insert(2);
   check_hosts(session, expected_nodes);
@@ -422,8 +422,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
    * node discovery
    */
   Cluster cluster = default_cluster()
-    .with_load_balance_round_robin()
-    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
+                    .with_load_balance_round_robin()
+                    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
   Session session = cluster.connect();
 
   // Ensure all hosts are actively used
@@ -461,10 +461,10 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
   logger_.add_critera("to host 192.0.2.2 closed");
   logger_.add_critera("to host 192.0.2.3 closed");
   Cluster cluster = default_cluster(false) // Do not add the default contact points
-    .with_load_balance_round_robin()
-    .with_contact_points(generate_contact_points("192.0.2.", 3)) // Invalid IPs
-    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1)) // Single valid contact point
-    .with_connect_timeout(1000u); // Handle initial invalid IPs
+                    .with_load_balance_round_robin()
+                    .with_contact_points(generate_contact_points("192.0.2.", 3)) // Invalid IPs
+                    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1)) // Single valid contact point
+                    .with_connect_timeout(1000u); // Handle initial invalid IPs
   Session session = cluster.connect();
 
   // Ensure the invalid IPs were not reached
@@ -501,8 +501,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
    * node discovery
    */
   Cluster cluster = default_cluster()
-    .with_load_balance_round_robin()
-    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
+                    .with_load_balance_round_robin()
+                    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
   Session session = cluster.connect();
 
   // Delete the `local` row from the system table (control connection info)
@@ -538,8 +538,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
   connect(); // Create the default session
   std::stringstream update_system_table;
   update_system_table
-    << "UPDATE system.peers SET rpc_address = null WHERE peer = '"
-    << ccm_->get_ip_prefix() << "3'";
+      << "UPDATE system.peers SET rpc_address = null WHERE peer = '"
+      << ccm_->get_ip_prefix() << "3'";
   for (int i = 0; i < 3; ++i) { // Ensure all the nodes in the cluster are updated
     session_.execute(update_system_table.str());
   }
@@ -550,8 +550,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests,
    * node discovery
    */
   Cluster cluster = default_cluster(false)
-    .with_load_balance_round_robin()
-    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
+                    .with_load_balance_round_robin()
+                    .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
   Session session = cluster.connect();
 
   // Ensure nodes one and two are actively used
@@ -665,8 +665,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionFourNodeClusterTests,
 
   // Create a cluster object using randomized contact points
   Cluster cluster = default_cluster()
-    .with_load_balance_round_robin()
-    .with_randomized_contact_points(true);
+                    .with_load_balance_round_robin()
+                    .with_randomized_contact_points(true);
 
   // Establish a connect and ensure the first established host is not node 1
   Session session;
@@ -691,7 +691,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionFourNodeClusterTests,
 
     // Ensure the next host is the expected host
     std::string current_host =
-      session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).host();
+        session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).host();
     ASSERT_STREQ(expected_host.str().c_str(), current_host.c_str());
   }
 
@@ -723,7 +723,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionSingleNodeDataCentersClusterTests,
    * policy
    */
   Cluster cluster = default_cluster()
-    .with_load_balance_dc_aware("invalid_data_center", 0, false);
+                    .with_load_balance_dc_aware("invalid_data_center", 0, false);
   try {
     Session session = cluster.connect();
     FAIL() << "Connection was established using invalid data center";
@@ -766,8 +766,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests,
     std::stringstream expected_message;
     // Message to validate number of I/O worker threads
     expected_message << "Unable to connect to host " << ccm_->get_ip_prefix()
-      << "1 because of the following error: Received error response "
-      << "'Keyspace '" << inavlid_keyspace_name << "' does not exist'";
+                     << "1 because of the following error: Received error response "
+                     << "'Keyspace '" << inavlid_keyspace_name << "' does not exist'";
     logger_.add_critera(expected_message.str());
     // Message to validate connection/host is ready/up
     expected_message.str("");

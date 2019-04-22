@@ -34,17 +34,17 @@ CassDataType* cass_data_type_new(CassValueType type) {
     case CASS_VALUE_TYPE_SET:
     case CASS_VALUE_TYPE_TUPLE:
     case CASS_VALUE_TYPE_MAP:
-      data_type = cass::Memory::allocate<cass::CollectionType>(type, false);
+      data_type = new cass::CollectionType(type, false);
       data_type->inc_ref();
       break;
 
     case CASS_VALUE_TYPE_UDT:
-      data_type = cass::Memory::allocate<cass::UserType>(false);
+      data_type = new cass::UserType(false);
       data_type->inc_ref();
       break;
 
     case CASS_VALUE_TYPE_CUSTOM:
-      data_type = cass::Memory::allocate<cass::CustomType>();
+      data_type = new cass::CustomType();
       data_type->inc_ref();
       break;
 
@@ -54,7 +54,7 @@ CassDataType* cass_data_type_new(CassValueType type) {
 
     default:
       if (type < CASS_VALUE_TYPE_LAST_ENTRY) {
-        data_type = cass::Memory::allocate<cass::DataType>(type);
+        data_type = new cass::DataType(type);
         data_type->inc_ref();
       }
       break;
@@ -70,13 +70,13 @@ CassDataType* cass_data_type_new_from_existing(const CassDataType* data_type) {
 
 CassDataType* cass_data_type_new_tuple(size_t item_count) {
   cass::DataType* data_type
-      = cass::Memory::allocate<cass::CollectionType>(CASS_VALUE_TYPE_TUPLE, item_count);
+      = new cass::CollectionType(CASS_VALUE_TYPE_TUPLE, item_count);
   data_type->inc_ref();
   return CassDataType::to(data_type);
 }
 
 CassDataType* cass_data_type_new_udt(size_t field_count) {
-  cass::DataType* data_type = cass::Memory::allocate<cass::UserType>(field_count);
+  cass::DataType* data_type = new cass::UserType(field_count);
   data_type->inc_ref();
   return CassDataType::to(data_type);
 }
@@ -133,8 +133,8 @@ cass_bool_t cass_data_type_is_frozen(const CassDataType* data_type) {
 }
 
 CassError cass_data_type_type_name(const CassDataType* data_type,
-                              const char** name,
-                              size_t* name_length) {
+                                   const char** name,
+                                   size_t* name_length) {
   if (!data_type->is_user_type()) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
@@ -349,7 +349,7 @@ CassError cass_data_type_add_sub_type_by_name_n(CassDataType* data_type,
 CassError cass_data_type_add_sub_value_type(CassDataType* data_type,
                                             CassValueType sub_value_type) {
   cass::DataType::ConstPtr sub_data_type(
-        cass::Memory::allocate<cass::DataType>(sub_value_type));
+        new cass::DataType(sub_value_type));
   return cass_data_type_add_sub_type(data_type,
                                      CassDataType::to(sub_data_type.get()));
 }
@@ -359,7 +359,7 @@ CassError cass_data_type_add_sub_value_type_by_name(CassDataType* data_type,
                                                     const char* name,
                                                     CassValueType sub_value_type) {
   cass::DataType::ConstPtr sub_data_type(
-        cass::Memory::allocate<cass::DataType>(sub_value_type));
+        new cass::DataType(sub_value_type));
   return cass_data_type_add_sub_type_by_name(data_type, name,
                                              CassDataType::to(sub_data_type.get()));
 }
@@ -369,7 +369,7 @@ CassError cass_data_type_add_sub_value_type_by_name_n(CassDataType* data_type,
                                                       size_t name_length,
                                                       CassValueType sub_value_type) {
   cass::DataType::ConstPtr sub_data_type(
-        cass::Memory::allocate<cass::DataType>(sub_value_type));
+        new cass::DataType(sub_value_type));
   return cass_data_type_add_sub_type_by_name_n(data_type, name, name_length,
                                                CassDataType::to(sub_data_type.get()));
 }
@@ -389,7 +389,7 @@ DataType::ConstPtr DataType::create_by_class(StringRef name) {
   if (value_type == CASS_VALUE_TYPE_UNKNOWN) {
     return DataType::NIL;
   }
-  return ConstPtr(Memory::allocate<DataType>(value_type));
+  return ConstPtr(new DataType(value_type));
 }
 
 DataType::ConstPtr DataType::create_by_cql(StringRef name) {
@@ -397,7 +397,7 @@ DataType::ConstPtr DataType::create_by_cql(StringRef name) {
   if (value_type == CASS_VALUE_TYPE_UNKNOWN) {
     return DataType::NIL;
   }
-  return ConstPtr(Memory::allocate<DataType>(value_type));
+  return ConstPtr(new DataType(value_type));
 }
 
 ValueTypes::HashMap ValueTypes::value_types_by_class_;
@@ -410,11 +410,11 @@ ValueTypes::ValueTypes() {
   value_types_by_cql_.set_empty_key("");
 
 #define XX_VALUE_TYPE(name, type, cql, klass)                   \
-    if (sizeof(klass) - 1 > 0) value_types_by_class_[klass] = name; \
-    if (sizeof(cql) - 1 > 0) value_types_by_cql_[cql] = name;
+  if (sizeof(klass) - 1 > 0) value_types_by_class_[klass] = name; \
+  if (sizeof(cql) - 1 > 0) value_types_by_cql_[cql] = name;
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
-#undef XX_VALUE_TYPE
+    #undef XX_VALUE_TYPE
 }
 
 CassValueType ValueTypes::by_class(StringRef name) {
@@ -447,7 +447,7 @@ const DataType::ConstPtr& SimpleDataTypeCache::by_value_type(uint16_t value_type
   DataType::ConstPtr& data_type = cache_[value_type];
   if (!data_type) {
     data_type = DataType::ConstPtr(
-                  Memory::allocate<DataType>(static_cast<CassValueType>(value_type)));
+                  new DataType(static_cast<CassValueType>(value_type)));
   }
   return data_type;
 }

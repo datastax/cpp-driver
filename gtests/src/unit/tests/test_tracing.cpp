@@ -53,7 +53,7 @@ TEST_F(TracingUnitTest, Simple) {
 
   connect();
 
-  cass::Statement::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::Statement::Ptr request(new cass::QueryRequest("blah", 0));
   request->set_tracing(true);
 
   cass::ResponseFuture::Ptr future(session.execute(cass::Request::ConstPtr(request)));
@@ -79,7 +79,7 @@ TEST_F(TracingUnitTest, DataNotAvailble) {
 
   connect();
 
-  cass::Statement::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::Statement::Ptr request(new cass::QueryRequest("blah", 0));
   request->set_tracing(true);
 
   add_logging_critera("Tracing data not available after 15 ms");
@@ -111,7 +111,7 @@ TEST_F(TracingUnitTest, RequestTimeout) {
   config.set_max_tracing_wait_time_ms(500);
   connect(config);
 
-  cass::Statement::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::Statement::Ptr request(new cass::QueryRequest("blah", 0));
   request->set_request_timeout_ms(100);
   request->set_tracing(true);
 
@@ -142,7 +142,7 @@ TEST_F(TracingUnitTest, QueryError) {
 
   connect();
 
-  cass::Statement::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::Statement::Ptr request(new cass::QueryRequest("blah", 0));
   request->set_tracing(true);
 
   add_logging_critera("Chained error response 'Invalid query' (0x02002200) for query "

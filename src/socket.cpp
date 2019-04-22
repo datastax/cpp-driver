@@ -69,7 +69,7 @@ SocketHandler::~SocketHandler() {
 }
 
 SocketWriteBase* SocketHandler::new_pending_write(Socket* socket) {
-  return Memory::allocate<SocketWrite>(socket);
+  return new SocketWrite(socket);
 }
 
 void SocketHandler::alloc_buffer(size_t suggested_size, uv_buf_t* buf) {
@@ -195,7 +195,7 @@ void SslSocketWrite::on_write(uv_write_t* req, int status) {
 }
 
 SocketWriteBase* SslSocketHandler::new_pending_write(Socket* socket) {
-  return Memory::allocate<SslSocketWrite>(socket, ssl_session_.get());
+  return new SslSocketWrite(socket, ssl_session_.get());
 }
 
 void SslSocketHandler::alloc_buffer(size_t suggested_size, uv_buf_t* buf) {
@@ -271,7 +271,7 @@ void SocketWriteBase::handle_write(uv_write_t* req, int status) {
     clear();
     socket->free_writes_.push_back(this);
   } else {
-    Memory::deallocate(this);
+    delete this;
   }
 
   socket->flush();
@@ -385,7 +385,7 @@ void Socket::handle_close() {
   while (!pending_writes_.is_empty()) {
     SocketWriteBase* pending_write = pending_writes_.pop_front();
     pending_write->on_close();
-    Memory::deallocate(pending_write);
+    delete pending_write;
   }
 
   if (handler_) {
@@ -397,7 +397,7 @@ void Socket::handle_close() {
 void Socket::cleanup_free_writes() {
   for (SocketWriteVec::iterator i = free_writes_.begin(),
        end = free_writes_.end(); i != end; ++i) {
-    Memory::deallocate(*i);
+    delete *i;
   }
 }
 

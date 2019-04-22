@@ -52,7 +52,7 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 11
+#define CASS_VERSION_MINOR 12
 #define CASS_VERSION_PATCH 0
 #define CASS_VERSION_SUFFIX ""
 
@@ -1020,15 +1020,20 @@ cass_execution_profile_set_load_balance_round_robin(CassExecProfile* profile);
  * <b>Note:</b> Profile-based load balancing policy is disabled by default;
  * cluster load balancing policy is used when profile does not contain a policy.
  *
+ * @deprecated The remote DC settings for DC-aware are not suitable for most
+ * scenarios that require DC failover. There is also unhandled gap between
+ * replication factor number of nodes failing and the full cluster failing. Only
+ * the remote DC settings are being deprecated.
+ *
  * @public @memberof CassExecProfile
  *
  * @param[in] profile
  * @param[in] local_dc The primary data center to try first
  * @param[in] used_hosts_per_remote_dc The number of hosts used in each remote
- * DC if no hosts are available in the local dc
+ * DC if no hosts are available in the local dc (<b>deprecated</b>)
  * @param[in] allow_remote_dcs_for_local_cl Allows remote hosts to be used if no
  * local dc hosts are available and the consistency level is LOCAL_ONE or
- * LOCAL_QUORUM
+ * LOCAL_QUORUM (<b>deprecated</b>)
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_cluster_set_load_balance_dc_aware()
@@ -1043,13 +1048,18 @@ cass_execution_profile_set_load_balance_dc_aware(CassExecProfile* profile,
  * Same as cass_execution_profile_set_load_balance_dc_aware(), but with lengths
  * for string parameters.
  *
+ * @deprecated The remote DC settings for DC-aware are not suitable for most
+ * scenarios that require DC failover. There is also unhandled gap between
+ * replication factor number of nodes failing and the full cluster failing. Only
+ * the remote DC settings are being deprecated.
+ *
  * @public @memberof CassExecProfile
  *
  * @param[in] profile
  * @param[in] local_dc
  * @param[in] local_dc_length
- * @param[in] used_hosts_per_remote_dc
- * @param[in] allow_remote_dcs_for_local_cl
+ * @param[in] used_hosts_per_remote_dc (<b>deprecated</b>)
+ * @param[in] allow_remote_dcs_for_local_cl (<b>deprecated</b>)
  * @return same as cass_execution_profile_set_load_balance_dc_aware()
  *
  * @see cass_execution_profile_set_load_balance_dc_aware()
@@ -2073,14 +2083,20 @@ cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
  * query plans. If relying on this mechanism, be sure to use only contact
  * points from the local DC.
  *
+ * @deprecated The remote DC settings for DC-aware are not suitable for most
+ * scenarios that require DC failover. There is also unhandled gap between
+ * replication factor number of nodes failing and the full cluster failing. Only
+ * the remote DC settings are being deprecated.
+ *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
  * @param[in] local_dc The primary data center to try first
- * @param[in] used_hosts_per_remote_dc The number of hosts used in each remote DC if no hosts
- * are available in the local dc
- * @param[in] allow_remote_dcs_for_local_cl Allows remote hosts to be used if no local dc hosts
- * are available and the consistency level is LOCAL_ONE or LOCAL_QUORUM
+ * @param[in] used_hosts_per_remote_dc The number of hosts used in each remote
+ * DC if no hosts are available in the local dc (<b>deprecated</b>)
+ * @param[in] allow_remote_dcs_for_local_cl Allows remote hosts to be used if no
+ * local dc hosts are available and the consistency level is LOCAL_ONE or
+ * LOCAL_QUORUM (<b>deprecated</b>)
  * @return CASS_OK if successful, otherwise an error occurred
  */
 CASS_EXPORT CassError
@@ -2094,13 +2110,18 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
  * Same as cass_cluster_set_load_balance_dc_aware(), but with lengths for string
  * parameters.
  *
+ * @deprecated The remote DC settings for DC-aware are not suitable for most
+ * scenarios that require DC failover. There is also unhandled gap between
+ * replication factor number of nodes failing and the full cluster failing. Only
+ * the remote DC settings are being deprecated.
+ *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
  * @param[in] local_dc
  * @param[in] local_dc_length
- * @param[in] used_hosts_per_remote_dc
- * @param[in] allow_remote_dcs_for_local_cl
+ * @param[in] used_hosts_per_remote_dc (<b>deprecated</b>)
+ * @param[in] allow_remote_dcs_for_local_cl (<b>deprecated</b>)
  * @return same as cass_cluster_set_load_balance_dc_aware()
  *
  * @see cass_cluster_set_load_balance_dc_aware()

@@ -204,7 +204,7 @@ public:
   }
 
   void set_host(const Address& host) {
-    host_.reset(Memory::allocate<Address>(host));
+    host_.reset(new Address(host));
   }
   const Address* host() const { return host_.get(); }
 

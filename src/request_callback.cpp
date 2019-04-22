@@ -49,7 +49,7 @@ void RequestCallback::notify_write(Connection* connection, int stream) {
 }
 
 bool RequestCallback::skip_metadata() const {
-    // Skip the metadata if this an execute request and we have an entry cached
+  // Skip the metadata if this an execute request and we have an entry cached
   return request()->opcode() == CQL_OPCODE_EXECUTE &&
       prepared_metadata_entry() &&
       prepared_metadata_entry()->result()->result_metadata();
@@ -175,7 +175,7 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
 
 SimpleRequestCallback::SimpleRequestCallback(const String& query, uint64_t request_timeout_ms)
   : RequestCallback(
-      RequestWrapper(Request::ConstPtr(Memory::allocate<QueryRequest>(query)),
+      RequestWrapper(Request::ConstPtr(new QueryRequest(query)),
                      request_timeout_ms)) { }
 
 void SimpleRequestCallback::on_write(Connection* connection) {
@@ -229,13 +229,13 @@ ChainedRequestCallback::ChainedRequestCallback(const String& key, const Request:
 ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const String& query) {
   has_pending_ = true;
   return ChainedRequestCallback::Ptr(
-                   Memory::allocate<ChainedRequestCallback>(key, query, Ptr(this)));
+        new ChainedRequestCallback(key, query, Ptr(this)));
 }
 
 ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const Request::ConstPtr& request) {
   has_pending_ = true;
   return ChainedRequestCallback::Ptr(
-        Memory::allocate<ChainedRequestCallback>(key, request, Ptr(this)));
+        new ChainedRequestCallback(key, request, Ptr(this)));
 }
 
 ResultResponse::Ptr ChainedRequestCallback::result(const String& key) const {

@@ -94,6 +94,9 @@ Process::Result Process::execute(const Args& command) {
   rc = uv_loop_close(&loop);
   if (rc != 0) {
     uv_print_all_handles(&loop, stderr);
+    if (!result.standard_error.empty()) {
+      std::cerr << result.standard_error << std::endl;
+    }
     assert(false && "Process loop still has pending handles");
   }
 

@@ -17,6 +17,7 @@
 #ifndef __CASS_REF_COUNTED_HPP_INCLUDED__
 #define __CASS_REF_COUNTED_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "atomic.hpp"
 #include "macros.hpp"
 #include "memory.hpp"
@@ -27,10 +28,8 @@
 
 namespace cass {
 
-struct RefCountedBase { };
-
 template <class T>
-class RefCounted : public RefCountedBase {
+class RefCounted : public Allocated {
 public:
   RefCounted()
       : ref_count_(0) { }
@@ -48,7 +47,7 @@ public:
     assert(new_ref_count >= 1);
     if (new_ref_count == 1) {
       atomic_thread_fence(MEMORY_ORDER_ACQUIRE);
-      Memory::deallocate(static_cast<const T*>(this));
+      delete static_cast<const T*>(this);
     }
   }
 

@@ -39,7 +39,7 @@ public:
   };
 
   Request()
-    : then_(cass::Memory::allocate<Success>()) { };
+    : then_(new Success()) { };
 
   /**
    * Generate the JSON for the priming request

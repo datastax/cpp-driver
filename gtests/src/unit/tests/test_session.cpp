@@ -60,8 +60,8 @@ public:
     cass::Future::Ptr connect_future(session->connect(config));
     ASSERT_TRUE(connect_future->wait_for(wait_for_time_us)) << "Timed out waiting for session to connect";
     ASSERT_FALSE(connect_future->error())
-      << cass_error_desc(connect_future->error()->code) << ": "
-      << connect_future->error()->message;
+        << cass_error_desc(connect_future->error()->code) << ": "
+        << connect_future->error()->message;
   }
 
   static void connect(cass::Session* session,
@@ -86,19 +86,19 @@ public:
     cass::Future::Ptr close_future(session->close());
     ASSERT_TRUE(close_future->wait_for(wait_for_time_us)) << "Timed out waiting for session to close";
     ASSERT_FALSE(close_future->error())
-      << cass_error_desc(close_future->error()->code) << ": "
-      << close_future->error()->message;
+        << cass_error_desc(close_future->error()->code) << ": "
+        << close_future->error()->message;
   }
 
   static void query(cass::Session* session) {
-    cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+    cass::QueryRequest::Ptr request(new cass::QueryRequest("blah", 0));
     request->set_is_idempotent(true);
 
     cass::Future::Ptr future = session->execute(request, NULL);
     ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out executing query";
     ASSERT_FALSE(future->error())
-      << cass_error_desc(future->error()->code) << ": "
-      << future->error()->message;
+        << cass_error_desc(future->error()->code) << ": "
+        << future->error()->message;
   }
 
   // uv_thread_create
@@ -150,8 +150,8 @@ public:
 
     TestHostListener() {
       events_.push_back(
-        HostEventFuture::Ptr(
-        Memory::allocate<HostEventFuture>()));
+            HostEventFuture::Ptr(
+              new HostEventFuture()));
       uv_mutex_init(&mutex_);
     }
 
@@ -177,7 +177,7 @@ public:
 
     HostEventFuture::Event wait_for_event(uint64_t timeout_us) {
       HostEventFuture::Event event(front()->wait_for_event(timeout_us));
-      pop_front();
+      if (event.first != HostEventFuture::INVALID) pop_front();
       return event;
     }
 
@@ -204,8 +204,8 @@ public:
       cass::ScopedMutex lock(&mutex_);
       events_.back()->set_event(type, host->address());
       events_.push_back(
-        HostEventFuture::Ptr(
-        Memory::allocate<HostEventFuture>()));
+            HostEventFuture::Ptr(
+              new HostEventFuture()));
     }
 
   private:
@@ -215,7 +215,7 @@ public:
 };
 
 TEST_F(SessionUnitTest, ExecuteQueryNotConnected) {
-  cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::QueryRequest::Ptr request(new cass::QueryRequest("blah", 0));
 
   cass::Session session;
   cass::Future::Ptr future = session.execute(request, NULL);
@@ -225,10 +225,10 @@ TEST_F(SessionUnitTest, ExecuteQueryNotConnected) {
 TEST_F(SessionUnitTest, InvalidKeyspace) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   builder.on(mockssandra::OPCODE_QUERY)
-    .system_local()
-    .system_peers()
-    .use_keyspace("blah")
-    .empty_rows_result(1);
+      .system_local()
+      .system_peers()
+      .use_keyspace("blah")
+      .empty_rows_result(1);
   mockssandra::SimpleCluster cluster(builder.build());
   ASSERT_EQ(cluster.start_all(), 0);
 
@@ -249,7 +249,7 @@ TEST_F(SessionUnitTest, InvalidDataCenter) {
 
   cass::Config config;
   config.contact_points().push_back("127.0.0.1");
-  config.set_load_balancing_policy(cass::Memory::allocate<cass::DCAwarePolicy>(
+  config.set_load_balancing_policy(new cass::DCAwarePolicy(
                                      "invalid_data_center",
                                      0,
                                      false));
@@ -270,7 +270,7 @@ TEST_F(SessionUnitTest, InvalidLocalAddress) {
   cass::Config config;
   config.set_local_address(Address("1.1.1.1", PORT)); // Invalid
   config.contact_points().push_back("127.0.0.1");
-  config.set_load_balancing_policy(cass::Memory::allocate<cass::DCAwarePolicy>(
+  config.set_load_balancing_policy(new cass::DCAwarePolicy(
                                      "invalid_data_center",
                                      0,
                                      false));
@@ -350,7 +350,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithCompleteOutage) {
 
   // Full outage
   cluster.stop_all();
-  cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::QueryRequest::Ptr request(new cass::QueryRequest("blah", 0));
   cass::Future::Ptr future = session.execute(request, NULL);
   ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME));
   ASSERT_TRUE(future->error());
@@ -381,7 +381,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithCompleteOutageSpinDown) {
   cluster.stop(2);
 
   // Full outage
-  cass::QueryRequest::Ptr request(cass::Memory::allocate<cass::QueryRequest>("blah", 0));
+  cass::QueryRequest::Ptr request(new cass::QueryRequest("blah", 0));
   cass::Future::Ptr future = session.execute(request, NULL);
   ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME));
   ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, future->error()->code);
@@ -456,7 +456,7 @@ TEST_F(SessionUnitTest, HostListener) {
   mockssandra::SimpleCluster cluster(simple(), 2);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  TestHostListener::Ptr listener(cass::Memory::allocate<TestHostListener>());
+  TestHostListener::Ptr listener(new TestHostListener());
 
   cass::Config config;
   config.set_reconnect_wait_time(100); // Reconnect immediately
@@ -466,7 +466,20 @@ TEST_F(SessionUnitTest, HostListener) {
   cass::Session session;
   connect(config, &session);
 
-  EXPECT_EQ(0u, listener->event_count());
+  { // Initial nodes available from peers table
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
 
   {
     cluster.remove(1);
@@ -499,6 +512,153 @@ TEST_F(SessionUnitTest, HostListener) {
     cluster.start(2);
     EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
                                      Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, HostListenerDCAwareLocal) {
+  mockssandra::SimpleCluster cluster(simple(), 2, 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  cass::Config config;
+  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.contact_points().push_back("127.0.0.1");
+  config.set_host_listener(listener);
+
+  cass::Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  { // Node 3 is DC2 should be ignored
+    cluster.stop(3);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::INVALID,
+              Address()),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+// TODO: Remove HostListenerDCAwareRemote after remote DC settings are removed from API
+TEST_F(SessionUnitTest, HostListenerDCAwareRemote) {
+  mockssandra::SimpleCluster cluster(simple(), 2, 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  cass::Config config;
+  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.contact_points().push_back("127.0.0.1");
+  config.set_load_balancing_policy(new cass::DCAwarePolicy(
+                                   "dc1",
+                                   1,
+                                   false));
+  config.set_host_listener(listener);
+
+  cass::Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  {
+    cluster.stop(3);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, HostListenerNodeDown) {
+  mockssandra::SimpleCluster cluster(simple(), 3);
+  ASSERT_EQ(cluster.start(1), 0);
+  ASSERT_EQ(cluster.start(3), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  cass::Config config;
+  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.contact_points().push_back("127.0.0.1");
+  config.set_host_listener(listener);
+
+  cass::Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  { // Node 2 connection should not be established (node down event)
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
+              Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  {
+    cluster.start(2);
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
+              Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 

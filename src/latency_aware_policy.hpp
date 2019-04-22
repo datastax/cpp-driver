@@ -46,7 +46,7 @@ public:
     : ChainedLoadBalancingPolicy(child_policy)
     , min_average_(-1)
     , settings_(settings)
-    , hosts_(Memory::allocate<HostVec>()) {}
+    , hosts_(new HostVec()) {}
 
   virtual ~LatencyAwarePolicy() {}
 
@@ -60,7 +60,7 @@ public:
                                     const TokenMap* token_map);
 
   virtual LoadBalancingPolicy* new_instance() {
-    return Memory::allocate<LatencyAwarePolicy>(child_policy_->new_instance(), settings_);
+    return new LatencyAwarePolicy(child_policy_->new_instance(), settings_);
   }
 
   virtual void on_host_added(const Host::Ptr& host);

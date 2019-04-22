@@ -89,6 +89,18 @@ void explode(const String& str, Vector<String>& vec, const char delimiter /* = '
   }
 }
 
+String implode(const Vector<String>& vec, const char delimiter /* = ' ' */) {
+  String str;
+  for (Vector<String>::const_iterator it = vec.begin(),
+       end = vec.end(); it != end; ++it) {
+    if (!str.empty()) {
+      str.push_back(delimiter);
+    }
+    str.append(*it);
+  }
+  return str;
+}
+
 String& trim(String& str) {
   // Trim front
   str.erase(str.begin(),

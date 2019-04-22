@@ -56,7 +56,7 @@ public:
 
   ResponseFuture(const Metadata::SchemaSnapshot& schema_metadata)
     : Future(FUTURE_TYPE_RESPONSE)
-    , schema_metadata(Memory::allocate<Metadata::SchemaSnapshot>(schema_metadata)) { }
+    , schema_metadata(new Metadata::SchemaSnapshot(schema_metadata)) { }
 
   bool set_response(Address address, const Response::Ptr& response) {
     ScopedMutex lock(&mutex_);

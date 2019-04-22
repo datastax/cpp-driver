@@ -23,12 +23,6 @@
 #include "serialization.hpp"
 #include "small_vector.hpp"
 
-#ifdef _WIN32
-# ifndef snprintf
-#  define snprintf _snprintf
-# endif
-#endif
-
 #define CHECK_REMAINING(SIZE, DETAIL) do { \
   if (remaining_ <  static_cast<size_t>(SIZE)) { \
     notify_error(DETAIL, SIZE); \

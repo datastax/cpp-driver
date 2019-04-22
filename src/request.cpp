@@ -21,7 +21,7 @@
 extern "C" {
 
 CassCustomPayload* cass_custom_payload_new() {
-  cass::CustomPayload* payload = cass::Memory::allocate<cass::CustomPayload>();
+  cass::CustomPayload* payload = new cass::CustomPayload();
   payload->inc_ref();
   return CassCustomPayload::to(payload);
 }

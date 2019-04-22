@@ -8,6 +8,7 @@
 #ifndef __DSE_SET_HPP_INCLUDED__
 #define __DSE_SET_HPP_INCLUDED__
 
+#include "allocated.hpp"
 #include "allocator.hpp"
 
 #include <set>
@@ -15,7 +16,9 @@
 namespace cass {
 
 template <class T, class Compare = std::less<T> >
-class Set : public std::set<T, Compare, cass::Allocator<T> > {
+class Set
+    : public Allocated
+    , public std::set<T, Compare, cass::Allocator<T> > {
 public:
   typedef cass::Allocator<T> Allocator;
 

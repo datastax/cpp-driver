@@ -19,7 +19,6 @@
 
 #include "unit.hpp"
 #include "test_utils.hpp"
-#include "memory.hpp"
 
 #include <uv.h>
 
@@ -61,7 +60,7 @@ public:
    */
   void starve_thread_pool(unsigned int sleep_ms) {
     for (int i = 0; i < NUM_WORKERS; ++i) {
-      workers[i].data = cass::Memory::allocate<unsigned int>(sleep_ms);
+      workers[i].data = new unsigned int(sleep_ms);
       uv_queue_work(loop(), &workers[i], on_work, NULL);
     }
   }
@@ -70,7 +69,7 @@ private:
   static void on_work(uv_work_t* req) {
     unsigned int* sleep_ms = static_cast<unsigned int*>(req->data);
     test::Utils::msleep(*sleep_ms);
-    cass::Memory::deallocate(sleep_ms);
+    delete sleep_ms;
   }
 
 private:

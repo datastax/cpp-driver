@@ -16,7 +16,6 @@
 
 #include "micro_timer.hpp"
 
-#include "memory.hpp"
 
 #ifdef HAVE_TIMERFD
 #include <string.h>
@@ -42,7 +41,7 @@ int MicroTimer::start(uv_loop_t* loop,
     if (fd_ == -1)  return errno;
   }
   if (handle_ == NULL) {
-    handle_ = Memory::allocate<uv_poll_t>();
+    handle_ = new AllocatedT<uv_poll_t>();
     handle_->loop = NULL;
     handle_->data = this;
   }
@@ -79,7 +78,7 @@ void MicroTimer::stop() {
   }
   if (handle_ != NULL) {
     if (state_ == CLOSED) { // The handle was allocated, but initialization failed.
-      Memory::deallocate(handle_);
+      delete handle_;
     } else { // If initialized or started then close the handle properly.
       uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
     }
@@ -107,7 +106,7 @@ void MicroTimer::handle_timeout() {
 }
 
 void MicroTimer::on_close(uv_handle_t* handle) {
-  Memory::deallocate(reinterpret_cast<uv_poll_t*>(handle));
+  delete reinterpret_cast<AllocatedT<uv_poll_t>*>(handle);
 }
 #else
 

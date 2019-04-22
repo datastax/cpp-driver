@@ -40,7 +40,7 @@ private:
 };
 
 HeartbeatCallback::HeartbeatCallback(Connection* connection)
-  : SimpleRequestCallback(Request::ConstPtr(Memory::allocate<OptionsRequest>()))
+  : SimpleRequestCallback(Request::ConstPtr(new OptionsRequest()))
   , connection_(connection) { }
 
 void HeartbeatCallback::on_internal_set(ResponseMessage* response) {
@@ -105,18 +105,27 @@ void RecordingConnectionListener::process_events(const EventResponse::Vec& event
 }
 
 Connection::Connection(const Socket::Ptr& socket,
+                       const Host::Ptr& host,
                        ProtocolVersion protocol_version,
                        unsigned int idle_timeout_secs,
                        unsigned int heartbeat_interval_secs)
   : socket_(socket)
+  , host_(host)
   , inflight_request_count_(0)
-  , response_(Memory::allocate<ResponseMessage>())
+  , response_(new ResponseMessage())
   , listener_(&nop_listener__)
   , protocol_version_(protocol_version)
   , idle_timeout_secs_(idle_timeout_secs)
   , heartbeat_interval_secs_(heartbeat_interval_secs)
   , heartbeat_outstanding_(false) {
   inc_ref(); // For the event loop
+
+  assert(host_->address() == socket_->address() && "Host doesn't match socket address");
+  host_->increment_connection_count();
+}
+
+Connection::~Connection() {
+  host_->decrement_connection_count();
 }
 
 int32_t Connection::write(const RequestCallback::Ptr& callback) {
@@ -276,7 +285,7 @@ void Connection::on_read(const char* buf, size_t size) {
 
     if (response_->is_body_ready()) {
       ScopedPtr<ResponseMessage> response(response_.release());
-      response_.reset(Memory::allocate<ResponseMessage>());
+      response_.reset(new ResponseMessage());
 
       LOG_TRACE("Consumed message type %s with stream %d, input %u, remaining %u on host %s",
                 opcode_to_string(response->opcode()).c_str(),
@@ -352,7 +361,7 @@ void Connection::restart_heartbeat_timer() {
 
 void Connection::on_heartbeat(Timer* timer) {
   if (!heartbeat_outstanding_ && !socket_->is_closing()) {
-    if (!write_and_flush(RequestCallback::Ptr(Memory::allocate<HeartbeatCallback>(this)))) {
+    if (!write_and_flush(RequestCallback::Ptr(new HeartbeatCallback(this)))) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests
       // that never returned and as a result timed out.

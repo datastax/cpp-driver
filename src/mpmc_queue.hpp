@@ -22,10 +22,11 @@
 #ifndef __CASS_MPMC_QUEUE_INCLUDED__
 #define __CASS_MPMC_QUEUE_INCLUDED__
 
+#include "allocated.hpp"
 #include "atomic.hpp"
 #include "cassconfig.hpp"
 #include "macros.hpp"
-#include "memory.hpp"
+#include "scoped_ptr.hpp"
 #include "utils.hpp"
 
 #include <assert.h>
@@ -33,14 +34,14 @@
 namespace cass {
 
 template <typename T>
-class MPMCQueue {
+class MPMCQueue : public Allocated {
 public:
   typedef T EntryType;
 
   MPMCQueue(size_t size)
       : size_(next_pow_2(size))
       , mask_(size_ - 1)
-      , buffer_(size_)
+      , buffer_(new Node[size_])
       , tail_(0)
       , head_(0) {
     // populate the sequence initial values
@@ -138,7 +139,7 @@ public:
   }
 
 private:
-  struct Node {
+  struct Node : public Allocated {
     Atomic<size_t> seq;
     T data;
   };
@@ -149,7 +150,7 @@ private:
   CachePad pad0_;
   const size_t size_;
   const size_t mask_;
-  DynamicArray<Node> buffer_;
+  ScopedArray<Node> buffer_;
   CachePad pad1_;
   Atomic<size_t> tail_;
   CachePad pad2_;

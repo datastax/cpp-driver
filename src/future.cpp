@@ -79,9 +79,9 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
     return NULL;
   }
 
-  cass::Prepared* prepared = cass::Memory::allocate<cass::Prepared>(result,
-                                                                    response_future->prepare_request,
-                                                                    *response_future->schema_metadata);
+  cass::Prepared* prepared = new cass::Prepared(result,
+                                                response_future->prepare_request,
+                                                *response_future->schema_metadata);
   prepared->inc_ref();
   return CassPrepared::to(prepared);
 }
