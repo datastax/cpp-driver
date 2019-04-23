@@ -48,7 +48,7 @@ struct TestPool : public test_utils::MultipleNodesTest {
   }
 };
 
-BOOST_AUTO_TEST_SUITE(pool)
+BOOST_AUTO_TEST_SUITE_WITH_DECOR(pool, *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(connection_spawn) {
   TestPool tester;

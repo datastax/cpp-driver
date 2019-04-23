@@ -372,7 +372,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(basics, BasicTests)
+BOOST_FIXTURE_TEST_SUITE_WITH_DECOR(basics, BasicTests, *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(basic_types) {
   if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {

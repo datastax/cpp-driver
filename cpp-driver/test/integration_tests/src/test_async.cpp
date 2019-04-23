@@ -96,7 +96,7 @@ struct AsyncTests : public test_utils::SingleSessionTest {
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(async, AsyncTests)
+BOOST_FIXTURE_TEST_SUITE_WITH_DECOR(async, AsyncTests, *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(simple) {
   std::string table_name =
