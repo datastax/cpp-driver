@@ -1,4 +1,6 @@
+%if 0%{!?amzn}
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
+%endif
 
 Name:    dse-cpp-driver
 Epoch:   1
@@ -14,8 +16,10 @@ Source1: dse.pc.in
 Source2: dse_static.pc.in
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+%if 0%{?distnum}
 %if %{distnum} == 5
 BuildRequires: buildsys-macros >= 5
+%endif
 %endif
 BuildRequires: cmake >= 2.6.4
 BuildRequires: libuv-devel >= %{libuv_version}
