@@ -20,7 +20,7 @@
 #include "request.hpp"
 #include "constants.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class OptionsRequest : public Request {
 public:
@@ -31,6 +31,6 @@ private:
   int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const { return 0; }
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

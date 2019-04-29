@@ -30,7 +30,7 @@
 #include <intrin.h>
 #endif
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 struct StreamHash {
   std::size_t operator()(int stream) const {
@@ -151,6 +151,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(StreamManager);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

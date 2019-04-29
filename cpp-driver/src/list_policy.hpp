@@ -21,7 +21,7 @@
 #include "host.hpp"
 #include "scoped_ptr.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ListPolicy : public ChainedLoadBalancingPolicy {
 public:
@@ -48,7 +48,6 @@ private:
 
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif
-

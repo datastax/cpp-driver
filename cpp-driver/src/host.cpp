@@ -20,7 +20,10 @@
 #include "value.hpp"
 #include "collection_iterator.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host) {
   HostVec::iterator i;
@@ -49,6 +52,8 @@ bool remove_host(CopyOnWriteHostVec& hosts, const Address& address) {
   }
   return false;
 }
+
+} } } // namespace datastax::internal::core
 
 void Host::LatencyTracker::update(uint64_t latency_ns) {
   uint64_t now = uv_hrtime();
@@ -165,5 +170,3 @@ void ExternalHostListener::on_host_removed(const Host::Ptr& host) {
   address.address_length = host->address().to_inet(address.address);
   callback_(CASS_HOST_LISTENER_EVENT_REMOVE, address, data_);
 }
-
-} // namespace cass

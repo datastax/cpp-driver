@@ -14,10 +14,14 @@
 #include <iomanip>
 #include <sstream>
 
+using namespace datastax;
+using namespace datastax::internal::core;
+using namespace datastax::internal::enterprise;
+
 extern "C" {
 
 DseLineString* dse_line_string_new() {
-  return DseLineString::to(new dse::LineString());
+  return DseLineString::to(new LineString());
 }
 
 void dse_line_string_free(DseLineString* line_string) {
@@ -44,7 +48,7 @@ CassError dse_line_string_finish(DseLineString* line_string) {
 }
 
 DseLineStringIterator* dse_line_string_iterator_new() {
-  return DseLineStringIterator::to(new dse::LineStringIterator());
+  return DseLineStringIterator::to(new LineStringIterator());
 }
 
 void dse_line_string_iterator_free(DseLineStringIterator* iterator) {
@@ -77,15 +81,13 @@ CassError dse_line_string_iterator_next_point(DseLineStringIterator* iterator,
 
 } // extern "C"
 
-namespace dse {
-
-cass::String LineString::to_wkt() const {
+String LineString::to_wkt() const {
   // Special case empty line string
   if (num_points_ == 0) {
     return "LINESTRING EMPTY";
   }
 
-  cass::OStringStream ss;
+  OStringStream ss;
   ss.precision(WKT_MAX_DIGITS);
   ss << "LINESTRING (";
   const cass_byte_t* pos = bytes_.data() + WKB_HEADER_SIZE + sizeof(cass_uint32_t);
@@ -104,11 +106,11 @@ cass::String LineString::to_wkt() const {
 CassError LineStringIterator::reset_binary(const CassValue* value) {
   size_t size = 0;
   const cass_byte_t* pos = NULL;
-  dse::WkbByteOrder byte_order;
+  WkbByteOrder byte_order;
   cass_uint32_t num_points = 0;
   CassError rc = CASS_OK;
 
-  rc = dse::validate_data_type(value, DSE_LINE_STRING_TYPE);
+  rc = validate_data_type(value, DSE_LINE_STRING_TYPE);
   if (rc != CASS_OK) return rc;
 
   rc = cass_value_get_bytes(value, &pos, &size);
@@ -119,12 +121,12 @@ CassError LineStringIterator::reset_binary(const CassValue* value) {
   }
   size -= WKB_LINE_STRING_HEADER_SIZE;
 
-  if (dse::decode_header(pos, &byte_order) != dse::WKB_GEOMETRY_TYPE_LINESTRING) {
+  if (decode_header(pos, &byte_order) != WKB_GEOMETRY_TYPE_LINESTRING) {
     return CASS_ERROR_LIB_INVALID_DATA;
   }
   pos += WKB_HEADER_SIZE;
 
-  num_points = dse::decode_uint32(pos, byte_order);
+  num_points = decode_uint32(pos, byte_order);
   pos += sizeof(cass_uint32_t);
 
   if (size < 2 * num_points * sizeof(cass_double_t)) {
@@ -241,5 +243,3 @@ CassError LineStringIterator::TextIterator::next_point(cass_double_t* x, cass_do
 
   return CASS_OK;
 }
-
-} // namespace dse

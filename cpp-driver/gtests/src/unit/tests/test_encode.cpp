@@ -20,7 +20,7 @@
 
 #include <time.h>
 
-using namespace cass;
+using namespace datastax::internal::core;
 
 TEST(EncodeDurationUnitTest, Base) {
   CassDuration value(0, 0, 0);

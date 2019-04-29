@@ -14,15 +14,20 @@
 #include "result_iterator.hpp"
 #include "session.hpp"
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+using namespace datastax::internal::enterprise;
+
 class ClientInsightsUnitTest : public Unit {
 public:
-  class RpcPayloadLatch : public cass::RefCounted<RpcPayloadLatch> {
+  class RpcPayloadLatch : public RefCounted<RpcPayloadLatch> {
   public:
     typedef SharedRefPtr<RpcPayloadLatch> Ptr;
 
     RpcPayloadLatch(unsigned initial_payload_count = 1)
       : count_(initial_payload_count)
-      , future_(new cass::Future(cass::Future::FUTURE_TYPE_GENERIC)) {
+      , future_(new Future(Future::FUTURE_TYPE_GENERIC)) {
       uv_mutex_init(&mutex_);
     }
 
@@ -35,19 +40,19 @@ public:
     }
 
     void reset(unsigned count) {
-      cass::ScopedMutex lock(&mutex_);
+      ScopedMutex lock(&mutex_);
       count_ = count;
-      future_.reset(new cass::Future(cass::Future::FUTURE_TYPE_GENERIC));
+      future_.reset(new Future(Future::FUTURE_TYPE_GENERIC));
     }
 
-    void add_payload(const cass::String& payload) {
-      cass::ScopedMutex lock(&mutex_);
+    void add_payload(const String& payload) {
+      ScopedMutex lock(&mutex_);
       payloads_.push_back(payload);
       if (--count_ == 0) future_->set();
     }
 
-    const cass::Vector<String>& payloads() {
-      cass::ScopedMutex lock(&mutex_);
+    const Vector<String>& payloads() {
+      ScopedMutex lock(&mutex_);
       return payloads_;
     }
 
@@ -57,9 +62,9 @@ public:
 
   private:
     unsigned count_;
-    cass::Future::Ptr future_;
+    Future::Ptr future_;
     uv_mutex_t mutex_;
-    cass::Vector<cass::String> payloads_;
+    Vector<String> payloads_;
   };
 
   class InsightsRpcQuery : public mockssandra::Action {
@@ -72,7 +77,7 @@ public:
       mockssandra::QueryParameters params;
       if (!request->decode_query(&query, &params)) {
         request->error(mockssandra::ERROR_PROTOCOL_ERROR, "Invalid query message");
-      } else if (cass::starts_with(query, "CALL InsightsRpc.reportInsight")) {
+      } else if (starts_with(query, "CALL InsightsRpc.reportInsight")) {
         size_t pos = query.find("('") + 2; // Skip starting single quote
         size_t len = (query.find_last_of("')") - 1) - pos; // Skip ending single quote
         latch_->add_payload(query.substr(pos, len));
@@ -96,12 +101,12 @@ public:
 
     mockssandra::SimpleRequestHandlerBuilder builder;
     builder.on(mockssandra::OPCODE_QUERY)
-      .system_local_dse()
-      .system_peers_dse()
-      .execute(new InsightsRpcQuery(rpc_payload_latch_)) // Allow RPC calls to be stored in cluster
-      .is_query("wait")
+        .system_local_dse()
+        .system_peers_dse()
+        .execute(new InsightsRpcQuery(rpc_payload_latch_)) // Allow RPC calls to be stored in cluster
+        .is_query("wait")
         .then(mockssandra::Action::Builder().wait(2000).void_result()) // Allow queries to build up
-      .void_result();
+        .void_result();
 
     return builder.build();
   }
@@ -109,7 +114,7 @@ public:
   void connect(unsigned interval_secs = 1) {
     config_.contact_points().push_back("127.0.0.1");
     config_.set_monitor_reporting_interval_secs(interval_secs);
-    cass::Future::Ptr connect_future(session_.connect(config_));
+    Future::Ptr connect_future(session_.connect(config_));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";
     ASSERT_FALSE(connect_future->error())
@@ -117,14 +122,14 @@ public:
         << connect_future->error()->message;
   }
 
-  cass::String startup_message(uint64_t wait_time_sec = WAIT_FOR_TIME) const {
+  String startup_message(uint64_t wait_time_sec = WAIT_FOR_TIME) const {
     if (!rpc_payload_latch_->wait_for(wait_time_sec)) {
       return "";
     }
     return rpc_payload_latch_->payload();
   }
 
-  cass::String status_message(unsigned status_message_index = 1) const {
+  String status_message(unsigned status_message_index = 1) const {
     if (!rpc_payload_latch_->wait_for(WAIT_FOR_TIME * status_message_index)) {
       return "";
     }
@@ -136,8 +141,8 @@ public:
   }
 
 protected:
-  cass::Config config_;
-  cass::Session session_;
+  Config config_;
+  Session session_;
   RpcPayloadLatch::Ptr rpc_payload_latch_;
 };
 
@@ -146,14 +151,14 @@ TEST_F(ClientInsightsUnitTest, StartupMetadata) {
   ASSERT_EQ(cluster.start_all(), 0);
   connect();
 
-  cass::String message = startup_message();
-  const uint64_t current_timestamp = cass::get_time_since_epoch_ms();
-  cass::json::Document document;
+  String message = startup_message();
+  const uint64_t current_timestamp = get_time_since_epoch_ms();
+  json::Document document;
   document.Parse(message.c_str());
 
   ASSERT_TRUE(document.IsObject());
   ASSERT_TRUE(document.HasMember("metadata"));
-  const cass::json::Value& metadata = document["metadata"];
+  const json::Value& metadata = document["metadata"];
   ASSERT_TRUE(metadata.IsObject());
 
   { // name
@@ -174,7 +179,7 @@ TEST_F(ClientInsightsUnitTest, StartupMetadata) {
   }
   { // tags
     ASSERT_TRUE(metadata.HasMember("tags"));
-    const cass::json::Value& value = metadata["tags"];
+    const json::Value& value = metadata["tags"];
     ASSERT_TRUE(value.IsObject());
     ASSERT_TRUE(value.HasMember("language"));
     ASSERT_STREQ("C/C++", value["language"].GetString());
@@ -186,8 +191,8 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   config_.contact_points().push_back("localhost"); // Used for hostname resolve
-  cass::String applicationName = "StartupData";
-  cass::String applicationVersion = "v1.0.0-test";
+  String applicationName = "StartupData";
+  String applicationVersion = "v1.0.0-test";
   CassConsistency consistency = CASS_CONSISTENCY_ALL;
   CassConsistency serial_consistency = CASS_CONSISTENCY_ONE;
   unsigned core_connections = 3;
@@ -195,36 +200,36 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   unsigned periodic_status_interval = 7;
   unsigned reconnect_wait_time_ms = 9;
   unsigned request_timeout_ms = 11;
-  cass::RetryPolicy::Ptr retry_policy(new cass::FallthroughRetryPolicy());
+  RetryPolicy::Ptr retry_policy(new FallthroughRetryPolicy());
   config_.set_application_name(applicationName);
   config_.set_application_version(applicationVersion);
   config_.set_consistency(consistency);
   config_.set_serial_consistency(serial_consistency);
   config_.set_core_connections_per_host(core_connections);
   config_.set_connection_heartbeat_interval_secs(heartbeat_interval_secs);
-  config_.set_protocol_version(cass::ProtocolVersion::lowest_supported());
+  config_.set_protocol_version(ProtocolVersion::lowest_supported());
   config_.set_reconnect_wait_time(reconnect_wait_time_ms);
   config_.set_request_timeout(request_timeout_ms);
   config_.set_retry_policy(retry_policy.get());
   connect(periodic_status_interval);
 
-  cass::String message = startup_message();
-  cass::json::Document document;
+  String message = startup_message();
+  json::Document document;
   document.Parse(message.c_str());
 
   ASSERT_TRUE(document.IsObject());
   ASSERT_TRUE(document.HasMember("data"));
-  const cass::json::Value& data = document["data"];
+  const json::Value& data = document["data"];
   ASSERT_TRUE(data.IsObject());
 
   { // client ID
     ASSERT_TRUE(data.HasMember("clientId"));
-    ASSERT_STREQ(cass::to_string(session_.client_id()).c_str(),
+    ASSERT_STREQ(to_string(session_.client_id()).c_str(),
                  data["clientId"].GetString());
   }
   { // session ID
     ASSERT_TRUE(data.HasMember("sessionId"));
-    ASSERT_STREQ(cass::to_string(session_.session_id()).c_str(),
+    ASSERT_STREQ(to_string(session_.session_id()).c_str(),
                  data["sessionId"].GetString());
   }
   { // application name
@@ -242,50 +247,50 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   }
   { // driver name
     ASSERT_TRUE(data.HasMember("driverName"));
-    ASSERT_STREQ(cass::driver_name(), data["driverName"].GetString());
+    ASSERT_STREQ(driver_name(), data["driverName"].GetString());
   }
   { // driver version
     ASSERT_TRUE(data.HasMember("driverVersion"));
-    ASSERT_STREQ(cass::driver_version(), data["driverVersion"].GetString());
+    ASSERT_STREQ(driver_version(), data["driverVersion"].GetString());
   }
   { // contact points
     ASSERT_TRUE(data.HasMember("contactPoints"));
-    const cass::json::Value& value = data["contactPoints"];
+    const json::Value& value = data["contactPoints"];
     ASSERT_TRUE(value.IsObject());
     ASSERT_EQ(2u, value.MemberCount());
     ASSERT_TRUE(value.HasMember("127.0.0.1"));
-    const cass::json::Value& local_ipv4_1 = value["127.0.0.1"];
+    const json::Value& local_ipv4_1 = value["127.0.0.1"];
     ASSERT_TRUE(local_ipv4_1.IsArray());
     ASSERT_EQ(1u, local_ipv4_1.Size());
-    cass::OStringStream ipv4_with_port;
+    OStringStream ipv4_with_port;
     ipv4_with_port << "127.0.0.1:" << config_.port();
-    cass::OStringStream ipv6_with_port;
+    OStringStream ipv6_with_port;
     ipv6_with_port << "[::1]:" << config_.port();
     ASSERT_EQ(ipv4_with_port.str(), local_ipv4_1.GetArray()[0].GetString());
     ASSERT_TRUE(value.HasMember("localhost"));
-    const cass::json::Value& local_hostname = value["localhost"];
+    const json::Value& local_hostname = value["localhost"];
     ASSERT_GE(local_hostname.Size(), 1u); // More than one address could be resolved
-    cass::String resolved_local_hostname = local_hostname.GetArray()[0].GetString();
+    String resolved_local_hostname = local_hostname.GetArray()[0].GetString();
     ASSERT_TRUE(ipv6_with_port.str() == resolved_local_hostname ||
                 ipv4_with_port.str() == resolved_local_hostname);
   }
   { // data centers
     ASSERT_TRUE(data.HasMember("dataCenters"));
-    const cass::json::Value& value = data["dataCenters"];
+    const json::Value& value = data["dataCenters"];
     ASSERT_TRUE(value.IsArray());
     ASSERT_EQ(1u, value.Size()); // Should only connect to 1 DC based on LBP
     ASSERT_STREQ("dc1", value.GetArray()[0].GetString());
   }
   { // initial control connection
     ASSERT_TRUE(data.HasMember("initialControlConnection"));
-    cass::OStringStream ipv4_with_port;
+    OStringStream ipv4_with_port;
     ipv4_with_port << "127.0.0.1:" << config_.port();
     ASSERT_EQ(ipv4_with_port.str(),
-                 data["initialControlConnection"].GetString());
+              data["initialControlConnection"].GetString());
   }
   { // protocol version
     ASSERT_TRUE(data.HasMember("protocolVersion"));
-    ASSERT_EQ(cass::ProtocolVersion::lowest_supported().value(),
+    ASSERT_EQ(ProtocolVersion::lowest_supported().value(),
               data["protocolVersion"].GetInt());
   }
   { // local address
@@ -294,18 +299,18 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   }
   { // hostname
     ASSERT_TRUE(data.HasMember("hostName"));
-    const cass::json::Value& value = data["hostName"];
+    const json::Value& value = data["hostName"];
     // No simple way to validate hostname on different machines
     ASSERT_TRUE(value.IsString());
     ASSERT_GT(value.GetStringLength(), 0u);
   }
   { // execution profiles
     ASSERT_TRUE(data.HasMember("executionProfiles"));
-    const cass::json::Value& value = data["executionProfiles"];
+    const json::Value& value = data["executionProfiles"];
     ASSERT_TRUE(value.IsObject());
     ASSERT_EQ(1u, value.MemberCount());
     ASSERT_TRUE(value.HasMember("default"));
-    const cass::json::Value& default_profile = value["default"];
+    const json::Value& default_profile = value["default"];
     ASSERT_TRUE(default_profile.IsObject());
     ASSERT_EQ(5u, default_profile.MemberCount());
     ASSERT_TRUE(default_profile.HasMember("requestTimeoutMs"));
@@ -321,13 +326,13 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_STREQ("FallthroughRetryPolicy",
                  default_profile["retryPolicy"].GetString());
     ASSERT_TRUE(default_profile.HasMember("loadBalancing"));
-    const cass::json::Value& load_balancing = default_profile["loadBalancing"];
+    const json::Value& load_balancing = default_profile["loadBalancing"];
     ASSERT_TRUE(load_balancing.IsObject());
     ASSERT_EQ(2u, load_balancing.MemberCount());
     ASSERT_TRUE(load_balancing.HasMember("type"));
     ASSERT_STREQ("DCAwarePolicy", load_balancing["type"].GetString());
     ASSERT_TRUE(load_balancing.HasMember("options"));
-    const cass::json::Value& options = load_balancing["options"];
+    const json::Value& options = load_balancing["options"];
     ASSERT_TRUE(options.IsObject());
     ASSERT_EQ(5u, options.MemberCount());
     ASSERT_TRUE(options.HasMember("localDc"));
@@ -339,7 +344,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(options.HasMember("hostTargeting"));
     ASSERT_FALSE(options["hostTargeting"].GetBool());
     ASSERT_TRUE(options.HasMember("tokenAwareRouting"));
-    const cass::json::Value& token_aware_routing = options["tokenAwareRouting"];
+    const json::Value& token_aware_routing = options["tokenAwareRouting"];
     ASSERT_TRUE(token_aware_routing.IsObject());
     ASSERT_EQ(1u, token_aware_routing.MemberCount());
     ASSERT_TRUE(token_aware_routing.HasMember("shuffleReplicas"));
@@ -347,7 +352,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   }
   { // pool size by host distance
     ASSERT_TRUE(data.HasMember("poolSizeByHostDistance"));
-    const cass::json::Value& value = data["poolSizeByHostDistance"];
+    const json::Value& value = data["poolSizeByHostDistance"];
     ASSERT_TRUE(value.IsObject());
     ASSERT_EQ(2u, value.MemberCount());
     ASSERT_TRUE(value.HasMember("local"));
@@ -366,13 +371,13 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   }
   { // reconnection policy
     ASSERT_TRUE(data.HasMember("reconnectionPolicy"));
-    const cass::json::Value& value = data["reconnectionPolicy"];
+    const json::Value& value = data["reconnectionPolicy"];
     ASSERT_TRUE(value.IsObject());
     ASSERT_EQ(2u, value.MemberCount());
     ASSERT_TRUE(value.HasMember("type"));
     ASSERT_STREQ("ConstantReconnectionPolicy", value["type"].GetString());
     ASSERT_TRUE(value.HasMember("options"));
-    const cass::json::Value& options = value["options"];
+    const json::Value& options = value["options"];
     ASSERT_TRUE(options.IsObject());
     ASSERT_EQ(1u, options.MemberCount());
     ASSERT_TRUE(options.HasMember("reconnectWaitTimeMs"));
@@ -380,7 +385,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   }
   { // SSL
     ASSERT_TRUE(data.HasMember("ssl"));
-    const cass::json::Value& value = data["ssl"];
+    const json::Value& value = data["ssl"];
     ASSERT_TRUE(value.IsObject());
     ASSERT_EQ(2u, value.MemberCount());
     ASSERT_TRUE(value.HasMember("enabled"));
@@ -390,11 +395,11 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   }
   { // other options
     ASSERT_TRUE(data.HasMember("otherOptions"));
-    const cass::json::Value& value = data["otherOptions"];
+    const json::Value& value = data["otherOptions"];
     ASSERT_TRUE(value.IsObject());
     ASSERT_EQ(1u, value.MemberCount());
     ASSERT_TRUE(value.HasMember("configuration"));
-    const cass::json::Value& configuration = value["configuration"];
+    const json::Value& configuration = value["configuration"];
     ASSERT_TRUE(configuration.IsObject());
     ASSERT_EQ(24, configuration.MemberCount());
     ASSERT_TRUE(configuration.HasMember("protocolVersion"));
@@ -426,7 +431,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
               configuration["maxTracingWaitTimeMs"].GetUint());
     ASSERT_TRUE(configuration.HasMember("tracingConsistency"));
     ASSERT_STREQ(cass_consistency_string(config_.tracing_consistency()),
-              configuration["tracingConsistency"].GetString());
+                 configuration["tracingConsistency"].GetString());
     ASSERT_TRUE(configuration.HasMember("coalesceDelayUs"));
     ASSERT_EQ(config_.coalesce_delay_us(),
               configuration["coalesceDelayUs"].GetUint64());
@@ -435,7 +440,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
               configuration["newRequestRatio"].GetInt());
     ASSERT_TRUE(configuration.HasMember("logLevel"));
     ASSERT_STREQ(cass_log_level_string(config_.log_level()),
-              configuration["logLevel"].GetString());
+                 configuration["logLevel"].GetString());
     ASSERT_TRUE(configuration.HasMember("tcpNodelayEnable"));
     ASSERT_EQ(config_.tcp_nodelay_enable(),
               configuration["tcpNodelayEnable"].GetBool());
@@ -472,12 +477,12 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   }
   { // platform info
     ASSERT_TRUE(data.HasMember("platformInfo"));
-    const cass::json::Value& value = data["platformInfo"];
+    const json::Value& value = data["platformInfo"];
     // No simple way to validate platform information on different platforms
     ASSERT_TRUE(value.IsObject());
     ASSERT_EQ(3u, value.MemberCount());
     ASSERT_TRUE(value.HasMember("os"));
-    const cass::json::Value& os = value["os"];
+    const json::Value& os = value["os"];
     ASSERT_TRUE(os.IsObject());
     ASSERT_EQ(3u, os.MemberCount());
     ASSERT_TRUE(os.HasMember("name"));
@@ -490,7 +495,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(os["arch"].IsString());
     ASSERT_GT(os["arch"].GetStringLength(), 0u);
     ASSERT_TRUE(value.HasMember("cpus"));
-    const cass::json::Value& cpus = value["cpus"];
+    const json::Value& cpus = value["cpus"];
     ASSERT_TRUE(cpus.IsObject());
     ASSERT_EQ(2u, cpus.MemberCount());
     ASSERT_TRUE(cpus.HasMember("length"));
@@ -499,7 +504,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(cpus["model"].IsString());
     ASSERT_GT(cpus["model"].GetStringLength(), 0u);
     ASSERT_TRUE(value.HasMember("runtime"));
-    const cass::json::Value& runtime = value["runtime"];
+    const json::Value& runtime = value["runtime"];
     ASSERT_TRUE(runtime.IsObject());
     ASSERT_EQ(3u, runtime.MemberCount());
     // NOTE: No simple way to validate compiler with different compilers
@@ -522,17 +527,17 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleDcs) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call(), 1, 1);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  cass::LoadBalancingPolicy::Ptr load_balancing_policy(new cass::DCAwarePolicy("dc1",
-                                                                               1,
-                                                                               false));
+  LoadBalancingPolicy::Ptr load_balancing_policy(new DCAwarePolicy("dc1",
+                                                                   1,
+                                                                   false));
   config_.set_load_balancing_policy(load_balancing_policy.get());
   connect();
 
-  cass::String message = startup_message();
-  cass::json::Document document;
+  String message = startup_message();
+  json::Document document;
   document.Parse(message.c_str());
 
-  const cass::json::Value& data = document["data"];
+  const json::Value& data = document["data"];
   ASSERT_EQ(2u, data["dataCenters"].Size());
   ASSERT_STREQ("dc1", data["dataCenters"].GetArray()[0].GetString());
   ASSERT_STREQ("dc2", data["dataCenters"].GetArray()[1].GetString());
@@ -542,19 +547,19 @@ TEST_F(ClientInsightsUnitTest, StartupDataProtocolVersion) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  cass::ProtocolVersion configured_protocol_version(CASS_PROTOCOL_VERSION_DSEV2);
+  ProtocolVersion configured_protocol_version(CASS_PROTOCOL_VERSION_DSEV2);
   config_.set_protocol_version(configured_protocol_version); // Mockssandra does not currently support DSE protocols
   connect();
 
-  cass::String message = startup_message();
-  cass::json::Document document;
+  String message = startup_message();
+  json::Document document;
   document.Parse(message.c_str());
 
   // Configured and connected protocol versions should be different
-  const cass::json::Value& data = document["data"];
+  const json::Value& data = document["data"];
   int data_protocol_version = data["protocolVersion"].GetInt();
   int other_options_protocol_version =
-    data["otherOptions"]["configuration"]["protocolVersion"].GetInt();
+      data["otherOptions"]["configuration"]["protocolVersion"].GetInt();
   ASSERT_LT(data_protocol_version, configured_protocol_version.value());
   ASSERT_EQ(other_options_protocol_version,
             configured_protocol_version.value());
@@ -564,19 +569,19 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  cass::DCAwarePolicy::Ptr dc_aware(new cass::DCAwarePolicy("dc1", 1, true));
-  cass::RoundRobinPolicy::Ptr round_robin(new cass::RoundRobinPolicy());
-  cass::LatencyAwarePolicy::Settings latency_aware_settings;
-  cass::RetryPolicy::Ptr profile_retry_policy(new cass::DowngradingConsistencyRetryPolicy());
+  DCAwarePolicy::Ptr dc_aware(new DCAwarePolicy("dc1", 1, true));
+  RoundRobinPolicy::Ptr round_robin(new RoundRobinPolicy());
+  LatencyAwarePolicy::Settings latency_aware_settings;
+  RetryPolicy::Ptr profile_retry_policy(new DowngradingConsistencyRetryPolicy());
   latency_aware_settings.exclusion_threshold = 0.1;
   latency_aware_settings.scale_ns = 1;
   latency_aware_settings.retry_period_ns = 3;
   latency_aware_settings.update_rate_ms = 5;
   latency_aware_settings.min_measured = 7;
-  cass::ExecutionProfile quorum_profile;
+  ExecutionProfile quorum_profile;
   quorum_profile.set_consistency(CASS_CONSISTENCY_QUORUM);
   quorum_profile.set_request_timeout(300000);
-  cass::ExecutionProfile round_robin_profile;
+  ExecutionProfile round_robin_profile;
   round_robin_profile.set_load_balancing_policy(round_robin.get());
   round_robin_profile.set_token_aware_routing(false);
   round_robin_profile.set_latency_aware_routing(true);
@@ -589,17 +594,17 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
   config_.set_execution_profile("round_robin", &round_robin_profile);
   connect();
 
-  cass::String message = startup_message();
-  cass::json::Document document;
+  String message = startup_message();
+  json::Document document;
   document.Parse(message.c_str());
 
-  const cass::json::Value& data = document["data"];
-  const cass::json::Value& execution_profiles = data["executionProfiles"];
+  const json::Value& data = document["data"];
+  const json::Value& execution_profiles = data["executionProfiles"];
   ASSERT_EQ(3u, execution_profiles.MemberCount());
   ASSERT_TRUE(execution_profiles.HasMember("default"));
   ASSERT_TRUE(execution_profiles.HasMember("round_robin"));
   { // default profile
-    const cass::json::Value& execution_profile = execution_profiles["default"];
+    const json::Value& execution_profile = execution_profiles["default"];
     ASSERT_EQ(config_.request_timeout(),
               execution_profile["requestTimeoutMs"].GetUint());
     ASSERT_STREQ(cass_consistency_string(config_.consistency()),
@@ -608,9 +613,9 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
                  execution_profile["serialConsistency"].GetString());
     ASSERT_STREQ("DefaultRetryPolicy",
                  execution_profile["retryPolicy"].GetString());
-    const cass::json::Value& load_balancing = execution_profile["loadBalancing"];
+    const json::Value& load_balancing = execution_profile["loadBalancing"];
     ASSERT_STREQ("DCAwarePolicy", load_balancing["type"].GetString());
-    const cass::json::Value& options = load_balancing["options"];
+    const json::Value& options = load_balancing["options"];
     ASSERT_STREQ("dc1", options["localDc"].GetString());
     ASSERT_EQ(1u, options["usedHostsPerRemoteDc"].GetUint());
     ASSERT_FALSE(options["allowRemoteDcsForLocalCl"].GetBool());
@@ -619,7 +624,7 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
     ASSERT_FALSE(options["tokenAwareRouting"]["shuffleReplicas"].GetBool());
   }
   { // quorum profile
-    const cass::json::Value& execution_profile = execution_profiles["quorum"];
+    const json::Value& execution_profile = execution_profiles["quorum"];
     ASSERT_EQ(quorum_profile.request_timeout_ms(),
               execution_profile["requestTimeoutMs"].GetUint());
     ASSERT_STREQ(cass_consistency_string(quorum_profile.consistency()),
@@ -629,16 +634,16 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
     ASSERT_FALSE(execution_profiles.HasMember("loadBalancing"));
   }
   { // round robin profile
-    const cass::json::Value& execution_profile = execution_profiles["round_robin"];
+    const json::Value& execution_profile = execution_profiles["round_robin"];
     ASSERT_FALSE(execution_profiles.HasMember("requestTimeoutMs"));
     ASSERT_FALSE(execution_profiles.HasMember("consistency"));
     ASSERT_FALSE(execution_profiles.HasMember("serialConsistency"));
     ASSERT_FALSE(execution_profiles.HasMember("retryPolicy"));
-    const cass::json::Value& load_balancing = execution_profile["loadBalancing"];
+    const json::Value& load_balancing = execution_profile["loadBalancing"];
     ASSERT_STREQ("RoundRobinPolicy", load_balancing["type"].GetString());
-    const cass::json::Value& options = load_balancing["options"];
+    const json::Value& options = load_balancing["options"];
     ASSERT_TRUE(options["hostTargeting"].GetBool());
-    const cass::json::Value& latency_aware_routing = options["latencyAwareRouting"];
+    const json::Value& latency_aware_routing = options["latencyAwareRouting"];
     ASSERT_EQ(latency_aware_settings.exclusion_threshold,
               latency_aware_routing["exclusionThreshold"].GetDouble());
     ASSERT_EQ(latency_aware_settings.scale_ns,
@@ -654,35 +659,35 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
 
 TEST_F(ClientInsightsUnitTest, StartupDataSsl) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call());
-  cass::SslContext::Ptr ssl_context = use_ssl(&cluster).socket_settings.ssl_context;
+  SslContext::Ptr ssl_context = use_ssl(&cluster).socket_settings.ssl_context;
   ASSERT_EQ(cluster.start_all(), 0);
 
   config_.set_ssl_context(ssl_context.get());
   connect();
 
-  cass::String message = startup_message();
-  cass::json::Document document;
+  String message = startup_message();
+  json::Document document;
   document.Parse(message.c_str());
 
-  const cass::json::Value& data = document["data"];
+  const json::Value& data = document["data"];
   ASSERT_TRUE(data["ssl"]["enabled"].GetBool());
   ASSERT_TRUE(data["ssl"]["certValidation"].GetBool());
 }
 
 TEST_F(ClientInsightsUnitTest, StartupDataSslWithoutCertValidation) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call());
-  cass::SslContext::Ptr ssl_context = use_ssl(&cluster).socket_settings.ssl_context;
+  SslContext::Ptr ssl_context = use_ssl(&cluster).socket_settings.ssl_context;
   ssl_context->set_verify_flags(SSL_VERIFY_NONE);
   ASSERT_EQ(cluster.start_all(), 0);
 
   config_.set_ssl_context(ssl_context.get());
   connect();
 
-  cass::String message = startup_message();
-  cass::json::Document document;
+  String message = startup_message();
+  json::Document document;
   document.Parse(message.c_str());
 
-  const cass::json::Value& data = document["data"];
+  const json::Value& data = document["data"];
   ASSERT_TRUE(data["ssl"]["enabled"].GetBool());
   ASSERT_FALSE(data["ssl"]["certValidation"].GetBool());
 }
@@ -691,20 +696,20 @@ TEST_F(ClientInsightsUnitTest, StartupDataConfigAntiPatternWithoutSsl) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  cass::LoadBalancingPolicy::Ptr dc_aware(new cass::DCAwarePolicy("dc1",
-                                          1,
-                                          false)); // useRemoteHosts
-  cass::RetryPolicy::Ptr retry_policy(new cass::DowngradingConsistencyRetryPolicy());
+  LoadBalancingPolicy::Ptr dc_aware(new DCAwarePolicy("dc1",
+                                                      1,
+                                                      false)); // useRemoteHosts
+  RetryPolicy::Ptr retry_policy(new DowngradingConsistencyRetryPolicy());
   config_.set_credentials("cassandra", "cassandra"); // plainTextAuthWithoutSsl
   connect();
 
-  cass::String message = startup_message();
-  cass::json::Document document;
+  String message = startup_message();
+  json::Document document;
   document.Parse(message.c_str());
 
-  const cass::json::Value& data = document["data"];
+  const json::Value& data = document["data"];
   ASSERT_TRUE(data.HasMember("configAntiPatterns"));
-  const cass::json::Value& config_anti_patterns = data["configAntiPatterns"];
+  const json::Value& config_anti_patterns = data["configAntiPatterns"];
   ASSERT_TRUE(config_anti_patterns.IsObject());
   ASSERT_EQ(1u, config_anti_patterns.MemberCount());
   ASSERT_TRUE(config_anti_patterns.HasMember("plainTextAuthWithoutSsl"));
@@ -714,27 +719,27 @@ TEST_F(ClientInsightsUnitTest, StartupDataConfigAntiPatternWithoutSsl) {
 
 TEST_F(ClientInsightsUnitTest, StartupDataConfigAntiPatternsWithSsl) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call(), 1, 1);
-  cass::SslContext::Ptr ssl_context = use_ssl(&cluster).socket_settings.ssl_context;
+  SslContext::Ptr ssl_context = use_ssl(&cluster).socket_settings.ssl_context;
   ssl_context->set_verify_flags(SSL_VERIFY_NONE); // sslWithoutCertValidation
   ASSERT_EQ(cluster.start_all(), 0);
 
-  cass::LoadBalancingPolicy::Ptr dc_aware(new cass::DCAwarePolicy("dc1",
-                                                                  1,
-                                                                  false)); // useRemoteHosts
-  cass::RetryPolicy::Ptr retry_policy(new cass::DowngradingConsistencyRetryPolicy());
+  LoadBalancingPolicy::Ptr dc_aware(new DCAwarePolicy("dc1",
+                                                      1,
+                                                      false)); // useRemoteHosts
+  RetryPolicy::Ptr retry_policy(new DowngradingConsistencyRetryPolicy());
   config_.set_load_balancing_policy(dc_aware.get());
   config_.set_retry_policy(retry_policy.get());  // downgradingConsistency
   config_.set_ssl_context(ssl_context.get());
   config_.contact_points().push_back("127.0.0.2"); // contactPointsMultipleDCs
   connect();
 
-  cass::String message = startup_message();
-  cass::json::Document document;
+  String message = startup_message();
+  json::Document document;
   document.Parse(message.c_str());
 
-  const cass::json::Value& data = document["data"];
+  const json::Value& data = document["data"];
   ASSERT_TRUE(data.HasMember("configAntiPatterns"));
-  const cass::json::Value& config_anti_patterns = data["configAntiPatterns"];
+  const json::Value& config_anti_patterns = data["configAntiPatterns"];
   ASSERT_TRUE(config_anti_patterns.IsObject());
   ASSERT_EQ(4u, config_anti_patterns.MemberCount());
   ASSERT_TRUE(config_anti_patterns.HasMember("contactPointsMultipleDCs"));
@@ -756,18 +761,18 @@ TEST_F(ClientInsightsUnitTest, StatusMetadata) {
   ASSERT_EQ(cluster.start_all(), 0);
   connect();
 
-  cass::String message = status_message();
-  cass::json::Document document;
+  String message = status_message();
+  json::Document document;
   document.Parse(message.c_str());
 
   ASSERT_TRUE(document.IsObject());
   ASSERT_TRUE(document.HasMember("metadata"));
-  const cass::json::Value& metadata = document["metadata"];
+  const json::Value& metadata = document["metadata"];
   ASSERT_TRUE(metadata.IsObject());
 
   { // name
     ASSERT_TRUE(metadata.HasMember("name"));
-    const cass::json::Value& value = metadata["name"];
+    const json::Value& value = metadata["name"];
     ASSERT_STREQ("driver.status", metadata["name"].GetString());
   }
 }
@@ -782,41 +787,41 @@ TEST_F(ClientInsightsUnitTest, StatusData) {
   config_.set_use_randomized_contact_points(false);
   connect();
 
-  cass::String message = status_message();
-  cass::json::Document document;
+  String message = status_message();
+  json::Document document;
   document.Parse(message.c_str());
 
   ASSERT_TRUE(document.IsObject());
   ASSERT_TRUE(document.HasMember("data"));
-  const cass::json::Value& data = document["data"];
+  const json::Value& data = document["data"];
   ASSERT_TRUE(data.IsObject());
 
   { // client ID
     ASSERT_TRUE(data.HasMember("clientId"));
-    ASSERT_STREQ(cass::to_string(session_.client_id()).c_str(),
+    ASSERT_STREQ(to_string(session_.client_id()).c_str(),
                  data["clientId"].GetString());
   }
   { // session ID
     ASSERT_TRUE(data.HasMember("sessionId"));
-    ASSERT_STREQ(cass::to_string(session_.session_id()).c_str(),
+    ASSERT_STREQ(to_string(session_.session_id()).c_str(),
                  data["sessionId"].GetString());
   }
   { // control connection
     ASSERT_TRUE(data.HasMember("controlConnection"));
-    cass::OStringStream ip_with_port;
+    OStringStream ip_with_port;
     ip_with_port << "127.0.0.1:" << config_.port();
     ASSERT_EQ(ip_with_port.str(), data["controlConnection"].GetString());
   }
   { // connected nodes
     ASSERT_TRUE(data.HasMember("conntectedNodes"));
-    const cass::json::Value& value = data["conntectedNodes"];
+    const json::Value& value = data["conntectedNodes"];
     ASSERT_TRUE(value.IsObject());
     ASSERT_EQ(2u, value.MemberCount());
     for (unsigned i = 1; i <= value.MemberCount(); ++i) {
-      cass::OStringStream ip_with_port;
+      OStringStream ip_with_port;
       ip_with_port << "127.0.0." << i << ":" << config_.port();
       ASSERT_TRUE(value.HasMember(ip_with_port.str().c_str()));
-      const cass::json::Value& node = value[ip_with_port.str().c_str()];
+      const json::Value& node = value[ip_with_port.str().c_str()];
       ASSERT_TRUE(node.IsObject());
       ASSERT_EQ(2u, node.MemberCount());
       ASSERT_TRUE(node.HasMember("connections"));
@@ -835,16 +840,16 @@ TEST_F(ClientInsightsUnitTest, StatusDataConnectedNodesRemovedNode) {
   config_.set_use_randomized_contact_points(false);
   connect();
 
-  cass::String message = status_message();
+  String message = status_message();
   reset_latch();
-  cass::json::Document document;
+  json::Document document;
   document.Parse(message.c_str());
 
   { // connected nodes (all nodes should be connected)
-    const cass::json::Value& value = document["data"]["conntectedNodes"];
+    const json::Value& value = document["data"]["conntectedNodes"];
     ASSERT_EQ(3u, value.MemberCount());
     for (unsigned i = 1; i <= value.MemberCount(); ++i) {
-      cass::OStringStream ip_with_port;
+      OStringStream ip_with_port;
       ip_with_port << "127.0.0." << i << ":" << config_.port();
       int expected_connections (i == 1 ? 2 : 1); // Handle control connection
       ASSERT_EQ(expected_connections,
@@ -857,18 +862,18 @@ TEST_F(ClientInsightsUnitTest, StatusDataConnectedNodesRemovedNode) {
   document.Parse(message.c_str());
 
   { // connected nodes (node 2 should be missing)
-    const cass::json::Value& value = document["data"]["conntectedNodes"];
+    const json::Value& value = document["data"]["conntectedNodes"];
     ASSERT_EQ(2u, value.MemberCount());
     {
-      cass::OStringStream ip_with_port;
+      OStringStream ip_with_port;
       ip_with_port << "127.0.0.1:" << config_.port();
-      const cass::json::Value& node = value[ip_with_port.str().c_str()]["connections"];
+      const json::Value& node = value[ip_with_port.str().c_str()]["connections"];
       EXPECT_EQ(2, node.GetInt()); // Ensure the control connection has moved to node 2
     }
     {
-      cass::OStringStream ip_with_port;
+      OStringStream ip_with_port;
       ip_with_port << "127.0.0.3:" << config_.port();
-      const cass::json::Value& node = value[ip_with_port.str().c_str()]["connections"];
+      const json::Value& node = value[ip_with_port.str().c_str()]["connections"];
       ASSERT_EQ(1, node.GetInt());
     }
   }
@@ -881,25 +886,25 @@ TEST_F(ClientInsightsUnitTest, StatusDataUpdatedControlConnection) {
   config_.set_reconnect_wait_time(100u);  // Reconnect immediately
   connect();
 
-  cass::String message = startup_message();
+  String message = startup_message();
   cluster.stop(1);
   reset_latch();
-  cass::json::Document document;
+  json::Document document;
   document.Parse(message.c_str());
-  cass::String initial_control_connection =
-    document["data"]["initialControlConnection"].GetString();
+  String initial_control_connection =
+      document["data"]["initialControlConnection"].GetString();
   {
-    cass::OStringStream ip_with_port;
+    OStringStream ip_with_port;
     ip_with_port << "127.0.0.1:" << config_.port();
     ASSERT_EQ(ip_with_port.str(), initial_control_connection);
   }
 
   message = status_message();
   document.Parse(message.c_str());
-  cass::String control_connection =
-    document["data"]["controlConnection"].GetString();
+  String control_connection =
+      document["data"]["controlConnection"].GetString();
   {
-    cass::OStringStream ip_with_port;
+    OStringStream ip_with_port;
     ip_with_port << "127.0.0.2:" << config_.port();
     ASSERT_EQ(ip_with_port.str(), control_connection);
   }
@@ -911,23 +916,23 @@ TEST_F(ClientInsightsUnitTest, StatusDataInFlightQueries) {
   connect();
 
   for (int i = 0; i < 37; ++i) {
-    cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest("wait", 0));
+    SharedRefPtr<QueryRequest> request(new QueryRequest("wait", 0));
     session_.execute(request, NULL);
   }
 
-  cass::OStringStream ip_with_port;
+  OStringStream ip_with_port;
   ip_with_port << "127.0.0.1:" << config_.port();
 
   {
-    cass::String message = status_message();
-    cass::json::Document document;
+    String message = status_message();
+    json::Document document;
     document.Parse(message.c_str());
     ASSERT_EQ(37, document["data"]["conntectedNodes"][ip_with_port.str().c_str()]["inFlightQueries"].GetInt());
   }
 
   {
-    cass::String message = status_message(3);
-    cass::json::Document document;
+    String message = status_message(3);
+    json::Document document;
     document.Parse(message.c_str());
     ASSERT_EQ(0, document["data"]["conntectedNodes"][ip_with_port.str().c_str()]["inFlightQueries"].GetInt());
   }
@@ -938,7 +943,7 @@ TEST_F(ClientInsightsUnitTest, DisableClientInsights) {
   ASSERT_EQ(cluster.start_all(), 0);
   connect(0); // Disable client insights
 
-  cass::String message = startup_message();
+  String message = startup_message();
   ASSERT_TRUE(message.empty());
   message = status_message();
   ASSERT_TRUE(message.empty());

@@ -27,7 +27,7 @@
 
 #include <algorithm>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 struct ColumnDefinition : public HashTableEntry<ColumnDefinition> {
   StringRef name;
@@ -59,6 +59,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ResultMetadata);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

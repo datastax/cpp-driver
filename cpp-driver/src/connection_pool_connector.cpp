@@ -19,7 +19,8 @@
 #include "event_loop.hpp"
 #include "metrics.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 ConnectionPoolConnector::ConnectionPoolConnector(const Host::Ptr& host,
                                                  ProtocolVersion protocol_version,
@@ -168,5 +169,3 @@ void ConnectionPoolConnector::on_connect(Connector* connector) {
     dec_ref();
   }
 }
-
-} // namespace cass

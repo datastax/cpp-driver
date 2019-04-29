@@ -18,7 +18,7 @@
 
 #include "serialization.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 bool EventResponse::decode(Decoder& decoder) {
   decoder.set_type("event");
@@ -106,5 +106,3 @@ bool EventResponse::decode(Decoder& decoder) {
   decoder.maybe_log_remaining();
   return true;
 }
-
-} // namespace cass

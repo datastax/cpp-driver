@@ -18,8 +18,10 @@
 
 #include "retry_policy.hpp"
 
-typedef cass::RetryPolicy RetryPolicy;
-typedef cass::RetryPolicy::RetryDecision RetryDecision;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
+typedef RetryPolicy::RetryDecision RetryDecision;
 
 void check_decision(RetryDecision decision,
                     RetryDecision::Type type,
@@ -30,8 +32,7 @@ void check_decision(RetryDecision decision,
   EXPECT_EQ(decision.retry_current_host(), retry_current_host);
 }
 
-
-void check_default(cass::RetryPolicy& policy) {
+void check_default(RetryPolicy& policy) {
   // Read timeout
   {
     // Retry because data wasn't present
@@ -86,13 +87,13 @@ void check_default(cass::RetryPolicy& policy) {
 
 TEST(RetryPoliciesUnitTest, DefaultPolicy)
 {
-  cass::DefaultRetryPolicy policy;
+  DefaultRetryPolicy policy;
   check_default(policy);
 }
 
 TEST(RetryPoliciesUnitTest, Downgrading)
 {
-  cass::DowngradingConsistencyRetryPolicy policy;
+  DowngradingConsistencyRetryPolicy policy;
 
   // Read timeout
   {
@@ -190,7 +191,7 @@ TEST(RetryPoliciesUnitTest, Downgrading)
 
 TEST(RetryPoliciesUnitTest, Fallthrough)
 {
-  cass::FallthroughRetryPolicy policy;
+  FallthroughRetryPolicy policy;
 
   // Always fail
 
@@ -212,9 +213,9 @@ TEST(RetryPoliciesUnitTest, Fallthrough)
 
 TEST(RetryPoliciesUnitTest, Logging)
 {
-  cass::SharedRefPtr<cass::DefaultRetryPolicy> policy(
-        new cass::DefaultRetryPolicy());
-  cass::LoggingRetryPolicy logging_policy(policy);
+  SharedRefPtr<DefaultRetryPolicy> policy(
+        new DefaultRetryPolicy());
+  LoggingRetryPolicy logging_policy(policy);
   cass_log_set_level(CASS_LOG_INFO);
   check_default(logging_policy);
 }

@@ -20,7 +20,7 @@
 #ifndef __CASS_SPINLOCK_HPP_INCLUDED__
 #define __CASS_SPINLOCK_HPP_INCLUDED__
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Spinlock {
 public:
@@ -96,6 +96,6 @@ private:
 template <class N>
 Spinlock SpinlockPool<N>::spinlocks_[41];
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

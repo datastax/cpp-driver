@@ -31,6 +31,10 @@
 
 #include <uv.h>
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 CassStatement* cass_statement_new(const char* query,
@@ -41,8 +45,8 @@ CassStatement* cass_statement_new(const char* query,
 CassStatement* cass_statement_new_n(const char* query,
                                     size_t query_length,
                                     size_t parameter_count) {
-  cass::QueryRequest* query_request
-      = new cass::QueryRequest(query, query_length, parameter_count);
+  QueryRequest* query_request
+      = new QueryRequest(query, query_length, parameter_count);
   query_request->inc_ref();
   return CassStatement::to(query_request);
 }
@@ -70,7 +74,7 @@ CassError cass_statement_set_keyspace_n(CassStatement* statement,
   if (statement->opcode() == CQL_OPCODE_EXECUTE) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  statement->set_keyspace(cass::String(keyspace, keyspace_length));
+  statement->set_keyspace(String(keyspace, keyspace_length));
   return CASS_OK;
 }
 
@@ -103,9 +107,9 @@ CassError cass_statement_set_paging_state(CassStatement* statement,
 }
 
 CassError cass_statement_set_paging_state_token(CassStatement* statement,
-                                              const char* paging_state,
-                                              size_t paging_state_size) {
-  statement->set_paging_state(cass::String(paging_state, paging_state_size));
+                                                const char* paging_state,
+                                                size_t paging_state_size) {
+  statement->set_paging_state(String(paging_state, paging_state_size));
   return CASS_OK;
 }
 
@@ -150,9 +154,9 @@ CassError cass_statement_set_execution_profile_n(CassStatement* statement,
                                                  const char* name,
                                                  size_t name_length) {
   if (name_length > 0) {
-    statement->set_execution_profile_name(cass::String(name, name_length));
+    statement->set_execution_profile_name(String(name, name_length));
   } else {
-    statement->set_execution_profile_name(cass::String());
+    statement->set_execution_profile_name(String());
   }
   return CASS_OK;
 }
@@ -173,10 +177,10 @@ CassError cass_statement_set_host_n(CassStatement* statement,
                                     const char* host,
                                     size_t host_length,
                                     int port) {
-  cass::Address address;
-  if (!cass::Address::from_string(cass::String(host, host_length),
-                                  port,
-                                  &address)) {
+  Address address;
+  if (!Address::from_string(String(host, host_length),
+                            port,
+                            &address)) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   statement->set_host(address);
@@ -186,10 +190,10 @@ CassError cass_statement_set_host_n(CassStatement* statement,
 CassError cass_statement_set_host_inet(CassStatement* statement,
                                        const CassInet* host,
                                        int port) {
-  cass::Address address;
-  if (!cass::Address::from_inet(host->address,
-                                host->address_length,
-                                port, &address)) {
+  Address address;
+  if (!Address::from_inet(host->address,
+                          host->address_length,
+                          port, &address)) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   statement->set_host(address);
@@ -198,20 +202,20 @@ CassError cass_statement_set_host_inet(CassStatement* statement,
 
 #define CASS_STATEMENT_BIND(Name, Params, Value)                                \
   CassError cass_statement_bind_##Name(CassStatement* statement,                \
-                                      size_t index Params) {                    \
-    return statement->set(index, Value);                                        \
-  }                                                                             \
+  size_t index Params) {                    \
+  return statement->set(index, Value);                                        \
+}                                                                             \
   CassError cass_statement_bind_##Name##_by_name(CassStatement* statement,      \
-                                                const char* name Params) {      \
-    return statement->set(cass::StringRef(name), Value);                        \
-  }                                                                             \
+  const char* name Params) {      \
+  return statement->set(StringRef(name), Value);                        \
+}                                                                             \
   CassError cass_statement_bind_##Name##_by_name_n(CassStatement* statement,    \
-                                                   const char* name,            \
-                                                   size_t name_length Params) { \
-    return statement->set(cass::StringRef(name, name_length), Value);           \
-  }
+  const char* name,            \
+  size_t name_length Params) { \
+  return statement->set(StringRef(name, name_length), Value);           \
+}
 
-CASS_STATEMENT_BIND(null, ZERO_PARAMS_(), cass::CassNull())
+CASS_STATEMENT_BIND(null, ZERO_PARAMS_(), CassNull())
 CASS_STATEMENT_BIND(int8, ONE_PARAM_(cass_int8_t value), value)
 CASS_STATEMENT_BIND(int16, ONE_PARAM_(cass_int16_t value), value)
 CASS_STATEMENT_BIND(int32, ONE_PARAM_(cass_int32_t value), value)
@@ -227,13 +231,13 @@ CASS_STATEMENT_BIND(tuple, ONE_PARAM_(const CassTuple* value), value->from())
 CASS_STATEMENT_BIND(user_type, ONE_PARAM_(const CassUserType* value), value->from())
 CASS_STATEMENT_BIND(bytes,
                     TWO_PARAMS_(const cass_byte_t* value, size_t value_size),
-                    cass::CassBytes(value, value_size))
+                    CassBytes(value, value_size))
 CASS_STATEMENT_BIND(decimal,
                     THREE_PARAMS_(const cass_byte_t* varint, size_t varint_size, int scale),
-                    cass::CassDecimal(varint, varint_size, scale))
+                    CassDecimal(varint, varint_size, scale))
 CASS_STATEMENT_BIND(duration,
                     THREE_PARAMS_(cass_int32_t months, cass_int32_t days, cass_int64_t nanos),
-                    cass::CassDuration(months, days, nanos))
+                    CassDuration(months, days, nanos))
 
 #undef CASS_STATEMENT_BIND
 
@@ -245,14 +249,14 @@ CassError cass_statement_bind_string(CassStatement* statement, size_t index,
 
 CassError cass_statement_bind_string_n(CassStatement* statement, size_t index,
                                        const char* value, size_t value_length) {
-  return statement->set(index, cass::CassString(value, value_length));
+  return statement->set(index, CassString(value, value_length));
 }
 
 CassError cass_statement_bind_string_by_name(CassStatement* statement,
                                              const char* name,
                                              const char* value) {
-  return statement->set(cass::StringRef(name),
-                        cass::CassString(value, SAFE_STRLEN(value)));
+  return statement->set(StringRef(name),
+                        CassString(value, SAFE_STRLEN(value)));
 }
 
 CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
@@ -260,8 +264,8 @@ CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
                                                size_t name_length,
                                                const char* value,
                                                size_t value_length) {
-  return statement->set(cass::StringRef(name, name_length),
-                        cass::CassString(value, SAFE_STRLEN(value)));
+  return statement->set(StringRef(name, name_length),
+                        CassString(value, SAFE_STRLEN(value)));
 }
 
 CassError cass_statement_bind_custom(CassStatement* statement,
@@ -270,8 +274,8 @@ CassError cass_statement_bind_custom(CassStatement* statement,
                                      const cass_byte_t* value,
                                      size_t value_size) {
   return statement->set(index,
-                        cass::CassCustom(cass::StringRef(class_name),
-                                         value, value_size));
+                        CassCustom(StringRef(class_name),
+                                   value, value_size));
 }
 
 CassError cass_statement_bind_custom_n(CassStatement* statement,
@@ -281,8 +285,8 @@ CassError cass_statement_bind_custom_n(CassStatement* statement,
                                        const cass_byte_t* value,
                                        size_t value_size) {
   return statement->set(index,
-                        cass::CassCustom(cass::StringRef(class_name, class_name_length),
-                                         value, value_size));
+                        CassCustom(StringRef(class_name, class_name_length),
+                                   value, value_size));
 }
 
 CassError cass_statement_bind_custom_by_name(CassStatement* statement,
@@ -290,9 +294,9 @@ CassError cass_statement_bind_custom_by_name(CassStatement* statement,
                                              const char* class_name,
                                              const cass_byte_t* value,
                                              size_t value_size) {
-  return statement->set(cass::StringRef(name),
-                        cass::CassCustom(cass::StringRef(class_name),
-                                         value, value_size));
+  return statement->set(StringRef(name),
+                        CassCustom(StringRef(class_name),
+                                   value, value_size));
 }
 
 CassError cass_statement_bind_custom_by_name_n(CassStatement* statement,
@@ -302,14 +306,12 @@ CassError cass_statement_bind_custom_by_name_n(CassStatement* statement,
                                                size_t class_name_length,
                                                const cass_byte_t* value,
                                                size_t value_size) {
-  return statement->set(cass::StringRef(name, name_length),
-                        cass::CassCustom(cass::StringRef(class_name, class_name_length),
-                                         value, value_size));
+  return statement->set(StringRef(name, name_length),
+                        CassCustom(StringRef(class_name, class_name_length),
+                                   value, value_size));
 }
 
 } // extern "C"
-
-namespace cass {
 
 Statement::Statement(const char* query, size_t query_length, size_t values_count)
   : RoutableRequest(CQL_OPCODE_QUERY)
@@ -483,7 +485,7 @@ int32_t Statement::encode_values(ProtocolVersion version, RequestCallback* callb
       bufs->push_back(element.get_buffer());
     } else  {
       if (version >= CASS_PROTOCOL_VERSION_V4) {
-        bufs->push_back(cass::encode_with_length(CassUnset()));
+        bufs->push_back(core::encode_with_length(CassUnset()));
       } else {
         OStringStream ss;
         ss << "Query parameter at index " << i << " was not set";
@@ -605,5 +607,3 @@ bool Statement::calculate_routing_key(const Vector<size_t>& key_indices, String*
 
   return true;
 }
-
-} // namespace  cass

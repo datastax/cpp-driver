@@ -20,7 +20,7 @@
 #include "cassandra.h"
 #include "string_ref.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 struct CassNull { };
 
@@ -74,6 +74,6 @@ struct CassDuration {
   cass_int64_t nanos;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

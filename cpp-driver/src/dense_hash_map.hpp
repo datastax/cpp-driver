@@ -12,7 +12,7 @@
 
 #include <sparsehash/dense_hash_map>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class K, class V,
           class HashFcn = SPARSEHASH_HASH<K>,
@@ -20,9 +20,9 @@ template <class K, class V,
 class DenseHashMap
     : public sparsehash::dense_hash_map<
       K, V,  HashFcn, EqualKey,
-      cass::Allocator<std::pair<const K, V> > > {
+      internal::Allocator<std::pair<const K, V> > > {
 public:
-  typedef cass::Allocator<std::pair<const K, V> > Allocator;
+  typedef internal::Allocator<std::pair<const K, V> > Allocator;
 
   explicit DenseHashMap(size_t expected_max_items_in_table = 0,
                         const HashFcn& hf = HashFcn(),
@@ -44,6 +44,6 @@ public:
                                                                      hf, eql, alloc) { }
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

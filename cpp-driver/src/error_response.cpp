@@ -22,6 +22,10 @@
 
 #include <iomanip>
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 void cass_error_result_free(const CassErrorResult* error_result) {
@@ -105,15 +109,13 @@ CassError cass_error_result_arg_type(const CassErrorResult* error_result,
   if (index > error_result->arg_types().size()) {
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
   }
-  cass::StringRef arg_type_ref = error_result->arg_types()[index];
+  StringRef arg_type_ref = error_result->arg_types()[index];
   *arg_type = arg_type_ref.data();
   *arg_type_length = arg_type_ref.size();
   return CASS_OK;
 }
 
 } // extern "C"
-
-namespace cass {
 
 String ErrorResponse::error_message() const {
   OStringStream ss;
@@ -197,5 +199,3 @@ bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opco
 
   return true;
 }
-
-} // namespace cass

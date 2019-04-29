@@ -16,7 +16,7 @@
 
 #include "auth_requests.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 int AuthResponseRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   // <token> [bytes]
@@ -28,5 +28,3 @@ int AuthResponseRequest::encode(ProtocolVersion version, RequestCallback* callba
 
   return length;
 }
-
-} // namespace cass

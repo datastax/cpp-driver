@@ -31,6 +31,9 @@
 #define MIN_CLOCK_SEQ_AND_NODE 0x8080808080808080LL
 #define MAX_CLOCK_SEQ_AND_NODE 0x7f7f7f7f7f7f7f7fLL
 
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 static uint64_t to_milliseconds(uint64_t timestamp) {
   return timestamp / 10000L;
 }
@@ -46,11 +49,11 @@ static uint64_t set_version(uint64_t timestamp, uint8_t version) {
 extern "C" {
 
 CassUuidGen* cass_uuid_gen_new() {
-  return CassUuidGen::to(new cass::UuidGen());
+  return CassUuidGen::to(new UuidGen());
 }
 
 CassUuidGen* cass_uuid_gen_new_with_node(cass_uint64_t node) {
-  return CassUuidGen::to(new cass::UuidGen(node));
+  return CassUuidGen::to(new UuidGen(node));
 }
 
 void cass_uuid_gen_free(CassUuidGen* uuid_gen) {
@@ -91,7 +94,7 @@ cass_uint8_t cass_uuid_version(CassUuid uuid) {
 void cass_uuid_string(CassUuid uuid, char* output) {
   size_t pos = 0;
   char encoded[16];
-  cass::encode_uuid(encoded, uuid);
+  encode_uuid(encoded, uuid);
   static const char half_byte_to_hex[] = { '0', '1', '2', '3', '4', '5', '6', '7',
                                            '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
   for (size_t i = 0; i < 16; ++i) {
@@ -159,14 +162,12 @@ CassError cass_uuid_from_string_n(const char* str,
     pos += 2;
   }
 
-  cass::decode_uuid(buf, output);
+  decode_uuid(buf, output);
 
   return CASS_OK;
 }
 
 } // extern "C"
-
-namespace cass {
 
 UuidGen::UuidGen()
   : clock_seq_and_node_(0)
@@ -289,5 +290,3 @@ uint64_t UuidGen::monotonic_timestamp() {
     }
   }
 }
-
-} // namespace cass

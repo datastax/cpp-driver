@@ -23,7 +23,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ConnectionPool;
 class ConnectionPoolConnector;
@@ -245,6 +245,6 @@ private:
   DenseHashSet<PooledConnection*> to_flush_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

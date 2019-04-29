@@ -18,7 +18,9 @@
 
 #include "logger.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 void ListPolicy::init(const Host::Ptr& connected_host,
                       const HostMap& hosts,
@@ -65,5 +67,3 @@ void ListPolicy::on_host_removed(const Host::Ptr& host) {
     child_policy_->on_host_removed(host);
   }
 }
-
-} // namespace cass

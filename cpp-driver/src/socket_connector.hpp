@@ -22,7 +22,7 @@
 #include "socket.hpp"
 #include "tcp_connector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Config;
 
@@ -62,7 +62,7 @@ class SocketConnector : public RefCounted<SocketConnector> {
 public:
   typedef SharedRefPtr<SocketConnector> Ptr;
 
-  typedef cass::Callback<void, SocketConnector*> Callback;
+  typedef internal::Callback<void, SocketConnector*> Callback;
 
   enum SocketError {
     SOCKET_OK,
@@ -168,6 +168,6 @@ private:
   SocketSettings settings_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

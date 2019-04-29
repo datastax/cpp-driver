@@ -25,7 +25,7 @@
 
 #include "get_time.hpp"
 
-namespace cass {
+namespace datastax { namespace  internal {
 
 // Information for using the query performance counter can be found here:
 // https://msdn.microsoft.com/en-us/library/dn553408(v=vs.85).aspx
@@ -69,7 +69,6 @@ uint64_t get_time_monotonic_ns() {
   }
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif // defined(_WIN32)
-

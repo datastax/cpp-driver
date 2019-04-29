@@ -27,10 +27,10 @@ namespace driver {
 /**
  * Retry policy that will create an ignore decision for retry
  */
-class IgnoreRetryPolicy : public cass::DefaultRetryPolicy {
+class IgnoreRetryPolicy : public datastax::internal::core::DefaultRetryPolicy {
 public:
   IgnoreRetryPolicy()
-    : cass::DefaultRetryPolicy() { }
+    : datastax::internal::core::DefaultRetryPolicy() { }
 
   /**
    * Create an instance of the retry policy for use with the driver
@@ -38,12 +38,12 @@ public:
    * @return Driver ready retry policy
    */
   static ::test::driver::RetryPolicy policy() {
-    cass::RetryPolicy* policy = new IgnoreRetryPolicy();
+    datastax::internal::core::RetryPolicy* policy = new IgnoreRetryPolicy();
     policy->inc_ref();
     return CassRetryPolicy::to(policy);
   }
 
-  RetryDecision on_read_timeout(const cass::Request* request,
+  RetryDecision on_read_timeout(const datastax::internal::core::Request* request,
                                 CassConsistency cl,
                                 int received,
                                 int required,
@@ -51,7 +51,7 @@ public:
                                 int num_retries) const {
     return RetryDecision::ignore();
   }
-  RetryDecision on_write_timeout(const cass::Request* request,
+  RetryDecision on_write_timeout(const datastax::internal::core::Request* request,
                                  CassConsistency cl,
                                  int received,
                                  int required,
@@ -59,16 +59,16 @@ public:
                                  int num_retries) const {
     return RetryDecision::ignore();
   }
-  virtual RetryDecision on_unavailable(const cass::Request* request,
+  virtual RetryDecision on_unavailable(const datastax::internal::core::Request* request,
                                        CassConsistency cl,
                                        int required,
                                        int alive,
                                        int num_retries) const {
     return RetryDecision::ignore();
   }
-  virtual RetryDecision on_request_error(const cass::Request* request,
+  virtual RetryDecision on_request_error(const datastax::internal::core::Request* request,
                                          CassConsistency cl,
-                                         const cass::ErrorResponse* error,
+                                         const datastax::internal::core::ErrorResponse* error,
                                          int num_retries) const {
     return RetryDecision::ignore();
   }

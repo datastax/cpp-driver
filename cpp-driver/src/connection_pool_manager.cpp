@@ -19,7 +19,8 @@
 #include "scoped_lock.hpp"
 #include "utils.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 class NopConnectionPoolManagerListener : public ConnectionPoolManagerListener {
 public:
@@ -228,5 +229,3 @@ void ConnectionPoolManager::on_connect(ConnectionPoolConnector* pool_connector) 
                                       pool_connector->error_message());
   }
 }
-
-} // namespace cass

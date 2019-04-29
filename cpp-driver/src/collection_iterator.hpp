@@ -22,7 +22,7 @@
 #include "serialization.hpp"
 #include "value.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ValueIterator : public Iterator {
 public:
@@ -78,6 +78,6 @@ private:
   DataType::Vec::const_iterator end_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

@@ -30,7 +30,7 @@
   if (rc != CASS_OK) return rc;                \
 } while(0)
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class UserTypeValue;
 
@@ -58,7 +58,7 @@ public:
 #define APPEND_TYPE(Type)                  \
   CassError append(const Type value) {     \
     CASS_COLLECTION_CHECK_TYPE(value);     \
-    items_.push_back(cass::encode(value)); \
+    items_.push_back(core::encode(value)); \
     return CASS_OK;                        \
   }
 
@@ -135,9 +135,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Collection);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Collection, CassCollection)
+EXTERNAL_TYPE(datastax::internal::core::Collection, CassCollection)
 
 #endif
-

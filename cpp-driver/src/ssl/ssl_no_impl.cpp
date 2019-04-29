@@ -16,7 +16,8 @@
 
 #include "ssl.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 NoSslSession::NoSslSession(const Address& address, const String& hostname)
   : SslSession(address, hostname, CASS_SSL_VERIFY_NONE) {
@@ -24,30 +25,27 @@ NoSslSession::NoSslSession(const Address& address, const String& hostname)
   error_message_ = "SSL support not built into driver";
 }
 
-SslSession* cass::NoSslContext::create_session(const Address& address, const String& hostname) {
+SslSession* NoSslContext::create_session(const Address& address, const String& hostname) {
   return new NoSslSession(address, hostname);
 }
 
-CassError cass::NoSslContext::add_trusted_cert(const char* cert,
-                                               size_t cert_length) {
+CassError NoSslContext::add_trusted_cert(const char* cert,
+                                         size_t cert_length) {
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
-CassError cass::NoSslContext::set_cert(const char* cert,
-                                       size_t cert_length) {
+CassError NoSslContext::set_cert(const char* cert,
+                                 size_t cert_length) {
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
-CassError cass::NoSslContext::set_private_key(const char* key,
-                                              size_t key_length,
-                                              const char* password,
-                                              size_t password_length) {
+CassError NoSslContext::set_private_key(const char* key,
+                                        size_t key_length,
+                                        const char* password,
+                                        size_t password_length) {
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
 SslContext::Ptr NoSslContextFactory::create() {
   return SslContext::Ptr(new NoSslContext());
 }
-
-
-} // namespace cass

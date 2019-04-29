@@ -21,10 +21,14 @@
 
 #include <utility>
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 static void clock_skew_log_callback(const CassLogMessage* message, void* data) {
-  cass::String msg(message->message);
+  String msg(message->message);
   int* counter = reinterpret_cast<int*>(data);
-  if (msg.find("Clock skew detected") != cass::String::npos) {
+  if (msg.find("Clock skew detected") != String::npos) {
     (*counter)++;
   }
 }
@@ -36,16 +40,16 @@ public:
                                   uint64_t duration_ms) {
     const int NUM_TIMESTAMPS_PER_ITERATION = 1000;
 
-    cass::MonotonicTimestampGenerator gen(warning_threshold_us,
-                                          warning_interval_ms);
+    MonotonicTimestampGenerator gen(warning_threshold_us,
+                                    warning_interval_ms);
 
     int timestamp_count = 0;
     int warn_count = 0;
 
-    cass::Logger::set_log_level(CASS_LOG_WARN);
-    cass::Logger::set_callback(clock_skew_log_callback, &warn_count);
+    Logger::set_log_level(CASS_LOG_WARN);
+    Logger::set_callback(clock_skew_log_callback, &warn_count);
 
-    uint64_t start = cass::get_time_since_epoch_ms();
+    uint64_t start = get_time_since_epoch_ms();
     uint64_t elapsed;
 
     do {
@@ -58,7 +62,7 @@ public:
         timestamp_count++;
       }
 
-      elapsed = cass::get_time_since_epoch_ms() - start;
+      elapsed = get_time_since_epoch_ms() - start;
     } while (elapsed < duration_ms);
 
     // We can generate at most 1,000,000 timestamps in a second. If we exceed
@@ -68,7 +72,7 @@ public:
     if (timestamp_rate <= 1000000.0 ||
         elapsed * MICROSECONDS_PER_MILLISECOND <= warning_threshold_us) {
       fprintf(stderr, "Warning: The test may not have exceeded the timestamp " \
-              "generator's maximum rate.");
+                      "generator's maximum rate.");
     }
 
     EXPECT_GT(warn_count, 0);
@@ -79,13 +83,13 @@ public:
 
 TEST_F(TimestampGenUnitTest, Server)
 {
-  cass::ServerSideTimestampGenerator gen;
+  ServerSideTimestampGenerator gen;
   EXPECT_EQ(gen.next(), CASS_INT64_MIN);
 }
 
 TEST_F(TimestampGenUnitTest, Monotonic)
 {
-  cass::MonotonicTimestampGenerator gen;
+  MonotonicTimestampGenerator gen;
 
   int64_t prev = gen.next();
   for (int i = 0; i < 100; ++i) {

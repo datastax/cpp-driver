@@ -23,7 +23,7 @@
 #include "string.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class QueryRequest : public Statement {
 public:
@@ -63,6 +63,6 @@ private:
   ScopedPtr<ValueNameHashTable> value_names_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

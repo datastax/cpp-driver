@@ -22,7 +22,7 @@
 #include "ref_counted.hpp"
 #include "request.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class AuthResponseRequest : public Request {
 public:
@@ -42,6 +42,6 @@ private:
   Authenticator::Ptr auth_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

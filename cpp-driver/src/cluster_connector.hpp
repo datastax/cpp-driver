@@ -21,9 +21,12 @@
 #include "cluster.hpp"
 #include "resolver.hpp"
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Random;
+
+namespace core {
+
 class Metrics;
 
 /**
@@ -37,7 +40,7 @@ class ClusterConnector : public RefCounted<ClusterConnector> {
 public:
   typedef SharedRefPtr<ClusterConnector> Ptr;
 
-  typedef cass::Callback<void, ClusterConnector*> Callback;
+  typedef internal::Callback<void, ClusterConnector*> Callback;
 
   enum ClusterError {
     CLUSTER_OK,
@@ -177,6 +180,6 @@ private:
   CassError ssl_error_code_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

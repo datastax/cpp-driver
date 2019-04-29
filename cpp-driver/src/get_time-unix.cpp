@@ -23,7 +23,7 @@
 
 #include <time.h>
 
-namespace cass {
+namespace datastax { namespace  internal {
 
 class ClockInfo {
 public:
@@ -44,7 +44,6 @@ bool ClockInfo::supports_monotonic_;
 
 static ClockInfo __clock_info__; // Initializer
 
-
 uint64_t get_time_since_epoch_us() {
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
@@ -63,7 +62,6 @@ uint64_t get_time_monotonic_ns() {
   }
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif
-

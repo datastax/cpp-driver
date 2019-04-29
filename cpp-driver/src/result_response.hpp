@@ -26,7 +26,7 @@
 #include "string_ref.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ResultIterator;
 
@@ -115,8 +115,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ResultResponse);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::ResultResponse, CassResult)
+EXTERNAL_TYPE(datastax::internal::core::ResultResponse, CassResult)
 
 #endif

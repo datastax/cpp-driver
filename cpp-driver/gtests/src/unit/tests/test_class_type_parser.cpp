@@ -18,22 +18,25 @@
 
 #include "data_type_parser.hpp"
 
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 TEST(ClassTypeParserUnitTest, Simple) {
-  cass::DataType::ConstPtr data_type;
+  DataType::ConstPtr data_type;
 
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  data_type = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.InetAddressType", cache);
+  data_type = DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.InetAddressType", cache);
   EXPECT_EQ(data_type->value_type(), CASS_VALUE_TYPE_INET);
 
-  data_type = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.ReversedType(org.apache.cassandra.db.marshal.UTF8Type)", cache);
+  data_type = DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.ReversedType(org.apache.cassandra.db.marshal.UTF8Type)", cache);
   EXPECT_EQ(data_type->value_type(), CASS_VALUE_TYPE_TEXT);
 
-  data_type = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.UTF8Type)", cache);
+  data_type = DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.UTF8Type)", cache);
   ASSERT_EQ(data_type->value_type(), CASS_VALUE_TYPE_LIST);
 
-  cass::CollectionType::ConstPtr collection
-      = static_cast<cass::CollectionType::ConstPtr>(data_type);
+  CollectionType::ConstPtr collection
+      = static_cast<CollectionType::ConstPtr>(data_type);
   ASSERT_EQ(collection->types().size(), 1u);
   EXPECT_EQ(collection->types()[0]->value_type(), CASS_VALUE_TYPE_TEXT);
 }
@@ -41,58 +44,58 @@ TEST(ClassTypeParserUnitTest, Simple) {
 TEST(ClassTypeParserUnitTest, Invalid) {
   cass_log_set_level(CASS_LOG_DISABLED);
 
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
   // Premature end of string
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType", cache));
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType(", cache));
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType(blah", cache));
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType(blah,", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType(", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType(blah", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType(blah,", cache));
 
   // Empty
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType()", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType()", cache));
 
   // Invalid hex
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType(blah,ZZZZ", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType(blah,ZZZZ", cache));
 
   // Missing ':'
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType("
-                                                        "foo,61646472657373,"
-                                                        "737472656574org.apache.cassandra.db.marshal.UTF8Type)", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType("
+                                                  "foo,61646472657373,"
+                                                  "737472656574org.apache.cassandra.db.marshal.UTF8Type)", cache));
 
   // Premature end of string
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType", cache));
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType(", cache));
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType(org.apache.cassandra.db.marshal.UTF8Type", cache));
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType(org.apache.cassandra.db.marshal.UTF8Type,", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType(", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType(org.apache.cassandra.db.marshal.UTF8Type", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType(org.apache.cassandra.db.marshal.UTF8Type,", cache));
 
   // Empty
-  EXPECT_FALSE(cass::DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType()", cache));
+  EXPECT_FALSE(DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType()", cache));
 }
 
 TEST(ClassTypeParserUnitTest, UserDefinedType) {
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  cass::DataType::ConstPtr data_type
-      = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType("
-                                                 "foo,61646472657373,"
-                                                 "737472656574:org.apache.cassandra.db.marshal.UTF8Type,"
-                                                 "7a6970636f6465:org.apache.cassandra.db.marshal.Int32Type,"
-                                                 "70686f6e6573:org.apache.cassandra.db.marshal.SetType("
-                                                 "org.apache.cassandra.db.marshal.UserType(foo,70686f6e65,6e616d65:org.apache.cassandra.db.marshal.UTF8Type,6e756d626572:org.apache.cassandra.db.marshal.UTF8Type)))",
-                                                 cache);
+  DataType::ConstPtr data_type
+      = DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType("
+                                           "foo,61646472657373,"
+                                           "737472656574:org.apache.cassandra.db.marshal.UTF8Type,"
+                                           "7a6970636f6465:org.apache.cassandra.db.marshal.Int32Type,"
+                                           "70686f6e6573:org.apache.cassandra.db.marshal.SetType("
+                                           "org.apache.cassandra.db.marshal.UserType(foo,70686f6e65,6e616d65:org.apache.cassandra.db.marshal.UTF8Type,6e756d626572:org.apache.cassandra.db.marshal.UTF8Type)))",
+                                           cache);
 
   ASSERT_EQ(data_type->value_type(), CASS_VALUE_TYPE_UDT);
 
   // Check external UDT
 
-  cass::UserType::ConstPtr udt(data_type);
+  UserType::ConstPtr udt(data_type);
 
   EXPECT_EQ(udt->keyspace(), "foo");
   EXPECT_EQ(udt->type_name(), "address");
   ASSERT_EQ(udt->fields().size(), 3u);
 
-  cass::UserType::FieldVec::const_iterator i;
+  UserType::FieldVec::const_iterator i;
 
   i = udt->fields().begin();
 
@@ -109,15 +112,15 @@ TEST(ClassTypeParserUnitTest, UserDefinedType) {
   EXPECT_EQ(i->name, "phones");
   ASSERT_EQ(i->type->value_type(), CASS_VALUE_TYPE_SET);
 
-  cass::CollectionType::ConstPtr collection
-      = static_cast<cass::CollectionType::ConstPtr>(i->type);
+  CollectionType::ConstPtr collection
+      = static_cast<CollectionType::ConstPtr>(i->type);
 
   ASSERT_EQ(collection->types().size(), 1u);
   ASSERT_EQ(collection->types()[0]->value_type(), CASS_VALUE_TYPE_UDT);
 
   // Check internal UDT
 
-  udt = static_cast<cass::UserType::ConstPtr>(collection->types()[0]);
+  udt = static_cast<UserType::ConstPtr>(collection->types()[0]);
 
   EXPECT_EQ(udt->keyspace(), "foo");
   EXPECT_EQ(udt->type_name(), "phone");
@@ -135,17 +138,17 @@ TEST(ClassTypeParserUnitTest, UserDefinedType) {
 }
 
 TEST(ClassTypeParserUnitTest, Tuple) {
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  cass::DataType::ConstPtr data_type
-      = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.TupleType("
-                                                 "org.apache.cassandra.db.marshal.Int32Type,"
-                                                 "org.apache.cassandra.db.marshal.UTF8Type,"
-                                                 "org.apache.cassandra.db.marshal.FloatType)", cache);
+  DataType::ConstPtr data_type
+      = DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.TupleType("
+                                           "org.apache.cassandra.db.marshal.Int32Type,"
+                                           "org.apache.cassandra.db.marshal.UTF8Type,"
+                                           "org.apache.cassandra.db.marshal.FloatType)", cache);
 
   ASSERT_EQ(data_type->value_type(), CASS_VALUE_TYPE_TUPLE);
 
-  cass::TupleType::ConstPtr tuple = static_cast<cass::TupleType::ConstPtr>(data_type);
+  TupleType::ConstPtr tuple = static_cast<TupleType::ConstPtr>(data_type);
 
   ASSERT_EQ(tuple->types().size(), 3u);
 
@@ -155,19 +158,19 @@ TEST(ClassTypeParserUnitTest, Tuple) {
 }
 
 TEST(ClassTypeParserUnitTest, NestedCollections) {
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  cass::DataType::ConstPtr data_type
-      = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.MapType("
-                                                 "org.apache.cassandra.db.marshal.UTF8Type,"
-                                                 "org.apache.cassandra.db.marshal.FrozenType("
-                                                 "org.apache.cassandra.db.marshal.MapType("
-                                                 "org.apache.cassandra.db.marshal.Int32Type,org.apache.cassandra.db.marshal.Int32Type)))", cache);
+  DataType::ConstPtr data_type
+      = DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.MapType("
+                                           "org.apache.cassandra.db.marshal.UTF8Type,"
+                                           "org.apache.cassandra.db.marshal.FrozenType("
+                                           "org.apache.cassandra.db.marshal.MapType("
+                                           "org.apache.cassandra.db.marshal.Int32Type,org.apache.cassandra.db.marshal.Int32Type)))", cache);
 
   ASSERT_EQ(data_type->value_type(), CASS_VALUE_TYPE_MAP);
 
-  cass::CollectionType::ConstPtr collection
-      = static_cast<cass::CollectionType::ConstPtr>(data_type);
+  CollectionType::ConstPtr collection
+      = static_cast<CollectionType::ConstPtr>(data_type);
 
   ASSERT_EQ(collection->types().size(), 2u);
 
@@ -175,8 +178,8 @@ TEST(ClassTypeParserUnitTest, NestedCollections) {
 
   ASSERT_EQ(collection->types()[1]->value_type(), CASS_VALUE_TYPE_MAP);
 
-  cass::CollectionType::ConstPtr nested_collection
-      = static_cast<cass::CollectionType::ConstPtr>(collection->types()[1]);
+  CollectionType::ConstPtr nested_collection
+      = static_cast<CollectionType::ConstPtr>(collection->types()[1]);
 
   ASSERT_EQ(nested_collection->types().size(), 2u);
   EXPECT_EQ(nested_collection->types()[0]->value_type(), CASS_VALUE_TYPE_INT);
@@ -184,12 +187,12 @@ TEST(ClassTypeParserUnitTest, NestedCollections) {
 }
 
 TEST(ClassTypeParserUnitTest, Composite) {
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  cass::SharedRefPtr<cass::ParseResult> result
-      = cass::DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType("
-                                                            "org.apache.cassandra.db.marshal.AsciiType,"
-                                                            "org.apache.cassandra.db.marshal.Int32Type)", cache);
+  SharedRefPtr<ParseResult> result
+      = DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType("
+                                                      "org.apache.cassandra.db.marshal.AsciiType,"
+                                                      "org.apache.cassandra.db.marshal.Int32Type)", cache);
 
   EXPECT_TRUE(result->is_composite());
 
@@ -205,10 +208,10 @@ TEST(ClassTypeParserUnitTest, Composite) {
 }
 
 TEST(ClassTypeParserUnitTest, NotComposite) {
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  cass::SharedRefPtr<cass::ParseResult> result
-      = cass::DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.InetAddressType", cache);
+  SharedRefPtr<ParseResult> result
+      = DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.InetAddressType", cache);
 
   ASSERT_EQ(result->types().size(), 1u);
   EXPECT_EQ(result->types()[0]->value_type(), CASS_VALUE_TYPE_INET);
@@ -218,12 +221,12 @@ TEST(ClassTypeParserUnitTest, NotComposite) {
 }
 
 TEST(ClassTypeParserUnitTest, CompositeWithReversedType) {
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  cass::SharedRefPtr<cass::ParseResult> result
-      = cass::DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType("
-                                                            "org.apache.cassandra.db.marshal.ReversedType(org.apache.cassandra.db.marshal.AsciiType),"
-                                                            "org.apache.cassandra.db.marshal.Int32Type)", cache);
+  SharedRefPtr<ParseResult> result
+      = DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType("
+                                                      "org.apache.cassandra.db.marshal.ReversedType(org.apache.cassandra.db.marshal.AsciiType),"
+                                                      "org.apache.cassandra.db.marshal.Int32Type)", cache);
 
   EXPECT_TRUE(result->is_composite());
 
@@ -239,17 +242,17 @@ TEST(ClassTypeParserUnitTest, CompositeWithReversedType) {
 }
 
 TEST(ClassTypeParserUnitTest, CompositeWithCollections) {
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  cass::SharedRefPtr<cass::ParseResult> result
-      = cass::DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType("
-                                                            "org.apache.cassandra.db.marshal.Int32Type, "
-                                                            "org.apache.cassandra.db.marshal.UTF8Type,"
-                                                            "org.apache.cassandra.db.marshal.ColumnToCollectionType("
-                                                            "6162:org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.Int32Type),"
-                                                            "4A4b4C4D4e4F:org.apache.cassandra.db.marshal.SetType(org.apache.cassandra.db.marshal.UTF8Type),"
-                                                            "6A6b6C6D6e6F:org.apache.cassandra.db.marshal.MapType(org.apache.cassandra.db.marshal.UTF8Type, org.apache.cassandra.db.marshal.LongType)"
-                                                            "))", cache);
+  SharedRefPtr<ParseResult> result
+      = DataTypeClassNameParser::parse_with_composite("org.apache.cassandra.db.marshal.CompositeType("
+                                                      "org.apache.cassandra.db.marshal.Int32Type, "
+                                                      "org.apache.cassandra.db.marshal.UTF8Type,"
+                                                      "org.apache.cassandra.db.marshal.ColumnToCollectionType("
+                                                      "6162:org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.Int32Type),"
+                                                      "4A4b4C4D4e4F:org.apache.cassandra.db.marshal.SetType(org.apache.cassandra.db.marshal.UTF8Type),"
+                                                      "6A6b6C6D6e6F:org.apache.cassandra.db.marshal.MapType(org.apache.cassandra.db.marshal.UTF8Type, org.apache.cassandra.db.marshal.LongType)"
+                                                      "))", cache);
 
   EXPECT_TRUE(result->is_composite());
 
@@ -263,47 +266,47 @@ TEST(ClassTypeParserUnitTest, CompositeWithCollections) {
 
   ASSERT_EQ(result->collections().size(), 3u);
 
-  cass::ParseResult::CollectionMap::const_iterator i;
+  ParseResult::CollectionMap::const_iterator i;
 
   i = result->collections().find("ab");
-  cass::CollectionType::ConstPtr collection;
+  CollectionType::ConstPtr collection;
   ASSERT_NE(i, result->collections().end());
   ASSERT_EQ(i->second->value_type(), CASS_VALUE_TYPE_LIST);
-  collection = static_cast<cass::CollectionType::ConstPtr>(i->second);
+  collection = static_cast<CollectionType::ConstPtr>(i->second);
   ASSERT_EQ(collection->types().size(), 1u);
   EXPECT_EQ(collection->types()[0]->value_type(), CASS_VALUE_TYPE_INT);
 
   i = result->collections().find("JKLMNO");
   ASSERT_NE(i, result->collections().end());
   EXPECT_EQ(i->second->value_type(), CASS_VALUE_TYPE_SET);
-  collection = static_cast<cass::CollectionType::ConstPtr>(i->second);
+  collection = static_cast<CollectionType::ConstPtr>(i->second);
   ASSERT_EQ(collection->types().size(), 1u);
   EXPECT_EQ(collection->types()[0]->value_type(), CASS_VALUE_TYPE_TEXT);
 
   i = result->collections().find("jklmno");
   ASSERT_NE(i, result->collections().end());
   EXPECT_EQ(i->second->value_type(), CASS_VALUE_TYPE_MAP);
-  collection = static_cast<cass::CollectionType::ConstPtr>(i->second);
+  collection = static_cast<CollectionType::ConstPtr>(i->second);
   ASSERT_EQ(collection->types().size(), 2u);
   EXPECT_EQ(collection->types()[0]->value_type(), CASS_VALUE_TYPE_TEXT);
   EXPECT_EQ(collection->types()[1]->value_type(), CASS_VALUE_TYPE_BIGINT);
 }
 
 TEST(ClassTypeParserUnitTest, Frozen) {
-  cass::DataType::ConstPtr data_type;
+  DataType::ConstPtr data_type;
 
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  data_type = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.FrozenType(org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.UTF8Type))", cache);
+  data_type = DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.FrozenType(org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.UTF8Type))", cache);
   ASSERT_EQ(data_type->value_type(), CASS_VALUE_TYPE_LIST);
   EXPECT_TRUE(data_type->is_frozen());
 
-  data_type = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.FrozenType(org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.UTF8Type)))", cache);
+  data_type = DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.FrozenType(org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.UTF8Type)))", cache);
   ASSERT_EQ(data_type->value_type(), CASS_VALUE_TYPE_LIST);
   EXPECT_FALSE(data_type->is_frozen());
 
-  cass::CollectionType::ConstPtr collection
-      = static_cast<cass::CollectionType::ConstPtr>(data_type);
+  CollectionType::ConstPtr collection
+      = static_cast<CollectionType::ConstPtr>(data_type);
   ASSERT_EQ(collection->types().size(), 1u);
   EXPECT_EQ(collection->types()[0]->value_type(), CASS_VALUE_TYPE_LIST);
   EXPECT_TRUE(collection->types()[0]->is_frozen());

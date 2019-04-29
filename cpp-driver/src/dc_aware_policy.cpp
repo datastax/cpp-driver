@@ -22,7 +22,9 @@
 
 #include <algorithm>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 DCAwarePolicy::DCAwarePolicy(const String& local_dc,
                              size_t used_hosts_per_remote_dc,
@@ -171,7 +173,7 @@ void DCAwarePolicy::PerDCHostMap::remove_host_from_dc(const String& dc, const Ho
   ScopedWriteLock wl(&rwlock_);
   Map::iterator i = map_.find(dc);
   if (i != map_.end()) {
-    cass::remove_host(i->second, host);
+    core::remove_host(i->second, host);
   }
 }
 
@@ -179,7 +181,7 @@ bool DCAwarePolicy::PerDCHostMap::remove_host(const Address& address) {
   ScopedWriteLock wl(&rwlock_);
   for (Map::iterator i = map_.begin(),
        end = map_.end(); i != end; ++i) {
-    if (cass::remove_host(i->second, address)) {
+    if (core::remove_host(i->second, address)) {
       return true;
     }
   }
@@ -268,5 +270,3 @@ Host::Ptr DCAwarePolicy::DCAwareQueryPlan::compute_next() {
 
   return Host::Ptr();
 }
-
-} // namespace cass

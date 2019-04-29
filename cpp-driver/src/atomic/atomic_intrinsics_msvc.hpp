@@ -58,7 +58,7 @@
 # define InterlockedCompareExchange64 _InterlockedCompareExchange64
 #endif
 
-namespace cass {
+namespace datastax { namespace internal {
 
 namespace impl {
 
@@ -469,6 +469,6 @@ inline void atomic_thread_fence(MemoryOrder order) {
   _ReadWriteBarrier();
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

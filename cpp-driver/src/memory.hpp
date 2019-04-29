@@ -11,7 +11,7 @@
 #include "cassandra.h"
 #include <cstdlib>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Memory {
 public:
@@ -50,6 +50,6 @@ private:
   static CassFreeFunction free_func_;
 };
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

@@ -21,7 +21,8 @@
 #include <signal.h>
 #endif
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
 static int block_sigpipe() {
@@ -243,5 +244,3 @@ EventLoop* RoundRobinEventLoopGroup::add(Task* task) {
   event_loop->add(task);
   return event_loop;
 }
-
-} // namespace cass

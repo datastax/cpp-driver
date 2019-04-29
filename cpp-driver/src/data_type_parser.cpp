@@ -32,7 +32,8 @@
 #define UDT_TYPE "org.apache.cassandra.db.marshal.UserType"
 #define TUPLE_TYPE "org.apache.cassandra.db.marshal.TupleType"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 int hex_value(int c) {
   if (c >= '0' && c <= '9') {
@@ -641,5 +642,3 @@ void DataTypeClassNameParser::Parser::parse_error(const String& str,
             static_cast<unsigned int>(index),
             error);
 }
-
-} // namespace cass

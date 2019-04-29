@@ -21,7 +21,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A listener that used for determining if a host is up.
@@ -79,6 +79,6 @@ private:
   SchemaAgreementListener* const listener_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

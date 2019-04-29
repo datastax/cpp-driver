@@ -28,7 +28,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Cluster;
 
@@ -444,6 +444,6 @@ private:
   Timer monitor_reporting_timer_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

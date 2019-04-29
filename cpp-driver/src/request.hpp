@@ -31,7 +31,7 @@
 #include <stdint.h>
 #include <utility>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class RequestCallback;
 
@@ -233,9 +233,9 @@ public:
   virtual bool get_routing_key(String* routing_key) const = 0;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::CustomPayload, CassCustomPayload)
+EXTERNAL_TYPE(datastax::internal::core::CustomPayload, CassCustomPayload)
 
 
 #endif

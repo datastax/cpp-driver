@@ -24,7 +24,7 @@
 #include "string_ref.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class EventResponse : public Response {
 public:
@@ -90,6 +90,6 @@ private:
   StringRefVec arg_types_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

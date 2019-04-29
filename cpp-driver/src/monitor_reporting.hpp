@@ -22,7 +22,7 @@
 #include "load_balancing.hpp"
 #include "string.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Config;
 
@@ -53,6 +53,6 @@ MonitorReporting* create_monitor_reporting(const String& client_id,
                                            const String& session_id,
                                            const Config& config);
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif // __CASS_MONITOR_REPORTING_HPP_INCLUDED__

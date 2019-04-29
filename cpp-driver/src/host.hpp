@@ -33,7 +33,7 @@
 #include <math.h>
 #include <stdint.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Row;
 
@@ -325,6 +325,6 @@ void add_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host);
 void remove_host(CopyOnWriteHostVec& hosts, const Host::Ptr& host);
 bool remove_host(CopyOnWriteHostVec& hosts, const Address& address);
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

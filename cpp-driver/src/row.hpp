@@ -22,7 +22,7 @@
 #include "string_ref.hpp"
 #include "value.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ResultResponse;
 
@@ -51,8 +51,8 @@ private:
 bool decode_row(Decoder& decoder, const ResultResponse* result,
                 OutputValueVec& output);
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Row, CassRow)
+EXTERNAL_TYPE(datastax::internal::core::Row, CassRow)
 
 #endif

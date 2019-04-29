@@ -20,33 +20,36 @@
 #include "logger.hpp"
 #include "request.hpp"
 
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 CassRetryPolicy* cass_retry_policy_default_new() {
-  cass::RetryPolicy* policy = new cass::DefaultRetryPolicy();
+  RetryPolicy* policy = new DefaultRetryPolicy();
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
 
 CassRetryPolicy* cass_retry_policy_downgrading_consistency_new() {
-  cass::RetryPolicy* policy = new cass::DowngradingConsistencyRetryPolicy();
+  RetryPolicy* policy = new DowngradingConsistencyRetryPolicy();
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
 
 CassRetryPolicy* cass_retry_policy_fallthrough_new() {
-  cass::RetryPolicy* policy = new cass::FallthroughRetryPolicy();
+  RetryPolicy* policy = new FallthroughRetryPolicy();
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
 
 CassRetryPolicy* cass_retry_policy_logging_new(CassRetryPolicy* child_retry_policy) {
-  if (child_retry_policy->type() == cass::RetryPolicy::LOGGING) {
+  if (child_retry_policy->type() == RetryPolicy::LOGGING) {
     return NULL;
   }
-  cass::RetryPolicy* policy
-      = new cass::LoggingRetryPolicy(
-          cass::SharedRefPtr<cass::RetryPolicy>(child_retry_policy));
+  RetryPolicy* policy
+      = new LoggingRetryPolicy(
+          SharedRefPtr<RetryPolicy>(child_retry_policy));
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
@@ -56,8 +59,6 @@ void cass_retry_policy_free(CassRetryPolicy* policy) {
 }
 
 } // extern "C"
-
-namespace cass {
 
 inline RetryPolicy::RetryDecision max_likely_to_work(int received) {
   if (received >= 3) {
@@ -318,5 +319,3 @@ RetryPolicy::RetryDecision LoggingRetryPolicy::on_request_error(const Request* r
 
   return decision;
 }
-
-} // namespace cass

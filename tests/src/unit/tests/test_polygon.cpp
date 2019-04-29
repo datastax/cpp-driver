@@ -16,6 +16,10 @@
 
 #define RESET_ITERATOR_WITH(x) iterator.reset_text((x), strlen((x)))
 
+using namespace datastax;
+using namespace datastax::internal::core;
+using namespace datastax::internal::enterprise;
+
 class PolygonUnitTest : public testing::Test {
 public:
   void SetUp() {
@@ -28,14 +32,14 @@ public:
 
   const CassValue* to_value() {
     char* data = const_cast<char*>(reinterpret_cast<const char*>(polygon->bytes().data()));
-    value =  cass::Value(cass::DataType::ConstPtr(new cass::CustomType(DSE_POLYGON_TYPE)),
-                         cass::Decoder(data, polygon->bytes().size(), 0)); // Protocol version not used
+    value =  Value(DataType::ConstPtr(new CustomType(DSE_POLYGON_TYPE)),
+                   Decoder(data, polygon->bytes().size(), 0)); // Protocol version not used
     return CassValue::to(&value);
   }
 
   DsePolygon* polygon;
-  cass::Value value;
-  dse::PolygonIterator iterator;
+  Value value;
+  PolygonIterator iterator;
 };
 
 TEST_F(PolygonUnitTest, BinaryEmptyRing) {
@@ -155,7 +159,7 @@ TEST_F(PolygonUnitTest, TextJunkAfterEmptyPolygon) {
 }
 
 TEST_F(PolygonUnitTest, TextEmpty) {
-  cass::String wkt = polygon->to_wkt();
+  String wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON EMPTY", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
@@ -166,7 +170,7 @@ TEST_F(PolygonUnitTest, TextEmptyRing) {
   ASSERT_EQ(CASS_OK, dse_polygon_start_ring(polygon));
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  cass::String wkt = polygon->to_wkt();
+  String wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON (())", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
@@ -180,7 +184,7 @@ TEST_F(PolygonUnitTest, TextSingleRing) {
   ASSERT_EQ(CASS_OK, dse_polygon_add_point(polygon, 4, 5));
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  cass::String wkt = polygon->to_wkt();
+  String wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON ((0 1, 2 3, 4 5))", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
@@ -215,7 +219,7 @@ TEST_F(PolygonUnitTest, TextMultipleRings) {
 
   ASSERT_EQ(CASS_OK, dse_polygon_finish(polygon));
 
-  cass::String wkt = polygon->to_wkt();
+  String wkt = polygon->to_wkt();
   ASSERT_EQ("POLYGON ((0 1, 2 3, 4 5), (6 7, 8 9, 10 11, 12 13))", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));

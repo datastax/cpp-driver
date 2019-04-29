@@ -37,7 +37,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Config;
 class Connection;
@@ -330,6 +330,6 @@ private:
   const uint64_t start_time_ns_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

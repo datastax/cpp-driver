@@ -23,7 +23,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Buffer {
 public:
@@ -70,55 +70,55 @@ public:
 
   size_t encode_byte(size_t offset, uint8_t value) {
     assert(offset + sizeof(uint8_t) <= static_cast<size_t>(size_));
-    cass::encode_byte(data() + offset, value);
+    internal::encode_byte(data() + offset, value);
     return offset + sizeof(uint8_t);
   }
 
   size_t encode_int8(size_t offset, int8_t value) {
     assert(offset + sizeof(int8_t) <= static_cast<size_t>(size_));
-    cass::encode_int8(data() + offset, value);
+    internal::encode_int8(data() + offset, value);
     return offset + sizeof(int8_t);
   }
 
   size_t encode_int16(size_t offset, int16_t value) {
     assert(offset + sizeof(int16_t) <= static_cast<size_t>(size_));
-    cass::encode_int16(data() + offset, value);
+    internal::encode_int16(data() + offset, value);
     return offset + sizeof(int16_t);
   }
 
   size_t encode_uint16(size_t offset, uint16_t value) {
     assert(offset + sizeof(uint16_t) <= static_cast<size_t>(size_));
-    cass::encode_uint16(data() + offset, value);
+    internal::encode_uint16(data() + offset, value);
     return offset + sizeof(uint16_t);
   }
 
   size_t encode_int32(size_t offset, int32_t value) {
     assert(offset + sizeof(int32_t) <= static_cast<size_t>(size_));
-    cass::encode_int32(data() + offset, value);
+    internal::encode_int32(data() + offset, value);
     return offset + sizeof(int32_t);
   }
 
   size_t encode_uint32(size_t offset, uint32_t value) {
     assert(offset + sizeof(uint32_t) <= static_cast<size_t>(size_));
-    cass::encode_uint32(data() + offset, value);
+    internal::encode_uint32(data() + offset, value);
     return offset + sizeof(uint32_t);
   }
 
   size_t encode_int64(size_t offset, int64_t value) {
     assert(offset + sizeof(int64_t) <= static_cast<size_t>(size_));
-    cass::encode_int64(data() + offset, value);
+    internal::encode_int64(data() + offset, value);
     return offset + sizeof(int64_t);
   }
 
   size_t encode_float(size_t offset, float value) {
     assert(offset + sizeof(float) <= static_cast<size_t>(size_));
-    cass::encode_float(data() + offset, value);
+    internal::encode_float(data() + offset, value);
     return offset + sizeof(float);
   }
 
   size_t encode_double(size_t offset, double value) {
     assert(offset + sizeof(double) <= static_cast<size_t>(size_));
-    cass::encode_double(data() + offset, value);
+    internal::encode_double(data() + offset, value);
     return offset + sizeof(double);
   }
 
@@ -161,7 +161,7 @@ public:
 
   size_t encode_uuid(size_t offset, CassUuid value) {
     assert(offset + sizeof(CassUuid) <= static_cast<size_t>(size_));
-    cass::encode_uuid(data() + offset, value);
+    internal::encode_uuid(data() + offset, value);
     return offset + sizeof(CassUuid);
   }
 
@@ -224,6 +224,6 @@ private:
 
 typedef Vector<Buffer> BufferVec;
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

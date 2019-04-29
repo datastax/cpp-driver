@@ -22,7 +22,7 @@
 #include "ref_counted.hpp"
 #include "event_response.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class HostsConnectorRequestCallback;
 class Metrics;
@@ -89,7 +89,7 @@ class ControlConnector : public RefCounted<ControlConnector>
 public:
   typedef SharedRefPtr<ControlConnector> Ptr;
   typedef Vector<Ptr> Vec;
-  typedef cass::Callback<void, ControlConnector*> Callback;
+  typedef internal::Callback<void, ControlConnector*> Callback;
 
   enum ControlConnectionError {
     CONTROL_CONNECTION_OK,
@@ -262,6 +262,6 @@ private:
   ControlConnectionSettings settings_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

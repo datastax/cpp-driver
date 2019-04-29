@@ -25,7 +25,7 @@
 #include "request_handler.hpp"
 #include "response.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A handler that tracks the progress of prepares on all hosts and returns the
@@ -78,6 +78,6 @@ private:
   bool is_finished_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

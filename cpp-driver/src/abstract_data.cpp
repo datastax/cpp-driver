@@ -22,7 +22,7 @@
 #include "tuple.hpp"
 #include "user_type_value.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 CassError AbstractData::set(size_t index, CassNull value) {
   CASS_CHECK_INDEX_AND_TYPE(index, value);
@@ -119,5 +119,3 @@ Buffer AbstractData::Element::get_buffer() const {
     return buf_;
   }
 }
-
-} // namespace cass

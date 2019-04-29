@@ -38,33 +38,37 @@
 
 #include <uv.h>
 
-const cass::String LOCAL_DC = "local";
-const cass::String REMOTE_DC = "remote";
-const cass::String BACKUP_DC = "backup";
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
-#define VECTOR_FROM(t, a) cass::Vector<t>(a, a + sizeof(a)/sizeof(a[0]))
+const String LOCAL_DC = "local";
+const String REMOTE_DC = "remote";
+const String BACKUP_DC = "backup";
 
-cass::Address addr_for_sequence(size_t i) {
+#define VECTOR_FROM(t, a) Vector<t>(a, a + sizeof(a)/sizeof(a[0]))
+
+Address addr_for_sequence(size_t i) {
   char temp[64];
   sprintf(temp, "%d.%d.%d.%d",
           static_cast<int>(i & 0xFF),
           static_cast<int>((i >> 8) & 0xFF),
           static_cast<int>((i >> 16) & 0xFF),
           static_cast<int>((i >> 24) & 0xFF));
-  return cass::Address(temp, 9042);
+  return Address(temp, 9042);
 }
 
-cass::SharedRefPtr<cass::Host> host_for_addr(const cass::Address addr,
-                                             const cass::String& rack = "rack",
-                                             const cass::String& dc = "dc") {
-  cass::SharedRefPtr<cass::Host>host(new cass::Host(addr));
+SharedRefPtr<Host> host_for_addr(const Address addr,
+                                 const String& rack = "rack",
+                                 const String& dc = "dc") {
+  SharedRefPtr<Host>host(new Host(addr));
   host->set_rack_and_dc(rack, dc);
   return host;
 }
 
-void populate_hosts(size_t count, const cass::String& rack,
-                    const cass::String& dc, cass::HostMap* hosts) {
-  cass::Address addr;
+void populate_hosts(size_t count, const String& rack,
+                    const String& dc, HostMap* hosts) {
+  Address addr;
   size_t first = hosts->size() + 1;
   for (size_t i = first; i < first+count; ++i) {
     addr = addr_for_sequence(i);
@@ -72,9 +76,9 @@ void populate_hosts(size_t count, const cass::String& rack,
   }
 }
 
-void verify_sequence(cass::QueryPlan* qp, const cass::Vector<size_t>& sequence) {
-  cass::Address received;
-  for (cass::Vector<size_t>::const_iterator it = sequence.begin();
+void verify_sequence(QueryPlan* qp, const Vector<size_t>& sequence) {
+  Address received;
+  for (Vector<size_t>::const_iterator it = sequence.begin();
        it!= sequence.end();
        ++it) {
     ASSERT_TRUE(qp->compute_next(&received));
@@ -83,13 +87,13 @@ void verify_sequence(cass::QueryPlan* qp, const cass::Vector<size_t>& sequence) 
   EXPECT_FALSE(qp->compute_next(&received));
 }
 
-typedef cass::Map<cass::Address, int> QueryCounts;
+typedef Map<Address, int> QueryCounts;
 
-QueryCounts run_policy(cass::LoadBalancingPolicy& policy, int count) {
+QueryCounts run_policy(LoadBalancingPolicy& policy, int count) {
   QueryCounts counts;
   for (int i = 0; i < 12; ++i) {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-    cass::Host::Ptr host(qp->compute_next());
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+    Host::Ptr host(qp->compute_next());
     if (host) {
       counts[host->address()] += 1;
     }
@@ -98,11 +102,11 @@ QueryCounts run_policy(cass::LoadBalancingPolicy& policy, int count) {
 }
 
 void verify_dcs(const QueryCounts& counts,
-                const cass::HostMap& hosts,
-                const cass::String& expected_dc) {
+                const HostMap& hosts,
+                const String& expected_dc) {
   for (QueryCounts::const_iterator it = counts.begin(),
        end = counts.end(); it != end; ++it) {
-    cass::HostMap::const_iterator host_it = hosts.find(it->first);
+    HostMap::const_iterator host_it = hosts.find(it->first);
     ASSERT_NE(host_it, hosts.end());
     EXPECT_EQ(expected_dc, host_it->second->dc());
   }
@@ -115,14 +119,14 @@ void verify_query_counts(const QueryCounts& counts, int expected_count) {
   }
 }
 
-struct RunPeriodicTask : public cass::EventLoop {
-  RunPeriodicTask(cass::LatencyAwarePolicy* policy)
+struct RunPeriodicTask : public EventLoop {
+  RunPeriodicTask(LatencyAwarePolicy* policy)
     : policy(policy) {
     async.data = this;
   }
 
   int init() {
-    int rc = cass::EventLoop::init();
+    int rc = EventLoop::init();
     if (rc != 0) return rc;
     rc = uv_async_init(loop(), &async, on_async);
     if (rc != 0) return rc;
@@ -142,7 +146,7 @@ struct RunPeriodicTask : public cass::EventLoop {
   }
 
   uv_async_t async;
-  cass::LatencyAwarePolicy* policy;
+  LatencyAwarePolicy* policy;
 };
 
 // Latency-aware utility functions
@@ -155,7 +159,7 @@ uint64_t calculate_moving_average(uint64_t first_latency_ns,
   const uint64_t min_measured = 15LL;
   const uint64_t threshold_to_account = (30LL * min_measured) / 100LL;
 
-  cass::Host host(cass::Address("0.0.0.0", 9042));
+  Host host(Address("0.0.0.0", 9042));
   host.enable_latency_tracking(scale, min_measured);
 
   for (uint64_t i = 0; i < threshold_to_account; ++i) {
@@ -169,82 +173,82 @@ uint64_t calculate_moving_average(uint64_t first_latency_ns,
   while (uv_hrtime() - start < time_between_ns) {}
 
   host.update_latency(second_latency_ns);
-  cass::TimestampedAverage current = host.get_current_average();
+  TimestampedAverage current = host.get_current_average();
   return current.average;
 }
 
 void test_dc_aware_policy(size_t local_count, size_t remote_count) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(local_count, "rack", LOCAL_DC, &hosts);
   populate_hosts(remote_count, "rack", REMOTE_DC, &hosts);
-  cass::DCAwarePolicy policy(LOCAL_DC, remote_count, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  DCAwarePolicy policy(LOCAL_DC, remote_count, false);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
   const size_t total_hosts = local_count + remote_count;
 
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-  cass::Vector<size_t> seq(total_hosts);
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  Vector<size_t> seq(total_hosts);
   for (size_t i = 0; i < total_hosts; ++i) seq[i] = i + 1;
   verify_sequence(qp.get(), seq);
 }
 
 TEST(RoundRobinLoadBalancingUnitTest, Simple) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(2, "rack", "dc", &hosts);
 
-  cass::RoundRobinPolicy policy;
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  RoundRobinPolicy policy;
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
   // start on first elem
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
   const size_t seq1[] = {1, 2};
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
 
   // rotate starting element
-  cass::ScopedPtr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
   const size_t seq2[] = {2, 1};
   verify_sequence(qp2.get(), VECTOR_FROM(size_t, seq2));
 
   // back around
-  cass::ScopedPtr<cass::QueryPlan> qp3(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp3(policy.new_query_plan("ks", NULL, NULL));
   verify_sequence(qp3.get(), VECTOR_FROM(size_t, seq1));
 }
 
 TEST(RoundRobinLoadBalancingUnitTest, OnAdd) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(2, "rack", "dc", &hosts);
 
-  cass::RoundRobinPolicy policy;
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  RoundRobinPolicy policy;
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
   // baseline
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
   const size_t seq1[] = {1, 2};
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
 
   const size_t seq_new = 5;
-  cass::Address addr_new = addr_for_sequence(seq_new);
-  cass::SharedRefPtr<cass::Host> host = host_for_addr(addr_new);
+  Address addr_new = addr_for_sequence(seq_new);
+  SharedRefPtr<Host> host = host_for_addr(addr_new);
   policy.on_host_added(host);
   policy.on_host_up(host);
 
-  cass::ScopedPtr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
   const size_t seq2[] = {2, seq_new, 1};
   verify_sequence(qp2.get(), VECTOR_FROM(size_t, seq2));
 }
 
 TEST(RoundRobinLoadBalancingUnitTest, OnRemove) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack", "dc", &hosts);
 
-  cass::RoundRobinPolicy policy;
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  RoundRobinPolicy policy;
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-  cass::SharedRefPtr<cass::Host> host = hosts.begin()->second;
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  SharedRefPtr<Host> host = hosts.begin()->second;
   policy.on_host_removed(host);
 
-  cass::ScopedPtr<cass::QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
 
   // Both should not have the removed host
   const size_t seq1[] = {2, 3};
@@ -255,15 +259,15 @@ TEST(RoundRobinLoadBalancingUnitTest, OnRemove) {
 }
 
 TEST(RoundRobinLoadBalancingUnitTest, OnUpAndDown) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack", "dc", &hosts);
 
-  cass::RoundRobinPolicy policy;
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  RoundRobinPolicy policy;
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp_before1(policy.new_query_plan("ks", NULL, NULL));
-  cass::ScopedPtr<cass::QueryPlan> qp_before2(policy.new_query_plan("ks", NULL, NULL));
-  cass::SharedRefPtr<cass::Host> host = hosts.begin()->second;
+  ScopedPtr<QueryPlan> qp_before1(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp_before2(policy.new_query_plan("ks", NULL, NULL));
+  SharedRefPtr<Host> host = hosts.begin()->second;
 
   // 'before' qp both have the down host
   // Ahead of set_down, it will be returned
@@ -282,8 +286,8 @@ TEST(RoundRobinLoadBalancingUnitTest, OnUpAndDown) {
   // host is added to the list, but not 'up'
   policy.on_host_up(host);
 
-  cass::ScopedPtr<cass::QueryPlan> qp_after1(policy.new_query_plan("ks", NULL, NULL));
-  cass::ScopedPtr<cass::QueryPlan> qp_after2(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp_after1(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp_after2(policy.new_query_plan("ks", NULL, NULL));
 
   policy.on_host_down(host->address());
   // 1 is dynamically excluded from plan
@@ -301,11 +305,11 @@ TEST(RoundRobinLoadBalancingUnitTest, OnUpAndDown) {
 }
 
 TEST(RoundRobinLoadBalancingUnitTest, VerifyEqualDistribution) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack", "dc", &hosts);
 
-  cass::RoundRobinPolicy policy;
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  RoundRobinPolicy policy;
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
   { // All nodes
     QueryCounts counts(run_policy(policy, 12));
@@ -340,31 +344,31 @@ TEST(RoundRobinLoadBalancingUnitTest, VerifyEqualDistribution) {
 
 TEST(DatacenterAwareLoadBalancingUnitTest, SomeDatacenterLocalUnspecified) {
   const size_t total_hosts = 3;
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(total_hosts, "rack", LOCAL_DC, &hosts);
-  cass::Host* h = hosts.begin()->second.get();
+  Host* h = hosts.begin()->second.get();
   h->set_rack_and_dc("", "");
 
-  cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  DCAwarePolicy policy(LOCAL_DC, 1, false);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
   const size_t seq[] = {2, 3, 1};
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
 }
 
 TEST(DatacenterAwareLoadBalancingUnitTest, SingleLocalDown) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack", LOCAL_DC, &hosts);
-  cass::SharedRefPtr<cass::Host> target_host = hosts.begin()->second;
+  SharedRefPtr<Host> target_host = hosts.begin()->second;
   populate_hosts(1, "rack", REMOTE_DC, &hosts);
 
-  cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  DCAwarePolicy policy(LOCAL_DC, 1, false);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
-  cass::ScopedPtr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
+  ScopedPtr<QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
+  ScopedPtr<QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
 
   policy.on_host_down(target_host->address());
   {
@@ -380,17 +384,17 @@ TEST(DatacenterAwareLoadBalancingUnitTest, SingleLocalDown) {
 }
 
 TEST(DatacenterAwareLoadBalancingUnitTest, AllLocalRemovedReturned) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(1, "rack", LOCAL_DC, &hosts);
-  cass::SharedRefPtr<cass::Host> target_host = hosts.begin()->second;
+  SharedRefPtr<Host> target_host = hosts.begin()->second;
   populate_hosts(1, "rack", REMOTE_DC, &hosts);
 
-  cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  DCAwarePolicy policy(LOCAL_DC, 1, false);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
+  ScopedPtr<QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
   policy.on_host_down(target_host->address());
-  cass::ScopedPtr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
+  ScopedPtr<QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
 
   {
     const size_t seq[] = {2};
@@ -401,7 +405,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllLocalRemovedReturned) {
   policy.on_host_up(target_host);
 
   // make sure we get the local node first after on_up
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
   {
     const size_t seq[] = {1, 2};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
@@ -409,18 +413,18 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllLocalRemovedReturned) {
 }
 
 TEST(DatacenterAwareLoadBalancingUnitTest, RemoteRemovedReturned) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(1, "rack", LOCAL_DC, &hosts);
   populate_hosts(1, "rack", REMOTE_DC, &hosts);
-  cass::Address target_addr("2.0.0.0", 9042);
-  cass::SharedRefPtr<cass::Host> target_host = hosts[target_addr];
+  Address target_addr("2.0.0.0", 9042);
+  SharedRefPtr<Host> target_host = hosts[target_addr];
 
-  cass::DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  DCAwarePolicy policy(LOCAL_DC, 1, false);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
+  ScopedPtr<QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
   policy.on_host_down(target_host->address());
-  cass::ScopedPtr<cass::QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
+  ScopedPtr<QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
 
   {
     const size_t seq[] = {1};
@@ -431,7 +435,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, RemoteRemovedReturned) {
   policy.on_host_up(target_host);
 
   // make sure we get both nodes, correct order after
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
   {
     const size_t seq[] = {1, 2};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
@@ -439,16 +443,16 @@ TEST(DatacenterAwareLoadBalancingUnitTest, RemoteRemovedReturned) {
 }
 
 TEST(DatacenterAwareLoadBalancingUnitTest, UsedHostsPerDatacenter) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack", LOCAL_DC, &hosts);
   populate_hosts(3, "rack", REMOTE_DC, &hosts);
 
   for (size_t used_hosts = 0; used_hosts < 4; ++used_hosts) {
-    cass::DCAwarePolicy policy(LOCAL_DC, used_hosts, false);
-    policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+    DCAwarePolicy policy(LOCAL_DC, used_hosts, false);
+    policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-    cass::Vector<size_t> seq;
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+    Vector<size_t> seq;
     size_t index = 0;
 
     seq.reserve(3 + used_hosts);
@@ -470,24 +474,24 @@ TEST(DatacenterAwareLoadBalancingUnitTest, UsedHostsPerDatacenter) {
 }
 
 TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsistencyLevel) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack", LOCAL_DC, &hosts);
   populate_hosts(3, "rack", REMOTE_DC, &hosts);
 
   {
     // Not allowing remote DCs for local CLs
     bool allow_remote_dcs_for_local_cl = false;
-    cass::DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
-    policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+    DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
+    policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
     // Set local CL
-    cass::QueryRequest::Ptr request(new cass::QueryRequest("", 0));
+    QueryRequest::Ptr request(new QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
-    cass::SharedRefPtr<cass::RequestHandler> request_handler(
-          new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+    SharedRefPtr<RequestHandler> request_handler(
+          new RequestHandler(request, ResponseFuture::Ptr()));
 
     // Check for only local hosts are used
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
     const size_t seq[] = {1, 2, 3};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -495,61 +499,61 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
   {
     // Allowing remote DCs for local CLs
     bool allow_remote_dcs_for_local_cl = true;
-    cass::DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
-    policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+    DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
+    policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
     // Set local CL
-    cass::QueryRequest::Ptr request(new cass::QueryRequest("", 0));
+    QueryRequest::Ptr request(new QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
-    cass::SharedRefPtr<cass::RequestHandler> request_handler(
-          new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+    SharedRefPtr<RequestHandler> request_handler(
+          new RequestHandler(request, ResponseFuture::Ptr()));
 
     // Check for only local hosts are used
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
     const size_t seq[] = {1, 2, 3, 4, 5, 6};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
 
 TEST(DatacenterAwareLoadBalancingUnitTest, StartWithEmptyLocalDatacenter) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(1, "rack", REMOTE_DC, &hosts);
   populate_hosts(3, "rack", LOCAL_DC, &hosts);
 
   // Set local DC using connected host
   {
-    cass::DCAwarePolicy policy("", 0, false);
-    policy.init(hosts[cass::Address("2.0.0.0", 9042)], hosts, NULL);
+    DCAwarePolicy policy("", 0, false);
+    policy.init(hosts[Address("2.0.0.0", 9042)], hosts, NULL);
 
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
     const size_t seq[] = {2, 3, 4};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 
   // Set local DC using first host with non-empty DC
   {
-    cass::DCAwarePolicy policy("", 0, false);
-    policy.init(cass::SharedRefPtr<cass::Host>(
-                  new cass::Host(cass::Address("0.0.0.0", 9042))), hosts, NULL);
+    DCAwarePolicy policy("", 0, false);
+    policy.init(SharedRefPtr<Host>(
+                  new Host(Address("0.0.0.0", 9042))), hosts, NULL);
 
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
     const size_t seq[] = {1};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
 
-cass::Vector<cass::String> single_token(int64_t token) {
-  cass::OStringStream ss;
+Vector<String> single_token(int64_t token) {
+  OStringStream ss;
   ss << token;
-  return cass::Vector<cass::String>(1, ss.str());
+  return Vector<String>(1, ss.str());
 }
 
 TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionLocalDc) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack", LOCAL_DC, &hosts);
   populate_hosts(3, "rack", REMOTE_DC, &hosts);
 
-  cass::DCAwarePolicy policy("", 0, false);
+  DCAwarePolicy policy("", 0, false);
   policy.init(hosts.begin()->second, hosts, NULL);
 
   { // All local nodes
@@ -588,16 +592,16 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionLocalDc) {
 }
 
 TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionRemoteDc) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack", LOCAL_DC, &hosts);
   populate_hosts(3, "rack", REMOTE_DC, &hosts);
 
-  cass::DCAwarePolicy policy("", 3, false); // Allow all remote DC nodes
+  DCAwarePolicy policy("", 3, false); // Allow all remote DC nodes
   policy.init(hosts.begin()->second, hosts, NULL);
 
-  cass::Host::Ptr remote_dc_node1;
+  Host::Ptr remote_dc_node1;
   { // Mark down all local nodes
-    cass::HostMap::iterator it = hosts.begin();
+    HostMap::iterator it = hosts.begin();
     for (int i = 0; i < 3; ++i) {
       policy.on_host_down(it->first);
       it++;
@@ -642,8 +646,8 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionRemoteDc) {
 
 TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   const int64_t num_hosts = 4;
-  cass::HostMap hosts;
-  cass::TokenMap::Ptr token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
+  HostMap hosts;
+  TokenMap::Ptr token_map(TokenMap::from_partitioner(Murmur3Partitioner::name()));
 
   // Tokens
   // 1.0.0.0 -4611686018427387905
@@ -652,14 +656,14 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   // 4.0.0.0  9223372036854775804
 
   const uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  cass::Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
+  Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
 
   for (size_t i = 1; i <= num_hosts; ++i) {
-    cass::Host::Ptr host(create_host(addr_for_sequence(i),
-                                     single_token(token),
-                                     cass::Murmur3Partitioner::name().to_string(),
-                                     "rack1",
-                                     LOCAL_DC));
+    Host::Ptr host(create_host(addr_for_sequence(i),
+                               single_token(token),
+                               Murmur3Partitioner::name().to_string(),
+                               "rack1",
+                               LOCAL_DC));
 
     hosts[host->address()] = host;
     token_map->add_host(host);
@@ -669,28 +673,28 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   add_keyspace_simple("test", 3, token_map.get());
   token_map->build();
 
-  cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy(), false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  TokenAwarePolicy policy(new RoundRobinPolicy(), false);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::QueryRequest::Ptr request(new cass::QueryRequest("", 1));
+  QueryRequest::Ptr request(new QueryRequest("", 1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
-  request->set(0, cass::CassString(value, strlen(value)));
+  request->set(0, CassString(value, strlen(value)));
   request->add_key_index(0);
-  cass::SharedRefPtr<cass::RequestHandler> request_handler(
-        new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+  SharedRefPtr<RequestHandler> request_handler(
+        new RequestHandler(request, ResponseFuture::Ptr()));
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     const size_t seq[] = { 4, 1, 2, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 
   // Bring down the first host
-  cass::HostMap::iterator curr_host_it = hosts.begin(); // 1.0.0.0
+  HostMap::iterator curr_host_it = hosts.begin(); // 1.0.0.0
   policy.on_host_down(curr_host_it->second->address());
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     const size_t seq[] = { 4, 2, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -703,7 +707,7 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   policy.on_host_down(curr_host_it->second->address());
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     const size_t seq[] = { 1, 2, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -711,9 +715,9 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
 
 TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   const size_t num_hosts = 7;
-  cass::HostMap hosts;
+  HostMap hosts;
 
-  cass::TokenMap::Ptr token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
+  TokenMap::Ptr token_map(TokenMap::from_partitioner(Murmur3Partitioner::name()));
 
   // Tokens
   // 1.0.0.0 local  -6588122883467697006
@@ -725,14 +729,14 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   // 7.0.0.0 local   9223372036854775806
 
   const uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  cass::Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
+  Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
 
   for (size_t i = 1; i <= num_hosts; ++i) {
-    cass::Host::Ptr host(create_host(addr_for_sequence(i),
-                                     single_token(token),
-                                     cass::Murmur3Partitioner::name().to_string(),
-                                     "rack1",
-                                     i % 2 == 0 ? REMOTE_DC : LOCAL_DC));
+    Host::Ptr host(create_host(addr_for_sequence(i),
+                               single_token(token),
+                               Murmur3Partitioner::name().to_string(),
+                               "rack1",
+                               i % 2 == 0 ? REMOTE_DC : LOCAL_DC));
 
     hosts[host->address()] = host;
     token_map->add_host(host);
@@ -745,28 +749,28 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   add_keyspace_network_topology("test", replication, token_map.get());
   token_map->build();
 
-  cass::TokenAwarePolicy policy(new cass::DCAwarePolicy(LOCAL_DC, num_hosts / 2, false), false);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  TokenAwarePolicy policy(new DCAwarePolicy(LOCAL_DC, num_hosts / 2, false), false);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::QueryRequest::Ptr request(new cass::QueryRequest("", 1));
+  QueryRequest::Ptr request(new QueryRequest("", 1));
   const char* value = "abc"; // hash: -5434086359492102041
-  request->set(0, cass::CassString(value, strlen(value)));
+  request->set(0, CassString(value, strlen(value)));
   request->add_key_index(0);
-  cass::SharedRefPtr<cass::RequestHandler> request_handler(
-        new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+  SharedRefPtr<RequestHandler> request_handler(
+        new RequestHandler(request, ResponseFuture::Ptr()));
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     const size_t seq[] = { 3, 5, 7, 1, 4, 6, 2 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 
   // Bring down the first host
-  cass::HostMap::iterator curr_host_it = hosts.begin(); // 1.0.0.0
+  HostMap::iterator curr_host_it = hosts.begin(); // 1.0.0.0
   policy.on_host_down(curr_host_it->second->address());
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     const size_t seq[] = { 3, 5, 7, 4, 6, 2 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
@@ -778,18 +782,18 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   policy.on_host_down(curr_host_it->second->address());
 
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     const size_t seq[] = { 5, 7, 1, 6, 2, 4 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
 
 TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
-  cass::Random random;
+  Random random;
 
   const int64_t num_hosts = 4;
-  cass::HostMap hosts;
-  cass::TokenMap::Ptr token_map(cass::TokenMap::from_partitioner(cass::Murmur3Partitioner::name()));
+  HostMap hosts;
+  TokenMap::Ptr token_map(TokenMap::from_partitioner(Murmur3Partitioner::name()));
 
   // Tokens
   // 1.0.0.0 -4611686018427387905
@@ -798,14 +802,14 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   // 4.0.0.0  9223372036854775804
 
   const uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
-  cass::Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
+  Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
 
   for (size_t i = 1; i <= num_hosts; ++i) {
-    cass::Host::Ptr host(create_host(addr_for_sequence(i),
-                                     single_token(token),
-                                     cass::Murmur3Partitioner::name().to_string(),
-                                     "rack1",
-                                     LOCAL_DC));
+    Host::Ptr host(create_host(addr_for_sequence(i),
+                               single_token(token),
+                               Murmur3Partitioner::name().to_string(),
+                               "rack1",
+                               LOCAL_DC));
 
     hosts[host->address()] = host;
     token_map->add_host(host);
@@ -815,26 +819,26 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   add_keyspace_simple("test", 3, token_map.get());
   token_map->build();
 
-  cass::QueryRequest::Ptr request(new cass::QueryRequest("", 1));
+  QueryRequest::Ptr request(new QueryRequest("", 1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
-  request->set(0, cass::CassString(value, strlen(value)));
+  request->set(0, CassString(value, strlen(value)));
   request->add_key_index(0);
-  cass::SharedRefPtr<cass::RequestHandler> request_handler(
-        new cass::RequestHandler(request, cass::ResponseFuture::Ptr()));
+  SharedRefPtr<RequestHandler> request_handler(
+        new RequestHandler(request, ResponseFuture::Ptr()));
 
 
-  cass::HostVec not_shuffled;
+  HostVec not_shuffled;
   {
-    cass::TokenAwarePolicy policy(new cass::RoundRobinPolicy(), false); // Not shuffled
-    policy.init(cass::SharedRefPtr<cass::Host>(), hosts, &random);
-    cass::ScopedPtr<cass::QueryPlan> qp1(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    TokenAwarePolicy policy(new RoundRobinPolicy(), false); // Not shuffled
+    policy.init(SharedRefPtr<Host>(), hosts, &random);
+    ScopedPtr<QueryPlan> qp1(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     for (int i = 0; i < num_hosts; ++i) {
       not_shuffled.push_back(qp1->compute_next());
     }
 
     // Verify that not shuffled will repeat the same order
-    cass::HostVec not_shuffled_again;
-    cass::ScopedPtr<cass::QueryPlan> qp2(policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    HostVec not_shuffled_again;
+    ScopedPtr<QueryPlan> qp2(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     for (int i = 0; i < num_hosts; ++i) {
       not_shuffled_again.push_back(qp2->compute_next());
     }
@@ -843,11 +847,11 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
 
   // Verify that the shuffle setting does indeed shuffle the replicas
   {
-    cass::TokenAwarePolicy shuffle_policy(new cass::RoundRobinPolicy(), true); // Shuffled
-    shuffle_policy.init(cass::SharedRefPtr<cass::Host>(), hosts, &random);
+    TokenAwarePolicy shuffle_policy(new RoundRobinPolicy(), true); // Shuffled
+    shuffle_policy.init(SharedRefPtr<Host>(), hosts, &random);
 
-    cass::HostVec shuffled_previous;
-    cass::ScopedPtr<cass::QueryPlan> qp(shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    HostVec shuffled_previous;
+    ScopedPtr<QueryPlan> qp(shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
     for (int i = 0; i < num_hosts; ++i) {
       shuffled_previous.push_back(qp->compute_next());
     }
@@ -855,11 +859,11 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
     int count;
     const int max_iterations = num_hosts * num_hosts;
     for (count = 0; count < max_iterations; ++count) {
-      cass::ScopedPtr<cass::QueryPlan> qp(shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
+      ScopedPtr<QueryPlan> qp(shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
 
-      cass::HostVec shuffled;
+      HostVec shuffled;
       for (int j = 0; j < num_hosts; ++j) {
-        cass::Host::Ptr host(qp->compute_next());
+        Host::Ptr host(qp->compute_next());
         EXPECT_GT(std::count(not_shuffled.begin(), not_shuffled.end(), host), 0);
         shuffled.push_back(host);
       }
@@ -879,10 +883,10 @@ TEST(LatencyAwareLoadBalancingUnitTest, ThreadholdToAccount) {
   const uint64_t threshold_to_account = (30LL * min_measured) / 100LL;
   const uint64_t one_ms = 1000000LL; // 1 ms in ns
 
-  cass::Host host(cass::Address("0.0.0.0", 9042));
+  Host host(Address("0.0.0.0", 9042));
   host.enable_latency_tracking(scale, min_measured);
 
-  cass::TimestampedAverage current = host.get_current_average();
+  TimestampedAverage current = host.get_current_average();
   for (uint64_t i = 0; i < threshold_to_account; ++i) {
     host.update_latency(one_ms);
     current = host.get_current_average();
@@ -926,7 +930,7 @@ TEST(LatencyAwareLoadBalancingUnitTest, DISABLED_Simple) { // Disabled: See http
 #else
 TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
 #endif
-  cass::LatencyAwarePolicy::Settings settings;
+  LatencyAwarePolicy::Settings settings;
 
   // Disable min_measured
   settings.min_measured = 0L;
@@ -938,22 +942,22 @@ TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
   settings.retry_period_ns = 1000LL * 1000LL * 1000L;
 
   const int64_t num_hosts = 4;
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
-  cass::LatencyAwarePolicy policy(new cass::RoundRobinPolicy(), settings);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  LatencyAwarePolicy policy(new RoundRobinPolicy(), settings);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
   // Record some latencies with 100 ns being the minimum
-  for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
+  for (HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
     i->second->enable_latency_tracking(settings.scale_ns, settings.min_measured);
   }
 
-  hosts[cass::Address("1.0.0.0", 9042)]->update_latency(100);
-  hosts[cass::Address("4.0.0.0", 9042)]->update_latency(150);
+  hosts[Address("1.0.0.0", 9042)]->update_latency(100);
+  hosts[Address("4.0.0.0", 9042)]->update_latency(150);
 
   // Hosts 2 and 3 will exceed the exclusion threshold
-  hosts[cass::Address("2.0.0.0", 9042)]->update_latency(201);
-  hosts[cass::Address("3.0.0.0", 9042)]->update_latency(1000);
+  hosts[Address("2.0.0.0", 9042)]->update_latency(201);
+  hosts[Address("3.0.0.0", 9042)]->update_latency(1000);
 
   // Verify we don't have a current minimum average
   EXPECT_EQ(policy.min_average(), -1);
@@ -974,7 +978,7 @@ TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
 
   // 1 and 4  are under the minimum, but 2 and 3 will be skipped
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("", NULL, NULL));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("", NULL, NULL));
     const size_t seq1[] = {1, 4, 2, 3};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   }
@@ -984,7 +988,7 @@ TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
 
   // After waiting no hosts should be skipped (notice 2 and 3 tried first)
   {
-    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("", NULL, NULL));
+    ScopedPtr<QueryPlan> qp(policy.new_query_plan("", NULL, NULL));
     const size_t seq1[] = {2, 3, 4, 1};
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   }
@@ -995,16 +999,16 @@ TEST(LatencyAwareLoadBalancingUnitTest, DISABLED_MinAverageUnderMinMeasured) { /
 #else
 TEST(LatencyAwareLoadBalancingUnitTest, MinAverageUnderMinMeasured) {
 #endif
-  cass::LatencyAwarePolicy::Settings settings;
+  LatencyAwarePolicy::Settings settings;
 
   const int64_t num_hosts = 4;
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
-  cass::LatencyAwarePolicy policy(new cass::RoundRobinPolicy(), settings);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  LatencyAwarePolicy policy(new RoundRobinPolicy(), settings);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
   int count = 1;
-  for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
+  for (HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
     i->second->enable_latency_tracking(settings.scale_ns, settings.min_measured);
     i->second->update_latency(100 * count++);
   }
@@ -1029,82 +1033,82 @@ TEST(LatencyAwareLoadBalancingUnitTest, MinAverageUnderMinMeasured) {
 
 TEST(WhitelistLoadBalancingUnitTest, Hosts) {
   const int64_t num_hosts = 100;
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
-  cass::ContactPointList whitelist_hosts;
+  ContactPointList whitelist_hosts;
   whitelist_hosts.push_back("37.0.0.0");
   whitelist_hosts.push_back("83.0.0.0");
-  cass::WhitelistPolicy policy(new cass::RoundRobinPolicy(), whitelist_hosts);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  WhitelistPolicy policy(new RoundRobinPolicy(), whitelist_hosts);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
   // Verify only hosts 37 and 83 are computed in the query plan
   const size_t seq1[] = { 37, 83 };
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   // The query plan should now be exhausted
-  cass::Address next_address;
+  Address next_address;
   ASSERT_FALSE(qp.get()->compute_next(&next_address));
 }
 
 TEST(WhitelistLoadBalancingUnitTest, Datacenters) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack1", LOCAL_DC, &hosts);
   populate_hosts(3, "rack1", BACKUP_DC, &hosts);
   populate_hosts(3, "rack1", REMOTE_DC, &hosts);
-  cass::DcList whitelist_dcs;
+  DcList whitelist_dcs;
   whitelist_dcs.push_back(LOCAL_DC);
   whitelist_dcs.push_back(REMOTE_DC);
-  cass::WhitelistDCPolicy policy(new cass::RoundRobinPolicy(), whitelist_dcs);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  WhitelistDCPolicy policy(new RoundRobinPolicy(), whitelist_dcs);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
   // Verify only hosts LOCAL_DC and REMOTE_DC are computed in the query plan
   const size_t seq1[] = { 1, 2, 3, 7, 8, 9 };
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   // The query plan should now be exhausted
-  cass::Address next_address;
+  Address next_address;
   ASSERT_FALSE(qp.get()->compute_next(&next_address));
 }
 
 TEST(BlacklistLoadBalancingUnitTest, Hosts) {
   const int64_t num_hosts = 5;
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
-  cass::ContactPointList blacklist_hosts;
+  ContactPointList blacklist_hosts;
   blacklist_hosts.push_back("2.0.0.0");
   blacklist_hosts.push_back("3.0.0.0");
-  cass::BlacklistPolicy policy(new cass::RoundRobinPolicy(), blacklist_hosts);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  BlacklistPolicy policy(new RoundRobinPolicy(), blacklist_hosts);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
   // Verify only hosts 1, 4 and 5 are computed in the query plan
   const size_t seq1[] = { 1, 4, 5 };
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   // The query plan should now be exhausted
-  cass::Address next_address;
+  Address next_address;
   ASSERT_FALSE(qp.get()->compute_next(&next_address));
 }
 
 TEST(BlacklistLoadBalancingUnitTest, Datacenters) {
-  cass::HostMap hosts;
+  HostMap hosts;
   populate_hosts(3, "rack1", LOCAL_DC, &hosts);
   populate_hosts(3, "rack1", BACKUP_DC, &hosts);
   populate_hosts(3, "rack1", REMOTE_DC, &hosts);
-  cass::DcList blacklist_dcs;
+  DcList blacklist_dcs;
   blacklist_dcs.push_back(LOCAL_DC);
   blacklist_dcs.push_back(REMOTE_DC);
-  cass::BlacklistDCPolicy policy(new cass::RoundRobinPolicy(), blacklist_dcs);
-  policy.init(cass::SharedRefPtr<cass::Host>(), hosts, NULL);
+  BlacklistDCPolicy policy(new RoundRobinPolicy(), blacklist_dcs);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
+  ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
   // Verify only hosts from BACKUP_DC are computed in the query plan
   const size_t seq1[] = { 4, 5, 6 };
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   // The query plan should now be exhausted
-  cass::Address next_address;
+  Address next_address;
   ASSERT_FALSE(qp.get()->compute_next(&next_address));
 }

@@ -175,7 +175,7 @@ public:
    * @return True is ADS is initialized; false otherwise
    */
   static bool is_initialized() {
-    cass::ScopedMutex lock(&mutex_);
+    datastax::internal::ScopedMutex lock(&mutex_);
     return is_initialized_;
   }
 
@@ -600,7 +600,7 @@ private:
    * @param term_signal Terminating signal
    */
   static void process_exit(uv_process_t* process, int64_t error_code, int term_signal) {
-    cass::ScopedMutex lock(&mutex_);
+    datastax::internal::ScopedMutex lock(&mutex_);
     TEST_LOG("Process " << process->pid << " Terminated: " << error_code);
     uv_close(reinterpret_cast<uv_handle_t*>(process), NULL);
   }
@@ -613,7 +613,7 @@ private:
    * @param buffer Buffer to allocate bytes for
    */
   static void output_allocation(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buffer) {
-    cass::ScopedMutex lock(&mutex_);
+    datastax::internal::ScopedMutex lock(&mutex_);
     buffer->base = new char[OUTPUT_BUFFER_SIZE];
     buffer->len = OUTPUT_BUFFER_SIZE;
   }
@@ -626,7 +626,7 @@ private:
    * @param buffer Buffer to process
    */
   static void process_read(uv_stream_t* stream, ssize_t buffer_length, const uv_buf_t* buffer) {
-    cass::ScopedMutex lock(&mutex_);
+    datastax::internal::ScopedMutex lock(&mutex_);
 
     // Get the pipe message contents
     std::string* message = reinterpret_cast<std::string*>(stream->data);

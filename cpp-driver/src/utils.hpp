@@ -30,10 +30,7 @@
 #include <intrin.h>
 #endif
 
-namespace cass {
-
-class BufferPiece;
-class Value;
+namespace datastax { namespace internal {
 
 typedef Vector<String> ContactPointList;
 typedef Vector<String> DcList;
@@ -127,6 +124,6 @@ static void set_pointer_keys(C& container) {
 
 void thread_yield();
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

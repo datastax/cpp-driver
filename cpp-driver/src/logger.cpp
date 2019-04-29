@@ -16,6 +16,8 @@
 
 #include "logger.hpp"
 
+using namespace datastax::internal;
+
 extern "C" {
 
 void cass_log_cleanup() {
@@ -23,12 +25,12 @@ void cass_log_cleanup() {
 }
 
 void cass_log_set_level(CassLogLevel log_level) {
-  cass::Logger::set_log_level(log_level);
+  Logger::set_log_level(log_level);
 }
 
 void cass_log_set_callback(CassLogCallback callback,
                            void* data) {
-  cass::Logger::set_callback(callback, data);
+  Logger::set_callback(callback, data);
 }
 
 void cass_log_set_queue_size(size_t queue_size) {
@@ -37,7 +39,7 @@ void cass_log_set_queue_size(size_t queue_size) {
 
 } // extern "C"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 void stderr_log_callback(const CassLogMessage* message, void* data) {
   fprintf(stderr, "%u.%03u [%s] (%s:%d:%s): %s\n",
@@ -48,10 +50,12 @@ void stderr_log_callback(const CassLogMessage* message, void* data) {
           message->message);
 }
 
+} } } // namespace datastax::internal::core
+
 void noop_log_callback(const CassLogMessage* message, void* data) { }
 
 CassLogLevel Logger::log_level_ = CASS_LOG_WARN;
-CassLogCallback Logger::cb_ = stderr_log_callback;
+CassLogCallback Logger::cb_ = core::stderr_log_callback;
 void* Logger::data_ = NULL;
 
 void Logger::internal_log(CassLogLevel severity,
@@ -74,5 +78,3 @@ void Logger::set_callback(CassLogCallback cb, void* data) {
   cb_ = cb == NULL ? noop_log_callback : cb;
   data_ = data;
 }
-
-} // namespace cass

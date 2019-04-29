@@ -26,6 +26,20 @@
 
 #define CASS_PROTOCOL_VERSION 3
 
+using datastax::String;
+using datastax::internal::OStringStream;
+using datastax::internal::core::Address;
+using datastax::internal::core::ByteOrderedPartitioner;
+using datastax::internal::core::DataType;
+using datastax::internal::core::Decoder;
+using datastax::internal::core::CollectionType;
+using datastax::internal::core::Host;
+using datastax::internal::core::VersionNumber;
+using datastax::internal::core::Murmur3Partitioner;
+using datastax::internal::core::RandomPartitioner;
+using datastax::internal::core::ResultResponse;
+using datastax::internal::core::TokenMap;
+
 class BufferBuilder {
 public:
   char* data() const {
@@ -38,7 +52,7 @@ public:
 
   template<class T>
   void append(T value) {
-    cass::String buffer(size_of(value), 0);
+    String buffer(size_of(value), 0);
     encode(&buffer[0], value);
     buffer_.append(buffer);
   }
@@ -49,7 +63,7 @@ public:
     append<T>(value);
   }
 
-  void append_string(const cass::String& str) {
+  void append_string(const String& str) {
     append<uint16_t>(str.size());
     append(str);
   }
@@ -73,43 +87,43 @@ private:
     return sizeof(int64_t);
   }
 
-  static size_t size_of(const cass::String& value) {
+  static size_t size_of(const String& value) {
     return value.size();
   }
 
   static void encode(char* buf, uint16_t value) {
-    cass::encode_uint16(buf, value);
+    datastax::internal::encode_uint16(buf, value);
   }
 
   static void encode(char* buf, int32_t value) {
-    cass::encode_int32(buf, value);
+    datastax::internal::encode_int32(buf, value);
   }
 
   static void encode(char* buf, int64_t value) {
-    cass::encode_int64(buf, value);
+    datastax::internal::encode_int64(buf, value);
   }
 
-  static void encode(char* buf, const cass::String& value) {
+  static void encode(char* buf, const String& value) {
     memcpy(buf, value.data(), value.size());
   }
 
 private:
-  cass::String buffer_;
+  String buffer_;
 };
 
-typedef cass::Map<cass::String, cass::String> ReplicationMap;
+typedef datastax::internal::Map<String, String> ReplicationMap;
 
 struct ColumnMetadata {
-  ColumnMetadata(const cass::String& name, const cass::DataType::ConstPtr& data_type)
+  ColumnMetadata(const String& name, const DataType::ConstPtr& data_type)
     : name(name)
     , data_type(data_type) { }
-  cass::String name;
-  cass::DataType::ConstPtr data_type;
+  String name;
+  DataType::ConstPtr data_type;
 };
 
-typedef cass::Vector<ColumnMetadata> ColumnMetadataVec;
-typedef cass::Vector<cass::String> TokenVec;
-typedef cass::Vector<cass::Murmur3Partitioner::Token> Murmur3TokenVec;
+typedef datastax::internal::Vector<ColumnMetadata> ColumnMetadataVec;
+typedef datastax::internal::Vector<String> TokenVec;
+typedef datastax::internal::Vector<Murmur3Partitioner::Token> Murmur3TokenVec;
 
 class RowResultResponseBuilder : protected BufferBuilder {
 public:
@@ -122,7 +136,7 @@ public:
     append_string("table");
 
     for (ColumnMetadataVec::const_iterator i = column_metadata.begin(),
-          end = column_metadata.end(); i != end; ++i) {
+         end = column_metadata.end(); i != end; ++i) {
       append_column_metadata(*i);
     }
 
@@ -130,9 +144,9 @@ public:
     append<cass_int32_t>(0); // Row count (updated later)
   }
 
-  void append_keyspace_row_v3(const cass::String& keyspace_name,
+  void append_keyspace_row_v3(const String& keyspace_name,
                               const ReplicationMap& replication) {
-    append_value<cass::String>(keyspace_name);
+    append_value<String>(keyspace_name);
 
     size_t size = sizeof(int32_t);
     for (ReplicationMap::const_iterator i = replication.begin(),
@@ -145,33 +159,33 @@ public:
     append<cass_int32_t>(replication.size()); // Element count
     for (ReplicationMap::const_iterator i = replication.begin(),
          end = replication.end(); i != end; ++i) {
-      append_value<cass::String>(i->first);
-      append_value<cass::String>(i->second);
+      append_value<String>(i->first);
+      append_value<String>(i->second);
     }
 
     ++row_count_;
   }
 
-  void append_keyspace_row_v3(const cass::String& keyspace_name,
-                              const cass::String& strategy_class,
-                              const cass::String& strategy_options) {
-    append_value<cass::String>(keyspace_name);
-    append_value<cass::String>(strategy_class);
-    append_value<cass::String>(strategy_options);
+  void append_keyspace_row_v3(const String& keyspace_name,
+                              const String& strategy_class,
+                              const String& strategy_options) {
+    append_value<String>(keyspace_name);
+    append_value<String>(strategy_class);
+    append_value<String>(strategy_options);
 
     ++row_count_;
   }
 
   void append_local_peers_row_v3(const TokenVec& tokens,
-                                 const cass::String& partitioner,
-                                 const cass::String& dc,
-                                 const cass::String& rack,
-                                 const cass::String& release_version) {
-    append_value<cass::String>(rack);
-    append_value<cass::String>(dc);
-    append_value<cass::String>(release_version);
+                                 const String& partitioner,
+                                 const String& dc,
+                                 const String& rack,
+                                 const String& release_version) {
+    append_value<String>(rack);
+    append_value<String>(dc);
+    append_value<String>(release_version);
     if (!partitioner.empty()) {
-      append_value<cass::String>(partitioner);
+      append_value<String>(partitioner);
     }
 
     size_t size = sizeof(int32_t);
@@ -184,7 +198,7 @@ public:
     append<cass_int32_t>(tokens.size()); // Element count
     for (TokenVec::const_iterator i = tokens.begin(),
          end = tokens.end(); i != end; ++i) {
-      append_value<cass::String>(*i);
+      append_value<String>(*i);
     }
 
     ++row_count_;
@@ -195,17 +209,17 @@ public:
     append_data_type(metadata.data_type);
   }
 
-  void append_data_type(const cass::DataType::ConstPtr& data_type) {
+  void append_data_type(const DataType::ConstPtr& data_type) {
     append<uint16_t>(data_type->value_type());
 
     switch (data_type->value_type()) {
       case CASS_VALUE_TYPE_LIST:
       case CASS_VALUE_TYPE_SET:
-        append_data_type(cass::CollectionType::ConstPtr(data_type)->types()[0]);
+        append_data_type(CollectionType::ConstPtr(data_type)->types()[0]);
         break;
       case CASS_VALUE_TYPE_MAP:
-        append_data_type(cass::CollectionType::ConstPtr(data_type)->types()[0]);
-        append_data_type(cass::CollectionType::ConstPtr(data_type)->types()[1]);
+        append_data_type(CollectionType::ConstPtr(data_type)->types()[0]);
+        append_data_type(CollectionType::ConstPtr(data_type)->types()[1]);
         break;
       case CASS_VALUE_TYPE_TUPLE:
       case CASS_VALUE_TYPE_UDT:
@@ -216,34 +230,34 @@ public:
     }
   }
 
-  cass::ResultResponse* finish() {
+  ResultResponse* finish() {
     encode_at(row_count_index_, row_count_);
-    cass::Decoder decoder(data(), size(), CASS_PROTOCOL_VERSION);
+    Decoder decoder(data(), size(), CASS_PROTOCOL_VERSION);
     result_response_.decode(decoder);
     return &result_response_;
   }
 
 private:
-  cass::ResultResponse result_response_;
+  ResultResponse result_response_;
   size_t row_count_index_;
   int32_t row_count_;
 };
 
-inline cass::String to_string(const cass::Murmur3Partitioner::Token& token) {
-  cass::OStringStream ss;
+inline String to_string(const Murmur3Partitioner::Token& token) {
+  OStringStream ss;
   ss << token;
   return ss.str();
 }
 
-inline cass::String to_string(const cass::RandomPartitioner::Token& token) {
+inline String to_string(const RandomPartitioner::Token& token) {
   numeric::uint128_t r(token.lo);
   r |= (numeric::uint128_t(token.hi) << 64);
   return r.to_string();
 }
 
-inline cass::String to_string(const cass::ByteOrderedPartitioner::Token& token) {
-  cass::String s;
-  for (cass::ByteOrderedPartitioner::Token::const_iterator it = token.begin(),
+inline String to_string(const ByteOrderedPartitioner::Token& token) {
+  String s;
+  for (ByteOrderedPartitioner::Token::const_iterator it = token.begin(),
        end = token.end(); it != end; ++it) {
     s.push_back(static_cast<char>(*it));
   }
@@ -272,55 +286,55 @@ inline TokenVec murmur3_tokens(const Murmur3TokenVec& murmur3_tokens) {
   return tokens;
 }
 
-inline void add_keyspace_simple(const cass::String& keyspace_name,
+inline void add_keyspace_simple(const String& keyspace_name,
                                 size_t replication_factor,
-                                cass::TokenMap* token_map) {
+                                TokenMap* token_map) {
 
-  cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
+  DataType::ConstPtr varchar_data_type(new DataType(CASS_VALUE_TYPE_VARCHAR));
 
   ColumnMetadataVec column_metadata;
   column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
-  column_metadata.push_back(ColumnMetadata("replication", cass::CollectionType::map(varchar_data_type, varchar_data_type, true)));
+  column_metadata.push_back(ColumnMetadata("replication", CollectionType::map(varchar_data_type, varchar_data_type, true)));
   RowResultResponseBuilder builder(column_metadata);
 
   ReplicationMap replication;
   replication["class"] = CASS_SIMPLE_STRATEGY;
-  cass::OStringStream ss;
+  OStringStream ss;
   ss << replication_factor;
   replication["replication_factor"] = ss.str();
   builder.append_keyspace_row_v3(keyspace_name, replication);
   builder.finish();
 
-  token_map->add_keyspaces(cass::VersionNumber(3, 0, 0), builder.finish());
+  token_map->add_keyspaces(VersionNumber(3, 0, 0), builder.finish());
 }
 
-inline void add_keyspace_network_topology(const cass::String& keyspace_name,
+inline void add_keyspace_network_topology(const String& keyspace_name,
                                           ReplicationMap& replication,
-                                          cass::TokenMap* token_map) {
+                                          TokenMap* token_map) {
 
-  cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
+  DataType::ConstPtr varchar_data_type(new DataType(CASS_VALUE_TYPE_VARCHAR));
 
   ColumnMetadataVec column_metadata;
   column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
-  column_metadata.push_back(ColumnMetadata("replication", cass::CollectionType::map(varchar_data_type, varchar_data_type, true)));
+  column_metadata.push_back(ColumnMetadata("replication", CollectionType::map(varchar_data_type, varchar_data_type, true)));
   RowResultResponseBuilder builder(column_metadata);
 
   replication["class"] = CASS_NETWORK_TOPOLOGY_STRATEGY;
   builder.append_keyspace_row_v3(keyspace_name, replication);
   builder.finish();
 
-  token_map->add_keyspaces(cass::VersionNumber(3, 0, 0), builder.finish());
+  token_map->add_keyspaces(VersionNumber(3, 0, 0), builder.finish());
 }
 
-inline cass::Host::Ptr create_host(const cass::Address& address,
-                                   const TokenVec& tokens,
-                                   const cass::String& partitioner = "",
-                                   const cass::String& dc = "dc",
-                                   const cass::String& rack = "rack",
-                                   const cass::String& release_version = "3.11") {
-  cass::Host::Ptr host(new cass::Host(address));
+inline Host::Ptr create_host(const Address& address,
+                             const TokenVec& tokens,
+                             const String& partitioner = "",
+                             const String& dc = "dc",
+                             const String& rack = "rack",
+                             const String& release_version = "3.11") {
+  Host::Ptr host(new Host(address));
 
-  cass::DataType::ConstPtr varchar_data_type(new cass::DataType(CASS_VALUE_TYPE_VARCHAR));
+  DataType::ConstPtr varchar_data_type(new DataType(CASS_VALUE_TYPE_VARCHAR));
 
   ColumnMetadataVec column_metadata;
   column_metadata.push_back(ColumnMetadata("data_center", varchar_data_type));
@@ -329,7 +343,7 @@ inline cass::Host::Ptr create_host(const cass::Address& address,
   if (!partitioner.empty()) {
     column_metadata.push_back(ColumnMetadata("partitioner", varchar_data_type));
   }
-  column_metadata.push_back(ColumnMetadata("tokens", cass::CollectionType::list(varchar_data_type, true)));
+  column_metadata.push_back(ColumnMetadata("tokens", CollectionType::list(varchar_data_type, true)));
 
   RowResultResponseBuilder builder(column_metadata);
   builder.append_local_peers_row_v3(tokens, partitioner, dc, rack, release_version);
@@ -339,27 +353,27 @@ inline cass::Host::Ptr create_host(const cass::Address& address,
   return host;
 }
 
-inline cass::Host::Ptr create_host(const cass::String& address,
-                                   const TokenVec& tokens,
-                                   const cass::String& partitioner = "",
-                                   const cass::String& dc = "dc",
-                                   const cass::String& rack = "rack",
-                                   const cass::String& release_version = "3.11") {
-  return create_host(cass::Address(address, 9042), tokens, partitioner, dc, rack, release_version);
+inline Host::Ptr create_host(const String& address,
+                             const TokenVec& tokens,
+                             const String& partitioner = "",
+                             const String& dc = "dc",
+                             const String& rack = "rack",
+                             const String& release_version = "3.11") {
+  return create_host(Address(address, 9042), tokens, partitioner, dc, rack, release_version);
 }
 
 
-inline cass::RandomPartitioner::Token create_random_token(const cass::String& s) {
-  cass::RandomPartitioner::Token token;
+inline RandomPartitioner::Token create_random_token(const String& s) {
+  RandomPartitioner::Token token;
   numeric::uint128_t i(s);
   token.lo = (i & numeric::uint128_t("0xFFFFFFFFFFFFFFFF")).to_base_type();
   token.hi = (i >> 64).to_base_type();
   return token;
 }
 
-inline cass::ByteOrderedPartitioner::Token create_byte_ordered_token(const cass::String& s) {
-  cass::ByteOrderedPartitioner::Token token;
-  for (cass::String::const_iterator i = s.begin(),
+inline ByteOrderedPartitioner::Token create_byte_ordered_token(const String& s) {
+  ByteOrderedPartitioner::Token token;
+  for (String::const_iterator i = s.begin(),
        end = s.end(); i != end; ++i) {
     token.push_back(static_cast<uint8_t>(*i));
   }

@@ -51,8 +51,7 @@
 #define BIO_get_data(b) ((b)->ptr)
 #endif
 
-namespace cass {
-namespace rb {
+namespace datastax { namespace internal {  namespace rb {
 
 // This wrapper is used to contain the ring buffer state kept in the BIO's
 // user data field. OpenSSL 1.1 made the BIO's structure opaque which removed access
@@ -97,7 +96,6 @@ private:
 #endif
 };
 
-} // namespace rb
-} // namespace cass
+} } } // namespace datastax::internal::rb
 
 #endif

@@ -17,7 +17,7 @@
 #ifndef __CASS_SSL_NO_IMPL_HPP_INCLUDED__
 #define __CASS_SSL_NO_IMPL_HPP_INCLUDED__
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class NoSslSession : public SslSession {
 public:
@@ -54,7 +54,6 @@ public:
 
 typedef SslContextFactoryBase<NoSslContextFactory> SslContextFactory;
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif
-

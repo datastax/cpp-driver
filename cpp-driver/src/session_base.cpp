@@ -24,7 +24,9 @@
 #include "utils.hpp"
 #include "uuids.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class SessionFuture : public Future {
 public:
@@ -53,7 +55,7 @@ SessionBase::~SessionBase() {
 
 Future::Ptr SessionBase::connect(const Config& config,
                                  const String& keyspace) {
-  cass::Future::Ptr future(new SessionFuture());
+  Future::Ptr future(new SessionFuture());
 
   ScopedMutex l(&mutex_);
   if (state_ != SESSION_STATE_CLOSED) {
@@ -121,7 +123,7 @@ Future::Ptr SessionBase::connect(const Config& config,
 }
 
 Future::Ptr SessionBase::close() {
-  cass::Future::Ptr future(new SessionFuture());
+  Future::Ptr future(new SessionFuture());
 
   ScopedMutex l(&mutex_);
   if (state_ == SESSION_STATE_CLOSED ||
@@ -225,5 +227,3 @@ void SessionBase::on_initialize(ClusterConnector* connector) {
     }
   }
 }
-
-} // namespace cass

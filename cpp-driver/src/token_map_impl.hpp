@@ -42,8 +42,8 @@
 namespace std {
 
 template<>
-struct equal_to<cass::Host::Ptr> {
-  bool operator()(const cass::Host::Ptr& lhs, const cass::Host::Ptr& rhs) const {
+struct equal_to<datastax::internal::core::Host::Ptr> {
+  bool operator()(const datastax::internal::core::Host::Ptr& lhs, const datastax::internal::core::Host::Ptr& rhs) const {
     if (lhs == rhs) {
       return true;
     }
@@ -56,10 +56,10 @@ struct equal_to<cass::Host::Ptr> {
 
 } // namespace std
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 struct HostHash {
-  std::size_t operator()(const cass::Host::Ptr& host) const {
+  std::size_t operator()(const Host::Ptr& host) const {
     if (!host) return 0;
     return hash(host->address());
   }
@@ -785,6 +785,6 @@ void TokenMapImpl<Partitioner>::build_replicas() {
   }
 }
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

@@ -23,7 +23,8 @@
 #define DSE_PROTOCOL_VERSION_BIT  0x40
 #define DSE_PROTOCOL_VERSION_MASK 0x3F
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 static bool is_protocol_at_least_v5_or_dse_v2(int version) {
   if (version & DSE_PROTOCOL_VERSION_BIT) {
@@ -129,5 +130,3 @@ bool ProtocolVersion::supports_result_metadata_id() const {
   assert(value_ > 0 && "Invalid protocol version");
   return is_protocol_at_least_v5_or_dse_v2(value_);
 }
-
-} // namespace cass

@@ -23,7 +23,7 @@
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class OpenSslSession : public SslSession {
 public:
@@ -82,6 +82,6 @@ public:
 
 typedef SslContextFactoryBase<OpenSslContextFactory> SslContextFactory;
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

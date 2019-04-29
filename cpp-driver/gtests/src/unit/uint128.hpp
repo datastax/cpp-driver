@@ -96,7 +96,7 @@ public:
 	uint128(base_type value)      : lo(value), hi(0)                         {}
 	uint128(base_type lo, base_type hi) : lo(lo), hi(hi)                     {}
 
-	uint128(const cass::String &sz) : lo(0), hi(0) {
+	uint128(const datastax::String &sz) : lo(0), hi(0) {
 
 		// do we have at least one character?
 		if(!sz.empty()) {
@@ -104,7 +104,7 @@ public:
 			int radix = 10;
 			bool minus = false;
 
-			cass::String::const_iterator i = sz.begin();
+			datastax::String::const_iterator i = sz.begin();
 
 			// check for minus sign, i suppose technically this should only apply
 			// to base 10, but who says that -0x1 should be invalid?
@@ -397,7 +397,7 @@ public:
 		return lo;
 	}
 
-    cass::String to_string(unsigned int radix = 10) const {
+    datastax::String to_string(unsigned int radix = 10) const {
     	if(*this == 0) {
 			return "0";
 		}

@@ -29,7 +29,7 @@
 
 #include <climits>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 void stderr_log_callback(const CassLogMessage* message, void* data);
 
@@ -475,6 +475,6 @@ private:
   unsigned monitor_reporting_interval_secs_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

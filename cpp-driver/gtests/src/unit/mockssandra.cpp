@@ -29,9 +29,11 @@
 #  include "winsock.h"
 #endif
 
-using cass::Memory;
-using cass::ScopedMutex;
-using cass::OStringStream;
+using datastax::internal::bind_callback;
+using datastax::internal::Memory;
+using datastax::internal::ScopedMutex;
+using datastax::internal::OStringStream;
+using datastax::internal::core::UuidGen;
 
 #define SSL_BUF_SIZE 8192
 #define CASSANDRA_VERSION "3.11.4"
@@ -439,7 +441,7 @@ bool ServerConnection::use_ssl(const String& key,
   return true;
 }
 
-using cass::Task;
+using datastax::internal::core::Task;
 
 class RunListen : public Task {
 public:
@@ -1013,7 +1015,7 @@ static String encode_header(int8_t version, int8_t flags, int16_t stream, int8_t
   }
   encode_int32(len, &header);
   if (flags & FLAG_TRACING) {
-    cass::UuidGen gen;
+    UuidGen gen;
     CassUuid tracing_id;
     gen.generate_random(&tracing_id);
     encode_uuid(tracing_id, &header);
@@ -1072,7 +1074,7 @@ void Collection::encode(int protocol_version, String* output) const {
 Value::Value()
   : type_(NUL) { }
 
-Value::Value(const cass::String& value)
+Value::Value(const String& value)
   : type_(VALUE)
   , value_(new String(value)) { }
 
@@ -1109,12 +1111,12 @@ void Value::encode(int protocol_version, String* output) const {
   }
 }
 
-Row::Builder& Row::Builder::text(const cass::String& text) {
+Row::Builder& Row::Builder::text(const String& text) {
   values_.push_back(Value(text));
   return *this;
 }
 
-Row::Builder& Row::Builder::inet(const cass::Address& inet) {
+Row::Builder& Row::Builder::inet(const Address& inet) {
   String value;
   uint8_t buf[16];
   uint8_t len = inet.to_inet(buf);
@@ -1137,7 +1139,7 @@ Row::Builder& Row::Builder::collection(const Collection& collection) {
   return *this;
 }
 
-void Row::encode(int protocol_version, cass::String* output) const {
+void Row::encode(int protocol_version, String* output) const {
   for (Vector<Value>::const_iterator it = values_.begin(),
        end = values_.end(); it != end; ++it) {
     it->encode(protocol_version, output);
@@ -1283,12 +1285,12 @@ Action::Builder& Action::Builder::system_traces() {
   return execute(new SystemTraces());
 }
 
-Action::Builder& Action::Builder::use_keyspace(const cass::String& keyspace) {
+Action::Builder& Action::Builder::use_keyspace(const String& keyspace) {
   return execute((new UseKeyspace(keyspace)));
 }
 
-Action::Builder& Action::Builder::plaintext_auth(const cass::String& username,
-                                                 const cass::String& password) {
+Action::Builder& Action::Builder::plaintext_auth(const String& username,
+                                                 const String& password) {
   return execute((new PlaintextAuth(username, password)));
 }
 
@@ -1324,15 +1326,15 @@ Action* Action::Builder::build() {
   return first_.release();
 }
 
-Action::PredicateBuilder Action::Builder::is_address(const cass::Address& address) {
+Action::PredicateBuilder Action::Builder::is_address(const Address& address) {
   return PredicateBuilder(execute(new IsAddress(address)));
 }
 
-Action::PredicateBuilder Action::Builder::is_address(const cass::String& address, int port) {
+Action::PredicateBuilder Action::Builder::is_address(const String& address, int port) {
   return PredicateBuilder(execute(new IsAddress(Address(address, port))));
 }
 
-Action::PredicateBuilder Action::Builder::is_query(const cass::String& query) {
+Action::PredicateBuilder Action::Builder::is_query(const String& query) {
   return PredicateBuilder(execute(new IsQuery(query)));
 }
 
@@ -1362,7 +1364,7 @@ void Request::write(int8_t opcode, const String& body) {
   write(stream_, opcode, body);
 }
 
-void Request::write(int16_t stream, int8_t opcode, const cass::String& body) {
+void Request::write(int16_t stream, int8_t opcode, const String& body) {
   client_->write(encode_header(version_, flags_, stream, opcode, body.size()) + body);
 }
 
@@ -1377,7 +1379,7 @@ void Request::wait(uint64_t timeout, const Action* action) {
   inc_ref();
   timer_action_ = action;
   timer_.start(client_->server()->loop(), timeout,
-               cass::bind_callback(&Request::on_timeout, this));
+               bind_callback(&Request::on_timeout, this));
 }
 
 void Request::close() {
@@ -1999,7 +2001,7 @@ void ClientConnection::on_read(const char* data, size_t len) {
   handler_.decode(this, data, len);
 }
 
-Event::Event(const cass::String& event_body)
+Event::Event(const String& event_body)
   : event_body_(event_body) { }
 
 void Event::run(internal::ServerConnection* server_connection) {
@@ -2024,7 +2026,7 @@ Event::Ptr TopologyChangeEvent::removed_node(const Address& address) {
   return Ptr(new TopologyChangeEvent(REMOVED_NODE, address));
 }
 
-cass::String TopologyChangeEvent::encode(TopologyChangeEvent::Type type, const cass::Address& address) {
+String TopologyChangeEvent::encode(TopologyChangeEvent::Type type, const Address& address) {
   String body;
   encode_string("TOPOLOGY_CHANGE", &body);
   switch(type) {
@@ -2046,7 +2048,7 @@ Event::Ptr StatusChangeEvent::up(const Address& address) {
   return Ptr(new StatusChangeEvent(UP, address));
 }
 
-Event::Ptr StatusChangeEvent::down(const cass::Address& address) {
+Event::Ptr StatusChangeEvent::down(const Address& address) {
   return Ptr(new StatusChangeEvent(DOWN, address));
 }
 
@@ -2104,9 +2106,9 @@ Event::Ptr SchemaChangeEvent::aggregate(SchemaChangeEvent::Type type,
                                                  args_types));
 }
 
-cass::String SchemaChangeEvent::encode(SchemaChangeEvent::Target target, SchemaChangeEvent::Type type,
-                                       const cass::String& keyspace_name, const cass::String& target_name,
-                                       const Vector<cass::String>& arg_types) {
+String SchemaChangeEvent::encode(SchemaChangeEvent::Target target, SchemaChangeEvent::Type type,
+                                       const String& keyspace_name, const String& target_name,
+                                       const Vector<String>& arg_types) {
   String body;
   encode_string("SCHEMA_CHANGE", &body);
   switch (type) {
@@ -2189,7 +2191,7 @@ int Cluster::start_all(EventLoopGroup* event_loop_group) {
   return 0;
 }
 
-void Cluster::start_all_async(cass::EventLoopGroup* event_loop_group) {
+void Cluster::start_all_async(EventLoopGroup* event_loop_group) {
   for (size_t i = 0; i < servers_.size(); ++i) {
     Server& server = servers_[i];
     server.connection->listen(event_loop_group);
@@ -2220,7 +2222,7 @@ int Cluster::start(EventLoopGroup* event_loop_group, size_t node) {
   return server.connection->wait_listen();
 }
 
-void Cluster::start_async(cass::EventLoopGroup* event_loop_group, size_t node) {
+void Cluster::start_async(EventLoopGroup* event_loop_group, size_t node) {
   if (node < 1 || node > servers_.size()) {
     return;
   }
@@ -2245,7 +2247,7 @@ void Cluster::stop_async(size_t node) {
   server.connection->close();
 }
 
-int Cluster::add(cass::EventLoopGroup* event_loop_group, size_t node) {
+int Cluster::add(EventLoopGroup* event_loop_group, size_t node) {
   if (node < 1 || node > servers_.size()) {
     return -1;
   }
@@ -2328,9 +2330,9 @@ Address Ipv4AddressGenerator::next() {
   return Address(buf, port_);
 }
 
-Host::Host(const cass::Address& address,
-           const cass::String& dc,
-           const cass::String& rack,
+Host::Host(const Address& address,
+           const String& dc,
+           const String& rack,
            MT19937_64& token_rng,
            int num_tokens)
   : address(address)
@@ -2346,7 +2348,7 @@ Host::Host(const cass::Address& address,
 }
 
 SimpleEventLoopGroup::SimpleEventLoopGroup(size_t num_threads)
-  : cass::RoundRobinEventLoopGroup(num_threads) {
+  : RoundRobinEventLoopGroup(num_threads) {
   int rc = init("mockssandra");
   UNUSED_(rc);
   assert(rc == 0 && "Unable to initialize simple event loop");
@@ -2368,7 +2370,7 @@ SimpleRequestHandlerBuilder::SimpleRequestHandlerBuilder()
   on(OPCODE_QUERY).system_local().system_peers().empty_rows_result(1);
 }
 
-AuthRequestHandlerBuilder::AuthRequestHandlerBuilder(const cass::String& username,
+AuthRequestHandlerBuilder::AuthRequestHandlerBuilder(const String& username,
                                                      const String& password)
   : SimpleRequestHandlerBuilder() {
   on(mockssandra::OPCODE_STARTUP)

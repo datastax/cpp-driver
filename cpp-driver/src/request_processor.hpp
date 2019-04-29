@@ -33,7 +33,7 @@
 #include "timer.hpp"
 #include "token_map.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ConnectionPoolManagerInitializer;
 class RequestProcessor;
@@ -64,7 +64,7 @@ private:
    * An internal task that keeps the original keyspace change handler
    * alive so that processing happens on the original event loop.
    */
-  class Task : public cass::Task {
+  class Task : public core::Task {
   public:
     Task(const KeyspaceChangedResponse& response)
       : response_(response) { }
@@ -373,6 +373,6 @@ private:
 #endif
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif // __CASS_REQUEST_PROCESSOR_HPP_INCLUDED__

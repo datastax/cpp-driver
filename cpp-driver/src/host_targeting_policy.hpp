@@ -22,7 +22,7 @@
 #include "load_balancing.hpp"
 #include "request_handler.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class HostTargetingPolicy : public ChainedLoadBalancingPolicy {
 public:
@@ -30,7 +30,7 @@ public:
     : ChainedLoadBalancingPolicy(child_policy) { }
 
   virtual void init(const SharedRefPtr<Host>& connected_host,
-                    const cass::HostMap& hosts, Random* random);
+                    const HostMap& hosts, Random* random);
 
   virtual QueryPlan* new_query_plan(const String& keyspace,
                                     RequestHandler* request_handler,
@@ -70,6 +70,6 @@ private:
   HostMap hosts_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

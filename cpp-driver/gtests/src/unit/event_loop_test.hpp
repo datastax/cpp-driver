@@ -20,9 +20,12 @@
 #include "unit.hpp"
 #include "event_loop.hpp"
 
+using datastax::internal::core::Future;
+using datastax::internal::core::EventLoop;
+
 class EventLoopTest : public Unit {
 public:
-  EventLoopTest(const cass::String& thread_name)
+  EventLoopTest(const datastax::String& thread_name)
     :thread_name_(thread_name) { }
 
   virtual void SetUp() {
@@ -54,15 +57,15 @@ public:
    * @param outage_plan The outage plan to execute.
    * @return Generic future instance.
    */
-  cass::Future::Ptr execute_outage_plan(OutagePlan* outage_plan) {
-    cass::Future::Ptr future(new cass::Future(cass::Future::FUTURE_TYPE_GENERIC));
+  Future::Ptr execute_outage_plan(OutagePlan* outage_plan) {
+    Future::Ptr future(new Future(Future::FUTURE_TYPE_GENERIC));
     add_task(new ExecuteOutagePlan(outage_plan, future));
     return future;
   }
 
 private:
-  cass::EventLoop event_loop_;
-  cass::String thread_name_;
+  EventLoop event_loop_;
+  datastax::String thread_name_;
 };
 
 #endif // EVENT_LOOP_TEST_HPP

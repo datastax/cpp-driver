@@ -16,10 +16,13 @@
 
 #include "cluster_config.hpp"
 
+using namespace datastax;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 CassCluster* cass_cluster_new() {
-  return CassCluster::to(new cass::ClusterConfig());
+  return CassCluster::to(new ClusterConfig());
 }
 
 CassError cass_cluster_set_port(CassCluster* cluster,
@@ -41,10 +44,10 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
   if (cluster->config().use_beta_protocol_version()) {
     LOG_ERROR("The protocol version is already set to the newest beta version %s "
               "and cannot be explicitly set.",
-              cass::ProtocolVersion::newest_beta().to_string().c_str());
+              ProtocolVersion::newest_beta().to_string().c_str());
     return CASS_ERROR_LIB_BAD_PARAMS;
   } else {
-    cass::ProtocolVersion version(protocol_version);
+    ProtocolVersion version(protocol_version);
     if (!version.is_valid()) {
       return CASS_ERROR_LIB_BAD_PARAMS;
     }
@@ -56,8 +59,8 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
 CassError cass_cluster_set_use_beta_protocol_version(CassCluster* cluster,
                                                      cass_bool_t enable) {
   cluster->config().set_use_beta_protocol_version(enable == cass_true);
-  cluster->config().set_protocol_version(enable ? cass::ProtocolVersion::newest_beta()
-                                                : cass::ProtocolVersion::highest_supported());
+  cluster->config().set_protocol_version(enable ? ProtocolVersion::newest_beta()
+                                                : ProtocolVersion::highest_supported());
   return CASS_OK;
 }
 
@@ -115,8 +118,8 @@ CassError cass_cluster_set_contact_points_n(CassCluster* cluster,
   if (contact_points_length == 0) {
     cluster->config().contact_points().clear();
   } else {
-    cass::explode(cass::String(contact_points, contact_points_length),
-                  cluster->config().contact_points());
+    explode(String(contact_points, contact_points_length),
+            cluster->config().contact_points());
   }
   return CASS_OK;
 }
@@ -248,12 +251,12 @@ void cass_cluster_set_credentials_n(CassCluster* cluster,
                                     size_t username_length,
                                     const char* password,
                                     size_t password_length) {
-  cluster->config().set_credentials(cass::String(username, username_length),
-                                    cass::String(password, password_length));
+  cluster->config().set_credentials(String(username, username_length),
+                                    String(password, password_length));
 }
 
 void cass_cluster_set_load_balance_round_robin(CassCluster* cluster) {
-  cluster->config().set_load_balancing_policy(new cass::RoundRobinPolicy());
+  cluster->config().set_load_balancing_policy(new RoundRobinPolicy());
 }
 
 CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
@@ -279,9 +282,9 @@ CassError cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_load_balancing_policy(
-        new cass::DCAwarePolicy(cass::String(local_dc, local_dc_length),
-                                used_hosts_per_remote_dc,
-                                !allow_remote_dcs_for_local_cl));
+        new DCAwarePolicy(String(local_dc, local_dc_length),
+                          used_hosts_per_remote_dc,
+                          !allow_remote_dcs_for_local_cl));
   return CASS_OK;
 }
 
@@ -306,7 +309,7 @@ void cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
                                                      cass_uint64_t retry_period_ms,
                                                      cass_uint64_t update_rate_ms,
                                                      cass_uint64_t min_measured) {
-  cass::LatencyAwarePolicy::Settings settings;
+  LatencyAwarePolicy::Settings settings;
   settings.exclusion_threshold = exclusion_threshold;
   settings.scale_ns = scale_ms * 1000 * 1000;
   settings.retry_period_ns = retry_period_ms * 1000 * 1000;
@@ -328,8 +331,8 @@ void cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
   if (hosts_length == 0) {
     cluster->config().default_profile().whitelist().clear();
   } else {
-    cass::explode(cass::String(hosts, hosts_length),
-                  cluster->config().default_profile().whitelist());
+    explode(String(hosts, hosts_length),
+            cluster->config().default_profile().whitelist());
   }
 }
 
@@ -346,8 +349,8 @@ void cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
   if (hosts_length == 0) {
     cluster->config().default_profile().blacklist().clear();
   } else {
-    cass::explode(cass::String(hosts, hosts_length),
-                  cluster->config().default_profile().blacklist());
+    explode(String(hosts, hosts_length),
+            cluster->config().default_profile().blacklist());
   }
 }
 
@@ -364,8 +367,8 @@ void cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
   if (dcs_length == 0) {
     cluster->config().default_profile().whitelist_dc().clear();
   } else {
-    cass::explode(cass::String(dcs, dcs_length),
-                  cluster->config().default_profile().whitelist_dc());
+    explode(String(dcs, dcs_length),
+            cluster->config().default_profile().whitelist_dc());
   }
 }
 
@@ -382,8 +385,8 @@ void cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
   if (dcs_length == 0) {
     cluster->config().default_profile().blacklist_dc().clear();
   } else {
-    cass::explode(cass::String(dcs, dcs_length),
-                  cluster->config().default_profile().blacklist_dc());
+    explode(String(dcs, dcs_length),
+            cluster->config().default_profile().blacklist_dc());
   }
 }
 
@@ -402,9 +405,9 @@ CassError cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
                                                    const CassAuthenticatorCallbacks* exchange_callbacks,
                                                    CassAuthenticatorDataCleanupCallback cleanup_callback,
                                                    void* data) {
-  cluster->config().set_auth_provider(cass::AuthProvider::Ptr(
-                                        new cass::ExternalAuthProvider(exchange_callbacks,
-                                                                       cleanup_callback, data)));
+  cluster->config().set_auth_provider(AuthProvider::Ptr(
+                                        new ExternalAuthProvider(exchange_callbacks,
+                                                                 cleanup_callback, data)));
   return CASS_OK;
 }
 
@@ -452,14 +455,14 @@ CassError cass_cluster_set_constant_speculative_execution_policy(CassCluster* cl
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_speculative_execution_policy(
-        new cass::ConstantSpeculativeExecutionPolicy(constant_delay_ms,
-                                                     max_speculative_executions));
+        new ConstantSpeculativeExecutionPolicy(constant_delay_ms,
+                                               max_speculative_executions));
   return CASS_OK;
 }
 
 CassError cass_cluster_set_no_speculative_execution_policy(CassCluster* cluster) {
   cluster->config().set_speculative_execution_policy(
-        new cass::NoSpeculativeExecutionPolicy());
+        new NoSpeculativeExecutionPolicy());
   return CASS_OK;
 }
 
@@ -485,7 +488,7 @@ CassError cass_cluster_set_execution_profile_n(CassCluster* cluster,
   if (name_length == 0 || !profile) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cluster->config().set_execution_profile(cass::String(name, name_length),
+  cluster->config().set_execution_profile(String(name, name_length),
                                           profile);
   return CASS_OK;
 }
@@ -510,10 +513,10 @@ CassError cass_cluster_set_local_address(CassCluster* cluster,
 CassError cass_cluster_set_local_address_n(CassCluster* cluster,
                                            const char* name,
                                            size_t name_length) {
-  cass::Address address;  // default to AF_UNSPEC
+  Address address;  // default to AF_UNSPEC
   if (name_length == 0 ||
       name == NULL ||
-      cass::Address::from_string(cass::String(name, name_length), 0, &address)) {
+      Address::from_string(String(name, name_length), 0, &address)) {
     cluster->config().set_local_address(address);
   } else {
     return CASS_ERROR_LIB_HOST_RESOLUTION;
@@ -531,8 +534,8 @@ CassError cass_cluster_set_host_listener_callback(CassCluster* cluster,
                                                   CassHostListenerCallback callback,
                                                   void* data) {
   cluster->config().set_host_listener(
-        cass::DefaultHostListener::Ptr(
-          new cass::ExternalHostListener(callback, data)));
+        DefaultHostListener::Ptr(
+          new ExternalHostListener(callback, data)));
   return CASS_OK;
 }
 

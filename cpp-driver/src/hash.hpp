@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <stdint.h>
 
-namespace cass { namespace hash {
+namespace datastax { namespace hash {
 
 typedef int (Op)(int);
 
@@ -52,7 +52,7 @@ inline uint32_t fnv1a(const char* data, size_t length, Op op = nop) {
 }
 #endif
 
-} } // namespace cass::hash
+} } // namespace datastax::hash
 
 
 #endif

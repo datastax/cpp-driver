@@ -16,7 +16,7 @@
 
 #include "timer.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 Timer::Timer()
   : handle_(NULL)
@@ -70,5 +70,3 @@ void Timer::handle_timeout() {
 void Timer::on_close(uv_handle_t* handle) {
   delete reinterpret_cast<AllocatedT<uv_timer_t>*>(handle);
 }
-
-} // namespace cass

@@ -16,7 +16,7 @@
 
 #include "config.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 void Config::init_profiles() {
   // Initialize the profile settings (if needed)
@@ -43,5 +43,3 @@ void Config::init_profiles() {
     }
   }
 }
-
-} // namespace cass

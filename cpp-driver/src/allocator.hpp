@@ -12,7 +12,7 @@
 
 #include <limits>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
 class Allocator {
@@ -64,6 +64,6 @@ public:
   }
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

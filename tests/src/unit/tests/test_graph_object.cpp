@@ -11,6 +11,9 @@
 #include "json.hpp"
 #include "graph.hpp"
 
+using namespace datastax;
+using namespace datastax::internal;
+
 class GraphObjectUnitTest : public testing::Test {
 public:
   void SetUp() {
@@ -45,7 +48,7 @@ public:
   }
 
   DseGraphObject* graph_object;
-  cass::json::Document document;
+  json::Document document;
   DseLineString* line_string;
   DseLineStringIterator* line_string_iterator;
   DsePolygon* polygon;
@@ -68,34 +71,34 @@ TEST_F(GraphObjectUnitTest, PrimitiveTypes) {
   ASSERT_EQ(6u, dse_graph_result_member_count(graph_result));
 
   const DseGraphResult* value;
-  ASSERT_EQ("null", cass::String(dse_graph_result_member_key(graph_result, 0, NULL)));
+  ASSERT_EQ("null", String(dse_graph_result_member_key(graph_result, 0, NULL)));
   value = dse_graph_result_member_value(graph_result, 0);
   ASSERT_TRUE(dse_graph_result_is_null(value));
 
-  ASSERT_EQ("bool", cass::String(dse_graph_result_member_key(graph_result, 1, NULL)));
+  ASSERT_EQ("bool", String(dse_graph_result_member_key(graph_result, 1, NULL)));
   value = dse_graph_result_member_value(graph_result, 1);
   ASSERT_TRUE(dse_graph_result_is_bool(value));
   ASSERT_TRUE(dse_graph_result_get_bool(value));
 
-  ASSERT_EQ("int32", cass::String(dse_graph_result_member_key(graph_result, 2, NULL)));
+  ASSERT_EQ("int32", String(dse_graph_result_member_key(graph_result, 2, NULL)));
   value = dse_graph_result_member_value(graph_result, 2);
   ASSERT_TRUE(dse_graph_result_is_int32(value));
   ASSERT_EQ(1, dse_graph_result_get_int32(value));
 
-  ASSERT_EQ("int64", cass::String(dse_graph_result_member_key(graph_result, 3, NULL)));
+  ASSERT_EQ("int64", String(dse_graph_result_member_key(graph_result, 3, NULL)));
   value = dse_graph_result_member_value(graph_result, 3);
   ASSERT_TRUE(dse_graph_result_is_int64(value));
   ASSERT_EQ(2, dse_graph_result_get_int64(value));
 
-  ASSERT_EQ("double", cass::String(dse_graph_result_member_key(graph_result, 4, NULL)));
+  ASSERT_EQ("double", String(dse_graph_result_member_key(graph_result, 4, NULL)));
   value = dse_graph_result_member_value(graph_result, 4);
   ASSERT_TRUE(dse_graph_result_is_double(value));
   ASSERT_EQ(1.2, dse_graph_result_get_double(value));
 
-  ASSERT_EQ("string", cass::String(dse_graph_result_member_key(graph_result, 5, NULL)));
+  ASSERT_EQ("string", String(dse_graph_result_member_key(graph_result, 5, NULL)));
   value = dse_graph_result_member_value(graph_result, 5);
   ASSERT_TRUE(dse_graph_result_is_string(value));
-  ASSERT_EQ("abc", cass::String(dse_graph_result_get_string(value, NULL)));
+  ASSERT_EQ("abc", String(dse_graph_result_get_string(value, NULL)));
 }
 
 TEST_F(GraphObjectUnitTest, Point) {
@@ -109,7 +112,7 @@ TEST_F(GraphObjectUnitTest, Point) {
 
   const DseGraphResult* value;
   cass_double_t x, y;
-  ASSERT_EQ("point", cass::String(dse_graph_result_member_key(graph_result, 0, NULL)));
+  ASSERT_EQ("point", String(dse_graph_result_member_key(graph_result, 0, NULL)));
   value = dse_graph_result_member_value(graph_result, 0);
   ASSERT_EQ(CASS_OK, dse_graph_result_as_point(value, &x, &y));
   ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
@@ -132,7 +135,7 @@ TEST_F(GraphObjectUnitTest, LineString) {
 
   const DseGraphResult* value;
   cass_double_t x, y;
-  ASSERT_EQ("line_string", cass::String(dse_graph_result_member_key(graph_result, 0, NULL)));
+  ASSERT_EQ("line_string", String(dse_graph_result_member_key(graph_result, 0, NULL)));
   value = dse_graph_result_member_value(graph_result, 0);
 
   line_string_iterator = dse_line_string_iterator_new();
@@ -174,7 +177,7 @@ TEST_F(GraphObjectUnitTest, Polygon) {
 
   const DseGraphResult* value;
   cass_double_t x, y;
-  ASSERT_EQ("polygon", cass::String(dse_graph_result_member_key(graph_result, 0, NULL)));
+  ASSERT_EQ("polygon", String(dse_graph_result_member_key(graph_result, 0, NULL)));
   value = dse_graph_result_member_value(graph_result, 0);
 
   polygon_iterator = dse_polygon_iterator_new();

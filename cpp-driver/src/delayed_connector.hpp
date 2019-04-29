@@ -24,7 +24,7 @@
 #include "string.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ConnectionPool;
 class EventLoop;
@@ -37,7 +37,7 @@ public:
   typedef SharedRefPtr<DelayedConnector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef cass::Callback<void, DelayedConnector*> Callback;
+  typedef internal::Callback<void, DelayedConnector*> Callback;
 
   /**
    * Constructor
@@ -128,6 +128,6 @@ private:
   bool is_canceled_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

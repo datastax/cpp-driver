@@ -18,7 +18,8 @@
 
 #include "loop_test.hpp"
 
-using namespace cass;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class MicroTimerUnitTest : public LoopTest {
 public:

@@ -18,14 +18,16 @@
 
 #include "stream_manager.hpp"
 
+using datastax::internal::core::StreamManager;
+
 TEST(StreamManagerUnitTest, MaxStreams)
 {
-  ASSERT_EQ(cass::StreamManager<int>().max_streams(), 32768u);
+  ASSERT_EQ(StreamManager<int>().max_streams(), 32768u);
 }
 
 TEST(StreamManagerUnitTest, Simple)
 {
-    cass::StreamManager<int> streams;
+    StreamManager<int> streams;
 
     for (size_t i = 0; i < streams.max_streams(); ++i) {
       int stream = streams.acquire(i);
@@ -53,7 +55,7 @@ TEST(StreamManagerUnitTest, Simple)
 
 TEST(StreamManagerUnitTest, Release)
 {
-  cass::StreamManager<int> streams;
+  StreamManager<int> streams;
 
   for (size_t i = 0; i < streams.max_streams(); ++i) {
     int stream = streams.acquire(i);

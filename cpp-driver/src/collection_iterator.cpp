@@ -16,7 +16,7 @@
 
 #include "collection_iterator.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 bool CollectionIterator::next() {
   if (index_ + 1 >= count_) {
@@ -45,5 +45,3 @@ bool TupleIterator::next() {
   current_ = next_++;
   return decoder_.decode_value(*current_, value_);
 }
-
-} // namespace cass

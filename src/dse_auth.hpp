@@ -14,13 +14,13 @@
 
 #include <uv.h>
 
-namespace dse {
+namespace datastax { namespace internal { namespace enterprise {
 
-class PlaintextAuthenticatorData : public cass::Allocated {
+class PlaintextAuthenticatorData : public Allocated {
 public:
-  PlaintextAuthenticatorData(const cass::String& username,
-                             const cass::String& password,
-                             const cass::String& authorization_id)
+  PlaintextAuthenticatorData(const datastax::String& username,
+                             const datastax::String& password,
+                             const datastax::String& authorization_id)
     : username_(username)
     , password_(password)
     , authorization_id_(authorization_id) { }
@@ -36,25 +36,25 @@ private:
   static CassAuthenticatorCallbacks callbacks_;
 
 private:
-  cass::String username_;
-  cass::String password_;
-  cass::String authorization_id_;
+  datastax::String username_;
+  datastax::String password_;
+  datastax::String authorization_id_;
 };
 
-class GssapiAuthenticatorData : public cass::Allocated {
+class GssapiAuthenticatorData : public Allocated {
 public:
-  GssapiAuthenticatorData(const cass::String& service,
-                          const cass::String& principal,
-                          const cass::String& authorization_id)
+  GssapiAuthenticatorData(const datastax::String& service,
+                          const datastax::String& principal,
+                          const datastax::String& authorization_id)
     : service_(service)
     , principal_(principal)
     , authorization_id_(authorization_id) { }
 
   static const CassAuthenticatorCallbacks* callbacks() { return &callbacks_; }
 
-  const cass::String& service() const { return service_; }
-  const cass::String& principal() const { return principal_; }
-  const cass::String& authorization_id() const { return authorization_id_; }
+  const datastax::String& service() const { return service_; }
+  const datastax::String& principal() const { return principal_; }
+  const datastax::String& authorization_id() const { return authorization_id_; }
 
   static CassError set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
                                       DseGssapiAuthenticatorUnlockCallback unlock_callback,
@@ -79,11 +79,11 @@ private:
   static void* data_;
 
 private:
-  cass::String service_;
-  cass::String principal_;
-  cass::String authorization_id_;
+  datastax::String service_;
+  datastax::String principal_;
+  datastax::String authorization_id_;
 };
 
-} // namespace dse
+} } } // namespace datastax::internal::enterprise
 
 #endif

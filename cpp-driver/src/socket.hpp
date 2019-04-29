@@ -31,7 +31,7 @@
 
 #define MIN_BUFFERS_SIZE 128
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Socket;
 class SocketWriteBase;
@@ -199,7 +199,7 @@ class SocketWriteBase
     : public Allocated
     , public List<SocketWriteBase>::Node {
 public:
-  typedef cass::List<SocketWriteBase> List;
+  typedef internal::List<SocketWriteBase> List;
 
   /**
    * Constructor
@@ -379,6 +379,6 @@ private:
   String address_string_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

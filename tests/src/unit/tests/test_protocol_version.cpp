@@ -21,7 +21,7 @@
 #include "dse.h"
 #include "protocol.hpp"
 
-using cass::ProtocolVersion;
+using datastax::internal::core::ProtocolVersion;
 
 class ProtocolVersionUnitTest : public Unit { };
 

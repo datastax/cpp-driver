@@ -24,7 +24,7 @@
 #include <limits>
 #include <memory>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 // This is an allocator that starts using a fixed size buffer that only
 // uses the heap when exceeded. The allocator can be
@@ -111,6 +111,6 @@ private:
   Fixed* fixed_;
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

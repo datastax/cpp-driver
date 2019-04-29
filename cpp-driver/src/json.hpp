@@ -19,8 +19,7 @@
 
 #include "memory.hpp"
 
-namespace cass {
-namespace json {
+namespace datastax { namespace internal { namespace json {
 
 template <class T>
 static T* new_() {
@@ -37,13 +36,13 @@ static void delete_(T* ptr) {
   Memory::free(ptr);
 }
 
-} } // namespace cass::json
+} } } // namespace datastax::internal::json
 
-#define RAPIDJSON_NAMESPACE cass::rapidjson
-#define RAPIDJSON_NAMESPACE_BEGIN namespace cass { namespace rapidjson {
+#define RAPIDJSON_NAMESPACE datastax::rapidjson
+#define RAPIDJSON_NAMESPACE_BEGIN namespace datastax { namespace rapidjson {
 #define RAPIDJSON_NAMESPACE_END } }
-#define RAPIDJSON_NEW(x) cass::json::new_<x>
-#define RAPIDJSON_DELETE(x) cass::json::delete_(x)
+#define RAPIDJSON_NEW(x) ::datastax::internal::json::new_<x>
+#define RAPIDJSON_DELETE(x) ::datastax::internal::json::delete_(x)
 
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
@@ -55,8 +54,7 @@ static void delete_(T* ptr) {
 # define JSON_WRITE_TYPE PrettyWriter
 #endif
 
-namespace cass {
-namespace json {
+namespace datastax { namespace internal { namespace json {
 
 class Allocator {
 public:
@@ -73,14 +71,14 @@ public:
     }
 };
 
-typedef cass::rapidjson::GenericDocument<cass::rapidjson::UTF8<>, cass::rapidjson::MemoryPoolAllocator<json::Allocator>, json::Allocator> Document;
-typedef cass::rapidjson::GenericValue<cass::rapidjson::UTF8<>, cass::rapidjson::MemoryPoolAllocator<json::Allocator> > Value;
-typedef cass::rapidjson::GenericStringBuffer<cass::rapidjson::UTF8<>, json::Allocator> StringBuffer;
+typedef datastax::rapidjson::GenericDocument<datastax::rapidjson::UTF8<>, datastax::rapidjson::MemoryPoolAllocator<json::Allocator>, json::Allocator> Document;
+typedef datastax::rapidjson::GenericValue<datastax::rapidjson::UTF8<>, datastax::rapidjson::MemoryPoolAllocator<json::Allocator> > Value;
+typedef datastax::rapidjson::GenericStringBuffer<datastax::rapidjson::UTF8<>, json::Allocator> StringBuffer;
 
-template<typename OutputStream, typename SourceEncoding = cass::rapidjson::UTF8<>, typename TargetEncoding = cass::rapidjson::UTF8<>, typename StackAllocator = json::Allocator, unsigned writeFlags = cass::rapidjson::kWriteDefaultFlags>
-class Writer : public cass::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> {
+template<typename OutputStream, typename SourceEncoding = datastax::rapidjson::UTF8<>, typename TargetEncoding = datastax::rapidjson::UTF8<>, typename StackAllocator = json::Allocator, unsigned writeFlags = datastax::rapidjson::kWriteDefaultFlags>
+class Writer : public datastax::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> {
 public:
-    typedef cass::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> Type;
+    typedef datastax::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> Type;
 
     explicit Writer(OutputStream& os, StackAllocator* stackAllocator = 0, size_t levelDepth = Type::kDefaultLevelDepth) :
         Type(os, stackAllocator, levelDepth) { }
@@ -89,6 +87,6 @@ public:
         Type(allocator, levelDepth) { }
 };
 
-} } // namespace cass::json
+} } } // namespace datastax::internal::json
 
 #endif // __CASS_JSON_HPP_INCLUDED__

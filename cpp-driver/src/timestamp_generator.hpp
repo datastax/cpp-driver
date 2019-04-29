@@ -26,7 +26,7 @@
 
 #include <stdint.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class TimestampGenerator : public RefCounted<TimestampGenerator> {
 public:
@@ -84,9 +84,8 @@ private:
   const int64_t warning_interval_ms_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::TimestampGenerator, CassTimestampGen)
+EXTERNAL_TYPE(datastax::internal::core::TimestampGenerator, CassTimestampGen)
 
 #endif
-

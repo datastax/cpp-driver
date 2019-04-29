@@ -291,7 +291,7 @@ _eof_trans:
 #line 49 "wkt.rl"
 	{te = p;p--;{
                    if (!skip_number_) {
-                     number_ = atof(cass::String(ts, te).c_str());
+                     number_ = atof(datastax::String(ts, te).c_str());
                    }
                    token = TK_NUMBER;
                    {p++; goto _out; }
@@ -305,7 +305,7 @@ _eof_trans:
 #line 49 "wkt.rl"
 	{{p = ((te))-1;}{
                    if (!skip_number_) {
-                     number_ = atof(cass::String(ts, te).c_str());
+                     number_ = atof(datastax::String(ts, te).c_str());
                    }
                    token = TK_NUMBER;
                    {p++; goto _out; }
@@ -321,7 +321,7 @@ _eof_trans:
 	case 8:
 	{{p = ((te))-1;}
                    if (!skip_number_) {
-                     number_ = atof(cass::String(ts, te).c_str());
+                     number_ = atof(datastax::String(ts, te).c_str());
                    }
                    token = TK_NUMBER;
                    {p++; goto _out; }

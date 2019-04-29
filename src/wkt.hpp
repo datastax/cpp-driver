@@ -63,5 +63,4 @@ private:
   bool skip_number_;
 };
 
-
 #endif

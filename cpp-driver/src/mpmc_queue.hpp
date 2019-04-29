@@ -31,7 +31,7 @@
 
 #include <assert.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 template <typename T>
 class MPMCQueue : public Allocated {
@@ -160,6 +160,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(MPMCQueue);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

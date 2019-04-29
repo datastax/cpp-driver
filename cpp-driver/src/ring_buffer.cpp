@@ -44,8 +44,7 @@
 #include <assert.h>
 #include <string.h>
 
-namespace cass {
-namespace rb {
+using namespace datastax::internal::rb;
 
 RingBuffer::~RingBuffer() {
   Buffer* current = head_.next_;
@@ -267,6 +266,3 @@ void RingBuffer::reset() {
   write_head_ = read_head_;
   assert(length_ == 0);
 }
-
-} // namespace rb
-} // namespace cass

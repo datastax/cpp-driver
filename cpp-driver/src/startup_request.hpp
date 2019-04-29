@@ -23,7 +23,7 @@
 #include "scoped_ptr.hpp"
 #include "string.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class StartupRequest : public Request {
 public:
@@ -56,6 +56,6 @@ private:
   bool no_compact_enabled_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

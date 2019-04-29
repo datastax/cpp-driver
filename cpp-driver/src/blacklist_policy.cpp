@@ -16,7 +16,7 @@
 
 #include "blacklist_policy.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 bool BlacklistPolicy::is_valid_host(const Host::Ptr& host) const {
   const String& host_address = host->address().to_string(false);
@@ -29,5 +29,3 @@ bool BlacklistPolicy::is_valid_host(const Host::Ptr& host) const {
   }
   return true;
 }
-
-} // namespace cass

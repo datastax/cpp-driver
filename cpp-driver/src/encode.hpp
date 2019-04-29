@@ -20,7 +20,7 @@
 #include "buffer.hpp"
 #include "types.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 inline Buffer encode_with_length(CassNull) {
   Buffer buf(sizeof(int32_t));
@@ -222,7 +222,6 @@ Buffer encode(CassDuration value);
 
 Buffer encode_with_length(CassDuration value);
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif
-

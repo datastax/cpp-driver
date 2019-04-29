@@ -18,7 +18,8 @@
 #include "ssl.hpp"
 
 #define NUM_NODES 3u
-using namespace cass;
+
+using namespace datastax::internal::core;
 
 class PoolUnitTest : public LoopTest {
 public:

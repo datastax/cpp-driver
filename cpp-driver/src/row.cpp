@@ -22,6 +22,9 @@
 #include "serialization.hpp"
 #include "string_ref.hpp"
 
+using namespace datastax;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 const CassValue* cass_row_get_column(const CassRow* row, size_t index) {
@@ -41,12 +44,12 @@ const CassValue* cass_row_get_column_by_name_n(const CassRow* row,
                                                const char* name,
                                                size_t name_length) {
 
-  return CassValue::to(row->get_by_name(cass::StringRef(name, name_length)));
+  return CassValue::to(row->get_by_name(StringRef(name, name_length)));
 }
 
 } // extern "C"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 bool decode_row(Decoder& decoder, const ResultResponse* result,
                 OutputValueVec& output) {
@@ -61,6 +64,8 @@ bool decode_row(Decoder& decoder, const ResultResponse* result,
 
   return true;
 }
+
+} } } // namespace datastax::internal::core
 
 const Value* Row::get_by_name(const StringRef& name) const {
   IndexVec indices;
@@ -77,6 +82,4 @@ bool Row::get_string_by_name(const StringRef& name, String* out) const {
   }
   *out = value->decoder().as_string();
   return true;
-}
-
 }

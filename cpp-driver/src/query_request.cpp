@@ -21,7 +21,8 @@
 #include "logger.hpp"
 #include "serialization.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 int QueryRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   int32_t result;
@@ -76,5 +77,3 @@ size_t QueryRequest::get_indices(StringRef name, IndexVec* indices) {
 
   return indices->size();
 }
-
-} // namespace cass

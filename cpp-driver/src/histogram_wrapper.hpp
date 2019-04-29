@@ -23,7 +23,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class HistogramWrapper {
 public:
@@ -74,7 +74,7 @@ private:
   String name_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif // CASS_INTERNAL_DIAGNOSTICS
 

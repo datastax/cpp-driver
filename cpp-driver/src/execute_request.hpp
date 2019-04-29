@@ -24,7 +24,7 @@
 #include "string.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ExecuteRequest : public Statement {
 public:
@@ -51,6 +51,6 @@ private:
   Prepared::ConstPtr prepared_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

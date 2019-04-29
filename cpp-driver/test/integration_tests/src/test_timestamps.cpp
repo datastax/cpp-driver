@@ -23,6 +23,9 @@
 #include <boost/format.hpp>
 #include <boost/test/unit_test.hpp>
 
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 struct TimestampsTest : public test_utils::SingleSessionTest {
   typedef test_utils::CassBatchPtr CassBatchPtr;
   typedef test_utils::CassFuturePtr CassFuturePtr;
@@ -64,7 +67,7 @@ struct TimestampsTest : public test_utils::SingleSessionTest {
   }
 };
 
-class TestTimestampGenerator : public cass::TimestampGenerator {
+class TestTimestampGenerator : public TimestampGenerator {
 public:
   TestTimestampGenerator(int64_t timestamp)
     : TimestampGenerator(SERVER_SIDE) // Doesn't matter for this test
@@ -76,7 +79,7 @@ private:
   int64_t timestamp_;
 };
 
-class TestMonotonicTimestampGenerator : public cass::MonotonicTimestampGenerator {
+class TestMonotonicTimestampGenerator : public MonotonicTimestampGenerator {
 public:
   std::vector<int64_t> timestamps_;
 
@@ -85,7 +88,7 @@ public:
     : MonotonicTimestampGenerator(warning_threshold_us, warning_interval_ms) { }
 
   virtual int64_t next() {
-    int64_t timestamp = cass::MonotonicTimestampGenerator::next();
+    int64_t timestamp = MonotonicTimestampGenerator::next();
     timestamps_.push_back(timestamp);
     return timestamp;
   }
@@ -185,7 +188,7 @@ BOOST_AUTO_TEST_CASE(generator)
   CCM::CassVersion version = test_utils::get_version();
   if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     TimestampsTest tester;
-    cass::SharedRefPtr<TestTimestampGenerator> gen(new TestTimestampGenerator(1234));
+    SharedRefPtr<TestTimestampGenerator> gen(new TestTimestampGenerator(1234));
 
     cass_cluster_set_timestamp_gen(tester.cluster, CassTimestampGen::to(gen.get()));
     tester.create_session();
@@ -269,7 +272,7 @@ BOOST_AUTO_TEST_CASE(server_side)
     cass_statement_bind_string(statement.get(), 0, key.c_str());
     cass_statement_bind_string(statement.get(), 1, key.c_str());
 
-    uint64_t timestamp = cass::get_time_since_epoch_ms();
+    uint64_t timestamp = get_time_since_epoch_ms();
     test_utils::CassFuturePtr future(cass_session_execute(tester.session, statement.get()));
     BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
 
@@ -294,7 +297,7 @@ BOOST_AUTO_TEST_CASE(server_side)
 BOOST_AUTO_TEST_CASE(monotonic_generator)
 {
   TimestampsTest tester;
-  cass::SharedRefPtr<TestMonotonicTimestampGenerator> gen(new TestMonotonicTimestampGenerator()); // mimics cass_timestamp_gen_monotonic_new())
+  SharedRefPtr<TestMonotonicTimestampGenerator> gen(new TestMonotonicTimestampGenerator()); // mimics cass_timestamp_gen_monotonic_new())
   cass_cluster_set_timestamp_gen(tester.cluster, CassTimestampGen::to(gen.get()));
   tester.create_session();
 
@@ -331,7 +334,7 @@ BOOST_AUTO_TEST_CASE(monotonic_generator)
 BOOST_AUTO_TEST_CASE(monotonic_generator_warnings)
 {
   TimestampsTest tester;
-  cass::SharedRefPtr<TestMonotonicTimestampGenerator> gen(new TestMonotonicTimestampGenerator(1, 1000)); // mimics cass_timestamp_gen_monotonic_new_with_settings())
+  SharedRefPtr<TestMonotonicTimestampGenerator> gen(new TestMonotonicTimestampGenerator(1, 1000)); // mimics cass_timestamp_gen_monotonic_new_with_settings())
   cass_cluster_set_timestamp_gen(tester.cluster, CassTimestampGen::to(gen.get()));
   tester.create_session();
 

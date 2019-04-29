@@ -25,7 +25,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A handler that waits for server-side data by running queries and verifying
@@ -129,6 +129,6 @@ private:
   const Response::Ptr response_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

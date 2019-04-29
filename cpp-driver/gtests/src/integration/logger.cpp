@@ -25,6 +25,7 @@
 #include <iostream>
 #include <sstream>
 
+using namespace datastax::internal;
 using namespace test::driver;
 
 #define LOGGER_DIRECTORY "log"
@@ -75,12 +76,12 @@ void Logger::initialize(const std::string& test_case, const std::string& test_na
 }
 
 void Logger::add_critera(const std::string& criteria) {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   search_criteria_.push_back(criteria);
 }
 
 void test::driver::Logger::clear_critera() {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   search_criteria_.clear();
 }
 
@@ -90,7 +91,7 @@ size_t Logger::count() {
 
 void Logger::log(const CassLogMessage* log, void* data) {
   Logger* logger = static_cast<Logger*>(data);
-  cass::ScopedMutex lock(&(logger->mutex_));
+  ScopedMutex lock(&(logger->mutex_));
 
   // Get the log message
   std::string message = log->message;
@@ -133,13 +134,13 @@ void Logger::log(const CassLogMessage* log, void* data) {
 }
 
 void test::driver::Logger::reset() {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   search_criteria_.clear();
   count_ = 0;
 }
 
 void test::driver::Logger::reset_count() {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   count_ = 0;
 }
 

@@ -18,7 +18,8 @@
 
 #include "connection.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 PrepareAllHandler::PrepareAllHandler(const Host::Ptr& current_host,
                                      const Response::Ptr& response,
@@ -75,5 +76,3 @@ void PrepareAllCallback::on_internal_timeout() {
   LOG_WARN("Prepare all timed out on host %s", address_.to_string().c_str());
   finish(); // Don't wait for the request to come back
 }
-
-} // namespace cass

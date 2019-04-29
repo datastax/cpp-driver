@@ -18,10 +18,12 @@
 
 #include "external.hpp"
 
+using namespace datastax::internal::core;
+
 extern "C" {
 
 CassCustomPayload* cass_custom_payload_new() {
-  cass::CustomPayload* payload = new cass::CustomPayload();
+  CustomPayload* payload = new CustomPayload();
   payload->inc_ref();
   return CassCustomPayload::to(payload);
 }
@@ -58,8 +60,6 @@ void cass_custom_payload_free(CassCustomPayload* payload) {
 
 } // extern "C"
 
-namespace cass {
-
 void CustomPayload::set(const char* name, size_t name_length, const uint8_t* value, size_t value_size) {
   Buffer buf(sizeof(uint16_t) + name_length + sizeof(int32_t) + value_size);
   size_t pos = buf.encode_string(0, name, name_length);
@@ -78,5 +78,3 @@ int32_t CustomPayload::encode(BufferVec* bufs) const {
   }
   return length;
 }
-
-} // namespace cass

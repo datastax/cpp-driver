@@ -36,7 +36,7 @@
 // Note: Please use the boost::atomic<> or std::atomic<>
 // implementations when possible.
 
-namespace cass {
+namespace datastax { namespace internal {
 
 enum MemoryOrder {
   MEMORY_ORDER_RELAXED = 0,
@@ -47,7 +47,7 @@ enum MemoryOrder {
   MEMORY_ORDER_SEQ_CST = 14 // MEMORY_ORDER_ACQ_REL | 8
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #if defined(__GNUC__)
 #include "atomic_intrinsics_gcc.hpp"

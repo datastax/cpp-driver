@@ -55,7 +55,7 @@
 #define SELECT_VIRTUAL_TABLES_40 "SELECT * FROM system_virtual_schema.tables"
 #define SELECT_VIRTUAL_COLUMNS_40 "SELECT * FROM system_virtual_schema.columns"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ChainedControlRequestCallback;
 class ControlRequestCallback;
@@ -296,6 +296,6 @@ private:
   ControlConnectionListener* listener_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

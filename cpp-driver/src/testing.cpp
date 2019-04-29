@@ -28,14 +28,16 @@
 #include "result_response.hpp"
 #include "session.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace testing {
+
+using namespace core;
 
 String get_host_from_future(CassFuture* future) {
-  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
+  if (future->type() != Future::FUTURE_TYPE_RESPONSE) {
     return "";
   }
-  cass::ResponseFuture* response_future =
-      static_cast<cass::ResponseFuture*>(future->from());
+  ResponseFuture* response_future =
+      static_cast<ResponseFuture*>(future->from());
   return response_future->address().to_string();
 }
 
@@ -70,7 +72,7 @@ int64_t create_murmur3_hash_from_string(const String &value) {
 }
 
 uint64_t get_time_since_epoch_in_ms() {
-  return cass::get_time_since_epoch_ms();
+  return internal::get_time_since_epoch_ms();
 }
 
 uint64_t get_host_latency_average(CassSession* session, String ip_address, int port) {
@@ -82,4 +84,4 @@ uint64_t get_host_latency_average(CassSession* session, String ip_address, int p
   return 0;
 }
 
-} // namespace cass
+} } } // namespace datastax::internal::testing

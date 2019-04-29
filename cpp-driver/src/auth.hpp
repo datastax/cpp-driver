@@ -25,7 +25,7 @@
 #include "ref_counted.hpp"
 #include "string.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Authenticator : public RefCounted<Authenticator> {
 public:
@@ -174,8 +174,8 @@ private:
   String password_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::ExternalAuthenticator, CassAuthenticator)
+EXTERNAL_TYPE(datastax::internal::core::ExternalAuthenticator, CassAuthenticator)
 
 #endif

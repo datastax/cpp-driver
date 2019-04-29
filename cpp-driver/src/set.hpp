@@ -13,14 +13,14 @@
 
 #include <set>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T, class Compare = std::less<T> >
 class Set
     : public Allocated
-    , public std::set<T, Compare, cass::Allocator<T> > {
+    , public std::set<T, Compare, internal::Allocator<T> > {
 public:
-  typedef cass::Allocator<T> Allocator;
+  typedef internal::Allocator<T> Allocator;
 
   explicit Set(const Compare& compare = Compare(),
                const Allocator& alloc = Allocator())
@@ -36,6 +36,6 @@ public:
     : std::set<T, Compare, Allocator>(first, last, compare, alloc) { }
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

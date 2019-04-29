@@ -12,7 +12,7 @@
 
 #include <stack>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T, class Container = Deque<T> >
 class Stack : public std::stack<T,  Container> {
@@ -24,6 +24,6 @@ public:
     : std::stack<T, Container>(other) { }
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

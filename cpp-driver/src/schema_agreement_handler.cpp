@@ -24,7 +24,8 @@
 #define SELECT_PEERS_SCHEMA \
   "SELECT peer, rpc_address, schema_version FROM system.peers"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 SchemaAgreementHandler::SchemaAgreementHandler(const RequestHandler::Ptr& request_handler,
                                                const Host::Ptr& current_host,
@@ -114,5 +115,3 @@ void SchemaAgreementHandler::on_error(WaitForHandler::WaitForError code, const S
       break;
   }
 }
-
-} // namespace cass

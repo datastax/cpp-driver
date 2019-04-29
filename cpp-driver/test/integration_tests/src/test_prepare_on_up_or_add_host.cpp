@@ -29,6 +29,8 @@
 #include "test_utils.hpp"
 #include "testing.hpp"
 
+using namespace datastax::internal::testing;
+
 /**
  * Test harness for prepare on up or add host functionality.
  */
@@ -181,7 +183,7 @@ struct PrepareOnUpOrAddHostTests : public test_utils::SingleSessionTest {
       test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.peers", 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(),
                                                             statement.get()));
-      std::string host(cass::get_host_from_future(future.get()).c_str());
+      std::string host(get_host_from_future(future.get()).c_str());
       if (cass_future_error_code(future.get()) == CASS_OK && host == ip_address.str()) {
         return;
       }

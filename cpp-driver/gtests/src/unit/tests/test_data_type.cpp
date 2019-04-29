@@ -22,6 +22,9 @@
 #include <algorithm>
 #include <ctype.h>
 
+using namespace datastax;
+using namespace datastax::internal::core;
+
 class DataTypeWrapper {
 public:
   DataTypeWrapper(CassDataType* data_type)
@@ -54,10 +57,10 @@ TEST(DataTypeUnitTest, KeyspaceAndTypeName) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_keyspace(data_type, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "keyspace1");
+    EXPECT_EQ(String(name, name_length), "keyspace1");
 
     ASSERT_EQ(cass_data_type_type_name(data_type, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "type_name1");
+    EXPECT_EQ(String(name, name_length), "type_name1");
   }
 
   // Invalid type
@@ -94,7 +97,7 @@ TEST(DataTypeUnitTest, ClassName) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_class_name(data_type, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "class_name1");
+    EXPECT_EQ(String(name, name_length), "class_name1");
   }
 
   // Invalid type
@@ -129,7 +132,7 @@ TEST(DataTypeUnitTest, FromExisting) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_class_name(data_type_copy, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "class_name1");
+    EXPECT_EQ(String(name, name_length), "class_name1");
   }
 
   // From an existing tuple
@@ -193,10 +196,10 @@ TEST(DataTypeUnitTest, FromExisting) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_keyspace(data_type_copy, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "keyspace1");
+    EXPECT_EQ(String(name, name_length), "keyspace1");
 
     ASSERT_EQ(cass_data_type_type_name(data_type_copy, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "type_name1");
+    EXPECT_EQ(String(name, name_length), "type_name1");
   }
 }
 
@@ -368,20 +371,20 @@ TEST(DataTypeUnitTest, CheckSubValueType) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_sub_type_name(data_type, 0, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "field1");
+    EXPECT_EQ(String(name, name_length), "field1");
 
     ASSERT_EQ(cass_data_type_sub_type_name(data_type, 1, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "field2");
+    EXPECT_EQ(String(name, name_length), "field2");
 
     ASSERT_EQ(cass_data_type_sub_type_name(data_type, 2, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "field3");
+    EXPECT_EQ(String(name, name_length), "field3");
   }
 }
 
 TEST(DataTypeUnitTest, CheckValueTypeByClass) {
 #define XX_VALUE_TYPE(name, type, cql, klass)             \
   EXPECT_TRUE(strlen(klass) == 0 ||                       \
-              cass::ValueTypes::by_class(klass) == name); \
+              ValueTypes::by_class(klass) == name); \
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
 #undef XX_VALUE_TYPE
@@ -389,9 +392,9 @@ TEST(DataTypeUnitTest, CheckValueTypeByClass) {
 
 TEST(DataTypeUnitTest, CheckValueTypeByClassCaseInsensitive) {
 #define XX_VALUE_TYPE(name, type, cql, klass) {                              \
-    cass::String upper(klass);                                                \
+    String upper(klass);                                                \
     std::transform(upper.begin(), upper.end(), upper.begin(), toupper);      \
-    EXPECT_TRUE(upper.empty() || cass::ValueTypes::by_class(upper) == name); \
+    EXPECT_TRUE(upper.empty() || ValueTypes::by_class(upper) == name); \
   }
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
@@ -401,7 +404,7 @@ TEST(DataTypeUnitTest, CheckValueTypeByClassCaseInsensitive) {
 TEST(DataTypeUnitTest, CheckValueTypesByCql) {
 #define XX_VALUE_TYPE(name, type, cql, klass)         \
   EXPECT_TRUE(strlen(cql) == 0 ||                     \
-              cass::ValueTypes::by_cql(cql) == name); \
+              ValueTypes::by_cql(cql) == name); \
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
 #undef XX_VALUE_TYPE
@@ -409,9 +412,9 @@ TEST(DataTypeUnitTest, CheckValueTypesByCql) {
 
 TEST(DataTypeUnitTest, CheckValueTypesByCqlCasInsensitive) {
 #define XX_VALUE_TYPE(name, type, cql, klass) {                            \
-    cass::String upper(cql);                                                \
+    String upper(cql);                                                \
     std::transform(upper.begin(), upper.end(), upper.begin(), toupper);    \
-    EXPECT_TRUE(upper.empty() || cass::ValueTypes::by_cql(upper) == name); \
+    EXPECT_TRUE(upper.empty() || ValueTypes::by_cql(upper) == name); \
   }
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
@@ -419,11 +422,11 @@ TEST(DataTypeUnitTest, CheckValueTypesByCqlCasInsensitive) {
 }
 
 TEST(DataTypeUnitTest, SimpleDataTypeCache) {
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  cass::DataType::ConstPtr by_class = cache.by_class("org.apache.cassandra.db.marshal.AsciiType");
-  cass::DataType::ConstPtr by_cql = cache.by_cql("ascii");
-  cass::DataType::ConstPtr by_value_type = cache.by_value_type(CASS_VALUE_TYPE_ASCII);
+  DataType::ConstPtr by_class = cache.by_class("org.apache.cassandra.db.marshal.AsciiType");
+  DataType::ConstPtr by_cql = cache.by_cql("ascii");
+  DataType::ConstPtr by_value_type = cache.by_value_type(CASS_VALUE_TYPE_ASCII);
 
   EXPECT_EQ(by_class->value_type(), CASS_VALUE_TYPE_ASCII);
   EXPECT_EQ(by_cql->value_type(), CASS_VALUE_TYPE_ASCII);

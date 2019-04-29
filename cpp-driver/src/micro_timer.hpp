@@ -32,7 +32,7 @@
 // Only affects busy wait timer version
 #define CASS_PERCENT_OF_MILLSECOND_THRESHOLD 95
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A timer that supports microsecond precision. It is not intended for general
@@ -48,7 +48,7 @@ namespace cass {
  */
 class MicroTimer {
 public:
-  typedef cass::Callback<void, MicroTimer*> Callback;
+  typedef internal::Callback<void, MicroTimer*> Callback;
 
   MicroTimer();
   ~MicroTimer() { stop(); }
@@ -113,6 +113,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(MicroTimer);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

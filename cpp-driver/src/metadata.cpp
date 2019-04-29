@@ -38,13 +38,17 @@
 #include <ctype.h>
 #include <iterator>
 
-static cass::String& append_arguments(cass::String& full_name,
-                                      const cass::String& arguments) {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
+static String& append_arguments(String& full_name,
+                                const String& arguments) {
   full_name.push_back('(');
   bool first = true;
-  cass::IStringStream stream(arguments);
+  IStringStream stream(arguments);
   while (!stream.eof()) {
-    cass::String argument;
+    String argument;
     std::getline(stream, argument, ',');
     // Remove white-space
     argument.erase(std::remove_if(argument.begin(), argument.end(), ::isspace),
@@ -85,7 +89,7 @@ const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name(const CassSchemaMeta* 
 const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name_n(const CassSchemaMeta* schema_meta,
                                                             const char* keyspace,
                                                             size_t keyspace_length) {
-  return CassKeyspaceMeta::to(schema_meta->get_keyspace(cass::String(keyspace, keyspace_length)));
+  return CassKeyspaceMeta::to(schema_meta->get_keyspace(String(keyspace, keyspace_length)));
 }
 
 void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
@@ -107,7 +111,7 @@ const CassTableMeta* cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* 
                                                         const char* table,
                                                         size_t table_length) {
 
-  return CassTableMeta::to(keyspace_meta->get_table(cass::String(table, table_length)));
+  return CassTableMeta::to(keyspace_meta->get_table(String(table, table_length)));
 }
 
 const CassMaterializedViewMeta* cass_keyspace_meta_materialized_view_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -119,7 +123,7 @@ const CassMaterializedViewMeta* cass_keyspace_meta_materialized_view_by_name_n(c
                                                                                const char* view,
                                                                                size_t view_length) {
 
-  return CassMaterializedViewMeta::to(keyspace_meta->get_view(cass::String(view, view_length)));
+  return CassMaterializedViewMeta::to(keyspace_meta->get_view(String(view, view_length)));
 }
 
 const CassDataType* cass_keyspace_meta_user_type_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -130,7 +134,7 @@ const CassDataType* cass_keyspace_meta_user_type_by_name(const CassKeyspaceMeta*
 const CassDataType* cass_keyspace_meta_user_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                                            const char* type,
                                                            size_t type_length) {
-  return CassDataType::to(keyspace_meta->get_user_type(cass::String(type, type_length)));
+  return CassDataType::to(keyspace_meta->get_user_type(String(type, type_length)));
 }
 
 const CassFunctionMeta* cass_keyspace_meta_function_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -147,9 +151,9 @@ const CassFunctionMeta* cass_keyspace_meta_function_by_name_n(const CassKeyspace
                                                               size_t name_length,
                                                               const char* arguments,
                                                               size_t arguments_length) {
-  cass::String full_function_name(name, name_length);
+  String full_function_name(name, name_length);
   return CassFunctionMeta::to(keyspace_meta->get_function(
-                                append_arguments(full_function_name, cass::String(arguments, arguments_length))));
+                                append_arguments(full_function_name, String(arguments, arguments_length))));
 }
 
 const CassAggregateMeta* cass_keyspace_meta_aggregate_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -165,9 +169,9 @@ const CassAggregateMeta* cass_keyspace_meta_aggregate_by_name_n(const CassKeyspa
                                                                 size_t name_length,
                                                                 const char* arguments,
                                                                 size_t arguments_length) {
-  cass::String full_aggregate_name(name, name_length);
+  String full_aggregate_name(name, name_length);
   return CassAggregateMeta::to(keyspace_meta->get_aggregate(
-                                 append_arguments(full_aggregate_name, cass::String(arguments, arguments_length))));
+                                 append_arguments(full_aggregate_name, String(arguments, arguments_length))));
 }
 
 const CassValue* cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -177,7 +181,7 @@ const CassValue* cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspa
 
 const CassValue* cass_keyspace_meta_field_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                                     const char* name, size_t name_length) {
-  return CassValue::to(keyspace_meta->get_field(cass::String(name, name_length)));
+  return CassValue::to(keyspace_meta->get_field(String(name, name_length)));
 }
 
 void cass_table_meta_name(const CassTableMeta* table_meta,
@@ -198,7 +202,7 @@ const CassColumnMeta* cass_table_meta_column_by_name(const CassTableMeta* table_
 const CassColumnMeta* cass_table_meta_column_by_name_n(const CassTableMeta* table_meta,
                                                        const char* column,
                                                        size_t column_length) {
-  return CassColumnMeta::to(table_meta->get_column(cass::String(column, column_length)));
+  return CassColumnMeta::to(table_meta->get_column(String(column, column_length)));
 }
 
 size_t cass_table_meta_column_count(const CassTableMeta* table_meta) {
@@ -221,7 +225,7 @@ const CassIndexMeta* cass_table_meta_index_by_name(const CassTableMeta* table_me
 const CassIndexMeta* cass_table_meta_index_by_name_n(const CassTableMeta* table_meta,
                                                      const char* index,
                                                      size_t index_length) {
-  return CassIndexMeta::to(table_meta->get_index(cass::String(index, index_length)));
+  return CassIndexMeta::to(table_meta->get_index(String(index, index_length)));
 }
 
 size_t cass_table_meta_index_count(const CassTableMeta* table_meta) {
@@ -244,7 +248,7 @@ const CassMaterializedViewMeta* cass_table_meta_materialized_view_by_name(const 
 const CassMaterializedViewMeta* cass_table_meta_materialized_view_by_name_n(const CassTableMeta* table_meta,
                                                                             const char* view,
                                                                             size_t view_length) {
-  return CassMaterializedViewMeta::to(table_meta->get_view(cass::String(view, view_length)));
+  return CassMaterializedViewMeta::to(table_meta->get_view(String(view, view_length)));
 }
 
 size_t cass_table_meta_materialized_view_count(const CassTableMeta* table_meta) {
@@ -298,7 +302,7 @@ const CassValue* cass_table_meta_field_by_name(const CassTableMeta* table_meta,
 
 const CassValue* cass_table_meta_field_by_name_n(const CassTableMeta* table_meta,
                                                  const char* name, size_t name_length) {
-  return CassValue::to(table_meta->get_field(cass::String(name, name_length)));
+  return CassValue::to(table_meta->get_field(String(name, name_length)));
 }
 
 const CassColumnMeta* cass_materialized_view_meta_column_by_name(const CassMaterializedViewMeta* view_meta,
@@ -309,7 +313,7 @@ const CassColumnMeta* cass_materialized_view_meta_column_by_name(const CassMater
 const CassColumnMeta* cass_materialized_view_meta_column_by_name_n(const CassMaterializedViewMeta* view_meta,
                                                                    const char* column,
                                                                    size_t column_length) {
-  return CassColumnMeta::to(view_meta->get_column(cass::String(column, column_length)));
+  return CassColumnMeta::to(view_meta->get_column(String(column, column_length)));
 }
 
 void cass_materialized_view_meta_name(const CassMaterializedViewMeta* view_meta,
@@ -332,7 +336,7 @@ const CassValue* cass_materialized_view_meta_field_by_name(const CassMaterialize
 
 const CassValue* cass_materialized_view_meta_field_by_name_n(const CassMaterializedViewMeta* view_meta,
                                                              const char* name, size_t name_length) {
-  return CassValue::to(view_meta->get_field(cass::String(name, name_length)));
+  return CassValue::to(view_meta->get_field(String(name, name_length)));
 }
 
 size_t cass_materialized_view_meta_column_count(const CassMaterializedViewMeta* view_meta) {
@@ -402,7 +406,7 @@ cass_column_meta_field_by_name(const CassColumnMeta* column_meta,
 const CassValue*
 cass_column_meta_field_by_name_n(const CassColumnMeta* column_meta,
                                  const char* name, size_t name_length) {
-  return CassValue::to(column_meta->get_field(cass::String(name, name_length)));
+  return CassValue::to(column_meta->get_field(String(name, name_length)));
 }
 
 void cass_index_meta_name(const CassIndexMeta* index_meta,
@@ -434,7 +438,7 @@ cass_index_meta_field_by_name(const CassIndexMeta* index_meta,
 const CassValue*
 cass_index_meta_field_by_name_n(const CassIndexMeta* index_meta,
                                 const char* name, size_t name_length) {
-  return CassValue::to(index_meta->get_field(cass::String(name, name_length)));
+  return CassValue::to(index_meta->get_field(String(name, name_length)));
 }
 
 void cass_function_meta_name(const CassFunctionMeta* function_meta,
@@ -481,7 +485,7 @@ CassError cass_function_meta_argument(const CassFunctionMeta* function_meta,
   if (index >= function_meta->args().size()) {
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
   }
-  const cass::FunctionMetadata::Argument& arg = function_meta->args()[index];
+  const FunctionMetadata::Argument& arg = function_meta->args()[index];
   *name = arg.name.data();
   *name_length = arg.name.size();
   *type = CassDataType::to(arg.type.get());
@@ -496,7 +500,7 @@ const CassDataType* cass_function_meta_argument_type_by_name(const CassFunctionM
 const CassDataType* cass_function_meta_argument_type_by_name_n(const CassFunctionMeta* function_meta,
                                                                const char* name,
                                                                size_t name_length) {
-  return CassDataType::to(function_meta->get_arg_type(cass::StringRef(name, name_length)));
+  return CassDataType::to(function_meta->get_arg_type(StringRef(name, name_length)));
 }
 
 const CassDataType* cass_function_meta_return_type(const CassFunctionMeta* function_meta) {
@@ -511,7 +515,7 @@ const CassValue* cass_function_meta_field_by_name(const CassFunctionMeta* functi
 const CassValue* cass_function_meta_field_by_name_n(const CassFunctionMeta* function_meta,
                                                     const char* name,
                                                     size_t name_length) {
-  return CassValue::to(function_meta->get_field(cass::String(name, name_length)));
+  return CassValue::to(function_meta->get_field(String(name, name_length)));
 }
 
 void cass_aggregate_meta_name(const CassAggregateMeta* aggregate_meta,
@@ -568,7 +572,7 @@ const CassValue* cass_aggregate_meta_field_by_name(const CassAggregateMeta* aggr
 const CassValue* cass_aggregate_meta_field_by_name_n(const CassAggregateMeta* aggregate_meta,
                                                      const char* name,
                                                      size_t name_length) {
-  return CassValue::to(aggregate_meta->get_field(cass::String(name, name_length)));
+  return CassValue::to(aggregate_meta->get_field(String(name, name_length)));
 }
 
 CassIterator* cass_iterator_keyspaces_from_schema_meta(const CassSchemaMeta* schema_meta) {
@@ -644,7 +648,7 @@ const CassKeyspaceMeta* cass_iterator_get_keyspace_meta(const CassIterator* iter
     return NULL;
   }
   return CassKeyspaceMeta::to(
-        static_cast<const cass::Metadata::KeyspaceIterator*>(
+        static_cast<const Metadata::KeyspaceIterator*>(
           iterator->from())->keyspace());
 }
 
@@ -653,7 +657,7 @@ const CassTableMeta* cass_iterator_get_table_meta(const CassIterator* iterator) 
     return NULL;
   }
   return CassTableMeta::to(
-        static_cast<const cass::KeyspaceMetadata::TableIterator*>(
+        static_cast<const KeyspaceMetadata::TableIterator*>(
           iterator->from())->table());
 }
 
@@ -662,7 +666,7 @@ const CassMaterializedViewMeta* cass_iterator_get_materialized_view_meta(const C
     return NULL;
   }
   return CassMaterializedViewMeta::to(
-        static_cast<const cass::ViewIteratorBase*>(
+        static_cast<const ViewIteratorBase*>(
           iterator->from())->view());
 }
 
@@ -671,7 +675,7 @@ const CassDataType* cass_iterator_get_user_type(const CassIterator* iterator) {
     return NULL;
   }
   return CassDataType::to(
-        static_cast<const cass::KeyspaceMetadata::TypeIterator*>(
+        static_cast<const KeyspaceMetadata::TypeIterator*>(
           iterator->from())->type());
 }
 
@@ -680,7 +684,7 @@ const CassFunctionMeta* cass_iterator_get_function_meta(const CassIterator* iter
     return NULL;
   }
   return CassFunctionMeta::to(
-        static_cast<const cass::KeyspaceMetadata::FunctionIterator*>(
+        static_cast<const KeyspaceMetadata::FunctionIterator*>(
           iterator->from())->function());
 }
 
@@ -689,7 +693,7 @@ const CassAggregateMeta* cass_iterator_get_aggregate_meta(const CassIterator* it
     return NULL;
   }
   return CassAggregateMeta::to(
-        static_cast<const cass::KeyspaceMetadata::AggregateIterator*>(
+        static_cast<const KeyspaceMetadata::AggregateIterator*>(
           iterator->from())->aggregate());
 }
 
@@ -698,7 +702,7 @@ const CassColumnMeta* cass_iterator_get_column_meta(const CassIterator* iterator
     return NULL;
   }
   return CassColumnMeta::to(
-        static_cast<const cass::TableMetadata::ColumnIterator*>(
+        static_cast<const TableMetadata::ColumnIterator*>(
           iterator->from())->column());
 }
 
@@ -707,7 +711,7 @@ const CassIndexMeta* cass_iterator_get_index_meta(const CassIterator* iterator) 
     return NULL;
   }
   return CassIndexMeta::to(
-        static_cast<const cass::TableMetadata::IndexIterator*>(
+        static_cast<const TableMetadata::IndexIterator*>(
           iterator->from())->index());
 }
 
@@ -717,8 +721,8 @@ CassError cass_iterator_get_meta_field_name(const CassIterator* iterator,
   if (iterator->type() != CASS_ITERATOR_TYPE_META_FIELD) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  const cass::MetadataField* field =
-      static_cast<const cass::MetadataFieldIterator*>(iterator->from())->field();
+  const MetadataField* field =
+      static_cast<const MetadataFieldIterator*>(iterator->from())->field();
   *name = field->name().data();
   *name_length = field->name().size();
   return CASS_OK;
@@ -729,19 +733,17 @@ const CassValue* cass_iterator_get_meta_field_value(const CassIterator* iterator
     return NULL;
   }
   return CassValue::to(
-        static_cast<const cass::MetadataFieldIterator*>(
+        static_cast<const MetadataFieldIterator*>(
           iterator->from())->field()->value());
 }
 
 } // extern "C"
 
-namespace cass {
-
-static const char* table_column_name(const cass::VersionNumber& server_version) {
+static const char* table_column_name(const VersionNumber& server_version) {
   return server_version >= VersionNumber(3, 0, 0) ? "table_name" : "columnfamily_name";
 }
 
-static const char* signature_column_name(const cass::VersionNumber& server_version) {
+static const char* signature_column_name(const VersionNumber& server_version) {
   return server_version >= VersionNumber(3, 0, 0) ? "argument_types" : "signature";
 }
 
@@ -1021,7 +1023,7 @@ void MetadataBase::add_json_list_field(const Row* row, const String& name) {
   Collection collection(CollectionType::list(DataType::Ptr(new DataType(CASS_VALUE_TYPE_TEXT)), false),
                         d.Size());
   for (json::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
-    collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
+    collection.append(CassString(i->GetString(), i->GetStringLength()));
   }
 
   size_t encoded_size = collection.get_items_size();
@@ -2071,8 +2073,8 @@ void Metadata::InternalData::update_user_types(const VersionNumber& server_versi
         break;
       }
 
-      const cass::Value* name = names.value();
-      const cass::Value* type = types.value();
+      const Value* name = names.value();
+      const Value* type = types.value();
 
       if (name->is_null() || type->is_null()) {
         LOG_ERROR("'field_name' or 'field_type' is null for keyspace \"%s\" and type \"%s\"",
@@ -2365,6 +2367,3 @@ KeyspaceMetadata* Metadata::InternalData::get_or_create_keyspace(const String& n
   }
   return &i->second;
 }
-
-} // namespace cass
-

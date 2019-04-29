@@ -22,7 +22,9 @@
 #include <algorithm>
 #include <iterator>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 void LatencyAwarePolicy::init(const Host::Ptr& connected_host,
                               const HostMap& hosts,
@@ -122,5 +124,3 @@ Host::Ptr LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
 
   return Host::Ptr();
 }
-
-} // namespace cass

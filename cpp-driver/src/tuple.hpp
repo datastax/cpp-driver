@@ -31,7 +31,7 @@
   if (rc != CASS_OK) return rc;                \
   } while(0)
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Collection;
 class UserTypeValue;
@@ -52,7 +52,7 @@ public:
 #define SET_TYPE(Type)                  \
   CassError set(size_t index, const Type value) {     \
     CASS_TUPLE_CHECK_INDEX_AND_TYPE(index, value);     \
-    items_[index] = cass::encode_with_length(value); \
+    items_[index] = core::encode_with_length(value); \
     return CASS_OK;                        \
   }
 
@@ -109,9 +109,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Tuple);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Tuple, CassTuple)
+EXTERNAL_TYPE(datastax::internal::core::Tuple, CassTuple)
 
 #endif
-

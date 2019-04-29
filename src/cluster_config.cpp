@@ -9,15 +9,17 @@
 
 #include "dse_auth.hpp"
 #include "cluster_config.hpp"
-#include "memory.hpp"
 #include "string.hpp"
 
+using namespace datastax;
+using namespace datastax::internal::enterprise;
+
 static void dse_plaintext_authenticator_cleanup(void* data) {
-  delete static_cast<dse::PlaintextAuthenticatorData*>(data);
+  delete static_cast<PlaintextAuthenticatorData*>(data);
 }
 
 static void dse_gssapi_authenticator_cleanup(void* data) {
-  delete static_cast<dse::GssapiAuthenticatorData*>(data);
+  delete static_cast<GssapiAuthenticatorData*>(data);
 }
 
 extern "C" {
@@ -60,14 +62,14 @@ CassError cass_cluster_set_dse_plaintext_authenticator_proxy_n(CassCluster* clus
                                                                const char* password, size_t password_length,
                                                                const char* authorization_id, size_t authorization_id_length) {
   CassError rc = cass_cluster_set_authenticator_callbacks(cluster,
-                                                          dse::PlaintextAuthenticatorData::callbacks(),
+                                                          PlaintextAuthenticatorData::callbacks(),
                                                           dse_plaintext_authenticator_cleanup,
-                                                          new dse::PlaintextAuthenticatorData(cass::String(username, username_length),
-                                                                                              cass::String(password, password_length),
-                                                                                              cass::String(authorization_id, authorization_id_length)));
+                                                          new PlaintextAuthenticatorData(String(username, username_length),
+                                                                                         String(password, password_length),
+                                                                                         String(authorization_id, authorization_id_length)));
 
   if (rc == CASS_OK) {
-    cass::String name = "DSEPlainTextAuthProvider";
+    String name = "DSEPlainTextAuthProvider";
     if (authorization_id_length > 0) {
       name.append(" (Proxy)");
     }
@@ -109,13 +111,13 @@ CassError cass_cluster_set_dse_gssapi_authenticator_proxy_n(CassCluster* cluster
                                                             const char* principal, size_t principal_length,
                                                             const char* authorization_id, size_t authorization_id_length) {
   CassError rc = cass_cluster_set_authenticator_callbacks(cluster,
-                                                          dse::GssapiAuthenticatorData::callbacks(),
+                                                          GssapiAuthenticatorData::callbacks(),
                                                           dse_gssapi_authenticator_cleanup,
-                                                          new dse::GssapiAuthenticatorData(cass::String(service, service_length),
-                                                                                           cass::String(principal, principal_length),
-                                                                                           cass::String(authorization_id, authorization_id_length)));
+                                                          new GssapiAuthenticatorData(String(service, service_length),
+                                                                                      String(principal, principal_length),
+                                                                                      String(authorization_id, authorization_id_length)));
   if (rc == CASS_OK) {
-    cass::String name = "DSEGSSAPIAuthProvider";
+    String name = "DSEGSSAPIAuthProvider";
     if (authorization_id_length > 0) {
       name.append(" (Proxy)");
     }
@@ -134,8 +136,8 @@ void cass_cluster_set_application_name(CassCluster* cluster,
 void cass_cluster_set_application_name_n(CassCluster* cluster,
                                          const char* application_name,
                                          size_t application_name_length) {
-  cluster->config().set_application_name(cass::String(application_name,
-                                                      application_name_length));
+  cluster->config().set_application_name(String(application_name,
+                                                application_name_length));
 }
 
 void cass_cluster_set_application_version(CassCluster* cluster,
@@ -147,8 +149,8 @@ void cass_cluster_set_application_version(CassCluster* cluster,
 void cass_cluster_set_application_version_n(CassCluster* cluster,
                                             const char* application_version,
                                             size_t application_version_length) {
-  cluster->config().set_application_version(cass::String(application_version,
-                                                         application_version_length));
+  cluster->config().set_application_version(String(application_version,
+                                                   application_version_length));
 }
 
 void cass_cluster_set_client_id(CassCluster* cluster, CassUuid client_id) {

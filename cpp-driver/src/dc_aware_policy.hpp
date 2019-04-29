@@ -27,7 +27,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class DCAwarePolicy : public LoadBalancingPolicy {
 public:
@@ -65,7 +65,7 @@ public:
 private:
   class PerDCHostMap {
   public:
-    typedef cass::Map<String, CopyOnWriteHostVec> Map;
+    typedef internal::Map<String, CopyOnWriteHostVec> Map;
     typedef Set<String> KeySet;
 
     PerDCHostMap() : no_hosts_(new HostVec()) {
@@ -126,6 +126,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(DCAwarePolicy);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

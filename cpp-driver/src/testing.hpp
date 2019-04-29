@@ -23,7 +23,7 @@
 
 #include <stdint.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace testing {
 
 CASS_EXPORT String get_host_from_future(CassFuture* future);
 
@@ -39,6 +39,6 @@ CASS_EXPORT uint64_t get_time_since_epoch_in_ms();
 
 CASS_EXPORT uint64_t get_host_latency_average(CassSession* session, String ip_address, int port);
 
-} // namespace cass
+} } } // namespace datastax::internal::testing
 
 #endif

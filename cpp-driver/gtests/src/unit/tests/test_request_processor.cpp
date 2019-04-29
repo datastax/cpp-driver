@@ -24,7 +24,8 @@
 
 #define NUM_NODES 3
 
-using namespace cass;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class RequestProcessorUnitTest : public EventLoopTest {
 public:
@@ -57,12 +58,12 @@ public:
         << response_future->error()->message;;
   }
 
-  class Future : public cass::Future {
+  class Future : public core::Future {
   public:
     typedef SharedRefPtr<Future> Ptr;
 
     Future()
-      : cass::Future(FUTURE_TYPE_GENERIC) { }
+      : core::Future(FUTURE_TYPE_GENERIC) { }
 
     ~Future() {
       if (processor_) {
@@ -594,7 +595,7 @@ TEST_F(RequestProcessorUnitTest, RollingRestart) {
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
   RequestProcessor::Ptr processor(connect_future->processor());
-  cass::Future::Ptr outage_future = execute_outage_plan(&outage_plan);
+  Future::Ptr outage_future = execute_outage_plan(&outage_plan);
 
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
     try_request(processor, WAIT_FOR_TIME * 3); // Increase wait time for chaotic tests

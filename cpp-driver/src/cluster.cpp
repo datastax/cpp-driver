@@ -25,7 +25,10 @@
 #include "speculative_execution.hpp"
 #include "utils.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A task for initiating the cluster close process.
@@ -131,6 +134,8 @@ public:
 
   virtual void on_close(Cluster* cluster) { }
 };
+
+} } } // namespace datastax::internal::core
 
 void ClusterEvent::process_event(const ClusterEvent& event,
                                  ClusterListener* listener) {
@@ -409,7 +414,7 @@ void Cluster::update_token_map(const HostMap& hosts,
 // important for DC-aware). This method prevents connection pools from being
 // created to ignored hosts.
 bool Cluster::is_host_ignored(const Host::Ptr& host) const {
-  return cass::is_host_ignored(load_balancing_policies_, host);
+  return core::is_host_ignored(load_balancing_policies_, host);
 }
 
 void Cluster::schedule_reconnect() {
@@ -817,5 +822,3 @@ void Cluster::on_close(ControlConnection* connection) {
     handle_close();
   }
 }
-
-} // namespace cass

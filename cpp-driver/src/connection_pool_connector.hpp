@@ -28,7 +28,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ConnectionPoolManager;
 
@@ -41,7 +41,7 @@ public:
   typedef SharedRefPtr<ConnectionPoolConnector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef cass::Callback<void, ConnectionPoolConnector*> Callback;
+  typedef internal::Callback<void, ConnectionPoolConnector*> Callback;
 
   /**
    * Constructor
@@ -139,6 +139,6 @@ private:
   Metrics* metrics_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

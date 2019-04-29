@@ -24,7 +24,7 @@
 #define SELECT_TRACES_SESSION \
   "SELECT session_id FROM system_traces.sessions WHERE session_id = ?"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A handler that waits for tracing data to become available for a specified
@@ -69,6 +69,6 @@ private:
   CassConsistency consistency_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

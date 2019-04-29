@@ -23,7 +23,11 @@
 #include "tracing_data_handler.hpp"
 #include "utils.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 class ProcessorRunClose : public Task {
 public:
@@ -140,6 +144,8 @@ public:
                                             const PreparedMetadata::Entry::Ptr& entry) { }
   virtual void on_close(RequestProcessor* processor) { }
 };
+
+} } } // namespace datastax::internal::core
 
 static NopRequestProcessorListener nop_request_processor_listener__;
 
@@ -621,5 +627,3 @@ bool RequestProcessor::write_wait_callback(const RequestHandler::Ptr& request_ha
   }
   return false;
 }
-
-} // namespace cass

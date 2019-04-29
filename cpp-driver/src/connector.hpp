@@ -22,7 +22,7 @@
 #ifndef __CASS_CONNECTION_CONNECTOR_HPP_INCLUDED__
 #define __CASS_CONNECTION_CONNECTOR_HPP_INCLUDED__
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class AuthResponseRequest;
 class Config;
@@ -69,7 +69,7 @@ public:
   typedef SharedRefPtr<Connector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef cass::Callback<void, Connector*> Callback;
+  typedef internal::Callback<void, Connector*> Callback;
 
   enum ConnectionError {
     CONNECTION_OK,
@@ -241,6 +241,6 @@ private:
   ConnectionSettings settings_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

@@ -26,7 +26,7 @@
   STRINGIFY(CASS_VERSION_MINOR) "." \
   STRINGIFY(CASS_VERSION_PATCH)
 
-namespace cass {
+namespace datastax { namespace internal  {
 
 const char* driver_name() {
   return "DataStax Apache Cassandra C/C++ Driver";
@@ -40,4 +40,4 @@ const char* driver_version() {
   }
 }
 
-} // namespace cass
+} } // namespace datastax::internal

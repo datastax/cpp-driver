@@ -23,7 +23,7 @@
 #include "result_metadata.hpp"
 #include "string_ref.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Value {
 public:
@@ -152,8 +152,8 @@ private:
 
 typedef Vector<Value> OutputValueVec;
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Value, CassValue)
+EXTERNAL_TYPE(datastax::internal::core::Value, CassValue)
 
 #endif

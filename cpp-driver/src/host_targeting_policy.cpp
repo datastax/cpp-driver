@@ -16,12 +16,14 @@
 
 #include "host_targeting_policy.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 void HostTargetingPolicy::init(const SharedRefPtr<Host>& connected_host,
-                               const cass::HostMap& hosts,
+                               const core::HostMap& hosts,
                                Random* random) {
-  for (cass::HostMap::const_iterator it = hosts.begin(),
+  for (core::HostMap::const_iterator it = hosts.begin(),
        end = hosts.end(); it != end; ++it) {
     hosts_[it->first] = it->second;
   }
@@ -69,5 +71,3 @@ SharedRefPtr<Host> HostTargetingPolicy::HostTargetingQueryPlan::compute_next() {
     return next;
   }
 }
-
-} // namespace cass

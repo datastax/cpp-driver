@@ -16,7 +16,7 @@
 
 #include "async.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 Async::Async()
   : handle_(NULL) { }
@@ -60,5 +60,3 @@ void Async::on_async(uv_async_t* handle) {
 void Async::on_close(uv_handle_t* handle) {
   delete reinterpret_cast<AllocatedT<uv_async_t>*>(handle);
 }
-
-} // namespace cass

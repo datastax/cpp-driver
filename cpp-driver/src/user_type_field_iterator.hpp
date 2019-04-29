@@ -23,7 +23,7 @@
 #include "serialization.hpp"
 #include "value.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class UserTypeFieldIterator : public Iterator {
 public:
@@ -56,6 +56,6 @@ private:
   Value value_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

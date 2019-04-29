@@ -23,7 +23,9 @@
 #undef STATUS_TIMEOUT
 #endif
 
-using namespace cass;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 using mockssandra::SchemaChangeEvent;
 using mockssandra::StatusChangeEvent;
 using mockssandra::TopologyChangeEvent;

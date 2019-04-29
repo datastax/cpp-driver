@@ -24,10 +24,13 @@
 #include "serialization.hpp"
 #include "statement.hpp"
 
+using namespace datastax;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 CassBatch* cass_batch_new(CassBatchType type) {
-  cass::BatchRequest* batch = new cass::BatchRequest(type);
+  BatchRequest* batch = new BatchRequest(type);
   batch->inc_ref();
   return CassBatch::to(batch);
 }
@@ -43,7 +46,7 @@ CassError cass_batch_set_keyspace(CassBatch* batch, const char* keyspace) {
 CassError cass_batch_set_keyspace_n(CassBatch* batch,
                                     const char* keyspace,
                                     size_t keyspace_length) {
-  batch->set_keyspace(cass::String(keyspace, keyspace_length));
+  batch->set_keyspace(String(keyspace, keyspace_length));
   return CASS_OK;
 }
 
@@ -111,16 +114,14 @@ CassError cass_batch_set_execution_profile_n(CassBatch* batch,
                                              const char* name,
                                              size_t name_length) {
   if (name_length > 0) {
-    batch->set_execution_profile_name(cass::String(name, name_length));
+    batch->set_execution_profile_name(String(name, name_length));
   } else {
-    batch->set_execution_profile_name(cass::String());
+    batch->set_execution_profile_name(String());
   }
   return CASS_OK;
 }
 
 } // extern "C"
-
-namespace cass {
 
 // Format: <type><n><query_1>...<query_n><consistency><flags>[<serial_consistency>][<timestamp>]
 // where:
@@ -251,5 +252,3 @@ bool BatchRequest::get_routing_key(String* routing_key) const {
   }
   return false;
 }
-
-} // namespace cass

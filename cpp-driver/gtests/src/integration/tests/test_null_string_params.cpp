@@ -27,6 +27,8 @@
 // Name of materialized view used in this test file.
 #define VIEW_NAME "my_view"
 
+using namespace datastax::internal::core;
+
 /**
  * Null string api args test, without initially creating a connection.
  */
@@ -672,8 +674,8 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, UserTypeFunctions) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, MiscellaneousFunctions) {
   CHECK_VERSION(2.2.0);
-  cass::ResultResponse response;
-  cass::Row r(&response);
+  ResultResponse response;
+  datastax::internal::core::Row r(&response);
   CassRow* row = CassRow::to(&r);
   EXPECT_EQ(NULL, cass_row_get_column_by_name(row, NULL));
 

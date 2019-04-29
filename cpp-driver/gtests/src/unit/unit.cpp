@@ -15,6 +15,10 @@
 */
 #include "unit.hpp"
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 Unit::OutagePlan::Action::Action(Type type, size_t node, uint64_t delay_ms)
   : type(type)
   , node(node)
@@ -45,7 +49,7 @@ void Unit::OutagePlan::remove_node(size_t node, uint64_t delay_ms /*= DEFAULT_OU
   action_it_ = actions_.begin();
 }
 
-void Unit::OutagePlan::run(cass::Future::Ptr future /*= cass::Future::Ptr()*/) {
+void Unit::OutagePlan::run(core::Future::Ptr future /*= core::Future::Ptr()*/) {
   if (future) future_ = future;
   next();
 }
@@ -62,7 +66,7 @@ void Unit::OutagePlan::next() {
   if (!is_done()) {
     if (action_it_->delay_ms > 0 && loop_ != NULL) {
       ASSERT_EQ(0, timer_.start(loop_, action_it_->delay_ms,
-                cass::bind_callback(&OutagePlan::on_timeout, this)));
+                                bind_callback(&OutagePlan::on_timeout, this)));
     } else {
       handle_timeout();
     }
@@ -100,13 +104,13 @@ void Unit::OutagePlan::handle_timeout() {
 Unit::Unit()
   : output_log_level_(CASS_LOG_DISABLED)
   , logging_criteria_count_(0) {
-  cass::Logger::set_log_level(CASS_LOG_TRACE);
-  cass::Logger::set_callback(on_log, this);
+  Logger::set_log_level(CASS_LOG_TRACE);
+  Logger::set_callback(on_log, this);
 }
 
 Unit::~Unit() {
-  cass::Logger::set_log_level(CASS_LOG_DISABLED);
-  cass::Logger::set_callback(NULL, NULL);
+  Logger::set_log_level(CASS_LOG_DISABLED);
+  Logger::set_callback(NULL, NULL);
 }
 
 void Unit::set_output_log_level(CassLogLevel output_log_level) {
@@ -121,22 +125,22 @@ const mockssandra::RequestHandler* Unit::auth() {
   return mockssandra::AuthRequestHandlerBuilder().build();
 }
 
-cass::ConnectionSettings Unit::use_ssl(mockssandra::Cluster* cluster,
-                                       const cass::String& cn /*= ""*/) {
-  cass::SslContext::Ptr ssl_context(cass::SslContextFactory::create());
+ConnectionSettings Unit::use_ssl(mockssandra::Cluster* cluster,
+                                 const String& cn /*= ""*/) {
+  SslContext::Ptr ssl_context(SslContextFactory::create());
 
   String cert = cluster->use_ssl(cn);
   EXPECT_FALSE(cert.empty()) << "Unable to enable SSL";
   EXPECT_EQ(ssl_context->add_trusted_cert(cert.data(), cert.size()), CASS_OK);
 
-  cass::ConnectionSettings settings;
+  core::ConnectionSettings settings;
   settings.socket_settings.ssl_context = ssl_context;
   settings.socket_settings.hostname_resolution_enabled = true;
 
   return settings;
 }
 
-void Unit::add_logging_critera(const cass::String& criteria) {
+void Unit::add_logging_critera(const String& criteria) {
   logging_criteria_.push_back(criteria);
 }
 
@@ -159,8 +163,8 @@ void Unit::on_log(const CassLogMessage* message, void* data) {
   }
 
   // Determine if the log message matches any of the criteria
-  for (Vector<cass::String>::const_iterator it = instance->logging_criteria_.begin(),
-    end = instance->logging_criteria_.end(); it != end; ++it) {
+  for (Vector<String>::const_iterator it = instance->logging_criteria_.begin(),
+       end = instance->logging_criteria_.end(); it != end; ++it) {
     if (strstr(message->message, it->c_str()) != NULL) {
       instance->logging_criteria_count_.fetch_add(1);
     }

@@ -27,7 +27,7 @@
 #include <assert.h>
 #include <string.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class UuidGen : public Allocated {
 public:
@@ -50,8 +50,8 @@ private:
   MT19937_64 ng_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::UuidGen, CassUuidGen)
+EXTERNAL_TYPE(datastax::internal::core::UuidGen, CassUuidGen)
 
 #endif

@@ -25,7 +25,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class RequestProcessorInitializer;
 class Statement;
@@ -111,8 +111,8 @@ private:
   bool is_closing_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Session, CassSession)
+EXTERNAL_TYPE(datastax::internal::core::Session, CassSession)
 
 #endif

@@ -21,7 +21,9 @@
 
 #include <algorithm>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 // The number of replicas is bounded by replication factor per DC. In practice, the number
 // of replicas is fairly small so a linear search should be extremely fast.
@@ -109,5 +111,3 @@ Host::Ptr TokenAwarePolicy::TokenAwareQueryPlan::compute_next()  {
   }
   return Host::Ptr();
 }
-
-} // namespace cass

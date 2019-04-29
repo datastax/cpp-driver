@@ -28,7 +28,7 @@
 #include "types.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Collection;
 class Tuple;
@@ -324,7 +324,7 @@ class UserType : public DataType {
 public:
   typedef SharedRefPtr<UserType> Ptr;
   typedef SharedRefPtr<const UserType> ConstPtr;
-  typedef cass::Map<String, UserType::Ptr > Map;
+  typedef internal::Map<String, UserType::Ptr > Map;
 
   struct Field : public HashTableEntry<Field> {
     Field(const String& field_name,
@@ -601,8 +601,8 @@ struct IsValidDataType<const UserTypeValue*> {
   bool operator()(const UserTypeValue* value, const DataType::ConstPtr& data_type) const;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::DataType, CassDataType)
+EXTERNAL_TYPE(datastax::internal::core::DataType, CassDataType)
 
 #endif

@@ -29,7 +29,7 @@
   #include <unistd.h>
 #endif
 
-namespace cass {
+namespace datastax { namespace internal {
 
 String opcode_to_string(int opcode) {
   switch (opcode) {
@@ -229,4 +229,4 @@ void set_thread_name(const String& thread_name) {
 #endif
 }
 
-} // namespace cass
+} } // namespace datastax::internal

@@ -24,7 +24,9 @@
 
 #include <iterator>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 ResultMetadata::ResultMetadata(size_t column_count,
                                const RefBuffer::Ptr& buffer)
@@ -38,5 +40,3 @@ size_t ResultMetadata::get_indices(StringRef name, IndexVec* result) const{
 void ResultMetadata::add(const ColumnDefinition& def) {
   defs_.add(def);
 }
-
-} // namespace cass

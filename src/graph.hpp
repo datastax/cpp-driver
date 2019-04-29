@@ -14,9 +14,8 @@
 #include "json.hpp"
 #include "line_string.hpp"
 #include "polygon.hpp"
-#include "string.hpp"
 
-#include <external.hpp>
+#include "external.hpp"
 #include <scoped_ptr.hpp>
 
 #define DSE_GRAPH_OPTION_LANGUAGE_KEY          "graph-language"
@@ -32,11 +31,11 @@
 
 #define DSE_LOOKUP_ANALYTICS_GRAPH_SERVER      "CALL DseClientTool.getAnalyticsGraphServer()"
 
-namespace dse {
+namespace datastax { namespace internal { namespace enterprise {
 
 class GraphStatement;
 
-class GraphOptions : public cass::Allocated {
+class GraphOptions : public Allocated {
 public:
   GraphOptions()
     : payload_(cass_custom_payload_new())
@@ -55,23 +54,23 @@ public:
 
   GraphOptions* clone() const;
 
-  void set_graph_language(const cass::String& graph_language) {
+  void set_graph_language(const datastax::String& graph_language) {
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_LANGUAGE_KEY, sizeof(DSE_GRAPH_OPTION_LANGUAGE_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_language.data()), graph_language.size());
     graph_language_ = graph_language;
   }
 
-  const cass::String graph_source() const { return graph_source_; }
+  const datastax::String graph_source() const { return graph_source_; }
 
-  void set_graph_source(const cass::String& graph_source) {
+  void set_graph_source(const datastax::String& graph_source) {
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_SOURCE_KEY, sizeof(DSE_GRAPH_OPTION_SOURCE_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_source.data()), graph_source.size());
     graph_source_ = graph_source;
   }
 
-  void set_graph_name(const cass::String& graph_name) {
+  void set_graph_name(const datastax::String& graph_name) {
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_NAME_KEY, sizeof(DSE_GRAPH_OPTION_NAME_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_name.data()), graph_name.size());
@@ -100,20 +99,20 @@ public:
 
 private:
   CassCustomPayload* payload_;
-  cass::String graph_language_;
-  cass::String graph_name_;
-  cass::String graph_source_;
+  datastax::String graph_language_;
+  datastax::String graph_name_;
+  datastax::String graph_source_;
   CassConsistency read_consistency_;
   CassConsistency write_consistency_;
   int64_t request_timeout_ms_;
 };
 
 class GraphWriter
-    : public cass::Allocated
-    , private cass::json::Writer<cass::json::StringBuffer> {
+    : public Allocated
+    , private json::Writer<json::StringBuffer> {
 public:
   GraphWriter()
-    : cass::json::Writer<cass::json::StringBuffer>(buffer_) { }
+    : json::Writer<json::StringBuffer>(buffer_) { }
 
   const char* data() const { return buffer_.GetString(); }
   size_t length() const { return buffer_.GetSize(); }
@@ -127,24 +126,24 @@ public:
   void add_double(cass_double_t value) { Double(value); }
 
   void add_string(const char* string, size_t length) {
-    String(string, static_cast<cass::rapidjson::SizeType>(length));
+    String(string, static_cast<datastax::rapidjson::SizeType>(length));
   }
 
   void add_key(const char* key, size_t length) {
-    Key(key, static_cast<cass::rapidjson::SizeType>(length));
+    Key(key, static_cast<datastax::rapidjson::SizeType>(length));
   }
 
   void add_point(cass_double_t x, cass_double_t y);
 
-  void add_line_string(const dse::LineString* line_string) {
+  void add_line_string(const LineString* line_string) {
     String(line_string->to_wkt().c_str());
   }
 
-  void add_polygon(const dse::Polygon* polygon) {
+  void add_polygon(const Polygon* polygon) {
     String(polygon->to_wkt().c_str());
   }
 
-  void add_writer(const GraphWriter* writer, cass::rapidjson::Type type) {
+  void add_writer(const GraphWriter* writer, datastax::rapidjson::Type type) {
     size_t length = writer->buffer_.GetSize();
     Prefix(type);
     memcpy(os_->Push(length), writer->buffer_.GetString(), length);
@@ -163,7 +162,7 @@ protected:
   void end_array() { EndArray(); }
 
 private:
-  cass::json::StringBuffer buffer_;
+  json::StringBuffer buffer_;
 };
 
 class GraphObject : public GraphWriter {
@@ -198,7 +197,7 @@ public:
   }
 };
 
-class GraphStatement : public cass::Allocated {
+class GraphStatement : public Allocated {
 public:
   GraphStatement(const char* query, size_t length,
                  const GraphOptions* options)
@@ -222,7 +221,7 @@ public:
     cass_statement_free(wrapped_);
   }
 
-  const cass::String graph_source() const { return graph_source_; }
+  const datastax::String graph_source() const { return graph_source_; }
 
   const CassStatement* wrapped() const { return wrapped_; }
 
@@ -242,14 +241,14 @@ public:
   }
 
 private:
-  cass::String query_;
-  cass::String graph_source_;
+  datastax::String query_;
+  datastax::String graph_source_;
   CassStatement* wrapped_;
 };
 
-typedef cass::json::Value GraphResult;
+typedef json::Value GraphResult;
 
-class GraphResultSet : public cass::Allocated {
+class GraphResultSet : public Allocated {
 public:
   GraphResultSet(const CassResult* result)
     : rows_(cass_iterator_from_result(result))
@@ -267,19 +266,19 @@ public:
   const GraphResult* next();
 
 private:
-  cass::json::Document document_;
-  cass::String json_;
+  json::Document document_;
+  datastax::String json_;
   CassIterator* rows_;
   const CassResult* result_;
 };
 
-} // namespace dse
+} } } // namespace datastax::internal::enterprise
 
-EXTERNAL_TYPE(dse::GraphOptions, DseGraphOptions)
-EXTERNAL_TYPE(dse::GraphStatement, DseGraphStatement)
-EXTERNAL_TYPE(dse::GraphArray, DseGraphArray)
-EXTERNAL_TYPE(dse::GraphObject, DseGraphObject)
-EXTERNAL_TYPE(dse::GraphResultSet, DseGraphResultSet)
-EXTERNAL_TYPE(dse::GraphResult, DseGraphResult)
+EXTERNAL_TYPE(datastax::internal::enterprise::GraphOptions, DseGraphOptions)
+EXTERNAL_TYPE(datastax::internal::enterprise::GraphStatement, DseGraphStatement)
+EXTERNAL_TYPE(datastax::internal::enterprise::GraphArray, DseGraphArray)
+EXTERNAL_TYPE(datastax::internal::enterprise::GraphObject, DseGraphObject)
+EXTERNAL_TYPE(datastax::internal::enterprise::GraphResultSet, DseGraphResultSet)
+EXTERNAL_TYPE(datastax::internal::enterprise::GraphResult, DseGraphResult)
 
 #endif

@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 template <class T>
 class CopyOnWritePtr {
@@ -91,6 +91,6 @@ private:
   SharedRefPtr<Referenced> ptr_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

@@ -20,7 +20,11 @@
 #include "random.hpp"
 #include "round_robin_policy.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A task for running the connection process.
@@ -53,6 +57,8 @@ public:
 private:
   ClusterConnector::Ptr connector_;
 };
+
+} } } // namespace datastax::internal::core
 
 ClusterConnector::ClusterConnector(const ContactPointList& contact_points,
                                    ProtocolVersion protocol_version,
@@ -343,5 +349,3 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
     on_error(CLUSTER_ERROR_NO_HOSTS_AVAILABLE, connector->error_message());
   }
 }
-
-} // namespace cass

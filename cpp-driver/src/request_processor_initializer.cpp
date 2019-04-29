@@ -19,7 +19,11 @@
 #include "request_processor_initializer.hpp"
 #include "scoped_lock.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 class RunInitializeProcessor : public Task {
 public:
@@ -33,6 +37,8 @@ public:
 private:
   RequestProcessorInitializer::Ptr initializer_;
 };
+
+} } } // namespace datastax::internal::core
 
 RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& connected_host,
                                                          ProtocolVersion protocol_version,
@@ -183,5 +189,3 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
   connection_pool_manager_initializer_.reset();
   dec_ref();
 }
-
-} // namespace cass

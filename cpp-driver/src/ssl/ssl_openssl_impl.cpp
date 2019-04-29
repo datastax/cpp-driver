@@ -36,7 +36,9 @@
 #define SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE SSL_F_USE_CERTIFICATE_CHAIN_FILE
 #endif
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 #if DEBUG_SSL
 #define SSL_PRINT_INFO(ssl, w, flag, msg) do { \
@@ -690,5 +692,3 @@ void OpenSslContextFactory::internal_cleanup() {
   rb::RingBufferBio::cleanup();
 #endif
 }
-
-} // namespace cass

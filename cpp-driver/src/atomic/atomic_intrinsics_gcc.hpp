@@ -33,7 +33,7 @@
 
 #include <assert.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
 class Atomic {
@@ -109,6 +109,6 @@ inline void atomic_thread_fence(MemoryOrder order) {
   }
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

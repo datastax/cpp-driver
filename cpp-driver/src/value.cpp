@@ -30,6 +30,10 @@
   } \
 } while (0)
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 const CassDataType* cass_value_data_type(const CassValue* value) {
@@ -71,7 +75,7 @@ CassError cass_value_get_uint32(const CassValue* value, cass_uint32_t* output) {
 
 CassError cass_value_get_int64(const CassValue* value, cass_int64_t* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  if (!cass::is_int64_type(value->value_type())) {
+  if (!is_int64_type(value->value_type())) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
   CHECK_VALUE(value->decoder().as_int64(output));
@@ -108,7 +112,7 @@ CassError cass_value_get_bool(const CassValue* value, cass_bool_t* output) {
 
 CassError cass_value_get_uuid(const CassValue* value, CassUuid* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  if (!cass::is_uuid_type(value->value_type())) {
+  if (!is_uuid_type(value->value_type())) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
   CHECK_VALUE(value->decoder().as_uuid(output));
@@ -129,7 +133,7 @@ CassError cass_value_get_string(const CassValue* value,
                                 const char** output,
                                 size_t* output_length) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  cass::StringRef buffer = value->decoder().as_string_ref();
+  StringRef buffer = value->decoder().as_string_ref();
   *output = buffer.data();
   *output_length = buffer.size();
   return CASS_OK;
@@ -139,7 +143,7 @@ CassError cass_value_get_bytes(const CassValue* value,
                                const cass_byte_t** output,
                                size_t* output_size) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  cass::StringRef buffer = value->decoder().as_string_ref();
+  StringRef buffer = value->decoder().as_string_ref();
   *output = reinterpret_cast<const cass_byte_t*>(buffer.data());
   *output_size = buffer.size();
   return CASS_OK;
@@ -178,8 +182,8 @@ cass_bool_t cass_value_is_collection(const CassValue* value) {
 }
 
 cass_bool_t cass_value_is_duration(const CassValue* value) {
-  cass::IsValidDataType<cass::CassDuration> is_valid;
-  cass::CassDuration dummy(0, 0, 0);
+  IsValidDataType<CassDuration> is_valid;
+  CassDuration dummy(0, 0, 0);
   return static_cast<cass_bool_t>(is_valid(dummy, value->data_type()));
 }
 
@@ -196,9 +200,6 @@ CassValueType cass_value_secondary_sub_type(const CassValue* collection) {
 }
 
 } // extern "C"
-
-
-namespace cass {
 
 Value::Value(const DataType::ConstPtr &data_type, Decoder decoder)
     : data_type_(data_type)
@@ -256,5 +257,3 @@ StringVec Value::as_stringlist() const {
   }
   return stringlist;
 }
-
-} // namespace cass

@@ -12,9 +12,11 @@
 #include "line_string.hpp"
 #include "polygon.hpp"
 
+using namespace datastax::internal::enterprise;
+
 CassError cass_collection_append_dse_point(CassCollection* collection,
                                            cass_double_t x, cass_double_t y) {
-  dse::Bytes bytes = dse::encode_point(x, y);
+  Bytes bytes = encode_point(x, y);
   return cass_collection_append_custom(collection, DSE_POINT_TYPE,
                                        bytes.data(), bytes.size());
 }
@@ -33,7 +35,7 @@ CassError cass_collection_append_dse_polygon(CassCollection* collection,
 
 CassError cass_collection_append_dse_date_range(CassCollection* collection,
                                                 const DseDateRange* range) {
-  dse::Bytes bytes = dse::encode_date_range(range);
+  Bytes bytes = encode_date_range(range);
   return cass_collection_append_custom(collection, DSE_DATE_RANGE_TYPE,
                                        bytes.data(), bytes.size());
 }

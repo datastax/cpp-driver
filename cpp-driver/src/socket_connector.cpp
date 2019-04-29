@@ -21,7 +21,10 @@
 
 #define SSL_HANDSHAKE_MAX_BUFFER_SIZE (16 * 1024 + 5)
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A socket handler that handles the SSL handshake process.
@@ -61,6 +64,8 @@ public:
 private:
   SocketConnector* connector_;
 };
+
+} } } // namespace datastax::internal::core
 
 SocketSettings::SocketSettings()
   : hostname_resolution_enabled(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
@@ -293,5 +298,3 @@ void SocketConnector::on_no_resolve(Timer* timer) {
     internal_connect(timer->loop());
   }
 }
-
-} // namespace cass

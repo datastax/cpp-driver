@@ -47,8 +47,7 @@
 
 #include <uv.h>
 
-namespace cass {
-namespace rb {
+namespace datastax { namespace internal { namespace rb {
 
 class RingBuffer {
  private:
@@ -160,7 +159,6 @@ size_t RingBuffer::peek_multiple(Position pos, SmallVector<uv_buf_t, N>* bufs) {
   return total;
 }
 
-} // namespace rb
-} // namespace cass
+} } } // namespace datastax::internal::rb
 
 #endif

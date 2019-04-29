@@ -18,7 +18,8 @@
 
 #include "event_loop.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 DelayedConnector::DelayedConnector(const Host::Ptr& host,
                                    ProtocolVersion protocol_version,
@@ -111,5 +112,3 @@ void DelayedConnector::on_connect(Connector* connector) {
 void DelayedConnector::on_delayed_connect(Timer* timer) {
   internal_connect(timer->loop());
 }
-
-} // namespace cass

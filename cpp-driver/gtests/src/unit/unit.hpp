@@ -66,7 +66,7 @@ public:
       size_t node;
       uint64_t delay_ms;
     };
-    typedef cass::Vector<Action> Actions;
+    typedef datastax::internal::Vector<Action> Actions;
 
     /**
      * Constructor.
@@ -110,7 +110,7 @@ public:
      *
      * @param future Future to set when outage plan is running.
      */
-    void run(cass::Future::Ptr future = cass::Future::Ptr());
+    void run(datastax::internal::core::Future::Ptr future = datastax::internal::core::Future::Ptr());
 
     /**
      * Stop the outage plan; must be executed on the same thread that started
@@ -138,14 +138,14 @@ public:
     Actions actions_;
     uv_loop_t* loop_;
     mockssandra::SimpleCluster* cluster_;
-    cass::Future::Ptr future_;
+    datastax::internal::core::Future::Ptr future_;
   };
 
 public:
   class ExecuteOutagePlan : public Task {
   public:
     ExecuteOutagePlan(OutagePlan* outage_plan,
-                      cass::Future::Ptr future)
+                      datastax::internal::core::Future::Ptr future)
       : outage_plan_(outage_plan)
       , future_(future) { }
     virtual void run(EventLoop* event_loop) {
@@ -153,13 +153,13 @@ public:
     }
   private:
     OutagePlan * outage_plan_;
-    cass::Future::Ptr future_;
+    datastax::internal::core::Future::Ptr future_;
   };
 
   class StopOutagePlan : public Task {
   public:
     StopOutagePlan(OutagePlan* outage_plan,
-                   cass::Future::Ptr future)
+                   datastax::internal::core::Future::Ptr future)
       : outage_plan_(outage_plan)
       , future_(future) { }
     virtual void run(EventLoop* event_loop) {
@@ -168,7 +168,7 @@ public:
     }
   private:
     OutagePlan * outage_plan_;
-    cass::Future::Ptr future_;
+    datastax::internal::core::Future::Ptr future_;
   };
 
 public:
@@ -211,15 +211,15 @@ public:
    *           peer verification)
    * @return A connection settings object setup to use SSL.
    */
-  cass::ConnectionSettings use_ssl(mockssandra::Cluster* cluster,
-                                   const cass::String& cn = "");
+  datastax::internal::core::ConnectionSettings use_ssl(mockssandra::Cluster* cluster,
+                                                       const datastax::String& cn = "");
 
   /**
    * Add criteria to the search criteria for incoming log messages
    *
    * @param criteria Criteria to add
    */
-  void add_logging_critera(const cass::String& criteria);
+  void add_logging_critera(const datastax::String& criteria);
   /**
    * Get the number of log messages that matched the search criteria
    *
@@ -238,8 +238,8 @@ private:
 
 private:
   CassLogLevel output_log_level_;
-  cass::Vector<cass::String> logging_criteria_;
-  cass::Atomic<int> logging_criteria_count_;
+  datastax::internal::Vector<datastax::String> logging_criteria_;
+  datastax::internal::Atomic<int> logging_criteria_count_;
 };
 
 #endif // UNIT_TEST_HPP

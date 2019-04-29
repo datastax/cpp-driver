@@ -24,7 +24,8 @@
 #include <algorithm>
 
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 static inline bool least_busy_comp(const PooledConnection::Ptr& a,
                                    const PooledConnection::Ptr& b) {
@@ -274,5 +275,3 @@ void ConnectionPool::on_reconnect(DelayedConnector* connector) {
     }
   }
 }
-
-} // namespace cass

@@ -30,10 +30,13 @@
 #include "scoped_lock.hpp"
 #include "statement.hpp"
 
+using namespace datastax;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 CassSession* cass_session_new() {
-  cass::Session* session = new cass::Session();
+  Session* session = new Session();
   return CassSession::to(session);
 }
 
@@ -63,14 +66,14 @@ CassFuture* cass_session_connect_keyspace_n(CassSession* session,
                                             const CassCluster* cluster,
                                             const char* keyspace,
                                             size_t keyspace_length) {
-  cass::Future::Ptr future(
-        session->connect(cluster->config(), cass::String(keyspace, keyspace_length)));
+  Future::Ptr future(
+        session->connect(cluster->config(), String(keyspace, keyspace_length)));
   future->inc_ref();
   return CassFuture::to(future.get());
 }
 
 CassFuture* cass_session_close(CassSession* session) {
-  cass::Future::Ptr future(session->close());
+  Future::Ptr future(session->close());
   future->inc_ref();
   return CassFuture::to(future.get());
 }
@@ -82,40 +85,40 @@ CassFuture* cass_session_prepare(CassSession* session, const char* query) {
 CassFuture* cass_session_prepare_n(CassSession* session,
                                    const char* query,
                                    size_t query_length) {
-  cass::Future::Ptr future(session->prepare(query, query_length));
+  Future::Ptr future(session->prepare(query, query_length));
   future->inc_ref();
   return CassFuture::to(future.get());
 }
 
 CassFuture* cass_session_prepare_from_existing(CassSession* session,
                                                CassStatement* statement) {
-  cass::Future::Ptr future(session->prepare(statement));
+  Future::Ptr future(session->prepare(statement));
   future->inc_ref();
   return CassFuture::to(future.get());
 }
 
 CassFuture* cass_session_execute(CassSession* session,
                                  const CassStatement* statement) {
-  cass::Future::Ptr future(session->execute(cass::Request::ConstPtr(statement->from())));
+  Future::Ptr future(session->execute(Request::ConstPtr(statement->from())));
   future->inc_ref();
   return CassFuture::to(future.get());
 }
 
 CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* batch) {
-  cass::Future::Ptr future(session->execute(cass::Request::ConstPtr(batch->from())));
+  Future::Ptr future(session->execute(Request::ConstPtr(batch->from())));
   future->inc_ref();
   return CassFuture::to(future.get());
 }
 
 const CassSchemaMeta* cass_session_get_schema_meta(const CassSession* session) {
   return CassSchemaMeta::to(
-        new cass::Metadata::SchemaSnapshot(
+        new Metadata::SchemaSnapshot(
           session->cluster()->schema_snapshot()));
 }
 
 void cass_session_get_metrics(const CassSession* session,
                                CassMetrics* metrics) {
-  const cass::Metrics* internal_metrics = session->metrics();
+  const Metrics* internal_metrics = session->metrics();
 
   if (internal_metrics == NULL)  {
     LOG_WARN("Attempted to get metrics before connecting session object");
@@ -123,7 +126,7 @@ void cass_session_get_metrics(const CassSession* session,
     return;
   }
 
-  cass::Metrics::Histogram::Snapshot requests_snapshot;
+  Metrics::Histogram::Snapshot requests_snapshot;
   internal_metrics->request_latencies.get_snapshot(&requests_snapshot);
 
   metrics->requests.min = requests_snapshot.min;
@@ -153,7 +156,7 @@ void cass_session_get_metrics(const CassSession* session,
 
 void  cass_session_get_speculative_execution_metrics(const CassSession* session,
                                                      CassSpeculativeExecutionMetrics* metrics) {
-  const cass::Metrics* internal_metrics = session->metrics();
+  const Metrics* internal_metrics = session->metrics();
 
   if (internal_metrics == NULL)  {
     LOG_WARN("Attempted to get speculative execution metrics before connecting session object");
@@ -161,7 +164,7 @@ void  cass_session_get_speculative_execution_metrics(const CassSession* session,
     return;
   }
 
-  cass::Metrics::Histogram::Snapshot speculative_snapshot;
+  Metrics::Histogram::Snapshot speculative_snapshot;
   internal_metrics->speculative_request_latencies.get_snapshot(&speculative_snapshot);
 
   metrics->min = speculative_snapshot.min;
@@ -182,12 +185,12 @@ void  cass_session_get_speculative_execution_metrics(const CassSession* session,
 
 } // extern "C"
 
-namespace cass {
-
 static inline bool least_busy_comp(const RequestProcessor::Ptr& a,
                                    const RequestProcessor::Ptr& b) {
   return a->request_count() < b->request_count();
 }
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * An initialize helper class for `Session`. This keeps the initialization
@@ -290,6 +293,8 @@ private:
   String error_message_;
   RequestProcessor::Vec request_processors_;
 };
+
+} } } // namespace datastax::internal::core
 
 Session::Session()
   : request_processor_count_(0)
@@ -544,5 +549,3 @@ void Session::on_close(RequestProcessor* processor) {
     notify_closed();
   }
 }
-
-} // namespace cass

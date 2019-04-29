@@ -16,7 +16,8 @@
 
 #include "connection_pool_manager_initializer.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(ProtocolVersion protocol_version,
                                                                    const Callback& callback)
@@ -146,5 +147,3 @@ void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_
     dec_ref();
   }
 }
-
-} // namespace cass

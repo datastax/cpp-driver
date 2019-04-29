@@ -29,7 +29,7 @@
 
 #define CHECK_RESULT(result) if(!(result)) return false;
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Response : public RefCounted<Response> {
 public:
@@ -129,6 +129,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ResponseMessage);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

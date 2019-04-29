@@ -21,7 +21,7 @@
 #include "constants.hpp"
 #include "string.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A type that represents the protocol version for Cassandra/DSE.
@@ -135,6 +135,6 @@ private:
   int value_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

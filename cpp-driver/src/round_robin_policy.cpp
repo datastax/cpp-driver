@@ -20,7 +20,9 @@
 #include <algorithm>
 #include <iterator>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 RoundRobinPolicy::RoundRobinPolicy()
   : hosts_(new HostVec())
@@ -96,5 +98,3 @@ Host::Ptr RoundRobinPolicy::RoundRobinQueryPlan::compute_next() {
   }
   return Host::Ptr();
 }
-
-} // namespace cass

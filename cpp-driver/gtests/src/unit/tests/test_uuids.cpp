@@ -24,6 +24,9 @@
 #include <ctype.h>
 #include <string.h>
 
+using namespace datastax;
+using namespace datastax::internal::testing;
+
 inline bool operator!=(const CassUuid& u1, const CassUuid& u2) {
   return u1.clock_seq_and_node != u2.clock_seq_and_node ||
          u1.time_and_version != u2.time_and_version;
@@ -39,7 +42,7 @@ TEST(UuidUnitTest, V1)
 
   for (int i = 0; i < 1000; ++i) {
     CassUuid uuid;
-    uint64_t curr_ts = cass::get_time_since_epoch_in_ms();
+    uint64_t curr_ts = get_time_since_epoch_in_ms();
     cass_uuid_gen_time(uuid_gen, &uuid);
     cass_uint64_t ts = cass_uuid_timestamp(uuid);
 
@@ -64,7 +67,7 @@ TEST(UuidUnitTest, V1)
 TEST(UuidUnitTest, V1MinMax)
 {
   cass_uint64_t founded_ts = 1270080000; // April 2010
-  cass_uint64_t curr_ts = cass::get_time_since_epoch_in_ms();
+  cass_uint64_t curr_ts = get_time_since_epoch_in_ms();
 
   CassUuid min_uuid_1;
   CassUuid min_uuid_2;
@@ -132,14 +135,14 @@ TEST(UuidUnitTest, V4)
 TEST(UuidUnitTest, FromString)
 {
   CassUuid uuid;
-  const cass::String expected = "c3b54ca0-7b01-11e4-aea6-c30dd51eaa64";
+  const String expected = "c3b54ca0-7b01-11e4-aea6-c30dd51eaa64";
   char actual[CASS_UUID_STRING_LENGTH];
 
   EXPECT_EQ(cass_uuid_from_string(expected.c_str(), &uuid), CASS_OK);
   cass_uuid_string(uuid, actual);
   EXPECT_EQ(expected, actual);
 
-  cass::String upper  = expected;
+  String upper  = expected;
   std::transform(upper.begin(), upper.end(), upper.begin(), toupper);
   EXPECT_EQ(cass_uuid_from_string(upper.c_str(), &uuid), CASS_OK);
   cass_uuid_string(uuid, actual);

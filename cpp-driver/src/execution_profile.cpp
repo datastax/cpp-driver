@@ -7,11 +7,14 @@
 
 #include "execution_profile.hpp"
 
+using namespace datastax;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 CassExecProfile* cass_execution_profile_new() {
-  cass::ExecutionProfile* profile =
-      new cass::ExecutionProfile();
+  ExecutionProfile* profile =
+      new ExecutionProfile();
   return CassExecProfile::to(profile);
 }
 
@@ -39,7 +42,7 @@ CassError cass_execution_profile_set_serial_consistency(CassExecProfile* profile
 
 CassError cass_execution_profile_set_load_balance_round_robin(CassExecProfile* profile) {
   profile->set_load_balancing_policy(
-        new cass::RoundRobinPolicy());
+        new RoundRobinPolicy());
   return CASS_OK;
 }
 
@@ -66,9 +69,9 @@ CassError cass_execution_profile_set_load_balance_dc_aware_n(CassExecProfile* pr
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   profile->set_load_balancing_policy(
-        new cass::DCAwarePolicy(cass::String(local_dc, local_dc_length),
-                                used_hosts_per_remote_dc,
-                                !allow_remote_dcs_for_local_cl));
+        new DCAwarePolicy(String(local_dc, local_dc_length),
+                          used_hosts_per_remote_dc,
+                          !allow_remote_dcs_for_local_cl));
   return CASS_OK;
 }
 
@@ -96,7 +99,7 @@ CassError cass_execution_profile_set_latency_aware_routing_settings(CassExecProf
                                                                     cass_uint64_t retry_period_ms,
                                                                     cass_uint64_t update_rate_ms,
                                                                     cass_uint64_t min_measured) {
-  cass::LatencyAwarePolicy::Settings settings;
+  LatencyAwarePolicy::Settings settings;
   settings.exclusion_threshold = exclusion_threshold;
   settings.scale_ns = scale_ms * 1000 * 1000;
   settings.retry_period_ns = retry_period_ms * 1000 * 1000;
@@ -120,8 +123,8 @@ CassError cass_execution_profile_set_whitelist_filtering_n(CassExecProfile* prof
   if (hosts_length == 0) {
     profile->whitelist().clear();
   } else {
-    cass::explode(cass::String(hosts, hosts_length),
-                  profile->whitelist());
+    explode(String(hosts, hosts_length),
+            profile->whitelist());
   }
   return CASS_OK;
 }
@@ -139,8 +142,8 @@ CassError cass_execution_profile_set_blacklist_filtering_n(CassExecProfile* prof
   if (hosts_length == 0) {
     profile->blacklist().clear();
   } else {
-    cass::explode(cass::String(hosts, hosts_length),
-                  profile->blacklist());
+    explode(String(hosts, hosts_length),
+            profile->blacklist());
   }
   return CASS_OK;
 }
@@ -158,8 +161,8 @@ CassError cass_execution_profile_set_whitelist_dc_filtering_n(CassExecProfile* p
   if (dcs_length == 0) {
     profile->whitelist_dc().clear();
   } else {
-    cass::explode(cass::String(dcs, dcs_length),
-                  profile->whitelist_dc());
+    explode(String(dcs, dcs_length),
+            profile->whitelist_dc());
   }
   return CASS_OK;
 }
@@ -177,8 +180,8 @@ CassError cass_execution_profile_set_blacklist_dc_filtering_n(CassExecProfile* p
   if (dcs_length == 0) {
     profile->blacklist_dc().clear();
   } else {
-    cass::explode(cass::String(dcs, dcs_length),
-                  profile->blacklist_dc());
+    explode(String(dcs, dcs_length),
+            profile->blacklist_dc());
   }
   return CASS_OK;
 }
@@ -196,13 +199,13 @@ CassError cass_execution_profile_set_constant_speculative_execution_policy(CassE
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   profile->set_speculative_execution_policy(
-        new cass::ConstantSpeculativeExecutionPolicy(constant_delay_ms,
-                                                     max_speculative_executions));
+        new ConstantSpeculativeExecutionPolicy(constant_delay_ms,
+                                               max_speculative_executions));
   return CASS_OK;
 }
 
 CassError cass_execution_profile_set_no_speculative_execution_policy(CassExecProfile* profile) {
-  profile->set_speculative_execution_policy(new cass::NoSpeculativeExecutionPolicy());
+  profile->set_speculative_execution_policy(new NoSpeculativeExecutionPolicy());
   return CASS_OK;
 }
 

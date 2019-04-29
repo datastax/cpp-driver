@@ -22,7 +22,7 @@
 #include <uv.h>
 #include <assert.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Mutex {
 public:
@@ -100,6 +100,6 @@ typedef ScopedLock<Mutex> ScopedMutex;
 typedef ScopedLock<ReadLock> ScopedReadLock;
 typedef ScopedLock<WriteLock> ScopedWriteLock;
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

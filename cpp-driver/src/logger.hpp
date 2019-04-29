@@ -24,7 +24,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Logger {
 public:
@@ -63,7 +63,7 @@ private:
   Logger(); // Keep this object from being created
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 // These macros allow the LOG_<level>() methods to accept one or more
 // arguments (including the format string). This needs to be extended
@@ -103,8 +103,8 @@ private:
 #endif
 
 #define LOG_CHECK_LEVEL(severity, ...) do {                            \
-  if (severity <= cass::Logger::log_level()) {                         \
-    cass::Logger::log(severity,                                        \
+  if (severity <= ::datastax::internal::Logger::log_level()) {         \
+    ::datastax::internal::Logger::log(severity,                        \
                       LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
                       LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__)); \
   }                                                                    \

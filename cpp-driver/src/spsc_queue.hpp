@@ -34,7 +34,7 @@
 #include "scoped_ptr.hpp"
 #include "utils.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 template <typename T>
 class SPSCQueue {
@@ -101,6 +101,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SPSCQueue);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

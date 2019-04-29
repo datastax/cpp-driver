@@ -23,7 +23,7 @@
 
 #include "uv.h"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ClusterConfig : public Allocated {
 public:
@@ -34,8 +34,8 @@ private:
   Config config_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::ClusterConfig, CassCluster)
+EXTERNAL_TYPE(datastax::internal::core::ClusterConfig, CassCluster)
 
 #endif

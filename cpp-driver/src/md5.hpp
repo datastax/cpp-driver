@@ -25,7 +25,7 @@
 #include <uv.h>
 #include <stdint.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Md5 {
 public:
@@ -50,6 +50,6 @@ private:
 };
 
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

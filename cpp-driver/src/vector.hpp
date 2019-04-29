@@ -13,14 +13,14 @@
 
 #include <vector>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
 class Vector
     : public Allocated
-    , public std::vector<T, cass::Allocator<T> > {
+    , public std::vector<T, internal::Allocator<T> > {
 public:
-  typedef cass::Allocator<T> Allocator;
+  typedef internal::Allocator<T> Allocator;
 
   explicit Vector(const Allocator& alloc = Allocator())
     : std::vector<T, Allocator>(alloc) { }
@@ -36,6 +36,6 @@ public:
     : std::vector<T, Allocator>(first, last) { }
 };
 
-} // namepsace cass
+} } // namepsace datastax::internal
 
 #endif

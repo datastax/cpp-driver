@@ -17,7 +17,8 @@
 #include "startup_request.hpp"
 #include "driver_info.hpp"
 
-namespace cass {
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 int StartupRequest::encode(ProtocolVersion version,
                            RequestCallback* callback,
@@ -53,5 +54,3 @@ int StartupRequest::encode(ProtocolVersion version,
 
   return length;
 }
-
-} // namespace cass

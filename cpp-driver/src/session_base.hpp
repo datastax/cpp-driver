@@ -22,10 +22,13 @@
 #include "schema_agreement_handler.hpp"
 #include "token_map.hpp"
 
-namespace cass {
+namespace datastax { namespace internal {
+
+class Random;
+
+namespace core {
 
 class ClusterConfig;
-class Random;
 
 /**
  * A base class for implementing a session. It manages the state machine for
@@ -162,6 +165,6 @@ private:
   CassUuid session_id_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

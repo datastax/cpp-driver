@@ -19,7 +19,8 @@
 #include "query_request.hpp"
 #include "result_iterator.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 TracingDataHandler::TracingDataHandler(const RequestHandler::Ptr& request_handler,
                                        const Host::Ptr& current_host,
@@ -76,5 +77,3 @@ void TracingDataHandler::on_error(WaitForHandler::WaitForError code, const Strin
       break;
   }
 }
-
-} // namespace cass

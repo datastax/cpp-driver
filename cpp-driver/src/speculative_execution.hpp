@@ -24,7 +24,7 @@
 
 #include <stdint.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Request;
 
@@ -100,6 +100,6 @@ public:
   const int max_speculative_executions_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

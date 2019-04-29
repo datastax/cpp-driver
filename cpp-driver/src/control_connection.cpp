@@ -35,7 +35,10 @@
 #include <iomanip>
 #include <iterator>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A class for handling a single query on behalf of the control connection.
@@ -324,6 +327,8 @@ public:
 
   virtual void on_close(ControlConnection* connection) { }
 };
+
+} } } // namespace datastax::internal::core
 
 static NopControlConnectionListener nop_listener__;
 
@@ -836,5 +841,3 @@ void ControlConnection::on_event(const EventResponse::Ptr& response) {
       break;
   }
 }
-
-} // namespace cass

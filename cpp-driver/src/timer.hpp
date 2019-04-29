@@ -23,11 +23,11 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Timer {
 public:
-  typedef cass::Callback<void, Timer*> Callback;
+  typedef internal::Callback<void, Timer*> Callback;
 
   Timer();
   ~Timer();
@@ -61,6 +61,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Timer);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

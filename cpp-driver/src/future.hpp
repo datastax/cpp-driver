@@ -30,7 +30,7 @@
 #include <uv.h>
 #include <assert.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 struct Error;
 
@@ -145,8 +145,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Future);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Future, CassFuture)
+EXTERNAL_TYPE(datastax::internal::core::Future, CassFuture)
 
 #endif

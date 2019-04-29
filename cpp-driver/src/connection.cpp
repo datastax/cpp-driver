@@ -21,7 +21,10 @@
 #include "request.hpp"
 #include "result_response.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A request callback that handles heartbeats.
@@ -95,6 +98,8 @@ void SslConnectionHandler::on_write(Socket* socket, int status, SocketRequest* r
 void SslConnectionHandler::on_close() {
   connection_->on_close();
 }
+
+} } } // namespace datastax::internal::core
 
 void RecordingConnectionListener::process_events(const EventResponse::Vec& events,
                                                  ConnectionListener* listener) {
@@ -391,5 +396,3 @@ void Connection::on_terminate(Timer* timer) {
             "Terminating connection...");
   defunct();
 }
-
-} // namespace cass

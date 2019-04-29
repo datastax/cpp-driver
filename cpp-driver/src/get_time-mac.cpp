@@ -22,7 +22,7 @@
 #include <mach/mach_time.h>
 #include <sys/time.h>
 
-namespace cass {
+namespace datastax { namespace  internal {
 
 // Information on converting the absolute time to nanoseconds can be found
 // here: https://developer.apple.com/library/content/qa/qa1398/_index.html.
@@ -57,7 +57,6 @@ uint64_t get_time_monotonic_ns() {
   return time * ClockInfo::frequency();
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif // defined(__APPLE__) && defined(__MACH__)
-

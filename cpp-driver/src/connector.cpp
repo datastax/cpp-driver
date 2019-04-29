@@ -36,7 +36,10 @@
 
 #include <iomanip>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A proxy request callback that handles the connection process.
@@ -56,6 +59,8 @@ private:
 private:
   Connector* connector_;
 };
+
+} } } // namespace datastax::internal::core
 
 StartupCallback::StartupCallback(Connector* connector, const Request::ConstPtr& request)
   : SimpleRequestCallback(request, connector->settings_.connect_timeout_ms)
@@ -424,5 +429,3 @@ void Connector::on_timeout(Timer* timer) {
   socket_connector_->cancel();
   if (connection_) connection_->close();
 }
-
-} // namespace cass

@@ -28,13 +28,13 @@
 
 #include <functional>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Resolver : public RefCounted<Resolver> {
 public:
   typedef SharedRefPtr<Resolver> Ptr;
   typedef Vector<Ptr> Vec;
-  typedef cass::Callback<void, Resolver*> Callback;
+  typedef internal::Callback<void, Resolver*> Callback;
 
   enum Status {
     NEW,
@@ -160,7 +160,7 @@ private:
 class MultiResolver : public RefCounted<MultiResolver> {
 public:
   typedef SharedRefPtr<MultiResolver> Ptr;
-  typedef cass::Callback<void, MultiResolver*> Callback;
+  typedef internal::Callback<void, MultiResolver*> Callback;
 
   MultiResolver(const Callback& callback)
     : remaining_(0)
@@ -205,6 +205,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(MultiResolver);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

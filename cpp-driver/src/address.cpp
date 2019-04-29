@@ -24,7 +24,8 @@
 #include <assert.h>
 #include <string.h>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 const Address Address::EMPTY_KEY("0.0.0.0", 0);
 const Address Address::DELETED_KEY("0.0.0.0", 1);
@@ -169,6 +170,8 @@ int Address::compare(const Address& a, bool with_port) const {
   return 0;
 }
 
+namespace datastax { namespace internal { namespace core {
+
 bool determine_address_for_peer_host(const Address& connected_address,
                                      const Value* peer_value,
                                      const Value* rpc_value,
@@ -223,4 +226,4 @@ String determine_listen_address(const Address& address, const Row* row) {
   return "";
 }
 
-} // namespace cass
+} } } // namespace datastax::internal::core

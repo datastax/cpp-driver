@@ -25,6 +25,10 @@
 #define GSSAPI_AUTH_MECHANISM "GSSAPI"
 #define GSSAPI_AUTH_SERVER_INITIAL_CHALLENGE "GSSAPI-START"
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::enterprise;
+
 static void dse_gssapi_authenticator_nop_lock(void* data) { }
 static void dse_gssapi_authenticator_nop_unlock(void* data) { }
 
@@ -33,15 +37,13 @@ extern "C" {
 CassError dse_gssapi_authenticator_set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
                                                       DseGssapiAuthenticatorUnlockCallback unlock_callback,
                                                       void* data) {
-  return dse::GssapiAuthenticatorData::set_lock_callbacks(lock_callback, unlock_callback, data);
+  return GssapiAuthenticatorData::set_lock_callbacks(lock_callback, unlock_callback, data);
 }
 
 } // extern "C"
 
-namespace dse {
-
 void PlaintextAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
-  cass::StringRef authenticator(DSE_AUTHENTICATOR);
+  StringRef authenticator(DSE_AUTHENTICATOR);
 
   if (authenticator ==  cass_authenticator_class_name(auth, NULL)) {
     cass_authenticator_set_response(auth,
@@ -56,11 +58,11 @@ void PlaintextAuthenticatorData::on_initial(CassAuthenticator* auth, void* data)
 
 void PlaintextAuthenticatorData::on_challenge(CassAuthenticator* auth, void* data,
                                               const char* token, size_t token_size) {
-  cass::StringRef plaintext(PLAINTEXT_AUTH_SERVER_INITIAL_CHALLENGE);
+  StringRef plaintext(PLAINTEXT_AUTH_SERVER_INITIAL_CHALLENGE);
 
   PlaintextAuthenticatorData* plaintext_auth = static_cast<PlaintextAuthenticatorData*>(data);
 
-  if (plaintext == cass::StringRef(token, token_size)) {
+  if (plaintext == StringRef(token, token_size)) {
     size_t username_size = plaintext_auth->username_.size();
     size_t password_size = plaintext_auth->password_.size();
     size_t authorization_id_size = plaintext_auth->authorization_id_.size();
@@ -85,7 +87,7 @@ void PlaintextAuthenticatorData::on_challenge(CassAuthenticator* auth, void* dat
     return;
   }
 
-  cass::String error("Unexpected token returned during plaintext challenge '");
+  String error("Unexpected token returned during plaintext challenge '");
   error.append(token, token_size);
   error.append("'");
 
@@ -157,7 +159,7 @@ public:
   }
 };
 
-class GssapiAuthenticator : public cass::Allocated {
+class GssapiAuthenticator : public Allocated {
 public:
   enum State {
     NEGOTIATION,
@@ -177,34 +179,34 @@ public:
     AUTH_CONFIDENTIALITY = 3
   };
 
-  GssapiAuthenticator(const cass::String& authorization_id);
+  GssapiAuthenticator(const String& authorization_id);
   ~GssapiAuthenticator();
 
-  const cass::String& response() const { return response_; }
-  const cass::String& error() const { return error_; }
+  const String& response() const { return response_; }
+  const String& error() const { return error_; }
 
-  Result init(const cass::String& service, const cass::String& principal);
+  Result init(const String& service, const String& principal);
   Result process(const char* token, size_t token_length);
 
 private:
   Result negotiate(gss_buffer_t challenge_token);
   Result authenticate(gss_buffer_t challenge_token);
 
-  static cass::String display_status(OM_uint32 maj, OM_uint32 min);
+  static String display_status(OM_uint32 maj, OM_uint32 min);
 
 private:
   gss_ctx_id_t context_;
   gss_name_t server_name_;
   OM_uint32 gss_flags_;
   gss_cred_id_t client_creds_;
-  cass::String username_;
-  cass::String response_;
-  cass::String error_;
+  String username_;
+  String response_;
+  String error_;
   State state_;
-  cass::String authorization_id_;
+  String authorization_id_;
 };
 
-GssapiAuthenticator::GssapiAuthenticator(const cass::String& authorization_id)
+GssapiAuthenticator::GssapiAuthenticator(const String& authorization_id)
   : context_(GSS_C_NO_CONTEXT)
   , server_name_(GSS_C_NO_NAME)
   , gss_flags_(GSS_C_MUTUAL_FLAG | GSS_C_SEQUENCE_FLAG)
@@ -238,7 +240,7 @@ GssapiAuthenticator::~GssapiAuthenticator() {
   }
 }
 
-GssapiAuthenticator::Result GssapiAuthenticator::init(const cass::String& service, const cass::String& principal) {
+GssapiAuthenticator::Result GssapiAuthenticator::init(const String& service, const String& principal) {
   OM_uint32 maj_stat;
   OM_uint32 min_stat;
   gss_buffer_desc name_token = GSS_C_EMPTY_BUFFER;
@@ -377,7 +379,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
   OM_uint32 req_output_size;
   OM_uint32 max_input_size;
   unsigned char qop;
-  cass::String input;
+  String input;
   gss_buffer_desc input_token = GSS_C_EMPTY_BUFFER;
   GssapiBuffer output_token;
 
@@ -434,7 +436,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
   input.push_back((req_output_size >> 0)  & 0xFF);
 
   // Send the authorization_id if present (proxy login), otherwise the username.
-  const cass::String& authorization_id = authorization_id_.empty() ? username_ : authorization_id_;
+  const String& authorization_id = authorization_id_.empty() ? username_ : authorization_id_;
   input.append(authorization_id);
 
   input_token.length = 4 + authorization_id.size();
@@ -467,8 +469,8 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
   return RESULT_COMPLETE;
 }
 
-cass::String GssapiAuthenticator::display_status(OM_uint32 maj, OM_uint32 min) {
-  cass::String error;
+String GssapiAuthenticator::display_status(OM_uint32 maj, OM_uint32 min) {
+  String error;
   OM_uint32 message_context;
 
   message_context = 0;
@@ -568,7 +570,7 @@ CassError GssapiAuthenticatorData::set_lock_callbacks(DseGssapiAuthenticatorLock
 }
 
 void GssapiAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
-  cass::StringRef authenticator(DSE_AUTHENTICATOR);
+  StringRef authenticator(DSE_AUTHENTICATOR);
 
   GssapiAuthenticatorData* gssapi_auth_data
       = static_cast<GssapiAuthenticatorData*>(data);
@@ -576,7 +578,7 @@ void GssapiAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
       = static_cast<GssapiAuthenticator*>(cass_authenticator_exchange_data(auth));
 
   if (gssapi_auth == NULL) {
-    cass::String service;
+    String service;
 
     size_t hostname_length = 0;
     const char* hostname = cass_authenticator_hostname(auth, &hostname_length);
@@ -600,7 +602,7 @@ void GssapiAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
 
     if (gssapi_auth->init(service,
                           gssapi_auth_data->principal()) == GssapiAuthenticator::RESULT_ERROR) {
-      cass::String error("Unable to intialize GSSAPI: ");
+      String error("Unable to intialize GSSAPI: ");
       error.append(gssapi_auth->error());
       cass_authenticator_set_error_n(auth, error.data(), error.length());
       return;
@@ -620,20 +622,20 @@ void GssapiAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
 
 void GssapiAuthenticatorData::on_challenge(CassAuthenticator* auth, void* data,
                                            const char* token, size_t token_size) {
-  cass::StringRef gssapi(GSSAPI_AUTH_SERVER_INITIAL_CHALLENGE);
+  StringRef gssapi(GSSAPI_AUTH_SERVER_INITIAL_CHALLENGE);
 
   GssapiAuthenticator* gssapi_auth
       = static_cast<GssapiAuthenticator*>(cass_authenticator_exchange_data(auth));
 
-  if (gssapi == cass::StringRef(token, token_size)) {
+  if (gssapi == StringRef(token, token_size)) {
     if (gssapi_auth->process("", 0) == GssapiAuthenticator::RESULT_ERROR) {
-      cass::String error("GSSAPI initial handshake failed: ");
+      String error("GSSAPI initial handshake failed: ");
       error.append(gssapi_auth->error());
       cass_authenticator_set_error_n(auth, error.data(), error.length());
     }
   } else {
     if (gssapi_auth->process(token, token_size) == GssapiAuthenticator::RESULT_ERROR) {
-      cass::String error("GSSAPI challenge handshake failed: ");
+      String error("GSSAPI challenge handshake failed: ");
       error.append(gssapi_auth->error());
       cass_authenticator_set_error_n(auth, error.data(), error.length());
     }
@@ -660,5 +662,3 @@ CassAuthenticatorCallbacks GssapiAuthenticatorData::callbacks_ = {
 DseGssapiAuthenticatorLockCallback GssapiAuthenticatorData::lock_callback_ = dse_gssapi_authenticator_nop_lock;
 DseGssapiAuthenticatorUnlockCallback GssapiAuthenticatorData::unlock_callback_ = dse_gssapi_authenticator_nop_unlock;
 void* GssapiAuthenticatorData::data_ = NULL;
-
-} // namespace dse

@@ -22,6 +22,9 @@
 
 #include <algorithm>
 
+using namespace datastax;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 void cass_authenticator_address(const CassAuthenticator* auth,
@@ -50,7 +53,7 @@ void cass_authenticator_set_exchange_data(CassAuthenticator* auth, void* exchang
 }
 
 char* cass_authenticator_response(CassAuthenticator* auth, size_t size) {
-  cass::String* response = auth->response();
+  String* response = auth->response();
 
   if (response != NULL) {
     response->resize(size, 0);
@@ -74,12 +77,10 @@ void cass_authenticator_set_error(CassAuthenticator* auth,
 
 void cass_authenticator_set_error_n(CassAuthenticator* auth,
                                     const char* message, size_t message_length) {
-  auth->set_error(cass::String(message, message_length));
+  auth->set_error(String(message, message_length));
 }
 
 } // extern "C"
-
-namespace cass {
 
 bool PlainTextAuthenticator::initial_response(String* response) {
   response->reserve(username_.size() + password_.size() + 2);
@@ -151,5 +152,3 @@ bool ExternalAuthenticator::success(const String& token) {
                                token.data(), token.size());
   return error_.empty();
 }
-
-} // namespace cass

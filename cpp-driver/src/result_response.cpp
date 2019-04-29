@@ -23,6 +23,10 @@
 #include "result_response.hpp"
 #include "serialization.hpp"
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 void cass_result_free(const CassResult* result) {
@@ -47,21 +51,21 @@ CassError cass_result_column_name(const CassResult* result,
                                   size_t index,
                                   const char** name,
                                   size_t* name_length) {
-  const cass::SharedRefPtr<cass::ResultMetadata>& metadata(result->metadata());
+  const SharedRefPtr<ResultMetadata>& metadata(result->metadata());
   if (index >= metadata->column_count()) {
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
   }
   if (result->kind() != CASS_RESULT_KIND_ROWS) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  const cass::ColumnDefinition def = metadata->get_column_definition(index);
+  const ColumnDefinition def = metadata->get_column_definition(index);
   *name = def.name.data();
   *name_length = def.name.size();
   return CASS_OK;
 }
 
 CassValueType cass_result_column_type(const CassResult* result, size_t index) {
-  const cass::SharedRefPtr<cass::ResultMetadata>& metadata(result->metadata());
+  const SharedRefPtr<ResultMetadata>& metadata(result->metadata());
   if (result->kind() == CASS_RESULT_KIND_ROWS &&
       index < metadata->column_count()) {
     return metadata->get_column_definition(index).data_type->value_type();
@@ -70,7 +74,7 @@ CassValueType cass_result_column_type(const CassResult* result, size_t index) {
 }
 
 const CassDataType* cass_result_column_data_type(const CassResult* result, size_t index) {
-  const cass::SharedRefPtr<cass::ResultMetadata>& metadata(result->metadata());
+  const SharedRefPtr<ResultMetadata>& metadata(result->metadata());
   if (result->kind() == CASS_RESULT_KIND_ROWS &&
       index < metadata->column_count()) {
     return CassDataType::to(metadata->get_column_definition(index).data_type.get());
@@ -101,8 +105,6 @@ CassError cass_result_paging_state_token(const CassResult* result,
 }
 
 } // extern "C"
-
-namespace cass {
 
 class DataTypeDecoder {
 public:
@@ -347,5 +349,3 @@ bool ResultResponse::decode_schema_change(Decoder& decoder) {
   CHECK_RESULT(decoder.decode_string(&table_));
   return true;
 }
-
-} // namespace cass

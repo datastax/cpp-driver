@@ -19,7 +19,8 @@
 #include "md5.hpp"
 #include "murmur3.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 static int64_t parse_int64(const char* p, size_t n) {
   int c;
@@ -151,5 +152,3 @@ ByteOrderedPartitioner::Token ByteOrderedPartitioner::hash(const StringRef& str)
   const uint8_t* data = reinterpret_cast<const uint8_t*>(str.data());
   return Token(data, data + str.size());
 }
-
-} // namespace cass

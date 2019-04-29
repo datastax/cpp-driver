@@ -34,7 +34,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Config;
 class Connection;
@@ -384,6 +384,6 @@ private:
   Map responses_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

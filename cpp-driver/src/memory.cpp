@@ -13,12 +13,14 @@
 
 #include <uv.h>
 
+using namespace datastax::internal;
+
 extern "C" {
 
 void cass_alloc_set_functions(CassMallocFunction malloc_func,
                               CassReallocFunction realloc_func,
                               CassFreeFunction free_func) {
-  cass::Memory::set_functions(malloc_func, realloc_func, free_func);
+  Memory::set_functions(malloc_func, realloc_func, free_func);
 }
 
 } // extern "C"
@@ -44,8 +46,6 @@ void operator delete[](void* ptr) throw() {
   cass::Memory::free(ptr);
 }
 #endif
-
-namespace cass {
 
 CassMallocFunction Memory::malloc_func_ = NULL;
 CassReallocFunction Memory::realloc_func_ = NULL;
@@ -79,6 +79,3 @@ void Memory::set_functions(CassMallocFunction malloc_func,
   uv_replace_allocator(Memory::malloc_func_, Memory::realloc_func_, calloc_, Memory::free_func_);
 #endif
 }
-
-} // namespace cass
-

@@ -15,11 +15,11 @@
 #include "string.hpp"
 #include "wkt.hpp"
 
-#include <external.hpp>
+#include "external.hpp"
 
-namespace dse {
+namespace datastax { namespace internal { namespace enterprise {
 
-class Polygon : public cass::Allocated {
+class Polygon : public Allocated {
 public:
   Polygon() {
     reset();
@@ -67,7 +67,7 @@ public:
     return finish_ring(); // Finish the last ring
   }
 
-  cass::String to_wkt() const;
+  datastax::String to_wkt() const;
 
 private:
   CassError finish_ring() {
@@ -89,7 +89,7 @@ private:
   Bytes bytes_;
 };
 
-class PolygonIterator : public cass::Allocated {
+class PolygonIterator : public Allocated {
 private:
   enum State {
     STATE_NUM_POINTS,
@@ -122,7 +122,7 @@ public:
   }
 
 private:
-  class Iterator : public cass::Allocated {
+  class Iterator : public Allocated {
   public:
     virtual ~Iterator() { }
     virtual CassError next_num_points(cass_uint32_t* num_points) = 0;
@@ -171,9 +171,9 @@ private:
   TextIterator text_iterator_;
 };
 
-} // namespace dse
+} } } // namespace datastax::internal::enterprise
 
-EXTERNAL_TYPE(dse::Polygon, DsePolygon)
-EXTERNAL_TYPE(dse::PolygonIterator, DsePolygonIterator)
+EXTERNAL_TYPE(datastax::internal::enterprise::Polygon, DsePolygon)
+EXTERNAL_TYPE(datastax::internal::enterprise::PolygonIterator, DsePolygonIterator)
 
 #endif

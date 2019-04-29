@@ -29,7 +29,7 @@
 
 #define MIN_BUCKETS(N) STATIC_NEXT_POW_2((((N * 100) / OCCUPANCY_PCT) + 1))
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 // This hash map uses a fixed buffer as long as it doesn't exceed N items.
 // This can help to avoid heap allocation in cases where the hash map remains
@@ -67,6 +67,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SmallDenseHashMap);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

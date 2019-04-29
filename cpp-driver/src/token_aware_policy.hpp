@@ -22,7 +22,7 @@
 #include "host.hpp"
 #include "scoped_ptr.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class TokenAwarePolicy : public ChainedLoadBalancingPolicy {
 public:
@@ -74,6 +74,6 @@ private:
 private:
   DISALLOW_COPY_AND_ASSIGN(TokenAwarePolicy);
 };
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

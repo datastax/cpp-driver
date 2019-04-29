@@ -23,7 +23,7 @@
 #include <unistd.h>
 #endif
 
-namespace cass {
+using namespace datastax::internal::core;
 
 #ifdef HAVE_TIMERFD
 
@@ -162,5 +162,3 @@ void MicroTimer::on_timeout(Timer* timer) {
 }
 
 #endif
-
-} // namespace cass

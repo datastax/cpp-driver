@@ -28,7 +28,7 @@
 # endif
 #endif
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ErrorResponse;
 class Request;
@@ -182,9 +182,8 @@ private:
   RetryPolicy::Ptr retry_policy_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::RetryPolicy, CassRetryPolicy)
+EXTERNAL_TYPE(datastax::internal::core::RetryPolicy, CassRetryPolicy)
 
 #endif
-

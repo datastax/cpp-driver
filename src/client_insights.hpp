@@ -13,41 +13,35 @@
 #include "monitor_reporting.hpp"
 #include "resolver.hpp"
 
-namespace cass {
-
-class Session;
-
-} // namespace cass
-
-namespace dse {
+namespace datastax { namespace internal { namespace enterprise {
 
 class ClientInsightsRequestCallback;
 class StartupMessageHandler;
 
-class ClientInsights : public cass::MonitorReporting {
+class ClientInsights : public core::MonitorReporting {
 public:
-  typedef cass::json::StringBuffer StringBuffer;
-  typedef cass::json::Writer<StringBuffer> Writer;
+  typedef json::StringBuffer StringBuffer;
+  typedef json::Writer<StringBuffer> Writer;
 
-  ClientInsights(const cass::String& client_id,
-                 const cass::String& session_id,
+  ClientInsights(const String& client_id,
+                 const String& session_id,
                  unsigned interval_secs);
   virtual ~ClientInsights() { }
 
-  virtual uint64_t interval_ms(const cass::VersionNumber& dse_server_version) const;
-  virtual void send_startup_message(const cass::Connection::Ptr& connection,
-                                    const cass::Config& config,
-                                    const cass::HostMap& hosts,
-                                    const cass::LoadBalancingPolicy::Vec& initialized_policies);
-  virtual void send_status_message(const cass::Connection::Ptr& connection,
-                                   const cass::HostMap& hosts);
+  virtual uint64_t interval_ms(const core::VersionNumber& dse_server_version) const;
+  virtual void send_startup_message(const core::Connection::Ptr& connection,
+                                    const core::Config& config,
+                                    const core::HostMap& hosts,
+                                    const core::LoadBalancingPolicy::Vec& initialized_policies);
+  virtual void send_status_message(const core::Connection::Ptr& connection,
+                                   const core::HostMap& hosts);
 
 private:
-  const cass::String client_id_;
-  const cass::String session_id_;
+  const String client_id_;
+  const String session_id_;
   const uint64_t interval_ms_;
 };
 
-} // namespace dse
+} } } // namespace datastax::internal::enterprise
 
 #endif // __DSE_CLIENT_INSIGHTS_HPP_INCLUDED__

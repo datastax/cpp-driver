@@ -26,11 +26,11 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 int64_t MurmurHash3_x64_128(const void * key, const int len,
                             const uint32_t seed);
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

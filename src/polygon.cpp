@@ -12,10 +12,15 @@
 #include <iomanip>
 #include <sstream>
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+using namespace datastax::internal::enterprise;
+
 extern "C" {
 
 DsePolygon* dse_polygon_new() {
-  return DsePolygon::to(new dse::Polygon());
+  return DsePolygon::to(new enterprise::Polygon());
 }
 
 void dse_polygon_free(DsePolygon* polygon) {
@@ -47,7 +52,7 @@ CassError dse_polygon_finish(DsePolygon* polygon) {
 }
 
 DsePolygonIterator* dse_polygon_iterator_new() {
-  return DsePolygonIterator::to(new dse::PolygonIterator());
+  return DsePolygonIterator::to(new PolygonIterator());
 }
 
 CassError dse_polygon_iterator_reset(DsePolygonIterator* iterator,
@@ -86,15 +91,13 @@ CassError dse_polygon_iterator_next_point(DsePolygonIterator* iterator,
 
 } // extern "C"
 
-namespace dse {
-
-cass::String Polygon::to_wkt() const {
+String Polygon::to_wkt() const {
   // Special case empty polygon
   if (num_rings_ == 0) {
     return "POLYGON EMPTY";
   }
 
-  cass::OStringStream ss;
+  OStringStream ss;
   ss.precision(WKT_MAX_DIGITS);
   ss << "POLYGON (";
   const cass_byte_t* pos = bytes_.data() + WKB_HEADER_SIZE + sizeof(cass_uint32_t);
@@ -120,10 +123,10 @@ cass::String Polygon::to_wkt() const {
 CassError PolygonIterator::reset_binary(const CassValue* value) {
   size_t size;
   const cass_byte_t* pos;
-  dse::WkbByteOrder byte_order;
+  WkbByteOrder byte_order;
   cass_uint32_t num_rings;
 
-  CassError rc = dse::validate_data_type(value, DSE_POLYGON_TYPE);
+  CassError rc = validate_data_type(value, DSE_POLYGON_TYPE);
   if (rc != CASS_OK) return rc;
 
   rc = cass_value_get_bytes(value, &pos, &size);
@@ -134,12 +137,12 @@ CassError PolygonIterator::reset_binary(const CassValue* value) {
   }
   size -= WKB_POLYGON_HEADER_SIZE;
 
-  if (dse::decode_header(pos, &byte_order) != dse::WKB_GEOMETRY_TYPE_POLYGON) {
+  if (decode_header(pos, &byte_order) != WKB_GEOMETRY_TYPE_POLYGON) {
     return CASS_ERROR_LIB_INVALID_DATA;
   }
   pos += WKB_HEADER_SIZE;
 
-  num_rings = dse::decode_uint32(pos, byte_order);
+  num_rings = decode_uint32(pos, byte_order);
   pos += sizeof(cass_uint32_t);
 
   const cass_byte_t* rings = pos;
@@ -153,7 +156,7 @@ CassError PolygonIterator::reset_binary(const CassValue* value) {
     }
     size -= sizeof(cass_uint32_t);
 
-    num_points = dse::decode_uint32(pos, byte_order);
+    num_points = decode_uint32(pos, byte_order);
     pos += sizeof(cass_uint32_t);
 
     if (size < 2 * num_points * sizeof(cass_double_t)) {
@@ -364,5 +367,3 @@ CassError PolygonIterator::TextIterator::next_point(cass_double_t* x, cass_doubl
 
   return CASS_OK;
 }
-
-} // namespace dse

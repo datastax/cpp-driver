@@ -57,7 +57,7 @@ inline int64_t rotl64 (int64_t x, int8_t r) {
 
 #endif // !defined(_MSC_VER)
 
-namespace cass {
+namespace datastax { namespace internal {
 
 FORCE_INLINE int64_t getblock(const int64_t * p, int i) {
   return p[i];
@@ -152,4 +152,5 @@ int64_t MurmurHash3_x64_128(const void * key, const int len,
   return h1;
 }
 
-}
+} } // namespace datastax::internal
+

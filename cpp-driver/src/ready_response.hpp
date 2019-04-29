@@ -19,7 +19,7 @@
 
 #include "response.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ReadyResponse : public Response {
 public:
@@ -29,6 +29,6 @@ public:
   virtual bool decode(Decoder& decoder) { return true; }
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

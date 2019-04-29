@@ -25,13 +25,13 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class NameResolver : public RefCounted<NameResolver> {
 public:
   typedef SharedRefPtr<NameResolver> Ptr;
 
-  typedef cass::Callback<void, NameResolver*> Callback;
+  typedef internal::Callback<void, NameResolver*> Callback;
 
   enum Status {
     NEW,
@@ -134,6 +134,6 @@ private:
   Callback callback_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

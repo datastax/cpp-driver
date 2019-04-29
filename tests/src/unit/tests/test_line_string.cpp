@@ -15,7 +15,11 @@
 #include <data_type.hpp>
 
 #define RESET_ITERATOR_WITH(x) iterator.reset_text((x), strlen((x)))
- 
+
+using namespace datastax;
+using namespace datastax::internal::core;
+using namespace datastax::internal::enterprise;
+
 class LineStringUnitTest : public testing::Test {
 public:
   void SetUp() {
@@ -28,14 +32,14 @@ public:
 
   const CassValue* to_value() {
     char* data = const_cast<char*>(reinterpret_cast<const char*>(line_string->bytes().data()));
-    value =  cass::Value(cass::DataType::ConstPtr(new cass::CustomType(DSE_LINE_STRING_TYPE)),
-                         cass::Decoder(data, line_string->bytes().size(), 0)); // Protocol version not used
+    value =  Value(DataType::ConstPtr(new CustomType(DSE_LINE_STRING_TYPE)),
+                         Decoder(data, line_string->bytes().size(), 0)); // Protocol version not used
     return CassValue::to(&value);
   }
 
   DseLineString* line_string;
-  cass::Value value;
-  dse::LineStringIterator iterator;
+  Value value;
+  LineStringIterator iterator;
 };
 
 TEST_F(LineStringUnitTest, BinaryEmpty) {
@@ -100,7 +104,7 @@ TEST_F(LineStringUnitTest, TextJunkAfterEmptyLineString) {
 }
 
 TEST_F(LineStringUnitTest, TextEmpty) {
-  cass::String wkt = line_string->to_wkt();
+  String wkt = line_string->to_wkt();
   ASSERT_EQ("LINESTRING EMPTY", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
@@ -110,7 +114,7 @@ TEST_F(LineStringUnitTest, TextEmpty) {
 TEST_F(LineStringUnitTest, TextSingle) {
   ASSERT_EQ(CASS_OK, dse_line_string_add_point(line_string, 0.0, 1.0));
 
-  cass::String wkt = line_string->to_wkt();
+  String wkt = line_string->to_wkt();
   ASSERT_EQ("LINESTRING (0 1)", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
@@ -126,7 +130,7 @@ TEST_F(LineStringUnitTest, TextMultiple) {
   ASSERT_EQ(CASS_OK, dse_line_string_add_point(line_string, 2.0, 3.0));
   ASSERT_EQ(CASS_OK, dse_line_string_add_point(line_string, 4.0, 5.0));
 
-  cass::String wkt = line_string->to_wkt();
+  String wkt = line_string->to_wkt();
   ASSERT_EQ("LINESTRING (0 1, 2 3, 4 5)", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));
@@ -146,7 +150,7 @@ TEST_F(LineStringUnitTest, TextMultiple) {
 TEST_F(LineStringUnitTest, TextPrecision) {
   ASSERT_EQ(CASS_OK, dse_line_string_add_point(line_string, 0.0001, 0.012345678901234567));
 
-  cass::String wkt = line_string->to_wkt();
+  String wkt = line_string->to_wkt();
   ASSERT_EQ("LINESTRING (0.0001 0.012345678901234567)", wkt);
 
   ASSERT_EQ(CASS_OK, iterator.reset_text(wkt.data(), wkt.size()));

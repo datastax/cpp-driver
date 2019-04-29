@@ -15,11 +15,11 @@
 #include "string.hpp"
 #include "wkt.hpp"
 
-#include <external.hpp>
+#include "external.hpp"
 
-namespace dse {
+namespace datastax { namespace internal { namespace enterprise {
 
-class LineString : public cass::Allocated {
+class LineString : public Allocated {
 public:
   LineString() {
     reset();
@@ -57,14 +57,14 @@ public:
     return CASS_OK;
   }
 
-  cass::String to_wkt() const;
+  datastax::String to_wkt() const;
 
 private:
   cass_uint32_t num_points_;
   Bytes bytes_;
 };
 
-class LineStringIterator : public cass::Allocated {
+class LineStringIterator : public Allocated {
 public:
   LineStringIterator()
     : num_points_(0)
@@ -83,7 +83,7 @@ public:
   }
 
 private:
-  class Iterator : public cass::Allocated {
+  class Iterator : public Allocated {
   public:
     virtual ~Iterator() { }
     virtual CassError next_point(cass_double_t *x, cass_double_t *y) = 0;
@@ -124,9 +124,9 @@ private:
   TextIterator text_iterator_;
 };
 
-} // namespace dse
+} } } // namespace datastax::internal::enterprise
 
-EXTERNAL_TYPE(dse::LineString, DseLineString)
-EXTERNAL_TYPE(dse::LineStringIterator, DseLineStringIterator)
+EXTERNAL_TYPE(datastax::internal::enterprise::LineString, DseLineString)
+EXTERNAL_TYPE(datastax::internal::enterprise::LineStringIterator, DseLineStringIterator)
 
 #endif

@@ -25,11 +25,8 @@
 
 #define RESOLVE_TIMEOUT 2000
 
-using cass::Address;
-using cass::bind_callback;
-using cass::Memory;
-using cass::NameResolver;
-using cass::String;
+using namespace datastax;
+using namespace datastax::internal::core;
 
 class NameResolverUnitTest : public LoopTest {
 public:

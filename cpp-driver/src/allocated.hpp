@@ -19,7 +19,7 @@
 
 #include <cstddef>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Allocated {
 public:
@@ -36,6 +36,6 @@ template <class T>
 struct AllocatedT : public Allocated, public T { };
 
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

@@ -25,7 +25,7 @@
 
 #define MICROSECONDS_PER_MILLISECOND 1000LL
 
-namespace cass {
+namespace datastax { namespace internal {
 
 uint64_t get_time_since_epoch_us();
 
@@ -38,6 +38,6 @@ inline uint64_t get_time_since_epoch_ms() {
 // `get_time_since_epoch_us()` will be used.
 uint64_t get_time_monotonic_ns();
 
-}
+} } // namespace datastax::internal
 
 #endif

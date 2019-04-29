@@ -22,7 +22,7 @@
 #include "serialization.hpp"
 #include "value.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class MapIterator : public Iterator {
 public:
@@ -57,6 +57,6 @@ private:
   const int32_t count_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

@@ -32,7 +32,9 @@
 
 #include <uv.h>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class SingleHostQueryPlan : public QueryPlan {
 public:
@@ -54,12 +56,12 @@ public:
   PrepareCallback(const String& query, RequestExecution* request_execution);
 
 private:
-  class PrepareRequest : public cass::PrepareRequest {
+  class PrepareRequest : public core::PrepareRequest {
   public:
     PrepareRequest(const String& query,
                    const String& keyspace,
                    uint64_t request_timeout_ms)
-      : cass::PrepareRequest(query) {
+      : core::PrepareRequest(query) {
       set_keyspace(keyspace);
       set_request_timeout_ms(request_timeout_ms);
     }
@@ -665,5 +667,3 @@ void RequestExecution::set_error_with_error_response(const Response::Ptr& error,
                                                      CassError code, const String& message) {
   request_handler_->set_error_with_error_response(current_host_, error, code, message);
 }
-
-} // namespace cass

@@ -20,45 +20,48 @@
 #include "event_loop.hpp"
 #include "test_utils.hpp"
 
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 class EventLoopUnitTest : public testing::Test {
 public:
-  class MarkTaskCompleted : public cass::Task {
+  class MarkTaskCompleted : public Task {
   public:
     MarkTaskCompleted(EventLoopUnitTest* event_loop_unit_test)
       : event_loop_unit_test_(event_loop_unit_test) { }
-    virtual void run(cass::EventLoop* event_loop) {
+    virtual void run(EventLoop* event_loop) {
       event_loop_unit_test_->mark_task_completed();
     }
   private:
     EventLoopUnitTest* event_loop_unit_test_;
   };
 
-  class MarkIsRunningOn : public cass::Task {
+  class MarkIsRunningOn : public Task {
   public:
     MarkIsRunningOn(EventLoopUnitTest* event_loop_unit_test,
-                    cass::EventLoop* event_loop)
+                    EventLoop* event_loop)
       : event_loop_unit_test_(event_loop_unit_test)
       , event_loop_(event_loop) { }
-    virtual void run(cass::EventLoop* event_loop) {
+    virtual void run(EventLoop* event_loop) {
       event_loop_unit_test_->set_is_running_on(event_loop_->is_running_on());
     }
   private:
     EventLoopUnitTest * event_loop_unit_test_;
-    cass::EventLoop* event_loop_;
+    EventLoop* event_loop_;
   };
 
-  class StartIoTime : public cass::Task {
+  class StartIoTime : public Task {
   public:
-    virtual void run(cass::EventLoop* event_loop) {
+    virtual void run(EventLoop* event_loop) {
       event_loop->maybe_start_io_time();
     }
   };
 
-  class SetIoTimeElapsed : public cass::Task {
+  class SetIoTimeElapsed : public Task {
   public:
     SetIoTimeElapsed(EventLoopUnitTest* event_loop_unit_test)
       : event_loop_unit_test_(event_loop_unit_test) { }
-    virtual void run(cass::EventLoop* event_loop) {
+    virtual void run(EventLoop* event_loop) {
       event_loop_unit_test_->set_io_time_elapsed(event_loop->io_time_elapsed());
     }
   private:
@@ -86,7 +89,7 @@ private:
   uint64_t io_time_elapsed_;
 };
 
-class TestEventLoop : public cass::EventLoop {
+class TestEventLoop : public EventLoop {
 public:
   TestEventLoop()
     : is_on_run_completed_(false)
@@ -100,12 +103,12 @@ protected:
   void on_after_run() { is_after_run_completed_ = true; }
 
 private:
-  cass::Atomic<bool> is_on_run_completed_;
+  Atomic<bool> is_on_run_completed_;
   bool is_after_run_completed_;
 };
 
 TEST_F(EventLoopUnitTest, ExecuteTask) {
-  cass::EventLoop event_loop;
+  EventLoop event_loop;
   ASSERT_EQ(0, event_loop.init("EventLoopUnitTest::ExecuteTask"));
   ASSERT_STREQ("EventLoopUnitTest::ExecuteTask", event_loop.name().c_str());
   ASSERT_EQ(0, event_loop.run());
@@ -119,7 +122,7 @@ TEST_F(EventLoopUnitTest, ExecuteTask) {
 }
 
 TEST_F(EventLoopUnitTest, ThreadRunningOn) {
-  cass::EventLoop event_loop;
+  EventLoop event_loop;
   ASSERT_EQ(0, event_loop.init("EventLoopUnitTest::ThreadRunningOn"));
   ASSERT_STREQ("EventLoopUnitTest::ThreadRunningOn", event_loop.name().c_str());
   ASSERT_EQ(0, event_loop.run());
@@ -133,14 +136,14 @@ TEST_F(EventLoopUnitTest, ThreadRunningOn) {
 }
 
 TEST_F(EventLoopUnitTest, ThreadNotRunningOn) {
-  cass::EventLoop event_loop;
+  EventLoop event_loop;
   ASSERT_EQ(0, event_loop.init("EventLoopUnitTest::ThreadNotRunningOn (EventLoop 1)"));
   ASSERT_STREQ("EventLoopUnitTest::ThreadNotRunningOn (EventLoop 1)", event_loop.name().c_str());
   ASSERT_EQ(0, event_loop.run());
 
   ASSERT_FALSE(is_running_on());
 
-  cass::EventLoop event_loop_2;
+  EventLoop event_loop_2;
   ASSERT_EQ(0, event_loop_2.init("EventLoopUnitTest::ThreadNotRunningOn (EventLoop 2)"));
   ASSERT_STREQ("EventLoopUnitTest::ThreadNotRunningOn (EventLoop 2)", event_loop_2.name().c_str());
   ASSERT_EQ(0, event_loop_2.run());

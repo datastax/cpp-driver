@@ -19,10 +19,8 @@
 #include "callback.hpp"
 #include "tcp_connector.hpp"
 
-using cass::Address;
-using cass::bind_callback;
-using cass::Memory;
-using cass::TcpConnector;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class TcpConnectorUnitTest : public LoopTest {
 public:

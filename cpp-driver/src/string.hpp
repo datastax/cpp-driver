@@ -16,9 +16,11 @@
 #include <string>
 #include <sstream>
 
-namespace cass {
+namespace datastax {
 
-typedef std::basic_string<char, std::char_traits<char>, cass::Allocator<char> > String;
+typedef std::basic_string<char, std::char_traits<char>, internal::Allocator<char> > String;
+
+namespace internal {
 
 class OStringStream : public std::basic_ostream<char, std::char_traits<char> >
 {
@@ -28,7 +30,7 @@ public:
     typedef traits_type::int_type  int_type;
     typedef traits_type::pos_type  pos_type;
     typedef traits_type::off_type  off_type;
-    typedef cass::Allocator<char>  allocator_type;
+    typedef internal::Allocator<char>  allocator_type;
 
     typedef std::basic_string<char_type, traits_type, allocator_type> string_type;
 
@@ -51,7 +53,7 @@ public:
     void str(const string_type& str) { sb_.str(str); }
 
 private:
-  std::basic_stringbuf<char, std::char_traits<char>, cass::Allocator<char> > sb_;
+  std::basic_stringbuf<char, std::char_traits<char>, internal::Allocator<char> > sb_;
 };
 
 class IStringStream : public std::basic_istream<char, std::char_traits<char> >
@@ -62,7 +64,7 @@ public:
     typedef traits_type::int_type  int_type;
     typedef traits_type::pos_type  pos_type;
     typedef traits_type::off_type  off_type;
-    typedef cass::Allocator<char>  allocator_type;
+    typedef internal::Allocator<char>  allocator_type;
 
     typedef std::basic_string<char_type, traits_type, allocator_type> string_type;
 
@@ -85,10 +87,10 @@ public:
     void str(const string_type& str) { sb_.str(str); }
 
 private:
-  std::basic_stringbuf<char, std::char_traits<char>, cass::Allocator<char> > sb_;
+  std::basic_stringbuf<char, std::char_traits<char>, internal::Allocator<char> > sb_;
 };
 
-} // namepsace cass
+} } // namepsace datastax::internal
 
 namespace std {
 
@@ -97,9 +99,9 @@ namespace tr1 {
 #endif
 
 template <>
-struct hash<cass::String> {
-  size_t operator()(const cass::String& str) const {
-    return cass::hash::fnv1a(str.data(), str.size());
+struct hash<datastax::String> {
+  size_t operator()(const datastax::String& str) const {
+    return datastax::hash::fnv1a(str.data(), str.size());
   }
 };
 

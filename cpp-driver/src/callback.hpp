@@ -23,7 +23,7 @@
 #include <new>
 #include <stddef.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class R, class Arg>
 class Callback {
@@ -157,6 +157,6 @@ Callback<R, Arg> bind_callback(R (*func)(Arg, D), const D& data) {
   return Callback<R, Arg>(func, data, dummy);
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

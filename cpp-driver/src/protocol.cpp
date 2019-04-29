@@ -21,7 +21,7 @@
 #define DSE_PROTOCOL_VERSION_BIT  0x40
 #define DSE_PROTOCOL_VERSION_MASK 0x3F
 
-namespace cass {
+using namespace datastax::internal::core;
 
 ProtocolVersion::ProtocolVersion()
   : value_(-1) { }
@@ -111,5 +111,3 @@ bool ProtocolVersion::supports_result_metadata_id() const {
   return false;
   //return version_ >= CASS_PROTOCOL_VERSION_V5;
 }
-
-} // namespace cass

@@ -25,6 +25,8 @@
 #define HTTP_EOL "\r\n"
 #define OUTPUT_BUFFER_SIZE 10240ul
 
+using namespace datastax::internal::core;
+
 // Static initializations
 uv_buf_t RestClient::write_buf_;
 uv_write_t RestClient::write_req_;
@@ -62,8 +64,8 @@ const Response RestClient::send_request(const Request& request) {
   http_request.loop = &loop;
 
   // Create the IPv4 socket address
-  const cass::Address address(request.address.c_str(),
-                              static_cast<int>(request.port));
+  const Address address(request.address.c_str(),
+                        static_cast<int>(request.port));
 
   // Initialize the client TCP request
   uv_tcp_t tcp;

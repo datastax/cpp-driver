@@ -30,7 +30,7 @@
 
 #include <string.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ErrorResponse : public Response {
 public:
@@ -87,8 +87,8 @@ private:
 bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opcode,
                                      const Response* response);
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::ErrorResponse, CassErrorResult)
+EXTERNAL_TYPE(datastax::internal::core::ErrorResponse, CassErrorResult)
 
 #endif

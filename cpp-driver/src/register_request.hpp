@@ -20,7 +20,7 @@
 #include "request.hpp"
 #include "constants.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class RegisterRequest : public Request {
 public:
@@ -34,5 +34,5 @@ private:
   int event_types_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 #endif

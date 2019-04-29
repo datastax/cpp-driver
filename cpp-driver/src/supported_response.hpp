@@ -22,7 +22,7 @@
 #include "string.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class SupportedResponse : public Response {
 public:
@@ -41,6 +41,6 @@ private:
   Vector<String> protocol_versions_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

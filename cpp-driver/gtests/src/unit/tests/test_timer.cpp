@@ -18,7 +18,8 @@
 
 #include "timer.hpp"
 
-using namespace cass;
+using datastax::internal::bind_callback;
+using datastax::internal::core::Timer;
 
 class TimerUnitTest : public LoopTest {
 public:
@@ -86,7 +87,7 @@ public:
     Timer timer;
 
     restart_timer_.start(loop(), 10,
-                             bind_callback(&TimerUnitTest::on_timer_once, this));
+                         bind_callback(&TimerUnitTest::on_timer_once, this));
 
     timer.start(loop(), 1,
                 bind_callback(&TimerUnitTest::on_timer_restart, this));
@@ -124,7 +125,7 @@ private:
       restart_timer_.stop();
     } else {
       restart_timer_.start(loop(), 10,
-                             bind_callback(&TimerUnitTest::on_timer_once, this));
+                           bind_callback(&TimerUnitTest::on_timer_once, this));
 
       timer->start(loop(), 1,
                    bind_callback(&TimerUnitTest::on_timer_restart, this));

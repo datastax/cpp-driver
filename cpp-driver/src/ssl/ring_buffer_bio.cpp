@@ -50,8 +50,7 @@
 #define BIO_set_init(b, i) ((b)->init = i)
 #endif
 
-namespace cass {
-namespace rb {
+using namespace datastax::internal::rb;
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 const BIO_METHOD RingBufferBio::method_ = {
@@ -216,6 +215,3 @@ long RingBufferBio::ctrl(BIO* bio, int cmd, long num, void* ptr) {
   }
   return ret;
 }
-
-} // namespace rb
-} // namespace cass

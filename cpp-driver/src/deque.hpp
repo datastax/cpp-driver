@@ -12,12 +12,12 @@
 
 #include <deque>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
-class Deque : public std::deque<T, cass::Allocator<T> > {
+class Deque : public std::deque<T, internal::Allocator<T> > {
 public:
-  typedef cass::Allocator<T> Allocator;
+  typedef internal::Allocator<T> Allocator;
 
   explicit Deque(const Allocator& alloc = Allocator())
     : std::deque<T, Allocator>(alloc) { }
@@ -36,6 +36,6 @@ public:
     : std::deque<T, Allocator>(other) { }
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

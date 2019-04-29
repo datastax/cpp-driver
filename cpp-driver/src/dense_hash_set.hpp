@@ -12,7 +12,7 @@
 
 #include <sparsehash/dense_hash_set>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T,
           class HashFcn = SPARSEHASH_HASH<T>,
@@ -20,9 +20,9 @@ template <class T,
 class DenseHashSet
     : public sparsehash::dense_hash_set<
       T,  HashFcn, EqualKey,
-      cass::Allocator<T> > {
+      internal::Allocator<T> > {
 public:
-  typedef cass::Allocator<T> Allocator;
+  typedef internal::Allocator<T> Allocator;
 
   explicit DenseHashSet(size_t expected_max_items_in_table = 0,
                         const HashFcn& hf = HashFcn(),
@@ -44,6 +44,6 @@ public:
                                                                   hf, eql, alloc) { }
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

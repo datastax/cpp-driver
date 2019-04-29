@@ -23,7 +23,7 @@
 #include "whitelist_policy.hpp"
 #include "whitelist_dc_policy.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ExecutionProfile : public Allocated {
 public:
@@ -197,8 +197,8 @@ private:
   SpeculativeExecutionPolicy::Ptr speculative_execution_policy_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::ExecutionProfile, CassExecProfile)
+EXTERNAL_TYPE(datastax::internal::core::ExecutionProfile, CassExecProfile)
 
 #endif // __CASS_EXECUTION_PROFILE_HPP_INCLUDED__

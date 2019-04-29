@@ -23,7 +23,7 @@
 #include "host.hpp"
 #include "random.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class RoundRobinPolicy : public LoadBalancingPolicy {
 public:
@@ -77,6 +77,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RoundRobinPolicy);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

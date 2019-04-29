@@ -23,7 +23,7 @@
 #include "external.hpp"
 #include "ref_counted.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class UserTypeValue : public AbstractData {
 public:
@@ -49,8 +49,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(UserTypeValue);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::UserTypeValue, CassUserType)
+EXTERNAL_TYPE(datastax::internal::core::UserTypeValue, CassUserType)
 
 #endif

@@ -30,7 +30,7 @@
 // additional memory.
 #define CASS_LOAD_FACTOR 0.75
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 typedef SmallVector<size_t, 4> IndexVec;
 
@@ -40,7 +40,7 @@ struct HashTableEntry {
     : index(0)
     , next(NULL) { }
 
-  // Requires a "name" String or cass::StringRef field
+  // Requires a "name" String or datastax::StringRef field
   size_t index;
   T* next;
 };
@@ -217,6 +217,6 @@ void CaseInsensitiveHashTable<T>::reindex() {
   }
 }
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

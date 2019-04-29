@@ -38,6 +38,8 @@
   "return arg;" \
   "$$;"
 
+using namespace datastax::internal::core;
+
 /**
  * Speculative Execution Policy Integration Test Class
  *
@@ -108,7 +110,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     cass_statement_set_is_idempotent(statement.get(),
       (is_idempotent ? cass_true : cass_false));
     cass_statement_set_request_timeout(statement.get(), timeout_ms);
-    cass::Statement* native_statement = static_cast<cass::Statement*>(statement.get());
+    Statement* native_statement = static_cast<Statement*>(statement.get());
     native_statement->set_record_attempted_addresses(true);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     if (expected_error_code == CASS_OK) {
@@ -130,11 +132,11 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
   std::vector<std::string> attempted_hosts(test_utils::CassFuturePtr future) {
     // Gather and return the attempted hosts from the response
     std::vector<std::string> attempted_hosts;
-    cass::Future* native_future = static_cast<cass::Future*>(future.get());
-    if (native_future->type() == cass::Future::FUTURE_TYPE_RESPONSE) {
-      cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
-      cass::AddressVec attempted_addresses = native_response_future->attempted_addresses();
-      for (cass::AddressVec::iterator iterator = attempted_addresses.begin();
+    Future* native_future = static_cast<Future*>(future.get());
+    if (native_future->type() == Future::FUTURE_TYPE_RESPONSE) {
+      ResponseFuture* native_response_future = static_cast<ResponseFuture*>(native_future);
+      AddressVec attempted_addresses = native_response_future->attempted_addresses();
+      for (AddressVec::iterator iterator = attempted_addresses.begin();
         iterator != attempted_addresses.end(); ++iterator) {
         attempted_hosts.push_back(iterator->to_string().c_str());
       }
@@ -151,9 +153,9 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
    */
   std::string executed_host(test_utils::CassFuturePtr future) {
     std::string host;
-    cass::Future* native_future = static_cast<cass::Future*>(future.get());
-    if (native_future->type() == cass::Future::FUTURE_TYPE_RESPONSE) {
-      cass::ResponseFuture* native_response_future = static_cast<cass::ResponseFuture*>(native_future);
+    Future* native_future = static_cast<Future*>(future.get());
+    if (native_future->type() == Future::FUTURE_TYPE_RESPONSE) {
+      ResponseFuture* native_response_future = static_cast<ResponseFuture*>(native_future);
       host = native_response_future->address().to_string().c_str();
     }
     return host;

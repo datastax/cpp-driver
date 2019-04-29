@@ -20,7 +20,8 @@
 #include "event_loop.hpp"
 #include "query_request.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 /**
  * A request callback that sets the keyspace then runs the original request
@@ -176,5 +177,3 @@ void PooledConnection::on_close(Connection* connection) {
   pool_->close_connection(this, ConnectionPool::Protected());
   dec_ref();
 }
-
-} // namespace cass

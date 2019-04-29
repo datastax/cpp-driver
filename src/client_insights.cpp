@@ -43,30 +43,33 @@
                                                "validation is disabled"
 #define CONFIG_ANTIPATTERN_MSG_PLAINTEXT_NO_SSL "Plain text authentication is " \
                                                 "enabled without client-to-node " \
-                                                "encryption"
+                                                "encryption"""
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 MonitorReporting* create_monitor_reporting(const String& client_id,
                                            const String& session_id,
-                                           const cass::Config& config) {
+                                           const Config& config) {
   // Ensure the client monitor events should be enabled
   unsigned interval_secs = config.monitor_reporting_interval_secs();
   if (interval_secs > 0) {
-    return new dse::ClientInsights(client_id,
-                                   session_id,
-                                   interval_secs);
+    return new enterprise::ClientInsights(client_id,
+                                          session_id,
+                                          interval_secs);
   }
   return new NopMonitorReporting();
 }
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-using namespace dse;
+using namespace datastax::internal::core;
+using namespace datastax::internal;
+
+namespace datastax { namespace internal { namespace enterprise {
 
 #ifdef _WIN32
 #define ERROR_BUFFER_MAX_LENGTH 1024
-cass::String get_last_error() {
+String get_last_error() {
   DWORD rc = GetLastError();
 
   char buf[ERROR_BUFFER_MAX_LENGTH];
@@ -77,19 +80,19 @@ cass::String get_last_error() {
                                reinterpret_cast<LPSTR>(&buf[0]),
                                ERROR_BUFFER_MAX_LENGTH,
                                NULL);
-  cass::String str(buf, size);
-  cass::trim(str);
+  String str(buf, size);
+  trim(str);
   return str;
 }
 #endif
 
-cass::String get_hostname() {
+String get_hostname() {
 #ifdef _WIN32
   WSADATA data;
   WORD version_required = MAKEWORD(2, 2);
   if (WSAStartup(version_required, &data) != 0) {
     LOG_WARN("Unable to determine hostname: Failed to initialize WinSock2");
-    return cass::String();
+    return String();
   }
 #endif
 
@@ -99,13 +102,13 @@ cass::String get_hostname() {
     LOG_WARN("Unable to determine hostname: Error code %d", rc);
     return "UNKNOWN";
   }
-  return cass::String(buf, size);
+  return String(buf, size);
 }
 
 struct Os {
-  cass::String name;
-  cass::String version;
-  cass::String arch;
+  String name;
+  String version;
+  String arch;
 };
 Os get_os() {
   Os os;
@@ -114,14 +117,14 @@ Os get_os() {
 
   DWORD size = GetFileVersionInfoSize(TEXT("kernel32.dll"), NULL);
   if (size) {
-    cass::Vector<BYTE> version_info(size);
+    Vector<BYTE> version_info(size);
     if (GetFileVersionInfo(TEXT("kernel32.dll"), 0, size, &version_info[0])) {
       VS_FIXEDFILEINFO* file_info = NULL;
       UINT file_info_length = 0;
       if (VerQueryValue(&version_info[0], TEXT("\\"),
           reinterpret_cast<LPVOID*>(&file_info),
           &file_info_length)) {
-        cass::OStringStream oss;
+        OStringStream oss;
         oss << static_cast<int>(HIWORD(file_info->dwProductVersionMS)) << "."
           << static_cast<int>(LOWORD(file_info->dwProductVersionMS)) << "."
           << static_cast<int>(HIWORD(file_info->dwProductVersionLS));
@@ -154,7 +157,7 @@ Os get_os() {
 
 struct Cpus {
   int length;
-  cass::String model;
+  String model;
 };
 Cpus get_cpus() {
   Cpus cpus;
@@ -174,26 +177,24 @@ Cpus get_cpus() {
   return cpus;
 }
 
-namespace dse {
-
-class ClientInsightsRequestCallback : public cass::SimpleRequestCallback {
+class ClientInsightsRequestCallback : public SimpleRequestCallback {
 public:
-  typedef cass::SharedRefPtr<ClientInsightsRequestCallback> Ptr;
+  typedef SharedRefPtr<ClientInsightsRequestCallback> Ptr;
 
-  ClientInsightsRequestCallback(const cass::String& json,
-                                const cass::String& event_type)
-    : cass::SimpleRequestCallback("CALL InsightsRpc.reportInsight('" + json + "')")
+  ClientInsightsRequestCallback(const String& json,
+                                const String& event_type)
+    : SimpleRequestCallback("CALL InsightsRpc.reportInsight('" + json + "')")
     , event_type_(event_type) { }
 
-  virtual void on_internal_set(cass::ResponseMessage* response) {
+  virtual void on_internal_set(ResponseMessage* response) {
     if (response->opcode() != CQL_OPCODE_RESULT) {
       LOG_DEBUG("Failed to send %s event message: Invalid response [%s]",
                 event_type_.c_str(),
-                cass::opcode_to_string(response->opcode()).c_str());
+                opcode_to_string(response->opcode()).c_str());
     }
   }
 
-  virtual void on_internal_error(CassError code, const cass::String& message) {
+  virtual void on_internal_error(CassError code, const String& message) {
     LOG_DEBUG("Failed to send %s event message: %s",
               event_type_.c_str(),
               message.c_str());
@@ -205,10 +206,10 @@ public:
   }
 
 private:
-  cass::String event_type_;
+  String event_type_;
 };
 
-void metadata(ClientInsights::Writer& writer, const cass::String& name) {
+void metadata(ClientInsights::Writer& writer, const String& name) {
   writer.Key("metadata");
   writer.StartObject();
 
@@ -219,7 +220,7 @@ void metadata(ClientInsights::Writer& writer, const cass::String& name) {
   writer.Key("insightType");
   writer.String("EVENT"); //TODO: Make this an enumeration in the future
   writer.Key("timestamp");
-  writer.Uint64(cass::get_time_since_epoch_ms());
+  writer.Uint64(get_time_since_epoch_ms());
   writer.Key("tags");
   writer.StartObject();
   writer.Key("language");
@@ -229,16 +230,16 @@ void metadata(ClientInsights::Writer& writer, const cass::String& name) {
   writer.EndObject();
 }
 
-class StartupMessageHandler : public cass::RefCounted<StartupMessageHandler> {
+class StartupMessageHandler : public RefCounted<StartupMessageHandler> {
 public:
-  typedef cass::SharedRefPtr<StartupMessageHandler> Ptr;
+  typedef SharedRefPtr<StartupMessageHandler> Ptr;
 
-  StartupMessageHandler(const cass::Connection::Ptr& connection,
-                        const cass::String& client_id,
-                        const cass::String& session_id,
-                        const cass::Config& config,
-                        const cass::HostMap& hosts,
-                        const cass::LoadBalancingPolicy::Vec& initialized_policies)
+  StartupMessageHandler(const Connection::Ptr& connection,
+                        const String& client_id,
+                        const String& session_id,
+                        const Config& config,
+                        const HostMap& hosts,
+                        const LoadBalancingPolicy::Vec& initialized_policies)
     : connection_(connection)
     , client_id_(client_id)
     , session_id_(session_id)
@@ -256,7 +257,7 @@ public:
     writer.EndObject();
 
     assert(writer.IsComplete() && "Startup JSON is incomplete");
-    connection_->write_and_flush(cass::RequestCallback::Ptr(
+    connection_->write_and_flush(RequestCallback::Ptr(
         new ClientInsightsRequestCallback(buffer.GetString(),
                                           METADATA_STARTUP_NAME)));
   }
@@ -280,7 +281,7 @@ private:
     if (!config_.application_name().empty()) {
       writer.String(config_.application_name().c_str());
     } else {
-      writer.String(cass::driver_name());
+      writer.String(driver_name());
       is_application_name_generated = true;
     }
     writer.Key("applicationNameWasGenerated");
@@ -290,9 +291,9 @@ private:
       writer.String(config_.application_version().c_str());
     }
     writer.Key("driverName");
-    writer.String(cass::driver_name());
+    writer.String(driver_name());
     writer.Key("driverVersion");
-    writer.String(cass::driver_version());
+    writer.String(driver_version());
     contact_points(writer);
     data_centers(writer);
     writer.Key("initialControlConnection");
@@ -329,7 +330,7 @@ private:
          map_end = contact_points_resolved_.end(); map_it != map_end; ++map_it) {
       writer.Key(map_it->first.c_str());
       writer.StartArray();
-      for (cass::AddressSet::const_iterator vec_it = map_it->second.begin(),
+      for (AddressSet::const_iterator vec_it = map_it->second.begin(),
            vec_end = map_it->second.end(); vec_it != vec_end; ++vec_it) {
         writer.String(vec_it->to_string(true).c_str());
       }
@@ -343,10 +344,10 @@ private:
     writer.Key("dataCenters");
     writer.StartArray();
 
-    cass::Set<cass::String> data_centers;
-    for (cass::HostMap::const_iterator it = hosts_.begin(), end = hosts_.end();
+    Set<String> data_centers;
+    for (HostMap::const_iterator it = hosts_.begin(), end = hosts_.end();
          it != end; ++it) {
-      const cass::String& data_center = it->second->dc();
+      const String& data_center = it->second->dc();
       if (data_centers.insert(data_center).second) {
         writer.String(data_center.c_str());
       }
@@ -359,11 +360,11 @@ private:
     writer.Key("executionProfiles");
     writer.StartObject();
 
-    const cass::ExecutionProfile& default_profile = config_.default_profile();
-    const cass::ExecutionProfile::Map& profiles = config_.profiles();
+    const ExecutionProfile& default_profile = config_.default_profile();
+    const ExecutionProfile::Map& profiles = config_.profiles();
     writer.Key("default");
     execution_profile_as_json(writer, default_profile);
-    for (cass::ExecutionProfile::Map::const_iterator it = profiles.begin(),
+    for (ExecutionProfile::Map::const_iterator it = profiles.begin(),
          end = profiles.end(); it != end; ++it) {
       writer.Key(it->first.c_str());
       execution_profile_as_json(writer, it->second, &default_profile);
@@ -405,7 +406,7 @@ private:
     writer.Key("ssl");
     writer.StartObject();
 
-    const cass::SslContext::Ptr& ssl_context = config_.ssl_context();
+    const SslContext::Ptr& ssl_context = config_.ssl_context();
     writer.Key("enabled");
     if (ssl_context) {
       writer.Bool(true);
@@ -423,7 +424,7 @@ private:
   }
 
   void auth_provider(ClientInsights::Writer& writer) {
-    const cass::AuthProvider::Ptr& auth_provider = config_.auth_provider();
+    const AuthProvider::Ptr& auth_provider = config_.auth_provider();
     if (auth_provider) {
       writer.Key("authProvider");
       writer.StartObject();
@@ -589,26 +590,26 @@ private:
 private:
   // Startup message helper methods
   void resolve_contact_points() {
-    const cass::ContactPointList& contact_points = config_.contact_points();
+    const ContactPointList& contact_points = config_.contact_points();
     const int port = config_.port();
-    cass::MultiResolver::Ptr resolver;
+    MultiResolver::Ptr resolver;
 
-    for (cass::ContactPointList::const_iterator it = contact_points.begin(),
+    for (ContactPointList::const_iterator it = contact_points.begin(),
          end = contact_points.end(); it != end; ++it) {
-      const cass::String& contact_point = *it;
-      cass::Address address;
+      const String& contact_point = *it;
+      Address address;
       // Attempt to parse the contact point string. If it's an IP address
       // then immediately add it to our resolved contact points, otherwise
       // attempt to resolve the string as a hostname.
-      if (cass::Address::from_string(contact_point, port, &address)) {
-        cass::AddressSet addresses;
+      if (Address::from_string(contact_point, port, &address)) {
+        AddressSet addresses;
         addresses.insert(address);
         contact_points_resolved_[contact_point] = addresses;
       } else {
         if (!resolver) {
           inc_ref();
           resolver.reset(
-            new cass::MultiResolver(
+            new MultiResolver(
             bind_callback(&StartupMessageHandler::on_resolve, this)));
         }
         resolver->resolve(connection_->loop(),
@@ -622,15 +623,15 @@ private:
     //       the destructor
   }
 
-  void on_resolve(cass::MultiResolver* resolver) {
-    const cass::Resolver::Vec& resolvers = resolver->resolvers();
-    for (cass::Resolver::Vec::const_iterator it = resolvers.begin(),
+  void on_resolve(MultiResolver* resolver) {
+    const Resolver::Vec& resolvers = resolver->resolvers();
+    for (Resolver::Vec::const_iterator it = resolvers.begin(),
          end = resolvers.end(); it != end; ++it) {
-      const cass::Resolver::Ptr resolver(*it);
-      cass::AddressSet addresses;
+      const Resolver::Ptr resolver(*it);
+      AddressSet addresses;
       if (resolver->is_success()) {
         if (!resolver->addresses().empty()) {
-          for (cass::AddressVec::const_iterator it = resolver->addresses().begin(),
+          for (AddressVec::const_iterator it = resolver->addresses().begin(),
                end = resolver->addresses().end(); it != end;  ++it) {
             addresses.insert(*it);
           }
@@ -642,8 +643,8 @@ private:
     dec_ref(); // Send startup message in destructor
   }
 
-  cass::String get_local_address(const uv_tcp_t* tcp) const {
-    cass::Address interface_address;
+  String get_local_address(const uv_tcp_t* tcp) const {
+    Address interface_address;
     struct sockaddr socket_address;
     int namelen = sizeof(socket_address);
     if (uv_tcp_getsockname(tcp, &socket_address, &namelen) == 0 &&
@@ -654,8 +655,8 @@ private:
   }
 
   void execution_profile_as_json(ClientInsights::Writer& writer,
-                                 const cass::ExecutionProfile& profile,
-                                 const cass::ExecutionProfile* default_profile = NULL) {
+                                 const ExecutionProfile& profile,
+                                 const ExecutionProfile* default_profile = NULL) {
     writer.StartObject();
 
     if (!default_profile ||
@@ -675,16 +676,16 @@ private:
     }
     if (!default_profile ||
         (default_profile && profile.retry_policy() != default_profile->retry_policy())) {
-      const cass::RetryPolicy::Ptr& retry_policy = profile.retry_policy();
+      const RetryPolicy::Ptr& retry_policy = profile.retry_policy();
       if (retry_policy) {
         writer.Key("retryPolicy");
-        if (retry_policy->type() == cass::RetryPolicy::DEFAULT) {
+        if (retry_policy->type() == RetryPolicy::DEFAULT) {
           writer.String("DefaultRetryPolicy");
-        } else if (retry_policy->type() == cass::RetryPolicy::DOWNGRADING) {
+        } else if (retry_policy->type() == RetryPolicy::DOWNGRADING) {
           writer.String("DowngradingConsistencyRetryPolicy");
-        } else if (retry_policy->type() == cass::RetryPolicy::FALLTHROUGH) {
+        } else if (retry_policy->type() == RetryPolicy::FALLTHROUGH) {
           writer.String("FallthroughRetryPolicy");
-        } else if (retry_policy->type() == cass::RetryPolicy::LOGGING) {
+        } else if (retry_policy->type() == RetryPolicy::LOGGING) {
           writer.String("LoggingRetryPolicy");
         } else {
           LOG_DEBUG("Invalid retry policy: %d", retry_policy->type());
@@ -697,18 +698,18 @@ private:
       writer.Key("loadBalancing");
       writer.StartObject();
       writer.Key("type");
-      cass::LoadBalancingPolicy* current_lbp = profile.load_balancing_policy().get();
+      LoadBalancingPolicy* current_lbp = profile.load_balancing_policy().get();
       do {
         // NOTE: DCAware and RoundRobin are leaf policies (e.g. not chainable)
-        if (dynamic_cast<cass::DCAwarePolicy*>(current_lbp)) {
+        if (dynamic_cast<DCAwarePolicy*>(current_lbp)) {
           writer.String("DCAwarePolicy");
           break;
-        } else if (dynamic_cast<cass::RoundRobinPolicy*>(current_lbp)) {
+        } else if (dynamic_cast<RoundRobinPolicy*>(current_lbp)) {
           writer.String("RoundRobinPolicy");
           break;
         }
 
-        if (cass::ChainedLoadBalancingPolicy* chained_lbp = dynamic_cast<cass::ChainedLoadBalancingPolicy*>(current_lbp)) {
+        if (ChainedLoadBalancingPolicy* chained_lbp = dynamic_cast<ChainedLoadBalancingPolicy*>(current_lbp)) {
           current_lbp = chained_lbp->child_policy().get();
         } else {
           current_lbp = NULL;
@@ -716,7 +717,7 @@ private:
       } while (current_lbp);
       writer.Key("options");
       writer.StartObject();
-      if (cass::DCAwarePolicy* dc_lbp = dynamic_cast<cass::DCAwarePolicy*>(current_lbp)) {
+      if (DCAwarePolicy* dc_lbp = dynamic_cast<DCAwarePolicy*>(current_lbp)) {
         writer.Key("localDc");
         if (dc_lbp->local_dc().empty()) {
           writer.Null();
@@ -732,19 +733,19 @@ private:
       writer.Bool(profile.host_targeting());
       if (!profile.blacklist().empty()) {
         writer.Key("blacklist");
-        writer.String(cass::implode(profile.blacklist()).c_str());
+        writer.String(implode(profile.blacklist()).c_str());
       }
       if (!profile.blacklist_dc().empty()) {
         writer.Key("blacklistDc");
-        writer.String(cass::implode(profile.blacklist_dc()).c_str());
+        writer.String(implode(profile.blacklist_dc()).c_str());
       }
       if (!profile.whitelist().empty()) {
         writer.Key("whitelist");
-        writer.String(cass::implode(profile.whitelist()).c_str());
+        writer.String(implode(profile.whitelist()).c_str());
       }
       if (!profile.whitelist_dc().empty()) {
         writer.Key("whitelistDc");
-        writer.String(cass::implode(profile.whitelist_dc()).c_str());
+        writer.String(implode(profile.whitelist_dc()).c_str());
       }
       if (profile.token_aware_routing()) {
         writer.Key("tokenAwareRouting");
@@ -773,7 +774,7 @@ private:
       writer.EndObject(); // loadBalancingPolicy
     }
 
-    typedef cass::ConstantSpeculativeExecutionPolicy CSEP;
+    typedef ConstantSpeculativeExecutionPolicy CSEP;
     CSEP* default_csep = default_profile ? dynamic_cast<CSEP*>(default_profile->speculative_execution_policy().get()) : NULL;
     CSEP* csep = dynamic_cast<CSEP*>(profile.speculative_execution_policy().get());
     if (csep) {
@@ -800,14 +801,14 @@ private:
     writer.EndObject(); // executionProfile
   }
 
-  typedef std::pair<cass::String, cass::String> StringPair;
-  typedef cass::Vector<StringPair> StringPairVec;
-  StringPairVec get_config_anti_patterns(const cass::ExecutionProfile& default_profile,
-                                         const cass::ExecutionProfile::Map& profiles,
-                                         const cass::LoadBalancingPolicy::Vec& policies,
-                                         const cass::HostMap& hosts,
-                                         const cass::SslContext::Ptr& ssl_context,
-                                         const cass::AuthProvider::Ptr& auth_provider) {
+  typedef std::pair<String, String> StringPair;
+  typedef Vector<StringPair> StringPairVec;
+  StringPairVec get_config_anti_patterns(const ExecutionProfile& default_profile,
+                                         const ExecutionProfile::Map& profiles,
+                                         const LoadBalancingPolicy::Vec& policies,
+                                         const HostMap& hosts,
+                                         const SslContext::Ptr& ssl_context,
+                                         const AuthProvider::Ptr& auth_provider) {
     StringPairVec config_anti_patterns;
 
     if (is_contact_points_multiple_dcs(policies, hosts)) {
@@ -817,9 +818,9 @@ private:
                CONFIG_ANTIPATTERN_MSG_MULTI_DC_HOSTS);
     }
 
-    for (cass::LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
+    for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
          end = policies.end(); it != end; ++it) {
-      cass::DCAwarePolicy* dc_lbp = get_dc_aware_policy(*it);
+      DCAwarePolicy* dc_lbp = get_dc_aware_policy(*it);
       if (dc_lbp && !dc_lbp->skip_remote_dcs_for_local_cl()) {
         config_anti_patterns.push_back(StringPair("useRemoteHosts",
                                        CONFIG_ANTIPATTERN_MSG_REMOTE_HOSTS));
@@ -831,7 +832,7 @@ private:
 
     bool is_downgrading_consistency_enabled = is_downgrading_retry_anti_pattern(default_profile.retry_policy());
     if (!is_downgrading_consistency_enabled) {
-      for (cass::ExecutionProfile::Map::const_iterator it = profiles.begin(),
+      for (ExecutionProfile::Map::const_iterator it = profiles.begin(),
            end = profiles.end(); it != end; ++it) {
         if (is_downgrading_retry_anti_pattern(it->second.retry_policy())) {
           is_downgrading_consistency_enabled = true;
@@ -854,7 +855,7 @@ private:
     }
 
     if (auth_provider &&
-        auth_provider->name().find("PlainTextAuthProvider") != cass::String::npos &&
+        auth_provider->name().find("PlainTextAuthProvider") != String::npos &&
         !ssl_context) {
       config_anti_patterns.push_back(StringPair("plainTextAuthWithoutSsl",
                                      CONFIG_ANTIPATTERN_MSG_PLAINTEXT_NO_SSL));
@@ -865,13 +866,13 @@ private:
     return config_anti_patterns;
   }
 
-  cass::DCAwarePolicy* get_dc_aware_policy(const cass::LoadBalancingPolicy::Ptr& policy) {
-    cass::LoadBalancingPolicy* current_lbp = policy.get();
+  DCAwarePolicy* get_dc_aware_policy(const LoadBalancingPolicy::Ptr& policy) {
+    LoadBalancingPolicy* current_lbp = policy.get();
     do {
-      if (cass::DCAwarePolicy* dc_lbp = dynamic_cast<cass::DCAwarePolicy*>(current_lbp)) {
+      if (DCAwarePolicy* dc_lbp = dynamic_cast<DCAwarePolicy*>(current_lbp)) {
         return dc_lbp;
       }
-      if (cass::ChainedLoadBalancingPolicy* chained_lbp = dynamic_cast<cass::ChainedLoadBalancingPolicy*>(current_lbp)) {
+      if (ChainedLoadBalancingPolicy* chained_lbp = dynamic_cast<ChainedLoadBalancingPolicy*>(current_lbp)) {
         current_lbp = chained_lbp->child_policy().get();
       } else {
         break;
@@ -881,26 +882,26 @@ private:
     return NULL;
   }
 
-  bool is_contact_points_multiple_dcs(const cass::LoadBalancingPolicy::Vec& policies,
-                                      const cass::HostMap& hosts) {
+  bool is_contact_points_multiple_dcs(const LoadBalancingPolicy::Vec& policies,
+                                      const HostMap& hosts) {
     // Get the DC aware load balancing policy if it is the only policy that
     // exists. If found this policy will be used after the contact points have
     // been resolved in order to determine if there are contacts points that exist
     // in multiple DCs using a copy of the discovered hosts.
     if (policies.size() == 1) {
-      cass::DCAwarePolicy* policy = get_dc_aware_policy(policies[0]);
+      DCAwarePolicy* policy = get_dc_aware_policy(policies[0]);
       if (policy) {
         // Loop through the resolved contacts, find the correct initialized host
         // and if the contact point is a remote host identify as an anti-pattern
         for (ResolvedHostMap::const_iterator resolved_it = contact_points_resolved_.begin(),
              hosts_end = contact_points_resolved_.end(); resolved_it != hosts_end; ++resolved_it) {
-          const cass::AddressSet& addresses = resolved_it->second;
-          for (cass::AddressSet::const_iterator addresses_it = addresses.begin(),
+          const AddressSet& addresses = resolved_it->second;
+          for (AddressSet::const_iterator addresses_it = addresses.begin(),
                addresses_end = addresses.end(); addresses_it != addresses_end; ++addresses_it) {
-            const cass::Address& address = *addresses_it;
-            for (cass::HostMap::const_iterator hosts_it = hosts.begin(),
+            const Address& address = *addresses_it;
+            for (HostMap::const_iterator hosts_it = hosts.begin(),
                  hosts_end = hosts.end(); hosts_it != hosts_end; ++hosts_it) {
-              const cass::Host::Ptr& host = hosts_it->second;
+              const Host::Ptr& host = hosts_it->second;
               if (host->address() == address &&
                   policy->distance(host) == CASS_HOST_DISTANCE_REMOTE) {
                 return true;
@@ -914,50 +915,48 @@ private:
     return false;
   }
 
-  bool is_downgrading_retry_anti_pattern(const cass::RetryPolicy::Ptr& policy) {
-    if (policy && policy->type() == cass::RetryPolicy::DOWNGRADING) {
+  bool is_downgrading_retry_anti_pattern(const RetryPolicy::Ptr& policy) {
+    if (policy && policy->type() == RetryPolicy::DOWNGRADING) {
       return true;
     }
     return false;
   }
 
 private:
-  const cass::Connection::Ptr connection_;
-  const cass::String client_id_;
-  const cass::String session_id_;
-  const cass::Config config_;
-  const cass::HostMap hosts_;
-  const cass::LoadBalancingPolicy::Vec initialized_policies_;
+  const Connection::Ptr connection_;
+  const String client_id_;
+  const String session_id_;
+  const Config config_;
+  const HostMap hosts_;
+  const LoadBalancingPolicy::Vec initialized_policies_;
 
 private:
-  typedef cass::Map<cass::String, cass::AddressSet> ResolvedHostMap;
+  typedef Map<String, AddressSet> ResolvedHostMap;
   ResolvedHostMap contact_points_resolved_;
 };
 
-} // namespace dse
-
-ClientInsights::ClientInsights(const cass::String& client_id,
-                               const cass::String& session_id,
+ClientInsights::ClientInsights(const String& client_id,
+                               const String& session_id,
                                unsigned interval_secs)
   : client_id_(client_id)
   , session_id_(session_id)
   , interval_ms_(interval_secs * 1000) { }
 
-uint64_t ClientInsights::interval_ms(const cass::VersionNumber& dse_server_version) const {
+uint64_t ClientInsights::interval_ms(const VersionNumber& dse_server_version) const {
   // DSE v5.1.13+ (backported)
   // DSE v6.0.5+ (backported)
   // DSE v6.7.0 was the first to supported the Insights RPC call
-  if ((dse_server_version >= cass::VersionNumber(5, 1, 13) && dse_server_version < cass::VersionNumber(6, 0, 0)) ||
-      dse_server_version >= cass::VersionNumber(6, 0, 5)) {
+  if ((dse_server_version >= VersionNumber(5, 1, 13) && dse_server_version < VersionNumber(6, 0, 0)) ||
+      dse_server_version >= VersionNumber(6, 0, 5)) {
     return interval_ms_;
   }
   return 0;
 }
 
-void ClientInsights::send_startup_message(const cass::Connection::Ptr& connection,
-                                          const cass::Config& config,
-                                          const cass::HostMap& hosts,
-                                          const cass::LoadBalancingPolicy::Vec& initialized_policies) {
+void ClientInsights::send_startup_message(const Connection::Ptr& connection,
+                                          const Config& config,
+                                          const HostMap& hosts,
+                                          const LoadBalancingPolicy::Vec& initialized_policies) {
   StartupMessageHandler::Ptr handler = StartupMessageHandler::Ptr(new StartupMessageHandler(connection,
                                                                                             client_id_,
                                                                                             session_id_,
@@ -967,8 +966,8 @@ void ClientInsights::send_startup_message(const cass::Connection::Ptr& connectio
   handler->send_message();
 }
 
-void ClientInsights::send_status_message(const cass::Connection::Ptr& connection,
-                                         const cass::HostMap& hosts) {
+void ClientInsights::send_status_message(const Connection::Ptr& connection,
+                                         const HostMap& hosts) {
   StringBuffer buffer;
   Writer writer(buffer);
 
@@ -987,10 +986,10 @@ void ClientInsights::send_status_message(const cass::Connection::Ptr& connection
 
   writer.Key("conntectedNodes");
   writer.StartObject();
-  for (cass::HostMap::const_iterator it = hosts.begin(),
+  for (HostMap::const_iterator it = hosts.begin(),
        end = hosts.end(); it != end; ++it) {
-    cass::String address_with_port = it->first.to_string(true);
-    const cass::Host::Ptr& host = it->second;
+    String address_with_port = it->first.to_string(true);
+    const Host::Ptr& host = it->second;
     writer.Key(address_with_port.c_str());
     writer.StartObject();
     writer.Key("connections");
@@ -1005,7 +1004,9 @@ void ClientInsights::send_status_message(const cass::Connection::Ptr& connection
   writer.EndObject();
 
   assert(writer.IsComplete() && "Status JSON is incomplete");
-  connection->write_and_flush(cass::RequestCallback::Ptr(
+  connection->write_and_flush(RequestCallback::Ptr(
       new ClientInsightsRequestCallback(buffer.GetString(),
                                         METADATA_STATUS_NAME)));
 }
+
+} } } // namespace datastax::internal::enterprise

@@ -30,7 +30,7 @@
 #include "string.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class RequestCallback;
 
@@ -107,8 +107,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Statement);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Statement, CassStatement)
+EXTERNAL_TYPE(datastax::internal::core::Statement, CassStatement)
 
 #endif

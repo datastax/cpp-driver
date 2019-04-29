@@ -26,7 +26,7 @@
   STRINGIFY(DSE_VERSION_MINOR) "." \
   STRINGIFY(DSE_VERSION_PATCH)
 
-namespace cass {
+namespace datastax { namespace internal  {
 
 const char* driver_name() {
   return "DataStax Enterprise C/C++ Driver";
@@ -40,4 +40,4 @@ const char* driver_version() {
   }
 }
 
-} // namespace cass
+} } // namespace datastax::internal

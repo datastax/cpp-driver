@@ -23,12 +23,12 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 template<class Type, class HType>
 class LoopWatcher {
 public:
-  typedef cass::Callback<void, Type*> Callback;
+  typedef internal::Callback<void, Type*> Callback;
   typedef HType HandleType;
 
   LoopWatcher()
@@ -165,6 +165,6 @@ private:
   }
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

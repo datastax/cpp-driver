@@ -29,7 +29,7 @@
 #error Unsupported compiler!
 #endif
 
-namespace cass {
+namespace datastax { namespace internal {
 
 // This allows for the allocation of memory that is of the same size and
 // alignment as a required by a non-POD, but is represented as a POD type (char).
@@ -59,7 +59,6 @@ ALIGNED_STORAGE(64);
 
 #undef ALIGNED_STORAGE
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif
-

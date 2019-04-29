@@ -39,6 +39,8 @@
 #define MAX_TOKEN static_cast<uint64_t>(INT64_MAX) - 1
 #define DATA_CENTER_PREFIX "dc"
 
+using datastax::internal::ScopedMutex;
+
 // Initialize the mutex, running status, thread, and default data center nodes
 uv_mutex_t test::SimulacronCluster::mutex_;
 bool test::SimulacronCluster::is_ready_ = false;
@@ -275,7 +277,7 @@ void test::SimulacronCluster::remove_primed_queries(unsigned int node /*= 0*/) {
 void test::SimulacronCluster::handle_exit(uv_process_t* process,
                                           int64_t error_code,
                                           int term_signal) {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   TEST_LOG("Process " << process->pid << " Terminated: " << error_code);
   uv_close(reinterpret_cast<uv_handle_t*>(process), NULL);
 }
@@ -283,7 +285,7 @@ void test::SimulacronCluster::handle_exit(uv_process_t* process,
 void test::SimulacronCluster::handle_allocation(uv_handle_t* handle,
                                                 size_t suggested_size,
                                                 uv_buf_t* buffer) {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   buffer->base = new char[OUTPUT_BUFFER_SIZE];
   buffer->len = OUTPUT_BUFFER_SIZE;
 }
@@ -352,7 +354,7 @@ void test::SimulacronCluster::handle_thread_create(void* arg) {
 
 void test::SimulacronCluster::handle_read(uv_stream_t* stream,
   ssize_t buffer_length, const uv_buf_t* buffer) {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   if (buffer_length > 0) {
     // Process the buffer and log it
     std::string message(buffer->base, buffer_length);

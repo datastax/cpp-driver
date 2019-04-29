@@ -24,6 +24,8 @@
 #define EVENT_MAXIMUM_WAIT_TIME_MS 5000
 #define EVENT_WAIT_FOR_NAP_MS 100
 
+using namespace datastax::internal;
+
 class SessionTest : public Integration {
 public:
   typedef std::pair<CassHostListenerEvent, std::string> Event;
@@ -42,7 +44,7 @@ public:
   }
 
   void check_event(CassHostListenerEvent expected_event, short expected_node) {
-    cass::ScopedMutex l(&mutex_);
+    ScopedMutex l(&mutex_);
     std::stringstream expected_address;
     expected_address << ccm_->get_ip_prefix() << expected_node;
     Event event = events_.front();
@@ -61,11 +63,11 @@ public:
 
 protected:
   size_t event_count() {
-    cass::ScopedMutex l(&mutex_);
+    ScopedMutex l(&mutex_);
     return events_.size();
   }
   void add_event(CassHostListenerEvent event, CassInet inet) {
-    cass::ScopedMutex l(&mutex_);
+    ScopedMutex l(&mutex_);
     char address[CASS_INET_STRING_LENGTH];
 
     cass_inet_string(inet, address);

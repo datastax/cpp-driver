@@ -22,7 +22,7 @@
 
 #include <stddef.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
 struct DefaultDeleter {
@@ -105,6 +105,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ScopedArray);
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

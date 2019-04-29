@@ -18,9 +18,11 @@
 
 #include "small_vector.hpp"
 
+using datastax::internal::SmallVector;
+
 TEST(SmallVectorUnitTest, Simple)
 {
-  cass::SmallVector<int, 5> vec;
+  SmallVector<int, 5> vec;
   EXPECT_EQ(vec.fixed().data.address(), vec.data());
   EXPECT_EQ(vec.fixed().is_used, true);
 

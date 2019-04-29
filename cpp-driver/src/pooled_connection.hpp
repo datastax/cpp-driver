@@ -22,7 +22,7 @@
 #include "ref_counted.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ConnectionPool;
 class EventLoop;
@@ -87,6 +87,6 @@ private:
   EventLoop* const event_loop_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

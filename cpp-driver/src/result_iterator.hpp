@@ -21,7 +21,7 @@
 #include "result_response.hpp"
 #include "row.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ResultIterator : public Iterator {
 public:
@@ -64,6 +64,6 @@ private:
   Row row_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

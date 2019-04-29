@@ -21,7 +21,7 @@
 #include "request.hpp"
 #include "string.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class PrepareRequest : public Request {
 public:
@@ -47,6 +47,6 @@ private:
   String query_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

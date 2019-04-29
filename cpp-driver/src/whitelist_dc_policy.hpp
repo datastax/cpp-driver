@@ -22,7 +22,7 @@
 #include "scoped_ptr.hpp"
 #include "list_policy.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class WhitelistDCPolicy : public ListPolicy {
 public:
@@ -46,6 +46,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(WhitelistDCPolicy);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

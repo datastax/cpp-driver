@@ -23,7 +23,7 @@
 #include <algorithm>
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Random : public Allocated {
 public:
@@ -49,7 +49,6 @@ void random_shuffle(RandomAccessIterator first,
   }
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif
-

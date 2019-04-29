@@ -26,6 +26,8 @@
 #include "statement.hpp"
 #include "test_utils.hpp"
 
+using namespace datastax::internal::core;
+
 /**
  * Test harness for prepared from existing functionality.
  */
@@ -101,7 +103,7 @@ BOOST_AUTO_TEST_CASE(prepare_from_existing_simple_statement) {
   test_utils::CassStatementPtr bound_statement(cass_prepared_bind(prepared.get()));
   BOOST_REQUIRE(bound_statement);
 
-  cass::ExecuteRequest* execute_request = static_cast<cass::ExecuteRequest*>(bound_statement->from());
+  ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(bound_statement->from());
 
   // Validate that the bound statement inherited the settings from the original statement
   BOOST_CHECK_EQUAL(execute_request->consistency(), CASS_CONSISTENCY_LOCAL_QUORUM);
@@ -149,7 +151,7 @@ BOOST_AUTO_TEST_CASE(prepare_from_existing_bound_statement) {
   test_utils::CassStatementPtr bound_statement2(cass_prepared_bind(prepared2.get()));
   BOOST_REQUIRE(bound_statement2);
 
-  cass::ExecuteRequest* execute_request = static_cast<cass::ExecuteRequest*>(bound_statement2->from());
+  ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(bound_statement2->from());
 
   // Validate that the bound statement inherited the settings from the original bound statement
   BOOST_CHECK_EQUAL(execute_request->consistency(), CASS_CONSISTENCY_LOCAL_QUORUM);

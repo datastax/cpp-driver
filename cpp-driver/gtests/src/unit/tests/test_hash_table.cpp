@@ -18,20 +18,23 @@
 
 #include "hash_table.hpp"
 
-struct TestEntry : cass::HashTableEntry<TestEntry> {
-  TestEntry(const cass::String& name)
+using namespace datastax;
+using namespace datastax::internal::core;
+
+struct TestEntry : HashTableEntry<TestEntry> {
+  TestEntry(const String& name)
     : name(name) { }
-  cass::String name;
+  String name;
 };
 
 TEST(HashTableUnitTests, Simple) {
-  cass::CaseInsensitiveHashTable<TestEntry> ht(4);
+  CaseInsensitiveHashTable<TestEntry> ht(4);
   ht.add(TestEntry("abc"));
   ht.add(TestEntry("def"));
   ht.add(TestEntry("123"));
   ht.add(TestEntry("456"));
 
-  cass::IndexVec indices;
+  IndexVec indices;
 
   EXPECT_GT(ht.get_indices("abc", &indices), 0u);
   EXPECT_EQ(indices[0], 0u);
@@ -49,12 +52,12 @@ TEST(HashTableUnitTests, Simple) {
 }
 
 TEST(HashTableUnitTests, CaseSensitivity) {
-  cass::CaseInsensitiveHashTable<TestEntry> ht(4);
+  CaseInsensitiveHashTable<TestEntry> ht(4);
   ht.add(TestEntry("abc"));
   ht.add(TestEntry("def"));
   ht.add(TestEntry("DEF"));
 
-  cass::IndexVec indices;
+  IndexVec indices;
 
   EXPECT_GT(ht.get_indices("aBc", &indices), 0u);
   EXPECT_EQ(indices[0], 0u);
@@ -77,15 +80,15 @@ TEST(HashTableUnitTests, CaseSensitivity) {
 }
 
 TEST(HashTableUnitTests, Resize) {
-  cass::CaseInsensitiveHashTable<TestEntry> ht(0);
+  CaseInsensitiveHashTable<TestEntry> ht(0);
 
   for (int i = 0; i < 26; ++i) {
-    cass::String s;
+    String s;
     s.push_back('a' + i);
     ht.add(TestEntry(s));
   }
 
-  cass::IndexVec indices;
+  IndexVec indices;
 
   EXPECT_GT(ht.get_indices("a", &indices), 0u);
   EXPECT_EQ(indices[0], 0u);

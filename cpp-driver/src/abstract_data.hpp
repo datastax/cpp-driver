@@ -33,7 +33,7 @@
   if (rc != CASS_OK) return rc;                     \
 } while(0)
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Tuple;
 class UserTypeValue;
@@ -54,7 +54,7 @@ public:
 
     Element(CassNull value)
       : type_(NUL)
-      , buf_(cass::encode_with_length(value)) { }
+      , buf_(core::encode_with_length(value)) { }
 
     Element(const Buffer& buf)
       : type_(BUFFER)
@@ -100,7 +100,7 @@ public:
 #define SET_TYPE(Type)                                  \
   CassError set(size_t index, const Type value) {       \
     CASS_CHECK_INDEX_AND_TYPE(index, value);            \
-    elements_[index] = cass::encode_with_length(value); \
+    elements_[index] = core::encode_with_length(value); \
     return CASS_OK;                                     \
   }
 
@@ -177,6 +177,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(AbstractData);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

@@ -19,7 +19,7 @@
 
 #include <atomic>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 enum MemoryOrder {
   MEMORY_ORDER_RELAXED = std::memory_order_relaxed,
@@ -72,6 +72,6 @@ inline void atomic_thread_fence(MemoryOrder order) {
   std::atomic_thread_fence(static_cast<std::memory_order>(order));
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

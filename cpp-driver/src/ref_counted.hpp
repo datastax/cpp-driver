@@ -26,7 +26,7 @@
 #include <new>
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
 class RefCounted : public Allocated {
@@ -163,6 +163,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RefBuffer);
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

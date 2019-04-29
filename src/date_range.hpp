@@ -10,8 +10,10 @@
 
 #include "serialization.hpp"
 
-namespace dse {
+namespace datastax { namespace internal { namespace enterprise {
+
   Bytes encode_date_range(const DseDateRange *range);
-}
+
+} } } // datastax::internal::enterprise
 
 #endif

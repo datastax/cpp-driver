@@ -20,6 +20,9 @@
 #include "string.hpp"
 #include "ssl.hpp"
 
+using datastax::String;
+using datastax::internal::core::SslContextFactory;
+
 #if defined(_WIN32) && defined(_DEBUG)
 # ifdef USE_VISUAL_LEAK_DETECTOR
 #   include <vld.h>
@@ -132,7 +135,7 @@ class BootstrapListener : public testing::EmptyTestEventListener {
               << CASS_VERSION_MAJOR << "."
               << CASS_VERSION_MINOR << "."
               << CASS_VERSION_PATCH;
-    if (!cass::String(CASS_VERSION_SUFFIX).empty()) {
+    if (!String(CASS_VERSION_SUFFIX).empty()) {
       std::cout << "-" << CASS_VERSION_SUFFIX;
     }
     std::cout << std::endl;
@@ -144,11 +147,11 @@ class BootstrapListener : public testing::EmptyTestEventListener {
   }
 
   void OnTestStart(const testing::TestInfo& test_information) {
-    cass::SslContextFactory::init();
+    SslContextFactory::init();
   }
 
   void OnTestEnd(const testing::TestInfo& test_information) {
-    cass::SslContextFactory::cleanup();
+    SslContextFactory::cleanup();
   }
 };
 

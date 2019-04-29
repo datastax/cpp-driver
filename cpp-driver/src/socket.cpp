@@ -25,7 +25,8 @@
 #define MAX_BUFFER_REUSE_NO 8
 #define BUFFER_REUSE_SIZE 64 * 1024
 
-namespace cass {
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 typedef Vector<uv_buf_t> UvBufVec;
 
@@ -400,5 +401,3 @@ void Socket::cleanup_free_writes() {
     delete *i;
   }
 }
-
-} // namespace cass

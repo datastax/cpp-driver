@@ -34,7 +34,7 @@
 
 #include <math.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Metrics : public Allocated {
 public:
@@ -471,6 +471,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Metrics);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

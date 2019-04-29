@@ -30,7 +30,7 @@
 #include <limits>
 #include <string.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 // http://commandcenter.blogspot.com/2012/04/byte-order-fallacy.html
 // This frees us from having to deal with endian stuff on every platform.
@@ -225,6 +225,6 @@ inline uint64_t encode_zig_zag(int64_t n) {
   return (n << 1) ^ (n >> 63);
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

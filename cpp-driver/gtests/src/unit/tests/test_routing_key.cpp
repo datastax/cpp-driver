@@ -21,6 +21,10 @@
 #include "string.hpp"
 #include "token_map.hpp"
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 // The java-driver was used as a reference for the hash value
 // below.
 
@@ -29,7 +33,7 @@ struct RoutingKeyUnitTest : public Unit { };
 TEST_F(RoutingKeyUnitTest, Single)
 {
   {
-    cass::QueryRequest query("", 1);
+    QueryRequest query("", 1);
 
     CassUuid uuid;
     ASSERT_EQ(cass_uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", &uuid), CASS_OK);
@@ -37,77 +41,77 @@ TEST_F(RoutingKeyUnitTest, Single)
     query.set(0, uuid);
     query.add_key_index(0);
 
-    cass::String routing_key;
+    String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
-    int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
+    int64_t hash = MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 6739078495667776670);
   }
 
   {
-    cass::QueryRequest query("", 1);
+    QueryRequest query("", 1);
 
     cass_int32_t value = 123456789;
     query.set(0, value);
     query.add_key_index(0);
 
-    cass::String routing_key;
+    String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
-    int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
+    int64_t hash = MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, -567416363967733925);
   }
 
   {
-    cass::QueryRequest query("", 1);
+    QueryRequest query("", 1);
 
     cass_int64_t value = 123456789;
     query.set(0, value);
     query.add_key_index(0);
 
-    cass::String routing_key;
+    String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
-    int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
+    int64_t hash = MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 5616923877423390342);
   }
 
   {
-    cass::QueryRequest query("", 1);
+    QueryRequest query("", 1);
 
     query.set(0, cass_true);
     query.add_key_index(0);
 
-    cass::String routing_key;
+    String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
-    int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
+    int64_t hash = MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 8849112093580131862);
   }
 
   {
-    cass::QueryRequest query("", 1);
+    QueryRequest query("", 1);
 
     const char* value = "abcdefghijklmnop";
-    query.set(0, cass::CassString(value, strlen(value)));
+    query.set(0, CassString(value, strlen(value)));
     query.add_key_index(0);
 
-    cass::String routing_key;
+    String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
-    int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
+    int64_t hash = MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, -4266531025627334877);
   }
 }
 
 TEST_F(RoutingKeyUnitTest, EmptyAndNull)
 {
-  cass::QueryRequest query("", 1);
+  QueryRequest query("", 1);
 
-  cass::String routing_key;
+  String routing_key;
   EXPECT_FALSE(query.get_routing_key(&routing_key));
 
-  query.set(0, cass::CassNull());
+  query.set(0, CassNull());
   query.add_key_index(0);
 
   EXPECT_FALSE(query.get_routing_key(&routing_key));
@@ -116,7 +120,7 @@ TEST_F(RoutingKeyUnitTest, EmptyAndNull)
 TEST_F(RoutingKeyUnitTest, Composite)
 {
   {
-    cass::QueryRequest query("", 3);
+    QueryRequest query("", 3);
 
     CassUuid uuid;
     ASSERT_EQ(cass_uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", &uuid), CASS_OK);
@@ -128,18 +132,18 @@ TEST_F(RoutingKeyUnitTest, Composite)
     query.add_key_index(1);
 
     const char* value = "abcdefghijklmnop";
-    query.set(2, cass::CassString(value, strlen(value)));
+    query.set(2, CassString(value, strlen(value)));
     query.add_key_index(2);
 
-    cass::String routing_key;
+    String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
-    int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
+    int64_t hash = MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 3838437721532426513);
   }
 
   {
-    cass::QueryRequest query("", 3);
+    QueryRequest query("", 3);
 
     query.set(0, cass_false);
     query.add_key_index(0);
@@ -148,13 +152,13 @@ TEST_F(RoutingKeyUnitTest, Composite)
     query.add_key_index(1);
 
     const char* value = "xyz";
-    query.set(2, cass::CassString(value, strlen(value)));
+    query.set(2, CassString(value, strlen(value)));
     query.add_key_index(2);
 
-    cass::String routing_key;
+    String routing_key;
     EXPECT_TRUE(query.get_routing_key(&routing_key));
 
-    int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
+    int64_t hash = MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     EXPECT_EQ(hash, 4466051201071860026);
   }
 }

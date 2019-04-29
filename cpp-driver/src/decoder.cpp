@@ -25,7 +25,7 @@
   } \
 } while (0)
 
-namespace cass {
+using namespace datastax::internal::core;
 
 void Decoder::maybe_log_remaining() const {
   if (remaining_ > 0) {
@@ -38,7 +38,7 @@ bool Decoder::decode_inet(Address* output) {
   CHECK_REMAINING(sizeof(uint8_t), "length of inet");
 
   uint8_t address_length = 0;
-  input_ = cass::decode_byte(input_, address_length);
+  input_ = internal::decode_byte(input_, address_length);
   remaining_ -= sizeof(uint8_t);
   if (address_length > CASS_INET_V6_LENGTH) {
     LOG_ERROR("Invalid inet address length of %d bytes", address_length);
@@ -53,7 +53,7 @@ bool Decoder::decode_inet(Address* output) {
 
   CHECK_REMAINING(sizeof(int32_t), "port");
   int32_t port = 0;
-  input_ = cass::decode_int32(input_, port);
+  input_ = internal::decode_int32(input_, port);
   remaining_ -= sizeof(int32_t);
 
   return Address::from_inet(address, address_length, port, output);
@@ -62,7 +62,7 @@ bool Decoder::decode_inet(Address* output) {
 bool Decoder::decode_inet(CassInet* output) {
   CHECK_REMAINING(sizeof(uint8_t), "length of inet");
 
-  input_ = cass::decode_byte(input_, output->address_length);
+  input_ = internal::decode_byte(input_, output->address_length);
   remaining_ -= sizeof(uint8_t);
   if (output->address_length > CASS_INET_V6_LENGTH) {
     LOG_ERROR("Invalid inet address length of %d bytes",
@@ -126,7 +126,7 @@ bool Decoder::decode_warnings(WarningVec& output) {
     return false;
   }
   uint16_t count = 0;
-  input_ = cass::decode_uint16(input_, count);
+  input_ = internal::decode_uint16(input_, count);
   remaining_ -= sizeof(uint16_t);
 
   for (uint16_t i = 0; i < count; ++i) {
@@ -179,5 +179,3 @@ void Decoder::notify_error(const char* detail, size_t bytes) const {
               type_);
   }
 }
-
-} // namespace cass

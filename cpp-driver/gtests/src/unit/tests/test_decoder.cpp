@@ -19,15 +19,19 @@
 #include "decoder.hpp"
 #include "logger.hpp"
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 // Testing decoder class to expose protected testing methods
-class TestDecoder : public cass::Decoder {
+class TestDecoder : public Decoder {
 public:
   TestDecoder(const char* input, size_t length,
-              cass::ProtocolVersion protocol_version = cass::ProtocolVersion::highest_supported())
-      : cass::Decoder(input, length, protocol_version) { }
+              ProtocolVersion protocol_version = ProtocolVersion::highest_supported())
+      : Decoder(input, length, protocol_version) { }
 
-  inline const char* buffer() const { return cass::Decoder::buffer(); }
-  inline size_t remaining() const { return cass::Decoder::remaining(); }
+  inline const char* buffer() const { return Decoder::buffer(); }
+  inline size_t remaining() const { return Decoder::remaining(); }
 };
 
 class DecoderUnitTest : public testing::Test {
@@ -36,7 +40,7 @@ public:
     failure_logged_ = false;
     warning_logged_ = false;
     cass_log_set_level(CASS_LOG_WARN);
-    cass::Logger::set_callback(DecoderUnitTest::log, NULL);
+    Logger::set_callback(DecoderUnitTest::log, NULL);
   }
 
   static void log(const CassLogMessage* message, void* data) {
@@ -470,7 +474,7 @@ TEST_F(DecoderUnitTest, DecodeStringRef) {
   const char input[17] = { 0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
                            0, 5, 67, 47, 67, 43, 43 }; // C/C++
   TestDecoder decoder(input, 17);
-  cass::StringRef value;
+  StringRef value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_string(&value));
@@ -542,7 +546,7 @@ TEST_F(DecoderUnitTest, DecodeBytesRef) {
   const char input[21] = { 0, 0, 0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
                            0, 0, 0, 5, 67, 47, 67, 43, 43 }; // C/C++
   TestDecoder decoder(input, 21);
-  cass::StringRef value;
+  StringRef value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_bytes(&value));
@@ -568,7 +572,7 @@ TEST_F(DecoderUnitTest, DecodeInetAddress) {
   const char input[30] = { 4, 127, 0, 0, 1, 0, 0, 35, 82, // 127.0.0.1:9042
                            16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 35, 82 }; // [::1]:9042
   TestDecoder decoder(input, 30);
-  cass::Address value;
+  Address value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_inet(&value));
@@ -596,14 +600,14 @@ TEST_F(DecoderUnitTest, DecodeInetStruct) {
   ASSERT_EQ(17ul, decoder.remaining());
   for (int i = 0; i < value.address_length; ++i) {
     uint8_t byte = 0;
-    cass::decode_byte(&input[i + 1], byte);
+    decode_byte(&input[i + 1], byte);
     ASSERT_EQ(byte, value.address[i]);
   }
   ASSERT_TRUE(decoder.decode_inet(&value));
   ASSERT_EQ(0ul, decoder.remaining());
   for (int i = 0; i < value.address_length; ++i) {
     uint8_t byte = 0;
-    cass::decode_byte(&input[i + 6], byte);
+    decode_byte(&input[i + 6], byte);
     ASSERT_EQ(byte, value.address[i]);
   }
 
@@ -624,7 +628,7 @@ TEST_F(DecoderUnitTest, AsInetIPv4) {
     ASSERT_EQ(4ul, decoder.remaining());
     for (int j = 0; j < value.address_length; ++j) {
       uint8_t byte = 0;
-      cass::decode_byte(&input[j], byte);
+      decode_byte(&input[j], byte);
       ASSERT_EQ(byte, value.address[j]);
     }
   }
@@ -643,7 +647,7 @@ TEST_F(DecoderUnitTest, AsInetIPv6) {
     ASSERT_EQ(16ul, decoder.remaining());
     for (int j = 0; j < value.address_length; ++j) {
       uint8_t byte = 0;
-      cass::decode_byte(&input[j], byte);
+      decode_byte(&input[j], byte);
       ASSERT_EQ(byte, value.address[j]);
     }
   }
@@ -657,7 +661,7 @@ TEST_F(DecoderUnitTest, DecodeStringMap) {
                            0, 8, 108, 97, 110, 103, 117, 97, 103, 101, // key = language
                            0, 5, 67, 47, 67, 43, 43 }; // value = C/C++
   TestDecoder decoder(input, 38);
-  cass::Map<cass::String, cass::String> value;
+  Map<String, String> value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_string_map(value));
@@ -677,7 +681,7 @@ TEST_F(DecoderUnitTest, DecodeStringlistVector) {
                            0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
                            0, 5, 67, 47, 67, 43, 43 }; // C/C++
   TestDecoder decoder(input, 19);
-  cass::Vector<cass::String> value;
+  Vector<String> value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_stringlist(value));
@@ -697,7 +701,7 @@ TEST_F(DecoderUnitTest, DecodeStringlistStringRefVec) {
                            0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
                            0, 5, 67, 47, 67, 43, 43 }; // C/C++
   TestDecoder decoder(input, 19);
-  cass::StringRefVec value;
+  StringRefVec value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_stringlist(value));
@@ -719,7 +723,7 @@ TEST_F(DecoderUnitTest, AsStringlist) {
                            0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
                            0, 5, 67, 47, 67, 43, 43 }; // C/C++
   TestDecoder decoder(input, 19);
-  cass::StringRefVec value;
+  StringRefVec value;
 
   // SUCCESS
   for (int i = 0; i < 10; ++i) {
@@ -752,14 +756,14 @@ TEST_F(DecoderUnitTest, DecodeStringMultiMap) {
                            0, 6, 80, 121, 116, 104, 111, 110, // Python
                            0, 4, 82, 117, 98, 121 }; // Ruby
   TestDecoder decoder(input, 58);
-  cass::Map<cass::String, cass::Vector<cass::String> > value;
+  Map<String, Vector<String> > value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_string_multimap(value));
   ASSERT_EQ(&input[58], decoder.buffer());
   ASSERT_EQ(0ul, decoder.remaining());
   ASSERT_EQ(1ul, value.size());
-  cass::Vector<cass::String> values = value["drivers"];
+  Vector<String> values = value["drivers"];
   ASSERT_EQ(7ul, values.size());
   ASSERT_STREQ("C/C++",
                std::string(values[0].data(), values[0].size()).c_str());
@@ -841,7 +845,7 @@ TEST_F(DecoderUnitTest, AsDecimal) {
     ASSERT_EQ(8ul, decoder.remaining());
     for (size_t j = 0; j < value_size; ++j) {
       uint8_t byte = 0;
-      cass::decode_byte(&input[j + sizeof(int32_t)], byte);
+      decode_byte(&input[j + sizeof(int32_t)], byte);
       ASSERT_EQ(byte, value[j]);
     }
   }
@@ -890,7 +894,7 @@ TEST_F(DecoderUnitTest, DecodeCustomPayload) {
                            0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
                            0, 0, 0, 5, 67, 47, 67, 43, 43 }; // C/C++
   TestDecoder decoder(input, 21);
-  cass::CustomPayloadVec value;
+  CustomPayloadVec value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_custom_payload(value));
@@ -912,7 +916,7 @@ TEST_F(DecoderUnitTest, DecodeCustomPayload) {
 TEST_F(DecoderUnitTest, DecodeFailures) {
   const char input[4] = { 0, 0, 0, 42 };
   TestDecoder decoder(input, 4, 1);
-  cass::FailureVec value;
+  FailureVec value;
   int32_t value_size = 0;
 
   // SUCCESS
@@ -933,7 +937,7 @@ TEST_F(DecoderUnitTest, DecodeFailuresWithVector) {
                            16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, // [::1] [02]
                            0, 2 };
   TestDecoder decoder(input, 30, 5);
-  cass::FailureVec value;
+  FailureVec value;
   int32_t value_size = 0;
 
   // SUCCESS
@@ -943,13 +947,13 @@ TEST_F(DecoderUnitTest, DecodeFailuresWithVector) {
   ASSERT_EQ(2, value_size);
   for (int i = 0; i < value[0].endpoint.address_length; ++i) {
     uint8_t byte;
-    cass::decode_byte(&input[i + 5], byte);
+    decode_byte(&input[i + 5], byte);
     ASSERT_EQ(byte, value[0].endpoint.address[i]);
   }
   ASSERT_EQ(1ul, value[0].failurecode);
   for (int i = 0; i < value[1].endpoint.address_length; ++i) {
     uint8_t byte;
-    cass::decode_byte(&input[i + 12], byte);
+    decode_byte(&input[i + 12], byte);
     ASSERT_EQ(byte, value[1].endpoint.address[i]);
   }
   ASSERT_EQ(2ul, value[1].failurecode);
@@ -1008,7 +1012,7 @@ TEST_F(DecoderUnitTest, DecodeWarnings) {
                            0, 16, 87, 97, 114, 110, 105, 110, 103, 32, 78, 117, 109, 98, 101, 114, 32, 49, // Warning Number 1
                            0, 16, 87, 97, 114, 110, 105, 110, 103, 32, 78, 117, 109, 98, 101, 114, 32, 50 }; // Warning Number 2
   TestDecoder decoder(input, 38);
-  cass::WarningVec value;
+  WarningVec value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_warnings(value));

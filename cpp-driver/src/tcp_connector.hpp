@@ -23,7 +23,7 @@
 #include "callback.hpp"
 #include "ref_counted.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A wrapper for uv_connect that handles connecting a TCP connection.
@@ -32,7 +32,7 @@ class TcpConnector : public RefCounted<TcpConnector> {
 public:
   typedef SharedRefPtr<TcpConnector> Ptr;
 
-  typedef cass::Callback<void, TcpConnector*> Callback;
+  typedef internal::Callback<void, TcpConnector*> Callback;
 
   enum Status {
     NEW,
@@ -125,6 +125,6 @@ private:
   int uv_status_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

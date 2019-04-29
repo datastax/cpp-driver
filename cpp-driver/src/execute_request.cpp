@@ -20,7 +20,7 @@
 #include "protocol.hpp"
 #include "request_callback.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 ExecuteRequest::ExecuteRequest(const Prepared* prepared)
   : Statement(prepared)
@@ -46,5 +46,3 @@ int ExecuteRequest::encode(ProtocolVersion version, RequestCallback* callback, B
   length += encode_end(version, callback, bufs);
   return length;
 }
-
-} // namespace cass

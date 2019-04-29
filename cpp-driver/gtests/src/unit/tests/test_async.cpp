@@ -19,6 +19,9 @@
 #include "async.hpp"
 #include "callback.hpp"
 
+using datastax::internal::core::Async;
+using datastax::internal::bind_callback;
+
 class AsyncUnitTest : public LoopTest {
 public:
   AsyncUnitTest()
@@ -27,14 +30,14 @@ public:
   bool is_callback_called() { return is_callback_called_; }
 
 protected:
-  void start(cass::Async* async) {
+  void start(Async* async) {
     ASSERT_EQ(0, async->start(loop(),
-                              cass::bind_callback(&AsyncUnitTest::on_async,
-                                                  this)));
+                              bind_callback(&AsyncUnitTest::on_async,
+                                            this)));
   }
 
 private:
-  void on_async(cass::Async* async) {
+  void on_async(Async* async) {
     is_callback_called_ = true;
     async->close_handle();
   }
@@ -44,7 +47,7 @@ private:
 };
 
 TEST_F(AsyncUnitTest, Simple) {
-  cass::Async async;
+  Async async;
   ASSERT_FALSE(async.is_running());
 
   start(&async);
@@ -62,7 +65,7 @@ TEST_F(AsyncUnitTest, Simple) {
 }
 
 TEST_F(AsyncUnitTest, NotStarted) {
-  cass::Async async;
+  Async async;
   ASSERT_FALSE(async.is_running());
   ASSERT_FALSE(is_callback_called());
 

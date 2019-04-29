@@ -21,7 +21,7 @@
 
 #include <vector>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 // This vector uses a fixed buffer as long as it doesn't exceed N items.
 // This can help to avoid heap allocation in cases where the vector remains
@@ -49,6 +49,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SmallVector);
 };
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

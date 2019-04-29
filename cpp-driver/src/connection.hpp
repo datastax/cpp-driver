@@ -22,7 +22,7 @@
 #ifndef __CASS_CONNECTION_HPP_INCLUDED__
 #define __CASS_CONNECTION_HPP_INCLUDED__
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ResponseMessage;
 class EventResponse;
@@ -255,6 +255,6 @@ private:
   Timer terminate_timer_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

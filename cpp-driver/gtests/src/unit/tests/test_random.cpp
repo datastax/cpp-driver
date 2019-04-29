@@ -20,6 +20,8 @@
 #include "third_party/hdr_histogram/hdr_histogram.hpp"
 #include "vector.hpp"
 
+using namespace datastax::internal;
+
 // 626 of the first numbers generated with the default seed of 5489LL using boost::mt19937_64
 uint64_t random_numbers[] = {
   14514284786278117030ULL,4620546740167642908ULL,13109570281517897720ULL,17462938647148434322ULL,355488278567739596ULL,7469126240319926998ULL,4635995468481642529ULL,418970542659199878ULL,
@@ -103,7 +105,7 @@ uint64_t random_numbers[] = {
   12329720415526259303ULL,5557519966701086911ULL };
 
 TEST(RandomUnitTest, RandomShuffle) {
-  cass::Random r;
+  Random r;
 
   const int num_elements = 8;
   const int max_iterations = num_elements * num_elements;
@@ -117,7 +119,7 @@ TEST(RandomUnitTest, RandomShuffle) {
   int count;
   for (count = 0; count < max_iterations; ++count) {
     std::vector<int> copy(previous);
-    cass::random_shuffle(copy.begin(), copy.end(), &r);
+    random_shuffle(copy.begin(), copy.end(), &r);
     if (copy != previous) {
       break;
     }
@@ -135,7 +137,7 @@ TEST(RandomUnitTest, RandomSeed) {
     int count;
     // Keep trying while seed equals previous value
     for (count = 0; count < max_iterations; ++count) {
-      uint64_t seed = cass::get_random_seed(previous);
+      uint64_t seed = get_random_seed(previous);
       if (seed != previous) {
         previous = seed;
         break;

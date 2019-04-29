@@ -28,7 +28,7 @@
 
 #define EMPTY_TYPE "org.apache.cassandra.db.marshal.EmptyType"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ParserBase {
 public:
@@ -180,6 +180,6 @@ private:
   DataTypeClassNameParser();
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

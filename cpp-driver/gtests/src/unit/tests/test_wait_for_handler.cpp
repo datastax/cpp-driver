@@ -22,7 +22,8 @@
 #include "wait_for_handler.hpp"
 #include "timer.hpp"
 
-using namespace cass;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class WaitForHandlerUnitTest : public LoopTest {
 public:

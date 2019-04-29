@@ -27,7 +27,7 @@
 #include "string.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ExecuteRequest;
 
@@ -57,8 +57,8 @@ private:
   StatementVec statements_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::BatchRequest, CassBatch)
+EXTERNAL_TYPE(datastax::internal::core::BatchRequest, CassBatch)
 
 #endif

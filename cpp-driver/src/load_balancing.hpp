@@ -48,9 +48,12 @@ typedef enum CassHostDistance_ {
 
 } // extern "C"
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Random;
+
+namespace core {
+
 class RequestHandler;
 class TokenMap;
 
@@ -147,7 +150,6 @@ protected:
   LoadBalancingPolicy::Ptr child_policy_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif
-

@@ -27,7 +27,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class EventLoop;
 
@@ -209,6 +209,6 @@ private:
 #endif
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

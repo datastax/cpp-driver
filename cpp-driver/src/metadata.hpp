@@ -34,7 +34,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ColumnMetadata;
 class TableMetadata;
@@ -46,7 +46,7 @@ template<class T>
 class MapIteratorImpl {
 public:
   typedef T ItemType;
-  typedef cass::Map<String, T> Collection;
+  typedef internal::Map<String, T> Collection;
 
   MapIteratorImpl(const Collection& map)
     : next_(map.begin())
@@ -100,7 +100,7 @@ private:
 
 class MetadataField {
 public:
-  typedef cass::Map<String, MetadataField> Map;
+  typedef internal::Map<String, MetadataField> Map;
 
   MetadataField() { }
 
@@ -188,7 +188,7 @@ protected:
 class FunctionMetadata : public MetadataBase, public RefCounted<FunctionMetadata> {
 public:
   typedef SharedRefPtr<FunctionMetadata> Ptr;
-  typedef cass::Map<String, Ptr> Map;
+  typedef internal::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
 
   struct Argument {
@@ -231,7 +231,7 @@ inline bool operator==(const FunctionMetadata::Argument& a, StringRef b) {
 class AggregateMetadata : public MetadataBase, public RefCounted<AggregateMetadata> {
 public:
   typedef SharedRefPtr<AggregateMetadata> Ptr;
-  typedef cass::Map<String, Ptr> Map;
+  typedef internal::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
 
   AggregateMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
@@ -260,7 +260,7 @@ private:
 class IndexMetadata : public MetadataBase, public RefCounted<IndexMetadata> {
 public:
   typedef SharedRefPtr<IndexMetadata> Ptr;
-  typedef cass::Map<String, Ptr> Map;
+  typedef internal::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
 
   CassIndexType type() const { return type_; }
@@ -297,7 +297,7 @@ private:
 class ColumnMetadata : public MetadataBase, public RefCounted<ColumnMetadata> {
 public:
   typedef SharedRefPtr<ColumnMetadata> Ptr;
-  typedef cass::Map<String, Ptr> Map;
+  typedef internal::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
 
   ColumnMetadata(const String& name)
@@ -394,7 +394,7 @@ protected:
 class ViewMetadata : public TableMetadataBase {
 public:
   typedef SharedRefPtr<ViewMetadata> Ptr;
-  typedef cass::Map<String, Ptr> Map;
+  typedef internal::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
 
   static const ViewMetadata::Ptr NIL;
@@ -469,7 +469,7 @@ inline bool operator==(const ViewMetadata::Ptr& a, const ViewMetadata::Ptr& b) {
 class TableMetadata : public TableMetadataBase {
 public:
   typedef SharedRefPtr<TableMetadata> Ptr;
-  typedef cass::Map<String, Ptr> Map;
+  typedef internal::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
   typedef Vector<String> KeyAliases;
 
@@ -515,7 +515,7 @@ private:
 
 class KeyspaceMetadata : public MetadataBase {
 public:
-  typedef cass::Map<String, KeyspaceMetadata> Map;
+  typedef internal::Map<String, KeyspaceMetadata> Map;
   typedef CopyOnWritePtr<KeyspaceMetadata::Map> MapPtr;
 
   class TableIterator : public MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> > {
@@ -748,17 +748,15 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Metadata);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Metadata::SchemaSnapshot, CassSchemaMeta)
-EXTERNAL_TYPE(cass::KeyspaceMetadata, CassKeyspaceMeta)
-EXTERNAL_TYPE(cass::TableMetadata, CassTableMeta)
-EXTERNAL_TYPE(cass::ViewMetadata, CassMaterializedViewMeta)
-EXTERNAL_TYPE(cass::ColumnMetadata, CassColumnMeta)
-EXTERNAL_TYPE(cass::IndexMetadata, CassIndexMeta)
-EXTERNAL_TYPE(cass::FunctionMetadata, CassFunctionMeta)
-EXTERNAL_TYPE(cass::AggregateMetadata, CassAggregateMeta)
+EXTERNAL_TYPE(datastax::internal::core::Metadata::SchemaSnapshot, CassSchemaMeta)
+EXTERNAL_TYPE(datastax::internal::core::KeyspaceMetadata, CassKeyspaceMeta)
+EXTERNAL_TYPE(datastax::internal::core::TableMetadata, CassTableMeta)
+EXTERNAL_TYPE(datastax::internal::core::ViewMetadata, CassMaterializedViewMeta)
+EXTERNAL_TYPE(datastax::internal::core::ColumnMetadata, CassColumnMeta)
+EXTERNAL_TYPE(datastax::internal::core::IndexMetadata, CassIndexMeta)
+EXTERNAL_TYPE(datastax::internal::core::FunctionMetadata, CassFunctionMeta)
+EXTERNAL_TYPE(datastax::internal::core::AggregateMetadata, CassAggregateMeta)
 
 #endif
-
-

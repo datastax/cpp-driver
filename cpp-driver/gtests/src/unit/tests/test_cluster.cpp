@@ -20,19 +20,20 @@
 #include "cluster_connector.hpp"
 #include "ref_counted.hpp"
 
-using namespace cass;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class ClusterUnitTest : public EventLoopTest {
 public:
   ClusterUnitTest()
     : EventLoopTest("ClusterUnitTest") { }
 
-  class Future : public cass::Future {
+  class Future : public core::Future {
   public:
     typedef SharedRefPtr<Future> Ptr;
 
     Future()
-      : cass::Future(FUTURE_TYPE_GENERIC) { }
+      : core::Future(FUTURE_TYPE_GENERIC) { }
 
     ~Future() {
       if (cluster_) {
@@ -237,7 +238,7 @@ public:
     virtual void on_reconnect(Cluster* cluster) {
       // Trigger an ADD event right after cluster connection.
       simple_cluster_.event(
-            mockssandra::TopologyChangeEvent::new_node(cass::Address("127.0.0.2", 9042)));
+            mockssandra::TopologyChangeEvent::new_node(Address("127.0.0.2", 9042)));
     }
 
     virtual void on_host_up(const Host::Ptr& host) { event_future_->set(); }

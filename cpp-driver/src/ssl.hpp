@@ -28,7 +28,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class SslSession : public Allocated {
 public:
@@ -141,7 +141,7 @@ void SslContextFactoryBase<T>::cleanup() {
   T::internal_cleanup();
 }
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #ifdef HAVE_OPENSSL
 #include "ssl/ssl_openssl_impl.hpp"
@@ -149,6 +149,6 @@ void SslContextFactoryBase<T>::cleanup() {
 #include "ssl/ssl_no_impl.hpp"
 #endif
 
-EXTERNAL_TYPE(cass::SslContext, CassSsl)
+EXTERNAL_TYPE(datastax::internal::core::SslContext, CassSsl)
 
 #endif

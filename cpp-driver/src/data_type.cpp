@@ -25,26 +25,29 @@
 
 #include <string.h>
 
+using namespace datastax;
+using namespace datastax::internal::core;
+
 extern "C" {
 
 CassDataType* cass_data_type_new(CassValueType type) {
-  cass::DataType* data_type = NULL;
+  DataType* data_type = NULL;
   switch (type) {
     case CASS_VALUE_TYPE_LIST:
     case CASS_VALUE_TYPE_SET:
     case CASS_VALUE_TYPE_TUPLE:
     case CASS_VALUE_TYPE_MAP:
-      data_type = new cass::CollectionType(type, false);
+      data_type = new CollectionType(type, false);
       data_type->inc_ref();
       break;
 
     case CASS_VALUE_TYPE_UDT:
-      data_type = new cass::UserType(false);
+      data_type = new UserType(false);
       data_type->inc_ref();
       break;
 
     case CASS_VALUE_TYPE_CUSTOM:
-      data_type = new cass::CustomType();
+      data_type = new CustomType();
       data_type->inc_ref();
       break;
 
@@ -54,7 +57,7 @@ CassDataType* cass_data_type_new(CassValueType type) {
 
     default:
       if (type < CASS_VALUE_TYPE_LAST_ENTRY) {
-        data_type = new cass::DataType(type);
+        data_type = new DataType(type);
         data_type->inc_ref();
       }
       break;
@@ -63,36 +66,36 @@ CassDataType* cass_data_type_new(CassValueType type) {
 }
 
 CassDataType* cass_data_type_new_from_existing(const CassDataType* data_type) {
-  cass::DataType::Ptr copy = data_type->copy();
+  DataType::Ptr copy = data_type->copy();
   copy->inc_ref();
   return CassDataType::to(copy.get());
 }
 
 CassDataType* cass_data_type_new_tuple(size_t item_count) {
-  cass::DataType* data_type
-      = new cass::CollectionType(CASS_VALUE_TYPE_TUPLE, item_count);
+  DataType* data_type
+      = new CollectionType(CASS_VALUE_TYPE_TUPLE, item_count);
   data_type->inc_ref();
   return CassDataType::to(data_type);
 }
 
 CassDataType* cass_data_type_new_udt(size_t field_count) {
-  cass::DataType* data_type = new cass::UserType(field_count);
+  DataType* data_type = new UserType(field_count);
   data_type->inc_ref();
   return CassDataType::to(data_type);
 }
 
 const CassDataType* cass_data_type_sub_data_type(const CassDataType* data_type,
                                                  size_t index) {
-  const cass::DataType* sub_type = NULL;
+  const DataType* sub_type = NULL;
   if (data_type->is_collection() || data_type->is_tuple()) {
-    const cass::CompositeType* composite_type
-        = static_cast<const cass::CompositeType*>(data_type->from());
+    const CompositeType* composite_type
+        = static_cast<const CompositeType*>(data_type->from());
     if (index < composite_type->types().size()) {
       sub_type = composite_type->types()[index].get();
     }
   } else if (data_type->is_user_type()) {
-    const cass::UserType* user_type
-        = static_cast<const cass::UserType*>(data_type->from());
+    const UserType* user_type
+        = static_cast<const UserType*>(data_type->from());
     if (index < user_type->fields().size()) {
       sub_type = user_type->fields()[index].type.get();
     }
@@ -113,11 +116,11 @@ const CassDataType* cass_data_type_sub_data_type_by_name_n(const CassDataType* d
     return NULL;
   }
 
-  const cass::UserType* user_type
-      = static_cast<const cass::UserType*>(data_type->from());
+  const UserType* user_type
+      = static_cast<const UserType*>(data_type->from());
 
-  cass::IndexVec indices;
-  if (user_type->get_indices(cass::StringRef(name, name_length), &indices) == 0) {
+  IndexVec indices;
+  if (user_type->get_indices(StringRef(name, name_length), &indices) == 0) {
     return NULL;
   }
 
@@ -139,8 +142,8 @@ CassError cass_data_type_type_name(const CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  const cass::UserType* user_type
-      = static_cast<const cass::UserType*>(data_type->from());
+  const UserType* user_type
+      = static_cast<const UserType*>(data_type->from());
 
   *name = user_type->type_name().data();
   *name_length = user_type->type_name().size();
@@ -161,10 +164,10 @@ CassError cass_data_type_set_type_name_n(CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  cass::UserType* user_type
-      = static_cast<cass::UserType*>(data_type->from());
+  UserType* user_type
+      = static_cast<UserType*>(data_type->from());
 
-  user_type->set_type_name(cass::String(type_name, type_name_length));
+  user_type->set_type_name(String(type_name, type_name_length));
 
   return CASS_OK;
 }
@@ -176,8 +179,8 @@ CassError cass_data_type_keyspace(const CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  const cass::UserType* user_type
-      = static_cast<const cass::UserType*>(data_type->from());
+  const UserType* user_type
+      = static_cast<const UserType*>(data_type->from());
 
   *keyspace = user_type->keyspace().data();
   *keyspace_length = user_type->keyspace().size();
@@ -198,10 +201,10 @@ CassError cass_data_type_set_keyspace_n(CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  cass::UserType* user_type
-      = static_cast<cass::UserType*>(data_type->from());
+  UserType* user_type
+      = static_cast<UserType*>(data_type->from());
 
-  user_type->set_keyspace(cass::String(keyspace, keyspace_length));
+  user_type->set_keyspace(String(keyspace, keyspace_length));
 
   return CASS_OK;
 }
@@ -213,8 +216,8 @@ CassError cass_data_type_class_name(const CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  const cass::CustomType* custom_type
-      = static_cast<const cass::CustomType*>(data_type->from());
+  const CustomType* custom_type
+      = static_cast<const CustomType*>(data_type->from());
 
   *class_name = custom_type->class_name().data();
   *class_name_length = custom_type->class_name().size();
@@ -235,10 +238,10 @@ CassError cass_data_type_set_class_name_n(CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  cass::CustomType* custom_type
-      = static_cast<cass::CustomType*>(data_type->from());
+  CustomType* custom_type
+      = static_cast<CustomType*>(data_type->from());
 
-  custom_type->set_class_name(cass::String(class_name, class_name_length));
+  custom_type->set_class_name(String(class_name, class_name_length));
 
   return CASS_OK;
 }
@@ -249,12 +252,12 @@ size_t cass_data_sub_type_count(const CassDataType* data_type) {
 
 size_t cass_data_type_sub_type_count(const CassDataType* data_type) {
   if (data_type->is_collection() || data_type->is_tuple()) {
-    const cass::CompositeType* composite_type
-        = static_cast<const cass::CompositeType*>(data_type->from());
+    const CompositeType* composite_type
+        = static_cast<const CompositeType*>(data_type->from());
     return composite_type->types().size();
   } else if (data_type->is_user_type()) {
-    const cass::UserType* user_type
-        = static_cast<const cass::UserType*>(data_type->from());
+    const UserType* user_type
+        = static_cast<const UserType*>(data_type->from());
     return user_type->fields().size();
   }
   return 0;
@@ -268,14 +271,14 @@ CassError cass_data_type_sub_type_name(const CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  const cass::UserType* user_type
-      = static_cast<const cass::UserType*>(data_type->from());
+  const UserType* user_type
+      = static_cast<const UserType*>(data_type->from());
 
   if (index >= user_type->fields().size()) {
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
   }
 
-  cass::StringRef field_name = user_type->fields()[index].name;
+  StringRef field_name = user_type->fields()[index].name;
 
   *name = field_name.data();
   *name_length = field_name.size();
@@ -289,8 +292,8 @@ CassError cass_data_type_add_sub_type(CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  cass::CompositeType* composite_type
-      = static_cast<cass::CompositeType*>(data_type->from());
+  CompositeType* composite_type
+      = static_cast<CompositeType*>(data_type->from());
 
   switch (composite_type->value_type()) {
     case CASS_VALUE_TYPE_LIST:
@@ -298,18 +301,18 @@ CassError cass_data_type_add_sub_type(CassDataType* data_type,
       if (composite_type->types().size() >= 1) {
         return CASS_ERROR_LIB_BAD_PARAMS;
       }
-      composite_type->types().push_back(cass::DataType::ConstPtr(sub_data_type));
+      composite_type->types().push_back(DataType::ConstPtr(sub_data_type));
       break;
 
     case CASS_VALUE_TYPE_MAP:
       if (composite_type->types().size() >= 2) {
         return CASS_ERROR_LIB_BAD_PARAMS;
       }
-      composite_type->types().push_back(cass::DataType::ConstPtr(sub_data_type));
+      composite_type->types().push_back(DataType::ConstPtr(sub_data_type));
       break;
 
     case CASS_VALUE_TYPE_TUPLE:
-      composite_type->types().push_back(cass::DataType::ConstPtr(sub_data_type));
+      composite_type->types().push_back(DataType::ConstPtr(sub_data_type));
       break;
 
     default:
@@ -336,11 +339,11 @@ CassError cass_data_type_add_sub_type_by_name_n(CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  cass::UserType* user_type
-      = static_cast<cass::UserType*>(data_type->from());
+  UserType* user_type
+      = static_cast<UserType*>(data_type->from());
 
-  user_type->add_field(cass::String(name, name_length),
-                       cass::DataType::ConstPtr(sub_data_type));
+  user_type->add_field(String(name, name_length),
+                       DataType::ConstPtr(sub_data_type));
 
   return CASS_OK;
 
@@ -348,8 +351,8 @@ CassError cass_data_type_add_sub_type_by_name_n(CassDataType* data_type,
 
 CassError cass_data_type_add_sub_value_type(CassDataType* data_type,
                                             CassValueType sub_value_type) {
-  cass::DataType::ConstPtr sub_data_type(
-        new cass::DataType(sub_value_type));
+  DataType::ConstPtr sub_data_type(
+        new DataType(sub_value_type));
   return cass_data_type_add_sub_type(data_type,
                                      CassDataType::to(sub_data_type.get()));
 }
@@ -358,8 +361,8 @@ CassError cass_data_type_add_sub_value_type(CassDataType* data_type,
 CassError cass_data_type_add_sub_value_type_by_name(CassDataType* data_type,
                                                     const char* name,
                                                     CassValueType sub_value_type) {
-  cass::DataType::ConstPtr sub_data_type(
-        new cass::DataType(sub_value_type));
+  DataType::ConstPtr sub_data_type(
+        new DataType(sub_value_type));
   return cass_data_type_add_sub_type_by_name(data_type, name,
                                              CassDataType::to(sub_data_type.get()));
 }
@@ -368,8 +371,8 @@ CassError cass_data_type_add_sub_value_type_by_name_n(CassDataType* data_type,
                                                       const char* name,
                                                       size_t name_length,
                                                       CassValueType sub_value_type) {
-  cass::DataType::ConstPtr sub_data_type(
-        new cass::DataType(sub_value_type));
+  DataType::ConstPtr sub_data_type(
+        new DataType(sub_value_type));
   return cass_data_type_add_sub_type_by_name_n(data_type, name, name_length,
                                                CassDataType::to(sub_data_type.get()));
 }
@@ -379,8 +382,6 @@ void cass_data_type_free(CassDataType* data_type) {
 }
 
 } // extern "C"
-
-namespace cass {
 
 const DataType::ConstPtr DataType::NIL;
 
@@ -452,19 +453,17 @@ const DataType::ConstPtr& SimpleDataTypeCache::by_value_type(uint16_t value_type
   return data_type;
 }
 
-bool cass::IsValidDataType<const Collection*>::operator()(const Collection* value,
-                                                          const DataType::ConstPtr& data_type) const {
+bool IsValidDataType<const Collection*>::operator()(const Collection* value,
+                                                    const DataType::ConstPtr& data_type) const {
   return value->data_type()->equals(data_type);
 }
 
-bool cass::IsValidDataType<const Tuple*>::operator()(const Tuple* value,
-                                                     const DataType::ConstPtr& data_type) const {
+bool IsValidDataType<const Tuple*>::operator()(const Tuple* value,
+                                               const DataType::ConstPtr& data_type) const {
   return value->data_type()->equals(data_type);
 }
 
-bool cass::IsValidDataType<const UserTypeValue*>::operator()(const UserTypeValue* value,
-                                                             const DataType::ConstPtr& data_type) const {
+bool IsValidDataType<const UserTypeValue*>::operator()(const UserTypeValue* value,
+                                                       const DataType::ConstPtr& data_type) const {
   return value->data_type()->equals(data_type);
 }
-
-} // namespace cass

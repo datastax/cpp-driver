@@ -41,7 +41,7 @@
 #include <sys/uio.h>
 #endif
 
-namespace cass {
+namespace datastax { namespace internal {
 
 Random::Random()
  // Use high resolution time if we can't get a real random seed
@@ -147,7 +147,7 @@ uint64_t Random::next(uint64_t max) {
 
     return seed;
   }
-
 #endif
 
-} // namespace cass
+} } // namespace datastax::internal
+

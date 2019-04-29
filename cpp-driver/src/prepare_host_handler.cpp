@@ -23,7 +23,8 @@
 
 #include <algorithm>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 struct CompareEntryKeyspace {
   bool operator()(const PreparedMetadata::Entry::Ptr& lhs,
@@ -216,5 +217,3 @@ void PrepareHostHandler::SetKeyspaceCallback::on_internal_timeout() {
            handler_->host_->address_string().c_str());
   handler_->close();
 }
-
-} // namespace cass

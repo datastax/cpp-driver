@@ -61,7 +61,7 @@
   (block_[(n)])
 #endif
 
-namespace cass {
+using namespace datastax::internal;
 
 Md5::Md5()
   : lo_(0), hi_(0)
@@ -257,5 +257,3 @@ const uint8_t* Md5::body(const uint8_t* data, size_t size)
 
   return ptr;
 }
-
-} // namespace cass

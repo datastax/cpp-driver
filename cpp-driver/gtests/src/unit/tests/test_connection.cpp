@@ -27,7 +27,8 @@
 #undef STATUS_TIMEOUT
 #endif
 
-using namespace cass;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class ConnectionUnitTest : public LoopTest {
 public:

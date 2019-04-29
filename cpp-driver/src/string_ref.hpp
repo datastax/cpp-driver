@@ -28,7 +28,7 @@
 #include <stddef.h>
 #include <string.h>
 
-namespace cass {
+namespace datastax {
 
 template<class IsEqual>
 int compare(const char* s1,  const char* s2,
@@ -147,15 +147,15 @@ private:
     } else if(length_ > ref.length_) {
       return 1;
     }
-    return cass::compare(ptr_, ref.ptr_, length_, is_equal);
+    return datastax::compare(ptr_, ref.ptr_, length_, is_equal);
   }
 
   const char* ptr_;
   size_t length_;
 };
 
-typedef Vector<String> StringVec;
-typedef Vector<StringRef> StringRefVec;
+typedef internal::Vector<String> StringVec;
+typedef internal::Vector<StringRef> StringRefVec;
 
 inline StringVec to_strings(const StringRefVec& refs) {
   StringVec strings;
@@ -170,14 +170,14 @@ inline StringVec to_strings(const StringRefVec& refs) {
 
 inline bool starts_with(const StringRef& input, const StringRef& target) {
   return input.length() >= target.length() &&
-      cass::compare(input.data(), target.data(), target.size(),
-                    StringRef::IsEqual()) == 0;
+      compare(input.data(), target.data(), target.size(),
+              StringRef::IsEqual()) == 0;
 }
 
 inline bool ends_with(const StringRef& input, const StringRef& target) {
   return input.length() >= target.length() &&
-      cass::compare(input.data() + (input.length() - target.length()),
-                    target.data(), target.size(), StringRef::IsEqual()) == 0;
+      compare(input.data() + (input.length() - target.length()),
+              target.data(), target.size(), StringRef::IsEqual()) == 0;
 }
 
 inline bool iequals(const StringRef& lhs, const StringRef& rhs) {
@@ -196,6 +196,6 @@ struct StringRefIEquals {
   }
 };
 
-} // namespace cass
+} // namespace datastax
 
 #endif

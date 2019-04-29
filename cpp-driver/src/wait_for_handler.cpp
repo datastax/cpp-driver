@@ -21,7 +21,10 @@
 
 #include <iomanip>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A callback that handles a chain of requests on behalf of the wait handler.
@@ -46,6 +49,8 @@ private:
 void WaitForCallback::on_chain_write(Connection* connection) {
   handler_->start(connection);
 }
+
+} } } // namespace datastax::internal::core
 
 void WaitForCallback::on_chain_set() {
   if (handler_->on_set(Ptr(this))) {
@@ -122,7 +127,7 @@ void WaitForHandler::on_retry_timeout(Timer* timer) {
     on_error(WaitForHandler::WAIT_FOR_ERROR_CONNECTION_CLOSED, "Connection closed");
     finish();
   } else if (connection_->write_and_flush(callback(requests_)) ==
-             cass::Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS) {
+             core::Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS) {
     on_error(WaitForHandler::WAIT_FOR_ERROR_NO_STREAMS, "Connection closed");
     finish();
   }
@@ -145,5 +150,3 @@ WaitForHandler::WaitForHandler(const RequestHandler::Ptr& request_handler,
   , request_handler_(request_handler)
   , current_host_(current_host)
   , response_(response) { }
-
-} // namespace cass

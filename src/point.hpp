@@ -10,7 +10,7 @@
 
 #include "serialization.hpp"
 
-namespace dse {
+namespace datastax { namespace internal { namespace enterprise {
 
 inline Bytes encode_point(cass_double_t x, cass_double_t y) {
   Bytes bytes;
@@ -26,6 +26,6 @@ inline Bytes encode_point(cass_double_t x, cass_double_t y) {
   return bytes;
 }
 
-} // namespace dse
+} } } // namespace datastax::internal::enterprise
 
 #endif

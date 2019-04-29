@@ -14,12 +14,14 @@
 
 #include "statement.hpp"
 
+using namespace datastax::internal::enterprise;
+
 extern "C" {
 
 CassError cass_statement_bind_dse_point(CassStatement* statement,
                                         size_t index,
                                         cass_double_t x, cass_double_t y) {
-  dse::Bytes bytes = dse::encode_point(x, y);
+  Bytes bytes = encode_point(x, y);
   return cass_statement_bind_custom(statement, index, DSE_POINT_TYPE,
                                     bytes.data(), bytes.size());
 }
@@ -35,7 +37,7 @@ CassError cass_statement_bind_dse_point_by_name(CassStatement* statement,
 CassError cass_statement_bind_dse_point_by_name_n(CassStatement* statement,
                                                   const char* name, size_t name_length,
                                                   cass_double_t x, cass_double_t y) {
-  dse::Bytes bytes = dse::encode_point(x, y);
+  Bytes bytes = encode_point(x, y);
   return cass_statement_bind_custom_by_name_n(statement,
                                               name, name_length,
                                               DSE_POINT_TYPE, sizeof(DSE_POINT_TYPE) - 1,
@@ -91,7 +93,7 @@ CassError cass_statement_bind_dse_polygon_by_name_n(CassStatement* statement,
 CassError cass_statement_bind_dse_date_range(CassStatement* statement,
                                              size_t index,
                                              const DseDateRange* range) {
-  dse::Bytes bytes = dse::encode_date_range(range);
+  Bytes bytes = encode_date_range(range);
   return cass_statement_bind_custom(statement, index, DSE_DATE_RANGE_TYPE, bytes.data(), bytes.size());
 }
 
@@ -104,7 +106,7 @@ CassError cass_statement_bind_dse_date_range_by_name(CassStatement* statement,
 CassError cass_statement_bind_dse_date_range_by_name_n(CassStatement* statement,
                                                        const char* name, size_t name_length,
                                                        const DseDateRange* range) {
-  dse::Bytes bytes = dse::encode_date_range(range);
+  Bytes bytes = encode_date_range(range);
   return cass_statement_bind_custom_by_name_n(statement, name, name_length,
                                               DSE_DATE_RANGE_TYPE, sizeof(DSE_DATE_RANGE_TYPE) - 1,
                                               bytes.data(), bytes.size());

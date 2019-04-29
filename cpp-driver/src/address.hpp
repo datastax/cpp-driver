@@ -27,7 +27,7 @@
 #include <string.h>
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Row;
 class Value;
@@ -95,13 +95,13 @@ private:
 };
 
 struct AddressHash {
-  std::size_t operator()(const cass::Address& a) const {
+  std::size_t operator()(const Address& a) const {
     if (a.family() == AF_INET) {
-      return cass::hash::fnv1a(reinterpret_cast<const char*>(a.addr()),
-                               sizeof(struct sockaddr_in));
+      return hash::fnv1a(reinterpret_cast<const char*>(a.addr()),
+                                   sizeof(struct sockaddr_in));
     } else if (a.family() == AF_INET6) {
-      return cass::hash::fnv1a(reinterpret_cast<const char*>(a.addr()),
-                               sizeof(struct sockaddr_in6));
+      return hash::fnv1a(reinterpret_cast<const char*>(a.addr()),
+                                   sizeof(struct sockaddr_in6));
     }
     return 0;
   }
@@ -152,6 +152,6 @@ bool determine_address_for_peer_host(const Address& connected_address,
 
 String determine_listen_address(const Address& address, const Row* row);
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

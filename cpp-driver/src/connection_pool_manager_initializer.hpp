@@ -27,7 +27,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Config;
 class Metrics;
@@ -42,7 +42,7 @@ class ConnectionPoolManagerInitializer
 public:
   typedef SharedRefPtr<ConnectionPoolManagerInitializer> Ptr;
 
-  typedef cass::Callback<void, ConnectionPoolManagerInitializer*> Callback;
+  typedef internal::Callback<void, ConnectionPoolManagerInitializer*> Callback;
 
   /**
    * Constructor
@@ -155,6 +155,6 @@ private:
   ConnectionPoolSettings settings_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

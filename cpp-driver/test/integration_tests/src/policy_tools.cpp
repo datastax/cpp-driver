@@ -22,6 +22,8 @@
 #include "testing.hpp"
 #include "policy_tools.hpp"
 
+using namespace datastax::internal::testing;
+
 void PolicyTool::show_coordinators()	// show what queries went to what nodes IP.
 {
   for (std::map<std::string, int>::const_iterator p = coordinators.begin(); p != coordinators.end(); ++p) {
@@ -138,7 +140,7 @@ void PolicyTool::query(CassSession* session, int n, CassConsistency cl)
     cass_statement_set_consistency(statement.get(), cl);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
-    add_coordinator(cass::get_host_from_future(future.get()).c_str());
+    add_coordinator(get_host_from_future(future.get()).c_str());
   }
 }
 
@@ -155,7 +157,7 @@ CassError PolicyTool::query_return_error(CassSession* session, int n, CassConsis
     if (rc != CASS_OK) {
       return rc;
     }
-    add_coordinator(cass::get_host_from_future(future.get()).c_str());
+    add_coordinator(get_host_from_future(future.get()).c_str());
   }
   return CASS_OK;
 }

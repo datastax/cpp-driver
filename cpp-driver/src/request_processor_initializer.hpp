@@ -27,7 +27,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Config;
 class EventLoop;
@@ -43,7 +43,7 @@ class RequestProcessorInitializer
 public:
   typedef SharedRefPtr<RequestProcessorInitializer> Ptr;
   typedef Vector<Ptr> Vec;
-  typedef cass::Callback<void, RequestProcessorInitializer*> Callback;
+  typedef internal::Callback<void, RequestProcessorInitializer*> Callback;
 
   enum RequestProcessorError {
     REQUEST_PROCESSOR_OK,
@@ -177,6 +177,6 @@ private:
   Atomic<size_t> remaining_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

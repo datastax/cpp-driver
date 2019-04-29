@@ -23,7 +23,7 @@
 #include "scoped_ptr.hpp"
 #include "timer.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class LatencyAwarePolicy : public ChainedLoadBalancingPolicy {
 public:
@@ -104,6 +104,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(LatencyAwarePolicy);
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

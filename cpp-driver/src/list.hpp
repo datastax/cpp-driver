@@ -21,7 +21,7 @@
 
 #include <stddef.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
 class List {
@@ -139,6 +139,6 @@ void List<T>::insert_before(Node* pos, Node* node) {
   pos->prev_ = node;
 }
 
-} // namespace cass
+} } // namespace datastax::internal
 
 #endif

@@ -25,9 +25,11 @@
 #define NUM_THREADS 2
 #define NUM_ITERATIONS 100
 
+using datastax::internal::core::Metrics;
+
 struct CounterThreadArgs {
   uv_thread_t thread;
-  cass::Metrics::Counter* counter;
+  Metrics::Counter* counter;
 };
 
 void counter_thread(void* data) {
@@ -40,7 +42,7 @@ void counter_thread(void* data) {
 struct HistogramThreadArgs {
   uv_thread_t thread;
   uint64_t id;
-  cass::Metrics::Histogram* histogram;
+  Metrics::Histogram* histogram;
 };
 
 void histogram_thread(void* data) {
@@ -52,7 +54,7 @@ void histogram_thread(void* data) {
 
 struct MeterThreadArgs {
   uv_thread_t thread;
-  cass::Metrics::Meter* meter;
+  Metrics::Meter* meter;
 };
 
 void meter_thread(void* data) {
@@ -66,8 +68,8 @@ void meter_thread(void* data) {
 }
 
 TEST(MetricsUnitTest, Counter) {
-  cass::Metrics::ThreadState thread_state(1);
-  cass::Metrics::Counter counter(&thread_state);
+  Metrics::ThreadState thread_state(1);
+  Metrics::Counter counter(&thread_state);
 
   EXPECT_EQ(counter.sum(), 0);
 
@@ -85,8 +87,8 @@ TEST(MetricsUnitTest, Counter) {
 TEST(MetricsUnitTest, CounterWithThreads) {
   CounterThreadArgs args[NUM_THREADS];
 
-  cass::Metrics::ThreadState thread_state(NUM_THREADS);
-  cass::Metrics::Counter counter(&thread_state);
+  Metrics::ThreadState thread_state(NUM_THREADS);
+  Metrics::Counter counter(&thread_state);
 
   for (int i = 0; i < NUM_THREADS; ++i) {
     args[i].counter = &counter;
@@ -101,14 +103,14 @@ TEST(MetricsUnitTest, CounterWithThreads) {
 }
 
 TEST(MetricsUnitTest, Histogram) {
-  cass::Metrics::ThreadState thread_state(1);
-  cass::Metrics::Histogram histogram(&thread_state);
+  Metrics::ThreadState thread_state(1);
+  Metrics::Histogram histogram(&thread_state);
 
   for (uint64_t i = 1; i <= 100; ++i) {
     histogram.record_value(i);
   }
 
-  cass::Metrics::Histogram::Snapshot snapshot;
+  Metrics::Histogram::Snapshot snapshot;
   histogram.get_snapshot(&snapshot);
 
   EXPECT_EQ(snapshot.min, 1);
@@ -124,10 +126,10 @@ TEST(MetricsUnitTest, Histogram) {
 }
 
 TEST(MetricsUnitTest, HistogramEmpty) {
-  cass::Metrics::ThreadState thread_state(1);
-  cass::Metrics::Histogram histogram(&thread_state);
+  Metrics::ThreadState thread_state(1);
+  Metrics::Histogram histogram(&thread_state);
 
-  cass::Metrics::Histogram::Snapshot snapshot;
+  Metrics::Histogram::Snapshot snapshot;
   histogram.get_snapshot(&snapshot);
 
   EXPECT_EQ(snapshot.min, 0);
@@ -145,8 +147,8 @@ TEST(MetricsUnitTest, HistogramEmpty) {
 TEST(MetricsUnitTest, HistogramWithThreads) {
   HistogramThreadArgs args[NUM_THREADS];
 
-  cass::Metrics::ThreadState thread_state(NUM_THREADS);
-  cass::Metrics::Histogram histogram(&thread_state);
+  Metrics::ThreadState thread_state(NUM_THREADS);
+  Metrics::Histogram histogram(&thread_state);
 
   for (int i = 0; i < NUM_THREADS; ++i) {
     args[i].histogram = &histogram;
@@ -158,7 +160,7 @@ TEST(MetricsUnitTest, HistogramWithThreads) {
     uv_thread_join(&args[i].thread);
   }
 
-  cass::Metrics::Histogram::Snapshot snapshot;
+  Metrics::Histogram::Snapshot snapshot;
   histogram.get_snapshot(&snapshot);
 
   EXPECT_EQ(snapshot.min, 1);
@@ -173,8 +175,8 @@ TEST(MetricsUnitTest, HistogramWithThreads) {
 }
 
 TEST(MetricsUnitTest, Meter) {
-  cass::Metrics::ThreadState thread_state(1);
-  cass::Metrics::Meter meter(&thread_state);
+  Metrics::ThreadState thread_state(1);
+  Metrics::Meter meter(&thread_state);
 
   // ~10 requests a second (Needs to run for at least 5 seconds)
   for (int i = 0; i < 51; ++i) {
@@ -202,8 +204,8 @@ TEST(MetricsUnitTest, Meter) {
 }
 
 TEST(MetricsUnitTest, MeterSpeculative) {
-  cass::Metrics::ThreadState thread_state(1);
-  cass::Metrics::Meter meter(&thread_state);
+  Metrics::ThreadState thread_state(1);
+  Metrics::Meter meter(&thread_state);
 
   // Emulate a situation where for a total of 60 requests sent on the wire,
   // where 15 are unique requests and 45 are dups (speculative executions).
@@ -224,8 +226,8 @@ TEST(MetricsUnitTest, MeterSpeculative) {
 TEST(MetricsUnitTest, MeterWithThreads) {
   MeterThreadArgs args[NUM_THREADS];
 
-  cass::Metrics::ThreadState thread_state(NUM_THREADS);
-  cass::Metrics::Meter meter(&thread_state);
+  Metrics::ThreadState thread_state(NUM_THREADS);
+  Metrics::Meter meter(&thread_state);
 
   for (int i = 0; i < NUM_THREADS; ++i) {
     args[i].meter = &meter;

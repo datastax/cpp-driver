@@ -24,7 +24,7 @@
 #include "ref_counted.hpp"
 #include "string.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Connector;
 
@@ -34,7 +34,7 @@ class Connector;
 class PrepareHostHandler : public RefCounted<PrepareHostHandler>
                          , public ConnectionListener {
 public:
-  typedef cass::Callback<void, const PrepareHostHandler*> Callback;
+  typedef internal::Callback<void, const PrepareHostHandler*> Callback;
 
   typedef SharedRefPtr<PrepareHostHandler> Ptr;
 
@@ -119,6 +119,6 @@ private:
   PreparedMetadata::Entry::Vec::const_iterator current_entry_it_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

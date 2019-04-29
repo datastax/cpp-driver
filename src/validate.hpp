@@ -12,7 +12,7 @@
 
 #include "string_ref.hpp"
 
-namespace dse {
+namespace datastax { namespace internal { namespace enterprise {
 
 inline CassError validate_data_type(const CassValue* value,
                                const char* class_name) {
@@ -30,14 +30,14 @@ inline CassError validate_data_type(const CassValue* value,
   size_t name_length;
   cass_data_type_class_name(data_type, &name, &name_length);
 
-  if (cass::StringRef(name, name_length) != class_name) {
+  if (StringRef(name, name_length) != class_name) {
     return CASS_ERROR_LIB_INVALID_CUSTOM_TYPE;
   }
 
   return CASS_OK;
 }
 
-} // namespace dse
+} } } // namespace datastax::internal::enterprise
 
 
 #endif

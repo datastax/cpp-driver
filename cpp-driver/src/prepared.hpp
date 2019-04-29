@@ -31,7 +31,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Prepared : public RefCounted<Prepared> {
 public:
@@ -130,8 +130,8 @@ private:
   Map metadata_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Prepared, CassPrepared)
+EXTERNAL_TYPE(datastax::internal::core::Prepared, CassPrepared)
 
 #endif

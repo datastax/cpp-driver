@@ -20,13 +20,13 @@
 #include "host.hpp"
 #include "ref_counted.hpp"
 #include "string.hpp"
+#include "string_ref.hpp"
 
-namespace cass {
+namespace datastax {  namespace internal { namespace core {
 
 class VersionNumber;
 class Value;
 class ResultResponse;
-class StringRef;
 
 class TokenMap : public RefCounted<TokenMap> {
 public:
@@ -52,6 +52,6 @@ public:
                                                  const String& routing_key) const = 0;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

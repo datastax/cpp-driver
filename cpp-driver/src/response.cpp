@@ -26,7 +26,7 @@
 
 #include <cstring>
 
-namespace cass {
+using namespace datastax::internal::core;
 
 /**
  * A dummy invalid protocol error response that's used to handle responses
@@ -209,6 +209,3 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
 
   return input_pos - input;
 }
-
-} // namespace cass
-

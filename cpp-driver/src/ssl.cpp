@@ -21,15 +21,17 @@
 
 #include <uv.h>
 
+using namespace datastax::internal::core;
+
 extern "C" {
 
 CassSsl* cass_ssl_new() {
-  cass::SslContextFactory::init_once();
+  SslContextFactory::init_once();
   return cass_ssl_new_no_lib_init();
 }
 
 CassSsl* cass_ssl_new_no_lib_init() {
-  cass::SslContext::Ptr ssl_context(cass::SslContextFactory::create());
+  SslContext::Ptr ssl_context(SslContextFactory::create());
   ssl_context->inc_ref();
   return CassSsl::to(ssl_context.get());
 }
@@ -81,9 +83,5 @@ CassError cass_ssl_set_private_key_n(CassSsl* ssl,
 
 } // extern "C"
 
-namespace cass {
-
 template<class T>
 uv_once_t SslContextFactoryBase<T>::ssl_init_guard = UV_ONCE_INIT;
-
-} // namespace cass

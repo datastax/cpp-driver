@@ -22,7 +22,7 @@
 #include "string.hpp"
 #include "string_ref.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class AuthenticateResponse : public Response {
 public:
@@ -63,6 +63,6 @@ private:
   String token_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

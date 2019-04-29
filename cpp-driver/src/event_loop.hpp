@@ -32,7 +32,7 @@
 #include <assert.h>
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class EventLoop;
 
@@ -229,6 +229,6 @@ private:
   size_t num_threads_;
 };
 
-} // namespace cass
+} } } // namespace datastax::internal::core
 
 #endif

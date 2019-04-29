@@ -18,7 +18,8 @@
 
 #include "token_map_impl.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 TokenMap::Ptr TokenMap::from_partitioner(StringRef partitioner) {
   if (ends_with(partitioner, Murmur3Partitioner::name())) {
@@ -32,5 +33,3 @@ TokenMap::Ptr TokenMap::from_partitioner(StringRef partitioner) {
     return Ptr();
   }
 }
-
-} // namespace cass

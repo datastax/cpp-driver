@@ -19,7 +19,7 @@
 #include "protocol.hpp"
 #include "serialization.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 int PrepareRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
   // <query> [long string]
@@ -49,5 +49,3 @@ int PrepareRequest::encode(ProtocolVersion version, RequestCallback* callback, B
   }
   return length;
 }
-
-} // namespace cass

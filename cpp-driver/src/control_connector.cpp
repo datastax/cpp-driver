@@ -17,7 +17,10 @@
 #include "control_connector.hpp"
 #include "result_iterator.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A chained request callback that gets the cluster's hosts from the
@@ -79,6 +82,8 @@ public:
 private:
   ControlConnector* connector_;
 };
+
+} } } // namespace datastax::internal::core
 
 ControlConnectionSettings::ControlConnectionSettings()
   : use_schema(CASS_DEFAULT_USE_SCHEMA)
@@ -347,5 +352,3 @@ void ControlConnector::on_close(Connection* connection) {
              "Control connection closed prematurely");
   }
 }
-
-} // namespace cass

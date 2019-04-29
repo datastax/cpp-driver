@@ -27,7 +27,7 @@
 #define WKB_POLYGON_HEADER_SIZE (WKB_HEADER_SIZE + sizeof(cass_uint32_t)) // Header + Num rings
 #define WKB_LINE_STRING_HEADER_SIZE (WKB_HEADER_SIZE + sizeof(cass_uint32_t)) // Header + Num points
 
-namespace dse {
+namespace datastax { namespace internal { namespace enterprise {
 
 enum DateRangeBoundType {
   DATE_RANGE_BOUND_TYPE_SINGLE_DATE = 0,
@@ -72,7 +72,7 @@ inline WkbByteOrder native_byte_order() {
 #endif
 
 
-typedef cass::Vector<cass_byte_t> Bytes;
+typedef Vector<cass_byte_t> Bytes;
 
 #if defined(HAVE_BUILTIN_BSWAP32) && defined(HAVE_BUILTIN_BSWAP64)
 inline cass_uint32_t swap_uint32(cass_uint32_t value)
@@ -154,11 +154,11 @@ inline cass_uint32_t decode_uint32(const cass_byte_t* bytes,
   return value;
 }
 
-inline dse::WkbGeometryType decode_header(const cass_byte_t* bytes, dse::WkbByteOrder* byte_order) {
-  *byte_order = static_cast<dse::WkbByteOrder>(bytes[0]);
-  return static_cast<dse::WkbGeometryType>(dse::decode_uint32(bytes + 1, *byte_order));
+inline WkbGeometryType decode_header(const cass_byte_t* bytes, WkbByteOrder* byte_order) {
+  *byte_order = static_cast<WkbByteOrder>(bytes[0]);
+  return static_cast<WkbGeometryType>(decode_uint32(bytes + 1, *byte_order));
 }
 
-} // namespace dse
+} } } // namespace datastax::internal::enterprise
 
 #endif

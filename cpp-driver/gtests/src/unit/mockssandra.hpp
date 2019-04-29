@@ -43,17 +43,19 @@
 
 #define CLIENT_OPTIONS_QUERY "client.options"
 
-using cass::Address;
-using cass::EventLoop;
-using cass::EventLoopGroup;
-using cass::List;
-using cass::String;
-using cass::Task;
-using cass::Timer;
-using cass::Vector;
-using cass::RefCounted;
-using cass::SharedRefPtr;
-using cass::ScopedPtr;
+using datastax::String;
+using datastax::internal::Atomic;
+using datastax::internal::List;
+using datastax::internal::Vector;
+using datastax::internal::RefCounted;
+using datastax::internal::SharedRefPtr;
+using datastax::internal::ScopedPtr;
+using datastax::internal::core::Address;
+using datastax::internal::core::EventLoop;
+using datastax::internal::core::EventLoopGroup;
+using datastax::internal::core::RoundRobinEventLoopGroup;
+using datastax::internal::core::Task;
+using datastax::internal::core::Timer;
 
 namespace mockssandra {
 
@@ -1222,7 +1224,7 @@ public:
   void stop(size_t node);
   void stop_async(size_t node);
 
-  int add(cass::EventLoopGroup* event_loop_group, size_t node);
+  int add(EventLoopGroup* event_loop_group, size_t node);
   void remove(size_t node);
 
   const Host& host(const Address& address) const;
@@ -1251,7 +1253,7 @@ private:
 
     Host host;
     internal::ServerConnection::Ptr connection;
-    cass::Atomic<bool> is_removed;
+    Atomic<bool> is_removed;
   };
 
   typedef Vector<Server> Servers;
@@ -1265,7 +1267,7 @@ private:
   MT19937_64 token_rng_;
 };
 
-class SimpleEventLoopGroup : public cass::RoundRobinEventLoopGroup {
+class SimpleEventLoopGroup : public RoundRobinEventLoopGroup {
 public:
   SimpleEventLoopGroup(size_t num_threads = 1);
   ~SimpleEventLoopGroup();

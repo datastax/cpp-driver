@@ -27,7 +27,8 @@
 #include "result_response.hpp"
 #include "serialization.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 void RequestWrapper::set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry) {
   prepared_metadata_entry_ = entry;
@@ -315,5 +316,3 @@ void ChainedRequestCallback::maybe_finish() {
     }
   }
 }
-
-} // namespace cass
