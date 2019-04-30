@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONNECTION_POOL_HPP_INCLUDED__
-#define __CASS_CONNECTION_POOL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONNECTION_POOL_HPP
+#define DATASTAX_INTERNAL_CONNECTION_POOL_HPP
 
 #include "address.hpp"
 #include "delayed_connector.hpp"

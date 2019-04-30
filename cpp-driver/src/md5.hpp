@@ -17,8 +17,8 @@
 // Based on public domain source found here:
 // http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
 
-#ifndef __CASS_MD5_HPP_INCLUDED__
-#define __CASS_MD5_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MD5_HPP
+#define DATASTAX_INTERNAL_MD5_HPP
 
 #include "macros.hpp"
 

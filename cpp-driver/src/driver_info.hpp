@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_DRIVER_INFO_HPP_INCLUDED__
-#define __CASS_DRIVER_INFO_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_DRIVER_INFO_HPP
+#define DATASTAX_INTERNAL_DRIVER_INFO_HPP
 
 namespace datastax { namespace internal {
 
@@ -24,4 +24,4 @@ const char* driver_version();
 
 } }  // namespace datastax::internal
 
-#endif // __CASS_DRIVER_INFO_HPP_INCLUDED__
+#endif // DATASTAX_INTERNAL_DRIVER_INFO_HPP

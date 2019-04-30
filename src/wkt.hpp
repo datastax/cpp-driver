@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_WKT_HPP_INCLUDED__
-#define __DSE_WKT_HPP_INCLUDED__
+#ifndef DATASTAX_ENTERPRISE_INTERNAL_WKT_HPP
+#define DATASTAX_ENTERPRISE_INTERNAL_WKT_HPP
 
 #include <stddef.h>
 

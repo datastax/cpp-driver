@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TEST_TOKEN_MAP_UTILS_HPP_INCLUDED__
-#define __CASS_TEST_TOKEN_MAP_UTILS_HPP_INCLUDED__
+#ifndef DATASTAX_TEST_TOKEN_MAP_UTILS_HPP
+#define DATASTAX_TEST_TOKEN_MAP_UTILS_HPP
 
 #include "constants.hpp"
 #include "decoder.hpp"

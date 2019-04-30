@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RETRY_POLICY_HPP_INCLUDED__
-#define __CASS_RETRY_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RETRY_POLICY_HPP
+#define DATASTAX_INTERNAL_RETRY_POLICY_HPP
 
 #include "cassandra.h"
 #include "error_response.hpp"

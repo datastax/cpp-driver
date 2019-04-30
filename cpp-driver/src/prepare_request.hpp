@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARE_REQUEST_HPP_INCLUDED__
-#define __CASS_PREPARE_REQUEST_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_PREPARE_REQUEST_HPP
+#define DATASTAX_INTERNAL_PREPARE_REQUEST_HPP
 
 #include "constants.hpp"
 #include "request.hpp"

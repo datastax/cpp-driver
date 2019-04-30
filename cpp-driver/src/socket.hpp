@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SOCKET_HPP_INCLUDED__
-#define __CASS_SOCKET_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SOCKET_HPP
+#define DATASTAX_INTERNAL_SOCKET_HPP
 
 #include "allocated.hpp"
 #include "buffer.hpp"

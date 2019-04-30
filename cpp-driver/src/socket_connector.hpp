@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SOCKET_CONNECTOR_HPP_INCLUDED__
-#define __CASS_SOCKET_CONNECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SOCKET_CONNECTOR_HPP
+#define DATASTAX_INTERNAL_SOCKET_CONNECTOR_HPP
 
 #include "callback.hpp"
 #include "name_resolver.hpp"

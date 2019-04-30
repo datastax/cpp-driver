@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_CLIENT_INSIGHTS_HPP_INCLUDED__
-#define __DSE_CLIENT_INSIGHTS_HPP_INCLUDED__
+#ifndef DATASTAX_ENTERPRISE_INTERNAL_CLIENT_INSIGHTS_HPP
+#define DATASTAX_ENTERPRISE_INTERNAL_CLIENT_INSIGHTS_HPP
 
 #include "config.hpp"
 #include "json.hpp"
@@ -44,4 +44,4 @@ private:
 
 } } } // namespace datastax::internal::enterprise
 
-#endif // __DSE_CLIENT_INSIGHTS_HPP_INCLUDED__
+#endif // DATASTAX_ENTERPRISE_INTERNAL_CLIENT_INSIGHTS_HPP

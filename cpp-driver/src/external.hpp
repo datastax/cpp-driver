@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_EXTERNAL_HPP_INCLUDED__
-#define __CASS_EXTERNAL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_EXTERNAL_HPP
+#define DATASTAX_INTERNAL_EXTERNAL_HPP
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.

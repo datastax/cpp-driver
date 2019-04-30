@@ -17,8 +17,8 @@
 // Based on implemenations of metrics (especially Meter) from Java library
 // com.codehale.Metrics (https://github.com/dropwizard/metrics)
 
-#ifndef __CASS_METRICS_HPP_INCLUDED__
-#define __CASS_METRICS_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_METRICS_HPP
+#define DATASTAX_INTERNAL_METRICS_HPP
 
 #include "allocated.hpp"
 #include "atomic.hpp"

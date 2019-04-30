@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ENCODING_HPP_INCLUDED__
-#define __CASS_ENCODING_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ENCODING_HPP
+#define DATASTAX_INTERNAL_ENCODING_HPP
 
 #include "buffer.hpp"
 #include "types.hpp"

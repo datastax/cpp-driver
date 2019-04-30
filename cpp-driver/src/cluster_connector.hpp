@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CLUSTER_CONNECTOR_HPP_INCLUDED__
-#define __CASS_CLUSTER_CONNECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CLUSTER_CONNECTOR_HPP
+#define DATASTAX_INTERNAL_CLUSTER_CONNECTOR_HPP
 
 #include "callback.hpp"
 #include "cluster.hpp"

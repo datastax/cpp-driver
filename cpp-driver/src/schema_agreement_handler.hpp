@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SCHEMA_CHANGE_HANDLER_HPP_INCLUDED__
-#define __CASS_SCHEMA_CHANGE_HANDLER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SCHEMA_CHANGE_HANDLER_HPP
+#define DATASTAX_INTERNAL_SCHEMA_CHANGE_HANDLER_HPP
 
 #include "wait_for_handler.hpp"
 

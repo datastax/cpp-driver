@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TOKEN_AWARE_POLICY_HPP_INCLUDED__
-#define __CASS_TOKEN_AWARE_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TOKEN_AWARE_POLICY_HPP
+#define DATASTAX_INTERNAL_TOKEN_AWARE_POLICY_HPP
 
 #include "token_map.hpp"
 #include "load_balancing.hpp"

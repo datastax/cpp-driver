@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONFIG_HPP_INCLUDED__
-#define __CASS_CONFIG_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONFIG_HPP
+#define DATASTAX_INTERNAL_CONFIG_HPP
 
 #include "auth.hpp"
 #include "cassandra.h"

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SCOPED_LOCK_HPP_INCLUDED__
-#define __CASS_SCOPED_LOCK_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SCOPED_LOCK_HPP
+#define DATASTAX_INTERNAL_SCOPED_LOCK_HPP
 
 #include "macros.hpp"
 

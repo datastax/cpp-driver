@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ROUND_ROBIN_POLICY_HPP_INCLUDED__
-#define __CASS_ROUND_ROBIN_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ROUND_ROBIN_POLICY_HPP
+#define DATASTAX_INTERNAL_ROUND_ROBIN_POLICY_HPP
 
 #include "cassandra.h"
 #include "copy_on_write_ptr.hpp"

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CALLBACK_HPP_INCLUDED__
-#define __CASS_CALLBACK_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CALLBACK_HPP
+#define DATASTAX_INTERNAL_CALLBACK_HPP
 
 #include "aligned_storage.hpp"
 #include "macros.hpp"

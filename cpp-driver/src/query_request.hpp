@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_QUERY_REQUEST_HPP_INCLUDED__
-#define __CASS_QUERY_REQUEST_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_QUERY_REQUEST_HPP
+#define DATASTAX_INTERNAL_QUERY_REQUEST_HPP
 
 #include "constants.hpp"
 #include "hash_table.hpp"

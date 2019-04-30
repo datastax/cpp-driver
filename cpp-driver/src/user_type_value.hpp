@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_USER_TYPE_VALUE_HPP_INCLUDED__
-#define __CASS_USER_TYPE_VALUE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_USER_TYPE_VALUE_HPP
+#define DATASTAX_INTERNAL_USER_TYPE_VALUE_HPP
 
 #include "abstract_data.hpp"
 #include "cassandra.h"

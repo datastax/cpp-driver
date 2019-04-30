@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_AUTH_REQUESTS_HPP_INCLUDED__
-#define __CASS_AUTH_REQUESTS_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_AUTH_REQUESTS_HPP
+#define DATASTAX_INTERNAL_AUTH_REQUESTS_HPP
 
 #include "auth.hpp"
 #include "constants.hpp"

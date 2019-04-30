@@ -16,7 +16,7 @@
 
 #include "random.hpp"
 
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "cassandra.h"
 #include "logger.hpp"
 #include "scoped_lock.hpp"

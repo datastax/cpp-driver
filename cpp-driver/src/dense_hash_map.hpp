@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_DENSE_HASH_MAP_HPP_INCLUDED__
-#define __DSE_DENSE_HASH_MAP_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_DENSE_HASH_MAP_HPP
+#define DATASTAX_INTERNAL_DENSE_HASH_MAP_HPP
 
 #include "allocator.hpp"
 

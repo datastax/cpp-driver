@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_WAIT_FOR_HANDLER_HPP_INCLUDED__
-#define __CASS_WAIT_FOR_HANDLER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_WAIT_FOR_HANDLER_HPP
+#define DATASTAX_INTERNAL_WAIT_FOR_HANDLER_HPP
 
 #include "connection.hpp"
 #include "ref_counted.hpp"

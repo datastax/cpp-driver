@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RANDOM_HPP_INCLUDED__
-#define __CASS_RANDOM_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RANDOM_HPP
+#define DATASTAX_INTERNAL_RANDOM_HPP
 
 #include "allocated.hpp"
 #include "third_party/mt19937_64/mt19937_64.hpp"

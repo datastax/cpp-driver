@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONTROL_CONNECTOR_HPP_INCLUDED__
-#define __CASS_CONTROL_CONNECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONTROL_CONNECTOR_HPP
+#define DATASTAX_INTERNAL_CONTROL_CONNECTOR_HPP
 
 #include "callback.hpp"
 #include "control_connection.hpp"

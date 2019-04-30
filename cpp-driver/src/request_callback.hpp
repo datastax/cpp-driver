@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REQUEST_CALLBACK_HPP_INCLUDED__
-#define __CASS_REQUEST_CALLBACK_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_REQUEST_CALLBACK_HPP
+#define DATASTAX_INTERNAL_REQUEST_CALLBACK_HPP
 
 #include "buffer.hpp"
 #include "cassandra.h"

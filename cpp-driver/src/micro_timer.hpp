@@ -14,12 +14,12 @@
   limitations under the License.
 */
 
-#ifndef __CASS_MICRO_TIMER_HPP_INCLUDED__
-#define __CASS_MICRO_TIMER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MICRO_TIMER_HPP
+#define DATASTAX_INTERNAL_MICRO_TIMER_HPP
 
 #include "allocated.hpp"
 #include "callback.hpp"
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "macros.hpp"
 
 #ifndef HAVE_TIMERFD

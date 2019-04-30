@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PROTOCOL_HPP_INCLUDED__
-#define __CASS_PROTOCOL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_PROTOCOL_HPP
+#define DATASTAX_INTERNAL_PROTOCOL_HPP
 
 #include "cassandra.h"
 #include "constants.hpp"

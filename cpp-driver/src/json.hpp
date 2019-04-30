@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_JSON_HPP_INCLUDED__
-#define __CASS_JSON_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_JSON_HPP
+#define DATASTAX_INTERNAL_JSON_HPP
 
 #include "memory.hpp"
 
@@ -89,4 +89,4 @@ public:
 
 } } } // namespace datastax::internal::json
 
-#endif // __CASS_JSON_HPP_INCLUDED__
+#endif // DATASTAX_INTERNAL_JSON_HPP

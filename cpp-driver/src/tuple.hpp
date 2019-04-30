@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TUPLE_HPP_INCLUDED__
-#define __CASS_TUPLE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TUPLE_HPP
+#define DATASTAX_INTERNAL_TUPLE_HPP
 
 #include "allocated.hpp"
 #include "buffer.hpp"

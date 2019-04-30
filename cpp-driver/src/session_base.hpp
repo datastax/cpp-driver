@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SESSION_BASE_HPP_INCLUDED__
-#define __CASS_SESSION_BASE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SESSION_BASE_HPP
+#define DATASTAX_INTERNAL_SESSION_BASE_HPP
 
 #include "cluster_connector.hpp"
 #include "prepared.hpp"

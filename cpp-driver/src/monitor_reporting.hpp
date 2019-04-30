@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_MONITOR_REPORTING_HPP_INCLUDED__
-#define __CASS_MONITOR_REPORTING_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MONITOR_REPORTING_HPP
+#define DATASTAX_INTERNAL_MONITOR_REPORTING_HPP
 
 #include "connection.hpp"
 #include "host.hpp"
@@ -55,4 +55,4 @@ MonitorReporting* create_monitor_reporting(const String& client_id,
 
 } } } // namespace datastax::internal::core
 
-#endif // __CASS_MONITOR_REPORTING_HPP_INCLUDED__
+#endif // DATASTAX_INTERNAL_MONITOR_REPORTING_HPP

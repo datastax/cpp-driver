@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_POOLED_CONNECTION_HPP_INCLUDED__
-#define __CASS_POOLED_CONNECTION_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_POOLED_CONNECTION_HPP
+#define DATASTAX_INTERNAL_POOLED_CONNECTION_HPP
 
 #include "atomic.hpp"
 #include "connection.hpp"

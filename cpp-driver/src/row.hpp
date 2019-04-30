@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ROW_HPP_INCLUDED__
-#define __CASS_ROW_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ROW_HPP
+#define DATASTAX_INTERNAL_ROW_HPP
 
 #include "decoder.hpp"
 #include "external.hpp"

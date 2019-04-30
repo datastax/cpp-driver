@@ -14,13 +14,13 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SSL_HPP_INCLUDED__
-#define __CASS_SSL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SSL_HPP
+#define DATASTAX_INTERNAL_SSL_HPP
 
 #include "allocated.hpp"
 #include "address.hpp"
 #include "cassandra.h"
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "external.hpp"
 #include "ref_counted.hpp"
 #include "ring_buffer.hpp"

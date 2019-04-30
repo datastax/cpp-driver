@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_DECODER_HPP_INCLUDED__
-#define __CASS_DECODER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_DECODER_HPP
+#define DATASTAX_INTERNAL_DECODER_HPP
 
 #include "constants.hpp"
 #include "data_type.hpp"
@@ -587,4 +587,4 @@ private:
 
 #undef CHECK_REMAINING
 
-#endif // __CASS_DECODER_HPP_INCLUDED__
+#endif // DATASTAX_INTERNAL_DECODER_HPP

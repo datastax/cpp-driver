@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_MAP_ITERATOR_HPP_INCLUDED__
-#define __CASS_MAP_ITERATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MAP_ITERATOR_HPP
+#define DATASTAX_INTERNAL_MAP_ITERATOR_HPP
 
 #include "cassandra.h"
 #include "iterator.hpp"

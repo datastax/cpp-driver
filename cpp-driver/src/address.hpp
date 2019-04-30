@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ADDRESS_HPP_INCLUDED__
-#define __CASS_ADDRESS_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ADDRESS_HPP
+#define DATASTAX_INTERNAL_ADDRESS_HPP
 
 #include "allocated.hpp"
 #include "hash.hpp"

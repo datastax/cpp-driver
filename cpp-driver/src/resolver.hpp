@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RESOLVER_HPP_INCLUDED__
-#define __CASS_RESOLVER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RESOLVER_HPP
+#define DATASTAX_INTERNAL_RESOLVER_HPP
 
 #include "address.hpp"
 #include "callback.hpp"

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_COMMON_HPP_INCLUDED__
-#define __CASS_COMMON_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_COMMON_HPP
+#define DATASTAX_INTERNAL_COMMON_HPP
 
 #include "cassandra.h"
 #include "macros.hpp"

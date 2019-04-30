@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SESSION_HPP_INCLUDED__
-#define __CASS_SESSION_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SESSION_HPP
+#define DATASTAX_INTERNAL_SESSION_HPP
 
 #include "allocated.hpp"
 #include "metrics.hpp"

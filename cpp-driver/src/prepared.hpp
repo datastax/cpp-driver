@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARED_HPP_INCLUDED__
-#define __CASS_PREPARED_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_PREPARED_HPP
+#define DATASTAX_INTERNAL_PREPARED_HPP
 
 #include "buffer.hpp"
 #include "external.hpp"

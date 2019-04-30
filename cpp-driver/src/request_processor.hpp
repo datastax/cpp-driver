@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REQUEST_PROCESSOR_HPP_INCLUDED__
-#define __CASS_REQUEST_PROCESSOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_REQUEST_PROCESSOR_HPP
+#define DATASTAX_INTERNAL_REQUEST_PROCESSOR_HPP
 
 #include "atomic.hpp"
 #include "config.hpp"
@@ -375,4 +375,4 @@ private:
 
 } } } // namespace datastax::internal::core
 
-#endif // __CASS_REQUEST_PROCESSOR_HPP_INCLUDED__
+#endif // DATASTAX_INTERNAL_REQUEST_PROCESSOR_HPP

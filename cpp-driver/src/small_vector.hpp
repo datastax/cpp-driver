@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SMALL_VECTOR_HPP_INCLUDED__
-#define __CASS_SMALL_VECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SMALL_VECTOR_HPP
+#define DATASTAX_INTERNAL_SMALL_VECTOR_HPP
 
 #include "fixed_allocator.hpp"
 

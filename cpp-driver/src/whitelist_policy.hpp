@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_WHITELIST_POLICY_HPP_INCLUDED__
-#define __CASS_WHITELIST_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_WHITELIST_POLICY_HPP
+#define DATASTAX_INTERNAL_WHITELIST_POLICY_HPP
 
 #include "load_balancing.hpp"
 #include "host.hpp"

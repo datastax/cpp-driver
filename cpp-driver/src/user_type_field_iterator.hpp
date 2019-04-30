@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_USER_TYPE_ITERATOR_HPP_INCLUDED__
-#define __CASS_USER_TYPE_ITERATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_USER_TYPE_ITERATOR_HPP
+#define DATASTAX_INTERNAL_USER_TYPE_ITERATOR_HPP
 
 #include "cassandra.h"
 #include "data_type.hpp"

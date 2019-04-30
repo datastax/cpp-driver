@@ -14,13 +14,13 @@
   limitations under the License.
 */
 
-#ifndef __CASS_THREAD_HPP_INCLUDED__
-#define __CASS_THREAD_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_THREAD_HPP
+#define DATASTAX_INTERNAL_THREAD_HPP
 
 #include "allocated.hpp"
 #include "async.hpp"
 #include "atomic.hpp"
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "deque.hpp"
 #include "logger.hpp"
 #include "macros.hpp"

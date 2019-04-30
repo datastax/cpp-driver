@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SCHEMA_METADATA_HPP_INCLUDED__
-#define __CASS_SCHEMA_METADATA_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SCHEMA_METADATA_HPP
+#define DATASTAX_INTERNAL_SCHEMA_METADATA_HPP
 
 #include "allocated.hpp"
 #include "copy_on_write_ptr.hpp"

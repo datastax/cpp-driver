@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REGISTER_REQUEST_HPP_INCLUDED__
-#define __CASS_REGISTER_REQUEST_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_REGISTER_REQUEST_HPP
+#define DATASTAX_INTERNAL_REGISTER_REQUEST_HPP
 
 #include "request.hpp"
 #include "constants.hpp"

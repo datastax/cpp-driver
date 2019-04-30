@@ -19,8 +19,8 @@
 #include "socket.hpp"
 #include "stream_manager.hpp"
 
-#ifndef __CASS_CONNECTION_HPP_INCLUDED__
-#define __CASS_CONNECTION_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONNECTION_HPP
+#define DATASTAX_INTERNAL_CONNECTION_HPP
 
 namespace datastax { namespace internal { namespace core {
 

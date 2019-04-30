@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_STRING_REF_HPP_INCLUDED__
-#define __CASS_STRING_REF_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_STRING_REF_HPP
+#define DATASTAX_INTERNAL_STRING_REF_HPP
 
 #include "hash.hpp"
 #include "macros.hpp"

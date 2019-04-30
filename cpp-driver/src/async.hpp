@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ASYNC_HPP_INCLUDED__
-#define __CASS_ASYNC_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ASYNC_HPP
+#define DATASTAX_INTERNAL_ASYNC_HPP
 
 #include "allocated.hpp"
 #include "callback.hpp"

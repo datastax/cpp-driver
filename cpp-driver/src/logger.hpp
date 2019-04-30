@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_LOGGER_HPP_INCLUDED__
-#define __CASS_LOGGER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_LOGGER_HPP
+#define DATASTAX_INTERNAL_LOGGER_HPP
 
 #include "cassandra.h"
 #include "get_time.hpp"

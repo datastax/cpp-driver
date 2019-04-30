@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CLUSTER_HPP_INCLUDED__
-#define __CASS_CLUSTER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CLUSTER_HPP
+#define DATASTAX_INTERNAL_CLUSTER_HPP
 
 #include "monitor_reporting.hpp"
 #include "config.hpp"

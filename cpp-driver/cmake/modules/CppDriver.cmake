@@ -998,7 +998,7 @@ endmacro()
 #------------------------
 # CassConfigure
 #
-# Generate cassconfig.hpp from cassconfig.hpp.in
+# Generate driver_config.hpp from driver_config.hpp.in
 #
 # Input: CASS_ROOT_DIR, CASS_SRC_DIR
 #------------------------
@@ -1034,6 +1034,6 @@ macro(CassConfigure)
     check_cxx_source_compiles("int main() { return __builtin_bswap64(42); }" HAVE_BUILTIN_BSWAP64)
   endif()
 
-  # Generate the cassconfig.hpp file
-  configure_file(${CASS_ROOT_DIR}/cassconfig.hpp.in ${CASS_SRC_DIR}/cassconfig.hpp)
+  # Generate the driver_config.hpp file
+  configure_file(${CASS_ROOT_DIR}/driver_config.hpp.in ${CASS_SRC_DIR}/driver_config.hpp)
 endmacro()

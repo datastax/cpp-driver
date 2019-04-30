@@ -5,11 +5,11 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_STRING_HPP_INCLUDED__
-#define __DSE_STRING_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_STRING_HPP
+#define DATASTAX_INTERNAL_STRING_HPP
 
 #include "allocator.hpp"
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "hash.hpp"
 
 #include <sparsehash/dense_hash_map>

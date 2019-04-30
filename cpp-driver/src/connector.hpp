@@ -19,8 +19,8 @@
 #include "connection.hpp"
 #include "socket_connector.hpp"
 
-#ifndef __CASS_CONNECTION_CONNECTOR_HPP_INCLUDED__
-#define __CASS_CONNECTION_CONNECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONNECTION_CONNECTOR_HPP
+#define DATASTAX_INTERNAL_CONNECTION_CONNECTOR_HPP
 
 namespace datastax { namespace internal { namespace core {
 

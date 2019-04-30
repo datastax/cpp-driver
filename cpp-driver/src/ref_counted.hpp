@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REF_COUNTED_HPP_INCLUDED__
-#define __CASS_REF_COUNTED_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_REF_COUNTED_HPP
+#define DATASTAX_INTERNAL_REF_COUNTED_HPP
 
 #include "allocated.hpp"
 #include "atomic.hpp"

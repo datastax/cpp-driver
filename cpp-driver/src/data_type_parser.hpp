@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TYPE_PARSER_HPP_INCLUDED__
-#define __CASS_TYPE_PARSER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TYPE_PARSER_HPP
+#define DATASTAX_INTERNAL_TYPE_PARSER_HPP
 
 #include "cassandra.h"
 #include "data_type.hpp"

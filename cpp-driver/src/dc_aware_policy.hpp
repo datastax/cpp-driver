@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_DC_AWARE_POLICY_HPP_INCLUDED__
-#define __CASS_DC_AWARE_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_DC_AWARE_POLICY_HPP
+#define DATASTAX_INTERNAL_DC_AWARE_POLICY_HPP
 
 #include "load_balancing.hpp"
 #include "host.hpp"

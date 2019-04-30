@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RESULT_ITERATOR_HPP_INCLUDED__
-#define __CASS_RESULT_ITERATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RESULT_ITERATOR_HPP
+#define DATASTAX_INTERNAL_RESULT_ITERATOR_HPP
 
 #include "iterator.hpp"
 #include "result_response.hpp"

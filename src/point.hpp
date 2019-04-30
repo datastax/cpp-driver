@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_POINT_HPP_INCLUDED__
-#define __DSE_POINT_HPP_INCLUDED__
+#ifndef DATASTAX_ENTERPRISE_INTERNAL_POINT_HPP
+#define DATASTAX_ENTERPRISE_INTERNAL_POINT_HPP
 
 #include "serialization.hpp"
 

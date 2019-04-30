@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TRACING_DATA_HANDLER_HPP_INCLUDED__
-#define __CASS_TRACING_DATA_HANDLER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TRACING_DATA_HANDLER_HPP
+#define DATASTAX_INTERNAL_TRACING_DATA_HANDLER_HPP
 
 #include "wait_for_handler.hpp"
 

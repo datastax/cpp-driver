@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_AUTH_HPP_INCLUDED__
-#define __DSE_AUTH_HPP_INCLUDED__
+#ifndef DATASTAX_ENTERPRISE_INTERNAL_AUTH_HPP
+#define DATASTAX_ENTERPRISE_INTERNAL_AUTH_HPP
 
 #include "allocated.hpp"
 #include "dse.h"

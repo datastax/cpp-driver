@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RESULT_RESPONSE_HPP_INCLUDED__
-#define __CASS_RESULT_RESPONSE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RESULT_RESPONSE_HPP
+#define DATASTAX_INTERNAL_RESULT_RESPONSE_HPP
 
 #include "constants.hpp"
 #include "data_type.hpp"

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TYPES_HPP_INCLUDED__
-#define __CASS_TYPES_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TYPES_HPP
+#define DATASTAX_INTERNAL_TYPES_HPP
 
 #include "cassandra.h"
 #include "string_ref.hpp"

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
-#define __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_FIXED_ALLOCATOR_HPP
+#define DATASTAX_INTERNAL_FIXED_ALLOCATOR_HPP
 
 #include "aligned_storage.hpp"
 #include "macros.hpp"

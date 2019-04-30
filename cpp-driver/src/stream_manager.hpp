@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_STREAM_MANAGER_HPP_INCLUDED__
-#define __CASS_STREAM_MANAGER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_STREAM_MANAGER_HPP
+#define DATASTAX_INTERNAL_STREAM_MANAGER_HPP
 
 #include "constants.hpp"
 #include "dense_hash_map.hpp"

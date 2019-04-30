@@ -23,13 +23,13 @@
   http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
 */
 
-#ifndef __CASS_SPSC_QUEUE_HPP_INCLUDED__
-#define __CASS_SPSC_QUEUE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SPSC_QUEUE_HPP
+#define DATASTAX_INTERNAL_SPSC_QUEUE_HPP
 
 #include <assert.h>
 
 #include "atomic.hpp"
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "macros.hpp"
 #include "scoped_ptr.hpp"
 #include "utils.hpp"

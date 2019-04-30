@@ -19,8 +19,8 @@
  * domain. The author hereby disclaims copyright to this source code.
  */
 
-#ifndef __CASS_MURMUR3_HPP_INCLUDED__
-#define __CASS_MURMUR3_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MURMUR3_HPP
+#define DATASTAX_INTERNAL_MURMUR3_HPP
 
 #include "macros.hpp"
 

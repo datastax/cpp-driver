@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_POLYGON_HPP_INCLUDED__
-#define __DSE_POLYGON_HPP_INCLUDED__
+#ifndef DATASTAX_ENTERPRISE_INTERNAL_POLYGON_HPP
+#define DATASTAX_ENTERPRISE_INTERNAL_POLYGON_HPP
 
 #include "dse.h"
 

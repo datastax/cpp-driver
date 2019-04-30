@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ALLOCATED_HPP_INCLUDED__
-#define __CASS_ALLOCATED_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ALLOCATED_HPP
+#define DATASTAX_INTERNAL_ALLOCATED_HPP
 
 #include <cstddef>
 

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SPECULATIVE_EXECUTION_HPP_INCLUDED__
-#define __CASS_SPECULATIVE_EXECUTION_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SPECULATIVE_EXECUTION_HPP
+#define DATASTAX_INTERNAL_SPECULATIVE_EXECUTION_HPP
 
 #include "allocated.hpp"
 #include "host.hpp"

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SSL_NO_IMPL_HPP_INCLUDED__
-#define __CASS_SSL_NO_IMPL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SSL_NO_IMPL_HPP
+#define DATASTAX_INTERNAL_SSL_NO_IMPL_HPP
 
 namespace datastax { namespace internal { namespace core {
 

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TESTING_HPP_INCLUDED__
-#define __CASS_TESTING_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TESTING_HPP
+#define DATASTAX_INTERNAL_TESTING_HPP
 
 #include "cassandra.h"
 #include "string.hpp"

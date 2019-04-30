@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TOKEN_MAP_IMPL_HPP_INCLUDED__
-#define __CASS_TOKEN_MAP_IMPL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TOKEN_MAP_IMPL_HPP
+#define DATASTAX_INTERNAL_TOKEN_MAP_IMPL_HPP
 
 #include "collection_iterator.hpp"
 #include "constants.hpp"

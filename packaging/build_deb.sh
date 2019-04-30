@@ -39,7 +39,7 @@ release=1
 dist=$(lsb_release -s -c)
 base="dse-cpp-driver-$version"
 archive="$base.tar.gz"
-files="CMakeLists.txt include src cmake cpp-driver/include cpp-driver/src cpp-driver/cmake cpp-driver/cassconfig.hpp.in"
+files="CMakeLists.txt include src cmake cpp-driver/include cpp-driver/src cpp-driver/cmake cpp-driver/driver_config.hpp.in"
 
 echo "Building version $version"
 

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BUFFER_HPP_INCLUDED__
-#define __CASS_BUFFER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_BUFFER_HPP
+#define DATASTAX_INTERNAL_BUFFER_HPP
 
 #include "ref_counted.hpp"
 #include "serialization.hpp"

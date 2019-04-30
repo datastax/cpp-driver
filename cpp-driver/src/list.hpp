@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_LIST_HPP_INCLUDED__
-#define __CASS_LIST_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_LIST_HPP
+#define DATASTAX_INTERNAL_LIST_HPP
 
 #include "macros.hpp"
 

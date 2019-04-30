@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_MEMORY_HPP_INCLUDED__
-#define __DSE_MEMORY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MEMORY_HPP
+#define DATASTAX_INTERNAL_MEMORY_HPP
 
 #include "cassandra.h"
 #include <cstdlib>

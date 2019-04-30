@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_VECTOR_HPP_INCLUDED__
-#define __DSE_VECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_VECTOR_HPP
+#define DATASTAX_INTERNAL_VECTOR_HPP
 
 #include "allocated.hpp"
 #include "allocator.hpp"

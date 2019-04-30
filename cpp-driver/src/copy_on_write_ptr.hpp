@@ -16,8 +16,8 @@
 
 #include "ref_counted.hpp"
 
-#ifndef __CASS_COPY_ON_WRITE_PTR_HPP_INCLUDED__
-#define __CASS_COPY_ON_WRITE_PTR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_COPY_ON_WRITE_PTR_HPP
+#define DATASTAX_INTERNAL_COPY_ON_WRITE_PTR_HPP
 
 #include <stdio.h>
 

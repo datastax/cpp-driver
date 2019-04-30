@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_LOAD_BALANCING_HPP_INCLUDED__
-#define __CASS_LOAD_BALANCING_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_LOAD_BALANCING_HPP
+#define DATASTAX_INTERNAL_LOAD_BALANCING_HPP
 
 #include "allocated.hpp"
 #include "cassandra.h"

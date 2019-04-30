@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_LATENCY_AWARE_POLICY_HPP_INCLUDED__
-#define __CASS_LATENCY_AWARE_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_LATENCY_AWARE_POLICY_HPP
+#define DATASTAX_INTERNAL_LATENCY_AWARE_POLICY_HPP
 
 #include "atomic.hpp"
 #include "load_balancing.hpp"

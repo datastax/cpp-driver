@@ -17,8 +17,8 @@
 #include "atomic.hpp"
 #include "macros.hpp"
 
-#ifndef __CASS_SPINLOCK_HPP_INCLUDED__
-#define __CASS_SPINLOCK_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SPINLOCK_HPP
+#define DATASTAX_INTERNAL_SPINLOCK_HPP
 
 namespace datastax { namespace internal { namespace core {
 

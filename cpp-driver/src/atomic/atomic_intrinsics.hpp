@@ -28,8 +28,8 @@
  * Copyright (c) 2014 Andrey Semashev
  */
 
-#ifndef __CASS_ATOMIC_INTRINSICS_HPP_INCLUDED__
-#define __CASS_ATOMIC_INTRINSICS_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ATOMIC_INTRINSICS_HPP
+#define DATASTAX_INTERNAL_ATOMIC_INTRINSICS_HPP
 
 // The slower, intrinsics-based implemenations of Atomic<>.
 

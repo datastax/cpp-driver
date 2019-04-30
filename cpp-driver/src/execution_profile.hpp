@@ -5,8 +5,8 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __CASS_EXECUTION_PROFILE_HPP_INCLUDED__
-#define __CASS_EXECUTION_PROFILE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_EXECUTION_PROFILE_HPP
+#define DATASTAX_INTERNAL_EXECUTION_PROFILE_HPP
 
 #include "allocated.hpp"
 #include "blacklist_policy.hpp"
@@ -201,4 +201,4 @@ private:
 
 EXTERNAL_TYPE(datastax::internal::core::ExecutionProfile, CassExecProfile)
 
-#endif // __CASS_EXECUTION_PROFILE_HPP_INCLUDED__
+#endif // DATASTAX_INTERNAL_EXECUTION_PROFILE_HPP
