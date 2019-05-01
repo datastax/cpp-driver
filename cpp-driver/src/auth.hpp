@@ -31,8 +31,8 @@ class Authenticator : public RefCounted<Authenticator> {
 public:
   typedef SharedRefPtr<Authenticator> Ptr;
 
-  Authenticator() { }
-  virtual ~Authenticator() { }
+  Authenticator() {}
+  virtual ~Authenticator() {}
 
   const String& error() { return error_; }
   void set_error(const String& error) { error_ = error; }
@@ -50,10 +50,9 @@ private:
 
 class PlainTextAuthenticator : public Authenticator {
 public:
-  PlainTextAuthenticator(const String& username,
-                         const String& password)
-    : username_(username)
-    , password_(password) { }
+  PlainTextAuthenticator(const String& username, const String& password)
+      : username_(username)
+      , password_(password) {}
 
   virtual bool initial_response(String* response);
   virtual bool evaluate_challenge(const String& token, String* response);
@@ -69,13 +68,12 @@ public:
   typedef SharedRefPtr<AuthProvider> Ptr;
 
   AuthProvider(const String& name = "")
-    : RefCounted<AuthProvider>()
-    , name_(name) { }
+      : RefCounted<AuthProvider>()
+      , name_(name) {}
 
-  virtual ~AuthProvider() { }
+  virtual ~AuthProvider() {}
 
-  virtual Authenticator::Ptr new_authenticator(const Address& address,
-                                               const String& hostname,
+  virtual Authenticator::Ptr new_authenticator(const Address& address, const String& hostname,
                                                const String& class_name) const {
     return Authenticator::Ptr();
   }
@@ -93,8 +91,7 @@ private:
 
 class ExternalAuthenticator : public Authenticator {
 public:
-  ExternalAuthenticator(const Address& address, const String& hostname,
-                        const String& class_name,
+  ExternalAuthenticator(const Address& address, const String& hostname, const String& class_name,
                         const CassAuthenticatorCallbacks* callbacks, void* data);
 
   ~ExternalAuthenticator();
@@ -126,12 +123,11 @@ private:
 class ExternalAuthProvider : public AuthProvider {
 public:
   ExternalAuthProvider(const CassAuthenticatorCallbacks* exchange_callbacks,
-                       CassAuthenticatorDataCleanupCallback cleanup_callback,
-                       void* data)
-    : AuthProvider("ExternalAuthProvider")
-    , exchange_callbacks_(*exchange_callbacks)
-    , cleanup_callback_(cleanup_callback)
-    , data_(data) { }
+                       CassAuthenticatorDataCleanupCallback cleanup_callback, void* data)
+      : AuthProvider("ExternalAuthProvider")
+      , exchange_callbacks_(*exchange_callbacks)
+      , cleanup_callback_(cleanup_callback)
+      , data_(data) {}
 
   ~ExternalAuthProvider() {
     if (cleanup_callback_ != NULL) {
@@ -139,14 +135,10 @@ public:
     }
   }
 
-  virtual Authenticator::Ptr new_authenticator(const Address& address,
-                                               const String& hostname,
+  virtual Authenticator::Ptr new_authenticator(const Address& address, const String& hostname,
                                                const String& class_name) const {
-    return Authenticator::Ptr(new ExternalAuthenticator(address,
-                                                        hostname,
-                                                        class_name,
-                                                        &exchange_callbacks_,
-                                                        data_));
+    return Authenticator::Ptr(
+        new ExternalAuthenticator(address, hostname, class_name, &exchange_callbacks_, data_));
   }
 
 private:
@@ -157,14 +149,12 @@ private:
 
 class PlainTextAuthProvider : public AuthProvider {
 public:
-  PlainTextAuthProvider(const String& username,
-                        const String& password)
-    : AuthProvider("PlainTextAuthProvider")
-    , username_(username)
-    , password_(password) { }
+  PlainTextAuthProvider(const String& username, const String& password)
+      : AuthProvider("PlainTextAuthProvider")
+      , username_(username)
+      , password_(password) {}
 
-  virtual Authenticator::Ptr new_authenticator(const Address& address,
-                                               const String& hostname,
+  virtual Authenticator::Ptr new_authenticator(const Address& address, const String& hostname,
                                                const String& class_name) const {
     return Authenticator::Ptr(new PlainTextAuthenticator(username_, password_));
   }
@@ -174,7 +164,7 @@ private:
   String password_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::ExternalAuthenticator, CassAuthenticator)
 

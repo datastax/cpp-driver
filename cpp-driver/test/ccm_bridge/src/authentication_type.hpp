@@ -22,120 +22,120 @@
 
 namespace CCM {
 
+/**
+ * Authentication type indicating how SSH authentication should be handled
+ */
+class AuthenticationType {
+public:
   /**
-   * Authentication type indicating how SSH authentication should be handled
+   * Iterator for authentication type constants
    */
-  class AuthenticationType {
-  public:
-    /**
-     * Iterator for authentication type constants
-     */
-    typedef std::set<AuthenticationType>::iterator iterator;
+  typedef std::set<AuthenticationType>::iterator iterator;
 
-    /**
-     * Username/Password authentication type; SSH process is authenticated via
-     * plain text username and password
-     */
-    static const AuthenticationType USERNAME_PASSWORD;
-    /**
-     * Public key authentication type; SSH process is authenticated via public
-     * key
-     */
-    static const AuthenticationType PUBLIC_KEY;
+  /**
+   * Username/Password authentication type; SSH process is authenticated via
+   * plain text username and password
+   */
+  static const AuthenticationType USERNAME_PASSWORD;
+  /**
+   * Public key authentication type; SSH process is authenticated via public
+   * key
+   */
+  static const AuthenticationType PUBLIC_KEY;
 
-    /**
-     * Name of constant
-     *
-     * @return Name of constant
-     */
-    const std::string& name() const;
-    /**
-     * Ordinal of constant
-     *
-     * @return Ordinal of constant
-     */
-    short ordinal() const;
-    /**
-     * Get the display name
-     *
-     * @return Display name of authentication type
-     */
-    const std::string& to_string() const;
+  /**
+   * Name of constant
+   *
+   * @return Name of constant
+   */
+  const std::string& name() const;
+  /**
+   * Ordinal of constant
+   *
+   * @return Ordinal of constant
+   */
+  short ordinal() const;
+  /**
+   * Get the display name
+   *
+   * @return Display name of authentication type
+   */
+  const std::string& to_string() const;
 
-    /**
-     * Less than (can be used for sorting)
-     *
-     * @param object Right hand side comparison object
-     * @return True if LHS < RHS; false otherwise
-     */
-    bool operator<(const AuthenticationType& object) const;
-    /**
-     * Equal to
-     *
-     * @param object Right hand side comparison object
-     * @return True if LHS == RHS; false otherwise
-     */
-    bool operator==(const AuthenticationType& object) const;
-    /**
-     * Equal to (case-incentive string comparison)
-     *
-     * @param object Right hand side comparison object
-     * @return True if LHS == RHS; false otherwise
-     */
-    bool operator==(const std::string& object) const;
+  /**
+   * Less than (can be used for sorting)
+   *
+   * @param object Right hand side comparison object
+   * @return True if LHS < RHS; false otherwise
+   */
+  bool operator<(const AuthenticationType& object) const;
+  /**
+   * Equal to
+   *
+   * @param object Right hand side comparison object
+   * @return True if LHS == RHS; false otherwise
+   */
+  bool operator==(const AuthenticationType& object) const;
+  /**
+   * Equal to (case-incentive string comparison)
+   *
+   * @param object Right hand side comparison object
+   * @return True if LHS == RHS; false otherwise
+   */
+  bool operator==(const std::string& object) const;
 
-    /**
-     * First item in the authentication constants
-     *
-     * @return Iterator pointing to the first element in the set
-     */
-    static std::set<AuthenticationType>::iterator begin();
-    /**
-     * Last item in the authentication constants
-     *
-     * @return Iterator pointing to the last element in the set
-     */
-    static std::set<AuthenticationType>::iterator end();
+  /**
+   * First item in the authentication constants
+   *
+   * @return Iterator pointing to the first element in the set
+   */
+  static std::set<AuthenticationType>::iterator begin();
+  /**
+   * Last item in the authentication constants
+   *
+   * @return Iterator pointing to the last element in the set
+   */
+  static std::set<AuthenticationType>::iterator end();
 
-    /**
-     * Default constructor to handle issues with static initialization of
-     * constant authentication types
-     */
-    AuthenticationType();
+  /**
+   * Default constructor to handle issues with static initialization of
+   * constant authentication types
+   */
+  AuthenticationType();
 
-  private:
-    /**
-     * Authentication type constants
-     */
-    static std::set<AuthenticationType> constants_;
-    /**
-     * Name of constant
-     */
-    std::string name_;
-    /**
-     * Ordinal of constant
-     */
-    short ordinal_;
-    /**
-     * Display name for constant
-     */
-    std::string display_name_;
+private:
+  /**
+   * Authentication type constants
+   */
+  static std::set<AuthenticationType> constants_;
+  /**
+   * Name of constant
+   */
+  std::string name_;
+  /**
+   * Ordinal of constant
+   */
+  short ordinal_;
+  /**
+   * Display name for constant
+   */
+  std::string display_name_;
 
-    /**
-     * Constructor
-     *
-     * @param name Name for authentication type
-     * @param display_name Display name for authentication type
-     */
-    AuthenticationType(const std::string& name, int ordinal, const std::string& display_name);
-    /**
-     * Get the authentication type constants
-     *
-     * @return List of authentication type constants
-     */
-    static const std::set<AuthenticationType>& get_constants();
-  };
+  /**
+   * Constructor
+   *
+   * @param name Name for authentication type
+   * @param display_name Display name for authentication type
+   */
+  AuthenticationType(const std::string& name, int ordinal, const std::string& display_name);
+  /**
+   * Get the authentication type constants
+   *
+   * @return List of authentication type constants
+   */
+  static const std::set<AuthenticationType>& get_constants();
+};
 
-}
+} // namespace CCM
 
 #endif // __CCM_AUTHENTICATION_TYPE_HPP__

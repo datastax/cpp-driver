@@ -19,8 +19,8 @@
 #include "connector.hpp"
 #include "query_request.hpp"
 #include "request_handler.hpp"
-#include "wait_for_handler.hpp"
 #include "timer.hpp"
+#include "wait_for_handler.hpp"
 
 using namespace datastax::internal;
 using namespace datastax::internal::core;
@@ -31,14 +31,11 @@ public:
   public:
     typedef SharedRefPtr<TestWaitForHandler> Ptr;
 
-    TestWaitForHandler(uint64_t max_wait_time = 2000,
-                       uint64_t retry_wait_time = 200)
-      : WaitForHandler(RequestHandler::Ptr(
-                         new RequestHandler(
-                           QueryRequest::Ptr(new QueryRequest("")),
-                           ResponseFuture::Ptr(new ResponseFuture()))),
-                       Host::Ptr(new Host(Address())),
-                       Response::Ptr(), max_wait_time, retry_wait_time) { }
+    TestWaitForHandler(uint64_t max_wait_time = 2000, uint64_t retry_wait_time = 200)
+        : WaitForHandler(
+              RequestHandler::Ptr(new RequestHandler(QueryRequest::Ptr(new QueryRequest("")),
+                                                     ResponseFuture::Ptr(new ResponseFuture()))),
+              Host::Ptr(new Host(Address())), Response::Ptr(), max_wait_time, retry_wait_time) {}
 
     virtual RequestCallback::Ptr callback() = 0;
 
@@ -58,9 +55,8 @@ public:
     }
 
   private:
-    virtual void on_error(WaitForError code, const String& message)  {
-      EXPECT_TRUE(WAIT_FOR_ERROR_CONNECTION_CLOSED == code ||
-                  WAIT_FOR_ERROR_REQUEST_ERROR == code);
+    virtual void on_error(WaitForError code, const String& message) {
+      EXPECT_TRUE(WAIT_FOR_ERROR_CONNECTION_CLOSED == code || WAIT_FOR_ERROR_REQUEST_ERROR == code);
     }
   };
 
@@ -68,7 +64,8 @@ public:
   public:
     virtual RequestCallback::Ptr callback() {
       WaitforRequestVec requests;
-      QueryRequest::Ptr local_request(new QueryRequest("SELECT * FROM system.local WHERE key='local'"));
+      QueryRequest::Ptr local_request(
+          new QueryRequest("SELECT * FROM system.local WHERE key='local'"));
       QueryRequest::Ptr peers_request(new QueryRequest("SELECT * FROM system.peers"));
       local_request->set_is_idempotent(true);
       peers_request->set_is_idempotent(true);
@@ -78,7 +75,7 @@ public:
     }
 
   private:
-    virtual void on_error(WaitForError code, const String& message)  {
+    virtual void on_error(WaitForError code, const String& message) {
       EXPECT_TRUE(WAIT_FOR_ERROR_CONNECTION_CLOSED == code ||
                   WAIT_FOR_ERROR_REQUEST_TIMEOUT == code);
     }
@@ -92,9 +89,8 @@ public:
     timeout_ = timeout;
 
     Connector::Ptr connector(
-          new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                        PROTOCOL_VERSION,
-                        bind_callback(&WaitForHandlerUnitTest::on_connected, this)));
+        new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                      bind_callback(&WaitForHandlerUnitTest::on_connected, this)));
     connector->connect(loop());
 
     uv_run(loop(), UV_RUN_DEFAULT);
@@ -103,7 +99,7 @@ public:
 private:
   struct CloseConnectionHandler {
     CloseConnectionHandler(const Connection::Ptr& connection)
-      : connection(connection) { }
+        : connection(connection) {}
 
     void on_timeout(Timer* timer) {
       connection->close();
@@ -111,8 +107,7 @@ private:
     }
 
     void start(uint64_t timeout) {
-      timer.start(connection->loop(),
-                  timeout,
+      timer.start(connection->loop(), timeout,
                   bind_callback(&CloseConnectionHandler::on_timeout, this));
     }
 
@@ -135,8 +130,7 @@ private:
         connection->close();
       }
     } else {
-      ASSERT_TRUE(false) << "Connection had a failure: "
-                         << connector->error_message();
+      ASSERT_TRUE(false) << "Connection had a failure: " << connector->error_message();
     }
   }
 

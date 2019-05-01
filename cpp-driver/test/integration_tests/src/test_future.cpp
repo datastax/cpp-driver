@@ -14,15 +14,15 @@
   limitations under the License.
 */
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/scoped_ptr.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
+#include <boost/thread.hpp>
 #include <boost/thread/condition.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -30,14 +30,13 @@
 #include <sstream>
 
 struct FuturesTests : public test_utils::MultipleNodesTest {
-  FuturesTests() : test_utils::MultipleNodesTest(1, 0) {
-  }
+  FuturesTests()
+      : test_utils::MultipleNodesTest(1, 0) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(future, FuturesTests)
 
-BOOST_AUTO_TEST_CASE(error)
-{
+BOOST_AUTO_TEST_CASE(error) {
   test_utils::CassSessionPtr session(cass_session_new());
   test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster));
   test_utils::wait_and_check_error(connect_future.get());
@@ -57,15 +56,13 @@ BOOST_AUTO_TEST_CASE(error)
     const char* name;
     const cass_byte_t* value;
     size_t name_length, value_size;
-    BOOST_REQUIRE_EQUAL(cass_future_custom_payload_item(future.get(), 0,
-                                                        &name, &name_length,
-                                                        &value, &value_size),
-                        CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS);
+    BOOST_REQUIRE_EQUAL(
+        cass_future_custom_payload_item(future.get(), 0, &name, &name_length, &value, &value_size),
+        CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS);
   }
 }
 
-BOOST_AUTO_TEST_CASE(result_response)
-{
+BOOST_AUTO_TEST_CASE(result_response) {
   test_utils::CassSessionPtr session(cass_session_new());
   test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster));
   test_utils::wait_and_check_error(connect_future.get());
@@ -86,20 +83,19 @@ BOOST_AUTO_TEST_CASE(result_response)
     const char* name;
     const cass_byte_t* value;
     size_t name_length, value_size;
-    BOOST_REQUIRE_EQUAL(cass_future_custom_payload_item(future.get(), 0,
-                                                        &name, &name_length,
-                                                        &value, &value_size),
-                        CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS);
+    BOOST_REQUIRE_EQUAL(
+        cass_future_custom_payload_item(future.get(), 0, &name, &name_length, &value, &value_size),
+        CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS);
   }
 }
 
-BOOST_AUTO_TEST_CASE(prepare_response)
-{
+BOOST_AUTO_TEST_CASE(prepare_response) {
   test_utils::CassSessionPtr session(cass_session_new());
   test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster));
   test_utils::wait_and_check_error(connect_future.get());
 
-  test_utils::CassFuturePtr future(cass_session_prepare(session.get(), "SELECT * FROM system.local"));
+  test_utils::CassFuturePtr future(
+      cass_session_prepare(session.get(), "SELECT * FROM system.local"));
 
   // Expected
   BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
@@ -117,12 +113,10 @@ BOOST_AUTO_TEST_CASE(prepare_response)
     const char* name;
     const cass_byte_t* value;
     size_t name_length, value_size;
-    BOOST_REQUIRE_EQUAL(cass_future_custom_payload_item(future.get(), 0,
-                                                        &name, &name_length,
-                                                        &value, &value_size),
-                        CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS);
+    BOOST_REQUIRE_EQUAL(
+        cass_future_custom_payload_item(future.get(), 0, &name, &name_length, &value, &value_size),
+        CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS);
   }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-

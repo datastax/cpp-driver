@@ -17,8 +17,8 @@
 #ifndef DATASTAX_INTERNAL_OPTIONS_REQUEST_HPP
 #define DATASTAX_INTERNAL_OPTIONS_REQUEST_HPP
 
-#include "request.hpp"
 #include "constants.hpp"
+#include "request.hpp"
 
 namespace datastax { namespace internal { namespace core {
 
@@ -28,9 +28,11 @@ public:
       : Request(CQL_OPCODE_OPTIONS) {}
 
 private:
-  int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const { return 0; }
+  int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
+    return 0;
+  }
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

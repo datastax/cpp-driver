@@ -47,8 +47,7 @@ int main(int argc, char* argv[]) {
     const char* message;
     size_t message_length;
     cass_future_error_message(connect_future, &message, &message_length);
-    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length,
-                                                        message);
+    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length, message);
   }
 
   cass_future_free(connect_future);

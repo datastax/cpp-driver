@@ -31,12 +31,8 @@ public:
   typedef std::pair<CassHostListenerEvent, std::string> Event;
   typedef std::queue<Event> Events;
 
-  SessionTest() {
-    uv_mutex_init(&mutex_);
-  }
-  ~SessionTest() {
-    uv_mutex_destroy(&mutex_);
-  }
+  SessionTest() { uv_mutex_init(&mutex_); }
+  ~SessionTest() { uv_mutex_destroy(&mutex_); }
 
   void SetUp() {
     is_session_requested_ = false;
@@ -54,8 +50,7 @@ public:
   }
   bool wait_for_event(size_t expected_count) {
     start_timer();
-    while (elapsed_time() < EVENT_MAXIMUM_WAIT_TIME_MS
-           && event_count() < expected_count) {
+    while (elapsed_time() < EVENT_MAXIMUM_WAIT_TIME_MS && event_count() < expected_count) {
       msleep(EVENT_WAIT_FOR_NAP_MS);
     }
     return event_count() >= expected_count;
@@ -85,9 +80,7 @@ protected:
 
     events_.push(Event(event, address));
   }
-  static void on_host_listener(CassHostListenerEvent event,
-                               CassInet inet,
-                               void* data) {
+  static void on_host_listener(CassHostListenerEvent event, CassInet inet, void* data) {
     SessionTest* instance = static_cast<SessionTest*>(data);
     instance->add_event(event, inet);
   }
@@ -112,7 +105,8 @@ CASSANDRA_INTEGRATION_TEST_F(SessionTest, MetricsWithoutConnecting) {
 
   CassSpeculativeExecutionMetrics spec_ex_metrics;
   logger_.reset();
-  logger_.add_critera("Attempted to get speculative execution metrics before connecting session object");
+  logger_.add_critera(
+      "Attempted to get speculative execution metrics before connecting session object");
   cass_session_get_speculative_execution_metrics(session.get(), &spec_ex_metrics);
   EXPECT_EQ(spec_ex_metrics.min, 0u);
   EXPECT_EQ(spec_ex_metrics.percentage, 0.0);
@@ -123,9 +117,8 @@ CASSANDRA_INTEGRATION_TEST_F(SessionTest, ExternalHostListener) {
   CHECK_FAILURE;
   is_test_chaotic_ = true; // Destroy the cluster after the test completes
 
-  Cluster cluster = default_cluster()
-    .with_load_balance_round_robin()
-    .with_host_listener_callback(on_host_listener, this);
+  Cluster cluster = default_cluster().with_load_balance_round_robin().with_host_listener_callback(
+      on_host_listener, this);
   Session session = cluster.connect();
 
   // Initial node 1 events (add and up)

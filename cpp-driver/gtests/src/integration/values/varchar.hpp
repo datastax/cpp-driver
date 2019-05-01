@@ -18,9 +18,7 @@
 #define __TEST_VARCHAR_HPP__
 #include "nullable_value.hpp"
 
-namespace test {
-namespace driver {
-namespace values {
+namespace test { namespace driver { namespace values {
 
 /**
  * Varchar wrapped value
@@ -30,23 +28,18 @@ public:
   typedef std::string ConvenienceType;
   typedef std::string ValueType;
 
-  Varchar() { }
+  Varchar() {}
 
   Varchar(const ConvenienceType& varchar)
-    : varchar_(varchar) { }
+      : varchar_(varchar) {}
 
   void append(Collection collection) {
-    ASSERT_EQ(CASS_OK, cass_collection_append_string(collection.get(),
-              varchar_.c_str()));
+    ASSERT_EQ(CASS_OK, cass_collection_append_string(collection.get(), varchar_.c_str()));
   }
 
-  std::string cql_type() const {
-    return "varchar";
-  }
+  std::string cql_type() const { return "varchar"; }
 
-  std::string cql_value() const {
-    return "'" + str() + "'";
-  }
+  std::string cql_value() const { return "'" + str() + "'"; }
 
   /**
    * Comparison operation for driver string
@@ -54,9 +47,7 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const std::string& rhs) const {
-    return varchar_.compare(rhs.c_str());
-  }
+  int compare(const std::string& rhs) const { return varchar_.compare(rhs.c_str()); }
 
   /**
    * Comparison operation for Varchar
@@ -64,57 +55,41 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Varchar& rhs) const {
-    return compare(rhs.varchar_);
-  }
+  int compare(const Varchar& rhs) const { return compare(rhs.varchar_); }
 
   void initialize(const CassValue* value) {
     const char* string = NULL;
     size_t length;
     ASSERT_EQ(CASS_OK, cass_value_get_string(value, &string, &length))
-      << "Unable to Get Varchar: Invalid error code returned";
+        << "Unable to Get Varchar: Invalid error code returned";
     varchar_.assign(string, length);
   }
 
   void set(Tuple tuple, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_tuple_set_string(tuple.get(),
-              index,
-              varchar_.c_str()));
+    ASSERT_EQ(CASS_OK, cass_tuple_set_string(tuple.get(), index, varchar_.c_str()));
   }
 
   void set(UserType user_type, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_user_type_set_string_by_name(user_type.get(),
-              name.c_str(),
-              varchar_.c_str()));
+    ASSERT_EQ(CASS_OK,
+              cass_user_type_set_string_by_name(user_type.get(), name.c_str(), varchar_.c_str()));
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_string(statement.get(),
-              index,
-              varchar_.c_str()));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_string(statement.get(), index, varchar_.c_str()));
   }
 
   void statement_bind(Statement statement, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_string_by_name(statement.get(),
-              name.c_str(),
-              varchar_.c_str()));
+    ASSERT_EQ(CASS_OK,
+              cass_statement_bind_string_by_name(statement.get(), name.c_str(), varchar_.c_str()));
   }
 
-  std::string str() const {
-    return varchar_;
-  }
+  std::string str() const { return varchar_; }
 
-  static std::string supported_server_version() {
-    return "1.2.0";
-  }
+  static std::string supported_server_version() { return "1.2.0"; }
 
-  ValueType value() const {
-    return varchar_;
-  }
+  ValueType value() const { return varchar_; }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_VARCHAR;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_VARCHAR; }
 
 protected:
   /**
@@ -128,22 +103,18 @@ protected:
  */
 class Text : public Varchar {
 public:
-  Text() { }
+  Text() {}
 
   Text(const ConvenienceType& text)
-    : Varchar(text) { }
+      : Varchar(text) {}
 
-  std::string cql_type() const {
-    return "text";
-  }
+  std::string cql_type() const { return "text"; }
 
   CassValueType value_type() const {
     return CASS_VALUE_TYPE_VARCHAR; // Text (alias is returned as varchar from server)
   }
 };
 
-} // namespace values
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::values
 
 #endif // __TEST_VARCHAR_HPP__

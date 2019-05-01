@@ -28,7 +28,7 @@ class TestDecoder : public Decoder {
 public:
   TestDecoder(const char* input, size_t length,
               ProtocolVersion protocol_version = ProtocolVersion::highest_supported())
-      : Decoder(input, length, protocol_version) { }
+      : Decoder(input, length, protocol_version) {}
 
   inline const char* buffer() const { return Decoder::buffer(); }
   inline size_t remaining() const { return Decoder::remaining(); }
@@ -45,18 +45,16 @@ public:
 
   static void log(const CassLogMessage* message, void* data) {
     std::string function = message->function;
-    if (message->severity == CASS_LOG_ERROR &&
-        function.find("Decoder::") != std::string::npos) {
+    if (message->severity == CASS_LOG_ERROR && function.find("Decoder::") != std::string::npos) {
       failure_logged_ = true;
     } else if (message->severity == CASS_LOG_WARN &&
-      function.find("Decoder::") != std::string::npos) {
-        warning_logged_ = true;
+               function.find("Decoder::") != std::string::npos) {
+      warning_logged_ = true;
     }
   }
 
   static bool warning_logged_;
   static bool failure_logged_;
-
 };
 
 bool DecoderUnitTest::failure_logged_ = false;
@@ -177,8 +175,7 @@ TEST_F(DecoderUnitTest, AsInt8) {
 }
 
 TEST_F(DecoderUnitTest, DecodeUInt16) {
-  const char input[4] = { -1, -1,
-                          0, 0 };
+  const char input[4] = { -1, -1, 0, 0 };
   TestDecoder decoder(input, 4);
   uint16_t value = 0;
 
@@ -197,8 +194,7 @@ TEST_F(DecoderUnitTest, DecodeUInt16) {
 }
 
 TEST_F(DecoderUnitTest, DecodeInt16) {
-  const char input[4] = { -128, 0,
-                          127, -1 };
+  const char input[4] = { -128, 0, 127, -1 };
   TestDecoder decoder(input, 4);
   int16_t value = 0;
 
@@ -239,8 +235,7 @@ TEST_F(DecoderUnitTest, AsInt16) {
 }
 
 TEST_F(DecoderUnitTest, DecodeUInt32) {
-  const char input[8] = { -1, -1, -1, -1,
-                          0, 0, 0, 0 };
+  const char input[8] = { -1, -1, -1, -1, 0, 0, 0, 0 };
   TestDecoder decoder(input, 8);
   uint32_t value = 0;
 
@@ -280,8 +275,7 @@ TEST_F(DecoderUnitTest, AsUInt32) {
 }
 
 TEST_F(DecoderUnitTest, DecodeInt32) {
-  const char input[8] = { -128, 0, 0, 0,
-                          127, -1, -1, -1 };
+  const char input[8] = { -128, 0, 0, 0, 127, -1, -1, -1 };
   TestDecoder decoder(input, 8);
   int32_t value = 0;
 
@@ -322,8 +316,7 @@ TEST_F(DecoderUnitTest, AsInt32) {
 }
 
 TEST_F(DecoderUnitTest, DecodeInt64) {
-  const char input[16] = { -128, 0, 0, 0,0, 0, 0, 0,
-                           127, -1, -1, -1, -1, -1, -1, -1 };
+  const char input[16] = { -128, 0, 0, 0, 0, 0, 0, 0, 127, -1, -1, -1, -1, -1, -1, -1 };
   TestDecoder decoder(input, 16);
   int64_t value = 0;
 
@@ -342,7 +335,7 @@ TEST_F(DecoderUnitTest, DecodeInt64) {
 }
 
 TEST_F(DecoderUnitTest, AsInt64) {
-  const char input[8] = { -128, 0, 0, 0,0, 0, 0, 0 };
+  const char input[8] = { -128, 0, 0, 0, 0, 0, 0, 0 };
   TestDecoder decoder(input, 8);
   cass_int64_t value = 0;
 
@@ -364,8 +357,7 @@ TEST_F(DecoderUnitTest, AsInt64) {
 }
 
 TEST_F(DecoderUnitTest, DecodeFloat) {
-  const char input[8] = { 0, -128, 0, 0,
-                          127, 127, -1, -1 };
+  const char input[8] = { 0, -128, 0, 0, 127, 127, -1, -1 };
   TestDecoder decoder(input, 8);
   float value = 0;
 
@@ -406,8 +398,7 @@ TEST_F(DecoderUnitTest, AsFloat) {
 }
 
 TEST_F(DecoderUnitTest, DecodeDouble) {
-  const char input[16] = { 0, 16, 0, 0, 0, 0, 0, 0,
-                           127, -17, -1, -1, -1, -1, -1, -1 };
+  const char input[16] = { 0, 16, 0, 0, 0, 0, 0, 0, 127, -17, -1, -1, -1, -1, -1, -1 };
   TestDecoder decoder(input, 16);
   double value = 0;
 
@@ -449,7 +440,7 @@ TEST_F(DecoderUnitTest, AsDouble) {
 
 TEST_F(DecoderUnitTest, DecodeString) {
   const char input[17] = { 0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
-                           0, 5, 67, 47, 67, 43, 43 }; // C/C++
+                           0, 5, 67, 47, 67,  43, 43 };             // C/C++
   TestDecoder decoder(input, 17);
   const char* value = NULL;
   size_t value_size = 0;
@@ -472,7 +463,7 @@ TEST_F(DecoderUnitTest, DecodeString) {
 
 TEST_F(DecoderUnitTest, DecodeStringRef) {
   const char input[17] = { 0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
-                           0, 5, 67, 47, 67, 43, 43 }; // C/C++
+                           0, 5, 67, 47, 67,  43, 43 };             // C/C++
   TestDecoder decoder(input, 17);
   StringRef value;
 
@@ -494,7 +485,7 @@ TEST_F(DecoderUnitTest, DecodeStringRef) {
 
 TEST_F(DecoderUnitTest, DecodeLongString) {
   const char input[21] = { 0, 0, 0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
-                           0, 0, 0, 5, 67, 47, 67, 43, 43 }; // C/C++
+                           0, 0, 0, 5, 67, 47, 67,  43, 43 };             // C/C++
   TestDecoder decoder(input, 21);
   const char* value = NULL;
   size_t value_size = 0;
@@ -517,7 +508,7 @@ TEST_F(DecoderUnitTest, DecodeLongString) {
 
 TEST_F(DecoderUnitTest, DecodeBytes) {
   const char input[21] = { 0, 0, 0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
-                           0, 0, 0, 5, 67, 47, 67, 43, 43 }; // C/C++
+                           0, 0, 0, 5, 67, 47, 67,  43, 43 };             // C/C++
   TestDecoder decoder(input, 21);
   const char* value = NULL;
   size_t value_size = 0;
@@ -544,7 +535,7 @@ TEST_F(DecoderUnitTest, DecodeBytes) {
 
 TEST_F(DecoderUnitTest, DecodeBytesRef) {
   const char input[21] = { 0, 0, 0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
-                           0, 0, 0, 5, 67, 47, 67, 43, 43 }; // C/C++
+                           0, 0, 0, 5, 67, 47, 67,  43, 43 };             // C/C++
   TestDecoder decoder(input, 21);
   StringRef value;
 
@@ -569,8 +560,10 @@ TEST_F(DecoderUnitTest, DecodeBytesRef) {
 }
 
 TEST_F(DecoderUnitTest, DecodeInetAddress) {
-  const char input[30] = { 4, 127, 0, 0, 1, 0, 0, 35, 82, // 127.0.0.1:9042
-                           16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 35, 82 }; // [::1]:9042
+  const char input[30] = {
+    4,  127, 0, 0, 1, 0, 0, 35, 82, // 127.0.0.1:9042
+    16, 0,   0, 0, 0, 0, 0, 0,  0,  0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 35, 82
+  }; // [::1]:9042
   TestDecoder decoder(input, 30);
   Address value;
 
@@ -589,8 +582,8 @@ TEST_F(DecoderUnitTest, DecodeInetAddress) {
 }
 
 TEST_F(DecoderUnitTest, DecodeInetStruct) {
-  const char input[22] = { 4, 127, 0, 0, 1, // 127.0.0.1
-                           16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }; // [::1]
+  const char input[22] = { 4,  127, 0, 0, 1,                                       // 127.0.0.1
+                           16, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }; // [::1]
   TestDecoder decoder(input, 22);
   CassInet value;
 
@@ -655,11 +648,10 @@ TEST_F(DecoderUnitTest, AsInetIPv6) {
 }
 
 TEST_F(DecoderUnitTest, DecodeStringMap) {
-  const char input[38] = { 0, 2,
-                           0, 7, 99, 111, 109, 112, 97, 110, 121, // key = company
-                           0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // value = DataStax
-                           0, 8, 108, 97, 110, 103, 117, 97, 103, 101, // key = language
-                           0, 5, 67, 47, 67, 43, 43 }; // value = C/C++
+  const char input[38] = { 0, 2, 0,   7,  99,  111, 109, 112, 97,  110, 121, // key = company
+                           0, 8, 68,  97, 116, 97,  83,  116, 97,  120,      // value = DataStax
+                           0, 8, 108, 97, 110, 103, 117, 97,  103, 101,      // key = language
+                           0, 5, 67,  47, 67,  43,  43 };                    // value = C/C++
   TestDecoder decoder(input, 38);
   Map<String, String> value;
 
@@ -677,9 +669,8 @@ TEST_F(DecoderUnitTest, DecodeStringMap) {
 }
 
 TEST_F(DecoderUnitTest, DecodeStringlistVector) {
-  const char input[19] = { 0, 2,
-                           0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
-                           0, 5, 67, 47, 67, 43, 43 }; // C/C++
+  const char input[19] = { 0, 2, 0,  8,  68, 97, 116, 97, 83, 116, 97, 120, // DataStax
+                           0, 5, 67, 47, 67, 43, 43 };                      // C/C++
   TestDecoder decoder(input, 19);
   Vector<String> value;
 
@@ -697,9 +688,8 @@ TEST_F(DecoderUnitTest, DecodeStringlistVector) {
 }
 
 TEST_F(DecoderUnitTest, DecodeStringlistStringRefVec) {
-  const char input[19] = { 0, 2,
-                           0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
-                           0, 5, 67, 47, 67, 43, 43 }; // C/C++
+  const char input[19] = { 0, 2, 0,  8,  68, 97, 116, 97, 83, 116, 97, 120, // DataStax
+                           0, 5, 67, 47, 67, 43, 43 };                      // C/C++
   TestDecoder decoder(input, 19);
   StringRefVec value;
 
@@ -708,10 +698,8 @@ TEST_F(DecoderUnitTest, DecodeStringlistStringRefVec) {
   ASSERT_EQ(&input[19], decoder.buffer());
   ASSERT_EQ(0ul, decoder.remaining());
   ASSERT_EQ(2ul, value.size());
-  ASSERT_STREQ("DataStax",
-               std::string(value[0].data(), value[0].size()).c_str());
-  ASSERT_STREQ("C/C++",
-               std::string(value[1].data(), value[1].size()).c_str());
+  ASSERT_STREQ("DataStax", std::string(value[0].data(), value[0].size()).c_str());
+  ASSERT_STREQ("C/C++", std::string(value[1].data(), value[1].size()).c_str());
 
   // FAIL
   ASSERT_FALSE(decoder.decode_stringlist(value));
@@ -719,9 +707,8 @@ TEST_F(DecoderUnitTest, DecodeStringlistStringRefVec) {
 }
 
 TEST_F(DecoderUnitTest, AsStringlist) {
-  const char input[19] = { 0, 2,
-                           0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
-                           0, 5, 67, 47, 67, 43, 43 }; // C/C++
+  const char input[19] = { 0, 2, 0,  8,  68, 97, 116, 97, 83, 116, 97, 120, // DataStax
+                           0, 5, 67, 47, 67, 43, 43 };                      // C/C++
   TestDecoder decoder(input, 19);
   StringRefVec value;
 
@@ -731,10 +718,8 @@ TEST_F(DecoderUnitTest, AsStringlist) {
     ASSERT_EQ(&input[0], decoder.buffer());
     ASSERT_EQ(19ul, decoder.remaining());
     ASSERT_EQ(2ul, value.size());
-    ASSERT_STREQ("DataStax",
-                 std::string(value[0].data(), value[0].size()).c_str());
-    ASSERT_STREQ("C/C++",
-                 std::string(value[1].data(), value[1].size()).c_str());
+    ASSERT_STREQ("DataStax", std::string(value[0].data(), value[0].size()).c_str());
+    ASSERT_STREQ("C/C++", std::string(value[1].data(), value[1].size()).c_str());
   }
 
   // Decode stringlist to finish decoding buffer
@@ -746,15 +731,14 @@ TEST_F(DecoderUnitTest, AsStringlist) {
 }
 
 TEST_F(DecoderUnitTest, DecodeStringMultiMap) {
-  const char input[58] = { 0, 1, 0, 7, 100, 114, 105, 118, 101, 114, 115, // key = drivers
-                           0, 7,
-                           0, 5, 67, 47, 67, 43, 43, // C/C++
-                           0, 2, 67, 35, // C#
-                           0, 4, 74, 97, 118, 97, // Java
-                           0, 7, 78, 111, 100, 101, 46, 106, 115, // Node.js
-                           0, 3, 80, 72, 80, // PHP
-                           0, 6, 80, 121, 116, 104, 111, 110, // Python
-                           0, 4, 82, 117, 98, 121 }; // Ruby
+  const char input[58] = { 0, 1, 0,  7,   100, 114, 105, 118, 101, 114, 115, // key = drivers
+                           0, 7, 0,  5,   67,  47,  67,  43,  43,            // C/C++
+                           0, 2, 67, 35,                                     // C#
+                           0, 4, 74, 97,  118, 97,                           // Java
+                           0, 7, 78, 111, 100, 101, 46,  106, 115,           // Node.js
+                           0, 3, 80, 72,  80,                                // PHP
+                           0, 6, 80, 121, 116, 104, 111, 110,                // Python
+                           0, 4, 82, 117, 98,  121 };                        // Ruby
   TestDecoder decoder(input, 58);
   Map<String, Vector<String> > value;
 
@@ -765,20 +749,13 @@ TEST_F(DecoderUnitTest, DecodeStringMultiMap) {
   ASSERT_EQ(1ul, value.size());
   Vector<String> values = value["drivers"];
   ASSERT_EQ(7ul, values.size());
-  ASSERT_STREQ("C/C++",
-               std::string(values[0].data(), values[0].size()).c_str());
-  ASSERT_STREQ("C#",
-               std::string(values[1].data(), values[1].size()).c_str());
-  ASSERT_STREQ("Java",
-               std::string(values[2].data(), values[2].size()).c_str());
-  ASSERT_STREQ("Node.js",
-               std::string(values[3].data(), values[3].size()).c_str());
-  ASSERT_STREQ("PHP",
-               std::string(values[4].data(), values[4].size()).c_str());
-  ASSERT_STREQ("Python",
-               std::string(values[5].data(), values[5].size()).c_str());
-  ASSERT_STREQ("Ruby",
-               std::string(values[6].data(), values[6].size()).c_str());
+  ASSERT_STREQ("C/C++", std::string(values[0].data(), values[0].size()).c_str());
+  ASSERT_STREQ("C#", std::string(values[1].data(), values[1].size()).c_str());
+  ASSERT_STREQ("Java", std::string(values[2].data(), values[2].size()).c_str());
+  ASSERT_STREQ("Node.js", std::string(values[3].data(), values[3].size()).c_str());
+  ASSERT_STREQ("PHP", std::string(values[4].data(), values[4].size()).c_str());
+  ASSERT_STREQ("Python", std::string(values[5].data(), values[5].size()).c_str());
+  ASSERT_STREQ("Ruby", std::string(values[6].data(), values[6].size()).c_str());
 
   // FAIL
   ASSERT_FALSE(decoder.decode_string_multimap(value));
@@ -786,7 +763,7 @@ TEST_F(DecoderUnitTest, DecodeStringMultiMap) {
 }
 
 TEST_F(DecoderUnitTest, DecodeOption) {
-  const char input[14] = { 0, 1, // ASCII
+  const char input[14] = { 0, 1,                                            // ASCII
                            0, 0, 0, 8, 68, 97, 116, 97, 83, 116, 97, 120 }; // Custom = DataStax
   TestDecoder decoder(input, 14);
   uint16_t type;
@@ -810,8 +787,8 @@ TEST_F(DecoderUnitTest, DecodeOption) {
 }
 
 TEST_F(DecoderUnitTest, DecodeUuid) {
-  const char input[32] = { -1, -1, -1, -1, -1, -1, -1, -1,-1, -1, -1, -1, -1, -1, -1, -1,
-                           0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0 };
+  const char input[32] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                           0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 };
   TestDecoder decoder(input, 32);
   CassUuid value;
 
@@ -862,7 +839,7 @@ TEST_F(DecoderUnitTest, AsDecimal) {
 }
 
 TEST_F(DecoderUnitTest, AsDuration) {
-  const char input[4] = { 2, 4, 6, -127}; // 1, 2, 3 (zig zag encoding)
+  const char input[4] = { 2, 4, 6, -127 }; // 1, 2, 3 (zig zag encoding)
   TestDecoder decoder(input, 4);
   int32_t months = 0;
   int32_t days = 0;
@@ -890,9 +867,8 @@ TEST_F(DecoderUnitTest, AsDuration) {
 }
 
 TEST_F(DecoderUnitTest, DecodeCustomPayload) {
-  const char input[21] = { 0, 1,
-                           0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
-                           0, 0, 0, 5, 67, 47, 67, 43, 43 }; // C/C++
+  const char input[21] = { 0, 1, 0, 8, 68, 97, 116, 97, 83, 116, 97, 120, // DataStax
+                           0, 0, 0, 5, 67, 47, 67,  43, 43 };             // C/C++
   TestDecoder decoder(input, 21);
   CustomPayloadVec value;
 
@@ -901,8 +877,7 @@ TEST_F(DecoderUnitTest, DecodeCustomPayload) {
   ASSERT_EQ(0ul, decoder.remaining());
   ASSERT_EQ(1ul, value.size());
   ASSERT_EQ(8ul, value[0].name.size());
-  ASSERT_STREQ("DataStax",
-               std::string(value[0].name.data(), value[0].name.size()).c_str());
+  ASSERT_STREQ("DataStax", std::string(value[0].name.data(), value[0].name.size()).c_str());
   ASSERT_EQ(5ul, value[0].value.size());
   for (int i = 0; i < 5; ++i) {
     ASSERT_EQ(input[i + 16], value[0].value.data()[i]);
@@ -931,10 +906,8 @@ TEST_F(DecoderUnitTest, DecodeFailures) {
 }
 
 TEST_F(DecoderUnitTest, DecodeFailuresWithVector) {
-  const char input[30] = { 0, 0, 0, 2,
-                           4, 127, 0, 0, 1, // 127.0.0.1
-                           0, 1,
-                           16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, // [::1] [02]
+  const char input[30] = { 0, 0, 0,  2, 4, 127, 0, 0, 1,                               // 127.0.0.1
+                           0, 1, 16, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, // [::1] [02]
                            0, 2 };
   TestDecoder decoder(input, 30, 5);
   FailureVec value;
@@ -964,14 +937,15 @@ TEST_F(DecoderUnitTest, DecodeFailuresWithVector) {
 }
 
 TEST_F(DecoderUnitTest, DecodeWriteType) {
-  const char input[67] = { 0, 6, 83, 73, 77, 80, 76, 69, // SIMPLE
-                           0, 5, 66, 65, 84, 67, 72, // BATCH
-                           0, 14, 85, 78, 76, 79, 71, 71, 69, 68, 95, 66, 65, 84, 67, 72, // UNLOGGED_BATCH
-                           0, 7, 67, 79, 85, 78, 84, 69, 82, // COUNTER
-                           0, 9, 66, 65, 84, 67, 72, 95, 76, 79, 71, // BATCH_LOG
-                           0, 3, 67, 65, 83, // CAS
-                           0, 4, 86, 73, 69, 87, // VIEW
-                           0, 3, 67, 68, 67 }; // CDC
+  const char input[67] = { 0,  6,  83, 73, 77, 80, 76, 69, // SIMPLE
+                           0,  5,  66, 65, 84, 67, 72,     // BATCH
+                           0,  14, 85, 78, 76, 79, 71, 71, 69, 68, 95,
+                           66, 65, 84, 67, 72,                         // UNLOGGED_BATCH
+                           0,  7,  67, 79, 85, 78, 84, 69, 82,         // COUNTER
+                           0,  9,  66, 65, 84, 67, 72, 95, 76, 79, 71, // BATCH_LOG
+                           0,  3,  67, 65, 83,                         // CAS
+                           0,  4,  86, 73, 69, 87,                     // VIEW
+                           0,  3,  67, 68, 67 };                       // CDC
   TestDecoder decoder(input, 67);
   CassWriteType value;
 
@@ -1008,9 +982,10 @@ TEST_F(DecoderUnitTest, DecodeWriteType) {
 }
 
 TEST_F(DecoderUnitTest, DecodeWarnings) {
-  const char input[38] = { 0, 2,
-                           0, 16, 87, 97, 114, 110, 105, 110, 103, 32, 78, 117, 109, 98, 101, 114, 32, 49, // Warning Number 1
-                           0, 16, 87, 97, 114, 110, 105, 110, 103, 32, 78, 117, 109, 98, 101, 114, 32, 50 }; // Warning Number 2
+  const char input[38] = { 0,   2,   0,   16,  87,  97,  114, 110, 105, 110,
+                           103, 32,  78,  117, 109, 98,  101, 114, 32,  49, // Warning Number 1
+                           0,   16,  87,  97,  114, 110, 105, 110, 103, 32,
+                           78,  117, 109, 98,  101, 114, 32,  50 }; // Warning Number 2
   TestDecoder decoder(input, 38);
   WarningVec value;
 
@@ -1018,13 +993,10 @@ TEST_F(DecoderUnitTest, DecodeWarnings) {
   ASSERT_TRUE(decoder.decode_warnings(value));
   ASSERT_EQ(0ul, decoder.remaining());
   ASSERT_EQ(2ul, value.size());
-  ASSERT_STREQ("Warning Number 1",
-                std::string(value[0].data(), value[0].size()).c_str());
-  ASSERT_STREQ("Warning Number 2",
-                std::string(value[1].data(), value[1].size()).c_str());
+  ASSERT_STREQ("Warning Number 1", std::string(value[0].data(), value[0].size()).c_str());
+  ASSERT_STREQ("Warning Number 2", std::string(value[1].data(), value[1].size()).c_str());
 
   // FAIL
   ASSERT_FALSE(decoder.decode_warnings(value));
   ASSERT_TRUE(failure_logged_);
 }
-

@@ -16,9 +16,9 @@
 
 #include "host.hpp"
 
+#include "collection_iterator.hpp"
 #include "row.hpp"
 #include "value.hpp"
-#include "collection_iterator.hpp"
 
 using namespace datastax;
 using namespace datastax::internal::core;
@@ -53,7 +53,7 @@ bool remove_host(CopyOnWriteHostVec& hosts, const Address& address) {
   return false;
 }
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 void Host::LatencyTracker::update(uint64_t latency_ns) {
   uint64_t now = uv_hrtime();
@@ -74,7 +74,8 @@ void Host::LatencyTracker::update(uint64_t latency_ns) {
 
     double scaled_delay = static_cast<double>(delay) / scale_ns_;
     double weight = log(scaled_delay + 1) / scaled_delay;
-    current_.average = static_cast<int64_t>((1.0 - weight) * latency_ns + weight * previous.average);
+    current_.average =
+        static_cast<int64_t>((1.0 - weight) * latency_ns + weight * previous.average);
   }
 
   current_.num_measured = previous.num_measured + 1;
@@ -82,7 +83,8 @@ void Host::LatencyTracker::update(uint64_t latency_ns) {
 }
 
 bool VersionNumber::parse(const String& version) {
-  return sscanf(version.c_str(), "%d.%d.%d", &major_version_, &minor_version_, &patch_version_) >= 2;
+  return sscanf(version.c_str(), "%d.%d.%d", &major_version_, &minor_version_, &patch_version_) >=
+         2;
 }
 
 void Host::set(const Row* row, bool use_tokens) {
@@ -104,8 +106,7 @@ void Host::set(const Row* row, bool use_tokens) {
   if (server_version.parse(release_version)) {
     server_version_ = server_version;
   } else {
-    LOG_WARN("Invalid release version string \"%s\" on host %s",
-             release_version.c_str(),
+    LOG_WARN("Invalid release version string \"%s\" on host %s", release_version.c_str(),
              address().to_string().c_str());
   }
 
@@ -123,8 +124,7 @@ void Host::set(const Row* row, bool use_tokens) {
         server_version_ = VersionNumber(3, 11, 0);
       }
     } else {
-      LOG_WARN("Invalid DSE version string \"%s\" on host %s",
-               dse_version_str.c_str(),
+      LOG_WARN("Invalid DSE version string \"%s\" on host %s", dse_version_str.c_str(),
                address().to_string().c_str());
     }
   }
@@ -142,10 +142,9 @@ void Host::set(const Row* row, bool use_tokens) {
   }
 }
 
-ExternalHostListener::ExternalHostListener(const CassHostListenerCallback callback,
-                                           void *data)
-  : callback_(callback)
-  , data_(data) { }
+ExternalHostListener::ExternalHostListener(const CassHostListenerCallback callback, void* data)
+    : callback_(callback)
+    , data_(data) {}
 
 void ExternalHostListener::on_host_up(const Host::Ptr& host) {
   CassInet address;

@@ -23,12 +23,13 @@
 #include "serialization.hpp"
 #include "small_vector.hpp"
 
-#define CHECK_REMAINING(SIZE, DETAIL) do { \
-  if (remaining_ <  static_cast<size_t>(SIZE)) { \
-    notify_error(DETAIL, SIZE); \
-    return false; \
-  } \
-} while (0)
+#define CHECK_REMAINING(SIZE, DETAIL)             \
+  do {                                            \
+    if (remaining_ < static_cast<size_t>(SIZE)) { \
+      notify_error(DETAIL, SIZE);                 \
+      return false;                               \
+    }                                             \
+  } while (0)
 
 namespace datastax { namespace internal { namespace core {
 
@@ -43,7 +44,7 @@ typedef Vector<Failure> FailureVec;
 struct CustomPayloadItem {
   CustomPayloadItem(StringRef name, StringRef value)
       : name(name)
-      , value(value) { }
+      , value(value) {}
   StringRef name;
   StringRef value;
 };
@@ -57,13 +58,14 @@ class Value; // Forward declaration
  * Decoder class to validate server responses
  */
 class Decoder {
-friend class Value;
+  friend class Value;
+
 public:
   Decoder()
       : input_(NULL)
       , length_(0)
       , remaining_(0)
-      , type_("") { }
+      , type_("") {}
 
   Decoder(const char* input, size_t length,
           ProtocolVersion protocol_version = ProtocolVersion::highest_supported())
@@ -71,14 +73,12 @@ public:
       , input_(input)
       , length_(length)
       , remaining_(length)
-      , type_("") { }
+      , type_("") {}
 
   void maybe_log_remaining() const;
 
   inline String as_string() const { return String(input_, remaining_); }
-  inline StringRef as_string_ref() const {
-    return StringRef(input_, remaining_);
-  }
+  inline StringRef as_string_ref() const { return StringRef(input_, remaining_); }
 
   inline Vector<char> as_vector() const {
     Vector<char> buffer(remaining_ + 1);
@@ -89,9 +89,7 @@ public:
 
   inline ProtocolVersion protocol_version() const { return protocol_version_; }
 
-  inline void set_type(const char* type) {
-    type_ = type;
-  }
+  inline void set_type(const char* type) { type_ = type; }
 
   inline bool decode_byte(uint8_t& output) {
     CHECK_REMAINING(sizeof(uint8_t), "byte");
@@ -301,8 +299,7 @@ public:
   bool decode_inet(CassInet* output);
   bool as_inet(const int address_length, CassInet* output) const;
 
-  inline bool as_inet(const int address_length, const int port,
-                      Address* output) const {
+  inline bool as_inet(const int address_length, const int port, Address* output) const {
     CassInet inet;
     if (!as_inet(address_length, &inet)) return false;
     return Address::from_inet(&inet.address, inet.address_length, port, output);
@@ -324,8 +321,7 @@ public:
 
       if (!decode_string(&key, key_size)) return false;
       if (!decode_string(&value, value_size)) return false;
-      map.insert(std::make_pair(String(key, key_size),
-                                String(value, value_size)));
+      map.insert(std::make_pair(String(key, key_size), String(value, value_size)));
     }
 
     return true;
@@ -414,8 +410,7 @@ public:
     return true;
   }
 
-  inline bool decode_option(uint16_t& type, const char** class_name,
-                            size_t& class_name_size) {
+  inline bool decode_option(uint16_t& type, const char** class_name, size_t& class_name_size) {
     CHECK_REMAINING(sizeof(uint16_t), "option type");
 
     input_ = internal::decode_uint16(input_, type);
@@ -462,8 +457,8 @@ public:
       // 3. We care about leading 0s in the byte, not int, so subtract out the
       //    appropriate number of extra bits (56 for a 64-bit int).
 
-      // We mask out high-order bits to prevent sign-extension as the value is placed in a 64-bit arg
-      // to the num_leading_zeros function.
+      // We mask out high-order bits to prevent sign-extension as the value is placed in a 64-bit
+      // arg to the num_leading_zeros function.
       int extra_bytes = internal::num_leading_zeros(~first_byte & 0xff) - 56;
       CHECK_REMAINING(extra_bytes, "vint value");
 
@@ -482,8 +477,7 @@ public:
     return true;
   }
 
-  inline bool as_decimal(const uint8_t** output, size_t* size,
-                         int32_t* scale) {
+  inline bool as_decimal(const uint8_t** output, size_t* size, int32_t* scale) {
     CHECK_REMAINING(sizeof(int32_t), "decimal scale");
 
     const char* pos = internal::decode_int32(input_, *scale);
@@ -497,8 +491,7 @@ public:
     return true;
   }
 
-  inline bool as_duration(int32_t* out_months, int32_t* out_days,
-                          int64_t* out_nanos) const {
+  inline bool as_duration(int32_t* out_months, int32_t* out_days, int64_t* out_nanos) const {
     Decoder decoder = Decoder(input_, remaining_, protocol_version_);
     uint64_t decoded = 0;
 
@@ -583,7 +576,7 @@ private:
   void notify_error(const char* detail, size_t bytes) const;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #undef CHECK_REMAINING
 

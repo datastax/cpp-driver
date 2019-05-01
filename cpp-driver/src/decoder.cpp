@@ -18,19 +18,19 @@
 #include "logger.hpp"
 #include "value.hpp"
 
-#define CHECK_REMAINING(SIZE, DETAIL) do { \
-  if (remaining_ <  static_cast<size_t>(SIZE)) { \
-    notify_error(DETAIL, SIZE); \
-    return false; \
-  } \
-} while (0)
+#define CHECK_REMAINING(SIZE, DETAIL)             \
+  do {                                            \
+    if (remaining_ < static_cast<size_t>(SIZE)) { \
+      notify_error(DETAIL, SIZE);                 \
+      return false;                               \
+    }                                             \
+  } while (0)
 
 using namespace datastax::internal::core;
 
 void Decoder::maybe_log_remaining() const {
   if (remaining_ > 0) {
-    LOG_TRACE("Data remaining in %s response: %u", type_,
-              static_cast<unsigned int>(remaining_));
+    LOG_TRACE("Data remaining in %s response: %u", type_, static_cast<unsigned int>(remaining_));
   }
 }
 
@@ -65,8 +65,7 @@ bool Decoder::decode_inet(CassInet* output) {
   input_ = internal::decode_byte(input_, output->address_length);
   remaining_ -= sizeof(uint8_t);
   if (output->address_length > CASS_INET_V6_LENGTH) {
-    LOG_ERROR("Invalid inet address length of %d bytes",
-              output->address_length);
+    LOG_ERROR("Invalid inet address length of %d bytes", output->address_length);
     return false;
   }
 
@@ -80,8 +79,7 @@ bool Decoder::decode_inet(CassInet* output) {
 bool Decoder::as_inet(const int address_length, CassInet* output) const {
   output->address_length = address_length;
   if (output->address_length > CASS_INET_V6_LENGTH) {
-    LOG_ERROR("Invalid inet address length of %d bytes",
-              output->address_length);
+    LOG_ERROR("Invalid inet address length of %d bytes", output->address_length);
     return false;
   }
 
@@ -112,8 +110,7 @@ bool Decoder::decode_write_type(CassWriteType& output) {
   } else if (write_type == "CDC") {
     output = CASS_WRITE_TYPE_CDC;
   } else {
-    LOG_WARN("Invalid write type %.*s",
-             (int)write_type.size(), write_type.data());
+    LOG_WARN("Invalid write type %.*s", (int)write_type.size(), write_type.data());
     return false;
   }
 
@@ -171,11 +168,10 @@ bool Decoder::decode_value(const DataType::ConstPtr& data_type, Value& output,
 
 void Decoder::notify_error(const char* detail, size_t bytes) const {
   if (strlen(type_) == 0) {
-    LOG_ERROR("Expected at least %u byte%s to decode %s value",
-              static_cast<unsigned int>(bytes), (bytes > 1 ? "s" : ""), detail);
+    LOG_ERROR("Expected at least %u byte%s to decode %s value", static_cast<unsigned int>(bytes),
+              (bytes > 1 ? "s" : ""), detail);
   } else {
     LOG_ERROR("Expected at least %u byte%s to decode %s %s response",
-              static_cast<unsigned int>(bytes), (bytes > 1 ? "s" : ""), detail,
-              type_);
+              static_cast<unsigned int>(bytes), (bytes > 1 ? "s" : ""), detail, type_);
   }
 }

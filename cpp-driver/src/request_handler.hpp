@@ -20,12 +20,12 @@
 #include "constants.hpp"
 #include "error_response.hpp"
 #include "future.hpp"
-#include "request_callback.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
 #include "metadata.hpp"
 #include "prepare_request.hpp"
 #include "request.hpp"
+#include "request_callback.hpp"
 #include "response.hpp"
 #include "result_response.hpp"
 #include "retry_policy.hpp"
@@ -52,11 +52,11 @@ public:
   typedef SharedRefPtr<ResponseFuture> Ptr;
 
   ResponseFuture()
-    : Future(FUTURE_TYPE_RESPONSE) { }
+      : Future(FUTURE_TYPE_RESPONSE) {}
 
   ResponseFuture(const Metadata::SchemaSnapshot& schema_metadata)
-    : Future(FUTURE_TYPE_RESPONSE)
-    , schema_metadata(new Metadata::SchemaSnapshot(schema_metadata)) { }
+      : Future(FUTURE_TYPE_RESPONSE)
+      , schema_metadata(new Metadata::SchemaSnapshot(schema_metadata)) {}
 
   bool set_response(Address address, const Response::Ptr& response) {
     ScopedMutex lock(&mutex_);
@@ -85,8 +85,8 @@ public:
     return false;
   }
 
-  bool set_error_with_response(Address address, const Response::Ptr& response,
-                               CassError code, const String& message) {
+  bool set_error_with_response(Address address, const Response::Ptr& response, CassError code,
+                               const String& message) {
     ScopedMutex lock(&mutex_);
     if (!is_set()) {
       address_ = address;
@@ -136,17 +136,13 @@ class RequestHandler : public RefCounted<RequestHandler> {
 public:
   typedef SharedRefPtr<RequestHandler> Ptr;
 
-  RequestHandler(const Request::ConstPtr& request,
-                 const ResponseFuture::Ptr& future,
-                 Metrics* metrics = NULL,
-                 const Address* preferred_address = NULL);
+  RequestHandler(const Request::ConstPtr& request, const ResponseFuture::Ptr& future,
+                 Metrics* metrics = NULL, const Address* preferred_address = NULL);
 
   void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
 
-  void init(const ExecutionProfile& profile,
-            ConnectionPoolManager* manager,
-            const TokenMap* token_map,
-            TimestampGenerator* timestamp_generator,
+  void init(const ExecutionProfile& profile, ConnectionPoolManager* manager,
+            const TokenMap* token_map, TimestampGenerator* timestamp_generator,
             RequestListener* listener);
 
   void execute();
@@ -159,8 +155,8 @@ public:
 public:
   class Protected {
     friend class RequestExecution;
-    Protected() { }
-    Protected(Protected const&) { }
+    Protected() {}
+    Protected(Protected const&) {}
   };
 
   void retry(RequestExecution* request_execution, Protected);
@@ -172,31 +168,22 @@ public:
 
   void add_attempted_address(const Address& address, Protected);
 
-  void notify_result_metadata_changed(const String& prepared_id,
-                                      const String& query,
-                                      const String& keyspace,
-                                      const String& result_metadata_id,
+  void notify_result_metadata_changed(const String& prepared_id, const String& query,
+                                      const String& keyspace, const String& result_metadata_id,
                                       const ResultResponse::ConstPtr& result_response, Protected);
 
-  void notify_keyspace_changed(const String& keyspace,
-                               const Host::Ptr& current_host,
+  void notify_keyspace_changed(const String& keyspace, const Host::Ptr& current_host,
                                const Response::Ptr& response);
 
-  bool wait_for_tracing_data(const Host::Ptr& current_host,
-                             const Response::Ptr& response);
-  bool wait_for_schema_agreement(const Host::Ptr& current_host,
-                                 const Response::Ptr& response);
+  bool wait_for_tracing_data(const Host::Ptr& current_host, const Response::Ptr& response);
+  bool wait_for_schema_agreement(const Host::Ptr& current_host, const Response::Ptr& response);
 
-  bool prepare_all(const Host::Ptr& current_host,
-                   const Response::Ptr& response);
+  bool prepare_all(const Host::Ptr& current_host, const Response::Ptr& response);
 
-  void set_response(const Host::Ptr& host,
-                    const Response::Ptr& response);
+  void set_response(const Host::Ptr& host, const Response::Ptr& response);
   void set_error(CassError code, const String& message);
-  void set_error(const Host::Ptr& host,
-                 CassError code, const String& message);
-  void set_error_with_error_response(const Host::Ptr& host,
-                                     const Response::Ptr& error,
+  void set_error(const Host::Ptr& host, CassError code, const String& message);
+  void set_error_with_error_response(const Host::Ptr& host, const Response::Ptr& error,
                                      CassError code, const String& message);
 
   void stop_timer();
@@ -229,16 +216,13 @@ private:
 
 class KeyspaceChangedResponse {
 public:
-  KeyspaceChangedResponse(const RequestHandler::Ptr& request_handler,
-                          const Host::Ptr& current_host,
+  KeyspaceChangedResponse(const RequestHandler::Ptr& request_handler, const Host::Ptr& current_host,
                           const Response::Ptr& response)
-    : request_handler_(request_handler)
-    , current_host_(current_host)
-    , response_(response) { }
+      : request_handler_(request_handler)
+      , current_host_(current_host)
+      , response_(response) {}
 
-  void set_response() {
-    request_handler_->set_response(current_host_, response_);
-  }
+  void set_response() { request_handler_->set_response(current_host_, response_); }
 
 private:
   RequestHandler::Ptr request_handler_;
@@ -248,7 +232,7 @@ private:
 
 class PreparedMetadataListener {
 public:
-  virtual ~PreparedMetadataListener() { }
+  virtual ~PreparedMetadataListener() {}
 
   virtual void on_prepared_metadata_changed(const String& id,
                                             const PreparedMetadata::Entry::Ptr& entry) = 0;
@@ -256,7 +240,7 @@ public:
 
 class RequestListener : public PreparedMetadataListener {
 public:
-  virtual ~RequestListener() { }
+  virtual ~RequestListener() {}
 
   /**
    * A callback called when the keyspace has changed.
@@ -265,8 +249,7 @@ public:
    * @param response The response for the keyspace change. `set_response()`
    * must be called when the callback is done processing the keyspace change.
    */
-  virtual void on_keyspace_changed(const String& keyspace,
-                                   KeyspaceChangedResponse response) = 0;
+  virtual void on_keyspace_changed(const String& keyspace, KeyspaceChangedResponse response) = 0;
 
   virtual bool on_wait_for_tracing_data(const RequestHandler::Ptr& request_handler,
                                         const Host::Ptr& current_host,
@@ -277,8 +260,7 @@ public:
                                             const Response::Ptr& response) = 0;
 
   virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
-                              const Host::Ptr& current_host,
-                              const Response::Ptr& response) = 0;
+                              const Host::Ptr& current_host, const Response::Ptr& response) = 0;
 
   virtual void on_done() = 0;
 };
@@ -290,12 +272,9 @@ public:
   RequestExecution(RequestHandler* request_handler);
 
   const Host::Ptr& current_host() const { return current_host_; }
-  void next_host() {
-    current_host_ = request_handler_->next_host(RequestHandler::Protected());
-  }
+  void next_host() { current_host_ = request_handler_->next_host(RequestHandler::Protected()); }
 
-  void notify_result_metadata_changed(const Request *request,
-                                      ResultResponse* result_response);
+  void notify_result_metadata_changed(const Request* request, ResultResponse* result_response);
 
   virtual void on_retry_current_host();
   virtual void on_retry_next_host();
@@ -318,8 +297,8 @@ private:
 private:
   void set_response(const Response::Ptr& response);
   void set_error(CassError code, const String& message);
-  void set_error_with_error_response(const Response::Ptr& error,
-                                     CassError code, const String& message);
+  void set_error_with_error_response(const Response::Ptr& error, CassError code,
+                                     const String& message);
 
 private:
   RequestHandler::Ptr request_handler_;
@@ -330,6 +309,6 @@ private:
   const uint64_t start_time_ns_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

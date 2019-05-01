@@ -33,7 +33,8 @@ public:
     }
 
     // Restart the cluster with the appropriate JVM arguments and establish connection
-    ccm_->start_cluster("-Dcassandra.custom_query_handler_class=org.apache.cassandra.cql3.CustomPayloadMirroringQueryHandler");
+    ccm_->start_cluster("-Dcassandra.custom_query_handler_class=org.apache.cassandra.cql3."
+                        "CustomPayloadMirroringQueryHandler");
     connect();
   }
 };

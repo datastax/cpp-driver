@@ -10,13 +10,16 @@
 
 #include <rapidjson/rapidjson.h>
 
-#define GRAPH_DATA_TYPE_CREATE_FORMAT "schema.propertyKey(property_name).%s().create();" \
+#define GRAPH_DATA_TYPE_CREATE_FORMAT                                    \
+  "schema.propertyKey(property_name).%s().create();"                     \
   "schema.vertexLabel(vertex_label).properties(property_name).create();" \
-  "schema.vertexLabel(vertex_label).index(property_name + 'Index').secondary().by(property_name).add();"
+  "schema.vertexLabel(vertex_label).index(property_name + "              \
+  "'Index').secondary().by(property_name).add();"
 
 #define GRAPH_DATA_TYPE_INSERT "g.addV(vertex_label).property(property_name, value_field);"
 
-#define GRAPH_DATA_TYPE_SELECT "g.V().hasLabel(vertex_label).has(property_name, value_field).next();"
+#define GRAPH_DATA_TYPE_SELECT \
+  "g.V().hasLabel(vertex_label).has(property_name, value_field).next();"
 
 /**
  * Graph data type integration tests
@@ -25,7 +28,6 @@
  */
 class GraphDataTypeTest : public DseIntegration {
 public:
-
   /**
    * Pair containing values and expected return values
    */
@@ -59,10 +61,9 @@ protected:
    *                        representation of the value; this will allow the
    *                        validation of those coercions
    */
-  template<typename T>
-  void perform_data_type_test(const std::string& data_type,
-    std::vector<T> values,
-    std::vector<T> expected_values = std::vector<T>()) {
+  template <typename T>
+  void perform_data_type_test(const std::string& data_type, std::vector<T> values,
+                              std::vector<T> expected_values = std::vector<T>()) {
     // Determine if the values being validated are the same as the insert values
     if (expected_values.empty()) {
       expected_values = values;
@@ -70,7 +71,7 @@ protected:
 
     // Ensure the values are of the same size
     ASSERT_EQ(values.size(), expected_values.size())
-      << "Insert and expected vectors must be equal in size";
+        << "Insert and expected vectors must be equal in size";
 
     // Iterate over the values and perform the test operations
     for (size_t i = 0; i < values.size(); ++i) {
@@ -120,7 +121,7 @@ private:
    * @param value Value to assign to `value_field`
    * @return DSE graph object to apply to DSE graph statements
    */
-  template<typename T>
+  template <typename T>
   dse::GraphObject create_object(T value) {
     dse::GraphObject object;
 
@@ -147,15 +148,14 @@ private:
     // Determine if data type is geospatial and append withGeoBounds
     std::string type = data_type;
     if (server_version_ >= "5.1.0" &&
-      (type.compare("Linestring") == 0 ||
-      type.compare("Point") == 0 ||
-      type.compare("Polygon") == 0)) {
+        (type.compare("Linestring") == 0 || type.compare("Point") == 0 ||
+         type.compare("Polygon") == 0)) {
       type += "().withGeoBounds";
     }
 
     // Create and execute the statement
-    dse::GraphStatement statement(
-      format_string(GRAPH_DATA_TYPE_CREATE_FORMAT, type.c_str()), options_);
+    dse::GraphStatement statement(format_string(GRAPH_DATA_TYPE_CREATE_FORMAT, type.c_str()),
+                                  options_);
     statement.bind(object);
     CHECK_FAILURE;
     dse_session_.execute(statement);
@@ -194,8 +194,7 @@ private:
    * @param result_set DSE graph result set to get the value from
    * @return DSE graph result which will contain only the data type value
    */
-  dse::GraphResult get_data_type_value(
-    dse::GraphResultSet result_set) {
+  dse::GraphResult get_data_type_value(dse::GraphResultSet result_set) {
     EXPECT_EQ(1u, result_set.count());
     dse::GraphResult result = result_set.next();
     dse::GraphVertex vertex = result.vertex();
@@ -285,7 +284,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, DecimalDoubleFloat) {
 
   // Iterate over all the values and perform the test operations
   for (std::map<std::string, std::vector<Double> >::iterator iterator = values.begin();
-    iterator != values.end(); ++iterator) {
+       iterator != values.end(); ++iterator) {
     TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<Double>(iterator->first, iterator->second);
   }
@@ -327,7 +326,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, IntegerSmallIntegerVarint) {
 
   // Iterate over all the values and perform the test operations
   for (std::map<std::string, std::vector<Integer> >::iterator iterator = values.begin();
-    iterator != values.end(); ++iterator) {
+       iterator != values.end(); ++iterator) {
     TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<Integer>(iterator->first, iterator->second);
   }
@@ -350,8 +349,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, Text) {
 
   // Create the values being tested
   std::vector<Varchar> values;
-  values.push_back(Varchar(
-    "The quick brown fox jumps over the lazy dog"));
+  values.push_back(Varchar("The quick brown fox jumps over the lazy dog"));
   values.push_back(Varchar("Hello World!"));
   values.push_back(Varchar("DataStax C/C++ DSE Driver"));
 
@@ -404,7 +402,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
   /*
    * Test data types with different expected values
    */
-   // Create duration values
+  // Create duration values
   std::vector<std::string> durations;
   durations.push_back("5 s");
   durations.push_back("5 seconds");
@@ -420,18 +418,10 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
 
   // Create line string values (remove tick marks from CQL value)
   std::vector<std::string> line_strings;
-  line_strings.push_back(replace_all(
-    dse::LineString("0.0 0.0, 1.0 1.0").cql_value(),
-                    "'",
-                    ""));
-  line_strings.push_back(replace_all(
-    dse::LineString("1.0 3.0, 2.0 6.0, 3.0 9.0").cql_value(),
-                    "'",
-                    ""));
-  line_strings.push_back(replace_all(
-    dse::LineString("-1.2 -90.0, 0.99 3.0").cql_value(),
-                    "'",
-                    ""));
+  line_strings.push_back(replace_all(dse::LineString("0.0 0.0, 1.0 1.0").cql_value(), "'", ""));
+  line_strings.push_back(
+      replace_all(dse::LineString("1.0 3.0, 2.0 6.0, 3.0 9.0").cql_value(), "'", ""));
+  line_strings.push_back(replace_all(dse::LineString("-1.2 -90.0, 0.99 3.0").cql_value(), "'", ""));
   std::vector<std::string> line_strings_expected;
   line_strings_expected.push_back("LINESTRING (0 0, 1 1)");
   line_strings_expected.push_back("LINESTRING (1 3, 2 6, 3 9)");
@@ -449,19 +439,16 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
 
   // Create polygon values (remove tick marks from CQL value)
   std::vector<std::string> polygons;
-  polygons.push_back(replace_all(
-    dse::Polygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)").cql_value(),
-                 "'",
-                 ""));
-  polygons.push_back(replace_all(
-    dse::Polygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
-                  (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)").cql_value(),
-                 "'",
-                 ""));
+  polygons.push_back(
+      replace_all(dse::Polygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)").cql_value(), "'", ""));
+  polygons.push_back(replace_all(dse::Polygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
+                  (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)")
+                                     .cql_value(),
+                                 "'", ""));
   std::vector<std::string> polygons_expected;
   polygons_expected.push_back("POLYGON ((1 3, 3 1, 3 6, 1 3))");
-  polygons_expected.push_back("POLYGON ((0 10, 10 0, 10 10, 0 10), " \
-                                      "(6 7, 3 9, 9 9, 6 7))");
+  polygons_expected.push_back("POLYGON ((0 10, 10 0, 10 10, 0 10), "
+                              "(6 7, 3 9, 9 9, 6 7))");
 
   // Create timestamp values
   std::vector<std::string> timestamps;
@@ -473,27 +460,24 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
 
   // Create the valued being tested (data type, [[value], [expected]]]
   std::map<std::string, ValuesExpected> values_expected;
-  values_expected.insert(std::make_pair("Duration",
-    std::make_pair(durations, durations_expected)));
-  values_expected.insert(std::make_pair("Linestring",
-    std::make_pair(line_strings, line_strings_expected)));
-  values_expected.insert(std::make_pair("Point",
-    std::make_pair(points, points_expected)));
-  values_expected.insert(std::make_pair("Polygon",
-    std::make_pair(polygons, polygons_expected)));
-  values_expected.insert(std::make_pair("Timestamp",
-    std::make_pair(timestamps, timestamps_expected)));
+  values_expected.insert(std::make_pair("Duration", std::make_pair(durations, durations_expected)));
+  values_expected.insert(
+      std::make_pair("Linestring", std::make_pair(line_strings, line_strings_expected)));
+  values_expected.insert(std::make_pair("Point", std::make_pair(points, points_expected)));
+  values_expected.insert(std::make_pair("Polygon", std::make_pair(polygons, polygons_expected)));
+  values_expected.insert(
+      std::make_pair("Timestamp", std::make_pair(timestamps, timestamps_expected)));
 
   // Iterate over all the values and perform the test operations
   for (std::map<std::string, std::vector<std::string> >::iterator iterator = values.begin();
-    iterator != values.end(); ++iterator) {
+       iterator != values.end(); ++iterator) {
     TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<std::string>(iterator->first, iterator->second);
   }
   for (std::map<std::string, ValuesExpected>::iterator iterator = values_expected.begin();
-    iterator != values_expected.end(); ++iterator) {
+       iterator != values_expected.end(); ++iterator) {
     TEST_LOG("Testing data type " << iterator->first);
-    perform_data_type_test<std::string>(iterator->first,
-      iterator->second.first, iterator->second.second);
+    perform_data_type_test<std::string>(iterator->first, iterator->second.first,
+                                        iterator->second.second);
   }
 }

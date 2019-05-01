@@ -18,9 +18,7 @@
 
 class StatementTests : public Integration {
 public:
-  StatementTests() {
-    number_dc1_nodes_ = 2;
-  }
+  StatementTests() { number_dc1_nodes_ = 2; }
 };
 
 /**
@@ -115,12 +113,11 @@ CASSANDRA_INTEGRATION_TEST_F(StatementTests, SetHostWhereHostIsDown) {
  */
 TEST(StatementTest, SetHostWithValidHostString) {
   Statement statement("");
-  EXPECT_EQ(cass_statement_set_host(statement.get(), "127.0.0.1", 9042),
-            CASS_OK);
-  EXPECT_EQ(cass_statement_set_host(statement.get(), "::1", 9042),
-            CASS_OK);
-  EXPECT_EQ(cass_statement_set_host(statement.get(), "2001:0db8:85a3:0000:0000:8a2e:0370:7334", 9042),
-            CASS_OK);
+  EXPECT_EQ(cass_statement_set_host(statement.get(), "127.0.0.1", 9042), CASS_OK);
+  EXPECT_EQ(cass_statement_set_host(statement.get(), "::1", 9042), CASS_OK);
+  EXPECT_EQ(
+      cass_statement_set_host(statement.get(), "2001:0db8:85a3:0000:0000:8a2e:0370:7334", 9042),
+      CASS_OK);
 }
 
 /**
@@ -132,12 +129,9 @@ TEST(StatementTest, SetHostWithValidHostString) {
  */
 TEST(StatementTest, SetHostWithInvalidHostString) {
   Statement statement("");
-  EXPECT_EQ(cass_statement_set_host(statement.get(), "notvalid", 9042),
-            CASS_ERROR_LIB_BAD_PARAMS);
-  EXPECT_EQ(cass_statement_set_host(statement.get(), "", 9042),
-            CASS_ERROR_LIB_BAD_PARAMS);
-  EXPECT_EQ(cass_statement_set_host(statement.get(), NULL, 9042),
-            CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(cass_statement_set_host(statement.get(), "notvalid", 9042), CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(cass_statement_set_host(statement.get(), "", 9042), CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(cass_statement_set_host(statement.get(), NULL, 9042), CASS_ERROR_LIB_BAD_PARAMS);
 }
 
 /**
@@ -152,16 +146,13 @@ TEST(StatementTest, SetHostWithValidHostInet) {
   CassInet valid;
   ASSERT_EQ(cass_inet_from_string("127.0.0.1", &valid), CASS_OK);
   EXPECT_EQ(valid.address_length, 4);
-  EXPECT_EQ(cass_statement_set_host_inet(statement.get(), &valid, 9042),
-            CASS_OK);
+  EXPECT_EQ(cass_statement_set_host_inet(statement.get(), &valid, 9042), CASS_OK);
   ASSERT_EQ(cass_inet_from_string("::1", &valid), CASS_OK);
   EXPECT_EQ(valid.address_length, 16);
-  EXPECT_EQ(cass_statement_set_host_inet(statement.get(), &valid, 9042),
-            CASS_OK);
+  EXPECT_EQ(cass_statement_set_host_inet(statement.get(), &valid, 9042), CASS_OK);
   ASSERT_EQ(cass_inet_from_string("2001:0db8:85a3:0000:0000:8a2e:0370:7334", &valid), CASS_OK);
   EXPECT_EQ(valid.address_length, 16);
-  EXPECT_EQ(cass_statement_set_host_inet(statement.get(), &valid, 9042),
-            CASS_OK);
+  EXPECT_EQ(cass_statement_set_host_inet(statement.get(), &valid, 9042), CASS_OK);
 }
 
 /**

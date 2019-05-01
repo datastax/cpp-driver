@@ -17,19 +17,18 @@
 #ifndef DATASTAX_INTERNAL_WHITELIST_POLICY_HPP
 #define DATASTAX_INTERNAL_WHITELIST_POLICY_HPP
 
-#include "load_balancing.hpp"
 #include "host.hpp"
-#include "scoped_ptr.hpp"
 #include "list_policy.hpp"
+#include "load_balancing.hpp"
+#include "scoped_ptr.hpp"
 
 namespace datastax { namespace internal { namespace core {
 
 class WhitelistPolicy : public ListPolicy {
 public:
-  WhitelistPolicy(LoadBalancingPolicy* child_policy,
-                  const ContactPointList& hosts)
-    : ListPolicy(child_policy)
-    , hosts_(hosts) {}
+  WhitelistPolicy(LoadBalancingPolicy* child_policy, const ContactPointList& hosts)
+      : ListPolicy(child_policy)
+      , hosts_(hosts) {}
 
   virtual ~WhitelistPolicy() {}
 
@@ -46,6 +45,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(WhitelistPolicy);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

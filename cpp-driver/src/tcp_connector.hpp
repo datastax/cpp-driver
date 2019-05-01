@@ -34,14 +34,7 @@ public:
 
   typedef internal::Callback<void, TcpConnector*> Callback;
 
-  enum Status {
-    NEW,
-    CONNECTING,
-    FAILED_BAD_PARAM,
-    FAILED_TO_CONNECT,
-    CANCELED,
-    SUCCESS
-  };
+  enum Status { NEW, CONNECTING, FAILED_BAD_PARAM, FAILED_TO_CONNECT, CANCELED, SUCCESS };
 
   /**
    * Constructor
@@ -91,7 +84,7 @@ public:
   }
 
 public:
-  uv_loop_t* loop() { return req_.handle->loop;  }
+  uv_loop_t* loop() { return req_.handle->loop; }
 
   bool is_success() { return status_ == SUCCESS; }
   bool is_canceled() { return status_ == CANCELED; }
@@ -99,7 +92,6 @@ public:
   int uv_status() { return uv_status_; }
 
   const Address& address() { return address_; }
-
 
 private:
   static void on_connect(uv_connect_t* req, int status) {
@@ -125,6 +117,6 @@ private:
   int uv_status_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

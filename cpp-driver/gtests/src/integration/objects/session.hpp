@@ -28,27 +28,27 @@
 
 #include "exception.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Wrapped session object
  */
 class Session : public Object<CassSession, cass_session_free> {
-friend class Cluster;
+  friend class Cluster;
+
 public:
   class Exception : public test::CassException {
   public:
     Exception(const std::string& message, const CassError error_code,
               const std::string& error_message)
-      : test::CassException(message, error_code, error_message) { }
+        : test::CassException(message, error_code, error_message) {}
   };
 
   /**
    * Create the default session object
    */
   Session()
-    : Object<CassSession, cass_session_free>(cass_session_new()) { }
+      : Object<CassSession, cass_session_free>(cass_session_new()) {}
 
   /**
    * Create the session object from the native driver object
@@ -56,7 +56,7 @@ public:
    * @param session Native driver object
    */
   Session(CassSession* session)
-    : Object<CassSession, cass_session_free>(session) { }
+      : Object<CassSession, cass_session_free>(session) {}
 
   /**
    * Create the session object from a shared reference
@@ -64,7 +64,7 @@ public:
    * @param session Shared reference
    */
   Session(Ptr session)
-    : Object<CassSession, cass_session_free>(session) { }
+      : Object<CassSession, cass_session_free>(session) {}
 
   /**
    * Close the active session
@@ -82,27 +82,21 @@ public:
    *
    * @return Error code of the future
    */
-  CassError connect_error_code() {
-    return connect_future_.error_code();
-  }
+  CassError connect_error_code() { return connect_future_.error_code(); }
 
   /**
    * Get the human readable description of the error code during the connection
    *
    * @return Error description
    */
-  const std::string connect_error_description() {
-    return connect_future_.error_description();
-  }
+  const std::string connect_error_description() { return connect_future_.error_description(); }
 
   /**
    * Get the error message that occurred during the connection
    *
    * @return Error message
    */
-  const std::string connect_error_message() {
-    return connect_future_.error_message();
-  }
+  const std::string connect_error_message() { return connect_future_.error_message(); }
 
   /**
    * Execute a batch statement synchronously
@@ -144,9 +138,8 @@ public:
    *                  CASS_OK; false otherwise (default: true)
    * @return Result object
    */
-  Result execute(const std::string& query,
-    CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
-    bool is_idempotent = false, bool assert_ok = true) {
+  Result execute(const std::string& query, CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
+                 bool is_idempotent = false, bool assert_ok = true) {
     Statement statement(query);
     statement.set_consistency(consistency);
     statement.set_idempotent(is_idempotent);
@@ -184,8 +177,8 @@ public:
    * @return Future object
    */
   Future execute_async(const std::string& query,
-    CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
-    bool is_idempotent = false) {
+                       CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
+                       bool is_idempotent = false) {
     Statement statement(query);
     statement.set_consistency(consistency);
     statement.set_idempotent(is_idempotent);
@@ -235,15 +228,14 @@ protected:
     if (keyspace.empty()) {
       session.connect_future_ = cass_session_connect(session.get(), cluster);
     } else {
-      session.connect_future_ = cass_session_connect_keyspace(session.get(),
-        cluster, keyspace.c_str());
+      session.connect_future_ =
+          cass_session_connect_keyspace(session.get(), cluster, keyspace.c_str());
     }
     session.connect_future_.wait(false);
     if (assert_ok && session.connect_error_code() != CASS_OK) {
-      throw Exception("Unable to Establish Session Connection: "
-                      + session.connect_error_description(),
-                      session.connect_error_code(),
-                      session.connect_error_message());
+      throw Exception("Unable to Establish Session Connection: " +
+                          session.connect_error_description(),
+                      session.connect_error_code(), session.connect_error_message());
     }
     return session;
   }
@@ -252,7 +244,6 @@ private:
   Future connect_future_;
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_SESSION_HPP__

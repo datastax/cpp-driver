@@ -30,8 +30,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 // Forward declarations
 class Row;
@@ -45,13 +44,13 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) { }
+        : test::Exception(message) {}
   };
 
   /**
    * Create an empty result object
    */
-  Result() { }
+  Result() {}
 
   /**
    * Create the result object from the native driver object
@@ -59,7 +58,7 @@ public:
    * @param result Native driver object
    */
   Result(const CassResult* result)
-    : Object<const CassResult, cass_result_free>(result) { }
+      : Object<const CassResult, cass_result_free>(result) {}
 
   /**
    * Create the result object from a shared reference
@@ -67,7 +66,7 @@ public:
    * @param result Shared reference
    */
   Result(Ptr result)
-    : Object<const CassResult, cass_result_free>(result) { }
+      : Object<const CassResult, cass_result_free>(result) {}
 
   /**
    * Create the result object from a future object
@@ -75,63 +74,51 @@ public:
    * @param future Wrapped driver object
    */
   Result(Future future)
-    : Object<const CassResult, cass_result_free>(future.result())
-    , future_(future)
-    , custom_payload_(future) { }
+      : Object<const CassResult, cass_result_free>(future.result())
+      , future_(future)
+      , custom_payload_(future) {}
 
   /**
    * Get the attempted host/address of the future
    *
    * @return Attempted host/address
    */
-  const std::vector<std::string> attempted_hosts() {
-    return future_.attempted_hosts();
-  }
+  const std::vector<std::string> attempted_hosts() { return future_.attempted_hosts(); }
 
   /**
    * Get the error code from the future
    *
    * @return Error code of the future
    */
-  CassError error_code() {
-    return future_.error_code();
-  }
+  CassError error_code() { return future_.error_code(); }
 
   /**
    * Get the human readable description of the error code
    *
    * @return Error description
    */
-  const std::string error_description() {
-    return future_.error_description();
-  }
+  const std::string error_description() { return future_.error_description(); }
 
   /**
    * Get the error message of the future if an error occurred
    *
    * @return Error message
    */
-  const std::string error_message() {
-    return future_.error_message();
-  }
+  const std::string error_message() { return future_.error_message(); }
 
   /**
    * Get the host/address of the future
    *
    * @return Host/Address
    */
-  const std::string host() {
-    return future_.host();
-  }
+  const std::string host() { return future_.host(); }
 
   /**
    * Get the number of columns from the result
    *
    * @return The number of columns in the result
    */
-  size_t column_count() {
-    return cass_result_column_count(get());
-  }
+  size_t column_count() { return cass_result_column_count(get()); }
 
   /**
    * Get the column names from the result
@@ -162,9 +149,7 @@ public:
    *
    * @return The number of rows in the result
    */
-  size_t row_count() {
-    return cass_result_row_count(get());
-  }
+  size_t row_count() { return cass_result_row_count(get()); }
 
   /**
    * Get the rows from the result
@@ -179,18 +164,14 @@ public:
    *
    * @return True if result is empty; false otherwise
    */
-  bool is_empty() {
-    return row_count() == 0;
-  }
+  bool is_empty() { return row_count() == 0; }
 
   /**
    * Get the custom payload associated with the result
    *
    * @return Custom payload
    */
-  CustomPayload custom_payload() {
-    return custom_payload_;
-  }
+  CustomPayload custom_payload() { return custom_payload_; }
 
   /**
    * Get the tracing ID from the result's future.
@@ -228,15 +209,15 @@ public:
    * @param parent The result object for the column
    */
   Column(const CassValue* value, const Result& parent)
-    : value_(value)
-    , parent_(parent) { }
+      : value_(value)
+      , parent_(parent) {}
 
   /**
    * Get the value as a specific type
    *
    * @return The value as a value type
    */
-  template<class T>
+  template <class T>
   T as() const {
     return T(value_);
   }
@@ -264,8 +245,8 @@ public:
    * @param parent The result object for the row
    */
   Row(const CassRow* row, const Result& parent)
-    : row_(row)
-    , parent_(parent) {
+      : row_(row)
+      , parent_(parent) {
     if (row != NULL) {
       iterator_ = cass_iterator_from_row(row);
     } else {
@@ -279,7 +260,7 @@ public:
    * @param name Name of the column to retrieve
    * @return The value as a value type
    */
-  template<typename T>
+  template <typename T>
   T column_by_name(const std::string& name) {
     return T(cass_row_get_column_by_name(row_, name.c_str()));
   }
@@ -289,13 +270,9 @@ public:
    *
    * @return The total number of columns in a row
    */
-  size_t column_count() {
-    return parent_.column_count();
-  }
+  size_t column_count() { return parent_.column_count(); }
 
-  const CassRow* get() {
-    return row_;
-  }
+  const CassRow* get() { return row_; }
 
   /**
    * Get the next column
@@ -337,26 +314,22 @@ public:
    * @param parent The result object for these rows
    */
   Rows(Iterator iterator, Result parent)
-    : iterator_(iterator)
-    , parent_(parent) { }
+      : iterator_(iterator)
+      , parent_(parent) {}
 
   /**
    * Get the total number of columns in a row
    *
    * @return The total number of columns in a row
    */
-  size_t column_count() {
-    return parent_.column_count();
-  }
+  size_t column_count() { return parent_.column_count(); }
 
   /**
    * Get the total number of rows
    *
    * @return The total number of rows
    */
-  size_t row_count() {
-    return parent_.row_count();
-  }
+  size_t row_count() { return parent_.row_count(); }
 
   /**
    * Get the next row
@@ -382,7 +355,6 @@ private:
   Result parent_;
 };
 
-
 inline Row Result::first_row() {
   if (cass_result_row_count(get()) == 0) {
     throw Exception("No first row available");
@@ -390,11 +362,8 @@ inline Row Result::first_row() {
   return Row(cass_result_first_row(get()), *this);
 }
 
-inline Rows Result::rows() {
-  return Rows(cass_iterator_from_result(get()), *this);
-}
+inline Rows Result::rows() { return Rows(cass_iterator_from_result(get()), *this); }
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_RESULT_HPP__

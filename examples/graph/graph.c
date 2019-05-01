@@ -9,44 +9,46 @@
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef _WIN32
-  #include <windows.h>
+#include <windows.h>
 #else
-  #include <unistd.h>
+#include <unistd.h>
 #endif
-#define GRAPH_ALLOW_SCANS \
-  "schema.config().option('graph.allow_scan').set('true')"
+#define GRAPH_ALLOW_SCANS "schema.config().option('graph.allow_scan').set('true')"
 
-#define GRAPH_MAKE_STRICT \
-  "schema.config().option('graph.schema_mode').set(com.datastax.bdp.graph.api.model.Schema.Mode.Production)"
+#define GRAPH_MAKE_STRICT                                                                         \
+  "schema.config().option('graph.schema_mode').set(com.datastax.bdp.graph.api.model.Schema.Mode." \
+  "Production)"
 
-#define GRAPH_SCHEMA \
-  "schema.propertyKey('name').Text().ifNotExists().create();" \
-  "schema.propertyKey('age').Int().ifNotExists().create();" \
-  "schema.propertyKey('lang').Text().ifNotExists().create();" \
-  "schema.propertyKey('weight').Float().ifNotExists().create();" \
-  "schema.vertexLabel('person').properties('name', 'age').ifNotExists().create();" \
+#define GRAPH_SCHEMA                                                                  \
+  "schema.propertyKey('name').Text().ifNotExists().create();"                         \
+  "schema.propertyKey('age').Int().ifNotExists().create();"                           \
+  "schema.propertyKey('lang').Text().ifNotExists().create();"                         \
+  "schema.propertyKey('weight').Float().ifNotExists().create();"                      \
+  "schema.vertexLabel('person').properties('name', 'age').ifNotExists().create();"    \
   "schema.vertexLabel('software').properties('name', 'lang').ifNotExists().create();" \
-  "schema.edgeLabel('created').properties('weight').connection('person', 'software').ifNotExists().create();" \
-  "schema.edgeLabel('created').connection('software', 'software').add();" \
-  "schema.edgeLabel('knows').properties('weight').connection('person', 'person').ifNotExists().create();"
+  "schema.edgeLabel('created').properties('weight').connection('person', "            \
+  "'software').ifNotExists().create();"                                               \
+  "schema.edgeLabel('created').connection('software', 'software').add();"             \
+  "schema.edgeLabel('knows').properties('weight').connection('person', "              \
+  "'person').ifNotExists().create();"
 
-#define GRAPH_DATA \
-  "Vertex marko = graph.addVertex(label, 'person', 'name', 'marko', 'age', 29);" \
-  "Vertex vadas = graph.addVertex(label, 'person', 'name', 'vadas', 'age', 27);" \
-  "Vertex lop = graph.addVertex(label, 'software', 'name', 'lop', 'lang', 'java');" \
-  "Vertex josh = graph.addVertex(label, 'person', 'name', 'josh', 'age', 32);" \
+#define GRAPH_DATA                                                                        \
+  "Vertex marko = graph.addVertex(label, 'person', 'name', 'marko', 'age', 29);"          \
+  "Vertex vadas = graph.addVertex(label, 'person', 'name', 'vadas', 'age', 27);"          \
+  "Vertex lop = graph.addVertex(label, 'software', 'name', 'lop', 'lang', 'java');"       \
+  "Vertex josh = graph.addVertex(label, 'person', 'name', 'josh', 'age', 32);"            \
   "Vertex ripple = graph.addVertex(label, 'software', 'name', 'ripple', 'lang', 'java');" \
-  "Vertex peter = graph.addVertex(label, 'person', 'name', 'peter', 'age', 35);" \
-  "marko.addEdge('knows', vadas, 'weight', 0.5f);" \
-  "marko.addEdge('knows', josh, 'weight', 1.0f);" \
-  "marko.addEdge('created', lop, 'weight', 0.4f);" \
-  "josh.addEdge('created', ripple, 'weight', 1.0f);" \
-  "josh.addEdge('created', lop, 'weight', 0.4f);" \
+  "Vertex peter = graph.addVertex(label, 'person', 'name', 'peter', 'age', 35);"          \
+  "marko.addEdge('knows', vadas, 'weight', 0.5f);"                                        \
+  "marko.addEdge('knows', josh, 'weight', 1.0f);"                                         \
+  "marko.addEdge('created', lop, 'weight', 0.4f);"                                        \
+  "josh.addEdge('created', ripple, 'weight', 1.0f);"                                      \
+  "josh.addEdge('created', lop, 'weight', 0.4f);"                                         \
   "peter.addEdge('created', lop, 'weight', 0.2f);"
 
 void print_error(CassFuture* future) {
@@ -68,13 +70,12 @@ void print_indented(int indent, const char* format, ...) {
 void print_graph_result(int indent, const DseGraphResult* result) {
   size_t i, count;
 
-  switch(dse_graph_result_type(result)) {
+  switch (dse_graph_result_type(result)) {
     case DSE_GRAPH_RESULT_TYPE_NULL:
       print_indented(indent, "null");
       break;
     case DSE_GRAPH_RESULT_TYPE_BOOL:
-      print_indented(indent, "%s",
-                     dse_graph_result_get_bool(result) ? "true" : "false");
+      print_indented(indent, "%s", dse_graph_result_get_bool(result) ? "true" : "false");
       break;
     case DSE_GRAPH_RESULT_TYPE_NUMBER:
       if (dse_graph_result_is_int32(result)) {
@@ -97,8 +98,7 @@ void print_graph_result(int indent, const DseGraphResult* result) {
         DseGraphResultType type = dse_graph_result_type(value);
         printf("\n");
         print_indented(indent + 4, "\"%s\": ", key);
-        if (type == DSE_GRAPH_RESULT_TYPE_OBJECT ||
-            type == DSE_GRAPH_RESULT_TYPE_ARRAY) {
+        if (type == DSE_GRAPH_RESULT_TYPE_OBJECT || type == DSE_GRAPH_RESULT_TYPE_ARRAY) {
           printf("\n");
           print_graph_result(indent + 4, value);
         } else {
@@ -134,10 +134,8 @@ void print_graph_resultset(DseGraphResultSet* resultset) {
   printf("]\n");
 }
 
-cass_bool_t execute_graph_query(CassSession* session,
-                                const char* query,
-                                const DseGraphOptions* options,
-                                const DseGraphObject* values,
+cass_bool_t execute_graph_query(CassSession* session, const char* query,
+                                const DseGraphOptions* options, const DseGraphObject* values,
                                 DseGraphResultSet** resultset) {
   cass_bool_t is_success = cass_false;
   CassFuture* future;
@@ -173,15 +171,13 @@ cass_bool_t create_graph(CassSession* session, const char* name) {
   dse_graph_object_finish(values);
 
   if (execute_graph_query(session,
-                          "graph = system.graph(name);" \
-                          "if (graph.exists()) graph.drop();" \
+                          "graph = system.graph(name);"
+                          "if (graph.exists()) graph.drop();"
                           "graph.create();",
                           NULL, values, NULL)) {
-    for  (i = 0; i < 10; ++i) {
+    for (i = 0; i < 10; ++i) {
       DseGraphResultSet* resultset;
-      if (execute_graph_query(session,
-                              "system.graph(name).exists()",
-                              NULL, values, &resultset)) {
+      if (execute_graph_query(session, "system.graph(name).exists()", NULL, values, &resultset)) {
         if (dse_graph_resultset_count(resultset) > 0) {
           const DseGraphResult* result = dse_graph_resultset_next(resultset);
           if (dse_graph_result_is_bool(result) && dse_graph_result_get_bool(result)) {
@@ -204,10 +200,8 @@ cass_bool_t create_graph(CassSession* session, const char* name) {
   return is_success;
 }
 
-void execute_graph_query_and_print(CassSession* session,
-                                   const char* query,
-                                   const DseGraphOptions* options,
-                                   const DseGraphObject* values) {
+void execute_graph_query_and_print(CassSession* session, const char* query,
+                                   const DseGraphOptions* options, const DseGraphObject* values) {
   DseGraphResultSet* resultset;
   if (execute_graph_query(session, query, options, values, &resultset)) {
     print_graph_resultset(resultset);
@@ -246,10 +240,12 @@ int main(int argc, char* argv[]) {
       execute_graph_query(session, GRAPH_DATA, options, NULL, NULL);
 
       printf("Who does 'marko' know?\n");
-      execute_graph_query_and_print(session, "g.V().has('name','marko').out('knows').values('name')", options, NULL);
+      execute_graph_query_and_print(
+          session, "g.V().has('name','marko').out('knows').values('name')", options, NULL);
 
       printf("What vertices are connected to 'marko'?\n");
-      execute_graph_query_and_print(session, "g.V().has('name', 'marko').out('knows')", options, NULL);
+      execute_graph_query_and_print(session, "g.V().has('name', 'marko').out('knows')", options,
+                                    NULL);
     }
 
     dse_graph_options_free(options);
@@ -263,8 +259,7 @@ int main(int argc, char* argv[]) {
     const char* message;
     size_t message_length;
     cass_future_error_message(connect_future, &message, &message_length);
-    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length,
-                                                        message);
+    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length, message);
   }
 
   cass_future_free(connect_future);

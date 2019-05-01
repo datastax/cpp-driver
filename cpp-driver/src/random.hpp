@@ -40,15 +40,13 @@ private:
 uint64_t get_random_seed(uint64_t seed);
 
 template <class RandomAccessIterator>
-void random_shuffle(RandomAccessIterator first,
-                    RandomAccessIterator last,
-                    Random* random) {
+void random_shuffle(RandomAccessIterator first, RandomAccessIterator last, Random* random) {
   size_t size = last - first;
   for (size_t i = size - 1; i > 0; --i) {
     std::swap(first[i], first[random->next(i + 1)]);
   }
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

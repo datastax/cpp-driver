@@ -19,10 +19,10 @@
 #include "test_utils.hpp"
 #include "tlog.hpp"
 
+#include "objects/uuid_gen.hpp"
 #include "scoped_lock.hpp"
 #include "tsocket.hpp"
 #include "values/uuid.hpp"
-#include "objects/uuid_gen.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -35,7 +35,7 @@
 #define OUTPUT_BUFFER_SIZE 10240ul
 #define SIMULACRON_NAP 100
 #define SIMULACRON_CONNECTION_RETRIES 600 // Up to 60 seconds for retry based on SIMULACRON_NAP
-#define SIMULACRON_PROCESS_RETRIS 100 // Up to 10 seconds for retry based on SIMULACRON_NAP
+#define SIMULACRON_PROCESS_RETRIS 100     // Up to 10 seconds for retry based on SIMULACRON_NAP
 #define MAX_TOKEN static_cast<uint64_t>(INT64_MAX) - 1
 #define DATA_CENTER_PREFIX "dc"
 
@@ -48,21 +48,19 @@ bool test::SimulacronCluster::is_running_ = false;
 uv_thread_t test::SimulacronCluster::thread_;
 const unsigned int DEFAULT_NODE[] = { 1 };
 const std::vector<unsigned int> test::SimulacronCluster::DEFAULT_DATA_CENTER_NODES(
-  DEFAULT_NODE, DEFAULT_NODE + sizeof(DEFAULT_NODE) / sizeof(DEFAULT_NODE[0]));
+    DEFAULT_NODE, DEFAULT_NODE + sizeof(DEFAULT_NODE) / sizeof(DEFAULT_NODE[0]));
 
 test::SimulacronCluster::SimulacronCluster()
-  : dse_version_("")
-  , cassandra_version_("")
-  , current_cluster_id_(-1)
-{
+    : dse_version_("")
+    , cassandra_version_("")
+    , current_cluster_id_(-1) {
   // Initialize the mutex
   uv_mutex_init(&mutex_);
 
   // Determine if Simulacron file exists
   if (!test::Utils::file_exists(SIMULACRON_SERVER_JAR)) {
     std::stringstream message;
-    message << "Unable to find Simulacron JAR file ["
-      << SIMULACRON_SERVER_JAR << "]";
+    message << "Unable to find Simulacron JAR file [" << SIMULACRON_SERVER_JAR << "]";
     throw Exception(message.str());
   }
 
@@ -74,11 +72,9 @@ test::SimulacronCluster::SimulacronCluster()
     if (cassandra_version == "0.0.0") {
       throw Exception("Unable to determine Cassandra version from DSE version");
     }
-    dse_version_ = test::Utils::replace_all(dse_version.to_string(), "-",
-      ".");
+    dse_version_ = test::Utils::replace_all(dse_version.to_string(), "-", ".");
   }
-  cassandra_version_ = test::Utils::replace_all(cassandra_version.to_string(),
-    "-", ".");
+  cassandra_version_ = test::Utils::replace_all(cassandra_version.to_string(), "-", ".");
 
   // Create Simulacron process (threaded) and wait for completely availability
   uv_thread_create(&thread_, handle_thread_create, NULL);
@@ -93,17 +89,15 @@ test::SimulacronCluster::SimulacronCluster()
   test::Utils::wait_for_port(SIMULACRON_LISTEN_ADDRESS, SIMULACRON_ADMIN_PORT);
 }
 
-test::SimulacronCluster::~SimulacronCluster() {
-  remove_cluster();
-}
+test::SimulacronCluster::~SimulacronCluster() { remove_cluster(); }
 
 std::string test::SimulacronCluster::cluster_contact_points(bool is_all /*= true*/) {
   // Iterate over each node and collect the list of active contact points
   std::vector<Cluster::DataCenter::Node> cluster_nodes = nodes();
   size_t index = 1;
   std::stringstream contact_points;
-  for (std::vector<Cluster::DataCenter::Node>::iterator it =
-    cluster_nodes.begin(); it != cluster_nodes.end(); ++it) {
+  for (std::vector<Cluster::DataCenter::Node>::iterator it = cluster_nodes.begin();
+       it != cluster_nodes.end(); ++it) {
     if (is_all || is_node_up(index++)) {
       if (!contact_points.str().empty()) {
         contact_points << ",";
@@ -114,16 +108,16 @@ std::string test::SimulacronCluster::cluster_contact_points(bool is_all /*= true
   return contact_points.str();
 }
 
-void test::SimulacronCluster::create_cluster(const std::vector<unsigned int>& data_center_nodes /*= DEFAULT_DATA_CENTER_NODES*/,
-                                             bool with_vnodes /*= false */) {
+void test::SimulacronCluster::create_cluster(
+    const std::vector<unsigned int>& data_center_nodes /*= DEFAULT_DATA_CENTER_NODES*/,
+    bool with_vnodes /*= false */) {
   std::stringstream paramters;
   std::stringstream cluster_name;
   cluster_name << DEFAULT_CLUSTER_PREFIX << "_";
 
   // Add the data centers, Cassandra version, and token/vnodes parameters
-  paramters << "data_centers="
-    << test::Utils::implode<unsigned int>(data_center_nodes, ',')
-    << "&cassandra_version=" << cassandra_version_;
+  paramters << "data_centers=" << test::Utils::implode<unsigned int>(data_center_nodes, ',')
+            << "&cassandra_version=" << cassandra_version_;
   // Update the cluster configuration (set num_tokens)
   if (with_vnodes) {
     // Maximum number of tokens is 1536
@@ -141,8 +135,7 @@ void test::SimulacronCluster::create_cluster(const std::vector<unsigned int>& da
   }
 
   // Add the cluster name
-  cluster_name << "_"
-    << test::Utils::implode<unsigned int>(data_center_nodes, '-');
+  cluster_name << "_" << test::Utils::implode<unsigned int>(data_center_nodes, '-');
   if (with_vnodes) {
     cluster_name << "-vnodes";
   }
@@ -157,8 +150,8 @@ void test::SimulacronCluster::create_cluster(const std::vector<unsigned int>& da
 }
 
 void test::SimulacronCluster::create_cluster(unsigned int data_center_one_nodes,
-  unsigned int data_center_two_nodes /*= 0*/,
-  bool with_vnodes /*=false */) {
+                                             unsigned int data_center_two_nodes /*= 0*/,
+                                             bool with_vnodes /*=false */) {
   std::vector<unsigned int> data_center_nodes;
   if (data_center_one_nodes > 0) {
     data_center_nodes.push_back(data_center_one_nodes);
@@ -169,9 +162,7 @@ void test::SimulacronCluster::create_cluster(unsigned int data_center_one_nodes,
   create_cluster(data_center_nodes, with_vnodes);
 }
 
-void test::SimulacronCluster::remove_cluster() {
-  send_delete("cluster");
-}
+void test::SimulacronCluster::remove_cluster() { send_delete("cluster"); }
 
 std::string test::SimulacronCluster::get_ip_address(unsigned int node) {
   std::vector<Cluster::DataCenter::Node> current_nodes = nodes();
@@ -188,9 +179,8 @@ bool test::SimulacronCluster::is_node_down(unsigned int node) {
     if (!is_node_available(node)) {
       return true;
     } else {
-      TEST_LOG("Connected to Node " << node
-        << " in Cluster: Rechecking node down status ["
-        << number_of_retries << "]");
+      TEST_LOG("Connected to Node " << node << " in Cluster: Rechecking node down status ["
+                                    << number_of_retries << "]");
       test::Utils::msleep(SIMULACRON_NAP);
     }
   }
@@ -206,9 +196,8 @@ bool test::SimulacronCluster::is_node_up(unsigned int node) {
     if (is_node_available(node)) {
       return true;
     } else {
-      TEST_LOG("Unable to Connect to Node " << node
-        << " in Cluster: Rechecking node up status ["
-        << number_of_retries << "]");
+      TEST_LOG("Unable to Connect to Node " << node << " in Cluster: Rechecking node up status ["
+                                            << number_of_retries << "]");
       test::Utils::msleep(SIMULACRON_NAP);
     }
   }
@@ -235,14 +224,13 @@ std::vector<test::SimulacronCluster::Cluster::DataCenter> test::SimulacronCluste
   return current_cluster.data_centers;
 }
 
-std::vector<test::SimulacronCluster::Cluster::DataCenter::Node>
-test::SimulacronCluster::nodes() {
+std::vector<test::SimulacronCluster::Cluster::DataCenter::Node> test::SimulacronCluster::nodes() {
   // Get the cluster object and retrieve the nodes from the data center(s)
   Cluster current_cluster = cluster();
   std::vector<Cluster::DataCenter::Node> nodes;
   std::vector<Cluster::DataCenter> data_centers = current_cluster.data_centers;
-  for (std::vector<Cluster::DataCenter>::iterator it =
-    data_centers.begin(); it != data_centers.end(); ++it) {
+  for (std::vector<Cluster::DataCenter>::iterator it = data_centers.begin();
+       it != data_centers.end(); ++it) {
     std::vector<Cluster::DataCenter::Node> dc_nodes = it->nodes;
     nodes.insert(nodes.end(), dc_nodes.begin(), dc_nodes.end());
   }
@@ -257,12 +245,9 @@ unsigned int test::SimulacronCluster::active_connections(unsigned int node) {
   return 0;
 }
 
-unsigned int test::SimulacronCluster::active_connections() {
-  return cluster().active_connections;
-}
+unsigned int test::SimulacronCluster::active_connections() { return cluster().active_connections; }
 
-void test::SimulacronCluster::prime_query(prime::Request& request,
-                                          unsigned int node /*= 0*/) {
+void test::SimulacronCluster::prime_query(prime::Request& request, unsigned int node /*= 0*/) {
   std::stringstream endpoint;
   endpoint << "prime/" << current_cluster_id_ << generate_node_endpoint(node);
   send_post(endpoint.str(), request.json());
@@ -274,16 +259,14 @@ void test::SimulacronCluster::remove_primed_queries(unsigned int node /*= 0*/) {
   send_delete(endpoint.str());
 }
 
-void test::SimulacronCluster::handle_exit(uv_process_t* process,
-                                          int64_t error_code,
+void test::SimulacronCluster::handle_exit(uv_process_t* process, int64_t error_code,
                                           int term_signal) {
   ScopedMutex lock(&mutex_);
   TEST_LOG("Process " << process->pid << " Terminated: " << error_code);
   uv_close(reinterpret_cast<uv_handle_t*>(process), NULL);
 }
 
-void test::SimulacronCluster::handle_allocation(uv_handle_t* handle,
-                                                size_t suggested_size,
+void test::SimulacronCluster::handle_allocation(uv_handle_t* handle, size_t suggested_size,
                                                 uv_buf_t* buffer) {
   ScopedMutex lock(&mutex_);
   buffer->base = new char[OUTPUT_BUFFER_SIZE];
@@ -293,9 +276,9 @@ void test::SimulacronCluster::handle_allocation(uv_handle_t* handle,
 void test::SimulacronCluster::handle_thread_create(void* arg) {
   // Initialize the loop and process arguments
   uv_loop_t loop;
-  if(uv_loop_init(&loop) != 0) {
-    throw Exception("Unable to Create Simulacron Process: libuv loop " \
-      "initialization failed");
+  if (uv_loop_init(&loop) != 0) {
+    throw Exception("Unable to Create Simulacron Process: libuv loop "
+                    "initialization failed");
   };
   uv_process_options_t options;
   memset(&options, 0, sizeof(uv_process_options_t));
@@ -310,9 +293,9 @@ void test::SimulacronCluster::handle_thread_create(void* arg) {
   options.stdio = stdio;
   options.stdio[0].flags = UV_IGNORE;
   options.stdio[1].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-  options.stdio[1].data.stream = (uv_stream_t*) &standard_output;
+  options.stdio[1].data.stream = (uv_stream_t*)&standard_output;
   options.stdio[2].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-  options.stdio[2].data.stream = (uv_stream_t*) &error_output;
+  options.stdio[2].data.stream = (uv_stream_t*)&error_output;
 
   // Generate the spawn command for use with uv_spawn
   const char* spawn_command[7];
@@ -333,14 +316,11 @@ void test::SimulacronCluster::handle_thread_create(void* arg) {
   uv_process_t process;
   int error_code = uv_spawn(&loop, &process, &options);
   if (error_code == 0) {
-    TEST_LOG("Launched " << spawn_command[0] << " with ID "
-      << process.pid);
+    TEST_LOG("Launched " << spawn_command[0] << " with ID " << process.pid);
 
     // Start the output thread loops
-    uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output),
-      handle_allocation, handle_read);
-    uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output),
-      handle_allocation, handle_read);
+    uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output), handle_allocation, handle_read);
+    uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), handle_allocation, handle_read);
 
     // Start the process loop
     is_running_ = true;
@@ -352,8 +332,8 @@ void test::SimulacronCluster::handle_thread_create(void* arg) {
   }
 }
 
-void test::SimulacronCluster::handle_read(uv_stream_t* stream,
-  ssize_t buffer_length, const uv_buf_t* buffer) {
+void test::SimulacronCluster::handle_read(uv_stream_t* stream, ssize_t buffer_length,
+                                          const uv_buf_t* buffer) {
   ScopedMutex lock(&mutex_);
   if (buffer_length > 0) {
     // Process the buffer and log it
@@ -377,39 +357,36 @@ void test::SimulacronCluster::send_delete(const std::string& endpoint) {
   if (response.status_code != 202) {
     std::stringstream message;
     message << "DELETE Operation " << endpoint
-      << " did not Complete Successfully: " << response.status_code;
+            << " did not Complete Successfully: " << response.status_code;
     throw Exception(message.str());
   }
 }
 
-const std::string test::SimulacronCluster::send_get(
-  const std::string& endpoint) {
+const std::string test::SimulacronCluster::send_get(const std::string& endpoint) {
   Response response = send_request(Request::HTTP_METHOD_GET, endpoint);
   if (response.status_code != 200) {
     std::stringstream message;
     message << "GET Operation " << endpoint
-      << " did not Complete Successfully: " << response.status_code;
+            << " did not Complete Successfully: " << response.status_code;
     throw Exception(message.str());
   }
   return response.message;
 }
 
-const std::string test::SimulacronCluster::send_post(
-  const std::string& endpoint, const std::string& content /*= ""*/) {
-  Response response = send_request(Request::HTTP_METHOD_POST, endpoint,
-    content);
+const std::string test::SimulacronCluster::send_post(const std::string& endpoint,
+                                                     const std::string& content /*= ""*/) {
+  Response response = send_request(Request::HTTP_METHOD_POST, endpoint, content);
   if (response.status_code != 201) {
     std::stringstream message;
     message << "POST Operation " << endpoint
-      << " did not Complete Successfully: " << response.status_code;
+            << " did not Complete Successfully: " << response.status_code;
     throw Exception(message.str());
   }
   return response.message;
 }
 
-Response test::SimulacronCluster::send_request(Request::Method method,
-  const std::string& endpoint,
-  const std::string& content /*= ""*/) {
+Response test::SimulacronCluster::send_request(Request::Method method, const std::string& endpoint,
+                                               const std::string& content /*= ""*/) {
   // Create and send the request to the REST server
   Request request;
   request.method = method;
@@ -427,8 +404,7 @@ bool test::SimulacronCluster::is_node_available(unsigned int node) {
   std::vector<Cluster::DataCenter::Node> cluster_nodes = nodes();
   if (node > cluster_nodes.size()) {
     std::stringstream message;
-    message << "Unable to Check Availability of Node: Node " << node
-      << " is not a valid node";
+    message << "Unable to Check Availability of Node: Node " << node << " is not a valid node";
     throw test::Exception(message.str());
   }
 
@@ -440,7 +416,7 @@ bool test::SimulacronCluster::is_node_available(unsigned int node) {
 }
 
 bool test::SimulacronCluster::is_node_available(const std::string& ip_address,
-  unsigned short port) {
+                                                unsigned short port) {
   Socket socket;
   try {
     socket.establish_connection(ip_address, port);
@@ -459,12 +435,11 @@ const std::string test::SimulacronCluster::generate_node_endpoint(unsigned int n
     std::vector<Cluster::DataCenter::Node> current_nodes = nodes();
     if (node > current_nodes.size()) {
       std::stringstream message;
-      message << "Insufficient Nodes in Cluster: Cluster contains "
-        << current_nodes.size() << "; " << node << " is invalid";
+      message << "Insufficient Nodes in Cluster: Cluster contains " << current_nodes.size() << "; "
+              << node << " is invalid";
       throw Exception(message.str());
     }
-    endpoint << "/" << current_nodes[node - 1].data_center_id << "/"
-      << current_nodes[node - 1].id;
+    endpoint << "/" << current_nodes[node - 1].data_center_id << "/" << current_nodes[node - 1].id;
   }
   return endpoint.str();
 }

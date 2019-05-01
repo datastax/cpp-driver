@@ -35,9 +35,8 @@ public:
     Future::Ptr connect_future(session.connect(temp));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";
-    ASSERT_FALSE(connect_future->error())
-        << cass_error_desc(connect_future->error()->code) << ": "
-        << connect_future->error()->message;
+    ASSERT_FALSE(connect_future->error()) << cass_error_desc(connect_future->error()->code) << ": "
+                                          << connect_future->error()->message;
   }
 
   Session session;

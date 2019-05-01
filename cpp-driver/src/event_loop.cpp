@@ -45,11 +45,11 @@ static void consume_blocked_sigpipe() {
 #endif
 
 EventLoop::EventLoop()
-  : is_loop_initialized_(false)
-  , is_joinable_(false)
-  , is_closing_(false)
-  , io_time_start_(0)
-  , io_time_elapsed_(0) {
+    : is_loop_initialized_(false)
+    , is_joinable_(false)
+    , is_closing_(false)
+    , io_time_start_(0)
+    , io_time_elapsed_(0) {
   // Set user data for PooledConnection to start the I/O elapsed time.
   loop_.data = this;
 }
@@ -120,27 +120,22 @@ void EventLoop::maybe_start_io_time() {
   }
 }
 
-bool EventLoop::is_running_on() const {
-  return uv_thread_self() == thread_;
-}
+bool EventLoop::is_running_on() const { return uv_thread_self() == thread_; }
 
 void EventLoop::on_run() {
   if (name_.empty()) name_ = "Event Loop";
 #if defined(_MSC_VER)
   char temp[64];
-  sprintf(temp, "%s - %lu", name_.c_str(), static_cast<unsigned long>(GetThreadId(uv_thread_self())));
+  sprintf(temp, "%s - %lu", name_.c_str(),
+          static_cast<unsigned long>(GetThreadId(uv_thread_self())));
   name_ = temp;
 #endif
   set_thread_name(name_);
 }
 
-EventLoop::TaskQueue::TaskQueue() {
-  uv_mutex_init(&lock_);
-}
+EventLoop::TaskQueue::TaskQueue() { uv_mutex_init(&lock_); }
 
-EventLoop::TaskQueue::~TaskQueue() {
-  uv_mutex_destroy(&lock_);
-}
+EventLoop::TaskQueue::~TaskQueue() { uv_mutex_destroy(&lock_); }
 
 bool EventLoop::TaskQueue::enqueue(Task* task) {
   ScopedMutex l(&lock_);
@@ -175,7 +170,7 @@ void EventLoop::handle_run() {
   SslContextFactory::thread_cleanup();
 }
 
-void EventLoop::on_check(Check *check) {
+void EventLoop::on_check(Check* check) {
   uint64_t now = uv_hrtime();
   if (io_time_start_ > 0) {
     io_time_elapsed_ = now - io_time_start_;
@@ -206,9 +201,7 @@ void EventLoop::on_task(Async* async) {
 }
 
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
-void EventLoop::on_prepare(uv_prepare_t* prepare) {
-  consume_blocked_sigpipe();
-}
+void EventLoop::on_prepare(uv_prepare_t* prepare) { consume_blocked_sigpipe(); }
 #endif
 
 int RoundRobinEventLoopGroup::init(const String& thread_name /*= ""*/) {

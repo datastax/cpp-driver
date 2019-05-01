@@ -62,10 +62,8 @@ public:
    * @param callback A callback that is called when the processor is initialized
    * or if an error occurred.
    */
-  RequestProcessorInitializer(const Host::Ptr& connected_host,
-                              ProtocolVersion protocol_version,
-                              const HostMap& hosts,
-                              const TokenMap::Ptr& token_map,
+  RequestProcessorInitializer(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
+                              const HostMap& hosts, const TokenMap::Ptr& token_map,
                               const Callback& callback);
   ~RequestProcessorInitializer();
 
@@ -140,8 +138,7 @@ private:
 
   virtual void on_pool_up(const Address& address);
   virtual void on_pool_down(const Address& address);
-  virtual void on_pool_critical_error(const Address& address,
-                                      Connector::ConnectionError code,
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
                                       const String& message);
   virtual void on_close(ConnectionPoolManager* manager);
 
@@ -177,6 +174,6 @@ private:
   Atomic<size_t> remaining_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

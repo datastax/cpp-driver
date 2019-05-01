@@ -5,13 +5,12 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#include "serialization.hpp"
 #include "cpp-driver/src/serialization.hpp"
+#include "serialization.hpp"
 
 extern "C" {
 
-DseDateRangeBound dse_date_range_bound_init(DseDateRangePrecision precision,
-                                            cass_int64_t time_ms) {
+DseDateRangeBound dse_date_range_bound_init(DseDateRangePrecision precision, cass_int64_t time_ms) {
   DseDateRangeBound bound;
   bound.precision = precision;
   bound.time_ms = time_ms;
@@ -29,8 +28,7 @@ cass_bool_t dse_date_range_bound_is_unbounded(DseDateRangeBound bound) {
   return static_cast<cass_bool_t>(bound.precision == DSE_DATE_RANGE_PRECISION_UNBOUNDED);
 }
 
-DseDateRange* dse_date_range_init(DseDateRange* range,
-                                  DseDateRangeBound lower_bound,
+DseDateRange* dse_date_range_init(DseDateRange* range, DseDateRangeBound lower_bound,
                                   DseDateRangeBound upper_bound) {
   range->lower_bound = lower_bound;
   range->upper_bound = upper_bound;
@@ -38,8 +36,7 @@ DseDateRange* dse_date_range_init(DseDateRange* range,
   return range;
 }
 
-DseDateRange* dse_date_range_init_single_date(DseDateRange* range,
-                                              DseDateRangeBound date) {
+DseDateRange* dse_date_range_init_single_date(DseDateRange* range, DseDateRangeBound date) {
   range->lower_bound = date;
   range->is_single_date = cass_true;
   return range;
@@ -49,7 +46,7 @@ DseDateRange* dse_date_range_init_single_date(DseDateRange* range,
 
 namespace datastax { namespace internal { namespace enterprise {
 
-Bytes encode_date_range(const DseDateRange *range) {
+Bytes encode_date_range(const DseDateRange* range) {
   Bytes bytes;
   DateRangeBoundType range_type;
   char* pos = NULL;
@@ -97,7 +94,8 @@ Bytes encode_date_range(const DseDateRange *range) {
       break;
     case DATE_RANGE_BOUND_TYPE_CLOSED_RANGE:
       // type, from_time, from_precision, to_time, to_precision
-      bytes.resize(sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t));
+      bytes.resize(sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t) + sizeof(int64_t) +
+                   sizeof(int8_t));
       pos = reinterpret_cast<char*>(&bytes[0]);
       pos = encode_int8(pos, range_type);
       pos = encode_int64(pos, range->lower_bound.time_ms);
@@ -109,4 +107,4 @@ Bytes encode_date_range(const DseDateRange *range) {
   return bytes;
 }
 
-} } } // datastax::internal::enterprise
+}}} // namespace datastax::internal::enterprise

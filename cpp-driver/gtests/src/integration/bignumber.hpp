@@ -24,8 +24,7 @@
 
 #include <openssl/bn.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Helper class for working with Java byte arrays (e.g. BigInteger and
@@ -34,11 +33,11 @@ namespace driver {
 class BigNumber {
 public:
   BigNumber()
-    : scale_(0) { }
+      : scale_(0) {}
 
   BigNumber(const std::string& big_number)
-    : big_number_(BN_new())
-    , scale_(0) {
+      : big_number_(BN_new())
+      , scale_(0) {
     BIGNUM* bignum = big_number_.get();
     std::string copy = test::Utils::trim(big_number);
 
@@ -61,8 +60,8 @@ public:
   }
 
   BigNumber(const unsigned char* bytes, size_t bytes_length, int32_t scale)
-    : big_number_(BN_new())
-    , scale_(scale) {
+      : big_number_(BN_new())
+      , scale_(scale) {
     if (bytes && bytes_length > 0) {
       // Determine if value is negative and handle two's complement
       bool is_negative = ((bytes[0] & 0x80) != 0);
@@ -141,9 +140,7 @@ public:
    *
    * @return Scale for number
    */
-  int32_t scale() const {
-    return scale_;
-  }
+  int32_t scale() const { return scale_; }
 
   /**
    * Get the string representation of the big number
@@ -158,7 +155,7 @@ public:
     result.assign(decimal);
     OPENSSL_free(decimal);
 
-    //Normalize - strip leading zeros
+    // Normalize - strip leading zeros
     result.erase(0, result.find_first_not_of('0'));
     if (result.size() == 0) {
       result = "0";
@@ -167,9 +164,7 @@ public:
     // Return the value as integer or decimal (depending)
     if (scale_ > 0) {
       size_t decimal_location = result.size() - scale_;
-      return result.substr(0, decimal_location)
-             + "."
-             + result.substr(decimal_location);
+      return result.substr(0, decimal_location) + "." + result.substr(decimal_location);
     }
     return result;
   }
@@ -217,7 +212,6 @@ private:
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_BIG_NUMBER_HPP__

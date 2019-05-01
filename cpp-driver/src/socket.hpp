@@ -20,11 +20,11 @@
 #include "allocated.hpp"
 #include "buffer.hpp"
 #include "constants.hpp"
-#include "tcp_connector.hpp"
 #include "list.hpp"
-#include "stack.hpp"
 #include "scoped_ptr.hpp"
 #include "ssl.hpp"
+#include "stack.hpp"
+#include "tcp_connector.hpp"
 #include "timer.hpp"
 
 #include <uv.h>
@@ -44,7 +44,7 @@ class SocketRequest
     : public Allocated
     , public List<SocketRequest>::Node {
 public:
-  virtual ~SocketRequest() { }
+  virtual ~SocketRequest() {}
 
   enum {
     SOCKET_REQUEST_ERROR_CLOSED = CASS_INT32_MIN,
@@ -77,14 +77,14 @@ public:
    * @param buf A buffer to append to buffers
    */
   BufferSocketRequest(const Buffer& buf)
-    : buf_(buf) { }
+      : buf_(buf) {}
 
   virtual int32_t encode(BufferVec* bufs) {
     bufs->push_back(buf_);
     return buf_.size();
   }
 
-  virtual void on_close() { }
+  virtual void on_close() {}
 
 private:
   Buffer buf_;
@@ -98,7 +98,7 @@ private:
  */
 class SocketHandlerBase : public Allocated {
 public:
-  virtual ~SocketHandlerBase() { }
+  virtual ~SocketHandlerBase() {}
 
   /**
    * Allocate a write request.
@@ -171,7 +171,7 @@ public:
    * @param ssl_session A SSL session used to encrypt/decrypt data.
    */
   SslSocketHandler(SslSession* ssl_session)
-    : ssl_session_(ssl_session) { }
+      : ssl_session_(ssl_session) {}
 
   virtual SocketWriteBase* new_pending_write(Socket* socket);
   virtual void alloc_buffer(size_t suggested_size, uv_buf_t* buf);
@@ -207,13 +207,13 @@ public:
    * @param The socket handling the write.
    */
   SocketWriteBase(Socket* socket)
-    : socket_(socket)
-    , is_flushed_(false) {
+      : socket_(socket)
+      , is_flushed_(false) {
     req_.data = this;
     buffers_.reserve(MIN_BUFFERS_SIZE);
   }
 
-  virtual ~SocketWriteBase() { }
+  virtual ~SocketWriteBase() {}
 
   uv_tcp_t* tcp();
 
@@ -313,7 +313,7 @@ public:
    * @param request The request to write to the socket.
    * @return The number of bytes written by the request to the socket.
    */
-  int32_t write_and_flush(SocketRequest *request);
+  int32_t write_and_flush(SocketRequest* request);
 
   /**
    * Flush all outstanding requests.
@@ -379,6 +379,6 @@ private:
   String address_string_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

@@ -36,15 +36,16 @@ namespace datastax { namespace internal {
 // The allows for the memory to be correctly allocated without invoking the
 // constructor.
 
-template<size_t N, size_t A>
+template <size_t N, size_t A>
 class AlignedStorage;
 
 #define ALIGNED_STORAGE(Alignment)                \
-  template<size_t N>                              \
+  template <size_t N>                             \
   class AlignedStorage<N, Alignment> {            \
   public:                                         \
     void* address() { return data_; }             \
     const void* address() const { return data_; } \
+                                                  \
   private:                                        \
     ALIGN_AS(Alignment) char data_[N];            \
   }
@@ -59,6 +60,6 @@ ALIGNED_STORAGE(64);
 
 #undef ALIGNED_STORAGE
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

@@ -36,11 +36,9 @@ namespace datastax { namespace internal { namespace core {
 class ClusterRunClose : public Task {
 public:
   ClusterRunClose(const Cluster::Ptr& cluster)
-    : cluster_(cluster) { }
+      : cluster_(cluster) {}
 
-  void run(EventLoop* event_loop) {
-    cluster_->internal_close();
-  }
+  void run(EventLoop* event_loop) { cluster_->internal_close(); }
 
 private:
   Cluster::Ptr cluster_;
@@ -52,12 +50,10 @@ private:
 class ClusterNotifyUp : public Task {
 public:
   ClusterNotifyUp(const Cluster::Ptr& cluster, const Address& address)
-    : cluster_(cluster)
-    , address_(address) { }
+      : cluster_(cluster)
+      , address_(address) {}
 
-  void run(EventLoop* event_loop) {
-    cluster_->internal_notify_host_up(address_);
-  }
+  void run(EventLoop* event_loop) { cluster_->internal_notify_host_up(address_); }
 
 private:
   Cluster::Ptr cluster_;
@@ -70,12 +66,10 @@ private:
 class ClusterNotifyDown : public Task {
 public:
   ClusterNotifyDown(const Cluster::Ptr& cluster, const Address& address)
-    : cluster_(cluster)
-    , address_(address) { }
+      : cluster_(cluster)
+      , address_(address) {}
 
-  void run(EventLoop* event_loop) {
-    cluster_->internal_notify_host_down(address_);
-  }
+  void run(EventLoop* event_loop) { cluster_->internal_notify_host_down(address_); }
 
 private:
   Cluster::Ptr cluster_;
@@ -85,11 +79,9 @@ private:
 class ClusterStartEvents : public Task {
 public:
   ClusterStartEvents(const Cluster::Ptr& cluster)
-    : cluster_(cluster) { }
+      : cluster_(cluster) {}
 
-  void run(EventLoop* event_loop) {
-    cluster_->internal_start_events();
-  }
+  void run(EventLoop* event_loop) { cluster_->internal_start_events(); }
 
 private:
   Cluster::Ptr cluster_;
@@ -97,14 +89,12 @@ private:
 
 class ClusterStartClientMonitor : public Task {
 public:
-  ClusterStartClientMonitor(const Cluster::Ptr& cluster,
-                            const String& client_id,
-                            const String& session_id,
-                            const Config& config)
-    : cluster_(cluster)
-    , client_id_(client_id)
-    , session_id_(session_id)
-    , config_(config) { }
+  ClusterStartClientMonitor(const Cluster::Ptr& cluster, const String& client_id,
+                            const String& session_id, const Config& config)
+      : cluster_(cluster)
+      , client_id_(client_id)
+      , session_id_(session_id)
+      , config_(config) {}
 
   void run(EventLoop* event_loop) {
     cluster_->internal_start_monitor_reporting(client_id_, session_id_, config_);
@@ -122,24 +112,23 @@ private:
  */
 class NopClusterListener : public ClusterListener {
 public:
-  virtual void on_connect(Cluster* cluster) { }
+  virtual void on_connect(Cluster* cluster) {}
 
-  virtual void on_host_up(const Host::Ptr& host) { }
-  virtual void on_host_down(const Host::Ptr& host) { }
+  virtual void on_host_up(const Host::Ptr& host) {}
+  virtual void on_host_down(const Host::Ptr& host) {}
 
-  virtual void on_host_added(const Host::Ptr& host) { }
-  virtual void on_host_removed(const Host::Ptr& host) { }
+  virtual void on_host_added(const Host::Ptr& host) {}
+  virtual void on_host_removed(const Host::Ptr& host) {}
 
-  virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { }
+  virtual void on_token_map_updated(const TokenMap::Ptr& token_map) {}
 
-  virtual void on_close(Cluster* cluster) { }
+  virtual void on_close(Cluster* cluster) {}
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
-void ClusterEvent::process_event(const ClusterEvent& event,
-                                 ClusterListener* listener) {
-  switch(event.type) {
+void ClusterEvent::process_event(const ClusterEvent& event, ClusterListener* listener) {
+  switch (event.type) {
     case HOST_UP:
       listener->on_host_up(event.host);
       break;
@@ -164,10 +153,8 @@ void ClusterEvent::process_event(const ClusterEvent& event,
   }
 }
 
-void ClusterEvent::process_events(const ClusterEvent::Vec& events,
-                                  ClusterListener* listener) {
-  for (ClusterEvent::Vec::const_iterator it = events.begin(),
-       end = events.end(); it != end; ++it) {
+void ClusterEvent::process_events(const ClusterEvent::Vec& events, ClusterListener* listener) {
+  for (ClusterEvent::Vec::const_iterator it = events.begin(), end = events.end(); it != end; ++it) {
     process_event(*it, listener);
   }
 }
@@ -175,13 +162,11 @@ void ClusterEvent::process_events(const ClusterEvent::Vec& events,
 static NopClusterListener nop_cluster_listener__;
 
 LockedHostMap::LockedHostMap(const HostMap& hosts)
-  : hosts_(hosts) {
+    : hosts_(hosts) {
   uv_mutex_init(&mutex_);
 }
 
-LockedHostMap::~LockedHostMap() {
-  uv_mutex_destroy(&mutex_);
-}
+LockedHostMap::~LockedHostMap() { uv_mutex_destroy(&mutex_); }
 
 LockedHostMap::const_iterator LockedHostMap::find(const Address& address) const {
   return hosts_.find(address);
@@ -204,67 +189,60 @@ Host::Ptr& LockedHostMap::operator[](const Address& address) {
   return hosts_[address];
 }
 
-LockedHostMap&LockedHostMap::operator=(const HostMap& hosts) {
+LockedHostMap& LockedHostMap::operator=(const HostMap& hosts) {
   ScopedMutex l(&mutex_);
   hosts_ = hosts;
   return *this;
 }
 
 ClusterSettings::ClusterSettings()
-  : load_balancing_policy(new RoundRobinPolicy())
-  , port(CASS_DEFAULT_PORT)
-  , reconnect_timeout_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
-  , prepare_on_up_or_add_host(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
-  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
-  , disable_events_on_startup(false) {
+    : load_balancing_policy(new RoundRobinPolicy())
+    , port(CASS_DEFAULT_PORT)
+    , reconnect_timeout_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
+    , prepare_on_up_or_add_host(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
+    , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
+    , disable_events_on_startup(false) {
   load_balancing_policies.push_back(load_balancing_policy);
 }
 
 ClusterSettings::ClusterSettings(const Config& config)
-  : control_connection_settings(config)
-  , load_balancing_policy(config.load_balancing_policy())
-  , load_balancing_policies(config.load_balancing_policies())
-  , port(config.port())
-  , reconnect_timeout_ms(config.reconnect_wait_time_ms())
-  , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
-  , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
-  , disable_events_on_startup(false) { }
+    : control_connection_settings(config)
+    , load_balancing_policy(config.load_balancing_policy())
+    , load_balancing_policies(config.load_balancing_policies())
+    , port(config.port())
+    , reconnect_timeout_ms(config.reconnect_wait_time_ms())
+    , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
+    , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
+    , disable_events_on_startup(false) {}
 
-Cluster::Cluster(const ControlConnection::Ptr& connection,
-                 ClusterListener* listener,
-                 EventLoop* event_loop,
-                 const Host::Ptr& connected_host,
-                 const HostMap& hosts,
+Cluster::Cluster(const ControlConnection::Ptr& connection, ClusterListener* listener,
+                 EventLoop* event_loop, const Host::Ptr& connected_host, const HostMap& hosts,
                  const ControlConnectionSchema& schema,
                  const LoadBalancingPolicy::Ptr& load_balancing_policy,
                  const LoadBalancingPolicy::Vec& load_balancing_policies,
                  const ClusterSettings& settings)
-  : connection_(connection)
-  , listener_(listener ? listener : &nop_cluster_listener__)
-  , event_loop_(event_loop)
-  , load_balancing_policy_(load_balancing_policy)
-  , load_balancing_policies_(load_balancing_policies)
-  , settings_(settings)
-  , is_closing_(false)
-  , connected_host_(connected_host)
-  , hosts_(hosts)
-  , is_recording_events_(settings.disable_events_on_startup) {
+    : connection_(connection)
+    , listener_(listener ? listener : &nop_cluster_listener__)
+    , event_loop_(event_loop)
+    , load_balancing_policy_(load_balancing_policy)
+    , load_balancing_policies_(load_balancing_policies)
+    , settings_(settings)
+    , is_closing_(false)
+    , connected_host_(connected_host)
+    , hosts_(hosts)
+    , is_recording_events_(settings.disable_events_on_startup) {
   inc_ref();
   connection_->set_listener(this);
 
   query_plan_.reset(load_balancing_policy_->new_query_plan("", NULL, NULL));
 
   update_schema(schema);
-  update_token_map(hosts,
-                   connected_host_->partitioner(),
-                   schema);
+  update_token_map(hosts, connected_host_->partitioner(), schema);
 
   listener_->on_reconnect(this);
 }
 
-void Cluster::close() {
-  event_loop_->add(new ClusterRunClose(Ptr(this)));
-}
+void Cluster::close() { event_loop_->add(new ClusterRunClose(Ptr(this))); }
 
 void Cluster::notify_host_up(const Address& address) {
   event_loop_->add(new ClusterNotifyUp(Ptr(this), address));
@@ -274,40 +252,28 @@ void Cluster::notify_host_down(const Address& address) {
   event_loop_->add(new ClusterNotifyDown(Ptr(this), address));
 }
 
-void Cluster::start_events() {
-  event_loop_->add(new ClusterStartEvents(Ptr(this)));
-}
+void Cluster::start_events() { event_loop_->add(new ClusterStartEvents(Ptr(this))); }
 
-void Cluster::start_monitor_reporting(const String& client_id,
-                                      const String& session_id,
+void Cluster::start_monitor_reporting(const String& client_id, const String& session_id,
                                       const Config& config) {
-  event_loop_->add(new ClusterStartClientMonitor(Ptr(this),
-                                                 client_id,
-                                                 session_id,
-                                                 config));
+  event_loop_->add(new ClusterStartClientMonitor(Ptr(this), client_id, session_id, config));
 }
 
-Metadata::SchemaSnapshot Cluster::schema_snapshot() {
-  return metadata_.schema_snapshot();
-}
+Metadata::SchemaSnapshot Cluster::schema_snapshot() { return metadata_.schema_snapshot(); }
 
-Host::Ptr Cluster::find_host(const Address& address) const {
-  return hosts_.get(address);
-}
+Host::Ptr Cluster::find_host(const Address& address) const { return hosts_.get(address); }
 
 PreparedMetadata::Entry::Ptr Cluster::prepared(const String& id) const {
   return prepared_metadata_.get(id);
 }
 
-void Cluster::prepared(const String& id,
-                       const PreparedMetadata::Entry::Ptr& entry) {
+void Cluster::prepared(const String& id, const PreparedMetadata::Entry::Ptr& entry) {
   prepared_metadata_.set(id, entry);
 }
 
 HostMap Cluster::available_hosts() const {
   HostMap available;
-  for (HostMap::const_iterator it = hosts_.begin(),
-       end = hosts_.end(); it != end; ++it) {
+  for (HostMap::const_iterator it = hosts_.begin(), end = hosts_.end(); it != end; ++it) {
     if (!is_host_ignored(it->second)) {
       available[it->first] = it->second;
     }
@@ -323,8 +289,7 @@ void Cluster::update_hosts(const HostMap& hosts) {
   // Update the hosts and properly notify the listener
   HostMap existing(hosts_);
 
-  for (HostMap::const_iterator it = hosts.begin(),
-       end = hosts.end(); it != end; ++it) {
+  for (HostMap::const_iterator it = hosts.begin(), end = hosts.end(); it != end; ++it) {
     HostMap::iterator find_it = existing.find(it->first);
     if (find_it != existing.end()) {
       existing.erase(find_it); // Already exists mark as visited
@@ -335,8 +300,7 @@ void Cluster::update_hosts(const HostMap& hosts) {
 
   // Any hosts that existed before, but aren't in the new hosts
   // need to be marked as removed.
-  for (HostMap::const_iterator it = existing.begin(),
-       end = existing.end(); it != end; ++it) {
+  for (HostMap::const_iterator it = existing.begin(), end = existing.end(); it != end; ++it) {
     notify_host_remove(it->first);
   }
 }
@@ -391,8 +355,7 @@ void Cluster::update_schema(const ControlConnectionSchema& schema) {
   metadata_.swap_to_back_and_update_front();
 }
 
-void Cluster::update_token_map(const HostMap& hosts,
-                               const String& partitioner,
+void Cluster::update_token_map(const HostMap& hosts, const String& partitioner,
                                const ControlConnectionSchema& schema) {
   if (settings_.control_connection_settings.token_aware_routing && schema.keyspaces) {
     // Create a new token map and populate it
@@ -401,8 +364,7 @@ void Cluster::update_token_map(const HostMap& hosts,
       return; // Partition is not supported
     }
     token_map_->add_keyspaces(connection_->server_version(), schema.keyspaces.get());
-    for (HostMap::const_iterator it = hosts.begin(),
-         end = hosts.end(); it != end; ++it) {
+    for (HostMap::const_iterator it = hosts.begin(), end = hosts.end(); it != end; ++it) {
       token_map_->add_host(it->second);
     }
     token_map_->build();
@@ -426,18 +388,14 @@ void Cluster::schedule_reconnect() {
   }
 }
 
-void Cluster::on_schedule_reconnect(Timer* timer) {
-  handle_schedule_reconnect();
-}
+void Cluster::on_schedule_reconnect(Timer* timer) { handle_schedule_reconnect(); }
 
 void Cluster::handle_schedule_reconnect() {
   const Host::Ptr& host = query_plan_->compute_next();
   if (host) {
-    reconnector_.reset(new ControlConnector(host,
-                                            connection_->protocol_version(),
+    reconnector_.reset(new ControlConnector(host, connection_->protocol_version(),
                                             bind_callback(&Cluster::on_reconnect, this)));
-    reconnector_
-        ->with_settings(settings_.control_connection_settings)
+    reconnector_->with_settings(settings_.control_connection_settings)
         ->connect(connection_->loop());
   } else {
     // No more hosts, refresh the query plan and schedule a re-connection
@@ -467,23 +425,20 @@ void Cluster::on_reconnect(ControlConnector* connector) {
     assert(connected_host_ && "Connected host not found in hosts map");
 
     update_schema(connector->schema());
-    update_token_map(connector->hosts(),
-                     connected_host_->partitioner(),
-                     connector->schema());
+    update_token_map(connector->hosts(), connected_host_->partitioner(), connector->schema());
 
     // Notify the listener that we've built a new token map
     if (token_map_) {
       notify_or_record(ClusterEvent(token_map_));
     }
 
-    LOG_INFO("Control connection connected to %s",
-             connected_host_->address_string().c_str());
+    LOG_INFO("Control connection connected to %s", connected_host_->address_string().c_str());
 
     listener_->on_reconnect(this);
   } else if (!connector->is_canceled()) {
-    LOG_ERROR("Unable to reestablish a control connection to host %s because of the following error: %s",
-              connector->address().to_string().c_str(),
-              connector->error_message().c_str());
+    LOG_ERROR(
+        "Unable to reestablish a control connection to host %s because of the following error: %s",
+        connector->address().to_string().c_str(), connector->error_message().c_str());
     schedule_reconnect();
   }
 }
@@ -496,14 +451,15 @@ void Cluster::internal_close() {
     handle_close();
   } else if (reconnector_) {
     reconnector_->cancel();
-  } else if (connection_)  {
+  } else if (connection_) {
     connection_->close();
   }
 }
 
 void Cluster::handle_close() {
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
-       end = load_balancing_policies_.end(); it != end; ++it) {
+                                                end = load_balancing_policies_.end();
+       it != end; ++it) {
     (*it)->close_handles();
   }
   connection_.reset();
@@ -515,8 +471,7 @@ void Cluster::internal_notify_host_up(const Address& address) {
   LockedHostMap::const_iterator it = hosts_.find(address);
 
   if (it == hosts_.end()) {
-    LOG_WARN("Attempting to mark host %s that we don't have as UP",
-             address.to_string().c_str());
+    LOG_WARN("Attempting to mark host %s that we don't have as UP", address.to_string().c_str());
     return;
   }
 
@@ -531,7 +486,8 @@ void Cluster::internal_notify_host_up(const Address& address) {
   }
 
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
-       end = load_balancing_policies_.end(); it != end; ++it) {
+                                                end = load_balancing_policies_.end();
+       it != end; ++it) {
     (*it)->on_host_up(host);
   }
 
@@ -539,8 +495,7 @@ void Cluster::internal_notify_host_up(const Address& address) {
     return; // Ignore host
   }
 
-  if (!prepare_host(host,
-                    bind_callback(&Cluster::on_prepare_host_up, this))) {
+  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_up, this))) {
     notify_host_up_after_prepare(host);
   }
 }
@@ -556,8 +511,7 @@ void Cluster::internal_notify_host_down(const Address& address) {
   if (it == hosts_.end()) {
     // Using DEBUG level here because this can happen normally as the result of
     // a remove event.
-    LOG_DEBUG("Attempting to mark host %s that we don't have as DOWN",
-              address.to_string().c_str());
+    LOG_DEBUG("Attempting to mark host %s that we don't have as DOWN", address.to_string().c_str());
     return;
   }
 
@@ -569,7 +523,8 @@ void Cluster::internal_notify_host_down(const Address& address) {
   }
 
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
-       end = load_balancing_policies_.end(); it != end; ++it) {
+                                                end = load_balancing_policies_.end();
+       it != end; ++it) {
     (*it)->on_host_down(address);
   }
 
@@ -585,32 +540,25 @@ void Cluster::internal_start_events() {
   }
 }
 
-void Cluster::internal_start_monitor_reporting(const String& client_id,
-                                            const String& session_id,
-                                            const Config& config) {
-  monitor_reporting_.reset(create_monitor_reporting(client_id,
-                                                    session_id,
-                                                    config));
+void Cluster::internal_start_monitor_reporting(const String& client_id, const String& session_id,
+                                               const Config& config) {
+  monitor_reporting_.reset(create_monitor_reporting(client_id, session_id, config));
 
-  if (!is_closing_ &&
-      monitor_reporting_->interval_ms(connection_->dse_server_version()) > 0) {
-    monitor_reporting_->send_startup_message(connection_->connection(),
-                                          config,
-                                          available_hosts(),
-                                          load_balancing_policies_);
-    monitor_reporting_timer_.start(event_loop_->loop(),
-                                   monitor_reporting_->interval_ms(connection_->dse_server_version()),
-                                   bind_callback(&Cluster::on_monitor_reporting, this));
+  if (!is_closing_ && monitor_reporting_->interval_ms(connection_->dse_server_version()) > 0) {
+    monitor_reporting_->send_startup_message(connection_->connection(), config, available_hosts(),
+                                             load_balancing_policies_);
+    monitor_reporting_timer_.start(
+        event_loop_->loop(), monitor_reporting_->interval_ms(connection_->dse_server_version()),
+        bind_callback(&Cluster::on_monitor_reporting, this));
   }
 }
 
 void Cluster::on_monitor_reporting(Timer* timer) {
   if (!is_closing_) {
-    monitor_reporting_->send_status_message(connection_->connection(),
-                                            available_hosts());
-    monitor_reporting_timer_.start(event_loop_->loop(),
-                                   monitor_reporting_->interval_ms(connection_->dse_server_version()),
-                                   bind_callback(&Cluster::on_monitor_reporting, this));
+    monitor_reporting_->send_status_message(connection_->connection(), available_hosts());
+    monitor_reporting_timer_.start(
+        event_loop_->loop(), monitor_reporting_->interval_ms(connection_->dse_server_version()),
+        bind_callback(&Cluster::on_monitor_reporting, this));
   }
 }
 
@@ -618,12 +566,12 @@ void Cluster::notify_host_add(const Host::Ptr& host) {
   LockedHostMap::const_iterator host_it = hosts_.find(host->address());
 
   if (host_it != hosts_.end()) {
-    LOG_WARN("Attempting to add host %s that we already have",
-             host->address_string().c_str());
+    LOG_WARN("Attempting to add host %s that we already have", host->address_string().c_str());
     // If an entry already exists then notify that the node has been removed
     // then re-add it.
     for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
-         end = load_balancing_policies_.end(); it != end; ++it) {
+                                                  end = load_balancing_policies_.end();
+         it != end; ++it) {
       (*it)->on_host_removed(host_it->second);
     }
     notify_or_record(ClusterEvent(ClusterEvent::HOST_REMOVE, host));
@@ -631,7 +579,8 @@ void Cluster::notify_host_add(const Host::Ptr& host) {
 
   hosts_[host->address()] = host;
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
-       end = load_balancing_policies_.end(); it != end; ++it) {
+                                                end = load_balancing_policies_.end();
+       it != end; ++it) {
     (*it)->on_host_added(host);
   }
 
@@ -639,8 +588,7 @@ void Cluster::notify_host_add(const Host::Ptr& host) {
     return; // Ignore host
   }
 
-  if (!prepare_host(host,
-                    bind_callback(&Cluster::on_prepare_host_add, this))) {
+  if (!prepare_host(host, bind_callback(&Cluster::on_prepare_host_add, this))) {
     notify_host_add_after_prepare(host);
   }
 }
@@ -658,8 +606,7 @@ void Cluster::notify_host_remove(const Address& address) {
   LockedHostMap::const_iterator it = hosts_.find(address);
 
   if (it == hosts_.end()) {
-    LOG_WARN("Attempting removing host %s that we don't have",
-             address.to_string().c_str());
+    LOG_WARN("Attempting removing host %s that we don't have", address.to_string().c_str());
     return;
   }
 
@@ -678,7 +625,8 @@ void Cluster::notify_host_remove(const Address& address) {
 
   hosts_.erase(address);
   for (LoadBalancingPolicy::Vec::const_iterator it = load_balancing_policies_.begin(),
-       end = load_balancing_policies_.end(); it != end; ++it) {
+                                                end = load_balancing_policies_.end();
+       it != end; ++it) {
     (*it)->on_host_removed(host);
   }
 
@@ -693,15 +641,11 @@ void Cluster::notify_or_record(const ClusterEvent& event) {
   }
 }
 
-bool Cluster::prepare_host(const Host::Ptr& host,
-                           const PrepareHostHandler::Callback& callback) {
+bool Cluster::prepare_host(const Host::Ptr& host, const PrepareHostHandler::Callback& callback) {
   if (connection_ && settings_.prepare_on_up_or_add_host) {
     PrepareHostHandler::Ptr prepare_host_handler(
-          new PrepareHostHandler(host,
-                                 prepared_metadata_.copy(),
-                                 callback,
-                                 connection_->protocol_version(),
-                                 settings_.max_prepares_per_flush));
+        new PrepareHostHandler(host, prepared_metadata_.copy(), callback,
+                               connection_->protocol_version(), settings_.max_prepares_per_flush));
 
     prepare_host_handler->prepare(connection_->loop(),
                                   settings_.control_connection_settings.connection_settings);
@@ -718,10 +662,8 @@ void Cluster::on_prepare_host_up(const PrepareHostHandler* handler) {
   notify_host_up_after_prepare(handler->host());
 }
 
-void Cluster::on_update_schema(SchemaType type,
-                               const ResultResponse::Ptr& result,
-                               const String& keyspace_name,
-                               const String& target_name) {
+void Cluster::on_update_schema(SchemaType type, const ResultResponse::Ptr& result,
+                               const String& keyspace_name, const String& target_name) {
   switch (type) {
     case KEYSPACE:
       // Virtual keyspaces are not updated (always false)
@@ -756,8 +698,7 @@ void Cluster::on_update_schema(SchemaType type,
   }
 }
 
-void Cluster::on_drop_schema(SchemaType type,
-                             const String& keyspace_name,
+void Cluster::on_drop_schema(SchemaType type, const String& keyspace_name,
                              const String& target_name) {
   switch (type) {
     case KEYSPACE:
@@ -792,8 +733,7 @@ void Cluster::on_up(const Address& address) {
   LockedHostMap::const_iterator it = hosts_.find(address);
 
   if (it == hosts_.end()) {
-    LOG_WARN("Received UP event for an unknown host %s",
-             address.to_string().c_str());
+    LOG_WARN("Received UP event for an unknown host %s", address.to_string().c_str());
     return;
   }
 
@@ -805,18 +745,13 @@ void Cluster::on_down(const Address& address) {
   // `notify_host_down()` to trigger the DOWN status.
 }
 
-void Cluster::on_add(const Host::Ptr& host) {
-  notify_host_add(host);
-}
+void Cluster::on_add(const Host::Ptr& host) { notify_host_add(host); }
 
-void Cluster::on_remove(const Address& address) {
-  notify_host_remove(address);
-}
+void Cluster::on_remove(const Address& address) { notify_host_remove(address); }
 
 void Cluster::on_close(ControlConnection* connection) {
   if (!is_closing_) {
-    LOG_WARN("Lost control connection to host %s",
-             connection_->address_string().c_str());
+    LOG_WARN("Lost control connection to host %s", connection_->address_string().c_str());
     schedule_reconnect();
   } else {
     handle_close();

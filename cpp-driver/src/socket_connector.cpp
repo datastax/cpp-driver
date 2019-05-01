@@ -32,7 +32,7 @@ namespace datastax { namespace internal { namespace core {
 class SslHandshakeHandler : public SocketHandler {
 public:
   SslHandshakeHandler(SocketConnector* connector)
-    : connector_(connector) { }
+      : connector_(connector) {}
 
   virtual void alloc_buffer(size_t suggested_size, uv_buf_t* buf) {
     buf->base = connector_->ssl_session_->incoming().peek_writable(&suggested_size);
@@ -65,31 +65,31 @@ private:
   SocketConnector* connector_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 SocketSettings::SocketSettings()
-  : hostname_resolution_enabled(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
-  , resolve_timeout_ms(CASS_DEFAULT_RESOLVE_TIMEOUT_MS)
-  , tcp_nodelay_enabled(CASS_DEFAULT_TCP_NO_DELAY_ENABLED)
-  , tcp_keepalive_enabled(CASS_DEFAULT_TCP_KEEPALIVE_ENABLED)
-  , tcp_keepalive_delay_secs(CASS_DEFAULT_TCP_KEEPALIVE_DELAY_SECS)
-  , max_reusable_write_objects(CASS_DEFAULT_MAX_REUSABLE_WRITE_OBJECTS) { }
+    : hostname_resolution_enabled(CASS_DEFAULT_HOSTNAME_RESOLUTION_ENABLED)
+    , resolve_timeout_ms(CASS_DEFAULT_RESOLVE_TIMEOUT_MS)
+    , tcp_nodelay_enabled(CASS_DEFAULT_TCP_NO_DELAY_ENABLED)
+    , tcp_keepalive_enabled(CASS_DEFAULT_TCP_KEEPALIVE_ENABLED)
+    , tcp_keepalive_delay_secs(CASS_DEFAULT_TCP_KEEPALIVE_DELAY_SECS)
+    , max_reusable_write_objects(CASS_DEFAULT_MAX_REUSABLE_WRITE_OBJECTS) {}
 
 SocketSettings::SocketSettings(const Config& config)
-  : hostname_resolution_enabled(config.use_hostname_resolution())
-  , resolve_timeout_ms(config.resolve_timeout_ms())
-  , ssl_context(config.ssl_context())
-  , tcp_nodelay_enabled(config.tcp_nodelay_enable())
-  , tcp_keepalive_enabled(config.tcp_keepalive_enable())
-  , tcp_keepalive_delay_secs(config.tcp_keepalive_delay_secs())
-  , max_reusable_write_objects(config.max_reusable_write_objects())
-  , local_address(config.local_address()) { }
+    : hostname_resolution_enabled(config.use_hostname_resolution())
+    , resolve_timeout_ms(config.resolve_timeout_ms())
+    , ssl_context(config.ssl_context())
+    , tcp_nodelay_enabled(config.tcp_nodelay_enable())
+    , tcp_keepalive_enabled(config.tcp_keepalive_enable())
+    , tcp_keepalive_delay_secs(config.tcp_keepalive_delay_secs())
+    , max_reusable_write_objects(config.max_reusable_write_objects())
+    , local_address(config.local_address()) {}
 
 SocketConnector::SocketConnector(const Address& address, const Callback& callback)
-  : address_(address)
-  , callback_(callback)
-  , error_code_(SOCKET_OK)
-  , ssl_error_code_(CASS_OK) { }
+    : address_(address)
+    , callback_(callback)
+    , error_code_(SOCKET_OK)
+    , ssl_error_code_(CASS_OK) {}
 
 SocketConnector* SocketConnector::with_settings(const SocketSettings& settings) {
   settings_ = settings;
@@ -101,9 +101,7 @@ void SocketConnector::connect(uv_loop_t* loop) {
 
   if (settings_.hostname_resolution_enabled) {
     // Run hostname resolution then connect.
-    resolver_.reset(
-          new NameResolver(address_,
-                           bind_callback(&SocketConnector::on_resolve, this)));
+    resolver_.reset(new NameResolver(address_, bind_callback(&SocketConnector::on_resolve, this)));
     resolver_->resolve(loop, settings_.resolve_timeout_ms);
   } else {
     // Postpone the connection process until after this method ends because it
@@ -129,9 +127,7 @@ Socket::Ptr SocketConnector::release_socket() {
 }
 
 void SocketConnector::internal_connect(uv_loop_t* loop) {
-  Socket::Ptr socket(
-        new Socket(address_,
-                   settings_.max_reusable_write_objects));
+  Socket::Ptr socket(new Socket(address_, settings_.max_reusable_write_objects));
 
   if (uv_tcp_init(loop, socket->handle()) != 0) {
     on_error(SOCKET_ERROR_INIT, "Unable to initialize TCP object");
@@ -146,20 +142,17 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
   if (local_address.is_valid()) {
     int rc = uv_tcp_bind(socket->handle(), local_address.addr(), 0);
     if (rc != 0) {
-      on_error(SOCKET_ERROR_BIND,
-               "Unable to bind local address: " + String(uv_strerror(rc)));
+      on_error(SOCKET_ERROR_BIND, "Unable to bind local address: " + String(uv_strerror(rc)));
 
       return;
     }
   }
 
-  if (uv_tcp_nodelay(socket_->handle(),
-                     settings_.tcp_nodelay_enabled ? 1 : 0) != 0) {
+  if (uv_tcp_nodelay(socket_->handle(), settings_.tcp_nodelay_enabled ? 1 : 0) != 0) {
     LOG_WARN("Unable to set tcp nodelay");
   }
 
-  if (uv_tcp_keepalive(socket_->handle(),
-                       settings_.tcp_keepalive_enabled ? 1 : 0,
+  if (uv_tcp_keepalive(socket_->handle(), settings_.tcp_keepalive_enabled ? 1 : 0,
                        settings_.tcp_keepalive_delay_secs) != 0) {
     LOG_WARN("Unable to set tcp keepalive");
   }
@@ -169,8 +162,7 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
   }
 
   connector_.reset(new TcpConnector(address_));
-  connector_->connect(socket_->handle(),
-                      bind_callback(&SocketConnector::on_connect, this));
+  connector_->connect(socket_->handle(), bind_callback(&SocketConnector::on_connect, this));
 }
 
 void SocketConnector::ssl_handshake() {
@@ -217,8 +209,7 @@ void SocketConnector::on_error(SocketError code, const String& message) {
   assert(code != SOCKET_OK && "Notified error without an error");
   if (error_code_ == SOCKET_OK) { // Only call this once
     LOG_DEBUG("Lost connection to host %s with the following error: %s",
-              address_.to_string().c_str(),
-              message.c_str());
+              address_.to_string().c_str(), message.c_str());
     error_message_ = message;
     error_code_ = code;
     if (is_ssl_error()) {
@@ -231,8 +222,7 @@ void SocketConnector::on_error(SocketError code, const String& message) {
 
 void SocketConnector::on_connect(TcpConnector* tcp_connector) {
   if (tcp_connector->is_success()) {
-    LOG_DEBUG("Connected to host %s on socket(%p)",
-              address_.to_string().c_str(),
+    LOG_DEBUG("Connected to host %s on socket(%p)", address_.to_string().c_str(),
               static_cast<void*>(this));
 
 #ifdef HAVE_NOSIGPIPE
@@ -243,7 +233,7 @@ void SocketConnector::on_connect(TcpConnector* tcp_connector) {
     uv_os_fd_t fd = 0;
     int enabled = 1;
     if (uv_fileno(reinterpret_cast<uv_handle_t*>(tcp), &fd) != 0 ||
-        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&enabled, sizeof(int)) != 0) {
+        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (void*)&enabled, sizeof(int)) != 0) {
       LOG_WARN("Unable to set socket option SO_NOSIGPIPE for host %s",
                address_.to_string().c_str());
     }
@@ -259,16 +249,13 @@ void SocketConnector::on_connect(TcpConnector* tcp_connector) {
     finish();
   } else {
     on_error(SOCKET_ERROR_CONNECT,
-             "Connect error '" +
-             String(uv_strerror(tcp_connector->uv_status())) +
-             "'");
+             "Connect error '" + String(uv_strerror(tcp_connector->uv_status())) + "'");
   }
 }
 
 void SocketConnector::on_resolve(NameResolver* resolver) {
   if (resolver->is_success()) {
-    LOG_DEBUG("Resolved the hostname %s for address %s",
-              resolver->hostname().c_str(),
+    LOG_DEBUG("Resolved the hostname %s for address %s", resolver->hostname().c_str(),
               resolver->address().to_string().c_str());
     const String& hostname = resolver->hostname();
     if (!hostname.empty() && hostname[hostname.size() - 1] == '.') {
@@ -281,13 +268,10 @@ void SocketConnector::on_resolve(NameResolver* resolver) {
   } else if (is_canceled() || resolver->is_canceled()) {
     finish();
   } else if (resolver->is_timed_out()) {
-    on_error(SOCKET_ERROR_RESOLVE_TIMEOUT,
-             "Timed out attempting to resolve hostname");
+    on_error(SOCKET_ERROR_RESOLVE_TIMEOUT, "Timed out attempting to resolve hostname");
   } else {
     on_error(SOCKET_ERROR_RESOLVE,
-             "Unable to resolve hostname '" +
-             String(uv_strerror(resolver->uv_status())) +
-             "'");
+             "Unable to resolve hostname '" + String(uv_strerror(resolver->uv_status())) + "'");
   }
 }
 

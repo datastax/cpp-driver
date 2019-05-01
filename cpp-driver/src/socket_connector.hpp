@@ -126,17 +126,12 @@ public:
   const String& error_message() { return error_message_; }
   CassError ssl_error_code() { return ssl_error_code_; }
 
-  bool is_ok() const {
-    return error_code_ == SOCKET_OK;
-  }
+  bool is_ok() const { return error_code_ == SOCKET_OK; }
 
-  bool is_canceled() const {
-    return error_code_ == SOCKET_CANCELED;
-  }
+  bool is_canceled() const { return error_code_ == SOCKET_CANCELED; }
 
   bool is_ssl_error() const {
-    return error_code_ == SOCKET_ERROR_SSL_HANDSHAKE ||
-        error_code_ == SOCKET_ERROR_SSL_VERIFY;
+    return error_code_ == SOCKET_ERROR_SSL_HANDSHAKE || error_code_ == SOCKET_ERROR_SSL_VERIFY;
   }
 
 private:
@@ -168,6 +163,6 @@ private:
   SocketSettings settings_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

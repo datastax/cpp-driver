@@ -21,9 +21,7 @@ namespace datastax { namespace internal { namespace enterprise {
 
 class LineString : public Allocated {
 public:
-  LineString() {
-    reset();
-  }
+  LineString() { reset(); }
 
   const Bytes& bytes() const { return bytes_; }
 
@@ -38,8 +36,7 @@ public:
   }
 
   void reserve(cass_uint32_t num_points) {
-    bytes_.reserve(WKB_HEADER_SIZE +
-                   sizeof(cass_uint32_t) +
+    bytes_.reserve(WKB_HEADER_SIZE + sizeof(cass_uint32_t) +
                    2 * num_points * sizeof(cass_double_t));
   }
 
@@ -67,8 +64,8 @@ private:
 class LineStringIterator : public Allocated {
 public:
   LineStringIterator()
-    : num_points_(0)
-    , iterator_(NULL) { }
+      : num_points_(0)
+      , iterator_(NULL) {}
 
   cass_uint32_t num_points() const { return num_points_; }
 
@@ -85,21 +82,20 @@ public:
 private:
   class Iterator : public Allocated {
   public:
-    virtual ~Iterator() { }
-    virtual CassError next_point(cass_double_t *x, cass_double_t *y) = 0;
+    virtual ~Iterator() {}
+    virtual CassError next_point(cass_double_t* x, cass_double_t* y) = 0;
   };
 
   class BinaryIterator : public Iterator {
   public:
-    BinaryIterator() { }
-    BinaryIterator(const cass_byte_t* points_begin,
-                   const cass_byte_t* points_end,
+    BinaryIterator() {}
+    BinaryIterator(const cass_byte_t* points_begin, const cass_byte_t* points_end,
                    WkbByteOrder byte_order)
-      : position_(points_begin)
-      , points_end_(points_end)
-      , byte_order_(byte_order) { }
+        : position_(points_begin)
+        , points_end_(points_end)
+        , byte_order_(byte_order) {}
 
-    virtual CassError next_point(cass_double_t *x, cass_double_t *y);
+    virtual CassError next_point(cass_double_t* x, cass_double_t* y);
 
   private:
     const cass_byte_t* position_;
@@ -109,10 +105,10 @@ private:
 
   class TextIterator : public Iterator {
   public:
-    TextIterator() { }
+    TextIterator() {}
     TextIterator(const char* text, size_t size);
 
-    virtual CassError next_point(cass_double_t *x, cass_double_t *y);
+    virtual CassError next_point(cass_double_t* x, cass_double_t* y);
 
   private:
     WktLexer lexer_;
@@ -124,7 +120,7 @@ private:
   TextIterator text_iterator_;
 };
 
-} } } // namespace datastax::internal::enterprise
+}}} // namespace datastax::internal::enterprise
 
 EXTERNAL_TYPE(datastax::internal::enterprise::LineString, DseLineString)
 EXTERNAL_TYPE(datastax::internal::enterprise::LineStringIterator, DseLineStringIterator)

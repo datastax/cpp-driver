@@ -26,13 +26,13 @@
 #include <iomanip>
 #include <sstream>
 #ifndef _WIN32
-# include <time.h>
+#include <time.h>
 #endif
 
 #ifdef _WIN32
-# define FILE_MODE 0
+#define FILE_MODE 0
 #else
-# define FILE_MODE S_IRWXU | S_IRWXG | S_IROTH
+#define FILE_MODE S_IRWXU | S_IRWXG | S_IROTH
 #endif
 #define FILE_PATH_SIZE 1024
 
@@ -45,7 +45,7 @@ const char test::Utils::PATH_SEPARATOR = '\\';
 const char test::Utils::PATH_SEPARATOR = '/';
 #endif
 
-template<typename T>
+template <typename T>
 T* test::Utils::addressof(T& value) {
   return reinterpret_cast<T*>(&const_cast<char&>(reinterpret_cast<const volatile char&>(value)));
 }
@@ -128,14 +128,13 @@ std::string test::Utils::scalar_cql_type(CassValueType value_type) {
       break;
     default:
       std::stringstream message;
-      message << "Unable to Retrieve CQL Type: CassValueType [" <<
-        value_type << "] is not valid";
+      message << "Unable to Retrieve CQL Type: CassValueType [" << value_type << "] is not valid";
       throw test::Exception(message.str());
   }
 }
 
 std::vector<std::string> test::Utils::explode(const std::string& input,
-  const char delimiter /*= ' '*/) {
+                                              const char delimiter /*= ' '*/) {
   // Iterate over the input line and parse the tokens
   std::vector<std::string> result;
   std::istringstream parser(input);
@@ -159,8 +158,8 @@ std::string test::Utils::indent(const std::string& input, unsigned int indent) {
 
   // Iterate over each line in the input string and indent
   std::vector<std::string> lines = explode(input, '\n');
-  for (std::vector<std::string>::iterator iterator = lines.begin();
-    iterator < lines.end(); ++iterator) {
+  for (std::vector<std::string>::iterator iterator = lines.begin(); iterator < lines.end();
+       ++iterator) {
     output << std::setw(indent) << "" << *iterator;
     if ((iterator + 1) != lines.end()) {
       output << std::endl;
@@ -194,12 +193,12 @@ void test::Utils::msleep(unsigned int milliseconds) {
 #ifdef _WIN32
   Sleep(milliseconds);
 #else
-  //Convert the milliseconds into a proper timespec structure
+  // Convert the milliseconds into a proper timespec structure
   struct timespec requested;
   time_t seconds = static_cast<int>(milliseconds / 1000);
   long int nanoseconds = static_cast<long int>((milliseconds - (seconds * 1000)) * 1000000);
 
-  //Assign the requested time and perform sleep
+  // Assign the requested time and perform sleep
   requested.tv_sec = seconds;
   requested.tv_nsec = nanoseconds;
   while (nanosleep(&requested, &requested) == -1) {
@@ -208,11 +207,11 @@ void test::Utils::msleep(unsigned int milliseconds) {
 #endif
 }
 
-std::string test::Utils::replace_all(const std::string& input,
-  const std::string& from, const std::string& to) {
+std::string test::Utils::replace_all(const std::string& input, const std::string& from,
+                                     const std::string& to) {
   size_t position = 0;
   std::string result = input;
-  while((position = result.find(from, position)) != std::string::npos) {
+  while ((position = result.find(from, position)) != std::string::npos) {
     result.replace(position, from.length(), to);
     // Handle the case where 'to' is a substring of 'from'
     position += to.length();
@@ -221,13 +220,13 @@ std::string test::Utils::replace_all(const std::string& input,
 }
 
 std::string test::Utils::shorten(const std::string& input,
-  bool add_space_after_newline /*= true*/) {
+                                 bool add_space_after_newline /*= true*/) {
   std::string result = input;
 
   // Iterate over each trim delimiter
   std::string delimiters = TRIM_DELIMETERS;
-  for (std::string::iterator iterator = delimiters.begin();
-    iterator < delimiters.end(); ++iterator) {
+  for (std::string::iterator iterator = delimiters.begin(); iterator < delimiters.end();
+       ++iterator) {
     // Replace the trim delimiter with empty string (space if EOL)
     std::string delimiter(1, *iterator);
     std::string newline_replacement = add_space_after_newline ? " " : "";
@@ -259,8 +258,8 @@ std::string test::Utils::trim(const std::string& input) {
 }
 
 bool test::Utils::wait_for_port(const std::string& ip_address, unsigned short port,
-  unsigned int number_of_retries /*= 100*/,
-  unsigned int retry_delay_ms /*= 100*/) {
+                                unsigned int number_of_retries /*= 100*/,
+                                unsigned int retry_delay_ms /*= 100*/) {
   // Attempt establish a connection to the IP address and port of the node
   for (unsigned int n = 0; n < number_of_retries; ++n) {
     Socket socket;

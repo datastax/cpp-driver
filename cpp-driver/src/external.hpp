@@ -27,12 +27,12 @@ struct External : public In {
   static const Ex* to(const In* in) { return static_cast<const Ex*>(in); }
 };
 
-#define EXTERNAL_TYPE(InternalType, ExternalType)                          \
-  extern "C" {                                                             \
-    struct ExternalType##_ : public External<InternalType, ExternalType> { \
-      private:                                                             \
-        ~ExternalType##_() { }                                             \
-    };                                                                     \
+#define EXTERNAL_TYPE(InternalType, ExternalType)                        \
+  extern "C" {                                                           \
+  struct ExternalType##_ : public External<InternalType, ExternalType> { \
+  private:                                                               \
+    ~ExternalType##_() {}                                                \
+  };                                                                     \
   }
 
 #endif

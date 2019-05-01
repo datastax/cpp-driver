@@ -51,8 +51,7 @@ public:
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  ConnectionPoolConnector(const Host::Ptr& host,
-                          ProtocolVersion protocol_version,
+  ConnectionPoolConnector(const Host::Ptr& host, ProtocolVersion protocol_version,
                           const Callback& callback);
 
   /**
@@ -139,6 +138,6 @@ private:
   Metrics* metrics_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

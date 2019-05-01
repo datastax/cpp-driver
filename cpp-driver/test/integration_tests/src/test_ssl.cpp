@@ -15,16 +15,16 @@
 */
 
 #ifdef _WIN32
-#   ifndef CASS_STATIC
-#      include <openssl/applink.c>
-#   endif
+#ifndef CASS_STATIC
+#include <openssl/applink.c>
+#endif
 #endif
 
 #include <boost/chrono.hpp>
+#include <boost/format.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
-#include <boost/format.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -103,21 +103,22 @@ struct TestSSL {
       , connect_future_(NULL)
       , session_(NULL)
       , ssl_(NULL) {
-    //Load the PEM certificates and private keys
+    // Load the PEM certificates and private keys
     cassandra_certificate_ = test_utils::load_ssl_certificate(CASSANDRA_PEM_CERTIFICATE_FILENAME);
     driver_certificate_ = test_utils::load_ssl_certificate(DRIVER_PEM_CERTIFICATE_FILENAME);
     driver_private_key_ = test_utils::load_ssl_certificate(DRIVER_PEM_PRIVATE_KEY_FILENAME);
-    invalid_cassandra_certificate_ = test_utils::load_ssl_certificate(INVALID_CASSANDRA_PEM_CERTIFICATE_FILENAME);
-    invalid_driver_certificate_ = test_utils::load_ssl_certificate(INVALID_DRIVER_PEM_CERTIFICATE_FILENAME);
-    invalid_driver_private_key_ = test_utils::load_ssl_certificate(INVALID_DRIVER_PEM_PRIVATE_KEY_FILENAME);
+    invalid_cassandra_certificate_ =
+        test_utils::load_ssl_certificate(INVALID_CASSANDRA_PEM_CERTIFICATE_FILENAME);
+    invalid_driver_certificate_ =
+        test_utils::load_ssl_certificate(INVALID_DRIVER_PEM_CERTIFICATE_FILENAME);
+    invalid_driver_private_key_ =
+        test_utils::load_ssl_certificate(INVALID_DRIVER_PEM_PRIVATE_KEY_FILENAME);
   }
 
   /**
    * Destructor
    */
-  ~TestSSL() {
-    cleanup();
-  }
+  ~TestSSL() { cleanup(); }
 
   /**
    * Create the Cassandra cluster, initialize the cpp-driver cluster, and create
@@ -132,12 +133,13 @@ struct TestSSL {
    *                   (default: false)
    * @param nodes Number of nodes for the cluster (default: 1)
    */
-  void ssl_setup(bool is_ssl = true, bool is_client_authentication = false, bool is_failure = false, unsigned int nodes = 1) {
-    //Create a n-node cluster
+  void ssl_setup(bool is_ssl = true, bool is_client_authentication = false, bool is_failure = false,
+                 unsigned int nodes = 1) {
+    // Create a n-node cluster
     ccm_->create_cluster(nodes, 0, false, is_ssl, is_client_authentication);
     ccm_->start_cluster();
 
-    //Initialize the cpp-driver
+    // Initialize the cpp-driver
     cluster_ = cass_cluster_new();
     test_utils::initialize_contact_points(cluster_, ccm_->get_ip_prefix(), nodes);
     cass_cluster_set_connect_timeout(cluster_, 10000);
@@ -147,22 +149,21 @@ struct TestSSL {
     cass_cluster_set_max_connections_per_host(cluster_, 4);
     cass_cluster_set_ssl(cluster_, ssl_);
 
-    //Establish the connection (if ssl)
+    // Establish the connection (if ssl)
     session_ = cass_session_new();
     connect_future_ = cass_session_connect(session_, cluster_);
     if (!is_failure) {
       test_utils::wait_and_check_error(connect_future_);
     } else {
-      BOOST_REQUIRE(cass_future_wait_timed(connect_future_, 2000000)); //Ensure the wait is long enough for slow machines
+      BOOST_REQUIRE(cass_future_wait_timed(
+          connect_future_, 2000000)); // Ensure the wait is long enough for slow machines
     }
   }
 
   /**
    * Alias to driver connection cleanup
    */
-  void ssl_teardown() {
-    cleanup();
-  }
+  void ssl_teardown() { cleanup(); }
 
   /**
    * Cleanup the driver connection
@@ -219,20 +220,27 @@ struct TestSSL {
    * Test established connection with a normal load query
    */
   void test_normal_load() {
-    //Create and use the simple keyspace
-    test_utils::execute_query(session_, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
+    // Create and use the simple keyspace
+    test_utils::execute_query(session_,
+                              str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) %
+                                  test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session_, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
-    //Create a table to fill with numbers and characters
-    test_utils::execute_query(session_, "CREATE TABLE normal_load (key int PRIMARY KEY, a int, b float, c text)");
+    // Create a table to fill with numbers and characters
+    test_utils::execute_query(
+        session_, "CREATE TABLE normal_load (key int PRIMARY KEY, a int, b float, c text)");
 
-    //Perform queries and validate inserted data
+    // Perform queries and validate inserted data
     for (int n = 0; n < NUMBER_OF_ITERATIONS; ++n) {
       std::string text = test_utils::generate_random_string(16);
-      test_utils::execute_query(session_, str(boost::format("INSERT INTO normal_load (key, a, b, c) VALUES (%d, %d, %f, '%s')") % n % (n * 100) % (n * .001f) % text));
+      test_utils::execute_query(
+          session_,
+          str(boost::format("INSERT INTO normal_load (key, a, b, c) VALUES (%d, %d, %f, '%s')") %
+              n % (n * 100) % (n * .001f) % text));
 
       test_utils::CassResultPtr result;
-      test_utils::execute_query(session_, str(boost::format("SELECT * FROM normal_load WHERE key = %d") % n), &result);
+      test_utils::execute_query(
+          session_, str(boost::format("SELECT * FROM normal_load WHERE key = %d") % n), &result);
       BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4u);
       BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1u);
 
@@ -263,31 +271,39 @@ struct TestSSL {
       BOOST_CHECK(test_utils::Value<CassString>::equal(c, CassString(text.c_str())));
     }
 
-    //Drop the table and keyspace
+    // Drop the table and keyspace
     test_utils::execute_query(session_, "DROP TABLE normal_load");
-    test_utils::execute_query(session_, str(boost::format("DROP KEYSPACE %s")  % test_utils::SIMPLE_KEYSPACE));
+    test_utils::execute_query(session_,
+                              str(boost::format("DROP KEYSPACE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 
   /**
    * Test established connection with a high load query
    */
   void test_high_load() {
-    //Create and use the simple keyspace
-    test_utils::execute_query(session_, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
+    // Create and use the simple keyspace
+    test_utils::execute_query(session_,
+                              str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) %
+                                  test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session_, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
-    //Create a table to fill with large text fields
-    test_utils::execute_query(session_, "CREATE TABLE high_load (key int PRIMARY KEY, a text, b text, c text)");
+    // Create a table to fill with large text fields
+    test_utils::execute_query(
+        session_, "CREATE TABLE high_load (key int PRIMARY KEY, a text, b text, c text)");
 
-    //Perform queries and validate inserted data
+    // Perform queries and validate inserted data
     for (int n = 0; n < NUMBER_OF_ITERATIONS; ++n) {
       std::string text_a = test_utils::generate_random_string(10240);
       std::string text_b = test_utils::generate_random_string(20480);
       std::string text_c = test_utils::generate_random_string(40960);
-      test_utils::execute_query(session_, str(boost::format("INSERT INTO high_load (key, a, b, c) VALUES (%d, '%s', '%s', '%s')") % n % text_a % text_b % text_c));
+      test_utils::execute_query(
+          session_,
+          str(boost::format("INSERT INTO high_load (key, a, b, c) VALUES (%d, '%s', '%s', '%s')") %
+              n % text_a % text_b % text_c));
 
       test_utils::CassResultPtr result;
-      test_utils::execute_query(session_, str(boost::format("SELECT * FROM high_load WHERE key = %d") % n), &result);
+      test_utils::execute_query(
+          session_, str(boost::format("SELECT * FROM high_load WHERE key = %d") % n), &result);
       BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4u);
       BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1u);
 
@@ -318,9 +334,10 @@ struct TestSSL {
       BOOST_CHECK(test_utils::Value<CassString>::equal(c, CassString(text_c.c_str())));
     }
 
-    //Drop the table and keyspace
+    // Drop the table and keyspace
     test_utils::execute_query(session_, "DROP TABLE high_load");
-    test_utils::execute_query(session_, str(boost::format("DROP KEYSPACE %s")  % test_utils::SIMPLE_KEYSPACE));
+    test_utils::execute_query(session_,
+                              str(boost::format("DROP KEYSPACE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 };
 
@@ -336,7 +353,9 @@ BOOST_AUTO_TEST_CASE(connect) {
 
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(), cassandra_certificate_.size()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(),
+                                                  cassandra_certificate_.size()),
+                      CASS_OK);
   ssl_setup();
   test_normal_load();
   test_high_load();
@@ -344,7 +363,9 @@ BOOST_AUTO_TEST_CASE(connect) {
 
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_IDENTITY);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(), cassandra_certificate_.size()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(),
+                                                  cassandra_certificate_.size()),
+                      CASS_OK);
   ssl_setup();
   test_normal_load();
   test_high_load();
@@ -354,7 +375,9 @@ BOOST_AUTO_TEST_CASE(connect) {
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
   BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cassandra_certificate_.c_str()), CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, driver_certificate_.c_str()), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
+  BOOST_REQUIRE_EQUAL(
+      cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), DRIVER_PEM_PRIVATE_KEY_PASSWORD),
+      CASS_OK);
   ssl_setup(true, true);
   test_normal_load();
   test_high_load();
@@ -362,20 +385,26 @@ BOOST_AUTO_TEST_CASE(connect) {
 }
 
 BOOST_AUTO_TEST_CASE(connect_failures) {
-  //Load invalid certificates
+  // Load invalid certificates
   create_ssl_context();
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, "Invalid Client Certificate"), CASS_ERROR_SSL_INVALID_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, "Invalid Trusted Certificate"), CASS_ERROR_SSL_INVALID_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, "Invalid Private Key", "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, "Invalid Client Certificate"),
+                      CASS_ERROR_SSL_INVALID_CERT);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, "Invalid Trusted Certificate"),
+                      CASS_ERROR_SSL_INVALID_CERT);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, "Invalid Private Key", "invalid"),
+                      CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), "invalid"),
+                      CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
 
   // Null certificate arg
   BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, NULL), CASS_ERROR_SSL_INVALID_CERT);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, NULL), CASS_ERROR_SSL_INVALID_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, NULL, "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), NULL), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, NULL, "invalid"),
+                      CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), NULL),
+                      CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
 
-  //Connect with SSL where the Cassandra server has SSL disabled
+  // Connect with SSL where the Cassandra server has SSL disabled
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_NONE);
   ssl_setup(false, false, true);
@@ -394,33 +423,42 @@ BOOST_AUTO_TEST_CASE(connect_failures) {
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
   BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cassandra_certificate_.c_str()), CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, driver_certificate_.c_str()), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
+  BOOST_REQUIRE_EQUAL(
+      cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), DRIVER_PEM_PRIVATE_KEY_PASSWORD),
+      CASS_OK);
   ssl_setup(false, false, true);
   ssl_teardown();
 
-  //Connect with SSL with invalid peer and client certificates
+  // Connect with SSL with invalid peer and client certificates
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, invalid_cassandra_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, invalid_cassandra_certificate_.c_str()),
+                      CASS_OK);
   ssl_setup(true, false, true);
   ssl_teardown();
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_IDENTITY);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, invalid_cassandra_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, invalid_cassandra_certificate_.c_str()),
+                      CASS_OK);
   ssl_setup(true, false, true);
   ssl_teardown();
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, invalid_cassandra_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, invalid_cassandra_certificate_.c_str()),
+                      CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, driver_certificate_.c_str()), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
+  BOOST_REQUIRE_EQUAL(
+      cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), DRIVER_PEM_PRIVATE_KEY_PASSWORD),
+      CASS_OK);
   ssl_setup(true, true, true);
   ssl_teardown();
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
   BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cassandra_certificate_.c_str()), CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, invalid_driver_certificate_.c_str()), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, invalid_driver_private_key_.c_str(), INVALID_DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, invalid_driver_private_key_.c_str(),
+                                               INVALID_DRIVER_PEM_PRIVATE_KEY_PASSWORD),
+                      CASS_OK);
   ssl_setup(true, true, true);
   ssl_teardown();
 }
@@ -441,7 +479,9 @@ BOOST_AUTO_TEST_CASE(connect_failures) {
 BOOST_AUTO_TEST_CASE(reconnect_after_cluster_crash_and_restart) {
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(), cassandra_certificate_.size()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(),
+                                                  cassandra_certificate_.size()),
+                      CASS_OK);
   ssl_setup();
   crash_and_restart_cluster();
   ssl_teardown();
@@ -449,4 +489,3 @@ BOOST_AUTO_TEST_CASE(reconnect_after_cluster_crash_and_restart) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-

@@ -63,16 +63,14 @@ void RingBuffer::try_move_read_head() {
   // inside the buffer, respectively. When they're equal - its safe to reset
   // them, because both reader and writer will continue doing their stuff
   // from new (zero) positions.
-  while (read_head_->read_pos_ != 0 &&
-         read_head_->read_pos_ == read_head_->write_pos_) {
+  while (read_head_->read_pos_ != 0 && read_head_->read_pos_ == read_head_->write_pos_) {
     // Reset positions
     read_head_->read_pos_ = 0;
     read_head_->write_pos_ = 0;
 
     // Move read_head_ forward, just in case if there're still some data to
     // read in the next buffer.
-    if (read_head_ != write_head_)
-      read_head_ = read_head_->next_;
+    if (read_head_ != write_head_) read_head_ = read_head_->next_;
   }
 }
 
@@ -85,12 +83,10 @@ size_t RingBuffer::read(char* out, size_t size) {
   while (bytes_read < expected) {
     assert(read_head_->read_pos_ <= read_head_->write_pos_);
     size_t avail = read_head_->write_pos_ - read_head_->read_pos_;
-    if (avail > left)
-      avail = left;
+    if (avail > left) avail = left;
 
     // Copy data
-    if (out != NULL)
-      memcpy(out + offset, read_head_->data_ + read_head_->read_pos_, avail);
+    if (out != NULL) memcpy(out + offset, read_head_->data_ + read_head_->read_pos_, avail);
     read_head_->read_pos_ += avail;
 
     // Move pointers
@@ -109,14 +105,11 @@ size_t RingBuffer::read(char* out, size_t size) {
   return bytes_read;
 }
 
-
 void RingBuffer::free_empty() {
   Buffer* child = write_head_->next_;
-  if (child == write_head_ || child == read_head_)
-    return;
+  if (child == write_head_ || child == read_head_) return;
   Buffer* cur = child->next_;
-  if (cur == write_head_ || cur == read_head_)
-    return;
+  if (cur == write_head_ || cur == read_head_) return;
 
   Buffer* prev = child;
   while (cur != read_head_) {
@@ -138,7 +131,6 @@ void RingBuffer::free_empty() {
   prev->next_ = cur;
 }
 
-
 size_t RingBuffer::index_of(char delim, size_t limit) {
   size_t bytes_read = 0;
   size_t max = length_ > limit ? limit : length_;
@@ -148,8 +140,7 @@ size_t RingBuffer::index_of(char delim, size_t limit) {
   while (bytes_read < max) {
     assert(current->read_pos_ <= current->write_pos_);
     size_t avail = current->write_pos_ - current->read_pos_;
-    if (avail > left)
-      avail = left;
+    if (avail > left) avail = left;
 
     // Walk through data
     char* tmp = current->data_ + current->read_pos_;
@@ -186,13 +177,10 @@ void RingBuffer::write(const char* data, size_t size) {
     assert(write_head_->write_pos_ <= BUFFER_LENGTH);
     size_t avail = BUFFER_LENGTH - write_head_->write_pos_;
 
-    if (to_write > avail)
-      to_write = avail;
+    if (to_write > avail) to_write = avail;
 
     // Copy data
-    memcpy(write_head_->data_ + write_head_->write_pos_,
-           data + offset,
-           to_write);
+    memcpy(write_head_->data_ + write_head_->write_pos_, data + offset, to_write);
 
     // Move pointers
     left -= to_write;
@@ -245,8 +233,7 @@ void RingBuffer::commit(size_t size) {
 void RingBuffer::try_allocate_for_write() {
   // If write head is full, next buffer is either read head or not empty.
   if (write_head_->write_pos_ == BUFFER_LENGTH &&
-      (write_head_->next_ == read_head_ ||
-       write_head_->next_->write_pos_ != 0)) {
+      (write_head_->next_ == read_head_ || write_head_->next_->write_pos_ != 0)) {
     Buffer* next = new Buffer();
     next->next_ = write_head_->next_;
     write_head_->next_ = next;

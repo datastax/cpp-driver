@@ -24,12 +24,10 @@ SharedPtr<test::SimulacronCluster> SimulacronIntegration::sc_ = NULL;
 bool SimulacronIntegration::is_sc_started_ = false;
 
 SimulacronIntegration::SimulacronIntegration()
-  : is_sc_start_requested_(true)
-  , is_sc_for_test_case_(false) {
-}
+    : is_sc_start_requested_(true)
+    , is_sc_for_test_case_(false) {}
 
-SimulacronIntegration::~SimulacronIntegration() {
-}
+SimulacronIntegration::~SimulacronIntegration() {}
 
 void SimulacronIntegration::SetUpTestCase() {
   try {
@@ -74,8 +72,7 @@ void SimulacronIntegration::TearDown() {
 }
 
 test::driver::Cluster SimulacronIntegration::default_cluster() {
-  return Integration::default_cluster()
-    .with_connection_heartbeat_interval(0);
+  return Integration::default_cluster().with_connection_heartbeat_interval(0);
 }
 
 void SimulacronIntegration::default_start_sc() {
@@ -86,7 +83,9 @@ void SimulacronIntegration::default_start_sc() {
   start_sc(data_center_nodes);
 }
 
-void SimulacronIntegration::start_sc(const std::vector<unsigned int>& data_center_nodes /*= SimulacronCluster::DEFAULT_DATA_CENTER_NODES*/) {
+void SimulacronIntegration::start_sc(
+    const std::vector<unsigned int>&
+        data_center_nodes /*= SimulacronCluster::DEFAULT_DATA_CENTER_NODES*/) {
   // Ensure the SC is only started once (process handling)
   if (!is_sc_started_) {
     // Create and start the SC
@@ -97,26 +96,22 @@ void SimulacronIntegration::start_sc(const std::vector<unsigned int>& data_cente
   }
 }
 
-test::driver::Result SimulacronIntegration::execute_mock_query(
-  CassConsistency consistency /*= CASS_CONSISTENCY_ONE*/) {
+test::driver::Result
+SimulacronIntegration::execute_mock_query(CassConsistency consistency /*= CASS_CONSISTENCY_ONE*/) {
   return session_.execute("mock query", consistency, false, false);
 }
 
 void SimulacronIntegration::prime_mock_query(unsigned int node /*= 0*/) {
   prime::Success success = prime::Success();
-  success.with_rows(prime::Rows()
-    .add_row(prime::Row()
-      .add_column("SUCCESS", CASS_VALUE_TYPE_BOOLEAN, "TRUE")));
+  success.with_rows(
+      prime::Rows().add_row(prime::Row().add_column("SUCCESS", CASS_VALUE_TYPE_BOOLEAN, "TRUE")));
   prime_mock_query_with_result(&success, node);
 }
-
 
 void SimulacronIntegration::prime_mock_query_with_result(prime::Result* result,
                                                          unsigned int node /*= 0*/) {
   // Create the mock query
-  prime::Request mock_query = prime::Request()
-    .with_query("mock query")
-    .with_result(result);
+  prime::Request mock_query = prime::Request().with_query("mock query").with_result(result);
 
   // Prime the mock query with the given error
   sc_->prime_query(mock_query, node);

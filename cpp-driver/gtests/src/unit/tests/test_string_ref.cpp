@@ -20,8 +20,7 @@
 
 using datastax::StringRef;
 
-TEST(StringRefUnitTest, Compare)
-{
+TEST(StringRefUnitTest, Compare) {
   const char* value = "abc";
   StringRef s(value);
 
@@ -39,8 +38,7 @@ TEST(StringRefUnitTest, Compare)
   EXPECT_TRUE(iequals(s, "ABC"));
 }
 
-TEST(StringRefUnitTest, Empty)
-{
+TEST(StringRefUnitTest, Empty) {
   StringRef s;
 
   EXPECT_TRUE(s.empty());
@@ -54,8 +52,7 @@ TEST(StringRefUnitTest, Empty)
   EXPECT_FALSE(ends_with(s, "abc"));
 }
 
-TEST(StringRefUnitTest, Substr)
-{
+TEST(StringRefUnitTest, Substr) {
   StringRef s("abcxyz");
 
   // Full string
@@ -68,8 +65,7 @@ TEST(StringRefUnitTest, Substr)
   // More tests in "starts_with" and "ends_with"
 }
 
-TEST(StringRefUnitTest, Find)
-{
+TEST(StringRefUnitTest, Find) {
   StringRef s("abcxyz");
 
   EXPECT_EQ(s.find(""), 0u);
@@ -84,9 +80,7 @@ TEST(StringRefUnitTest, Find)
   EXPECT_EQ(StringRef("").find(""), 0u);
 }
 
-
-TEST(StringRefUnitTest, StartsWith)
-{
+TEST(StringRefUnitTest, StartsWith) {
   StringRef s("abcxyz");
 
   // Various lengths
@@ -101,8 +95,7 @@ TEST(StringRefUnitTest, StartsWith)
   EXPECT_FALSE(starts_with(s, "abcxyzabcxyz"));
 }
 
-TEST(StringRefUnitTest, EndsWith)
-{
+TEST(StringRefUnitTest, EndsWith) {
   StringRef s("abcxyz");
 
   // Various lengths

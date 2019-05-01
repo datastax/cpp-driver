@@ -18,10 +18,10 @@
 #define DATASTAX_INTERNAL_ADDRESS_HPP
 
 #include "allocated.hpp"
+#include "dense_hash_set.hpp"
 #include "hash.hpp"
 #include "string.hpp"
 #include "vector.hpp"
-#include "dense_hash_set.hpp"
 
 #include <ostream>
 #include <string.h>
@@ -43,18 +43,20 @@ public:
   Address();
   Address(const String& ip, int port); // Tests only
 
-  static bool from_string(const String& ip, int port,
-                          Address* output = NULL);
+  static bool from_string(const String& ip, int port, Address* output = NULL);
 
-  static bool from_inet(const void* data, size_t size, int port,
-                        Address* output = NULL);
+  static bool from_inet(const void* data, size_t size, int port, Address* output = NULL);
 
   bool init(const struct sockaddr* addr);
 
 #ifdef _WIN32
   const struct sockaddr* addr() const { return reinterpret_cast<const struct sockaddr*>(&addr_); }
-  const struct sockaddr_in* addr_in() const { return reinterpret_cast<const struct sockaddr_in*>(&addr_); }
-  const struct sockaddr_in6* addr_in6() const { return reinterpret_cast<const struct sockaddr_in6*>(&addr_); }
+  const struct sockaddr_in* addr_in() const {
+    return reinterpret_cast<const struct sockaddr_in*>(&addr_);
+  }
+  const struct sockaddr_in6* addr_in6() const {
+    return reinterpret_cast<const struct sockaddr_in6*>(&addr_);
+  }
 #else
   const struct sockaddr* addr() const { return &addr_; }
   const struct sockaddr_in* addr_in() const { return &addr_in_; }
@@ -76,15 +78,27 @@ private:
   void init(const struct sockaddr_in6* addr);
 
 #ifdef _WIN32
-  struct sockaddr* addr() { return reinterpret_cast<struct sockaddr*>(&addr_); }
-  struct sockaddr_in* addr_in() { return reinterpret_cast<struct sockaddr_in*>(&addr_); }
-  struct sockaddr_in6* addr_in6() { return reinterpret_cast<struct sockaddr_in6*>(&addr_); }
+  struct sockaddr* addr() {
+    return reinterpret_cast<struct sockaddr*>(&addr_);
+  }
+  struct sockaddr_in* addr_in() {
+    return reinterpret_cast<struct sockaddr_in*>(&addr_);
+  }
+  struct sockaddr_in6* addr_in6() {
+    return reinterpret_cast<struct sockaddr_in6*>(&addr_);
+  }
 
   struct sockaddr_storage addr_;
 #else
-  struct sockaddr* addr() { return &addr_; }
-  struct sockaddr_in* addr_in() { return &addr_in_; }
-  struct sockaddr_in6* addr_in6() { return &addr_in6_; }
+  struct sockaddr* addr() {
+    return &addr_;
+  }
+  struct sockaddr_in* addr_in() {
+    return &addr_in_;
+  }
+  struct sockaddr_in6* addr_in6() {
+    return &addr_in6_;
+  }
 
   union {
     struct sockaddr addr_;
@@ -97,11 +111,9 @@ private:
 struct AddressHash {
   std::size_t operator()(const Address& a) const {
     if (a.family() == AF_INET) {
-      return hash::fnv1a(reinterpret_cast<const char*>(a.addr()),
-                                   sizeof(struct sockaddr_in));
+      return hash::fnv1a(reinterpret_cast<const char*>(a.addr()), sizeof(struct sockaddr_in));
     } else if (a.family() == AF_INET6) {
-      return hash::fnv1a(reinterpret_cast<const char*>(a.addr()),
-                                   sizeof(struct sockaddr_in6));
+      return hash::fnv1a(reinterpret_cast<const char*>(a.addr()), sizeof(struct sockaddr_in6));
     }
     return 0;
   }
@@ -116,17 +128,11 @@ public:
   }
 };
 
-inline bool operator<(const Address& a, const Address& b) {
-  return a.compare(b) < 0;
-}
+inline bool operator<(const Address& a, const Address& b) { return a.compare(b) < 0; }
 
-inline bool operator==(const Address& a, const Address& b) {
-  return a.compare(b) == 0;
-}
+inline bool operator==(const Address& a, const Address& b) { return a.compare(b) == 0; }
 
-inline bool operator!=(const Address& a, const Address& b) {
-  return a.compare(b) != 0;
-}
+inline bool operator!=(const Address& a, const Address& b) { return a.compare(b) != 0; }
 
 inline std::ostream& operator<<(std::ostream& os, const Address& addr) {
   return os << addr.to_string();
@@ -135,8 +141,7 @@ inline std::ostream& operator<<(std::ostream& os, const Address& addr) {
 inline std::ostream& operator<<(std::ostream& os, const AddressVec& v) {
   os << "[";
   bool first = true;
-  for (AddressVec::const_iterator it = v.begin(),
-       end = v.end(); it != end; ++it) {
+  for (AddressVec::const_iterator it = v.begin(), end = v.end(); it != end; ++it) {
     if (!first) os << ", ";
     first = false;
     os << *it;
@@ -145,13 +150,11 @@ inline std::ostream& operator<<(std::ostream& os, const AddressVec& v) {
   return os;
 }
 
-bool determine_address_for_peer_host(const Address& connected_address,
-                                     const Value* peer_value,
-                                     const Value* rpc_value,
-                                     Address* output);
+bool determine_address_for_peer_host(const Address& connected_address, const Value* peer_value,
+                                     const Value* rpc_value, Address* output);
 
 String determine_listen_address(const Address& address, const Row* row);
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

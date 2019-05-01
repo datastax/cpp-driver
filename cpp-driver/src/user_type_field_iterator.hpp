@@ -56,6 +56,6 @@ private:
   Value value_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

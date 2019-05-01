@@ -28,14 +28,15 @@ public:
   void operator delete(void* ptr);
   void operator delete[](void* ptr);
 
-  void* operator new(size_t, void* p)  { return p; }
-  void* operator new[](size_t, void* p)  { return p; }
+  void* operator new(size_t, void* p) { return p; }
+  void* operator new[](size_t, void* p) { return p; }
 };
 
 template <class T>
-struct AllocatedT : public Allocated, public T { };
+struct AllocatedT
+    : public Allocated
+    , public T {};
 
-
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

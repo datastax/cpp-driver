@@ -16,10 +16,10 @@
 
 #include "unit.hpp"
 
-#include "query_request.hpp"
-#include "control_connection.hpp"
-#include "session.hpp"
 #include "constants.hpp"
+#include "control_connection.hpp"
+#include "query_request.hpp"
+#include "session.hpp"
 
 using namespace datastax::internal::core;
 
@@ -37,9 +37,8 @@ public:
     Future::Ptr connect_future(session.connect(temp));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";
-    ASSERT_FALSE(connect_future->error())
-        << cass_error_desc(connect_future->error()->code) << ": "
-        << connect_future->error()->message;
+    ASSERT_FALSE(connect_future->error()) << cass_error_desc(connect_future->error()->code) << ": "
+                                          << connect_future->error()->message;
   }
 
   void get_rpc_address(const Response::Ptr& response, Address* output) {

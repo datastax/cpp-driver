@@ -8,14 +8,12 @@
 #include "dse_integration.hpp"
 #include "options.hpp"
 
-#define GRAPH_ADD_VERTEX_FORMAT \
-  "graph.addVertex(label, '%s', 'name', '%s', '%s', %d);"
+#define GRAPH_ADD_VERTEX_FORMAT "graph.addVertex(label, '%s', 'name', '%s', '%s', %d);"
 
 #define GRAPH_SELECT_VERTEX_TIMESTAMP_FORMAT \
   "SELECT WRITETIME(\"~~vertex_exists\") FROM \"%s\".%s_p WHERE community_id=%d;"
 
-#define GRAPH_SLEEP_FORMAT \
-  "java.util.concurrent.TimeUnit.MILLISECONDS.sleep(%dL);"
+#define GRAPH_SLEEP_FORMAT "java.util.concurrent.TimeUnit.MILLISECONDS.sleep(%dL);"
 
 #define BIG_INTEGER_VALUE test::driver::BigInteger::max()
 #define BIG_INTEGER_NAMED_PARAMETER "big_integer_value"
@@ -56,8 +54,7 @@ public:
    * @param is_object_requested True if object should be added to the array;
    *                            false otherwise
    */
-  dse::GraphArray create_array(bool is_array_requested = true,
-    bool is_object_requested = true) {
+  dse::GraphArray create_array(bool is_array_requested = true, bool is_object_requested = true) {
     // Create the data type objects for the DSE graph array
     dse::GraphArray graph_array_value;
     if (is_array_requested) {
@@ -85,11 +82,11 @@ public:
    *                            false otherwise
    */
   dse::GraphObject create_named_object(bool is_array_requested = true,
-    bool is_object_requested = true) {
+                                       bool is_object_requested = true) {
     dse::GraphObject graph_object_value;
     if (is_array_requested) {
       graph_object_value.add<dse::GraphArray>(GRAPH_ARRAY_NAMED_PARAMETER,
-        create_array(false, false));
+                                              create_array(false, false));
     }
     graph_object_value.add<BigInteger>(BIG_INTEGER_NAMED_PARAMETER, BIG_INTEGER_VALUE);
     graph_object_value.add<Boolean>(BOOLEAN_NAMED_PARAMETER, BOOLEAN_VALUE);
@@ -98,7 +95,7 @@ public:
     graph_object_value.add<NULL_DATA_TYPE>(NULL_NAMED_PARAMETER, NULL_VALUE);
     if (is_object_requested) {
       graph_object_value.add<dse::GraphObject>(GRAPH_OBJECT_NAMED_PARAMETER,
-        create_named_object(false, false));
+                                               create_named_object(false, false));
     }
     graph_object_value.add<std::string>(STRING_NAMED_PARAMETER, STRING_VALUE);
 
@@ -123,13 +120,9 @@ public:
    */
   std::string expected_result() {
     std::stringstream result;
-    result << BIG_INTEGER_VALUE.str() << ","
-           << BOOLEAN_VALUE.str() << ","
-           << DOUBLE_VALUE.str() << ","
-           << INTEGER_VALUE.str() << ","
-           << NULL_VALUE.str() << ","
-           << "\"" << STRING_VALUE << "\","
-           << as_array_or_named_object(true) << ","
+    result << BIG_INTEGER_VALUE.str() << "," << BOOLEAN_VALUE.str() << "," << DOUBLE_VALUE.str()
+           << "," << INTEGER_VALUE.str() << "," << NULL_VALUE.str() << ","
+           << "\"" << STRING_VALUE << "\"," << as_array_or_named_object(true) << ","
            << as_array_or_named_object(false);
     return result.str();
   }
@@ -142,8 +135,7 @@ private:
    * @param is_object True if key should be generated; false otherwise
    * @return Generated key or empty string (if not object)
    */
-  std::string generate_key(const std::string& key,
-    bool is_object) {
+  std::string generate_key(const std::string& key, bool is_object) {
     if (is_object) {
       return "\"" + key + "\":";
     }
@@ -160,9 +152,8 @@ private:
    *                            object; false otherwise
    * @return Generate result string for array or named object
    */
-  std::string as_array_or_named_object(bool is_array,
-    bool is_array_requested = true,
-    bool is_object_requested = true) {
+  std::string as_array_or_named_object(bool is_array, bool is_array_requested = true,
+                                       bool is_object_requested = true) {
     std::stringstream result;
 
     result << (is_array ? "[" : "{");
@@ -170,22 +161,16 @@ private:
       result << generate_key(GRAPH_ARRAY_NAMED_PARAMETER, !is_array)
              << as_array_or_named_object(true, false, false) << ",";
     }
-    result << generate_key(BIG_INTEGER_NAMED_PARAMETER, !is_array)
-           << BIG_INTEGER_VALUE.str() << ","
-           << generate_key(BOOLEAN_NAMED_PARAMETER, !is_array)
-           << BOOLEAN_VALUE.str() << ","
-           << generate_key(DOUBLE_NAMED_PARAMETER, !is_array)
-           << DOUBLE_VALUE.str() << ","
-           << generate_key(INTEGER_NAMED_PARAMETER, !is_array)
-           << INTEGER_VALUE.str() << ","
-           << generate_key(NULL_NAMED_PARAMETER, !is_array)
-           << NULL_VALUE.str() << ",";
+    result << generate_key(BIG_INTEGER_NAMED_PARAMETER, !is_array) << BIG_INTEGER_VALUE.str() << ","
+           << generate_key(BOOLEAN_NAMED_PARAMETER, !is_array) << BOOLEAN_VALUE.str() << ","
+           << generate_key(DOUBLE_NAMED_PARAMETER, !is_array) << DOUBLE_VALUE.str() << ","
+           << generate_key(INTEGER_NAMED_PARAMETER, !is_array) << INTEGER_VALUE.str() << ","
+           << generate_key(NULL_NAMED_PARAMETER, !is_array) << NULL_VALUE.str() << ",";
     if (is_object_requested) {
       result << generate_key(GRAPH_OBJECT_NAMED_PARAMETER, !is_array)
              << as_array_or_named_object(false, false, false) << ",";
     }
-    result << generate_key(STRING_NAMED_PARAMETER, !is_array)
-           << "\"" << STRING_VALUE << "\""
+    result << generate_key(STRING_NAMED_PARAMETER, !is_array) << "\"" << STRING_VALUE << "\""
            << (is_array ? "]" : "}");
 
     return result.str();
@@ -247,12 +232,11 @@ DSE_INTEGRATION_TEST_F(GraphTest, ServerError) {
   CHECK_FAILURE;
 
   // Execute the graph statement where a graph is used but does not exist
-  dse::GraphResultSet result_set = dse_session_.execute(
-    "system.graph('graph_name_does_not_exist').drop()", NULL, false);
+  dse::GraphResultSet result_set =
+      dse_session_.execute("system.graph('graph_name_does_not_exist').drop()", NULL, false);
   CHECK_FAILURE;
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
-  ASSERT_EQ("Graph graph_name_does_not_exist does not exist",
-    result_set.error_message());
+  ASSERT_EQ("Graph graph_name_does_not_exist does not exist", result_set.error_message());
 }
 
 /**
@@ -273,14 +257,10 @@ DSE_INTEGRATION_TEST_F(GraphTest, MutlipleNamedParameters) {
 
   // Create the graph statement (graph does not need to exist; name not required)
   std::stringstream simple_array;
-  simple_array << "[" << BIG_INTEGER_NAMED_PARAMETER << ","
-    << BOOLEAN_NAMED_PARAMETER << ","
-    << DOUBLE_NAMED_PARAMETER << ","
-    << INTEGER_NAMED_PARAMETER << ","
-    << NULL_NAMED_PARAMETER << ","
-    << STRING_NAMED_PARAMETER << ","
-    << GRAPH_ARRAY_NAMED_PARAMETER << ","
-    << GRAPH_OBJECT_NAMED_PARAMETER << "]";
+  simple_array << "[" << BIG_INTEGER_NAMED_PARAMETER << "," << BOOLEAN_NAMED_PARAMETER << ","
+               << DOUBLE_NAMED_PARAMETER << "," << INTEGER_NAMED_PARAMETER << ","
+               << NULL_NAMED_PARAMETER << "," << STRING_NAMED_PARAMETER << ","
+               << GRAPH_ARRAY_NAMED_PARAMETER << "," << GRAPH_OBJECT_NAMED_PARAMETER << "]";
   dse::GraphStatement graph_statement(simple_array.str());
 
   // Create the named parameters and bind the DSE graph object to the statement
@@ -288,14 +268,11 @@ DSE_INTEGRATION_TEST_F(GraphTest, MutlipleNamedParameters) {
   CHECK_FAILURE;
   dse::GraphObject graph_object = create_named_object();
   CHECK_FAILURE;
-  dse::GraphObject graph_named_values = create_named_object(false,
-    false);
+  dse::GraphObject graph_named_values = create_named_object(false, false);
   CHECK_FAILURE;
-  graph_named_values.add<dse::GraphArray>(GRAPH_ARRAY_NAMED_PARAMETER,
-    graph_array);
+  graph_named_values.add<dse::GraphArray>(GRAPH_ARRAY_NAMED_PARAMETER, graph_array);
   CHECK_FAILURE;
-  graph_named_values.add<dse::GraphObject>(GRAPH_OBJECT_NAMED_PARAMETER,
-    graph_object);
+  graph_named_values.add<dse::GraphObject>(GRAPH_OBJECT_NAMED_PARAMETER, graph_object);
   CHECK_FAILURE;
   graph_statement.bind(graph_named_values);
   CHECK_FAILURE;
@@ -332,8 +309,7 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrieveEdges) {
   // Create the graph statement to see who created what
   dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
-  dse::GraphStatement graph_statement("g.E().hasLabel('created')",
-    graph_options);
+  dse::GraphStatement graph_statement("g.E().hasLabel('created')", graph_options);
 
   // Execute the graph statement and ensure the edges were retrieved (validate)
   dse::GraphResultSet result_set = dse_session_.execute(graph_statement);
@@ -375,8 +351,7 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrieveVertices) {
   // Create the graph statement to see who Marko knows
   dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
-  dse::GraphStatement graph_statement("g.V().has('name', 'marko').out('knows')",
-    graph_options);
+  dse::GraphStatement graph_statement("g.V().has('name', 'marko').out('knows')", graph_options);
 
   // Execute the graph statement and ensure the vertices were retrieved (validate)
   dse::GraphResultSet result_set = dse_session_.execute(graph_statement);
@@ -423,10 +398,11 @@ DSE_INTEGRATION_TEST_F(GraphTest, RetrievePaths) {
    */
   dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
-  dse::GraphStatement graph_statement("g.V().hasLabel('person')" \
-    ".has('name', 'marko').as('a').outE('knows').as('b').inV().as('c', 'd')" \
-    ".outE('created').as('e', 'f', 'g').inV().as('h').path()",
-    graph_options);
+  dse::GraphStatement graph_statement(
+      "g.V().hasLabel('person')"
+      ".has('name', 'marko').as('a').outE('knows').as('b').inV().as('c', 'd')"
+      ".outE('created').as('e', 'f', 'g').inV().as('h').path()",
+      graph_options);
 
   // Execute the graph statement and ensure the vertices were retrieved (validate)
   dse::GraphResultSet result_set = dse_session_.execute(graph_statement);
@@ -561,15 +537,13 @@ DSE_INTEGRATION_TEST_F(GraphTest, Timestamp) {
   CHECK_FAILURE;
 
   // Create the statement with a timestamp
-  std::string add_vertex = format_string(GRAPH_ADD_VERTEX_FORMAT, "person",
-    "michael", "age", 27);
+  std::string add_vertex = format_string(GRAPH_ADD_VERTEX_FORMAT, "person", "michael", "age", 27);
   cass_int64_t expected_timestamp = 1270110600000;
   dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
   dse::GraphStatement graph_statement(add_vertex, graph_options);
   graph_statement.set_timestamp(expected_timestamp);
-  dse::GraphResultSet result_set = dse_session_.execute(graph_statement,
-    graph_options);
+  dse::GraphResultSet result_set = dse_session_.execute(graph_statement, graph_options);
 
   // Get the community id from the vertex insert and create the select statement
   dse::GraphResult id = result_set.next();
@@ -586,7 +560,7 @@ DSE_INTEGRATION_TEST_F(GraphTest, Timestamp) {
   ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_NUMBER, id.type());
   BigInteger community_id = id.value<BigInteger>();
   std::string select_timestamp = format_string(GRAPH_SELECT_VERTEX_TIMESTAMP_FORMAT,
-    test_name_.c_str(), "person", community_id.value());
+                                               test_name_.c_str(), "person", community_id.value());
 
   // Validate the timestamp from the graph inserted timestamp (+1 from insert)
   expected_timestamp += 1l;
@@ -619,8 +593,7 @@ DSE_INTEGRATION_TEST_F(GraphTest, ClientRequestTimeout) {
   dse::GraphOptions graph_options;
   graph_options.set_timeout(500);
   start_timer();
-  dse::GraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
-    graph_options, false);
+  dse::GraphResultSet result_set = dse_session_.execute(graph_ms_sleep, graph_options, false);
   ASSERT_LE(stop_timer(), 600ull);
   ASSERT_EQ(CASS_ERROR_LIB_REQUEST_TIMED_OUT, result_set.error_code());
 
@@ -665,8 +638,7 @@ DSE_INTEGRATION_TEST_F(GraphTest, ServerRequestTimeout) {
   dse::GraphOptions graph_options;
   graph_options.set_name(test_name_);
   std::string graph_ms_sleep = format_string(GRAPH_SLEEP_FORMAT, 35000);
-  dse::GraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
-    graph_options, false);
+  dse::GraphResultSet result_set = dse_session_.execute(graph_ms_sleep, graph_options, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
   ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));
 

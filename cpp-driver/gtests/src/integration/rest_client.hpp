@@ -30,11 +30,7 @@ struct Request {
   /**
    * HTTP request method
    */
-  enum Method {
-    HTTP_METHOD_DELETE = 0,
-    HTTP_METHOD_GET,
-    HTTP_METHOD_POST
-  };
+  enum Method { HTTP_METHOD_DELETE = 0, HTTP_METHOD_GET, HTTP_METHOD_POST };
 
   /**
    * Host address IPv4
@@ -72,7 +68,7 @@ struct Response {
   int status_code;
 
   Response()
-    : status_code(200 /* OK */) { }
+      : status_code(200 /* OK */) {}
 };
 
 /**
@@ -84,7 +80,7 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) { }
+        : test::Exception(message) {}
   };
 
   /**
@@ -117,8 +113,7 @@ private:
    * @param suggested_size The size (in bytes) to allocate for the buffer
    * @param buf Buffer to be allocated
    */
-  static void handle_allocation(uv_handle_t* handle, size_t suggested_size,
-    uv_buf_t* buffer);
+  static void handle_allocation(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buffer);
 
   /**
    * Handle the connect (callback) when the connection has been established to
@@ -138,9 +133,7 @@ private:
    *              will equal <b>UV_EOF</b>
    * @param buf Buffer to read from
    */
-  static void handle_response(uv_stream_t* stream,
-                              ssize_t nread,
-                              const uv_buf_t* buf);
+  static void handle_response(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 
   /**
    * Generate the HTTP message for the REST request.
@@ -149,7 +142,6 @@ private:
    * @return String representing the REST request HTTP message
    */
   static const std::string generate_http_message(const Request& request);
-
 };
 
 #endif // __TEST_REST_CLIENT_HPP__

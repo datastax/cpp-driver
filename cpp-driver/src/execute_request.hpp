@@ -17,10 +17,10 @@
 #ifndef DATASTAX_INTERNAL_EXECUTE_REQUEST_HPP
 #define DATASTAX_INTERNAL_EXECUTE_REQUEST_HPP
 
-#include "statement.hpp"
 #include "constants.hpp"
 #include "prepared.hpp"
 #include "ref_counted.hpp"
+#include "statement.hpp"
 #include "string.hpp"
 #include "vector.hpp"
 
@@ -34,7 +34,7 @@ public:
 
   virtual int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
-  bool get_routing_key(String* routing_key)  const {
+  bool get_routing_key(String* routing_key) const {
     return calculate_routing_key(prepared_->key_indices(), routing_key);
   }
 
@@ -51,6 +51,6 @@ private:
   Prepared::ConstPtr prepared_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

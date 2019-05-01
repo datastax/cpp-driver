@@ -22,15 +22,11 @@
 #include <cstring>
 
 #define DRIVER_VERSION \
-  STRINGIFY(DSE_VERSION_MAJOR) "." \
-  STRINGIFY(DSE_VERSION_MINOR) "." \
-  STRINGIFY(DSE_VERSION_PATCH)
+  STRINGIFY(DSE_VERSION_MAJOR) "." STRINGIFY(DSE_VERSION_MINOR) "." STRINGIFY(DSE_VERSION_PATCH)
 
-namespace datastax { namespace internal  {
+namespace datastax { namespace internal {
 
-const char* driver_name() {
-  return "DataStax Enterprise C/C++ Driver";
-}
+const char* driver_name() { return "DataStax Enterprise C/C++ Driver"; }
 
 const char* driver_version() {
   if (strlen(DSE_VERSION_SUFFIX) == 0) {
@@ -40,4 +36,4 @@ const char* driver_version() {
   }
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal

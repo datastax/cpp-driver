@@ -16,8 +16,8 @@
 
 #include <gtest/gtest.h>
 
-#include "value.hpp"
 #include "cassandra.h"
+#include "value.hpp"
 
 #include <time.h>
 
@@ -30,22 +30,20 @@ static DataType::ConstPtr s_text_type(new DataType(CASS_VALUE_TYPE_TEXT));
 static Value s_text_value_Value(s_text_type, Decoder(NULL, 0));
 static CassValue* s_text_value = CassValue::to(&s_text_value_Value);
 
-// ST is simple-type name (e.g. int8 and the like) and T is the full type name (e.g. cass_int8_t, CassUuid, etc.).
-#define TEST_TYPE(ST, T, SLT) \
-  TEST(ValueUnitTest, Bad##ST) \
-{ \
-  T output; \
-  EXPECT_EQ(cass_value_get_##ST(s_text_value, &output), \
-  CASS_ERROR_LIB_INVALID_VALUE_TYPE); \
-  DataType::ConstPtr data_type(new DataType(CASS_VALUE_TYPE_##SLT)); \
-  Value null_value(data_type); \
-  EXPECT_EQ(cass_value_get_##ST(NULL, &output), \
-  CASS_ERROR_LIB_NULL_VALUE); \
-  EXPECT_EQ(cass_value_get_##ST(CassValue::to(&null_value), &output), \
-  CASS_ERROR_LIB_NULL_VALUE); \
-  Value invalid_value(data_type, Decoder("", 0)); \
-  EXPECT_EQ(cass_value_get_##ST(CassValue::to(&invalid_value), &output), \
-  CASS_ERROR_LIB_NOT_ENOUGH_DATA); \
+// ST is simple-type name (e.g. int8 and the like) and T is the full type name (e.g. cass_int8_t,
+// CassUuid, etc.).
+#define TEST_TYPE(ST, T, SLT)                                                                 \
+  TEST(ValueUnitTest, Bad##ST) {                                                              \
+    T output;                                                                                 \
+    EXPECT_EQ(cass_value_get_##ST(s_text_value, &output), CASS_ERROR_LIB_INVALID_VALUE_TYPE); \
+    DataType::ConstPtr data_type(new DataType(CASS_VALUE_TYPE_##SLT));                        \
+    Value null_value(data_type);                                                              \
+    EXPECT_EQ(cass_value_get_##ST(NULL, &output), CASS_ERROR_LIB_NULL_VALUE);                 \
+    EXPECT_EQ(cass_value_get_##ST(CassValue::to(&null_value), &output),                       \
+              CASS_ERROR_LIB_NULL_VALUE);                                                     \
+    Value invalid_value(data_type, Decoder("", 0));                                           \
+    EXPECT_EQ(cass_value_get_##ST(CassValue::to(&invalid_value), &output),                    \
+              CASS_ERROR_LIB_NOT_ENOUGH_DATA);                                                \
   }
 
 #define TEST_SIMPLE_TYPE(T, SLT) TEST_TYPE(T, cass_##T##_t, SLT)
@@ -60,41 +58,32 @@ TEST_SIMPLE_TYPE(double, DOUBLE)
 TEST_SIMPLE_TYPE(bool, BOOLEAN)
 TEST_TYPE(uuid, CassUuid, UUID)
 
-TEST(ValueUnitTest, BadBytes)
-{
+TEST(ValueUnitTest, BadBytes) {
   const cass_byte_t* bytes = NULL;
   size_t bytes_size = 0;
-  EXPECT_EQ(cass_value_get_bytes(NULL, &bytes, &bytes_size),
-            CASS_ERROR_LIB_NULL_VALUE);
+  EXPECT_EQ(cass_value_get_bytes(NULL, &bytes, &bytes_size), CASS_ERROR_LIB_NULL_VALUE);
 }
 
-TEST(ValueUnitTest, BadString)
-{
+TEST(ValueUnitTest, BadString) {
   const char* str = NULL;
   size_t str_length = 0;
-  EXPECT_EQ(cass_value_get_string(NULL, &str, &str_length),
-            CASS_ERROR_LIB_NULL_VALUE);
+  EXPECT_EQ(cass_value_get_string(NULL, &str, &str_length), CASS_ERROR_LIB_NULL_VALUE);
 }
 
-TEST(ValueUnitTest, BadInet)
-{
+TEST(ValueUnitTest, BadInet) {
   CassInet inet;
   DataType::ConstPtr data_type(new DataType(CASS_VALUE_TYPE_INET));
 
-  EXPECT_EQ(cass_value_get_inet(NULL, &inet),
-            CASS_ERROR_LIB_NULL_VALUE);
+  EXPECT_EQ(cass_value_get_inet(NULL, &inet), CASS_ERROR_LIB_NULL_VALUE);
 
   Value null_value(data_type);
-  EXPECT_EQ(cass_value_get_inet(CassValue::to(&null_value), &inet),
-            CASS_ERROR_LIB_NULL_VALUE);
+  EXPECT_EQ(cass_value_get_inet(CassValue::to(&null_value), &inet), CASS_ERROR_LIB_NULL_VALUE);
 
   Value invalid_value(data_type, Decoder("12345678901234567", 17));
-  EXPECT_EQ(cass_value_get_inet(CassValue::to(&invalid_value), &inet),
-            CASS_ERROR_LIB_INVALID_DATA);
+  EXPECT_EQ(cass_value_get_inet(CassValue::to(&invalid_value), &inet), CASS_ERROR_LIB_INVALID_DATA);
 }
 
-TEST(ValueUnitTest, BadDuration)
-{
+TEST(ValueUnitTest, BadDuration) {
   cass_int32_t months, days;
   cass_int64_t nanos;
   EXPECT_EQ(cass_value_get_duration(s_text_value, &months, &days, &nanos),
@@ -106,8 +95,7 @@ TEST(ValueUnitTest, BadDuration)
             CASS_ERROR_LIB_NOT_ENOUGH_DATA);
 }
 
-TEST(ValueUnitTest, BadDecimal)
-{
+TEST(ValueUnitTest, BadDecimal) {
   const cass_byte_t* varint;
   size_t varint_size;
   cass_int32_t scale;

@@ -21,8 +21,7 @@
 
 #include "retry_policy.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Retry policy that will retry the statement on the next host
@@ -30,7 +29,7 @@ namespace driver {
 class NextHostRetryPolicy : public datastax::internal::core::DefaultRetryPolicy {
 public:
   NextHostRetryPolicy()
-    : datastax::internal::core::DefaultRetryPolicy() { }
+      : datastax::internal::core::DefaultRetryPolicy() {}
 
   /**
    * Create an instance of the retry policy for use with the driver
@@ -44,25 +43,17 @@ public:
   }
 
   RetryDecision on_read_timeout(const datastax::internal::core::Request* request,
-                                CassConsistency cl,
-                                int received,
-                                int required,
-                                bool data_recevied,
+                                CassConsistency cl, int received, int required, bool data_recevied,
                                 int num_retries) const {
     return RetryDecision::retry_next_host(cl);
   }
   RetryDecision on_write_timeout(const datastax::internal::core::Request* request,
-                                 CassConsistency cl,
-                                 int received,
-                                 int required,
-                                 CassWriteType write_type,
-                                 int num_retries) const {
+                                 CassConsistency cl, int received, int required,
+                                 CassWriteType write_type, int num_retries) const {
     return RetryDecision::retry_next_host(cl);
   }
   virtual RetryDecision on_unavailable(const datastax::internal::core::Request* request,
-                                       CassConsistency cl,
-                                       int required,
-                                       int alive,
+                                       CassConsistency cl, int required, int alive,
                                        int num_retries) const {
     return RetryDecision::retry_next_host(cl);
   }
@@ -74,7 +65,6 @@ public:
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __NEXT_HOST_RETRY_POLICY_HPP__

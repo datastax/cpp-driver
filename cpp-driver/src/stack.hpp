@@ -15,15 +15,15 @@
 namespace datastax { namespace internal {
 
 template <class T, class Container = Deque<T> >
-class Stack : public std::stack<T,  Container> {
+class Stack : public std::stack<T, Container> {
 public:
-  explicit Stack( const Container& container = Container())
-    : std::stack<T, Container>(container) { }
+  explicit Stack(const Container& container = Container())
+      : std::stack<T, Container>(container) {}
 
   Stack(const Stack& other)
-    : std::stack<T, Container>(other) { }
+      : std::stack<T, Container>(other) {}
 };
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

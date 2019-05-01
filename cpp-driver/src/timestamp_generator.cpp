@@ -38,16 +38,13 @@ CassTimestampGen* cass_timestamp_gen_monotonic_new() {
 
 CassTimestampGen* cass_timestamp_gen_monotonic_new_with_settings(int64_t warning_threshold_us,
                                                                  int64_t warning_interval_ms) {
-  TimestampGenerator* timestamp_gen
-      = new MonotonicTimestampGenerator(warning_threshold_us,
-                                        warning_interval_ms);
+  TimestampGenerator* timestamp_gen =
+      new MonotonicTimestampGenerator(warning_threshold_us, warning_interval_ms);
   timestamp_gen->inc_ref();
   return CassTimestampGen::to(timestamp_gen);
 }
 
-void cass_timestamp_gen_free(CassTimestampGen* timestamp_gen) {
-  timestamp_gen->dec_ref();
-}
+void cass_timestamp_gen_free(CassTimestampGen* timestamp_gen) { timestamp_gen->dec_ref(); }
 
 } // extern "C"
 
@@ -80,8 +77,7 @@ int64_t MonotonicTimestampGenerator::compute_next(int64_t last) {
                  "microseconds behind the last generated timestamp (%lld). "
                  "The next generated timestamp will be artificially incremented "
                  "to guarantee monotonicity.",
-                 static_cast<long long>(current),
-                 static_cast<long long>(last - current),
+                 static_cast<long long>(current), static_cast<long long>(last - current),
                  static_cast<long long>(last));
       }
     }

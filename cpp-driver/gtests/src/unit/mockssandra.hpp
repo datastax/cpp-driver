@@ -19,21 +19,21 @@
 
 #include <uv.h>
 
-#include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
+#include <openssl/ssl.h>
 
 #include <stdint.h>
 
 #include "address.hpp"
 #include "event_loop.hpp"
-#include "string.hpp"
-#include "vector.hpp"
-#include "timer.hpp"
-#include "ref_counted.hpp"
 #include "list.hpp"
+#include "ref_counted.hpp"
 #include "scoped_ptr.hpp"
+#include "string.hpp"
 #include "third_party/mt19937_64/mt19937_64.hpp"
+#include "timer.hpp"
+#include "vector.hpp"
 
 #if defined(WIN32) || defined(_WIN32)
 #undef ERROR_ALREADY_EXISTS
@@ -46,10 +46,10 @@
 using datastax::String;
 using datastax::internal::Atomic;
 using datastax::internal::List;
-using datastax::internal::Vector;
 using datastax::internal::RefCounted;
-using datastax::internal::SharedRefPtr;
 using datastax::internal::ScopedPtr;
+using datastax::internal::SharedRefPtr;
+using datastax::internal::Vector;
 using datastax::internal::core::Address;
 using datastax::internal::core::EventLoop;
 using datastax::internal::core::EventLoopGroup;
@@ -91,10 +91,10 @@ public:
   ServerConnection* server() { return server_; }
 
   virtual int on_accept() { return accept(); }
-  virtual void on_close() { }
+  virtual void on_close() {}
 
-  virtual void on_read(const char* data, size_t len) { }
-  virtual void on_write() { }
+  virtual void on_read(const char* data, size_t len) {}
+  virtual void on_write() {}
 
   int write(const String& data);
   int write(const char* data, size_t len);
@@ -150,7 +150,7 @@ class ServerConnectionTask : public RefCounted<ServerConnectionTask> {
 public:
   typedef SharedRefPtr<ServerConnectionTask> Ptr;
 
-  virtual ~ServerConnectionTask() { }
+  virtual ~ServerConnectionTask() {}
   virtual void run(ServerConnection* server_connection) = 0;
 };
 
@@ -160,68 +160,61 @@ class ServerConnection : public RefCounted<ServerConnection> {
 public:
   typedef SharedRefPtr<ServerConnection> Ptr;
 
-   ServerConnection(const Address& address, const ClientConnectionFactory& factory);
-   ~ServerConnection();
+  ServerConnection(const Address& address, const ClientConnectionFactory& factory);
+  ~ServerConnection();
 
-   const Address& address() const { return address_; }
-   uv_loop_t* loop();
-   SSL_CTX* ssl_context() { return ssl_context_; }
-   const ClientConnections& clients() const { return clients_; }
+  const Address& address() const { return address_; }
+  uv_loop_t* loop();
+  SSL_CTX* ssl_context() { return ssl_context_; }
+  const ClientConnections& clients() const { return clients_; }
 
-   bool use_ssl(const String& key,
-                const String& cert,
-                const String& password = "");
+  bool use_ssl(const String& key, const String& cert, const String& password = "");
 
-   void listen(EventLoopGroup* event_loop_group);
-   int wait_listen();
+  void listen(EventLoopGroup* event_loop_group);
+  int wait_listen();
 
-   void close();
-   void wait_close();
+  void close();
+  void wait_close();
 
-   void run(const ServerConnectionTask::Ptr& task);
+  void run(const ServerConnectionTask::Ptr& task);
 
 private:
-   friend class ClientConnection;
-   int accept(uv_stream_t* client);
-   void remove(ClientConnection* connection);
+  friend class ClientConnection;
+  int accept(uv_stream_t* client);
+  void remove(ClientConnection* connection);
 
 private:
-   friend class RunListen;
-   friend class RunClose;
+  friend class RunListen;
+  friend class RunClose;
 
-   void internal_listen();
-   void internal_close();
-   void maybe_close();
+  void internal_listen();
+  void internal_close();
+  void maybe_close();
 
-   void signal_listen(int rc);
-   void signal_close();
+  void signal_listen(int rc);
+  void signal_close();
 
-   static void on_connection(uv_stream_t* stream, int status);
-   void handle_connection(int status);
+  static void on_connection(uv_stream_t* stream, int status);
+  void handle_connection(int status);
 
-   static void on_close(uv_handle_t* handle);
-   void handle_close();
+  static void on_close(uv_handle_t* handle);
+  void handle_close();
 
-   static int on_password(char *buf, int size, int rwflag, void *password);
+  static int on_password(char* buf, int size, int rwflag, void* password);
 
 private:
-   enum State {
-     STATE_CLOSED,
-     STATE_CLOSING,
-     STATE_PENDING,
-     STATE_LISTENING
-   };
+  enum State { STATE_CLOSED, STATE_CLOSING, STATE_PENDING, STATE_LISTENING };
 
-   Tcp tcp_;
-   EventLoop* event_loop_;
-   State state_;
-   int rc_;
-   uv_mutex_t mutex_;
-   uv_cond_t cond_;
-   ClientConnections clients_;
-   const Address address_;
-   const ClientConnectionFactory& factory_;
-   SSL_CTX* ssl_context_;
+  Tcp tcp_;
+  EventLoop* event_loop_;
+  State state_;
+  int rc_;
+  uv_mutex_t mutex_;
+  uv_cond_t cond_;
+  ClientConnections clients_;
+  const Address address_;
+  const ClientConnectionFactory& factory_;
+  SSL_CTX* ssl_context_;
 };
 
 } // namespace internal
@@ -229,7 +222,7 @@ private:
 enum {
   FLAG_COMPRESSION = 0x01,
   FLAG_TRACING = 0x02,
-  FLAG_CUSTOM_PAYLOAD  = 0x04,
+  FLAG_CUSTOM_PAYLOAD = 0x04,
   FLAG_WARNING = 0x08,
   FLAG_BETA = 0x10
 };
@@ -266,9 +259,7 @@ enum {
   QUERY_FLAG_KEYSPACE = 0x80
 };
 
-enum {
-  PREPARE_FLAGS_KEYSPACE = 0x01
-};
+enum { PREPARE_FLAGS_KEYSPACE = 0x01 };
 
 enum {
   ERROR_SERVER_ERROR = 0x0000,
@@ -373,10 +364,10 @@ public:
 
 private:
   Type()
-    : type_(-1) { }
+      : type_(-1) {}
 
   Type(int type)
-    : type_(type) { }
+      : type_(type) {}
 
   friend class Vector<Type>;
 
@@ -390,8 +381,8 @@ private:
 class Column {
 public:
   Column(const String& name, const Type type)
-    : name_(name)
-    , type_(type) { }
+      : name_(name)
+      , type_(type) {}
 
   void encode(int protocol_version, String* output) const;
 
@@ -405,11 +396,7 @@ class Collection;
 
 class Value {
 private:
-  enum Type {
-    NUL,
-    VALUE,
-    COLLECTION
-  };
+  enum Type { NUL, VALUE, COLLECTION };
 
 public:
   Value();
@@ -433,16 +420,14 @@ public:
   class Builder {
   public:
     Builder(const Type& sub_type)
-      : sub_type_(sub_type) { }
+        : sub_type_(sub_type) {}
 
     Builder& text(const String& text) {
       values_.push_back(Value(text));
       return *this;
     }
 
-    Collection build() {
-      return Collection(sub_type_, values_);
-    }
+    Collection build() { return Collection(sub_type_, values_); }
 
   private:
     Type sub_type_;
@@ -453,18 +438,16 @@ public:
 
   static Collection text(const Vector<String>& values) {
     Collection::Builder builder(Type::text());
-    for (Vector<String>::const_iterator it = values.begin(),
-         end = values.end(); it != end; ++it) {
+    for (Vector<String>::const_iterator it = values.begin(), end = values.end(); it != end; ++it) {
       builder.text(*it);
     }
     return builder.build();
   }
 
 private:
-  Collection(const Type& sub_type,
-             const Vector<Value> values)
-    : sub_type_(sub_type)
-    , values_(values) { }
+  Collection(const Type& sub_type, const Vector<Value> values)
+      : sub_type_(sub_type)
+      , values_(values) {}
 
 private:
   const Type sub_type_;
@@ -483,9 +466,7 @@ public:
 
     Builder& collection(const Collection& collection);
 
-    Row build() const {
-      return Row(values_);
-    }
+    Row build() const { return Row(values_); }
 
   private:
     Vector<Value> values_;
@@ -495,7 +476,7 @@ public:
 
 private:
   Row(const Vector<Value>& values)
-    : values_(values) { }
+      : values_(values) {}
 
 private:
   Vector<Value> values_;
@@ -506,8 +487,8 @@ public:
   class Builder {
   public:
     Builder(const String& keyspace_name, const String& table_name)
-      : keyspace_name_(keyspace_name)
-      , table_name_(table_name) { }
+        : keyspace_name_(keyspace_name)
+        , table_name_(table_name) {}
 
     Builder& column(const String& name, const Type& type) {
       columns_.push_back(Column(name, type));
@@ -519,9 +500,7 @@ public:
       return *this;
     }
 
-    ResultSet build() const {
-      return ResultSet(keyspace_name_, table_name_, columns_, rows_);
-    }
+    ResultSet build() const { return ResultSet(keyspace_name_, table_name_, columns_, rows_); }
 
   private:
     const String keyspace_name_;
@@ -535,14 +514,12 @@ public:
   size_t column_count() const { return columns_.size(); }
 
 private:
-  ResultSet(const String& keyspace_name,
-            const String& table_name,
-            const Vector<Column>& columns,
+  ResultSet(const String& keyspace_name, const String& table_name, const Vector<Column>& columns,
             const Vector<Row>& rows)
-    : keyspace_name_(keyspace_name)
-    , table_name_(table_name)
-    , columns_(columns)
-    , rows_(rows) { }
+      : keyspace_name_(keyspace_name)
+      , table_name_(table_name)
+      , columns_(columns)
+      , rows_(rows) {}
 
 private:
   const String keyspace_name_;
@@ -553,19 +530,16 @@ private:
 
 struct Exception : public std::exception {
   Exception(int code, const String& message)
-    : code(code)
-    , message(message) { }
-  virtual ~Exception() throw() { }
+      : code(code)
+      , message(message) {}
+  virtual ~Exception() throw() {}
   const int code;
   const String message;
 };
 
 struct Host {
-  Host() { }
-  Host(const Address& address,
-       const String& dc,
-       const String& rack,
-       MT19937_64& token_rng,
+  Host() {}
+  Host(const Address& address, const String& dc, const String& rack, MT19937_64& token_rng,
        int num_tokens = 2);
   Address address;
   String dc;
@@ -591,7 +565,7 @@ struct Action {
   class Builder {
   public:
     Builder()
-      : last_(NULL) { }
+        : last_(NULL) {}
 
     Builder& reset();
 
@@ -643,7 +617,7 @@ struct Action {
 
     PredicateBuilder is_query(const String& query);
 
-     Action* build();
+    Action* build();
 
   private:
     ScopedPtr<Action> first_;
@@ -653,21 +627,18 @@ struct Action {
   class PredicateBuilder {
   public:
     PredicateBuilder(Builder& builder)
-      : builder_(builder) { }
+        : builder_(builder) {}
 
-    Builder& then(Builder& builder) {
-      return then(builder.build());
-    }
+    Builder& then(Builder& builder) { return then(builder.build()); }
 
-    Builder& then(Action* action) {
-      return builder_.execute_if(action);
-    }
+    Builder& then(Action* action) { return builder_.execute_if(action); }
 
   private:
     Builder& builder_;
   };
 
-  Action() : next(NULL) { }
+  Action()
+      : next(NULL) {}
   virtual ~Action() { delete next; }
 
   void run(Request* request) const;
@@ -680,7 +651,8 @@ struct Action {
 };
 
 struct Predicate : public Action {
-  Predicate() : then(NULL) { }
+  Predicate()
+      : then(NULL) {}
   virtual ~Predicate() { delete then; }
 
   virtual bool is_predicate() const { return true; }
@@ -699,14 +671,14 @@ struct Predicate : public Action {
   const Action* then;
 };
 
-
-class Request : public List<Request>::Node
-              , public RefCounted<Request> {
+class Request
+    : public List<Request>::Node
+    , public RefCounted<Request> {
 public:
   typedef SharedRefPtr<Request> Ptr;
 
-  Request(int8_t version, int8_t flags, int16_t stream, int8_t opcode,
-          const String& body, ClientConnection* client);
+  Request(int8_t version, int8_t flags, int16_t stream, int8_t opcode, const String& body,
+          ClientConnection* client);
 
   int8_t version() const { return version_; }
   int16_t stream() const { return stream_; }
@@ -750,30 +722,26 @@ private:
 };
 
 struct Nop : public Action {
-  virtual void on_run(Request* request) const { }
+  virtual void on_run(Request* request) const {}
 };
 
 struct Wait : public Action {
   Wait(uint64_t timeout)
-    : timeout(timeout) { }
+      : timeout(timeout) {}
 
-  virtual void on_run(Request* request) const {
-    request->wait(timeout, this);
-  }
+  virtual void on_run(Request* request) const { request->wait(timeout, this); }
 
   const uint64_t timeout;
 };
 
 struct Close : public Action {
-  virtual void on_run(Request* request) const {
-    request->close();
-  }
+  virtual void on_run(Request* request) const { request->close(); }
 };
 
 struct SendError : public Action {
   SendError(int32_t code, const String& message)
-    : code(code)
-    , message(message) { }
+      : code(code)
+      , message(message) {}
 
   virtual void on_run(Request* request) const;
 
@@ -787,21 +755,21 @@ struct SendReady : public Action {
 
 struct SendAuthenticate : public Action {
   SendAuthenticate(const String& class_name)
-    : class_name(class_name) { }
+      : class_name(class_name) {}
   virtual void on_run(Request* request) const;
   String class_name;
 };
 
 struct SendAuthChallenge : public Action {
   SendAuthChallenge(const String& token)
-    : token(token) { }
+      : token(token) {}
   virtual void on_run(Request* request) const;
   String token;
 };
 
 struct SendAuthSuccess : public Action {
   SendAuthSuccess(const String& token)
-    : token(token) { }
+      : token(token) {}
   virtual void on_run(Request* request) const;
   String token;
 };
@@ -812,7 +780,7 @@ struct SendSupported : public Action {
 
 struct SendUpEvent : public Action {
   SendUpEvent(const Address& address)
-    : address(address) { }
+      : address(address) {}
   virtual void on_run(Request* request) const;
   Address address;
 };
@@ -823,7 +791,7 @@ struct VoidResult : public Action {
 
 struct EmptyRowsResult : public Action {
   EmptyRowsResult(int row_count)
-    : row_count(row_count) { }
+      : row_count(row_count) {}
   virtual void on_run(Request* request) const;
   int32_t row_count;
 };
@@ -834,7 +802,7 @@ struct NoResult : public Action {
 
 struct MatchQuery : public Action {
   MatchQuery(const Matches& matches)
-    : matches(matches) { }
+      : matches(matches) {}
   virtual void on_run(Request* request) const;
   Matches matches;
 };
@@ -865,15 +833,15 @@ struct SystemTraces : public Action {
 
 struct UseKeyspace : public Action {
   UseKeyspace(const String& keyspace)
-    : keyspace(keyspace) { }
+      : keyspace(keyspace) {}
   virtual void on_run(Request* request) const;
   String keyspace;
 };
 
 struct PlaintextAuth : public Action {
-  PlaintextAuth (const String& username, const String& password)
-    : username(username)
-    , password(password) { }
+  PlaintextAuth(const String& username, const String& password)
+      : username(username)
+      , password(password) {}
   virtual void on_run(Request* request) const;
   String username;
   String password;
@@ -909,14 +877,14 @@ struct SetProtocolVersion : public Action {
 
 struct IsAddress : public Predicate {
   IsAddress(const Address& address)
-    : address(address) { }
+      : address(address) {}
   virtual bool is_true(Request* request) const;
   const Address address;
 };
 
 struct IsQuery : public Predicate {
   IsQuery(const String& query)
-    : query(query) { }
+      : query(query) {}
   virtual bool is_true(Request* request) const;
   const String query;
 };
@@ -926,8 +894,8 @@ public:
   class Builder {
   public:
     Builder()
-      : lowest_supported_protocol_version_(1)
-      , highest_supported_protocol_version_(5) {
+        : lowest_supported_protocol_version_(1)
+        , highest_supported_protocol_version_(5) {
       invalid_protocol_.invalid_protocol();
       invalid_opcode_.invalid_opcode();
     }
@@ -960,21 +928,14 @@ public:
     int highest_supported_protocol_version_;
   };
 
-  RequestHandler(Builder* builder,
-                 int lowest_supported_protocol_version,
+  RequestHandler(Builder* builder, int lowest_supported_protocol_version,
                  int highest_supported_protocol_version);
 
-  int lowest_supported_protocol_version() const {
-    return lowest_supported_protocol_version_;
-  }
+  int lowest_supported_protocol_version() const { return lowest_supported_protocol_version_; }
 
-  int highest_supported_protocol_version() const {
-    return highest_supported_protocol_version_;
-  }
+  int highest_supported_protocol_version() const { return highest_supported_protocol_version_; }
 
-  void invalid_protocol(Request* request) const {
-    invalid_protocol_->run(request);
-  }
+  void invalid_protocol(Request* request) const { invalid_protocol_->run(request); }
 
   void run(Request* request) const {
     const ScopedPtr<const Action>& action = actions_[request->opcode()];
@@ -993,17 +954,16 @@ private:
   const int highest_supported_protocol_version_;
 };
 
-
 class ProtocolHandler {
 public:
   ProtocolHandler(const RequestHandler* request_handler)
-    : request_handler_(request_handler)
-    , state_(PROTOCOL_VERSION)
-    , version_(0)
-    , flags_(0)
-    , stream_(0)
-    , opcode_(0)
-    , length_(0) { }
+      : request_handler_(request_handler)
+      , state_(PROTOCOL_VERSION)
+      , version_(0)
+      , flags_(0)
+      , stream_(0)
+      , opcode_(0)
+      , length_(0) {}
 
   void decode(ClientConnection* client, const char* data, int32_t len);
 
@@ -1011,11 +971,7 @@ private:
   int32_t decode_frame(ClientConnection* client, const char* frame, int32_t len);
   void decode_body(ClientConnection* client, const char* body, int32_t len);
 
-  enum State {
-    PROTOCOL_VERSION,
-    HEADER,
-    BODY
-  };
+  enum State { PROTOCOL_VERSION, HEADER, BODY };
 
 private:
   String buffer_;
@@ -1030,19 +986,20 @@ private:
 
 class ClientConnection : public internal::ClientConnection {
 public:
-  ClientConnection(internal::ServerConnection* server, const RequestHandler* request_handler, const Cluster* cluster)
-    : internal::ClientConnection(server)
-    , handler_(request_handler)
-    , cluster_(cluster)
-    , protocol_version_(-1)
-    , is_registered_for_events_(false) { }
+  ClientConnection(internal::ServerConnection* server, const RequestHandler* request_handler,
+                   const Cluster* cluster)
+      : internal::ClientConnection(server)
+      , handler_(request_handler)
+      , cluster_(cluster)
+      , protocol_version_(-1)
+      , is_registered_for_events_(false) {}
 
   virtual void on_read(const char* data, size_t len);
 
   const Cluster* cluster() const { return cluster_; }
 
   int protocol_version() const { return protocol_version_; }
-  void set_protocol_version(int protocol_version) { protocol_version_  = protocol_version; }
+  void set_protocol_version(int protocol_version) { protocol_version_ = protocol_version; }
 
   bool is_registered_for_events() const { return is_registered_for_events_; }
   void set_registered_for_events() { is_registered_for_events_ = true; }
@@ -1059,8 +1016,9 @@ private:
 
 class CloseConnection : public ClientConnection {
 public:
-  CloseConnection(internal::ServerConnection* server, const RequestHandler* request_handler, const Cluster* cluster)
-    : ClientConnection(server, request_handler, cluster) { }
+  CloseConnection(internal::ServerConnection* server, const RequestHandler* request_handler,
+                  const Cluster* cluster)
+      : ClientConnection(server, request_handler, cluster) {}
 
   int on_accept() {
     int rc = accept();
@@ -1075,13 +1033,11 @@ public:
 class ClientConnectionFactory : public internal::ClientConnectionFactory {
 public:
   ClientConnectionFactory(const RequestHandler* request_handler, const Cluster* cluster)
-    : request_handler_(request_handler)
-    , cluster_(cluster)
-    , close_immediately_(false) { }
+      : request_handler_(request_handler)
+      , cluster_(cluster)
+      , close_immediately_(false) {}
 
-  void use_close_immediately() {
-    close_immediately_ = true;
-  }
+  void use_close_immediately() { close_immediately_ = true; }
 
   virtual internal::ClientConnection* create(internal::ServerConnection* server) const {
     if (close_immediately_) {
@@ -1104,9 +1060,10 @@ public:
 
 class Ipv4AddressGenerator : public AddressGenerator {
 public:
-  Ipv4AddressGenerator(uint8_t a = 127, uint8_t b = 0, uint8_t c = 0, uint8_t d = 1, int port = 9042)
-    : ip_((a << 24) | (b << 16) | (c << 8) | (d & 0xff))
-    , port_(port) { }
+  Ipv4AddressGenerator(uint8_t a = 127, uint8_t b = 0, uint8_t c = 0, uint8_t d = 1,
+                       int port = 9042)
+      : ip_((a << 24) | (b << 16) | (c << 8) | (d & 0xff))
+      , port_(port) {}
 
   virtual Address next();
 
@@ -1129,14 +1086,10 @@ private:
 
 class TopologyChangeEvent : public Event {
 public:
-  enum Type {
-    NEW_NODE,
-    MOVED_NODE,
-    REMOVED_NODE
-  };
+  enum Type { NEW_NODE, MOVED_NODE, REMOVED_NODE };
 
   TopologyChangeEvent(Type type, const Address& address)
-    : Event(encode(type, address)) { }
+      : Event(encode(type, address)) {}
 
   static Ptr new_node(const Address& address);
   static Ptr moved_node(const Address& address);
@@ -1147,13 +1100,10 @@ public:
 
 class StatusChangeEvent : public Event {
 public:
-  enum Type {
-    UP,
-    DOWN
-  };
+  enum Type { UP, DOWN };
 
   StatusChangeEvent(Type type, const Address& address)
-    : Event(encode(type, address)) { }
+      : Event(encode(type, address)) {}
 
   static Ptr up(const Address& address);
   static Ptr down(const Address& address);
@@ -1163,48 +1113,30 @@ public:
 
 class SchemaChangeEvent : public Event {
 public:
-  enum Type {
-    CREATED,
-    UPDATED,
-    DROPPED
-  };
+  enum Type { CREATED, UPDATED, DROPPED };
 
-  enum Target {
-    KEYSPACE,
-    TABLE,
-    USER_TYPE,
-    FUNCTION,
-    AGGREGATE
-  };
+  enum Target { KEYSPACE, TABLE, USER_TYPE, FUNCTION, AGGREGATE };
 
-  SchemaChangeEvent(Target target, Type type,
-                    const String& keyspace_name, const String& target_name = "",
+  SchemaChangeEvent(Target target, Type type, const String& keyspace_name,
+                    const String& target_name = "",
                     const Vector<String>& args_types = Vector<String>())
-    : Event(encode(target, type, keyspace_name, target_name, args_types)) { }
+      : Event(encode(target, type, keyspace_name, target_name, args_types)) {}
 
-  static Ptr keyspace(Type type,
-                      const String& keyspace_name);
-  static Ptr table(Type type,
-                   const String& keyspace_name, const String& table_name);
-  static Ptr user_type(Type type,
-                       const String& keyspace_name, const String& user_type_name);
-  static Ptr function(Type type,
-                      const String& keyspace_name, const String& function_name,
+  static Ptr keyspace(Type type, const String& keyspace_name);
+  static Ptr table(Type type, const String& keyspace_name, const String& table_name);
+  static Ptr user_type(Type type, const String& keyspace_name, const String& user_type_name);
+  static Ptr function(Type type, const String& keyspace_name, const String& function_name,
                       const Vector<String>& args_types);
-  static Ptr aggregate(Type type,
-                       const String& keyspace_name, const String& aggregate_name,
+  static Ptr aggregate(Type type, const String& keyspace_name, const String& aggregate_name,
                        const Vector<String>& args_types);
 
-  static String encode(Target target, Type type,
-                       const String& keyspace_name, const String& target_name,
-                       const Vector<String>& arg_types);
+  static String encode(Target target, Type type, const String& keyspace_name,
+                       const String& target_name, const Vector<String>& arg_types);
 };
 
 class Cluster {
 protected:
-  void init(AddressGenerator& generator,
-            ClientConnectionFactory& factory,
-            size_t num_nodes_dc1,
+  void init(AddressGenerator& generator, ClientConnectionFactory& factory, size_t num_nodes_dc1,
             size_t num_nodes_dc2);
 
 public:
@@ -1235,14 +1167,14 @@ public:
 private:
   struct Server {
     Server(const Host& host, const internal::ServerConnection::Ptr& connection)
-      : host(host)
-      , connection(connection)
-      , is_removed(false) { }
+        : host(host)
+        , connection(connection)
+        , is_removed(false) {}
 
     Server(const Server& server)
-      : host(server.host)
-      , connection(server.connection)
-      , is_removed(server.is_removed.load()) { }
+        : host(server.host)
+        , connection(server.connection)
+        , is_removed(server.is_removed.load()) {}
 
     Server& operator=(const Server& server) {
       host = server.host;
@@ -1258,8 +1190,7 @@ private:
 
   typedef Vector<Server> Servers;
 
-  int create_and_add_server(AddressGenerator& generator,
-                            ClientConnectionFactory& factory,
+  int create_and_add_server(AddressGenerator& generator, ClientConnectionFactory& factory,
                             const String& dc);
 
 private:
@@ -1286,33 +1217,22 @@ public:
 
 class SimpleCluster : public Cluster {
 public:
-  SimpleCluster(const RequestHandler* request_handler,
-                size_t num_nodes_dc1 = 1,
+  SimpleCluster(const RequestHandler* request_handler, size_t num_nodes_dc1 = 1,
                 size_t num_nodes_dc2 = 0)
-    : factory_(request_handler, this)
-    , event_loop_group_(1) {
+      : factory_(request_handler, this)
+      , event_loop_group_(1) {
     init(generator_, factory_, num_nodes_dc1, num_nodes_dc2);
   }
 
-  ~SimpleCluster() {
-    stop_all();
-  }
+  ~SimpleCluster() { stop_all(); }
 
-  void use_close_immediately() {
-    factory_.use_close_immediately();
-  }
+  void use_close_immediately() { factory_.use_close_immediately(); }
 
-  int start_all() {
-    return Cluster::start_all(&event_loop_group_);
-  }
+  int start_all() { return Cluster::start_all(&event_loop_group_); }
 
-  int start(size_t node) {
-    return Cluster::start(&event_loop_group_, node);
-  }
+  int start(size_t node) { return Cluster::start(&event_loop_group_, node); }
 
-  int add(size_t node) {
-    return Cluster::add(&event_loop_group_, node);
-  }
+  int add(size_t node) { return Cluster::add(&event_loop_group_, node); }
 
 private:
   Ipv4AddressGenerator generator_;
@@ -1323,12 +1243,10 @@ private:
 class SimpleEchoServer {
 public:
   SimpleEchoServer(const Address& address = Address("127.0.0.1", 8888))
-   : event_loop_group_(1)
-   , server_(new internal::ServerConnection(address, factory_)) { }
+      : event_loop_group_(1)
+      , server_(new internal::ServerConnection(address, factory_)) {}
 
-  ~SimpleEchoServer() {
-    close();
-  }
+  ~SimpleEchoServer() { close(); }
 
   void close() {
     server_->close();
@@ -1344,9 +1262,7 @@ public:
     return cert;
   }
 
-  void use_close_immediately() {
-    factory_.use_close_immediately();
-  }
+  void use_close_immediately() { factory_.use_close_immediately(); }
 
   int listen() {
     server_->listen(&event_loop_group_);
@@ -1361,7 +1277,7 @@ private:
   class CloseConnection : public internal::ClientConnection {
   public:
     CloseConnection(internal::ServerConnection* server)
-      : internal::ClientConnection(server) { }
+        : internal::ClientConnection(server) {}
 
     virtual int on_accept() {
       int rc = accept();
@@ -1376,21 +1292,17 @@ private:
   class EchoConnection : public internal::ClientConnection {
   public:
     EchoConnection(internal::ServerConnection* server)
-      : internal::ClientConnection(server) { }
+        : internal::ClientConnection(server) {}
 
-    virtual void on_read(const char* data, size_t len)  {
-      write(data, len);
-    }
+    virtual void on_read(const char* data, size_t len) { write(data, len); }
   };
 
   class ClientConnectionFactory : public internal::ClientConnectionFactory {
   public:
     ClientConnectionFactory()
-      : close_immediately_(false) { }
+        : close_immediately_(false) {}
 
-    void use_close_immediately() {
-      close_immediately_ = true;
-    }
+    void use_close_immediately() { close_immediately_ = true; }
 
     virtual internal::ClientConnection* create(internal::ServerConnection* server) const {
       if (close_immediately_) {

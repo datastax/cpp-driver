@@ -17,10 +17,10 @@
 #ifndef DATASTAX_INTERNAL_TOKEN_AWARE_POLICY_HPP
 #define DATASTAX_INTERNAL_TOKEN_AWARE_POLICY_HPP
 
-#include "token_map.hpp"
-#include "load_balancing.hpp"
 #include "host.hpp"
+#include "load_balancing.hpp"
 #include "scoped_ptr.hpp"
+#include "token_map.hpp"
 
 namespace datastax { namespace internal { namespace core {
 
@@ -32,12 +32,11 @@ public:
       , index_(0)
       , shuffle_replicas_(shuffle_replicas) {}
 
-  virtual ~TokenAwarePolicy() { }
+  virtual ~TokenAwarePolicy() {}
 
   virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
 
-  virtual QueryPlan* new_query_plan(const String& keyspace,
-                                    RequestHandler* request_handler,
+  virtual QueryPlan* new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
   LoadBalancingPolicy* new_instance() {
@@ -47,15 +46,13 @@ public:
 private:
   class TokenAwareQueryPlan : public QueryPlan {
   public:
-    TokenAwareQueryPlan(LoadBalancingPolicy* child_policy,
-                        QueryPlan* child_plan,
-                        const CopyOnWriteHostVec& replicas,
-                        size_t start_index)
-      : child_policy_(child_policy)
-      , child_plan_(child_plan)
-      , replicas_(replicas)
-      , index_(start_index)
-      , remaining_(replicas->size()) { }
+    TokenAwareQueryPlan(LoadBalancingPolicy* child_policy, QueryPlan* child_plan,
+                        const CopyOnWriteHostVec& replicas, size_t start_index)
+        : child_policy_(child_policy)
+        , child_plan_(child_plan)
+        , replicas_(replicas)
+        , index_(start_index)
+        , remaining_(replicas->size()) {}
 
     Host::Ptr compute_next();
 
@@ -74,6 +71,6 @@ private:
 private:
   DISALLOW_COPY_AND_ASSIGN(TokenAwarePolicy);
 };
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

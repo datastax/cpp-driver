@@ -36,7 +36,7 @@
 #endif
 
 // Windows Server 2003 or higher required to build because
-// Interlocked*64() intrinsics are used. The Boost implementation 
+// Interlocked*64() intrinsics are used. The Boost implementation
 // of Atomic<> may offer better compatibility and performance.
 
 // This is often defined in the Visual Studio project settings
@@ -54,8 +54,8 @@
 
 // 32-bit Windows compilation
 #ifndef _M_X64
-# pragma intrinsic(_InterlockedCompareExchange64)
-# define InterlockedCompareExchange64 _InterlockedCompareExchange64
+#pragma intrinsic(_InterlockedCompareExchange64)
+#define InterlockedCompareExchange64 _InterlockedCompareExchange64
 #endif
 
 namespace datastax { namespace internal {
@@ -65,9 +65,8 @@ namespace impl {
 // copy_cast<> wouldn't work because it would lose
 // the "volatile" qualifier when passed to "memcpy()"
 // and the compiler would error.
-template<typename From, typename To>
-inline To union_cast(const From& from)
-{
+template <typename From, typename To>
+inline To union_cast(const From& from) {
   STATIC_ASSERT(sizeof(From) == sizeof(To));
 
   union {
@@ -87,8 +86,8 @@ struct IsIntegral {
 #define IS_INTEGRAL(Type)           \
   template <>                       \
   struct IsIntegral<Type> {         \
-  static const bool value = true; \
-}
+    static const bool value = true; \
+  }
 
 IS_INTEGRAL(char);
 IS_INTEGRAL(short);
@@ -104,7 +103,7 @@ IS_INTEGRAL(unsigned long long);
 
 #undef IS_INTEGRAL
 
-template <class T, bool IsInt = IsIntegral<T>::value >
+template <class T, bool IsInt = IsIntegral<T>::value>
 struct Classify {
   typedef void Type;
 };
@@ -130,8 +129,8 @@ struct IsSigned;
 #define IS_SIGNED(Type, Value)       \
   template <>                        \
   struct IsSigned<Type> {            \
-  static const bool value = Value; \
-}
+    static const bool value = Value; \
+  }
 
 IS_SIGNED(int, true);
 IS_SIGNED(unsigned int, false);
@@ -142,7 +141,7 @@ IS_SIGNED(unsigned long long, false);
 
 #undef IS_SIGNED
 
-template<size_t Size, bool Signed>
+template <size_t Size, bool Signed>
 struct AtomicImpl;
 
 template <size_t NumBytes, bool Signed>
@@ -151,8 +150,8 @@ struct AtomicStorageType;
 #define ATOMIC_STORAGE_TYPE(NumBytes, Signed, StorageType) \
   template <>                                              \
   struct AtomicStorageType<NumBytes, Signed> {             \
-  typedef StorageType Type;                              \
-}
+    typedef StorageType Type;                              \
+  }
 
 ATOMIC_STORAGE_TYPE(4, true, long);
 ATOMIC_STORAGE_TYPE(4, false, unsigned long);
@@ -180,7 +179,8 @@ struct AtomicImpl<4, Signed> {
 
   static inline bool compare_exchange(volatile Type& storage, Type& expected, Type desired) {
     Type temp_expected = expected;
-    Type previous = static_cast<Type>(InterlockedCompareExchange((long*)&storage, (long)desired, (long)temp_expected));
+    Type previous = static_cast<Type>(
+        InterlockedCompareExchange((long*)&storage, (long)desired, (long)temp_expected));
     expected = previous;
     return (previous == temp_expected);
   }
@@ -195,7 +195,8 @@ struct AtomicImpl<8, Signed> {
     return static_cast<Type>(InterlockedExchangeAdd64((__int64*)&storage, (__int64)value));
 #else
     Type old_value = storage;
-    while(!compare_exchange(storage, old_value, (old_value + value))) {}
+    while (!compare_exchange(storage, old_value, (old_value + value))) {
+    }
     return old_value;
 #endif
   }
@@ -210,14 +211,16 @@ struct AtomicImpl<8, Signed> {
     return static_cast<Type>(InterlockedExchange64((__int64*)&storage, (__int64)value));
 #else
     Type ret = storage;
-    while(!compare_exchange(storage, ret, value)) {}
+    while (!compare_exchange(storage, ret, value)) {
+    }
     return ret;
 #endif
   }
 
   static inline bool compare_exchange(volatile Type& storage, Type& expected, Type desired) {
     Type temp_expected = expected;
-    Type previous = static_cast<Type>(InterlockedCompareExchange64((__int64*)&storage, (__int64)desired, (__int64)temp_expected));
+    Type previous = static_cast<Type>(
+        InterlockedCompareExchange64((__int64*)&storage, (__int64)desired, (__int64)temp_expected));
     expected = previous;
     return (previous == temp_expected);
   }
@@ -230,11 +233,12 @@ class AtomicBase;
 template <class T>
 class AtomicBase<T, void> {
 public:
-  typedef typename impl::AtomicImpl<sizeof(T), false > Impl;
+  typedef typename impl::AtomicImpl<sizeof(T), false> Impl;
   typedef typename Impl::Type ImplType;
 
   AtomicBase() {}
-  explicit AtomicBase(T value) : value_(static_cast<ImplType>(value)) {}
+  explicit AtomicBase(T value)
+      : value_(static_cast<ImplType>(value)) {}
 
   inline void store(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     assert(order != MEMORY_ORDER_ACQUIRE);
@@ -263,14 +267,16 @@ public:
     return static_cast<T>(Impl::exchange(value_, static_cast<ImplType>(value)));
   }
 
-  inline bool compare_exchange_strong(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_strong(T& expected, T desired,
+                                      MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     ImplType temp_expected = static_cast<ImplType>(expected);
     bool result = Impl::compare_exchange(value_, temp_expected, static_cast<ImplType>(desired));
     expected = static_cast<T>(temp_expected);
     return result;
   }
 
-  inline bool compare_exchange_weak(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_weak(T& expected, T desired,
+                                    MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     return compare_exchange_strong(expected, desired, order);
   }
 
@@ -286,7 +292,8 @@ public:
   typedef typename Impl::Type ImplType;
 
   AtomicBase() {}
-  explicit AtomicBase(T value) : value_(cast(value)) {}
+  explicit AtomicBase(T value)
+      : value_(cast(value)) {}
 
   inline void store(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     assert(order != MEMORY_ORDER_ACQUIRE);
@@ -315,25 +322,23 @@ public:
     return cast(Impl::exchange(value_, cast(value)));
   }
 
-  inline bool compare_exchange_strong(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_strong(T& expected, T desired,
+                                      MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     ImplType temp_expected = cast(expected);
     bool result = Impl::compare_exchange(value_, temp_expected, cast(desired));
     expected = cast(temp_expected);
     return result;
   }
 
-  inline bool compare_exchange_weak(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_weak(T& expected, T desired,
+                                    MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     return compare_exchange_strong(expected, desired, order);
   }
 
 private:
-  static inline bool cast(ImplType value) {
-    return static_cast<ImplType>(value ? 1 : 0);
-  }
+  static inline bool cast(ImplType value) { return static_cast<ImplType>(value ? 1 : 0); }
 
-  static inline ImplType cast(bool value) {
-    return static_cast<T>(value != 0);
-  }
+  static inline ImplType cast(bool value) { return static_cast<T>(value != 0); }
 
   typename ImplType value_;
 };
@@ -342,11 +347,12 @@ private:
 template <class T>
 class AtomicBase<T, int> {
 public:
-  typedef typename impl::AtomicImpl<sizeof(T), impl::IsSigned<T>::value > Impl;
+  typedef typename impl::AtomicImpl<sizeof(T), impl::IsSigned<T>::value> Impl;
   typedef typename Impl::Type ImplType;
 
   AtomicBase() {}
-  explicit AtomicBase(T value) : value_(static_cast<ImplType>(value)) {}
+  explicit AtomicBase(T value)
+      : value_(static_cast<ImplType>(value)) {}
 
   inline void store(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     assert(order != MEMORY_ORDER_ACQUIRE);
@@ -383,14 +389,16 @@ public:
     return static_cast<T>(Impl::exchange(value_, static_cast<ImplType>(value)));
   }
 
-  inline bool compare_exchange_strong(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_strong(T& expected, T desired,
+                                      MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     ImplType temp_expected = static_cast<ImplType>(expected);
     bool result = Impl::compare_exchange(value_, temp_expected, static_cast<ImplType>(desired));
     expected = static_cast<T>(temp_expected);
     return result;
   }
 
-  inline bool compare_exchange_weak(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_weak(T& expected, T desired,
+                                    MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     return compare_exchange_strong(expected, desired, order);
   }
 
@@ -402,11 +410,12 @@ private:
 template <class T>
 class AtomicBase<T*, void*> {
 public:
-  typedef typename impl::AtomicImpl<sizeof(T*), false > Impl;
+  typedef typename impl::AtomicImpl<sizeof(T*), false> Impl;
   typedef typename Impl::Type ImplType;
 
   AtomicBase() {}
-  explicit AtomicBase(T* value) : value_(union_cast<T*, ImplType>(value)) {}
+  explicit AtomicBase(T* value)
+      : value_(union_cast<T*, ImplType>(value)) {}
 
   inline void store(T* value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     assert(order != MEMORY_ORDER_ACQUIRE);
@@ -432,17 +441,20 @@ public:
   }
 
   inline T* exchange(T* value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return union_cast<volatile ImplType, T*>(Impl::exchange(value_, union_cast<T*, ImplType>(value)));
+    return union_cast<volatile ImplType, T*>(
+        Impl::exchange(value_, union_cast<T*, ImplType>(value)));
   }
 
-  inline bool compare_exchange_strong(T*& expected, T* desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_strong(T*& expected, T* desired,
+                                      MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     ImplType temp_expected = union_cast<T*, ImplType>(expected);
     bool result = Impl::compare_exchange(value_, temp_expected, union_cast<T*, ImplType>(desired));
     expected = union_cast<volatile ImplType, T*>(temp_expected);
     return result;
   }
 
-  inline bool compare_exchange_weak(T*& expected, T* desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_weak(T*& expected, T* desired,
+                                    MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     return compare_exchange_strong(expected, desired, order);
   }
 
@@ -457,7 +469,7 @@ class Atomic : public impl::AtomicBase<T, typename impl::Classify<T>::Type> {
 public:
   Atomic() {}
   explicit Atomic(T value)
-    : AtomicBase(value) {}
+      : AtomicBase(value) {}
 };
 
 inline void atomic_thread_fence(MemoryOrder order) {
@@ -469,6 +481,6 @@ inline void atomic_thread_fence(MemoryOrder order) {
   _ReadWriteBarrier();
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

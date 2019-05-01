@@ -55,7 +55,7 @@ public:
 
   type* get() const { return ptr_; }
   type& operator*() const { return *ptr_; }
-  type * operator->() const { return ptr_; }
+  type* operator->() const { return ptr_; }
   operator bool() const { return ptr_ != NULL; }
 
 private:
@@ -105,6 +105,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ScopedArray);
 };
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

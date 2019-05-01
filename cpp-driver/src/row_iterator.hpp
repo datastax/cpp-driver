@@ -47,6 +47,6 @@ private:
   int32_t index_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

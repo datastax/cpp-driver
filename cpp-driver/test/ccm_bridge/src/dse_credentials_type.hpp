@@ -22,121 +22,121 @@
 
 namespace CCM {
 
+/**
+ * DSE credential stype indicating how authentication for DSE downloads is
+ * performed through CCM
+ */
+class DseCredentialsType {
+public:
   /**
-   * DSE credential stype indicating how authentication for DSE downloads is
-   * performed through CCM
+   * Iterator for DSE credentials type constants
    */
-  class DseCredentialsType {
-  public:
-    /**
-     * Iterator for DSE credentials type constants
-     */
-    typedef std::set<DseCredentialsType>::iterator iterator;
+  typedef std::set<DseCredentialsType>::iterator iterator;
 
-    /**
-     * Username/Password credentials type; DSE download process is authenticated
-     * via plain text username and password
-     */
-    static const DseCredentialsType USERNAME_PASSWORD;
-    /**
-     * File credentials type; DSE download process is authenticated via the
-     * CCM DSE credentials default file location (e.g. ~/.ccm/.dse.ini)
-     */
-    static const DseCredentialsType INI_FILE;
+  /**
+   * Username/Password credentials type; DSE download process is authenticated
+   * via plain text username and password
+   */
+  static const DseCredentialsType USERNAME_PASSWORD;
+  /**
+   * File credentials type; DSE download process is authenticated via the
+   * CCM DSE credentials default file location (e.g. ~/.ccm/.dse.ini)
+   */
+  static const DseCredentialsType INI_FILE;
 
-    /**
-     * Name of constant
-     *
-     * @return Name of constant
-     */
-    const std::string& name() const;
-    /**
-     * Ordinal of constant
-     *
-     * @return Ordinal of constant
-     */
-    short ordinal() const;
-    /**
-     * Get the display name
-     *
-     * @return Display name of DSE credentials type
-     */
-    const std::string& to_string() const;
+  /**
+   * Name of constant
+   *
+   * @return Name of constant
+   */
+  const std::string& name() const;
+  /**
+   * Ordinal of constant
+   *
+   * @return Ordinal of constant
+   */
+  short ordinal() const;
+  /**
+   * Get the display name
+   *
+   * @return Display name of DSE credentials type
+   */
+  const std::string& to_string() const;
 
-    /**
-     * Less than (can be used for sorting)
-     *
-     * @param object Right hand side comparison object
-     * @return True if LHS < RHS; false otherwise
-     */
-    bool operator<(const DseCredentialsType& object) const;
-    /**
-     * Equal to
-     *
-     * @param object Right hand side comparison object
-     * @return True if LHS == RHS; false otherwise
-     */
-    bool operator==(const DseCredentialsType& object) const;
-    /**
-     * Equal to (case-incentive string comparison)
-     *
-     * @param object Right hand side comparison object
-     * @return True if LHS == RHS; false otherwise
-     */
-    bool operator==(const std::string& object) const;
+  /**
+   * Less than (can be used for sorting)
+   *
+   * @param object Right hand side comparison object
+   * @return True if LHS < RHS; false otherwise
+   */
+  bool operator<(const DseCredentialsType& object) const;
+  /**
+   * Equal to
+   *
+   * @param object Right hand side comparison object
+   * @return True if LHS == RHS; false otherwise
+   */
+  bool operator==(const DseCredentialsType& object) const;
+  /**
+   * Equal to (case-incentive string comparison)
+   *
+   * @param object Right hand side comparison object
+   * @return True if LHS == RHS; false otherwise
+   */
+  bool operator==(const std::string& object) const;
 
-    /**
-     * First item in the DSE credentials constants
-     *
-     * @return Iterator pointing to the first element in the set
-     */
-    static std::set<DseCredentialsType>::iterator begin();
-    /**
-     * Last item in the DSE credentials constants
-     *
-     * @return Iterator pointing to the last element in the set
-     */
-    static std::set<DseCredentialsType>::iterator end();
+  /**
+   * First item in the DSE credentials constants
+   *
+   * @return Iterator pointing to the first element in the set
+   */
+  static std::set<DseCredentialsType>::iterator begin();
+  /**
+   * Last item in the DSE credentials constants
+   *
+   * @return Iterator pointing to the last element in the set
+   */
+  static std::set<DseCredentialsType>::iterator end();
 
-    /**
-     * Default constructor to handle issues with static initialization of
-     * constant DSE credentials types
-     */
-    DseCredentialsType();
+  /**
+   * Default constructor to handle issues with static initialization of
+   * constant DSE credentials types
+   */
+  DseCredentialsType();
 
-  private:
-    /**
-     * DSE credentials type constants
-     */
-    static std::set<DseCredentialsType> constants_;
-    /**
-     * Name of constant
-     */
-    std::string name_;
-    /**
-     * Ordinal of constant
-     */
-    short ordinal_;
-    /**
-     * Display name for constant
-     */
-    std::string display_name_;
+private:
+  /**
+   * DSE credentials type constants
+   */
+  static std::set<DseCredentialsType> constants_;
+  /**
+   * Name of constant
+   */
+  std::string name_;
+  /**
+   * Ordinal of constant
+   */
+  short ordinal_;
+  /**
+   * Display name for constant
+   */
+  std::string display_name_;
 
-    /**
-     * Constructor
-     *
-     * @param name Name for DSE credentials type
-     * @param display_name Display name for DSE credentials type
-     */
-    DseCredentialsType(const std::string& name, int ordinal, const std::string& display_name);
-    /**
-     * Get the DSE credential type constants
-     *
-     * @return List of DSE credentials type constants
-     */
-    static const std::set<DseCredentialsType>& get_constants();
-  };
+  /**
+   * Constructor
+   *
+   * @param name Name for DSE credentials type
+   * @param display_name Display name for DSE credentials type
+   */
+  DseCredentialsType(const std::string& name, int ordinal, const std::string& display_name);
+  /**
+   * Get the DSE credential type constants
+   *
+   * @return List of DSE credentials type constants
+   */
+  static const std::set<DseCredentialsType>& get_constants();
+};
 
-}
+} // namespace CCM
 
 #endif // __CCM_DSE_CREDENTIALS_TYPE_HPP__

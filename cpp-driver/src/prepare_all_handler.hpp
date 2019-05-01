@@ -35,10 +35,8 @@ class PrepareAllHandler : public RefCounted<PrepareAllHandler> {
 public:
   typedef SharedRefPtr<PrepareAllHandler> Ptr;
 
-  PrepareAllHandler(const Host::Ptr& current_host,
-                    const Response::Ptr& response,
-                    const RequestHandler::Ptr& request_handler,
-                    int remaining);
+  PrepareAllHandler(const Host::Ptr& current_host, const Response::Ptr& response,
+                    const RequestHandler::Ptr& request_handler, int remaining);
 
 private:
   friend class PrepareAllCallback;
@@ -78,6 +76,6 @@ private:
   bool is_finished_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

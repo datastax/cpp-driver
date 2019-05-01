@@ -38,7 +38,7 @@ private:
   const CassIteratorType type_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::Iterator, CassIterator)
 

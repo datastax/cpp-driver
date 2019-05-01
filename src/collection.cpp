@@ -8,17 +8,16 @@
 #include "dse.h"
 
 #include "date_range.hpp"
-#include "point.hpp"
 #include "line_string.hpp"
+#include "point.hpp"
 #include "polygon.hpp"
 
 using namespace datastax::internal::enterprise;
 
-CassError cass_collection_append_dse_point(CassCollection* collection,
-                                           cass_double_t x, cass_double_t y) {
+CassError cass_collection_append_dse_point(CassCollection* collection, cass_double_t x,
+                                           cass_double_t y) {
   Bytes bytes = encode_point(x, y);
-  return cass_collection_append_custom(collection, DSE_POINT_TYPE,
-                                       bytes.data(), bytes.size());
+  return cass_collection_append_custom(collection, DSE_POINT_TYPE, bytes.data(), bytes.size());
 }
 
 CassError cass_collection_append_dse_line_string(CassCollection* collection,
@@ -29,13 +28,12 @@ CassError cass_collection_append_dse_line_string(CassCollection* collection,
 
 CassError cass_collection_append_dse_polygon(CassCollection* collection,
                                              const DsePolygon* polygon) {
-  return cass_collection_append_custom(collection, DSE_POLYGON_TYPE,
-                                       polygon->bytes().data(), polygon->bytes().size());
+  return cass_collection_append_custom(collection, DSE_POLYGON_TYPE, polygon->bytes().data(),
+                                       polygon->bytes().size());
 }
 
 CassError cass_collection_append_dse_date_range(CassCollection* collection,
                                                 const DseDateRange* range) {
   Bytes bytes = encode_date_range(range);
-  return cass_collection_append_custom(collection, DSE_DATE_RANGE_TYPE,
-                                       bytes.data(), bytes.size());
+  return cass_collection_append_custom(collection, DSE_DATE_RANGE_TYPE, bytes.data(), bytes.size());
 }

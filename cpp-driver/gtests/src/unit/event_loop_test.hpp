@@ -17,16 +17,16 @@
 #ifndef EVENT_LOOP_TEST_HPP
 #define EVENT_LOOP_TEST_HPP
 
-#include "unit.hpp"
 #include "event_loop.hpp"
+#include "unit.hpp"
 
-using datastax::internal::core::Future;
 using datastax::internal::core::EventLoop;
+using datastax::internal::core::Future;
 
 class EventLoopTest : public Unit {
 public:
   EventLoopTest(const datastax::String& thread_name)
-    :thread_name_(thread_name) { }
+      : thread_name_(thread_name) {}
 
   virtual void SetUp() {
     Unit::SetUp();

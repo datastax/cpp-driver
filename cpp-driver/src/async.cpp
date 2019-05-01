@@ -19,11 +19,9 @@
 using namespace datastax::internal::core;
 
 Async::Async()
-  : handle_(NULL) { }
+    : handle_(NULL) {}
 
-Async::~Async() {
-  close_handle();
-}
+Async::~Async() { close_handle(); }
 
 int Async::start(uv_loop_t* loop, const Async::Callback& callback) {
   if (handle_ == NULL) {

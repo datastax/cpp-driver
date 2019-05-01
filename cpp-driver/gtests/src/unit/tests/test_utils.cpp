@@ -23,11 +23,10 @@
 #include <stdio.h>
 
 using datastax::String;
-using datastax::internal::to_cql_id;
 using datastax::internal::num_leading_zeros;
+using datastax::internal::to_cql_id;
 
-TEST(UtilsUnitTest, CqlId)
-{
+TEST(UtilsUnitTest, CqlId) {
   String s;
 
   // valid id
@@ -47,8 +46,7 @@ TEST(UtilsUnitTest, CqlId)
   EXPECT_EQ(to_cql_id(s), String("!@#"));
 }
 
-TEST(UtilsUnitTest, EscapeId)
-{
+TEST(UtilsUnitTest, EscapeId) {
   String s;
 
   s = "abc";
@@ -64,15 +62,13 @@ TEST(UtilsUnitTest, EscapeId)
   EXPECT_EQ(escape_id(s), String("\"a\"\"Bc\""));
 }
 
-TEST(UtilsUnitTest, NumLeadingZeros)
-{
+TEST(UtilsUnitTest, NumLeadingZeros) {
   EXPECT_EQ(64u, num_leading_zeros(0));
   EXPECT_EQ(0u, num_leading_zeros(1LL << 63));
   EXPECT_EQ(0u, num_leading_zeros(1LL << 63 | 1 << 5));
 }
 
-TEST(UtilsUnitTest, NextPow2)
-{
+TEST(UtilsUnitTest, NextPow2) {
   EXPECT_EQ(STATIC_NEXT_POW_2(1u), 2u);
   EXPECT_EQ(STATIC_NEXT_POW_2(1u), 2u);
   EXPECT_EQ(STATIC_NEXT_POW_2(2u), 2u);

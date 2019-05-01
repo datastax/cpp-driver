@@ -17,10 +17,10 @@
 
       CREATE ROLE target_user WITH PASSWORD = 'target_user' and LOGIN = true;
       CREATE ROLE service_user WITH PASSWORD = 'service_user' and LOGIN = true;
-      CREATE KEYSPACE examples WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};
-      CREATE TABLE examples.proxy_execution (f1 int PRIMARY KEY, f2 int);
-      INSERT INTO examples.proxy_execution (f1, f2) VALUES (1, 2);
-      GRANT ALL ON examples.proxy_execution TO target_user;
+      CREATE KEYSPACE examples WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor':
+ 1}; CREATE TABLE examples.proxy_execution (f1 int PRIMARY KEY, f2 int); INSERT INTO
+ examples.proxy_execution (f1, f2) VALUES (1, 2); GRANT ALL ON examples.proxy_execution TO
+ target_user;
 
       GRANT PROXY.EXECUTE ON ROLE 'target_user' to 'service_user';
  * 3. Verify that service_user cannot query examples.proxy_execution (in cqlsh).
@@ -56,7 +56,7 @@ CassError select_and_dump(CassSession* session, const char* execute_as) {
       int f1, f2;
       const CassRow* row = cass_iterator_get_row(iterator);
       if (cass_value_get_int32(cass_row_get_column(row, 0), &f1) != CASS_OK ||
-        cass_value_get_int32(cass_row_get_column(row, 1), &f2) != CASS_OK) {
+          cass_value_get_int32(cass_row_get_column(row, 1), &f2) != CASS_OK) {
         print_error(future);
       } else {
         printf("f1: %d    f2: %d\n", f1, f2);

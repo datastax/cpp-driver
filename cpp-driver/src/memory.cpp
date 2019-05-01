@@ -17,8 +17,7 @@ using namespace datastax::internal;
 
 extern "C" {
 
-void cass_alloc_set_functions(CassMallocFunction malloc_func,
-                              CassReallocFunction realloc_func,
+void cass_alloc_set_functions(CassMallocFunction malloc_func, CassReallocFunction realloc_func,
                               CassFreeFunction free_func) {
   Memory::set_functions(malloc_func, realloc_func, free_func);
 }
@@ -61,12 +60,9 @@ static void* calloc_(size_t count, size_t size) {
 }
 #endif
 
-void Memory::set_functions(CassMallocFunction malloc_func,
-                           CassReallocFunction realloc_func,
+void Memory::set_functions(CassMallocFunction malloc_func, CassReallocFunction realloc_func,
                            CassFreeFunction free_func) {
-  if (malloc_func == NULL ||
-      realloc_func == NULL ||
-      free_func == NULL) {
+  if (malloc_func == NULL || realloc_func == NULL || free_func == NULL) {
     Memory::malloc_func_ = NULL;
     Memory::realloc_func_ = NULL;
     Memory::free_func_ = NULL;

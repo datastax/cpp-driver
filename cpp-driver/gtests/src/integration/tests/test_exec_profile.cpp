@@ -24,10 +24,10 @@
 class ExecutionProfileTest : public Integration {
 public:
   ExecutionProfileTest()
-    : insert_(NULL)
-    , child_retry_policy_(IgnoreRetryPolicy::policy()) // Used for counting retry
-    , logging_retry_policy_(child_retry_policy_)
-    , skip_base_execution_profile_(false) {
+      : insert_(NULL)
+      , child_retry_policy_(IgnoreRetryPolicy::policy()) // Used for counting retry
+      , logging_retry_policy_(child_retry_policy_)
+      , skip_base_execution_profile_(false) {
     replication_factor_ = 2;
     number_dc1_nodes_ = 2;
     is_beta_protocol_ = false; // Issue with beta protocol v5 and functions on Cassandra v3.10.0+
@@ -40,33 +40,40 @@ public:
     // Create the execution profiles for the test cases
     if (!skip_base_execution_profile_) {
       profiles_["request_timeout"] = ExecutionProfile::build().with_request_timeout(1);
-      profiles_["consistency"] = ExecutionProfile::build().with_consistency(CASS_CONSISTENCY_SERIAL);
-      profiles_["serial_consistency"] = ExecutionProfile::build().with_serial_consistency(CASS_CONSISTENCY_ONE);
-      profiles_["round_robin"] = ExecutionProfile::build().with_load_balance_round_robin()
-                                                          .with_token_aware_routing(false);
-      profiles_["latency_aware"] = ExecutionProfile::build().with_latency_aware_routing()
-                                                            .with_load_balance_round_robin();
-      profiles_["token_aware"] = ExecutionProfile::build().with_token_aware_routing()
-                                                          .with_load_balance_round_robin();
-      profiles_["blacklist"] = ExecutionProfile::build().with_blacklist_filtering(Options::host_prefix() + "1")
-                                                        .with_load_balance_round_robin();
-      profiles_["whitelist"] = ExecutionProfile::build().with_whitelist_filtering(Options::host_prefix() + "1")
-                                                        .with_load_balance_round_robin();
-      profiles_["retry_policy"] = ExecutionProfile::build().with_retry_policy(logging_retry_policy_)
-                                                           .with_consistency(CASS_CONSISTENCY_THREE);
-      profiles_["speculative_execution"] = ExecutionProfile::build().with_constant_speculative_execution_policy(100, 20);
+      profiles_["consistency"] =
+          ExecutionProfile::build().with_consistency(CASS_CONSISTENCY_SERIAL);
+      profiles_["serial_consistency"] =
+          ExecutionProfile::build().with_serial_consistency(CASS_CONSISTENCY_ONE);
+      profiles_["round_robin"] =
+          ExecutionProfile::build().with_load_balance_round_robin().with_token_aware_routing(false);
+      profiles_["latency_aware"] =
+          ExecutionProfile::build().with_latency_aware_routing().with_load_balance_round_robin();
+      profiles_["token_aware"] =
+          ExecutionProfile::build().with_token_aware_routing().with_load_balance_round_robin();
+      profiles_["blacklist"] = ExecutionProfile::build()
+                                   .with_blacklist_filtering(Options::host_prefix() + "1")
+                                   .with_load_balance_round_robin();
+      profiles_["whitelist"] = ExecutionProfile::build()
+                                   .with_whitelist_filtering(Options::host_prefix() + "1")
+                                   .with_load_balance_round_robin();
+      profiles_["retry_policy"] = ExecutionProfile::build()
+                                      .with_retry_policy(logging_retry_policy_)
+                                      .with_consistency(CASS_CONSISTENCY_THREE);
+      profiles_["speculative_execution"] =
+          ExecutionProfile::build().with_constant_speculative_execution_policy(100, 20);
     }
 
     // Call the parent setup function
     Integration::SetUp();
 
     // Create the table
-    session_.execute(format_string("CREATE TABLE %s (key text PRIMARY KEY, value int)",
-                     table_name_.c_str()));
+    session_.execute(
+        format_string("CREATE TABLE %s (key text PRIMARY KEY, value int)", table_name_.c_str()));
 
     // Create the insert statement for later use
     insert_ = Statement(format_string("INSERT INTO %s (key, value) VALUES (?, ?) IF NOT EXISTS",
-                                      table_name_.c_str()), 2);
+                                      table_name_.c_str()),
+                        2);
     insert_.bind<Text>(0, Text(test_name_));
     insert_.bind<Integer>(1, Integer(1000));
 
@@ -159,8 +166,7 @@ private:
       std::set<Text> tokens = row.next().as<Set<Text> >().value();
 
       // Iterate over the tokens and update the token/host mapping
-      for (std::set<Text>::const_iterator it = tokens.begin();
-           it != tokens.end(); ++it) {
+      for (std::set<Text>::const_iterator it = tokens.begin(); it != tokens.end(); ++it) {
         int64_t token = 0;
         std::stringstream token_value(it->value());
         if ((token_value >> token).fail()) {
@@ -177,20 +183,21 @@ private:
  */
 class DCExecutionProfileTest : public ExecutionProfileTest {
 public:
-  DCExecutionProfileTest() {
-    number_dc2_nodes_ = 1;
-  }
+  DCExecutionProfileTest() { number_dc2_nodes_ = 1; }
 
   void SetUp() {
     // Create the execution profiles for the test cases
-    profiles_["dc_aware"] = ExecutionProfile::build().with_load_balance_dc_aware("dc1", 1, false)
-                                                     .with_consistency(CASS_CONSISTENCY_LOCAL_ONE);
-    profiles_["blacklist_dc"] = ExecutionProfile::build().with_blacklist_dc_filtering("dc1")
-                                                         .with_load_balance_dc_aware("dc1", 1, true)
-                                                         .with_consistency(CASS_CONSISTENCY_LOCAL_ONE);
-    profiles_["whitelist_dc"] = ExecutionProfile::build().with_whitelist_dc_filtering("dc2")
-                                                         .with_load_balance_dc_aware("dc1", 1, true)
-                                                         .with_consistency(CASS_CONSISTENCY_LOCAL_ONE);
+    profiles_["dc_aware"] = ExecutionProfile::build()
+                                .with_load_balance_dc_aware("dc1", 1, false)
+                                .with_consistency(CASS_CONSISTENCY_LOCAL_ONE);
+    profiles_["blacklist_dc"] = ExecutionProfile::build()
+                                    .with_blacklist_dc_filtering("dc1")
+                                    .with_load_balance_dc_aware("dc1", 1, true)
+                                    .with_consistency(CASS_CONSISTENCY_LOCAL_ONE);
+    profiles_["whitelist_dc"] = ExecutionProfile::build()
+                                    .with_whitelist_dc_filtering("dc2")
+                                    .with_load_balance_dc_aware("dc1", 1, true)
+                                    .with_consistency(CASS_CONSISTENCY_LOCAL_ONE);
 
     // Call the parent setup function
     skip_base_execution_profile_ = true;
@@ -296,14 +303,14 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, Consistency) {
   result = session_.execute(batch, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result.error_code());
   ASSERT_TRUE(contains(result.error_message(),
-              "SERIAL is not supported as conditional update commit consistency"));
+                       "SERIAL is not supported as conditional update commit consistency"));
 
   // Execute a simple query with assigned profile (should fail)
   insert_.set_execution_profile("consistency");
   result = session_.execute(insert_, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result.error_code());
   ASSERT_TRUE(contains(result.error_message(),
-              "SERIAL is not supported as conditional update commit consistency"));
+                       "SERIAL is not supported as conditional update commit consistency"));
 }
 
 /**
@@ -328,15 +335,17 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, SerialConsistency) {
   batch.set_execution_profile("serial_consistency");
   Result result = session_.execute(batch, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result.error_code());
-  ASSERT_TRUE(contains(result.error_message(),
-              "Invalid consistency for conditional update. Must be one of SERIAL or LOCAL_SERIAL"));
+  ASSERT_TRUE(contains(
+      result.error_message(),
+      "Invalid consistency for conditional update. Must be one of SERIAL or LOCAL_SERIAL"));
 
   // Execute a simple query with assigned profile (should fail)
   insert_.set_execution_profile("serial_consistency");
   result = session_.execute(insert_, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result.error_code());
-  ASSERT_TRUE(contains(result.error_message(),
-              "Invalid consistency for conditional update. Must be one of SERIAL or LOCAL_SERIAL"));
+  ASSERT_TRUE(contains(
+      result.error_message(),
+      "Invalid consistency for conditional update. Must be one of SERIAL or LOCAL_SERIAL"));
 }
 
 /**
@@ -357,7 +366,7 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, RoundRobin) {
   CHECK_FAILURE;
 
   // Execute statements over all the nodes in the cluster twice
-  for (size_t i = 0; i < total_nodes_ * 2 ; ++i) {
+  for (size_t i = 0; i < total_nodes_ * 2; ++i) {
     // Execute the same query with the cluster default profile
     insert_.set_execution_profile(""); // Reset the insert statement
     Result result = session_.execute(insert_);
@@ -466,8 +475,7 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, TokenAwareRouting) {
     ASSERT_EQ(CASS_OK, result.error_code());
 
     // Validate the correct replica/token was used
-    ASSERT_STREQ(get_primary_replica(value.str()).c_str(),
-                 result.host().c_str());
+    ASSERT_STREQ(get_primary_replica(value.str()).c_str(), result.host().c_str());
   }
 
   // Assign the execution profile for token aware routing
@@ -485,8 +493,7 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, TokenAwareRouting) {
     ASSERT_EQ(CASS_OK, result.error_code());
 
     // Validate the correct replica/token was used
-    ASSERT_STREQ(get_primary_replica(value.str()).c_str(),
-                 result.host().c_str());
+    ASSERT_STREQ(get_primary_replica(value.str()).c_str(), result.host().c_str());
   }
 }
 
@@ -524,7 +531,7 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, BlacklistFiltering) {
   // Execute statements over all the nodes in the cluster twice
   for (size_t i = 0; i < total_nodes_ * 2; ++i) {
     // Execute the same query with the cluster default profile
-    insert_.set_execution_profile("");  // Reset the insert statement
+    insert_.set_execution_profile(""); // Reset the insert statement
     Result result = session_.execute(insert_);
     ASSERT_EQ(CASS_OK, result.error_code());
 
@@ -570,7 +577,7 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, WhitelistFiltering) {
   // Execute statements over all the nodes in the cluster twice
   for (size_t i = 0; i < total_nodes_ * 2; ++i) {
     // Execute the same query with the cluster default profile
-    insert_.set_execution_profile("");  // Reset the insert statement
+    insert_.set_execution_profile(""); // Reset the insert statement
     Result result = session_.execute(insert_);
     ASSERT_EQ(CASS_OK, result.error_code());
 
@@ -608,8 +615,8 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, RetryPolicy) {
   ASSERT_EQ(CASS_OK, result.error_code());
   ASSERT_EQ(0u, logger_.count());
 
-  //TODO(fero): Create a write timeout test for using Simulacron
-  //NOTE: Tested locally with batch to ensure profiles are set with correct
+  // TODO(fero): Create a write timeout test for using Simulacron
+  // NOTE: Tested locally with batch to ensure profiles are set with correct
   //      retry policy (if available)
 
   // Execute a simple query with assigned profile
@@ -643,16 +650,15 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, SpeculativeExecutionPolicy) {
   session_.execute("CREATE OR REPLACE FUNCTION timeout(arg int) "
                    "RETURNS NULL ON NULL INPUT RETURNS int LANGUAGE java "
                    "AS $$ long start = System.currentTimeMillis(); "
-                     "while(System.currentTimeMillis() - start < arg) {"
-                       ";;"
-                     "}"
-                     "return arg;"
+                   "while(System.currentTimeMillis() - start < arg) {"
+                   ";;"
+                   "}"
+                   "return arg;"
                    "$$;");
 
   // Execute a simple query without assigned profile using timeout UDF
   Statement statement(format_string("SELECT timeout(value) FROM %s WHERE key='%s'",
-                                    table_name_.c_str(),
-                                    test_name_.c_str()));
+                                    table_name_.c_str(), test_name_.c_str()));
   statement.set_idempotent(true);
   statement.set_record_attempted_hosts(true);
   Result result = session_.execute(statement);
@@ -687,9 +693,9 @@ CASSANDRA_INTEGRATION_TEST_F(DCExecutionProfileTest, DCAware) {
   CHECK_FAILURE;
 
   // Execute statements over all the nodes in the cluster twice
-  for (size_t i = 0; i < total_nodes_ * 2 ; ++i) {
+  for (size_t i = 0; i < total_nodes_ * 2; ++i) {
     // Execute the same query with the cluster default profile
-    insert_.set_execution_profile("");  // Reset the insert statement
+    insert_.set_execution_profile(""); // Reset the insert statement
     Result result = session_.execute(insert_);
     ASSERT_EQ(CASS_OK, result.error_code());
 
@@ -737,7 +743,7 @@ CASSANDRA_INTEGRATION_TEST_F(DCExecutionProfileTest, BlacklistDCFiltering) {
   // Execute statements over all the nodes in the cluster twice
   for (size_t i = 0; i < total_nodes_ * 2; ++i) {
     // Execute the same query with the cluster default profile
-    insert_.set_execution_profile("");  // Reset the insert statement
+    insert_.set_execution_profile(""); // Reset the insert statement
     Result result = session_.execute(insert_);
     ASSERT_EQ(CASS_OK, result.error_code());
 
@@ -779,7 +785,7 @@ CASSANDRA_INTEGRATION_TEST_F(DCExecutionProfileTest, WhitelistDCFiltering) {
   // Execute statements over all the nodes in the cluster twice
   for (size_t i = 0; i < total_nodes_ * 2; ++i) {
     // Execute the same query with the cluster default profile
-    insert_.set_execution_profile("");  // Reset the insert statement
+    insert_.set_execution_profile(""); // Reset the insert statement
     Result result = session_.execute(insert_);
     ASSERT_EQ(CASS_OK, result.error_code());
 

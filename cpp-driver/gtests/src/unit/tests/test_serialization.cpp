@@ -16,14 +16,12 @@
 
 #include <gtest/gtest.h>
 
-#include "serialization.hpp"
 #include "buffer.hpp"
+#include "serialization.hpp"
 
 using namespace datastax::internal;
 
-TEST(SerializationTest, DecodeZigZag) {
-  ASSERT_EQ(1LL << 63, decode_zig_zag((long) -1));
-}
+TEST(SerializationTest, DecodeZigZag) { ASSERT_EQ(1LL << 63, decode_zig_zag((long)-1)); }
 
 TEST(SerializationTest, DecodeByte) {
   const char input[2] = { -1, 0 };
@@ -48,8 +46,7 @@ TEST(SerializationTest, DecodeInt8) {
 }
 
 TEST(SerializationTest, DecodeUInt16) {
-  const char input[4] = { -1, -1,
-                          0, 0 };
+  const char input[4] = { -1, -1, 0, 0 };
   uint16_t value = 0;
 
   const char* pos = decode_uint16(&input[0], value);
@@ -60,12 +57,11 @@ TEST(SerializationTest, DecodeUInt16) {
 }
 
 TEST(SerializationTest, DecodeInt16) {
-  const char input[4] = { -128, 0,
-                          127, -1 };
+  const char input[4] = { -128, 0, 127, -1 };
   int16_t value = 0;
 
   // SUCCESS
-  const char *pos = decode_int16(&input[0], value);
+  const char* pos = decode_int16(&input[0], value);
   ASSERT_EQ(&input[2], pos);
   ASSERT_EQ(std::numeric_limits<int16_t>::min(), value);
   pos = decode_int16(pos, value);
@@ -73,8 +69,7 @@ TEST(SerializationTest, DecodeInt16) {
 }
 
 TEST(SerializationTest, DecodeUInt32) {
-  const char input[8] = { -1, -1, -1, -1,
-                          0, 0, 0, 0 };
+  const char input[8] = { -1, -1, -1, -1, 0, 0, 0, 0 };
   uint32_t value = 0;
 
   const char* pos = decode_uint32(&input[0], value);
@@ -85,11 +80,10 @@ TEST(SerializationTest, DecodeUInt32) {
 }
 
 TEST(SerializationTest, DecodeInt32) {
-  const char input[8] = { -128, 0, 0, 0,
-                          127, -1, -1, -1 };
+  const char input[8] = { -128, 0, 0, 0, 127, -1, -1, -1 };
   int32_t value = 0;
 
-  const char *pos = decode_int32(&input[0], value);
+  const char* pos = decode_int32(&input[0], value);
   ASSERT_EQ(&input[4], pos);
   ASSERT_EQ(std::numeric_limits<int32_t>::min(), value);
   pos = decode_int32(pos, value);
@@ -97,11 +91,10 @@ TEST(SerializationTest, DecodeInt32) {
 }
 
 TEST(SerializationTest, DecodeInt64) {
-  const char input[16] = { -128, 0, 0, 0,0, 0, 0, 0,
-                           127, -1, -1, -1, -1, -1, -1, -1 };
+  const char input[16] = { -128, 0, 0, 0, 0, 0, 0, 0, 127, -1, -1, -1, -1, -1, -1, -1 };
   int64_t value = 0;
 
-  const char *pos = decode_int64(&input[0], value);
+  const char* pos = decode_int64(&input[0], value);
   ASSERT_EQ(&input[8], pos);
   ASSERT_EQ(std::numeric_limits<int64_t>::min(), value);
   pos = decode_int64(pos, value);
@@ -109,11 +102,10 @@ TEST(SerializationTest, DecodeInt64) {
 }
 
 TEST(SerializationTest, DecodeFloat) {
-  const char input[8] = { 0, -128, 0, 0,
-                          127, 127, -1, -1 };
+  const char input[8] = { 0, -128, 0, 0, 127, 127, -1, -1 };
   float value = 0;
 
-  const char *pos = decode_float(&input[0], value);
+  const char* pos = decode_float(&input[0], value);
   ASSERT_EQ(&input[4], pos);
   ASSERT_EQ(std::numeric_limits<float>::min(), value);
   pos = decode_float(pos, value);
@@ -121,11 +113,10 @@ TEST(SerializationTest, DecodeFloat) {
 }
 
 TEST(SerializationTest, DecodeDouble) {
-  const char input[16] = { 0, 16, 0, 0,0, 0, 0, 0,
-                           127, -17, -1, -1, -1, -1, -1, -1 };
+  const char input[16] = { 0, 16, 0, 0, 0, 0, 0, 0, 127, -17, -1, -1, -1, -1, -1, -1 };
   double value = 0;
 
-  const char *pos = decode_double(&input[0], value);
+  const char* pos = decode_double(&input[0], value);
   ASSERT_EQ(&input[8], pos);
   ASSERT_EQ(std::numeric_limits<double>::min(), value);
   pos = decode_double(pos, value);
@@ -133,11 +124,11 @@ TEST(SerializationTest, DecodeDouble) {
 }
 
 TEST(SerializationTest, DecodeUuid) {
-  const char input[32] = { -1, -1, -1, -1, -1, -1, -1, -1,-1, -1, -1, -1, -1, -1, -1, -1,
-                           0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0 };
+  const char input[32] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                           0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 };
   CassUuid value;
 
-  const char *pos = decode_uuid(&input[0], &value);
+  const char* pos = decode_uuid(&input[0], &value);
   ASSERT_EQ(&input[16], pos);
   ASSERT_EQ(std::numeric_limits<uint64_t>::max(), value.clock_seq_and_node);
   ASSERT_EQ(std::numeric_limits<uint64_t>::max(), value.time_and_version);

@@ -19,7 +19,7 @@
 #include "session.hpp"
 
 #define KEYSPACE "datastax"
-#define NUM_THREADS 2 // Number of threads to execute queries using a session
+#define NUM_THREADS 2         // Number of threads to execute queries using a session
 #define OUTAGE_PLAN_DELAY 250 // Reduced delay to incorporate larger outage plan
 
 using namespace datastax::internal;
@@ -28,7 +28,7 @@ using namespace datastax::internal::core;
 class SessionUnitTest : public EventLoopTest {
 public:
   SessionUnitTest()
-    : EventLoopTest("SessionUnitTest") { }
+      : EventLoopTest("SessionUnitTest") {}
 
   void populate_outage_plan(OutagePlan* outage_plan) {
     // Multiple rolling restarts
@@ -57,20 +57,17 @@ public:
     }
   }
 
-  static void connect(const Config& config,
-                      Session* session,
+  static void connect(const Config& config, Session* session,
                       uint64_t wait_for_time_us = WAIT_FOR_TIME) {
     Future::Ptr connect_future(session->connect(config));
-    ASSERT_TRUE(connect_future->wait_for(wait_for_time_us)) << "Timed out waiting for session to connect";
-    ASSERT_FALSE(connect_future->error())
-        << cass_error_desc(connect_future->error()->code) << ": "
-        << connect_future->error()->message;
+    ASSERT_TRUE(connect_future->wait_for(wait_for_time_us))
+        << "Timed out waiting for session to connect";
+    ASSERT_FALSE(connect_future->error()) << cass_error_desc(connect_future->error()->code) << ": "
+                                          << connect_future->error()->message;
   }
 
-  static void connect(Session* session,
-                      SslContext* ssl_context = NULL,
-                      uint64_t wait_for_time_us = WAIT_FOR_TIME,
-                      size_t num_nodes = 3) {
+  static void connect(Session* session, SslContext* ssl_context = NULL,
+                      uint64_t wait_for_time_us = WAIT_FOR_TIME, size_t num_nodes = 3) {
     Config config;
     config.set_reconnect_wait_time(100); // Faster reconnect time to handle cluster starts and stops
     for (size_t i = 1; i <= num_nodes; ++i) {
@@ -84,13 +81,12 @@ public:
     connect(config, session, wait_for_time_us);
   }
 
-  static void close(Session* session,
-                    uint64_t wait_for_time_us = WAIT_FOR_TIME) {
+  static void close(Session* session, uint64_t wait_for_time_us = WAIT_FOR_TIME) {
     Future::Ptr close_future(session->close());
-    ASSERT_TRUE(close_future->wait_for(wait_for_time_us)) << "Timed out waiting for session to close";
+    ASSERT_TRUE(close_future->wait_for(wait_for_time_us))
+        << "Timed out waiting for session to close";
     ASSERT_FALSE(close_future->error())
-        << cass_error_desc(close_future->error()->code) << ": "
-        << close_future->error()->message;
+        << cass_error_desc(close_future->error()->code) << ": " << close_future->error()->message;
   }
 
   static void query(Session* session) {
@@ -99,9 +95,8 @@ public:
 
     Future::Ptr future = session->execute(request, NULL);
     ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out executing query";
-    ASSERT_FALSE(future->error())
-        << cass_error_desc(future->error()->code) << ": "
-        << future->error()->message;
+    ASSERT_FALSE(future->error()) << cass_error_desc(future->error()->code) << ": "
+                                  << future->error()->message;
   }
 
   // uv_thread_create
@@ -114,18 +109,12 @@ public:
   public:
     typedef SharedRefPtr<HostEventFuture> Ptr;
 
-    enum Type {
-      INVALID,
-      START_NODE,
-      STOP_NODE,
-      ADD_NODE,
-      REMOVE_NODE
-    };
+    enum Type { INVALID, START_NODE, STOP_NODE, ADD_NODE, REMOVE_NODE };
 
     typedef std::pair<Type, Address> Event;
 
     HostEventFuture()
-      : Future(Future::FUTURE_TYPE_GENERIC) { }
+        : Future(Future::FUTURE_TYPE_GENERIC) {}
 
     Type type() { return event_.first; }
 
@@ -139,8 +128,7 @@ public:
 
     Event wait_for_event(uint64_t timeout_us) {
       ScopedMutex lock(&mutex_);
-      return internal_wait_for(lock, timeout_us) ? event_ : Event(INVALID,
-                                                                  Address());
+      return internal_wait_for(lock, timeout_us) ? event_ : Event(INVALID, Address());
     }
 
   private:
@@ -152,19 +140,13 @@ public:
     typedef SharedRefPtr<TestHostListener> Ptr;
 
     TestHostListener() {
-      events_.push_back(
-            HostEventFuture::Ptr(
-              new HostEventFuture()));
+      events_.push_back(HostEventFuture::Ptr(new HostEventFuture()));
       uv_mutex_init(&mutex_);
     }
 
-    ~TestHostListener() {
-      uv_mutex_destroy(&mutex_);
-    }
+    ~TestHostListener() { uv_mutex_destroy(&mutex_); }
 
-    virtual void on_host_up(const Host::Ptr& host) {
-      push_back(HostEventFuture::START_NODE, host);
-    }
+    virtual void on_host_up(const Host::Ptr& host) { push_back(HostEventFuture::START_NODE, host); }
 
     virtual void on_host_down(const Host::Ptr& host) {
       push_back(HostEventFuture::STOP_NODE, host);
@@ -206,9 +188,7 @@ public:
     void push_back(HostEventFuture::Type type, const Host::Ptr& host) {
       ScopedMutex lock(&mutex_);
       events_.back()->set_event(type, host->address());
-      events_.push_back(
-            HostEventFuture::Ptr(
-              new HostEventFuture()));
+      events_.push_back(HostEventFuture::Ptr(new HostEventFuture()));
     }
 
   private:
@@ -252,10 +232,7 @@ TEST_F(SessionUnitTest, InvalidDataCenter) {
 
   Config config;
   config.contact_points().push_back("127.0.0.1");
-  config.set_load_balancing_policy(new DCAwarePolicy(
-                                     "invalid_data_center",
-                                     0,
-                                     false));
+  config.set_load_balancing_policy(new DCAwarePolicy("invalid_data_center", 0, false));
   Session session;
 
   Future::Ptr connect_future(session.connect(config));
@@ -265,7 +242,6 @@ TEST_F(SessionUnitTest, InvalidDataCenter) {
   ASSERT_TRUE(session.close()->wait_for(WAIT_FOR_TIME));
 }
 
-
 TEST_F(SessionUnitTest, InvalidLocalAddress) {
   mockssandra::SimpleCluster cluster(simple());
   ASSERT_EQ(cluster.start_all(), 0);
@@ -273,10 +249,7 @@ TEST_F(SessionUnitTest, InvalidLocalAddress) {
   Config config;
   config.set_local_address(Address("1.1.1.1", PORT)); // Invalid
   config.contact_points().push_back("127.0.0.1");
-  config.set_load_balancing_policy(new DCAwarePolicy(
-                                     "invalid_data_center",
-                                     0,
-                                     false));
+  config.set_load_balancing_policy(new DCAwarePolicy("invalid_data_center", 0, false));
   Session session;
 
   Future::Ptr connect_future(session.connect(config, "invalid"));
@@ -470,51 +443,41 @@ TEST_F(SessionUnitTest, HostListener) {
   connect(config, &session);
 
   { // Initial nodes available from peers table
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
   {
     cluster.remove(1);
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
-                                     Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::REMOVE_NODE,
-                                     Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::REMOVE_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
   {
     cluster.add(1);
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-                                     Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-                                     Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
   {
     cluster.stop(2);
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
-                                     Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
   {
     cluster.start(2);
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-                                     Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
@@ -538,24 +501,19 @@ TEST_F(SessionUnitTest, HostListenerDCAwareLocal) {
   connect(config, &session);
 
   { // Initial nodes available from peers table
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
   { // Node 3 is DC2 should be ignored
     cluster.stop(3);
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::INVALID,
-              Address()),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::INVALID, Address()),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
@@ -574,40 +532,30 @@ TEST_F(SessionUnitTest, HostListenerDCAwareRemote) {
   Config config;
   config.set_reconnect_wait_time(100); // Reconnect immediately
   config.contact_points().push_back("127.0.0.1");
-  config.set_load_balancing_policy(new DCAwarePolicy(
-                                   "dc1",
-                                   1,
-                                   false));
+  config.set_load_balancing_policy(new DCAwarePolicy("dc1", 1, false));
   config.set_host_listener(listener);
 
   Session session;
   connect(config, &session);
 
   { // Initial nodes available from peers table
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.3", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.3", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.3", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.3", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
   {
     cluster.stop(3);
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
-              Address("127.0.0.3", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE, Address("127.0.0.3", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
@@ -632,36 +580,28 @@ TEST_F(SessionUnitTest, HostListenerNodeDown) {
   connect(config, &session);
 
   { // Initial nodes available from peers table
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.1", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.1", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE,
-              Address("127.0.0.3", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.3", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.3", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.3", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
   { // Node 2 connection should not be established (node down event)
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::STOP_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 
   {
     cluster.start(2);
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE,
-              Address("127.0.0.2", 9042)),
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.2", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
   }
 

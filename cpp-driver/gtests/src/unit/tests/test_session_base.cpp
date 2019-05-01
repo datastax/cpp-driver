@@ -28,25 +28,23 @@ using namespace datastax::internal::core;
 class TestSessionBase : public SessionBase {
 public:
   TestSessionBase()
-    : connected_(0)
-    , failed_(0)
-    , closed_(0) { }
+      : connected_(0)
+      , failed_(0)
+      , closed_(0) {}
 
-  virtual void on_host_up(const Host::Ptr& host) { }
-  virtual void on_host_down(const Host::Ptr& host) { }
-  virtual void on_host_added(const Host::Ptr& host) { }
-  virtual void on_host_removed(const Host::Ptr& host) { }
-  virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { }
+  virtual void on_host_up(const Host::Ptr& host) {}
+  virtual void on_host_down(const Host::Ptr& host) {}
+  virtual void on_host_added(const Host::Ptr& host) {}
+  virtual void on_host_removed(const Host::Ptr& host) {}
+  virtual void on_token_map_updated(const TokenMap::Ptr& token_map) {}
 
   int connected() { return connected_; }
   int failed() { return failed_; }
   int closed() { return closed_; }
 
 protected:
-  virtual void on_connect(const Host::Ptr& connected_host,
-                          ProtocolVersion protocol_version,
-                          const HostMap& hosts,
-                          const TokenMap::Ptr& token_map) {
+  virtual void on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
+                          const HostMap& hosts, const TokenMap::Ptr& token_map) {
     ++connected_;
     ASSERT_STREQ("127.0.0.1", connected_host->address_string().c_str());
     ASSERT_EQ(ProtocolVersion(PROTOCOL_VERSION), protocol_version);
@@ -74,7 +72,7 @@ private:
   int closed_;
 };
 
-class SessionBaseUnitTest : public Unit { };
+class SessionBaseUnitTest : public Unit {};
 
 TEST_F(SessionBaseUnitTest, Simple) {
   mockssandra::SimpleCluster cluster(simple());
@@ -305,7 +303,7 @@ TEST_F(SessionBaseUnitTest, ConnectWhenAlreadyConnected) {
     EXPECT_EQ(0, session_base.closed());
   }
 
-  {// Attempt second session connection
+  { // Attempt second session connection
     Future::Ptr connect_future(session_base.connect(config, ""));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
     EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_CONNECT, connect_future->error()->code);

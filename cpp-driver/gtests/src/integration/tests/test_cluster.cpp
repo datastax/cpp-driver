@@ -26,5 +26,5 @@
 TEST(ClusterTest, SetLoadBalanceDcAwareNullLocalDc) {
   test::driver::Cluster cluster;
   EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
-    cass_cluster_set_load_balance_dc_aware(cluster.get(), NULL, 99, cass_false));
+            cass_cluster_set_load_balance_dc_aware(cluster.get(), NULL, 99, cass_false));
 }

@@ -43,7 +43,7 @@ public:
 
   struct State {
     State()
-      : status(STATUS_NEW) { }
+        : status(STATUS_NEW) {}
 
     Connection::Ptr connection;
     Status status;
@@ -52,9 +52,9 @@ public:
   class RequestCallback : public SimpleRequestCallback {
   public:
     RequestCallback(Connection* connection, ConnectionUnitTest::State* state)
-      : SimpleRequestCallback("SELECT * FROM blah")
-      , state_(state)
-      , connection_(connection) { }
+        : SimpleRequestCallback("SELECT * FROM blah")
+        , state_(state)
+        , connection_(connection) {}
 
     virtual void on_internal_set(ResponseMessage* response) {
       connection_->close();
@@ -85,10 +85,12 @@ public:
     state->status = STATUS_CONNECTED;
     state->connection = connector->release_connection();
     state->connection->start_heartbeats();
-    state->connection->write_and_flush(RequestCallback::Ptr(new RequestCallback(state->connection.get(), state)));
+    state->connection->write_and_flush(
+        RequestCallback::Ptr(new RequestCallback(state->connection.get(), state)));
   }
 
-  static void on_connection_error_code(Connector* connector, Connector::ConnectionError* error_code) {
+  static void on_connection_error_code(Connector* connector,
+                                       Connector::ConnectionError* error_code) {
     if (!connector->is_ok()) {
       *error_code = connector->error_code();
     }
@@ -105,16 +107,17 @@ public:
     state->status = STATUS_CONNECTED;
     state->connection = connector->release_connection();
     state->connection->start_heartbeats();
-    state->connection->write_and_flush(RequestCallback::Ptr(new RequestCallback(state->connection.get(), state)));
+    state->connection->write_and_flush(
+        RequestCallback::Ptr(new RequestCallback(state->connection.get(), state)));
   }
 
-  static void on_delayed_error_code(DelayedConnector* connector, Connector::ConnectionError* error_code) {
+  static void on_delayed_error_code(DelayedConnector* connector,
+                                    Connector::ConnectionError* error_code) {
     if (!connector->is_ok()) {
       *error_code = connector->error_code();
     }
   }
 };
-
 
 TEST_F(ConnectionUnitTest, Simple) {
   mockssandra::SimpleCluster cluster(simple());
@@ -134,10 +137,7 @@ TEST_F(ConnectionUnitTest, Simple) {
 
 TEST_F(ConnectionUnitTest, Keyspace) {
   mockssandra::SimpleRequestHandlerBuilder builder;
-  builder
-      .on(mockssandra::OPCODE_QUERY)
-      .use_keyspace("foo")
-      .validate_query().void_result();
+  builder.on(mockssandra::OPCODE_QUERY).use_keyspace("foo").validate_query().void_result();
   mockssandra::SimpleCluster cluster(builder.build());
   ASSERT_EQ(cluster.start_all(), 0);
 
@@ -146,9 +146,7 @@ TEST_F(ConnectionUnitTest, Keyspace) {
                                          PROTOCOL_VERSION,
                                          bind_callback(on_connection_connected, &state)));
 
-  connector
-      ->with_keyspace("foo")
-      ->connect(loop());
+  connector->with_keyspace("foo")->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -169,9 +167,7 @@ TEST_F(ConnectionUnitTest, Auth) {
   ConnectionSettings settings;
   settings.auth_provider.reset(new PlainTextAuthProvider("cassandra", "cassandra"));
 
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -187,9 +183,7 @@ TEST_F(ConnectionUnitTest, Ssl) {
   Connector::Ptr connector(new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                          PROTOCOL_VERSION,
                                          bind_callback(on_connection_connected, &state)));
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -244,9 +238,7 @@ TEST_F(ConnectionUnitTest, SslClose) {
     Connector::Ptr connector(new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                            PROTOCOL_VERSION,
                                            bind_callback(on_connection_close, &is_closed)));
-    connector
-        ->with_settings(settings)
-        ->connect(loop());
+    connector->with_settings(settings)->connect(loop());
     connectors.push_back(connector);
   }
 
@@ -294,9 +286,7 @@ TEST_F(ConnectionUnitTest, SslCancel) {
     Connector::Ptr connector(new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                            PROTOCOL_VERSION,
                                            bind_callback(on_connection_error_code, &error_code)));
-    connector
-        ->with_settings(settings)
-        ->connect(loop());
+    connector->with_settings(settings)->connect(loop());
     connectors.push_back(connector);
   }
 
@@ -326,9 +316,7 @@ TEST_F(ConnectionUnitTest, Timeout) {
   ConnectionSettings settings;
   settings.connect_timeout_ms = 200;
 
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -337,10 +325,7 @@ TEST_F(ConnectionUnitTest, Timeout) {
 
 TEST_F(ConnectionUnitTest, InvalidKeyspace) {
   mockssandra::SimpleRequestHandlerBuilder builder;
-  builder
-      .on(mockssandra::OPCODE_QUERY)
-      .use_keyspace("foo")
-      .validate_query().void_result();
+  builder.on(mockssandra::OPCODE_QUERY).use_keyspace("foo").validate_query().void_result();
   mockssandra::SimpleCluster cluster(builder.build());
   ASSERT_EQ(cluster.start_all(), 0);
 
@@ -348,9 +333,7 @@ TEST_F(ConnectionUnitTest, InvalidKeyspace) {
   Connector::Ptr connector(new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                          PROTOCOL_VERSION,
                                          bind_callback(on_connection_error_code, &error_code)));
-  connector
-      ->with_keyspace("invalid")
-      ->connect(loop());
+  connector->with_keyspace("invalid")->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -365,8 +348,7 @@ TEST_F(ConnectionUnitTest, InvalidProtocol) {
   Connector::Ptr connector(new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                          0x7F, // Invalid protocol version
                                          bind_callback(on_connection_error_code, &error_code)));
-  connector
-      ->connect(loop());
+  connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -374,17 +356,15 @@ TEST_F(ConnectionUnitTest, InvalidProtocol) {
 }
 
 TEST_F(ConnectionUnitTest, DeprecatedProtocol) {
-  mockssandra::SimpleCluster cluster(mockssandra::SimpleRequestHandlerBuilder()
-                                     .with_supported_protocol_versions(1, 2)
-                                     .build());
+  mockssandra::SimpleCluster cluster(
+      mockssandra::SimpleRequestHandlerBuilder().with_supported_protocol_versions(1, 2).build());
   cluster.start_all();
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   Connector::Ptr connector(new Connector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
                                          PROTOCOL_VERSION,
                                          bind_callback(on_connection_error_code, &error_code)));
-  connector
-      ->connect(loop());
+  connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -403,9 +383,7 @@ TEST_F(ConnectionUnitTest, InvalidAuth) {
   ConnectionSettings settings;
   settings.auth_provider.reset(new PlainTextAuthProvider("invalid", "invalid"));
 
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -427,9 +405,7 @@ TEST_F(ConnectionUnitTest, InvalidNoSsl) {
   settings.socket_settings.ssl_context = ssl_context;
   settings.socket_settings.hostname_resolution_enabled = true;
 
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -452,9 +428,7 @@ TEST_F(ConnectionUnitTest, InvalidSsl) {
   settings.socket_settings.ssl_context = ssl_context;
   settings.socket_settings.hostname_resolution_enabled = true;
 
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -466,9 +440,9 @@ TEST_F(ConnectionUnitTest, Delayed) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
-  DelayedConnector::Ptr connector(new DelayedConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_delayed_connected, &state)));
+  DelayedConnector::Ptr connector(
+      new DelayedConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                           bind_callback(on_delayed_connected, &state)));
 
   connector->delayed_connect(loop(), 500);
 
@@ -482,9 +456,9 @@ TEST_F(ConnectionUnitTest, DelayedCancel) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   State state;
-  DelayedConnector::Ptr connector(new DelayedConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_delayed_connected, &state)));
+  DelayedConnector::Ptr connector(
+      new DelayedConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                           bind_callback(on_delayed_connected, &state)));
 
   connector->delayed_connect(loop(), 500);
 
@@ -498,9 +472,9 @@ TEST_F(ConnectionUnitTest, DelayedCancel) {
 
   Connector::ConnectionError error_code(Connector::CONNECTION_OK);
   for (size_t i = 0; i < 10; ++i) {
-    DelayedConnector::Ptr connector(new DelayedConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                         PROTOCOL_VERSION,
-                                                         bind_callback(on_delayed_error_code, &error_code)));
+    DelayedConnector::Ptr connector(
+        new DelayedConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                             bind_callback(on_delayed_error_code, &error_code)));
     connector->delayed_connect(loop(), 500);
     connectors.push_back(connector);
   }

@@ -11,9 +11,7 @@
 
 #include <string>
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 // Forward declaration for circular dependency
 class GraphResult;
@@ -30,7 +28,7 @@ public:
    * @param vertex Native driver object
    */
   GraphVertex(DseGraphVertexResult vertex)
-    : vertex_(vertex) {}
+      : vertex_(vertex) {}
 
   /**
    * Get the DSE graph vertex id
@@ -67,8 +65,6 @@ private:
   DseGraphVertexResult vertex_;
 };
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_GRAPH_VERTEX_HPP__

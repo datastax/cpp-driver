@@ -17,8 +17,11 @@
 #include <gtest/gtest.h>
 
 #include "address.hpp"
+#include "blacklist_dc_policy.hpp"
+#include "blacklist_policy.hpp"
 #include "constants.hpp"
 #include "dc_aware_policy.hpp"
+#include "event_loop.hpp"
 #include "latency_aware_policy.hpp"
 #include "murmur3.hpp"
 #include "query_request.hpp"
@@ -27,11 +30,8 @@
 #include "scoped_ptr.hpp"
 #include "string.hpp"
 #include "token_aware_policy.hpp"
-#include "event_loop.hpp"
-#include "whitelist_policy.hpp"
-#include "blacklist_policy.hpp"
 #include "whitelist_dc_policy.hpp"
-#include "blacklist_dc_policy.hpp"
+#include "whitelist_policy.hpp"
 
 #include "test_token_map_utils.hpp"
 #include "test_utils.hpp"
@@ -46,31 +46,26 @@ const String LOCAL_DC = "local";
 const String REMOTE_DC = "remote";
 const String BACKUP_DC = "backup";
 
-#define VECTOR_FROM(t, a) Vector<t>(a, a + sizeof(a)/sizeof(a[0]))
+#define VECTOR_FROM(t, a) Vector<t>(a, a + sizeof(a) / sizeof(a[0]))
 
 Address addr_for_sequence(size_t i) {
   char temp[64];
-  sprintf(temp, "%d.%d.%d.%d",
-          static_cast<int>(i & 0xFF),
-          static_cast<int>((i >> 8) & 0xFF),
-          static_cast<int>((i >> 16) & 0xFF),
-          static_cast<int>((i >> 24) & 0xFF));
+  sprintf(temp, "%d.%d.%d.%d", static_cast<int>(i & 0xFF), static_cast<int>((i >> 8) & 0xFF),
+          static_cast<int>((i >> 16) & 0xFF), static_cast<int>((i >> 24) & 0xFF));
   return Address(temp, 9042);
 }
 
-SharedRefPtr<Host> host_for_addr(const Address addr,
-                                 const String& rack = "rack",
+SharedRefPtr<Host> host_for_addr(const Address addr, const String& rack = "rack",
                                  const String& dc = "dc") {
-  SharedRefPtr<Host>host(new Host(addr));
+  SharedRefPtr<Host> host(new Host(addr));
   host->set_rack_and_dc(rack, dc);
   return host;
 }
 
-void populate_hosts(size_t count, const String& rack,
-                    const String& dc, HostMap* hosts) {
+void populate_hosts(size_t count, const String& rack, const String& dc, HostMap* hosts) {
   Address addr;
   size_t first = hosts->size() + 1;
-  for (size_t i = first; i < first+count; ++i) {
+  for (size_t i = first; i < first + count; ++i) {
     addr = addr_for_sequence(i);
     (*hosts)[addr] = host_for_addr(addr, rack, dc);
   }
@@ -78,9 +73,7 @@ void populate_hosts(size_t count, const String& rack,
 
 void verify_sequence(QueryPlan* qp, const Vector<size_t>& sequence) {
   Address received;
-  for (Vector<size_t>::const_iterator it = sequence.begin();
-       it!= sequence.end();
-       ++it) {
+  for (Vector<size_t>::const_iterator it = sequence.begin(); it != sequence.end(); ++it) {
     ASSERT_TRUE(qp->compute_next(&received));
     EXPECT_EQ(addr_for_sequence(*it), received);
   }
@@ -101,11 +94,8 @@ QueryCounts run_policy(LoadBalancingPolicy& policy, int count) {
   return counts;
 }
 
-void verify_dcs(const QueryCounts& counts,
-                const HostMap& hosts,
-                const String& expected_dc) {
-  for (QueryCounts::const_iterator it = counts.begin(),
-       end = counts.end(); it != end; ++it) {
+void verify_dcs(const QueryCounts& counts, const HostMap& hosts, const String& expected_dc) {
+  for (QueryCounts::const_iterator it = counts.begin(), end = counts.end(); it != end; ++it) {
     HostMap::const_iterator host_it = hosts.find(it->first);
     ASSERT_NE(host_it, hosts.end());
     EXPECT_EQ(expected_dc, host_it->second->dc());
@@ -113,15 +103,14 @@ void verify_dcs(const QueryCounts& counts,
 }
 
 void verify_query_counts(const QueryCounts& counts, int expected_count) {
-  for (QueryCounts::const_iterator it = counts.begin(),
-       end = counts.end(); it != end; ++it) {
+  for (QueryCounts::const_iterator it = counts.begin(), end = counts.end(); it != end; ++it) {
     EXPECT_EQ(expected_count, it->second);
   }
 }
 
 struct RunPeriodicTask : public EventLoop {
   RunPeriodicTask(LatencyAwarePolicy* policy)
-    : policy(policy) {
+      : policy(policy) {
     async.data = this;
   }
 
@@ -134,11 +123,9 @@ struct RunPeriodicTask : public EventLoop {
     return rc;
   }
 
-  void done() {
-    uv_async_send(&async);
-  }
+  void done() { uv_async_send(&async); }
 
-  static void on_async(uv_async_t *handle) {
+  static void on_async(uv_async_t* handle) {
     RunPeriodicTask* task = static_cast<RunPeriodicTask*>(handle->data);
     task->close_handles();
     task->policy->close_handles();
@@ -152,8 +139,7 @@ struct RunPeriodicTask : public EventLoop {
 // Latency-aware utility functions
 
 // Don't make "time_between_ns" too high because it spin waits
-uint64_t calculate_moving_average(uint64_t first_latency_ns,
-                                  uint64_t second_latency_ns,
+uint64_t calculate_moving_average(uint64_t first_latency_ns, uint64_t second_latency_ns,
                                   uint64_t time_between_ns) {
   const uint64_t scale = 100LL;
   const uint64_t min_measured = 15LL;
@@ -170,7 +156,8 @@ uint64_t calculate_moving_average(uint64_t first_latency_ns,
 
   // Spin wait
   uint64_t start = uv_hrtime();
-  while (uv_hrtime() - start < time_between_ns) {}
+  while (uv_hrtime() - start < time_between_ns) {
+  }
 
   host.update_latency(second_latency_ns);
   TimestampedAverage current = host.get_current_average();
@@ -188,7 +175,8 @@ void test_dc_aware_policy(size_t local_count, size_t remote_count) {
 
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
   Vector<size_t> seq(total_hosts);
-  for (size_t i = 0; i < total_hosts; ++i) seq[i] = i + 1;
+  for (size_t i = 0; i < total_hosts; ++i)
+    seq[i] = i + 1;
   verify_sequence(qp.get(), seq);
 }
 
@@ -201,12 +189,12 @@ TEST(RoundRobinLoadBalancingUnitTest, Simple) {
 
   // start on first elem
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-  const size_t seq1[] = {1, 2};
+  const size_t seq1[] = { 1, 2 };
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
 
   // rotate starting element
   ScopedPtr<QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
-  const size_t seq2[] = {2, 1};
+  const size_t seq2[] = { 2, 1 };
   verify_sequence(qp2.get(), VECTOR_FROM(size_t, seq2));
 
   // back around
@@ -223,7 +211,7 @@ TEST(RoundRobinLoadBalancingUnitTest, OnAdd) {
 
   // baseline
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-  const size_t seq1[] = {1, 2};
+  const size_t seq1[] = { 1, 2 };
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
 
   const size_t seq_new = 5;
@@ -233,7 +221,7 @@ TEST(RoundRobinLoadBalancingUnitTest, OnAdd) {
   policy.on_host_up(host);
 
   ScopedPtr<QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
-  const size_t seq2[] = {2, seq_new, 1};
+  const size_t seq2[] = { 2, seq_new, 1 };
   verify_sequence(qp2.get(), VECTOR_FROM(size_t, seq2));
 }
 
@@ -251,10 +239,10 @@ TEST(RoundRobinLoadBalancingUnitTest, OnRemove) {
   ScopedPtr<QueryPlan> qp2(policy.new_query_plan("ks", NULL, NULL));
 
   // Both should not have the removed host
-  const size_t seq1[] = {2, 3};
+  const size_t seq1[] = { 2, 3 };
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
 
-  const size_t seq2[] = {3, 2};
+  const size_t seq2[] = { 3, 2 };
   verify_sequence(qp2.get(), VECTOR_FROM(size_t, seq2));
 }
 
@@ -272,14 +260,14 @@ TEST(RoundRobinLoadBalancingUnitTest, OnUpAndDown) {
   // 'before' qp both have the down host
   // Ahead of set_down, it will be returned
   {
-    const size_t seq[] = {1, 2, 3};
+    const size_t seq[] = { 1, 2, 3 };
     verify_sequence(qp_before1.get(), VECTOR_FROM(size_t, seq));
   }
 
   policy.on_host_down(host->address());
   // Following set_down, it is dynamically excluded
   {
-    const size_t seq[] = {2, 3};
+    const size_t seq[] = { 2, 3 };
     verify_sequence(qp_before2.get(), VECTOR_FROM(size_t, seq));
   }
 
@@ -292,14 +280,14 @@ TEST(RoundRobinLoadBalancingUnitTest, OnUpAndDown) {
   policy.on_host_down(host->address());
   // 1 is dynamically excluded from plan
   {
-    const size_t seq[] = {2, 3};
+    const size_t seq[] = { 2, 3 };
     verify_sequence(qp_after1.get(), VECTOR_FROM(size_t, seq));
   }
 
   policy.on_host_up(host);
   // now included
   {
-    const size_t seq[] = {2, 3, 1};
+    const size_t seq[] = { 2, 3, 1 };
     verify_sequence(qp_after2.get(), VECTOR_FROM(size_t, seq));
   }
 }
@@ -354,7 +342,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, SomeDatacenterLocalUnspecified) {
 
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
-  const size_t seq[] = {2, 3, 1};
+  const size_t seq[] = { 2, 3, 1 };
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
 }
 
@@ -367,18 +355,20 @@ TEST(DatacenterAwareLoadBalancingUnitTest, SingleLocalDown) {
   DCAwarePolicy policy(LOCAL_DC, 1, false);
   policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  ScopedPtr<QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
-  ScopedPtr<QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
+  ScopedPtr<QueryPlan> qp_before(
+      policy.new_query_plan("ks", NULL, NULL)); // has down host ptr in plan
+  ScopedPtr<QueryPlan> qp_after(
+      policy.new_query_plan("ks", NULL, NULL)); // should not have down host ptr in plan
 
   policy.on_host_down(target_host->address());
   {
-    const size_t seq[] = {2, 3, 4};
+    const size_t seq[] = { 2, 3, 4 };
     verify_sequence(qp_before.get(), VECTOR_FROM(size_t, seq));
   }
 
   policy.on_host_up(target_host);
   {
-    const size_t seq[] = {2, 3, 1, 4}; // local dc wrapped before remote offered
+    const size_t seq[] = { 2, 3, 1, 4 }; // local dc wrapped before remote offered
     verify_sequence(qp_after.get(), VECTOR_FROM(size_t, seq));
   }
 }
@@ -392,12 +382,14 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllLocalRemovedReturned) {
   DCAwarePolicy policy(LOCAL_DC, 1, false);
   policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  ScopedPtr<QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
+  ScopedPtr<QueryPlan> qp_before(
+      policy.new_query_plan("ks", NULL, NULL)); // has down host ptr in plan
   policy.on_host_down(target_host->address());
-  ScopedPtr<QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
+  ScopedPtr<QueryPlan> qp_after(
+      policy.new_query_plan("ks", NULL, NULL)); // should not have down host ptr in plan
 
   {
-    const size_t seq[] = {2};
+    const size_t seq[] = { 2 };
     verify_sequence(qp_before.get(), VECTOR_FROM(size_t, seq));
     verify_sequence(qp_after.get(), VECTOR_FROM(size_t, seq));
   }
@@ -407,7 +399,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllLocalRemovedReturned) {
   // make sure we get the local node first after on_up
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
   {
-    const size_t seq[] = {1, 2};
+    const size_t seq[] = { 1, 2 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
@@ -422,12 +414,14 @@ TEST(DatacenterAwareLoadBalancingUnitTest, RemoteRemovedReturned) {
   DCAwarePolicy policy(LOCAL_DC, 1, false);
   policy.init(SharedRefPtr<Host>(), hosts, NULL);
 
-  ScopedPtr<QueryPlan> qp_before(policy.new_query_plan("ks", NULL, NULL));// has down host ptr in plan
+  ScopedPtr<QueryPlan> qp_before(
+      policy.new_query_plan("ks", NULL, NULL)); // has down host ptr in plan
   policy.on_host_down(target_host->address());
-  ScopedPtr<QueryPlan> qp_after(policy.new_query_plan("ks", NULL, NULL));// should not have down host ptr in plan
+  ScopedPtr<QueryPlan> qp_after(
+      policy.new_query_plan("ks", NULL, NULL)); // should not have down host ptr in plan
 
   {
-    const size_t seq[] = {1};
+    const size_t seq[] = { 1 };
     verify_sequence(qp_before.get(), VECTOR_FROM(size_t, seq));
     verify_sequence(qp_after.get(), VECTOR_FROM(size_t, seq));
   }
@@ -437,7 +431,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, RemoteRemovedReturned) {
   // make sure we get both nodes, correct order after
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
   {
-    const size_t seq[] = {1, 2};
+    const size_t seq[] = { 1, 2 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
@@ -488,11 +482,11 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     QueryRequest::Ptr request(new QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
     SharedRefPtr<RequestHandler> request_handler(
-          new RequestHandler(request, ResponseFuture::Ptr()));
+        new RequestHandler(request, ResponseFuture::Ptr()));
 
     // Check for only local hosts are used
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
-    const size_t seq[] = {1, 2, 3};
+    const size_t seq[] = { 1, 2, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 
@@ -506,11 +500,11 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     QueryRequest::Ptr request(new QueryRequest("", 0));
     request->set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
     SharedRefPtr<RequestHandler> request_handler(
-          new RequestHandler(request, ResponseFuture::Ptr()));
+        new RequestHandler(request, ResponseFuture::Ptr()));
 
     // Check for only local hosts are used
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", request_handler.get(), NULL));
-    const size_t seq[] = {1, 2, 3, 4, 5, 6};
+    const size_t seq[] = { 1, 2, 3, 4, 5, 6 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
@@ -526,18 +520,17 @@ TEST(DatacenterAwareLoadBalancingUnitTest, StartWithEmptyLocalDatacenter) {
     policy.init(hosts[Address("2.0.0.0", 9042)], hosts, NULL);
 
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-    const size_t seq[] = {2, 3, 4};
+    const size_t seq[] = { 2, 3, 4 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 
   // Set local DC using first host with non-empty DC
   {
     DCAwarePolicy policy("", 0, false);
-    policy.init(SharedRefPtr<Host>(
-                  new Host(Address("0.0.0.0", 9042))), hosts, NULL);
+    policy.init(SharedRefPtr<Host>(new Host(Address("0.0.0.0", 9042))), hosts, NULL);
 
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
-    const size_t seq[] = {1};
+    const size_t seq[] = { 1 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
@@ -659,11 +652,8 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
 
   for (size_t i = 1; i <= num_hosts; ++i) {
-    Host::Ptr host(create_host(addr_for_sequence(i),
-                               single_token(token),
-                               Murmur3Partitioner::name().to_string(),
-                               "rack1",
-                               LOCAL_DC));
+    Host::Ptr host(create_host(addr_for_sequence(i), single_token(token),
+                               Murmur3Partitioner::name().to_string(), "rack1", LOCAL_DC));
 
     hosts[host->address()] = host;
     token_map->add_host(host);
@@ -680,8 +670,7 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
   request->set(0, CassString(value, strlen(value)));
   request->add_key_index(0);
-  SharedRefPtr<RequestHandler> request_handler(
-        new RequestHandler(request, ResponseFuture::Ptr()));
+  SharedRefPtr<RequestHandler> request_handler(new RequestHandler(request, ResponseFuture::Ptr()));
 
   {
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -732,10 +721,8 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
 
   for (size_t i = 1; i <= num_hosts; ++i) {
-    Host::Ptr host(create_host(addr_for_sequence(i),
-                               single_token(token),
-                               Murmur3Partitioner::name().to_string(),
-                               "rack1",
+    Host::Ptr host(create_host(addr_for_sequence(i), single_token(token),
+                               Murmur3Partitioner::name().to_string(), "rack1",
                                i % 2 == 0 ? REMOTE_DC : LOCAL_DC));
 
     hosts[host->address()] = host;
@@ -756,8 +743,7 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   const char* value = "abc"; // hash: -5434086359492102041
   request->set(0, CassString(value, strlen(value)));
   request->add_key_index(0);
-  SharedRefPtr<RequestHandler> request_handler(
-        new RequestHandler(request, ResponseFuture::Ptr()));
+  SharedRefPtr<RequestHandler> request_handler(new RequestHandler(request, ResponseFuture::Ptr()));
 
   {
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("test", request_handler.get(), token_map.get()));
@@ -805,11 +791,8 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   Murmur3Partitioner::Token token = CASS_INT64_MIN + partition_size;
 
   for (size_t i = 1; i <= num_hosts; ++i) {
-    Host::Ptr host(create_host(addr_for_sequence(i),
-                               single_token(token),
-                               Murmur3Partitioner::name().to_string(),
-                               "rack1",
-                               LOCAL_DC));
+    Host::Ptr host(create_host(addr_for_sequence(i), single_token(token),
+                               Murmur3Partitioner::name().to_string(), "rack1", LOCAL_DC));
 
     hosts[host->address()] = host;
     token_map->add_host(host);
@@ -823,9 +806,7 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
   request->set(0, CassString(value, strlen(value)));
   request->add_key_index(0);
-  SharedRefPtr<RequestHandler> request_handler(
-        new RequestHandler(request, ResponseFuture::Ptr()));
-
+  SharedRefPtr<RequestHandler> request_handler(new RequestHandler(request, ResponseFuture::Ptr()));
 
   HostVec not_shuffled;
   {
@@ -851,7 +832,8 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
     shuffle_policy.init(SharedRefPtr<Host>(), hosts, &random);
 
     HostVec shuffled_previous;
-    ScopedPtr<QueryPlan> qp(shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
+    ScopedPtr<QueryPlan> qp(
+        shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
     for (int i = 0; i < num_hosts; ++i) {
       shuffled_previous.push_back(qp->compute_next());
     }
@@ -859,7 +841,8 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
     int count;
     const int max_iterations = num_hosts * num_hosts;
     for (count = 0; count < max_iterations; ++count) {
-      ScopedPtr<QueryPlan> qp(shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
+      ScopedPtr<QueryPlan> qp(
+          shuffle_policy.new_query_plan("test", request_handler.get(), token_map.get()));
 
       HostVec shuffled;
       for (int j = 0; j < num_hosts; ++j) {
@@ -905,28 +888,27 @@ TEST(LatencyAwareLoadBalancingUnitTest, MovingAverage) {
 
   // Verify average is approx. the same when recording the same latency twice
   EXPECT_NEAR(static_cast<double>(calculate_moving_average(one_ms, one_ms, 100LL)),
-              static_cast<double>(one_ms),
-              0.2 * one_ms);
+              static_cast<double>(one_ms), 0.2 * one_ms);
 
   EXPECT_NEAR(static_cast<double>(calculate_moving_average(one_ms, one_ms, 1000LL)),
-              static_cast<double>(one_ms),
-              0.2 * one_ms);
+              static_cast<double>(one_ms), 0.2 * one_ms);
 
   // First average is 100 us and second average is 50 us, expect a 75 us average approx.
   // after a short wait time. This has a high tolerance because the time waited varies.
-  EXPECT_NEAR(static_cast<double>(calculate_moving_average(one_ms, one_ms / 2LL, 50LL)),
-              static_cast<double>((3LL * one_ms) / 4LL),
-              50.0 * one_ms); // Highly variable because it's in the early part of the logarithmic curve
+  EXPECT_NEAR(
+      static_cast<double>(calculate_moving_average(one_ms, one_ms / 2LL, 50LL)),
+      static_cast<double>((3LL * one_ms) / 4LL),
+      50.0 * one_ms); // Highly variable because it's in the early part of the logarithmic curve
 
   // First average is 100 us and second average is 50 us, expect a 50 us average approx.
   // after a longer wait time. This has a high tolerance because the time waited varies
   EXPECT_NEAR(static_cast<double>(calculate_moving_average(one_ms, one_ms / 2LL, 100000LL)),
-              static_cast<double>(one_ms / 2LL),
-              2.0 * one_ms);
+              static_cast<double>(one_ms / 2LL), 2.0 * one_ms);
 }
 
 #if _MSC_VER == 1700 && _M_IX86
-TEST(LatencyAwareLoadBalancingUnitTest, DISABLED_Simple) { // Disabled: See https://datastax-oss.atlassian.net/browse/CPP-654
+TEST(LatencyAwareLoadBalancingUnitTest,
+     DISABLED_Simple) { // Disabled: See https://datastax-oss.atlassian.net/browse/CPP-654
 #else
 TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
 #endif
@@ -979,7 +961,7 @@ TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
   // 1 and 4  are under the minimum, but 2 and 3 will be skipped
   {
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("", NULL, NULL));
-    const size_t seq1[] = {1, 4, 2, 3};
+    const size_t seq1[] = { 1, 4, 2, 3 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   }
 
@@ -989,13 +971,15 @@ TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
   // After waiting no hosts should be skipped (notice 2 and 3 tried first)
   {
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("", NULL, NULL));
-    const size_t seq1[] = {2, 3, 4, 1};
+    const size_t seq1[] = { 2, 3, 4, 1 };
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   }
 }
 
 #if _MSC_VER == 1700 && _M_IX86
-TEST(LatencyAwareLoadBalancingUnitTest, DISABLED_MinAverageUnderMinMeasured) { // Disabled: See https://datastax-oss.atlassian.net/browse/CPP-654
+TEST(LatencyAwareLoadBalancingUnitTest,
+     DISABLED_MinAverageUnderMinMeasured) { // Disabled: See
+                                            // https://datastax-oss.atlassian.net/browse/CPP-654
 #else
 TEST(LatencyAwareLoadBalancingUnitTest, MinAverageUnderMinMeasured) {
 #endif

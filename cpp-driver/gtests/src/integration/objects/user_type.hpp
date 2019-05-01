@@ -25,8 +25,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * User type object
@@ -41,7 +40,7 @@ public:
    * @param data_type The data type that makes up the user type
    */
   UserType(const CassDataType* data_type)
-    : is_null_(true) {
+      : is_null_(true) {
     initialize(data_type);
   }
 
@@ -51,8 +50,8 @@ public:
    * @param column Column to retrieve user type from
    */
   UserType(const CassValue* column)
-    : size_(0)
-    , is_null_(true) {
+      : size_(0)
+      , is_null_(true) {
     initialize(column);
   }
 
@@ -61,9 +60,7 @@ public:
    *
    * @return True if user type is NULL; false otherwise
    */
-  bool is_null() {
-    return is_null_;
-  }
+  bool is_null() { return is_null_; }
 
   /**
    * Set the value in the user type
@@ -73,7 +70,7 @@ public:
    * @throws Exception If user type is not able to have values added to it (e.g.
    *         The user type was generated from server result)
    */
-  template<typename T>
+  template <typename T>
   void set(T value, const std::string& name) {
     value.set(*this, name);
     is_null_ = false;
@@ -84,9 +81,7 @@ public:
    *
    * @return The number of elements in the user type
    */
-  size_t size() {
-    return size_;
-  }
+  size_t size() { return size_; }
 
   /**
    * Get a field value from the user type
@@ -94,7 +89,7 @@ public:
    * @return Value of the field in the user type
    * @throws Exception If value is not available
    */
-  template<typename T>
+  template <typename T>
   T value(const std::string& name) {
     ValuesMap::iterator iterator = values_.find(name);
     if (iterator != values_.end()) {
@@ -108,7 +103,7 @@ public:
    *
    * @return A map of all the fields where the value is a single type
    */
-  template<typename T>
+  template <typename T>
   std::map<std::string, T> values() {
     std::map<std::string, T> result;
     while (cass_iterator_next(iterator_.get())) {
@@ -124,7 +119,6 @@ public:
     return result;
   }
 
-
   /**
    * Bind the user type to a statement at the given index
    *
@@ -133,8 +127,7 @@ public:
    *              statement
    */
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK,
-      cass_statement_bind_user_type(statement.get(), index, get()));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_user_type(statement.get(), index, get()));
   }
 
 protected:
@@ -173,7 +166,6 @@ protected:
     iterator_ = cass_iterator_fields_from_user_type(value);
   }
 
-
   /**
    * Initialize the user type from the data type
    *
@@ -188,8 +180,7 @@ protected:
       // Get the user type field name
       const char* name;
       size_t name_length;
-      ASSERT_EQ(CASS_OK,
-        cass_data_type_sub_type_name(data_type, i, &name, &name_length));
+      ASSERT_EQ(CASS_OK, cass_data_type_sub_type_name(data_type, i, &name, &name_length));
 
       // Create a temporary place holder for the field value
       std::string field(name, name_length);
@@ -198,12 +189,10 @@ protected:
     }
 
     // Create the user type from the data type
-    Object<CassUserType, cass_user_type_free>::set(
-      cass_user_type_new_from_data_type(data_type));
+    Object<CassUserType, cass_user_type_free>::set(cass_user_type_new_from_data_type(data_type));
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_USER_DATA_TYPE_HPP__

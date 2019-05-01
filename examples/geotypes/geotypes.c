@@ -61,16 +61,13 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-void print_point(cass_double_t x, cass_double_t y) {
-  printf("POINT(%.1f %.1f)", x, y);
-}
+void print_point(cass_double_t x, cass_double_t y) { printf("POINT(%.1f %.1f)", x, y); }
 
-void insert_point(CassSession* session, const char* key,
-                  cass_double_t x, cass_double_t y) {
+void insert_point(CassSession* session, const char* key, cass_double_t x, cass_double_t y) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("INSERT INTO examples.geotypes "
-                           "(key, point) VALUES (?, ?)", 2);
+  CassStatement* statement = cass_statement_new("INSERT INTO examples.geotypes "
+                                                "(key, point) VALUES (?, ?)",
+                                                2);
 
   cass_statement_bind_string(statement, 0, key);
   cass_statement_bind_dse_point(statement, 1, x, y);
@@ -87,8 +84,8 @@ void insert_point(CassSession* session, const char* key,
 
 void select_point(CassSession* session, const char* key) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("SELECT point FROM examples.geotypes WHERE key = ?", 1);
+  CassStatement* statement =
+      cass_statement_new("SELECT point FROM examples.geotypes WHERE key = ?", 1);
 
   cass_statement_bind_string(statement, 0, key);
 
@@ -118,9 +115,10 @@ void select_point(CassSession* session, const char* key) {
 
 void insert_point_collections(CassSession* session, const char* key) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("INSERT INTO examples.geotypes_collections "
-                           "(key, point_list, point_tuple, point_udt) VALUES (?, ?, ?, ?)", 4);
+  CassStatement* statement =
+      cass_statement_new("INSERT INTO examples.geotypes_collections "
+                         "(key, point_list, point_tuple, point_udt) VALUES (?, ?, ?, ?)",
+                         4);
 
   cass_statement_bind_string(statement, 0, key);
 
@@ -165,9 +163,9 @@ void insert_point_collections(CassSession* session, const char* key) {
 
 void select_point_collections(CassSession* session, const char* key) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("SELECT point_list, point_tuple, point_udt "
-                           "FROM examples.geotypes_collections WHERE key = ?", 1);
+  CassStatement* statement = cass_statement_new("SELECT point_list, point_tuple, point_udt "
+                                                "FROM examples.geotypes_collections WHERE key = ?",
+                                                1);
 
   cass_statement_bind_string(statement, 0, key);
 
@@ -240,7 +238,7 @@ void select_point_collections(CassSession* session, const char* key) {
 }
 
 void print_line_string(DseLineStringIterator* iterator) {
-  cass_int32_t i, num_points = dse_line_string_iterator_num_points(iterator) ;
+  cass_int32_t i, num_points = dse_line_string_iterator_num_points(iterator);
   printf("LINESTRING(");
   for (i = 0; i < num_points; ++i) {
     cass_double_t x, y;
@@ -255,9 +253,9 @@ void insert_line_string(CassSession* session, const char* key, int num_points, .
   int i;
   va_list args;
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("INSERT INTO examples.geotypes "
-                           "(key, linestring) VALUES (?, ?)", 2);
+  CassStatement* statement = cass_statement_new("INSERT INTO examples.geotypes "
+                                                "(key, linestring) VALUES (?, ?)",
+                                                2);
   DseLineString* line_string = dse_line_string_new();
 
   dse_line_string_reserve(line_string, num_points);
@@ -288,8 +286,8 @@ void insert_line_string(CassSession* session, const char* key, int num_points, .
 
 void select_line_string(CassSession* session, const char* key) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("SELECT linestring FROM examples.geotypes WHERE key = ?", 1);
+  CassStatement* statement =
+      cass_statement_new("SELECT linestring FROM examples.geotypes WHERE key = ?", 1);
 
   cass_statement_bind_string(statement, 0, key);
 
@@ -308,7 +306,6 @@ void select_line_string(CassSession* session, const char* key) {
 
       num_points = dse_line_string_iterator_num_points(iterator);
 
-
       printf("%s: ", key);
       print_line_string(iterator);
       printf(")\n");
@@ -326,9 +323,10 @@ void select_line_string(CassSession* session, const char* key) {
 
 void insert_line_string_collections(CassSession* session, const char* key) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("INSERT INTO examples.geotypes_collections "
-                           "(key, linestring_set, linestring_tuple, linestring_udt) VALUES (?, ?, ?, ?)", 4);
+  CassStatement* statement = cass_statement_new(
+      "INSERT INTO examples.geotypes_collections "
+      "(key, linestring_set, linestring_tuple, linestring_udt) VALUES (?, ?, ?, ?)",
+      4);
   DseLineString* line_string = dse_line_string_new();
 
   cass_statement_bind_string(statement, 0, key);
@@ -411,9 +409,10 @@ void insert_line_string_collections(CassSession* session, const char* key) {
 
 void select_line_string_collections(CassSession* session, const char* key) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("SELECT linestring_set, linestring_tuple, linestring_udt "
-                           "FROM examples.geotypes_collections WHERE key = ?", 1);
+  CassStatement* statement =
+      cass_statement_new("SELECT linestring_set, linestring_tuple, linestring_udt "
+                         "FROM examples.geotypes_collections WHERE key = ?",
+                         1);
   DseLineStringIterator* line_string_iterator = dse_line_string_iterator_new();
 
   cass_statement_bind_string(statement, 0, key);
@@ -491,7 +490,7 @@ void print_polygon(DsePolygonIterator* iterator) {
     cass_uint32_t j, num_points = 0;
     dse_polygon_iterator_next_num_points(iterator, &num_points);
     printf("(");
-    for (j = 0; j < num_points; ++j)  {
+    for (j = 0; j < num_points; ++j) {
       cass_double_t x = 0.0, y;
       dse_polygon_iterator_next_point(iterator, &x, &y);
       if (j > 0) printf(", ");
@@ -506,9 +505,9 @@ void insert_polygon(CassSession* session, const char* key, int num_rings, ...) {
   int i, j;
   va_list args;
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("INSERT INTO examples.geotypes "
-                           "(key, polygon) VALUES (?, ?)", 2);
+  CassStatement* statement = cass_statement_new("INSERT INTO examples.geotypes "
+                                                "(key, polygon) VALUES (?, ?)",
+                                                2);
 
   DsePolygon* polygon = dse_polygon_new();
 
@@ -542,8 +541,8 @@ void insert_polygon(CassSession* session, const char* key, int num_rings, ...) {
 
 void select_polygon(CassSession* session, const char* key) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("SELECT polygon FROM examples.geotypes WHERE key = ?", 1);
+  CassStatement* statement =
+      cass_statement_new("SELECT polygon FROM examples.geotypes WHERE key = ?", 1);
 
   cass_statement_bind_string(statement, 0, key);
 
@@ -576,9 +575,10 @@ void select_polygon(CassSession* session, const char* key) {
 
 void insert_polygon_collections(CassSession* session, const char* key) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("INSERT INTO examples.geotypes_collections "
-                           "(key, polygon_map, polygon_tuple, polygon_udt) VALUES (?, ?, ?, ?)", 4);
+  CassStatement* statement =
+      cass_statement_new("INSERT INTO examples.geotypes_collections "
+                         "(key, polygon_map, polygon_tuple, polygon_udt) VALUES (?, ?, ?, ?)",
+                         4);
   DsePolygon* polygon = dse_polygon_new();
 
   cass_statement_bind_string(statement, 0, key);
@@ -679,9 +679,9 @@ void insert_polygon_collections(CassSession* session, const char* key) {
 
 void select_polygon_collections(CassSession* session, const char* key) {
   CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("SELECT polygon_map, polygon_tuple, polygon_udt "
-                           "FROM examples.geotypes_collections WHERE key = ?", 1);
+  CassStatement* statement = cass_statement_new("SELECT polygon_map, polygon_tuple, polygon_udt "
+                                                "FROM examples.geotypes_collections WHERE key = ?",
+                                                1);
   DsePolygonIterator* polygon_iterator = dse_polygon_iterator_new();
 
   cass_statement_bind_string(statement, 0, key);
@@ -782,17 +782,14 @@ int main(int argc, char* argv[]) {
                          "linestring 'LineStringType', "
                          "polygon 'PolygonType')");
 
-  execute_query(session,
-                "CREATE TYPE IF NOT EXISTS examples.point_user_type "
-                "(point1 'PointType', point2 'PointType')");
+  execute_query(session, "CREATE TYPE IF NOT EXISTS examples.point_user_type "
+                         "(point1 'PointType', point2 'PointType')");
 
-  execute_query(session,
-                "CREATE TYPE IF NOT EXISTS examples.linestring_user_type "
-                "(linestring1 'LineStringType', linestring2 'LineStringType')");
+  execute_query(session, "CREATE TYPE IF NOT EXISTS examples.linestring_user_type "
+                         "(linestring1 'LineStringType', linestring2 'LineStringType')");
 
-  execute_query(session,
-                "CREATE TYPE IF NOT EXISTS examples.polygon_user_type "
-                "(polygon1 'PolygonType', polygon2 'PolygonType')");
+  execute_query(session, "CREATE TYPE IF NOT EXISTS examples.polygon_user_type "
+                         "(polygon1 'PolygonType', polygon2 'PolygonType')");
 
   execute_query(session, "CREATE TABLE IF NOT EXISTS examples.geotypes_collections ("
                          "key text PRIMARY KEY, "
@@ -811,13 +808,13 @@ int main(int argc, char* argv[]) {
     const CassKeyspaceMeta* keyspace = cass_schema_meta_keyspace_by_name(schema, "examples");
 
     point_user_type = cass_data_type_new_from_existing(
-                        cass_keyspace_meta_user_type_by_name(keyspace, "point_user_type"));
+        cass_keyspace_meta_user_type_by_name(keyspace, "point_user_type"));
 
     line_string_user_type = cass_data_type_new_from_existing(
-                              cass_keyspace_meta_user_type_by_name(keyspace, "linestring_user_type"));
+        cass_keyspace_meta_user_type_by_name(keyspace, "linestring_user_type"));
 
     polygon_user_type = cass_data_type_new_from_existing(
-                          cass_keyspace_meta_user_type_by_name(keyspace, "polygon_user_type"));
+        cass_keyspace_meta_user_type_by_name(keyspace, "polygon_user_type"));
 
     cass_schema_meta_free(schema);
   }
@@ -830,32 +827,21 @@ int main(int argc, char* argv[]) {
   insert_line_string(session, "lnstr1", 0);
   select_line_string(session, "lnstr1");
 
-  insert_line_string(session, "lnstr2", 2,
-                     0.0, 0.0, 1.0, 1.0);
+  insert_line_string(session, "lnstr2", 2, 0.0, 0.0, 1.0, 1.0);
   select_line_string(session, "lnstr2");
 
-  insert_line_string(session, "lnstr3", 3,
-                     0.0, 0.0, 1.0, 0.0,
-                     2.0, 0.0);
+  insert_line_string(session, "lnstr3", 3, 0.0, 0.0, 1.0, 0.0, 2.0, 0.0);
   select_line_string(session, "lnstr3");
 
-  insert_line_string(session, "lnstr4", 4,
-                     0.0, 0.0, 1.0, 0.0,
-                     2.0, 0.0, 3.0, 0.0);
+  insert_line_string(session, "lnstr4", 4, 0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0);
   select_line_string(session, "lnstr4");
 
   printf("\nexamples.geotypes (Polygon):\n");
   insert_polygon(session, "poly1", 0);
   select_polygon(session, "poly1");
 
-  insert_polygon(session, "poly2", 2,
-                 5,
-                 35.0, 10.0, 45.0, 45.0,
-                 15.0, 40.0, 10.0, 20.0,
-                 35.0, 10.0,
-                 4,
-                 20.0, 30.0, 35.0, 35.0,
-                 30.0, 20.0, 20.0, 30.0);
+  insert_polygon(session, "poly2", 2, 5, 35.0, 10.0, 45.0, 45.0, 15.0, 40.0, 10.0, 20.0, 35.0, 10.0,
+                 4, 20.0, 30.0, 35.0, 35.0, 30.0, 20.0, 20.0, 30.0);
   select_polygon(session, "poly2");
 
   printf("\nexamples.geotypes_collections (Point):\n");
@@ -879,4 +865,3 @@ int main(int argc, char* argv[]) {
 
   return 0;
 }
-

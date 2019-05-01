@@ -28,23 +28,22 @@ namespace datastax { namespace internal { namespace core {
 class Buffer {
 public:
   Buffer()
-    : size_(0) { }
+      : size_(0) {}
 
   Buffer(const char* data, size_t size)
-    : size_(size) {
+      : size_(size) {
     if (size > FIXED_BUFFER_SIZE) {
       RefBuffer* buffer = RefBuffer::create(size);
       buffer->inc_ref();
       memcpy(buffer->data(), data, size);
       data_.buffer = buffer;
-    } else if (size > 0){
+    } else if (size > 0) {
       memcpy(data_.fixed, data, size);
     }
   }
 
-  explicit
-  Buffer(size_t size)
-    : size_(size) {
+  explicit Buffer(size_t size)
+      : size_(size) {
     if (size > FIXED_BUFFER_SIZE) {
       RefBuffer* buffer = RefBuffer::create(size);
       buffer->inc_ref();
@@ -53,7 +52,7 @@ public:
   }
 
   Buffer(const Buffer& buf)
-    : size_(0) {
+      : size_(0) {
     copy(buf);
   }
 
@@ -142,8 +141,7 @@ public:
 
   size_t encode_string_list(size_t offset, const Vector<String>& value) {
     size_t pos = encode_uint16(offset, static_cast<uint16_t>(value.size()));
-    for (Vector<String>::const_iterator it = value.begin(),
-         end = value.end(); it != end; ++it) {
+    for (Vector<String>::const_iterator it = value.begin(), end = value.end(); it != end; ++it) {
       pos = encode_string(pos, it->data(), static_cast<uint16_t>(it->size()));
     }
     return pos;
@@ -151,8 +149,7 @@ public:
 
   size_t encode_string_map(size_t offset, const Map<String, String>& value) {
     size_t pos = encode_uint16(offset, static_cast<uint16_t>(value.size()));
-    for (Map<String, String>::const_iterator it = value.begin();
-         it != value.end(); ++it) {
+    for (Map<String, String>::const_iterator it = value.begin(); it != value.end(); ++it) {
       pos = encode_string(pos, it->first.c_str(), static_cast<uint16_t>(it->first.size()));
       pos = encode_string(pos, it->second.c_str(), static_cast<uint16_t>(it->second.size()));
     }
@@ -176,15 +173,11 @@ public:
   }
 
   char* data() {
-    return size_ > FIXED_BUFFER_SIZE
-        ? static_cast<RefBuffer*>(data_.buffer)->data()
-        : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefBuffer*>(data_.buffer)->data() : data_.fixed;
   }
 
   const char* data() const {
-    return size_ > FIXED_BUFFER_SIZE
-        ? static_cast<RefBuffer*>(data_.buffer)->data()
-        : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefBuffer*>(data_.buffer)->data() : data_.fixed;
   }
 
   size_t size() const { return size_; }
@@ -216,7 +209,7 @@ private:
     RefBuffer* buffer;
 
     Data()
-      : buffer(NULL) { }
+        : buffer(NULL) {}
   } data_;
 
   size_t size_;
@@ -224,6 +217,6 @@ private:
 
 typedef Vector<Buffer> BufferVec;
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

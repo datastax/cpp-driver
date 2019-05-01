@@ -20,48 +20,35 @@ using namespace datastax::internal::enterprise;
 
 extern "C" {
 
-DseLineString* dse_line_string_new() {
-  return DseLineString::to(new LineString());
-}
+DseLineString* dse_line_string_new() { return DseLineString::to(new LineString()); }
 
-void dse_line_string_free(DseLineString* line_string) {
-  delete line_string->from();
-}
+void dse_line_string_free(DseLineString* line_string) { delete line_string->from(); }
 
-void dse_line_string_reset(DseLineString* line_string) {
-  line_string->reset();
-}
+void dse_line_string_reset(DseLineString* line_string) { line_string->reset(); }
 
-void dse_line_string_reserve(DseLineString* line_string,
-                             cass_uint32_t num_points) {
+void dse_line_string_reserve(DseLineString* line_string, cass_uint32_t num_points) {
   line_string->reserve(num_points);
 }
 
-CassError dse_line_string_add_point(DseLineString* line_string,
-                                    cass_double_t x, cass_double_t y) {
+CassError dse_line_string_add_point(DseLineString* line_string, cass_double_t x, cass_double_t y) {
   line_string->add_point(x, y);
   return CASS_OK;
 }
 
-CassError dse_line_string_finish(DseLineString* line_string) {
-  return line_string->finish();
-}
+CassError dse_line_string_finish(DseLineString* line_string) { return line_string->finish(); }
 
 DseLineStringIterator* dse_line_string_iterator_new() {
   return DseLineStringIterator::to(new LineStringIterator());
 }
 
-void dse_line_string_iterator_free(DseLineStringIterator* iterator) {
-  delete iterator->from();
-}
+void dse_line_string_iterator_free(DseLineStringIterator* iterator) { delete iterator->from(); }
 
-CassError dse_line_string_iterator_reset(DseLineStringIterator *iterator, const CassValue *value) {
+CassError dse_line_string_iterator_reset(DseLineStringIterator* iterator, const CassValue* value) {
   return iterator->reset_binary(value);
 }
 
 CassError dse_line_string_iterator_reset_with_wkt_n(DseLineStringIterator* iterator,
-                                                    const char* wkt,
-                                                    size_t wkt_length) {
+                                                    const char* wkt, size_t wkt_length) {
   return iterator->reset_text(wkt, wkt_length);
 }
 
@@ -74,8 +61,8 @@ cass_uint32_t dse_line_string_iterator_num_points(const DseLineStringIterator* i
   return iterator->num_points();
 }
 
-CassError dse_line_string_iterator_next_point(DseLineStringIterator* iterator,
-                                              cass_double_t* x, cass_double_t* y) {
+CassError dse_line_string_iterator_next_point(DseLineStringIterator* iterator, cass_double_t* x,
+                                              cass_double_t* y) {
   return iterator->next_point(x, y);
 }
 
@@ -140,9 +127,7 @@ CassError LineStringIterator::reset_binary(const CassValue* value) {
   return CASS_OK;
 }
 
-bool isnum(int c) {
-  return isdigit(c) || c == '+' || c == '-' || c == '.';
-}
+bool isnum(int c) { return isdigit(c) || c == '+' || c == '-' || c == '.'; }
 
 CassError LineStringIterator::reset_text(const char* text, size_t size) {
   cass_uint32_t num_points = 0;
@@ -185,7 +170,7 @@ CassError LineStringIterator::reset_text(const char* text, size_t size) {
     if (token == WktLexer::TK_COMMA) {
       token = lexer.next_token();
       // Verify there are more points
-      if(token != WktLexer::TK_NUMBER) {
+      if (token != WktLexer::TK_NUMBER) {
         return CASS_ERROR_LIB_BAD_PARAMS;
       }
     }
@@ -217,11 +202,14 @@ CassError LineStringIterator::BinaryIterator::next_point(cass_double_t* x, cass_
 }
 
 LineStringIterator::TextIterator::TextIterator(const char* text, size_t size)
-  : lexer_(text, size) {
-  WktLexer::Token token; UNUSED_(token);
+    : lexer_(text, size) {
+  WktLexer::Token token;
+  UNUSED_(token);
   // Skip over "LINESTRING (" tokens
-  token = lexer_.next_token(); assert(token == WktLexer::TK_TYPE_LINESTRING);
-  token = lexer_.next_token(); assert(token == WktLexer::TK_OPEN_PAREN);
+  token = lexer_.next_token();
+  assert(token == WktLexer::TK_TYPE_LINESTRING);
+  token = lexer_.next_token();
+  assert(token == WktLexer::TK_OPEN_PAREN);
 }
 
 CassError LineStringIterator::TextIterator::next_point(cass_double_t* x, cass_double_t* y) {
@@ -234,12 +222,13 @@ CassError LineStringIterator::TextIterator::next_point(cass_double_t* x, cass_do
   }
   *x = lexer_.number();
 
-  token = lexer_.next_token(); assert(token == WktLexer::TK_NUMBER);
+  token = lexer_.next_token();
+  assert(token == WktLexer::TK_NUMBER);
   *y = lexer_.number();
 
   // Skip trailing "," or  ")" tokens
-  token = lexer_.next_token(); assert(token == WktLexer::TK_COMMA ||
-                                      token == WktLexer::TK_CLOSE_PAREN);
+  token = lexer_.next_token();
+  assert(token == WktLexer::TK_COMMA || token == WktLexer::TK_CLOSE_PAREN);
 
   return CASS_OK;
 }

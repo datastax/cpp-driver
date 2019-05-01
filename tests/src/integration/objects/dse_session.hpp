@@ -9,25 +9,24 @@
 #define __TEST_DSE_SESSION_HPP__
 #include "objects/dse_cluster.hpp"
 
-#include "objects/dse_statement.hpp"
-#include "objects/dse_graph_statement.hpp"
 #include "objects/dse_graph_result_set.hpp"
+#include "objects/dse_graph_statement.hpp"
+#include "objects/dse_statement.hpp"
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 /**
  * Wrapped DSE session object
  */
 class Session : public driver::Session {
-friend class Cluster;
+  friend class Cluster;
+
 public:
   /**
    * Create the default DSE session object
    */
   Session()
-    : driver::Session() {}
+      : driver::Session() {}
 
   /**
    * Create the DSE session object from the native driver object
@@ -35,7 +34,7 @@ public:
    * @param session Native driver object
    */
   Session(CassSession* session)
-    : driver::Session(session) {}
+      : driver::Session(session) {}
 
   /**
    * Create the DSE session object from a shared reference
@@ -43,7 +42,7 @@ public:
    * @param session Shared reference
    */
   Session(Ptr session)
-    : driver::Session(session) {}
+      : driver::Session(session) {}
 
   /**
    * Create the DSE session object from a wrapped session
@@ -51,7 +50,7 @@ public:
    * @param session Wrapped session object
    */
   Session(driver::Session session)
-    : driver::Session(session) {}
+      : driver::Session(session) {}
 
   /**
    * Execute a DSE batch statement synchronously
@@ -93,13 +92,9 @@ public:
    *                  CASS_OK; false otherwise (default: true)
    * @return Result object
    */
-  Result execute(const std::string& query,
-    CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
-    bool is_idempotent = false, bool assert_ok = true) {
-    return driver::Session::execute(query,
-                                    consistency,
-                                    is_idempotent,
-                                    assert_ok);
+  Result execute(const std::string& query, CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
+                 bool is_idempotent = false, bool assert_ok = true) {
+    return driver::Session::execute(query, consistency, is_idempotent, assert_ok);
   }
 
   /**
@@ -125,8 +120,7 @@ public:
    *                  CASS_OK; false otherwise (default: true)
    * @return DSE graph result object
    */
-  GraphResultSet execute(const std::string& query, GraphOptions options,
-    bool assert_ok = true) {
+  GraphResultSet execute(const std::string& query, GraphOptions options, bool assert_ok = true) {
     // Allow for NULL graph options without throwing an exception
     DseGraphOptions* graph_options = NULL;
     if (options) {
@@ -134,8 +128,7 @@ public:
     }
 
     // Create and execute the graph statement
-    GraphStatement statement(dse_graph_statement_new(query.c_str(),
-                                                     graph_options));
+    GraphStatement statement(dse_graph_statement_new(query.c_str(), graph_options));
     return execute(statement, assert_ok);
   }
 
@@ -148,9 +141,7 @@ public:
    *                  CASS_OK; false otherwise (default: true)
    * @return Result object
    */
-  Result execute_as(driver::Batch batch,
-                    const std::string& name,
-                    bool assert_ok = true) {
+  Result execute_as(driver::Batch batch, const std::string& name, bool assert_ok = true) {
     return execute_as(Batch(batch), name, assert_ok);
   }
 
@@ -162,9 +153,7 @@ public:
    * @param assert_ok True if error code for future should be asserted
    *                  CASS_OK; false otherwise (default: true)
    */
-  Result execute_as(Batch batch,
-                    const std::string& name,
-                    bool assert_ok = true) {
+  Result execute_as(Batch batch, const std::string& name, bool assert_ok = true) {
     batch.set_execute_as(name);
     Future future(cass_session_execute_batch(get(), batch.get()));
     future.wait(assert_ok);
@@ -180,9 +169,7 @@ public:
    *                  CASS_OK; false otherwise (default: true)
    * @return Result object
    */
-  Result execute_as(driver::Statement statement,
-                    const std::string& name,
-                    bool assert_ok = true) {
+  Result execute_as(driver::Statement statement, const std::string& name, bool assert_ok = true) {
     return execute_as(Statement(statement), name, assert_ok);
   }
 
@@ -195,9 +182,7 @@ public:
    *                  CASS_OK; false otherwise (default: true)
    * @return Result object
    */
-  Result execute_as(Statement statement,
-                    const std::string& name,
-                    bool assert_ok = true) {
+  Result execute_as(Statement statement, const std::string& name, bool assert_ok = true) {
     statement.set_execute_as(name);
     Future future(cass_session_execute(get(), statement.get()));
     future.wait(assert_ok);
@@ -217,17 +202,16 @@ public:
    *                  CASS_OK; false otherwise (default: true)
    * @return Result object
    */
-  Result execute_as(const std::string& query,
-                    const std::string& name,
+  Result execute_as(const std::string& query, const std::string& name,
                     CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
-    bool is_idempotent = false, bool assert_ok = true) {
+                    bool is_idempotent = false, bool assert_ok = true) {
     Statement statement(query);
     statement.set_consistency(consistency);
     statement.set_idempotent(is_idempotent);
     return execute_as(statement, name, assert_ok);
   }
 
-   /**
+  /**
    * Execute a DSE batch statement asynchronously
    *
    * @param batch Batch statement to execute
@@ -258,8 +242,8 @@ public:
    * @return Future object
    */
   Future execute_async(const std::string& query,
-    CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
-    bool is_idempotent = false) {
+                       CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
+                       bool is_idempotent = false) {
     return driver::Session::execute_async(query, consistency, is_idempotent);
   }
 
@@ -343,8 +327,8 @@ public:
    * @return Future object
    */
   Future execute_async_as(const std::string& query, const std::string& name,
-    CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
-    bool is_idempotent = false) {
+                          CassConsistency consistency = CASS_CONSISTENCY_LOCAL_ONE,
+                          bool is_idempotent = false) {
     Statement statement(query);
     statement.set_consistency(consistency);
     statement.set_idempotent(is_idempotent);
@@ -352,8 +336,6 @@ public:
   }
 };
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_SESSION_HPP__

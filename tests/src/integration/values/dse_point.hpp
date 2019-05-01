@@ -10,10 +10,7 @@
 #include "dse_nullable_value.hpp"
 #include "exception.hpp"
 
-namespace test {
-namespace driver {
-namespace values {
-namespace dse {
+namespace test { namespace driver { namespace values { namespace dse {
 
 /**
  * DSE point wrapped value
@@ -38,13 +35,13 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) { }
+        : test::Exception(message) {}
   };
   typedef PointType Native;
   typedef std::string ConvenienceType;
   typedef PointType ValueType;
 
-  Point() { }
+  Point() {}
 
   /**
    * @throws DsePoint::Exception
@@ -79,26 +76,20 @@ public:
   }
 
   /**
-  * Constructor using simple point type
-  *
-  * @param point Simple point type value
-  */
+   * Constructor using simple point type
+   *
+   * @param point Simple point type value
+   */
   Point(PointType point)
-    : point_(point) { }
+      : point_(point) {}
 
   void append(Collection collection) {
-    ASSERT_EQ(CASS_OK, cass_collection_append_dse_point(collection.get(),
-                                                        point_.x,
-                                                        point_.y));
+    ASSERT_EQ(CASS_OK, cass_collection_append_dse_point(collection.get(), point_.x, point_.y));
   }
 
-  std::string cql_type() const {
-    return "'PointType'";
-  }
+  std::string cql_type() const { return "'PointType'"; }
 
-  std::string cql_value() const {
-    return "'POINT(" + str() + ")'";
-  }
+  std::string cql_value() const { return "'POINT(" + str() + ")'"; }
 
   /**
    * Comparison operation for driver value DSE point
@@ -122,13 +113,11 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Point& rhs) const {
-    return compare(rhs.point_);
-  }
+  int compare(const Point& rhs) const { return compare(rhs.point_); }
 
   void initialize(const CassValue* value) {
     ASSERT_EQ(CASS_OK, cass_value_get_dse_point(value, &point_.x, &point_.y))
-      << "Unable to Get DSE Point: Invalid error code returned";
+        << "Unable to Get DSE Point: Invalid error code returned";
   }
 
   void initialize(const ::DseGraphResult* result) {
@@ -136,31 +125,21 @@ public:
   }
 
   void set(Tuple tuple, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_tuple_set_dse_point(tuple.get(),
-                                                index,
-                                                point_.x,
-                                                point_.y));
+    ASSERT_EQ(CASS_OK, cass_tuple_set_dse_point(tuple.get(), index, point_.x, point_.y));
   }
 
   void set(UserType user_type, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_user_type_set_dse_point_by_name(user_type.get(),
-                                                            name.c_str(),
-                                                            point_.x,
+    ASSERT_EQ(CASS_OK, cass_user_type_set_dse_point_by_name(user_type.get(), name.c_str(), point_.x,
                                                             point_.y));
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_point(statement.get(),
-                                                     index,
-                                                     point_.x,
-                                                     point_.y));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_point(statement.get(), index, point_.x, point_.y));
   }
 
   void statement_bind(Statement statement, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_point_by_name(statement.get(),
-                                                             name.c_str(),
-                                                             point_.x,
-                                                             point_.y));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_point_by_name(statement.get(), name.c_str(),
+                                                             point_.x, point_.y));
   }
 
   std::string str() const {
@@ -169,21 +148,13 @@ public:
     return point_string.str();
   }
 
-  static std::string supported_server_version() {
-    return "5.0.0";
-  }
+  static std::string supported_server_version() { return "5.0.0"; }
 
-  Native to_native() const {
-    return point_;
-  }
+  Native to_native() const { return point_; }
 
-  ValueType value() const {
-    return point_;
-  }
+  ValueType value() const { return point_; }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_CUSTOM;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_CUSTOM; }
 
 private:
   /**
@@ -197,9 +168,6 @@ inline std::ostream& operator<<(std::ostream& os, const Point& point) {
   return os;
 }
 
-} // namespace dse
-} // namespace values
-} // namespace driver
-} // namespace test
+}}}} // namespace test::driver::values::dse
 
 #endif // __TEST_DSE_POINT_HPP__

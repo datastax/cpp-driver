@@ -91,11 +91,9 @@ bool EventResponse::decode(Decoder& decoder) {
 
     CHECK_RESULT(decoder.decode_string(&keyspace_));
 
-    if (schema_change_target_ == TABLE ||
-        schema_change_target_ == TYPE) {
+    if (schema_change_target_ == TABLE || schema_change_target_ == TYPE) {
       CHECK_RESULT(decoder.decode_string(&target_));
-    } else if (schema_change_target_ == FUNCTION ||
-               schema_change_target_ == AGGREGATE) {
+    } else if (schema_change_target_ == FUNCTION || schema_change_target_ == AGGREGATE) {
       CHECK_RESULT(decoder.decode_string(&target_));
       CHECK_RESULT(decoder.decode_stringlist(arg_types_));
     }

@@ -11,9 +11,7 @@
 
 #include "objects/dse_graph_vertex.hpp"
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 // Forward declaration for circular dependency
 class GraphResult;
@@ -30,7 +28,7 @@ public:
    * @param edge Native driver object
    */
   GraphEdge(DseGraphEdgeResult edge)
-    : edge_(edge) {}
+      : edge_(edge) {}
 
   /**
    * Get the DSE graph edge id
@@ -95,8 +93,6 @@ private:
   DseGraphEdgeResult edge_;
 };
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_GRAPH_EDGE_HPP__

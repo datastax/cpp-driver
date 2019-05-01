@@ -21,9 +21,7 @@ namespace datastax { namespace internal { namespace enterprise {
 
 class Polygon : public Allocated {
 public:
-  Polygon() {
-    reset();
-  }
+  Polygon() { reset(); }
 
   const Bytes& bytes() const { return bytes_; }
 
@@ -41,9 +39,9 @@ public:
   }
 
   void reserve(cass_uint32_t num_rings, cass_uint32_t total_num_points) {
-    bytes_.reserve(WKB_HEADER_SIZE +                        // Header
-                   sizeof(cass_uint32_t) +                  // Num rings
-                   num_rings * sizeof(cass_uint32_t) +      // Num points for each ring
+    bytes_.reserve(WKB_HEADER_SIZE +                              // Header
+                   sizeof(cass_uint32_t) +                        // Num rings
+                   num_rings * sizeof(cass_uint32_t) +            // Num points for each ring
                    2 * total_num_points * sizeof(cass_double_t)); // Points for each ring
   }
 
@@ -91,55 +89,50 @@ private:
 
 class PolygonIterator : public Allocated {
 private:
-  enum State {
-    STATE_NUM_POINTS,
-    STATE_POINTS,
-    STATE_DONE
-  };
+  enum State { STATE_NUM_POINTS, STATE_POINTS, STATE_DONE };
 
 public:
   PolygonIterator()
-    : num_rings_(0)
-    , iterator_(NULL) { }
+      : num_rings_(0)
+      , iterator_(NULL) {}
 
   cass_uint32_t num_rings() const { return num_rings_; }
 
   CassError reset_binary(const CassValue* value);
   CassError reset_text(const char* text, size_t size);
 
-   CassError next_num_points(cass_uint32_t* num_points) {
-     if (iterator_ == NULL) {
-       return CASS_ERROR_LIB_INVALID_STATE;
-     }
-     return iterator_->next_num_points(num_points);
+  CassError next_num_points(cass_uint32_t* num_points) {
+    if (iterator_ == NULL) {
+      return CASS_ERROR_LIB_INVALID_STATE;
+    }
+    return iterator_->next_num_points(num_points);
   }
 
   CassError next_point(cass_double_t* x, cass_double_t* y) {
-     if (iterator_ == NULL) {
-       return CASS_ERROR_LIB_INVALID_STATE;
-     }
-     return iterator_->next_point(x, y);
+    if (iterator_ == NULL) {
+      return CASS_ERROR_LIB_INVALID_STATE;
+    }
+    return iterator_->next_point(x, y);
   }
 
 private:
   class Iterator : public Allocated {
   public:
-    virtual ~Iterator() { }
+    virtual ~Iterator() {}
     virtual CassError next_num_points(cass_uint32_t* num_points) = 0;
     virtual CassError next_point(cass_double_t* x, cass_double_t* y) = 0;
   };
 
   class BinaryIterator : public Iterator {
   public:
-    BinaryIterator() { }
-    BinaryIterator(const cass_byte_t* rings_begin,
-                   const cass_byte_t* rings_end,
+    BinaryIterator() {}
+    BinaryIterator(const cass_byte_t* rings_begin, const cass_byte_t* rings_end,
                    WkbByteOrder byte_order)
-      : state_(STATE_NUM_POINTS)
-      , position_(rings_begin)
-      , rings_end_(rings_end)
-      , points_end_(NULL)
-      , byte_order_(byte_order) { }
+        : state_(STATE_NUM_POINTS)
+        , position_(rings_begin)
+        , rings_end_(rings_end)
+        , points_end_(NULL)
+        , byte_order_(byte_order) {}
 
     virtual CassError next_num_points(cass_uint32_t* num_points);
     virtual CassError next_point(cass_double_t* x, cass_double_t* y);
@@ -154,7 +147,7 @@ private:
 
   class TextIterator : public Iterator {
   public:
-    TextIterator() { }
+    TextIterator() {}
     TextIterator(const char* text, size_t size);
 
     virtual CassError next_num_points(cass_uint32_t* num_points);
@@ -171,7 +164,7 @@ private:
   TextIterator text_iterator_;
 };
 
-} } } // namespace datastax::internal::enterprise
+}}} // namespace datastax::internal::enterprise
 
 EXTERNAL_TYPE(datastax::internal::enterprise::Polygon, DsePolygon)
 EXTERNAL_TYPE(datastax::internal::enterprise::PolygonIterator, DsePolygonIterator)

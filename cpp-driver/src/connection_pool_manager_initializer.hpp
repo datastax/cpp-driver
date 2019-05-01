@@ -51,8 +51,7 @@ public:
    * @param callback A callback that is called when the manager is connected or
    * if an error occurred.
    */
-  ConnectionPoolManagerInitializer(ProtocolVersion protocol_version,
-                                   const Callback& callback);
+  ConnectionPoolManagerInitializer(ProtocolVersion protocol_version, const Callback& callback);
 
   /**
    * Initialize a connection pool manager use the given hosts.
@@ -91,7 +90,6 @@ public:
    */
   ConnectionPoolManagerInitializer* with_metrics(Metrics* metrics);
 
-
   /**
    * Set settings to use for the manager and its connections.
    *
@@ -99,7 +97,6 @@ public:
    * @return The initializer to chain calls.
    */
   ConnectionPoolManagerInitializer* with_settings(const ConnectionPoolSettings& settings);
-
 
   /**
    * Critical failures that happened during the connection process.
@@ -128,9 +125,8 @@ private:
 
   virtual void on_pool_down(const Address& address);
 
-  virtual void on_pool_critical_error(const Address& address,
-                                 Connector::ConnectionError code,
-                                 const String& message);
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
+                                      const String& message);
 
   virtual void on_close(ConnectionPool* pool);
 
@@ -155,6 +151,6 @@ private:
   ConnectionPoolSettings settings_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

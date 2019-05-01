@@ -22,8 +22,7 @@
 
 #include "objects/statement.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Wrapped prepared object
@@ -34,7 +33,7 @@ public:
    * Create the empty prepared object
    */
   Prepared()
-    : Object<const CassPrepared, cass_prepared_free>() {}
+      : Object<const CassPrepared, cass_prepared_free>() {}
 
   /**
    * Create the prepared object from the native driver object
@@ -42,7 +41,7 @@ public:
    * @param prepared Native driver object
    */
   Prepared(const CassPrepared* prepared)
-    : Object<const CassPrepared, cass_prepared_free>(prepared) {}
+      : Object<const CassPrepared, cass_prepared_free>(prepared) {}
 
   /**
    * Create the prepared object from a shared reference
@@ -50,16 +49,14 @@ public:
    * @param prepared Shared reference
    */
   Prepared(Ptr prepared)
-    : Object<const CassPrepared, cass_prepared_free>(prepared) {}
+      : Object<const CassPrepared, cass_prepared_free>(prepared) {}
 
   /**
    * Bind the prepared object and create a statement
    *
    * @return Statement
    */
-  Statement bind() {
-    return Statement(cass_prepared_bind(get()));
-  }
+  Statement bind() { return Statement(cass_prepared_bind(get())); }
 
   /**
    * Get the data type for a given column index
@@ -87,9 +84,7 @@ public:
    * @param index The column index to retrieve the value type
    * @return Value type at the specified column index
    */
-  CassValueType value_type(size_t index) {
-    return cass_data_type_type(data_type(index));
-  }
+  CassValueType value_type(size_t index) { return cass_data_type_type(data_type(index)); }
 
   /**
    * Get the value type for a given column name
@@ -97,12 +92,9 @@ public:
    * @param name The column name to retrieve the value type
    * @return Value type at the specified column index
    */
-  CassValueType value_type(const std::string& name) {
-    return cass_data_type_type(data_type(name));
-  }
+  CassValueType value_type(const std::string& name) { return cass_data_type_type(data_type(name)); }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_PREPARED_HPP__

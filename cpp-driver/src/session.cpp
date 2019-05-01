@@ -53,21 +53,14 @@ CassFuture* cass_session_connect(CassSession* session, const CassCluster* cluste
   return cass_session_connect_keyspace(session, cluster, "");
 }
 
-CassFuture* cass_session_connect_keyspace(CassSession* session,
-                                          const CassCluster* cluster,
+CassFuture* cass_session_connect_keyspace(CassSession* session, const CassCluster* cluster,
                                           const char* keyspace) {
-  return cass_session_connect_keyspace_n(session,
-                                         cluster,
-                                         keyspace,
-                                         SAFE_STRLEN(keyspace));
+  return cass_session_connect_keyspace_n(session, cluster, keyspace, SAFE_STRLEN(keyspace));
 }
 
-CassFuture* cass_session_connect_keyspace_n(CassSession* session,
-                                            const CassCluster* cluster,
-                                            const char* keyspace,
-                                            size_t keyspace_length) {
-  Future::Ptr future(
-        session->connect(cluster->config(), String(keyspace, keyspace_length)));
+CassFuture* cass_session_connect_keyspace_n(CassSession* session, const CassCluster* cluster,
+                                            const char* keyspace, size_t keyspace_length) {
+  Future::Ptr future(session->connect(cluster->config(), String(keyspace, keyspace_length)));
   future->inc_ref();
   return CassFuture::to(future.get());
 }
@@ -82,23 +75,19 @@ CassFuture* cass_session_prepare(CassSession* session, const char* query) {
   return cass_session_prepare_n(session, query, SAFE_STRLEN(query));
 }
 
-CassFuture* cass_session_prepare_n(CassSession* session,
-                                   const char* query,
-                                   size_t query_length) {
+CassFuture* cass_session_prepare_n(CassSession* session, const char* query, size_t query_length) {
   Future::Ptr future(session->prepare(query, query_length));
   future->inc_ref();
   return CassFuture::to(future.get());
 }
 
-CassFuture* cass_session_prepare_from_existing(CassSession* session,
-                                               CassStatement* statement) {
+CassFuture* cass_session_prepare_from_existing(CassSession* session, CassStatement* statement) {
   Future::Ptr future(session->prepare(statement));
   future->inc_ref();
   return CassFuture::to(future.get());
 }
 
-CassFuture* cass_session_execute(CassSession* session,
-                                 const CassStatement* statement) {
+CassFuture* cass_session_execute(CassSession* session, const CassStatement* statement) {
   Future::Ptr future(session->execute(Request::ConstPtr(statement->from())));
   future->inc_ref();
   return CassFuture::to(future.get());
@@ -111,16 +100,13 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
 }
 
 const CassSchemaMeta* cass_session_get_schema_meta(const CassSession* session) {
-  return CassSchemaMeta::to(
-        new Metadata::SchemaSnapshot(
-          session->cluster()->schema_snapshot()));
+  return CassSchemaMeta::to(new Metadata::SchemaSnapshot(session->cluster()->schema_snapshot()));
 }
 
-void cass_session_get_metrics(const CassSession* session,
-                               CassMetrics* metrics) {
+void cass_session_get_metrics(const CassSession* session, CassMetrics* metrics) {
   const Metrics* internal_metrics = session->metrics();
 
-  if (internal_metrics == NULL)  {
+  if (internal_metrics == NULL) {
     LOG_WARN("Attempted to get metrics before connecting session object");
     memset(metrics, 0, sizeof(CassMetrics));
     return;
@@ -146,19 +132,19 @@ void cass_session_get_metrics(const CassSession* session,
 
   metrics->stats.total_connections = internal_metrics->total_connections.sum();
   metrics->stats.available_connections = metrics->stats.total_connections; // Deprecated
-  metrics->stats.exceeded_write_bytes_water_mark = 0; // Deprecated
-  metrics->stats.exceeded_pending_requests_water_mark = 0; // Deprecated
+  metrics->stats.exceeded_write_bytes_water_mark = 0;                      // Deprecated
+  metrics->stats.exceeded_pending_requests_water_mark = 0;                 // Deprecated
 
   metrics->errors.connection_timeouts = internal_metrics->connection_timeouts.sum();
   metrics->errors.pending_request_timeouts = internal_metrics->pending_request_timeouts.sum();
   metrics->errors.request_timeouts = internal_metrics->request_timeouts.sum();
 }
 
-void  cass_session_get_speculative_execution_metrics(const CassSession* session,
-                                                     CassSpeculativeExecutionMetrics* metrics) {
+void cass_session_get_speculative_execution_metrics(const CassSession* session,
+                                                    CassSpeculativeExecutionMetrics* metrics) {
   const Metrics* internal_metrics = session->metrics();
 
-  if (internal_metrics == NULL)  {
+  if (internal_metrics == NULL) {
     LOG_WARN("Attempted to get speculative execution metrics before connecting session object");
     memset(metrics, 0, sizeof(CassSpeculativeExecutionMetrics));
     return;
@@ -177,16 +163,13 @@ void  cass_session_get_speculative_execution_metrics(const CassSession* session,
   metrics->percentile_98th = speculative_snapshot.percentile_98th;
   metrics->percentile_99th = speculative_snapshot.percentile_99th;
   metrics->percentile_999th = speculative_snapshot.percentile_999th;
-  metrics->count =
-      internal_metrics->request_rates.speculative_request_count();
-  metrics->percentage =
-      internal_metrics->request_rates.speculative_request_percent();
+  metrics->count = internal_metrics->request_rates.speculative_request_count();
+  metrics->percentage = internal_metrics->request_rates.speculative_request_percent();
 }
 
 } // extern "C"
 
-static inline bool least_busy_comp(const RequestProcessor::Ptr& a,
-                                   const RequestProcessor::Ptr& b) {
+static inline bool least_busy_comp(const RequestProcessor::Ptr& a, const RequestProcessor::Ptr& b) {
   return a->request_count() < b->request_count();
 }
 
@@ -201,36 +184,29 @@ public:
   typedef SharedRefPtr<SessionInitializer> Ptr;
 
   SessionInitializer(Session* session)
-    : session_(session)
-    , remaining_(0)
-    , error_code_(CASS_OK) {
+      : session_(session)
+      , remaining_(0)
+      , error_code_(CASS_OK) {
     uv_mutex_init(&mutex_);
   }
 
-  SessionInitializer() {
-    uv_mutex_destroy(&mutex_);
-  }
+  SessionInitializer() { uv_mutex_destroy(&mutex_); }
 
-  void initialize(const Host::Ptr& connected_host,
-                  ProtocolVersion protocol_version,
-                  const HostMap& hosts,
-                  const TokenMap::Ptr& token_map) {
+  void initialize(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
+                  const HostMap& hosts, const TokenMap::Ptr& token_map) {
     inc_ref();
 
     const size_t thread_count_io = remaining_ = session_->config().thread_count_io();
     for (size_t i = 0; i < thread_count_io; ++i) {
       RequestProcessorInitializer::Ptr initializer(
-            new RequestProcessorInitializer(connected_host,
-                                            protocol_version,
-                                            hosts,
-                                            token_map,
-                                            bind_callback(&SessionInitializer::on_initialize, this)));
+          new RequestProcessorInitializer(connected_host, protocol_version, hosts, token_map,
+                                          bind_callback(&SessionInitializer::on_initialize, this)));
 
       RequestProcessorSettings settings(session_->config());
-      settings.connection_pool_settings.connection_settings.client_id = to_string(session_->client_id());
+      settings.connection_pool_settings.connection_settings.client_id =
+          to_string(session_->client_id());
 
-      initializer
-          ->with_settings(RequestProcessorSettings(settings))
+      initializer->with_settings(RequestProcessorSettings(settings))
           ->with_listener(session_)
           ->with_keyspace(session_->connect_keyspace())
           ->with_metrics(session_->metrics())
@@ -294,11 +270,11 @@ private:
   RequestProcessor::Vec request_processors_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 Session::Session()
-  : request_processor_count_(0)
-  , is_closing_(false) {
+    : request_processor_count_(0)
+    , is_closing_(false) {
   uv_mutex_init(&mutex_);
 }
 
@@ -313,8 +289,7 @@ Future::Ptr Session::prepare(const char* statement, size_t length) {
   ResponseFuture::Ptr future(new ResponseFuture(cluster()->schema_snapshot()));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(
-            new RequestHandler(prepare, future, metrics())));
+  execute(RequestHandler::Ptr(new RequestHandler(prepare, future, metrics())));
 
   return future;
 }
@@ -337,8 +312,7 @@ Future::Ptr Session::prepare(const Statement* statement) {
   ResponseFuture::Ptr future(new ResponseFuture(cluster()->schema_snapshot()));
   future->prepare_request = PrepareRequest::ConstPtr(prepare);
 
-  execute(RequestHandler::Ptr(
-            new RequestHandler(prepare, future, metrics())));
+  execute(RequestHandler::Ptr(new RequestHandler(prepare, future, metrics())));
 
   return future;
 }
@@ -347,9 +321,7 @@ Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* pr
   ResponseFuture::Ptr future(new ResponseFuture());
 
   RequestHandler::Ptr request_handler(
-            new RequestHandler(request, future,
-                                             metrics(), preferred_address));
-
+      new RequestHandler(request, future, metrics(), preferred_address));
 
   if (request_handler->request()->opcode() == CQL_OPCODE_EXECUTE) {
     const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request_handler->request());
@@ -363,19 +335,16 @@ Future::Ptr Session::execute(const Request::ConstPtr& request, const Address* pr
 
 void Session::execute(const RequestHandler::Ptr& request_handler) {
   if (state() != SESSION_STATE_CONNECTED) {
-    request_handler->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                               "Session is not connected");
+    request_handler->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "Session is not connected");
     return;
   }
-
 
   // This intentionally doesn't lock the request processors. The processors will
   // be populated before the connect future returns and calling execute during
   // the connection process is undefined behavior. Locking would cause unnecessary
   // overhead for something that's constant once the session is connected.
-  const RequestProcessor::Ptr& request_processor
-      =  *std::min_element(request_processors_.begin(), request_processors_.end(),
-                           least_busy_comp);
+  const RequestProcessor::Ptr& request_processor =
+      *std::min_element(request_processors_.begin(), request_processors_.end(), least_busy_comp);
   request_processor->process_request(request_handler);
 }
 
@@ -387,10 +356,8 @@ void Session::join() {
   }
 }
 
-void Session::on_connect(const Host::Ptr& connected_host,
-                         ProtocolVersion protocol_version,
-                         const HostMap& hosts,
-                         const TokenMap::Ptr& token_map) {
+void Session::on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
+                         const HostMap& hosts, const TokenMap::Ptr& token_map) {
   int rc = 0;
 
   if (hosts.empty()) {
@@ -403,33 +370,28 @@ void Session::on_connect(const Host::Ptr& connected_host,
   event_loop_group_.reset(new RoundRobinEventLoopGroup(config().thread_count_io()));
   rc = event_loop_group_->init("Request Processor");
   if (rc != 0) {
-    notify_connect_failed(CASS_ERROR_LIB_UNABLE_TO_INIT,
-                          "Unable to initialize event loop group");
+    notify_connect_failed(CASS_ERROR_LIB_UNABLE_TO_INIT, "Unable to initialize event loop group");
     return;
   }
 
   rc = event_loop_group_->run();
   if (rc != 0) {
-    notify_connect_failed(CASS_ERROR_LIB_UNABLE_TO_INIT,
-                          "Unable to run event loop group");
+    notify_connect_failed(CASS_ERROR_LIB_UNABLE_TO_INIT, "Unable to run event loop group");
     return;
   }
 
-  for (HostMap::const_iterator it = hosts.begin(),
-       end = hosts.end(); it != end; ++it) {
+  for (HostMap::const_iterator it = hosts.begin(), end = hosts.end(); it != end; ++it) {
     const Host::Ptr& host = it->second;
     config().host_listener()->on_host_added(host);
-    config().host_listener()->on_host_up(host); // If host is down it will be marked down later in the connection process
+    config().host_listener()->on_host_up(
+        host); // If host is down it will be marked down later in the connection process
   }
 
   request_processors_.clear();
   request_processor_count_ = 0;
   is_closing_ = false;
   SessionInitializer::Ptr initializer(new SessionInitializer(this));
-  initializer->initialize(connected_host,
-                          protocol_version,
-                          hosts,
-                          token_map);
+  initializer->initialize(connected_host, protocol_version, hosts, token_map);
 }
 
 void Session::on_close() {
@@ -439,7 +401,8 @@ void Session::on_close() {
   is_closing_ = true;
   if (request_processor_count_ > 0) {
     for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
-         end = request_processors_.end(); it != end; ++it) {
+                                               end = request_processors_.end();
+         it != end; ++it) {
       (*it)->close();
     }
   } else {
@@ -471,18 +434,20 @@ void Session::on_host_added(const Host::Ptr& host) {
   { // Lock for request processor
     ScopedMutex l(&mutex_);
     for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
-         end = request_processors_.end(); it != end; ++it) {
+                                               end = request_processors_.end();
+         it != end; ++it) {
       (*it)->notify_host_added(host);
     }
   }
   config().host_listener()->on_host_added(host);
 }
 
-void Session::on_host_removed(const Host::Ptr& host)  {
+void Session::on_host_removed(const Host::Ptr& host) {
   { // Lock for request processor
     ScopedMutex l(&mutex_);
     for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
-         end = request_processors_.end(); it != end; ++it) {
+                                               end = request_processors_.end();
+         it != end; ++it) {
       (*it)->notify_host_removed(host);
     }
   }
@@ -492,7 +457,8 @@ void Session::on_host_removed(const Host::Ptr& host)  {
 void Session::on_token_map_updated(const TokenMap::Ptr& token_map) {
   ScopedMutex l(&mutex_);
   for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
-       end = request_processors_.end(); it != end; ++it) {
+                                             end = request_processors_.end();
+       it != end; ++it) {
     (*it)->notify_token_map_updated(token_map);
   }
 }
@@ -500,7 +466,8 @@ void Session::on_token_map_updated(const TokenMap::Ptr& token_map) {
 void Session::on_host_maybe_up(const Host::Ptr& host) {
   ScopedMutex l(&mutex_);
   for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
-       end = request_processors_.end(); it != end; ++it) {
+                                             end = request_processors_.end();
+       it != end; ++it) {
     (*it)->notify_host_maybe_up(host->address());
   }
 }
@@ -508,21 +475,17 @@ void Session::on_host_maybe_up(const Host::Ptr& host) {
 void Session::on_host_ready(const Host::Ptr& host) {
   ScopedMutex l(&mutex_);
   for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
-       end = request_processors_.end(); it != end; ++it) {
+                                             end = request_processors_.end();
+       it != end; ++it) {
     (*it)->notify_host_ready(host);
   }
 }
 
-void Session::on_pool_up(const Address& address) {
-  cluster()->notify_host_up(address);
-}
+void Session::on_pool_up(const Address& address) { cluster()->notify_host_up(address); }
 
-void Session::on_pool_down(const Address& address) {
-  cluster()->notify_host_down(address);
-}
+void Session::on_pool_down(const Address& address) { cluster()->notify_host_down(address); }
 
-void Session::on_pool_critical_error(const Address& address,
-                                     Connector::ConnectionError code,
+void Session::on_pool_critical_error(const Address& address, Connector::ConnectionError code,
                                      const String& message) {
   cluster()->notify_host_down(address);
 }
@@ -531,7 +494,8 @@ void Session::on_keyspace_changed(const String& keyspace,
                                   const KeyspaceChangedHandler::Ptr& handler) {
   ScopedMutex l(&mutex_);
   for (RequestProcessor::Vec::const_iterator it = request_processors_.begin(),
-       end = request_processors_.end(); it != end; ++it) {
+                                             end = request_processors_.end();
+       it != end; ++it) {
     (*it)->set_keyspace(keyspace, handler);
   }
 }

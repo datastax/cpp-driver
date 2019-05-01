@@ -16,11 +16,11 @@
 
 #include <string>
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
 #include <boost/chrono.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 
 #include "cassandra.h"
@@ -36,11 +36,10 @@ using namespace datastax::internal::testing;
  */
 struct PreparedBatchTests : public test_utils::SingleSessionTest {
   PreparedBatchTests()
-    : SingleSessionTest(1, 0)
-    , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen))) {
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % keyspace
-                                           % "1"));
+      : SingleSessionTest(1, 0)
+      , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen))) {
+    test_utils::execute_query(
+        session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % keyspace % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % keyspace));
     test_utils::execute_query(session, "CREATE TABLE test (k text PRIMARY KEY, v text)");
   }
@@ -57,8 +56,7 @@ struct PreparedBatchTests : public test_utils::SingleSessionTest {
 
     for (int i = 0; i < 30; ++i) {
       test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.peers", 0));
-      test_utils::CassFuturePtr future(cass_session_execute(session.get(),
-                                                            statement.get()));
+      test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
       std::string host(get_host_from_future(future.get()).c_str());
       if (cass_future_error_code(future.get()) == CASS_OK && host == ip_address.str()) {
         return;
@@ -66,9 +64,7 @@ struct PreparedBatchTests : public test_utils::SingleSessionTest {
       boost::this_thread::sleep_for(boost::chrono::seconds(1));
     }
     BOOST_REQUIRE_MESSAGE(false,
-                          "Failed to wait for node " <<
-                          ip_address.str() <<
-                          " to become availble");
+                          "Failed to wait for node " << ip_address.str() << " to become availble");
   }
 
   /**
@@ -78,13 +74,11 @@ struct PreparedBatchTests : public test_utils::SingleSessionTest {
    * @param key The key to validate
    * @param expected_value The expected value for the given key
    */
-  void validate_result(test_utils::CassSessionPtr session,
-                       const std::string& key,
+  void validate_result(test_utils::CassSessionPtr session, const std::string& key,
                        const std::string& expected_value) {
     test_utils::CassResultPtr result;
-    test_utils::execute_query(session.get(),
-                              str(boost::format("SELECT * FROM test WHERE k = '%s'") % key),
-                              &result);
+    test_utils::execute_query(
+        session.get(), str(boost::format("SELECT * FROM test WHERE k = '%s'") % key), &result);
     BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1);
     const CassRow* row = cass_result_first_row(result.get());
     BOOST_REQUIRE(row != NULL);
@@ -120,7 +114,8 @@ BOOST_AUTO_TEST_CASE(reprepare_batch) {
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
   test_utils::execute_query(session.get(), str(boost::format("USE %s") % keyspace));
 
-  test_utils::CassFuturePtr prepare_future(cass_session_prepare(session.get(), "INSERT INTO test (k, v) VALUES (?, ?)"));
+  test_utils::CassFuturePtr prepare_future(
+      cass_session_prepare(session.get(), "INSERT INTO test (k, v) VALUES (?, ?)"));
   test_utils::wait_and_check_error(prepare_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepare_future.get()));
 

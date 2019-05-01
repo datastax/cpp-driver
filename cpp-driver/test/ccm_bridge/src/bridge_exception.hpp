@@ -22,45 +22,47 @@
 
 namespace CCM {
 
-  /**
-   * Exception mechanism for the CCM bridge class
-   */
-  class BridgeException : public std::exception {
-  public:
+/**
+ * Exception mechanism for the CCM bridge class
+ */
+class BridgeException : public std::exception {
+public:
 #ifdef _WIN32
-    /**
-     * CCM bridge exception class
-     *
-     * @param message BridgeException message
-     */
-    BridgeException(const std::string &message) : std::exception(message.c_str()) {}
+  /**
+   * CCM bridge exception class
+   *
+   * @param message BridgeException message
+   */
+  BridgeException(const std::string& message)
+      : std::exception(message.c_str()) {}
 #else
-    /**
-     * CCM bridge exception class
-     *
-     * @param message Exception message
-     */
-    BridgeException(const std::string& message) : message_(message) {}
-    /**
-     * Destructor
-     */
-    ~BridgeException() throw() {}
+  /**
+   * CCM bridge exception class
+   *
+   * @param message Exception message
+   */
+  BridgeException(const std::string& message)
+      : message_(message) {}
+  /**
+   * Destructor
+   */
+  ~BridgeException() throw() {}
 
-    /**
-     * Get the exception message
-     *
-     * @return Exception message
-     */
-    const char* what() const throw() { return message_.c_str(); }
+  /**
+   * Get the exception message
+   *
+   * @return Exception message
+   */
+  const char* what() const throw() { return message_.c_str(); }
 
-  private:
-    /**
-     * Message to display for exception
-     */
-    std::string message_;
+private:
+  /**
+   * Message to display for exception
+   */
+  std::string message_;
 #endif
-  };
+};
 
-}
+} // namespace CCM
 
 #endif // __CCM_BRIDGE_EXCEPTION_HPP__

@@ -26,18 +26,14 @@ public:
     typedef SharedRefPtr<RpcPayloadLatch> Ptr;
 
     RpcPayloadLatch(unsigned initial_payload_count = 1)
-      : count_(initial_payload_count)
-      , future_(new Future(Future::FUTURE_TYPE_GENERIC)) {
+        : count_(initial_payload_count)
+        , future_(new Future(Future::FUTURE_TYPE_GENERIC)) {
       uv_mutex_init(&mutex_);
     }
 
-    ~RpcPayloadLatch() {
-      uv_mutex_destroy(&mutex_);
-    }
+    ~RpcPayloadLatch() { uv_mutex_destroy(&mutex_); }
 
-    bool wait_for(uint64_t timeout_us) {
-      return future_->wait_for(timeout_us);
-    }
+    bool wait_for(uint64_t timeout_us) { return future_->wait_for(timeout_us); }
 
     void reset(unsigned count) {
       ScopedMutex lock(&mutex_);
@@ -56,9 +52,7 @@ public:
       return payloads_;
     }
 
-    const String& payload() {
-      return payloads().front();
-    }
+    const String& payload() { return payloads().front(); }
 
   private:
     unsigned count_;
@@ -70,7 +64,7 @@ public:
   class InsightsRpcQuery : public mockssandra::Action {
   public:
     InsightsRpcQuery(const RpcPayloadLatch::Ptr& latch)
-      : latch_(latch) { }
+        : latch_(latch) {}
 
     virtual void on_run(mockssandra::Request* request) const {
       String query;
@@ -78,7 +72,7 @@ public:
       if (!request->decode_query(&query, &params)) {
         request->error(mockssandra::ERROR_PROTOCOL_ERROR, "Invalid query message");
       } else if (starts_with(query, "CALL InsightsRpc.reportInsight")) {
-        size_t pos = query.find("('") + 2; // Skip starting single quote
+        size_t pos = query.find("('") + 2;                 // Skip starting single quote
         size_t len = (query.find_last_of("')") - 1) - pos; // Skip ending single quote
         latch_->add_payload(query.substr(pos, len));
       } else {
@@ -103,7 +97,8 @@ public:
     builder.on(mockssandra::OPCODE_QUERY)
         .system_local_dse()
         .system_peers_dse()
-        .execute(new InsightsRpcQuery(rpc_payload_latch_)) // Allow RPC calls to be stored in cluster
+        .execute(
+            new InsightsRpcQuery(rpc_payload_latch_)) // Allow RPC calls to be stored in cluster
         .is_query("wait")
         .then(mockssandra::Action::Builder().wait(2000).void_result()) // Allow queries to build up
         .void_result();
@@ -117,9 +112,8 @@ public:
     Future::Ptr connect_future(session_.connect(config_));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";
-    ASSERT_FALSE(connect_future->error())
-        << cass_error_desc(connect_future->error()->code) << ": "
-        << connect_future->error()->message;
+    ASSERT_FALSE(connect_future->error()) << cass_error_desc(connect_future->error()->code) << ": "
+                                          << connect_future->error()->message;
   }
 
   String startup_message(uint64_t wait_time_sec = WAIT_FOR_TIME) const {
@@ -136,9 +130,7 @@ public:
     return rpc_payload_latch_->payloads()[status_message_index];
   }
 
-  void reset_latch(unsigned payload_count = 1) {
-    rpc_payload_latch_->reset(payload_count);
-  }
+  void reset_latch(unsigned payload_count = 1) { rpc_payload_latch_->reset(payload_count); }
 
 protected:
   Config config_;
@@ -174,8 +166,10 @@ TEST_F(ClientInsightsUnitTest, StartupMetadata) {
     ASSERT_STREQ("EVENT", metadata["insightType"].GetString());
   }
   { // timestamp
-    ASSERT_TRUE(metadata.HasMember("timestamp"));;
-    ASSERT_NEAR(current_timestamp, metadata["timestamp"].GetUint64(), 1000LL); // Allow for 1 second threshold
+    ASSERT_TRUE(metadata.HasMember("timestamp"));
+    ;
+    ASSERT_NEAR(current_timestamp, metadata["timestamp"].GetUint64(),
+                1000LL); // Allow for 1 second threshold
   }
   { // tags
     ASSERT_TRUE(metadata.HasMember("tags"));
@@ -187,7 +181,8 @@ TEST_F(ClientInsightsUnitTest, StartupMetadata) {
 }
 
 TEST_F(ClientInsightsUnitTest, StartupData) {
-  mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call(), 1, 1); // Two DCs one will not be connected to
+  mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call(), 1,
+                                     1); // Two DCs one will not be connected to
   ASSERT_EQ(cluster.start_all(), 0);
 
   config_.contact_points().push_back("localhost"); // Used for hostname resolve
@@ -224,13 +219,11 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
 
   { // client ID
     ASSERT_TRUE(data.HasMember("clientId"));
-    ASSERT_STREQ(to_string(session_.client_id()).c_str(),
-                 data["clientId"].GetString());
+    ASSERT_STREQ(to_string(session_.client_id()).c_str(), data["clientId"].GetString());
   }
   { // session ID
     ASSERT_TRUE(data.HasMember("sessionId"));
-    ASSERT_STREQ(to_string(session_.session_id()).c_str(),
-                 data["sessionId"].GetString());
+    ASSERT_STREQ(to_string(session_.session_id()).c_str(), data["sessionId"].GetString());
   }
   { // application name
     ASSERT_TRUE(data.HasMember("applicationName"));
@@ -242,8 +235,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   }
   { // application version
     ASSERT_TRUE(data.HasMember("applicationVersion"));
-    ASSERT_STREQ(applicationVersion.c_str(),
-                 data["applicationVersion"].GetString());
+    ASSERT_STREQ(applicationVersion.c_str(), data["applicationVersion"].GetString());
   }
   { // driver name
     ASSERT_TRUE(data.HasMember("driverName"));
@@ -285,13 +277,11 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(data.HasMember("initialControlConnection"));
     OStringStream ipv4_with_port;
     ipv4_with_port << "127.0.0.1:" << config_.port();
-    ASSERT_EQ(ipv4_with_port.str(),
-              data["initialControlConnection"].GetString());
+    ASSERT_EQ(ipv4_with_port.str(), data["initialControlConnection"].GetString());
   }
   { // protocol version
     ASSERT_TRUE(data.HasMember("protocolVersion"));
-    ASSERT_EQ(ProtocolVersion::lowest_supported().value(),
-              data["protocolVersion"].GetInt());
+    ASSERT_EQ(ProtocolVersion::lowest_supported().value(), data["protocolVersion"].GetInt());
   }
   { // local address
     ASSERT_TRUE(data.HasMember("localAddress"));
@@ -314,17 +304,14 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(default_profile.IsObject());
     ASSERT_EQ(5u, default_profile.MemberCount());
     ASSERT_TRUE(default_profile.HasMember("requestTimeoutMs"));
-    ASSERT_EQ(request_timeout_ms,
-              default_profile["requestTimeoutMs"].GetUint());
+    ASSERT_EQ(request_timeout_ms, default_profile["requestTimeoutMs"].GetUint());
     ASSERT_TRUE(default_profile.HasMember("consistency"));
-    ASSERT_STREQ(cass_consistency_string(consistency),
-                 default_profile["consistency"].GetString());
+    ASSERT_STREQ(cass_consistency_string(consistency), default_profile["consistency"].GetString());
     ASSERT_TRUE(default_profile.HasMember("serialConsistency"));
     ASSERT_STREQ(cass_consistency_string(serial_consistency),
                  default_profile["serialConsistency"].GetString());
     ASSERT_TRUE(default_profile.HasMember("retryPolicy"));
-    ASSERT_STREQ("FallthroughRetryPolicy",
-                 default_profile["retryPolicy"].GetString());
+    ASSERT_STREQ("FallthroughRetryPolicy", default_profile["retryPolicy"].GetString());
     ASSERT_TRUE(default_profile.HasMember("loadBalancing"));
     const json::Value& load_balancing = default_profile["loadBalancing"];
     ASSERT_TRUE(load_balancing.IsObject());
@@ -362,12 +349,11 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   }
   { // heartbeat interval
     ASSERT_TRUE(data.HasMember("heartbeatInterval"));
-    ASSERT_EQ(heartbeat_interval_secs * 1000u,
-              data["heartbeatInterval"].GetUint64());
+    ASSERT_EQ(heartbeat_interval_secs * 1000u, data["heartbeatInterval"].GetUint64());
   }
   { // compression
     ASSERT_TRUE(data.HasMember("compression"));
-    ASSERT_STREQ("NONE", data["compression"].GetString()); //TODO: Update once compression is added
+    ASSERT_STREQ("NONE", data["compression"].GetString()); // TODO: Update once compression is added
   }
   { // reconnection policy
     ASSERT_TRUE(data.HasMember("reconnectionPolicy"));
@@ -403,62 +389,46 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(configuration.IsObject());
     ASSERT_EQ(24, configuration.MemberCount());
     ASSERT_TRUE(configuration.HasMember("protocolVersion"));
-    ASSERT_EQ(config_.protocol_version().value(),
-              configuration["protocolVersion"].GetInt());
+    ASSERT_EQ(config_.protocol_version().value(), configuration["protocolVersion"].GetInt());
     ASSERT_TRUE(configuration.HasMember("useBetaProtocol"));
-    ASSERT_EQ(config_.use_beta_protocol_version(),
-              configuration["useBetaProtocol"].GetBool());
+    ASSERT_EQ(config_.use_beta_protocol_version(), configuration["useBetaProtocol"].GetBool());
     ASSERT_TRUE(configuration.HasMember("threadCountIo"));
-    ASSERT_EQ(config_.thread_count_io(),
-              configuration["threadCountIo"].GetUint());
+    ASSERT_EQ(config_.thread_count_io(), configuration["threadCountIo"].GetUint());
     ASSERT_TRUE(configuration.HasMember("queueSizeIo"));
-    ASSERT_EQ(config_.queue_size_io(),
-              configuration["queueSizeIo"].GetUint());
+    ASSERT_EQ(config_.queue_size_io(), configuration["queueSizeIo"].GetUint());
     ASSERT_TRUE(configuration.HasMember("coreConnectionsPerHost"));
     ASSERT_EQ(config_.core_connections_per_host(),
               configuration["coreConnectionsPerHost"].GetUint());
     ASSERT_TRUE(configuration.HasMember("connectTimeoutMs"));
-    ASSERT_EQ(config_.connect_timeout_ms(),
-              configuration["connectTimeoutMs"].GetUint());
+    ASSERT_EQ(config_.connect_timeout_ms(), configuration["connectTimeoutMs"].GetUint());
     ASSERT_TRUE(configuration.HasMember("resolveTimeoutMs"));
-    ASSERT_EQ(config_.resolve_timeout_ms(),
-              configuration["resolveTimeoutMs"].GetUint());
+    ASSERT_EQ(config_.resolve_timeout_ms(), configuration["resolveTimeoutMs"].GetUint());
     ASSERT_TRUE(configuration.HasMember("maxSchemaWaitTimeMs"));
-    ASSERT_EQ(config_.max_schema_wait_time_ms(),
-              configuration["maxSchemaWaitTimeMs"].GetUint());
+    ASSERT_EQ(config_.max_schema_wait_time_ms(), configuration["maxSchemaWaitTimeMs"].GetUint());
     ASSERT_TRUE(configuration.HasMember("maxTracingWaitTimeMs"));
-    ASSERT_EQ(config_.max_tracing_wait_time_ms(),
-              configuration["maxTracingWaitTimeMs"].GetUint());
+    ASSERT_EQ(config_.max_tracing_wait_time_ms(), configuration["maxTracingWaitTimeMs"].GetUint());
     ASSERT_TRUE(configuration.HasMember("tracingConsistency"));
     ASSERT_STREQ(cass_consistency_string(config_.tracing_consistency()),
                  configuration["tracingConsistency"].GetString());
     ASSERT_TRUE(configuration.HasMember("coalesceDelayUs"));
-    ASSERT_EQ(config_.coalesce_delay_us(),
-              configuration["coalesceDelayUs"].GetUint64());
+    ASSERT_EQ(config_.coalesce_delay_us(), configuration["coalesceDelayUs"].GetUint64());
     ASSERT_TRUE(configuration.HasMember("newRequestRatio"));
-    ASSERT_EQ(config_.new_request_ratio(),
-              configuration["newRequestRatio"].GetInt());
+    ASSERT_EQ(config_.new_request_ratio(), configuration["newRequestRatio"].GetInt());
     ASSERT_TRUE(configuration.HasMember("logLevel"));
-    ASSERT_STREQ(cass_log_level_string(config_.log_level()),
-                 configuration["logLevel"].GetString());
+    ASSERT_STREQ(cass_log_level_string(config_.log_level()), configuration["logLevel"].GetString());
     ASSERT_TRUE(configuration.HasMember("tcpNodelayEnable"));
-    ASSERT_EQ(config_.tcp_nodelay_enable(),
-              configuration["tcpNodelayEnable"].GetBool());
+    ASSERT_EQ(config_.tcp_nodelay_enable(), configuration["tcpNodelayEnable"].GetBool());
     ASSERT_TRUE(configuration.HasMember("tcpKeepaliveEnable"));
-    ASSERT_EQ(config_.tcp_keepalive_enable(),
-              configuration["tcpKeepaliveEnable"].GetBool());
+    ASSERT_EQ(config_.tcp_keepalive_enable(), configuration["tcpKeepaliveEnable"].GetBool());
     ASSERT_TRUE(configuration.HasMember("tcpKeepaliveDelaySecs"));
-    ASSERT_EQ(config_.tcp_keepalive_delay_secs(),
-              configuration["tcpKeepaliveDelaySecs"].GetUint());
+    ASSERT_EQ(config_.tcp_keepalive_delay_secs(), configuration["tcpKeepaliveDelaySecs"].GetUint());
     ASSERT_TRUE(configuration.HasMember("connectionIdleTimeoutSecs"));
     ASSERT_EQ(config_.connection_idle_timeout_secs(),
               configuration["connectionIdleTimeoutSecs"].GetUint());
     ASSERT_TRUE(configuration.HasMember("useSchema"));
-    ASSERT_EQ(config_.use_schema(),
-              configuration["useSchema"].GetBool());
+    ASSERT_EQ(config_.use_schema(), configuration["useSchema"].GetBool());
     ASSERT_TRUE(configuration.HasMember("useHostnameResolution"));
-    ASSERT_EQ(config_.use_hostname_resolution(),
-              configuration["useHostnameResolution"].GetBool());
+    ASSERT_EQ(config_.use_hostname_resolution(), configuration["useHostnameResolution"].GetBool());
     ASSERT_TRUE(configuration.HasMember("useRandomizedContactPoints"));
     ASSERT_EQ(config_.use_randomized_contact_points(),
               configuration["useRandomizedContactPoints"].GetBool());
@@ -466,14 +436,11 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_EQ(config_.max_reusable_write_objects(),
               configuration["maxReusableWriteObjects"].GetUint());
     ASSERT_TRUE(configuration.HasMember("prepareOnAllHosts"));
-    ASSERT_EQ(config_.prepare_on_all_hosts(),
-              configuration["prepareOnAllHosts"].GetBool());
+    ASSERT_EQ(config_.prepare_on_all_hosts(), configuration["prepareOnAllHosts"].GetBool());
     ASSERT_TRUE(configuration.HasMember("prepareOnUpOrAddHost"));
-    ASSERT_EQ(config_.prepare_on_up_or_add_host(),
-              configuration["prepareOnUpOrAddHost"].GetBool());
+    ASSERT_EQ(config_.prepare_on_up_or_add_host(), configuration["prepareOnUpOrAddHost"].GetBool());
     ASSERT_TRUE(configuration.HasMember("noCompact"));
-    ASSERT_EQ(config_.no_compact(),
-              configuration["noCompact"].GetBool());
+    ASSERT_EQ(config_.no_compact(), configuration["noCompact"].GetBool());
   }
   { // platform info
     ASSERT_TRUE(data.HasMember("platformInfo"));
@@ -515,11 +482,11 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(runtime["openssl"].IsString());
     ASSERT_GT(runtime["openssl"].GetStringLength(), 0u);
   }
-  ASSERT_FALSE(data.HasMember("configAntiPatterns")); // Config anti patterns should not exist with current config
-  { // periodic status interval
+  ASSERT_FALSE(data.HasMember(
+      "configAntiPatterns")); // Config anti patterns should not exist with current config
+  {                           // periodic status interval
     ASSERT_TRUE(data.HasMember("periodicStatusInterval"));
-    ASSERT_EQ(periodic_status_interval,
-              data["periodicStatusInterval"].GetUint());
+    ASSERT_EQ(periodic_status_interval, data["periodicStatusInterval"].GetUint());
   }
 }
 
@@ -527,9 +494,7 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleDcs) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call(), 1, 1);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  LoadBalancingPolicy::Ptr load_balancing_policy(new DCAwarePolicy("dc1",
-                                                                   1,
-                                                                   false));
+  LoadBalancingPolicy::Ptr load_balancing_policy(new DCAwarePolicy("dc1", 1, false));
   config_.set_load_balancing_policy(load_balancing_policy.get());
   connect();
 
@@ -548,7 +513,8 @@ TEST_F(ClientInsightsUnitTest, StartupDataProtocolVersion) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ProtocolVersion configured_protocol_version(CASS_PROTOCOL_VERSION_DSEV2);
-  config_.set_protocol_version(configured_protocol_version); // Mockssandra does not currently support DSE protocols
+  config_.set_protocol_version(
+      configured_protocol_version); // Mockssandra does not currently support DSE protocols
   connect();
 
   String message = startup_message();
@@ -561,8 +527,7 @@ TEST_F(ClientInsightsUnitTest, StartupDataProtocolVersion) {
   int other_options_protocol_version =
       data["otherOptions"]["configuration"]["protocolVersion"].GetInt();
   ASSERT_LT(data_protocol_version, configured_protocol_version.value());
-  ASSERT_EQ(other_options_protocol_version,
-            configured_protocol_version.value());
+  ASSERT_EQ(other_options_protocol_version, configured_protocol_version.value());
 }
 
 TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
@@ -605,14 +570,12 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
   ASSERT_TRUE(execution_profiles.HasMember("round_robin"));
   { // default profile
     const json::Value& execution_profile = execution_profiles["default"];
-    ASSERT_EQ(config_.request_timeout(),
-              execution_profile["requestTimeoutMs"].GetUint());
+    ASSERT_EQ(config_.request_timeout(), execution_profile["requestTimeoutMs"].GetUint());
     ASSERT_STREQ(cass_consistency_string(config_.consistency()),
                  execution_profile["consistency"].GetString());
     ASSERT_STREQ(cass_consistency_string(config_.serial_consistency()),
                  execution_profile["serialConsistency"].GetString());
-    ASSERT_STREQ("DefaultRetryPolicy",
-                 execution_profile["retryPolicy"].GetString());
+    ASSERT_STREQ("DefaultRetryPolicy", execution_profile["retryPolicy"].GetString());
     const json::Value& load_balancing = execution_profile["loadBalancing"];
     ASSERT_STREQ("DCAwarePolicy", load_balancing["type"].GetString());
     const json::Value& options = load_balancing["options"];
@@ -625,8 +588,7 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
   }
   { // quorum profile
     const json::Value& execution_profile = execution_profiles["quorum"];
-    ASSERT_EQ(quorum_profile.request_timeout_ms(),
-              execution_profile["requestTimeoutMs"].GetUint());
+    ASSERT_EQ(quorum_profile.request_timeout_ms(), execution_profile["requestTimeoutMs"].GetUint());
     ASSERT_STREQ(cass_consistency_string(quorum_profile.consistency()),
                  execution_profile["consistency"].GetString());
     ASSERT_FALSE(execution_profiles.HasMember("serialConsistency"));
@@ -646,8 +608,7 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
     const json::Value& latency_aware_routing = options["latencyAwareRouting"];
     ASSERT_EQ(latency_aware_settings.exclusion_threshold,
               latency_aware_routing["exclusionThreshold"].GetDouble());
-    ASSERT_EQ(latency_aware_settings.scale_ns,
-              latency_aware_routing["scaleNs"].GetUint64());
+    ASSERT_EQ(latency_aware_settings.scale_ns, latency_aware_routing["scaleNs"].GetUint64());
     ASSERT_EQ(latency_aware_settings.retry_period_ns,
               latency_aware_routing["retryPeriodNs"].GetUint64());
     ASSERT_EQ(latency_aware_settings.update_rate_ms,
@@ -696,8 +657,7 @@ TEST_F(ClientInsightsUnitTest, StartupDataConfigAntiPatternWithoutSsl) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  LoadBalancingPolicy::Ptr dc_aware(new DCAwarePolicy("dc1",
-                                                      1,
+  LoadBalancingPolicy::Ptr dc_aware(new DCAwarePolicy("dc1", 1,
                                                       false)); // useRemoteHosts
   RetryPolicy::Ptr retry_policy(new DowngradingConsistencyRetryPolicy());
   config_.set_credentials("cassandra", "cassandra"); // plainTextAuthWithoutSsl
@@ -723,12 +683,11 @@ TEST_F(ClientInsightsUnitTest, StartupDataConfigAntiPatternsWithSsl) {
   ssl_context->set_verify_flags(SSL_VERIFY_NONE); // sslWithoutCertValidation
   ASSERT_EQ(cluster.start_all(), 0);
 
-  LoadBalancingPolicy::Ptr dc_aware(new DCAwarePolicy("dc1",
-                                                      1,
+  LoadBalancingPolicy::Ptr dc_aware(new DCAwarePolicy("dc1", 1,
                                                       false)); // useRemoteHosts
   RetryPolicy::Ptr retry_policy(new DowngradingConsistencyRetryPolicy());
   config_.set_load_balancing_policy(dc_aware.get());
-  config_.set_retry_policy(retry_policy.get());  // downgradingConsistency
+  config_.set_retry_policy(retry_policy.get()); // downgradingConsistency
   config_.set_ssl_context(ssl_context.get());
   config_.contact_points().push_back("127.0.0.2"); // contactPointsMultipleDCs
   connect();
@@ -798,13 +757,11 @@ TEST_F(ClientInsightsUnitTest, StatusData) {
 
   { // client ID
     ASSERT_TRUE(data.HasMember("clientId"));
-    ASSERT_STREQ(to_string(session_.client_id()).c_str(),
-                 data["clientId"].GetString());
+    ASSERT_STREQ(to_string(session_.client_id()).c_str(), data["clientId"].GetString());
   }
   { // session ID
     ASSERT_TRUE(data.HasMember("sessionId"));
-    ASSERT_STREQ(to_string(session_.session_id()).c_str(),
-                 data["sessionId"].GetString());
+    ASSERT_STREQ(to_string(session_.session_id()).c_str(), data["sessionId"].GetString());
   }
   { // control connection
     ASSERT_TRUE(data.HasMember("controlConnection"));
@@ -825,10 +782,11 @@ TEST_F(ClientInsightsUnitTest, StatusData) {
       ASSERT_TRUE(node.IsObject());
       ASSERT_EQ(2u, node.MemberCount());
       ASSERT_TRUE(node.HasMember("connections"));
-      int expected_connections (i == 1 ? 11 : 10); // Handle control connection
+      int expected_connections(i == 1 ? 11 : 10); // Handle control connection
       ASSERT_EQ(expected_connections, node["connections"].GetInt());
       ASSERT_TRUE(node.HasMember("inFlightQueries"));
-      ASSERT_NEAR(0, node["inFlightQueries"].GetInt(), 5); // Relaxed memory ordering for inflight request count
+      ASSERT_NEAR(0, node["inFlightQueries"].GetInt(),
+                  5); // Relaxed memory ordering for inflight request count
     }
   }
 }
@@ -851,9 +809,8 @@ TEST_F(ClientInsightsUnitTest, StatusDataConnectedNodesRemovedNode) {
     for (unsigned i = 1; i <= value.MemberCount(); ++i) {
       OStringStream ip_with_port;
       ip_with_port << "127.0.0." << i << ":" << config_.port();
-      int expected_connections (i == 1 ? 2 : 1); // Handle control connection
-      ASSERT_EQ(expected_connections,
-                value[ip_with_port.str().c_str()]["connections"].GetInt());
+      int expected_connections(i == 1 ? 2 : 1); // Handle control connection
+      ASSERT_EQ(expected_connections, value[ip_with_port.str().c_str()]["connections"].GetInt());
     }
   }
 
@@ -883,7 +840,7 @@ TEST_F(ClientInsightsUnitTest, StatusDataUpdatedControlConnection) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call(1), 2);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  config_.set_reconnect_wait_time(100u);  // Reconnect immediately
+  config_.set_reconnect_wait_time(100u); // Reconnect immediately
   connect();
 
   String message = startup_message();
@@ -891,8 +848,7 @@ TEST_F(ClientInsightsUnitTest, StatusDataUpdatedControlConnection) {
   reset_latch();
   json::Document document;
   document.Parse(message.c_str());
-  String initial_control_connection =
-      document["data"]["initialControlConnection"].GetString();
+  String initial_control_connection = document["data"]["initialControlConnection"].GetString();
   {
     OStringStream ip_with_port;
     ip_with_port << "127.0.0.1:" << config_.port();
@@ -901,8 +857,7 @@ TEST_F(ClientInsightsUnitTest, StatusDataUpdatedControlConnection) {
 
   message = status_message();
   document.Parse(message.c_str());
-  String control_connection =
-      document["data"]["controlConnection"].GetString();
+  String control_connection = document["data"]["controlConnection"].GetString();
   {
     OStringStream ip_with_port;
     ip_with_port << "127.0.0.2:" << config_.port();
@@ -927,14 +882,16 @@ TEST_F(ClientInsightsUnitTest, StatusDataInFlightQueries) {
     String message = status_message();
     json::Document document;
     document.Parse(message.c_str());
-    ASSERT_EQ(37, document["data"]["conntectedNodes"][ip_with_port.str().c_str()]["inFlightQueries"].GetInt());
+    ASSERT_EQ(37, document["data"]["conntectedNodes"][ip_with_port.str().c_str()]["inFlightQueries"]
+                      .GetInt());
   }
 
   {
     String message = status_message(3);
     json::Document document;
     document.Parse(message.c_str());
-    ASSERT_EQ(0, document["data"]["conntectedNodes"][ip_with_port.str().c_str()]["inFlightQueries"].GetInt());
+    ASSERT_EQ(0, document["data"]["conntectedNodes"][ip_with_port.str().c_str()]["inFlightQueries"]
+                     .GetInt());
   }
 }
 

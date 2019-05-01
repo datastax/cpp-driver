@@ -17,8 +17,8 @@
 #ifndef DATASTAX_INTERNAL_REGISTER_REQUEST_HPP
 #define DATASTAX_INTERNAL_REGISTER_REQUEST_HPP
 
-#include "request.hpp"
 #include "constants.hpp"
+#include "request.hpp"
 
 namespace datastax { namespace internal { namespace core {
 
@@ -34,5 +34,5 @@ private:
   int event_types_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 #endif

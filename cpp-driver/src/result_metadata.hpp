@@ -40,8 +40,7 @@ class ResultMetadata : public RefCounted<ResultMetadata> {
 public:
   typedef SharedRefPtr<ResultMetadata> Ptr;
 
-  ResultMetadata(size_t column_count,
-                 const RefBuffer::Ptr& buffer);
+  ResultMetadata(size_t column_count, const RefBuffer::Ptr& buffer);
 
   const ColumnDefinition& get_column_definition(size_t index) const { return defs_[index]; }
 
@@ -59,6 +58,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ResultMetadata);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

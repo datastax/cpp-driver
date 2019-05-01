@@ -53,8 +53,7 @@ TEST(EncodeDurationUnitTest, SimpleNegative) {
 }
 
 TEST(EncodeDurationUnitTest, EdgePositive) {
-  CassDuration value(std::numeric_limits<int32_t>::max(),
-                     std::numeric_limits<int32_t>::max(),
+  CassDuration value(std::numeric_limits<int32_t>::max(), std::numeric_limits<int32_t>::max(),
                      std::numeric_limits<int64_t>::max());
   Buffer result = encode(value);
   EXPECT_EQ(19u, result.size());
@@ -91,8 +90,7 @@ TEST(EncodeDurationUnitTest, EdgePositive) {
 }
 
 TEST(EncodeDurationUnitTest, EdgeNegative) {
-  CassDuration value(std::numeric_limits<int32_t>::min(),
-                     std::numeric_limits<int32_t>::min(),
+  CassDuration value(std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::min(),
                      std::numeric_limits<int64_t>::min());
   Buffer result = encode(value);
   EXPECT_EQ(19u, result.size());

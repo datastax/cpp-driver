@@ -33,12 +33,12 @@ CASS_EXPORT int get_port_from_cluster(CassCluster* cluster);
 
 CASS_EXPORT String get_contact_points_from_cluster(CassCluster* cluster);
 
-CASS_EXPORT int64_t create_murmur3_hash_from_string(const String &value);
+CASS_EXPORT int64_t create_murmur3_hash_from_string(const String& value);
 
 CASS_EXPORT uint64_t get_time_since_epoch_in_ms();
 
 CASS_EXPORT uint64_t get_host_latency_average(CassSession* session, String ip_address, int port);
 
-} } } // namespace datastax::internal::testing
+}}} // namespace datastax::internal::testing
 
 #endif

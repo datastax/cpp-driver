@@ -14,8 +14,7 @@
 
 namespace datastax { namespace internal { namespace enterprise {
 
-inline CassError validate_data_type(const CassValue* value,
-                               const char* class_name) {
+inline CassError validate_data_type(const CassValue* value, const char* class_name) {
   const CassDataType* data_type = cass_value_data_type(value);
 
   if (data_type == NULL) {
@@ -37,7 +36,6 @@ inline CassError validate_data_type(const CassValue* value,
   return CASS_OK;
 }
 
-} } } // namespace datastax::internal::enterprise
-
+}}} // namespace datastax::internal::enterprise
 
 #endif

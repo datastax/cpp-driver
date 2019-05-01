@@ -17,29 +17,26 @@
 
 #undef SKIP_TEST_VERSION
 #define SKIP_TEST_VERSION(server_version_string, version_string) \
-  SKIP_TEST("Unsupported for DataStax Enterprise Version " \
-    << server_version_string << ": Server version " \
-    << version_string << "+ is required")
+  SKIP_TEST("Unsupported for DataStax Enterprise Version "       \
+            << server_version_string << ": Server version " << version_string << "+ is required")
 
 #undef CHECK_VERSION
-#define CHECK_VERSION(version) \
-  if (!Options::is_dse()) { \
+#define CHECK_VERSION(version)                                              \
+  if (!Options::is_dse()) {                                                 \
     SKIP_TEST("DataStax Enterprise Version " << #version << " is required") \
-  } else if (this->server_version_ < #version) { \
-    SKIP_TEST_VERSION(this->server_version_.to_string(), #version) \
+  } else if (this->server_version_ < #version) {                            \
+    SKIP_TEST_VERSION(this->server_version_.to_string(), #version)          \
   }
 
 #undef CHECK_VALUE_TYPE_VERSION
-#define CHECK_VALUE_TYPE_VERSION(type) \
-  if (this->server_version_ < type::supported_server_version()) { \
-    SKIP_TEST_VERSION(this->server_version_.to_string(), \
-                      type::supported_server_version()) \
+#define CHECK_VALUE_TYPE_VERSION(type)                                                     \
+  if (this->server_version_ < type::supported_server_version()) {                          \
+    SKIP_TEST_VERSION(this->server_version_.to_string(), type::supported_server_version()) \
   }
 
 // Macros to use for grouping DSE integration tests together
 #define DSE_TEST_NAME(test_name) Integration##_##DSE##_##test_name
-#define DSE_INTEGRATION_TEST_F(test_case, test_name) \
-  INTEGRATION_TEST_F(DSE, test_case, test_name)
+#define DSE_INTEGRATION_TEST_F(test_case, test_name) INTEGRATION_TEST_F(DSE, test_case, test_name)
 #define DSE_INTEGRATION_TYPED_TEST_P(test_case, test_name) \
   INTEGRATION_TYPED_TEST_P(DSE, test_case, test_name)
 #define DSE_INTEGRATION_DISABLED_TEST_F(test_case, test_name) \
@@ -97,9 +94,8 @@ protected:
    * @param duration Maximum duration to wait for a traversal to evaluate
    * @see replication_factor_
    */
-  void create_graph(const std::string& graph_name,
-    const std::string& replication_strategy,
-    const std::string& duration);
+  void create_graph(const std::string& graph_name, const std::string& replication_strategy,
+                    const std::string& duration);
 
   /**
    * Create the graph using the test name and default replication strategy

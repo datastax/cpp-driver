@@ -16,9 +16,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 /**
  * Wrapped DSE graph statement object
@@ -32,7 +30,7 @@ public:
    * @param statement Native driver object
    */
   GraphStatement(DseGraphStatement* statement)
-    : Object<DseGraphStatement, dse_graph_statement_free>(statement) {}
+      : Object<DseGraphStatement, dse_graph_statement_free>(statement) {}
 
   /**
    * Create the DSE graph statement object from the shared reference
@@ -40,7 +38,7 @@ public:
    * @param statement Shared reference
    */
   GraphStatement(Ptr statement)
-    : Object<DseGraphStatement, dse_graph_statement_free>(statement) {}
+      : Object<DseGraphStatement, dse_graph_statement_free>(statement) {}
 
   /**
    * Create the statement object from a query without options
@@ -48,8 +46,8 @@ public:
    * @param query Query to create statement from
    */
   GraphStatement(const std::string& query)
-    : Object<DseGraphStatement, dse_graph_statement_free>(
-        dse_graph_statement_new(query.c_str(), NULL)) {}
+      : Object<DseGraphStatement, dse_graph_statement_free>(
+            dse_graph_statement_new(query.c_str(), NULL)) {}
 
   /**
    * Create the statement object from a query
@@ -58,8 +56,8 @@ public:
    * @param options Graph options to apply to the graph statement
    */
   GraphStatement(const std::string& query, GraphOptions options)
-    : Object<DseGraphStatement, dse_graph_statement_free>(
-        dse_graph_statement_new(query.c_str(), options.get())) {}
+      : Object<DseGraphStatement, dse_graph_statement_free>(
+            dse_graph_statement_new(query.c_str(), options.get())) {}
 
   /**
    * Bind the DSE graph object (values) to the DSE graph statement
@@ -81,8 +79,6 @@ public:
   }
 };
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_GRAPH_STATEMENT_HPP__

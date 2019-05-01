@@ -41,11 +41,11 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) { }
+        : test::Exception(message) {}
   };
   typedef std::pair<std::string, std::string> Column;
 
-  Row() { }
+  Row() {}
 
   /**
    * Add a column|value pair
@@ -55,22 +55,19 @@ public:
    * @param value Value for the column
    * @return PrimingRow instance
    */
-  Row& add_column(const std::string& name,
-                  const CassValueType value_type,
+  Row& add_column(const std::string& name, const CassValueType value_type,
                   const std::string& value) {
     std::string cql_type = test::Utils::scalar_cql_type(value_type);
-    if (value_type == CASS_VALUE_TYPE_LIST ||
-      value_type == CASS_VALUE_TYPE_MAP ||
-      value_type == CASS_VALUE_TYPE_SET) {
-      throw Exception("Value Type " + cql_type + "Needs to be Parameterized: "
-        "Use add_column(string name, string cql_value_type, string value) instead");
-     }
+    if (value_type == CASS_VALUE_TYPE_LIST || value_type == CASS_VALUE_TYPE_MAP ||
+        value_type == CASS_VALUE_TYPE_SET) {
+      throw Exception("Value Type " + cql_type +
+                      "Needs to be Parameterized: "
+                      "Use add_column(string name, string cql_value_type, string value) instead");
+    }
 
-    //TODO: Add types when supported by Simulacron
-    if (value_type == CASS_VALUE_TYPE_CUSTOM ||
-      value_type == CASS_VALUE_TYPE_UDT) {
-      throw Exception("Value Type is not Supported by Simulacron: "
-        + cql_type);
+    // TODO: Add types when supported by Simulacron
+    if (value_type == CASS_VALUE_TYPE_CUSTOM || value_type == CASS_VALUE_TYPE_UDT) {
+      throw Exception("Value Type is not Supported by Simulacron: " + cql_type);
     }
 
     return add_column(name, cql_type, value);
@@ -84,10 +81,9 @@ public:
    * @param value Value for the column
    * @return PrimingRow instance
    */
-  Row& add_column(const std::string& name,
-                  const std::string& cql_value_type,
+  Row& add_column(const std::string& name, const std::string& cql_value_type,
                   const std::string& value) {
-    //TODO: Add validation (mainly for parameterized types)
+    // TODO: Add validation (mainly for parameterized types)
     // Ensure the column doesn't already exist
     if (columns_.find(name) != columns_.end()) {
       throw Exception("Unable to Add Column: Already Exists [" + name + "]");
@@ -105,15 +101,10 @@ public:
    *         otherwise
    */
   bool operator==(const Row& rhs) const {
-    return columns_.size() == rhs.columns_.size()
-      && std::equal(columns_.begin(),
-                    columns_.end(),
-                    rhs.columns_.begin(),
-                    ColumnsKeyEquality());
+    return columns_.size() == rhs.columns_.size() &&
+           std::equal(columns_.begin(), columns_.end(), rhs.columns_.begin(), ColumnsKeyEquality());
   }
-  bool operator!=(const Row& rhs) const {
-    return !(*this == rhs);
-  }
+  bool operator!=(const Row& rhs) const { return !(*this == rhs); }
 
   /**
    * Build the column types for the column used by the row
@@ -124,8 +115,7 @@ public:
     writer.Key("column_types");
     writer.StartObject();
 
-    for (Map::const_iterator iterator = columns_.begin(); iterator != columns_.end();
-      ++iterator) {
+    for (Map::const_iterator iterator = columns_.begin(); iterator != columns_.end(); ++iterator) {
       std::string name = iterator->first;
       std::string cql_type = iterator->second.first;
       writer.Key(name.c_str());
@@ -143,21 +133,19 @@ public:
   void build_row(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
     writer.StartObject();
 
-    for (Map::const_iterator iterator = columns_.begin(); iterator != columns_.end();
-      ++iterator) {
+    for (Map::const_iterator iterator = columns_.begin(); iterator != columns_.end(); ++iterator) {
       std::string name = iterator->first;
       std::string value = iterator->second.second;
 
       // Add the column|value pair
       writer.Key(name.c_str());
-      bool is_array = value.compare(0, 1, "[")  == 0 &&
-        value.compare(value.size() - 1, 1, "]") == 0;
+      bool is_array = value.compare(0, 1, "[") == 0 && value.compare(value.size() - 1, 1, "]") == 0;
       if (is_array) {
         value = value.substr(1, value.size() - 2);
         writer.StartArray();
         std::vector<std::string> values = test::Utils::explode(value, ',');
-        for (std::vector<std::string>::iterator iterator = values.begin();
-          iterator != values.end(); ++iterator) {
+        for (std::vector<std::string>::iterator iterator = values.begin(); iterator != values.end();
+             ++iterator) {
           writer.String((*iterator).c_str());
         }
         writer.EndArray();
@@ -204,10 +192,10 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) {}
+        : test::Exception(message) {}
   };
 
-  Rows() { }
+  Rows() {}
 
   /**
    * Add a row
@@ -218,8 +206,7 @@ public:
    */
   Rows& add_row(const Row& columns) {
     if (!rows_.empty() && rows_.front() != columns) {
-      throw Exception(
-        "Unable to Add Row: Columns are incompatible with previous row(s)");
+      throw Exception("Unable to Add Row: Columns are incompatible with previous row(s)");
     }
     rows_.push_back(columns);
     return *this;
@@ -230,9 +217,7 @@ public:
    *
    * @return True if rows are empty; false otherwise
    */
-  bool empty() const {
-    return rows_.empty();
-  }
+  bool empty() const { return rows_.empty(); }
 
   /**
    * Build the column types for the column used by the rows
@@ -251,8 +236,8 @@ public:
   void build_rows(rapidjson::PrettyWriter<rapidjson::StringBuffer>& rows) const {
     rows.Key("rows");
     rows.StartArray();
-    for (std::vector<Row>::const_iterator iterator = rows_.begin();
-      iterator != rows_.end(); ++iterator) {
+    for (std::vector<Row>::const_iterator iterator = rows_.begin(); iterator != rows_.end();
+         ++iterator) {
       iterator->build_row(rows);
     }
     rows.EndArray();
@@ -271,7 +256,7 @@ private:
 class Success : public Result {
 public:
   Success()
-    : Result("success") { }
+      : Result("success") {}
 
   /**
    * Fully construct the 'success' result
@@ -279,10 +264,9 @@ public:
    * @param delay_in_ms Delay in milliseconds before forwarding result
    * @param rows Rows to return when responding to the request
    */
-  Success(unsigned long delay_in_ms,
-          const Rows& rows)
-    : Result("success", delay_in_ms)
-    , rows_(rows) { }
+  Success(unsigned long delay_in_ms, const Rows& rows)
+      : Result("success", delay_in_ms)
+      , rows_(rows) {}
 
   /**
    * Set a fixed delay to the response time of a result

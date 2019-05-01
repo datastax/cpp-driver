@@ -20,9 +20,7 @@ using namespace datastax::internal::core;
 
 bool BlacklistPolicy::is_valid_host(const Host::Ptr& host) const {
   const String& host_address = host->address().to_string(false);
-  for (ContactPointList::const_iterator it = hosts_.begin(),
-                                                end = hosts_.end();
-       it != end; ++it) {
+  for (ContactPointList::const_iterator it = hosts_.begin(), end = hosts_.end(); it != end; ++it) {
     if (host_address.compare(*it) == 0) {
       return false;
     }

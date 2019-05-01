@@ -160,6 +160,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(MPMCQueue);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

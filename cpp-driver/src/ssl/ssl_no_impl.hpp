@@ -33,27 +33,24 @@ public:
 
 class NoSslContext : public SslContext {
 public:
-
   virtual SslSession* create_session(const Address& address, const String& hostname);
 
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length);
   virtual CassError set_cert(const char* cert, size_t cert_length);
-  virtual CassError set_private_key(const char* key,
-                                    size_t key_length,
-                                    const char* password,
+  virtual CassError set_private_key(const char* key, size_t key_length, const char* password,
                                     size_t password_length);
 };
 
 class NoSslContextFactory : public SslContextFactoryBase<NoSslContextFactory> {
 public:
   static SslContext::Ptr create();
-  static void internal_init() { }
-  static void internal_thread_cleanup() { }
-  static void internal_cleanup() { }
+  static void internal_init() {}
+  static void internal_thread_cleanup() {}
+  static void internal_cleanup() {}
 };
 
 typedef SslContextFactoryBase<NoSslContextFactory> SslContextFactory;
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

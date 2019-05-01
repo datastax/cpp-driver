@@ -31,8 +31,9 @@ class RequestCallback;
 /**
  * A connection wrapper that handles connection pool functionality.
  */
-class PooledConnection : public RefCounted<PooledConnection>
-                       , public ConnectionListener {
+class PooledConnection
+    : public RefCounted<PooledConnection>
+    , public ConnectionListener {
 public:
   typedef SharedRefPtr<PooledConnection> Ptr;
   typedef Vector<Ptr> Vec;
@@ -43,8 +44,7 @@ public:
    * @param pool The connection pool of the connection.
    * @param connection The wrapped connection.
    */
-  PooledConnection(ConnectionPool* pool,
-                   const Connection::Ptr& connection);
+  PooledConnection(ConnectionPool* pool, const Connection::Ptr& connection);
 
   /**
    * Writes a request to a connection, but it's not written to the socket until
@@ -87,6 +87,6 @@ private:
   EventLoop* const event_loop_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

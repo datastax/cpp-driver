@@ -23,15 +23,12 @@ public:
   typedef json::StringBuffer StringBuffer;
   typedef json::Writer<StringBuffer> Writer;
 
-  ClientInsights(const String& client_id,
-                 const String& session_id,
-                 unsigned interval_secs);
-  virtual ~ClientInsights() { }
+  ClientInsights(const String& client_id, const String& session_id, unsigned interval_secs);
+  virtual ~ClientInsights() {}
 
   virtual uint64_t interval_ms(const core::VersionNumber& dse_server_version) const;
   virtual void send_startup_message(const core::Connection::Ptr& connection,
-                                    const core::Config& config,
-                                    const core::HostMap& hosts,
+                                    const core::Config& config, const core::HostMap& hosts,
                                     const core::LoadBalancingPolicy::Vec& initialized_policies);
   virtual void send_status_message(const core::Connection::Ptr& connection,
                                    const core::HostMap& hosts);
@@ -42,6 +39,6 @@ private:
   const uint64_t interval_ms_;
 };
 
-} } } // namespace datastax::internal::enterprise
+}}} // namespace datastax::internal::enterprise
 
 #endif // DATASTAX_ENTERPRISE_INTERNAL_CLIENT_INSIGHTS_HPP

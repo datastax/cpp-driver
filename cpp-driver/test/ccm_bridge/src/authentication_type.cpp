@@ -21,29 +21,23 @@
 using namespace CCM;
 
 // Constant value definitions for authentication type
-const AuthenticationType AuthenticationType::USERNAME_PASSWORD("USERNAME_PASSWORD", 0, "Username and Password");
+const AuthenticationType AuthenticationType::USERNAME_PASSWORD("USERNAME_PASSWORD", 0,
+                                                               "Username and Password");
 const AuthenticationType AuthenticationType::PUBLIC_KEY("PUBLIC_KEY", 1, "Public Key");
 
 // Static declarations for authentication type
 std::set<AuthenticationType> AuthenticationType::constants_;
 
 AuthenticationType::AuthenticationType()
- : name_("INVALID")
- , ordinal_(-1)
- , display_name_("Invalid authentication") {
-}
+    : name_("INVALID")
+    , ordinal_(-1)
+    , display_name_("Invalid authentication") {}
 
-const std::string& AuthenticationType::name() const {
-  return name_;
-}
+const std::string& AuthenticationType::name() const { return name_; }
 
-short AuthenticationType::ordinal() const {
-  return ordinal_;
-}
+short AuthenticationType::ordinal() const { return ordinal_; }
 
-const std::string& AuthenticationType::to_string() const {
-  return display_name_;
-}
+const std::string& AuthenticationType::to_string() const { return display_name_; }
 
 const std::set<AuthenticationType>& AuthenticationType::get_constants() {
   if (constants_.empty()) {
@@ -54,14 +48,13 @@ const std::set<AuthenticationType>& AuthenticationType::get_constants() {
   return constants_;
 }
 
-AuthenticationType::AuthenticationType(const std::string &name, int ordinal, const std::string &display_name)
-  : name_(name)
-  , ordinal_(ordinal)
-  , display_name_(display_name) {}
+AuthenticationType::AuthenticationType(const std::string& name, int ordinal,
+                                       const std::string& display_name)
+    : name_(name)
+    , ordinal_(ordinal)
+    , display_name_(display_name) {}
 
-std::set<AuthenticationType>::iterator AuthenticationType::end() {
-  return get_constants().end();
-}
+std::set<AuthenticationType>::iterator AuthenticationType::end() { return get_constants().end(); }
 
 std::set<AuthenticationType>::iterator AuthenticationType::begin() {
   return get_constants().begin();

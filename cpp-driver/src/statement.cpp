@@ -37,16 +37,13 @@ using namespace datastax::internal::core;
 
 extern "C" {
 
-CassStatement* cass_statement_new(const char* query,
-                                  size_t parameter_count) {
+CassStatement* cass_statement_new(const char* query, size_t parameter_count) {
   return cass_statement_new_n(query, SAFE_STRLEN(query), parameter_count);
 }
 
-CassStatement* cass_statement_new_n(const char* query,
-                                    size_t query_length,
+CassStatement* cass_statement_new_n(const char* query, size_t query_length,
                                     size_t parameter_count) {
-  QueryRequest* query_request
-      = new QueryRequest(query, query_length, parameter_count);
+  QueryRequest* query_request = new QueryRequest(query, query_length, parameter_count);
   query_request->inc_ref();
   return CassStatement::to(query_request);
 }
@@ -67,8 +64,7 @@ CassError cass_statement_set_keyspace(CassStatement* statement, const char* keys
   return cass_statement_set_keyspace_n(statement, keyspace, SAFE_STRLEN(keyspace));
 }
 
-CassError cass_statement_set_keyspace_n(CassStatement* statement,
-                                        const char* keyspace,
+CassError cass_statement_set_keyspace_n(CassStatement* statement, const char* keyspace,
                                         size_t keyspace_length) {
   // The keyspace is set by the prepared metadata
   if (statement->opcode() == CQL_OPCODE_EXECUTE) {
@@ -78,12 +74,9 @@ CassError cass_statement_set_keyspace_n(CassStatement* statement,
   return CASS_OK;
 }
 
-void cass_statement_free(CassStatement* statement) {
-  statement->dec_ref();
-}
+void cass_statement_free(CassStatement* statement) { statement->dec_ref(); }
 
-CassError cass_statement_set_consistency(CassStatement* statement,
-                                         CassConsistency consistency) {
+CassError cass_statement_set_consistency(CassStatement* statement, CassConsistency consistency) {
   statement->set_consistency(consistency);
   return CASS_OK;
 }
@@ -94,45 +87,38 @@ CassError cass_statement_set_serial_consistency(CassStatement* statement,
   return CASS_OK;
 }
 
-CassError cass_statement_set_paging_size(CassStatement* statement,
-                                         int page_size) {
+CassError cass_statement_set_paging_size(CassStatement* statement, int page_size) {
   statement->set_page_size(page_size);
   return CASS_OK;
 }
 
-CassError cass_statement_set_paging_state(CassStatement* statement,
-                                          const CassResult* result) {
+CassError cass_statement_set_paging_state(CassStatement* statement, const CassResult* result) {
   statement->set_paging_state(result->paging_state().to_string());
   return CASS_OK;
 }
 
-CassError cass_statement_set_paging_state_token(CassStatement* statement,
-                                                const char* paging_state,
+CassError cass_statement_set_paging_state_token(CassStatement* statement, const char* paging_state,
                                                 size_t paging_state_size) {
   statement->set_paging_state(String(paging_state, paging_state_size));
   return CASS_OK;
 }
 
-CassError cass_statement_set_retry_policy(CassStatement* statement,
-                                          CassRetryPolicy* retry_policy) {
+CassError cass_statement_set_retry_policy(CassStatement* statement, CassRetryPolicy* retry_policy) {
   statement->set_retry_policy(retry_policy);
   return CASS_OK;
 }
 
-CassError cass_statement_set_timestamp(CassStatement* statement,
-                                       cass_int64_t timestamp)  {
+CassError cass_statement_set_timestamp(CassStatement* statement, cass_int64_t timestamp) {
   statement->set_timestamp(timestamp);
   return CASS_OK;
 }
 
-CassError cass_statement_set_request_timeout(CassStatement* statement,
-                                             cass_uint64_t timeout_ms) {
+CassError cass_statement_set_request_timeout(CassStatement* statement, cass_uint64_t timeout_ms) {
   statement->set_request_timeout_ms(timeout_ms);
   return CASS_OK;
 }
 
-CassError cass_statement_set_is_idempotent(CassStatement* statement,
-                                           cass_bool_t is_idempotent) {
+CassError cass_statement_set_is_idempotent(CassStatement* statement, cass_bool_t is_idempotent) {
   statement->set_is_idempotent(is_idempotent == cass_true);
   return CASS_OK;
 }
@@ -143,15 +129,11 @@ CassError cass_statement_set_custom_payload(CassStatement* statement,
   return CASS_OK;
 }
 
-CassError cass_statement_set_execution_profile(CassStatement* statement,
-                                               const char* name) {
-  return cass_statement_set_execution_profile_n(statement,
-                                                name,
-                                                SAFE_STRLEN(name));
+CassError cass_statement_set_execution_profile(CassStatement* statement, const char* name) {
+  return cass_statement_set_execution_profile_n(statement, name, SAFE_STRLEN(name));
 }
 
-CassError cass_statement_set_execution_profile_n(CassStatement* statement,
-                                                 const char* name,
+CassError cass_statement_set_execution_profile_n(CassStatement* statement, const char* name,
                                                  size_t name_length) {
   if (name_length > 0) {
     statement->set_execution_profile_name(String(name, name_length));
@@ -161,59 +143,46 @@ CassError cass_statement_set_execution_profile_n(CassStatement* statement,
   return CASS_OK;
 }
 
-CassError cass_statement_set_tracing(CassStatement* statement,
-                                     cass_bool_t enabled) {
+CassError cass_statement_set_tracing(CassStatement* statement, cass_bool_t enabled) {
   statement->set_tracing(enabled == cass_true);
   return CASS_OK;
 }
 
-CassError cass_statement_set_host(CassStatement* statement,
-                                  const char* host,
-                                  int port) {
+CassError cass_statement_set_host(CassStatement* statement, const char* host, int port) {
   return cass_statement_set_host_n(statement, host, SAFE_STRLEN(host), port);
 }
 
-CassError cass_statement_set_host_n(CassStatement* statement,
-                                    const char* host,
-                                    size_t host_length,
+CassError cass_statement_set_host_n(CassStatement* statement, const char* host, size_t host_length,
                                     int port) {
   Address address;
-  if (!Address::from_string(String(host, host_length),
-                            port,
-                            &address)) {
+  if (!Address::from_string(String(host, host_length), port, &address)) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   statement->set_host(address);
   return CASS_OK;
 }
 
-CassError cass_statement_set_host_inet(CassStatement* statement,
-                                       const CassInet* host,
-                                       int port) {
+CassError cass_statement_set_host_inet(CassStatement* statement, const CassInet* host, int port) {
   Address address;
-  if (!Address::from_inet(host->address,
-                          host->address_length,
-                          port, &address)) {
+  if (!Address::from_inet(host->address, host->address_length, port, &address)) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   statement->set_host(address);
   return CASS_OK;
 }
 
-#define CASS_STATEMENT_BIND(Name, Params, Value)                                \
-  CassError cass_statement_bind_##Name(CassStatement* statement,                \
-  size_t index Params) {                    \
-  return statement->set(index, Value);                                        \
-}                                                                             \
-  CassError cass_statement_bind_##Name##_by_name(CassStatement* statement,      \
-  const char* name Params) {      \
-  return statement->set(StringRef(name), Value);                        \
-}                                                                             \
-  CassError cass_statement_bind_##Name##_by_name_n(CassStatement* statement,    \
-  const char* name,            \
-  size_t name_length Params) { \
-  return statement->set(StringRef(name, name_length), Value);           \
-}
+#define CASS_STATEMENT_BIND(Name, Params, Value)                                               \
+  CassError cass_statement_bind_##Name(CassStatement* statement, size_t index Params) {        \
+    return statement->set(index, Value);                                                       \
+  }                                                                                            \
+  CassError cass_statement_bind_##Name##_by_name(CassStatement* statement,                     \
+                                                 const char* name Params) {                    \
+    return statement->set(StringRef(name), Value);                                             \
+  }                                                                                            \
+  CassError cass_statement_bind_##Name##_by_name_n(CassStatement* statement, const char* name, \
+                                                   size_t name_length Params) {                \
+    return statement->set(StringRef(name, name_length), Value);                                \
+  }
 
 CASS_STATEMENT_BIND(null, ZERO_PARAMS_(), CassNull())
 CASS_STATEMENT_BIND(int8, ONE_PARAM_(cass_int8_t value), value)
@@ -229,8 +198,7 @@ CASS_STATEMENT_BIND(inet, ONE_PARAM_(CassInet value), value)
 CASS_STATEMENT_BIND(collection, ONE_PARAM_(const CassCollection* value), value->from())
 CASS_STATEMENT_BIND(tuple, ONE_PARAM_(const CassTuple* value), value->from())
 CASS_STATEMENT_BIND(user_type, ONE_PARAM_(const CassUserType* value), value->from())
-CASS_STATEMENT_BIND(bytes,
-                    TWO_PARAMS_(const cass_byte_t* value, size_t value_size),
+CASS_STATEMENT_BIND(bytes, TWO_PARAMS_(const cass_byte_t* value, size_t value_size),
                     CassBytes(value, value_size))
 CASS_STATEMENT_BIND(decimal,
                     THREE_PARAMS_(const cass_byte_t* varint, size_t varint_size, int scale),
@@ -241,94 +209,70 @@ CASS_STATEMENT_BIND(duration,
 
 #undef CASS_STATEMENT_BIND
 
-CassError cass_statement_bind_string(CassStatement* statement, size_t index,
-                                     const char* value) {
-  return cass_statement_bind_string_n(statement, index,
-                                      value, SAFE_STRLEN(value));
+CassError cass_statement_bind_string(CassStatement* statement, size_t index, const char* value) {
+  return cass_statement_bind_string_n(statement, index, value, SAFE_STRLEN(value));
 }
 
-CassError cass_statement_bind_string_n(CassStatement* statement, size_t index,
-                                       const char* value, size_t value_length) {
+CassError cass_statement_bind_string_n(CassStatement* statement, size_t index, const char* value,
+                                       size_t value_length) {
   return statement->set(index, CassString(value, value_length));
 }
 
-CassError cass_statement_bind_string_by_name(CassStatement* statement,
-                                             const char* name,
+CassError cass_statement_bind_string_by_name(CassStatement* statement, const char* name,
                                              const char* value) {
-  return statement->set(StringRef(name),
-                        CassString(value, SAFE_STRLEN(value)));
+  return statement->set(StringRef(name), CassString(value, SAFE_STRLEN(value)));
 }
 
-CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
-                                               const char* name,
-                                               size_t name_length,
-                                               const char* value,
+CassError cass_statement_bind_string_by_name_n(CassStatement* statement, const char* name,
+                                               size_t name_length, const char* value,
                                                size_t value_length) {
-  return statement->set(StringRef(name, name_length),
-                        CassString(value, SAFE_STRLEN(value)));
+  return statement->set(StringRef(name, name_length), CassString(value, SAFE_STRLEN(value)));
 }
 
-CassError cass_statement_bind_custom(CassStatement* statement,
-                                     size_t index,
-                                     const char* class_name,
-                                     const cass_byte_t* value,
-                                     size_t value_size) {
+CassError cass_statement_bind_custom(CassStatement* statement, size_t index, const char* class_name,
+                                     const cass_byte_t* value, size_t value_size) {
+  return statement->set(index, CassCustom(StringRef(class_name), value, value_size));
+}
+
+CassError cass_statement_bind_custom_n(CassStatement* statement, size_t index,
+                                       const char* class_name, size_t class_name_length,
+                                       const cass_byte_t* value, size_t value_size) {
   return statement->set(index,
-                        CassCustom(StringRef(class_name),
-                                   value, value_size));
+                        CassCustom(StringRef(class_name, class_name_length), value, value_size));
 }
 
-CassError cass_statement_bind_custom_n(CassStatement* statement,
-                                       size_t index,
-                                       const char* class_name,
-                                       size_t class_name_length,
-                                       const cass_byte_t* value,
-                                       size_t value_size) {
-  return statement->set(index,
-                        CassCustom(StringRef(class_name, class_name_length),
-                                   value, value_size));
-}
-
-CassError cass_statement_bind_custom_by_name(CassStatement* statement,
-                                             const char* name,
-                                             const char* class_name,
-                                             const cass_byte_t* value,
+CassError cass_statement_bind_custom_by_name(CassStatement* statement, const char* name,
+                                             const char* class_name, const cass_byte_t* value,
                                              size_t value_size) {
-  return statement->set(StringRef(name),
-                        CassCustom(StringRef(class_name),
-                                   value, value_size));
+  return statement->set(StringRef(name), CassCustom(StringRef(class_name), value, value_size));
 }
 
-CassError cass_statement_bind_custom_by_name_n(CassStatement* statement,
-                                               const char* name,
-                                               size_t name_length,
-                                               const char* class_name,
-                                               size_t class_name_length,
-                                               const cass_byte_t* value,
+CassError cass_statement_bind_custom_by_name_n(CassStatement* statement, const char* name,
+                                               size_t name_length, const char* class_name,
+                                               size_t class_name_length, const cass_byte_t* value,
                                                size_t value_size) {
   return statement->set(StringRef(name, name_length),
-                        CassCustom(StringRef(class_name, class_name_length),
-                                   value, value_size));
+                        CassCustom(StringRef(class_name, class_name_length), value, value_size));
 }
 
 } // extern "C"
 
 Statement::Statement(const char* query, size_t query_length, size_t values_count)
-  : RoutableRequest(CQL_OPCODE_QUERY)
-  , AbstractData(values_count)
-  , query_or_id_(sizeof(int32_t) + query_length)
-  , flags_(0)
-  , page_size_(-1) {
+    : RoutableRequest(CQL_OPCODE_QUERY)
+    , AbstractData(values_count)
+    , query_or_id_(sizeof(int32_t) + query_length)
+    , flags_(0)
+    , page_size_(-1) {
   // <query> [long string]
   query_or_id_.encode_long_string(0, query, query_length);
 }
 
 Statement::Statement(const Prepared* prepared)
-  : RoutableRequest(CQL_OPCODE_EXECUTE)
-  , AbstractData(prepared->result()->column_count())
-  , query_or_id_(sizeof(uint16_t) + prepared->id().size())
-  , flags_(0)
-  , page_size_(-1) {
+    : RoutableRequest(CQL_OPCODE_EXECUTE)
+    , AbstractData(prepared->result()->column_count())
+    , query_or_id_(sizeof(uint16_t) + prepared->id().size())
+    , flags_(0)
+    , page_size_(-1) {
   // <id> [short bytes] (or [string])
   const String& id = prepared->id();
   query_or_id_.encode_string(0, id.data(), id.size());
@@ -343,8 +287,7 @@ Statement::Statement(const Prepared* prepared)
 
 String Statement::query() const {
   if (opcode() == CQL_OPCODE_QUERY) {
-    return String(query_or_id_.data() + sizeof(int32_t),
-                  query_or_id_.size() - sizeof(int32_t));
+    return String(query_or_id_.data() + sizeof(int32_t), query_or_id_.size() - sizeof(int32_t));
   }
   return String();
 }
@@ -355,7 +298,8 @@ String Statement::query() const {
 // <string_or_id> is a [long string] for <string> and a [short bytes] for <id>
 // <n> is a [short]
 // <value> is a [bytes]
-int32_t Statement::encode_batch(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
+int32_t Statement::encode_batch(ProtocolVersion version, RequestCallback* callback,
+                                BufferVec* bufs) const {
   int32_t length = 0;
 
   { // <kind> [byte]
@@ -386,9 +330,9 @@ int32_t Statement::encode_batch(ProtocolVersion version, RequestCallback* callba
 
 bool Statement::with_keyspace(ProtocolVersion version) const {
   return version.supports_set_keyspace() &&
-      // Execute requests (bound statements) use the keyspace
-      // from the time of prepare.
-      opcode() != CQL_OPCODE_EXECUTE && !keyspace().empty();
+         // Execute requests (bound statements) use the keyspace
+         // from the time of prepare.
+         opcode() != CQL_OPCODE_EXECUTE && !keyspace().empty();
 }
 
 // For query statements the format is:
@@ -477,13 +421,14 @@ int32_t Statement::encode_begin(ProtocolVersion version, uint16_t element_count,
 // Format: [<value_1>...<value_n>]
 // where:
 // <value> is a [bytes]
-int32_t Statement::encode_values(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
+int32_t Statement::encode_values(ProtocolVersion version, RequestCallback* callback,
+                                 BufferVec* bufs) const {
   int32_t length = 0;
   for (size_t i = 0; i < elements().size(); ++i) {
     const Element& element = elements()[i];
     if (!element.is_unset()) {
       bufs->push_back(element.get_buffer());
-    } else  {
+    } else {
       if (version >= CASS_PROTOCOL_VERSION_V4) {
         bufs->push_back(core::encode_with_length(CassUnset()));
       } else {
@@ -505,7 +450,8 @@ int32_t Statement::encode_values(ProtocolVersion version, RequestCallback* callb
 // <serial_consistency> is a [short]
 // <timestamp> is a [long]
 // <keyspace> is a [string]
-int32_t Statement::encode_end(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
+int32_t Statement::encode_end(ProtocolVersion version, RequestCallback* callback,
+                              BufferVec* bufs) const {
   int32_t length = 0;
   size_t paging_buf_size = 0;
 
@@ -562,7 +508,8 @@ int32_t Statement::encode_end(ProtocolVersion version, RequestCallback* callback
   return length;
 }
 
-bool Statement::calculate_routing_key(const Vector<size_t>& key_indices, String* routing_key) const {
+bool Statement::calculate_routing_key(const Vector<size_t>& key_indices,
+                                      String* routing_key) const {
   if (key_indices.empty()) return false;
 
   if (key_indices.size() == 1) {
@@ -572,13 +519,11 @@ bool Statement::calculate_routing_key(const Vector<size_t>& key_indices, String*
       return false;
     }
     Buffer buf(element.get_buffer());
-    routing_key->assign(buf.data() + sizeof(int32_t),
-                        buf.size() - sizeof(int32_t));
+    routing_key->assign(buf.data() + sizeof(int32_t), buf.size() - sizeof(int32_t));
   } else {
     size_t length = 0;
 
-    for (Vector<size_t>::const_iterator i = key_indices.begin();
-         i != key_indices.end(); ++i) {
+    for (Vector<size_t>::const_iterator i = key_indices.begin(); i != key_indices.end(); ++i) {
       assert(*i < elements().size());
       const AbstractData::Element& element(elements()[*i]);
       if (element.is_unset() || element.is_null()) {
@@ -591,8 +536,7 @@ bool Statement::calculate_routing_key(const Vector<size_t>& key_indices, String*
     routing_key->clear();
     routing_key->reserve(length);
 
-    for (Vector<size_t>::const_iterator i = key_indices.begin();
-         i != key_indices.end(); ++i) {
+    for (Vector<size_t>::const_iterator i = key_indices.begin(); i != key_indices.end(); ++i) {
       const AbstractData::Element& element(elements()[*i]);
       Buffer buf(element.get_buffer());
       size_t size = buf.size() - sizeof(int32_t);

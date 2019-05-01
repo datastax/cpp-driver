@@ -21,8 +21,7 @@
 
 #include "retry_policy.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Retry policy that will create an ignore decision for retry
@@ -30,7 +29,7 @@ namespace driver {
 class IgnoreRetryPolicy : public datastax::internal::core::DefaultRetryPolicy {
 public:
   IgnoreRetryPolicy()
-    : datastax::internal::core::DefaultRetryPolicy() { }
+      : datastax::internal::core::DefaultRetryPolicy() {}
 
   /**
    * Create an instance of the retry policy for use with the driver
@@ -44,25 +43,17 @@ public:
   }
 
   RetryDecision on_read_timeout(const datastax::internal::core::Request* request,
-                                CassConsistency cl,
-                                int received,
-                                int required,
-                                bool data_recevied,
+                                CassConsistency cl, int received, int required, bool data_recevied,
                                 int num_retries) const {
     return RetryDecision::ignore();
   }
   RetryDecision on_write_timeout(const datastax::internal::core::Request* request,
-                                 CassConsistency cl,
-                                 int received,
-                                 int required,
-                                 CassWriteType write_type,
-                                 int num_retries) const {
+                                 CassConsistency cl, int received, int required,
+                                 CassWriteType write_type, int num_retries) const {
     return RetryDecision::ignore();
   }
   virtual RetryDecision on_unavailable(const datastax::internal::core::Request* request,
-                                       CassConsistency cl,
-                                       int required,
-                                       int alive,
+                                       CassConsistency cl, int required, int alive,
                                        int num_retries) const {
     return RetryDecision::ignore();
   }
@@ -74,7 +65,6 @@ public:
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __ALWAYS_IGNORE_RETRY_POLICY_HPP__

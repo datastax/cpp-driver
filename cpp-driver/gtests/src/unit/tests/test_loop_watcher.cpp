@@ -24,22 +24,18 @@ using namespace datastax::internal::core;
 class LoopWatcherUnitTest : public LoopTest {
 public:
   LoopWatcherUnitTest()
-    : is_check_callback_called_(false)
-    , is_prepare_callback_called_(false) { }
+      : is_check_callback_called_(false)
+      , is_prepare_callback_called_(false) {}
 
   bool is_check_callback_called() { return is_check_callback_called_; }
   bool is_prepare_callback_called() { return is_prepare_callback_called_; }
 
 protected:
   void start(Check* check) {
-    ASSERT_EQ(0, check->start(loop(),
-                              bind_callback(&LoopWatcherUnitTest::on_check,
-                                            this)));
+    ASSERT_EQ(0, check->start(loop(), bind_callback(&LoopWatcherUnitTest::on_check, this)));
   }
   void start(Prepare* prepare) {
-    ASSERT_EQ(0, prepare->start(loop(),
-                                bind_callback(&LoopWatcherUnitTest::on_prepare,
-                                              this)));
+    ASSERT_EQ(0, prepare->start(loop(), bind_callback(&LoopWatcherUnitTest::on_prepare, this)));
   }
 
 private:

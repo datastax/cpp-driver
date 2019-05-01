@@ -24,8 +24,8 @@ using datastax::internal::ScopedWriteLock;
 
 struct MutexData {
   MutexData(uv_mutex_t* mutex)
-    : mutex(mutex)
-    , error_code(0) { }
+      : mutex(mutex)
+      , error_code(0) {}
 
   uv_mutex_t* mutex;
   int error_code;
@@ -33,8 +33,8 @@ struct MutexData {
 
 struct RwlockData {
   RwlockData(uv_rwlock_t* rwlock)
-    : rwlock(rwlock)
-    , error_code(0) { }
+      : rwlock(rwlock)
+      , error_code(0) {}
 
   uv_rwlock_t* rwlock;
   int error_code;
@@ -101,7 +101,8 @@ TEST(ScopedLockUnitTest, ScopedReadLock) {
     ScopedReadLock rl(&rwlock);
 
     uv_thread_t thread;
-    uv_thread_create(&thread, on_rwlock_trywrlock, &rwlock_data); // Lock for writing to force busy for write
+    uv_thread_create(&thread, on_rwlock_trywrlock,
+                     &rwlock_data); // Lock for writing to force busy for write
     uv_thread_join(&thread);
   }
 
@@ -169,7 +170,8 @@ TEST(ScopedLockUnitTest, ScopedWriteLockBusy) {
     ScopedWriteLock wl(&rwlock);
 
     uv_thread_t thread;
-    uv_thread_create(&thread, on_rwlock_tryrdlock, &rwlock_data); // Lock for reading to force busy for read
+    uv_thread_create(&thread, on_rwlock_tryrdlock,
+                     &rwlock_data); // Lock for reading to force busy for read
     uv_thread_join(&thread);
   }
 

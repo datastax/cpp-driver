@@ -22,7 +22,7 @@
 #include <mach/mach_time.h>
 #include <sys/time.h>
 
-namespace datastax { namespace  internal {
+namespace datastax { namespace internal {
 
 // Information on converting the absolute time to nanoseconds can be found
 // here: https://developer.apple.com/library/content/qa/qa1398/_index.html.
@@ -48,8 +48,7 @@ static ClockInfo __clock_info__; // Initializer
 uint64_t get_time_since_epoch_us() {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  return static_cast<uint64_t>(tv.tv_sec) * 1000000 +
-         static_cast<uint64_t>(tv.tv_usec);
+  return static_cast<uint64_t>(tv.tv_sec) * 1000000 + static_cast<uint64_t>(tv.tv_usec);
 }
 
 uint64_t get_time_monotonic_ns() {
@@ -57,6 +56,6 @@ uint64_t get_time_monotonic_ns() {
   return time * ClockInfo::frequency();
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif // defined(__APPLE__) && defined(__MACH__)

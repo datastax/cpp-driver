@@ -14,15 +14,15 @@
   limitations under the License.
 */
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/scoped_ptr.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
+#include <boost/thread.hpp>
 #include <boost/thread/condition.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -32,10 +32,10 @@
 namespace {
 
 struct CallbackData {
-  CallbackData(CassSession *session = NULL)
-    : was_called(false)
-    , row_count(0)
-    , cass_session(session) {}
+  CallbackData(CassSession* session = NULL)
+      : was_called(false)
+      , row_count(0)
+      , cass_session(session) {}
 
   void wait() {
     boost::unique_lock<boost::mutex> lock(mutex);
@@ -78,14 +78,13 @@ void check_result_callback(CassFuture* future, void* data) {
 } // namespace
 
 struct FutureCallbacksTests : public test_utils::MultipleNodesTest {
-  FutureCallbacksTests() : test_utils::MultipleNodesTest(1, 0) {
-  }
+  FutureCallbacksTests()
+      : test_utils::MultipleNodesTest(1, 0) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(future_callbacks, FutureCallbacksTests)
 
-BOOST_AUTO_TEST_CASE(connect)
-{
+BOOST_AUTO_TEST_CASE(connect) {
   boost::scoped_ptr<CallbackData> callback_data(new CallbackData());
 
   test_utils::CassSessionPtr session(cass_session_new());
@@ -97,8 +96,7 @@ BOOST_AUTO_TEST_CASE(connect)
   BOOST_CHECK(callback_data->was_called);
 }
 
-BOOST_AUTO_TEST_CASE(close)
-{
+BOOST_AUTO_TEST_CASE(close) {
   boost::scoped_ptr<CallbackData> callback_data(new CallbackData());
 
   test_utils::CassSessionPtr session(cass_session_new());
@@ -114,8 +112,7 @@ BOOST_AUTO_TEST_CASE(close)
   BOOST_CHECK(callback_data->was_called);
 }
 
-BOOST_AUTO_TEST_CASE(result)
-{
+BOOST_AUTO_TEST_CASE(result) {
   boost::scoped_ptr<CallbackData> callback_data(new CallbackData());
 
   test_utils::CassSessionPtr session(cass_session_new());
@@ -126,7 +123,8 @@ BOOST_AUTO_TEST_CASE(result)
   test_utils::CassResultPtr result;
 
   std::stringstream query;
-  query << "SELECT * FROM " << (version >= "3.0.0" ? "system_schema.keyspaces" : "system.schema_keyspaces");
+  query << "SELECT * FROM "
+        << (version >= "3.0.0" ? "system_schema.keyspaces" : "system.schema_keyspaces");
   test_utils::CassStatementPtr statement(cass_statement_new(query.str().c_str(), 0));
   test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
 
@@ -138,8 +136,7 @@ BOOST_AUTO_TEST_CASE(result)
   BOOST_CHECK(callback_data->row_count > 0);
 }
 
-BOOST_AUTO_TEST_CASE(after_set)
-{
+BOOST_AUTO_TEST_CASE(after_set) {
   boost::scoped_ptr<CallbackData> callback_data(new CallbackData());
 
   test_utils::CassSessionPtr session(cass_session_new());
@@ -155,4 +152,3 @@ BOOST_AUTO_TEST_CASE(after_set)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-

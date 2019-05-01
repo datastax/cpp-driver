@@ -28,15 +28,15 @@
 // F and G are optimized compared to their RFC 1321 definitions for
 // architectures that lack an AND-NOT instruction, just like in Colin Plumb's
 // implementation.
-#define F(x, y, z)			((z) ^ ((x) & ((y) ^ (z))))
-#define G(x, y, z)			((y) ^ ((z) & ((x) ^ (y))))
-#define H(x, y, z)			((x) ^ (y) ^ (z))
-#define I(x, y, z)			((y) ^ ((x) | ~(z)))
+#define F(x, y, z) ((z) ^ ((x) & ((y) ^ (z))))
+#define G(x, y, z) ((y) ^ ((z) & ((x) ^ (y))))
+#define H(x, y, z) ((x) ^ (y) ^ (z))
+#define I(x, y, z) ((y) ^ ((x) | ~(z)))
 
 // The MD5 transformation for all four rounds.
-#define STEP(f, a, b, c, d, x, t, s) \
-  (a) += f((b), (c), (d)) + (x) + (t); \
-  (a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s)))); \
+#define STEP(f, a, b, c, d, x, t, s)                       \
+  (a) += f((b), (c), (d)) + (x) + (t);                     \
+  (a) = (((a) << (s)) | (((a)&0xffffffff) >> (32 - (s)))); \
   (a) += (b);
 
 // SET reads 4 input bytes in little-endian byte order and stores them
@@ -46,35 +46,31 @@
 // memory accesses is just an optimization.  Nothing will break if it
 // doesn't work.
 #if defined(__i386__) || defined(__x86_64__) || defined(__vax__)
-#define SET(n) \
-  (*(MD5_u32plus *)&ptr[(n) * 4])
-#define GET(n) \
-  SET(n)
+#define SET(n) (*(MD5_u32plus*)&ptr[(n)*4])
+#define GET(n) SET(n)
 #else
-#define SET(n) \
-  (block_[(n)] = \
-  (MD5_u32plus)ptr[(n) * 4] | \
-  ((MD5_u32plus)ptr[(n) * 4 + 1] << 8) | \
-  ((MD5_u32plus)ptr[(n) * 4 + 2] << 16) | \
-  ((MD5_u32plus)ptr[(n) * 4 + 3] << 24))
-#define GET(n) \
-  (block_[(n)])
+#define SET(n)                                                                  \
+  (block_[(n)] = (MD5_u32plus)ptr[(n)*4] | ((MD5_u32plus)ptr[(n)*4 + 1] << 8) | \
+                 ((MD5_u32plus)ptr[(n)*4 + 2] << 16) | ((MD5_u32plus)ptr[(n)*4 + 3] << 24))
+#define GET(n) (block_[(n)])
 #endif
 
 using namespace datastax::internal;
 
 Md5::Md5()
-  : lo_(0), hi_(0)
-  , a_(0x67452301), b_(0xefcdab89)
-  , c_(0x98badcfe), d_(0x10325476) {}
+    : lo_(0)
+    , hi_(0)
+    , a_(0x67452301)
+    , b_(0xefcdab89)
+    , c_(0x98badcfe)
+    , d_(0x10325476) {}
 
 void Md5::update(const uint8_t* data, size_t size) {
   MD5_u32plus saved_lo;
   size_t used, free;
 
   saved_lo = lo_;
-  if ((lo_ = (saved_lo + size) & 0x1fffffff) < saved_lo)
-    hi_++;
+  if ((lo_ = (saved_lo + size) & 0x1fffffff) < saved_lo) hi_++;
   hi_ += size >> 29;
 
   used = saved_lo & 0x3f;
@@ -88,7 +84,7 @@ void Md5::update(const uint8_t* data, size_t size) {
     }
 
     memcpy(&buffer_[used], data, free);
-    data = (unsigned char *)data + free;
+    data = (unsigned char*)data + free;
     size -= free;
     body(buffer_, 64);
   }
@@ -131,16 +127,16 @@ void Md5::final(uint8_t* result) {
 
   body(buffer_, 64);
 
-  result[0]  = a_;
-  result[1]  = a_ >> 8;
-  result[2]  = a_ >> 16;
-  result[3]  = a_ >> 24;
-  result[4]  = b_;
-  result[5]  = b_ >> 8;
-  result[6]  = b_ >> 16;
-  result[7]  = b_ >> 24;
-  result[8]  = c_;
-  result[9]  = c_ >> 8;
+  result[0] = a_;
+  result[1] = a_ >> 8;
+  result[2] = a_ >> 16;
+  result[3] = a_ >> 24;
+  result[4] = b_;
+  result[5] = b_ >> 8;
+  result[6] = b_ >> 16;
+  result[7] = b_ >> 24;
+  result[8] = c_;
+  result[9] = c_ >> 8;
   result[10] = c_ >> 16;
   result[11] = c_ >> 24;
   result[12] = d_;
@@ -153,8 +149,7 @@ void Md5::final(uint8_t* result) {
 
 // This processes one or more 64-byte data blocks, but does NOT update
 // the bit counters.  There are no alignment requirements.
-const uint8_t* Md5::body(const uint8_t* data, size_t size)
-{
+const uint8_t* Md5::body(const uint8_t* data, size_t size) {
   const uint8_t* ptr = data;
   MD5_u32plus a, b, c, d;
   MD5_u32plus saved_a, saved_b, saved_c, saved_d;
@@ -206,7 +201,7 @@ const uint8_t* Md5::body(const uint8_t* data, size_t size)
     STEP(G, c, d, a, b, GET(7), 0x676f02d9, 14)
     STEP(G, b, c, d, a, GET(12), 0x8d2a4c8a, 20)
 
-     // Round 3
+    // Round 3
     STEP(H, a, b, c, d, GET(5), 0xfffa3942, 4)
     STEP(H, d, a, b, c, GET(8), 0x8771f681, 11)
     STEP(H, c, d, a, b, GET(11), 0x6d9d6122, 16)

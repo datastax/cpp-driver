@@ -9,9 +9,7 @@
 #define __TEST_DSE_GRAPH_PATH_HPP__
 #include "dse.h"
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 // Forward declaration for circular dependency
 class GraphResult;
@@ -28,7 +26,7 @@ public:
    * @param edge Native driver object
    */
   GraphPath(DseGraphPathResult path)
-    : path_(path) {}
+      : path_(path) {}
 
   /**
    * Get the DSE graph edge label
@@ -51,8 +49,6 @@ private:
   DseGraphPathResult path_;
 };
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_GRAPH_PATH_HPP__

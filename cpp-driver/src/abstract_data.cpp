@@ -32,8 +32,7 @@ CassError AbstractData::set(size_t index, CassNull value) {
 
 CassError AbstractData::set(size_t index, const Collection* value) {
   CASS_CHECK_INDEX_AND_TYPE(index, value);
-  if (value->type() == CASS_COLLECTION_TYPE_MAP &&
-      value->items().size() % 2 != 0) {
+  if (value->type() == CASS_COLLECTION_TYPE_MAP && value->items().size() % 2 != 0) {
     return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
   }
   elements_[index] = value;
@@ -70,8 +69,7 @@ Buffer AbstractData::encode_with_length() const {
 
 size_t AbstractData::get_buffers_size() const {
   size_t size = 0;
-  for (ElementVec::const_iterator i = elements_.begin(),
-       end = elements_.end(); i != end; ++i) {
+  for (ElementVec::const_iterator i = elements_.begin(), end = elements_.end(); i != end; ++i) {
     if (!i->is_unset()) {
       size += i->get_size();
     } else {
@@ -82,8 +80,7 @@ size_t AbstractData::get_buffers_size() const {
 }
 
 void AbstractData::encode_buffers(size_t pos, Buffer* buf) const {
-  for (ElementVec::const_iterator i = elements_.begin(),
-       end = elements_.end(); i != end; ++i) {
+  for (ElementVec::const_iterator i = elements_.begin(), end = elements_.end(); i != end; ++i) {
     if (!i->is_unset()) {
       pos = i->copy_buffer(pos, buf);
     } else {

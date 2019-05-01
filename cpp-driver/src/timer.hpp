@@ -46,11 +46,7 @@ private:
   static void on_close(uv_handle_t* handle);
 
 private:
-  enum State {
-    CLOSED,
-    STOPPED,
-    STARTED
-  };
+  enum State { CLOSED, STOPPED, STARTED };
 
 private:
   AllocatedT<uv_timer_t>* handle_;
@@ -61,6 +57,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Timer);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

@@ -24,11 +24,11 @@ using namespace datastax::internal::core;
 
 SharedRefPtr<ResultMetadata> create_metadata(const char* column_names[]) {
   size_t count = 0;
-  while (column_names[count] != NULL) { count++; }
+  while (column_names[count] != NULL) {
+    count++;
+  }
 
-  ResultMetadata::Ptr metadata(
-        new ResultMetadata(count,
-                           RefBuffer::Ptr()));
+  ResultMetadata::Ptr metadata(new ResultMetadata(count, RefBuffer::Ptr()));
 
   for (size_t i = 0; column_names[i] != NULL; ++i) {
     ColumnDefinition def;

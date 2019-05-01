@@ -18,20 +18,20 @@ namespace datastax { namespace internal { namespace enterprise {
 
 class PlaintextAuthenticatorData : public Allocated {
 public:
-  PlaintextAuthenticatorData(const datastax::String& username,
-                             const datastax::String& password,
+  PlaintextAuthenticatorData(const datastax::String& username, const datastax::String& password,
                              const datastax::String& authorization_id)
-    : username_(username)
-    , password_(password)
-    , authorization_id_(authorization_id) { }
+      : username_(username)
+      , password_(password)
+      , authorization_id_(authorization_id) {}
 
   static const CassAuthenticatorCallbacks* callbacks() { return &callbacks_; }
 
 private:
   static void on_initial(CassAuthenticator* auth, void* data);
 
-  static void on_challenge(CassAuthenticator* auth, void* data,
-                           const char* token, size_t token_size);
+  static void on_challenge(CassAuthenticator* auth, void* data, const char* token,
+                           size_t token_size);
+
 private:
   static CassAuthenticatorCallbacks callbacks_;
 
@@ -43,12 +43,11 @@ private:
 
 class GssapiAuthenticatorData : public Allocated {
 public:
-  GssapiAuthenticatorData(const datastax::String& service,
-                          const datastax::String& principal,
+  GssapiAuthenticatorData(const datastax::String& service, const datastax::String& principal,
                           const datastax::String& authorization_id)
-    : service_(service)
-    , principal_(principal)
-    , authorization_id_(authorization_id) { }
+      : service_(service)
+      , principal_(principal)
+      , authorization_id_(authorization_id) {}
 
   static const CassAuthenticatorCallbacks* callbacks() { return &callbacks_; }
 
@@ -66,11 +65,10 @@ public:
 private:
   static void on_initial(CassAuthenticator* auth, void* data);
 
-  static void on_challenge(CassAuthenticator* auth, void* data,
-                           const char* token, size_t token_size);
+  static void on_challenge(CassAuthenticator* auth, void* data, const char* token,
+                           size_t token_size);
 
   static void on_cleanup(CassAuthenticator* auth, void* data);
-
 
 private:
   static CassAuthenticatorCallbacks callbacks_;
@@ -84,6 +82,6 @@ private:
   datastax::String authorization_id_;
 };
 
-} } } // namespace datastax::internal::enterprise
+}}} // namespace datastax::internal::enterprise
 
 #endif

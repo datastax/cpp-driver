@@ -21,23 +21,20 @@
  */
 class ConsistencyTwoNodeClusterTests : public Integration {
 public:
-  ConsistencyTwoNodeClusterTests() {
-    number_dc1_nodes_ = 2;
-  }
+  ConsistencyTwoNodeClusterTests() { number_dc1_nodes_ = 2; }
 
   virtual void SetUp() {
     // Call the parent setup function
     Integration::SetUp();
 
     // Create the table, insert and select statements for the test (with values)
-    session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT,
-                     table_name_.c_str(), "int", "int"));
-    insert_ = Statement(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT,
-                        table_name_.c_str(), "?", "?"), 2);
+    session_.execute(
+        format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "int"));
+    insert_ = Statement(
+        format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "?", "?"), 2);
     insert_.bind<Integer>(0, Integer(0));
     insert_.bind<Integer>(1, Integer(1));
-    select_ = Statement(format_string(CASSANDRA_SELECT_VALUE_FORMAT,
-                        table_name_.c_str(), "?"), 1);
+    select_ = Statement(format_string(CASSANDRA_SELECT_VALUE_FORMAT, table_name_.c_str(), "?"), 1);
     select_.bind<Integer>(0, Integer(0));
   }
 
@@ -103,10 +100,8 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleLocalTwo) {
   select_.set_consistency(CASS_CONSISTENCY_TWO);
 
   // Perform insert and select operations (should fail: N=2, RF=1)
-  ASSERT_EQ(CASS_ERROR_SERVER_UNAVAILABLE,
-            session_.execute(insert_, false).error_code());
-  ASSERT_EQ(CASS_ERROR_SERVER_UNAVAILABLE,
-            session_.execute(select_, false).error_code());
+  ASSERT_EQ(CASS_ERROR_SERVER_UNAVAILABLE, session_.execute(insert_, false).error_code());
+  ASSERT_EQ(CASS_ERROR_SERVER_UNAVAILABLE, session_.execute(select_, false).error_code());
 }
 
 /**
@@ -127,10 +122,8 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleLocalThree) {
   select_.set_consistency(CASS_CONSISTENCY_THREE);
 
   // Perform insert and select operations (should fail: N=2, RF=1)
-  ASSERT_EQ(CASS_ERROR_SERVER_UNAVAILABLE,
-            session_.execute(insert_, false).error_code());
-  ASSERT_EQ(CASS_ERROR_SERVER_UNAVAILABLE,
-            session_.execute(select_, false).error_code());
+  ASSERT_EQ(CASS_ERROR_SERVER_UNAVAILABLE, session_.execute(insert_, false).error_code());
+  ASSERT_EQ(CASS_ERROR_SERVER_UNAVAILABLE, session_.execute(select_, false).error_code());
 }
 
 /**
@@ -153,8 +146,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleAny) {
 
   // Perform insert and select operations (NOTE: `ANY` is for writes only)
   session_.execute(insert_);
-  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-            session_.execute(select_, false).error_code());
+  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(select_, false).error_code());
 }
 
 /**
@@ -166,7 +158,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleAny) {
  * @test_category consistency
  * @since core:1.0.0
  * @expected_result Successful insert and select using consistency
-  *                 `LOCAL_QUORUM`
+ *                 `LOCAL_QUORUM`
  */
 CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleLocalQuorum) {
   CHECK_FAILURE;
@@ -192,7 +184,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleLocalQuorum) 
  * @since core:1.0.0
  * @expected_result Successful insert and failed select using consistency
  *                  `EACH_QUORUM` (Successful select using Cassandra v3.0.0+;
-  *                 see CASSANDRA-9602)
+ *                 see CASSANDRA-9602)
  */
 CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleEachQuorum) {
   CHECK_FAILURE;
@@ -209,8 +201,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleEachQuorum) {
   if (server_version_ >= "3.0.0") {
     session_.execute(select_);
   } else {
-    ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-              session_.execute(select_, false).error_code());
+    ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(select_, false).error_code());
   }
 }
 
@@ -229,8 +220,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyTwoNodeClusterTests, SimpleEachQuorum) {
  *                  Failed insert and select using multiple consistencies:
  *                  `ALL` (after decommission) and `THREE`
  */
-CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests,
-                             OneNodeDecommissioned) {
+CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests, OneNodeDecommissioned) {
   CHECK_FAILURE;
 
   // Perform a sanity check against a full healthy cluster (N=3, RF=3)
@@ -288,8 +278,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests,
  *                  Failed insert and select using multiple consistencies:
  *                  `ALL` (after decommission), `QUORUM`, `TWO`, and `THREE`
  */
-CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests,
-                             TwoNodesDecommissioned) {
+CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests, TwoNodesDecommissioned) {
   CHECK_FAILURE;
 
   // Perform a sanity check against a full healthy cluster (N=3, RF=3)
@@ -347,8 +336,7 @@ CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests,
  * @expected_result Successful insert and select using multiple consistencies
  *                  with the downgrading retry policy applied
  */
-CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests,
-                             DowngradingRetryPolicy) {
+CASSANDRA_INTEGRATION_TEST_F(ConsistencyThreeNodeClusterTests, DowngradingRetryPolicy) {
   CHECK_FAILURE;
 
   // Create a new session to utilize the downgrading retry policy

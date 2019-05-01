@@ -29,7 +29,7 @@ namespace test {
  * @param tm The resulting time struct
  * @return NULL if an error occurred
  */
-char *strptime(const char *s, const char *f, struct tm *tm);
+char* strptime(const char* s, const char* f, struct tm* tm);
 
 } // namespace test
 

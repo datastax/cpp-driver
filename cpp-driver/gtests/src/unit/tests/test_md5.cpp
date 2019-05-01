@@ -46,23 +46,22 @@ TEST(Md5UnitTest, Simple) {
   EXPECT_TRUE(check_hash("a", "0cc175b9c0f1b6a831c399e269772661"));
   EXPECT_TRUE(check_hash("abc", "900150983cd24fb0d6963f7d28e17f72"));
 
-  const char* big_str =
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
-      "012345689abcdef012345689abcdef012345689abcdef012345689abcdef";
+  const char* big_str = "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef"
+                        "012345689abcdef012345689abcdef012345689abcdef012345689abcdef";
 
   EXPECT_TRUE(check_hash(big_str, "15355dec7c48faeb01b46366d90be0be"));
 }

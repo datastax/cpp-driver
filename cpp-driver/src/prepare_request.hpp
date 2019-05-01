@@ -30,15 +30,13 @@ public:
 
   PrepareRequest(const String& query)
       : Request(CQL_OPCODE_PREPARE)
-      , query_(query) { }
+      , query_(query) {}
 
   const String& query() const { return query_; }
 
   void set_query(const String& query) { query_ = query; }
 
-  void set_query(const char* query, size_t query_length) {
-    query_.assign(query, query_length);
-  }
+  void set_query(const char* query, size_t query_length) { query_.assign(query, query_length); }
 
 private:
   int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
@@ -47,6 +45,6 @@ private:
   String query_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

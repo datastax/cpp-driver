@@ -35,7 +35,7 @@ public:
    * @param message Exception message
    */
   Exception(const std::string& message)
-    : std::runtime_error(message) {}
+      : std::runtime_error(message) {}
 
   /**
    * Destructor
@@ -55,8 +55,8 @@ public:
    * @param error_code Error code
    */
   CassException(const std::string& message, const CassError error_code)
-    : Exception(message)
-    , error_code_(error_code) {}
+      : Exception(message)
+      , error_code_(error_code) {}
 
   /**
    * Exception class that contains an error code
@@ -67,14 +67,14 @@ public:
    */
   CassException(const std::string& message, const CassError error_code,
                 const std::string& error_message)
-    : Exception(message)
-    , error_code_(error_code)
-    , error_message_(error_message) { }
+      : Exception(message)
+      , error_code_(error_code)
+      , error_message_(error_message) {}
 
   /**
    * Destructor
    */
-  virtual ~CassException() throw() { }
+  virtual ~CassException() throw() {}
 
   /**
    * Get the error code associated with the exception
@@ -88,9 +88,7 @@ public:
    *
    * @return Error description
    */
-  const std::string error_description() {
-    return std::string(cass_error_desc(error_code()));
-  }
+  const std::string error_description() { return std::string(cass_error_desc(error_code())); }
 
   /**
    * Get the error message associated with the exception

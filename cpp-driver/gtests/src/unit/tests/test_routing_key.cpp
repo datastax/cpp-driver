@@ -28,10 +28,9 @@ using namespace datastax::internal::core;
 // The java-driver was used as a reference for the hash value
 // below.
 
-struct RoutingKeyUnitTest : public Unit { };
+struct RoutingKeyUnitTest : public Unit {};
 
-TEST_F(RoutingKeyUnitTest, Single)
-{
+TEST_F(RoutingKeyUnitTest, Single) {
   {
     QueryRequest query("", 1);
 
@@ -104,8 +103,7 @@ TEST_F(RoutingKeyUnitTest, Single)
   }
 }
 
-TEST_F(RoutingKeyUnitTest, EmptyAndNull)
-{
+TEST_F(RoutingKeyUnitTest, EmptyAndNull) {
   QueryRequest query("", 1);
 
   String routing_key;
@@ -117,8 +115,7 @@ TEST_F(RoutingKeyUnitTest, EmptyAndNull)
   EXPECT_FALSE(query.get_routing_key(&routing_key));
 }
 
-TEST_F(RoutingKeyUnitTest, Composite)
-{
+TEST_F(RoutingKeyUnitTest, Composite) {
   {
     QueryRequest query("", 3);
 

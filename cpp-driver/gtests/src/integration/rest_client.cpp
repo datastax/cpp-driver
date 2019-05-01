@@ -50,12 +50,11 @@ struct HttpRequest {
 };
 
 const Response RestClient::send_request(const Request& request) {
-    // Initialize the loop
+  // Initialize the loop
   uv_loop_t loop;
   int error_code = uv_loop_init(&loop);
-  if(error_code != 0) {
-    throw Exception("Unable to Send Request: " +
-                    std::string(uv_strerror(error_code)));
+  if (error_code != 0) {
+    throw Exception("Unable to Send Request: " + std::string(uv_strerror(error_code)));
   };
 
   // Initialize the HTTP request
@@ -64,40 +63,33 @@ const Response RestClient::send_request(const Request& request) {
   http_request.loop = &loop;
 
   // Create the IPv4 socket address
-  const Address address(request.address.c_str(),
-                        static_cast<int>(request.port));
+  const Address address(request.address.c_str(), static_cast<int>(request.port));
 
   // Initialize the client TCP request
   uv_tcp_t tcp;
   tcp.data = &http_request;
   error_code = uv_tcp_init(&loop, &tcp);
   if (error_code != 0) {
-    TEST_LOG_ERROR("Unable to Initialize TCP Request: " +
-      std::string(uv_strerror(error_code)));
+    TEST_LOG_ERROR("Unable to Initialize TCP Request: " + std::string(uv_strerror(error_code)));
   }
   error_code = uv_tcp_keepalive(&tcp, 1, 60);
   if (error_code != 0) {
-    TEST_LOG_ERROR("Unable to Set TCP KeepAlive: " +
-      std::string(uv_strerror(error_code)));
+    TEST_LOG_ERROR("Unable to Set TCP KeepAlive: " + std::string(uv_strerror(error_code)));
   }
 
   // Start the request and attach the HTTP request to send to the REST server
   uv_connect_t connect;
   connect.data = &http_request;
-  uv_tcp_connect(&connect, &tcp,
-    address.addr(),
-    handle_connected);
+  uv_tcp_connect(&connect, &tcp, address.addr(), handle_connected);
 
-    uv_run(&loop, UV_RUN_DEFAULT);
-    uv_loop_close(&loop);
+  uv_run(&loop, UV_RUN_DEFAULT);
+  uv_loop_close(&loop);
 
   // Return the response from the request
   return http_request.response;
 }
 
-void RestClient::handle_allocation(uv_handle_t* handle,
-                                   size_t suggested_size,
-                                   uv_buf_t* buffer) {
+void RestClient::handle_allocation(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buffer) {
   buffer->base = new char[OUTPUT_BUFFER_SIZE];
   buffer->len = OUTPUT_BUFFER_SIZE;
 }
@@ -106,8 +98,7 @@ void RestClient::handle_connected(uv_connect_t* req, int status) {
   HttpRequest* request = static_cast<HttpRequest*>(req->data);
 
   if (status < 0) {
-    TEST_LOG_ERROR("Unable to Connect to HTTP Server: "
-      << uv_strerror(status));
+    TEST_LOG_ERROR("Unable to Connect to HTTP Server: " << uv_strerror(status));
     uv_close(reinterpret_cast<uv_handle_t*>(req->handle), NULL);
   } else {
     // Create the buffer to write to the stream
@@ -120,8 +111,7 @@ void RestClient::handle_connected(uv_connect_t* req, int status) {
   }
 }
 
-void RestClient::handle_response(uv_stream_t* stream,
-                                 ssize_t buffer_length,
+void RestClient::handle_response(uv_stream_t* stream, ssize_t buffer_length,
                                  const uv_buf_t* buffer) {
   HttpRequest* request = static_cast<HttpRequest*>(stream->data);
 
@@ -172,12 +162,10 @@ const std::string RestClient::generate_http_message(const Request& request) {
 
   // Generate the headers
   bool is_post = request.method == Request::HTTP_METHOD_POST;
-  message
-    << "Host: " << request.address << ":" << request.port << HTTP_EOL
-    << (is_post ? "Content-Type: application/json" HTTP_EOL : "")
-    << "Content-Length: "<< ((is_post) ? request.content.size() : 0) << HTTP_EOL
-    << "Connection: close" << HTTP_EOL << HTTP_EOL
-    << (is_post ? request.content : "");
+  message << "Host: " << request.address << ":" << request.port << HTTP_EOL
+          << (is_post ? "Content-Type: application/json" HTTP_EOL : "")
+          << "Content-Length: " << ((is_post) ? request.content.size() : 0) << HTTP_EOL
+          << "Connection: close" << HTTP_EOL << HTTP_EOL << (is_post ? request.content : "");
 
   // Return the HTTP message
   TEST_LOG("[HTTP Message]: " << message.str());

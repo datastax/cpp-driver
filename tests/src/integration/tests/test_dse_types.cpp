@@ -19,7 +19,7 @@
  *
  * @dse_version 5.0.0+
  */
-template<class C>
+template <class C>
 class DseTypesTest : public DseIntegration {
 public:
   /**
@@ -66,8 +66,8 @@ protected:
    * @param cql_type CQL value type to use for the tables
    */
   void initialize(const std::string& cql_type) {
-    session_.execute(format_string(DSE_TYPE_TABLE_FORMAT,
-      table_name_.c_str(), cql_type.c_str(), cql_type.c_str()));
+    session_.execute(format_string(DSE_TYPE_TABLE_FORMAT, table_name_.c_str(), cql_type.c_str(),
+                                   cql_type.c_str()));
     insert_query_ = format_string(DSE_TYPE_INSERT_FORMAT, table_name_.c_str(), "?", "?");
     select_query_ = format_string(DSE_TYPE_SELECT_FORMAT, table_name_.c_str(), "?");
     prepared_statement_ = session_.prepare(insert_query_);
@@ -97,16 +97,14 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Basic) {
   const std::vector<TypeParam>& values = DseTypesTest<TypeParam>::values_;
 
   // Iterate over all the DSE type values
-  for (typename std::vector<TypeParam>::const_iterator it = values.begin();
-    it != values.end(); ++it) {
+  for (typename std::vector<TypeParam>::const_iterator it = values.begin(); it != values.end();
+       ++it) {
     // Get the current value
     const TypeParam& value = *it;
 
     // Create both simple and prepared statements
-    Statement statements[] = {
-      Statement(this->insert_query_, 2),
-      this->prepared_statement_.bind()
-    };
+    Statement statements[] = { Statement(this->insert_query_, 2),
+                               this->prepared_statement_.bind() };
 
     // Iterate over all the statements
     for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
@@ -152,10 +150,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, List) {
   this->initialize("frozen<" + list.cql_type() + ">");
 
   // Create both simple and prepared statements
-  Statement statements[] = {
-    Statement(this->insert_query_, 2),
-    this->prepared_statement_.bind()
-  };
+  Statement statements[] = { Statement(this->insert_query_, 2), this->prepared_statement_.bind() };
 
   // Iterate over all the statements
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
@@ -201,10 +196,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Set) {
   this->initialize("frozen<" + set.cql_type() + ">");
 
   // Create both simple and prepared statements
-  Statement statements[] = {
-    Statement(this->insert_query_, 2),
-    this->prepared_statement_.bind()
-  };
+  Statement statements[] = { Statement(this->insert_query_, 2), this->prepared_statement_.bind() };
 
   // Iterate overall all the statements
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
@@ -248,18 +240,15 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Map) {
   // Initialize the table and assign the values for the map
   std::map<TypeParam, TypeParam> map_values;
   const std::vector<TypeParam>& values = DseTypesTest<TypeParam>::values_;
-  for (typename std::vector<TypeParam>::const_iterator it = values.begin();
-    it != values.end(); ++it) {
+  for (typename std::vector<TypeParam>::const_iterator it = values.begin(); it != values.end();
+       ++it) {
     map_values[*it] = *it;
   }
   Map<TypeParam, TypeParam> map(map_values);
   this->initialize("frozen<" + map.cql_type() + ">");
 
   // Create both simple and prepared statements
-  Statement statements[] = {
-    Statement(this->insert_query_, 2),
-    this->prepared_statement_.bind()
-  };
+  Statement statements[] = { Statement(this->insert_query_, 2), this->prepared_statement_.bind() };
 
   // Iterate over all the statements
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
@@ -314,10 +303,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Tuple) {
   this->initialize(cql_type);
 
   // Create both simple and prepared statements
-  Statement statements[] = {
-    Statement(this->insert_query_, 2),
-    this->prepared_statement_.bind()
-  };
+  Statement statements[] = { Statement(this->insert_query_, 2), this->prepared_statement_.bind() };
 
   // Iterate over all the statements
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
@@ -378,7 +364,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, UDT) {
   this->session_.execute(create_type);
 
   // Initialize the table; NOTE: UDT must be frozen for older versions of DSE
-  this->initialize("frozen<" +  cql_type + ">");
+  this->initialize("frozen<" + cql_type + ">");
 
   // Build our UDT values and UDT type
   std::map<std::string, TypeParam> udt_values;
@@ -387,21 +373,17 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, UDT) {
     field << "field" << i;
     udt_values[field.str()] = values[i];
   }
-  UserType user_type(this->session_.schema()
-                     .keyspace(this->keyspace_name_)
-                     .user_type(cql_type).data_type());
+  UserType user_type(
+      this->session_.schema().keyspace(this->keyspace_name_).user_type(cql_type).data_type());
 
   // Assign/Set the values in the user type
   for (typename std::map<std::string, TypeParam>::const_iterator it = udt_values.begin();
-    it != udt_values.end(); ++it) {
+       it != udt_values.end(); ++it) {
     user_type.set<TypeParam>(it->second, it->first);
   }
 
   // Use both simple and prepared statements
-  Statement statements[] = {
-    Statement(this->insert_query_, 2),
-    this->prepared_statement_.bind()
-  };
+  Statement statements[] = { Statement(this->insert_query_, 2), this->prepared_statement_.bind() };
 
   for (size_t i = 0; i < ARRAY_LEN(statements); ++i) {
     Statement& statement = statements[i];
@@ -422,12 +404,9 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, UDT) {
 }
 
 // Register all test cases
-REGISTER_TYPED_TEST_CASE_P(DseTypesTest, Integration_DSE_Basic,
-                                         Integration_DSE_List,
-                                         Integration_DSE_Set,
-                                         Integration_DSE_Map,
-                                         Integration_DSE_Tuple,
-                                         Integration_DSE_UDT);
+REGISTER_TYPED_TEST_CASE_P(DseTypesTest, Integration_DSE_Basic, Integration_DSE_List,
+                           Integration_DSE_Set, Integration_DSE_Map, Integration_DSE_Tuple,
+                           Integration_DSE_UDT);
 
 // Instantiate the test case for all the geotypes and date range
 typedef testing::Types<dse::Point, dse::LineString, dse::Polygon, dse::DateRange> DseTypes;
@@ -436,40 +415,36 @@ INSTANTIATE_TYPED_TEST_CASE_P(DseTypes, DseTypesTest, DseTypes);
 /**
  * Values for point tests
  */
-const dse::Point GEOMETRY_POINTS[] = {
-  dse::Point("0.0, 0.0"),
-  dse::Point("2.0, 4.0"),
-  dse::Point("-1.2, -100.0")
-};
-template<> const std::vector<dse::Point> DseTypesTest<dse::Point>::values_(
-  GEOMETRY_POINTS,
-  GEOMETRY_POINTS + ARRAY_LEN(GEOMETRY_POINTS));
+const dse::Point GEOMETRY_POINTS[] = { dse::Point("0.0, 0.0"), dse::Point("2.0, 4.0"),
+                                       dse::Point("-1.2, -100.0") };
+template <>
+const std::vector<dse::Point> DseTypesTest<dse::Point>::values_(GEOMETRY_POINTS,
+                                                                GEOMETRY_POINTS +
+                                                                    ARRAY_LEN(GEOMETRY_POINTS));
 
 /**
  * Values for line string tests
  */
-const dse::LineString GEOMETRY_LINE_STRING[] = {
-  dse::LineString("0.0 0.0, 1.0 1.0"),
-  dse::LineString("1.0 3.0, 2.0 6.0, 3.0 9.0"),
-  dse::LineString("-1.2 -100.0, 0.99 3.0"),
-  dse::LineString("LINESTRING EMPTY")
-};
-template<> const std::vector<dse::LineString> DseTypesTest<dse::LineString>::values_(
-  GEOMETRY_LINE_STRING,
-  GEOMETRY_LINE_STRING + ARRAY_LEN(GEOMETRY_LINE_STRING));
+const dse::LineString GEOMETRY_LINE_STRING[] = { dse::LineString("0.0 0.0, 1.0 1.0"),
+                                                 dse::LineString("1.0 3.0, 2.0 6.0, 3.0 9.0"),
+                                                 dse::LineString("-1.2 -100.0, 0.99 3.0"),
+                                                 dse::LineString("LINESTRING EMPTY") };
+template <>
+const std::vector<dse::LineString>
+    DseTypesTest<dse::LineString>::values_(GEOMETRY_LINE_STRING,
+                                           GEOMETRY_LINE_STRING + ARRAY_LEN(GEOMETRY_LINE_STRING));
 
 /**
  * Values for polygon tests
  */
-const dse::Polygon GEOMETRY_POLYGON[] = {
-  dse::Polygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)"),
-  dse::Polygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
+const dse::Polygon GEOMETRY_POLYGON[] = { dse::Polygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)"),
+                                          dse::Polygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
                 (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)"),
-  dse::Polygon("POLYGON EMPTY")
-};
-template<> const std::vector<dse::Polygon> DseTypesTest<dse::Polygon>::values_(
-  GEOMETRY_POLYGON,
-  GEOMETRY_POLYGON + ARRAY_LEN(GEOMETRY_POLYGON));
+                                          dse::Polygon("POLYGON EMPTY") };
+template <>
+const std::vector<dse::Polygon>
+    DseTypesTest<dse::Polygon>::values_(GEOMETRY_POLYGON,
+                                        GEOMETRY_POLYGON + ARRAY_LEN(GEOMETRY_POLYGON));
 
 /**
  * Values for date range tests
@@ -478,20 +453,13 @@ const dse::DateRange DATE_RANGES[] = {
   // Single dates
   dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_YEAR, "1970")),
   dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_YEAR, "2017")),
-  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_MONTH,
-                                        "04/2017")),
-  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_DAY,
-                                        "04/14/2017")),
-  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_HOUR,
-                                        "01:00 01/01/1970")),
-  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_HOUR,
-                                        "23:00 04/14/2017")),
-  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_MINUTE,
-                                        "23:59 04/14/2017")),
-  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND,
-                                        "00:00:01 01/01/1970")),
-  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND,
-                                        "23:59:59 04/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_MONTH, "04/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_DAY, "04/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 01/01/1970")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_HOUR, "23:00 04/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_MINUTE, "23:59 04/14/2017")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND, "00:00:01 01/01/1970")),
+  dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND, "23:59:59 04/14/2017")),
   dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(0))),
   dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(1000))),
   dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(1))),
@@ -512,8 +480,8 @@ const dse::DateRange DATE_RANGES[] = {
                                         DSE_DATE_RANGE_PRECISION_MINUTE, "12:12 4/14/2017")),
   dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970",
                                         DSE_DATE_RANGE_PRECISION_SECOND, "12:12:12 4/14/2017")),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(1),
-                                        values::dse::DateRangeBound(1000))),
+  dse::DateRange(
+      values::dse::DateRange(values::dse::DateRangeBound(1), values::dse::DateRangeBound(1000))),
 
   // Upper and lower bounds mixed precisions
   dse::DateRange(values::dse::DateRange(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970",
@@ -522,38 +490,50 @@ const dse::DateRange DATE_RANGES[] = {
                                         DSE_DATE_RANGE_PRECISION_MONTH, "04/2017")),
 
   // Lower unbounded
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
-                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_YEAR, "2017"))),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
-                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MONTH, "08/2017"))),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
-                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_DAY, "8/14/2017"))),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
-                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_HOUR, "12:00 8/14/2017"))),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
-                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MINUTE, "12:12 4/14/2017"))),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
-                                        values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_SECOND, "12:12:12 4/14/2017"))),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::unbounded(),
+      values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_YEAR, "2017"))),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::unbounded(),
+      values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MONTH, "08/2017"))),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::unbounded(),
+      values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_DAY, "8/14/2017"))),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::unbounded(),
+      values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_HOUR, "12:00 8/14/2017"))),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::unbounded(),
+      values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_MINUTE, "12:12 4/14/2017"))),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::unbounded(),
+      values::dse::DateRangeBound::upper(DSE_DATE_RANGE_PRECISION_SECOND, "12:12:12 4/14/2017"))),
   dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::unbounded(),
                                         values::dse::DateRangeBound(1000))),
 
   // Upper unbounded
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_YEAR, "1970"),
-                                        values::dse::DateRangeBound::unbounded())),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MONTH, "02/1970"),
-                                        values::dse::DateRangeBound::unbounded())),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_DAY, "4/14/1970"),
-                                        values::dse::DateRangeBound::unbounded())),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 4/14/1970"),
-                                        values::dse::DateRangeBound::unbounded())),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MINUTE, "01:01 2/28/1970"),
-                                        values::dse::DateRangeBound::unbounded())),
-  dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970"),
-                                        values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_YEAR, "1970"),
+      values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MONTH, "02/1970"),
+      values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_DAY, "4/14/1970"),
+      values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_HOUR, "01:00 4/14/1970"),
+      values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_MINUTE, "01:01 2/28/1970"),
+      values::dse::DateRangeBound::unbounded())),
+  dse::DateRange(values::dse::DateRange(
+      values::dse::DateRangeBound::lower(DSE_DATE_RANGE_PRECISION_SECOND, "01:01:01 4/14/1970"),
+      values::dse::DateRangeBound::unbounded())),
   dse::DateRange(values::dse::DateRange(values::dse::DateRangeBound(1),
                                         values::dse::DateRangeBound::unbounded()))
 };
 
-template<> const std::vector<dse::DateRange> DseTypesTest<dse::DateRange>::values_(
-  DATE_RANGES,
-  DATE_RANGES + ARRAY_LEN(DATE_RANGES));
+template <>
+const std::vector<dse::DateRange>
+    DseTypesTest<dse::DateRange>::values_(DATE_RANGES, DATE_RANGES + ARRAY_LEN(DATE_RANGES));

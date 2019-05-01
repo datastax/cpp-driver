@@ -22,22 +22,23 @@
 
 namespace datastax { namespace internal { namespace core {
 
-struct CassNull { };
+struct CassNull {};
 
-struct CassUnset { };
+struct CassUnset {};
 
 struct CassBytes {
   CassBytes(const cass_byte_t* data, size_t size)
-    : data(data), size(size) { }
+      : data(data)
+      , size(size) {}
   const cass_byte_t* data;
   size_t size;
 };
 
 struct CassCustom {
-  CassCustom(StringRef class_name,
-             const cass_byte_t* data, size_t size)
-    : class_name(class_name)
-    , data(data), size(size) { }
+  CassCustom(StringRef class_name, const cass_byte_t* data, size_t size)
+      : class_name(class_name)
+      , data(data)
+      , size(size) {}
   StringRef class_name;
   const cass_byte_t* data;
   size_t size;
@@ -45,35 +46,32 @@ struct CassCustom {
 
 struct CassString {
   CassString(const char* data, size_t length)
-    : data(data), length(length) { }
+      : data(data)
+      , length(length) {}
   const char* data;
   size_t length;
 };
 
 struct CassDecimal {
-  CassDecimal(const cass_byte_t* varint,
-              size_t varint_size,
-              int scale)
-    : varint(varint)
-    , varint_size(varint_size)
-    , scale(scale) { }
+  CassDecimal(const cass_byte_t* varint, size_t varint_size, int scale)
+      : varint(varint)
+      , varint_size(varint_size)
+      , scale(scale) {}
   const cass_byte_t* varint;
   size_t varint_size;
   cass_int32_t scale;
 };
 
 struct CassDuration {
-  CassDuration(cass_int32_t months,
-               cass_int32_t days,
-               cass_int64_t nanos)
-    : months(months)
-    , days(days)
-    , nanos(nanos) { }
+  CassDuration(cass_int32_t months, cass_int32_t days, cass_int64_t nanos)
+      : months(months)
+      , days(days)
+      , nanos(nanos) {}
   cass_int32_t months;
   cass_int32_t days;
   cass_int64_t nanos;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

@@ -27,32 +27,29 @@ namespace datastax { namespace internal { namespace core {
 
 class QueryRequest : public Statement {
 public:
-  QueryRequest(const String& query,
-               size_t value_count = 0)
-    : Statement(query.data(), query.size(), value_count) { }
+  QueryRequest(const String& query, size_t value_count = 0)
+      : Statement(query.data(), query.size(), value_count) {}
 
-  QueryRequest(const char* query, size_t query_length,
-               size_t value_count)
-    : Statement(query, query_length, value_count) { }
+  QueryRequest(const char* query, size_t query_length, size_t value_count)
+      : Statement(query, query_length, value_count) {}
 
   virtual int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
-  int32_t encode_values_with_names(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
+  int32_t encode_values_with_names(ProtocolVersion version, RequestCallback* callback,
+                                   BufferVec* bufs) const;
 
   virtual size_t get_indices(StringRef name, IndexVec* indices);
 
-  virtual const DataType::ConstPtr& get_type(size_t index) const {
-    return DataType::NIL;
-  }
+  virtual const DataType::ConstPtr& get_type(size_t index) const { return DataType::NIL; }
 
 private:
   struct ValueName : HashTableEntry<ValueName> {
-    ValueName() { }
+    ValueName() {}
 
     ValueName(const String& name)
-      : name(name)
-      , buf(sizeof(uint16_t) + name.size()) {
+        : name(name)
+        , buf(sizeof(uint16_t) + name.size()) {
       buf.encode_string(0, name.data(), name.size());
     }
 
@@ -63,6 +60,6 @@ private:
   ScopedPtr<ValueNameHashTable> value_names_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

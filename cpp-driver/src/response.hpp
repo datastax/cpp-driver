@@ -27,7 +27,8 @@
 
 #include <uv.h>
 
-#define CHECK_RESULT(result) if(!(result)) return false;
+#define CHECK_RESULT(result) \
+  if (!(result)) return false;
 
 namespace datastax { namespace internal { namespace core {
 
@@ -37,7 +38,7 @@ public:
 
   Response(uint8_t opcode);
 
-  virtual ~Response() { }
+  virtual ~Response() {}
 
   uint8_t opcode() const { return opcode_; }
 
@@ -45,9 +46,7 @@ public:
 
   const RefBuffer::Ptr& buffer() const { return buffer_; }
 
-  void set_buffer(size_t size) {
-    buffer_ = RefBuffer::Ptr(RefBuffer::create(size));
-  }
+  void set_buffer(size_t size) { buffer_ = RefBuffer::Ptr(RefBuffer::create(size)); }
 
   bool has_tracing_id() const;
 
@@ -129,6 +128,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ResponseMessage);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

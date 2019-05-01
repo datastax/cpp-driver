@@ -33,11 +33,11 @@ class WaitForCallback : public ChainedRequestCallback {
 public:
   WaitForCallback(const String& key, const Request::ConstPtr& request,
                   const WaitForHandler::Ptr& handler)
-    : ChainedRequestCallback(key, request)
-    , handler_(handler) { }
+      : ChainedRequestCallback(key, request)
+      , handler_(handler) {}
 
 private:
-  virtual void on_chain_write(Connection *connection);
+  virtual void on_chain_write(Connection* connection);
   virtual void on_chain_set();
   virtual void on_chain_error(CassError code, const String& message);
   virtual void on_chain_timeout();
@@ -46,11 +46,9 @@ private:
   WaitForHandler::Ptr handler_;
 };
 
-void WaitForCallback::on_chain_write(Connection* connection) {
-  handler_->start(connection);
-}
+void WaitForCallback::on_chain_write(Connection* connection) { handler_->start(connection); }
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 void WaitForCallback::on_chain_set() {
   if (handler_->on_set(Ptr(this))) {
@@ -62,8 +60,8 @@ void WaitForCallback::on_chain_set() {
 
 void WaitForCallback::on_chain_error(CassError code, const String& message) {
   OStringStream ss;
-  ss << message
-     << " (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
+  ss << message << " (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code
+     << ")";
   handler_->on_error(WaitForHandler::WAIT_FOR_ERROR_REQUEST_ERROR, ss.str());
   handler_->finish();
 }
@@ -76,8 +74,8 @@ void WaitForCallback::on_chain_timeout() {
 ChainedRequestCallback::Ptr WaitForHandler::callback(const WaitforRequestVec& requests) {
   requests_ = requests;
   ChainedRequestCallback::Ptr chain;
-  for (WaitforRequestVec::const_iterator it = requests.begin(),
-       end = requests.end(); it != end; ++it) {
+  for (WaitforRequestVec::const_iterator it = requests.begin(), end = requests.end(); it != end;
+       ++it) {
     if (!chain) {
       chain.reset(new WaitForCallback(it->first, it->second, Ptr(this)));
     } else {
@@ -87,7 +85,8 @@ ChainedRequestCallback::Ptr WaitForHandler::callback(const WaitforRequestVec& re
   return chain;
 }
 
-WaitForHandler::WaitForRequest WaitForHandler::make_request(const String& key, const String& query) {
+WaitForHandler::WaitForRequest WaitForHandler::make_request(const String& key,
+                                                            const String& query) {
   QueryRequest::Ptr request(new QueryRequest(query));
   request->set_request_timeout_ms(request_timeout_ms());
   return WaitForRequest(key, request);
@@ -95,7 +94,7 @@ WaitForHandler::WaitForRequest WaitForHandler::make_request(const String& key, c
 
 void WaitForHandler::start(Connection* connection) {
   if (!connection_ && !is_finished_) { // Start only once
-    inc_ref(); // Reference for the event loop
+    inc_ref();                         // Reference for the event loop
     connection_.reset(connection);
     timer_.start(connection_->loop(), max_wait_time_ms_,
                  bind_callback(&WaitForHandler::on_timeout, this));
@@ -139,14 +138,12 @@ void WaitForHandler::on_timeout(Timer* timer) {
 }
 
 WaitForHandler::WaitForHandler(const RequestHandler::Ptr& request_handler,
-                               const Host::Ptr& current_host,
-                               const Response::Ptr& response,
-                               uint64_t max_wait_time_ms,
-                               uint64_t retry_wait_time_ms)
-  : is_finished_(false)
-  , start_time_ms_(get_time_since_epoch_ms())
-  , max_wait_time_ms_(max_wait_time_ms)
-  , retry_wait_time_ms_(retry_wait_time_ms)
-  , request_handler_(request_handler)
-  , current_host_(current_host)
-  , response_(response) { }
+                               const Host::Ptr& current_host, const Response::Ptr& response,
+                               uint64_t max_wait_time_ms, uint64_t retry_wait_time_ms)
+    : is_finished_(false)
+    , start_time_ms_(get_time_since_epoch_ms())
+    , max_wait_time_ms_(max_wait_time_ms)
+    , retry_wait_time_ms_(retry_wait_time_ms)
+    , request_handler_(request_handler)
+    , current_host_(current_host)
+    , response_(response) {}

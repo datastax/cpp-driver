@@ -23,17 +23,15 @@ using datastax::internal::core::Timer;
 
 class TimerUnitTest : public LoopTest {
 public:
-
   TimerUnitTest()
-    : count_(0)
-    , repeat_timeout_(0)
-    , restart_count_(0) { }
+      : count_(0)
+      , repeat_timeout_(0)
+      , restart_count_(0) {}
 
   void test_once(uint64_t timeout) {
     Timer timer;
 
-    timer.start(loop(), timeout,
-                bind_callback(&TimerUnitTest::on_timer_once, this));
+    timer.start(loop(), timeout, bind_callback(&TimerUnitTest::on_timer_once, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -48,8 +46,7 @@ public:
 
     repeat_timeout_ = timeout;
 
-    timer.start(loop(), timeout,
-                bind_callback(&TimerUnitTest::on_timer_repeat, this));
+    timer.start(loop(), timeout, bind_callback(&TimerUnitTest::on_timer_repeat, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -62,8 +59,7 @@ public:
   void test_stop() {
     Timer timer;
 
-    timer.start(loop(), 1,
-                bind_callback(&TimerUnitTest::on_timer_once, this));
+    timer.start(loop(), 1, bind_callback(&TimerUnitTest::on_timer_once, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -71,8 +67,7 @@ public:
 
     EXPECT_FALSE(timer.is_running());
 
-    timer.start(loop(), 1,
-                bind_callback(&TimerUnitTest::on_timer_once, this));
+    timer.start(loop(), 1, bind_callback(&TimerUnitTest::on_timer_once, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -82,15 +77,12 @@ public:
     EXPECT_EQ(count_, 1);
   }
 
-
   void test_restart() {
     Timer timer;
 
-    restart_timer_.start(loop(), 10,
-                         bind_callback(&TimerUnitTest::on_timer_once, this));
+    restart_timer_.start(loop(), 10, bind_callback(&TimerUnitTest::on_timer_once, this));
 
-    timer.start(loop(), 1,
-                bind_callback(&TimerUnitTest::on_timer_restart, this));
+    timer.start(loop(), 1, bind_callback(&TimerUnitTest::on_timer_restart, this));
 
     EXPECT_TRUE(restart_timer_.is_running());
     EXPECT_TRUE(timer.is_running());
@@ -114,21 +106,18 @@ private:
     EXPECT_FALSE(timer->is_running());
     count_++;
     if (count_ == 1) {
-      timer->start(loop(), repeat_timeout_,
-                   bind_callback(&TimerUnitTest::on_timer_repeat, this));
+      timer->start(loop(), repeat_timeout_, bind_callback(&TimerUnitTest::on_timer_repeat, this));
     }
   }
 
   void on_timer_restart(Timer* timer) {
     restart_count_++;
-    if  (restart_count_ == 10) {
+    if (restart_count_ == 10) {
       restart_timer_.stop();
     } else {
-      restart_timer_.start(loop(), 10,
-                           bind_callback(&TimerUnitTest::on_timer_once, this));
+      restart_timer_.start(loop(), 10, bind_callback(&TimerUnitTest::on_timer_once, this));
 
-      timer->start(loop(), 1,
-                   bind_callback(&TimerUnitTest::on_timer_restart, this));
+      timer->start(loop(), 1, bind_callback(&TimerUnitTest::on_timer_restart, this));
     }
   }
 
@@ -139,32 +128,14 @@ private:
   Timer restart_timer_;
 };
 
-TEST_F(TimerUnitTest, Once)
-{
-  test_once(1);
-}
+TEST_F(TimerUnitTest, Once) { test_once(1); }
 
-TEST_F(TimerUnitTest, OnceZero)
-{
-  test_once(0);
-}
+TEST_F(TimerUnitTest, OnceZero) { test_once(0); }
 
-TEST_F(TimerUnitTest, Repeat)
-{
-  test_repeat(1);
-}
+TEST_F(TimerUnitTest, Repeat) { test_repeat(1); }
 
-TEST_F(TimerUnitTest, RepeatZero)
-{
-  test_repeat(0);
-}
+TEST_F(TimerUnitTest, RepeatZero) { test_repeat(0); }
 
-TEST_F(TimerUnitTest, Stop)
-{
-  test_stop();
-}
+TEST_F(TimerUnitTest, Stop) { test_stop(); }
 
-TEST_F(TimerUnitTest, Restart)
-{
-  test_restart();
-}
+TEST_F(TimerUnitTest, Restart) { test_restart(); }

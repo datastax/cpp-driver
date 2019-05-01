@@ -34,7 +34,7 @@ class Connection;
 class ConnectionHandler : public SocketHandler {
 public:
   ConnectionHandler(Connection* connection)
-    : connection_(connection) { }
+      : connection_(connection) {}
 
   virtual void on_read(Socket* socket, ssize_t nread, const uv_buf_t* buf);
   virtual void on_write(Socket* socket, int status, SocketRequest* request);
@@ -50,8 +50,8 @@ private:
 class SslConnectionHandler : public SslSocketHandler {
 public:
   SslConnectionHandler(SslSession* ssl_session, Connection* connection)
-    : SslSocketHandler(ssl_session)
-    , connection_(connection) { }
+      : SslSocketHandler(ssl_session)
+      , connection_(connection) {}
 
   virtual void on_ssl_read(Socket* socket, char* buf, size_t size);
   virtual void on_write(Socket* socket, int status, SocketRequest* request);
@@ -66,7 +66,7 @@ private:
  */
 class ConnectionListener {
 public:
-  virtual ~ConnectionListener() { }
+  virtual ~ConnectionListener() {}
 
   /**
    * A callback that's called when the connection receives an event. The
@@ -74,11 +74,11 @@ public:
    *
    * @param response The event response data sent from the server.
    */
-  virtual void on_event(const EventResponse::Ptr& response) { }
+  virtual void on_event(const EventResponse::Ptr& response) {}
 
-  virtual void on_read() { }
+  virtual void on_read() {}
 
-  virtual void on_write() { }
+  virtual void on_write() {}
 
   /**
    * A callback that's called when the connection closes.
@@ -95,9 +95,7 @@ class RecordingConnectionListener : public ConnectionListener {
 public:
   const EventResponse::Vec& events() const { return events_; }
 
-  virtual void on_event(const EventResponse::Ptr& response) {
-    events_.push_back(response);
-  }
+  virtual void on_event(const EventResponse::Ptr& response) { events_.push_back(response); }
 
   virtual void on_close(Connection* connection) = 0;
 
@@ -107,8 +105,7 @@ public:
    * @param events The events to replay.
    * @param listener The listener that will receive the events.
    */
-  static void process_events(const EventResponse::Vec& events,
-                             ConnectionListener* listener);
+  static void process_events(const EventResponse::Vec& events, ConnectionListener* listener);
 
 private:
   EventResponse::Vec events_;
@@ -141,11 +138,8 @@ public:
    * where the connection is considered idle and is terminated.
    * @param heartbeat_interval_secs The interval (in seconds) to send a heartbeat.
    */
-  Connection(const Socket::Ptr& socket,
-             const Host::Ptr& host,
-             ProtocolVersion protocol_version,
-             unsigned int idle_timeout_secs,
-             unsigned int heartbeat_interval_secs);
+  Connection(const Socket::Ptr& socket, const Host::Ptr& host, ProtocolVersion protocol_version,
+             unsigned int idle_timeout_secs, unsigned int heartbeat_interval_secs);
   ~Connection();
 
   /**
@@ -216,9 +210,7 @@ public:
   uv_loop_t* loop() { return socket_->loop(); }
   const uv_tcp_t* handle() const { return socket_->handle(); }
 
-  int inflight_request_count() const {
-    return inflight_request_count_.load(MEMORY_ORDER_RELAXED);
-  }
+  int inflight_request_count() const { return inflight_request_count_.load(MEMORY_ORDER_RELAXED); }
 
 private:
   void maybe_set_keyspace(ResponseMessage* response);
@@ -255,6 +247,6 @@ private:
   Timer terminate_timer_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

@@ -23,7 +23,7 @@ using namespace datastax::internal::core;
 
 struct TestEntry : HashTableEntry<TestEntry> {
   TestEntry(const String& name)
-    : name(name) { }
+      : name(name) {}
   String name;
 };
 

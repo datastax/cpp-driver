@@ -21,8 +21,7 @@
 
 #include "objects/object_base.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 // Forward declarations
 class Keyspace;
@@ -37,13 +36,14 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) {}
+        : test::Exception(message) {}
   };
 
   /**
    * Default constructor
    */
-  Schema() : Object<const CassSchemaMeta, cass_schema_meta_free>(NULL) {}
+  Schema()
+      : Object<const CassSchemaMeta, cass_schema_meta_free>(NULL) {}
 
   /**
    * Create a schema object
@@ -51,7 +51,7 @@ public:
    * @param schema_meta Native driver object
    */
   Schema(const CassSchemaMeta* schema_meta)
-    : Object<const CassSchemaMeta, cass_schema_meta_free>(schema_meta) {}
+      : Object<const CassSchemaMeta, cass_schema_meta_free>(schema_meta) {}
 
   /**
    * Get the keyspace metadata for a given keyspace
@@ -62,9 +62,7 @@ public:
    */
   Keyspace keyspace(const std::string& name);
 
-  const CassVersion version() const {
-    return cass_schema_meta_version(get());
-  }
+  const CassVersion version() const { return cass_schema_meta_version(get()); }
 };
 
 /**
@@ -75,14 +73,14 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) {}
+        : test::Exception(message) {}
   };
 
   /**
    * Default constructor
    */
   Keyspace()
-    : keyspace_meta_(NULL) {}
+      : keyspace_meta_(NULL) {}
 
   /**
    * Create the keyspace object
@@ -91,18 +89,15 @@ public:
    * @param parent The schema object for the keyspace metadata
    */
   Keyspace(const CassKeyspaceMeta* keyspace_meta, const Schema& parent)
-    : keyspace_meta_(keyspace_meta)
-    , parent_(parent) {}
-
+      : keyspace_meta_(keyspace_meta)
+      , parent_(parent) {}
 
   /**
    * Determine if the keyspace is virtual
    *
    * @return true if virtual, otherwise false
    */
-  bool is_virtual() const {
-    return cass_keyspace_meta_is_virtual(keyspace_meta_) == cass_true;
-  }
+  bool is_virtual() const { return cass_keyspace_meta_is_virtual(keyspace_meta_) == cass_true; }
 
   /**
    * Get the UserType type object for a given user type
@@ -144,7 +139,7 @@ public:
    * Default constructor
    */
   Table()
-    : table_meta_(NULL) {}
+      : table_meta_(NULL) {}
 
   /**
    * Create the table object
@@ -153,17 +148,15 @@ public:
    * @param parent The keyspace object that owns the table
    */
   Table(const CassTableMeta* table_meta, const Keyspace& parent)
-    : table_meta_(table_meta)
-    , parent_(parent) {}
+      : table_meta_(table_meta)
+      , parent_(parent) {}
 
   /**
    * Determine if the table is virtual
    *
    * @return true if virtual, otherwise false
    */
-  bool is_virtual() const {
-    return cass_table_meta_is_virtual(table_meta_) == cass_true;
-  }
+  bool is_virtual() const { return cass_table_meta_is_virtual(table_meta_) == cass_true; }
 
   const CassTableMeta* get() const { return table_meta_; }
 
@@ -192,17 +185,15 @@ public:
    * @param parent The keyspace object for the UserType type
    */
   UserTypeType(const CassDataType* data_type, const Keyspace& parent)
-    : data_type_(data_type)
-    , parent_(parent) {}
+      : data_type_(data_type)
+      , parent_(parent) {}
 
   /**
    * Get the data type
    *
    * @return Native driver data type
    */
-  const CassDataType* data_type() const {
-    return data_type_;
-  }
+  const CassDataType* data_type() const { return data_type_; }
 
 private:
   /**
@@ -215,10 +206,8 @@ private:
   Keyspace parent_;
 };
 
-
 inline Keyspace Schema::keyspace(const std::string& name) {
-  const CassKeyspaceMeta* keyspace_meta
-      = cass_schema_meta_keyspace_by_name(get(), name.c_str());
+  const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(get(), name.c_str());
   if (keyspace_meta == NULL) {
     throw Exception("Unable to get metadata for keyspace: " + name);
   }
@@ -226,8 +215,8 @@ inline Keyspace Schema::keyspace(const std::string& name) {
 }
 
 inline UserTypeType Keyspace::user_type(const std::string& name) {
-  const CassDataType* data_type
-      = cass_keyspace_meta_user_type_by_name(keyspace_meta_, name.c_str());
+  const CassDataType* data_type =
+      cass_keyspace_meta_user_type_by_name(keyspace_meta_, name.c_str());
   if (data_type == NULL) {
     throw Exception("Unable to get metadata for user type: " + name);
   }
@@ -235,15 +224,13 @@ inline UserTypeType Keyspace::user_type(const std::string& name) {
 }
 
 inline Table Keyspace::table(const std::string& name) {
-  const CassTableMeta* table =
-    cass_keyspace_meta_table_by_name(keyspace_meta_, name.c_str());
+  const CassTableMeta* table = cass_keyspace_meta_table_by_name(keyspace_meta_, name.c_str());
   if (table == NULL) {
     throw Exception("Unable to get metadata for table: " + name);
   }
   return Table(table, *this);
 }
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_SCHEMA_HPP__

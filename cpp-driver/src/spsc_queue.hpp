@@ -69,16 +69,13 @@ public:
     return true;
   }
 
-  bool is_empty() {
-    return head_.load(MEMORY_ORDER_ACQUIRE) ==
-        tail_.load(MEMORY_ORDER_ACQUIRE);
-  }
+  bool is_empty() { return head_.load(MEMORY_ORDER_ACQUIRE) == tail_.load(MEMORY_ORDER_ACQUIRE); }
 
   static void memory_fence() {
-   // Internally, libuv has a "pending" flag check whose load can be reordered
-   // before storing the data into the queue causing the data in the queue
-   // not to be consumed. This fence ensures that the load happens after the
-   // data has been store in the queue.
+    // Internally, libuv has a "pending" flag check whose load can be reordered
+    // before storing the data into the queue causing the data in the queue
+    // not to be consumed. This fence ensures that the load happens after the
+    // data has been store in the queue.
 #if defined(HAVE_BOOST_ATOMIC) || defined(HAVE_STD_ATOMIC)
     atomic_thread_fence(MEMORY_ORDER_SEQ_CST);
 #endif
@@ -101,6 +98,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SPSCQueue);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

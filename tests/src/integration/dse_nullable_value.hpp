@@ -20,9 +20,7 @@
 
 #include "nullable_value.hpp"
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 /**
  * DSE NullableValue is a templated interface for all the DSE server data types
@@ -30,13 +28,13 @@ namespace dse {
  * expectations on the value type and other miscellaneous needs for testing;
  * while also allowing the value to be NULL.
  */
-template<typename T>
+template <typename T>
 class NullableValue : public driver::NullableValue<T> {
 public:
   /**
    * Constructor for a NULL value
    */
-  NullableValue() { };
+  NullableValue(){};
 
   /**
    * Constructor for a nullable value; convenience constructor
@@ -44,7 +42,7 @@ public:
    * @param value Typed value
    */
   explicit NullableValue(const typename T::ConvenienceType& value)
-    : driver::NullableValue<T>(value) { }
+      : driver::NullableValue<T>(value) {}
 
   /**
    * Constructor for a nullable value using the wrapped type
@@ -52,7 +50,7 @@ public:
    * @param value Wrapped type value
    */
   explicit NullableValue(const T& value)
-    : driver::NullableValue<T>(value) { }
+      : driver::NullableValue<T>(value) {}
 
   /**
    * Constructor for a nullable value using the drivers primitive/collection
@@ -61,7 +59,7 @@ public:
    * @param value CassValue from driver query
    */
   explicit NullableValue(const CassValue* value)
-    : driver::NullableValue<T>(value) { }
+      : driver::NullableValue<T>(value) {}
 
   /**
    * Constructor for a nullable value using the drivers graph result
@@ -78,22 +76,16 @@ public:
    *
    * @param value CassValue to initialize wrapped value from
    */
-  void initialize(const DseGraphResult* result) {
-    this->value_.initialize(result);
-  }
+  void initialize(const DseGraphResult* result) { this->value_.initialize(result); }
 
   /**
    * Generate the native driver object from the wrapped type
    *
    * @return Generated native reference object; may be empty
    */
-  typename T::Native to_native() const {
-    return this->value_.to_native();
-  }
+  typename T::Native to_native() const { return this->value_.to_native(); }
 };
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_NULLABLE_VALUE_HPP__

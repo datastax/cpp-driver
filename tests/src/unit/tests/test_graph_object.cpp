@@ -8,8 +8,8 @@
 #include <gtest/gtest.h>
 
 #include "dse.h"
-#include "json.hpp"
 #include "graph.hpp"
+#include "json.hpp"
 
 using namespace datastax;
 using namespace datastax::internal;
@@ -115,7 +115,8 @@ TEST_F(GraphObjectUnitTest, Point) {
   ASSERT_EQ("point", String(dse_graph_result_member_key(graph_result, 0, NULL)));
   value = dse_graph_result_member_value(graph_result, 0);
   ASSERT_EQ(CASS_OK, dse_graph_result_as_point(value, &x, &y));
-  ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
+  ASSERT_EQ(1.0, x);
+  ASSERT_EQ(2.0, y);
 }
 
 TEST_F(GraphObjectUnitTest, LineString) {
@@ -143,13 +144,16 @@ TEST_F(GraphObjectUnitTest, LineString) {
   ASSERT_EQ(3u, dse_line_string_iterator_num_points(line_string_iterator));
 
   ASSERT_EQ(CASS_OK, dse_line_string_iterator_next_point(line_string_iterator, &x, &y));
-  ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
+  ASSERT_EQ(1.0, x);
+  ASSERT_EQ(2.0, y);
 
   ASSERT_EQ(CASS_OK, dse_line_string_iterator_next_point(line_string_iterator, &x, &y));
-  ASSERT_EQ(3.0, x); ASSERT_EQ(4.0, y);
+  ASSERT_EQ(3.0, x);
+  ASSERT_EQ(4.0, y);
 
   ASSERT_EQ(CASS_OK, dse_line_string_iterator_next_point(line_string_iterator, &x, &y));
-  ASSERT_EQ(5.0, x); ASSERT_EQ(6.0, y);
+  ASSERT_EQ(5.0, x);
+  ASSERT_EQ(6.0, y);
 }
 
 TEST_F(GraphObjectUnitTest, Polygon) {
@@ -190,24 +194,30 @@ TEST_F(GraphObjectUnitTest, Polygon) {
   ASSERT_EQ(3u, num_points);
 
   ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(polygon_iterator, &x, &y));
-  ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
+  ASSERT_EQ(1.0, x);
+  ASSERT_EQ(2.0, y);
 
   ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(polygon_iterator, &x, &y));
-  ASSERT_EQ(3.0, x); ASSERT_EQ(4.0, y);
+  ASSERT_EQ(3.0, x);
+  ASSERT_EQ(4.0, y);
 
   ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(polygon_iterator, &x, &y));
-  ASSERT_EQ(5.0, x); ASSERT_EQ(6.0, y);
+  ASSERT_EQ(5.0, x);
+  ASSERT_EQ(6.0, y);
 
   // Second ring
   ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_num_points(polygon_iterator, &num_points));
   ASSERT_EQ(3u, num_points);
 
   ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(polygon_iterator, &x, &y));
-  ASSERT_EQ(7.0, x); ASSERT_EQ(8.0, y);
+  ASSERT_EQ(7.0, x);
+  ASSERT_EQ(8.0, y);
 
   ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(polygon_iterator, &x, &y));
-  ASSERT_EQ(9.0, x); ASSERT_EQ(10.0, y);
+  ASSERT_EQ(9.0, x);
+  ASSERT_EQ(10.0, y);
 
   ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(polygon_iterator, &x, &y));
-  ASSERT_EQ(11.0, x); ASSERT_EQ(12.0, y);
+  ASSERT_EQ(11.0, x);
+  ASSERT_EQ(12.0, y);
 }

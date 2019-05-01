@@ -25,12 +25,13 @@
 
 #include <string>
 #ifdef _WIN32
-# define putenv _putenv
+#define putenv _putenv
 #endif
 
 #include <uv.h>
 
-//TODO: This should be broken out in the future if required by more than one test (currently Authentication tests)
+// TODO: This should be broken out in the future if required by more than one test (currently
+// Authentication tests)
 
 // Defines for ADS configuration
 #define EMBEDDED_ADS_JAR_FILENAME "embedded-ads.jar"
@@ -67,26 +68,26 @@ namespace test {
  * Embedded ADS for easily authenticating with DSE using Kerberos
  */
 class EmbeddedADS {
-/**
- * Result for command execution
- */
-typedef struct CommandResult_ {
   /**
-   * Error code (e.g. exit status)
+   * Result for command execution
    */
-  int error_code;
-  /**
-   * Standard output from executing command
-   */
-  std::string standard_output;
-  /**
-   * Standard error from executing command
-   */
-  std::string standard_error;
+  typedef struct CommandResult_ {
+    /**
+     * Error code (e.g. exit status)
+     */
+    int error_code;
+    /**
+     * Standard output from executing command
+     */
+    std::string standard_output;
+    /**
+     * Standard error from executing command
+     */
+    std::string standard_error;
 
-  CommandResult_()
-    : error_code(-1) { }
-} CommandResult;
+    CommandResult_()
+        : error_code(-1) {}
+  } CommandResult;
 
 public:
   /**
@@ -94,7 +95,7 @@ public:
    *                        properly
    */
   EmbeddedADS() {
-    //TODO: Update test to work with remote deployments
+    // TODO: Update test to work with remote deployments
 #ifdef _WIN32
     // Unable to execute ADS locally and use remote DSE cluster
     throw Exception("ADS Server will not be Created: Must run locally with DSE cluster");
@@ -144,9 +145,7 @@ public:
   /**
    * Start the ADS process
    */
-  void start_process() {
-    uv_thread_create(&thread_, EmbeddedADS::process_start, NULL);
-  }
+  void start_process() { uv_thread_create(&thread_, EmbeddedADS::process_start, NULL); }
 
   /**
    * Terminate the ADS process
@@ -185,9 +184,7 @@ public:
    * @return Absolute path to the ADS configuration directory; empty string
    *         indicates ADS was not started properly
    */
-  static std::string get_configuration_directory() {
-    return configuration_directory_;
-  }
+  static std::string get_configuration_directory() { return configuration_directory_; }
 
   /**
    * Get the configuration file being used by the ADS process
@@ -195,9 +192,7 @@ public:
    * @return Absolute path to the ADS configuration file; empty string indicates
    *         ADS was not started properly
    */
-  static std::string get_configuration_file() {
-    return configuration_file_;
-  }
+  static std::string get_configuration_file() { return configuration_file_; }
 
   /**
    * Get the Cassandra keytab configuration file being used by the ADS process
@@ -205,9 +200,7 @@ public:
    * @return Absolute path to the Cassandra keytab configuration file; empty
    *         string indicates ADS was not started properly
    */
-  static std::string get_cassandra_keytab_file() {
-    return cassandra_keytab_file_;
-  }
+  static std::string get_cassandra_keytab_file() { return cassandra_keytab_file_; }
 
   /**
    * Get the DSE keytab configuration file being used by the ADS process
@@ -215,9 +208,7 @@ public:
    * @return Absolute path to the DSE keytab configuration file; empty
    *         string indicates ADS was not started properly
    */
-  static std::string get_dse_keytab_file() {
-    return dse_keytab_file_;
-  }
+  static std::string get_dse_keytab_file() { return dse_keytab_file_; }
 
   /**
    * Get the DSE user keytab configuration file being used by the ADS process
@@ -225,9 +216,7 @@ public:
    * @return Absolute path to the DSE user keytab configuration file; empty
    *         string indicates ADS was not started properly
    */
-  static std::string get_dseuser_keytab_file() {
-    return dseuser_keytab_file_;
-  }
+  static std::string get_dseuser_keytab_file() { return dseuser_keytab_file_; }
 
   /**
    * Get the unknown keytab configuration file being used by the ADS process
@@ -235,9 +224,7 @@ public:
    * @return Absolute path to the unknown keytab configuration file; empty
    *         string indicates ADS was not started properly
    */
-  static std::string get_unknown_keytab_file() {
-    return unknown_keytab_file_;
-  }
+  static std::string get_unknown_keytab_file() { return unknown_keytab_file_; }
 
   /**
    * Get the Bill keytab configuration file being used by the ADS process
@@ -245,9 +232,7 @@ public:
    * @return Absolute path to the Bill keytab configuration file; empty string
    *         indicates ADS was not started properly
    */
-  static std::string get_bill_keytab_file() {
-    return bill_keytab_file_;
-  }
+  static std::string get_bill_keytab_file() { return bill_keytab_file_; }
 
   /**
    * Get the Bob keytab configuration file being used by the ADS process
@@ -255,9 +240,7 @@ public:
    * @return Absolute path to the Bob keytab configuration file; empty string
    *         indicates ADS was not started properly
    */
-  static std::string get_bob_keytab_file() {
-    return bob_keytab_file_;
-  }
+  static std::string get_bob_keytab_file() { return bob_keytab_file_; }
 
   /**
    * Get the Charlie keytab configuration file being used by the ADS process
@@ -265,9 +248,7 @@ public:
    * @return Absolute path to the Charlie keytab configuration file; empty
    *         string indicates ADS was not started properly
    */
-  static std::string get_charlie_keytab_file() {
-    return charlie_keytab_file_;
-  }
+  static std::string get_charlie_keytab_file() { return charlie_keytab_file_; }
 
   /**
    * Get the Steve keytab configuration file being used by the ADS process
@@ -275,9 +256,7 @@ public:
    * @return Absolute path to the Steve keytab configuration file; empty string
    *         string indicates ADS was not started properly
    */
-  static std::string get_steve_keytab_file() {
-    return steve_keytab_file_;
-  }
+  static std::string get_steve_keytab_file() { return steve_keytab_file_; }
 
   /**
    * Check to see if the Kerberos client binaries are Heimdal
@@ -296,10 +275,8 @@ public:
       CommandResult result = execute_command(kinit_args);
       if (result.error_code == 0) {
         // Check both outputs
-        bool is_in_standard_output = Utils::contains(result.standard_output,
-                                                     "Heimdal");
-        bool is_in_standard_error = Utils::contains(result.standard_error,
-                                                     "Heimdal");
+        bool is_in_standard_output = Utils::contains(result.standard_output, "Heimdal");
+        bool is_in_standard_error = Utils::contains(result.standard_error, "Heimdal");
         return (is_in_standard_output || is_in_standard_error);
       }
     }
@@ -440,9 +417,9 @@ private:
     options.stdio = stdio;
     options.stdio[0].flags = UV_IGNORE;
     options.stdio[1].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-    options.stdio[1].data.stream = (uv_stream_t*) &standard_output;
+    options.stdio[1].data.stream = (uv_stream_t*)&standard_output;
     options.stdio[2].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-    options.stdio[2].data.stream = (uv_stream_t*) &error_output;
+    options.stdio[2].data.stream = (uv_stream_t*)&error_output;
 
     // Create the options for the process
     options.args = args;
@@ -463,8 +440,10 @@ private:
       error_output.data = &result.standard_error;
 
       // Start the output thread loops
-      uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
-      uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
+      uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output),
+                    EmbeddedADS::output_allocation, EmbeddedADS::process_read);
+      uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), EmbeddedADS::output_allocation,
+                    EmbeddedADS::process_read);
 
       // Start the process loop
       uv_run(&loop, UV_RUN_DEFAULT);
@@ -544,9 +523,9 @@ private:
     options.stdio = stdio;
     options.stdio[0].flags = UV_IGNORE;
     options.stdio[1].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-    options.stdio[1].data.stream = (uv_stream_t*) &standard_output;
+    options.stdio[1].data.stream = (uv_stream_t*)&standard_output;
     options.stdio[2].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-    options.stdio[2].data.stream = (uv_stream_t*) &error_output;
+    options.stdio[2].data.stream = (uv_stream_t*)&error_output;
 
     // Create the options for the process
     options.args = args;
@@ -565,12 +544,14 @@ private:
       error_output.data = &stderr_message;
 
       // Start the output thread loops
-      uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
-      uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
+      uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output),
+                    EmbeddedADS::output_allocation, EmbeddedADS::process_read);
+      uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), EmbeddedADS::output_allocation,
+                    EmbeddedADS::process_read);
 
       // Indicate the ADS configurations
-      configuration_directory_ = Utils::cwd() + Utils::PATH_SEPARATOR
-        + EMBEDDED_ADS_CONFIGURATION_DIRECTORY + Utils::PATH_SEPARATOR;
+      configuration_directory_ = Utils::cwd() + Utils::PATH_SEPARATOR +
+                                 EMBEDDED_ADS_CONFIGURATION_DIRECTORY + Utils::PATH_SEPARATOR;
       configuration_file_ = configuration_directory_ + EMBEDDED_ADS_CONFIGURATION_FILE;
       cassandra_keytab_file_ = configuration_directory_ + CASSANDRA_KEYTAB_ADS_CONFIGURATION_FILE;
       dse_keytab_file_ = configuration_directory_ + DSE_KEYTAB_ADS_CONFIGURATION_FILE;
@@ -636,7 +617,8 @@ private:
       std::string output(buffer->base, buffer_length);
       message->append(output);
 
-      if (!is_initialized_ && message->find("Principal Initialization Complete") != std::string::npos) {
+      if (!is_initialized_ &&
+          message->find("Principal Initialization Complete") != std::string::npos) {
         Utils::msleep(10000); // TODO: Not 100% ready; need to add a better check mechanism
         is_initialized_ = true;
       }

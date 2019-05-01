@@ -20,8 +20,7 @@
 using namespace datastax::internal;
 using namespace datastax::internal::core;
 
-int StartupRequest::encode(ProtocolVersion version,
-                           RequestCallback* callback,
+int StartupRequest::encode(ProtocolVersion version, RequestCallback* callback,
                            BufferVec* bufs) const {
   // <options> [string map]
   size_t length = sizeof(uint16_t);
@@ -43,11 +42,10 @@ int StartupRequest::encode(ProtocolVersion version,
     options["NO_COMPACT"] = "true";
   }
 
-  for (OptionsMap::const_iterator it = options.begin(),
-       end = options.end(); it != end; ++it) {
+  for (OptionsMap::const_iterator it = options.begin(), end = options.end(); it != end; ++it) {
     length += sizeof(uint16_t) + it->first.size();
     length += sizeof(uint16_t) + it->second.size();
-   }
+  }
 
   bufs->push_back(Buffer(length));
   bufs->back().encode_string_map(0, options);

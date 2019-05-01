@@ -42,12 +42,7 @@ public:
     /**
      * Type of action to occur during loop execution.
      */
-    enum Type {
-      START_NODE,
-      STOP_NODE,
-      ADD_NODE,
-      REMOVE_NODE
-    };
+    enum Type { START_NODE, STOP_NODE, ADD_NODE, REMOVE_NODE };
 
     /**
      * Action to take place during loop execution.
@@ -110,7 +105,8 @@ public:
      *
      * @param future Future to set when outage plan is running.
      */
-    void run(datastax::internal::core::Future::Ptr future = datastax::internal::core::Future::Ptr());
+    void
+    run(datastax::internal::core::Future::Ptr future = datastax::internal::core::Future::Ptr());
 
     /**
      * Stop the outage plan; must be executed on the same thread that started
@@ -144,30 +140,28 @@ public:
 public:
   class ExecuteOutagePlan : public Task {
   public:
-    ExecuteOutagePlan(OutagePlan* outage_plan,
-                      datastax::internal::core::Future::Ptr future)
-      : outage_plan_(outage_plan)
-      , future_(future) { }
-    virtual void run(EventLoop* event_loop) {
-      outage_plan_->run(future_);
-    }
+    ExecuteOutagePlan(OutagePlan* outage_plan, datastax::internal::core::Future::Ptr future)
+        : outage_plan_(outage_plan)
+        , future_(future) {}
+    virtual void run(EventLoop* event_loop) { outage_plan_->run(future_); }
+
   private:
-    OutagePlan * outage_plan_;
+    OutagePlan* outage_plan_;
     datastax::internal::core::Future::Ptr future_;
   };
 
   class StopOutagePlan : public Task {
   public:
-    StopOutagePlan(OutagePlan* outage_plan,
-                   datastax::internal::core::Future::Ptr future)
-      : outage_plan_(outage_plan)
-      , future_(future) { }
+    StopOutagePlan(OutagePlan* outage_plan, datastax::internal::core::Future::Ptr future)
+        : outage_plan_(outage_plan)
+        , future_(future) {}
     virtual void run(EventLoop* event_loop) {
       outage_plan_->stop();
       future_->set();
     }
+
   private:
-    OutagePlan * outage_plan_;
+    OutagePlan* outage_plan_;
     datastax::internal::core::Future::Ptr future_;
   };
 

@@ -14,7 +14,6 @@
   limitations under the License.
 */
 
-
 #if defined(_WIN32)
 
 #ifndef _WINSOCKAPI_
@@ -25,7 +24,7 @@
 
 #include "get_time.hpp"
 
-namespace datastax { namespace  internal {
+namespace datastax { namespace internal {
 
 // Information for using the query performance counter can be found here:
 // https://msdn.microsoft.com/en-us/library/dn553408(v=vs.85).aspx
@@ -50,11 +49,11 @@ static ClockInfo __clock_info__; // Initializer
 uint64_t get_time_since_epoch_us() {
   _FILETIME ft;
   GetSystemTimeAsFileTime(&ft);
-  uint64_t ns100 = (static_cast<uint64_t>(ft.dwHighDateTime) << 32 |
-                    static_cast<uint64_t>(ft.dwLowDateTime)) -
-                   116444736000000000LL; // 100 nanosecond increments between
-                                         // Jan. 1, 1601 - Jan. 1, 1970
-  return ns100 / 10;                     // 100 nanosecond increments to microseconds
+  uint64_t ns100 =
+      (static_cast<uint64_t>(ft.dwHighDateTime) << 32 | static_cast<uint64_t>(ft.dwLowDateTime)) -
+      116444736000000000LL; // 100 nanosecond increments between
+                            // Jan. 1, 1601 - Jan. 1, 1970
+  return ns100 / 10;        // 100 nanosecond increments to microseconds
 }
 
 uint64_t get_time_monotonic_ns() {
@@ -69,6 +68,6 @@ uint64_t get_time_monotonic_ns() {
   }
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif // defined(_WIN32)
