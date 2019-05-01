@@ -29,7 +29,7 @@ struct DefaultDeleter {
   void operator()(T* ptr) const { delete ptr; }
 };
 
-template <class T, class D = DefaultDeleter<T>>
+template <class T, class D = DefaultDeleter<T> >
 class ScopedPtr {
 public:
   typedef T type;
@@ -70,7 +70,7 @@ struct DefaultArrayDeleter {
   void operator()(T* ptr) const { delete[] ptr; }
 };
 
-template <class T, class D = DefaultArrayDeleter<T>>
+template <class T, class D = DefaultArrayDeleter<T> >
 class ScopedArray {
 public:
   typedef T type;

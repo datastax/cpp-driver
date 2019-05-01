@@ -14,12 +14,12 @@
 
 namespace datastax { namespace internal {
 
-template <class K, class V, class HashFcn = SPARSEHASH_HASH<K>, class EqualKey = std::equal_to<K>>
+template <class K, class V, class HashFcn = SPARSEHASH_HASH<K>, class EqualKey = std::equal_to<K> >
 class DenseHashMap
     : public sparsehash::dense_hash_map<K, V, HashFcn, EqualKey,
-                                        internal::Allocator<std::pair<const K, V>>> {
+                                        internal::Allocator<std::pair<const K, V> > > {
 public:
-  typedef internal::Allocator<std::pair<const K, V>> Allocator;
+  typedef internal::Allocator<std::pair<const K, V> > Allocator;
 
   explicit DenseHashMap(size_t expected_max_items_in_table = 0, const HashFcn& hf = HashFcn(),
                         const EqualKey& eql = EqualKey(), const Allocator& alloc = Allocator())

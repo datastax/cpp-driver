@@ -51,7 +51,7 @@ class Comparable {
  * value to be NULL.
  */
 template <typename T>
-class NullableValue : public Comparable<NullableValue<T>> {
+class NullableValue : public Comparable<NullableValue<T> > {
 public:
   /**
    * Constructor for a NULL value

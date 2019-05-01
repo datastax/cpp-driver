@@ -15,10 +15,10 @@
 
 namespace datastax { namespace internal {
 
-template <class T, class Compare = std::less<T>>
+template <class T, class Compare = std::less<T> >
 class Set
     : public Allocated
-    , public std::set<T, Compare, internal::Allocator<T>> {
+    , public std::set<T, Compare, internal::Allocator<T> > {
 public:
   typedef internal::Allocator<T> Allocator;
 

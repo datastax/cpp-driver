@@ -14,7 +14,7 @@
 
 namespace datastax { namespace internal {
 
-template <class T, class Container = Deque<T>>
+template <class T, class Container = Deque<T> >
 class Stack : public std::stack<T, Container> {
 public:
   explicit Stack(const Container& container = Container())

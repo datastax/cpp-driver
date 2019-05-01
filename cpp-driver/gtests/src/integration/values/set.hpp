@@ -27,7 +27,7 @@ namespace test { namespace driver {
 template <typename T>
 class Set
     : public Collection
-    , Comparable<Set<T>> {
+    , Comparable<Set<T> > {
 public:
   Set()
       : Collection(CASS_COLLECTION_TYPE_SET) {}

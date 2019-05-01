@@ -18,7 +18,7 @@ namespace datastax { namespace internal {
 template <class T>
 class Vector
     : public Allocated
-    , public std::vector<T, internal::Allocator<T>> {
+    , public std::vector<T, internal::Allocator<T> > {
 public:
   typedef internal::Allocator<T> Allocator;
 

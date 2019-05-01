@@ -18,11 +18,11 @@
 
 namespace datastax {
 
-typedef std::basic_string<char, std::char_traits<char>, internal::Allocator<char>> String;
+typedef std::basic_string<char, std::char_traits<char>, internal::Allocator<char> > String;
 
 namespace internal {
 
-class OStringStream : public std::basic_ostream<char, std::char_traits<char>> {
+class OStringStream : public std::basic_ostream<char, std::char_traits<char> > {
 public:
   typedef char char_type;
   typedef std::char_traits<char> traits_type;
@@ -51,10 +51,10 @@ public:
   void str(const string_type& str) { sb_.str(str); }
 
 private:
-  std::basic_stringbuf<char, std::char_traits<char>, internal::Allocator<char>> sb_;
+  std::basic_stringbuf<char, std::char_traits<char>, internal::Allocator<char> > sb_;
 };
 
-class IStringStream : public std::basic_istream<char, std::char_traits<char>> {
+class IStringStream : public std::basic_istream<char, std::char_traits<char> > {
 public:
   typedef char char_type;
   typedef std::char_traits<char> traits_type;
@@ -83,7 +83,7 @@ public:
   void str(const string_type& str) { sb_.str(str); }
 
 private:
-  std::basic_stringbuf<char, std::char_traits<char>, internal::Allocator<char>> sb_;
+  std::basic_stringbuf<char, std::char_traits<char>, internal::Allocator<char> > sb_;
 };
 
 } // namespace internal

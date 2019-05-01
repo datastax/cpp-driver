@@ -36,10 +36,10 @@ namespace datastax { namespace internal { namespace core {
 // small and doesn't excceed the fixed buffer.
 
 template <class K, class V, size_t N, class HashFcn = SPARSEHASH_HASH<K>,
-          class EqualKey = std::equal_to<K>>
+          class EqualKey = std::equal_to<K> >
 class SmallDenseHashMap
     : public sparsehash::dense_hash_map<K, V, HashFcn, EqualKey,
-                                        FixedAllocator<std::pair<const K, V>, MIN_BUCKETS(N)>> {
+                                        FixedAllocator<std::pair<const K, V>, MIN_BUCKETS(N)> > {
 public:
   typedef std::pair<const K, V> Pair;
   typedef FixedAllocator<std::pair<const K, V>, MIN_BUCKETS(N)> Allocator;

@@ -163,7 +163,7 @@ private:
       // Get the data center and token values
       Row row = result.first_row();
       Text data_center = row.next().as<Text>();
-      std::set<Text> tokens = row.next().as<Set<Text>>().value();
+      std::set<Text> tokens = row.next().as<Set<Text> >().value();
 
       // Iterate over the tokens and update the token/host mapping
       for (std::set<Text>::const_iterator it = tokens.begin(); it != tokens.end(); ++it) {

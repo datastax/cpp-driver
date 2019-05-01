@@ -512,7 +512,7 @@ const std::string& Options::public_key() { return public_key_; }
 
 const std::string& Options::private_key() { return private_key_; }
 
-SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge>> Options::ccm() {
+SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > Options::ccm() {
   return new CCM::Bridge(Options::server_version(), Options::use_git(), Options::branch_tag(),
                          Options::use_install_dir(), Options::install_dir(), Options::is_dse(),
                          CCM::Bridge::DEFAULT_DSE_WORKLOAD, Options::cluster_prefix(),

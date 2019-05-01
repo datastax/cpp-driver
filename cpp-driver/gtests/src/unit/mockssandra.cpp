@@ -704,7 +704,7 @@ inline const char* decode_uuid(const char* input, CassUuid* output) {
 }
 
 inline const char* decode_string_map(const char* input, const char* end,
-                                     Vector<std::pair<String, String>>* output) {
+                                     Vector<std::pair<String, String> >* output) {
 
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);

@@ -15,7 +15,7 @@
 namespace datastax { namespace internal {
 
 template <class T>
-class Deque : public std::deque<T, internal::Allocator<T>> {
+class Deque : public std::deque<T, internal::Allocator<T> > {
 public:
   typedef internal::Allocator<T> Allocator;
 

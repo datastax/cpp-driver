@@ -33,7 +33,7 @@
 
 namespace datastax { namespace internal { namespace core {
 
-typedef Map<String, Vector<String>> StringMultimap;
+typedef Map<String, Vector<String> > StringMultimap;
 
 struct Failure {
   CassInet endpoint;

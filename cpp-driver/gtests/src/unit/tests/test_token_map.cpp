@@ -161,7 +161,7 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes) {
     const CopyOnWriteHostVec& hosts = token_map->get_replicas("ks1", key);
     ASSERT_TRUE(hosts && hosts->size() == replication_factor * num_dcs);
 
-    typedef Map<String, Set<String>> DcRackMap;
+    typedef Map<String, Set<String> > DcRackMap;
 
     // Verify rack counts
     DcRackMap dc_racks;

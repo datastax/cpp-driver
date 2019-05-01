@@ -332,11 +332,11 @@ public:
   typedef SharedRefPtr<TableMetadataBase> Ptr;
   typedef Vector<CassClusteringOrder> ClusteringOrderVec;
 
-  class ColumnIterator : public MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr>> {
+  class ColumnIterator : public MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> > {
   public:
     ColumnIterator(const ColumnIterator::Collection& collection)
-        : MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr>>(CASS_ITERATOR_TYPE_COLUMN_META,
-                                                                     collection) {}
+        : MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> >(
+              CASS_ITERATOR_TYPE_COLUMN_META, collection) {}
     const ColumnMetadata* column() const { return impl_.item().get(); }
   };
 
@@ -456,11 +456,11 @@ public:
 
   static const TableMetadata::Ptr NIL;
 
-  class IndexIterator : public MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr>> {
+  class IndexIterator : public MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr> > {
   public:
     IndexIterator(const IndexIterator::Collection& collection)
-        : MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr>>(CASS_ITERATOR_TYPE_INDEX_META,
-                                                                    collection) {}
+        : MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr> >(CASS_ITERATOR_TYPE_INDEX_META,
+                                                                     collection) {}
     const IndexMetadata* index() const { return impl_.item().get(); }
   };
 
@@ -499,34 +499,34 @@ public:
   typedef internal::Map<String, KeyspaceMetadata> Map;
   typedef CopyOnWritePtr<KeyspaceMetadata::Map> MapPtr;
 
-  class TableIterator : public MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr>> {
+  class TableIterator : public MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> > {
   public:
     TableIterator(const TableIterator::Collection& collection)
-        : MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr>>(CASS_ITERATOR_TYPE_TABLE_META,
-                                                                    collection) {}
+        : MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> >(CASS_ITERATOR_TYPE_TABLE_META,
+                                                                     collection) {}
     const TableMetadata* table() const { return static_cast<TableMetadata*>(impl_.item().get()); }
   };
 
-  class TypeIterator : public MetadataIteratorImpl<MapIteratorImpl<UserType::Ptr>> {
+  class TypeIterator : public MetadataIteratorImpl<MapIteratorImpl<UserType::Ptr> > {
   public:
     TypeIterator(const TypeIterator::Collection& collection)
-        : MetadataIteratorImpl<MapIteratorImpl<UserType::Ptr>>(CASS_ITERATOR_TYPE_TYPE_META,
-                                                               collection) {}
+        : MetadataIteratorImpl<MapIteratorImpl<UserType::Ptr> >(CASS_ITERATOR_TYPE_TYPE_META,
+                                                                collection) {}
     const UserType* type() const { return impl_.item().get(); }
   };
 
-  class FunctionIterator : public MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr>> {
+  class FunctionIterator : public MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr> > {
   public:
     FunctionIterator(const FunctionIterator::Collection& collection)
-        : MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr>>(
+        : MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr> >(
               CASS_ITERATOR_TYPE_FUNCTION_META, collection) {}
     const FunctionMetadata* function() const { return impl_.item().get(); }
   };
 
-  class AggregateIterator : public MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr>> {
+  class AggregateIterator : public MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr> > {
   public:
     AggregateIterator(const AggregateIterator::Collection& collection)
-        : MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr>>(
+        : MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr> >(
               CASS_ITERATOR_TYPE_AGGREGATE_META, collection) {}
     const AggregateMetadata* aggregate() const { return impl_.item().get(); }
   };
@@ -594,11 +594,11 @@ private:
 
 class Metadata {
 public:
-  class KeyspaceIterator : public MetadataIteratorImpl<MapIteratorImpl<KeyspaceMetadata>> {
+  class KeyspaceIterator : public MetadataIteratorImpl<MapIteratorImpl<KeyspaceMetadata> > {
   public:
     KeyspaceIterator(const KeyspaceIterator::Collection& collection)
-        : MetadataIteratorImpl<MapIteratorImpl<KeyspaceMetadata>>(CASS_ITERATOR_TYPE_KEYSPACE_META,
-                                                                  collection) {}
+        : MetadataIteratorImpl<MapIteratorImpl<KeyspaceMetadata> >(CASS_ITERATOR_TYPE_KEYSPACE_META,
+                                                                   collection) {}
     const KeyspaceMetadata* keyspace() const { return &impl_.item(); }
   };
 

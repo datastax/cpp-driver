@@ -28,15 +28,15 @@ namespace datastax { namespace internal {
 // small and doesn't excceed the fixed buffer.
 
 template <class T, size_t N>
-class SmallVector : public std::vector<T, FixedAllocator<T, N>> {
+class SmallVector : public std::vector<T, FixedAllocator<T, N> > {
 public:
   SmallVector()
-      : std::vector<T, FixedAllocator<T, N>>(FixedAllocator<T, N>(&fixed_)) {
+      : std::vector<T, FixedAllocator<T, N> >(FixedAllocator<T, N>(&fixed_)) {
     this->reserve(N);
   }
 
   SmallVector(size_t inital_size)
-      : std::vector<T, FixedAllocator<T, N>>(FixedAllocator<T, N>(&fixed_)) {
+      : std::vector<T, FixedAllocator<T, N> >(FixedAllocator<T, N>(&fixed_)) {
     this->resize(inital_size);
   }
 

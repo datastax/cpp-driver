@@ -15,12 +15,12 @@
 
 namespace datastax { namespace internal {
 
-template <class K, class V, class Compare = std::less<K>>
+template <class K, class V, class Compare = std::less<K> >
 class Map
     : public Allocated
-    , public std::map<K, V, Compare, internal::Allocator<std::pair<const K, V>>> {
+    , public std::map<K, V, Compare, internal::Allocator<std::pair<const K, V> > > {
 public:
-  typedef internal::Allocator<std::pair<const K, V>> Allocator;
+  typedef internal::Allocator<std::pair<const K, V> > Allocator;
 
   explicit Map(const Compare& compare = Compare(), const Allocator& alloc = Allocator())
       : std::map<K, V, Compare, Allocator>(compare, alloc) {}

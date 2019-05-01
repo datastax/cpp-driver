@@ -534,7 +534,7 @@ public:
   };
 
   typedef DenseHashMap<String, TokenReplicasVec> KeyspaceReplicaMap;
-  typedef DenseHashMap<String, ReplicationStrategy<Partitioner>> KeyspaceStrategyMap;
+  typedef DenseHashMap<String, ReplicationStrategy<Partitioner> > KeyspaceStrategyMap;
 
   TokenMapImpl()
       : no_replicas_dummy_(NULL) {

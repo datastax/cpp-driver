@@ -196,7 +196,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select) {
   insert_task(insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id);
   select_task(select_query, CASS_CONSISTENCY_QUORUM, num_iterations);
 
-  std::vector<boost::shared_future<bool>> futures;
+  std::vector<boost::shared_future<bool> > futures;
 
   for (int i = 0; i < 10; ++i) {
     futures.push_back(boost::async(boost::launch::async,
@@ -278,7 +278,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing) {
   insert_task(insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id);
   select_task(select_query, CASS_CONSISTENCY_QUORUM, num_iterations);
 
-  std::vector<boost::shared_future<bool>> futures;
+  std::vector<boost::shared_future<bool> > futures;
 
   for (int i = 0; i < 10; ++i) {
     futures.push_back(boost::async(boost::launch::async,

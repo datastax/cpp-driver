@@ -456,9 +456,9 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares) {
   test_utils::execute_query(session, create_table_query);
 
 #if BOOST_VERSION < 105700
-  CONTAINER<boost::BOOST_THREAD_FUTURE<CassPreparedMovable>> prepare_futures;
+  CONTAINER<boost::BOOST_THREAD_FUTURE<CassPreparedMovable> > prepare_futures;
 #else
-  CONTAINER<boost::BOOST_THREAD_FUTURE<test_utils::CassPreparedPtr>> prepare_futures;
+  CONTAINER<boost::BOOST_THREAD_FUTURE<test_utils::CassPreparedPtr> > prepare_futures;
 #endif
 
   std::vector<CassUuid> tweet_ids;
@@ -472,7 +472,7 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares) {
     tweet_ids.push_back(tweet_id);
   }
 
-  std::vector<boost::shared_future<void>> execute_futures;
+  std::vector<boost::shared_future<void> > execute_futures;
 #if BOOST_VERSION < 105700
   CONTAINER<CassPreparedMovable> prepares;
 #else

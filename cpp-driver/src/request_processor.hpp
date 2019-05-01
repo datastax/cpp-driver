@@ -340,7 +340,7 @@ private:
   ExecutionProfile default_profile_;
   ExecutionProfile::Map profiles_;
   Atomic<int> request_count_;
-  ScopedPtr<MPMCQueue<RequestHandler*>> const request_queue_;
+  ScopedPtr<MPMCQueue<RequestHandler*> > const request_queue_;
   TokenMap::Ptr token_map_;
 
   bool is_closing_;

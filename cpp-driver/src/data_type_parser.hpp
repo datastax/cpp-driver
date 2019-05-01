@@ -146,7 +146,7 @@ private:
   static bool get_nested_class_name(const String& type, String* class_name);
 
   typedef Vector<String> TypeParamsVec;
-  typedef Vector<std::pair<String, String>> NameAndTypeParamsVec;
+  typedef Vector<std::pair<String, String> > NameAndTypeParamsVec;
 
   class Parser : public ParserBase {
   public:

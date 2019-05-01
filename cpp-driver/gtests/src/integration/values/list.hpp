@@ -29,7 +29,7 @@ namespace test { namespace driver {
 template <typename T>
 class List
     : public Collection
-    , Comparable<List<T>> {
+    , Comparable<List<T> > {
 public:
   List()
       : Collection(CASS_COLLECTION_TYPE_LIST) {}

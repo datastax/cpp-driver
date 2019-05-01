@@ -157,16 +157,16 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, List) {
     Statement& statement = statements[i];
 
     // Bind both the primary key and the value with the DSE type list and insert
-    statement.bind<List<TypeParam>>(0, list);
-    statement.bind<List<TypeParam>>(1, list);
+    statement.bind<List<TypeParam> >(0, list);
+    statement.bind<List<TypeParam> >(1, list);
     this->session_.execute(statement);
 
     // Validate the result
     Statement select_statement(this->select_query_, 1);
-    select_statement.bind<List<TypeParam>>(0, list);
+    select_statement.bind<List<TypeParam> >(0, list);
     Result result = this->session_.execute(select_statement);
     ASSERT_EQ(1u, result.row_count());
-    List<TypeParam> result_list(result.first_row().next().as<List<TypeParam>>());
+    List<TypeParam> result_list(result.first_row().next().as<List<TypeParam> >());
     ASSERT_EQ(list.value(), result_list.value());
   }
 }
@@ -203,16 +203,16 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Set) {
     Statement& statement = statements[i];
 
     // Bind both the primary key and the value with the DSE type set and insert
-    statement.bind<Set<TypeParam>>(0, set);
-    statement.bind<Set<TypeParam>>(1, set);
+    statement.bind<Set<TypeParam> >(0, set);
+    statement.bind<Set<TypeParam> >(1, set);
     this->session_.execute(statement);
 
     // Validate the result
     Statement select_statement(this->select_query_, 1);
-    select_statement.bind<Set<TypeParam>>(0, set);
+    select_statement.bind<Set<TypeParam> >(0, set);
     Result result = this->session_.execute(select_statement);
     ASSERT_EQ(1u, result.row_count());
-    Set<TypeParam> result_set = result.first_row().next().as<Set<TypeParam>>();
+    Set<TypeParam> result_set = result.first_row().next().as<Set<TypeParam> >();
     ASSERT_EQ(set.value(), result_set.value());
   }
 }
@@ -255,17 +255,17 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesTest, Map) {
     Statement& statement = statements[i];
 
     // Bind both the primary key and the value with the DSE type map and insert
-    statement.bind<Map<TypeParam, TypeParam>>(0, map);
-    statement.bind<Map<TypeParam, TypeParam>>(1, map);
+    statement.bind<Map<TypeParam, TypeParam> >(0, map);
+    statement.bind<Map<TypeParam, TypeParam> >(1, map);
     this->session_.execute(statement);
 
     // Validate the result
     Statement select_statement(this->select_query_, 1);
-    select_statement.bind<Map<TypeParam, TypeParam>>(0, map);
+    select_statement.bind<Map<TypeParam, TypeParam> >(0, map);
     Result result = this->session_.execute(select_statement);
     ASSERT_EQ(1u, result.row_count());
     Column column = result.first_row().next();
-    Map<TypeParam, TypeParam> result_map(column.as<Map<TypeParam, TypeParam>>());
+    Map<TypeParam, TypeParam> result_map(column.as<Map<TypeParam, TypeParam> >());
     ASSERT_EQ(map_values, result_map.value());
   }
 }

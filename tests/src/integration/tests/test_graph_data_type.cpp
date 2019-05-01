@@ -31,7 +31,7 @@ public:
   /**
    * Pair containing values and expected return values
    */
-  typedef std::pair<std::vector<std::string>, std::vector<std::string>> ValuesExpected;
+  typedef std::pair<std::vector<std::string>, std::vector<std::string> > ValuesExpected;
 
   void SetUp() {
     CHECK_VERSION(5.0.0);
@@ -277,13 +277,13 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, DecimalDoubleFloat) {
   floats.push_back(Double(456.456));
 
   // Create the values being tested (data type, [value])
-  std::map<std::string, std::vector<Double>> values;
+  std::map<std::string, std::vector<Double> > values;
   values.insert(std::make_pair("Decimal", decimals));
   values.insert(std::make_pair("Double", doubles));
   values.insert(std::make_pair("Float", floats));
 
   // Iterate over all the values and perform the test operations
-  for (std::map<std::string, std::vector<Double>>::iterator iterator = values.begin();
+  for (std::map<std::string, std::vector<Double> >::iterator iterator = values.begin();
        iterator != values.end(); ++iterator) {
     TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<Double>(iterator->first, iterator->second);
@@ -319,13 +319,13 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, IntegerSmallIntegerVarint) {
   small_integers.push_back(Integer(SmallInteger::min().value()));
 
   // Create the values being tested (data type, [value])
-  std::map<std::string, std::vector<Integer>> values;
+  std::map<std::string, std::vector<Integer> > values;
   values.insert(std::make_pair("Int", integers));
   values.insert(std::make_pair("Smallint", small_integers));
   values.insert(std::make_pair("Varint", integers));
 
   // Iterate over all the values and perform the test operations
-  for (std::map<std::string, std::vector<Integer>>::iterator iterator = values.begin();
+  for (std::map<std::string, std::vector<Integer> >::iterator iterator = values.begin();
        iterator != values.end(); ++iterator) {
     TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<Integer>(iterator->first, iterator->second);
@@ -394,7 +394,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
   uuids.push_back(uuid_generator_.generate_timeuuid().str());
 
   // Create the values being tested (data type, [value])
-  std::map<std::string, std::vector<std::string>> values;
+  std::map<std::string, std::vector<std::string> > values;
   values.insert(std::make_pair("Blob", blobs));
   values.insert(std::make_pair("Inet", inets));
   values.insert(std::make_pair("Uuid", uuids));
@@ -469,7 +469,7 @@ DSE_INTEGRATION_TEST_F(GraphDataTypeTest, StringResults) {
       std::make_pair("Timestamp", std::make_pair(timestamps, timestamps_expected)));
 
   // Iterate over all the values and perform the test operations
-  for (std::map<std::string, std::vector<std::string>>::iterator iterator = values.begin();
+  for (std::map<std::string, std::vector<std::string> >::iterator iterator = values.begin();
        iterator != values.end(); ++iterator) {
     TEST_LOG("Testing data type " << iterator->first);
     perform_data_type_test<std::string>(iterator->first, iterator->second);

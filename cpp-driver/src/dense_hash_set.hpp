@@ -14,9 +14,9 @@
 
 namespace datastax { namespace internal {
 
-template <class T, class HashFcn = SPARSEHASH_HASH<T>, class EqualKey = std::equal_to<T>>
+template <class T, class HashFcn = SPARSEHASH_HASH<T>, class EqualKey = std::equal_to<T> >
 class DenseHashSet
-    : public sparsehash::dense_hash_set<T, HashFcn, EqualKey, internal::Allocator<T>> {
+    : public sparsehash::dense_hash_set<T, HashFcn, EqualKey, internal::Allocator<T> > {
 public:
   typedef internal::Allocator<T> Allocator;
 

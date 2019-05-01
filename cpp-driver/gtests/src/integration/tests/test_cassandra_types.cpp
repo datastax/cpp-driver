@@ -278,7 +278,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullList) {
 
     // Bind the NULL collection and insert
     statement.bind<Integer>(0, Integer(i));
-    statement.bind<test::driver::List<TypeParam>>(1, value);
+    statement.bind<test::driver::List<TypeParam> >(1, value);
     this->session_.execute(statement);
 
     // Validate the insert and result
@@ -287,7 +287,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullList) {
     Result result = this->session_.execute(select_statement);
     ASSERT_EQ(1u, result.row_count());
     test::driver::List<TypeParam> select_value =
-        result.first_row().next().as<test::driver::List<TypeParam>>();
+        result.first_row().next().as<test::driver::List<TypeParam> >();
     ASSERT_EQ(value, select_value);
     ASSERT_TRUE(select_value.is_null());
   }
@@ -322,7 +322,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullMap) {
 
     // Bind the NULL collection and insert
     statement.bind<Integer>(0, Integer(i));
-    statement.bind<test::driver::Map<TypeParam, TypeParam>>(1, value);
+    statement.bind<test::driver::Map<TypeParam, TypeParam> >(1, value);
     this->session_.execute(statement);
 
     // Validate the insert and result
@@ -331,7 +331,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullMap) {
     Result result = this->session_.execute(select_statement);
     ASSERT_EQ(1u, result.row_count());
     test::driver::Map<TypeParam, TypeParam> select_value =
-        result.first_row().next().as<test::driver::Map<TypeParam, TypeParam>>();
+        result.first_row().next().as<test::driver::Map<TypeParam, TypeParam> >();
     ASSERT_EQ(value, select_value);
     ASSERT_TRUE(select_value.is_null());
   }
@@ -366,7 +366,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullSet) {
 
     // Bind the NULL collection and insert
     statement.bind<Integer>(0, Integer(i));
-    statement.bind<test::driver::Set<TypeParam>>(1, value);
+    statement.bind<test::driver::Set<TypeParam> >(1, value);
     this->session_.execute(statement);
 
     // Validate the insert and result
@@ -375,7 +375,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, BasicNullSet) {
     Result result = this->session_.execute(select_statement);
     ASSERT_EQ(1u, result.row_count());
     test::driver::Set<TypeParam> select_value =
-        result.first_row().next().as<test::driver::Set<TypeParam>>();
+        result.first_row().next().as<test::driver::Set<TypeParam> >();
     ASSERT_EQ(value, select_value);
     ASSERT_TRUE(select_value.is_null());
   }
@@ -411,23 +411,23 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, List) {
 
     // Bind both the primary key and the value with the Cassandra type list and insert
     if (this->is_key_allowed_) {
-      statement.bind<List<TypeParam>>(0, list);
+      statement.bind<List<TypeParam> >(0, list);
     } else {
       statement.bind<Integer>(0, Integer(i));
     }
-    statement.bind<List<TypeParam>>(1, list);
+    statement.bind<List<TypeParam> >(1, list);
     this->session_.execute(statement);
 
     // Validate the result
     Statement select_statement(this->select_query_, 1);
     if (this->is_key_allowed_) {
-      select_statement.bind<List<TypeParam>>(0, list);
+      select_statement.bind<List<TypeParam> >(0, list);
     } else {
       select_statement.bind<Integer>(0, Integer(i));
     }
     Result result = this->session_.execute(select_statement);
     ASSERT_EQ(1u, result.row_count());
-    List<TypeParam> result_list(result.first_row().next().as<List<TypeParam>>());
+    List<TypeParam> result_list(result.first_row().next().as<List<TypeParam> >());
     ASSERT_EQ(list.value(), result_list.value());
   }
 }
@@ -465,23 +465,23 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Set) {
 
     // Bind both the primary key and the value with the Cassandra type set and insert
     if (this->is_key_allowed_) {
-      statement.bind<Set<TypeParam>>(0, set);
+      statement.bind<Set<TypeParam> >(0, set);
     } else {
       statement.bind<Integer>(0, Integer(i));
     }
-    statement.bind<Set<TypeParam>>(1, set);
+    statement.bind<Set<TypeParam> >(1, set);
     this->session_.execute(statement);
 
     // Validate the result
     Statement select_statement(this->select_query_, 1);
     if (this->is_key_allowed_) {
-      select_statement.bind<Set<TypeParam>>(0, set);
+      select_statement.bind<Set<TypeParam> >(0, set);
     } else {
       select_statement.bind<Integer>(0, Integer(i));
     }
     Result result = this->session_.execute(select_statement);
     ASSERT_EQ(1u, result.row_count());
-    Set<TypeParam> result_set = result.first_row().next().as<Set<TypeParam>>();
+    Set<TypeParam> result_set = result.first_row().next().as<Set<TypeParam> >();
     ASSERT_EQ(set.value(), result_set.value());
   }
 }
@@ -524,17 +524,17 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Map) {
       Statement& statement = statements[i];
 
       // Bind both the primary key and the value with the Cassandra type map and insert
-      statement.bind<Map<TypeParam, TypeParam>>(0, map);
-      statement.bind<Map<TypeParam, TypeParam>>(1, map);
+      statement.bind<Map<TypeParam, TypeParam> >(0, map);
+      statement.bind<Map<TypeParam, TypeParam> >(1, map);
       this->session_.execute(statement);
 
       // Validate the result
       Statement select_statement(this->select_query_, 1);
-      select_statement.bind<Map<TypeParam, TypeParam>>(0, map);
+      select_statement.bind<Map<TypeParam, TypeParam> >(0, map);
       Result result = this->session_.execute(select_statement);
       ASSERT_EQ(1u, result.row_count());
       Column column = result.first_row().next();
-      Map<TypeParam, TypeParam> result_map(column.as<Map<TypeParam, TypeParam>>());
+      Map<TypeParam, TypeParam> result_map(column.as<Map<TypeParam, TypeParam> >());
       ASSERT_EQ(map_values, result_map.value());
     }
   } else {
@@ -559,7 +559,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Map) {
 
       // Bind both the primary key and the value with the Cassandra type map and insert
       statement.bind<Integer>(0, Integer(i));
-      statement.bind<Map<Integer, TypeParam>>(1, map);
+      statement.bind<Map<Integer, TypeParam> >(1, map);
       this->session_.execute(statement);
 
       // Validate the result
@@ -568,7 +568,7 @@ CASSANDRA_INTEGRATION_TYPED_TEST_P(CassandraTypesTest, Map) {
       Result result = this->session_.execute(select_statement);
       ASSERT_EQ(1u, result.row_count());
       Column column = result.first_row().next();
-      Map<Integer, TypeParam> result_map(column.as<Map<Integer, TypeParam>>());
+      Map<Integer, TypeParam> result_map(column.as<Map<Integer, TypeParam> >());
       ASSERT_EQ(map_values, result_map.value());
     }
   }
