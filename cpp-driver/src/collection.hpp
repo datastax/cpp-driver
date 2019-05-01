@@ -17,18 +17,19 @@
 #ifndef DATASTAX_INTERNAL_COLLECTION_HPP
 #define DATASTAX_INTERNAL_COLLECTION_HPP
 
+#include "buffer.hpp"
 #include "cassandra.h"
 #include "data_type.hpp"
 #include "encode.hpp"
 #include "external.hpp"
-#include "buffer.hpp"
 #include "ref_counted.hpp"
 #include "types.hpp"
 
-#define CASS_COLLECTION_CHECK_TYPE(Value) do { \
-  CassError rc = check(Value);                 \
-  if (rc != CASS_OK) return rc;                \
-} while(0)
+#define CASS_COLLECTION_CHECK_TYPE(Value) \
+  do {                                    \
+    CassError rc = check(Value);          \
+    if (rc != CASS_OK) return rc;         \
+  } while (0)
 
 namespace datastax { namespace internal { namespace core {
 
@@ -36,15 +37,13 @@ class UserTypeValue;
 
 class Collection : public RefCounted<Collection> {
 public:
-  Collection(CassCollectionType type,
-             size_t item_count)
-    : data_type_(new CollectionType(static_cast<CassValueType>(type), false)) {
+  Collection(CassCollectionType type, size_t item_count)
+      : data_type_(new CollectionType(static_cast<CassValueType>(type), false)) {
     items_.reserve(item_count);
   }
 
-  Collection(const CollectionType::ConstPtr& data_type,
-             size_t item_count)
-    : data_type_(data_type) {
+  Collection(const CollectionType::ConstPtr& data_type, size_t item_count)
+      : data_type_(data_type) {
     items_.reserve(item_count);
   }
 
@@ -94,9 +93,7 @@ public:
   Buffer encode() const;
   Buffer encode_with_length() const;
 
-  void clear() {
-    items_.clear();
-  }
+  void clear() { items_.clear(); }
 
 private:
   template <class T>
@@ -104,7 +101,7 @@ private:
     IsValidDataType<T> is_valid_type;
     size_t index = items_.size();
 
-    switch(type()) {
+    switch (type()) {
       case CASS_COLLECTION_TYPE_MAP:
         if (data_type_->types().size() == 2 &&
             !is_valid_type(value, data_type_->types()[index % 2])) {
@@ -114,8 +111,7 @@ private:
 
       case CASS_COLLECTION_TYPE_LIST:
       case CASS_COLLECTION_TYPE_SET:
-        if (data_type_->types().size() == 1 &&
-            !is_valid_type(value, data_type_->types()[0])) {
+        if (data_type_->types().size() == 1 && !is_valid_type(value, data_type_->types()[0])) {
           return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
         }
         break;
@@ -135,7 +131,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Collection);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::Collection, CassCollection)
 

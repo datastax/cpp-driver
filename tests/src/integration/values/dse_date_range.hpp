@@ -22,10 +22,7 @@
 #endif
 #endif
 
-namespace test {
-namespace driver {
-namespace values {
-namespace dse {
+namespace test { namespace driver { namespace values { namespace dse {
 
 /**
  * Internal helper functions for handling date/time stuff
@@ -124,9 +121,7 @@ public:
    *
    * @return An unbounded bound
    */
-  static DateRangeBound unbounded() {
-    return dse_date_range_bound_unbounded();
-  }
+  static DateRangeBound unbounded() { return dse_date_range_bound_unbounded(); }
 
   /**
    * Create a lower bound given a precision and date/time string. This rounds the date/time
@@ -168,7 +163,8 @@ private:
    *
    * @throw Exception if the format is valid for the provided precision
    */
-  static void from_string(DseDateRangePrecision precision, const std::string& str, struct tm* result) {
+  static void from_string(DseDateRangePrecision precision, const std::string& str,
+                          struct tm* result) {
     switch (precision) {
       case DSE_DATE_RANGE_PRECISION_YEAR:
         if (test::strptime(str.c_str(), "%Y", result) == NULL) {
@@ -276,7 +272,8 @@ private:
         rounded_tm.tm_hour = 23;
         rounded_tm.tm_min = 59;
         rounded_tm.tm_sec = 60;
-        rounded_tm.tm_mday = internal::max_days_in_month(rounded_tm.tm_mon, rounded_tm.tm_year + 1900);
+        rounded_tm.tm_mday =
+            internal::max_days_in_month(rounded_tm.tm_mon, rounded_tm.tm_year + 1900);
         break;
       case DSE_DATE_RANGE_PRECISION_DAY:
         rounded_tm.tm_hour = 23;
@@ -309,7 +306,7 @@ private:
    * @param time_ms
    */
   DateRangeBound(DseDateRangePrecision precision, cass_int64_t time_ms) {
-    this->precision  = precision;
+    this->precision = precision;
     this->time_ms = time_ms;
   }
 };
@@ -410,7 +407,7 @@ public:
   typedef DseDateRange ValueType;
 
   DateRange(const ConvenienceType& date_range)
-    : date_range_(date_range) { }
+      : date_range_(date_range) {}
 
   /**
    * Create a single date range
@@ -456,15 +453,11 @@ public:
    *                              string
    * @param upper_bound_date_time The upper date/time string
    */
-  DateRange(DseDateRangePrecision lower_bound_precision,
-            const std::string& lower_bound_date_time,
-            DseDateRangePrecision upper_bound_precision,
-            const std::string& upper_bound_date_time) {
+  DateRange(DseDateRangePrecision lower_bound_precision, const std::string& lower_bound_date_time,
+            DseDateRangePrecision upper_bound_precision, const std::string& upper_bound_date_time) {
     date_range_.is_single_date = cass_false;
-    date_range_.lower_bound = DateRangeBound::lower(lower_bound_precision,
-                                                    lower_bound_date_time);
-    date_range_.upper_bound = DateRangeBound::upper(upper_bound_precision,
-                                                    upper_bound_date_time);
+    date_range_.lower_bound = DateRangeBound::lower(lower_bound_precision, lower_bound_date_time);
+    date_range_.upper_bound = DateRangeBound::upper(upper_bound_precision, upper_bound_date_time);
   }
 
   /**
@@ -473,8 +466,7 @@ public:
    * @param collection
    */
   void append(Collection collection) {
-    ASSERT_EQ(CASS_OK, cass_collection_append_dse_date_range(collection.get(),
-                                                             &date_range_));
+    ASSERT_EQ(CASS_OK, cass_collection_append_dse_date_range(collection.get(), &date_range_));
   }
 
   /**
@@ -483,9 +475,8 @@ public:
    * @param rhs
    * @return -1 if less than, 1 if greater than, otherwise 0
    */
-  int compare(const DateRange &rhs) const {
-    int result = dse::compare(date_range_.lower_bound,
-                              rhs.date_range_.lower_bound);
+  int compare(const DateRange& rhs) const {
+    int result = dse::compare(date_range_.lower_bound, rhs.date_range_.lower_bound);
     if (result != 0) return result;
     if (date_range_.is_single_date) {
       return rhs.date_range_.is_single_date ? 0 : -1;
@@ -496,42 +487,32 @@ public:
     return dse::compare(date_range_.upper_bound, rhs.date_range_.upper_bound);
   }
 
-  std::string cql_type() const {
-    return "'DateRangeType'";
-  }
+  std::string cql_type() const { return "'DateRangeType'"; }
 
-  std::string cql_value() const {
-    return str();
-  }
+  std::string cql_value() const { return str(); }
 
   void initialize(const CassValue* value) {
     CassError error_code = cass_value_get_dse_date_range(value, &date_range_);
     ASSERT_EQ(CASS_OK, cass_value_get_dse_date_range(value, &date_range_))
-      << "Unable to Get DSE Date Range: Invalid error code returned "
-      << "[ " << cass_error_desc(error_code) << "]";
+        << "Unable to Get DSE Date Range: Invalid error code returned "
+        << "[ " << cass_error_desc(error_code) << "]";
   }
 
   void set(Tuple tuple, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_tuple_set_dse_date_range(tuple.get(),
-                                                     index,
-                                                     &date_range_));
+    ASSERT_EQ(CASS_OK, cass_tuple_set_dse_date_range(tuple.get(), index, &date_range_));
   }
 
   void set(UserType user_type, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_user_type_set_dse_date_range_by_name(user_type.get(),
-                                                                 name.c_str(),
+    ASSERT_EQ(CASS_OK, cass_user_type_set_dse_date_range_by_name(user_type.get(), name.c_str(),
                                                                  &date_range_));
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_date_range(statement.get(),
-                                                          index,
-                                                          &date_range_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_date_range(statement.get(), index, &date_range_));
   }
 
   void statement_bind(Statement statement, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_date_range_by_name(statement.get(),
-                                                                  name.c_str(),
+    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_date_range_by_name(statement.get(), name.c_str(),
                                                                   &date_range_));
   }
 
@@ -539,27 +520,17 @@ public:
     if (date_range_.is_single_date) {
       return dse::str(date_range_.lower_bound);
     } else {
-      return dse::str(date_range_.lower_bound) +
-             " TO " +
-             dse::str(date_range_.upper_bound);
+      return dse::str(date_range_.lower_bound) + " TO " + dse::str(date_range_.upper_bound);
     }
   }
 
-  static std::string supported_server_version() {
-    return "5.1.0";
-  }
+  static std::string supported_server_version() { return "5.1.0"; }
 
-  Native to_native() const {
-    return date_range_;
-  }
+  Native to_native() const { return date_range_; }
 
-  ValueType value() const {
-    return date_range_;
-  }
+  ValueType value() const { return date_range_; }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_CUSTOM;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_CUSTOM; }
 
 protected:
   /**
@@ -570,22 +541,15 @@ protected:
 
 typedef std::vector<DateRange> DateRangeVec;
 
-inline bool operator==(const DateRange& lhs, const DateRange& rhs) {
-  return lhs.compare(rhs) == 0;
-}
+inline bool operator==(const DateRange& lhs, const DateRange& rhs) { return lhs.compare(rhs) == 0; }
 
-inline bool operator<(const DateRange& lhs, const DateRange& rhs) {
-  return lhs.compare(rhs) < 0;
-}
+inline bool operator<(const DateRange& lhs, const DateRange& rhs) { return lhs.compare(rhs) < 0; }
 
 inline std::ostream& operator<<(std::ostream& os, const DateRange& date_range) {
   os << date_range.cql_value();
   return os;
 }
 
-} // namespace dse
-} // namespace values
-} // namespace driver
-} // namespace test
+}}}} // namespace test::driver::values::dse
 
 #endif // __TEST_DSE_DATE_RANGE_HPP__

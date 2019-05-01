@@ -14,14 +14,15 @@
   limitations under the License.
 */
 
-#include "test_utils.hpp"
 #include "cassandra.h"
+#include "test_utils.hpp"
 
 #include <boost/test/unit_test.hpp>
 
 struct HeartbestTest : public test_utils::MultipleNodesTest {
 public:
-  HeartbestTest() : MultipleNodesTest(2, 0) {}
+  HeartbestTest()
+      : MultipleNodesTest(2, 0) {}
 
   /**
    * Execute a select statement against the system tables for a specified amount

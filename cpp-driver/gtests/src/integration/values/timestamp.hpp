@@ -25,9 +25,7 @@
 #undef max
 #endif
 
-namespace test {
-namespace driver {
-namespace values {
+namespace test { namespace driver { namespace values {
 
 /**
  * Timestamp wrapped value
@@ -36,14 +34,12 @@ class Timestamp : public BigInteger {
 public:
   using BigInteger::compare;
 
-  Timestamp() { }
+  Timestamp() {}
 
   Timestamp(const ConvenienceType integer)
-    : BigInteger(integer) { }
+      : BigInteger(integer) {}
 
-  std::string cql_type() const {
-    return "timestamp";
-  }
+  std::string cql_type() const { return "timestamp"; }
 
   /**
    * Comparison operation for driver time
@@ -51,31 +47,20 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Timestamp& rhs) const {
-    return compare(rhs.integer_);
-  }
+  int compare(const Timestamp& rhs) const { return compare(rhs.integer_); }
 
-  static Timestamp max() {
-    return Timestamp(std::numeric_limits<cass_int64_t>::max());
-  }
+  static Timestamp max() { return Timestamp(std::numeric_limits<cass_int64_t>::max()); }
 
-  static Timestamp min() {
-    return Timestamp(std::numeric_limits<cass_int64_t>::min());
-  }
+  static Timestamp min() { return Timestamp(std::numeric_limits<cass_int64_t>::min()); }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_TIMESTAMP;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_TIMESTAMP; }
 };
 
-inline std::ostream& operator<<(std::ostream& output_stream,
-                                const Timestamp& value) {
+inline std::ostream& operator<<(std::ostream& output_stream, const Timestamp& value) {
   output_stream << value.cql_value();
   return output_stream;
 }
 
-} // namespace values
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::values
 
 #endif // __TEST_TIMESTAMP_HPP__

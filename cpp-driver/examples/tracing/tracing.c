@@ -25,8 +25,8 @@
   For more information, please refer to <http://unlicense.org/>
 */
 
-#include <stdio.h>
 #include <cassandra.h>
+#include <stdio.h>
 
 void print_error(const char* context, CassFuture* future) {
   const char* message;
@@ -35,9 +35,7 @@ void print_error(const char* context, CassFuture* future) {
   fprintf(stderr, "%s: %.*s\n", context, (int)message_length, message);
 }
 
-const CassResult* run_tracing_query(CassSession* session,
-                                    const char* query,
-                                    CassUuid tracing_id) {
+const CassResult* run_tracing_query(CassSession* session, const char* query, CassUuid tracing_id) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
   const CassResult* result = NULL;
@@ -74,8 +72,7 @@ void print_tracing_data(CassSession* session, CassFuture* future) {
   /* Query the tracing tables using the retrieved tracing ID */
 
   /* Get information for the tracing session */
-  result = run_tracing_query(session,
-                             "SELECT * FROM system_traces.sessions WHERE session_id = ?",
+  result = run_tracing_query(session, "SELECT * FROM system_traces.sessions WHERE session_id = ?",
                              tracing_id);
 
   if (result) {
@@ -86,13 +83,10 @@ void print_tracing_data(CassSession* session, CassFuture* future) {
       const CassRow* row = cass_result_first_row(result);
 
       /* Get the command type that was run and how long it took */
-      cass_value_get_string(cass_row_get_column_by_name(row, "command"),
-                            &command, &command_length);
-      cass_value_get_int32(cass_row_get_column_by_name(row, "duration"),
-                           &duration);
+      cass_value_get_string(cass_row_get_column_by_name(row, "command"), &command, &command_length);
+      cass_value_get_int32(cass_row_get_column_by_name(row, "duration"), &duration);
 
-      printf("Request command \"%.*s\" took %f milliseconds:\n",
-             (int)command_length, command,
+      printf("Request command \"%.*s\" took %f milliseconds:\n", (int)command_length, command,
              duration / 1000.0);
     }
 
@@ -100,8 +94,7 @@ void print_tracing_data(CassSession* session, CassFuture* future) {
   }
 
   /* Get the events that happened during the tracing session */
-  result = run_tracing_query(session,
-                             "SELECT * FROM system_traces.events WHERE session_id = ?",
+  result = run_tracing_query(session, "SELECT * FROM system_traces.events WHERE session_id = ?",
                              tracing_id);
 
   if (result) {
@@ -120,18 +113,14 @@ void print_tracing_data(CassSession* session, CassFuture* future) {
         /* Get the activity for the event which host happened on, and how long
          * it took.
          */
-        cass_value_get_string(cass_row_get_column_by_name(row, "activity"),
-                              &activity, &activity_length);
-        cass_value_get_inet(cass_row_get_column_by_name(row, "source"),
-                            &source);
-        cass_value_get_int32(cass_row_get_column_by_name(row, "source_elapsed"),
-                             &source_elapsed);
+        cass_value_get_string(cass_row_get_column_by_name(row, "activity"), &activity,
+                              &activity_length);
+        cass_value_get_inet(cass_row_get_column_by_name(row, "source"), &source);
+        cass_value_get_int32(cass_row_get_column_by_name(row, "source_elapsed"), &source_elapsed);
 
         cass_inet_string(source, source_str);
-        printf("%2d) Event on host %s (%f milliseconds): \"%.*s\"\n",
-               event_count++,
-               source_str, source_elapsed / 1000.0,
-               (int)activity_length, activity);
+        printf("%2d) Event on host %s (%f milliseconds): \"%.*s\"\n", event_count++, source_str,
+               source_elapsed / 1000.0, (int)activity_length, activity);
       }
 
       cass_iterator_free(iterator);
@@ -181,8 +170,7 @@ int main(int argc, char* argv[]) {
         const char* release_version;
         size_t release_version_length;
         cass_value_get_string(value, &release_version, &release_version_length);
-        printf("release_version: '%.*s'\n", (int)release_version_length,
-               release_version);
+        printf("release_version: '%.*s'\n", (int)release_version_length, release_version);
       } else {
         printf("No rows returned\n");
       }

@@ -26,6 +26,6 @@ inline Bytes encode_point(cass_double_t x, cass_double_t y) {
   return bytes;
 }
 
-} } } // namespace datastax::internal::enterprise
+}}} // namespace datastax::internal::enterprise
 
 #endif

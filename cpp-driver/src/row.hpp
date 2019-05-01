@@ -29,10 +29,10 @@ class ResultResponse;
 class Row {
 public:
   Row()
-    : result_(NULL) {}
+      : result_(NULL) {}
 
   Row(const ResultResponse* result)
-    : result_(result) {}
+      : result_(result) {}
 
   OutputValueVec values;
 
@@ -48,10 +48,9 @@ private:
   const ResultResponse* result_;
 };
 
-bool decode_row(Decoder& decoder, const ResultResponse* result,
-                OutputValueVec& output);
+bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& output);
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::Row, CassRow)
 

@@ -24,11 +24,11 @@
 #include "serialization.hpp"
 #include "supported_response.hpp"
 
-#include "request.hpp"
 #include "auth_requests.hpp"
 #include "options_request.hpp"
 #include "query_request.hpp"
 #include "register_request.hpp"
+#include "request.hpp"
 #include "startup_request.hpp"
 
 #include "response.hpp"
@@ -46,8 +46,7 @@ namespace datastax { namespace internal { namespace core {
  */
 class StartupCallback : public SimpleRequestCallback {
 public:
-  StartupCallback(Connector* connector,
-                  const Request::ConstPtr& request);
+  StartupCallback(Connector* connector, const Request::ConstPtr& request);
 
 private:
   virtual void on_internal_set(ResponseMessage* response);
@@ -60,11 +59,11 @@ private:
   Connector* connector_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 StartupCallback::StartupCallback(Connector* connector, const Request::ConstPtr& request)
-  : SimpleRequestCallback(request, connector->settings_.connect_timeout_ms)
-  , connector_(connector) { }
+    : SimpleRequestCallback(request, connector->settings_.connect_timeout_ms)
+    , connector_(connector) {}
 
 void StartupCallback::on_internal_set(ResponseMessage* response) {
   switch (response->opcode()) {
@@ -75,8 +74,7 @@ void StartupCallback::on_internal_set(ResponseMessage* response) {
 #endif
 
     case CQL_OPCODE_ERROR: {
-      ErrorResponse* error
-          = static_cast<ErrorResponse*>(response->response_body().get());
+      ErrorResponse* error = static_cast<ErrorResponse*>(response->response_body().get());
       Connector::ConnectionError error_code = Connector::CONNECTION_ERROR_RESPONSE;
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
           error->message().find("Invalid or unsupported protocol version") != StringRef::npos) {
@@ -93,22 +91,22 @@ void StartupCallback::on_internal_set(ResponseMessage* response) {
     }
 
     case CQL_OPCODE_AUTHENTICATE: {
-      AuthenticateResponse* auth
-          = static_cast<AuthenticateResponse*>(response->response_body().get());
+      AuthenticateResponse* auth =
+          static_cast<AuthenticateResponse*>(response->response_body().get());
       connector_->on_authenticate(auth->class_name());
       break;
     }
 
     case CQL_OPCODE_AUTH_CHALLENGE:
       connector_->on_auth_challenge(
-            static_cast<const AuthResponseRequest*>(request()),
-            static_cast<AuthChallengeResponse*>(response->response_body().get())->token());
+          static_cast<const AuthResponseRequest*>(request()),
+          static_cast<AuthChallengeResponse*>(response->response_body().get())->token());
       break;
 
     case CQL_OPCODE_AUTH_SUCCESS:
       connector_->on_auth_success(
-            static_cast<const AuthResponseRequest*>(request()),
-            static_cast<AuthSuccessResponse*>(response->response_body().get())->token());
+          static_cast<const AuthResponseRequest*>(request()),
+          static_cast<AuthSuccessResponse*>(response->response_body().get())->token());
       break;
 
     case CQL_OPCODE_READY:
@@ -127,13 +125,12 @@ void StartupCallback::on_internal_set(ResponseMessage* response) {
 
 void StartupCallback::on_internal_error(CassError code, const String& message) {
   // Ignore timeouts caused by the connection closing
-  if (connector_->connection_->is_closing() &&
-      code == CASS_ERROR_LIB_REQUEST_TIMED_OUT) {
+  if (connector_->connection_->is_closing() && code == CASS_ERROR_LIB_REQUEST_TIMED_OUT) {
     return;
   }
   OStringStream ss;
-  ss << "Error: '" << message
-     << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
+  ss << "Error: '" << message << "' (0x" << std::hex << std::uppercase << std::setw(8)
+     << std::setfill('0') << code << ")";
   connector_->on_error(Connector::CONNECTION_ERROR_INTERNAL, ss.str());
 }
 
@@ -142,8 +139,7 @@ void StartupCallback::on_internal_timeout() {
 }
 
 void StartupCallback::on_result_response(ResponseMessage* response) {
-  ResultResponse* result =
-      static_cast<ResultResponse*>(response->response_body().get());
+  ResultResponse* result = static_cast<ResultResponse*>(response->response_body().get());
   switch (result->kind()) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
       connector_->finish();
@@ -156,36 +152,34 @@ void StartupCallback::on_result_response(ResponseMessage* response) {
 }
 
 ConnectionSettings::ConnectionSettings()
-  : connect_timeout_ms(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
-  , auth_provider(new AuthProvider())
-  , idle_timeout_secs(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
-  , heartbeat_interval_secs(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
-  , no_compact(CASS_DEFAULT_NO_COMPACT) { }
+    : connect_timeout_ms(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
+    , auth_provider(new AuthProvider())
+    , idle_timeout_secs(CASS_DEFAULT_IDLE_TIMEOUT_SECS)
+    , heartbeat_interval_secs(CASS_DEFAULT_HEARTBEAT_INTERVAL_SECS)
+    , no_compact(CASS_DEFAULT_NO_COMPACT) {}
 
 ConnectionSettings::ConnectionSettings(const Config& config)
-  : socket_settings(config)
-  , connect_timeout_ms(config.connect_timeout_ms())
-  , auth_provider(config.auth_provider())
-  , idle_timeout_secs(config.connection_idle_timeout_secs())
-  , heartbeat_interval_secs(config.connection_heartbeat_interval_secs())
-  , no_compact(config.no_compact())
-  , application_name(config.application_name())
-  , application_version(config.application_version()) { }
+    : socket_settings(config)
+    , connect_timeout_ms(config.connect_timeout_ms())
+    , auth_provider(config.auth_provider())
+    , idle_timeout_secs(config.connection_idle_timeout_secs())
+    , heartbeat_interval_secs(config.connection_heartbeat_interval_secs())
+    , no_compact(config.no_compact())
+    , application_name(config.application_name())
+    , application_version(config.application_version()) {}
 
-Connector::Connector(const Host::Ptr& host,
-                     ProtocolVersion protocol_version,
+Connector::Connector(const Host::Ptr& host, ProtocolVersion protocol_version,
                      const Callback& callback)
-  : callback_(callback)
-  , loop_(NULL)
-  , host_(host)
-  , socket_connector_(
-      new SocketConnector(host->address(),
-                          bind_callback(&Connector::on_connect, this)))
-  , error_code_(CONNECTION_OK)
-  , protocol_version_(protocol_version)
-  , event_types_(0)
-  , listener_(NULL)
-  , metrics_(NULL) { }
+    : callback_(callback)
+    , loop_(NULL)
+    , host_(host)
+    , socket_connector_(
+          new SocketConnector(host->address(), bind_callback(&Connector::on_connect, this)))
+    , error_code_(CONNECTION_OK)
+    , protocol_version_(protocol_version)
+    , event_types_(0)
+    , listener_(NULL)
+    , metrics_(NULL) {}
 
 Connector* Connector::with_keyspace(const String& keyspace) {
   keyspace_ = keyspace;
@@ -211,21 +205,18 @@ Connector* Connector::with_settings(const ConnectionSettings& settings) {
   settings_ = settings;
   // Only use hostname resolution if actually required for SSL or
   // authentication.
-  settings_.socket_settings.hostname_resolution_enabled
-      = settings.socket_settings.hostname_resolution_enabled &&
-        (settings.auth_provider || settings.socket_settings.ssl_context);
+  settings_.socket_settings.hostname_resolution_enabled =
+      settings.socket_settings.hostname_resolution_enabled &&
+      (settings.auth_provider || settings.socket_settings.ssl_context);
   return this;
 }
 
 void Connector::connect(uv_loop_t* loop) {
   inc_ref(); // For the event loop
   loop_ = loop;
-  socket_connector_
-      ->with_settings(settings_.socket_settings)
-      ->connect(loop);
+  socket_connector_->with_settings(settings_.socket_settings)->connect(loop);
   if (settings_.connect_timeout_ms > 0) {
-    timer_.start(loop, settings_.connect_timeout_ms,
-                 bind_callback(&Connector::on_timeout, this));
+    timer_.start(loop, settings_.connect_timeout_ms, bind_callback(&Connector::on_timeout, this));
   }
 }
 
@@ -259,8 +250,7 @@ void Connector::finish() {
 void Connector::on_error(ConnectionError code, const String& message) {
   assert(code != CONNECTION_OK && "Notified error without an error");
   LOG_DEBUG("Unable to connect to host %s because of the following error: %s",
-            address().to_string().c_str(),
-            message.c_str());
+            address().to_string().c_str(), message.c_str());
   if (error_code_ == CONNECTION_OK) { // Only perform this once
     error_message_ = message;
     error_code_ = code;
@@ -273,21 +263,15 @@ void Connector::on_ready_or_set_keyspace() {
   if (keyspace_.empty()) {
     finish();
   } else {
-    connection_->write_and_flush(
-          RequestCallback::Ptr(
-            new StartupCallback(this,
-                                Request::ConstPtr(
-                                  new QueryRequest("USE " + keyspace_)))));
+    connection_->write_and_flush(RequestCallback::Ptr(
+        new StartupCallback(this, Request::ConstPtr(new QueryRequest("USE " + keyspace_)))));
   }
 }
 
 void Connector::on_ready_or_register_for_events() {
   if (event_types_ != 0) {
-    connection_->write_and_flush(
-          RequestCallback::Ptr(
-            new StartupCallback(this,
-                                Request::ConstPtr(
-                                  new RegisterRequest(event_types_)))));
+    connection_->write_and_flush(RequestCallback::Ptr(
+        new StartupCallback(this, Request::ConstPtr(new RegisterRequest(event_types_)))));
     // REGISTER requests also returns a READY response so this needs to be reset
     // to prevent a loop.
     event_types_ = 0;
@@ -301,27 +285,21 @@ void Connector::on_ready_or_register_for_events() {
 // options for at least compression, but likely other things too.
 #ifdef CASS_USE_OPTIONS
 void ConnectionConnector::on_supported(ResponseMessage* response) {
-  SupportedResponse* supported =
-      static_cast<SupportedResponse*>(response->response_body().get());
+  SupportedResponse* supported = static_cast<SupportedResponse*>(response->response_body().get());
 
   // TODO: Do something with the supported info
   (void)supported;
 
-  connection_->write_and_flush(
-        RequestCallback::Ptr(
-          new StartupCallback(this,
-                              Request::ConstPtr(
-                                new StartupRequest(settings_.application_name,
-                                                   settings_.application_version,
-                                                   settings_.client_id,
-                                                   settings_.no_compact)))));
+  connection_->write_and_flush(RequestCallback::Ptr(new StartupCallback(
+      this, Request::ConstPtr(new StartupRequest(settings_.application_name,
+                                                 settings_.application_version, settings_.client_id,
+                                                 settings_.no_compact)))));
 }
 #endif
 
 void Connector::on_authenticate(const String& class_name) {
-  Authenticator::Ptr auth(settings_.auth_provider->new_authenticator(socket_connector_->address(),
-                                                                     socket_connector_->hostname(),
-                                                                     class_name));
+  Authenticator::Ptr auth(settings_.auth_provider->new_authenticator(
+      socket_connector_->address(), socket_connector_->hostname(), class_name));
   if (!auth) {
     on_error(CONNECTION_ERROR_AUTH, "Authentication required but no auth provider set");
   } else {
@@ -330,25 +308,20 @@ void Connector::on_authenticate(const String& class_name) {
       on_error(CONNECTION_ERROR_AUTH, "Failed creating initial response token: " + auth->error());
       return;
     }
-    connection_->write_and_flush(
-          RequestCallback::Ptr(
-            new StartupCallback(this,
-                                Request::ConstPtr(
-                                  new AuthResponseRequest(response, auth)))));
+    connection_->write_and_flush(RequestCallback::Ptr(
+        new StartupCallback(this, Request::ConstPtr(new AuthResponseRequest(response, auth)))));
   }
 }
 
 void Connector::on_auth_challenge(const AuthResponseRequest* request, const String& token) {
   String response;
   if (!request->auth()->evaluate_challenge(token, &response)) {
-    on_error(CONNECTION_ERROR_AUTH, "Failed evaluating challenge token: " + request->auth()->error());
+    on_error(CONNECTION_ERROR_AUTH,
+             "Failed evaluating challenge token: " + request->auth()->error());
     return;
   }
-  connection_->write_and_flush(
-        RequestCallback::Ptr(
-          new StartupCallback(this,
-                              Request::ConstPtr(
-                                new AuthResponseRequest(response, request->auth())))));
+  connection_->write_and_flush(RequestCallback::Ptr(new StartupCallback(
+      this, Request::ConstPtr(new AuthResponseRequest(response, request->auth())))));
 }
 
 void Connector::on_auth_success(const AuthResponseRequest* request, const String& token) {
@@ -371,38 +344,25 @@ void Connector::on_connect(SocketConnector* socket_connector) {
   if (socket_connector->is_ok()) {
     Socket::Ptr socket(socket_connector->release_socket());
 
-    connection_.reset(new Connection(socket,
-                                     host_,
-                                     protocol_version_,
-                                     settings_.idle_timeout_secs,
+    connection_.reset(new Connection(socket, host_, protocol_version_, settings_.idle_timeout_secs,
                                      settings_.heartbeat_interval_secs));
     connection_->set_listener(this);
 
     if (socket_connector->ssl_session()) {
       socket->set_handler(
-            new SslConnectionHandler(
-              socket_connector->ssl_session().release(),
-              connection_.get()));
+          new SslConnectionHandler(socket_connector->ssl_session().release(), connection_.get()));
     } else {
-      socket->set_handler(
-            new ConnectionHandler(connection_.get()));
+      socket->set_handler(new ConnectionHandler(connection_.get()));
     }
 
 #ifdef CASS_USE_OPTIONS
     connection_->write_and_flush(
-          RequestCallback::Ptr(
-            new StartupCallback(this,
-                                Request::ConstPtr(
-                                  new OptionsRequest()))));
+        RequestCallback::Ptr(new StartupCallback(this, Request::ConstPtr(new OptionsRequest()))));
 #else
-    connection_->write_and_flush(
-          RequestCallback::Ptr(
-            new StartupCallback(this,
-                                Request::ConstPtr(
-                                  new StartupRequest(settings_.application_name,
-                                                     settings_.application_version,
-                                                     settings_.client_id,
-                                                     settings_.no_compact)))));
+    connection_->write_and_flush(RequestCallback::Ptr(new StartupCallback(
+        this, Request::ConstPtr(new StartupRequest(settings_.application_name,
+                                                   settings_.application_version,
+                                                   settings_.client_id, settings_.no_compact)))));
 #endif
   } else if (socket_connector->is_canceled() || is_timeout_error()) {
     finish();

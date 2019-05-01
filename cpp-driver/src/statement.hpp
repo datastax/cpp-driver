@@ -34,16 +34,17 @@ namespace datastax { namespace internal { namespace core {
 
 class RequestCallback;
 
-class Statement : public RoutableRequest, public AbstractData {
+class Statement
+    : public RoutableRequest
+    , public AbstractData {
 public:
   typedef SharedRefPtr<Statement> Ptr;
 
-  Statement(const char* query, size_t query_length,
-            size_t values_count);
+  Statement(const char* query, size_t query_length, size_t values_count);
 
   Statement(const Prepared* prepared);
 
-  virtual ~Statement() { }
+  virtual ~Statement() {}
 
   // Used to get the original query string from a simple statement. To get the
   // query from a execute request (bound statement) cast it and get it from the
@@ -58,9 +59,7 @@ public:
     }
   }
 
-  bool has_names_for_values() const {
-    return flags_ & CASS_QUERY_FLAG_NAMES_FOR_VALUES;
-  }
+  bool has_names_for_values() const { return flags_ & CASS_QUERY_FLAG_NAMES_FOR_VALUES; }
 
   int32_t page_size() const { return page_size_; }
 
@@ -68,13 +67,10 @@ public:
 
   const String& paging_state() const { return paging_state_; }
 
-  void set_paging_state(const String& paging_state) {
-    paging_state_ = paging_state;
-  }
+  void set_paging_state(const String& paging_state) { paging_state_ = paging_state; }
 
   uint8_t kind() const {
-    return opcode() == CQL_OPCODE_QUERY ? CASS_BATCH_KIND_QUERY
-                                        : CASS_BATCH_KIND_PREPARED;
+    return opcode() == CQL_OPCODE_QUERY ? CASS_BATCH_KIND_QUERY : CASS_BATCH_KIND_PREPARED;
   }
 
   void add_key_index(size_t index) { key_indices_.push_back(index); }
@@ -89,8 +85,8 @@ protected:
   bool with_keyspace(ProtocolVersion version) const;
 
   int32_t encode_query_or_id(BufferVec* bufs) const;
-  int32_t encode_begin(ProtocolVersion version, uint16_t element_count,
-                       RequestCallback* callback, BufferVec* bufs) const;
+  int32_t encode_begin(ProtocolVersion version, uint16_t element_count, RequestCallback* callback,
+                       BufferVec* bufs) const;
   int32_t encode_values(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
   int32_t encode_end(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
@@ -107,7 +103,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Statement);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::Statement, CassStatement)
 

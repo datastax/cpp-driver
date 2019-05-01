@@ -21,8 +21,7 @@
 
 #include <uv.h>
 
-#define SELECT_TRACES_SESSION \
-  "SELECT session_id FROM system_traces.sessions WHERE session_id = ?"
+#define SELECT_TRACES_SESSION "SELECT session_id FROM system_traces.sessions WHERE session_id = ?"
 
 namespace datastax { namespace internal { namespace core {
 
@@ -47,12 +46,9 @@ public:
    * @param retry_wait_time_ms The amount of time to wait between failed attempts
    * to retrieve tracing data.
    */
-  TracingDataHandler(const RequestHandler::Ptr& request_handler,
-                     const Host::Ptr& current_host,
-                     const Response::Ptr& response,
-                     CassConsistency consistency,
-                     uint64_t max_wait_time_ms,
-                     uint64_t retry_wait_time_ms);
+  TracingDataHandler(const RequestHandler::Ptr& request_handler, const Host::Ptr& current_host,
+                     const Response::Ptr& response, CassConsistency consistency,
+                     uint64_t max_wait_time_ms, uint64_t retry_wait_time_ms);
 
   /**
    * Gets a request callback for executing queries on behalf of the handler.
@@ -69,6 +65,6 @@ private:
   CassConsistency consistency_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

@@ -7,12 +7,12 @@
 
 #include <gtest/gtest.h>
 
-#include "dse.h"
 #include "decoder.hpp"
+#include "dse.h"
 #include "line_string.hpp"
 
-#include <value.hpp>
 #include <data_type.hpp>
+#include <value.hpp>
 
 #define RESET_ITERATOR_WITH(x) iterator.reset_text((x), strlen((x)))
 
@@ -22,18 +22,14 @@ using namespace datastax::internal::enterprise;
 
 class LineStringUnitTest : public testing::Test {
 public:
-  void SetUp() {
-    line_string = dse_line_string_new();
-  }
+  void SetUp() { line_string = dse_line_string_new(); }
 
-  void TearDown() {
-    dse_line_string_free(line_string);
-  }
+  void TearDown() { dse_line_string_free(line_string); }
 
   const CassValue* to_value() {
     char* data = const_cast<char*>(reinterpret_cast<const char*>(line_string->bytes().data()));
-    value =  Value(DataType::ConstPtr(new CustomType(DSE_LINE_STRING_TYPE)),
-                         Decoder(data, line_string->bytes().size(), 0)); // Protocol version not used
+    value = Value(DataType::ConstPtr(new CustomType(DSE_LINE_STRING_TYPE)),
+                  Decoder(data, line_string->bytes().size(), 0)); // Protocol version not used
     return CassValue::to(&value);
   }
 
@@ -64,13 +60,16 @@ TEST_F(LineStringUnitTest, BinaryMultiple) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(0.0, x); ASSERT_EQ(1.0, y);
+  ASSERT_EQ(0.0, x);
+  ASSERT_EQ(1.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(2.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(2.0, x);
+  ASSERT_EQ(3.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(4.0, x); ASSERT_EQ(5.0, y);
+  ASSERT_EQ(4.0, x);
+  ASSERT_EQ(5.0, y);
 }
 
 TEST_F(LineStringUnitTest, TextMissingY) {
@@ -95,7 +94,8 @@ TEST_F(LineStringUnitTest, TextJunkAfterLineString) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
+  ASSERT_EQ(1.0, x);
+  ASSERT_EQ(2.0, y);
 }
 
 TEST_F(LineStringUnitTest, TextJunkAfterEmptyLineString) {
@@ -122,7 +122,8 @@ TEST_F(LineStringUnitTest, TextSingle) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(0.0, x); ASSERT_EQ(1.0, y);
+  ASSERT_EQ(0.0, x);
+  ASSERT_EQ(1.0, y);
 }
 
 TEST_F(LineStringUnitTest, TextMultiple) {
@@ -138,13 +139,16 @@ TEST_F(LineStringUnitTest, TextMultiple) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(0.0, x); ASSERT_EQ(1.0, y);
+  ASSERT_EQ(0.0, x);
+  ASSERT_EQ(1.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(2.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(2.0, x);
+  ASSERT_EQ(3.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(4.0, x); ASSERT_EQ(5.0, y);
+  ASSERT_EQ(4.0, x);
+  ASSERT_EQ(5.0, y);
 }
 
 TEST_F(LineStringUnitTest, TextPrecision) {
@@ -158,7 +162,8 @@ TEST_F(LineStringUnitTest, TextPrecision) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(0.0001, x); ASSERT_EQ(0.012345678901234567, y);
+  ASSERT_EQ(0.0001, x);
+  ASSERT_EQ(0.012345678901234567, y);
 }
 
 TEST_F(LineStringUnitTest, TextLeadingSpace) {
@@ -167,7 +172,8 @@ TEST_F(LineStringUnitTest, TextLeadingSpace) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(1.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(1.0, x);
+  ASSERT_EQ(3.0, y);
 }
 
 TEST_F(LineStringUnitTest, TextTrailingSpace) {
@@ -176,5 +182,6 @@ TEST_F(LineStringUnitTest, TextTrailingSpace) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(1.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(1.0, x);
+  ASSERT_EQ(3.0, y);
 }

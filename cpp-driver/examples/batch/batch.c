@@ -26,15 +26,15 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cassandra.h"
 
 struct Pair_ {
-    const char* key;
-    const char* value;
+  const char* key;
+  const char* value;
 };
 
 typedef struct Pair_ Pair;
@@ -105,7 +105,8 @@ CassError prepare_insert_into_batch(CassSession* session, const CassPrepared** p
   return rc;
 }
 
-CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepared* prepared, const Pair* pairs) {
+CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepared* prepared,
+                                          const Pair* pairs) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
   CassBatch* batch = cass_batch_new(CASS_BATCH_TYPE_LOGGED);
@@ -120,13 +121,15 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
   }
 
   {
-    CassStatement* statement = cass_statement_new("INSERT INTO examples.pairs (key, value) VALUES ('c', '3')", 0);
+    CassStatement* statement =
+        cass_statement_new("INSERT INTO examples.pairs (key, value) VALUES ('c', '3')", 0);
     cass_batch_add_statement(batch, statement);
     cass_statement_free(statement);
   }
 
   {
-    CassStatement* statement = cass_statement_new("INSERT INTO examples.pairs (key, value) VALUES (?, ?)", 2);
+    CassStatement* statement =
+        cass_statement_new("INSERT INTO examples.pairs (key, value) VALUES (?, ?)", 2);
     cass_statement_bind_string(statement, 0, "d");
     cass_statement_bind_string(statement, 1, "4");
     cass_batch_add_statement(batch, statement);
@@ -147,14 +150,13 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
   return rc;
 }
 
-
 int main(int argc, char* argv[]) {
   CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
   const CassPrepared* prepared = NULL;
   char* hosts = "127.0.0.1";
 
-  Pair pairs[] = { {"a", "1"}, {"b", "2"}, { NULL, NULL} };
+  Pair pairs[] = { { "a", "1" }, { "b", "2" }, { NULL, NULL } };
 
   if (argc > 1) {
     hosts = argv[1];
@@ -167,13 +169,10 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { \
+  execute_query(session, "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' };");
 
-
-  execute_query(session,
-                "CREATE TABLE examples.pairs (key text, \
+  execute_query(session, "CREATE TABLE examples.pairs (key text, \
                                               value text, \
                                               PRIMARY KEY (key));");
 

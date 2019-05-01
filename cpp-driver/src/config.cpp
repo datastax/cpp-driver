@@ -20,8 +20,7 @@ using namespace datastax::internal::core;
 
 void Config::init_profiles() {
   // Initialize the profile settings (if needed)
-  for (ExecutionProfile::Map::iterator it = profiles_.begin();
-        it != profiles_.end(); ++it) {
+  for (ExecutionProfile::Map::iterator it = profiles_.begin(); it != profiles_.end(); ++it) {
     if (it->second.consistency() == CASS_CONSISTENCY_UNKNOWN) {
       it->second.set_consistency(default_profile_.consistency());
     }
@@ -39,7 +38,8 @@ void Config::init_profiles() {
     }
 
     if (!it->second.speculative_execution_policy()) {
-      it->second.set_speculative_execution_policy(default_profile_.speculative_execution_policy()->new_instance());
+      it->second.set_speculative_execution_policy(
+          default_profile_.speculative_execution_policy()->new_instance());
     }
   }
 }

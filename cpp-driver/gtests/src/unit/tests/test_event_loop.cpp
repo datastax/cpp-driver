@@ -28,51 +28,49 @@ public:
   class MarkTaskCompleted : public Task {
   public:
     MarkTaskCompleted(EventLoopUnitTest* event_loop_unit_test)
-      : event_loop_unit_test_(event_loop_unit_test) { }
-    virtual void run(EventLoop* event_loop) {
-      event_loop_unit_test_->mark_task_completed();
-    }
+        : event_loop_unit_test_(event_loop_unit_test) {}
+    virtual void run(EventLoop* event_loop) { event_loop_unit_test_->mark_task_completed(); }
+
   private:
     EventLoopUnitTest* event_loop_unit_test_;
   };
 
   class MarkIsRunningOn : public Task {
   public:
-    MarkIsRunningOn(EventLoopUnitTest* event_loop_unit_test,
-                    EventLoop* event_loop)
-      : event_loop_unit_test_(event_loop_unit_test)
-      , event_loop_(event_loop) { }
+    MarkIsRunningOn(EventLoopUnitTest* event_loop_unit_test, EventLoop* event_loop)
+        : event_loop_unit_test_(event_loop_unit_test)
+        , event_loop_(event_loop) {}
     virtual void run(EventLoop* event_loop) {
       event_loop_unit_test_->set_is_running_on(event_loop_->is_running_on());
     }
+
   private:
-    EventLoopUnitTest * event_loop_unit_test_;
+    EventLoopUnitTest* event_loop_unit_test_;
     EventLoop* event_loop_;
   };
 
   class StartIoTime : public Task {
   public:
-    virtual void run(EventLoop* event_loop) {
-      event_loop->maybe_start_io_time();
-    }
+    virtual void run(EventLoop* event_loop) { event_loop->maybe_start_io_time(); }
   };
 
   class SetIoTimeElapsed : public Task {
   public:
     SetIoTimeElapsed(EventLoopUnitTest* event_loop_unit_test)
-      : event_loop_unit_test_(event_loop_unit_test) { }
+        : event_loop_unit_test_(event_loop_unit_test) {}
     virtual void run(EventLoop* event_loop) {
       event_loop_unit_test_->set_io_time_elapsed(event_loop->io_time_elapsed());
     }
+
   private:
-    EventLoopUnitTest * event_loop_unit_test_;
+    EventLoopUnitTest* event_loop_unit_test_;
   };
 
 public:
   EventLoopUnitTest()
-    : is_task_completed_(false)
-    , is_running_on_(false)
-    , io_time_elapsed_(0) { }
+      : is_task_completed_(false)
+      , is_running_on_(false)
+      , io_time_elapsed_(0) {}
 
   bool is_task_completed() { return is_task_completed_; }
   bool is_running_on() { return is_running_on_; }
@@ -92,8 +90,8 @@ private:
 class TestEventLoop : public EventLoop {
 public:
   TestEventLoop()
-    : is_on_run_completed_(false)
-    , is_after_run_completed_(false) { }
+      : is_on_run_completed_(false)
+      , is_after_run_completed_(false) {}
 
   bool is_on_run_completed() { return is_on_run_completed_.load(); }
   bool is_after_run_completed() { return is_after_run_completed_; }
@@ -164,7 +162,8 @@ TEST_F(EventLoopUnitTest, BeforeAndAfterRun) {
   ASSERT_EQ(0, event_loop.init("EventLoopUnitTest::BeforeAndAfterRun"));
   ASSERT_STREQ("EventLoopUnitTest::BeforeAndAfterRun", event_loop.name().c_str());
   ASSERT_EQ(0, event_loop.run());
-  while(!event_loop.is_on_run_completed()) test::Utils::msleep(1); // Poll to wait for thread to be started
+  while (!event_loop.is_on_run_completed())
+    test::Utils::msleep(1); // Poll to wait for thread to be started
   ASSERT_TRUE(event_loop.is_on_run_completed());
   ASSERT_FALSE(event_loop.is_after_run_completed());
 

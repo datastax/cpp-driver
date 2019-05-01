@@ -8,15 +8,12 @@
 #ifndef __TEST_DSE_POLYGON_HPP__
 #define __TEST_DSE_POLYGON_HPP__
 
-#include "values/dse_line_string.hpp"
 #include "tlog.hpp"
+#include "values/dse_line_string.hpp"
 
 #include <algorithm>
 
-namespace test {
-namespace driver {
-namespace values {
-namespace dse {
+namespace test { namespace driver { namespace values { namespace dse {
 
 /**
  * DSE polygon wrapped value
@@ -28,7 +25,7 @@ public:
   typedef std::string ConvenienceType;
   typedef std::vector<LineString> ValueType;
 
-  Polygon() { }
+  Polygon() {}
 
   /**
    * @throws Point::Exception
@@ -45,13 +42,10 @@ public:
 
   void append(Collection collection) {
     Native polygon = to_native();
-    ASSERT_EQ(CASS_OK, cass_collection_append_dse_polygon(collection.get(),
-                                                          polygon.get()));
+    ASSERT_EQ(CASS_OK, cass_collection_append_dse_polygon(collection.get(), polygon.get()));
   }
 
-  std::string cql_type() const {
-    return "'PolygonType'";
-  }
+  std::string cql_type() const { return "'PolygonType'"; }
 
   std::string cql_value() const {
     if (line_strings_.empty()) {
@@ -93,15 +87,13 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Polygon& rhs) const {
-    return compare(rhs.line_strings_);
-  }
+  int compare(const Polygon& rhs) const { return compare(rhs.line_strings_); }
 
   void initialize(const CassValue* value) {
     // Get the polygon from the value
     Iterator iterator(dse_polygon_iterator_new());
     ASSERT_EQ(CASS_OK, dse_polygon_iterator_reset(iterator.get(), value))
-      << "Unable to Reset DSE Polygon Iterator: Invalid error code returned";
+        << "Unable to Reset DSE Polygon Iterator: Invalid error code returned";
     assign_line_strings(iterator);
   }
 
@@ -114,36 +106,30 @@ public:
 
   void set(Tuple tuple, size_t index) {
     Native polygon = to_native();
-    ASSERT_EQ(CASS_OK, cass_tuple_set_dse_polygon(tuple.get(),
-                                                  index,
-                                                  polygon.get()));
+    ASSERT_EQ(CASS_OK, cass_tuple_set_dse_polygon(tuple.get(), index, polygon.get()));
   }
 
   void set(UserType user_type, const std::string& name) {
     Native polygon = to_native();
-    ASSERT_EQ(CASS_OK, cass_user_type_set_dse_polygon_by_name(user_type.get(),
-                                                              name.c_str(),
-                                                              polygon.get()));
+    ASSERT_EQ(CASS_OK,
+              cass_user_type_set_dse_polygon_by_name(user_type.get(), name.c_str(), polygon.get()));
   }
 
   void statement_bind(Statement statement, size_t index) {
     Native polygon = to_native();
-    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_polygon(statement.get(),
-                                                       index,
-                                                       polygon.get()));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_polygon(statement.get(), index, polygon.get()));
   }
 
   void statement_bind(Statement statement, const std::string& name) {
     Native polygon = to_native();
-    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_polygon_by_name(statement.get(),
-                                                               name.c_str(),
+    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_polygon_by_name(statement.get(), name.c_str(),
                                                                polygon.get()));
   }
 
   std::string str() const {
     std::stringstream polygon_string;
     for (std::vector<LineString>::const_iterator iterator = line_strings_.begin();
-      iterator < line_strings_.end(); ++iterator) {
+         iterator < line_strings_.end(); ++iterator) {
       try {
         polygon_string << "(" << (*iterator).str() << ")";
 
@@ -155,12 +141,10 @@ public:
         TEST_LOG_ERROR(e.what());
       }
     }
-      return polygon_string.str();
+    return polygon_string.str();
   }
 
-  static std::string supported_server_version() {
-    return "5.0.0";
-  }
+  static std::string supported_server_version() { return "5.0.0"; }
 
   Native to_native() const {
     // Create the native polygon object
@@ -172,41 +156,36 @@ public:
       polygon = dse_polygon_new();
       size_t total_points = 0;
       for (std::vector<LineString>::const_iterator iterator = line_strings_.begin();
-        iterator < line_strings_.end(); ++iterator) {
+           iterator < line_strings_.end(); ++iterator) {
         total_points += (*iterator).size();
       }
-      dse_polygon_reserve(polygon.get(),
-                          static_cast<cass_uint32_t>(line_strings_.size()),
+      dse_polygon_reserve(polygon.get(), static_cast<cass_uint32_t>(line_strings_.size()),
                           static_cast<cass_uint32_t>(total_points));
 
       // Add all the line strings to the native driver object
       for (std::vector<LineString>::const_iterator line_strings_iterator = line_strings_.begin();
-        line_strings_iterator < line_strings_.end(); ++line_strings_iterator) {
+           line_strings_iterator < line_strings_.end(); ++line_strings_iterator) {
         // Add each ring of line strings to the polygon
         std::vector<Point> points = (*line_strings_iterator).value();
         dse_polygon_start_ring(polygon.get());
         for (std::vector<Point>::const_iterator points_iterator = points.begin();
-          points_iterator < points.end(); ++points_iterator) {
+             points_iterator < points.end(); ++points_iterator) {
           Point::PointType point = (*points_iterator).value();
           EXPECT_EQ(CASS_OK, dse_polygon_add_point(polygon.get(), point.x, point.y))
-            << "Unable to Add DSE Point to DSE Polygon: Invalid error code returned";
+              << "Unable to Add DSE Point to DSE Polygon: Invalid error code returned";
         }
       }
       EXPECT_EQ(CASS_OK, dse_polygon_finish(polygon.get()))
-        << "Unable to Complete DSE Polygon: Invalid error code returned";
+          << "Unable to Complete DSE Polygon: Invalid error code returned";
     }
 
     // Return the generated line string
     return polygon;
   }
 
-  ValueType value() const {
-    return line_strings_;
-  }
+  ValueType value() const { return line_strings_; }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_CUSTOM;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_CUSTOM; }
 
 private:
   /**
@@ -227,16 +206,13 @@ private:
     for (cass_uint32_t i = 0; i < total_rings; ++i) {
       // Add each ring of line strings to the polygon
       cass_uint32_t total_points = 0;
-      ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_num_points(iterator.get(),
-                                                              &total_points))
-        << "Unable to Get Number of Points from DSE Polygon: Invalid error code returned";
+      ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_num_points(iterator.get(), &total_points))
+          << "Unable to Get Number of Points from DSE Polygon: Invalid error code returned";
       std::vector<Point> points;
       for (cass_uint32_t j = 0; j < total_points; ++j) {
         Point::PointType point = { 0.0, 0.0 };
-        ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(iterator.get(),
-                                                           &point.x,
-                                                           &point.y))
-          << "Unable to Get DSE Point from DSE Polygon: Invalid error code returned";
+        ASSERT_EQ(CASS_OK, dse_polygon_iterator_next_point(iterator.get(), &point.x, &point.y))
+            << "Unable to Get DSE Point from DSE Polygon: Invalid error code returned";
         points.push_back(Point(point));
       }
       line_strings_.push_back(LineString(points));
@@ -289,9 +265,6 @@ inline std::ostream& operator<<(std::ostream& os, const Polygon& polygon) {
   return os;
 }
 
-} // namespace dse
-} // namespace values
-} // namespace driver
-} // namespace test
+}}}} // namespace test::driver::values::dse
 
 #endif // __TEST_DSE_POLYGON_HPP__

@@ -27,13 +27,13 @@ template <class T>
 class CopyOnWritePtr {
 public:
   CopyOnWritePtr(T* t)
-    : ptr_(new Referenced(t)) {}
+      : ptr_(new Referenced(t)) {}
 
   CopyOnWritePtr(const SharedRefPtr<T>& shared)
-    : ptr_(shared) {}
+      : ptr_(shared) {}
 
   CopyOnWritePtr(const CopyOnWritePtr<T>& cow)
-    : ptr_(cow.ptr_) {}
+      : ptr_(cow.ptr_) {}
 
   CopyOnWritePtr<T>& operator=(const SharedRefPtr<T>& rhs) {
     ptr_ = rhs;
@@ -45,22 +45,16 @@ public:
     return *this;
   }
 
-  operator bool() const {
-    return ptr_->ref != NULL;
-  }
+  operator bool() const { return ptr_->ref != NULL; }
 
-  const T& operator*() const {
-    return *(ptr_->ref);
-  }
+  const T& operator*() const { return *(ptr_->ref); }
 
   T& operator*() {
     detach();
     return *(ptr_->ref);
   }
 
-  const T* operator->() const {
-    return ptr_->ref;
-  }
+  const T* operator->() const { return ptr_->ref; }
 
   T* operator->() {
     detach();
@@ -79,11 +73,9 @@ private:
   class Referenced : public RefCounted<Referenced> {
   public:
     Referenced(T* ref)
-      : ref(ref) {}
+        : ref(ref) {}
 
-    ~Referenced() {
-      delete ref;
-    }
+    ~Referenced() { delete ref; }
 
     T* ref;
   };
@@ -91,6 +83,6 @@ private:
   SharedRefPtr<Referenced> ptr_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

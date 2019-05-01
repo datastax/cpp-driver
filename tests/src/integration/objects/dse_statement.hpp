@@ -9,9 +9,7 @@
 #define __TEST_DSE_STATEMENT_HPP__
 #include "objects/statement.hpp"
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 /**
  * Wrapped DSE statement object
@@ -24,7 +22,7 @@ public:
    * @param statement Native driver object
    */
   Statement(CassStatement* statement)
-    : driver::Statement(statement) {}
+      : driver::Statement(statement) {}
 
   /**
    * Create the DSE statement object from the shared reference
@@ -32,7 +30,7 @@ public:
    * @param statement Shared reference
    */
   Statement(Ptr statement)
-    : driver::Statement(statement) {}
+      : driver::Statement(statement) {}
 
   /**
    * Create the DSE statement object from a wrapped statement object
@@ -40,7 +38,7 @@ public:
    * @param statement Wrapped statement object
    */
   Statement(driver::Statement statement)
-    : driver::Statement(statement) {}
+      : driver::Statement(statement) {}
 
   /**
    * Create the statement object from a query
@@ -50,7 +48,7 @@ public:
    *                        (default: 0)
    */
   Statement(const std::string& query, size_t parameter_count = 0)
-    : driver::Statement(cass_statement_new(query.c_str(), parameter_count)) {}
+      : driver::Statement(cass_statement_new(query.c_str(), parameter_count)) {}
 
   /**
    * Set the name of the user to execute the statement as
@@ -73,7 +71,7 @@ public:
    * @param batch_type Type of batch to create (default: Unlogged)
    */
   Batch(CassBatchType batch_type = CASS_BATCH_TYPE_UNLOGGED)
-    : driver::Batch(cass_batch_new(batch_type)) {}
+      : driver::Batch(cass_batch_new(batch_type)) {}
 
   /**
    * Create the batch object from the native driver batch object
@@ -81,7 +79,7 @@ public:
    * @param batch Native driver object
    */
   Batch(CassBatch* batch)
-    : driver::Batch(batch) {}
+      : driver::Batch(batch) {}
 
   /**
    * Create the batch object from the shared reference
@@ -89,7 +87,7 @@ public:
    * @param batch Shared reference
    */
   Batch(Ptr batch)
-    : driver::Batch(batch) {}
+      : driver::Batch(batch) {}
 
   /**
    * Create the DSE batch object from a wrapped batch object
@@ -97,7 +95,7 @@ public:
    * @param batch Wrapped batch object
    */
   Batch(driver::Batch batch)
-    : driver::Batch(batch) {}
+      : driver::Batch(batch) {}
 
   /**
    * Set the name of the user to execute the batch statement as
@@ -109,8 +107,6 @@ public:
   }
 };
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_STATEMENT_HPP__

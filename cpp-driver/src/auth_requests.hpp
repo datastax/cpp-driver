@@ -26,11 +26,10 @@ namespace datastax { namespace internal { namespace core {
 
 class AuthResponseRequest : public Request {
 public:
-  AuthResponseRequest(const String& token,
-                      const Authenticator::Ptr& auth)
-    : Request(CQL_OPCODE_AUTH_RESPONSE)
-    , token_(token)
-    , auth_(auth) { }
+  AuthResponseRequest(const String& token, const Authenticator::Ptr& auth)
+      : Request(CQL_OPCODE_AUTH_RESPONSE)
+      , token_(token)
+      , auth_(auth) {}
 
   const Authenticator::Ptr& auth() const { return auth_; }
 
@@ -42,6 +41,6 @@ private:
   Authenticator::Ptr auth_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

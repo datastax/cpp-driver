@@ -19,21 +19,19 @@
 #include "async.hpp"
 #include "callback.hpp"
 
-using datastax::internal::core::Async;
 using datastax::internal::bind_callback;
+using datastax::internal::core::Async;
 
 class AsyncUnitTest : public LoopTest {
 public:
   AsyncUnitTest()
-    : is_callback_called_(false) { }
+      : is_callback_called_(false) {}
 
   bool is_callback_called() { return is_callback_called_; }
 
 protected:
   void start(Async* async) {
-    ASSERT_EQ(0, async->start(loop(),
-                              bind_callback(&AsyncUnitTest::on_async,
-                                            this)));
+    ASSERT_EQ(0, async->start(loop(), bind_callback(&AsyncUnitTest::on_async, this)));
   }
 
 private:

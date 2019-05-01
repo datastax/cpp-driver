@@ -51,9 +51,8 @@ void RequestCallback::notify_write(Connection* connection, int stream) {
 
 bool RequestCallback::skip_metadata() const {
   // Skip the metadata if this an execute request and we have an entry cached
-  return request()->opcode() == CQL_OPCODE_EXECUTE &&
-      prepared_metadata_entry() &&
-      prepared_metadata_entry()->result()->result_metadata();
+  return request()->opcode() == CQL_OPCODE_EXECUTE && prepared_metadata_entry() &&
+         prepared_metadata_entry()->result()->result_metadata();
 }
 
 int32_t RequestCallback::encode(BufferVec* bufs) {
@@ -126,8 +125,7 @@ void RequestCallback::on_close() {
 void RequestCallback::set_state(RequestCallback::State next_state) {
   switch (state_) {
     case REQUEST_STATE_NEW:
-      if (next_state == REQUEST_STATE_NEW ||
-          next_state == REQUEST_STATE_WRITING) {
+      if (next_state == REQUEST_STATE_NEW || next_state == REQUEST_STATE_WRITING) {
         state_ = next_state;
       } else {
         assert(false && "Invalid request state after new");
@@ -135,8 +133,7 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
       break;
 
     case REQUEST_STATE_WRITING:
-      if (next_state == REQUEST_STATE_READING ||
-          next_state == REQUEST_STATE_READ_BEFORE_WRITE ||
+      if (next_state == REQUEST_STATE_READING || next_state == REQUEST_STATE_READ_BEFORE_WRITE ||
           next_state == REQUEST_STATE_FINISHED) {
         state_ = next_state;
       } else {
@@ -175,15 +172,13 @@ void RequestCallback::set_state(RequestCallback::State next_state) {
 }
 
 SimpleRequestCallback::SimpleRequestCallback(const String& query, uint64_t request_timeout_ms)
-  : RequestCallback(
-      RequestWrapper(Request::ConstPtr(new QueryRequest(query)),
-                     request_timeout_ms)) { }
+    : RequestCallback(
+          RequestWrapper(Request::ConstPtr(new QueryRequest(query)), request_timeout_ms)) {}
 
 void SimpleRequestCallback::on_write(Connection* connection) {
   uint64_t request_timeout_ms = this->request_timeout_ms();
   if (request_timeout_ms > 0) { // 0 means no timeout
-    timer_.start(connection->loop(),
-                 request_timeout_ms,
+    timer_.start(connection->loop(), request_timeout_ms,
                  bind_callback(&SimpleRequestCallback::on_timeout, this));
   }
   on_internal_write(connection);
@@ -213,30 +208,31 @@ void SimpleRequestCallback::on_timeout(Timer* timer) {
   LOG_DEBUG("Request timed out (internal)");
 }
 
-ChainedRequestCallback::ChainedRequestCallback(const String& key, const String& query, const Ptr& chain)
-  : SimpleRequestCallback(query)
-  , chain_(chain)
-  , has_pending_(false)
-  , has_error_or_timeout_(false)
-  , key_(key) { }
+ChainedRequestCallback::ChainedRequestCallback(const String& key, const String& query,
+                                               const Ptr& chain)
+    : SimpleRequestCallback(query)
+    , chain_(chain)
+    , has_pending_(false)
+    , has_error_or_timeout_(false)
+    , key_(key) {}
 
-ChainedRequestCallback::ChainedRequestCallback(const String& key, const Request::ConstPtr& request, const Ptr& chain)
-  : SimpleRequestCallback(request)
-  , chain_(chain)
-  , has_pending_(false)
-  , has_error_or_timeout_(false)
-  , key_(key) { }
+ChainedRequestCallback::ChainedRequestCallback(const String& key, const Request::ConstPtr& request,
+                                               const Ptr& chain)
+    : SimpleRequestCallback(request)
+    , chain_(chain)
+    , has_pending_(false)
+    , has_error_or_timeout_(false)
+    , key_(key) {}
 
 ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const String& query) {
   has_pending_ = true;
-  return ChainedRequestCallback::Ptr(
-        new ChainedRequestCallback(key, query, Ptr(this)));
+  return ChainedRequestCallback::Ptr(new ChainedRequestCallback(key, query, Ptr(this)));
 }
 
-ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key, const Request::ConstPtr& request) {
+ChainedRequestCallback::Ptr ChainedRequestCallback::chain(const String& key,
+                                                          const Request::ConstPtr& request) {
   has_pending_ = true;
-  return ChainedRequestCallback::Ptr(
-        new ChainedRequestCallback(key, request, Ptr(this)));
+  return ChainedRequestCallback::Ptr(new ChainedRequestCallback(key, request, Ptr(this)));
 }
 
 ResultResponse::Ptr ChainedRequestCallback::result(const String& key) const {
@@ -291,9 +287,8 @@ void ChainedRequestCallback::set_chain_responses(Map& responses) {
 }
 
 bool ChainedRequestCallback::is_finished() const {
-  return response_ &&
-      !has_error_or_timeout_ &&
-      ((has_pending_ && !responses_.empty()) || !has_pending_);
+  return response_ && !has_error_or_timeout_ &&
+         ((has_pending_ && !responses_.empty()) || !has_pending_);
 }
 
 void ChainedRequestCallback::maybe_finish() {

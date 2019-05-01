@@ -47,7 +47,7 @@ enum MemoryOrder {
   MEMORY_ORDER_SEQ_CST = 14 // MEMORY_ORDER_ACQ_REL | 8
 };
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #if defined(__GNUC__)
 #include "atomic_intrinsics_gcc.hpp"

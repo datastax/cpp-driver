@@ -19,11 +19,11 @@
 #include <uv.h>
 
 #ifdef _WIN32
-# include <winsock2.h>
-# include <windows.h>
+#include <windows.h>
+#include <winsock2.h>
 #else
-# include <sys/utsname.h>
-# include <unistd.h>
+#include <sys/utsname.h>
+#include <unistd.h>
 #endif
 #define HOSTNAME_MAX_LENGTH 256
 
@@ -32,35 +32,37 @@
 #define METADATA_INSIGHTS_MAPPING_ID "v1"
 #define METADATA_LANGUAGE "C/C++"
 
-#define CONFIG_ANTIPATTERN_MSG_MULTI_DC_HOSTS "Contact points contain hosts from "\
-                                              "multiple data centers but only one " \
-                                              "is going to be used"
+#define CONFIG_ANTIPATTERN_MSG_MULTI_DC_HOSTS \
+  "Contact points contain hosts from "        \
+  "multiple data centers but only one "       \
+  "is going to be used"
 #define CONFIG_ANTIPATTERN_MSG_REMOTE_HOSTS "Using remote hosts for failover"
-#define CONFIG_ANTIPATTERN_MSG_DOWNGRADING "Downgrading consistency retry " \
-                                           "policy in use"
-#define CONFIG_ANTIPATTERN_MSG_CERT_VALIDATION "Client-to-node encryption is " \
-                                               "enabled but server certificate " \
-                                               "validation is disabled"
-#define CONFIG_ANTIPATTERN_MSG_PLAINTEXT_NO_SSL "Plain text authentication is " \
-                                                "enabled without client-to-node " \
-                                                "encryption"""
+#define CONFIG_ANTIPATTERN_MSG_DOWNGRADING \
+  "Downgrading consistency retry "         \
+  "policy in use"
+#define CONFIG_ANTIPATTERN_MSG_CERT_VALIDATION \
+  "Client-to-node encryption is "              \
+  "enabled but server certificate "            \
+  "validation is disabled"
+#define CONFIG_ANTIPATTERN_MSG_PLAINTEXT_NO_SSL \
+  "Plain text authentication is "               \
+  "enabled without client-to-node "             \
+  "encryption"                                  \
+  ""
 
 namespace datastax { namespace internal { namespace core {
 
-MonitorReporting* create_monitor_reporting(const String& client_id,
-                                           const String& session_id,
+MonitorReporting* create_monitor_reporting(const String& client_id, const String& session_id,
                                            const Config& config) {
   // Ensure the client monitor events should be enabled
   unsigned interval_secs = config.monitor_reporting_interval_secs();
   if (interval_secs > 0) {
-    return new enterprise::ClientInsights(client_id,
-                                          session_id,
-                                          interval_secs);
+    return new enterprise::ClientInsights(client_id, session_id, interval_secs);
   }
   return new NopMonitorReporting();
 }
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 using namespace datastax::internal::core;
 using namespace datastax::internal;
@@ -73,13 +75,9 @@ String get_last_error() {
   DWORD rc = GetLastError();
 
   char buf[ERROR_BUFFER_MAX_LENGTH];
-  size_t size = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                               NULL,
-                               rc,
+  size_t size = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, rc,
                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                               reinterpret_cast<LPSTR>(&buf[0]),
-                               ERROR_BUFFER_MAX_LENGTH,
-                               NULL);
+                               reinterpret_cast<LPSTR>(&buf[0]), ERROR_BUFFER_MAX_LENGTH, NULL);
   String str(buf, size);
   trim(str);
   return str;
@@ -121,29 +119,30 @@ Os get_os() {
     if (GetFileVersionInfo(TEXT("kernel32.dll"), 0, size, &version_info[0])) {
       VS_FIXEDFILEINFO* file_info = NULL;
       UINT file_info_length = 0;
-      if (VerQueryValue(&version_info[0], TEXT("\\"),
-          reinterpret_cast<LPVOID*>(&file_info),
-          &file_info_length)) {
+      if (VerQueryValue(&version_info[0], TEXT("\\"), reinterpret_cast<LPVOID*>(&file_info),
+                        &file_info_length)) {
         OStringStream oss;
         oss << static_cast<int>(HIWORD(file_info->dwProductVersionMS)) << "."
-          << static_cast<int>(LOWORD(file_info->dwProductVersionMS)) << "."
-          << static_cast<int>(HIWORD(file_info->dwProductVersionLS));
+            << static_cast<int>(LOWORD(file_info->dwProductVersionMS)) << "."
+            << static_cast<int>(HIWORD(file_info->dwProductVersionLS));
         os.version = oss.str();
       } else {
         LOG_DEBUG("Unable to retrieve Windows version: %s\n", get_last_error().c_str());
       }
     } else {
-      LOG_DEBUG("Unable to retrieve Windows version (GetFileVersionInfo): %s\n", get_last_error().c_str());
+      LOG_DEBUG("Unable to retrieve Windows version (GetFileVersionInfo): %s\n",
+                get_last_error().c_str());
     }
   } else {
-    LOG_DEBUG("Unable to retrieve Windows version (GetFileVersionInfoSize): %s\n", get_last_error().c_str());
+    LOG_DEBUG("Unable to retrieve Windows version (GetFileVersionInfoSize): %s\n",
+              get_last_error().c_str());
   }
 
-# ifdef _WIN64
+#ifdef _WIN64
   os.arch = "x64";
-# else
+#else
   os.arch = "x86";
-# endif
+#endif
 #else
   struct utsname client_info;
   uname(&client_info);
@@ -181,23 +180,19 @@ class ClientInsightsRequestCallback : public SimpleRequestCallback {
 public:
   typedef SharedRefPtr<ClientInsightsRequestCallback> Ptr;
 
-  ClientInsightsRequestCallback(const String& json,
-                                const String& event_type)
-    : SimpleRequestCallback("CALL InsightsRpc.reportInsight('" + json + "')")
-    , event_type_(event_type) { }
+  ClientInsightsRequestCallback(const String& json, const String& event_type)
+      : SimpleRequestCallback("CALL InsightsRpc.reportInsight('" + json + "')")
+      , event_type_(event_type) {}
 
   virtual void on_internal_set(ResponseMessage* response) {
     if (response->opcode() != CQL_OPCODE_RESULT) {
-      LOG_DEBUG("Failed to send %s event message: Invalid response [%s]",
-                event_type_.c_str(),
+      LOG_DEBUG("Failed to send %s event message: Invalid response [%s]", event_type_.c_str(),
                 opcode_to_string(response->opcode()).c_str());
     }
   }
 
   virtual void on_internal_error(CassError code, const String& message) {
-    LOG_DEBUG("Failed to send %s event message: %s",
-              event_type_.c_str(),
-              message.c_str());
+    LOG_DEBUG("Failed to send %s event message: %s", event_type_.c_str(), message.c_str());
   }
 
   virtual void on_internal_timeout() {
@@ -218,7 +213,7 @@ void metadata(ClientInsights::Writer& writer, const String& name) {
   writer.Key("insightMappingId");
   writer.String(METADATA_INSIGHTS_MAPPING_ID);
   writer.Key("insightType");
-  writer.String("EVENT"); //TODO: Make this an enumeration in the future
+  writer.String("EVENT"); // TODO: Make this an enumeration in the future
   writer.Key("timestamp");
   writer.Uint64(get_time_since_epoch_ms());
   writer.Key("tags");
@@ -234,18 +229,15 @@ class StartupMessageHandler : public RefCounted<StartupMessageHandler> {
 public:
   typedef SharedRefPtr<StartupMessageHandler> Ptr;
 
-  StartupMessageHandler(const Connection::Ptr& connection,
-                        const String& client_id,
-                        const String& session_id,
-                        const Config& config,
-                        const HostMap& hosts,
+  StartupMessageHandler(const Connection::Ptr& connection, const String& client_id,
+                        const String& session_id, const Config& config, const HostMap& hosts,
                         const LoadBalancingPolicy::Vec& initialized_policies)
-    : connection_(connection)
-    , client_id_(client_id)
-    , session_id_(session_id)
-    , config_(config)
-    , hosts_(hosts)
-    , initialized_policies_(initialized_policies) { }
+      : connection_(connection)
+      , client_id_(client_id)
+      , session_id_(session_id)
+      , config_(config)
+      , hosts_(hosts)
+      , initialized_policies_(initialized_policies) {}
 
   ~StartupMessageHandler() {
     ClientInsights::StringBuffer buffer;
@@ -258,13 +250,10 @@ public:
 
     assert(writer.IsComplete() && "Startup JSON is incomplete");
     connection_->write_and_flush(RequestCallback::Ptr(
-        new ClientInsightsRequestCallback(buffer.GetString(),
-                                          METADATA_STARTUP_NAME)));
+        new ClientInsightsRequestCallback(buffer.GetString(), METADATA_STARTUP_NAME)));
   }
 
-  void send_message() {
-    resolve_contact_points();
-  }
+  void send_message() { resolve_contact_points(); }
 
 private:
   // Startup message associated methods
@@ -309,7 +298,7 @@ private:
     writer.Key("heartbeatInterval");
     writer.Uint64(config_.connection_heartbeat_interval_secs() * 1000); // in milliseconds
     writer.Key("compression");
-    writer.String("NONE"); //TODO: Update once compression is added
+    writer.String("NONE"); // TODO: Update once compression is added
     reconnection_policy(writer);
     ssl(writer);
     auth_provider(writer);
@@ -327,11 +316,13 @@ private:
     writer.StartObject();
 
     for (ResolvedHostMap::const_iterator map_it = contact_points_resolved_.begin(),
-         map_end = contact_points_resolved_.end(); map_it != map_end; ++map_it) {
+                                         map_end = contact_points_resolved_.end();
+         map_it != map_end; ++map_it) {
       writer.Key(map_it->first.c_str());
       writer.StartArray();
       for (AddressSet::const_iterator vec_it = map_it->second.begin(),
-           vec_end = map_it->second.end(); vec_it != vec_end; ++vec_it) {
+                                      vec_end = map_it->second.end();
+           vec_it != vec_end; ++vec_it) {
         writer.String(vec_it->to_string(true).c_str());
       }
       writer.EndArray();
@@ -345,8 +336,7 @@ private:
     writer.StartArray();
 
     Set<String> data_centers;
-    for (HostMap::const_iterator it = hosts_.begin(), end = hosts_.end();
-         it != end; ++it) {
+    for (HostMap::const_iterator it = hosts_.begin(), end = hosts_.end(); it != end; ++it) {
       const String& data_center = it->second->dc();
       if (data_centers.insert(data_center).second) {
         writer.String(data_center.c_str());
@@ -364,8 +354,8 @@ private:
     const ExecutionProfile::Map& profiles = config_.profiles();
     writer.Key("default");
     execution_profile_as_json(writer, default_profile);
-    for (ExecutionProfile::Map::const_iterator it = profiles.begin(),
-         end = profiles.end(); it != end; ++it) {
+    for (ExecutionProfile::Map::const_iterator it = profiles.begin(), end = profiles.end();
+         it != end; ++it) {
       writer.Key(it->first.c_str());
       execution_profile_as_json(writer, it->second, &default_profile);
     }
@@ -392,7 +382,8 @@ private:
 
     // TODO: Update once more reconnection policies are added
     writer.Key("type");
-    writer.String("ConstantReconnectionPolicy"); // TODO: Update once more reconnection policies are added (convert to enumeration)
+    writer.String("ConstantReconnectionPolicy"); // TODO: Update once more reconnection policies are
+                                                 // added (convert to enumeration)
     writer.Key("options");
     writer.StartObject();
     writer.Key("reconnectWaitTimeMs");
@@ -523,13 +514,15 @@ private:
     writer.StartObject();
 #if defined(__clang__) || defined(__APPLE_CC__)
     writer.Key("Clang/LLVM");
-    writer.String(STRINGIFY(__clang_major__) "." STRINGIFY(__clang_minor__) "." STRINGIFY(__clang_patchlevel__));
+    writer.String(STRINGIFY(__clang_major__) "." STRINGIFY(__clang_minor__) "." STRINGIFY(
+        __clang_patchlevel__));
 #elif defined(__INTEL_COMPILER)
     writer.Key("Intel ICC/ICPC");
     writer.String(STRINGIFY(__INTEL_COMPILER));
 #elif defined(__GNUC__) || defined(__GNUG__)
     writer.Key("GNU GCC/G++");
-    writer.String(STRINGIFY(__GNUC__) "." STRINGIFY(__GNUC_MINOR__) "." STRINGIFY(__GNUC_PATCHLEVEL__));
+    writer.String(
+        STRINGIFY(__GNUC__) "." STRINGIFY(__GNUC_MINOR__) "." STRINGIFY(__GNUC_PATCHLEVEL__));
 #elif defined(__HP_aCC)
     writer.Key("Hewlett-Packard C/aC++");
     writer.String(STRINGIFY(__HP_aCC));
@@ -541,25 +534,27 @@ private:
     writer.String(STRINGIFY(_MSC_FULL_VER));
 #elif defined(__PGI)
     writer.Key("Portland Group PGCC/PGCPP");
-    writer.String(STRINGIFY(__PGIC__) "." STRINGIFY(__PGIC_MINOR__) "." STRINGIFY(__PGIC_PATCHLEVEL__));
+    writer.String(
+        STRINGIFY(__PGIC__) "." STRINGIFY(__PGIC_MINOR__) "." STRINGIFY(__PGIC_PATCHLEVEL__));
 #elif defined(__SUNPRO_CC)
     writer.Key("Oracle Solaris Studio");
     writer.String(STRINGIFY(__SUNPRO_CC));
-# else
+#else
     writer.Key("Unknown");
     writer.String("Unknown");
 #endif
     writer.Key("uv");
-    writer.String(STRINGIFY(UV_VERSION_MAJOR) "." STRINGIFY(UV_VERSION_MINOR) "." STRINGIFY(UV_VERSION_PATCH));
+    writer.String(STRINGIFY(UV_VERSION_MAJOR) "." STRINGIFY(UV_VERSION_MINOR) "." STRINGIFY(
+        UV_VERSION_PATCH));
     writer.Key("openssl");
 #ifdef OPENSSL_VERSION_TEXT
     writer.String(OPENSSL_VERSION_TEXT);
 #else
-# ifdef LIBRESSL_VERSION_NUMBER
+#ifdef LIBRESSL_VERSION_NUMBER
     writer.String("LibreSSL " STRINGIFY(LIBRESSL_VERSION_NUMBER));
-# else
+#else
     writer.String("OpenSSL " STRINGIFY(OPENSSL_VERSION_NUMBER));
-# endif
+#endif
 #endif
     writer.EndObject(); // runtime
 
@@ -567,18 +562,16 @@ private:
   }
 
   void config_anti_patterns(ClientInsights::Writer& writer) {
-    StringPairVec config_anti_patterns = get_config_anti_patterns(config_.default_profile(),
-                                                                  config_.profiles(),
-                                                                  initialized_policies_,
-                                                                  hosts_,
-                                                                  config_.ssl_context(),
-                                                                  config_.auth_provider());
+    StringPairVec config_anti_patterns = get_config_anti_patterns(
+        config_.default_profile(), config_.profiles(), initialized_policies_, hosts_,
+        config_.ssl_context(), config_.auth_provider());
     if (!config_anti_patterns.empty()) {
       writer.Key("configAntiPatterns");
       writer.StartObject();
 
       for (StringPairVec::const_iterator it = config_anti_patterns.begin(),
-           end = config_anti_patterns.end(); it != end; ++it) {
+                                         end = config_anti_patterns.end();
+           it != end; ++it) {
         writer.Key(it->first.c_str());
         writer.String(it->second.c_str());
       }
@@ -594,8 +587,8 @@ private:
     const int port = config_.port();
     MultiResolver::Ptr resolver;
 
-    for (ContactPointList::const_iterator it = contact_points.begin(),
-         end = contact_points.end(); it != end; ++it) {
+    for (ContactPointList::const_iterator it = contact_points.begin(), end = contact_points.end();
+         it != end; ++it) {
       const String& contact_point = *it;
       Address address;
       // Attempt to parse the contact point string. If it's an IP address
@@ -609,13 +602,9 @@ private:
         if (!resolver) {
           inc_ref();
           resolver.reset(
-            new MultiResolver(
-            bind_callback(&StartupMessageHandler::on_resolve, this)));
+              new MultiResolver(bind_callback(&StartupMessageHandler::on_resolve, this)));
         }
-        resolver->resolve(connection_->loop(),
-                          contact_point,
-                          port,
-                          config_.resolve_timeout_ms());
+        resolver->resolve(connection_->loop(), contact_point, port, config_.resolve_timeout_ms());
       }
     }
 
@@ -625,14 +614,15 @@ private:
 
   void on_resolve(MultiResolver* resolver) {
     const Resolver::Vec& resolvers = resolver->resolvers();
-    for (Resolver::Vec::const_iterator it = resolvers.begin(),
-         end = resolvers.end(); it != end; ++it) {
+    for (Resolver::Vec::const_iterator it = resolvers.begin(), end = resolvers.end(); it != end;
+         ++it) {
       const Resolver::Ptr resolver(*it);
       AddressSet addresses;
       if (resolver->is_success()) {
         if (!resolver->addresses().empty()) {
           for (AddressVec::const_iterator it = resolver->addresses().begin(),
-               end = resolver->addresses().end(); it != end;  ++it) {
+                                          end = resolver->addresses().end();
+               it != end; ++it) {
             addresses.insert(*it);
           }
         }
@@ -654,13 +644,12 @@ private:
     return "unknown";
   }
 
-  void execution_profile_as_json(ClientInsights::Writer& writer,
-                                 const ExecutionProfile& profile,
+  void execution_profile_as_json(ClientInsights::Writer& writer, const ExecutionProfile& profile,
                                  const ExecutionProfile* default_profile = NULL) {
     writer.StartObject();
 
-    if (!default_profile ||
-        (default_profile && profile.request_timeout_ms() != default_profile->request_timeout_ms())) {
+    if (!default_profile || (default_profile && profile.request_timeout_ms() !=
+                                                    default_profile->request_timeout_ms())) {
       writer.Key("requestTimeoutMs");
       writer.Uint64(profile.request_timeout_ms());
     }
@@ -669,8 +658,8 @@ private:
       writer.Key("consistency");
       writer.String(cass_consistency_string(profile.consistency()));
     }
-    if (!default_profile ||
-        (default_profile && profile.serial_consistency() != default_profile->serial_consistency())) {
+    if (!default_profile || (default_profile && profile.serial_consistency() !=
+                                                    default_profile->serial_consistency())) {
       writer.Key("serialConsistency");
       writer.String(cass_consistency_string(profile.serial_consistency()));
     }
@@ -709,7 +698,8 @@ private:
           break;
         }
 
-        if (ChainedLoadBalancingPolicy* chained_lbp = dynamic_cast<ChainedLoadBalancingPolicy*>(current_lbp)) {
+        if (ChainedLoadBalancingPolicy* chained_lbp =
+                dynamic_cast<ChainedLoadBalancingPolicy*>(current_lbp)) {
           current_lbp = chained_lbp->child_policy().get();
         } else {
           current_lbp = NULL;
@@ -775,12 +765,14 @@ private:
     }
 
     typedef ConstantSpeculativeExecutionPolicy CSEP;
-    CSEP* default_csep = default_profile ? dynamic_cast<CSEP*>(default_profile->speculative_execution_policy().get()) : NULL;
+    CSEP* default_csep =
+        default_profile ? dynamic_cast<CSEP*>(default_profile->speculative_execution_policy().get())
+                        : NULL;
     CSEP* csep = dynamic_cast<CSEP*>(profile.speculative_execution_policy().get());
     if (csep) {
       if (!default_csep ||
-        (default_csep->constant_delay_ms_ != csep->constant_delay_ms_ &&
-          default_csep->max_speculative_executions_ != csep->max_speculative_executions_)) {
+          (default_csep->constant_delay_ms_ != csep->constant_delay_ms_ &&
+           default_csep->max_speculative_executions_ != csep->max_speculative_executions_)) {
         writer.Key("speculativeExecutionPolicy");
         writer.StartObject();
         writer.Key("type");
@@ -806,34 +798,32 @@ private:
   StringPairVec get_config_anti_patterns(const ExecutionProfile& default_profile,
                                          const ExecutionProfile::Map& profiles,
                                          const LoadBalancingPolicy::Vec& policies,
-                                         const HostMap& hosts,
-                                         const SslContext::Ptr& ssl_context,
+                                         const HostMap& hosts, const SslContext::Ptr& ssl_context,
                                          const AuthProvider::Ptr& auth_provider) {
     StringPairVec config_anti_patterns;
 
     if (is_contact_points_multiple_dcs(policies, hosts)) {
-      config_anti_patterns.push_back(StringPair("contactPointsMultipleDCs",
-                                     CONFIG_ANTIPATTERN_MSG_MULTI_DC_HOSTS));
-      LOG_WARN("Configuration anti-pattern detected: %s",
-               CONFIG_ANTIPATTERN_MSG_MULTI_DC_HOSTS);
+      config_anti_patterns.push_back(
+          StringPair("contactPointsMultipleDCs", CONFIG_ANTIPATTERN_MSG_MULTI_DC_HOSTS));
+      LOG_WARN("Configuration anti-pattern detected: %s", CONFIG_ANTIPATTERN_MSG_MULTI_DC_HOSTS);
     }
 
-    for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
-         end = policies.end(); it != end; ++it) {
+    for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(), end = policies.end();
+         it != end; ++it) {
       DCAwarePolicy* dc_lbp = get_dc_aware_policy(*it);
       if (dc_lbp && !dc_lbp->skip_remote_dcs_for_local_cl()) {
-        config_anti_patterns.push_back(StringPair("useRemoteHosts",
-                                       CONFIG_ANTIPATTERN_MSG_REMOTE_HOSTS));
-        LOG_WARN("Configuration anti-pattern detected: %s",
-                 CONFIG_ANTIPATTERN_MSG_REMOTE_HOSTS);
+        config_anti_patterns.push_back(
+            StringPair("useRemoteHosts", CONFIG_ANTIPATTERN_MSG_REMOTE_HOSTS));
+        LOG_WARN("Configuration anti-pattern detected: %s", CONFIG_ANTIPATTERN_MSG_REMOTE_HOSTS);
         break;
       }
     }
 
-    bool is_downgrading_consistency_enabled = is_downgrading_retry_anti_pattern(default_profile.retry_policy());
+    bool is_downgrading_consistency_enabled =
+        is_downgrading_retry_anti_pattern(default_profile.retry_policy());
     if (!is_downgrading_consistency_enabled) {
-      for (ExecutionProfile::Map::const_iterator it = profiles.begin(),
-           end = profiles.end(); it != end; ++it) {
+      for (ExecutionProfile::Map::const_iterator it = profiles.begin(), end = profiles.end();
+           it != end; ++it) {
         if (is_downgrading_retry_anti_pattern(it->second.retry_policy())) {
           is_downgrading_consistency_enabled = true;
           break;
@@ -841,26 +831,22 @@ private:
       }
     }
     if (is_downgrading_consistency_enabled) {
-      config_anti_patterns.push_back(StringPair("downgradingConsistency",
-                                     CONFIG_ANTIPATTERN_MSG_DOWNGRADING));
-      LOG_WARN("Configuration anti-pattern detected: %s",
-               CONFIG_ANTIPATTERN_MSG_DOWNGRADING);
+      config_anti_patterns.push_back(
+          StringPair("downgradingConsistency", CONFIG_ANTIPATTERN_MSG_DOWNGRADING));
+      LOG_WARN("Configuration anti-pattern detected: %s", CONFIG_ANTIPATTERN_MSG_DOWNGRADING);
     }
 
     if (ssl_context && !ssl_context->is_cert_validation_enabled()) {
-      config_anti_patterns.push_back(StringPair("sslWithoutCertValidation",
-                                     CONFIG_ANTIPATTERN_MSG_CERT_VALIDATION));
-      LOG_WARN("Configuration anti-pattern detected: %s",
-               CONFIG_ANTIPATTERN_MSG_CERT_VALIDATION);
+      config_anti_patterns.push_back(
+          StringPair("sslWithoutCertValidation", CONFIG_ANTIPATTERN_MSG_CERT_VALIDATION));
+      LOG_WARN("Configuration anti-pattern detected: %s", CONFIG_ANTIPATTERN_MSG_CERT_VALIDATION);
     }
 
-    if (auth_provider &&
-        auth_provider->name().find("PlainTextAuthProvider") != String::npos &&
+    if (auth_provider && auth_provider->name().find("PlainTextAuthProvider") != String::npos &&
         !ssl_context) {
-      config_anti_patterns.push_back(StringPair("plainTextAuthWithoutSsl",
-                                     CONFIG_ANTIPATTERN_MSG_PLAINTEXT_NO_SSL));
-      LOG_WARN("Configuration anti-pattern detected: %s",
-               CONFIG_ANTIPATTERN_MSG_PLAINTEXT_NO_SSL);
+      config_anti_patterns.push_back(
+          StringPair("plainTextAuthWithoutSsl", CONFIG_ANTIPATTERN_MSG_PLAINTEXT_NO_SSL));
+      LOG_WARN("Configuration anti-pattern detected: %s", CONFIG_ANTIPATTERN_MSG_PLAINTEXT_NO_SSL);
     }
 
     return config_anti_patterns;
@@ -872,7 +858,8 @@ private:
       if (DCAwarePolicy* dc_lbp = dynamic_cast<DCAwarePolicy*>(current_lbp)) {
         return dc_lbp;
       }
-      if (ChainedLoadBalancingPolicy* chained_lbp = dynamic_cast<ChainedLoadBalancingPolicy*>(current_lbp)) {
+      if (ChainedLoadBalancingPolicy* chained_lbp =
+              dynamic_cast<ChainedLoadBalancingPolicy*>(current_lbp)) {
         current_lbp = chained_lbp->child_policy().get();
       } else {
         break;
@@ -894,13 +881,15 @@ private:
         // Loop through the resolved contacts, find the correct initialized host
         // and if the contact point is a remote host identify as an anti-pattern
         for (ResolvedHostMap::const_iterator resolved_it = contact_points_resolved_.begin(),
-             hosts_end = contact_points_resolved_.end(); resolved_it != hosts_end; ++resolved_it) {
+                                             hosts_end = contact_points_resolved_.end();
+             resolved_it != hosts_end; ++resolved_it) {
           const AddressSet& addresses = resolved_it->second;
           for (AddressSet::const_iterator addresses_it = addresses.begin(),
-               addresses_end = addresses.end(); addresses_it != addresses_end; ++addresses_it) {
+                                          addresses_end = addresses.end();
+               addresses_it != addresses_end; ++addresses_it) {
             const Address& address = *addresses_it;
-            for (HostMap::const_iterator hosts_it = hosts.begin(),
-                 hosts_end = hosts.end(); hosts_it != hosts_end; ++hosts_it) {
+            for (HostMap::const_iterator hosts_it = hosts.begin(), hosts_end = hosts.end();
+                 hosts_it != hosts_end; ++hosts_it) {
               const Host::Ptr& host = hosts_it->second;
               if (host->address() == address &&
                   policy->distance(host) == CASS_HOST_DISTANCE_REMOTE) {
@@ -935,39 +924,33 @@ private:
   ResolvedHostMap contact_points_resolved_;
 };
 
-ClientInsights::ClientInsights(const String& client_id,
-                               const String& session_id,
+ClientInsights::ClientInsights(const String& client_id, const String& session_id,
                                unsigned interval_secs)
-  : client_id_(client_id)
-  , session_id_(session_id)
-  , interval_ms_(interval_secs * 1000) { }
+    : client_id_(client_id)
+    , session_id_(session_id)
+    , interval_ms_(interval_secs * 1000) {}
 
 uint64_t ClientInsights::interval_ms(const VersionNumber& dse_server_version) const {
   // DSE v5.1.13+ (backported)
   // DSE v6.0.5+ (backported)
   // DSE v6.7.0 was the first to supported the Insights RPC call
-  if ((dse_server_version >= VersionNumber(5, 1, 13) && dse_server_version < VersionNumber(6, 0, 0)) ||
+  if ((dse_server_version >= VersionNumber(5, 1, 13) &&
+       dse_server_version < VersionNumber(6, 0, 0)) ||
       dse_server_version >= VersionNumber(6, 0, 5)) {
     return interval_ms_;
   }
   return 0;
 }
 
-void ClientInsights::send_startup_message(const Connection::Ptr& connection,
-                                          const Config& config,
+void ClientInsights::send_startup_message(const Connection::Ptr& connection, const Config& config,
                                           const HostMap& hosts,
                                           const LoadBalancingPolicy::Vec& initialized_policies) {
-  StartupMessageHandler::Ptr handler = StartupMessageHandler::Ptr(new StartupMessageHandler(connection,
-                                                                                            client_id_,
-                                                                                            session_id_,
-                                                                                            config,
-                                                                                            hosts,
-                                                                                            initialized_policies));
+  StartupMessageHandler::Ptr handler = StartupMessageHandler::Ptr(new StartupMessageHandler(
+      connection, client_id_, session_id_, config, hosts, initialized_policies));
   handler->send_message();
 }
 
-void ClientInsights::send_status_message(const Connection::Ptr& connection,
-                                         const HostMap& hosts) {
+void ClientInsights::send_status_message(const Connection::Ptr& connection, const HostMap& hosts) {
   StringBuffer buffer;
   Writer writer(buffer);
 
@@ -986,8 +969,7 @@ void ClientInsights::send_status_message(const Connection::Ptr& connection,
 
   writer.Key("conntectedNodes");
   writer.StartObject();
-  for (HostMap::const_iterator it = hosts.begin(),
-       end = hosts.end(); it != end; ++it) {
+  for (HostMap::const_iterator it = hosts.begin(), end = hosts.end(); it != end; ++it) {
     String address_with_port = it->first.to_string(true);
     const Host::Ptr& host = it->second;
     writer.Key(address_with_port.c_str());
@@ -1005,8 +987,7 @@ void ClientInsights::send_status_message(const Connection::Ptr& connection,
 
   assert(writer.IsComplete() && "Status JSON is incomplete");
   connection->write_and_flush(RequestCallback::Ptr(
-      new ClientInsightsRequestCallback(buffer.GetString(),
-                                        METADATA_STATUS_NAME)));
+      new ClientInsightsRequestCallback(buffer.GetString(), METADATA_STATUS_NAME)));
 }
 
-} } } // namespace datastax::internal::enterprise
+}}} // namespace datastax::internal::enterprise

@@ -9,8 +9,8 @@
 
 #include "dse.h"
 
-#include <value.hpp>
 #include <data_type.hpp>
+#include <value.hpp>
 
 class PointUnitTest : public testing::Test {
 public:

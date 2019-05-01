@@ -23,9 +23,7 @@
 
 using datastax::internal::Atomic;
 
-enum Enum {
-  ONE, TWO, THREE
-};
+enum Enum { ONE, TWO, THREE };
 
 struct Object {};
 

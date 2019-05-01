@@ -13,9 +13,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 /**
  * Wrapped DSE graph options object
@@ -26,7 +24,7 @@ public:
    * Create the empty DSE graph options object
    */
   GraphOptions()
-    : Object<DseGraphOptions, dse_graph_options_free>(dse_graph_options_new()) {}
+      : Object<DseGraphOptions, dse_graph_options_free>(dse_graph_options_new()) {}
 
   /**
    * Create the DSE graph options object from the native driver DSE graph
@@ -35,7 +33,7 @@ public:
    * @param options Native driver object
    */
   GraphOptions(DseGraphOptions* options)
-    : Object<DseGraphOptions, dse_graph_options_free>(options) {}
+      : Object<DseGraphOptions, dse_graph_options_free>(options) {}
 
   /**
    * Create the DSE graph options object from the shared reference
@@ -43,7 +41,7 @@ public:
    * @param options Shared reference
    */
   GraphOptions(Ptr options)
-    : Object<DseGraphOptions, dse_graph_options_free>(options) {}
+      : Object<DseGraphOptions, dse_graph_options_free>(options) {}
 
   /**
    * Set the language to use when applied to a DSE graph statement
@@ -100,8 +98,6 @@ public:
   }
 };
 
-} // namesapce dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_GRAPH_OPTIONS_HPP__

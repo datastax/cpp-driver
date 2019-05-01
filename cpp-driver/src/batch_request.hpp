@@ -21,8 +21,8 @@
 #include "constants.hpp"
 #include "external.hpp"
 #include "map.hpp"
-#include "request.hpp"
 #include "ref_counted.hpp"
+#include "request.hpp"
 #include "statement.hpp"
 #include "string.hpp"
 #include "vector.hpp"
@@ -37,7 +37,7 @@ public:
 
   BatchRequest(uint8_t type_)
       : RoutableRequest(CQL_OPCODE_BATCH)
-      , type_(type_) { }
+      , type_(type_) {}
 
   uint8_t type() const { return type_; }
 
@@ -57,7 +57,7 @@ private:
   StatementVec statements_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::BatchRequest, CassBatch)
 

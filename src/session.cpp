@@ -11,8 +11,6 @@
 
 extern "C" {
 
-CassUuid cass_session_get_client_id(CassSession* session) {
-  return session->client_id();
-}
+CassUuid cass_session_get_client_id(CassSession* session) { return session->client_id(); }
 
 } // extern "C"

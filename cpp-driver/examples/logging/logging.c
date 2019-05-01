@@ -26,9 +26,9 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cassandra.h"
 
@@ -61,12 +61,9 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
 void on_log(const CassLogMessage* message, void* data) {
   FILE* log_file = (FILE*)data;
-  fprintf(log_file, "%u.%03u [%s] (%s:%d:%s): %s\n",
-          (unsigned int)(message->time_ms / 1000),
-          (unsigned int)(message->time_ms % 1000),
-          cass_log_level_string(message->severity),
-          message->file, message->line, message->function,
-          message->message);
+  fprintf(log_file, "%u.%03u [%s] (%s:%d:%s): %s\n", (unsigned int)(message->time_ms / 1000),
+          (unsigned int)(message->time_ms % 1000), cass_log_level_string(message->severity),
+          message->file, message->line, message->function, message->message);
 }
 
 int main(int argc, char* argv[]) {

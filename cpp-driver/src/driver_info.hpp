@@ -22,6 +22,6 @@ namespace datastax { namespace internal {
 const char* driver_name();
 const char* driver_version();
 
-} }  // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif // DATASTAX_INTERNAL_DRIVER_INFO_HPP

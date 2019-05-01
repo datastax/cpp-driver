@@ -29,9 +29,7 @@
 #undef max
 #endif
 
-namespace test {
-namespace driver {
-namespace values {
+namespace test { namespace driver { namespace values {
 
 /**
  * Double wrapped value
@@ -42,23 +40,18 @@ public:
   typedef cass_double_t ValueType;
 
   Double()
-    : double_(0.0) { }
+      : double_(0.0) {}
 
   Double(const ConvenienceType double_value)
-    : double_(double_value) { }
+      : double_(double_value) {}
 
   void append(Collection collection) {
-    ASSERT_EQ(CASS_OK, cass_collection_append_double(collection.get(),
-                                                     double_));
+    ASSERT_EQ(CASS_OK, cass_collection_append_double(collection.get(), double_));
   }
 
-  std::string cql_type() const {
-    return "double";
-  }
+  std::string cql_type() const { return "double"; }
 
-  std::string cql_value() const {
-    return str();
-  }
+  std::string cql_value() const { return str(); }
 
   /**
    * Comparison operation for driver doubles
@@ -79,43 +72,31 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Double& rhs) const {
-    return compare(rhs.double_);
-  }
+  int compare(const Double& rhs) const { return compare(rhs.double_); }
 
   void initialize(const CassValue* value) {
     ASSERT_EQ(CASS_OK, cass_value_get_double(value, &double_))
-      << "Unable to Get Double: Invalid error code returned";
+        << "Unable to Get Double: Invalid error code returned";
   }
 
-  static Double max() {
-    return Double(std::numeric_limits<cass_double_t>::max());
-  }
+  static Double max() { return Double(std::numeric_limits<cass_double_t>::max()); }
 
-  static Double min() {
-    return Double(std::numeric_limits<cass_double_t>::min());
-  }
+  static Double min() { return Double(std::numeric_limits<cass_double_t>::min()); }
 
   void set(Tuple tuple, size_t index) {
     ASSERT_EQ(CASS_OK, cass_tuple_set_double(tuple.get(), index, double_));
   }
 
   void set(UserType user_type, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_user_type_set_double_by_name(user_type.get(),
-                                                         name.c_str(),
-                                                         double_));
+    ASSERT_EQ(CASS_OK, cass_user_type_set_double_by_name(user_type.get(), name.c_str(), double_));
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_double(statement.get(),
-                                                  index,
-                                                  double_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_double(statement.get(), index, double_));
   }
 
   void statement_bind(Statement statement, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_double_by_name(statement.get(),
-                                                          name.c_str(),
-                                                          double_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_double_by_name(statement.get(), name.c_str(), double_));
   }
 
   std::string str() const {
@@ -124,17 +105,11 @@ public:
     return double_string.str();
   }
 
-  static std::string supported_server_version() {
-    return "1.2.0";
-  }
+  static std::string supported_server_version() { return "1.2.0"; }
 
-  cass_double_t value() const {
-    return double_;
-  }
+  cass_double_t value() const { return double_; }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_DOUBLE;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_DOUBLE; }
 
 protected:
   /**
@@ -143,8 +118,6 @@ protected:
   cass_double_t double_;
 };
 
-} // namespace values
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::values
 
 #endif // __TEST_DOUBLE_HPP__

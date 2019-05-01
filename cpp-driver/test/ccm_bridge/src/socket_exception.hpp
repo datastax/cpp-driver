@@ -31,14 +31,16 @@ public:
    *
    * @param message SocketException message
    */
-  SocketException(const std::string &message) : std::exception(message.c_str()) {}
+  SocketException(const std::string& message)
+      : std::exception(message.c_str()) {}
 #else
   /**
    * Socket exception class
    *
    * @param message Exception message
    */
-  SocketException(const std::string& message) : message_(message) {}
+  SocketException(const std::string& message)
+      : message_(message) {}
   /**
    * Destructor
    */

@@ -22,8 +22,8 @@
 
 #include "macros.hpp"
 
-#include <uv.h>
 #include <stdint.h>
+#include <uv.h>
 
 namespace datastax { namespace internal {
 
@@ -49,7 +49,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Md5);
 };
 
-
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

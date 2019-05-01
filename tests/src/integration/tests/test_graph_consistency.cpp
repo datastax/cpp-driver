@@ -8,11 +8,9 @@
 #include "dse_integration.hpp"
 #include "options.hpp"
 
-#define GRAPH_READ_QUERY \
-  "g.V().limit(1);"
+#define GRAPH_READ_QUERY "g.V().limit(1);"
 
-#define GRAPH_WRITE_QUERY \
-  "graph.addVertex(label, 'person', 'name', 'michael', 'age', 27);"
+#define GRAPH_WRITE_QUERY "graph.addVertex(label, 'person', 'name', 'michael', 'age', 27);"
 
 /**
  * Graph consistency integration tests
@@ -46,8 +44,7 @@ public:
    *                  otherwise
    * @return DSE graph result from the executed query
    */
-  dse::GraphResultSet execute_read_query(CassConsistency consistency,
-    bool assert_ok = true) {
+  dse::GraphResultSet execute_read_query(CassConsistency consistency, bool assert_ok = true) {
     // Initialize the graph options
     dse::GraphOptions graph_options;
     graph_options.set_name(test_name_);
@@ -65,8 +62,7 @@ public:
    *                  otherwise
    * @return DSE graph result from the executed query
    */
-  dse::GraphResultSet execute_write_query(CassConsistency consistency,
-                                          bool assert_ok = true) {
+  dse::GraphResultSet execute_write_query(CassConsistency consistency, bool assert_ok = true) {
     // Initialize the graph options
     dse::GraphOptions graph_options;
     graph_options.set_name(test_name_);
@@ -87,7 +83,7 @@ public:
     // Determine if schema operations should be triggered across cluster nodes
     if (!propagate_schema_) {
       TEST_LOG("Performing Graph Query to Propagate Schema Across Cluster: "
-        << "Waiting 10s");
+               << "Waiting 10s");
       execute_read_query(CASS_CONSISTENCY_ONE);
       msleep(10000);
       propagate_schema_ = true;
@@ -214,8 +210,7 @@ DSE_INTEGRATION_TEST_F(GraphConsistencyTest, ReadOneNodeDown) {
   ASSERT_EQ(CASS_OK, execute_read_query(CASS_CONSISTENCY_QUORUM).error_code());
 
   // Perform the read graph query with consistency levels expected to fail
-  dse::GraphResultSet result_set = execute_read_query(CASS_CONSISTENCY_ALL,
-                                                      false);
+  dse::GraphResultSet result_set = execute_read_query(CASS_CONSISTENCY_ALL, false);
   ASSERT_NE(CASS_OK, result_set.error_code());
   ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level") ||
               contains(result_set.error_message(), "Operation timed out"));
@@ -300,8 +295,7 @@ DSE_INTEGRATION_TEST_F(GraphConsistencyTest, WriteOneNodeDown) {
   CHECK_FAILURE;
 
   // Perform the write graph query with consistency levels expected to fail
-  dse::GraphResultSet result_set =
-    execute_write_query(CASS_CONSISTENCY_ALL, false);
+  dse::GraphResultSet result_set = execute_write_query(CASS_CONSISTENCY_ALL, false);
   ASSERT_NE(CASS_OK, result_set.error_code());
   ASSERT_TRUE(contains(result_set.error_message(), "Cannot achieve consistency level") ||
               contains(result_set.error_message(), "Operation timed out"));

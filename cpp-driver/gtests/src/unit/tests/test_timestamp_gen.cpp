@@ -35,13 +35,11 @@ static void clock_skew_log_callback(const CassLogMessage* message, void* data) {
 
 class TimestampGenUnitTest : public Unit {
 public:
-  int run_monotonic_timestamp_gen(uint64_t warning_threshold_us,
-                                  uint64_t warning_interval_ms,
+  int run_monotonic_timestamp_gen(uint64_t warning_threshold_us, uint64_t warning_interval_ms,
                                   uint64_t duration_ms) {
     const int NUM_TIMESTAMPS_PER_ITERATION = 1000;
 
-    MonotonicTimestampGenerator gen(warning_threshold_us,
-                                    warning_interval_ms);
+    MonotonicTimestampGenerator gen(warning_threshold_us, warning_interval_ms);
 
     int timestamp_count = 0;
     int warn_count = 0;
@@ -71,7 +69,7 @@ public:
     double timestamp_rate = (static_cast<double>(timestamp_count) / elapsed) * 1000;
     if (timestamp_rate <= 1000000.0 ||
         elapsed * MICROSECONDS_PER_MILLISECOND <= warning_threshold_us) {
-      fprintf(stderr, "Warning: The test may not have exceeded the timestamp " \
+      fprintf(stderr, "Warning: The test may not have exceeded the timestamp "
                       "generator's maximum rate.");
     }
 
@@ -81,14 +79,12 @@ public:
   }
 };
 
-TEST_F(TimestampGenUnitTest, Server)
-{
+TEST_F(TimestampGenUnitTest, Server) {
   ServerSideTimestampGenerator gen;
   EXPECT_EQ(gen.next(), CASS_INT64_MIN);
 }
 
-TEST_F(TimestampGenUnitTest, Monotonic)
-{
+TEST_F(TimestampGenUnitTest, Monotonic) {
   MonotonicTimestampGenerator gen;
 
   int64_t prev = gen.next();
@@ -100,7 +96,7 @@ TEST_F(TimestampGenUnitTest, Monotonic)
   }
 }
 
-TEST_F(TimestampGenUnitTest, MonotonicExceedWarningThreshold)  {
+TEST_F(TimestampGenUnitTest, MonotonicExceedWarningThreshold) {
   // Set the threshold to something small that we're guaranteed to easily exceed.
   run_monotonic_timestamp_gen(1, 1000, 1000);
 }

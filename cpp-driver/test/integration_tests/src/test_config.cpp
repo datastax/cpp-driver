@@ -17,20 +17,18 @@
 #include <boost/test/unit_test.hpp>
 
 #include "cassandra.h"
-#include "testing.hpp"
 #include "test_utils.hpp"
+#include "testing.hpp"
 
 using namespace datastax::internal::testing;
 
 struct ConfigTests {
-  ConfigTests() { }
+  ConfigTests() {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(config, ConfigTests)
 
-
-BOOST_AUTO_TEST_CASE(options)
-{
+BOOST_AUTO_TEST_CASE(options) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   {
@@ -46,8 +44,7 @@ BOOST_AUTO_TEST_CASE(options)
   }
 }
 
-BOOST_AUTO_TEST_CASE(contact_points)
-{
+BOOST_AUTO_TEST_CASE(contact_points) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   // Simple
@@ -69,7 +66,8 @@ BOOST_AUTO_TEST_CASE(contact_points)
   BOOST_REQUIRE(get_contact_points_from_cluster(cluster.get()).empty());
 
   // Extra whitespace
-  const char* contact_points1_ws = "   ,\r\n,  ,   ,  127.0.0.1 ,,,  ,\t127.0.0.2,127.0.0.3,  \t\n, ,,   ";
+  const char* contact_points1_ws =
+      "   ,\r\n,  ,   ,  127.0.0.1 ,,,  ,\t127.0.0.2,127.0.0.3,  \t\n, ,,   ";
   cass_cluster_set_contact_points(cluster.get(), contact_points1_ws);
   BOOST_REQUIRE(get_contact_points_from_cluster(cluster.get()).compare(contact_points1) == 0);
 
@@ -91,5 +89,3 @@ BOOST_AUTO_TEST_CASE(contact_points)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
-

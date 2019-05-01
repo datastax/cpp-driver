@@ -11,18 +11,17 @@
 
 #include <utility>
 
-//TODO: Update test to work with remote deployments
-# ifdef _WIN32
-#   define CHECK_FOR_SKIPPED_TEST \
-      SKIP_TEST("Test cannot currently run on Windows");
-# elif defined(CASS_USE_LIBSSH2)
-#   define CHECK_FOR_SKIPPED_TEST \
-      if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
-        SKIP_TEST("Test cannot currently run using remote deployment"); \
-      }
-# else
-#   define CHECK_FOR_SKIPPED_TEST ((void)0)
-# endif
+// TODO: Update test to work with remote deployments
+#ifdef _WIN32
+#define CHECK_FOR_SKIPPED_TEST SKIP_TEST("Test cannot currently run on Windows");
+#elif defined(CASS_USE_LIBSSH2)
+#define CHECK_FOR_SKIPPED_TEST                                      \
+  if (Options::deployment_type() == CCM::DeploymentType::REMOTE) {  \
+    SKIP_TEST("Test cannot currently run using remote deployment"); \
+  }
+#else
+#define CHECK_FOR_SKIPPED_TEST ((void)0)
+#endif
 
 #define ADS_WAIT_ATTEMPTS 500
 #define DEFAULT_KEY "DataStax Enterprise"
@@ -52,7 +51,7 @@ public:
       } else {
         TEST_LOG_ERROR("ADS was not Initialized");
       }
-    } catch (test::Exception &e) {
+    } catch (test::Exception& e) {
       TEST_LOG_ERROR(e.what());
     }
   }
@@ -72,7 +71,7 @@ public:
     CHECK_VERSION(5.1.0);
     CHECK_FOR_SKIPPED_TEST;
 
-    //TODO: Update test to work with remote deployments
+    // TODO: Update test to work with remote deployments
     // Ensure test can run for current configuration
 #ifdef _WIN32
     return;
@@ -82,8 +81,7 @@ public:
       return;
     }
 #endif
-    CHECK_CONTINUE(ads_->is_initialized(),
-        "Correct missing components for proper ADS launching");
+    CHECK_CONTINUE(ads_->is_initialized(), "Correct missing components for proper ADS launching");
 
     // Call the parent setup function (override startup and session connection)
     is_ccm_start_requested_ = false;
@@ -127,30 +125,33 @@ protected:
       std::vector<std::string> update_configuration;
       std::vector<std::string> update_dse_configuration;
       update_configuration.push_back("authorizer:com.datastax.bdp.cassandra.auth.DseAuthorizer");
-      update_configuration.push_back("authenticator:com.datastax.bdp.cassandra.auth.DseAuthenticator");
+      update_configuration.push_back(
+          "authenticator:com.datastax.bdp.cassandra.auth.DseAuthenticator");
       update_dse_configuration.push_back("authorization_options.enabled:true");
       update_dse_configuration.push_back("audit_logging_options.enabled:true");
-      update_dse_configuration.push_back("kerberos_options.service_principal:" + std::string(DSE_SERVICE_PRINCIPAL));
-      update_dse_configuration.push_back("kerberos_options.http_principal:" + std::string(DSE_SERVICE_PRINCIPAL));
+      update_dse_configuration.push_back("kerberos_options.service_principal:" +
+                                         std::string(DSE_SERVICE_PRINCIPAL));
+      update_dse_configuration.push_back("kerberos_options.http_principal:" +
+                                         std::string(DSE_SERVICE_PRINCIPAL));
       update_dse_configuration.push_back("kerberos_options.keytab:" + ads_->get_dse_keytab_file());
       update_dse_configuration.push_back("kerberos_options.qop:auth");
       std::string update_dse_configuration_authentication_options_yaml =
-	"authentication_options:\n" \
-        "  enabled: true\n" \
-        "  default_scheme: kerberos\n" \
-        "  other_schemes:\n" \
-        "    - internal";
+          "authentication_options:\n"
+          "  enabled: true\n"
+          "  default_scheme: kerberos\n"
+          "  other_schemes:\n"
+          "    - internal";
 
       // Apply the configuration options
       ccm_->update_cluster_configuration(update_configuration);
       ccm_->update_cluster_configuration(update_dse_configuration, true);
-      ccm_->update_cluster_configuration_yaml(update_dse_configuration_authentication_options_yaml, true);
+      ccm_->update_cluster_configuration_yaml(update_dse_configuration_authentication_options_yaml,
+                                              true);
 
       // Start the cluster
       std::vector<std::string> jvm_arguments;
       jvm_arguments.push_back("-Dcassandra.superuser_setup_delay_ms=0");
-      jvm_arguments.push_back("-Djava.security.krb5.conf="
-        + ads_->get_configuration_file());
+      jvm_arguments.push_back("-Djava.security.krb5.conf=" + ads_->get_configuration_file());
       ccm_->start_cluster(jvm_arguments);
       msleep(5000); // DSE may not be 100% available (even though port is available)
 
@@ -166,13 +167,18 @@ protected:
        * Charlie and Steve are allowed to execute as Alice, but not login as
        * Alice.
        */
-      dse_session_.execute("CREATE ROLE IF NOT EXISTS alice WITH PASSWORD = 'alice' AND LOGIN = FALSE");
+      dse_session_.execute(
+          "CREATE ROLE IF NOT EXISTS alice WITH PASSWORD = 'alice' AND LOGIN = FALSE");
       dse_session_.execute("CREATE ROLE IF NOT EXISTS ben WITH PASSWORD = 'ben' AND LOGIN = TRUE");
       dse_session_.execute("CREATE ROLE IF NOT EXISTS 'bob@DATASTAX.COM' WITH LOGIN = TRUE");
-      dse_session_.execute("CREATE ROLE IF NOT EXISTS 'charlie@DATASTAX.COM' WITH PASSWORD = 'charlie' AND LOGIN = TRUE");
-      dse_session_.execute("CREATE ROLE IF NOT EXISTS steve WITH PASSWORD = 'steve' AND LOGIN = TRUE");
-      dse_session_.execute("CREATE KEYSPACE IF NOT EXISTS aliceks WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': '1'}");
-      dse_session_.execute("CREATE TABLE IF NOT EXISTS aliceks.alicetable (key text PRIMARY KEY, value text)");
+      dse_session_.execute("CREATE ROLE IF NOT EXISTS 'charlie@DATASTAX.COM' WITH PASSWORD = "
+                           "'charlie' AND LOGIN = TRUE");
+      dse_session_.execute(
+          "CREATE ROLE IF NOT EXISTS steve WITH PASSWORD = 'steve' AND LOGIN = TRUE");
+      dse_session_.execute("CREATE KEYSPACE IF NOT EXISTS aliceks WITH REPLICATION = {'class': "
+                           "'SimpleStrategy', 'replication_factor': '1'}");
+      dse_session_.execute(
+          "CREATE TABLE IF NOT EXISTS aliceks.alicetable (key text PRIMARY KEY, value text)");
       dse_session_.execute("GRANT ALL ON KEYSPACE aliceks TO alice");
       dse_session_.execute("GRANT EXECUTE ON ALL AUTHENTICATION SCHEMES TO 'ben'");
       dse_session_.execute("GRANT EXECUTE ON ALL AUTHENTICATION SCHEMES TO 'bob@DATASTAX.COM'");
@@ -185,8 +191,8 @@ protected:
 
       // Insert the first row for most tests to verify query
       std::stringstream insert_query;
-      insert_query << "INSERT INTO aliceks.alicetable (key, value) VALUES ('"
-        << DEFAULT_KEY << "', '" << DEFAULT_VALUE << "')";
+      insert_query << "INSERT INTO aliceks.alicetable (key, value) VALUES ('" << DEFAULT_KEY
+                   << "', '" << DEFAULT_VALUE << "')";
       dse_session_.execute(insert_query.str());
 
       // Indicate cluster has been configured for proxy authentication
@@ -207,11 +213,9 @@ protected:
     // Execute the query and validate the results
     test::driver::Result result;
     if (!as.empty()) {
-      result = session.execute_as(SELECT_ALL_ALICETABLE, as, CASS_CONSISTENCY_ONE,
-        false, false);
+      result = session.execute_as(SELECT_ALL_ALICETABLE, as, CASS_CONSISTENCY_ONE, false, false);
     } else {
-      result = session.execute(SELECT_ALL_ALICETABLE, CASS_CONSISTENCY_ONE,
-        false, false);
+      result = session.execute(SELECT_ALL_ALICETABLE, CASS_CONSISTENCY_ONE, false, false);
     }
 
     // Determine if the results should be validated or exception thrown
@@ -237,8 +241,8 @@ protected:
     test::driver::Batch batch;
     for (int i = 0; i < 10; ++i) {
       std::stringstream query;
-      query << "INSERT INTO aliceks.alicetable (key, value) VALUES ('"
-        << i << "', '" << i << "00')";
+      query << "INSERT INTO aliceks.alicetable (key, value) VALUES ('" << i << "', '" << i
+            << "00')";
       batch.add(test::driver::Statement(query.str()));
     }
 
@@ -323,9 +327,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyAuthorizedUserLogi
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_plaintext_authenticator_proxy("ben", "ben", "alice")
-    .connect();
+  dse::Session session =
+      cluster.with_plaintext_authenticator_proxy("ben", "ben", "alice").connect();
 
   // Execute and validate the query
   query(session);
@@ -352,9 +355,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExec
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_plaintext_authenticator("steve", "steve")
-    .connect();
+  dse::Session session = cluster.with_plaintext_authenticator("steve", "steve").connect();
 
   // Execute and validate the query as "alice"
   query(session, "alice");
@@ -381,9 +382,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginExec
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_plaintext_authenticator("steve", "steve")
-    .connect();
+  dse::Session session = cluster.with_plaintext_authenticator("steve", "steve").connect();
 
   // Execute and validate the batch query as "alice"
   batch_query(session, "alice");
@@ -412,15 +411,14 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextProxyUnauthorizedUserLo
   bool is_session_failure = false;
   try {
     dse::Cluster cluster = default_cluster();
-    dse::Session session = cluster
-      .with_plaintext_authenticator_proxy("steve", "steve", "alice")
-      .connect();
+    dse::Session session =
+        cluster.with_plaintext_authenticator_proxy("steve", "steve", "alice").connect();
     query(session);
-  } catch (test::CassException &ce) {
+  } catch (test::CassException& ce) {
     TEST_LOG(ce.what());
     ASSERT_TRUE(CASS_ERROR_SERVER_UNAUTHORIZED == ce.error_code() ||
-		CASS_ERROR_SERVER_BAD_CREDENTIALS == ce.error_code())
-      << "Error code is not 'Unauthorized|Bad credentials'";
+                CASS_ERROR_SERVER_BAD_CREDENTIALS == ce.error_code())
+        << "Error code is not 'Unauthorized|Bad credentials'";
     is_session_failure = true;
   }
   ASSERT_EQ(true, is_session_failure) << "Session connection established";
@@ -447,18 +445,16 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnau
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_plaintext_authenticator("ben", "ben")
-    .connect();
+  dse::Session session = cluster.with_plaintext_authenticator("ben", "ben").connect();
 
   // Execute and validate the query as "alice" fails
   bool is_query_failure = false;
   try {
     query(session, "alice");
-  } catch (test::CassException &ce) {
+  } catch (test::CassException& ce) {
     TEST_LOG(ce.what());
     ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
-      << "Error code is not 'Unauthorized'";
+        << "Error code is not 'Unauthorized'";
     is_query_failure = true;
   }
   ASSERT_EQ(true, is_query_failure) << "Query completed successfully";
@@ -478,25 +474,24 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnau
  * @since 1.2.0
  * @expected_result Connection is successful and query execution fails
  */
-DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, PlainTextAuthorizedUserLoginUnauthorizedExecuteBatchAs) {
+DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest,
+                       PlainTextAuthorizedUserLoginUnauthorizedExecuteBatchAs) {
   CHECK_VERSION(5.1.0);
   CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_plaintext_authenticator("ben", "ben")
-    .connect();
+  dse::Session session = cluster.with_plaintext_authenticator("ben", "ben").connect();
 
   // Execute and validate the query as "alice" fails
   bool is_query_failure = false;
   try {
     batch_query(session, "alice");
-  } catch (test::CassException &ce) {
+  } catch (test::CassException& ce) {
     TEST_LOG(ce.what());
     ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
-      << "Error code is not 'Unauthorized'";
+        << "Error code is not 'Unauthorized'";
     is_query_failure = true;
   }
   ASSERT_EQ(true, is_query_failure) << "Batch query completed successfully";
@@ -524,9 +519,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosProxyAuthorizedUserLogin
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_gssapi_authenticator_proxy("dse", BOB_PRINCIPAL, "alice")
-    .connect();
+  dse::Session session =
+      cluster.with_gssapi_authenticator_proxy("dse", BOB_PRINCIPAL, "alice").connect();
 
   // Execute and validate the query
   query(session);
@@ -556,9 +550,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginExecu
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_gssapi_authenticator("dse", CHARLIE_PRINCIPAL)
-    .connect();
+  dse::Session session = cluster.with_gssapi_authenticator("dse", CHARLIE_PRINCIPAL).connect();
 
   // Execute and validate the query as "alice"
   query(session, "alice");
@@ -588,9 +580,7 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginExecu
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_gssapi_authenticator("dse", CHARLIE_PRINCIPAL)
-    .connect();
+  dse::Session session = cluster.with_gssapi_authenticator("dse", CHARLIE_PRINCIPAL).connect();
 
   // Execute and validate the batch query as "alice"
   batch_query(session, "alice");
@@ -622,13 +612,12 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosProxyBadCredentialsUserL
   bool is_session_failure = false;
   try {
     dse::Cluster cluster = default_cluster();
-    dse::Session session = cluster
-    .with_gssapi_authenticator_proxy("dse", CHARLIE_PRINCIPAL, "alice")
-    .connect();
-  } catch (Session::Exception &se) {
+    dse::Session session =
+        cluster.with_gssapi_authenticator_proxy("dse", CHARLIE_PRINCIPAL, "alice").connect();
+  } catch (Session::Exception& se) {
     TEST_LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
-      << "Error code is not 'Bad credentials'";
+        << "Error code is not 'Bad credentials'";
     is_session_failure = true;
   }
   ASSERT_EQ(true, is_session_failure) << "Session connection established";
@@ -658,18 +647,16 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnaut
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_gssapi_authenticator("dse", BOB_PRINCIPAL)
-    .connect();
+  dse::Session session = cluster.with_gssapi_authenticator("dse", BOB_PRINCIPAL).connect();
 
   // Execute and validate the query as "alice" fails
   bool is_query_failure = false;
   try {
     query(session, "alice");
-  } catch (test::CassException &ce) {
+  } catch (test::CassException& ce) {
     TEST_LOG(ce.what());
     ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
-      << "Error code is not 'Unauthorized'";
+        << "Error code is not 'Unauthorized'";
     is_query_failure = true;
   }
   ASSERT_EQ(true, is_query_failure) << "Query completed successfully";
@@ -689,7 +676,8 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnaut
  * @since 1.2.0
  * @expected_result Connection is successful and query execution fails
  */
-DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnauthorizedExecuteBatchAs) {
+DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest,
+                       KerberosAuthorizedUserLoginUnauthorizedExecuteBatchAs) {
   CHECK_VERSION(5.1.0);
   CHECK_FOR_SKIPPED_TEST;
   CHECK_FAILURE;
@@ -699,18 +687,16 @@ DSE_INTEGRATION_TEST_F(ProxyAuthenticationTest, KerberosAuthorizedUserLoginUnaut
 
   // Build the cluster configuration and establish the session connection
   dse::Cluster cluster = default_cluster();
-  dse::Session session = cluster
-    .with_gssapi_authenticator("dse", BOB_PRINCIPAL)
-    .connect();
+  dse::Session session = cluster.with_gssapi_authenticator("dse", BOB_PRINCIPAL).connect();
 
   // Execute and validate the query as "alice" fails
   bool is_query_failure = false;
   try {
     batch_query(session, "alice");
-  } catch (test::CassException &ce) {
+  } catch (test::CassException& ce) {
     TEST_LOG(ce.what());
     ASSERT_EQ(CASS_ERROR_SERVER_UNAUTHORIZED, ce.error_code())
-      << "Error code is not 'Unauthorized'";
+        << "Error code is not 'Unauthorized'";
     is_query_failure = true;
   }
   ASSERT_EQ(true, is_query_failure) << "Query completed successfully";

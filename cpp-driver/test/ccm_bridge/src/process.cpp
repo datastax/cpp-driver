@@ -16,16 +16,17 @@
 
 #include "process.hpp"
 
-#include <string.h>
 #include <iostream>
 #include <sstream>
+#include <string.h>
 
 #include <uv.h>
 
 // Create simple console logging functions
-#define LOG_MESSAGE(message, is_output) if (is_output) { \
-  std::cerr << "process> " << message << std::endl; \
-}
+#define LOG_MESSAGE(message, is_output)               \
+  if (is_output) {                                    \
+    std::cerr << "process> " << message << std::endl; \
+  }
 #define LOG_ERROR(message) LOG_MESSAGE(message, true)
 
 namespace utils {
@@ -55,8 +56,7 @@ Process::Result Process::execute(const Args& command) {
 
   // Create the options for the process
   std::vector<const char*> args;
-  for (Args::const_iterator it = command.begin(), end = command.end();
-       it != end; ++it) {
+  for (Args::const_iterator it = command.begin(), end = command.end(); it != end; ++it) {
     args.push_back(it->c_str());
   }
   args.push_back(NULL);
@@ -75,12 +75,10 @@ Process::Result Process::execute(const Args& command) {
     standard_error.data = &result.standard_error;
 
     // Start the output thread loops
-    uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output),
-                                                 Process::on_allocate,
-                                                 Process::on_read);
-    uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_error),
-                                                 Process::on_allocate,
-                                                 Process::on_read);
+    uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output), Process::on_allocate,
+                  Process::on_read);
+    uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_error), Process::on_allocate,
+                  Process::on_read);
 
     // Start the process loop
     uv_run(&loop, UV_RUN_DEFAULT);
@@ -130,4 +128,3 @@ void Process::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 }
 
 }; // namespace utils
-

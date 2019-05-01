@@ -27,8 +27,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Wrapped collection object
@@ -38,7 +37,7 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) {}
+        : test::Exception(message) {}
   };
 
   /**
@@ -47,7 +46,7 @@ public:
    * @param column Column to retrieve collection from
    */
   Collection(const CassValue* column)
-    : is_null_(true) {
+      : is_null_(true) {
     initialize(column);
   }
 
@@ -57,8 +56,7 @@ public:
    * @param collection Collection to append the value to
    */
   void append(Collection collection) {
-    ASSERT_EQ(CASS_OK,
-      cass_collection_append_collection(collection.get(), get()));
+    ASSERT_EQ(CASS_OK, cass_collection_append_collection(collection.get(), get()));
   }
 
   /**
@@ -96,12 +94,10 @@ public:
    */
   void set(UserType user_type, const std::string& name) {
     if (is_null_) {
-      ASSERT_EQ(CASS_OK,
-        cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+      ASSERT_EQ(CASS_OK, cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
     } else {
       ASSERT_EQ(CASS_OK,
-        cass_user_type_set_collection_by_name(user_type.get(), name.c_str(),
-        get()));
+                cass_user_type_set_collection_by_name(user_type.get(), name.c_str(), get()));
     }
   }
 
@@ -113,8 +109,7 @@ public:
    *              statement
    */
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK,
-      cass_statement_bind_collection(statement.get(), index, get()));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_collection(statement.get(), index, get()));
   }
 
 protected:
@@ -152,9 +147,9 @@ protected:
    * @param count Size of the collection (default: 1)
    */
   Collection(CassCollectionType collection_type, size_t count = 1)
-    : Object<CassCollection, cass_collection_free>(cass_collection_new(collection_type, count))
-    , collection_type_(collection_type)
-    , is_null_(true) { }
+      : Object<CassCollection, cass_collection_free>(cass_collection_new(collection_type, count))
+      , collection_type_(collection_type)
+      , is_null_(true) {}
 
   /**
    * Append the value to the collection
@@ -163,7 +158,7 @@ protected:
    * @throws Exception If collection is not able to have values added to it
    *         (e.g. The collection was generated from server result)
    */
-  template<typename T>
+  template <typename T>
   void append(T value) {
     ASSERT_TRUE(!value.is_null());
     value.append(*this);
@@ -181,7 +176,8 @@ protected:
     // Ensure the value is a collection
     ASSERT_TRUE(value != NULL) << "Invalid CassValue: Value should not be null";
     if (!cass_value_is_null(value)) {
-      ASSERT_TRUE(cass_value_is_collection(value)) << "Invalid CassValue: Value is not a collection";
+      ASSERT_TRUE(cass_value_is_collection(value))
+          << "Invalid CassValue: Value is not a collection";
 
       // Determine the type of collection from the value type
       CassValueType value_type = cass_value_type(value);
@@ -211,7 +207,6 @@ protected:
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_COLLECTION_HPP__

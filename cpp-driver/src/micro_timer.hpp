@@ -64,9 +64,7 @@ public:
    * @param callback The callback that handles the timeout.
    * @return 0 for success (or no change), otherwise an error occurred.
    */
-  int start(uv_loop_t* loop,
-            uint64_t timeout_us,
-            const Callback& callback);
+  int start(uv_loop_t* loop, uint64_t timeout_us, const Callback& callback);
 
   /**
    * Stop the timer and cleanup its handles.
@@ -93,11 +91,7 @@ private:
 
 private:
 #ifdef HAVE_TIMERFD
-  enum State {
-    CLOSED,
-    STOPPED,
-    STARTED
-  };
+  enum State { CLOSED, STOPPED, STARTED };
 
   AllocatedT<uv_poll_t>* handle_;
   int fd_;
@@ -113,6 +107,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(MicroTimer);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

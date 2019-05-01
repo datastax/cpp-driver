@@ -15,27 +15,25 @@
 
 namespace datastax { namespace internal {
 
-template <class T, class Compare = std::less<T> >
+template <class T, class Compare = std::less<T>>
 class Set
     : public Allocated
-    , public std::set<T, Compare, internal::Allocator<T> > {
+    , public std::set<T, Compare, internal::Allocator<T>> {
 public:
   typedef internal::Allocator<T> Allocator;
 
-  explicit Set(const Compare& compare = Compare(),
-               const Allocator& alloc = Allocator())
-    : std::set<T, Compare, Allocator>(compare, alloc) { }
+  explicit Set(const Compare& compare = Compare(), const Allocator& alloc = Allocator())
+      : std::set<T, Compare, Allocator>(compare, alloc) {}
 
   Set(const Set& other)
-    : std::set<T, Compare, Allocator>(other) { }
+      : std::set<T, Compare, Allocator>(other) {}
 
-  template<class InputIt>
-  Set(InputIt first, InputIt last,
-      const Compare& compare = Compare(),
+  template <class InputIt>
+  Set(InputIt first, InputIt last, const Compare& compare = Compare(),
       const Allocator& alloc = Allocator())
-    : std::set<T, Compare, Allocator>(first, last, compare, alloc) { }
+      : std::set<T, Compare, Allocator>(first, last, compare, alloc) {}
 };
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

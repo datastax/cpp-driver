@@ -25,9 +25,9 @@
   For more information, please refer to <http://unlicense.org/>
 */
 
-#include <stdio.h>
-#include <openssl/ssl.h>
 #include <cassandra.h>
+#include <openssl/ssl.h>
+#include <stdio.h>
 
 int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   CassError rc;
@@ -35,7 +35,7 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   long cert_size;
   size_t bytes_read;
 
-  FILE *in = fopen(file, "rb");
+  FILE* in = fopen(file, "rb");
   if (in == NULL) {
     fprintf(stderr, "Error loading certificate file '%s'\n", file);
     return 0;
@@ -49,7 +49,7 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   bytes_read = fread(cert, 1, cert_size, in);
   fclose(in);
 
-  if (bytes_read == (size_t) cert_size) {
+  if (bytes_read == (size_t)cert_size) {
     rc = cass_ssl_add_trusted_cert_n(ssl, cert, cert_size);
     if (rc != CASS_OK) {
       fprintf(stderr, "Error loading SSL certificate: %s\n", cass_error_desc(rc));
@@ -105,8 +105,7 @@ int main(int argc, char* argv[]) {
         const char* release_version;
         size_t release_version_length;
         cass_value_get_string(value, &release_version, &release_version_length);
-        printf("release_version: '%.*s'\n", (int)release_version_length,
-               release_version);
+        printf("release_version: '%.*s'\n", (int)release_version_length, release_version);
       }
 
       cass_result_free(result);
@@ -115,19 +114,17 @@ int main(int argc, char* argv[]) {
       const char* message;
       size_t message_length;
       cass_future_error_message(result_future, &message, &message_length);
-      fprintf(stderr, "Unable to run query: '%.*s'\n", (int)message_length,
-                                                            message);
+      fprintf(stderr, "Unable to run query: '%.*s'\n", (int)message_length, message);
     }
 
     cass_statement_free(statement);
     cass_future_free(result_future);
   } else {
-      /* Handle error */
-      const char* message;
-      size_t message_length;
-      cass_future_error_message(connect_future, &message, &message_length);
-      fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length,
-                                                          message);
+    /* Handle error */
+    const char* message;
+    size_t message_length;
+    cass_future_error_message(connect_future, &message, &message_length);
+    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length, message);
   }
 
   cass_future_free(connect_future);

@@ -15,27 +15,25 @@
 
 namespace datastax { namespace internal {
 
-template <class K, class V, class Compare = std::less<K> >
-class Map :
-    public Allocated,
-    public std::map<K, V, Compare, internal::Allocator<std::pair<const K, V> > > {
+template <class K, class V, class Compare = std::less<K>>
+class Map
+    : public Allocated
+    , public std::map<K, V, Compare, internal::Allocator<std::pair<const K, V>>> {
 public:
-  typedef internal::Allocator<std::pair<const K, V> > Allocator;
+  typedef internal::Allocator<std::pair<const K, V>> Allocator;
 
-  explicit Map(const Compare& compare = Compare(),
-               const Allocator& alloc = Allocator())
-    : std::map<K, V, Compare, Allocator>(compare, alloc) { }
+  explicit Map(const Compare& compare = Compare(), const Allocator& alloc = Allocator())
+      : std::map<K, V, Compare, Allocator>(compare, alloc) {}
 
   Map(const Map& other)
-    : std::map<K, V, Compare, Allocator>(other) { }
+      : std::map<K, V, Compare, Allocator>(other) {}
 
-  template<class InputIt>
-  Map(InputIt first, InputIt last,
-      const Compare& compare = Compare(),
+  template <class InputIt>
+  Map(InputIt first, InputIt last, const Compare& compare = Compare(),
       const Allocator& alloc = Allocator())
-    : std::map<K, V, Compare, Allocator>(first, last, compare, alloc) { }
+      : std::map<K, V, Compare, Allocator>(first, last, compare, alloc) {}
 };
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

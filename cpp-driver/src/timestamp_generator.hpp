@@ -32,15 +32,12 @@ class TimestampGenerator : public RefCounted<TimestampGenerator> {
 public:
   typedef SharedRefPtr<TimestampGenerator> Ptr;
 
-  enum Type {
-    SERVER_SIDE,
-    MONOTONIC
-  };
+  enum Type { SERVER_SIDE, MONOTONIC };
 
   TimestampGenerator(Type type)
-    : type_(type) { }
+      : type_(type) {}
 
-  virtual ~TimestampGenerator() { }
+  virtual ~TimestampGenerator() {}
 
   Type type() const { return type_; }
 
@@ -56,7 +53,7 @@ private:
 class ServerSideTimestampGenerator : public TimestampGenerator {
 public:
   ServerSideTimestampGenerator()
-    : TimestampGenerator(SERVER_SIDE) { }
+      : TimestampGenerator(SERVER_SIDE) {}
 
   virtual int64_t next() { return CASS_INT64_MIN; }
 };
@@ -65,12 +62,11 @@ class MonotonicTimestampGenerator : public TimestampGenerator {
 public:
   MonotonicTimestampGenerator(int64_t warning_threshold_us = 1000000,
                               int64_t warning_interval_ms = 1000)
-    : TimestampGenerator(MONOTONIC)
-    , last_(0)
-    , last_warning_(0)
-    , warning_threshold_us_(warning_threshold_us)
-    , warning_interval_ms_(warning_interval_ms < 0 ? 0
-                                                   : warning_interval_ms) { }
+      : TimestampGenerator(MONOTONIC)
+      , last_(0)
+      , last_warning_(0)
+      , warning_threshold_us_(warning_threshold_us)
+      , warning_interval_ms_(warning_interval_ms < 0 ? 0 : warning_interval_ms) {}
 
   virtual int64_t next();
 
@@ -84,7 +80,7 @@ private:
   const int64_t warning_interval_ms_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::TimestampGenerator, CassTimestampGen)
 

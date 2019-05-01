@@ -28,7 +28,7 @@ namespace datastax { namespace internal { namespace core {
  */
 class SchemaAgreementListener {
 public:
-  virtual ~SchemaAgreementListener() { }
+  virtual ~SchemaAgreementListener() {}
 
   /**
    * A callback for determining if a host is up.
@@ -58,10 +58,8 @@ public:
    * @param max_wait_time_ms The maximum amount of time to wait for the data to
    * become available.
    */
-  SchemaAgreementHandler(const RequestHandler::Ptr& request_handler,
-                         const Host::Ptr& current_host,
-                         const Response::Ptr& response,
-                         SchemaAgreementListener* listener,
+  SchemaAgreementHandler(const RequestHandler::Ptr& request_handler, const Host::Ptr& current_host,
+                         const Response::Ptr& response, SchemaAgreementListener* listener,
                          uint64_t max_wait_time_ms);
 
   /**
@@ -79,6 +77,6 @@ private:
   SchemaAgreementListener* const listener_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

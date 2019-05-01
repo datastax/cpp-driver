@@ -17,10 +17,10 @@
  *
       CREATE ROLE target_user WITH PASSWORD = 'target_user' and LOGIN = true;
       CREATE ROLE service_user WITH PASSWORD = 'service_user' and LOGIN = true;
-      CREATE KEYSPACE examples WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};
-      CREATE TABLE examples.plaintext_proxy_auth (f1 int PRIMARY KEY, f2 int);
-      INSERT INTO examples.plaintext_proxy_auth (f1, f2) VALUES (1, 2);
-      GRANT ALL ON examples.plaintext_proxy_auth TO target_user;
+      CREATE KEYSPACE examples WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor':
+ 1}; CREATE TABLE examples.plaintext_proxy_auth (f1 int PRIMARY KEY, f2 int); INSERT INTO
+ examples.plaintext_proxy_auth (f1, f2) VALUES (1, 2); GRANT ALL ON examples.plaintext_proxy_auth TO
+ target_user;
 
       GRANT PROXY.LOGIN ON ROLE 'target_user' to 'service_user';
  */
@@ -52,7 +52,7 @@ CassError select_and_dump(CassSession* session) {
       int f1, f2;
       const CassRow* row = cass_iterator_get_row(iterator);
       if (cass_value_get_int32(cass_row_get_column(row, 0), &f1) != CASS_OK ||
-        cass_value_get_int32(cass_row_get_column(row, 1), &f2) != CASS_OK) {
+          cass_value_get_int32(cass_row_get_column(row, 1), &f2) != CASS_OK) {
         print_error(future);
       } else {
         printf("f1: %d    f2: %d\n", f1, f2);
@@ -94,9 +94,8 @@ void connect_and_run(const char* hosts, const char* proxy_user) {
   if (proxy_user == NULL) {
     cass_cluster_set_dse_plaintext_authenticator(cluster, "service_user", "service_user");
   } else {
-    cass_cluster_set_dse_plaintext_authenticator_proxy(
-      cluster, "service_user", "service_user", proxy_user
-    );
+    cass_cluster_set_dse_plaintext_authenticator_proxy(cluster, "service_user", "service_user",
+                                                       proxy_user);
   }
 
   if (connect_session(session, cluster) != CASS_OK) {

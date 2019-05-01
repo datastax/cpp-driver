@@ -43,19 +43,17 @@ private:
 };
 
 HeartbeatCallback::HeartbeatCallback(Connection* connection)
-  : SimpleRequestCallback(Request::ConstPtr(new OptionsRequest()))
-  , connection_(connection) { }
+    : SimpleRequestCallback(Request::ConstPtr(new OptionsRequest()))
+    , connection_(connection) {}
 
 void HeartbeatCallback::on_internal_set(ResponseMessage* response) {
-  LOG_TRACE("Heartbeat completed on host %s",
-            connection_->socket_->address_string().c_str());
+  LOG_TRACE("Heartbeat completed on host %s", connection_->socket_->address_string().c_str());
   connection_->heartbeat_outstanding_ = false;
 }
 
 void HeartbeatCallback::on_internal_error(CassError code, const String& message) {
   LOG_WARN("An error occurred on host %s during a heartbeat request: %s",
-           connection_->socket_->address_string().c_str(),
-           message.c_str());
+           connection_->socket_->address_string().c_str(), message.c_str());
   connection_->heartbeat_outstanding_ = false;
 }
 
@@ -69,7 +67,7 @@ void HeartbeatCallback::on_internal_timeout() {
  * A no operation connection listener. This is used if a listener is not set.
  */
 class NopConnectionListener : public ConnectionListener {
-  virtual void on_close(Connection* connection) { }
+  virtual void on_close(Connection* connection) {}
 };
 
 static NopConnectionListener nop_listener__;
@@ -83,9 +81,7 @@ void ConnectionHandler::on_write(Socket* socket, int status, SocketRequest* requ
   connection_->on_write(status, static_cast<RequestCallback*>(request));
 }
 
-void ConnectionHandler::on_close() {
-  connection_->on_close();
-}
+void ConnectionHandler::on_close() { connection_->on_close(); }
 
 void SslConnectionHandler::on_ssl_read(Socket* socket, char* buf, size_t size) {
   connection_->on_read(buf, size);
@@ -95,43 +91,37 @@ void SslConnectionHandler::on_write(Socket* socket, int status, SocketRequest* r
   connection_->on_write(status, static_cast<RequestCallback*>(request));
 }
 
-void SslConnectionHandler::on_close() {
-  connection_->on_close();
-}
+void SslConnectionHandler::on_close() { connection_->on_close(); }
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 void RecordingConnectionListener::process_events(const EventResponse::Vec& events,
                                                  ConnectionListener* listener) {
-  for (EventResponse::Vec::const_iterator it = events.begin(),
-       end = events.end(); it != end; ++it) {
+  for (EventResponse::Vec::const_iterator it = events.begin(), end = events.end(); it != end;
+       ++it) {
     listener->on_event(*it);
   }
 }
 
-Connection::Connection(const Socket::Ptr& socket,
-                       const Host::Ptr& host,
-                       ProtocolVersion protocol_version,
-                       unsigned int idle_timeout_secs,
+Connection::Connection(const Socket::Ptr& socket, const Host::Ptr& host,
+                       ProtocolVersion protocol_version, unsigned int idle_timeout_secs,
                        unsigned int heartbeat_interval_secs)
-  : socket_(socket)
-  , host_(host)
-  , inflight_request_count_(0)
-  , response_(new ResponseMessage())
-  , listener_(&nop_listener__)
-  , protocol_version_(protocol_version)
-  , idle_timeout_secs_(idle_timeout_secs)
-  , heartbeat_interval_secs_(heartbeat_interval_secs)
-  , heartbeat_outstanding_(false) {
+    : socket_(socket)
+    , host_(host)
+    , inflight_request_count_(0)
+    , response_(new ResponseMessage())
+    , listener_(&nop_listener__)
+    , protocol_version_(protocol_version)
+    , idle_timeout_secs_(idle_timeout_secs)
+    , heartbeat_interval_secs_(heartbeat_interval_secs)
+    , heartbeat_outstanding_(false) {
   inc_ref(); // For the event loop
 
   assert(host_->address() == socket_->address() && "Host doesn't match socket address");
   host_->increment_connection_count();
 }
 
-Connection::~Connection() {
-  host_->decrement_connection_count();
-}
+Connection::~Connection() { host_->decrement_connection_count(); }
 
 int32_t Connection::write(const RequestCallback::Ptr& callback) {
   int stream = stream_manager_.acquire(callback);
@@ -148,8 +138,7 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
 
     switch (request_size) {
       case SocketRequest::SOCKET_REQUEST_ERROR_CLOSED:
-        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
-                           "Unable to write to close socket");
+        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unable to write to close socket");
         break;
 
       case SocketRequest::SOCKET_REQUEST_ERROR_NO_HANDLER:
@@ -168,8 +157,7 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
         break;
 
       default:
-        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
-                           "Unspecified write error occurred");
+        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unspecified write error occurred");
         break;
     }
 
@@ -180,8 +168,7 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
   inflight_request_count_.fetch_add(1);
 
   LOG_TRACE("Sending message type %s with stream %d on host %s",
-            opcode_to_string(callback->request()->opcode()).c_str(),
-            stream,
+            opcode_to_string(callback->request()->opcode()).c_str(), stream,
             socket_->address_string().c_str());
 
   callback->set_state(RequestCallback::REQUEST_STATE_WRITING);
@@ -197,17 +184,11 @@ int32_t Connection::write_and_flush(const RequestCallback::Ptr& callback) {
   return result;
 }
 
-size_t Connection::flush() {
-  return socket_->flush();
-}
+size_t Connection::flush() { return socket_->flush(); }
 
-void Connection::close() {
-  socket_->close();
-}
+void Connection::close() { socket_->close(); }
 
-void Connection::defunct() {
-  socket_->defunct();
-}
+void Connection::defunct() { socket_->defunct(); }
 
 void Connection::set_listener(ConnectionListener* listener) {
   listener_ = listener ? listener : &nop_listener__;
@@ -220,8 +201,7 @@ void Connection::start_heartbeats() {
 
 void Connection::maybe_set_keyspace(ResponseMessage* response) {
   if (response->opcode() == CQL_OPCODE_RESULT) {
-    ResultResponse* result =
-        static_cast<ResultResponse*>(response->response_body().get());
+    ResultResponse* result = static_cast<ResultResponse*>(response->response_body().get());
     if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
       keyspace_ = result->keyspace().to_string();
     }
@@ -249,8 +229,7 @@ void Connection::on_write(int status, RequestCallback* request) {
         stream_manager_.release(callback->stream());
         inflight_request_count_.fetch_sub(1);
         callback->set_state(RequestCallback::REQUEST_STATE_FINISHED);
-        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
-                           "Unable to write to socket");
+        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unable to write to socket");
       }
       break;
 
@@ -293,10 +272,8 @@ void Connection::on_read(const char* buf, size_t size) {
       response_.reset(new ResponseMessage());
 
       LOG_TRACE("Consumed message type %s with stream %d, input %u, remaining %u on host %s",
-                opcode_to_string(response->opcode()).c_str(),
-                static_cast<int>(response->stream()),
-                static_cast<unsigned int>(size),
-                static_cast<unsigned int>(remaining),
+                opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
+                static_cast<unsigned int>(size), static_cast<unsigned int>(remaining),
                 socket_->address_string().c_str());
 
       if (response->stream() < 0) {
@@ -384,8 +361,7 @@ void Connection::on_heartbeat(Timer* timer) {
 void Connection::restart_terminate_timer() {
   // The terminate timer shouldn't be started without having heartbeats enabled,
   // otherwise connections would be terminated in periods of request inactivity.
-  if (!is_closing() && heartbeat_interval_secs_ > 0 &&
-      idle_timeout_secs_ > 0) {
+  if (!is_closing() && heartbeat_interval_secs_ > 0 && idle_timeout_secs_ > 0) {
     terminate_timer_.start(socket_->loop(), 1000 * idle_timeout_secs_,
                            bind_callback(&Connection::on_terminate, this));
   }

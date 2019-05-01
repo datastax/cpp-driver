@@ -19,9 +19,7 @@
 #include "nullable_value.hpp"
 #include "test_utils.hpp"
 
-namespace test {
-namespace driver {
-namespace values {
+namespace test { namespace driver { namespace values {
 
 /**
  * Inet wrapped value
@@ -31,32 +29,25 @@ public:
   typedef std::string ConvenienceType;
   typedef CassInet ValueType;
 
-  Inet() { }
+  Inet() {}
 
   Inet(const ConvenienceType& address) {
     std::string address_trim = Utils::trim(address);
 
     // Determine if the value is valid
-    CassError error_code = cass_inet_from_string(address_trim.c_str(),
-                                                 &inet_);
+    CassError error_code = cass_inet_from_string(address_trim.c_str(), &inet_);
     if (error_code != CASS_OK) {
-      EXPECT_TRUE(false) << "Invalid Inet " << address_trim
-        << ": Value will be NULL";
+      EXPECT_TRUE(false) << "Invalid Inet " << address_trim << ": Value will be NULL";
     }
   }
 
   void append(Collection collection) {
-    ASSERT_EQ(CASS_OK, cass_collection_append_inet(collection.get(),
-                                                   inet_));
+    ASSERT_EQ(CASS_OK, cass_collection_append_inet(collection.get(), inet_));
   }
 
-  std::string cql_type() const {
-    return "inet";
-  }
+  std::string cql_type() const { return "inet"; }
 
-  std::string cql_value() const {
-    return str();
-  }
+  std::string cql_value() const { return str(); }
 
   /**
    * Comparison operation for driver addresses
@@ -77,13 +68,11 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Inet& rhs) const {
-    return compare(rhs.inet_);
-  }
+  int compare(const Inet& rhs) const { return compare(rhs.inet_); }
 
   void initialize(const CassValue* value) {
     ASSERT_EQ(CASS_OK, cass_value_get_inet(value, &inet_))
-      << "Unable to Get Inet: Invalid error code returned";
+        << "Unable to Get Inet: Invalid error code returned";
   }
 
   static Inet max() {
@@ -105,9 +94,7 @@ public:
   }
 
   void set(UserType user_type, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_user_type_set_inet_by_name(user_type.get(),
-                                                       name.c_str(),
-                                                       inet_));
+    ASSERT_EQ(CASS_OK, cass_user_type_set_inet_by_name(user_type.get(), name.c_str(), inet_));
   }
 
   void statement_bind(Statement statement, size_t index) {
@@ -115,9 +102,7 @@ public:
   }
 
   void statement_bind(Statement statement, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_inet_by_name(statement.get(),
-                                                        name.c_str(),
-                                                        inet_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_inet_by_name(statement.get(), name.c_str(), inet_));
   }
 
   std::string str() const {
@@ -126,17 +111,11 @@ public:
     return inet_string;
   }
 
-  static std::string supported_server_version() {
-    return "1.2.0";
-  }
+  static std::string supported_server_version() { return "1.2.0"; }
 
-  ValueType value() const {
-    return inet_;
-  }
+  ValueType value() const { return inet_; }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_INET;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_INET; }
 
 protected:
   /**
@@ -145,14 +124,11 @@ protected:
   CassInet inet_;
 };
 
-inline std::ostream& operator<<(std::ostream& output_stream,
-                                const Inet& value) {
+inline std::ostream& operator<<(std::ostream& output_stream, const Inet& value) {
   output_stream << value.cql_value();
   return output_stream;
 }
 
-} // namespace values
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::values
 
 #endif // __TEST_INET_HPP__

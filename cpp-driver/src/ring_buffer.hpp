@@ -50,15 +50,17 @@
 namespace datastax { namespace internal { namespace rb {
 
 class RingBuffer {
- private:
+private:
   // NOTE: Size is maximum TLS frame length, this is required if we want
   // to fit whole ClientHello into one Buffer of RingBuffer.
   static const size_t BUFFER_LENGTH = 16 * 1024 + 5;
 
   class Buffer : public Allocated {
-   public:
-    Buffer() : read_pos_(0), write_pos_(0), next_(NULL) {
-    }
+  public:
+    Buffer()
+        : read_pos_(0)
+        , write_pos_(0)
+        , next_(NULL) {}
 
     size_t read_pos_;
     size_t write_pos_;
@@ -66,27 +68,26 @@ class RingBuffer {
     char data_[BUFFER_LENGTH];
   };
 
- public:
+public:
   struct Position {
     Position(Buffer* buf, size_t pos)
-      : buf(buf) , pos(pos) {}
+        : buf(buf)
+        , pos(pos) {}
     Buffer* buf;
     size_t pos;
   };
 
   RingBuffer()
-    : length_(0)
-    , read_head_(&head_)
-    , write_head_(&head_) {
+      : length_(0)
+      , read_head_(&head_)
+      , write_head_(&head_) {
     // Loop head
     head_.next_ = &head_;
   }
 
   ~RingBuffer();
 
-  Position write_position() {
-    return Position(write_head_, write_head_->write_pos_);
-  }
+  Position write_position() { return Position(write_head_, write_head_->write_pos_); }
 
   // Move read head to next buffer if needed
   void try_move_read_head();
@@ -124,11 +125,9 @@ class RingBuffer {
   void commit(size_t size);
 
   // Return size of buffer in bytes
-  size_t inline length() {
-    return length_;
-  }
+  size_t inline length() { return length_; }
 
- private:
+private:
   size_t length_;
   Buffer head_;
   Buffer* read_head_;
@@ -159,6 +158,6 @@ size_t RingBuffer::peek_multiple(Position pos, SmallVector<uv_buf_t, N>* bufs) {
   return total;
 }
 
-} } } // namespace datastax::internal::rb
+}}} // namespace datastax::internal::rb
 
 #endif

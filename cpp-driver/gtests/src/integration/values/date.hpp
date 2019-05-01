@@ -25,9 +25,7 @@
 #undef max
 #endif
 
-namespace test {
-namespace driver {
-namespace values {
+namespace test { namespace driver { namespace values {
 
 /**
  * Date wrapped value
@@ -38,23 +36,18 @@ public:
   typedef cass_uint32_t ValueType;
 
   Date()
-    : date_(0) { }
+      : date_(0) {}
 
   Date(const ConvenienceType date)
-    : date_(date) { }
+      : date_(date) {}
 
   void append(Collection collection) {
-    ASSERT_EQ(CASS_OK,
-      cass_collection_append_uint32(collection.get(), date_));
+    ASSERT_EQ(CASS_OK, cass_collection_append_uint32(collection.get(), date_));
   }
 
-  std::string cql_type() const {
-    return "date";
-  }
+  std::string cql_type() const { return "date"; }
 
-  std::string cql_value() const {
-    return "'" + str() + "'";
-  }
+  std::string cql_value() const { return "'" + str() + "'"; }
 
   /**
    * Comparison operation for driver unsigned integers (e.g. date)
@@ -75,13 +68,11 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Date& rhs) const {
-    return compare(rhs.date_);
-  }
+  int compare(const Date& rhs) const { return compare(rhs.date_); }
 
   void initialize(const CassValue* value) {
     ASSERT_EQ(CASS_OK, cass_value_get_uint32(value, &date_))
-      << "Unable to Get Date: Invalid error code returned";
+        << "Unable to Get Date: Invalid error code returned";
   }
 
   static Date max() {
@@ -97,21 +88,15 @@ public:
   }
 
   void set(UserType user_type, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_user_type_set_uint32_by_name(user_type.get(),
-                                                         name.c_str(),
-                                                         date_));
+    ASSERT_EQ(CASS_OK, cass_user_type_set_uint32_by_name(user_type.get(), name.c_str(), date_));
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_uint32(statement.get(),
-                                                  index,
-                                                  date_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_uint32(statement.get(), index, date_));
   }
 
   void statement_bind(Statement statement, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_uint32_by_name(statement.get(),
-                                                          name.c_str(),
-                                                          date_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_uint32_by_name(statement.get(), name.c_str(), date_));
   }
 
   std::string str() const {
@@ -122,17 +107,11 @@ public:
     return date_string;
   }
 
-  static std::string supported_server_version() {
-    return "2.2.3";
-  }
+  static std::string supported_server_version() { return "2.2.3"; }
 
-  cass_uint32_t value() const {
-    return date_;
-  }
+  cass_uint32_t value() const { return date_; }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_DATE;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_DATE; }
 
 protected:
   /**
@@ -141,15 +120,12 @@ protected:
   cass_uint32_t date_;
 };
 
-inline std::ostream& operator<<(std::ostream& output_stream,
-                                const Date& value) {
+inline std::ostream& operator<<(std::ostream& output_stream, const Date& value) {
   // Output both values
   output_stream << value.cql_value() << " [ = " << value.value() << "]";
   return output_stream;
 }
 
-} // namespace values
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::values
 
 #endif // __TEST_DATE_HPP__

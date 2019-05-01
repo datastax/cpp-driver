@@ -14,15 +14,15 @@
   limitations under the License.
 */
 
-#include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp> // Sleep functionality
 
 #include <uv.h>
 
 #include "cassandra.h"
-#include "testing.hpp"
 #include "test_utils.hpp"
+#include "testing.hpp"
 
 #define DEFAULT_CASSANDRA_NODE_PORT 9042
 #define WARM_UP_QUERY_COUNT 25
@@ -34,9 +34,9 @@ public:
   boost::shared_ptr<CCM::Bridge> ccm_;
 
   LatencyAwarePolicyTest()
-    : ccm_(new CCM::Bridge("config.txt"))
-    , cluster_(cass_cluster_new())
-    , thread_() {
+      : ccm_(new CCM::Bridge("config.txt"))
+      , cluster_(cass_cluster_new())
+      , thread_() {
     uv_mutex_init(&lock_);
     uv_cond_init(&condition_);
 
@@ -117,13 +117,13 @@ public:
    * @param tolerance Acceptable percentage threshold/tolerance
    */
   void check_max_latency(int node, unsigned int expected_latency, double tolerance) {
-      double latency = max_node_latency[node - 1];
-      if (latency < expected_latency) {
-        BOOST_CHECK_CLOSE(latency, expected_latency, tolerance);
-      } else {
-        // Ensure assertions are checked for testing framework
-        BOOST_CHECK(latency >= expected_latency);
-      }
+    double latency = max_node_latency[node - 1];
+    if (latency < expected_latency) {
+      BOOST_CHECK_CLOSE(latency, expected_latency, tolerance);
+    } else {
+      // Ensure assertions are checked for testing framework
+      BOOST_CHECK(latency >= expected_latency);
+    }
   }
 
 private:
@@ -142,9 +142,7 @@ private:
    *
    * @param arg Not used
    */
-  static void start_thread(void* arg) {
-    execute_query();
-  }
+  static void start_thread(void* arg) { execute_query(); }
 
   /**
    * Execute a query on the system table
@@ -157,18 +155,18 @@ private:
       std::string query = "SELECT * FROM system.local";
       test_utils::CassStatementPtr statement(cass_statement_new_n(query.data(), query.size(), 0));
       test_utils::CassFuturePtr future(cass_session_execute(session_.get(), statement.get()));
-      CassError error_code = test_utils::wait_and_return_error(future.get(),
-                                                               240 * test_utils::ONE_SECOND_IN_MICROS);
+      CassError error_code =
+          test_utils::wait_and_return_error(future.get(), 240 * test_utils::ONE_SECOND_IN_MICROS);
 
       // Ignore all timing errors
-      if (error_code != CASS_OK &&
-          error_code != CASS_ERROR_LIB_REQUEST_TIMED_OUT &&
+      if (error_code != CASS_OK && error_code != CASS_ERROR_LIB_REQUEST_TIMED_OUT &&
           error_code != CASS_ERROR_SERVER_READ_TIMEOUT) {
         CassString message;
         cass_future_error_message(future.get(), &message.data, &message.length);
 
         // Indicate error occurred
-        std::cerr << std::string(message.data, message.length) << "' (" << cass_error_desc(error_code) << ")" << std::endl;
+        std::cerr << std::string(message.data, message.length) << "' ("
+                  << cass_error_desc(error_code) << ")" << std::endl;
         is_error_ = true;
         is_running_ = false;
       }
@@ -176,9 +174,10 @@ private:
       if (!is_error_) {
         // Get the host latency
         std::string host_ip_address = get_host_from_future(future.get()).c_str();
-        double host_latency = static_cast<double>(get_host_latency_average(session_.get(),
-                                                                           host_ip_address.c_str(),
-                                                                           DEFAULT_CASSANDRA_NODE_PORT)) / 1e6;
+        double host_latency =
+            static_cast<double>(get_host_latency_average(session_.get(), host_ip_address.c_str(),
+                                                         DEFAULT_CASSANDRA_NODE_PORT)) /
+            1e6;
 
         // Update the max latency incurred
         std::stringstream node_value;

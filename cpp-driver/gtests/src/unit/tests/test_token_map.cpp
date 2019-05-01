@@ -16,9 +16,9 @@
 
 #include <gtest/gtest.h>
 
-#include "test_token_map_utils.hpp"
 #include "map.hpp"
 #include "set.hpp"
+#include "test_token_map_utils.hpp"
 
 using namespace datastax;
 using namespace datastax::internal;
@@ -35,11 +35,11 @@ struct TestTokenMap {
   TokenMap::Ptr token_map;
 
   TestTokenMap()
-    : token_map(TokenMap::from_partitioner(Partitioner::name())) { }
+      : token_map(TokenMap::from_partitioner(Partitioner::name())) {}
 
   void add_host(const Host::Ptr& host) {
-    for (Vector<String>::const_iterator i = host->tokens().begin(),
-         end = host->tokens().end(); i != end; ++i) {
+    for (Vector<String>::const_iterator i = host->tokens().begin(), end = host->tokens().end();
+         i != end; ++i) {
       const String v(*i);
       tokens[Partitioner::from_string(*i)] = host;
     }
@@ -47,8 +47,8 @@ struct TestTokenMap {
 
   void build(const String& keyspace_name = "ks", size_t replication_factor = 3) {
     add_keyspace_simple(keyspace_name, replication_factor, token_map.get());
-    for (typename TokenHostMap::const_iterator i = tokens.begin(),
-         end = tokens.end(); i != end; ++i) {
+    for (typename TokenHostMap::const_iterator i = tokens.begin(), end = tokens.end(); i != end;
+         ++i) {
       token_map->add_host(i->second);
     }
     token_map->build();
@@ -66,7 +66,7 @@ struct TestTokenMap {
   void verify(const String& keyspace_name = "ks") {
     const String keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
-    for (size_t i = 0; i < sizeof(keys)/sizeof(keys[0]); ++i) {
+    for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i) {
       const String& key = keys[i];
 
       const CopyOnWriteHostVec& hosts = token_map->get_replicas(keyspace_name, key);
@@ -83,8 +83,7 @@ struct TestTokenMap {
 
 } // namespace
 
-TEST(TokenMapUnitTest, Murmur3)
-{
+TEST(TokenMapUnitTest, Murmur3) {
   TestTokenMap<Murmur3Partitioner> test_murmur3;
 
   test_murmur3.add_host(create_host("1.0.0.1", single_token(CASS_INT64_MIN / 2)));
@@ -95,8 +94,7 @@ TEST(TokenMapUnitTest, Murmur3)
   test_murmur3.verify();
 }
 
-TEST(TokenMapUnitTest, Murmur3MultipleTokensPerHost)
-{
+TEST(TokenMapUnitTest, Murmur3MultipleTokensPerHost) {
   TestTokenMap<Murmur3Partitioner> test_murmur3;
 
   const size_t tokens_per_host = 256;
@@ -111,8 +109,7 @@ TEST(TokenMapUnitTest, Murmur3MultipleTokensPerHost)
   test_murmur3.verify();
 }
 
-TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes)
-{
+TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes) {
   TestTokenMap<Murmur3Partitioner> test_murmur3;
 
   size_t num_dcs = 3;
@@ -143,10 +140,8 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes)
         sprintf(ip, "127.0.%d.%d", host_count / 255, host_count % 255);
         host_count++;
 
-        Host::Ptr host(create_host(ip,
-                                   random_murmur3_tokens(rng, num_vnodes),
-                                   Murmur3Partitioner::name().to_string(),
-                                   rack, dc));
+        Host::Ptr host(create_host(ip, random_murmur3_tokens(rng, num_vnodes),
+                                   Murmur3Partitioner::name().to_string(), rack, dc));
 
         test_murmur3.add_host(host);
         token_map->add_host(host);
@@ -160,25 +155,23 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes)
 
   const String keys[] = { "test", "abc", "def", "a", "b", "c", "d" };
 
-  for (size_t i = 0; i < sizeof(keys)/sizeof(keys[0]); ++i) {
+  for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i) {
     const String& key = keys[i];
 
     const CopyOnWriteHostVec& hosts = token_map->get_replicas("ks1", key);
     ASSERT_TRUE(hosts && hosts->size() == replication_factor * num_dcs);
 
-    typedef Map<String, Set<String> > DcRackMap;
+    typedef Map<String, Set<String>> DcRackMap;
 
     // Verify rack counts
     DcRackMap dc_racks;
-    for (HostVec::const_iterator i = hosts->begin(),
-         end = hosts->end(); i != end; ++i) {
+    for (HostVec::const_iterator i = hosts->begin(), end = hosts->end(); i != end; ++i) {
       const Host::Ptr& host = (*i);
       dc_racks[host->dc()].insert(host->rack());
     }
     EXPECT_EQ(dc_racks.size(), num_dcs);
 
-    for (DcRackMap::const_iterator i = dc_racks.begin(),
-         end = dc_racks.end(); i != end; ++i) {
+    for (DcRackMap::const_iterator i = dc_racks.begin(), end = dc_racks.end(); i != end; ++i) {
       EXPECT_GE(i->second.size(), std::min(num_racks, replication_factor));
     }
 
@@ -190,22 +183,26 @@ TEST(TokenMapUnitTest, Murmur3LargeNumberOfVnodes)
   }
 }
 
-TEST(TokenMapUnitTest, Random)
-{
+TEST(TokenMapUnitTest, Random) {
   TokenMap::Ptr token_map(TokenMap::from_partitioner(RandomPartitioner::name()));
 
   TestTokenMap<RandomPartitioner> test_random;
 
-  test_random.add_host(create_host("1.0.0.1", single_token(create_random_token("42535295865117307932921825928971026432")))); // 2^127 / 4
-  test_random.add_host(create_host("1.0.0.2", single_token(create_random_token("85070591730234615865843651857942052864")))); // 2^127 / 2
-  test_random.add_host(create_host("1.0.0.3", single_token(create_random_token("1605887595351923798765477786913079296")))); // 2^127 * 3 / 4
+  test_random.add_host(create_host(
+      "1.0.0.1",
+      single_token(create_random_token("42535295865117307932921825928971026432")))); // 2^127 / 4
+  test_random.add_host(create_host(
+      "1.0.0.2",
+      single_token(create_random_token("85070591730234615865843651857942052864")))); // 2^127 / 2
+  test_random.add_host(create_host(
+      "1.0.0.3",
+      single_token(create_random_token("1605887595351923798765477786913079296")))); // 2^127 * 3 / 4
 
   test_random.build();
   test_random.verify();
 }
 
-TEST(TokenMapUnitTest, ByteOrdered)
-{
+TEST(TokenMapUnitTest, ByteOrdered) {
   TokenMap::Ptr token_map(TokenMap::from_partitioner(ByteOrderedPartitioner::name()));
 
   TestTokenMap<ByteOrderedPartitioner> test_byte_ordered;
@@ -218,8 +215,7 @@ TEST(TokenMapUnitTest, ByteOrdered)
   test_byte_ordered.verify();
 }
 
-TEST(TokenMapUnitTest, RemoveHost)
-{
+TEST(TokenMapUnitTest, RemoveHost) {
   TestTokenMap<Murmur3Partitioner> test_remove_host;
 
   test_remove_host.add_host(create_host("1.0.0.1", single_token(CASS_INT64_MIN / 2)));
@@ -239,7 +235,8 @@ TEST(TokenMapUnitTest, RemoveHost)
     EXPECT_EQ((*replicas)[1]->address(), Address("1.0.0.2", 9042));
   }
 
-  TestTokenMap<Murmur3Partitioner>::TokenHostMap::iterator host_to_remove_it = test_remove_host.tokens.begin();
+  TestTokenMap<Murmur3Partitioner>::TokenHostMap::iterator host_to_remove_it =
+      test_remove_host.tokens.begin();
 
   token_map->remove_host_and_build(host_to_remove_it->second);
 
@@ -271,8 +268,7 @@ TEST(TokenMapUnitTest, RemoveHost)
   }
 }
 
-TEST(TokenMapUnitTest, UpdateHost)
-{
+TEST(TokenMapUnitTest, UpdateHost) {
   TestTokenMap<Murmur3Partitioner> test_update_host;
 
   test_update_host.add_host(create_host("1.0.0.1", single_token(CASS_INT64_MIN / 2)));
@@ -333,8 +329,7 @@ TEST(TokenMapUnitTest, UpdateHost)
  * @test_category token_map
  * @expected_results Host's tokens should be added and removed from the token map.
  */
-TEST(TokenMapUnitTest, UpdateRemoveHostsMurmur3)
-{
+TEST(TokenMapUnitTest, UpdateRemoveHostsMurmur3) {
   TokenMapImpl<Murmur3Partitioner> token_map;
 
   // Add hosts and build token map
@@ -344,10 +339,8 @@ TEST(TokenMapUnitTest, UpdateRemoveHostsMurmur3)
   tokens1.push_back(1LL);
   tokens1.push_back(3LL);
 
-  Host::Ptr host1(create_host("1.0.0.1",
-                              murmur3_tokens(tokens1),
-                              Murmur3Partitioner::name().to_string(),
-                              "rack1", "dc1"));
+  Host::Ptr host1(create_host("1.0.0.1", murmur3_tokens(tokens1),
+                              Murmur3Partitioner::name().to_string(), "rack1", "dc1"));
 
   token_map.add_host(host1);
 
@@ -357,10 +350,8 @@ TEST(TokenMapUnitTest, UpdateRemoveHostsMurmur3)
   tokens2.push_back(2LL);
   tokens2.push_back(4LL);
 
-  Host::Ptr host2(create_host("1.0.0.2",
-                              murmur3_tokens(tokens2),
-                              Murmur3Partitioner::name().to_string(),
-                              "rack1", "dc2"));
+  Host::Ptr host2(create_host("1.0.0.2", murmur3_tokens(tokens2),
+                              Murmur3Partitioner::name().to_string(), "rack1", "dc2"));
 
   token_map.add_host(host2);
 
@@ -437,8 +428,7 @@ TEST(TokenMapUnitTest, UpdateRemoveHostsMurmur3)
   EXPECT_TRUE(token_map.contains(4LL));
 }
 
-TEST(TokenMapUnitTest, DropKeyspace)
-{
+TEST(TokenMapUnitTest, DropKeyspace) {
   TestTokenMap<Murmur3Partitioner> test_drop_keyspace;
 
   test_drop_keyspace.add_host(create_host("1.0.0.1", single_token(CASS_INT64_MIN / 2)));

@@ -30,12 +30,10 @@ using namespace datastax::internal::core;
 
 inline bool operator==(const CassUuid& rhs, const CassUuid& lhs) {
   return rhs.clock_seq_and_node == lhs.clock_seq_and_node &&
-      rhs.time_and_version == lhs.time_and_version;
+         rhs.time_and_version == lhs.time_and_version;
 }
 
-inline bool operator!=(const CassUuid& rhs, const CassUuid& lhs) {
-  return !(rhs == lhs);
-}
+inline bool operator!=(const CassUuid& rhs, const CassUuid& lhs) { return !(rhs == lhs); }
 
 class StartupRequestUnitTest : public Unit {
 public:
@@ -60,10 +58,10 @@ public:
   void connect() {
     config_.contact_points().push_back("127.0.0.1");
     internal::core::Future::Ptr connect_future(session_.connect(config_));
-    ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME)) << "Timed out waiting for session to connect";
-    ASSERT_FALSE(connect_future->error())
-        << cass_error_desc(connect_future->error()->code) << ": "
-        << connect_future->error()->message;
+    ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
+        << "Timed out waiting for session to connect";
+    ASSERT_FALSE(connect_future->error()) << cass_error_desc(connect_future->error()->code) << ": "
+                                          << connect_future->error()->message;
 
     char client_id[CASS_UUID_STRING_LENGTH];
     cass_uuid_string(session_.client_id(), client_id);
@@ -74,9 +72,8 @@ public:
     SharedRefPtr<QueryRequest> request(new QueryRequest(CLIENT_OPTIONS_QUERY, 0));
     ResponseFuture::Ptr future = static_cast<ResponseFuture::Ptr>(session_.execute(request, NULL));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out executing query";
-    EXPECT_FALSE(future->error())
-        << cass_error_desc(future->error()->code) << ": "
-        << future->error()->message;
+    EXPECT_FALSE(future->error()) << cass_error_desc(future->error()->code) << ": "
+                                  << future->error()->message;
 
     Map<String, String> options;
     ResultResponse::Ptr response = static_cast<ResultResponse::Ptr>(future->response());
@@ -151,8 +148,7 @@ TEST_F(StartupRequestUnitTest, SetClientId) {
   CassUuid generated_client_id = session().client_id();
   CassUuid assigned_client_id;
   ASSERT_EQ(CASS_OK,
-            cass_uuid_from_string("03398c99-c635-4fad-b30a-3b2c49f785c2",
-                                  &assigned_client_id));
+            cass_uuid_from_string("03398c99-c635-4fad-b30a-3b2c49f785c2", &assigned_client_id));
   config().set_client_id(assigned_client_id);
 
   connect();

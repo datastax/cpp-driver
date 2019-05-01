@@ -11,14 +11,12 @@
 
 #include "objects/object_base.hpp"
 
-#include "objects/future.hpp"
 #include "objects/dse_graph_result.hpp"
+#include "objects/future.hpp"
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 /**
  * Wrapped DSE graph result set object
@@ -28,7 +26,7 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) {}
+        : test::Exception(message) {}
   };
 
   /**
@@ -38,8 +36,8 @@ public:
    * @param result_set Native driver object
    */
   GraphResultSet(DseGraphResultSet* result_set)
-    : Object<DseGraphResultSet, dse_graph_resultset_free>(result_set)
-    , index_(0) {}
+      : Object<DseGraphResultSet, dse_graph_resultset_free>(result_set)
+      , index_(0) {}
 
   /**
    * Create the DSE graph result set object from the shared reference
@@ -47,8 +45,8 @@ public:
    * @param result_set Shared reference
    */
   GraphResultSet(Ptr result_set)
-    : Object<DseGraphResultSet, dse_graph_resultset_free>(result_set)
-    , index_(0) {}
+      : Object<DseGraphResultSet, dse_graph_resultset_free>(result_set)
+      , index_(0) {}
 
   /**
    * Create the DSE graph result set object from a future object
@@ -56,10 +54,10 @@ public:
    * @param future Wrapped driver object
    */
   GraphResultSet(Future future)
-    : Object<DseGraphResultSet, dse_graph_resultset_free>(
-        cass_future_get_dse_graph_resultset(future.get()))
-    , future_(future)
-    , index_(0) {}
+      : Object<DseGraphResultSet, dse_graph_resultset_free>(
+            cass_future_get_dse_graph_resultset(future.get()))
+      , future_(future)
+      , index_(0) {}
 
   /**
    * Get the error code from the future
@@ -118,18 +116,14 @@ public:
    *
    * @return The number of results in the DSE graph result set
    */
-  size_t count() {
-    return dse_graph_resultset_count(get());
-  }
+  size_t count() { return dse_graph_resultset_count(get()); }
 
   /**
    * Get the current index into the DSE graph result set
    *
    * @return Current index into the DSE graph result set
    */
-  size_t index() {
-    return index_;
-  }
+  size_t index() { return index_; }
 
   /**
    * Get the next DSE graph result from the DSE graph result set
@@ -187,11 +181,8 @@ private:
    * Counter variable to determine the current DSE graph result set index
    */
   size_t index_;
-
 };
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_GRAPH_RESULT_SET_HPP__

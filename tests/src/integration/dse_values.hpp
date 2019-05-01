@@ -14,17 +14,13 @@
 #include "values/dse_point.hpp"
 #include "values/dse_polygon.hpp"
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 typedef NullableValue<values::dse::DateRange> DateRange;
 typedef NullableValue<values::dse::LineString> LineString;
 typedef NullableValue<values::dse::Point> Point;
 typedef NullableValue<values::dse::Polygon> Polygon;
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __DRIVER_VALUE_DSE_VALUES_HPP__

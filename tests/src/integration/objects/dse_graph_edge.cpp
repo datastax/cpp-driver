@@ -8,17 +8,11 @@
 #include "objects/dse_graph_edge.hpp"
 #include "objects/dse_graph_result.hpp"
 
-test::driver::dse::GraphResult test::driver::dse::GraphEdge::id() {
-  return edge_.id;
-}
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::id() { return edge_.id; }
 
-test::driver::dse::GraphResult test::driver::dse::GraphEdge::label() {
-  return edge_.label;
-}
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::label() { return edge_.label; }
 
-test::driver::dse::GraphResult test::driver::dse::GraphEdge::type() {
-  return edge_.type;
-}
+test::driver::dse::GraphResult test::driver::dse::GraphEdge::type() { return edge_.type; }
 
 test::driver::dse::GraphResult test::driver::dse::GraphEdge::properties() {
   return edge_.properties;

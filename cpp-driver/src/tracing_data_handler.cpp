@@ -23,15 +23,11 @@ using namespace datastax;
 using namespace datastax::internal::core;
 
 TracingDataHandler::TracingDataHandler(const RequestHandler::Ptr& request_handler,
-                                       const Host::Ptr& current_host,
-                                       const Response::Ptr& response,
-                                       CassConsistency consistency,
-                                       uint64_t max_wait_time_ms,
+                                       const Host::Ptr& current_host, const Response::Ptr& response,
+                                       CassConsistency consistency, uint64_t max_wait_time_ms,
                                        uint64_t retry_wait_time_ms)
-  : WaitForHandler (request_handler, current_host,
-                    response,
-                    max_wait_time_ms, retry_wait_time_ms)
-  , consistency_(consistency) { }
+    : WaitForHandler(request_handler, current_host, response, max_wait_time_ms, retry_wait_time_ms)
+    , consistency_(consistency) {}
 
 ChainedRequestCallback::Ptr TracingDataHandler::callback() {
   WaitforRequestVec requests;

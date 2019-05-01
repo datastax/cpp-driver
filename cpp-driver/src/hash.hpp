@@ -22,7 +22,7 @@
 
 namespace datastax { namespace hash {
 
-typedef int (Op)(int);
+typedef int(Op)(int);
 
 inline int nop(int c) { return c; }
 
@@ -52,7 +52,6 @@ inline uint32_t fnv1a(const char* data, size_t length, Op op = nop) {
 }
 #endif
 
-} } // namespace datastax::hash
-
+}} // namespace datastax::hash
 
 #endif

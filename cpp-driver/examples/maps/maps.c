@@ -26,9 +26,9 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cassandra.h"
 
@@ -139,9 +139,7 @@ CassError select_from_maps(CassSession* session, const char* key) {
     if (cass_result_row_count(result) > 0) {
       const CassRow* row = cass_result_first_row(result);
 
-      CassIterator* iterator
-          = cass_iterator_from_map(
-              cass_row_get_column(row, 0));
+      CassIterator* iterator = cass_iterator_from_map(cass_row_get_column(row, 0));
 
       while (cass_iterator_next(iterator)) {
         const char* key;
@@ -168,7 +166,9 @@ int main(int argc, char* argv[]) {
   CassSession* session = cass_session_new();
   char* hosts = "127.0.0.1";
 
-  const Pair items[] = { { "apple", 1 }, { "orange", 2 }, { "banana", 3 }, { "mango", 4 }, { NULL, 0 } };
+  const Pair items[] = {
+    { "apple", 1 }, { "orange", 2 }, { "banana", 3 }, { "mango", 4 }, { NULL, 0 }
+  };
 
   if (argc > 1) {
     hosts = argv[1];
@@ -181,15 +181,12 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { \
+  execute_query(session, "CREATE KEYSPACE examples WITH replication = { \
                 'class': 'SimpleStrategy', 'replication_factor': '3' };");
 
-  execute_query(session,
-                "CREATE TABLE examples.maps (key text, \
+  execute_query(session, "CREATE TABLE examples.maps (key text, \
                 items map<text, int>, \
                 PRIMARY KEY (key))");
-
 
   insert_into_maps(session, "test", items);
   select_from_maps(session, "test");

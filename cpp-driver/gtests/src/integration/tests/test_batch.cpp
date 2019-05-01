@@ -24,15 +24,15 @@
 class BatchSingleNodeClusterTests : public Integration {
 public:
   BatchSingleNodeClusterTests()
-    : value_cql_data_type_("text") { }
+      : value_cql_data_type_("text") {}
 
   virtual void SetUp() {
     // Call the parent setup function
     Integration::SetUp();
 
     // Create the table, insert and select statements for the test
-    session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT,
-                     table_name_.c_str(), "int", value_cql_data_type_.c_str()));
+    session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int",
+                                   value_cql_data_type_.c_str()));
     create_queries_select_statements();
   }
 
@@ -58,12 +58,11 @@ protected:
    * Create the queries and select statement for the test
    */
   virtual void create_queries_select_statements() {
-    insert_query_ = format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT,
-                                  table_name_.c_str(), "?", "?");
-    update_query_ = format_string(CASSANDRA_UPDATE_VALUE_FORMAT,
-                                  table_name_.c_str(), "value + ?", "?");
-    select_prepared_ = session_.prepare(format_string(CASSANDRA_SELECT_VALUE_FORMAT,
-                                        table_name_.c_str(), "?"));
+    insert_query_ = format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "?", "?");
+    update_query_ =
+        format_string(CASSANDRA_UPDATE_VALUE_FORMAT, table_name_.c_str(), "value + ?", "?");
+    select_prepared_ =
+        session_.prepare(format_string(CASSANDRA_SELECT_VALUE_FORMAT, table_name_.c_str(), "?"));
   }
 
   /**
@@ -84,8 +83,7 @@ protected:
       Result result = session_.execute(statement);
 
       // Validate the result
-      ASSERT_EQ(Text(format_string("test data %d", i)),
-                result.first_row().next().as<Text>());
+      ASSERT_EQ(Text(format_string("test data %d", i)), result.first_row().next().as<Text>());
     }
   }
 
@@ -96,8 +94,7 @@ protected:
    * @param index The index/row being validated
    */
   virtual void validate_result(Result result, int index) {
-    ASSERT_EQ(Text(format_string("test data %d", index)),
-              result.first_row().next().as<Text>());
+    ASSERT_EQ(Text(format_string("test data %d", index)), result.first_row().next().as<Text>());
   }
 };
 
@@ -108,9 +105,7 @@ protected:
  */
 class BatchCounterSingleNodeClusterTests : public BatchSingleNodeClusterTests {
 public:
-  BatchCounterSingleNodeClusterTests() {
-    value_cql_data_type_ = "counter";
-  }
+  BatchCounterSingleNodeClusterTests() { value_cql_data_type_ = "counter"; }
 
   /**
    * Validate the result for the text data type
@@ -264,13 +259,15 @@ CASSANDRA_INTEGRATION_TEST_F(BatchCounterSingleNodeClusterTests, InvalidBatchTyp
 
   // Create and add the insert statement
   Statement statement(insert_query_, 2);
-  statement.bind<Integer>(0, Integer(37)); // Attempt to insert a counter value inside a batch statement
+  statement.bind<Integer>(
+      0, Integer(37)); // Attempt to insert a counter value inside a batch statement
   statement.bind<Counter>(1, Counter(37));
   batch.add(statement);
 
   // Execute the batch statement and verify the server response
   Result result = session_.execute(batch, false);
-  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result.error_code()); // Cannot include a counter statement in a logged batch
+  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
+            result.error_code()); // Cannot include a counter statement in a logged batch
 }
 
 /**
@@ -315,8 +312,7 @@ CASSANDRA_INTEGRATION_TEST_F(BatchCounterThreeNodeClusterTests, MixedPreparedAnd
   session_.execute(batch);
 
   // Validate the updates
-  Result result = session_.execute(default_select_all(),
-                                   CASS_CONSISTENCY_QUORUM);
+  Result result = session_.execute(default_select_all(), CASS_CONSISTENCY_QUORUM);
   ASSERT_EQ(number_of_rows, result.row_count());
   ASSERT_EQ(2u, result.column_count());
   Rows rows = result.rows();

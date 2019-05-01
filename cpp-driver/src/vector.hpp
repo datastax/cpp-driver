@@ -18,24 +18,24 @@ namespace datastax { namespace internal {
 template <class T>
 class Vector
     : public Allocated
-    , public std::vector<T, internal::Allocator<T> > {
+    , public std::vector<T, internal::Allocator<T>> {
 public:
   typedef internal::Allocator<T> Allocator;
 
   explicit Vector(const Allocator& alloc = Allocator())
-    : std::vector<T, Allocator>(alloc) { }
+      : std::vector<T, Allocator>(alloc) {}
 
   explicit Vector(size_t count, const T& value = T())
-    : std::vector<T, Allocator>(count, value) { }
+      : std::vector<T, Allocator>(count, value) {}
 
   Vector(const Vector& other)
-    : std::vector<T, Allocator>(other) { }
+      : std::vector<T, Allocator>(other) {}
 
-  template<class InputIt>
+  template <class InputIt>
   Vector(InputIt first, InputIt last)
-    : std::vector<T, Allocator>(first, last) { }
+      : std::vector<T, Allocator>(first, last) {}
 };
 
-} } // namepsace datastax::internal
+}} // namespace datastax::internal
 
 #endif

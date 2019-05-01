@@ -48,14 +48,14 @@ public:
   };
 
   Resolver(const String& hostname, int port, const Callback& callback)
-    : hostname_(hostname)
-    , port_(port)
-    , status_(NEW)
-    , callback_(callback) {
+      : hostname_(hostname)
+      , port_(port)
+      , status_(NEW)
+      , callback_(callback) {
     req_.data = this;
   }
 
-  ~Resolver() { }
+  ~Resolver() {}
 
   const String& hostname() { return hostname_; }
   int port() { return port_; }
@@ -74,14 +74,12 @@ public:
     inc_ref(); // For the event loop
 
     if (timeout > 0) {
-      timer_.start(loop, timeout,
-                   bind_callback(&Resolver::on_timeout, this));
+      timer_.start(loop, timeout, bind_callback(&Resolver::on_timeout, this));
     }
 
     OStringStream ss;
     ss << port_;
-    int rc = uv_getaddrinfo(loop, &req_, on_resolve, hostname_.c_str(),
-                            ss.str().c_str(), hints);
+    int rc = uv_getaddrinfo(loop, &req_, on_resolve, hostname_.c_str(), ss.str().c_str(), hints);
 
     if (rc != 0) {
       status_ = FAILED_BAD_PARAM;
@@ -101,8 +99,7 @@ public:
   }
 
 private:
-  static void on_resolve(uv_getaddrinfo_t* req, int status,
-                         struct addrinfo* res) {
+  static void on_resolve(uv_getaddrinfo_t* req, int status, struct addrinfo* res) {
     Resolver* resolver = static_cast<Resolver*>(req->data);
 
     if (resolver->status_ == RESOLVING) { // A timeout may have happened
@@ -139,7 +136,7 @@ private:
         status = true;
       }
       res = res->ai_next;
-    } while(res);
+    } while (res);
     return status;
   }
 
@@ -163,26 +160,23 @@ public:
   typedef internal::Callback<void, MultiResolver*> Callback;
 
   MultiResolver(const Callback& callback)
-    : remaining_(0)
-    , callback_(callback) { }
+      : remaining_(0)
+      , callback_(callback) {}
 
   const Resolver::Vec& resolvers() { return resolvers_; }
 
-  void resolve(uv_loop_t* loop,
-               const String& host, int port,
-               uint64_t timeout, struct addrinfo* hints = NULL) {
+  void resolve(uv_loop_t* loop, const String& host, int port, uint64_t timeout,
+               struct addrinfo* hints = NULL) {
     inc_ref();
     Resolver::Ptr resolver(
-          new Resolver(host, port,
-                       bind_callback(&MultiResolver::on_resolve, this)));
+        new Resolver(host, port, bind_callback(&MultiResolver::on_resolve, this)));
     resolver->resolve(loop, timeout, hints);
     resolvers_.push_back(resolver);
     remaining_++;
   }
 
   void cancel() {
-    for (Resolver::Vec::iterator it = resolvers_.begin(),
-         end = resolvers_.end(); it != end; ++it) {
+    for (Resolver::Vec::iterator it = resolvers_.begin(), end = resolvers_.end(); it != end; ++it) {
       (*it)->cancel();
     }
   }
@@ -205,6 +199,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(MultiResolver);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

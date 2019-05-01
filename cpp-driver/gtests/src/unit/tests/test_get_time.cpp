@@ -16,8 +16,8 @@
 
 #include <gtest/gtest.h>
 
-#include "test_utils.hpp"
 #include "get_time.hpp"
+#include "test_utils.hpp"
 
 using datastax::internal::get_time_monotonic_ns;
 

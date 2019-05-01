@@ -16,8 +16,8 @@
 
 #ifndef __SHARED_PTR_HPP__
 #define __SHARED_PTR_HPP__
-#include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
+#include "scoped_ptr.hpp"
 
 template <class T>
 struct StdDeleter {
@@ -27,24 +27,20 @@ struct StdDeleter {
 /**
  * Reference counted objects container
  */
-template<typename T, class D = datastax::internal::DefaultDeleter<T> >
-class ObjectRef : public datastax::internal::RefCounted< ObjectRef<T, D> > {
+template <typename T, class D = datastax::internal::DefaultDeleter<T>>
+class ObjectRef : public datastax::internal::RefCounted<ObjectRef<T, D>> {
 public:
   ObjectRef(T* ptr)
-    : ptr_(ptr) {}
+      : ptr_(ptr) {}
 
-  virtual ~ObjectRef() {
-    D()(ptr_);
-  }
+  virtual ~ObjectRef() { D()(ptr_); }
 
   /**
    * Get the native object
    *
    * @return The native object
    */
-  T* get() {
-    return ptr_;
-  }
+  T* get() { return ptr_; }
 
 private:
   /**
@@ -56,28 +52,22 @@ private:
 /**
  * Shared pointer for object references
  */
-template<typename T, class D = datastax::internal::DefaultDeleter<T> >
+template <typename T, class D = datastax::internal::DefaultDeleter<T>>
 class SharedPtr {
 public:
   SharedPtr(T* ptr = NULL)
-    : object_(NULL) {
+      : object_(NULL) {
     if (ptr) {
       ObjectRef<T, D>* object_ref = new ObjectRef<T, D>(ptr);
-      object_ = datastax::internal::SharedRefPtr<ObjectRef<T, D> >(object_ref);
+      object_ = datastax::internal::SharedRefPtr<ObjectRef<T, D>>(object_ref);
     }
   }
 
-  T* operator->() {
-    return get();
-  }
+  T* operator->() { return get(); }
 
-  T& operator*() {
-    return *get();
-  }
+  T& operator*() { return *get(); }
 
-  operator bool() const {
-    return object_;
-  }
+  operator bool() const { return object_; }
 
   /**
    * Get the native object from the object reference
@@ -97,11 +87,12 @@ public:
     }
     return NULL;
   }
+
 private:
   /**
    * Object reference
    */
-  datastax::internal::SharedRefPtr<ObjectRef<T, D> > object_;
+  datastax::internal::SharedRefPtr<ObjectRef<T, D>> object_;
 };
 
 #endif // __SHARED_PTR_HPP__

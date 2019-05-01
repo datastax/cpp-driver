@@ -28,36 +28,27 @@ using namespace datastax::internal::core;
 class ResolverUnitTest : public LoopTest {
 public:
   ResolverUnitTest()
-    : status_(Resolver::NEW) { }
+      : status_(Resolver::NEW) {}
 
   Resolver::Ptr create(const String& hostname, int port = 9042) {
     return Resolver::Ptr(
-          new Resolver(hostname,
-                       port,
-                       bind_callback(&ResolverUnitTest::on_resolve, this)));
+        new Resolver(hostname, port, bind_callback(&ResolverUnitTest::on_resolve, this)));
   }
 
   MultiResolver::Ptr create_multi() {
     return MultiResolver::Ptr(
-          new MultiResolver(bind_callback(&ResolverUnitTest::on_multi_resolve, this)));
+        new MultiResolver(bind_callback(&ResolverUnitTest::on_multi_resolve, this)));
   }
 
-  Resolver::Status status() const {
-    return status_;
-  }
+  Resolver::Status status() const { return status_; }
 
-  const AddressVec& addresses() const {
-    return addresses_;
-  }
+  const AddressVec& addresses() const { return addresses_; }
 
-  const Resolver::Vec& resolvers() const {
-    return resolvers_;
-  }
+  const Resolver::Vec& resolvers() const { return resolvers_; }
 
   void verify_addresses(const AddressVec& addresses) const {
     ASSERT_FALSE(addresses.empty());
-    EXPECT_TRUE(Address("127.0.0.1", 9042) == addresses[0] ||
-        Address("::1", 9042) == addresses[0])
+    EXPECT_TRUE(Address("127.0.0.1", 9042) == addresses[0] || Address("::1", 9042) == addresses[0])
         << "Unable to find \"127.0.0.1\" (IPv4) or \"::1\" (IPv6) in " << addresses;
   }
 
@@ -67,9 +58,7 @@ private:
     addresses_ = resolver->addresses();
   }
 
-  void on_multi_resolve(MultiResolver* resolver) {
-    resolvers_ = resolver->resolvers();
-  }
+  void on_multi_resolve(MultiResolver* resolver) { resolvers_ = resolver->resolvers(); }
 
 private:
   Resolver::Status status_;
@@ -124,8 +113,8 @@ TEST_F(ResolverUnitTest, Multi) {
   resolver->resolve(loop(), "localhost", 9042, RESOLVE_TIMEOUT);
   run_loop();
   ASSERT_EQ(3u, resolvers().size());
-  for (Resolver::Vec::const_iterator it = resolvers().begin(),
-       end = resolvers().end(); end != it; ++it) {
+  for (Resolver::Vec::const_iterator it = resolvers().begin(), end = resolvers().end(); end != it;
+       ++it) {
     EXPECT_EQ(Resolver::SUCCESS, (*it)->status());
     verify_addresses((*it)->addresses());
   }
@@ -147,8 +136,8 @@ TEST_F(ResolverUnitTest, MultiTimeout) {
 
   run_loop();
   ASSERT_EQ(3u, resolvers().size());
-  for (Resolver::Vec::const_iterator it = resolvers().begin(),
-       end = resolvers().end(); end != it; ++it) {
+  for (Resolver::Vec::const_iterator it = resolvers().begin(), end = resolvers().end(); end != it;
+       ++it) {
     EXPECT_EQ(Resolver::FAILED_TIMED_OUT, (*it)->status());
     EXPECT_TRUE((*it)->addresses().empty());
   }
@@ -161,8 +150,8 @@ TEST_F(ResolverUnitTest, MultiInvalid) {
   resolver->resolve(loop(), "doesnotexist3.dne", 9042, RESOLVE_TIMEOUT);
   run_loop();
   ASSERT_EQ(3u, resolvers().size());
-  for (Resolver::Vec::const_iterator it = resolvers().begin(),
-       end = resolvers().end(); end != it; ++it) {
+  for (Resolver::Vec::const_iterator it = resolvers().begin(), end = resolvers().end(); end != it;
+       ++it) {
     EXPECT_EQ(Resolver::FAILED_UNABLE_TO_RESOLVE, (*it)->status());
     EXPECT_TRUE((*it)->addresses().empty());
   }
@@ -176,8 +165,8 @@ TEST_F(ResolverUnitTest, MultiCancel) {
   resolver->cancel();
   run_loop();
   ASSERT_EQ(3u, resolvers().size());
-  for (Resolver::Vec::const_iterator it = resolvers().begin(),
-       end = resolvers().end(); end != it; ++it) {
+  for (Resolver::Vec::const_iterator it = resolvers().begin(), end = resolvers().end(); end != it;
+       ++it) {
     EXPECT_EQ(Resolver::CANCELED, (*it)->status());
     EXPECT_TRUE((*it)->addresses().empty());
   }

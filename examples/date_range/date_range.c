@@ -5,9 +5,9 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "dse.h"
@@ -49,9 +49,9 @@ void precision_to_string(DseDateRangePrecision precision, char* precision_string
 
 void time_to_string(cass_int64_t time_int, char* time_string) {
   /* time_int is ms-precision. */
-  time_t time_secs = (time_t) time_int / 1000;
+  time_t time_secs = (time_t)time_int / 1000;
   strftime(time_string, 20, "%Y-%m-%d %H:%M:%S", gmtime(&time_secs));
-  sprintf(time_string + 19, ".%03d", (int) (time_int % 1000));
+  sprintf(time_string + 19, ".%03d", (int)(time_int % 1000));
 }
 
 void print_range(const DseDateRange* range) {
@@ -81,7 +81,8 @@ void print_range(const DseDateRange* range) {
     time_to_string(range->lower_bound.time_ms, from_time_string);
     precision_to_string(range->upper_bound.precision, to_precision_string);
     time_to_string(range->upper_bound.time_ms, to_time_string);
-    printf("%s(%s) TO %s(%s)\n", from_time_string, from_precision_string, to_time_string, to_precision_string);
+    printf("%s(%s) TO %s(%s)\n", from_time_string, from_precision_string, to_time_string,
+           to_precision_string);
   }
 }
 
@@ -123,9 +124,7 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-CassError insert_into_table(CassSession* session,
-                            const char* key,
-                            const DseDateRange* range) {
+CassError insert_into_table(CassSession* session, const char* key, const DseDateRange* range) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
@@ -173,8 +172,9 @@ CassError select_from_table(CassSession* session) {
       int rc = 0;
       DseDateRange range;
 
-      if ((rc = cass_value_get_string(cass_row_get_column(row, 0), &row_key, &row_key_length)) == CASS_OK) {
-        printf("%.*s\t", (int) row_key_length, row_key);
+      if ((rc = cass_value_get_string(cass_row_get_column(row, 0), &row_key, &row_key_length)) ==
+          CASS_OK) {
+        printf("%.*s\t", (int)row_key_length, row_key);
       } else {
         printf("got error: %d\n", rc);
       }
@@ -196,7 +196,8 @@ CassError select_from_table(CassSession* session) {
   return rc;
 }
 
-CassError insert_into_collections(CassSession* session, const char* key, const DseDateRange* range1, const DseDateRange* range2) {
+CassError insert_into_collections(CassSession* session, const char* key, const DseDateRange* range1,
+                                  const DseDateRange* range2) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
@@ -208,7 +209,8 @@ CassError insert_into_collections(CassSession* session, const char* key, const D
   CassUserType* udt = NULL;
 
   const char** item = NULL;
-  const char* query = "INSERT INTO examples.drcoll (key, coll_value, tuple_value, udt_value) VALUES (?, ?, ?, ?);";
+  const char* query =
+      "INSERT INTO examples.drcoll (key, coll_value, tuple_value, udt_value) VALUES (?, ?, ?, ?);";
   int ind = 0;
 
   statement = cass_statement_new(query, 4);
@@ -260,7 +262,8 @@ CassError select_from_collections(CassSession* session, const char* key) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
-  const char* query = "SELECT coll_value, tuple_value, udt_value FROM examples.drcoll WHERE key = ?";
+  const char* query =
+      "SELECT coll_value, tuple_value, udt_value FROM examples.drcoll WHERE key = ?";
 
   statement = cass_statement_new(query, 1);
   cass_statement_bind_string(statement, 0, key);
@@ -307,7 +310,7 @@ CassError select_from_collections(CassSession* session, const char* key) {
       value = cass_row_get_column(row, 2);
       items_iterator = cass_iterator_fields_from_user_type(value);
       printf("udt_value:\n");
-      while(items_iterator != NULL && cass_iterator_next(items_iterator)) {
+      while (items_iterator != NULL && cass_iterator_next(items_iterator)) {
         const char* field_name;
         size_t field_name_length;
         const CassValue* field_value = NULL;
@@ -351,46 +354,47 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  execute_query(session,
-                "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { \
+  execute_query(session, "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '1' };");
 
-
-  execute_query(session,
-                "CREATE TABLE IF NOT EXISTS examples.dr (key text PRIMARY KEY, \
+  execute_query(session, "CREATE TABLE IF NOT EXISTS examples.dr (key text PRIMARY KEY, \
                                            value 'DateRangeType');");
 
-  execute_query(session,
-                "CREATE TYPE IF NOT EXISTS examples.dr_user_type (sub 'DateRangeType')");
+  execute_query(session, "CREATE TYPE IF NOT EXISTS examples.dr_user_type (sub 'DateRangeType')");
 
-  execute_query(session,
-                "CREATE TABLE IF NOT EXISTS examples.drcoll (key text PRIMARY KEY, \
+  execute_query(session, "CREATE TABLE IF NOT EXISTS examples.drcoll (key text PRIMARY KEY, \
                                                coll_value set<'DateRangeType'>, \
                                                tuple_value tuple<'DateRangeType', 'DateRangeType'>, \
                                                udt_value dr_user_type)");
 
   /* Insert a different flavors of date ranges into examples.dr. */
-  insert_into_table(session, "open range", dse_date_range_init(&range,
-                                                               dse_date_range_bound_unbounded(),
-                                                               dse_date_range_bound_unbounded()));
-  insert_into_table(session, "open value", dse_date_range_init_single_date(&range, dse_date_range_bound_unbounded()));
+  insert_into_table(session, "open range",
+                    dse_date_range_init(&range, dse_date_range_bound_unbounded(),
+                                        dse_date_range_bound_unbounded()));
+  insert_into_table(session, "open value",
+                    dse_date_range_init_single_date(&range, dse_date_range_bound_unbounded()));
   insert_into_table(session, "single value",
-                    dse_date_range_init_single_date(&range,
-                                                    dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_MONTH, ((cass_int64_t) now) * 1000)));
+                    dse_date_range_init_single_date(
+                        &range, dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_MONTH,
+                                                          ((cass_int64_t)now) * 1000)));
   insert_into_table(session, "open high, day",
                     dse_date_range_init(&range,
-                                        dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_DAY, ((cass_int64_t) now) * 1000),
+                                        dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_DAY,
+                                                                  ((cass_int64_t)now) * 1000),
                                         dse_date_range_bound_unbounded()));
-  insert_into_table(session, "open low, ms",
-                    dse_date_range_init(&range,
-                                        dse_date_range_bound_unbounded(),
-                                        dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_MILLISECOND, ((cass_int64_t) now) * 1000)));
+  insert_into_table(
+      session, "open low, ms",
+      dse_date_range_init(&range, dse_date_range_bound_unbounded(),
+                          dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_MILLISECOND,
+                                                    ((cass_int64_t)now) * 1000)));
 
-  /* Closed range from 1/2/1970 to now (with some millis tacked on to show that millis are handled properly). */
+  /* Closed range from 1/2/1970 to now (with some millis tacked on to show that millis are handled
+   * properly). */
   insert_into_table(session, "closed range",
-                    dse_date_range_init(&range,
-                                        dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_YEAR, 86400000),
-                                        dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_MILLISECOND, ((cass_int64_t) now) * 1000 + 987)));
+                    dse_date_range_init(
+                        &range, dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_YEAR, 86400000),
+                        dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_MILLISECOND,
+                                                  ((cass_int64_t)now) * 1000 + 987)));
 
   /* Now query examples.dr and print out the results. */
   printf("examples.dr:\n");
@@ -398,9 +402,9 @@ int main(int argc, char* argv[]) {
 
   /* Insert a row in the collection table. */
 
-  dse_date_range_init(&range,
-                      dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_DAY, 86400000),
-                      dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_MILLISECOND, ((cass_int64_t) now) * 1000 + 123));
+  dse_date_range_init(&range, dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_DAY, 86400000),
+                      dse_date_range_bound_init(DSE_DATE_RANGE_PRECISION_MILLISECOND,
+                                                ((cass_int64_t)now) * 1000 + 123));
   dse_date_range_init_single_date(&range2, dse_date_range_bound_unbounded());
 
   insert_into_collections(session, "key", &range, &range2);

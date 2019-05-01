@@ -18,10 +18,10 @@
 #define __TSOCKET_HPP__
 
 #ifdef _WIN32
-# include <winsock2.h>
-# define SOCKET_HANDLE SOCKET
+#include <winsock2.h>
+#define SOCKET_HANDLE SOCKET
 #else
-# define SOCKET_HANDLE int
+#define SOCKET_HANDLE int
 #endif
 
 #include "socket_exception.hpp"
@@ -48,7 +48,7 @@ public:
    * @param ip_address IP address to connect to
    * @param port Port number to establish connection on
    */
-  void establish_connection(const std::string &ip_address, unsigned short port);
+  void establish_connection(const std::string& ip_address, unsigned short port);
   /**
    * Get the socket handle
    *

@@ -29,7 +29,7 @@ struct DefaultDeleter {
   void operator()(T* ptr) const { delete ptr; }
 };
 
-template <class T, class D = DefaultDeleter<T> >
+template <class T, class D = DefaultDeleter<T>>
 class ScopedPtr {
 public:
   typedef T type;
@@ -55,7 +55,7 @@ public:
 
   type* get() const { return ptr_; }
   type& operator*() const { return *ptr_; }
-  type * operator->() const { return ptr_; }
+  type* operator->() const { return ptr_; }
   operator bool() const { return ptr_ != NULL; }
 
 private:
@@ -70,7 +70,7 @@ struct DefaultArrayDeleter {
   void operator()(T* ptr) const { delete[] ptr; }
 };
 
-template <class T, class D = DefaultArrayDeleter<T> >
+template <class T, class D = DefaultArrayDeleter<T>>
 class ScopedArray {
 public:
   typedef T type;
@@ -105,6 +105,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ScopedArray);
 };
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

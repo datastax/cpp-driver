@@ -57,6 +57,6 @@ private:
   const int32_t count_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

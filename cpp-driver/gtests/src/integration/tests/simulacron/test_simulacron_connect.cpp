@@ -22,7 +22,8 @@
  * Connection integration tests using Simulacron
  */
 class ConnectionTest : public SimulacronIntegration {
-using SimulacronIntegration::connect;
+  using SimulacronIntegration::connect;
+
 public:
   void SetUp() {
     is_sc_start_requested_ = false;
@@ -37,8 +38,7 @@ public:
    * @param is_across_dcs True if connections are going to be made on all DCs;
    *                      false otherwise.
    */
-  void assert_active_connections(int host_connections = 1,
-    bool is_across_dcs = true) {
+  void assert_active_connections(int host_connections = 1, bool is_across_dcs = true) {
     std::vector<SimulacronCluster::Cluster::DataCenter> data_centers = sc_->data_centers();
     for (std::vector<SimulacronCluster::Cluster::DataCenter>::iterator it = data_centers.begin();
          it != data_centers.end(); ++it) {
@@ -65,8 +65,7 @@ public:
    * @param cluster Cluster configuration to use when establishing the
    *                connection (default: NULL; uses default configuration)
    */
-  void connect(std::vector<unsigned int> data_center_nodes,
-    test::driver::Cluster cluster = NULL) {
+  void connect(std::vector<unsigned int> data_center_nodes, test::driver::Cluster cluster = NULL) {
     // Start the SC, prime the tables, and establish a connection
     start_sc(data_center_nodes);
     contact_points_ = sc_->get_ip_address(1);
@@ -88,7 +87,7 @@ public:
    *                connection (default: NULL; uses default configuration)
    */
   void connect(unsigned int number_dc1_nodes, unsigned int number_dc2_nodes,
-    test::driver::Cluster cluster = NULL) {
+               test::driver::Cluster cluster = NULL) {
     // Initialize the number of nodes in the standard data centers
     std::vector<unsigned int> data_center_nodes;
     number_dc1_nodes_ = number_dc1_nodes;
@@ -189,13 +188,11 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectOneNodeTwoDataCenters) {
  * @expected_result Successful connection and validation of active connections
  *                  across the data centers
  */
-SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
-                              ConnectOneNodeTwoDataCentersAcrossDCs) {
+SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectOneNodeTwoDataCentersAcrossDCs) {
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Ensure the control connection and normal node connection is established
-  test::driver::Cluster cluster = default_cluster()
-    .with_load_balance_round_robin();
+  test::driver::Cluster cluster = default_cluster().with_load_balance_round_robin();
   connect(1, 1, cluster);
   assert_active_connections();
 }
@@ -231,13 +228,11 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectThreeNodesTwoDataCenters) {
  * @expected_result Successful connection and validation of active connections
  *                  across the data centers
  */
-SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
-                              ConnectThreeNodesTwoDataCentersAcrossDCs) {
+SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectThreeNodesTwoDataCentersAcrossDCs) {
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Ensure the control connection and normal node connection is established
-  test::driver::Cluster cluster = default_cluster()
-    .with_load_balance_round_robin();
+  test::driver::Cluster cluster = default_cluster().with_load_balance_round_robin();
   connect(3, 3, cluster);
   assert_active_connections();
 }
@@ -253,8 +248,7 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
  * @since 1.0.0
  * @expected_result Successful connection and validation of active connections
  */
-SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
-                              ConnectFiveHundredNodesTwoDataCenters) {
+SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectFiveHundredNodesTwoDataCenters) {
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Ensure the control connection and normal node connection is established
@@ -274,13 +268,11 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
  * @expected_result Successful connection and validation of active connections
  *                  across the data centers
  */
-SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
-                              ConnectFiveHundredNodesTwoDataCentersAcrossDCs) {
+SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectFiveHundredNodesTwoDataCentersAcrossDCs) {
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Ensure the control connection and normal node connection is established
-  test::driver::Cluster cluster = default_cluster()
-    .with_load_balance_round_robin();
+  test::driver::Cluster cluster = default_cluster().with_load_balance_round_robin();
   connect(500, 500, cluster);
   assert_active_connections();
 }
@@ -322,8 +314,7 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectOneNodeNineDataCenters) {
  * @expected_result Successful connection and validation of active connections
  *                  across the data centers
  */
-SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
-                              ConnectOneNodeNineDataCentersAcrossDCs) {
+SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectOneNodeNineDataCentersAcrossDCs) {
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Create the nine data centers
@@ -333,8 +324,7 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
   }
 
   // Ensure the control connection and normal node connection is established
-  test::driver::Cluster cluster = default_cluster()
-    .with_load_balance_round_robin();
+  test::driver::Cluster cluster = default_cluster().with_load_balance_round_robin();
   connect(data_center_nodes, cluster);
   assert_active_connections();
 }
@@ -350,13 +340,12 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
  * @since 1.0.0
  * @expected_result Successful connection and validation of active connections
  */
-SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
-                              ConnectOneNodeMultipleConnectionsPerHost) {
+SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectOneNodeMultipleConnectionsPerHost) {
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Ensure the control connection and normal node connection is established
-  test::driver::Cluster cluster = default_cluster()
-    .with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
+  test::driver::Cluster cluster =
+      default_cluster().with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
   connect(1, 0, cluster);
   assert_active_connections(CORE_CONNECTIONS_PER_HOST);
 }
@@ -372,13 +361,12 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
  * @since 1.0.0
  * @expected_result Successful connection and validation of active connections
  */
-SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
-                              ConnectThreeNodesMultipleConnectionsPerHost) {
+SIMULACRON_INTEGRATION_TEST_F(ConnectionTest, ConnectThreeNodesMultipleConnectionsPerHost) {
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Ensure the control connection and normal node connection is established
-  test::driver::Cluster cluster = default_cluster()
-    .with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
+  test::driver::Cluster cluster =
+      default_cluster().with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
   connect(3, 0, cluster);
   assert_active_connections(CORE_CONNECTIONS_PER_HOST);
 }
@@ -399,8 +387,8 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Ensure the control connection and normal node connection is established
-  test::driver::Cluster cluster = default_cluster()
-    .with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
+  test::driver::Cluster cluster =
+      default_cluster().with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
   connect(1, 1, cluster);
   assert_active_connections(CORE_CONNECTIONS_PER_HOST, false);
 }
@@ -421,8 +409,8 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
   SKIP_TEST_IF_SIMULACRON_UNAVAILABLE;
 
   // Ensure the control connection and normal node connection is established
-  test::driver::Cluster cluster = default_cluster()
-    .with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
+  test::driver::Cluster cluster =
+      default_cluster().with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
   connect(3, 3, cluster);
   assert_active_connections(CORE_CONNECTIONS_PER_HOST, false);
 }
@@ -449,8 +437,8 @@ SIMULACRON_INTEGRATION_TEST_F(ConnectionTest,
   }
 
   // Ensure the control connection and normal node connection is established
-  test::driver::Cluster cluster = default_cluster()
-    .with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
+  test::driver::Cluster cluster =
+      default_cluster().with_core_connections_per_host(CORE_CONNECTIONS_PER_HOST);
   connect(data_center_nodes, cluster);
   assert_active_connections(CORE_CONNECTIONS_PER_HOST, false);
 }

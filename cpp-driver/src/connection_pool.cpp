@@ -23,65 +23,57 @@
 
 #include <algorithm>
 
-
 using namespace datastax;
 using namespace datastax::internal::core;
 
-static inline bool least_busy_comp(const PooledConnection::Ptr& a,
-                                   const PooledConnection::Ptr& b) {
+static inline bool least_busy_comp(const PooledConnection::Ptr& a, const PooledConnection::Ptr& b) {
   return a->inflight_request_count() < b->inflight_request_count();
 }
 
 ConnectionPoolSettings::ConnectionPoolSettings()
-  : num_connections_per_host(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
-  , reconnect_wait_time_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS) { }
+    : num_connections_per_host(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
+    , reconnect_wait_time_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS) {}
 
 ConnectionPoolSettings::ConnectionPoolSettings(const Config& config)
-  : connection_settings(config)
-  , num_connections_per_host(config.core_connections_per_host())
-  , reconnect_wait_time_ms(config.reconnect_wait_time_ms()) { }
+    : connection_settings(config)
+    , num_connections_per_host(config.core_connections_per_host())
+    , reconnect_wait_time_ms(config.reconnect_wait_time_ms()) {}
 
 class NopConnectionPoolListener : public ConnectionPoolListener {
 public:
-  virtual void on_pool_up(const Address& address) { }
+  virtual void on_pool_up(const Address& address) {}
 
-  virtual void on_pool_down(const Address& address) { }
+  virtual void on_pool_down(const Address& address) {}
 
-  virtual void on_pool_critical_error(const Address& address,
-                                      Connector::ConnectionError code,
-                                      const String& message) { }
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
+                                      const String& message) {}
 
-  virtual void on_close(ConnectionPool* pool) { }
+  virtual void on_close(ConnectionPool* pool) {}
 };
 
 NopConnectionPoolListener nop_connection_pool_listener__;
 
-ConnectionPool::ConnectionPool(const Connection::Vec& connections,
-                               ConnectionPoolListener* listener,
-                               const String& keyspace,
-                               uv_loop_t* loop,
-                               const Host::Ptr& host,
+ConnectionPool::ConnectionPool(const Connection::Vec& connections, ConnectionPoolListener* listener,
+                               const String& keyspace, uv_loop_t* loop, const Host::Ptr& host,
                                ProtocolVersion protocol_version,
-                               const ConnectionPoolSettings& settings,
-                               Metrics* metrics)
-  : listener_(listener ? listener : &nop_connection_pool_listener__)
-  , keyspace_(keyspace)
-  , loop_(loop)
-  , host_(host)
-  , protocol_version_(protocol_version)
-  , settings_(settings)
-  , metrics_(metrics)
-  , close_state_(CLOSE_STATE_OPEN)
-  , notify_state_(NOTIFY_STATE_NEW) {
+                               const ConnectionPoolSettings& settings, Metrics* metrics)
+    : listener_(listener ? listener : &nop_connection_pool_listener__)
+    , keyspace_(keyspace)
+    , loop_(loop)
+    , host_(host)
+    , protocol_version_(protocol_version)
+    , settings_(settings)
+    , metrics_(metrics)
+    , close_state_(CLOSE_STATE_OPEN)
+    , notify_state_(NOTIFY_STATE_NEW) {
   inc_ref(); // Reference for the lifetime of the pooled connections
   set_pointer_keys(to_flush_);
 
-  for (Connection::Vec::const_iterator it = connections.begin(),
-       end = connections.end(); it != end; ++it) {
+  for (Connection::Vec::const_iterator it = connections.begin(), end = connections.end(); it != end;
+       ++it) {
     const Connection::Ptr& connection(*it);
     if (!connection->is_closing()) {
-      add_connection(PooledConnection::Ptr(
-                       new PooledConnection(this, connection)));
+      add_connection(PooledConnection::Ptr(new PooledConnection(this, connection)));
     }
   }
 
@@ -99,29 +91,26 @@ PooledConnection::Ptr ConnectionPool::find_least_busy() const {
   if (connections_.empty()) {
     return PooledConnection::Ptr();
   }
-  return *std::min_element(connections_.begin(),
-                           connections_.end(), least_busy_comp);
+  return *std::min_element(connections_.begin(), connections_.end(), least_busy_comp);
 }
 
-bool ConnectionPool::has_connections() const {
-  return !connections_.empty();
-}
+bool ConnectionPool::has_connections() const { return !connections_.empty(); }
 
 void ConnectionPool::flush() {
   for (DenseHashSet<PooledConnection*>::const_iterator it = to_flush_.begin(),
-       end = to_flush_.end(); it != end; ++it) {
+                                                       end = to_flush_.end();
+       it != end; ++it) {
     (*it)->flush();
   }
   to_flush_.clear();
 }
 
-void ConnectionPool::close() {
-  internal_close();
-}
+void ConnectionPool::close() { internal_close(); }
 
 void ConnectionPool::attempt_immediate_connect() {
   for (DelayedConnector::Vec::iterator it = pending_connections_.begin(),
-       end = pending_connections_.end(); it != end; ++it) {
+                                       end = pending_connections_.end();
+       it != end; ++it) {
     (*it)->attempt_immediate_connect();
   }
 }
@@ -130,9 +119,7 @@ void ConnectionPool::set_listener(ConnectionPoolListener* listener) {
   listener_ = listener ? listener : &nop_connection_pool_listener__;
 }
 
-void ConnectionPool::set_keyspace(const String& keyspace) {
-  keyspace_ = keyspace;
-}
+void ConnectionPool::set_keyspace(const String& keyspace) { keyspace_ = keyspace; }
 
 void ConnectionPool::requires_flush(PooledConnection* connection, ConnectionPool::Protected) {
   if (to_flush_.empty()) {
@@ -179,8 +166,7 @@ void ConnectionPool::notify_up_or_down() {
   }
 }
 
-void ConnectionPool::notify_critical_error(Connector::ConnectionError code,
-                                           const String& message) {
+void ConnectionPool::notify_critical_error(Connector::ConnectionError code, const String& message) {
   if (notify_state_ != NOTIFY_STATE_CRITICAL) {
     notify_state_ = NOTIFY_STATE_CRITICAL;
     listener_->on_pool_critical_error(host_->address(), code, message);
@@ -192,13 +178,10 @@ void ConnectionPool::schedule_reconnect() {
            host_->address().to_string().c_str(),
            static_cast<unsigned long long>(settings_.reconnect_wait_time_ms),
            static_cast<void*>(this));
-  DelayedConnector::Ptr connector(
-        new DelayedConnector(host_,
-                             protocol_version_,
-                             bind_callback(&ConnectionPool::on_reconnect, this)));
+  DelayedConnector::Ptr connector(new DelayedConnector(
+      host_, protocol_version_, bind_callback(&ConnectionPool::on_reconnect, this)));
   pending_connections_.push_back(connector);
-  connector
-      ->with_keyspace(keyspace())
+  connector->with_keyspace(keyspace())
       ->with_metrics(metrics_)
       ->with_settings(settings_.connection_settings)
       ->delayed_connect(loop_, settings_.reconnect_wait_time_ms);
@@ -212,14 +195,15 @@ void ConnectionPool::internal_close() {
     // invalidation.
 
     PooledConnection::Vec connections(connections_);
-    for (PooledConnection::Vec::iterator it = connections.begin(),
-         end = connections.end(); it != end; ++it) {
+    for (PooledConnection::Vec::iterator it = connections.begin(), end = connections.end();
+         it != end; ++it) {
       (*it)->close();
     }
 
     DelayedConnector::Vec pending_connections(pending_connections_);
     for (DelayedConnector::Vec::iterator it = pending_connections.begin(),
-         end = pending_connections.end(); it != end; ++it) {
+                                         end = pending_connections.end();
+         it != end; ++it) {
       (*it)->cancel();
     }
 
@@ -231,8 +215,7 @@ void ConnectionPool::internal_close() {
 void ConnectionPool::maybe_closed() {
   // Remove the pool once all current connections and pending connections
   // are terminated.
-  if (close_state_ == CLOSE_STATE_WAITING_FOR_CONNECTIONS &&
-      connections_.empty() &&
+  if (close_state_ == CLOSE_STATE_WAITING_FOR_CONNECTIONS && connections_.empty() &&
       pending_connections_.empty()) {
     close_state_ = CLOSE_STATE_CLOSED;
     // Only mark DOWN if it's UP otherwise we might get multiple DOWN events
@@ -246,8 +229,9 @@ void ConnectionPool::maybe_closed() {
 }
 
 void ConnectionPool::on_reconnect(DelayedConnector* connector) {
-  pending_connections_.erase(std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
-                             pending_connections_.end());
+  pending_connections_.erase(
+      std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
+      pending_connections_.end());
 
   if (close_state_ != CLOSE_STATE_OPEN) {
     maybe_closed();
@@ -256,21 +240,18 @@ void ConnectionPool::on_reconnect(DelayedConnector* connector) {
 
   if (connector->is_ok()) {
     add_connection(
-          PooledConnection::Ptr(
-            new PooledConnection(this, connector->release_connection())));
+        PooledConnection::Ptr(new PooledConnection(this, connector->release_connection())));
     notify_up_or_down();
   } else if (!connector->is_canceled()) {
-    if(connector->is_critical_error()) {
+    if (connector->is_critical_error()) {
       LOG_ERROR("Closing established connection pool to host %s because of the following error: %s",
-                address().to_string().c_str(),
-                connector->error_message().c_str());
-      notify_critical_error(connector->error_code(),
-                            connector->error_message());
+                address().to_string().c_str(), connector->error_message().c_str());
+      notify_critical_error(connector->error_code(), connector->error_message());
       internal_close();
     } else {
-      LOG_WARN("Connection pool was unable to reconnect to host %s because of the following error: %s",
-               address().to_string().c_str(),
-               connector->error_message().c_str());
+      LOG_WARN(
+          "Connection pool was unable to reconnect to host %s because of the following error: %s",
+          address().to_string().c_str(), connector->error_message().c_str());
       schedule_reconnect();
     }
   }

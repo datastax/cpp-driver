@@ -47,8 +47,7 @@ public:
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  DelayedConnector(const Host::Ptr& host,
-                   ProtocolVersion protocol_version,
+  DelayedConnector(const Host::Ptr& host, ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**
@@ -128,6 +127,6 @@ private:
   bool is_canceled_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

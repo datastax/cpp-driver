@@ -25,8 +25,8 @@
   For more information, please refer to <http://unlicense.org/>
 */
 
-#include <stdio.h>
 #include "cassandra.h"
+#include <stdio.h>
 
 #define NANOS_IN_A_SEC (1000LL * 1000LL * 1000LL)
 
@@ -76,7 +76,8 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-CassError insert_into(CassSession* session, const char* key, cass_int32_t months, cass_int32_t days, cass_int64_t nanos) {
+CassError insert_into(CassSession* session, const char* key, cass_int32_t months, cass_int32_t days,
+                      cass_int64_t nanos) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
@@ -156,14 +157,11 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  execute_query(session,
-                "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { "
-                "'class': 'SimpleStrategy', 'replication_factor': '3' };");
+  execute_query(session, "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { "
+                         "'class': 'SimpleStrategy', 'replication_factor': '3' };");
 
-
-  execute_query(session,
-                "CREATE TABLE IF NOT EXISTS examples.duration "
-                "(key text PRIMARY KEY, d duration)");
+  execute_query(session, "CREATE TABLE IF NOT EXISTS examples.duration "
+                         "(key text PRIMARY KEY, d duration)");
 
   /* Insert some rows into the table and read them back out */
 

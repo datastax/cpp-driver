@@ -9,26 +9,26 @@
 #include "embedded_ads.hpp"
 #include "options.hpp"
 
+#define CHECK_FOR_KERBEROS_HEIMDAL                                    \
+  do {                                                                \
+    if (EmbeddedADS::is_kerberos_client_heimdal()) {                  \
+      SKIP_TEST("Heimdal implementation is not valid for this test"); \
+    }                                                                 \
+  } while (0);
 
-#define CHECK_FOR_KERBEROS_HEIMDAL do { \
-  if (EmbeddedADS::is_kerberos_client_heimdal()) { \
-    SKIP_TEST("Heimdal implementation is not valid for this test"); \
-  } \
-} while(0);
-
-//TODO: Update test to work with remote deployments
-# ifdef _WIN32
-#   define CHECK_FOR_SKIPPED_TEST \
-      SKIP_TEST("Test cannot currently run on Windows");
-# elif defined(CASS_USE_LIBSSH2)
-#   define CHECK_FOR_SKIPPED_TEST do { \
-      if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
-        SKIP_TEST("Test cannot currently run using remote deployment"); \
-      } \
-    } while(0);
-# else
-#   define CHECK_FOR_SKIPPED_TEST ((void)0)
-# endif
+// TODO: Update test to work with remote deployments
+#ifdef _WIN32
+#define CHECK_FOR_SKIPPED_TEST SKIP_TEST("Test cannot currently run on Windows");
+#elif defined(CASS_USE_LIBSSH2)
+#define CHECK_FOR_SKIPPED_TEST                                        \
+  do {                                                                \
+    if (Options::deployment_type() == CCM::DeploymentType::REMOTE) {  \
+      SKIP_TEST("Test cannot currently run using remote deployment"); \
+    }                                                                 \
+  } while (0);
+#else
+#define CHECK_FOR_SKIPPED_TEST ((void)0)
+#endif
 
 /**
  * Authentication integration tests
@@ -47,7 +47,7 @@ public:
       }
       TEST_LOG("ADS is Initialized and Ready");
       is_ads_available_ = true;
-    } catch (test::Exception &e) {
+    } catch (test::Exception& e) {
       TEST_LOG_ERROR(e.what());
     }
   }
@@ -63,7 +63,7 @@ public:
 
   void SetUp() {
     CHECK_FOR_SKIPPED_TEST;
-    //TODO: Update test to work with remote deployments
+    // TODO: Update test to work with remote deployments
     // Ensure test can run for current configuration
 #ifdef _WIN32
     return;
@@ -73,8 +73,7 @@ public:
       return;
     }
 #endif
-    CHECK_CONTINUE(ads_->is_initialized(),
-        "Correct missing components for proper ADS launching");
+    CHECK_CONTINUE(ads_->is_initialized(), "Correct missing components for proper ADS launching");
 
     // Call the parent setup function (override startup and session connection)
     is_ccm_start_requested_ = false;
@@ -114,7 +113,8 @@ protected:
     std::vector<std::string> update_configuration;
     std::vector<std::string> update_dse_configuration;
     if (server_version_ >= "5.0.0") {
-      update_configuration.push_back("authenticator:com.datastax.bdp.cassandra.auth.DseAuthenticator");
+      update_configuration.push_back(
+          "authenticator:com.datastax.bdp.cassandra.auth.DseAuthenticator");
       update_dse_configuration.push_back("authentication_options.enabled:true");
     }
 
@@ -125,20 +125,20 @@ protected:
       if (server_version_ >= "5.0.0") {
         update_dse_configuration.push_back("authentication_options.default_scheme:kerberos");
         update_dse_configuration.push_back("authentication_options.scheme_permissions:true");
-        update_dse_configuration.push_back("authentication_options.allow_digest_with_kerberos:true");
+        update_dse_configuration.push_back(
+            "authentication_options.allow_digest_with_kerberos:true");
         update_dse_configuration.push_back("authentication_options.transitional_mode:disabled");
       } else {
-        update_configuration.push_back("authenticator:com.datastax.bdp.cassandra.auth.KerberosAuthenticator");
+        update_configuration.push_back(
+            "authenticator:com.datastax.bdp.cassandra.auth.KerberosAuthenticator");
       }
-      update_dse_configuration.push_back("kerberos_options.service_principal:"
-        + std::string(DSE_SERVICE_PRINCIPAL));
-      update_dse_configuration.push_back("kerberos_options.keytab:"
-        + ads_->get_dse_keytab_file());
+      update_dse_configuration.push_back("kerberos_options.service_principal:" +
+                                         std::string(DSE_SERVICE_PRINCIPAL));
+      update_dse_configuration.push_back("kerberos_options.keytab:" + ads_->get_dse_keytab_file());
       update_dse_configuration.push_back("kerberos_options.qop:auth");
 
       jvm_arguments.push_back("-Dcassandra.superuser_setup_delay_ms=0");
-      jvm_arguments.push_back("-Djava.security.krb5.conf="
-        + ads_->get_configuration_file());
+      jvm_arguments.push_back("-Djava.security.krb5.conf=" + ads_->get_configuration_file());
     } else {
       if (server_version_ >= "5.0.0") {
         update_dse_configuration.push_back("authentication_options.default_scheme:internal");
@@ -166,10 +166,10 @@ protected:
 
     // Build the cluster configuration and establish the session connection
     Cluster cluster = dse::Cluster::build()
-      .with_gssapi_authenticator("dse", principal)
-      .with_contact_points(contact_points_)
-      .with_hostname_resolution(true)
-      .with_schema_metadata(false);
+                          .with_gssapi_authenticator("dse", principal)
+                          .with_contact_points(contact_points_)
+                          .with_hostname_resolution(true)
+                          .with_schema_metadata(false);
     Session session = cluster.connect();
 
     // Execute a simple query to ensure authentication
@@ -185,17 +185,17 @@ protected:
    * @param password Password for username
    * @throws Session::Exception If session could not be established
    */
-  void connect_using_internal_authentication_and_query_system_table(
-      const std::string& username, const std::string& password) {
+  void connect_using_internal_authentication_and_query_system_table(const std::string& username,
+                                                                    const std::string& password) {
     // Update the CCM configuration for use with internal authentication
     configure_dse_cluster(false);
 
     // Build the cluster configuration and establish the session connection
     Cluster cluster = dse::Cluster::build()
-      .with_plaintext_authenticator(username, password)
-      .with_contact_points(contact_points_)
-      .with_hostname_resolution(true)
-      .with_schema_metadata(false);
+                          .with_plaintext_authenticator(username, password)
+                          .with_contact_points(contact_points_)
+                          .with_hostname_resolution(true)
+                          .with_schema_metadata(false);
     Session session = cluster.connect();
 
     // Execute a simple query to ensure authentication
@@ -250,10 +250,10 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureBadCrede
   bool is_session_failure = false;
   try {
     connect_using_kerberos_and_query_system_table(UNKNOWN_PRINCIPAL);
-  } catch (Session::Exception &se) {
+  } catch (Session::Exception& se) {
     TEST_LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
-      << "Error code is not 'Bad credentials'";
+        << "Error code is not 'Bad credentials'";
     is_session_failure = true;
   }
   ASSERT_EQ(true, is_session_failure) << "Session connection established";
@@ -279,10 +279,10 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, KerberosAuthenticationFailureNoTicket
   bool is_session_failure = false;
   try {
     connect_using_kerberos_and_query_system_table(CASSANDRA_USER_PRINCIPAL);
-  } catch (Session::Exception &se) {
+  } catch (Session::Exception& se) {
     TEST_LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
-      << "Error code is not 'Bad credentials'";
+        << "Error code is not 'Bad credentials'";
     is_session_failure = true;
   }
   ASSERT_EQ(true, is_session_failure) << "Session connection established";
@@ -332,10 +332,10 @@ DSE_INTEGRATION_TEST_F(AuthenticationTest, InternalAuthenticationFailure) {
   bool is_session_failure = false;
   try {
     connect_using_internal_authentication_and_query_system_table("invalid", "invalid");
-  } catch (Session::Exception &se) {
+  } catch (Session::Exception& se) {
     TEST_LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
-      << "Error code is not 'Bad credentials'";
+        << "Error code is not 'Bad credentials'";
     is_session_failure = true;
   }
   ASSERT_EQ(true, is_session_failure) << "Session connection established";

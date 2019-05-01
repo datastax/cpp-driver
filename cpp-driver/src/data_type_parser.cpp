@@ -16,10 +16,10 @@
 
 #include "data_type_parser.hpp"
 
-#include "utils.hpp"
 #include "logger.hpp"
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"
+#include "utils.hpp"
 
 #define REVERSED_TYPE "org.apache.cassandra.db.marshal.ReversedType"
 #define FROZEN_TYPE "org.apache.cassandra.db.marshal.FrozenType"
@@ -58,15 +58,14 @@ bool from_hex(const String& hex, String* result) {
     if (half0 < 0 || half1 < 0) {
       return false;
     }
-    (*result)[i] = static_cast<char>((static_cast<uint8_t>(half0) << 4) | static_cast<uint8_t>(half1));
+    (*result)[i] =
+        static_cast<char>((static_cast<uint8_t>(half0) << 4) | static_cast<uint8_t>(half1));
   }
   return true;
 }
 
-DataType::ConstPtr DataTypeCqlNameParser::parse(const String& type,
-                                                SimpleDataTypeCache& cache,
-                                                KeyspaceMetadata* keyspace,
-                                                bool is_frozen) {
+DataType::ConstPtr DataTypeCqlNameParser::parse(const String& type, SimpleDataTypeCache& cache,
+                                                KeyspaceMetadata* keyspace, bool is_frozen) {
   Parser parser(type, 0);
   String type_name;
   Parser::TypeParamsVec params;
@@ -116,9 +115,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const String& type,
       return DataType::NIL;
     }
     DataType::Vec types;
-    for (Parser::TypeParamsVec::iterator i = params.begin(),
-         end = params.end();
-         i != end;  ++i) {
+    for (Parser::TypeParamsVec::iterator i = params.begin(), end = params.end(); i != end; ++i) {
       types.push_back(parse(*i, cache, keyspace));
     }
     return DataType::ConstPtr(new TupleType(types, is_frozen));
@@ -149,10 +146,8 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const String& type,
   UserType::ConstPtr user_type(keyspace->get_or_create_user_type(type_name, is_frozen));
 
   if (user_type->is_frozen() != is_frozen) {
-    return UserType::Ptr(new UserType(user_type->keyspace(),
-                                      user_type->type_name(),
-                                      user_type->fields(),
-                                      is_frozen));
+    return UserType::Ptr(new UserType(user_type->keyspace(), user_type->type_name(),
+                                      user_type->fields(), is_frozen));
   }
 
   return user_type;
@@ -171,8 +166,8 @@ void DataTypeCqlNameParser::Parser::parse_type_parameters(TypeParamsVec* params)
   skip_blank_and_comma();
 
   if (str_[index_] != '<') {
-    LOG_ERROR("Expecting char %u of %s to be '<' but '%c' found",
-              (unsigned int)index_, str_.c_str(), str_[index_]);
+    LOG_ERROR("Expecting char %u of %s to be '<' but '%c' found", (unsigned int)index_,
+              str_.c_str(), str_[index_]);
     return;
   }
 
@@ -186,8 +181,7 @@ void DataTypeCqlNameParser::Parser::parse_type_parameters(TypeParamsVec* params)
       return;
     }
     parse_type_name(&name);
-    if (!read_raw_type_parameters(&args))
-      return;
+    if (!read_raw_type_parameters(&args)) return;
     params->push_back(name + args);
   }
 }
@@ -200,7 +194,7 @@ void DataTypeCqlNameParser::Parser::read_next_identifier(String* name) {
       bool is_quote = str_[index_] == '"';
       ++index_;
       if (is_quote) {
-        if  (!is_eos() && str_[index_] == '"') {
+        if (!is_eos() && str_[index_] == '"') {
           ++index_;
         } else {
           break;
@@ -209,7 +203,8 @@ void DataTypeCqlNameParser::Parser::read_next_identifier(String* name) {
     }
   } else if (str_[start_index] == '\'') {
     ++index_;
-    while (!is_eos() && str_[index_++] != '\'') { }
+    while (!is_eos() && str_[index_++] != '\'') {
+    }
   } else {
     while (!is_eos() && (is_identifier_char(str_[index_]) || str_[index_] == '"')) {
       ++index_;
@@ -226,8 +221,8 @@ bool DataTypeCqlNameParser::Parser::read_raw_type_parameters(String* params) {
   if (is_eos() || str_[index_] == '>' || str_[index_] == ',') return true;
 
   if (str_[index_] != '<') {
-    LOG_ERROR("Expecting char %u of %s to be '<' but '%c' found",
-              (unsigned int)index_, str_.c_str(), str_[index_]);
+    LOG_ERROR("Expecting char %u of %s to be '<' but '%c' found", (unsigned int)index_,
+              str_.c_str(), str_[index_]);
     return false;
   }
 
@@ -284,7 +279,8 @@ bool DataTypeClassNameParser::is_tuple_type(const String& type) {
   return starts_with(type, TUPLE_TYPE);
 }
 
-DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, SimpleDataTypeCache& cache) {
+DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type,
+                                                      SimpleDataTypeCache& cache) {
   bool is_frozen = DataTypeClassNameParser::is_frozen(type);
 
   String class_name;
@@ -312,7 +308,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, Simple
       return DataType::ConstPtr();
     }
     return CollectionType::list(element_type, is_frozen);
-  } else if(starts_with(next, SET_TYPE)) {
+  } else if (starts_with(next, SET_TYPE)) {
     TypeParamsVec params;
     if (!parser.get_type_params(&params) || params.empty()) {
       return DataType::ConstPtr();
@@ -322,7 +318,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, Simple
       return DataType::ConstPtr();
     }
     return CollectionType::set(element_type, is_frozen);
-  } else if(starts_with(next, MAP_TYPE)) {
+  } else if (starts_with(next, MAP_TYPE)) {
     TypeParamsVec params;
     if (!parser.get_type_params(&params) || params.size() < 2) {
       return DataType::ConstPtr();
@@ -372,8 +368,8 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, Simple
     }
 
     UserType::FieldVec fields;
-    for (NameAndTypeParamsVec::const_iterator i = raw_fields.begin(),
-         end = raw_fields.end(); i != end; ++i) {
+    for (NameAndTypeParamsVec::const_iterator i = raw_fields.begin(), end = raw_fields.end();
+         i != end; ++i) {
       DataType::ConstPtr data_type = parse_one(i->second, cache);
       if (!data_type) {
         return DataType::ConstPtr();
@@ -391,8 +387,8 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, Simple
     }
 
     DataType::Vec types;
-    for (TypeParamsVec::const_iterator i = raw_types.begin(),
-         end = raw_types.end(); i != end; ++i) {
+    for (TypeParamsVec::const_iterator i = raw_types.begin(), end = raw_types.end(); i != end;
+         ++i) {
       DataType::ConstPtr data_type = parse_one(*i, cache);
       if (!data_type) {
         return DataType::ConstPtr();
@@ -411,7 +407,8 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const String& type, Simple
   return DataType::ConstPtr(new CustomType(next));
 }
 
-ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const String& type, SimpleDataTypeCache& cache) {
+ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const String& type,
+                                                               SimpleDataTypeCache& cache) {
   Parser parser(type, 0);
 
   String next;
@@ -449,8 +446,8 @@ ParseResult::Ptr DataTypeClassNameParser::parse_with_composite(const String& typ
       return ParseResult::Ptr();
     }
 
-    for (NameAndTypeParamsVec::const_iterator i = params.begin(),
-         end = params.end(); i != end; ++i) {
+    for (NameAndTypeParamsVec::const_iterator i = params.begin(), end = params.end(); i != end;
+         ++i) {
       DataType::ConstPtr data_type = parse_one(i->second, cache);
       if (!data_type) {
         return ParseResult::Ptr();
@@ -508,7 +505,7 @@ bool DataTypeClassNameParser::Parser::get_type_params(TypeParamsVec* params) {
   }
 
   if (str_[index_] != '(') {
-    parse_error(str_, index_,  "Expected '(' before type parameters");
+    parse_error(str_, index_, "Expected '(' before type parameters");
     return false;
   }
 
@@ -527,7 +524,7 @@ bool DataTypeClassNameParser::Parser::get_type_params(TypeParamsVec* params) {
     params->push_back(param);
   }
 
-  parse_error(str_, index_,  "Unexpected end of string");
+  parse_error(str_, index_, "Unexpected end of string");
   return false;
 }
 
@@ -550,7 +547,7 @@ bool DataTypeClassNameParser::Parser::get_name_and_type_params(NameAndTypeParams
     skip_blank();
 
     if (str_[index_] != ':') {
-      parse_error(str_, index_,  "Expected ':'");
+      parse_error(str_, index_, "Expected ':'");
       return false;
     }
 
@@ -566,7 +563,7 @@ bool DataTypeClassNameParser::Parser::get_name_and_type_params(NameAndTypeParams
     params->push_back(std::make_pair(name, type));
   }
 
-  parse_error(str_, index_,  "Unexpected end of string");
+  parse_error(str_, index_, "Unexpected end of string");
   return false;
 }
 
@@ -577,7 +574,7 @@ bool DataTypeClassNameParser::Parser::get_collection_params(NameAndTypeParamsVec
   }
 
   if (str_[index_] != '(') {
-    parse_error(str_, index_,  "Expected '(' before collection parameters");
+    parse_error(str_, index_, "Expected '(' before collection parameters");
     return false;
   }
 
@@ -628,17 +625,14 @@ void DataTypeClassNameParser::Parser::read_next_identifier(String* name) {
   if (name != NULL) {
     if (index_ > i) {
       *name = str_.substr(i, index_ - i);
-    } else{
+    } else {
       name->clear();
     }
   }
 }
 
-void DataTypeClassNameParser::Parser::parse_error(const String& str,
-                                                  size_t index,
+void DataTypeClassNameParser::Parser::parse_error(const String& str, size_t index,
                                                   const char* error) {
-  LOG_ERROR("Error parsing '%s' at %u index: %s",
-            str.c_str(),
-            static_cast<unsigned int>(index),
+  LOG_ERROR("Error parsing '%s' at %u index: %s", str.c_str(), static_cast<unsigned int>(index),
             error);
 }

@@ -220,7 +220,7 @@ public:
    *
    * @return CCM instance
    */
-  static SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > ccm();
+  static SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge>> ccm();
 
 private:
   /**
@@ -354,4 +354,3 @@ private:
 };
 
 #endif // __OPTIONS_HPP__
-

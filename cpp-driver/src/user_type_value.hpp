@@ -28,8 +28,8 @@ namespace datastax { namespace internal { namespace core {
 class UserTypeValue : public AbstractData {
 public:
   UserTypeValue(const UserType::ConstPtr& data_type)
-    : AbstractData(data_type->fields().size())
-    , data_type_(data_type) { }
+      : AbstractData(data_type->fields().size())
+      , data_type_(data_type) {}
 
   const UserType::ConstPtr& data_type() const { return data_type_; }
 
@@ -49,7 +49,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(UserTypeValue);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::UserTypeValue, CassUserType)
 

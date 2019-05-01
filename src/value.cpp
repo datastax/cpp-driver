@@ -18,8 +18,7 @@ using namespace datastax::internal::enterprise;
 
 extern "C" {
 
-CassError cass_value_get_dse_point(const CassValue* value,
-                                   cass_double_t* x, cass_double_t* y) {
+CassError cass_value_get_dse_point(const CassValue* value, cass_double_t* x, cass_double_t* y) {
   const cass_byte_t* pos;
   size_t size;
 
@@ -47,8 +46,7 @@ CassError cass_value_get_dse_point(const CassValue* value,
   return CASS_OK;
 }
 
-CassError cass_value_get_dse_date_range(const CassValue* value,
-                                        DseDateRange* range) {
+CassError cass_value_get_dse_date_range(const CassValue* value, DseDateRange* range) {
   size_t size = 0;
   size_t expected_size = 0;
   const char* pos = NULL;
@@ -69,15 +67,16 @@ CassError cass_value_get_dse_date_range(const CassValue* value,
 
   end = pos + size;
 
-  // The format of the data is <type int8>[<from_time int64><from_precision int8>[<to_time int64><to_precision int8>]]
-  // Depending on the type of range, we may have a subset of the remaining fields.
-  // This translates to having 0, 1, or 2 bounds. If we have one bound, it may be an upper or lower bound.
+  // The format of the data is <type int8>[<from_time int64><from_precision int8>[<to_time
+  // int64><to_precision int8>]] Depending on the type of range, we may have a subset of the
+  // remaining fields. This translates to having 0, 1, or 2 bounds. If we have one bound, it may be
+  // an upper or lower bound.
 
   range_type = static_cast<DateRangeBoundType>(*pos++);
 
-  range->is_single_date = static_cast<cass_bool_t>(
-                            range_type == DATE_RANGE_BOUND_TYPE_SINGLE_DATE ||
-                            range_type == DATE_RANGE_BOUND_TYPE_SINGLE_DATE_OPEN);
+  range->is_single_date =
+      static_cast<cass_bool_t>(range_type == DATE_RANGE_BOUND_TYPE_SINGLE_DATE ||
+                               range_type == DATE_RANGE_BOUND_TYPE_SINGLE_DATE_OPEN);
   range->lower_bound = dse_date_range_bound_unbounded();
   range->upper_bound = dse_date_range_bound_unbounded();
 
@@ -91,13 +90,13 @@ CassError cass_value_get_dse_date_range(const CassValue* value,
     case DATE_RANGE_BOUND_TYPE_OPEN_RANGE_LOW:
       // type, from_time, from_precision
       expected_size = sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t);
-      first_bound = (range_type == DATE_RANGE_BOUND_TYPE_OPEN_RANGE_LOW) ?
-                      &(range->upper_bound) :
-                      &(range->lower_bound);
+      first_bound = (range_type == DATE_RANGE_BOUND_TYPE_OPEN_RANGE_LOW) ? &(range->upper_bound)
+                                                                         : &(range->lower_bound);
       break;
     case DATE_RANGE_BOUND_TYPE_CLOSED_RANGE:
       // type, from_time, from_precision, to_time, to_precision
-      expected_size = sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t);
+      expected_size =
+          sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t) + sizeof(int64_t) + sizeof(int8_t);
       first_bound = &(range->lower_bound);
       break;
     default:

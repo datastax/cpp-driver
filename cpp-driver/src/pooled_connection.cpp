@@ -30,16 +30,14 @@ using namespace datastax::internal::core;
  */
 class ChainedSetKeyspaceCallback : public SimpleRequestCallback {
 public:
-  ChainedSetKeyspaceCallback(Connection* connection,
-                             const String& keyspace,
+  ChainedSetKeyspaceCallback(Connection* connection, const String& keyspace,
                              const RequestCallback::Ptr& chained_callback);
 
 private:
   class SetKeyspaceRequest : public QueryRequest {
   public:
-    SetKeyspaceRequest(const String& keyspace,
-                       uint64_t request_timeout_ms)
-      : QueryRequest("USE \"" + keyspace + "\"") {
+    SetKeyspaceRequest(const String& keyspace, uint64_t request_timeout_ms)
+        : QueryRequest("USE \"" + keyspace + "\"") {
       set_request_timeout_ms(request_timeout_ms);
     }
   };
@@ -59,12 +57,10 @@ private:
 ChainedSetKeyspaceCallback::ChainedSetKeyspaceCallback(Connection* connection,
                                                        const String& keyspace,
                                                        const RequestCallback::Ptr& chained_callback)
-  : SimpleRequestCallback(
-      Request::ConstPtr(
-        new SetKeyspaceRequest(keyspace,
-                               chained_callback->request_timeout_ms())))
-  , connection_(connection)
-  , chained_callback_(chained_callback) { }
+    : SimpleRequestCallback(Request::ConstPtr(
+          new SetKeyspaceRequest(keyspace, chained_callback->request_timeout_ms())))
+    , connection_(connection)
+    , chained_callback_(chained_callback) {}
 
 void ChainedSetKeyspaceCallback::on_internal_set(ResponseMessage* response) {
   switch (response->opcode()) {
@@ -73,30 +69,24 @@ void ChainedSetKeyspaceCallback::on_internal_set(ResponseMessage* response) {
       break;
     case CQL_OPCODE_ERROR:
       connection_->defunct();
-      chained_callback_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                                  "Unable to set keyspace");
+      chained_callback_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, "Unable to set keyspace");
       break;
     default:
       connection_->defunct();
-      chained_callback_->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                                  "Unexpected response");
+      chained_callback_->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE, "Unexpected response");
       break;
   }
 }
 
 void ChainedSetKeyspaceCallback::on_internal_error(CassError code, const String& message) {
   connection_->defunct();
-  chained_callback_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                              "Unable to set keyspace");
+  chained_callback_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, "Unable to set keyspace");
 }
 
-void ChainedSetKeyspaceCallback::on_internal_timeout() {
-  chained_callback_->on_retry_next_host();
-}
+void ChainedSetKeyspaceCallback::on_internal_timeout() { chained_callback_->on_retry_next_host(); }
 
 void ChainedSetKeyspaceCallback::on_result_response(ResponseMessage* response) {
-  ResultResponse* result =
-      static_cast<ResultResponse*>(response->response_body().get());
+  ResultResponse* result = static_cast<ResultResponse*>(response->response_body().get());
   if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
     if (!connection_->write_and_flush(chained_callback_)) {
       // Try on the same host but a different connection
@@ -104,17 +94,15 @@ void ChainedSetKeyspaceCallback::on_result_response(ResponseMessage* response) {
     }
   } else {
     connection_->defunct();
-    chained_callback_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                                "Unable to set keyspace");
+    chained_callback_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, "Unable to set keyspace");
   }
 }
 
-PooledConnection::PooledConnection(ConnectionPool* pool,
-                                   const Connection::Ptr& connection)
-  : connection_(connection)
-  , pool_(pool)
-  // If the user data is set then use it to start the I/O timer.
-  , event_loop_(static_cast<EventLoop*>(pool->loop()->data)) {
+PooledConnection::PooledConnection(ConnectionPool* pool, const Connection::Ptr& connection)
+    : connection_(connection)
+    , pool_(pool)
+    // If the user data is set then use it to start the I/O timer.
+    , event_loop_(static_cast<EventLoop*>(pool->loop()->data)) {
   inc_ref(); // Reference for the connection's lifetime
   connection_->set_listener(this);
 }
@@ -123,15 +111,10 @@ bool PooledConnection::write(RequestCallback* callback) {
   bool result = false;
   const String& keyspace(pool_->keyspace());
   if (keyspace != connection_->keyspace()) {
-    LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)",
-              keyspace.c_str(),
-              static_cast<void*>(connection_.get()),
-              static_cast<void*>(pool_));
-    result = connection_->write(RequestCallback::Ptr(
-                                  new ChainedSetKeyspaceCallback(
-                                    connection_.get(),
-                                    keyspace,
-                                    RequestCallback::Ptr(callback))));
+    LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)", keyspace.c_str(),
+              static_cast<void*>(connection_.get()), static_cast<void*>(pool_));
+    result = connection_->write(RequestCallback::Ptr(new ChainedSetKeyspaceCallback(
+        connection_.get(), keyspace, RequestCallback::Ptr(callback))));
   } else {
     result = connection_->write(RequestCallback::Ptr(callback));
   }
@@ -153,9 +136,7 @@ void PooledConnection::flush() {
 #endif
 }
 
-void PooledConnection::close() {
-  connection_->close();
-}
+void PooledConnection::close() { connection_->close(); }
 
 int PooledConnection::inflight_request_count() const {
   return connection_->inflight_request_count();

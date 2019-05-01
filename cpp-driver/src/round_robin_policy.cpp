@@ -25,21 +25,17 @@ using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 RoundRobinPolicy::RoundRobinPolicy()
-  : hosts_(new HostVec())
-  , index_(0) {
+    : hosts_(new HostVec())
+    , index_(0) {
   uv_rwlock_init(&available_rwlock_);
 }
 
-RoundRobinPolicy::~RoundRobinPolicy() {
-  uv_rwlock_destroy(&available_rwlock_);
-}
+RoundRobinPolicy::~RoundRobinPolicy() { uv_rwlock_destroy(&available_rwlock_); }
 
-void RoundRobinPolicy::init(const Host::Ptr& connected_host,
-                            const HostMap& hosts,
-                            Random* random) {
+void RoundRobinPolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random) {
   available_.resize(hosts.size());
-  std::transform(hosts.begin(), hosts.end(),
-                 std::inserter(available_, available_.begin()), GetAddress());
+  std::transform(hosts.begin(), hosts.end(), std::inserter(available_, available_.begin()),
+                 GetAddress());
   hosts_->reserve(hosts.size());
   std::transform(hosts.begin(), hosts.end(), std::back_inserter(*hosts_), GetHost());
 
@@ -52,8 +48,7 @@ CassHostDistance RoundRobinPolicy::distance(const Host::Ptr& host) const {
   return CASS_HOST_DISTANCE_LOCAL;
 }
 
-QueryPlan* RoundRobinPolicy::new_query_plan(const String& keyspace,
-                                            RequestHandler* request_handler,
+QueryPlan* RoundRobinPolicy::new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                             const TokenMap* token_map) {
   return new RoundRobinQueryPlan(this, hosts_, index_++);
 }
@@ -63,13 +58,9 @@ bool RoundRobinPolicy::is_host_up(const Address& address) const {
   return available_.count(address) > 0;
 }
 
-void RoundRobinPolicy::on_host_added(const Host::Ptr& host) {
-  add_host(hosts_, host);
-}
+void RoundRobinPolicy::on_host_added(const Host::Ptr& host) { add_host(hosts_, host); }
 
-void RoundRobinPolicy::on_host_removed(const Host::Ptr& host) {
-  on_host_down(host->address());
-}
+void RoundRobinPolicy::on_host_removed(const Host::Ptr& host) { on_host_down(host->address()); }
 
 void RoundRobinPolicy::on_host_up(const Host::Ptr& host) {
   add_host(hosts_, host);

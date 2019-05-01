@@ -34,32 +34,32 @@
 bool Integration::skipped_message_displayed_ = false;
 
 Integration::Integration()
-  : ccm_(NULL)
-  , session_()
-  , keyspace_name_("")
-  , table_name_("")
-  , system_schema_keyspaces_("system.schema_keyspaces")
-  , uuid_generator_()
-  , server_version_(Options::server_version())
-  , number_dc1_nodes_(1)
-  , number_dc2_nodes_(0)
-  , replication_factor_(0)
-  , replication_strategy_("")
-  , contact_points_("")
-  , is_password_authenticator_(false)
-  , is_client_authentication_(false)
-  , is_ssl_(false)
-  , is_with_vnodes_(false)
-  , is_randomized_contact_points_(false)
-  , is_schema_metadata_(false)
-  , is_ccm_start_requested_(true)
-  , is_ccm_start_node_individually_(false)
-  , is_session_requested_(true)
-  , is_test_chaotic_(false)
-  , is_beta_protocol_(Options::is_beta_protocol())
-  , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
-  , create_keyspace_query_("")
-  , start_time_(0ull) {
+    : ccm_(NULL)
+    , session_()
+    , keyspace_name_("")
+    , table_name_("")
+    , system_schema_keyspaces_("system.schema_keyspaces")
+    , uuid_generator_()
+    , server_version_(Options::server_version())
+    , number_dc1_nodes_(1)
+    , number_dc2_nodes_(0)
+    , replication_factor_(0)
+    , replication_strategy_("")
+    , contact_points_("")
+    , is_password_authenticator_(false)
+    , is_client_authentication_(false)
+    , is_ssl_(false)
+    , is_with_vnodes_(false)
+    , is_randomized_contact_points_(false)
+    , is_schema_metadata_(false)
+    , is_ccm_start_requested_(true)
+    , is_ccm_start_node_individually_(false)
+    , is_session_requested_(true)
+    , is_test_chaotic_(false)
+    , is_beta_protocol_(Options::is_beta_protocol())
+    , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
+    , create_keyspace_query_("")
+    , start_time_(0ull) {
   // Determine if the schema keyspaces table should be updated
   // TODO: Make cass_version (and dse_version) available for all tests
   CCM::CassVersion cass_version = server_version_;
@@ -79,7 +79,7 @@ Integration::Integration()
   if (type_param) {
     std::vector<std::string> tokens = explode(test_information->test_case_name(), '/');
     for (std::vector<std::string>::const_iterator iterator = tokens.begin();
-      iterator < tokens.end(); ++iterator) {
+         iterator < tokens.end(); ++iterator) {
       std::string token = *iterator;
 
       // Determine if we are looking at the last token
@@ -89,9 +89,7 @@ Integration::Integration()
         if (!(tokenStream >> number).fail()) {
           std::vector<std::string> type_param_tokens = explode(type_param, ':');
           size_t size = type_param_tokens.size();
-          test_case_name_ += test::Utils::replace_all(type_param_tokens[size - 1],
-                                                      ">",
-                                                      "");
+          test_case_name_ += test::Utils::replace_all(type_param_tokens[size - 1], ">", "");
         }
       } else {
         test_case_name_ += token + "_";
@@ -110,7 +108,8 @@ Integration::Integration()
 Integration::~Integration() {
   try {
     session_.close(false);
-  } catch (...) {}
+  } catch (...) {
+  }
 
   // Reset the skipped message displayed state
   skipped_message_displayed_ = false;
@@ -130,11 +129,9 @@ void Integration::SetUp() {
   }
   replication_strategy_ = default_replication_strategy();
 
-
   // Generate the keyspace query
-  create_keyspace_query_ = format_string(SIMPLE_KEYSPACE_FORMAT,
-                                         keyspace_name_.c_str(),
-                                         replication_strategy_.c_str());
+  create_keyspace_query_ =
+      format_string(SIMPLE_KEYSPACE_FORMAT, keyspace_name_.c_str(), replication_strategy_.c_str());
 
   // Create the data center nodes vector
   std::vector<unsigned short> data_center_nodes;
@@ -142,28 +139,19 @@ void Integration::SetUp() {
   data_center_nodes.push_back(number_dc2_nodes_);
 
   try {
-    //Create and start the CCM cluster (if not already created)
-    ccm_ = new CCM::Bridge(server_version_,
-      Options::use_git(), Options::branch_tag(),
-      Options::use_install_dir(), Options::install_dir(),
-      Options::is_dse(), dse_workload_,
-      Options::cluster_prefix(),
-      Options::dse_credentials(),
-      Options::dse_username(), Options::dse_password(),
-      Options::deployment_type(), Options::authentication_type(),
-      Options::host(), Options::port(),
-      Options::username(), Options::password(),
-      Options::public_key(), Options::private_key(),
-      Options::is_verbose_ccm());
-    if (ccm_->create_cluster(data_center_nodes,
-                             is_with_vnodes_,
-                             is_password_authenticator_,
-                             is_ssl_,
-                             is_client_authentication_)) {
+    // Create and start the CCM cluster (if not already created)
+    ccm_ = new CCM::Bridge(
+        server_version_, Options::use_git(), Options::branch_tag(), Options::use_install_dir(),
+        Options::install_dir(), Options::is_dse(), dse_workload_, Options::cluster_prefix(),
+        Options::dse_credentials(), Options::dse_username(), Options::dse_password(),
+        Options::deployment_type(), Options::authentication_type(), Options::host(),
+        Options::port(), Options::username(), Options::password(), Options::public_key(),
+        Options::private_key(), Options::is_verbose_ccm());
+    if (ccm_->create_cluster(data_center_nodes, is_with_vnodes_, is_password_authenticator_,
+                             is_ssl_, is_client_authentication_)) {
       if (is_ccm_start_requested_) {
         if (is_ccm_start_node_individually_) {
-          for (unsigned short node = 1;
-            node <= (number_dc1_nodes_ + number_dc2_nodes_); ++node) {
+          for (unsigned short node = 1; node <= (number_dc1_nodes_ + number_dc2_nodes_); ++node) {
             if (is_password_authenticator_) {
               ccm_->start_node(node, "-Dcassandra.superuser_setup_delay_ms=0");
             } else {
@@ -181,8 +169,8 @@ void Integration::SetUp() {
     }
 
     // Generate the default contact points
-    contact_points_ = generate_contact_points(ccm_->get_ip_prefix(),
-                      number_dc1_nodes_ + number_dc2_nodes_);
+    contact_points_ =
+        generate_contact_points(ccm_->get_ip_prefix(), number_dc1_nodes_ + number_dc2_nodes_);
 
     // Determine if the session connection should be established
     if (is_session_requested_ && is_ccm_start_requested_) {
@@ -210,9 +198,9 @@ void Integration::TearDown() {
     std::stringstream use_keyspace_query;
     use_keyspace_query << "DROP KEYSPACE " << keyspace_name_;
     try {
-      session_.execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false,
-                       false);
-    } catch (...) { }
+      session_.execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false, false);
+    } catch (...) {
+    }
   }
 
   // Determine if the CCM cluster should be destroyed
@@ -230,13 +218,13 @@ std::string Integration::default_keyspace() {
 
   // Clean up the initial keyspace name (remove category information)
   keyspace_name_ = to_lower(test_case_name_) + "_" + to_lower(test_name_);
-  keyspace_name_ = replace_all(keyspace_name_, "tests", ""); //TODO: Rename integration tests (remove 's' or add 's')
+  keyspace_name_ = replace_all(keyspace_name_, "tests",
+                               ""); // TODO: Rename integration tests (remove 's' or add 's')
   keyspace_name_ = replace_all(keyspace_name_, "test", "");
   keyspace_name_ = replace_all(keyspace_name_, "integration", "");
-  for (TestCategory::iterator iterator = TestCategory::begin();
-    iterator != TestCategory::end(); ++iterator) {
-    keyspace_name_ = replace_all(keyspace_name_,
-      "_" + to_lower(iterator->name()) + "_", "");
+  for (TestCategory::iterator iterator = TestCategory::begin(); iterator != TestCategory::end();
+       ++iterator) {
+    keyspace_name_ = replace_all(keyspace_name_, "_" + to_lower(iterator->name()) + "_", "");
   }
 
   // Generate the keyspace name
@@ -246,17 +234,15 @@ std::string Integration::default_keyspace() {
 
 unsigned short Integration::default_replication_factor() {
   // Calculate and return the default replication factor
-  return (number_dc1_nodes_ % 2 == 0)
-    ? number_dc1_nodes_ / 2
-    : (number_dc1_nodes_ + 1) / 2;
+  return (number_dc1_nodes_ % 2 == 0) ? number_dc1_nodes_ / 2 : (number_dc1_nodes_ + 1) / 2;
 }
 
 std::string Integration::default_replication_strategy() {
   // Determine the replication strategy
   std::stringstream replication_strategy_s;
   if (number_dc2_nodes_ > 0) {
-    replication_strategy_s << "'NetworkTopologyStrategy', 'dc1': "
-      << number_dc1_nodes_ << ", " << "'dc2': " << number_dc2_nodes_;
+    replication_strategy_s << "'NetworkTopologyStrategy', 'dc1': " << number_dc1_nodes_ << ", "
+                           << "'dc2': " << number_dc2_nodes_;
   } else {
     replication_strategy_s << "'SimpleStrategy', 'replication_factor': ";
 
@@ -279,10 +265,8 @@ std::string Integration::default_select_all() {
 }
 
 int64_t Integration::default_select_count() {
-  Result result = session_.execute(format_string(SELECT_COUNT_FORMAT,
-                                                 table_name_.c_str()));
-  EXPECT_EQ(CASS_OK, result.error_code()) << "Unable to get Row Count: "
-    << result.error_message();
+  Result result = session_.execute(format_string(SELECT_COUNT_FORMAT, table_name_.c_str()));
+  EXPECT_EQ(CASS_OK, result.error_code()) << "Unable to get Row Count: " << result.error_message();
   return result.first_row().next().as<BigInteger>().value();
 }
 
@@ -324,7 +308,8 @@ void Integration::connect(Cluster cluster) {
     } else {
       server_version_ = ccm_->get_cassandra_version();
     }
-    TEST_LOG("Branch/Tag Option was Used: Retrieved server version is " << server_version_.to_string());
+    TEST_LOG("Branch/Tag Option was Used: Retrieved server version is "
+             << server_version_.to_string());
   }
 
   // Create the keyspace for the integration test
@@ -346,21 +331,19 @@ void Integration::connect() {
 test::driver::Cluster Integration::default_cluster(bool is_with_default_contact_points /*= true*/) {
   // Create the default cluster object
   Cluster cluster = Cluster::build()
-    .with_randomized_contact_points(is_randomized_contact_points_)
-    .with_schema_metadata(is_schema_metadata_);
+                        .with_randomized_contact_points(is_randomized_contact_points_)
+                        .with_schema_metadata(is_schema_metadata_);
   if (is_with_default_contact_points) {
     cluster.with_contact_points(contact_points_);
   }
-  if (server_version_ >= "3.10" &&
-      protocol_version_ == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
+  if (server_version_ >= "3.10" && protocol_version_ == CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) {
     cluster.with_beta_protocol(is_beta_protocol_);
   } else {
     cluster.with_protocol_version(protocol_version_);
   }
 
   // Assign the execution profiles to the cluster object (if available)
-  for(ExecutionProfile::Map::iterator it = profiles_.begin();
-      it != profiles_.end(); ++it) {
+  for (ExecutionProfile::Map::iterator it = profiles_.begin(); it != profiles_.end(); ++it) {
     cluster.with_execution_profile(it->first, it->second);
   }
   return cluster;
@@ -369,7 +352,7 @@ test::driver::Cluster Integration::default_cluster(bool is_with_default_contact_
 void Integration::enable_cluster_tracing(bool enable /*= true*/) {
   std::vector<std::string> active_nodes = ccm_->cluster_ip_addresses();
   for (std::vector<std::string>::iterator iterator = active_nodes.begin();
-    iterator != active_nodes.end(); ++iterator) {
+       iterator != active_nodes.end(); ++iterator) {
     // Get the node number from the IP address
     std::string node_ip_address = *iterator;
     std::stringstream node_value;
@@ -382,8 +365,7 @@ void Integration::enable_cluster_tracing(bool enable /*= true*/) {
   }
 }
 
-bool Integration::decommission_node(unsigned int node,
-                                    bool is_force /*= false */) {
+bool Integration::decommission_node(unsigned int node, bool is_force /*= false */) {
   // Decommission the requested node
   bool status = ccm_->decommission_node(node, is_force);
   if (status) {
@@ -401,9 +383,8 @@ bool Integration::start_node(unsigned int node) {
   // Stop the requested node
   if (ccm_->is_node_down(node, true)) {
     bool status = ccm_->start_node(node);
-    std::vector<unsigned int>::iterator it = std::find(stopped_nodes_.begin(),
-                                                       stopped_nodes_.end(),
-                                                       node);
+    std::vector<unsigned int>::iterator it =
+        std::find(stopped_nodes_.begin(), stopped_nodes_.end(), node);
     if (it != stopped_nodes_.end()) {
       stopped_nodes_.erase(it);
     }
@@ -450,12 +431,10 @@ std::string Integration::format_string(const char* format, ...) const {
   return buffer;
 }
 
-void Integration::maybe_shrink_name(std::string& name)
-{
+void Integration::maybe_shrink_name(std::string& name) {
   if (name.size() > ENTITY_MAXIMUM_LENGTH) {
     // Update the name with a UUID (first portions of v4 UUID)
-    std::vector<std::string> uuid_octets = explode(
-      uuid_generator_.generate_timeuuid().str(), '-');
+    std::vector<std::string> uuid_octets = explode(uuid_generator_.generate_timeuuid().str(), '-');
     std::string id = uuid_octets[0] + uuid_octets[3];
     name = name.substr(0, ENTITY_MAXIMUM_LENGTH - id.size()) + id;
   }
@@ -463,8 +442,7 @@ void Integration::maybe_shrink_name(std::string& name)
 
 bool Integration::wait_for_logger(size_t expected_count) {
   start_timer();
-  while (elapsed_time() < LOGGER_MAXIMUM_WAIT_TIME_MS
-         && logger_.count() < expected_count) {
+  while (elapsed_time() < LOGGER_MAXIMUM_WAIT_TIME_MS && logger_.count() < expected_count) {
     msleep(LOGGER_WAIT_FOR_NAP_MS);
   }
   return logger_.count() >= expected_count;

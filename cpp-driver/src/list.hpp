@@ -82,8 +82,7 @@ public:
 
   T* pop_front() {
     T* first = front();
-    if (first != NULL)
-      remove(first);
+    if (first != NULL) remove(first);
     return first;
   }
 
@@ -139,6 +138,6 @@ void List<T>::insert_before(Node* pos, Node* node) {
   pos->prev_ = node;
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

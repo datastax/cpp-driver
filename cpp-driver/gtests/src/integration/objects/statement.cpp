@@ -19,7 +19,5 @@
 #include "objects/custom_payload.hpp"
 
 void test::driver::Statement::set_custom_payload(CustomPayload custom_payload) {
-  ASSERT_EQ(CASS_OK, cass_statement_set_custom_payload(get(),
-            custom_payload.get()));
+  ASSERT_EQ(CASS_OK, cass_statement_set_custom_payload(get(), custom_payload.get()));
 }
-

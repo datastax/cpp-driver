@@ -34,14 +34,12 @@ const CassValue* cass_row_get_column(const CassRow* row, size_t index) {
   return CassValue::to(&row->values[index]);
 }
 
-const CassValue* cass_row_get_column_by_name(const CassRow* row,
-                                             const char* name) {
+const CassValue* cass_row_get_column_by_name(const CassRow* row, const char* name) {
 
   return cass_row_get_column_by_name_n(row, name, SAFE_STRLEN(name));
 }
 
-const CassValue* cass_row_get_column_by_name_n(const CassRow* row,
-                                               const char* name,
+const CassValue* cass_row_get_column_by_name_n(const CassRow* row, const char* name,
                                                size_t name_length) {
 
   return CassValue::to(row->get_by_name(StringRef(name, name_length)));
@@ -51,8 +49,7 @@ const CassValue* cass_row_get_column_by_name_n(const CassRow* row,
 
 namespace datastax { namespace internal { namespace core {
 
-bool decode_row(Decoder& decoder, const ResultResponse* result,
-                OutputValueVec& output) {
+bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& output) {
   output.clear();
   output.reserve(result->column_count());
   for (int i = 0; i < result->column_count(); ++i) {
@@ -65,7 +62,7 @@ bool decode_row(Decoder& decoder, const ResultResponse* result,
   return true;
 }
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 const Value* Row::get_by_name(const StringRef& name) const {
   IndexVec indices;

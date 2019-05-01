@@ -25,19 +25,17 @@
 
 namespace datastax { namespace internal { namespace core {
 
-template<class Type, class HType>
+template <class Type, class HType>
 class LoopWatcher {
 public:
   typedef internal::Callback<void, Type*> Callback;
   typedef HType HandleType;
 
   LoopWatcher()
-    : handle_(NULL)
-    , state_(CLOSED) { }
+      : handle_(NULL)
+      , state_(CLOSED) {}
 
-  ~LoopWatcher() {
-    close_handle();
-  }
+  ~LoopWatcher() { close_handle(); }
 
   /**
    * Start the handle.
@@ -93,7 +91,7 @@ public:
 
 public:
   bool is_running() const { return state_ == STARTED; }
-  uv_loop_t* loop() {  return handle_ ? handle_->loop : NULL;  }
+  uv_loop_t* loop() { return handle_ ? handle_->loop : NULL; }
 
 private:
   static void on_run(HandleType* handle) {
@@ -106,11 +104,7 @@ private:
   }
 
 private:
-  enum State {
-    CLOSED,
-    STOPPED,
-    STARTED
-  };
+  enum State { CLOSED, STOPPED, STARTED };
 
 private:
   AllocatedT<HandleType>* handle_;
@@ -138,9 +132,7 @@ private:
     return uv_prepare_start(handle, callback);
   }
 
-  static void stop_handle(HandleType* handle) {
-    uv_prepare_stop(handle);
-  }
+  static void stop_handle(HandleType* handle) { uv_prepare_stop(handle); }
 };
 
 /**
@@ -160,11 +152,9 @@ private:
     return uv_check_start(handle, callback);
   }
 
-  static void stop_handle(HandleType* handle) {
-    uv_check_stop(handle);
-  }
+  static void stop_handle(HandleType* handle) { uv_check_stop(handle); }
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

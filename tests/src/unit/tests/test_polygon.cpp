@@ -7,8 +7,8 @@
 
 #include <gtest/gtest.h>
 
-#include "dse.h"
 #include "decoder.hpp"
+#include "dse.h"
 #include "polygon.hpp"
 #include "string.hpp"
 
@@ -22,18 +22,14 @@ using namespace datastax::internal::enterprise;
 
 class PolygonUnitTest : public testing::Test {
 public:
-  void SetUp() {
-    polygon = dse_polygon_new();
-  }
+  void SetUp() { polygon = dse_polygon_new(); }
 
-  void TearDown() {
-    dse_polygon_free(polygon);
-  }
+  void TearDown() { dse_polygon_free(polygon); }
 
   const CassValue* to_value() {
     char* data = const_cast<char*>(reinterpret_cast<const char*>(polygon->bytes().data()));
-    value =  Value(DataType::ConstPtr(new CustomType(DSE_POLYGON_TYPE)),
-                   Decoder(data, polygon->bytes().size(), 0)); // Protocol version not used
+    value = Value(DataType::ConstPtr(new CustomType(DSE_POLYGON_TYPE)),
+                  Decoder(data, polygon->bytes().size(), 0)); // Protocol version not used
     return CassValue::to(&value);
   }
 
@@ -66,13 +62,16 @@ TEST_F(PolygonUnitTest, BinarySingleRing) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(0.0, x); ASSERT_EQ(1.0, y);
+  ASSERT_EQ(0.0, x);
+  ASSERT_EQ(1.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(2.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(2.0, x);
+  ASSERT_EQ(3.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(4.0, x); ASSERT_EQ(5.0, y);
+  ASSERT_EQ(4.0, x);
+  ASSERT_EQ(5.0, y);
 }
 
 TEST_F(PolygonUnitTest, BinaryMultipleRings) {
@@ -99,29 +98,36 @@ TEST_F(PolygonUnitTest, BinaryMultipleRings) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(0.0, x); ASSERT_EQ(1.0, y);
+  ASSERT_EQ(0.0, x);
+  ASSERT_EQ(1.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(2.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(2.0, x);
+  ASSERT_EQ(3.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(4.0, x); ASSERT_EQ(5.0, y);
+  ASSERT_EQ(4.0, x);
+  ASSERT_EQ(5.0, y);
 
   // Second ring
   ASSERT_EQ(CASS_OK, iterator.next_num_points(&num_points));
   ASSERT_EQ(4u, num_points);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(6.0, x); ASSERT_EQ(7.0, y);
+  ASSERT_EQ(6.0, x);
+  ASSERT_EQ(7.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(8.0, x); ASSERT_EQ(9.0, y);
+  ASSERT_EQ(8.0, x);
+  ASSERT_EQ(9.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(10.0, x); ASSERT_EQ(11.0, y);
+  ASSERT_EQ(10.0, x);
+  ASSERT_EQ(11.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(12.0, x); ASSERT_EQ(13.0, y);
+  ASSERT_EQ(12.0, x);
+  ASSERT_EQ(13.0, y);
 }
 
 TEST_F(PolygonUnitTest, TextMissingY) {
@@ -150,7 +156,8 @@ TEST_F(PolygonUnitTest, TextJunkAfterPolygon) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(1.0, x); ASSERT_EQ(2.0, y);
+  ASSERT_EQ(1.0, x);
+  ASSERT_EQ(2.0, y);
 }
 
 TEST_F(PolygonUnitTest, TextJunkAfterEmptyPolygon) {
@@ -196,13 +203,16 @@ TEST_F(PolygonUnitTest, TextSingleRing) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(0.0, x); ASSERT_EQ(1.0, y);
+  ASSERT_EQ(0.0, x);
+  ASSERT_EQ(1.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(2.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(2.0, x);
+  ASSERT_EQ(3.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(4.0, x); ASSERT_EQ(5.0, y);
+  ASSERT_EQ(4.0, x);
+  ASSERT_EQ(5.0, y);
 }
 
 TEST_F(PolygonUnitTest, TextMultipleRings) {
@@ -232,29 +242,36 @@ TEST_F(PolygonUnitTest, TextMultipleRings) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(0.0, x); ASSERT_EQ(1.0, y);
+  ASSERT_EQ(0.0, x);
+  ASSERT_EQ(1.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(2.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(2.0, x);
+  ASSERT_EQ(3.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(4.0, x); ASSERT_EQ(5.0, y);
+  ASSERT_EQ(4.0, x);
+  ASSERT_EQ(5.0, y);
 
   // Second ring
   ASSERT_EQ(CASS_OK, iterator.next_num_points(&num_points));
   ASSERT_EQ(4u, num_points);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(6.0, x); ASSERT_EQ(7.0, y);
+  ASSERT_EQ(6.0, x);
+  ASSERT_EQ(7.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(8.0, x); ASSERT_EQ(9.0, y);
+  ASSERT_EQ(8.0, x);
+  ASSERT_EQ(9.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(10.0, x); ASSERT_EQ(11.0, y);
+  ASSERT_EQ(10.0, x);
+  ASSERT_EQ(11.0, y);
 
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(12.0, x); ASSERT_EQ(13.0, y);
+  ASSERT_EQ(12.0, x);
+  ASSERT_EQ(13.0, y);
 }
 
 TEST_F(PolygonUnitTest, TextLeadingSpace) {
@@ -267,7 +284,8 @@ TEST_F(PolygonUnitTest, TextLeadingSpace) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(1.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(1.0, x);
+  ASSERT_EQ(3.0, y);
 }
 
 TEST_F(PolygonUnitTest, TextTrailingSpace) {
@@ -280,5 +298,6 @@ TEST_F(PolygonUnitTest, TextTrailingSpace) {
 
   cass_double_t x, y;
   ASSERT_EQ(CASS_OK, iterator.next_point(&x, &y));
-  ASSERT_EQ(1.0, x); ASSERT_EQ(3.0, y);
+  ASSERT_EQ(1.0, x);
+  ASSERT_EQ(3.0, y);
 }

@@ -30,7 +30,7 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) {}
+        : test::Exception(message) {}
   };
   /**
    * Iterator
@@ -184,8 +184,8 @@ private:
    * @param display_name Display name for enumeration
    * @param filter Filter for enumeration
    */
-  TestCategory(const std::string& name, short ordinal,
-    const std::string& display_name, const std::string& filter);
+  TestCategory(const std::string& name, short ordinal, const std::string& display_name,
+               const std::string& filter);
   /**
    * Get the enumeration constants
    *

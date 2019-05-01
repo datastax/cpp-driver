@@ -14,36 +14,25 @@
 
 namespace datastax { namespace internal {
 
-template <class T,
-          class HashFcn = SPARSEHASH_HASH<T>,
-          class EqualKey = std::equal_to<T> >
+template <class T, class HashFcn = SPARSEHASH_HASH<T>, class EqualKey = std::equal_to<T>>
 class DenseHashSet
-    : public sparsehash::dense_hash_set<
-      T,  HashFcn, EqualKey,
-      internal::Allocator<T> > {
+    : public sparsehash::dense_hash_set<T, HashFcn, EqualKey, internal::Allocator<T>> {
 public:
   typedef internal::Allocator<T> Allocator;
 
-  explicit DenseHashSet(size_t expected_max_items_in_table = 0,
-                        const HashFcn& hf = HashFcn(),
-                        const EqualKey& eql = EqualKey(),
-                        const Allocator& alloc = Allocator())
-    : sparsehash::dense_hash_set<T, HashFcn, EqualKey, Allocator>(expected_max_items_in_table,
-                                                                  hf, eql, alloc) { }
+  explicit DenseHashSet(size_t expected_max_items_in_table = 0, const HashFcn& hf = HashFcn(),
+                        const EqualKey& eql = EqualKey(), const Allocator& alloc = Allocator())
+      : sparsehash::dense_hash_set<T, HashFcn, EqualKey, Allocator>(expected_max_items_in_table, hf,
+                                                                    eql, alloc) {}
 
   template <class InputIterator>
-  DenseHashSet(InputIterator first, InputIterator last,
-               const T& empty_key_val,
-               size_t expected_max_items_in_table = 0,
-               const HashFcn& hf = HashFcn(),
-               const EqualKey& eql = EqualKey(),
-               const Allocator& alloc = Allocator())
-    : sparsehash::dense_hash_set<T, HashFcn, EqualKey, Allocator>(first, last,
-                                                                  empty_key_val,
-                                                                  expected_max_items_in_table,
-                                                                  hf, eql, alloc) { }
+  DenseHashSet(InputIterator first, InputIterator last, const T& empty_key_val,
+               size_t expected_max_items_in_table = 0, const HashFcn& hf = HashFcn(),
+               const EqualKey& eql = EqualKey(), const Allocator& alloc = Allocator())
+      : sparsehash::dense_hash_set<T, HashFcn, EqualKey, Allocator>(
+            first, last, empty_key_val, expected_max_items_in_table, hf, eql, alloc) {}
 };
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

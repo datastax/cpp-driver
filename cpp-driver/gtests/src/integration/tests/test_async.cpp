@@ -28,8 +28,8 @@ public:
     Integration::SetUp();
 
     // Create the table
-    session_.execute("CREATE TABLE " + table_name_
-                     + " (key timeuuid PRIMARY KEY, value_number int, value_text text)");
+    session_.execute("CREATE TABLE " + table_name_ +
+                     " (key timeuuid PRIMARY KEY, value_number int, value_text text)");
   }
 
   /**
@@ -44,7 +44,8 @@ public:
     for (size_t i = 0; i < NUMBER_OF_CONCURRENT_REQUESTS; ++i) {
       // Create the insert statement
       Statement insert("INSERT INTO " + table_name_ +
-                       " (key, value_number, value_text) VALUES (?, ?, ?) IF NOT EXISTS", 3);
+                           " (key, value_number, value_text) VALUES (?, ?, ?) IF NOT EXISTS",
+                       3);
 
       // Bind the values to the insert statement
       TimeUuid key = uuid_generator_.generate_timeuuid();

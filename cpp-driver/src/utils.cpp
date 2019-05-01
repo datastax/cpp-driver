@@ -23,10 +23,10 @@
 #include <functional>
 
 #if (defined(WIN32) || defined(_WIN32))
-  #include <windows.h>
+#include <windows.h>
 #else
-  #include <sched.h>
-  #include <unistd.h>
+#include <sched.h>
+#include <unistd.h>
 #endif
 
 namespace datastax { namespace internal {
@@ -91,8 +91,7 @@ void explode(const String& str, Vector<String>& vec, const char delimiter /* = '
 
 String implode(const Vector<String>& vec, const char delimiter /* = ' ' */) {
   String str;
-  for (Vector<String>::const_iterator it = vec.begin(),
-       end = vec.end(); it != end; ++it) {
+  for (Vector<String>::const_iterator it = vec.begin(), end = vec.end(); it != end; ++it) {
     if (!str.empty()) {
       str.push_back(delimiter);
     }
@@ -104,28 +103,24 @@ String implode(const Vector<String>& vec, const char delimiter /* = ' ' */) {
 String& trim(String& str) {
   // Trim front
   str.erase(str.begin(),
-            std::find_if(str.begin(), str.end(),
-                         std::not1(std::ptr_fun<int, int>(::isspace))));
+            std::find_if(str.begin(), str.end(), std::not1(std::ptr_fun<int, int>(::isspace))));
   // Trim back
-  str.erase(std::find_if(str.rbegin(), str.rend(),
-                         std::not1(std::ptr_fun<int, int>(::isspace))).base(),
-            str.end());
+  str.erase(
+      std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun<int, int>(::isspace))).base(),
+      str.end());
   return str;
 }
 
 static bool is_word_char(int c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-         (c >= '0' && c <= '9') || c == '_';
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
 static bool is_lower_word_char(int c) {
-  return (c >= 'a' && c <= 'z') ||
-         (c >= '0' && c <= '9') || c == '_';
+  return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_';
 }
 
 bool is_valid_cql_id(const String& str) {
-  for (String::const_iterator i = str.begin(),
-       end = str.end(); i != end; ++i) {
+  for (String::const_iterator i = str.begin(), end = str.end(); i != end; ++i) {
     if (!is_word_char(*i)) {
       return false;
     }
@@ -138,8 +133,7 @@ bool is_valid_lower_cql_id(const String& str) {
     return false;
   }
   if (str.size() > 1) {
-    for (String::const_iterator i = str.begin() + 1,
-         end = str.end(); i != end; ++i) {
+    for (String::const_iterator i = str.begin() + 1, end = str.end(); i != end; ++i) {
       if (!is_lower_word_char(*i)) {
         return false;
       }
@@ -152,8 +146,7 @@ String& quote_id(String& str) {
   String temp(str);
   str.clear();
   str.push_back('"');
-  for (String::const_iterator i = temp.begin(),
-       end = temp.end(); i != end; ++i) {
+  for (String::const_iterator i = temp.begin(), end = temp.end(); i != end; ++i) {
     if (*i == '"') {
       str.push_back('"');
       str.push_back('"');
@@ -166,9 +159,7 @@ String& quote_id(String& str) {
   return str;
 }
 
-String& escape_id(String& str) {
-  return is_valid_lower_cql_id(str) ?  str : quote_id(str);
-}
+String& escape_id(String& str) { return is_valid_lower_cql_id(str) ? str : quote_id(str); }
 
 String& to_cql_id(String& str) {
   if (is_valid_cql_id(str)) {
@@ -201,12 +192,12 @@ void thread_yield() {
 // https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
 #if defined(_MSC_VER) && defined(_DEBUG)
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
-#pragma pack(push,8)
+#pragma pack(push, 8)
 typedef struct tagTHREADNAME_INFO {
-  DWORD dwType; // Must be 0x1000.
-  LPCSTR szName; // Pointer to name (in user addr space).
+  DWORD dwType;     // Must be 0x1000.
+  LPCSTR szName;    // Pointer to name (in user addr space).
   DWORD dwThreadID; // Thread ID (-1=caller thread).
-  DWORD dwFlags; // Reserved for future use, must be zero.
+  DWORD dwFlags;    // Reserved for future use, must be zero.
 } THREADNAME_INFO;
 #pragma pack(pop)
 #endif
@@ -218,15 +209,14 @@ void set_thread_name(const String& thread_name) {
   info.dwThreadID = -1;
   info.dwFlags = 0;
 #pragma warning(push)
-#pragma warning(disable: 6320 6322)
+#pragma warning(disable : 6320 6322)
   __try {
-    RaiseException(MS_VC_EXCEPTION,
-                   0,
-                   sizeof(info) / sizeof(ULONG_PTR),
+    RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR),
                    reinterpret_cast<ULONG_PTR*>(&info));
-  } __except (EXCEPTION_EXECUTE_HANDLER) { }
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
+  }
 #pragma warning(pop)
 #endif
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal

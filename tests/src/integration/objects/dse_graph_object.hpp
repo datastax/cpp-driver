@@ -9,33 +9,31 @@
 #define __TEST_DSE_GRAPH_OBJECT_HPP__
 #include "dse.h"
 
-#include "objects/object_base.hpp"
 #include "objects/dse_graph_array.hpp"
+#include "objects/object_base.hpp"
 
 #include "dse_values.hpp"
 
 #include <gtest/gtest.h>
 
-#define ADD_OBJECT_NULL(name, value) \
-  if (value.is_null()) { \
+#define ADD_OBJECT_NULL(name, value)                                    \
+  if (value.is_null()) {                                                \
     ASSERT_EQ(CASS_OK, dse_graph_object_add_null(get(), name.c_str())); \
   }
 
-#define ADD_OBJECT_VALUE(add_function, name, value) \
-   ADD_OBJECT_NULL(name, value) \
-    else { \
+#define ADD_OBJECT_VALUE(add_function, name, value)                       \
+  ADD_OBJECT_NULL(name, value)                                            \
+  else {                                                                  \
     ASSERT_EQ(CASS_OK, add_function(get(), name.c_str(), value.value())); \
   }
 
-#define ADD_OBJECT_VALUE_C_STR(add_function, name, value) \
-  ADD_OBJECT_NULL(name, value) \
-   else { \
+#define ADD_OBJECT_VALUE_C_STR(add_function, name, value)                       \
+  ADD_OBJECT_NULL(name, value)                                                  \
+  else {                                                                        \
     ASSERT_EQ(CASS_OK, add_function(get(), name.c_str(), value.str().c_str())); \
   }
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 // Forward declaration for circular dependency
 class GraphArray;
@@ -49,7 +47,7 @@ public:
    * Create the empty DSE graph object
    */
   GraphObject()
-    : Object<DseGraphObject, dse_graph_object_free>(dse_graph_object_new()) {}
+      : Object<DseGraphObject, dse_graph_object_free>(dse_graph_object_new()) {}
 
   /**
    * Create the DSE graph object from the native driver DSE graph object
@@ -57,7 +55,7 @@ public:
    * @param object Native driver object
    */
   GraphObject(DseGraphObject* object)
-    : Object<DseGraphObject, dse_graph_object_free>(object) {}
+      : Object<DseGraphObject, dse_graph_object_free>(object) {}
 
   /**
    * Create the DSE graph object from the shared reference
@@ -65,7 +63,7 @@ public:
    * @param object Shared reference
    */
   GraphObject(Ptr object)
-    : Object<DseGraphObject, dse_graph_object_free>(object) {}
+      : Object<DseGraphObject, dse_graph_object_free>(object) {}
 
   /**
    * Destructor to clean up the shared reference pointers that may be associated
@@ -79,9 +77,7 @@ public:
   /**
    * Finish (Complete/Close) a DSE graph object
    */
-  void finish() {
-    dse_graph_object_finish(get());
-  }
+  void finish() { dse_graph_object_finish(get()); }
 
   /**
    * Reset/Reuse a DSE graph object
@@ -99,7 +95,7 @@ public:
    * @param name Name to apply value to
    * @param value Value to apply
    */
-  template<class C>
+  template <class C>
   void add(const std::string& name, C value) {
     add_value(name, value.get());
   }
@@ -120,7 +116,7 @@ private:
    * @param name Name to apply array value to
    * @param value Array value to apply
    */
-  void add_value(const std::string& name, DseGraphArray* value)  {
+  void add_value(const std::string& name, DseGraphArray* value) {
     dse_graph_array_finish(value);
     ASSERT_EQ(CASS_OK, dse_graph_object_add_array(get(), name.c_str(), value));
   }
@@ -132,7 +128,7 @@ private:
  * @param name Name to apply boolean value to
  * @param value Boolean value to apply
  */
-template<>
+template <>
 inline void GraphObject::add<Boolean>(const std::string& name, Boolean value) {
   ADD_OBJECT_VALUE(dse_graph_object_add_bool, name, value);
 }
@@ -143,7 +139,7 @@ inline void GraphObject::add<Boolean>(const std::string& name, Boolean value) {
  * @param name Name to apply double value to
  * @param value Double value to apply
  */
-template<>
+template <>
 inline void GraphObject::add<Double>(const std::string& name, Double value) {
   ADD_OBJECT_VALUE(dse_graph_object_add_double, name, value);
 }
@@ -154,7 +150,7 @@ inline void GraphObject::add<Double>(const std::string& name, Double value) {
  * @param name Name to apply 32-bit integer value to
  * @param value 32-bit integer value to apply
  */
-template<>
+template <>
 inline void GraphObject::add<Integer>(const std::string& name, Integer value) {
   ADD_OBJECT_VALUE(dse_graph_object_add_int32, name, value);
 }
@@ -166,7 +162,7 @@ inline void GraphObject::add<Integer>(const std::string& name, Integer value) {
  * @param name Name to apply 64-bit integer value to
  * @param value 64-bit integer value to apply
  */
-template<>
+template <>
 inline void GraphObject::add<BigInteger>(const std::string& name, BigInteger value) {
   ADD_OBJECT_VALUE(dse_graph_object_add_int64, name, value);
 }
@@ -177,11 +173,11 @@ inline void GraphObject::add<BigInteger>(const std::string& name, BigInteger val
  * @param name Name to apply object value to
  * @param value Object value to apply
  */
-template<>
+template <>
 inline void GraphObject::add<GraphObject>(const std::string& name, GraphObject value) {
   value.finish();
   ASSERT_EQ(CASS_OK, dse_graph_object_add_object(get(), name.c_str(),
-    const_cast<DseGraphObject*>(value.get())));
+                                                 const_cast<DseGraphObject*>(value.get())));
 }
 
 /**
@@ -190,15 +186,15 @@ inline void GraphObject::add<GraphObject>(const std::string& name, GraphObject v
  * @param name Name to apply string value to
  * @param value String value to apply
  */
-template<>
+template <>
 inline void GraphObject::add<Varchar>(const std::string& name, Varchar value) {
   ADD_OBJECT_VALUE_C_STR(dse_graph_object_add_string, name, value);
 }
-template<>
+template <>
 inline void GraphObject::add<Text>(const std::string& name, Text value) {
   add<Text>(name, value);
 }
-template<>
+template <>
 inline void GraphObject::add<std::string>(const std::string& name, std::string value) {
   add<Varchar>(name, Varchar(value));
 }
@@ -209,14 +205,11 @@ inline void GraphObject::add<std::string>(const std::string& name, std::string v
  * @param name Name to apply object value to
  * @param value Line string value to apply
  */
-template<>
-inline void GraphObject::add<LineString>(const std::string& name,
-                                         LineString value) {
+template <>
+inline void GraphObject::add<LineString>(const std::string& name, LineString value) {
   values::dse::LineString::Native line_string = value.to_native();
   line_strings_.push_back(line_string);
-  ASSERT_EQ(CASS_OK, dse_graph_object_add_line_string(get(),
-                                                      name.c_str(),
-                                                      line_string.get()));
+  ASSERT_EQ(CASS_OK, dse_graph_object_add_line_string(get(), name.c_str(), line_string.get()));
 }
 
 /**
@@ -225,13 +218,10 @@ inline void GraphObject::add<LineString>(const std::string& name,
  * @param name Name to apply object value to
  * @param value Point value to apply
  */
-template<>
-inline void GraphObject::add<Point>(const std::string& name,
-                                    Point value) {
-  ASSERT_EQ(CASS_OK, dse_graph_object_add_point(get(),
-                                                name.c_str(),
-                                                value.value().x,
-                                                value.value().y));
+template <>
+inline void GraphObject::add<Point>(const std::string& name, Point value) {
+  ASSERT_EQ(CASS_OK,
+            dse_graph_object_add_point(get(), name.c_str(), value.value().x, value.value().y));
 }
 
 /**
@@ -240,18 +230,13 @@ inline void GraphObject::add<Point>(const std::string& name,
  * @param name Name to apply object value to
  * @param value Polygon value to apply
  */
-template<>
-inline void GraphObject::add<Polygon>(const std::string& name,
-                                      Polygon value) {
+template <>
+inline void GraphObject::add<Polygon>(const std::string& name, Polygon value) {
   values::dse::Polygon::Native polygon = value.to_native();
   polygons_.push_back(polygon);
-  ASSERT_EQ(CASS_OK, dse_graph_object_add_polygon(get(),
-                                                  name.c_str(),
-                                                  polygon.get()));
+  ASSERT_EQ(CASS_OK, dse_graph_object_add_polygon(get(), name.c_str(), polygon.get()));
 }
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_GRAPH_OBJECT_HPP__

@@ -16,10 +16,10 @@
 
 #include <string>
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 
 #include "cassandra.h"
 #include "execute_request.hpp"
@@ -31,16 +31,14 @@
  */
 struct PreparedMetadataTests : public test_utils::SingleSessionTest {
   PreparedMetadataTests()
-    : SingleSessionTest(1, 0)
-    , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen))) {
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % keyspace
-                                           % "1"));
+      : SingleSessionTest(1, 0)
+      , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen))) {
+    test_utils::execute_query(
+        session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % keyspace % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % keyspace));
     test_utils::execute_query(session, "CREATE TABLE test (k text PRIMARY KEY, v text)");
     test_utils::execute_query(session, "INSERT INTO test (k, v) VALUES ('key1', 'value1')");
   }
-
 
   /**
    * Check the column count of a bound statement before and after adding a
@@ -53,7 +51,8 @@ struct PreparedMetadataTests : public test_utils::SingleSessionTest {
 
     test_utils::execute_query(session.get(), str(boost::format("USE %s") % keyspace));
 
-    test_utils::CassFuturePtr future(cass_session_prepare(session.get(), "SELECT * FROM test WHERE k = 'key1'"));
+    test_utils::CassFuturePtr future(
+        cass_session_prepare(session.get(), "SELECT * FROM test WHERE k = 'key1'"));
     BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
 
     test_utils::CassPreparedPtr prepared(cass_future_get_prepared(future.get()));
@@ -64,7 +63,8 @@ struct PreparedMetadataTests : public test_utils::SingleSessionTest {
 
     // Verify that the table has two columns in the metadata
     {
-      test_utils::CassFuturePtr result_future(cass_session_execute(session.get(), bound_statement.get()));
+      test_utils::CassFuturePtr result_future(
+          cass_session_execute(session.get(), bound_statement.get()));
       BOOST_REQUIRE_EQUAL(cass_future_error_code(result_future.get()), CASS_OK);
 
       test_utils::CassResultPtr result(cass_future_get_result(result_future.get()));
@@ -77,7 +77,8 @@ struct PreparedMetadataTests : public test_utils::SingleSessionTest {
 
     // The column count shouldn't have changed
     {
-      test_utils::CassFuturePtr result_future(cass_session_execute(session.get(), bound_statement.get()));
+      test_utils::CassFuturePtr result_future(
+          cass_session_execute(session.get(), bound_statement.get()));
       BOOST_REQUIRE_EQUAL(cass_future_error_code(result_future.get()), CASS_OK);
 
       test_utils::CassResultPtr result(cass_future_get_result(result_future.get()));
@@ -103,8 +104,10 @@ BOOST_FIXTURE_TEST_SUITE(prepared_metadata, PreparedMetadataTests)
  *
  */
 BOOST_AUTO_TEST_CASE(alter_doesnt_update_column_count) {
-  cass_cluster_set_use_beta_protocol_version(cluster, cass_false); // Ensure beta protocol is not set
-  BOOST_REQUIRE_EQUAL(cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4), CASS_OK);
+  cass_cluster_set_use_beta_protocol_version(cluster,
+                                             cass_false); // Ensure beta protocol is not set
+  BOOST_REQUIRE_EQUAL(cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4),
+                      CASS_OK);
 
   // The column count will stay the same even after the alter
   prepared_check_column_count_after_alter(2u);

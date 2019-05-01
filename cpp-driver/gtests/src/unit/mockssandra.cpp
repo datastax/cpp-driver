@@ -26,13 +26,13 @@
 #include "uuids.hpp"
 
 #ifdef WIN32
-#  include "winsock.h"
+#include "winsock.h"
 #endif
 
 using datastax::internal::bind_callback;
 using datastax::internal::Memory;
-using datastax::internal::ScopedMutex;
 using datastax::internal::OStringStream;
+using datastax::internal::ScopedMutex;
 using datastax::internal::core::UuidGen;
 
 #define SSL_BUF_SIZE 8192
@@ -93,8 +93,10 @@ String Ssl::generate_cert(const String& key, String cn) {
   X509_set_pubkey(x509, pkey);
 
   X509_NAME* name = X509_get_subject_name(x509);
-  X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, reinterpret_cast<const unsigned char*>("US"), -1, -1, 0);
-  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
+  X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, reinterpret_cast<const unsigned char*>("US"),
+                             -1, -1, 0);
+  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
+                             reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
   X509_set_issuer_name(x509, name);
   X509_sign(x509, pkey, EVP_md5());
 
@@ -125,8 +127,8 @@ static void print_ssl_error() {
 
 struct WriteReq {
   WriteReq(const char* data, size_t len, ClientConnection* connection)
-    : data(data, len)
-    , connection(connection) {
+      : data(data, len)
+      , connection(connection) {
     req.data = this;
   }
   const String data;
@@ -134,33 +136,23 @@ struct WriteReq {
   uv_write_t req;
 };
 
-Tcp::Tcp(void* data) {
-  tcp_.data = data;
-}
+Tcp::Tcp(void* data) { tcp_.data = data; }
 
-int Tcp::init(uv_loop_t* loop) {
-  return uv_tcp_init(loop, &tcp_);
-}
+int Tcp::init(uv_loop_t* loop) { return uv_tcp_init(loop, &tcp_); }
 
-int Tcp::bind(const struct sockaddr* addr) {
-  return uv_tcp_bind(&tcp_, addr, 0);
-}
+int Tcp::bind(const struct sockaddr* addr) { return uv_tcp_bind(&tcp_, addr, 0); }
 
-uv_handle_t* Tcp::as_handle() {
-  return reinterpret_cast<uv_handle_t*>(&tcp_);
-}
+uv_handle_t* Tcp::as_handle() { return reinterpret_cast<uv_handle_t*>(&tcp_); }
 
-uv_stream_t* Tcp::as_stream() {
-  return reinterpret_cast<uv_stream_t*>(&tcp_);
-}
+uv_stream_t* Tcp::as_stream() { return reinterpret_cast<uv_stream_t*>(&tcp_); }
 
 ClientConnection::ClientConnection(ServerConnection* server)
-  : tcp_(this)
-  , server_(server)
-  , ssl_(server->ssl_context() ? SSL_new(server->ssl_context()) : NULL)
-  , incoming_bio_(ssl_ ? BIO_new(BIO_s_mem()) : NULL)
-  , outgoing_bio_(ssl_ ? BIO_new(BIO_s_mem()) : NULL)
-  , handshake_state_(SSL_HANDSHAKE_INPROGRESS) {
+    : tcp_(this)
+    , server_(server)
+    , ssl_(server->ssl_context() ? SSL_new(server->ssl_context()) : NULL)
+    , incoming_bio_(ssl_ ? BIO_new(BIO_s_mem()) : NULL)
+    , outgoing_bio_(ssl_ ? BIO_new(BIO_s_mem()) : NULL)
+    , handshake_state_(SSL_HANDSHAKE_INPROGRESS) {
   tcp_.init(server->loop());
   if (ssl_) {
     SSL_set_bio(ssl_, incoming_bio_, outgoing_bio_);
@@ -171,9 +163,7 @@ ClientConnection::~ClientConnection() {
   if (ssl_) SSL_free(ssl_);
 }
 
-int ClientConnection::write(const String& data) {
-  return write(data.data(), data.length());
-}
+int ClientConnection::write(const String& data) { return write(data.data(), data.length()); }
 
 int ClientConnection::write(const char* data, size_t len) {
   if (ssl_) {
@@ -290,9 +280,7 @@ int ClientConnection::ssl_write(const char* data, size_t len) {
   return 0;
 }
 
-bool ClientConnection::is_handshake_done() {
-  return SSL_is_init_finished(ssl_) != 0;
-}
+bool ClientConnection::is_handshake_done() { return SSL_is_init_finished(ssl_) != 0; }
 
 bool ClientConnection::has_ssl_error(int rc) {
   if (rc > 0) return false;
@@ -355,15 +343,14 @@ void ClientConnection::on_ssl_read(const char* data, size_t len) {
   }
 }
 
-ServerConnection::ServerConnection(const Address& address,
-                                   const ClientConnectionFactory& factory)
-  : tcp_(this)
-  , event_loop_(NULL)
-  , state_(STATE_CLOSED)
-  , rc_(0)
-  , address_(address)
-  , factory_(factory)
-  , ssl_context_(NULL) {
+ServerConnection::ServerConnection(const Address& address, const ClientConnectionFactory& factory)
+    : tcp_(this)
+    , event_loop_(NULL)
+    , state_(STATE_CLOSED)
+    , rc_(0)
+    , address_(address)
+    , factory_(factory)
+    , ssl_context_(NULL) {
   uv_mutex_init(&mutex_);
   uv_cond_init(&cond_);
 }
@@ -376,14 +363,12 @@ ServerConnection::~ServerConnection() {
   }
 }
 
-uv_loop_t*ServerConnection::loop() {
+uv_loop_t* ServerConnection::loop() {
   ScopedMutex l(&mutex_);
   return event_loop_->loop();
 }
 
-bool ServerConnection::use_ssl(const String& key,
-                               const String& cert,
-                               const String& password) {
+bool ServerConnection::use_ssl(const String& key, const String& cert, const String& password) {
   if (ssl_context_) {
     SSL_CTX_free(ssl_context_);
   }
@@ -446,11 +431,9 @@ using datastax::internal::core::Task;
 class RunListen : public Task {
 public:
   RunListen(ServerConnection* server)
-    : server_(server) { }
+      : server_(server) {}
 
-  virtual void run(EventLoop* event_loop) {
-    server_->internal_listen();
-  }
+  virtual void run(EventLoop* event_loop) { server_->internal_listen(); }
 
 private:
   ServerConnection* server_;
@@ -459,11 +442,9 @@ private:
 class RunClose : public Task {
 public:
   RunClose(ServerConnection* server)
-    : server_(server) { }
+      : server_(server) {}
 
-  virtual void run(EventLoop* event_loop) {
-    server_->internal_close();
-  }
+  virtual void run(EventLoop* event_loop) { server_->internal_close(); }
 
 private:
   ServerConnection* server_;
@@ -472,12 +453,10 @@ private:
 class RunTask : public Task {
 public:
   RunTask(const ServerConnectionTask::Ptr& task, const ServerConnection::Ptr& connection)
-    : task_(task)
-    , connection_(connection) { }
+      : task_(task)
+      , connection_(connection) {}
 
-  virtual void run(EventLoop* event_loop) {
-    task_->run(connection_.get());
-  }
+  virtual void run(EventLoop* event_loop) { task_->run(connection_.get()); }
 
 private:
   ServerConnectionTask::Ptr task_;
@@ -551,20 +530,15 @@ void ServerConnection::internal_listen() {
   signal_listen(rc);
 }
 
-int ServerConnection::accept(uv_stream_t* client) {
-  return uv_accept(tcp_.as_stream(), client);
-}
+int ServerConnection::accept(uv_stream_t* client) { return uv_accept(tcp_.as_stream(), client); }
 
 void ServerConnection::remove(ClientConnection* connection) {
-  clients_.erase(std::remove(clients_.begin(), clients_.end(), connection),
-                     clients_.end());
+  clients_.erase(std::remove(clients_.begin(), clients_.end(), connection), clients_.end());
   maybe_close();
 }
 
 void ServerConnection::internal_close() {
-  for (ClientConnections::iterator it = clients_.begin(),
-       end = clients_.end();
-       it != end; ++it) {
+  for (ClientConnections::iterator it = clients_.begin(), end = clients_.end(); it != end; ++it) {
     (*it)->close();
   }
   maybe_close();
@@ -572,9 +546,7 @@ void ServerConnection::internal_close() {
 
 void ServerConnection::maybe_close() {
   ScopedMutex l(&mutex_);
-  if (state_ == STATE_CLOSING &&
-      clients_.empty() &&
-      !uv_is_closing(tcp_.as_handle())) {
+  if (state_ == STATE_CLOSING && clients_.empty() && !uv_is_closing(tcp_.as_handle())) {
     uv_close(tcp_.as_handle(), on_close);
   }
 }
@@ -627,19 +599,20 @@ void ServerConnection::handle_close() {
 }
 
 int ServerConnection::on_password(char* buf, int size, int rwflag, void* password) {
-  strncpy(buf, (char *)(password), size);
+  strncpy(buf, (char*)(password), size);
   buf[size - 1] = '\0';
   return strlen(buf);
 }
 
 } // namespace internal
 
-#define CHECK(pos, error) do { \
-  if ((pos) > end) { \
-    fprintf(stderr, "Decoding error: %s\n", (error)); \
-    return end + 1; \
-   } \
-} while(0)
+#define CHECK(pos, error)                               \
+  do {                                                  \
+    if ((pos) > end) {                                  \
+      fprintf(stderr, "Decoding error: %s\n", (error)); \
+      return end + 1;                                   \
+    }                                                   \
+  } while (0)
 
 inline const char* decode_int8(const char* input, const char* end, int8_t* value) {
   CHECK(input + 1, "Unable to decode byte");
@@ -650,36 +623,36 @@ inline const char* decode_int8(const char* input, const char* end, int8_t* value
 inline const char* decode_int16(const char* input, const char* end, int16_t* value) {
   CHECK(input + 2, "Unable to decode signed short");
   *value = (static_cast<int16_t>(static_cast<uint8_t>(input[1])) << 0) |
-      (static_cast<int16_t>(static_cast<uint8_t>(input[0])) << 8);
+           (static_cast<int16_t>(static_cast<uint8_t>(input[0])) << 8);
   return input + sizeof(int16_t);
 }
 
 inline const char* decode_uint16(const char* input, const char* end, uint16_t* value) {
   CHECK(input + 2, "Unable to decode unsigned short");
   *value = (static_cast<uint16_t>(static_cast<uint8_t>(input[1])) << 0) |
-      (static_cast<uint16_t>(static_cast<uint8_t>(input[0])) << 8);
+           (static_cast<uint16_t>(static_cast<uint8_t>(input[0])) << 8);
   return input + sizeof(uint16_t);
 }
 
 inline const char* decode_int32(const char* input, const char* end, int32_t* value) {
   CHECK(input + 4, "Unable to decode integer");
   *value = (static_cast<int32_t>(static_cast<uint8_t>(input[3])) << 0) |
-      (static_cast<int32_t>(static_cast<uint8_t>(input[2])) << 8) |
-      (static_cast<int32_t>(static_cast<uint8_t>(input[1])) << 16) |
-      (static_cast<int32_t>(static_cast<uint8_t>(input[0])) << 24);
+           (static_cast<int32_t>(static_cast<uint8_t>(input[2])) << 8) |
+           (static_cast<int32_t>(static_cast<uint8_t>(input[1])) << 16) |
+           (static_cast<int32_t>(static_cast<uint8_t>(input[0])) << 24);
   return input + sizeof(int32_t);
 }
 
 inline const char* decode_int64(const char* input, const char* end, int64_t* value) {
   CHECK(input + 8, "Unable to decode long");
   *value = (static_cast<int64_t>(static_cast<uint8_t>(input[7])) << 0) |
-      (static_cast<int64_t>(static_cast<uint8_t>(input[6])) << 8) |
-      (static_cast<int64_t>(static_cast<uint8_t>(input[5])) << 16) |
-      (static_cast<int64_t>(static_cast<uint8_t>(input[4])) << 24) |
-      (static_cast<int64_t>(static_cast<uint8_t>(input[3])) << 32) |
-      (static_cast<int64_t>(static_cast<uint8_t>(input[2])) << 40) |
-      (static_cast<int64_t>(static_cast<uint8_t>(input[1])) << 48) |
-      (static_cast<int64_t>(static_cast<uint8_t>(input[0])) << 56);
+           (static_cast<int64_t>(static_cast<uint8_t>(input[6])) << 8) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[5])) << 16) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[4])) << 24) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[3])) << 32) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[2])) << 40) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[1])) << 48) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[0])) << 56);
   return input + sizeof(int64_t);
 }
 
@@ -711,7 +684,7 @@ inline const char* decode_bytes(const char* input, const char* end, String* outp
 }
 
 inline const char* decode_uuid(const char* input, CassUuid* output) {
-  output->time_and_version  = static_cast<uint64_t>(static_cast<uint8_t>(input[3]));
+  output->time_and_version = static_cast<uint64_t>(static_cast<uint8_t>(input[3]));
   output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[2])) << 8;
   output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[1])) << 16;
   output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[0])) << 24;
@@ -724,14 +697,14 @@ inline const char* decode_uuid(const char* input, CassUuid* output) {
 
   output->clock_seq_and_node = 0;
   for (size_t i = 0; i < 8; ++i) {
-    output->clock_seq_and_node |= static_cast<uint64_t>(static_cast<uint8_t>(input[15 - i])) << (8 * i);
+    output->clock_seq_and_node |= static_cast<uint64_t>(static_cast<uint8_t>(input[15 - i]))
+                                  << (8 * i);
   }
   return input + 16;
 }
 
-inline const char* decode_string_map(const char* input,
-                                     const char* end,
-                                     Vector<std::pair<String, String> >* output) {
+inline const char* decode_string_map(const char* input, const char* end,
+                                     Vector<std::pair<String, String>>* output) {
 
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
@@ -746,9 +719,7 @@ inline const char* decode_string_map(const char* input,
   return pos;
 }
 
-inline const char* decode_stringlist(const char* input,
-                                     const char* end,
-                                     Vector<String>* output) {
+inline const char* decode_stringlist(const char* input, const char* end, Vector<String>* output) {
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   output->reserve(len);
@@ -760,9 +731,7 @@ inline const char* decode_stringlist(const char* input,
   return pos;
 }
 
-inline const char* decode_values(const char* input,
-                                 const char* end,
-                                 Vector<String>* output) {
+inline const char* decode_values(const char* input, const char* end, Vector<String>* output) {
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   output->reserve(len);
@@ -774,10 +743,8 @@ inline const char* decode_values(const char* input,
   return pos;
 }
 
-inline const char* decode_values_with_names(const char* input,
-                                            const char* end,
-                                            Vector<String>* names,
-                                            Vector<String>* values) {
+inline const char* decode_values_with_names(const char* input, const char* end,
+                                            Vector<String>* names, Vector<String>* values) {
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   names->reserve(len);
@@ -793,8 +760,8 @@ inline const char* decode_values_with_names(const char* input,
   return pos;
 }
 
-const char* decode_query_params_v1(const char* input, const char* end,
-                                   bool is_execute, QueryParameters* params) {
+const char* decode_query_params_v1(const char* input, const char* end, bool is_execute,
+                                   QueryParameters* params) {
   const char* pos = input;
   if (is_execute) {
     pos = decode_values(pos, end, &params->values);
@@ -805,8 +772,7 @@ const char* decode_query_params_v1(const char* input, const char* end,
   return pos;
 }
 
-const char* decode_query_params_v2(const char* input, const char*end,
-                                   QueryParameters* params) {
+const char* decode_query_params_v2(const char* input, const char* end, QueryParameters* params) {
   int8_t flags;
   const char* pos = input;
   pos = decode_uint16(pos, end, &params->consistency);
@@ -827,8 +793,7 @@ const char* decode_query_params_v2(const char* input, const char*end,
   return pos;
 }
 
-const char* decode_query_params_v3v4(const char* input, const char* end,
-                                     QueryParameters* params) {
+const char* decode_query_params_v3v4(const char* input, const char* end, QueryParameters* params) {
   int8_t flags;
   const char* pos = input;
   pos = decode_uint16(pos, end, &params->consistency);
@@ -854,8 +819,7 @@ const char* decode_query_params_v3v4(const char* input, const char* end,
   return pos;
 }
 
-const char* decode_query_params_v5(const char* input, const char* end,
-                                   QueryParameters* params) {
+const char* decode_query_params_v5(const char* input, const char* end, QueryParameters* params) {
   int32_t flags;
   const char* pos = input;
   pos = decode_uint16(pos, end, &params->consistency);
@@ -884,8 +848,8 @@ const char* decode_query_params_v5(const char* input, const char* end,
   return pos;
 }
 
-const char* decode_query_params(int version, const char* input, const char* end,
-                                bool is_execute, QueryParameters* params) {
+const char* decode_query_params(int version, const char* input, const char* end, bool is_execute,
+                                QueryParameters* params) {
   const char* pos = input;
   if (version == 1) {
     pos = decode_query_params_v1(pos, end, is_execute, params);
@@ -946,8 +910,7 @@ inline int32_t encode_string(const String& value, String* output) {
 
 inline int32_t encode_string_list(const Vector<String>& value, String* output) {
   int32_t size = encode_int16(value.size(), output);
-  for (Vector<String>::const_iterator it = value.begin(),
-       end = value.end(); it != end; ++it) {
+  for (Vector<String>::const_iterator it = value.begin(), end = value.end(); it != end; ++it) {
     size += encode_string(*it, output);
   }
   return size;
@@ -961,7 +924,7 @@ inline int32_t encode_bytes(const String& value, String* output) {
 
 inline int32_t encode_inet(const Address& value, String* output) {
   uint8_t buf[16];
-  uint8_t len =  value.to_inet(buf);
+  uint8_t len = value.to_inet(buf);
   encode_int8(len, output);
   for (uint8_t i = 0; i < len; ++i) {
     output->push_back(static_cast<char>(buf[i]));
@@ -1000,7 +963,8 @@ inline int32_t encode_uuid(CassUuid uuid, String* output) {
   return 16;
 }
 
-static String encode_header(int8_t version, int8_t flags, int16_t stream, int8_t opcode, int32_t len) {
+static String encode_header(int8_t version, int8_t flags, int16_t stream, int8_t opcode,
+                            int32_t len) {
   String header;
   encode_int8(0x80 | version, &header);
   encode_int8(flags, &header);
@@ -1023,17 +987,11 @@ static String encode_header(int8_t version, int8_t flags, int16_t stream, int8_t
   return header;
 }
 
-Type Type::text() {
-  return Type(TYPE_VARCHAR);
-}
+Type Type::text() { return Type(TYPE_VARCHAR); }
 
-Type Type::inet() {
-  return Type(TYPE_INET);
-}
+Type Type::inet() { return Type(TYPE_INET); }
 
-Type Type::uuid() {
-  return Type(TYPE_UUID);
-}
+Type Type::uuid() { return Type(TYPE_UUID); }
 
 Type Type::list(const Type& sub_type) {
   Type type(TYPE_LIST);
@@ -1065,25 +1023,24 @@ void Column::encode(int protocol_version, String* output) const {
 
 void Collection::encode(int protocol_version, String* output) const {
   encode_int32(values_.size(), output);
-  for (Vector<Value>::const_iterator it = values_.begin(),
-       end = values_.end(); it != end; ++it) {
+  for (Vector<Value>::const_iterator it = values_.begin(), end = values_.end(); it != end; ++it) {
     it->encode(protocol_version, output);
   }
 }
 
 Value::Value()
-  : type_(NUL) { }
+    : type_(NUL) {}
 
 Value::Value(const String& value)
-  : type_(VALUE)
-  , value_(new String(value)) { }
+    : type_(VALUE)
+    , value_(new String(value)) {}
 
 Value::Value(const Collection& collection)
-  : type_(COLLECTION)
-  , collection_(new Collection(collection)){ }
+    : type_(COLLECTION)
+    , collection_(new Collection(collection)) {}
 
 Value::Value(const Value& other)
-  : type_(other.type_) {
+    : type_(other.type_) {
   if (type_ == VALUE) {
     value_ = new String(*other.value_);
   } else if (type_ == COLLECTION) {
@@ -1102,9 +1059,9 @@ Value::~Value() {
 void Value::encode(int protocol_version, String* output) const {
   if (type_ == NUL) {
     encode_int32(-1, output);
-  } else if(type_ == VALUE) {
+  } else if (type_ == VALUE) {
     encode_bytes(*value_, output);
-  } else if(type_ == COLLECTION) {
+  } else if (type_ == COLLECTION) {
     String buf;
     collection_->encode(protocol_version, &buf);
     encode_bytes(buf, output);
@@ -1140,8 +1097,7 @@ Row::Builder& Row::Builder::collection(const Collection& collection) {
 }
 
 void Row::encode(int protocol_version, String* output) const {
-  for (Vector<Value>::const_iterator it = values_.begin(),
-       end = values_.end(); it != end; ++it) {
+  for (Vector<Value>::const_iterator it = values_.begin(), end = values_.end(); it != end; ++it) {
     it->encode(protocol_version, output);
   }
 }
@@ -1152,21 +1108,20 @@ String ResultSet::encode(int protocol_version) const {
   encode_int32(RESULT_ROWS, &body); // Result type
 
   encode_int32(RESULT_FLAG_GLOBAL_TABLESPEC, &body); // Flags
-  encode_int32(columns_.size(), &body); // Column count
-  encode_string(keyspace_name_, &body); // Global spec keyspace name
-  encode_string(table_name_, &body); // Global spec table name
+  encode_int32(columns_.size(), &body);              // Column count
+  encode_string(keyspace_name_, &body);              // Global spec keyspace name
+  encode_string(table_name_, &body);                 // Global spec table name
 
   // Columns
-  for (Vector<Column>::const_iterator it = columns_.begin(),
-       end = columns_.end(); it != end; ++it) {
+  for (Vector<Column>::const_iterator it = columns_.begin(), end = columns_.end(); it != end;
+       ++it) {
     it->encode(protocol_version, &body);
   }
 
   encode_int32(rows_.size(), &body); // Row count
 
   // Rows
-  for (Vector<Row>::const_iterator it = rows_.begin(),
-       end = rows_.end(); it != end; ++it) {
+  for (Vector<Row>::const_iterator it = rows_.begin(), end = rows_.end(); it != end; ++it) {
     it->encode(protocol_version, &body);
   }
 
@@ -1197,33 +1152,25 @@ Action::Builder& Action::Builder::execute_if(Action* action) {
   return *this;
 }
 
-Action::Builder& Action::Builder::nop() {
-  return execute(new Nop());
-}
+Action::Builder& Action::Builder::nop() { return execute(new Nop()); }
 
-Action::Builder& Action::Builder::wait(uint64_t timeout) {
-  return execute(new Wait(timeout));
-}
+Action::Builder& Action::Builder::wait(uint64_t timeout) { return execute(new Wait(timeout)); }
 
-Action::Builder& Action::Builder::close() {
-  return execute(new Close());
-}
+Action::Builder& Action::Builder::close() { return execute(new Close()); }
 
 Action::Builder& Action::Builder::error(int32_t code, const String& message) {
   return execute(new SendError(code, message));
 }
 
-Action::Builder&Action::Builder::invalid_protocol() {
+Action::Builder& Action::Builder::invalid_protocol() {
   return error(ERROR_PROTOCOL_ERROR, "Invalid or unsupported protocol version");
 }
 
-Action::Builder&Action::Builder::invalid_opcode() {
+Action::Builder& Action::Builder::invalid_opcode() {
   return error(ERROR_PROTOCOL_ERROR, "Invalid opcode (or not implemented)");
 }
 
-Action::Builder& Action::Builder::ready() {
-  return execute(new SendReady());
-}
+Action::Builder& Action::Builder::ready() { return execute(new SendReady()); }
 
 Action::Builder& Action::Builder::authenticate(const String& class_name) {
   return execute(new SendAuthenticate(class_name));
@@ -1237,66 +1184,45 @@ Action::Builder& Action::Builder::auth_success(const String& token) {
   return execute(new SendAuthSuccess(token));
 }
 
-Action::Builder& Action::Builder::supported() {
-  return execute(new SendSupported());
-}
+Action::Builder& Action::Builder::supported() { return execute(new SendSupported()); }
 
 Action::Builder& Action::Builder::up_event(const Address& address) {
   return execute(new SendUpEvent(address));
 }
 
-Action::Builder& Action::Builder::void_result() {
-  return execute(new VoidResult());
-}
+Action::Builder& Action::Builder::void_result() { return execute(new VoidResult()); }
 
 Action::Builder& Action::Builder::empty_rows_result(int32_t row_count) {
   return execute(new EmptyRowsResult(row_count));
 }
 
-Action::Builder& Action::Builder::no_result() {
-  return execute(new NoResult());
-}
+Action::Builder& Action::Builder::no_result() { return execute(new NoResult()); }
 
 Action::Builder& Action::Builder::match_query(const Matches& matches) {
   return execute(new MatchQuery(matches));
 }
 
-Action::Builder& Action::Builder::client_options() {
-  return execute(new ClientOptions());
-}
+Action::Builder& Action::Builder::client_options() { return execute(new ClientOptions()); }
 
-Action::Builder& Action::Builder::system_local() {
-  return execute(new SystemLocal());
-}
+Action::Builder& Action::Builder::system_local() { return execute(new SystemLocal()); }
 
-Action::Builder& Action::Builder::system_local_dse() {
-  return execute(new SystemLocalDse());
-}
+Action::Builder& Action::Builder::system_local_dse() { return execute(new SystemLocalDse()); }
 
-Action::Builder& Action::Builder::system_peers() {
-  return execute(new SystemPeers());
-}
+Action::Builder& Action::Builder::system_peers() { return execute(new SystemPeers()); }
 
-Action::Builder& Action::Builder::system_peers_dse() {
-  return execute(new SystemPeersDse());
-}
+Action::Builder& Action::Builder::system_peers_dse() { return execute(new SystemPeersDse()); }
 
-Action::Builder& Action::Builder::system_traces() {
-  return execute(new SystemTraces());
-}
+Action::Builder& Action::Builder::system_traces() { return execute(new SystemTraces()); }
 
 Action::Builder& Action::Builder::use_keyspace(const String& keyspace) {
   return execute((new UseKeyspace(keyspace)));
 }
 
-Action::Builder& Action::Builder::plaintext_auth(const String& username,
-                                                 const String& password) {
+Action::Builder& Action::Builder::plaintext_auth(const String& username, const String& password) {
   return execute((new PlaintextAuth(username, password)));
 }
 
-Action::Builder& Action::Builder::validate_startup() {
-  return execute(new ValidateStartup());
-}
+Action::Builder& Action::Builder::validate_startup() { return execute(new ValidateStartup()); }
 
 Action::Builder& Action::Builder::validate_credentials() {
   return execute(new ValidateCredentials());
@@ -1306,13 +1232,9 @@ Action::Builder& Action::Builder::validate_auth_response() {
   return execute(new ValidateAuthResponse());
 }
 
-Action::Builder& Action::Builder::validate_register() {
-  return execute(new ValidateRegister());
-}
+Action::Builder& Action::Builder::validate_register() { return execute(new ValidateRegister()); }
 
-Action::Builder& Action::Builder::validate_query() {
-  return execute(new ValidateQuery());
-}
+Action::Builder& Action::Builder::validate_query() { return execute(new ValidateQuery()); }
 
 Action::Builder& Action::Builder::set_registered_for_events() {
   return execute(new SetRegisteredForEvents());
@@ -1322,9 +1244,7 @@ Action::Builder& Action::Builder::set_protocol_version() {
   return execute(new SetProtocolVersion());
 }
 
-Action* Action::Builder::build() {
-  return first_.release();
-}
+Action* Action::Builder::build() { return first_.release(); }
 
 Action::PredicateBuilder Action::Builder::is_address(const Address& address) {
   return PredicateBuilder(execute(new IsAddress(address)));
@@ -1338,9 +1258,7 @@ Action::PredicateBuilder Action::Builder::is_query(const String& query) {
   return PredicateBuilder(execute(new IsQuery(query)));
 }
 
-void Action::run(Request* request) const {
-  on_run(request);
-}
+void Action::run(Request* request) const { on_run(request); }
 
 void Action::run_next(Request* request) const {
   if (next) {
@@ -1348,21 +1266,19 @@ void Action::run_next(Request* request) const {
   }
 }
 
-Request::Request(int8_t version, int8_t flags, int16_t stream, int8_t opcode,
-                 const String& body, ClientConnection* client)
-  : version_(version)
-  , flags_(flags)
-  , stream_(stream)
-  , opcode_(opcode)
-  , body_(body)
-  , client_(client)
-  , timer_action_(NULL) {
+Request::Request(int8_t version, int8_t flags, int16_t stream, int8_t opcode, const String& body,
+                 ClientConnection* client)
+    : version_(version)
+    , flags_(flags)
+    , stream_(stream)
+    , opcode_(opcode)
+    , body_(body)
+    , client_(client)
+    , timer_action_(NULL) {
   (void)flags_; // TODO: Implement custom payload etc.
 }
 
-void Request::write(int8_t opcode, const String& body) {
-  write(stream_, opcode, body);
-}
+void Request::write(int8_t opcode, const String& body) { write(stream_, opcode, body); }
 
 void Request::write(int16_t stream, int8_t opcode, const String& body) {
   client_->write(encode_header(version_, flags_, stream, opcode, body.size()) + body);
@@ -1378,13 +1294,10 @@ void Request::error(int32_t code, const String& message) {
 void Request::wait(uint64_t timeout, const Action* action) {
   inc_ref();
   timer_action_ = action;
-  timer_.start(client_->server()->loop(), timeout,
-               bind_callback(&Request::on_timeout, this));
+  timer_.start(client_->server()->loop(), timeout, bind_callback(&Request::on_timeout, this));
 }
 
-void Request::close() {
-  client_->close();
-}
+void Request::close() { client_->close(); }
 
 bool Request::decode_startup(Options* options) {
   return decode_string_map(start(), end(), options) == end();
@@ -1403,41 +1316,36 @@ bool Request::decode_register(EventTypes* types) {
 }
 
 bool Request::decode_query(String* query, QueryParameters* params) {
-  return decode_query_params(version_, decode_long_string(start(), end(), query), end(), false, params) == end();
+  return decode_query_params(version_, decode_long_string(start(), end(), query), end(), false,
+                             params) == end();
 }
 
 bool Request::decode_execute(String* id, QueryParameters* params) {
-  return decode_query_params(version_, decode_string(start(), end(), id), end(), true, params) == end();
+  return decode_query_params(version_, decode_string(start(), end(), id), end(), true, params) ==
+         end();
 }
 
 bool Request::decode_prepare(String* query, PrepareParameters* params) {
-  return decode_prepare_params(version_, decode_long_string(start(), end(), query), end(), params) == end();
+  return decode_prepare_params(version_, decode_long_string(start(), end(), query), end(),
+                               params) == end();
 }
 
-const Address& Request::address() const {
-  return client_->server()->address();
-}
+const Address& Request::address() const { return client_->server()->address(); }
 
 const Host& Request::host(const Address& address) const {
   return client_->cluster()->host(address);
 }
 
-Hosts Request::hosts() const {
-  return client_->cluster()->hosts();
-}
+Hosts Request::hosts() const { return client_->cluster()->hosts(); }
 
 void Request::on_timeout(Timer* timer) {
   timer_action_->run_next(this);
   dec_ref();
 }
 
-void SendError::on_run(Request* request) const {
-  request->error(code, message);
-}
+void SendError::on_run(Request* request) const { request->error(code, message); }
 
-void SendReady::on_run(Request* request) const {
-  request->write(OPCODE_READY, String());
-}
+void SendReady::on_run(Request* request) const { request->write(OPCODE_READY, String()); }
 
 void SendAuthenticate::on_run(Request* request) const {
   String body;
@@ -1482,14 +1390,14 @@ void EmptyRowsResult::on_run(Request* request) const {
   } else {
     String body;
     encode_int32(RESULT_ROWS, &body);
-    encode_int32(0, &body); // Flags
-    encode_int32(0, &body); // Column count
+    encode_int32(0, &body);         // Flags
+    encode_int32(0, &body);         // Column count
     encode_int32(row_count, &body); // Row count
     request->write(OPCODE_RESULT, body);
   }
 }
 
-void NoResult::on_run(Request* request) const { }
+void NoResult::on_run(Request* request) const {}
 
 void MatchQuery::on_run(Request* request) const {
   String query;
@@ -1498,8 +1406,7 @@ void MatchQuery::on_run(Request* request) const {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
     return;
   } else {
-    for (Matches::const_iterator it = matches.begin(),
-         end = matches.end(); it != end; ++it) {
+    for (Matches::const_iterator it = matches.begin(), end = matches.end(); it != end; ++it) {
       if (it->first == query) {
         request->write(OPCODE_RESULT, it->second.encode(request->version()));
         return;
@@ -1518,9 +1425,10 @@ void ClientOptions::on_run(Request* request) const {
     ResultSet::Builder builder("client", "options");
     Row::Builder row_builder;
     for (Options::const_iterator it = request->client()->options().begin(),
-      end = request->client()->options().end(); it != end; ++it) {
-        builder.column((*it).first, Type::text());
-        row_builder.text((*it).second);
+                                 end = request->client()->options().end();
+         it != end; ++it) {
+      builder.column((*it).first, Type::text());
+      row_builder.text((*it).second);
     }
     ResultSet client_options = builder.row(row_builder.build()).build();
 
@@ -1538,25 +1446,24 @@ void SystemLocal::on_run(Request* request) const {
   } else if (query.find(SELECT_LOCAL) != String::npos) {
     const Host& host(request->host(request->address()));
 
-    ResultSet local_rs
-        = ResultSet::Builder("system", "local")
-          .column("key", Type::text())
-          .column("data_center", Type::text())
-          .column("rack", Type::text())
-          .column("release_version", Type::text())
-          .column("rpc_address", Type::inet())
-          .column("partitioner", Type::text())
-          .column("tokens", Type::list(Type::text()))
-          .row(Row::Builder()
-               .text(request->client()->server()->address().to_string())
-               .text(host.dc)
-               .text(host.rack)
-               .text(CASSANDRA_VERSION)
-               .inet(request->client()->server()->address())
-               .text(host.partitioner)
-               .collection(Collection::text(host.tokens))
-               .build())
-          .build();
+    ResultSet local_rs = ResultSet::Builder("system", "local")
+                             .column("key", Type::text())
+                             .column("data_center", Type::text())
+                             .column("rack", Type::text())
+                             .column("release_version", Type::text())
+                             .column("rpc_address", Type::inet())
+                             .column("partitioner", Type::text())
+                             .column("tokens", Type::list(Type::text()))
+                             .row(Row::Builder()
+                                      .text(request->client()->server()->address().to_string())
+                                      .text(host.dc)
+                                      .text(host.rack)
+                                      .text(CASSANDRA_VERSION)
+                                      .inet(request->client()->server()->address())
+                                      .text(host.partitioner)
+                                      .collection(Collection::text(host.tokens))
+                                      .build())
+                             .build();
 
     request->write(OPCODE_RESULT, local_rs.encode(request->version()));
   } else {
@@ -1572,27 +1479,26 @@ void SystemLocalDse::on_run(Request* request) const {
   } else if (query.find(SELECT_LOCAL) != String::npos) {
     const Host& host(request->host(request->address()));
 
-    ResultSet local_rs
-        = ResultSet::Builder("system", "local")
-          .column("key", Type::text())
-          .column("data_center", Type::text())
-          .column("rack", Type::text())
-          .column("dse_version", Type::text())
-          .column("release_version", Type::text())
-          .column("rpc_address", Type::inet())
-          .column("partitioner", Type::text())
-          .column("tokens", Type::list(Type::text()))
-          .row(Row::Builder()
-               .text(request->client()->server()->address().to_string())
-               .text(host.dc)
-               .text(host.rack)
-               .text(DSE_VERSION)
-               .text(DSE_CASSANDRA_VERSION)
-               .inet(request->client()->server()->address())
-               .text(host.partitioner)
-               .collection(Collection::text(host.tokens))
-               .build())
-          .build();
+    ResultSet local_rs = ResultSet::Builder("system", "local")
+                             .column("key", Type::text())
+                             .column("data_center", Type::text())
+                             .column("rack", Type::text())
+                             .column("dse_version", Type::text())
+                             .column("release_version", Type::text())
+                             .column("rpc_address", Type::inet())
+                             .column("partitioner", Type::text())
+                             .column("tokens", Type::list(Type::text()))
+                             .row(Row::Builder()
+                                      .text(request->client()->server()->address().to_string())
+                                      .text(host.dc)
+                                      .text(host.rack)
+                                      .text(DSE_VERSION)
+                                      .text(DSE_CASSANDRA_VERSION)
+                                      .inet(request->client()->server()->address())
+                                      .text(host.partitioner)
+                                      .collection(Collection::text(host.tokens))
+                                      .build())
+                             .build();
 
     request->write(OPCODE_RESULT, local_rs.encode(request->version()));
   } else {
@@ -1607,33 +1513,30 @@ void SystemPeers::on_run(Request* request) const {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
   } else if (query.find(SELECT_PEERS) != String::npos) {
     const String where_clause(" WHERE peer = '");
-    ResultSet::Builder peers_builder
-        = ResultSet::Builder("system", "peers")
-          .column("peer", Type::inet())
-          .column("data_center", Type::text())
-          .column("rack", Type::text())
-          .column("release_version", Type::text())
-          .column("rpc_address", Type::inet())
-          .column("tokens", Type::list(Type::text()));
+    ResultSet::Builder peers_builder = ResultSet::Builder("system", "peers")
+                                           .column("peer", Type::inet())
+                                           .column("data_center", Type::text())
+                                           .column("rack", Type::text())
+                                           .column("release_version", Type::text())
+                                           .column("rpc_address", Type::inet())
+                                           .column("tokens", Type::list(Type::text()));
 
     size_t pos = query.find(where_clause);
     if (pos == String::npos) {
       Hosts hosts(request->hosts());
-      for (Hosts::const_iterator it = hosts.begin(),
-           end = hosts.end(); it != end; ++it) {
+      for (Hosts::const_iterator it = hosts.begin(), end = hosts.end(); it != end; ++it) {
         const Host& host(*it);
         if (host.address == request->address()) {
           continue;
         }
-        peers_builder
-            .row(Row::Builder()
-                 .inet(host.address)
-                 .text(host.dc)
-                 .text(host.rack)
-                 .text(CASSANDRA_VERSION)
-                 .inet(host.address)
-                 .collection(Collection::text(host.tokens))
-                 .build());
+        peers_builder.row(Row::Builder()
+                              .inet(host.address)
+                              .text(host.dc)
+                              .text(host.rack)
+                              .text(CASSANDRA_VERSION)
+                              .inet(host.address)
+                              .collection(Collection::text(host.tokens))
+                              .build());
       }
       ResultSet peers_rs = peers_builder.build();
       request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
@@ -1653,17 +1556,16 @@ void SystemPeers::on_run(Request* request) const {
       }
 
       const Host& host(request->host(address));
-      ResultSet peers_rs
-          = peers_builder
-            .row(Row::Builder()
-                 .inet(host.address)
-                 .text(host.dc)
-                 .text(host.rack)
-                 .text(CASSANDRA_VERSION)
-                 .inet(host.address)
-                 .collection(Collection::text(host.tokens))
-                 .build())
-            .build();
+      ResultSet peers_rs = peers_builder
+                               .row(Row::Builder()
+                                        .inet(host.address)
+                                        .text(host.dc)
+                                        .text(host.rack)
+                                        .text(CASSANDRA_VERSION)
+                                        .inet(host.address)
+                                        .collection(Collection::text(host.tokens))
+                                        .build())
+                               .build();
       request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
     }
   } else {
@@ -1678,35 +1580,32 @@ void SystemPeersDse::on_run(Request* request) const {
     request->error(ERROR_PROTOCOL_ERROR, "Invalid query message");
   } else if (query.find(SELECT_PEERS) != String::npos) {
     const String where_clause(" WHERE peer = '");
-    ResultSet::Builder peers_builder
-        = ResultSet::Builder("system", "peers")
-          .column("peer", Type::inet())
-          .column("data_center", Type::text())
-          .column("rack", Type::text())
-          .column("dse_version", Type::text())
-          .column("release_version", Type::text())
-          .column("rpc_address", Type::inet())
-          .column("tokens", Type::list(Type::text()));
+    ResultSet::Builder peers_builder = ResultSet::Builder("system", "peers")
+                                           .column("peer", Type::inet())
+                                           .column("data_center", Type::text())
+                                           .column("rack", Type::text())
+                                           .column("dse_version", Type::text())
+                                           .column("release_version", Type::text())
+                                           .column("rpc_address", Type::inet())
+                                           .column("tokens", Type::list(Type::text()));
 
     size_t pos = query.find(where_clause);
     if (pos == String::npos) {
       Hosts hosts(request->hosts());
-      for (Hosts::const_iterator it = hosts.begin(),
-           end = hosts.end(); it != end; ++it) {
+      for (Hosts::const_iterator it = hosts.begin(), end = hosts.end(); it != end; ++it) {
         const Host& host(*it);
         if (host.address == request->address()) {
           continue;
         }
-        peers_builder
-            .row(Row::Builder()
-                 .inet(host.address)
-                 .text(host.dc)
-                 .text(host.rack)
-                 .text(DSE_VERSION)
-                 .text(DSE_CASSANDRA_VERSION)
-                 .inet(host.address)
-                 .collection(Collection::text(host.tokens))
-                 .build());
+        peers_builder.row(Row::Builder()
+                              .inet(host.address)
+                              .text(host.dc)
+                              .text(host.rack)
+                              .text(DSE_VERSION)
+                              .text(DSE_CASSANDRA_VERSION)
+                              .inet(host.address)
+                              .collection(Collection::text(host.tokens))
+                              .build());
       }
       ResultSet peers_rs = peers_builder.build();
       request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
@@ -1726,17 +1625,16 @@ void SystemPeersDse::on_run(Request* request) const {
       }
 
       const Host& host(request->host(address));
-      ResultSet peers_rs
-          = peers_builder
-            .row(Row::Builder()
-                 .inet(host.address)
-                 .text(host.dc)
-                 .text(host.rack)
-                 .text(CASSANDRA_VERSION)
-                 .inet(host.address)
-                 .collection(Collection::text(host.tokens))
-                 .build())
-            .build();
+      ResultSet peers_rs = peers_builder
+                               .row(Row::Builder()
+                                        .inet(host.address)
+                                        .text(host.dc)
+                                        .text(host.rack)
+                                        .text(CASSANDRA_VERSION)
+                                        .inet(host.address)
+                                        .collection(Collection::text(host.tokens))
+                                        .build())
+                               .build();
       request->write(OPCODE_RESULT, peers_rs.encode(request->version()));
     }
   } else {
@@ -1756,13 +1654,10 @@ void SystemTraces::on_run(Request* request) const {
     }
     CassUuid tracing_id;
     decode_uuid(params.values.front().data(), &tracing_id);
-    ResultSet session_rs
-        = ResultSet::Builder("system_traces", "session")
-          .column("session_id", Type::uuid())
-          .row(Row::Builder()
-               .uuid(tracing_id)
-               .build())
-          .build();
+    ResultSet session_rs = ResultSet::Builder("system_traces", "session")
+                               .column("session_id", Type::uuid())
+                               .row(Row::Builder().uuid(tracing_id).build())
+                               .build();
     request->write(OPCODE_RESULT, session_rs.encode(request->version()));
   } else {
     run_next(request);
@@ -1799,8 +1694,7 @@ void PlaintextAuth::on_run(Request* request) const {
     String username, password;
     String::const_reverse_iterator last = token.rbegin();
     enum { PASSWORD, USERNAME } state = PASSWORD;
-    for (String::const_reverse_iterator it = token.rbegin(),
-         end = token.rend(); it != end; ++it) {
+    for (String::const_reverse_iterator it = token.rbegin(), end = token.rend(); it != end; ++it) {
       if (*it == '\0') {
         if (state == PASSWORD) {
           password.assign(it.base(), last.base());
@@ -1893,16 +1787,15 @@ bool IsQuery::is_true(Request* request) const {
 }
 
 RequestHandler::RequestHandler(RequestHandler::Builder* builder,
-                 int lowest_supported_protocol_version,
-                 int highest_supported_protocol_version)
-  : invalid_protocol_(builder->on_invalid_protocol().build())
-  , invalid_opcode_(builder->on_invalid_opcode().build())
-  , lowest_supported_protocol_version_(lowest_supported_protocol_version)
-  , highest_supported_protocol_version_(highest_supported_protocol_version) { }
+                               int lowest_supported_protocol_version,
+                               int highest_supported_protocol_version)
+    : invalid_protocol_(builder->on_invalid_protocol().build())
+    , invalid_opcode_(builder->on_invalid_opcode().build())
+    , lowest_supported_protocol_version_(lowest_supported_protocol_version)
+    , highest_supported_protocol_version_(highest_supported_protocol_version) {}
 
 const RequestHandler* RequestHandler::Builder::build() {
-  RequestHandler* handler(new RequestHandler(this,
-                                             lowest_supported_protocol_version_,
+  RequestHandler* handler(new RequestHandler(this, lowest_supported_protocol_version_,
                                              highest_supported_protocol_version_));
 
   handler->actions_[OPCODE_STARTUP].reset(actions_[OPCODE_STARTUP].build());
@@ -1997,19 +1890,20 @@ void ProtocolHandler::decode_body(ClientConnection* client, const char* body, in
   request_handler_->run(request.get());
 }
 
-void ClientConnection::on_read(const char* data, size_t len) {
-  handler_.decode(this, data, len);
-}
+void ClientConnection::on_read(const char* data, size_t len) { handler_.decode(this, data, len); }
 
 Event::Event(const String& event_body)
-  : event_body_(event_body) { }
+    : event_body_(event_body) {}
 
 void Event::run(internal::ServerConnection* server_connection) {
   for (internal::ClientConnections::const_iterator it = server_connection->clients().begin(),
-       end = server_connection->clients().end(); it != end; ++it) {
+                                                   end = server_connection->clients().end();
+       it != end; ++it) {
     ClientConnection* client = static_cast<ClientConnection*>(*it);
     if (client->is_registered_for_events() && client->protocol_version() > 0) {
-      client->write(encode_header(client->protocol_version(), 0, -1, OPCODE_EVENT, event_body_.size()) + event_body_);
+      client->write(
+          encode_header(client->protocol_version(), 0, -1, OPCODE_EVENT, event_body_.size()) +
+          event_body_);
     }
   }
 }
@@ -2029,7 +1923,7 @@ Event::Ptr TopologyChangeEvent::removed_node(const Address& address) {
 String TopologyChangeEvent::encode(TopologyChangeEvent::Type type, const Address& address) {
   String body;
   encode_string("TOPOLOGY_CHANGE", &body);
-  switch(type) {
+  switch (type) {
     case NEW_NODE:
       encode_string("NEW_NODE", &body);
       break;
@@ -2055,7 +1949,7 @@ Event::Ptr StatusChangeEvent::down(const Address& address) {
 String StatusChangeEvent::encode(Type type, const Address& address) {
   String body;
   encode_string("STATUS_CHANGE", &body);
-  switch(type) {
+  switch (type) {
     case UP:
       encode_string("UP", &body);
       break;
@@ -2067,48 +1961,35 @@ String StatusChangeEvent::encode(Type type, const Address& address) {
   return body;
 }
 
-Event::Ptr SchemaChangeEvent::keyspace(SchemaChangeEvent::Type type,
-                                       const String& keyspace_name) {
-  return Ptr(new SchemaChangeEvent(KEYSPACE,
-                                   type,
-                                   keyspace_name));
+Event::Ptr SchemaChangeEvent::keyspace(SchemaChangeEvent::Type type, const String& keyspace_name) {
+  return Ptr(new SchemaChangeEvent(KEYSPACE, type, keyspace_name));
 }
 
-Event::Ptr SchemaChangeEvent::table(SchemaChangeEvent::Type type,
-                                    const String& keyspace_name,
+Event::Ptr SchemaChangeEvent::table(SchemaChangeEvent::Type type, const String& keyspace_name,
                                     const String& table_name) {
-  return Ptr(new SchemaChangeEvent(TABLE, type,
-                                   keyspace_name, table_name));
+  return Ptr(new SchemaChangeEvent(TABLE, type, keyspace_name, table_name));
 }
 
-Event::Ptr SchemaChangeEvent::user_type(SchemaChangeEvent::Type type,
-                                        const String& keyspace_name,
+Event::Ptr SchemaChangeEvent::user_type(SchemaChangeEvent::Type type, const String& keyspace_name,
                                         const String& user_type_name) {
-  return Ptr(new SchemaChangeEvent(USER_TYPE, type,
-                                                 keyspace_name, user_type_name));
+  return Ptr(new SchemaChangeEvent(USER_TYPE, type, keyspace_name, user_type_name));
 }
 
-Event::Ptr SchemaChangeEvent::function(SchemaChangeEvent::Type type,
-                                       const String& keyspace_name,
+Event::Ptr SchemaChangeEvent::function(SchemaChangeEvent::Type type, const String& keyspace_name,
                                        const String& function_name,
                                        const Vector<String>& args_types) {
-  return Ptr(new SchemaChangeEvent(FUNCTION, type,
-                                                 keyspace_name, function_name,
-                                                 args_types));
+  return Ptr(new SchemaChangeEvent(FUNCTION, type, keyspace_name, function_name, args_types));
 }
 
-Event::Ptr SchemaChangeEvent::aggregate(SchemaChangeEvent::Type type,
-                                        const String& keyspace_name,
+Event::Ptr SchemaChangeEvent::aggregate(SchemaChangeEvent::Type type, const String& keyspace_name,
                                         const String& aggregate_name,
                                         const Vector<String>& args_types) {
-  return Ptr(new SchemaChangeEvent(AGGREGATE, type,
-                                                 keyspace_name, aggregate_name,
-                                                 args_types));
+  return Ptr(new SchemaChangeEvent(AGGREGATE, type, keyspace_name, aggregate_name, args_types));
 }
 
 String SchemaChangeEvent::encode(SchemaChangeEvent::Target target, SchemaChangeEvent::Type type,
-                                       const String& keyspace_name, const String& target_name,
-                                       const Vector<String>& arg_types) {
+                                 const String& keyspace_name, const String& target_name,
+                                 const Vector<String>& arg_types) {
   String body;
   encode_string("SCHEMA_CHANGE", &body);
   switch (type) {
@@ -2131,7 +2012,8 @@ String SchemaChangeEvent::encode(SchemaChangeEvent::Target target, SchemaChangeE
       encode_string("TABLE", &body);
       encode_string(keyspace_name, &body);
       encode_string(target_name, &body);
-      break;;
+      break;
+      ;
     case USER_TYPE:
       encode_string("TYPE", &body);
       encode_string(keyspace_name, &body);
@@ -2153,10 +2035,8 @@ String SchemaChangeEvent::encode(SchemaChangeEvent::Target target, SchemaChangeE
   return body;
 }
 
-void Cluster::init(AddressGenerator& generator,
-                   ClientConnectionFactory& factory,
-                   size_t num_nodes_dc1,
-                   size_t num_nodes_dc2) {
+void Cluster::init(AddressGenerator& generator, ClientConnectionFactory& factory,
+                   size_t num_nodes_dc1, size_t num_nodes_dc2) {
   for (size_t i = 0; i < num_nodes_dc1; ++i) {
     create_and_add_server(generator, factory, "dc1");
   }
@@ -2165,9 +2045,7 @@ void Cluster::init(AddressGenerator& generator,
   }
 }
 
-Cluster::~Cluster() {
-  stop_all();
-}
+Cluster::~Cluster() { stop_all(); }
 
 String Cluster::use_ssl(const String& cn /*= ""*/) {
   String key(Ssl::generate_key());
@@ -2281,22 +2159,19 @@ void Cluster::remove(size_t node) {
 }
 
 const Host& Cluster::host(const Address& address) const {
-  for (Servers::const_iterator it = servers_.begin(),
-       end = servers_.end(); it != end; ++it) {
+  for (Servers::const_iterator it = servers_.begin(), end = servers_.end(); it != end; ++it) {
     if (it->host.address == address) {
       return it->host;
     }
   }
 
-  throw Exception(ERROR_PROTOCOL_ERROR,
-                  "Unable to find host " + address.to_string());
+  throw Exception(ERROR_PROTOCOL_ERROR, "Unable to find host " + address.to_string());
 }
 
 Hosts Cluster::hosts() const {
   Hosts hosts;
   hosts.reserve(servers_.size());
-  for (Servers::const_iterator it = servers_.begin(),
-       end = servers_.end(); it != end; ++it) {
+  for (Servers::const_iterator it = servers_.begin(), end = servers_.end(); it != end; ++it) {
     if (!it->is_removed.load()) {
       hosts.push_back(it->host);
     }
@@ -2304,41 +2179,36 @@ Hosts Cluster::hosts() const {
   return hosts;
 }
 
-int Cluster::create_and_add_server(AddressGenerator& generator,
-                                   ClientConnectionFactory& factory,
+int Cluster::create_and_add_server(AddressGenerator& generator, ClientConnectionFactory& factory,
                                    const String& dc) {
   Address address(generator.next());
   Server server(Host(address, dc, "rack1", token_rng_),
-                internal::ServerConnection::Ptr(
-                new internal::ServerConnection(address, factory)));
+                internal::ServerConnection::Ptr(new internal::ServerConnection(address, factory)));
 
   servers_.push_back(server);
   return static_cast<int>(servers_.size());
 }
 
 void Cluster::event(const Event::Ptr& event) {
-  for (Servers::const_iterator it = servers_.begin(),
-       end = servers_.end(); it != end; ++it) {
+  for (Servers::const_iterator it = servers_.begin(), end = servers_.end(); it != end; ++it) {
     it->connection->run(internal::ServerConnectionTask::Ptr(event));
   }
 }
 
 Address Ipv4AddressGenerator::next() {
   char buf[32];
-  sprintf(buf, "%d.%d.%d.%d", (ip_ >> 24) & 0xff, (ip_ >> 16) & 0xff, (ip_ >> 8) & 0xff, ip_ & 0xff);
+  sprintf(buf, "%d.%d.%d.%d", (ip_ >> 24) & 0xff, (ip_ >> 16) & 0xff, (ip_ >> 8) & 0xff,
+          ip_ & 0xff);
   ip_++;
   return Address(buf, port_);
 }
 
-Host::Host(const Address& address,
-           const String& dc,
-           const String& rack,
-           MT19937_64& token_rng,
+Host::Host(const Address& address, const String& dc, const String& rack, MT19937_64& token_rng,
            int num_tokens)
-  : address(address)
-  , dc(dc)
-  , rack(rack)
-  , partitioner("org.apache.cassandra.dht.Murmur3Partitioner") {
+    : address(address)
+    , dc(dc)
+    , rack(rack)
+    , partitioner("org.apache.cassandra.dht.Murmur3Partitioner") {
   // Only murmur tokens currently supported
   for (int i = 0; i < num_tokens; ++i) {
     OStringStream ss;
@@ -2348,7 +2218,7 @@ Host::Host(const Address& address,
 }
 
 SimpleEventLoopGroup::SimpleEventLoopGroup(size_t num_threads)
-  : RoundRobinEventLoopGroup(num_threads) {
+    : RoundRobinEventLoopGroup(num_threads) {
   int rc = init("mockssandra");
   UNUSED_(rc);
   assert(rc == 0 && "Unable to initialize simple event loop");
@@ -2361,24 +2231,23 @@ SimpleEventLoopGroup::~SimpleEventLoopGroup() {
 }
 
 SimpleRequestHandlerBuilder::SimpleRequestHandlerBuilder()
-  : RequestHandler::Builder() {
+    : RequestHandler::Builder() {
   on(OPCODE_STARTUP).validate_startup().ready();
   on(OPCODE_OPTIONS).supported();
   on(OPCODE_CREDENTIALS).validate_credentials().ready();
   on(OPCODE_AUTH_RESPONSE).validate_auth_response().auth_success("");
-  on(OPCODE_REGISTER).validate_register().set_protocol_version().set_registered_for_events().ready();
+  on(OPCODE_REGISTER)
+      .validate_register()
+      .set_protocol_version()
+      .set_registered_for_events()
+      .ready();
   on(OPCODE_QUERY).system_local().system_peers().empty_rows_result(1);
 }
 
-AuthRequestHandlerBuilder::AuthRequestHandlerBuilder(const String& username,
-                                                     const String& password)
-  : SimpleRequestHandlerBuilder() {
-  on(mockssandra::OPCODE_STARTUP)
-      .validate_startup()
-      .authenticate("com.datastax.SomeAuthenticator");
-  on(mockssandra::OPCODE_AUTH_RESPONSE)
-      .validate_auth_response()
-      .plaintext_auth(username, password);
+AuthRequestHandlerBuilder::AuthRequestHandlerBuilder(const String& username, const String& password)
+    : SimpleRequestHandlerBuilder() {
+  on(mockssandra::OPCODE_STARTUP).validate_startup().authenticate("com.datastax.SomeAuthenticator");
+  on(mockssandra::OPCODE_AUTH_RESPONSE).validate_auth_response().plaintext_auth(username, password);
 }
 
 } // namespace mockssandra

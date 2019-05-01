@@ -32,7 +32,7 @@ class EventLoop;
 
 class ConnectionPoolStateListener {
 public:
-  virtual ~ConnectionPoolStateListener() { }
+  virtual ~ConnectionPoolStateListener() {}
 
   /**
    * A callback that's called when a host is up.
@@ -62,15 +62,13 @@ public:
    * @param code The code of the critical error.
    * @param message The message of the critical error.
    */
-  virtual void on_pool_critical_error(const Address& address,
-                                      Connector::ConnectionError code,
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
                                       const String& message) = 0;
 };
 
-
 class ConnectionPoolListener : public ConnectionPoolStateListener {
 public:
-  virtual void on_requires_flush(ConnectionPool* pool) { }
+  virtual void on_requires_flush(ConnectionPool* pool) {}
 
   virtual void on_close(ConnectionPool* pool) = 0;
 };
@@ -123,13 +121,9 @@ public:
    * @param settings
    * @param metrics
    */
-  ConnectionPool(const Connection::Vec& connections,
-                 ConnectionPoolListener* listener,
-                 const String& keyspace,
-                 uv_loop_t* loop,
-                 const Host::Ptr& host,
-                 ProtocolVersion protocol_version,
-                 const ConnectionPoolSettings& settings,
+  ConnectionPool(const Connection::Vec& connections, ConnectionPoolListener* listener,
+                 const String& keyspace, uv_loop_t* loop, const Host::Ptr& host,
+                 ProtocolVersion protocol_version, const ConnectionPoolSettings& settings,
                  Metrics* metrics);
 
   /**
@@ -181,8 +175,8 @@ public:
   class Protected {
     friend class PooledConnection;
     friend class ConnectionPoolConnector;
-    Protected() { }
-    Protected(Protected const&) { }
+    Protected() {}
+    Protected(Protected const&) {}
   };
 
   /**
@@ -208,20 +202,14 @@ private:
     CLOSE_STATE_CLOSED
   };
 
-  enum NotifyState {
-    NOTIFY_STATE_NEW,
-    NOTIFY_STATE_UP,
-    NOTIFY_STATE_DOWN,
-    NOTIFY_STATE_CRITICAL
-  };
+  enum NotifyState { NOTIFY_STATE_NEW, NOTIFY_STATE_UP, NOTIFY_STATE_DOWN, NOTIFY_STATE_CRITICAL };
 
 private:
   friend class NotifyDownOnRemovePoolOp;
 
 private:
   void notify_up_or_down();
-  void notify_critical_error(Connector::ConnectionError code,
-                             const String& message);
+  void notify_critical_error(Connector::ConnectionError code, const String& message);
   void add_connection(const PooledConnection::Ptr& connection);
   void schedule_reconnect();
   void internal_close();
@@ -245,6 +233,6 @@ private:
   DenseHashSet<PooledConnection*> to_flush_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

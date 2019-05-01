@@ -22,15 +22,11 @@
 #include <cstring>
 
 #define DRIVER_VERSION \
-  STRINGIFY(CASS_VERSION_MAJOR) "." \
-  STRINGIFY(CASS_VERSION_MINOR) "." \
-  STRINGIFY(CASS_VERSION_PATCH)
+  STRINGIFY(CASS_VERSION_MAJOR) "." STRINGIFY(CASS_VERSION_MINOR) "." STRINGIFY(CASS_VERSION_PATCH)
 
-namespace datastax { namespace internal  {
+namespace datastax { namespace internal {
 
-const char* driver_name() {
-  return "DataStax Apache Cassandra C/C++ Driver";
-}
+const char* driver_name() { return "DataStax Apache Cassandra C/C++ Driver"; }
 
 const char* driver_version() {
   if (strlen(CASS_VERSION_SUFFIX) == 0) {
@@ -40,4 +36,4 @@ const char* driver_version() {
   }
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal

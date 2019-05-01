@@ -19,7 +19,7 @@
 /**
  * Startup options integration tests
  */
-class StartupOptionssTests : public Integration { };
+class StartupOptionssTests : public Integration {};
 
 /**
  * Verify driver name and version are assigned in startup options.
@@ -38,17 +38,14 @@ CASSANDRA_INTEGRATION_TEST_F(StartupOptionssTests, DriverOptions) {
   CHECK_FAILURE;
   CHECK_VERSION(4.0.0);
   if (Options::is_dse()) {
-    SKIP_TEST("Unsupported for DataStax Enterprise Version " << server_version_.to_string()
-              << ": 'system_views.clients' is unavailable");
+    SKIP_TEST("Unsupported for DataStax Enterprise Version "
+              << server_version_.to_string() << ": 'system_views.clients' is unavailable");
   }
 
-  Result result = session_.execute(
-      "SELECT driver_name, driver_version from system_views.clients");
+  Result result = session_.execute("SELECT driver_name, driver_version from system_views.clients");
   ASSERT_EQ(2u, result.row_count()); // Control connection and request processor connection
   ASSERT_EQ(2u, result.column_count());
   Row row = result.first_row();
-  ASSERT_EQ(Varchar(driver::internals::Utils::driver_name()),
-            row.next().as<Varchar>());
-  ASSERT_EQ(Varchar(driver::internals::Utils::driver_version()),
-            row.next().as<Varchar>());
+  ASSERT_EQ(Varchar(driver::internals::Utils::driver_name()), row.next().as<Varchar>());
+  ASSERT_EQ(Varchar(driver::internals::Utils::driver_version()), row.next().as<Varchar>());
 }

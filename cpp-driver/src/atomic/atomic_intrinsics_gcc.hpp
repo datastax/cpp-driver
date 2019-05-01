@@ -39,7 +39,8 @@ template <class T>
 class Atomic {
 public:
   Atomic() {}
-  explicit Atomic(T value) : value_(value) {}
+  explicit Atomic(T value)
+      : value_(value) {}
 
   inline void store(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     assert(order != MEMORY_ORDER_ACQUIRE);
@@ -84,18 +85,21 @@ public:
     return __sync_lock_test_and_set(&value_, value);
 #else
     T before = load(MEMORY_ORDER_RELAXED);
-    while (!compare_exchange_weak(before, before, order)) {}
+    while (!compare_exchange_weak(before, before, order)) {
+    }
     return before;
 #endif
   }
-  inline bool compare_exchange_strong(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_strong(T& expected, T desired,
+                                      MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     T temp_expected = expected;
     T previous = __sync_val_compare_and_swap(&value_, temp_expected, desired);
     expected = previous;
     return previous == temp_expected;
   }
 
-  inline bool compare_exchange_weak(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_weak(T& expected, T desired,
+                                    MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     return compare_exchange_strong(expected, desired, order);
   }
 
@@ -109,6 +113,6 @@ inline void atomic_thread_fence(MemoryOrder order) {
   }
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

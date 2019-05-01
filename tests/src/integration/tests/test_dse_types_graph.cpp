@@ -14,7 +14,7 @@
  *
  * @dse_version 5.0.0
  */
-template<class C>
+template <class C>
 class DseTypesGraphTest : public DseIntegration {
 public:
   /**
@@ -125,7 +125,7 @@ DSE_INTEGRATION_TYPED_TEST_P(DseTypesGraphTest, GraphObject) {
 }
 // Register all test cases
 REGISTER_TYPED_TEST_CASE_P(DseTypesGraphTest, Integration_DSE_GraphArray,
-                                              Integration_DSE_GraphObject);
+                           Integration_DSE_GraphObject);
 
 // Instantiate the test case for all the geotypes and date range
 typedef testing::Types<dse::Point, dse::LineString, dse::Polygon> DseTypes;
@@ -139,9 +139,10 @@ const dse::Point GEOMETRY_POINTS[] = {
   dse::Point("2.0, 4.0"),
   dse::Point("-1.2, -100.0"),
 };
-template<> const std::vector<dse::Point> DseTypesGraphTest<dse::Point>::values_(
-  GEOMETRY_POINTS,
-  GEOMETRY_POINTS + ARRAY_LEN(GEOMETRY_POINTS));
+template <>
+const std::vector<dse::Point>
+    DseTypesGraphTest<dse::Point>::values_(GEOMETRY_POINTS,
+                                           GEOMETRY_POINTS + ARRAY_LEN(GEOMETRY_POINTS));
 
 /**
  * Values for line string tests
@@ -152,9 +153,9 @@ const dse::LineString GEOMETRY_LINE_STRING[] = {
   dse::LineString("-1.2 -100.0, 0.99 3.0"),
   dse::LineString("LINESTRING EMPTY"),
 };
-template<> const std::vector<dse::LineString> DseTypesGraphTest<dse::LineString>::values_(
-  GEOMETRY_LINE_STRING,
-  GEOMETRY_LINE_STRING + ARRAY_LEN(GEOMETRY_LINE_STRING));
+template <>
+const std::vector<dse::LineString> DseTypesGraphTest<dse::LineString>::values_(
+    GEOMETRY_LINE_STRING, GEOMETRY_LINE_STRING + ARRAY_LEN(GEOMETRY_LINE_STRING));
 
 /**
  * Values for polygon tests
@@ -165,6 +166,7 @@ const dse::Polygon GEOMETRY_POLYGON[] = {
                 (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)"),
   dse::Polygon("POLYGON EMPTY"),
 };
-template<> const std::vector<dse::Polygon> DseTypesGraphTest<dse::Polygon>::values_(
-  GEOMETRY_POLYGON,
-  GEOMETRY_POLYGON + ARRAY_LEN(GEOMETRY_POLYGON));
+template <>
+const std::vector<dse::Polygon>
+    DseTypesGraphTest<dse::Polygon>::values_(GEOMETRY_POLYGON,
+                                             GEOMETRY_POLYGON + ARRAY_LEN(GEOMETRY_POLYGON));

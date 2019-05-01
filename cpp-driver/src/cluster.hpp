@@ -17,14 +17,14 @@
 #ifndef DATASTAX_INTERNAL_CLUSTER_HPP
 #define DATASTAX_INTERNAL_CLUSTER_HPP
 
-#include "monitor_reporting.hpp"
 #include "config.hpp"
 #include "control_connector.hpp"
-#include "external.hpp"
 #include "event_loop.hpp"
+#include "external.hpp"
 #include "metadata.hpp"
-#include "prepared.hpp"
+#include "monitor_reporting.hpp"
 #include "prepare_host_handler.hpp"
+#include "prepared.hpp"
 
 #include <uv.h>
 
@@ -63,7 +63,7 @@ private:
  */
 class TokenMapListener {
 public:
-  virtual ~TokenMapListener() { }
+  virtual ~TokenMapListener() {}
 
   /**
    * A callback that's called when the token map has changed. This happens as
@@ -79,12 +79,12 @@ public:
  * A listener that handles cluster events.
  */
 class ClusterListener
-  : public HostListener
-  , public TokenMapListener {
+    : public HostListener
+    , public TokenMapListener {
 public:
   typedef Vector<ClusterListener*> Vec;
 
-  virtual ~ClusterListener() { }
+  virtual ~ClusterListener() {}
 
   /**
    * A callback that's called when the control connection receives an up event.
@@ -93,7 +93,7 @@ public:
    *
    * @param host A host that may be available.
    */
-  virtual void on_host_maybe_up(const Host::Ptr& host) { }
+  virtual void on_host_maybe_up(const Host::Ptr& host) {}
 
   /**
    * A callback that's called as the result of `Cluster::notify_host_up()`.
@@ -104,7 +104,7 @@ public:
    *
    * @param host A host that's ready to receive queries.
    */
-  virtual void on_host_ready(const Host::Ptr& host) { }
+  virtual void on_host_ready(const Host::Ptr& host) {}
 
   /**
    * A callback that's called when the cluster connects or reconnects to a host.
@@ -113,7 +113,7 @@ public:
    *
    * @param cluster The cluster object.
    */
-  virtual void on_reconnect(Cluster* cluster) { }
+  virtual void on_reconnect(Cluster* cluster) {}
 
   /**
    * A callback that's called when the cluster has closed.
@@ -139,12 +139,12 @@ struct ClusterEvent {
   };
 
   ClusterEvent(Type type, const Host::Ptr& host)
-    : type(type)
-    , host(host) { }
+      : type(type)
+      , host(host) {}
 
   ClusterEvent(const TokenMap::Ptr& token_map)
-    : type(TOKEN_MAP_UPDATE)
-    , token_map(token_map) { }
+      : type(TOKEN_MAP_UPDATE)
+      , token_map(token_map) {}
 
   static void process_event(const ClusterEvent& event, ClusterListener* listener);
   static void process_events(const Vec& events, ClusterListener* listener);
@@ -222,8 +222,9 @@ struct ClusterSettings {
  * explicit call to close because it repeatedly tries to re-establish its
  * connection even if no hosts are available.
  */
-class Cluster : public RefCounted<Cluster>
-              , public ControlConnectionListener {
+class Cluster
+    : public RefCounted<Cluster>
+    , public ControlConnectionListener {
 public:
   typedef SharedRefPtr<Cluster> Ptr;
 
@@ -243,15 +244,11 @@ public:
    * @param settings The control connection settings to use for reconnecting the
    * control connection.
    */
-  Cluster(const ControlConnection::Ptr& connection,
-          ClusterListener* listener,
-          EventLoop* event_loop,
-          const Host::Ptr& connected_host,
-          const HostMap& hosts,
+  Cluster(const ControlConnection::Ptr& connection, ClusterListener* listener,
+          EventLoop* event_loop, const Host::Ptr& connected_host, const HostMap& hosts,
           const ControlConnectionSchema& schema,
           const LoadBalancingPolicy::Ptr& load_balancing_policy,
-          const LoadBalancingPolicy::Vec& load_balancing_policies,
-          const ClusterSettings& settings);
+          const LoadBalancingPolicy::Vec& load_balancing_policies, const ClusterSettings& settings);
 
   /**
    * Set the listener that will handle events for the cluster
@@ -296,8 +293,7 @@ public:
    * @param session_id Session ID associated with the session.
    * @param config The config object.
    */
-  void start_monitor_reporting(const String& client_id,
-                               const String& session_id,
+  void start_monitor_reporting(const String& client_id, const String& session_id,
                                const Config& config);
 
   /**
@@ -331,8 +327,7 @@ public:
    * @param id A prepared ID.
    * @param entry A prepared metadata entry.
    */
-  void prepared(const String& id,
-                const PreparedMetadata::Entry::Ptr& entry);
+  void prepared(const String& id, const PreparedMetadata::Entry::Ptr& entry);
 
   /**
    * Get available hosts (determined by host distance). This filters out ignored
@@ -358,8 +353,7 @@ private:
 private:
   void update_hosts(const HostMap& hosts);
   void update_schema(const ControlConnectionSchema& schema);
-  void update_token_map(const HostMap& hosts,
-                        const String& partitioner,
+  void update_token_map(const HostMap& hosts, const String& partitioner,
                         const ControlConnectionSchema& schema);
 
   bool is_host_ignored(const Host::Ptr& host) const;
@@ -381,8 +375,7 @@ private:
   void internal_notify_host_down(const Address& address);
 
   void internal_start_events();
-  void internal_start_monitor_reporting(const String& client_id,
-                                        const String& session_id,
+  void internal_start_monitor_reporting(const String& client_id, const String& session_id,
                                         const Config& config);
 
   void on_monitor_reporting(Timer* timer);
@@ -396,8 +389,7 @@ private:
   void notify_or_record(const ClusterEvent& event);
 
 private:
-  bool prepare_host(const Host::Ptr& host,
-                    const PrepareHostHandler::Callback& callback);
+  bool prepare_host(const Host::Ptr& host, const PrepareHostHandler::Callback& callback);
 
   void on_prepare_host_add(const PrepareHostHandler* handler);
   void on_prepare_host_up(const PrepareHostHandler* handler);
@@ -405,13 +397,10 @@ private:
 private:
   // Control connection listener methods
 
-  virtual void on_update_schema(SchemaType type,
-                                const ResultResponse::Ptr& result,
-                                const String& keyspace_name,
-                                const String& target_name);
+  virtual void on_update_schema(SchemaType type, const ResultResponse::Ptr& result,
+                                const String& keyspace_name, const String& target_name);
 
-  virtual void on_drop_schema(SchemaType type,
-                              const String& keyspace_name,
+  virtual void on_drop_schema(SchemaType type, const String& keyspace_name,
                               const String& target_name);
 
   virtual void on_up(const Address& address);
@@ -444,6 +433,6 @@ private:
   Timer monitor_reporting_timer_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

@@ -18,16 +18,16 @@
 #define DATASTAX_INTERNAL_PREPARED_HPP
 
 #include "buffer.hpp"
+#include "dense_hash_map.hpp"
 #include "external.hpp"
+#include "metadata.hpp"
 #include "prepare_request.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
 #include "result_response.hpp"
-#include "metadata.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "string.hpp"
-#include "dense_hash_map.hpp"
 
 #include <uv.h>
 
@@ -37,8 +37,7 @@ class Prepared : public RefCounted<Prepared> {
 public:
   typedef SharedRefPtr<const Prepared> ConstPtr;
 
-  Prepared(const ResultResponse::Ptr& result,
-           const PrepareRequest::ConstPtr& prepare_request,
+  Prepared(const ResultResponse::Ptr& result, const PrepareRequest::ConstPtr& prepare_request,
            const Metadata::SchemaSnapshot& schema_metadata);
 
   const ResultResponse::ConstPtr& result() const { return result_; }
@@ -64,17 +63,13 @@ public:
     typedef SharedRefPtr<const Entry> Ptr;
     typedef Vector<Ptr> Vec;
 
-    Entry(const String& query,
-          const String& keyspace,
-          const String& result_metadata_id,
+    Entry(const String& query, const String& keyspace, const String& result_metadata_id,
           const ResultResponse::ConstPtr& result)
-      : query_(query)
-      , keyspace_(keyspace)
-      , result_metadata_id_(sizeof(uint16_t) + result_metadata_id.size())
-      , result_(result) {
-      result_metadata_id_.encode_string(0,
-                                        result_metadata_id.data(),
-                                        result_metadata_id.size());
+        : query_(query)
+        , keyspace_(keyspace)
+        , result_metadata_id_(sizeof(uint16_t) + result_metadata_id.size())
+        , result_(result) {
+      result_metadata_id_.encode_string(0, result_metadata_id.data(), result_metadata_id.size());
     }
 
     const String& query() const { return query_; }
@@ -94,11 +89,9 @@ public:
     uv_rwlock_init(&rwlock_);
   }
 
-  ~PreparedMetadata() {
-    uv_rwlock_destroy(&rwlock_);
-  }
+  ~PreparedMetadata() { uv_rwlock_destroy(&rwlock_); }
 
-   Entry::Ptr get(const String& prepared_id) const {
+  Entry::Ptr get(const String& prepared_id) const {
     ScopedReadLock rl(&rwlock_);
     Map::const_iterator i = metadata_.find(prepared_id);
     if (i != metadata_.end()) {
@@ -116,8 +109,7 @@ public:
     ScopedReadLock rl(&rwlock_);
     Entry::Vec temp;
     temp.reserve(metadata_.size());
-    for (Map::const_iterator it = metadata_.begin(),
-         end = metadata_.end(); it != end; ++it) {
+    for (Map::const_iterator it = metadata_.begin(), end = metadata_.end(); it != end; ++it) {
       temp.push_back(it->second);
     }
     return temp;
@@ -130,7 +122,7 @@ private:
   Map metadata_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::Prepared, CassPrepared)
 

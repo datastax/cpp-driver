@@ -21,27 +21,23 @@ using namespace datastax::internal::core;
 
 ConnectionPoolManagerInitializer::ConnectionPoolManagerInitializer(ProtocolVersion protocol_version,
                                                                    const Callback& callback)
-  : callback_(callback)
-  , is_canceled_(false)
-  , remaining_(0)
-  , protocol_version_(protocol_version)
-  , listener_(NULL)
-  , metrics_(NULL) { }
+    : callback_(callback)
+    , is_canceled_(false)
+    , remaining_(0)
+    , protocol_version_(protocol_version)
+    , listener_(NULL)
+    , metrics_(NULL) {}
 
-void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop,
-                                                  const HostMap& hosts) {
+void ConnectionPoolManagerInitializer::initialize(uv_loop_t* loop, const HostMap& hosts) {
   inc_ref();
   loop_ = loop;
   remaining_ = hosts.size();
-  for (HostMap::const_iterator it = hosts.begin(),
-       end = hosts.end(); it != end; ++it) {
-    ConnectionPoolConnector::Ptr pool_connector(
-          new ConnectionPoolConnector(it->second,
-                                      protocol_version_,
-                                      bind_callback(&ConnectionPoolManagerInitializer::on_connect, this)));
+  for (HostMap::const_iterator it = hosts.begin(), end = hosts.end(); it != end; ++it) {
+    ConnectionPoolConnector::Ptr pool_connector(new ConnectionPoolConnector(
+        it->second, protocol_version_,
+        bind_callback(&ConnectionPoolManagerInitializer::on_connect, this)));
     pending_pools_.push_back(pool_connector);
-    pool_connector
-        ->with_listener(this)
+    pool_connector->with_listener(this)
         ->with_keyspace(keyspace_)
         ->with_metrics(metrics_)
         ->with_settings(settings_)
@@ -55,22 +51,24 @@ void ConnectionPoolManagerInitializer::cancel() {
     manager_->close();
   } else {
     for (ConnectionPoolConnector::Vec::const_iterator it = pending_pools_.begin(),
-         end = pending_pools_.end(); it != end; ++it) {
+                                                      end = pending_pools_.end();
+         it != end; ++it) {
       (*it)->cancel();
     }
-    for (ConnectionPool::Map::iterator it = pools_.begin(),
-         end= pools_.end(); it != end; ++it) {
+    for (ConnectionPool::Map::iterator it = pools_.begin(), end = pools_.end(); it != end; ++it) {
       it->second->close();
     }
   }
 }
 
-ConnectionPoolManagerInitializer* ConnectionPoolManagerInitializer::with_keyspace(const String& keyspace) {
+ConnectionPoolManagerInitializer*
+ConnectionPoolManagerInitializer::with_keyspace(const String& keyspace) {
   keyspace_ = keyspace;
   return this;
 }
 
-ConnectionPoolManagerInitializer* ConnectionPoolManagerInitializer::with_listener(ConnectionPoolManagerListener* listener) {
+ConnectionPoolManagerInitializer*
+ConnectionPoolManagerInitializer::with_listener(ConnectionPoolManagerListener* listener) {
   listener_ = listener;
   return this;
 }
@@ -80,7 +78,8 @@ ConnectionPoolManagerInitializer* ConnectionPoolManagerInitializer::with_metrics
   return this;
 }
 
-ConnectionPoolManagerInitializer* ConnectionPoolManagerInitializer::with_settings(const ConnectionPoolSettings& settings) {
+ConnectionPoolManagerInitializer*
+ConnectionPoolManagerInitializer::with_settings(const ConnectionPoolSettings& settings) {
   settings_ = settings;
   return this;
 }
@@ -128,17 +127,12 @@ void ConnectionPoolManagerInitializer::on_connect(ConnectionPoolConnector* pool_
 
   if (--remaining_ == 0) {
     if (!is_canceled_) {
-      manager_.reset(new ConnectionPoolManager(pools_,
-                                               loop_,
-                                               protocol_version_,
-                                               keyspace_,
-                                               listener_,
-                                               metrics_,
-                                               settings_));
+      manager_.reset(new ConnectionPoolManager(pools_, loop_, protocol_version_, keyspace_,
+                                               listener_, metrics_, settings_));
     }
     callback_(this);
     // If the manager hasn't been released then close it.
-    if (manager_)  {
+    if (manager_) {
       // If the callback doesn't take possession of the manager then we should
       // also clear the listener.
       manager_->set_listener();

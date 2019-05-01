@@ -60,8 +60,7 @@ public:
    * keyspace should be used.
    * @return A future object for monitoring the connection progress.
    */
-  Future::Ptr connect(const Config& config,
-                      const String& keyspace = "");
+  Future::Ptr connect(const Config& config, const String& keyspace = "");
 
   /**
    * Close the session. There are not any failure conditions for closing a
@@ -114,10 +113,8 @@ protected:
    * @param hosts The current hosts in the cluster.
    * @param token_map The token map for the cluster.
    */
-  virtual void on_connect(const Host::Ptr& connected_host,
-                          ProtocolVersion protocol_version,
-                          const HostMap& hosts,
-                          const TokenMap::Ptr& token_map);
+  virtual void on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
+                          const HostMap& hosts, const TokenMap::Ptr& token_map);
 
   /**
    * A callback called after the control connection fails to connect. By default
@@ -128,8 +125,7 @@ protected:
    * @param code The error code for the connection failure.
    * @param message The error message for the connection failure.
    */
-  virtual void on_connect_failed(CassError code,
-                                 const String& message);
+  virtual void on_connect_failed(CassError code, const String& message);
 
   /**
    * A callback called at the start of the close process. By default this closes
@@ -165,6 +161,7 @@ private:
   CassUuid session_id_;
 };
 
-} } } // namespace datastax::internal::core
+} // namespace core
+}} // namespace datastax::internal
 
 #endif

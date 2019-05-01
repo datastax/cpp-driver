@@ -20,8 +20,7 @@
 
 using datastax::internal::SmallVector;
 
-TEST(SmallVectorUnitTest, Simple)
-{
+TEST(SmallVectorUnitTest, Simple) {
   SmallVector<int, 5> vec;
   EXPECT_EQ(vec.fixed().data.address(), vec.data());
   EXPECT_EQ(vec.fixed().is_used, true);

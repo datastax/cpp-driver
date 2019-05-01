@@ -16,9 +16,9 @@
 
 #include <gtest/gtest.h>
 
-#include "test_token_map_utils.hpp"
 #include "set.hpp"
 #include "string.hpp"
+#include "test_token_map_utils.hpp"
 #include "vector.hpp"
 
 using namespace datastax;
@@ -57,7 +57,8 @@ struct MockTokenMap {
 
     ColumnMetadataVec column_metadata;
     column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
-    column_metadata.push_back(ColumnMetadata("replication", CollectionType::map(varchar_data_type, varchar_data_type, true)));
+    column_metadata.push_back(ColumnMetadata(
+        "replication", CollectionType::map(varchar_data_type, varchar_data_type, true)));
     RowResultResponseBuilder builder(column_metadata);
 
     ReplicationMap replication;
@@ -80,7 +81,8 @@ struct MockTokenMap {
 
     ColumnMetadataVec column_metadata;
     column_metadata.push_back(ColumnMetadata("keyspace_name", varchar_data_type));
-    column_metadata.push_back(ColumnMetadata("replication", CollectionType::map(varchar_data_type, varchar_data_type, true)));
+    column_metadata.push_back(ColumnMetadata(
+        "replication", CollectionType::map(varchar_data_type, varchar_data_type, true)));
     RowResultResponseBuilder builder(column_metadata);
 
     replication["class"] = CASS_NETWORK_TOPOLOGY_STRATEGY;
@@ -92,9 +94,7 @@ struct MockTokenMap {
     strategy.init(dc_ids, VersionNumber(3, 0, 0), iterator.row());
   }
 
-  void add_token(Token token,
-                 const String& address,
-                 const String& rack = "",
+  void add_token(Token token, const String& address, const String& rack = "",
                  const String& dc = "") {
     tokens.push_back(TokenHost(token, create_host(address, rack, dc)));
   }
@@ -105,20 +105,17 @@ struct MockTokenMap {
     strategy.build_replicas(tokens, datacenters, replicas);
   }
 
-
   const CopyOnWriteHostVec& find_hosts(Token token) {
-    typename TokenReplicasVec::const_iterator i = std::lower_bound(replicas.begin(), replicas.end(),
-                                                                   TokenReplicas(token, NO_REPLICAS),
-                                                                   TokenReplicasCompare());
+    typename TokenReplicasVec::const_iterator i =
+        std::lower_bound(replicas.begin(), replicas.end(), TokenReplicas(token, NO_REPLICAS),
+                         TokenReplicasCompare());
     if (i != replicas.end() && i->first == token) {
       return i->second;
     }
     return NO_REPLICAS;
   }
 
-  Host* create_host(const String& address,
-                    const String& rack = "",
-                    const String& dc = "") {
+  Host* create_host(const String& address, const String& rack = "", const String& dc = "") {
     Host::Ptr host(new Host(Address(address, 9042)));
     host->set_rack_and_dc(rack, dc);
     host->set_rack_and_dc_ids(rack_ids.get(rack), dc_ids.get(dc));
@@ -132,9 +129,7 @@ struct MockTokenMap {
   }
 };
 
-void check_host(const SharedRefPtr<Host>& host,
-                const String& ip,
-                const String& rack = "",
+void check_host(const SharedRefPtr<Host>& host, const String& ip, const String& rack = "",
                 const String& dc = "") {
   EXPECT_EQ(host->address(), Address(ip, 9042));
   EXPECT_EQ(host->rack(), rack);
@@ -143,8 +138,7 @@ void check_host(const SharedRefPtr<Host>& host,
 
 } // namespace
 
-TEST(ReplicationStrategyUnitTest, Simple)
-{
+TEST(ReplicationStrategyUnitTest, Simple) {
   MockTokenMap<Murmur3Partitioner> token_map;
 
   token_map.init_simple_strategy(3);
@@ -191,8 +185,7 @@ TEST(ReplicationStrategyUnitTest, Simple)
   }
 }
 
-TEST(ReplicationStrategyUnitTest, NetworkTopology)
-{
+TEST(ReplicationStrategyUnitTest, NetworkTopology) {
   MockTokenMap<Murmur3Partitioner> token_map;
 
   ReplicationMap replication;
@@ -296,8 +289,7 @@ TEST(ReplicationStrategyUnitTest, NetworkTopology)
   }
 }
 
-TEST(ReplicationStrategyUnitTest, NetworkTopologySameRack)
-{
+TEST(ReplicationStrategyUnitTest, NetworkTopologySameRack) {
   MockTokenMap<Murmur3Partitioner> token_map;
 
   ReplicationMap replication;
@@ -373,8 +365,7 @@ TEST(ReplicationStrategyUnitTest, NetworkTopologySameRack)
   }
 }
 
-TEST(ReplicationStrategyUnitTest, NetworkTopologyNotEnoughRacks)
-{
+TEST(ReplicationStrategyUnitTest, NetworkTopologyNotEnoughRacks) {
   MockTokenMap<Murmur3Partitioner> token_map;
 
   ReplicationMap replication;

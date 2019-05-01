@@ -60,8 +60,7 @@ public:
    * @param callback A callback that is called when a connection to a contact
    * point is established, if an error occurred, or all contact points failed.
    */
-  ClusterConnector(const ContactPointList& contact_points,
-                   ProtocolVersion protocol_version,
+  ClusterConnector(const ContactPointList& contact_points, ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**
@@ -70,7 +69,7 @@ public:
    * @param listener A listener that handles cluster events.
    * @return The connector to chain calls.
    */
-  ClusterConnector* with_listener(ClusterListener*  listener);
+  ClusterConnector* with_listener(ClusterListener* listener);
 
   /**
    * Set the random object to use for shuffling the contact points and load
@@ -89,7 +88,6 @@ public:
    * @return The connector to chain calls.
    */
   ClusterConnector* with_metrics(Metrics* metrics);
-
 
   /**
    * Set the cluster and underlying control connection settings.
@@ -180,6 +178,7 @@ private:
   CassError ssl_error_code_;
 };
 
-} } } // namespace datastax::internal::core
+} // namespace core
+}} // namespace datastax::internal
 
 #endif

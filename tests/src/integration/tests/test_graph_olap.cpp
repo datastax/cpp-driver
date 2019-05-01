@@ -7,16 +7,16 @@
 
 #include "dse_integration.hpp"
 #include "options.hpp"
-#include "rest_client.hpp"
 #include "rapidjson/document.h"
+#include "rest_client.hpp"
 
-#define ALTER_DSE_LEASES_FORMAT "ALTER KEYSPACE dse_leases " \
-  " WITH REPLICATION = { " \
-    "'class': 'NetworkTopologyStrategy', 'dc1' : '%d' " \
+#define ALTER_DSE_LEASES_FORMAT                       \
+  "ALTER KEYSPACE dse_leases "                        \
+  " WITH REPLICATION = { "                            \
+  "'class': 'NetworkTopologyStrategy', 'dc1' : '%d' " \
   "}"
 
-#define GRAPH_OLAP_QUERY \
-  "g.V().count();"
+#define GRAPH_OLAP_QUERY "g.V().count();"
 
 #define GRAPH_OLAP_TIMEOUT 240000 // 4 minutes
 
@@ -56,12 +56,10 @@ public:
      * until all nodes are available, preventing nodes from electing the wrong
      * master node.
      */
-    dse::Cluster cluster = dse::Cluster::build()
-      .with_contact_points(master_host_ip_address_);
+    dse::Cluster cluster = dse::Cluster::build().with_contact_points(master_host_ip_address_);
     try {
       Session session = cluster.connect();
-      session.execute(format_string(ALTER_DSE_LEASES_FORMAT,
-        number_dc1_nodes_));
+      session.execute(format_string(ALTER_DSE_LEASES_FORMAT, number_dc1_nodes_));
       session.close();
     } catch (Session::Exception e) {
       FAIL() << e.what();
@@ -76,9 +74,8 @@ public:
     }
     if (wait_for_workers(master_host_ip_address_, number_dc1_nodes_)) {
       // Create the DSE session
-      cluster = default_cluster()
-        .with_connection_heartbeat_interval(0)
-        .with_request_timeout(GRAPH_OLAP_TIMEOUT);
+      cluster = default_cluster().with_connection_heartbeat_interval(0).with_request_timeout(
+          GRAPH_OLAP_TIMEOUT);
       DseIntegration::connect(cluster);
 
       // Create the graph
@@ -98,8 +95,8 @@ public:
    * @param source Graph source to query
    * @param hosts Hosts used during execution of graph query
    */
-  void execute_query(unsigned int number_of_queries,
-    const std::string& source, std::vector<std::string> *hosts) {
+  void execute_query(unsigned int number_of_queries, const std::string& source,
+                     std::vector<std::string>* hosts) {
     // Initialize the graph options and set analytics source
     dse::GraphOptions graph_options;
     graph_options.set_name(test_name_);
@@ -111,8 +108,7 @@ public:
     // Execute the graph query and return the hosts used during execution
     for (unsigned int n = 0; n < number_of_queries; ++n) {
       // Execute the graph query and get the host address used
-      dse::GraphResultSet result_set = dse_session_.execute(
-        GRAPH_OLAP_QUERY, graph_options);
+      dse::GraphResultSet result_set = dse_session_.execute(GRAPH_OLAP_QUERY, graph_options);
       CHECK_FAILURE;
       std::string host = result_set.host_address();
       if (std::find(hosts->begin(), hosts->end(), host) == hosts->end()) {
@@ -205,8 +201,7 @@ private:
    * @param number_of_worker Number of workers to look for
    * @return True if workers are 'ACTIVE'' false otherwise
    */
-  bool wait_for_workers(const std::string& master_ip_address,
-                        unsigned short number_of_workers) {
+  bool wait_for_workers(const std::string& master_ip_address, unsigned short number_of_workers) {
     for (int n = 0; n < 1200; ++n) { // Check for up to 2 minutes (sleep is 100ms)
       // Create and send a request to the Spark server
       Request request;
@@ -227,7 +222,7 @@ private:
       // Iterate over the Spark workers and count the active slaves
       unsigned short active_slaves = 0;
       for (std::vector<SparkMaster::Slave>::const_iterator it = master.slaves.begin();
-            it != master.slaves.end(); ++it) {
+           it != master.slaves.end(); ++it) {
         SparkMaster::Slave slave = *it;
         if (to_lower(slave.state).compare("alive") == 0) {
           ++active_slaves;
@@ -290,22 +285,22 @@ DSE_INTEGRATION_TEST_F(GraphOlapTest, AnalyticsNodeNotTargeted) {
   // Generate the list of expected hosts for validation
   std::vector<std::string> expected_hosts;
   expected_hosts.push_back(master_host_ip_address_);
-  expected_hosts.insert(expected_hosts.end(),
-    worker_hosts_ip_addresses_.begin(), worker_hosts_ip_addresses_.end());
+  expected_hosts.insert(expected_hosts.end(), worker_hosts_ip_addresses_.begin(),
+                        worker_hosts_ip_addresses_.end());
 
   // Ensure all nodes are targeted when using graph source
   std::vector<std::string> hosts;
   execute_query(12, "g", &hosts);
   CHECK_FAILURE;
   ASSERT_EQ(number_dc1_nodes_, hosts.size());
-  ASSERT_TRUE(std::equal(expected_hosts.begin(),
-    expected_hosts.begin() + expected_hosts.size(), hosts.begin()));
+  ASSERT_TRUE(std::equal(expected_hosts.begin(), expected_hosts.begin() + expected_hosts.size(),
+                         hosts.begin()));
 
   // Ensure all nodes are targeted when using default graph source
   hosts.clear();
   execute_query(12, "", &hosts);
   CHECK_FAILURE;
   ASSERT_EQ(number_dc1_nodes_, hosts.size());
-  ASSERT_TRUE(std::equal(expected_hosts.begin(),
-    expected_hosts.begin() + expected_hosts.size(), hosts.begin()));
+  ASSERT_TRUE(std::equal(expected_hosts.begin(), expected_hosts.begin() + expected_hosts.size(),
+                         hosts.begin()));
 }

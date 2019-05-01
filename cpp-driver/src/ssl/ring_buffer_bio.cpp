@@ -53,18 +53,11 @@
 using namespace datastax::internal::rb;
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-const BIO_METHOD RingBufferBio::method_ = {
-  BIO_TYPE_MEM,
-  "ring buffer",
-  RingBufferBio::write,
-  RingBufferBio::read,
-  RingBufferBio::puts,
-  RingBufferBio::gets,
-  RingBufferBio::ctrl,
-  RingBufferBio::create,
-  RingBufferBio::destroy,
-  NULL
-};
+const BIO_METHOD RingBufferBio::method_ = { BIO_TYPE_MEM,           "ring buffer",
+                                            RingBufferBio::write,   RingBufferBio::read,
+                                            RingBufferBio::puts,    RingBufferBio::gets,
+                                            RingBufferBio::ctrl,    RingBufferBio::create,
+                                            RingBufferBio::destroy, NULL };
 #else
 BIO_METHOD* RingBufferBio::method_ = NULL;
 
@@ -81,9 +74,7 @@ void RingBufferBio::initialize() {
   }
 }
 
-void RingBufferBio::cleanup() {
-  BIO_meth_free(method_);
-}
+void RingBufferBio::cleanup() { BIO_meth_free(method_); }
 #endif
 
 BIO* RingBufferBio::create(RingBufferState* state) {
@@ -107,8 +98,7 @@ int RingBufferBio::create(BIO* bio) {
 }
 
 int RingBufferBio::destroy(BIO* bio) {
-  if (bio == NULL)
-    return 0;
+  if (bio == NULL) return 0;
 
   return 1;
 }
@@ -137,25 +127,20 @@ int RingBufferBio::write(BIO* bio, const char* data, int len) {
   return len;
 }
 
-int RingBufferBio::puts(BIO* bio, const char* str) {
-  return write(bio, str, strlen(str));
-}
+int RingBufferBio::puts(BIO* bio, const char* str) { return write(bio, str, strlen(str)); }
 
 int RingBufferBio::gets(BIO* bio, char* out, int size) {
   RingBuffer* ring_buffer = from_bio(bio)->ring_buffer;
 
-  if (ring_buffer->length() == 0)
-    return 0;
+  if (ring_buffer->length() == 0) return 0;
 
   int i = ring_buffer->index_of('\n', size);
 
   // Include '\n', if it's there.  If not, don't read off the end.
-  if (i < size && i >= 0 && static_cast<size_t>(i) < ring_buffer->length())
-    i++;
+  if (i < size && i >= 0 && static_cast<size_t>(i) < ring_buffer->length()) i++;
 
   // Shift `i` a bit to NULL-terminate string later
-  if (size == i)
-    i--;
+  if (size == i) i--;
 
   // Flush read data
   ring_buffer->read(out, i);
@@ -180,8 +165,7 @@ long RingBufferBio::ctrl(BIO* bio, int cmd, long num, void* ptr) {
       break;
     case BIO_CTRL_INFO:
       ret = from_bio(bio)->ring_buffer->length();
-      if (ptr != NULL)
-        *reinterpret_cast<void**>(ptr) = NULL;
+      if (ptr != NULL) *reinterpret_cast<void**>(ptr) = NULL;
       break;
     case BIO_C_SET_BUF_MEM:
       assert(0 && "Can't use SET_BUF_MEM_PTR with RingBufferBio");

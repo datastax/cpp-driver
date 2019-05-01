@@ -21,9 +21,7 @@
 
 #include <cstring>
 
-namespace test {
-namespace driver {
-namespace values {
+namespace test { namespace driver { namespace values {
 
 /**
  * Blob wrapped value
@@ -33,23 +31,18 @@ public:
   typedef std::string ConvenienceType;
   typedef std::string ValueType;
 
-  Blob() { }
+  Blob() {}
 
   Blob(const ConvenienceType& blob)
-    : blob_(blob) { }
+      : blob_(blob) {}
 
   void append(Collection collection) {
-    ASSERT_EQ(CASS_OK,
-              cass_collection_append_bytes(collection.get(), data(), size()));
+    ASSERT_EQ(CASS_OK, cass_collection_append_bytes(collection.get(), data(), size()));
   }
 
-  std::string cql_type() const {
-    return "blob";
-  }
+  std::string cql_type() const { return "blob"; }
 
-  std::string cql_value() const {
-    return "'0x" + str() + "'";
-  }
+  std::string cql_value() const { return "'0x" + str() + "'"; }
 
   /**
    * Comparison operation for driver bytes
@@ -74,39 +67,30 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Blob& rhs) const {
-    return compare(rhs.blob_);
-  }
+  int compare(const Blob& rhs) const { return compare(rhs.blob_); }
 
   /**
    * Helper method to return data for the blob type
    *
    * @return Blob data
    */
-  const cass_byte_t* data() const {
-    return reinterpret_cast<const cass_byte_t*>(blob_.data());
-  }
-
+  const cass_byte_t* data() const { return reinterpret_cast<const cass_byte_t*>(blob_.data()); }
 
   void initialize(const CassValue* value) {
     const cass_byte_t* bytes = NULL;
     size_t size;
     ASSERT_EQ(CASS_OK, cass_value_get_bytes(value, &bytes, &size))
-      << "Unable to Get Blob: Invalid error code returned";
-    blob_.assign(reinterpret_cast<const char*>(bytes),
-                 size * sizeof(cass_byte_t));
+        << "Unable to Get Blob: Invalid error code returned";
+    blob_.assign(reinterpret_cast<const char*>(bytes), size * sizeof(cass_byte_t));
   }
 
   void set(Tuple tuple, size_t index) {
-    ASSERT_EQ(CASS_OK,
-              cass_tuple_set_bytes(tuple.get(), index, data(), size()));
+    ASSERT_EQ(CASS_OK, cass_tuple_set_bytes(tuple.get(), index, data(), size()));
   }
 
   void set(UserType user_type, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_user_type_set_bytes_by_name(user_type.get(),
-                                                        name.c_str(),
-                                                        data(),
-                                                        size()));
+    ASSERT_EQ(CASS_OK,
+              cass_user_type_set_bytes_by_name(user_type.get(), name.c_str(), data(), size()));
   }
 
   /**
@@ -114,23 +98,15 @@ public:
    *
    * @return Blob size (e.g.length)
    */
-  size_t size() const {
-    return blob_.size() / sizeof(cass_byte_t);
-  }
-
+  size_t size() const { return blob_.size() / sizeof(cass_byte_t); }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_bytes(statement.get(),
-                                                 index,
-                                                 data(),
-                                                 size()));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_bytes(statement.get(), index, data(), size()));
   }
 
   void statement_bind(Statement statement, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_bytes_by_name(statement.get(),
-                                                         name.c_str(),
-                                                         data(),
-                                                         size()));
+    ASSERT_EQ(CASS_OK,
+              cass_statement_bind_bytes_by_name(statement.get(), name.c_str(), data(), size()));
   }
 
   std::string str() const {
@@ -147,17 +123,11 @@ public:
     return value.str();
   }
 
-  static std::string supported_server_version() {
-    return "1.2.0";
-  }
+  static std::string supported_server_version() { return "1.2.0"; }
 
-  ValueType value() const {
-    return blob_;
-  }
+  ValueType value() const { return blob_; }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_BLOB;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_BLOB; }
 
 protected:
   /**
@@ -166,14 +136,11 @@ protected:
   std::string blob_;
 };
 
-inline std::ostream& operator<<(std::ostream& output_stream,
-                                const Blob& value) {
+inline std::ostream& operator<<(std::ostream& output_stream, const Blob& value) {
   output_stream << value.cql_value();
   return output_stream;
 }
 
-} // namespace values
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::values
 
 #endif // __TEST_BLOB_HPP__

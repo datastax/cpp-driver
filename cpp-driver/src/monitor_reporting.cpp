@@ -18,8 +18,7 @@
 
 using namespace datastax::internal::core;
 
-MonitorReporting* create_monitor_reporting(const String& client_id,
-                                           const String& session_id,
+MonitorReporting* create_monitor_reporting(const String& client_id, const String& session_id,
                                            const Config& config) {
   return new NopMonitorReporting();
 }

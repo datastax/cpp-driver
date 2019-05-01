@@ -15,26 +15,24 @@
 
 #include <gtest/gtest.h>
 
-#define ADD_ARRAY_NULL(value) \
-  if (value.is_null()) { \
+#define ADD_ARRAY_NULL(value)                            \
+  if (value.is_null()) {                                 \
     ASSERT_EQ(CASS_OK, dse_graph_array_add_null(get())); \
   }
 
-#define ADD_ARRAY_VALUE(add_function, value) \
-   ADD_ARRAY_NULL(value) \
-    else { \
+#define ADD_ARRAY_VALUE(add_function, value)                \
+  ADD_ARRAY_NULL(value)                                     \
+  else {                                                    \
     ASSERT_EQ(CASS_OK, add_function(get(), value.value())); \
   }
 
-#define ADD_ARRAY_VALUE_C_STR(add_function, value) \
-  ADD_ARRAY_NULL(value) \
-   else { \
+#define ADD_ARRAY_VALUE_C_STR(add_function, value)                \
+  ADD_ARRAY_NULL(value)                                           \
+  else {                                                          \
     ASSERT_EQ(CASS_OK, add_function(get(), value.str().c_str())); \
   }
 
-namespace test {
-namespace driver {
-namespace dse {
+namespace test { namespace driver { namespace dse {
 
 // Forward declaration for circular dependency
 class GraphObject;
@@ -48,7 +46,7 @@ public:
    * Create the empty DSE graph array object
    */
   GraphArray()
-    : Object<DseGraphArray, dse_graph_array_free>(dse_graph_array_new()) {}
+      : Object<DseGraphArray, dse_graph_array_free>(dse_graph_array_new()) {}
 
   /**
    * Create the DSE graph array object from the native driver DSE graph
@@ -57,7 +55,7 @@ public:
    * @param array Native driver object
    */
   GraphArray(DseGraphArray* array)
-    : Object<DseGraphArray, dse_graph_array_free>(array) {}
+      : Object<DseGraphArray, dse_graph_array_free>(array) {}
 
   /**
    * Create the DSE graph array object from the shared reference
@@ -65,7 +63,7 @@ public:
    * @param array Shared reference
    */
   GraphArray(Ptr array)
-    : Object<DseGraphArray, dse_graph_array_free>(array) {}
+      : Object<DseGraphArray, dse_graph_array_free>(array) {}
 
   /**
    * Destructor to clean up the shared reference pointers that may be associated
@@ -79,9 +77,7 @@ public:
   /**
    * Finish (Complete/Close) a DSE graph array object
    */
-  void finish() {
-    dse_graph_array_finish(get());
-  }
+  void finish() { dse_graph_array_finish(get()); }
 
   /**
    * Reset/Reuse a DSE graph array object
@@ -98,7 +94,7 @@ public:
    *
    * @param value Value to apply
    */
-  template<class C>
+  template <class C>
   void add(C value) {
     add_value(value.get());
   }
@@ -129,7 +125,7 @@ private:
  *
  * @param value Array value to add
  */
-template<>
+template <>
 inline void GraphArray::add<GraphArray>(GraphArray value) {
   value.finish();
   ASSERT_EQ(CASS_OK, dse_graph_array_add_array(get(), const_cast<DseGraphArray*>(value.get())));
@@ -140,7 +136,7 @@ inline void GraphArray::add<GraphArray>(GraphArray value) {
  *
  * @param value Boolean value to add
  */
-template<>
+template <>
 inline void GraphArray::add<Boolean>(Boolean value) {
   ADD_ARRAY_VALUE(dse_graph_array_add_bool, value);
 }
@@ -150,7 +146,7 @@ inline void GraphArray::add<Boolean>(Boolean value) {
  *
  * @param value Double value to add
  */
-template<>
+template <>
 inline void GraphArray::add<Double>(Double value) {
   ADD_ARRAY_VALUE(dse_graph_array_add_double, value);
 }
@@ -160,7 +156,7 @@ inline void GraphArray::add<Double>(Double value) {
  *
  * @param value 32-bit integer value to add
  */
-template<>
+template <>
 inline void GraphArray::add<Integer>(Integer value) {
   ADD_ARRAY_VALUE(dse_graph_array_add_int32, value);
 }
@@ -170,7 +166,7 @@ inline void GraphArray::add<Integer>(Integer value) {
  *
  * @param value 64-bit integer value to add
  */
-template<>
+template <>
 inline void GraphArray::add<BigInteger>(BigInteger value) {
   ADD_ARRAY_VALUE(dse_graph_array_add_int64, value);
 }
@@ -180,15 +176,15 @@ inline void GraphArray::add<BigInteger>(BigInteger value) {
  *
  * @param value String value to add
  */
-template<>
+template <>
 inline void GraphArray::add<Varchar>(Varchar value) {
   ADD_ARRAY_VALUE_C_STR(dse_graph_array_add_string, value);
 }
-template<>
+template <>
 inline void GraphArray::add<Text>(Text value) {
   add<Varchar>(Varchar(value.value()));
 }
-template<>
+template <>
 inline void GraphArray::add<std::string>(std::string value) {
   add<Varchar>(Varchar(value));
 }
@@ -198,7 +194,7 @@ inline void GraphArray::add<std::string>(std::string value) {
  *
  * @param value Line string value to apply
  */
-template<>
+template <>
 inline void GraphArray::add<LineString>(LineString value) {
   if (value.is_null()) {
     dse_graph_array_add_null(get());
@@ -214,14 +210,12 @@ inline void GraphArray::add<LineString>(LineString value) {
  *
  * @param value Point value to apply
  */
-template<>
+template <>
 inline void GraphArray::add<Point>(Point value) {
   if (value.is_null()) {
     dse_graph_array_add_null(get());
   } else {
-    ASSERT_EQ(CASS_OK, dse_graph_array_add_point(get(),
-                                                 value.value().x,
-                                                 value.value().y));
+    ASSERT_EQ(CASS_OK, dse_graph_array_add_point(get(), value.value().x, value.value().y));
   }
 }
 
@@ -230,7 +224,7 @@ inline void GraphArray::add<Point>(Point value) {
  *
  * @param value Polygon value to apply
  */
-template<>
+template <>
 inline void GraphArray::add<Polygon>(Polygon value) {
   if (value.is_null()) {
     dse_graph_array_add_null(get());
@@ -241,8 +235,6 @@ inline void GraphArray::add<Polygon>(Polygon value) {
   }
 }
 
-} // namespace dse
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::dse
 
 #endif // __TEST_DSE_GRAPH_ARRAY_HPP__

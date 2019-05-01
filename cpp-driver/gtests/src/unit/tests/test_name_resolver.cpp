@@ -20,7 +20,7 @@
 #include "name_resolver.hpp"
 
 #ifdef WIN32
-#  include "winsock.h"
+#include "winsock.h"
 #endif
 
 #define RESOLVE_TIMEOUT 2000
@@ -31,21 +31,16 @@ using namespace datastax::internal::core;
 class NameResolverUnitTest : public LoopTest {
 public:
   NameResolverUnitTest()
-    : status_(NameResolver::NEW) { }
+      : status_(NameResolver::NEW) {}
 
   NameResolver::Ptr create(const Address& address) {
     return NameResolver::Ptr(
-          new NameResolver(address,
-                           bind_callback(&NameResolverUnitTest::on_resolve, this)));
+        new NameResolver(address, bind_callback(&NameResolverUnitTest::on_resolve, this)));
   }
 
-  NameResolver::Status status() const {
-    return status_;
-  }
+  NameResolver::Status status() const { return status_; }
 
-  const String& hostname() const {
-    return hostname_;
-  }
+  const String& hostname() const { return hostname_; }
 
 private:
   void on_resolve(NameResolver* resolver) {

@@ -14,36 +14,26 @@
 
 namespace datastax { namespace internal {
 
-template <class K, class V,
-          class HashFcn = SPARSEHASH_HASH<K>,
-          class EqualKey = std::equal_to<K> >
+template <class K, class V, class HashFcn = SPARSEHASH_HASH<K>, class EqualKey = std::equal_to<K>>
 class DenseHashMap
-    : public sparsehash::dense_hash_map<
-      K, V,  HashFcn, EqualKey,
-      internal::Allocator<std::pair<const K, V> > > {
+    : public sparsehash::dense_hash_map<K, V, HashFcn, EqualKey,
+                                        internal::Allocator<std::pair<const K, V>>> {
 public:
-  typedef internal::Allocator<std::pair<const K, V> > Allocator;
+  typedef internal::Allocator<std::pair<const K, V>> Allocator;
 
-  explicit DenseHashMap(size_t expected_max_items_in_table = 0,
-                        const HashFcn& hf = HashFcn(),
-                        const EqualKey& eql = EqualKey(),
-                        const Allocator& alloc = Allocator())
-    : sparsehash::dense_hash_map<K, V, HashFcn, EqualKey, Allocator>(expected_max_items_in_table,
-                                                                     hf, eql, alloc) { }
+  explicit DenseHashMap(size_t expected_max_items_in_table = 0, const HashFcn& hf = HashFcn(),
+                        const EqualKey& eql = EqualKey(), const Allocator& alloc = Allocator())
+      : sparsehash::dense_hash_map<K, V, HashFcn, EqualKey, Allocator>(expected_max_items_in_table,
+                                                                       hf, eql, alloc) {}
 
   template <class InputIterator>
-  DenseHashMap(InputIterator first, InputIterator last,
-               const K& empty_key_val,
-               size_t expected_max_items_in_table = 0,
-               const HashFcn& hf = HashFcn(),
-               const EqualKey& eql = EqualKey(),
-               const Allocator& alloc = Allocator())
-    : sparsehash::dense_hash_map<K, V, HashFcn, EqualKey, Allocator>(first, last,
-                                                                     empty_key_val,
-                                                                     expected_max_items_in_table,
-                                                                     hf, eql, alloc) { }
+  DenseHashMap(InputIterator first, InputIterator last, const K& empty_key_val,
+               size_t expected_max_items_in_table = 0, const HashFcn& hf = HashFcn(),
+               const EqualKey& eql = EqualKey(), const Allocator& alloc = Allocator())
+      : sparsehash::dense_hash_map<K, V, HashFcn, EqualKey, Allocator>(
+            first, last, empty_key_val, expected_max_items_in_table, hf, eql, alloc) {}
 };
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

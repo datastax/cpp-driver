@@ -19,12 +19,10 @@
 using namespace datastax::internal::core;
 
 Timer::Timer()
-  : handle_(NULL)
-  , state_(CLOSED) { }
+    : handle_(NULL)
+    , state_(CLOSED) {}
 
-Timer::~Timer() {
-  stop();
-}
+Timer::~Timer() { stop(); }
 
 int Timer::start(uv_loop_t* loop, uint64_t timeout, const Timer::Callback& callback) {
   int rc = 0;

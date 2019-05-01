@@ -17,8 +17,8 @@
 #ifndef DATASTAX_INTERNAL_SSL_HPP
 #define DATASTAX_INTERNAL_SSL_HPP
 
-#include "allocated.hpp"
 #include "address.hpp"
+#include "allocated.hpp"
 #include "cassandra.h"
 #include "driver_config.hpp"
 #include "external.hpp"
@@ -32,27 +32,19 @@ namespace datastax { namespace internal { namespace core {
 
 class SslSession : public Allocated {
 public:
-  SslSession(const Address& address,
-             const String& hostname,
-             int flags)
-    : address_(address)
-    , hostname_(hostname)
-    , verify_flags_(flags)
-    , error_code_(CASS_OK) {}
+  SslSession(const Address& address, const String& hostname, int flags)
+      : address_(address)
+      , hostname_(hostname)
+      , verify_flags_(flags)
+      , error_code_(CASS_OK) {}
 
   virtual ~SslSession() {}
 
-  bool has_error() const {
-    return error_code() != CASS_OK;
-  }
+  bool has_error() const { return error_code() != CASS_OK; }
 
-  CassError error_code() const {
-    return error_code_;
-  }
+  CassError error_code() const { return error_code_; }
 
-  String error_message() const {
-    return error_message_;
-  }
+  String error_message() const { return error_message_; }
 
   virtual bool is_handshake_done() const = 0;
   virtual void do_handshake() = 0;
@@ -79,23 +71,17 @@ public:
   typedef SharedRefPtr<SslContext> Ptr;
 
   SslContext()
-    : verify_flags_(CASS_SSL_VERIFY_PEER_CERT) {}
+      : verify_flags_(CASS_SSL_VERIFY_PEER_CERT) {}
 
   virtual ~SslContext() {}
 
-  void set_verify_flags(int flags) {
-    verify_flags_ = flags;
-  }
-  bool is_cert_validation_enabled() {
-    return verify_flags_ != CASS_SSL_VERIFY_NONE;
-  }
+  void set_verify_flags(int flags) { verify_flags_ = flags; }
+  bool is_cert_validation_enabled() { return verify_flags_ != CASS_SSL_VERIFY_NONE; }
 
   virtual SslSession* create_session(const Address& address, const String& hostname) = 0;
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length) = 0;
   virtual CassError set_cert(const char* cert, size_t cert_length) = 0;
-  virtual CassError set_private_key(const char* key,
-                                    size_t key_length,
-                                    const char* password,
+  virtual CassError set_private_key(const char* key, size_t key_length, const char* password,
                                     size_t password_length) = 0;
 
 protected:
@@ -109,39 +95,39 @@ public:
   static void init_once();
   static void thread_cleanup();
 
-  static void init(); // Tests only
+  static void init();    // Tests only
   static void cleanup(); // Tests only
 
 private:
   static uv_once_t ssl_init_guard;
 };
 
-template<class T>
+template <class T>
 SslContext::Ptr SslContextFactoryBase<T>::create() {
   return T::create();
 }
 
-template<class T>
+template <class T>
 void SslContextFactoryBase<T>::init_once() {
   uv_once(&ssl_init_guard, T::init);
 }
 
-template<class T>
+template <class T>
 void SslContextFactoryBase<T>::thread_cleanup() {
   T::internal_thread_cleanup();
 }
 
-template<class T>
+template <class T>
 void SslContextFactoryBase<T>::init() {
   T::internal_init();
 }
 
-template<class T>
+template <class T>
 void SslContextFactoryBase<T>::cleanup() {
   T::internal_cleanup();
 }
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #ifdef HAVE_OPENSSL
 #include "ssl/ssl_openssl_impl.hpp"

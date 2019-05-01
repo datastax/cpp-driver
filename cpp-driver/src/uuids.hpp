@@ -23,9 +23,9 @@
 #include "external.hpp"
 #include "random.hpp"
 
-#include <uv.h>
 #include <assert.h>
 #include <string.h>
+#include <uv.h>
 
 namespace datastax { namespace internal { namespace core {
 
@@ -50,7 +50,7 @@ private:
   MT19937_64 ng_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::UuidGen, CassUuidGen)
 

@@ -18,10 +18,10 @@
 #define __WIN_DEBUG_HPP__
 
 #if defined(_WIN32) && defined(_DEBUG)
-# ifdef USE_VISUAL_LEAK_DETECTOR
-#   include <vld.h>
-# endif
-# include <gtest/gtest.h>
+#ifdef USE_VISUAL_LEAK_DETECTOR
+#include <vld.h>
+#endif
+#include <gtest/gtest.h>
 #endif
 
 /**
@@ -30,10 +30,10 @@
 class MemoryLeakListener : public testing::EmptyTestEventListener {
 public:
 #if defined(_WIN32) && defined(_DEBUG)
-# ifndef USE_VISUAL_LEAK_DETECTOR
+#ifndef USE_VISUAL_LEAK_DETECTOR
   void OnTestProgramStart(const testing::UnitTest& unit_test);
   void OnTestProgramEnd(const testing::UnitTest& unit_test);
-# endif
+#endif
   void OnTestStart(const testing::TestInfo& test_information);
   void OnTestEnd(const testing::TestInfo& test_information);
 
@@ -47,12 +47,12 @@ public:
   static void enable();
 
 private:
-# ifndef USE_VISUAL_LEAK_DETECTOR
+#ifndef USE_VISUAL_LEAK_DETECTOR
   /**
    * Starting memory state (before start of test)
    */
   _CrtMemState memory_start_state_;
-# endif
+#endif
 
   /**
    * Check for memory leaks based on the starting memory state
@@ -61,8 +61,8 @@ private:
    */
   void check_leaks(const testing::TestInfo& test_information);
 #else
-  static void disable() {};
-  static void enable() {};
+  static void disable(){};
+  static void enable(){};
 #endif
 };
 

@@ -34,15 +34,14 @@ public:
 #if defined(__GNUC__) || defined(__clang__)
 #define ATTR_FORMAT(string, first) __attribute__((__format__(__printf__, string, first)))
 #else
-#define ATTR_FORMAT(string , first)
+#define ATTR_FORMAT(string, first)
 #endif
 
   static CassLogLevel log_level() { return log_level_; }
 
   ATTR_FORMAT(5, 6)
-  static void log(CassLogLevel severity,
-                   const char* file, int line, const char* function,
-                   const char* format, ...) {
+  static void log(CassLogLevel severity, const char* file, int line, const char* function,
+                  const char* format, ...) {
     va_list args;
     va_start(args, format);
     internal_log(severity, file, line, function, format, args);
@@ -51,8 +50,7 @@ public:
 
 private:
   ATTR_FORMAT(5, 0)
-  static void internal_log(CassLogLevel severity,
-                           const char* file, int line, const char* function,
+  static void internal_log(CassLogLevel severity, const char* file, int line, const char* function,
                            const char* format, va_list args);
 
 private:
@@ -63,7 +61,7 @@ private:
   Logger(); // Keep this object from being created
 };
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 // These macros allow the LOG_<level>() methods to accept one or more
 // arguments (including the format string). This needs to be extended
@@ -77,14 +75,13 @@ private:
 #define LOG_REST_HELPER2_(num, ...) LOG_REST_HELPER_##num##_(__VA_ARGS__)
 #define LOG_REST_HELPER_ONE_(first)
 #define LOG_REST_HELPER_TWOORMORE_(first, ...) , __VA_ARGS__
-#define LOG_SELECT_20TH_(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, \
-  a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, ...) a20
-#define LOG_NUM_ARGS_(...) LOG_SELECT_20TH_(__VA_ARGS__, \
-  TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,            \
-  TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,            \
-  TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,            \
-  TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,            \
-  TWOORMORE, TWOORMORE, ONE, throwaway)
+#define LOG_SELECT_20TH_(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, \
+                         a17, a18, a19, a20, ...)                                               \
+  a20
+#define LOG_NUM_ARGS_(...)                                                                        \
+  LOG_SELECT_20TH_(__VA_ARGS__, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, \
+                   TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,   \
+                   TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, ONE, throwaway)
 
 // Using __FILE__ returns the whole absolute path of the file, this
 // allows something more concise to be used via -DLOG_FILE_=<path>
@@ -93,22 +90,22 @@ private:
 #endif
 
 #if defined(_MSC_VER)
-#  define LOG_FUNCTION_ __FUNCSIG__
+#define LOG_FUNCTION_ __FUNCSIG__
 #elif defined(__clang__) || defined(__GNUC__) || defined(__INTEL_COMPILER)
-#  define LOG_FUNCTION_ __PRETTY_FUNCTION__
+#define LOG_FUNCTION_ __PRETTY_FUNCTION__
 #elif defined(__func__)
-#  define LOG_FUNCTION_ __func__
+#define LOG_FUNCTION_ __func__
 #else
-#  define LOG_FUNCTION_ ""
+#define LOG_FUNCTION_ ""
 #endif
 
-#define LOG_CHECK_LEVEL(severity, ...) do {                            \
-  if (severity <= ::datastax::internal::Logger::log_level()) {         \
-    ::datastax::internal::Logger::log(severity,                        \
-                      LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
-                      LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__)); \
-  }                                                                    \
-} while(0)
+#define LOG_CHECK_LEVEL(severity, ...)                                                   \
+  do {                                                                                   \
+    if (severity <= ::datastax::internal::Logger::log_level()) {                         \
+      ::datastax::internal::Logger::log(severity, LOG_FILE_, __LINE__, LOG_FUNCTION_,    \
+                                        LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__)); \
+    }                                                                                    \
+  } while (0)
 
 #define LOG_CRITICAL(...) LOG_CHECK_LEVEL(CASS_LOG_CRITICAL, __VA_ARGS__)
 #define LOG_ERROR(...) LOG_CHECK_LEVEL(CASS_LOG_ERROR, __VA_ARGS__)

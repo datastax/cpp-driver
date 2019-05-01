@@ -19,61 +19,44 @@ using namespace datastax::internal::enterprise;
 
 extern "C" {
 
-DsePolygon* dse_polygon_new() {
-  return DsePolygon::to(new enterprise::Polygon());
-}
+DsePolygon* dse_polygon_new() { return DsePolygon::to(new enterprise::Polygon()); }
 
-void dse_polygon_free(DsePolygon* polygon) {
-  delete polygon->from();
-}
+void dse_polygon_free(DsePolygon* polygon) { delete polygon->from(); }
 
-void dse_polygon_reset(DsePolygon* polygon) {
-  polygon->reset();
-}
+void dse_polygon_reset(DsePolygon* polygon) { polygon->reset(); }
 
-void dse_polygon_reserve(DsePolygon* polygon,
-                         cass_uint32_t num_rings,
+void dse_polygon_reserve(DsePolygon* polygon, cass_uint32_t num_rings,
                          cass_uint32_t total_num_points) {
   polygon->reserve(num_rings, total_num_points);
 }
 
-CassError dse_polygon_start_ring(DsePolygon* polygon) {
-  return polygon->start_ring();
-}
+CassError dse_polygon_start_ring(DsePolygon* polygon) { return polygon->start_ring(); }
 
-CassError dse_polygon_add_point(DsePolygon* polygon,
-                                cass_double_t x, cass_double_t y) {
+CassError dse_polygon_add_point(DsePolygon* polygon, cass_double_t x, cass_double_t y) {
   polygon->add_point(x, y);
   return CASS_OK;
 }
 
-CassError dse_polygon_finish(DsePolygon* polygon) {
-  return polygon->finish();
-}
+CassError dse_polygon_finish(DsePolygon* polygon) { return polygon->finish(); }
 
 DsePolygonIterator* dse_polygon_iterator_new() {
   return DsePolygonIterator::to(new PolygonIterator());
 }
 
-CassError dse_polygon_iterator_reset(DsePolygonIterator* iterator,
-                                     const CassValue* value) {
+CassError dse_polygon_iterator_reset(DsePolygonIterator* iterator, const CassValue* value) {
   return iterator->reset_binary(value);
 }
 
-CassError dse_polygon_iterator_reset_with_wkt_n(DsePolygonIterator* iterator,
-                                                const char* wkt,
+CassError dse_polygon_iterator_reset_with_wkt_n(DsePolygonIterator* iterator, const char* wkt,
                                                 size_t wkt_length) {
   return iterator->reset_text(wkt, wkt_length);
 }
 
-CassError dse_polygon_iterator_reset_with_wkt(DsePolygonIterator* iterator,
-                                              const char* wkt) {
+CassError dse_polygon_iterator_reset_with_wkt(DsePolygonIterator* iterator, const char* wkt) {
   return dse_polygon_iterator_reset_with_wkt_n(iterator, wkt, SAFE_STRLEN(wkt));
 }
 
-void dse_polygon_iterator_free(DsePolygonIterator* iterator) {
-  delete iterator->from();
-}
+void dse_polygon_iterator_free(DsePolygonIterator* iterator) { delete iterator->from(); }
 
 cass_uint32_t dse_polygon_iterator_num_rings(const DsePolygonIterator* iterator) {
   return iterator->num_rings();
@@ -84,8 +67,8 @@ CassError dse_polygon_iterator_next_num_points(DsePolygonIterator* iterator,
   return iterator->next_num_points(num_points);
 }
 
-CassError dse_polygon_iterator_next_point(DsePolygonIterator* iterator,
-                                          cass_double_t* x, cass_double_t* y) {
+CassError dse_polygon_iterator_next_point(DsePolygonIterator* iterator, cass_double_t* x,
+                                          cass_double_t* y) {
   return iterator->next_point(x, y);
 }
 
@@ -219,7 +202,7 @@ CassError PolygonIterator::reset_text(const char* text, size_t size) {
       if (token == WktLexer::TK_COMMA) {
         token = lexer.next_token();
         // Verify there are more points
-        if(token != WktLexer::TK_NUMBER) {
+        if (token != WktLexer::TK_NUMBER) {
           return CASS_ERROR_LIB_BAD_PARAMS;
         }
       }
@@ -287,12 +270,15 @@ CassError PolygonIterator::BinaryIterator::next_point(cass_double_t* x, cass_dou
 }
 
 PolygonIterator::TextIterator::TextIterator(const char* text, size_t size)
-  : state_(STATE_NUM_POINTS)
-  , lexer_(text, size) {
-  WktLexer::Token token; UNUSED_(token);
+    : state_(STATE_NUM_POINTS)
+    , lexer_(text, size) {
+  WktLexer::Token token;
+  UNUSED_(token);
   // Skip over "POLYGON (" tokens
-  token = lexer_.next_token(); assert(token == WktLexer::TK_TYPE_POLYGON);
-  token = lexer_.next_token(); assert(token == WktLexer::TK_OPEN_PAREN);
+  token = lexer_.next_token();
+  assert(token == WktLexer::TK_TYPE_POLYGON);
+  token = lexer_.next_token();
+  assert(token == WktLexer::TK_OPEN_PAREN);
 }
 
 CassError PolygonIterator::TextIterator::next_num_points(cass_uint32_t* num_points) {
@@ -315,7 +301,8 @@ CassError PolygonIterator::TextIterator::next_num_points(cass_uint32_t* num_poin
     assert(token == WktLexer::TK_NUMBER);
 
     // Second number in point
-    token = temp.next_token(); assert(token == WktLexer::TK_NUMBER);
+    token = temp.next_token();
+    assert(token == WktLexer::TK_NUMBER);
 
     ++(*num_points);
 
@@ -341,16 +328,18 @@ CassError PolygonIterator::TextIterator::next_point(cass_double_t* x, cass_doubl
   }
 
   // First number in point
-  token = lexer_.next_token(); assert(token == WktLexer::TK_NUMBER);
+  token = lexer_.next_token();
+  assert(token == WktLexer::TK_NUMBER);
   *x = lexer_.number();
 
   // Second number in point
-  token = lexer_.next_token(); assert(token == WktLexer::TK_NUMBER);
+  token = lexer_.next_token();
+  assert(token == WktLexer::TK_NUMBER);
   *y = lexer_.number();
 
   token = lexer_.next_token();
   if (token == WktLexer::TK_CLOSE_PAREN) {
-     // Done with this ring
+    // Done with this ring
     token = lexer_.next_token();
     if (token == WktLexer::TK_CLOSE_PAREN) {
       // Done with last ring

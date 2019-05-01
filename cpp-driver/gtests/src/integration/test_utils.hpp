@@ -77,8 +77,7 @@ public:
    * @param delimiter Character to use split into elements (default: <space>)
    * @return An array/vector representation of the string
    */
-  static std::vector<std::string> explode(const std::string& input,
-    const char delimiter = ' ');
+  static std::vector<std::string> explode(const std::string& input, const char delimiter = ' ');
 
   /**
    * Check to see if a file exists
@@ -105,13 +104,12 @@ public:
    * @return A string concatenating all the vector elements with delimiter
    *         separation
    */
-  template<typename T>
-  inline static std::string implode(const std::vector<T>& elements,
-                                    const char delimiter = ' ') {
+  template <typename T>
+  inline static std::string implode(const std::vector<T>& elements, const char delimiter = ' ') {
     // Iterate through each element in the vector and concatenate the string
     std::stringstream result;
     for (typename std::vector<T>::const_iterator iterator = elements.begin();
-      iterator < elements.end(); ++iterator) {
+         iterator < elements.end(); ++iterator) {
       result << *iterator;
       if ((iterator + 1) != elements.end()) {
         result << delimiter;
@@ -144,8 +142,8 @@ public:
    * @param to String to replace with
    * @return Input string with replacement
    */
-  static std::string replace_all(const std::string& input,
-    const std::string& from, const std::string& to);
+  static std::string replace_all(const std::string& input, const std::string& from,
+                                 const std::string& to);
 
   /**
    * Reduce/Shorten a multi-line string into a single line string
@@ -156,8 +154,7 @@ public:
    *                                otherwise
    * @return Single line string converted from multi-line string
    */
-  static std::string shorten(const std::string& input,
-    bool add_space_after_newline = true);
+  static std::string shorten(const std::string& input, bool add_space_after_newline = true);
 
   /**
    * Convert a string to lowercase
@@ -186,8 +183,8 @@ public:
    * @return True if port on IP address is available; false otherwise
    */
   static bool wait_for_port(const std::string& ip_address, unsigned short port,
-    unsigned int number_of_retries = 100,
-    unsigned int retry_delay_ms = 100);
+                            unsigned int number_of_retries = 100,
+                            unsigned int retry_delay_ms = 100);
 };
 
 } // namespace test

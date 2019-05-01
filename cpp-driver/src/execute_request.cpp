@@ -23,10 +23,11 @@
 using namespace datastax::internal::core;
 
 ExecuteRequest::ExecuteRequest(const Prepared* prepared)
-  : Statement(prepared)
-  , prepared_(prepared) { }
+    : Statement(prepared)
+    , prepared_(prepared) {}
 
-int ExecuteRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
+int ExecuteRequest::encode(ProtocolVersion version, RequestCallback* callback,
+                           BufferVec* bufs) const {
   int32_t length = encode_query_or_id(bufs);
   if (version.supports_result_metadata_id()) {
     if (callback->prepared_metadata_entry()) {

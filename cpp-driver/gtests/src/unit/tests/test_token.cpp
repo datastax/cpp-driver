@@ -35,11 +35,10 @@ String to_string(RandomPartitioner::Token token) {
 
 } // namespace
 
-TEST(TokenUnitTest, RandomAbs)
-{
+TEST(TokenUnitTest, RandomAbs) {
   // Two's complement: -170141183460469231731687303715884105728
   {
-    uint8_t digest[16] = { };
+    uint8_t digest[16] = {};
     digest[0] = 0x80;
 
     RandomPartitioner::Token token;
@@ -48,12 +47,11 @@ TEST(TokenUnitTest, RandomAbs)
     token = RandomPartitioner::abs(token);
 
     EXPECT_EQ(to_string(token), "170141183460469231731687303715884105728");
-
   }
 
   // Two's complement: -170141183460469231731687303715884105727
   {
-    uint8_t digest[16] = { };
+    uint8_t digest[16] = {};
     digest[0] = 0x80;
     digest[15] = 0x01;
 
@@ -67,7 +65,7 @@ TEST(TokenUnitTest, RandomAbs)
 
   // Two's complement: -18446744073709551616
   {
-    uint8_t digest[16] = { };
+    uint8_t digest[16] = {};
     digest[0] = 0xFF;
     digest[1] = 0xFF;
     digest[2] = 0xFF;
@@ -87,7 +85,7 @@ TEST(TokenUnitTest, RandomAbs)
 
   // Two's complement: 0
   {
-    uint8_t digest[16] = { };
+    uint8_t digest[16] = {};
 
     RandomPartitioner::Token token;
     token.hi = RandomPartitioner::encode(digest);
@@ -99,17 +97,17 @@ TEST(TokenUnitTest, RandomAbs)
 
   // Two's complement: 170141183460469231731687303715884105727
   {
-    uint8_t digest[16] = { };
-    digest[0]  = 0x7F;
-    digest[1]  = 0xFF;
-    digest[2]  = 0xFF;
-    digest[3]  = 0xFF;
-    digest[4]  = 0xFF;
-    digest[5]  = 0xFF;
-    digest[6]  = 0xFF;
-    digest[7]  = 0xFF;
-    digest[8]  = 0xFF;
-    digest[9]  = 0xFF;
+    uint8_t digest[16] = {};
+    digest[0] = 0x7F;
+    digest[1] = 0xFF;
+    digest[2] = 0xFF;
+    digest[3] = 0xFF;
+    digest[4] = 0xFF;
+    digest[5] = 0xFF;
+    digest[6] = 0xFF;
+    digest[7] = 0xFF;
+    digest[8] = 0xFF;
+    digest[9] = 0xFF;
     digest[10] = 0xFF;
     digest[11] = 0xFF;
     digest[12] = 0xFF;
@@ -126,15 +124,14 @@ TEST(TokenUnitTest, RandomAbs)
   }
 }
 
-TEST(TokenUnitTest, RandomLessThan)
-{
+TEST(TokenUnitTest, RandomLessThan) {
   // 'hi' is the same and 'lo' is less than
   {
     RandomPartitioner::Token t1, t2;
 
     // Two's complement: 0
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       t1.hi = RandomPartitioner::encode(digest);
       t1.lo = RandomPartitioner::encode(digest + 8);
       t1 = RandomPartitioner::abs(t1);
@@ -142,7 +139,7 @@ TEST(TokenUnitTest, RandomLessThan)
 
     // Two's complement: 1
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[15] = 0x01;
       t2.hi = RandomPartitioner::encode(digest);
       t2.lo = RandomPartitioner::encode(digest + 8);
@@ -158,7 +155,7 @@ TEST(TokenUnitTest, RandomLessThan)
 
     // Two's complement: 18446744073709551616
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[7] = 0x01;
 
       t1.hi = RandomPartitioner::encode(digest);
@@ -168,7 +165,7 @@ TEST(TokenUnitTest, RandomLessThan)
 
     // Two's complement: 36893488147419103232
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[7] = 0x02;
       t2.hi = RandomPartitioner::encode(digest);
       t2.lo = RandomPartitioner::encode(digest + 8);
@@ -184,7 +181,7 @@ TEST(TokenUnitTest, RandomLessThan)
 
     // Two's complement: -170141183460469231731687303715884105727
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[0] = 0x80;
       digest[15] = 0x01;
       t1.hi = RandomPartitioner::encode(digest);
@@ -194,7 +191,7 @@ TEST(TokenUnitTest, RandomLessThan)
 
     // Two's complement: -170141183460469231731687303715884105728
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[0] = 0x80;
       t2.hi = RandomPartitioner::encode(digest);
       t2.lo = RandomPartitioner::encode(digest + 8);
@@ -210,7 +207,7 @@ TEST(TokenUnitTest, RandomLessThan)
 
     // Two's complement: 18446744073709551616
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[7] = 0x01;
       t1.hi = RandomPartitioner::encode(digest);
       t1.lo = RandomPartitioner::encode(digest + 8);
@@ -219,7 +216,7 @@ TEST(TokenUnitTest, RandomLessThan)
 
     // Two's complement: 18446744073709551616
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[7] = 0x01;
       t2.hi = RandomPartitioner::encode(digest);
       t2.lo = RandomPartitioner::encode(digest + 8);
@@ -234,14 +231,14 @@ TEST(TokenUnitTest, RandomLessThan)
     RandomPartitioner::Token t1, t2;
 
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       t1.hi = RandomPartitioner::encode(digest);
       t1.lo = RandomPartitioner::encode(digest + 8);
       t1 = RandomPartitioner::abs(t1);
     }
 
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       t2.hi = RandomPartitioner::encode(digest);
       t2.lo = RandomPartitioner::encode(digest + 8);
       t2 = RandomPartitioner::abs(t2);
@@ -251,15 +248,14 @@ TEST(TokenUnitTest, RandomLessThan)
   }
 }
 
-TEST(TokenUnitTest, RandomEqual)
-{
+TEST(TokenUnitTest, RandomEqual) {
   // Same value
   {
     RandomPartitioner::Token t1, t2;
 
     // Two's complement: 18446744073709551616
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[7] = 0x01;
       t1.hi = RandomPartitioner::encode(digest);
       t1.lo = RandomPartitioner::encode(digest + 8);
@@ -268,7 +264,7 @@ TEST(TokenUnitTest, RandomEqual)
 
     // Two's complement: 18446744073709551616
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[7] = 0x01;
       t2.hi = RandomPartitioner::encode(digest);
       t2.lo = RandomPartitioner::encode(digest + 8);
@@ -283,14 +279,14 @@ TEST(TokenUnitTest, RandomEqual)
     RandomPartitioner::Token t1, t2;
 
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       t1.hi = RandomPartitioner::encode(digest);
       t1.lo = RandomPartitioner::encode(digest + 8);
       t1 = RandomPartitioner::abs(t1);
     }
 
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       t2.hi = RandomPartitioner::encode(digest);
       t2.lo = RandomPartitioner::encode(digest + 8);
       t2 = RandomPartitioner::abs(t2);
@@ -305,7 +301,7 @@ TEST(TokenUnitTest, RandomEqual)
 
     // Two's complement: 0
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       t1.hi = RandomPartitioner::encode(digest);
       t1.lo = RandomPartitioner::encode(digest + 8);
       t1 = RandomPartitioner::abs(t1);
@@ -313,7 +309,7 @@ TEST(TokenUnitTest, RandomEqual)
 
     // Two's complement: 1
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[15] = 0x01;
       t2.hi = RandomPartitioner::encode(digest);
       t2.lo = RandomPartitioner::encode(digest + 8);
@@ -329,7 +325,7 @@ TEST(TokenUnitTest, RandomEqual)
 
     // Two's complement: 18446744073709551616
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[7] = 0x01;
 
       t1.hi = RandomPartitioner::encode(digest);
@@ -339,7 +335,7 @@ TEST(TokenUnitTest, RandomEqual)
 
     // Two's complement: 36893488147419103232
     {
-      uint8_t digest[16] = { };
+      uint8_t digest[16] = {};
       digest[7] = 0x02;
       t2.hi = RandomPartitioner::encode(digest);
       t2.lo = RandomPartitioner::encode(digest + 8);
@@ -350,8 +346,7 @@ TEST(TokenUnitTest, RandomEqual)
   }
 }
 
-TEST(TokenUnitTest, RandomHash)
-{
+TEST(TokenUnitTest, RandomHash) {
   // Sampled using: SELECT token(key) FROM sometable;
   EXPECT_EQ(to_string(RandomPartitioner::hash("a")), "16955237001963240173058271559858726497");
   EXPECT_EQ(to_string(RandomPartitioner::hash("b")), "144992942750327304334463589818972416113");
@@ -361,10 +356,11 @@ TEST(TokenUnitTest, RandomHash)
   EXPECT_EQ(to_string(RandomPartitioner::hash("xyz")), "61893731502141497228477852773302439842");
 }
 
-TEST(TokenUnitTest, RandomFromString)
-{
+TEST(TokenUnitTest, RandomFromString) {
   EXPECT_EQ(to_string(RandomPartitioner::from_string("0")), "0");
   EXPECT_EQ(to_string(RandomPartitioner::from_string("1")), "1");
-  EXPECT_EQ(to_string(RandomPartitioner::from_string("170141183460469231731687303715884105727")), "170141183460469231731687303715884105727");
-  EXPECT_EQ(to_string(RandomPartitioner::from_string("170141183460469231731687303715884105728")), "170141183460469231731687303715884105728");
+  EXPECT_EQ(to_string(RandomPartitioner::from_string("170141183460469231731687303715884105727")),
+            "170141183460469231731687303715884105727");
+  EXPECT_EQ(to_string(RandomPartitioner::from_string("170141183460469231731687303715884105728")),
+            "170141183460469231731687303715884105728");
 }

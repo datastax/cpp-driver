@@ -7,46 +7,46 @@
 
 #include "dse_integration.hpp"
 
-#define GRAPH_CREATE \
+#define GRAPH_CREATE                                                       \
   "system.graph(name).option('graph.replication_config').set(replication)" \
-  ".option('graph.system_replication_config').set(replication)" \
-  ".option('graph.traversal_sources.g.evaluation_timeout').set(duration)" \
+  ".option('graph.system_replication_config').set(replication)"            \
+  ".option('graph.traversal_sources.g.evaluation_timeout').set(duration)"  \
   ".ifNotExists().create();"
 
-#define GRAPH_ALLOW_SCANS \
-  "schema.config().option('graph.allow_scan').set('true')"
+#define GRAPH_ALLOW_SCANS "schema.config().option('graph.allow_scan').set('true')"
 
-#define GRAPH_ENABLE_STRICT \
-  "schema.config().option('graph.schema_mode').set('production')"
+#define GRAPH_ENABLE_STRICT "schema.config().option('graph.schema_mode').set('production')"
 
-#define GRAPH_SCHEMA \
-  "schema.propertyKey('name').Text().ifNotExists().create();" \
-  "schema.propertyKey('age').Int().ifNotExists().create();" \
-  "schema.propertyKey('lang').Text().ifNotExists().create();" \
-  "schema.propertyKey('weight').Float().ifNotExists().create();" \
-  "schema.vertexLabel('person').properties('name', 'age').ifNotExists().create();" \
+#define GRAPH_SCHEMA                                                                  \
+  "schema.propertyKey('name').Text().ifNotExists().create();"                         \
+  "schema.propertyKey('age').Int().ifNotExists().create();"                           \
+  "schema.propertyKey('lang').Text().ifNotExists().create();"                         \
+  "schema.propertyKey('weight').Float().ifNotExists().create();"                      \
+  "schema.vertexLabel('person').properties('name', 'age').ifNotExists().create();"    \
   "schema.vertexLabel('software').properties('name', 'lang').ifNotExists().create();" \
-  "schema.edgeLabel('created').properties('weight').connection('person', 'software').ifNotExists().create();" \
-  "schema.edgeLabel('created').connection('software', 'software').add();" \
-  "schema.edgeLabel('knows').properties('weight').connection('person', 'person').ifNotExists().create();"
+  "schema.edgeLabel('created').properties('weight').connection('person', "            \
+  "'software').ifNotExists().create();"                                               \
+  "schema.edgeLabel('created').connection('software', 'software').add();"             \
+  "schema.edgeLabel('knows').properties('weight').connection('person', "              \
+  "'person').ifNotExists().create();"
 
-#define GRAPH_DATA \
-  "Vertex marko = graph.addVertex(label, 'person', 'name', 'marko', 'age', 29);" \
-  "Vertex vadas = graph.addVertex(label, 'person', 'name', 'vadas', 'age', 27);" \
-  "Vertex lop = graph.addVertex(label, 'software', 'name', 'lop', 'lang', 'java');" \
-  "Vertex josh = graph.addVertex(label, 'person', 'name', 'josh', 'age', 32);" \
+#define GRAPH_DATA                                                                        \
+  "Vertex marko = graph.addVertex(label, 'person', 'name', 'marko', 'age', 29);"          \
+  "Vertex vadas = graph.addVertex(label, 'person', 'name', 'vadas', 'age', 27);"          \
+  "Vertex lop = graph.addVertex(label, 'software', 'name', 'lop', 'lang', 'java');"       \
+  "Vertex josh = graph.addVertex(label, 'person', 'name', 'josh', 'age', 32);"            \
   "Vertex ripple = graph.addVertex(label, 'software', 'name', 'ripple', 'lang', 'java');" \
-  "Vertex peter = graph.addVertex(label, 'person', 'name', 'peter', 'age', 35);" \
-  "marko.addEdge('knows', vadas, 'weight', 0.5f);" \
-  "marko.addEdge('knows', josh, 'weight', 1.0f);" \
-  "marko.addEdge('created', lop, 'weight', 0.4f);" \
-  "josh.addEdge('created', ripple, 'weight', 1.0f);" \
-  "josh.addEdge('created', lop, 'weight', 0.4f);" \
+  "Vertex peter = graph.addVertex(label, 'person', 'name', 'peter', 'age', 35);"          \
+  "marko.addEdge('knows', vadas, 'weight', 0.5f);"                                        \
+  "marko.addEdge('knows', josh, 'weight', 1.0f);"                                         \
+  "marko.addEdge('created', lop, 'weight', 0.4f);"                                        \
+  "josh.addEdge('created', ripple, 'weight', 1.0f);"                                      \
+  "josh.addEdge('created', lop, 'weight', 0.4f);"                                         \
   "peter.addEdge('created', lop, 'weight', 0.2f);"
 
 DseIntegration::DseIntegration()
-  : Integration()
-  , dse_session_() {}
+    : Integration()
+    , dse_session_() {}
 
 void DseIntegration::SetUp() {
   // Call the parent setup class
@@ -71,14 +71,14 @@ void DseIntegration::connect() {
 
 Cluster DseIntegration::default_cluster() {
   return dse::Cluster::build()
-    .with_contact_points(contact_points_)
-    .with_randomized_contact_points(is_randomized_contact_points_)
-    .with_schema_metadata(is_schema_metadata_);
+      .with_contact_points(contact_points_)
+      .with_randomized_contact_points(is_randomized_contact_points_)
+      .with_schema_metadata(is_schema_metadata_);
 }
 
 void DseIntegration::create_graph(const std::string& graph_name,
-  const std::string& replication_strategy,
-  const std::string& duration) {
+                                  const std::string& replication_strategy,
+                                  const std::string& duration) {
   // Create the graph statement using the pre-determined replication config
   dse::GraphObject graph_object;
   graph_object.add<std::string>("name", graph_name);

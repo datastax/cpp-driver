@@ -17,19 +17,18 @@
 #ifndef DATASTAX_INTERNAL_BLACKLIST_DC_POLICY_HPP
 #define DATASTAX_INTERNAL_BLACKLIST_DC_POLICY_HPP
 
-#include "load_balancing.hpp"
 #include "host.hpp"
-#include "scoped_ptr.hpp"
 #include "list_policy.hpp"
+#include "load_balancing.hpp"
+#include "scoped_ptr.hpp"
 
 namespace datastax { namespace internal { namespace core {
 
 class BlacklistDCPolicy : public ListPolicy {
 public:
-  BlacklistDCPolicy(LoadBalancingPolicy* child_policy,
-                    const DcList& dcs)
-    : ListPolicy(child_policy)
-    , dcs_(dcs) {}
+  BlacklistDCPolicy(LoadBalancingPolicy* child_policy, const DcList& dcs)
+      : ListPolicy(child_policy)
+      , dcs_(dcs) {}
 
   virtual ~BlacklistDCPolicy() {}
 
@@ -46,6 +45,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(BlacklistDCPolicy);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

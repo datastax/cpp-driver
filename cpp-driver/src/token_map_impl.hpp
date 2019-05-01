@@ -32,18 +32,19 @@
 #include "value.hpp"
 #include "vector.hpp"
 
-#include <assert.h>
 #include <algorithm>
+#include <assert.h>
 #include <uv.h>
 
 #define CASS_NETWORK_TOPOLOGY_STRATEGY "NetworkTopologyStrategy"
-#define CASS_SIMPLE_STRATEGY           "SimpleStrategy"
+#define CASS_SIMPLE_STRATEGY "SimpleStrategy"
 
 namespace std {
 
-template<>
+template <>
 struct equal_to<datastax::internal::core::Host::Ptr> {
-  bool operator()(const datastax::internal::core::Host::Ptr& lhs, const datastax::internal::core::Host::Ptr& rhs) const {
+  bool operator()(const datastax::internal::core::Host::Ptr& lhs,
+                  const datastax::internal::core::Host::Ptr& rhs) const {
     if (lhs == rhs) {
       return true;
     }
@@ -73,9 +74,7 @@ public:
   static const uint32_t EMPTY_KEY;
   static const uint32_t DELETED_KEY;
 
-  IdGenerator() {
-    ids_.set_empty_key(String());
-  }
+  IdGenerator() { ids_.set_empty_key(String()); }
 
   uint32_t get(const String& key) {
     if (key.empty()) {
@@ -115,9 +114,7 @@ struct RandomPartitioner {
       return hi == other.hi ? lo < other.lo : hi < other.hi;
     }
 
-    bool operator==(const Token& other) const {
-      return hi == other.hi && lo == other.lo;
-    }
+    bool operator==(const Token& other) const { return hi == other.hi && lo == other.lo; }
   };
 
   static Token abs(Token token);
@@ -155,7 +152,7 @@ public:
 
 struct Datacenter {
   Datacenter()
-    : num_nodes(0) { }
+      : num_nodes(0) {}
   size_t num_nodes;
   RackSet racks;
 };
@@ -170,7 +167,7 @@ public:
 
 struct ReplicationFactor {
   ReplicationFactor()
-    : count(0) { }
+      : count(0) {}
   size_t count;
   String name; // Used for logging the datacenter name
   bool operator==(const ReplicationFactor& other) const {
@@ -180,8 +177,7 @@ struct ReplicationFactor {
 
 inline void build_datacenters(const HostSet& hosts, DatacenterMap& result) {
   result.clear();
-  for (HostSet::const_iterator i = hosts.begin(), end = hosts.end();
-       i != end; ++i) {
+  for (HostSet::const_iterator i = hosts.begin(), end = hosts.end(); i != end; ++i) {
     uint32_t dc = (*i)->dc_id();
     uint32_t rack = (*i)->rack_id();
     if (dc != 0 && rack != 0) {
@@ -194,9 +190,7 @@ inline void build_datacenters(const HostSet& hosts, DatacenterMap& result) {
 
 class ReplicationFactorMap : public DenseHashMap<uint32_t, ReplicationFactor> {
 public:
-  ReplicationFactorMap() {
-    set_empty_key(IdGenerator::EMPTY_KEY);
-  }
+  ReplicationFactorMap() { set_empty_key(IdGenerator::EMPTY_KEY); }
 };
 
 template <class Partitioner>
@@ -214,9 +208,9 @@ public:
 
   struct DatacenterRackInfo {
     DatacenterRackInfo()
-      : replica_count(0)
-      , replication_factor(0)
-      , rack_count(0) { }
+        : replica_count(0)
+        , replication_factor(0)
+        , rack_count(0) {}
     size_t replica_count;
     size_t replication_factor;
     RackSet racks_observed;
@@ -226,27 +220,20 @@ public:
 
   class DatacenterRackInfoMap : public DenseHashMap<uint32_t, DatacenterRackInfo> {
   public:
-    DatacenterRackInfoMap () {
+    DatacenterRackInfoMap() {
       DenseHashMap<uint32_t, DatacenterRackInfo>::set_empty_key(IdGenerator::EMPTY_KEY);
     }
   };
 
-  enum Type {
-    NETWORK_TOPOLOGY_STRATEGY,
-    SIMPLE_STRATEGY,
-    NON_REPLICATED
-  };
+  enum Type { NETWORK_TOPOLOGY_STRATEGY, SIMPLE_STRATEGY, NON_REPLICATED };
 
   ReplicationStrategy()
-    : type_(NON_REPLICATED) { }
+      : type_(NON_REPLICATED) {}
 
-  void init(IdGenerator& dc_ids,
-            const VersionNumber& cassandra_version,
-            const Row* row);
+  void init(IdGenerator& dc_ids, const VersionNumber& cassandra_version, const Row* row);
 
   bool operator!=(const ReplicationStrategy& other) const {
-    return type_ != other.type_ ||
-                    replication_factors_ != other.replication_factors_;
+    return type_ != other.type_ || replication_factors_ != other.replication_factors_;
   }
 
   void build_replicas(const TokenHostVec& tokens, const DatacenterMap& datacenters,
@@ -256,7 +243,7 @@ private:
   void build_replicas_network_topology(const TokenHostVec& tokens, const DatacenterMap& datacenters,
                                        TokenReplicasVec& result) const;
   void build_replicas_simple(const TokenHostVec& tokens, const DatacenterMap& datacenters,
-                             TokenReplicasVec& result) const ;
+                             TokenReplicasVec& result) const;
   void build_replicas_non_replicated(const TokenHostVec& tokens, const DatacenterMap& datacenters,
                                      TokenReplicasVec& result) const;
 
@@ -273,8 +260,7 @@ void ReplicationStrategy<Partitioner>::init(IdGenerator& dc_ids,
 
   if (cassandra_version >= VersionNumber(3, 0, 0)) {
     const Value* value = row->get_by_name("replication");
-    if (value &&  value->is_map() &&
-        is_string_type(value->primary_value_type()) &&
+    if (value && value->is_map() && is_string_type(value->primary_value_type()) &&
         is_string_type(value->secondary_value_type())) {
       MapIterator iterator(value);
       while (iterator.next()) {
@@ -288,7 +274,7 @@ void ReplicationStrategy<Partitioner>::init(IdGenerator& dc_ids,
             ReplicationFactor replication_factor;
             replication_factor.count = count;
             replication_factor.name = key;
-            if (key == "replication_factor"){
+            if (key == "replication_factor") {
               replication_factors_[1] = replication_factor;
             } else {
               replication_factors_[dc_ids.get(key)] = replication_factor;
@@ -341,7 +327,8 @@ void ReplicationStrategy<Partitioner>::init(IdGenerator& dc_ids,
 }
 
 template <class Partitioner>
-void ReplicationStrategy<Partitioner>::build_replicas(const TokenHostVec& tokens, const DatacenterMap& datacenters,
+void ReplicationStrategy<Partitioner>::build_replicas(const TokenHostVec& tokens,
+                                                      const DatacenterMap& datacenters,
                                                       TokenReplicasVec& result) const {
   result.clear();
   result.reserve(tokens.size());
@@ -360,8 +347,8 @@ void ReplicationStrategy<Partitioner>::build_replicas(const TokenHostVec& tokens
 }
 
 template <class Partitioner>
-void ReplicationStrategy<Partitioner>::build_replicas_network_topology(const TokenHostVec& tokens, const DatacenterMap& datacenters,
-                                                                       TokenReplicasVec& result) const {
+void ReplicationStrategy<Partitioner>::build_replicas_network_topology(
+    const TokenHostVec& tokens, const DatacenterMap& datacenters, TokenReplicasVec& result) const {
   if (replication_factors_.empty()) {
     return;
   }
@@ -376,7 +363,8 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(const Tok
   // for a datacenter that doesn't exist or has no node then it will not
   // be counted.
   for (ReplicationFactorMap::const_iterator i = replication_factors_.begin(),
-       end = replication_factors_.end(); i != end; ++i) {
+                                            end = replication_factors_.end();
+       i != end; ++i) {
     DatacenterMap::const_iterator j = datacenters.find(i->first);
     // Don't include datacenters that don't exist
     if (j != datacenters.end()) {
@@ -388,7 +376,8 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(const Tok
       dc_rack_info.rack_count = j->second.racks.size();
       dc_racks[j->first] = dc_rack_info;
     } else {
-      LOG_WARN("No nodes in datacenter '%s'. Check your replication strategies.", i->second.name.c_str());
+      LOG_WARN("No nodes in datacenter '%s'. Check your replication strategies.",
+               i->second.name.c_str());
     }
   }
 
@@ -396,8 +385,8 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(const Tok
     return;
   }
 
-  for (typename TokenHostVec::const_iterator i = tokens.begin(),
-       end = tokens.end(); i != end; ++i) {
+  for (typename TokenHostVec::const_iterator i = tokens.begin(), end = tokens.end(); i != end;
+       ++i) {
     Token token = i->first;
     typename TokenHostVec::const_iterator token_it = i;
 
@@ -405,16 +394,16 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(const Tok
     replicas->reserve(num_replicas);
 
     // Clear datacenter and rack information for the next token
-    for (typename DatacenterRackInfoMap::iterator j = dc_racks.begin(),
-         end = dc_racks.end(); j != end; ++j) {
+    for (typename DatacenterRackInfoMap::iterator j = dc_racks.begin(), end = dc_racks.end();
+         j != end; ++j) {
       j->second.replica_count = 0;
       j->second.racks_observed.clear();
       j->second.skipped_endpoints.clear();
     }
 
-    for (typename TokenHostVec::const_iterator j = tokens.begin(),
-         end = tokens.end(); j != end && replicas->size() < num_replicas; ++j) {
-      typename TokenHostVec::const_iterator  curr_token_it = token_it;
+    for (typename TokenHostVec::const_iterator j = tokens.begin(), end = tokens.end();
+         j != end && replicas->size() < num_replicas; ++j) {
+      typename TokenHostVec::const_iterator curr_token_it = token_it;
       Host* host = curr_token_it->second;
       uint32_t dc = host->dc_id();
       uint32_t rack = host->rack_id();
@@ -459,7 +448,8 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(const Tok
           // Once we visited every rack in the current datacenter then starting considering
           // hosts we've already skipped.
           if (racks_observed_this_dc.size() == rack_count_this_dc) {
-            while (!skipped_endpoints_this_dc.empty() && replica_count_this_dc < replication_factor) {
+            while (!skipped_endpoints_this_dc.empty() &&
+                   replica_count_this_dc < replication_factor) {
               ++replica_count_this_dc;
               replicas->push_back(Host::Ptr(skipped_endpoints_this_dc.front()->second));
               skipped_endpoints_this_dc.pop_front();
@@ -474,15 +464,16 @@ void ReplicationStrategy<Partitioner>::build_replicas_network_topology(const Tok
 }
 
 template <class Partitioner>
-void ReplicationStrategy<Partitioner>::build_replicas_simple(const TokenHostVec& tokens, const DatacenterMap& not_used,
+void ReplicationStrategy<Partitioner>::build_replicas_simple(const TokenHostVec& tokens,
+                                                             const DatacenterMap& not_used,
                                                              TokenReplicasVec& result) const {
   ReplicationFactorMap::const_iterator it = replication_factors_.find(1);
   if (it == replication_factors_.end()) {
     return;
   }
   size_t num_replicas = std::min<size_t>(it->second.count, tokens.size());
-  for (typename TokenHostVec::const_iterator i = tokens.begin(),
-       end = tokens.end(); i != end; ++i) {
+  for (typename TokenHostVec::const_iterator i = tokens.begin(), end = tokens.end(); i != end;
+       ++i) {
     CopyOnWriteHostVec replicas(new HostVec());
     typename TokenHostVec::const_iterator token_it = i;
     do {
@@ -497,8 +488,8 @@ void ReplicationStrategy<Partitioner>::build_replicas_simple(const TokenHostVec&
 }
 
 template <class Partitioner>
-void ReplicationStrategy<Partitioner>::build_replicas_non_replicated(const TokenHostVec& tokens, const DatacenterMap& not_used,
-                                                                     TokenReplicasVec& result) const {
+void ReplicationStrategy<Partitioner>::build_replicas_non_replicated(
+    const TokenHostVec& tokens, const DatacenterMap& not_used, TokenReplicasVec& result) const {
   for (typename TokenHostVec::const_iterator i = tokens.begin(); i != tokens.end(); ++i) {
     CopyOnWriteHostVec replicas(new HostVec(1, Host::Ptr(i->second)));
     result.push_back(TokenReplicas(i->first, replicas));
@@ -521,7 +512,7 @@ public:
 
   struct RemoveTokenHostIf {
     RemoveTokenHostIf(const Host::Ptr& host)
-      : host(host) { }
+        : host(host) {}
 
     bool operator()(const TokenHost& token) const {
       if (!token.second) {
@@ -543,10 +534,10 @@ public:
   };
 
   typedef DenseHashMap<String, TokenReplicasVec> KeyspaceReplicaMap;
-  typedef DenseHashMap<String, ReplicationStrategy<Partitioner> > KeyspaceStrategyMap;
+  typedef DenseHashMap<String, ReplicationStrategy<Partitioner>> KeyspaceStrategyMap;
 
   TokenMapImpl()
-    : no_replicas_dummy_(NULL) {
+      : no_replicas_dummy_(NULL) {
     replicas_.set_empty_key(String());
     replicas_.set_deleted_key(String(1, '\0'));
     strategies_.set_empty_key(String());
@@ -554,20 +545,21 @@ public:
   }
 
   TokenMapImpl(const TokenMapImpl& other)
-    : tokens_(other.tokens_)
-    , hosts_(other.hosts_)
-    , replicas_(other.replicas_)
-    , strategies_(other.strategies_)
-    , rack_ids_(other.rack_ids_)
-    , dc_ids_(other.dc_ids_)
-    , no_replicas_dummy_(NULL) { }
+      : tokens_(other.tokens_)
+      , hosts_(other.hosts_)
+      , replicas_(other.replicas_)
+      , strategies_(other.strategies_)
+      , rack_ids_(other.rack_ids_)
+      , dc_ids_(other.dc_ids_)
+      , no_replicas_dummy_(NULL) {}
 
   virtual void add_host(const Host::Ptr& host);
   virtual void update_host_and_build(const Host::Ptr& host);
   virtual void remove_host_and_build(const Host::Ptr& host);
 
   virtual void add_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result);
-  virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, const ResultResponse* result);
+  virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version,
+                                          const ResultResponse* result);
   virtual void drop_keyspace(const String& keyspace_name);
 
   virtual void build();
@@ -579,16 +571,15 @@ public:
 
   // Test only
   bool contains(const Token& token) const {
-    for (typename TokenHostVec::const_iterator i = tokens_.begin(),
-         end = tokens_.end(); i != end; ++i) {
+    for (typename TokenHostVec::const_iterator i = tokens_.begin(), end = tokens_.end(); i != end;
+         ++i) {
       if (token == i->first) return true;
     }
     return false;
   }
 
 private:
-  void update_keyspace(const VersionNumber& cassandra_version,
-                       const ResultResponse* result,
+  void update_keyspace(const VersionNumber& cassandra_version, const ResultResponse* result,
                        bool should_build_replicas);
   void remove_host_tokens(const Host::Ptr& host);
   void update_host_ids(const Host::Ptr& host);
@@ -611,8 +602,7 @@ void TokenMapImpl<Partitioner>::add_host(const Host::Ptr& host) {
   hosts_.insert(host);
 
   const Vector<String>& tokens(host->tokens());
-  for (Vector<String>::const_iterator it = tokens.begin(),
-       end = tokens.end(); it != end; ++it) {
+  for (Vector<String>::const_iterator it = tokens.begin(), end = tokens.end(); it != end; ++it) {
     Token token = Partitioner::from_string(*it);
     tokens_.push_back(TokenHost(token, host.get()));
   }
@@ -628,8 +618,7 @@ void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host) {
 
   TokenHostVec new_tokens;
   const Vector<String>& tokens(host->tokens());
-  for (Vector<String>::const_iterator it = tokens.begin(),
-       end = tokens.end(); it != end; ++it) {
+  for (Vector<String>::const_iterator it = tokens.begin(), end = tokens.end(); it != end; ++it) {
     Token token = Partitioner::from_string(*it);
     new_tokens.push_back(TokenHost(token, host.get()));
   }
@@ -637,17 +626,15 @@ void TokenMapImpl<Partitioner>::update_host_and_build(const Host::Ptr& host) {
   std::sort(new_tokens.begin(), new_tokens.end());
 
   TokenHostVec merged(tokens_.size() + new_tokens.size());
-  std::merge(tokens_.begin(), tokens_.end(),
-             new_tokens.begin(), new_tokens.end(),
-             merged.begin(), TokenHostCompare());
+  std::merge(tokens_.begin(), tokens_.end(), new_tokens.begin(), new_tokens.end(), merged.begin(),
+             TokenHostCompare());
   tokens_ = merged;
 
   build_replicas();
-  LOG_DEBUG("Updated token map with host %s (%u tokens). Rebuilt token map with %u hosts and %u tokens in %f ms",
-            host->address_string().c_str(),
-            (unsigned int)new_tokens.size(),
-            (unsigned int)hosts_.size(),
-            (unsigned int)tokens_.size(),
+  LOG_DEBUG("Updated token map with host %s (%u tokens). Rebuilt token map with %u hosts and %u "
+            "tokens in %f ms",
+            host->address_string().c_str(), (unsigned int)new_tokens.size(),
+            (unsigned int)hosts_.size(), (unsigned int)tokens_.size(),
             (double)(uv_hrtime() - start) / (1000.0 * 1000.0));
 }
 
@@ -658,11 +645,10 @@ void TokenMapImpl<Partitioner>::remove_host_and_build(const Host::Ptr& host) {
   remove_host_tokens(host);
   hosts_.erase(host);
   build_replicas();
-  LOG_DEBUG("Removed host %s from token map. Rebuilt token map with %u hosts and %u tokens in %f ms",
-            host->address_string().c_str(),
-            (unsigned int)hosts_.size(),
-            (unsigned int)tokens_.size(),
-            (double)(uv_hrtime() - start) / (1000.0 * 1000.0));
+  LOG_DEBUG(
+      "Removed host %s from token map. Rebuilt token map with %u hosts and %u tokens in %f ms",
+      host->address_string().c_str(), (unsigned int)hosts_.size(), (unsigned int)tokens_.size(),
+      (double)(uv_hrtime() - start) / (1000.0 * 1000.0));
 }
 
 template <class Partitioner>
@@ -688,13 +674,11 @@ void TokenMapImpl<Partitioner>::build() {
   uint64_t start = uv_hrtime();
   std::sort(tokens_.begin(), tokens_.end());
   build_replicas();
-  LOG_DEBUG("Built token map with %u hosts and %u tokens in %f ms",
-            (unsigned int)hosts_.size(),
-            (unsigned int)tokens_.size(),
-            (double)(uv_hrtime() - start) / (1000.0 * 1000.0));
+  LOG_DEBUG("Built token map with %u hosts and %u tokens in %f ms", (unsigned int)hosts_.size(),
+            (unsigned int)tokens_.size(), (double)(uv_hrtime() - start) / (1000.0 * 1000.0));
 }
 
-template<class Partitioner>
+template <class Partitioner>
 TokenMap::Ptr TokenMapImpl<Partitioner>::copy() const {
   return Ptr(new TokenMapImpl<Partitioner>(*this));
 }
@@ -707,9 +691,9 @@ const CopyOnWriteHostVec& TokenMapImpl<Partitioner>::get_replicas(const String& 
   if (ks_it != replicas_.end()) {
     Token token = Partitioner::hash(routing_key);
     const TokenReplicasVec& replicas = ks_it->second;
-    typename TokenReplicasVec::const_iterator replicas_it = std::upper_bound(replicas.begin(), replicas.end(),
-                                                                             TokenReplicas(token, no_replicas_dummy_),
-                                                                             TokenReplicasCompare());
+    typename TokenReplicasVec::const_iterator replicas_it =
+        std::upper_bound(replicas.begin(), replicas.end(), TokenReplicas(token, no_replicas_dummy_),
+                         TokenReplicasCompare());
     if (replicas_it != replicas.end()) {
       return replicas_it->second;
     } else if (!replicas.empty()) {
@@ -750,10 +734,9 @@ void TokenMapImpl<Partitioner>::update_keyspace(const VersionNumber& cassandra_v
         uint64_t start = uv_hrtime();
         build_datacenters(hosts_, datacenters_);
         strategy.build_replicas(tokens_, datacenters_, replicas_[keyspace_name]);
-        LOG_DEBUG("Updated token map with keyspace '%s'. Rebuilt token map with %u hosts and %u tokens in %f ms",
-                  keyspace_name.c_str(),
-                  (unsigned int)hosts_.size(),
-                  (unsigned int)tokens_.size(),
+        LOG_DEBUG("Updated token map with keyspace '%s'. Rebuilt token map with %u hosts and %u "
+                  "tokens in %f ms",
+                  keyspace_name.c_str(), (unsigned int)hosts_.size(), (unsigned int)tokens_.size(),
                   (double)(uv_hrtime() - start) / (1000.0 * 1000.0));
       }
     }
@@ -762,9 +745,8 @@ void TokenMapImpl<Partitioner>::update_keyspace(const VersionNumber& cassandra_v
 
 template <class Partitioner>
 void TokenMapImpl<Partitioner>::remove_host_tokens(const Host::Ptr& host) {
-  typename TokenHostVec::iterator last = std::remove_copy_if(tokens_.begin(), tokens_.end(),
-                                                             tokens_.begin(),
-                                                             RemoveTokenHostIf(host));
+  typename TokenHostVec::iterator last =
+      std::remove_copy_if(tokens_.begin(), tokens_.end(), tokens_.begin(), RemoveTokenHostIf(host));
   tokens_.resize(last - tokens_.begin());
 }
 
@@ -777,7 +759,7 @@ template <class Partitioner>
 void TokenMapImpl<Partitioner>::build_replicas() {
   build_datacenters(hosts_, datacenters_);
   for (typename KeyspaceStrategyMap::const_iterator i = strategies_.begin(),
-       end = strategies_.end();
+                                                    end = strategies_.end();
        i != end; ++i) {
     const String& keyspace_name = i->first;
     const ReplicationStrategy<Partitioner>& strategy = i->second;
@@ -785,6 +767,6 @@ void TokenMapImpl<Partitioner>::build_replicas() {
   }
 }
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

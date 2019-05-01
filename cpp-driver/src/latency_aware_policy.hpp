@@ -29,11 +29,11 @@ class LatencyAwarePolicy : public ChainedLoadBalancingPolicy {
 public:
   struct Settings {
     Settings()
-      : exclusion_threshold(2.0)
-      , scale_ns(100LL * 1000LL * 1000LL)
-      , retry_period_ns(10LL * 1000LL * 1000LL * 1000LL)
-      , update_rate_ms(100LL)
-      , min_measured(50LL) {}
+        : exclusion_threshold(2.0)
+        , scale_ns(100LL * 1000LL * 1000LL)
+        , retry_period_ns(10LL * 1000LL * 1000LL * 1000LL)
+        , update_rate_ms(100LL)
+        , min_measured(50LL) {}
 
     double exclusion_threshold;
     uint64_t scale_ns;
@@ -43,10 +43,10 @@ public:
   };
 
   LatencyAwarePolicy(LoadBalancingPolicy* child_policy, const Settings& settings)
-    : ChainedLoadBalancingPolicy(child_policy)
-    , min_average_(-1)
-    , settings_(settings)
-    , hosts_(new HostVec()) {}
+      : ChainedLoadBalancingPolicy(child_policy)
+      , min_average_(-1)
+      , settings_(settings)
+      , hosts_(new HostVec()) {}
 
   virtual ~LatencyAwarePolicy() {}
 
@@ -55,8 +55,7 @@ public:
   virtual void register_handles(uv_loop_t* loop);
   virtual void close_handles();
 
-  virtual QueryPlan* new_query_plan(const String& keyspace,
-                                    RequestHandler* request_handler,
+  virtual QueryPlan* new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
   virtual LoadBalancingPolicy* new_instance() {
@@ -68,9 +67,7 @@ public:
 
 public:
   // Testing only
-  int64_t min_average() const {
-    return min_average_.load();
-  }
+  int64_t min_average() const { return min_average_.load(); }
 
 private:
   void start_timer(uv_loop_t* loop);
@@ -79,9 +76,9 @@ private:
   class LatencyAwareQueryPlan : public QueryPlan {
   public:
     LatencyAwareQueryPlan(LatencyAwarePolicy* policy, QueryPlan* child_plan)
-      : policy_(policy)
-      , child_plan_(child_plan)
-      , skipped_index_(0) {}
+        : policy_(policy)
+        , child_plan_(child_plan)
+        , skipped_index_(0) {}
 
     Host::Ptr compute_next();
 
@@ -104,6 +101,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(LatencyAwarePolicy);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

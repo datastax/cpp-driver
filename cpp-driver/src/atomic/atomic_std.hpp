@@ -34,7 +34,8 @@ template <class T>
 class Atomic {
 public:
   Atomic() {}
-  explicit Atomic(T value) : value_(value) {}
+  explicit Atomic(T value)
+      : value_(value) {}
 
   inline void store(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) {
     value_.store(value, static_cast<std::memory_order>(order));
@@ -56,11 +57,13 @@ public:
     return value_.exchange(value, static_cast<std::memory_order>(order));
   }
 
-  inline bool compare_exchange_strong(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) {
+  inline bool compare_exchange_strong(T& expected, T desired,
+                                      MemoryOrder order = MEMORY_ORDER_SEQ_CST) {
     return value_.compare_exchange_strong(expected, desired, static_cast<std::memory_order>(order));
   }
 
-  inline bool compare_exchange_weak(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) {
+  inline bool compare_exchange_weak(T& expected, T desired,
+                                    MemoryOrder order = MEMORY_ORDER_SEQ_CST) {
     return value_.compare_exchange_weak(expected, desired, static_cast<std::memory_order>(order));
   }
 
@@ -72,6 +75,6 @@ inline void atomic_thread_fence(MemoryOrder order) {
   std::atomic_thread_fence(static_cast<std::memory_order>(order));
 }
 
-} } // namespace datastax::internal
+}} // namespace datastax::internal
 
 #endif

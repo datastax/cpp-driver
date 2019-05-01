@@ -16,8 +16,8 @@
 
 #include "loop_test.hpp"
 
-#include "control_connector.hpp"
 #include "constants.hpp"
+#include "control_connector.hpp"
 
 #ifdef WIN32
 #undef STATUS_TIMEOUT
@@ -55,8 +55,10 @@ struct RecordedEvent {
     NODE_REMOVED
   };
 
-  RecordedEvent() : type(INVALID) { }
-  RecordedEvent(Type type) : type(type) { }
+  RecordedEvent()
+      : type(INVALID) {}
+  RecordedEvent(Type type)
+      : type(type) {}
 
   Type type;
   ResultResponse::Ptr result;
@@ -69,14 +71,13 @@ static RecordedEvent invalid_event__;
 
 typedef Vector<RecordedEvent> RecordedEventVec;
 
-class RecordingControlConnectionListener
-    : public ControlConnectionListener {
+class RecordingControlConnectionListener : public ControlConnectionListener {
 public:
   const RecordedEventVec& events() const { return events_; }
 
   const RecordedEvent& find_event(RecordedEvent::Type type) {
-    for (RecordedEventVec::const_iterator it = events().begin(),
-         end = events().end(); it != end; ++it) {
+    for (RecordedEventVec::const_iterator it = events().begin(), end = events().end(); it != end;
+         ++it) {
       if (it->type == type) {
         return *it;
       }
@@ -85,20 +86,34 @@ public:
   }
 
 protected:
-  virtual void on_update_schema(SchemaType type,
-                                const ResultResponse::Ptr& result,
-                                const String& keyspace_name,
-                                const String& target_name) {
+  virtual void on_update_schema(SchemaType type, const ResultResponse::Ptr& result,
+                                const String& keyspace_name, const String& target_name) {
     RecordedEvent event;
     switch (type) {
-      case KEYSPACE: event.type = RecordedEvent::KEYSPACE_UPDATED; break;
-      case TABLE: event.type = RecordedEvent::TABLE_UPDATED; break;
-      case VIEW: event.type = RecordedEvent::VIEW_UPDATED; break;
-      case COLUMN: event.type = RecordedEvent::COLUMN_UPDATED; break;
-      case INDEX: event.type = RecordedEvent::INDEX_UPDATED; break;
-      case USER_TYPE: event.type = RecordedEvent::USER_TYPE_UPDATED; break;
-      case FUNCTION: event.type = RecordedEvent::FUNCTION_UPDATED; break;
-      case AGGREGATE: event.type = RecordedEvent::AGGREGATE_UPDATED; break;
+      case KEYSPACE:
+        event.type = RecordedEvent::KEYSPACE_UPDATED;
+        break;
+      case TABLE:
+        event.type = RecordedEvent::TABLE_UPDATED;
+        break;
+      case VIEW:
+        event.type = RecordedEvent::VIEW_UPDATED;
+        break;
+      case COLUMN:
+        event.type = RecordedEvent::COLUMN_UPDATED;
+        break;
+      case INDEX:
+        event.type = RecordedEvent::INDEX_UPDATED;
+        break;
+      case USER_TYPE:
+        event.type = RecordedEvent::USER_TYPE_UPDATED;
+        break;
+      case FUNCTION:
+        event.type = RecordedEvent::FUNCTION_UPDATED;
+        break;
+      case AGGREGATE:
+        event.type = RecordedEvent::AGGREGATE_UPDATED;
+        break;
     }
     event.result = result;
     event.keyspace_name = keyspace_name;
@@ -106,19 +121,34 @@ protected:
     events_.push_back(event);
   }
 
-  virtual void on_drop_schema(SchemaType type,
-                              const String& keyspace_name,
+  virtual void on_drop_schema(SchemaType type, const String& keyspace_name,
                               const String& target_name) {
     RecordedEvent event;
     switch (type) {
-      case KEYSPACE: event.type = RecordedEvent::KEYSPACE_DROPPED; break;
-      case TABLE: event.type = RecordedEvent::TABLE_DROPPED; break;
-      case VIEW: event.type = RecordedEvent::VIEW_DROPPED; break;
-      case COLUMN: event.type = RecordedEvent::COLUMN_DROPPED; break;
-      case INDEX: event.type = RecordedEvent::INDEX_DROPPED; break;
-      case USER_TYPE: event.type = RecordedEvent::USER_TYPE_DROPPED; break;
-      case FUNCTION: event.type = RecordedEvent::FUNCTION_DROPPED; break;
-      case AGGREGATE: event.type = RecordedEvent::AGGREGATE_DROPPED; break;
+      case KEYSPACE:
+        event.type = RecordedEvent::KEYSPACE_DROPPED;
+        break;
+      case TABLE:
+        event.type = RecordedEvent::TABLE_DROPPED;
+        break;
+      case VIEW:
+        event.type = RecordedEvent::VIEW_DROPPED;
+        break;
+      case COLUMN:
+        event.type = RecordedEvent::COLUMN_DROPPED;
+        break;
+      case INDEX:
+        event.type = RecordedEvent::INDEX_DROPPED;
+        break;
+      case USER_TYPE:
+        event.type = RecordedEvent::USER_TYPE_DROPPED;
+        break;
+      case FUNCTION:
+        event.type = RecordedEvent::FUNCTION_DROPPED;
+        break;
+      case AGGREGATE:
+        event.type = RecordedEvent::AGGREGATE_DROPPED;
+        break;
     }
     event.keyspace_name = keyspace_name;
     event.target_name = target_name;
@@ -149,7 +179,7 @@ protected:
     events_.push_back(event);
   }
 
-  virtual void on_close(ControlConnection* connection) { }
+  virtual void on_close(ControlConnection* connection) {}
 
 private:
   RecordedEventVec events_;
@@ -179,34 +209,30 @@ public:
   struct EventListener : public RecordingControlConnectionListener {
   public:
     EventListener(mockssandra::SimpleCluster* cluster)
-      : remaining_(0)
-      , cluster_(cluster) { }
+        : remaining_(0)
+        , cluster_(cluster) {}
 
-    void add_event(const mockssandra::Event::Ptr& event) {
-      events_.push_back(event);
-    }
+    void add_event(const mockssandra::Event::Ptr& event) { events_.push_back(event); }
 
     void trigger_events(const ControlConnection::Ptr& connection) {
       connection_ = connection;
       remaining_ = events_.size();
       for (Vector<mockssandra::Event::Ptr>::const_iterator it = events_.begin(),
-           end = events_.end(); it != end; ++it) {
+                                                           end = events_.end();
+           it != end; ++it) {
         cluster_->event(*it);
       }
     }
 
-    virtual void on_update_schema(SchemaType type,
-                                  const ResultResponse::Ptr& result,
-                                  const String& keyspace_name,
-                                  const String& target_name) {
-      RecordingControlConnectionListener::on_update_schema(type, result,
-                                                           keyspace_name, target_name);
+    virtual void on_update_schema(SchemaType type, const ResultResponse::Ptr& result,
+                                  const String& keyspace_name, const String& target_name) {
+      RecordingControlConnectionListener::on_update_schema(type, result, keyspace_name,
+                                                           target_name);
       if (type == COLUMN || type == INDEX) return;
       if (--remaining_ <= 0) connection_->close();
     }
 
-    virtual void on_drop_schema(SchemaType type,
-                                const String& keyspace_name,
+    virtual void on_drop_schema(SchemaType type, const String& keyspace_name,
                                 const String& target_name = "") {
       RecordingControlConnectionListener::on_drop_schema(type, keyspace_name, target_name);
       if (--remaining_ <= 0) connection_->close();
@@ -217,12 +243,12 @@ public:
       if (--remaining_ <= 0) connection_->close();
     }
 
-    virtual void on_down(const Address& address)  {
+    virtual void on_down(const Address& address) {
       RecordingControlConnectionListener::on_down(address);
       if (--remaining_ <= 0) connection_->close();
     }
 
-    virtual void on_add(const Host::Ptr& host)  {
+    virtual void on_add(const Host::Ptr& host) {
       RecordingControlConnectionListener::on_add(host);
       if (--remaining_ <= 0) connection_->close();
     }
@@ -249,9 +275,9 @@ TEST_F(ControlConnectionUnitTest, Simple) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   bool is_connected = false;
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, &is_connected)));
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, &is_connected)));
   connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
@@ -264,15 +290,14 @@ TEST_F(ControlConnectionUnitTest, Auth) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   bool is_connected = false;
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, &is_connected)));
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, &is_connected)));
   ControlConnectionSettings settings;
-  settings.connection_settings.auth_provider.reset(new PlainTextAuthProvider("cassandra", "cassandra"));
+  settings.connection_settings.auth_provider.reset(
+      new PlainTextAuthProvider("cassandra", "cassandra"));
 
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -286,12 +311,10 @@ TEST_F(ControlConnectionUnitTest, Ssl) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   bool is_connected = false;
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, &is_connected)));
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, &is_connected)));
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -307,9 +330,9 @@ TEST_F(ControlConnectionUnitTest, Close) {
 
   bool is_closed(false);
   for (size_t i = 0; i < 10; ++i) {
-    ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                         PROTOCOL_VERSION,
-                                                         bind_callback(on_connection_close, &is_closed)));
+    ControlConnector::Ptr connector(
+        new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                             bind_callback(on_connection_close, &is_closed)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -327,9 +350,9 @@ TEST_F(ControlConnectionUnitTest, Cancel) {
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
   for (size_t i = 0; i < 10; ++i) {
-    ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                         PROTOCOL_VERSION,
-                                                         bind_callback(on_connection_error_code, &error_code)));
+    ControlConnector::Ptr connector(
+        new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                             bind_callback(on_connection_error_code, &error_code)));
     connector->connect(loop());
     connectors.push_back(connector);
   }
@@ -357,12 +380,10 @@ TEST_F(ControlConnectionUnitTest, StatusChangeEvents) {
   listener.add_event(StatusChangeEvent::up(address));
   listener.add_event(StatusChangeEvent::down(address));
 
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(address)),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_event, &listener)));
-  connector
-      ->with_listener(&listener)
-      ->connect(loop());
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(address)), PROTOCOL_VERSION,
+                           bind_callback(on_connection_event, &listener)));
+  connector->with_listener(&listener)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -389,12 +410,10 @@ TEST_F(ControlConnectionUnitTest, TopologyChangeEvents) {
   listener.add_event(TopologyChangeEvent::new_node(address2));
   listener.add_event(TopologyChangeEvent::removed_node(address2));
 
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(address1)),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_event, &listener)));
-  connector
-      ->with_listener(&listener)
-      ->connect(loop());
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(address1)), PROTOCOL_VERSION,
+                           bind_callback(on_connection_event, &listener)));
+  connector->with_listener(&listener)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -426,8 +445,10 @@ TEST_F(ControlConnectionUnitTest, SchemaChangeEvents) {
   listener.add_event(SchemaChangeEvent::table(SchemaChangeEvent::UPDATED, "keyspace1", "table1"));
   listener.add_event(SchemaChangeEvent::table(SchemaChangeEvent::DROPPED, "keyspace1", "table1"));
 
-  listener.add_event(SchemaChangeEvent::user_type(SchemaChangeEvent::UPDATED, "keyspace1", "type1"));
-  listener.add_event(SchemaChangeEvent::user_type(SchemaChangeEvent::DROPPED, "keyspace1", "type1"));
+  listener.add_event(
+      SchemaChangeEvent::user_type(SchemaChangeEvent::UPDATED, "keyspace1", "type1"));
+  listener.add_event(
+      SchemaChangeEvent::user_type(SchemaChangeEvent::DROPPED, "keyspace1", "type1"));
 
   listener.add_event(SchemaChangeEvent::function(SchemaChangeEvent::UPDATED, "keyspace1",
                                                  "function1", Vector<String>(1, "int")));
@@ -439,12 +460,10 @@ TEST_F(ControlConnectionUnitTest, SchemaChangeEvents) {
   listener.add_event(SchemaChangeEvent::aggregate(SchemaChangeEvent::DROPPED, "keyspace1",
                                                   "aggregate1", Vector<String>(1, "varchar")));
 
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(address)),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_event, &listener)));
-  connector
-      ->with_listener(&listener)
-      ->connect(loop());
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(address)), PROTOCOL_VERSION,
+                           bind_callback(on_connection_event, &listener)));
+  connector->with_listener(&listener)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -522,8 +541,7 @@ TEST_F(ControlConnectionUnitTest, EventDuringStartup) {
   Address address("127.0.0.1", PORT);
 
   mockssandra::SimpleRequestHandlerBuilder builder;
-  builder
-      .on(mockssandra::OPCODE_QUERY)
+  builder.on(mockssandra::OPCODE_QUERY)
       .up_event(address) // Send UP event during startup
       .system_local()
       .system_peers()
@@ -534,12 +552,10 @@ TEST_F(ControlConnectionUnitTest, EventDuringStartup) {
   RecordingControlConnectionListener listener;
 
   bool is_connected;
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(address)),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, &is_connected)));
-  connector
-      ->with_listener(&listener)
-      ->connect(loop());
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(address)), PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, &is_connected)));
+  connector->with_listener(&listener)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -556,9 +572,10 @@ TEST_F(ControlConnectionUnitTest, InvalidProtocol) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                       0x7F, // Invalid protocol version
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
+                           0x7F, // Invalid protocol version
+                           bind_callback(on_connection_error_code, &error_code)));
   connector->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
@@ -572,16 +589,14 @@ TEST_F(ControlConnectionUnitTest, InvalidAuth) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                           bind_callback(on_connection_error_code, &error_code)));
 
   ControlConnectionSettings settings;
   settings.connection_settings.auth_provider.reset(new PlainTextAuthProvider("invalid", "invalid"));
 
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 
@@ -595,18 +610,16 @@ TEST_F(ControlConnectionUnitTest, InvalidSsl) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   ControlConnector::ControlConnectionError error_code(ControlConnector::CONTROL_CONNECTION_OK);
-  ControlConnector::Ptr connector(new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))),
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_error_code, &error_code)));
+  ControlConnector::Ptr connector(
+      new ControlConnector(Host::Ptr(new Host(Address("127.0.0.1", PORT))), PROTOCOL_VERSION,
+                           bind_callback(on_connection_error_code, &error_code)));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
   ControlConnectionSettings settings;
   settings.connection_settings.socket_settings.ssl_context = ssl_context;
 
-  connector
-      ->with_settings(settings)
-      ->connect(loop());
+  connector->with_settings(settings)->connect(loop());
 
   uv_run(loop(), UV_RUN_DEFAULT);
 

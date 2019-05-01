@@ -29,7 +29,7 @@ static char* encode_vint(char* output, uint64_t value, size_t value_size) {
 
   // Write the bytes of zigzag value to the output array with most significant byte
   // in first byte of buffer, and so on.
-  for (int j = value_size - 1 ; j >= 0 ; --j) {
+  for (int j = value_size - 1; j >= 0; --j) {
     *(output + j) = value & 0xff;
     value >>= 8;
   }
@@ -78,12 +78,8 @@ static Buffer encode_internal(CassDuration value, bool with_length) {
   return buf;
 }
 
-Buffer encode(CassDuration value) {
-  return encode_internal(value, false);
-}
+Buffer encode(CassDuration value) { return encode_internal(value, false); }
 
-Buffer encode_with_length(CassDuration value) {
-  return encode_internal(value, true);
-}
+Buffer encode_with_length(CassDuration value) { return encode_internal(value, true); }
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core

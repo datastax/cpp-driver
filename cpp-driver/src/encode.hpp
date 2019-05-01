@@ -222,6 +222,6 @@ Buffer encode(CassDuration value);
 
 Buffer encode_with_length(CassDuration value);
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

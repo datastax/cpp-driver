@@ -25,7 +25,8 @@ using namespace datastax::internal::core;
 static int64_t parse_int64(const char* p, size_t n) {
   int c;
   const char* s = p;
-  for (; n != 0 && isspace(c = *s); ++s, --n) {}
+  for (; n != 0 && isspace(c = *s); ++s, --n) {
+  }
 
   if (n == 0) {
     return 0;
@@ -34,11 +35,12 @@ static int64_t parse_int64(const char* p, size_t n) {
   int64_t sign = 1;
   if (c == '-') {
     sign = -1;
-    ++s; --n;
+    ++s;
+    --n;
   }
 
   int64_t value = 0;
-  for (; n != 0  && isdigit(c = *s); ++s, --n) {
+  for (; n != 0 && isdigit(c = *s); ++s, --n) {
     value *= 10;
     value += c - '0';
   }
@@ -51,7 +53,8 @@ static void parse_int128(const char* p, size_t n, uint64_t* h, uint64_t* l) {
   int c;
   const char* s = p;
 
-  for (; n != 0 && isspace(c = *s); ++s, --n) {}
+  for (; n != 0 && isspace(c = *s); ++s, --n) {
+  }
 
   if (n == 0) {
     *h = *l = 0;
@@ -63,18 +66,18 @@ static void parse_int128(const char* p, size_t n, uint64_t* h, uint64_t* l) {
   uint64_t hi_tmp;
   uint64_t lo_tmp;
   uint64_t lo_tmp2;
-  for (; n != 0  && isdigit(c = *s); ++s, --n) {
+  for (; n != 0 && isdigit(c = *s); ++s, --n) {
     hi_tmp = hi;
     lo_tmp = lo;
 
-    //value *= 10;
+    // value *= 10;
     lo = lo_tmp << 1;
     hi = (lo_tmp >> 63) + (hi_tmp << 1);
     lo_tmp2 = lo;
     lo += lo_tmp << 3;
     hi += (lo_tmp >> 61) + (hi_tmp << 3) + (lo < lo_tmp2 ? 1 : 0);
 
-    //value += c - '0';
+    // value += c - '0';
     lo_tmp = lo;
     lo += c - '0';
     hi += (lo < lo_tmp) ? 1 : 0;
@@ -118,7 +121,7 @@ RandomPartitioner::Token RandomPartitioner::abs(RandomPartitioner::Token token) 
     uint64_t old_lo = token.lo;
     ++token.lo;
     // Carry to "hi" if our "lo" value wrapped
-    if(token.lo < old_lo) {
+    if (token.lo < old_lo) {
       ++token.hi;
     }
   }
@@ -133,7 +136,8 @@ RandomPartitioner::Token RandomPartitioner::hash(const StringRef& str) {
   Token token;
 
   // For compatability with Cassandra we interpret the MD5 as a big-endian value:
-  // Reference: https://docs.oracle.com/javase/7/docs/api/java/math/BigInteger.html#BigInteger(byte[])
+  // Reference:
+  // https://docs.oracle.com/javase/7/docs/api/java/math/BigInteger.html#BigInteger(byte[])
   token.hi = encode(digest);
   token.lo = encode(digest + 8);
 

@@ -27,8 +27,7 @@
 using namespace datastax::internal;
 using namespace datastax::internal::core;
 
-std::vector<std::string> test::driver::internals::Utils::attempted_hosts(
-  CassFuture* future) {
+std::vector<std::string> test::driver::internals::Utils::attempted_hosts(CassFuture* future) {
   std::vector<std::string> attempted_hosts;
   if (future) {
     Future* cass_future = static_cast<Future*>(future);
@@ -36,7 +35,7 @@ std::vector<std::string> test::driver::internals::Utils::attempted_hosts(
       ResponseFuture* response = static_cast<ResponseFuture*>(cass_future);
       AddressVec attempted_addresses = response->attempted_addresses();
       for (AddressVec::iterator iterator = attempted_addresses.begin();
-        iterator != attempted_addresses.end(); ++iterator) {
+           iterator != attempted_addresses.end(); ++iterator) {
         attempted_hosts.push_back(iterator->to_string().c_str());
       }
       std::sort(attempted_hosts.begin(), attempted_hosts.end());
@@ -51,8 +50,7 @@ unsigned int test::driver::internals::Utils::connect_timeout(CassCluster* cluste
 
 std::string test::driver::internals::Utils::contact_points(CassCluster* cluster) {
   std::string contact_points;
-  const ContactPointList& contact_points_list =
-    cluster->config().contact_points();
+  const ContactPointList& contact_points_list = cluster->config().contact_points();
   for (ContactPointList::const_iterator it = contact_points_list.begin();
        it != contact_points_list.end(); ++it) {
     if (contact_points.size() > 0) {
@@ -81,19 +79,15 @@ std::string test::driver::internals::Utils::host(CassFuture* future) {
   return "";
 }
 
-int64_t test::driver::internals::Utils::murmur3_hash(
-  const std::string& value) {
+int64_t test::driver::internals::Utils::murmur3_hash(const std::string& value) {
   return MurmurHash3_x64_128(value.data(), value.size(), 0);
 }
 
-int test::driver::internals::Utils::port(CassCluster* cluster) {
-  return cluster->config().port();
-}
+int test::driver::internals::Utils::port(CassCluster* cluster) { return cluster->config().port(); }
 
-void test::driver::internals::Utils::set_record_attempted_hosts(
-  CassStatement* statement, bool enable) {
+void test::driver::internals::Utils::set_record_attempted_hosts(CassStatement* statement,
+                                                                bool enable) {
   if (statement) {
-    static_cast<Statement*>(statement)
-      ->set_record_attempted_addresses(enable);
+    static_cast<Statement*>(statement)->set_record_attempted_addresses(enable);
   }
 }

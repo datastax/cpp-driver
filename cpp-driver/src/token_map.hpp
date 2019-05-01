@@ -22,7 +22,7 @@
 #include "string.hpp"
 #include "string_ref.hpp"
 
-namespace datastax {  namespace internal { namespace core {
+namespace datastax { namespace internal { namespace core {
 
 class VersionNumber;
 class Value;
@@ -34,14 +34,16 @@ public:
 
   static TokenMap::Ptr from_partitioner(StringRef partitioner);
 
-  virtual ~TokenMap() { }
+  virtual ~TokenMap() {}
 
   virtual void add_host(const Host::Ptr& host) = 0;
   virtual void update_host_and_build(const Host::Ptr& host) = 0;
   virtual void remove_host_and_build(const Host::Ptr& host) = 0;
 
-  virtual void add_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result) = 0;
-  virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, const ResultResponse* result) = 0;
+  virtual void add_keyspaces(const VersionNumber& cassandra_version,
+                             const ResultResponse* result) = 0;
+  virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version,
+                                          const ResultResponse* result) = 0;
   virtual void drop_keyspace(const String& keyspace_name) = 0;
 
   virtual void build() = 0;
@@ -52,6 +54,6 @@ public:
                                                  const String& routing_key) const = 0;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

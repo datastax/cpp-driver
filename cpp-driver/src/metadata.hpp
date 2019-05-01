@@ -19,6 +19,7 @@
 
 #include "allocated.hpp"
 #include "copy_on_write_ptr.hpp"
+#include "data_type.hpp"
 #include "external.hpp"
 #include "host.hpp"
 #include "iterator.hpp"
@@ -28,7 +29,6 @@
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "string.hpp"
-#include "data_type.hpp"
 #include "value.hpp"
 #include "vector.hpp"
 
@@ -42,15 +42,15 @@ class KeyspaceMetadata;
 class Row;
 class ResultResponse;
 
-template<class T>
+template <class T>
 class MapIteratorImpl {
 public:
   typedef T ItemType;
   typedef internal::Map<String, T> Collection;
 
   MapIteratorImpl(const Collection& map)
-    : next_(map.begin())
-    , end_(map.end()) { }
+      : next_(map.begin())
+      , end_(map.end()) {}
 
   bool next() {
     if (next_ == end_) {
@@ -60,9 +60,7 @@ public:
     return true;
   }
 
-  const T& item() const {
-    return current_->second;
-  }
+  const T& item() const { return current_->second; }
 
 private:
   typename Collection::const_iterator next_;
@@ -70,15 +68,15 @@ private:
   typename Collection::const_iterator end_;
 };
 
-template<class T>
+template <class T>
 class VecIteratorImpl {
 public:
   typedef T ItemType;
   typedef Vector<T> Collection;
 
   VecIteratorImpl(const Collection& vec)
-    : next_(vec.begin())
-    , end_(vec.end()) { }
+      : next_(vec.begin())
+      , end_(vec.end()) {}
 
   bool next() {
     if (next_ == end_) {
@@ -88,9 +86,7 @@ public:
     return true;
   }
 
-  const T& item() const {
-    return (*current_);
-  }
+  const T& item() const { return (*current_); }
 
 private:
   typename Collection::const_iterator next_;
@@ -102,25 +98,19 @@ class MetadataField {
 public:
   typedef internal::Map<String, MetadataField> Map;
 
-  MetadataField() { }
+  MetadataField() {}
 
   MetadataField(const String& name)
-    : name_(name) { }
+      : name_(name) {}
 
-  MetadataField(const String& name,
-                const Value& value,
-                const RefBuffer::Ptr& buffer)
-    : name_(name)
-    , value_(value)
-    , buffer_(buffer) { }
+  MetadataField(const String& name, const Value& value, const RefBuffer::Ptr& buffer)
+      : name_(name)
+      , value_(value)
+      , buffer_(buffer) {}
 
-  const String& name() const {
-    return name_;
-  }
+  const String& name() const { return name_; }
 
-  const Value* value() const {
-    return &value_;
-  }
+  const Value* value() const { return &value_; }
 
 private:
   String name_;
@@ -133,8 +123,8 @@ public:
   typedef MapIteratorImpl<MetadataField>::Collection Map;
 
   MetadataFieldIterator(const Map& map)
-    : Iterator(CASS_ITERATOR_TYPE_META_FIELD)
-    , impl_(map) { }
+      : Iterator(CASS_ITERATOR_TYPE_META_FIELD)
+      , impl_(map) {}
 
   virtual bool next() { return impl_.next(); }
   const MetadataField* field() const { return &impl_.item(); }
@@ -146,7 +136,7 @@ private:
 class MetadataBase {
 public:
   MetadataBase(const String& name)
-    : name_(name) { }
+      : name_(name) {}
 
   const String& name() const { return name_; }
 
@@ -154,9 +144,7 @@ public:
   String get_string_field(const String& name) const;
   Iterator* iterator_fields() const { return new MetadataFieldIterator(fields_); }
 
-  void swap_fields(MetadataBase& meta) {
-    fields_.swap(meta.fields_);
-  }
+  void swap_fields(MetadataBase& meta) { fields_.swap(meta.fields_); }
 
 protected:
   const Value* add_field(const RefBuffer::Ptr& buffer, const Row* row, const String& name);
@@ -170,14 +158,14 @@ private:
   const String name_;
 };
 
-template<class IteratorImpl>
+template <class IteratorImpl>
 class MetadataIteratorImpl : public Iterator {
 public:
   typedef typename IteratorImpl::Collection Collection;
 
   MetadataIteratorImpl(CassIteratorType type, const Collection& colleciton)
-    : Iterator(type)
-    , impl_(colleciton) { }
+      : Iterator(type)
+      , impl_(colleciton) {}
 
   virtual bool next() { return impl_.next(); }
 
@@ -185,7 +173,9 @@ protected:
   IteratorImpl impl_;
 };
 
-class FunctionMetadata : public MetadataBase, public RefCounted<FunctionMetadata> {
+class FunctionMetadata
+    : public MetadataBase
+    , public RefCounted<FunctionMetadata> {
 public:
   typedef SharedRefPtr<FunctionMetadata> Ptr;
   typedef internal::Map<String, Ptr> Map;
@@ -195,15 +185,14 @@ public:
     typedef Vector<Argument> Vec;
 
     Argument(const StringRef& name, const DataType::ConstPtr& type)
-      : name(name)
-      , type(type) { }
+        : name(name)
+        , type(type) {}
     StringRef name;
     DataType::ConstPtr type;
   };
 
   FunctionMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
-                   const String& name, const Value* signature,
-                   KeyspaceMetadata* keyspace,
+                   const String& name, const Value* signature, KeyspaceMetadata* keyspace,
                    const RefBuffer::Ptr& buffer, const Row* row);
 
   const String& simple_name() const { return simple_name_; }
@@ -224,19 +213,18 @@ private:
   bool called_on_null_input_;
 };
 
-inline bool operator==(const FunctionMetadata::Argument& a, StringRef b) {
-  return a.name == b;
-}
+inline bool operator==(const FunctionMetadata::Argument& a, StringRef b) { return a.name == b; }
 
-class AggregateMetadata : public MetadataBase, public RefCounted<AggregateMetadata> {
+class AggregateMetadata
+    : public MetadataBase
+    , public RefCounted<AggregateMetadata> {
 public:
   typedef SharedRefPtr<AggregateMetadata> Ptr;
   typedef internal::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
 
   AggregateMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
-                    const String& name, const Value* signature,
-                    KeyspaceMetadata* keyspace,
+                    const String& name, const Value* signature, KeyspaceMetadata* keyspace,
                     const RefBuffer::Ptr& buffer, const Row* row);
 
   const String& simple_name() const { return simple_name_; }
@@ -257,7 +245,9 @@ private:
   Value init_cond_;
 };
 
-class IndexMetadata : public MetadataBase, public RefCounted<IndexMetadata> {
+class IndexMetadata
+    : public MetadataBase
+    , public RefCounted<IndexMetadata> {
 public:
   typedef SharedRefPtr<IndexMetadata> Ptr;
   typedef internal::Map<String, Ptr> Map;
@@ -268,22 +258,20 @@ public:
   const Value* options() const { return &options_; }
 
   IndexMetadata(const String& index_name)
-    : MetadataBase(index_name)
-    , type_(CASS_INDEX_TYPE_UNKNOWN) { }
+      : MetadataBase(index_name)
+      , type_(CASS_INDEX_TYPE_UNKNOWN) {}
 
-  static IndexMetadata::Ptr from_row(const String& index_name,
-                                     const RefBuffer::Ptr& buffer, const Row* row);
+  static IndexMetadata::Ptr from_row(const String& index_name, const RefBuffer::Ptr& buffer,
+                                     const Row* row);
   void update(StringRef index_type, const Value* options);
 
   static IndexMetadata::Ptr from_legacy(const String& index_name, const ColumnMetadata* column,
                                         const RefBuffer::Ptr& buffer, const Row* row);
   void update_legacy(StringRef index_type, const ColumnMetadata* column, const Value* options);
 
-
 private:
   static CassIndexType index_type_from_string(StringRef index_type);
-  static String target_from_legacy(const ColumnMetadata* column,
-                                        const Value* options);
+  static String target_from_legacy(const ColumnMetadata* column, const Value* options);
 
 private:
   CassIndexType type_;
@@ -294,32 +282,31 @@ private:
   DISALLOW_COPY_AND_ASSIGN(IndexMetadata);
 };
 
-class ColumnMetadata : public MetadataBase, public RefCounted<ColumnMetadata> {
+class ColumnMetadata
+    : public MetadataBase
+    , public RefCounted<ColumnMetadata> {
 public:
   typedef SharedRefPtr<ColumnMetadata> Ptr;
   typedef internal::Map<String, Ptr> Map;
   typedef Vector<Ptr> Vec;
 
   ColumnMetadata(const String& name)
-    : MetadataBase(name)
-    , type_(CASS_COLUMN_TYPE_REGULAR)
-    , position_(0)
-    , is_reversed_(false) { }
+      : MetadataBase(name)
+      , type_(CASS_COLUMN_TYPE_REGULAR)
+      , position_(0)
+      , is_reversed_(false) {}
 
-  ColumnMetadata(const String& name,
-                 int32_t position,
-                 CassColumnType type,
+  ColumnMetadata(const String& name, int32_t position, CassColumnType type,
                  const DataType::ConstPtr& data_type)
-    : MetadataBase(name)
-    , type_(type)
-    , position_(position)
-    , data_type_(data_type)
-    , is_reversed_(false) { }
+      : MetadataBase(name)
+      , type_(type)
+      , position_(position)
+      , data_type_(data_type)
+      , is_reversed_(false) {}
 
   ColumnMetadata(const VersionNumber& server_version, SimpleDataTypeCache& cache,
-                 const String& name,
-                 KeyspaceMetadata* keyspace,
-                 const RefBuffer::Ptr& buffer, const Row* row);
+                 const String& name, KeyspaceMetadata* keyspace, const RefBuffer::Ptr& buffer,
+                 const Row* row);
 
   CassColumnType type() const { return type_; }
   int32_t position() const { return position_; }
@@ -336,37 +323,37 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ColumnMetadata);
 };
 
-inline bool operator==(const ColumnMetadata::Ptr& a, const String& b) {
-  return a->name() == b;
-}
+inline bool operator==(const ColumnMetadata::Ptr& a, const String& b) { return a->name() == b; }
 
-class TableMetadataBase : public MetadataBase, public RefCounted<TableMetadataBase> {
+class TableMetadataBase
+    : public MetadataBase
+    , public RefCounted<TableMetadataBase> {
 public:
   typedef SharedRefPtr<TableMetadataBase> Ptr;
   typedef Vector<CassClusteringOrder> ClusteringOrderVec;
 
-  class ColumnIterator : public MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> > {
+  class ColumnIterator : public MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr>> {
   public:
     ColumnIterator(const ColumnIterator::Collection& collection)
-      : MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> >(CASS_ITERATOR_TYPE_COLUMN_META, collection) { }
+        : MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr>>(CASS_ITERATOR_TYPE_COLUMN_META,
+                                                                     collection) {}
     const ColumnMetadata* column() const { return impl_.item().get(); }
   };
 
-  TableMetadataBase(const VersionNumber& server_version,
-                    const String& name, const RefBuffer::Ptr& buffer, const Row* row,
-                    bool is_virtual);
+  TableMetadataBase(const VersionNumber& server_version, const String& name,
+                    const RefBuffer::Ptr& buffer, const Row* row, bool is_virtual);
 
   TableMetadataBase(const TableMetadataBase& other)
-    : MetadataBase(other)
-    , RefCounted<TableMetadataBase>()
-    , is_virtual_(other.is_virtual_)
-    , columns_(other.columns_)
-    , columns_by_name_(other.columns_by_name_)
-    , partition_key_(other.partition_key_)
-    , clustering_key_(other.clustering_key_)
-    , clustering_key_order_(other.clustering_key_order_) { }
+      : MetadataBase(other)
+      , RefCounted<TableMetadataBase>()
+      , is_virtual_(other.is_virtual_)
+      , columns_(other.columns_)
+      , columns_by_name_(other.columns_by_name_)
+      , partition_key_(other.partition_key_)
+      , clustering_key_(other.clustering_key_)
+      , clustering_key_order_(other.clustering_key_order_) {}
 
-  virtual ~TableMetadataBase() { }
+  virtual ~TableMetadataBase() {}
 
   bool is_virtual() const { return is_virtual_; }
 
@@ -399,16 +386,12 @@ public:
 
   static const ViewMetadata::Ptr NIL;
 
-  ViewMetadata(const VersionNumber& server_version,
-               const TableMetadata* table,
-               const String& name,
-               const RefBuffer::Ptr& buffer, const Row* row,
-               bool is_virtual);
+  ViewMetadata(const VersionNumber& server_version, const TableMetadata* table, const String& name,
+               const RefBuffer::Ptr& buffer, const Row* row, bool is_virtual);
 
-  ViewMetadata(const ViewMetadata& other,
-               const TableMetadata* table)
-    : TableMetadataBase(other)
-    , base_table_(table) { }
+  ViewMetadata(const ViewMetadata& other, const TableMetadata* table)
+      : TableMetadataBase(other)
+      , base_table_(table) {}
 
   const TableMetadata* base_table() const { return base_table_; }
 
@@ -423,7 +406,7 @@ private:
 class ViewIteratorBase : public Iterator {
 public:
   ViewIteratorBase(CassIteratorType type)
-    : Iterator(type) { }
+      : Iterator(type) {}
 
   virtual ViewMetadata* view() const = 0;
 };
@@ -431,8 +414,8 @@ public:
 class ViewIteratorVec : public ViewIteratorBase {
 public:
   ViewIteratorVec(const ViewMetadata::Vec& views)
-    : ViewIteratorBase(CASS_ITERATOR_TYPE_MATERIALIZED_VIEW_META)
-    , impl_(views) { }
+      : ViewIteratorBase(CASS_ITERATOR_TYPE_MATERIALIZED_VIEW_META)
+      , impl_(views) {}
 
   virtual ViewMetadata* view() const { return impl_.item().get(); }
   virtual bool next() { return impl_.next(); }
@@ -444,8 +427,8 @@ private:
 class ViewIteratorMap : public ViewIteratorBase {
 public:
   ViewIteratorMap(const ViewMetadata::Map& views)
-    : ViewIteratorBase(CASS_ITERATOR_TYPE_MATERIALIZED_VIEW_META)
-    , impl_(views) { }
+      : ViewIteratorBase(CASS_ITERATOR_TYPE_MATERIALIZED_VIEW_META)
+      , impl_(views) {}
 
   virtual ViewMetadata* view() const { return impl_.item().get(); }
   virtual bool next() { return impl_.next(); }
@@ -458,9 +441,7 @@ inline bool operator<(const ViewMetadata::Ptr& a, const ViewMetadata::Ptr& b) {
   return a->name() < b->name();
 }
 
-inline  bool operator<(const ViewMetadata::Ptr& a, const String& b) {
-  return a->name() < b;
-}
+inline bool operator<(const ViewMetadata::Ptr& a, const String& b) { return a->name() < b; }
 
 inline bool operator==(const ViewMetadata::Ptr& a, const ViewMetadata::Ptr& b) {
   return a->name() == b->name();
@@ -475,21 +456,21 @@ public:
 
   static const TableMetadata::Ptr NIL;
 
-  class IndexIterator : public MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr> > {
+  class IndexIterator : public MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr>> {
   public:
-  IndexIterator(const IndexIterator::Collection& collection)
-    : MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr> >(CASS_ITERATOR_TYPE_INDEX_META, collection) { }
+    IndexIterator(const IndexIterator::Collection& collection)
+        : MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr>>(CASS_ITERATOR_TYPE_INDEX_META,
+                                                                    collection) {}
     const IndexMetadata* index() const { return impl_.item().get(); }
   };
 
   TableMetadata(const VersionNumber& server_version, const String& name,
-                const RefBuffer::Ptr& buffer, const Row* row,
-                bool is_virtual);
+                const RefBuffer::Ptr& buffer, const Row* row, bool is_virtual);
 
   TableMetadata(const TableMetadata& other)
-    : TableMetadataBase(other)
-    , indexes_(other.indexes_)
-    , indexes_by_name_(other.indexes_by_name_) { }
+      : TableMetadataBase(other)
+      , indexes_(other.indexes_)
+      , indexes_by_name_(other.indexes_by_name_) {}
 
   const ViewMetadata::Vec& views() const { return views_; }
   const IndexMetadata::Vec& indexes() const { return indexes_; }
@@ -518,45 +499,48 @@ public:
   typedef internal::Map<String, KeyspaceMetadata> Map;
   typedef CopyOnWritePtr<KeyspaceMetadata::Map> MapPtr;
 
-  class TableIterator : public MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> > {
+  class TableIterator : public MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr>> {
   public:
-   TableIterator(const TableIterator::Collection& collection)
-     : MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> >(CASS_ITERATOR_TYPE_TABLE_META, collection) { }
+    TableIterator(const TableIterator::Collection& collection)
+        : MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr>>(CASS_ITERATOR_TYPE_TABLE_META,
+                                                                    collection) {}
     const TableMetadata* table() const { return static_cast<TableMetadata*>(impl_.item().get()); }
   };
 
-  class TypeIterator : public MetadataIteratorImpl<MapIteratorImpl<UserType::Ptr> > {
+  class TypeIterator : public MetadataIteratorImpl<MapIteratorImpl<UserType::Ptr>> {
   public:
-   TypeIterator(const TypeIterator::Collection& collection)
-     : MetadataIteratorImpl<MapIteratorImpl<UserType::Ptr> >(CASS_ITERATOR_TYPE_TYPE_META, collection) { }
+    TypeIterator(const TypeIterator::Collection& collection)
+        : MetadataIteratorImpl<MapIteratorImpl<UserType::Ptr>>(CASS_ITERATOR_TYPE_TYPE_META,
+                                                               collection) {}
     const UserType* type() const { return impl_.item().get(); }
   };
 
-  class FunctionIterator : public MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr> > {
+  class FunctionIterator : public MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr>> {
   public:
-   FunctionIterator(const FunctionIterator::Collection& collection)
-     : MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr> >(CASS_ITERATOR_TYPE_FUNCTION_META, collection) { }
+    FunctionIterator(const FunctionIterator::Collection& collection)
+        : MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr>>(
+              CASS_ITERATOR_TYPE_FUNCTION_META, collection) {}
     const FunctionMetadata* function() const { return impl_.item().get(); }
   };
 
-  class AggregateIterator : public MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr> > {
+  class AggregateIterator : public MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr>> {
   public:
-   AggregateIterator(const AggregateIterator::Collection& collection)
-     : MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr> >(CASS_ITERATOR_TYPE_AGGREGATE_META, collection) { }
+    AggregateIterator(const AggregateIterator::Collection& collection)
+        : MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr>>(
+              CASS_ITERATOR_TYPE_AGGREGATE_META, collection) {}
     const AggregateMetadata* aggregate() const { return impl_.item().get(); }
   };
 
   KeyspaceMetadata(const String& name, bool is_virtual = false)
-    : MetadataBase(name)
-    , is_virtual_(is_virtual)
-    , tables_(new TableMetadata::Map())
-    , views_(new ViewMetadata::Map())
-    , user_types_(new UserType::Map())
-    , functions_(new FunctionMetadata::Map())
-    , aggregates_(new AggregateMetadata::Map()) { }
+      : MetadataBase(name)
+      , is_virtual_(is_virtual)
+      , tables_(new TableMetadata::Map())
+      , views_(new ViewMetadata::Map())
+      , user_types_(new UserType::Map())
+      , functions_(new FunctionMetadata::Map())
+      , aggregates_(new AggregateMetadata::Map()) {}
 
-  void update(const VersionNumber& server_version,
-              const RefBuffer::Ptr& buffer, const Row* row);
+  void update(const VersionNumber& server_version, const RefBuffer::Ptr& buffer, const Row* row);
 
   bool is_virtual() const { return is_virtual_; }
 
@@ -594,8 +578,7 @@ public:
   const Value* strategy_options() const { return &strategy_options_; }
 
 private:
-  void internal_add_table(const TableMetadata::Ptr& table,
-                          const ViewMetadata::Vec& views);
+  void internal_add_table(const TableMetadata::Ptr& table, const ViewMetadata::Vec& views);
 
 private:
   const bool is_virtual_;
@@ -611,21 +594,21 @@ private:
 
 class Metadata {
 public:
-  class KeyspaceIterator : public MetadataIteratorImpl<MapIteratorImpl<KeyspaceMetadata> > {
+  class KeyspaceIterator : public MetadataIteratorImpl<MapIteratorImpl<KeyspaceMetadata>> {
   public:
-  KeyspaceIterator(const KeyspaceIterator::Collection& collection)
-    : MetadataIteratorImpl<MapIteratorImpl<KeyspaceMetadata> >(CASS_ITERATOR_TYPE_KEYSPACE_META, collection) { }
+    KeyspaceIterator(const KeyspaceIterator::Collection& collection)
+        : MetadataIteratorImpl<MapIteratorImpl<KeyspaceMetadata>>(CASS_ITERATOR_TYPE_KEYSPACE_META,
+                                                                  collection) {}
     const KeyspaceMetadata* keyspace() const { return &impl_.item(); }
   };
 
   class SchemaSnapshot : public Allocated {
   public:
-    SchemaSnapshot(uint32_t version,
-                   const VersionNumber& server_version,
+    SchemaSnapshot(uint32_t version, const VersionNumber& server_version,
                    const KeyspaceMetadata::MapPtr& keyspaces)
-      : version_(version)
-      , server_version_(server_version)
-      , keyspaces_(keyspaces) { }
+        : version_(version)
+        , server_version_(server_version)
+        , keyspaces_(keyspaces) {}
 
     uint32_t version() const { return version_; }
     VersionNumber server_version() const { return server_version_; }
@@ -633,8 +616,7 @@ public:
     const KeyspaceMetadata* get_keyspace(const String& name) const;
     Iterator* iterator_keyspaces() const { return new KeyspaceIterator(*keyspaces_); }
 
-    const UserType* get_user_type(const String& keyspace_name,
-                                  const String& type_name) const;
+    const UserType* get_user_type(const String& keyspace_name, const String& type_name) const;
 
   private:
     uint32_t version_;
@@ -646,14 +628,12 @@ public:
 
 public:
   Metadata()
-    : updating_(&front_)
-    , schema_snapshot_version_(0) {
+      : updating_(&front_)
+      , schema_snapshot_version_(0) {
     uv_mutex_init(&mutex_);
   }
 
-  ~Metadata() {
-    uv_mutex_destroy(&mutex_);
-  }
+  ~Metadata() { uv_mutex_destroy(&mutex_); }
 
   SchemaSnapshot schema_snapshot() const;
 
@@ -689,14 +669,16 @@ private:
   class InternalData {
   public:
     InternalData()
-      : keyspaces_(new KeyspaceMetadata::Map()) { }
+        : keyspaces_(new KeyspaceMetadata::Map()) {}
 
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
-    void update_keyspaces(const VersionNumber& server_version, const ResultResponse* result, bool is_virtual);
+    void update_keyspaces(const VersionNumber& server_version, const ResultResponse* result,
+                          bool is_virtual);
     void update_tables(const VersionNumber& server_version, const ResultResponse* result);
     void update_views(const VersionNumber& server_version, const ResultResponse* result);
-    void update_columns(const VersionNumber& server_version, SimpleDataTypeCache& cache, const ResultResponse* result);
+    void update_columns(const VersionNumber& server_version, SimpleDataTypeCache& cache,
+                        const ResultResponse* result);
     void update_legacy_indexes(const VersionNumber& server_version, const ResultResponse* result);
     void update_indexes(const VersionNumber& server_version, const ResultResponse* result);
     void update_user_types(const VersionNumber& server_version, SimpleDataTypeCache& cache,
@@ -748,7 +730,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Metadata);
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 EXTERNAL_TYPE(datastax::internal::core::Metadata::SchemaSnapshot, CassSchemaMeta)
 EXTERNAL_TYPE(datastax::internal::core::KeyspaceMetadata, CassKeyspaceMeta)

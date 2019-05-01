@@ -15,18 +15,18 @@
 */
 
 #include "cassandra.h"
-#include "test_utils.hpp"
 #include "cluster.hpp"
+#include "test_utils.hpp"
 
 #include <uv.h>
 
 #include <boost/scoped_ptr.hpp>
-#include <boost/thread.hpp>
 #include <boost/test/unit_test.hpp>
+#include <boost/thread.hpp>
 
 struct TestPool : public test_utils::MultipleNodesTest {
   TestPool()
-    : MultipleNodesTest(1, 0) {}
+      : MultipleNodesTest(1, 0) {}
 
   /**
    * Execute a select statement against the system tables for a specified amount
@@ -50,24 +50,22 @@ struct TestPool : public test_utils::MultipleNodesTest {
 
 BOOST_AUTO_TEST_SUITE(pool)
 
-BOOST_AUTO_TEST_CASE(connection_spawn)
-{
+BOOST_AUTO_TEST_CASE(connection_spawn) {
   TestPool tester;
-  const std::string SPAWN_MSG = "Spawning new connection to host " + tester.ccm->get_ip_prefix() + "1";
+  const std::string SPAWN_MSG =
+      "Spawning new connection to host " + tester.ccm->get_ip_prefix() + "1";
   test_utils::CassLog::reset(SPAWN_MSG);
 
   test_utils::MultipleNodesTest inst(1, 0);
   cass_cluster_set_num_threads_io(tester.cluster, 1);
   cass_cluster_set_core_connections_per_host(tester.cluster, 1);
   cass_cluster_set_max_connections_per_host(tester.cluster, 2);
-  cass_cluster_set_max_concurrent_requests_threshold(tester.cluster, 1);// start next connection soon
+  cass_cluster_set_max_concurrent_requests_threshold(tester.cluster,
+                                                     1); // start next connection soon
 
   // only one with no traffic
-  {
-    test_utils::CassSessionPtr session(test_utils::create_session(tester.cluster));
-  }
+  { test_utils::CassSessionPtr session(test_utils::create_session(tester.cluster)); }
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1u);
-
 
   test_utils::CassLog::reset(SPAWN_MSG);
   // exactly two with traffic
@@ -79,7 +77,8 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
     // run a few to get concurrent requests
     std::vector<test_utils::CassFuturePtr> futures;
     for (size_t i = 0; i < 10; ++i) {
-      futures.push_back(test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
+      futures.push_back(
+          test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
     }
   }
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2u);
@@ -100,10 +99,11 @@ struct ConnectionInterruptionData {
  *
  * @param data Connection interruption data structure
  */
-static void connection_interruptions(void *data) {
+static void connection_interruptions(void* data) {
   boost::posix_time::ptime start = boost::posix_time::second_clock::universal_time();
   ConnectionInterruptionData* ci_data = static_cast<ConnectionInterruptionData*>(data);
-  while ((boost::posix_time::second_clock::universal_time() - start).total_seconds() < ci_data->duration) {
+  while ((boost::posix_time::second_clock::universal_time() - start).total_seconds() <
+         ci_data->duration) {
     ci_data->ccm->pause_node(ci_data->node);
     boost::this_thread::sleep(boost::posix_time::seconds(ci_data->delay));
     ci_data->ccm->resume_node(ci_data->node);
@@ -122,7 +122,8 @@ static void connection_interruptions(void *data) {
  * @jira_ticket CPP-253 [https://datastax-oss.atlassian.net/browse/CPP-253]
  */
 BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
-  // Limit backpressure test to lower version of C* (difficult to produce in later versions deterministically)
+  // Limit backpressure test to lower version of C* (difficult to produce in later versions
+  // deterministically)
   CCM::CassVersion version = test_utils::get_version();
   if ((version.major_version <= 2 && version.minor_version < 1) || version.major_version < 2) {
     TestPool tester;
@@ -141,7 +142,8 @@ BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
     cass_cluster_set_load_balance_round_robin(tester.cluster);
 
     // Create session during "connection interruptions"
-    test_utils::CassLog::reset("Host " + ip_prefix + "2 already present attempting to initiate immediate connection");
+    test_utils::CassLog::reset("Host " + ip_prefix +
+                               "2 already present attempting to initiate immediate connection");
     {
       uv_thread_t connection_interruptions_thread;
       ci_data.duration = 5;
@@ -174,10 +176,11 @@ BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
     // Destroy the current cluster (node added)
     tester.ccm->remove_cluster();
   } else {
-    std::cout << "Difficult to Produce Don't Recycle Pool on Timeout for Cassandra v" << version.to_string() << ": Skipping pool/dont_recycle_pool_on_timeout (use C* 1.x - 2.0.x)" << std::endl;
+    std::cout << "Difficult to Produce Don't Recycle Pool on Timeout for Cassandra v"
+              << version.to_string()
+              << ": Skipping pool/dont_recycle_pool_on_timeout (use C* 1.x - 2.0.x)" << std::endl;
     BOOST_REQUIRE(true);
   }
-
 }
 
 BOOST_AUTO_TEST_SUITE_END()

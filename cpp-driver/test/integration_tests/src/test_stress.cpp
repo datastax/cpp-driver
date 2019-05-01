@@ -20,15 +20,15 @@
 #include <signal.h>
 #endif
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/cstdint.hpp>
-#include <boost/format.hpp>
 #include <boost/asio/io_service.hpp>
-#include <boost/thread/future.hpp>
 #include <boost/bind.hpp>
 #include <boost/chrono.hpp>
+#include <boost/cstdint.hpp>
+#include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
+#include <boost/thread/future.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -36,33 +36,36 @@
 struct StressTests : public test_utils::MultipleNodesTest {
   CassSession* session;
 
-  StressTests() : MultipleNodesTest(3, 0) {
+  StressTests()
+      : MultipleNodesTest(3, 0) {
     session = cass_session_new();
     test_utils::CassFuturePtr session_future(cass_session_connect(session, cluster));
     test_utils::wait_and_check_error(session_future.get());
 
-    test_utils::execute_query(session, "CREATE KEYSPACE tester WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};");
+    test_utils::execute_query(session, "CREATE KEYSPACE tester WITH replication = {'class': "
+                                       "'SimpleStrategy', 'replication_factor' : 3};");
     test_utils::execute_query(session, "USE tester;");
   }
 
   ~StressTests() {
     // Drop the keyspace (ignore any and all errors)
-    test_utils::execute_query_with_error(session,
-      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-      % "tester"));
+    test_utils::execute_query_with_error(
+        session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "tester"));
 
     cass_session_free(session);
   }
 
-  bool create_and_execute_insert(const std::string &query, CassConsistency consistency) {
+  bool create_and_execute_insert(const std::string& query, CassConsistency consistency) {
     CassUuid time_uuid = test_utils::generate_random_uuid(uuid_gen);
     std::string time_uuid_string = test_utils::Value<CassUuid>::to_string(time_uuid);
     boost::chrono::system_clock::time_point now(boost::chrono::system_clock::now());
-    boost::chrono::milliseconds event_time(boost::chrono::duration_cast<boost::chrono::milliseconds>(now.time_since_epoch()));
+    boost::chrono::milliseconds event_time(
+        boost::chrono::duration_cast<boost::chrono::milliseconds>(now.time_since_epoch()));
     std::string text_sample("'" + test_utils::string_from_time_point(now) + "'");
 
     std::string simple_query = test_utils::replaceAll(query, "?", "%s");
-    simple_query = str(boost::format(simple_query) % time_uuid_string % event_time.count() % text_sample);
+    simple_query =
+        str(boost::format(simple_query) % time_uuid_string % event_time.count() % text_sample);
     test_utils::CassStatementPtr statement(cass_statement_new(simple_query.c_str(), 0));
     cass_statement_set_consistency(statement.get(), consistency);
 
@@ -71,7 +74,8 @@ struct StressTests : public test_utils::MultipleNodesTest {
 
   bool bind_and_execute_insert(CassStatement* statement) {
     boost::chrono::system_clock::time_point now(boost::chrono::system_clock::now());
-    boost::chrono::milliseconds event_time(boost::chrono::duration_cast<boost::chrono::milliseconds>(now.time_since_epoch()));
+    boost::chrono::milliseconds event_time(
+        boost::chrono::duration_cast<boost::chrono::milliseconds>(now.time_since_epoch()));
     std::string text_sample(test_utils::string_from_time_point(now));
 
     cass_statement_bind_uuid(statement, 0, test_utils::generate_time_uuid(uuid_gen));
@@ -88,7 +92,8 @@ struct StressTests : public test_utils::MultipleNodesTest {
     if (code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
       CassString message;
       cass_future_error_message(future.get(), &message.data, &message.length);
-      fprintf(stderr, "Error occurred during insert '%.*s'\n", static_cast<int>(message.length), message.data);
+      fprintf(stderr, "Error occurred during insert '%.*s'\n", static_cast<int>(message.length),
+              message.data);
       return false;
     }
 
@@ -113,7 +118,8 @@ struct StressTests : public test_utils::MultipleNodesTest {
     return is_successful;
   }
 
-  bool insert_prepared_task(const CassPrepared* prepared, CassConsistency consistency, int rows_per_id) {
+  bool insert_prepared_task(const CassPrepared* prepared, CassConsistency consistency,
+                            int rows_per_id) {
     bool is_successful = true;
     for (int i = 0; i < rows_per_id; ++i) {
       test_utils::CassStatementPtr statement(cass_prepared_bind(prepared));
@@ -135,12 +141,12 @@ struct StressTests : public test_utils::MultipleNodesTest {
       cass_future_wait(future.get());
 
       CassError code = cass_future_error_code(future.get());
-      if (code != CASS_OK
-         && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT
-         && code != CASS_ERROR_SERVER_READ_TIMEOUT) { // Timeout is okay
+      if (code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT &&
+          code != CASS_ERROR_SERVER_READ_TIMEOUT) { // Timeout is okay
         CassString message;
         cass_future_error_message(future.get(), &message.data, &message.length);
-        fprintf(stderr, "Error occurred during select '%.*s'\n", static_cast<int>(message.length), message.data);
+        fprintf(stderr, "Error occurred during select '%.*s'\n", static_cast<int>(message.length),
+                message.data);
         is_successful = false;
       }
 
@@ -163,23 +169,23 @@ struct StressTests : public test_utils::MultipleNodesTest {
   }
 };
 
-bool is_failed(boost::shared_future<bool> future) {
-  return future.get() == false;
-}
+bool is_failed(boost::shared_future<bool> future) { return future.get() == false; }
 
 BOOST_FIXTURE_TEST_SUITE(stress, StressTests)
 
-BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
-{
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
+BOOST_AUTO_TEST_CASE(parallel_insert_and_select) {
+  std::string table_name =
+      str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
 
-  test_utils::execute_query(session, str(boost::format(test_utils::CREATE_TABLE_TIME_SERIES) % table_name));
+  test_utils::execute_query(session,
+                            str(boost::format(test_utils::CREATE_TABLE_TIME_SERIES) % table_name));
 
-  std::string insert_query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
+  std::string insert_query = str(
+      boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
   std::string select_query = str(boost::format("SELECT * FROM %s LIMIT 10000") % table_name);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
-                                                                   insert_query.data(), insert_query.size()));
+  test_utils::CassFuturePtr prepared_future(
+      cass_session_prepare_n(session, insert_query.data(), insert_query.size()));
 
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
@@ -190,41 +196,78 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
   insert_task(insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id);
   select_task(select_query, CASS_CONSISTENCY_QUORUM, num_iterations);
 
-  std::vector<boost::shared_future<bool> > futures;
+  std::vector<boost::shared_future<bool>> futures;
 
   for (int i = 0; i < 10; ++i) {
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_task, this, insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::select_task, this, select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::insert_task, this, insert_query,
+                                               CASS_CONSISTENCY_QUORUM, rows_per_id))
+                          .share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::select_task, this, select_query,
+                                               CASS_CONSISTENCY_QUORUM, num_iterations))
+                          .share());
+    futures.push_back(
+        boost::async(boost::launch::async,
+                     boost::bind(&StressTests::insert_prepared_task, this, prepared.get(),
+                                 CASS_CONSISTENCY_QUORUM, rows_per_id))
+            .share());
 
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::select_task, this, select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_task, this, insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_task, this, insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::select_task, this, select_query,
+                                               CASS_CONSISTENCY_QUORUM, num_iterations))
+                          .share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::insert_task, this, insert_query,
+                                               CASS_CONSISTENCY_QUORUM, rows_per_id))
+                          .share());
+    futures.push_back(
+        boost::async(boost::launch::async,
+                     boost::bind(&StressTests::insert_prepared_task, this, prepared.get(),
+                                 CASS_CONSISTENCY_QUORUM, rows_per_id))
+            .share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::insert_task, this, insert_query,
+                                               CASS_CONSISTENCY_QUORUM, rows_per_id))
+                          .share());
 
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::select_task, this, select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
+    futures.push_back(
+        boost::async(boost::launch::async,
+                     boost::bind(&StressTests::insert_prepared_task, this, prepared.get(),
+                                 CASS_CONSISTENCY_QUORUM, rows_per_id))
+            .share());
+    futures.push_back(
+        boost::async(boost::launch::async,
+                     boost::bind(&StressTests::insert_prepared_task, this, prepared.get(),
+                                 CASS_CONSISTENCY_QUORUM, rows_per_id))
+            .share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::select_task, this, select_query,
+                                               CASS_CONSISTENCY_QUORUM, num_iterations))
+                          .share());
   }
 
   boost::wait_for_all(futures.begin(), futures.end());
-  BOOST_REQUIRE(std::find_if (futures.begin(), futures.end(), is_failed) == futures.end());
+  BOOST_REQUIRE(std::find_if(futures.begin(), futures.end(), is_failed) == futures.end());
 
   // Drop the keyspace (ignore any and all errors)
-  test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "tester"));
+  test_utils::execute_query_with_error(
+      session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "tester"));
 }
 
-BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
-{
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
+BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing) {
+  std::string table_name =
+      str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
 
-  test_utils::execute_query(session, str(boost::format(test_utils::CREATE_TABLE_TIME_SERIES) % table_name));
+  test_utils::execute_query(session,
+                            str(boost::format(test_utils::CREATE_TABLE_TIME_SERIES) % table_name));
 
-  std::string insert_query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
+  std::string insert_query = str(
+      boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
   std::string select_query = str(boost::format("SELECT * FROM %s LIMIT 10000") % table_name);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
-                                                                   insert_query.data(), insert_query.size()));
+  test_utils::CassFuturePtr prepared_future(
+      cass_session_prepare_n(session, insert_query.data(), insert_query.size()));
 
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
@@ -235,27 +278,63 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
   insert_task(insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id);
   select_task(select_query, CASS_CONSISTENCY_QUORUM, num_iterations);
 
-  std::vector<boost::shared_future<bool> > futures;
+  std::vector<boost::shared_future<bool>> futures;
 
   for (int i = 0; i < 10; ++i) {
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_task, this, insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::select_task, this, select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::insert_task, this, insert_query,
+                                               CASS_CONSISTENCY_QUORUM, rows_per_id))
+                          .share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::select_task, this, select_query,
+                                               CASS_CONSISTENCY_QUORUM, num_iterations))
+                          .share());
+    futures.push_back(
+        boost::async(boost::launch::async,
+                     boost::bind(&StressTests::insert_prepared_task, this, prepared.get(),
+                                 CASS_CONSISTENCY_QUORUM, rows_per_id))
+            .share());
 
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::select_task, this, select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_task, this, insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_task, this, insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::select_task, this, select_query,
+                                               CASS_CONSISTENCY_QUORUM, num_iterations))
+                          .share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::insert_task, this, insert_query,
+                                               CASS_CONSISTENCY_QUORUM, rows_per_id))
+                          .share());
+    futures.push_back(
+        boost::async(boost::launch::async,
+                     boost::bind(&StressTests::insert_prepared_task, this, prepared.get(),
+                                 CASS_CONSISTENCY_QUORUM, rows_per_id))
+            .share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::insert_task, this, insert_query,
+                                               CASS_CONSISTENCY_QUORUM, rows_per_id))
+                          .share());
 
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
-    futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::select_task, this, select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
+    futures.push_back(
+        boost::async(boost::launch::async,
+                     boost::bind(&StressTests::insert_prepared_task, this, prepared.get(),
+                                 CASS_CONSISTENCY_QUORUM, rows_per_id))
+            .share());
+    futures.push_back(
+        boost::async(boost::launch::async,
+                     boost::bind(&StressTests::insert_prepared_task, this, prepared.get(),
+                                 CASS_CONSISTENCY_QUORUM, rows_per_id))
+            .share());
+    futures.push_back(boost::async(boost::launch::async,
+                                   boost::bind(&StressTests::select_task, this, select_query,
+                                               CASS_CONSISTENCY_QUORUM, num_iterations))
+                          .share());
   }
 
-  futures.insert(futures.begin() + 8, boost::async(boost::launch::async, boost::bind(&StressTests::kill_task, this)).share());
+  futures.insert(
+      futures.begin() + 8,
+      boost::async(boost::launch::async, boost::bind(&StressTests::kill_task, this)).share());
 
   boost::wait_for_all(futures.begin(), futures.end());
-  BOOST_REQUIRE(std::find_if (futures.begin(), futures.end(), is_failed) == futures.end());
+  BOOST_REQUIRE(std::find_if(futures.begin(), futures.end(), is_failed) == futures.end());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

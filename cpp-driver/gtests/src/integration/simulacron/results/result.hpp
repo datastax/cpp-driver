@@ -19,8 +19,8 @@
 
 #include <string>
 
-#include <rapidjson/stringbuffer.h>
 #include <rapidjson/prettywriter.h>
+#include <rapidjson/stringbuffer.h>
 
 namespace prime {
 
@@ -29,7 +29,7 @@ namespace prime {
  */
 class Result {
 public:
-  virtual ~Result() { }
+  virtual ~Result() {}
 
   /**
    * Generate the JSON for the base result
@@ -55,8 +55,8 @@ protected:
    * @param result String value for the JSON result value
    */
   Result(const std::string& result)
-    : delay_in_ms_(0)
-    , result_(result) { }
+      : delay_in_ms_(0)
+      , result_(result) {}
 
   /**
    * Protected constructor for base result type
@@ -65,8 +65,8 @@ protected:
    * @param delay_in_ms Delay in milliseconds before forwarding result
    */
   Result(const std::string& result, unsigned long delay_in_ms)
-    : delay_in_ms_(delay_in_ms)
-    , result_(result) { }
+      : delay_in_ms_(delay_in_ms)
+      , result_(result) {}
 
 private:
   /**

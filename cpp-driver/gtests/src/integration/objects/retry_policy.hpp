@@ -20,8 +20,7 @@
 
 #include "objects/object_base.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Wrapped retry policy object
@@ -34,7 +33,7 @@ public:
    * @param retry_policy Native driver object
    */
   RetryPolicy(CassRetryPolicy* retry_policy)
-    : Object<CassRetryPolicy, cass_retry_policy_free>(retry_policy) {}
+      : Object<CassRetryPolicy, cass_retry_policy_free>(retry_policy) {}
 
   /**
    * Create the retry policy object from the shared reference
@@ -42,7 +41,7 @@ public:
    * @param retry_policy Shared reference
    */
   RetryPolicy(Ptr retry_policy)
-    : Object<CassRetryPolicy, cass_retry_policy_free>(retry_policy) {}
+      : Object<CassRetryPolicy, cass_retry_policy_free>(retry_policy) {}
 };
 
 /**
@@ -55,7 +54,7 @@ public:
    * policy object
    */
   DefaultRetryPolicy()
-    : RetryPolicy(cass_retry_policy_default_new()) {}
+      : RetryPolicy(cass_retry_policy_default_new()) {}
 };
 
 /**
@@ -68,7 +67,7 @@ public:
    * driver downgrading consistency retry policy object
    */
   DowngradingConsistencyRetryPolicy()
-    : RetryPolicy(cass_retry_policy_downgrading_consistency_new()) {}
+      : RetryPolicy(cass_retry_policy_downgrading_consistency_new()) {}
 };
 
 /**
@@ -81,7 +80,7 @@ public:
    * fallthrough retry policy object
    */
   FallthroughRetryPolicy()
-    : RetryPolicy(cass_retry_policy_fallthrough_new()) {}
+      : RetryPolicy(cass_retry_policy_fallthrough_new()) {}
 };
 
 /**
@@ -96,10 +95,9 @@ public:
    * @param child_policy Child retry policy being logged (CASS_LOG_INFO)
    */
   LoggingRetryPolicy(RetryPolicy child_policy)
-    : RetryPolicy(cass_retry_policy_logging_new(child_policy.get())) {}
+      : RetryPolicy(cass_retry_policy_logging_new(child_policy.get())) {}
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_RETRY_POLICY_HPP__

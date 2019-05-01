@@ -190,10 +190,10 @@ TEST(MetricsUnitTest, Meter) {
   // Sleep can be off more on Windows; increasing tolerance
   // https://msdn.microsoft.com/en-us/library/windows/desktop/ms686298(v=vs.85).aspx
   tolerance = 25.0;
-# ifndef _M_X64
+#ifndef _M_X64
   // 32-bit metrics are slower on Windows (split operations)
   tolerance *= 1.5;
-# endif
+#endif
 #endif
   double expected = 10;
   double abs_error = tolerance * expected;
@@ -239,15 +239,15 @@ TEST(MetricsUnitTest, MeterWithThreads) {
   }
 
   // Sleep can be off by as much as 10+ ms on most systems (or 10% for 100ms)
-    double tolerance = 15.0;
+  double tolerance = 15.0;
 #ifdef _MSC_VER
   // Sleep can be off more on Windows; increasing tolerance
   // https://msdn.microsoft.com/en-us/library/windows/desktop/ms686298(v=vs.85).aspx
   tolerance = 25.0;
-# ifndef _M_X64
+#ifndef _M_X64
   // 32-bit metrics are slower on Windows (split operations)
   tolerance *= 1.5;
-# endif
+#endif
 #endif
   double expected = 10 * NUM_THREADS;
   double abs_error = tolerance * expected;

@@ -12,8 +12,8 @@
 
 namespace datastax { namespace internal { namespace enterprise {
 
-  Bytes encode_date_range(const DseDateRange *range);
+Bytes encode_date_range(const DseDateRange* range);
 
-} } } // datastax::internal::enterprise
+}}} // namespace datastax::internal::enterprise
 
 #endif

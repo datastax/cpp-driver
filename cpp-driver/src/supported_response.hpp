@@ -17,8 +17,8 @@
 #ifndef DATASTAX_INTERNAL_SUPPORTED_RESPONSE_HPP
 #define DATASTAX_INTERNAL_SUPPORTED_RESPONSE_HPP
 
-#include "response.hpp"
 #include "constants.hpp"
+#include "response.hpp"
 #include "string.hpp"
 #include "vector.hpp"
 
@@ -41,6 +41,6 @@ private:
   Vector<String> protocol_versions_;
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif

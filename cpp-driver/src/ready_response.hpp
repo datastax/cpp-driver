@@ -29,6 +29,6 @@ public:
   virtual bool decode(Decoder& decoder) { return true; }
 };
 
-} } } // namespace datastax::internal::core
+}}} // namespace datastax::internal::core
 
 #endif
