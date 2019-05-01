@@ -1,6 +1,7 @@
 ---
 BasedOnStyle: LLVM
 Language: Cpp
+Standard: Cpp03
 AccessModifierOffset: -2
 IndentWidth: 2
 TabWidth: 8
