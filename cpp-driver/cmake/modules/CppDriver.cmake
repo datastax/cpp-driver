@@ -987,12 +987,6 @@ macro(CassFindSourceFiles)
   endif()
 
   set(CASS_ALL_SOURCE_FILES ${CASS_SRC_FILES} ${CASS_API_HEADER_FILES} ${CASS_INC_FILES})
-
-  # Shorten the source file pathing for log messages
-  foreach(SRC_FILE ${CASS_SRC_FILES})
-    string(REPLACE "${CASS_ROOT_DIR}/" "" LOG_FILE_ ${SRC_FILE})
-    set_source_files_properties(${SRC_FILE} PROPERTIES COMPILE_FLAGS -DLOG_FILE_=\\\"${LOG_FILE_}\\\")
-  endforeach()
 endmacro()
 
 #------------------------
