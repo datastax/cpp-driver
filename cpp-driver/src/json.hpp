@@ -71,11 +71,14 @@ public:
     }
 };
 
-typedef datastax::rapidjson::GenericDocument<datastax::rapidjson::UTF8<>, datastax::rapidjson::MemoryPoolAllocator<json::Allocator>, json::Allocator> Document;
-typedef datastax::rapidjson::GenericValue<datastax::rapidjson::UTF8<>, datastax::rapidjson::MemoryPoolAllocator<json::Allocator> > Value;
-typedef datastax::rapidjson::GenericStringBuffer<datastax::rapidjson::UTF8<>, json::Allocator> StringBuffer;
+typedef datastax::rapidjson::UTF8<> UTF8;
+typedef datastax::rapidjson::MemoryPoolAllocator<json::Allocator> MemoryPoolAllocator;
 
-template<typename OutputStream, typename SourceEncoding = datastax::rapidjson::UTF8<>, typename TargetEncoding = datastax::rapidjson::UTF8<>, typename StackAllocator = json::Allocator, unsigned writeFlags = datastax::rapidjson::kWriteDefaultFlags>
+typedef datastax::rapidjson::GenericDocument<UTF8, MemoryPoolAllocator, json::Allocator> Document;
+typedef datastax::rapidjson::GenericValue<UTF8, MemoryPoolAllocator > Value;
+typedef datastax::rapidjson::GenericStringBuffer<UTF8, json::Allocator> StringBuffer;
+
+template<typename OutputStream, typename SourceEncoding = UTF8, typename TargetEncoding = UTF8, typename StackAllocator = json::Allocator, unsigned writeFlags = datastax::rapidjson::kWriteDefaultFlags>
 class Writer : public datastax::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> {
 public:
     typedef datastax::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> Type;

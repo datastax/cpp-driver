@@ -124,6 +124,7 @@ CassError cass_uuid_from_string_n(const char* str,
   const char* pos = str;
   char buf[16];
 
+// clang-format off
   static const signed char hex_to_half_byte[256] = {
     -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
     -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
@@ -142,6 +143,7 @@ CassError cass_uuid_from_string_n(const char* str,
     -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
     -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
   };
+// clang-format on
 
   if (str == NULL || str_length != 36) {
     return CASS_ERROR_LIB_BAD_PARAMS;

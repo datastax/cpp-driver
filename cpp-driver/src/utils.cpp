@@ -197,8 +197,8 @@ void thread_yield() {
 #endif
 }
 
-// Code was taken from MSDN documentation
-// see https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
+// Code was taken from MSDN documentation see:
+// https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
 #if defined(_MSC_VER) && defined(_DEBUG)
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 #pragma pack(push,8)
