@@ -17,6 +17,7 @@ list(APPEND CMAKE_MODULE_PATH ${CASS_ROOT_DIR}/cmake/modules
 )
 
 include(CppDriver)
+include(ClangFormat)
 
 CassInitProject(dse)
 CassRapidJson()

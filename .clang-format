@@ -24,4 +24,3 @@ Cpp11BracedListStyle: false
 AlwaysBreakTemplateDeclarations: true
 BreakBeforeInheritanceComma: true
 ...
-
