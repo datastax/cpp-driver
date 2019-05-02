@@ -21,6 +21,7 @@
 #include "get_time.hpp"
 #include "string.hpp"
 
+#include <cstring>
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -83,11 +84,18 @@ private:
                    TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,   \
                    TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, ONE, throwaway)
 
-// Using __FILE__ returns the whole absolute path of the file, this
-// allows something more concise to be used via -DLOG_FILE_=<path>
-#ifndef LOG_FILE_
-#define LOG_FILE_ __FILE__
+#ifdef WIN32
+#define LOG_FILE_SEPARATOR_STR_ "\\"
+#define LOG_FILE_SEPARATOR_CHAR_ '\\'
+#else
+#define LOG_FILE_SEPARATOR_STR_ "/"
+#define LOG_FILE_SEPARATOR_CHAR_ '/'
 #endif
+
+// Compiles away on most compilers (not MSVC, but it's still fast). This adds the seperator to the
+// front to guarantee a match is found, but it's then removed by moving the pointer to the next
+// position.
+#define LOG_FILE_ (strrchr(LOG_FILE_SEPARATOR_STR_ __FILE__, LOG_FILE_SEPARATOR_CHAR_) + 1)
 
 #if defined(_MSC_VER)
 #define LOG_FUNCTION_ __FUNCSIG__
