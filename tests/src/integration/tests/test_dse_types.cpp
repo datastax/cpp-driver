@@ -437,10 +437,11 @@ const std::vector<dse::LineString>
 /**
  * Values for polygon tests
  */
-const dse::Polygon GEOMETRY_POLYGON[] = { dse::Polygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)"),
-                                          dse::Polygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
-                (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)"),
-                                          dse::Polygon("POLYGON EMPTY") };
+const dse::Polygon GEOMETRY_POLYGON[] = {
+  dse::Polygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)"),
+  dse::Polygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)"),
+  dse::Polygon("POLYGON EMPTY")
+};
 template <>
 const std::vector<dse::Polygon>
     DseTypesTest<dse::Polygon>::values_(GEOMETRY_POLYGON,
