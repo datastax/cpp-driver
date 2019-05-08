@@ -773,7 +773,7 @@ Function Publish-Artifacts {
     }
 
     # Create the Uri and FilePath components for the upload
-    $base_uri = "$($Env:ARTIFACTORY_BASE_URI)/origin/$($Env:APPVEYOR_REPO_BRANCH)/$(Get-Commit-Sha)/windows"
+    $base_uri = "$($Env:ARTIFACTORY_BASE_URI)/$($Env:DRIVER_VERSION)/$(Get-Commit-Sha)/windows"
     $driver_uri = "$($base_uri)/$($driver_type)/v$($Env:DRIVER_VERSION)/$($Env:DRIVER_ARTIFACT_ARCHIVE)"
     $driver_archive = "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:DRIVER_ARTIFACT_ARCHIVE)"
     $libuv_uri = "$($base_uri)/dependencies/libuv/v$($Env:LIBUV_VERSION)/$($Env:LIBUV_ARTIFACT_ARCHIVE)"
