@@ -1819,7 +1819,7 @@ void ProtocolHandler::decode(ClientConnection* client, const char* data, int32_t
     } else {
       // Not efficient, but concise. Copy the consumed part of the buffer
       // forward then resize the buffer to what's left over.
-      std::copy(buffer_.begin(), buffer_.begin() + result, buffer_.begin());
+      std::copy(buffer_.begin() + result, buffer_.end(), buffer_.begin());
       buffer_.resize(buffer_.size() - result);
     }
   }
@@ -1838,12 +1838,17 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
         remaining--;
         if (version_ < request_handler_->lowest_supported_protocol_version() ||
             version_ > request_handler_->highest_supported_protocol_version()) {
-          // Respond using the highest supported protocol that the server
-          // supports (don't use the request's version because it's not supported)
-          Request::Ptr request(new Request(request_handler_->highest_supported_protocol_version(),
-                                           flags_, stream_, opcode_, String(), client));
+          // Use the highest supported protocol version unless it's less than the lowest supported
+          // then use the original request's protocol version.
+          int8_t response_version = request_handler_->highest_supported_protocol_version();
+          if (version_ < request_handler_->lowest_supported_protocol_version()) {
+            response_version = version_;
+          }
+          Request::Ptr request(
+              new Request(response_version, flags_, stream_, opcode_, String(), client));
           request_handler_->invalid_protocol(request.get());
-          return len - remaining;
+          client->close();
+          return -1;
         }
         state_ = HEADER;
         break;
@@ -1854,7 +1859,7 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
           opcode_ = *pos++;
           pos = decode_int32(pos, end, &length_);
           remaining -= 7;
-        } else if (version_ >= 3 && version_ <= 5 && remaining >= 8) {
+        } else if (version_ >= 3 && remaining >= 8) {
           flags_ = *pos++;
           pos = decode_int16(pos, end, &stream_);
           opcode_ = *pos++;
