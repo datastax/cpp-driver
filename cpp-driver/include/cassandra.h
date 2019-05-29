@@ -2014,8 +2014,8 @@ cass_cluster_set_tracing_retry_wait_time(CassCluster* cluster,
  *
  * <b>Default:</b> CASS_CONSISTENCY_ONE
  *
- * @param cluster[in]
- * @param consistency[in]
+ * @param[in] cluster
+ * @param[in] consistency
  */
 CASS_EXPORT void
 cass_cluster_set_tracing_consistency(CassCluster* cluster,

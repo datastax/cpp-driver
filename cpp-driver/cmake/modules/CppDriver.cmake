@@ -234,6 +234,20 @@ macro(CassConfigureInstall var_prefix pkg_config_stem)
   # Create a binary directory executable and DLLs (windows only)
   set(INSTALL_DLL_EXE_DIR "bin")
 
+  # Determine the header install dir
+  if (CASS_INSTALL_HEADER_IN_SUBDIR)
+    if (CASS_INSTALL_HEADER_SUBDIR_NAME)
+      # User-specified include sub-dir
+      set(INSTALL_HEADER_DIR "include/${CASS_INSTALL_HEADER_SUBDIR_NAME}")
+    else()
+      # Default subdir location is 'include/cassandra'
+      set(INSTALL_HEADER_DIR "include/${PROJECT_NAME_STRING}")
+    endif()
+  else()
+    # Default header install location is 'include'
+    set(INSTALL_HEADER_DIR "include")
+  endif()
+
   if(${var_prefix}_INSTALL_PKG_CONFIG)
     if(NOT WIN32)
       find_package(PkgConfig)
@@ -241,7 +255,7 @@ macro(CassConfigureInstall var_prefix pkg_config_stem)
         set(prefix ${CMAKE_INSTALL_PREFIX})
         set(exec_prefix ${CMAKE_INSTALL_PREFIX})
         set(libdir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
-        set(includedir ${CMAKE_INSTALL_PREFIX}/include)
+        set(includedir ${CMAKE_INSTALL_PREFIX}/${INSTALL_HEADER_DIR})
         set(version ${PROJECT_VERSION_STRING})
       endif()
     endif()
@@ -249,7 +263,7 @@ macro(CassConfigureInstall var_prefix pkg_config_stem)
 
   # Determine if the header should be installed
   if(${var_prefix}_INSTALL_HEADER)
-    install(FILES ${${var_prefix}_API_HEADER_FILES} DESTINATION "include")
+    install(FILES ${${var_prefix}_API_HEADER_FILES} DESTINATION ${INSTALL_HEADER_DIR})
   endif()
 
   # Install the dynamic/shared library
