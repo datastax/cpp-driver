@@ -12,5 +12,6 @@
 #cmakedefine HAVE_ARC4RANDOM
 #cmakedefine HAVE_GETRANDOM
 #cmakedefine HAVE_TIMERFD
+#cmakedefine HAVE_EXPLICIT_BZERO
 
 #endif

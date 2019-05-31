@@ -11224,6 +11224,17 @@ cass_alloc_set_functions(CassMallocFunction malloc_func,
                          CassReallocFunction realloc_func,
                          CassFreeFunction free_func);
 
+/**
+ * Clean dst buffer to len size
+ *
+ * Similar as bzero but not optimisable regardless
+ * of the compiler optimisation level
+ * @param[in] dst
+ * @param[in] len
+ */
+CASS_EXPORT void
+cass_secure_zero(void * dst,
+		 size_t len);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

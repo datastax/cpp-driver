@@ -21,6 +21,17 @@ void cass_alloc_set_functions(CassMallocFunction malloc_func,
   cass::Memory::set_functions(malloc_func, realloc_func, free_func);
 }
 
+void cass_secure_zero(void *dst,
+		      size_t len) {
+#if defined(HAVE_EXPLICIT_BZERO)
+  explicit_bzero(dst, len);
+#else
+  // Using volatile fp over assembly, more portable at least
+  void *(*const volatile nop_memset)(void *, int, size_t) = &memset;
+  nop_memset(dst, 0, len);
+#endif
+}
+
 } // extern "C"
 
 #ifdef DEBUG_CUSTOM_ALLOCATOR

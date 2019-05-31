@@ -1025,6 +1025,7 @@ macro(CassConfigure)
     endif()
   else()
     check_symbol_exists(arc4random_buf "stdlib.h" HAVE_ARC4RANDOM)
+    check_symbol_exists(explicit_bzero "string.h" HAVE_EXPLICIT_BZERO)
   endif()
   # Determine if sigpipe is available
   check_symbol_exists(SO_NOSIGPIPE "sys/socket.h;sys/types.h" HAVE_NOSIGPIPE)
