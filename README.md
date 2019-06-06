@@ -104,8 +104,9 @@ int main() {
 
 ## License
 
-Copyright &copy; DataStax, Inc.
+&copy; DataStax, Inc.
 
+The full license terms are available at
 http://www.datastax.com/terms/datastax-dse-driver-license-terms
 
 [DSE]: http://www.datastax.com/products/datastax-enterprise
