@@ -718,6 +718,11 @@ typedef enum CassError_ {
   /* @endcond*/
 } CassError;
 
+typedef enum CassOperationType_ {
+  CASS_OPERATION_TYPE_READ,
+  CASS_OPERATION_TYPE_WRITE
+} CassOperationType;
+
 /**
  * A callback that's notified when the future is set.
  *
@@ -903,6 +908,31 @@ typedef enum CassHostListenerEvent_ {
 typedef void(*CassHostListenerCallback)(CassHostListenerEvent event,
                                         const CassInet address,
                                         void* data);
+
+/**
+ * Gets the next weaker consistency level. Calling this function with the weakest
+ * level will return the same value.
+ *
+ * @param[in] op Indicates if it's a read or write operation.
+ * @param[in] stronger The consistency level.
+ * @return The next weaker consistency level. If there is a mismatch between the operation
+ *         type and the consistency level provided, CASS_CONSISTENCY_UNKNOWN is returned.
+ */
+CASS_EXPORT CassConsistency
+cass_next_weaker_consistency_level(CassOperationType op, CassConsistency stronger);
+
+
+/**
+ * Compares two consistency levels.
+ *
+ * @param[in] op Indicates if it's a read or write operation.
+ * @param[in] stronger The stronger consistency level.
+ * @param[in] weaker The weaker consistency level.
+ * @return cass_true if 'stronger' is a strictly stronger consistency level. If both levels are equal or
+ *         if one of them is CASS_CONSISTENCY_UNKNOWN, this function returns cass_false.
+ */
+CASS_EXPORT cass_bool_t
+cass_consistency_level_compare(CassOperationType op, CassConsistency stronger, CassConsistency weaker);
 
 /***********************************************************************************
  *

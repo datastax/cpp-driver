@@ -29,6 +29,74 @@
   #include <unistd.h>
 #endif
 
+extern "C" {
+
+CassConsistency
+cass_next_weaker_consistency_level(CassOperationType op, CassConsistency stronger)
+{
+    switch (stronger) {
+        case CASS_CONSISTENCY_ALL:
+            return CASS_CONSISTENCY_EACH_QUORUM;
+        case CASS_CONSISTENCY_EACH_QUORUM:
+            return CASS_CONSISTENCY_QUORUM;
+        case CASS_CONSISTENCY_QUORUM:
+            return CASS_CONSISTENCY_LOCAL_QUORUM;
+        case CASS_CONSISTENCY_LOCAL_QUORUM:
+            return CASS_CONSISTENCY_THREE;
+        case CASS_CONSISTENCY_THREE:
+            return CASS_CONSISTENCY_TWO;
+        case CASS_CONSISTENCY_TWO:
+            return CASS_CONSISTENCY_ONE;
+        case CASS_CONSISTENCY_ONE:
+            return CASS_CONSISTENCY_LOCAL_ONE;
+        default:
+            break;
+    }
+    if (op == CASS_OPERATION_TYPE_READ) {
+        switch(stronger) {
+            case CASS_CONSISTENCY_LOCAL_ONE:
+                return CASS_CONSISTENCY_SERIAL;
+            case CASS_CONSISTENCY_SERIAL:
+            case CASS_CONSISTENCY_LOCAL_SERIAL:
+                return CASS_CONSISTENCY_LOCAL_SERIAL;
+            default:
+                return CASS_CONSISTENCY_UNKNOWN;
+        }
+    }
+    else { //op == CASS_OPERATION_TYPE_WRITE
+        switch(stronger) {
+            case CASS_CONSISTENCY_LOCAL_ONE:
+            case CASS_CONSISTENCY_ANY:
+                return CASS_CONSISTENCY_ANY;
+            default:
+                return CASS_CONSISTENCY_UNKNOWN;
+        }
+    }
+}
+
+cass_bool_t
+cass_consistency_level_compare(CassOperationType op, CassConsistency stronger, CassConsistency weaker)
+{
+    if ((stronger == CASS_CONSISTENCY_UNKNOWN) ||
+        (weaker == CASS_CONSISTENCY_UNKNOWN) ||
+        (stronger == weaker)) {
+        return cass_false;
+    }
+    CassConsistency s = stronger, w;
+    do {
+        w = cass_next_weaker_consistency_level(op, s);
+        if (s == w) {
+            break; //we have reached the weakest consistency level
+        }
+        else {
+            s = w; //downgrade
+        }
+    } while (w != weaker);
+    return w == weaker ? cass_true : cass_false;
+}
+
+} // extern "C"
+
 namespace cass {
 
 String opcode_to_string(int opcode) {
