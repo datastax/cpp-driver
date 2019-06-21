@@ -23,6 +23,8 @@
 using namespace datastax::internal;
 using namespace datastax::internal::core;
 
+#define FIFTEEN_PERCENT(value) static_cast<double>((value * 115) / 100)
+
 class ClusterUnitTest : public EventLoopTest {
 public:
   ClusterUnitTest()
@@ -237,6 +239,53 @@ public:
   public:
     Future::Ptr event_future_;
     mockssandra::Cluster& simple_cluster_;
+  };
+
+  class ClusterUnitTestReconnectionPolicy : public ReconnectionPolicy {
+  public:
+    typedef SharedRefPtr<ClusterUnitTestReconnectionPolicy> Ptr;
+
+    ClusterUnitTestReconnectionPolicy()
+        : ReconnectionPolicy(ReconnectionPolicy::CONSTANT)
+        , reconnection_schedule_count_(0)
+        , destroyed_reconnection_schedule_count_(0)
+        , scheduled_delay_count_(0) {}
+
+    virtual const char* name() const { return "blah"; }
+    virtual ReconnectionSchedule* new_reconnection_schedule() {
+      ++reconnection_schedule_count_;
+      return new ClusterUnitTestReconnectionSchedule(&scheduled_delay_count_,
+                                                     &destroyed_reconnection_schedule_count_);
+    }
+
+    unsigned reconnection_schedule_count() const { return reconnection_schedule_count_; }
+    unsigned destroyed_reconnection_schedule_count() const {
+      return destroyed_reconnection_schedule_count_;
+    }
+    unsigned scheduled_delay_count() const { return scheduled_delay_count_; }
+
+  private:
+    unsigned reconnection_schedule_count_;
+    unsigned destroyed_reconnection_schedule_count_;
+    unsigned scheduled_delay_count_;
+
+    class ClusterUnitTestReconnectionSchedule : public ReconnectionSchedule {
+    public:
+      ClusterUnitTestReconnectionSchedule(unsigned* delay_count, unsigned* destroyed_count)
+          : delay_count_(delay_count)
+          , destroyed_count_(destroyed_count) {}
+
+      ~ClusterUnitTestReconnectionSchedule() { ++*destroyed_count_; }
+
+      virtual uint64_t next_delay_ms() {
+        ++*delay_count_;
+        return 1;
+      }
+
+    private:
+      unsigned* delay_count_;
+      unsigned* destroyed_count_;
+    };
   };
 
   static void on_connection_connected(ClusterConnector* connector, Future* future) {
@@ -469,7 +518,7 @@ TEST_F(ClusterUnitTest, ReconnectToDiscoveredHosts) {
   ReconnectClusterListener::Ptr listener(new ReconnectClusterListener(close_future, &outage_plan));
 
   ClusterSettings settings;
-  settings.reconnect_timeout_ms = 1; // Reconnect immediately
+  settings.reconnection_policy.reset(new ConstantReconnectionPolicy(1)); // Reconnect immediately
   settings.control_connection_settings.connection_settings.connect_timeout_ms =
       200; // Give enough time for the connection to complete
 
@@ -512,7 +561,7 @@ TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
   ReconnectClusterListener::Ptr listener(new ReconnectClusterListener(close_future, &outage_plan));
 
   ClusterSettings settings;
-  settings.reconnect_timeout_ms = 1; // Reconnect immediately
+  settings.reconnection_policy.reset(new ConstantReconnectionPolicy(1)); // Reconnect immediately
   settings.control_connection_settings.connection_settings.connect_timeout_ms =
       200; // Give enough time for the connection to complete
 
@@ -553,7 +602,8 @@ TEST_F(ClusterUnitTest, CloseDuringReconnect) {
   Listener::Ptr listener(new Listener(close_future));
 
   ClusterSettings settings;
-  settings.reconnect_timeout_ms = 100000; // Make sure we're reconnecting when we close.
+  settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(100000)); // Make sure we're reconnecting when we close.
 
   connector->with_settings(settings)->with_listener(listener.get())->connect(event_loop());
 
@@ -772,7 +822,7 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
       new DCAwarePolicy("dc1", 1, false)); // Allow connection to a single remote host
   settings.load_balancing_policies.clear();
   settings.load_balancing_policies.push_back(settings.load_balancing_policy);
-  settings.reconnect_timeout_ms = 1; // Reconnect immediately
+  settings.reconnection_policy.reset(new ConstantReconnectionPolicy(1)); // Reconnect immediately
   settings.control_connection_settings.connection_settings.connect_timeout_ms =
       200; // Give enough time for the connection to complete
 
@@ -867,4 +917,43 @@ TEST_F(ClusterUnitTest, DisableEventsOnStartup) {
 
   connect_future->cluster()->close();
   ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+}
+
+TEST_F(ClusterUnitTest, ReconnectionPolicy) {
+  mockssandra::SimpleCluster mock_cluster(simple());
+  ASSERT_EQ(mock_cluster.start_all(), 0);
+
+  OutagePlan outage_plan(loop(), &mock_cluster);
+  outage_plan.stop_node(1);
+  outage_plan.start_node(1);
+  outage_plan.stop_node(1);
+  outage_plan.start_node(1);
+
+  ContactPointList contact_points;
+  contact_points.push_back("127.0.0.1");
+
+  Future::Ptr close_future(new Future());
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
+  ReconnectClusterListener::Ptr listener(new ReconnectClusterListener(close_future, &outage_plan));
+
+  ClusterSettings settings;
+  settings.reconnection_policy.reset(new ClusterUnitTestReconnectionPolicy());
+  settings.control_connection_settings.connection_settings.connect_timeout_ms =
+      200; // Give enough time for the connection to complete
+  connector->with_settings(settings)->with_listener(listener.get())->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+
+  ClusterUnitTestReconnectionPolicy::Ptr policy(
+      static_cast<ClusterUnitTestReconnectionPolicy::Ptr>(settings.reconnection_policy));
+  EXPECT_EQ(2, policy->reconnection_schedule_count());
+  EXPECT_EQ(2, policy->destroyed_reconnection_schedule_count());
+  EXPECT_GE(policy->scheduled_delay_count(), 2u);
+  EXPECT_EQ(3, mock_cluster.connection_attempts(1)); // Includes initial connection attempt
 }

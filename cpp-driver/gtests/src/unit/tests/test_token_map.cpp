@@ -71,7 +71,7 @@ struct TestTokenMap {
 
       const CopyOnWriteHostVec& hosts = token_map->get_replicas(keyspace_name, key);
       ASSERT_TRUE(hosts);
-      ASSERT_GT(hosts->size(), 0);
+      ASSERT_GT(hosts->size(), 0u);
 
       const Host::Ptr& host = get_replica(key);
       ASSERT_TRUE(host);

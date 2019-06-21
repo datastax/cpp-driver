@@ -69,7 +69,7 @@ public:
   static void connect(Session* session, SslContext* ssl_context = NULL,
                       uint64_t wait_for_time_us = WAIT_FOR_TIME, size_t num_nodes = 3) {
     Config config;
-    config.set_reconnect_wait_time(100); // Faster reconnect time to handle cluster starts and stops
+    config.set_constant_reconnect(100); // Faster reconnect time to handle cluster starts and stops
     for (size_t i = 1; i <= num_nodes; ++i) {
       OStringStream ss;
       ss << "127.0.0." << i;
@@ -435,7 +435,7 @@ TEST_F(SessionUnitTest, HostListener) {
   TestHostListener::Ptr listener(new TestHostListener());
 
   Config config;
-  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.set_constant_reconnect(100); // Reconnect immediately
   config.contact_points().push_back("127.0.0.2");
   config.set_host_listener(listener);
 
@@ -493,7 +493,7 @@ TEST_F(SessionUnitTest, HostListenerDCAwareLocal) {
   TestHostListener::Ptr listener(new TestHostListener());
 
   Config config;
-  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.set_constant_reconnect(100); // Reconnect immediately
   config.contact_points().push_back("127.0.0.1");
   config.set_host_listener(listener);
 
@@ -530,7 +530,7 @@ TEST_F(SessionUnitTest, HostListenerDCAwareRemote) {
   TestHostListener::Ptr listener(new TestHostListener());
 
   Config config;
-  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.set_constant_reconnect(100); // Reconnect immediately
   config.contact_points().push_back("127.0.0.1");
   config.set_load_balancing_policy(new DCAwarePolicy("dc1", 1, false));
   config.set_host_listener(listener);
@@ -572,7 +572,7 @@ TEST_F(SessionUnitTest, HostListenerNodeDown) {
   TestHostListener::Ptr listener(new TestHostListener());
 
   Config config;
-  config.set_reconnect_wait_time(100); // Reconnect immediately
+  config.set_constant_reconnect(100); // Reconnect immediately
   config.contact_points().push_back("127.0.0.1");
   config.set_host_listener(listener);
 

@@ -19,7 +19,9 @@
 
 #include "address.hpp"
 #include "delayed_connector.hpp"
+#include "dense_hash_map.hpp"
 #include "pooled_connection.hpp"
+#include "reconnection_policy.hpp"
 
 #include <uv.h>
 
@@ -91,7 +93,7 @@ struct ConnectionPoolSettings {
 
   ConnectionSettings connection_settings;
   size_t num_connections_per_host;
-  uint64_t reconnect_wait_time_ms;
+  ReconnectionPolicy::Ptr reconnection_policy;
 };
 
 /**
@@ -100,6 +102,7 @@ struct ConnectionPoolSettings {
 class ConnectionPool : public RefCounted<ConnectionPool> {
 public:
   typedef SharedRefPtr<ConnectionPool> Ptr;
+  typedef DenseHashMap<DelayedConnector*, ReconnectionSchedule*> ReconnectionSchedules;
 
   class Map : public DenseHashMap<Address, Ptr, AddressHash> {
   public:
@@ -211,7 +214,7 @@ private:
   void notify_up_or_down();
   void notify_critical_error(Connector::ConnectionError code, const String& message);
   void add_connection(const PooledConnection::Ptr& connection);
-  void schedule_reconnect();
+  void schedule_reconnect(ReconnectionSchedule* schedule = NULL);
   void internal_close();
   void maybe_closed();
 
@@ -225,6 +228,7 @@ private:
   const ProtocolVersion protocol_version_;
   const ConnectionPoolSettings settings_;
   Metrics* const metrics_;
+  ReconnectionSchedules reconnection_schedules_;
 
   CloseState close_state_;
   NotifyState notify_state_;

@@ -193,9 +193,9 @@ struct ClusterSettings {
   int port;
 
   /**
-   * Time to wait before attempting to reconnect the control connection.
+   * Reconnection policy to use when attempting to reconnect the control connection.
    */
-  uint64_t reconnect_timeout_ms;
+  ReconnectionPolicy::Ptr reconnection_policy;
 
   /**
    * If true then cached prepared statements are prepared when a host is brought
@@ -431,6 +431,7 @@ private:
   ClusterEvent::Vec recorded_events_;
   ScopedPtr<MonitorReporting> monitor_reporting_;
   Timer monitor_reporting_timer_;
+  ScopedPtr<ReconnectionSchedule> reconnection_schedule_;
 };
 
 }}} // namespace datastax::internal::core

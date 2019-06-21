@@ -350,7 +350,8 @@ ServerConnection::ServerConnection(const Address& address, const ClientConnectio
     , rc_(0)
     , address_(address)
     , factory_(factory)
-    , ssl_context_(NULL) {
+    , ssl_context_(NULL)
+    , connection_attempts_(0) {
   uv_mutex_init(&mutex_);
   uv_cond_init(&cond_);
 }
@@ -493,6 +494,7 @@ void ServerConnection::wait_close() {
   }
 }
 
+unsigned ServerConnection::connection_attempts() const { return connection_attempts_.load(); }
 void ServerConnection::run(const ServerConnectionTask::Ptr& task) {
   ScopedMutex l(&mutex_);
   if (state_ != STATE_LISTENING) return;
@@ -575,6 +577,8 @@ void ServerConnection::on_connection(uv_stream_t* server, int status) {
 }
 
 void ServerConnection::handle_connection(int status) {
+  connection_attempts_.fetch_add(1);
+
   if (status != 0) {
     fprintf(stderr, "Listen failure: %s\n", uv_strerror(status));
     return;
@@ -2182,6 +2186,14 @@ Hosts Cluster::hosts() const {
     }
   }
   return hosts;
+}
+
+unsigned Cluster::connection_attempts(size_t node) const {
+  if (node < 1 || node > servers_.size()) {
+    return 0;
+  }
+  const Server& server = servers_[node - 1];
+  return server.connection->connection_attempts();
 }
 
 int Cluster::create_and_add_server(AddressGenerator& generator, ClientConnectionFactory& factory,

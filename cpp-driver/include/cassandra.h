@@ -1735,16 +1735,64 @@ cass_cluster_set_max_connections_per_host(CassCluster* cluster,
 /**
  * Sets the amount of time to wait before attempting to reconnect.
  *
- * <b>Default:</b> 2000 milliseconds
- *
  * @public @memberof CassCluster
+ *
+ * @deprecated This is being replaced with cass_cluster_set_constant_reconnect().
+ * Expect this to be removed in a future release.
  *
  * @param[in] cluster
  * @param[in] wait_time
  */
-CASS_EXPORT void
+CASS_EXPORT CASS_DEPRECATED(void
 cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
-                                     unsigned wait_time);
+                                     unsigned wait_time));
+
+/**
+ * Configures the cluster to use a reconnection policy that waits a constant
+ * time between each reconnection attempt.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] delay_ms Time in milliseconds to delay attempting a reconnection;
+ * 0 to perform a reconnection immediately.
+ */
+CASS_EXPORT void
+cass_cluster_set_constant_reconnect(CassCluster* cluster,
+                                    cass_uint64_t delay_ms);
+
+/**
+ * Configures the cluster to use a reconnection policy that waits exponentially
+ * longer between each reconnection attempt; however will maintain a constant
+ * delay once the maximum delay is reached.
+ *
+ * <b>Default:</b>
+ * <ul>
+ *   <li>2000 milliseconds base delay</li>
+ *   <li>60000 milliseconds max delay</li>
+ * </ul>
+ *
+ * <p>
+ *   <b>Note:</b> A random amount of jitter (+/- 15%) will be added to the pure
+ *   exponential delay value. This helps to prevent situations where multiple
+ *   connections are in the reconnection process at exactly the same time. The
+ *   jitter will never cause the delay to be less than the base delay, or more
+ *   than the max delay.
+ * </p>
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] base_delay_ms The base delay (in milliseconds) to use for
+ * scheduling reconnection attempts.
+ * @param[in] max_delay_ms The maximum delay to wait between two reconnection
+ * attempts.
+ * @return CASS_OK if successful, otherwise error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_exponential_reconnect(CassCluster* cluster,
+                                       cass_uint64_t base_delay_ms,
+                                       cass_uint64_t max_delay_ms);
 
 /**
  * Sets the amount of time, in microseconds, to wait for new requests to

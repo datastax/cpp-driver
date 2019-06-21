@@ -315,7 +315,8 @@ TEST_F(RequestProcessorUnitTest, NotifyAddRemoveHost) {
       bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
+  settings.connection_pool_settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(1)); // Reconnect immediately
 
   UpDownListener::Ptr listener(new UpDownListener(up_future, down_future, to_add_remove));
 
@@ -346,8 +347,8 @@ TEST_F(RequestProcessorUnitTest, CloseDuringReconnect) {
       bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.reconnect_wait_time_ms =
-      100000; // Make sure we're reconnecting when we close.
+  settings.connection_pool_settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(100000)); // Make sure we're reconnecting when we close.
 
   CloseListener::Ptr listener(new CloseListener(close_future));
 
@@ -441,7 +442,8 @@ TEST_F(RequestProcessorUnitTest, PoolUp) {
       bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
+  settings.connection_pool_settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(1)); // Reconnect immediately
 
   UpDownListener::Ptr listener(new UpDownListener(up_future, down_future, target_host));
 
@@ -530,7 +532,8 @@ TEST_F(RequestProcessorUnitTest, RollingRestart) {
       bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.reconnect_wait_time_ms = 10; // Reconnect immediately
+  settings.connection_pool_settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(10)); // Reconnect immediately
 
   initializer->with_settings(settings)->with_listener(listener.get())->initialize(event_loop());
 

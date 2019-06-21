@@ -46,7 +46,7 @@ public:
     }
 
     // Initialize the cluster for latency aware
-    cass_cluster_set_reconnect_wait_time(cluster_.get(), 1);
+    cass_cluster_set_constant_reconnect(cluster_.get(), 1);
     cass_cluster_set_connect_timeout(cluster_.get(), 240 * test_utils::ONE_SECOND_IN_MICROS);
     cass_cluster_set_request_timeout(cluster_.get(), 240 * test_utils::ONE_SECOND_IN_MICROS);
     test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 3);

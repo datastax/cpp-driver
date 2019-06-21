@@ -123,7 +123,31 @@ CassError cass_cluster_set_max_connections_per_host(CassCluster* cluster,
 }
 
 void cass_cluster_set_reconnect_wait_time(CassCluster* cluster, unsigned wait_time_ms) {
-  cluster->config().set_reconnect_wait_time(wait_time_ms);
+  cass_cluster_set_constant_reconnect(cluster, wait_time_ms);
+}
+
+void cass_cluster_set_constant_reconnect(CassCluster* cluster, cass_uint64_t delay_ms) {
+  cluster->config().set_constant_reconnect(delay_ms);
+}
+
+CassError cass_cluster_set_exponential_reconnect(CassCluster* cluster, cass_uint64_t base_delay_ms,
+                                                 cass_uint64_t max_delay_ms) {
+  if (base_delay_ms <= 1) {
+    LOG_ERROR("Base delay must be greater than 1");
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+
+  if (max_delay_ms <= 1) {
+    LOG_ERROR("Max delay must be greater than 1");
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+
+  if (max_delay_ms < base_delay_ms) {
+    LOG_ERROR("Max delay cannot be less than base delay");
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_exponential_reconnect(base_delay_ms, max_delay_ms);
+  return CASS_OK;
 }
 
 CassError cass_cluster_set_coalesce_delay(CassCluster* cluster, cass_int64_t delay_us) {

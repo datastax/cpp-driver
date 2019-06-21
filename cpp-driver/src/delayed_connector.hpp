@@ -77,8 +77,8 @@ public:
   /**
    * Connect to a host after a delay.
    *
+   * @param loop The event loop to run the timer and connection process.
    * @param wait_time_ms The amount of time to delay.
-   * @param A key to restrict access to the method.
    */
   void delayed_connect(uv_loop_t* loop, uint64_t wait_time_ms);
 

@@ -302,13 +302,13 @@ public:
   }
 
   /**
-   * Sets the amount of time to wait before attempting to reconnect.
+   * Sets the constant reconnection policy.
    *
-   * @param wait_time_ms Wait time in milliseconds (default: 2000)
+   * @param delay_ms Delay in milliseconds (default: 2000)
    * @return Cluster object
    */
-  Cluster& with_reconnect_wait_time(unsigned int wait_time_ms) {
-    cass_cluster_set_reconnect_wait_time(get(), wait_time_ms);
+  Cluster& with_constant_reconnect(unsigned int delay_ms) {
+    cass_cluster_set_constant_reconnect(get(), delay_ms);
     return *this;
   }
 

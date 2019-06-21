@@ -64,7 +64,7 @@ TEST_F(TracingUnitTest, Simple) {
   EXPECT_TRUE(future->response()->has_tracing_id());
 
   CassUuid tracing_id(future->response()->tracing_id());
-  EXPECT_NE(tracing_id.time_and_version, 0);
+  EXPECT_NE(tracing_id.time_and_version, 0u);
 }
 
 TEST_F(TracingUnitTest, DataNotAvailble) {
@@ -92,7 +92,7 @@ TEST_F(TracingUnitTest, DataNotAvailble) {
   EXPECT_TRUE(future->response()->has_tracing_id());
 
   CassUuid tracing_id(future->response()->tracing_id());
-  EXPECT_NE(tracing_id.time_and_version, 0);
+  EXPECT_NE(tracing_id.time_and_version, 0u);
 
   EXPECT_GT(logging_criteria_count(), 0);
 }
@@ -125,7 +125,7 @@ TEST_F(TracingUnitTest, RequestTimeout) {
   EXPECT_TRUE(future->response()->has_tracing_id());
 
   CassUuid tracing_id(future->response()->tracing_id());
-  EXPECT_NE(tracing_id.time_and_version, 0);
+  EXPECT_NE(tracing_id.time_and_version, 0u);
 
   EXPECT_GT(logging_criteria_count(), 0);
 }
@@ -156,7 +156,7 @@ TEST_F(TracingUnitTest, QueryError) {
   EXPECT_TRUE(future->response()->has_tracing_id());
 
   CassUuid tracing_id(future->response()->tracing_id());
-  EXPECT_NE(tracing_id.time_and_version, 0);
+  EXPECT_NE(tracing_id.time_and_version, 0u);
 
   EXPECT_GT(logging_criteria_count(), 0);
 }

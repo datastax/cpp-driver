@@ -355,7 +355,7 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests, StatusChange)
    * Create a new session connection using the round robin load balancing policy
    * to ensure all nodes can be accessed during request execution
    */
-  Cluster cluster = default_cluster().with_load_balance_round_robin().with_reconnect_wait_time(
+  Cluster cluster = default_cluster().with_load_balance_round_robin().with_constant_reconnect(
       10); // Ensure reconnect timeout is quick
   Session session = cluster.connect();
 

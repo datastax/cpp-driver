@@ -344,6 +344,26 @@ int main() {
           listener callbacks. Performing expensive operations in a callback
           will block or slow the driver's normal operation.
 
+### Reconnection Policy
+
+The reconnection policy controls the interval between each attempt for a given
+connection.
+
+#### Exponential Reconnection Policy
+
+The exponential reconnection policy is the default reconnection policy. It
+starts by using a base delay in milliseconds which is then exponentially
+increased (doubled) during each reconnection attempt; up to the defined maximum
+delay.
+
+**Note**: Once the connection is re-established, this policy will restart using
+          base delay if a reconnection occurs.
+
+#### Constant Reconnection Policy
+
+The constant reconnection policy is a fixed delay for each reconnection
+attempt.
+
 ### Performance Tips
 
 #### Use a single persistent session

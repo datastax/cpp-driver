@@ -176,6 +176,7 @@ public:
   void close();
   void wait_close();
 
+  unsigned connection_attempts() const;
   void run(const ServerConnectionTask::Ptr& task);
 
 private:
@@ -215,6 +216,7 @@ private:
   const Address address_;
   const ClientConnectionFactory& factory_;
   SSL_CTX* ssl_context_;
+  Atomic<unsigned> connection_attempts_;
 };
 
 } // namespace internal
@@ -1161,6 +1163,8 @@ public:
 
   const Host& host(const Address& address) const;
   Hosts hosts() const;
+
+  unsigned connection_attempts(size_t node) const;
 
   void event(const Event::Ptr& event);
 

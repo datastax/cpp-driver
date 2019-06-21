@@ -198,7 +198,7 @@ LockedHostMap& LockedHostMap::operator=(const HostMap& hosts) {
 ClusterSettings::ClusterSettings()
     : load_balancing_policy(new RoundRobinPolicy())
     , port(CASS_DEFAULT_PORT)
-    , reconnect_timeout_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
+    , reconnection_policy(new ExponentialReconnectionPolicy())
     , prepare_on_up_or_add_host(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
     , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
     , disable_events_on_startup(false) {
@@ -210,7 +210,7 @@ ClusterSettings::ClusterSettings(const Config& config)
     , load_balancing_policy(config.load_balancing_policy())
     , load_balancing_policies(config.load_balancing_policies())
     , port(config.port())
-    , reconnect_timeout_ms(config.reconnect_wait_time_ms())
+    , reconnection_policy(config.reconnection_policy())
     , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
     , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
     , disable_events_on_startup(false) {}
@@ -380,8 +380,12 @@ bool Cluster::is_host_ignored(const Host::Ptr& host) const {
 }
 
 void Cluster::schedule_reconnect() {
-  if (settings_.reconnect_timeout_ms > 0) {
-    timer_.start(connection_->loop(), settings_.reconnect_timeout_ms,
+  if (!reconnection_schedule_) {
+    reconnection_schedule_.reset(settings_.reconnection_policy->new_reconnection_schedule());
+  }
+  uint64_t delay_ms = reconnection_schedule_->next_delay_ms();
+  if (delay_ms > 0) {
+    timer_.start(connection_->loop(), delay_ms,
                  bind_callback(&Cluster::on_schedule_reconnect, this));
   } else {
     handle_schedule_reconnect();
@@ -435,6 +439,7 @@ void Cluster::on_reconnect(ControlConnector* connector) {
     LOG_INFO("Control connection connected to %s", connected_host_->address_string().c_str());
 
     listener_->on_reconnect(this);
+    reconnection_schedule_.reset();
   } else if (!connector->is_canceled()) {
     LOG_ERROR(
         "Unable to reestablish a control connection to host %s because of the following error: %s",

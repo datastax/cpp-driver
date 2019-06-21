@@ -22,6 +22,7 @@
 #include "constants.hpp"
 #include "execution_profile.hpp"
 #include "protocol.hpp"
+#include "reconnection_policy.hpp"
 #include "speculative_execution.hpp"
 #include "ssl.hpp"
 #include "string.hpp"
@@ -42,7 +43,7 @@ public:
       , thread_count_io_(CASS_DEFAULT_THREAD_COUNT_IO)
       , queue_size_io_(CASS_DEFAULT_QUEUE_SIZE_IO)
       , core_connections_per_host_(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
-      , reconnect_wait_time_ms_(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS)
+      , reconnection_policy_(new ExponentialReconnectionPolicy())
       , connect_timeout_ms_(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
       , resolve_timeout_ms_(CASS_DEFAULT_RESOLVE_TIMEOUT_MS)
       , max_schema_wait_time_ms_(CASS_DEFAULT_MAX_SCHEMA_WAIT_TIME_MS)
@@ -116,9 +117,15 @@ public:
     core_connections_per_host_ = num_connections;
   }
 
-  unsigned reconnect_wait_time_ms() const { return reconnect_wait_time_ms_; }
+  ReconnectionPolicy::Ptr reconnection_policy() const { return reconnection_policy_; }
 
-  void set_reconnect_wait_time(unsigned wait_time_ms) { reconnect_wait_time_ms_ = wait_time_ms; }
+  void set_constant_reconnect(uint64_t wait_time_ms) {
+    reconnection_policy_.reset(new ConstantReconnectionPolicy(wait_time_ms));
+  }
+
+  void set_exponential_reconnect(uint64_t base_delay_ms, uint64_t max_delay_ms) {
+    reconnection_policy_.reset(new ExponentialReconnectionPolicy(base_delay_ms, max_delay_ms));
+  }
 
   unsigned connect_timeout_ms() const { return connect_timeout_ms_; }
 
@@ -373,7 +380,7 @@ private:
   unsigned thread_count_io_;
   unsigned queue_size_io_;
   unsigned core_connections_per_host_;
-  unsigned reconnect_wait_time_ms_;
+  SharedRefPtr<ReconnectionPolicy> reconnection_policy_;
   unsigned connect_timeout_ms_;
   unsigned resolve_timeout_ms_;
   unsigned max_schema_wait_time_ms_;

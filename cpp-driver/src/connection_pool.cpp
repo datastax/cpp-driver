@@ -32,12 +32,12 @@ static inline bool least_busy_comp(const PooledConnection::Ptr& a, const PooledC
 
 ConnectionPoolSettings::ConnectionPoolSettings()
     : num_connections_per_host(CASS_DEFAULT_NUM_CONNECTIONS_PER_HOST)
-    , reconnect_wait_time_ms(CASS_DEFAULT_RECONNECT_WAIT_TIME_MS) {}
+    , reconnection_policy(new ExponentialReconnectionPolicy()) {}
 
 ConnectionPoolSettings::ConnectionPoolSettings(const Config& config)
     : connection_settings(config)
     , num_connections_per_host(config.core_connections_per_host())
-    , reconnect_wait_time_ms(config.reconnect_wait_time_ms()) {}
+    , reconnection_policy(config.reconnection_policy()) {}
 
 class NopConnectionPoolListener : public ConnectionPoolListener {
 public:
@@ -67,6 +67,7 @@ ConnectionPool::ConnectionPool(const Connection::Vec& connections, ConnectionPoo
     , close_state_(CLOSE_STATE_OPEN)
     , notify_state_(NOTIFY_STATE_NEW) {
   inc_ref(); // Reference for the lifetime of the pooled connections
+  set_pointer_keys(reconnection_schedules_);
   set_pointer_keys(to_flush_);
 
   for (Connection::Vec::const_iterator it = connections.begin(), end = connections.end(); it != end;
@@ -173,18 +174,25 @@ void ConnectionPool::notify_critical_error(Connector::ConnectionError code, cons
   }
 }
 
-void ConnectionPool::schedule_reconnect() {
-  LOG_INFO("Scheduling reconnect for host %s in %llu ms on connection pool (%p)",
-           host_->address().to_string().c_str(),
-           static_cast<unsigned long long>(settings_.reconnect_wait_time_ms),
-           static_cast<void*>(this));
+void ConnectionPool::schedule_reconnect(ReconnectionSchedule* schedule) {
   DelayedConnector::Ptr connector(new DelayedConnector(
       host_, protocol_version_, bind_callback(&ConnectionPool::on_reconnect, this)));
+
+  if (!schedule) {
+    schedule = settings_.reconnection_policy->new_reconnection_schedule();
+  }
+  reconnection_schedules_[connector.get()] = schedule;
+
+  uint64_t delay_ms = schedule->next_delay_ms();
+  LOG_INFO("Scheduling %s reconnect for host %s in %llums on connection pool (%p) ",
+           settings_.reconnection_policy->name(), host_->address().to_string().c_str(),
+           static_cast<unsigned long long>(delay_ms), static_cast<void*>(this));
+
   pending_connections_.push_back(connector);
   connector->with_keyspace(keyspace())
       ->with_metrics(metrics_)
       ->with_settings(settings_.connection_settings)
-      ->delayed_connect(loop_, settings_.reconnect_wait_time_ms);
+      ->delayed_connect(loop_, delay_ms);
 }
 
 void ConnectionPool::internal_close() {
@@ -233,6 +241,13 @@ void ConnectionPool::on_reconnect(DelayedConnector* connector) {
       std::remove(pending_connections_.begin(), pending_connections_.end(), connector),
       pending_connections_.end());
 
+  ReconnectionSchedules::iterator it = reconnection_schedules_.find(connector);
+  assert(it != reconnection_schedules_.end() &&
+         "No reconnection schedule associated with connector");
+
+  ScopedPtr<ReconnectionSchedule> schedule(it->second);
+  reconnection_schedules_.erase(it);
+
   if (close_state_ != CLOSE_STATE_OPEN) {
     maybe_closed();
     return;
@@ -252,7 +267,7 @@ void ConnectionPool::on_reconnect(DelayedConnector* connector) {
       LOG_WARN(
           "Connection pool was unable to reconnect to host %s because of the following error: %s",
           address().to_string().c_str(), connector->error_message().c_str());
-      schedule_reconnect();
+      schedule_reconnect(schedule.release());
     }
   }
 }

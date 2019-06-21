@@ -156,16 +156,18 @@ public:
         , count_(num_nodes)
         , remaining_(num_nodes) {}
 
+    ~ListenerStatus() {}
+
     void reset() { remaining_ = count_; }
 
-    void up() { set(UP); }
-    void down() { set(DOWN); }
-    void critical_error() { set(CRITICAL_ERROR); }
-    void critical_error_invalid_protocol() { set(CRITICAL_ERROR_INVALID_PROTOCOL); }
-    void critical_error_keyspace() { set(CRITICAL_ERROR_KEYSPACE); }
-    void critical_error_auth() { set(CRITICAL_ERROR_AUTH); }
-    void critical_error_ssl_handshake() { set(CRITICAL_ERROR_SSL_HANDSHAKE); }
-    void critical_error_ssl_verify() { set(CRITICAL_ERROR_SSL_VERIFY); }
+    virtual void up() { set(UP); }
+    virtual void down() { set(DOWN); }
+    virtual void critical_error() { set(CRITICAL_ERROR); }
+    virtual void critical_error_invalid_protocol() { set(CRITICAL_ERROR_INVALID_PROTOCOL); }
+    virtual void critical_error_keyspace() { set(CRITICAL_ERROR_KEYSPACE); }
+    virtual void critical_error_auth() { set(CRITICAL_ERROR_AUTH); }
+    virtual void critical_error_ssl_handshake() { set(CRITICAL_ERROR_SSL_HANDSHAKE); }
+    virtual void critical_error_ssl_verify() { set(CRITICAL_ERROR_SSL_VERIFY); }
 
   private:
     virtual void set(ListenerState::Enum state) {
@@ -177,6 +179,20 @@ public:
     uv_loop_t* loop_;
     size_t count_;
     size_t remaining_;
+  };
+
+  class ListenerUpStatus : public ListenerStatus {
+  public:
+    ListenerUpStatus(uv_loop_t* loop, int num_nodes = NUM_NODES)
+        : ListenerStatus(loop, num_nodes) {}
+
+    void down() {}
+    void critical_error() {}
+    void critical_error_invalid_protocol() {}
+    void critical_error_keyspace() {}
+    void critical_error_auth() {}
+    void critical_error_ssl_handshake() {}
+    void critical_error_ssl_verify() {}
   };
 
   class Listener : public ConnectionPoolManagerListener {
@@ -244,12 +260,59 @@ public:
     RequestStatus* status_;
   };
 
+  class PoolUnitTestReconnectionPolicy : public ReconnectionPolicy {
+  public:
+    typedef SharedRefPtr<PoolUnitTestReconnectionPolicy> Ptr;
+
+    PoolUnitTestReconnectionPolicy()
+        : ReconnectionPolicy(ReconnectionPolicy::CONSTANT)
+        , reconnection_schedule_count_(0)
+        , destroyed_reconnection_schedule_count_(0)
+        , scheduled_delay_count_(0) {}
+
+    virtual const char* name() const { return "blah"; }
+    virtual ReconnectionSchedule* new_reconnection_schedule() {
+      ++reconnection_schedule_count_;
+      return new ClusterUnitTestReconnectionSchedule(&scheduled_delay_count_,
+                                                     &destroyed_reconnection_schedule_count_);
+    }
+
+    unsigned reconnection_schedule_count() const { return reconnection_schedule_count_; }
+    unsigned destroyed_reconnection_schedule_count() const {
+      return destroyed_reconnection_schedule_count_;
+    }
+    unsigned scheduled_delay_count() const { return scheduled_delay_count_; }
+
+  private:
+    unsigned reconnection_schedule_count_;
+    unsigned destroyed_reconnection_schedule_count_;
+    unsigned scheduled_delay_count_;
+
+    class ClusterUnitTestReconnectionSchedule : public ReconnectionSchedule {
+    public:
+      ClusterUnitTestReconnectionSchedule(unsigned* delay_count, unsigned* destroyed_count)
+          : delay_count_(delay_count)
+          , destroyed_count_(destroyed_count) {}
+
+      ~ClusterUnitTestReconnectionSchedule() { ++*destroyed_count_; }
+
+      virtual uint64_t next_delay_ms() {
+        ++*delay_count_;
+        return 1;
+      }
+
+    private:
+      unsigned* delay_count_;
+      unsigned* destroyed_count_;
+    };
+  };
+
   PoolUnitTest() { loop()->data = NULL; }
 
-  HostMap hosts() const {
+  HostMap hosts(size_t num_nodes = NUM_NODES) const {
     mockssandra::Ipv4AddressGenerator generator;
     HostMap hosts;
-    for (size_t i = 0; i < NUM_NODES; ++i) {
+    for (size_t i = 0; i < num_nodes; ++i) {
       Host::Ptr host(new Host(generator.next()));
       hosts[host->address()] = host;
     }
@@ -519,7 +582,7 @@ TEST_F(PoolUnitTest, Reconnect) {
   ASSERT_EQ(hosts.size(), NUM_NODES);
 
   ConnectionPoolSettings settings;
-  settings.reconnect_wait_time_ms = 0; // Reconnect immediately
+  settings.reconnection_policy.reset(new ConstantReconnectionPolicy(0)); // Reconnect immediately
 
   initializer->with_settings(settings)->with_listener(listener.get())->initialize(loop(), hosts);
   uv_run(loop(), UV_RUN_DEFAULT);
@@ -690,6 +753,45 @@ TEST_F(PoolUnitTest, InvalidSsl) {
 
   EXPECT_GT(listener_status.count(ListenerStatus::CRITICAL_ERROR_SSL_VERIFY), 0u)
       << listener_status.results();
+}
+
+TEST_F(PoolUnitTest, ReconnectionPolicy) {
+  mockssandra::SimpleCluster cluster(simple(), 2);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  ListenerStatus listener_status(loop(), 2);
+  ListenerStatus reconnect_listener_status(loop(), 1);
+  ScopedPtr<Listener> listener(new Listener(&listener_status));
+  RequestStatusWithManager request_status(loop(), 0);
+
+  ConnectionPoolManagerInitializer::Ptr initializer(new ConnectionPoolManagerInitializer(
+      PROTOCOL_VERSION, bind_callback(on_pool_nop, &request_status)));
+
+  HostMap hosts = this->hosts(2);
+  ConnectionPoolSettings settings;
+  settings.reconnection_policy.reset(new PoolUnitTestReconnectionPolicy());
+  initializer->with_settings(settings)->with_listener(listener.get())->initialize(loop(), hosts);
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_EQ(listener_status.count(ListenerStatus::UP), 2) << listener_status.results();
+
+  // Stop and start node 1 twice engaging the reconnection policy
+  listener->reset(&reconnect_listener_status);
+  for (int i = 0; i < 2; ++i) {
+    reconnect_listener_status.reset();
+    cluster.stop(1);
+    uv_run(loop(), UV_RUN_DEFAULT);
+    reconnect_listener_status.reset();
+    ASSERT_EQ(cluster.start(1), 0);
+    uv_run(loop(), UV_RUN_DEFAULT);
+  }
+
+  PoolUnitTestReconnectionPolicy::Ptr policy(
+      static_cast<PoolUnitTestReconnectionPolicy::Ptr>(settings.reconnection_policy));
+  EXPECT_EQ(2, policy->reconnection_schedule_count());
+  EXPECT_EQ(2, policy->destroyed_reconnection_schedule_count());
+  EXPECT_EQ(2, policy->scheduled_delay_count());
+  EXPECT_EQ(3, cluster.connection_attempts(1)); // Includes initial connection attempt
+  EXPECT_EQ(1, cluster.connection_attempts(2));
 }
 
 TEST_F(PoolUnitTest, PartialReconnect) {

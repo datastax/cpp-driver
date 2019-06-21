@@ -15,6 +15,7 @@
 #include "string.hpp"
 #include "utils.hpp"
 
+#include <cassert>
 #include <openssl/ssl.h>
 #include <uv.h>
 
@@ -380,14 +381,31 @@ private:
     writer.Key("reconnectionPolicy");
     writer.StartObject();
 
-    // TODO: Update once more reconnection policies are added
+    ReconnectionPolicy::Ptr reconnection_policy = config_.reconnection_policy();
     writer.Key("type");
-    writer.String("ConstantReconnectionPolicy"); // TODO: Update once more reconnection policies are
-                                                 // added (convert to enumeration)
+    if (reconnection_policy->type() == ReconnectionPolicy::CONSTANT) {
+      writer.String("ConstantReconnectionPolicy");
+    } else if (reconnection_policy->type() == ReconnectionPolicy::EXPONENTIAL) {
+      writer.String("ExponentialReconnectionPolicy");
+    } else {
+      assert(false && "Reconnection policy needs to be added");
+      writer.String("UnknownReconnectionPolicy");
+    }
     writer.Key("options");
     writer.StartObject();
-    writer.Key("reconnectWaitTimeMs");
-    writer.Uint(config_.reconnect_wait_time_ms());
+    if (reconnection_policy->type() == ReconnectionPolicy::CONSTANT) {
+      ConstantReconnectionPolicy::Ptr crp =
+          static_cast<ConstantReconnectionPolicy::Ptr>(reconnection_policy);
+      writer.Key("delayMs");
+      writer.Uint(crp->delay_ms());
+    } else if (reconnection_policy->type() == ReconnectionPolicy::EXPONENTIAL) {
+      ExponentialReconnectionPolicy::Ptr erp =
+          static_cast<ExponentialReconnectionPolicy::Ptr>(reconnection_policy);
+      writer.Key("baseDelayMs");
+      writer.Uint(erp->base_delay_ms());
+      writer.Key("maxDelayMs");
+      writer.Uint(erp->max_delay_ms());
+    }
     writer.EndObject(); // options
 
     writer.EndObject();

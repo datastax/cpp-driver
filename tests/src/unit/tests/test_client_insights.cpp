@@ -193,7 +193,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   unsigned core_connections = 3;
   unsigned heartbeat_interval_secs = 5;
   unsigned periodic_status_interval = 7;
-  unsigned reconnect_wait_time_ms = 9;
+  unsigned delay_ms = 9;
   unsigned request_timeout_ms = 11;
   RetryPolicy::Ptr retry_policy(new FallthroughRetryPolicy());
   config_.set_application_name(applicationName);
@@ -203,7 +203,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
   config_.set_core_connections_per_host(core_connections);
   config_.set_connection_heartbeat_interval_secs(heartbeat_interval_secs);
   config_.set_protocol_version(ProtocolVersion::lowest_supported());
-  config_.set_reconnect_wait_time(reconnect_wait_time_ms);
+  config_.set_constant_reconnect(delay_ms);
   config_.set_request_timeout(request_timeout_ms);
   config_.set_retry_policy(retry_policy.get());
   connect(periodic_status_interval);
@@ -345,7 +345,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(value.HasMember("local"));
     ASSERT_EQ(core_connections, value["local"].GetUint()); // Only one host connected
     ASSERT_TRUE(value.HasMember("remote"));
-    ASSERT_EQ(0, value["remote"].GetUint());
+    ASSERT_EQ(0u, value["remote"].GetUint());
   }
   { // heartbeat interval
     ASSERT_TRUE(data.HasMember("heartbeatInterval"));
@@ -366,8 +366,8 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     const json::Value& options = value["options"];
     ASSERT_TRUE(options.IsObject());
     ASSERT_EQ(1u, options.MemberCount());
-    ASSERT_TRUE(options.HasMember("reconnectWaitTimeMs"));
-    ASSERT_EQ(reconnect_wait_time_ms, options["reconnectWaitTimeMs"].GetUint());
+    ASSERT_TRUE(options.HasMember("delayMs"));
+    ASSERT_EQ(delay_ms, options["delayMs"].GetUint());
   }
   { // SSL
     ASSERT_TRUE(data.HasMember("ssl"));
@@ -387,7 +387,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(value.HasMember("configuration"));
     const json::Value& configuration = value["configuration"];
     ASSERT_TRUE(configuration.IsObject());
-    ASSERT_EQ(24, configuration.MemberCount());
+    ASSERT_EQ(24u, configuration.MemberCount());
     ASSERT_TRUE(configuration.HasMember("protocolVersion"));
     ASSERT_EQ(config_.protocol_version().value(), configuration["protocolVersion"].GetInt());
     ASSERT_TRUE(configuration.HasMember("useBetaProtocol"));
@@ -618,6 +618,35 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
   }
 }
 
+TEST_F(ClientInsightsUnitTest, StartupDataExponentialReconnect) {
+  mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  unsigned base_delay_ms = 1234u;
+  unsigned max_delay_ms = 123456u;
+  config_.set_exponential_reconnect(base_delay_ms, max_delay_ms);
+  connect();
+
+  String message = startup_message();
+  json::Document document;
+  document.Parse(message.c_str());
+
+  const json::Value& data = document["data"];
+  const json::Value& reconnection_policy = data["reconnectionPolicy"];
+  ASSERT_TRUE(reconnection_policy.IsObject());
+  ASSERT_EQ(2u, reconnection_policy.MemberCount());
+  ASSERT_TRUE(reconnection_policy.HasMember("type"));
+  ASSERT_STREQ("ExponentialReconnectionPolicy", reconnection_policy["type"].GetString());
+  ASSERT_TRUE(reconnection_policy.HasMember("options"));
+  const json::Value& options = reconnection_policy["options"];
+  ASSERT_TRUE(options.IsObject());
+  ASSERT_EQ(2u, options.MemberCount());
+  ASSERT_TRUE(options.HasMember("baseDelayMs"));
+  ASSERT_EQ(base_delay_ms, options["baseDelayMs"].GetUint());
+  ASSERT_TRUE(options.HasMember("maxDelayMs"));
+  ASSERT_EQ(max_delay_ms, options["maxDelayMs"].GetUint());
+}
+
 TEST_F(ClientInsightsUnitTest, StartupDataSsl) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call());
   SslContext::Ptr ssl_context = use_ssl(&cluster).socket_settings.ssl_context;
@@ -731,7 +760,6 @@ TEST_F(ClientInsightsUnitTest, StatusMetadata) {
 
   { // name
     ASSERT_TRUE(metadata.HasMember("name"));
-    const json::Value& value = metadata["name"];
     ASSERT_STREQ("driver.status", metadata["name"].GetString());
   }
 }
@@ -840,7 +868,7 @@ TEST_F(ClientInsightsUnitTest, StatusDataUpdatedControlConnection) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call(1), 2);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  config_.set_reconnect_wait_time(100u); // Reconnect immediately
+  config_.set_constant_reconnect(100u); // Reconnect immediately
   connect();
 
   String message = startup_message();

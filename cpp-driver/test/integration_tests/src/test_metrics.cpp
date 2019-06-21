@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(connections) {
   // Create one connections per host
   cass_cluster_set_num_threads_io(cluster_.get(), 1);
   cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
-  cass_cluster_set_reconnect_wait_time(cluster_.get(), 10); // Low re-connect for node restart
+  cass_cluster_set_constant_reconnect(cluster_.get(), 10); // Low re-connect for node restart
   test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 3);
   if (ccm_->create_cluster(3)) {
     ccm_->start_cluster();
