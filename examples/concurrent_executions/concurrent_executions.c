@@ -32,14 +32,16 @@
 
 #include <uv.h>
 
-#define CONCURRENCY_LEVEL 32 /* Maximum amount of parallel async executions (threads) */
+#define NUM_THREADS 4
+#define CONCURRENCY_LEVEL 32
 #define NUM_REQUESTS 10000
 
-typedef struct Concurrent_ {
-  CassSession* session;
-  const CassPrepared* prepared;
-  CassUuidGen* uuid_gen;
-} Concurrent;
+CassSession* session = NULL;
+const CassPrepared* prepared = NULL;
+CassUuidGen* uuid_gen = NULL;
+
+int num_requests = 0;
+int num_outstanding_requests = 0;
 
 void print_error(CassFuture* future) {
   const char* message;
@@ -68,11 +70,11 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
   return rc;
 }
 
-CassError execute_query(CassSession* session, CassStatement* statement) {
+CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
-  CassFuture* future = NULL;
+  CassStatement* statement = cass_statement_new(query, 0);
 
-  future = cass_session_execute(session, statement);
+  CassFuture* future = cass_session_execute(session, statement);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -80,17 +82,16 @@ CassError execute_query(CassSession* session, CassStatement* statement) {
     print_error(future);
   }
 
+  cass_statement_free(statement);
   cass_future_free(future);
-
   return rc;
 }
 
 CassError prepare_insert(CassSession* session, const CassPrepared** prepared) {
   CassError rc = CASS_OK;
-  CassFuture* future = NULL;
   const char* query = "INSERT INTO examples.concurrent_executions (id, value) VALUES (?, ?);";
 
-  future = cass_session_prepare(session, query);
+  CassFuture* future = cass_session_prepare(session, query);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -105,80 +106,77 @@ CassError prepare_insert(CassSession* session, const CassPrepared** prepared) {
   return rc;
 }
 
-void insert_into_concurrent(void* data) {
-  Concurrent* concurrent_data = (Concurrent*)data;
-  CassSession* session = concurrent_data->session;
-  const CassPrepared* prepared = concurrent_data->prepared;
-  CassUuidGen* uuid_gen = concurrent_data->uuid_gen;
+void insert_into_concurrent_executions(void* data) {
+  CassFuture* futures[CONCURRENCY_LEVEL];
+  int num_requests = NUM_REQUESTS;
 
-  int i;
-  for (i = 0; i < NUM_REQUESTS; ++i) {
-    CassUuid uuid;
-    char value_buffer[16];
-    CassStatement* statement = cass_prepared_bind(prepared);
-    cass_statement_set_is_idempotent(statement, cass_true);
-    cass_uuid_gen_random(uuid_gen, &uuid);
-    cass_statement_bind_uuid_by_name(statement, "id", uuid);
-    snprintf(value_buffer, sizeof(value_buffer), "%d", i);
-    cass_statement_bind_string_by_name(statement, "value", value_buffer);
+  while (num_requests > 0) {
+    int i;
+    int num_outstanding_requests = CONCURRENCY_LEVEL;
+    if (num_requests < num_outstanding_requests) {
+      num_outstanding_requests = num_requests;
+    }
 
-    execute_query(session, statement);
+    for (i = 0; i < num_outstanding_requests; ++i) {
+      CassUuid uuid;
+      char value_buffer[16];
+      CassStatement* statement = cass_prepared_bind(prepared);
+      cass_statement_set_is_idempotent(statement, cass_true);
+      cass_uuid_gen_random(uuid_gen, &uuid);
+      cass_statement_bind_uuid_by_name(statement, "id", uuid);
+      snprintf(value_buffer, sizeof(value_buffer), "%d", i);
+      cass_statement_bind_string_by_name(statement, "value", value_buffer);
 
-    cass_statement_free(statement);\
+      futures[i] = cass_session_execute(session, statement);
+      cass_statement_free(statement);
+    }
+
+    for (i = 0; i < num_outstanding_requests; ++i) {
+      CassFuture* future = futures[i];
+      CassError rc = cass_future_error_code(future);
+      if (rc != CASS_OK) {
+        print_error(future);
+      }
+      cass_future_free(future);
+      --num_requests;
+    }
   }
 }
 
 int main(int argc, char* argv[]) {
   CassCluster* cluster = NULL;
-  CassSession* session = cass_session_new();
-  const CassPrepared* prepared = NULL;
-  CassUuidGen* uuid_gen = cass_uuid_gen_new();
-  uv_thread_t threads[CONCURRENCY_LEVEL];
+  uv_thread_t threads[NUM_THREADS];
   char* hosts = "127.0.0.1";
   if (argc > 1) {
     hosts = argv[1];
   }
+  session = cass_session_new();
+  uuid_gen = cass_uuid_gen_new();
   cluster = create_cluster(hosts);
 
   if (connect_session(session, cluster) != CASS_OK) {
+    cass_uuid_gen_free(uuid_gen);
     cass_cluster_free(cluster);
     cass_session_free(session);
     return -1;
   }
 
-  {
-    CassStatement* statement =
-      cass_statement_new("CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { \
-                                                    'class': 'SimpleStrategy', \
-                                                    'replication_factor': '1' }",
-                         0);
-    execute_query(session, statement);
-    cass_statement_free(statement);
-  }
-
-  {
-    CassStatement* statement =
-      cass_statement_new("CREATE TABLE IF NOT EXISTS examples.concurrent_executions ( \
+  execute_query(session, "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { \
+                                                        'class': 'SimpleStrategy', \
+                                                        'replication_factor': '1' }");
+  execute_query(session, "CREATE TABLE IF NOT EXISTS examples.concurrent_executions ( \
                                                      id uuid, \
                                                      value text, \
-                                                     PRIMARY KEY (id))",
-                         0);
-    execute_query(session, statement);
-    cass_statement_free(statement);
-  }
+                                                     PRIMARY KEY (id))");
 
   if (prepare_insert(session, &prepared) == CASS_OK) {
-    int i;
-    Concurrent concurrent_data;
-    concurrent_data.session = session;
-    concurrent_data.prepared = prepared;
-    concurrent_data.uuid_gen = uuid_gen;
+    int i = 0;
 
-    for (i = 0; i < CONCURRENCY_LEVEL; ++i) {
-      uv_thread_create(&threads[i], insert_into_concurrent, (void*)&concurrent_data);
+    for (i = 0; i < NUM_THREADS; ++i) {
+      uv_thread_create(&threads[i], insert_into_concurrent_executions, NULL);
     }
 
-    for (i = 0; i < CONCURRENCY_LEVEL; ++i) {
+    for (i = 0; i < NUM_THREADS; ++i) {
       uv_thread_join(&threads[i]);
     }
 
