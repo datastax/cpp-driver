@@ -1,3 +1,20 @@
+1.9.0
+===========
+
+Features
+--------
+[CPP-745] Exponential reconnection policy with jitter
+[CPP-769] Use `clang-format` to fix up formatting
+[CPP-775] Add `clang-format` to Windows
+
+Other
+--------
+[CPP-743] Move internal components from `namespace cass` to `namespace datastax::internal`
+[CPP-764] Rename namespace from `cass` to `datastax`
+[CPP-766] Allow RPM packaging script to build RPM packages for Amazon Linux
+[CPP-770] Fix header files include guard (__CASS_XXX to DATASTAX_XXX)
+[CPP-772] Remove per cpp file LOG_FILE attribute to speed up Windows builds
+
 1.8.0
 ===========
 

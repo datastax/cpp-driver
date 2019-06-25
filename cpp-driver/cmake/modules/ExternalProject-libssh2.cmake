@@ -22,7 +22,7 @@ if(NOT LIBSSH2_INSTALL_PREFIX)
 endif()
 option(LIBSSH2_VERSION "libssh2 version to build and install")
 if(NOT LIBSSH2_VERSION)
-  set(LIBSSH2_VERSION "1.8.2")
+  set(LIBSSH2_VERSION "1.9.0")
 endif()
 set(LIBSSH2_VERSION ${LIBSSH2_VERSION} CACHE STRING "libssh2 version to build and install" FORCE)
 

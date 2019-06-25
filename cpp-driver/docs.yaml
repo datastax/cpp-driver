@@ -57,6 +57,8 @@ rules:
   use_path_nav_files_only: true
 
 versions:
+  - name: "2.13"
+    ref: 2.13.0
   - name: "2.12"
     ref: 2.12.0
   - name: "2.11"
