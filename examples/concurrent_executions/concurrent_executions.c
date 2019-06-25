@@ -30,9 +30,6 @@
 
 #include "cassandra.h"
 
-#include <uv.h>
-
-#define NUM_THREADS 4
 #define CONCURRENCY_LEVEL 32
 #define NUM_REQUESTS 10000
 
@@ -106,7 +103,7 @@ CassError prepare_insert(CassSession* session, const CassPrepared** prepared) {
   return rc;
 }
 
-void insert_into_concurrent_executions(void* data) {
+void insert_into_concurrent_executions() {
   CassFuture* futures[CONCURRENCY_LEVEL];
   int num_requests = NUM_REQUESTS;
 
@@ -145,7 +142,6 @@ void insert_into_concurrent_executions(void* data) {
 
 int main(int argc, char* argv[]) {
   CassCluster* cluster = NULL;
-  uv_thread_t threads[NUM_THREADS];
   char* hosts = "127.0.0.1";
   if (argc > 1) {
     hosts = argv[1];
@@ -170,16 +166,7 @@ int main(int argc, char* argv[]) {
                                                      PRIMARY KEY (id))");
 
   if (prepare_insert(session, &prepared) == CASS_OK) {
-    int i = 0;
-
-    for (i = 0; i < NUM_THREADS; ++i) {
-      uv_thread_create(&threads[i], insert_into_concurrent_executions, NULL);
-    }
-
-    for (i = 0; i < NUM_THREADS; ++i) {
-      uv_thread_join(&threads[i]);
-    }
-
+    insert_into_concurrent_executions();
     cass_prepared_free(prepared);
   }
 
