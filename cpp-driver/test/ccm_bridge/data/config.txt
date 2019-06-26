@@ -13,7 +13,7 @@
 #
 # Uncomment to specify Cassandra version
 ##
-#CASSANDRA_VERSION=3.11.3
+#CASSANDRA_VERSION=3.11.4
 ##
 # Flag to determine if Cassandra/DSE version should be obtained from ASF/GitHub
 #
@@ -68,7 +68,7 @@
 #
 # Uncomment to specify DSE version
 ##
-#DSE_VERSION=6.0.4
+#DSE_VERSION=6.0.8
 ##
 # CCM DSE Credentials Type (username_password|ini_file)
 #
