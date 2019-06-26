@@ -66,6 +66,13 @@ rewrites:
   - ^/features/: /dse_features/
   - http://www.datastax.com/documentation/cql/3.1: https://docs.datastax.com/en/archived/cql/3.1
   - http://www.datastax.com/documentation/cassandra/2.: https://docs.datastax.com/en/archived/cassandra/2.
+  - http://downloads.datastax.com/cpp-driver: https://downloads.datastax.com/cpp-driver/
+  - search: /features/authentication
+    replace: /dse_features/authentication
+  - search: /features/geotypes
+    replace: /dse_features/geotypes
+  - search: /features/graph
+    replace: /dse_features/graph
 links:
   - title: Releases
     href:  http://downloads.datastax.com/cpp-driver

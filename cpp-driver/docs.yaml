@@ -52,6 +52,7 @@ rewrites:
   - ^examples/(.*): https://github.com/datastax/cpp-driver/blob/master/examples/\1
   - http://www.datastax.com/documentation/cql/3.1: https://docs.datastax.com/en/archived/cql/3.1
   - http://www.datastax.com/documentation/cassandra/2.: https://docs.datastax.com/en/archived/cassandra/2.
+  - http://downloads.datastax.com/cpp-driver: https://downloads.datastax.com/cpp-driver/
 rules:
   use_path_nav_files_only: true
 

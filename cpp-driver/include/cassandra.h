@@ -2747,7 +2747,7 @@ cass_cluster_set_no_compact(CassCluster* cluster,
  * <b>Note:</b> The callback is invoked only when state changes in the cluster
  * are applicable to the configured load balancing policy(s).
  *
- * @public @memberor CassCluster
+ * @public @memberof CassCluster
  *
  * @param[in] cluster
  * @param[in] callback

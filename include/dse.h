@@ -476,7 +476,7 @@ cass_cluster_set_application_name(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] application_name
- * @param[in] application_length
+ * @param[in] application_name_length
  */
 CASS_EXPORT void
 cass_cluster_set_application_name_n(CassCluster* cluster,
@@ -494,7 +494,7 @@ cass_cluster_set_application_name_n(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] application_name_version
+ * @param[in] application_version
  */
 
 CASS_EXPORT void
