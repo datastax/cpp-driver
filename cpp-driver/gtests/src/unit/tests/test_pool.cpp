@@ -772,7 +772,7 @@ TEST_F(PoolUnitTest, ReconnectionPolicy) {
   settings.reconnection_policy.reset(new PoolUnitTestReconnectionPolicy());
   initializer->with_settings(settings)->with_listener(listener.get())->initialize(loop(), hosts);
   uv_run(loop(), UV_RUN_DEFAULT);
-  EXPECT_EQ(listener_status.count(ListenerStatus::UP), 2) << listener_status.results();
+  EXPECT_EQ(listener_status.count(ListenerStatus::UP), 2u) << listener_status.results();
 
   // Stop and start node 1 twice engaging the reconnection policy
   listener->reset(&reconnect_listener_status);
@@ -787,11 +787,11 @@ TEST_F(PoolUnitTest, ReconnectionPolicy) {
 
   PoolUnitTestReconnectionPolicy::Ptr policy(
       static_cast<PoolUnitTestReconnectionPolicy::Ptr>(settings.reconnection_policy));
-  EXPECT_EQ(2, policy->reconnection_schedule_count());
-  EXPECT_EQ(2, policy->destroyed_reconnection_schedule_count());
-  EXPECT_EQ(2, policy->scheduled_delay_count());
-  EXPECT_EQ(3, cluster.connection_attempts(1)); // Includes initial connection attempt
-  EXPECT_EQ(1, cluster.connection_attempts(2));
+  EXPECT_EQ(2u, policy->reconnection_schedule_count());
+  EXPECT_EQ(2u, policy->destroyed_reconnection_schedule_count());
+  EXPECT_EQ(2u, policy->scheduled_delay_count());
+  EXPECT_EQ(3u, cluster.connection_attempts(1)); // Includes initial connection attempt
+  EXPECT_EQ(1u, cluster.connection_attempts(2));
 }
 
 TEST_F(PoolUnitTest, PartialReconnect) {
