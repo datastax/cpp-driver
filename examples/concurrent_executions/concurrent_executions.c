@@ -113,6 +113,7 @@ void insert_into_concurrent_executions() {
     if (num_requests < num_outstanding_requests) {
       num_outstanding_requests = num_requests;
     }
+    num_requests -= num_outstanding_requests;
 
     for (i = 0; i < num_outstanding_requests; ++i) {
       CassUuid uuid;
@@ -135,7 +136,6 @@ void insert_into_concurrent_executions() {
         print_error(future);
       }
       cass_future_free(future);
-      --num_requests;
     }
   }
 }
