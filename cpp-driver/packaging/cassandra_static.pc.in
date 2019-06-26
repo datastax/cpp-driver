@@ -7,6 +7,6 @@ Name: cassandra
 Description: A C/C++ client driver for Apache Cassandra
 Version: @version@
 Requires: libuv
-Libs: -L${libdir} -lcassandra_static -lstdc++
+Libs: -L${libdir} -l@PROJECT_LIB_NAME_STATIC@ -lstdc++
 Cflags:
 URL: https://github.com/datastax/cpp-driver/
