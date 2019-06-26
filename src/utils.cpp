@@ -32,17 +32,26 @@
 extern "C" {
 
 CassConsistency
-cass_next_weaker_consistency_level(CassOperationType op, CassConsistency stronger)
+cass_next_weaker_consistency_level(size_t dc_replication_factor,
+                                   CassOperationType op,
+                                   CassConsistency stronger)
 {
+    int local_quorum_size = (dc_replication_factor/2) + 1;
+    
+    if (stronger == CASS_CONSISTENCY_UNKNOWN) {
+        return CASS_CONSISTENCY_UNKNOWN;
+    }
     switch (stronger) {
         case CASS_CONSISTENCY_ALL:
             return CASS_CONSISTENCY_EACH_QUORUM;
         case CASS_CONSISTENCY_EACH_QUORUM:
             return CASS_CONSISTENCY_QUORUM;
         case CASS_CONSISTENCY_QUORUM:
-            return CASS_CONSISTENCY_LOCAL_QUORUM;
+            return local_quorum_size >= 3 ? CASS_CONSISTENCY_LOCAL_QUORUM : CASS_CONSISTENCY_THREE;
         case CASS_CONSISTENCY_LOCAL_QUORUM:
-            return CASS_CONSISTENCY_THREE;
+            if (local_quorum_size > 3) return CASS_CONSISTENCY_THREE;
+            if (local_quorum_size > 2) return CASS_CONSISTENCY_TWO;
+            else return CASS_CONSISTENCY_ONE;
         case CASS_CONSISTENCY_THREE:
             return CASS_CONSISTENCY_TWO;
         case CASS_CONSISTENCY_TWO:
@@ -75,7 +84,10 @@ cass_next_weaker_consistency_level(CassOperationType op, CassConsistency stronge
 }
 
 cass_bool_t
-cass_consistency_level_compare(CassOperationType op, CassConsistency stronger, CassConsistency weaker)
+cass_consistency_level_compare(size_t dc_replication_factor,
+                               CassOperationType op,
+                               CassConsistency stronger,
+                               CassConsistency weaker)
 {
     if ((stronger == CASS_CONSISTENCY_UNKNOWN) ||
         (weaker == CASS_CONSISTENCY_UNKNOWN) ||
@@ -84,7 +96,7 @@ cass_consistency_level_compare(CassOperationType op, CassConsistency stronger, C
     }
     CassConsistency s = stronger, w;
     do {
-        w = cass_next_weaker_consistency_level(op, s);
+        w = cass_next_weaker_consistency_level(dc_replication_factor, op, s);
         if (s == w) {
             break; //we have reached the weakest consistency level
         }

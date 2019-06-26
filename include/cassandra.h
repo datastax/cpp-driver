@@ -913,18 +913,22 @@ typedef void(*CassHostListenerCallback)(CassHostListenerEvent event,
  * Gets the next weaker consistency level. Calling this function with the weakest
  * level will return the same value.
  *
+ * @param[in] dc_replication_factor The replication factor used per data center.
  * @param[in] op Indicates if it's a read or write operation.
  * @param[in] stronger The consistency level.
  * @return The next weaker consistency level. If there is a mismatch between the operation
  *         type and the consistency level provided, CASS_CONSISTENCY_UNKNOWN is returned.
  */
 CASS_EXPORT CassConsistency
-cass_next_weaker_consistency_level(CassOperationType op, CassConsistency stronger);
+cass_next_weaker_consistency_level(size_t dc_replication_factor,
+                                   CassOperationType op,
+                                   CassConsistency stronger);
 
 
 /**
  * Compares two consistency levels.
  *
+ * @param[in] dc_replication_factor The replication factor used per data center.
  * @param[in] op Indicates if it's a read or write operation.
  * @param[in] stronger The stronger consistency level.
  * @param[in] weaker The weaker consistency level.
@@ -932,7 +936,10 @@ cass_next_weaker_consistency_level(CassOperationType op, CassConsistency stronge
  *         if one of them is CASS_CONSISTENCY_UNKNOWN, this function returns cass_false.
  */
 CASS_EXPORT cass_bool_t
-cass_consistency_level_compare(CassOperationType op, CassConsistency stronger, CassConsistency weaker);
+cass_consistency_level_compare(size_t dc_replication_factor,
+                               CassOperationType op,
+                               CassConsistency stronger,
+                               CassConsistency weaker);
 
 /***********************************************************************************
  *
