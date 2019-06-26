@@ -21,6 +21,7 @@
 #define DSE_PROTOCOL_VERSION_BIT 0x40
 #define DSE_PROTOCOL_VERSION_MASK 0x3F
 
+using namespace datastax;
 using namespace datastax::internal::core;
 
 ProtocolVersion::ProtocolVersion()
