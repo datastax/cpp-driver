@@ -122,7 +122,7 @@ void insert_into_concurrent_executions() {
       cass_statement_set_is_idempotent(statement, cass_true);
       cass_uuid_gen_random(uuid_gen, &uuid);
       cass_statement_bind_uuid_by_name(statement, "id", uuid);
-      snprintf(value_buffer, sizeof(value_buffer), "%d", i);
+      sprintf(value_buffer, "%d", i);
       cass_statement_bind_string_by_name(statement, "value", value_buffer);
 
       futures[i] = cass_session_execute(session, statement);
