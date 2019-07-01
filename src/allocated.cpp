@@ -18,22 +18,12 @@
 #include "memory.hpp"
 #include <new>
 
-namespace cass {
+using namespace datastax::internal;
 
-void* Allocated::operator new(size_t size) {
-  return Memory::malloc(size);
-}
+void* Allocated::operator new(size_t size) { return Memory::malloc(size); }
 
-void* Allocated::operator new[](size_t size) {
-  return Memory::malloc(size);
-}
+void* Allocated::operator new[](size_t size) { return Memory::malloc(size); }
 
-void Allocated::operator delete(void* ptr) {
-  Memory::free(ptr);
-}
+void Allocated::operator delete(void* ptr) { Memory::free(ptr); }
 
-void Allocated::operator delete[](void* ptr) {
-  Memory::free(ptr);
-}
-
-} // namespace cass
+void Allocated::operator delete[](void* ptr) { Memory::free(ptr); }

@@ -16,8 +16,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Wrapped execution profile object (builder)
@@ -30,7 +29,7 @@ public:
    * Create the execution profile for the builder object
    */
   ExecutionProfile()
-    : Object<CassExecProfile, cass_execution_profile_free>(cass_execution_profile_new()) { }
+      : Object<CassExecProfile, cass_execution_profile_free>(cass_execution_profile_new()) {}
 
   /**
    * Create the execution profile for the builder object
@@ -38,7 +37,7 @@ public:
    * @param profile Already defined execution profile object to utilize
    */
   ExecutionProfile(CassExecProfile* profile)
-    : Object<CassExecProfile, cass_execution_profile_free>(profile) {}
+      : Object<CassExecProfile, cass_execution_profile_free>(profile) {}
 
   /**
    * Create the execution profile object from a shared reference
@@ -46,16 +45,14 @@ public:
    * @param profile Shared reference
    */
   ExecutionProfile(Ptr profile)
-    : Object<CassExecProfile, cass_execution_profile_free>(profile) {}
+      : Object<CassExecProfile, cass_execution_profile_free>(profile) {}
 
   /**
    * Build/Create the execution profile
    *
    * @return Execution profile object
    */
-  static ExecutionProfile build() {
-    return ExecutionProfile();
-  }
+  static ExecutionProfile build() { return ExecutionProfile(); }
 
   /**
    * Append/Assign/Set the blacklist hosts for statement/batch execution
@@ -64,22 +61,18 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_blacklist_filtering(const std::string& hosts) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_blacklist_filtering(get(),
-                hosts.c_str()));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_blacklist_filtering(get(), hosts.c_str()));
     return *this;
   }
 
   /**
-  * Append/Assign/Set the blacklist data centers for statement/batch execution
-  *
-  * @param dcs A comma delimited list of data center names
-  * @return Execution profile object
-  */
+   * Append/Assign/Set the blacklist data centers for statement/batch execution
+   *
+   * @param dcs A comma delimited list of data center names
+   * @return Execution profile object
+   */
   ExecutionProfile& with_blacklist_dc_filtering(const std::string& dcs) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_blacklist_dc_filtering(get(),
-              dcs.c_str()));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_blacklist_dc_filtering(get(), dcs.c_str()));
     return *this;
   }
 
@@ -90,8 +83,7 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_consistency(CassConsistency consistency) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_consistency(get(), consistency));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_consistency(get(), consistency));
     return *this;
   }
 
@@ -103,9 +95,8 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_latency_aware_routing(bool enable = true) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_latency_aware_routing(get(),
-                (enable == true ? cass_true : cass_false)));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_latency_aware_routing(
+                           get(), (enable == true ? cass_true : cass_false)));
     return *this;
   }
 
@@ -128,14 +119,12 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_latency_aware_routing_settings(double exclusion_threshold,
-                                                        uint64_t scale_ms,
-                                                        uint64_t retry_period_ms,
+                                                        uint64_t scale_ms, uint64_t retry_period_ms,
                                                         uint64_t update_rate_ms,
                                                         uint64_t min_measured) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_latency_aware_routing_settings(get(),
-                exclusion_threshold, scale_ms, retry_period_ms, update_rate_ms,
-                min_measured));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_latency_aware_routing_settings(
+                           get(), exclusion_threshold, scale_ms, retry_period_ms, update_rate_ms,
+                           min_measured));
     return *this;
   }
 
@@ -156,10 +145,9 @@ public:
   ExecutionProfile& with_load_balance_dc_aware(const std::string& local_dc,
                                                size_t used_hosts_per_remote_dc,
                                                bool allow_remote_dcs_for_local_cl) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_load_balance_dc_aware(get(),
-                local_dc.c_str(), used_hosts_per_remote_dc,
-                (allow_remote_dcs_for_local_cl == true ? cass_true : cass_false)));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_load_balance_dc_aware(
+                           get(), local_dc.c_str(), used_hosts_per_remote_dc,
+                           (allow_remote_dcs_for_local_cl == true ? cass_true : cass_false)));
     return *this;
   }
 
@@ -169,8 +157,7 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_load_balance_round_robin() {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_load_balance_round_robin(get()));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_load_balance_round_robin(get()));
     return *this;
   }
 
@@ -180,8 +167,7 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_no_speculative_execution_policy() {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_no_speculative_execution_policy(get()));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_no_speculative_execution_policy(get()));
     return *this;
   }
 
@@ -192,8 +178,7 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_request_timeout(uint64_t timeout_ms) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_request_timeout(get(), timeout_ms));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_request_timeout(get(), timeout_ms));
     return *this;
   }
 
@@ -204,8 +189,7 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_retry_policy(RetryPolicy retry_policy) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_retry_policy(get(), retry_policy.get()));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_retry_policy(get(), retry_policy.get()));
     return *this;
   }
 
@@ -217,8 +201,7 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_serial_consistency(CassConsistency serial_consistency) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_serial_consistency(get(),serial_consistency));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_serial_consistency(get(), serial_consistency));
     return *this;
   }
 
@@ -233,10 +216,8 @@ public:
    */
   ExecutionProfile& with_constant_speculative_execution_policy(cass_int64_t constant_delay_ms,
                                                                int max_speculative_executions) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_constant_speculative_execution_policy(get(),
-                                                                               constant_delay_ms,
-                                                                               max_speculative_executions));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_constant_speculative_execution_policy(
+                           get(), constant_delay_ms, max_speculative_executions));
     return *this;
   }
 
@@ -248,9 +229,8 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_token_aware_routing(bool enable = true) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_token_aware_routing(get(),
-                (enable == true ? cass_true : cass_false)));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_token_aware_routing(
+                           get(), (enable == true ? cass_true : cass_false)));
     return *this;
   }
 
@@ -263,9 +243,8 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_token_aware_routing_shuffle_replicas(bool enable = true) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_token_aware_routing_shuffle_replicas(get(),
-                (enable == true ? cass_true : cass_false)));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_token_aware_routing_shuffle_replicas(
+                           get(), (enable == true ? cass_true : cass_false)));
     return *this;
   }
 
@@ -276,9 +255,7 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_whitelist_filtering(const std::string& hosts) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_whitelist_filtering(get(),
-                hosts.c_str()));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_whitelist_filtering(get(), hosts.c_str()));
     return *this;
   }
 
@@ -289,14 +266,11 @@ public:
    * @return Execution profile object
    */
   ExecutionProfile& with_whitelist_dc_filtering(const std::string& dcs) {
-    EXPECT_EQ(CASS_OK,
-              cass_execution_profile_set_whitelist_dc_filtering(get(),
-                dcs.c_str()));
+    EXPECT_EQ(CASS_OK, cass_execution_profile_set_whitelist_dc_filtering(get(), dcs.c_str()));
     return *this;
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_EXECUTION_PROFILE_HPP__

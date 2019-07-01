@@ -18,7 +18,7 @@
 #include "serialization.hpp"
 #include "utils.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 static char* encode_vint(char* output, uint64_t value, size_t value_size) {
   if (value_size == 1) {
@@ -29,7 +29,7 @@ static char* encode_vint(char* output, uint64_t value, size_t value_size) {
 
   // Write the bytes of zigzag value to the output array with most significant byte
   // in first byte of buffer, and so on.
-  for (int j = value_size - 1 ; j >= 0 ; --j) {
+  for (int j = value_size - 1; j >= 0; --j) {
     *(output + j) = value & 0xff;
     value >>= 8;
   }
@@ -50,14 +50,14 @@ static Buffer encode_internal(CassDuration value, bool with_length) {
   // We need vint sizes for each attribute.
   size_t vint_sizes[3];
 
-  zigzag_values[0] = cass::encode_zig_zag(value.months);
-  zigzag_values[1] = cass::encode_zig_zag(value.days);
-  zigzag_values[2] = cass::encode_zig_zag(value.nanos);
+  zigzag_values[0] = encode_zig_zag(value.months);
+  zigzag_values[1] = encode_zig_zag(value.days);
+  zigzag_values[2] = encode_zig_zag(value.nanos);
 
   // We also need the total size of all three vint's.
   size_t data_size = 0;
   for (int i = 0; i < 3; ++i) {
-    vint_sizes[i] = cass::vint_size(zigzag_values[i]);
+    vint_sizes[i] = vint_size(zigzag_values[i]);
     data_size += vint_sizes[i];
   }
 
@@ -78,12 +78,8 @@ static Buffer encode_internal(CassDuration value, bool with_length) {
   return buf;
 }
 
-Buffer encode(CassDuration value) {
-  return encode_internal(value, false);
-}
+Buffer encode(CassDuration value) { return encode_internal(value, false); }
 
-Buffer encode_with_length(CassDuration value) {
-  return encode_internal(value, true);
-}
+Buffer encode_with_length(CassDuration value) { return encode_internal(value, true); }
 
-} // namespace cass
+}}} // namespace datastax::internal::core

@@ -18,14 +18,16 @@
 
 #include "address.hpp"
 
+using datastax::internal::core::Address;
+
 TEST(AddressUnitTest, CompareIPv4) {
-  EXPECT_GT(cass::Address("255.255.255.255", 9042).compare(cass::Address("0.0.0.0", 9042)), 0);
-  EXPECT_LT(cass::Address("0.0.0.0", 9042).compare(cass::Address("255.255.255.255", 9042)), 0);
-  EXPECT_EQ(cass::Address("1.2.3.4", 9042).compare(cass::Address("1.2.3.4", 9042)), 0);
+  EXPECT_GT(Address("255.255.255.255", 9042).compare(Address("0.0.0.0", 9042)), 0);
+  EXPECT_LT(Address("0.0.0.0", 9042).compare(Address("255.255.255.255", 9042)), 0);
+  EXPECT_EQ(Address("1.2.3.4", 9042).compare(Address("1.2.3.4", 9042)), 0);
 }
 
 TEST(AddressUnitTest, CompareIPv6) {
-  EXPECT_GT(cass::Address("0.0.0.0", 1).compare(cass::Address("0.0.0.0", 0), true), 0);
-  EXPECT_LT(cass::Address("0.0.0.0", 0).compare(cass::Address("0.0.0.0", 1), true), 0);
-  EXPECT_EQ(cass::Address("0.0.0.0", 0).compare(cass::Address("0.0.0.0", 1), false), 0);
+  EXPECT_GT(Address("0.0.0.0", 1).compare(Address("0.0.0.0", 0), true), 0);
+  EXPECT_LT(Address("0.0.0.0", 0).compare(Address("0.0.0.0", 1), true), 0);
+  EXPECT_EQ(Address("0.0.0.0", 0).compare(Address("0.0.0.0", 1), false), 0);
 }

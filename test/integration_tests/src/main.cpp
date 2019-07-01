@@ -62,7 +62,8 @@ BOOST_GLOBAL_FIXTURE(CCMCleanUp);
  */
 struct EnableTestCaseOutput {
   EnableTestCaseOutput() {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_test_units);
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(
+        boost::unit_test::log_test_units);
   }
 };
 BOOST_GLOBAL_FIXTURE(EnableTestCaseOutput);

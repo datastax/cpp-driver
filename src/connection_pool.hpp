@@ -14,16 +14,18 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONNECTION_POOL_HPP_INCLUDED__
-#define __CASS_CONNECTION_POOL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONNECTION_POOL_HPP
+#define DATASTAX_INTERNAL_CONNECTION_POOL_HPP
 
 #include "address.hpp"
 #include "delayed_connector.hpp"
+#include "dense_hash_map.hpp"
 #include "pooled_connection.hpp"
+#include "reconnection_policy.hpp"
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ConnectionPool;
 class ConnectionPoolConnector;
@@ -32,7 +34,7 @@ class EventLoop;
 
 class ConnectionPoolStateListener {
 public:
-  virtual ~ConnectionPoolStateListener() { }
+  virtual ~ConnectionPoolStateListener() {}
 
   /**
    * A callback that's called when a host is up.
@@ -62,15 +64,13 @@ public:
    * @param code The code of the critical error.
    * @param message The message of the critical error.
    */
-  virtual void on_pool_critical_error(const Address& address,
-                                      Connector::ConnectionError code,
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
                                       const String& message) = 0;
 };
 
-
 class ConnectionPoolListener : public ConnectionPoolStateListener {
 public:
-  virtual void on_requires_flush(ConnectionPool* pool) { }
+  virtual void on_requires_flush(ConnectionPool* pool) {}
 
   virtual void on_close(ConnectionPool* pool) = 0;
 };
@@ -93,7 +93,7 @@ struct ConnectionPoolSettings {
 
   ConnectionSettings connection_settings;
   size_t num_connections_per_host;
-  uint64_t reconnect_wait_time_ms;
+  ReconnectionPolicy::Ptr reconnection_policy;
 };
 
 /**
@@ -102,6 +102,7 @@ struct ConnectionPoolSettings {
 class ConnectionPool : public RefCounted<ConnectionPool> {
 public:
   typedef SharedRefPtr<ConnectionPool> Ptr;
+  typedef DenseHashMap<DelayedConnector*, ReconnectionSchedule*> ReconnectionSchedules;
 
   class Map : public DenseHashMap<Address, Ptr, AddressHash> {
   public:
@@ -123,13 +124,9 @@ public:
    * @param settings
    * @param metrics
    */
-  ConnectionPool(const Connection::Vec& connections,
-                 ConnectionPoolListener* listener,
-                 const String& keyspace,
-                 uv_loop_t* loop,
-                 const Host::Ptr& host,
-                 ProtocolVersion protocol_version,
-                 const ConnectionPoolSettings& settings,
+  ConnectionPool(const Connection::Vec& connections, ConnectionPoolListener* listener,
+                 const String& keyspace, uv_loop_t* loop, const Host::Ptr& host,
+                 ProtocolVersion protocol_version, const ConnectionPoolSettings& settings,
                  Metrics* metrics);
 
   /**
@@ -181,8 +178,8 @@ public:
   class Protected {
     friend class PooledConnection;
     friend class ConnectionPoolConnector;
-    Protected() { }
-    Protected(Protected const&) { }
+    Protected() {}
+    Protected(Protected const&) {}
   };
 
   /**
@@ -208,22 +205,16 @@ private:
     CLOSE_STATE_CLOSED
   };
 
-  enum NotifyState {
-    NOTIFY_STATE_NEW,
-    NOTIFY_STATE_UP,
-    NOTIFY_STATE_DOWN,
-    NOTIFY_STATE_CRITICAL
-  };
+  enum NotifyState { NOTIFY_STATE_NEW, NOTIFY_STATE_UP, NOTIFY_STATE_DOWN, NOTIFY_STATE_CRITICAL };
 
 private:
   friend class NotifyDownOnRemovePoolOp;
 
 private:
   void notify_up_or_down();
-  void notify_critical_error(Connector::ConnectionError code,
-                             const String& message);
+  void notify_critical_error(Connector::ConnectionError code, const String& message);
   void add_connection(const PooledConnection::Ptr& connection);
-  void schedule_reconnect();
+  void schedule_reconnect(ReconnectionSchedule* schedule = NULL);
   void internal_close();
   void maybe_closed();
 
@@ -237,6 +228,7 @@ private:
   const ProtocolVersion protocol_version_;
   const ConnectionPoolSettings settings_;
   Metrics* const metrics_;
+  ReconnectionSchedules reconnection_schedules_;
 
   CloseState close_state_;
   NotifyState notify_state_;
@@ -245,6 +237,6 @@ private:
   DenseHashSet<PooledConnection*> to_flush_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

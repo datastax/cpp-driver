@@ -16,26 +16,27 @@
 
 #include <string>
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 
 #include "cassandra.h"
 #include "execute_request.hpp"
 #include "statement.hpp"
 #include "test_utils.hpp"
 
+using namespace datastax::internal::core;
+
 /**
  * Test harness for prepared from existing functionality.
  */
 struct PreparedFromExistingTests : public test_utils::SingleSessionTest {
   PreparedFromExistingTests()
-    : SingleSessionTest(1, 0)
-    , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen))) {
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % keyspace
-                                           % "1"));
+      : SingleSessionTest(1, 0)
+      , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen))) {
+    test_utils::execute_query(
+        session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % keyspace % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % keyspace));
     test_utils::execute_query(session, "CREATE TABLE test (k text PRIMARY KEY, v text)");
     test_utils::execute_query(session, "INSERT INTO test (k, v) VALUES ('key1', 'value1')");
@@ -60,7 +61,8 @@ struct PreparedFromExistingTests : public test_utils::SingleSessionTest {
 
     const char* value;
     size_t value_length;
-    BOOST_REQUIRE_EQUAL(cass_value_get_string(cass_row_get_column(row, 0), &value, &value_length), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_value_get_string(cass_row_get_column(row, 0), &value, &value_length),
+                        CASS_OK);
     BOOST_CHECK_EQUAL(std::string(value, value_length), "value1");
   }
 
@@ -81,13 +83,16 @@ BOOST_FIXTURE_TEST_SUITE(prepared_existing, PreparedFromExistingTests)
  *
  */
 BOOST_AUTO_TEST_CASE(prepare_from_existing_simple_statement) {
-  test_utils::CassStatementPtr statement(cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
+  test_utils::CassStatementPtr statement(
+      cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
 
   test_utils::CassRetryPolicyPtr retry_policy(cass_retry_policy_downgrading_consistency_new());
 
   // Set unique settings to validate later
-  BOOST_CHECK_EQUAL(cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_LOCAL_QUORUM), CASS_OK);
-  BOOST_CHECK_EQUAL(cass_statement_set_serial_consistency(statement.get(), CASS_CONSISTENCY_SERIAL), CASS_OK);
+  BOOST_CHECK_EQUAL(cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_LOCAL_QUORUM),
+                    CASS_OK);
+  BOOST_CHECK_EQUAL(cass_statement_set_serial_consistency(statement.get(), CASS_CONSISTENCY_SERIAL),
+                    CASS_OK);
   BOOST_CHECK_EQUAL(cass_statement_set_request_timeout(statement.get(), 99999u), CASS_OK);
   BOOST_CHECK_EQUAL(cass_statement_set_retry_policy(statement.get(), retry_policy.get()), CASS_OK);
 
@@ -101,7 +106,7 @@ BOOST_AUTO_TEST_CASE(prepare_from_existing_simple_statement) {
   test_utils::CassStatementPtr bound_statement(cass_prepared_bind(prepared.get()));
   BOOST_REQUIRE(bound_statement);
 
-  cass::ExecuteRequest* execute_request = static_cast<cass::ExecuteRequest*>(bound_statement->from());
+  ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(bound_statement->from());
 
   // Validate that the bound statement inherited the settings from the original statement
   BOOST_CHECK_EQUAL(execute_request->consistency(), CASS_CONSISTENCY_LOCAL_QUORUM);
@@ -109,7 +114,8 @@ BOOST_AUTO_TEST_CASE(prepare_from_existing_simple_statement) {
   BOOST_CHECK_EQUAL(execute_request->request_timeout_ms(), 99999u);
   BOOST_CHECK_EQUAL(execute_request->retry_policy().get(), retry_policy.get());
 
-  validate_query_result(test_utils::CassFuturePtr(cass_session_execute(session, bound_statement.get())));
+  validate_query_result(
+      test_utils::CassFuturePtr(cass_session_execute(session, bound_statement.get())));
 }
 
 /**
@@ -122,7 +128,8 @@ BOOST_AUTO_TEST_CASE(prepare_from_existing_simple_statement) {
  *
  */
 BOOST_AUTO_TEST_CASE(prepare_from_existing_bound_statement) {
-  test_utils::CassFuturePtr future1(cass_session_prepare(session, "SELECT v FROM test WHERE k = 'key1'"));
+  test_utils::CassFuturePtr future1(
+      cass_session_prepare(session, "SELECT v FROM test WHERE k = 'key1'"));
   BOOST_REQUIRE_EQUAL(cass_future_error_code(future1.get()), CASS_OK);
 
   test_utils::CassPreparedPtr prepared1(cass_future_get_prepared(future1.get()));
@@ -134,13 +141,19 @@ BOOST_AUTO_TEST_CASE(prepare_from_existing_bound_statement) {
   test_utils::CassRetryPolicyPtr retry_policy(cass_retry_policy_downgrading_consistency_new());
 
   // Set unique settings to validate later
-  BOOST_CHECK_EQUAL(cass_statement_set_consistency(bound_statement1.get(), CASS_CONSISTENCY_LOCAL_QUORUM), CASS_OK);
-  BOOST_CHECK_EQUAL(cass_statement_set_serial_consistency(bound_statement1.get(), CASS_CONSISTENCY_SERIAL), CASS_OK);
+  BOOST_CHECK_EQUAL(
+      cass_statement_set_consistency(bound_statement1.get(), CASS_CONSISTENCY_LOCAL_QUORUM),
+      CASS_OK);
+  BOOST_CHECK_EQUAL(
+      cass_statement_set_serial_consistency(bound_statement1.get(), CASS_CONSISTENCY_SERIAL),
+      CASS_OK);
   BOOST_CHECK_EQUAL(cass_statement_set_request_timeout(bound_statement1.get(), 99999u), CASS_OK);
-  BOOST_CHECK_EQUAL(cass_statement_set_retry_policy(bound_statement1.get(), retry_policy.get()), CASS_OK);
+  BOOST_CHECK_EQUAL(cass_statement_set_retry_policy(bound_statement1.get(), retry_policy.get()),
+                    CASS_OK);
 
   // Prepare from the existing bound statement
-  test_utils::CassFuturePtr future2(cass_session_prepare_from_existing(session, bound_statement1.get()));
+  test_utils::CassFuturePtr future2(
+      cass_session_prepare_from_existing(session, bound_statement1.get()));
   BOOST_REQUIRE_EQUAL(cass_future_error_code(future2.get()), CASS_OK);
 
   test_utils::CassPreparedPtr prepared2(cass_future_get_prepared(future2.get()));
@@ -149,7 +162,7 @@ BOOST_AUTO_TEST_CASE(prepare_from_existing_bound_statement) {
   test_utils::CassStatementPtr bound_statement2(cass_prepared_bind(prepared2.get()));
   BOOST_REQUIRE(bound_statement2);
 
-  cass::ExecuteRequest* execute_request = static_cast<cass::ExecuteRequest*>(bound_statement2->from());
+  ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(bound_statement2->from());
 
   // Validate that the bound statement inherited the settings from the original bound statement
   BOOST_CHECK_EQUAL(execute_request->consistency(), CASS_CONSISTENCY_LOCAL_QUORUM);
@@ -157,7 +170,8 @@ BOOST_AUTO_TEST_CASE(prepare_from_existing_bound_statement) {
   BOOST_CHECK_EQUAL(execute_request->request_timeout_ms(), 99999u);
   BOOST_CHECK_EQUAL(execute_request->retry_policy().get(), retry_policy.get());
 
-  validate_query_result(test_utils::CassFuturePtr(cass_session_execute(session, bound_statement2.get())));
+  validate_query_result(
+      test_utils::CassFuturePtr(cass_session_execute(session, bound_statement2.get())));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

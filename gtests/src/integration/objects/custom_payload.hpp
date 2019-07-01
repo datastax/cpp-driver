@@ -29,26 +29,24 @@
 #include <string>
 #include <utility>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Custom payload object
  */
-class CustomPayload
-  : public Object<CassCustomPayload, cass_custom_payload_free> {
+class CustomPayload : public Object<CassCustomPayload, cass_custom_payload_free> {
 public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) { }
+        : test::Exception(message) {}
   };
 
   /**
    * Create an empty custom payload object
    */
   CustomPayload()
-    : Object<CassCustomPayload, cass_custom_payload_free>(cass_custom_payload_new()) { }
+      : Object<CassCustomPayload, cass_custom_payload_free>(cass_custom_payload_new()) {}
 
   /**
    * Create the custom payload from a response future
@@ -56,7 +54,7 @@ public:
    * @param column Column to retrieve custom payload from
    */
   CustomPayload(Future future)
-    : Object<CassCustomPayload, cass_custom_payload_free>(cass_custom_payload_new()) {
+      : Object<CassCustomPayload, cass_custom_payload_free>(cass_custom_payload_new()) {
     initialize(future);
   }
 
@@ -67,9 +65,7 @@ public:
    * @param value Blob/Bytes to set to the custom payload
    */
   void set(const std::string& name, Blob value) {
-    cass_custom_payload_set(get(),
-                            name.c_str(),
-                            value.wrapped_value().data(),
+    cass_custom_payload_set(get(), name.c_str(), value.wrapped_value().data(),
                             value.wrapped_value().size());
 
     // Update the local items map and the count
@@ -81,9 +77,7 @@ public:
    *
    * @return The number of items in the custom payload
    */
-  size_t item_count() {
-    return items_.size();
-  }
+  size_t item_count() { return items_.size(); }
 
   /**
    * Get the item from the custom payload at the specified index
@@ -106,9 +100,7 @@ public:
    *
    * @return The custom payload as a map of key/value pairs
    */
-  std::map<std::string, Blob> items() {
-    return items_;
-  }
+  std::map<std::string, Blob> items() { return items_; }
 
 protected:
   /**
@@ -132,17 +124,16 @@ protected:
       size_t name_length;
       const cass_byte_t* value;
       size_t value_size;
-      ASSERT_EQ(CASS_OK, cass_future_custom_payload_item(future.get(),
-                i, &name, &name_length, &value, &value_size));
+      ASSERT_EQ(CASS_OK, cass_future_custom_payload_item(future.get(), i, &name, &name_length,
+                                                         &value, &value_size));
 
       // Add the item to the map of items for the custom payload
       items_[std::string(name, name_length)] =
-        Blob(std::string(reinterpret_cast<const char*>(value), value_size));
+          Blob(std::string(reinterpret_cast<const char*>(value), value_size));
     }
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_CUSTOM_PAYLOAD_HPP__

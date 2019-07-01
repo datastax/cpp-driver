@@ -14,25 +14,25 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ROW_HPP_INCLUDED__
-#define __CASS_ROW_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ROW_HPP
+#define DATASTAX_INTERNAL_ROW_HPP
 
 #include "decoder.hpp"
 #include "external.hpp"
 #include "string_ref.hpp"
 #include "value.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ResultResponse;
 
 class Row {
 public:
   Row()
-    : result_(NULL) {}
+      : result_(NULL) {}
 
   Row(const ResultResponse* result)
-    : result_(result) {}
+      : result_(result) {}
 
   OutputValueVec values;
 
@@ -48,11 +48,10 @@ private:
   const ResultResponse* result_;
 };
 
-bool decode_row(Decoder& decoder, const ResultResponse* result,
-                OutputValueVec& output);
+bool decode_row(Decoder& decoder, const ResultResponse* result, OutputValueVec& output);
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Row, CassRow)
+EXTERNAL_TYPE(datastax::internal::core::Row, CassRow)
 
 #endif

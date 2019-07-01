@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_NAME_RESOLVER_HPP_INCLUDED__
-#define __CASS_NAME_RESOLVER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_NAME_RESOLVER_HPP
+#define DATASTAX_INTERNAL_NAME_RESOLVER_HPP
 
 #include "address.hpp"
 #include "callback.hpp"
@@ -25,13 +25,13 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class NameResolver : public RefCounted<NameResolver> {
 public:
   typedef SharedRefPtr<NameResolver> Ptr;
 
-  typedef cass::Callback<void, NameResolver*> Callback;
+  typedef internal::Callback<void, NameResolver*> Callback;
 
   enum Status {
     NEW,
@@ -51,7 +51,7 @@ public:
     req_.data = this;
   }
 
-  uv_loop_t* loop() { return req_.loop;  }
+  uv_loop_t* loop() { return req_.loop; }
 
   bool is_success() { return status_ == SUCCESS; }
   bool is_canceled() { return status_ == CANCELED; }
@@ -69,11 +69,11 @@ public:
     inc_ref(); // For the event loop
 
     if (timeout > 0) {
-      timer_.start(loop, timeout,
-                   bind_callback(&NameResolver::on_timeout, this));
+      timer_.start(loop, timeout, bind_callback(&NameResolver::on_timeout, this));
     }
 
-    int rc = uv_getnameinfo(loop, &req_, on_resolve, static_cast<const Address>(address_).addr(), flags);
+    int rc =
+        uv_getnameinfo(loop, &req_, on_resolve, static_cast<const Address>(address_).addr(), flags);
 
     if (rc != 0) {
       status_ = FAILED_BAD_PARAM;
@@ -93,8 +93,8 @@ public:
   }
 
 private:
-  static void on_resolve(uv_getnameinfo_t* req, int status,
-                         const char* hostname, const char* service) {
+  static void on_resolve(uv_getnameinfo_t* req, int status, const char* hostname,
+                         const char* service) {
     NameResolver* resolver = static_cast<NameResolver*>(req->data);
 
     if (resolver->status_ == RESOLVING) { // A timeout may have happened
@@ -134,6 +134,6 @@ private:
   Callback callback_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

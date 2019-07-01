@@ -1,19 +1,43 @@
+2.13.0
+===========
+
+Features
+--------
+* [CPP-745] Exponential reconnection policy with jitter
+* [CPP-769] Use `clang-format` to fix up formatting
+* [CPP-775] Add `clang-format` to Windows
+
+Other
+--------
+* [CPP-743] Move internal components from `namespace cass` to `namespace datastax::internal`
+* [CPP-764] Rename namespace from `cass` to `datastax`
+* [CPP-766] Allow RPM packaging script to build RPM packages for Amazon Linux
+* [CPP-770] Fix header files include guard (\_\_CASS_XXX to DATASTAX_XXX)
+* [CPP-772] Remove per cpp file LOG_FILE attribute to speed up Windows builds
+
+Community
+--------
+* Fixed the location of the '[in]' information for Doxygen. (AlexisWilke)
+* Added header subdirectory installation capability. (accelerated)
+* Changed pkg_config templates to use the library variable name. (accelerated)
+* Fix generation of shlib deps file for debian packages. (jirkasilhan)
+
 2.12.0
 ===========
 
 Features
 --------
-[CPP-751] Call host listener callback for the initial set of hosts
+* [CPP-751] Call host listener callback for the initial set of hosts
 
 Bug Fixes
 --------
-[CPP-755] UDT metadata not being properly populated/updated
+* [CPP-755] UDT metadata not being properly populated/updated
 
 Other
 --------
-[CPP-705] Deprecate DC-aware multi-DC settings (`used_hosts_per_remote_dc`
-          and `allowRemoteDCsForLocalConsistencyLevel `)
-[CPP-720] Streamline custom allocator
+* [CPP-705] Deprecate DC-aware multi-DC settings (`used_hosts_per_remote_dc`
+            and `allowRemoteDCsForLocalConsistencyLevel `)
+* [CPP-720] Streamline custom allocator
 
 2.11.0
 ===========

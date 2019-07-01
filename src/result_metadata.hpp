@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RESULT_METADATA_HPP_INCLUDED__
-#define __CASS_RESULT_METADATA_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RESULT_METADATA_HPP
+#define DATASTAX_INTERNAL_RESULT_METADATA_HPP
 
 #include "cassandra.h"
 #include "data_type.hpp"
@@ -27,7 +27,7 @@
 
 #include <algorithm>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 struct ColumnDefinition : public HashTableEntry<ColumnDefinition> {
   StringRef name;
@@ -40,8 +40,7 @@ class ResultMetadata : public RefCounted<ResultMetadata> {
 public:
   typedef SharedRefPtr<ResultMetadata> Ptr;
 
-  ResultMetadata(size_t column_count,
-                 const RefBuffer::Ptr& buffer);
+  ResultMetadata(size_t column_count, const RefBuffer::Ptr& buffer);
 
   const ColumnDefinition& get_column_definition(size_t index) const { return defs_[index]; }
 
@@ -59,6 +58,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ResultMetadata);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

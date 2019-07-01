@@ -18,9 +18,10 @@
 
 #include "serialization.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
-int RegisterRequest::encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const {
+int RegisterRequest::encode(ProtocolVersion version, RequestCallback* callback,
+                            BufferVec* bufs) const {
   // <events> [string list]
   size_t length = sizeof(uint16_t);
   Vector<String> events;
@@ -48,6 +49,3 @@ int RegisterRequest::encode(ProtocolVersion version, RequestCallback* callback, 
 
   return length;
 }
-
-} // namespace cas
-

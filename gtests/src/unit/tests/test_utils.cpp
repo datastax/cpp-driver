@@ -22,53 +22,53 @@
 #include <ctype.h>
 #include <stdio.h>
 
-TEST(UtilsUnitTest, CqlId)
-{
-  cass::String s;
+using datastax::String;
+using datastax::internal::num_leading_zeros;
+using datastax::internal::to_cql_id;
+
+TEST(UtilsUnitTest, CqlId) {
+  String s;
 
   // valid id
   s = "abc";
-  EXPECT_EQ(cass::to_cql_id(s), cass::String("abc"));
+  EXPECT_EQ(to_cql_id(s), String("abc"));
 
   // test lower cassing
   s = "ABC";
-  EXPECT_EQ(cass::to_cql_id(s), cass::String("abc"));
+  EXPECT_EQ(to_cql_id(s), String("abc"));
 
   // quoted
   s = "\"aBc\"";
-  EXPECT_EQ(cass::to_cql_id(s), cass::String("aBc"));
+  EXPECT_EQ(to_cql_id(s), String("aBc"));
 
   // invalid chars
   s = "!@#";
-  EXPECT_EQ(cass::to_cql_id(s), cass::String("!@#"));
+  EXPECT_EQ(to_cql_id(s), String("!@#"));
 }
 
-TEST(UtilsUnitTest, EscapeId)
-{
-  cass::String s;
+TEST(UtilsUnitTest, EscapeId) {
+  String s;
 
   s = "abc";
-  EXPECT_EQ(cass::escape_id(s), cass::String("abc"));
+  EXPECT_EQ(escape_id(s), String("abc"));
 
   s = "aBc";
-  EXPECT_EQ(cass::escape_id(s), cass::String("\"aBc\""));
+  EXPECT_EQ(escape_id(s), String("\"aBc\""));
 
   s = "\"";
-  EXPECT_EQ(cass::escape_id(s), cass::String("\"\"\"\""));
+  EXPECT_EQ(escape_id(s), String("\"\"\"\""));
 
   s = "a\"Bc";
-  EXPECT_EQ(cass::escape_id(s), cass::String("\"a\"\"Bc\""));
+  EXPECT_EQ(escape_id(s), String("\"a\"\"Bc\""));
 }
 
-TEST(UtilsUnitTest, NumLeadingZeros)
-{
-  EXPECT_EQ(64u, cass::num_leading_zeros(0));
-  EXPECT_EQ(0u, cass::num_leading_zeros(1LL << 63));
-  EXPECT_EQ(0u, cass::num_leading_zeros(1LL << 63 | 1 << 5));
+TEST(UtilsUnitTest, NumLeadingZeros) {
+  EXPECT_EQ(64u, num_leading_zeros(0));
+  EXPECT_EQ(0u, num_leading_zeros(1LL << 63));
+  EXPECT_EQ(0u, num_leading_zeros(1LL << 63 | 1 << 5));
 }
 
-TEST(UtilsUnitTest, NextPow2)
-{
+TEST(UtilsUnitTest, NextPow2) {
   EXPECT_EQ(STATIC_NEXT_POW_2(1u), 2u);
   EXPECT_EQ(STATIC_NEXT_POW_2(1u), 2u);
   EXPECT_EQ(STATIC_NEXT_POW_2(2u), 2u);

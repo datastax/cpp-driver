@@ -26,9 +26,9 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cassandra.h"
 
@@ -160,7 +160,7 @@ CassError select_from_tuple(CassSession* session) {
     result = cass_future_get_result(future);
     rows = cass_iterator_from_result(result);
 
-    while(cass_iterator_next(rows)) {
+    while (cass_iterator_next(rows)) {
       CassUuid id;
       char id_str[CASS_UUID_STRING_LENGTH];
       const CassRow* row = cass_iterator_get_row(rows);
@@ -173,7 +173,7 @@ CassError select_from_tuple(CassSession* session) {
 
       printf("id %s ", id_str);
 
-      while(cass_iterator_next(item)) {
+      while (cass_iterator_next(item)) {
         const CassValue* value = cass_iterator_get_value(item);
 
         if (!cass_value_is_null(value)) {
@@ -224,12 +224,11 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { \
+  execute_query(session, "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' }");
 
-  execute_query(session,
-                "CREATE TABLE examples.tuples (id timeuuid, item frozen<tuple<text, bigint>>, PRIMARY KEY(id))");
+  execute_query(session, "CREATE TABLE examples.tuples (id timeuuid, item frozen<tuple<text, "
+                         "bigint>>, PRIMARY KEY(id))");
 
   insert_into_tuple(session);
   select_from_tuple(session);

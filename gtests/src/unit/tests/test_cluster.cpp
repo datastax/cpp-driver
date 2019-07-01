@@ -20,19 +20,22 @@
 #include "cluster_connector.hpp"
 #include "ref_counted.hpp"
 
-using namespace cass;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
+#define FIFTEEN_PERCENT(value) static_cast<double>((value * 115) / 100)
 
 class ClusterUnitTest : public EventLoopTest {
 public:
   ClusterUnitTest()
-    : EventLoopTest("ClusterUnitTest") { }
+      : EventLoopTest("ClusterUnitTest") {}
 
-  class Future : public cass::Future {
+  class Future : public core::Future {
   public:
     typedef SharedRefPtr<Future> Ptr;
 
     Future()
-      : cass::Future(FUTURE_TYPE_GENERIC) { }
+        : core::Future(FUTURE_TYPE_GENERIC) {}
 
     ~Future() {
       if (cluster_) {
@@ -59,21 +62,21 @@ public:
     typedef SharedRefPtr<Listener> Ptr;
 
     Listener(const Future::Ptr& close_future = Future::Ptr())
-      : close_future_(close_future) {
+        : close_future_(close_future) {
       inc_ref(); // Might leak during an error, but won't allow a stale pointer
     }
 
-    virtual ~Listener() { }
+    virtual ~Listener() {}
 
-    virtual void on_host_up(const Host::Ptr& host) { }
-    virtual void on_host_down(const Host::Ptr& host) { }
+    virtual void on_host_up(const Host::Ptr& host) {}
+    virtual void on_host_down(const Host::Ptr& host) {}
 
-    virtual void on_host_added(const Host::Ptr& host) { }
-    virtual void on_host_removed(const Host::Ptr& host) { }
+    virtual void on_host_added(const Host::Ptr& host) {}
+    virtual void on_host_removed(const Host::Ptr& host) {}
 
-    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { }
+    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) {}
 
-    virtual void on_close(Cluster* cluster)  {
+    virtual void on_close(Cluster* cluster) {
       if (close_future_) {
         close_future_->set();
       }
@@ -88,18 +91,15 @@ public:
   public:
     typedef SharedRefPtr<UpDownListener> Ptr;
 
-    UpDownListener(const Future::Ptr& close_future,
-                   const Future::Ptr& up_future,
+    UpDownListener(const Future::Ptr& close_future, const Future::Ptr& up_future,
                    const Future::Ptr& down_future)
-      : Listener(close_future)
-      , up_future_(up_future)
-      , down_future_(down_future) {
+        : Listener(close_future)
+        , up_future_(up_future)
+        , down_future_(down_future) {
       uv_mutex_init(&mutex_);
     }
 
-    ~UpDownListener() {
-      uv_mutex_destroy(&mutex_);
-    }
+    ~UpDownListener() { uv_mutex_destroy(&mutex_); }
 
     Address address() {
       ScopedMutex l(&mutex_);
@@ -134,30 +134,23 @@ public:
     typedef SharedRefPtr<ReconnectClusterListener> Ptr;
 
     struct Event {
-      enum Type {
-        NODE_ADD,
-        NODE_REMOVE
-      };
+      enum Type { NODE_ADD, NODE_REMOVE };
       Event(Type type, const Address& address)
-        : type(type)
-        , address(address) { }
+          : type(type)
+          , address(address) {}
       Type type;
       Address address;
     };
     typedef Vector<Event> Events;
 
     ReconnectClusterListener(const Future::Ptr& close_future, OutagePlan* outage_plan)
-      : Listener(close_future)
-      , outage_plan_(outage_plan)
-      , cluster_(NULL) { }
+        : Listener(close_future)
+        , outage_plan_(outage_plan)
+        , cluster_(NULL) {}
 
-    const HostVec& connected_hosts() const {
-      return connected_hosts_;
-    }
+    const HostVec& connected_hosts() const { return connected_hosts_; }
 
-    const Events& events() const {
-      return events_;
-    }
+    const Events& events() const { return events_; }
 
     virtual void on_reconnect(Cluster* cluster) {
       cluster_ = cluster;
@@ -166,14 +159,15 @@ public:
         outage_plan_->run();
       } else {
         if (outage_plan_->is_done()) {
-          outage_plan_->stop(); // Stop and clean up outage plan timer handle on the original event loop thread.
+          outage_plan_->stop(); // Stop and clean up outage plan timer handle on the original event
+                                // loop thread.
           cluster->close();
         }
       }
     }
 
-    virtual void on_host_up(const Host::Ptr& host) { }
-    virtual void on_host_down(const Host::Ptr& host) { }
+    virtual void on_host_up(const Host::Ptr& host) {}
+    virtual void on_host_down(const Host::Ptr& host) {}
 
     virtual void on_host_added(const Host::Ptr& host) {
       events_.push_back(Event(Event::NODE_ADD, host->address()));
@@ -188,7 +182,7 @@ public:
       events_.push_back(Event(Event::NODE_REMOVE, host->address()));
     }
 
-    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) { }
+    virtual void on_token_map_updated(const TokenMap::Ptr& token_map) {}
 
   private:
     HostVec connected_hosts_;
@@ -201,15 +195,12 @@ public:
   public:
     typedef SharedRefPtr<RecoverClusterListener> Ptr;
 
-    RecoverClusterListener(const Future::Ptr& close_future,
-                           const Future::Ptr& up_future,
+    RecoverClusterListener(const Future::Ptr& close_future, const Future::Ptr& up_future,
                            const Future::Ptr& recover_future)
-      : UpDownListener(close_future, up_future, Future::Ptr())
-      , recover_future_(recover_future) { }
+        : UpDownListener(close_future, up_future, Future::Ptr())
+        , recover_future_(recover_future) {}
 
-    const HostVec& connected_hosts() const {
-      return connected_hosts_;
-    }
+    const HostVec& connected_hosts() const { return connected_hosts_; }
 
     virtual void on_reconnect(Cluster* cluster) {
       connected_hosts_.push_back(cluster->connected_host());
@@ -228,16 +219,15 @@ public:
     typedef SharedRefPtr<DisableEventsListener> Ptr;
 
     DisableEventsListener(const Future::Ptr& close_future, mockssandra::Cluster& simple_cluster)
-      : Listener(close_future)
-      , event_future_(new Future())
-      , simple_cluster_(simple_cluster) { }
+        : Listener(close_future)
+        , event_future_(new Future())
+        , simple_cluster_(simple_cluster) {}
 
     Future::Ptr& event_future() { return event_future_; }
 
     virtual void on_reconnect(Cluster* cluster) {
       // Trigger an ADD event right after cluster connection.
-      simple_cluster_.event(
-            mockssandra::TopologyChangeEvent::new_node(cass::Address("127.0.0.2", 9042)));
+      simple_cluster_.event(mockssandra::TopologyChangeEvent::new_node(Address("127.0.0.2", 9042)));
     }
 
     virtual void on_host_up(const Host::Ptr& host) { event_future_->set(); }
@@ -251,6 +241,53 @@ public:
     mockssandra::Cluster& simple_cluster_;
   };
 
+  class ClusterUnitTestReconnectionPolicy : public ReconnectionPolicy {
+  public:
+    typedef SharedRefPtr<ClusterUnitTestReconnectionPolicy> Ptr;
+
+    ClusterUnitTestReconnectionPolicy()
+        : ReconnectionPolicy(ReconnectionPolicy::CONSTANT)
+        , reconnection_schedule_count_(0)
+        , destroyed_reconnection_schedule_count_(0)
+        , scheduled_delay_count_(0) {}
+
+    virtual const char* name() const { return "blah"; }
+    virtual ReconnectionSchedule* new_reconnection_schedule() {
+      ++reconnection_schedule_count_;
+      return new ClusterUnitTestReconnectionSchedule(&scheduled_delay_count_,
+                                                     &destroyed_reconnection_schedule_count_);
+    }
+
+    unsigned reconnection_schedule_count() const { return reconnection_schedule_count_; }
+    unsigned destroyed_reconnection_schedule_count() const {
+      return destroyed_reconnection_schedule_count_;
+    }
+    unsigned scheduled_delay_count() const { return scheduled_delay_count_; }
+
+  private:
+    unsigned reconnection_schedule_count_;
+    unsigned destroyed_reconnection_schedule_count_;
+    unsigned scheduled_delay_count_;
+
+    class ClusterUnitTestReconnectionSchedule : public ReconnectionSchedule {
+    public:
+      ClusterUnitTestReconnectionSchedule(unsigned* delay_count, unsigned* destroyed_count)
+          : delay_count_(delay_count)
+          , destroyed_count_(destroyed_count) {}
+
+      ~ClusterUnitTestReconnectionSchedule() { ++*destroyed_count_; }
+
+      virtual uint64_t next_delay_ms() {
+        ++*delay_count_;
+        return 1;
+      }
+
+    private:
+      unsigned* delay_count_;
+      unsigned* destroyed_count_;
+    };
+  };
+
   static void on_connection_connected(ClusterConnector* connector, Future* future) {
     if (connector->is_ok()) {
       future->set();
@@ -261,24 +298,19 @@ public:
                             connector->error_message());
           break;
         case ClusterConnector::CLUSTER_ERROR_SSL_ERROR:
-          future->set_error(connector->ssl_error_code(),
-                            connector->error_message());
+          future->set_error(connector->ssl_error_code(), connector->error_message());
           break;
         case ClusterConnector::CLUSTER_ERROR_AUTH_ERROR:
-          future->set_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
-                            connector->error_message());
+          future->set_error(CASS_ERROR_SERVER_BAD_CREDENTIALS, connector->error_message());
           break;
         case ClusterConnector::CLUSTER_ERROR_NO_HOSTS_AVAILABLE:
-          future->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                            connector->error_message());
+          future->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connector->error_message());
           break;
         case ClusterConnector::CLUSTER_CANCELED:
-          future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
-                            "Canceled");
+          future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT, "Canceled");
           break;
         default:
-          future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
-                            connector->error_message());
+          future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT, connector->error_message());
           break;
       }
     }
@@ -288,8 +320,7 @@ public:
     if (connector->is_ok()) {
       future->set_cluster(connector->release_cluster()); // Keep the cluster alive
     } else {
-      future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
-                        connector->error_message());
+      future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT, connector->error_message());
     }
   }
 };
@@ -304,9 +335,9 @@ TEST_F(ClusterUnitTest, Simple) {
   contact_points.push_back("127.0.0.3");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -320,13 +351,16 @@ TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
   mockssandra::SimpleRequestHandlerBuilder builder;
   builder.on(mockssandra::OPCODE_STARTUP)
       .validate_startup()
-      .is_address("127.0.0.2").then(mockssandra::Action::Builder().authenticate("com.dataxtax.SomeAuthenticator"))
-      .is_address("127.0.0.3").then(mockssandra::Action::Builder().invalid_protocol())
+      .is_address("127.0.0.2")
+      .then(mockssandra::Action::Builder().authenticate("com.dataxtax.SomeAuthenticator"))
+      .is_address("127.0.0.3")
+      .then(mockssandra::Action::Builder().invalid_protocol())
       .ready();
 
   builder.on(mockssandra::OPCODE_AUTH_RESPONSE)
       .validate_auth_response()
-      .is_address("127.0.0.2").then(mockssandra::Action::Builder().plaintext_auth())
+      .is_address("127.0.0.2")
+      .then(mockssandra::Action::Builder().plaintext_auth())
       .auth_success();
 
   ContactPointList contact_points;
@@ -344,21 +378,21 @@ TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.auth_provider.reset(
-        new PlainTextAuthProvider("invalid", "invalid"));
+      new PlainTextAuthProvider("invalid", "invalid"));
 
-  connector
-      ->with_settings(settings)
-      ->connect(event_loop());
+  connector->with_settings(settings)->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
-  EXPECT_GE(logging_criteria_count(), 2); // Invalid or unsupported protocol may retry with different protocol before connection
+  EXPECT_GE(
+      logging_criteria_count(),
+      2); // Invalid or unsupported protocol may retry with different protocol before connection
 }
 
 TEST_F(ClusterUnitTest, Resolve) {
@@ -369,9 +403,9 @@ TEST_F(ClusterUnitTest, Resolve) {
   contact_points.push_back("localhost");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
   connector->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
@@ -386,17 +420,15 @@ TEST_F(ClusterUnitTest, Auth) {
   contact_points.push_back("127.0.0.1");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.auth_provider.reset(
-        new PlainTextAuthProvider("cassandra", "cassandra"));
+      new PlainTextAuthProvider("cassandra", "cassandra"));
 
-  connector
-      ->with_settings(settings)
-      ->connect(event_loop());
+  connector->with_settings(settings)->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -412,13 +444,11 @@ TEST_F(ClusterUnitTest, Ssl) {
   contact_points.push_back("127.0.0.1");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
-  connector
-      ->with_settings(settings)
-      ->connect(event_loop());
+  connector->with_settings(settings)->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -438,25 +468,25 @@ TEST_F(ClusterUnitTest, Cancel) {
 
   for (size_t i = 0; i < 10; ++i) {
     Future::Ptr connect_future(new Future());
-    ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                         PROTOCOL_VERSION,
-                                                         bind_callback(on_connection_connected, connect_future.get())));
+    ClusterConnector::Ptr connector(
+        new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                             bind_callback(on_connection_connected, connect_future.get())));
     connector->connect(event_loop());
     connectors.push_back(connector);
     connect_futures.push_back(connect_future);
   }
 
-  for (Vector<ClusterConnector::Ptr>::iterator it = connectors.begin(),
-       end = connectors.end(); it != end; ++it) {
+  for (Vector<ClusterConnector::Ptr>::iterator it = connectors.begin(), end = connectors.end();
+       it != end; ++it) {
     (*it)->cancel();
   }
 
   bool is_canceled = false;
   for (Vector<Future::Ptr>::const_iterator it = connect_futures.begin(),
-       end = connect_futures.end(); it != end; ++it) {
+                                           end = connect_futures.end();
+       it != end; ++it) {
     ASSERT_TRUE((*it)->wait_for(WAIT_FOR_TIME));
-    if ((*it)->error() &&
-        (*it)->error()->code == CASS_ERROR_LIB_UNABLE_TO_CONNECT &&
+    if ((*it)->error() && (*it)->error()->code == CASS_ERROR_LIB_UNABLE_TO_CONNECT &&
         (*it)->error()->message == "Canceled") {
       is_canceled = true;
     }
@@ -482,20 +512,17 @@ TEST_F(ClusterUnitTest, ReconnectToDiscoveredHosts) {
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_reconnect, connect_future.get())));
-  ReconnectClusterListener::Ptr listener(
-        new ReconnectClusterListener(close_future, &outage_plan));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
+  ReconnectClusterListener::Ptr listener(new ReconnectClusterListener(close_future, &outage_plan));
 
   ClusterSettings settings;
-  settings.reconnect_timeout_ms = 1; // Reconnect immediately
-  settings.control_connection_settings.connection_settings.connect_timeout_ms = 200; // Give enough time for the connection to complete
+  settings.reconnection_policy.reset(new ConstantReconnectionPolicy(1)); // Reconnect immediately
+  settings.control_connection_settings.connection_settings.connect_timeout_ms =
+      200; // Give enough time for the connection to complete
 
-  connector
-      ->with_settings(settings)
-      ->with_listener(listener.get())
-      ->connect(event_loop());
+  connector->with_settings(settings)->with_listener(listener.get())->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -528,20 +555,17 @@ TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_reconnect, connect_future.get())));
-  ReconnectClusterListener::Ptr listener(
-        new ReconnectClusterListener(close_future, &outage_plan));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
+  ReconnectClusterListener::Ptr listener(new ReconnectClusterListener(close_future, &outage_plan));
 
   ClusterSettings settings;
-  settings.reconnect_timeout_ms = 1; // Reconnect immediately
-  settings.control_connection_settings.connection_settings.connect_timeout_ms = 200; // Give enough time for the connection to complete
+  settings.reconnection_policy.reset(new ConstantReconnectionPolicy(1)); // Reconnect immediately
+  settings.control_connection_settings.connection_settings.connect_timeout_ms =
+      200; // Give enough time for the connection to complete
 
-  connector
-      ->with_settings(settings)
-      ->with_listener(listener.get())
-      ->connect(event_loop());
+  connector->with_settings(settings)->with_listener(listener.get())->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -571,19 +595,17 @@ TEST_F(ClusterUnitTest, CloseDuringReconnect) {
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_reconnect, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
 
   Listener::Ptr listener(new Listener(close_future));
 
   ClusterSettings settings;
-  settings.reconnect_timeout_ms = 100000; // Make sure we're reconnecting when we close.
+  settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(100000)); // Make sure we're reconnecting when we close.
 
-  connector
-      ->with_settings(settings)
-      ->with_listener(listener.get())
-      ->connect(event_loop());
+  connector->with_settings(settings)->with_listener(listener.get())->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -608,15 +630,13 @@ TEST_F(ClusterUnitTest, NotifyDownUp) {
   Future::Ptr connect_future(new Future());
   Future::Ptr up_future(new Future());
   Future::Ptr down_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_reconnect, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
 
   UpDownListener::Ptr listener(new UpDownListener(close_future, up_future, down_future));
 
-  connector
-      ->with_listener(listener.get())
-      ->connect(event_loop());
+  connector->with_listener(listener.get())->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -641,7 +661,8 @@ TEST_F(ClusterUnitTest, NotifyDownUp) {
 
 TEST_F(ClusterUnitTest, ProtocolNegotiation) {
   mockssandra::SimpleRequestHandlerBuilder builder;
-  builder.with_supported_protocol_versions(1, PROTOCOL_VERSION - 1); // Support one less than our current version
+  builder.with_supported_protocol_versions(1, PROTOCOL_VERSION -
+                                                  1); // Support one less than our current version
   mockssandra::SimpleCluster cluster(builder.build());
   ASSERT_EQ(cluster.start_all(), 0);
 
@@ -649,9 +670,9 @@ TEST_F(ClusterUnitTest, ProtocolNegotiation) {
   contact_points.push_back("127.0.0.1");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -671,9 +692,9 @@ TEST_F(ClusterUnitTest, NoSupportedProtocols) {
   contact_points.push_back("127.0.0.1");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -692,16 +713,14 @@ TEST_F(ClusterUnitTest, FindValidHost) {
   contact_points.push_back("127.0.0.1");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.connect_timeout_ms = 100;
 
-  connector
-      ->with_settings(settings)
-      ->connect(event_loop());
+  connector->with_settings(settings)->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -717,9 +736,9 @@ TEST_F(ClusterUnitTest, NoHostsAvailable) {
   contact_points.push_back("127.0.0.3");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   connector->connect(event_loop());
 
@@ -736,17 +755,15 @@ TEST_F(ClusterUnitTest, InvalidAuth) {
   contact_points.push_back("127.0.0.1");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
   settings.control_connection_settings.connection_settings.auth_provider.reset(
-        new PlainTextAuthProvider("invalid", "invalid"));
+      new PlainTextAuthProvider("invalid", "invalid"));
 
-  connector
-      ->with_settings(settings)
-      ->connect(event_loop());
+  connector->with_settings(settings)->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_TRUE(connect_future->error());
@@ -762,18 +779,17 @@ TEST_F(ClusterUnitTest, InvalidSsl) {
   contact_points.push_back("127.0.0.1");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
   ClusterSettings settings;
-  settings.control_connection_settings.connection_settings.socket_settings.ssl_context = ssl_context;
+  settings.control_connection_settings.connection_settings.socket_settings.ssl_context =
+      ssl_context;
 
-  connector
-      ->with_settings(settings)
-      ->connect(event_loop());
+  connector->with_settings(settings)->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_TRUE(connect_future->error());
@@ -792,26 +808,25 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_reconnect, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
 
   Future::Ptr up_future(new Future());
   Future::Ptr recover_future(new Future());
   RecoverClusterListener::Ptr listener(
-        new RecoverClusterListener(close_future, up_future, recover_future));
+      new RecoverClusterListener(close_future, up_future, recover_future));
 
   ClusterSettings settings;
-  settings.load_balancing_policy.reset(new DCAwarePolicy("dc1", 1, false)); // Allow connection to a single remote host
+  settings.load_balancing_policy.reset(
+      new DCAwarePolicy("dc1", 1, false)); // Allow connection to a single remote host
   settings.load_balancing_policies.clear();
   settings.load_balancing_policies.push_back(settings.load_balancing_policy);
-  settings.reconnect_timeout_ms = 1; // Reconnect immediately
-  settings.control_connection_settings.connection_settings.connect_timeout_ms = 200; // Give enough time for the connection to complete
+  settings.reconnection_policy.reset(new ConstantReconnectionPolicy(1)); // Reconnect immediately
+  settings.control_connection_settings.connection_settings.connect_timeout_ms =
+      200; // Give enough time for the connection to complete
 
-  connector
-      ->with_settings(settings)
-      ->with_listener(listener.get())
-      ->connect(event_loop());
+  connector->with_settings(settings)->with_listener(listener.get())->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -835,7 +850,8 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
 
   ASSERT_EQ(listener->connected_hosts().size(), 2u);
   EXPECT_EQ(listener->connected_hosts()[0]->address(), Address("127.0.0.1", PORT));
-  EXPECT_EQ(listener->connected_hosts()[1]->address(), Address("127.0.0.2", PORT)); // Connected to remote host.
+  EXPECT_EQ(listener->connected_hosts()[1]->address(),
+            Address("127.0.0.2", PORT)); // Connected to remote host.
 }
 
 TEST_F(ClusterUnitTest, InvalidDC) {
@@ -846,23 +862,23 @@ TEST_F(ClusterUnitTest, InvalidDC) {
   contact_points.push_back("127.0.0.1");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_connected, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
 
   ClusterSettings settings;
-  settings.load_balancing_policy.reset(new DCAwarePolicy("invalid_dc", 0, false)); // Invalid DC and not using remote hosts
+  settings.load_balancing_policy.reset(
+      new DCAwarePolicy("invalid_dc", 0, false)); // Invalid DC and not using remote hosts
   settings.load_balancing_policies.clear();
   settings.load_balancing_policies.push_back(settings.load_balancing_policy);
 
-  connector
-      ->with_settings(settings)
-      ->connect(event_loop());
+  connector->with_settings(settings)->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_TRUE(connect_future->error());
   EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
-  EXPECT_TRUE(connect_future->error()->message.find("Check to see if the configured local datacenter is valid") != String::npos);
+  EXPECT_TRUE(connect_future->error()->message.find(
+                  "Check to see if the configured local datacenter is valid") != String::npos);
 }
 
 TEST_F(ClusterUnitTest, DisableEventsOnStartup) {
@@ -874,21 +890,17 @@ TEST_F(ClusterUnitTest, DisableEventsOnStartup) {
   contact_points.push_back("127.0.0.1");
 
   Future::Ptr connect_future(new Future());
-  ClusterConnector::Ptr connector(new ClusterConnector(contact_points,
-                                                       PROTOCOL_VERSION,
-                                                       bind_callback(on_connection_reconnect, connect_future.get())));
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
 
   ClusterSettings settings;
   settings.disable_events_on_startup = true; // Disable events to start
 
   Future::Ptr close_future(new Future());
-  DisableEventsListener::Ptr listener(
-        new DisableEventsListener(close_future, cluster));
+  DisableEventsListener::Ptr listener(new DisableEventsListener(close_future, cluster));
 
-  connector
-      ->with_listener(listener.get())
-      ->with_settings(settings)
-      ->connect(event_loop());
+  connector->with_listener(listener.get())->with_settings(settings)->connect(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_FALSE(connect_future->error());
@@ -905,4 +917,43 @@ TEST_F(ClusterUnitTest, DisableEventsOnStartup) {
 
   connect_future->cluster()->close();
   ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+}
+
+TEST_F(ClusterUnitTest, ReconnectionPolicy) {
+  mockssandra::SimpleCluster mock_cluster(simple());
+  ASSERT_EQ(mock_cluster.start_all(), 0);
+
+  OutagePlan outage_plan(loop(), &mock_cluster);
+  outage_plan.stop_node(1);
+  outage_plan.start_node(1);
+  outage_plan.stop_node(1);
+  outage_plan.start_node(1);
+
+  ContactPointList contact_points;
+  contact_points.push_back("127.0.0.1");
+
+  Future::Ptr close_future(new Future());
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
+  ReconnectClusterListener::Ptr listener(new ReconnectClusterListener(close_future, &outage_plan));
+
+  ClusterSettings settings;
+  settings.reconnection_policy.reset(new ClusterUnitTestReconnectionPolicy());
+  settings.control_connection_settings.connection_settings.connect_timeout_ms =
+      200; // Give enough time for the connection to complete
+  connector->with_settings(settings)->with_listener(listener.get())->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+
+  ClusterUnitTestReconnectionPolicy::Ptr policy(
+      static_cast<ClusterUnitTestReconnectionPolicy::Ptr>(settings.reconnection_policy));
+  EXPECT_EQ(2u, policy->reconnection_schedule_count());
+  EXPECT_EQ(2u, policy->destroyed_reconnection_schedule_count());
+  EXPECT_GE(policy->scheduled_delay_count(), 2u);
+  EXPECT_EQ(3u, mock_cluster.connection_attempts(1)); // Includes initial connection attempt
 }

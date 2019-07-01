@@ -14,7 +14,6 @@
   limitations under the License.
 */
 
-
 #include <unistd.h>
 
 #if _POSIX_TIMERS > 0
@@ -23,15 +22,15 @@
 
 #include <time.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class ClockInfo {
 public:
   ClockInfo() {
     struct timespec res;
     struct timespec tp;
-    supports_monotonic_ = clock_getres(CLOCK_MONOTONIC, &res) == 0 &&
-                          clock_gettime(CLOCK_MONOTONIC, &tp) == 0;
+    supports_monotonic_ =
+        clock_getres(CLOCK_MONOTONIC, &res) == 0 && clock_gettime(CLOCK_MONOTONIC, &tp) == 0;
   }
 
   static bool supports_monotonic() { return supports_monotonic_; }
@@ -44,12 +43,10 @@ bool ClockInfo::supports_monotonic_;
 
 static ClockInfo __clock_info__; // Initializer
 
-
 uint64_t get_time_since_epoch_us() {
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
-  return static_cast<uint64_t>(ts.tv_sec)  * 1000000 +
-         static_cast<uint64_t>(ts.tv_nsec) / 1000;
+  return static_cast<uint64_t>(ts.tv_sec) * 1000000 + static_cast<uint64_t>(ts.tv_nsec) / 1000;
 }
 
 uint64_t get_time_monotonic_ns() {
@@ -63,7 +60,6 @@ uint64_t get_time_monotonic_ns() {
   }
 }
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif
-

@@ -24,18 +24,20 @@
 #include "utils.hpp"
 #include "uuids.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class SessionFuture : public Future {
 public:
   typedef SharedRefPtr<SessionFuture> Ptr;
 
   SessionFuture()
-    : Future(FUTURE_TYPE_SESSION) { }
+      : Future(FUTURE_TYPE_SESSION) {}
 };
 
 SessionBase::SessionBase()
-  : state_(SESSION_STATE_CLOSED) {
+    : state_(SESSION_STATE_CLOSED) {
   uv_mutex_init(&mutex_);
 
   UuidGen generator;
@@ -51,9 +53,8 @@ SessionBase::~SessionBase() {
   uv_mutex_destroy(&mutex_);
 }
 
-Future::Ptr SessionBase::connect(const Config& config,
-                                 const String& keyspace) {
-  cass::Future::Ptr future(new SessionFuture());
+Future::Ptr SessionBase::connect(const Config& config, const String& keyspace) {
+  Future::Ptr future(new SessionFuture());
 
   ScopedMutex l(&mutex_);
   if (state_ != SESSION_STATE_CLOSED) {
@@ -68,15 +69,13 @@ Future::Ptr SessionBase::connect(const Config& config,
 
     rc = event_loop_->init("Session/Control Connection");
     if (rc != 0) {
-      future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
-                        "Unable to initialize cluster event loop");
+      future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT, "Unable to initialize cluster event loop");
       return future;
     }
 
     rc = event_loop_->run();
     if (rc != 0) {
-      future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
-                        "Unable to run cluster event loop");
+      future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT, "Unable to run cluster event loop");
       return future;
     }
   }
@@ -102,16 +101,14 @@ Future::Ptr SessionBase::connect(const Config& config,
 
   cluster_.reset();
   ClusterConnector::Ptr connector(
-        new ClusterConnector(config_.contact_points(),
-                             config_.protocol_version(),
-                             bind_callback(&SessionBase::on_initialize, this)));
+      new ClusterConnector(config_.contact_points(), config_.protocol_version(),
+                           bind_callback(&SessionBase::on_initialize, this)));
 
   ClusterSettings settings(config_);
   settings.control_connection_settings.connection_settings.client_id = to_string(client_id_);
   settings.disable_events_on_startup = true;
 
-  connector
-      ->with_listener(this)
+  connector->with_listener(this)
       ->with_settings(settings)
       ->with_random(random_.get())
       ->with_metrics(metrics_.get())
@@ -121,13 +118,11 @@ Future::Ptr SessionBase::connect(const Config& config,
 }
 
 Future::Ptr SessionBase::close() {
-  cass::Future::Ptr future(new SessionFuture());
+  Future::Ptr future(new SessionFuture());
 
   ScopedMutex l(&mutex_);
-  if (state_ == SESSION_STATE_CLOSED ||
-      state_ == SESSION_STATE_CLOSING) {
-    future->set_error(CASS_ERROR_LIB_UNABLE_TO_CLOSE,
-                      "Already closing or closed");
+  if (state_ == SESSION_STATE_CLOSED || state_ == SESSION_STATE_CLOSING) {
+    future->set_error(CASS_ERROR_LIB_UNABLE_TO_CLOSE, "Already closing or closed");
     return future;
   }
   state_ = SESSION_STATE_CLOSING;
@@ -163,10 +158,8 @@ void SessionBase::notify_closed() {
   if (cluster_) cluster_->close();
 }
 
-void SessionBase::on_connect(const Host::Ptr& connected_host,
-                             ProtocolVersion protocol_version,
-                             const HostMap& hosts,
-                             const TokenMap::Ptr& token_map) {
+void SessionBase::on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
+                             const HostMap& hosts, const TokenMap::Ptr& token_map) {
   notify_connected();
 }
 
@@ -174,9 +167,7 @@ void SessionBase::on_connect_failed(CassError code, const String& message) {
   notify_connect_failed(code, message);
 }
 
-void SessionBase::on_close() {
-  notify_closed();
-}
+void SessionBase::on_close() { notify_closed(); }
 
 void SessionBase::on_close(Cluster* cluster) {
   ScopedMutex l(&mutex_);
@@ -194,36 +185,27 @@ void SessionBase::on_close(Cluster* cluster) {
 void SessionBase::on_initialize(ClusterConnector* connector) {
   if (connector->is_ok()) {
     cluster_ = connector->release_cluster();
-    on_connect(cluster_->connected_host(),
-               cluster_->protocol_version(),
-               cluster_->available_hosts(),
-               cluster_->token_map());
+    on_connect(cluster_->connected_host(), cluster_->protocol_version(),
+               cluster_->available_hosts(), cluster_->token_map());
   } else {
     assert(!connector->is_canceled() && "Cluster connection process canceled");
     switch (connector->error_code()) {
       case ClusterConnector::CLUSTER_ERROR_INVALID_PROTOCOL:
-        on_connect_failed(CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL,
-                          connector->error_message());
+        on_connect_failed(CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL, connector->error_message());
         break;
       case ClusterConnector::CLUSTER_ERROR_SSL_ERROR:
-        on_connect_failed(connector->ssl_error_code(),
-                          connector->error_message());
+        on_connect_failed(connector->ssl_error_code(), connector->error_message());
         break;
       case ClusterConnector::CLUSTER_ERROR_AUTH_ERROR:
-        on_connect_failed(CASS_ERROR_SERVER_BAD_CREDENTIALS,
-                          connector->error_message());
+        on_connect_failed(CASS_ERROR_SERVER_BAD_CREDENTIALS, connector->error_message());
         break;
       case ClusterConnector::CLUSTER_ERROR_NO_HOSTS_AVAILABLE:
-        on_connect_failed(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                          connector->error_message());
+        on_connect_failed(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connector->error_message());
         break;
       default:
         // This shouldn't happen, but let's handle it
-        on_connect_failed(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
-                          connector->error_message());
+        on_connect_failed(CASS_ERROR_LIB_UNABLE_TO_CONNECT, connector->error_message());
         break;
     }
   }
 }
-
-} // namespace cass

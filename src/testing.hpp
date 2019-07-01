@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TESTING_HPP_INCLUDED__
-#define __CASS_TESTING_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TESTING_HPP
+#define DATASTAX_INTERNAL_TESTING_HPP
 
 #include "cassandra.h"
 #include "string.hpp"
@@ -23,7 +23,7 @@
 
 #include <stdint.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace testing {
 
 CASS_EXPORT String get_host_from_future(CassFuture* future);
 
@@ -33,12 +33,12 @@ CASS_EXPORT int get_port_from_cluster(CassCluster* cluster);
 
 CASS_EXPORT String get_contact_points_from_cluster(CassCluster* cluster);
 
-CASS_EXPORT int64_t create_murmur3_hash_from_string(const String &value);
+CASS_EXPORT int64_t create_murmur3_hash_from_string(const String& value);
 
 CASS_EXPORT uint64_t get_time_since_epoch_in_ms();
 
 CASS_EXPORT uint64_t get_host_latency_average(CassSession* session, String ip_address, int port);
 
-} // namespace cass
+}}} // namespace datastax::internal::testing
 
 #endif

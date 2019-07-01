@@ -14,25 +14,23 @@
   limitations under the License.
 */
 
-#ifndef __CASS_VALUE_ITERATOR_HPP_INCLUDED__
-#define __CASS_VALUE_ITERATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_VALUE_ITERATOR_HPP
+#define DATASTAX_INTERNAL_VALUE_ITERATOR_HPP
 
 #include "cassandra.h"
 #include "iterator.hpp"
 #include "serialization.hpp"
 #include "value.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ValueIterator : public Iterator {
 public:
   ValueIterator(CassIteratorType type, Decoder decoder)
-    : Iterator(type)
-    , decoder_(decoder) { }
+      : Iterator(type)
+      , decoder_(decoder) {}
 
-  const Value* value() const {
-    return &value_;
-  }
+  const Value* value() const { return &value_; }
 
 protected:
   Decoder decoder_;
@@ -45,9 +43,8 @@ public:
       : ValueIterator(CASS_ITERATOR_TYPE_COLLECTION, collection->decoder())
       , collection_(collection)
       , index_(-1)
-      , count_(collection_->value_type() == CASS_VALUE_TYPE_MAP
-                   ? (2 * collection_->count())
-                   : collection->count()) {}
+      , count_(collection_->value_type() == CASS_VALUE_TYPE_MAP ? (2 * collection_->count())
+                                                                : collection->count()) {}
 
   virtual bool next();
 
@@ -78,6 +75,6 @@ private:
   DataType::Vec::const_iterator end_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

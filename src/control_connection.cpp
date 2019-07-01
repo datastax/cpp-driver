@@ -18,13 +18,13 @@
 
 #include "collection_iterator.hpp"
 #include "constants.hpp"
+#include "error_response.hpp"
 #include "event_response.hpp"
 #include "load_balancing.hpp"
 #include "logger.hpp"
 #include "metadata.hpp"
 #include "query_request.hpp"
 #include "result_iterator.hpp"
-#include "error_response.hpp"
 #include "result_response.hpp"
 #include "session.hpp"
 #include "timer.hpp"
@@ -35,7 +35,10 @@
 #include <iomanip>
 #include <iterator>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A class for handling a single query on behalf of the control connection.
@@ -52,12 +55,11 @@ public:
    * @param control_connection The control connection the query is run on.
    * @param callback A callback that handles a successful query.
    */
-  ControlRequestCallback(const String& query,
-                         ControlConnection* control_connection,
+  ControlRequestCallback(const String& query, ControlConnection* control_connection,
                          Callback callback)
-    : SimpleRequestCallback(query)
-    , control_connection_(control_connection)
-    , callback_(callback) { }
+      : SimpleRequestCallback(query)
+      , control_connection_(control_connection)
+      , callback_(callback) {}
 
   /**
    * Constructor. Initialize with a request object.
@@ -66,12 +68,11 @@ public:
    * @param control_connection The control connection the request is run on.
    * @param callback A callback that handles a successful request.
    */
-  ControlRequestCallback(const Request::ConstPtr& request,
-                         ControlConnection* control_connection,
+  ControlRequestCallback(const Request::ConstPtr& request, ControlConnection* control_connection,
                          Callback callback)
-    : SimpleRequestCallback(request)
-    , control_connection_(control_connection)
-    , callback_(callback) { }
+      : SimpleRequestCallback(request)
+      , control_connection_(control_connection)
+      , callback_(callback) {}
 
   virtual void on_internal_set(ResponseMessage* response) {
     if (response->opcode() != CQL_OPCODE_RESULT) {
@@ -86,9 +87,7 @@ public:
     control_connection_->defunct();
   }
 
-  virtual void on_internal_timeout() {
-    control_connection_->defunct();
-  }
+  virtual void on_internal_timeout() { control_connection_->defunct(); }
 
   ControlConnection* control_connection() { return control_connection_; }
   const ResultResponse::Ptr& result() const { return result_; }
@@ -117,15 +116,13 @@ public:
    * @param callback The callback for a successful run of all the queries.
    */
   ChainedControlRequestCallback(const String& key, const String& query,
-                                ControlConnection* control_connection,
-                                Callback callback)
-    : ChainedRequestCallback(key, query)
-    , control_connection_(control_connection)
-    , callback_(callback) { }
+                                ControlConnection* control_connection, Callback callback)
+      : ChainedRequestCallback(key, query)
+      , control_connection_(control_connection)
+      , callback_(callback) {}
 
   virtual void on_chain_set() {
-    for (Map::const_iterator it = responses().begin(),
-         end = responses().end(); it != end; ++it) {
+    for (Map::const_iterator it = responses().begin(), end = responses().end(); it != end; ++it) {
       if (it->second->opcode() != CQL_OPCODE_RESULT) {
         control_connection_->defunct();
         return;
@@ -138,9 +135,7 @@ public:
     control_connection_->defunct();
   }
 
-  virtual void on_chain_timeout() {
-    control_connection_->defunct();
-  }
+  virtual void on_chain_timeout() { control_connection_->defunct(); }
 
   ControlConnection* control_connection() { return control_connection_; }
 
@@ -148,7 +143,6 @@ private:
   ControlConnection* control_connection_;
   Callback callback_;
 };
-
 
 /**
  * A specialized request callback for handling node queries. This is needed for
@@ -166,17 +160,12 @@ public:
    * @param query The query to run for the node change.
    * @param control_connection The control connection the query is run on.
    */
-  RefreshNodeCallback(const Address& address,
-                      ControlConnection::RefreshNodeType type,
-                      bool is_all_peers,
-                      const String& query,
-                      ControlConnection* control_connection)
-    : ControlRequestCallback(query,
-                             control_connection,
-                             ControlConnection::on_refresh_node)
-    , address(address)
-    , type(type)
-    , is_all_peers(is_all_peers) { }
+  RefreshNodeCallback(const Address& address, ControlConnection::RefreshNodeType type,
+                      bool is_all_peers, const String& query, ControlConnection* control_connection)
+      : ControlRequestCallback(query, control_connection, ControlConnection::on_refresh_node)
+      , address(address)
+      , type(type)
+      , is_all_peers(is_all_peers) {}
 
   const Address address;
   const ControlConnection::RefreshNodeType type;
@@ -196,13 +185,10 @@ public:
    * @param query The query to run for the keyspace change.
    * @param control_connection The control connection the query is run on.
    */
-  RefreshKeyspaceCallback(const String& keyspace_name,
-                          const String& query,
+  RefreshKeyspaceCallback(const String& keyspace_name, const String& query,
                           ControlConnection* control_connection)
-    : ControlRequestCallback(query,
-                             control_connection,
-                             ControlConnection::on_refresh_keyspace)
-    , keyspace_name(keyspace_name) { }
+      : ControlRequestCallback(query, control_connection, ControlConnection::on_refresh_keyspace)
+      , keyspace_name(keyspace_name) {}
 
   const String keyspace_name;
 };
@@ -227,11 +213,10 @@ public:
   RefreshTableCallback(const String& keyspace_name, const String& table_or_view_name,
                        const String& key, const String& query,
                        ControlConnection* control_connection)
-    : ChainedControlRequestCallback(key, query,
-                                    control_connection,
-                                    ControlConnection::on_refresh_table_or_view)
-    , keyspace_name(keyspace_name)
-    , table_or_view_name(table_or_view_name) { }
+      : ChainedControlRequestCallback(key, query, control_connection,
+                                      ControlConnection::on_refresh_table_or_view)
+      , keyspace_name(keyspace_name)
+      , table_or_view_name(table_or_view_name) {}
 
   const String keyspace_name;
   const String table_or_view_name;
@@ -251,14 +236,11 @@ public:
    * @param query The query to run for the type change.
    * @param control_connection The control connection to run the query on.
    */
-  RefreshTypeCallback(const String& keyspace_name, const String& type_name,
-                      const String& query,
+  RefreshTypeCallback(const String& keyspace_name, const String& type_name, const String& query,
                       ControlConnection* control_connection)
-    : ControlRequestCallback(query,
-                             control_connection,
-                             ControlConnection::on_refresh_type)
-    , keyspace_name(keyspace_name)
-    , type_name(type_name) { }
+      : ControlRequestCallback(query, control_connection, ControlConnection::on_refresh_type)
+      , keyspace_name(keyspace_name)
+      , type_name(type_name) {}
 
   const String keyspace_name;
   const String type_name;
@@ -284,15 +266,12 @@ public:
    */
   RefreshFunctionCallback(const String& keyspace_name, const String& function_name,
                           const StringVec& arg_types, bool is_aggregate,
-                          const Request::ConstPtr& request,
-                          ControlConnection* control_connection)
-    : ControlRequestCallback(request,
-                             control_connection,
-                             ControlConnection::on_refresh_function)
-    , keyspace_name(keyspace_name)
-    , function_name(function_name)
-    , arg_types(arg_types)
-    , is_aggregate(is_aggregate) { }
+                          const Request::ConstPtr& request, ControlConnection* control_connection)
+      : ControlRequestCallback(request, control_connection, ControlConnection::on_refresh_function)
+      , keyspace_name(keyspace_name)
+      , function_name(function_name)
+      , arg_types(arg_types)
+      , is_aggregate(is_aggregate) {}
 
   const String keyspace_name;
   const String function_name;
@@ -304,43 +283,39 @@ public:
  * A no operation control connection listener. This is used if no listener
  * is set.
  */
-class NopControlConnectionListener
-    : public ControlConnectionListener {
+class NopControlConnectionListener : public ControlConnectionListener {
 public:
-  virtual void on_up(const Address& address)  { }
-  virtual void on_down(const Address& address)  { }
+  virtual void on_up(const Address& address) {}
+  virtual void on_down(const Address& address) {}
 
-  virtual void on_add(const Host::Ptr& host)  { }
-  virtual void on_remove(const Address& address)  { }
+  virtual void on_add(const Host::Ptr& host) {}
+  virtual void on_remove(const Address& address) {}
 
-  virtual void on_update_schema(SchemaType type,
-                                const ResultResponse::Ptr& result,
-                                const String& keyspace_name,
-                                const String& target_name)  { }
+  virtual void on_update_schema(SchemaType type, const ResultResponse::Ptr& result,
+                                const String& keyspace_name, const String& target_name) {}
 
-  virtual void on_drop_schema(SchemaType type,
-                              const String& keyspace_name,
-                              const String& target_name) { }
+  virtual void on_drop_schema(SchemaType type, const String& keyspace_name,
+                              const String& target_name) {}
 
-  virtual void on_close(ControlConnection* connection) { }
+  virtual void on_close(ControlConnection* connection) {}
 };
+
+}}} // namespace datastax::internal::core
 
 static NopControlConnectionListener nop_listener__;
 
 ControlConnection::ControlConnection(const Connection::Ptr& connection,
-                                     ControlConnectionListener* listener,
-                                     bool use_schema,
-                                     bool token_aware_routing,
-                                     const VersionNumber& server_version,
+                                     ControlConnectionListener* listener, bool use_schema,
+                                     bool token_aware_routing, const VersionNumber& server_version,
                                      const VersionNumber& dse_server_version,
                                      ListenAddressMap listen_addresses)
-  : connection_(connection)
-  , use_schema_(use_schema)
-  , token_aware_routing_(token_aware_routing)
-  , server_version_(server_version)
-  , dse_server_version_(dse_server_version)
-  , listen_addresses_(listen_addresses)
-  , listener_(listener ? listener : &nop_listener__) {
+    : connection_(connection)
+    , use_schema_(use_schema)
+    , token_aware_routing_(token_aware_routing)
+    , server_version_(server_version)
+    , dse_server_version_(dse_server_version)
+    , listen_addresses_(listen_addresses)
+    , listener_(listener ? listener : &nop_listener__) {
   connection_->set_listener(this);
   inc_ref();
 }
@@ -353,13 +328,9 @@ int32_t ControlConnection::write_and_flush(const RequestCallback::Ptr& callback)
   return connection_->write_and_flush(callback);
 }
 
-void ControlConnection::close() {
-  connection_->close();
-}
+void ControlConnection::close() { connection_->close(); }
 
-void ControlConnection::defunct() {
-  connection_->defunct();
-}
+void ControlConnection::defunct() { connection_->defunct(); }
 
 void ControlConnection::set_listener(ControlConnectionListener* listener) {
   listener_ = listener ? listener : &nop_listener__;
@@ -388,8 +359,7 @@ void ControlConnection::refresh_node(RefreshNodeType type, const Address& addres
   LOG_DEBUG("Refresh node: %s", query.c_str());
 
   if (write_and_flush(RequestCallback::Ptr(
-                        new RefreshNodeCallback(
-                          address, type, is_all_peers, query, this))) < 0) {
+          new RefreshNodeCallback(address, type, is_all_peers, query, this))) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh node info");
     defunct();
   }
@@ -407,32 +377,26 @@ void ControlConnection::handle_refresh_node(RefreshNodeCallback* callback) {
     String address_str = callback->address.to_string();
     LOG_ERROR("No row found for host %s in %s's local/peers system table. "
               "%s will be ignored.",
-              address_str.c_str(),
-              address_string().c_str(),
-              address_str.c_str());
+              address_str.c_str(), address_string().c_str(), address_str.c_str());
     return;
   }
 
   Host::Ptr host(new Host(callback->address));
   if (!callback->is_all_peers) {
     host->set(&result->first_row(), token_aware_routing_);
-    listen_addresses_[callback->address]
-        = determine_listen_address(callback->address, &result->first_row());
+    listen_addresses_[callback->address] =
+        determine_listen_address(callback->address, &result->first_row());
   } else {
     ResultIterator rows(result.get());
     bool found_host = false;
     while (rows.next()) {
       const Row* row = rows.row();
       Address address;
-      bool is_valid_address
-          = determine_address_for_peer_host(this->address(),
-                                            row->get_by_name("peer"),
-                                            row->get_by_name("rpc_address"),
-                                            &address);
+      bool is_valid_address = determine_address_for_peer_host(
+          this->address(), row->get_by_name("peer"), row->get_by_name("rpc_address"), &address);
       if (is_valid_address && callback->address == address) {
         host->set(row, token_aware_routing_);
-        listen_addresses_[callback->address]
-            = determine_listen_address(callback->address, row);
+        listen_addresses_[callback->address] = determine_listen_address(callback->address, row);
         found_host = true;
         break;
       }
@@ -441,9 +405,7 @@ void ControlConnection::handle_refresh_node(RefreshNodeCallback* callback) {
       String address_str = callback->address.to_string();
       LOG_ERROR("No row found for host %s in %s's peers system table. "
                 "%s will be ignored.",
-                address_str.c_str(),
-                address_string().c_str(),
-                address_str.c_str());
+                address_str.c_str(), address_string().c_str(), address_str.c_str());
       return;
     }
   }
@@ -467,7 +429,7 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
 
   if (server_version_ >= VersionNumber(3, 0, 0)) {
     query.assign(SELECT_KEYSPACES_30);
-  }  else {
+  } else {
     query.assign(SELECT_KEYSPACES_20);
   }
   query.append(" WHERE keyspace_name='")
@@ -476,10 +438,8 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
 
   LOG_DEBUG("Refreshing keyspace %s", query.c_str());
 
-  if (write_and_flush(
-        RequestCallback::Ptr(
-          new RefreshKeyspaceCallback(
-            keyspace_name.to_string(), query, this))) < 0) {
+  if (write_and_flush(RequestCallback::Ptr(
+          new RefreshKeyspaceCallback(keyspace_name.to_string(), query, this))) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh keyspace info");
     defunct();
   }
@@ -497,8 +457,7 @@ void ControlConnection::handle_refresh_keyspace(RefreshKeyspaceCallback* callbac
               callback->keyspace_name.c_str());
     return;
   }
-  listener_->on_update_schema(ControlConnectionListener::KEYSPACE,  result,
-                              callback->keyspace_name);
+  listener_->on_update_schema(ControlConnectionListener::KEYSPACE, result, callback->keyspace_name);
 }
 
 void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
@@ -510,39 +469,55 @@ void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
 
   if (server_version_ >= VersionNumber(3, 0, 0)) {
     table_query.assign(SELECT_TABLES_30);
-    table_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND table_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
+    table_query.append(" WHERE keyspace_name='")
+        .append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND table_name='")
+        .append(table_or_view_name.data(), table_or_view_name.size())
+        .append("'");
 
     view_query.assign(SELECT_VIEWS_30);
-    view_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND view_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
+    view_query.append(" WHERE keyspace_name='")
+        .append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND view_name='")
+        .append(table_or_view_name.data(), table_or_view_name.size())
+        .append("'");
 
     column_query.assign(SELECT_COLUMNS_30);
-    column_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND table_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
+    column_query.append(" WHERE keyspace_name='")
+        .append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND table_name='")
+        .append(table_or_view_name.data(), table_or_view_name.size())
+        .append("'");
 
     index_query.assign(SELECT_INDEXES_30);
-    index_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND table_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
+    index_query.append(" WHERE keyspace_name='")
+        .append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND table_name='")
+        .append(table_or_view_name.data(), table_or_view_name.size())
+        .append("'");
 
     LOG_DEBUG("Refreshing table/view %s; %s; %s; %s", table_query.c_str(), view_query.c_str(),
               column_query.c_str(), index_query.c_str());
   } else {
     table_query.assign(SELECT_COLUMN_FAMILIES_20);
-    table_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND columnfamily_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
+    table_query.append(" WHERE keyspace_name='")
+        .append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND columnfamily_name='")
+        .append(table_or_view_name.data(), table_or_view_name.size())
+        .append("'");
 
     column_query.assign(SELECT_COLUMNS_20);
-    column_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND columnfamily_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
+    column_query.append(" WHERE keyspace_name='")
+        .append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND columnfamily_name='")
+        .append(table_or_view_name.data(), table_or_view_name.size())
+        .append("'");
 
     LOG_DEBUG("Refreshing table %s; %s", table_query.c_str(), column_query.c_str());
   }
 
-  ChainedRequestCallback::Ptr callback(
-        new RefreshTableCallback(
-          keyspace_name.to_string(), table_or_view_name.to_string(),
-          "tables", table_query, this));
+  ChainedRequestCallback::Ptr callback(new RefreshTableCallback(
+      keyspace_name.to_string(), table_or_view_name.to_string(), "tables", table_query, this));
 
   callback = callback->chain("columns", column_query);
 
@@ -570,8 +545,7 @@ void ControlConnection::handle_refresh_table_or_view(RefreshTableCallback* callb
     ResultResponse::Ptr views_result(callback->result("views"));
     if (!views_result || views_result->row_count() == 0) {
       LOG_ERROR("No row found for table (or view) %s.%s in system schema tables.",
-                callback->keyspace_name.c_str(),
-                callback->table_or_view_name.c_str());
+                callback->keyspace_name.c_str(), callback->table_or_view_name.c_str());
       return;
     }
     listener_->on_update_schema(ControlConnectionListener::VIEW, views_result,
@@ -594,8 +568,7 @@ void ControlConnection::handle_refresh_table_or_view(RefreshTableCallback* callb
   }
 }
 
-void ControlConnection::refresh_type(const StringRef& keyspace_name,
-                                     const StringRef& type_name) {
+void ControlConnection::refresh_type(const StringRef& keyspace_name, const StringRef& type_name) {
   String query;
   if (server_version_ >= VersionNumber(3, 0, 0)) {
     query.assign(SELECT_USERTYPES_30);
@@ -603,16 +576,16 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name,
     query.assign(SELECT_USERTYPES_21);
   }
 
-  query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-      .append("' AND type_name='").append(type_name.data(), type_name.size()).append("'");
+  query.append(" WHERE keyspace_name='")
+      .append(keyspace_name.data(), keyspace_name.size())
+      .append("' AND type_name='")
+      .append(type_name.data(), type_name.size())
+      .append("'");
 
   LOG_DEBUG("Refreshing type %s", query.c_str());
 
-  if (!write_and_flush(
-        RequestCallback::Ptr(
-          new RefreshTypeCallback(
-            keyspace_name.to_string(), type_name.to_string(),
-            query, this)))) {
+  if (!write_and_flush(RequestCallback::Ptr(new RefreshTypeCallback(
+          keyspace_name.to_string(), type_name.to_string(), query, this)))) {
     LOG_ERROR("No more stream available while attempting to refresh type info");
     defunct();
   }
@@ -627,18 +600,16 @@ void ControlConnection::handle_refresh_type(RefreshTypeCallback* callback) {
   const ResultResponse::Ptr result = callback->result();
   if (result->row_count() == 0) {
     LOG_ERROR("No row found for keyspace %s and type %s in system schema.",
-              callback->keyspace_name.c_str(),
-              callback->type_name.c_str());
+              callback->keyspace_name.c_str(), callback->type_name.c_str());
     return;
   }
-  listener_->on_update_schema(ControlConnectionListener::USER_TYPE, result,
-                              callback->keyspace_name, callback->type_name);
+  listener_->on_update_schema(ControlConnectionListener::USER_TYPE, result, callback->keyspace_name,
+                              callback->type_name);
 }
 
 void ControlConnection::refresh_function(const StringRef& keyspace_name,
                                          const StringRef& function_name,
-                                         const StringRefVec& arg_types,
-                                         bool is_aggregate) {
+                                         const StringRefVec& arg_types, bool is_aggregate) {
   String query;
   if (server_version_ >= VersionNumber(3, 0, 0)) {
     if (is_aggregate) {
@@ -658,18 +629,14 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
     }
   }
 
-  LOG_DEBUG("Refreshing %s %s in keyspace %s",
-            is_aggregate ? "aggregate" : "function",
+  LOG_DEBUG("Refreshing %s %s in keyspace %s", is_aggregate ? "aggregate" : "function",
             Metadata::full_function_name(function_name.to_string(), to_strings(arg_types)).c_str(),
             String(keyspace_name.data(), keyspace_name.length()).c_str());
 
   SharedRefPtr<QueryRequest> request(new QueryRequest(query, 3));
   SharedRefPtr<Collection> signature(new Collection(CASS_COLLECTION_TYPE_LIST, arg_types.size()));
 
-  for (StringRefVec::const_iterator i = arg_types.begin(),
-       end = arg_types.end();
-       i != end;
-       ++i) {
+  for (StringRefVec::const_iterator i = arg_types.begin(), end = arg_types.end(); i != end; ++i) {
     signature->append(CassString(i->data(), i->size()));
   }
 
@@ -677,12 +644,9 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
   request->set(1, CassString(function_name.data(), function_name.size()));
   request->set(2, signature.get());
 
-  if (!write_and_flush(
-        RequestCallback::Ptr(
-          new RefreshFunctionCallback(
-            keyspace_name.to_string(), function_name.to_string(),
-            to_strings(arg_types), is_aggregate,
-            request, this)))) {
+  if (!write_and_flush(RequestCallback::Ptr(
+          new RefreshFunctionCallback(keyspace_name.to_string(), function_name.to_string(),
+                                      to_strings(arg_types), is_aggregate, request, this)))) {
     LOG_ERROR("No more stream available while attempting to refresh function info");
     defunct();
   }
@@ -696,20 +660,17 @@ void ControlConnection::on_refresh_function(ControlRequestCallback* callback) {
 void ControlConnection::handle_refresh_function(RefreshFunctionCallback* callback) {
   const ResultResponse::Ptr result = callback->result();
   if (result->row_count() == 0) {
-    LOG_ERROR("No row found for keyspace %s and %s %s",
-              callback->keyspace_name.c_str(),
+    LOG_ERROR("No row found for keyspace %s and %s %s", callback->keyspace_name.c_str(),
               callback->is_aggregate ? "aggregate" : "function",
-              Metadata::full_function_name(callback->function_name,
-                                           callback->arg_types).c_str());
+              Metadata::full_function_name(callback->function_name, callback->arg_types).c_str());
     return;
   }
 
-  listener_->on_update_schema(callback->is_aggregate ? ControlConnectionListener::AGGREGATE
-                                                     : ControlConnectionListener::FUNCTION,
-                              result,
-                              callback->keyspace_name,
-                              Metadata::full_function_name(callback->function_name,
-                                                           callback->arg_types));
+  listener_->on_update_schema(
+      callback->is_aggregate ? ControlConnectionListener::AGGREGATE
+                             : ControlConnectionListener::FUNCTION,
+      result, callback->keyspace_name,
+      Metadata::full_function_name(callback->function_name, callback->arg_types));
 }
 
 void ControlConnection::on_close(Connection* connection) {
@@ -763,13 +724,11 @@ void ControlConnection::on_event(const EventResponse::Ptr& response) {
 
     case CASS_EVENT_SCHEMA_CHANGE:
       // Only handle keyspace events when using token-aware routing
-      if (!use_schema_ &&
-          response->schema_change_target() != EventResponse::KEYSPACE) {
+      if (!use_schema_ && response->schema_change_target() != EventResponse::KEYSPACE) {
         return;
       }
 
-      LOG_DEBUG("Schema change (%d): %.*s %.*s",
-                response->schema_change(),
+      LOG_DEBUG("Schema change (%d): %.*s %.*s", response->schema_change(),
                 (int)response->keyspace().size(), response->keyspace().data(),
                 (int)response->target().size(), response->target().data());
 
@@ -788,9 +747,7 @@ void ControlConnection::on_event(const EventResponse::Ptr& response) {
               break;
             case EventResponse::FUNCTION:
             case EventResponse::AGGREGATE:
-              refresh_function(response->keyspace(),
-                               response->target(),
-                               response->arg_types(),
+              refresh_function(response->keyspace(), response->target(), response->arg_types(),
                                response->schema_change_target() == EventResponse::AGGREGATE);
               break;
           }
@@ -814,20 +771,19 @@ void ControlConnection::on_event(const EventResponse::Ptr& response) {
                                         response->target().to_string());
               break;
             case EventResponse::FUNCTION:
-              listener_->on_drop_schema(ControlConnectionListener::FUNCTION,
-                                        response->keyspace().to_string(),
-                                        Metadata::full_function_name(response->target().to_string(),
-                                                                     to_strings(response->arg_types())));
+              listener_->on_drop_schema(
+                  ControlConnectionListener::FUNCTION, response->keyspace().to_string(),
+                  Metadata::full_function_name(response->target().to_string(),
+                                               to_strings(response->arg_types())));
               break;
             case EventResponse::AGGREGATE:
-              listener_->on_drop_schema(ControlConnectionListener::AGGREGATE,
-                                        response->keyspace().to_string(),
-                                        Metadata::full_function_name(response->target().to_string(),
-                                                                     to_strings(response->arg_types())));
+              listener_->on_drop_schema(
+                  ControlConnectionListener::AGGREGATE, response->keyspace().to_string(),
+                  Metadata::full_function_name(response->target().to_string(),
+                                               to_strings(response->arg_types())));
               break;
           }
           break;
-
       }
       break;
 
@@ -836,5 +792,3 @@ void ControlConnection::on_event(const EventResponse::Ptr& response) {
       break;
   }
 }
-
-} // namespace cass

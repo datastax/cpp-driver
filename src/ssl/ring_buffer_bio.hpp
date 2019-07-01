@@ -39,8 +39,8 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef __CASS_RING_BUFFER_BIO_HPP_INCLUDED__
-#define __CASS_RING_BUFFER_BIO_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RING_BUFFER_BIO_HPP
+#define DATASTAX_INTERNAL_RING_BUFFER_BIO_HPP
 
 #include "ring_buffer.hpp"
 
@@ -51,8 +51,7 @@
 #define BIO_get_data(b) ((b)->ptr)
 #endif
 
-namespace cass {
-namespace rb {
+namespace datastax { namespace internal { namespace rb {
 
 // This wrapper is used to contain the ring buffer state kept in the BIO's
 // user data field. OpenSSL 1.1 made the BIO's structure opaque which removed access
@@ -60,8 +59,8 @@ namespace rb {
 // is now used to track the EOF return value.
 struct RingBufferState {
   RingBufferState(RingBuffer* ring_buffer)
-    : ring_buffer(ring_buffer)
-    , ret(-1) { }
+      : ring_buffer(ring_buffer)
+      , ret(-1) {}
 
   RingBuffer* ring_buffer;
   int ret; // Used to keep track of the EOF return value
@@ -93,11 +92,10 @@ private:
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
   static const BIO_METHOD method_;
 #else
-  static BIO_METHOD *method_;
+  static BIO_METHOD* method_;
 #endif
 };
 
-} // namespace rb
-} // namespace cass
+}}} // namespace datastax::internal::rb
 
 #endif

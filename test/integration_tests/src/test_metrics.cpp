@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp> // Sleep functionality
 
 #include "cassandra.h"
@@ -28,12 +28,10 @@ public:
   boost::shared_ptr<CCM::Bridge> ccm_;
 
   MetricsTest()
-    : cluster_(cass_cluster_new())
-    , ccm_(new CCM::Bridge("config.txt")) {}
+      : cluster_(cass_cluster_new())
+      , ccm_(new CCM::Bridge("config.txt")) {}
 
-  ~MetricsTest() {
-    close_session();
-  }
+  ~MetricsTest() { close_session(); }
 
   /**
    * Create the session
@@ -55,7 +53,8 @@ public:
 
       CassString message;
       cass_future_error_message(connect_future.get(), &message.data, &message.length);
-      BOOST_FAIL(std::string(message.data, message.length) << "' (" << cass_error_desc(error_code) << ")");
+      BOOST_FAIL(std::string(message.data, message.length)
+                 << "' (" << cass_error_desc(error_code) << ")");
     }
   }
 
@@ -74,24 +73,22 @@ public:
    *
    * @param metrics Metrics to assign from the active session
    */
-  void get_metrics(CassMetrics *metrics) {
-    cass_session_get_metrics(session_.get(), metrics);
-  }
+  void get_metrics(CassMetrics* metrics) { cass_session_get_metrics(session_.get(), metrics); }
 
- /**
-  * Get the driver speculative execution metrics
-  *
-  * @param metrics Metrics to assign from the active session
-  */
-  void get_speculative_execution_metrics(CassSpeculativeExecutionMetrics *metrics) {
+  /**
+   * Get the driver speculative execution metrics
+   *
+   * @param metrics Metrics to assign from the active session
+   */
+  void get_speculative_execution_metrics(CassSpeculativeExecutionMetrics* metrics) {
     cass_session_get_speculative_execution_metrics(session_.get(), metrics);
   }
 
   /**
-  * Execute a query on the system table
-  *
-  * @param is_async True if async query; false otherwise
-  */
+   * Execute a query on the system table
+   *
+   * @param is_async True if async query; false otherwise
+   */
   void execute_query(bool is_async = false) {
     std::string query = "SELECT * FROM system.local";
     test_utils::CassStatementPtr statement(cass_statement_new_n(query.data(), query.size(), 0));
@@ -118,10 +115,10 @@ BOOST_FIXTURE_TEST_SUITE(metrics, MetricsTest)
  * @test_category metrics
  */
 BOOST_AUTO_TEST_CASE(connections) {
-  //Create one connections per host
+  // Create one connections per host
   cass_cluster_set_num_threads_io(cluster_.get(), 1);
   cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
-  cass_cluster_set_reconnect_wait_time(cluster_.get(), 10); // Low re-connect for node restart
+  cass_cluster_set_constant_reconnect(cluster_.get(), 10); // Low re-connect for node restart
   test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 3);
   if (ccm_->create_cluster(3)) {
     ccm_->start_cluster();
@@ -203,7 +200,7 @@ BOOST_AUTO_TEST_CASE(timeouts) {
 
     // Ensure the pending request has occurred
     boost::chrono::steady_clock::time_point end =
-    boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
+        boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
     do {
       boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       get_metrics(&metrics);
@@ -211,7 +208,8 @@ BOOST_AUTO_TEST_CASE(timeouts) {
              metrics.errors.pending_request_timeouts == 0);
     BOOST_CHECK_GT(metrics.errors.pending_request_timeouts, 0);
   } else {
-    std::cout << "Skipping Pending Request Timeout for Cassandra v" << version.to_string() << std::endl;
+    std::cout << "Skipping Pending Request Timeout for Cassandra v" << version.to_string()
+              << std::endl;
   }
 
   /*
@@ -229,12 +227,11 @@ BOOST_AUTO_TEST_CASE(timeouts) {
 
   // Ensure the request timeout has occurred
   boost::chrono::steady_clock::time_point end =
-    boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
+      boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
   do {
     boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
     get_metrics(&metrics);
-  } while (boost::chrono::steady_clock::now() < end &&
-           metrics.errors.request_timeouts == 0);
+  } while (boost::chrono::steady_clock::now() < end && metrics.errors.request_timeouts == 0);
   BOOST_CHECK_GT(metrics.errors.request_timeouts, 0);
 }
 
@@ -252,7 +249,7 @@ BOOST_AUTO_TEST_CASE(timeouts) {
  * @test_category metrics
  */
 BOOST_AUTO_TEST_CASE(request_statistics) {
-  //Create one connections per host
+  // Create one connections per host
   cass_cluster_set_num_threads_io(cluster_.get(), 1);
   cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
   test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 1);
@@ -264,13 +261,12 @@ BOOST_AUTO_TEST_CASE(request_statistics) {
   CassMetrics metrics;
   CassSpeculativeExecutionMetrics spec_metrics;
   boost::chrono::steady_clock::time_point end =
-    boost::chrono::steady_clock::now() + boost::chrono::seconds(70);
+      boost::chrono::steady_clock::now() + boost::chrono::seconds(70);
   do {
     execute_query();
     get_metrics(&metrics);
     get_speculative_execution_metrics(&spec_metrics);
-  } while (boost::chrono::steady_clock::now() < end &&
-    metrics.requests.one_minute_rate == 0.0);
+  } while (boost::chrono::steady_clock::now() < end && metrics.requests.one_minute_rate == 0.0);
 
   BOOST_CHECK_LT(metrics.requests.min, CASS_UINT64_MAX);
   BOOST_CHECK_GT(metrics.requests.max, 0);

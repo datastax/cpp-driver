@@ -26,10 +26,10 @@
 */
 
 #include <assert.h>
-#include <string.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <string.h>
 
 #include <uv.h>
 
@@ -51,12 +51,12 @@
 #if defined(_MSC_VER) && defined(_DEBUG)
 #include <windows.h>
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
-#pragma pack(push,8)
+#pragma pack(push, 8)
 typedef struct tagTHREADNAME_INFO {
-  DWORD dwType; /* Must be 0x1000. */
-  LPCSTR szName; /* Pointer to name (in user addr space). */
+  DWORD dwType;     /* Must be 0x1000. */
+  LPCSTR szName;    /* Pointer to name (in user addr space). */
   DWORD dwThreadID; /* Thread ID (-1=caller thread). */
-  DWORD dwFlags; /* Reserved for future use, must be zero. */
+  DWORD dwFlags;    /* Reserved for future use, must be zero. */
 } THREADNAME_INFO;
 #pragma pack(pop)
 void set_thread_name(const char* thread_name) {
@@ -66,13 +66,11 @@ void set_thread_name(const char* thread_name) {
   info.dwThreadID = -1;
   info.dwFlags = 0;
 #pragma warning(push)
-#pragma warning(disable: 6320 6322)
+#pragma warning(disable : 6320 6322)
   __try {
-    RaiseException(MS_VC_EXCEPTION,
-                   0,
-                   sizeof(info) / sizeof(ULONG_PTR),
-                   (ULONG_PTR*) &info);
-  } __except (EXCEPTION_EXECUTE_HANDLER) { }
+    RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
+  }
 #pragma warning(pop)
 }
 #endif
@@ -256,7 +254,8 @@ void run_insert_queries(void* data) {
   CassSession* session = (CassSession*)data;
 
   const CassPrepared* insert_prepared = NULL;
-  const char* insert_query = "INSERT INTO stress.songs (id, title, album, artist, tags) VALUES (?, ?, ?, ?, ?);";
+  const char* insert_query =
+      "INSERT INTO stress.songs (id, title, album, artist, tags) VALUES (?, ?, ?, ?, ?);";
 
 #if USE_PREPARED
   if (prepare_query(session, insert_query, &insert_prepared) == CASS_OK) {
@@ -310,11 +309,12 @@ void run_select_queries(void* data) {
   int i;
   CassSession* session = (CassSession*)data;
   const CassPrepared* select_prepared = NULL;
-  const char* select_query = "SELECT * FROM stress.songs WHERE id = a98d21b2-1900-11e4-b97b-e5e358e71e0d";
+  const char* select_query =
+      "SELECT * FROM stress.songs WHERE id = a98d21b2-1900-11e4-b97b-e5e358e71e0d";
 
 #if defined(_MSC_VER) && defined(_DEBUG)
   char thread_name[32];
-  sprintf(thread_name, "Perf - %lu", (unsigned long) (GetThreadId(uv_thread_self())));
+  sprintf(thread_name, "Perf - %lu", (unsigned long)(GetThreadId(uv_thread_self())));
   set_thread_name(thread_name);
 #endif
 
@@ -367,11 +367,11 @@ int main(int argc, char* argv[]) {
                          "title text, album text, artist text, "
                          "tags set<text>, data blob)");
 
-  execute_query(session,
-                "INSERT INTO stress.songs (id, title, album, artist, tags) VALUES "
-                "(a98d21b2-1900-11e4-b97b-e5e358e71e0d, "
-                "'La Petite Tonkinoise', 'Bye Bye Blackbird', 'Joséphine Baker', { 'jazz', '2013' });");
-
+  execute_query(
+      session,
+      "INSERT INTO stress.songs (id, title, album, artist, tags) VALUES "
+      "(a98d21b2-1900-11e4-b97b-e5e358e71e0d, "
+      "'La Petite Tonkinoise', 'Bye Bye Blackbird', 'Joséphine Baker', { 'jazz', '2013' });");
 
   for (i = 0; i < NUM_THREADS; ++i) {
 #if DO_SELECTS
@@ -383,19 +383,21 @@ int main(int argc, char* argv[]) {
 
   while (status_wait(&status, 5) > 0) {
     cass_session_get_metrics(session, &metrics);
-    printf("rate stats (requests/second): mean %f 1m %f 5m %f 10m %f\n",
-           metrics.requests.mean_rate,
-           metrics.requests.one_minute_rate,
-           metrics.requests.five_minute_rate,
+    printf("rate stats (requests/second): mean %f 1m %f 5m %f 10m %f\n", metrics.requests.mean_rate,
+           metrics.requests.one_minute_rate, metrics.requests.five_minute_rate,
            metrics.requests.fifteen_minute_rate);
   }
 
   cass_session_get_metrics(session, &metrics);
-  printf("final stats (microseconds): min %llu max %llu median %llu 75th %llu 95th %llu 98th %llu 99th %llu 99.9th %llu\n",
+  printf("final stats (microseconds): min %llu max %llu median %llu 75th %llu 95th %llu 98th %llu "
+         "99th %llu 99.9th %llu\n",
          (unsigned long long int)metrics.requests.min, (unsigned long long int)metrics.requests.max,
-         (unsigned long long int)metrics.requests.median, (unsigned long long int)metrics.requests.percentile_75th,
-         (unsigned long long int)metrics.requests.percentile_95th, (unsigned long long int)metrics.requests.percentile_98th,
-         (unsigned long long int)metrics.requests.percentile_99th, (unsigned long long int)metrics.requests.percentile_999th);
+         (unsigned long long int)metrics.requests.median,
+         (unsigned long long int)metrics.requests.percentile_75th,
+         (unsigned long long int)metrics.requests.percentile_95th,
+         (unsigned long long int)metrics.requests.percentile_98th,
+         (unsigned long long int)metrics.requests.percentile_99th,
+         (unsigned long long int)metrics.requests.percentile_999th);
 
   for (i = 0; i < NUM_THREADS; ++i) {
     uv_thread_join(&threads[i]);

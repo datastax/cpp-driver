@@ -17,8 +17,8 @@
 #ifndef LOOP_TEST_HPP
 #define LOOP_TEST_HPP
 
-#include "unit.hpp"
 #include "test_utils.hpp"
+#include "unit.hpp"
 
 #include <uv.h>
 
@@ -48,9 +48,7 @@ public:
     }
   }
 
-  int run_loop(uv_run_mode mode = UV_RUN_DEFAULT) {
-    return uv_run(loop(), mode);
-  }
+  int run_loop(uv_run_mode mode = UV_RUN_DEFAULT) { return uv_run(loop(), mode); }
 
   /**
    * Prevent the uv_work thread pool from completing any useful work for the

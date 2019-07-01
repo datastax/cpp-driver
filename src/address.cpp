@@ -24,7 +24,8 @@
 #include <assert.h>
 #include <string.h>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 const Address Address::EMPTY_KEY("0.0.0.0", 0);
 const Address Address::DELETED_KEY("0.0.0.0", 1);
@@ -32,9 +33,7 @@ const Address Address::DELETED_KEY("0.0.0.0", 1);
 const Address Address::BIND_ANY_IPV4("0.0.0.0", 0);
 const Address Address::BIND_ANY_IPV6("::", 0);
 
-Address::Address() {
-  memset(&addr_, 0, sizeof(addr_));
-}
+Address::Address() { memset(&addr_, 0, sizeof(addr_)); }
 
 Address::Address(const String& ip, int port) {
   init();
@@ -105,13 +104,9 @@ bool Address::init(const sockaddr* addr) {
   return false;
 }
 
-void Address::init(const struct sockaddr_in* addr) {
-  *addr_in() = *addr;
-}
+void Address::init(const struct sockaddr_in* addr) { *addr_in() = *addr; }
 
-void Address::init(const struct sockaddr_in6* addr) {
-  *addr_in6() = *addr;
-}
+void Address::init(const struct sockaddr_in6* addr) { *addr_in6() = *addr; }
 
 int Address::port() const {
   if (family() == AF_INET) {
@@ -124,15 +119,13 @@ int Address::port() const {
 
 String Address::to_string(bool with_port) const {
   OStringStream ss;
-  char host[INET6_ADDRSTRLEN + 1] = {'\0'};
+  char host[INET6_ADDRSTRLEN + 1] = { '\0' };
   if (family() == AF_INET) {
-    uv_ip4_name(const_cast<struct sockaddr_in*>(addr_in()), host,
-                INET_ADDRSTRLEN);
+    uv_ip4_name(const_cast<struct sockaddr_in*>(addr_in()), host, INET_ADDRSTRLEN);
     ss << host;
     if (with_port) ss << ":" << port();
   } else if (family() == AF_INET6) {
-    uv_ip6_name(const_cast<struct sockaddr_in6*>(addr_in6()), host,
-                INET6_ADDRSTRLEN);
+    uv_ip6_name(const_cast<struct sockaddr_in6*>(addr_in6()), host, INET6_ADDRSTRLEN);
     if (with_port) ss << "[";
     ss << host;
     if (with_port) ss << "]:" << port();
@@ -169,41 +162,41 @@ int Address::compare(const Address& a, bool with_port) const {
   return 0;
 }
 
-bool determine_address_for_peer_host(const Address& connected_address,
-                                     const Value* peer_value,
-                                     const Value* rpc_value,
-                                     Address* output) {
+namespace datastax { namespace internal { namespace core {
+
+bool determine_address_for_peer_host(const Address& connected_address, const Value* peer_value,
+                                     const Value* rpc_value, Address* output) {
   Address peer_address;
-  if (!peer_value || !peer_value->decoder().as_inet(peer_value->size(),
-                                                    connected_address.port(),
-                                                    &peer_address)) {
+  if (!peer_value ||
+      !peer_value->decoder().as_inet(peer_value->size(), connected_address.port(), &peer_address)) {
     LOG_WARN("Invalid address format for peer address");
     return false;
   }
   if (rpc_value && !rpc_value->is_null()) {
-    if (!rpc_value->decoder().as_inet(rpc_value->size(),
-                                      connected_address.port(),
-                                      output)) {
+    if (!rpc_value->decoder().as_inet(rpc_value->size(), connected_address.port(), output)) {
       LOG_WARN("Invalid address format for rpc address");
       return false;
     }
     if (connected_address == *output || connected_address == peer_address) {
       LOG_DEBUG("system.peers on %s contains a line with rpc_address for itself. "
                 "This is not normal, but is a known problem for some versions of DSE. "
-                "Ignoring this entry.", connected_address.to_string(false).c_str());
+                "Ignoring this entry.",
+                connected_address.to_string(false).c_str());
       return false;
     }
     if (Address::BIND_ANY_IPV4.compare(*output, false) == 0 ||
         Address::BIND_ANY_IPV6.compare(*output, false) == 0) {
-      LOG_WARN("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact instead. "
-               "If this is incorrect you should configure a specific interface for rpc_address on the server.",
+      LOG_WARN("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact "
+               "instead. "
+               "If this is incorrect you should configure a specific interface for rpc_address on "
+               "the server.",
                peer_address.to_string(false).c_str());
       *output = peer_address;
     }
   } else {
     LOG_WARN("No rpc_address for host %s in system.peers on %s. "
-             "Ignoring this entry.", peer_address.to_string(false).c_str(),
-             connected_address.to_string(false).c_str());
+             "Ignoring this entry.",
+             peer_address.to_string(false).c_str(), connected_address.to_string(false).c_str());
     return false;
   }
   return true;
@@ -223,4 +216,4 @@ String determine_listen_address(const Address& address, const Row* row) {
   return "";
 }
 
-} // namespace cass
+}}} // namespace datastax::internal::core

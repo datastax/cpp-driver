@@ -14,23 +14,26 @@
   limitations under the License.
 */
 
-#include "test_utils.hpp"
 #include "cassandra.h"
+#include "test_utils.hpp"
 
 #include <boost/format.hpp>
 #include <boost/test/unit_test.hpp>
 
 struct DataTypesTests : public test_utils::SingleSessionTest {
-  DataTypesTests() : test_utils::SingleSessionTest(1, 0) {
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
+  DataTypesTests()
+      : test_utils::SingleSessionTest(1, 0) {
+    test_utils::execute_query(session,
+                              str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) %
+                                  test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 
   ~DataTypesTests() {
     // Drop the keyspace (ignore any and all errors)
-    test_utils::execute_query_with_error(session,
-      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-      % test_utils::SIMPLE_KEYSPACE));
+    test_utils::execute_query_with_error(
+        session,
+        str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % test_utils::SIMPLE_KEYSPACE));
   }
 
   /**
@@ -43,7 +46,8 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
   void insert_value(CassValueType value_type, T value) {
     // Create the table for the test
     std::string table_name = "table_" + test_utils::generate_unique_str(uuid_gen);
-    std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value " + test_utils::get_value_type(value_type) +")";
+    std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value " +
+                               test_utils::get_value_type(value_type) + ")";
     test_utils::execute_query(session, create_table.c_str());
 
     // Bind, validate, and insert the value into Cassandra
@@ -56,16 +60,24 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
     }
     BOOST_REQUIRE_EQUAL(cass_statement_bind_string(statement.get(), 0, "simple"), CASS_OK);
     BOOST_REQUIRE_EQUAL(test_utils::Value<T>::bind(statement.get(), 1, value), CASS_OK);
-    test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())).get());
+    test_utils::wait_and_check_error(
+        test_utils::CassFuturePtr(cass_session_execute(session, statement.get())).get());
     test_utils::CassPreparedPtr prepared(test_utils::prepare(session, insert_query.c_str()));
     statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
-    BOOST_REQUIRE_EQUAL(cass_data_type_type(cass_prepared_parameter_data_type(prepared.get(), 0)), CASS_VALUE_TYPE_VARCHAR);
-    BOOST_REQUIRE_EQUAL(cass_data_type_type(cass_prepared_parameter_data_type_by_name(prepared.get(), "key")), CASS_VALUE_TYPE_VARCHAR);
-    BOOST_REQUIRE_EQUAL(cass_data_type_type(cass_prepared_parameter_data_type(prepared.get(), 1)), value_type);
-    BOOST_REQUIRE_EQUAL(cass_data_type_type(cass_prepared_parameter_data_type_by_name(prepared.get(), "value")), value_type);
+    BOOST_REQUIRE_EQUAL(cass_data_type_type(cass_prepared_parameter_data_type(prepared.get(), 0)),
+                        CASS_VALUE_TYPE_VARCHAR);
+    BOOST_REQUIRE_EQUAL(
+        cass_data_type_type(cass_prepared_parameter_data_type_by_name(prepared.get(), "key")),
+        CASS_VALUE_TYPE_VARCHAR);
+    BOOST_REQUIRE_EQUAL(cass_data_type_type(cass_prepared_parameter_data_type(prepared.get(), 1)),
+                        value_type);
+    BOOST_REQUIRE_EQUAL(
+        cass_data_type_type(cass_prepared_parameter_data_type_by_name(prepared.get(), "value")),
+        value_type);
     BOOST_REQUIRE_EQUAL(cass_statement_bind_string(statement.get(), 0, "prepared"), CASS_OK);
     BOOST_REQUIRE_EQUAL(test_utils::Value<T>::bind(statement.get(), 1, value), CASS_OK);
-    test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())).get());
+    test_utils::wait_and_check_error(
+        test_utils::CassFuturePtr(cass_session_execute(session, statement.get())).get());
 
     // Ensure the value can be read
     std::string select_query = "SELECT key, value FROM " + table_name;
@@ -85,7 +97,8 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
       BOOST_REQUIRE_EQUAL(cass_data_type_type(key_data_type), CASS_VALUE_TYPE_VARCHAR);
       CassString key_result;
       cass_value_get_string(key_value, &key_result.data, &key_result.length);
-      BOOST_REQUIRE(test_utils::Value<CassString>::equal(CassString("simple"), key_result) || test_utils::Value<CassString>::equal(CassString("prepared"), key_result));
+      BOOST_REQUIRE(test_utils::Value<CassString>::equal(CassString("simple"), key_result) ||
+                    test_utils::Value<CassString>::equal(CassString("prepared"), key_result));
 
       // Verify the value
       const CassValue* value_value = cass_row_get_column(row, 1);
@@ -127,7 +140,8 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
   }
 
   {
-    CassBytes value = test_utils::bytes_from_string("012345678900123456789001234567890012345678900123456789001234567890");
+    CassBytes value = test_utils::bytes_from_string(
+        "012345678900123456789001234567890012345678900123456789001234567890");
     insert_value<CassBytes>(CASS_VALUE_TYPE_BLOB, value);
     insert_value<CassBytes>(CASS_VALUE_TYPE_VARINT, value);
   }
@@ -135,9 +149,11 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
   insert_value<cass_bool_t>(CASS_VALUE_TYPE_BOOLEAN, cass_true);
 
   {
-    const cass_uint8_t pi[] = { 57, 115, 235, 135, 229, 215, 8, 125, 13, 43, 1, 25, 32, 135, 129, 180,
-      112, 176, 158, 120, 246, 235, 29, 145, 238, 50, 108, 239, 219, 100, 250,
-      84, 6, 186, 148, 76, 230, 46, 181, 89, 239, 247 };
+    const cass_uint8_t pi[] = {
+      57,  115, 235, 135, 229, 215, 8,   125, 13,  43,  1,   25, 32,  135,
+      129, 180, 112, 176, 158, 120, 246, 235, 29,  145, 238, 50, 108, 239,
+      219, 100, 250, 84,  6,   186, 148, 76,  230, 46,  181, 89, 239, 247
+    };
     const cass_int32_t pi_scale = 100;
     CassDecimal value = CassDecimal(pi, sizeof(pi), pi_scale);
     insert_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value);
@@ -150,13 +166,11 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
     value = CassDuration(1, 2, 3);
     insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
 
-    value = CassDuration(std::numeric_limits<int32_t>::max(),
-                         std::numeric_limits<int32_t>::max(),
+    value = CassDuration(std::numeric_limits<int32_t>::max(), std::numeric_limits<int32_t>::max(),
                          std::numeric_limits<int64_t>::max());
     insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
 
-    value = CassDuration(std::numeric_limits<int32_t>::min(),
-                         std::numeric_limits<int32_t>::min(),
+    value = CassDuration(std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::min(),
                          std::numeric_limits<int64_t>::min());
     insert_value<CassDuration>(CASS_VALUE_TYPE_DURATION, value);
   }
@@ -199,15 +213,13 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
  * @test_category data_types::duration
  * @expected_result Driver will handle the server error on statement execution
  */
-BOOST_AUTO_TEST_CASE(duration_mixed_values_server_error)
-{
+BOOST_AUTO_TEST_CASE(duration_mixed_values_server_error) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major_version >= 3 && version.minor_version >= 10)
-    || version.major_version >= 4) {
+  if ((version.major_version >= 3 && version.minor_version >= 10) || version.major_version >= 4) {
     // Create the table for the test
     std::string table_name = "duration_server_error";
-    std::string create_table = "CREATE TABLE " + table_name
-      + "(key text PRIMARY KEY, value duration)";
+    std::string create_table =
+        "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value duration)";
     test_utils::execute_query(session, create_table.c_str());
 
     // Bind, validate, and insert the value into the server
@@ -228,7 +240,7 @@ BOOST_AUTO_TEST_CASE(duration_mixed_values_server_error)
 
   } else {
     std::cout << "Unsupported Test for Cassandra v" << version.to_string()
-      << ": Skipping datatypes/duration_mixed_values_server_error" << std::endl;
+              << ": Skipping datatypes/duration_mixed_values_server_error" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TIMER_HPP_INCLUDED__
-#define __CASS_TIMER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TIMER_HPP
+#define DATASTAX_INTERNAL_TIMER_HPP
 
 #include "allocated.hpp"
 #include "callback.hpp"
@@ -23,11 +23,11 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Timer {
 public:
-  typedef cass::Callback<void, Timer*> Callback;
+  typedef internal::Callback<void, Timer*> Callback;
 
   Timer();
   ~Timer();
@@ -46,11 +46,7 @@ private:
   static void on_close(uv_handle_t* handle);
 
 private:
-  enum State {
-    CLOSED,
-    STOPPED,
-    STARTED
-  };
+  enum State { CLOSED, STOPPED, STARTED };
 
 private:
   AllocatedT<uv_timer_t>* handle_;
@@ -61,6 +57,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Timer);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

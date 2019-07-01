@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_HISTOGRAM_WRAPPER_HPP_INCLUDED__
-#define __CASS_HISTOGRAM_WRAPPER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_HISTOGRAM_WRAPPER_HPP
+#define DATASTAX_INTERNAL_HISTOGRAM_WRAPPER_HPP
 
 #ifdef CASS_INTERNAL_DIAGNOSTICS
 #include "string.hpp"
@@ -23,15 +23,15 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class HistogramWrapper {
 public:
   static const int64_t HIGHEST_TRACKABLE_VALUE = 1000LL * 1000LL;
 
   HistogramWrapper(const String& name)
-    : thread_id_(0)
-    , name_(name) {
+      : thread_id_(0)
+      , name_(name) {
     hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
   }
 
@@ -57,14 +57,16 @@ public:
             "%10llu, %10llu, %10llu, %10llu, "
             "%10llu, %10llu, %10llu, %10llu, "
             "%10llu\n",
-            "name", "thread", "min", "mean", "median", "75th",
-            "95th", "98th", "99th", "99.9th",
-            "max",
-            name_.c_str(), static_cast<unsigned long long int>(thread_id_),
-            (unsigned long long int)hdr_min(histogram_), (unsigned long long int)hdr_mean(histogram_),
-            (unsigned long long int)hdr_value_at_percentile(histogram_, 50.0), (unsigned long long int)hdr_value_at_percentile(histogram_, 75.0),
-            (unsigned long long int)hdr_value_at_percentile(histogram_, 95.0), (unsigned long long int)hdr_value_at_percentile(histogram_, 98.0),
-            (unsigned long long int)hdr_value_at_percentile(histogram_, 99.0), (unsigned long long int)hdr_value_at_percentile(histogram_, 99.9),
+            "name", "thread", "min", "mean", "median", "75th", "95th", "98th", "99th", "99.9th",
+            "max", name_.c_str(), static_cast<unsigned long long int>(thread_id_),
+            (unsigned long long int)hdr_min(histogram_),
+            (unsigned long long int)hdr_mean(histogram_),
+            (unsigned long long int)hdr_value_at_percentile(histogram_, 50.0),
+            (unsigned long long int)hdr_value_at_percentile(histogram_, 75.0),
+            (unsigned long long int)hdr_value_at_percentile(histogram_, 95.0),
+            (unsigned long long int)hdr_value_at_percentile(histogram_, 98.0),
+            (unsigned long long int)hdr_value_at_percentile(histogram_, 99.0),
+            (unsigned long long int)hdr_value_at_percentile(histogram_, 99.9),
             (unsigned long long int)hdr_max(histogram_));
   }
 
@@ -74,7 +76,7 @@ private:
   String name_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif // CASS_INTERNAL_DIAGNOSTICS
 

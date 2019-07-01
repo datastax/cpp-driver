@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_STREAM_MANAGER_HPP_INCLUDED__
-#define __CASS_STREAM_MANAGER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_STREAM_MANAGER_HPP
+#define DATASTAX_INTERNAL_STREAM_MANAGER_HPP
 
 #include "constants.hpp"
 #include "dense_hash_map.hpp"
@@ -30,12 +30,10 @@
 #include <intrin.h>
 #endif
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 struct StreamHash {
-  std::size_t operator()(int stream) const {
-    return ((stream & 0x3F) << 10) | (stream >> 6);
-  }
+  std::size_t operator()(int stream) const { return ((stream & 0x3F) << 10) | (stream >> 6); }
 };
 
 template <class T>
@@ -96,12 +94,12 @@ private:
     return __builtin_ctzl(word);
 #elif defined(_MSC_VER)
     unsigned long index;
-#  if defined(_M_AMD64)
+#if defined(_M_AMD64)
     _BitScanForward64(&index, word);
 
-#  else
+#else
     _BitScanForward(&index, word);
-#  endif
+#endif
     return static_cast<int>(index);
 #else
 #endif
@@ -151,6 +149,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(StreamManager);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

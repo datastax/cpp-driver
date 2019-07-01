@@ -28,9 +28,7 @@
 #undef max
 #endif
 
-namespace test {
-namespace driver {
-namespace values {
+namespace test { namespace driver { namespace values {
 
 /**
  * UUID wrapped value
@@ -40,15 +38,14 @@ public:
   typedef std::string ConvenienceType;
   typedef CassUuid ValueType;
 
-  Uuid() { }
+  Uuid() {}
 
   Uuid(const ConvenienceType& value) {
     std::string value_trim = Utils::trim(value);
 
     // Determine if the value is valid (default is 0 otherwise)
     CassError error_code = cass_uuid_from_string(value_trim.c_str(), &uuid_);
-    EXPECT_EQ(CASS_OK, error_code) << "Invalid UUID " << value_trim
-      << ": Using default " << str();
+    EXPECT_EQ(CASS_OK, error_code) << "Invalid UUID " << value_trim << ": Using default " << str();
   }
 
   /**
@@ -57,20 +54,15 @@ public:
    * @param uuid Native driver value
    */
   Uuid(CassUuid uuid)
-    : uuid_(uuid) { }
+      : uuid_(uuid) {}
 
   void append(Collection collection) {
-    ASSERT_EQ(CASS_OK,
-              cass_collection_append_uuid(collection.get(), uuid_));
+    ASSERT_EQ(CASS_OK, cass_collection_append_uuid(collection.get(), uuid_));
   }
 
-  static std::string cql_type() {
-    return "uuid";
-  }
+  static std::string cql_type() { return "uuid"; }
 
-  std::string cql_value() const {
-    return str();
-  }
+  std::string cql_value() const { return str(); }
 
   /**
    * Comparison operation for driver UUIDs
@@ -94,14 +86,12 @@ public:
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Uuid& rhs) const {
-    return compare(rhs.uuid_);
-  }
+  int compare(const Uuid& rhs) const { return compare(rhs.uuid_); }
 
   void initialize(const CassValue* value) {
     // Get the UUID
     ASSERT_EQ(CASS_OK, cass_value_get_uuid(value, &uuid_))
-      << "Unable to Get Uuid: Invalid error code returned";
+        << "Unable to Get Uuid: Invalid error code returned";
   }
 
   static Uuid max() {
@@ -123,22 +113,15 @@ public:
   }
 
   void set(UserType user_type, const std::string& name) {
-    ASSERT_EQ(CASS_OK,
-              cass_user_type_set_uuid_by_name(user_type.get(),
-                                              name.c_str(),
-                                              uuid_));
+    ASSERT_EQ(CASS_OK, cass_user_type_set_uuid_by_name(user_type.get(), name.c_str(), uuid_));
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_uuid(statement.get(),
-                                                index,
-                                                uuid_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_uuid(statement.get(), index, uuid_));
   }
 
   void statement_bind(Statement statement, const std::string& name) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_uuid_by_name(statement.get(),
-                                                        name.c_str(),
-                                                        uuid_));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_uuid_by_name(statement.get(), name.c_str(), uuid_));
   }
 
   std::string str() const {
@@ -147,26 +130,18 @@ public:
     return buffer;
   }
 
-  static std::string supported_server_version() {
-    return "1.2.0";
-  }
+  static std::string supported_server_version() { return "1.2.0"; }
 
-  CassUuid value() const {
-    return uuid_;
-  }
+  CassUuid value() const { return uuid_; }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_UUID;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_UUID; }
 
   /**
    * Get the version of the UUID
    *
    * @return The version of the UUID (v1 or v4)
    */
-  cass_uint8_t version() {
-    return cass_uuid_version(uuid_);
-  }
+  cass_uint8_t version() { return cass_uuid_version(uuid_); }
 
 protected:
   /**
@@ -180,10 +155,10 @@ protected:
  */
 class TimeUuid : public Uuid {
 public:
-  TimeUuid() { }
+  TimeUuid() {}
 
   TimeUuid(const ConvenienceType& value)
-    : Uuid(value) { }
+      : Uuid(value) {}
 
   /**
    * Constructor for native driver type
@@ -191,21 +166,17 @@ public:
    * @param uuid Native driver value
    */
   TimeUuid(CassUuid uuid)
-    : Uuid(uuid) { }
+      : Uuid(uuid) {}
 
-  std::string cql_type() const {
-    return "timeuuid";
-  }
+  std::string cql_type() const { return "timeuuid"; }
 
   void initialize(const CassValue* value) {
     // Get the time UUID
     ASSERT_EQ(CASS_OK, cass_value_get_uuid(value, &uuid_))
-      << "Unable to Get Uuid: Invalid error code returned";
+        << "Unable to Get Uuid: Invalid error code returned";
   }
 
-  static TimeUuid max() {
-    return TimeUuid::max(std::numeric_limits<uint64_t>::max());
-  }
+  static TimeUuid max() { return TimeUuid::max(std::numeric_limits<uint64_t>::max()); }
 
   /**
    * Gets a TimeUuid maximum value for the specified timestamp
@@ -219,9 +190,7 @@ public:
     return timeuuid;
   }
 
-  static TimeUuid min() {
-    return TimeUuid::min(std::numeric_limits<uint64_t>::min());
-  }
+  static TimeUuid min() { return TimeUuid::min(std::numeric_limits<uint64_t>::min()); }
 
   /**
    * Gets a TimeUuid minimum value for the specified timestamp
@@ -240,29 +209,21 @@ public:
    *
    * @return The timestamp in milliseconds since the epoch
    */
-  cass_uint64_t timestamp() {
-    return cass_uuid_timestamp(uuid_);
-  }
+  cass_uint64_t timestamp() { return cass_uuid_timestamp(uuid_); }
 
-  CassValueType value_type() const {
-    return CASS_VALUE_TYPE_TIMEUUID;
-  }
+  CassValueType value_type() const { return CASS_VALUE_TYPE_TIMEUUID; }
 };
 
-inline std::ostream& operator<<(std::ostream& output_stream,
-                                const Uuid& value) {
+inline std::ostream& operator<<(std::ostream& output_stream, const Uuid& value) {
   output_stream << value.cql_value();
   return output_stream;
 }
 
-inline std::ostream& operator<<(std::ostream& output_stream,
-                                const TimeUuid& value) {
+inline std::ostream& operator<<(std::ostream& output_stream, const TimeUuid& value) {
   output_stream << value.cql_value();
   return output_stream;
 }
 
-} // namespace values
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::values
 
 #endif // __TEST_UUID_HPP__

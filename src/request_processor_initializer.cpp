@@ -14,47 +14,49 @@
   limitations under the License.
 */
 
+#include "request_processor_initializer.hpp"
 #include "config.hpp"
 #include "event_loop.hpp"
-#include "request_processor_initializer.hpp"
 #include "scoped_lock.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
+namespace datastax { namespace internal { namespace core {
 
 class RunInitializeProcessor : public Task {
 public:
   RunInitializeProcessor(const RequestProcessorInitializer::Ptr& initializer)
-    : initializer_(initializer) { }
+      : initializer_(initializer) {}
 
-  virtual void run(EventLoop* event_loop) {
-    initializer_->internal_intialize();
-  }
+  virtual void run(EventLoop* event_loop) { initializer_->internal_intialize(); }
 
 private:
   RequestProcessorInitializer::Ptr initializer_;
 };
+
+}}} // namespace datastax::internal::core
 
 RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& connected_host,
                                                          ProtocolVersion protocol_version,
                                                          const HostMap& hosts,
                                                          const TokenMap::Ptr& token_map,
                                                          const Callback& callback)
-  : event_loop_(NULL)
-  , listener_(NULL)
-  , metrics_(NULL)
-  , random_(NULL)
-  , connected_host_(connected_host)
-  , protocol_version_(protocol_version)
-  , hosts_(hosts)
-  , token_map_(token_map)
-  , error_code_(REQUEST_PROCESSOR_OK)
-  , callback_(callback) {
+    : event_loop_(NULL)
+    , listener_(NULL)
+    , metrics_(NULL)
+    , random_(NULL)
+    , connected_host_(connected_host)
+    , protocol_version_(protocol_version)
+    , hosts_(hosts)
+    , token_map_(token_map)
+    , error_code_(REQUEST_PROCESSOR_OK)
+    , callback_(callback) {
   uv_mutex_init(&mutex_);
 }
 
-RequestProcessorInitializer::~RequestProcessorInitializer() {
-  uv_mutex_destroy(&mutex_);
-}
+RequestProcessorInitializer::~RequestProcessorInitializer() { uv_mutex_destroy(&mutex_); }
 
 void RequestProcessorInitializer::initialize(EventLoop* event_loop) {
   ScopedMutex l(&mutex_);
@@ -62,12 +64,14 @@ void RequestProcessorInitializer::initialize(EventLoop* event_loop) {
   event_loop_->add(new RunInitializeProcessor(Ptr(this)));
 }
 
-RequestProcessorInitializer* RequestProcessorInitializer::with_settings(const RequestProcessorSettings& settings) {
+RequestProcessorInitializer*
+RequestProcessorInitializer::with_settings(const RequestProcessorSettings& settings) {
   settings_ = settings;
   return this;
 }
 
-RequestProcessorInitializer* RequestProcessorInitializer::with_listener(RequestProcessorListener* listener) {
+RequestProcessorInitializer*
+RequestProcessorInitializer::with_listener(RequestProcessorListener* listener) {
   listener_ = listener;
   return this;
 }
@@ -119,12 +123,10 @@ void RequestProcessorInitializer::on_close(ConnectionPoolManager* manager) {
 
 void RequestProcessorInitializer::internal_intialize() {
   inc_ref();
-  connection_pool_manager_initializer_.reset(
-        new ConnectionPoolManagerInitializer(protocol_version_,
-                                             bind_callback(&RequestProcessorInitializer::on_initialize, this)));
+  connection_pool_manager_initializer_.reset(new ConnectionPoolManagerInitializer(
+      protocol_version_, bind_callback(&RequestProcessorInitializer::on_initialize, this)));
 
-  connection_pool_manager_initializer_
-      ->with_settings(settings_.connection_pool_settings)
+  connection_pool_manager_initializer_->with_settings(settings_.connection_pool_settings)
       ->with_listener(this)
       ->with_keyspace(keyspace_)
       ->with_metrics(metrics_)
@@ -136,8 +138,8 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
 
   // Prune hosts
   const ConnectionPoolConnector::Vec& failures = initializer->failures();
-  for (ConnectionPoolConnector::Vec::const_iterator it = failures.begin(),
-       end = failures.end(); it != end; ++it) {
+  for (ConnectionPoolConnector::Vec::const_iterator it = failures.begin(), end = failures.end();
+       it != end; ++it) {
     ConnectionPoolConnector::Ptr connector(*it);
     if (connector->is_keyspace_error()) {
       is_keyspace_error = true;
@@ -155,14 +157,8 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
     error_code_ = REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE;
     error_message_ = "Unable to connect to any hosts";
   } else {
-    processor_.reset(new RequestProcessor(listener_,
-                                          event_loop_,
-                                          initializer->release_manager(),
-                                          connected_host_,
-                                          hosts_,
-                                          token_map_,
-                                          settings_,
-                                          random_));
+    processor_.reset(new RequestProcessor(listener_, event_loop_, initializer->release_manager(),
+                                          connected_host_, hosts_, token_map_, settings_, random_));
 
     int rc = processor_->init(RequestProcessor::Protected());
     if (rc != 0) {
@@ -183,5 +179,3 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
   connection_pool_manager_initializer_.reset();
   dec_ref();
 }
-
-} // namespace cass

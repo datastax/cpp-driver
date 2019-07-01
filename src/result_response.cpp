@@ -23,11 +23,13 @@
 #include "result_response.hpp"
 #include "serialization.hpp"
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 extern "C" {
 
-void cass_result_free(const CassResult* result) {
-  result->dec_ref();
-}
+void cass_result_free(const CassResult* result) { result->dec_ref(); }
 
 size_t cass_result_row_count(const CassResult* result) {
   if (result->kind() == CASS_RESULT_KIND_ROWS) {
@@ -43,36 +45,32 @@ size_t cass_result_column_count(const CassResult* result) {
   return 0;
 }
 
-CassError cass_result_column_name(const CassResult* result,
-                                  size_t index,
-                                  const char** name,
+CassError cass_result_column_name(const CassResult* result, size_t index, const char** name,
                                   size_t* name_length) {
-  const cass::SharedRefPtr<cass::ResultMetadata>& metadata(result->metadata());
+  const SharedRefPtr<ResultMetadata>& metadata(result->metadata());
   if (index >= metadata->column_count()) {
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
   }
   if (result->kind() != CASS_RESULT_KIND_ROWS) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  const cass::ColumnDefinition def = metadata->get_column_definition(index);
+  const ColumnDefinition def = metadata->get_column_definition(index);
   *name = def.name.data();
   *name_length = def.name.size();
   return CASS_OK;
 }
 
 CassValueType cass_result_column_type(const CassResult* result, size_t index) {
-  const cass::SharedRefPtr<cass::ResultMetadata>& metadata(result->metadata());
-  if (result->kind() == CASS_RESULT_KIND_ROWS &&
-      index < metadata->column_count()) {
+  const SharedRefPtr<ResultMetadata>& metadata(result->metadata());
+  if (result->kind() == CASS_RESULT_KIND_ROWS && index < metadata->column_count()) {
     return metadata->get_column_definition(index).data_type->value_type();
   }
   return CASS_VALUE_TYPE_UNKNOWN;
 }
 
 const CassDataType* cass_result_column_data_type(const CassResult* result, size_t index) {
-  const cass::SharedRefPtr<cass::ResultMetadata>& metadata(result->metadata());
-  if (result->kind() == CASS_RESULT_KIND_ROWS &&
-      index < metadata->column_count()) {
+  const SharedRefPtr<ResultMetadata>& metadata(result->metadata());
+  if (result->kind() == CASS_RESULT_KIND_ROWS && index < metadata->column_count()) {
     return CassDataType::to(metadata->get_column_definition(index).data_type.get());
   }
   return NULL;
@@ -89,8 +87,7 @@ cass_bool_t cass_result_has_more_pages(const CassResult* result) {
   return static_cast<cass_bool_t>(result->has_more_pages());
 }
 
-CassError cass_result_paging_state_token(const CassResult* result,
-                                         const char** paging_state,
+CassError cass_result_paging_state_token(const CassResult* result, const char** paging_state,
                                          size_t* paging_state_size) {
   if (!result->has_more_pages()) {
     return CASS_ERROR_LIB_NO_PAGING_STATE;
@@ -102,13 +99,11 @@ CassError cass_result_paging_state_token(const CassResult* result,
 
 } // extern "C"
 
-namespace cass {
-
 class DataTypeDecoder {
 public:
   DataTypeDecoder(Decoder& decoder, SimpleDataTypeCache& cache)
-    : decoder_(decoder)
-    , cache_(cache) { }
+      : decoder_(decoder)
+      , cache_(cache) {}
 
   DataType::ConstPtr decode() {
     decoder_.set_type("data type");
@@ -172,10 +167,8 @@ private:
       if (!decoder_.decode_string(&field_name)) return DataType::NIL;
       fields.push_back(UserType::Field(field_name.to_string(), decode()));
     }
-    return DataType::ConstPtr(new UserType(keyspace.to_string(),
-                                           type_name.to_string(),
-                                           fields,
-                                           false));
+    return DataType::ConstPtr(
+        new UserType(keyspace.to_string(), type_name.to_string(), fields, false));
   }
 
   DataType::ConstPtr decode_tuple() {
@@ -216,7 +209,7 @@ bool ResultResponse::decode(Decoder& decoder) {
       break;
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
-      is_valid =  decode_set_keyspace(decoder);
+      is_valid = decode_set_keyspace(decoder);
       break;
 
     case CASS_RESULT_KIND_PREPARED:
@@ -236,8 +229,7 @@ bool ResultResponse::decode(Decoder& decoder) {
   return is_valid;
 }
 
-bool ResultResponse::decode_metadata(Decoder& decoder,
-                                     ResultMetadata::Ptr* metadata,
+bool ResultResponse::decode_metadata(Decoder& decoder, ResultMetadata::Ptr* metadata,
                                      bool has_pk_indices) {
   int32_t flags = 0;
   CHECK_RESULT(decoder.decode_int32(flags));
@@ -292,7 +284,6 @@ bool ResultResponse::decode_metadata(Decoder& decoder,
       if (!global_table_spec) {
         CHECK_RESULT(decoder.decode_string(&def.keyspace));
         CHECK_RESULT(decoder.decode_string(&def.table));
-
       }
 
       CHECK_RESULT(decoder.decode_string(&def.name));
@@ -308,9 +299,8 @@ bool ResultResponse::decode_metadata(Decoder& decoder,
 }
 
 bool ResultResponse::decode_first_row() {
-  if (row_count_ > 0 &&
-      metadata_ && // Valid metadata required for column count
-      first_row_.values.empty()) { // Only decode the first row once
+  if (row_count_ > 0 && metadata_ && // Valid metadata required for column count
+      first_row_.values.empty()) {   // Only decode the first row once
     first_row_.values.reserve(column_count());
     return decode_row(row_decoder_, this, first_row_.values);
   }
@@ -335,8 +325,8 @@ bool ResultResponse::decode_prepared(Decoder& decoder) {
   if (decoder.protocol_version().supports_result_metadata_id()) {
     CHECK_RESULT(decoder.decode_string(&result_metadata_id_));
   }
-  CHECK_RESULT(decode_metadata(decoder, &metadata_,
-                               decoder.protocol_version() >= CASS_PROTOCOL_VERSION_V4));
+  CHECK_RESULT(
+      decode_metadata(decoder, &metadata_, decoder.protocol_version() >= CASS_PROTOCOL_VERSION_V4));
   CHECK_RESULT(decode_metadata(decoder, &result_metadata_));
   return true;
 }
@@ -347,5 +337,3 @@ bool ResultResponse::decode_schema_change(Decoder& decoder) {
   CHECK_RESULT(decoder.decode_string(&table_));
   return true;
 }
-
-} // namespace cass

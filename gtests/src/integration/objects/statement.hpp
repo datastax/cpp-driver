@@ -28,8 +28,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 // Forward declaration for circular dependency
 class CustomPayload;
@@ -43,14 +42,14 @@ public:
    * Create an empty statement
    */
   Statement()
-    : Object<CassStatement, cass_statement_free>() { }
+      : Object<CassStatement, cass_statement_free>() {}
   /**
    * Create the statement object from the native driver statement object
    *
    * @param statement Native driver object
    */
   Statement(CassStatement* statement)
-    : Object<CassStatement, cass_statement_free>(statement) { }
+      : Object<CassStatement, cass_statement_free>(statement) {}
 
   /**
    * Create the statement object from the shared reference
@@ -58,7 +57,7 @@ public:
    * @param statement Shared reference
    */
   Statement(Ptr statement)
-    : Object<CassStatement, cass_statement_free>(statement) { }
+      : Object<CassStatement, cass_statement_free>(statement) {}
 
   /**
    * Create the statement object from a query
@@ -68,8 +67,8 @@ public:
    *                        (default: 0)
    */
   Statement(const std::string& query, size_t parameter_count = 0)
-    : Object<CassStatement, cass_statement_free>(cass_statement_new(query.c_str(),
-      parameter_count)) { }
+      : Object<CassStatement, cass_statement_free>(
+            cass_statement_new(query.c_str(), parameter_count)) {}
 
   /**
    * Add a key index specifier to the statement.
@@ -90,7 +89,7 @@ public:
    * @param index Index to bind the value to
    * @param value<T> Value to bind to the statement at given index
    */
-  template<typename T>
+  template <typename T>
   void bind(size_t index, T value) {
     value.statement_bind(*this, index);
   }
@@ -101,7 +100,7 @@ public:
    * @param name Column name to bind the value to
    * @param value<T> Value to bind to the statement at given index
    */
-  template<typename T>
+  template <typename T>
   void bind(const std::string& name, T value) {
     value.statement_bind(*this, name);
   }
@@ -139,8 +138,7 @@ public:
    * @param enable True if statement is idempotent; false otherwise
    */
   void set_idempotent(bool enable) {
-    ASSERT_EQ(CASS_OK, cass_statement_set_is_idempotent(get(),
-      enable ? cass_true : cass_false));
+    ASSERT_EQ(CASS_OK, cass_statement_set_is_idempotent(get(), enable ? cass_true : cass_false));
   }
 
   /**
@@ -159,8 +157,7 @@ public:
    * @param enable True if attempted host should be recorded; false otherwise
    */
   void set_record_attempted_hosts(bool enable) {
-    return internals::Utils::set_record_attempted_hosts(get(),
-      enable);
+    return internals::Utils::set_record_attempted_hosts(get(), enable);
   }
 
   /**
@@ -169,8 +166,7 @@ public:
    * @param timeout_ms Timeout in milliseconds
    */
   void set_request_timeout(uint64_t timeout_ms) {
-    ASSERT_EQ(CASS_OK, cass_statement_set_request_timeout(get(),
-      timeout_ms));
+    ASSERT_EQ(CASS_OK, cass_statement_set_request_timeout(get(), timeout_ms));
   }
 
   /**
@@ -179,8 +175,7 @@ public:
    * @param retry_policy Retry policy to use for the statement
    */
   void set_retry_policy(RetryPolicy retry_policy) {
-    ASSERT_EQ(CASS_OK, cass_statement_set_retry_policy(get(),
-      retry_policy.get()));
+    ASSERT_EQ(CASS_OK, cass_statement_set_retry_policy(get(), retry_policy.get()));
   }
 
   /**
@@ -189,8 +184,7 @@ public:
    * @param serial_consistency Serial consistency to use for the statement
    */
   void set_serial_consistency(CassConsistency serial_consistency) {
-    ASSERT_EQ(CASS_OK, cass_statement_set_serial_consistency(get(),
-      serial_consistency));
+    ASSERT_EQ(CASS_OK, cass_statement_set_serial_consistency(get(), serial_consistency));
   }
 
   /**
@@ -199,8 +193,7 @@ public:
    * @param enabled
    */
   void set_tracing(bool enabled) {
-    ASSERT_EQ(CASS_OK,
-              cass_statement_set_tracing(get(), enabled ? cass_true : cass_false));
+    ASSERT_EQ(CASS_OK, cass_statement_set_tracing(get(), enabled ? cass_true : cass_false));
   }
 
   /**
@@ -210,8 +203,7 @@ public:
    * @param port
    */
   void set_host(const std::string& host, int port) {
-    ASSERT_EQ(CASS_OK,
-              cass_statement_set_host(get(), host.c_str(), port));
+    ASSERT_EQ(CASS_OK, cass_statement_set_host(get(), host.c_str(), port));
   }
 
   /**
@@ -221,8 +213,7 @@ public:
    * @param port
    */
   void set_host(const CassInet* host, int port) {
-    ASSERT_EQ(CASS_OK,
-              cass_statement_set_host_inet(get(), host, port));
+    ASSERT_EQ(CASS_OK, cass_statement_set_host_inet(get(), host, port));
   }
 };
 
@@ -237,7 +228,7 @@ public:
    * @param batch_type Type of batch to create (default: Unlogged)
    */
   Batch(CassBatchType batch_type = CASS_BATCH_TYPE_UNLOGGED)
-    : Object<CassBatch, cass_batch_free>(cass_batch_new(batch_type)) {}
+      : Object<CassBatch, cass_batch_free>(cass_batch_new(batch_type)) {}
 
   /**
    * Create the batch object from the native driver batch object
@@ -245,7 +236,7 @@ public:
    * @param batch Native driver object
    */
   Batch(CassBatch* batch)
-    : Object<CassBatch, cass_batch_free>(batch) {}
+      : Object<CassBatch, cass_batch_free>(batch) {}
 
   /**
    * Create the batch object from the shared reference
@@ -253,7 +244,7 @@ public:
    * @param batch Shared reference
    */
   Batch(Ptr batch)
-    : Object<CassBatch, cass_batch_free>(batch) {}
+      : Object<CassBatch, cass_batch_free>(batch) {}
 
   /**
    * Add a statement (query or bound) to the batch
@@ -263,11 +254,10 @@ public:
    *                  CASS_OK; false otherwise (default: true)
    */
   void add(Statement statement, bool assert_ok = true) {
-    CassError error_code = cass_batch_add_statement(get(),
-      statement.get());
+    CassError error_code = cass_batch_add_statement(get(), statement.get());
     if (assert_ok) {
       ASSERT_EQ(CASS_OK, error_code)
-        << "Unable to Add Statement to Batch: " << cass_error_desc(error_code);
+          << "Unable to Add Statement to Batch: " << cass_error_desc(error_code);
     }
   }
 
@@ -297,8 +287,7 @@ public:
    * @param enable True if statement in a batch is idempotent; false otherwise
    */
   void set_idempotent(bool enable) {
-    ASSERT_EQ(CASS_OK, cass_batch_set_is_idempotent(get(),
-      enable ? cass_true : cass_false));
+    ASSERT_EQ(CASS_OK, cass_batch_set_is_idempotent(get(), enable ? cass_true : cass_false));
   }
 
   /**
@@ -307,8 +296,7 @@ public:
    * @param timeout_ms Timeout in milliseconds
    */
   void set_request_timeout(uint64_t timeout_ms) {
-    ASSERT_EQ(CASS_OK, cass_batch_set_request_timeout(get(),
-      timeout_ms));
+    ASSERT_EQ(CASS_OK, cass_batch_set_request_timeout(get(), timeout_ms));
   }
 
   /**
@@ -326,12 +314,10 @@ public:
    * @param serial_consistency Serial consistency to use for the batch
    */
   void set_serial_consistency(CassConsistency serial_consistency) {
-    ASSERT_EQ(CASS_OK, cass_batch_set_serial_consistency(get(),
-      serial_consistency));
+    ASSERT_EQ(CASS_OK, cass_batch_set_serial_consistency(get(), serial_consistency));
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_STATEMENT_HPP__

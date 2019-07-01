@@ -19,46 +19,44 @@
 #include "scoped_lock.hpp"
 #include "utils.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
 class NopConnectionPoolManagerListener : public ConnectionPoolManagerListener {
 public:
-  virtual void on_pool_up(const Address& address) { }
+  virtual void on_pool_up(const Address& address) {}
 
-  virtual void on_pool_down(const Address& address) { }
+  virtual void on_pool_down(const Address& address) {}
 
-  virtual void on_pool_critical_error(const Address& address,
-                                      Connector::ConnectionError code,
-                                      const String& message) { }
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
+                                      const String& message) {}
 
-  virtual void on_close(ConnectionPoolManager* manager) { }
+  virtual void on_close(ConnectionPoolManager* manager) {}
 };
 
 static NopConnectionPoolManagerListener nop_connection_pool_manager_listener__;
 
-ConnectionPoolManager::ConnectionPoolManager(const ConnectionPool::Map& pools,
-                                             uv_loop_t* loop,
+ConnectionPoolManager::ConnectionPoolManager(const ConnectionPool::Map& pools, uv_loop_t* loop,
                                              ProtocolVersion protocol_version,
                                              const String& keyspace,
                                              ConnectionPoolManagerListener* listener,
                                              Metrics* metrics,
                                              const ConnectionPoolSettings& settings)
-  : loop_(loop)
-  , protocol_version_(protocol_version)
-  , settings_(settings)
-  , listener_(listener ? listener : &nop_connection_pool_manager_listener__)
-  , close_state_(CLOSE_STATE_OPEN)
-  , keyspace_(keyspace)
-  , metrics_(metrics)
-  #ifdef CASS_INTERNAL_DIAGNOSTICS
-  , flush_bytes_("flushed")
-  #endif
+    : loop_(loop)
+    , protocol_version_(protocol_version)
+    , settings_(settings)
+    , listener_(listener ? listener : &nop_connection_pool_manager_listener__)
+    , close_state_(CLOSE_STATE_OPEN)
+    , keyspace_(keyspace)
+    , metrics_(metrics)
+#ifdef CASS_INTERNAL_DIAGNOSTICS
+    , flush_bytes_("flushed")
+#endif
 {
   inc_ref(); // Reference for the lifetime of the connection pools
   set_pointer_keys(to_flush_);
 
-  for (ConnectionPool::Map::const_iterator it = pools.begin(),
-       end= pools.end(); it != end; ++it) {
+  for (ConnectionPool::Map::const_iterator it = pools.begin(), end = pools.end(); it != end; ++it) {
     it->second->set_listener(this);
     add_pool(it->second);
   }
@@ -78,19 +76,18 @@ bool ConnectionPoolManager::has_connections(const Address& address) const {
 }
 
 void ConnectionPoolManager::flush() {
-  for (DenseHashSet<ConnectionPool*>::const_iterator it = to_flush_.begin(),
-       end = to_flush_.end(); it != end; ++it) {
+  for (DenseHashSet<ConnectionPool*>::const_iterator it = to_flush_.begin(), end = to_flush_.end();
+       it != end; ++it) {
     (*it)->flush();
   }
   to_flush_.clear();
-
 }
 
 AddressVec ConnectionPoolManager::available() const {
   AddressVec result;
   result.reserve(pools_.size());
-  for (ConnectionPool::Map::const_iterator it = pools_.begin(),
-       end = pools_.end(); it != end; ++it) {
+  for (ConnectionPool::Map::const_iterator it = pools_.begin(), end = pools_.end(); it != end;
+       ++it) {
     result.push_back(it->first);
   }
   return result;
@@ -101,17 +98,15 @@ void ConnectionPoolManager::add(const Host::Ptr& host) {
   if (it != pools_.end()) return;
 
   for (ConnectionPoolConnector::Vec::iterator it = pending_pools_.begin(),
-       end = pending_pools_.end(); it != end; ++it) {
+                                              end = pending_pools_.end();
+       it != end; ++it) {
     if ((*it)->address() == host->address()) return;
   }
 
-  ConnectionPoolConnector::Ptr connector(
-        new ConnectionPoolConnector(host,
-                                    protocol_version_,
-                                    bind_callback(&ConnectionPoolManager::on_connect, this)));
+  ConnectionPoolConnector::Ptr connector(new ConnectionPoolConnector(
+      host, protocol_version_, bind_callback(&ConnectionPoolManager::on_connect, this)));
   pending_pools_.push_back(connector);
-  connector
-      ->with_listener(this)
+  connector->with_listener(this)
       ->with_keyspace(keyspace_)
       ->with_metrics(metrics_)
       ->with_settings(settings_)
@@ -134,14 +129,14 @@ void ConnectionPoolManager::close() {
     // invalidation.
 
     ConnectionPool::Map pools(pools_);
-    for (ConnectionPool::Map::iterator it = pools.begin(),
-         end = pools.end(); it != end; ++it) {
+    for (ConnectionPool::Map::iterator it = pools.begin(), end = pools.end(); it != end; ++it) {
       it->second->close();
     }
 
     ConnectionPoolConnector::Vec pending_pools(pending_pools_);
     for (ConnectionPoolConnector::Vec::iterator it = pending_pools.begin(),
-         end = pending_pools.end(); it != end; ++it) {
+                                                end = pending_pools.end();
+         it != end; ++it) {
       (*it)->cancel();
     }
 
@@ -162,15 +157,12 @@ void ConnectionPoolManager::set_listener(ConnectionPoolManagerListener* listener
 
 void ConnectionPoolManager::set_keyspace(const String& keyspace) {
   keyspace_ = keyspace;
-  for (ConnectionPool::Map::iterator it = pools_.begin(),
-       end = pools_.end(); it != end; ++it) {
+  for (ConnectionPool::Map::iterator it = pools_.begin(), end = pools_.end(); it != end; ++it) {
     it->second->set_keyspace(keyspace);
   }
 }
 
-void ConnectionPoolManager::on_pool_up(const Address& address) {
-  listener_->on_pool_up(address);
-}
+void ConnectionPoolManager::on_pool_up(const Address& address) { listener_->on_pool_up(address); }
 
 void ConnectionPoolManager::on_pool_down(const Address& address) {
   listener_->on_pool_down(address);
@@ -223,10 +215,7 @@ void ConnectionPoolManager::on_connect(ConnectionPoolConnector* pool_connector) 
   if (pool_connector->is_ok()) {
     add_pool(pool_connector->release_pool());
   } else {
-    listener_->on_pool_critical_error(pool_connector->address(),
-                                      pool_connector->error_code(),
+    listener_->on_pool_critical_error(pool_connector->address(), pool_connector->error_code(),
                                       pool_connector->error_message());
   }
 }
-
-} // namespace cass

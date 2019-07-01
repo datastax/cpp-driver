@@ -14,18 +14,18 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONTROL_CONNECTION_HPP_INCLUDED__
-#define __CASS_CONTROL_CONNECTION_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONTROL_CONNECTION_HPP
+#define DATASTAX_INTERNAL_CONTROL_CONNECTION_HPP
 
 #include "address.hpp"
 #include "config.hpp"
 #include "connection.hpp"
 #include "connector.hpp"
 #include "dense_hash_map.hpp"
-#include "request_callback.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
 #include "macros.hpp"
+#include "request_callback.hpp"
 #include "response.hpp"
 #include "scoped_ptr.hpp"
 #include "token_map.hpp"
@@ -55,7 +55,7 @@
 #define SELECT_VIRTUAL_TABLES_40 "SELECT * FROM system_virtual_schema.tables"
 #define SELECT_VIRTUAL_COLUMNS_40 "SELECT * FROM system_virtual_schema.columns"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ChainedControlRequestCallback;
 class ControlRequestCallback;
@@ -73,18 +73,9 @@ class RefreshFunctionCallback;
  */
 class ControlConnectionListener {
 public:
-  enum SchemaType {
-    KEYSPACE,
-    TABLE,
-    VIEW,
-    COLUMN,
-    INDEX,
-    USER_TYPE,
-    FUNCTION,
-    AGGREGATE
-  };
+  enum SchemaType { KEYSPACE, TABLE, VIEW, COLUMN, INDEX, USER_TYPE, FUNCTION, AGGREGATE };
 
-  virtual ~ControlConnectionListener() { }
+  virtual ~ControlConnectionListener() {}
 
   /**
    * A callback that's called when a host is marked as being UP.
@@ -124,10 +115,8 @@ public:
    * @param result A result response with the row data associated with the
    * schema change.
    */
-  virtual void on_update_schema(SchemaType type,
-                                const ResultResponse::Ptr& result,
-                                const String& keyspace_name,
-                                const String& target_name = "") = 0;
+  virtual void on_update_schema(SchemaType type, const ResultResponse::Ptr& result,
+                                const String& keyspace_name, const String& target_name = "") = 0;
 
   /**
    * A callback that's called when schema is dropped.
@@ -137,8 +126,7 @@ public:
    * @param target_name The name of the table, user type, function, or
    * aggregate dropped. This is the empty string for dropped keyspaces.
    */
-  virtual void on_drop_schema(SchemaType type,
-                              const String& keyspace_name,
+  virtual void on_drop_schema(SchemaType type, const String& keyspace_name,
                               const String& target_name = "") = 0;
 
   /**
@@ -167,15 +155,13 @@ public:
  * by running queries on the control connection to get additional information
  * then passing that data to the listener.
  */
-class ControlConnection : public RefCounted<ControlConnection>
-                        , public ConnectionListener {
+class ControlConnection
+    : public RefCounted<ControlConnection>
+    , public ConnectionListener {
 public:
   typedef SharedRefPtr<ControlConnection> Ptr;
 
-  enum RefreshNodeType {
-    NEW_NODE,
-    MOVED_NODE
-  };
+  enum RefreshNodeType { NEW_NODE, MOVED_NODE };
 
   /**
    * Constructor. Don't use directly.
@@ -190,13 +176,9 @@ public:
    * @param dse_server_version The version number of the DSE server implementation.
    * @param listen_addresses The current state of the listen addresses map.
    */
-  ControlConnection(const Connection::Ptr& connection,
-                    ControlConnectionListener* listener,
-                    bool use_schema,
-                    bool token_aware_routing,
-                    const VersionNumber& server_version,
-                    const VersionNumber& dse_server_version,
-                    ListenAddressMap listen_addresses);
+  ControlConnection(const Connection::Ptr& connection, ControlConnectionListener* listener,
+                    bool use_schema, bool token_aware_routing, const VersionNumber& server_version,
+                    const VersionNumber& dse_server_version, ListenAddressMap listen_addresses);
 
   /**
    * Write a request and flush immediately.
@@ -225,25 +207,15 @@ public:
   void set_listener(ControlConnectionListener* listener = NULL);
 
 public:
-  const Address& address() const {
-    return connection_->address();
-  }
+  const Address& address() const { return connection_->address(); }
 
-  const String& address_string() const {
-    return connection_->address_string();
-  }
+  const String& address_string() const { return connection_->address_string(); }
 
-  ProtocolVersion protocol_version() const {
-    return connection_->protocol_version();
-  }
+  ProtocolVersion protocol_version() const { return connection_->protocol_version(); }
 
-  const VersionNumber& server_version() {
-    return server_version_;
-  }
+  const VersionNumber& server_version() { return server_version_; }
 
-  const VersionNumber& dse_server_version() {
-    return dse_server_version_;
-  }
+  const VersionNumber& dse_server_version() { return dse_server_version_; }
 
   uv_loop_t* loop() { return connection_->loop(); }
   const Connection::Ptr& connection() const { return connection_; }
@@ -265,20 +237,16 @@ private:
   static void on_refresh_keyspace(ControlRequestCallback* callback);
   void handle_refresh_keyspace(RefreshKeyspaceCallback* callback);
 
-  void refresh_table_or_view(const StringRef& keyspace_name,
-                             const StringRef& table_or_view_name);
+  void refresh_table_or_view(const StringRef& keyspace_name, const StringRef& table_or_view_name);
   static void on_refresh_table_or_view(ChainedControlRequestCallback* callback);
   void handle_refresh_table_or_view(RefreshTableCallback* callback);
 
-  void refresh_type(const StringRef& keyspace_name,
-                    const StringRef& type_name);
+  void refresh_type(const StringRef& keyspace_name, const StringRef& type_name);
   static void on_refresh_type(ControlRequestCallback* callback);
   void handle_refresh_type(RefreshTypeCallback* callback);
 
-  void refresh_function(const StringRef& keyspace_name,
-                        const StringRef& function_name,
-                        const StringRefVec& arg_types,
-                        bool is_aggregate);
+  void refresh_function(const StringRef& keyspace_name, const StringRef& function_name,
+                        const StringRefVec& arg_types, bool is_aggregate);
   static void on_refresh_function(ControlRequestCallback* callback);
   void handle_refresh_function(RefreshFunctionCallback* callback);
 
@@ -296,6 +264,6 @@ private:
   ControlConnectionListener* listener_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

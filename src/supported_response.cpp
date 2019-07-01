@@ -18,7 +18,7 @@
 
 #include "serialization.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 bool SupportedResponse::decode(Decoder& decoder) {
   decoder.set_type("supported");
@@ -43,5 +43,3 @@ bool SupportedResponse::decode(Decoder& decoder) {
   }
   return true;
 }
-
-} // namespace cass

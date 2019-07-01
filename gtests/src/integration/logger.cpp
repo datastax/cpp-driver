@@ -25,19 +25,20 @@
 #include <iostream>
 #include <sstream>
 
+using namespace datastax::internal;
 using namespace test::driver;
 
 #define LOGGER_DIRECTORY "log"
 #ifdef _WIN32
-# define FILE_MODE 0
-# define LOCALTIME(tm, time) localtime_s(tm, time)
+#define FILE_MODE 0
+#define LOCALTIME(tm, time) localtime_s(tm, time)
 #else
-# define FILE_MODE S_IRWXU | S_IRWXG | S_IROTH
-# define LOCALTIME(tm, time) localtime_r(time, tm)
+#define FILE_MODE S_IRWXU | S_IRWXG | S_IROTH
+#define LOCALTIME(tm, time) localtime_r(time, tm)
 #endif
 
 Logger::Logger()
-  : count_(0) { }
+    : count_(0) {}
 
 Logger::~Logger() {
   if (output_.is_open()) {
@@ -52,7 +53,7 @@ void Logger::initialize(const std::string& test_case, const std::string& test_na
   std::vector<std::string> path_tokens = Utils::explode(path, Utils::PATH_SEPARATOR);
   std::string mkdir_path;
   for (std::vector<std::string>::const_iterator iterator = path_tokens.begin();
-    iterator < path_tokens.end(); ++iterator) {
+       iterator < path_tokens.end(); ++iterator) {
     mkdir_path += *iterator + Utils::PATH_SEPARATOR;
     Utils::mkdir(mkdir_path);
   }
@@ -75,22 +76,20 @@ void Logger::initialize(const std::string& test_case, const std::string& test_na
 }
 
 void Logger::add_critera(const std::string& criteria) {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   search_criteria_.push_back(criteria);
 }
 
 void test::driver::Logger::clear_critera() {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   search_criteria_.clear();
 }
 
-size_t Logger::count() {
-  return count_;
-}
+size_t Logger::count() { return count_; }
 
 void Logger::log(const CassLogMessage* log, void* data) {
   Logger* logger = static_cast<Logger*>(data);
-  cass::ScopedMutex lock(&(logger->mutex_));
+  ScopedMutex lock(&(logger->mutex_));
 
   // Get the log message
   std::string message = log->message;
@@ -105,27 +104,24 @@ void Logger::log(const CassLogMessage* log, void* data) {
   // Create the date formatted output
   std::stringstream date;
   int month = (date_time.tm_mon + 1);
-  date << date_time.tm_year + 1900 << "/"
-    << (month < 10 ? "0" : "") << month << "/"
-    << (date_time.tm_mday < 10 ? "0" : "") << date_time.tm_mday;
+  date << date_time.tm_year + 1900 << "/" << (month < 10 ? "0" : "") << month << "/"
+       << (date_time.tm_mday < 10 ? "0" : "") << date_time.tm_mday;
 
   // Create the formatted time
   std::stringstream time;
   time << (date_time.tm_hour < 10 ? "0" : "") << date_time.tm_hour << ":"
-    << (date_time.tm_min < 10 ? "0" : "") << date_time.tm_min << ":"
-    << (date_time.tm_sec < 10 ? "0" : "") << date_time.tm_sec << "."
-    << std::setfill('0') << std::setw(3) << milliseconds;
+       << (date_time.tm_min < 10 ? "0" : "") << date_time.tm_min << ":"
+       << (date_time.tm_sec < 10 ? "0" : "") << date_time.tm_sec << "." << std::setfill('0')
+       << std::setw(3) << milliseconds;
 
   // Create the formatted log message and output to the file
   std::string severity = cass_log_level_string(log->severity);
-  logger->output_ << date.str() << " " << time.str() << " "
-                  << severity << ": " << message
-                  << " (" << log->file << ":" << log->line << ") " << std::endl;
-
+  logger->output_ << date.str() << " " << time.str() << " " << severity << ": " << message << " ("
+                  << log->file << ":" << log->line << ") " << std::endl;
 
   // Determine if the log message matches any of the criteria
   for (std::vector<std::string>::const_iterator iterator = logger->search_criteria_.begin();
-      iterator != logger->search_criteria_.end(); ++iterator) {
+       iterator != logger->search_criteria_.end(); ++iterator) {
     if (message.find(*iterator) != std::string::npos) {
       ++logger->count_;
     }
@@ -133,13 +129,12 @@ void Logger::log(const CassLogMessage* log, void* data) {
 }
 
 void test::driver::Logger::reset() {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   search_criteria_.clear();
   count_ = 0;
 }
 
 void test::driver::Logger::reset_count() {
-  cass::ScopedMutex lock(&mutex_);
+  ScopedMutex lock(&mutex_);
   count_ = 0;
 }
-

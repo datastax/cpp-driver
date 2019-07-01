@@ -19,17 +19,17 @@
 #include "cassandra.h"
 #include "testing.hpp"
 
-#include <boost/test/test_tools.hpp>
-#include <boost/test/debug.hpp>
-#include <boost/thread.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/test_tools.hpp>
+#include <boost/thread.hpp>
 
 #include <assert.h>
+#include <cstdlib>
 #include <fstream>
 #include <istream>
 #include <vector>
-#include <cstdlib>
 
 namespace test_utils {
 //-----------------------------------------------------------------------------------
@@ -37,83 +37,76 @@ const cass_duration_t ONE_SECOND_IN_MILLISECONDS = 1000;
 const cass_duration_t ONE_MILLISECOND_IN_MICROS = 1000;
 const cass_duration_t ONE_SECOND_IN_MICROS = 1000 * ONE_MILLISECOND_IN_MICROS;
 
-const char* CREATE_TABLE_ALL_TYPES =
-    "CREATE TABLE %s ("
-    "id uuid PRIMARY KEY,"
-    "text_sample text,"
-    "int_sample int,"
-    "bigint_sample bigint,"
-    "float_sample float,"
-    "double_sample double,"
-    "decimal_sample decimal,"
-    "blob_sample blob,"
-    "boolean_sample boolean,"
-    "timestamp_sample timestamp,"
-    "inet_sample inet);";
+const char* CREATE_TABLE_ALL_TYPES = "CREATE TABLE %s ("
+                                     "id uuid PRIMARY KEY,"
+                                     "text_sample text,"
+                                     "int_sample int,"
+                                     "bigint_sample bigint,"
+                                     "float_sample float,"
+                                     "double_sample double,"
+                                     "decimal_sample decimal,"
+                                     "blob_sample blob,"
+                                     "boolean_sample boolean,"
+                                     "timestamp_sample timestamp,"
+                                     "inet_sample inet);";
 
-const char* CREATE_TABLE_ALL_TYPES_V4 =
-    "CREATE TABLE %s ("
-    "id uuid PRIMARY KEY,"
-    "text_sample text,"
-    "int_sample int,"
-    "bigint_sample bigint,"
-    "float_sample float,"
-    "double_sample double,"
-    "decimal_sample decimal,"
-    "blob_sample blob,"
-    "boolean_sample boolean,"
-    "timestamp_sample timestamp,"
-    "inet_sample inet,"
-    "tinyint_sample tinyint,"
-    "smallint_sample smallint,"
-    "date_sample date,"
-    "time_sample time);";
+const char* CREATE_TABLE_ALL_TYPES_V4 = "CREATE TABLE %s ("
+                                        "id uuid PRIMARY KEY,"
+                                        "text_sample text,"
+                                        "int_sample int,"
+                                        "bigint_sample bigint,"
+                                        "float_sample float,"
+                                        "double_sample double,"
+                                        "decimal_sample decimal,"
+                                        "blob_sample blob,"
+                                        "boolean_sample boolean,"
+                                        "timestamp_sample timestamp,"
+                                        "inet_sample inet,"
+                                        "tinyint_sample tinyint,"
+                                        "smallint_sample smallint,"
+                                        "date_sample date,"
+                                        "time_sample time);";
 
-const char* CREATE_TABLE_ALL_TYPES_V4_1 =
-    "CREATE TABLE %s ("
-    "id uuid PRIMARY KEY,"
-    "text_sample text,"
-    "int_sample int,"
-    "bigint_sample bigint,"
-    "float_sample float,"
-    "double_sample double,"
-    "decimal_sample decimal,"
-    "blob_sample blob,"
-    "boolean_sample boolean,"
-    "timestamp_sample timestamp,"
-    "inet_sample inet,"
-    "tinyint_sample tinyint,"
-    "smallint_sample smallint,"
-    "date_sample date,"
-    "time_sample time,"
-    "duration_sample duration);";
+const char* CREATE_TABLE_ALL_TYPES_V4_1 = "CREATE TABLE %s ("
+                                          "id uuid PRIMARY KEY,"
+                                          "text_sample text,"
+                                          "int_sample int,"
+                                          "bigint_sample bigint,"
+                                          "float_sample float,"
+                                          "double_sample double,"
+                                          "decimal_sample decimal,"
+                                          "blob_sample blob,"
+                                          "boolean_sample boolean,"
+                                          "timestamp_sample timestamp,"
+                                          "inet_sample inet,"
+                                          "tinyint_sample tinyint,"
+                                          "smallint_sample smallint,"
+                                          "date_sample date,"
+                                          "time_sample time,"
+                                          "duration_sample duration);";
 
-const char* CREATE_TABLE_TIME_SERIES =
-    "CREATE TABLE %s ("
-    "id uuid,"
-    "event_time timestamp,"
-    "text_sample text,"
-    "int_sample int,"
-    "bigint_sample bigint,"
-    "float_sample float,"
-    "double_sample double,"
-    "decimal_sample decimal,"
-    "blob_sample blob,"
-    "boolean_sample boolean,"
-    "timestamp_sample timestamp,"
-    "inet_sample inet,"
-    "PRIMARY KEY(id, event_time));";
+const char* CREATE_TABLE_TIME_SERIES = "CREATE TABLE %s ("
+                                       "id uuid,"
+                                       "event_time timestamp,"
+                                       "text_sample text,"
+                                       "int_sample int,"
+                                       "bigint_sample bigint,"
+                                       "float_sample float,"
+                                       "double_sample double,"
+                                       "decimal_sample decimal,"
+                                       "blob_sample blob,"
+                                       "boolean_sample boolean,"
+                                       "timestamp_sample timestamp,"
+                                       "inet_sample inet,"
+                                       "PRIMARY KEY(id, event_time));";
 
-const char* CREATE_TABLE_SIMPLE =
-    "CREATE TABLE %s ("
-    "id int PRIMARY KEY,"
-    "test_val text);";
+const char* CREATE_TABLE_SIMPLE = "CREATE TABLE %s ("
+                                  "id int PRIMARY KEY,"
+                                  "test_val text);";
 
 CassLog::LogData CassLog::log_data_;
 
-size_t CassLog::message_count() {
-  return log_data_.message_count;
-}
+size_t CassLog::message_count() { return log_data_.message_count; }
 
 void CassLog::callback(const CassLogMessage* message, void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
@@ -122,13 +115,13 @@ void CassLog::callback(const CassLogMessage* message, void* data) {
     fprintf(stderr, "CassLog: %u.%03u [%s] (%s:%d:%s): %s\n",
             static_cast<unsigned int>(message->time_ms / 1000),
             static_cast<unsigned int>(message->time_ms % 1000),
-            cass_log_level_string(message->severity),
-            message->file, message->line, message->function,
-            message->message);
+            cass_log_level_string(message->severity), message->file, message->line,
+            message->function, message->message);
   }
   boost::lock_guard<LogData> l(*log_data);
   if (log_data->messages.empty()) return;
-  for (std::vector<std::string>::const_iterator iterator = log_data->messages.begin(); iterator != log_data->messages.end(); ++iterator) {
+  for (std::vector<std::string>::const_iterator iterator = log_data->messages.begin();
+       iterator != log_data->messages.end(); ++iterator) {
     if (str.find(*iterator) != std::string::npos) {
       if (log_data_.expected_log_level_ == CASS_LOG_DISABLED ||
           message->severity == log_data_.expected_log_level_) {
@@ -140,52 +133,79 @@ void CassLog::callback(const CassLogMessage* message, void* data) {
 
 const char* get_value_type(CassValueType type) {
   switch (type) {
-    case CASS_VALUE_TYPE_CUSTOM: return "custom";
-    case CASS_VALUE_TYPE_ASCII: return "ascii";
-    case CASS_VALUE_TYPE_BIGINT: return "bigint";
-    case CASS_VALUE_TYPE_BLOB: return "blob";
-    case CASS_VALUE_TYPE_BOOLEAN: return "boolean";
-    case CASS_VALUE_TYPE_COUNTER: return "counter";
-    case CASS_VALUE_TYPE_DECIMAL: return "decimal";
-    case CASS_VALUE_TYPE_DURATION: return "duration";
-    case CASS_VALUE_TYPE_DOUBLE: return "double";
-    case CASS_VALUE_TYPE_FLOAT: return "float";
-    case CASS_VALUE_TYPE_INT: return "int";
-    case CASS_VALUE_TYPE_TEXT: return "text";
-    case CASS_VALUE_TYPE_TIMESTAMP: return "timestamp";
-    case CASS_VALUE_TYPE_UUID: return "uuid";
-    case CASS_VALUE_TYPE_VARCHAR: return "varchar";
-    case CASS_VALUE_TYPE_VARINT: return "varint";
-    case CASS_VALUE_TYPE_TIMEUUID: return "timeuuid";
-    case CASS_VALUE_TYPE_INET: return "inet";
-    case CASS_VALUE_TYPE_LIST: return "list";
-    case CASS_VALUE_TYPE_MAP: return "map";
-    case CASS_VALUE_TYPE_SET: return "set";
-    case CASS_VALUE_TYPE_TUPLE: return "tuple";
-    case CASS_VALUE_TYPE_SMALL_INT: return "smallint";
-    case CASS_VALUE_TYPE_TINY_INT: return "tinyint";
-    case CASS_VALUE_TYPE_DATE: return "date";
-    case CASS_VALUE_TYPE_TIME: return "time";
+    case CASS_VALUE_TYPE_CUSTOM:
+      return "custom";
+    case CASS_VALUE_TYPE_ASCII:
+      return "ascii";
+    case CASS_VALUE_TYPE_BIGINT:
+      return "bigint";
+    case CASS_VALUE_TYPE_BLOB:
+      return "blob";
+    case CASS_VALUE_TYPE_BOOLEAN:
+      return "boolean";
+    case CASS_VALUE_TYPE_COUNTER:
+      return "counter";
+    case CASS_VALUE_TYPE_DECIMAL:
+      return "decimal";
+    case CASS_VALUE_TYPE_DURATION:
+      return "duration";
+    case CASS_VALUE_TYPE_DOUBLE:
+      return "double";
+    case CASS_VALUE_TYPE_FLOAT:
+      return "float";
+    case CASS_VALUE_TYPE_INT:
+      return "int";
+    case CASS_VALUE_TYPE_TEXT:
+      return "text";
+    case CASS_VALUE_TYPE_TIMESTAMP:
+      return "timestamp";
+    case CASS_VALUE_TYPE_UUID:
+      return "uuid";
+    case CASS_VALUE_TYPE_VARCHAR:
+      return "varchar";
+    case CASS_VALUE_TYPE_VARINT:
+      return "varint";
+    case CASS_VALUE_TYPE_TIMEUUID:
+      return "timeuuid";
+    case CASS_VALUE_TYPE_INET:
+      return "inet";
+    case CASS_VALUE_TYPE_LIST:
+      return "list";
+    case CASS_VALUE_TYPE_MAP:
+      return "map";
+    case CASS_VALUE_TYPE_SET:
+      return "set";
+    case CASS_VALUE_TYPE_TUPLE:
+      return "tuple";
+    case CASS_VALUE_TYPE_SMALL_INT:
+      return "smallint";
+    case CASS_VALUE_TYPE_TINY_INT:
+      return "tinyint";
+    case CASS_VALUE_TYPE_DATE:
+      return "date";
+    case CASS_VALUE_TYPE_TIME:
+      return "time";
     default:
       assert(false && "Invalid value type");
       return "";
   }
 }
 
-std::string to_hex(const char *byte_array) {
-    std::stringstream value;
-    value << std::hex << std::setfill('0');
-    for (unsigned int n = 0; n < strlen(byte_array); ++n) {
-      value << std::setw(2) << static_cast<unsigned>(byte_array[n]);
-    }
+std::string to_hex(const char* byte_array) {
+  std::stringstream value;
+  value << std::hex << std::setfill('0');
+  for (unsigned int n = 0; n < strlen(byte_array); ++n) {
+    value << std::setw(2) << static_cast<unsigned>(byte_array[n]);
+  }
 
-    if (value.str().size() == 0) {
-      value << "00";
-    }
-    return value.str();
+  if (value.str().size() == 0) {
+    value << "00";
+  }
+  return value.str();
 }
 
-std::string replaceAll(const std::string& current, const std::string& search, const std::string& replace) {
+std::string replaceAll(const std::string& current, const std::string& search,
+                       const std::string& replace) {
   // Go through each found occurrence and replace the value (in place)
   std::string updated = current;
   size_t found_position = 0;
@@ -198,36 +218,47 @@ std::string replaceAll(const std::string& current, const std::string& search, co
 }
 
 //-----------------------------------------------------------------------------------
-const std::string CREATE_KEYSPACE_SIMPLE_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %s }";
-const std::string CREATE_KEYSPACE_NETWORK_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'NetworkTopologyStrategy',  'dc1' : %d, 'dc2' : %d }";
-const std::string CREATE_KEYSPACE_GENERIC_FORMAT = "CREATE KEYSPACE {0} WITH replication = { 'class' : '{1}', {2} }";
+const std::string CREATE_KEYSPACE_SIMPLE_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' "
+                                                  ": 'SimpleStrategy', 'replication_factor' : %s }";
+const std::string CREATE_KEYSPACE_NETWORK_FORMAT =
+    "CREATE KEYSPACE %s WITH replication = { 'class' : 'NetworkTopologyStrategy',  'dc1' : %d, "
+    "'dc2' : %d }";
+const std::string CREATE_KEYSPACE_GENERIC_FORMAT =
+    "CREATE KEYSPACE {0} WITH replication = { 'class' : '{1}', {2} }";
 const std::string DROP_KEYSPACE_FORMAT = "DROP KEYSPACE %s";
 const std::string DROP_KEYSPACE_IF_EXISTS_FORMAT = "DROP KEYSPACE IF EXISTS %s";
 const std::string SIMPLE_KEYSPACE = "ks";
 const std::string NUMERIC_KEYSPACE_FORMAT = "ks%d";
 const std::string SIMPLE_TABLE = "test";
-const std::string CREATE_TABLE_SIMPLE_FORMAT = "CREATE TABLE {0} (k text PRIMARY KEY, t text, i int, f float)";
+const std::string CREATE_TABLE_SIMPLE_FORMAT =
+    "CREATE TABLE {0} (k text PRIMARY KEY, t text, i int, f float)";
 const std::string INSERT_FORMAT = "INSERT INTO {0} (k, t, i, f) VALUES ('{1}', '{2}', {3}, {4})";
 const std::string SELECT_ALL_FORMAT = "SELECT * FROM {0}";
 const std::string SELECT_WHERE_FORMAT = "SELECT * FROM {0} WHERE {1}";
 const std::string SELECT_VERSION = "SELECT release_version FROM system.local";
 
-const std::string lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla porta turpis vel dui venenatis, quis viverra magna"
-                                "suscipit. Praesent pharetra facilisis turpis, et fermentum leo sollicitudin sit amet. In hac habitasse platea dictumst. Donec mattis facilisis"
-                                "diam, nec pulvinar ligula. Sed eget faucibus magna. Donec vitae fermentum augue. Ut nec accumsan ligula. Sed a viverra leo, sed semper augue."
-                                "Pellentesque auctor nisl varius, imperdiet est non, porttitor risus. Donec aliquam elementum sollicitudin. Maecenas ultrices mattis mauris,"
-                                "fringilla congue nunc sodales sed. Fusce ac neque quis erat hendrerit porta at nec massa. Maecenas blandit ut felis sed ultrices. Sed fermentum"
-                                "pharetra lacus sodales cursus.";
+const std::string lorem_ipsum =
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla porta turpis vel dui "
+    "venenatis, quis viverra magna"
+    "suscipit. Praesent pharetra facilisis turpis, et fermentum leo sollicitudin sit amet. In hac "
+    "habitasse platea dictumst. Donec mattis facilisis"
+    "diam, nec pulvinar ligula. Sed eget faucibus magna. Donec vitae fermentum augue. Ut nec "
+    "accumsan ligula. Sed a viverra leo, sed semper augue."
+    "Pellentesque auctor nisl varius, imperdiet est non, porttitor risus. Donec aliquam elementum "
+    "sollicitudin. Maecenas ultrices mattis mauris,"
+    "fringilla congue nunc sodales sed. Fusce ac neque quis erat hendrerit porta at nec massa. "
+    "Maecenas blandit ut felis sed ultrices. Sed fermentum"
+    "pharetra lacus sodales cursus.";
 const char ALPHA_NUMERIC[] = { "01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" };
 
 //-----------------------------------------------------------------------------------
 
 CCM::CassVersion MultipleNodesTest::version("0.0.0");
 
-MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1,
-  unsigned int num_nodes_dc2, unsigned int protocol_version,
-  bool with_vnodes /* = false */, bool is_ssl /* = false */)
-  : ccm(new CCM::Bridge("config.txt")) {
+MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
+                                     unsigned int protocol_version, bool with_vnodes /* = false */,
+                                     bool is_ssl /* = false */)
+    : ccm(new CCM::Bridge("config.txt")) {
   // Only start the cluster if it wasn't the active cluster
   if (ccm->create_cluster(num_nodes_dc1, num_nodes_dc2, with_vnodes, is_ssl)) {
     ccm->start_cluster();
@@ -275,15 +306,13 @@ MultipleNodesTest::~MultipleNodesTest() {
   cass_cluster_free(cluster);
 }
 
-SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1,
-                                     unsigned int num_nodes_dc2, bool with_session /* = true */,
-  unsigned int protocol_version, bool with_vnodes /* = false */,
-  bool is_ssl /* = false */)
-  : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version,
-    with_vnodes, is_ssl)
-  , session(NULL)
-  , ssl(NULL) {
-  //SSL verification flags must be set before establishing session
+SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2,
+                                     bool with_session /* = true */, unsigned int protocol_version,
+                                     bool with_vnodes /* = false */, bool is_ssl /* = false */)
+    : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version, with_vnodes, is_ssl)
+    , session(NULL)
+    , ssl(NULL) {
+  // SSL verification flags must be set before establishing session
   if (!is_ssl) {
     if (with_session) {
       create_session();
@@ -315,7 +344,7 @@ SingleSessionTest::~SingleSessionTest() {
 }
 
 void initialize_contact_points(CassCluster* cluster, std::string prefix,
-  unsigned int num_of_nodes) {
+                               unsigned int num_of_nodes) {
   for (unsigned int i = 0; i < num_of_nodes; ++i) {
     std::string contact_point(prefix + boost::lexical_cast<std::string>(i + 1));
     cass_cluster_set_contact_points(cluster, contact_point.c_str());
@@ -338,11 +367,8 @@ CassSessionPtr create_session(CassCluster* cluster, CassError* code, cass_durati
   return session;
 }
 
-void execute_query(CassSession* session,
-                   const std::string& query,
-                   CassResultPtr* result,
-                   CassConsistency consistency,
-                   cass_duration_t timeout) {
+void execute_query(CassSession* session, const std::string& query, CassResultPtr* result,
+                   CassConsistency consistency, cass_duration_t timeout) {
   CassStatementPtr statement(cass_statement_new(query.c_str(), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
@@ -352,16 +378,14 @@ void execute_query(CassSession* session,
   }
 }
 
-CassError execute_query_with_error(CassSession* session,
-                                   const std::string& query,
-                                   CassResultPtr* result,
-                                   CassConsistency consistency,
+CassError execute_query_with_error(CassSession* session, const std::string& query,
+                                   CassResultPtr* result, CassConsistency consistency,
                                    cass_duration_t timeout) {
   CassStatementPtr statement(cass_statement_new(query.c_str(), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
   CassError code = wait_and_return_error(future.get(), timeout);
-  if(result != NULL) {
+  if (result != NULL) {
     *result = CassResultPtr(cass_future_get_result(future.get()));
   }
   return code;
@@ -379,7 +403,8 @@ void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   if (code != CASS_OK) {
     CassString message;
     cass_future_error_message(future, &message.data, &message.length);
-    BOOST_FAIL("Error occurred during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");
+    BOOST_FAIL("Error occurred during query '" << std::string(message.data, message.length) << "' ("
+                                               << boost::format("0x%08X") % code << ")");
   }
 }
 
@@ -415,13 +440,14 @@ CCM::CassVersion get_version(CassSession* session /* = NULL */) {
     execute_query(session, SELECT_VERSION, &result);
 
     // Only one row should be returned; get the first row
-    const CassRow *row = cass_result_first_row(result.get());
+    const CassRow* row = cass_result_first_row(result.get());
 
     // Convert the release_version value to a string
     CassString version_cass_string;
     const CassValue* value = cass_row_get_column_by_name(row, "release_version");
     cass_value_get_string(value, &version_cass_string.data, &version_cass_string.length);
-    version_string = std::string(version_cass_string.data, version_cass_string.length); // Needed for null termination
+    version_string = std::string(version_cass_string.data,
+                                 version_cass_string.length); // Needed for null termination
   } else {
     return CCM::Bridge::get_cassandra_version("config.txt");
   }
@@ -463,9 +489,11 @@ std::string load_ssl_certificate(const std::string filename) {
 }
 
 std::string implode(const std::vector<std::string>& elements, const char delimiter /*= ' '*/,
-  const char* delimiter_prefix /*= NULL*/, const char* delimiter_suffix /*= NULL*/) {
+                    const char* delimiter_prefix /*= NULL*/,
+                    const char* delimiter_suffix /*= NULL*/) {
   std::string result;
-  for (std::vector<std::string>::const_iterator iterator = elements.begin(); iterator < elements.end(); ++iterator) {
+  for (std::vector<std::string>::const_iterator iterator = elements.begin();
+       iterator < elements.end(); ++iterator) {
     result += *iterator;
     if ((iterator + 1) != elements.end()) {
       if (delimiter_prefix) {
@@ -486,9 +514,11 @@ void wait_for_node_connection(const std::string& ip_prefix, int node, int total_
   wait_for_node_connections(ip_prefix, nodes, total_attempts);
 }
 
-void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> nodes, int total_attempts /*= 10*/) {
+void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> nodes,
+                               int total_attempts /*= 10*/) {
   // Build the log messages to look for
-  for (std::vector<int>::const_iterator iterator = nodes.begin(); iterator != nodes.end(); ++iterator) {
+  for (std::vector<int>::const_iterator iterator = nodes.begin(); iterator != nodes.end();
+       ++iterator) {
     std::stringstream log_message;
     log_message << "Connected to host " << ip_prefix << *iterator;
     if (iterator == nodes.begin()) {
@@ -508,12 +538,11 @@ void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> no
 std::string& trim(std::string& str) {
   // Trim front
   str.erase(str.begin(),
-            std::find_if(str.begin(), str.end(),
-                         std::not1(std::ptr_fun<int, int>(::isspace))));
+            std::find_if(str.begin(), str.end(), std::not1(std::ptr_fun<int, int>(::isspace))));
   // Trim back
-  str.erase(std::find_if(str.rbegin(), str.rend(),
-                         std::not1(std::ptr_fun<int, int>(::isspace))).base(),
-            str.end());
+  str.erase(
+      std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun<int, int>(::isspace))).base(),
+      str.end());
   return str;
 }
 

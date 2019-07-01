@@ -36,8 +36,7 @@
 #include "values/varchar.hpp"
 #include "values/varint.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 typedef NullableValue<values::Ascii> Ascii;
 typedef NullableValue<values::BigInteger> BigInteger;
@@ -61,7 +60,6 @@ typedef NullableValue<values::Uuid> Uuid;
 typedef NullableValue<values::Varchar> Varchar;
 typedef NullableValue<values::Varint> Varint;
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif //__TEST_VALUES_HPP__

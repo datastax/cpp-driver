@@ -14,12 +14,12 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ATOMIC_BOOST_HPP_INCLUDED__
-#define __CASS_ATOMIC_BOOST_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ATOMIC_BOOST_HPP
+#define DATASTAX_INTERNAL_ATOMIC_BOOST_HPP
 
 #include <boost/atomic.hpp>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 enum MemoryOrder {
   MEMORY_ORDER_RELAXED = boost::memory_order_relaxed,
@@ -34,7 +34,8 @@ template <class T>
 class Atomic {
 public:
   Atomic() {}
-  explicit Atomic(T value) : value_(value) {}
+  explicit Atomic(T value)
+      : value_(value) {}
 
   inline void store(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     value_.store(value, static_cast<boost::memory_order>(order));
@@ -56,11 +57,14 @@ public:
     return value_.exchange(value, static_cast<boost::memory_order>(order));
   }
 
-  inline bool compare_exchange_strong(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return value_.compare_exchange_strong(expected, desired, static_cast<boost::memory_order>(order));
+  inline bool compare_exchange_strong(T& expected, T desired,
+                                      MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+    return value_.compare_exchange_strong(expected, desired,
+                                          static_cast<boost::memory_order>(order));
   }
 
-  inline bool compare_exchange_weak(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+  inline bool compare_exchange_weak(T& expected, T desired,
+                                    MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     return value_.compare_exchange_weak(expected, desired, static_cast<boost::memory_order>(order));
   }
 
@@ -72,6 +76,6 @@ inline void atomic_thread_fence(MemoryOrder order) {
   boost::atomic_thread_fence(static_cast<boost::memory_order>(order));
 }
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

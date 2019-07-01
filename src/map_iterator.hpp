@@ -14,15 +14,15 @@
   limitations under the License.
 */
 
-#ifndef __CASS_MAP_ITERATOR_HPP_INCLUDED__
-#define __CASS_MAP_ITERATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MAP_ITERATOR_HPP
+#define DATASTAX_INTERNAL_MAP_ITERATOR_HPP
 
 #include "cassandra.h"
 #include "iterator.hpp"
 #include "serialization.hpp"
 #include "value.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class MapIterator : public Iterator {
 public:
@@ -57,6 +57,6 @@ private:
   const int32_t count_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

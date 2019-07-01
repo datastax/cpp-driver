@@ -27,13 +27,10 @@
 
 #include <cassandra.h>
 
-
 #include <stdio.h>
 #include <uv.h>
 
-void on_signal(uv_signal_t* handle, int signum) {
-  uv_signal_stop(handle);
-}
+void on_signal(uv_signal_t* handle, int signum) { uv_signal_stop(handle); }
 
 void on_host_listener(CassHostListenerEvent event, CassInet inet, void* data);
 

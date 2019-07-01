@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SPECULATIVE_EXECUTION_HPP_INCLUDED__
-#define __CASS_SPECULATIVE_EXECUTION_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SPECULATIVE_EXECUTION_HPP
+#define DATASTAX_INTERNAL_SPECULATIVE_EXECUTION_HPP
 
 #include "allocated.hpp"
 #include "host.hpp"
@@ -24,13 +24,13 @@
 
 #include <stdint.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Request;
 
 class SpeculativeExecutionPlan : public Allocated {
 public:
-  virtual ~SpeculativeExecutionPlan() { }
+  virtual ~SpeculativeExecutionPlan() {}
 
   virtual int64_t next_execution(const Host::Ptr& current_host) = 0;
 };
@@ -39,10 +39,9 @@ class SpeculativeExecutionPolicy : public RefCounted<SpeculativeExecutionPolicy>
 public:
   typedef SharedRefPtr<SpeculativeExecutionPolicy> Ptr;
 
-  virtual ~SpeculativeExecutionPolicy() { }
+  virtual ~SpeculativeExecutionPolicy() {}
 
-  virtual SpeculativeExecutionPlan* new_plan(const String& keyspace,
-                                             const Request* request) = 0;
+  virtual SpeculativeExecutionPlan* new_plan(const String& keyspace, const Request* request) = 0;
 
   virtual SpeculativeExecutionPolicy* new_instance() = 0;
 };
@@ -54,21 +53,18 @@ public:
 
 class NoSpeculativeExecutionPolicy : public SpeculativeExecutionPolicy {
 public:
-  virtual SpeculativeExecutionPlan* new_plan(const String& keyspace,
-                                             const Request* request) {
+  virtual SpeculativeExecutionPlan* new_plan(const String& keyspace, const Request* request) {
     return new NoSpeculativeExecutionPlan();
   }
 
-  virtual SpeculativeExecutionPolicy* new_instance()  {
-    return  new NoSpeculativeExecutionPolicy();
-  }
+  virtual SpeculativeExecutionPolicy* new_instance() { return new NoSpeculativeExecutionPolicy(); }
 };
 
 class ConstantSpeculativeExecutionPlan : public SpeculativeExecutionPlan {
 public:
   ConstantSpeculativeExecutionPlan(int64_t constant_delay_ms, int count)
-    : constant_delay_ms_(constant_delay_ms)
-    , count_(count) { }
+      : constant_delay_ms_(constant_delay_ms)
+      , count_(count) {}
 
   virtual int64_t next_execution(const Host::Ptr& current_host) {
     return --count_ >= 0 ? constant_delay_ms_ : -1;
@@ -82,24 +78,21 @@ private:
 class ConstantSpeculativeExecutionPolicy : public SpeculativeExecutionPolicy {
 public:
   ConstantSpeculativeExecutionPolicy(int64_t constant_delay_ms, int max_speculative_executions)
-    : constant_delay_ms_(constant_delay_ms)
-    , max_speculative_executions_(max_speculative_executions) { }
+      : constant_delay_ms_(constant_delay_ms)
+      , max_speculative_executions_(max_speculative_executions) {}
 
-  virtual SpeculativeExecutionPlan* new_plan(const String& keyspace,
-                                             const Request* request) {
-    return new ConstantSpeculativeExecutionPlan(constant_delay_ms_,
-                                                max_speculative_executions_);
+  virtual SpeculativeExecutionPlan* new_plan(const String& keyspace, const Request* request) {
+    return new ConstantSpeculativeExecutionPlan(constant_delay_ms_, max_speculative_executions_);
   }
 
-  virtual SpeculativeExecutionPolicy* new_instance()  {
-    return new ConstantSpeculativeExecutionPolicy(constant_delay_ms_,
-                                                  max_speculative_executions_);
+  virtual SpeculativeExecutionPolicy* new_instance() {
+    return new ConstantSpeculativeExecutionPolicy(constant_delay_ms_, max_speculative_executions_);
   }
 
   const int64_t constant_delay_ms_;
   const int max_speculative_executions_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

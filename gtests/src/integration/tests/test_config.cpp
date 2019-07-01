@@ -22,26 +22,24 @@
 #include "objects/cluster.hpp"
 
 TEST(ConfigTest, Options) {
-  test::driver::Cluster cluster = test::driver::Cluster::build()
-                                  .with_connect_timeout(9999u)
-                                  .with_port(7000);
-  EXPECT_EQ(9999u,
-            test::driver::internals::Utils::connect_timeout(cluster.get()));
+  test::driver::Cluster cluster =
+      test::driver::Cluster::build().with_connect_timeout(9999u).with_port(7000);
+  EXPECT_EQ(9999u, test::driver::internals::Utils::connect_timeout(cluster.get()));
   EXPECT_EQ(7000, test::driver::internals::Utils::port(cluster.get()));
 }
 
 TEST(ConfigTest, ContactPointsSimple) {
   std::string contact_points = "127.0.0.1,127.0.0.2,127.0.0.3";
-  test::driver::Cluster cluster = test::driver::Cluster::build()
-                                  .with_contact_points(contact_points);
+  test::driver::Cluster cluster =
+      test::driver::Cluster::build().with_contact_points(contact_points);
   EXPECT_STREQ(contact_points.c_str(),
                test::driver::internals::Utils::contact_points(cluster.get()).c_str());
 }
 
 TEST(ConfigTest, ContactPointsClear) {
   std::string contact_points = "127.0.0.1,127.0.0.2,127.0.0.3";
-  test::driver::Cluster cluster = test::driver::Cluster::build()
-                                  .with_contact_points(contact_points);
+  test::driver::Cluster cluster =
+      test::driver::Cluster::build().with_contact_points(contact_points);
   EXPECT_STREQ(contact_points.c_str(),
                test::driver::internals::Utils::contact_points(cluster.get()).c_str());
   cluster.with_contact_points("");
@@ -50,25 +48,24 @@ TEST(ConfigTest, ContactPointsClear) {
 
 TEST(ConfigTest, ContactPointsExtraCommas) {
   std::string contact_points = ",,,,127.0.0.1,,,,127.0.0.2,127.0.0.3,,,,";
-  test::driver::Cluster cluster = test::driver::Cluster::build()
-                                  .with_contact_points(contact_points);
+  test::driver::Cluster cluster =
+      test::driver::Cluster::build().with_contact_points(contact_points);
   EXPECT_STREQ("127.0.0.1,127.0.0.2,127.0.0.3",
                test::driver::internals::Utils::contact_points(cluster.get()).c_str());
 }
 
 TEST(ConfigTest, ContactPointsExtraWhitespace) {
-  std::string contact_points = "   ,\r\n,  ,   ,  127.0.0.1 ,,,  ,\t127.0.0.2,127.0.0.3,  \t\n, ,,   ";
-  test::driver::Cluster cluster = test::driver::Cluster::build()
-                                  .with_contact_points(contact_points);
+  std::string contact_points =
+      "   ,\r\n,  ,   ,  127.0.0.1 ,,,  ,\t127.0.0.2,127.0.0.3,  \t\n, ,,   ";
+  test::driver::Cluster cluster =
+      test::driver::Cluster::build().with_contact_points(contact_points);
   EXPECT_STREQ("127.0.0.1,127.0.0.2,127.0.0.3",
                test::driver::internals::Utils::contact_points(cluster.get()).c_str());
 }
 
 TEST(ConfigTest, ContactPointsAppend) {
-  test::driver::Cluster cluster = test::driver::Cluster::build()
-                                  .with_contact_points("127.0.0.1");
-  EXPECT_STREQ("127.0.0.1",
-               test::driver::internals::Utils::contact_points(cluster.get()).c_str());
+  test::driver::Cluster cluster = test::driver::Cluster::build().with_contact_points("127.0.0.1");
+  EXPECT_STREQ("127.0.0.1", test::driver::internals::Utils::contact_points(cluster.get()).c_str());
   cluster.with_contact_points("127.0.0.2");
   EXPECT_STREQ("127.0.0.1,127.0.0.2",
                test::driver::internals::Utils::contact_points(cluster.get()).c_str());

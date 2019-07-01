@@ -28,15 +28,15 @@
  * Copyright (c) 2014 Andrey Semashev
  */
 
-#ifndef __CASS_ATOMIC_INTRINSICS_HPP_INCLUDED__
-#define __CASS_ATOMIC_INTRINSICS_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ATOMIC_INTRINSICS_HPP
+#define DATASTAX_INTERNAL_ATOMIC_INTRINSICS_HPP
 
 // The slower, intrinsics-based implemenations of Atomic<>.
 
 // Note: Please use the boost::atomic<> or std::atomic<>
 // implementations when possible.
 
-namespace cass {
+namespace datastax { namespace internal {
 
 enum MemoryOrder {
   MEMORY_ORDER_RELAXED = 0,
@@ -47,7 +47,7 @@ enum MemoryOrder {
   MEMORY_ORDER_SEQ_CST = 14 // MEMORY_ORDER_ACQ_REL | 8
 };
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #if defined(__GNUC__)
 #include "atomic_intrinsics_gcc.hpp"

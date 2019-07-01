@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
-#define __CASS_PREPARE_HOST_HANDLER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_PREPARE_HOST_HANDLER_HPP
+#define DATASTAX_INTERNAL_PREPARE_HOST_HANDLER_HPP
 
 #include "callback.hpp"
 #include "connector.hpp"
@@ -24,30 +24,29 @@
 #include "ref_counted.hpp"
 #include "string.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Connector;
 
 /**
  * A handler for pre-preparing statements on a newly available host.
  */
-class PrepareHostHandler : public RefCounted<PrepareHostHandler>
-                         , public ConnectionListener {
+class PrepareHostHandler
+    : public RefCounted<PrepareHostHandler>
+    , public ConnectionListener {
 public:
-  typedef cass::Callback<void, const PrepareHostHandler*> Callback;
+  typedef internal::Callback<void, const PrepareHostHandler*> Callback;
 
   typedef SharedRefPtr<PrepareHostHandler> Ptr;
 
   PrepareHostHandler(const Host::Ptr& host,
                      const PreparedMetadata::Entry::Vec& prepared_metadata_entries,
-                     const Callback& callback,
-                     ProtocolVersion protocol_version,
+                     const Callback& callback, ProtocolVersion protocol_version,
                      unsigned max_requests_per_flush);
 
   const Host::Ptr host() const { return host_; }
 
-  void prepare(uv_loop_t* loop,
-               const ConnectionSettings& settings);
+  void prepare(uv_loop_t* loop, const ConnectionSettings& settings);
 
 private:
   virtual void on_close(Connection* connection);
@@ -83,8 +82,7 @@ private:
    */
   class SetKeyspaceCallback : public SimpleRequestCallback {
   public:
-    SetKeyspaceCallback(const String& keyspace,
-                        const PrepareHostHandler::Ptr& handler);
+    SetKeyspaceCallback(const String& keyspace, const PrepareHostHandler::Ptr& handler);
 
     virtual void on_internal_set(ResponseMessage* response);
 
@@ -119,6 +117,6 @@ private:
   PreparedMetadata::Entry::Vec::const_iterator current_entry_it_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

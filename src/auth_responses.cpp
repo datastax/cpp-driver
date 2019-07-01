@@ -18,7 +18,7 @@
 
 #include "serialization.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 bool AuthenticateResponse::decode(Decoder& decoder) {
   decoder.set_type("authentication");
@@ -30,7 +30,7 @@ bool AuthenticateResponse::decode(Decoder& decoder) {
   return true;
 }
 
-bool cass::AuthChallengeResponse::decode(Decoder& decoder) {
+bool AuthChallengeResponse::decode(Decoder& decoder) {
   decoder.set_type("authentication challenge");
   StringRef token;
 
@@ -40,7 +40,7 @@ bool cass::AuthChallengeResponse::decode(Decoder& decoder) {
   return true;
 }
 
-bool cass::AuthSuccessResponse::decode(Decoder& decoder) {
+bool AuthSuccessResponse::decode(Decoder& decoder) {
   decoder.set_type("authentication success");
   StringRef token;
 
@@ -49,5 +49,3 @@ bool cass::AuthSuccessResponse::decode(Decoder& decoder) {
   decoder.maybe_log_remaining();
   return true;
 }
-
-} // namespace cass

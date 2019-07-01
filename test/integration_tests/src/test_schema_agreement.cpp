@@ -28,15 +28,13 @@
 
 struct ClusterInit {
   ClusterInit()
-    : inst(3, 0)
-    , session(NULL)
-    , schema_alter_session(NULL) {
+      : inst(3, 0)
+      , session(NULL)
+      , schema_alter_session(NULL) {
     new_session();
   }
 
-  ~ClusterInit() {
-    close_session();
-  }
+  ~ClusterInit() { close_session(); }
 
   void new_session() {
     close_session();
@@ -52,7 +50,8 @@ struct ClusterInit {
     whitelist_hosts << ip_prefix << "1";
     cass_cluster_set_whitelist_filtering(inst.cluster, whitelist_hosts.str().c_str());
     schema_alter_session = cass_session_new();
-    test_utils::CassFuturePtr connect_future(cass_session_connect(schema_alter_session, inst.cluster));
+    test_utils::CassFuturePtr connect_future(
+        cass_session_connect(schema_alter_session, inst.cluster));
     test_utils::wait_and_check_error(connect_future.get());
   }
 
@@ -76,17 +75,18 @@ struct ClusterInit {
 BOOST_FIXTURE_TEST_SUITE(schema_agreement, ClusterInit)
 
 // only doing a keyspace for now since there is no difference for types or tables
-BOOST_AUTO_TEST_CASE(keyspace_add_drop)
-{
+BOOST_AUTO_TEST_CASE(keyspace_add_drop) {
   test_utils::CassLog::reset("Found schema agreement in");
 
-  // "USE" in fast succession would normally fail on the next node if the previous query did not wait
+  // "USE" in fast succession would normally fail on the next node if the previous query did not
+  // wait
   const std::string use_simple = str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE);
-  test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                         % test_utils::SIMPLE_KEYSPACE % 2));
+  test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) %
+                                         test_utils::SIMPLE_KEYSPACE % 2));
   test_utils::execute_query(session, use_simple);
   test_utils::execute_query(session, "USE system");
-  test_utils::execute_query(session, str(boost::format("DROP KEYSPACE %s") % test_utils::SIMPLE_KEYSPACE));
+  test_utils::execute_query(session,
+                            str(boost::format("DROP KEYSPACE %s") % test_utils::SIMPLE_KEYSPACE));
   test_utils::CassResultPtr result;
   CassError rc = test_utils::execute_query_with_error(session, use_simple, &result);
   BOOST_CHECK_EQUAL(rc, CASS_ERROR_SERVER_INVALID_QUERY);
@@ -112,11 +112,12 @@ BOOST_AUTO_TEST_CASE(agreement_node_down) {
 
   test_utils::CassLog::reset("Found schema agreement in");
   const std::string use_simple = str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE);
-  test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                         % test_utils::SIMPLE_KEYSPACE % 2));
+  test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) %
+                                         test_utils::SIMPLE_KEYSPACE % 2));
   test_utils::execute_query(session, use_simple);
   test_utils::execute_query(session, "USE system");
-  test_utils::execute_query(session, str(boost::format("DROP KEYSPACE %s") % test_utils::SIMPLE_KEYSPACE));
+  test_utils::execute_query(session,
+                            str(boost::format("DROP KEYSPACE %s") % test_utils::SIMPLE_KEYSPACE));
   test_utils::CassResultPtr result;
   CassError rc = test_utils::execute_query_with_error(session, use_simple, &result);
   BOOST_CHECK_EQUAL(rc, CASS_ERROR_SERVER_INVALID_QUERY);
@@ -130,20 +131,24 @@ BOOST_AUTO_TEST_CASE(agreement_node_down) {
 }
 
 #define MAX_SCHEMA_AGREEMENT_WAIT_MS 10000
-static void alter_schema_version(void *arg) {
+static void alter_schema_version(void* arg) {
   ClusterInit* cluster_init = static_cast<ClusterInit*>(arg);
   std::string ip_prefix = cluster_init->inst.ccm->get_ip_prefix();
   boost::chrono::steady_clock::time_point end =
-    boost::chrono::steady_clock::now() + boost::chrono::milliseconds(MAX_SCHEMA_AGREEMENT_WAIT_MS + 2000);
+      boost::chrono::steady_clock::now() +
+      boost::chrono::milliseconds(MAX_SCHEMA_AGREEMENT_WAIT_MS + 2000);
   size_t i = 0;
 
   do {
     std::stringstream ss;
     // Update node 2 and 3's schema version in node 1's peers table.
-    ss << "UPDATE system.peers SET schema_version=? WHERE peer='" << ip_prefix << ((i++ % 2) + 2) << "'";
+    ss << "UPDATE system.peers SET schema_version=? WHERE peer='" << ip_prefix << ((i++ % 2) + 2)
+       << "'";
     test_utils::CassStatementPtr schema_stmt(cass_statement_new(ss.str().c_str(), 1));
-    cass_statement_bind_uuid(schema_stmt.get(), 0, test_utils::generate_random_uuid(cluster_init->inst.uuid_gen));
-    test_utils::CassFuturePtr future(cass_session_execute(cluster_init->schema_alter_session, schema_stmt.get()));
+    cass_statement_bind_uuid(schema_stmt.get(), 0,
+                             test_utils::generate_random_uuid(cluster_init->inst.uuid_gen));
+    test_utils::CassFuturePtr future(
+        cass_session_execute(cluster_init->schema_alter_session, schema_stmt.get()));
     cass_future_wait(future.get());
     BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
 
@@ -160,8 +165,11 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   uv_thread_t thread;
   uv_thread_create(&thread, alter_schema_version, this);
 
-  test_utils::CassStatementPtr create_stmt(cass_statement_new(str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                                               % test_utils::SIMPLE_KEYSPACE % 2).c_str(), 0));
+  test_utils::CassStatementPtr create_stmt(
+      cass_statement_new(str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) %
+                             test_utils::SIMPLE_KEYSPACE % 2)
+                             .c_str(),
+                         0));
   test_utils::CassFuturePtr create_future(cass_session_execute(session, create_stmt.get()));
 
   cass_future_wait(create_future.get());
@@ -171,9 +179,8 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   uv_thread_join(&thread);
 
   // Drop the keyspace (ignore any and all errors)
-  test_utils::execute_query_with_error(session,
-    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-    % test_utils::SIMPLE_KEYSPACE));
+  test_utils::execute_query_with_error(
+      session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % test_utils::SIMPLE_KEYSPACE));
 
   close_session();
 }

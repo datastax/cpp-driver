@@ -16,14 +16,14 @@
 
 #include <algorithm>
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
+#include <boost/atomic.hpp>
+#include <boost/chrono.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
-#include <boost/chrono.hpp>
-#include <boost/atomic.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -32,13 +32,12 @@ struct LoggingTests {
   boost::shared_ptr<CCM::Bridge> ccm;
 
   LoggingTests()
-    : ccm(new CCM::Bridge("config.txt")) {}
+      : ccm(new CCM::Bridge("config.txt")) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(logging, LoggingTests)
 
-BOOST_AUTO_TEST_CASE(logging_callback)
-{
+BOOST_AUTO_TEST_CASE(logging_callback) {
   test_utils::CassLog::reset("Adding pool for host");
 
   if (ccm->create_cluster()) {
@@ -68,8 +67,7 @@ BOOST_AUTO_TEST_CASE(logging_callback)
  * @since 2.4.0
  * @expected_result Logger error reduced to warning
  */
-BOOST_AUTO_TEST_CASE(logging_connection_error_reduced)
-{
+BOOST_AUTO_TEST_CASE(logging_connection_error_reduced) {
   // Ensure the cluster is not running
   if (!ccm->create_cluster()) {
     ccm->stop_cluster();
@@ -112,8 +110,7 @@ BOOST_AUTO_TEST_CASE(logging_connection_error_reduced)
  * @since 2.4.0
  * @expected_result Logger error reduced to warning
  */
-BOOST_AUTO_TEST_CASE(logging_pool_error_reduced)
-{
+BOOST_AUTO_TEST_CASE(logging_pool_error_reduced) {
   test_utils::CassLog::reset("Connection pool was unable to connect to host");
   test_utils::CassLog::set_expected_log_level(CASS_LOG_ERROR);
 

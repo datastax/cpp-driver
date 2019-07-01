@@ -1,0 +1,27 @@
+---
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: Cpp03
+AccessModifierOffset: -2
+IndentWidth: 2
+TabWidth: 8
+ColumnLimit: 100
+UseTab: Never
+IndentCaseLabels: true
+AlignAfterOpenBracket: true
+AlignEscapedNewlines: Left
+BreakConstructorInitializers: BeforeComma
+AllowShortBlocksOnASingleLine: false
+DerivePointerAlignment: false
+PointerAlignment: Left
+BinPackParameters: true
+BinPackArguments: true
+AllowShortIfStatementsOnASingleLine: true
+CompactNamespaces: true
+AlignOperands: true
+SpacesInContainerLiterals: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+Cpp11BracedListStyle: false
+AlwaysBreakTemplateDeclarations: true
+BreakBeforeInheritanceComma: true
+...

@@ -24,13 +24,15 @@
 #include <ctype.h>
 #include <string.h>
 
+using namespace datastax;
+using namespace datastax::internal::testing;
+
 inline bool operator!=(const CassUuid& u1, const CassUuid& u2) {
   return u1.clock_seq_and_node != u2.clock_seq_and_node ||
          u1.time_and_version != u2.time_and_version;
 }
 
-TEST(UuidUnitTest, V1)
-{
+TEST(UuidUnitTest, V1) {
   CassUuidGen* uuid_gen = cass_uuid_gen_new();
 
   CassUuid prev_uuid;
@@ -39,7 +41,7 @@ TEST(UuidUnitTest, V1)
 
   for (int i = 0; i < 1000; ++i) {
     CassUuid uuid;
-    uint64_t curr_ts = cass::get_time_since_epoch_in_ms();
+    uint64_t curr_ts = get_time_since_epoch_in_ms();
     cass_uuid_gen_time(uuid_gen, &uuid);
     cass_uint64_t ts = cass_uuid_timestamp(uuid);
 
@@ -61,10 +63,9 @@ TEST(UuidUnitTest, V1)
   cass_uuid_gen_free(uuid_gen);
 }
 
-TEST(UuidUnitTest, V1MinMax)
-{
+TEST(UuidUnitTest, V1MinMax) {
   cass_uint64_t founded_ts = 1270080000; // April 2010
-  cass_uint64_t curr_ts = cass::get_time_since_epoch_in_ms();
+  cass_uint64_t curr_ts = get_time_since_epoch_in_ms();
 
   CassUuid min_uuid_1;
   CassUuid min_uuid_2;
@@ -94,8 +95,7 @@ TEST(UuidUnitTest, V1MinMax)
   EXPECT_NE(min_uuid_2.clock_seq_and_node, max_uuid_2.clock_seq_and_node);
 }
 
-TEST(UuidUnitTest, V1Node)
-{
+TEST(UuidUnitTest, V1Node) {
   CassUuidGen* uuid_gen = cass_uuid_gen_new_with_node(0x0000112233445566LL);
 
   CassUuid uuid;
@@ -110,8 +110,7 @@ TEST(UuidUnitTest, V1Node)
   cass_uuid_gen_free(uuid_gen);
 }
 
-TEST(UuidUnitTest, V4)
-{
+TEST(UuidUnitTest, V4) {
   CassUuidGen* uuid_gen = cass_uuid_gen_new();
 
   CassUuid prev_uuid;
@@ -129,38 +128,42 @@ TEST(UuidUnitTest, V4)
   cass_uuid_gen_free(uuid_gen);
 }
 
-TEST(UuidUnitTest, FromString)
-{
+TEST(UuidUnitTest, FromString) {
   CassUuid uuid;
-  const cass::String expected = "c3b54ca0-7b01-11e4-aea6-c30dd51eaa64";
+  const String expected = "c3b54ca0-7b01-11e4-aea6-c30dd51eaa64";
   char actual[CASS_UUID_STRING_LENGTH];
 
   EXPECT_EQ(cass_uuid_from_string(expected.c_str(), &uuid), CASS_OK);
   cass_uuid_string(uuid, actual);
   EXPECT_EQ(expected, actual);
 
-  cass::String upper  = expected;
+  String upper = expected;
   std::transform(upper.begin(), upper.end(), upper.begin(), toupper);
   EXPECT_EQ(cass_uuid_from_string(upper.c_str(), &uuid), CASS_OK);
   cass_uuid_string(uuid, actual);
   EXPECT_EQ(expected, actual);
 }
 
-TEST(UuidUnitTest, FromStringInvalid)
-{
+TEST(UuidUnitTest, FromStringInvalid) {
   CassUuid uuid;
   // Empty
   EXPECT_EQ(cass_uuid_from_string("", &uuid), CASS_ERROR_LIB_BAD_PARAMS);
   // One char short
-  EXPECT_EQ(cass_uuid_from_string("c3b54ca0-7b01-11e4-aea6-c30dd51eaa6", &uuid), CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(cass_uuid_from_string("c3b54ca0-7b01-11e4-aea6-c30dd51eaa6", &uuid),
+            CASS_ERROR_LIB_BAD_PARAMS);
   // All '-'
-  EXPECT_EQ(cass_uuid_from_string("------------------------------------", &uuid), CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(cass_uuid_from_string("------------------------------------", &uuid),
+            CASS_ERROR_LIB_BAD_PARAMS);
   // Invalid char
-  EXPECT_EQ(cass_uuid_from_string("c3b54ca0-7b01-11e4-aea6-c30dd51eaz64", &uuid), CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(cass_uuid_from_string("c3b54ca0-7b01-11e4-aea6-c30dd51eaz64", &uuid),
+            CASS_ERROR_LIB_BAD_PARAMS);
   // Extra '-'
-  EXPECT_EQ(cass_uuid_from_string("c3b54ca0-7b01-11e4-aea6-c30dd51eaa-4", &uuid), CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(cass_uuid_from_string("c3b54ca0-7b01-11e4-aea6-c30dd51eaa-4", &uuid),
+            CASS_ERROR_LIB_BAD_PARAMS);
   // Invalid group
-  EXPECT_EQ(cass_uuid_from_string("c3b54ca07b0-1-11e4-aea6-c30dd51eaa64", &uuid), CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(cass_uuid_from_string("c3b54ca07b0-1-11e4-aea6-c30dd51eaa64", &uuid),
+            CASS_ERROR_LIB_BAD_PARAMS);
   // String longer then str_length
-  EXPECT_EQ(cass_uuid_from_string_n("00-00-00-00-11-11-11-11-22-22-22-22-deadbeaf", 36, &uuid), CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(cass_uuid_from_string_n("00-00-00-00-11-11-11-11-22-22-22-22-deadbeaf", 36, &uuid),
+            CASS_ERROR_LIB_BAD_PARAMS);
 }

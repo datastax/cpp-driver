@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ERROR_RESPONSE_HPP_INCLUDED__
-#define __CASS_ERROR_RESPONSE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ERROR_RESPONSE_HPP
+#define DATASTAX_INTERNAL_ERROR_RESPONSE_HPP
 
-#include "external.hpp"
 #include "constants.hpp"
+#include "external.hpp"
 #include "response.hpp"
 #include "retry_policy.hpp"
 #include "scoped_ptr.hpp"
@@ -30,7 +30,7 @@
 
 #include <string.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ErrorResponse : public Response {
 public:
@@ -42,12 +42,12 @@ public:
       , required_(-1)
       , num_failures_(-1)
       , data_present_(0)
-      , write_type_(CASS_WRITE_TYPE_UNKNOWN) { }
+      , write_type_(CASS_WRITE_TYPE_UNKNOWN) {}
 
   ErrorResponse(int32_t code, StringRef message)
-    : Response (CQL_OPCODE_ERROR)
-    , code_(code)
-    , message_(message) { }
+      : Response(CQL_OPCODE_ERROR)
+      , code_(code)
+      , message_(message) {}
 
   int32_t code() const { return code_; }
   StringRef message() const { return message_; }
@@ -87,8 +87,8 @@ private:
 bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opcode,
                                      const Response* response);
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::ErrorResponse, CassErrorResult)
+EXTERNAL_TYPE(datastax::internal::core::ErrorResponse, CassErrorResult)
 
 #endif

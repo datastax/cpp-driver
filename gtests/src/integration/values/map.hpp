@@ -19,24 +19,23 @@
 #include "nullable_value.hpp"
 #include "test_utils.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Map wrapped value
  */
-template<typename K, typename V>
+template <typename K, typename V>
 class Map : public Collection {
 public:
   Map()
-    : Collection(CASS_COLLECTION_TYPE_MAP) { }
+      : Collection(CASS_COLLECTION_TYPE_MAP) {}
 
   Map(const std::map<K, V>& map)
-    : Collection(CASS_COLLECTION_TYPE_MAP, map.size())
-    , map_(map) {
+      : Collection(CASS_COLLECTION_TYPE_MAP, map.size())
+      , map_(map) {
     // Create the collection
-    for (typename std::map<K, V>::const_iterator iterator = map.begin();
-      iterator != map.end(); ++iterator) {
+    for (typename std::map<K, V>::const_iterator iterator = map.begin(); iterator != map.end();
+         ++iterator) {
       K key = iterator->first;
       V value = iterator->second;
       Collection::append<K>(key);
@@ -47,82 +46,63 @@ public:
   }
 
   Map(const CassValue* value)
-    : Collection(CASS_COLLECTION_TYPE_MAP) {
+      : Collection(CASS_COLLECTION_TYPE_MAP) {
     initialize(value);
   }
 
-  void append(Collection collection) {
-    Collection::append(collection);
-  }
+  void append(Collection collection) { Collection::append(collection); }
 
   std::string cql_type() const {
     typename std::map<K, V>::const_iterator iterator = map_.begin();
-    std::string cql_type = "map<" + iterator->first.cql_type() + ", "
-      + iterator->second.cql_type() + ">";
+    std::string cql_type =
+        "map<" + iterator->first.cql_type() + ", " + iterator->second.cql_type() + ">";
     return cql_type;
   }
 
-  std::string cql_value() const {
-    return str();
-  }
+  std::string cql_value() const { return str(); }
 
-  bool is_null() const {
-    return Collection::is_null_;
-  }
+  bool is_null() const { return Collection::is_null_; }
 
-  CassCollectionType collection_type() const {
-    return collection_type_;
-  }
+  CassCollectionType collection_type() const { return collection_type_; }
 
-  void set(Tuple tuple, size_t index) {
-    Collection::set(tuple, index);
-  }
+  void set(Tuple tuple, size_t index) { Collection::set(tuple, index); }
 
-  void set(UserType user_type, const std::string& name) {
-    Collection::set(user_type, name);
-  }
+  void set(UserType user_type, const std::string& name) { Collection::set(user_type, name); }
 
   /**
    * Get the size of the map
    *
    * @return The number of key/value in the map
    */
-  size_t size() const {
-    return map_.size();
-  }
+  size_t size() const { return map_.size(); }
 
   void statement_bind(Statement statement, size_t index) {
     if (is_null()) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
     } else {
-      ASSERT_EQ(CASS_OK,
-        cass_statement_bind_collection(statement.get(), index, get()));
+      ASSERT_EQ(CASS_OK, cass_statement_bind_collection(statement.get(), index, get()));
     }
   }
 
   void statement_bind(Statement statement, const std::string& name) {
     if (is_null()) {
-      ASSERT_EQ(CASS_OK, cass_statement_bind_null_by_name(statement.get(),
-                                                          name.c_str()));
+      ASSERT_EQ(CASS_OK, cass_statement_bind_null_by_name(statement.get(), name.c_str()));
     } else {
-      ASSERT_EQ(CASS_OK, cass_statement_bind_collection_by_name(statement.get(),
-                                                                name.c_str(),
-                                                                get()));
+      ASSERT_EQ(CASS_OK,
+                cass_statement_bind_collection_by_name(statement.get(), name.c_str(), get()));
     }
   }
 
   std::vector<K> keys() const {
     std::vector<K> keys;
-    for (typename std::map<K, V>::const_iterator iterator = map_.begin();
-      iterator != map_.end(); ++iterator) {
+    for (typename std::map<K, V>::const_iterator iterator = map_.begin(); iterator != map_.end();
+         ++iterator) {
       keys.push_back(iterator->first);
     }
     return keys;
   }
 
-  CassValueType key_type() const {
-    return secondary_sub_type_;
-  }
+  CassValueType key_type() const { return secondary_sub_type_; }
 
   std::string str() const {
     if (is_null()) {
@@ -132,8 +112,8 @@ public:
     } else {
       std::stringstream map_string;
       map_string << "{";
-      for (typename std::map<K, V>::const_iterator iterator = map_.begin();
-        iterator != map_.end(); ++iterator) {
+      for (typename std::map<K, V>::const_iterator iterator = map_.begin(); iterator != map_.end();
+           ++iterator) {
         K key = iterator->first;
         V value = iterator->second;
         map_string << key.cql_value() << ":" << value.cql_value();
@@ -148,22 +128,18 @@ public:
     }
   }
 
-  std::map<K, V> value() const {
-    return map_;
-  }
+  std::map<K, V> value() const { return map_; }
 
   std::vector<V> values() const {
     std::vector<V> values;
-    for (typename std::map<K, V>::const_iterator iterator = map_.begin();
-      iterator != map_.end(); ++iterator) {
+    for (typename std::map<K, V>::const_iterator iterator = map_.begin(); iterator != map_.end();
+         ++iterator) {
       values.push_back(iterator->second);
     }
     return values;
   }
 
-  CassValueType value_type() const {
-    return primary_sub_type_;
-  }
+  CassValueType value_type() const { return primary_sub_type_; }
 
 private:
   /**
@@ -195,7 +171,6 @@ inline std::ostream& operator<<(std::ostream& os, const Map<K, V>& map) {
   return os;
 }
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_MAP_HPP__

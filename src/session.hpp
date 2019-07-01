@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SESSION_HPP_INCLUDED__
-#define __CASS_SESSION_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SESSION_HPP
+#define DATASTAX_INTERNAL_SESSION_HPP
 
 #include "allocated.hpp"
 #include "metrics.hpp"
@@ -25,7 +25,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class RequestProcessorInitializer;
 class Statement;
@@ -42,8 +42,7 @@ public:
 
   Future::Ptr prepare(const Statement* statement);
 
-  Future::Ptr execute(const Request::ConstPtr& request,
-                      const Address* preferred_address = NULL);
+  Future::Ptr execute(const Request::ConstPtr& request, const Address* preferred_address = NULL);
 
 private:
   void execute(const RequestHandler::Ptr& request_handler);
@@ -53,10 +52,8 @@ private:
 private:
   // Session base methods
 
-  virtual void on_connect(const Host::Ptr& connected_host,
-                          ProtocolVersion protocol_version,
-                          const HostMap& hosts,
-                          const TokenMap::Ptr& token_map);
+  virtual void on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
+                          const HostMap& hosts, const TokenMap::Ptr& token_map);
 
   virtual void on_close();
 
@@ -86,15 +83,14 @@ private:
 
   virtual void on_pool_down(const Address& address);
 
-  virtual void on_pool_critical_error(const Address& address,
-                                      Connector::ConnectionError code,
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
                                       const String& message);
 
   virtual void on_keyspace_changed(const String& keyspace,
                                    const KeyspaceChangedHandler::Ptr& handler);
 
   virtual void on_prepared_metadata_changed(const String& id,
-                                           const PreparedMetadata::Entry::Ptr& entry);
+                                            const PreparedMetadata::Entry::Ptr& entry);
 
   virtual void on_close(RequestProcessor* processor);
 
@@ -111,8 +107,8 @@ private:
   bool is_closing_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Session, CassSession)
+EXTERNAL_TYPE(datastax::internal::core::Session, CassSession)
 
 #endif

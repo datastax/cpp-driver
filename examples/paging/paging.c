@@ -26,9 +26,9 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cassandra.h"
 
@@ -183,13 +183,10 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { \
+  execute_query(session, "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' };");
 
-
-  execute_query(session,
-                "CREATE TABLE examples.paging (key timeuuid, \
+  execute_query(session, "CREATE TABLE examples.paging (key timeuuid, \
                                                value text, \
                                                PRIMARY KEY (key));");
 

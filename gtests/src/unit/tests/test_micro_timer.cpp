@@ -18,19 +18,19 @@
 
 #include "loop_test.hpp"
 
-using namespace cass;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class MicroTimerUnitTest : public LoopTest {
 public:
   MicroTimerUnitTest()
-    : count_(0)
-    , repeat_timeout_us_(0) { }
+      : count_(0)
+      , repeat_timeout_us_(0) {}
 
   void test_once(uint64_t timeout_us) {
     MicroTimer timer;
 
-    timer.start(loop(), timeout_us,
-                bind_callback(&MicroTimerUnitTest::on_timer_once, this));
+    timer.start(loop(), timeout_us, bind_callback(&MicroTimerUnitTest::on_timer_once, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -45,8 +45,7 @@ public:
 
     repeat_timeout_us_ = timeout_us;
 
-    timer.start(loop(), timeout_us,
-                bind_callback(&MicroTimerUnitTest::on_timer_repeat, this));
+    timer.start(loop(), timeout_us, bind_callback(&MicroTimerUnitTest::on_timer_repeat, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -59,8 +58,7 @@ public:
   void test_stop() {
     MicroTimer timer;
 
-    timer.start(loop(), 1,
-                bind_callback(&MicroTimerUnitTest::on_timer_once, this));
+    timer.start(loop(), 1, bind_callback(&MicroTimerUnitTest::on_timer_once, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -68,8 +66,7 @@ public:
 
     EXPECT_FALSE(timer.is_running());
 
-    timer.start(loop(), 1,
-                bind_callback(&MicroTimerUnitTest::on_timer_once, this));
+    timer.start(loop(), 1, bind_callback(&MicroTimerUnitTest::on_timer_once, this));
 
     EXPECT_TRUE(timer.is_running());
 
@@ -78,7 +75,6 @@ public:
     EXPECT_FALSE(timer.is_running());
     EXPECT_EQ(count_, 1);
   }
-
 
 private:
   void on_timer_once(MicroTimer* timer) {
@@ -99,66 +95,36 @@ private:
   uint64_t repeat_timeout_us_;
 };
 
-TEST_F(MicroTimerUnitTest, Once)
-{
-  test_once(2000);
-}
+TEST_F(MicroTimerUnitTest, Once) { test_once(2000); }
 
-TEST_F(MicroTimerUnitTest, OnceZero)
-{
-  test_once(0);
-}
+TEST_F(MicroTimerUnitTest, OnceZero) { test_once(0); }
 
-TEST_F(MicroTimerUnitTest, OnceMilliAndMicroSec)
-{
-  test_once(1200);
-}
+TEST_F(MicroTimerUnitTest, OnceMilliAndMicroSec) { test_once(1200); }
 
-TEST_F(MicroTimerUnitTest, OnceNearThreshold)
-{
+TEST_F(MicroTimerUnitTest, OnceNearThreshold) {
   test_once((1000 * CASS_PERCENT_OF_MILLSECOND_THRESHOLD) / 100);
 }
 
-TEST_F(MicroTimerUnitTest, OnceMilliAndNearThreshold)
-{
+TEST_F(MicroTimerUnitTest, OnceMilliAndNearThreshold) {
   test_once(1000 + (1000 * CASS_PERCENT_OF_MILLSECOND_THRESHOLD) / 100);
 }
 
-TEST_F(MicroTimerUnitTest, OnceMicroSec)
-{
-  test_once(1);
-}
+TEST_F(MicroTimerUnitTest, OnceMicroSec) { test_once(1); }
 
-TEST_F(MicroTimerUnitTest, Repeat)
-{
-  test_repeat(2000);
-}
+TEST_F(MicroTimerUnitTest, Repeat) { test_repeat(2000); }
 
-TEST_F(MicroTimerUnitTest, RepeatZero)
-{
-  test_repeat(0);
-}
+TEST_F(MicroTimerUnitTest, RepeatZero) { test_repeat(0); }
 
-TEST_F(MicroTimerUnitTest, RepeatMilliAndMicroSec)
-{
-  test_repeat(1200);
-}
+TEST_F(MicroTimerUnitTest, RepeatMilliAndMicroSec) { test_repeat(1200); }
 
-TEST_F(MicroTimerUnitTest, RepeatNearThreshold)
-{
+TEST_F(MicroTimerUnitTest, RepeatNearThreshold) {
   test_repeat((1000 * CASS_PERCENT_OF_MILLSECOND_THRESHOLD) / 100);
 }
 
-TEST_F(MicroTimerUnitTest, RepeatMilliAndNearThreshold)
-{
+TEST_F(MicroTimerUnitTest, RepeatMilliAndNearThreshold) {
   test_repeat(1000 + (1000 * CASS_PERCENT_OF_MILLSECOND_THRESHOLD) / 100);
 }
 
-TEST_F(MicroTimerUnitTest, RepeatMicroSec)
-{
-  test_repeat(1);
-}
+TEST_F(MicroTimerUnitTest, RepeatMicroSec) { test_repeat(1); }
 
-TEST_F(MicroTimerUnitTest, Stop) {
-  test_stop();
-}
+TEST_F(MicroTimerUnitTest, Stop) { test_stop(); }

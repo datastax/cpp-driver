@@ -22,15 +22,16 @@
 
 #include <iomanip>
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 extern "C" {
 
-void cass_error_result_free(const CassErrorResult* error_result) {
-  error_result->dec_ref();
-}
+void cass_error_result_free(const CassErrorResult* error_result) { error_result->dec_ref(); }
 
 CassError cass_error_result_code(const CassErrorResult* error_result) {
-  return static_cast<CassError>(
-        CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error_result->code()));
+  return static_cast<CassError>(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error_result->code()));
 }
 
 CassConsistency cass_error_result_consistency(const CassErrorResult* error_result) {
@@ -57,8 +58,7 @@ CassWriteType cass_error_result_write_type(const CassErrorResult* error_result) 
   return error_result->write_type();
 }
 
-CassError cass_error_result_keyspace(const CassErrorResult* error_result,
-                                     const char** keyspace,
+CassError cass_error_result_keyspace(const CassErrorResult* error_result, const char** keyspace,
                                      size_t* keyspace_length) {
   if (error_result->code() != CASS_ERROR_SERVER_ALREADY_EXISTS ||
       error_result->code() != CASS_ERROR_SERVER_FUNCTION_FAILURE) {
@@ -69,8 +69,7 @@ CassError cass_error_result_keyspace(const CassErrorResult* error_result,
   return CASS_OK;
 }
 
-CassError cass_error_result_table(const CassErrorResult* error_result,
-                                  const char** table,
+CassError cass_error_result_table(const CassErrorResult* error_result, const char** table,
                                   size_t* table_length) {
   if (error_result->code() != CASS_ERROR_SERVER_ALREADY_EXISTS) {
     return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
@@ -80,8 +79,7 @@ CassError cass_error_result_table(const CassErrorResult* error_result,
   return CASS_OK;
 }
 
-CassError cass_error_result_function(const CassErrorResult* error_result,
-                                     const char** function,
+CassError cass_error_result_function(const CassErrorResult* error_result, const char** function,
                                      size_t* function_length) {
   if (error_result->code() != CASS_ERROR_SERVER_FUNCTION_FAILURE) {
     return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
@@ -95,25 +93,21 @@ size_t cass_error_num_arg_types(const CassErrorResult* error_result) {
   return error_result->arg_types().size();
 }
 
-CassError cass_error_result_arg_type(const CassErrorResult* error_result,
-                                     size_t index,
-                                     const char** arg_type,
-                                     size_t* arg_type_length) {
+CassError cass_error_result_arg_type(const CassErrorResult* error_result, size_t index,
+                                     const char** arg_type, size_t* arg_type_length) {
   if (error_result->code() != CASS_ERROR_SERVER_FUNCTION_FAILURE) {
     return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
   }
   if (index > error_result->arg_types().size()) {
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
   }
-  cass::StringRef arg_type_ref = error_result->arg_types()[index];
+  StringRef arg_type_ref = error_result->arg_types()[index];
   *arg_type = arg_type_ref.data();
   *arg_type_length = arg_type_ref.size();
   return CASS_OK;
 }
 
 } // extern "C"
-
-namespace cass {
 
 String ErrorResponse::error_message() const {
   OStringStream ss;
@@ -189,13 +183,10 @@ bool check_error_or_invalid_response(const String& prefix, uint8_t expected_opco
     ss << prefix << ": Error response "
        << static_cast<const ErrorResponse*>(response)->error_message();
   } else {
-    ss << prefix << ": Unexpected opcode "
-       << opcode_to_string(response->opcode());
+    ss << prefix << ": Unexpected opcode " << opcode_to_string(response->opcode());
   }
 
   LOG_ERROR("%s", ss.str().c_str());
 
   return true;
 }
-
-} // namespace cass

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#include "integration.hpp"
 #include "cassandra.h"
+#include "integration.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -31,9 +31,12 @@ public:
   }
 
   void initialize() {
-    session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "text"));
-    session_.execute(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "1", "'one'"));
-    session_.execute(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "2", "'two'"));
+    session_.execute(
+        format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "text"));
+    session_.execute(
+        format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "1", "'one'"));
+    session_.execute(
+        format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "2", "'two'"));
   }
 
   std::vector<std::string> validate() {
@@ -54,7 +57,8 @@ public:
   }
 
   Statement select_statement(const std::string& key) {
-    Statement statement(format_string(CASSANDRA_SELECT_VALUE_FORMAT, table_name_.c_str(), key.c_str()));
+    Statement statement(
+        format_string(CASSANDRA_SELECT_VALUE_FORMAT, table_name_.c_str(), key.c_str()));
     statement.set_consistency(CASS_CONSISTENCY_ONE);
     statement.set_record_attempted_hosts(true);
     return statement;
@@ -91,10 +95,12 @@ CASSANDRA_INTEGRATION_TEST_F(DcAwarePolicyTest, UsedHostsRemoteDc) {
     std::vector<std::string> attempted_hosts = validate();
 
     // Verify that local DC hosts were used
-    EXPECT_TRUE(contains(ccm_->get_ip_prefix() + "1", attempted_hosts) || contains(ccm_->get_ip_prefix() + "2", attempted_hosts));
+    EXPECT_TRUE(contains(ccm_->get_ip_prefix() + "1", attempted_hosts) ||
+                contains(ccm_->get_ip_prefix() + "2", attempted_hosts));
 
     // Verify that no remote DC hosts were used
-    EXPECT_TRUE(!contains(ccm_->get_ip_prefix() + "3", attempted_hosts) && !contains(ccm_->get_ip_prefix() + "4", attempted_hosts));
+    EXPECT_TRUE(!contains(ccm_->get_ip_prefix() + "3", attempted_hosts) &&
+                !contains(ccm_->get_ip_prefix() + "4", attempted_hosts));
   }
 
   // Stop the whole local DC
@@ -105,9 +111,11 @@ CASSANDRA_INTEGRATION_TEST_F(DcAwarePolicyTest, UsedHostsRemoteDc) {
     std::vector<std::string> attempted_hosts = validate();
 
     // Verify that remote DC hosts were used
-    EXPECT_TRUE(contains(ccm_->get_ip_prefix() + "3", attempted_hosts) || contains(ccm_->get_ip_prefix() + "4", attempted_hosts));
+    EXPECT_TRUE(contains(ccm_->get_ip_prefix() + "3", attempted_hosts) ||
+                contains(ccm_->get_ip_prefix() + "4", attempted_hosts));
 
     // Verify that no local DC hosts where used
-    EXPECT_TRUE(!contains(ccm_->get_ip_prefix() + "1", attempted_hosts) && !contains(ccm_->get_ip_prefix() + "2", attempted_hosts));
+    EXPECT_TRUE(!contains(ccm_->get_ip_prefix() + "1", attempted_hosts) &&
+                !contains(ccm_->get_ip_prefix() + "2", attempted_hosts));
   }
 }

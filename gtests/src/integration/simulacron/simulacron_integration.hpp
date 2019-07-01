@@ -29,12 +29,12 @@
   INTEGRATION_TYPED_TEST_P(simulacron, test_case, test_name)
 
 #define CHECK_SIMULACRON_AVAILABLE \
-  if (!sc_) { \
-    return; \
+  if (!sc_) {                      \
+    return;                        \
   }
 
 #define SKIP_TEST_IF_SIMULACRON_UNAVAILABLE \
-  if (!sc_) { \
+  if (!sc_) {                               \
     SKIP_TEST("Simulacron is unavailable"); \
   }
 
@@ -89,7 +89,8 @@ protected:
    * @param data_center_nodes Data center(s) to create in the Simulacron cluster
    *                          (default: 1 data center with 1 node)
    */
-  void start_sc(const std::vector<unsigned int>& data_center_nodes = SimulacronCluster::DEFAULT_DATA_CENTER_NODES);
+  void start_sc(const std::vector<unsigned int>& data_center_nodes =
+                    SimulacronCluster::DEFAULT_DATA_CENTER_NODES);
 
   /**
    * Execute a mock query at a given consistency level
@@ -102,7 +103,8 @@ protected:
    *                                  remaining nodes with a successful mock
    *                                  query
    */
-  virtual test::driver::Result execute_mock_query(CassConsistency consistency = CASS_CONSISTENCY_ONE);
+  virtual test::driver::Result
+  execute_mock_query(CassConsistency consistency = CASS_CONSISTENCY_ONE);
 
   /**
    * Prime the successful mock query on the given node
@@ -123,8 +125,7 @@ protected:
    *             result will be applied to all nodes in the Simulacron cluster
    *             (DEFAULT: 0 - Apply mock query with result to all nodes)
    */
-  void prime_mock_query_with_result(prime::Result* result,
-                                    unsigned int node = 0);
+  void prime_mock_query_with_result(prime::Result* result, unsigned int node = 0);
 
 private:
   /**

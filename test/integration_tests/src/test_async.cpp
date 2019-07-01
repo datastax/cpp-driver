@@ -14,40 +14,44 @@
   limitations under the License.
 */
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
 
 struct AsyncTests : public test_utils::SingleSessionTest {
-  AsyncTests() : test_utils::SingleSessionTest(3, 0) {
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % test_utils::SIMPLE_KEYSPACE % "3"));
+  AsyncTests()
+      : test_utils::SingleSessionTest(3, 0) {
+    test_utils::execute_query(session,
+                              str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) %
+                                  test_utils::SIMPLE_KEYSPACE % "3"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 
   ~AsyncTests() {
     // Drop the keyspace (ignore any and all errors)
-    test_utils::execute_query_with_error(session,
-      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-      % test_utils::SIMPLE_KEYSPACE));
+    test_utils::execute_query_with_error(
+        session,
+        str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % test_utils::SIMPLE_KEYSPACE));
   }
 
-  static std::vector<CassUuid> insert_async(CassSession* session,
-                                            CassUuidGen* uuid_gen,
+  static std::vector<CassUuid> insert_async(CassSession* session, CassUuidGen* uuid_gen,
                                             const std::string& table_name,
                                             size_t num_concurrent_requests,
                                             std::vector<test_utils::CassFuturePtr>* futures) {
-    std::string create_table_query = str(boost::format("CREATE TABLE %s (id timeuuid PRIMARY KEY, num int, str text);") % table_name);
+    std::string create_table_query =
+        str(boost::format("CREATE TABLE %s (id timeuuid PRIMARY KEY, num int, str text);") %
+            table_name);
 
     test_utils::execute_query(session, create_table_query);
 
-    std::string insert_query = str(boost::format("INSERT INTO %s (id, num, str) VALUES(?, ?, ?)") % table_name);
+    std::string insert_query =
+        str(boost::format("INSERT INTO %s (id, num, str) VALUES(?, ?, ?)") % table_name);
 
     std::vector<CassUuid> ids;
     for (size_t i = 0; i < num_concurrent_requests; ++i) {
@@ -56,7 +60,8 @@ struct AsyncTests : public test_utils::SingleSessionTest {
 
       // Determine if bound parameters can be used based on C* version
       if (version.major_version == 1) {
-        insert_query = str(boost::format("INSERT INTO %s (id, num, str) VALUES(%s, %s, 'row%s')") % table_name % test_utils::Value<CassUuid>::to_string(id) % i % i);
+        insert_query = str(boost::format("INSERT INTO %s (id, num, str) VALUES(%s, %s, 'row%s')") %
+                           table_name % test_utils::Value<CassUuid>::to_string(id) % i % i);
         statement = test_utils::CassStatementPtr(cass_statement_new(insert_query.c_str(), 0));
       } else {
         BOOST_REQUIRE(cass_statement_bind_uuid(statement.get(), 0, id) == CASS_OK);
@@ -73,10 +78,8 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     return ids;
   }
 
-  void validate_results(const std::string& table_name,
-                        size_t num_concurrent_requests,
-                        const std::vector<CassUuid>& ids)
-  {
+  void validate_results(const std::string& table_name, size_t num_concurrent_requests,
+                        const std::vector<CassUuid>& ids) {
     std::string select_query = str(boost::format("SELECT * FROM %s;") % table_name);
     test_utils::CassResultPtr result;
     test_utils::execute_query(session, select_query, &result, CASS_CONSISTENCY_QUORUM);
@@ -95,33 +98,36 @@ struct AsyncTests : public test_utils::SingleSessionTest {
 
 BOOST_FIXTURE_TEST_SUITE(async, AsyncTests)
 
-BOOST_AUTO_TEST_CASE(simple)
-{
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
+BOOST_AUTO_TEST_CASE(simple) {
+  std::string table_name =
+      str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   const size_t num_concurrent_requests = 4096;
 
   std::vector<test_utils::CassFuturePtr> futures;
-  std::vector<CassUuid> ids = insert_async(session, uuid_gen, table_name, num_concurrent_requests, &futures);
+  std::vector<CassUuid> ids =
+      insert_async(session, uuid_gen, table_name, num_concurrent_requests, &futures);
 
-  for (std::vector<test_utils::CassFuturePtr>::iterator it = futures.begin(),
-      end = futures.end(); it != end; ++it) {
+  for (std::vector<test_utils::CassFuturePtr>::iterator it = futures.begin(), end = futures.end();
+       it != end; ++it) {
     test_utils::wait_and_check_error(it->get());
   }
 
   validate_results(table_name, num_concurrent_requests, ids);
 }
 
-BOOST_AUTO_TEST_CASE(close)
-{
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
+BOOST_AUTO_TEST_CASE(close) {
+  std::string table_name =
+      str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   const size_t num_concurrent_requests = 4096;
 
   test_utils::CassSessionPtr temp_session(test_utils::create_session(cluster));
 
-  test_utils::execute_query(temp_session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  test_utils::execute_query(temp_session.get(),
+                            str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
   std::vector<test_utils::CassFuturePtr> futures;
-  std::vector<CassUuid> ids = insert_async(temp_session.get(), uuid_gen, table_name, num_concurrent_requests, &futures);
+  std::vector<CassUuid> ids =
+      insert_async(temp_session.get(), uuid_gen, table_name, num_concurrent_requests, &futures);
 
   // Close session, this should wait for all pending requests to finish
 

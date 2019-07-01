@@ -14,28 +14,23 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SSL_OPENSSL_IMPL_HPP_INCLUDED__
-#define __CASS_SSL_OPENSSL_IMPL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SSL_OPENSSL_IMPL_HPP
+#define DATASTAX_INTERNAL_SSL_OPENSSL_IMPL_HPP
 
 #include "ssl/ring_buffer_bio.hpp"
 
 #include <assert.h>
-#include <openssl/ssl.h>
 #include <openssl/bio.h>
+#include <openssl/ssl.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class OpenSslSession : public SslSession {
 public:
-  OpenSslSession(const Address& address,
-                 const String& hostname,
-                 int flags,
-                 SSL_CTX* ssl_ctx);
+  OpenSslSession(const Address& address, const String& hostname, int flags, SSL_CTX* ssl_ctx);
   ~OpenSslSession();
 
-  virtual bool is_handshake_done() const {
-    return SSL_is_init_finished(ssl_) != 0;
-  }
+  virtual bool is_handshake_done() const { return SSL_is_init_finished(ssl_) != 0; }
 
   virtual void do_handshake();
   virtual void verify();
@@ -62,9 +57,7 @@ public:
   virtual SslSession* create_session(const Address& address, const String& hostname);
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length);
   virtual CassError set_cert(const char* cert, size_t cert_length);
-  virtual CassError set_private_key(const char* key,
-                                    size_t key_length,
-                                    const char* password,
+  virtual CassError set_private_key(const char* key, size_t key_length, const char* password,
                                     size_t password_length);
 
 private:
@@ -82,6 +75,6 @@ public:
 
 typedef SslContextFactoryBase<OpenSslContextFactory> SslContextFactory;
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

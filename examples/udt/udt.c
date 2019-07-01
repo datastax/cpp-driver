@@ -26,9 +26,9 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cassandra.h"
 
@@ -166,7 +166,7 @@ CassError select_from_udt(CassSession* session) {
     result = cass_future_get_result(future);
     rows = cass_iterator_from_result(result);
 
-    while(cass_iterator_next(rows)) {
+    while (cass_iterator_next(rows)) {
       CassUuid id;
       char id_str[CASS_UUID_STRING_LENGTH];
       const CassRow* row = cass_iterator_get_row(rows);
@@ -179,7 +179,7 @@ CassError select_from_udt(CassSession* session) {
 
       printf("id %s ", id_str);
 
-      while(fields != NULL && cass_iterator_next(fields)) {
+      while (fields != NULL && cass_iterator_next(fields)) {
         const char* field_name;
         size_t field_name_length;
         const CassValue* field_value = NULL;
@@ -204,7 +204,8 @@ CassError select_from_udt(CassSession* session) {
               CassIterator* phone_fields = cass_iterator_fields_from_user_type(phone_value);
               assert(cass_value_type(phone_value) == CASS_VALUE_TYPE_UDT);
               while (cass_iterator_next(phone_fields)) {
-                const CassValue* phone_number_value = cass_iterator_get_user_type_field_value(phone_fields);
+                const CassValue* phone_number_value =
+                    cass_iterator_get_user_type_field_value(phone_fields);
                 cass_int32_t i;
                 cass_value_get_int32(phone_number_value, &i);
                 printf("%d ", i);
@@ -248,18 +249,16 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { \
+  execute_query(session, "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' }");
 
-  execute_query(session,
-                "CREATE TYPE examples.phone_numbers (phone1 int, phone2 int)");
+  execute_query(session, "CREATE TYPE examples.phone_numbers (phone1 int, phone2 int)");
 
-  execute_query(session,
-                "CREATE TYPE examples.address (street text, city text, zip int, phone set<frozen<phone_numbers>>)");
+  execute_query(session, "CREATE TYPE examples.address (street text, city text, zip int, phone "
+                         "set<frozen<phone_numbers>>)");
 
-  execute_query(session,
-                "CREATE TABLE examples.udt (id timeuuid, address frozen<address>, PRIMARY KEY(id))");
+  execute_query(
+      session, "CREATE TABLE examples.udt (id timeuuid, address frozen<address>, PRIMARY KEY(id))");
 
   schema_meta = cass_session_get_schema_meta(session);
 

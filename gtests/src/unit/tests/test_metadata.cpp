@@ -18,17 +18,21 @@
 
 #include "result_metadata.hpp"
 
-cass::SharedRefPtr<cass::ResultMetadata> create_metadata(const char* column_names[]) {
-  size_t count = 0;
-  while (column_names[count] != NULL) { count++; }
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
-  cass::ResultMetadata::Ptr metadata(
-        new cass::ResultMetadata(count,
-                                 cass::RefBuffer::Ptr()));
+SharedRefPtr<ResultMetadata> create_metadata(const char* column_names[]) {
+  size_t count = 0;
+  while (column_names[count] != NULL) {
+    count++;
+  }
+
+  ResultMetadata::Ptr metadata(new ResultMetadata(count, RefBuffer::Ptr()));
 
   for (size_t i = 0; column_names[i] != NULL; ++i) {
-    cass::ColumnDefinition def;
-    def.name = cass::StringRef(column_names[i]);
+    ColumnDefinition def;
+    def.name = StringRef(column_names[i]);
     def.index = i;
     metadata->add(def);
   }
@@ -38,10 +42,10 @@ cass::SharedRefPtr<cass::ResultMetadata> create_metadata(const char* column_name
 
 TEST(ResultMetadataUnitTest, Simple) {
   const char* column_names[] = { "abc", "def", "xyz", NULL };
-  cass::SharedRefPtr<cass::ResultMetadata> metadata(create_metadata(column_names));
+  SharedRefPtr<ResultMetadata> metadata(create_metadata(column_names));
 
   for (size_t i = 0; column_names[i] != NULL; ++i) {
-    cass::IndexVec indices;
+    IndexVec indices;
     size_t count = metadata->get_indices(column_names[i], &indices);
     EXPECT_EQ(count, 1u);
     EXPECT_GT(indices.size(), 0u);
@@ -51,11 +55,11 @@ TEST(ResultMetadataUnitTest, Simple) {
 
 TEST(ResultMetadataUnitTest, CaseSensitive) {
   const char* column_names[] = { "a", "A", "abc", "Abc", "ABc", "ABC", "aBc", "aBC", "abC", NULL };
-  cass::SharedRefPtr<cass::ResultMetadata> metadata(create_metadata(column_names));
+  SharedRefPtr<ResultMetadata> metadata(create_metadata(column_names));
 
   for (size_t i = 0; column_names[i] != NULL; ++i) {
-    cass::IndexVec indices;
-    cass::String name;
+    IndexVec indices;
+    String name;
     name.push_back('"');
     name.append(column_names[i]);
     name.push_back('"');
@@ -66,13 +70,13 @@ TEST(ResultMetadataUnitTest, CaseSensitive) {
   }
 
   {
-    cass::IndexVec indices;
+    IndexVec indices;
     size_t count = metadata->get_indices("a", &indices);
     EXPECT_EQ(count, 2u);
   }
 
   {
-    cass::IndexVec indices;
+    IndexVec indices;
     size_t count = metadata->get_indices("abc", &indices);
     EXPECT_EQ(count, 7u);
   }

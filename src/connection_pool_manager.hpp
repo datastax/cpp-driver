@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONNECTION_POOL_MANAGER_HPP_INCLUDED__
-#define __CASS_CONNECTION_POOL_MANAGER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONNECTION_POOL_MANAGER_HPP
+#define DATASTAX_INTERNAL_CONNECTION_POOL_MANAGER_HPP
 
 #include "address.hpp"
 #include "atomic.hpp"
@@ -27,7 +27,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class EventLoop;
 
@@ -36,13 +36,13 @@ class EventLoop;
  */
 class ConnectionPoolManagerListener : public ConnectionPoolStateListener {
 public:
-  virtual ~ConnectionPoolManagerListener() { }
+  virtual ~ConnectionPoolManagerListener() {}
 
   /**
    * A callback that's called when one of the manager's connections requires a
    * flush. It's only called once on the first write to the connection.
    */
-  virtual void on_requires_flush() { }
+  virtual void on_requires_flush() {}
 
   /**
    * A callback that's called when a manager is closed.
@@ -72,12 +72,9 @@ public:
    * @param metrics An object for recording metrics.
    * @param settings Settings for the manager and its connections.
    */
-  ConnectionPoolManager(const ConnectionPool::Map& pools,
-                        uv_loop_t* loop,
-                        ProtocolVersion protocol_version,
-                        const String& keyspace,
-                        ConnectionPoolManagerListener* listener,
-                        Metrics* metrics,
+  ConnectionPoolManager(const ConnectionPool::Map& pools, uv_loop_t* loop,
+                        ProtocolVersion protocol_version, const String& keyspace,
+                        ConnectionPoolManagerListener* listener, Metrics* metrics,
                         const ConnectionPoolSettings& settings);
 
   /**
@@ -88,7 +85,6 @@ public:
    * available.
    */
   PooledConnection::Ptr find_least_busy(const Address& address) const;
-
 
   /**
    * Determine if a pool has any valid connections.
@@ -165,9 +161,8 @@ private:
 
   virtual void on_pool_down(const Address& address);
 
-  virtual void on_pool_critical_error(const Address& address,
-                                 Connector::ConnectionError code,
-                                 const String& message);
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
+                                      const String& message);
 
   virtual void on_requires_flush(ConnectionPool* pool);
 
@@ -209,6 +204,6 @@ private:
 #endif
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

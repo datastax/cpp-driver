@@ -22,24 +22,16 @@ struct PolicyTool {
 
   std::map<std::string, int> coordinators;
 
-  void show_coordinators();	// show what queries went to what node IP.
+  void show_coordinators(); // show what queries went to what node IP.
   void reset_coordinators();
 
-  void init(CassSession* session,
-            int n,
-            CassConsistency cl,
-            bool batch = false);
+  void init(CassSession* session, int n, CassConsistency cl, bool batch = false);
 
-  CassError init_return_error(CassSession* session,
-                              int n,
-                              CassConsistency cl,
-                              bool batch = false);
+  CassError init_return_error(CassSession* session, int n, CassConsistency cl, bool batch = false);
 
-  void create_schema(CassSession* session,
-                     int replicationFactor);
+  void create_schema(CassSession* session, int replicationFactor);
 
-  void create_schema(CassSession* session,
-                     int dc1, int dc2);
+  void create_schema(CassSession* session, int dc1, int dc2);
 
   void drop_schema(CassSession* session);
 
@@ -51,7 +43,5 @@ struct PolicyTool {
 
   void query(CassSession* session, int n, CassConsistency cl);
 
-  CassError query_return_error(CassSession* session,
-                               int n,
-                               CassConsistency cl);
+  CassError query_return_error(CassSession* session, int n, CassConsistency cl);
 };

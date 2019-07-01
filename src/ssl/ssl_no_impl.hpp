@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SSL_NO_IMPL_HPP_INCLUDED__
-#define __CASS_SSL_NO_IMPL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SSL_NO_IMPL_HPP
+#define DATASTAX_INTERNAL_SSL_NO_IMPL_HPP
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class NoSslSession : public SslSession {
 public:
@@ -33,28 +33,24 @@ public:
 
 class NoSslContext : public SslContext {
 public:
-
   virtual SslSession* create_session(const Address& address, const String& hostname);
 
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length);
   virtual CassError set_cert(const char* cert, size_t cert_length);
-  virtual CassError set_private_key(const char* key,
-                                    size_t key_length,
-                                    const char* password,
+  virtual CassError set_private_key(const char* key, size_t key_length, const char* password,
                                     size_t password_length);
 };
 
 class NoSslContextFactory : public SslContextFactoryBase<NoSslContextFactory> {
 public:
   static SslContext::Ptr create();
-  static void internal_init() { }
-  static void internal_thread_cleanup() { }
-  static void internal_cleanup() { }
+  static void internal_init() {}
+  static void internal_thread_cleanup() {}
+  static void internal_cleanup() {}
 };
 
 typedef SslContextFactoryBase<NoSslContextFactory> SslContextFactory;
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif
-

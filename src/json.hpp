@@ -14,13 +14,12 @@
   limitations under the License.
 */
 
-#ifndef __CASS_JSON_HPP_INCLUDED__
-#define __CASS_JSON_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_JSON_HPP
+#define DATASTAX_INTERNAL_JSON_HPP
 
 #include "memory.hpp"
 
-namespace cass {
-namespace json {
+namespace datastax { namespace internal { namespace json {
 
 template <class T>
 static T* new_() {
@@ -37,58 +36,67 @@ static void delete_(T* ptr) {
   Memory::free(ptr);
 }
 
-} } // namespace cass::json
+}}} // namespace datastax::internal::json
 
-#define RAPIDJSON_NAMESPACE cass::rapidjson
-#define RAPIDJSON_NAMESPACE_BEGIN namespace cass { namespace rapidjson {
-#define RAPIDJSON_NAMESPACE_END } }
-#define RAPIDJSON_NEW(x) cass::json::new_<x>
-#define RAPIDJSON_DELETE(x) cass::json::delete_(x)
+#define RAPIDJSON_NAMESPACE datastax::rapidjson
+#define RAPIDJSON_NAMESPACE_BEGIN \
+  namespace datastax {            \
+  namespace rapidjson {
+#define RAPIDJSON_NAMESPACE_END \
+  }                             \
+  }
+#define RAPIDJSON_NEW(x) ::datastax::internal::json::new_<x>
+#define RAPIDJSON_DELETE(x) ::datastax::internal::json::delete_(x)
 
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #ifndef JSON_DEBUG
-# include "third_party/rapidjson/rapidjson/writer.h"
-# define JSON_WRITE_TYPE Writer
+#include "third_party/rapidjson/rapidjson/writer.h"
+#define JSON_WRITE_TYPE Writer
 #else
-# include "third_party/rapidjson/rapidjson/prettywriter.h"
-# define JSON_WRITE_TYPE PrettyWriter
+#include "third_party/rapidjson/rapidjson/prettywriter.h"
+#define JSON_WRITE_TYPE PrettyWriter
 #endif
 
-namespace cass {
-namespace json {
+namespace datastax { namespace internal { namespace json {
 
 class Allocator {
 public:
-    static const bool kNeedFree = true;
-    void* Malloc(size_t size) {
-      return Memory::malloc(size);
-    }
-    void* Realloc(void* ptr, size_t original_size, size_t new_size) {
-      (void)original_size;
-      return Memory::realloc(ptr, new_size);
-    }
-    static void Free(void *ptr) {
-      Memory::free(ptr);
-    }
+  static const bool kNeedFree = true;
+  void* Malloc(size_t size) { return Memory::malloc(size); }
+  void* Realloc(void* ptr, size_t original_size, size_t new_size) {
+    (void)original_size;
+    return Memory::realloc(ptr, new_size);
+  }
+  static void Free(void* ptr) { Memory::free(ptr); }
 };
 
-typedef cass::rapidjson::GenericDocument<cass::rapidjson::UTF8<>, cass::rapidjson::MemoryPoolAllocator<json::Allocator>, json::Allocator> Document;
-typedef cass::rapidjson::GenericValue<cass::rapidjson::UTF8<>, cass::rapidjson::MemoryPoolAllocator<json::Allocator> > Value;
-typedef cass::rapidjson::GenericStringBuffer<cass::rapidjson::UTF8<>, json::Allocator> StringBuffer;
+typedef datastax::rapidjson::UTF8<> UTF8;
+typedef datastax::rapidjson::MemoryPoolAllocator<json::Allocator> MemoryPoolAllocator;
 
-template<typename OutputStream, typename SourceEncoding = cass::rapidjson::UTF8<>, typename TargetEncoding = cass::rapidjson::UTF8<>, typename StackAllocator = json::Allocator, unsigned writeFlags = cass::rapidjson::kWriteDefaultFlags>
-class Writer : public cass::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> {
+typedef datastax::rapidjson::GenericDocument<UTF8, MemoryPoolAllocator, json::Allocator> Document;
+typedef datastax::rapidjson::GenericValue<UTF8, MemoryPoolAllocator> Value;
+typedef datastax::rapidjson::GenericStringBuffer<UTF8, json::Allocator> StringBuffer;
+
+template <typename OutputStream, typename SourceEncoding = UTF8, typename TargetEncoding = UTF8,
+          typename StackAllocator = json::Allocator,
+          unsigned writeFlags = datastax::rapidjson::kWriteDefaultFlags>
+class Writer
+    : public datastax::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding,
+                                                  StackAllocator, writeFlags> {
 public:
-    typedef cass::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> Type;
+  typedef datastax::rapidjson::JSON_WRITE_TYPE<OutputStream, SourceEncoding, TargetEncoding,
+                                               StackAllocator, writeFlags>
+      Type;
 
-    explicit Writer(OutputStream& os, StackAllocator* stackAllocator = 0, size_t levelDepth = Type::kDefaultLevelDepth) :
-        Type(os, stackAllocator, levelDepth) { }
+  explicit Writer(OutputStream& os, StackAllocator* stackAllocator = 0,
+                  size_t levelDepth = Type::kDefaultLevelDepth)
+      : Type(os, stackAllocator, levelDepth) {}
 
-    explicit Writer(StackAllocator* allocator = 0, size_t levelDepth = Type::kDefaultLevelDepth) :
-        Type(allocator, levelDepth) { }
+  explicit Writer(StackAllocator* allocator = 0, size_t levelDepth = Type::kDefaultLevelDepth)
+      : Type(allocator, levelDepth) {}
 };
 
-} } // namespace cass::json
+}}} // namespace datastax::internal::json
 
-#endif // __CASS_JSON_HPP_INCLUDED__
+#endif // DATASTAX_INTERNAL_JSON_HPP

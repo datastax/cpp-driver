@@ -25,7 +25,8 @@
 #define MAX_BUFFER_REUSE_NO 8
 #define BUFFER_REUSE_SIZE 64 * 1024
 
-namespace cass {
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 typedef Vector<uv_buf_t> UvBufVec;
 
@@ -35,7 +36,7 @@ typedef Vector<uv_buf_t> UvBufVec;
 class SocketWrite : public SocketWriteBase {
 public:
   SocketWrite(Socket* socket)
-    : SocketWriteBase(socket) { }
+      : SocketWriteBase(socket) {}
 
   size_t flush();
 };
@@ -47,8 +48,7 @@ size_t SocketWrite::flush() {
 
     bufs.reserve(buffers_.size());
 
-    for (BufferVec::const_iterator it = buffers_.begin(),
-         end = buffers_.end(); it != end; ++it) {
+    for (BufferVec::const_iterator it = buffers_.begin(), end = buffers_.end(); it != end; ++it) {
       total += it->size();
       bufs.push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
     }
@@ -78,7 +78,8 @@ void SocketHandler::alloc_buffer(size_t suggested_size, uv_buf_t* buf) {
       *buf = buffer_reuse_list_.top();
       buffer_reuse_list_.pop();
     } else {
-      *buf = uv_buf_init(reinterpret_cast<char*>(Memory::malloc(BUFFER_REUSE_SIZE)), BUFFER_REUSE_SIZE);
+      *buf = uv_buf_init(reinterpret_cast<char*>(Memory::malloc(BUFFER_REUSE_SIZE)),
+                         BUFFER_REUSE_SIZE);
     }
   } else {
     *buf = uv_buf_init(reinterpret_cast<char*>(Memory::malloc(suggested_size)), suggested_size);
@@ -99,9 +100,9 @@ void SocketHandler::free_buffer(const uv_buf_t* buf) {
 class SslSocketWrite : public SocketWriteBase {
 public:
   SslSocketWrite(Socket* socket, SslSession* ssl_session)
-    : SocketWriteBase(socket)
-    , ssl_session_(ssl_session)
-    , encrypted_size_(0) {}
+      : SocketWriteBase(socket)
+      , ssl_session_(ssl_session)
+      , encrypted_size_(0) {}
 
   virtual size_t flush();
 
@@ -142,8 +143,7 @@ void SslSocketWrite::encrypt() {
   size_t offset = 0;
   size_t total = 0;
 
-  BufferVec::const_iterator it = buffers_.begin(),
-      end = buffers_.end();
+  BufferVec::const_iterator it = buffers_.begin(), end = buffers_.end();
 
   LOG_TRACE("Copying %u bufs", static_cast<unsigned int>(buffers_.size()));
 
@@ -208,24 +208,20 @@ void SslSocketHandler::on_read(Socket* socket, ssize_t nread, const uv_buf_t* bu
 
   ssl_session_->incoming().commit(nread);
   char decrypted[SSL_READ_SIZE];
-  int rc =  0;
+  int rc = 0;
   while ((rc = ssl_session_->decrypt(decrypted, sizeof(decrypted))) > 0) {
     on_ssl_read(socket, decrypted, rc);
   }
   if (rc <= 0 && ssl_session_->has_error()) {
-    LOG_ERROR("Unable to decrypt data: %s",
-              ssl_session_->error_message().c_str());
+    LOG_ERROR("Unable to decrypt data: %s", ssl_session_->error_message().c_str());
     socket->defunct();
   }
 }
 
-uv_tcp_t* SocketWriteBase::tcp() {
-  return &socket_->tcp_;
-}
+uv_tcp_t* SocketWriteBase::tcp() { return &socket_->tcp_; }
 
 void SocketWriteBase::on_close() {
-  for (RequestVec::iterator i = requests_.begin(), end = requests_.end();
-       i != end; ++i) {
+  for (RequestVec::iterator i = requests_.begin(), end = requests_.end(); i != end; ++i) {
     (*i)->on_close();
   }
 }
@@ -259,8 +255,7 @@ void SocketWriteBase::handle_write(uv_write_t* req, int status) {
   }
 
   if (socket->handler_) {
-    for (RequestVec::iterator i = requests_.begin(),
-         end = requests_.end(); i != end; ++i) {
+    for (RequestVec::iterator i = requests_.begin(), end = requests_.end(); i != end; ++i) {
       socket->handler_->on_write(socket, status, *i);
     }
   }
@@ -278,31 +273,28 @@ void SocketWriteBase::handle_write(uv_write_t* req, int status) {
 }
 
 Socket::Socket(const Address& address, size_t max_reusable_write_objects)
-  : is_defunct_(false)
-  , max_reusable_write_objects_(max_reusable_write_objects)
-  , address_(address)
-  , address_string_(address.to_string()) {
+    : is_defunct_(false)
+    , max_reusable_write_objects_(max_reusable_write_objects)
+    , address_(address)
+    , address_string_(address.to_string()) {
   tcp_.data = this;
 }
 
-Socket::~Socket() {
-  cleanup_free_writes();
-}
+Socket::~Socket() { cleanup_free_writes(); }
 
 void Socket::set_handler(SocketHandlerBase* handler) {
   handler_.reset(handler);
   cleanup_free_writes();
   free_writes_.clear();
   if (handler_) {
-    uv_read_start(reinterpret_cast<uv_stream_t*>(&tcp_),
-                  Socket::alloc_buffer, Socket::on_read);
+    uv_read_start(reinterpret_cast<uv_stream_t*>(&tcp_), Socket::alloc_buffer, Socket::on_read);
   } else {
     uv_read_stop(reinterpret_cast<uv_stream_t*>(&tcp_));
   }
 }
 
 int32_t Socket::write(SocketRequest* request) {
-  if (!handler_)  {
+  if (!handler_) {
     return SocketRequest::SOCKET_REQUEST_ERROR_NO_HANDLER;
   }
 
@@ -322,7 +314,7 @@ int32_t Socket::write(SocketRequest* request) {
   return pending_writes_.back()->write(request);
 }
 
-int32_t Socket::write_and_flush(SocketRequest *request) {
+int32_t Socket::write_and_flush(SocketRequest* request) {
   int32_t result = write(request);
   if (result > 0) {
     flush();
@@ -378,9 +370,7 @@ void Socket::on_close(uv_handle_t* handle) {
 }
 
 void Socket::handle_close() {
-  LOG_DEBUG("Socket(%p) to host %s closed",
-            static_cast<void*>(this),
-            address_string().c_str());
+  LOG_DEBUG("Socket(%p) to host %s closed", static_cast<void*>(this), address_string().c_str());
 
   while (!pending_writes_.is_empty()) {
     SocketWriteBase* pending_write = pending_writes_.pop_front();
@@ -395,10 +385,7 @@ void Socket::handle_close() {
 }
 
 void Socket::cleanup_free_writes() {
-  for (SocketWriteVec::iterator i = free_writes_.begin(),
-       end = free_writes_.end(); i != end; ++i) {
+  for (SocketWriteVec::iterator i = free_writes_.begin(), end = free_writes_.end(); i != end; ++i) {
     delete *i;
   }
 }
-
-} // namespace cass

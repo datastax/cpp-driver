@@ -14,23 +14,25 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SCOPED_LOCK_HPP_INCLUDED__
-#define __CASS_SCOPED_LOCK_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SCOPED_LOCK_HPP
+#define DATASTAX_INTERNAL_SCOPED_LOCK_HPP
 
 #include "macros.hpp"
 
-#include <uv.h>
 #include <assert.h>
+#include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Mutex {
 public:
   typedef uv_mutex_t Type;
-  Mutex(uv_mutex_t* m) : mutex_(m) {}
+  Mutex(uv_mutex_t* m)
+      : mutex_(m) {}
   void lock() { uv_mutex_lock(mutex_); }
   void unlock() { uv_mutex_unlock(mutex_); }
   uv_mutex_t* get() const { return mutex_; }
+
 private:
   uv_mutex_t* mutex_;
 };
@@ -38,10 +40,12 @@ private:
 class ReadLock {
 public:
   typedef uv_rwlock_t Type;
-  ReadLock(uv_rwlock_t* l) : rwlock_(l) {}
+  ReadLock(uv_rwlock_t* l)
+      : rwlock_(l) {}
   void lock() { uv_rwlock_rdlock(rwlock_); }
   void unlock() { uv_rwlock_rdunlock(rwlock_); }
   uv_rwlock_t* get() const { return rwlock_; }
+
 private:
   uv_rwlock_t* rwlock_;
 };
@@ -49,10 +53,12 @@ private:
 class WriteLock {
 public:
   typedef uv_rwlock_t Type;
-  WriteLock(uv_rwlock_t* l) : rwlock_(l) {}
+  WriteLock(uv_rwlock_t* l)
+      : rwlock_(l) {}
   void lock() { uv_rwlock_wrlock(rwlock_); }
   void unlock() { uv_rwlock_wrunlock(rwlock_); }
   uv_rwlock_t* get() const { return rwlock_; }
+
 private:
   uv_rwlock_t* rwlock_;
 };
@@ -100,6 +106,6 @@ typedef ScopedLock<Mutex> ScopedMutex;
 typedef ScopedLock<ReadLock> ScopedReadLock;
 typedef ScopedLock<WriteLock> ScopedWriteLock;
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

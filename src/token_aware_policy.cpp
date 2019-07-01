@@ -21,13 +21,14 @@
 
 #include <algorithm>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 // The number of replicas is bounded by replication factor per DC. In practice, the number
 // of replicas is fairly small so a linear search should be extremely fast.
 static inline bool contains(const CopyOnWriteHostVec& replicas, const Address& address) {
-  for (HostVec::const_iterator i = replicas->begin(),
-       end = replicas->end(); i != end; ++i) {
+  for (HostVec::const_iterator i = replicas->begin(), end = replicas->end(); i != end; ++i) {
     if ((*i)->address() == address) {
       return true;
     }
@@ -35,9 +36,7 @@ static inline bool contains(const CopyOnWriteHostVec& replicas, const Address& a
   return false;
 }
 
-void TokenAwarePolicy::init(const Host::Ptr& connected_host,
-                            const HostMap& hosts,
-                            Random* random) {
+void TokenAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random) {
   if (random != NULL) {
     if (shuffle_replicas_) {
       // Store random so that it can be used to shuffle replicas.
@@ -51,14 +50,14 @@ void TokenAwarePolicy::init(const Host::Ptr& connected_host,
   ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
 }
 
-QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace,
-                                            RequestHandler* request_handler,
+QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                             const TokenMap* token_map) {
   if (request_handler != NULL) {
-    const RoutableRequest* request = static_cast<const RoutableRequest*>(request_handler->request());
+    const RoutableRequest* request =
+        static_cast<const RoutableRequest*>(request_handler->request());
     switch (request->opcode()) {
       {
-      case CQL_OPCODE_QUERY:
+        case CQL_OPCODE_QUERY:
         case CQL_OPCODE_EXECUTE:
         case CQL_OPCODE_BATCH:
           String routing_key;
@@ -69,12 +68,10 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace,
                 if (random_ != NULL) {
                   random_shuffle(replicas->begin(), replicas->end(), random_);
                 }
-                return new TokenAwareQueryPlan(child_policy_.get(),
-                                               child_policy_->new_query_plan(keyspace,
-                                                                             request_handler,
-                                                                             token_map),
-                                               replicas,
-                                               index_);
+                return new TokenAwareQueryPlan(
+                    child_policy_.get(),
+                    child_policy_->new_query_plan(keyspace, request_handler, token_map), replicas,
+                    index_);
               }
             }
           }
@@ -85,12 +82,10 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace,
         break;
     }
   }
-  return child_policy_->new_query_plan(keyspace,
-                                       request_handler,
-                                       token_map);
+  return child_policy_->new_query_plan(keyspace, request_handler, token_map);
 }
 
-Host::Ptr TokenAwarePolicy::TokenAwareQueryPlan::compute_next()  {
+Host::Ptr TokenAwarePolicy::TokenAwareQueryPlan::compute_next() {
   while (remaining_ > 0) {
     --remaining_;
     const Host::Ptr& host((*replicas_)[index_++ % replicas_->size()]);
@@ -109,5 +104,3 @@ Host::Ptr TokenAwarePolicy::TokenAwareQueryPlan::compute_next()  {
   }
   return Host::Ptr();
 }
-
-} // namespace cass

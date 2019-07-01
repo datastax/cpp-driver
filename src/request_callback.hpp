@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REQUEST_CALLBACK_HPP_INCLUDED__
-#define __CASS_REQUEST_CALLBACK_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_REQUEST_CALLBACK_HPP
+#define DATASTAX_INTERNAL_REQUEST_CALLBACK_HPP
 
 #include "buffer.hpp"
 #include "cassandra.h"
@@ -34,7 +34,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Config;
 class Connection;
@@ -55,22 +55,19 @@ typedef Vector<uv_buf_t> UvBufVec;
  */
 class RequestWrapper {
 public:
-  RequestWrapper(const Request::ConstPtr &request,
+  RequestWrapper(const Request::ConstPtr& request,
                  uint64_t request_timeout_ms = CASS_DEFAULT_REQUEST_TIMEOUT_MS)
-    : request_(request)
-    , consistency_(CASS_DEFAULT_CONSISTENCY)
-    , serial_consistency_(CASS_DEFAULT_SERIAL_CONSISTENCY)
-    , request_timeout_ms_(request_timeout_ms)
-    , timestamp_(CASS_INT64_MIN) { }
+      : request_(request)
+      , consistency_(CASS_DEFAULT_CONSISTENCY)
+      , serial_consistency_(CASS_DEFAULT_SERIAL_CONSISTENCY)
+      , request_timeout_ms_(request_timeout_ms)
+      , timestamp_(CASS_INT64_MIN) {}
 
   void set_prepared_metadata(const PreparedMetadata::Entry::Ptr& entry);
 
-  void init(const ExecutionProfile& profile,
-            TimestampGenerator* timestamp_generator);
+  void init(const ExecutionProfile& profile, TimestampGenerator* timestamp_generator);
 
-  const Request::ConstPtr& request() const {
-    return request_;
-  }
+  const Request::ConstPtr& request() const { return request_; }
 
   CassConsistency consistency() const {
     if (request()->consistency() != CASS_CONSISTENCY_UNKNOWN) {
@@ -121,7 +118,9 @@ private:
   PreparedMetadata::Entry::Ptr prepared_metadata_entry_;
 };
 
-class RequestCallback : public RefCounted<RequestCallback>, public SocketRequest {
+class RequestCallback
+    : public RefCounted<RequestCallback>
+    , public SocketRequest {
 public:
   typedef SharedRefPtr<RequestCallback> Ptr;
   typedef Vector<Ptr> Vec;
@@ -135,15 +134,14 @@ public:
   };
 
   RequestCallback(const RequestWrapper& wrapper)
-    : wrapper_(wrapper)
-    , stream_(-1)
-    , state_(REQUEST_STATE_NEW)
-    , retry_consistency_(CASS_CONSISTENCY_UNKNOWN) { }
+      : wrapper_(wrapper)
+      , stream_(-1)
+      , state_(REQUEST_STATE_NEW)
+      , retry_consistency_(CASS_CONSISTENCY_UNKNOWN) {}
 
-  virtual ~RequestCallback() { }
+  virtual ~RequestCallback() {}
 
-  void notify_write(Connection* connection,
-                    int stream);
+  void notify_write(Connection* connection, int stream);
 
 public:
   // Called to retry a request on a different connection
@@ -172,21 +170,13 @@ public:
     return wrapper_.consistency();
   }
 
-  CassConsistency serial_consistency() {
-    return wrapper_.serial_consistency();
-  }
+  CassConsistency serial_consistency() { return wrapper_.serial_consistency(); }
 
-  uint64_t request_timeout_ms() {
-    return wrapper_.request_timeout_ms();
-  }
+  uint64_t request_timeout_ms() { return wrapper_.request_timeout_ms(); }
 
-  int64_t timestamp() {
-    return wrapper_.timestamp();
-  }
+  int64_t timestamp() { return wrapper_.timestamp(); }
 
-  const RetryPolicy::Ptr& retry_policy() {
-    return wrapper_.retry_policy();
-  }
+  const RetryPolicy::Ptr& retry_policy() { return wrapper_.retry_policy(); }
 
   const PreparedMetadata::Entry::Ptr& prepared_metadata_entry() const {
     return wrapper_.prepared_metadata_entry();
@@ -199,9 +189,7 @@ public:
   State state() const { return state_; }
   void set_state(State next_state);
 
-  ResponseMessage* read_before_write_response() const {
-    return read_before_write_response_.get();
-  }
+  ResponseMessage* read_before_write_response() const { return read_before_write_response_.get(); }
 
   void set_read_before_write_response(ResponseMessage* response) {
     read_before_write_response_.reset(response);
@@ -230,13 +218,13 @@ public:
 
   SimpleRequestCallback(const Request::ConstPtr& request,
                         uint64_t request_timeout_ms = CASS_DEFAULT_REQUEST_TIMEOUT_MS)
-    : RequestCallback(RequestWrapper(request, request_timeout_ms)) { }
+      : RequestCallback(RequestWrapper(request, request_timeout_ms)) {}
 
   SimpleRequestCallback(const RequestWrapper& wrapper)
-    : RequestCallback(wrapper) { }
+      : RequestCallback(wrapper) {}
 
 protected:
-  virtual void on_internal_write(Connection* connection) { }
+  virtual void on_internal_write(Connection* connection) {}
   virtual void on_internal_set(ResponseMessage* response) = 0;
   virtual void on_internal_error(CassError code, const String& message) = 0;
   virtual void on_internal_timeout() = 0;
@@ -268,9 +256,7 @@ public:
 
   class Map : public DenseHashMap<String, Response::Ptr> {
   public:
-    Map() {
-      set_empty_key(String());
-    }
+    Map() { set_empty_key(String()); }
   };
 
   /**
@@ -291,7 +277,8 @@ public:
    * @param chain A request that's chained to this request. Don't use directly
    * instead use the chain() method.
    */
-  ChainedRequestCallback(const String& key, const Request::ConstPtr& request, const Ptr& chain = Ptr());
+  ChainedRequestCallback(const String& key, const Request::ConstPtr& request,
+                         const Ptr& chain = Ptr());
 
   /**
    * Add a chained query to this request callback.
@@ -341,12 +328,12 @@ protected:
    *
    * @param connection The connection the callback was written to.
    */
-  virtual void on_chain_write(Connection* connection) { }
+  virtual void on_chain_write(Connection* connection) {}
 
   /**
    * A callback for when all responses have been received.
    */
-  virtual void on_chain_set() { }
+  virtual void on_chain_set() {}
 
   /**
    * A callback for when an error occurs. A single error causes the whole
@@ -355,13 +342,13 @@ protected:
    * @param code The error code.
    * @param message The error message.
    */
-  virtual void on_chain_error(CassError code, const String& message) { }
+  virtual void on_chain_error(CassError code, const String& message) {}
 
   /**
    * A callback for a request timeout. A single timeout causes the whole
    * chain to fail.
    */
-  virtual void on_chain_timeout() { }
+  virtual void on_chain_timeout() {}
 
 private:
   virtual void on_internal_write(Connection* connection);
@@ -384,6 +371,6 @@ private:
   Map responses_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

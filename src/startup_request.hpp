@@ -14,28 +14,26 @@
   limitations under the License.
 */
 
-#ifndef __CASS_STARTUP_REQUEST_HPP_INCLUDED__
-#define __CASS_STARTUP_REQUEST_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_STARTUP_REQUEST_HPP
+#define DATASTAX_INTERNAL_STARTUP_REQUEST_HPP
 
-#include "request.hpp"
 #include "constants.hpp"
 #include "map.hpp"
+#include "request.hpp"
 #include "scoped_ptr.hpp"
 #include "string.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class StartupRequest : public Request {
 public:
-  StartupRequest(const String& application_name,
-                 const String& application_version,
-                 const String& client_id,
-                 bool no_compact_enabled)
+  StartupRequest(const String& application_name, const String& application_version,
+                 const String& client_id, bool no_compact_enabled)
       : Request(CQL_OPCODE_STARTUP)
       , application_name_(application_name)
       , application_version_(application_version)
       , client_id_(client_id)
-      , no_compact_enabled_(no_compact_enabled) { }
+      , no_compact_enabled_(no_compact_enabled) {}
 
   const String& application_name() const { return application_name_; }
   const String& application_version() const { return application_version_; }
@@ -43,9 +41,7 @@ public:
   bool no_compact_enabled() const { return no_compact_enabled_; }
 
 private:
-  int encode(ProtocolVersion version,
-             RequestCallback* callback,
-             BufferVec* bufs) const;
+  int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
 private:
   typedef Map<String, String> OptionsMap;
@@ -56,6 +52,6 @@ private:
   bool no_compact_enabled_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

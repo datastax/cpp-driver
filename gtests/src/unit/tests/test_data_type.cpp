@@ -22,18 +22,17 @@
 #include <algorithm>
 #include <ctype.h>
 
+using namespace datastax;
+using namespace datastax::internal::core;
+
 class DataTypeWrapper {
 public:
   DataTypeWrapper(CassDataType* data_type)
-    : data_type_(data_type) { }
+      : data_type_(data_type) {}
 
-  ~DataTypeWrapper() {
-    cass_data_type_free(data_type_);
-  }
+  ~DataTypeWrapper() { cass_data_type_free(data_type_); }
 
-  operator CassDataType*() {
-    return data_type_;
-  }
+  operator CassDataType*() { return data_type_; }
 
 private:
   CassDataType* data_type_;
@@ -54,10 +53,10 @@ TEST(DataTypeUnitTest, KeyspaceAndTypeName) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_keyspace(data_type, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "keyspace1");
+    EXPECT_EQ(String(name, name_length), "keyspace1");
 
     ASSERT_EQ(cass_data_type_type_name(data_type, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "type_name1");
+    EXPECT_EQ(String(name, name_length), "type_name1");
   }
 
   // Invalid type
@@ -66,21 +65,20 @@ TEST(DataTypeUnitTest, KeyspaceAndTypeName) {
     DataTypeWrapper data_type(cass_data_type_new(CASS_VALUE_TYPE_LIST));
 
     EXPECT_EQ(cass_data_type_set_keyspace(data_type, "keyspace1"),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 
     EXPECT_EQ(cass_data_type_set_type_name(data_type, "type_name1"),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 
     const char* name;
     size_t name_length;
 
     EXPECT_EQ(cass_data_type_keyspace(data_type, &name, &name_length),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 
     EXPECT_EQ(cass_data_type_type_name(data_type, &name, &name_length),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
   }
-
 }
 
 TEST(DataTypeUnitTest, ClassName) {
@@ -94,7 +92,7 @@ TEST(DataTypeUnitTest, ClassName) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_class_name(data_type, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "class_name1");
+    EXPECT_EQ(String(name, name_length), "class_name1");
   }
 
   // Invalid type
@@ -103,16 +101,15 @@ TEST(DataTypeUnitTest, ClassName) {
     DataTypeWrapper data_type(cass_data_type_new(CASS_VALUE_TYPE_UDT));
 
     EXPECT_EQ(cass_data_type_set_class_name(data_type, "class_name1"),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 
     const char* name;
     size_t name_length;
 
     EXPECT_EQ(cass_data_type_class_name(data_type, &name, &name_length),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
   }
 }
-
 
 TEST(DataTypeUnitTest, FromExisting) {
   // From an existing custom type
@@ -129,7 +126,7 @@ TEST(DataTypeUnitTest, FromExisting) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_class_name(data_type_copy, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "class_name1");
+    EXPECT_EQ(String(name, name_length), "class_name1");
   }
 
   // From an existing tuple
@@ -139,7 +136,8 @@ TEST(DataTypeUnitTest, FromExisting) {
     // Tuples support an arbitrary number of parameterized types
     EXPECT_EQ(cass_data_type_add_sub_value_type(data_type_existing, CASS_VALUE_TYPE_TEXT), CASS_OK);
     EXPECT_EQ(cass_data_type_add_sub_value_type(data_type_existing, CASS_VALUE_TYPE_INT), CASS_OK);
-    EXPECT_EQ(cass_data_type_add_sub_value_type(data_type_existing, CASS_VALUE_TYPE_BIGINT), CASS_OK);
+    EXPECT_EQ(cass_data_type_add_sub_value_type(data_type_existing, CASS_VALUE_TYPE_BIGINT),
+              CASS_OK);
 
     // Copy tuple and verify values
     DataTypeWrapper data_type_copy(cass_data_type_new_from_existing(data_type_existing));
@@ -164,9 +162,15 @@ TEST(DataTypeUnitTest, FromExisting) {
   {
     DataTypeWrapper data_type_existing(cass_data_type_new_udt(3));
 
-    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type_existing, "field1", CASS_VALUE_TYPE_TEXT), CASS_OK);
-    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type_existing, "field2", CASS_VALUE_TYPE_INT), CASS_OK);
-    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type_existing, "field3", CASS_VALUE_TYPE_BIGINT), CASS_OK);
+    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type_existing, "field1",
+                                                        CASS_VALUE_TYPE_TEXT),
+              CASS_OK);
+    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type_existing, "field2",
+                                                        CASS_VALUE_TYPE_INT),
+              CASS_OK);
+    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type_existing, "field3",
+                                                        CASS_VALUE_TYPE_BIGINT),
+              CASS_OK);
 
     EXPECT_EQ(cass_data_type_set_keyspace(data_type_existing, "keyspace1"), CASS_OK);
     EXPECT_EQ(cass_data_type_set_type_name(data_type_existing, "type_name1"), CASS_OK);
@@ -193,13 +197,12 @@ TEST(DataTypeUnitTest, FromExisting) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_keyspace(data_type_copy, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "keyspace1");
+    EXPECT_EQ(String(name, name_length), "keyspace1");
 
     ASSERT_EQ(cass_data_type_type_name(data_type_copy, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "type_name1");
+    EXPECT_EQ(String(name, name_length), "type_name1");
   }
 }
-
 
 TEST(DataTypeUnitTest, CheckValueType) {
   {
@@ -226,16 +229,15 @@ TEST(DataTypeUnitTest, CheckSubValueType) {
 
     // Lists only support a single parameterized type
     EXPECT_EQ(cass_data_type_add_sub_value_type(data_type, CASS_VALUE_TYPE_TEXT),
-                      CASS_ERROR_LIB_BAD_PARAMS);
+              CASS_ERROR_LIB_BAD_PARAMS);
 
     // List don't support named parameterized types
     EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type, "field1", CASS_VALUE_TYPE_INT),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 
     const CassDataType* sub_data_type = cass_data_type_sub_data_type(data_type, 0);
     ASSERT_TRUE(sub_data_type != NULL);
-    EXPECT_EQ(cass_data_type_type(sub_data_type),
-                      CASS_VALUE_TYPE_INT);
+    EXPECT_EQ(cass_data_type_type(sub_data_type), CASS_VALUE_TYPE_INT);
   }
 
   // Set
@@ -245,17 +247,16 @@ TEST(DataTypeUnitTest, CheckSubValueType) {
 
     // Sets only support a single parameterized type
     EXPECT_EQ(cass_data_type_add_sub_value_type(data_type, CASS_VALUE_TYPE_TEXT),
-                      CASS_ERROR_LIB_BAD_PARAMS);
+              CASS_ERROR_LIB_BAD_PARAMS);
 
     // Sets don't support named parameterized types
     EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type, "field1", CASS_VALUE_TYPE_INT),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 
     const CassDataType* sub_data_type = cass_data_type_sub_data_type(data_type, 0);
     ASSERT_TRUE(sub_data_type != NULL);
     EXPECT_EQ(cass_data_type_type(sub_data_type), CASS_VALUE_TYPE_INT);
   }
-
 
   // Map
   {
@@ -265,11 +266,11 @@ TEST(DataTypeUnitTest, CheckSubValueType) {
 
     // Maps only support two parameterized types
     EXPECT_EQ(cass_data_type_add_sub_value_type(data_type, CASS_VALUE_TYPE_BIGINT),
-                      CASS_ERROR_LIB_BAD_PARAMS);
+              CASS_ERROR_LIB_BAD_PARAMS);
 
     // Maps don't support named parameterized types
     EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type, "field1", CASS_VALUE_TYPE_INT),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 
     const CassDataType* sub_data_type;
 
@@ -293,7 +294,7 @@ TEST(DataTypeUnitTest, CheckSubValueType) {
 
     // Tuples don't support named parameterized types
     EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type, "field1", CASS_VALUE_TYPE_INT),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 
     const CassDataType* sub_data_type;
 
@@ -314,20 +315,24 @@ TEST(DataTypeUnitTest, CheckSubValueType) {
 
     // Tuples don't support named fields
     EXPECT_EQ(cass_data_type_sub_type_name(data_type, 0, &name, &name_length),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
   }
 
   // UDT
   {
     DataTypeWrapper data_type(cass_data_type_new(CASS_VALUE_TYPE_UDT));
 
-    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type, "field1", CASS_VALUE_TYPE_TEXT), CASS_OK);
-    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type, "field2", CASS_VALUE_TYPE_INT), CASS_OK);
-    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type, "field3", CASS_VALUE_TYPE_BIGINT), CASS_OK);
+    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type, "field1", CASS_VALUE_TYPE_TEXT),
+              CASS_OK);
+    EXPECT_EQ(cass_data_type_add_sub_value_type_by_name(data_type, "field2", CASS_VALUE_TYPE_INT),
+              CASS_OK);
+    EXPECT_EQ(
+        cass_data_type_add_sub_value_type_by_name(data_type, "field3", CASS_VALUE_TYPE_BIGINT),
+        CASS_OK);
 
     // UDTs don't support adding fields without a name
     EXPECT_EQ(cass_data_type_add_sub_value_type(data_type, CASS_VALUE_TYPE_TEXT),
-                      CASS_ERROR_LIB_INVALID_VALUE_TYPE);
+              CASS_ERROR_LIB_INVALID_VALUE_TYPE);
 
     const CassDataType* sub_data_type;
 
@@ -368,30 +373,30 @@ TEST(DataTypeUnitTest, CheckSubValueType) {
     size_t name_length;
 
     ASSERT_EQ(cass_data_type_sub_type_name(data_type, 0, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "field1");
+    EXPECT_EQ(String(name, name_length), "field1");
 
     ASSERT_EQ(cass_data_type_sub_type_name(data_type, 1, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "field2");
+    EXPECT_EQ(String(name, name_length), "field2");
 
     ASSERT_EQ(cass_data_type_sub_type_name(data_type, 2, &name, &name_length), CASS_OK);
-    EXPECT_EQ(cass::String(name, name_length), "field3");
+    EXPECT_EQ(String(name, name_length), "field3");
   }
 }
 
 TEST(DataTypeUnitTest, CheckValueTypeByClass) {
-#define XX_VALUE_TYPE(name, type, cql, klass)             \
-  EXPECT_TRUE(strlen(klass) == 0 ||                       \
-              cass::ValueTypes::by_class(klass) == name); \
+#define XX_VALUE_TYPE(name, type, cql, klass) \
+  EXPECT_TRUE(strlen(klass) == 0 || ValueTypes::by_class(klass) == name);
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
 #undef XX_VALUE_TYPE
 }
 
-TEST(DataTypeUnitTest, CheckValueTypeByClassCaseInsensitive) {
-#define XX_VALUE_TYPE(name, type, cql, klass) {                              \
-    cass::String upper(klass);                                                \
-    std::transform(upper.begin(), upper.end(), upper.begin(), toupper);      \
-    EXPECT_TRUE(upper.empty() || cass::ValueTypes::by_class(upper) == name); \
+TEST(DataTypeUnitTest, CheckValueTypeByClassCaseInsensitive){
+#define XX_VALUE_TYPE(name, type, cql, klass)                           \
+  {                                                                     \
+    String upper(klass);                                                \
+    std::transform(upper.begin(), upper.end(), upper.begin(), toupper); \
+    EXPECT_TRUE(upper.empty() || ValueTypes::by_class(upper) == name);  \
   }
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
@@ -399,19 +404,19 @@ TEST(DataTypeUnitTest, CheckValueTypeByClassCaseInsensitive) {
 }
 
 TEST(DataTypeUnitTest, CheckValueTypesByCql) {
-#define XX_VALUE_TYPE(name, type, cql, klass)         \
-  EXPECT_TRUE(strlen(cql) == 0 ||                     \
-              cass::ValueTypes::by_cql(cql) == name); \
+#define XX_VALUE_TYPE(name, type, cql, klass) \
+  EXPECT_TRUE(strlen(cql) == 0 || ValueTypes::by_cql(cql) == name);
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
 #undef XX_VALUE_TYPE
 }
 
-TEST(DataTypeUnitTest, CheckValueTypesByCqlCasInsensitive) {
-#define XX_VALUE_TYPE(name, type, cql, klass) {                            \
-    cass::String upper(cql);                                                \
-    std::transform(upper.begin(), upper.end(), upper.begin(), toupper);    \
-    EXPECT_TRUE(upper.empty() || cass::ValueTypes::by_cql(upper) == name); \
+TEST(DataTypeUnitTest, CheckValueTypesByCqlCasInsensitive){
+#define XX_VALUE_TYPE(name, type, cql, klass)                           \
+  {                                                                     \
+    String upper(cql);                                                  \
+    std::transform(upper.begin(), upper.end(), upper.begin(), toupper); \
+    EXPECT_TRUE(upper.empty() || ValueTypes::by_cql(upper) == name);    \
   }
 
   CASS_VALUE_TYPE_MAPPING(XX_VALUE_TYPE)
@@ -419,11 +424,11 @@ TEST(DataTypeUnitTest, CheckValueTypesByCqlCasInsensitive) {
 }
 
 TEST(DataTypeUnitTest, SimpleDataTypeCache) {
-  cass::SimpleDataTypeCache cache;
+  SimpleDataTypeCache cache;
 
-  cass::DataType::ConstPtr by_class = cache.by_class("org.apache.cassandra.db.marshal.AsciiType");
-  cass::DataType::ConstPtr by_cql = cache.by_cql("ascii");
-  cass::DataType::ConstPtr by_value_type = cache.by_value_type(CASS_VALUE_TYPE_ASCII);
+  DataType::ConstPtr by_class = cache.by_class("org.apache.cassandra.db.marshal.AsciiType");
+  DataType::ConstPtr by_cql = cache.by_cql("ascii");
+  DataType::ConstPtr by_value_type = cache.by_value_type(CASS_VALUE_TYPE_ASCII);
 
   EXPECT_EQ(by_class->value_type(), CASS_VALUE_TYPE_ASCII);
   EXPECT_EQ(by_cql->value_type(), CASS_VALUE_TYPE_ASCII);

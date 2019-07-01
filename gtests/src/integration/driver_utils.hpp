@@ -23,9 +23,7 @@
 #include <string>
 #include <vector>
 
-namespace test {
-namespace driver {
-namespace internals {
+namespace test { namespace driver { namespace internals {
 
 class Utils {
 public:
@@ -101,8 +99,6 @@ public:
   static void set_record_attempted_hosts(CassStatement* statement, bool enable);
 };
 
-} // namespace internals
-} // namespace driver
-} // namespace test
+}}} // namespace test::driver::internals
 
 #endif // __TEST_DRIVER_UTILS_HPP__

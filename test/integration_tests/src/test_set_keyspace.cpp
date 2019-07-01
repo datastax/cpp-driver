@@ -18,10 +18,10 @@
 #include <map>
 #include <string>
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 
 #include "cassandra.h"
 #include "constants.hpp"
@@ -36,15 +36,13 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
    * keyspace is be use for the queries instead of the session keyspace
    */
   SetKeyspaceTests()
-    : SingleSessionTest(1, 0)
-    , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen)))
-    , keyspace2(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen)))  {
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % keyspace
-                                           % "1"));
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % keyspace2
-                                           % "1"));
+      : SingleSessionTest(1, 0)
+      , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen)))
+      , keyspace2(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen))) {
+    test_utils::execute_query(
+        session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % keyspace % "1"));
+    test_utils::execute_query(
+        session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % keyspace2 % "1"));
     create_table();
     cass_cluster_set_use_beta_protocol_version(cluster, cass_true);
   }
@@ -53,18 +51,19 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
    * Create table schema.
    */
   void create_table() {
-    test_utils::execute_query(session, str(boost::format("CREATE TABLE %s.test (k text PRIMARY KEY, v text)")
-                                           % keyspace2));
-    test_utils::execute_query(session, str(boost::format("INSERT INTO %s.test (k, v) VALUES ('key1', 'value1')")
-                                           % keyspace2));
+    test_utils::execute_query(
+        session,
+        str(boost::format("CREATE TABLE %s.test (k text PRIMARY KEY, v text)") % keyspace2));
+    test_utils::execute_query(
+        session,
+        str(boost::format("INSERT INTO %s.test (k, v) VALUES ('key1', 'value1')") % keyspace2));
   }
 
   /**
    * Drop table schema.
    */
   void drop_table() {
-    test_utils::execute_query(session, str(boost::format("DROP TABLE %s.test")
-                                           % keyspace2));
+    test_utils::execute_query(session, str(boost::format("DROP TABLE %s.test") % keyspace2));
   }
 
   /**
@@ -80,11 +79,13 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
       test_utils::execute_query(session.get(), str(boost::format("USE %s") % session_keyspace));
     }
 
-    test_utils::CassStatementPtr statement(cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
+    test_utils::CassStatementPtr statement(
+        cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
 
     cass_statement_set_keyspace(statement.get(), keyspace2.c_str());
 
-    validate_query_result(test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
+    validate_query_result(
+        test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
   }
 
   /**
@@ -100,9 +101,11 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
       test_utils::execute_query(session.get(), str(boost::format("USE %s") % session_keyspace));
     }
 
-    test_utils::CassStatementPtr statement(prepare(session, "SELECT v FROM test WHERE k = 'key1'", keyspace2));
+    test_utils::CassStatementPtr statement(
+        prepare(session, "SELECT v FROM test WHERE k = 'key1'", keyspace2));
 
-    validate_query_result(test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
+    validate_query_result(
+        test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
   }
 
   /**
@@ -115,8 +118,10 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
   void batch_query_with_keyspace(const std::string& session_keyspace) {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-    test_utils::CassStatementPtr statement1(cass_statement_new("INSERT INTO test (k, v) VALUES ('key2', 'value2')", 0));
-    test_utils::CassStatementPtr statement2(cass_statement_new("INSERT INTO test (k, v) VALUES ('key3', 'value3')", 0));
+    test_utils::CassStatementPtr statement1(
+        cass_statement_new("INSERT INTO test (k, v) VALUES ('key2', 'value2')", 0));
+    test_utils::CassStatementPtr statement2(
+        cass_statement_new("INSERT INTO test (k, v) VALUES ('key3', 'value3')", 0));
 
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
 
@@ -139,8 +144,7 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
    * @param keyspace  The keyspace used to prepare the query (optional)
    * @return A bound statement for the prepared query
    */
-  test_utils::CassStatementPtr prepare(test_utils::CassSessionPtr session,
-                                       const std::string& query,
+  test_utils::CassStatementPtr prepare(test_utils::CassSessionPtr session, const std::string& query,
                                        const std::string& keyspace = std::string()) {
     test_utils::CassStatementPtr existing_statement(cass_statement_new(query.c_str(), 0));
 
@@ -148,7 +152,8 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
       cass_statement_set_keyspace(existing_statement.get(), keyspace.c_str());
     }
 
-    test_utils::CassFuturePtr future(cass_session_prepare_from_existing(session.get(), existing_statement.get()));
+    test_utils::CassFuturePtr future(
+        cass_session_prepare_from_existing(session.get(), existing_statement.get()));
     BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
 
     test_utils::CassPreparedPtr prepared(cass_future_get_prepared(future.get()));
@@ -179,7 +184,8 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
 
     const char* value;
     size_t value_length;
-    BOOST_REQUIRE_EQUAL(cass_value_get_string(cass_row_get_column(row, 0), &value, &value_length), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_value_get_string(cass_row_get_column(row, 0), &value, &value_length),
+                        CASS_OK);
     BOOST_CHECK_EQUAL(std::string(value, value_length), "value1");
   }
 
@@ -188,7 +194,8 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
    */
   void validate_batch_results() {
     test_utils::CassResultPtr result;
-    test_utils::execute_query(session, str(boost::format("SELECT k, v FROM %s.test") % keyspace2), &result);
+    test_utils::execute_query(session, str(boost::format("SELECT k, v FROM %s.test") % keyspace2),
+                              &result);
     BOOST_REQUIRE(result);
 
     BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 3u);
@@ -207,11 +214,13 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
 
       const char* key;
       size_t key_length;
-      BOOST_REQUIRE_EQUAL(cass_value_get_string(cass_row_get_column(row, 0), &key, &key_length), CASS_OK);
+      BOOST_REQUIRE_EQUAL(cass_value_get_string(cass_row_get_column(row, 0), &key, &key_length),
+                          CASS_OK);
 
       const char* value;
       size_t value_length;
-      BOOST_REQUIRE_EQUAL(cass_value_get_string(cass_row_get_column(row, 1), &value, &value_length), CASS_OK);
+      BOOST_REQUIRE_EQUAL(cass_value_get_string(cass_row_get_column(row, 1), &value, &value_length),
+                          CASS_OK);
 
       actual[std::string(key, key_length)] = std::string(value, value_length);
     }
@@ -228,7 +237,6 @@ struct SetKeyspaceTests : public test_utils::SingleSessionTest {
    * Statement keyspace
    */
   std::string keyspace2;
-
 };
 
 BOOST_FIXTURE_TEST_SUITE(set_keyspace, SetKeyspaceTests)
@@ -246,7 +254,8 @@ BOOST_AUTO_TEST_CASE(query_not_supported_by_older_protocol) {
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-  test_utils::CassStatementPtr statement(cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
+  test_utils::CassStatementPtr statement(
+      cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
 
   // Attempt to set the keyspace with an older protocol
   cass_statement_set_keyspace(statement.get(), keyspace2.c_str());
@@ -308,12 +317,14 @@ BOOST_AUTO_TEST_CASE(prepared_not_supported_by_older_protocol) {
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-  test_utils::CassStatementPtr statement(cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
+  test_utils::CassStatementPtr statement(
+      cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
 
   // Attempt to set the keyspace with an older protocol
   cass_statement_set_keyspace(statement.get(), keyspace2.c_str());
 
-  test_utils::CassFuturePtr future(cass_session_prepare_from_existing(session.get(), statement.get()));
+  test_utils::CassFuturePtr future(
+      cass_session_prepare_from_existing(session.get(), statement.get()));
   BOOST_CHECK_EQUAL(cass_future_error_code(future.get()), CASS_ERROR_SERVER_INVALID_QUERY);
 }
 
@@ -330,19 +341,22 @@ BOOST_AUTO_TEST_CASE(prepared_should_reprepare_with_the_same_keyspace) {
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-  test_utils::CassStatementPtr statement(cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
+  test_utils::CassStatementPtr statement(
+      cass_statement_new("SELECT v FROM test WHERE k = 'key1'", 0));
 
   // Attempt to set the keyspace with an older protocol
   cass_statement_set_keyspace(statement.get(), keyspace2.c_str());
 
-  test_utils::CassFuturePtr future(cass_session_prepare_from_existing(session.get(), statement.get()));
+  test_utils::CassFuturePtr future(
+      cass_session_prepare_from_existing(session.get(), statement.get()));
   BOOST_CHECK_EQUAL(cass_future_error_code(future.get()), CASS_OK);
 
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(future.get()));
   BOOST_CHECK(prepared);
 
   // Force the statement to be reprepared
-  test_utils::execute_query(session.get(), "TRUNCATE system.prepared_statements"); // Required for 3.10+ (CASSANDRA-8831)
+  test_utils::execute_query(
+      session.get(), "TRUNCATE system.prepared_statements"); // Required for 3.10+ (CASSANDRA-8831)
   drop_table();
   create_table();
 
@@ -350,7 +364,8 @@ BOOST_AUTO_TEST_CASE(prepared_should_reprepare_with_the_same_keyspace) {
   test_utils::CassStatementPtr bound_statement(cass_prepared_bind(prepared.get()));
   BOOST_CHECK(bound_statement);
 
-  validate_query_result(test_utils::CassFuturePtr(cass_session_execute(session.get(), bound_statement.get())));
+  validate_query_result(
+      test_utils::CassFuturePtr(cass_session_execute(session.get(), bound_statement.get())));
 }
 
 /**
@@ -405,8 +420,10 @@ BOOST_AUTO_TEST_CASE(batch_with_keyspace_from_simple_statement) {
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-  test_utils::CassStatementPtr statement1(cass_statement_new("INSERT INTO test (k, v) VALUES ('key2', 'value2')", 0));
-  test_utils::CassStatementPtr statement2(cass_statement_new("INSERT INTO test (k, v) VALUES ('key3', 'value3')", 0));
+  test_utils::CassStatementPtr statement1(
+      cass_statement_new("INSERT INTO test (k, v) VALUES ('key2', 'value2')", 0));
+  test_utils::CassStatementPtr statement2(
+      cass_statement_new("INSERT INTO test (k, v) VALUES ('key3', 'value3')", 0));
 
   // The batch should get the keyspace from the second statement
   cass_statement_set_keyspace(statement2.get(), keyspace2.c_str());
@@ -435,10 +452,12 @@ BOOST_AUTO_TEST_CASE(batch_with_keyspace_from_prepared) {
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-  test_utils::CassStatementPtr statement1(cass_statement_new("INSERT INTO test (k, v) VALUES ('key2', 'value2')", 0));
+  test_utils::CassStatementPtr statement1(
+      cass_statement_new("INSERT INTO test (k, v) VALUES ('key2', 'value2')", 0));
 
   // The batch should get the keyspace from the second statement
-  test_utils::CassStatementPtr statement2(prepare(session, "INSERT INTO test (k, v) VALUES ('key3', 'value3')", keyspace2));
+  test_utils::CassStatementPtr statement2(
+      prepare(session, "INSERT INTO test (k, v) VALUES ('key3', 'value3')", keyspace2));
 
   test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
 
@@ -464,8 +483,10 @@ BOOST_AUTO_TEST_CASE(batch_not_supported_by_older_protocol) {
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-  test_utils::CassStatementPtr statement1(cass_statement_new("INSERT INTO test (k, v) VALUES ('key2', 'value2')", 0));
-  test_utils::CassStatementPtr statement2(cass_statement_new("INSERT INTO test (k, v) VALUES ('key3', 'value3')", 0));
+  test_utils::CassStatementPtr statement1(
+      cass_statement_new("INSERT INTO test (k, v) VALUES ('key2', 'value2')", 0));
+  test_utils::CassStatementPtr statement2(
+      cass_statement_new("INSERT INTO test (k, v) VALUES ('key3', 'value3')", 0));
 
   test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
 

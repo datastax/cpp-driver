@@ -26,9 +26,9 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cassandra.h"
 
@@ -106,7 +106,8 @@ CassError prepare_query(CassSession* session, const char* query, const CassPrepa
   return rc;
 }
 
-CassError insert_into_basic(CassSession* session, const CassPrepared* prepared, const char* key, const Basic* basic) {
+CassError insert_into_basic(CassSession* session, const CassPrepared* prepared, const char* key,
+                            const Basic* basic) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
@@ -135,7 +136,8 @@ CassError insert_into_basic(CassSession* session, const CassPrepared* prepared, 
   return rc;
 }
 
-CassError select_from_basic(CassSession* session, const CassPrepared * prepared, const char* key, Basic* basic) {
+CassError select_from_basic(CassSession* session, const CassPrepared* prepared, const char* key,
+                            Basic* basic) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
@@ -183,10 +185,9 @@ int main(int argc, char* argv[]) {
   const CassPrepared* select_prepared = NULL;
   char* hosts = "127.0.0.1";
 
-  const char* insert_query
-    = "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
-  const char* select_query
-    = "SELECT * FROM examples.basic WHERE key = ?";
+  const char* insert_query =
+      "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
+  const char* select_query = "SELECT * FROM examples.basic WHERE key = ?";
 
   if (argc > 1) {
     hosts = argv[1];
@@ -199,25 +200,21 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { \
+  execute_query(session, "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' };");
 
-
-  execute_query(session,
-                "CREATE TABLE examples.basic (key text, \
+  execute_query(session, "CREATE TABLE examples.basic (key text, \
                                               bln boolean, \
                                               flt float, dbl double,\
                                               i32 int, i64 bigint, \
                                               PRIMARY KEY (key));");
-
 
   if (prepare_query(session, insert_query, &insert_prepared) == CASS_OK) {
     insert_into_basic(session, insert_prepared, "prepared_test", &input);
     cass_prepared_free(insert_prepared);
   }
 
-  if (prepare_query(session, select_query,  &select_prepared) == CASS_OK) {
+  if (prepare_query(session, select_query, &select_prepared) == CASS_OK) {
     select_from_basic(session, select_prepared, "prepared_test", &output);
 
     assert(input.bln == output.bln);

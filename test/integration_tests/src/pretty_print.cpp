@@ -15,11 +15,7 @@
 */
 #include "pretty_print.hpp"
 
-namespace boost {
-
-namespace test_tools {
-
-namespace tt_detail {
+namespace boost { namespace test_tools { namespace tt_detail {
 
 void print_log_value<CassError>::operator()(std::ostream& output_stream,
                                             const CassError& error_code) {
@@ -294,8 +290,4 @@ void print_log_value<CassValueType>::operator()(std::ostream& output_stream,
   }
 }
 
-} // namespace tt_detail
-
-} // namespace test_tools
-
-} // namespace boost
+}}} // namespace boost::test_tools::tt_detail

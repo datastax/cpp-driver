@@ -19,19 +19,19 @@
   http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
 */
 
-#ifndef __CASS_MPMC_QUEUE_INCLUDED__
-#define __CASS_MPMC_QUEUE_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MPMC_QUEUE
+#define DATASTAX_INTERNAL_MPMC_QUEUE
 
 #include "allocated.hpp"
 #include "atomic.hpp"
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "macros.hpp"
 #include "scoped_ptr.hpp"
 #include "utils.hpp"
 
 #include <assert.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 template <typename T>
 class MPMCQueue : public Allocated {
@@ -160,6 +160,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(MPMCQueue);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

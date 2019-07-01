@@ -35,8 +35,7 @@ typedef struct Credentials_ {
   const char* username;
 } Credentials;
 
-void on_auth_initial(CassAuthenticator* auth,
-                       void* data) {
+void on_auth_initial(CassAuthenticator* auth, void* data) {
   /*
    * This callback is used to initiate a request to begin an authentication
    * exchange. Required resources can be acquired and initialized here.
@@ -52,7 +51,7 @@ void on_auth_initial(CassAuthenticator* auth,
    * authentication callbacks were set and is available to all
    * authentication exchanges.
    */
-  const Credentials* credentials = (const Credentials *)data;
+  const Credentials* credentials = (const Credentials*)data;
 
   size_t username_size = strlen(credentials->username);
   size_t password_size = strlen(credentials->password);
@@ -68,20 +67,14 @@ void on_auth_initial(CassAuthenticator* auth,
   memcpy(response + username_size + 2, credentials->password, password_size);
 }
 
-void on_auth_challenge(CassAuthenticator* auth,
-                       void* data,
-                       const char* token,
-                       size_t token_size) {
+void on_auth_challenge(CassAuthenticator* auth, void* data, const char* token, size_t token_size) {
   /*
    * Not used for plain text authentication, but this is to be used
    * for handling an authentication challenge initiated by the server.
    */
 }
 
-void on_auth_success(CassAuthenticator* auth,
-                     void* data,
-                     const char* token,
-                     size_t token_size ) {
+void on_auth_success(CassAuthenticator* auth, void* data, const char* token, size_t token_size) {
   /*
    * Not used for plain text authentication, but this is to be used
    * for handling the success phase of an exchange.
@@ -104,17 +97,10 @@ int main(int argc, char* argv[]) {
   char* hosts = "127.0.0.1,127.0.0.2,127.0.0.3";
 
   /* Setup authentication callbacks and credentials */
-  CassAuthenticatorCallbacks auth_callbacks = {
-    on_auth_initial,
-    on_auth_challenge,
-    on_auth_success,
-    on_auth_cleanup
-  };
+  CassAuthenticatorCallbacks auth_callbacks = { on_auth_initial, on_auth_challenge, on_auth_success,
+                                                on_auth_cleanup };
 
-  Credentials credentials = {
-    "cassandra",
-    "cassandra"
-  };
+  Credentials credentials = { "cassandra", "cassandra" };
 
   /* Add contact points */
   if (argc > 1) {
@@ -123,10 +109,7 @@ int main(int argc, char* argv[]) {
   cass_cluster_set_contact_points(cluster, hosts);
 
   /* Set custom authentication callbacks and credentials */
-  cass_cluster_set_authenticator_callbacks(cluster,
-                                           &auth_callbacks,
-                                           NULL,
-                                           &credentials);
+  cass_cluster_set_authenticator_callbacks(cluster, &auth_callbacks, NULL, &credentials);
 
   /* Provide the cluster object as configuration to connect the session */
   connect_future = cass_session_connect(session, cluster);
@@ -138,8 +121,7 @@ int main(int argc, char* argv[]) {
     const char* message;
     size_t message_length;
     cass_future_error_message(connect_future, &message, &message_length);
-    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length,
-                                                        message);
+    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length, message);
   }
 
   cass_future_free(connect_future);

@@ -17,23 +17,26 @@
 #include <gtest/gtest.h>
 
 #include "cassandra.h"
-#include "string.hpp"
 #include "ssl.hpp"
+#include "string.hpp"
+
+using datastax::String;
+using datastax::internal::core::SslContextFactory;
 
 #if defined(_WIN32) && defined(_DEBUG)
-# ifdef USE_VISUAL_LEAK_DETECTOR
-#   include <vld.h>
-# else
+#ifdef USE_VISUAL_LEAK_DETECTOR
+#include <vld.h>
+#else
 // Enable memory leak detection
-# define _CRTDBG_MAP_ALLOC
-# include <stdlib.h>
-# include <crtdbg.h>
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#include <stdlib.h>
 
 // Enable memory leak detection for new operator
-# ifndef DBG_NEW
-#   define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-#   define new DBG_NEW
-# endif
+#ifndef DBG_NEW
+#define DBG_NEW new (_NORMAL_BLOCK, __FILE__, __LINE__)
+#define new DBG_NEW
+#endif
 
 /**
  * Output the memory leak results to the console
@@ -47,15 +50,14 @@ int __cdecl output_memory_leak_results(int report_type, char* message, int* erro
   std::cerr << message;
   return 1;
 }
-# endif
+#endif
 
 /**
  * Memory leak listener for detecting memory leaks on Windows more efficiently.
  */
 class MemoryLeakListener : public testing::EmptyTestEventListener {
 public:
-
-# ifndef USE_VISUAL_LEAK_DETECTOR
+#ifndef USE_VISUAL_LEAK_DETECTOR
   void OnTestProgramStart(const testing::UnitTest& unit_test) {
     // Install the memory leak reporting
     _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, &output_memory_leak_results);
@@ -65,32 +67,32 @@ public:
     // Uninstall/Remove the memory leak reporting
     _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, &output_memory_leak_results);
   }
-# endif
+#endif
 
   void OnTestStart(const testing::TestInfo& test_information) {
-# ifdef USE_VISUAL_LEAK_DETECTOR
+#ifdef USE_VISUAL_LEAK_DETECTOR
     VLDMarkAllLeaksAsReported();
     VLDEnable();
-# else
+#else
     // Get the starting memory state
     _CrtMemCheckpoint(&memory_start_state_);
-# endif
+#endif
   }
 
   void OnTestEnd(const testing::TestInfo& test_information) {
     // Check for memory leaks if the test was successful
-    if(test_information.result()->Passed()) {
+    if (test_information.result()->Passed()) {
       check_leaks(test_information);
     }
-}
+  }
 
 private:
-# ifndef USE_VISUAL_LEAK_DETECTOR
+#ifndef USE_VISUAL_LEAK_DETECTOR
   /**
    * Starting memory state (before start of test)
    */
   _CrtMemState memory_start_state_;
-# endif
+#endif
 
   /**
    * Check for memory leaks based on the starting memory state
@@ -98,13 +100,13 @@ private:
    * @param test_information Information about the test
    */
   void check_leaks(const testing::TestInfo& test_information) {
-# ifdef USE_VISUAL_LEAK_DETECTOR
+#ifdef USE_VISUAL_LEAK_DETECTOR
     // Determine if a difference exists (e.g. leak)
     VLDDisable();
     if (VLDGetLeaksCount() > 0) {
       VLDReportLeaks();
       VLDMarkAllLeaksAsReported();
-# else
+#else
     // Get the ending memory state for the test
     _CrtMemState memory_end_state;
     _CrtMemCheckpoint(&memory_end_state);
@@ -113,10 +115,9 @@ private:
     // Determine if a difference exists (e.g. leak)
     if (_CrtMemDifference(&memory_state_difference, &memory_start_state_, &memory_end_state)) {
       _CrtMemDumpStatistics(&memory_state_difference);
-# endif
-      FAIL() << "Memory leaks detected in "
-             << test_information.test_case_name()
-             << "." << test_information.name();
+#endif
+      FAIL() << "Memory leaks detected in " << test_information.test_case_name() << "."
+             << test_information.name();
     }
   }
 };
@@ -128,11 +129,9 @@ private:
 class BootstrapListener : public testing::EmptyTestEventListener {
   void OnTestProgramStart(const testing::UnitTest& unit_test) {
     std::cout << "Starting DataStax C/C++ Driver Unit Test" << std::endl;
-    std::cout << "  Cassandra driver v"
-              << CASS_VERSION_MAJOR << "."
-              << CASS_VERSION_MINOR << "."
+    std::cout << "  Cassandra driver v" << CASS_VERSION_MAJOR << "." << CASS_VERSION_MINOR << "."
               << CASS_VERSION_PATCH;
-    if (!cass::String(CASS_VERSION_SUFFIX).empty()) {
+    if (!String(CASS_VERSION_SUFFIX).empty()) {
       std::cout << "-" << CASS_VERSION_SUFFIX;
     }
     std::cout << std::endl;
@@ -143,13 +142,9 @@ class BootstrapListener : public testing::EmptyTestEventListener {
     std::cout << "Finishing DataStax C/C++ Driver Unit Test" << std::endl;
   }
 
-  void OnTestStart(const testing::TestInfo& test_information) {
-    cass::SslContextFactory::init();
-  }
+  void OnTestStart(const testing::TestInfo& test_information) { SslContextFactory::init(); }
 
-  void OnTestEnd(const testing::TestInfo& test_information) {
-    cass::SslContextFactory::cleanup();
-  }
+  void OnTestEnd(const testing::TestInfo& test_information) { SslContextFactory::cleanup(); }
 };
 
 int main(int argc, char* argv[]) {
@@ -162,10 +157,10 @@ int main(int argc, char* argv[]) {
 #if defined(_WIN32) && defined(_DEBUG)
   // Add the memory leak checking to the listener callbacks
   listeners.Append(new MemoryLeakListener());
-# ifdef USE_VISUAL_LEAK_DETECTOR
+#ifdef USE_VISUAL_LEAK_DETECTOR
   // Google test statically initializes heap objects; mark all leaks as reported
   VLDMarkAllLeaksAsReported();
-# endif
+#endif
 #endif
 
   listeners.Append(new BootstrapListener());

@@ -5,37 +5,35 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_MAP_HPP_INCLUDED__
-#define __DSE_MAP_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MAP_HPP
+#define DATASTAX_INTERNAL_MAP_HPP
 
 #include "allocated.hpp"
 #include "allocator.hpp"
 
 #include <map>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class K, class V, class Compare = std::less<K> >
-class Map :
-    public Allocated,
-    public std::map<K, V, Compare, cass::Allocator<std::pair<const K, V> > > {
+class Map
+    : public Allocated
+    , public std::map<K, V, Compare, internal::Allocator<std::pair<const K, V> > > {
 public:
-  typedef cass::Allocator<std::pair<const K, V> > Allocator;
+  typedef internal::Allocator<std::pair<const K, V> > Allocator;
 
-  explicit Map(const Compare& compare = Compare(),
-               const Allocator& alloc = Allocator())
-    : std::map<K, V, Compare, Allocator>(compare, alloc) { }
+  explicit Map(const Compare& compare = Compare(), const Allocator& alloc = Allocator())
+      : std::map<K, V, Compare, Allocator>(compare, alloc) {}
 
   Map(const Map& other)
-    : std::map<K, V, Compare, Allocator>(other) { }
+      : std::map<K, V, Compare, Allocator>(other) {}
 
-  template<class InputIt>
-  Map(InputIt first, InputIt last,
-      const Compare& compare = Compare(),
+  template <class InputIt>
+  Map(InputIt first, InputIt last, const Compare& compare = Compare(),
       const Allocator& alloc = Allocator())
-    : std::map<K, V, Compare, Allocator>(first, last, compare, alloc) { }
+      : std::map<K, V, Compare, Allocator>(first, last, compare, alloc) {}
 };
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

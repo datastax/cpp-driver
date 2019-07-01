@@ -18,7 +18,7 @@
 
 #include "serialization.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 bool UserTypeFieldIterator::next() {
   if (next_ == end_) {
@@ -27,5 +27,3 @@ bool UserTypeFieldIterator::next() {
   current_ = next_++;
   return decoder_.decode_value(current_->type, value_);
 }
-
-} // namespace cass

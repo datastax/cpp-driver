@@ -14,13 +14,13 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ENCODING_HPP_INCLUDED__
-#define __CASS_ENCODING_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ENCODING_HPP
+#define DATASTAX_INTERNAL_ENCODING_HPP
 
 #include "buffer.hpp"
 #include "types.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 inline Buffer encode_with_length(CassNull) {
   Buffer buf(sizeof(int32_t));
@@ -222,7 +222,6 @@ Buffer encode(CassDuration value);
 
 Buffer encode_with_length(CassDuration value);
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif
-

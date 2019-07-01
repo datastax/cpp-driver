@@ -14,12 +14,12 @@
   limitations under the License.
 */
 
-#ifndef __CASS_MICRO_TIMER_HPP_INCLUDED__
-#define __CASS_MICRO_TIMER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MICRO_TIMER_HPP
+#define DATASTAX_INTERNAL_MICRO_TIMER_HPP
 
 #include "allocated.hpp"
 #include "callback.hpp"
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "macros.hpp"
 
 #ifndef HAVE_TIMERFD
@@ -32,7 +32,7 @@
 // Only affects busy wait timer version
 #define CASS_PERCENT_OF_MILLSECOND_THRESHOLD 95
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A timer that supports microsecond precision. It is not intended for general
@@ -48,7 +48,7 @@ namespace cass {
  */
 class MicroTimer {
 public:
-  typedef cass::Callback<void, MicroTimer*> Callback;
+  typedef internal::Callback<void, MicroTimer*> Callback;
 
   MicroTimer();
   ~MicroTimer() { stop(); }
@@ -64,9 +64,7 @@ public:
    * @param callback The callback that handles the timeout.
    * @return 0 for success (or no change), otherwise an error occurred.
    */
-  int start(uv_loop_t* loop,
-            uint64_t timeout_us,
-            const Callback& callback);
+  int start(uv_loop_t* loop, uint64_t timeout_us, const Callback& callback);
 
   /**
    * Stop the timer and cleanup its handles.
@@ -93,11 +91,7 @@ private:
 
 private:
 #ifdef HAVE_TIMERFD
-  enum State {
-    CLOSED,
-    STOPPED,
-    STARTED
-  };
+  enum State { CLOSED, STOPPED, STARTED };
 
   AllocatedT<uv_poll_t>* handle_;
   int fd_;
@@ -113,6 +107,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(MicroTimer);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

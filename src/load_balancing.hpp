@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_LOAD_BALANCING_HPP_INCLUDED__
-#define __CASS_LOAD_BALANCING_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_LOAD_BALANCING_HPP
+#define DATASTAX_INTERNAL_LOAD_BALANCING_HPP
 
 #include "allocated.hpp"
 #include "cassandra.h"
@@ -48,9 +48,12 @@ typedef enum CassHostDistance_ {
 
 } // extern "C"
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Random;
+
+namespace core {
+
 class RequestHandler;
 class TokenMap;
 
@@ -73,14 +76,13 @@ public:
   }
 };
 
-class LoadBalancingPolicy
-    : public RefCounted<LoadBalancingPolicy> {
+class LoadBalancingPolicy : public RefCounted<LoadBalancingPolicy> {
 public:
   typedef SharedRefPtr<LoadBalancingPolicy> Ptr;
   typedef Vector<Ptr> Vec;
 
   LoadBalancingPolicy()
-    : RefCounted<LoadBalancingPolicy>() {}
+      : RefCounted<LoadBalancingPolicy>() {}
 
   virtual ~LoadBalancingPolicy() {}
 
@@ -97,17 +99,15 @@ public:
   virtual void on_host_up(const Host::Ptr& host) = 0;
   virtual void on_host_down(const Address& address) = 0;
 
-  virtual QueryPlan* new_query_plan(const String& keyspace,
-                                    RequestHandler* request_handler,
+  virtual QueryPlan* new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                     const TokenMap* token_map) = 0;
 
   virtual LoadBalancingPolicy* new_instance() = 0;
 };
 
-inline bool is_host_ignored(const LoadBalancingPolicy::Vec& policies,
-                            const Host::Ptr& host) {
-  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(),
-       end = policies.end(); it != end; ++it) {
+inline bool is_host_ignored(const LoadBalancingPolicy::Vec& policies, const Host::Ptr& host) {
+  for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(), end = policies.end();
+       it != end; ++it) {
     if ((*it)->distance(host) != CASS_HOST_DISTANCE_IGNORE) {
       return false;
     }
@@ -118,7 +118,7 @@ inline bool is_host_ignored(const LoadBalancingPolicy::Vec& policies,
 class ChainedLoadBalancingPolicy : public LoadBalancingPolicy {
 public:
   ChainedLoadBalancingPolicy(LoadBalancingPolicy* child_policy)
-    : child_policy_(child_policy) {}
+      : child_policy_(child_policy) {}
 
   virtual ~ChainedLoadBalancingPolicy() {}
 
@@ -126,9 +126,7 @@ public:
     return child_policy_->init(connected_host, hosts, random);
   }
 
-  virtual const LoadBalancingPolicy::Ptr& child_policy() const {
-    return child_policy_;
-  }
+  virtual const LoadBalancingPolicy::Ptr& child_policy() const { return child_policy_; }
 
   virtual CassHostDistance distance(const Host::Ptr& host) const {
     return child_policy_->distance(host);
@@ -147,7 +145,7 @@ protected:
   LoadBalancingPolicy::Ptr child_policy_;
 };
 
-} // namespace cass
+} // namespace core
+}} // namespace datastax::internal
 
 #endif
-

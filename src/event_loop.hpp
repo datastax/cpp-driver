@@ -14,17 +14,17 @@
   limitations under the License.
 */
 
-#ifndef __CASS_THREAD_HPP_INCLUDED__
-#define __CASS_THREAD_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_THREAD_HPP
+#define DATASTAX_INTERNAL_THREAD_HPP
 
 #include "allocated.hpp"
 #include "async.hpp"
 #include "atomic.hpp"
-#include "cassconfig.hpp"
 #include "deque.hpp"
+#include "driver_config.hpp"
 #include "logger.hpp"
-#include "macros.hpp"
 #include "loop_watcher.hpp"
+#include "macros.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "utils.hpp"
@@ -32,7 +32,7 @@
 #include <assert.h>
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class EventLoop;
 
@@ -41,7 +41,7 @@ class EventLoop;
  */
 class Task : public Allocated {
 public:
-  virtual ~Task() { }
+  virtual ~Task() {}
   virtual void run(EventLoop* event_loop) = 0;
 };
 
@@ -101,7 +101,6 @@ public:
    */
   uint64_t io_time_elapsed() const { return io_time_elapsed_; }
 
-
   /**
    * Determines if we're running on this event loop.
    *
@@ -125,7 +124,7 @@ protected:
   /**
    * A callback that's run after the event loop exits.
    */
-  virtual void on_after_run() { }
+  virtual void on_after_run() {}
 
 private:
   class TaskQueue {
@@ -153,7 +152,7 @@ private:
   bool is_loop_initialized_;
 
 #if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
-  static void on_prepare(uv_prepare_t *prepare);
+  static void on_prepare(uv_prepare_t* prepare);
 
   uv_prepare_t prepare_;
 #endif
@@ -177,7 +176,7 @@ private:
  */
 class EventLoopGroup : public Allocated {
 public:
-  virtual ~EventLoopGroup() { }
+  virtual ~EventLoopGroup() {}
 
   /**
    * Queue a task on any available event loop thread.
@@ -210,9 +209,9 @@ public:
 class RoundRobinEventLoopGroup : public EventLoopGroup {
 public:
   RoundRobinEventLoopGroup(size_t num_threads)
-    : current_(0)
-    , threads_(new EventLoop[num_threads])
-    , num_threads_(num_threads) { }
+      : current_(0)
+      , threads_(new EventLoop[num_threads])
+      , num_threads_(num_threads) {}
 
   int init(const String& thread_name = "");
   int run();
@@ -229,6 +228,6 @@ private:
   size_t num_threads_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

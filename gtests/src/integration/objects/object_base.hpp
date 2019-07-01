@@ -20,13 +20,12 @@
 #include "shared_ptr.hpp"
 #include "tlog.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Template deleter class for driver objects that utilize a freeing function
  */
-template<class T, void (*free_function)(T*)>
+template <class T, void (*free_function)(T*)>
 class Deleter {
 public:
   void operator()(T* object) {
@@ -39,7 +38,7 @@ public:
 /**
  * Template object class for driver objects
  */
-template<class T, void (*free_function)(T*)>
+template <class T, void (*free_function)(T*)>
 class Object {
 public:
   typedef Deleter<T, free_function> Dtor;
@@ -49,7 +48,7 @@ public:
    * Create an empty object
    */
   Object()
-    : object_(NULL) { }
+      : object_(NULL) {}
 
   /**
    * Create the object with the native pointer object
@@ -57,7 +56,7 @@ public:
    * @param object Native pointer object
    */
   Object(T* object)
-    : object_(object) { }
+      : object_(object) {}
 
   /**
    * Create the object with the reference pointer object
@@ -65,7 +64,7 @@ public:
    * @param object Shared reference pointer object
    */
   Object(Ptr object)
-    : object_(object) { }
+      : object_(object) {}
 
   /**
    * Get the object pointer
@@ -95,9 +94,7 @@ public:
    *
    * @return True if object pointer is valid; false otherwise
    */
-  operator bool() const {
-    return object_.get() != NULL;
-  }
+  operator bool() const { return object_.get() != NULL; }
 
   /**
    * Conversion operator for determining if the pointer used for the object is
@@ -105,9 +102,7 @@ public:
    *
    * @return True if object pointer is valid; false otherwise
    */
-  operator bool() {
-    return object_.get() != NULL;
-  }
+  operator bool() { return object_.get() != NULL; }
 
 protected:
   /**
@@ -126,9 +121,7 @@ protected:
    *
    * @param object Object reference
    */
-  void set(T* object) {
-    object_ = object;
-  }
+  void set(T* object) { object_ = object; }
 
 private:
   /**
@@ -137,7 +130,6 @@ private:
   Ptr object_;
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_OBJECT_BASE_HPP__

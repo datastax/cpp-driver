@@ -26,11 +26,7 @@
 /**
  * Enumeration for 'close_type' property
  */
-enum CloseType {
-  CLOSE_TYPE_DISCONNECT,
-  CLOSE_TYPE_SHUTDOWN_READ,
-  CLOSE_TYPE_SHUTDOWN_WRITE
-};
+enum CloseType { CLOSE_TYPE_DISCONNECT, CLOSE_TYPE_SHUTDOWN_READ, CLOSE_TYPE_SHUTDOWN_WRITE };
 
 /**
  * Enumeration for disconnect 'scope' property
@@ -55,13 +51,13 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) { }
+        : test::Exception(message) {}
   };
 
   CloseConnection()
-    : Result("close_connection")
-    , close_type_(CLOSE_TYPE_DISCONNECT)
-    , scope_(DISCONNECT_SCOPE_CONNECTION) { }
+      : Result("close_connection")
+      , close_type_(CLOSE_TYPE_DISCONNECT)
+      , scope_(DISCONNECT_SCOPE_CONNECTION) {}
 
   /**
    * Fully construct the 'close_connection' result
@@ -71,12 +67,10 @@ public:
    * @param scope The scope (connection, node, data center, cluster) at which to
    *              close the associated connection(s)
    */
-  CloseConnection(unsigned long delay_in_ms,
-                  CloseType close_type,
-                  DisconnectScope scope)
-    : Result("close_connection", delay_in_ms)
-    , close_type_(close_type)
-    , scope_(scope) { }
+  CloseConnection(unsigned long delay_in_ms, CloseType close_type, DisconnectScope scope)
+      : Result("close_connection", delay_in_ms)
+      , close_type_(close_type)
+      , scope_(scope) {}
 
   /**
    * Set a fixed delay to the response time of a result
@@ -135,7 +129,7 @@ private:
    * @return String representation of the close type property
    */
   std::string get_close_type(CloseType type) const {
-    switch(type) {
+    switch (type) {
       case CLOSE_TYPE_DISCONNECT:
         return "disconnect";
       case CLOSE_TYPE_SHUTDOWN_READ:
@@ -144,11 +138,10 @@ private:
         return "shutdown_write";
       default:
         std::stringstream message;
-        message << "Unsupported Close Type: " << type
-          << " will need to be added";
+        message << "Unsupported Close Type: " << type << " will need to be added";
         throw Exception(message.str());
         break;
-     }
+    }
   }
 
   /**
@@ -158,7 +151,7 @@ private:
    * @return String representation of the disconnect scope property
    */
   std::string get_disconnect_scope(DisconnectScope disconnect_scope) const {
-    switch(disconnect_scope) {
+    switch (disconnect_scope) {
       case DISCONNECT_SCOPE_CONNECTION:
         return "connection";
       case DISCONNECT_SCOPE_NODE:
@@ -169,11 +162,10 @@ private:
         return "cluster";
       default:
         std::stringstream message;
-        message << "Unsupported Disconnect Scope: " << disconnect_scope
-          << " will need to be added";
+        message << "Unsupported Disconnect Scope: " << disconnect_scope << " will need to be added";
         throw Exception(message.str());
         break;
-     }
+    }
   }
 
 private:

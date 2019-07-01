@@ -26,9 +26,9 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cassandra.h"
 
@@ -98,9 +98,7 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-CassError insert_into_examples(CassSession* session,
-                               const char* profile_name,
-                               const char* key,
+CassError insert_into_examples(CassSession* session, const char* profile_name, const char* key,
                                const cass_bool_t value) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
@@ -134,9 +132,7 @@ CassError insert_into_examples(CassSession* session,
   return rc;
 }
 
-CassError select_from_examples(CassSession* session,
-                               const char* profile_name,
-                               const char* key,
+CassError select_from_examples(CassSession* session, const char* profile_name, const char* key,
                                cass_bool_t* return_value) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
@@ -165,8 +161,7 @@ CassError select_from_examples(CassSession* session,
     if (row) {
       const CassValue* value = cass_row_get_column_by_name(row, "value");
       cass_value_get_bool(value, return_value);
-      printf("SELECT: Key = %s | Value = %s\n",
-             key,
+      printf("SELECT: Key = %s | Value = %s\n", key,
              (*return_value == cass_true ? "true" : "false"));
     }
 
@@ -195,14 +190,10 @@ int main(int argc, char* argv[]) {
 
   /* Create and set execution profiles; freeing once added to configuration */
   profile = create_reduced_latency_write_execution_profile();
-  cass_cluster_set_execution_profile(cluster,
-                                     "reduced_latency",
-                                     profile);
+  cass_cluster_set_execution_profile(cluster, "reduced_latency", profile);
   cass_execution_profile_free(profile);
   profile = create_quorum_execution_profile();
-  cass_cluster_set_execution_profile(cluster,
-                                     "quorum",
-                                     profile);
+  cass_cluster_set_execution_profile(cluster, "quorum", profile);
   cass_execution_profile_free(profile);
 
   /* Provide the cluster object as configuration to connect the session */
@@ -213,12 +204,10 @@ int main(int argc, char* argv[]) {
   }
 
   /* Create a keyspace and table for the execution profile example  */
-  execute_query(session,
-                "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { \
+  execute_query(session, "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { \
                   'class': 'SimpleStrategy', 'replication_factor': '3' \
                 }");
-  execute_query(session,
-                "CREATE TABLE IF NOT EXISTS examples.execution_profiles ( \
+  execute_query(session, "CREATE TABLE IF NOT EXISTS examples.execution_profiles ( \
                   key text PRIMARY KEY, \
                   value boolean \
                 )");

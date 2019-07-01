@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RESPONSE_HPP_INCLUDED__
-#define __CASS_RESPONSE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RESPONSE_HPP
+#define DATASTAX_INTERNAL_RESPONSE_HPP
 
 #include "allocated.hpp"
 #include "constants.hpp"
@@ -27,9 +27,10 @@
 
 #include <uv.h>
 
-#define CHECK_RESULT(result) if(!(result)) return false;
+#define CHECK_RESULT(result) \
+  if (!(result)) return false;
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Response : public RefCounted<Response> {
 public:
@@ -37,7 +38,7 @@ public:
 
   Response(uint8_t opcode);
 
-  virtual ~Response() { }
+  virtual ~Response() {}
 
   uint8_t opcode() const { return opcode_; }
 
@@ -45,9 +46,7 @@ public:
 
   const RefBuffer::Ptr& buffer() const { return buffer_; }
 
-  void set_buffer(size_t size) {
-    buffer_ = RefBuffer::Ptr(RefBuffer::create(size));
-  }
+  void set_buffer(size_t size) { buffer_ = RefBuffer::Ptr(RefBuffer::create(size)); }
 
   bool has_tracing_id() const;
 
@@ -129,6 +128,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ResponseMessage);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

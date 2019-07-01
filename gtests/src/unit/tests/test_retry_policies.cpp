@@ -18,203 +18,158 @@
 
 #include "retry_policy.hpp"
 
-typedef cass::RetryPolicy RetryPolicy;
-typedef cass::RetryPolicy::RetryDecision RetryDecision;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
-void check_decision(RetryDecision decision,
-                    RetryDecision::Type type,
-                    CassConsistency cl,
+typedef RetryPolicy::RetryDecision RetryDecision;
+
+void check_decision(RetryDecision decision, RetryDecision::Type type, CassConsistency cl,
                     bool retry_current_host) {
   EXPECT_EQ(decision.type(), type);
   EXPECT_EQ(decision.retry_consistency(), cl);
   EXPECT_EQ(decision.retry_current_host(), retry_current_host);
 }
 
-
-void check_default(cass::RetryPolicy& policy) {
+void check_default(RetryPolicy& policy) {
   // Read timeout
   {
     // Retry because data wasn't present
     check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, false, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_QUORUM,
-                   true);
+                   RetryDecision::RETRY, CASS_CONSISTENCY_QUORUM, true);
 
     // Return error because recieved < required
     check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 2, 3, false, 0),
-                   RetryDecision::RETURN_ERROR,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+                   RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
 
     // Return error because a retry has already happened
     check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, false, 1),
-                   RetryDecision::RETURN_ERROR,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+                   RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
   }
 
   // Write timeout
   {
     // Retry because of batch log failed to write
-    check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_BATCH_LOG, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_QUORUM,
-                   true);
+    check_decision(
+        policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_BATCH_LOG, 0),
+        RetryDecision::RETRY, CASS_CONSISTENCY_QUORUM, true);
 
     // Return error because a retry has already happened
-    check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_BATCH_LOG, 1),
-                   RetryDecision::RETURN_ERROR,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+    check_decision(
+        policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_BATCH_LOG, 1),
+        RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
   }
 
   // Unavailable
   {
     // Retry with next host
     check_decision(policy.on_unavailable(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_QUORUM,
-                   false);
+                   RetryDecision::RETRY, CASS_CONSISTENCY_QUORUM, false);
 
     // Return error because a retry has already happened
     check_decision(policy.on_unavailable(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, 1),
-                   RetryDecision::RETURN_ERROR,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+                   RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
   }
 }
 
-TEST(RetryPoliciesUnitTest, DefaultPolicy)
-{
-  cass::DefaultRetryPolicy policy;
+TEST(RetryPoliciesUnitTest, DefaultPolicy) {
+  DefaultRetryPolicy policy;
   check_default(policy);
 }
 
-TEST(RetryPoliciesUnitTest, Downgrading)
-{
-  cass::DowngradingConsistencyRetryPolicy policy;
+TEST(RetryPoliciesUnitTest, Downgrading) {
+  DowngradingConsistencyRetryPolicy policy;
 
   // Read timeout
   {
     // Retry because data wasn't present
     check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, false, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_QUORUM,
-                   true);
+                   RetryDecision::RETRY, CASS_CONSISTENCY_QUORUM, true);
 
     // Downgrade consistency to three
     check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 4, false, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_THREE,
-                   true);
+                   RetryDecision::RETRY, CASS_CONSISTENCY_THREE, true);
 
     // Downgrade consistency to two
     check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 2, 4, false, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_TWO,
-                   true);
+                   RetryDecision::RETRY, CASS_CONSISTENCY_TWO, true);
 
     // Downgrade consistency to one
     check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 1, 4, false, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_ONE,
-                   true);
+                   RetryDecision::RETRY, CASS_CONSISTENCY_ONE, true);
 
     // Return error because no copies
     check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 0, 4, false, 0),
-                   RetryDecision::RETURN_ERROR,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+                   RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
 
     // Return error because a retry has already happened
     check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, false, 1),
-                   RetryDecision::RETURN_ERROR,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+                   RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
   }
 
   // Write timeout
   {
     // Ignore if at least one copy
-    check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 1, 3, CASS_WRITE_TYPE_SIMPLE, 0),
-                   RetryDecision::IGNORE,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+    check_decision(
+        policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 1, 3, CASS_WRITE_TYPE_SIMPLE, 0),
+        RetryDecision::IGNORE, CASS_CONSISTENCY_UNKNOWN, false);
 
     // Ignore if at least one copy
-    check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 1, 3, CASS_WRITE_TYPE_BATCH, 0),
-                   RetryDecision::IGNORE,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+    check_decision(
+        policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 1, 3, CASS_WRITE_TYPE_BATCH, 0),
+        RetryDecision::IGNORE, CASS_CONSISTENCY_UNKNOWN, false);
 
     // Return error if no copies
-    check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 0, 3, CASS_WRITE_TYPE_SIMPLE, 0),
-                   RetryDecision::RETURN_ERROR,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+    check_decision(
+        policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 0, 3, CASS_WRITE_TYPE_SIMPLE, 0),
+        RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
 
     // Downgrade consistency to two
-    check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 2, 3, CASS_WRITE_TYPE_UNLOGGED_BATCH, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_TWO,
-                   true);
+    check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 2, 3,
+                                           CASS_WRITE_TYPE_UNLOGGED_BATCH, 0),
+                   RetryDecision::RETRY, CASS_CONSISTENCY_TWO, true);
 
     // Retry because of batch log failed to write
-    check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_BATCH_LOG, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_QUORUM,
-                   true);
+    check_decision(
+        policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_BATCH_LOG, 0),
+        RetryDecision::RETRY, CASS_CONSISTENCY_QUORUM, true);
 
     // Return error because a retry has already happened
-    check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_BATCH_LOG, 1),
-                   RetryDecision::RETURN_ERROR,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+    check_decision(
+        policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_BATCH_LOG, 1),
+        RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
   }
 
   // Unavailable
   {
     // Retry with next host
     check_decision(policy.on_unavailable(NULL, CASS_CONSISTENCY_QUORUM, 3, 2, 0),
-                   RetryDecision::RETRY,
-                   CASS_CONSISTENCY_TWO,
-                   true);
+                   RetryDecision::RETRY, CASS_CONSISTENCY_TWO, true);
 
     // Return error because a retry has already happened
     check_decision(policy.on_unavailable(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, 1),
-                   RetryDecision::RETURN_ERROR,
-                   CASS_CONSISTENCY_UNKNOWN,
-                   false);
+                   RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
   }
 }
 
-TEST(RetryPoliciesUnitTest, Fallthrough)
-{
-  cass::FallthroughRetryPolicy policy;
+TEST(RetryPoliciesUnitTest, Fallthrough) {
+  FallthroughRetryPolicy policy;
 
   // Always fail
 
   check_decision(policy.on_read_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, false, 0),
-                 RetryDecision::RETURN_ERROR,
-                 CASS_CONSISTENCY_UNKNOWN,
-                 false);
+                 RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
 
-  check_decision(policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_SIMPLE, 0),
-                 RetryDecision::RETURN_ERROR,
-                 CASS_CONSISTENCY_UNKNOWN,
-                 false);
+  check_decision(
+      policy.on_write_timeout(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, CASS_WRITE_TYPE_SIMPLE, 0),
+      RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
 
   check_decision(policy.on_unavailable(NULL, CASS_CONSISTENCY_QUORUM, 3, 3, 0),
-                 RetryDecision::RETURN_ERROR,
-                 CASS_CONSISTENCY_UNKNOWN,
-                 false);
+                 RetryDecision::RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
 }
 
-TEST(RetryPoliciesUnitTest, Logging)
-{
-  cass::SharedRefPtr<cass::DefaultRetryPolicy> policy(
-        new cass::DefaultRetryPolicy());
-  cass::LoggingRetryPolicy logging_policy(policy);
+TEST(RetryPoliciesUnitTest, Logging) {
+  SharedRefPtr<DefaultRetryPolicy> policy(new DefaultRetryPolicy());
+  LoggingRetryPolicy logging_policy(policy);
   cass_log_set_level(CASS_LOG_INFO);
   check_default(logging_policy);
 }

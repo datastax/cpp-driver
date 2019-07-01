@@ -35,11 +35,11 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) { }
+        : test::Exception(message) {}
   };
 
   Request()
-    : then_(new Success()) { };
+      : then_(new Success()){};
 
   /**
    * Generate the JSON for the priming request
@@ -80,8 +80,7 @@ public:
    * @param consistency Consistency levels for the request
    * @return PrimingRequest instance
    */
-  Request& with_consistencies(
-    const std::vector<CassConsistency>& consistency) {
+  Request& with_consistencies(const std::vector<CassConsistency>& consistency) {
     when_.with_consistencies(consistency);
     return *this;
   }
@@ -98,11 +97,11 @@ public:
   }
 
   /**
-  * Set a response for the request
-  *
-  * @param result Response to the request
-  * @return PrimingRequest instance
-  */
+   * Set a response for the request
+   *
+   * @param result Response to the request
+   * @return PrimingRequest instance
+   */
   Request& with_result(Result* result) {
     then_ = result;
     return *this;
@@ -110,7 +109,8 @@ public:
 
 private:
   class When {
-  friend class Request;
+    friend class Request;
+
   private:
     /**
      * Consistency levels
@@ -121,7 +121,7 @@ private:
      */
     std::string query_;
 
-    When() {};
+    When(){};
 
     /**
      * Build the when section for the priming request
@@ -136,7 +136,7 @@ private:
         writer.Key("consistency");
         writer.StartArray();
         for (std::vector<CassConsistency>::iterator iterator = consistencies_.begin();
-          iterator != consistencies_.end(); ++iterator) {
+             iterator != consistencies_.end(); ++iterator) {
           writer.String(cass_consistency_string(*iterator));
         }
         writer.EndArray();
@@ -171,9 +171,7 @@ private:
      *
      * @param query Query for the request
      */
-    void with_query(const std::string& query) {
-      query_ = query;
-    }
+    void with_query(const std::string& query) { query_ = query; }
   };
 
 private:

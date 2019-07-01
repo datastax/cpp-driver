@@ -5,90 +5,89 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_STRING_HPP_INCLUDED__
-#define __DSE_STRING_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_STRING_HPP
+#define DATASTAX_INTERNAL_STRING_HPP
 
 #include "allocator.hpp"
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "hash.hpp"
 
 #include <sparsehash/dense_hash_map>
-#include <string>
 #include <sstream>
+#include <string>
 
-namespace cass {
+namespace datastax {
 
-typedef std::basic_string<char, std::char_traits<char>, cass::Allocator<char> > String;
+typedef std::basic_string<char, std::char_traits<char>, internal::Allocator<char> > String;
 
-class OStringStream : public std::basic_ostream<char, std::char_traits<char> >
-{
+namespace internal {
+
+class OStringStream : public std::basic_ostream<char, std::char_traits<char> > {
 public:
-    typedef char                   char_type;
-    typedef std::char_traits<char> traits_type;
-    typedef traits_type::int_type  int_type;
-    typedef traits_type::pos_type  pos_type;
-    typedef traits_type::off_type  off_type;
-    typedef cass::Allocator<char>  allocator_type;
+  typedef char char_type;
+  typedef std::char_traits<char> traits_type;
+  typedef traits_type::int_type int_type;
+  typedef traits_type::pos_type pos_type;
+  typedef traits_type::off_type off_type;
+  typedef internal::Allocator<char> allocator_type;
 
-    typedef std::basic_string<char_type, traits_type, allocator_type> string_type;
+  typedef std::basic_string<char_type, traits_type, allocator_type> string_type;
 
 public:
-    explicit OStringStream(std::ios_base::openmode mode = ios_base::out)
+  explicit OStringStream(std::ios_base::openmode mode = ios_base::out)
       : std::basic_ostream<char_type, traits_type>(&sb_)
-      , sb_(mode | ios_base::out) { }
+      , sb_(mode | ios_base::out) {}
 
-    explicit OStringStream(const string_type& str,
-                           std::ios_base::openmode mode = ios_base::out)
-    : std::basic_ostream<char_type, traits_type>(&sb_)
-    , sb_(str, mode | std::ios_base::out) { }
+  explicit OStringStream(const string_type& str, std::ios_base::openmode mode = ios_base::out)
+      : std::basic_ostream<char_type, traits_type>(&sb_)
+      , sb_(str, mode | std::ios_base::out) {}
 
-    std::basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
-      return const_cast<std::basic_stringbuf<char_type, traits_type, allocator_type>*>(&sb_);
-    }
+  std::basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
+    return const_cast<std::basic_stringbuf<char_type, traits_type, allocator_type>*>(&sb_);
+  }
 
-    string_type str() const { return sb_.str(); }
+  string_type str() const { return sb_.str(); }
 
-    void str(const string_type& str) { sb_.str(str); }
+  void str(const string_type& str) { sb_.str(str); }
 
 private:
-  std::basic_stringbuf<char, std::char_traits<char>, cass::Allocator<char> > sb_;
+  std::basic_stringbuf<char, std::char_traits<char>, internal::Allocator<char> > sb_;
 };
 
-class IStringStream : public std::basic_istream<char, std::char_traits<char> >
-{
+class IStringStream : public std::basic_istream<char, std::char_traits<char> > {
 public:
-    typedef char                   char_type;
-    typedef std::char_traits<char> traits_type;
-    typedef traits_type::int_type  int_type;
-    typedef traits_type::pos_type  pos_type;
-    typedef traits_type::off_type  off_type;
-    typedef cass::Allocator<char>  allocator_type;
+  typedef char char_type;
+  typedef std::char_traits<char> traits_type;
+  typedef traits_type::int_type int_type;
+  typedef traits_type::pos_type pos_type;
+  typedef traits_type::off_type off_type;
+  typedef internal::Allocator<char> allocator_type;
 
-    typedef std::basic_string<char_type, traits_type, allocator_type> string_type;
+  typedef std::basic_string<char_type, traits_type, allocator_type> string_type;
 
 public:
-    explicit IStringStream(std::ios_base::openmode mode = ios_base::in)
+  explicit IStringStream(std::ios_base::openmode mode = ios_base::in)
       : std::basic_istream<char_type, traits_type>(&sb_)
-      , sb_(mode | ios_base::in) { }
+      , sb_(mode | ios_base::in) {}
 
-    explicit IStringStream(const string_type& str,
-                           std::ios_base::openmode mode = ios_base::in)
-    : std::basic_istream<char_type, traits_type>(&sb_)
-    , sb_(str, mode | std::ios_base::in) { }
+  explicit IStringStream(const string_type& str, std::ios_base::openmode mode = ios_base::in)
+      : std::basic_istream<char_type, traits_type>(&sb_)
+      , sb_(str, mode | std::ios_base::in) {}
 
-    std::basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
-      return const_cast<std::basic_stringbuf<char_type, traits_type, allocator_type>*>(&sb_);
-    }
+  std::basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
+    return const_cast<std::basic_stringbuf<char_type, traits_type, allocator_type>*>(&sb_);
+  }
 
-    string_type str() const { return sb_.str(); }
+  string_type str() const { return sb_.str(); }
 
-    void str(const string_type& str) { sb_.str(str); }
+  void str(const string_type& str) { sb_.str(str); }
 
 private:
-  std::basic_stringbuf<char, std::char_traits<char>, cass::Allocator<char> > sb_;
+  std::basic_stringbuf<char, std::char_traits<char>, internal::Allocator<char> > sb_;
 };
 
-} // namepsace cass
+} // namespace internal
+} // namespace datastax
 
 namespace std {
 
@@ -97,16 +96,16 @@ namespace tr1 {
 #endif
 
 template <>
-struct hash<cass::String> {
-  size_t operator()(const cass::String& str) const {
-    return cass::hash::fnv1a(str.data(), str.size());
+struct hash<datastax::String> {
+  size_t operator()(const datastax::String& str) const {
+    return datastax::hash::fnv1a(str.data(), str.size());
   }
 };
 
 #if defined(HASH_IN_TR1) && !defined(_WIN32)
-} //namespace tr1
+} // namespace tr1
 #endif
 
-} //namespace std
+} // namespace std
 
 #endif

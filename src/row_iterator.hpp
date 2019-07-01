@@ -14,13 +14,13 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ROW_ITERATOR_HPP_INCLUDED__
-#define __CASS_ROW_ITERATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ROW_ITERATOR_HPP
+#define DATASTAX_INTERNAL_ROW_ITERATOR_HPP
 
 #include "iterator.hpp"
 #include "row.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class RowIterator : public Iterator {
 public:
@@ -47,6 +47,6 @@ private:
   int32_t index_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

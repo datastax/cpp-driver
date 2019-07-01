@@ -14,47 +14,30 @@
   limitations under the License.
 */
 
-#ifndef __CASS_EVENT_RESPONSE_HPP_INCLUDED__
-#define __CASS_EVENT_RESPONSE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_EVENT_RESPONSE_HPP
+#define DATASTAX_INTERNAL_EVENT_RESPONSE_HPP
 
 #include "address.hpp"
-#include "response.hpp"
 #include "constants.hpp"
+#include "response.hpp"
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class EventResponse : public Response {
 public:
   typedef SharedRefPtr<EventResponse> Ptr;
   typedef Vector<Ptr> Vec;
 
-  enum TopologyChange {
-    NEW_NODE = 1,
-    REMOVED_NODE,
-    MOVED_NODE
-  };
+  enum TopologyChange { NEW_NODE = 1, REMOVED_NODE, MOVED_NODE };
 
-  enum StatusChange {
-    UP = 1,
-    DOWN
-  };
+  enum StatusChange { UP = 1, DOWN };
 
-  enum SchemaChange {
-    CREATED = 1,
-    UPDATED,
-    DROPPED
-  };
+  enum SchemaChange { CREATED = 1, UPDATED, DROPPED };
 
-  enum SchemaChangeTarget {
-    KEYSPACE = 1,
-    TABLE,
-    TYPE,
-    FUNCTION,
-    AGGREGATE
-  };
+  enum SchemaChangeTarget { KEYSPACE = 1, TABLE, TYPE, FUNCTION, AGGREGATE };
 
   EventResponse()
       : Response(CQL_OPCODE_EVENT)
@@ -62,7 +45,7 @@ public:
       , topology_change_(0)
       , status_change_(0)
       , schema_change_(0)
-      , schema_change_target_(0) { }
+      , schema_change_target_(0) {}
 
   virtual bool decode(Decoder& decoder);
 
@@ -90,6 +73,6 @@ private:
   StringRefVec arg_types_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

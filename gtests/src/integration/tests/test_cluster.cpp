@@ -26,5 +26,23 @@
 TEST(ClusterTest, SetLoadBalanceDcAwareNullLocalDc) {
   test::driver::Cluster cluster;
   EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
-    cass_cluster_set_load_balance_dc_aware(cluster.get(), NULL, 99, cass_false));
+            cass_cluster_set_load_balance_dc_aware(cluster.get(), NULL, 99, cass_false));
+}
+
+/**
+ * Set invalid parameters for exponential reconnection policy.
+ *
+ * @jira_ticket CPP-745
+ * @test_category configuration
+ * @expected_result CASS_ERROR_LIB_BAD_PARAMS.
+ */
+TEST(ClusterTest, ExponentialReconnectionPolicyBadParameters) {
+  test::driver::Cluster cluster;
+
+  // Base delay must be greater than 1
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_exponential_reconnect(cluster.get(), 0, 1));
+  // Max delay must be greater than 1
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_exponential_reconnect(cluster.get(), 1, 0));
+  // Base delay cannot be greater than max delay
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_exponential_reconnect(cluster.get(), 3, 2));
 }

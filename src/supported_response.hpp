@@ -14,15 +14,15 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SUPPORTED_RESPONSE_HPP_INCLUDED__
-#define __CASS_SUPPORTED_RESPONSE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SUPPORTED_RESPONSE_HPP
+#define DATASTAX_INTERNAL_SUPPORTED_RESPONSE_HPP
 
-#include "response.hpp"
 #include "constants.hpp"
+#include "response.hpp"
 #include "string.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class SupportedResponse : public Response {
 public:
@@ -41,6 +41,6 @@ private:
   Vector<String> protocol_versions_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

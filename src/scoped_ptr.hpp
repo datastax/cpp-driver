@@ -14,15 +14,15 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SCOPED_PTR_HPP_INCLUDED__
-#define __CASS_SCOPED_PTR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SCOPED_PTR_HPP
+#define DATASTAX_INTERNAL_SCOPED_PTR_HPP
 
 #include "macros.hpp"
 #include "utils.hpp"
 
 #include <stddef.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
 struct DefaultDeleter {
@@ -55,7 +55,7 @@ public:
 
   type* get() const { return ptr_; }
   type& operator*() const { return *ptr_; }
-  type * operator->() const { return ptr_; }
+  type* operator->() const { return ptr_; }
   operator bool() const { return ptr_ != NULL; }
 
 private:
@@ -105,6 +105,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ScopedArray);
 };
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

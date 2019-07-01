@@ -21,25 +21,21 @@
 #include "cassandra.h"
 #include "protocol.hpp"
 
-using cass::ProtocolVersion;
+using datastax::internal::core::ProtocolVersion;
 
-class ProtocolVersionUnitTest : public Unit { };
+class ProtocolVersionUnitTest : public Unit {};
 
 TEST_F(ProtocolVersionUnitTest, LowestSupported) {
-  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V3),
-            ProtocolVersion::lowest_supported());
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V3), ProtocolVersion::lowest_supported());
 }
 
 TEST_F(ProtocolVersionUnitTest, HighestSupported) {
-  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V4),
-            ProtocolVersion::highest_supported());
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V4), ProtocolVersion::highest_supported());
 }
 
 TEST_F(ProtocolVersionUnitTest, NewestBeta) {
-  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V5),
-            ProtocolVersion::newest_beta());
+  EXPECT_EQ(ProtocolVersion(CASS_PROTOCOL_VERSION_V5), ProtocolVersion::newest_beta());
 }
-
 
 TEST_F(ProtocolVersionUnitTest, IsValid) {
   { // Invalid

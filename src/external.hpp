@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_EXTERNAL_HPP_INCLUDED__
-#define __CASS_EXTERNAL_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_EXTERNAL_HPP
+#define DATASTAX_INTERNAL_EXTERNAL_HPP
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -27,12 +27,12 @@ struct External : public In {
   static const Ex* to(const In* in) { return static_cast<const Ex*>(in); }
 };
 
-#define EXTERNAL_TYPE(InternalType, ExternalType)                          \
-  extern "C" {                                                             \
-    struct ExternalType##_ : public External<InternalType, ExternalType> { \
-      private:                                                             \
-        ~ExternalType##_() { }                                             \
-    };                                                                     \
+#define EXTERNAL_TYPE(InternalType, ExternalType)                        \
+  extern "C" {                                                           \
+  struct ExternalType##_ : public External<InternalType, ExternalType> { \
+  private:                                                               \
+    ~ExternalType##_() {}                                                \
+  };                                                                     \
   }
 
 #endif

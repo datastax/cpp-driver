@@ -16,15 +16,13 @@
 
 #include "timer.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 Timer::Timer()
-  : handle_(NULL)
-  , state_(CLOSED) { }
+    : handle_(NULL)
+    , state_(CLOSED) {}
 
-Timer::~Timer() {
-  stop();
-}
+Timer::~Timer() { stop(); }
 
 int Timer::start(uv_loop_t* loop, uint64_t timeout, const Timer::Callback& callback) {
   int rc = 0;
@@ -70,5 +68,3 @@ void Timer::handle_timeout() {
 void Timer::on_close(uv_handle_t* handle) {
   delete reinterpret_cast<AllocatedT<uv_timer_t>*>(handle);
 }
-
-} // namespace cass

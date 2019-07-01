@@ -28,7 +28,6 @@ TEST(InetUnitTest, IPv4) {
   cass_inet_string(inet, output);
   EXPECT_EQ(strcmp(ip_address, output), 0);
 
-
   // Inavlid address
   EXPECT_EQ(cass_inet_from_string("<invalid>", &inet), CASS_ERROR_LIB_BAD_PARAMS);
   EXPECT_EQ(cass_inet_from_string("127.0.0.", &inet), CASS_ERROR_LIB_BAD_PARAMS);
@@ -60,7 +59,8 @@ TEST(InetUnitTest, Length) {
   EXPECT_EQ(strcmp(ip_address, output), 0);
 
   const char* max_ip_address = "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255";
-  const char* max_ip_address_v6 = "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"; // Last octets converted to hex
+  const char* max_ip_address_v6 =
+      "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"; // Last octets converted to hex
 
   EXPECT_EQ(cass_inet_from_string_n(max_ip_address, strlen(max_ip_address), &inet), CASS_OK);
 
