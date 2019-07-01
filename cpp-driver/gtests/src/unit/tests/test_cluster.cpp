@@ -952,8 +952,8 @@ TEST_F(ClusterUnitTest, ReconnectionPolicy) {
 
   ClusterUnitTestReconnectionPolicy::Ptr policy(
       static_cast<ClusterUnitTestReconnectionPolicy::Ptr>(settings.reconnection_policy));
-  EXPECT_EQ(2, policy->reconnection_schedule_count());
-  EXPECT_EQ(2, policy->destroyed_reconnection_schedule_count());
+  EXPECT_EQ(2u, policy->reconnection_schedule_count());
+  EXPECT_EQ(2u, policy->destroyed_reconnection_schedule_count());
   EXPECT_GE(policy->scheduled_delay_count(), 2u);
-  EXPECT_EQ(3, mock_cluster.connection_attempts(1)); // Includes initial connection attempt
+  EXPECT_EQ(3u, mock_cluster.connection_attempts(1)); // Includes initial connection attempt
 }

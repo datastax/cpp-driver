@@ -39,10 +39,10 @@ TEST(ClusterTest, SetLoadBalanceDcAwareNullLocalDc) {
 TEST(ClusterTest, ExponentialReconnectionPolicyBadParameters) {
   test::driver::Cluster cluster;
 
-  // Base delay cannot be zero
+  // Base delay must be greater than 1
   EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_exponential_reconnect(cluster.get(), 0, 1));
-  // Max delay cannot be zero
+  // Max delay must be greater than 1
   EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_exponential_reconnect(cluster.get(), 1, 0));
   // Base delay cannot be greater than max delay
-  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_exponential_reconnect(cluster.get(), 2, 1));
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_exponential_reconnect(cluster.get(), 3, 2));
 }

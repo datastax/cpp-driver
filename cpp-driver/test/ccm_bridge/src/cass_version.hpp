@@ -472,13 +472,17 @@ public:
     } else if (*this == "5.1.11") {
       return CassVersion("3.11.2-5111");
     } else if (*this == "5.1.12") {
-      return CassVersion("3.11.2-5112");
-    } else if (*this >= "5.1.13" && *this < "6.0.0") {
-      if (*this > "5.1.13") {
+      return CassVersion("3.11.3-5112");
+    } else if (*this == "5.1.13") {
+      return CassVersion("3.11.3-5113");
+    } else if (*this == "5.1.14") {
+      return CassVersion("3.11.3-5114");
+    } else if (*this >= "5.1.15" && *this < "6.0.0") {
+      if (*this > "5.1.15") {
         std::cerr << "Cassandra Version is not Defined: "
                   << "Add Cassandra version for DSE v" << this->to_string() << std::endl;
       }
-      return CassVersion("3.11.2-5113");
+      return CassVersion("3.11.3-5115");
     } else if (*this >= "6.0.0" && *this < "6.7.0") {
       return CassVersion(
           "3.11.2-5111"); // Versions before DSE 6.7 erroneously return they support Cassandra 4.0.0

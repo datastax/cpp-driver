@@ -19,7 +19,7 @@ os:
   - centos/7-64/cpp
   - osx/high-sierra
 env:
-  LIBUV_VERSION: 1.28.0
+  LIBUV_VERSION: 1.29.1
 build:
   - script: |
       . ./cpp-driver/.build.sh
