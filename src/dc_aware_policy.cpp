@@ -22,16 +22,17 @@
 
 #include <algorithm>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
-DCAwarePolicy::DCAwarePolicy(const String& local_dc,
-                             size_t used_hosts_per_remote_dc,
+DCAwarePolicy::DCAwarePolicy(const String& local_dc, size_t used_hosts_per_remote_dc,
                              bool skip_remote_dcs_for_local_cl)
-  : local_dc_(local_dc)
-  , used_hosts_per_remote_dc_(used_hosts_per_remote_dc)
-  , skip_remote_dcs_for_local_cl_(skip_remote_dcs_for_local_cl)
-  , local_dc_live_hosts_(new HostVec())
-  , index_(0) {
+    : local_dc_(local_dc)
+    , used_hosts_per_remote_dc_(used_hosts_per_remote_dc)
+    , skip_remote_dcs_for_local_cl_(skip_remote_dcs_for_local_cl)
+    , local_dc_live_hosts_(new HostVec())
+    , index_(0) {
   uv_rwlock_init(&available_rwlock_);
   if (used_hosts_per_remote_dc_ > 0 || !skip_remote_dcs_for_local_cl) {
     LOG_WARN("Remote multi-dc settings have been deprecated and will be removed"
@@ -39,13 +40,9 @@ DCAwarePolicy::DCAwarePolicy(const String& local_dc,
   }
 }
 
-DCAwarePolicy::~DCAwarePolicy() {
-  uv_rwlock_destroy(&available_rwlock_);
-}
+DCAwarePolicy::~DCAwarePolicy() { uv_rwlock_destroy(&available_rwlock_); }
 
-void DCAwarePolicy::init(const Host::Ptr& connected_host,
-                         const HostMap& hosts,
-                         Random* random) {
+void DCAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random) {
   if (local_dc_.empty() && connected_host && !connected_host->dc().empty()) {
     LOG_INFO("Using '%s' for the local data center "
              "(if this is incorrect, please provide the correct data center)",
@@ -54,11 +51,10 @@ void DCAwarePolicy::init(const Host::Ptr& connected_host,
   }
 
   available_.resize(hosts.size());
-  std::transform(hosts.begin(), hosts.end(),
-                 std::inserter(available_, available_.begin()), GetAddress());
+  std::transform(hosts.begin(), hosts.end(), std::inserter(available_, available_.begin()),
+                 GetAddress());
 
-  for (HostMap::const_iterator i = hosts.begin(),
-       end = hosts.end(); i != end; ++i) {
+  for (HostMap::const_iterator i = hosts.begin(), end = hosts.end(); i != end; ++i) {
     on_host_added(i->second);
   }
   if (random != NULL) {
@@ -82,10 +78,10 @@ CassHostDistance DCAwarePolicy::distance(const Host::Ptr& host) const {
   return CASS_HOST_DISTANCE_IGNORE;
 }
 
-QueryPlan* DCAwarePolicy::new_query_plan(const String& keyspace,
-                                         RequestHandler* request_handler,
+QueryPlan* DCAwarePolicy::new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                          const TokenMap* token_map) {
-  CassConsistency cl = request_handler != NULL ? request_handler->consistency() : CASS_DEFAULT_CONSISTENCY;
+  CassConsistency cl =
+      request_handler != NULL ? request_handler->consistency() : CASS_DEFAULT_CONSISTENCY;
   return new DCAwareQueryPlan(this, cl, index_++);
 }
 
@@ -171,15 +167,14 @@ void DCAwarePolicy::PerDCHostMap::remove_host_from_dc(const String& dc, const Ho
   ScopedWriteLock wl(&rwlock_);
   Map::iterator i = map_.find(dc);
   if (i != map_.end()) {
-    cass::remove_host(i->second, host);
+    core::remove_host(i->second, host);
   }
 }
 
 bool DCAwarePolicy::PerDCHostMap::remove_host(const Address& address) {
   ScopedWriteLock wl(&rwlock_);
-  for (Map::iterator i = map_.begin(),
-       end = map_.end(); i != end; ++i) {
-    if (cass::remove_host(i->second, address)) {
+  for (Map::iterator i = map_.begin(), end = map_.end(); i != end; ++i) {
+    if (core::remove_host(i->second, address)) {
       return true;
     }
   }
@@ -196,8 +191,7 @@ const CopyOnWriteHostVec& DCAwarePolicy::PerDCHostMap::get_hosts(const String& d
 
 void DCAwarePolicy::PerDCHostMap::copy_dcs(KeySet* dcs) const {
   ScopedReadLock rl(&rwlock_);
-  for (Map::const_iterator i = map_.begin(),
-       end = map_.end(); i != end; ++i) {
+  for (Map::const_iterator i = map_.begin(), end = map_.end(); i != end; ++i) {
     dcs->insert(i->first);
   }
 }
@@ -208,24 +202,21 @@ static const Host::Ptr& get_next_host(const CopyOnWriteHostVec& hosts, size_t in
   return (*hosts)[index % hosts->size()];
 }
 
-static const Host::Ptr& get_next_host_bounded(const CopyOnWriteHostVec& hosts,
-                                              size_t index, size_t bound) {
+static const Host::Ptr& get_next_host_bounded(const CopyOnWriteHostVec& hosts, size_t index,
+                                              size_t bound) {
   return (*hosts)[index % std::min(hosts->size(), bound)];
 }
 
-static size_t get_hosts_size(const CopyOnWriteHostVec& hosts) {
-  return hosts->size();
-}
+static size_t get_hosts_size(const CopyOnWriteHostVec& hosts) { return hosts->size(); }
 
-DCAwarePolicy::DCAwareQueryPlan::DCAwareQueryPlan(const DCAwarePolicy* policy,
-                                                  CassConsistency cl,
+DCAwarePolicy::DCAwareQueryPlan::DCAwareQueryPlan(const DCAwarePolicy* policy, CassConsistency cl,
                                                   size_t start_index)
-  : policy_(policy)
-  , cl_(cl)
-  , hosts_(policy_->local_dc_live_hosts_)
-  , local_remaining_(get_hosts_size(hosts_))
-  , remote_remaining_(0)
-  , index_(start_index) { }
+    : policy_(policy)
+    , cl_(cl)
+    , hosts_(policy_->local_dc_live_hosts_)
+    , local_remaining_(get_hosts_size(hosts_))
+    , remote_remaining_(0)
+    , index_(start_index) {}
 
 Host::Ptr DCAwarePolicy::DCAwareQueryPlan::compute_next() {
   while (local_remaining_ > 0) {
@@ -248,9 +239,8 @@ Host::Ptr DCAwarePolicy::DCAwareQueryPlan::compute_next() {
   while (true) {
     while (remote_remaining_ > 0) {
       --remote_remaining_;
-      const Host::Ptr& host(get_next_host_bounded(hosts_,
-                                                  index_++,
-                                                  policy_->used_hosts_per_remote_dc_));
+      const Host::Ptr& host(
+          get_next_host_bounded(hosts_, index_++, policy_->used_hosts_per_remote_dc_));
       if (policy_->is_host_up(host->address())) {
         return host;
       }
@@ -268,5 +258,3 @@ Host::Ptr DCAwarePolicy::DCAwareQueryPlan::compute_next() {
 
   return Host::Ptr();
 }
-
-} // namespace cass

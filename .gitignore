@@ -50,7 +50,7 @@ Testing
 Debug
 demo/cassandra_demo
 test/unit_tests/cassandra_test
-src/cassconfig.hpp
+src/driver_config.hpp
 
 # API docs files
 Doxyfile

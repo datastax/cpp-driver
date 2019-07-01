@@ -73,6 +73,7 @@ build_driver() {
   (
     cd build
     cmake -DCMAKE_BUILD_TYPE=Release -D${driver_prefix}_BUILD_SHARED=On -D${driver_prefix}_BUILD_STATIC=On -D${driver_prefix}_BUILD_EXAMPLES=On -D${driver_prefix}_BUILD_UNIT_TESTS=On ..
+    [[ -x $(which clang-format) ]] && make format-check
     make -j${PROCS}
   )
 }

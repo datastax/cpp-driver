@@ -21,9 +21,9 @@
 #include <limits>
 #include <stdint.h>
 
-enum Enum {
-  ONE, TWO, THREE
-};
+using datastax::internal::Atomic;
+
+enum Enum { ONE, TWO, THREE };
 
 struct Object {};
 
@@ -35,7 +35,7 @@ void test_atomic_integer() {
   const T zero = static_cast<T>(0);
   const T one = static_cast<T>(1);
 
-  cass::Atomic<T> i(zero);
+  Atomic<T> i(zero);
 
   EXPECT_EQ(i.load(), zero);
 
@@ -86,7 +86,7 @@ TEST(AtomicUnitTest, Integers) {
 }
 
 TEST(AtomicUnitTest, Enumeration) {
-  cass::Atomic<Enum> e(ONE);
+  Atomic<Enum> e(ONE);
 
   EXPECT_EQ(e.load(), ONE);
 
@@ -116,7 +116,7 @@ TEST(AtomicUnitTest, Enumeration) {
 
 TEST(AtomicUnitTest, Pointer) {
   Object one, two;
-  cass::Atomic<Object*> p(&one);
+  Atomic<Object*> p(&one);
 
   EXPECT_EQ(p.load(), &one);
 
@@ -145,7 +145,7 @@ TEST(AtomicUnitTest, Pointer) {
 }
 
 TEST(AtomicUnitTest, Boolean) {
-  cass::Atomic<bool> b(false);
+  Atomic<bool> b(false);
 
   EXPECT_EQ(b.load(), false);
 

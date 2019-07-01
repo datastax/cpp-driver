@@ -18,16 +18,15 @@
 
 #include "event_loop.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
-DelayedConnector::DelayedConnector(const Host::Ptr& host,
-                                   ProtocolVersion protocol_version,
+DelayedConnector::DelayedConnector(const Host::Ptr& host, ProtocolVersion protocol_version,
                                    const Callback& callback)
-  : connector_(new Connector(host,
-                             protocol_version,
-                             bind_callback(&DelayedConnector::on_connect, this)))
-  , callback_(callback)
-  , is_canceled_(false) { }
+    : connector_(
+          new Connector(host, protocol_version, bind_callback(&DelayedConnector::on_connect, this)))
+    , callback_(callback)
+    , is_canceled_(false) {}
 
 DelayedConnector* DelayedConnector::with_keyspace(const String& keyspace) {
   connector_->with_keyspace(keyspace);
@@ -72,17 +71,11 @@ void DelayedConnector::cancel() {
   }
 }
 
-Connection::Ptr DelayedConnector::release_connection() {
-  return connector_->release_connection();
-}
+Connection::Ptr DelayedConnector::release_connection() { return connector_->release_connection(); }
 
-bool DelayedConnector::is_canceled() const {
-  return is_canceled_;
-}
+bool DelayedConnector::is_canceled() const { return is_canceled_; }
 
-bool DelayedConnector::is_ok() const {
-  return !is_canceled() && connector_->is_ok();
-}
+bool DelayedConnector::is_ok() const { return !is_canceled() && connector_->is_ok(); }
 
 bool DelayedConnector::is_critical_error() const {
   return !is_canceled() && connector_->is_critical_error();
@@ -99,17 +92,11 @@ Connector::ConnectionError DelayedConnector::error_code() const {
   return connector_->error_code();
 }
 
-void DelayedConnector::internal_connect(uv_loop_t* loop) {
-  connector_->connect(loop);
-}
+void DelayedConnector::internal_connect(uv_loop_t* loop) { connector_->connect(loop); }
 
 void DelayedConnector::on_connect(Connector* connector) {
   callback_(this);
   dec_ref();
 }
 
-void DelayedConnector::on_delayed_connect(Timer* timer) {
-  internal_connect(timer->loop());
-}
-
-} // namespace cass
+void DelayedConnector::on_delayed_connect(Timer* timer) { internal_connect(timer->loop()); }

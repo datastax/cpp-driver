@@ -16,27 +16,31 @@
 
 #include "integration.hpp"
 
-#define TABLE_FORMAT "CREATE TABLE %s (" \
-                       "key timeuuid PRIMARY KEY, " \
-                       "a int, " \
-                       "b boolean, " \
-                       "c text, " \
-                       "abc float, " \
-                       "\"ABC\" float, " \
-                       "\"aBc\" float" \
-                     ")"
-#define TABLE_BYTES_FORMAT "CREATE TABLE %s (" \
-                             "key timeuuid PRIMARY KEY, " \
-                             "blobs blob, " \
-                             "varints varint" \
-                           ")"
+#define TABLE_FORMAT           \
+  "CREATE TABLE %s ("          \
+  "key timeuuid PRIMARY KEY, " \
+  "a int, "                    \
+  "b boolean, "                \
+  "c text, "                   \
+  "abc float, "                \
+  "\"ABC\" float, "            \
+  "\"aBc\" float"              \
+  ")"
+#define TABLE_BYTES_FORMAT     \
+  "CREATE TABLE %s ("          \
+  "key timeuuid PRIMARY KEY, " \
+  "blobs blob, "               \
+  "varints varint"             \
+  ")"
 #define INSERT_FORMAT "INSERT INTO %s (key, a, b, c) VALUES (?, ?, ?, ?)"
-#define INSERT_CASE_SENSITIVE_FORMAT "INSERT INTO %s " \
-                                     "(key, abc, \"ABC\", \"aBc\") " \
-                                     "VALUES (?, ?, ?, ?)"
-#define INSERT_ALL_FORMAT "INSERT INTO %s " \
-                          "(key, a, b, c, abc, \"ABC\", \"aBc\") " \
-                          "VALUES (?, ?, ?, ?, ?, ?, ?)"
+#define INSERT_CASE_SENSITIVE_FORMAT \
+  "INSERT INTO %s "                  \
+  "(key, abc, \"ABC\", \"aBc\") "    \
+  "VALUES (?, ?, ?, ?)"
+#define INSERT_ALL_FORMAT                  \
+  "INSERT INTO %s "                        \
+  "(key, a, b, c, abc, \"ABC\", \"aBc\") " \
+  "VALUES (?, ?, ?, ?, ?, ?, ?)"
 #define INSERT_BYTES_FORMAT "INSERT INTO %s (key, blobs, varints) VALUES (?, ?, ?)"
 
 /**
@@ -199,8 +203,7 @@ CASSANDRA_INTEGRATION_TEST_F(ByNameTests, Prepared) {
   CHECK_FAILURE;
 
   // Prepare, create, insert and validate
-  Prepared prepared = session_.prepare(format_string(INSERT_FORMAT,
-                                       table_name_.c_str()));
+  Prepared prepared = session_.prepare(format_string(INSERT_FORMAT, table_name_.c_str()));
   insert_and_validate(prepared.bind());
 }
 
@@ -238,8 +241,8 @@ CASSANDRA_INTEGRATION_TEST_F(ByNameTests, PreparedCaseSensitive) {
   CHECK_FAILURE;
 
   // Prepare, create, insert and validate
-  Prepared prepared = session_.prepare(format_string(INSERT_CASE_SENSITIVE_FORMAT,
-                                       table_name_.c_str()));
+  Prepared prepared =
+      session_.prepare(format_string(INSERT_CASE_SENSITIVE_FORMAT, table_name_.c_str()));
   insert_and_validate_case_sensitive(prepared.bind());
 }
 
@@ -261,8 +264,7 @@ CASSANDRA_INTEGRATION_TEST_F(ByNameTests, SimpleCaseSensitive) {
   CHECK_VERSION(2.1.0);
 
   // Prepare, create, insert and validate
-  Statement statement(format_string(INSERT_CASE_SENSITIVE_FORMAT,
-                      table_name_.c_str()), 4);
+  Statement statement(format_string(INSERT_CASE_SENSITIVE_FORMAT, table_name_.c_str()), 4);
   insert_and_validate_case_sensitive(statement);
 }
 
@@ -282,8 +284,8 @@ CASSANDRA_INTEGRATION_TEST_F(ByNameTests, MultipleBinds) {
   CHECK_FAILURE;
 
   // Prepare, bind, and insert the values into the table
-  Prepared prepared = session_.prepare(format_string(INSERT_CASE_SENSITIVE_FORMAT,
-                                       table_name_.c_str()));
+  Prepared prepared =
+      session_.prepare(format_string(INSERT_CASE_SENSITIVE_FORMAT, table_name_.c_str()));
   Statement statement = prepared.bind();
   TimeUuid key = uuid_generator_.generate_timeuuid();
   statement.bind<TimeUuid>("key", key);
@@ -311,14 +313,13 @@ CASSANDRA_INTEGRATION_TEST_F(ByNameTests, MultipleBinds) {
  * @test_category queries:prepared
  * @since core:1.0.0
  * @expected_result Driver error will occur when binding value to invalid column
-  *                 name
+ *                 name
  */
 CASSANDRA_INTEGRATION_TEST_F(ByNameTests, BindUsingInvalidName) {
   CHECK_FAILURE;
 
   // Prepare and create the insert statement
-  Prepared prepared = session_.prepare(format_string(INSERT_ALL_FORMAT,
-                                       table_name_.c_str()));
+  Prepared prepared = session_.prepare(format_string(INSERT_ALL_FORMAT, table_name_.c_str()));
   Statement statement = prepared.bind();
 
   // Bind values to invalid columns name and validate error
@@ -339,14 +340,13 @@ CASSANDRA_INTEGRATION_TEST_F(ByNameTests, BindUsingInvalidName) {
  * @test_category queries:basic
  * @since core:1.0.0
  * @expected_result Driver error will occur when retrieving value from invalid
-  *                 column name
+ *                 column name
  */
 CASSANDRA_INTEGRATION_TEST_F(ByNameTests, RetrieveInvalidName) {
   CHECK_FAILURE;
 
   // Prepare, create, insert and validate (all)
-  Prepared prepared = session_.prepare(format_string(INSERT_ALL_FORMAT,
-                                       table_name_.c_str()));
+  Prepared prepared = session_.prepare(format_string(INSERT_ALL_FORMAT, table_name_.c_str()));
   Statement statement = prepared.bind();
   insert_and_validate_all(statement);
 
@@ -373,8 +373,7 @@ CASSANDRA_INTEGRATION_TEST_F(ByNameTests, NullPrepared) {
   CHECK_FAILURE;
 
   // Prepare, create, insert and validate
-  Prepared prepared = session_.prepare(format_string(INSERT_ALL_FORMAT,
-                                       table_name_.c_str()));
+  Prepared prepared = session_.prepare(format_string(INSERT_ALL_FORMAT, table_name_.c_str()));
   insert_and_validate_all_null(prepared.bind());
 }
 
@@ -423,8 +422,7 @@ CASSANDRA_INTEGRATION_TEST_F(ByNameBytesTests, Prepared) {
   Varint varints("1234567890123456789012345678901234567890");
 
   // Prepare, bind, and insert the values into the table
-  Prepared prepared = session_.prepare(format_string(INSERT_BYTES_FORMAT,
-                                       table_name_.c_str()));
+  Prepared prepared = session_.prepare(format_string(INSERT_BYTES_FORMAT, table_name_.c_str()));
   Statement statement = prepared.bind();
   statement.bind<TimeUuid>("key", key);
   statement.bind<Blob>("blobs", blobs);

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_DELAYED_CONNECTOR_HPP_INCLUDED__
-#define __CASS_DELAYED_CONNECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_DELAYED_CONNECTOR_HPP
+#define DATASTAX_INTERNAL_DELAYED_CONNECTOR_HPP
 
 #include "callback.hpp"
 #include "connector.hpp"
@@ -24,7 +24,7 @@
 #include "string.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ConnectionPool;
 class EventLoop;
@@ -37,7 +37,7 @@ public:
   typedef SharedRefPtr<DelayedConnector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef cass::Callback<void, DelayedConnector*> Callback;
+  typedef internal::Callback<void, DelayedConnector*> Callback;
 
   /**
    * Constructor
@@ -47,8 +47,7 @@ public:
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  DelayedConnector(const Host::Ptr& host,
-                   ProtocolVersion protocol_version,
+  DelayedConnector(const Host::Ptr& host, ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**
@@ -78,8 +77,8 @@ public:
   /**
    * Connect to a host after a delay.
    *
+   * @param loop The event loop to run the timer and connection process.
    * @param wait_time_ms The amount of time to delay.
-   * @param A key to restrict access to the method.
    */
   void delayed_connect(uv_loop_t* loop, uint64_t wait_time_ms);
 
@@ -128,6 +127,6 @@ private:
   bool is_canceled_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

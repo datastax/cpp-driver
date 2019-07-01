@@ -25,8 +25,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Tuple object
@@ -38,7 +37,7 @@ public:
   class Exception : public test::Exception {
   public:
     Exception(const std::string& message)
-      : test::Exception(message) {}
+        : test::Exception(message) {}
   };
 
   /**
@@ -47,9 +46,9 @@ public:
    * @param size Number of elements in the tuple
    */
   Tuple(size_t size)
-    : Object<CassTuple, cass_tuple_free>(cass_tuple_new(size))
-    , size_(size)
-    , is_null_(true) {}
+      : Object<CassTuple, cass_tuple_free>(cass_tuple_new(size))
+      , size_(size)
+      , is_null_(true) {}
 
   /**
    * Create the tuple from a particular column
@@ -57,8 +56,8 @@ public:
    * @param column Column to retrieve tuple from
    */
   Tuple(const CassValue* column)
-    : size_(0)
-    , is_null_(true) {
+      : size_(0)
+      , is_null_(true) {
     initialize(column);
   }
 
@@ -67,9 +66,7 @@ public:
    *
    * @return True if tuple is NULL; false otherwise
    */
-  bool is_null() {
-    return is_null_;
-  }
+  bool is_null() { return is_null_; }
 
   /**
    * Get the next value
@@ -92,7 +89,7 @@ public:
    * @throws Exception If tuple is not able to have values added to it (e.g.
    *         The tuple was generated from server result)
    */
-  template<typename T>
+  template <typename T>
   void set(T value, size_t index) {
     value.set(*this, index);
     is_null_ = false;
@@ -103,9 +100,7 @@ public:
    *
    * @return The number of elements in the tuple
    */
-  size_t size() {
-    return size_;
-  }
+  size_t size() { return size_; }
 
   /**
    * Get the current value from the tuple iterator (retrieved from server)
@@ -113,7 +108,7 @@ public:
    * @return Current value in the tuple
    * @throws Exception If iterator is not valid
    */
-  template<typename T>
+  template <typename T>
   T value() {
     if (iterator_) {
       return T(cass_iterator_get_value(iterator_.get()));
@@ -126,7 +121,7 @@ public:
    *
    * @return The tuple as a vector of a single type
    */
-  template<typename T>
+  template <typename T>
   std::vector<T> values() {
     std::vector<T> result;
     const CassValue* value;
@@ -144,8 +139,7 @@ public:
    *              statement
    */
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK,
-      cass_statement_bind_tuple(statement.get(), index, get()));
+    ASSERT_EQ(CASS_OK, cass_statement_bind_tuple(statement.get(), index, get()));
   }
 
 protected:
@@ -184,7 +178,6 @@ protected:
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_TUPLE_HPP__

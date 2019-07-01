@@ -14,13 +14,13 @@
   limitations under the License.
 */
 
-#include "test_utils.hpp"
 #include "policy_tools.hpp"
+#include "test_utils.hpp"
 
 #include "cassandra.h"
 
-#include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 
 struct ConsistencyTests {
@@ -29,14 +29,13 @@ public:
   std::string ip_prefix;
 
   ConsistencyTests()
-    : ccm(new CCM::Bridge("config.txt"))
-    , ip_prefix(ccm->get_ip_prefix()) {}
+      : ccm(new CCM::Bridge("config.txt"))
+      , ip_prefix(ccm->get_ip_prefix()) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(consistency, ConsistencyTests)
 
-BOOST_AUTO_TEST_CASE(simple_two_nodes)
-{
+BOOST_AUTO_TEST_CASE(simple_two_nodes) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   if (ccm->create_cluster(2)) {
@@ -51,27 +50,37 @@ BOOST_AUTO_TEST_CASE(simple_two_nodes)
   policy_tool.create_schema(session.get(), 1); // replication_factor = 1
 
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_ONE);	// Should work
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ONE);	// Should work
-    BOOST_CHECK_EQUAL(init_result,  CASS_OK);
+    CassError init_result =
+        policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_ONE); // Should work
+    CassError query_result =
+        policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ONE); // Should work
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_ANY);  // Should work
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ANY);  // Should fail (ANY is for writing only)
+    CassError init_result =
+        policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_ANY); // Should work
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ANY); // Should fail (ANY is for writing only)
     BOOST_CHECK_EQUAL(init_result, CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_ERROR_SERVER_INVALID_QUERY);
   }
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_LOCAL_QUORUM);  // Should fail (LOCAL_QUORUM is incompatible with SimpleStrategy)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_LOCAL_QUORUM);  // Should fail (see above)
-    BOOST_CHECK_EQUAL(init_result, CASS_OK); // TODO(mpenick): Shouldn't be CASS_OK?
-    BOOST_CHECK_EQUAL(query_result, CASS_OK); // TODO(mpenick): Shouldn't be CASS_OK?
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_LOCAL_QUORUM); // Should fail (LOCAL_QUORUM is
+                                                           // incompatible with SimpleStrategy)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_LOCAL_QUORUM); // Should fail (see above)
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);               // TODO(mpenick): Shouldn't be CASS_OK?
+    BOOST_CHECK_EQUAL(query_result, CASS_OK);              // TODO(mpenick): Shouldn't be CASS_OK?
   }
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_EACH_QUORUM);  // Should fail (EACH_QUORUM is incompatible with SimpleStrategy)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM);  // Should fail (see above)
-    BOOST_CHECK_EQUAL(init_result, CASS_OK); // TODO(mpenick): Shouldn't be CASS_OK?
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM); // Should fail (EACH_QUORUM is
+                                                          // incompatible with SimpleStrategy)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM); // Should fail (see above)
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);              // TODO(mpenick): Shouldn't be CASS_OK?
     // Handle EACH_QUORUM read support added to C* v3.0.0 [CASSANDRA-9602]
     // https://issues.apache.org/jira/browse/CASSANDRA-9602
     if (test_utils::get_version() >= "3.0.0") {
@@ -81,8 +90,10 @@ BOOST_AUTO_TEST_CASE(simple_two_nodes)
     }
   }
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_THREE);  // Should fail (N=2, RF=1)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_THREE);  // Should fail (N=2, RF=1)
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_THREE); // Should fail (N=2, RF=1)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_THREE); // Should fail (N=2, RF=1)
     BOOST_CHECK_EQUAL(init_result, CASS_ERROR_SERVER_UNAVAILABLE);
     BOOST_CHECK_EQUAL(query_result, CASS_ERROR_SERVER_UNAVAILABLE);
   }
@@ -91,8 +102,7 @@ BOOST_AUTO_TEST_CASE(simple_two_nodes)
   policy_tool.drop_schema(session.get());
 }
 
-BOOST_AUTO_TEST_CASE(one_node_down)
-{
+BOOST_AUTO_TEST_CASE(one_node_down) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   if (ccm->create_cluster(3)) {
@@ -108,36 +118,46 @@ BOOST_AUTO_TEST_CASE(one_node_down)
 
   {
     // Sanity check
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_ALL);	// Should work (N=3, RF=3)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ALL);	// Should work (N=3, RF=3)
-    BOOST_CHECK_EQUAL(init_result,  CASS_OK);
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ALL); // Should work (N=3, RF=3)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ALL); // Should work (N=3, RF=3)
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
   ccm->force_decommission_node(2);
 
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_ONE);	// Should work (N=2, RF=3)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ONE);	// Should work (N=2, RF=3)
-    BOOST_CHECK_EQUAL(init_result,  CASS_OK);
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ONE); // Should work (N=2, RF=3)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ONE); // Should work (N=2, RF=3)
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_TWO);	// Should work (N=2, RF=3)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_TWO);	// Should work (N=2, RF=3)
-    BOOST_CHECK_EQUAL(init_result,  CASS_OK);
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_TWO); // Should work (N=2, RF=3)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_TWO); // Should work (N=2, RF=3)
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_ALL);	// Should fail (N=2, RF=3)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ALL);	// Should fail (N=2, RF=3)
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ALL); // Should fail (N=2, RF=3)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ALL); // Should fail (N=2, RF=3)
     BOOST_CHECK_NE(init_result, CASS_OK);
     BOOST_CHECK_NE(query_result, CASS_OK);
   }
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_QUORUM);	// Should work (N=2, RF=3, quorum=2)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should work (N=2, RF=3, quorum=2)
-    BOOST_CHECK_EQUAL(init_result,  CASS_OK);
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_QUORUM); // Should work (N=2, RF=3, quorum=2)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_QUORUM); // Should work (N=2, RF=3, quorum=2)
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
@@ -145,8 +165,7 @@ BOOST_AUTO_TEST_CASE(one_node_down)
   ccm->remove_cluster();
 }
 
-BOOST_AUTO_TEST_CASE(two_nodes_down)
-{
+BOOST_AUTO_TEST_CASE(two_nodes_down) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   if (ccm->create_cluster(3)) {
@@ -162,9 +181,11 @@ BOOST_AUTO_TEST_CASE(two_nodes_down)
 
   {
     // Sanity check
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_ALL);	// Should work (N=3, RF=3)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ALL);	// Should work (N=3, RF=3)
-    BOOST_CHECK_EQUAL(init_result,  CASS_OK);
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ALL); // Should work (N=3, RF=3)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ALL); // Should work (N=3, RF=3)
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
@@ -172,21 +193,27 @@ BOOST_AUTO_TEST_CASE(two_nodes_down)
   ccm->force_decommission_node(3);
 
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_ONE);	// Should work (N=1, RF=3)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ONE);	// Should work (N=1, RF=3)
-    BOOST_CHECK_EQUAL(init_result,  CASS_OK);
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ONE); // Should work (N=1, RF=3)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ONE); // Should work (N=1, RF=3)
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_TWO);	// Should fail (N=1, RF=3)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_TWO);	// Should fail (N=1, RF=3)
-    BOOST_CHECK(init_result  != CASS_OK);
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_TWO); // Should fail (N=1, RF=3)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_TWO); // Should fail (N=1, RF=3)
+    BOOST_CHECK(init_result != CASS_OK);
     BOOST_CHECK(query_result != CASS_OK);
   }
   {
-    CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_QUORUM);	// Should fail (N=1, RF=3, quorum=2)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should fail (N=1, RF=3, quorum=2)
-    BOOST_CHECK(init_result  != CASS_OK);
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_QUORUM); // Should fail (N=1, RF=3, quorum=2)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_QUORUM); // Should fail (N=1, RF=3, quorum=2)
+    BOOST_CHECK(init_result != CASS_OK);
     BOOST_CHECK(query_result != CASS_OK);
   }
 
@@ -194,8 +221,7 @@ BOOST_AUTO_TEST_CASE(two_nodes_down)
   ccm->remove_cluster();
 }
 
-BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
-{
+BOOST_AUTO_TEST_CASE(retry_policy_downgrading) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
   CassRetryPolicy* downgrading_policy = cass_retry_policy_downgrading_consistency_new();
   cass_cluster_set_retry_policy(cluster.get(), downgrading_policy);
@@ -215,8 +241,10 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
 
   {
     // Sanity check
-    CassError init_result = policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_ALL);	// Should work (N=3, RF=3)
-    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ALL);	// Should work (N=3, RF=3)
+    CassError init_result = policy_tool.init_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ALL); // Should work (N=3, RF=3)
+    CassError query_result = policy_tool.query_return_error(
+        session.get(), 12, CASS_CONSISTENCY_ALL); // Should work (N=3, RF=3)
     BOOST_CHECK_EQUAL(init_result, CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
@@ -226,12 +254,14 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
   {
     CassError init_result;
     do {
-      init_result = policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should work (N=2, RF=3)
+      init_result = policy_tool.init_return_error(
+          session.get(), 12, CASS_CONSISTENCY_QUORUM); // Should work (N=2, RF=3)
     } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     BOOST_CHECK_EQUAL(init_result, CASS_OK);
     CassError query_result;
     do {
-      query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should work (N=2, RF=3)
+      query_result = policy_tool.query_return_error(
+          session.get(), 12, CASS_CONSISTENCY_QUORUM); // Should work (N=2, RF=3)
     } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
@@ -241,12 +271,14 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
   {
     CassError init_result;
     do {
-      init_result = policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should work (N=1, RF=3)
+      init_result = policy_tool.init_return_error(
+          session.get(), 12, CASS_CONSISTENCY_QUORUM); // Should work (N=1, RF=3)
     } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     BOOST_CHECK_EQUAL(init_result, CASS_OK);
     CassError query_result;
     do {
-      query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should work (N=1, RF=3)
+      query_result = policy_tool.query_return_error(
+          session.get(), 12, CASS_CONSISTENCY_QUORUM); // Should work (N=1, RF=3)
     } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
@@ -254,12 +286,14 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
   {
     CassError init_result;
     do {
-      init_result = policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_TWO);	// Should work (N=1, RF=3)
+      init_result = policy_tool.init_return_error(session.get(), 12,
+                                                  CASS_CONSISTENCY_TWO); // Should work (N=1, RF=3)
     } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     BOOST_CHECK_EQUAL(init_result, CASS_OK);
     CassError query_result;
     do {
-      query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_TWO);	// Should work (N=1, RF=3)
+      query_result = policy_tool.query_return_error(
+          session.get(), 12, CASS_CONSISTENCY_TWO); // Should work (N=1, RF=3)
     } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }

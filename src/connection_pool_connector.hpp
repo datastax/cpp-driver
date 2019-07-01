@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONNECTION_POOL_CONNECTOR_HPP_INCLUDED__
-#define __CASS_CONNECTION_POOL_CONNECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONNECTION_POOL_CONNECTOR_HPP
+#define DATASTAX_INTERNAL_CONNECTION_POOL_CONNECTOR_HPP
 
 #include "address.hpp"
 #include "atomic.hpp"
@@ -28,7 +28,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ConnectionPoolManager;
 
@@ -41,7 +41,7 @@ public:
   typedef SharedRefPtr<ConnectionPoolConnector> Ptr;
   typedef Vector<Ptr> Vec;
 
-  typedef cass::Callback<void, ConnectionPoolConnector*> Callback;
+  typedef internal::Callback<void, ConnectionPoolConnector*> Callback;
 
   /**
    * Constructor
@@ -51,8 +51,7 @@ public:
    * @param callback A callback that is called when the connection is connected or
    * if an error occurred.
    */
-  ConnectionPoolConnector(const Host::Ptr& host,
-                          ProtocolVersion protocol_version,
+  ConnectionPoolConnector(const Host::Ptr& host, ProtocolVersion protocol_version,
                           const Callback& callback);
 
   /**
@@ -139,6 +138,6 @@ private:
   Metrics* metrics_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

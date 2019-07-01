@@ -30,22 +30,15 @@ const DeploymentType DeploymentType::REMOTE("REMOTE", 1, "Remote");
 std::set<DeploymentType> DeploymentType::constants_;
 
 DeploymentType::DeploymentType()
- : name_("INVALID")
- , ordinal_(-1)
- , display_name_("Invalid deployment") {
-}
+    : name_("INVALID")
+    , ordinal_(-1)
+    , display_name_("Invalid deployment") {}
 
-const std::string& DeploymentType::name() const {
-  return name_;
-}
+const std::string& DeploymentType::name() const { return name_; }
 
-short DeploymentType::ordinal() const {
-  return ordinal_;
-}
+short DeploymentType::ordinal() const { return ordinal_; }
 
-const std::string& DeploymentType::to_string() const {
-  return display_name_;
-}
+const std::string& DeploymentType::to_string() const { return display_name_; }
 
 const std::set<DeploymentType>& DeploymentType::get_constants() {
   if (constants_.empty()) {
@@ -58,18 +51,15 @@ const std::set<DeploymentType>& DeploymentType::get_constants() {
   return constants_;
 }
 
-DeploymentType::DeploymentType(const std::string &name, int ordinal, const std::string &display_name)
-  : name_(name)
-  , ordinal_(ordinal)
-  , display_name_(display_name) {}
+DeploymentType::DeploymentType(const std::string& name, int ordinal,
+                               const std::string& display_name)
+    : name_(name)
+    , ordinal_(ordinal)
+    , display_name_(display_name) {}
 
-std::set<DeploymentType>::iterator DeploymentType::end() {
-  return get_constants().end();
-}
+std::set<DeploymentType>::iterator DeploymentType::end() { return get_constants().end(); }
 
-std::set<DeploymentType>::iterator DeploymentType::begin() {
-  return get_constants().begin();
-}
+std::set<DeploymentType>::iterator DeploymentType::begin() { return get_constants().begin(); }
 
 bool DeploymentType::operator<(const DeploymentType& object) const {
   return ordinal_ < object.ordinal_;

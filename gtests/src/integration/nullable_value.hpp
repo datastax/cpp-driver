@@ -27,30 +27,21 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Create a comparable template to act as an interface for comparing
  * values.
  */
-template<typename T>
+template <typename T>
 class Comparable {
-  friend bool operator==(const T& lhs, const T& rhs) {
-    return lhs.compare(rhs) == 0;
-  }
+  friend bool operator==(const T& lhs, const T& rhs) { return lhs.compare(rhs) == 0; }
 
-  friend bool operator!=(const T& lhs, const T& rhs) {
-    return lhs.compare(rhs) != 0;
-  }
+  friend bool operator!=(const T& lhs, const T& rhs) { return lhs.compare(rhs) != 0; }
 
-  friend bool operator<(const T& lhs, const T& rhs) {
-    return lhs.compare(rhs) <= -1;
-  }
+  friend bool operator<(const T& lhs, const T& rhs) { return lhs.compare(rhs) <= -1; }
 
-  friend bool operator>(const T& lhs, const T& rhs) {
-    return lhs.compare(rhs) >= -1;
-  }
+  friend bool operator>(const T& lhs, const T& rhs) { return lhs.compare(rhs) >= -1; }
 };
 
 /**
@@ -59,14 +50,14 @@ class Comparable {
  * value type and other miscellaneous needs for testing; while also allowing the
  * value to be NULL.
  */
-template<typename T>
+template <typename T>
 class NullableValue : public Comparable<NullableValue<T> > {
 public:
   /**
    * Constructor for a NULL value
    */
   NullableValue()
-    : is_null_(true) { };
+      : is_null_(true){};
 
   /**
    * Constructor for a nullable value; convenience constructor
@@ -74,8 +65,8 @@ public:
    * @param value Typed value
    */
   explicit NullableValue(const typename T::ConvenienceType& value)
-    : is_null_(false)
-    , value_(value) { }
+      : is_null_(false)
+      , value_(value) {}
 
   /**
    * Constructor for a nullable value using the wrapped type
@@ -83,8 +74,8 @@ public:
    * @param value Wrapped type value
    */
   explicit NullableValue(const T& value)
-    : is_null_(false)
-    , value_(value) { }
+      : is_null_(false)
+      , value_(value) {}
 
   /**
    * Constructor for a nullable value using the drivers primitive/collection
@@ -93,7 +84,7 @@ public:
    * @param value CassValue from driver query
    */
   explicit NullableValue(const CassValue* value)
-    : is_null_(false) {
+      : is_null_(false) {
     initialize(value);
   }
 
@@ -102,27 +93,21 @@ public:
    *
    * @param collection Collection to append the value to
    */
-  void append(Collection collection) {
-    value_.append(collection);
-  }
+  void append(Collection collection) { value_.append(collection); }
 
   /**
    * Get the CQL type
    *
    * @return CQL type name
    */
-  std::string cql_type() const {
-    return value_.cql_type();
-  }
+  std::string cql_type() const { return value_.cql_type(); }
 
   /**
    * Get the CQL value (for embedded simple statements)
    *
    * @return CQL type value
    */
-  std::string cql_value() const {
-    return value_.cql_value();
-  }
+  std::string cql_value() const { return value_.cql_value(); }
 
   /**
    * Comparison operation for Comparable template
@@ -172,27 +157,21 @@ public:
    *
    * @return True if value is NULL; false otherwise
    */
-  bool is_null() const {
-    return is_null_;
-  }
+  bool is_null() const { return is_null_; }
 
   /**
    * Get the maximum value
    *
    * @return Maximum value
    */
-  static NullableValue<T> max() {
-    return NullableValue<T>(T::max());
-  }
+  static NullableValue<T> max() { return NullableValue<T>(T::max()); }
 
   /**
    * Get the minimum value
    *
    * @return Minimum value
    */
-  static NullableValue<T> min() {
-    return NullableValue<T>(T::min());
-  }
+  static NullableValue<T> min() { return NullableValue<T>(T::min()); }
 
   /**
    * Set the value to a index in the tuple
@@ -216,8 +195,7 @@ public:
    */
   void set(UserType user_type, const std::string& name) {
     if (is_null_) {
-      ASSERT_EQ(CASS_OK,
-                cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
+      ASSERT_EQ(CASS_OK, cass_user_type_set_null_by_name(user_type.get(), name.c_str()));
     } else {
       value_.set(user_type, name);
     }
@@ -246,8 +224,7 @@ public:
    */
   void statement_bind(Statement statement, const std::string& name) {
     if (is_null_) {
-      ASSERT_EQ(CASS_OK, cass_statement_bind_null_by_name(statement.get(),
-                                                          name.c_str()));
+      ASSERT_EQ(CASS_OK, cass_statement_bind_null_by_name(statement.get(), name.c_str()));
     } else {
       value_.statement_bind(statement, name);
     }
@@ -269,42 +246,34 @@ public:
    *
    * @return Minimum server version allowed for value
    */
-  static std::string supported_server_version() {
-    return T::supported_server_version();
-  }
+  static std::string supported_server_version() { return T::supported_server_version(); }
 
   /**
    * Get the driver value
    *
    * @return Driver value
    */
-  typename T::ValueType value() const {
-    return value_.value();
-  }
+  typename T::ValueType value() const { return value_.value(); }
 
   /**
    * Get the wrapped value
    *
    * @return Wrapped value type (templated type)
    */
-  T wrapped_value() const {
-    return value_;
-  }
+  T wrapped_value() const { return value_; }
 
   /**
    * Get the type of value the native driver value is
    *
    * @return Value type of the native driver value
    */
-  CassValueType value_type() const {
-    return value_.value_type();
-  }
+  CassValueType value_type() const { return value_.value_type(); }
 
-  NullableValue<T> operator -(const NullableValue<T>& rhs) {
+  NullableValue<T> operator-(const NullableValue<T>& rhs) {
     return NullableValue<T>(value_ - rhs.value_);
   }
 
-  NullableValue<T> operator +(const NullableValue<T>& rhs) {
+  NullableValue<T> operator+(const NullableValue<T>& rhs) {
     return NullableValue<T>(value_ + rhs.value_);
   }
 
@@ -319,15 +288,12 @@ protected:
   T value_;
 };
 
-template<typename T>
-inline std::ostream& operator<<(std::ostream& output_stream,
-                               const NullableValue<T>& value) {
+template <typename T>
+inline std::ostream& operator<<(std::ostream& output_stream, const NullableValue<T>& value) {
   output_stream << value.cql_value();
   return output_stream;
 }
 
-
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_NULLBALE_VALUE_HPP__

@@ -14,12 +14,12 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ALLOCATED_HPP_INCLUDED__
-#define __CASS_ALLOCATED_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ALLOCATED_HPP
+#define DATASTAX_INTERNAL_ALLOCATED_HPP
 
 #include <cstddef>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Allocated {
 public:
@@ -28,14 +28,15 @@ public:
   void operator delete(void* ptr);
   void operator delete[](void* ptr);
 
-  void* operator new(size_t, void* p)  { return p; }
-  void* operator new[](size_t, void* p)  { return p; }
+  void* operator new(size_t, void* p) { return p; }
+  void* operator new[](size_t, void* p) { return p; }
 };
 
 template <class T>
-struct AllocatedT : public Allocated, public T { };
+struct AllocatedT
+    : public Allocated
+    , public T {};
 
-
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

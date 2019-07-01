@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SMALL_DENSE_HASH_MAP_HPP_INCLUDED__
-#define __CASS_SMALL_DENSE_HASH_MAP_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SMALL_DENSE_HASH_MAP_HPP
+#define DATASTAX_INTERNAL_SMALL_DENSE_HASH_MAP_HPP
 
 #include "fixed_allocator.hpp"
 #include "macros.hpp"
@@ -29,32 +29,30 @@
 
 #define MIN_BUCKETS(N) STATIC_NEXT_POW_2((((N * 100) / OCCUPANCY_PCT) + 1))
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 // This hash map uses a fixed buffer as long as it doesn't exceed N items.
 // This can help to avoid heap allocation in cases where the hash map remains
 // small and doesn't excceed the fixed buffer.
 
-template <class K, class V,
-          size_t N,
-          class HashFcn = SPARSEHASH_HASH<K>,
+template <class K, class V, size_t N, class HashFcn = SPARSEHASH_HASH<K>,
           class EqualKey = std::equal_to<K> >
 class SmallDenseHashMap
-    : public sparsehash::dense_hash_map<
-      K, V,  HashFcn, EqualKey,
-      FixedAllocator<std::pair<const K, V>, MIN_BUCKETS(N)> > {
+    : public sparsehash::dense_hash_map<K, V, HashFcn, EqualKey,
+                                        FixedAllocator<std::pair<const K, V>, MIN_BUCKETS(N)> > {
 public:
   typedef std::pair<const K, V> Pair;
   typedef FixedAllocator<std::pair<const K, V>, MIN_BUCKETS(N)> Allocator;
   typedef sparsehash::dense_hash_map<K, V, HashFcn, EqualKey, Allocator> HashMap;
 
   SmallDenseHashMap()
-    : HashMap(N, typename HashMap::hasher(), typename HashMap::key_equal(), Allocator(&fixed_)) {
+      : HashMap(N, typename HashMap::hasher(), typename HashMap::key_equal(), Allocator(&fixed_)) {
     assert(MIN_BUCKETS(N) >= this->bucket_count());
   }
 
   SmallDenseHashMap(size_t expected_max_items_in_table)
-    : HashMap(expected_max_items_in_table, HashMap::hasher(), HashMap::key_equal(), Allocator(&fixed_)) {
+      : HashMap(expected_max_items_in_table, HashMap::hasher(), HashMap::key_equal(),
+                Allocator(&fixed_)) {
     assert(MIN_BUCKETS(N) >= this->bucket_count());
   }
 
@@ -67,6 +65,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SmallDenseHashMap);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

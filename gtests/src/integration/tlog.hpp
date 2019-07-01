@@ -20,9 +20,10 @@
 #include "options.hpp"
 
 // Create simple console logging functions
-#define TEST_LOG_MESSAGE(message, is_output) if (is_output) { \
-  std::cerr << "test> " << message << std::endl; \
-}
+#define TEST_LOG_MESSAGE(message, is_output)       \
+  if (is_output) {                                 \
+    std::cerr << "test> " << message << std::endl; \
+  }
 #define TEST_LOG(message) TEST_LOG_MESSAGE(message, Options::is_verbose_integration())
 #define TEST_LOG_ERROR(message) TEST_LOG_MESSAGE(message, true)
 

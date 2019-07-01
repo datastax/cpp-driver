@@ -18,18 +18,19 @@
 
 #include "event_loop.hpp"
 #include "query_request.hpp"
+#include "ref_counted.hpp"
 #include "request_handler.hpp"
 #include "request_processor_initializer.hpp"
-#include "ref_counted.hpp"
 
 #define NUM_NODES 3
 
-using namespace cass;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class RequestProcessorUnitTest : public EventLoopTest {
 public:
   RequestProcessorUnitTest()
-    : EventLoopTest("RequestProcessorUnitTest") { }
+      : EventLoopTest("RequestProcessorUnitTest") {}
 
   HostMap generate_hosts() {
     HostMap hosts;
@@ -52,17 +53,17 @@ public:
 
     processor->process_request(request_handler);
     ASSERT_TRUE(response_future->wait_for(wait_for_time_us)) << "Timed out waiting for response";
-    ASSERT_FALSE(response_future->error())
-        << cass_error_desc(response_future->error()->code) << ": "
-        << response_future->error()->message;;
+    ASSERT_FALSE(response_future->error()) << cass_error_desc(response_future->error()->code)
+                                           << ": " << response_future->error()->message;
+    ;
   }
 
-  class Future : public cass::Future {
+  class Future : public core::Future {
   public:
     typedef SharedRefPtr<Future> Ptr;
 
     Future()
-      : cass::Future(FUTURE_TYPE_GENERIC) { }
+        : core::Future(FUTURE_TYPE_GENERIC) {}
 
     ~Future() {
       if (processor_) {
@@ -89,33 +90,29 @@ public:
     typedef SharedRefPtr<CloseListener> Ptr;
 
     CloseListener(const Future::Ptr& close_future = Future::Ptr())
-      : close_future_(close_future)
-      , processor_(NULL) {
+        : close_future_(close_future)
+        , processor_(NULL) {
       inc_ref();
     }
 
-    virtual ~CloseListener() { }
+    virtual ~CloseListener() {}
 
-    virtual void on_connect(RequestProcessor* processor) {
-      processor_ = processor;
-    }
+    virtual void on_connect(RequestProcessor* processor) { processor_ = processor; }
 
-    virtual void on_pool_up(const Address& address)  {
+    virtual void on_pool_up(const Address& address) {
       // In the absence of a Cluster object the processor must notify itself
       // that a host is ready.
       if (processor_) {
-        processor_->notify_host_ready(
-              Host::Ptr(new Host(address)));
+        processor_->notify_host_ready(Host::Ptr(new Host(address)));
       }
     }
-    virtual void on_pool_down(const Address& address) { }
-    virtual void on_pool_critical_error(const Address& address,
-                                        Connector::ConnectionError code,
-                                        const String& message) { }
+    virtual void on_pool_down(const Address& address) {}
+    virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
+                                        const String& message) {}
     virtual void on_keyspace_changed(const String& keyspace,
-                                     const KeyspaceChangedHandler::Ptr& handler) { }
+                                     const KeyspaceChangedHandler::Ptr& handler) {}
     virtual void on_prepared_metadata_changed(const String& id,
-                                              const PreparedMetadata::Entry::Ptr& entry) { }
+                                              const PreparedMetadata::Entry::Ptr& entry) {}
 
     virtual void on_close(RequestProcessor* processor) {
       if (close_future_) {
@@ -135,18 +132,17 @@ public:
       return std::count(error_codes_.begin(), error_codes_.end(), code);
     }
 
-    virtual void on_pool_up(const Address& address)  { }
-    virtual void on_pool_down(const Address& address) { }
-    virtual void on_pool_critical_error(const Address& address,
-                                        Connector::ConnectionError code,
+    virtual void on_pool_up(const Address& address) {}
+    virtual void on_pool_down(const Address& address) {}
+    virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
                                         const String& message) {
       error_codes_.push_back(code);
     }
     virtual void on_keyspace_changed(const String& keyspace,
-                                     const KeyspaceChangedHandler::Ptr& handler) { }
+                                     const KeyspaceChangedHandler::Ptr& handler) {}
     virtual void on_prepared_metadata_changed(const String& id,
-                                              const PreparedMetadata::Entry::Ptr& entry) { }
-    virtual void on_close(RequestProcessor* processor) { }
+                                              const PreparedMetadata::Entry::Ptr& entry) {}
+    virtual void on_close(RequestProcessor* processor) {}
 
   private:
     Vector<Connector::ConnectionError> error_codes_;
@@ -156,14 +152,13 @@ public:
   public:
     typedef SharedRefPtr<UpDownListener> Ptr;
 
-    UpDownListener(const Future::Ptr& up_future,
-                   const Future::Ptr& down_future,
+    UpDownListener(const Future::Ptr& up_future, const Future::Ptr& down_future,
                    const Host::Ptr& target_host = Host::Ptr())
-      : up_future_(up_future)
-      , down_future_(down_future)
-      , target_host_(target_host) { }
+        : up_future_(up_future)
+        , down_future_(down_future)
+        , target_host_(target_host) {}
 
-    virtual void on_pool_up(const Address& address)  {
+    virtual void on_pool_up(const Address& address) {
       if (target_host_ && target_host_->address() != address) return;
       up_future_->set();
     }
@@ -185,20 +180,17 @@ public:
     } else {
       switch (initializer->error_code()) {
         case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_KEYSPACE:
-          future->set_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                            initializer->error_message());
+          future->set_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, initializer->error_message());
           break;
         case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_NO_HOSTS_AVAILABLE:
           future->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                             "Unable to connect to any contact points");
           break;
         case RequestProcessorInitializer::REQUEST_PROCESSOR_ERROR_UNABLE_TO_INIT:
-          future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
-                            initializer->error_message());
+          future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT, initializer->error_message());
           break;
         default:
-          future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
-                            initializer->error_message());
+          future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT, initializer->error_message());
           break;
       }
     }
@@ -212,11 +204,9 @@ TEST_F(RequestProcessorUnitTest, Simple) {
   HostMap hosts(generate_hosts());
 
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   initializer->initialize(event_loop());
 
@@ -233,11 +223,9 @@ TEST_F(RequestProcessorUnitTest, CloseWithRequestsPending) {
   HostMap hosts(generate_hosts());
 
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   initializer->initialize(event_loop());
 
@@ -258,8 +246,8 @@ TEST_F(RequestProcessorUnitTest, CloseWithRequestsPending) {
 
   processor->close();
 
-  for (Vector<ResponseFuture::Ptr>::const_iterator it = futures.begin(),
-       end = futures.end(); it != end; ++it) {
+  for (Vector<ResponseFuture::Ptr>::const_iterator it = futures.begin(), end = futures.end();
+       it != end; ++it) {
     ResponseFuture::Ptr response_future(*it);
     ASSERT_TRUE(response_future->wait_for(WAIT_FOR_TIME));
     EXPECT_FALSE(response_future->error());
@@ -273,19 +261,15 @@ TEST_F(RequestProcessorUnitTest, Auth) {
   HostMap hosts(generate_hosts());
 
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
   settings.connection_pool_settings.connection_settings.auth_provider.reset(
-        new PlainTextAuthProvider("cassandra", "cassandra"));
+      new PlainTextAuthProvider("cassandra", "cassandra"));
 
-  initializer
-      ->with_settings(settings)
-      ->initialize(event_loop());
+  initializer->with_settings(settings)->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -296,21 +280,17 @@ TEST_F(RequestProcessorUnitTest, Auth) {
 TEST_F(RequestProcessorUnitTest, Ssl) {
   mockssandra::SimpleCluster cluster(simple(), NUM_NODES);
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.connection_settings =  use_ssl(&cluster);
+  settings.connection_pool_settings.connection_settings = use_ssl(&cluster);
   ASSERT_EQ(cluster.start_all(), 0);
 
   HostMap hosts(generate_hosts());
 
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
-  initializer
-      ->with_settings(settings)
-      ->initialize(event_loop());
+  initializer->with_settings(settings)->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -330,21 +310,17 @@ TEST_F(RequestProcessorUnitTest, NotifyAddRemoveHost) {
   Future::Ptr connect_future(new Future());
   Future::Ptr up_future(new Future());
   Future::Ptr down_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
+  settings.connection_pool_settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(1)); // Reconnect immediately
 
   UpDownListener::Ptr listener(new UpDownListener(up_future, down_future, to_add_remove));
 
-  initializer
-      ->with_settings(settings)
-      ->with_listener(listener.get())
-      ->initialize(event_loop());
+  initializer->with_settings(settings)->with_listener(listener.get())->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -366,21 +342,17 @@ TEST_F(RequestProcessorUnitTest, CloseDuringReconnect) {
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.reconnect_wait_time_ms = 100000; // Make sure we're reconnecting when we close.
+  settings.connection_pool_settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(100000)); // Make sure we're reconnecting when we close.
 
   CloseListener::Ptr listener(new CloseListener(close_future));
 
-  initializer
-      ->with_settings(settings)
-      ->with_listener(listener.get())
-      ->initialize(event_loop());
+  initializer->with_settings(settings)->with_listener(listener.get())->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -405,17 +377,13 @@ TEST_F(RequestProcessorUnitTest, CloseDuringAddNewHost) {
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   CloseListener::Ptr listener(new CloseListener(close_future));
 
-  initializer
-      ->with_listener(listener.get())
-      ->initialize(event_loop());
+  initializer->with_listener(listener.get())->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -439,17 +407,13 @@ TEST_F(RequestProcessorUnitTest, PoolDown) {
   Future::Ptr connect_future(new Future());
   Future::Ptr up_future(new Future());
   Future::Ptr down_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   UpDownListener::Ptr listener(new UpDownListener(up_future, down_future, target_host));
 
-  initializer
-      ->with_listener(listener.get())
-      ->initialize(event_loop());
+  initializer->with_listener(listener.get())->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -473,21 +437,17 @@ TEST_F(RequestProcessorUnitTest, PoolUp) {
   Future::Ptr connect_future(new Future());
   Future::Ptr up_future(new Future());
   Future::Ptr down_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.reconnect_wait_time_ms = 1; // Reconnect immediately
+  settings.connection_pool_settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(1)); // Reconnect immediately
 
   UpDownListener::Ptr listener(new UpDownListener(up_future, down_future, target_host));
 
-  initializer
-      ->with_settings(settings)
-      ->with_listener(listener.get())
-      ->initialize(event_loop());
+  initializer->with_settings(settings)->with_listener(listener.get())->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -505,22 +465,17 @@ TEST_F(RequestProcessorUnitTest, InvalidAuth) {
   HostMap hosts(generate_hosts());
 
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
   settings.connection_pool_settings.connection_settings.auth_provider.reset(
-        new PlainTextAuthProvider("invalid", "invalid"));
+      new PlainTextAuthProvider("invalid", "invalid"));
 
   CriticalErrorListener listener; // Use stack allocation because it's never closed
 
-  initializer
-      ->with_settings(settings)
-      ->with_listener(&listener)
-      ->initialize(event_loop());
+  initializer->with_settings(settings)->with_listener(&listener)->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_TRUE(connect_future->error());
@@ -536,11 +491,9 @@ TEST_F(RequestProcessorUnitTest, InvalidSsl) {
   HostMap hosts(generate_hosts());
 
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   SslContext::Ptr ssl_context(SslContextFactory::create()); // No trusted cert
 
@@ -549,10 +502,7 @@ TEST_F(RequestProcessorUnitTest, InvalidSsl) {
 
   CriticalErrorListener listener; // Use stack allocation because it's never closed
 
-  initializer
-      ->with_settings(settings)
-      ->with_listener(&listener)
-      ->initialize(event_loop());
+  initializer->with_settings(settings)->with_listener(&listener)->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   ASSERT_TRUE(connect_future->error());
@@ -577,26 +527,22 @@ TEST_F(RequestProcessorUnitTest, RollingRestart) {
 
   HostMap hosts(generate_hosts());
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
   RequestProcessorSettings settings;
-  settings.connection_pool_settings.reconnect_wait_time_ms = 10; // Reconnect immediately
+  settings.connection_pool_settings.reconnection_policy.reset(
+      new ConstantReconnectionPolicy(10)); // Reconnect immediately
 
-  initializer
-      ->with_settings(settings)
-      ->with_listener(listener.get())
-      ->initialize(event_loop());
+  initializer->with_settings(settings)->with_listener(listener.get())->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
   RequestProcessor::Ptr processor(connect_future->processor());
-  cass::Future::Ptr outage_future = execute_outage_plan(&outage_plan);
+  Future::Ptr outage_future = execute_outage_plan(&outage_plan);
 
-  while (!outage_future->wait_for(1000)) { // 1 millisecond wait
+  while (!outage_future->wait_for(1000)) {     // 1 millisecond wait
     try_request(processor, WAIT_FOR_TIME * 3); // Increase wait time for chaotic tests
   }
 
@@ -613,15 +559,11 @@ TEST_F(RequestProcessorUnitTest, NoHostsAvailable) {
 
   HostMap hosts(generate_hosts());
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
-  initializer
-      ->with_listener(listener.get())
-      ->initialize(event_loop());
+  initializer->with_listener(listener.get())->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());
@@ -653,15 +595,11 @@ TEST_F(RequestProcessorUnitTest, RequestTimeout) {
 
   HostMap hosts(generate_hosts());
   Future::Ptr connect_future(new Future());
-  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(hosts.begin()->second,
-                                                                               PROTOCOL_VERSION,
-                                                                               hosts,
-                                                                               TokenMap::Ptr(),
-                                                                               bind_callback(on_connected, connect_future.get())));
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(),
+      bind_callback(on_connected, connect_future.get())));
 
-  initializer
-      ->with_listener(listener.get())
-      ->initialize(event_loop());
+  initializer->with_listener(listener.get())->initialize(event_loop());
 
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_FALSE(connect_future->error());

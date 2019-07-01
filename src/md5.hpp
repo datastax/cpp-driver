@@ -17,15 +17,15 @@
 // Based on public domain source found here:
 // http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
 
-#ifndef __CASS_MD5_HPP_INCLUDED__
-#define __CASS_MD5_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MD5_HPP
+#define DATASTAX_INTERNAL_MD5_HPP
 
 #include "macros.hpp"
 
-#include <uv.h>
 #include <stdint.h>
+#include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Md5 {
 public:
@@ -49,7 +49,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Md5);
 };
 
-
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

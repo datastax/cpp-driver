@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REQUEST_PROCESSOR_INITIALIZER_HPP_INCLUDED__
-#define __CASS_REQUEST_PROCESSOR_INITIALIZER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_REQUEST_PROCESSOR_INITIALIZER_HPP
+#define DATASTAX_INTERNAL_REQUEST_PROCESSOR_INITIALIZER_HPP
 
 #include "atomic.hpp"
 #include "callback.hpp"
@@ -27,7 +27,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Config;
 class EventLoop;
@@ -43,7 +43,7 @@ class RequestProcessorInitializer
 public:
   typedef SharedRefPtr<RequestProcessorInitializer> Ptr;
   typedef Vector<Ptr> Vec;
-  typedef cass::Callback<void, RequestProcessorInitializer*> Callback;
+  typedef internal::Callback<void, RequestProcessorInitializer*> Callback;
 
   enum RequestProcessorError {
     REQUEST_PROCESSOR_OK,
@@ -62,10 +62,8 @@ public:
    * @param callback A callback that is called when the processor is initialized
    * or if an error occurred.
    */
-  RequestProcessorInitializer(const Host::Ptr& connected_host,
-                              ProtocolVersion protocol_version,
-                              const HostMap& hosts,
-                              const TokenMap::Ptr& token_map,
+  RequestProcessorInitializer(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
+                              const HostMap& hosts, const TokenMap::Ptr& token_map,
                               const Callback& callback);
   ~RequestProcessorInitializer();
 
@@ -140,8 +138,7 @@ private:
 
   virtual void on_pool_up(const Address& address);
   virtual void on_pool_down(const Address& address);
-  virtual void on_pool_critical_error(const Address& address,
-                                      Connector::ConnectionError code,
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
                                       const String& message);
   virtual void on_close(ConnectionPoolManager* manager);
 
@@ -177,6 +174,6 @@ private:
   Atomic<size_t> remaining_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

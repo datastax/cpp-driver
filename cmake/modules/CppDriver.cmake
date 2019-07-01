@@ -810,25 +810,6 @@ macro(CassSetCompilerFlags)
       add_definitions("/MP")
     endif()
 
-    # Enable link time optimization for all MSVC build configurations
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
-    set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
-
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /GL")
-    string(REGEX REPLACE "[-/]INCREMENTAL" "/INCREMENTAL:NO" CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO}")
-    set(CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO} /LTCG")
-    string(REGEX REPLACE "[-/]INCREMENTAL" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO}")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} /LTCG")
-    string(REGEX REPLACE "[-/]INCREMENTAL" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}")
-    set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} /LTCG")
-
-    set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /GL")
-    set(CMAKE_STATIC_LINKER_FLAGS_MINSIZEREL "${CMAKE_STATIC_LINKER_FLAGS_MINSIZEREL} /LTCG")
-    set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "${CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL} /LTCG")
-    set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "${CMAKE_EXE_LINKER_FLAGS_MINSIZEREL} /LTCG")
-
     # On Visual C++ -pedantic flag is not used,
     # -fPIC is not used on Windows platform (all DLLs are
     # relocable), -Wall generates about 30k stupid warnings
@@ -1001,18 +982,12 @@ macro(CassFindSourceFiles)
   endif()
 
   set(CASS_ALL_SOURCE_FILES ${CASS_SRC_FILES} ${CASS_API_HEADER_FILES} ${CASS_INC_FILES})
-
-  # Shorten the source file pathing for log messages
-  foreach(SRC_FILE ${CASS_SRC_FILES})
-    string(REPLACE "${CASS_ROOT_DIR}/" "" LOG_FILE_ ${SRC_FILE})
-    set_source_files_properties(${SRC_FILE} PROPERTIES COMPILE_FLAGS -DLOG_FILE_=\\\"${LOG_FILE_}\\\")
-  endforeach()
 endmacro()
 
 #------------------------
 # CassConfigure
 #
-# Generate cassconfig.hpp from cassconfig.hpp.in
+# Generate driver_config.hpp from driver_config.hpp.in
 #
 # Input: CASS_ROOT_DIR, CASS_SRC_DIR
 #------------------------
@@ -1048,6 +1023,6 @@ macro(CassConfigure)
     check_cxx_source_compiles("int main() { return __builtin_bswap64(42); }" HAVE_BUILTIN_BSWAP64)
   endif()
 
-  # Generate the cassconfig.hpp file
-  configure_file(${CASS_ROOT_DIR}/cassconfig.hpp.in ${CASS_SRC_DIR}/cassconfig.hpp)
+  # Generate the driver_config.hpp file
+  configure_file(${CASS_ROOT_DIR}/driver_config.hpp.in ${CASS_SRC_DIR}/driver_config.hpp)
 endmacro()

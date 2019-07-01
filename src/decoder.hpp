@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_DECODER_HPP_INCLUDED__
-#define __CASS_DECODER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_DECODER_HPP
+#define DATASTAX_INTERNAL_DECODER_HPP
 
 #include "constants.hpp"
 #include "data_type.hpp"
@@ -23,14 +23,15 @@
 #include "serialization.hpp"
 #include "small_vector.hpp"
 
-#define CHECK_REMAINING(SIZE, DETAIL) do { \
-  if (remaining_ <  static_cast<size_t>(SIZE)) { \
-    notify_error(DETAIL, SIZE); \
-    return false; \
-  } \
-} while (0)
+#define CHECK_REMAINING(SIZE, DETAIL)             \
+  do {                                            \
+    if (remaining_ < static_cast<size_t>(SIZE)) { \
+      notify_error(DETAIL, SIZE);                 \
+      return false;                               \
+    }                                             \
+  } while (0)
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 typedef Map<String, Vector<String> > StringMultimap;
 
@@ -43,7 +44,7 @@ typedef Vector<Failure> FailureVec;
 struct CustomPayloadItem {
   CustomPayloadItem(StringRef name, StringRef value)
       : name(name)
-      , value(value) { }
+      , value(value) {}
   StringRef name;
   StringRef value;
 };
@@ -57,13 +58,14 @@ class Value; // Forward declaration
  * Decoder class to validate server responses
  */
 class Decoder {
-friend class Value;
+  friend class Value;
+
 public:
   Decoder()
       : input_(NULL)
       , length_(0)
       , remaining_(0)
-      , type_("") { }
+      , type_("") {}
 
   Decoder(const char* input, size_t length,
           ProtocolVersion protocol_version = ProtocolVersion::highest_supported())
@@ -71,14 +73,12 @@ public:
       , input_(input)
       , length_(length)
       , remaining_(length)
-      , type_("") { }
+      , type_("") {}
 
   void maybe_log_remaining() const;
 
   inline String as_string() const { return String(input_, remaining_); }
-  inline StringRef as_string_ref() const {
-    return StringRef(input_, remaining_);
-  }
+  inline StringRef as_string_ref() const { return StringRef(input_, remaining_); }
 
   inline Vector<char> as_vector() const {
     Vector<char> buffer(remaining_ + 1);
@@ -89,14 +89,12 @@ public:
 
   inline ProtocolVersion protocol_version() const { return protocol_version_; }
 
-  inline void set_type(const char* type) {
-    type_ = type;
-  }
+  inline void set_type(const char* type) { type_ = type; }
 
   inline bool decode_byte(uint8_t& output) {
     CHECK_REMAINING(sizeof(uint8_t), "byte");
 
-    input_ = cass::decode_byte(input_, output);
+    input_ = internal::decode_byte(input_, output);
     remaining_ -= sizeof(uint8_t);
     return true;
   }
@@ -104,7 +102,7 @@ public:
   inline bool as_byte(uint8_t* output) const {
     CHECK_REMAINING(sizeof(uint8_t), "byte");
 
-    cass::decode_byte(input_, *output);
+    internal::decode_byte(input_, *output);
     return true;
   }
 
@@ -118,7 +116,7 @@ public:
   inline bool decode_int8(int8_t& output) {
     CHECK_REMAINING(sizeof(int8_t), "signed byte");
 
-    input_ = cass::decode_int8(input_, output);
+    input_ = internal::decode_int8(input_, output);
     remaining_ -= sizeof(int8_t);
     return true;
   }
@@ -126,14 +124,14 @@ public:
   inline bool as_int8(int8_t* output) const {
     CHECK_REMAINING(sizeof(int8_t), "signed byte");
 
-    cass::decode_int8(input_, *output);
+    internal::decode_int8(input_, *output);
     return true;
   }
 
   inline bool decode_uint16(uint16_t& output) {
     CHECK_REMAINING(sizeof(uint16_t), "unsigned short");
 
-    input_ = cass::decode_uint16(input_, output);
+    input_ = internal::decode_uint16(input_, output);
     remaining_ -= sizeof(uint16_t);
     return true;
   }
@@ -141,7 +139,7 @@ public:
   inline bool decode_int16(int16_t& output) {
     CHECK_REMAINING(sizeof(int16_t), "short");
 
-    input_ = cass::decode_int16(input_, output);
+    input_ = internal::decode_int16(input_, output);
     remaining_ -= sizeof(int16_t);
     return true;
   }
@@ -149,14 +147,14 @@ public:
   inline bool as_int16(int16_t* output) const {
     CHECK_REMAINING(sizeof(int16_t), "short");
 
-    cass::decode_int16(input_, *output);
+    internal::decode_int16(input_, *output);
     return true;
   }
 
   inline bool decode_uint32(uint32_t& output) {
     CHECK_REMAINING(sizeof(uint32_t), "unsigned int");
 
-    input_ = cass::decode_uint32(input_, output);
+    input_ = internal::decode_uint32(input_, output);
     remaining_ -= sizeof(uint32_t);
     return true;
   }
@@ -164,14 +162,14 @@ public:
   inline bool as_uint32(uint32_t* output) const {
     CHECK_REMAINING(sizeof(uint32_t), "unsigned int");
 
-    cass::decode_uint32(input_, *output);
+    internal::decode_uint32(input_, *output);
     return true;
   }
 
   inline bool decode_int32(int32_t& output) {
     CHECK_REMAINING(sizeof(int32_t), "int");
 
-    input_ = cass::decode_int32(input_, output);
+    input_ = internal::decode_int32(input_, output);
     remaining_ -= sizeof(int32_t);
     return true;
   }
@@ -179,14 +177,14 @@ public:
   inline bool as_int32(int32_t* output) const {
     CHECK_REMAINING(sizeof(int32_t), "int");
 
-    cass::decode_int32(input_, *output);
+    internal::decode_int32(input_, *output);
     return true;
   }
 
   inline bool decode_int64(int64_t& output) {
     CHECK_REMAINING(sizeof(int64_t), "long");
 
-    input_ = cass::decode_int64(input_, output);
+    input_ = internal::decode_int64(input_, output);
     remaining_ -= sizeof(int64_t);
     return true;
   }
@@ -194,14 +192,14 @@ public:
   inline bool as_int64(int64_t* output) const {
     CHECK_REMAINING(sizeof(int64_t), "long");
 
-    cass::decode_int64(input_, *output);
+    internal::decode_int64(input_, *output);
     return true;
   }
 
   inline bool decode_float(float& output) {
     CHECK_REMAINING(sizeof(int32_t), "float");
 
-    input_ = cass::decode_float(input_, output);
+    input_ = internal::decode_float(input_, output);
     remaining_ -= sizeof(int32_t);
     return true;
   }
@@ -209,14 +207,14 @@ public:
   inline bool as_float(float* output) const {
     CHECK_REMAINING(sizeof(int32_t), "float");
 
-    cass::decode_float(input_, *output);
+    internal::decode_float(input_, *output);
     return true;
   }
 
   inline bool decode_double(double& output) {
     CHECK_REMAINING(sizeof(int64_t), "double");
 
-    input_ = cass::decode_double(input_, output);
+    input_ = internal::decode_double(input_, output);
     remaining_ -= sizeof(int64_t);
     return true;
   }
@@ -224,7 +222,7 @@ public:
   inline bool as_double(double* output) const {
     CHECK_REMAINING(sizeof(int64_t), "double");
 
-    cass::decode_double(input_, *output);
+    internal::decode_double(input_, *output);
     return true;
   }
 
@@ -232,7 +230,7 @@ public:
     CHECK_REMAINING(sizeof(uint16_t), "length of string");
 
     uint16_t string_size = 0;
-    input_ = cass::decode_uint16(input_, string_size);
+    input_ = internal::decode_uint16(input_, string_size);
     remaining_ -= sizeof(uint16_t);
 
     CHECK_REMAINING(string_size, "string");
@@ -256,7 +254,7 @@ public:
     CHECK_REMAINING(sizeof(int32_t), "length of long string");
 
     int32_t string_size = 0;
-    input_ = cass::decode_int32(input_, string_size);
+    input_ = internal::decode_int32(input_, string_size);
     remaining_ -= sizeof(int32_t);
 
     CHECK_REMAINING(string_size, "string");
@@ -271,7 +269,7 @@ public:
     CHECK_REMAINING(sizeof(int32_t), "length of bytes");
 
     int32_t bytes_size = 0;
-    input_ = cass::decode_int32(input_, bytes_size);
+    input_ = internal::decode_int32(input_, bytes_size);
     remaining_ -= sizeof(int32_t);
 
     if (bytes_size < 0) {
@@ -301,8 +299,7 @@ public:
   bool decode_inet(CassInet* output);
   bool as_inet(const int address_length, CassInet* output) const;
 
-  inline bool as_inet(const int address_length, const int port,
-                      Address* output) const {
+  inline bool as_inet(const int address_length, const int port, Address* output) const {
     CassInet inet;
     if (!as_inet(address_length, &inet)) return false;
     return Address::from_inet(&inet.address, inet.address_length, port, output);
@@ -312,7 +309,7 @@ public:
     CHECK_REMAINING(sizeof(uint16_t), "size of string map");
 
     uint16_t pairs = 0;
-    input_ = cass::decode_uint16(input_, pairs);
+    input_ = internal::decode_uint16(input_, pairs);
     remaining_ -= sizeof(uint16_t);
 
     map.clear();
@@ -324,8 +321,7 @@ public:
 
       if (!decode_string(&key, key_size)) return false;
       if (!decode_string(&value, value_size)) return false;
-      map.insert(std::make_pair(String(key, key_size),
-                                String(value, value_size)));
+      map.insert(std::make_pair(String(key, key_size), String(value, value_size)));
     }
 
     return true;
@@ -335,7 +331,7 @@ public:
     CHECK_REMAINING(sizeof(uint16_t), "count of stringlist");
 
     uint16_t count = 0;
-    input_ = cass::decode_uint16(input_, count);
+    input_ = internal::decode_uint16(input_, count);
     remaining_ -= sizeof(uint16_t);
 
     output.clear();
@@ -355,7 +351,7 @@ public:
     CHECK_REMAINING(sizeof(uint16_t), "count of stringlist");
 
     uint16_t count = 0;
-    input_ = cass::decode_uint16(input_, count);
+    input_ = internal::decode_uint16(input_, count);
     remaining_ -= sizeof(uint16_t);
 
     output.clear();
@@ -374,7 +370,7 @@ public:
     size_t total_read = sizeof(uint16_t);
     CHECK_REMAINING(total_read, "count of stringlist");
     uint16_t count = 0;
-    const char* pos = cass::decode_uint16(input_, count);
+    const char* pos = internal::decode_uint16(input_, count);
 
     output.clear();
     output.reserve(count);
@@ -382,7 +378,7 @@ public:
       total_read += sizeof(uint16_t);
       CHECK_REMAINING(total_read, "length of string");
       uint16_t string_size = 0;
-      pos = cass::decode_uint16(pos, string_size);
+      pos = internal::decode_uint16(pos, string_size);
 
       total_read += string_size;
       CHECK_REMAINING(total_read, "string");
@@ -397,7 +393,7 @@ public:
     CHECK_REMAINING(sizeof(uint16_t), "pair(s) of string multimap");
 
     uint16_t pairs = 0;
-    input_ = cass::decode_uint16(input_, pairs);
+    input_ = internal::decode_uint16(input_, pairs);
     remaining_ -= sizeof(uint16_t);
 
     output.clear();
@@ -414,11 +410,10 @@ public:
     return true;
   }
 
-  inline bool decode_option(uint16_t& type, const char** class_name,
-                            size_t& class_name_size) {
+  inline bool decode_option(uint16_t& type, const char** class_name, size_t& class_name_size) {
     CHECK_REMAINING(sizeof(uint16_t), "option type");
 
-    input_ = cass::decode_uint16(input_, type);
+    input_ = internal::decode_uint16(input_, type);
     remaining_ -= sizeof(uint16_t);
 
     if (type == CASS_VALUE_TYPE_CUSTOM) {
@@ -432,7 +427,7 @@ public:
     size_t bytes = sizeof(uint8_t) * 16;
     CHECK_REMAINING(bytes, "UUID");
 
-    input_ = cass::decode_uuid(input_, output);
+    input_ = internal::decode_uuid(input_, output);
     remaining_ -= bytes;
     return true;
   }
@@ -440,7 +435,7 @@ public:
   inline bool as_uuid(CassUuid* output) const {
     CHECK_REMAINING(sizeof(uint8_t) * 16, "UUID");
 
-    cass::decode_uuid(input_, output);
+    internal::decode_uuid(input_, output);
     return true;
   }
 
@@ -462,9 +457,9 @@ public:
       // 3. We care about leading 0s in the byte, not int, so subtract out the
       //    appropriate number of extra bits (56 for a 64-bit int).
 
-      // We mask out high-order bits to prevent sign-extension as the value is placed in a 64-bit arg
-      // to the num_leading_zeros function.
-      int extra_bytes = cass::num_leading_zeros(~first_byte & 0xff) - 56;
+      // We mask out high-order bits to prevent sign-extension as the value is placed in a 64-bit
+      // arg to the num_leading_zeros function.
+      int extra_bytes = internal::num_leading_zeros(~first_byte & 0xff) - 56;
       CHECK_REMAINING(extra_bytes, "vint value");
 
       // Build up the vint value one byte at a time from the data bytes.
@@ -482,11 +477,10 @@ public:
     return true;
   }
 
-  inline bool as_decimal(const uint8_t** output, size_t* size,
-                         int32_t* scale) {
+  inline bool as_decimal(const uint8_t** output, size_t* size, int32_t* scale) {
     CHECK_REMAINING(sizeof(int32_t), "decimal scale");
 
-    const char* pos = cass::decode_int32(input_, *scale);
+    const char* pos = internal::decode_int32(input_, *scale);
 
     if (remaining_ - sizeof(int32_t) <= 0) {
       notify_error("decimal value", remaining_ - sizeof(int32_t));
@@ -497,19 +491,18 @@ public:
     return true;
   }
 
-  inline bool as_duration(int32_t* out_months, int32_t* out_days,
-                          int64_t* out_nanos) const {
+  inline bool as_duration(int32_t* out_months, int32_t* out_days, int64_t* out_nanos) const {
     Decoder decoder = Decoder(input_, remaining_, protocol_version_);
     uint64_t decoded = 0;
 
     if (!decoder.decode_vint(decoded)) return false;
-    *out_months = static_cast<int32_t>(cass::decode_zig_zag(decoded));
+    *out_months = static_cast<int32_t>(internal::decode_zig_zag(decoded));
 
     if (!decoder.decode_vint(decoded)) return false;
-    *out_days = static_cast<int32_t>(cass::decode_zig_zag(decoded));
+    *out_days = static_cast<int32_t>(internal::decode_zig_zag(decoded));
 
     if (!decoder.decode_vint(decoded)) return false;
-    *out_nanos = static_cast<int64_t>(cass::decode_zig_zag(decoded));
+    *out_nanos = static_cast<int64_t>(internal::decode_zig_zag(decoded));
 
     return true;
   }
@@ -520,7 +513,7 @@ public:
       return false;
     }
     uint16_t count = 0;
-    input_ = cass::decode_uint16(input_, count);
+    input_ = internal::decode_uint16(input_, count);
     remaining_ -= sizeof(uint16_t);
 
     for (uint16_t i = 0; i < count; ++i) {
@@ -540,7 +533,7 @@ public:
       notify_error("count of failures", sizeof(int32_t));
       return false;
     }
-    input_ = cass::decode_int32(input_, output_size);
+    input_ = internal::decode_int32(input_, output_size);
     remaining_ -= sizeof(int32_t);
 
     // Format: <endpoint><failurecode>
@@ -583,8 +576,8 @@ private:
   void notify_error(const char* detail, size_t bytes) const;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #undef CHECK_REMAINING
 
-#endif // __CASS_DECODER_HPP_INCLUDED__
+#endif // DATASTAX_INTERNAL_DECODER_HPP

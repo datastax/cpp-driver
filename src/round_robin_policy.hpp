@@ -14,16 +14,16 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ROUND_ROBIN_POLICY_HPP_INCLUDED__
-#define __CASS_ROUND_ROBIN_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ROUND_ROBIN_POLICY_HPP
+#define DATASTAX_INTERNAL_ROUND_ROBIN_POLICY_HPP
 
 #include "cassandra.h"
 #include "copy_on_write_ptr.hpp"
-#include "load_balancing.hpp"
 #include "host.hpp"
+#include "load_balancing.hpp"
 #include "random.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class RoundRobinPolicy : public LoadBalancingPolicy {
 public:
@@ -34,8 +34,7 @@ public:
 
   virtual CassHostDistance distance(const Host::Ptr& host) const;
 
-  virtual QueryPlan* new_query_plan(const String& keyspace,
-                                    RequestHandler* request_handler,
+  virtual QueryPlan* new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
   virtual bool is_host_up(const Address& address) const;
@@ -50,13 +49,12 @@ public:
 private:
   class RoundRobinQueryPlan : public QueryPlan {
   public:
-    RoundRobinQueryPlan(const RoundRobinPolicy* policy,
-                        const CopyOnWriteHostVec& hosts,
+    RoundRobinQueryPlan(const RoundRobinPolicy* policy, const CopyOnWriteHostVec& hosts,
                         size_t start_index)
-      : policy_(policy)
-      , hosts_(hosts)
-      , index_(start_index)
-      , remaining_(hosts->size()) { }
+        : policy_(policy)
+        , hosts_(hosts)
+        , index_(start_index)
+        , remaining_(hosts->size()) {}
 
     virtual Host::Ptr compute_next();
 
@@ -77,6 +75,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RoundRobinPolicy);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

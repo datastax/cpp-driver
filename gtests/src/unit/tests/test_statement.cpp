@@ -16,10 +16,12 @@
 
 #include "unit.hpp"
 
-#include "query_request.hpp"
-#include "control_connection.hpp"
-#include "session.hpp"
 #include "constants.hpp"
+#include "control_connection.hpp"
+#include "query_request.hpp"
+#include "session.hpp"
+
+using namespace datastax::internal::core;
 
 class StatementUnitTest : public Unit {
 public:
@@ -28,35 +30,34 @@ public:
     Unit::TearDown();
   }
 
-  void connect(const cass::Config& config = cass::Config()) {
-    cass::Config temp(config);
+  void connect(const Config& config = Config()) {
+    Config temp(config);
     temp.contact_points().push_back("127.0.0.1");
     temp.contact_points().push_back("127.0.0.2"); // At least one more host (in case node 1 is down)
-    cass::Future::Ptr connect_future(session.connect(temp));
+    Future::Ptr connect_future(session.connect(temp));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";
-    ASSERT_FALSE(connect_future->error())
-        << cass_error_desc(connect_future->error()->code) << ": "
-        << connect_future->error()->message;
+    ASSERT_FALSE(connect_future->error()) << cass_error_desc(connect_future->error()->code) << ": "
+                                          << connect_future->error()->message;
   }
 
-  void get_rpc_address(const cass::Response::Ptr& response, cass::Address* output) {
+  void get_rpc_address(const Response::Ptr& response, Address* output) {
     ASSERT_TRUE(response);
     ASSERT_EQ(response->opcode(), CQL_OPCODE_RESULT);
 
-    cass::ResultResponse::Ptr result(response);
+    ResultResponse::Ptr result(response);
 
-    const cass::Value* value = result->first_row().get_by_name("rpc_address");
+    const Value* value = result->first_row().get_by_name("rpc_address");
     ASSERT_TRUE(value);
     ASSERT_EQ(value->value_type(), CASS_VALUE_TYPE_INET);
 
     CassInet inet;
     ASSERT_TRUE(value->decoder().as_inet(value->size(), &inet));
 
-    ASSERT_TRUE(cass::Address::from_inet(inet.address, inet.address_length, 9042, output));
+    ASSERT_TRUE(Address::from_inet(inet.address, inet.address_length, 9042, output));
   }
 
-  cass::Session session;
+  Session session;
 };
 
 TEST_F(StatementUnitTest, SetHost) {
@@ -68,15 +69,15 @@ TEST_F(StatementUnitTest, SetHost) {
   mockssandra::Ipv4AddressGenerator gen;
 
   for (int i = 0; i < 2; ++i) {
-    cass::Address expected_host(gen.next());
+    Address expected_host(gen.next());
 
-    cass::Statement::Ptr request(new cass::QueryRequest(SELECT_LOCAL, 0));
+    Statement::Ptr request(new QueryRequest(SELECT_LOCAL, 0));
     request->set_host(expected_host);
 
-    cass::ResponseFuture::Ptr future(session.execute(cass::Request::ConstPtr(request)));
+    ResponseFuture::Ptr future(session.execute(Request::ConstPtr(request)));
     future->wait();
 
-    cass::Address actual_host;
+    Address actual_host;
     get_rpc_address(future->response(), &actual_host);
 
     EXPECT_EQ(expected_host, actual_host);
@@ -89,12 +90,12 @@ TEST_F(StatementUnitTest, SetHostWithInvalidPort) {
 
   connect();
 
-  cass::Address expected_host(cass::Address("127.0.0.1", 8888)); // Invalid port
+  Address expected_host(Address("127.0.0.1", 8888)); // Invalid port
 
-  cass::Statement::Ptr request(new cass::QueryRequest(SELECT_LOCAL, 0));
+  Statement::Ptr request(new QueryRequest(SELECT_LOCAL, 0));
   request->set_host(expected_host);
 
-  cass::ResponseFuture::Ptr future(session.execute(cass::Request::ConstPtr(request)));
+  ResponseFuture::Ptr future(session.execute(Request::ConstPtr(request)));
   future->wait();
 
   ASSERT_TRUE(future->error());
@@ -109,12 +110,12 @@ TEST_F(StatementUnitTest, SetHostWhereHostIsDown) {
 
   connect();
 
-  cass::Address expected_host(cass::Address("127.0.0.1", 9042));
+  Address expected_host(Address("127.0.0.1", 9042));
 
-  cass::Statement::Ptr request(new cass::QueryRequest(SELECT_LOCAL, 0));
+  Statement::Ptr request(new QueryRequest(SELECT_LOCAL, 0));
   request->set_host(expected_host);
 
-  cass::ResponseFuture::Ptr future(session.execute(cass::Request::ConstPtr(request)));
+  ResponseFuture::Ptr future(session.execute(Request::ConstPtr(request)));
   future->wait();
 
   ASSERT_TRUE(future->error());

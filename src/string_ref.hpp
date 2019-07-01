@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_STRING_REF_HPP_INCLUDED__
-#define __CASS_STRING_REF_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_STRING_REF_HPP
+#define DATASTAX_INTERNAL_STRING_REF_HPP
 
 #include "hash.hpp"
 #include "macros.hpp"
@@ -28,11 +28,10 @@
 #include <stddef.h>
 #include <string.h>
 
-namespace cass {
+namespace datastax {
 
-template<class IsEqual>
-int compare(const char* s1,  const char* s2,
-            size_t length, IsEqual is_equal) {
+template <class IsEqual>
+int compare(const char* s1, const char* s2, size_t length, IsEqual is_equal) {
   for (size_t i = 0; i < length; ++i) {
     if (!is_equal(s1[i], s2[i])) {
       return s1[i] < s2[i] ? -1 : 1;
@@ -55,33 +54,29 @@ public:
   static const size_type npos;
 
   struct IsEqual {
-    bool operator()(char a, char b) const {
-      return a == b;
-    }
+    bool operator()(char a, char b) const { return a == b; }
   };
 
   struct IsEqualInsensitive {
-    bool operator()(char a, char b) const {
-      return std::toupper(a) == std::toupper(b);
-    }
+    bool operator()(char a, char b) const { return std::toupper(a) == std::toupper(b); }
   };
 
 public:
   StringRef()
-    : ptr_(NULL)
-    , length_(0) {}
+      : ptr_(NULL)
+      , length_(0) {}
 
   StringRef(const char* ptr, size_t length)
-    : ptr_(ptr)
-    , length_(length) {}
+      : ptr_(ptr)
+      , length_(length) {}
 
   StringRef(const char* str)
-    : ptr_(str)
-    , length_(SAFE_STRLEN(str)) {}
+      : ptr_(str)
+      , length_(SAFE_STRLEN(str)) {}
 
   StringRef(const String& str)
-    : ptr_(str.data())
-    , length_(str.size()) {}
+      : ptr_(str.data())
+      , length_(str.size()) {}
 
   const char* data() const { return ptr_; }
   size_t size() const { return length_; }
@@ -94,9 +89,7 @@ public:
   char front() const { return ptr_[0]; }
   char back() const { return ptr_[length_ - 1]; }
 
-  String to_string() const {
-    return String(ptr_, length_);
-  }
+  String to_string() const { return String(ptr_, length_); }
 
   StringRef substr(size_t pos = 0, size_t length = npos) {
     assert(pos < length_);
@@ -111,58 +104,42 @@ public:
     return i - begin();
   }
 
-  int compare(const StringRef& ref) const {
-    return compare(ref, IsEqual());
-  }
+  int compare(const StringRef& ref) const { return compare(ref, IsEqual()); }
 
-  int icompare(const StringRef& ref) const {
-    return compare(ref, IsEqualInsensitive());
-  }
+  int icompare(const StringRef& ref) const { return compare(ref, IsEqualInsensitive()); }
 
-  bool equals(const StringRef& ref) const {
-    return compare(ref) == 0;
-  }
+  bool equals(const StringRef& ref) const { return compare(ref) == 0; }
 
-  bool iequals(const StringRef& ref) const {
-    return icompare(ref) == 0;
-  }
+  bool iequals(const StringRef& ref) const { return icompare(ref) == 0; }
 
-  bool operator==(const StringRef& ref) const {
-    return equals(ref);
-  }
+  bool operator==(const StringRef& ref) const { return equals(ref); }
 
-  bool operator!=(const StringRef& ref) const {
-    return !equals(ref);
-  }
+  bool operator!=(const StringRef& ref) const { return !equals(ref); }
 
-  bool operator<(const StringRef& ref) const {
-    return compare(ref) < 0;
-  }
+  bool operator<(const StringRef& ref) const { return compare(ref) < 0; }
 
 private:
-  template<class IsEqual>
+  template <class IsEqual>
   int compare(const StringRef& ref, IsEqual is_equal) const {
     if (length_ < ref.length_) {
       return -1;
-    } else if(length_ > ref.length_) {
+    } else if (length_ > ref.length_) {
       return 1;
     }
-    return cass::compare(ptr_, ref.ptr_, length_, is_equal);
+    return datastax::compare(ptr_, ref.ptr_, length_, is_equal);
   }
 
   const char* ptr_;
   size_t length_;
 };
 
-typedef Vector<String> StringVec;
-typedef Vector<StringRef> StringRefVec;
+typedef internal::Vector<String> StringVec;
+typedef internal::Vector<StringRef> StringRefVec;
 
 inline StringVec to_strings(const StringRefVec& refs) {
   StringVec strings;
   strings.reserve(refs.size());
-  for (StringRefVec::const_iterator i = refs.begin(), end = refs.end();
-       i != end;
-       ++i) {
+  for (StringRefVec::const_iterator i = refs.begin(), end = refs.end(); i != end; ++i) {
     strings.push_back(i->to_string());
   }
   return strings;
@@ -170,19 +147,16 @@ inline StringVec to_strings(const StringRefVec& refs) {
 
 inline bool starts_with(const StringRef& input, const StringRef& target) {
   return input.length() >= target.length() &&
-      cass::compare(input.data(), target.data(), target.size(),
-                    StringRef::IsEqual()) == 0;
+         compare(input.data(), target.data(), target.size(), StringRef::IsEqual()) == 0;
 }
 
 inline bool ends_with(const StringRef& input, const StringRef& target) {
   return input.length() >= target.length() &&
-      cass::compare(input.data() + (input.length() - target.length()),
-                    target.data(), target.size(), StringRef::IsEqual()) == 0;
+         compare(input.data() + (input.length() - target.length()), target.data(), target.size(),
+                 StringRef::IsEqual()) == 0;
 }
 
-inline bool iequals(const StringRef& lhs, const StringRef& rhs) {
-  return lhs.iequals(rhs);
-}
+inline bool iequals(const StringRef& lhs, const StringRef& rhs) { return lhs.iequals(rhs); }
 
 struct StringRefIHash {
   std::size_t operator()(const StringRef& s) const {
@@ -191,11 +165,9 @@ struct StringRefIHash {
 };
 
 struct StringRefIEquals {
-  bool operator()(const StringRef& lhs, const StringRef& rhs) const {
-    return lhs.iequals(rhs);
-  }
+  bool operator()(const StringRef& lhs, const StringRef& rhs) const { return lhs.iequals(rhs); }
 };
 
-} // namespace cass
+} // namespace datastax
 
 #endif

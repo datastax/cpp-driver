@@ -14,20 +14,20 @@
   limitations under the License.
 */
 
-#ifndef __CASS_AUTH_RESPONSES_HPP_INCLUDED__
-#define __CASS_AUTH_RESPONSES_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_AUTH_RESPONSES_HPP
+#define DATASTAX_INTERNAL_AUTH_RESPONSES_HPP
 
 #include "constants.hpp"
 #include "response.hpp"
 #include "string.hpp"
 #include "string_ref.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class AuthenticateResponse : public Response {
 public:
   AuthenticateResponse()
-    : Response(CQL_OPCODE_AUTHENTICATE) { }
+      : Response(CQL_OPCODE_AUTHENTICATE) {}
 
   const String& class_name() const { return class_name_; }
 
@@ -40,7 +40,7 @@ private:
 class AuthChallengeResponse : public Response {
 public:
   AuthChallengeResponse()
-    : Response(CQL_OPCODE_AUTH_CHALLENGE) { }
+      : Response(CQL_OPCODE_AUTH_CHALLENGE) {}
 
   const String& token() const { return token_; }
 
@@ -53,7 +53,7 @@ private:
 class AuthSuccessResponse : public Response {
 public:
   AuthSuccessResponse()
-    : Response(CQL_OPCODE_AUTH_SUCCESS) { }
+      : Response(CQL_OPCODE_AUTH_SUCCESS) {}
 
   const String& token() const { return token_; }
 
@@ -63,6 +63,6 @@ private:
   String token_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

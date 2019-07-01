@@ -354,4 +354,3 @@ private:
 };
 
 #endif // __OPTIONS_HPP__
-

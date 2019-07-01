@@ -23,18 +23,18 @@
   http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
 */
 
-#ifndef __CASS_SPSC_QUEUE_HPP_INCLUDED__
-#define __CASS_SPSC_QUEUE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SPSC_QUEUE_HPP
+#define DATASTAX_INTERNAL_SPSC_QUEUE_HPP
 
 #include <assert.h>
 
 #include "atomic.hpp"
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 #include "macros.hpp"
 #include "scoped_ptr.hpp"
 #include "utils.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 template <typename T>
 class SPSCQueue {
@@ -69,16 +69,13 @@ public:
     return true;
   }
 
-  bool is_empty() {
-    return head_.load(MEMORY_ORDER_ACQUIRE) ==
-        tail_.load(MEMORY_ORDER_ACQUIRE);
-  }
+  bool is_empty() { return head_.load(MEMORY_ORDER_ACQUIRE) == tail_.load(MEMORY_ORDER_ACQUIRE); }
 
   static void memory_fence() {
-   // Internally, libuv has a "pending" flag check whose load can be reordered
-   // before storing the data into the queue causing the data in the queue
-   // not to be consumed. This fence ensures that the load happens after the
-   // data has been store in the queue.
+    // Internally, libuv has a "pending" flag check whose load can be reordered
+    // before storing the data into the queue causing the data in the queue
+    // not to be consumed. This fence ensures that the load happens after the
+    // data has been store in the queue.
 #if defined(HAVE_BOOST_ATOMIC) || defined(HAVE_STD_ATOMIC)
     atomic_thread_fence(MEMORY_ORDER_SEQ_CST);
 #endif
@@ -101,6 +98,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SPSCQueue);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

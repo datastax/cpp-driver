@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SERIALIZATION_HPP_INCLUDED__
-#define __CASS_SERIALIZATION_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SERIALIZATION_HPP
+#define DATASTAX_INTERNAL_SERIALIZATION_HPP
 
 #include "address.hpp"
 #include "cassandra.h"
@@ -30,7 +30,7 @@
 #include <limits>
 #include <string.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 // http://commandcenter.blogspot.com/2012/04/byte-order-fallacy.html
 // This frees us from having to deal with endian stuff on every platform.
@@ -197,7 +197,7 @@ inline char* encode_uuid(char* output, CassUuid uuid) {
 }
 
 inline const char* decode_uuid(const char* input, CassUuid* output) {
-  output->time_and_version  = static_cast<uint64_t>(static_cast<uint8_t>(input[3]));
+  output->time_and_version = static_cast<uint64_t>(static_cast<uint8_t>(input[3]));
   output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[2])) << 8;
   output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[1])) << 16;
   output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[0])) << 24;
@@ -210,7 +210,8 @@ inline const char* decode_uuid(const char* input, CassUuid* output) {
 
   output->clock_seq_and_node = 0;
   for (size_t i = 0; i < 8; ++i) {
-    output->clock_seq_and_node |= static_cast<uint64_t>(static_cast<uint8_t>(input[15 - i])) << (8 * i);
+    output->clock_seq_and_node |= static_cast<uint64_t>(static_cast<uint8_t>(input[15 - i]))
+                                  << (8 * i);
   }
   return input + 16;
 }
@@ -221,10 +222,8 @@ inline int64_t decode_zig_zag(uint64_t n) {
   return (n >> 1) ^ -static_cast<int64_t>(n & 1);
 }
 
-inline uint64_t encode_zig_zag(int64_t n) {
-  return (n << 1) ^ (n >> 63);
-}
+inline uint64_t encode_zig_zag(int64_t n) { return (n << 1) ^ (n >> 63); }
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

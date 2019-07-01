@@ -22,8 +22,7 @@
 
 #include "values.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Wrapped UUID generator object
@@ -34,7 +33,7 @@ public:
    * Create the UUID generator object
    */
   UuidGen()
-    : Object<CassUuidGen, cass_uuid_gen_free>(cass_uuid_gen_new()) {}
+      : Object<CassUuidGen, cass_uuid_gen_free>(cass_uuid_gen_new()) {}
 
   /**
    * Create the UUID generator object with custom node information
@@ -42,7 +41,7 @@ public:
    * @param node Node to use for custom node information
    */
   UuidGen(cass_uint64_t node)
-    : Object<CassUuidGen, cass_uuid_gen_free>(cass_uuid_gen_new_with_node(node)) {}
+      : Object<CassUuidGen, cass_uuid_gen_free>(cass_uuid_gen_new_with_node(node)) {}
 
   /**
    * Create the UUID generator object from the native driver object
@@ -50,7 +49,7 @@ public:
    * @param uuid_gen Native driver object
    */
   UuidGen(CassUuidGen* uuid_gen)
-    : Object<CassUuidGen, cass_uuid_gen_free>(uuid_gen) {}
+      : Object<CassUuidGen, cass_uuid_gen_free>(uuid_gen) {}
 
   /**
    * Create the UUID generator object from a shared reference
@@ -58,7 +57,7 @@ public:
    * @param uuid_gen Shared reference
    */
   UuidGen(Ptr uuid_gen)
-    : Object<CassUuidGen, cass_uuid_gen_free>(uuid_gen) {}
+      : Object<CassUuidGen, cass_uuid_gen_free>(uuid_gen) {}
 
   virtual ~UuidGen() {}
 
@@ -97,7 +96,6 @@ public:
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_UUID_GEN_HPP__

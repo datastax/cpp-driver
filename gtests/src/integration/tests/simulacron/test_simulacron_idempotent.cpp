@@ -22,7 +22,8 @@
  * Idempotent integration tests
  */
 class IdempotentTest : public SimulacronIntegration {
-using SimulacronIntegration::execute_mock_query;
+  using SimulacronIntegration::execute_mock_query;
+
 public:
   void SetUp() {
     number_dc1_nodes_ = 3;
@@ -44,8 +45,7 @@ public:
    *                                  should be enabled; false otherwise
    * @return Result from the executed mock query; see Result::error_code()
    */
-  test::driver::Result execute_mock_query(bool is_idempotent,
-    bool apply_custom_retry_policy) {
+  test::driver::Result execute_mock_query(bool is_idempotent, bool apply_custom_retry_policy) {
     // Create the statement with the desired idempotence and custom retry policy
     test::driver::Statement statement("mock query");
     statement.set_consistency(CASS_CONSISTENCY_ONE);
@@ -54,8 +54,8 @@ public:
 
     // Determine if the custom or default retry policy should be applied
     test::driver::RetryPolicy policy((apply_custom_retry_policy
-      ? NextHostRetryPolicy::policy()
-      : test::driver::DefaultRetryPolicy()));
+                                          ? NextHostRetryPolicy::policy()
+                                          : test::driver::DefaultRetryPolicy()));
     test::driver::LoggingRetryPolicy logging_policy(policy);
     statement.set_retry_policy(logging_policy);
 
@@ -91,7 +91,6 @@ SIMULACRON_INTEGRATION_TEST_F(IdempotentTest, WriteTimeoutNonIdempotentNoRetry) 
     }
   }
 }
-
 
 /**
  * Perform query using a idempotent statement; no errors should occur
@@ -153,7 +152,6 @@ SIMULACRON_INTEGRATION_TEST_F(IdempotentTest, ClosedConnectionNonIdempotentNoRet
     }
   }
 }
-
 
 /**
  * Perform query using a idempotent statement while a connection is closed

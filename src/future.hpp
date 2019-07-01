@@ -14,23 +14,23 @@
   limitations under the License.
 */
 
-#ifndef __CASS_FUTURE_HPP_INCLUDED__
-#define __CASS_FUTURE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_FUTURE_HPP
+#define DATASTAX_INTERNAL_FUTURE_HPP
 
 #include "atomic.hpp"
 #include "cassandra.h"
 #include "external.hpp"
 #include "host.hpp"
 #include "macros.hpp"
+#include "ref_counted.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "string.hpp"
-#include "ref_counted.hpp"
 
-#include <uv.h>
 #include <assert.h>
+#include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 struct Error;
 
@@ -39,11 +39,7 @@ public:
   typedef SharedRefPtr<Future> Ptr;
   typedef void (*Callback)(CassFuture*, void*);
 
-  enum Type {
-    FUTURE_TYPE_GENERIC,
-    FUTURE_TYPE_SESSION,
-    FUTURE_TYPE_RESPONSE
-  };
+  enum Type { FUTURE_TYPE_GENERIC, FUTURE_TYPE_SESSION, FUTURE_TYPE_RESPONSE };
 
   struct Error : public Allocated {
     Error(CassError code, const String& message)
@@ -145,8 +141,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Future);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Future, CassFuture)
+EXTERNAL_TYPE(datastax::internal::core::Future, CassFuture)
 
 #endif

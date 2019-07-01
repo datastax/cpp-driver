@@ -22,8 +22,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 class Iterator : public Object<CassIterator, cass_iterator_free> {
 public:
@@ -31,7 +30,7 @@ public:
    * Create the empty iterator object
    */
   Iterator()
-    : Object<CassIterator, cass_iterator_free>() {}
+      : Object<CassIterator, cass_iterator_free>() {}
 
   /**
    * Create the iterator object from the native driver object
@@ -39,7 +38,7 @@ public:
    * @param iterator Native driver object
    */
   Iterator(CassIterator* iterator)
-    : Object<CassIterator, cass_iterator_free>(iterator) {}
+      : Object<CassIterator, cass_iterator_free>(iterator) {}
 
   /**
    * Create the future object from a shared reference
@@ -47,10 +46,9 @@ public:
    * @param future Shared reference
    */
   Iterator(Ptr iterator)
-    : Object<CassIterator, cass_iterator_free>(iterator) {}
+      : Object<CassIterator, cass_iterator_free>(iterator) {}
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_ITERATOR_HPP__

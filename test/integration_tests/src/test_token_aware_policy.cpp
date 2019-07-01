@@ -21,23 +21,24 @@
 #endif
 
 #include "cassandra.h"
-#include "testing.hpp"
 #include "test_utils.hpp"
+#include "testing.hpp"
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/cstdint.hpp>
-#include <boost/format.hpp>
 #include <boost/asio/io_service.hpp>
-#include <boost/thread/future.hpp>
 #include <boost/bind.hpp>
 #include <boost/chrono.hpp>
 #include <boost/cstdint.hpp>
+#include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
+#include <boost/thread/future.hpp>
 
 #include <map>
 #include <set>
 #include <string>
+
+using namespace datastax::internal::testing;
 
 BOOST_AUTO_TEST_SUITE(token_aware_policy)
 
@@ -45,7 +46,8 @@ struct TestTokenMap {
   struct Host {
     Host() {}
     Host(const std::string& ip, const std::string& dc)
-      : ip(ip), dc(dc) {}
+        : ip(ip)
+        , dc(dc) {}
     std::string ip;
     std::string dc;
   };
@@ -65,7 +67,7 @@ struct TestTokenMap {
 
     for (int i = 0; i < num_nodes; ++i) {
       test_utils::CassStatementPtr statement(
-            cass_statement_new("SELECT tokens, data_center FROM system.local", 0));
+          cass_statement_new("SELECT tokens, data_center FROM system.local", 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
       test_utils::wait_and_check_error(future.get());
       test_utils::CassResultPtr result(cass_future_get_result(future.get()));
@@ -77,7 +79,7 @@ struct TestTokenMap {
       cass_value_get_string(data_center, &str.data, &str.length);
       std::string dc(str.data, str.length);
 
-      std::string ip = cass::get_host_from_future(future.get()).c_str();
+      std::string ip = get_host_from_future(future.get()).c_str();
       test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(token_set));
       while (cass_iterator_next(iterator.get())) {
         cass_value_get_string(cass_iterator_get_value(iterator.get()), &str.data, &str.length);
@@ -87,10 +89,11 @@ struct TestTokenMap {
     }
   }
 
-  ReplicaSet get_expected_replicas(size_t rf, const std::string& value, const std::string& local_dc = "") {
+  ReplicaSet get_expected_replicas(size_t rf, const std::string& value,
+                                   const std::string& local_dc = "") {
     ReplicaSet replicas;
-    TokenHostMap::iterator i = tokens.upper_bound(cass::create_murmur3_hash_from_string(value.c_str()));
-    while  (replicas.size() < rf) {
+    TokenHostMap::iterator i = tokens.upper_bound(create_murmur3_hash_from_string(value.c_str()));
+    while (replicas.size() < rf) {
       if (local_dc.empty() || local_dc == i->second.dc) {
         replicas.insert(i->second.ip);
       }
@@ -103,25 +106,20 @@ struct TestTokenMap {
   }
 };
 
-std::string get_replica(test_utils::CassSessionPtr session,
-                        const std::string& keyspace,
+std::string get_replica(test_utils::CassSessionPtr session, const std::string& keyspace,
                         const std::string& value) {
   // The query doesn't matter
-  test_utils::CassStatementPtr statement(
-        cass_statement_new("SELECT * FROM system.local", 1));
+  test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.local", 1));
   cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_ONE);
   cass_statement_bind_string_n(statement.get(), 0, value.data(), value.size());
   cass_statement_add_key_index(statement.get(), 0);
   cass_statement_set_keyspace(statement.get(), keyspace.c_str());
-  test_utils::CassFuturePtr future(
-        cass_session_execute(session.get(), statement.get()));
-  return cass::get_host_from_future(future.get()).c_str();
+  test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
+  return get_host_from_future(future.get()).c_str();
 }
 
-TestTokenMap::ReplicaSet get_replicas(size_t rf,
-                                      test_utils::CassSessionPtr session,
-                                      const std::string& keyspace,
-                                      const std::string& value) {
+TestTokenMap::ReplicaSet get_replicas(size_t rf, test_utils::CassSessionPtr session,
+                                      const std::string& keyspace, const std::string& value) {
   TestTokenMap::ReplicaSet replicas;
   for (size_t i = 0; i < rf * rf; ++i) {
     replicas.insert(get_replica(session, keyspace, "abc"));
@@ -130,8 +128,7 @@ TestTokenMap::ReplicaSet get_replicas(size_t rf,
   return replicas;
 }
 
-BOOST_AUTO_TEST_CASE(simple)
-{
+BOOST_AUTO_TEST_CASE(simple) {
   const size_t rf = 2;
   const std::string value = "abc";
 
@@ -153,13 +150,14 @@ BOOST_AUTO_TEST_CASE(simple)
 
   std::string keyspace = "ks";
 
-  test_utils::execute_query(session.get(),
-                            str(boost::format("CREATE KEYSPACE %s "
-                                              "WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': %d }") %
-                                keyspace % rf));
+  test_utils::execute_query(
+      session.get(),
+      str(boost::format(
+              "CREATE KEYSPACE %s "
+              "WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': %d }") %
+          keyspace % rf));
 
-  for (size_t i = 0; i < rf; ++i)
-  {
+  for (size_t i = 0; i < rf; ++i) {
     TestTokenMap token_map;
     token_map.build(ip_prefix, rf);
 
@@ -174,21 +172,18 @@ BOOST_AUTO_TEST_CASE(simple)
   }
 
   // Drop the keyspace (ignore any and all errors)
-  test_utils::execute_query_with_error(session.get(),
-    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-    % keyspace));
+  test_utils::execute_query_with_error(
+      session.get(), str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % keyspace));
 }
 
 bool intersects(const TestTokenMap::ReplicaSet& set1, const TestTokenMap::ReplicaSet& set2) {
   TestTokenMap::ReplicaSet intersection;
-  std::set_intersection(set1.begin(), set1.end(),
-                        set2.begin(), set2.end(),
+  std::set_intersection(set1.begin(), set1.end(), set2.begin(), set2.end(),
                         std::inserter(intersection, intersection.begin()));
   return intersection.size() > 0;
 }
 
-BOOST_AUTO_TEST_CASE(network_topology)
-{
+BOOST_AUTO_TEST_CASE(network_topology) {
   const size_t rf = 2;
   const std::string value = "abc";
 
@@ -210,10 +205,12 @@ BOOST_AUTO_TEST_CASE(network_topology)
 
   std::string keyspace = "ks";
 
-  test_utils::execute_query(session.get(),
-                            str(boost::format("CREATE KEYSPACE %s "
-                                              "WITH replication = { 'class': 'NetworkTopologyStrategy', 'dc1': %d , 'dc2': %d }") %
-                                keyspace % rf % rf));
+  test_utils::execute_query(
+      session.get(),
+      str(boost::format(
+              "CREATE KEYSPACE %s "
+              "WITH replication = { 'class': 'NetworkTopologyStrategy', 'dc1': %d , 'dc2': %d }") %
+          keyspace % rf % rf));
 
   TestTokenMap token_map;
   token_map.build(ip_prefix, 2 * rf);
@@ -240,9 +237,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   BOOST_CHECK(replicas.size() > 0 && !intersects(replicas, local_replicas));
 
   // Drop the keyspace (ignore any and all errors)
-  test_utils::execute_query_with_error(session.get(),
-    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-    % keyspace));
+  test_utils::execute_query_with_error(
+      session.get(), str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % keyspace));
 }
 
 /**
@@ -254,8 +250,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
  * @jira_ticket CPP-266
  * @test_category load_balancing:token_aware
  */
-BOOST_AUTO_TEST_CASE(shuffle_replicas)
-{
+BOOST_AUTO_TEST_CASE(shuffle_replicas) {
   const size_t rf = 2;
   const size_t max_iterations = rf * rf;
   const std::string value = "abc";
@@ -278,10 +273,12 @@ BOOST_AUTO_TEST_CASE(shuffle_replicas)
 
   std::string keyspace = "ks";
 
-  test_utils::execute_query(session.get(),
-                            str(boost::format("CREATE KEYSPACE %s "
-                                              "WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': %d }") %
-                                keyspace % rf));
+  test_utils::execute_query(
+      session.get(),
+      str(boost::format(
+              "CREATE KEYSPACE %s "
+              "WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': %d }") %
+          keyspace % rf));
   std::string replica_previous;
 
   // With shuffle enabled (default) the replica order should eventually change
@@ -309,9 +306,8 @@ BOOST_AUTO_TEST_CASE(shuffle_replicas)
   }
 
   // Drop the keyspace (ignore any and all errors)
-  test_utils::execute_query_with_error(session.get(),
-    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-    % keyspace));
+  test_utils::execute_query_with_error(
+      session.get(), str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % keyspace));
 }
 
 /**
@@ -325,8 +321,7 @@ BOOST_AUTO_TEST_CASE(shuffle_replicas)
  * @test_category load_balancing:token_aware
  * @test_subcategory collections
  */
-BOOST_AUTO_TEST_CASE(single_entry_routing_key)
-{
+BOOST_AUTO_TEST_CASE(single_entry_routing_key) {
   const size_t rf = 2;
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -344,17 +339,21 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   std::string keyspace = "ks";
-  test_utils::execute_query(session.get(),
-                            str(boost::format("CREATE KEYSPACE %s "
-                                              "WITH replication = { 'class': 'NetworkTopologyStrategy', 'dc1': %d , 'dc2': %d }") %
-                                keyspace % rf % rf));
+  test_utils::execute_query(
+      session.get(),
+      str(boost::format(
+              "CREATE KEYSPACE %s "
+              "WITH replication = { 'class': 'NetworkTopologyStrategy', 'dc1': %d , 'dc2': %d }") %
+          keyspace % rf % rf));
   test_utils::execute_query(session.get(), str(boost::format("USE %s") % keyspace));
-  test_utils::execute_query(session.get(), "CREATE TABLE invalid_routing_key (routing_key text PRIMARY KEY,"
-                                            "cass_collection map<text,text>);");
+  test_utils::execute_query(session.get(),
+                            "CREATE TABLE invalid_routing_key (routing_key text PRIMARY KEY,"
+                            "cass_collection map<text,text>);");
 
-  std::string insert_query = "UPDATE invalid_routing_key SET cass_collection = ? WHERE routing_key = ?";
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session.get(),
-                                                                   insert_query.data(), insert_query.size()));
+  std::string insert_query =
+      "UPDATE invalid_routing_key SET cass_collection = ? WHERE routing_key = ?";
+  test_utils::CassFuturePtr prepared_future(
+      cass_session_prepare_n(session.get(), insert_query.data(), insert_query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
@@ -369,9 +368,8 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   test_utils::wait_and_check_error(future.get());
 
   // Drop the keyspace (ignore any and all errors)
-  test_utils::execute_query_with_error(session.get(),
-    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-    % keyspace));
+  test_utils::execute_query_with_error(
+      session.get(), str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % keyspace));
 }
 
 /**
@@ -387,8 +385,7 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
  * @test_category load_balancing:token_aware
  * @test_category control_connection
  */
-BOOST_AUTO_TEST_CASE(no_timeout_control_connection)
-{
+BOOST_AUTO_TEST_CASE(no_timeout_control_connection) {
   int num_of_keyspaces = 50;
   int num_of_tables = 10;
   std::string keyspace_prefix = "tap_";
@@ -430,10 +427,13 @@ BOOST_AUTO_TEST_CASE(no_timeout_control_connection)
     // Create the keyspace (handling errors to avoid test failure))
     CassError error_code;
     do {
-      error_code = test_utils::execute_query_with_error(session.get(),
-        str(boost::format("CREATE KEYSPACE " + keyspace_prefix + "%d "
-        "WITH replication = { 'class': 'NetworkTopologyStrategy', "
-        + nts_dcs + " }") % i));
+      error_code = test_utils::execute_query_with_error(
+          session.get(),
+          str(boost::format("CREATE KEYSPACE " + keyspace_prefix +
+                            "%d "
+                            "WITH replication = { 'class': 'NetworkTopologyStrategy', " +
+                            nts_dcs + " }") %
+              i));
     } while (error_code != CASS_OK && error_code != CASS_ERROR_SERVER_ALREADY_EXISTS);
 
     // Perform table creation and random selects (iff keyspace is valid))
@@ -441,13 +441,12 @@ BOOST_AUTO_TEST_CASE(no_timeout_control_connection)
       // Create the table (handling errors to avoid test failures)
       for (int j = 0; j < num_of_tables; ++j) {
         std::stringstream full_table_name;
-        full_table_name << keyspace_prefix << i << "."
-          << table_prefix << j;
+        full_table_name << keyspace_prefix << i << "." << table_prefix << j;
         CassError error_code = CASS_ERROR_SERVER_READ_TIMEOUT;
         do {
-          error_code = test_utils::execute_query_with_error(session.get(),
-          str(boost::format(test_utils::CREATE_TABLE_SIMPLE) %
-            full_table_name.str()));
+          error_code = test_utils::execute_query_with_error(
+              session.get(),
+              str(boost::format(test_utils::CREATE_TABLE_SIMPLE) % full_table_name.str()));
         } while (error_code != CASS_OK && error_code != CASS_ERROR_SERVER_ALREADY_EXISTS);
 
         // Randomly perform select statements on the newly created table

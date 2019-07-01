@@ -21,13 +21,9 @@
 
 #include "cassandra.h"
 
-namespace boost {
+namespace boost { namespace test_tools { namespace tt_detail {
 
-namespace test_tools {
-
-namespace tt_detail {
-
-template<>
+template <>
 struct print_log_value<CassError> {
   /**
    * Pretty print CassError values
@@ -38,7 +34,7 @@ struct print_log_value<CassError> {
   void operator()(std::ostream& output_stream, const CassError& error_code);
 };
 
-template<>
+template <>
 struct print_log_value<CassValueType> {
   /**
    * Pretty print CassValueType values
@@ -46,14 +42,9 @@ struct print_log_value<CassValueType> {
    * @param output_stream Output stream to pretty print value to
    * @param value_type CassValueType value to pretty print
    */
-  void operator()(std::ostream& output_stream,
-                  const CassValueType& value_type);
+  void operator()(std::ostream& output_stream, const CassValueType& value_type);
 };
 
-} // namespace tt_detail
-
-} // namespace test_tools
-
-} // namespace boost
+}}} // namespace boost::test_tools::tt_detail
 
 #endif // __PRETTY_PRINT_HPP__

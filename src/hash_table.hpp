@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_HASH_INDEX_HPP_INCLUDED__
-#define __CASS_HASH_INDEX_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_HASH_INDEX_HPP
+#define DATASTAX_INTERNAL_HASH_INDEX_HPP
 
 #include "allocated.hpp"
 #include "hash.hpp"
@@ -30,22 +30,22 @@
 // additional memory.
 #define CASS_LOAD_FACTOR 0.75
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 typedef SmallVector<size_t, 4> IndexVec;
 
-template<class T>
+template <class T>
 struct HashTableEntry {
   HashTableEntry()
-    : index(0)
-    , next(NULL) { }
+      : index(0)
+      , next(NULL) {}
 
-  // Requires a "name" String or cass::StringRef field
+  // Requires a "name" String or datastax::StringRef field
   size_t index;
   T* next;
 };
 
-template<class T>
+template <class T>
 class CaseInsensitiveHashTable : public Allocated {
 public:
   typedef SmallVector<T, 16> EntryVec;
@@ -56,7 +56,7 @@ public:
   T& operator[](size_t index) { return entries_[index]; }
   const T& operator[](size_t index) const { return entries_[index]; }
 
-  size_t get_indices(StringRef name, IndexVec* result) const ;
+  size_t get_indices(StringRef name, IndexVec* result) const;
   size_t add(const T& entry);
 
   const EntryVec& entries() const { return entries_; }
@@ -80,17 +80,17 @@ private:
   DISALLOW_COPY_AND_ASSIGN(CaseInsensitiveHashTable);
 };
 
-template<class T>
+template <class T>
 CaseInsensitiveHashTable<T>::CaseInsensitiveHashTable(size_t capacity) {
   reset(capacity);
 }
 
-template<class T>
+template <class T>
 CaseInsensitiveHashTable<T>::CaseInsensitiveHashTable(const EntryVec& entries) {
   set_entries(entries);
 }
 
-template<class T>
+template <class T>
 size_t CaseInsensitiveHashTable<T>::get_indices(StringRef name, IndexVec* result) const {
   result->clear();
   bool is_case_sensitive = false;
@@ -104,8 +104,7 @@ size_t CaseInsensitiveHashTable<T>::get_indices(StringRef name, IndexVec* result
     name = name.substr(1, name.size() - 2);
   }
 
-  size_t h = hash::fnv1a(name.data(),
-                         name.size(), ::tolower) & index_mask_;
+  size_t h = hash::fnv1a(name.data(), name.size(), ::tolower) & index_mask_;
 
   size_t start = h;
   while (index_[h] != NULL && !iequals(name, index_[h]->name)) {
@@ -138,7 +137,7 @@ size_t CaseInsensitiveHashTable<T>::get_indices(StringRef name, IndexVec* result
   return result->size();
 }
 
-template<class T>
+template <class T>
 size_t CaseInsensitiveHashTable<T>::add(const T& entry) {
   size_t index = entries_.size();
   size_t capacity = entries_.capacity();
@@ -152,8 +151,7 @@ size_t CaseInsensitiveHashTable<T>::add(const T& entry) {
   return index;
 }
 
-
-template<class T>
+template <class T>
 void CaseInsensitiveHashTable<T>::set_entries(const EntryVec& entries) {
   entries_.clear();
   reset(entries.size());
@@ -162,10 +160,9 @@ void CaseInsensitiveHashTable<T>::set_entries(const EntryVec& entries) {
   }
 }
 
-template<class T>
+template <class T>
 void CaseInsensitiveHashTable<T>::add_index(T* entry) {
-  size_t h = hash::fnv1a(entry->name.data(),
-                         entry->name.size(), ::tolower) & index_mask_;
+  size_t h = hash::fnv1a(entry->name.data(), entry->name.size(), ::tolower) & index_mask_;
 
   if (index_[h] == NULL) {
     index_[h] = entry;
@@ -190,7 +187,7 @@ void CaseInsensitiveHashTable<T>::add_index(T* entry) {
   }
 }
 
-template<class T>
+template <class T>
 void CaseInsensitiveHashTable<T>::reset(size_t capacity) {
   if (capacity < entries_.capacity()) {
     capacity = entries_.capacity();
@@ -202,13 +199,13 @@ void CaseInsensitiveHashTable<T>::reset(size_t capacity) {
   index_mask_ = index_capacity - 1;
 }
 
-template<class T>
+template <class T>
 void CaseInsensitiveHashTable<T>::resize(size_t new_capacity) {
   reset(new_capacity);
   reindex();
 }
 
-template<class T>
+template <class T>
 void CaseInsensitiveHashTable<T>::reindex() {
   for (size_t i = 0; i < entries_.size(); ++i) {
     T* entry = &entries_[i];
@@ -217,6 +214,6 @@ void CaseInsensitiveHashTable<T>::reindex() {
   }
 }
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

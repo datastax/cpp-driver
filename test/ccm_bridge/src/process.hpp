@@ -18,8 +18,8 @@
 #define __PROCESS_HPP__
 
 #include <assert.h>
-#include <stdint.h>
 #include <exception>
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -29,13 +29,13 @@ typedef struct uv_handle_s uv_handle_t;
 typedef struct uv_process_s uv_process_t;
 typedef struct uv_stream_s uv_stream_t;
 #ifdef _MSC_VER
-# include <basetsd.h>
-# ifndef _SSIZE_T_DEFINED
-    typedef SSIZE_T ssize_t;
-#   define _SSIZE_T_DEFINED
-# endif
+#include <basetsd.h>
+#ifndef _SSIZE_T_DEFINED
+typedef SSIZE_T ssize_t;
+#define _SSIZE_T_DEFINED
+#endif
 #else
-# include <sys/types.h>
+#include <sys/types.h>
 #endif
 
 namespace utils {
@@ -52,7 +52,7 @@ public:
    */
   struct Result {
     Result()
-      : exit_status(-1) { }
+        : exit_status(-1) {}
 
     /**
      * Exit status
@@ -77,7 +77,7 @@ public:
   static Result execute(const Args& command);
 
 private:
-  Process() { }
+  Process() {}
 
   /**
    * uv_exit_cb for handling the completion of the process
@@ -112,6 +112,4 @@ private:
 
 } // namespace utils
 
-
 #endif // __PROCESS_HPP__
-

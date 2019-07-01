@@ -26,7 +26,7 @@
 
 #include <cstring>
 
-namespace cass {
+using namespace datastax::internal::core;
 
 /**
  * A dummy invalid protocol error response that's used to handle responses
@@ -35,8 +35,7 @@ namespace cass {
 class InvalidProtocolErrorResponse : public ErrorResponse {
 public:
   InvalidProtocolErrorResponse()
-    : ErrorResponse(CQL_ERROR_PROTOCOL_ERROR,
-                    "Invalid or unsupported protocol version") { }
+      : ErrorResponse(CQL_ERROR_PROTOCOL_ERROR, "Invalid or unsupported protocol version") {}
 
   virtual bool decode(Decoder& decoder) {
     return true; //  Ignore decoding the body
@@ -44,25 +43,19 @@ public:
 };
 
 Response::Response(uint8_t opcode)
-  : opcode_(opcode) {
+    : opcode_(opcode) {
   memset(&tracing_id_, 0, sizeof(CassUuid));
 }
 
-bool Response::has_tracing_id() const {
-  return tracing_id_.time_and_version != 0;
-}
+bool Response::has_tracing_id() const { return tracing_id_.time_and_version != 0; }
 
-bool Response::decode_trace_id(Decoder& decoder) {
-  return decoder.decode_uuid(&tracing_id_);
-}
+bool Response::decode_trace_id(Decoder& decoder) { return decoder.decode_uuid(&tracing_id_); }
 
 bool Response::decode_custom_payload(Decoder& decoder) {
   return decoder.decode_custom_payload(custom_payload_);
 }
 
-bool Response::decode_warnings(Decoder& decoder) {
-  return decoder.decode_warnings(warnings_);
-}
+bool Response::decode_warnings(Decoder& decoder) { return decoder.decode_warnings(warnings_); }
 
 bool ResponseMessage::allocate_body(int8_t opcode) {
   response_body_.reset();
@@ -118,7 +111,7 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
       }
       version_ = input[0] & 0x7F; // "input" will always have at least 1 bytes
       if (version_ >= CASS_PROTOCOL_VERSION_V3) {
-        header_size_  = CASS_HEADER_SIZE_V3;
+        header_size_ = CASS_HEADER_SIZE_V3;
       } else {
         header_size_ = CASS_HEADER_SIZE_V1_AND_V2;
       }
@@ -209,6 +202,3 @@ ssize_t ResponseMessage::decode(const char* input, size_t size) {
 
   return input_pos - input;
 }
-
-} // namespace cass
-

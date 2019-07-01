@@ -14,15 +14,15 @@
   limitations under the License.
 */
 
-#ifndef __CASS_HASH_HPP_INCLUDED__
-#define __CASS_HASH_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_HASH_HPP
+#define DATASTAX_INTERNAL_HASH_HPP
 
 #include <algorithm>
 #include <stdint.h>
 
-namespace cass { namespace hash {
+namespace datastax { namespace hash {
 
-typedef int (Op)(int);
+typedef int(Op)(int);
 
 inline int nop(int c) { return c; }
 
@@ -52,7 +52,6 @@ inline uint32_t fnv1a(const char* data, size_t length, Op op = nop) {
 }
 #endif
 
-} } // namespace cass::hash
-
+}} // namespace datastax::hash
 
 #endif

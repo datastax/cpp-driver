@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REF_COUNTED_HPP_INCLUDED__
-#define __CASS_REF_COUNTED_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_REF_COUNTED_HPP
+#define DATASTAX_INTERNAL_REF_COUNTED_HPP
 
 #include "allocated.hpp"
 #include "atomic.hpp"
@@ -26,21 +26,17 @@
 #include <new>
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
 class RefCounted : public Allocated {
 public:
   RefCounted()
-      : ref_count_(0) { }
+      : ref_count_(0) {}
 
-  int ref_count() const {
-    return ref_count_.load(MEMORY_ORDER_ACQUIRE);
-  }
+  int ref_count() const { return ref_count_.load(MEMORY_ORDER_ACQUIRE); }
 
-  void inc_ref() const {
-    ref_count_.fetch_add(1, MEMORY_ORDER_RELAXED);
-  }
+  void inc_ref() const { ref_count_.fetch_add(1, MEMORY_ORDER_RELAXED); }
 
   void dec_ref() const {
     int new_ref_count = ref_count_.fetch_sub(1, MEMORY_ORDER_RELEASE);
@@ -56,24 +52,24 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RefCounted);
 };
 
-template<class T>
+template <class T>
 class SharedRefPtr {
 public:
   explicit SharedRefPtr(T* ptr = NULL)
-       : ptr_(ptr) {
+      : ptr_(ptr) {
     if (ptr_ != NULL) {
       ptr_->inc_ref();
     }
   }
 
   SharedRefPtr(const SharedRefPtr<T>& ref)
-    : ptr_(NULL) {
+      : ptr_(NULL) {
     copy<T>(ref.ptr_);
   }
 
-  template<class S>
+  template <class S>
   SharedRefPtr(const SharedRefPtr<S>& ref)
-    : ptr_(NULL) {
+      : ptr_(NULL) {
     copy<S>(ref.ptr_);
   }
 
@@ -82,7 +78,7 @@ public:
     return *this;
   }
 
-  template<class S>
+  template <class S>
   SharedRefPtr<S>& operator=(const SharedRefPtr<S>& ref) {
     copy<S>(ref.ptr_);
     return *this;
@@ -94,17 +90,11 @@ public:
     }
   }
 
-  bool operator==(const T* ptr) const {
-    return ptr_ == ptr;
-  }
+  bool operator==(const T* ptr) const { return ptr_ == ptr; }
 
-  bool operator==(const SharedRefPtr<T>& ref) const {
-    return ptr_ == ref.ptr_;
-  }
+  bool operator==(const SharedRefPtr<T>& ref) const { return ptr_ == ref.ptr_; }
 
-  void reset(T* ptr = NULL) {
-    copy<T>(ptr);
-  }
+  void reset(T* ptr = NULL) { copy<T>(ptr); }
 
   T* get() const { return ptr_; }
   T& operator*() const { return *ptr_; }
@@ -112,9 +102,10 @@ public:
   operator bool() const { return ptr_ != NULL; }
 
 private:
-  template<class S> friend class SharedRefPtr;
+  template <class S>
+  friend class SharedRefPtr;
 
-  template<class S>
+  template <class S>
   void copy(S* ptr) {
     if (ptr == ptr_) return;
     if (ptr != NULL) {
@@ -137,7 +128,7 @@ public:
   static RefBuffer* create(size_t size) {
 #if defined(_WIN32)
 #pragma warning(push)
-#pragma warning(disable: 4291) //Invalid warning thrown RefBuffer has a delete function
+#pragma warning(disable : 4291) // Invalid warning thrown RefBuffer has a delete function
 #endif
     return new (size) RefBuffer();
 #if defined(_WIN32)
@@ -145,24 +136,18 @@ public:
 #endif
   }
 
-  char* data() {
-    return reinterpret_cast<char*>(this) + sizeof(RefBuffer);
-  }
+  char* data() { return reinterpret_cast<char*>(this) + sizeof(RefBuffer); }
 
-  void operator delete(void* ptr) {
-    Memory::free(ptr);
-  }
+  void operator delete(void* ptr) { Memory::free(ptr); }
 
 private:
-  RefBuffer() { }
+  RefBuffer() {}
 
-  void* operator new(size_t size, size_t extra) {
-    return Memory::malloc(size + extra);
-  }
+  void* operator new(size_t size, size_t extra) { return Memory::malloc(size + extra); }
 
   DISALLOW_COPY_AND_ASSIGN(RefBuffer);
 };
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

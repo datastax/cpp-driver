@@ -25,8 +25,8 @@
   For more information, please refer to <http://unlicense.org/>
 */
 
-#include <stdio.h>
 #include <cassandra.h>
+#include <stdio.h>
 
 void print_keyspace_meta(const CassKeyspaceMeta* meta, int indent);
 void print_table_meta(const CassTableMeta* meta, int indent);
@@ -64,12 +64,14 @@ void print_table(CassSession* session, const char* keyspace, const char* table) 
   cass_schema_meta_free(schema_meta);
 }
 
-void print_function(CassSession* session, const char* keyspace, const char* function, const char* arguments) {
+void print_function(CassSession* session, const char* keyspace, const char* function,
+                    const char* arguments) {
   const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
   const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta, keyspace);
 
   if (keyspace_meta != NULL) {
-    const CassFunctionMeta* function_meta = cass_keyspace_meta_function_by_name(keyspace_meta, function, arguments);
+    const CassFunctionMeta* function_meta =
+        cass_keyspace_meta_function_by_name(keyspace_meta, function, arguments);
     if (function_meta != NULL) {
       print_function_meta(function_meta, 0);
     } else {
@@ -82,12 +84,14 @@ void print_function(CassSession* session, const char* keyspace, const char* func
   cass_schema_meta_free(schema_meta);
 }
 
-void print_aggregate(CassSession* session, const char* keyspace, const char* aggregate, const char* arguments) {
+void print_aggregate(CassSession* session, const char* keyspace, const char* aggregate,
+                     const char* arguments) {
   const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
   const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta, keyspace);
 
   if (keyspace_meta != NULL) {
-    const CassAggregateMeta* aggregate_meta = cass_keyspace_meta_aggregate_by_name(keyspace_meta, aggregate, arguments);
+    const CassAggregateMeta* aggregate_meta =
+        cass_keyspace_meta_aggregate_by_name(keyspace_meta, aggregate, arguments);
     if (aggregate_meta != NULL) {
       print_aggregate_meta(aggregate_meta, 0);
     } else {
@@ -144,23 +148,19 @@ int main(int argc, char* argv[]) {
 
     execute_query(session, "DROP KEYSPACE IF EXISTS examples;");
 
-    execute_query(session,
-                  "CREATE KEYSPACE examples WITH replication = { \
+    execute_query(session, "CREATE KEYSPACE examples WITH replication = { \
                   'class': 'SimpleStrategy', 'replication_factor': '3' }");
 
     print_keyspace(session, "examples");
 
-    execute_query(session,
-                  "CREATE TABLE examples.schema_meta (key text, \
+    execute_query(session, "CREATE TABLE examples.schema_meta (key text, \
                   value bigint, \
                   PRIMARY KEY (key))");
 
-    execute_query(session,
-                  "CREATE INDEX schema_meta_idx \
+    execute_query(session, "CREATE INDEX schema_meta_idx \
                     ON examples.schema_meta (value)");
 
-    execute_query(session,
-                  "CREATE FUNCTION \
+    execute_query(session, "CREATE FUNCTION \
                      examples.avg_state(state tuple<int, bigint>, val int) \
                   CALLED ON NULL INPUT RETURNS tuple<int, bigint> \
                   LANGUAGE java AS \
@@ -169,8 +169,7 @@ int main(int argc, char* argv[]) {
                       state.setLong(1, state.getLong(1) + val.intValue()); \
                     } \
                     return state;'");
-    execute_query(session,
-                  "CREATE FUNCTION \
+    execute_query(session, "CREATE FUNCTION \
                      examples.avg_final (state tuple<int, bigint>) \
                   CALLED ON NULL INPUT RETURNS double \
                   LANGUAGE java AS \
@@ -180,8 +179,7 @@ int main(int argc, char* argv[]) {
                     r /= state.getInt(0); \
                     return Double.valueOf(r);'");
 
-    execute_query(session,
-                  "CREATE AGGREGATE examples.average(int) \
+    execute_query(session, "CREATE AGGREGATE examples.average(int) \
                   SFUNC avg_state STYPE tuple<int, bigint> FINALFUNC avg_final \
                   INITCOND(0, 0)");
 
@@ -292,7 +290,8 @@ void print_schema_bytes(const CassValue* value) {
 
   cass_value_get_bytes(value, &bytes, &b_length);
   printf("0x");
-  for (i = 0; i < b_length; ++i) printf("%02x", bytes[i]);
+  for (i = 0; i < b_length; ++i)
+    printf("%02x", bytes[i]);
 }
 
 void print_schema_list(const CassValue* value) {

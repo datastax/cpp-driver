@@ -18,10 +18,14 @@
 
 #include "scoped_lock.hpp"
 
+using datastax::internal::ScopedMutex;
+using datastax::internal::ScopedReadLock;
+using datastax::internal::ScopedWriteLock;
+
 struct MutexData {
   MutexData(uv_mutex_t* mutex)
-    : mutex(mutex)
-    , error_code(0) { }
+      : mutex(mutex)
+      , error_code(0) {}
 
   uv_mutex_t* mutex;
   int error_code;
@@ -29,8 +33,8 @@ struct MutexData {
 
 struct RwlockData {
   RwlockData(uv_rwlock_t* rwlock)
-    : rwlock(rwlock)
-    , error_code(0) { }
+      : rwlock(rwlock)
+      , error_code(0) {}
 
   uv_rwlock_t* rwlock;
   int error_code;
@@ -60,7 +64,7 @@ TEST(ScopedLockUnitTest, ScopedMutex) {
   MutexData mutex_data(&mutex);
 
   {
-    cass::ScopedMutex lock(&mutex);
+    ScopedMutex lock(&mutex);
 
     uv_thread_t thread;
     uv_thread_create(&thread, on_mutex_trylock, &mutex_data);
@@ -77,7 +81,7 @@ TEST(ScopedLockUnitTest, ScopedMutexDefaultUnlocked) {
   MutexData mutex_data(&mutex);
 
   {
-    cass::ScopedMutex lock(&mutex, false);
+    ScopedMutex lock(&mutex, false);
 
     uv_thread_t thread;
     uv_thread_create(&thread, on_mutex_trylock, &mutex_data);
@@ -94,10 +98,11 @@ TEST(ScopedLockUnitTest, ScopedReadLock) {
   RwlockData rwlock_data(&rwlock);
 
   {
-    cass::ScopedReadLock rl(&rwlock);
+    ScopedReadLock rl(&rwlock);
 
     uv_thread_t thread;
-    uv_thread_create(&thread, on_rwlock_trywrlock, &rwlock_data); // Lock for writing to force busy for write
+    uv_thread_create(&thread, on_rwlock_trywrlock,
+                     &rwlock_data); // Lock for writing to force busy for write
     uv_thread_join(&thread);
   }
 
@@ -111,7 +116,7 @@ TEST(ScopedLockUnitTest, ScopedReadLockDefaultUnlocked) {
   RwlockData rwlock_data(&rwlock);
 
   {
-    cass::ScopedReadLock rl(&rwlock, false);
+    ScopedReadLock rl(&rwlock, false);
 
     uv_thread_t thread;
     uv_thread_create(&thread, on_rwlock_trywrlock, &rwlock_data);
@@ -128,7 +133,7 @@ TEST(ScopedLockUnitTest, ScopedWriteLock) {
   RwlockData rwlock_data(&rwlock);
 
   {
-    cass::ScopedWriteLock wl(&rwlock);
+    ScopedWriteLock wl(&rwlock);
 
     uv_thread_t thread;
     uv_thread_create(&thread, on_rwlock_trywrlock, &rwlock_data);
@@ -145,7 +150,7 @@ TEST(ScopedLockUnitTest, ScopedWriteLockDefaultUnlocked) {
   RwlockData rwlock_data(&rwlock);
 
   {
-    cass::ScopedWriteLock wl(&rwlock, false);
+    ScopedWriteLock wl(&rwlock, false);
 
     uv_thread_t thread;
     uv_thread_create(&thread, on_rwlock_trywrlock, &rwlock_data);
@@ -162,10 +167,11 @@ TEST(ScopedLockUnitTest, ScopedWriteLockBusy) {
   RwlockData rwlock_data(&rwlock);
 
   {
-    cass::ScopedWriteLock wl(&rwlock);
+    ScopedWriteLock wl(&rwlock);
 
     uv_thread_t thread;
-    uv_thread_create(&thread, on_rwlock_tryrdlock, &rwlock_data); // Lock for reading to force busy for read
+    uv_thread_create(&thread, on_rwlock_tryrdlock,
+                     &rwlock_data); // Lock for reading to force busy for read
     uv_thread_join(&thread);
   }
 

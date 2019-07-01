@@ -16,7 +16,7 @@
 
 #include "map_iterator.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 bool MapIterator::decode_pair() {
   if (!decoder_.decode_value(map_->primary_data_type(), key_, true)) return false;
@@ -30,5 +30,3 @@ bool MapIterator::next() {
   ++index_;
   return decode_pair();
 }
-
-} // namespace cass

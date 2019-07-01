@@ -17,63 +17,63 @@
 #include <boost/test/unit_test.hpp>
 
 #include "cassandra.h"
-#include "testing.hpp"
 #include "test_utils.hpp"
+#include "testing.hpp"
+
+using namespace datastax::internal::testing;
 
 struct ConfigTests {
-  ConfigTests() { }
+  ConfigTests() {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(config, ConfigTests)
 
-
-BOOST_AUTO_TEST_CASE(options)
-{
+BOOST_AUTO_TEST_CASE(options) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   {
     unsigned connect_timeout = 9999;
     cass_cluster_set_connect_timeout(cluster.get(), connect_timeout);
-    BOOST_CHECK(cass::get_connect_timeout_from_cluster(cluster.get()) == connect_timeout);
+    BOOST_CHECK(get_connect_timeout_from_cluster(cluster.get()) == connect_timeout);
   }
 
   {
     int port = 7000;
     cass_cluster_set_port(cluster.get(), port);
-    BOOST_CHECK(cass::get_port_from_cluster(cluster.get()) == port);
+    BOOST_CHECK(get_port_from_cluster(cluster.get()) == port);
   }
 }
 
-BOOST_AUTO_TEST_CASE(contact_points)
-{
+BOOST_AUTO_TEST_CASE(contact_points) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   // Simple
   const char* contact_points1 = "127.0.0.1,127.0.0.2,127.0.0.3";
   cass_cluster_set_contact_points(cluster.get(), contact_points1);
-  BOOST_REQUIRE(cass::get_contact_points_from_cluster(cluster.get()).compare(contact_points1) == 0);
+  BOOST_REQUIRE(get_contact_points_from_cluster(cluster.get()).compare(contact_points1) == 0);
 
   // Clear
   cass_cluster_set_contact_points(cluster.get(), "");
-  BOOST_REQUIRE(cass::get_contact_points_from_cluster(cluster.get()).empty());
+  BOOST_REQUIRE(get_contact_points_from_cluster(cluster.get()).empty());
 
   // Extra commas
   const char* contact_points1_commas = ",,,,127.0.0.1,,,,127.0.0.2,127.0.0.3,,,,";
   cass_cluster_set_contact_points(cluster.get(), contact_points1_commas);
-  BOOST_REQUIRE(cass::get_contact_points_from_cluster(cluster.get()).compare(contact_points1) == 0);
+  BOOST_REQUIRE(get_contact_points_from_cluster(cluster.get()).compare(contact_points1) == 0);
 
   // Clear
   cass_cluster_set_contact_points(cluster.get(), "");
-  BOOST_REQUIRE(cass::get_contact_points_from_cluster(cluster.get()).empty());
+  BOOST_REQUIRE(get_contact_points_from_cluster(cluster.get()).empty());
 
   // Extra whitespace
-  const char* contact_points1_ws = "   ,\r\n,  ,   ,  127.0.0.1 ,,,  ,\t127.0.0.2,127.0.0.3,  \t\n, ,,   ";
+  const char* contact_points1_ws =
+      "   ,\r\n,  ,   ,  127.0.0.1 ,,,  ,\t127.0.0.2,127.0.0.3,  \t\n, ,,   ";
   cass_cluster_set_contact_points(cluster.get(), contact_points1_ws);
-  BOOST_REQUIRE(cass::get_contact_points_from_cluster(cluster.get()).compare(contact_points1) == 0);
+  BOOST_REQUIRE(get_contact_points_from_cluster(cluster.get()).compare(contact_points1) == 0);
 
   // Clear
   cass_cluster_set_contact_points(cluster.get(), "");
-  BOOST_REQUIRE(cass::get_contact_points_from_cluster(cluster.get()).empty());
+  BOOST_REQUIRE(get_contact_points_from_cluster(cluster.get()).empty());
 
   // Append
   const char* contact_point1 = "127.0.0.1";
@@ -85,9 +85,7 @@ BOOST_AUTO_TEST_CASE(contact_points)
   const char* contact_point3 = "127.0.0.3";
   cass_cluster_set_contact_points(cluster.get(), contact_point3);
 
-  BOOST_REQUIRE(cass::get_contact_points_from_cluster(cluster.get()).compare(contact_points1) == 0);
+  BOOST_REQUIRE(get_contact_points_from_cluster(cluster.get()).compare(contact_points1) == 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
-

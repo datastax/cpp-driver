@@ -23,8 +23,8 @@
 #include <algorithm>
 #include <iostream>
 
-#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.3")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.4")
+#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.4")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.8")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
@@ -91,8 +91,7 @@ bool Options::initialize(int argc, char* argv[]) {
       // Integration test options
       if (key == "--keep-clusters") {
         is_keep_clusters_ = true;
-      }
-      else if (key == "--log-tests") {
+      } else if (key == "--log-tests") {
         if (!value.empty()) {
           is_log_tests_ = bool_value(value);
         } else {
@@ -104,7 +103,8 @@ bool Options::initialize(int argc, char* argv[]) {
         if (!value.empty()) {
           server_version_ = CCM::CassVersion(value);
         } else {
-          std::cerr << "Missing Server Version: Using default " << server_version_.to_string() << std::endl;
+          std::cerr << "Missing Server Version: Using default " << server_version_.to_string()
+                    << std::endl;
         }
       } else if (key == "--dse") {
         is_dse_ = true;
@@ -119,7 +119,8 @@ bool Options::initialize(int argc, char* argv[]) {
       } else if (key == "--dse-credentials") {
         bool is_found = false;
         if (!value.empty()) {
-          for (CCM::DseCredentialsType::iterator iterator = CCM::DseCredentialsType::begin(); iterator != CCM::DseCredentialsType::end(); ++iterator) {
+          for (CCM::DseCredentialsType::iterator iterator = CCM::DseCredentialsType::begin();
+               iterator != CCM::DseCredentialsType::end(); ++iterator) {
             if (*iterator == value) {
               dse_credentials_type_ = *iterator;
               is_found = true;
@@ -128,7 +129,8 @@ bool Options::initialize(int argc, char* argv[]) {
           }
         }
         if (!is_found) {
-          std::cerr << "Invalid DSE Credentials Type: Using default " << dse_credentials_type_.to_string() << std::endl;
+          std::cerr << "Invalid DSE Credentials Type: Using default "
+                    << dse_credentials_type_.to_string() << std::endl;
         }
       } else if (key == "--git") {
         use_git_ = true;
@@ -138,7 +140,9 @@ bool Options::initialize(int argc, char* argv[]) {
       } else if (key == "--install-dir") {
         use_install_dir_ = true;
         if (value.empty()) {
-          std::cerr << "Disabling the Use of the Installation Directory: Installation directory must not be empty" << std::endl;
+          std::cerr << "Disabling the Use of the Installation Directory: Installation directory "
+                       "must not be empty"
+                    << std::endl;
           use_install_dir_ = false;
         } else {
           install_dir_ = value;
@@ -153,12 +157,12 @@ bool Options::initialize(int argc, char* argv[]) {
         if (!value.empty()) {
           std::vector<std::string> categories = test::Utils::explode(value, ':');
           for (std::vector<std::string>::iterator iterator = categories.begin();
-            iterator != categories.end(); ++iterator) {
+               iterator != categories.end(); ++iterator) {
             try {
               categories_.insert(*iterator);
             } catch (TestCategory::Exception& tce) {
               std::cerr << "Invalid Category: " << *iterator << " will be ignored"
-                << " (" << tce.what() << ")" << std::endl;
+                        << " (" << tce.what() << ")" << std::endl;
             }
           }
         } else {
@@ -167,15 +171,16 @@ bool Options::initialize(int argc, char* argv[]) {
       } else if (key == "--verbose") {
         if (!value.empty() && !bool_value(value)) {
           std::vector<std::string> components = test::Utils::explode(value, ',');
-          for (std::vector<std::string>::iterator it = components.begin(),
-              end = components.end(); it != end; ++it) {
+          for (std::vector<std::string>::iterator it = components.begin(), end = components.end();
+               it != end; ++it) {
             std::string component = test::Utils::to_lower(*it);
             if (component == "ccm") {
               is_verbose_ccm_ = true;
             } else if (component == "integration") {
               is_verbose_integration_ = true;
             } else {
-              std::cerr << "Invalid Component \"" << *it << "\": Available components are [ccm, integration]" << std::endl;
+              std::cerr << "Invalid Component \"" << *it
+                        << "\": Available components are [ccm, integration]" << std::endl;
             }
           }
         } else {
@@ -189,7 +194,8 @@ bool Options::initialize(int argc, char* argv[]) {
       else if (key == "--authentication") {
         bool is_found = false;
         if (!value.empty()) {
-          for (CCM::AuthenticationType::iterator iterator = CCM::AuthenticationType::begin(); iterator != CCM::AuthenticationType::end(); ++iterator) {
+          for (CCM::AuthenticationType::iterator iterator = CCM::AuthenticationType::begin();
+               iterator != CCM::AuthenticationType::end(); ++iterator) {
             if (*iterator == value) {
               authentication_type_ = *iterator;
               is_found = true;
@@ -198,12 +204,14 @@ bool Options::initialize(int argc, char* argv[]) {
           }
         }
         if (!is_found) {
-          std::cerr << "Invalid Authentication Type: Using default " << authentication_type_.to_string() << std::endl;
+          std::cerr << "Invalid Authentication Type: Using default "
+                    << authentication_type_.to_string() << std::endl;
         }
       } else if (key == "--deployment") {
         bool is_found = false;
         if (!value.empty()) {
-          for (CCM::DeploymentType::iterator iterator = CCM::DeploymentType::begin(); iterator != CCM::DeploymentType::end(); ++iterator) {
+          for (CCM::DeploymentType::iterator iterator = CCM::DeploymentType::begin();
+               iterator != CCM::DeploymentType::end(); ++iterator) {
             if (*iterator == value) {
               deployment_type_ = *iterator;
               is_found = true;
@@ -212,7 +220,8 @@ bool Options::initialize(int argc, char* argv[]) {
           }
         }
         if (!is_found) {
-          std::cerr << "Invalid Deployment Type: Using default " << deployment_type_.to_string() << std::endl;
+          std::cerr << "Invalid Deployment Type: Using default " << deployment_type_.to_string()
+                    << std::endl;
         }
       } else if (key == "--host") {
         if (!value.empty()) {
@@ -221,7 +230,7 @@ bool Options::initialize(int argc, char* argv[]) {
           std::cerr << "Missing Host: Using default " << host_ << std::endl;
         }
       } else if (key == "--port") {
-        //Convert the value
+        // Convert the value
         if (!value.empty()) {
           std::stringstream ss(value);
           if (!(ss >> port_).fail()) {
@@ -260,8 +269,8 @@ bool Options::initialize(int argc, char* argv[]) {
 
     // Determine if the options should have their defaults reset
     if (categories_.empty()) {
-      for (TestCategory::iterator iterator = TestCategory::begin();
-        iterator != TestCategory::end(); ++iterator) {
+      for (TestCategory::iterator iterator = TestCategory::begin(); iterator != TestCategory::end();
+           ++iterator) {
         // Only add the DSE test category if DSE is enabled
         if (*iterator != TestCategory::DSE || is_dse_) {
           categories_.insert(*iterator);
@@ -277,7 +286,8 @@ bool Options::initialize(int argc, char* argv[]) {
       // Determine if the DSE credentials type should be updated
       if (dse_credentials_type_ == CCM::DseCredentialsType::USERNAME_PASSWORD) {
         if (dse_username_.empty() || dse_password_.empty()) {
-          std::cerr << "Invalid Username and/or Password: Default to INI_FILE DSE credentials" << std::endl;
+          std::cerr << "Invalid Username and/or Password: Default to INI_FILE DSE credentials"
+                    << std::endl;
           dse_credentials_type_ = CCM::DseCredentialsType::INI_FILE;
         }
       }
@@ -292,75 +302,102 @@ bool Options::initialize(int argc, char* argv[]) {
 
 void Options::print_help() {
   std::cout << std::endl << "Integration Test Options:" << std::endl;
-  std::cout << "  --log-tests=(yes|no)" << std::endl << "      "
-    << "Enable/Disable logging of driver messages per test to a file." << std::endl
-    << "      The default is " << (log_tests() ? "yes" : "no") << "." << std::endl;
+  std::cout << "  --log-tests=(yes|no)" << std::endl
+            << "      "
+            << "Enable/Disable logging of driver messages per test to a file." << std::endl
+            << "      The default is " << (log_tests() ? "yes" : "no") << "." << std::endl;
   std::cout << std::endl << "CCM Options:" << std::endl;
-  std::cout << "  --version=[VERSION]" << std::endl << "      "
-    << "Cassandra/DSE version to use." << std::endl
-    << "      Default:" << std::endl
-    << "        Cassandra Version: " << server_version().to_string() << std::endl
-    << "        DSE Version: " << DEFAULT_OPTIONS_DSE_VERSION.to_string() << std::endl;
+  std::cout << "  --version=[VERSION]" << std::endl
+            << "      "
+            << "Cassandra/DSE version to use." << std::endl
+            << "      Default:" << std::endl
+            << "        Cassandra Version: " << server_version().to_string() << std::endl
+            << "        DSE Version: " << DEFAULT_OPTIONS_DSE_VERSION.to_string() << std::endl;
   std::string categories;
-  for (TestCategory::iterator iterator = TestCategory::begin();
-    iterator != TestCategory::end(); ++iterator) {
+  for (TestCategory::iterator iterator = TestCategory::begin(); iterator != TestCategory::end();
+       ++iterator) {
     if (iterator != TestCategory::begin()) {
       categories += "|";
     }
     categories += iterator->name();
   }
-  std::cout << "  --category=[" << categories << "]" << std::endl << "      "
-    << "Run only the categories whose name matches one of the available" << std::endl
-    << "      categories; ':' separates two categories. The default is all categories" << std::endl
-    << "      being executed."  << std::endl;
-  std::cout << "  --dse" << std::endl << "      "
-    << "Indicate server version supplied is DSE." << std::endl;
-  std::cout << "  --dse-credentials=(USERNAME_PASSWORD|INI_FILE)" << std::endl << "      "
-    << "DSE credentials to use for download authentication. The default is " << std::endl
-    << "      " << dse_credentials().to_string() << "." << std::endl;
-  std::cout << "  --dse-username=[USERNAME]" << std::endl << "      "
-    << "Username to use for DSE download authentication." << std::endl;
-  std::cout << "  --dse-password=[PASSWORD]" << std::endl << "      "
-    << "Password to use for DSE download authentication." << std::endl;
-  std::cout << "  --git" << std::endl << "      "
-    << "Indicate Cassandra/DSE server download should be obtained from" << std::endl
-    << "      ASF/GitHub." << std::endl;
-  std::cout << "  --git=[BRANCH_OR_TAG]" << std::endl << "      "
-    << "Indicate Cassandra/DSE server branch/tag should be obtained from" << std::endl
-    << "      ASF/GitHub." << std::endl;
-  std::cout << "  --install-dir=[INSTALL_DIR]" << std::endl << "      "
-    << "Indicate Cassandra/DSE installation directory to use." << std::endl;
-  std::cout << "  --prefix=[PREFIX]" << std::endl << "      "
-    << "CCM cluster prefix. The default is " << cluster_prefix() << "." << std::endl;
+  std::cout << "  --category=[" << categories << "]" << std::endl
+            << "      "
+            << "Run only the categories whose name matches one of the available" << std::endl
+            << "      categories; ':' separates two categories. The default is all categories"
+            << std::endl
+            << "      being executed." << std::endl;
+  std::cout << "  --dse" << std::endl
+            << "      "
+            << "Indicate server version supplied is DSE." << std::endl;
+  std::cout << "  --dse-credentials=(USERNAME_PASSWORD|INI_FILE)" << std::endl
+            << "      "
+            << "DSE credentials to use for download authentication. The default is " << std::endl
+            << "      " << dse_credentials().to_string() << "." << std::endl;
+  std::cout << "  --dse-username=[USERNAME]" << std::endl
+            << "      "
+            << "Username to use for DSE download authentication." << std::endl;
+  std::cout << "  --dse-password=[PASSWORD]" << std::endl
+            << "      "
+            << "Password to use for DSE download authentication." << std::endl;
+  std::cout << "  --git" << std::endl
+            << "      "
+            << "Indicate Cassandra/DSE server download should be obtained from" << std::endl
+            << "      ASF/GitHub." << std::endl;
+  std::cout << "  --git=[BRANCH_OR_TAG]" << std::endl
+            << "      "
+            << "Indicate Cassandra/DSE server branch/tag should be obtained from" << std::endl
+            << "      ASF/GitHub." << std::endl;
+  std::cout << "  --install-dir=[INSTALL_DIR]" << std::endl
+            << "      "
+            << "Indicate Cassandra/DSE installation directory to use." << std::endl;
+  std::cout << "  --prefix=[PREFIX]" << std::endl
+            << "      "
+            << "CCM cluster prefix. The default is " << cluster_prefix() << "." << std::endl;
 #ifdef CASS_USE_LIBSSH2
-  std::cout << "  --authentication=(USERNAME_PASSWORD|PUBLIC_KEY)" << std::endl << "      "
-    << "Authentication to use for remote deployment. The default is" << std::endl
-    << "      " << authentication_type().to_string() << "." << std::endl;
-  std::cout << "  --deployment=(LOCAL|REMOTE)" << std::endl << "      "
-    << "Deployment to use. The default is " << deployment_type().to_string() << "." << std::endl;
-  std::cout << "  --host=[IP_ADDRESS]" << std::endl << "      "
-    << "IP address to use for remote deployment. The default is " << host() << "." << std::endl;
-  std::cout << "  --port=[PORT]" << std::endl << "      "
-    << "Port to use for remote deployment. The default is " << port() << "." << std::endl;
-  std::cout << "  --username=[USERNAME]" << std::endl << "      "
-    << "Username to use for remote deployment. The default is " << username() << "." << std::endl;
-  std::cout << "  --password=[PASSWORD]" << std::endl << "      "
-    << "Password to use for remote deployment. The default is " << password() << "." << std::endl;
-  std::cout << "  --public-key=[FILENAME]" << std::endl << "      "
-    << "Public key filename to use for remote deployment. The default is" << std::endl
-    << "      " << public_key() << "." << std::endl;
-  std::cout << "  --private-key=[FILENAME]" << std::endl << "      "
-    << "Private key filename to use for remote deployment. The default is" << std::endl
-    << "      " << private_key() << "." << std::endl;
+  std::cout << "  --authentication=(USERNAME_PASSWORD|PUBLIC_KEY)" << std::endl
+            << "      "
+            << "Authentication to use for remote deployment. The default is" << std::endl
+            << "      " << authentication_type().to_string() << "." << std::endl;
+  std::cout << "  --deployment=(LOCAL|REMOTE)" << std::endl
+            << "      "
+            << "Deployment to use. The default is " << deployment_type().to_string() << "."
+            << std::endl;
+  std::cout << "  --host=[IP_ADDRESS]" << std::endl
+            << "      "
+            << "IP address to use for remote deployment. The default is " << host() << "."
+            << std::endl;
+  std::cout << "  --port=[PORT]" << std::endl
+            << "      "
+            << "Port to use for remote deployment. The default is " << port() << "." << std::endl;
+  std::cout << "  --username=[USERNAME]" << std::endl
+            << "      "
+            << "Username to use for remote deployment. The default is " << username() << "."
+            << std::endl;
+  std::cout << "  --password=[PASSWORD]" << std::endl
+            << "      "
+            << "Password to use for remote deployment. The default is " << password() << "."
+            << std::endl;
+  std::cout << "  --public-key=[FILENAME]" << std::endl
+            << "      "
+            << "Public key filename to use for remote deployment. The default is" << std::endl
+            << "      " << public_key() << "." << std::endl;
+  std::cout << "  --private-key=[FILENAME]" << std::endl
+            << "      "
+            << "Private key filename to use for remote deployment. The default is" << std::endl
+            << "      " << private_key() << "." << std::endl;
 #endif
-  std::cout << "  --keep-clusters" << std::endl << "      "
-    << "Indicate CCM clusters should not be removed after tests terminate."
-    << std::endl;
-  std::cout << "  --verbose(=ccm,integration)" << std::endl << "      "
-    << "Enable verbose output for component(s)." << std::endl;
-  std::cout << "  --disable-beta-protocol" << std::endl << "      "
-    << "Disable beta protocol use by default." << std::endl << "      "
-    << "NOTE: Individual tests may override this setting." << std::endl;
+  std::cout << "  --keep-clusters" << std::endl
+            << "      "
+            << "Indicate CCM clusters should not be removed after tests terminate." << std::endl;
+  std::cout << "  --verbose(=ccm,integration)" << std::endl
+            << "      "
+            << "Enable verbose output for component(s)." << std::endl;
+  std::cout << "  --disable-beta-protocol" << std::endl
+            << "      "
+            << "Disable beta protocol use by default." << std::endl
+            << "      "
+            << "NOTE: Individual tests may override this setting." << std::endl;
   std::cout << std::endl;
 }
 
@@ -411,25 +448,15 @@ void Options::print_settings() {
 #endif
 }
 
-bool Options::is_help() {
-  return is_help_;
-}
+bool Options::is_help() { return is_help_; }
 
-bool Options::keep_clusters() {
-  return is_keep_clusters_;
-}
+bool Options::keep_clusters() { return is_keep_clusters_; }
 
-bool Options::log_tests() {
-  return is_log_tests_;
-}
+bool Options::log_tests() { return is_log_tests_; }
 
-CCM::CassVersion Options::server_version() {
-  return server_version_;
-}
+CCM::CassVersion Options::server_version() { return server_version_; }
 
-bool Options::is_dse() {
-  return is_dse_;
-}
+bool Options::is_dse() { return is_dse_; }
 
 CCM::DseCredentialsType Options::dse_credentials() {
   // Static initialization cannot be guaranteed
@@ -439,33 +466,19 @@ CCM::DseCredentialsType Options::dse_credentials() {
   return dse_credentials_type_;
 }
 
-const std::string& Options::dse_username() {
-  return dse_username_;
-}
+const std::string& Options::dse_username() { return dse_username_; }
 
-const std::string& Options::dse_password() {
-  return dse_password_;
-}
+const std::string& Options::dse_password() { return dse_password_; }
 
-bool Options::use_git() {
-  return use_git_;
-}
+bool Options::use_git() { return use_git_; }
 
-const std::string& Options::branch_tag() {
-  return branch_tag_;
-}
+const std::string& Options::branch_tag() { return branch_tag_; }
 
-bool Options::use_install_dir() {
-  return use_install_dir_;
-}
+bool Options::use_install_dir() { return use_install_dir_; }
 
-const std::string& Options::install_dir() {
-  return install_dir_;
-}
+const std::string& Options::install_dir() { return install_dir_; }
 
-const std::string& Options::cluster_prefix() {
-  return cluster_prefix_;
-}
+const std::string& Options::cluster_prefix() { return cluster_prefix_; }
 
 CCM::DeploymentType Options::deployment_type() {
   // Static initialization cannot be guaranteed
@@ -483,73 +496,44 @@ CCM::AuthenticationType Options::authentication_type() {
   return authentication_type_;
 }
 
-std::set<TestCategory> Options::categories() {
-  return categories_;
-}
+std::set<TestCategory> Options::categories() { return categories_; }
 
-const std::string& Options::host() {
-  return host_;
-}
+const std::string& Options::host() { return host_; }
 
-std::string Options::host_prefix() {
-  return host_.substr(0, host_.size() - 1);
-}
+std::string Options::host_prefix() { return host_.substr(0, host_.size() - 1); }
 
-short Options::port() {
-  return port_;
-}
+short Options::port() { return port_; }
 
-const std::string& Options::username() {
-  return username_;
-}
+const std::string& Options::username() { return username_; }
 
-const std::string& Options::password() {
-  return password_;
-}
+const std::string& Options::password() { return password_; }
 
-const std::string& Options::public_key() {
-  return public_key_;
-}
+const std::string& Options::public_key() { return public_key_; }
 
-const std::string& Options::private_key() {
-  return private_key_;
-}
+const std::string& Options::private_key() { return private_key_; }
 
 SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > Options::ccm() {
-  return new CCM::Bridge( \
-    Options::server_version(),
-    Options::use_git(), Options::branch_tag(), \
-    Options::use_install_dir(), Options::install_dir(), \
-    Options::is_dse(), CCM::Bridge::DEFAULT_DSE_WORKLOAD, \
-    Options::cluster_prefix(), \
-    Options::dse_credentials(), \
-    Options::dse_username(), Options::dse_password(), \
-    Options::deployment_type(), Options::authentication_type(), \
-    Options::host(), Options::port(), \
-    Options::username(), Options::password(), \
-    Options::public_key(), Options::private_key(),
-    Options::is_verbose_ccm());
+  return new CCM::Bridge(Options::server_version(), Options::use_git(), Options::branch_tag(),
+                         Options::use_install_dir(), Options::install_dir(), Options::is_dse(),
+                         CCM::Bridge::DEFAULT_DSE_WORKLOAD, Options::cluster_prefix(),
+                         Options::dse_credentials(), Options::dse_username(),
+                         Options::dse_password(), Options::deployment_type(),
+                         Options::authentication_type(), Options::host(), Options::port(),
+                         Options::username(), Options::password(), Options::public_key(),
+                         Options::private_key(), Options::is_verbose_ccm());
 }
 
-bool Options::is_verbose_ccm() {
-  return is_verbose_ccm_;
-}
+bool Options::is_verbose_ccm() { return is_verbose_ccm_; }
 
-bool Options::is_verbose_integration() {
-  return is_verbose_integration_;
-}
+bool Options::is_verbose_integration() { return is_verbose_integration_; }
 
-bool Options::is_beta_protocol() {
-  return is_beta_protocol_;
-}
+bool Options::is_beta_protocol() { return is_beta_protocol_; }
 
-Options::Options() {
-}
+Options::Options() {}
 
 bool Options::bool_value(const std::string& value) {
   std::string lower_value = test::Utils::to_lower(value);
-  if (lower_value == "yes" || lower_value == "true" ||
-      lower_value == "on" || lower_value == "0") {
+  if (lower_value == "yes" || lower_value == "true" || lower_value == "on" || lower_value == "0") {
     return true;
   }
   return false;

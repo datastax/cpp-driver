@@ -14,14 +14,14 @@
   limitations under the License.
 */
 
-#ifndef __CASS_LIST_HPP_INCLUDED__
-#define __CASS_LIST_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_LIST_HPP
+#define DATASTAX_INTERNAL_LIST_HPP
 
 #include "macros.hpp"
 
 #include <stddef.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class T>
 class List {
@@ -82,8 +82,7 @@ public:
 
   T* pop_front() {
     T* first = front();
-    if (first != NULL)
-      remove(first);
+    if (first != NULL) remove(first);
     return first;
   }
 
@@ -139,6 +138,6 @@ void List<T>::insert_before(Node* pos, Node* node) {
   pos->prev_ = node;
 }
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

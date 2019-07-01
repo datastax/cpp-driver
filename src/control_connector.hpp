@@ -14,15 +14,15 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONTROL_CONNECTOR_HPP_INCLUDED__
-#define __CASS_CONTROL_CONNECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONTROL_CONNECTOR_HPP
+#define DATASTAX_INTERNAL_CONTROL_CONNECTOR_HPP
 
 #include "callback.hpp"
 #include "control_connection.hpp"
-#include "ref_counted.hpp"
 #include "event_response.hpp"
+#include "ref_counted.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class HostsConnectorRequestCallback;
 class Metrics;
@@ -84,12 +84,13 @@ struct ControlConnectionSchema {
  * version, and registers for cluster events (topology and schema changes). It
  * also retrieves the initial host and schema metadata for the cluster.
  */
-class ControlConnector : public RefCounted<ControlConnector>
-                       , public RecordingConnectionListener {
+class ControlConnector
+    : public RefCounted<ControlConnector>
+    , public RecordingConnectionListener {
 public:
   typedef SharedRefPtr<ControlConnector> Ptr;
   typedef Vector<Ptr> Vec;
-  typedef cass::Callback<void, ControlConnector*> Callback;
+  typedef internal::Callback<void, ControlConnector*> Callback;
 
   enum ControlConnectionError {
     CONTROL_CONNECTION_OK,
@@ -108,8 +109,7 @@ public:
    * connection.
    * @param callback
    */
-  ControlConnector(const Host::Ptr& host,
-                   ProtocolVersion protocol_version,
+  ControlConnector(const Host::Ptr& host, ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**
@@ -182,27 +182,20 @@ public:
   const ControlConnectionSchema& schema() const { return schema_; }
 
 public:
-  const Address& address() const {
-    return connector_->address();
-  }
+  const Address& address() const { return connector_->address(); }
 
-  const ProtocolVersion protocol_version() const {
-    return connector_->protocol_version();
-  }
+  const ProtocolVersion protocol_version() const { return connector_->protocol_version(); }
 
   bool is_ok() const { return error_code_ == CONTROL_CONNECTION_OK; }
   bool is_canceled() const { return error_code_ == CONTROL_CONNECTION_CANCELED; }
   bool is_invalid_protocol() const {
-    return error_code_ == CONTROL_CONNECTION_ERROR_CONNECTION &&
-        connector_->is_invalid_protocol();
+    return error_code_ == CONTROL_CONNECTION_ERROR_CONNECTION && connector_->is_invalid_protocol();
   }
   bool is_ssl_error() const {
-    return error_code_ == CONTROL_CONNECTION_ERROR_CONNECTION &&
-        connector_->is_ssl_error();
+    return error_code_ == CONTROL_CONNECTION_ERROR_CONNECTION && connector_->is_ssl_error();
   }
   bool is_auth_error() const {
-    return error_code_ == CONTROL_CONNECTION_ERROR_CONNECTION &&
-        connector_->is_auth_error();
+    return error_code_ == CONTROL_CONNECTION_ERROR_CONNECTION && connector_->is_auth_error();
   }
 
   ControlConnectionError error_code() const { return error_code_; }
@@ -262,6 +255,6 @@ private:
   ControlConnectionSettings settings_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

@@ -16,12 +16,14 @@
 
 #include "monitor_reporting.hpp"
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal::core;
 
-MonitorReporting* create_monitor_reporting(const String& client_id,
-                                           const String& session_id,
+namespace datastax { namespace internal { namespace core {
+
+MonitorReporting* create_monitor_reporting(const String& client_id, const String& session_id,
                                            const Config& config) {
   return new NopMonitorReporting();
 }
 
-} // namespace cass
+}}} // namespace datastax::internal::core

@@ -28,14 +28,15 @@
 #include "result_response.hpp"
 #include "session.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace testing {
+
+using namespace core;
 
 String get_host_from_future(CassFuture* future) {
-  if (future->type() != cass::Future::FUTURE_TYPE_RESPONSE) {
+  if (future->type() != Future::FUTURE_TYPE_RESPONSE) {
     return "";
   }
-  cass::ResponseFuture* response_future =
-      static_cast<cass::ResponseFuture*>(future->from());
+  ResponseFuture* response_future = static_cast<ResponseFuture*>(future->from());
   return response_future->address().to_string();
 }
 
@@ -43,18 +44,14 @@ unsigned get_connect_timeout_from_cluster(CassCluster* cluster) {
   return cluster->config().connect_timeout_ms();
 }
 
-int get_port_from_cluster(CassCluster* cluster) {
-  return cluster->config().port();
-}
+int get_port_from_cluster(CassCluster* cluster) { return cluster->config().port(); }
 
 String get_contact_points_from_cluster(CassCluster* cluster) {
   String str;
 
-  const ContactPointList& contact_points
-      = cluster->config().contact_points();
+  const ContactPointList& contact_points = cluster->config().contact_points();
 
-  for (ContactPointList::const_iterator it = contact_points.begin(),
-       end = contact_points.end();
+  for (ContactPointList::const_iterator it = contact_points.begin(), end = contact_points.end();
        it != end; ++it) {
     if (str.size() > 0) {
       str.push_back(',');
@@ -65,13 +62,11 @@ String get_contact_points_from_cluster(CassCluster* cluster) {
   return str;
 }
 
-int64_t create_murmur3_hash_from_string(const String &value) {
+int64_t create_murmur3_hash_from_string(const String& value) {
   return MurmurHash3_x64_128(value.data(), value.size(), 0);
 }
 
-uint64_t get_time_since_epoch_in_ms() {
-  return cass::get_time_since_epoch_ms();
-}
+uint64_t get_time_since_epoch_in_ms() { return internal::get_time_since_epoch_ms(); }
 
 uint64_t get_host_latency_average(CassSession* session, String ip_address, int port) {
   Address address;
@@ -82,4 +77,4 @@ uint64_t get_host_latency_average(CassSession* session, String ip_address, int p
   return 0;
 }
 
-} // namespace cass
+}}} // namespace datastax::internal::testing

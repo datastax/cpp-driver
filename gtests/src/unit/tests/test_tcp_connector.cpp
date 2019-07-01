@@ -19,15 +19,13 @@
 #include "callback.hpp"
 #include "tcp_connector.hpp"
 
-using cass::Address;
-using cass::bind_callback;
-using cass::Memory;
-using cass::TcpConnector;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 class TcpConnectorUnitTest : public LoopTest {
 public:
   TcpConnectorUnitTest()
-    : status_(TcpConnector::NEW) { }
+      : status_(TcpConnector::NEW) {}
 
   virtual void SetUp() {
     LoopTest::SetUp();
@@ -41,22 +39,16 @@ public:
     server_.close();
   }
 
-  void close() {
-    server_.close();
-  }
+  void close() { server_.close(); }
 
   void connect(const TcpConnector::Ptr& connector) {
     connector->connect(&tcp_, bind_callback(&TcpConnectorUnitTest::on_connect, this));
   }
 
-  TcpConnector::Status status() const {
-    return status_;
-  }
+  TcpConnector::Status status() const { return status_; }
 
 private:
-  void on_connect(TcpConnector* connector) {
-    status_ = connector->status();
-  }
+  void on_connect(TcpConnector* connector) { status_ = connector->status(); }
 
 private:
   uv_tcp_t tcp_;

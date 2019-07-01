@@ -26,9 +26,9 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cassandra.h"
 
@@ -92,7 +92,8 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
-  const char* query = "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
+  const char* query =
+      "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
 
   statement = cass_statement_new(query, 6);
 
@@ -175,13 +176,10 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { \
+  execute_query(session, "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' };");
 
-
-  execute_query(session,
-                "CREATE TABLE examples.basic (key text, \
+  execute_query(session, "CREATE TABLE examples.basic (key text, \
                                               bln boolean, \
                                               flt float, dbl double,\
                                               i32 int, i64 bigint, \

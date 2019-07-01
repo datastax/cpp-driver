@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ASYNC_HPP_INCLUDED__
-#define __CASS_ASYNC_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ASYNC_HPP
+#define DATASTAX_INTERNAL_ASYNC_HPP
 
 #include "allocated.hpp"
 #include "callback.hpp"
@@ -23,7 +23,7 @@
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A wrapper for uv_async. This is useful for signaling an event loop that's
@@ -31,7 +31,7 @@ namespace cass {
  */
 class Async {
 public:
-  typedef cass::Callback<void, Async*> Callback;
+  typedef internal::Callback<void, Async*> Callback;
 
   Async();
 
@@ -77,6 +77,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Async);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

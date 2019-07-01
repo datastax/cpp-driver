@@ -26,9 +26,9 @@
 */
 
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <uv.h>
 
@@ -76,14 +76,14 @@ CassCluster* create_cluster(const char* hosts) {
   return cluster;
 }
 
-void connect_session(CassSession* session, const CassCluster* cluster, CassFutureCallback callback) {
+void connect_session(CassSession* session, const CassCluster* cluster,
+                     CassFutureCallback callback) {
   CassFuture* future = cass_session_connect(session, cluster);
   cass_future_set_callback(future, callback, session);
   cass_future_free(future);
 }
 
-void execute_query(CassSession* session, const char* query,
-                   CassFutureCallback callback) {
+void execute_query(CassSession* session, const char* query, CassFutureCallback callback) {
   CassStatement* statement = cass_statement_new(query, 0);
   CassFuture* future = cass_session_execute(session, statement);
   cass_future_set_callback(future, callback, session);
@@ -113,9 +113,7 @@ void on_create_keyspace(CassFuture* future, void* data) {
     print_error(future);
   }
 
-  execute_query((CassSession*)data,
-                "USE examples",
-                on_set_keyspace);
+  execute_query((CassSession*)data, "USE examples", on_set_keyspace);
 }
 
 void on_set_keyspace(CassFuture* future, void* data) {
@@ -163,10 +161,8 @@ void on_insert(CassFuture* future, void* data) {
     signal_exit();
   } else {
     const char* select_query = "SELECT * FROM callbacks";
-    CassStatement* statement
-        = cass_statement_new(select_query, 0);
-    CassFuture* select_future
-        = cass_session_execute((CassSession*)data, statement);
+    CassStatement* statement = cass_statement_new(select_query, 0);
+    CassFuture* select_future = cass_session_execute((CassSession*)data, statement);
 
     cass_future_set_callback(select_future, on_select, data);
 

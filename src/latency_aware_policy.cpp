@@ -22,35 +22,29 @@
 #include <algorithm>
 #include <iterator>
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
-void LatencyAwarePolicy::init(const Host::Ptr& connected_host,
-                              const HostMap& hosts,
+void LatencyAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts,
                               Random* random) {
   hosts_->reserve(hosts.size());
   std::transform(hosts.begin(), hosts.end(), std::back_inserter(*hosts_), GetHost());
-  for (HostMap::const_iterator i = hosts.begin(),
-       end = hosts.end(); i != end; ++i) {
+  for (HostMap::const_iterator i = hosts.begin(), end = hosts.end(); i != end; ++i) {
     i->second->enable_latency_tracking(settings_.scale_ns, settings_.min_measured);
   }
   ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
 }
 
-void LatencyAwarePolicy::register_handles(uv_loop_t* loop) {
-  start_timer(loop);
-}
+void LatencyAwarePolicy::register_handles(uv_loop_t* loop) { start_timer(loop); }
 
-void LatencyAwarePolicy::close_handles() {
-  timer_.stop();
-}
+void LatencyAwarePolicy::close_handles() { timer_.stop(); }
 
 QueryPlan* LatencyAwarePolicy::new_query_plan(const String& keyspace,
                                               RequestHandler* request_handler,
                                               const TokenMap* token_map) {
-  return new LatencyAwareQueryPlan(this,
-                                   child_policy_->new_query_plan(keyspace,
-                                                                 request_handler,
-                                                                 token_map));
+  return new LatencyAwareQueryPlan(
+      this, child_policy_->new_query_plan(keyspace, request_handler, token_map));
 }
 
 void LatencyAwarePolicy::on_host_added(const Host::Ptr& host) {
@@ -65,8 +59,7 @@ void LatencyAwarePolicy::on_host_removed(const Host::Ptr& host) {
 }
 
 void LatencyAwarePolicy::start_timer(uv_loop_t* loop) {
-  timer_.start(loop, settings_.update_rate_ms,
-               bind_callback(&LatencyAwarePolicy::on_timer, this));
+  timer_.start(loop, settings_.update_rate_ms, bind_callback(&LatencyAwarePolicy::on_timer, this));
 }
 
 void LatencyAwarePolicy::on_timer(Timer* timer) {
@@ -75,12 +68,10 @@ void LatencyAwarePolicy::on_timer(Timer* timer) {
   int64_t new_min_average = CASS_INT64_MAX;
   int64_t now = uv_hrtime();
 
-  for (HostVec::const_iterator i = hosts->begin(),
-       end = hosts->end(); i != end; ++i) {
+  for (HostVec::const_iterator i = hosts->begin(), end = hosts->end(); i != end; ++i) {
     TimestampedAverage latency = (*i)->get_current_average();
-    if (latency.average >= 0
-        && latency.num_measured >= settings_.min_measured
-        && (now - latency.timestamp) <= settings_.retry_period_ns) {
+    if (latency.average >= 0 && latency.num_measured >= settings_.min_measured &&
+        (now - latency.timestamp) <= settings_.retry_period_ns) {
       new_min_average = std::min(new_min_average, latency.average);
     }
   }
@@ -102,9 +93,7 @@ Host::Ptr LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
   while ((host = child_plan_->compute_next())) {
     TimestampedAverage latency = host->get_current_average();
 
-    if (min < 0 ||
-        latency.average < 0 ||
-        latency.num_measured < settings.min_measured ||
+    if (min < 0 || latency.average < 0 || latency.num_measured < settings.min_measured ||
         (now - latency.timestamp) > settings.retry_period_ns) {
       return host;
     }
@@ -122,5 +111,3 @@ Host::Ptr LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
 
   return Host::Ptr();
 }
-
-} // namespace cass

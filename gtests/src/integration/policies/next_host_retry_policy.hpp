@@ -21,16 +21,15 @@
 
 #include "retry_policy.hpp"
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Retry policy that will retry the statement on the next host
  */
-class NextHostRetryPolicy : public cass::DefaultRetryPolicy {
+class NextHostRetryPolicy : public datastax::internal::core::DefaultRetryPolicy {
 public:
   NextHostRetryPolicy()
-    : cass::DefaultRetryPolicy() { }
+      : datastax::internal::core::DefaultRetryPolicy() {}
 
   /**
    * Create an instance of the retry policy for use with the driver
@@ -38,43 +37,34 @@ public:
    * @return Driver ready retry policy
    */
   static ::test::driver::RetryPolicy policy() {
-    cass::RetryPolicy* policy = new NextHostRetryPolicy();
+    datastax::internal::core::RetryPolicy* policy = new NextHostRetryPolicy();
     policy->inc_ref();
     return CassRetryPolicy::to(policy);
   }
 
-  RetryDecision on_read_timeout(const cass::Request* request,
-                                CassConsistency cl,
-                                int received,
-                                int required,
-                                bool data_recevied,
+  RetryDecision on_read_timeout(const datastax::internal::core::Request* request,
+                                CassConsistency cl, int received, int required, bool data_recevied,
                                 int num_retries) const {
     return RetryDecision::retry_next_host(cl);
   }
-  RetryDecision on_write_timeout(const cass::Request* request,
-                                 CassConsistency cl,
-                                 int received,
-                                 int required,
-                                 CassWriteType write_type,
-                                 int num_retries) const {
+  RetryDecision on_write_timeout(const datastax::internal::core::Request* request,
+                                 CassConsistency cl, int received, int required,
+                                 CassWriteType write_type, int num_retries) const {
     return RetryDecision::retry_next_host(cl);
   }
-  virtual RetryDecision on_unavailable(const cass::Request* request,
-                                       CassConsistency cl,
-                                       int required,
-                                       int alive,
+  virtual RetryDecision on_unavailable(const datastax::internal::core::Request* request,
+                                       CassConsistency cl, int required, int alive,
                                        int num_retries) const {
     return RetryDecision::retry_next_host(cl);
   }
-  virtual RetryDecision on_request_error(const cass::Request* request,
+  virtual RetryDecision on_request_error(const datastax::internal::core::Request* request,
                                          CassConsistency cl,
-                                         const cass::ErrorResponse* error,
+                                         const datastax::internal::core::ErrorResponse* error,
                                          int num_retries) const {
     return RetryDecision::retry_next_host(cl);
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __NEXT_HOST_RETRY_POLICY_HPP__

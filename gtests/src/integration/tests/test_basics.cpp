@@ -19,7 +19,7 @@
 /**
  * Basics integration tests; common operations
  */
-class BasicsTests : public Integration { };
+class BasicsTests : public Integration {};
 
 /**
  * Perform inserts and validate the timestamps from the server
@@ -36,12 +36,11 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, Timestamps) {
   CHECK_FAILURE;
 
   // Create the table, insert and select queries for the test
-  session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT,
-                   table_name_.c_str(), "int", "int"));
-  std::string insert_query = format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT,
-                                           table_name_.c_str(), "?", "?");
-  Statement select_query = Statement("SELECT WRITETIME (value) FROM "
-                                     + table_name_);
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "int"));
+  std::string insert_query =
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "?", "?");
+  Statement select_query = Statement("SELECT WRITETIME (value) FROM " + table_name_);
 
   // Insert a value and get the timestamp from the server
   Statement statement(insert_query, 2);
@@ -69,8 +68,7 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, Timestamps) {
 
   // Validate the timestamps
   ASSERT_NE(timestamp_1, timestamp_2);
-  ASSERT_LT(timestamp_2 - timestamp_1 - BigInteger(pause_duration * 1000),
-            BigInteger(100000));
+  ASSERT_LT(timestamp_2 - timestamp_1 - BigInteger(pause_duration * 1000), BigInteger(100000));
 }
 
 /**
@@ -87,15 +85,13 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, Counters) {
   CHECK_FAILURE;
 
   // Create the table and update/upsert queries for the test
-  session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT,
-                   table_name_.c_str(), "int", "counter"));
-  std::string update_query = "UPDATE " + table_name_
-    + " SET value=value %s ? WHERE key=0";
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "counter"));
+  std::string update_query = "UPDATE " + table_name_ + " SET value=value %s ? WHERE key=0";
 
   // Perform multiple upserts against the counter value
   for (int step = 0; step < 100; ++step) {
-    Statement statement(format_string(update_query.c_str(),
-      (step % 2 == 0 ? "-" : "+")), 1);
+    Statement statement(format_string(update_query.c_str(), (step % 2 == 0 ? "-" : "+")), 1);
     statement.bind<Counter>(0, Counter(step));
     session_.execute(statement);
   }
@@ -125,14 +121,15 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, RowsInRowsOut) {
   CHECK_FAILURE;
 
   // Create the table, insert, and select statements for the test
-  session_.execute("CREATE TABLE " + table_name_
-                   + " (key bigint PRIMARY KEY, " \
+  session_.execute("CREATE TABLE " + table_name_ +
+                   " (key bigint PRIMARY KEY, "
                    "value_1 bigint, value_2 bigint, value_3 bigint)");
-  Statement insert_statement("INSERT INTO " + table_name_
-                             + " (key, value_1, value_2, value_3) " \
-                             "VALUES (?, ?, ?, ?)", 4);
-  Statement select_statement("SELECT key, value_1, value_2, value_3 FROM "
-                             + table_name_ + " LIMIT 1000");
+  Statement insert_statement("INSERT INTO " + table_name_ +
+                                 " (key, value_1, value_2, value_3) "
+                                 "VALUES (?, ?, ?, ?)",
+                             4);
+  Statement select_statement("SELECT key, value_1, value_2, value_3 FROM " + table_name_ +
+                             " LIMIT 1000");
 
   // Create multiple rows with varying data
   for (int i = 0; i < 1000; ++i) {
@@ -177,8 +174,8 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, ColumnNames) {
   CHECK_FAILURE;
 
   // Create the table for the test
-  session_.execute("CREATE TABLE " + table_name_
-                   + " (key bigint PRIMARY KEY, " \
+  session_.execute("CREATE TABLE " + table_name_ +
+                   " (key bigint PRIMARY KEY, "
                    "value_1 text, value_2 int, value_3 bigint, value_4 float)");
 
   // Validate the column names
@@ -210,18 +207,17 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, EmptyResults) {
   CHECK_FAILURE;
 
   // Create the table
-  Result result = session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT,
-                                   table_name_.c_str(), "int", "int"));
+  Result result = session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "int"));
   ASSERT_TRUE(result.is_empty());
 
   // Insert data into the table
-  result = session_.execute(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT,
-                            table_name_.c_str(), "0", "0"));
+  result = session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "0", "0"));
   ASSERT_TRUE(result.is_empty());
 
   // Delete data from the table
-  result = session_.execute(format_string(CASSANDRA_DELETE_ROW_FORMAT,
-                            table_name_.c_str(), "0"));
+  result = session_.execute(format_string(CASSANDRA_DELETE_ROW_FORMAT, table_name_.c_str(), "0"));
   ASSERT_TRUE(result.is_empty());
 
   // Select data from the table (all rows have been deleted)
@@ -246,12 +242,11 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, UnsetParameters) {
   CHECK_FAILURE;
 
   // Create the table, insert a known value, and create insert statement for the test
-  session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT,
-                   table_name_.c_str(), "int", "int"));
-  session_.execute(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT,
-                   table_name_.c_str(), "0", "1"));
-  Prepared insert_prepared = session_.prepare(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT,
-                                              table_name_.c_str(), "?", "?"));
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "int"));
+  session_.execute(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "0", "1"));
+  Prepared insert_prepared = session_.prepare(
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "?", "?"));
 
   // Bind a single value and leave one unset
   Statement insert_statement = insert_prepared.bind();
@@ -287,17 +282,17 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, UnsetParameters) {
  * @test_category queries:basic
  * @since core:2.3.0
  * @expected_result String will be bound/inserted into blob  and values will be
-  *                 validated
+ *                 validated
  */
 CASSANDRA_INTEGRATION_TEST_F(BasicsTests, BindBlobAsString) {
   CHECK_FAILURE;
 
   // Create the table, prepared and  insert statement for the test
-  session_.execute(format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT,
-                   table_name_.c_str(), "int", "blob"));
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "blob"));
   // Prepared needed to validate bind type information
-  Prepared insert_prepared = session_.prepare(format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT,
-                                              table_name_.c_str(), "?", "?"));
+  Prepared insert_prepared = session_.prepare(
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, table_name_.c_str(), "?", "?"));
   Statement insert_statement = insert_prepared.bind();
 
   // Bind and insert the data into the table
@@ -341,33 +336,32 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, NoCompactEnabledConnection) {
   CCM::CassVersion cass_version = server_version_;
   if (Options::is_dse()) {
     if (server_version_ >= "6.0.0") {
-      SKIP_TEST("Unsupported for DataStax Enterprise Version " << server_version_.to_string()
+      SKIP_TEST("Unsupported for DataStax Enterprise Version "
+                << server_version_.to_string()
                 << ": Apache Cassandra server version must be used and less than"
                 << " v4.0.0 and either 3.0.16+ or 3.11.2+ in order to execute");
     }
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
   }
   if (cass_version >= "4.0.0") {
-    SKIP_TEST("Unsupported for Apache Cassandra Version " << cass_version.to_string()
+    SKIP_TEST("Unsupported for Apache Cassandra Version "
+              << cass_version.to_string()
               << ": Server version must be less than v4.0.0 and either 3.0.16+"
               << " or 3.11.2+ in order to execute");
   }
 
   // Create a session where the NO_COMPACT option is set
-  Session no_compact_session = default_cluster()
-    .with_no_compact()
-    .connect(default_keyspace());
+  Session no_compact_session = default_cluster().with_no_compact().connect(default_keyspace());
 
   // Create the table and insert data using the NO_COMPACT session
   no_compact_session.execute(format_string(
-                             "CREATE TABLE %s (k int PRIMARY KEY, v int) WITH COMPACT STORAGE",
-                             table_name_.c_str()));
-  no_compact_session.execute(format_string("INSERT INTO %s (k, v) VALUES(%s, %s)",
-                             table_name_.c_str(), "1", "1"));
-  no_compact_session.execute(format_string("INSERT INTO %s (k, v) VALUES(%s, %s)",
-                             table_name_.c_str(), "2", "2"));
-  no_compact_session.execute(format_string("INSERT INTO %s (k, v) VALUES(%s, %s)",
-                             table_name_.c_str(), "3", "3"));
+      "CREATE TABLE %s (k int PRIMARY KEY, v int) WITH COMPACT STORAGE", table_name_.c_str()));
+  no_compact_session.execute(
+      format_string("INSERT INTO %s (k, v) VALUES(%s, %s)", table_name_.c_str(), "1", "1"));
+  no_compact_session.execute(
+      format_string("INSERT INTO %s (k, v) VALUES(%s, %s)", table_name_.c_str(), "2", "2"));
+  no_compact_session.execute(
+      format_string("INSERT INTO %s (k, v) VALUES(%s, %s)", table_name_.c_str(), "3", "3"));
 
   // Validate the default session with compact storage enabled
   Result result = session_.execute(default_select_all());

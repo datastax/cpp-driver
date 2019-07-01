@@ -22,10 +22,10 @@
 #include "third_party/curl/hostcheck.hpp"
 
 #include <openssl/crypto.h>
-#include <openssl/err.h>
 #include <openssl/engine.h>
-#include <openssl/x509v3.h>
+#include <openssl/err.h>
 #include <openssl/rand.h>
+#include <openssl/x509v3.h>
 #include <string.h>
 
 #define DEBUG_SSL 0
@@ -36,17 +36,17 @@
 #define SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE SSL_F_USE_CERTIFICATE_CHAIN_FILE
 #endif
 
-namespace cass {
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
 
 #if DEBUG_SSL
-#define SSL_PRINT_INFO(ssl, w, flag, msg) do { \
-    if (w & flag) {                             \
-      fprintf(stderr, "%s - %s - %s\n",        \
-              msg,                             \
-              SSL_state_string(ssl),           \
-              SSL_state_string_long(ssl));     \
-    }                                          \
- } while (0);
+#define SSL_PRINT_INFO(ssl, w, flag, msg)                                                        \
+  do {                                                                                           \
+    if (w & flag) {                                                                              \
+      fprintf(stderr, "%s - %s - %s\n", msg, SSL_state_string(ssl), SSL_state_string_long(ssl)); \
+    }                                                                                            \
+  } while (0);
 
 static void ssl_info_callback(const SSL* ssl, int where, int ret) {
   if (ret == 0) {
@@ -152,7 +152,7 @@ static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
 
   x = PEM_read_bio_X509_AUX(in, NULL, pem_password_callback, NULL);
   if (x == NULL) {
-    SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE,ERR_R_PEM_LIB);
+    SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE, ERR_R_PEM_LIB);
     goto end;
   }
 
@@ -167,7 +167,7 @@ static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
     // If we could set up our certificate, now proceed to
     // the CA certificates.
 
-    X509 *ca;
+    X509* ca;
     int r;
     unsigned long err;
 
@@ -227,18 +227,14 @@ static X509* load_cert(const char* cert, size_t cert_size) {
   return x509;
 }
 
-static EVP_PKEY* load_key(const char* key,
-                          size_t key_size,
-                          const char* password) {
+static EVP_PKEY* load_key(const char* key, size_t key_size, const char* password) {
   BIO* bio = BIO_new_mem_buf(const_cast<char*>(key), key_size);
   if (bio == NULL) {
     return NULL;
   }
 
-  EVP_PKEY* pkey = PEM_read_bio_PrivateKey(bio,
-                                           NULL,
-                                           pem_password_callback,
-                                           const_cast<char*>(password));
+  EVP_PKEY* pkey =
+      PEM_read_bio_PrivateKey(bio, NULL, pem_password_callback, const_cast<char*>(password));
   if (pkey == NULL) {
     ssl_log_errors("Unable to load private key");
   }
@@ -250,12 +246,7 @@ static EVP_PKEY* load_key(const char* key,
 
 class OpenSslVerifyIdentity {
 public:
-  enum Result {
-    INVALID_CERT,
-    MATCH,
-    NO_MATCH,
-    NO_SAN_PRESENT
-  };
+  enum Result { INVALID_CERT, MATCH, NO_MATCH, NO_SAN_PRESENT };
 
   static Result match(X509* cert, const Address& address) {
     Result result = match_subject_alt_names_ipadd(cert, address);
@@ -346,8 +337,8 @@ private:
       return NO_MATCH;
     }
 
-    STACK_OF(GENERAL_NAME)* names
-      = static_cast<STACK_OF(GENERAL_NAME)*>(X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
+    STACK_OF(GENERAL_NAME)* names = static_cast<STACK_OF(GENERAL_NAME)*>(
+        X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
     if (names == NULL) {
       return NO_SAN_PRESENT;
     }
@@ -356,7 +347,7 @@ private:
     for (int i = 0; i < sk_GENERAL_NAME_num(names); ++i) {
       GENERAL_NAME* name = sk_GENERAL_NAME_value(names, i);
 
-      if (name->type == GEN_IPADD){
+      if (name->type == GEN_IPADD) {
         ASN1_STRING* str = name->d.iPAddress;
         if (str == NULL) {
           result = INVALID_CERT;
@@ -383,8 +374,8 @@ private:
   }
 
   static Result match_subject_alt_names_dns(X509* cert, const String& hostname) {
-    STACK_OF(GENERAL_NAME)* names
-      = static_cast<STACK_OF(GENERAL_NAME)*>(X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
+    STACK_OF(GENERAL_NAME)* names = static_cast<STACK_OF(GENERAL_NAME)*>(
+        X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
     if (names == NULL) {
       return NO_SAN_PRESENT;
     }
@@ -393,7 +384,7 @@ private:
     for (int i = 0; i < sk_GENERAL_NAME_num(names); ++i) {
       GENERAL_NAME* name = sk_GENERAL_NAME_value(names, i);
 
-      if (name->type == GEN_DNS){
+      if (name->type == GEN_DNS) {
         ASN1_STRING* str = name->d.dNSName;
         if (str == NULL) {
           result = INVALID_CERT;
@@ -419,16 +410,14 @@ private:
   }
 };
 
-OpenSslSession::OpenSslSession(const Address& address,
-                               const String& hostname,
-                               int flags,
+OpenSslSession::OpenSslSession(const Address& address, const String& hostname, int flags,
                                SSL_CTX* ssl_ctx)
-  : SslSession(address, hostname, flags)
-  , ssl_(SSL_new(ssl_ctx))
-  , incoming_state_(&incoming_)
-  , outgoing_state_(&outgoing_)
-  , incoming_bio_(rb::RingBufferBio::create(&incoming_state_))
-  , outgoing_bio_(rb::RingBufferBio::create(&outgoing_state_)) {
+    : SslSession(address, hostname, flags)
+    , ssl_(SSL_new(ssl_ctx))
+    , incoming_state_(&incoming_)
+    , outgoing_state_(&outgoing_)
+    , incoming_bio_(rb::RingBufferBio::create(&incoming_state_))
+    , outgoing_bio_(rb::RingBufferBio::create(&outgoing_state_)) {
   SSL_set_bio(ssl_, incoming_bio_, outgoing_bio_);
   SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_NONE, ssl_no_verify_callback);
 #if DEBUG_SSL
@@ -437,9 +426,7 @@ OpenSslSession::OpenSslSession(const Address& address,
   SSL_set_connect_state(ssl_);
 }
 
-OpenSslSession::~OpenSslSession() {
-  SSL_free(ssl_);
-}
+OpenSslSession::~OpenSslSession() { SSL_free(ssl_); }
 
 void OpenSslSession::do_handshake() {
   int rc = SSL_connect(ssl_);
@@ -484,7 +471,8 @@ void OpenSslSession::verify() {
         X509_free(peer_cert);
         return;
     }
-  } else if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY_DNS) { // Match using hostnames (including wildcards)
+  } else if (verify_flags_ &
+             CASS_SSL_VERIFY_PEER_IDENTITY_DNS) { // Match using hostnames (including wildcards)
     switch (OpenSslVerifyIdentity::match_dns(peer_cert, hostname_)) {
       case OpenSslVerifyIdentity::MATCH:
         // Success
@@ -513,7 +501,7 @@ int OpenSslSession::encrypt(const char* buf, size_t size) {
   return rc;
 }
 
-int OpenSslSession::decrypt(char* buf, size_t size)  {
+int OpenSslSession::decrypt(char* buf, size_t size) {
   int rc = SSL_read(ssl_, buf, size);
   if (rc <= 0) check_error(rc);
   return rc;
@@ -528,21 +516,18 @@ void OpenSslSession::check_error(int rc) {
 }
 
 OpenSslContext::OpenSslContext()
-  : ssl_ctx_(SSL_CTX_new(SSLv23_client_method()))
-  , trusted_store_(X509_STORE_new()) {
+    : ssl_ctx_(SSL_CTX_new(SSLv23_client_method()))
+    , trusted_store_(X509_STORE_new()) {
   SSL_CTX_set_cert_store(ssl_ctx_, trusted_store_);
 }
 
-OpenSslContext::~OpenSslContext() {
-  SSL_CTX_free(ssl_ctx_);
-}
+OpenSslContext::~OpenSslContext() { SSL_CTX_free(ssl_ctx_); }
 
 SslSession* OpenSslContext::create_session(const Address& address, const String& hostname) {
   return new OpenSslSession(address, hostname, verify_flags_, ssl_ctx_);
 }
 
-CassError OpenSslContext::add_trusted_cert(const char* cert,
-                                           size_t cert_length) {
+CassError OpenSslContext::add_trusted_cert(const char* cert, size_t cert_length) {
   X509* x509 = load_cert(cert, cert_length);
   if (x509 == NULL) {
     return CASS_ERROR_SSL_INVALID_CERT;
@@ -554,8 +539,7 @@ CassError OpenSslContext::add_trusted_cert(const char* cert,
   return CASS_OK;
 }
 
-CassError OpenSslContext::set_cert(const char* cert,
-                                   size_t cert_length) {
+CassError OpenSslContext::set_cert(const char* cert, size_t cert_length) {
   BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_length);
   if (bio == NULL) {
     return CASS_ERROR_SSL_INVALID_CERT;
@@ -573,9 +557,7 @@ CassError OpenSslContext::set_cert(const char* cert,
   return CASS_OK;
 }
 
-CassError OpenSslContext::set_private_key(const char* key,
-                                          size_t key_length,
-                                          const char* password,
+CassError OpenSslContext::set_private_key(const char* key, size_t key_length, const char* password,
                                           size_t password_length) {
   // TODO: Password buffer
   EVP_PKEY* pkey = load_key(key, key_length, password);
@@ -589,41 +571,27 @@ CassError OpenSslContext::set_private_key(const char* key,
   return CASS_OK;
 }
 
-SslContext::Ptr OpenSslContextFactory::create() {
-  return SslContext::Ptr(new OpenSslContext());
-}
+SslContext::Ptr OpenSslContextFactory::create() { return SslContext::Ptr(new OpenSslContext()); }
 
 namespace openssl {
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-  void* malloc(size_t size) {
-    return Memory::malloc(size);
-  }
+void* malloc(size_t size) { return Memory::malloc(size); }
 
-  void* realloc(void* ptr, size_t size) {
-    return Memory::realloc(ptr, size);
-  }
+void* realloc(void* ptr, size_t size) { return Memory::realloc(ptr, size); }
 
-  void free(void* ptr) {
-    Memory::free(ptr);
-  }
+void free(void* ptr) { Memory::free(ptr); }
 #else
-  void* malloc(size_t size, const char* file, int line) {
-    return Memory::malloc(size);
-  }
+void* malloc(size_t size, const char* file, int line) { return Memory::malloc(size); }
 
-  void* realloc(void* ptr, size_t size, const char* file, int line) {
-    return Memory::realloc(ptr, size);
-  }
+void* realloc(void* ptr, size_t size, const char* file, int line) {
+  return Memory::realloc(ptr, size);
+}
 
-  void free(void* ptr, const char* file, int line) {
-    Memory::free(ptr);
-  }
+void free(void* ptr, const char* file, int line) { Memory::free(ptr); }
 #endif
 
 } // namespace openssl
-
-
 
 void OpenSslContextFactory::internal_init() {
   CRYPTO_set_mem_functions(openssl::malloc, openssl::realloc, openssl::free);
@@ -690,5 +658,3 @@ void OpenSslContextFactory::internal_cleanup() {
   rb::RingBufferBio::cleanup();
 #endif
 }
-
-} // namespace cass

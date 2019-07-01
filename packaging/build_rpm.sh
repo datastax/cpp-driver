@@ -42,7 +42,7 @@ fi
 version=$(header_version "../include/cassandra.h")
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
-files="CMakeLists.txt cmake cmake_uninstall.cmake.in cassconfig.hpp.in include src README.md LICENSE.txt"
+files="CMakeLists.txt cmake cmake_uninstall.cmake.in driver_config.hpp.in include src README.md LICENSE.txt"
 
 echo "Building version $version"
 

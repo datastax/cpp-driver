@@ -18,42 +18,39 @@
 
 #include "stream_manager.hpp"
 
-TEST(StreamManagerUnitTest, MaxStreams)
-{
-  ASSERT_EQ(cass::StreamManager<int>().max_streams(), 32768u);
+using datastax::internal::core::StreamManager;
+
+TEST(StreamManagerUnitTest, MaxStreams) { ASSERT_EQ(StreamManager<int>().max_streams(), 32768u); }
+
+TEST(StreamManagerUnitTest, Simple) {
+  StreamManager<int> streams;
+
+  for (size_t i = 0; i < streams.max_streams(); ++i) {
+    int stream = streams.acquire(i);
+    ASSERT_GE(stream, 0);
+  }
+
+  // Verify there are no more streams left
+  EXPECT_LT(streams.acquire(streams.max_streams()), 0);
+
+  for (size_t i = 0; i < streams.max_streams(); ++i) {
+    int item = -1;
+    EXPECT_TRUE(streams.get(i, item));
+    streams.release(i);
+    EXPECT_GE(item, 0);
+  }
+
+  for (size_t i = 0; i < streams.max_streams(); ++i) {
+    int stream = streams.acquire(i);
+    ASSERT_GE(stream, 0);
+  }
+
+  // Verify there are no more streams left
+  EXPECT_LT(streams.acquire(streams.max_streams()), 0);
 }
 
-TEST(StreamManagerUnitTest, Simple)
-{
-    cass::StreamManager<int> streams;
-
-    for (size_t i = 0; i < streams.max_streams(); ++i) {
-      int stream = streams.acquire(i);
-      ASSERT_GE(stream, 0);
-    }
-
-    // Verify there are no more streams left
-    EXPECT_LT(streams.acquire(streams.max_streams()), 0);
-
-    for (size_t i = 0; i < streams.max_streams(); ++i) {
-      int item = -1;
-      EXPECT_TRUE(streams.get(i, item));
-      streams.release(i);
-      EXPECT_GE(item, 0);
-    }
-
-    for (size_t i = 0; i < streams.max_streams(); ++i) {
-      int stream = streams.acquire(i);
-      ASSERT_GE(stream, 0);
-    }
-
-    // Verify there are no more streams left
-    EXPECT_LT(streams.acquire(streams.max_streams()), 0);
-}
-
-TEST(StreamManagerUnitTest, Release)
-{
-  cass::StreamManager<int> streams;
+TEST(StreamManagerUnitTest, Release) {
+  StreamManager<int> streams;
 
   for (size_t i = 0; i < streams.max_streams(); ++i) {
     int stream = streams.acquire(i);

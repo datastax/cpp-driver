@@ -16,23 +16,25 @@
 
 #include <gtest/gtest.h>
 
-#include "test_utils.hpp"
 #include "get_time.hpp"
+#include "test_utils.hpp"
+
+using datastax::internal::get_time_monotonic_ns;
 
 TEST(GetTimeUnitTest, Monotonic) {
-  uint64_t prev = cass::get_time_monotonic_ns();
+  uint64_t prev = get_time_monotonic_ns();
   for (int i = 0; i < 100; ++i) {
-    uint64_t current = cass::get_time_monotonic_ns();
+    uint64_t current = get_time_monotonic_ns();
     EXPECT_GE(current, prev);
     prev = current;
   }
 }
 
 TEST(GetTimeUnitTest, MonotonicDuration) {
-  uint64_t start = cass::get_time_monotonic_ns();
+  uint64_t start = get_time_monotonic_ns();
 
   test::Utils::msleep(1000); // 1 second
-  uint64_t elapsed = cass::get_time_monotonic_ns() - start;
+  uint64_t elapsed = get_time_monotonic_ns() - start;
   EXPECT_GE(elapsed, static_cast<double>(NANOSECONDS_PER_SECOND));
   EXPECT_LE(elapsed, static_cast<double>(2 * NANOSECONDS_PER_SECOND));
 }

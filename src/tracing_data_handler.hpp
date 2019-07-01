@@ -14,17 +14,16 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TRACING_DATA_HANDLER_HPP_INCLUDED__
-#define __CASS_TRACING_DATA_HANDLER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TRACING_DATA_HANDLER_HPP
+#define DATASTAX_INTERNAL_TRACING_DATA_HANDLER_HPP
 
 #include "wait_for_handler.hpp"
 
 #include <uv.h>
 
-#define SELECT_TRACES_SESSION \
-  "SELECT session_id FROM system_traces.sessions WHERE session_id = ?"
+#define SELECT_TRACES_SESSION "SELECT session_id FROM system_traces.sessions WHERE session_id = ?"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A handler that waits for tracing data to become available for a specified
@@ -47,12 +46,9 @@ public:
    * @param retry_wait_time_ms The amount of time to wait between failed attempts
    * to retrieve tracing data.
    */
-  TracingDataHandler(const RequestHandler::Ptr& request_handler,
-                     const Host::Ptr& current_host,
-                     const Response::Ptr& response,
-                     CassConsistency consistency,
-                     uint64_t max_wait_time_ms,
-                     uint64_t retry_wait_time_ms);
+  TracingDataHandler(const RequestHandler::Ptr& request_handler, const Host::Ptr& current_host,
+                     const Response::Ptr& response, CassConsistency consistency,
+                     uint64_t max_wait_time_ms, uint64_t retry_wait_time_ms);
 
   /**
    * Gets a request callback for executing queries on behalf of the handler.
@@ -69,6 +65,6 @@ private:
   CassConsistency consistency_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

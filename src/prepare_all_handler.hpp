@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARE_ALL_HANDLER_HPP_INCLUDED__
-#define __CASS_PREPARE_ALL_HANDLER_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_PREPARE_ALL_HANDLER_HPP
+#define DATASTAX_INTERNAL_PREPARE_ALL_HANDLER_HPP
 
 #include "address.hpp"
 #include "atomic.hpp"
@@ -25,7 +25,7 @@
 #include "request_handler.hpp"
 #include "response.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A handler that tracks the progress of prepares on all hosts and returns the
@@ -35,10 +35,8 @@ class PrepareAllHandler : public RefCounted<PrepareAllHandler> {
 public:
   typedef SharedRefPtr<PrepareAllHandler> Ptr;
 
-  PrepareAllHandler(const Host::Ptr& current_host,
-                    const Response::Ptr& response,
-                    const RequestHandler::Ptr& request_handler,
-                    int remaining);
+  PrepareAllHandler(const Host::Ptr& current_host, const Response::Ptr& response,
+                    const RequestHandler::Ptr& request_handler, int remaining);
 
 private:
   friend class PrepareAllCallback;
@@ -78,6 +76,6 @@ private:
   bool is_finished_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

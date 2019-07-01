@@ -16,17 +16,14 @@
 
 #include "whitelist_dc_policy.hpp"
 
-namespace cass {
+using namespace datastax::internal::core;
 
 bool WhitelistDCPolicy::is_valid_host(const Host::Ptr& host) const {
   const String& host_dc = host->dc();
-  for (DcList::const_iterator it = dcs_.begin(),
-      end = dcs_.end(); it != end; ++it) {
+  for (DcList::const_iterator it = dcs_.begin(), end = dcs_.end(); it != end; ++it) {
     if (host_dc.compare(*it) == 0) {
       return true;
     }
   }
   return false;
 }
-
-} // namespace cass

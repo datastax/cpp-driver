@@ -18,33 +18,32 @@
 
 #include "loop_watcher.hpp"
 
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 class LoopWatcherUnitTest : public LoopTest {
 public:
   LoopWatcherUnitTest()
-    : is_check_callback_called_(false)
-    , is_prepare_callback_called_(false) { }
+      : is_check_callback_called_(false)
+      , is_prepare_callback_called_(false) {}
 
   bool is_check_callback_called() { return is_check_callback_called_; }
   bool is_prepare_callback_called() { return is_prepare_callback_called_; }
 
 protected:
-  void start(cass::Check* check) {
-    ASSERT_EQ(0, check->start(loop(),
-                              cass::bind_callback(&LoopWatcherUnitTest::on_check,
-                                                  this)));
+  void start(Check* check) {
+    ASSERT_EQ(0, check->start(loop(), bind_callback(&LoopWatcherUnitTest::on_check, this)));
   }
-  void start(cass::Prepare* prepare) {
-    ASSERT_EQ(0, prepare->start(loop(),
-                                cass::bind_callback(&LoopWatcherUnitTest::on_prepare,
-                                                    this)));
+  void start(Prepare* prepare) {
+    ASSERT_EQ(0, prepare->start(loop(), bind_callback(&LoopWatcherUnitTest::on_prepare, this)));
   }
 
 private:
-  void on_check(cass::Check* check) {
+  void on_check(Check* check) {
     is_check_callback_called_ = true;
     check->close_handle();
   }
-  void on_prepare(cass::Prepare* prepare) {
+  void on_prepare(Prepare* prepare) {
     is_prepare_callback_called_ = true;
     prepare->close_handle();
   }
@@ -55,7 +54,7 @@ private:
 };
 
 TEST_F(LoopWatcherUnitTest, Check) {
-  cass::Check check;
+  Check check;
   ASSERT_FALSE(check.is_running());
 
   start(&check);
@@ -69,7 +68,7 @@ TEST_F(LoopWatcherUnitTest, Check) {
 }
 
 TEST_F(LoopWatcherUnitTest, CheckNotStarted) {
-  cass::Prepare check;
+  Prepare check;
   ASSERT_FALSE(check.is_running());
   ASSERT_FALSE(is_check_callback_called());
 
@@ -80,7 +79,7 @@ TEST_F(LoopWatcherUnitTest, CheckNotStarted) {
 }
 
 TEST_F(LoopWatcherUnitTest, Prepare) {
-  cass::Prepare prepare;
+  Prepare prepare;
   ASSERT_FALSE(prepare.is_running());
 
   start(&prepare);
@@ -94,7 +93,7 @@ TEST_F(LoopWatcherUnitTest, Prepare) {
 }
 
 TEST_F(LoopWatcherUnitTest, PrepareNotStarted) {
-  cass::Prepare prepare;
+  Prepare prepare;
   ASSERT_FALSE(prepare.is_running());
   ASSERT_FALSE(is_prepare_callback_called());
 

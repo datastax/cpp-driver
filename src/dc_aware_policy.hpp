@@ -14,25 +14,24 @@
   limitations under the License.
 */
 
-#ifndef __CASS_DC_AWARE_POLICY_HPP_INCLUDED__
-#define __CASS_DC_AWARE_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_DC_AWARE_POLICY_HPP
+#define DATASTAX_INTERNAL_DC_AWARE_POLICY_HPP
 
-#include "load_balancing.hpp"
 #include "host.hpp"
+#include "load_balancing.hpp"
 #include "map.hpp"
 #include "round_robin_policy.hpp"
-#include "scoped_ptr.hpp"
 #include "scoped_lock.hpp"
+#include "scoped_ptr.hpp"
 #include "set.hpp"
 
 #include <uv.h>
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class DCAwarePolicy : public LoadBalancingPolicy {
 public:
-  DCAwarePolicy(const String& local_dc = "",
-                size_t used_hosts_per_remote_dc = 0,
+  DCAwarePolicy(const String& local_dc = "", size_t used_hosts_per_remote_dc = 0,
                 bool skip_remote_dcs_for_local_cl = true);
 
   ~DCAwarePolicy();
@@ -41,8 +40,7 @@ public:
 
   virtual CassHostDistance distance(const Host::Ptr& host) const;
 
-  virtual QueryPlan* new_query_plan(const String& keyspace,
-                                    RequestHandler* request_handler,
+  virtual QueryPlan* new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                     const TokenMap* token_map);
 
   virtual bool is_host_up(const Address& address) const;
@@ -57,18 +55,17 @@ public:
   virtual const String& local_dc() const;
 
   virtual LoadBalancingPolicy* new_instance() {
-    return new DCAwarePolicy(local_dc_,
-                             used_hosts_per_remote_dc_,
-                             skip_remote_dcs_for_local_cl_);
+    return new DCAwarePolicy(local_dc_, used_hosts_per_remote_dc_, skip_remote_dcs_for_local_cl_);
   }
 
 private:
   class PerDCHostMap {
   public:
-    typedef cass::Map<String, CopyOnWriteHostVec> Map;
+    typedef internal::Map<String, CopyOnWriteHostVec> Map;
     typedef Set<String> KeySet;
 
-    PerDCHostMap() : no_hosts_(new HostVec()) {
+    PerDCHostMap()
+        : no_hosts_(new HostVec()) {
       uv_rwlock_init(&rwlock_);
     }
     ~PerDCHostMap() { uv_rwlock_destroy(&rwlock_); }
@@ -94,9 +91,7 @@ private:
 public:
   class DCAwareQueryPlan : public QueryPlan {
   public:
-    DCAwareQueryPlan(const DCAwarePolicy* policy,
-                     CassConsistency cl,
-                     size_t start_index);
+    DCAwareQueryPlan(const DCAwarePolicy* policy, CassConsistency cl, size_t start_index);
 
     virtual Host::Ptr compute_next();
 
@@ -126,6 +121,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(DCAwarePolicy);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

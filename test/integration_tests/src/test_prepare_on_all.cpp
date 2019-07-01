@@ -16,11 +16,11 @@
 
 #include <string>
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
 #include <boost/chrono.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 
 #include "cassandra.h"
@@ -40,12 +40,11 @@ struct PrepareOnAllTests : public test_utils::SingleSessionTest {
    * and clear all prepared statements.
    */
   PrepareOnAllTests()
-    : SingleSessionTest(NUM_LOCAL_NODES, 0)
-    , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen)))
-    , prepared_query_(str(boost::format("SELECT * FROM %s.test") % keyspace)) {
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % keyspace
-                                           % "1"));
+      : SingleSessionTest(NUM_LOCAL_NODES, 0)
+      , keyspace(str(boost::format("ks_%s") % test_utils::generate_unique_str(uuid_gen)))
+      , prepared_query_(str(boost::format("SELECT * FROM %s.test") % keyspace)) {
+    test_utils::execute_query(
+        session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % keyspace % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % keyspace));
     test_utils::execute_query(session, "CREATE TABLE test (k text PRIMARY KEY, v text)");
 
@@ -100,7 +99,8 @@ struct PrepareOnAllTests : public test_utils::SingleSessionTest {
    */
   void prepared_statements_is_empty(int node) {
     test_utils::CassResultPtr result;
-    test_utils::execute_query(session_for_node(node).get(), "SELECT * FROM system.prepared_statements", &result);
+    test_utils::execute_query(session_for_node(node).get(),
+                              "SELECT * FROM system.prepared_statements", &result);
     BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 0u);
   }
 
@@ -113,7 +113,8 @@ struct PrepareOnAllTests : public test_utils::SingleSessionTest {
    */
   bool prepared_statement_is_present(int node, const std::string& query) {
     test_utils::CassResultPtr result;
-    test_utils::execute_query(session_for_node(node).get(), "SELECT * FROM system.prepared_statements", &result);
+    test_utils::execute_query(session_for_node(node).get(),
+                              "SELECT * FROM system.prepared_statements", &result);
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
     while (cass_iterator_next(iterator.get())) {
@@ -123,7 +124,8 @@ struct PrepareOnAllTests : public test_utils::SingleSessionTest {
       const CassValue* query_column = cass_row_get_column_by_name(row, "query_string");
       const char* query_string;
       size_t query_string_len;
-      BOOST_REQUIRE_EQUAL(cass_value_get_string(query_column, &query_string, &query_string_len), CASS_OK);
+      BOOST_REQUIRE_EQUAL(cass_value_get_string(query_column, &query_string, &query_string_len),
+                          CASS_OK);
 
       if (query == std::string(query_string, query_string_len)) {
         return true;
@@ -176,8 +178,8 @@ struct PrepareOnAllTests : public test_utils::SingleSessionTest {
   void wait_for_node(int node) {
     for (int i = 0; i < 10; ++i) {
       test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.peers", 0));
-      test_utils::CassFuturePtr future(cass_session_execute(session_for_node(node).get(),
-                                                            statement.get()));
+      test_utils::CassFuturePtr future(
+          cass_session_execute(session_for_node(node).get(), statement.get()));
       if (cass_future_error_code(future.get()) == CASS_OK) {
         return;
       }

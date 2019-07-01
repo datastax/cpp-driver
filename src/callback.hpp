@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CALLBACK_HPP_INCLUDED__
-#define __CASS_CALLBACK_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CALLBACK_HPP
+#define DATASTAX_INTERNAL_CALLBACK_HPP
 
 #include "aligned_storage.hpp"
 #include "macros.hpp"
@@ -23,19 +23,19 @@
 #include <new>
 #include <stddef.h>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 template <class R, class Arg>
 class Callback {
 public:
-  struct FunctionWithDataDummy { };
+  struct FunctionWithDataDummy {};
 
   Callback()
-    : invoker_(NULL) { }
+      : invoker_(NULL) {}
 
   template <class F, class T>
   Callback(F func, T* object)
-    : invoker_(new (&storage_) MemberInvoker<F, T>(func, object)) {
+      : invoker_(new (&storage_) MemberInvoker<F, T>(func, object)) {
     typedef MemberInvoker<F, T> MemberInvoker;
     STATIC_ASSERT(sizeof(Storage) >= sizeof(MemberInvoker));
     STATIC_ASSERT(ALIGN_OF(Storage) >= ALIGN_OF(MemberInvoker));
@@ -43,7 +43,7 @@ public:
 
   template <class F>
   explicit Callback(F func)
-    : invoker_(new (&storage_) FunctionInvoker<F>(func)) {
+      : invoker_(new (&storage_) FunctionInvoker<F>(func)) {
     typedef FunctionInvoker<F> FunctionInvoker;
     STATIC_ASSERT(sizeof(Storage) >= sizeof(FunctionInvoker));
     STATIC_ASSERT(ALIGN_OF(Storage) >= ALIGN_OF(FunctionInvoker));
@@ -51,14 +51,14 @@ public:
 
   template <class F, class D>
   Callback(F func, const D& data, FunctionWithDataDummy)
-    : invoker_(new (&storage_) FunctionWithDataInvoker<F, D>(func, data)) {
+      : invoker_(new (&storage_) FunctionWithDataInvoker<F, D>(func, data)) {
     typedef FunctionWithDataInvoker<F, D> FunctionWithDataInvoker;
     STATIC_ASSERT(sizeof(Storage) >= sizeof(FunctionWithDataInvoker));
     STATIC_ASSERT(ALIGN_OF(Storage) >= ALIGN_OF(FunctionWithDataInvoker));
   }
 
   Callback(const Callback& other)
-    : invoker_(other.invoker_ ? other.invoker_->copy(&storage_) : NULL) { }
+      : invoker_(other.invoker_ ? other.invoker_->copy(&storage_) : NULL) {}
 
   Callback& operator=(const Callback& other) {
     invoker_ = other.invoker_ ? other.invoker_->copy(&storage_) : NULL;
@@ -67,9 +67,7 @@ public:
 
   operator bool() const { return invoker_; }
 
-  R operator()(const Arg& arg) const {
-    return invoker_->invoke(arg);
-  }
+  R operator()(const Arg& arg) const { return invoker_->invoke(arg); }
 
 private:
   // This needs to be big enough to fit:
@@ -87,16 +85,12 @@ private:
   template <class F, class T>
   struct MemberInvoker : public Invoker {
     MemberInvoker(F func, T* object)
-      : func(func)
-      , object(object) { }
+        : func(func)
+        , object(object) {}
 
-    R invoke(const Arg& arg) const {
-      return (object->*func)(arg);
-    }
+    R invoke(const Arg& arg) const { return (object->*func)(arg); }
 
-    Invoker* copy(Storage* storage) {
-      return new (storage) MemberInvoker<F, T>(func, object);
-    }
+    Invoker* copy(Storage* storage) { return new (storage) MemberInvoker<F, T>(func, object); }
 
     F func;
     T* object;
@@ -105,15 +99,11 @@ private:
   template <class F>
   struct FunctionInvoker : public Invoker {
     FunctionInvoker(F func)
-      : func(func) { }
+        : func(func) {}
 
-    R invoke(const Arg& arg) const {
-      return func(arg);
-    }
+    R invoke(const Arg& arg) const { return func(arg); }
 
-    Invoker* copy(Storage* storage) {
-      return new (storage) FunctionInvoker<F>(func);
-    }
+    Invoker* copy(Storage* storage) { return new (storage) FunctionInvoker<F>(func); }
 
     F func;
   };
@@ -121,12 +111,10 @@ private:
   template <class F, class D>
   struct FunctionWithDataInvoker : public Invoker {
     FunctionWithDataInvoker(F func, D data)
-      : func(func)
-      , data(data) { }
+        : func(func)
+        , data(data) {}
 
-    R invoke(const Arg& arg) const {
-      return func(arg, data);
-    }
+    R invoke(const Arg& arg) const { return func(arg, data); }
 
     Invoker* copy(Storage* storage) {
       return new (storage) FunctionWithDataInvoker<F, D>(func, data);
@@ -157,6 +145,6 @@ Callback<R, Arg> bind_callback(R (*func)(Arg, D), const D& data) {
   return Callback<R, Arg>(func, data, dummy);
 }
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

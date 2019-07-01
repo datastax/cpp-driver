@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ALIGNED_STORAGE_HPP_INCLUDED__
-#define __CASS_ALIGNED_STORAGE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ALIGNED_STORAGE_HPP
+#define DATASTAX_INTERNAL_ALIGNED_STORAGE_HPP
 
 #include <stddef.h>
 
@@ -29,22 +29,23 @@
 #error Unsupported compiler!
 #endif
 
-namespace cass {
+namespace datastax { namespace internal {
 
 // This allows for the allocation of memory that is of the same size and
 // alignment as a required by a non-POD, but is represented as a POD type (char).
 // The allows for the memory to be correctly allocated without invoking the
 // constructor.
 
-template<size_t N, size_t A>
+template <size_t N, size_t A>
 class AlignedStorage;
 
 #define ALIGNED_STORAGE(Alignment)                \
-  template<size_t N>                              \
+  template <size_t N>                             \
   class AlignedStorage<N, Alignment> {            \
   public:                                         \
     void* address() { return data_; }             \
     const void* address() const { return data_; } \
+                                                  \
   private:                                        \
     ALIGN_AS(Alignment) char data_[N];            \
   }
@@ -59,7 +60,6 @@ ALIGNED_STORAGE(64);
 
 #undef ALIGNED_STORAGE
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif
-

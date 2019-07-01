@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#include "integration.hpp"
 #include "cassandra.h"
+#include "integration.hpp"
 #include "result_response.hpp"
 
 /****
@@ -27,14 +27,14 @@
 // Name of materialized view used in this test file.
 #define VIEW_NAME "my_view"
 
+using namespace datastax::internal::core;
+
 /**
  * Null string api args test, without initially creating a connection.
  */
 class DisconnectedNullStringApiArgsTest : public Integration {
 public:
-  DisconnectedNullStringApiArgsTest() {
-    is_session_requested_ = false;
-  }
+  DisconnectedNullStringApiArgsTest() { is_session_requested_ = false; }
 
   void SetUp() {
     Integration::SetUp();
@@ -48,9 +48,7 @@ public:
  */
 class NullStringApiArgsTest : public Integration {
 public:
-  NullStringApiArgsTest() {
-    is_schema_metadata_ = true;
-  }
+  NullStringApiArgsTest() { is_schema_metadata_ = true; }
 };
 
 /**
@@ -70,49 +68,44 @@ public:
 
   void populateSchema() {
     session_.execute(format_string("CREATE TABLE %s (key text, value bigint, "
-        "PRIMARY KEY (key))", table_name_.c_str()));
+                                   "PRIMARY KEY (key))",
+                                   table_name_.c_str()));
 
-    session_.execute(
-      "CREATE FUNCTION avg_state(state tuple<int, bigint>, val int) "
-        "CALLED ON NULL INPUT RETURNS tuple<int, bigint> "
-        "LANGUAGE java AS "
-        "  'if (val != null) { "
-        "    state.setInt(0, state.getInt(0) + 1); "
-        "    state.setLong(1, state.getLong(1) + val.intValue()); "
-        "  } ;"
-        "  return state;'"
-        ";");
-    session_.execute(
-      "CREATE FUNCTION avg_final (state tuple<int, bigint>) "
-        "CALLED ON NULL INPUT RETURNS double "
-        "LANGUAGE java AS "
-        "  'double r = 0; "
-        "  if (state.getInt(0) == 0) return null; "
-        "  r = state.getLong(1); "
-        "  r /= state.getInt(0); "
-        "  return Double.valueOf(r);' "
-        ";");
+    session_.execute("CREATE FUNCTION avg_state(state tuple<int, bigint>, val int) "
+                     "CALLED ON NULL INPUT RETURNS tuple<int, bigint> "
+                     "LANGUAGE java AS "
+                     "  'if (val != null) { "
+                     "    state.setInt(0, state.getInt(0) + 1); "
+                     "    state.setLong(1, state.getLong(1) + val.intValue()); "
+                     "  } ;"
+                     "  return state;'"
+                     ";");
+    session_.execute("CREATE FUNCTION avg_final (state tuple<int, bigint>) "
+                     "CALLED ON NULL INPUT RETURNS double "
+                     "LANGUAGE java AS "
+                     "  'double r = 0; "
+                     "  if (state.getInt(0) == 0) return null; "
+                     "  r = state.getLong(1); "
+                     "  r /= state.getInt(0); "
+                     "  return Double.valueOf(r);' "
+                     ";");
 
-    session_.execute(
-      "CREATE AGGREGATE average(int) "
-        "SFUNC avg_state STYPE tuple<int, bigint> FINALFUNC avg_final "
-        "INITCOND(0, 0);");
+    session_.execute("CREATE AGGREGATE average(int) "
+                     "SFUNC avg_state STYPE tuple<int, bigint> FINALFUNC avg_final "
+                     "INITCOND(0, 0);");
 
     if (server_version_ >= "3.0.0") {
       session_.execute(format_string("CREATE MATERIALIZED VIEW %s "
-          "AS SELECT value "
-          "   FROM %s"
-          "   WHERE value IS NOT NULL and key IS NOT NULL "
-          "PRIMARY KEY(value, key)", VIEW_NAME, table_name_.c_str()));
+                                     "AS SELECT value "
+                                     "   FROM %s"
+                                     "   WHERE value IS NOT NULL and key IS NOT NULL "
+                                     "PRIMARY KEY(value, key)",
+                                     VIEW_NAME, table_name_.c_str()));
     }
-    session_.execute(
-      "CREATE TYPE address (street text, city text)"
-    );
+    session_.execute("CREATE TYPE address (street text, city text)");
 
     session_.execute(
-      format_string("CREATE INDEX schema_meta_index ON %s (value)",
-                    table_name_.c_str())
-    );
+        format_string("CREATE INDEX schema_meta_index ON %s (value)", table_name_.c_str()));
   }
 
 protected:
@@ -130,8 +123,7 @@ protected:
  */
 CASSANDRA_INTEGRATION_TEST_F(DisconnectedNullStringApiArgsTest, SetContactPoints) {
   EXPECT_EQ(CASS_OK, cass_cluster_set_contact_points(cluster_.get(), NULL));
-  ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-    cluster_.connect("", false).connect_error_code());
+  ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, cluster_.connect("", false).connect_error_code());
 }
 
 /**
@@ -204,7 +196,8 @@ CASSANDRA_INTEGRATION_TEST_F(DisconnectedNullStringApiArgsTest, ConnectKeyspaceN
  */
 CASSANDRA_INTEGRATION_TEST_F(NullStringApiArgsTest, SchemaMetaKeyspaceByNameNullKeyspace) {
   Schema schema_meta = session_.schema();
-  const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta.get(), NULL);
+  const CassKeyspaceMeta* keyspace_meta =
+      cass_schema_meta_keyspace_by_name(schema_meta.get(), NULL);
   EXPECT_EQ(NULL, keyspace_meta);
 }
 
@@ -229,38 +222,33 @@ CASSANDRA_INTEGRATION_TEST_F(NullStringApiArgsTest, PrepareNullQuery) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, KeyspaceMetaFunctions) {
   CHECK_VERSION(2.2.0);
-  const CassTableMeta* table_meta =
-    cass_keyspace_meta_table_by_name(keyspace_meta_.get(), NULL);
+  const CassTableMeta* table_meta = cass_keyspace_meta_table_by_name(keyspace_meta_.get(), NULL);
   EXPECT_EQ(NULL, table_meta);
 
   if (schema_meta_.version().major_version >= 3) {
-    const CassMaterializedViewMeta *view_meta =
-      cass_keyspace_meta_materialized_view_by_name(keyspace_meta_.get(), NULL);
+    const CassMaterializedViewMeta* view_meta =
+        cass_keyspace_meta_materialized_view_by_name(keyspace_meta_.get(), NULL);
     EXPECT_EQ(NULL, view_meta);
   }
 
-  const CassDataType* type_meta =
-    cass_keyspace_meta_user_type_by_name(keyspace_meta_.get(), NULL);
+  const CassDataType* type_meta = cass_keyspace_meta_user_type_by_name(keyspace_meta_.get(), NULL);
   EXPECT_EQ(NULL, type_meta);
 
-  const CassValue* field_meta =
-    cass_keyspace_meta_field_by_name(keyspace_meta_.get(), NULL);
+  const CassValue* field_meta = cass_keyspace_meta_field_by_name(keyspace_meta_.get(), NULL);
   EXPECT_EQ(NULL, field_meta);
 
   const CassFunctionMeta* function_meta =
-    cass_keyspace_meta_function_by_name(keyspace_meta_.get(), NULL, "abc");
+      cass_keyspace_meta_function_by_name(keyspace_meta_.get(), NULL, "abc");
   EXPECT_EQ(NULL, function_meta);
 
-  function_meta =
-    cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final", NULL);
+  function_meta = cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final", NULL);
   EXPECT_EQ(NULL, function_meta);
 
   const CassAggregateMeta* aggregate_meta =
-    cass_keyspace_meta_aggregate_by_name(keyspace_meta_.get(), NULL, "abc");
+      cass_keyspace_meta_aggregate_by_name(keyspace_meta_.get(), NULL, "abc");
   EXPECT_EQ(NULL, aggregate_meta);
 
-  aggregate_meta =
-    cass_keyspace_meta_aggregate_by_name(keyspace_meta_.get(), "average", NULL);
+  aggregate_meta = cass_keyspace_meta_aggregate_by_name(keyspace_meta_.get(), "average", NULL);
   EXPECT_EQ(NULL, aggregate_meta);
 }
 
@@ -274,17 +262,15 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, KeyspaceMetaFunctions)
  */
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, TableMetaFunctions) {
   CHECK_VERSION(2.2.0);
-  const CassColumnMeta* column_meta =
-    cass_table_meta_column_by_name(table_meta_.get(), NULL);
+  const CassColumnMeta* column_meta = cass_table_meta_column_by_name(table_meta_.get(), NULL);
   EXPECT_EQ(NULL, column_meta);
 
-  const CassIndexMeta* index_meta =
-    cass_table_meta_index_by_name(table_meta_.get(), NULL);
+  const CassIndexMeta* index_meta = cass_table_meta_index_by_name(table_meta_.get(), NULL);
   EXPECT_EQ(NULL, index_meta);
 
   if (schema_meta_.version().major_version >= 3) {
-    const CassMaterializedViewMeta *view_meta =
-      cass_table_meta_materialized_view_by_name(table_meta_.get(), NULL);
+    const CassMaterializedViewMeta* view_meta =
+        cass_table_meta_materialized_view_by_name(table_meta_.get(), NULL);
     EXPECT_EQ(NULL, view_meta);
   }
 
@@ -292,12 +278,12 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, TableMetaFunctions) {
   EXPECT_EQ(NULL, field_meta);
 
   column_meta = cass_table_meta_column_by_name(table_meta_.get(), "value");
-  EXPECT_NE(static_cast<CassColumnMeta *>(NULL), column_meta);
+  EXPECT_NE(static_cast<CassColumnMeta*>(NULL), column_meta);
   field_meta = cass_column_meta_field_by_name(column_meta, NULL);
   EXPECT_EQ(NULL, field_meta);
 
   index_meta = cass_table_meta_index_by_name(table_meta_.get(), "schema_meta_index");
-  EXPECT_NE(static_cast<CassIndexMeta *>(NULL), index_meta);
+  EXPECT_NE(static_cast<CassIndexMeta*>(NULL), index_meta);
   field_meta = cass_index_meta_field_by_name(index_meta, NULL);
   EXPECT_EQ(NULL, field_meta);
 }
@@ -312,16 +298,14 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, TableMetaFunctions) {
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, MaterializedViewMetaFunctions) {
   CHECK_VERSION(3.0.0);
 
-  const CassMaterializedViewMeta *view_meta =
-    cass_table_meta_materialized_view_by_name(table_meta_.get(), VIEW_NAME);
-  ASSERT_NE(static_cast<CassMaterializedViewMeta *>(NULL), view_meta);
+  const CassMaterializedViewMeta* view_meta =
+      cass_table_meta_materialized_view_by_name(table_meta_.get(), VIEW_NAME);
+  ASSERT_NE(static_cast<CassMaterializedViewMeta*>(NULL), view_meta);
 
-  const CassColumnMeta *column_meta =
-    cass_materialized_view_meta_column_by_name(view_meta, NULL);
+  const CassColumnMeta* column_meta = cass_materialized_view_meta_column_by_name(view_meta, NULL);
   EXPECT_EQ(NULL, column_meta);
 
-  const CassValue *field_meta = cass_materialized_view_meta_field_by_name(
-    view_meta, NULL);
+  const CassValue* field_meta = cass_materialized_view_meta_field_by_name(view_meta, NULL);
   EXPECT_EQ(NULL, field_meta);
 }
 
@@ -336,22 +320,22 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, MaterializedViewMetaFu
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, FunctionAndAggregateMetaFunctions) {
   CHECK_VERSION(2.2.0);
   // C* 3.x and later annotate collection columns as frozen.
-  const CassFunctionMeta* function_meta = (schema_meta_.version().major_version >= 3) ?
-    cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final",
-                                        "frozen<tuple<int,bigint>>") :
-    cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final",
-                                        "tuple<int,bigint>");
-  ASSERT_NE(static_cast<CassFunctionMeta *>(NULL), function_meta);
+  const CassFunctionMeta* function_meta =
+      (schema_meta_.version().major_version >= 3)
+          ? cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final",
+                                                "frozen<tuple<int,bigint>>")
+          : cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final",
+                                                "tuple<int,bigint>");
+  ASSERT_NE(static_cast<CassFunctionMeta*>(NULL), function_meta);
 
-  const CassDataType* data_type =
-    cass_function_meta_argument_type_by_name(function_meta, NULL);
+  const CassDataType* data_type = cass_function_meta_argument_type_by_name(function_meta, NULL);
   EXPECT_EQ(NULL, data_type);
 
   const CassValue* field_meta = cass_function_meta_field_by_name(function_meta, NULL);
   EXPECT_EQ(NULL, field_meta);
 
   const CassAggregateMeta* aggregate_meta =
-    cass_keyspace_meta_aggregate_by_name(keyspace_meta_.get(), "average", "int");
+      cass_keyspace_meta_aggregate_by_name(keyspace_meta_.get(), "average", "int");
   ASSERT_NE(static_cast<CassAggregateMeta*>(NULL), aggregate_meta);
   field_meta = cass_aggregate_meta_field_by_name(aggregate_meta, NULL);
   EXPECT_EQ(NULL, field_meta);
@@ -369,11 +353,9 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, StatementFunctions) {
   Statement statement(NULL);
 
   statement = cass_statement_new(NULL, 0);
-  EXPECT_EQ(CASS_ERROR_SERVER_SYNTAX_ERROR,
-    session_.execute(statement, false).error_code());
+  EXPECT_EQ(CASS_ERROR_SERVER_SYNTAX_ERROR, session_.execute(statement, false).error_code());
 
-  statement = cass_statement_new(
-    format_string("SELECT * FROM %s", table_name_.c_str()).c_str(), 0);
+  statement = cass_statement_new(format_string("SELECT * FROM %s", table_name_.c_str()).c_str(), 0);
   EXPECT_EQ(CASS_OK, cass_statement_set_keyspace(statement.get(), NULL));
   EXPECT_EQ(CASS_OK, session_.execute(statement, false).error_code());
 
@@ -381,33 +363,29 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, StatementFunctions) {
   // the statement fails.
   Session session_without_keyspace = cluster_.connect();
   EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_without_keyspace.execute(statement, false).error_code());
+            session_without_keyspace.execute(statement, false).error_code());
 
   std::string query_string = format_string("INSERT INTO %s (key, value) "
-                                             "VALUES (42, :v)", table_name_.c_str());
+                                           "VALUES (42, :v)",
+                                           table_name_.c_str());
   const char* query = query_string.c_str();
 
   statement = cass_statement_new(query, 1);
   EXPECT_EQ(CASS_OK, cass_statement_bind_null_by_name(statement.get(), NULL));
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_.execute(statement, false).error_code());
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
-
-#define BIND_BY_NAME_TEST(FUNC, NAME, VALUE) \
-  statement = cass_statement_new(query, 1); \
+#define BIND_BY_NAME_TEST(FUNC, NAME, VALUE)              \
+  statement = cass_statement_new(query, 1);               \
   EXPECT_EQ(CASS_OK, FUNC(statement.get(), NAME, VALUE)); \
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, \
-    session_.execute(statement, false).error_code());
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
-#define BIND_BY_NAME_TEST_WITH_VALUE_LEN(FUNC, NAME, VALUE, VALUE_LEN) \
-  statement = cass_statement_new(query, 1); \
-  EXPECT_EQ(CASS_OK, FUNC(statement.get(), NAME, VALUE, VALUE_LEN)); \
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, \
-    session_.execute(statement, false).error_code()); \
-  statement = cass_statement_new(query, 1); \
-  EXPECT_EQ(CASS_OK, FUNC(statement.get(), "v", NULL, 0)); \
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, \
-    session_.execute(statement, false).error_code());
+#define BIND_BY_NAME_TEST_WITH_VALUE_LEN(FUNC, NAME, VALUE, VALUE_LEN)                         \
+  statement = cass_statement_new(query, 1);                                                    \
+  EXPECT_EQ(CASS_OK, FUNC(statement.get(), NAME, VALUE, VALUE_LEN));                           \
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code()); \
+  statement = cass_statement_new(query, 1);                                                    \
+  EXPECT_EQ(CASS_OK, FUNC(statement.get(), "v", NULL, 0));                                     \
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
   BIND_BY_NAME_TEST(cass_statement_bind_int8_by_name, NULL, 42);
   BIND_BY_NAME_TEST(cass_statement_bind_int16_by_name, NULL, 42);
@@ -420,47 +398,37 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, StatementFunctions) {
 
   statement = cass_statement_new(query, 1);
   EXPECT_EQ(CASS_OK, cass_statement_bind_string(statement.get(), 0, NULL));
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_.execute(statement, false).error_code());
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
   BIND_BY_NAME_TEST(cass_statement_bind_string_by_name, NULL, "val");
   BIND_BY_NAME_TEST(cass_statement_bind_string_by_name, "v", NULL);
 
   BIND_BY_NAME_TEST_WITH_VALUE_LEN(cass_statement_bind_bytes_by_name, NULL,
-                                   reinterpret_cast<const cass_byte_t *>("a"), 1);
+                                   reinterpret_cast<const cass_byte_t*>("a"), 1);
+
+  statement = cass_statement_new(query, 1);
+  EXPECT_EQ(CASS_OK, cass_statement_bind_custom(statement.get(), 0, "myclass", NULL, 0));
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
+
+  statement = cass_statement_new(query, 1);
+  EXPECT_EQ(CASS_OK, cass_statement_bind_custom(statement.get(), 0, NULL,
+                                                reinterpret_cast<const cass_byte_t*>("a"), 1));
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
   statement = cass_statement_new(query, 1);
   EXPECT_EQ(CASS_OK,
-    cass_statement_bind_custom(statement.get(), 0, "myclass", NULL, 0));
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_.execute(statement, false).error_code());
+            cass_statement_bind_custom_by_name(statement.get(), NULL, "myclass",
+                                               reinterpret_cast<const cass_byte_t*>("a"), 1));
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
   statement = cass_statement_new(query, 1);
-  EXPECT_EQ(CASS_OK,
-    cass_statement_bind_custom(statement.get(), 0, NULL,
-      reinterpret_cast<const cass_byte_t *>("a"), 1));
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_.execute(statement, false).error_code());
+  EXPECT_EQ(CASS_OK, cass_statement_bind_custom_by_name(statement.get(), "v", "myclass", NULL, 0));
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
   statement = cass_statement_new(query, 1);
-  EXPECT_EQ(CASS_OK,
-    cass_statement_bind_custom_by_name(statement.get(), NULL, "myclass",
-      reinterpret_cast<const cass_byte_t *>("a"), 1));
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_.execute(statement, false).error_code());
-
-  statement = cass_statement_new(query, 1);
-  EXPECT_EQ(CASS_OK,
-    cass_statement_bind_custom_by_name(statement.get(), "v", "myclass", NULL, 0));
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_.execute(statement, false).error_code());
-
-  statement = cass_statement_new(query, 1);
-  EXPECT_EQ(CASS_OK,
-    cass_statement_bind_custom_by_name(statement.get(), "v", NULL,
-      reinterpret_cast<const cass_byte_t *>("a"), 1));
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_.execute(statement, false).error_code());
+  EXPECT_EQ(CASS_OK, cass_statement_bind_custom_by_name(
+                         statement.get(), "v", NULL, reinterpret_cast<const cass_byte_t*>("a"), 1));
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
   UuidGen uuid_generator(11);
   BIND_BY_NAME_TEST(cass_statement_bind_uuid_by_name, NULL,
@@ -470,20 +438,17 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, StatementFunctions) {
   EXPECT_EQ(CASS_OK, cass_inet_from_string("127.1.2.3", &inet));
   BIND_BY_NAME_TEST(cass_statement_bind_inet_by_name, NULL, inet);
 
-  const cass_uint8_t pi[] = { 57, 115, 235, 135, 229, 215, 8, 125, 13, 43, 1, 25, 32, 135, 129, 180,
-                              112, 176, 158, 120, 246, 235, 29, 145, 238, 50, 108, 239, 219, 100, 250,
-                              84, 6, 186, 148, 76, 230, 46, 181, 89, 239, 247 };
+  const cass_uint8_t pi[] = { 57,  115, 235, 135, 229, 215, 8,   125, 13,  43,  1,   25, 32,  135,
+                              129, 180, 112, 176, 158, 120, 246, 235, 29,  145, 238, 50, 108, 239,
+                              219, 100, 250, 84,  6,   186, 148, 76,  230, 46,  181, 89, 239, 247 };
   statement = cass_statement_new(query, 1);
   EXPECT_EQ(CASS_OK,
-    cass_statement_bind_decimal_by_name(statement.get(), NULL, pi, sizeof(pi), 100));
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_.execute(statement, false).error_code());
+            cass_statement_bind_decimal_by_name(statement.get(), NULL, pi, sizeof(pi), 100));
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
   statement = cass_statement_new(query, 1);
-  EXPECT_EQ(CASS_OK,
-    cass_statement_bind_duration_by_name(statement.get(), NULL, 1, 2, 3));
-  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY,
-    session_.execute(statement, false).error_code());
+  EXPECT_EQ(CASS_OK, cass_statement_bind_duration_by_name(statement.get(), NULL, 1, 2, 3));
+  EXPECT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, session_.execute(statement, false).error_code());
 
   CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
   EXPECT_EQ(CASS_OK, cass_collection_append_string(collection, "a"));
@@ -498,14 +463,12 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, StatementFunctions) {
   cass_tuple_free(tuple);
 
   const CassDataType* udt_address =
-    cass_keyspace_meta_user_type_by_name(keyspace_meta_.get(), "address");
-  ASSERT_NE(static_cast<CassDataType *>(NULL), udt_address);
+      cass_keyspace_meta_user_type_by_name(keyspace_meta_.get(), "address");
+  ASSERT_NE(static_cast<CassDataType*>(NULL), udt_address);
 
   CassUserType* address = cass_user_type_new_from_data_type(udt_address);
-  EXPECT_EQ(CASS_OK,
-    cass_user_type_set_string_by_name(address, "street", "123 My Street"));
-  EXPECT_EQ(CASS_OK,
-    cass_user_type_set_string_by_name(address, "city", "Somewhere"));
+  EXPECT_EQ(CASS_OK, cass_user_type_set_string_by_name(address, "street", "123 My Street"));
+  EXPECT_EQ(CASS_OK, cass_user_type_set_string_by_name(address, "city", "Somewhere"));
   BIND_BY_NAME_TEST(cass_statement_bind_user_type_by_name, NULL, address);
   cass_user_type_free(address);
 
@@ -523,12 +486,10 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, StatementFunctions) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, PreparedFunctions) {
   CHECK_VERSION(2.2.0);
-  Prepared prepared =
-    session_.prepare(format_string("INSERT INTO %s (key, value) "
-                                     "VALUES ('42', :v)", table_name_.c_str()));
-  const CassDataType* data_type = cass_prepared_parameter_data_type_by_name(
-    prepared.get(), NULL
-  );
+  Prepared prepared = session_.prepare(format_string("INSERT INTO %s (key, value) "
+                                                     "VALUES ('42', :v)",
+                                                     table_name_.c_str()));
+  const CassDataType* data_type = cass_prepared_parameter_data_type_by_name(prepared.get(), NULL);
   EXPECT_EQ(NULL, data_type);
 }
 
@@ -552,8 +513,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, DataTypeFunctions) {
   EXPECT_EQ(CASS_OK, cass_data_type_set_class_name(custom_type, NULL));
 
   EXPECT_EQ(CASS_OK, cass_data_type_add_sub_type_by_name(udt, NULL, custom_type));
-  EXPECT_EQ(CASS_OK,
-    cass_data_type_add_sub_value_type_by_name(udt, NULL, CASS_VALUE_TYPE_BOOLEAN));
+  EXPECT_EQ(CASS_OK, cass_data_type_add_sub_value_type_by_name(udt, NULL, CASS_VALUE_TYPE_BOOLEAN));
 
   cass_data_type_free(udt);
   cass_data_type_free(custom_type);
@@ -571,13 +531,13 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, CollectionFunctions) {
   CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
   EXPECT_EQ(CASS_OK, cass_collection_append_string(collection, NULL));
   EXPECT_EQ(CASS_OK, cass_collection_append_custom(collection, NULL,
-    reinterpret_cast<const cass_byte_t *>("a"), 1));
+                                                   reinterpret_cast<const cass_byte_t*>("a"), 1));
   cass_collection_free(collection);
 
   CassTuple* tuple = cass_tuple_new(2);
   EXPECT_EQ(CASS_OK, cass_tuple_set_string(tuple, 0, NULL));
-  EXPECT_EQ(CASS_OK, cass_tuple_set_custom(tuple, 0, NULL,
-    reinterpret_cast<const cass_byte_t *>("a"), 1));
+  EXPECT_EQ(CASS_OK,
+            cass_tuple_set_custom(tuple, 0, NULL, reinterpret_cast<const cass_byte_t*>("a"), 1));
   cass_tuple_free(tuple);
 }
 
@@ -591,70 +551,85 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, CollectionFunctions) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, UserTypeFunctions) {
   CHECK_VERSION(2.2.0);
-  const CassDataType *udt_address =
-    cass_keyspace_meta_user_type_by_name(keyspace_meta_.get(), "address");
-  ASSERT_NE(static_cast<CassDataType *>(NULL), udt_address);
+  const CassDataType* udt_address =
+      cass_keyspace_meta_user_type_by_name(keyspace_meta_.get(), "address");
+  ASSERT_NE(static_cast<CassDataType*>(NULL), udt_address);
 
-  CassUserType *address = cass_user_type_new_from_data_type(udt_address);
+  CassUserType* address = cass_user_type_new_from_data_type(udt_address);
   EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_null_by_name(address, NULL));
   EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_int8_by_name(address, NULL, 42));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_int16_by_name(address, NULL, 42));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_int32_by_name(address, NULL, 42));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_uint32_by_name(address, NULL, 42));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_int64_by_name(address, NULL, 42));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_float_by_name(address, NULL, 42));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_double_by_name(address, NULL, 42));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_bool_by_name(address, NULL, cass_false));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_int16_by_name(address, NULL, 42));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_int32_by_name(address, NULL, 42));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_uint32_by_name(address, NULL, 42));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_int64_by_name(address, NULL, 42));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_float_by_name(address, NULL, 42));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_double_by_name(address, NULL, 42));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_bool_by_name(address, NULL, cass_false));
   EXPECT_EQ(CASS_OK, cass_user_type_set_string(address, 0, NULL));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_string_by_name(address, NULL, "foo"));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_bytes_by_name(address, NULL,
-    reinterpret_cast<const cass_byte_t *>("a"), 1));
-  EXPECT_EQ(CASS_ERROR_LIB_INVALID_VALUE_TYPE, cass_user_type_set_custom(address, 0, "org.foo", NULL, 0));
-  EXPECT_EQ(CASS_ERROR_LIB_INVALID_VALUE_TYPE, cass_user_type_set_custom(address, 0, NULL,
-    reinterpret_cast<const cass_byte_t *>("a"), 1));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_custom_by_name(address, NULL, "org.foo", NULL, 0));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_custom_by_name(address, NULL, NULL,
-    reinterpret_cast<const cass_byte_t *>("a"), 1));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_custom_by_name(address, "v", "org.foo", NULL, 0));
-  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, cass_user_type_set_custom_by_name(address, "v", NULL,
-    reinterpret_cast<const cass_byte_t *>("a"), 1));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_string_by_name(address, NULL, "foo"));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_bytes_by_name(address, NULL,
+                                             reinterpret_cast<const cass_byte_t*>("a"), 1));
+  EXPECT_EQ(CASS_ERROR_LIB_INVALID_VALUE_TYPE,
+            cass_user_type_set_custom(address, 0, "org.foo", NULL, 0));
+  EXPECT_EQ(
+      CASS_ERROR_LIB_INVALID_VALUE_TYPE,
+      cass_user_type_set_custom(address, 0, NULL, reinterpret_cast<const cass_byte_t*>("a"), 1));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_custom_by_name(address, NULL, "org.foo", NULL, 0));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_custom_by_name(address, NULL, NULL,
+                                              reinterpret_cast<const cass_byte_t*>("a"), 1));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_custom_by_name(address, "v", "org.foo", NULL, 0));
+  EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
+            cass_user_type_set_custom_by_name(address, "v", NULL,
+                                              reinterpret_cast<const cass_byte_t*>("a"), 1));
 
   UuidGen uuid_generator(11);
   EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
-    cass_user_type_set_uuid_by_name(address, NULL,
-                                    uuid_generator.generate_random_uuid().value()));
+            cass_user_type_set_uuid_by_name(address, NULL,
+                                            uuid_generator.generate_random_uuid().value()));
 
   CassInet inet;
   EXPECT_EQ(CASS_OK, cass_inet_from_string("127.1.2.3", &inet));
   EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
-    cass_user_type_set_inet_by_name(address, NULL, inet));
+            cass_user_type_set_inet_by_name(address, NULL, inet));
 
-  const cass_uint8_t pi[] = { 57, 115, 235, 135, 229, 215, 8, 125, 13, 43, 1, 25, 32, 135, 129, 180,
-                              112, 176, 158, 120, 246, 235, 29, 145, 238, 50, 108, 239, 219, 100, 250,
-                              84, 6, 186, 148, 76, 230, 46, 181, 89, 239, 247 };
+  const cass_uint8_t pi[] = { 57,  115, 235, 135, 229, 215, 8,   125, 13,  43,  1,   25, 32,  135,
+                              129, 180, 112, 176, 158, 120, 246, 235, 29,  145, 238, 50, 108, 239,
+                              219, 100, 250, 84,  6,   186, 148, 76,  230, 46,  181, 89, 239, 247 };
   EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
-    cass_user_type_set_decimal_by_name(address, NULL, pi, sizeof(pi), 100));
+            cass_user_type_set_decimal_by_name(address, NULL, pi, sizeof(pi), 100));
 
   EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
-    cass_user_type_set_duration_by_name(address, NULL, 1, 2, 3));
+            cass_user_type_set_duration_by_name(address, NULL, 1, 2, 3));
 
   CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
   EXPECT_EQ(CASS_OK, cass_collection_append_string(collection, "a"));
   EXPECT_EQ(CASS_OK, cass_collection_append_string(collection, "b"));
   EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
-    cass_user_type_set_collection_by_name(address, NULL, collection));
+            cass_user_type_set_collection_by_name(address, NULL, collection));
   cass_collection_free(collection);
 
   CassTuple* tuple = cass_tuple_new(2);
   EXPECT_EQ(CASS_OK, cass_tuple_set_string(tuple, 0, "a"));
   EXPECT_EQ(CASS_OK, cass_tuple_set_string(tuple, 1, "b"));
   EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
-    cass_user_type_set_tuple_by_name(address, NULL, tuple));
+            cass_user_type_set_tuple_by_name(address, NULL, tuple));
   cass_tuple_free(tuple);
 
-  CassUserType *address2 = cass_user_type_new_from_data_type(udt_address);
+  CassUserType* address2 = cass_user_type_new_from_data_type(udt_address);
   EXPECT_EQ(CASS_ERROR_LIB_NAME_DOES_NOT_EXIST,
-    cass_user_type_set_user_type_by_name(address, NULL, address2));
+            cass_user_type_set_user_type_by_name(address, NULL, address2));
   cass_user_type_free(address2);
 
   cass_user_type_free(address);
@@ -672,8 +647,8 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, UserTypeFunctions) {
  */
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, MiscellaneousFunctions) {
   CHECK_VERSION(2.2.0);
-  cass::ResultResponse response;
-  cass::Row r(&response);
+  ResultResponse response;
+  datastax::internal::core::Row r(&response);
   CassRow* row = CassRow::to(&r);
   EXPECT_EQ(NULL, cass_row_get_column_by_name(row, NULL));
 
@@ -681,8 +656,7 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, MiscellaneousFunctions
   EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_uuid_from_string(NULL, &uuid));
 
   CassCustomPayload* payload = cass_custom_payload_new();
-  cass_custom_payload_set(payload, NULL,
-    reinterpret_cast<const cass_byte_t *>("a"), 1);
+  cass_custom_payload_set(payload, NULL, reinterpret_cast<const cass_byte_t*>("a"), 1);
   cass_custom_payload_remove(payload, NULL);
   cass_custom_payload_free(payload);
 

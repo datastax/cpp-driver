@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_USER_TYPE_VALUE_HPP_INCLUDED__
-#define __CASS_USER_TYPE_VALUE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_USER_TYPE_VALUE_HPP
+#define DATASTAX_INTERNAL_USER_TYPE_VALUE_HPP
 
 #include "abstract_data.hpp"
 #include "cassandra.h"
@@ -23,13 +23,13 @@
 #include "external.hpp"
 #include "ref_counted.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class UserTypeValue : public AbstractData {
 public:
   UserTypeValue(const UserType::ConstPtr& data_type)
-    : AbstractData(data_type->fields().size())
-    , data_type_(data_type) { }
+      : AbstractData(data_type->fields().size())
+      , data_type_(data_type) {}
 
   const UserType::ConstPtr& data_type() const { return data_type_; }
 
@@ -49,8 +49,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(UserTypeValue);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::UserTypeValue, CassUserType)
+EXTERNAL_TYPE(datastax::internal::core::UserTypeValue, CassUserType)
 
 #endif

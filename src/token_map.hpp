@@ -14,19 +14,19 @@
   limitations under the License.
 */
 
-#ifndef __CASS_TOKEN_MAP_HPP_INCLUDED__
-#define __CASS_TOKEN_MAP_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_TOKEN_MAP_HPP
+#define DATASTAX_INTERNAL_TOKEN_MAP_HPP
 
 #include "host.hpp"
 #include "ref_counted.hpp"
 #include "string.hpp"
+#include "string_ref.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class VersionNumber;
 class Value;
 class ResultResponse;
-class StringRef;
 
 class TokenMap : public RefCounted<TokenMap> {
 public:
@@ -34,14 +34,16 @@ public:
 
   static TokenMap::Ptr from_partitioner(StringRef partitioner);
 
-  virtual ~TokenMap() { }
+  virtual ~TokenMap() {}
 
   virtual void add_host(const Host::Ptr& host) = 0;
   virtual void update_host_and_build(const Host::Ptr& host) = 0;
   virtual void remove_host_and_build(const Host::Ptr& host) = 0;
 
-  virtual void add_keyspaces(const VersionNumber& cassandra_version, const ResultResponse* result) = 0;
-  virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version, const ResultResponse* result) = 0;
+  virtual void add_keyspaces(const VersionNumber& cassandra_version,
+                             const ResultResponse* result) = 0;
+  virtual void update_keyspaces_and_build(const VersionNumber& cassandra_version,
+                                          const ResultResponse* result) = 0;
   virtual void drop_keyspace(const String& keyspace_name) = 0;
 
   virtual void build() = 0;
@@ -52,6 +54,6 @@ public:
                                                  const String& routing_key) const = 0;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

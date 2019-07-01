@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ATOMIC_HPP_INCLUDED__
-#define __CASS_ATOMIC_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ATOMIC_HPP
+#define DATASTAX_INTERNAL_ATOMIC_HPP
 
-#include "cassconfig.hpp"
+#include "driver_config.hpp"
 
 #if defined(HAVE_BOOST_ATOMIC)
 #include "atomic/atomic_boost.hpp"
@@ -28,4 +28,3 @@
 #endif
 
 #endif
-

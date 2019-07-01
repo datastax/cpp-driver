@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RETRY_POLICY_HPP_INCLUDED__
-#define __CASS_RETRY_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RETRY_POLICY_HPP
+#define DATASTAX_INTERNAL_RETRY_POLICY_HPP
 
 #include "cassandra.h"
 #include "error_response.hpp"
@@ -23,12 +23,12 @@
 #include "ref_counted.hpp"
 
 #ifdef _WIN32
-# ifdef IGNORE
-#   undef IGNORE
-# endif
+#ifdef IGNORE
+#undef IGNORE
+#endif
 #endif
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ErrorResponse;
 class Request;
@@ -37,25 +37,16 @@ class RetryPolicy : public RefCounted<RetryPolicy> {
 public:
   typedef SharedRefPtr<RetryPolicy> Ptr;
 
-  enum Type {
-    DEFAULT,
-    DOWNGRADING,
-    FALLTHROUGH,
-    LOGGING
-  };
+  enum Type { DEFAULT, DOWNGRADING, FALLTHROUGH, LOGGING };
 
   class RetryDecision {
   public:
-    enum Type {
-      RETURN_ERROR,
-      RETRY,
-      IGNORE
-    };
+    enum Type { RETURN_ERROR, RETRY, IGNORE };
 
     RetryDecision(Type type, CassConsistency retry_cl, bool retry_current_host)
-      : type_(type)
-      , retry_cl_(retry_cl)
-      , retry_current_host_(retry_current_host) { }
+        : type_(type)
+        , retry_cl_(retry_cl)
+        , retry_current_host_(retry_current_host) {}
 
     Type type() const { return type_; }
     CassConsistency retry_consistency() const { return retry_cl_; }
@@ -65,17 +56,13 @@ public:
       return RetryDecision(RETURN_ERROR, CASS_CONSISTENCY_UNKNOWN, false);
     }
 
-    static RetryDecision retry(CassConsistency cl) {
-      return RetryDecision(RETRY, cl, true);
-    }
+    static RetryDecision retry(CassConsistency cl) { return RetryDecision(RETRY, cl, true); }
 
     static RetryDecision retry_next_host(CassConsistency cl) {
       return RetryDecision(RETRY, cl, false);
     }
 
-    static RetryDecision ignore() {
-      return RetryDecision(IGNORE, CASS_CONSISTENCY_UNKNOWN, false);
-    }
+    static RetryDecision ignore() { return RetryDecision(IGNORE, CASS_CONSISTENCY_UNKNOWN, false); }
 
   private:
     Type type_;
@@ -84,21 +71,20 @@ public:
   };
 
   RetryPolicy(Type type)
-    : type_(type) { }
+      : type_(type) {}
 
-  virtual ~RetryPolicy() { }
+  virtual ~RetryPolicy() {}
 
   Type type() const { return type_; }
 
-  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl,
-                                        int received, int required,
-                                        bool data_recevied, int num_retries) const = 0;
-  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl,
-                                         int received, int required,
-                                         CassWriteType write_type, int num_retries) const = 0;
-  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl,
-                                       int required, int alive,
-                                       int num_retries) const = 0;
+  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl, int received,
+                                        int required, bool data_recevied,
+                                        int num_retries) const = 0;
+  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl, int received,
+                                         int required, CassWriteType write_type,
+                                         int num_retries) const = 0;
+  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl, int required,
+                                       int alive, int num_retries) const = 0;
   virtual RetryDecision on_request_error(const Request* request, CassConsistency cl,
                                          const ErrorResponse* error, int num_retries) const = 0;
 
@@ -109,17 +95,15 @@ private:
 class DefaultRetryPolicy : public RetryPolicy {
 public:
   DefaultRetryPolicy()
-    : RetryPolicy(DEFAULT) { }
+      : RetryPolicy(DEFAULT) {}
 
-  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl,
-                                        int received, int required,
-                                        bool data_recevied, int num_retries) const;
-  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl,
-                                         int received, int required,
-                                         CassWriteType write_type, int num_retries) const;
-  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl,
-                                       int required, int alive,
-                                       int num_retries) const;
+  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl, int received,
+                                        int required, bool data_recevied, int num_retries) const;
+  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl, int received,
+                                         int required, CassWriteType write_type,
+                                         int num_retries) const;
+  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl, int required,
+                                       int alive, int num_retries) const;
   virtual RetryDecision on_request_error(const Request* request, CassConsistency cl,
                                          const ErrorResponse* error, int num_retries) const;
 };
@@ -127,17 +111,15 @@ public:
 class DowngradingConsistencyRetryPolicy : public RetryPolicy {
 public:
   DowngradingConsistencyRetryPolicy()
-    : RetryPolicy(DOWNGRADING) { }
+      : RetryPolicy(DOWNGRADING) {}
 
-  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl,
-                                        int received, int required,
-                                        bool data_recevied, int num_retries) const;
-  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl,
-                                         int received, int required,
-                                         CassWriteType write_type, int num_retries) const;
-  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl,
-                                       int required, int alive,
-                                       int num_retries) const;
+  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl, int received,
+                                        int required, bool data_recevied, int num_retries) const;
+  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl, int received,
+                                         int required, CassWriteType write_type,
+                                         int num_retries) const;
+  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl, int required,
+                                       int alive, int num_retries) const;
   virtual RetryDecision on_request_error(const Request* request, CassConsistency cl,
                                          const ErrorResponse* error, int num_retries) const;
 };
@@ -145,17 +127,15 @@ public:
 class FallthroughRetryPolicy : public RetryPolicy {
 public:
   FallthroughRetryPolicy()
-    : RetryPolicy(FALLTHROUGH) { }
+      : RetryPolicy(FALLTHROUGH) {}
 
-  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl,
-                                        int received, int required,
-                                        bool data_recevied, int num_retries) const;
-  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl,
-                                         int received, int required,
-                                         CassWriteType write_type, int num_retries) const;
-  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl,
-                                       int required, int alive,
-                                       int num_retries) const;
+  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl, int received,
+                                        int required, bool data_recevied, int num_retries) const;
+  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl, int received,
+                                         int required, CassWriteType write_type,
+                                         int num_retries) const;
+  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl, int required,
+                                       int alive, int num_retries) const;
   virtual RetryDecision on_request_error(const Request* request, CassConsistency cl,
                                          const ErrorResponse* error, int num_retries) const;
 };
@@ -163,18 +143,16 @@ public:
 class LoggingRetryPolicy : public RetryPolicy {
 public:
   LoggingRetryPolicy(const RetryPolicy::Ptr& retry_policy)
-    : RetryPolicy(LOGGING)
-    , retry_policy_(retry_policy) { }
+      : RetryPolicy(LOGGING)
+      , retry_policy_(retry_policy) {}
 
-  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl,
-                                        int received, int required,
-                                        bool data_recevied, int num_retries) const;
-  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl,
-                                         int received, int required,
-                                         CassWriteType write_type, int num_retries) const;
-  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl,
-                                       int required, int alive,
-                                       int num_retries) const;
+  virtual RetryDecision on_read_timeout(const Request* request, CassConsistency cl, int received,
+                                        int required, bool data_recevied, int num_retries) const;
+  virtual RetryDecision on_write_timeout(const Request* request, CassConsistency cl, int received,
+                                         int required, CassWriteType write_type,
+                                         int num_retries) const;
+  virtual RetryDecision on_unavailable(const Request* request, CassConsistency cl, int required,
+                                       int alive, int num_retries) const;
   virtual RetryDecision on_request_error(const Request* request, CassConsistency cl,
                                          const ErrorResponse* response, int num_retries) const;
 
@@ -182,9 +160,8 @@ private:
   RetryPolicy::Ptr retry_policy_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::RetryPolicy, CassRetryPolicy)
+EXTERNAL_TYPE(datastax::internal::core::RetryPolicy, CassRetryPolicy)
 
 #endif
-

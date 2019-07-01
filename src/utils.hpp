@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_COMMON_HPP_INCLUDED__
-#define __CASS_COMMON_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_COMMON_HPP
+#define DATASTAX_INTERNAL_COMMON_HPP
 
 #include "cassandra.h"
 #include "macros.hpp"
@@ -30,10 +30,7 @@
 #include <intrin.h>
 #endif
 
-namespace cass {
-
-class BufferPiece;
-class Value;
+namespace datastax { namespace internal {
 
 typedef Vector<String> ContactPointList;
 typedef Vector<String> DcList;
@@ -45,9 +42,8 @@ typedef Vector<String> DcList;
 // without violating strict aliasing and usually optimizes away on a modern
 // compiler (GCC, Clang, and MSVC).
 
-template<typename From, typename To>
-inline To copy_cast(const From& from)
-{
+template <typename From, typename To>
+inline To copy_cast(const From& from) {
   STATIC_ASSERT(sizeof(From) == sizeof(To));
 
   To to;
@@ -80,14 +76,13 @@ String& to_cql_id(String& str);
 String& escape_id(String& str);
 
 inline size_t num_leading_zeros(int64_t value) {
-  if (value == 0)
-    return 64;
+  if (value == 0) return 64;
 
 #if defined(_MSC_VER)
   unsigned long index;
-#  if defined(_M_AMD64)
+#if defined(_M_AMD64)
   _BitScanReverse64(&index, value);
-#  else
+#else
   // On 32-bit this needs to be split into two operations
   char isNonzero = _BitScanReverse(&index, (unsigned long)(value >> 32));
 
@@ -97,9 +92,9 @@ inline size_t num_leading_zeros(int64_t value) {
     index += 32;
   else {
     // Scan the last 32 bits by truncating the 64-bit value
-    _BitScanReverse(&index, (unsigned long) value);
+    _BitScanReverse(&index, (unsigned long)value);
   }
-#  endif
+#endif
   // index is the (zero based) index, counting from lsb, of the most-significant 1 bit.
   // For example, a value of 12 (b1100) would return 3. The 4th bit is set, so there are
   // 60 leading zeros.
@@ -127,6 +122,6 @@ static void set_pointer_keys(C& container) {
 
 void thread_yield();
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

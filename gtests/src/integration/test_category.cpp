@@ -22,7 +22,8 @@
 // Constant value definitions for test type
 const TestCategory TestCategory::CASSANDRA("CASSANDRA", 0, "Cassandra", "*_Cassandra_*");
 const TestCategory TestCategory::DSE("DSE", 1, "DataStax Enterprise", "*_DSE_*");
-const TestCategory TestCategory::SIMULACRON("SIMULACRON", SHRT_MAX, "Simulated DSE (and Cassandra)", "*_simulacron_*");
+const TestCategory TestCategory::SIMULACRON("SIMULACRON", SHRT_MAX, "Simulated DSE (and Cassandra)",
+                                            "*_simulacron_*");
 
 // Static declarations for test type
 std::set<TestCategory> TestCategory::constants_;
@@ -33,40 +34,28 @@ std::ostream& operator<<(std::ostream& os, const TestCategory& object) {
 }
 
 TestCategory::TestCategory()
-  : name_("INVALID")
-  , ordinal_(-1)
-  , display_name_("Invalid test category")
-  , filter_("*") {}
+    : name_("INVALID")
+    , ordinal_(-1)
+    , display_name_("Invalid test category")
+    , filter_("*") {}
 
-TestCategory::TestCategory(const std::string& name) {
-  *this = name;
-}
+TestCategory::TestCategory(const std::string& name) { *this = name; }
 
-const std::string& TestCategory::name() const {
-  return name_;
-}
+const std::string& TestCategory::name() const { return name_; }
 
-short TestCategory::ordinal() const {
-  return ordinal_;
-}
+short TestCategory::ordinal() const { return ordinal_; }
 
-const std::string& TestCategory::display_name() const {
-  return display_name_;
-}
+const std::string& TestCategory::display_name() const { return display_name_; }
 
-const std::string& TestCategory::filter() const {
-  return filter_;
-}
+const std::string& TestCategory::filter() const { return filter_; }
 
-void TestCategory::operator =(const TestCategory& object) {
+void TestCategory::operator=(const TestCategory& object) {
   name_ = object.name_;
   ordinal_ = object.ordinal_;
   display_name_ = object.display_name_;
 }
 
-void TestCategory::operator=(const std::string& name) {
-  *this = get_enumeration(name);
-}
+void TestCategory::operator=(const std::string& name) { *this = get_enumeration(name); }
 
 bool TestCategory::operator<(const TestCategory& object) const {
   return ordinal_ < object.ordinal_;
@@ -91,28 +80,20 @@ bool TestCategory::operator==(const std::string& object) const {
   return lhs.compare(rhs) == 0;
 }
 
-bool TestCategory::operator !=(const TestCategory& object) const {
-  return !(*this == object);
-}
+bool TestCategory::operator!=(const TestCategory& object) const { return !(*this == object); }
 
-bool TestCategory::operator !=(const std::string& object) const {
-  return !(*this == object);
-}
+bool TestCategory::operator!=(const std::string& object) const { return !(*this == object); }
 
-TestCategory::iterator TestCategory::begin() {
-    return get_constants().begin();
-  }
+TestCategory::iterator TestCategory::begin() { return get_constants().begin(); }
 
-TestCategory::iterator TestCategory::end() {
-  return get_constants().end();
-}
+TestCategory::iterator TestCategory::end() { return get_constants().end(); }
 
-TestCategory::TestCategory(const std::string& name, short ordinal,
-  const std::string& display_name, const std::string& filter)
-  : name_(name)
-  , ordinal_(ordinal)
-  , display_name_(display_name)
-  , filter_(filter) {}
+TestCategory::TestCategory(const std::string& name, short ordinal, const std::string& display_name,
+                           const std::string& filter)
+    : name_(name)
+    , ordinal_(ordinal)
+    , display_name_(display_name)
+    , filter_(filter) {}
 
 const std::set<TestCategory>& TestCategory::get_constants() {
   if (constants_.empty()) {
@@ -124,7 +105,7 @@ const std::set<TestCategory>& TestCategory::get_constants() {
   return constants_;
 }
 
-TestCategory TestCategory::get_enumeration(const std::string& name)  const{
+TestCategory TestCategory::get_enumeration(const std::string& name) const {
   // Iterator over the constants and find the corresponding enumeration
   if (!name.empty()) {
     for (iterator iterator = begin(); iterator != end(); ++iterator) {

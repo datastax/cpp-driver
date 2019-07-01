@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_MACROS_HPP_INCLUDED__
-#define __CASS_MACROS_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MACROS_HPP
+#define DATASTAX_INTERNAL_MACROS_HPP
 
 #include <stddef.h>
 
@@ -30,48 +30,50 @@
 #define ZERO_PARAMS1_()
 #define ZERO_PARAMS_() ZERO_PARAMS1_()
 
-#define ONE_PARAM1_(A) ,A
+#define ONE_PARAM1_(A) , A
 #define ONE_PARAM_(A) ONE_PARAM1_(A)
 
-#define TWO_PARAMS1_(A, B)  ,A,B
+#define TWO_PARAMS1_(A, B) , A, B
 #define TWO_PARAMS_(A, B) TWO_PARAMS1_(A, B)
 
-#define THREE_PARAMS1_(A, B, C)  ,A,B,C
+#define THREE_PARAMS1_(A, B, C) , A, B, C
 #define THREE_PARAMS_(A, B, C) THREE_PARAMS1_(A, B, C)
 
 // Done this way so that macros like __LINE__ will expand before
 // being concatenated.
-#define STATIC_ASSERT_CONCAT(Arg1, Arg2)  STATIC_ASSERT_CONCAT1(Arg1, Arg2)
+#define STATIC_ASSERT_CONCAT(Arg1, Arg2) STATIC_ASSERT_CONCAT1(Arg1, Arg2)
 #define STATIC_ASSERT_CONCAT1(Arg1, Arg2) STATIC_ASSERT_CONCAT2(Arg1, Arg2)
 #define STATIC_ASSERT_CONCAT2(Arg1, Arg2) Arg1##Arg2
 
-#define STATIC_ASSERT(Expression) \
-  struct STATIC_ASSERT_CONCAT(__static_assertion_at_line_, __LINE__) \
-  { \
-    StaticAssert<static_cast<bool>(Expression)> \
-      STATIC_ASSERT_CONCAT(STATIC_ASSERTION_FAILED_AT_LINE_, __LINE__); \
-  }; \
+#define STATIC_ASSERT(Expression)                                                               \
+  struct STATIC_ASSERT_CONCAT(__static_assertion_at_line_, __LINE__) {                          \
+    StaticAssert<static_cast<bool>(Expression)>                                                 \
+        STATIC_ASSERT_CONCAT(STATIC_ASSERTION_FAILED_AT_LINE_, __LINE__);                       \
+  };                                                                                            \
   typedef StaticAssertTest<sizeof(STATIC_ASSERT_CONCAT(__static_assertion_at_line_, __LINE__))> \
-    STATIC_ASSERT_CONCAT(__static_assertion_test_at_line_, __LINE__)
+      STATIC_ASSERT_CONCAT(__static_assertion_test_at_line_, __LINE__)
 
-template <bool> struct StaticAssert;
-template <> struct StaticAssert<true> { };
-template<size_t s> struct StaticAssertTest { };
+template <bool>
+struct StaticAssert;
+template <>
+struct StaticAssert<true> {};
+template <size_t s>
+struct StaticAssertTest {};
 
 #define STATIC_NEXT_POW_2(N) StaticNextPow2<N>::value
 
 template <size_t C, size_t N>
 struct StaticNextPow2Helper {
-  enum { 
+  enum {
     value = static_cast<size_t>(StaticNextPow2Helper<C - 1, N>::value) < N
-          ? static_cast<size_t>(1) << C
-          : static_cast<size_t>(StaticNextPow2Helper<C - 1, N>::value)
+                ? static_cast<size_t>(1) << C
+                : static_cast<size_t>(StaticNextPow2Helper<C - 1, N>::value)
   };
 };
 
 template <size_t N>
-struct StaticNextPow2Helper<1, N> { 
-  enum { value = 2 }; 
+struct StaticNextPow2Helper<1, N> {
+  enum { value = 2 };
 };
 
 template <size_t N>

@@ -26,8 +26,7 @@
 
 #include <gtest/gtest.h>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Wrapped cluster object (builder)
@@ -38,7 +37,7 @@ public:
    * Create the cluster for the builder object
    */
   Cluster()
-    : Object<CassCluster, cass_cluster_free>(cass_cluster_new()) { }
+      : Object<CassCluster, cass_cluster_free>(cass_cluster_new()) {}
 
   /**
    * Create the cluster for the builder object
@@ -46,7 +45,7 @@ public:
    * @param cluster Already defined cluster object to utilize
    */
   Cluster(CassCluster* cluster)
-    : Object<CassCluster, cass_cluster_free>(cluster) { }
+      : Object<CassCluster, cass_cluster_free>(cluster) {}
 
   /**
    * Create the cluster object from a shared reference
@@ -54,21 +53,19 @@ public:
    * @param cluster Shared reference
    */
   Cluster(Ptr cluster)
-    : Object<CassCluster, cass_cluster_free>(cluster) { }
+      : Object<CassCluster, cass_cluster_free>(cluster) {}
 
   /**
    * Destroy the cluster
    */
-  virtual ~Cluster() {};
+  virtual ~Cluster(){};
 
   /**
    * Build/Create the cluster
    *
    * @return Cluster object
    */
-  static Cluster build() {
-    return Cluster();
-  }
+  static Cluster build() { return Cluster(); }
 
   /**
    * Sets the custom authenticator
@@ -76,8 +73,8 @@ public:
   Cluster& with_authenticator_callbacks(const CassAuthenticatorCallbacks* exchange_callbacks,
                                         CassAuthenticatorDataCleanupCallback cleanup_callback,
                                         void* data) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_authenticator_callbacks(get(),
-              exchange_callbacks, cleanup_callback, data));
+    EXPECT_EQ(CASS_OK, cass_cluster_set_authenticator_callbacks(get(), exchange_callbacks,
+                                                                cleanup_callback, data));
     return *this;
   }
 
@@ -89,8 +86,8 @@ public:
    * @return Cluster object
    */
   Cluster& with_beta_protocol(bool enable = false) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_use_beta_protocol_version(get(),
-              (enable == true ? cass_true : cass_false)));
+    EXPECT_EQ(CASS_OK, cass_cluster_set_use_beta_protocol_version(
+                           get(), (enable == true ? cass_true : cass_false)));
     return *this;
   }
 
@@ -129,8 +126,7 @@ public:
    * @return Cluster object
    */
   Cluster& with_contact_points(const std::string& contact_points) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_contact_points(get(),
-      contact_points.c_str()));
+    EXPECT_EQ(CASS_OK, cass_cluster_set_contact_points(get(), contact_points.c_str()));
     return *this;
   }
 
@@ -142,8 +138,7 @@ public:
    * @return Cluster object
    */
   Cluster& with_local_address(const std::string& name) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_local_address(get(),
-      name.c_str()));
+    EXPECT_EQ(CASS_OK, cass_cluster_set_local_address(get(), name.c_str()));
     return *this;
   }
 
@@ -157,8 +152,7 @@ public:
    * @return Cluster object
    */
   Cluster& with_core_connections_per_host(unsigned int connections = 1u) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_core_connections_per_host(get(),
-      connections));
+    EXPECT_EQ(CASS_OK, cass_cluster_set_core_connections_per_host(get(), connections));
     return *this;
   }
 
@@ -169,8 +163,7 @@ public:
    * param password Password
    * @return Cluster object
    */
-  Cluster& with_credentials(const char* username,
-                            const char* password) {
+  Cluster& with_credentials(const char* username, const char* password) {
     cass_cluster_set_credentials(get(), username, password);
     return *this;
   }
@@ -182,10 +175,8 @@ public:
    * @param profile Execution profile to add to the cluster
    * @return Cluster object
    */
-  Cluster& with_execution_profile(const std::string& name,
-                                  ExecutionProfile profile) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_execution_profile(get(),
-              name.c_str(), profile.get()));
+  Cluster& with_execution_profile(const std::string& name, ExecutionProfile profile) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_execution_profile(get(), name.c_str(), profile.get()));
     return *this;
   }
 
@@ -196,11 +187,8 @@ public:
    * @param data User data supplied to the callback (default: NULL)
    * @return Cluster object
    */
-  Cluster& with_host_listener_callback(CassHostListenerCallback callback,
-                                       void* data = NULL) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_host_listener_callback(get(),
-                                                               callback,
-                                                               data));
+  Cluster& with_host_listener_callback(CassHostListenerCallback callback, void* data = NULL) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_host_listener_callback(get(), callback, data));
     return *this;
   }
 
@@ -215,8 +203,8 @@ public:
    * @return Cluster object
    */
   Cluster& with_hostname_resolution(bool enable = true) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_use_hostname_resolution(get(),
-      (enable == true ? cass_true : cass_false)));
+    EXPECT_EQ(CASS_OK, cass_cluster_set_use_hostname_resolution(
+                           get(), (enable == true ? cass_true : cass_false)));
     return *this;
   }
 
@@ -246,13 +234,11 @@ public:
    *                                      otherwise false
    * @return Cluster object
    */
-  Cluster& with_load_balance_dc_aware(const std::string& local_dc,
-                                      size_t used_hosts_per_remote_dc,
+  Cluster& with_load_balance_dc_aware(const std::string& local_dc, size_t used_hosts_per_remote_dc,
                                       bool allow_remote_dcs_for_local_cl) {
-    EXPECT_EQ(CASS_OK,
-              cass_cluster_set_load_balance_dc_aware(get(), local_dc.c_str(),
-              used_hosts_per_remote_dc,
-              (allow_remote_dcs_for_local_cl == true ? cass_true : cass_false)));
+    EXPECT_EQ(CASS_OK, cass_cluster_set_load_balance_dc_aware(
+                           get(), local_dc.c_str(), used_hosts_per_remote_dc,
+                           (allow_remote_dcs_for_local_cl == true ? cass_true : cass_false)));
     return *this;
   }
 
@@ -274,9 +260,7 @@ public:
    * @return Cluster object
    */
   Cluster& with_no_compact(bool enable = true) {
-    EXPECT_EQ(CASS_OK,
-              cass_cluster_set_no_compact(get(),
-                                          enable == true ? cass_true : cass_false));
+    EXPECT_EQ(CASS_OK, cass_cluster_set_no_compact(get(), enable == true ? cass_true : cass_false));
     return *this;
   }
 
@@ -300,8 +284,7 @@ public:
    * @return Cluster object
    */
   Cluster& with_protocol_version(int protocol_version) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_protocol_version(get(),
-      protocol_version));
+    EXPECT_EQ(CASS_OK, cass_cluster_set_protocol_version(get(), protocol_version));
     return *this;
   }
 
@@ -314,18 +297,18 @@ public:
    */
   Cluster& with_randomized_contact_points(bool enable = true) {
     cass_cluster_set_use_randomized_contact_points(get(),
-      (enable == true ? cass_true : cass_false));
+                                                   (enable == true ? cass_true : cass_false));
     return *this;
   }
 
   /**
-   * Sets the amount of time to wait before attempting to reconnect.
+   * Sets the constant reconnection policy.
    *
-   * @param wait_time_ms Wait time in milliseconds (default: 2000)
+   * @param delay_ms Delay in milliseconds (default: 2000)
    * @return Cluster object
    */
-  Cluster& with_reconnect_wait_time(unsigned int wait_time_ms) {
-    cass_cluster_set_reconnect_wait_time(get(), wait_time_ms);
+  Cluster& with_constant_reconnect(unsigned int delay_ms) {
+    cass_cluster_set_constant_reconnect(get(), delay_ms);
     return *this;
   }
 
@@ -381,7 +364,6 @@ public:
   }
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_CLUSTER_HPP__

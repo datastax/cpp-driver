@@ -16,9 +16,8 @@
 
 #include "string_ref.hpp"
 
-namespace cass {
+namespace datastax {
 
 const StringRef::size_type StringRef::npos = -1;
 
-} // namespace cass
-
+} // namespace datastax

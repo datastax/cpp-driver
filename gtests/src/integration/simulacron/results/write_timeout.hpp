@@ -23,7 +23,6 @@
 
 #include "cassandra.h"
 
-
 namespace prime {
 
 /**
@@ -32,11 +31,11 @@ namespace prime {
 class WriteTimeout : public Result {
 public:
   WriteTimeout()
-    : Result("write_timeout")
-    , consistency_(CASS_CONSISTENCY_LOCAL_ONE)
-    , received_responses_(0)
-    , required_responses_(1)
-    , write_type_(CASS_WRITE_TYPE_SIMPLE) { }
+      : Result("write_timeout")
+      , consistency_(CASS_CONSISTENCY_LOCAL_ONE)
+      , received_responses_(0)
+      , required_responses_(1)
+      , write_type_(CASS_WRITE_TYPE_SIMPLE) {}
 
   /**
    * Fully construct the 'write_timeout' result
@@ -47,16 +46,14 @@ public:
    * @param required_responses Number of responses required from replicas
    * @param write_type The type of write that resulted in write timeout
    */
-  WriteTimeout(unsigned long delay_in_ms,
-               CassConsistency consistency,
-               unsigned int received_responses,
-               unsigned int required_responses,
+  WriteTimeout(unsigned long delay_in_ms, CassConsistency consistency,
+               unsigned int received_responses, unsigned int required_responses,
                CassWriteType write_type)
-    : Result("write_timeout", delay_in_ms)
-    , consistency_(consistency)
-    , received_responses_(received_responses)
-    , required_responses_(required_responses)
-    , write_type_(write_type) { }
+      : Result("write_timeout", delay_in_ms)
+      , consistency_(consistency)
+      , received_responses_(received_responses)
+      , required_responses_(required_responses)
+      , write_type_(write_type) {}
 
   /**
    * Set a fixed delay to the response time of a result

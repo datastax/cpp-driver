@@ -75,7 +75,6 @@ const char* cass_write_type_string(CassWriteType write_type) {
   }
 }
 
-
 CassInet cass_inet_init_v4(const cass_uint8_t* address) {
   CassInet inet;
   inet.address_length = CASS_INET_V4_LENGTH;
@@ -91,8 +90,7 @@ CassInet cass_inet_init_v6(const cass_uint8_t* address) {
 }
 
 void cass_inet_string(CassInet inet, char* output) {
-  uv_inet_ntop(inet.address_length == CASS_INET_V4_LENGTH ? AF_INET : AF_INET6,
-               inet.address,
+  uv_inet_ntop(inet.address_length == CASS_INET_V4_LENGTH ? AF_INET : AF_INET6, inet.address,
                output, CASS_INET_STRING_LENGTH);
 }
 
@@ -108,11 +106,9 @@ CassError cass_inet_from_string(const char* str, CassInet* output) {
   }
 }
 
-CassError cass_inet_from_string_n(const char* str,
-                                  size_t str_length,
-                                  CassInet* output) {
+CassError cass_inet_from_string_n(const char* str, size_t str_length, CassInet* output) {
   char buf[CASS_INET_STRING_LENGTH];
-   // Need space for null terminator
+  // Need space for null terminator
   if (str_length > CASS_INET_STRING_LENGTH - 1) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
@@ -126,13 +122,12 @@ cass_uint32_t cass_date_from_epoch(cass_int64_t epoch_secs) {
 }
 
 cass_int64_t cass_time_from_epoch(cass_int64_t epoch_secs) {
-  return  CASS_TIME_NANOSECONDS_PER_SECOND *
-      (epoch_secs % NUM_SECONDS_PER_DAY);
+  return CASS_TIME_NANOSECONDS_PER_SECOND * (epoch_secs % NUM_SECONDS_PER_DAY);
 }
 
 cass_int64_t cass_date_time_to_epoch(cass_uint32_t date, cass_int64_t time) {
   return (static_cast<cass_uint64_t>(date) - CASS_DATE_EPOCH) * NUM_SECONDS_PER_DAY +
-      time / CASS_TIME_NANOSECONDS_PER_SECOND;
+         time / CASS_TIME_NANOSECONDS_PER_SECOND;
 }
 
 } // extern "C"

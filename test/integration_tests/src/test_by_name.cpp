@@ -14,42 +14,48 @@
   limitations under the License.
 */
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
 
 #define INSERT_BY_NAME "INSERT INTO by_name (key, a, b, c) VALUES (?, ?, ?, ?)"
-#define INSERT_BY_NAME_CASE_SENSITIVE "INSERT INTO by_name (key, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?)"
-#define INSERT_BY_NAME_NULL "INSERT INTO by_name (key, a, b, c, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?, ?, ?, ?)"
+#define INSERT_BY_NAME_CASE_SENSITIVE \
+  "INSERT INTO by_name (key, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?)"
+#define INSERT_BY_NAME_NULL \
+  "INSERT INTO by_name (key, a, b, c, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?, ?, ?, ?)"
 
 struct ByNameTests : public test_utils::SingleSessionTest {
-  ByNameTests() : test_utils::SingleSessionTest(1, 0) {
-    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % test_utils::SIMPLE_KEYSPACE % "1"));
+  ByNameTests()
+      : test_utils::SingleSessionTest(1, 0) {
+    test_utils::execute_query(session,
+                              str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) %
+                                  test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
-    test_utils::execute_query(session, "CREATE TABLE by_name (key uuid PRIMARY KEY, a int, b boolean, c text, abc float, \"ABC\" float, \"aBc\" float)");
+    test_utils::execute_query(session, "CREATE TABLE by_name (key uuid PRIMARY KEY, a int, b "
+                                       "boolean, c text, abc float, \"ABC\" float, \"aBc\" float)");
 
-    test_utils::execute_query(session, "CREATE TABLE bytes_by_name (key uuid PRIMARY KEY, blobs blob, varints varint)");
+    test_utils::execute_query(
+        session, "CREATE TABLE bytes_by_name (key uuid PRIMARY KEY, blobs blob, varints varint)");
   }
 
   ~ByNameTests() {
     // Drop the keyspace (ignore any and all errors)
-    test_utils::execute_query_with_error(session,
-      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
-        % test_utils::SIMPLE_KEYSPACE));
+    test_utils::execute_query_with_error(
+        session,
+        str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % test_utils::SIMPLE_KEYSPACE));
   }
 
   test_utils::CassResultPtr select_all_from_by_name() {
     test_utils::CassResultPtr result;
     test_utils::execute_query(session, "SELECT * FROM by_name", &result);
-    BOOST_REQUIRE(cass_result_column_count(result.get()) ==  7);
+    BOOST_REQUIRE(cass_result_column_count(result.get()) == 7);
     BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
     return result;
   }
@@ -112,9 +118,12 @@ struct ByNameTests : public test_utils::SingleSessionTest {
     CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 
     BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
-    BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abc\"", 1.1f), CASS_OK);
-    BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"ABC\"", 2.2f), CASS_OK);
-    BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"aBc\"", 3.3f), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abc\"", 1.1f),
+                        CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"ABC\"", 2.2f),
+                        CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"aBc\"", 3.3f),
+                        CASS_OK);
 
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
@@ -179,45 +188,44 @@ struct ByNameTests : public test_utils::SingleSessionTest {
 
 BOOST_FIXTURE_TEST_SUITE(by_name, ByNameTests)
 
-BOOST_AUTO_TEST_CASE(bind_and_get_prepared)
-{
+BOOST_AUTO_TEST_CASE(bind_and_get_prepared) {
   test_utils::CassPreparedPtr prepared = test_utils::prepare(session, INSERT_BY_NAME);
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
   test_bind_and_get(statement);
 }
 
-BOOST_AUTO_TEST_CASE(bind_and_get)
-{
+BOOST_AUTO_TEST_CASE(bind_and_get) {
   if (version >= "2.1.0") {
     test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME, 4));
     test_bind_and_get(statement);
   } else {
-    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping by_name/bind_and_get" << std::endl;
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string()
+              << ": Skipping by_name/bind_and_get" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
 
-BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive_prepared)
-{
-  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, INSERT_BY_NAME_CASE_SENSITIVE);
+BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive_prepared) {
+  test_utils::CassPreparedPtr prepared =
+      test_utils::prepare(session, INSERT_BY_NAME_CASE_SENSITIVE);
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
   test_bind_and_get_case_sensitive(statement);
 }
 
-BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive)
-{
+BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive) {
   if (version >= "2.1.0") {
     test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME_CASE_SENSITIVE, 4));
     test_bind_and_get_case_sensitive(statement);
   } else {
-    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping by_name/bind_and_get_case_sensitive" << std::endl;
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string()
+              << ": Skipping by_name/bind_and_get_case_sensitive" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
 
-BOOST_AUTO_TEST_CASE(bind_multiple_columns)
-{
-  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, "INSERT INTO by_name (key, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?)");
+BOOST_AUTO_TEST_CASE(bind_multiple_columns) {
+  test_utils::CassPreparedPtr prepared = test_utils::prepare(
+      session, "INSERT INTO by_name (key, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?)");
 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
@@ -262,19 +270,22 @@ BOOST_AUTO_TEST_CASE(bind_multiple_columns)
   BOOST_CHECK(abc == 1.23f);
 }
 
-BOOST_AUTO_TEST_CASE(bind_invalid_name)
-{
-  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, "INSERT INTO by_name (key, a, b, c, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?, ?, ?, ?)");
+BOOST_AUTO_TEST_CASE(bind_invalid_name) {
+  test_utils::CassPreparedPtr prepared = test_utils::prepare(
+      session,
+      "INSERT INTO by_name (key, a, b, c, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?, ?, ?, ?)");
 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "d", 0), CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"aBC\"", 0.0), CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abC\"", 0.0), CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "d", 0),
+                      CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"aBC\"", 0.0),
+                      CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abC\"", 0.0),
+                      CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
 }
 
-BOOST_AUTO_TEST_CASE(get_invalid_name)
-{
+BOOST_AUTO_TEST_CASE(get_invalid_name) {
   // Create insert statement for bound parameters
   std::string insert_query = "INSERT INTO by_name (key, a) VALUES (?, ?)";
   test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
@@ -302,20 +313,19 @@ BOOST_AUTO_TEST_CASE(get_invalid_name)
   BOOST_CHECK(cass_row_get_column_by_name(row, "\"abC\"") == NULL);
 }
 
-BOOST_AUTO_TEST_CASE(null_prepared)
-{
+BOOST_AUTO_TEST_CASE(null_prepared) {
   test_utils::CassPreparedPtr prepared = test_utils::prepare(session, INSERT_BY_NAME_NULL);
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
   test_null(statement);
 }
 
-BOOST_AUTO_TEST_CASE(null)
-{
+BOOST_AUTO_TEST_CASE(null) {
   if (version >= "2.1.0") {
     test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME_NULL, 7));
     test_null(statement);
   } else {
-    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping by_name/null" << std::endl;
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string()
+              << ": Skipping by_name/null" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -330,22 +340,28 @@ BOOST_AUTO_TEST_CASE(null)
  * @test_category prepared_statements:binding
  * @jira_ticket CPP-272 [https://datastax-oss.atlassian.net/browse/CPP-272]
  */
-BOOST_AUTO_TEST_CASE(bind_bytes_by_name)
-{
-  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, "INSERT INTO bytes_by_name (key, blobs, varints) VALUES (?, ?, ?)");
+BOOST_AUTO_TEST_CASE(bind_bytes_by_name) {
+  test_utils::CassPreparedPtr prepared = test_utils::prepare(
+      session, "INSERT INTO bytes_by_name (key, blobs, varints) VALUES (?, ?, ?)");
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
   CassUuid key = test_utils::generate_time_uuid(uuid_gen);
   CassBytes blob;
-  blob.data = reinterpret_cast<const cass_byte_t *>("68971169783116971203269110116101114112114105115101329911211245100114105118101114");
+  blob.data = reinterpret_cast<const cass_byte_t*>(
+      "68971169783116971203269110116101114112114105115101329911211245100114105118101114");
   blob.size = strlen(reinterpret_cast<const char*>(blob.data));
   CassBytes varint;
-  varint.data = reinterpret_cast<const cass_byte_t *>("1234567890123456789012345678901234567890");
+  varint.data = reinterpret_cast<const cass_byte_t*>("1234567890123456789012345678901234567890");
   varint.size = strlen(reinterpret_cast<const char*>(varint.data));
 
   BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_bytes_by_name(statement.get(), "blobs", const_cast<cass_byte_t *>(blob.data), blob.size), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_bytes_by_name(statement.get(), "varints", const_cast<cass_byte_t *>(varint.data), varint.size), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_bytes_by_name(
+                          statement.get(), "blobs", const_cast<cass_byte_t*>(blob.data), blob.size),
+                      CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_bytes_by_name(statement.get(), "varints",
+                                                        const_cast<cass_byte_t*>(varint.data),
+                                                        varint.size),
+                      CASS_OK);
 
   test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
   test_utils::wait_and_check_error(future.get());
@@ -367,7 +383,8 @@ BOOST_AUTO_TEST_CASE(bind_bytes_by_name)
   value = cass_row_get_column_by_name(row, "varints");
   CassBytes result_varint;
   BOOST_REQUIRE(value != NULL);
-  BOOST_REQUIRE_EQUAL(cass_value_get_bytes(value, &result_varint.data, &result_varint.size), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_value_get_bytes(value, &result_varint.data, &result_varint.size),
+                      CASS_OK);
   BOOST_REQUIRE(test_utils::Value<CassBytes>::equal(varint, result_varint));
 }
 

@@ -39,12 +39,12 @@ TEST(DateTimeUnitTests, TimeFromEpoch) {
   time_t now = ::time(NULL);
   struct tm* tm = gmtime(&now);
   cass_int64_t actual = cass_time_from_epoch(now);
-  cass_int64_t expected = 1000000000LL * (tm->tm_hour * 3600  + 60 * tm->tm_min + tm->tm_sec);
+  cass_int64_t expected = 1000000000LL * (tm->tm_hour * 3600 + 60 * tm->tm_min + tm->tm_sec);
   EXPECT_EQ(actual, expected);
 }
 
 TEST(DateTimeUnitTests, DateTimeToEpoch) {
-  EXPECT_EQ(cass_date_time_to_epoch(CASS_DATE_EPOCH, 0), 0L); // Epoch
+  EXPECT_EQ(cass_date_time_to_epoch(CASS_DATE_EPOCH, 0), 0L);               // Epoch
   EXPECT_EQ(cass_date_time_to_epoch(CASS_DATE_EPOCH - 1, 0), -24L * 3600L); // Epoch - 1 day
-  EXPECT_EQ(cass_date_time_to_epoch(CASS_DATE_EPOCH + 1, 0), 24L * 3600L); // Epoch + 1 day
+  EXPECT_EQ(cass_date_time_to_epoch(CASS_DATE_EPOCH + 1, 0), 24L * 3600L);  // Epoch + 1 day
 }

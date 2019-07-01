@@ -14,18 +14,21 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SESSION_BASE_HPP_INCLUDED__
-#define __CASS_SESSION_BASE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SESSION_BASE_HPP
+#define DATASTAX_INTERNAL_SESSION_BASE_HPP
 
 #include "cluster_connector.hpp"
 #include "prepared.hpp"
 #include "schema_agreement_handler.hpp"
 #include "token_map.hpp"
 
-namespace cass {
+namespace datastax { namespace internal {
+
+class Random;
+
+namespace core {
 
 class ClusterConfig;
-class Random;
 
 /**
  * A base class for implementing a session. It manages the state machine for
@@ -57,8 +60,7 @@ public:
    * keyspace should be used.
    * @return A future object for monitoring the connection progress.
    */
-  Future::Ptr connect(const Config& config,
-                      const String& keyspace = "");
+  Future::Ptr connect(const Config& config, const String& keyspace = "");
 
   /**
    * Close the session. There are not any failure conditions for closing a
@@ -111,10 +113,8 @@ protected:
    * @param hosts The current hosts in the cluster.
    * @param token_map The token map for the cluster.
    */
-  virtual void on_connect(const Host::Ptr& connected_host,
-                          ProtocolVersion protocol_version,
-                          const HostMap& hosts,
-                          const TokenMap::Ptr& token_map);
+  virtual void on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
+                          const HostMap& hosts, const TokenMap::Ptr& token_map);
 
   /**
    * A callback called after the control connection fails to connect. By default
@@ -125,8 +125,7 @@ protected:
    * @param code The error code for the connection failure.
    * @param message The error message for the connection failure.
    */
-  virtual void on_connect_failed(CassError code,
-                                 const String& message);
+  virtual void on_connect_failed(CassError code, const String& message);
 
   /**
    * A callback called at the start of the close process. By default this closes
@@ -162,6 +161,7 @@ private:
   CassUuid session_id_;
 };
 
-} // namespace cass
+} // namespace core
+}} // namespace datastax::internal
 
 #endif

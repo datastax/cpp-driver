@@ -14,22 +14,21 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BLACKLIST_DC_POLICY_HPP_INCLUDED__
-#define __CASS_BLACKLIST_DC_POLICY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_BLACKLIST_DC_POLICY_HPP
+#define DATASTAX_INTERNAL_BLACKLIST_DC_POLICY_HPP
 
-#include "load_balancing.hpp"
 #include "host.hpp"
-#include "scoped_ptr.hpp"
 #include "list_policy.hpp"
+#include "load_balancing.hpp"
+#include "scoped_ptr.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class BlacklistDCPolicy : public ListPolicy {
 public:
-  BlacklistDCPolicy(LoadBalancingPolicy* child_policy,
-                    const DcList& dcs)
-    : ListPolicy(child_policy)
-    , dcs_(dcs) {}
+  BlacklistDCPolicy(LoadBalancingPolicy* child_policy, const DcList& dcs)
+      : ListPolicy(child_policy)
+      , dcs_(dcs) {}
 
   virtual ~BlacklistDCPolicy() {}
 
@@ -46,6 +45,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(BlacklistDCPolicy);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

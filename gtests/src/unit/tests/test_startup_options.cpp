@@ -24,14 +24,16 @@
 #define APPLICATION_NAME "DataStax C/C++ Test Harness"
 #define APPLICATION_VERSION "1.0.0"
 
+using namespace datastax;
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 inline bool operator==(const CassUuid& rhs, const CassUuid& lhs) {
   return rhs.clock_seq_and_node == lhs.clock_seq_and_node &&
-    rhs.time_and_version == lhs.time_and_version;
+         rhs.time_and_version == lhs.time_and_version;
 }
 
-inline bool operator!=(const CassUuid& rhs, const CassUuid& lhs) {
-  return !(rhs == lhs);
-}
+inline bool operator!=(const CassUuid& rhs, const CassUuid& lhs) { return !(rhs == lhs); }
 
 class StartupRequestUnitTest : public Unit {
 public:
@@ -40,46 +42,45 @@ public:
     Unit::TearDown();
   }
 
-  cass::Session& session() { return session_; }
-  const cass::String& client_id() const { return client_id_; }
-  cass::Config& config() { return config_; }
+  Session& session() { return session_; }
+  const String& client_id() const { return client_id_; }
+  Config& config() { return config_; }
   const mockssandra::RequestHandler* simple_with_client_options() {
     mockssandra::SimpleRequestHandlerBuilder builder;
     builder.on(mockssandra::OPCODE_QUERY)
-      .system_local()
-      .system_peers()
-      .client_options() // Allow for fake query to get client options
-      .empty_rows_result(1);
+        .system_local()
+        .system_peers()
+        .client_options() // Allow for fake query to get client options
+        .empty_rows_result(1);
     return builder.build();
   }
 
   void connect() {
     config_.contact_points().push_back("127.0.0.1");
-    cass::Future::Ptr connect_future(session_.connect(config_));
-    ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME)) << "Timed out waiting for session to connect";
-    ASSERT_FALSE(connect_future->error())
-      << cass_error_desc(connect_future->error()->code) << ": "
-      << connect_future->error()->message;
+    internal::core::Future::Ptr connect_future(session_.connect(config_));
+    ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
+        << "Timed out waiting for session to connect";
+    ASSERT_FALSE(connect_future->error()) << cass_error_desc(connect_future->error()->code) << ": "
+                                          << connect_future->error()->message;
 
     char client_id[CASS_UUID_STRING_LENGTH];
     cass_uuid_string(session_.client_id(), client_id);
     client_id_ = client_id;
   }
 
-  cass::Map<cass::String, cass::String> client_options() {
-    cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(CLIENT_OPTIONS_QUERY, 0));
-    cass::ResponseFuture::Ptr future = static_cast<cass::ResponseFuture::Ptr>(session_.execute(request, NULL));
+  Map<String, String> client_options() {
+    SharedRefPtr<QueryRequest> request(new QueryRequest(CLIENT_OPTIONS_QUERY, 0));
+    ResponseFuture::Ptr future = static_cast<ResponseFuture::Ptr>(session_.execute(request, NULL));
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out executing query";
-    EXPECT_FALSE(future->error())
-      << cass_error_desc(future->error()->code) << ": "
-      << future->error()->message;
+    EXPECT_FALSE(future->error()) << cass_error_desc(future->error()->code) << ": "
+                                  << future->error()->message;
 
-    cass::Map<cass::String, cass::String> options;
-    cass::ResultResponse::Ptr response = static_cast<cass::ResultResponse::Ptr>(future->response());
-    const cass::Row row = response->first_row();
+    Map<String, String> options;
+    ResultResponse::Ptr response = static_cast<ResultResponse::Ptr>(future->response());
+    const Row row = response->first_row();
     for (size_t i = 0; i < row.values.size(); ++i) {
-      cass::String key = response->metadata()->get_column_definition(i).name.to_string();
-      cass::String value = row.values[i].decoder().as_string();
+      String key = response->metadata()->get_column_definition(i).name.to_string();
+      String value = row.values[i].decoder().as_string();
       options[key] = value;
     }
 
@@ -87,9 +88,9 @@ public:
   }
 
 private:
-  cass::Config config_;
-  cass::Session session_;
-  cass::String client_id_;
+  Config config_;
+  Session session_;
+  String client_id_;
 };
 
 TEST_F(StartupRequestUnitTest, Standard) {
@@ -97,13 +98,13 @@ TEST_F(StartupRequestUnitTest, Standard) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   connect();
-  cass::Map<cass::String, cass::String> options = client_options();
+  Map<String, String> options = client_options();
   ASSERT_EQ(4u, options.size());
 
   ASSERT_EQ(client_id(), options["CLIENT_ID"]);
   ASSERT_EQ(CASS_DEFAULT_CQL_VERSION, options["CQL_VERSION"]);
-  ASSERT_EQ(cass::driver_name(), options["DRIVER_NAME"]);
-  ASSERT_EQ(cass::driver_version(), options["DRIVER_VERSION"]);
+  ASSERT_EQ(driver_name(), options["DRIVER_NAME"]);
+  ASSERT_EQ(driver_version(), options["DRIVER_VERSION"]);
 }
 
 TEST_F(StartupRequestUnitTest, EnableNoCompact) {
@@ -112,13 +113,13 @@ TEST_F(StartupRequestUnitTest, EnableNoCompact) {
 
   config().set_no_compact(true);
   connect();
-  cass::Map<cass::String, cass::String> options = client_options();
+  Map<String, String> options = client_options();
   ASSERT_EQ(5u, options.size());
 
   ASSERT_EQ(client_id(), options["CLIENT_ID"]);
   ASSERT_EQ(CASS_DEFAULT_CQL_VERSION, options["CQL_VERSION"]);
-  ASSERT_EQ(cass::driver_name(), options["DRIVER_NAME"]);
-  ASSERT_EQ(cass::driver_version(), options["DRIVER_VERSION"]);
+  ASSERT_EQ(driver_name(), options["DRIVER_NAME"]);
+  ASSERT_EQ(driver_version(), options["DRIVER_VERSION"]);
   ASSERT_EQ("true", options["NO_COMPACT"]);
 }
 
@@ -129,15 +130,15 @@ TEST_F(StartupRequestUnitTest, Application) {
   config().set_application_name(APPLICATION_NAME);
   config().set_application_version(APPLICATION_VERSION);
   connect();
-  cass::Map<cass::String, cass::String> options = client_options();
+  Map<String, String> options = client_options();
   ASSERT_EQ(6u, options.size());
 
   ASSERT_EQ(APPLICATION_NAME, options["APPLICATION_NAME"]);
   ASSERT_EQ(APPLICATION_VERSION, options["APPLICATION_VERSION"]);
   ASSERT_EQ(client_id(), options["CLIENT_ID"]);
   ASSERT_EQ(CASS_DEFAULT_CQL_VERSION, options["CQL_VERSION"]);
-  ASSERT_EQ(cass::driver_name(), options["DRIVER_NAME"]);
-  ASSERT_EQ(cass::driver_version(), options["DRIVER_VERSION"]);
+  ASSERT_EQ(driver_name(), options["DRIVER_NAME"]);
+  ASSERT_EQ(driver_version(), options["DRIVER_VERSION"]);
 }
 
 TEST_F(StartupRequestUnitTest, SetClientId) {
@@ -147,19 +148,18 @@ TEST_F(StartupRequestUnitTest, SetClientId) {
   CassUuid generated_client_id = session().client_id();
   CassUuid assigned_client_id;
   ASSERT_EQ(CASS_OK,
-            cass_uuid_from_string("03398c99-c635-4fad-b30a-3b2c49f785c2",
-                                  &assigned_client_id));
+            cass_uuid_from_string("03398c99-c635-4fad-b30a-3b2c49f785c2", &assigned_client_id));
   config().set_client_id(assigned_client_id);
 
   connect();
   CassUuid current_client_id = session().client_id();
   ASSERT_EQ(assigned_client_id, current_client_id);
   ASSERT_NE(generated_client_id, current_client_id);
-  cass::Map<cass::String, cass::String> options = client_options();
+  Map<String, String> options = client_options();
   ASSERT_EQ(4u, options.size());
 
   ASSERT_EQ("03398c99-c635-4fad-b30a-3b2c49f785c2", options["CLIENT_ID"]);
   ASSERT_EQ(CASS_DEFAULT_CQL_VERSION, options["CQL_VERSION"]);
-  ASSERT_EQ(cass::driver_name(), options["DRIVER_NAME"]);
-  ASSERT_EQ(cass::driver_version(), options["DRIVER_VERSION"]);
+  ASSERT_EQ(driver_name(), options["DRIVER_NAME"]);
+  ASSERT_EQ(driver_version(), options["DRIVER_VERSION"]);
 }

@@ -14,19 +14,19 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RESULT_RESPONSE_HPP_INCLUDED__
-#define __CASS_RESULT_RESPONSE_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_RESULT_RESPONSE_HPP
+#define DATASTAX_INTERNAL_RESULT_RESPONSE_HPP
 
 #include "constants.hpp"
 #include "data_type.hpp"
 #include "macros.hpp"
-#include "result_metadata.hpp"
 #include "response.hpp"
+#include "result_metadata.hpp"
 #include "row.hpp"
 #include "string_ref.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ResultIterator;
 
@@ -99,13 +99,13 @@ private:
   bool has_more_pages_; // row data
   ResultMetadata::Ptr metadata_;
   ResultMetadata::Ptr result_metadata_;
-  StringRef paging_state_; // row paging
-  StringRef prepared_id_; // prepared result
+  StringRef paging_state_;       // row paging
+  StringRef prepared_id_;        // prepared result
   StringRef result_metadata_id_; // prepared result, protocol v5/DSEv2
-  StringRef change_; // schema change
-  StringRef keyspace_; // rows, set keyspace, and schema change
-  StringRef table_; // rows, and schema change
-  StringRef new_metadata_id_; // rows result, protocol v5/DSEv2
+  StringRef change_;             // schema change
+  StringRef keyspace_;           // rows, set keyspace, and schema change
+  StringRef table_;              // rows, and schema change
+  StringRef new_metadata_id_;    // rows result, protocol v5/DSEv2
   int32_t row_count_;
   Decoder row_decoder_;
   Row first_row_;
@@ -115,8 +115,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ResultResponse);
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::ResultResponse, CassResult)
+EXTERNAL_TYPE(datastax::internal::core::ResultResponse, CassResult)
 
 #endif

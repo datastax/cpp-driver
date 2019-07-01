@@ -5,18 +5,17 @@
   license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
-#ifndef __DSE_MEMORY_HPP_INCLUDED__
-#define __DSE_MEMORY_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_MEMORY_HPP
+#define DATASTAX_INTERNAL_MEMORY_HPP
 
 #include "cassandra.h"
 #include <cstdlib>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 class Memory {
 public:
-  static void set_functions(CassMallocFunction malloc_func,
-                            CassReallocFunction realloc_func,
+  static void set_functions(CassMallocFunction malloc_func, CassReallocFunction realloc_func,
                             CassFreeFunction free_func);
 
   static CassMallocFunction malloc_func() { return malloc_func_; }
@@ -50,6 +49,6 @@ private:
   static CassFreeFunction free_func_;
 };
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

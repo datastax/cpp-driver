@@ -17,17 +17,17 @@
 #include "atomic.hpp"
 #include "macros.hpp"
 
-#ifndef __CASS_SPINLOCK_HPP_INCLUDED__
-#define __CASS_SPINLOCK_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SPINLOCK_HPP
+#define DATASTAX_INTERNAL_SPINLOCK_HPP
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Spinlock {
 public:
   typedef enum { LOCKED, UNLOCKED } LockState;
 
   Spinlock()
-    : state_(UNLOCKED) {}
+      : state_(UNLOCKED) {}
 
   void lock() {
     while (state_.exchange(LOCKED, MEMORY_ORDER_ACQUIRE) == LOCKED) {
@@ -35,9 +35,7 @@ public:
     }
   }
 
-  void unlock() {
-    state_.store(UNLOCKED, MEMORY_ORDER_RELEASE);
-  }
+  void unlock() { state_.store(UNLOCKED, MEMORY_ORDER_RELEASE); }
 
 private:
   Atomic<LockState> state_;
@@ -96,6 +94,6 @@ private:
 template <class N>
 Spinlock SpinlockPool<N>::spinlocks_[41];
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

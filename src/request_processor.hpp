@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REQUEST_PROCESSOR_HPP_INCLUDED__
-#define __CASS_REQUEST_PROCESSOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_REQUEST_PROCESSOR_HPP
+#define DATASTAX_INTERNAL_REQUEST_PROCESSOR_HPP
 
 #include "atomic.hpp"
 #include "config.hpp"
@@ -23,9 +23,9 @@
 #include "event_loop.hpp"
 #include "histogram_wrapper.hpp"
 #include "host.hpp"
+#include "loop_watcher.hpp"
 #include "micro_timer.hpp"
 #include "mpmc_queue.hpp"
-#include "loop_watcher.hpp"
 #include "prepare_host_handler.hpp"
 #include "random.hpp"
 #include "schema_agreement_handler.hpp"
@@ -33,7 +33,7 @@
 #include "timer.hpp"
 #include "token_map.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ConnectionPoolManagerInitializer;
 class RequestProcessor;
@@ -50,27 +50,23 @@ class KeyspaceChangedHandler : public RefCounted<KeyspaceChangedHandler> {
 public:
   typedef SharedRefPtr<KeyspaceChangedHandler> Ptr;
 
-  KeyspaceChangedHandler(EventLoop* event_loop,
-                         const KeyspaceChangedResponse& response)
-    : event_loop_(event_loop)
-    , response_(response) { }
+  KeyspaceChangedHandler(EventLoop* event_loop, const KeyspaceChangedResponse& response)
+      : event_loop_(event_loop)
+      , response_(response) {}
 
-  ~KeyspaceChangedHandler() {
-    event_loop_->add(new Task(response_));
-  }
+  ~KeyspaceChangedHandler() { event_loop_->add(new Task(response_)); }
 
 private:
   /**
    * An internal task that keeps the original keyspace change handler
    * alive so that processing happens on the original event loop.
    */
-  class Task : public cass::Task {
+  class Task : public core::Task {
   public:
     Task(const KeyspaceChangedResponse& response)
-      : response_(response) { }
-    virtual void run(EventLoop* event_loop) {
-      response_.set_response();
-    }
+        : response_(response) {}
+    virtual void run(EventLoop* event_loop) { response_.set_response(); }
+
   private:
     KeyspaceChangedResponse response_;
   };
@@ -82,7 +78,7 @@ private:
 
 class KeyspaceChangedListener {
 public:
-  virtual ~KeyspaceChangedListener() { }
+  virtual ~KeyspaceChangedListener() {}
 
   virtual void on_keyspace_changed(const String& keyspace,
                                    const KeyspaceChangedHandler::Ptr& handler) = 0;
@@ -100,7 +96,7 @@ public:
    *
    * @param processor The processor object.
    */
-  virtual void on_connect(RequestProcessor* processor) { }
+  virtual void on_connect(RequestProcessor* processor) {}
 
   /**
    * A callback that's called when the processor has closed.
@@ -146,10 +142,11 @@ struct RequestProcessorSettings {
  * the load balancing policy, executing and routing the request to the
  * appropriate node and perform the callback to the client.
  */
-class RequestProcessor : public RefCounted<RequestProcessor>
-                       , public ConnectionPoolManagerListener
-                       , public RequestListener
-                       , public SchemaAgreementListener {
+class RequestProcessor
+    : public RefCounted<RequestProcessor>
+    , public ConnectionPoolManagerListener
+    , public RequestListener
+    , public SchemaAgreementListener {
 public:
   typedef SharedRefPtr<RequestProcessor> Ptr;
   typedef Vector<Ptr> Vec;
@@ -167,13 +164,10 @@ public:
    * @param settings The current settings for the request processor.
    * @param random A RNG for randomizing hosts in the load balancing policies.
    */
-  RequestProcessor(RequestProcessorListener* listener,
-                   EventLoop* event_loop,
+  RequestProcessor(RequestProcessorListener* listener, EventLoop* event_loop,
                    const ConnectionPoolManager::Ptr& connection_pool_manager,
-                   const Host::Ptr& connected_host,
-                   const HostMap& hosts,
-                   const TokenMap::Ptr& token_map,
-                   const RequestProcessorSettings& settings,
+                   const Host::Ptr& connected_host, const HostMap& hosts,
+                   const TokenMap::Ptr& token_map, const RequestProcessorSettings& settings,
                    Random* random);
 
   /**
@@ -196,8 +190,7 @@ public:
    * @param keyspace New current keyspace to utilize
    * @param handler A keyspace handler to trigger a response to a "USE" query.
    */
-  void set_keyspace(const String& keyspace,
-                    const KeyspaceChangedHandler::Ptr& handler);
+  void set_keyspace(const String& keyspace, const KeyspaceChangedHandler::Ptr& handler);
 
   /**
    * Notify that a host has been added to the cluster
@@ -256,15 +249,13 @@ public:
    *
    * @return Request count
    */
-  int request_count() const {
-    return request_count_.load(MEMORY_ORDER_RELAXED);
-  }
+  int request_count() const { return request_count_.load(MEMORY_ORDER_RELAXED); }
 
 public:
   class Protected {
     friend class RequestProcessorInitializer;
-    Protected() { }
-    Protected(Protected const&) { }
+    Protected() {}
+    Protected(Protected const&) {}
   };
 
   /**
@@ -279,9 +270,8 @@ private:
 
   virtual void on_pool_up(const Address& address);
   virtual void on_pool_down(const Address& address);
-  virtual void on_pool_critical_error(const Address& address,
-                                 Connector::ConnectionError code,
-                                 const String& message);
+  virtual void on_pool_critical_error(const Address& address, Connector::ConnectionError code,
+                                      const String& message);
   virtual void on_requires_flush();
   virtual void on_close(ConnectionPoolManager* manager);
 
@@ -290,8 +280,7 @@ private:
 
   virtual void on_prepared_metadata_changed(const String& id,
                                             const PreparedMetadata::Entry::Ptr& entry);
-  virtual void on_keyspace_changed(const String& keyspace,
-                                   KeyspaceChangedResponse handler);
+  virtual void on_keyspace_changed(const String& keyspace, KeyspaceChangedResponse handler);
   virtual bool on_wait_for_tracing_data(const RequestHandler::Ptr& request_handler,
                                         const Host::Ptr& current_host,
                                         const Response::Ptr& response);
@@ -299,8 +288,7 @@ private:
                                             const Host::Ptr& current_host,
                                             const Response::Ptr& response);
   virtual bool on_prepare_all(const RequestHandler::Ptr& request_handler,
-                              const Host::Ptr& current_host,
-                              const Response::Ptr& response);
+                              const Host::Ptr& current_host, const Response::Ptr& response);
   virtual void on_done();
 
 private:
@@ -340,8 +328,7 @@ private:
   int process_requests(uint64_t processing_time);
 
   bool write_wait_callback(const RequestHandler::Ptr& request_handler,
-                           const Host::Ptr& current_host,
-                           const RequestCallback::Ptr& callback);
+                           const Host::Ptr& current_host, const RequestCallback::Ptr& callback);
 
 private:
   ConnectionPoolManager::Ptr connection_pool_manager_;
@@ -373,6 +360,6 @@ private:
 #endif
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
-#endif // __CASS_REQUEST_PROCESSOR_HPP_INCLUDED__
+#endif // DATASTAX_INTERNAL_REQUEST_PROCESSOR_HPP

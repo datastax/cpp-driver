@@ -14,15 +14,15 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SOCKET_CONNECTOR_HPP_INCLUDED__
-#define __CASS_SOCKET_CONNECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_SOCKET_CONNECTOR_HPP
+#define DATASTAX_INTERNAL_SOCKET_CONNECTOR_HPP
 
 #include "callback.hpp"
 #include "name_resolver.hpp"
 #include "socket.hpp"
 #include "tcp_connector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Config;
 
@@ -62,7 +62,7 @@ class SocketConnector : public RefCounted<SocketConnector> {
 public:
   typedef SharedRefPtr<SocketConnector> Ptr;
 
-  typedef cass::Callback<void, SocketConnector*> Callback;
+  typedef internal::Callback<void, SocketConnector*> Callback;
 
   enum SocketError {
     SOCKET_OK,
@@ -126,17 +126,12 @@ public:
   const String& error_message() { return error_message_; }
   CassError ssl_error_code() { return ssl_error_code_; }
 
-  bool is_ok() const {
-    return error_code_ == SOCKET_OK;
-  }
+  bool is_ok() const { return error_code_ == SOCKET_OK; }
 
-  bool is_canceled() const {
-    return error_code_ == SOCKET_CANCELED;
-  }
+  bool is_canceled() const { return error_code_ == SOCKET_CANCELED; }
 
   bool is_ssl_error() const {
-    return error_code_ == SOCKET_ERROR_SSL_HANDSHAKE ||
-        error_code_ == SOCKET_ERROR_SSL_VERIFY;
+    return error_code_ == SOCKET_ERROR_SSL_HANDSHAKE || error_code_ == SOCKET_ERROR_SSL_VERIFY;
   }
 
 private:
@@ -168,6 +163,6 @@ private:
   SocketSettings settings_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

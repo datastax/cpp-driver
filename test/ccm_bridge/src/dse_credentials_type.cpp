@@ -21,29 +21,23 @@
 using namespace CCM;
 
 // Constant value definitions for DSE credentials type
-const DseCredentialsType DseCredentialsType::USERNAME_PASSWORD("USERNAME_PASSWORD", 0, "Username and Password");
+const DseCredentialsType DseCredentialsType::USERNAME_PASSWORD("USERNAME_PASSWORD", 0,
+                                                               "Username and Password");
 const DseCredentialsType DseCredentialsType::INI_FILE("INI_FILE", 1, "INI Credentials File");
 
 // Static declarations for DSE credentials type
 std::set<DseCredentialsType> DseCredentialsType::constants_;
 
 DseCredentialsType::DseCredentialsType()
-  : name_("INVALID")
-  , ordinal_(-1)
-  , display_name_("Invalid DSE credentials") {
-}
+    : name_("INVALID")
+    , ordinal_(-1)
+    , display_name_("Invalid DSE credentials") {}
 
-const std::string& DseCredentialsType::name() const {
-  return name_;
-}
+const std::string& DseCredentialsType::name() const { return name_; }
 
-short DseCredentialsType::ordinal() const {
-  return ordinal_;
-}
+short DseCredentialsType::ordinal() const { return ordinal_; }
 
-const std::string& DseCredentialsType::to_string() const {
-  return display_name_;
-}
+const std::string& DseCredentialsType::to_string() const { return display_name_; }
 
 const std::set<DseCredentialsType>& DseCredentialsType::get_constants() {
   if (constants_.empty()) {
@@ -54,14 +48,13 @@ const std::set<DseCredentialsType>& DseCredentialsType::get_constants() {
   return constants_;
 }
 
-DseCredentialsType::DseCredentialsType(const std::string &name, int ordinal, const std::string &display_name)
-  : name_(name)
-  , ordinal_(ordinal)
-  , display_name_(display_name) {}
+DseCredentialsType::DseCredentialsType(const std::string& name, int ordinal,
+                                       const std::string& display_name)
+    : name_(name)
+    , ordinal_(ordinal)
+    , display_name_(display_name) {}
 
-std::set<DseCredentialsType>::iterator DseCredentialsType::end() {
-  return get_constants().end();
-}
+std::set<DseCredentialsType>::iterator DseCredentialsType::end() { return get_constants().end(); }
 
 std::set<DseCredentialsType>::iterator DseCredentialsType::begin() {
   return get_constants().begin();

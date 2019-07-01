@@ -14,17 +14,17 @@
   limitations under the License.
 */
 
-#ifndef __CASS_EXECUTE_REQUEST_HPP_INCLUDED__
-#define __CASS_EXECUTE_REQUEST_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_EXECUTE_REQUEST_HPP
+#define DATASTAX_INTERNAL_EXECUTE_REQUEST_HPP
 
-#include "statement.hpp"
 #include "constants.hpp"
 #include "prepared.hpp"
 #include "ref_counted.hpp"
+#include "statement.hpp"
 #include "string.hpp"
 #include "vector.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class ExecuteRequest : public Statement {
 public:
@@ -34,7 +34,7 @@ public:
 
   virtual int encode(ProtocolVersion version, RequestCallback* callback, BufferVec* bufs) const;
 
-  bool get_routing_key(String* routing_key)  const {
+  bool get_routing_key(String* routing_key) const {
     return calculate_routing_key(prepared_->key_indices(), routing_key);
   }
 
@@ -51,6 +51,6 @@ private:
   Prepared::ConstPtr prepared_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

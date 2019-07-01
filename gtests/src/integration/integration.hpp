@@ -36,14 +36,12 @@
 #include "values.hpp"
 
 // Macros for grouping tests together
-#define GROUP_TEST_F(group_name, test_case, test_name) \
-  TEST_F(test_case, group_name##_##test_name)
+#define GROUP_TEST_F(group_name, test_case, test_name) TEST_F(test_case, group_name##_##test_name)
 #define GROUP_TYPED_TEST_P(group_name, test_case, test_name) \
   TYPED_TEST_P(test_case, group_name##_##test_name)
 
 // Macros to use for grouping integration tests together
-#define GROUP_INTEGRATION_TEST(server_type) \
-  GROUP_CONCAT(Integration, server_type)
+#define GROUP_INTEGRATION_TEST(server_type) GROUP_CONCAT(Integration, server_type)
 #define INTEGRATION_TEST_F(server_type, test_case, test_name) \
   GROUP_TEST_F(Integration##_##server_type, test_case, test_name)
 #define INTEGRATION_TYPED_TEST_P(server_type, test_case, test_name) \
@@ -64,52 +62,50 @@
 #define CASSANDRA_INTEGRATION_DISABLED_TYPED_TEST_P(test_case, test_name) \
   INTEGRATION_DISABLED_TYPED_TEST_P(Cassandra, test_case, test_name)
 
-//TODO: Create SKIP_SUITE macro; reduces noise and makes sense for certain suites
+// TODO: Create SKIP_SUITE macro; reduces noise and makes sense for certain suites
 
-#define SKIP_TEST(message) \
-  if (!Integration::skipped_message_displayed_) { \
+#define SKIP_TEST(message)                                \
+  if (!Integration::skipped_message_displayed_) {         \
     std::cout << "[ SKIPPED  ] " << message << std::endl; \
-    Integration::skipped_message_displayed_ = true; \
-  } \
+    Integration::skipped_message_displayed_ = true;       \
+  }                                                       \
   return;
 
-#define CHECK_FAILURE \
+#define CHECK_FAILURE       \
   if (this->HasFailure()) { \
-    return; \
+    return;                 \
   }
 
 #define SKIP_TEST_VERSION(server_version_string, version_string) \
-  SKIP_TEST("Unsupported for Apache Cassandra Version " \
-    << server_version_string << ": Server version " \
-    << version_string << "+ is required")
+  SKIP_TEST("Unsupported for Apache Cassandra Version "          \
+            << server_version_string << ": Server version " << version_string << "+ is required")
 
-#define CHECK_VERSION(version) do { \
-  CCM::CassVersion cass_version = this->server_version_; \
-  if (Options::is_dse()) { \
-    cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
-  } \
-  if (cass_version < #version) { \
-    SKIP_TEST_VERSION(cass_version.to_string(), #version) \
-  } \
-} while(0)
+#define CHECK_VERSION(version)                                                      \
+  do {                                                                              \
+    CCM::CassVersion cass_version = this->server_version_;                          \
+    if (Options::is_dse()) {                                                        \
+      cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
+    }                                                                               \
+    if (cass_version < #version) {                                                  \
+      SKIP_TEST_VERSION(cass_version.to_string(), #version)                         \
+    }                                                                               \
+  } while (0)
 
-#define CHECK_OPTIONS_VERSION(version) \
-  if (Options::server_version() < #version) { \
+#define CHECK_OPTIONS_VERSION(version)                                 \
+  if (Options::server_version() < #version) {                          \
     SKIP_TEST_VERSION(Options::server_version().to_string(), #version) \
   }
 
-#define CHECK_VALUE_TYPE_VERSION(type) \
-  CCM::CassVersion cass_version = this->server_version_; \
-  if (Options::is_dse()) { \
+#define CHECK_VALUE_TYPE_VERSION(type)                                            \
+  CCM::CassVersion cass_version = this->server_version_;                          \
+  if (Options::is_dse()) {                                                        \
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
-  } \
-  if (cass_version < type::supported_server_version()) { \
-    SKIP_TEST_VERSION(cass_version.to_string(), \
-                      type::supported_server_version()) \
+  }                                                                               \
+  if (cass_version < type::supported_server_version()) {                          \
+    SKIP_TEST_VERSION(cass_version.to_string(), type::supported_server_version()) \
   }
 
-#define CHECK_CONTINUE(flag, message) \
-  ASSERT_TRUE(flag) << message; \
+#define CHECK_CONTINUE(flag, message) ASSERT_TRUE(flag) << message;
 
 #define CASSANDRA_KEY_VALUE_TABLE_FORMAT "CREATE TABLE %s (key %s PRIMARY KEY, value %s)"
 #define CASSANDRA_KEY_VALUE_INSERT_FORMAT "INSERT INTO %s (key, value) VALUES(%s, %s)"
@@ -455,8 +451,7 @@ protected:
    * @param number_of_nodes Total number of nodes in the cluster
    * @return Comma delimited IP address (e.g. contact points)
    */
-  std::string generate_contact_points(const std::string& ip_prefix,
-    size_t number_of_nodes);
+  std::string generate_contact_points(const std::string& ip_prefix, size_t number_of_nodes);
 
   /**
    * Variable argument string formatter
@@ -481,9 +476,7 @@ protected:
   /**
    * Start the timer to calculate the elapsed time
    */
-  inline void start_timer() {
-    start_time_ = uv_hrtime();
-  }
+  inline void start_timer() { start_time_ = uv_hrtime(); }
 
   /**
    * Stop the timer - Calculate the elapsed time and reset the timer
@@ -501,9 +494,7 @@ protected:
    *
    * @return Current working directory
    */
-  inline static std::string cwd() {
-    return Utils::cwd();
-  }
+  inline static std::string cwd() { return Utils::cwd(); }
 
   /**
    * Determine if a string contains another string
@@ -512,8 +503,7 @@ protected:
    * @param search String to find
    * @return True if string is contained in other string; false otherwise
    */
-  inline static bool contains(const std::string& input,
-    const std::string& search) {
+  inline static bool contains(const std::string& input, const std::string& search) {
     return Utils::contains(input, search);
   }
 
@@ -525,7 +515,7 @@ protected:
    * @return An array/vector representation of the string
    */
   inline static std::vector<std::string> explode(const std::string& input,
-    const char delimiter = ' ') {
+                                                 const char delimiter = ' ') {
     return Utils::explode(input, delimiter);
   }
 
@@ -557,18 +547,14 @@ protected:
    *
    * @param path Directory/Path to create
    */
-  inline static void mkdir(const std::string& path) {
-    Utils::mkdir(path);
-  }
+  inline static void mkdir(const std::string& path) { Utils::mkdir(path); }
 
   /**
    * Cross platform millisecond granularity sleep
    *
    * @param milliseconds Time in milliseconds to sleep
    */
-  inline static void msleep(unsigned int milliseconds) {
-    Utils::msleep(milliseconds);
-  }
+  inline static void msleep(unsigned int milliseconds) { Utils::msleep(milliseconds); }
 
   /**
    * Replace all occurrences of a string from the input string
@@ -578,8 +564,8 @@ protected:
    * @param to String to replace with
    * @return Input string with replacement
    */
-  inline static std::string replace_all(const std::string& input,
-    const std::string& from, const std::string& to) {
+  inline static std::string replace_all(const std::string& input, const std::string& from,
+                                        const std::string& to) {
     return Utils::replace_all(input, from, to);
   }
 
@@ -588,9 +574,7 @@ protected:
    *
    * @param input String to convert to lowercase
    */
-  inline static std::string to_lower(const std::string& input) {
-    return Utils::to_lower(input);
-  }
+  inline static std::string to_lower(const std::string& input) { return Utils::to_lower(input); }
 
   /**
    * Remove the leading and trailing whitespace from a string
@@ -598,9 +582,7 @@ protected:
    * @param input String to trim
    * @return Trimmed string
    */
-  inline static std::string trim(const std::string& input) {
-    return Utils::trim(input);
-  }
+  inline static std::string trim(const std::string& input) { return Utils::trim(input); }
 
   /**
    * Shrink the given name if the name is longer than allowable by the server

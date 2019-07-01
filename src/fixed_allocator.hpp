@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
-#define __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_FIXED_ALLOCATOR_HPP
+#define DATASTAX_INTERNAL_FIXED_ALLOCATOR_HPP
 
 #include "aligned_storage.hpp"
 #include "macros.hpp"
@@ -24,7 +24,7 @@
 #include <limits>
 #include <memory>
 
-namespace cass {
+namespace datastax { namespace internal {
 
 // This is an allocator that starts using a fixed size buffer that only
 // uses the heap when exceeded. The allocator can be
@@ -41,11 +41,14 @@ public:
   typedef T& reference;
   typedef const T& const_reference;
 
-  template <class U> struct rebind { typedef FixedAllocator<U, N> other; };
+  template <class U>
+  struct rebind {
+    typedef FixedAllocator<U, N> other;
+  };
 
   struct Fixed {
     Fixed()
-      : is_used(false) {}
+        : is_used(false) {}
 
     // See aligned_storage.hpp for why this is required
     typedef AlignedStorage<N * sizeof(T), ALIGN_OF(T)> Storage;
@@ -55,28 +58,24 @@ public:
   };
 
   FixedAllocator()
-    : fixed_(NULL) {}
+      : fixed_(NULL) {}
 
   FixedAllocator(Fixed* fixed)
-    : fixed_(fixed) {}
+      : fixed_(fixed) {}
 
   FixedAllocator(const FixedAllocator<T, N>& allocator)
-    : fixed_(allocator.fixed_) {}
+      : fixed_(allocator.fixed_) {}
 
-  template<class U, size_t M>
+  template <class U, size_t M>
   FixedAllocator(const FixedAllocator<U, M>& allocator)
-    : fixed_(NULL) {}
+      : fixed_(NULL) {}
 
   FixedAllocator(const std::allocator<T>& allocator)
-    : fixed_(NULL) {}
+      : fixed_(NULL) {}
 
-  pointer address(reference x) const {
-    return &x;
-  }
+  pointer address(reference x) const { return &x; }
 
-  const_pointer address(const_reference x) const {
-    return &x;
-  }
+  const_pointer address(const_reference x) const { return &x; }
 
   pointer allocate(size_type n, const_pointer hint = NULL) {
     if (fixed_ != NULL && !fixed_->is_used && n <= N) {
@@ -95,22 +94,16 @@ public:
     }
   }
 
-  void construct(pointer p, const_reference x) {
-    new (p) value_type(x);
-  }
+  void construct(pointer p, const_reference x) { new (p) value_type(x); }
 
-  void destroy(pointer p) {
-    p->~value_type();
-  }
+  void destroy(pointer p) { p->~value_type(); }
 
-  size_type max_size() const throw() {
-    return std::numeric_limits<size_type>::max();
-  }
+  size_type max_size() const throw() { return std::numeric_limits<size_type>::max(); }
 
 private:
   Fixed* fixed_;
 };
 
-} // namespace cass
+}} // namespace datastax::internal
 
 #endif

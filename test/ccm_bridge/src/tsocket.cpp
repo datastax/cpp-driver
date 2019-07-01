@@ -19,19 +19,19 @@
 #include <sstream>
 
 #ifndef _WIN32
-# include <arpa/inet.h>
-# include <cstring>
-# include <errno.h>
-# include <netinet/in.h>
-# include <sys/socket.h>
-# include <unistd.h>
+#include <arpa/inet.h>
+#include <cstring>
+#include <errno.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
-# define INVALID_SOCKET -1
-# define SOCKET_ERROR -1
+#define INVALID_SOCKET -1
+#define SOCKET_ERROR -1
 #endif
 
 Socket::Socket(long timeout /*= SOCKET_TIMEOUT_IN_SECONDS*/)
-  : timeout_(timeout) {
+    : timeout_(timeout) {
 #ifdef _WIN32
   initialize_sockets();
 #endif
@@ -46,9 +46,7 @@ Socket::~Socket() {
 #endif
 }
 
-SOCKET_HANDLE Socket::get_handle() {
-  return handle_;
-}
+SOCKET_HANDLE Socket::get_handle() { return handle_; }
 
 #ifdef _WIN32
 void Socket::initialize_sockets() {
@@ -66,9 +64,9 @@ std::string Socket::get_error_message(int error_code) const {
   std::stringstream message;
 #ifdef _WIN32
   LPVOID error_string;
-  int size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-    NULL, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-    (LPTSTR) &error_string, 0, NULL);
+  int size =
+      FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, error_code,
+                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&error_string, 0, NULL);
 
   // Ensure the message could be retrieved and update the return message
   if (size) {
@@ -88,8 +86,8 @@ void Socket::synchronize(bool is_read, bool is_write) {
   FD_SET(handle_, &socket);
 
   // Determine current read/write direction of the session
-  fd_set *read = NULL;
-  fd_set *write = NULL;
+  fd_set* read = NULL;
+  fd_set* write = NULL;
   if (is_read) {
     read = &socket;
   }
@@ -112,7 +110,7 @@ void Socket::synchronize(bool is_read, bool is_write) {
   }
 }
 
-void Socket::establish_connection(const std::string &ip_address, unsigned short port) {
+void Socket::establish_connection(const std::string& ip_address, unsigned short port) {
   handle_ = socket(AF_INET, SOCK_STREAM, 0);
   if (handle_ == INVALID_SOCKET) {
     std::string message = "Failed to Create Socket: ";
@@ -128,7 +126,7 @@ void Socket::establish_connection(const std::string &ip_address, unsigned short 
   ipv4_socket_address.sin_family = AF_INET;
   ipv4_socket_address.sin_port = htons(port);
   ipv4_socket_address.sin_addr.s_addr = inet_addr(ip_address.c_str());
-  if (connect(handle_, (struct sockaddr*) (&ipv4_socket_address), sizeof(struct sockaddr_in)) != 0) {
+  if (connect(handle_, (struct sockaddr*)(&ipv4_socket_address), sizeof(struct sockaddr_in)) != 0) {
     std::string message = "Failed to Establish Connection: ";
 #ifdef _WIN32
     message += get_error_message(GetLastError());

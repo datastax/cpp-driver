@@ -14,14 +14,14 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ITERATOR_HPP_INCLUDED__
-#define __CASS_ITERATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_ITERATOR_HPP
+#define DATASTAX_INTERNAL_ITERATOR_HPP
 
 #include "allocated.hpp"
 #include "cassandra.h"
 #include "external.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class Iterator : public Allocated {
 public:
@@ -38,8 +38,8 @@ private:
   const CassIteratorType type_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
-EXTERNAL_TYPE(cass::Iterator, CassIterator)
+EXTERNAL_TYPE(datastax::internal::core::Iterator, CassIterator)
 
 #endif

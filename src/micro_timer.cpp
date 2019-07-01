@@ -16,29 +16,26 @@
 
 #include "micro_timer.hpp"
 
-
 #ifdef HAVE_TIMERFD
 #include <string.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
 #endif
 
-namespace cass {
+using namespace datastax::internal::core;
 
 #ifdef HAVE_TIMERFD
 
 MicroTimer::MicroTimer()
-  : handle_(NULL)
-  , fd_(-1)
-  , state_(CLOSED) { }
+    : handle_(NULL)
+    , fd_(-1)
+    , state_(CLOSED) {}
 
-int MicroTimer::start(uv_loop_t* loop,
-                      uint64_t timeout_us,
-                      const Callback& callback) {
+int MicroTimer::start(uv_loop_t* loop, uint64_t timeout_us, const Callback& callback) {
   int rc = 0;
   if (fd_ == -1) {
     fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-    if (fd_ == -1)  return errno;
+    if (fd_ == -1) return errno;
   }
   if (handle_ == NULL) {
     handle_ = new AllocatedT<uv_poll_t>();
@@ -57,7 +54,7 @@ int MicroTimer::start(uv_loop_t* loop,
     memset(&ts.it_interval, 0, sizeof(struct timespec));
     if (timeout_us > 0) {
       ts.it_value.tv_sec = timeout_us / (1000 * 1000);
-      ts.it_value.tv_nsec = (timeout_us % (1000 * 1000))  * 1000;
+      ts.it_value.tv_nsec = (timeout_us % (1000 * 1000)) * 1000;
     } else {
       // If the timeout is 0 then set the smallest possible timeout (1 ns)
       // because all zeros disables the timer.
@@ -87,9 +84,7 @@ void MicroTimer::stop() {
   }
 }
 
-bool MicroTimer::is_running() const {
-  return state_ == STARTED;
-}
+bool MicroTimer::is_running() const { return state_ == STARTED; }
 
 void MicroTimer::on_timeout(uv_poll_t* poll, int status, int events) {
   MicroTimer* timer = static_cast<MicroTimer*>(poll->data);
@@ -111,17 +106,15 @@ void MicroTimer::on_close(uv_handle_t* handle) {
 #else
 
 MicroTimer::MicroTimer()
-  : timeout_ns_(0) { }
+    : timeout_ns_(0) {}
 
-int MicroTimer::start(uv_loop_t* loop,
-                      uint64_t timeout_us,
-                      const Callback& callback) {
+int MicroTimer::start(uv_loop_t* loop, uint64_t timeout_us, const Callback& callback) {
   if (is_running()) {
     return 0;
   }
 
   uint64_t ms = timeout_us / 1000;
-  uint64_t us =  timeout_us - (ms * 1000);
+  uint64_t us = timeout_us - (ms * 1000);
 
   timeout_ns_ = uv_hrtime() + timeout_us * 1000; // Convert to nanoseconds
   callback_ = callback;
@@ -130,24 +123,18 @@ int MicroTimer::start(uv_loop_t* loop,
     // If the requested sub-millisecond part of the timeout is within a certain
     // percentage of a millisecond then round up to the next millisecond and use
     // the timer.
-    return timer_.start(loop, ms + 1,
-                        bind_callback(&MicroTimer::on_timeout, this));
+    return timer_.start(loop, ms + 1, bind_callback(&MicroTimer::on_timeout, this));
   } else {
     // Note: This can potentially wait for 0 milliseconds and in that case the
     // loop will busy spin until the sub-millsecond part of the timeout is
     // reached.
-    return timer_.start(loop, ms,
-                        bind_callback(&MicroTimer::on_timeout, this));
+    return timer_.start(loop, ms, bind_callback(&MicroTimer::on_timeout, this));
   }
 }
 
-void MicroTimer::stop() {
-  timer_.stop();
-}
+void MicroTimer::stop() { timer_.stop(); }
 
-bool MicroTimer::is_running() const {
-  return timer_.is_running();
-}
+bool MicroTimer::is_running() const { return timer_.is_running(); }
 
 void MicroTimer::on_timeout(Timer* timer) {
   uint64_t now = uv_hrtime();
@@ -162,5 +149,3 @@ void MicroTimer::on_timeout(Timer* timer) {
 }
 
 #endif
-
-} // namespace cass

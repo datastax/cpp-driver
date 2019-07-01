@@ -26,8 +26,7 @@
 #include <string>
 #include <vector>
 
-namespace test {
-namespace driver {
+namespace test { namespace driver {
 
 /**
  * Logger class for handling log messages from the driver
@@ -108,8 +107,6 @@ private:
   static void log(const CassLogMessage* log, void* data);
 };
 
-} // namespace driver
-} // namespace test
+}} // namespace test::driver
 
 #endif // __TEST_LOGGER_HPP__
-

@@ -23,8 +23,10 @@
 
 #define DELAY_MS 500 // 500 milliseconds
 
+using datastax::internal::core::Future;
+
 void on_timeout_set_future(uv_timer_t* handle) {
-  cass::Future* future = static_cast<cass::Future*>(handle->data);
+  Future* future = static_cast<Future*>(handle->data);
   future->set();
   uv_close(reinterpret_cast<uv_handle_t*>(handle), NULL);
 }
@@ -35,30 +37,30 @@ void on_future_callback(CassFuture* future, void* data) {
 }
 
 void start_timer(void* arg) {
-  cass::Future* future = static_cast<cass::Future*>(arg);
+  Future* future = static_cast<Future*>(arg);
   test::Utils::msleep(DELAY_MS);
   future->set();
 }
 
 TEST(FutureUnitTest, Types) {
-  cass::Future generic(cass::Future::FUTURE_TYPE_GENERIC);
-  cass::Future session(cass::Future::FUTURE_TYPE_SESSION);
-  cass::Future response(cass::Future::FUTURE_TYPE_RESPONSE);
+  Future generic(Future::FUTURE_TYPE_GENERIC);
+  Future session(Future::FUTURE_TYPE_SESSION);
+  Future response(Future::FUTURE_TYPE_RESPONSE);
 
-  ASSERT_EQ(cass::Future::FUTURE_TYPE_GENERIC, generic.type());
-  ASSERT_EQ(cass::Future::FUTURE_TYPE_SESSION, session.type());
-  ASSERT_EQ(cass::Future::FUTURE_TYPE_RESPONSE, response.type());
+  ASSERT_EQ(Future::FUTURE_TYPE_GENERIC, generic.type());
+  ASSERT_EQ(Future::FUTURE_TYPE_SESSION, session.type());
+  ASSERT_EQ(Future::FUTURE_TYPE_RESPONSE, response.type());
 }
 
 TEST(FutureUnitTest, Ready) {
-  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
+  Future future(Future::FUTURE_TYPE_GENERIC);
   ASSERT_FALSE(future.ready());
   future.set();
   ASSERT_TRUE(future.ready());
 }
 
 TEST(FutureUnitTest, Wait) {
-  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
+  Future future(Future::FUTURE_TYPE_GENERIC);
   uv_thread_t thread;
   ASSERT_EQ(0, uv_thread_create(&thread, start_timer, &future));
 
@@ -69,7 +71,7 @@ TEST(FutureUnitTest, Wait) {
 }
 
 TEST(FutureUnitTest, WaitFor) {
-  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
+  Future future(Future::FUTURE_TYPE_GENERIC);
   uv_thread_t thread;
   ASSERT_EQ(0, uv_thread_create(&thread, start_timer, &future));
 
@@ -85,7 +87,7 @@ TEST(FutureUnitTest, WaitFor) {
 }
 
 TEST(FutureUnitTest, Error) {
-  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
+  Future future(Future::FUTURE_TYPE_GENERIC);
   future.set_error(CASS_ERROR_LIB_BAD_PARAMS, "FutureUnitTest error message");
   ASSERT_TRUE(future.ready());
   ASSERT_TRUE(future.error());
@@ -95,7 +97,7 @@ TEST(FutureUnitTest, Error) {
 
 TEST(FutureUnitTest, Callback) {
   bool is_future_callback_called = false;
-  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
+  Future future(Future::FUTURE_TYPE_GENERIC);
   ASSERT_TRUE(future.set_callback(&on_future_callback, &is_future_callback_called));
 
   ASSERT_FALSE(is_future_callback_called);
@@ -105,14 +107,14 @@ TEST(FutureUnitTest, Callback) {
 }
 
 TEST(FutureUnitTest, CallbackAlreadyAssigned) {
-  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
+  Future future(Future::FUTURE_TYPE_GENERIC);
   ASSERT_TRUE(future.set_callback(&on_future_callback, NULL));
   ASSERT_FALSE(future.set_callback(&on_future_callback, NULL));
 }
 
 TEST(FutureUnitTest, CallbackAfterFutureIsSet) {
   bool is_future_callback_called = false;
-  cass::Future future(cass::Future::FUTURE_TYPE_GENERIC);
+  Future future(Future::FUTURE_TYPE_GENERIC);
 
   ASSERT_FALSE(is_future_callback_called);
   future.set();

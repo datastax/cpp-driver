@@ -15,19 +15,19 @@
 */
 
 #if defined(_WIN32) && defined(_DEBUG)
-# include "win_debug.hpp"
+#include "win_debug.hpp"
 
-# ifndef USE_VISUAL_LEAK_DETECTOR
+#ifndef USE_VISUAL_LEAK_DETECTOR
 // Enable memory leak detection
-# define _CRTDBG_MAP_ALLOC
-# include <stdlib.h>
-# include <crtdbg.h>
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#include <stdlib.h>
 
 // Enable memory leak detection for new operator
-# ifndef DBG_NEW
-#   define DBG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
-#   define new DBG_NEW
-# endif
+#ifndef DBG_NEW
+#define DBG_NEW new (_NORMAL_BLOCK, __FILE__, __LINE__)
+#define new DBG_NEW
+#endif
 
 /**
  * Output the memory leak results to the console
@@ -41,29 +41,29 @@ inline int __cdecl output_memory_leak_results(int report_type, char* message, in
   std::cerr << message;
   return 1;
 }
-# endif
+#endif
 
 void MemoryLeakListener::disable() {
-# ifdef USE_VISUAL_LEAK_DETECTOR
+#ifdef USE_VISUAL_LEAK_DETECTOR
   VLDDisable();
-# else
+#else
   int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
   flags &= ~_CRTDBG_ALLOC_MEM_DF;
   _CrtSetDbgFlag(flags);
-# endif
+#endif
 }
 
 void MemoryLeakListener::enable() {
-# ifdef USE_VISUAL_LEAK_DETECTOR
+#ifdef USE_VISUAL_LEAK_DETECTOR
   VLDEnable();
-# else
+#else
   int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
   flags |= _CRTDBG_ALLOC_MEM_DF;
   _CrtSetDbgFlag(flags);
-# endif
+#endif
 }
 
-# ifndef USE_VISUAL_LEAK_DETECTOR
+#ifndef USE_VISUAL_LEAK_DETECTOR
 void MemoryLeakListener::OnTestProgramStart(const testing::UnitTest& unit_test) {
   // Install the memory leak reporting
   _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, &output_memory_leak_results);
@@ -73,16 +73,16 @@ void MemoryLeakListener::OnTestProgramEnd(const testing::UnitTest& unit_test) {
   // Uninstall/Remove the memory leak reporting
   _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, &output_memory_leak_results);
 }
-# endif
+#endif
 
 void MemoryLeakListener::OnTestStart(const testing::TestInfo& test_information) {
-# ifdef USE_VISUAL_LEAK_DETECTOR
+#ifdef USE_VISUAL_LEAK_DETECTOR
   // Make all memory leaks (if any) as reported (clean slate)
   VLDMarkAllLeaksAsReported();
-# else
+#else
   // Get the starting memory state
   _CrtMemCheckpoint(&memory_start_state_);
-# endif
+#endif
 
   // Enable memory leak detection
   enable();
@@ -90,7 +90,7 @@ void MemoryLeakListener::OnTestStart(const testing::TestInfo& test_information) 
 
 void MemoryLeakListener::OnTestEnd(const testing::TestInfo& test_information) {
   // Check for memory leaks if the test was successful
-  if(test_information.result()->Passed()) {
+  if (test_information.result()->Passed()) {
     check_leaks(test_information);
   }
 }
@@ -99,12 +99,12 @@ void MemoryLeakListener::check_leaks(const testing::TestInfo& test_information) 
   // Disable memory leak checking
   disable();
 
-# ifdef USE_VISUAL_LEAK_DETECTOR
+#ifdef USE_VISUAL_LEAK_DETECTOR
   // Determine if a difference exists (e.g. leak)
   if (VLDGetLeaksCount() > 0) {
     VLDReportLeaks();
     VLDMarkAllLeaksAsReported();
-# else
+#else
   // Get the ending memory state for the test
   _CrtMemState memory_end_state;
   _CrtMemCheckpoint(&memory_end_state);
@@ -114,10 +114,9 @@ void MemoryLeakListener::check_leaks(const testing::TestInfo& test_information) 
   if (_CrtMemDifference(&memory_state_difference, &memory_start_state_, &memory_end_state)) {
     _CrtMemDumpAllObjectsSince(&memory_start_state_);
     _CrtMemDumpStatistics(&memory_state_difference);
-# endif
-    FAIL() << "Memory leaks detected in "
-      << test_information.test_case_name()
-      << "." << test_information.name();
+#endif
+    FAIL() << "Memory leaks detected in " << test_information.test_case_name() << "."
+           << test_information.name();
   }
 }
 

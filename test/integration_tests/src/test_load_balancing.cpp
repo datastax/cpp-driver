@@ -14,16 +14,16 @@
   limitations under the License.
 */
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/test/debug.hpp>
+#include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 
 #include "cassandra.h"
-#include "test_utils.hpp"
 #include "policy_tools.hpp"
+#include "test_utils.hpp"
 
 #define MAX_RETRIES 50
 
@@ -33,8 +33,8 @@ public:
   std::string ip_prefix;
 
   LoadBalancingTests()
-    : ccm(new CCM::Bridge("config.txt"))
-    , ip_prefix(ccm->get_ip_prefix()) {}
+      : ccm(new CCM::Bridge("config.txt"))
+      , ip_prefix(ccm->get_ip_prefix()) {}
 
   /**
    * Wait for the total number of connections established
@@ -42,7 +42,8 @@ public:
    * @param session Session to get metrics from
    * @param number_of_connections Number of connections to verify
    */
-  void wait_for_total_connections(test_utils::CassSessionPtr session, cass_uint64_t number_of_connections) {
+  void wait_for_total_connections(test_utils::CassSessionPtr session,
+                                  cass_uint64_t number_of_connections) {
     CassMetrics metrics;
     unsigned int count = 0;
     do {
@@ -55,8 +56,7 @@ public:
 
 BOOST_FIXTURE_TEST_SUITE(load_balancing, LoadBalancingTests)
 
-BOOST_AUTO_TEST_CASE(round_robin)
-{
+BOOST_AUTO_TEST_CASE(round_robin) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   if (ccm->create_cluster(3)) {
@@ -96,8 +96,7 @@ BOOST_AUTO_TEST_CASE(round_robin)
   ccm->start_node(1);
 }
 
-BOOST_AUTO_TEST_CASE(dc_aware)
-{
+BOOST_AUTO_TEST_CASE(dc_aware) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   if (ccm->create_cluster(2, 1)) {
@@ -137,8 +136,7 @@ BOOST_AUTO_TEST_CASE(dc_aware)
   ccm->start_node(2);
 }
 
-BOOST_AUTO_TEST_CASE(blacklist)
-{
+BOOST_AUTO_TEST_CASE(blacklist) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   if (ccm->create_cluster(2)) {
@@ -188,8 +186,7 @@ BOOST_AUTO_TEST_CASE(blacklist)
   }
 }
 
-BOOST_AUTO_TEST_CASE(blacklist_dc)
-{
+BOOST_AUTO_TEST_CASE(blacklist_dc) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   if (ccm->create_cluster(2, 2)) {

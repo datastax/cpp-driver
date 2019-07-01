@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONNECTOR_HPP_INCLUDED__
-#define __CASS_CONNECTOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_CONNECTOR_HPP
+#define DATASTAX_INTERNAL_CONNECTOR_HPP
 
 #include <uv.h>
 
@@ -23,7 +23,7 @@
 #include "callback.hpp"
 #include "ref_counted.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 /**
  * A wrapper for uv_connect that handles connecting a TCP connection.
@@ -32,16 +32,9 @@ class TcpConnector : public RefCounted<TcpConnector> {
 public:
   typedef SharedRefPtr<TcpConnector> Ptr;
 
-  typedef cass::Callback<void, TcpConnector*> Callback;
+  typedef internal::Callback<void, TcpConnector*> Callback;
 
-  enum Status {
-    NEW,
-    CONNECTING,
-    FAILED_BAD_PARAM,
-    FAILED_TO_CONNECT,
-    CANCELED,
-    SUCCESS
-  };
+  enum Status { NEW, CONNECTING, FAILED_BAD_PARAM, FAILED_TO_CONNECT, CANCELED, SUCCESS };
 
   /**
    * Constructor
@@ -91,7 +84,7 @@ public:
   }
 
 public:
-  uv_loop_t* loop() { return req_.handle->loop;  }
+  uv_loop_t* loop() { return req_.handle->loop; }
 
   bool is_success() { return status_ == SUCCESS; }
   bool is_canceled() { return status_ == CANCELED; }
@@ -99,7 +92,6 @@ public:
   int uv_status() { return uv_status_; }
 
   const Address& address() { return address_; }
-
 
 private:
   static void on_connect(uv_connect_t* req, int status) {
@@ -125,6 +117,6 @@ private:
   int uv_status_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif

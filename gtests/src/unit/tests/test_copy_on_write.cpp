@@ -22,22 +22,25 @@
 #include "string.hpp"
 #include "vector.hpp"
 
+using namespace datastax::internal;
+using namespace datastax::internal::core;
+
 TEST(CopyOnWriteUnitTest, Simple) {
-  cass::Vector<int>* ptr = new cass::Vector<int>();
-  cass::CopyOnWritePtr<cass::Vector<int> > vec(ptr);
+  Vector<int>* ptr = new Vector<int>();
+  CopyOnWritePtr<Vector<int> > vec(ptr);
 
   // Only a single reference so no copy should be made
-  EXPECT_EQ(static_cast<const cass::CopyOnWritePtr<cass::Vector<int> >&>(vec).operator->(),  ptr);
+  EXPECT_EQ(static_cast<const CopyOnWritePtr<Vector<int> >&>(vec).operator->(), ptr);
   vec->push_back(1);
-  EXPECT_EQ(static_cast<const cass::CopyOnWritePtr<cass::Vector<int> >&>(vec).operator->(),  ptr);
+  EXPECT_EQ(static_cast<const CopyOnWritePtr<Vector<int> >&>(vec).operator->(), ptr);
 
   // Make const reference to object
-  const cass::CopyOnWritePtr<cass::Vector<int> > const_vec(vec);
+  const CopyOnWritePtr<Vector<int> > const_vec(vec);
   EXPECT_EQ((*const_vec)[0], 1);
-  EXPECT_EQ(const_vec.operator->(),  ptr);
+  EXPECT_EQ(const_vec.operator->(), ptr);
 
   // Force copy to be made
   vec->push_back(2);
-  EXPECT_NE(static_cast<const cass::CopyOnWritePtr<cass::Vector<int> >&>(vec).operator->(), ptr);
+  EXPECT_NE(static_cast<const CopyOnWritePtr<Vector<int> >&>(vec).operator->(), ptr);
   EXPECT_EQ(const_vec.operator->(), ptr);
 }

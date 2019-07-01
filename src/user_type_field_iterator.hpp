@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_USER_TYPE_ITERATOR_HPP_INCLUDED__
-#define __CASS_USER_TYPE_ITERATOR_HPP_INCLUDED__
+#ifndef DATASTAX_INTERNAL_USER_TYPE_ITERATOR_HPP
+#define DATASTAX_INTERNAL_USER_TYPE_ITERATOR_HPP
 
 #include "cassandra.h"
 #include "data_type.hpp"
@@ -23,7 +23,7 @@
 #include "serialization.hpp"
 #include "value.hpp"
 
-namespace cass {
+namespace datastax { namespace internal { namespace core {
 
 class UserTypeFieldIterator : public Iterator {
 public:
@@ -56,6 +56,6 @@ private:
   Value value_;
 };
 
-} // namespace cass
+}}} // namespace datastax::internal::core
 
 #endif
