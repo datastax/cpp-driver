@@ -522,30 +522,6 @@ macro(CassHttpParser)
 endmacro()
 
 #------------------------
-# CassSimulacron
-#
-# Set up Simulacron for use in tests.
-#
-# Input: TESTS_SIMULACRON_SERVER_DIR
-# Output: SIMULACRON_SERVER_JAR
-#------------------------
-macro(CassSimulacron)
-  # Determine if Simulacron server can be executed (Java runtime is available)
-  find_package(Java COMPONENTS Runtime)
-  if(Java_Runtime_FOUND)
-    # Determine the Simulacron jar file
-    file(GLOB SIMULACRON_SERVER_JAR
-      ${TESTS_SIMULACRON_SERVER_DIR}/simulacron-standalone-*.jar)
-  endif()
-
-  # Determine if the Simulacron server will be available for the tests
-  if(NOT EXISTS ${SIMULACRON_SERVER_JAR})
-    message(WARNING "Simulacron Not Found: Simulacron support will be disabled")
-  endif()
-endmacro()
-
-
-#------------------------
 # CassUseBoost
 #
 # Add includes, libraries, define flags required for using Boost if found or if

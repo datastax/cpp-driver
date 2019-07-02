@@ -20,12 +20,8 @@ GtestOptions()
 
 # Build the base include paths for the tests
 set(TESTS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
-set(TESTS_SIMULACRON_SOURCE_DIR "${TESTS_SOURCE_DIR}/integration/simulacron")
-set(TESTS_SIMULACRON_SERVER_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(VENDOR_DIR "${TESTS_SOURCE_DIR}/vendor")
 include_directories(${VENDOR_DIR})
-
-GtestSourceGroups()
 
 #------------------------------
 # Google test framework
@@ -36,7 +32,6 @@ GtestFramework()
 # Integration test executable
 #------------------------------
 if(CASS_BUILD_INTEGRATION_TESTS)
-  CassSimulacron()
   CassRapidJson()
 
   set(INTEGRATION_TESTS_NAME "cassandra-integration-tests")
@@ -53,23 +48,6 @@ if(CASS_BUILD_INTEGRATION_TESTS)
     set(${var_name} ${CASS_${var_name}})
   endforeach()
 
-  if (EXISTS ${SIMULACRON_SERVER_JAR})
-    # Configure the integration tests to use Simulacron
-    add_definitions(-DUSE_SIMULACRON_SERVER)
-    get_filename_component(SIMULACRON_SERVER_JAR_BASENAME
-      ${SIMULACRON_SERVER_JAR} NAME)
-    add_definitions(-DSIMULACRON_SERVER_JAR="${SIMULACRON_SERVER_JAR_BASENAME}")
-    file(GLOB INTEGRATION_TESTS_SIMULACRON_INCLUDE_FILES ${TESTS_SIMULACRON_SOURCE_DIR}/*.hpp)
-    file(GLOB INTEGRATION_TESTS_SIMULACRON_RESULTS_INCLUDE_FILES ${TESTS_SIMULACRON_SOURCE_DIR}/results/*.hpp)
-    file(GLOB INTEGRATION_TESTS_SIMULACRON_SOURCE_FILES ${TESTS_SIMULACRON_SOURCE_DIR}/*.cpp)
-    file(GLOB INTEGRATION_TESTS_SIMULACRON_TESTS_SOURCE_FILES ${INTEGRATION_TESTS_SOURCE_DIR}/tests/simulacron/*.cpp)
-    source_group("Header Files\\simulacron" FILES ${INTEGRATION_TESTS_SIMULACRON_INCLUDE_FILES})
-    source_group("Header Files\\simulacron\\results" FILES ${INTEGRATION_TESTS_SIMULACRON_RESULTS_INCLUDE_FILES})
-    source_group("Source Files\\simulacron" FILES ${INTEGRATION_TESTS_SIMULACRON_SOURCE_FILES})
-    source_group("Source Files\\tests\\simulacron" FILES ${INTEGRATION_TESTS_SIMULACRON_TESTS_SOURCE_FILES})
-    include_directories(${TESTS_SIMULACRON_SOURCE_DIR})
-  endif()
-
   if(LIBSSH2_FOUND)
     add_definitions(-DCASS_USE_LIBSSH2)
   endif()
@@ -77,15 +55,14 @@ if(CASS_BUILD_INTEGRATION_TESTS)
   GtestIntegrationTestSourceGroups()
   GtestCommonIntegrationTestSourceFiles()
   add_executable(${INTEGRATION_TESTS_NAME}
+    ${INTEGRATION_TESTS_INCLUDE_FILES}
     ${INTEGRATION_TESTS_OBJECTS_INCLUDE_FILES}
     ${INTEGRATION_TESTS_POLICIES_INCLUDE_FILES}
     ${INTEGRATION_TESTS_VALUES_INCLUDE_FILES}
-    ${INTEGRATION_TESTS_SIMULACRON_SOURCE_FILES}
-    ${INTEGRATION_TESTS_SIMULACRON_TESTS_SOURCE_FILES}
-    ${INTEGRATION_TESTS_SIMULACRON_INCLUDE_FILES}
-    ${INTEGRATION_TESTS_SIMULACRON_RESULTS_INCLUDE_FILES}
+    ${CASS_API_HEADER_FILES}
+    ${COMMON_INTEGRATION_TEST_INCLUDE_FILES}
     ${COMMON_INTEGRATION_TEST_SOURCE_FILES}
-  )
+    ${RAPIDJSON_HEADER_FILES})
   if(CMAKE_VERSION VERSION_LESS "2.8.11")
     include_directories(${INTEGRATION_TESTS_SOURCE_DIR})
     include_directories(${CCM_BRIDGE_INCLUDES})
@@ -106,22 +83,6 @@ if(CASS_BUILD_INTEGRATION_TESTS)
   endif()
   if(LIBSSH2_LIBRARY_NAME)
     add_dependencies(${INTEGRATION_TESTS_NAME} ${LIBSSH2_LIBRARY_NAME})
-  endif()
-
-  # Copy the test related dependencies to their proper locations
-  if(EXISTS ${SIMULACRON_SERVER_JAR})
-    # Copy the standalone Simulacron server JAR file to output directory
-    configure_file(${SIMULACRON_SERVER_JAR} ${CMAKE_BINARY_DIR} COPYONLY)
-    if(WIN32)
-      # Copy Simulacron server to additional locations for use with IDE
-      if(NOT EXISTS ${CMAKE_BINARY_DIR}/tests)
-        file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
-      endif()
-      get_filename_component(SIMULACRON_SERVER_JAR_FILENAME
-                             ${SIMULACRON_SERVER_JAR}
-                             NAME)
-      configure_file(${SIMULACRON_SERVER_JAR} ${CMAKE_BINARY_DIR}/tests COPYONLY)
-    endif()
   endif()
 endif()
 
