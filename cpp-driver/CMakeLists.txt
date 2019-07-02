@@ -8,6 +8,7 @@ set(CASS_INCLUDE_DIR "${CASS_ROOT_DIR}/include")
 list(APPEND CMAKE_MODULE_PATH ${CASS_ROOT_DIR}/cmake/modules)
 
 include(CppDriver)
+include(ClangFormat)
 
 CassInitProject(cassandra)
 CassPolicies()
