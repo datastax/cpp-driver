@@ -36,6 +36,22 @@
 #define SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE SSL_F_USE_CERTIFICATE_CHAIN_FILE
 #endif
 
+#if defined(OPENSSL_VERSION_NUMBER) && \
+    !defined(LIBRESSL_VERSION_NUMBER) // Required as OPENSSL_VERSION_NUMBER for LibreSSL is defined
+                                      // as 2.0.0
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#define SSL_CLIENT_METHOD TLS_client_method
+#else
+#define SSL_CLIENT_METHOD SSLv23_client_method
+#endif
+#else
+#if (LIBRESSL_VERSION_NUMBER >= 0x20302000L)
+#define SSL_CLIENT_METHOD TLS_client_method
+#else
+#define SSL_CLIENT_METHOD SSLv23_client_method
+#endif
+#endif
+
 using namespace datastax;
 using namespace datastax::internal;
 using namespace datastax::internal::core;
@@ -516,7 +532,7 @@ void OpenSslSession::check_error(int rc) {
 }
 
 OpenSslContext::OpenSslContext()
-    : ssl_ctx_(SSL_CTX_new(SSLv23_client_method()))
+    : ssl_ctx_(SSL_CTX_new(SSL_CLIENT_METHOD()))
     , trusted_store_(X509_STORE_new()) {
   SSL_CTX_set_cert_store(ssl_ctx_, trusted_store_);
 }
