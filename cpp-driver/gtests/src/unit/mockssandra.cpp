@@ -25,6 +25,9 @@
 #include "tracing_data_handler.hpp" // For tracing query
 #include "uuids.hpp"
 
+#include <openssl/bio.h>
+#include <openssl/dh.h>
+
 #ifdef WIN32
 #include "winsock.h"
 #endif
@@ -58,47 +61,28 @@ using datastax::internal::core::UuidGen;
 
 namespace mockssandra {
 
-/*
- * The following function was generated using the libressl utility, using
- * the command : "openssl dhparam -dsaparam -C 512"
- */
-#ifdef LIBRESSL_VERSION_NUMBER
-#ifndef HEADER_DH_H
-#include <openssl/dh.h>
-#endif
-DH* get_dh512() {
-  static unsigned char dh512_p[] = {
-    0xBF, 0xA0, 0x2D, 0x47, 0x30, 0xB2, 0x81, 0x13, 0xEC, 0xC5, 0xB8, 0x79, 0xE1, 0x16, 0x6F, 0x2E,
-    0x19, 0xB5, 0xC1, 0xE6, 0xCE, 0x15, 0x7E, 0x94, 0x00, 0x9D, 0x71, 0x4D, 0xB9, 0x73, 0xC8, 0x31,
-    0xE3, 0xFB, 0xDF, 0x37, 0x6A, 0x7B, 0xD6, 0x1D, 0xA8, 0xB3, 0x78, 0x7A, 0x23, 0xE4, 0x1D, 0x91,
-    0x34, 0x23, 0x74, 0x58, 0x96, 0xD2, 0x20, 0xEC, 0x61, 0xAC, 0x37, 0x96, 0x18, 0x33, 0xE6, 0x05,
-  };
-  static unsigned char dh512_g[] = {
-    0x08, 0x5E, 0x84, 0x3B, 0xC2, 0xD1, 0xEA, 0xB9, 0x39, 0xFA, 0xA4, 0x2A, 0x91, 0x79, 0xA3, 0x18,
-    0x1E, 0x24, 0x7C, 0x4C, 0x0F, 0xFD, 0x2F, 0x5C, 0x38, 0xFB, 0xC4, 0xA4, 0x1B, 0xF3, 0xE8, 0xB7,
-    0x61, 0x9E, 0xA1, 0x4F, 0x8E, 0xE3, 0xF8, 0x4B, 0x9C, 0xA7, 0xDD, 0xA5, 0x72, 0x01, 0x17, 0xF0,
-    0xBF, 0x65, 0x53, 0xAB, 0x07, 0xFB, 0x07, 0xF4, 0xD8, 0xFA, 0x4D, 0xEB, 0x1A, 0x0E, 0x29, 0x0A,
-  };
-  DH* dh;
+static DH* dh_parameters() {
+  // Generated using the following command: `openssl dhparam -C 2048`
+  // Prime length of 2048 chosen to bypass client-side error:
+  // `SSL3_CHECK_CERT_AND_ALGORITHM:dh key too small`
 
-  if ((dh = DH_new()) == NULL) return (NULL);
-  dh->p = BN_bin2bn(dh512_p, sizeof(dh512_p), NULL);
-  dh->g = BN_bin2bn(dh512_g, sizeof(dh512_g), NULL);
-  if ((dh->p == NULL) || (dh->g == NULL)) {
-    DH_free(dh);
-    return (NULL);
-  }
-  dh->length = 160;
-  return (dh);
+  // Note: This is not generated, programmatically, using something like the following:
+  // `DH_generate_parameters_ex(dh, 2048, DH_GENERATOR_5, NULL)`
+  // because DH prime generation takes a *REALLY* long time.
+  static const char* dh_parameters_pem =
+      "-----BEGIN DH PARAMETERS-----\n"
+      "MIIBCAKCAQEAusYypYO7u8mHelHjpDuUy7hjBgPw/KS03iSRnP5SNMB6OxVFslXv\n"
+      "s6McqEf218Fqpzi18tWA7fq3fvlT+Nx1Tda+Za5C8o5niRYxHks5N+RfnnrFf7vn\n"
+      "0lxrzsXP6es08Ts/UGMsp1nEaCSd/gjDglPgjdC1V/KmBsbT+8IwpbzPPdir0/jA\n"
+      "r+DXssZRZl7JtymGHXPkXTSBhsqSHamfzGRnAQFWToKAinqAdhY7pN/8krwvRj04\n"
+      "VYp84xAy2M6mWWqUm/kokN9QjAiT/DZRxZK8VhY7O9+oATo7/YPCMd9Em417O13k\n"
+      "+F0o/8IMaQvpmtlAsLc2ZKwGqqG+HD2dOwIBAg==\n"
+      "-----END DH PARAMETERS-----";
+  BIO* bio = BIO_new_mem_buf(dh_parameters_pem, -1); // Use null terminator for length
+  DH* dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
+  BIO_free(bio);
+  return dh;
 }
-/*
------BEGIN DH PARAMETERS-----
-MIGJAkEAv6AtRzCygRPsxbh54RZvLhm1webOFX6UAJ1xTblzyDHj+983anvWHaiz
-eHoj5B2RNCN0WJbSIOxhrDeWGDPmBQJACF6EO8LR6rk5+qQqkXmjGB4kfEwP/S9c
-OPvEpBvz6LdhnqFPjuP4S5yn3aVyARfwv2VTqwf7B/TY+k3rGg4pCgICAKA=
------END DH PARAMETERS-----
-*/
-#endif
 
 String Ssl::generate_key() {
   EVP_PKEY* pkey = NULL;
@@ -479,28 +463,13 @@ bool ServerConnection::use_ssl(const String& key, const String& cert, const Stri
   }
   EVP_PKEY_free(pkey);
 
-#ifdef LIBRESSL_VERSION_NUMBER // SSL_CTX_set_tmp_rsa is a no-op on LibreSSL
-  DH* dh512 = get_dh512();
-  if (!SSL_CTX_set_tmp_dh(ssl_context_, dh512)) {
+  DH* dh = dh_parameters();
+  if (!dh || !SSL_CTX_set_tmp_dh(ssl_context_, dh)) {
     print_ssl_error();
-    DH_free(dh512);
+    DH_free(dh);
     return false;
   }
-  DH_free(dh512);
-#else
-  BIGNUM* factor = BN_new();
-  BN_set_word(factor, RSA_F4);
-  RSA* rsa = RSA_new();
-  RSA_generate_key_ex(rsa, 512, factor, NULL);
-  if (!SSL_CTX_set_tmp_rsa(ssl_context_, rsa)) {
-    print_ssl_error();
-    BN_free(factor);
-    RSA_free(rsa);
-    return false;
-  }
-  BN_free(factor);
-  RSA_free(rsa);
-#endif
+  DH_free(dh);
 
   SSL_CTX_set_verify(ssl_context_, SSL_VERIFY_NONE, 0);
 
