@@ -184,7 +184,7 @@ specific language governing permissions and limitations under the License.
 [DSE C/C++ driver]: http://docs.datastax.com/en/developer/cpp-driver-dse/latest
 [DataStax Enterprise]: http://www.datastax.com/products/datastax-enterprise
 [Examples]: examples/
-[download server]: http://downloads.datastax.com/cpp-driver
+[download server]: http://downloads.datastax.com/cpp-driver/
 [GitHub]: https://github.com/datastax/cpp-driver
 [cpp-driver-compatability-matrix]: https://docs.datastax.com/en/developer/driver-matrix/doc/cppDrivers.html#cpp-drivers
 [Home]: http://docs.datastax.com/en/developer/cpp-driver/latest
