@@ -47,6 +47,18 @@ Function Perl-Version-Information {
   }
 }
 
+Function CMake-Version-Information {
+  If (Get-Command "cmake" -ErrorAction SilentlyContinue) {
+    $temporary_file = New-TemporaryFile
+    Start-Process -FilePath cmake -ArgumentList "--version" -RedirectStandardOutput $($temporary_file) -Wait -NoNewWindow
+    $output = Get-Content "$($temporary_file)" -Raw
+    Write-Host "$($output.Trim())" -BackgroundColor DarkBlue
+    Remove-Item $temporary_file
+  } Else {
+    Write-Host "CMake is not available" -BackgroundColor DarkRed
+  }
+}
+
 Function Build-Configuration-Information {
   $output = @"
 Visual Studio: $($Env:CMAKE_GENERATOR.Split(" ")[-2]) [$($Env:CMAKE_GENERATOR.Split(" ")[-1])]
@@ -112,8 +124,11 @@ Function Initialize-Build-Environment {
 
   # Determine the platform and create associate environment variables
   $architecture = "32"
+  $Env:CMAKE_PLATFORM = $Env:Platform
   If ($Env:Platform -Like "x64") {
     $architecture = "64"
+  } Else {
+    $Env:CMAKE_PLATFORM = "Win32"
   }
   $lib_architecture = "lib$($architecture)"
   $windows_architecture = "win$($architecture)"
@@ -308,8 +323,9 @@ Function Install-Driver-Environment {
     }
   }
 
-  # Display the Perl version information
+  # Display the Perl and CMake version information
   Perl-Version-Information
+  CMake-Version-Information
 
   # Determine the location of the CMake modules (external projects)
   $cmake_modules_dir = "$($Env:APPVEYOR_BUILD_FOLDER -Replace `"\\`", `"/`")/"
@@ -317,12 +333,6 @@ Function Install-Driver-Environment {
     $cmake_modules_dir += "cpp-driver/"
   }
   $cmake_modules_dir += "cmake/modules"
-
-  # Determine the CMake generator to utilize
-  $cmake_generator = $Env:CMAKE_GENERATOR
-  If ($Env:Platform -Like "x64") {
-    $cmake_generator += " Win64"
-  }
 
   # Build and install the dependencies (if needed; cached)
   $dependencies_build_location_prefix = "C:/projects/dependencies/build/"
@@ -346,7 +356,7 @@ add_dependencies(`${PROJECT_NAME} `${LIBUV_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring libuv"
-    cmake -G "$($cmake_generator)" -DBUILD_SHARED_LIBS=On "-DLIBUV_VERSION=$($Env:LIBUV_VERSION)" "-DLIBUV_INSTALL_PREFIX=$($Env:LIBUV_ROOT_DIR)" .
+    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM -DBUILD_SHARED_LIBS=On "-DLIBUV_VERSION=$($Env:LIBUV_VERSION)" "-DLIBUV_INSTALL_PREFIX=$($Env:LIBUV_ROOT_DIR)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "libuv Output Log"
@@ -399,7 +409,7 @@ add_dependencies(`${PROJECT_NAME} `${OPENSSL_LIBRARY_NAME})
       if ("$_" -Like "shared") {
         $shared_libs = "On"
       }
-      cmake -G "$($cmake_generator)" "-DBUILD_SHARED_LIBS=$($shared_libs)" "-DOPENSSL_VERSION=$($Env:OPENSSL_VERSION)" "-DOPENSSL_INSTALL_PREFIX=$($Env:OPENSSL_BASE_DIR)/$_" .
+      cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-DBUILD_SHARED_LIBS=$($shared_libs)" "-DOPENSSL_VERSION=$($Env:OPENSSL_VERSION)" "-DOPENSSL_INSTALL_PREFIX=$($Env:OPENSSL_BASE_DIR)/$_" .
       If ($LastExitCode -ne 0) {
         If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
           Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "OpenSSL Output Log"
@@ -447,7 +457,7 @@ add_dependencies(`${PROJECT_NAME} `${ZLIB_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring zlib"
-    cmake -G "$($cmake_generator)" -DBUILD_SHARED_LIBS=On "-DZLIB_VERSION=$($Env:ZLIB_VERSION)" "-DZLIB_INSTALL_PREFIX=$($Env:ZLIB_ROOT_DIR)" .
+    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM -DBUILD_SHARED_LIBS=On "-DZLIB_VERSION=$($Env:ZLIB_VERSION)" "-DZLIB_INSTALL_PREFIX=$($Env:ZLIB_ROOT_DIR)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "zlib Output Log"
@@ -527,7 +537,7 @@ add_dependencies(`${PROJECT_NAME} `${BOOST_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring Boost"
-    cmake -G "$($cmake_generator)" "-DBOOST_VERSION=$($Env:BOOST_VERSION)" "-DBOOST_INSTALL_PREFIX=$($Env:BOOST_ROOT)" .
+    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-DBOOST_VERSION=$($Env:BOOST_VERSION)" "-DBOOST_INSTALL_PREFIX=$($Env:BOOST_ROOT)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "Boost Output Log"
@@ -575,7 +585,7 @@ add_dependencies(`${PROJECT_NAME} `${LIBSSH2_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring libssh2"
-    cmake -G "$($cmake_generator)" "-DLIBSSH2_VERSION=$($Env:LIBSSH2_VERSION)" "-DLIBSSH2_INSTALL_PREFIX=$($Env:LIBSSH2_ROOT_DIR)" .
+    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-DLIBSSH2_VERSION=$($Env:LIBSSH2_VERSION)" "-DLIBSSH2_INSTALL_PREFIX=$($Env:LIBSSH2_ROOT_DIR)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "libssh2 Output Log"
@@ -613,12 +623,6 @@ add_dependencies(`${PROJECT_NAME} `${LIBSSH2_LIBRARY_NAME})
 }
 
 Function Build-Driver {
-  # Determine the CMake generator to utilize
-  $cmake_generator = $Env:CMAKE_GENERATOR
-  If ($Env:Platform -Like "x64") {
-    $cmake_generator += " Win64"
-  }
-
   # Ensure Boost atomic is used for Visual Studio 2010 (increased performance)
   $use_boost_atomic = "Off"
   If ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "100" -Or
@@ -634,7 +638,7 @@ Function Build-Driver {
   New-Item -ItemType Directory -Force -Path "$($Env:APPVEYOR_BUILD_FOLDER)/build"
   Push-Location "$($Env:APPVEYOR_BUILD_FOLDER)/build"
   Write-Host "Configuring DataStax C/C++ $($driver_type) Driver"
-  cmake -G "$($cmake_generator)" "-D$($Env:DRIVER_TYPE)_MULTICORE_COMPILATION=On" "-D$($Env:DRIVER_TYPE)_USE_OPENSSL=On" "-D$($Env:DRIVER_TYPE)_USE_ZLIB=On" "-D$($Env:DRIVER_TYPE)_USE_BOOST_ATOMIC=$($use_boost_atomic)" "-D$($Env:DRIVER_TYPE)_BUILD_EXAMPLES=On" "-D$($Env:DRIVER_TYPE)_BUILD_TESTS=On" "-D$($Env:DRIVER_TYPE)_USE_LIBSSH2=On" "-DCMAKE_INSTALL_PREFIX=`"$($Env:DRIVER_INSTALL_DIR)`"" ..
+  cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-D$($Env:DRIVER_TYPE)_MULTICORE_COMPILATION=On" "-D$($Env:DRIVER_TYPE)_USE_OPENSSL=On" "-D$($Env:DRIVER_TYPE)_USE_ZLIB=On" "-D$($Env:DRIVER_TYPE)_USE_BOOST_ATOMIC=$($use_boost_atomic)" "-D$($Env:DRIVER_TYPE)_BUILD_EXAMPLES=On" "-D$($Env:DRIVER_TYPE)_BUILD_TESTS=On" "-D$($Env:DRIVER_TYPE)_USE_LIBSSH2=On" "-DCMAKE_INSTALL_PREFIX=`"$($Env:DRIVER_INSTALL_DIR)`"" ..
   If ($LastExitCode -ne 0) {
     Pop-Location
     Throw "Failed to configure DataStax C/C++ $($driver_type) Driver for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
