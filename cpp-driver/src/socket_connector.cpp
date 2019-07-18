@@ -182,10 +182,8 @@ void SocketConnector::ssl_handshake() {
   size_t size = ssl_session_->outgoing().read(buf, SSL_HANDSHAKE_MAX_BUFFER_SIZE);
   if (size > 0) {
     socket_->write_and_flush(new BufferSocketRequest(Buffer(buf, size)));
-  }
-
-  // If the handshake process is done then verify the certificate and finish.
-  if (ssl_session_->is_handshake_done()) {
+  } else if (ssl_session_->is_handshake_done()) { // If the handshake process is done then verify
+                                                  // the certificate and finish.
     ssl_session_->verify();
     if (ssl_session_->has_error()) {
       on_error(SOCKET_ERROR_SSL_VERIFY,

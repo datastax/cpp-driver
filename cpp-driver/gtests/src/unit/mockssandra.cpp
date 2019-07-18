@@ -78,7 +78,8 @@ static DH* dh_parameters() {
       "VYp84xAy2M6mWWqUm/kokN9QjAiT/DZRxZK8VhY7O9+oATo7/YPCMd9Em417O13k\n"
       "+F0o/8IMaQvpmtlAsLc2ZKwGqqG+HD2dOwIBAg==\n"
       "-----END DH PARAMETERS-----";
-  BIO* bio = BIO_new_mem_buf(dh_parameters_pem, -1); // Use null terminator for length
+  BIO* bio = BIO_new_mem_buf(const_cast<char*>(dh_parameters_pem),
+                             -1); // Use null terminator for length
   DH* dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
   BIO_free(bio);
   return dh;
@@ -420,9 +421,6 @@ bool ServerConnection::use_ssl(const String& key, const String& cert, const Stri
     print_ssl_error();
     return false;
   }
-#ifdef SSL_OP_NO_TLSv1_3
-  SSL_CTX_set_options(ssl_context_, SSL_OP_NO_TLSv1_3);
-#endif
 
   SSL_CTX_set_default_passwd_cb_userdata(ssl_context_, (void*)password.c_str());
   SSL_CTX_set_default_passwd_cb(ssl_context_, on_password);
