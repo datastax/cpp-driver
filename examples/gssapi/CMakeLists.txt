@@ -16,9 +16,6 @@ add_executable(${PROJECT_EXAMPLE_NAME} ${EXAMPLE_SRC_FILES})
 target_link_libraries(${PROJECT_EXAMPLE_NAME} ${PROJECT_LIB_NAME_TARGET} ${DSE_LIBS})
 add_dependencies(${PROJECT_EXAMPLE_NAME} ${PROJECT_LIB_NAME_TARGET})
 
-set_property(
-  TARGET ${PROJECT_EXAMPLE_NAME}
-  APPEND PROPERTY COMPILE_FLAGS ${EXAMPLE_C_FLAGS})
 set_property(TARGET ${PROJECT_EXAMPLE_NAME} PROPERTY FOLDER "Examples")
 
 # Set up rules/commands for building gssapi_proxy example
@@ -28,7 +25,4 @@ add_executable(${PROJECT_EXAMPLE_NAME} ${EXAMPLE_SRC_FILES})
 target_link_libraries(${PROJECT_EXAMPLE_NAME} ${PROJECT_LIB_NAME_TARGET} ${DSE_LIBS})
 add_dependencies(${PROJECT_EXAMPLE_NAME} ${PROJECT_LIB_NAME_TARGET})
 
-set_property(
-        TARGET ${PROJECT_EXAMPLE_NAME}
-        APPEND PROPERTY COMPILE_FLAGS ${EXAMPLE_C_FLAGS})
 set_property(TARGET ${PROJECT_EXAMPLE_NAME} PROPERTY FOLDER "Examples")

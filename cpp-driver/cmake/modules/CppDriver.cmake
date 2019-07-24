@@ -138,21 +138,25 @@ endmacro()
 # Arguments:
 #    prefix - prefix of global variable names that contain specific
 #        info on building the library (e.g. CASS or DSE).
-# Input: PROJECT_LIB_NAME, PROJECT_VERSION_STRING, PROJECT_VERSION_MAJOR,
-#        PROJECT_CXX_LINKER_FLAGS, *_DRIVER_CXX_FLAGS
-# Output: CASS_INCLUDES and CASS_LIBS
+# Input: PROJECT_LIB_NAME, PROJECT_VERSION_STRING, PROJECT_VERSION_MAJOR
 #------------------------
 macro(CassConfigureShared prefix)
   target_link_libraries(${PROJECT_LIB_NAME} ${${prefix}_LIBS})
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
-  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES
       COMPILE_PDB_NAME "${PROJECT_LIB_NAME}"
       COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  set_property(
-      TARGET ${PROJECT_LIB_NAME}
-      APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DCASS_BUILDING")
+  set(STATIC_COMPILE_FLAGS "-D${prefix}_BUILDING")
+  if("${prefix}" STREQUAL "DSE")
+    set(STATIC_COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -DCASS_BUILDING")
+  endif()
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
+     "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set_property(
+        TARGET ${PROJECT_LIB_NAME}
+        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Werror")
+  endif()
 endmacro()
 
 #------------------------
@@ -164,20 +168,31 @@ endmacro()
 #    prefix - prefix of global variable names that contain specific
 #        info on building the library (e.g. CASS or DSE).
 # Input: PROJECT_LIB_NAME_STATIC, PROJECT_VERSION_STRING, PROJECT_VERSION_MAJOR,
-#        PROJECT_CXX_LINKER_FLAGS, *_DRIVER_CXX_FLAGS
-# Output: CASS_INCLUDES and CASS_LIBS
+#        *_USE_STATIC_LIBS
 #------------------------
 macro(CassConfigureStatic prefix)
   target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${${prefix}_LIBS})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES
       COMPILE_PDB_NAME "${PROJECT_LIB_NAME_STATIC}"
       COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  set_property(
-      TARGET ${PROJECT_LIB_NAME_STATIC}
-      APPEND PROPERTY COMPILE_FLAGS "${${prefix}_DRIVER_CXX_FLAGS} -DCASS_STATIC")
+  set(STATIC_COMPILE_FLAGS "-D${prefix}_STATIC")
+  if("${prefix}" STREQUAL "DSE")
+    set(STATIC_COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -DCASS_STATIC")
+  endif()
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
+     "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set_property(
+        TARGET ${PROJECT_LIB_NAME_STATIC}
+        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Werror")
+  endif()
+
+  # Update the CXX flags to indicate the use of the static library
+  if(${prefix}_USE_STATIC_LIBS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STATIC_COMPILE_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${STATIC_COMPILE_FLAGS}")
+  endif()
 endmacro()
 
 #------------------------
@@ -694,8 +709,6 @@ endmacro()
 #
 # Input: CASS_USE_STD_ATOMIC, CASS_USE_BOOST_ATOMIC, CASS_MULTICORE_COMPILATION
 #        CASS_USE_STATIC_LIBS
-# Output: CASS_USE_STD_ATOMIC, CASS_DRIVER_CXX_FLAGS, CASS_TEST_CXX_FLAGS,
-#         CASS_EXAMPLE_C_FLAGS
 #------------------------
 macro(CassSetCompilerFlags)
   # Force OLD style of implicitly dereferencing variables
@@ -826,10 +839,8 @@ macro(CassSetCompilerFlags)
     add_definitions(-D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING) # Remove warnings for TR1 deprecation (Visual Studio 15 2017); caused by sparsehash
 
     # Create the project, example, and test flags
-    set(CASS_DRIVER_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
-    set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
-    # Enable bigobj for large object files during compilation (Cassandra types integration test)
-    set(CASS_TEST_CXX_FLAGS "${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} /bigobj")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 
     # Assign additional library requirements for Windows
     set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv)
@@ -846,19 +857,16 @@ macro(CassSetCompilerFlags)
     # OpenSSL is deprecated on later versions of Mac OS X. The long-term solution
     # is to provide a CommonCryto implementation.
     if (APPLE AND CASS_USE_OPENSSL)
-      set(CASS_DRIVER_CXX_FLAGS "${CASS_DRIVER_CXX_FLAGS} -Wno-deprecated-declarations")
-      set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -Wno-deprecated-declarations")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
     endif()
 
     # Enable C++11 support to use std::atomic
     if(CASS_USE_STD_ATOMIC)
-      set(CASS_DRIVER_CXX_FLAGS "${CASS_DRIVER_CXX_FLAGS} -std=c++11")
-      set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -std=c++11")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     endif()
 
-    set(CASS_DRIVER_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")
-    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
-    set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     # Clang/Intel specific compiler options
     # I disabled long-long warning because boost generates about 50 such warnings
@@ -869,19 +877,16 @@ macro(CassSetCompilerFlags)
     # OpenSSL is deprecated on later versions of Mac OS X. The long-term solution
     # is to provide a CommonCryto implementation.
     if (APPLE AND CASS_USE_OPENSSL)
-      set(CASS_DRIVER_CXX_FLAGS "${CASS_DRIVER_CXX_FLAGS} -Wno-deprecated-declarations")
-      set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -Wno-deprecated-declarations")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
     endif()
 
     # Enable C++11 support to use std::atomic
     if(CASS_USE_STD_ATOMIC)
-      set(CASS_DRIVER_CXX_FLAGS "${CASS_DRIVER_CXX_FLAGS} -std=c++11")
-      set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -std=c++11")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     endif()
 
-    set(CASS_DRIVER_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")
-    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
-    set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
   else()
     message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
   endif()
@@ -1001,13 +1006,13 @@ macro(CassConfigure)
   else()
     check_symbol_exists(arc4random_buf "stdlib.h" HAVE_ARC4RANDOM)
   endif()
+
   # Determine if sigpipe is available
   check_symbol_exists(SO_NOSIGPIPE "sys/socket.h;sys/types.h" HAVE_NOSIGPIPE)
   check_symbol_exists(sigtimedwait "signal.h" HAVE_SIGTIMEDWAIT)
   if (NOT WIN32 AND NOT HAVE_NOSIGPIPE AND NOT HAVE_SIGTIMEDWAIT)
     message(WARNING "Unable to handle SIGPIPE on your platform")
   endif()
-
 
   # Determine if hash is in the tr1 namespace
   string(REPLACE "::" ";" HASH_NAMESPACE_LIST ${HASH_NAMESPACE})
@@ -1018,7 +1023,7 @@ macro(CassConfigure)
   endforeach()
 
   # Check for GCC compiler builtins
-  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     check_cxx_source_compiles("int main() { return __builtin_bswap32(42); }" HAVE_BUILTIN_BSWAP32)
     check_cxx_source_compiles("int main() { return __builtin_bswap64(42); }" HAVE_BUILTIN_BSWAP64)
   endif()

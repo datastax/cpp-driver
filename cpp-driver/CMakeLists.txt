@@ -108,8 +108,6 @@ CassAddIncludes()
 CassFindSourceFiles()
 CassConfigure()
 
-set(TEST_CXX_FLAGS ${CASS_TEST_CXX_FLAGS})
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -147,12 +145,6 @@ if(CASS_BUILD_STATIC)
   endif()
   CassConfigureStatic("CASS")
 
-  # Update the test flags to indicate the use of the static library
-  if(CASS_USE_STATIC_LIBS)
-    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DCASS_STATIC")
-    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DCASS_STATIC")
-  endif()
-
   set_property(TARGET ${PROJECT_LIB_NAME_STATIC} PROPERTY FOLDER "Driver/Cassandra")
 endif()
 
@@ -171,9 +163,6 @@ CassConfigureTests()
 # no need to update CMakeLists.txt!
 
 if(CASS_BUILD_EXAMPLES)
-  if(CASS_USE_STATIC_LIBS)
-    set(CASS_EXAMPLE_C_FLAGS "${CASS_EXAMPLE_C_FLAGS} -DCASS_STATIC")
-  endif()
   CassBuildExamples("examples")
 endif()
 
