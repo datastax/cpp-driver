@@ -228,6 +228,13 @@ int ClientConnection::accept() {
   return uv_read_start(tcp_.as_stream(), on_alloc, on_read);
 }
 
+const char* ClientConnection::sni_server_name() const {
+  if (ssl_) {
+    return SSL_get_servername(ssl_, TLSEXT_NAMETYPE_host_name);
+  }
+  return NULL;
+}
+
 void ClientConnection::on_close(uv_handle_t* handle) {
   ClientConnection* connection = static_cast<ClientConnection*>(handle->data);
   connection->handle_close();

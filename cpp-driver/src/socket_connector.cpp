@@ -159,7 +159,8 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
   }
 
   if (settings_.ssl_context) {
-    ssl_session_.reset(settings_.ssl_context->create_session(address_, hostname_));
+    ssl_session_.reset(
+        settings_.ssl_context->create_session(address_, hostname_, address_.server_name()));
   }
 
   connector_.reset(new TcpConnector(address_));

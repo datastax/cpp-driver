@@ -32,9 +32,11 @@ namespace datastax { namespace internal { namespace core {
 
 class SslSession : public Allocated {
 public:
-  SslSession(const Address& address, const String& hostname, int flags)
+  SslSession(const Address& address, const String& hostname, const String& sni_server_name,
+             int flags)
       : address_(address)
       , hostname_(hostname)
+      , sni_server_name_(sni_server_name)
       , verify_flags_(flags)
       , error_code_(CASS_OK) {}
 
@@ -59,6 +61,7 @@ public:
 protected:
   Address address_;
   String hostname_;
+  String sni_server_name_;
   int verify_flags_;
   rb::RingBuffer incoming_;
   rb::RingBuffer outgoing_;
@@ -78,7 +81,8 @@ public:
   void set_verify_flags(int flags) { verify_flags_ = flags; }
   bool is_cert_validation_enabled() { return verify_flags_ != CASS_SSL_VERIFY_NONE; }
 
-  virtual SslSession* create_session(const Address& address, const String& hostname) = 0;
+  virtual SslSession* create_session(const Address& address, const String& hostname,
+                                     const String& sni_server_name) = 0;
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length) = 0;
   virtual CassError set_cert(const char* cert, size_t cert_length) = 0;
   virtual CassError set_private_key(const char* key, size_t key_length, const char* password,

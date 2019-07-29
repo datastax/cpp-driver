@@ -25,6 +25,7 @@
 #include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
+#include <openssl/tls1.h>
 #include <openssl/x509v3.h>
 #include <string.h>
 
@@ -426,20 +427,23 @@ private:
   }
 };
 
-OpenSslSession::OpenSslSession(const Address& address, const String& hostname, int flags,
-                               SSL_CTX* ssl_ctx)
-    : SslSession(address, hostname, flags)
+OpenSslSession::OpenSslSession(const Address& address, const String& hostname,
+                               const String& sni_server_name, int flags, SSL_CTX* ssl_ctx)
+    : SslSession(address, hostname, sni_server_name, flags)
     , ssl_(SSL_new(ssl_ctx))
     , incoming_state_(&incoming_)
     , outgoing_state_(&outgoing_)
     , incoming_bio_(rb::RingBufferBio::create(&incoming_state_))
     , outgoing_bio_(rb::RingBufferBio::create(&outgoing_state_)) {
   SSL_set_bio(ssl_, incoming_bio_, outgoing_bio_);
-  SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_NONE, ssl_no_verify_callback);
 #if DEBUG_SSL
   SSL_CTX_set_info_callback(ssl_ctx, ssl_info_callback);
 #endif
   SSL_set_connect_state(ssl_);
+
+  if (!sni_server_name_.empty()) {
+    SSL_set_tlsext_host_name(ssl_, const_cast<char*>(sni_server_name_.c_str()));
+  }
 }
 
 OpenSslSession::~OpenSslSession() { SSL_free(ssl_); }
@@ -535,12 +539,14 @@ OpenSslContext::OpenSslContext()
     : ssl_ctx_(SSL_CTX_new(SSL_CLIENT_METHOD()))
     , trusted_store_(X509_STORE_new()) {
   SSL_CTX_set_cert_store(ssl_ctx_, trusted_store_);
+  SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, ssl_no_verify_callback);
 }
 
 OpenSslContext::~OpenSslContext() { SSL_CTX_free(ssl_ctx_); }
 
-SslSession* OpenSslContext::create_session(const Address& address, const String& hostname) {
-  return new OpenSslSession(address, hostname, verify_flags_, ssl_ctx_);
+SslSession* OpenSslContext::create_session(const Address& address, const String& hostname,
+                                           const String& sni_server_name) {
+  return new OpenSslSession(address, hostname, sni_server_name, verify_flags_, ssl_ctx_);
 }
 
 CassError OpenSslContext::add_trusted_cert(const char* cert, size_t cert_length) {
