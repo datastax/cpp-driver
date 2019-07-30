@@ -17,6 +17,7 @@
 #include "cluster_config.hpp"
 
 using namespace datastax;
+using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 extern "C" {
@@ -467,6 +468,18 @@ CassError cass_cluster_set_host_listener_callback(CassCluster* cluster,
                                                   CassHostListenerCallback callback, void* data) {
   cluster->config().set_host_listener(
       DefaultHostListener::Ptr(new ExternalHostListener(callback, data)));
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_cloud_secure_connection_bundle(CassCluster* cluster, const char* path) {
+  return cass_cluster_set_cloud_secure_connection_bundle_n(cluster, path, SAFE_STRLEN(path));
+}
+
+CassError cass_cluster_set_cloud_secure_connection_bundle_n(CassCluster* cluster, const char* path,
+                                                            size_t path_length) {
+  if (!cluster->config().set_cloud_secure_connection_bundle(String(path, path_length))) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
   return CASS_OK;
 }
 

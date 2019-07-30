@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <functional>
+#include <uv.h>
 
 #if (defined(WIN32) || defined(_WIN32))
 #include <windows.h>

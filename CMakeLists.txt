@@ -53,7 +53,7 @@ option(DSE_USE_SPARSEHASH "Use sparsehash" OFF)
 option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(DSE_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
-option(DSE_USE_ZLIB "Use zlib" OFF)
+option(DSE_USE_ZLIB "Use zlib" ON)
 option(DSE_USE_TIMERFD "Use timerfd (Linux only)" ON)
 
 # Handle testing dependencies

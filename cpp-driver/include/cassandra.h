@@ -2759,6 +2759,34 @@ cass_cluster_set_host_listener_callback(CassCluster* cluster,
                                         CassHostListenerCallback callback,
                                         void* data);
 
+/**
+ * Sets the secure connection bundle path for processing DBaaS credentials.
+ *
+ * This will pre-configure a cluster using the credentials format provided by
+ * the DBaaS cloud provider.
+ *
+ * @param[in] cluster
+ * @param[in] path Absolute path to DBaaS credentials file.
+ * @return CASS_OK if successful, otherwise error occured.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_cloud_secure_connection_bundle(CassCluster* cluster,
+                                                const char*path);
+
+/**
+ * Same as cass_cluster_set_cloud_secure_connection_bundle(), but with lengths
+ * for string parameters.
+ *
+ * @param[in] cluster
+ * @param[in] path Absolute path to DBaaS credentials file.
+ * @param[in] path_length Length of path variable.
+ * @return CASS_OK if successful, otherwise error occured.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_cloud_secure_connection_bundle_n(CassCluster* cluster,
+                                                  const char* path,
+                                                  size_t path_length);
+
 /***********************************************************************************
  *
  * Session

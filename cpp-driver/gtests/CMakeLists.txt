@@ -127,5 +127,10 @@ endif()
 # Unit test executable
 #------------------------------
 if(CASS_BUILD_UNIT_TESTS)
-  GtestUnitTests("cassandra" "" "" "${CASS_EXCLUDED_UNIT_TEST_FILES}")
+  # Add the ability to create zip files inside the unit tests
+  set(MINIZIP_INCLUDE_DIR "${CASS_SRC_DIR}/third_party/minizip")
+  set(MINIZIP_SOURCE_FILES ${MINIZIP_INCLUDE_DIR}/ioapi.c
+                           ${MINIZIP_INCLUDE_DIR}/zip.c)
+
+  GtestUnitTests("cassandra" "${MINIZIP_SOURCE_FILES}" "${MINIZIP_INCLUDE_DIR}" "${CASS_EXCLUDED_UNIT_TEST_FILES}")
 endif()

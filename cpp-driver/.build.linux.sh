@@ -54,6 +54,10 @@ install_openssl() {
   true # Already installed on image
 }
 
+install_zlib() {
+  true # Already installed on image
+}
+
 install_driver() {(
   cd packaging
 

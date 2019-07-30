@@ -460,6 +460,29 @@ macro(CassRapidJson)
 endmacro()
 
 #------------------------
+# CassMiniZip
+#
+# Set some MINIZIP_* variables, set up some source_group's, and add the
+# MINIZIP include dir to our list of include dirs.
+#
+# Input: CASS_SRC_DIR
+# Output: MINIZIP_INCLUDE_DIR, MINIZIP_HEADER_FILES, MINIZIP_SOURCE_FILES
+#------------------------
+macro(CassMiniZip)
+  if (ZLIB_FOUND)
+    set(MINIZIP_INCLUDE_DIR "${CASS_SRC_DIR}/third_party/minizip")
+    set(MINIZIP_HEADER_FILES ${MINIZIP_INCLUDE_DIR}/crypt.h
+                             ${MINIZIP_INCLUDE_DIR}/ioapi.h
+                             ${MINIZIP_INCLUDE_DIR}/unzip.h)
+    set(MINIZIP_SOURCE_FILES ${MINIZIP_INCLUDE_DIR}/ioapi.c
+                             ${MINIZIP_INCLUDE_DIR}/unzip.c)
+    source_group("Header Files\\minizip" FILES ${MINIZIP_HEADER_FILES})
+    source_group("Source Files\\minizip" FILES ${MINIZIP_SOURCE_FILES})
+    include_directories(${MINIZIP_INCLUDE_DIR})
+  endif()
+endmacro()
+
+#------------------------
 # CassSimulacron
 #
 # Set up Simulacron for use in tests.
@@ -687,6 +710,7 @@ macro(CassUseZlib)
       # Assign zlib properties
       set(CASS_INCLUDES ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS})
       set(CASS_LIBS ${CASS_LIBS} ${ZLIB_LIBRARIES})
+      set(HAVE_ZLIB On)
     else()
       message(WARNING "Could not find zlib, try to set the path to zlib root folder in the system variable ZLIB_ROOT_DIR")
       message(WARNING "zlib libraries will not be linked into build")
@@ -985,6 +1009,10 @@ macro(CassFindSourceFiles)
     set(CASS_SRC_FILES ${CASS_SRC_FILES}
       ${CASS_SRC_DIR}/ssl/ssl_no_impl.cpp)
   endif()
+
+  CassMiniZip()
+  set(CASS_INC_FILES ${CASS_INC_FILES} ${MINIZIP_HEADER_FILES})
+  set(CASS_SRC_FILES ${CASS_SRC_FILES} ${MINIZIP_SOURCE_FILES})
 
   set(CASS_ALL_SOURCE_FILES ${CASS_SRC_FILES} ${CASS_API_HEADER_FILES} ${CASS_INC_FILES})
 endmacro()

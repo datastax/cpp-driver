@@ -39,6 +39,16 @@ install_openssl() {
   fi
 }
 
+install_zlib() {
+  if brew ls --versions zlib > /dev/null; then
+    if ! brew outdated zlib; then
+      brew upgrade zlib
+    fi
+  else
+    brew install zlib
+  fi
+}
+
 install_driver() {
   true
 }
