@@ -53,7 +53,7 @@ option(DSE_USE_SPARSEHASH "Use sparsehash" OFF)
 option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(DSE_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
-option(DSE_USE_ZLIB "Use zlib" OFF)
+option(DSE_USE_ZLIB "Use zlib" ON)
 option(DSE_USE_TIMERFD "Use timerfd (Linux only)" ON)
 
 # Handle testing dependencies
@@ -141,10 +141,6 @@ find_package(Kerberos REQUIRED)
 set(DSE_INCLUDES ${DSE_INCLUDES} ${KERBEROS_INCLUDE_DIR})
 set(DSE_LIBS ${DSE_LIBS} ${KERBEROS_LIBRARIES})
 
-# Build up compiler flags
-set(DSE_DRIVER_CXX_FLAGS ${CASS_DRIVER_CXX_FLAGS})
-set(TEST_CXX_FLAGS ${CASS_TEST_CXX_FLAGS})
-
 #------------------------------
 # DSE static and shared
 #------------------------------
@@ -190,7 +186,6 @@ if(DSE_BUILD_SHARED)
   # macro, but if you do, something goes wrong and the cmake output
   # warns that policy CMP0042 is violated.
   add_library(${PROJECT_LIB_NAME} SHARED ${DSE_ALL_SOURCE_FILES})
-  set(DSE_DRIVER_CXX_FLAGS "${DSE_DRIVER_CXX_FLAGS} -DDSE_BUILDING")
   if(LIBUV_LIBRARY_NAME)
     add_dependencies(${PROJECT_LIB_NAME} ${LIBUV_LIBRARY_NAME})
   endif()
@@ -207,7 +202,6 @@ if(DSE_BUILD_STATIC)
   # macro, but if you do, something goes wrong and the cmake output
   # warns that policy CMP0042 is violated.
   add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${DSE_ALL_SOURCE_FILES})
-  set(DSE_DRIVER_CXX_FLAGS "${DSE_DRIVER_CXX_FLAGS} -DDSE_STATIC")
   if(LIBUV_LIBRARY_NAME)
     add_dependencies(${PROJECT_LIB_NAME_STATIC} ${LIBUV_LIBRARY_NAME})
   endif()
@@ -215,12 +209,6 @@ if(DSE_BUILD_STATIC)
     add_dependencies(${PROJECT_LIB_NAME_STATIC} ${OPENSSL_LIBRARY_NAME})
   endif()
   CassConfigureStatic("DSE")
-
-  # Update the test flags to indicate the use of the static library
-  if(DSE_USE_STATIC_LIBS)
-    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DDSE_STATIC -DCASS_STATIC")
-    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DDSE_STATIC -DCASS_STATIC")
-  endif()
 
   set_property(TARGET ${PROJECT_LIB_NAME_STATIC} PROPERTY FOLDER "Driver/DSE")
 endif()
@@ -244,10 +232,6 @@ endif()
 # no need to update CMakeLists.txt!
 
 if(DSE_BUILD_EXAMPLES)
-  if(DSE_USE_STATIC_LIBS)
-    set(EXAMPLE_C_FLAGS "${EXAMPLE_C_FLAGS} -DDSE_STATIC")
-    set(CASS_EXAMPLE_C_FLAGS "${CASS_EXAMPLE_C_FLAGS} -DCASS_STATIC")
-  endif()
   CassBuildExamples("examples")
   CassBuildExamples("cpp-driver/examples")
 endif()

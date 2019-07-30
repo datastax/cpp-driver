@@ -46,3 +46,17 @@ TEST(ClusterTest, ExponentialReconnectionPolicyBadParameters) {
   // Base delay cannot be greater than max delay
   EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_exponential_reconnect(cluster.get(), 3, 2));
 }
+
+/**
+ * Set invalid parameters for secure connect bundle.
+ *
+ * @jira_ticket CPP-790
+ * @test_category configuration
+ * @expected_result CASS_ERROR_LIB_BAD_PARAMS.
+ */
+TEST(ClusterTest, SecureConnectionBundleBadParameters) {
+  test::driver::Cluster cluster;
+
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_cloud_secure_connection_bundle_n(
+                                           cluster.get(), "invalid_filename", 16));
+}

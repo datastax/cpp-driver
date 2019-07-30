@@ -19,6 +19,7 @@
 
 #include "auth.hpp"
 #include "cassandra.h"
+#include "cloud_secure_connection_config.hpp"
 #include "constants.hpp"
 #include "execution_profile.hpp"
 #include "protocol.hpp"
@@ -369,6 +370,13 @@ public:
     monitor_reporting_interval_secs_ = interval_secs;
   };
 
+  const CloudSecureConnectionConfig& cloud_secure_connection_config() const {
+    return cloud_secure_connection_config_;
+  }
+  bool set_cloud_secure_connection_bundle(const String& path) {
+    return cloud_secure_connection_config_.load(path);
+  }
+
 private:
   void init_profiles();
 
@@ -416,6 +424,7 @@ private:
   CassUuid client_id_;
   DefaultHostListener::Ptr host_listener_;
   unsigned monitor_reporting_interval_secs_;
+  CloudSecureConnectionConfig cloud_secure_connection_config_;
 };
 
 }}} // namespace datastax::internal::core

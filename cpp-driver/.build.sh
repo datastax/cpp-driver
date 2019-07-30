@@ -61,6 +61,7 @@ get_driver_version() {
 install_dependencies() {
   install_libuv
   install_openssl
+  install_zlib
 }
 
 build_driver() {
