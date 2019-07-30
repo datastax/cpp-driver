@@ -20,9 +20,9 @@
 #include "socket_connector.hpp"
 #include "ssl.hpp"
 
-#define SSL_VERIFY_PEER_DNS_RELATIVE_HOSTNAME "cpp-driver.hostname"
-#define SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME SSL_VERIFY_PEER_DNS_RELATIVE_HOSTNAME "."
-#define SSL_VERIFY_PEER_DNS_IP_ADDRESS "127.254.254.254"
+#define DNS_RELATIVE_HOSTNAME "cpp-driver.hostname"
+#define DNS_ABSOLUTE_HOSTNAME DNS_RELATIVE_HOSTNAME "."
+#define DNS_IP_ADDRESS "127.254.254.254"
 
 using mockssandra::internal::ClientConnection;
 using mockssandra::internal::ClientConnectionFactory;
@@ -152,6 +152,11 @@ public:
     close();
   }
 
+  bool verify_dns() {
+    verify_dns_check(); // Verify address can be resolved
+    return HasFailure();
+  }
+
   static void on_socket_connected(SocketConnector* connector, String* result) {
     Socket::Ptr socket = connector->release_socket();
     if (connector->error_code() == SocketConnector::SOCKET_OK) {
@@ -190,13 +195,22 @@ public:
   static void on_request(uv_getnameinfo_t* handle, int status, const char* hostname,
                          const char* service) {
     if (status) {
-      FAIL() << "Unable to Execute Test SocketUnitTest.SslVerifyIdentityDns: "
-             << "Add /etc/hosts entry " << SSL_VERIFY_PEER_DNS_IP_ADDRESS << "\t"
-             << SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME;
-    } else if (String(hostname) != String(SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME)) {
-      FAIL() << "Invalid /etc/hosts entry for: '" << hostname << "' != '"
-             << SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME << "'";
+      FAIL() << "Unable to Execute Test: "
+             << "Add /etc/hosts entry " << DNS_IP_ADDRESS << "\t" << DNS_ABSOLUTE_HOSTNAME;
+    } else if (String(hostname) != String(DNS_ABSOLUTE_HOSTNAME)) {
+      FAIL() << "Invalid /etc/hosts entry for: '" << hostname << "' != '" << DNS_ABSOLUTE_HOSTNAME
+             << "'";
     }
+  }
+
+private:
+  void verify_dns_check() {
+    Address verify_entry(DNS_IP_ADDRESS, 8888);
+    uv_getnameinfo_t request;
+    Address::SocketStorage storage;
+    ASSERT_EQ(0,
+              uv_getnameinfo(loop(), &request, on_request, verify_entry.to_sockaddr(&storage), 0));
+    uv_run(loop(), UV_RUN_DEFAULT);
   }
 
 private:
@@ -209,6 +223,22 @@ TEST_F(SocketUnitTest, Simple) {
   String result;
   SocketConnector::Ptr connector(
       new SocketConnector(Address("127.0.0.1", 8888), bind_callback(on_socket_connected, &result)));
+
+  connector->connect(loop());
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
+}
+
+TEST_F(SocketUnitTest, SimpleDns) {
+  if (!verify_dns()) return;
+
+  listen(Address(DNS_IP_ADDRESS, 8888));
+
+  String result;
+  SocketConnector::Ptr connector(new SocketConnector(Address(DNS_RELATIVE_HOSTNAME, 8888),
+                                                     bind_callback(on_socket_connected, &result)));
 
   connector->connect(loop());
 
@@ -355,25 +385,16 @@ TEST_F(SocketUnitTest, SslVerifyIdentity) {
 }
 
 TEST_F(SocketUnitTest, SslVerifyIdentityDns) {
-  // Verify address can be resolved
-  Address verify_entry(SSL_VERIFY_PEER_DNS_IP_ADDRESS, 8888);
-  uv_getnameinfo_t request;
-  Address::SocketStorage storage;
-  ASSERT_EQ(0, uv_getnameinfo(loop(), &request, on_request, verify_entry.to_sockaddr(&storage), 0));
-  uv_run(loop(), UV_RUN_DEFAULT);
-  if (this->HasFailure()) { // Make test fail due to DNS not configured
-    return;
-  }
+  if (!verify_dns()) return;
 
-  SocketSettings settings(use_ssl(SSL_VERIFY_PEER_DNS_RELATIVE_HOSTNAME));
+  SocketSettings settings(use_ssl(DNS_RELATIVE_HOSTNAME));
 
-  listen(Address(SSL_VERIFY_PEER_DNS_IP_ADDRESS,
-                 8888)); // Ensure the echo server is listening on the correct address
+  listen(Address(DNS_IP_ADDRESS, 8888));
 
   settings.ssl_context->set_verify_flags(CASS_SSL_VERIFY_PEER_IDENTITY_DNS);
 
   String result;
-  SocketConnector::Ptr connector(new SocketConnector(Address(SSL_VERIFY_PEER_DNS_IP_ADDRESS, 8888),
+  SocketConnector::Ptr connector(new SocketConnector(Address(DNS_RELATIVE_HOSTNAME, 8888),
                                                      bind_callback(on_socket_connected, &result)));
 
   connector->with_settings(settings)->connect(loop());

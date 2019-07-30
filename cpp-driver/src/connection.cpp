@@ -116,8 +116,6 @@ Connection::Connection(const Socket::Ptr& socket, const Host::Ptr& host,
     , heartbeat_interval_secs_(heartbeat_interval_secs)
     , heartbeat_outstanding_(false) {
   inc_ref(); // For the event loop
-
-  assert(host_->address() == socket_->address() && "Host doesn't match socket address");
   host_->increment_connection_count();
 }
 

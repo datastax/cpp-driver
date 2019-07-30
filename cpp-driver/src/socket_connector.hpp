@@ -17,8 +17,10 @@
 #ifndef DATASTAX_INTERNAL_SOCKET_CONNECTOR_HPP
 #define DATASTAX_INTERNAL_SOCKET_CONNECTOR_HPP
 
+#include "atomic.hpp"
 #include "callback.hpp"
 #include "name_resolver.hpp"
+#include "resolver.hpp"
 #include "socket.hpp"
 #include "tcp_connector.hpp"
 
@@ -141,17 +143,23 @@ private:
 
   void on_error(SocketError code, const String& message);
   void on_connect(TcpConnector* tcp_connecter);
-  void on_resolve(NameResolver* resolver);
+  void on_resolve(Resolver* resolver);
+  void on_name_resolve(NameResolver* resolver);
   void on_no_resolve(Timer* timer);
 
 private:
+  static Atomic<size_t> resolved_address_offset_;
+
+private:
   Address address_;
+  Address resolved_address_;
   String hostname_;
   Callback callback_;
 
   Socket::Ptr socket_;
   TcpConnector::Ptr connector_;
-  NameResolver::Ptr resolver_;
+  Resolver::Ptr resolver_;
+  NameResolver::Ptr name_resolver_;
   Timer no_resolve_timer_;
 
   SocketError error_code_;

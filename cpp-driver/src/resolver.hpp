@@ -55,7 +55,7 @@ public:
     req_.data = this;
   }
 
-  ~Resolver() {}
+  uv_loop_t* loop() { return req_.loop; }
 
   const String& hostname() { return hostname_; }
   int port() { return port_; }
