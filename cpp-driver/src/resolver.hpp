@@ -130,8 +130,8 @@ private:
   bool init_addresses(struct addrinfo* res) {
     bool status = false;
     do {
-      Address address;
-      if (address.init(res->ai_addr)) {
+      Address address(res->ai_addr);
+      if (address.is_valid_and_resolved()) {
         addresses_.push_back(address);
         status = true;
       }

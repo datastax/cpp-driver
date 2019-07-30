@@ -54,7 +54,8 @@ public:
     CassInet inet;
     ASSERT_TRUE(value->decoder().as_inet(value->size(), &inet));
 
-    ASSERT_TRUE(Address::from_inet(inet.address, inet.address_length, 9042, output));
+    *output = Address(inet.address, inet.address_length, 9042);
+    ASSERT_TRUE(output->is_valid_and_resolved());
   }
 
   Session session;

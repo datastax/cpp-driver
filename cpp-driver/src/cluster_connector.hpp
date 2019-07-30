@@ -149,7 +149,7 @@ private:
   void on_connect(ControlConnector* connector);
 
 private:
-  class ConnectorMap : public DenseHashMap<Address, ControlConnector::Ptr, AddressHash> {
+  class ConnectorMap : public DenseHashMap<Address, ControlConnector::Ptr> {
   public:
     ConnectorMap() {
       set_empty_key(Address::EMPTY_KEY);

@@ -55,17 +55,26 @@ struct equal_to<datastax::internal::core::Host::Ptr> {
   }
 };
 
+#if defined(HASH_IN_TR1) && !defined(_WIN32)
+namespace tr1 {
+#endif
+
+template <>
+struct hash<datastax::internal::core::Host::Ptr> {
+  std::size_t operator()(const datastax::internal::core::Host::Ptr& host) const {
+    if (!host) return 0;
+    return hasher(host->address());
+  }
+  SPARSEHASH_HASH<datastax::internal::core::Address> hasher;
+};
+
+#if defined(HASH_IN_TR1) && !defined(_WIN32)
+} // namespace tr1
+#endif
+
 } // namespace std
 
 namespace datastax { namespace internal { namespace core {
-
-struct HostHash {
-  std::size_t operator()(const Host::Ptr& host) const {
-    if (!host) return 0;
-    return hash(host->address());
-  }
-  AddressHash hash;
-};
 
 class IdGenerator {
 public:
@@ -134,7 +143,7 @@ public:
   static StringRef name() { return "ByteOrderedPartitioner"; }
 };
 
-class HostSet : public DenseHashSet<Host::Ptr, HostHash> {
+class HostSet : public DenseHashSet<Host::Ptr> {
 public:
   HostSet() {
     set_empty_key(Host::Ptr(new Host(Address::EMPTY_KEY)));

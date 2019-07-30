@@ -560,7 +560,8 @@ void ServerConnection::internal_listen() {
 
   inc_ref(); // For the TCP handle
 
-  rc = tcp_.bind(address_.addr());
+  Address::SocketStorage storage;
+  rc = tcp_.bind(address_.to_sockaddr(&storage));
   if (rc != 0) {
     fprintf(stderr, "Unable to bind address %s\n", address_.to_string(true).c_str());
     uv_close(tcp_.as_handle(), on_close);
@@ -871,7 +872,7 @@ const char* decode_query_params_v3v4(const char* input, const char* end, QueryPa
 }
 
 const char* decode_query_params_v5(const char* input, const char* end, QueryParameters* params) {
-  int32_t flags;
+  int32_t flags = 0;
   const char* pos = input;
   pos = decode_uint16(pos, end, &params->consistency);
   pos = decode_int32(pos, end, &flags);
@@ -1600,8 +1601,8 @@ void SystemPeers::on_run(Request* request) const {
       }
 
       String ip = query.substr(pos, end_pos - pos);
-      Address address;
-      if (!Address::from_string(ip, request->address().port(), &address)) {
+      Address address(ip, request->address().port());
+      if (!address.is_valid_and_resolved()) {
         request->error(ERROR_INVALID_QUERY, "Invalid inet address in WHERE clause");
         return;
       }
@@ -1669,8 +1670,8 @@ void SystemPeersDse::on_run(Request* request) const {
       }
 
       String ip = query.substr(pos, end_pos - pos);
-      Address address;
-      if (!Address::from_string(ip, request->address().port(), &address)) {
+      Address address(ip, request->address().port());
+      if (!address.is_valid_and_resolved()) {
         request->error(ERROR_INVALID_QUERY, "Invalid inet address in WHERE clause");
         return;
       }

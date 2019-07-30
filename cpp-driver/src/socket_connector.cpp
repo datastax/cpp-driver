@@ -140,7 +140,8 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
   // This needs to be done after setting the socket to properly cleanup.
   const Address& local_address = settings_.local_address;
   if (local_address.is_valid()) {
-    int rc = uv_tcp_bind(socket->handle(), local_address.addr(), 0);
+    Address::SocketStorage storage;
+    int rc = uv_tcp_bind(socket->handle(), local_address.to_sockaddr(&storage), 0);
     if (rc != 0) {
       on_error(SOCKET_ERROR_BIND, "Unable to bind local address: " + String(uv_strerror(rc)));
 

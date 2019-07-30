@@ -286,11 +286,10 @@ TEST_F(SocketUnitTest, SslVerifyIdentity) {
 
 TEST_F(SocketUnitTest, SslVerifyIdentityDns) {
   // Verify address can be resolved
-  Address verify_entry;
-  Address::from_string(SSL_VERIFY_PEER_DNS_IP_ADDRESS, 8888, &verify_entry);
+  Address verify_entry(SSL_VERIFY_PEER_DNS_IP_ADDRESS, 8888);
   uv_getnameinfo_t request;
-  ASSERT_EQ(0, uv_getnameinfo(loop(), &request, on_request,
-                              static_cast<const Address>(verify_entry).addr(), 0));
+  Address::SocketStorage storage;
+  ASSERT_EQ(0, uv_getnameinfo(loop(), &request, on_request, verify_entry.to_sockaddr(&storage), 0));
   uv_run(loop(), UV_RUN_DEFAULT);
   if (this->HasFailure()) { // Make test fail due to DNS not configured
     return;

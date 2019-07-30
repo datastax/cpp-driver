@@ -30,6 +30,8 @@ public:
 
   void* operator new(size_t, void* p) { return p; }
   void* operator new[](size_t, void* p) { return p; }
+  void operator delete(void* ptr, void* p) {}
+  void operator delete[](void* ptr, void* p) {}
 };
 
 template <class T>

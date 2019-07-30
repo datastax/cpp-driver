@@ -111,11 +111,11 @@ void ClusterConnector::internal_resolve_and_connect() {
   for (ContactPointList::const_iterator it = contact_points_.begin(), end = contact_points_.end();
        it != end; ++it) {
     const String& contact_point = *it;
-    Address address;
+    Address address(contact_point, settings_.port);
     // Attempt to parse the contact point string. If it's an IP address
     // then immediately add it to our resolved contact points, otherwise
     // attempt to resolve the string as a hostname.
-    if (Address::from_string(contact_point, settings_.port, &address)) {
+    if (address.is_resolved()) {
       contact_points_resolved_.push_back(address);
     } else {
       if (!resolver_) {

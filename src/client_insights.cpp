@@ -608,11 +608,11 @@ private:
     for (ContactPointList::const_iterator it = contact_points.begin(), end = contact_points.end();
          it != end; ++it) {
       const String& contact_point = *it;
-      Address address;
+      Address address(contact_point, port);
       // Attempt to parse the contact point string. If it's an IP address
       // then immediately add it to our resolved contact points, otherwise
       // attempt to resolve the string as a hostname.
-      if (Address::from_string(contact_point, port, &address)) {
+      if (address.is_resolved()) {
         AddressSet addresses;
         addresses.insert(address);
         contact_points_resolved_[contact_point] = addresses;
@@ -652,12 +652,13 @@ private:
   }
 
   String get_local_address(const uv_tcp_t* tcp) const {
-    Address interface_address;
-    struct sockaddr socket_address;
-    int namelen = sizeof(socket_address);
-    if (uv_tcp_getsockname(tcp, &socket_address, &namelen) == 0 &&
-        interface_address.init(&socket_address)) {
-      return interface_address.to_string();
+    Address::SocketStorage name;
+    int namelen = sizeof(name);
+    if (uv_tcp_getsockname(tcp, name.addr(), &namelen) == 0) {
+      Address address(name.addr());
+      if (address.is_valid_and_resolved()) {
+        return address.to_string();
+      }
     }
     return "unknown";
   }

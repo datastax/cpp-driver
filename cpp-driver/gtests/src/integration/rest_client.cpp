@@ -80,7 +80,8 @@ const Response RestClient::send_request(const Request& request) {
   // Start the request and attach the HTTP request to send to the REST server
   uv_connect_t connect;
   connect.data = &http_request;
-  uv_tcp_connect(&connect, &tcp, address.addr(), handle_connected);
+  Address::SocketStorage storage;
+  uv_tcp_connect(&connect, &tcp, address.to_sockaddr(&storage), handle_connected);
 
   uv_run(&loop, UV_RUN_DEFAULT);
   uv_loop_close(&loop);

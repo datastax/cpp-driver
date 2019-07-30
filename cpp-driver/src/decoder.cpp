@@ -46,7 +46,7 @@ bool Decoder::decode_inet(Address* output) {
   }
 
   CHECK_REMAINING(address_length, "inet");
-  char address[CASS_INET_V6_LENGTH];
+  uint8_t address[CASS_INET_V6_LENGTH];
   memcpy(address, input_, address_length);
   input_ += address_length;
   remaining_ -= address_length;
@@ -56,7 +56,8 @@ bool Decoder::decode_inet(Address* output) {
   input_ = internal::decode_int32(input_, port);
   remaining_ -= sizeof(int32_t);
 
-  return Address::from_inet(address, address_length, port, output);
+  *output = Address(address, address_length, port);
+  return output->is_valid_and_resolved();
 }
 
 bool Decoder::decode_inet(CassInet* output) {

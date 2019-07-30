@@ -448,12 +448,15 @@ CassError cass_cluster_set_local_address(CassCluster* cluster, const char* name)
 
 CassError cass_cluster_set_local_address_n(CassCluster* cluster, const char* name,
                                            size_t name_length) {
-  Address address; // default to AF_UNSPEC
-  if (name_length == 0 || name == NULL ||
-      Address::from_string(String(name, name_length), 0, &address)) {
-    cluster->config().set_local_address(address);
+  if (name_length == 0 || name == NULL) {
+    cluster->config().set_local_address(Address());
   } else {
-    return CASS_ERROR_LIB_HOST_RESOLUTION;
+    Address address(String(name, name_length), 0);
+    if (address.is_valid_and_resolved()) {
+      cluster->config().set_local_address(address);
+    } else {
+      return CASS_ERROR_LIB_HOST_RESOLUTION;
+    }
   }
   return CASS_OK;
 }

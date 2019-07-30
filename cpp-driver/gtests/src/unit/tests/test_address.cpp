@@ -19,15 +19,112 @@
 #include "address.hpp"
 
 using datastax::internal::core::Address;
+using datastax::internal::core::AddressSet;
+
+TEST(AddressUnitTest, FromString) {
+  EXPECT_TRUE(Address("127.0.0.1", 9042).is_resolved());
+  EXPECT_TRUE(Address("0.0.0.0", 9042).is_resolved());
+  EXPECT_TRUE(Address("::", 9042).is_resolved());
+  EXPECT_TRUE(Address("::1", 9042).is_resolved());
+  EXPECT_TRUE(Address("2001:0db8:85a3:0000:0000:8a2e:0370:7334", 9042).is_resolved());
+
+  EXPECT_FALSE(Address().is_resolved());
+  EXPECT_FALSE(Address("localhost", 9042).is_resolved());
+  EXPECT_FALSE(Address("datastax.com", 9042).is_resolved());
+}
 
 TEST(AddressUnitTest, CompareIPv4) {
-  EXPECT_GT(Address("255.255.255.255", 9042).compare(Address("0.0.0.0", 9042)), 0);
-  EXPECT_LT(Address("0.0.0.0", 9042).compare(Address("255.255.255.255", 9042)), 0);
-  EXPECT_EQ(Address("1.2.3.4", 9042).compare(Address("1.2.3.4", 9042)), 0);
+  EXPECT_LT(Address("0.0.0.0", 9042), Address("255.255.255.255", 9042));
+  EXPECT_EQ(Address("1.2.3.4", 9042), Address("1.2.3.4", 9042));
+  EXPECT_NE(Address("1.2.3.4", 9042), Address("5.6.7.8", 9042));
+
+  EXPECT_LT(Address("0.0.0.0", 9041), Address("0.0.0.0", 9042));
+  EXPECT_NE(Address("0.0.0.0", 9041), Address("0.0.0.0", 9042));
+
+  // Without comparing port
+  EXPECT_TRUE(Address("0.0.0.0", 9041).equals(Address("0.0.0.0", 9042), false));
+  EXPECT_FALSE(Address("127.0.0.1", 9042).equals(Address("0.0.0.0", 9042), false));
 }
 
 TEST(AddressUnitTest, CompareIPv6) {
-  EXPECT_GT(Address("0.0.0.0", 1).compare(Address("0.0.0.0", 0), true), 0);
-  EXPECT_LT(Address("0.0.0.0", 0).compare(Address("0.0.0.0", 1), true), 0);
-  EXPECT_EQ(Address("0.0.0.0", 0).compare(Address("0.0.0.0", 1), false), 0);
+  EXPECT_LT(Address("0:0:0:0:0:0:0:0", 9042), Address("0:0:0:0:0:0:0:FFFF", 9042));
+  EXPECT_EQ(Address("0:0:0:0:0:0:0:1234", 9042), Address("0:0:0:0:0:0:0:1234", 9042));
+  EXPECT_NE(Address("0:0:0:0:0:0:0:1234", 9042), Address("0:0:0:0:0:0:0:5678", 9042));
+
+  EXPECT_LT(Address("0:0:0:0:0:0:0:0", 9041), Address("0:0:0:0:0:0:0:0", 9042));
+  EXPECT_NE(Address("0:0:0:0:0:0:0:0", 9041), Address("0:0:0:0:0:0:0:0", 9042));
+
+  // Without comparing port
+  EXPECT_TRUE(Address("::", 9041).equals(Address("::", 9042), false));
+  EXPECT_FALSE(Address("::1", 9042).equals(Address("::", 9042), false));
+
+  EXPECT_EQ(Address("0:0:0:0:0:0:0:0", 9042), Address("::", 9042)); // Normalization
+}
+
+TEST(AddressUnitTest, ToSockAddrIPv4) {
+  Address expected("127.0.0.1", 9042);
+  Address::SocketStorage storage;
+  Address actual(expected.to_sockaddr(&storage));
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(AddressUnitTest, ToSockAddrIPv6) {
+  Address expected("::1", 9042);
+  Address::SocketStorage storage;
+  Address actual(expected.to_sockaddr(&storage));
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(AddressUnitTest, ToInetIPv4) {
+  Address expected("127.0.0.1", 9042);
+
+  uint8_t inet_address[4];
+  uint8_t inet_address_length = expected.to_inet(inet_address);
+  EXPECT_EQ(inet_address_length, 4u);
+
+  Address actual(inet_address, inet_address_length, 9042);
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(AddressUnitTest, ToInetIPv6) {
+  Address expected("::1", 9042);
+
+  uint8_t inet_address[16];
+  uint8_t inet_address_length = expected.to_inet(inet_address);
+  EXPECT_EQ(inet_address_length, 16u);
+
+  Address actual(inet_address, inet_address_length, 9042);
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(AddressUnitTest, Hash) {
+  AddressSet set;
+
+  EXPECT_EQ(set.size(), 0u); // Empty
+
+  set.insert(Address("0.0.0.0", 9042));
+  EXPECT_EQ(set.size(), 1u); // Added
+
+  // Reinsert
+  set.insert(Address("0.0.0.0", 9042));
+  EXPECT_EQ(set.size(), 1u); // No change
+
+  // Remove
+  set.erase(Address("0.0.0.0", 9042));
+  EXPECT_EQ(set.size(), 0u); // Removed
+
+  // Multiple
+  set.insert(Address("0.0.0.0", 9042));
+  set.insert(Address("127.0.0.1", 9042));
+  set.insert(Address("localhost", 9042));
+  set.insert(Address("::1", 9042));
+  EXPECT_EQ(set.size(), 4u); // Added
+  EXPECT_EQ(set.count(Address("0.0.0.0", 9042)), 1u);
+  EXPECT_EQ(set.count(Address("127.0.0.1", 9042)), 1u);
+  EXPECT_EQ(set.count(Address("localhost", 9042)), 1u);
+  EXPECT_EQ(set.count(Address("::1", 9042)), 1u);
+
+  // Different port
+  set.insert(Address("0.0.0.0", 9041));
+  EXPECT_EQ(set.size(), 5u); // Added
 }

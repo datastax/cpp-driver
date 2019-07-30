@@ -93,8 +93,8 @@ void graph_analytics_lookup_callback(CassFuture* future, void* data) {
         }
       }
 
-      if (!Address::from_string(location.to_string(), request->session->config().port(),
-                                &preferred_address)) {
+      preferred_address = Address(location.to_string(), request->session->config().port());
+      if (!preferred_address.is_valid_and_resolved()) {
         LOG_ERROR("The 'location' map entry's value is not a valid address in "
                   "analytics master lookup response.");
         use_preferred_address = false;

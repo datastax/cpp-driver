@@ -141,7 +141,7 @@ public:
  * A mapping between a host's address and it's listening address. The listening
  * address is used to look up a peer in the "system.peers" table.
  */
-class ListenAddressMap : public DenseHashMap<Address, String, AddressHash> {
+class ListenAddressMap : public DenseHashMap<Address, String> {
 public:
   ListenAddressMap() {
     set_empty_key(Address::EMPTY_KEY);

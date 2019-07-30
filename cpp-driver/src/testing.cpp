@@ -69,8 +69,8 @@ int64_t create_murmur3_hash_from_string(const String& value) {
 uint64_t get_time_since_epoch_in_ms() { return internal::get_time_since_epoch_ms(); }
 
 uint64_t get_host_latency_average(CassSession* session, String ip_address, int port) {
-  Address address;
-  if (Address::from_string(ip_address, port, &address)) {
+  Address address(ip_address, port);
+  if (address.is_valid()) {
     Host::Ptr host(session->cluster()->find_host(address));
     return host ? host->get_current_average().average : 0;
   }

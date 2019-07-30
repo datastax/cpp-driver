@@ -58,7 +58,7 @@ private:
   };
 
 private:
-  class HostMap : public DenseHashMap<Address, Host::Ptr, AddressHash> {
+  class HostMap : public DenseHashMap<Address, Host::Ptr> {
   public:
     HostMap() {
       set_empty_key(Address::EMPTY_KEY);
