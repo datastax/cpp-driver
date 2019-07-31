@@ -106,7 +106,7 @@ String Ssl::generate_key() {
   return result;
 }
 
-String Ssl::generate_cert(const String& key, String cn) {
+String Ssl::generate_cert(const String& key, String cn, String ca_cert, String ca_key) {
   // Assign the proper default hostname
   if (cn.empty()) {
 #ifdef WIN32
@@ -128,6 +128,20 @@ String Ssl::generate_cert(const String& key, String cn) {
     BIO_free(bio);
   }
 
+  X509_REQ* x509_req = NULL;
+  if (!ca_cert.empty() && !ca_key.empty()) {
+    x509_req = X509_REQ_new();
+    X509_REQ_set_version(x509_req, 2);
+    X509_REQ_set_pubkey(x509_req, pkey);
+
+    X509_NAME* name = X509_REQ_get_subject_name(x509_req);
+    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC,
+                               reinterpret_cast<const unsigned char*>("US"), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
+                               reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
+    X509_REQ_sign(x509_req, pkey, EVP_sha256());
+  }
+
   X509* x509 = X509_new();
   X509_set_version(x509, 2);
   ASN1_INTEGER_set(X509_get_serialNumber(x509), 0);
@@ -135,13 +149,42 @@ String Ssl::generate_cert(const String& key, String cn) {
   X509_gmtime_adj(X509_get_notAfter(x509), static_cast<long>(60 * 60 * 24 * 365));
   X509_set_pubkey(x509, pkey);
 
-  X509_NAME* name = X509_get_subject_name(x509);
-  X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, reinterpret_cast<const unsigned char*>("US"),
-                             -1, -1, 0);
-  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
-                             reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
-  X509_set_issuer_name(x509, name);
-  X509_sign(x509, pkey, EVP_md5());
+  if (x509_req) {
+    X509_set_subject_name(x509, X509_REQ_get_subject_name(x509_req));
+
+    X509* x509_ca = NULL;
+    { // Read CA from string
+      BIO* bio = BIO_new_mem_buf(const_cast<char*>(ca_cert.c_str()), ca_cert.length());
+      if (!PEM_read_bio_X509(bio, &x509_ca, NULL, NULL)) {
+        BIO_free(bio);
+        return "";
+      }
+      BIO_free(bio);
+    }
+    X509_set_issuer_name(x509, X509_get_issuer_name(x509_ca));
+
+    EVP_PKEY* pkey_ca = NULL;
+    { // Read key from string
+      BIO* bio = BIO_new_mem_buf(const_cast<char*>(ca_key.c_str()), ca_key.length());
+      if (!PEM_read_bio_PrivateKey(bio, &pkey_ca, NULL, NULL)) {
+        BIO_free(bio);
+        return "";
+      }
+      BIO_free(bio);
+    }
+    X509_sign(x509, pkey_ca, EVP_sha256());
+
+    X509_free(x509_ca);
+    EVP_PKEY_free(pkey_ca);
+  } else {
+    X509_NAME* name = X509_get_subject_name(x509);
+    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC,
+                               reinterpret_cast<const unsigned char*>("US"), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
+                               reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
+    X509_set_issuer_name(x509, name);
+    X509_sign(x509, pkey, EVP_sha256());
+  }
 
   String result;
   { // Write cert into string
@@ -154,6 +197,8 @@ String Ssl::generate_cert(const String& key, String cn) {
   }
 
   X509_free(x509);
+  if (x509_req) X509_REQ_free(x509_req);
+
   EVP_PKEY_free(pkey);
 
   return result;
@@ -194,8 +239,7 @@ ClientConnection::ClientConnection(ServerConnection* server)
     , server_(server)
     , ssl_(server->ssl_context() ? SSL_new(server->ssl_context()) : NULL)
     , incoming_bio_(ssl_ ? BIO_new(BIO_s_mem()) : NULL)
-    , outgoing_bio_(ssl_ ? BIO_new(BIO_s_mem()) : NULL)
-    , handshake_state_(SSL_HANDSHAKE_INPROGRESS) {
+    , outgoing_bio_(ssl_ ? BIO_new(BIO_s_mem()) : NULL) {
   tcp_.init(server->loop());
   if (ssl_) {
     SSL_set_bio(ssl_, incoming_bio_, outgoing_bio_);
@@ -284,21 +328,8 @@ void ClientConnection::handle_write(int status) {
     close();
     return;
   }
-  if (ssl_) {
-    switch (handshake_state_) {
-      case SSL_HANDSHAKE_INPROGRESS:
-        // Nothing to do
-        break;
-      case SSL_HANDSHAKE_DONE:
-        on_write();
-        break;
-      case SSL_HANDSHAKE_FINAL_WRITE:
-        handshake_state_ = SSL_HANDSHAKE_DONE;
-        break;
-    }
-  } else {
-    on_write();
-  }
+
+  on_write();
 }
 
 int ClientConnection::internal_write(const char* data, size_t len) {
@@ -379,12 +410,10 @@ void ClientConnection::on_ssl_read(const char* data, size_t len) {
       internal_write(buf, num_bytes);
     }
 
-    if (is_handshake_done()) {
-      handshake_state_ = data_written ? SSL_HANDSHAKE_FINAL_WRITE : SSL_HANDSHAKE_DONE;
+    if (is_handshake_done() && data_written) {
+      return; // Handshake is not completed; ingore remaining data
     }
-  }
-
-  if (is_handshake_done()) {
+  } else {
     char buf[SSL_BUF_SIZE];
     while ((rc = SSL_read(ssl_, buf, sizeof(buf))) > 0) {
       on_read(buf, rc);
@@ -419,7 +448,9 @@ uv_loop_t* ServerConnection::loop() {
   return event_loop_->loop();
 }
 
-bool ServerConnection::use_ssl(const String& key, const String& cert, const String& password) {
+bool ServerConnection::use_ssl(const String& key, const String& cert,
+                               const String& password /*= ""*/,
+                               const String& client_cert /*= ""*/) {
   if (ssl_context_) {
     SSL_CTX_free(ssl_context_);
   }
@@ -475,6 +506,41 @@ bool ServerConnection::use_ssl(const String& key, const String& cert, const Stri
     return false;
   }
   DH_free(dh);
+
+  if (!client_cert.empty()) {
+    X509_STORE* trust_store = SSL_CTX_get_cert_store(static_cast<const SSL_CTX*>(ssl_context_));
+    STACK_OF(X509_INFO) * stack_info;
+
+    { // Read cert from string
+      BIO* bio = BIO_new_mem_buf(const_cast<char*>(client_cert.c_str()), client_cert.size());
+      if ((stack_info = PEM_X509_INFO_read_bio(bio, NULL, NULL, NULL)) == NULL) {
+        print_ssl_error();
+        BIO_free(bio);
+        return false;
+      }
+      BIO_free(bio);
+    }
+
+    if (stack_info) {
+      for (int i = 0; i < sk_X509_INFO_num(stack_info); i++) {
+        X509_INFO* info = sk_X509_INFO_value(stack_info, i);
+        if (info->x509) {
+          if (X509_STORE_add_cert(trust_store, info->x509) <= 0) {
+            print_ssl_error();
+            return false;
+          }
+        }
+        if (info->crl) {
+          if (X509_STORE_add_crl(trust_store, info->crl) <= -0) {
+            print_ssl_error();
+            return false;
+          }
+        }
+      }
+    }
+
+    sk_X509_INFO_pop_free(stack_info, X509_INFO_free);
+  }
 
   SSL_CTX_set_verify(ssl_context_, SSL_VERIFY_NONE, 0);
 
@@ -2289,9 +2355,10 @@ Host::Host(const Address& address, const String& dc, const String& rack, MT19937
   }
 }
 
-SimpleEventLoopGroup::SimpleEventLoopGroup(size_t num_threads)
+SimpleEventLoopGroup::SimpleEventLoopGroup(size_t num_threads,
+                                           const String& thread_name /*= "mockssandra"*/)
     : RoundRobinEventLoopGroup(num_threads) {
-  int rc = init("mockssandra");
+  int rc = init(thread_name);
   UNUSED_(rc);
   assert(rc == 0 && "Unable to initialize simple event loop");
   run();

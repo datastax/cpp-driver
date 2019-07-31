@@ -20,6 +20,7 @@
 #include "cluster.hpp"
 #include "cluster_metadata_resolver.hpp"
 #include "config.hpp"
+#include "http_client.hpp"
 #include "json.hpp"
 #include "logger.hpp"
 #include "ssl.hpp"
@@ -30,6 +31,8 @@ using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 #define CLOUD_ERROR "Unable to load cloud secure connection configuration: "
+#define METADATA_SERVER_ERROR "Unable to configure from metadata server: "
+#define METADATA_SERVER_PATH "/metadata"
 
 #ifdef HAVE_ZLIB
 #include "unzip.h"
@@ -82,18 +85,75 @@ namespace {
 
 class CloudClusterMetadataResolver : public ClusterMetadataResolver {
 public:
-  CloudClusterMetadataResolver(const String& host, int port, const SocketSettings& settings) {
-    // TODO
+  CloudClusterMetadataResolver(const String& host, int port, const SocketSettings& settings)
+      : client_(new HttpClient(Address(host, port), METADATA_SERVER_PATH,
+                               bind_callback(&CloudClusterMetadataResolver::on_response, this))) {
+    client_->with_settings(settings);
   }
 
 private:
   virtual void internal_resolve(uv_loop_t* loop, const AddressVec& contact_points) {
-    // TODO
+    inc_ref();
+    client_->request(loop);
   }
 
-  virtual void internal_cancel() {
-    // TODO
+  virtual void internal_cancel() { client_->cancel(); }
+
+private:
+  void on_response(HttpClient* http_client) {
+    if (http_client->content_type().find("json") == std::string::npos) {
+      LOG_ERROR("Invalid response type from metadata server");
+    } else {
+      json::Document document;
+      document.Parse(http_client->response_body().c_str());
+
+      if (!document.HasMember("contact_info")) {
+        LOG_ERROR(METADATA_SERVER_ERROR "Contact information is not available");
+      } else {
+        const json::Value& contact_info = document["contact_info"];
+
+        if (!contact_info.HasMember("local_dc")) {
+          LOG_WARN(METADATA_SERVER_ERROR "Local DC is not available");
+        } else {
+          local_dc_ = contact_info["local_dc"].GetString();
+          if (!contact_info.HasMember("sni_proxy_address")) {
+            LOG_ERROR(METADATA_SERVER_ERROR "SNI proxy address is not available");
+            local_dc_ = "";
+          } else {
+            int sni_port = CASS_DEFAULT_PORT;
+            Vector<String> tokens;
+            explode(contact_info["sni_proxy_address"].GetString(), tokens, ':');
+            String sni_address = tokens[0];
+            if (tokens.size() == 2) {
+              IStringStream ss(tokens[1]);
+              if ((ss >> sni_port).fail()) {
+                LOG_WARN(METADATA_SERVER_ERROR "Invalid port, default %d will be used",
+                         CASS_DEFAULT_PORT);
+              }
+            }
+
+            if (!contact_info.HasMember("contact_points") ||
+                !contact_info["contact_points"].IsArray()) {
+              LOG_ERROR(METADATA_SERVER_ERROR "Contact points are not available");
+              local_dc_ = "";
+            } else {
+              const json::Value& contact_points = contact_info["contact_points"];
+              for (rapidjson::SizeType i = 0; i < contact_points.Size(); ++i) {
+                String host_id = contact_points[i].GetString();
+                resolved_contact_points_.push_back(Address(sni_address, sni_port, host_id));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    callback_(this);
+    dec_ref();
   }
+
+private:
+  HttpClient::Ptr client_;
 };
 
 class CloudClusterMetadataResolverFactory : public ClusterMetadataResolverFactory {
