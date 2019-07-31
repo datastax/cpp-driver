@@ -1690,7 +1690,6 @@ std::string CCM::Bridge::read_libssh2_terminal() {
 std::string CCM::Bridge::execute_ccm_command(const std::vector<std::string>& command) {
   // Create the CCM command
   std::vector<std::string> ccm_command;
-  ccm_command.push_back("wsl");
   ccm_command.push_back("ccm");
   ccm_command.insert(ccm_command.end(), command.begin(), command.end());
   LOG(implode(ccm_command));
