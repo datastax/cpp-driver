@@ -150,6 +150,7 @@ bool CloudSecureConnectionConfig::load(const String& filename, Config* config /*
 
   if (config) {
     SslContext::Ptr ssl_context(SslContextFactory::create());
+
     if (ssl_context->add_trusted_cert(ca_cert_.c_str(), ca_cert_.length()) != CASS_OK) {
       LOG_ERROR(CLOUD_ERROR "Invalid CA certificate %s", CERTIFICATE_AUTHORITY_FILE);
       return false;
