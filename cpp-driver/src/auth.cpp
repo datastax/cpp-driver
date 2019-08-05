@@ -24,6 +24,12 @@
 
 using namespace datastax;
 using namespace datastax::internal::core;
+using namespace datastax::internal::enterprise;
+
+#define DSE_AUTHENTICATOR "com.datastax.bdp.cassandra.auth.DseAuthenticator"
+
+#define DSE_PLAINTEXT_AUTH_MECHANISM "PLAIN"
+#define DSE_PLAINTEXT_AUTH_SERVER_INITIAL_CHALLENGE "PLAIN-START"
 
 extern "C" {
 
@@ -91,6 +97,37 @@ bool PlainTextAuthenticator::evaluate_challenge(const String& token, String* res
 }
 
 bool PlainTextAuthenticator::success(const String& token) {
+  // no-op
+  return true;
+}
+
+bool DsePlainTextAuthenticator::initial_response(String* response) {
+  if (class_name_ == "com.datastax.bdp.cassandra.auth.DseAuthenticator") {
+    response->assign(DSE_PLAINTEXT_AUTH_MECHANISM);
+    return true;
+  } else {
+    return evaluate_challenge(DSE_PLAINTEXT_AUTH_SERVER_INITIAL_CHALLENGE, response);
+  }
+}
+
+bool DsePlainTextAuthenticator::evaluate_challenge(const String& token, String* response) {
+  if (token != DSE_PLAINTEXT_AUTH_SERVER_INITIAL_CHALLENGE) {
+    LOG_ERROR("Invalid start token for DSE plaintext authenticator during challenge: '%s'",
+              token.c_str());
+    return false;
+  }
+
+  // Credentials are of the form "<authid>\0<username>\0<password>"
+  response->append(authorization_id_);
+  response->push_back('\0');
+  response->append(username_);
+  response->push_back('\0');
+  response->append(password_);
+
+  return true;
+}
+
+bool DsePlainTextAuthenticator::success(const String& token) {
   // no-op
   return true;
 }

@@ -19,9 +19,6 @@
 
 #define DSE_AUTHENTICATOR "com.datastax.bdp.cassandra.auth.DseAuthenticator"
 
-#define PLAINTEXT_AUTH_MECHANISM "PLAIN"
-#define PLAINTEXT_AUTH_SERVER_INITIAL_CHALLENGE "PLAIN-START"
-
 #define GSSAPI_AUTH_MECHANISM "GSSAPI"
 #define GSSAPI_AUTH_SERVER_INITIAL_CHALLENGE "GSSAPI-START"
 
@@ -42,61 +39,6 @@ dse_gssapi_authenticator_set_lock_callbacks(DseGssapiAuthenticatorLockCallback l
 }
 
 } // extern "C"
-
-void PlaintextAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
-  StringRef authenticator(DSE_AUTHENTICATOR);
-
-  if (authenticator == cass_authenticator_class_name(auth, NULL)) {
-    cass_authenticator_set_response(auth, PLAINTEXT_AUTH_MECHANISM,
-                                    sizeof(PLAINTEXT_AUTH_MECHANISM) - 1);
-  } else {
-    return on_challenge(auth, data, PLAINTEXT_AUTH_SERVER_INITIAL_CHALLENGE,
-                        sizeof(PLAINTEXT_AUTH_SERVER_INITIAL_CHALLENGE) - 1);
-  }
-}
-
-void PlaintextAuthenticatorData::on_challenge(CassAuthenticator* auth, void* data,
-                                              const char* token, size_t token_size) {
-  StringRef plaintext(PLAINTEXT_AUTH_SERVER_INITIAL_CHALLENGE);
-
-  PlaintextAuthenticatorData* plaintext_auth = static_cast<PlaintextAuthenticatorData*>(data);
-
-  if (plaintext == StringRef(token, token_size)) {
-    size_t username_size = plaintext_auth->username_.size();
-    size_t password_size = plaintext_auth->password_.size();
-    size_t authorization_id_size = plaintext_auth->authorization_id_.size();
-    size_t size = username_size + password_size + authorization_id_size + 2;
-    size_t write_index = 0;
-
-    char* response = cass_authenticator_response(auth, size);
-
-    // Credentials are of the form "<authid>\0<username>\0<password>"
-    memcpy(response + write_index, plaintext_auth->authorization_id_.c_str(),
-           authorization_id_size);
-    write_index += authorization_id_size;
-
-    response[write_index++] = '\0';
-
-    memcpy(response + write_index, plaintext_auth->username_.c_str(), username_size);
-    write_index += username_size;
-
-    response[write_index++] = '\0';
-
-    memcpy(response + write_index, plaintext_auth->password_.c_str(), password_size);
-
-    return;
-  }
-
-  String error("Unexpected token returned during plaintext challenge '");
-  error.append(token, token_size);
-  error.append("'");
-
-  cass_authenticator_set_error_n(auth, error.data(), error.length());
-}
-
-CassAuthenticatorCallbacks PlaintextAuthenticatorData::callbacks_ = {
-  PlaintextAuthenticatorData::on_initial, PlaintextAuthenticatorData::on_challenge, NULL, NULL
-};
 
 struct GssapiBuffer {
 public:
