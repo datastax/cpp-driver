@@ -230,6 +230,7 @@ public:
   const SslContext::Ptr& ssl_context() const { return ssl_context_; }
 
   void set_ssl_context(SslContext* ssl_context) { ssl_context_.reset(ssl_context); }
+  void set_ssl_context(const SslContext::Ptr& ssl_context) { ssl_context_ = ssl_context; }
 
   bool token_aware_routing() const { return default_profile().token_aware_routing(); }
 
@@ -374,7 +375,7 @@ public:
     return cloud_secure_connection_config_;
   }
   bool set_cloud_secure_connection_bundle(const String& path) {
-    return cloud_secure_connection_config_.load(path);
+    return cloud_secure_connection_config_.load(path, this);
   }
 
 private:

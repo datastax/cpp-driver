@@ -16,8 +16,11 @@
 
 #include "cloud_secure_connection_config.hpp"
 
+#include "auth.hpp"
+#include "config.hpp"
 #include "json.hpp"
 #include "logger.hpp"
+#include "ssl.hpp"
 #include "utils.hpp"
 
 using namespace datastax;
@@ -77,7 +80,7 @@ CloudSecureConnectionConfig::CloudSecureConnectionConfig()
     : is_loaded_(false)
     , port_(0) {}
 
-bool CloudSecureConnectionConfig::load(const String& filename) {
+bool CloudSecureConnectionConfig::load(const String& filename, Config* config /* = NULL */) {
 #ifndef HAVE_ZLIB
   LOG_ERROR(CLOUD_ERROR "Driver was not built with zlib support");
   return false;
@@ -108,6 +111,12 @@ bool CloudSecureConnectionConfig::load(const String& filename) {
   if (document.HasMember("password") && document["password"].IsString()) {
     password_ = document["password"].GetString();
   }
+
+  if (config && (!username_.empty() || !password_.empty())) {
+    config->set_auth_provider(
+        AuthProvider::Ptr(new enterprise::DsePlainTextAuthProvider(username_, password_, "")));
+  }
+
   if (!document.HasMember("host") || !document["host"].IsString()) {
     LOG_ERROR(CLOUD_ERROR "Missing host");
     return false;
@@ -124,23 +133,40 @@ bool CloudSecureConnectionConfig::load(const String& filename) {
   port_ = document["port"].GetInt();
   keyspace_ = document["keyspace"].GetString();
 
-  if (!zip_file.read_contents(CERTIFICATE_AUTHORITY_FILE, &contents)) {
+  if (!zip_file.read_contents(CERTIFICATE_AUTHORITY_FILE, &ca_cert_)) {
     LOG_ERROR(CLOUD_ERROR "Missing certificate authority file %s", CERTIFICATE_AUTHORITY_FILE);
     return false;
   }
-  ca_cert_ = contents;
 
-  if (!zip_file.read_contents(CERTIFICATE_FILE, &contents)) {
+  if (!zip_file.read_contents(CERTIFICATE_FILE, &cert_)) {
     LOG_ERROR(CLOUD_ERROR "Missing certificate file %s", CERTIFICATE_FILE);
     return false;
   }
-  cert_ = contents;
 
-  if (!zip_file.read_contents(KEY_FILE, &contents)) {
+  if (!zip_file.read_contents(KEY_FILE, &key_)) {
     LOG_ERROR(CLOUD_ERROR "Missing key file %s", KEY_FILE);
     return false;
   }
-  key_ = contents;
+
+  if (config) {
+    SslContext::Ptr ssl_context(SslContextFactory::create());
+    if (ssl_context->add_trusted_cert(ca_cert_.c_str(), ca_cert_.length()) != CASS_OK) {
+      LOG_ERROR(CLOUD_ERROR "Invalid CA certificate %s", CERTIFICATE_AUTHORITY_FILE);
+      return false;
+    }
+
+    if (ssl_context->set_cert(cert_.c_str(), cert_.length()) != CASS_OK) {
+      LOG_ERROR(CLOUD_ERROR "Invalid client certificate %s", CERTIFICATE_FILE);
+      return false;
+    }
+
+    if (ssl_context->set_private_key(key_.c_str(), key_.length(), NULL, 0) != CASS_OK) {
+      LOG_ERROR(CLOUD_ERROR "Invalid client private key %s", KEY_FILE);
+      return false;
+    }
+
+    config->set_ssl_context(ssl_context);
+  }
 
   is_loaded_ = true;
   return true;

@@ -21,11 +21,13 @@
 
 namespace datastax { namespace internal { namespace core {
 
+class Config;
+
 class CloudSecureConnectionConfig {
 public:
   CloudSecureConnectionConfig();
 
-  bool load(const String& filename);
+  bool load(const String& filename, Config* config = NULL);
   bool is_loaded() const { return is_loaded_; }
 
   const String& username() const { return username_; }
