@@ -102,7 +102,7 @@ bool PlainTextAuthenticator::success(const String& token) {
 }
 
 bool DsePlainTextAuthenticator::initial_response(String* response) {
-  if (class_name_ == "com.datastax.bdp.cassandra.auth.DseAuthenticator") {
+  if (class_name_ == DSE_AUTHENTICATOR) {
     response->assign(DSE_PLAINTEXT_AUTH_MECHANISM);
     return true;
   } else {
