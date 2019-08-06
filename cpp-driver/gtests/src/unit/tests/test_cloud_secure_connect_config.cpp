@@ -99,8 +99,7 @@ public:
     zipClose(zip_file, NULL);
   }
 
-  static StringBuffer full_config_credsv1() {
-    StringBuffer buffer;
+  static void full_config_credsv1(StringBuffer& buffer) {
     Writer<StringBuffer> writer(buffer);
     writer.StartObject();
     writer.Key("username");
@@ -114,7 +113,6 @@ public:
     writer.Key("keyspace");
     writer.String("database_as_a_service");
     writer.EndObject();
-    return buffer;
   }
 
 private:
@@ -147,7 +145,8 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1) {
   Config config;
   CloudSecureConnectionConfig cloud_config;
 
-  StringBuffer buffer(full_config_credsv1());
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
   create_zip_file(buffer.GetString());
 
   EXPECT_TRUE(cloud_config.load(creds_zip_file(), &config));
@@ -271,7 +270,8 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingConfigJson) {
 TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingCA) {
   CloudSecureConnectionConfig config;
 
-  StringBuffer buffer(full_config_credsv1());
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
   create_zip_file(buffer.GetString(), true, false);
   EXPECT_FALSE(config.load(creds_zip_file()));
 }
@@ -279,7 +279,8 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingCA) {
 TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingCert) {
   CloudSecureConnectionConfig config;
 
-  StringBuffer buffer(full_config_credsv1());
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
   create_zip_file(buffer.GetString(), true, true, false);
   EXPECT_FALSE(config.load(creds_zip_file()));
 }
@@ -287,7 +288,9 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingCert) {
 TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingKey) {
   CloudSecureConnectionConfig config;
 
-  StringBuffer buffer(full_config_credsv1());
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  create_zip_file(buffer.GetString(), true, true, false);
   create_zip_file(buffer.GetString(), true, true, true, false);
   EXPECT_FALSE(config.load(creds_zip_file()));
 }
@@ -296,7 +299,8 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1SslCaCert) {
   Config config;
   CloudSecureConnectionConfig cloud_config;
 
-  StringBuffer buffer(full_config_credsv1());
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
   set_invalid_ca_cert();
   create_zip_file(buffer.GetString());
 
@@ -308,7 +312,8 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1SslCert) {
   Config config;
   CloudSecureConnectionConfig cloud_config;
 
-  StringBuffer buffer(full_config_credsv1());
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
   set_invalid_cert();
   create_zip_file(buffer.GetString());
 
@@ -320,7 +325,8 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1SslKey) {
   Config config;
   CloudSecureConnectionConfig cloud_config;
 
-  StringBuffer buffer(full_config_credsv1());
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
   set_invalid_key();
   create_zip_file(buffer.GetString());
 
