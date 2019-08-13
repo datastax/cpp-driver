@@ -47,19 +47,18 @@ HeartbeatCallback::HeartbeatCallback(Connection* connection)
     , connection_(connection) {}
 
 void HeartbeatCallback::on_internal_set(ResponseMessage* response) {
-  LOG_TRACE("Heartbeat completed on host %s", connection_->socket_->address_string().c_str());
+  LOG_TRACE("Heartbeat completed on host %s", connection_->host_->address_string().c_str());
   connection_->heartbeat_outstanding_ = false;
 }
 
 void HeartbeatCallback::on_internal_error(CassError code, const String& message) {
   LOG_WARN("An error occurred on host %s during a heartbeat request: %s",
-           connection_->socket_->address_string().c_str(), message.c_str());
+           connection_->host_->address_string().c_str(), message.c_str());
   connection_->heartbeat_outstanding_ = false;
 }
 
 void HeartbeatCallback::on_internal_timeout() {
-  LOG_WARN("Heartbeat request timed out on host %s",
-           connection_->socket_->address_string().c_str());
+  LOG_WARN("Heartbeat request timed out on host %s", connection_->host_->address_string().c_str());
   connection_->heartbeat_outstanding_ = false;
 }
 
@@ -167,7 +166,7 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
 
   LOG_TRACE("Sending message type %s with stream %d on host %s",
             opcode_to_string(callback->request()->opcode()).c_str(), stream,
-            socket_->address_string().c_str());
+            host_->address_string().c_str());
 
   callback->set_state(RequestCallback::REQUEST_STATE_WRITING);
 
@@ -272,7 +271,7 @@ void Connection::on_read(const char* buf, size_t size) {
       LOG_TRACE("Consumed message type %s with stream %d, input %u, remaining %u on host %s",
                 opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
                 static_cast<unsigned int>(size), static_cast<unsigned int>(remaining),
-                socket_->address_string().c_str());
+                host_->address_string().c_str());
 
       if (response->stream() < 0) {
         if (response->opcode() == CQL_OPCODE_EVENT) {

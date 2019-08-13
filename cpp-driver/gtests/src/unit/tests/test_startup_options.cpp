@@ -56,7 +56,7 @@ public:
   }
 
   void connect() {
-    config_.contact_points().push_back("127.0.0.1");
+    config_.contact_points().push_back(Address("127.0.0.1", 9042));
     internal::core::Future::Ptr connect_future(session_.connect(config_));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";

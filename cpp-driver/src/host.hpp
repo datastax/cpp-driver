@@ -96,6 +96,7 @@ public:
 
   Host(const Address& address)
       : address_(address)
+      , rpc_address_(address)
       , rack_id_(0)
       , dc_id_(0)
       , address_string_(address.to_string())
@@ -104,6 +105,8 @@ public:
 
   const Address& address() const { return address_; }
   const String& address_string() const { return address_string_; }
+
+  const Address& rpc_address() const { return rpc_address_; }
 
   void set(const Row* row, bool use_tokens);
 
@@ -197,6 +200,7 @@ private:
 
 private:
   Address address_;
+  Address rpc_address_;
   uint32_t rack_id_;
   uint32_t dc_id_;
   String address_string_;

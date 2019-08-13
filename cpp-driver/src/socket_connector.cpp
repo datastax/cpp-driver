@@ -117,7 +117,7 @@ void SocketConnector::connect(uv_loop_t* loop) {
   inc_ref(); // For the event loop
 
   if (!address_.is_resolved()) { // Address not resolved
-    hostname_ = address_.to_string();
+    hostname_ = address_.hostname_or_address();
 
     resolver_.reset(new Resolver(hostname_, address_.port(),
                                  bind_callback(&SocketConnector::on_resolve, this)));
@@ -286,8 +286,9 @@ void SocketConnector::on_resolve(Resolver* resolver) {
     const AddressVec& addresses(resolver->addresses());
     LOG_DEBUG("Resolved the addresses %s for hostname %s", to_string(addresses).c_str(),
               hostname_.c_str());
-    resolved_address_ =
-        addresses[resolved_address_offset_.fetch_add(MEMORY_ORDER_RELAXED) % addresses.size()];
+    resolved_address_ = Address(
+        addresses[resolved_address_offset_.fetch_add(MEMORY_ORDER_RELAXED) % addresses.size()],
+        address_.server_name()); // Keep the server name for debugging
     internal_connect(resolver->loop());
   } else if (is_canceled() || resolver->is_canceled()) {
     finish();

@@ -7,16 +7,13 @@
 
 #include "dse.h"
 
+#include "auth.hpp"
 #include "cluster_config.hpp"
 #include "dse_auth.hpp"
 #include "string.hpp"
 
 using namespace datastax;
 using namespace datastax::internal::enterprise;
-
-static void dse_plaintext_authenticator_cleanup(void* data) {
-  delete static_cast<PlaintextAuthenticatorData*>(data);
-}
 
 static void dse_gssapi_authenticator_cleanup(void* data) {
   delete static_cast<GssapiAuthenticatorData*>(data);
@@ -56,21 +53,11 @@ CassError cass_cluster_set_dse_plaintext_authenticator_proxy(CassCluster* cluste
 CassError cass_cluster_set_dse_plaintext_authenticator_proxy_n(
     CassCluster* cluster, const char* username, size_t username_length, const char* password,
     size_t password_length, const char* authorization_id, size_t authorization_id_length) {
-  CassError rc = cass_cluster_set_authenticator_callbacks(
-      cluster, PlaintextAuthenticatorData::callbacks(), dse_plaintext_authenticator_cleanup,
-      new PlaintextAuthenticatorData(String(username, username_length),
-                                     String(password, password_length),
-                                     String(authorization_id, authorization_id_length)));
-
-  if (rc == CASS_OK) {
-    String name = "DSEPlainTextAuthProvider";
-    if (authorization_id_length > 0) {
-      name.append(" (Proxy)");
-    }
-    cluster->config().auth_provider()->set_name(name);
-  }
-
-  return rc;
+  cluster->config().set_auth_provider(internal::core::AuthProvider::Ptr(
+      new DsePlainTextAuthProvider(String(username, username_length),
+                                   String(password, password_length),
+                                   String(authorization_id, authorization_id_length))));
+  return CASS_OK;
 }
 
 CassError cass_cluster_set_dse_gssapi_authenticator(CassCluster* cluster, const char* service,

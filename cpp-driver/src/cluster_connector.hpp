@@ -19,6 +19,7 @@
 
 #include "callback.hpp"
 #include "cluster.hpp"
+#include "cluster_metadata_resolver.hpp"
 #include "resolver.hpp"
 
 namespace datastax { namespace internal {
@@ -60,7 +61,7 @@ public:
    * @param callback A callback that is called when a connection to a contact
    * point is established, if an error occurred, or all contact points failed.
    */
-  ClusterConnector(const ContactPointList& contact_points, ProtocolVersion protocol_version,
+  ClusterConnector(const AddressVec& contact_points, ProtocolVersion protocol_version,
                    const Callback& callback);
 
   /**
@@ -138,14 +139,13 @@ private:
 private:
   void internal_resolve_and_connect();
   void internal_connect(const Address& address, ProtocolVersion version);
-  void internal_connect_all();
   void internal_cancel();
 
   void finish();
   void maybe_finish();
 
   void on_error(ClusterError code, const String& message);
-  void on_resolve(MultiResolver* resolver);
+  void on_resolve(ClusterMetadataResolver* resolver);
   void on_connect(ControlConnector* connector);
 
 private:
@@ -159,11 +159,10 @@ private:
 
 private:
   Cluster::Ptr cluster_;
-  MultiResolver::Ptr resolver_;
+  ClusterMetadataResolver::Ptr resolver_;
   ConnectorMap connectors_;
   size_t remaining_connector_count_;
-  ContactPointList contact_points_;
-  AddressVec contact_points_resolved_;
+  AddressVec contact_points_;
   ProtocolVersion protocol_version_;
   ClusterListener* listener_;
   EventLoop* event_loop_;

@@ -268,7 +268,7 @@ public:
   static Result match(X509* cert, const Address& address) {
     Result result = match_subject_alt_names_ipadd(cert, address);
     if (result == NO_SAN_PRESENT) {
-      result = match_common_name_ipaddr(cert, address.to_string());
+      result = match_common_name_ipaddr(cert, address.hostname_or_address());
     }
     return result;
   }

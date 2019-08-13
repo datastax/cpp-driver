@@ -107,7 +107,7 @@ public:
   }
 
   void connect(unsigned interval_secs = 1) {
-    config_.contact_points().push_back("127.0.0.1");
+    config_.contact_points().push_back(Address("127.0.0.1", 9042));
     config_.set_monitor_reporting_interval_secs(interval_secs);
     Future::Ptr connect_future(session_.connect(config_));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
@@ -185,7 +185,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
                                      1); // Two DCs one will not be connected to
   ASSERT_EQ(cluster.start_all(), 0);
 
-  config_.contact_points().push_back("localhost"); // Used for hostname resolve
+  config_.contact_points().push_back(Address("localhost", 9042)); // Used for hostname resolve
   String applicationName = "StartupData";
   String applicationVersion = "v1.0.0-test";
   CassConsistency consistency = CASS_CONSISTENCY_ALL;
@@ -718,7 +718,7 @@ TEST_F(ClientInsightsUnitTest, StartupDataConfigAntiPatternsWithSsl) {
   config_.set_load_balancing_policy(dc_aware.get());
   config_.set_retry_policy(retry_policy.get()); // downgradingConsistency
   config_.set_ssl_context(ssl_context.get());
-  config_.contact_points().push_back("127.0.0.2"); // contactPointsMultipleDCs
+  config_.contact_points().push_back(Address("127.0.0.2", 9042)); // contactPointsMultipleDCs
   connect();
 
   String message = startup_message();
@@ -768,7 +768,7 @@ TEST_F(ClientInsightsUnitTest, StatusData) {
   mockssandra::SimpleCluster cluster(simple_dse_with_rpc_call(2), 2);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  config_.contact_points().push_back("localhost");
+  config_.contact_points().push_back(Address("localhost", 9042));
   config_.set_core_connections_per_host(2);
   config_.set_thread_count_io(5);
   config_.set_use_randomized_contact_points(false);

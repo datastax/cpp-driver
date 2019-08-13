@@ -20,6 +20,7 @@
 #include "unit.hpp"
 
 #include "cloud_secure_connection_config.hpp"
+#include "config.hpp"
 #include "json.hpp"
 #include "string.hpp"
 
@@ -33,27 +34,7 @@
 #define CERTIFICATE_FILE "cert"
 #define KEY_FILE "key"
 
-#define CERTIFICATE_AUTHORITY "This would be a PEM file"
-#define CERTIFICATE "This would also be a PEM file"
-#define KEY "This would be yet another PEM file"
-
 #define CREDS_V1_ZIP_FILE "creds-v1.zip"
-
-#define FULL_CONFIG_CREDSV1               \
-  StringBuffer buffer;                    \
-  Writer<StringBuffer> writer(buffer);    \
-  writer.StartObject();                   \
-  writer.Key("username");                 \
-  writer.String("DataStax");              \
-  writer.Key("password");                 \
-  writer.String("Constellation");         \
-  writer.Key("host");                     \
-  writer.String("cloud.datastax.com");    \
-  writer.Key("port");                     \
-  writer.Int(1443);                       \
-  writer.Key("keyspace");                 \
-  writer.String("database_as_a_service"); \
-  writer.EndObject()
 
 #ifdef _WIN32
 #define PATH_SEPARATOR '\\'
@@ -63,11 +44,22 @@
 
 using datastax::String;
 using datastax::internal::core::CloudSecureConnectionConfig;
+using datastax::internal::core::Config;
+using datastax::internal::enterprise::DsePlainTextAuthProvider;
 using datastax::internal::json::StringBuffer;
 using datastax::internal::json::Writer;
 
+using mockssandra::Ssl;
+
 class CloudSecureConnectionConfigTest : public Unit {
 public:
+  const String& ca_cert() const { return ca_cert_; }
+  void set_invalid_ca_cert() { ca_cert_ = "!!!!!INVALID!!!!!"; }
+  const String& cert() const { return cert_; }
+  void set_invalid_cert() { cert_ = "!!!!!INVALID!!!!!"; }
+  const String& key() const { return key_; }
+  void set_invalid_key() { key_ = "!!!!!INVALID!!!!!"; }
+
   void SetUp() {
     Unit::SetUp();
     char tmp[260] = { 0 }; // Note: 260 is the maximum path on Windows
@@ -75,6 +67,10 @@ public:
     uv_os_tmpdir(tmp, &tmp_length);
 
     tmp_zip_file_ = String(tmp, tmp_length) + PATH_SEPARATOR + CREDS_V1_ZIP_FILE;
+
+    ca_cert_ = Ssl::generate_cert(Ssl::generate_key());
+    key_ = Ssl::generate_key();
+    cert_ = Ssl::generate_cert(key_, "localhost");
   }
 
   const String& creds_zip_file() const { return tmp_zip_file_; }
@@ -88,19 +84,35 @@ public:
       zipCloseFileInZip(zip_file);
     }
     if (is_ca && add_zip_file_entry(zip_file, CERTIFICATE_AUTHORITY_FILE)) {
-      zipWriteInFileInZip(zip_file, CERTIFICATE_AUTHORITY, strlen(CERTIFICATE_AUTHORITY));
+      zipWriteInFileInZip(zip_file, ca_cert_.c_str(), ca_cert_.length());
       zipCloseFileInZip(zip_file);
     }
     if (is_cert && add_zip_file_entry(zip_file, CERTIFICATE_FILE)) {
-      zipWriteInFileInZip(zip_file, CERTIFICATE, strlen(CERTIFICATE));
+      zipWriteInFileInZip(zip_file, cert_.c_str(), cert_.length());
       zipCloseFileInZip(zip_file);
     }
     if (is_key && add_zip_file_entry(zip_file, KEY_FILE)) {
-      zipWriteInFileInZip(zip_file, KEY, strlen(KEY));
+      zipWriteInFileInZip(zip_file, key_.c_str(), key_.length());
       zipCloseFileInZip(zip_file);
     }
 
     zipClose(zip_file, NULL);
+  }
+
+  static void full_config_credsv1(StringBuffer& buffer) {
+    Writer<StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("username");
+    writer.String("DataStax");
+    writer.Key("password");
+    writer.String("Constellation");
+    writer.Key("host");
+    writer.String("cloud.datastax.com");
+    writer.Key("port");
+    writer.Int(1443);
+    writer.Key("keyspace");
+    writer.String("database_as_a_service");
+    writer.EndObject();
   }
 
 private:
@@ -124,27 +136,36 @@ private:
 
 private:
   String tmp_zip_file_;
+  String ca_cert_;
+  String cert_;
+  String key_;
 };
 
 TEST_F(CloudSecureConnectionConfigTest, CredsV1) {
-  CloudSecureConnectionConfig config;
+  Config config;
+  CloudSecureConnectionConfig cloud_config;
 
-  FULL_CONFIG_CREDSV1;
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
   create_zip_file(buffer.GetString());
 
-  EXPECT_TRUE(config.load(creds_zip_file()));
-  EXPECT_EQ("DataStax", config.username());
-  EXPECT_EQ("Constellation", config.password());
-  EXPECT_EQ("cloud.datastax.com", config.host());
-  EXPECT_EQ(1443, config.port());
-  EXPECT_EQ("database_as_a_service", config.keyspace());
-  EXPECT_EQ(CERTIFICATE_AUTHORITY, config.ca_cert());
-  EXPECT_EQ(CERTIFICATE, config.cert());
-  EXPECT_EQ(KEY, config.key());
+  EXPECT_TRUE(cloud_config.load(creds_zip_file(), &config));
+  EXPECT_EQ("DataStax", cloud_config.username());
+  EXPECT_EQ("Constellation", cloud_config.password());
+  EXPECT_EQ("cloud.datastax.com", cloud_config.host());
+  EXPECT_EQ(1443, cloud_config.port());
+  EXPECT_EQ("database_as_a_service", cloud_config.keyspace());
+  EXPECT_EQ(ca_cert(), cloud_config.ca_cert());
+  EXPECT_EQ(cert(), cloud_config.cert());
+  EXPECT_EQ(key(), cloud_config.key());
+
+  EXPECT_TRUE(config.ssl_context());
+  EXPECT_TRUE(dynamic_cast<DsePlainTextAuthProvider*>(config.auth_provider().get()) != NULL);
 }
 
 TEST_F(CloudSecureConnectionConfigTest, CredsV1WithoutCreds) {
-  CloudSecureConnectionConfig config;
+  Config config;
+  CloudSecureConnectionConfig cloud_config;
 
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
@@ -158,15 +179,19 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1WithoutCreds) {
   writer.EndObject();
   create_zip_file(buffer.GetString());
 
-  EXPECT_TRUE(config.load(creds_zip_file()));
-  EXPECT_EQ("", config.username());
-  EXPECT_EQ("", config.password());
-  EXPECT_EQ("bigdata.datastax.com", config.host());
-  EXPECT_EQ(2443, config.port());
-  EXPECT_EQ("datastax", config.keyspace());
-  EXPECT_EQ(CERTIFICATE_AUTHORITY, config.ca_cert());
-  EXPECT_EQ(CERTIFICATE, config.cert());
-  EXPECT_EQ(KEY, config.key());
+  EXPECT_TRUE(cloud_config.load(creds_zip_file(), &config));
+  EXPECT_EQ("", cloud_config.username());
+  EXPECT_EQ("", cloud_config.password());
+  EXPECT_EQ("bigdata.datastax.com", cloud_config.host());
+  EXPECT_EQ(2443, cloud_config.port());
+  EXPECT_EQ("datastax", cloud_config.keyspace());
+  EXPECT_EQ(ca_cert(), cloud_config.ca_cert());
+  EXPECT_EQ(cert(), cloud_config.cert());
+  EXPECT_EQ(key(), cloud_config.key());
+
+  EXPECT_TRUE(config.ssl_context());
+  EXPECT_TRUE(dynamic_cast<DsePlainTextAuthProvider*>(config.auth_provider().get()) ==
+              NULL); // Not configured
 }
 
 TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingHost) {
@@ -245,7 +270,8 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingConfigJson) {
 TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingCA) {
   CloudSecureConnectionConfig config;
 
-  FULL_CONFIG_CREDSV1;
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
   create_zip_file(buffer.GetString(), true, false);
   EXPECT_FALSE(config.load(creds_zip_file()));
 }
@@ -253,7 +279,8 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingCA) {
 TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingCert) {
   CloudSecureConnectionConfig config;
 
-  FULL_CONFIG_CREDSV1;
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
   create_zip_file(buffer.GetString(), true, true, false);
   EXPECT_FALSE(config.load(creds_zip_file()));
 }
@@ -261,8 +288,49 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingCert) {
 TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1MissingKey) {
   CloudSecureConnectionConfig config;
 
-  FULL_CONFIG_CREDSV1;
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  create_zip_file(buffer.GetString(), true, true, false);
   create_zip_file(buffer.GetString(), true, true, true, false);
   EXPECT_FALSE(config.load(creds_zip_file()));
+}
+
+TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1SslCaCert) {
+  Config config;
+  CloudSecureConnectionConfig cloud_config;
+
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  set_invalid_ca_cert();
+  create_zip_file(buffer.GetString());
+
+  EXPECT_FALSE(cloud_config.load(creds_zip_file(), &config));
+  EXPECT_FALSE(config.ssl_context());
+}
+
+TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1SslCert) {
+  Config config;
+  CloudSecureConnectionConfig cloud_config;
+
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  set_invalid_cert();
+  create_zip_file(buffer.GetString());
+
+  EXPECT_FALSE(cloud_config.load(creds_zip_file(), &config));
+  EXPECT_FALSE(config.ssl_context());
+}
+
+TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1SslKey) {
+  Config config;
+  CloudSecureConnectionConfig cloud_config;
+
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  set_invalid_key();
+  create_zip_file(buffer.GetString());
+
+  EXPECT_FALSE(cloud_config.load(creds_zip_file(), &config));
+  EXPECT_FALSE(config.ssl_context());
 }
 #endif

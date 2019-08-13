@@ -89,8 +89,7 @@ protected:
   virtual void on_error(WaitForError code, const String& message) = 0;
 
 protected:
-  const Address& address() const { return connection_->address(); }
-  const String& address_string() const { return connection_->address_string(); }
+  const Host::Ptr& host() const { return connection_->host(); }
 
   const Response::Ptr& response() const { return response_; }
 

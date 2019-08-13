@@ -56,7 +56,7 @@ private:
 
 }}} // namespace datastax::internal::core
 
-ClusterConnector::ClusterConnector(const ContactPointList& contact_points,
+ClusterConnector::ClusterConnector(const AddressVec& contact_points,
                                    ProtocolVersion protocol_version, const Callback& callback)
     : remaining_connector_count_(0)
     , contact_points_(contact_points)
@@ -104,32 +104,16 @@ Cluster::Ptr ClusterConnector::release_cluster() {
 void ClusterConnector::internal_resolve_and_connect() {
   inc_ref();
 
+  assert(!contact_points_.empty() && "Contact points should never be empty");
+
   if (random_) {
     random_shuffle(contact_points_.begin(), contact_points_.end(), random_);
   }
 
-  for (ContactPointList::const_iterator it = contact_points_.begin(), end = contact_points_.end();
-       it != end; ++it) {
-    const String& contact_point = *it;
-    Address address(contact_point, settings_.port);
-    // Attempt to parse the contact point string. If it's an IP address
-    // then immediately add it to our resolved contact points, otherwise
-    // attempt to resolve the string as a hostname.
-    if (address.is_resolved()) {
-      contact_points_resolved_.push_back(address);
-    } else {
-      if (!resolver_) {
-        resolver_.reset(new MultiResolver(bind_callback(&ClusterConnector::on_resolve, this)));
-      }
-      resolver_->resolve(event_loop_->loop(), contact_point, settings_.port,
-                         settings_.control_connection_settings.connection_settings.socket_settings
-                             .resolve_timeout_ms);
-    }
-  }
+  resolver_ = settings_.cluster_metadata_resolver_factory->new_instance(settings_);
 
-  if (!resolver_) {
-    internal_connect_all();
-  }
+  resolver_->resolve(event_loop_->loop(), contact_points_,
+                     bind_callback(&ClusterConnector::on_resolve, this));
 }
 
 void ClusterConnector::internal_connect(const Address& address, ProtocolVersion version) {
@@ -140,21 +124,6 @@ void ClusterConnector::internal_connect(const Address& address, ProtocolVersion 
   connector->with_metrics(metrics_)
       ->with_settings(settings_.control_connection_settings)
       ->connect(event_loop_->loop());
-}
-
-void ClusterConnector::internal_connect_all() {
-  if (contact_points_resolved_.empty()) {
-    error_code_ = CLUSTER_ERROR_NO_HOSTS_AVAILABLE;
-    error_message_ = "Unable to connect to any contact points";
-    finish();
-    return;
-  }
-  remaining_connector_count_ = contact_points_resolved_.size();
-  for (AddressVec::const_iterator it = contact_points_resolved_.begin(),
-                                  end = contact_points_resolved_.end();
-       it != end; ++it) {
-    internal_connect(*it, protocol_version_);
-  }
 }
 
 void ClusterConnector::internal_cancel() {
@@ -194,37 +163,27 @@ void ClusterConnector::on_error(ClusterConnector::ClusterError code, const Strin
   maybe_finish();
 }
 
-void ClusterConnector::on_resolve(MultiResolver* resolver) {
+void ClusterConnector::on_resolve(ClusterMetadataResolver* resolver) {
   if (is_canceled()) {
     finish();
     return;
   }
 
-  const Resolver::Vec& resolvers = resolver->resolvers();
-  for (Resolver::Vec::const_iterator it = resolvers.begin(), end = resolvers.end(); it != end;
-       ++it) {
-    const Resolver::Ptr resolver(*it);
-    if (resolver->is_success()) {
-      const AddressVec& addresses = resolver->addresses();
-      if (!addresses.empty()) {
-        for (AddressVec::const_iterator it = addresses.begin(), end = addresses.end(); it != end;
-             ++it) {
-          contact_points_resolved_.push_back(*it);
-        }
-      } else {
-        LOG_ERROR("No addresses resolved for %s:%d\n", resolver->hostname().c_str(),
-                  resolver->port());
-      }
-    } else if (resolver->is_timed_out()) {
-      LOG_ERROR("Timed out attempting to resolve address for %s:%d\n", resolver->hostname().c_str(),
-                resolver->port());
-    } else if (!resolver->is_canceled()) {
-      LOG_ERROR("Unable to resolve address for %s:%d\n", resolver->hostname().c_str(),
-                resolver->port());
-    }
+  const AddressVec& resolved_contact_points(resolver->resolved_contact_points());
+
+  if (resolved_contact_points.empty()) {
+    error_code_ = CLUSTER_ERROR_NO_HOSTS_AVAILABLE;
+    error_message_ = "Unable to connect to any contact points";
+    finish();
+    return;
   }
 
-  internal_connect_all();
+  remaining_connector_count_ = resolved_contact_points.size();
+  for (AddressVec::const_iterator it = resolved_contact_points.begin(),
+                                  end = resolved_contact_points.end();
+       it != end; ++it) {
+    internal_connect(*it, protocol_version_);
+  }
 }
 
 void ClusterConnector::on_connect(ControlConnector* connector) {

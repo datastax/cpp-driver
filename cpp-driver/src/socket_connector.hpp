@@ -119,7 +119,6 @@ public:
   Socket::Ptr release_socket();
 
 public:
-  const Address& address() { return address_; }
   const String& hostname() { return hostname_; }
 
   ScopedPtr<SslSession>& ssl_session() { return ssl_session_; }

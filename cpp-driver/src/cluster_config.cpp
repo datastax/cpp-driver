@@ -104,7 +104,12 @@ CassError cass_cluster_set_contact_points_n(CassCluster* cluster, const char* co
   if (contact_points_length == 0) {
     cluster->config().contact_points().clear();
   } else {
-    explode(String(contact_points, contact_points_length), cluster->config().contact_points());
+    Vector<String> exploded;
+    explode(String(contact_points, contact_points_length), exploded);
+    for (Vector<String>::const_iterator it = exploded.begin(), end = exploded.end(); it != end;
+         ++it) {
+      cluster->config().contact_points().push_back(Address(*it, cluster->config().port()));
+    }
   }
   return CASS_OK;
 }
