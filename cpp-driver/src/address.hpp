@@ -70,7 +70,8 @@ public:
 #endif
 
   Address();
-  Address(const String& hostname, int port, const String& server_name = String());
+  Address(const Address& other, const String& server_name);
+  Address(const String& hostname_or_address, int port, const String& server_name = String());
   Address(const uint8_t* address, uint8_t address_length, int port);
   Address(const struct sockaddr* addr);
 
@@ -81,6 +82,7 @@ public:
   bool operator<(const Address& other) const;
 
 public:
+  String hostname_or_address() const;
   const String& server_name() const { return server_name_; }
   Family family() const { return family_; }
   int port() const { return port_; }

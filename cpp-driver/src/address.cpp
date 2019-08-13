@@ -41,6 +41,12 @@ Address::Address()
     : family_(UNRESOLVED)
     , port_(0) {}
 
+Address::Address(const Address& other, const String& server_name)
+    : hostname_or_address_(other.hostname_or_address_)
+    , server_name_(server_name)
+    , family_(other.family_)
+    , port_(other.port_) {}
+
 Address::Address(const String& hostname, int port, const String& server_name)
     : server_name_(server_name)
     , family_(UNRESOLVED)
@@ -101,6 +107,20 @@ bool Address::operator<(const Address& other) const {
   return false;
 }
 
+String Address::hostname_or_address() const {
+  if (family_ == IPv4) {
+    char name[INET_ADDRSTRLEN + 1] = { '\0' };
+    uv_inet_ntop(AF_INET, hostname_or_address_.data(), name, INET_ADDRSTRLEN);
+    return name;
+  } else if (family_ == IPv6) {
+    char name[INET6_ADDRSTRLEN + 1] = { '\0' };
+    uv_inet_ntop(AF_INET6, hostname_or_address_.data(), name, INET6_ADDRSTRLEN);
+    return name;
+  } else {
+    return hostname_or_address_;
+  }
+}
+
 size_t Address::hash_code() const {
   SPARSEHASH_HASH<Family> hasher;
   size_t code = hasher(family_);
@@ -141,23 +161,16 @@ const struct sockaddr* Address::to_sockaddr(SocketStorage* storage) const {
 
 String Address::to_string(bool with_port) const {
   OStringStream ss;
-  if (family_ == IPv4) {
-    char name[INET_ADDRSTRLEN + 1] = { '\0' };
-    uv_inet_ntop(AF_INET, hostname_or_address_.data(), name, INET_ADDRSTRLEN);
-    ss << name;
-  } else if (family_ == IPv6) {
-    char name[INET6_ADDRSTRLEN + 1] = { '\0' };
-    uv_inet_ntop(AF_INET6, hostname_or_address_.data(), name, INET6_ADDRSTRLEN);
-    if (with_port) {
-      ss << "[" << name << "]";
-    } else {
-      ss << name;
-    }
+  if (family_ == IPv6 && with_port) {
+    ss << "[" << hostname_or_address() << "]";
   } else {
-    ss << hostname_or_address_;
+    ss << hostname_or_address();
   }
   if (with_port) {
     ss << ":" << port_;
+  }
+  if (!server_name_.empty()) {
+    ss << " (" << server_name_ << ")";
   }
   return ss.str();
 }
@@ -184,8 +197,7 @@ bool determine_address_for_peer_host(const Address& connected_address, const Val
                 connected_address.to_string(false).c_str());
       return false;
     }
-    if (Address("0.0.0.0", 0).equals(*output, false) == 0 ||
-        Address("::", 0).equals(*output, false) == 0) {
+    if (Address("0.0.0.0", 0).equals(*output, false) || Address("::", 0).equals(*output, false)) {
       LOG_WARN("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact "
                "instead. "
                "If this is incorrect you should configure a specific interface for rpc_address on "

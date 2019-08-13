@@ -20,6 +20,7 @@
 #include "auth.hpp"
 #include "cassandra.h"
 #include "cloud_secure_connection_config.hpp"
+#include "cluster_metadata_resolver.hpp"
 #include "constants.hpp"
 #include "execution_profile.hpp"
 #include "protocol.hpp"
@@ -72,7 +73,8 @@ public:
       , no_compact_(CASS_DEFAULT_NO_COMPACT)
       , is_client_id_set_(false)
       , host_listener_(new DefaultHostListener())
-      , monitor_reporting_interval_secs_(CASS_DEFAULT_CLIENT_MONITOR_EVENTS_INTERVAL_SECS) {
+      , monitor_reporting_interval_secs_(CASS_DEFAULT_CLIENT_MONITOR_EVENTS_INTERVAL_SECS)
+      , cluster_metadata_resolver_factory_(new DefaultClusterMetadataResolverFactory()) {
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
@@ -165,9 +167,9 @@ public:
 
   void set_resolve_timeout(unsigned timeout_ms) { resolve_timeout_ms_ = timeout_ms; }
 
-  const ContactPointList& contact_points() const { return contact_points_; }
+  const AddressVec& contact_points() const { return contact_points_; }
 
-  ContactPointList& contact_points() { return contact_points_; }
+  AddressVec& contact_points() { return contact_points_; }
 
   int port() const { return port_; }
 
@@ -378,6 +380,14 @@ public:
     return cloud_secure_connection_config_.load(path, this);
   }
 
+  const ClusterMetadataResolverFactory::Ptr& cluster_metadata_resolver_factory() const {
+    return cluster_metadata_resolver_factory_;
+  }
+
+  void set_cluster_metadata_resolver_factory(const ClusterMetadataResolverFactory::Ptr& factory) {
+    cluster_metadata_resolver_factory_ = factory;
+  }
+
 private:
   void init_profiles();
 
@@ -385,7 +395,7 @@ private:
   int port_;
   ProtocolVersion protocol_version_;
   bool use_beta_protocol_version_;
-  ContactPointList contact_points_;
+  AddressVec contact_points_;
   unsigned thread_count_io_;
   unsigned queue_size_io_;
   unsigned core_connections_per_host_;
@@ -426,6 +436,7 @@ private:
   DefaultHostListener::Ptr host_listener_;
   unsigned monitor_reporting_interval_secs_;
   CloudSecureConnectionConfig cloud_secure_connection_config_;
+  ClusterMetadataResolverFactory::Ptr cluster_metadata_resolver_factory_;
 };
 
 }}} // namespace datastax::internal::core

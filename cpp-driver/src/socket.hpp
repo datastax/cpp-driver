@@ -350,7 +350,6 @@ public:
   uv_loop_t* loop() { return tcp_.loop; }
 
   const Address& address() const { return address_; }
-  const String& address_string() const { return address_string_; }
 
 private:
   static void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
@@ -376,7 +375,6 @@ private:
   size_t max_reusable_write_objects_;
 
   Address address_;
-  String address_string_;
 };
 
 }}} // namespace datastax::internal::core

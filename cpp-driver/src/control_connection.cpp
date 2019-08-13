@@ -304,14 +304,68 @@ public:
 
 static NopControlConnectionListener nop_listener__;
 
+bool DefaultAddressFactory::create(const Row* peers_row, const Host::Ptr& connected_host,
+                                   Address* address) {
+  return determine_address_for_peer_host(connected_host->address(), peers_row->get_by_name("peer"),
+                                         peers_row->get_by_name("rpc_address"), address);
+}
+
+bool SniAddressFactory::create(const Row* peers_row, const Host::Ptr& connected_host,
+                               Address* address) {
+  CassUuid host_id;
+  if (!peers_row->get_uuid_by_name("host_id", &host_id)) {
+    // Attempt to get an peer address for the error log.
+    Address peer_address;
+    const Value* peer_value = peers_row->get_by_name("peer");
+    if (!peer_value || !peer_value->decoder().as_inet(
+                           peer_value->size(), connected_host->address().port(), &peer_address)) {
+      LOG_WARN("Invalid address format for peer address");
+    }
+    LOG_ERROR("Invalid `host_id` for host. %s will be ignored.",
+              peer_address.is_valid() ? peer_address.to_string().c_str() : "<unknown>");
+    return false;
+  }
+  *address = Address(connected_host->address().hostname_or_address(),
+                     connected_host->address().port(), to_string(host_id));
+  return true;
+}
+
+static AddressFactory* create_address_factory_from_config(const Config& config) {
+  if (config.cloud_secure_connection_config().is_loaded()) {
+    return new SniAddressFactory();
+  } else {
+    return new DefaultAddressFactory();
+  }
+}
+
+ControlConnectionSettings::ControlConnectionSettings()
+    : use_schema(CASS_DEFAULT_USE_SCHEMA)
+    , use_token_aware_routing(CASS_DEFAULT_USE_TOKEN_AWARE_ROUTING)
+    , address_factory(new DefaultAddressFactory()) {}
+
+ControlConnectionSettings::ControlConnectionSettings(const Config& config)
+    : connection_settings(config)
+    , use_schema(config.use_schema())
+    , use_token_aware_routing(config.token_aware_routing())
+    , address_factory(create_address_factory_from_config(config)) {}
+
+ControlConnector::ControlConnector(const Host::Ptr& host, ProtocolVersion protocol_version,
+                                   const Callback& callback)
+    : connector_(
+          new Connector(host, protocol_version, bind_callback(&ControlConnector::on_connect, this)))
+    , callback_(callback)
+    , error_code_(CONTROL_CONNECTION_OK)
+    , listener_(NULL)
+    , metrics_(NULL) {}
+
 ControlConnection::ControlConnection(const Connection::Ptr& connection,
-                                     ControlConnectionListener* listener, bool use_schema,
-                                     bool token_aware_routing, const VersionNumber& server_version,
+                                     ControlConnectionListener* listener,
+                                     const ControlConnectionSettings& settings,
+                                     const VersionNumber& server_version,
                                      const VersionNumber& dse_server_version,
                                      ListenAddressMap listen_addresses)
     : connection_(connection)
-    , use_schema_(use_schema)
-    , token_aware_routing_(token_aware_routing)
+    , settings_(settings)
     , server_version_(server_version)
     , dse_server_version_(dse_server_version)
     , listen_addresses_(listen_addresses)
@@ -337,7 +391,7 @@ void ControlConnection::set_listener(ControlConnectionListener* listener) {
 }
 
 void ControlConnection::refresh_node(RefreshNodeType type, const Address& address) {
-  bool is_connected_host = (address == this->address());
+  bool is_connected_host = connection_->host()->rpc_address().equals(address, false);
 
   String query;
   bool is_all_peers = false;
@@ -371,56 +425,48 @@ void ControlConnection::on_refresh_node(ControlRequestCallback* callback) {
 }
 
 void ControlConnection::handle_refresh_node(RefreshNodeCallback* callback) {
-  const ResultResponse::Ptr result = callback->result();
+  bool found_host = false;
+  const Row* row = NULL;
+  ResultIterator rows(callback->result().get());
 
-  if (result->row_count() == 0) {
+  while (rows.next() && !found_host) {
+    row = rows.row();
+    if (callback->is_all_peers) {
+      Address address;
+      bool is_valid_address = determine_address_for_peer_host(
+          connection_->host()->rpc_address(), row->get_by_name("peer"),
+          row->get_by_name("rpc_address"), &address);
+      if (is_valid_address && callback->address == address) {
+        found_host = true;
+      }
+    } else {
+      found_host = true;
+    }
+  }
+
+  if (!found_host) {
     String address_str = callback->address.to_string();
-    LOG_ERROR("No row found for host %s in %s's local/peers system table. "
+    LOG_ERROR("No row found for host %s in %s's peers system table. "
               "%s will be ignored.",
               address_str.c_str(), address_string().c_str(), address_str.c_str());
     return;
   }
 
-  Host::Ptr host(new Host(callback->address));
-  if (!callback->is_all_peers) {
-    host->set(&result->first_row(), token_aware_routing_);
-    listen_addresses_[callback->address] =
-        determine_listen_address(callback->address, &result->first_row());
-  } else {
-    ResultIterator rows(result.get());
-    bool found_host = false;
-    while (rows.next()) {
-      const Row* row = rows.row();
-      Address address;
-      bool is_valid_address = determine_address_for_peer_host(
-          this->address(), row->get_by_name("peer"), row->get_by_name("rpc_address"), &address);
-      if (is_valid_address && callback->address == address) {
-        host->set(row, token_aware_routing_);
-        listen_addresses_[callback->address] = determine_listen_address(callback->address, row);
-        found_host = true;
-        break;
-      }
-    }
-    if (!found_host) {
-      String address_str = callback->address.to_string();
-      LOG_ERROR("No row found for host %s in %s's peers system table. "
-                "%s will be ignored.",
-                address_str.c_str(), address_string().c_str(), address_str.c_str());
-      return;
-    }
-  }
+  Address address;
+  if (settings_.address_factory->create(row, connection_->host(), &address)) {
+    Host::Ptr host(new Host(address));
+    host->set(row, settings_.use_token_aware_routing);
+    listen_addresses_[host->rpc_address()] = determine_listen_address(address, row);
 
-  switch (callback->type) {
-    case NEW_NODE:
-      listener_->on_add(host);
-      break;
-    case MOVED_NODE:
-      listener_->on_remove(host->address());
-      listener_->on_add(host);
-      break;
-    default:
-      assert(false && "Invalid node refresh type");
-      break;
+    switch (callback->type) {
+      case NEW_NODE:
+        listener_->on_add(host);
+        break;
+      case MOVED_NODE:
+        listener_->on_remove(host->address());
+        listener_->on_add(host);
+        break;
+    }
   }
 }
 
@@ -724,7 +770,7 @@ void ControlConnection::on_event(const EventResponse::Ptr& response) {
 
     case CASS_EVENT_SCHEMA_CHANGE:
       // Only handle keyspace events when using token-aware routing
-      if (!use_schema_ && response->schema_change_target() != EventResponse::KEYSPACE) {
+      if (!settings_.use_schema && response->schema_change_target() != EventResponse::KEYSPACE) {
         return;
       }
 

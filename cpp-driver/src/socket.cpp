@@ -275,8 +275,7 @@ void SocketWriteBase::handle_write(uv_write_t* req, int status) {
 Socket::Socket(const Address& address, size_t max_reusable_write_objects)
     : is_defunct_(false)
     , max_reusable_write_objects_(max_reusable_write_objects)
-    , address_(address)
-    , address_string_(address.to_string()) {
+    , address_(address) {
   tcp_.data = this;
 }
 
@@ -370,7 +369,7 @@ void Socket::on_close(uv_handle_t* handle) {
 }
 
 void Socket::handle_close() {
-  LOG_DEBUG("Socket(%p) to host %s closed", static_cast<void*>(this), address_string().c_str());
+  LOG_DEBUG("Socket(%p) to host %s closed", static_cast<void*>(this), address_.to_string().c_str());
 
   while (!pending_writes_.is_empty()) {
     SocketWriteBase* pending_write = pending_writes_.pop_front();

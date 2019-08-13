@@ -80,24 +80,6 @@ private:
 
 }}} // namespace datastax::internal::core
 
-ControlConnectionSettings::ControlConnectionSettings()
-    : use_schema(CASS_DEFAULT_USE_SCHEMA)
-    , token_aware_routing(CASS_DEFAULT_TOKEN_AWARE_ROUTING) {}
-
-ControlConnectionSettings::ControlConnectionSettings(const Config& config)
-    : connection_settings(config)
-    , use_schema(config.use_schema())
-    , token_aware_routing(config.token_aware_routing()) {}
-
-ControlConnector::ControlConnector(const Host::Ptr& host, ProtocolVersion protocol_version,
-                                   const Callback& callback)
-    : connector_(
-          new Connector(host, protocol_version, bind_callback(&ControlConnector::on_connect, this)))
-    , callback_(callback)
-    , error_code_(CONTROL_CONNECTION_OK)
-    , listener_(NULL)
-    , metrics_(NULL) {}
-
 ControlConnector* ControlConnector::with_listener(ControlConnectionListener* listener) {
   listener_ = listener;
   return this;
@@ -116,7 +98,7 @@ ControlConnector* ControlConnector::with_settings(const ControlConnectionSetting
 void ControlConnector::connect(uv_loop_t* loop) {
   inc_ref();
   int event_types = 0;
-  if (settings_.use_schema || settings_.token_aware_routing) {
+  if (settings_.use_schema || settings_.use_token_aware_routing) {
     event_types = CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE | CASS_EVENT_SCHEMA_CHANGE;
   } else {
     event_types = CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE;
@@ -161,9 +143,8 @@ void ControlConnector::on_success() {
   }
 
   // Transfer ownership of the connection to the control connection.
-  control_connection_.reset(new ControlConnection(connection_, listener_, settings_.use_schema,
-                                                  settings_.token_aware_routing, server_version_,
-                                                  dse_server_version_, listen_addresses_));
+  control_connection_.reset(new ControlConnection(
+      connection_, listener_, settings_, server_version_, dse_server_version_, listen_addresses_));
 
   control_connection_->set_listener(listener_);
 
@@ -223,12 +204,12 @@ void ControlConnector::query_hosts() {
 
 void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callback) {
   ResultResponse::Ptr local_result(callback->result("local"));
+  const Host::Ptr& connected_host = connection_->host();
   if (local_result && local_result->row_count() > 0) {
-    const Host::Ptr& host = connection_->host();
-    host->set(&local_result->first_row(), settings_.token_aware_routing);
-    hosts_[host->address()] = host;
-    server_version_ = host->server_version();
-    dse_server_version_ = host->dse_server_version();
+    connected_host->set(&local_result->first_row(), settings_.use_token_aware_routing);
+    hosts_[connected_host->address()] = connected_host;
+    server_version_ = connected_host->server_version();
+    dse_server_version_ = connected_host->dse_server_version();
   } else {
     on_error(CONTROL_CONNECTION_ERROR_HOSTS,
              "No row found in " + connection_->address_string() + "'s local system table");
@@ -241,19 +222,16 @@ void ControlConnector::handle_query_hosts(HostsConnectorRequestCallback* callbac
     while (rows.next()) {
       Address address;
       const Row* row = rows.row();
-      if (!determine_address_for_peer_host(connection_->address(), row->get_by_name("peer"),
-                                           row->get_by_name("rpc_address"), &address)) {
-        continue;
+      if (settings_.address_factory->create(row, connected_host, &address)) {
+        Host::Ptr host(new Host(address));
+        host->set(rows.row(), settings_.use_token_aware_routing);
+        listen_addresses_[host->rpc_address()] = determine_listen_address(address, row);
+        hosts_[host->address()] = host;
       }
-
-      Host::Ptr host(new Host(address));
-      host->set(rows.row(), settings_.token_aware_routing);
-      listen_addresses_[host->address()] = determine_listen_address(address, row);
-      hosts_[host->address()] = host;
     }
   }
 
-  if (settings_.token_aware_routing || settings_.use_schema) {
+  if (settings_.use_token_aware_routing || settings_.use_schema) {
     query_schema();
   } else {
     // If we're not using token aware routing or schema we can just finish.

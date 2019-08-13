@@ -299,7 +299,7 @@ void ConnectionConnector::on_supported(ResponseMessage* response) {
 
 void Connector::on_authenticate(const String& class_name) {
   Authenticator::Ptr auth(settings_.auth_provider->new_authenticator(
-      socket_connector_->address(), socket_connector_->hostname(), class_name));
+      host_->address(), socket_connector_->hostname(), class_name));
   if (!auth) {
     on_error(CONNECTION_ERROR_AUTH, "Authentication required but no auth provider set");
   } else {

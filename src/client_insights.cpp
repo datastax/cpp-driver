@@ -287,7 +287,7 @@ private:
     contact_points(writer);
     data_centers(writer);
     writer.Key("initialControlConnection");
-    writer.String(connection_->address().to_string(true).c_str());
+    writer.String(connection_->resolved_address().to_string(true).c_str());
     writer.Key("protocolVersion");
     writer.Int(connection_->protocol_version().value());
     writer.Key("localAddress");
@@ -601,28 +601,28 @@ private:
 private:
   // Startup message helper methods
   void resolve_contact_points() {
-    const ContactPointList& contact_points = config_.contact_points();
+    const AddressVec& contact_points = config_.contact_points();
     const int port = config_.port();
     MultiResolver::Ptr resolver;
 
-    for (ContactPointList::const_iterator it = contact_points.begin(), end = contact_points.end();
+    for (AddressVec::const_iterator it = contact_points.begin(), end = contact_points.end();
          it != end; ++it) {
-      const String& contact_point = *it;
-      Address address(contact_point, port);
+      const Address& contact_point = *it;
       // Attempt to parse the contact point string. If it's an IP address
       // then immediately add it to our resolved contact points, otherwise
       // attempt to resolve the string as a hostname.
-      if (address.is_resolved()) {
+      if (contact_point.is_resolved()) {
         AddressSet addresses;
-        addresses.insert(address);
-        contact_points_resolved_[contact_point] = addresses;
+        addresses.insert(contact_point);
+        contact_points_resolved_[contact_point.hostname_or_address()] = addresses;
       } else {
         if (!resolver) {
           inc_ref();
           resolver.reset(
               new MultiResolver(bind_callback(&StartupMessageHandler::on_resolve, this)));
         }
-        resolver->resolve(connection_->loop(), contact_point, port, config_.resolve_timeout_ms());
+        resolver->resolve(connection_->loop(), contact_point.hostname_or_address(), port,
+                          config_.resolve_timeout_ms());
       }
     }
 
@@ -984,7 +984,7 @@ void ClientInsights::send_status_message(const Connection::Ptr& connection, cons
   writer.Key("sessionId");
   writer.String(session_id_.c_str());
   writer.Key("controlConnection");
-  writer.String(connection->address().to_string(true).c_str());
+  writer.String(connection->resolved_address().to_string(true).c_str());
 
   writer.Key("conntectedNodes");
   writer.StartObject();

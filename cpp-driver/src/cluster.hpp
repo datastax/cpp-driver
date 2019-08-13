@@ -213,6 +213,13 @@ struct ClusterSettings {
    * started by calling `Cluster::start_events()`.
    */
   bool disable_events_on_startup;
+
+  /**
+   * A factory for creating cluster metadata resolvers. A cluster metadata resolver is used to
+   * determine contact points and retrieve other metadata required to connect the
+   * cluster.
+   */
+  ClusterMetadataResolverFactory::Ptr cluster_metadata_resolver_factory;
 };
 
 /**

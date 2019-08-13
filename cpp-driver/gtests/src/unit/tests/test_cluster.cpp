@@ -329,10 +329,10 @@ TEST_F(ClusterUnitTest, Simple) {
   mockssandra::SimpleCluster cluster(simple(), 3);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
-  contact_points.push_back("127.0.0.2");
-  contact_points.push_back("127.0.0.3");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
+  contact_points.push_back(Address("127.0.0.2", 9042));
+  contact_points.push_back(Address("127.0.0.3", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -363,13 +363,13 @@ TEST_F(ClusterUnitTest, SimpleWithCriticalFailures) {
       .then(mockssandra::Action::Builder().plaintext_auth())
       .auth_success();
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1"); // Good
-  contact_points.push_back("127.0.0.2"); // Invalid auth
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042)); // Good
+  contact_points.push_back(Address("127.0.0.2", 9042)); // Invalid auth
   add_logging_critera("Unable to connect to host 127.0.0.2 because of the "
                       "following error: Received error response 'Invalid "
                       "credentials'");
-  contact_points.push_back("127.0.0.3"); // Invalid protocol
+  contact_points.push_back(Address("127.0.0.3", 9042)); // Invalid protocol
   add_logging_critera("Unable to connect to host 127.0.0.3 because of the "
                       "following error: Received error response 'Invalid or "
                       "unsupported protocol version'");
@@ -399,8 +399,8 @@ TEST_F(ClusterUnitTest, Resolve) {
   mockssandra::SimpleCluster cluster(simple(), 3);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("localhost");
+  AddressVec contact_points;
+  contact_points.push_back(Address("localhost", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -416,8 +416,8 @@ TEST_F(ClusterUnitTest, Auth) {
   mockssandra::SimpleCluster cluster(auth());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -440,8 +440,8 @@ TEST_F(ClusterUnitTest, Ssl) {
   settings.control_connection_settings.connection_settings = use_ssl(&cluster);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -461,10 +461,10 @@ TEST_F(ClusterUnitTest, Cancel) {
   Vector<Future::Ptr> connect_futures;
   Vector<ClusterConnector::Ptr> connectors;
 
-  ContactPointList contact_points;
-  contact_points.push_back("localhost");
-  contact_points.push_back("google.com");
-  contact_points.push_back("doesnotexist.dne");
+  AddressVec contact_points;
+  contact_points.push_back(Address("localhost", 9042));
+  contact_points.push_back(Address("google.com", 9042));
+  contact_points.push_back(Address("doesnotexist.dne", 9042));
 
   for (size_t i = 0; i < 10; ++i) {
     Future::Ptr connect_future(new Future());
@@ -507,8 +507,8 @@ TEST_F(ClusterUnitTest, ReconnectToDiscoveredHosts) {
   outage_plan.start_node(1);
   outage_plan.stop_node(3);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
@@ -550,8 +550,8 @@ TEST_F(ClusterUnitTest, ReconnectUpdateHosts) {
   outage_plan.stop_node(3);
   outage_plan.stop_node(1);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
@@ -590,8 +590,8 @@ TEST_F(ClusterUnitTest, CloseDuringReconnect) {
   mockssandra::SimpleCluster mock_cluster(simple());
   mock_cluster.start_all();
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
@@ -623,8 +623,8 @@ TEST_F(ClusterUnitTest, NotifyDownUp) {
   mockssandra::SimpleCluster mock_cluster(simple(), 3);
   mock_cluster.start_all();
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
@@ -666,8 +666,8 @@ TEST_F(ClusterUnitTest, ProtocolNegotiation) {
   mockssandra::SimpleCluster cluster(builder.build());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -688,8 +688,8 @@ TEST_F(ClusterUnitTest, NoSupportedProtocols) {
   mockssandra::SimpleCluster cluster(builder.build());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -707,10 +707,10 @@ TEST_F(ClusterUnitTest, FindValidHost) {
   mockssandra::SimpleCluster cluster(simple(), 3);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.99.99.1"); // Invalid
-  contact_points.push_back("127.99.99.2"); // Invalid
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.99.99.1", 9042)); // Invalid
+  contact_points.push_back(Address("127.99.99.2", 9042)); // Invalid
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -730,10 +730,10 @@ TEST_F(ClusterUnitTest, NoHostsAvailable) {
   // Don't start the cluster
 
   // Try multiple hosts
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
-  contact_points.push_back("127.0.0.2");
-  contact_points.push_back("127.0.0.3");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
+  contact_points.push_back(Address("127.0.0.2", 9042));
+  contact_points.push_back(Address("127.0.0.3", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -751,8 +751,8 @@ TEST_F(ClusterUnitTest, InvalidAuth) {
   mockssandra::SimpleCluster cluster(auth());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -775,8 +775,8 @@ TEST_F(ClusterUnitTest, InvalidSsl) {
   use_ssl(&cluster);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -803,8 +803,8 @@ TEST_F(ClusterUnitTest, DCAwareRecoverOnRemoteHost) {
   Address local_address("127.0.0.1", 9042);
   Address remote_address("127.0.0.2", 9042);
 
-  ContactPointList contact_points;
-  contact_points.push_back(local_address.to_string());
+  AddressVec contact_points;
+  contact_points.push_back(local_address);
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());
@@ -858,8 +858,8 @@ TEST_F(ClusterUnitTest, InvalidDC) {
   mockssandra::SimpleCluster cluster(simple());
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -886,8 +886,8 @@ TEST_F(ClusterUnitTest, DisableEventsOnStartup) {
   mockssandra::SimpleCluster cluster(simple(), 2);
   ASSERT_EQ(cluster.start_all(), 0);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr connect_future(new Future());
   ClusterConnector::Ptr connector(
@@ -929,8 +929,8 @@ TEST_F(ClusterUnitTest, ReconnectionPolicy) {
   outage_plan.stop_node(1);
   outage_plan.start_node(1);
 
-  ContactPointList contact_points;
-  contact_points.push_back("127.0.0.1");
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
 
   Future::Ptr close_future(new Future());
   Future::Ptr connect_future(new Future());

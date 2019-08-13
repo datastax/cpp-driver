@@ -17,6 +17,8 @@
 #include "cloud_secure_connection_config.hpp"
 
 #include "auth.hpp"
+#include "cluster.hpp"
+#include "cluster_metadata_resolver.hpp"
 #include "config.hpp"
 #include "json.hpp"
 #include "logger.hpp"
@@ -75,6 +77,42 @@ private:
   unzFile file;
 };
 #endif
+
+namespace {
+
+class CloudClusterMetadataResolver : public ClusterMetadataResolver {
+public:
+  CloudClusterMetadataResolver(const String& host, int port, const SocketSettings& settings) {
+    // TODO
+  }
+
+private:
+  virtual void internal_resolve(uv_loop_t* loop, const AddressVec& contact_points) {
+    // TODO
+  }
+
+  virtual void internal_cancel() {
+    // TODO
+  }
+};
+
+class CloudClusterMetadataResolverFactory : public ClusterMetadataResolverFactory {
+public:
+  CloudClusterMetadataResolverFactory(const String host, int port)
+      : host_(host)
+      , port_(port) {}
+
+  virtual ClusterMetadataResolver::Ptr new_instance(const ClusterSettings& settings) const {
+    return ClusterMetadataResolver::Ptr(new CloudClusterMetadataResolver(
+        host_, port_, settings.control_connection_settings.connection_settings.socket_settings));
+  }
+
+private:
+  String host_;
+  int port_;
+};
+
+} // namespace
 
 CloudSecureConnectionConfig::CloudSecureConnectionConfig()
     : is_loaded_(false)
@@ -167,6 +205,9 @@ bool CloudSecureConnectionConfig::load(const String& filename, Config* config /*
     }
 
     config->set_ssl_context(ssl_context);
+
+    config->set_cluster_metadata_resolver_factory(
+        ClusterMetadataResolverFactory::Ptr(new CloudClusterMetadataResolverFactory(host_, port_)));
   }
 
   is_loaded_ = true;

@@ -32,8 +32,9 @@ public:
 
   void connect(const Config& config = Config()) {
     Config temp(config);
-    temp.contact_points().push_back("127.0.0.1");
-    temp.contact_points().push_back("127.0.0.2"); // At least one more host (in case node 1 is down)
+    temp.contact_points().push_back(Address("127.0.0.1", 9042));
+    temp.contact_points().push_back(
+        Address("127.0.0.2", 9042)); // At least one more host (in case node 1 is down)
     Future::Ptr connect_future(session.connect(temp));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";

@@ -73,7 +73,7 @@ public:
     for (size_t i = 1; i <= num_nodes; ++i) {
       OStringStream ss;
       ss << "127.0.0." << i;
-      config.contact_points().push_back(ss.str());
+      config.contact_points().push_back(Address(ss.str(), 9042));
     }
     if (ssl_context) {
       config.set_ssl_context(ssl_context);
@@ -216,7 +216,7 @@ TEST_F(SessionUnitTest, InvalidKeyspace) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   Session session;
 
   Future::Ptr connect_future(session.connect(config, "invalid"));
@@ -231,7 +231,7 @@ TEST_F(SessionUnitTest, InvalidDataCenter) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_load_balancing_policy(new DCAwarePolicy("invalid_data_center", 0, false));
   Session session;
 
@@ -248,7 +248,7 @@ TEST_F(SessionUnitTest, InvalidLocalAddress) {
 
   Config config;
   config.set_local_address(Address("1.1.1.1", PORT)); // Invalid
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_load_balancing_policy(new DCAwarePolicy("invalid_data_center", 0, false));
   Session session;
 
@@ -436,7 +436,7 @@ TEST_F(SessionUnitTest, HostListener) {
 
   Config config;
   config.set_constant_reconnect(100); // Reconnect immediately
-  config.contact_points().push_back("127.0.0.2");
+  config.contact_points().push_back(Address("127.0.0.2", 9042));
   config.set_host_listener(listener);
 
   Session session;
@@ -494,7 +494,7 @@ TEST_F(SessionUnitTest, HostListenerDCAwareLocal) {
 
   Config config;
   config.set_constant_reconnect(100); // Reconnect immediately
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_host_listener(listener);
 
   Session session;
@@ -531,7 +531,7 @@ TEST_F(SessionUnitTest, HostListenerDCAwareRemote) {
 
   Config config;
   config.set_constant_reconnect(100); // Reconnect immediately
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_load_balancing_policy(new DCAwarePolicy("dc1", 1, false));
   config.set_host_listener(listener);
 
@@ -573,7 +573,7 @@ TEST_F(SessionUnitTest, HostListenerNodeDown) {
 
   Config config;
   config.set_constant_reconnect(100); // Reconnect immediately
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_host_listener(listener);
 
   Session session;

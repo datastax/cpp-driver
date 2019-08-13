@@ -31,7 +31,7 @@ public:
 
   void connect(const Config& config = Config()) {
     Config temp(config);
-    temp.contact_points().push_back("127.0.0.1");
+    temp.contact_points().push_back(Address("127.0.0.1", 9042));
     Future::Ptr connect_future(session.connect(temp));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";

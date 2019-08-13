@@ -97,6 +97,41 @@ TEST(AddressUnitTest, ToInetIPv6) {
   EXPECT_EQ(expected, actual);
 }
 
+TEST(AddressUnitTest, ToString) {
+  // Only hostname/address
+  EXPECT_EQ(Address("127.0.0.1", 9042).hostname_or_address(), "127.0.0.1");
+  EXPECT_EQ(Address("::1", 9042).hostname_or_address(), "::1");
+  EXPECT_EQ(Address("0:0:0:0:0:0:0:1", 9042).hostname_or_address(), "::1"); // IPv6 normalization
+  EXPECT_EQ(Address("0:0:0:0:0:0:0:0", 9042).hostname_or_address(), "::");  // IPv6 normalization
+  EXPECT_EQ(Address("datastax.com", 9042).hostname_or_address(), "datastax.com");
+
+  // w/o port
+  EXPECT_EQ(Address("127.0.0.1", 9042).to_string(), "127.0.0.1");
+  EXPECT_EQ(Address("::1", 9042).to_string(), "::1");
+  EXPECT_EQ(Address("datastax.com", 9042).to_string(), "datastax.com");
+
+  // w/ port
+  EXPECT_EQ(Address("127.0.0.1", 9042).to_string(true), "127.0.0.1:9042");
+  EXPECT_EQ(Address("::1", 9042).to_string(true), "[::1]:9042");
+  EXPECT_EQ(Address("datastax.com", 9042).to_string(true), "datastax.com:9042");
+
+  // w/ servername
+  EXPECT_EQ(Address("127.0.0.1", 9042, "d1f1884b-6e05-4b3f-9e88-8a93904bb0e5").to_string(),
+            "127.0.0.1 (d1f1884b-6e05-4b3f-9e88-8a93904bb0e5)");
+  EXPECT_EQ(Address("::1", 9042, "d1f1884b-6e05-4b3f-9e88-8a93904bb0e5").to_string(),
+            "::1 (d1f1884b-6e05-4b3f-9e88-8a93904bb0e5)");
+  EXPECT_EQ(Address("datastax.com", 9042, "d1f1884b-6e05-4b3f-9e88-8a93904bb0e5").to_string(),
+            "datastax.com (d1f1884b-6e05-4b3f-9e88-8a93904bb0e5)");
+
+  // w/ servername and port
+  EXPECT_EQ(Address("127.0.0.1", 9042, "d1f1884b-6e05-4b3f-9e88-8a93904bb0e5").to_string(true),
+            "127.0.0.1:9042 (d1f1884b-6e05-4b3f-9e88-8a93904bb0e5)");
+  EXPECT_EQ(Address("::1", 9042, "d1f1884b-6e05-4b3f-9e88-8a93904bb0e5").to_string(true),
+            "[::1]:9042 (d1f1884b-6e05-4b3f-9e88-8a93904bb0e5)");
+  EXPECT_EQ(Address("datastax.com", 9042, "d1f1884b-6e05-4b3f-9e88-8a93904bb0e5").to_string(true),
+            "datastax.com:9042 (d1f1884b-6e05-4b3f-9e88-8a93904bb0e5)");
+}
+
 TEST(AddressUnitTest, Hash) {
   AddressSet set;
 
