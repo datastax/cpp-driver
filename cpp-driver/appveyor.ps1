@@ -123,15 +123,9 @@ Function Initialize-Build-Environment {
   $perl_version = "5.26.2.1"
 
   # Determine the platform and create associate environment variables
-  $architecture = "32"
   $Env:CMAKE_PLATFORM = $Env:Platform
-  If ($Env:Platform -Like "x64") {
-    $architecture = "64"
-  } Else {
-    $Env:CMAKE_PLATFORM = "Win32"
-  }
-  $lib_architecture = "lib$($architecture)"
-  $windows_architecture = "win$($architecture)"
+  $lib_architecture = "lib64"
+  $windows_architecture = "win64"
 
   # Determine which header file to use for determine driver version
   $driver_header_file = "cassandra.h"
@@ -172,9 +166,9 @@ Function Initialize-Build-Environment {
   $Env:DRIVER_ARTIFACTS_LOGS_DIR = "$($Env:DRIVER_ARTIFACTS_DIR)/logs"
 
   # Generate the environment variables for the third party archives
-  $Env:LIBUV_ARTIFACT_ARCHIVE = "libuv-$($libuv_version)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:OPENSSL_ARTIFACT_ARCHIVE = "openssl-$($openssl_version)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:ZLIB_ARTIFACT_ARCHIVE = "zlib-$($zlib_version)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:LIBUV_ARTIFACT_ARCHIVE = "libuv-$($libuv_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:OPENSSL_ARTIFACT_ARCHIVE = "openssl-$($openssl_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:ZLIB_ARTIFACT_ARCHIVE = "zlib-$($zlib_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
 
   # Generate DataStax Enterprise specific environment variables
   If ($Env:DRIVER_TYPE -Like "dse") {
@@ -204,15 +198,15 @@ Function Initialize-Build-Environment {
   # Generate the archive name for the driver test and examples artifacts
   $build_version = "$($Env:APPVEYOR_BUILD_NUMBER)-$($Env:APPVEYOR_REPO_BRANCH)"
   # TODO: Re-enable OpenSSL version appending if multiple OpenSSL versions are enabled
-  #$Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  #$Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  #$Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-openssl-$($Env:OPENSSL_MAJOR_MINOR)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  #$Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-openssl-$($Env:OPENSSL_MAJOR_MINOR)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
 
   # Generate the archive name for the driver packaging
   # TODO: Re-enable OpenSSL version appending if multiple OpenSSL versions are enabled
-  #$Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  #$Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-openssl-$($Env:OPENSSL_MAJOR_MINOR)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
 
   # Generate additional download/install environments for third party build requirements
   $Env:BISON_BINARIES_ARCHIVE = "bison-$($bison_version)-bin.zip"
@@ -625,8 +619,7 @@ add_dependencies(`${PROJECT_NAME} `${LIBSSH2_LIBRARY_NAME})
 Function Build-Driver {
   # Ensure Boost atomic is used for Visual Studio 2010 (increased performance)
   $use_boost_atomic = "Off"
-  If ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "100" -Or
-      ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "110" -And $Env:Platform -Like "x86")) {
+  If ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "100") {
     $use_boost_atomic = "On" # Enable Boost atomic usage
   }
 

@@ -26,7 +26,6 @@ cache:
   - C:\projects\dependencies\bin -> cpp-driver\appveyor.ps1
   - C:\projects\dependencies\libs -> appveyor.yml
 platform:
-  - x86
   - x64
 hosts:
   cpp-driver.hostname.: 127.254.254.254
