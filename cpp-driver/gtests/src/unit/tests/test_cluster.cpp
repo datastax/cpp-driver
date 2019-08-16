@@ -288,6 +288,37 @@ public:
     };
   };
 
+  class LocalDcClusterMetadataResolver : public ClusterMetadataResolver {
+  public:
+    LocalDcClusterMetadataResolver(const String& local_dc)
+        : desired_local_dc_(local_dc) {}
+
+  private:
+    virtual void internal_resolve(uv_loop_t* loop, const AddressVec& contact_points) {
+      resolved_contact_points_ = contact_points;
+      local_dc_ = desired_local_dc_;
+      callback_(this);
+    }
+
+    virtual void internal_cancel() {}
+
+  private:
+    String desired_local_dc_;
+  };
+
+  class LocalDcClusterMetadataResolverFactory : public ClusterMetadataResolverFactory {
+  public:
+    LocalDcClusterMetadataResolverFactory(const String& local_dc)
+        : local_dc_(local_dc) {}
+
+    virtual ClusterMetadataResolver::Ptr new_instance(const ClusterSettings& settings) const {
+      return ClusterMetadataResolver::Ptr(new LocalDcClusterMetadataResolver(local_dc_));
+    }
+
+  private:
+    String local_dc_;
+  };
+
   static void on_connection_connected(ClusterConnector* connector, Future* future) {
     if (connector->is_ok()) {
       future->set();
@@ -956,4 +987,26 @@ TEST_F(ClusterUnitTest, ReconnectionPolicy) {
   EXPECT_EQ(2u, policy->destroyed_reconnection_schedule_count());
   EXPECT_GE(policy->scheduled_delay_count(), 2u);
   EXPECT_EQ(3u, mock_cluster.connection_attempts(1)); // Includes initial connection attempt
+}
+
+TEST_F(ClusterUnitTest, LocalDcFromResolver) {
+  mockssandra::SimpleCluster cluster(simple(), 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", 9042));
+
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
+
+  ClusterSettings settings;
+  settings.cluster_metadata_resolver_factory = ClusterMetadataResolverFactory::Ptr(
+      new LocalDcClusterMetadataResolverFactory("this_local_dc"));
+  connector->with_settings(settings)->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+  ASSERT_EQ("this_local_dc", connect_future->cluster()->local_dc());
 }
