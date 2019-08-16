@@ -97,6 +97,15 @@ public:
   ControlConnector* with_metrics(Metrics* metrics);
 
   /**
+   * Set the local datacenter to use for the connection.
+   *
+   * @param local_dc The local datacenter determined by the metadata service for initializing the
+   * load balancing policies.
+   * @return The connector to chain calls.
+   */
+  ControlConnector* with_local_dc(const String& local_dc);
+
+  /**
    * Sets the control connection settings as well as the underlying settings
    * for the connection and socket.
    *
@@ -152,6 +161,8 @@ public:
   const Address& address() const { return connector_->address(); }
 
   const ProtocolVersion protocol_version() const { return connector_->protocol_version(); }
+
+  const String& local_dc() const { return local_dc_; }
 
   bool is_ok() const { return error_code_ == CONTROL_CONNECTION_OK; }
   bool is_canceled() const { return error_code_ == CONTROL_CONNECTION_CANCELED; }
@@ -218,6 +229,7 @@ private:
 
   ControlConnectionListener* listener_;
   Metrics* metrics_;
+  String local_dc_;
   Host::Ptr host_;
   ControlConnectionSettings settings_;
 };

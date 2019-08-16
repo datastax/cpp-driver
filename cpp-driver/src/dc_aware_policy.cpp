@@ -42,8 +42,14 @@ DCAwarePolicy::DCAwarePolicy(const String& local_dc, size_t used_hosts_per_remot
 
 DCAwarePolicy::~DCAwarePolicy() { uv_rwlock_destroy(&available_rwlock_); }
 
-void DCAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random) {
-  if (local_dc_.empty() && connected_host && !connected_host->dc().empty()) {
+void DCAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
+                         const String& local_dc /*= ""*/) {
+  if (!local_dc.empty()) {
+    if (!local_dc_.empty()) {
+      LOG_INFO("Overriding local data center %s with %s", local_dc_.c_str(), local_dc.c_str());
+    }
+    local_dc_ = local_dc;
+  } else if (local_dc_.empty() && connected_host && !connected_host->dc().empty()) {
     LOG_INFO("Using '%s' for the local data center "
              "(if this is incorrect, please provide the correct data center)",
              connected_host->dc().c_str());

@@ -248,6 +248,8 @@ public:
    * @param load_balancing_policy The default load balancing policy to use for
    * determining the next control connection host.
    * @param load_balancing_policies
+   * @param local_dc The local datacenter determined by the metadata service for initializing the
+   * load balancing policies.
    * @param settings The control connection settings to use for reconnecting the
    * control connection.
    */
@@ -255,7 +257,8 @@ public:
           EventLoop* event_loop, const Host::Ptr& connected_host, const HostMap& hosts,
           const ControlConnectionSchema& schema,
           const LoadBalancingPolicy::Ptr& load_balancing_policy,
-          const LoadBalancingPolicy::Vec& load_balancing_policies, const ClusterSettings& settings);
+          const LoadBalancingPolicy::Vec& load_balancing_policies, const String& local_dc,
+          const ClusterSettings& settings);
 
   /**
    * Set the listener that will handle events for the cluster
@@ -348,6 +351,7 @@ public:
   ProtocolVersion protocol_version() const { return connection_->protocol_version(); }
   const Host::Ptr& connected_host() const { return connected_host_; }
   const TokenMap::Ptr& token_map() const { return token_map_; }
+  const String& local_dc() const { return local_dc_; }
   const VersionNumber& dse_server_version() const { return connection_->dse_server_version(); }
 
 private:
@@ -433,6 +437,7 @@ private:
   Metadata metadata_;
   PreparedMetadata prepared_metadata_;
   TokenMap::Ptr token_map_;
+  String local_dc_;
   Timer timer_;
   bool is_recording_events_;
   ClusterEvent::Vec recorded_events_;

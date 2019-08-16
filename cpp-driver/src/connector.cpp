@@ -201,6 +201,11 @@ Connector* Connector::with_metrics(Metrics* metrics) {
   return this;
 }
 
+Connector* Connector::with_local_dc(const String& local_dc) {
+  local_dc_ = local_dc;
+  return this;
+}
+
 Connector* Connector::with_settings(const ConnectionSettings& settings) {
   settings_ = settings;
   // Only use hostname resolution if actually required for SSL or

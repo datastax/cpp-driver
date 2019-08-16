@@ -34,7 +34,8 @@ public:
 
   virtual ~TokenAwarePolicy() {}
 
-  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
+                    const String& local_dc);
 
   virtual QueryPlan* new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                     const TokenMap* token_map);

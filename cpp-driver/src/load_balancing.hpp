@@ -86,7 +86,8 @@ public:
 
   virtual ~LoadBalancingPolicy() {}
 
-  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random) = 0;
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
+                    const String& local_dc) = 0;
 
   virtual void register_handles(uv_loop_t* loop) {}
   virtual void close_handles() {}
@@ -122,8 +123,9 @@ public:
 
   virtual ~ChainedLoadBalancingPolicy() {}
 
-  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random) {
-    return child_policy_->init(connected_host, hosts, random);
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
+                    const String& local_dc) {
+    return child_policy_->init(connected_host, hosts, random, local_dc);
   }
 
   virtual const LoadBalancingPolicy::Ptr& child_policy() const { return child_policy_; }

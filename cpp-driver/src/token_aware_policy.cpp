@@ -36,7 +36,8 @@ static inline bool contains(const CopyOnWriteHostVec& replicas, const Address& a
   return false;
 }
 
-void TokenAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random) {
+void TokenAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
+                            const String& local_dc /*= ""*/) {
   if (random != NULL) {
     if (shuffle_replicas_) {
       // Store random so that it can be used to shuffle replicas.
@@ -47,7 +48,7 @@ void TokenAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& host
       index_ = random->next(std::max(static_cast<size_t>(1), hosts.size()));
     }
   }
-  ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
+  ChainedLoadBalancingPolicy::init(connected_host, hosts, random, local_dc);
 }
 
 QueryPlan* TokenAwarePolicy::new_query_plan(const String& keyspace, RequestHandler* request_handler,
