@@ -147,6 +147,12 @@ if(CASS_BUILD_STATIC)
   endif()
   CassConfigureStatic("CASS")
 
+  # Set pkg_config required libraries
+  set(PC_REQUIRED_LIBS "libuv")
+  if (CASS_USE_OPENSSL)
+    set(PC_REQUIRED_LIBS "${PC_REQUIRED_LIBS} openssl")
+  endif()
+
   # Update the test flags to indicate the use of the static library
   if(CASS_USE_STATIC_LIBS)
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DCASS_STATIC")
