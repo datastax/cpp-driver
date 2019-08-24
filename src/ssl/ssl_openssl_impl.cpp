@@ -371,7 +371,7 @@ private:
         }
 
         if (static_cast<size_t>(ip_len) == addr_buf_size &&
-            memcmp(ip, addr_buf, addr_buf_size) == 0) {
+            CRYPTO_memcmp(ip, addr_buf, addr_buf_size) == 0) {
           result = MATCH;
           break;
         }
