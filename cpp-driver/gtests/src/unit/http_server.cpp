@@ -27,7 +27,7 @@ using datastax::internal::core::Task;
 String response(int status, const String& body = "", const String& content_type = "") {
   OStringStream ss;
   ss << "HTTP/1.0 " << status << " " << http_status_str(static_cast<http_status>(status)) << "\r\n";
-  if (status == 200 && !body.empty()) {
+  if (!body.empty()) {
     ss << "Content-Type: ";
     if (content_type.empty()) {
       ss << "text/plain";
@@ -63,13 +63,14 @@ bool Server::use_ssl(const String& key, const String& cert, const String& passwo
 }
 
 Server::ClientConnection::ClientConnection(internal::ServerConnection* server_connection,
-                                           const String& path, const String& content_type,
-                                           const String& response_body, bool enable_valid_response)
+                                           Server* server)
     : internal::ClientConnection(server_connection)
-    , path_(path)
-    , content_type_(content_type)
-    , response_body_(response_body)
-    , enable_valid_response_(enable_valid_response) {
+    , path_(server->path())
+    , content_type_(server->content_type())
+    , response_body_(server->response_body())
+    , response_status_code_(server->response_status_code())
+    , enable_valid_response_(server->enable_valid_response())
+    , close_connnection_after_request_(server->close_connnection_after_request()) {
   http_parser_init(&parser_, HTTP_REQUEST);
   http_parser_settings_init(&parser_settings_);
 
@@ -95,17 +96,26 @@ int Server::ClientConnection::on_url(http_parser* parser, const char* buf, size_
 
 void Server::ClientConnection::handle_url(const char* buf, size_t len) {
   String path(buf, len);
-  if (path == path_) {
+  if (path.substr(0, path.find("?")) == path_) { // Compare without query parameters
     if (enable_valid_response_) {
       if (response_body_.empty()) {
-        write(response(200, request_)); // Echo response
+        write(response(response_status_code_, request_)); // Echo response
       } else {
-        write(response(200, response_body_, content_type_));
+        write(response(response_status_code_, response_body_, content_type_));
       }
     } else {
       write("Invalid HTTP server response");
     }
   } else {
     write(response(404));
+  }
+  // From the HTTP/1.0 protocol specification:
+  //
+  // > When an Entity-Body is included with a message, the length of that body may be determined in
+  // > one of two ways. If a Content-Length header field is present, its value in bytes represents
+  // > the length of the Entity-Body. Otherwise, the body length is determined by the closing of the
+  // > connection by the server.
+  if (close_connnection_after_request_) {
+    close();
   }
 }

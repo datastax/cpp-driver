@@ -16,8 +16,8 @@
 
 #include "http_client.hpp"
 
+#include "constants.hpp"
 #include "driver_info.hpp"
-#include "logger.hpp"
 
 using namespace datastax;
 using namespace datastax::internal::core;
@@ -36,7 +36,7 @@ public:
 
   virtual void on_write(Socket* socket, int status, SocketRequest* request) { delete request; }
 
-  virtual void on_close() { client_->handle_socket_close(); }
+  virtual void on_close() { client_->finish(); }
 
 private:
   HttpClient* client_;
@@ -52,7 +52,7 @@ public:
 
   virtual void on_write(Socket* socket, int status, SocketRequest* request) { delete request; }
 
-  virtual void on_close() { client_->handle_socket_close(); }
+  virtual void on_close() { client_->finish(); }
 
 private:
   HttpClient* client_;
@@ -61,11 +61,13 @@ private:
 }}} // namespace datastax::internal::core
 
 HttpClient::HttpClient(const Address& address, const String& path, const Callback& callback)
-    : address_(address)
+    : error_code_(HTTP_CLIENT_OK)
+    , address_(address)
     , path_(path)
     , callback_(callback)
     , socket_connector_(
           new SocketConnector(address, bind_callback(&HttpClient::on_socket_connect, this)))
+    , request_timeout_ms_(CASS_DEFAULT_CONNECT_TIMEOUT_MS)
     , status_code_(0) {
   http_parser_init(&parser_, HTTP_RESPONSE);
   http_parser_settings_init(&parser_settings_);
@@ -83,15 +85,28 @@ HttpClient* HttpClient::with_settings(const SocketSettings& settings) {
   return this;
 }
 
+HttpClient* HttpClient::with_request_timeout_ms(uint64_t request_timeout_ms) {
+  request_timeout_ms_ = request_timeout_ms;
+  return this;
+}
+
 void HttpClient::request(uv_loop_t* loop) {
   inc_ref();
   socket_connector_->connect(loop);
+  if (request_timeout_ms_ > 0) {
+    request_timer_.start(loop, request_timeout_ms_, bind_callback(&HttpClient::on_timeout, this));
+  }
 }
 
-void HttpClient::cancel() { socket_connector_->cancel(); }
+void HttpClient::cancel() {
+  error_code_ = HTTP_CLIENT_CANCELED;
+  socket_connector_->cancel();
+  if (socket_) socket_->close();
+  request_timer_.stop();
+}
 
 void HttpClient::on_socket_connect(SocketConnector* connector) {
-  if (connector->error_code() == SocketConnector::SOCKET_OK) {
+  if (connector->is_ok()) {
     socket_ = connector->release_socket();
     if (connector->ssl_session()) {
       socket_->set_handler(
@@ -108,30 +123,39 @@ void HttpClient::on_socket_connect(SocketConnector* connector) {
     String request = ss.str();
     socket_->write_and_flush(new BufferSocketRequest(Buffer(request.c_str(), request.size())));
   } else {
-    LOG_ERROR("Failed to connect to address %s: %s", address_.to_string(true).c_str(),
-              connector->error_message().c_str());
+    if (!connector->is_canceled()) {
+      error_code_ = HTTP_CLIENT_ERROR_SOCKET;
+      error_message_ = "Failed to establish HTTP connection: " + connector->error_message();
+    }
     finish();
   }
 }
 
-void HttpClient::handle_socket_close() { finish(); }
-
 void HttpClient::on_read(char* buf, ssize_t nread) {
+  if (is_canceled()) return;
+
   if (nread > 0) {
     size_t parsed = http_parser_execute(&parser_, &parser_settings_, buf, nread);
     if (parsed < static_cast<size_t>(nread)) {
+      error_code_ = HTTP_CLIENT_ERROR_PARSING;
+      OStringStream ss;
       enum http_errno err = HTTP_PARSER_ERRNO(&parser_);
-      LOG_ERROR("%s: %s", http_errno_name(err), http_errno_description(err));
+      ss << "HTTP parsing error (" << http_errno_name(err) << "):" << http_errno_description(err);
+      error_message_ = ss.str();
       socket_->close();
     }
-
-    if (!is_ok()) { // No more data is available
-      socket_->close();
-    }
-  } else if (nread != UV_EOF) {
-    LOG_ERROR("Read error: %s", uv_strerror(nread));
-    socket_->close();
+  } else if (is_ok() && status_code_ == 0) { // Make sure there wasn't an existing error
+    error_code_ = HTTP_CLIENT_ERROR_CLOSED;
+    error_message_ = "HTTP connection prematurely closed";
   }
+}
+
+void HttpClient::on_timeout(Timer* timer) {
+  error_code_ = HTTP_CLIENT_ERROR_TIMEOUT;
+  OStringStream ss;
+  ss << "HTTP request timed out after " << request_timeout_ms_ << " ms";
+  error_message_ = ss.str();
+  socket_->close();
 }
 
 int HttpClient::on_status(http_parser* parser, const char* buf, size_t len) {
@@ -140,6 +164,9 @@ int HttpClient::on_status(http_parser* parser, const char* buf, size_t len) {
 }
 
 int HttpClient::handle_status(unsigned status_code) {
+  if (status_code < 200 || status_code > 299) {
+    error_code_ = HTTP_CLIENT_ERROR_HTTP_STATUS;
+  }
   status_code_ = status_code;
   return 0;
 }
@@ -187,6 +214,7 @@ int HttpClient::handle_message_complete() {
 }
 
 void HttpClient::finish() {
+  request_timer_.stop();
   if (callback_) callback_(this);
   dec_ref();
 }

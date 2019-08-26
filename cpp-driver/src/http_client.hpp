@@ -33,11 +33,28 @@ public:
   typedef SharedRefPtr<HttpClient> Ptr;
   typedef internal::Callback<void, HttpClient*> Callback;
 
+  enum HttpClientError {
+    HTTP_CLIENT_OK,
+    HTTP_CLIENT_CANCELED,
+    HTTP_CLIENT_ERROR_SOCKET,
+    HTTP_CLIENT_ERROR_PARSING,
+    HTTP_CLIENT_ERROR_HTTP_STATUS,
+    HTTP_CLIENT_ERROR_TIMEOUT,
+    HTTP_CLIENT_ERROR_CLOSED
+  };
+
   HttpClient(const Address& address, const String& path, const Callback& callback);
+
   HttpClient* with_settings(const SocketSettings& settings);
 
-  bool is_ok() { return socket_connector_->is_ok() && status_code_ >= 200 && status_code_ <= 299; }
-  unsigned status_code() { return status_code_; }
+  HttpClient* with_request_timeout_ms(uint64_t request_timeout_ms);
+
+  bool is_ok() const { return error_code_ == HTTP_CLIENT_OK; }
+  bool is_error_status_code() const { return error_code_ == HTTP_CLIENT_ERROR_HTTP_STATUS; }
+  bool is_canceled() const { return error_code_ == HTTP_CLIENT_CANCELED; }
+  HttpClientError error_code() const { return error_code_; }
+  String error_message() const { return error_message_; }
+  unsigned status_code() const { return status_code_; }
   const String& content_type() const { return content_type_; }
   const String& response_body() const { return response_body_; }
 
@@ -50,8 +67,8 @@ private:
 
 private:
   void on_socket_connect(SocketConnector* connector);
-  void handle_socket_close();
   void on_read(char* buf, ssize_t nread);
+  void on_timeout(Timer* timer);
 
   static int on_status(http_parser* parser, const char* buf, size_t len);
   int handle_status(unsigned status_code);
@@ -67,11 +84,15 @@ private:
   void finish();
 
 private:
+  HttpClientError error_code_;
+  String error_message_;
   Address address_;
   String path_;
   Callback callback_;
   SocketConnector::Ptr socket_connector_;
   Socket::Ptr socket_;
+  Timer request_timer_;
+  uint64_t request_timeout_ms_;
   http_parser parser_;
   http_parser_settings parser_settings_;
   String current_header_;

@@ -34,11 +34,12 @@ namespace mockssandra { namespace http {
  */
 class Server {
 public:
-public:
   Server()
       : path_("/")
       , content_type_("text/plain")
+      , response_status_code_(200)
       , enable_valid_response_(true)
+      , close_connnection_after_request_(true)
       , event_loop_group_(1, "HTTP Server")
       , factory_(this)
       , server_connection_(new internal::ServerConnection(
@@ -47,12 +48,18 @@ public:
   const String& path() const { return path_; }
   const String& content_type() const { return content_type_; }
   const String& response_body() const { return response_body_; }
+  int response_status_code() const { return response_status_code_; }
   bool enable_valid_response() { return enable_valid_response_; }
+  bool close_connnection_after_request() { return close_connnection_after_request_; }
 
   void set_path(const String& path) { path_ = path; }
   void set_content_type(const String& content_type) { content_type_ = content_type; }
   void set_response_body(const String& response_body) { response_body_ = response_body; }
+  void set_response_status_code(int status_code) { response_status_code_ = status_code; }
   void enable_valid_response(bool enable) { enable_valid_response_ = enable; }
+  void set_close_connnection_after_request(bool enable) {
+    close_connnection_after_request_ = enable;
+  }
 
   bool use_ssl(const String& key, const String& cert, const String& password = "",
                const String& client_cert = "");
@@ -63,9 +70,7 @@ public:
 private:
   class ClientConnection : public internal::ClientConnection {
   public:
-    ClientConnection(internal::ServerConnection* server_connection, const String& endpoint,
-                     const String& content_type, const String& response_body,
-                     bool enable_valid_response);
+    ClientConnection(internal::ServerConnection* server_connection, Server* server);
 
     virtual void on_read(const char* data, size_t len);
 
@@ -77,7 +82,9 @@ private:
     String path_;
     String content_type_;
     String response_body_;
+    int response_status_code_;
     bool enable_valid_response_;
+    bool close_connnection_after_request_;
     String request_;
     http_parser parser_;
     http_parser_settings parser_settings_;
@@ -90,8 +97,7 @@ private:
 
     virtual internal::ClientConnection*
     create(internal::ServerConnection* server_connection) const {
-      return new ClientConnection(server_connection, server_->path(), server_->content_type(),
-                                  server_->response_body(), server_->enable_valid_response());
+      return new ClientConnection(server_connection, server_);
     }
 
   private:
@@ -102,7 +108,9 @@ private:
   String path_;
   String content_type_;
   String response_body_;
+  int response_status_code_;
   bool enable_valid_response_;
+  bool close_connnection_after_request_;
   SimpleEventLoopGroup event_loop_group_;
   ClientConnectionFactory factory_;
   internal::ServerConnection::Ptr server_connection_;

@@ -39,7 +39,13 @@ public:
     server_.set_response_body(response_body);
   }
 
+  void set_response_status_code(int status_code) { server_.set_response_status_code(status_code); }
+
   void enable_valid_response(bool enable) { server_.enable_valid_response(enable); }
+
+  void set_close_connnection_after_request(bool enable) {
+    server_.set_close_connnection_after_request(enable);
+  }
 
   void start_http_server() { server_.listen(); }
   void stop_http_server() { server_.close(); }

@@ -40,6 +40,12 @@ public:
     EXPECT_FALSE(client->is_ok());
   }
 
+  static void on_canceled(HttpClient* client, bool* flag) {
+    if (client->is_canceled()) {
+      *flag = true;
+    }
+  }
+
 private:
   static String echo_response() {
     OStringStream ss;
@@ -60,9 +66,69 @@ TEST_F(HttpClientUnitTest, Simple) {
                                         bind_callback(on_success_response, &is_success)));
   client->request(loop());
   uv_run(loop(), UV_RUN_DEFAULT);
-  ASSERT_TRUE(is_success);
+  EXPECT_TRUE(is_success);
 
   stop_http_server();
+}
+
+TEST_F(HttpClientUnitTest, Cancel) {
+  start_http_server();
+
+  Vector<HttpClient::Ptr> clients;
+
+  bool is_canceled = false;
+  for (size_t i = 0; i < 10; ++i) {
+    HttpClient::Ptr client(new HttpClient(Address(HTTP_MOCK_SERVER_IP, HTTP_MOCK_SERVER_PORT), "/",
+                                          bind_callback(on_canceled, &is_canceled)));
+    client->request(loop());
+    clients.push_back(client);
+  }
+
+  Vector<HttpClient::Ptr>::iterator it = clients.begin();
+  while (it != clients.end()) {
+    (*it)->cancel();
+    uv_run(loop(), UV_RUN_NOWAIT);
+    it++;
+  }
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_TRUE(is_canceled);
+}
+
+TEST_F(HttpClientUnitTest, CancelTimeout) {
+  set_close_connnection_after_request(false);
+  start_http_server();
+
+  Vector<HttpClient::Ptr> clients;
+
+  bool is_canceled = false;
+  for (size_t i = 0; i < 10; ++i) {
+    HttpClient::Ptr client(new HttpClient(Address(HTTP_MOCK_SERVER_IP, HTTP_MOCK_SERVER_PORT),
+                                          "/invalid", bind_callback(on_canceled, &is_canceled)));
+    client
+        ->with_request_timeout_ms(200) // Timeout quickly
+        ->request(loop());
+    clients.push_back(client);
+  }
+
+  Vector<HttpClient::Ptr>::iterator it = clients.begin();
+  while (it != clients.end()) {
+    (*it)->cancel();
+    uv_run(loop(), UV_RUN_NOWAIT);
+    it++;
+  }
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_TRUE(is_canceled);
+
+  for (Vector<HttpClient::Ptr>::const_iterator it = clients.begin(), end = clients.end(); it != end;
+       ++it) {
+    const HttpClient::Ptr& client(*it);
+    if (!client->is_canceled()) {
+      EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_TIMEOUT);
+      EXPECT_EQ(client->status_code(), 404);
+    }
+  }
 }
 
 TEST_F(HttpClientUnitTest, InvalidHttpServer) {
@@ -71,7 +137,8 @@ TEST_F(HttpClientUnitTest, InvalidHttpServer) {
                                         bind_callback(on_failed_response, &is_failed)));
   client->request(loop());
   uv_run(loop(), UV_RUN_DEFAULT);
-  ASSERT_TRUE(is_failed);
+  EXPECT_TRUE(is_failed);
+  EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_SOCKET);
 }
 
 TEST_F(HttpClientUnitTest, InvalidHttpServerResponse) {
@@ -83,12 +150,13 @@ TEST_F(HttpClientUnitTest, InvalidHttpServerResponse) {
                                         bind_callback(on_failed_response, &is_failed)));
   client->request(loop());
   uv_run(loop(), UV_RUN_DEFAULT);
-  ASSERT_TRUE(is_failed);
+  EXPECT_TRUE(is_failed);
+  EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_PARSING);
 
   stop_http_server();
 }
 
-TEST_F(HttpClientUnitTest, InvalidEndpoint) {
+TEST_F(HttpClientUnitTest, InvalidPath) {
   start_http_server();
 
   bool is_failed = false;
@@ -96,13 +164,33 @@ TEST_F(HttpClientUnitTest, InvalidEndpoint) {
                                         "/invalid", bind_callback(on_failed_response, &is_failed)));
   client->request(loop());
   uv_run(loop(), UV_RUN_DEFAULT);
-  ASSERT_TRUE(is_failed);
+  EXPECT_TRUE(is_failed);
+  EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_HTTP_STATUS);
+  EXPECT_EQ(client->status_code(), 404);
+
+  stop_http_server();
+}
+
+TEST_F(HttpClientUnitTest, Timeout) {
+  set_close_connnection_after_request(false);
+  start_http_server();
+
+  bool is_failed = false;
+  HttpClient::Ptr client(new HttpClient(Address(HTTP_MOCK_SERVER_IP, HTTP_MOCK_SERVER_PORT),
+                                        "/invalid", bind_callback(on_failed_response, &is_failed)));
+  client
+      ->with_request_timeout_ms(200) // Timeout quickly
+      ->request(loop());
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_TRUE(is_failed);
+  EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_TIMEOUT);
+  EXPECT_EQ(client->status_code(), 404);
 
   stop_http_server();
 }
 
 #ifdef HAVE_OPENSSL
-TEST_F(HttpClientUnitTest, SimpleSsl) {
+TEST_F(HttpClientUnitTest, Ssl) {
   SocketSettings settings = use_ssl();
   start_http_server();
 
@@ -111,21 +199,7 @@ TEST_F(HttpClientUnitTest, SimpleSsl) {
                                         bind_callback(on_success_response, &is_success)));
   client->with_settings(settings)->request(loop());
   uv_run(loop(), UV_RUN_DEFAULT);
-  ASSERT_TRUE(is_success);
-
-  stop_http_server();
-}
-
-TEST_F(HttpClientUnitTest, InvalidEndpointSsl) {
-  SocketSettings settings = use_ssl();
-  start_http_server();
-
-  bool is_failed = false;
-  HttpClient::Ptr client(new HttpClient(Address(HTTP_MOCK_SERVER_IP, HTTP_MOCK_SERVER_PORT),
-                                        "/invalid", bind_callback(on_failed_response, &is_failed)));
-  client->with_settings(settings)->request(loop());
-  uv_run(loop(), UV_RUN_DEFAULT);
-  ASSERT_TRUE(is_failed);
+  EXPECT_TRUE(is_success);
 
   stop_http_server();
 }
@@ -139,7 +213,8 @@ TEST_F(HttpClientUnitTest, InvalidClientSslNotConfigured) {
                                         bind_callback(on_failed_response, &is_failed)));
   client->request(loop());
   uv_run(loop(), UV_RUN_DEFAULT);
-  ASSERT_TRUE(is_failed);
+  EXPECT_TRUE(is_failed);
+  EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_CLOSED);
 
   stop_http_server();
 }
@@ -153,7 +228,8 @@ TEST_F(HttpClientUnitTest, InvalidServerSslNotConfigured) {
                                         bind_callback(on_failed_response, &is_failed)));
   client->with_settings(settings)->request(loop());
   uv_run(loop(), UV_RUN_DEFAULT);
-  ASSERT_TRUE(is_failed);
+  EXPECT_TRUE(is_failed);
+  EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_SOCKET);
 
   stop_http_server();
 }

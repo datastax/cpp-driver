@@ -52,6 +52,7 @@
 #define SNI_HOST_ID_1 "276b1694-64c4-4ba8-afb4-e33915a02f1e"
 #define SNI_HOST_ID_2 "8c29f723-5c1c-4ffd-a4ef-8c683a7fc02b"
 #define SNI_HOST_ID_3 "fb91d3ff-47cb-447d-b31d-c5721ca8d7ab"
+#define METADATA_SERVICE_PORT 30443
 
 using datastax::String;
 using datastax::internal::core::AddressVec;
@@ -404,12 +405,17 @@ public:
 
     const AddressVec& contact_points = resolver->resolved_contact_points();
     ASSERT_EQ(3u, contact_points.size());
-    EXPECT_EQ(Address(SNI_HOST, CASS_DEFAULT_PORT, SNI_HOST_ID_1), contact_points[0]);
-    EXPECT_EQ(Address(SNI_HOST, CASS_DEFAULT_PORT, SNI_HOST_ID_2), contact_points[1]);
-    EXPECT_EQ(Address(SNI_HOST, CASS_DEFAULT_PORT, SNI_HOST_ID_3), contact_points[2]);
+    EXPECT_EQ(Address(SNI_HOST, METADATA_SERVICE_PORT, SNI_HOST_ID_1), contact_points[0]);
+    EXPECT_EQ(Address(SNI_HOST, METADATA_SERVICE_PORT, SNI_HOST_ID_2), contact_points[1]);
+    EXPECT_EQ(Address(SNI_HOST, METADATA_SERVICE_PORT, SNI_HOST_ID_3), contact_points[2]);
   }
 
   static void on_resolve_failed(ClusterMetadataResolver* resolver, bool* flag) {
+    *flag = true;
+    EXPECT_EQ(0u, resolver->resolved_contact_points().size());
+  }
+
+  static void on_resolve_local_dc_failed(ClusterMetadataResolver* resolver, bool* flag) {
     *flag = true;
     EXPECT_EQ("", resolver->local_dc());
     EXPECT_EQ(0u, resolver->resolved_contact_points().size());
@@ -525,7 +531,8 @@ TEST_F(CloudMetadataServerTest, ResolveV1MissingLocalDcSsl) {
 
   bool is_resolved = false;
   AddressVec contact_points;
-  resolver()->resolve(loop(), contact_points, bind_callback(on_resolve_failed, &is_resolved));
+  resolver()->resolve(loop(), contact_points,
+                      bind_callback(on_resolve_local_dc_failed, &is_resolved));
   uv_run(loop(), UV_RUN_DEFAULT);
   EXPECT_TRUE(is_resolved);
 
@@ -552,6 +559,69 @@ TEST_F(CloudMetadataServerTest, ResolveV1MissingSniProxyAddressSsl) {
   resolver()->resolve(loop(), contact_points, bind_callback(on_resolve_failed, &is_resolved));
   uv_run(loop(), UV_RUN_DEFAULT);
   EXPECT_TRUE(is_resolved);
+
+  stop_http_server();
+}
+
+TEST_F(CloudMetadataServerTest, ResolveInvalidJsonResponse) {
+  add_logging_critera("Unable to configure driver from metadata server: Metadata JSON is invalid");
+
+  set_path("/metadata");
+  set_response_body("[]");
+  set_content_type("application/json");
+  HttpTest::start_http_server();
+
+  bool is_resolve_failed = false;
+  AddressVec contact_points;
+  resolver()->resolve(loop(), contact_points, bind_callback(on_resolve_failed, &is_resolve_failed));
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_TRUE(is_resolve_failed);
+  EXPECT_EQ(logging_criteria_count(), 1);
+
+  stop_http_server();
+}
+
+TEST_F(CloudMetadataServerTest, ResolveErrorResponse) {
+  add_logging_critera("Unable to configure driver from metadata server: Returned error response "
+                      "code 400: 'Invalid version'");
+
+  const char* response_body = "{"
+                              "\"code\": 400,"
+                              "\"message\": \"Invalid version\""
+                              "}";
+
+  set_path("/metadata");
+  set_response_body(response_body);
+  set_response_status_code(400);
+  set_content_type("application/json");
+  HttpTest::start_http_server();
+
+  bool is_resolve_failed = false;
+  AddressVec contact_points;
+  resolver()->resolve(loop(), contact_points, bind_callback(on_resolve_failed, &is_resolve_failed));
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_TRUE(is_resolve_failed);
+  EXPECT_EQ(logging_criteria_count(), 1);
+
+  stop_http_server();
+}
+
+TEST_F(CloudMetadataServerTest, ResolveInvalidJsonErrorResponse) {
+  add_logging_critera("Unable to configure driver from metadata server: Returned error response "
+                      "code 400: '[]'");
+
+  set_path("/metadata");
+  set_response_body("[]");
+  set_response_status_code(400);
+  set_content_type("application/json");
+  HttpTest::start_http_server();
+
+  bool is_resolve_failed = false;
+  AddressVec contact_points;
+  resolver()->resolve(loop(), contact_points, bind_callback(on_resolve_failed, &is_resolve_failed));
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_TRUE(is_resolve_failed);
+  EXPECT_EQ(logging_criteria_count(), 1);
 
   stop_http_server();
 }

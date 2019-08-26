@@ -31,8 +31,13 @@ using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 #define CLOUD_ERROR "Unable to load cloud secure connection configuration: "
-#define METADATA_SERVER_ERROR "Unable to configure from metadata server: "
-#define METADATA_SERVER_PATH "/metadata"
+#define METADATA_SERVER_ERROR "Unable to configure driver from metadata server: "
+
+// Pinned to v1 because that's what the driver currently handles.
+#define METADATA_SERVER_PATH "/metadata?version=1"
+
+#define METADATA_SERVER_PORT 30443
+#define RESPONSE_BODY_TRUNCATE_LENGTH 1024
 
 #ifdef HAVE_ZLIB
 #include "unzip.h"
@@ -85,10 +90,11 @@ namespace {
 
 class CloudClusterMetadataResolver : public ClusterMetadataResolver {
 public:
-  CloudClusterMetadataResolver(const String& host, int port, const SocketSettings& settings)
+  CloudClusterMetadataResolver(const String& host, int port, const SocketSettings& settings,
+                               uint64_t request_timeout_ms)
       : client_(new HttpClient(Address(host, port), METADATA_SERVER_PATH,
                                bind_callback(&CloudClusterMetadataResolver::on_response, this))) {
-    client_->with_settings(settings);
+    client_->with_settings(settings)->with_request_timeout_ms(request_timeout_ms);
   }
 
 private:
@@ -101,55 +107,89 @@ private:
 
 private:
   void on_response(HttpClient* http_client) {
-    if (http_client->content_type().find("json") == std::string::npos) {
-      LOG_ERROR("Invalid response type from metadata server");
-    } else {
-      json::Document document;
-      document.Parse(http_client->response_body().c_str());
-
-      if (!document.HasMember("contact_info")) {
-        LOG_ERROR(METADATA_SERVER_ERROR "Contact information is not available");
+    if (http_client->is_ok()) {
+      if (http_client->content_type().find("json") != std::string::npos) {
+        parse_metadata(http_client->response_body());
       } else {
-        const json::Value& contact_info = document["contact_info"];
-
-        if (!contact_info.HasMember("local_dc")) {
-          LOG_WARN(METADATA_SERVER_ERROR "Local DC is not available");
-        } else {
-          local_dc_ = contact_info["local_dc"].GetString();
-          if (!contact_info.HasMember("sni_proxy_address")) {
-            LOG_ERROR(METADATA_SERVER_ERROR "SNI proxy address is not available");
-            local_dc_ = "";
-          } else {
-            int sni_port = CASS_DEFAULT_PORT;
-            Vector<String> tokens;
-            explode(contact_info["sni_proxy_address"].GetString(), tokens, ':');
-            String sni_address = tokens[0];
-            if (tokens.size() == 2) {
-              IStringStream ss(tokens[1]);
-              if ((ss >> sni_port).fail()) {
-                LOG_WARN(METADATA_SERVER_ERROR "Invalid port, default %d will be used",
-                         CASS_DEFAULT_PORT);
-              }
-            }
-
-            if (!contact_info.HasMember("contact_points") ||
-                !contact_info["contact_points"].IsArray()) {
-              LOG_ERROR(METADATA_SERVER_ERROR "Contact points are not available");
-              local_dc_ = "";
-            } else {
-              const json::Value& contact_points = contact_info["contact_points"];
-              for (rapidjson::SizeType i = 0; i < contact_points.Size(); ++i) {
-                String host_id = contact_points[i].GetString();
-                resolved_contact_points_.push_back(Address(sni_address, sni_port, host_id));
-              }
-            }
+        LOG_ERROR(METADATA_SERVER_ERROR "Invalid response content type: '%s'",
+                  http_client->content_type().c_str());
+      }
+    } else if (!http_client->is_canceled()) {
+      if (http_client->is_error_status_code()) {
+        String error_message =
+            http_client->response_body().substr(0, RESPONSE_BODY_TRUNCATE_LENGTH);
+        if (http_client->content_type().find("json") != std::string::npos) {
+          json::Document document;
+          document.Parse(http_client->response_body().c_str());
+          if (document.IsObject() && document.HasMember("message") &&
+              document["message"].IsString()) {
+            error_message = document["message"].GetString();
           }
         }
+        LOG_ERROR(METADATA_SERVER_ERROR "Returned error response code %u: '%s'",
+                  http_client->status_code(), error_message.c_str());
+      } else {
+        LOG_ERROR(METADATA_SERVER_ERROR "%s", http_client->error_message().c_str());
       }
     }
 
     callback_(this);
     dec_ref();
+  }
+
+  void parse_metadata(const String& response_body) {
+    json::Document document;
+    document.Parse(response_body.c_str());
+
+    if (!document.IsObject()) {
+      LOG_ERROR(METADATA_SERVER_ERROR "Metadata JSON is invalid");
+      return;
+    }
+
+    if (!document.HasMember("contact_info") || !document["contact_info"].IsObject()) {
+      LOG_ERROR(METADATA_SERVER_ERROR "Contact information is not available");
+      return;
+    }
+
+    const json::Value& contact_info = document["contact_info"];
+
+    if (!contact_info.HasMember("local_dc") || !contact_info["local_dc"].IsString()) {
+      LOG_ERROR(METADATA_SERVER_ERROR "Local DC is not available");
+      return;
+    }
+
+    local_dc_ = contact_info["local_dc"].GetString();
+
+    if (!contact_info.HasMember("sni_proxy_address") ||
+        !contact_info["sni_proxy_address"].IsString()) {
+      LOG_ERROR(METADATA_SERVER_ERROR "SNI proxy address is not available");
+      return;
+    }
+
+    int sni_port = METADATA_SERVER_PORT;
+    Vector<String> tokens;
+    explode(contact_info["sni_proxy_address"].GetString(), tokens, ':');
+    String sni_address = tokens[0];
+    if (tokens.size() == 2) {
+      IStringStream ss(tokens[1]);
+      if ((ss >> sni_port).fail()) {
+        LOG_WARN(METADATA_SERVER_ERROR "Invalid port, default %d will be used",
+                 METADATA_SERVER_PORT);
+      }
+    }
+
+    if (!contact_info.HasMember("contact_points") || !contact_info["contact_points"].IsArray()) {
+      LOG_ERROR(METADATA_SERVER_ERROR "Contact points are not available");
+      return;
+    }
+
+    const json::Value& contact_points = contact_info["contact_points"];
+    for (rapidjson::SizeType i = 0; i < contact_points.Size(); ++i) {
+      if (contact_points[i].IsString()) {
+        String host_id = contact_points[i].GetString();
+        resolved_contact_points_.push_back(Address(sni_address, sni_port, host_id));
+      }
+    }
   }
 
 private:
@@ -164,7 +204,8 @@ public:
 
   virtual ClusterMetadataResolver::Ptr new_instance(const ClusterSettings& settings) const {
     return ClusterMetadataResolver::Ptr(new CloudClusterMetadataResolver(
-        host_, port_, settings.control_connection_settings.connection_settings.socket_settings));
+        host_, port_, settings.control_connection_settings.connection_settings.socket_settings,
+        settings.control_connection_settings.connection_settings.connect_timeout_ms));
   }
 
 private:
