@@ -163,3 +163,37 @@ TEST(AddressUnitTest, Hash) {
   set.insert(Address("0.0.0.0", 9041));
   EXPECT_EQ(set.size(), 5u); // Added
 }
+
+TEST(AddressUnitTest, StrictWeakOrder) {
+  { // Family
+    Address a("localhost", 9042);
+    Address b("127.0.0.1", 30002, "a");
+    ASSERT_NE(a, b);
+    ASSERT_TRUE(a < b);
+    ASSERT_FALSE(b < a);
+  }
+
+  { // Port
+    Address a("localhost", 9042, "b");
+    Address b("localhost", 30002, "a");
+    ASSERT_NE(a, b);
+    ASSERT_TRUE(a < b);
+    ASSERT_FALSE(b < a);
+  }
+
+  { // Server name
+    Address a("127.0.0.2", 9042, "a");
+    Address b("127.0.0.1", 9042, "b");
+    ASSERT_NE(a, b);
+    ASSERT_TRUE(a < b);
+    ASSERT_FALSE(b < a);
+  }
+
+  { // Hostname or address
+    Address a("127.0.0.1", 9042, "a");
+    Address b("127.0.0.2", 9042, "a");
+    ASSERT_NE(a, b);
+    ASSERT_TRUE(a < b);
+    ASSERT_FALSE(b < a);
+  }
+}

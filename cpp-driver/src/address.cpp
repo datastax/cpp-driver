@@ -100,11 +100,10 @@ bool Address::equals(const Address& other, bool with_port) const {
 }
 
 bool Address::operator<(const Address& other) const {
-  if (family_ < other.family_) return true;
-  if (port_ < other.port_) return true;
-  if (server_name_ < other.server_name_) return true;
-  if (hostname_or_address_ < other.hostname_or_address_) return true;
-  return false;
+  if (family_ != other.family_) return family_ < other.family_;
+  if (port_ != other.port_) return port_ < other.port_;
+  if (server_name_ != other.server_name_) return server_name_ < other.server_name_;
+  return hostname_or_address_ < other.hostname_or_address_;
 }
 
 String Address::hostname_or_address() const {
