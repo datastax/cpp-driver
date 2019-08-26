@@ -483,6 +483,25 @@ macro(CassMiniZip)
 endmacro()
 
 #------------------------
+# CassHttpParser
+#
+# Set some HTTP_PARSER_* variables, set up some source_group's, and add the
+# HTTP_PARSER include dir to our list of include dirs.
+#
+# Input: CASS_SRC_DIR
+# Output: HTTP_PARSER_INCLUDE_DIR, HTTP_PARSER_HEADER_FILES,
+#         HTTP_PARSER_SOURCE_FILES
+#------------------------
+macro(CassHttpParser)
+  set(HTTP_PARSER_INCLUDE_DIR "${CASS_SRC_DIR}/third_party/http-parser")
+  set(HTTP_PARSER_HEADER_FILES ${HTTP_PARSER_INCLUDE_DIR}/http_parser.h)
+  set(HTTP_PARSER_SOURCE_FILES ${HTTP_PARSER_INCLUDE_DIR}/http_parser.c)
+  source_group("Header Files\\http-parser" FILES ${HTTP_PARSER_HEADER_FILES})
+  source_group("Source Files\\http-parser" FILES ${HTTP_PARSER_SOURCE_FILES})
+  include_directories(${HTTP_PARSER_INCLUDE_DIR})
+endmacro()
+
+#------------------------
 # CassSimulacron
 #
 # Set up Simulacron for use in tests.
@@ -1013,6 +1032,10 @@ macro(CassFindSourceFiles)
   CassMiniZip()
   set(CASS_INC_FILES ${CASS_INC_FILES} ${MINIZIP_HEADER_FILES})
   set(CASS_SRC_FILES ${CASS_SRC_FILES} ${MINIZIP_SOURCE_FILES})
+
+  CassHttpParser()
+  set(CASS_INC_FILES ${CASS_INC_FILES} ${HTTP_PARSER_HEADER_FILES})
+  set(CASS_SRC_FILES ${CASS_SRC_FILES} ${HTTP_PARSER_SOURCE_FILES})
 
   set(CASS_ALL_SOURCE_FILES ${CASS_SRC_FILES} ${CASS_API_HEADER_FILES} ${CASS_INC_FILES})
 endmacro()

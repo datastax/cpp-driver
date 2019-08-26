@@ -62,7 +62,8 @@ namespace mockssandra {
 class Ssl {
 public:
   static String generate_key();
-  static String generate_cert(const String& key, String cn = "");
+  static String generate_cert(const String& key, String cn = "", String ca_cert = "",
+                              String ca_key = "");
 };
 
 namespace internal {
@@ -171,7 +172,8 @@ public:
   SSL_CTX* ssl_context() { return ssl_context_; }
   const ClientConnections& clients() const { return clients_; }
 
-  bool use_ssl(const String& key, const String& cert, const String& password = "");
+  bool use_ssl(const String& key, const String& cert, const String& password = "",
+               const String& client_cert = "");
 
   void listen(EventLoopGroup* event_loop_group);
   int wait_listen();
@@ -1207,7 +1209,7 @@ private:
 
 class SimpleEventLoopGroup : public RoundRobinEventLoopGroup {
 public:
-  SimpleEventLoopGroup(size_t num_threads = 1);
+  SimpleEventLoopGroup(size_t num_threads = 1, const String& thread_name = "mockssandra");
   ~SimpleEventLoopGroup();
 };
 

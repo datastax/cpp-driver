@@ -360,7 +360,8 @@ TEST_F(SessionUnitTest, ExecuteQueryWithCompleteOutageSpinDown) {
   QueryRequest::Ptr request(new QueryRequest("blah", 0));
   Future::Ptr future = session.execute(request, NULL);
   ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME));
-  ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, future->error()->code);
+  EXPECT_TRUE(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE == future->error()->code ||
+              CASS_ERROR_LIB_REQUEST_TIMED_OUT == future->error()->code);
 
   // Restart a node and execute query to ensure session recovers
   ASSERT_EQ(cluster.start(2), 0);
