@@ -116,14 +116,12 @@ void ClusterConnector::internal_resolve_and_connect() {
                      bind_callback(&ClusterConnector::on_resolve, this));
 }
 
-void ClusterConnector::internal_connect(const Address& address, ProtocolVersion version,
-                                        const String& local_dc) {
+void ClusterConnector::internal_connect(const Address& address, ProtocolVersion version) {
   Host::Ptr host(new Host(address));
   ControlConnector::Ptr connector(
       new ControlConnector(host, version, bind_callback(&ClusterConnector::on_connect, this)));
   connectors_[address] = connector; // Keep track of the connectors so they can be canceled.
   connector->with_metrics(metrics_)
-      ->with_local_dc(local_dc)
       ->with_settings(settings_.control_connection_settings)
       ->connect(event_loop_->loop());
 }
@@ -180,11 +178,12 @@ void ClusterConnector::on_resolve(ClusterMetadataResolver* resolver) {
     return;
   }
 
+  local_dc_ = resolver->local_dc();
   remaining_connector_count_ = resolved_contact_points.size();
   for (AddressVec::const_iterator it = resolved_contact_points.begin(),
                                   end = resolved_contact_points.end();
        it != end; ++it) {
-    internal_connect(*it, protocol_version_, resolver->local_dc());
+    internal_connect(*it, protocol_version_);
   }
 }
 
@@ -260,7 +259,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
 
     cluster_.reset(new Cluster(connector->release_connection(), listener_, event_loop_,
                                connected_host, hosts, connector->schema(), default_policy, policies,
-                               connector->local_dc(), settings_));
+                               local_dc_, settings_));
 
     // Clear any connection errors and set the final negotiated protocol version.
     error_code_ = CLUSTER_OK;
@@ -282,7 +281,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
       on_error(CLUSTER_ERROR_INVALID_PROTOCOL, "Unable to find supported protocol version");
       return;
     }
-    internal_connect(connector->address(), lower_version, connector->local_dc());
+    internal_connect(connector->address(), lower_version);
   } else if (connector->is_ssl_error()) {
     ssl_error_code_ = connector->ssl_error_code();
     on_error(CLUSTER_ERROR_SSL_ERROR, connector->error_message());

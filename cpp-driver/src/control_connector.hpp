@@ -97,15 +97,6 @@ public:
   ControlConnector* with_metrics(Metrics* metrics);
 
   /**
-   * Set the local datacenter to use for the connection.
-   *
-   * @param local_dc The local datacenter determined by the metadata service for initializing the
-   * load balancing policies.
-   * @return The connector to chain calls.
-   */
-  ControlConnector* with_local_dc(const String& local_dc);
-
-  /**
    * Sets the control connection settings as well as the underlying settings
    * for the connection and socket.
    *

@@ -23,7 +23,7 @@ using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 void ListPolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                      const String& local_dc /*= ""*/) {
+                      const String& local_dc) {
   HostMap valid_hosts;
   for (HostMap::const_iterator i = hosts.begin(), end = hosts.end(); i != end; ++i) {
     const Host::Ptr& host = i->second;

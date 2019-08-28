@@ -643,17 +643,13 @@ TEST_F(SessionUnitTest, HostListenerNodeDown) {
 }
 
 TEST_F(SessionUnitTest, LocalDcUpdatedOnPolicy) {
-  mockssandra::SimpleCluster cluster(simple(), 3, 2);
+  mockssandra::SimpleCluster cluster(simple(), 3, 1);
   ASSERT_EQ(cluster.start_all(), 0);
 
   TestHostListener::Ptr listener(new TestHostListener());
 
   Config config;
-  config.contact_points().push_back(Address("127.0.0.1", 9042));
-  config.set_use_randomized_contact_points(
-      false); // Ensure round robin order over DC for query execution
-  config.set_token_aware_routing(false);
-  config.set_load_balancing_policy(new DCAwarePolicy("dc1"));
+  config.contact_points().push_back(Address("127.0.0.4", 9042));
   config.set_cluster_metadata_resolver_factory(
       ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
   config.set_host_listener(listener);
@@ -666,10 +662,6 @@ TEST_F(SessionUnitTest, LocalDcUpdatedOnPolicy) {
               listener->wait_for_event(WAIT_FOR_TIME));
     EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.4", 9042)),
               listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.5", 9042)),
-              listener->wait_for_event(WAIT_FOR_TIME));
-    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.5", 9042)),
-              listener->wait_for_event(WAIT_FOR_TIME));
   }
 
   for (int i = 0; i < 20; ++i) { // Validate the request processors are using DC2 only
@@ -678,10 +670,160 @@ TEST_F(SessionUnitTest, LocalDcUpdatedOnPolicy) {
     ResponseFuture::Ptr future = session.execute(request, NULL);
     EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
     EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.4", future->address().to_string());
+  }
 
-    String expected_address = "127.0.0.";
-    expected_address.append((i % 2 == 0) ? "4" : "5");
-    EXPECT_EQ(expected_address, future->address().to_string());
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, LocalDcNotOverriddenOnPolicy) {
+  mockssandra::SimpleCluster cluster(simple(), 1, 3);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_load_balancing_policy(new DCAwarePolicy("dc1"));
+  config.set_cluster_metadata_resolver_factory(
+    ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+  config.set_host_listener(listener);
+
+  Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table (should be DC1)
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the request processors are using DC1 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.1", future->address().to_string());
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, LocalDcOverriddenOnPolicyUsingExecutionProfiles) {
+  mockssandra::SimpleCluster cluster(simple(), 3, 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.4", 9042));
+  config.set_use_randomized_contact_points(
+    false); // Ensure round robin order over DC for query execution
+  config.set_cluster_metadata_resolver_factory(
+    ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+  config.set_host_listener(listener);
+
+  ExecutionProfile profile;
+  profile.set_load_balancing_policy(new DCAwarePolicy());
+  config.set_execution_profile("use_propagated_local_dc", &profile);
+
+  Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table (should be DC2)
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC2 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.4", future->address().to_string());
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC2 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+    request->set_execution_profile_name("use_propagated_local_dc");
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.4", future->address().to_string());
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, LocalDcNotOverriddenOnPolicyUsingExecutionProfiles) {
+  mockssandra::SimpleCluster cluster(simple(), 3, 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.4", 9042));
+  config.set_use_randomized_contact_points(
+    false); // Ensure round robin order over DC for query execution
+  config.set_cluster_metadata_resolver_factory(
+    ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+  config.set_host_listener(listener);
+
+  ExecutionProfile profile;
+  profile.set_load_balancing_policy(new DCAwarePolicy("dc1"));
+  config.set_execution_profile("use_dc1", &profile);
+
+  Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table (should be DC1 and DC2)
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC2 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.4", future->address().to_string());
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC1 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+    request->set_execution_profile_name("use_dc1");
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_NE("127.0.0.4", future->address().to_string());
   }
 
   close(&session);

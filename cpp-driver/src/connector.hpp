@@ -133,16 +133,6 @@ public:
   Connector* with_metrics(Metrics* metrics);
 
   /**
-   * Set the local datacenter to use for the initializing the load balancing policies after the
-   * connection is connected.
-   *
-   * @param local_dc The local datacenter determined by the metadata service for initializing the
-   * load balancing policies.
-   * @return The connector to chain calls.
-   */
-  Connector* with_local_dc(const String& local_dc);
-
-  /**
    * Set the connection and socket settings.
    *
    * @param The settings to use for connecting the connection.
@@ -232,7 +222,6 @@ private:
   int event_types_;
   ConnectionListener* listener_;
   Metrics* metrics_;
-  String local_dc_;
   ConnectionSettings settings_;
 };
 

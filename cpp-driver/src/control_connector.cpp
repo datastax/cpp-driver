@@ -90,11 +90,6 @@ ControlConnector* ControlConnector::with_metrics(Metrics* metrics) {
   return this;
 }
 
-ControlConnector* ControlConnector::with_local_dc(const String& local_dc) {
-  local_dc_ = local_dc;
-  return this;
-}
-
 ControlConnector* ControlConnector::with_settings(const ControlConnectionSettings& settings) {
   settings_ = settings;
   return this;
@@ -109,7 +104,6 @@ void ControlConnector::connect(uv_loop_t* loop) {
     event_types = CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE;
   }
   connector_->with_metrics(metrics_)
-      ->with_local_dc(local_dc_)
       ->with_settings(settings_.connection_settings)
       ->with_event_types(event_types)
       ->connect(loop);

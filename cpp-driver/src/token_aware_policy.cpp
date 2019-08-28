@@ -37,7 +37,7 @@ static inline bool contains(const CopyOnWriteHostVec& replicas, const Address& a
 }
 
 void TokenAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
-                            const String& local_dc /*= ""*/) {
+                            const String& local_dc) {
   if (random != NULL) {
     if (shuffle_replicas_) {
       // Store random so that it can be used to shuffle replicas.

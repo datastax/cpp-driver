@@ -138,7 +138,7 @@ private:
 
 private:
   void internal_resolve_and_connect();
-  void internal_connect(const Address& address, ProtocolVersion version, const String& local_dc);
+  void internal_connect(const Address& address, ProtocolVersion version);
   void internal_cancel();
 
   void finish();
@@ -168,6 +168,7 @@ private:
   EventLoop* event_loop_;
   Random* random_;
   Metrics* metrics_;
+  String local_dc_;
   ClusterSettings settings_;
 
   Callback callback_;
