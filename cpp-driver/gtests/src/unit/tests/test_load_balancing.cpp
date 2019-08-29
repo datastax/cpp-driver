@@ -169,7 +169,7 @@ void test_dc_aware_policy(size_t local_count, size_t remote_count) {
   populate_hosts(local_count, "rack", LOCAL_DC, &hosts);
   populate_hosts(remote_count, "rack", REMOTE_DC, &hosts);
   DCAwarePolicy policy(LOCAL_DC, remote_count, false);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   const size_t total_hosts = local_count + remote_count;
 
@@ -185,7 +185,7 @@ TEST(RoundRobinLoadBalancingUnitTest, Simple) {
   populate_hosts(2, "rack", "dc", &hosts);
 
   RoundRobinPolicy policy;
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   // start on first elem
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
@@ -207,7 +207,7 @@ TEST(RoundRobinLoadBalancingUnitTest, OnAdd) {
   populate_hosts(2, "rack", "dc", &hosts);
 
   RoundRobinPolicy policy;
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   // baseline
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
@@ -230,7 +230,7 @@ TEST(RoundRobinLoadBalancingUnitTest, OnRemove) {
   populate_hosts(3, "rack", "dc", &hosts);
 
   RoundRobinPolicy policy;
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
   SharedRefPtr<Host> host = hosts.begin()->second;
@@ -251,7 +251,7 @@ TEST(RoundRobinLoadBalancingUnitTest, OnUpAndDown) {
   populate_hosts(3, "rack", "dc", &hosts);
 
   RoundRobinPolicy policy;
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp_before1(policy.new_query_plan("ks", NULL, NULL));
   ScopedPtr<QueryPlan> qp_before2(policy.new_query_plan("ks", NULL, NULL));
@@ -297,7 +297,7 @@ TEST(RoundRobinLoadBalancingUnitTest, VerifyEqualDistribution) {
   populate_hosts(3, "rack", "dc", &hosts);
 
   RoundRobinPolicy policy;
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   { // All nodes
     QueryCounts counts(run_policy(policy, 12));
@@ -338,7 +338,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, SomeDatacenterLocalUnspecified) {
   h->set_rack_and_dc("", "");
 
   DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
@@ -353,7 +353,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, SingleLocalDown) {
   populate_hosts(1, "rack", REMOTE_DC, &hosts);
 
   DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp_before(
       policy.new_query_plan("ks", NULL, NULL)); // has down host ptr in plan
@@ -380,7 +380,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllLocalRemovedReturned) {
   populate_hosts(1, "rack", REMOTE_DC, &hosts);
 
   DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp_before(
       policy.new_query_plan("ks", NULL, NULL)); // has down host ptr in plan
@@ -412,7 +412,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, RemoteRemovedReturned) {
   SharedRefPtr<Host> target_host = hosts[target_addr];
 
   DCAwarePolicy policy(LOCAL_DC, 1, false);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp_before(
       policy.new_query_plan("ks", NULL, NULL)); // has down host ptr in plan
@@ -443,7 +443,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, UsedHostsPerDatacenter) {
 
   for (size_t used_hosts = 0; used_hosts < 4; ++used_hosts) {
     DCAwarePolicy policy(LOCAL_DC, used_hosts, false);
-    policy.init(SharedRefPtr<Host>(), hosts, NULL);
+    policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
     Vector<size_t> seq;
@@ -476,7 +476,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     // Not allowing remote DCs for local CLs
     bool allow_remote_dcs_for_local_cl = false;
     DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
-    policy.init(SharedRefPtr<Host>(), hosts, NULL);
+    policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
     // Set local CL
     QueryRequest::Ptr request(new QueryRequest("", 0));
@@ -494,7 +494,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, AllowRemoteDatacentersForLocalConsist
     // Allowing remote DCs for local CLs
     bool allow_remote_dcs_for_local_cl = true;
     DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
-    policy.init(SharedRefPtr<Host>(), hosts, NULL);
+    policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
     // Set local CL
     QueryRequest::Ptr request(new QueryRequest("", 0));
@@ -517,7 +517,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, StartWithEmptyLocalDatacenter) {
   // Set local DC using connected host
   {
     DCAwarePolicy policy("", 0, false);
-    policy.init(hosts[Address("2.0.0.0", 9042)], hosts, NULL);
+    policy.init(hosts[Address("2.0.0.0", 9042)], hosts, NULL, "");
 
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
     const size_t seq[] = { 2, 3, 4 };
@@ -527,7 +527,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, StartWithEmptyLocalDatacenter) {
   // Set local DC using first host with non-empty DC
   {
     DCAwarePolicy policy("", 0, false);
-    policy.init(SharedRefPtr<Host>(new Host(Address("0.0.0.0", 9042))), hosts, NULL);
+    policy.init(SharedRefPtr<Host>(new Host(Address("0.0.0.0", 9042))), hosts, NULL, "");
 
     ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
     const size_t seq[] = { 1 };
@@ -547,7 +547,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionLocalDc) {
   populate_hosts(3, "rack", REMOTE_DC, &hosts);
 
   DCAwarePolicy policy("", 0, false);
-  policy.init(hosts.begin()->second, hosts, NULL);
+  policy.init(hosts.begin()->second, hosts, NULL, "");
 
   { // All local nodes
     QueryCounts counts(run_policy(policy, 12));
@@ -590,7 +590,7 @@ TEST(DatacenterAwareLoadBalancingUnitTest, VerifyEqualDistributionRemoteDc) {
   populate_hosts(3, "rack", REMOTE_DC, &hosts);
 
   DCAwarePolicy policy("", 3, false); // Allow all remote DC nodes
-  policy.init(hosts.begin()->second, hosts, NULL);
+  policy.init(hosts.begin()->second, hosts, NULL, "");
 
   Host::Ptr remote_dc_node1;
   { // Mark down all local nodes
@@ -664,7 +664,7 @@ TEST(TokenAwareLoadBalancingUnitTest, Simple) {
   token_map->build();
 
   TokenAwarePolicy policy(new RoundRobinPolicy(), false);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   QueryRequest::Ptr request(new QueryRequest("", 1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
@@ -737,7 +737,7 @@ TEST(TokenAwareLoadBalancingUnitTest, NetworkTopology) {
   token_map->build();
 
   TokenAwarePolicy policy(new DCAwarePolicy(LOCAL_DC, num_hosts / 2, false), false);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   QueryRequest::Ptr request(new QueryRequest("", 1));
   const char* value = "abc"; // hash: -5434086359492102041
@@ -811,7 +811,7 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   HostVec not_shuffled;
   {
     TokenAwarePolicy policy(new RoundRobinPolicy(), false); // Not shuffled
-    policy.init(SharedRefPtr<Host>(), hosts, &random);
+    policy.init(SharedRefPtr<Host>(), hosts, &random, "");
     ScopedPtr<QueryPlan> qp1(policy.new_query_plan("test", request_handler.get(), token_map.get()));
     for (int i = 0; i < num_hosts; ++i) {
       not_shuffled.push_back(qp1->compute_next());
@@ -829,7 +829,7 @@ TEST(TokenAwareLoadBalancingUnitTest, ShuffleReplicas) {
   // Verify that the shuffle setting does indeed shuffle the replicas
   {
     TokenAwarePolicy shuffle_policy(new RoundRobinPolicy(), true); // Shuffled
-    shuffle_policy.init(SharedRefPtr<Host>(), hosts, &random);
+    shuffle_policy.init(SharedRefPtr<Host>(), hosts, &random, "");
 
     HostVec shuffled_previous;
     ScopedPtr<QueryPlan> qp(
@@ -927,7 +927,7 @@ TEST(LatencyAwareLoadBalancingUnitTest, Simple) {
   HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
   LatencyAwarePolicy policy(new RoundRobinPolicy(), settings);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   // Record some latencies with 100 ns being the minimum
   for (HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
@@ -989,7 +989,7 @@ TEST(LatencyAwareLoadBalancingUnitTest, MinAverageUnderMinMeasured) {
   HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
   LatencyAwarePolicy policy(new RoundRobinPolicy(), settings);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   int count = 1;
   for (HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
@@ -1023,7 +1023,7 @@ TEST(WhitelistLoadBalancingUnitTest, Hosts) {
   whitelist_hosts.push_back("37.0.0.0");
   whitelist_hosts.push_back("83.0.0.0");
   WhitelistPolicy policy(new RoundRobinPolicy(), whitelist_hosts);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
@@ -1044,7 +1044,7 @@ TEST(WhitelistLoadBalancingUnitTest, Datacenters) {
   whitelist_dcs.push_back(LOCAL_DC);
   whitelist_dcs.push_back(REMOTE_DC);
   WhitelistDCPolicy policy(new RoundRobinPolicy(), whitelist_dcs);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
@@ -1064,7 +1064,7 @@ TEST(BlacklistLoadBalancingUnitTest, Hosts) {
   blacklist_hosts.push_back("2.0.0.0");
   blacklist_hosts.push_back("3.0.0.0");
   BlacklistPolicy policy(new RoundRobinPolicy(), blacklist_hosts);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 
@@ -1085,7 +1085,7 @@ TEST(BlacklistLoadBalancingUnitTest, Datacenters) {
   blacklist_dcs.push_back(LOCAL_DC);
   blacklist_dcs.push_back(REMOTE_DC);
   BlacklistDCPolicy policy(new RoundRobinPolicy(), blacklist_dcs);
-  policy.init(SharedRefPtr<Host>(), hosts, NULL);
+  policy.init(SharedRefPtr<Host>(), hosts, NULL, "");
 
   ScopedPtr<QueryPlan> qp(policy.new_query_plan("ks", NULL, NULL));
 

@@ -168,6 +168,7 @@ private:
   EventLoop* event_loop_;
   Random* random_;
   Metrics* metrics_;
+  String local_dc_;
   ClusterSettings settings_;
 
   Callback callback_;

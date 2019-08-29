@@ -50,7 +50,8 @@ public:
 
   virtual ~LatencyAwarePolicy() {}
 
-  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
+                    const String& local_dc);
 
   virtual void register_handles(uv_loop_t* loop);
   virtual void close_handles();

@@ -47,7 +47,7 @@ public:
   virtual void cancel() { internal_cancel(); }
 
   const AddressVec& resolved_contact_points() const { return resolved_contact_points_; }
-  String local_dc() const { return local_dc_; }
+  const String& local_dc() const { return local_dc_; }
 
 protected:
   virtual void internal_resolve(uv_loop_t* loop, const AddressVec& contact_points) = 0;

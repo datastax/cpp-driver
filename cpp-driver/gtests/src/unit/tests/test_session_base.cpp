@@ -44,7 +44,8 @@ public:
 
 protected:
   virtual void on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
-                          const HostMap& hosts, const TokenMap::Ptr& token_map) {
+                          const HostMap& hosts, const TokenMap::Ptr& token_map,
+                          const String& local_dc) {
     ++connected_;
 
     EXPECT_STREQ("127.0.0.1", connected_host->address_string().c_str());

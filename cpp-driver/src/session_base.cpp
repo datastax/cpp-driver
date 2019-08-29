@@ -159,7 +159,8 @@ void SessionBase::notify_closed() {
 }
 
 void SessionBase::on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
-                             const HostMap& hosts, const TokenMap::Ptr& token_map) {
+                             const HostMap& hosts, const TokenMap::Ptr& token_map,
+                             const String& local_dc) {
   notify_connected();
 }
 
@@ -186,7 +187,7 @@ void SessionBase::on_initialize(ClusterConnector* connector) {
   if (connector->is_ok()) {
     cluster_ = connector->release_cluster();
     on_connect(cluster_->connected_host(), cluster_->protocol_version(),
-               cluster_->available_hosts(), cluster_->token_map());
+               cluster_->available_hosts(), cluster_->token_map(), cluster_->local_dc());
   } else {
     assert(!connector->is_canceled() && "Cluster connection process canceled");
     switch (connector->error_code()) {

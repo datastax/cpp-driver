@@ -176,6 +176,7 @@ void ClusterConnector::on_resolve(ClusterMetadataResolver* resolver) {
     return;
   }
 
+  local_dc_ = resolver->local_dc();
   remaining_connector_count_ = resolved_contact_points.size();
   for (AddressVec::const_iterator it = resolved_contact_points.begin(),
                                   end = resolved_contact_points.end();
@@ -229,7 +230,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
     for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(), end = policies.end();
          it != end; ++it) {
       LoadBalancingPolicy::Ptr policy(*it);
-      policy->init(connected_host, hosts, random_);
+      policy->init(connected_host, hosts, random_, connector->local_dc());
       policy->register_handles(event_loop_->loop());
     }
 
@@ -256,7 +257,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
 
     cluster_.reset(new Cluster(connector->release_connection(), listener_, event_loop_,
                                connected_host, hosts, connector->schema(), default_policy, policies,
-                               settings_));
+                               local_dc_, settings_));
 
     // Clear any connection errors and set the final negotiated protocol version.
     error_code_ = CLUSTER_OK;

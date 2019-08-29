@@ -198,7 +198,7 @@ private:
 
 class CloudClusterMetadataResolverFactory : public ClusterMetadataResolverFactory {
 public:
-  CloudClusterMetadataResolverFactory(const String host, int port)
+  CloudClusterMetadataResolverFactory(const String& host, int port)
       : host_(host)
       , port_(port) {}
 
