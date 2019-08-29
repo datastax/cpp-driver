@@ -237,8 +237,10 @@ bool CloudSecureConnectionConfig::load(const String& filename, Config* config /*
     return false;
   }
 
+  json::MemoryStream memory_stream(contents.c_str(), contents.size());
+  json::AutoUTFMemoryInputStream auto_utf_stream(memory_stream);
   json::Document document;
-  document.Parse(contents.c_str());
+  document.ParseStream(auto_utf_stream);
   if (!document.IsObject()) {
     LOG_ERROR(CLOUD_ERROR "Invalid configuration");
     return false;

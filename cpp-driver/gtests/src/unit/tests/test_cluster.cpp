@@ -1010,3 +1010,21 @@ TEST_F(ClusterUnitTest, LocalDcFromResolver) {
   EXPECT_FALSE(connect_future->error());
   ASSERT_EQ("this_local_dc", connect_future->cluster()->local_dc());
 }
+
+TEST_F(ClusterUnitTest, NoContactPoints) {
+  // No cluster needed
+
+  AddressVec contact_points; // Empty
+
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
+  connector->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
+      << "Timed out waiting for cluster to connect";
+  ASSERT_TRUE(connect_future->error());
+  EXPECT_EQ(connect_future->error()->code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+}
+
