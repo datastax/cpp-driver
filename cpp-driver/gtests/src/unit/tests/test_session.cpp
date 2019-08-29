@@ -688,7 +688,7 @@ TEST_F(SessionUnitTest, LocalDcNotOverriddenOnPolicy) {
   config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_load_balancing_policy(new DCAwarePolicy("dc1"));
   config.set_cluster_metadata_resolver_factory(
-    ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+      ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
   config.set_host_listener(listener);
 
   Session session;
@@ -724,9 +724,9 @@ TEST_F(SessionUnitTest, LocalDcOverriddenOnPolicyUsingExecutionProfiles) {
   Config config;
   config.contact_points().push_back(Address("127.0.0.4", 9042));
   config.set_use_randomized_contact_points(
-    false); // Ensure round robin order over DC for query execution
+      false); // Ensure round robin order over DC for query execution
   config.set_cluster_metadata_resolver_factory(
-    ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+      ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
   config.set_host_listener(listener);
 
   ExecutionProfile profile;
@@ -776,9 +776,9 @@ TEST_F(SessionUnitTest, LocalDcNotOverriddenOnPolicyUsingExecutionProfiles) {
   Config config;
   config.contact_points().push_back(Address("127.0.0.4", 9042));
   config.set_use_randomized_contact_points(
-    false); // Ensure round robin order over DC for query execution
+      false); // Ensure round robin order over DC for query execution
   config.set_cluster_metadata_resolver_factory(
-    ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+      ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
   config.set_host_listener(listener);
 
   ExecutionProfile profile;
@@ -844,4 +844,3 @@ TEST_F(SessionUnitTest, NoContactPoints) {
   ASSERT_TRUE(connect_future->error());
   EXPECT_EQ(connect_future->error()->code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
-

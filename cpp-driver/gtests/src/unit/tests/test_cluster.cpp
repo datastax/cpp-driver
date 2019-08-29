@@ -1027,4 +1027,3 @@ TEST_F(ClusterUnitTest, NoContactPoints) {
   ASSERT_TRUE(connect_future->error());
   EXPECT_EQ(connect_future->error()->code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
-
