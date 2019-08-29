@@ -957,3 +957,20 @@ TEST_F(ClusterUnitTest, ReconnectionPolicy) {
   EXPECT_GE(policy->scheduled_delay_count(), 2u);
   EXPECT_EQ(3u, mock_cluster.connection_attempts(1)); // Includes initial connection attempt
 }
+
+TEST_F(ClusterUnitTest, NoContactPoints) {
+  // No cluster needed
+
+  AddressVec contact_points; // Empty
+
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_connected, connect_future.get())));
+  connector->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
+      << "Timed out waiting for cluster to connect";
+  ASSERT_TRUE(connect_future->error());
+  EXPECT_EQ(connect_future->error()->code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+}

@@ -104,9 +104,7 @@ Cluster::Ptr ClusterConnector::release_cluster() {
 void ClusterConnector::internal_resolve_and_connect() {
   inc_ref();
 
-  assert(!contact_points_.empty() && "Contact points should never be empty");
-
-  if (random_) {
+  if (random_ && !contact_points_.empty()) {
     random_shuffle(contact_points_.begin(), contact_points_.end(), random_);
   }
 

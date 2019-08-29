@@ -610,3 +610,17 @@ TEST_F(SessionUnitTest, HostListenerNodeDown) {
 
   ASSERT_EQ(0u, listener->event_count());
 }
+
+TEST_F(SessionUnitTest, NoContactPoints) {
+  // No cluster needed
+
+  Config config;
+  config.contact_points().clear();
+
+  Session session;
+  Future::Ptr connect_future(session.connect(config));
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
+      << "Timed out waiting for session to connect";
+  ASSERT_TRUE(connect_future->error());
+  EXPECT_EQ(connect_future->error()->code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+}
