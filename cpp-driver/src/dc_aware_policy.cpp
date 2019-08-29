@@ -44,7 +44,7 @@ DCAwarePolicy::~DCAwarePolicy() { uv_rwlock_destroy(&available_rwlock_); }
 
 void DCAwarePolicy::init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
                          const String& local_dc) {
-  if (local_dc_.empty()) { // Do not override
+  if (local_dc_.empty()) { // Only override if no local DC was specified.
     local_dc_ = local_dc;
   }
 
