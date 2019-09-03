@@ -529,7 +529,9 @@ int OpenSslSession::decrypt(char* buf, size_t size) {
 
 void OpenSslSession::check_error(int rc) {
   int err = SSL_get_error(ssl_, rc);
-  if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_NONE) {
+  if (err == SSL_ERROR_ZERO_RETURN) {
+    error_code_ = CASS_ERROR_SSL_CLOSED;
+  } else if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_NONE) {
     error_code_ = CASS_ERROR_SSL_PROTOCOL_ERROR;
     error_message_ = ssl_error_string();
   }

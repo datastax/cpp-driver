@@ -155,7 +155,8 @@ void HttpClient::on_timeout(Timer* timer) {
   OStringStream ss;
   ss << "HTTP request timed out after " << request_timeout_ms_ << " ms";
   error_message_ = ss.str();
-  socket_->close();
+  socket_connector_->cancel();
+  if (socket_) socket_->close();
 }
 
 int HttpClient::on_status(http_parser* parser, const char* buf, size_t len) {

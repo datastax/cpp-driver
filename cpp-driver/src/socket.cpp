@@ -213,8 +213,13 @@ void SslSocketHandler::on_read(Socket* socket, ssize_t nread, const uv_buf_t* bu
     on_ssl_read(socket, decrypted, rc);
   }
   if (rc <= 0 && ssl_session_->has_error()) {
-    LOG_ERROR("Unable to decrypt data: %s", ssl_session_->error_message().c_str());
-    socket->defunct();
+    if (ssl_session_->error_code() == CASS_ERROR_SSL_CLOSED) {
+      LOG_DEBUG("SSL session closed");
+      socket->close();
+    } else {
+      LOG_ERROR("Unable to decrypt data: %s", ssl_session_->error_message().c_str());
+      socket->defunct();
+    }
   }
 }
 

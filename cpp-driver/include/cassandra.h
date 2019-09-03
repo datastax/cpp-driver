@@ -700,7 +700,8 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_NO_PEER_CERT, 3, "No peer certificate")  \
   XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_PEER_CERT, 4, "Invalid peer certificate") \
   XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_IDENTITY_MISMATCH, 5, "Certificate does not match host or IP address") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_PROTOCOL_ERROR, 6, "Protocol error")
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_PROTOCOL_ERROR, 6, "Protocol error") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CLOSED, 7, "Connection closed")
 
 /* @cond IGNORE */
 #define CASS_ERROR_MAP CASS_ERROR_MAPPING /* Deprecated */
@@ -2771,11 +2772,13 @@ cass_cluster_set_host_listener_callback(CassCluster* cluster,
  */
 CASS_EXPORT CassError
 cass_cluster_set_cloud_secure_connection_bundle(CassCluster* cluster,
-                                                const char*path);
+                                                const char* path);
 
 /**
  * Same as cass_cluster_set_cloud_secure_connection_bundle(), but with lengths
  * for string parameters.
+ *
+ * @see cass_cluster_set_cloud_secure_connection_bundle()
  *
  * @param[in] cluster
  * @param[in] path Absolute path to DBaaS credentials file.
@@ -2786,6 +2789,41 @@ CASS_EXPORT CassError
 cass_cluster_set_cloud_secure_connection_bundle_n(CassCluster* cluster,
                                                   const char* path,
                                                   size_t path_length);
+
+/**
+ * Same as cass_cluster_set_cloud_secure_connection_bundle(), but it does not
+ * initialize the underlying SSL library implementation. The SSL library still
+ * needs to be initialized, but it's up to the client application to handle
+ * initialization. This is similar to the function cass_ssl_new_no_lib_init(),
+ * and its documentation should be used as a reference to properly initialize
+ * the underlying SSL library.
+ *
+ * @see cass_ssl_new_no_lib_init()
+ * @see cass_cluster_set_cloud_secure_connection_bundle()
+ *
+ * @param[in] cluster
+ * @param[in] path Absolute path to DBaaS credentials file.
+ * @return CASS_OK if successful, otherwise error occured.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(CassCluster* cluster,
+                                                                const char* path);
+
+/**
+ * Same as cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(),
+ * but with lengths for string parameters.
+ *
+ * @see cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init()
+ *
+ * @param[in] cluster
+ * @param[in] path Absolute path to DBaaS credentials file.
+ * @param[in] path_length Length of path variable.
+ * @return CASS_OK if successful, otherwise error occured.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(CassCluster* cluster,
+                                                                  const char* path,
+                                                                  size_t path_length);
 
 /***********************************************************************************
  *

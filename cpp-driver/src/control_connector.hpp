@@ -153,8 +153,6 @@ public:
 
   const ProtocolVersion protocol_version() const { return connector_->protocol_version(); }
 
-  const String& local_dc() const { return local_dc_; }
-
   bool is_ok() const { return error_code_ == CONTROL_CONNECTION_OK; }
   bool is_canceled() const { return error_code_ == CONTROL_CONNECTION_CANCELED; }
   bool is_invalid_protocol() const {
@@ -220,7 +218,6 @@ private:
 
   ControlConnectionListener* listener_;
   Metrics* metrics_;
-  String local_dc_;
   Host::Ptr host_;
   ControlConnectionSettings settings_;
 };

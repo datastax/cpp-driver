@@ -30,8 +30,6 @@ public:
   bool load(const String& filename, Config* config = NULL);
   bool is_loaded() const { return is_loaded_; }
 
-  const String& username() const { return username_; }
-  const String& password() const { return password_; }
   const String& host() const { return host_; }
   int port() const { return port_; }
   const String& keyspace() const { return keyspace_; }
@@ -42,8 +40,6 @@ public:
 
 private:
   bool is_loaded_;
-  String username_;
-  String password_;
   String host_;
   int port_;
   String keyspace_;

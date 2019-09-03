@@ -230,7 +230,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
     for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(), end = policies.end();
          it != end; ++it) {
       LoadBalancingPolicy::Ptr policy(*it);
-      policy->init(connected_host, hosts, random_, connector->local_dc());
+      policy->init(connected_host, hosts, random_, local_dc_);
       policy->register_handles(event_loop_->loop());
     }
 

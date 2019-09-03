@@ -485,6 +485,19 @@ CassError cass_cluster_set_cloud_secure_connection_bundle(CassCluster* cluster, 
 
 CassError cass_cluster_set_cloud_secure_connection_bundle_n(CassCluster* cluster, const char* path,
                                                             size_t path_length) {
+  SslContextFactory::init_once();
+  return cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(cluster, path,
+                                                                           path_length);
+}
+
+CassError cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(CassCluster* cluster,
+                                                                          const char* path) {
+  return cass_cluster_set_cloud_secure_connection_bundle_n(cluster, path, SAFE_STRLEN(path));
+}
+
+CassError cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(CassCluster* cluster,
+                                                                            const char* path,
+                                                                            size_t path_length) {
   if (!cluster->config().set_cloud_secure_connection_bundle(String(path, path_length))) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
