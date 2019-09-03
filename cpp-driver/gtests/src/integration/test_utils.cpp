@@ -274,3 +274,10 @@ bool test::Utils::wait_for_port(const std::string& ip_address, unsigned short po
   // Unable to establish connection to node on port
   return false;
 }
+
+std::string test::Utils::home_directory() {
+  char home[FILE_PATH_SIZE] = { 0 };
+  size_t home_length = sizeof(home);
+  uv_os_homedir(home, &home_length);
+  return std::string(home, home_length);
+}

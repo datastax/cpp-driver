@@ -114,6 +114,13 @@ public:
   const std::string host() { return future_.host(); }
 
   /**
+   * Get the server name of the future
+   *
+   * @return Server name
+   */
+  const std::string server_name() { return future_.server_name(); }
+
+  /**
    * Get the number of columns from the result
    *
    * @return The number of columns in the result
