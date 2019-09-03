@@ -492,7 +492,8 @@ CassError cass_cluster_set_cloud_secure_connection_bundle_n(CassCluster* cluster
 
 CassError cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(CassCluster* cluster,
                                                                           const char* path) {
-  return cass_cluster_set_cloud_secure_connection_bundle_n(cluster, path, SAFE_STRLEN(path));
+  return cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(cluster, path,
+                                                                           SAFE_STRLEN(path));
 }
 
 CassError cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(CassCluster* cluster,

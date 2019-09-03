@@ -130,8 +130,6 @@ public:
     writer.String(host.c_str());
     writer.Key("port");
     writer.Int(port);
-    writer.Key("keyspace");
-    writer.String("database_as_a_service");
     writer.EndObject();
   }
 
@@ -175,7 +173,6 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1) {
   EXPECT_EQ("Constellation", cloud_config.password());
   EXPECT_EQ("cloud.datastax.com", cloud_config.host());
   EXPECT_EQ(1443, cloud_config.port());
-  EXPECT_EQ("database_as_a_service", cloud_config.keyspace());
   EXPECT_EQ(ca_cert(), cloud_config.ca_cert());
   EXPECT_EQ(cert(), cloud_config.cert());
   EXPECT_EQ(key(), cloud_config.key());
@@ -195,8 +192,6 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1WithoutCreds) {
   writer.String("bigdata.datastax.com");
   writer.Key("port");
   writer.Int(2443);
-  writer.Key("keyspace");
-  writer.String("datastax");
   writer.EndObject();
   create_zip_file(buffer.GetString());
 
@@ -205,7 +200,6 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1WithoutCreds) {
   EXPECT_EQ("", cloud_config.password());
   EXPECT_EQ("bigdata.datastax.com", cloud_config.host());
   EXPECT_EQ(2443, cloud_config.port());
-  EXPECT_EQ("datastax", cloud_config.keyspace());
   EXPECT_EQ(ca_cert(), cloud_config.ca_cert());
   EXPECT_EQ(cert(), cloud_config.cert());
   EXPECT_EQ(key(), cloud_config.key());
@@ -227,8 +221,6 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingHost) {
   writer.String("Constellation");
   writer.Key("port");
   writer.Int(1443);
-  writer.Key("keyspace");
-  writer.String("database_as_a_service");
   writer.EndObject();
   create_zip_file(buffer.GetString());
 
@@ -247,28 +239,6 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingPort) {
   writer.String("Constellation");
   writer.Key("host");
   writer.String("cloud.datastax.com");
-  writer.Key("keyspace");
-  writer.String("database_as_a_service");
-  writer.EndObject();
-  create_zip_file(buffer.GetString());
-
-  EXPECT_FALSE(config.load(creds_zip_file()));
-}
-
-TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingKeyspace) {
-  CloudSecureConnectionConfig config;
-
-  StringBuffer buffer;
-  Writer<StringBuffer> writer(buffer);
-  writer.StartObject();
-  writer.Key("username");
-  writer.String("DataStax");
-  writer.Key("password");
-  writer.String("Constellation");
-  writer.Key("host");
-  writer.String("cloud.datastax.com");
-  writer.Key("port");
-  writer.Int(1443);
   writer.EndObject();
   create_zip_file(buffer.GetString());
 

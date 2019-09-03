@@ -34,7 +34,6 @@ public:
   const String& password() const { return password_; }
   const String& host() const { return host_; }
   int port() const { return port_; }
-  const String& keyspace() const { return keyspace_; }
 
   const String& ca_cert() const { return ca_cert_; }
   const String& cert() const { return cert_; }
@@ -46,7 +45,6 @@ private:
   String password_;
   String host_;
   int port_;
-  String keyspace_;
   String ca_cert_;
   String cert_;
   String key_;
