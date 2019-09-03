@@ -35,11 +35,15 @@ build:
       build/cassandra-unit-tests --gtest_output=xml:cassandra-unit-test-results.xml
       build/dse-unit-tests --gtest_output=xml:dse-unit-test-results.xml
 
+      if [ -f build/cassandra-integration-tests ]; then
+        build/cassandra-integration-tests --category=cassandra --keep-clusters --verbose --gtest_filter=DbaasTests* --gtest_output=xml:dbaas-integration-test-results.xml
+      fi
+
       install_driver
       test_installed_driver 'dse'
 
   - xunit:
-    - "*unit-test-results.xml"
+    - "*test-results.xml"
 package:
   allow_empty: true
   include: # list of files and glob paths to include in the artifact, relative to the current working directory
