@@ -61,6 +61,7 @@ using datastax::internal::core::ClusterMetadataResolver;
 using datastax::internal::core::ClusterSettings;
 using datastax::internal::core::Config;
 using datastax::internal::core::HttpClient;
+using datastax::internal::enterprise::DsePlainTextAuthProvider;
 using datastax::internal::json::StringBuffer;
 using datastax::internal::json::Writer;
 
@@ -121,6 +122,10 @@ public:
                                   int port = 1443) {
     Writer<StringBuffer> writer(buffer);
     writer.StartObject();
+    writer.Key("username");
+    writer.String("DataStax");
+    writer.Key("password");
+    writer.String("Constellation");
     writer.Key("host");
     writer.String(host.c_str());
     writer.Key("port");
@@ -166,6 +171,8 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1) {
   create_zip_file(buffer.GetString());
 
   EXPECT_TRUE(cloud_config.load(creds_zip_file(), &config));
+  EXPECT_EQ("DataStax", cloud_config.username());
+  EXPECT_EQ("Constellation", cloud_config.password());
   EXPECT_EQ("cloud.datastax.com", cloud_config.host());
   EXPECT_EQ(1443, cloud_config.port());
   EXPECT_EQ("database_as_a_service", cloud_config.keyspace());
@@ -174,6 +181,7 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1) {
   EXPECT_EQ(key(), cloud_config.key());
 
   EXPECT_TRUE(config.ssl_context());
+  EXPECT_TRUE(dynamic_cast<DsePlainTextAuthProvider*>(config.auth_provider().get()) != NULL);
 }
 
 TEST_F(CloudSecureConnectionConfigTest, CredsV1WithoutCreds) {
@@ -193,6 +201,8 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1WithoutCreds) {
   create_zip_file(buffer.GetString());
 
   EXPECT_TRUE(cloud_config.load(creds_zip_file(), &config));
+  EXPECT_EQ("", cloud_config.username());
+  EXPECT_EQ("", cloud_config.password());
   EXPECT_EQ("bigdata.datastax.com", cloud_config.host());
   EXPECT_EQ(2443, cloud_config.port());
   EXPECT_EQ("datastax", cloud_config.keyspace());
@@ -201,6 +211,8 @@ TEST_F(CloudSecureConnectionConfigTest, CredsV1WithoutCreds) {
   EXPECT_EQ(key(), cloud_config.key());
 
   EXPECT_TRUE(config.ssl_context());
+  EXPECT_TRUE(dynamic_cast<DsePlainTextAuthProvider*>(config.auth_provider().get()) ==
+              NULL); // Not configured
 }
 
 TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingHost) {
@@ -209,6 +221,10 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingHost) {
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
   writer.StartObject();
+  writer.Key("username");
+  writer.String("DataStax");
+  writer.Key("password");
+  writer.String("Constellation");
   writer.Key("port");
   writer.Int(1443);
   writer.Key("keyspace");
@@ -225,6 +241,10 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingPort) {
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
   writer.StartObject();
+  writer.Key("username");
+  writer.String("DataStax");
+  writer.Key("password");
+  writer.String("Constellation");
   writer.Key("host");
   writer.String("cloud.datastax.com");
   writer.Key("keyspace");
@@ -241,6 +261,10 @@ TEST_F(CloudSecureConnectionConfigTest, InvalidCredsV1ConfigMissingKeyspace) {
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
   writer.StartObject();
+  writer.Key("username");
+  writer.String("DataStax");
+  writer.Key("password");
+  writer.String("Constellation");
   writer.Key("host");
   writer.String("cloud.datastax.com");
   writer.Key("port");

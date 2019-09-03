@@ -246,6 +246,18 @@ bool CloudSecureConnectionConfig::load(const String& filename, Config* config /*
     return false;
   }
 
+  if (document.HasMember("username") && document["username"].IsString()) {
+    username_ = document["username"].GetString();
+  }
+  if (document.HasMember("password") && document["password"].IsString()) {
+    password_ = document["password"].GetString();
+  }
+
+  if (config && (!username_.empty() || !password_.empty())) {
+    config->set_auth_provider(
+        AuthProvider::Ptr(new enterprise::DsePlainTextAuthProvider(username_, password_, "")));
+  }
+
   if (!document.HasMember("host") || !document["host"].IsString()) {
     LOG_ERROR(CLOUD_ERROR "Missing host");
     return false;
