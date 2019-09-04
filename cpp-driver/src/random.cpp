@@ -53,6 +53,11 @@ Random::~Random() { uv_mutex_destroy(&mutex_); }
 
 uint64_t Random::next(uint64_t max) {
   ScopedMutex l(&mutex_);
+
+  if (max == 0) {
+    return 0;
+  }
+
   const uint64_t limit = CASS_UINT64_MAX - CASS_UINT64_MAX % max;
   uint64_t r;
   do {

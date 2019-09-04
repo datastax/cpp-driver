@@ -28,9 +28,6 @@ public:
   explicit Vector(size_t count, const T& value = T())
       : std::vector<T, Allocator>(count, value) {}
 
-  Vector(const Vector& other)
-      : std::vector<T, Allocator>(other) {}
-
   template <class InputIt>
   Vector(InputIt first, InputIt last)
       : std::vector<T, Allocator>(first, last) {}
