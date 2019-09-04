@@ -35,8 +35,8 @@ else
 fi
 
 get_driver_version() {
-  local header_file=$1
-  local driver_prefix=$2
+  local header_file=${1}
+  local driver_prefix=${2}
   local driver_version=$(grep "#define[ \t]\+${driver_prefix}_VERSION_\(MAJOR\|MINOR\|PATCH\|SUFFIX\)" ${header_file}  | awk '
     BEGIN { major="?"; minor="?"; patch="?" }
     /_VERSION_MAJOR/ { major=$3 }
@@ -65,7 +65,7 @@ install_dependencies() {
 }
 
 build_driver() {
-  local driver_prefix=$1
+  local driver_prefix=${1}
 
   # Ensure build directory is cleaned (static nodes are not cleaned)
   [[ -d build ]] && rm -rf build
@@ -73,7 +73,17 @@ build_driver() {
 
   (
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -D${driver_prefix}_BUILD_SHARED=On -D${driver_prefix}_BUILD_STATIC=On -D${driver_prefix}_BUILD_EXAMPLES=On -D${driver_prefix}_BUILD_UNIT_TESTS=On ..
+    BUILD_INTEGRATION_TESTS=Off
+    if [ "${RELEASE}" = "bionic64" ]; then
+      BUILD_INTEGRATION_TESTS=On
+    fi
+    cmake -DCMAKE_BUILD_TYPE=Release \
+          -D${driver_prefix}_BUILD_SHARED=On \
+          -D${driver_prefix}_BUILD_STATIC=On \
+          -D${driver_prefix}_BUILD_EXAMPLES=On \
+          -D${driver_prefix}_BUILD_UNIT_TESTS=On \
+          -D${driver_prefix}_BUILD_INTEGRATION_TESTS=${BUILD_INTEGRATION_TESTS} \
+          ..
     [[ -x $(which clang-format) ]] && make format-check
     make -j${PROCS}
   )
@@ -81,7 +91,7 @@ build_driver() {
 
 check_driver_exports() {(
   set +e  #Disable fail fast for this subshell
-  local driver_library=$1
+  local driver_library=${1}
   if [ -f ${driver_library} ]; then
     declare -a MISSING_FUNCTIONS
     for function in "${@:2}"; do

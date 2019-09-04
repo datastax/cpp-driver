@@ -266,13 +266,8 @@ bool CloudSecureConnectionConfig::load(const String& filename, Config* config /*
     LOG_ERROR(CLOUD_ERROR "Missing port");
     return false;
   }
-  if (!document.HasMember("keyspace") || !document["keyspace"].IsString()) {
-    LOG_ERROR(CLOUD_ERROR "Missing keyspace");
-    return false;
-  }
   host_ = document["host"].GetString();
   port_ = document["port"].GetInt();
-  keyspace_ = document["keyspace"].GetString();
 
   if (!zip_file.read_contents(CERTIFICATE_AUTHORITY_FILE, &ca_cert_)) {
     LOG_ERROR(CLOUD_ERROR "Missing certificate authority file %s", CERTIFICATE_AUTHORITY_FILE);

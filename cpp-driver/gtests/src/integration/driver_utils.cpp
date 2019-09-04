@@ -79,6 +79,16 @@ std::string test::driver::internals::Utils::host(CassFuture* future) {
   return "";
 }
 
+std::string test::driver::internals::Utils::server_name(CassFuture* future) {
+  if (future) {
+    Future* cass_future = static_cast<Future*>(future);
+    if (cass_future->type() == Future::FUTURE_TYPE_RESPONSE) {
+      return static_cast<ResponseFuture*>(cass_future)->address().server_name().c_str();
+    }
+  }
+  return "";
+}
+
 int64_t test::driver::internals::Utils::murmur3_hash(const std::string& value) {
   return MurmurHash3_x64_128(value.data(), value.size(), 0);
 }

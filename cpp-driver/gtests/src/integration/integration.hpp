@@ -253,6 +253,12 @@ protected:
    */
   bool is_schema_metadata_;
   /**
+   * Setting to determine if CCM instance should be created. True if CCM instance
+   * should be created; false otherwise.
+   * (DEFAULT: true)
+   */
+  bool is_ccm_requested_;
+  /**
    * Setting to determine if CCM cluster should be started. True if CCM cluster
    * should be started; false otherwise.
    * (DEFAULT: true)
