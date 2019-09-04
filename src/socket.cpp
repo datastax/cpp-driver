@@ -213,8 +213,13 @@ void SslSocketHandler::on_read(Socket* socket, ssize_t nread, const uv_buf_t* bu
     on_ssl_read(socket, decrypted, rc);
   }
   if (rc <= 0 && ssl_session_->has_error()) {
-    LOG_ERROR("Unable to decrypt data: %s", ssl_session_->error_message().c_str());
-    socket->defunct();
+    if (ssl_session_->error_code() == CASS_ERROR_SSL_CLOSED) {
+      LOG_DEBUG("SSL session closed");
+      socket->close();
+    } else {
+      LOG_ERROR("Unable to decrypt data: %s", ssl_session_->error_message().c_str());
+      socket->defunct();
+    }
   }
 }
 
@@ -275,8 +280,7 @@ void SocketWriteBase::handle_write(uv_write_t* req, int status) {
 Socket::Socket(const Address& address, size_t max_reusable_write_objects)
     : is_defunct_(false)
     , max_reusable_write_objects_(max_reusable_write_objects)
-    , address_(address)
-    , address_string_(address.to_string()) {
+    , address_(address) {
   tcp_.data = this;
 }
 
@@ -370,7 +374,7 @@ void Socket::on_close(uv_handle_t* handle) {
 }
 
 void Socket::handle_close() {
-  LOG_DEBUG("Socket(%p) to host %s closed", static_cast<void*>(this), address_string().c_str());
+  LOG_DEBUG("Socket(%p) to host %s closed", static_cast<void*>(this), address_.to_string().c_str());
 
   while (!pending_writes_.is_empty()) {
     SocketWriteBase* pending_write = pending_writes_.pop_front();

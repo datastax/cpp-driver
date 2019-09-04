@@ -29,7 +29,8 @@ public:
   HostTargetingPolicy(LoadBalancingPolicy* child_policy)
       : ChainedLoadBalancingPolicy(child_policy) {}
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random);
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts, Random* random,
+                    const String& local_dc);
 
   virtual QueryPlan* new_query_plan(const String& keyspace, RequestHandler* request_handler,
                                     const TokenMap* token_map);
@@ -58,7 +59,7 @@ private:
   };
 
 private:
-  class HostMap : public DenseHashMap<Address, Host::Ptr, AddressHash> {
+  class HostMap : public DenseHashMap<Address, Host::Ptr> {
   public:
     HostMap() {
       set_empty_key(Address::EMPTY_KEY);

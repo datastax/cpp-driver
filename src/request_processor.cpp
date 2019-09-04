@@ -167,7 +167,8 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener, EventLoop
                                    const ConnectionPoolManager::Ptr& connection_pool_manager,
                                    const Host::Ptr& connected_host, const HostMap& hosts,
                                    const TokenMap::Ptr& token_map,
-                                   const RequestProcessorSettings& settings, Random* random)
+                                   const RequestProcessorSettings& settings, Random* random,
+                                   const String& local_dc)
     : connection_pool_manager_(connection_pool_manager)
     , listener_(listener ? listener : &nop_request_processor_listener__)
     , event_loop_(event_loop)
@@ -210,7 +211,7 @@ RequestProcessor::RequestProcessor(RequestProcessorListener* listener, EventLoop
   LoadBalancingPolicy::Vec policies = load_balancing_policies();
   for (LoadBalancingPolicy::Vec::const_iterator it = policies.begin(); it != policies.end(); ++it) {
     // Initialize the load balancing policies
-    (*it)->init(connected_host, hosts, random);
+    (*it)->init(connected_host, hosts, random, local_dc);
   }
 
   listener_->on_connect(this);

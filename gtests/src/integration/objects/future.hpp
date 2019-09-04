@@ -98,6 +98,13 @@ public:
   const std::string host() { return internals::Utils::host(get()); }
 
   /**
+   * Get the server name of the future
+   *
+   * @return Server name
+   */
+  const std::string server_name() { return internals::Utils::server_name(get()); }
+
+  /**
    * Get the result from the future
    *
    * @return Result from future

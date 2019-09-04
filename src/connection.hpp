@@ -202,8 +202,9 @@ public:
   void start_heartbeats();
 
 public:
-  const Address& address() const { return socket_->address(); }
-  const String& address_string() const { return socket_->address_string(); }
+  const Address& address() const { return host_->address(); }
+  const String& address_string() const { return host_->address_string(); }
+  const Address& resolved_address() const { return socket_->address(); }
   const Host::Ptr& host() const { return host_; }
   ProtocolVersion protocol_version() const { return protocol_version_; }
   const String& keyspace() { return keyspace_; }

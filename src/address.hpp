@@ -18,13 +18,11 @@
 #define DATASTAX_INTERNAL_ADDRESS_HPP
 
 #include "allocated.hpp"
+#include "callback.hpp"
 #include "dense_hash_set.hpp"
-#include "hash.hpp"
 #include "string.hpp"
 #include "vector.hpp"
 
-#include <ostream>
-#include <string.h>
 #include <uv.h>
 
 namespace datastax { namespace internal { namespace core {
@@ -37,111 +35,133 @@ public:
   static const Address EMPTY_KEY;
   static const Address DELETED_KEY;
 
-  static const Address BIND_ANY_IPV4;
-  static const Address BIND_ANY_IPV6;
-
-  Address();
-  Address(const String& ip, int port); // Tests only
-
-  static bool from_string(const String& ip, int port, Address* output = NULL);
-
-  static bool from_inet(const void* data, size_t size, int port, Address* output = NULL);
-
-  bool init(const struct sockaddr* addr);
+  enum Family { UNRESOLVED, IPv4, IPv6 };
 
 #ifdef _WIN32
-  const struct sockaddr* addr() const { return reinterpret_cast<const struct sockaddr*>(&addr_); }
-  const struct sockaddr_in* addr_in() const {
-    return reinterpret_cast<const struct sockaddr_in*>(&addr_);
-  }
-  const struct sockaddr_in6* addr_in6() const {
-    return reinterpret_cast<const struct sockaddr_in6*>(&addr_);
-  }
+  struct SocketStorage {
+    struct sockaddr* addr() {
+      return reinterpret_cast<struct sockaddr*>(&storage);
+    }
+    struct sockaddr_in* addr_in() {
+      return reinterpret_cast<struct sockaddr_in*>(&storage);
+    }
+    struct sockaddr_in6* addr_in6() {
+      return reinterpret_cast<struct sockaddr_in6*>(&storage);
+    }
+    struct sockaddr_storage storage;
+  };
 #else
-  const struct sockaddr* addr() const { return &addr_; }
-  const struct sockaddr_in* addr_in() const { return &addr_in_; }
-  const struct sockaddr_in6* addr_in6() const { return &addr_in6_; }
-#endif
-
-  bool is_valid() const { return family() == AF_INET || family() == AF_INET6; }
-  int family() const { return addr()->sa_family; }
-  int port() const;
-
-  String to_string(bool with_port = false) const;
-  uint8_t to_inet(uint8_t* data) const;
-
-  int compare(const Address& a, bool with_port = true) const;
-
-private:
-  void init() { addr()->sa_family = AF_UNSPEC; }
-  void init(const struct sockaddr_in* addr);
-  void init(const struct sockaddr_in6* addr);
-
-#ifdef _WIN32
-  struct sockaddr* addr() {
-    return reinterpret_cast<struct sockaddr*>(&addr_);
-  }
-  struct sockaddr_in* addr_in() {
-    return reinterpret_cast<struct sockaddr_in*>(&addr_);
-  }
-  struct sockaddr_in6* addr_in6() {
-    return reinterpret_cast<struct sockaddr_in6*>(&addr_);
-  }
-
-  struct sockaddr_storage addr_;
-#else
-  struct sockaddr* addr() {
-    return &addr_;
-  }
-  struct sockaddr_in* addr_in() {
-    return &addr_in_;
-  }
-  struct sockaddr_in6* addr_in6() {
-    return &addr_in6_;
-  }
-
-  union {
-    struct sockaddr addr_;
-    struct sockaddr_in addr_in_;
-    struct sockaddr_in6 addr_in6_;
+  struct SocketStorage {
+    struct sockaddr* addr() {
+      return &storage.addr;
+    }
+    struct sockaddr_in* addr_in() {
+      return &storage.addr_in;
+    }
+    struct sockaddr_in6* addr_in6() {
+      return &storage.addr_in6;
+    }
+    union {
+      struct sockaddr addr;
+      struct sockaddr_in addr_in;
+      struct sockaddr_in6 addr_in6;
+    } storage;
   };
 #endif
+
+  Address();
+  Address(const Address& other, const String& server_name);
+  Address(const String& hostname_or_address, int port, const String& server_name = String());
+  Address(const uint8_t* address, uint8_t address_length, int port);
+  Address(const struct sockaddr* addr);
+
+  bool equals(const Address& other, bool with_port = true) const;
+
+  bool operator==(const Address& other) const { return equals(other); }
+  bool operator!=(const Address& other) const { return !equals(other); }
+  bool operator<(const Address& other) const;
+
+public:
+  String hostname_or_address() const;
+  const String& server_name() const { return server_name_; }
+  Family family() const { return family_; }
+  int port() const { return port_; }
+
+  bool is_valid() const { return !hostname_or_address_.empty(); }
+  bool is_resolved() const { return family_ == IPv4 || family_ == IPv6; }
+  bool is_valid_and_resolved() const { return is_valid() && is_resolved(); }
+
+public:
+  size_t hash_code() const;
+  uint8_t to_inet(void* address) const;
+  const struct sockaddr* to_sockaddr(SocketStorage* storage) const;
+  String to_string(bool with_port = false) const;
+
+private:
+  String hostname_or_address_;
+  String server_name_;
+  Family family_;
+  int port_;
 };
 
-struct AddressHash {
-  std::size_t operator()(const Address& a) const {
-    if (a.family() == AF_INET) {
-      return hash::fnv1a(reinterpret_cast<const char*>(a.addr()), sizeof(struct sockaddr_in));
-    } else if (a.family() == AF_INET6) {
-      return hash::fnv1a(reinterpret_cast<const char*>(a.addr()), sizeof(struct sockaddr_in6));
-    }
-    return 0;
+bool determine_address_for_peer_host(const Address& connected_address, const Value* peer_value,
+                                     const Value* rpc_value, Address* output);
+
+String determine_listen_address(const Address& address, const Row* row);
+
+}}} // namespace datastax::internal::core
+
+namespace std {
+
+#if defined(HASH_IN_TR1) && !defined(_WIN32)
+namespace tr1 {
+#endif
+
+template <>
+struct hash<datastax::internal::core::Address> {
+  size_t operator()(const datastax::internal::core::Address& address) const {
+    return address.hash_code();
   }
 };
 
-typedef Vector<Address> AddressVec;
-class AddressSet : public DenseHashSet<Address, AddressHash> {
+template <>
+struct hash<datastax::internal::core::Address::Family> {
+  size_t operator()(datastax::internal::core::Address::Family family) const {
+    return hasher(static_cast<int>(family));
+  }
+  SPARSEHASH_HASH<int> hasher;
+};
+
+#if defined(HASH_IN_TR1) && !defined(_WIN32)
+} // namespace tr1
+#endif
+
+} // namespace std
+
+namespace datastax { namespace internal { namespace core {
+
+class AddressSet : public DenseHashSet<Address> {
 public:
   AddressSet() {
     set_empty_key(Address::EMPTY_KEY);
     set_deleted_key(Address::DELETED_KEY);
   }
 };
+typedef Vector<Address> AddressVec;
 
-inline bool operator<(const Address& a, const Address& b) { return a.compare(b) < 0; }
+}}} // namespace datastax::internal::core
 
-inline bool operator==(const Address& a, const Address& b) { return a.compare(b) == 0; }
+namespace std {
 
-inline bool operator!=(const Address& a, const Address& b) { return a.compare(b) != 0; }
-
-inline std::ostream& operator<<(std::ostream& os, const Address& addr) {
-  return os << addr.to_string();
+inline std::ostream& operator<<(std::ostream& os, const datastax::internal::core::Address& a) {
+  return os << a.to_string();
 }
 
-inline std::ostream& operator<<(std::ostream& os, const AddressVec& v) {
+inline std::ostream& operator<<(std::ostream& os, const datastax::internal::core::AddressVec& v) {
   os << "[";
   bool first = true;
-  for (AddressVec::const_iterator it = v.begin(), end = v.end(); it != end; ++it) {
+  for (datastax::internal::core::AddressVec::const_iterator it = v.begin(), end = v.end();
+       it != end; ++it) {
     if (!first) os << ", ";
     first = false;
     os << *it;
@@ -150,11 +170,6 @@ inline std::ostream& operator<<(std::ostream& os, const AddressVec& v) {
   return os;
 }
 
-bool determine_address_for_peer_host(const Address& connected_address, const Value* peer_value,
-                                     const Value* rpc_value, Address* output);
-
-String determine_listen_address(const Address& address, const Row* row);
-
-}}} // namespace datastax::internal::core
+} // namespace std
 
 #endif

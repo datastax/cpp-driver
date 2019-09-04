@@ -59,12 +59,13 @@ public:
    * @param protocol_version The highest negotiated protocol for the cluster.
    * @param hosts A mapping of available hosts in the cluster.
    * @param token_map A token map.
+   * @param local_dc The local datacenter for initializing the load balancing policies.
    * @param callback A callback that is called when the processor is initialized
    * or if an error occurred.
    */
   RequestProcessorInitializer(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
                               const HostMap& hosts, const TokenMap::Ptr& token_map,
-                              const Callback& callback);
+                              const String& local_dc, const Callback& callback);
   ~RequestProcessorInitializer();
 
   /**
@@ -165,6 +166,7 @@ private:
   const ProtocolVersion protocol_version_;
   HostMap hosts_;
   const TokenMap::Ptr token_map_;
+  String local_dc_;
 
   RequestProcessorError error_code_;
   String error_message_;

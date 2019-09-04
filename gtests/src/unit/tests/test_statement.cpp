@@ -32,8 +32,9 @@ public:
 
   void connect(const Config& config = Config()) {
     Config temp(config);
-    temp.contact_points().push_back("127.0.0.1");
-    temp.contact_points().push_back("127.0.0.2"); // At least one more host (in case node 1 is down)
+    temp.contact_points().push_back(Address("127.0.0.1", 9042));
+    temp.contact_points().push_back(
+        Address("127.0.0.2", 9042)); // At least one more host (in case node 1 is down)
     Future::Ptr connect_future(session.connect(temp));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";
@@ -54,7 +55,8 @@ public:
     CassInet inet;
     ASSERT_TRUE(value->decoder().as_inet(value->size(), &inet));
 
-    ASSERT_TRUE(Address::from_inet(inet.address, inet.address_length, 9042, output));
+    *output = Address(inet.address, inet.address_length, 9042);
+    ASSERT_TRUE(output->is_valid_and_resolved());
   }
 
   Session session;

@@ -104,7 +104,7 @@ public:
   typedef SharedRefPtr<ConnectionPool> Ptr;
   typedef DenseHashMap<DelayedConnector*, ReconnectionSchedule*> ReconnectionSchedules;
 
-  class Map : public DenseHashMap<Address, Ptr, AddressHash> {
+  class Map : public DenseHashMap<Address, Ptr> {
   public:
     Map() {
       set_empty_key(Address::EMPTY_KEY);

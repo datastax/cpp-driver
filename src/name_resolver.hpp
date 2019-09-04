@@ -72,8 +72,8 @@ public:
       timer_.start(loop, timeout, bind_callback(&NameResolver::on_timeout, this));
     }
 
-    int rc =
-        uv_getnameinfo(loop, &req_, on_resolve, static_cast<const Address>(address_).addr(), flags);
+    Address::SocketStorage storage;
+    int rc = uv_getnameinfo(loop, &req_, on_resolve, address_.to_sockaddr(&storage), flags);
 
     if (rc != 0) {
       status_ = FAILED_BAD_PARAM;

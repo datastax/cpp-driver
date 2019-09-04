@@ -50,13 +50,13 @@ unsigned int test::driver::internals::Utils::connect_timeout(CassCluster* cluste
 
 std::string test::driver::internals::Utils::contact_points(CassCluster* cluster) {
   std::string contact_points;
-  const ContactPointList& contact_points_list = cluster->config().contact_points();
-  for (ContactPointList::const_iterator it = contact_points_list.begin();
-       it != contact_points_list.end(); ++it) {
+  const AddressVec& contact_points_list = cluster->config().contact_points();
+  for (AddressVec::const_iterator it = contact_points_list.begin(); it != contact_points_list.end();
+       ++it) {
     if (contact_points.size() > 0) {
       contact_points.push_back(',');
     }
-    contact_points.append((*it).c_str());
+    contact_points.append((*it).hostname_or_address().c_str());
   }
   return contact_points;
 }
@@ -73,7 +73,17 @@ std::string test::driver::internals::Utils::host(CassFuture* future) {
   if (future) {
     Future* cass_future = static_cast<Future*>(future);
     if (cass_future->type() == Future::FUTURE_TYPE_RESPONSE) {
-      return static_cast<ResponseFuture*>(cass_future)->address().to_string().c_str();
+      return static_cast<ResponseFuture*>(cass_future)->address().hostname_or_address().c_str();
+    }
+  }
+  return "";
+}
+
+std::string test::driver::internals::Utils::server_name(CassFuture* future) {
+  if (future) {
+    Future* cass_future = static_cast<Future*>(future);
+    if (cass_future->type() == Future::FUTURE_TYPE_RESPONSE) {
+      return static_cast<ResponseFuture*>(cass_future)->address().server_name().c_str();
     }
   }
   return "";

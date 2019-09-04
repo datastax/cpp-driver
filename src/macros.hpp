@@ -18,6 +18,7 @@
 #define DATASTAX_INTERNAL_MACROS_HPP
 
 #include <stddef.h>
+#include <string.h>
 
 #define SAFE_STRLEN(s) ((s) ? strlen(s) : 0)
 

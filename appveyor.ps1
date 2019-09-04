@@ -47,6 +47,18 @@ Function Perl-Version-Information {
   }
 }
 
+Function CMake-Version-Information {
+  If (Get-Command "cmake" -ErrorAction SilentlyContinue) {
+    $temporary_file = New-TemporaryFile
+    Start-Process -FilePath cmake -ArgumentList "--version" -RedirectStandardOutput $($temporary_file) -Wait -NoNewWindow
+    $output = Get-Content "$($temporary_file)" -Raw
+    Write-Host "$($output.Trim())" -BackgroundColor DarkBlue
+    Remove-Item $temporary_file
+  } Else {
+    Write-Host "CMake is not available" -BackgroundColor DarkRed
+  }
+}
+
 Function Build-Configuration-Information {
   $output = @"
 Visual Studio: $($Env:CMAKE_GENERATOR.Split(" ")[-2]) [$($Env:CMAKE_GENERATOR.Split(" ")[-1])]
@@ -55,6 +67,7 @@ Boost:         v$($Env:BOOST_VERSION)
 libssh2:       v$($Env:LIBSSH2_VERSION)
 libuv:         v$($Env:LIBUV_VERSION)
 OpenSSL:       v$(Get-OpenSSL-Version)
+zlib:          v$($Env:ZLIB_VERSION)
 Build Number:  $($Env:APPVEYOR_BUILD_NUMBER)
 Branch:        $($Env:APPVEYOR_REPO_BRANCH)
 SHA:           $(Get-Commit-Sha)
@@ -104,17 +117,15 @@ Function Initialize-Build-Environment {
   $libuv_version = $Env:LIBUV_VERSION
   $openssl_version = Get-OpenSSL-Version
   $Env:OPENSSL_VERSION = $openssl_version
+  $zlib_version = $Env:ZLIB_VERSION
   $kerberos_version = "4.1"
   $bison_version = "2.4.1"
   $perl_version = "5.26.2.1"
 
   # Determine the platform and create associate environment variables
-  $architecture = "32"
-  If ($Env:Platform -Like "x64") {
-    $architecture = "64"
-  }
-  $lib_architecture = "lib$($architecture)"
-  $windows_architecture = "win$($architecture)"
+  $Env:CMAKE_PLATFORM = $Env:Platform
+  $lib_architecture = "lib64"
+  $windows_architecture = "win64"
 
   # Determine which header file to use for determine driver version
   $driver_header_file = "cassandra.h"
@@ -149,13 +160,15 @@ Function Initialize-Build-Environment {
   $Env:LIBUV_ROOT_DIR = "$($dependencies_location_prefix)/libuv-$($libuv_version)"
   $Env:OPENSSL_BASE_DIR = "$($dependencies_location_prefix)/openssl-$($openssl_version)"
   $Env:OPENSSL_ROOT_DIR = "$($Env:OPENSSL_BASE_DIR)/shared"
+  $Env:ZLIB_ROOT_DIR = "$($dependencies_location_prefix)/zlib-$($zlib_version)"
   $Env:DRIVER_INSTALL_DIR = "C:/projects/driver/lib"
   $Env:DRIVER_ARTIFACTS_DIR = "C:/projects/driver/artifacts"
   $Env:DRIVER_ARTIFACTS_LOGS_DIR = "$($Env:DRIVER_ARTIFACTS_DIR)/logs"
 
   # Generate the environment variables for the third party archives
-  $Env:LIBUV_ARTIFACT_ARCHIVE = "libuv-$($libuv_version)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:OPENSSL_ARTIFACT_ARCHIVE = "openssl-$($openssl_version)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:LIBUV_ARTIFACT_ARCHIVE = "libuv-$($libuv_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:OPENSSL_ARTIFACT_ARCHIVE = "openssl-$($openssl_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:ZLIB_ARTIFACT_ARCHIVE = "zlib-$($zlib_version)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
 
   # Generate DataStax Enterprise specific environment variables
   If ($Env:DRIVER_TYPE -Like "dse") {
@@ -185,15 +198,15 @@ Function Initialize-Build-Environment {
   # Generate the archive name for the driver test and examples artifacts
   $build_version = "$($Env:APPVEYOR_BUILD_NUMBER)-$($Env:APPVEYOR_REPO_BRANCH)"
   # TODO: Re-enable OpenSSL version appending if multiple OpenSSL versions are enabled
-  #$Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  #$Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  #$Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-openssl-$($Env:OPENSSL_MAJOR_MINOR)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  #$Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-openssl-$($Env:OPENSSL_MAJOR_MINOR)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:DRIVER_ARTIFACT_EXAMPLES_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-examples-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:DRIVER_ARTIFACT_TESTS_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-tests-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
 
   # Generate the archive name for the driver packaging
   # TODO: Re-enable OpenSSL version appending if multiple OpenSSL versions are enabled
-  #$Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-openssl-$($Env:OPENSSL_MAJOR_MINOR)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
-  $Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-win$($architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  #$Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-openssl-$($Env:OPENSSL_MAJOR_MINOR)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
+  $Env:DRIVER_ARTIFACT_ARCHIVE = "$($driver_archive_prefix)-cpp-driver-$($Env:DRIVER_VERSION)-$($windows_architecture)-msvc$($Env:VISUAL_STUDIO_INTERNAL_VERSION).zip"
 
   # Generate additional download/install environments for third party build requirements
   $Env:BISON_BINARIES_ARCHIVE = "bison-$($bison_version)-bin.zip"
@@ -304,8 +317,9 @@ Function Install-Driver-Environment {
     }
   }
 
-  # Display the Perl version information
+  # Display the Perl and CMake version information
   Perl-Version-Information
+  CMake-Version-Information
 
   # Determine the location of the CMake modules (external projects)
   $cmake_modules_dir = "$($Env:APPVEYOR_BUILD_FOLDER -Replace `"\\`", `"/`")/"
@@ -313,12 +327,6 @@ Function Install-Driver-Environment {
     $cmake_modules_dir += "cpp-driver/"
   }
   $cmake_modules_dir += "cmake/modules"
-
-  # Determine the CMake generator to utilize
-  $cmake_generator = $Env:CMAKE_GENERATOR
-  If ($Env:Platform -Like "x64") {
-    $cmake_generator += " Win64"
-  }
 
   # Build and install the dependencies (if needed; cached)
   $dependencies_build_location_prefix = "C:/projects/dependencies/build/"
@@ -342,7 +350,7 @@ add_dependencies(`${PROJECT_NAME} `${LIBUV_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring libuv"
-    cmake -G "$($cmake_generator)" -DBUILD_SHARED_LIBS=On "-DLIBUV_VERSION=$($Env:LIBUV_VERSION)" "-DLIBUV_INSTALL_PREFIX=$($Env:LIBUV_ROOT_DIR)" .
+    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM -DBUILD_SHARED_LIBS=On "-DLIBUV_VERSION=$($Env:LIBUV_VERSION)" "-DLIBUV_INSTALL_PREFIX=$($Env:LIBUV_ROOT_DIR)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "libuv Output Log"
@@ -395,7 +403,7 @@ add_dependencies(`${PROJECT_NAME} `${OPENSSL_LIBRARY_NAME})
       if ("$_" -Like "shared") {
         $shared_libs = "On"
       }
-      cmake -G "$($cmake_generator)" "-DBUILD_SHARED_LIBS=$($shared_libs)" "-DOPENSSL_VERSION=$($Env:OPENSSL_VERSION)" "-DOPENSSL_INSTALL_PREFIX=$($Env:OPENSSL_BASE_DIR)/$_" .
+      cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-DBUILD_SHARED_LIBS=$($shared_libs)" "-DOPENSSL_VERSION=$($Env:OPENSSL_VERSION)" "-DOPENSSL_INSTALL_PREFIX=$($Env:OPENSSL_BASE_DIR)/$_" .
       If ($LastExitCode -ne 0) {
         If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
           Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "OpenSSL Output Log"
@@ -421,6 +429,53 @@ add_dependencies(`${PROJECT_NAME} `${OPENSSL_LIBRARY_NAME})
 
       Pop-Location
     }
+  }
+
+  If (-Not (Test-Path -Path "$($Env:ZLIB_ROOT_DIR)/lib")) {
+    New-Item -ItemType Directory -Force -Path "$($dependencies_build_location_prefix)/zlib" | Out-Null
+    Push-Location -Path "$($dependencies_build_location_prefix)/zlib"
+
+    $cmakelists_contents = @"
+cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
+project(zlib)
+set(PROJECT_DISPLAY_NAME "AppVeyor CI Build for zlib")
+set(PROJECT_MODULE_DIR $cmake_modules_dir)
+set(CMAKE_MODULE_PATH `${CMAKE_MODULE_PATH} `${PROJECT_MODULE_DIR})
+include(ExternalProject-zlib)
+set(GENERATED_SOURCE_FILE `${CMAKE_CURRENT_BINARY_DIR}/main.cpp)
+file(REMOVE `${GENERATED_SOURCE_FILE})
+file(WRITE `${GENERATED_SOURCE_FILE} "int main () { return 0; }")
+add_executable(`${PROJECT_NAME} `${GENERATED_SOURCE_FILE})
+add_dependencies(`${PROJECT_NAME} `${ZLIB_LIBRARY_NAME})
+"@
+    $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
+
+    Write-Host "Configuring zlib"
+    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM -DBUILD_SHARED_LIBS=On "-DZLIB_VERSION=$($Env:ZLIB_VERSION)" "-DZLIB_INSTALL_PREFIX=$($Env:ZLIB_ROOT_DIR)" .
+    If ($LastExitCode -ne 0) {
+      If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
+        Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "zlib Output Log"
+      }
+      If (Test-Path -Path "build/CMakeFiles/CMakeError.log") {
+        Push-AppveyorArtifact "build/CMakeFiles/CMakeError.log" -DeploymentName "zlib Error Log"
+      }
+      Pop-Location
+      Throw "Failed to configure zlib for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
+    }
+    Write-Host "Building and Installing zlib"
+    cmake --build . --config RelWithDebInfo
+    If ($LastExitCode -ne 0) {
+      If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
+        Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "zlib Output Log"
+      }
+      If (Test-Path -Path "build/CMakeFiles/CMakeError.log") {
+        Push-AppveyorArtifact "build/CMakeFiles/CMakeError.log" -DeploymentName "zlib Error Log"
+      }
+      Pop-Location
+      Throw "Failed to build zlib for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
+    }
+
+    Pop-Location
   }
 
   # Handle installation of DataStax Enterprise dependencies
@@ -476,7 +531,7 @@ add_dependencies(`${PROJECT_NAME} `${BOOST_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring Boost"
-    cmake -G "$($cmake_generator)" "-DBOOST_VERSION=$($Env:BOOST_VERSION)" "-DBOOST_INSTALL_PREFIX=$($Env:BOOST_ROOT)" .
+    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-DBOOST_VERSION=$($Env:BOOST_VERSION)" "-DBOOST_INSTALL_PREFIX=$($Env:BOOST_ROOT)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "Boost Output Log"
@@ -524,7 +579,7 @@ add_dependencies(`${PROJECT_NAME} `${LIBSSH2_LIBRARY_NAME})
     $cmakelists_contents | Out-File -FilePath "CMakeLists.txt" -Encoding Utf8 -Force
 
     Write-Host "Configuring libssh2"
-    cmake -G "$($cmake_generator)" "-DLIBSSH2_VERSION=$($Env:LIBSSH2_VERSION)" "-DLIBSSH2_INSTALL_PREFIX=$($Env:LIBSSH2_ROOT_DIR)" .
+    cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-DLIBSSH2_VERSION=$($Env:LIBSSH2_VERSION)" "-DLIBSSH2_INSTALL_PREFIX=$($Env:LIBSSH2_ROOT_DIR)" .
     If ($LastExitCode -ne 0) {
       If (Test-Path -Path "build/CMakeFiles/CMakeOutput.log") {
         Push-AppveyorArtifact "build/CMakeFiles/CMakeOutput.log" -DeploymentName "libssh2 Output Log"
@@ -562,16 +617,9 @@ add_dependencies(`${PROJECT_NAME} `${LIBSSH2_LIBRARY_NAME})
 }
 
 Function Build-Driver {
-  # Determine the CMake generator to utilize
-  $cmake_generator = $Env:CMAKE_GENERATOR
-  If ($Env:Platform -Like "x64") {
-    $cmake_generator += " Win64"
-  }
-
   # Ensure Boost atomic is used for Visual Studio 2010 (increased performance)
   $use_boost_atomic = "Off"
-  If ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "100" -Or
-      ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "110" -And $Env:Platform -Like "x86")) {
+  If ($Env:VISUAL_STUDIO_INTERNAL_VERSION -Like "100") {
     $use_boost_atomic = "On" # Enable Boost atomic usage
   }
 
@@ -583,7 +631,7 @@ Function Build-Driver {
   New-Item -ItemType Directory -Force -Path "$($Env:APPVEYOR_BUILD_FOLDER)/build"
   Push-Location "$($Env:APPVEYOR_BUILD_FOLDER)/build"
   Write-Host "Configuring DataStax C/C++ $($driver_type) Driver"
-  cmake -G "$($cmake_generator)" "-D$($Env:DRIVER_TYPE)_MULTICORE_COMPILATION=On" "-D$($Env:DRIVER_TYPE)_USE_OPENSSL=On" "-D$($Env:DRIVER_TYPE)_USE_BOOST_ATOMIC=$($use_boost_atomic)" "-D$($Env:DRIVER_TYPE)_BUILD_EXAMPLES=On" "-D$($Env:DRIVER_TYPE)_BUILD_TESTS=On" "-D$($Env:DRIVER_TYPE)_USE_LIBSSH2=On" "-DCMAKE_INSTALL_PREFIX=`"$($Env:DRIVER_INSTALL_DIR)`"" ..
+  cmake -G "$($Env:CMAKE_GENERATOR)" -A $Env:CMAKE_PLATFORM "-D$($Env:DRIVER_TYPE)_MULTICORE_COMPILATION=On" "-D$($Env:DRIVER_TYPE)_USE_OPENSSL=On" "-D$($Env:DRIVER_TYPE)_USE_ZLIB=On" "-D$($Env:DRIVER_TYPE)_USE_BOOST_ATOMIC=$($use_boost_atomic)" "-D$($Env:DRIVER_TYPE)_BUILD_EXAMPLES=On" "-D$($Env:DRIVER_TYPE)_BUILD_TESTS=On" "-D$($Env:DRIVER_TYPE)_USE_LIBSSH2=On" "-DCMAKE_INSTALL_PREFIX=`"$($Env:DRIVER_INSTALL_DIR)`"" ..
   If ($LastExitCode -ne 0) {
     Pop-Location
     Throw "Failed to configure DataStax C/C++ $($driver_type) Driver for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
@@ -707,6 +755,17 @@ a -tzip "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:OPENSSL_ARTIFACT_ARCHIVE)" -r "$($E
   If ($process.ExitCode -ne 0) {
     Throw "Failed to archive OpenSSL for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
   }
+
+  # Clean up the library dependency directories for zlib packaging
+  New-Item -ItemType Directory -Force -Path "$($Env:DRIVER_ARTIFACTS_DIR)/zlib" | Out-Null
+  Copy-Item -Force -Recurse -Path "$($Env:ZLIB_ROOT_DIR)/*" "$($Env:DRIVER_ARTIFACTS_DIR)/zlib" | Out-Null
+  $argument_list = @"
+a -tzip "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:ZLIB_ARTIFACT_ARCHIVE)" -r "$($Env:DRIVER_ARTIFACTS_DIR)/zlib/*"
+"@
+  $process = Start-Process -FilePath 7z -ArgumentList $argument_list -PassThru -Wait -NoNewWindow
+  If ($process.ExitCode -ne 0) {
+    Throw "Failed to archive zlib for MSVC $($Env:VISUAL_STUDIO_INTERNAL_VERSION)-$($Env:Platform)"
+  }
 }
 
 Function Push-Artifacts {
@@ -721,6 +780,7 @@ Function Push-Artifacts {
     Push-AppveyorArtifact "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:DRIVER_ARTIFACT_TESTS_ARCHIVE)" -DeploymentName "DataStax C/C++ $($driver_type) Driver Tests"
     Push-AppveyorArtifact "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:LIBUV_ARTIFACT_ARCHIVE)" -DeploymentName "libuv v$($Env:LIBUV_VERSION)"
     Push-AppveyorArtifact "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:OPENSSL_ARTIFACT_ARCHIVE)" -DeploymentName "OpenSSL v$($Env:OPENSSL_VERSION)"
+    Push-AppveyorArtifact "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:ZLIB_ARTIFACT_ARCHIVE)" -DeploymentName "zlib v$($Env:ZLIB_VERSION)"
   }
 }
 
@@ -781,6 +841,8 @@ Function Publish-Artifacts {
     #TODO: Need to handle OpenSSL v1.1.x if enabled
     $openssl_uri = "$($base_uri)/dependencies/openssl/v$($Env:OPENSSL_VERSION)/$($Env:OPENSSL_ARTIFACT_ARCHIVE)"
     $openssl_archive = "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:OPENSSL_ARTIFACT_ARCHIVE)"
+    $zlib_uri = "$($base_uri)/dependencies/zlib/v$($Env:ZLIB_VERSION)/$($Env:ZLIB_ARTIFACT_ARCHIVE)"
+    $zlib_archive = "$($Env:DRIVER_ARTIFACTS_DIR)/$($Env:ZLIB_ARTIFACT_ARCHIVE)"
 
     # Publish/Upload the driver and it dependencies to Artifactory
     $is_failure = $False
@@ -797,6 +859,10 @@ Function Publish-Artifacts {
     If ((Publish-Artifact-To-Artifactory -Uri "$($openssl_uri)" -FilePath "$($openssl_archive)") -ne 0) {
       $is_failure = $True
       $failed_upload += "OpenSSL"
+    }
+    If ((Publish-Artifact-To-Artifactory -Uri "$($zlib_uri)" -FilePath "$($zlib_archive)") -ne 0) {
+      $is_failure = $True
+      $failed_upload += "zlib"
     }
 
     # Check to see if there was a failure uploading the artifacts

@@ -21,7 +21,7 @@ namespace datastax { namespace internal { namespace core {
 
 class NoSslSession : public SslSession {
 public:
-  NoSslSession(const Address& address, const String& hostname);
+  NoSslSession(const Address& address, const String& hostname, const String& sni_server_name);
 
   virtual bool is_handshake_done() const { return false; }
   virtual void do_handshake() {}

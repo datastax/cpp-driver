@@ -302,7 +302,8 @@ public:
   inline bool as_inet(const int address_length, const int port, Address* output) const {
     CassInet inet;
     if (!as_inet(address_length, &inet)) return false;
-    return Address::from_inet(&inet.address, inet.address_length, port, output);
+    *output = Address(inet.address, inet.address_length, port);
+    return output->is_valid_and_resolved();
   }
 
   inline bool decode_string_map(Map<String, String>& map) {
