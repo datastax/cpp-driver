@@ -12,7 +12,8 @@ ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 endif
 
 export SOVER ?= $(shell dpkg-parsechangelog \
-    | sed -rne 's/^Version: ([0-9.]+)[-+~].*$$/\1/p')
+    | sed -rne 's/^Version: ([0-9.]+)([-+~][[:alpha:]][[:alnum:]]*)?([-+~][[:digit:]])?$$/\1\2/p' \
+    | sed 's/[+~]/-/')
 export SONAME=libdse.so.$(SOVER)
 
 %:
