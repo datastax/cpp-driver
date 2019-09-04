@@ -23,6 +23,7 @@ multiple architectures, can be obtained from our [download server].
 * DSE [proxy authentication][DSE Proxy Authentication] and
   [execution][DSE Proxy Execution]
 * [DSE DateRange]
+* Support for [DataStax Constellation] Cloud Data Platform
 
 ## Compatibility
 
@@ -43,7 +44,6 @@ __Disclaimer__: DataStax products do not support big-endian systems.
 
 * JIRA: https://datastax-oss.atlassian.net/browse/CPP (Assign "Component/s" field set to "DSE")
 * Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
-* DataStax Academy via Slack: https://academy.datastax.com/slack
 
 ## Feedback Requested
 
@@ -110,6 +110,7 @@ The full license terms are available at
 http://www.datastax.com/terms/datastax-dse-driver-license-terms
 
 [DSE]: http://www.datastax.com/products/datastax-enterprise
+[DataStax Constellation]: https://constellation.datastax.com
 [DataStax C/C++ driver for Apache Cassandra]: https://github.com/datastax/cpp-driver
 [download server]: http://downloads.datastax.com/cpp-driver
 [GitHub]: https://github.com/datastax/cpp-dse-driver
