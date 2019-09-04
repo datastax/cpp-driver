@@ -154,8 +154,8 @@ CassError cass_statement_set_host(CassStatement* statement, const char* host, in
 
 CassError cass_statement_set_host_n(CassStatement* statement, const char* host, size_t host_length,
                                     int port) {
-  Address address;
-  if (!Address::from_string(String(host, host_length), port, &address)) {
+  Address address(String(host, host_length), port);
+  if (!address.is_valid_and_resolved()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   statement->set_host(address);
@@ -163,8 +163,8 @@ CassError cass_statement_set_host_n(CassStatement* statement, const char* host, 
 }
 
 CassError cass_statement_set_host_inet(CassStatement* statement, const CassInet* host, int port) {
-  Address address;
-  if (!Address::from_inet(host->address, host->address_length, port, &address)) {
+  Address address(host->address, host->address_length, port);
+  if (!address.is_valid_and_resolved()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   statement->set_host(address);

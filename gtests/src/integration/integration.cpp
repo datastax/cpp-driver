@@ -52,6 +52,7 @@ Integration::Integration()
     , is_with_vnodes_(false)
     , is_randomized_contact_points_(false)
     , is_schema_metadata_(false)
+    , is_ccm_requested_(true)
     , is_ccm_start_requested_(true)
     , is_ccm_start_node_individually_(false)
     , is_session_requested_(true)
@@ -138,47 +139,49 @@ void Integration::SetUp() {
   data_center_nodes.push_back(number_dc1_nodes_);
   data_center_nodes.push_back(number_dc2_nodes_);
 
-  try {
-    // Create and start the CCM cluster (if not already created)
-    ccm_ = new CCM::Bridge(
-        server_version_, Options::use_git(), Options::branch_tag(), Options::use_install_dir(),
-        Options::install_dir(), Options::is_dse(), dse_workload_, Options::cluster_prefix(),
-        Options::dse_credentials(), Options::dse_username(), Options::dse_password(),
-        Options::deployment_type(), Options::authentication_type(), Options::host(),
-        Options::port(), Options::username(), Options::password(), Options::public_key(),
-        Options::private_key(), Options::is_verbose_ccm());
-    if (ccm_->create_cluster(data_center_nodes, is_with_vnodes_, is_password_authenticator_,
-                             is_ssl_, is_client_authentication_)) {
-      if (is_ccm_start_requested_) {
-        if (is_ccm_start_node_individually_) {
-          for (unsigned short node = 1; node <= (number_dc1_nodes_ + number_dc2_nodes_); ++node) {
-            if (is_password_authenticator_) {
-              ccm_->start_node(node, "-Dcassandra.superuser_setup_delay_ms=0");
-            } else {
-              ccm_->start_node(node);
+  if (is_ccm_requested_) {
+    try {
+      // Create and start the CCM cluster (if not already created)
+      ccm_ = new CCM::Bridge(
+          server_version_, Options::use_git(), Options::branch_tag(), Options::use_install_dir(),
+          Options::install_dir(), Options::is_dse(), dse_workload_, Options::cluster_prefix(),
+          Options::dse_credentials(), Options::dse_username(), Options::dse_password(),
+          Options::deployment_type(), Options::authentication_type(), Options::host(),
+          Options::port(), Options::username(), Options::password(), Options::public_key(),
+          Options::private_key(), Options::is_verbose_ccm());
+      if (ccm_->create_cluster(data_center_nodes, is_with_vnodes_, is_password_authenticator_,
+                               is_ssl_, is_client_authentication_)) {
+        if (is_ccm_start_requested_) {
+          if (is_ccm_start_node_individually_) {
+            for (unsigned short node = 1; node <= (number_dc1_nodes_ + number_dc2_nodes_); ++node) {
+              if (is_password_authenticator_) {
+                ccm_->start_node(node, "-Dcassandra.superuser_setup_delay_ms=0");
+              } else {
+                ccm_->start_node(node);
+              }
             }
-          }
-        } else {
-          if (is_password_authenticator_) {
-            ccm_->start_cluster("-Dcassandra.superuser_setup_delay_ms=0");
           } else {
-            ccm_->start_cluster();
+            if (is_password_authenticator_) {
+              ccm_->start_cluster("-Dcassandra.superuser_setup_delay_ms=0");
+            } else {
+              ccm_->start_cluster();
+            }
           }
         }
       }
-    }
 
-    // Generate the default contact points
-    contact_points_ =
-        generate_contact_points(ccm_->get_ip_prefix(), number_dc1_nodes_ + number_dc2_nodes_);
+      // Generate the default contact points
+      contact_points_ =
+          generate_contact_points(ccm_->get_ip_prefix(), number_dc1_nodes_ + number_dc2_nodes_);
 
-    // Determine if the session connection should be established
-    if (is_session_requested_ && is_ccm_start_requested_) {
-      connect();
+      // Determine if the session connection should be established
+      if (is_session_requested_ && is_ccm_start_requested_) {
+        connect();
+      }
+    } catch (CCM::BridgeException be) {
+      // Issue creating the CCM bridge instance (force failure)
+      FAIL() << be.what();
     }
-  } catch (CCM::BridgeException be) {
-    // Issue creating the CCM bridge instance (force failure)
-    FAIL() << be.what();
   }
 }
 

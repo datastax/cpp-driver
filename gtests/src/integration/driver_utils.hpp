@@ -74,6 +74,14 @@ public:
   static std::string host(CassFuture* future);
 
   /**
+   * Get the server name of the future
+   *
+   * @param future Future to retrieve server name from
+   * @return Server name
+   */
+  static std::string server_name(CassFuture* future);
+
+  /**
    * Get the Murmur3 hash for a given value
    *
    * @param value Value to calculate Murmur3 hash for

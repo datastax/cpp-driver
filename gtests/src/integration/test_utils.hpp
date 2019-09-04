@@ -185,6 +185,13 @@ public:
   static bool wait_for_port(const std::string& ip_address, unsigned short port,
                             unsigned int number_of_retries = 100,
                             unsigned int retry_delay_ms = 100);
+
+  /**
+   * Get the home directory for the current user (not thread safe)
+   *
+   * @return Home directory
+   */
+  static std::string home_directory();
 };
 
 } // namespace test

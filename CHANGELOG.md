@@ -1,3 +1,38 @@
+2.14.0-alpha
+===========
+
+Features
+--------
+* [CPP-787] DataStax cloud platform
+  * [CPP-788] Support SNI at connection level using `host_id` as host name
+    * [CPP-793] Add SNI support to `SocketConnector` and SSL backend
+    * [CPP-794] Add domain name resolution to `SocketConnector`
+    * [CPP-795] Replace `Address` with endpoint or host type on connection path
+    * [CPP-797] Events need to map from affected node address to `host_id`
+    * [CPP-800] Node discovery should use the `host_id` (and endpoint address) instead of the
+      node's rpc_address
+  * [CPP-790] Configuration API for DBaaS
+    * [CPP-791] Add creds.zip support for automatic configuration
+    * [CPP-798] Configure authentication and SSL from secure connection bundle configuration
+    * [CPP-799] Use metadata service to determine contact points
+    * [CPP-788] Support SNI at connection level using `host_id` as host name
+    * [CPP-803] Propagate `local_dc` from `CloudClusterMetadataResolver` to load balancing policies
+
+Bug Fixes
+--------
+* [CPP-786] Fix TLS 1.3 support
+* [CPP-806] Fix handling of no contact points
+
+Other
+--------
+* [CPP-796] Correct compiler flags for mixed C and C++ projects
+
+Community
+--------
+* [CPP-754] Broken build with GCC 9 (eevans)
+* Add openssl to the required library list in pkg_config file (accelerated)
+* Allow random to work with 0 (joeyhub)
+
 2.13.0
 ===========
 

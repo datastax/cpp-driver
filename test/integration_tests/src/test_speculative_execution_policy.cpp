@@ -144,7 +144,7 @@ struct TestSpeculativeExecutionPolicy : public test_utils::SingleSessionTest {
     Future* native_future = static_cast<Future*>(future.get());
     if (native_future->type() == Future::FUTURE_TYPE_RESPONSE) {
       ResponseFuture* native_response_future = static_cast<ResponseFuture*>(native_future);
-      host = native_response_future->address().to_string().c_str();
+      host = native_response_future->address().hostname_or_address().c_str();
     }
     return host;
   }

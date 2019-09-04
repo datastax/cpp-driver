@@ -27,7 +27,8 @@ namespace datastax { namespace internal { namespace core {
 
 class OpenSslSession : public SslSession {
 public:
-  OpenSslSession(const Address& address, const String& hostname, int flags, SSL_CTX* ssl_ctx);
+  OpenSslSession(const Address& address, const String& hostname, const String& sni_server_name,
+                 int flags, SSL_CTX* ssl_ctx);
   ~OpenSslSession();
 
   virtual bool is_handshake_done() const { return SSL_is_init_finished(ssl_) != 0; }
@@ -54,7 +55,8 @@ public:
 
   ~OpenSslContext();
 
-  virtual SslSession* create_session(const Address& address, const String& hostname);
+  virtual SslSession* create_session(const Address& address, const String& hostname,
+                                     const String& sni_server_name);
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length);
   virtual CassError set_cert(const char* cert, size_t cert_length);
   virtual CassError set_private_key(const char* key, size_t key_length, const char* password,

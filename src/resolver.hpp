@@ -55,7 +55,7 @@ public:
     req_.data = this;
   }
 
-  ~Resolver() {}
+  uv_loop_t* loop() { return req_.loop; }
 
   const String& hostname() { return hostname_; }
   int port() { return port_; }
@@ -130,8 +130,8 @@ private:
   bool init_addresses(struct addrinfo* res) {
     bool status = false;
     do {
-      Address address;
-      if (address.init(res->ai_addr)) {
+      Address address(res->ai_addr);
+      if (address.is_valid_and_resolved()) {
         addresses_.push_back(address);
         status = true;
       }

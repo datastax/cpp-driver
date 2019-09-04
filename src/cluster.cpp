@@ -201,7 +201,8 @@ ClusterSettings::ClusterSettings()
     , reconnection_policy(new ExponentialReconnectionPolicy())
     , prepare_on_up_or_add_host(CASS_DEFAULT_PREPARE_ON_UP_OR_ADD_HOST)
     , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
-    , disable_events_on_startup(false) {
+    , disable_events_on_startup(false)
+    , cluster_metadata_resolver_factory(new DefaultClusterMetadataResolverFactory()) {
   load_balancing_policies.push_back(load_balancing_policy);
 }
 
@@ -213,13 +214,14 @@ ClusterSettings::ClusterSettings(const Config& config)
     , reconnection_policy(config.reconnection_policy())
     , prepare_on_up_or_add_host(config.prepare_on_up_or_add_host())
     , max_prepares_per_flush(CASS_DEFAULT_MAX_PREPARES_PER_FLUSH)
-    , disable_events_on_startup(false) {}
+    , disable_events_on_startup(false)
+    , cluster_metadata_resolver_factory(config.cluster_metadata_resolver_factory()) {}
 
 Cluster::Cluster(const ControlConnection::Ptr& connection, ClusterListener* listener,
                  EventLoop* event_loop, const Host::Ptr& connected_host, const HostMap& hosts,
                  const ControlConnectionSchema& schema,
                  const LoadBalancingPolicy::Ptr& load_balancing_policy,
-                 const LoadBalancingPolicy::Vec& load_balancing_policies,
+                 const LoadBalancingPolicy::Vec& load_balancing_policies, const String& local_dc,
                  const ClusterSettings& settings)
     : connection_(connection)
     , listener_(listener ? listener : &nop_cluster_listener__)
@@ -230,6 +232,7 @@ Cluster::Cluster(const ControlConnection::Ptr& connection, ClusterListener* list
     , is_closing_(false)
     , connected_host_(connected_host)
     , hosts_(hosts)
+    , local_dc_(local_dc)
     , is_recording_events_(settings.disable_events_on_startup) {
   inc_ref();
   connection_->set_listener(this);
@@ -357,7 +360,7 @@ void Cluster::update_schema(const ControlConnectionSchema& schema) {
 
 void Cluster::update_token_map(const HostMap& hosts, const String& partitioner,
                                const ControlConnectionSchema& schema) {
-  if (settings_.control_connection_settings.token_aware_routing && schema.keyspaces) {
+  if (settings_.control_connection_settings.use_token_aware_routing && schema.keyspaces) {
     // Create a new token map and populate it
     token_map_ = TokenMap::from_partitioner(partitioner);
     if (!token_map_) {

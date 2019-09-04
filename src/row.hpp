@@ -40,6 +40,8 @@ public:
 
   bool get_string_by_name(const StringRef& name, String* out) const;
 
+  bool get_uuid_by_name(const StringRef& name, CassUuid* out) const;
+
   const ResultResponse* result() const { return result_; }
 
   void set_result(ResultResponse* result) { result_ = result; }
