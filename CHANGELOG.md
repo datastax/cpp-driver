@@ -1,3 +1,32 @@
+1.10.0-alpha
+===========
+
+Features
+--------
+* [CPP-787] DataStax cloud platform
+  * [CPP-788] Support SNI at connection level using `host_id` as host name
+    * [CPP-793] Add SNI support to `SocketConnector` and SSL backend
+    * [CPP-794] Add domain name resolution to `SocketConnector`
+    * [CPP-795] Replace `Address` with endpoint or host type on connection path
+    * [CPP-797] Events need to map from affected node address to `host_id`
+    * [CPP-800] Node discovery should use the `host_id` (and endpoint address) instead of the
+      node's rpc_address
+  * [CPP-790] Configuration API for DBaaS
+    * [CPP-791] Add creds.zip support for automatic configuration
+    * [CPP-798] Configure authentication and SSL from secure connection bundle configuration
+    * [CPP-799] Use metadata service to determine contact points
+    * [CPP-788] Support SNI at connection level using `host_id` as host name
+    * [CPP-803] Propagate `local_dc` from `CloudClusterMetadataResolver` to load balancing policies
+
+Bug Fixes
+--------
+* [CPP-786] Fix TLS 1.3 support
+* [CPP-806] Fix handling of no contact points
+
+Other
+--------
+* [CPP-796] Correct compiler flags for mixed C and C++ projects
+
 1.9.0
 ===========
 
@@ -172,7 +201,7 @@ Bug Fixes
 
 Other
 --------
-[CPP-449] Update vc_build.bat to include automated build for Visual Studio 2017
+* [CPP-449] Update vc_build.bat to include automated build for Visual Studio 2017
 
 1.3.0
 ===========
@@ -250,7 +279,6 @@ Other
 
 1.0.0
 ===========
-October 20, 2016
 
 Features
 --------
@@ -261,7 +289,6 @@ Features
 
 1.0.0-rc1
 ===========
-June 24, 2016
 
 Features
 --------

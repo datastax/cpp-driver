@@ -210,6 +210,12 @@ if(DSE_BUILD_STATIC)
   endif()
   CassConfigureStatic("DSE")
 
+  # Set pkg_config required libraries
+  set(PC_REQUIRED_LIBS "libuv")
+  if (DSE_USE_OPENSSL)
+    set(PC_REQUIRED_LIBS "${PC_REQUIRED_LIBS} openssl")
+  endif()
+
   set_property(TARGET ${PROJECT_LIB_NAME_STATIC} PROPERTY FOLDER "Driver/DSE")
 endif()
 

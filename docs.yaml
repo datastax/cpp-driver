@@ -82,12 +82,12 @@ links:
     href:  https://datastax-oss.atlassian.net/browse/CPP
   - title: Mailing List
     href:  https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
-  - title: Slack
-    href:  https://academy.datastax.com/slack
 rules:
   use_path_nav_files_only: true
 
 versions:
+  - name: "1.10"
+    ref: 1.10.0
   - name: 1.9
     ref: 1.9.0
   - name: 1.8
