@@ -47,10 +47,14 @@ public:
     outage_plan->stop_node(1, OUTAGE_PLAN_DELAY);
   }
 
-  void query_on_threads(Session* session) {
+  void query_on_threads(Session* session, bool is_chaotic = false) {
     uv_thread_t threads[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; ++i) {
-      ASSERT_EQ(0, uv_thread_create(&threads[i], query, session));
+      if (is_chaotic) {
+        ASSERT_EQ(0, uv_thread_create(&threads[i], query_is_chaotic, session));
+      } else {
+        ASSERT_EQ(0, uv_thread_create(&threads[i], query, session));
+      }
     }
     for (int i = 0; i < NUM_THREADS; ++i) {
       uv_thread_join(&threads[i]);
@@ -89,20 +93,31 @@ public:
         << cass_error_desc(close_future->error()->code) << ": " << close_future->error()->message;
   }
 
-  static void query(Session* session) {
+  static void query(Session* session, bool is_chaotic = false) {
     QueryRequest::Ptr request(new QueryRequest("blah", 0));
     request->set_is_idempotent(true);
 
     Future::Ptr future = session->execute(request, NULL);
     ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out executing query";
-    ASSERT_FALSE(future->error()) << cass_error_desc(future->error()->code) << ": "
-                                  << future->error()->message;
+    if (future->error()) fprintf(stderr, "%s\n", cass_error_desc(future->error()->code));
+    if (is_chaotic) {
+      ASSERT_TRUE(future->error() == NULL ||
+                  future->error()->code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE)
+          << cass_error_desc(future->error()->code) << ": " << future->error()->message;
+    } else {
+      ASSERT_FALSE(future->error())
+          << cass_error_desc(future->error()->code) << ": " << future->error()->message;
+    }
   }
 
   // uv_thread_create
   static void query(void* arg) {
     Session* session = static_cast<Session*>(arg);
     query(session);
+  }
+  static void query_is_chaotic(void* arg) {
+    Session* session = static_cast<Session*>(arg);
+    query(session, true);
   }
 
   class HostEventFuture : public Future {
@@ -326,7 +341,7 @@ TEST_F(SessionUnitTest, ExecuteQueryReusingSessionChaotic) {
   Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
     connect(&session, NULL, WAIT_FOR_TIME * 3, 4);
-    query(&session);
+    query(&session, true);
     close(&session, WAIT_FOR_TIME * 3);
   }
 }
@@ -343,7 +358,7 @@ TEST_F(SessionUnitTest, ExecuteQueryReusingSessionUsingSslChaotic) {
   Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
     connect(&session, ssl_context.get(), WAIT_FOR_TIME * 3, 4);
-    query(&session);
+    query(&session, true);
     close(&session, WAIT_FOR_TIME * 3);
   }
 }
@@ -435,7 +450,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithThreadsChaotic) {
 
   Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
-    query_on_threads(&session);
+    query_on_threads(&session, true);
   }
 
   close(&session);
@@ -454,7 +469,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithThreadsUsingSslChaotic) {
 
   Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
-    query_on_threads(&session);
+    query_on_threads(&session, true);
   }
 
   close(&session);
