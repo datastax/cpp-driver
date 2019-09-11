@@ -88,7 +88,7 @@ void ChainedSetKeyspaceCallback::on_internal_timeout() { chained_callback_->on_r
 void ChainedSetKeyspaceCallback::on_result_response(ResponseMessage* response) {
   ResultResponse* result = static_cast<ResultResponse*>(response->response_body().get());
   if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
-    if (!connection_->write_and_flush(chained_callback_)) {
+    if (connection_->write_and_flush(chained_callback_) < 0) {
       // Try on the same host but a different connection
       chained_callback_->on_retry_current_host();
     }
@@ -108,7 +108,7 @@ PooledConnection::PooledConnection(ConnectionPool* pool, const Connection::Ptr& 
 }
 
 bool PooledConnection::write(RequestCallback* callback) {
-  bool result = false;
+  int32_t result;
   const String& keyspace(pool_->keyspace());
   if (keyspace != connection_->keyspace()) {
     LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)", keyspace.c_str(),
@@ -119,10 +119,10 @@ bool PooledConnection::write(RequestCallback* callback) {
     result = connection_->write(RequestCallback::Ptr(callback));
   }
 
-  if (result) {
+  if (result > 0) {
     pool_->requires_flush(this, ConnectionPool::Protected());
   }
-  return result;
+  return result > 0;
 }
 
 void PooledConnection::flush() {

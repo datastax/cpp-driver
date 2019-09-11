@@ -133,7 +133,10 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
 
   int32_t request_size = socket_->write(callback.get());
 
-  if (request_size < 0) {
+  if (request_size == 0) {
+    callback->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE, "The encoded request had no data to write");
+    return Request::REQUEST_ERROR_NO_DATA_WRITTEN;
+  } else if (request_size < 0) {
     stream_manager_.release(stream);
 
     switch (request_size) {
@@ -343,7 +346,8 @@ void Connection::restart_heartbeat_timer() {
 
 void Connection::on_heartbeat(Timer* timer) {
   if (!heartbeat_outstanding_ && !socket_->is_closing()) {
-    if (!write_and_flush(RequestCallback::Ptr(new HeartbeatCallback(this)))) {
+    RequestCallback::Ptr callback(new HeartbeatCallback(this));
+    if (write_and_flush(callback) < 0) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests
       // that never returned and as a result timed out.

@@ -245,8 +245,7 @@ ResultResponse::Ptr ChainedRequestCallback::result(const String& key) const {
 
 void ChainedRequestCallback::on_internal_write(Connection* connection) {
   if (chain_) {
-    int32_t result = connection->write_and_flush(chain_);
-    if (result == Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS) {
+    if (connection->write_and_flush(chain_) < 0) {
       on_error(CASS_ERROR_LIB_NO_STREAMS,
                "No streams available when attempting to write chained request");
     }

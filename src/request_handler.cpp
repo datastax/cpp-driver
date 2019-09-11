@@ -591,7 +591,8 @@ void RequestExecution::on_error_unprepared(Connection* connection, ErrorResponse
     return;
   }
 
-  if (!connection->write_and_flush(RequestCallback::Ptr(new PrepareCallback(query, this)))) {
+  RequestCallback::Ptr callback(new PrepareCallback(query, this));
+  if (connection->write_and_flush(callback) < 0) {
     // Try to prepare on the same host but on a different connection
     retry_current_host();
   }
