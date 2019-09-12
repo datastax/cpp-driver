@@ -236,7 +236,13 @@ DSE_INTEGRATION_TEST_F(GraphTest, ServerError) {
       dse_session_.execute("system.graph('graph_name_does_not_exist').drop()", NULL, false);
   CHECK_FAILURE;
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
-  ASSERT_EQ("Graph graph_name_does_not_exist does not exist", result_set.error_message());
+  std::string expected_message = "Graph graph_name_does_not_exist does not exist";
+  if (server_version_ >= "5.1.0" && server_version_ < "6.8.0") {
+    expected_message = "Graph 'graph_name_does_not_exist' does not exist";
+  } else if (server_version_ >= "6.8.0") {
+    expected_message = "Unknown keyspace 'graph_name_does_not_exist'";
+  }
+  ASSERT_EQ(expected_message, result_set.error_message());
 }
 
 /**
@@ -640,17 +646,17 @@ DSE_INTEGRATION_TEST_F(GraphTest, ServerRequestTimeout) {
   std::string graph_ms_sleep = format_string(GRAPH_SLEEP_FORMAT, 35000);
   dse::GraphResultSet result_set = dse_session_.execute(graph_ms_sleep, graph_options, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
-  ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));
+  ASSERT_TRUE(contains(result_set.error_message(), "1243"));
 
   // Test with request timeout set
   graph_options.set_timeout(15000);
   result_set = dse_session_.execute(graph_ms_sleep, graph_options, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
-  ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));
+  ASSERT_TRUE(contains(result_set.error_message(), "1243"));
 
   // Test with reset of timeout (remove custom item from payload CPP-377)
   graph_options.set_timeout(0);
   result_set = dse_session_.execute(graph_ms_sleep, graph_options, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
-  ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));
+  ASSERT_TRUE(contains(result_set.error_message(), "1243"));
 }

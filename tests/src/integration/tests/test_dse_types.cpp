@@ -7,7 +7,7 @@
 
 #include "dse_integration.hpp"
 
-#define DSE_TYPE_TABLE_FORMAT "CREATE TABLE %s (id %s PRIMARY KEY, value %s)"
+#define DSE_TYPE_TABLE_FORMAT "CREATE TABLE IF NOT EXISTS %s (id %s PRIMARY KEY, value %s)"
 #define DSE_TYPE_INSERT_FORMAT "INSERT INTO %s (id, value) VALUES(%s, %s)"
 #define DSE_TYPE_SELECT_FORMAT "SELECT value FROM %s WHERE id=%s"
 
@@ -34,7 +34,6 @@ public:
     is_schema_metadata_ = true;
 
     // Call the parent setup function
-    dse_workload_.push_back(CCM::DSE_WORKLOAD_GRAPH);
     DseIntegration::SetUp();
   }
 

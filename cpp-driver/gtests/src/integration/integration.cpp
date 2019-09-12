@@ -209,7 +209,9 @@ void Integration::TearDown() {
   // Determine if the CCM cluster should be destroyed
   if (is_test_chaotic_) {
     // Destroy the current cluster and reset the chaos flag for the next test
-    ccm_->remove_cluster();
+    if (!Options::keep_clusters()) {
+      ccm_->remove_cluster();
+    }
     is_test_chaotic_ = false;
   }
 }

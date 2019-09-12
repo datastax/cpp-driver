@@ -46,6 +46,9 @@ public:
     DseIntegration::SetUp();
 
     // Wait for the spark master to become available
+    if (server_version_ >= "6.8.0") {
+      ccm_->update_cluster_configuration("dserm_options.override_legacy_rm", "false", true);
+    }
     start_node(1);
     wait_for_port(1, SPARK_PORT);
     master_host_ip_address_ = ccm_->cluster_ip_addresses(true)[0];

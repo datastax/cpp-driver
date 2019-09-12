@@ -11,7 +11,7 @@
   "system.graph(name).option('graph.replication_config').set(replication)" \
   ".option('graph.system_replication_config').set(replication)"            \
   ".option('graph.traversal_sources.g.evaluation_timeout').set(duration)"  \
-  ".ifNotExists().create();"
+  ".ifNotExists()"
 
 #define GRAPH_ALLOW_SCANS "schema.config().option('graph.allow_scan').set('true')"
 
@@ -84,7 +84,12 @@ void DseIntegration::create_graph(const std::string& graph_name,
   graph_object.add<std::string>("name", graph_name);
   graph_object.add<std::string>("replication", replication_strategy);
   graph_object.add<std::string>("duration", duration);
-  dse::GraphStatement graph_statement(GRAPH_CREATE);
+  std::string query = GRAPH_CREATE;
+  if (server_version_ >= "6.8.0") {
+    query.append(".classicEngine()");
+  }
+  query.append(".create()");
+  dse::GraphStatement graph_statement(query);
   graph_statement.bind(graph_object);
   CHECK_FAILURE;
 
