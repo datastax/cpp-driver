@@ -141,4 +141,3 @@ int main(int argc, char* argv[]) {
   }
   return Options::is_help() ? 0 : 1;
 }
-
