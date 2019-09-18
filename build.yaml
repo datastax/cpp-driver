@@ -3,12 +3,27 @@ schedules:
     schedule: adhoc
     notify:
       slack: cpp-driver-dev-bots
+    env_vars: |
+      CI_SCHEDULE=adhoc
   commit:
     schedule: per_commit
     notify:
       slack: cpp-driver-dev-bots
     branches:
-      include: ["/CPP-\\d+/", "master"]
+      include: ["/CPP-\\d+/", "master", "2.0.0-alpha"]
+    env_vars: |
+      CI_SCHEDULE=commit
+  nightly:
+    schedule: nightly
+    notify:
+      slack: cpp-driver-dev-bots
+    branches:
+      include: ["/CPP-\\d+/", "master", "2.0.0-alpha"]
+    matrix:
+      exclude:
+        - os: ['ubuntu/trusty64/cpp', 'ubuntu/xenial64/cpp', 'centos/6-64/cpp', 'centos/7-64/cpp', 'osx/high-sierra']
+    env_vars: |
+      CI_SCHEDULE=nightly
 architecture:
   - x64
 os:
