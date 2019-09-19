@@ -325,6 +325,7 @@ void Integration::connect(Cluster cluster) {
   std::stringstream use_keyspace_query;
   use_keyspace_query << "USE " << keyspace_name_;
   session_.execute(use_keyspace_query.str());
+  CHECK_FAILURE;
 }
 
 void Integration::connect() {

@@ -87,6 +87,7 @@ public:
     // Ensure CCM and session are not created for these tests
     is_ccm_requested_ = false;
     is_session_requested_ = false;
+    is_schema_metadata_ = true; // Needed for prepared statements
     Integration::SetUp();
   }
 
@@ -150,6 +151,7 @@ public:
     args.push_back("start");
     args.push_back("--root");
     args.push_back("--wait-for-binary-proto");
+    args.push_back("--jvm_arg=-Ddse.product_type=DATASTAX_APOLLO");
     return ccm_execute(args);
   }
 
@@ -165,6 +167,7 @@ public:
     args.push_back("start");
     args.push_back("--root");
     args.push_back("--wait-for-binary-proto");
+    args.push_back("--jvm_arg=-Ddse.product_type=DATASTAX_APOLLO");
     return ccm_execute(args);
   }
 
@@ -259,7 +262,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ResolveAndConnect) {
   Cluster cluster = default_cluster(false);
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  cluster.connect();
+  connect(cluster);
 }
 
 /**
@@ -267,8 +270,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ResolveAndConnect) {
  *
  * This test will perform a connection and execute a simple statement query against the
  * system.local table to ensure query execution to a DBaaS SNI single endpoint while validating the
- * results. This test will also ensure that the configured keyspace is assigned as the DBaaS
- * configuration assigns `system` as the default keyspace.
+ * results.
  *
  * @jira_ticket CPP-787
  * @test_category dbaas
@@ -282,11 +284,11 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, QueryEachNode) {
   Cluster cluster = default_cluster(false).with_load_balance_round_robin();
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  Session session = cluster.connect();
+  connect(cluster);
 
   ServerNames server_names;
   for (int i = 0; i < 3; ++i) {
-    Result result = session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
+    Result result = session_.execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
     Uuid expected_host_id = Uuid(result.server_name());
     Row row = result.first_row();
 
@@ -298,6 +300,78 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, QueryEachNode) {
   }
 
   EXPECT_EQ(3u, server_names.size()); // Ensure all three nodes were queried
+}
+
+/**
+ * Ensure guardrails are enabled when performing a query against the DBaaS SNI single endpoint
+ * docker image.
+ *
+ * This test will perform a connection and execute a simple insert statement query against the
+ * server using a valid consistency level.DBaaS SNI single endpoint while validating the
+ * insert occured.
+ *
+ * @jira_ticket CPP-813
+ * @test_category dbaas
+ * @test_category queries:guard_rails
+ * @since 2.14.0
+ * @expected_result Simple statement is executed and is validated.
+ */
+CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ConsistencyGuardrails) {
+  CHECK_FAILURE;
+
+  Cluster cluster = default_cluster(false);
+  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
+                                                                  creds_v1().c_str());
+  connect(cluster);
+
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, default_table().c_str(), "int", "int"));
+  CHECK_FAILURE;
+
+  session_.execute(Statement(
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, default_table().c_str(), "0", "1")));
+  Result result = session_.execute(
+      Statement(format_string(CASSANDRA_SELECT_VALUE_FORMAT, default_table().c_str(), "0")));
+  EXPECT_EQ(1u, result.row_count());
+  ASSERT_EQ(1u, result.column_count());
+  ASSERT_EQ(Integer(1), result.first_row().next().as<Integer>());
+}
+
+/**
+ * Ensure guardrails are enabled when performing a query against the DBaaS SNI single endpoint
+ * docker image.
+ *
+ * This test will perform a connection and execute a simple statement query against the
+ * server using an invalid consistency level.DBaaS SNI single endpoint while validating the
+ * error.
+ *
+ * @jira_ticket CPP-813
+ * @test_category dbaas
+ * @test_category queries:guard_rails
+ * @since 2.14.0
+ * @expected_result Simple statement is executed and guard rail error is validated.
+ */
+CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ConsistencyGuardrailsInvalid) {
+  CHECK_FAILURE;
+
+  Cluster cluster = default_cluster(false);
+  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
+                                                                  creds_v1().c_str());
+  connect(cluster);
+
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, default_table().c_str(), "int", "int"));
+  CHECK_FAILURE
+
+  Statement statement(
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, default_table().c_str(), "0", "1"));
+  statement.set_consistency(
+      CASS_CONSISTENCY_LOCAL_ONE); // Override default DBaaS configured consistency
+  Result result = session_.execute(statement, false);
+  EXPECT_TRUE(result.error_code() != CASS_OK)
+      << "Statement execution succeeded; guardrails may not be enabled";
+  EXPECT_TRUE(contains(result.error_message(),
+                       "Provided value LOCAL_ONE is not allowed for Write Consistency Level"));
 }
 
 /**
@@ -329,7 +403,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, DcAwareTokenAwareRoutingDefault) {
   Cluster cluster = default_cluster(false);
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  Session session = cluster.connect();
+  connect(cluster);
+
   for (std::vector<std::pair<int, int> >::iterator it = replicas.begin(), end = replicas.end();
        it != end; ++it) {
     Statement statement(SELECT_ALL_SYSTEM_LOCAL_CQL, 1);
@@ -338,8 +413,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, DcAwareTokenAwareRoutingDefault) {
     statement.set_keyspace("system");
     statement.bind<Integer>(0, Integer(it->first));
 
-    Result result =
-        session.execute(statement, false); // No bind variables exist so statement will return error
+    Result result = session_.execute(
+        statement, false); // No bind variables exist so statement will return error
     EXPECT_EQ(server_names[it->second], result.server_name());
   }
 }
@@ -362,7 +437,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ResolveAndConnectWithoutCredsInBundle) 
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_no_creds().c_str());
   cluster.with_credentials("cassandra", "cassandra");
-  cluster.connect();
+  connect(cluster);
 }
 
 /**
@@ -383,7 +458,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidWithoutCreds) {
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_no_creds().c_str());
   try {
-    cluster.connect();
+    connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
   } catch (Session::Exception& se) {
     EXPECT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code());
@@ -408,7 +483,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidMetadataServer) {
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_unreachable().c_str());
   try {
-    cluster.connect();
+    connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
   } catch (Session::Exception& se) {
     EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
@@ -433,7 +508,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidCertificate) {
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_no_cert().c_str());
   try {
-    cluster.connect();
+    connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
   } catch (Session::Exception& se) {
     EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
@@ -458,7 +533,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidCertificateAuthority) {
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_invalid_ca().c_str());
   try {
-    cluster.connect();
+    connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
   } catch (Session::Exception& se) {
     EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
@@ -486,16 +561,16 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, QueryWithNodesDown) {
   Cluster cluster = default_cluster(false);
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  Session session = cluster.connect();
+  connect(cluster);
 
   EXPECT_TRUE(stop_node(1));
   for (int i = 0; i < 8; ++i) {
-    EXPECT_NE(server_names[1], session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).server_name());
+    EXPECT_NE(server_names[1], session_.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).server_name());
   }
 
   EXPECT_TRUE(stop_node(3));
   for (int i = 0; i < 8; ++i) {
-    EXPECT_EQ(server_names[2], session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).server_name());
+    EXPECT_EQ(server_names[2], session_.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).server_name());
   }
 
   EXPECT_TRUE(start_cluster());
@@ -522,13 +597,13 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, FullOutage) {
   Cluster cluster = default_cluster(false).with_constant_reconnect(10); // Quick reconnect
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  Session session = cluster.connect();
+  connect(cluster);
 
   EXPECT_TRUE(stop_cluster());
 
   Statement statement(SELECT_ALL_SYSTEM_LOCAL_CQL);
-  EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, session.execute(statement, false).error_code());
+  EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, session_.execute(statement, false).error_code());
 
   EXPECT_TRUE(start_cluster());
-  EXPECT_EQ(CASS_OK, session.execute(statement).error_code());
+  EXPECT_EQ(CASS_OK, session_.execute(statement).error_code());
 }

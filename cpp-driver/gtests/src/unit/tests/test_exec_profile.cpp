@@ -41,8 +41,8 @@ TEST(ExecutionProfileUnitTest, Consistency) {
   Config copy_config = config.new_instance();
   ExecutionProfile profile_lookup;
   ASSERT_TRUE(execution_profile(copy_config, "profile", profile_lookup));
-  ASSERT_EQ(CASS_DEFAULT_CONSISTENCY, profile_lookup.consistency());
-  ASSERT_EQ(CASS_DEFAULT_CONSISTENCY, copy_config.default_profile().consistency());
+  ASSERT_EQ(CASS_CONSISTENCY_UNKNOWN, profile_lookup.consistency());
+  ASSERT_EQ(CASS_CONSISTENCY_UNKNOWN, copy_config.default_profile().consistency());
 }
 
 TEST(ExecutionProfileUnitTest, SerialConsistency) {

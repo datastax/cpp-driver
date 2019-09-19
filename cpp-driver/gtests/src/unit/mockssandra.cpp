@@ -33,6 +33,7 @@
 #endif
 
 using datastax::internal::bind_callback;
+using datastax::internal::Map;
 using datastax::internal::Memory;
 using datastax::internal::OStringStream;
 using datastax::internal::ScopedMutex;
@@ -1088,6 +1089,15 @@ inline int32_t encode_uuid(CassUuid uuid, String* output) {
   return 16;
 }
 
+int32_t encode_string_map(const Map<String, Vector<String> >& value, String* output) {
+  int32_t size = encode_uint16(value.size(), output);
+  for (Map<String, Vector<String> >::const_iterator it = value.begin(); it != value.end(); ++it) {
+    size += encode_string(it->first, output);
+    size += encode_string_list(it->second, output);
+  }
+  return size;
+}
+
 static String encode_header(int8_t version, int8_t flags, int16_t stream, int8_t opcode,
                             int32_t len) {
   String header;
@@ -1993,7 +2003,17 @@ int32_t ProtocolHandler::decode_frame(ClientConnection* client, const char* fram
         } else {
           return len - remaining;
         }
-        state_ = BODY;
+
+        if (length_ == 0) {
+          decode_body(client, pos, 0);
+          version_ = 0;
+          flags_ = 0;
+          opcode_ = 0;
+          length_ = 0;
+          state_ = PROTOCOL_VERSION;
+        } else {
+          state_ = BODY;
+        }
         break;
       case BODY:
         if (remaining >= length_) {

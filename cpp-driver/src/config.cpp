@@ -21,10 +21,6 @@ using namespace datastax::internal::core;
 void Config::init_profiles() {
   // Initialize the profile settings (if needed)
   for (ExecutionProfile::Map::iterator it = profiles_.begin(); it != profiles_.end(); ++it) {
-    if (it->second.consistency() == CASS_CONSISTENCY_UNKNOWN) {
-      it->second.set_consistency(default_profile_.consistency());
-    }
-
     if (it->second.serial_consistency() == CASS_CONSISTENCY_UNKNOWN) {
       it->second.set_serial_consistency(default_profile_.serial_consistency());
     }

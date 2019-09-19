@@ -16,30 +16,29 @@
 
 #include "supported_response.hpp"
 
+#include "logger.hpp"
 #include "serialization.hpp"
+#include "utils.hpp"
 
+#include <algorithm>
+
+using namespace datastax;
+using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 bool SupportedResponse::decode(Decoder& decoder) {
   decoder.set_type("supported");
-  StringMultimap supported;
-
-  CHECK_RESULT(decoder.decode_string_multimap(supported));
+  StringMultimap supported_options;
+  CHECK_RESULT(decoder.decode_string_multimap(supported_options));
   decoder.maybe_log_remaining();
 
-  StringMultimap::const_iterator it = supported.find("COMPRESSION");
-  if (it != supported.end()) {
-    compression_ = it->second;
+  // Force keys to be uppercase
+  for (StringMultimap::iterator it = supported_options.begin(), end = supported_options.end();
+       it != end; ++it) {
+    String key = it->first;
+    std::transform(key.begin(), key.end(), key.begin(), toupper);
+    supported_options_[key] = it->second;
   }
 
-  it = supported.find("CQL_VERSIONS");
-  if (it != supported.end()) {
-    cql_versions_ = it->second;
-  }
-
-  it = supported.find("PROTOCOL_VERSIONS");
-  if (it != supported.end()) {
-    protocol_versions_ = it->second;
-  }
   return true;
 }
