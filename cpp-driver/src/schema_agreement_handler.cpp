@@ -20,7 +20,7 @@
 
 #define RETRY_SCHEMA_AGREEMENT_WAIT_MS 200
 #define SELECT_LOCAL_SCHEMA "SELECT schema_version FROM system.local WHERE key='local'"
-#define SELECT_PEERS_SCHEMA "SELECT peer, rpc_address, schema_version FROM system.peers"
+#define SELECT_PEERS_SCHEMA "SELECT peer, rpc_address, host_id, schema_version FROM system.peers"
 
 using namespace datastax;
 using namespace datastax::internal::core;
@@ -29,10 +29,12 @@ SchemaAgreementHandler::SchemaAgreementHandler(const RequestHandler::Ptr& reques
                                                const Host::Ptr& current_host,
                                                const Response::Ptr& response,
                                                SchemaAgreementListener* listener,
-                                               uint64_t max_wait_time_ms)
+                                               uint64_t max_wait_time_ms,
+                                               const AddressFactory::Ptr& address_factory)
     : WaitForHandler(request_handler, current_host, response, max_wait_time_ms,
                      RETRY_SCHEMA_AGREEMENT_WAIT_MS)
-    , listener_(listener) {}
+    , listener_(listener)
+    , address_factory_(address_factory) {}
 
 ChainedRequestCallback::Ptr SchemaAgreementHandler::callback() {
   WaitforRequestVec requests;
@@ -63,9 +65,7 @@ bool SchemaAgreementHandler::on_set(const ChainedRequestCallback::Ptr& callback)
       const Row* row = rows.row();
 
       Address address;
-      bool is_valid_address =
-          determine_address_for_peer_host(this->host()->rpc_address(), row->get_by_name("peer"),
-                                          row->get_by_name("rpc_address"), &address);
+      bool is_valid_address = address_factory_->create(row, this->host(), &address);
 
       if (is_valid_address && listener_->on_is_host_up(address)) {
         const Value* v = row->get_by_name("schema_version");

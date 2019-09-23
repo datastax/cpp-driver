@@ -303,6 +303,140 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, QueryEachNode) {
 }
 
 /**
+ * Create function and aggregate definitions and ensure the schema metadata is reflected when
+ * execute against the DBaaS SNI single endpoint docker image.
+ *
+ * This test will perform a connection and execute create function/aggregate queries to ensure
+ * schema metadata using a DBaaS SNI single endpoint is handled properly.
+ *
+ * @jira_ticket CPP-815
+ * @test_category dbaas
+ * @test_category queries:schema_metadata:udf
+ * @since 2.14.0
+ * @expected_result Function/Aggregate definitions schema metadata are validated.
+ */
+CASSANDRA_INTEGRATION_TEST_F(DbaasTests, SchemaMetadata) {
+  CHECK_FAILURE;
+
+  Cluster cluster = default_cluster(false);
+  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
+                                                                  creds_v1().c_str());
+  connect(cluster);
+
+  // clang-format off
+  session_.execute("CREATE OR REPLACE FUNCTION avg_state(state tuple<int, bigint>, val int) "
+                   "CALLED ON NULL INPUT RETURNS tuple<int, bigint> "
+                   "LANGUAGE java AS "
+                     "'if (val != null) {"
+                       "state.setInt(0, state.getInt(0) + 1);"
+                       "state.setLong(1, state.getLong(1) + val.intValue());"
+                     "};"
+                     "return state;'"
+                   ";");
+  session_.execute("CREATE OR REPLACE FUNCTION avg_final (state tuple<int, bigint>) "
+                   "CALLED ON NULL INPUT RETURNS double "
+                   "LANGUAGE java AS "
+                     "'double r = 0;"
+                     "if (state.getInt(0) == 0) return null;"
+                     "r = state.getLong(1);"
+                     "r /= state.getInt(0);"
+                     "return Double.valueOf(r);'"
+                   ";");
+  session_.execute("CREATE OR REPLACE AGGREGATE average(int) "
+                   "SFUNC avg_state STYPE tuple<int, bigint> FINALFUNC avg_final "
+                   "INITCOND(0, 0);");
+  // clang-format on
+
+  const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session_.get());
+  ASSERT_TRUE(schema_meta != NULL);
+  const CassKeyspaceMeta* keyspace_meta =
+      cass_schema_meta_keyspace_by_name(schema_meta, default_keyspace().c_str());
+  ASSERT_TRUE(keyspace_meta != NULL);
+
+  { // Function `avg_state`
+    const char* data = NULL;
+    size_t length = 0;
+    const CassDataType* datatype = NULL;
+
+    const CassFunctionMeta* function_meta =
+        cass_keyspace_meta_function_by_name(keyspace_meta, "avg_state", "tuple<int,bigint>,int");
+    ASSERT_TRUE(function_meta != NULL);
+    cass_function_meta_name(function_meta, &data, &length);
+    EXPECT_EQ("avg_state", std::string(data, length));
+    cass_function_meta_full_name(function_meta, &data, &length);
+    EXPECT_EQ("avg_state(tuple<int,bigint>,int)", std::string(data, length));
+    cass_function_meta_body(function_meta, &data, &length);
+    EXPECT_EQ("if (val != null) {state.setInt(0, state.getInt(0) + 1);state.setLong(1, "
+              "state.getLong(1) + val.intValue());};return state;",
+              std::string(data, length));
+    cass_function_meta_language(function_meta, &data, &length);
+    EXPECT_EQ("java", std::string(data, length));
+    EXPECT_TRUE(cass_function_meta_called_on_null_input(function_meta));
+    ASSERT_EQ(2u, cass_function_meta_argument_count(function_meta));
+    cass_function_meta_argument(function_meta, 0, &data, &length, &datatype);
+    EXPECT_EQ("state", std::string(data, length));
+    EXPECT_EQ(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    ASSERT_EQ(2u, cass_data_type_sub_type_count(datatype));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    EXPECT_EQ(CASS_VALUE_TYPE_BIGINT,
+              cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+    cass_function_meta_argument(function_meta, 1, &data, &length, &datatype);
+    EXPECT_EQ("val", std::string(data, length));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(datatype));
+    datatype = cass_function_meta_argument_type_by_name(function_meta, "state");
+    EXPECT_EQ(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    ASSERT_EQ(2u, cass_data_type_sub_type_count(datatype));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    EXPECT_EQ(CASS_VALUE_TYPE_BIGINT,
+              cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+    datatype = cass_function_meta_argument_type_by_name(function_meta, "val");
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(datatype));
+    datatype = cass_function_meta_return_type(function_meta);
+    EXPECT_EQ(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    ASSERT_EQ(2u, cass_data_type_sub_type_count(datatype));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    EXPECT_EQ(CASS_VALUE_TYPE_BIGINT,
+              cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+  }
+
+  { // Aggregate `average`
+    const char* data = NULL;
+    size_t length = 0;
+    const CassDataType* datatype = NULL;
+
+    const CassAggregateMeta* aggregate_meta =
+        cass_keyspace_meta_aggregate_by_name(keyspace_meta, "average", "int");
+    ASSERT_TRUE(aggregate_meta != NULL);
+    cass_aggregate_meta_name(aggregate_meta, &data, &length);
+    EXPECT_EQ("average", std::string(data, length));
+    cass_aggregate_meta_full_name(aggregate_meta, &data, &length);
+    EXPECT_EQ("average(int)", std::string(data, length));
+    size_t count = cass_aggregate_meta_argument_count(aggregate_meta);
+    ASSERT_EQ(1u, cass_aggregate_meta_argument_count(aggregate_meta));
+    datatype = cass_aggregate_meta_argument_type(aggregate_meta, 0);
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(datatype));
+    datatype = cass_aggregate_meta_return_type(aggregate_meta);
+    EXPECT_EQ(CASS_VALUE_TYPE_DOUBLE, cass_data_type_type(datatype));
+    datatype = cass_aggregate_meta_state_type(aggregate_meta);
+    EXPECT_EQ(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    ASSERT_EQ(2u, cass_data_type_sub_type_count(datatype));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    EXPECT_EQ(CASS_VALUE_TYPE_BIGINT,
+              cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+    const CassFunctionMeta* function_meta = cass_aggregate_meta_state_func(aggregate_meta);
+    cass_function_meta_name(function_meta, &data, &length);
+    EXPECT_EQ("avg_state", std::string(data, length));
+    function_meta = cass_aggregate_meta_final_func(aggregate_meta);
+    cass_function_meta_name(function_meta, &data, &length);
+    EXPECT_EQ("avg_final", std::string(data, length));
+    const CassValue* initcond = cass_aggregate_meta_init_cond(aggregate_meta);
+    EXPECT_EQ(CASS_VALUE_TYPE_VARCHAR, cass_value_type(initcond));
+    EXPECT_EQ(Text("(0, 0)"), Text(initcond));
+    ASSERT_TRUE(true);
+  }
+}
+
+/**
  * Ensure guardrails are enabled when performing a query against the DBaaS SNI single endpoint
  * docker image.
  *

@@ -134,6 +134,8 @@ struct RequestProcessorSettings {
   uint64_t retry_tracing_wait_time_ms;
 
   CassConsistency tracing_consistency;
+
+  AddressFactory::Ptr address_factory;
 };
 
 /**
