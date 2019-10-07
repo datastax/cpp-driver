@@ -28,7 +28,6 @@
 namespace datastax { namespace internal { namespace core {
 
 class Row;
-class Value;
 
 class Address : public Allocated {
 public:
@@ -103,9 +102,6 @@ private:
   Family family_;
   int port_;
 };
-
-bool determine_address_for_peer_host(const Address& connected_address, const Value* peer_value,
-                                     const Value* rpc_value, Address* output);
 
 String determine_listen_address(const Address& address, const Row* row);
 

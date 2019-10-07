@@ -18,6 +18,7 @@
 #define DATASTAX_INTERNAL_CONTROL_CONNECTION_HPP
 
 #include "address.hpp"
+#include "address_factory.hpp"
 #include "config.hpp"
 #include "connection.hpp"
 #include "connector.hpp"
@@ -66,31 +67,6 @@ class RefreshKeyspaceCallback;
 class RefreshTableCallback;
 class RefreshTypeCallback;
 class RefreshFunctionCallback;
-
-/**
- * An interface for constructing `Address` from `system.local`/`system.peers` row data.
- */
-class AddressFactory : public RefCounted<AddressFactory> {
-public:
-  typedef SharedRefPtr<AddressFactory> Ptr;
-  virtual ~AddressFactory() {}
-  virtual bool create(const Row* peers_row, const Host::Ptr& connected_host, Address* address) = 0;
-};
-
-/**
- * An address factory that creates `Address` using the `rpc_address` column.
- */
-class DefaultAddressFactory : public AddressFactory {
-  virtual bool create(const Row* peers_row, const Host::Ptr& connected_host, Address* address);
-};
-
-/**
- * An address factory that creates `Address` using the connected host's address and the `host_id`
- * (for the SNI servername) column.
- */
-class SniAddressFactory : public AddressFactory {
-  virtual bool create(const Row* peers_row, const Host::Ptr& connected_host, Address* address);
-};
 
 /**
  * A listener for processing control connection events such as topology, node

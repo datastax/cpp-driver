@@ -571,7 +571,7 @@ TEST_F(ClientInsightsUnitTest, StartupDataMultipleExecutionProfiles) {
   { // default profile
     const json::Value& execution_profile = execution_profiles["default"];
     ASSERT_EQ(config_.request_timeout(), execution_profile["requestTimeoutMs"].GetUint());
-    ASSERT_STREQ(cass_consistency_string(config_.consistency()),
+    ASSERT_STREQ(cass_consistency_string(CASS_DEFAULT_CONSISTENCY),
                  execution_profile["consistency"].GetString());
     ASSERT_STREQ(cass_consistency_string(config_.serial_consistency()),
                  execution_profile["serialConsistency"].GetString());

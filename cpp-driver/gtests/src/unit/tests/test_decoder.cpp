@@ -740,7 +740,7 @@ TEST_F(DecoderUnitTest, DecodeStringMultiMap) {
                            0, 6, 80, 121, 116, 104, 111, 110,                // Python
                            0, 4, 82, 117, 98,  121 };                        // Ruby
   TestDecoder decoder(input, 58);
-  Map<String, Vector<String> > value;
+  StringMultimap value;
 
   // SUCCESS
   ASSERT_TRUE(decoder.decode_string_multimap(value));

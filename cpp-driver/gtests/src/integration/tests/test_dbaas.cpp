@@ -87,6 +87,7 @@ public:
     // Ensure CCM and session are not created for these tests
     is_ccm_requested_ = false;
     is_session_requested_ = false;
+    is_schema_metadata_ = true; // Needed for prepared statements
     Integration::SetUp();
   }
 
@@ -150,6 +151,7 @@ public:
     args.push_back("start");
     args.push_back("--root");
     args.push_back("--wait-for-binary-proto");
+    args.push_back("--jvm_arg=-Ddse.product_type=DATASTAX_APOLLO");
     return ccm_execute(args);
   }
 
@@ -165,6 +167,7 @@ public:
     args.push_back("start");
     args.push_back("--root");
     args.push_back("--wait-for-binary-proto");
+    args.push_back("--jvm_arg=-Ddse.product_type=DATASTAX_APOLLO");
     return ccm_execute(args);
   }
 
@@ -259,7 +262,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ResolveAndConnect) {
   Cluster cluster = default_cluster(false);
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  cluster.connect();
+  connect(cluster);
 }
 
 /**
@@ -267,8 +270,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ResolveAndConnect) {
  *
  * This test will perform a connection and execute a simple statement query against the
  * system.local table to ensure query execution to a DBaaS SNI single endpoint while validating the
- * results. This test will also ensure that the configured keyspace is assigned as the DBaaS
- * configuration assigns `system` as the default keyspace.
+ * results.
  *
  * @jira_ticket CPP-787
  * @test_category dbaas
@@ -282,11 +284,11 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, QueryEachNode) {
   Cluster cluster = default_cluster(false).with_load_balance_round_robin();
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  Session session = cluster.connect();
+  connect(cluster);
 
   ServerNames server_names;
   for (int i = 0; i < 3; ++i) {
-    Result result = session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
+    Result result = session_.execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
     Uuid expected_host_id = Uuid(result.server_name());
     Row row = result.first_row();
 
@@ -298,6 +300,212 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, QueryEachNode) {
   }
 
   EXPECT_EQ(3u, server_names.size()); // Ensure all three nodes were queried
+}
+
+/**
+ * Create function and aggregate definitions and ensure the schema metadata is reflected when
+ * execute against the DBaaS SNI single endpoint docker image.
+ *
+ * This test will perform a connection and execute create function/aggregate queries to ensure
+ * schema metadata using a DBaaS SNI single endpoint is handled properly.
+ *
+ * @jira_ticket CPP-815
+ * @test_category dbaas
+ * @test_category queries:schema_metadata:udf
+ * @since 2.14.0
+ * @expected_result Function/Aggregate definitions schema metadata are validated.
+ */
+CASSANDRA_INTEGRATION_TEST_F(DbaasTests, SchemaMetadata) {
+  CHECK_FAILURE;
+
+  Cluster cluster = default_cluster(false);
+  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
+                                                                  creds_v1().c_str());
+  connect(cluster);
+
+  // clang-format off
+  session_.execute("CREATE OR REPLACE FUNCTION avg_state(state tuple<int, bigint>, val int) "
+                   "CALLED ON NULL INPUT RETURNS tuple<int, bigint> "
+                   "LANGUAGE java AS "
+                     "'if (val != null) {"
+                       "state.setInt(0, state.getInt(0) + 1);"
+                       "state.setLong(1, state.getLong(1) + val.intValue());"
+                     "};"
+                     "return state;'"
+                   ";");
+  session_.execute("CREATE OR REPLACE FUNCTION avg_final (state tuple<int, bigint>) "
+                   "CALLED ON NULL INPUT RETURNS double "
+                   "LANGUAGE java AS "
+                     "'double r = 0;"
+                     "if (state.getInt(0) == 0) return null;"
+                     "r = state.getLong(1);"
+                     "r /= state.getInt(0);"
+                     "return Double.valueOf(r);'"
+                   ";");
+  session_.execute("CREATE OR REPLACE AGGREGATE average(int) "
+                   "SFUNC avg_state STYPE tuple<int, bigint> FINALFUNC avg_final "
+                   "INITCOND(0, 0);");
+  // clang-format on
+
+  const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session_.get());
+  ASSERT_TRUE(schema_meta != NULL);
+  const CassKeyspaceMeta* keyspace_meta =
+      cass_schema_meta_keyspace_by_name(schema_meta, default_keyspace().c_str());
+  ASSERT_TRUE(keyspace_meta != NULL);
+
+  { // Function `avg_state`
+    const char* data = NULL;
+    size_t length = 0;
+    const CassDataType* datatype = NULL;
+
+    const CassFunctionMeta* function_meta =
+        cass_keyspace_meta_function_by_name(keyspace_meta, "avg_state", "tuple<int,bigint>,int");
+    ASSERT_TRUE(function_meta != NULL);
+    cass_function_meta_name(function_meta, &data, &length);
+    EXPECT_EQ("avg_state", std::string(data, length));
+    cass_function_meta_full_name(function_meta, &data, &length);
+    EXPECT_EQ("avg_state(tuple<int,bigint>,int)", std::string(data, length));
+    cass_function_meta_body(function_meta, &data, &length);
+    EXPECT_EQ("if (val != null) {state.setInt(0, state.getInt(0) + 1);state.setLong(1, "
+              "state.getLong(1) + val.intValue());};return state;",
+              std::string(data, length));
+    cass_function_meta_language(function_meta, &data, &length);
+    EXPECT_EQ("java", std::string(data, length));
+    EXPECT_TRUE(cass_function_meta_called_on_null_input(function_meta));
+    ASSERT_EQ(2u, cass_function_meta_argument_count(function_meta));
+    cass_function_meta_argument(function_meta, 0, &data, &length, &datatype);
+    EXPECT_EQ("state", std::string(data, length));
+    EXPECT_EQ(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    ASSERT_EQ(2u, cass_data_type_sub_type_count(datatype));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    EXPECT_EQ(CASS_VALUE_TYPE_BIGINT,
+              cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+    cass_function_meta_argument(function_meta, 1, &data, &length, &datatype);
+    EXPECT_EQ("val", std::string(data, length));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(datatype));
+    datatype = cass_function_meta_argument_type_by_name(function_meta, "state");
+    EXPECT_EQ(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    ASSERT_EQ(2u, cass_data_type_sub_type_count(datatype));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    EXPECT_EQ(CASS_VALUE_TYPE_BIGINT,
+              cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+    datatype = cass_function_meta_argument_type_by_name(function_meta, "val");
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(datatype));
+    datatype = cass_function_meta_return_type(function_meta);
+    EXPECT_EQ(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    ASSERT_EQ(2u, cass_data_type_sub_type_count(datatype));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    EXPECT_EQ(CASS_VALUE_TYPE_BIGINT,
+              cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+  }
+
+  { // Aggregate `average`
+    const char* data = NULL;
+    size_t length = 0;
+    const CassDataType* datatype = NULL;
+
+    const CassAggregateMeta* aggregate_meta =
+        cass_keyspace_meta_aggregate_by_name(keyspace_meta, "average", "int");
+    ASSERT_TRUE(aggregate_meta != NULL);
+    cass_aggregate_meta_name(aggregate_meta, &data, &length);
+    EXPECT_EQ("average", std::string(data, length));
+    cass_aggregate_meta_full_name(aggregate_meta, &data, &length);
+    EXPECT_EQ("average(int)", std::string(data, length));
+    size_t count = cass_aggregate_meta_argument_count(aggregate_meta);
+    ASSERT_EQ(1u, cass_aggregate_meta_argument_count(aggregate_meta));
+    datatype = cass_aggregate_meta_argument_type(aggregate_meta, 0);
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(datatype));
+    datatype = cass_aggregate_meta_return_type(aggregate_meta);
+    EXPECT_EQ(CASS_VALUE_TYPE_DOUBLE, cass_data_type_type(datatype));
+    datatype = cass_aggregate_meta_state_type(aggregate_meta);
+    EXPECT_EQ(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    ASSERT_EQ(2u, cass_data_type_sub_type_count(datatype));
+    EXPECT_EQ(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    EXPECT_EQ(CASS_VALUE_TYPE_BIGINT,
+              cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+    const CassFunctionMeta* function_meta = cass_aggregate_meta_state_func(aggregate_meta);
+    cass_function_meta_name(function_meta, &data, &length);
+    EXPECT_EQ("avg_state", std::string(data, length));
+    function_meta = cass_aggregate_meta_final_func(aggregate_meta);
+    cass_function_meta_name(function_meta, &data, &length);
+    EXPECT_EQ("avg_final", std::string(data, length));
+    const CassValue* initcond = cass_aggregate_meta_init_cond(aggregate_meta);
+    EXPECT_EQ(CASS_VALUE_TYPE_VARCHAR, cass_value_type(initcond));
+    EXPECT_EQ(Text("(0, 0)"), Text(initcond));
+    ASSERT_TRUE(true);
+  }
+}
+
+/**
+ * Ensure guardrails are enabled when performing a query against the DBaaS SNI single endpoint
+ * docker image.
+ *
+ * This test will perform a connection and execute a simple insert statement query against the
+ * server using a valid consistency level.DBaaS SNI single endpoint while validating the
+ * insert occured.
+ *
+ * @jira_ticket CPP-813
+ * @test_category dbaas
+ * @test_category queries:guard_rails
+ * @since 2.14.0
+ * @expected_result Simple statement is executed and is validated.
+ */
+CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ConsistencyGuardrails) {
+  CHECK_FAILURE;
+
+  Cluster cluster = default_cluster(false);
+  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
+                                                                  creds_v1().c_str());
+  connect(cluster);
+
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, default_table().c_str(), "int", "int"));
+  CHECK_FAILURE;
+
+  session_.execute(Statement(
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, default_table().c_str(), "0", "1")));
+  Result result = session_.execute(
+      Statement(format_string(CASSANDRA_SELECT_VALUE_FORMAT, default_table().c_str(), "0")));
+  EXPECT_EQ(1u, result.row_count());
+  ASSERT_EQ(1u, result.column_count());
+  ASSERT_EQ(Integer(1), result.first_row().next().as<Integer>());
+}
+
+/**
+ * Ensure guardrails are enabled when performing a query against the DBaaS SNI single endpoint
+ * docker image.
+ *
+ * This test will perform a connection and execute a simple statement query against the
+ * server using an invalid consistency level.DBaaS SNI single endpoint while validating the
+ * error.
+ *
+ * @jira_ticket CPP-813
+ * @test_category dbaas
+ * @test_category queries:guard_rails
+ * @since 2.14.0
+ * @expected_result Simple statement is executed and guard rail error is validated.
+ */
+CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ConsistencyGuardrailsInvalid) {
+  CHECK_FAILURE;
+
+  Cluster cluster = default_cluster(false);
+  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
+                                                                  creds_v1().c_str());
+  connect(cluster);
+
+  session_.execute(
+      format_string(CASSANDRA_KEY_VALUE_TABLE_FORMAT, default_table().c_str(), "int", "int"));
+  CHECK_FAILURE
+
+  Statement statement(
+      format_string(CASSANDRA_KEY_VALUE_INSERT_FORMAT, default_table().c_str(), "0", "1"));
+  statement.set_consistency(
+      CASS_CONSISTENCY_LOCAL_ONE); // Override default DBaaS configured consistency
+  Result result = session_.execute(statement, false);
+  EXPECT_TRUE(result.error_code() != CASS_OK)
+      << "Statement execution succeeded; guardrails may not be enabled";
+  EXPECT_TRUE(contains(result.error_message(),
+                       "Provided value LOCAL_ONE is not allowed for Write Consistency Level"));
 }
 
 /**
@@ -329,7 +537,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, DcAwareTokenAwareRoutingDefault) {
   Cluster cluster = default_cluster(false);
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  Session session = cluster.connect();
+  connect(cluster);
+
   for (std::vector<std::pair<int, int> >::iterator it = replicas.begin(), end = replicas.end();
        it != end; ++it) {
     Statement statement(SELECT_ALL_SYSTEM_LOCAL_CQL, 1);
@@ -338,8 +547,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, DcAwareTokenAwareRoutingDefault) {
     statement.set_keyspace("system");
     statement.bind<Integer>(0, Integer(it->first));
 
-    Result result =
-        session.execute(statement, false); // No bind variables exist so statement will return error
+    Result result = session_.execute(
+        statement, false); // No bind variables exist so statement will return error
     EXPECT_EQ(server_names[it->second], result.server_name());
   }
 }
@@ -362,7 +571,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ResolveAndConnectWithoutCredsInBundle) 
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_no_creds().c_str());
   cluster.with_credentials("cassandra", "cassandra");
-  cluster.connect();
+  connect(cluster);
 }
 
 /**
@@ -383,7 +592,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidWithoutCreds) {
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_no_creds().c_str());
   try {
-    cluster.connect();
+    connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
   } catch (Session::Exception& se) {
     EXPECT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code());
@@ -408,7 +617,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidMetadataServer) {
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_unreachable().c_str());
   try {
-    cluster.connect();
+    connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
   } catch (Session::Exception& se) {
     EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
@@ -433,7 +642,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidCertificate) {
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_no_cert().c_str());
   try {
-    cluster.connect();
+    connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
   } catch (Session::Exception& se) {
     EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
@@ -458,7 +667,7 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidCertificateAuthority) {
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1_invalid_ca().c_str());
   try {
-    cluster.connect();
+    connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
   } catch (Session::Exception& se) {
     EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, se.error_code());
@@ -486,16 +695,16 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, QueryWithNodesDown) {
   Cluster cluster = default_cluster(false);
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  Session session = cluster.connect();
+  connect(cluster);
 
   EXPECT_TRUE(stop_node(1));
   for (int i = 0; i < 8; ++i) {
-    EXPECT_NE(server_names[1], session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).server_name());
+    EXPECT_NE(server_names[1], session_.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).server_name());
   }
 
   EXPECT_TRUE(stop_node(3));
   for (int i = 0; i < 8; ++i) {
-    EXPECT_EQ(server_names[2], session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).server_name());
+    EXPECT_EQ(server_names[2], session_.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).server_name());
   }
 
   EXPECT_TRUE(start_cluster());
@@ -522,13 +731,13 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, FullOutage) {
   Cluster cluster = default_cluster(false).with_constant_reconnect(10); // Quick reconnect
   cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
                                                                   creds_v1().c_str());
-  Session session = cluster.connect();
+  connect(cluster);
 
   EXPECT_TRUE(stop_cluster());
 
   Statement statement(SELECT_ALL_SYSTEM_LOCAL_CQL);
-  EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, session.execute(statement, false).error_code());
+  EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, session_.execute(statement, false).error_code());
 
   EXPECT_TRUE(start_cluster());
-  EXPECT_EQ(CASS_OK, session.execute(statement).error_code());
+  EXPECT_EQ(CASS_OK, session_.execute(statement).error_code());
 }

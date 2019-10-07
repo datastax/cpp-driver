@@ -120,6 +120,21 @@ public:
     query(session, true);
   }
 
+  bool check_consistency(const Session& session, CassConsistency expected_consistency,
+                         CassConsistency expected_profile_consistency) {
+    Config session_config = session.config();
+    EXPECT_EQ(expected_consistency, session_config.consistency());
+
+    const ExecutionProfile::Map& profiles = session_config.profiles();
+    for (ExecutionProfile::Map::const_iterator it = profiles.begin(), end = profiles.end();
+         it != end; ++it) {
+      if (expected_profile_consistency != it->second.consistency()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   class HostEventFuture : public Future {
   public:
     typedef SharedRefPtr<HostEventFuture> Ptr;
@@ -240,6 +255,21 @@ public:
 
   private:
     String local_dc_;
+  };
+
+  class SupportedDbaasOptions : public mockssandra::Action {
+  public:
+    virtual void on_run(mockssandra::Request* request) const {
+      Vector<String> product_type;
+      product_type.push_back("DATASTAX_APOLLO");
+
+      StringMultimap supported;
+      supported["PRODUCT_TYPE"] = product_type;
+
+      String body;
+      mockssandra::encode_string_map(supported, &body);
+      request->write(mockssandra::OPCODE_SUPPORTED, body);
+    }
   };
 };
 
@@ -858,4 +888,96 @@ TEST_F(SessionUnitTest, NoContactPoints) {
       << "Timed out waiting for session to connect";
   ASSERT_TRUE(connect_future->error());
   EXPECT_EQ(connect_future->error()->code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+}
+
+TEST_F(SessionUnitTest, DefaultConsistency) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Session session;
+  {
+    Config session_config = session.config();
+    EXPECT_EQ(CASS_CONSISTENCY_UNKNOWN, session_config.consistency());
+  }
+
+  ExecutionProfile profile;
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_execution_profile("profile", &profile);
+  connect(config, &session);
+
+  EXPECT_TRUE(check_consistency(session, CASS_DEFAULT_CONSISTENCY, CASS_DEFAULT_CONSISTENCY));
+
+  close(&session);
+}
+
+TEST_F(SessionUnitTest, DefaultConsistencyExecutionProfileNotUpdated) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Session session;
+  {
+    Config session_config = session.config();
+    EXPECT_EQ(CASS_CONSISTENCY_UNKNOWN, session_config.consistency());
+  }
+
+  ExecutionProfile profile;
+  profile.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_execution_profile("profile", &profile);
+  connect(config, &session);
+
+  EXPECT_TRUE(check_consistency(session, CASS_DEFAULT_CONSISTENCY, CASS_CONSISTENCY_LOCAL_QUORUM));
+
+  close(&session);
+}
+
+TEST_F(SessionUnitTest, DbaasDetectionUpdateDefaultConsistency) {
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(mockssandra::OPCODE_OPTIONS).execute(new SupportedDbaasOptions());
+  mockssandra::SimpleCluster cluster(builder.build());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Session session;
+  {
+    Config session_config = session.config();
+    EXPECT_EQ(CASS_CONSISTENCY_UNKNOWN, session_config.consistency());
+  }
+
+  ExecutionProfile profile;
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_execution_profile("profile", &profile);
+  connect(config, &session);
+
+  EXPECT_TRUE(
+      check_consistency(session, CASS_DEFAULT_DBAAS_CONSISTENCY, CASS_DEFAULT_DBAAS_CONSISTENCY));
+
+  close(&session);
+}
+
+TEST_F(SessionUnitTest, DbaasDefaultConsistencyExecutionProfileNotUpdate) {
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(mockssandra::OPCODE_OPTIONS).execute(new SupportedDbaasOptions());
+  mockssandra::SimpleCluster cluster(builder.build());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Session session;
+  {
+    Config session_config = session.config();
+    EXPECT_EQ(CASS_CONSISTENCY_UNKNOWN, session_config.consistency());
+  }
+
+  ExecutionProfile profile;
+  profile.set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_execution_profile("profile", &profile);
+  connect(config, &session);
+
+  EXPECT_TRUE(
+      check_consistency(session, CASS_DEFAULT_DBAAS_CONSISTENCY, CASS_CONSISTENCY_LOCAL_ONE));
+
+  close(&session);
 }
