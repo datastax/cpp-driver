@@ -134,8 +134,8 @@ public:
       Cluster cluster = default_cluster(false)
                             .with_randomized_contact_points(false)
                             .with_load_balance_round_robin();
-      cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                      creds_v1().c_str());
+      EXPECT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                             cluster.get(), creds_v1().c_str()));
       Session session = cluster.connect();
       for (int i = 0; i < 3; ++i) {
         Row row = session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL).first_row();
@@ -260,8 +260,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ResolveAndConnect) {
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1().c_str()));
   connect(cluster);
 }
 
@@ -282,8 +282,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, QueryEachNode) {
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false).with_load_balance_round_robin();
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1().c_str()));
   connect(cluster);
 
   ServerNames server_names;
@@ -319,8 +319,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, SchemaMetadata) {
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1().c_str()));
   connect(cluster);
 
   // clang-format off
@@ -434,6 +434,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, SchemaMetadata) {
     EXPECT_EQ(Text("(0, 0)"), Text(initcond));
     ASSERT_TRUE(true);
   }
+
+  cass_schema_meta_free(schema_meta);
 }
 
 /**
@@ -454,8 +456,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ConsistencyGuardrails) {
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1().c_str()));
   connect(cluster);
 
   session_.execute(
@@ -489,8 +491,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ConsistencyGuardrailsInvalid) {
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1().c_str()));
   connect(cluster);
 
   session_.execute(
@@ -535,8 +537,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, DcAwareTokenAwareRoutingDefault) {
   replicas.push_back(std::pair<int, int>(5, 2));
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1().c_str()));
   connect(cluster);
 
   for (std::vector<std::pair<int, int> >::iterator it = replicas.begin(), end = replicas.end();
@@ -568,8 +570,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, ResolveAndConnectWithoutCredsInBundle) 
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1_no_creds().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1_no_creds().c_str()));
   cluster.with_credentials("cassandra", "cassandra");
   connect(cluster);
 }
@@ -589,8 +591,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidWithoutCreds) {
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1_no_creds().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1_no_creds().c_str()));
   try {
     connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
@@ -614,8 +616,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidMetadataServer) {
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1_unreachable().c_str());
+  EXPECT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1_unreachable().c_str()));
   try {
     connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
@@ -639,8 +641,9 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidCertificate) {
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1_no_cert().c_str());
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+            cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                cluster.get(), creds_v1_no_cert().c_str()));
   try {
     connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
@@ -664,8 +667,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, InvalidCertificateAuthority) {
   CHECK_FAILURE;
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1_invalid_ca().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1_invalid_ca().c_str()));
   try {
     connect(cluster);
     EXPECT_TRUE(false) << "Connection established";
@@ -693,8 +696,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, QueryWithNodesDown) {
   ServerNames server_names = get_server_names();
 
   Cluster cluster = default_cluster(false);
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1().c_str()));
   connect(cluster);
 
   EXPECT_TRUE(stop_node(1));
@@ -729,8 +732,8 @@ CASSANDRA_INTEGRATION_TEST_F(DbaasTests, FullOutage) {
   ServerNames server_names = get_server_names();
 
   Cluster cluster = default_cluster(false).with_constant_reconnect(10); // Quick reconnect
-  cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(cluster.get(),
-                                                                  creds_v1().c_str());
+  ASSERT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster.get(), creds_v1().c_str()));
   connect(cluster);
 
   EXPECT_TRUE(stop_cluster());
