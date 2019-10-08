@@ -387,7 +387,7 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_TRUE(value.HasMember("configuration"));
     const json::Value& configuration = value["configuration"];
     ASSERT_TRUE(configuration.IsObject());
-    ASSERT_EQ(24u, configuration.MemberCount());
+    ASSERT_EQ(26u, configuration.MemberCount());
     ASSERT_TRUE(configuration.HasMember("protocolVersion"));
     ASSERT_EQ(config_.protocol_version().value(), configuration["protocolVersion"].GetInt());
     ASSERT_TRUE(configuration.HasMember("useBetaProtocol"));
@@ -441,6 +441,12 @@ TEST_F(ClientInsightsUnitTest, StartupData) {
     ASSERT_EQ(config_.prepare_on_up_or_add_host(), configuration["prepareOnUpOrAddHost"].GetBool());
     ASSERT_TRUE(configuration.HasMember("noCompact"));
     ASSERT_EQ(config_.no_compact(), configuration["noCompact"].GetBool());
+    ASSERT_TRUE(configuration.HasMember("cloudSecureConnectBundleLoaded"));
+    ASSERT_EQ(config_.cloud_secure_connection_config().is_loaded(),
+              configuration["cloudSecureConnectBundleLoaded"].GetBool());
+    ASSERT_TRUE(configuration.HasMember("clusterMetadataResolver"));
+    ASSERT_STREQ(config_.cluster_metadata_resolver_factory()->name(),
+                 configuration["clusterMetadataResolver"].GetString());
   }
   { // platform info
     ASSERT_TRUE(data.HasMember("platformInfo"));

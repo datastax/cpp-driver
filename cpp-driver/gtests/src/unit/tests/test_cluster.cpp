@@ -315,6 +315,8 @@ public:
       return ClusterMetadataResolver::Ptr(new LocalDcClusterMetadataResolver(local_dc_));
     }
 
+    virtual const char* name() const { return "LocalDc"; }
+
   private:
     String local_dc_;
   };

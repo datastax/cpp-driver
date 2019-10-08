@@ -499,6 +499,10 @@ private:
     writer.Bool(config_.prepare_on_up_or_add_host());
     writer.Key("noCompact");
     writer.Bool(config_.no_compact());
+    writer.Key("cloudSecureConnectBundleLoaded");
+    writer.Bool(config_.cloud_secure_connection_config().is_loaded());
+    writer.Key("clusterMetadataResolver");
+    writer.String(config_.cluster_metadata_resolver_factory()->name());
     writer.EndObject(); // configuration
 
     writer.EndObject(); // otherOptions
