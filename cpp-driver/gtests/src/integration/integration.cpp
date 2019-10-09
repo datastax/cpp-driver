@@ -56,6 +56,7 @@ Integration::Integration()
     , is_ccm_start_requested_(true)
     , is_ccm_start_node_individually_(false)
     , is_session_requested_(true)
+    , is_keyspace_change_requested_(true)
     , is_test_chaotic_(false)
     , is_beta_protocol_(Options::is_beta_protocol())
     , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
@@ -300,6 +301,16 @@ void Integration::drop_type(const std::string& type_name) {
   session_.execute(drop_type_query.str(), CASS_CONSISTENCY_ANY, false, false);
 }
 
+bool Integration::use_keyspace(const std::string& keyspace_name) {
+  std::stringstream use_keyspace_query;
+  use_keyspace_query << "USE " << keyspace_name;
+  session_.execute(use_keyspace_query.str());
+  if (this->HasFailure()) {
+    return false;
+  }
+  return true;
+}
+
 void Integration::connect(Cluster cluster) {
   // Establish the session connection
   cluster_ = cluster;
@@ -322,10 +333,9 @@ void Integration::connect(Cluster cluster) {
   CHECK_FAILURE;
 
   // Update the session to use the new keyspace by default
-  std::stringstream use_keyspace_query;
-  use_keyspace_query << "USE " << keyspace_name_;
-  session_.execute(use_keyspace_query.str());
-  CHECK_FAILURE;
+  if (is_keyspace_change_requested_) {
+    use_keyspace(keyspace_name_);
+  }
 }
 
 void Integration::connect() {

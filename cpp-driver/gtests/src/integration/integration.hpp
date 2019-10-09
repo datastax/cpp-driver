@@ -109,7 +109,10 @@
 
 #define CASSANDRA_KEY_VALUE_TABLE_FORMAT \
   "CREATE TABLE IF NOT EXISTS %s (key %s PRIMARY KEY, value %s)"
+#define CASSANDRA_KEY_VALUE_QUALIFIED_TABLE_FORMAT \
+  "CREATE TABLE IF NOT EXISTS %s.%s (key %s PRIMARY KEY, value %s)"
 #define CASSANDRA_KEY_VALUE_INSERT_FORMAT "INSERT INTO %s (key, value) VALUES(%s, %s)"
+#define CASSANDRA_KEY_VALUE_QUALIFIED_INSERT_FORMAT "INSERT INTO %s.%s (key, value) VALUES(%s, %s)"
 #define CASSANDRA_SELECT_VALUE_FORMAT "SELECT value FROM %s WHERE key=%s"
 #define CASSANDRA_DELETE_ROW_FORMAT "DELETE FROM %s WHERE key=%s"
 #define CASSANDRA_UPDATE_VALUE_FORMAT "UPDATE %s SET value=%s WHERE key=%s"
@@ -280,6 +283,11 @@ protected:
    */
   bool is_session_requested_;
   /**
+   * Flag to indicate if the newly created keyspace should be set for the session connection.
+   * (DEFAULT: true)
+   */
+  bool is_keyspace_change_requested_;
+  /**
    * Flag to indicate if a test is chaotic and should have its CCM cluster
    * destroyed
    */
@@ -375,6 +383,14 @@ protected:
    * @param type_name Table to drop from the current keyspace
    */
   virtual void drop_type(const std::string& type_name);
+
+  /**
+   * Update the current keyspace used by the session
+   *
+   * @param keyspace_name Keyspace to use
+   * @return True if keyspace was changed; false otherwise
+   */
+  virtual bool use_keyspace(const std::string& keyspace_name);
 
   /**
    * Establish the session connection using provided cluster object.

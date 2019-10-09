@@ -275,6 +275,7 @@ public:
   void next_host() { current_host_ = request_handler_->next_host(RequestHandler::Protected()); }
 
   void notify_result_metadata_changed(const Request* request, ResultResponse* result_response);
+  void notify_prepared_id_mismatch(const String& expected_id, const String& received_id);
 
   virtual void on_retry_current_host();
   virtual void on_retry_next_host();
