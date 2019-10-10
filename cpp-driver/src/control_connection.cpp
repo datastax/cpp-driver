@@ -378,8 +378,8 @@ void ControlConnection::refresh_node(RefreshNodeType type, const Address& addres
 
   LOG_DEBUG("Refresh node: %s", query.c_str());
 
-  if (write_and_flush(RequestCallback::Ptr(
-          new RefreshNodeCallback(address, type, is_all_peers, query, this))) < 0) {
+  RequestCallback::Ptr callback(new RefreshNodeCallback(address, type, is_all_peers, query, this));
+  if (write_and_flush(callback) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh node info");
     defunct();
   }
@@ -448,8 +448,9 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
 
   LOG_DEBUG("Refreshing keyspace %s", query.c_str());
 
-  if (write_and_flush(RequestCallback::Ptr(
-          new RefreshKeyspaceCallback(keyspace_name.to_string(), query, this))) < 0) {
+  RequestCallback::Ptr callback(
+      new RefreshKeyspaceCallback(keyspace_name.to_string(), query, this));
+  if (write_and_flush(callback) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh keyspace info");
     defunct();
   }
@@ -594,8 +595,9 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name, const Strin
 
   LOG_DEBUG("Refreshing type %s", query.c_str());
 
-  if (!write_and_flush(RequestCallback::Ptr(new RefreshTypeCallback(
-          keyspace_name.to_string(), type_name.to_string(), query, this)))) {
+  RequestCallback::Ptr callback(
+      new RefreshTypeCallback(keyspace_name.to_string(), type_name.to_string(), query, this));
+  if (write_and_flush(callback) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh type info");
     defunct();
   }
@@ -654,9 +656,10 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
   request->set(1, CassString(function_name.data(), function_name.size()));
   request->set(2, signature.get());
 
-  if (!write_and_flush(RequestCallback::Ptr(
-          new RefreshFunctionCallback(keyspace_name.to_string(), function_name.to_string(),
-                                      to_strings(arg_types), is_aggregate, request, this)))) {
+  RequestCallback::Ptr callback(
+      new RefreshFunctionCallback(keyspace_name.to_string(), function_name.to_string(),
+                                  to_strings(arg_types), is_aggregate, request, this));
+  if (write_and_flush(callback) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh function info");
     defunct();
   }

@@ -306,18 +306,54 @@ void RequestHandler::internal_retry(RequestExecution* request_execution) {
     return;
   }
 
-  bool is_successful = false;
-  while (request_execution->current_host()) {
+  bool is_done = false;
+  while (!is_done && request_execution->current_host()) {
     PooledConnection::Ptr connection =
         manager_->find_least_busy(request_execution->current_host()->address());
-    if (connection && connection->write(request_execution)) {
-      is_successful = true;
-      break;
+    if (connection) {
+      int32_t result = connection->write(request_execution);
+
+      if (result > 0) {
+        is_done = true;
+      } else {
+        switch (result) {
+          case SocketRequest::SOCKET_REQUEST_ERROR_CLOSED:
+            // This should never happen, but retry with next host if it does.
+            request_execution->next_host();
+            break;
+
+          case SocketRequest::SOCKET_REQUEST_ERROR_NO_HANDLER:
+            set_error(CASS_ERROR_LIB_WRITE_ERROR,
+                      "Socket is not properly configured with a handler");
+            is_done = true;
+            break;
+
+          case Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS:
+            // Retry with next host
+            request_execution->next_host();
+            break;
+
+          case Request::REQUEST_ERROR_BATCH_WITH_NAMED_VALUES:
+          case Request::REQUEST_ERROR_PARAMETER_UNSET:
+          case Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL:
+          case Request::REQUEST_ERROR_NO_DATA_WRITTEN:
+            // Already handled with a specific error.
+            is_done = true;
+            break;
+
+          default:
+            set_error(CASS_ERROR_LIB_WRITE_ERROR, "Unspecified write error occurred");
+            is_done = true;
+            break;
+        }
+      }
+    } else {
+      // No connection available on the current host, move to the next host.
+      request_execution->next_host();
     }
-    request_execution->next_host();
   }
 
-  if (!is_successful) {
+  if (!request_execution->current_host()) {
     set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "All hosts in current policy attempted "
                                                  "and were either unavailable or failed");
   }
@@ -335,7 +371,7 @@ void RequestExecution::on_execute_next(Timer* timer) { request_handler_->execute
 void RequestExecution::on_retry_current_host() { retry_current_host(); }
 
 void RequestExecution::on_retry_next_host() {
-  current_host_->decrement_inflight_requests();
+  if (current_host_) current_host_->decrement_inflight_requests();
   retry_next_host();
 }
 
@@ -392,14 +428,8 @@ void RequestExecution::on_set(ResponseMessage* response) {
 }
 
 void RequestExecution::on_error(CassError code, const String& message) {
-  current_host_->decrement_inflight_requests();
-
-  // Handle recoverable errors by retrying with the next host
-  if (code == CASS_ERROR_LIB_WRITE_ERROR || code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {
-    retry_next_host();
-  } else {
-    set_error(code, message);
-  }
+  if (current_host_) current_host_->decrement_inflight_requests();
+  set_error(code, message);
 }
 
 void RequestExecution::notify_result_metadata_changed(const Request* request,
@@ -591,7 +621,8 @@ void RequestExecution::on_error_unprepared(Connection* connection, ErrorResponse
     return;
   }
 
-  if (!connection->write_and_flush(RequestCallback::Ptr(new PrepareCallback(query, this)))) {
+  RequestCallback::Ptr callback(new PrepareCallback(query, this));
+  if (connection->write_and_flush(callback) < 0) {
     // Try to prepare on the same host but on a different connection
     retry_current_host();
   }

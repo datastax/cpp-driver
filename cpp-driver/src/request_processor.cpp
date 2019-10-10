@@ -583,7 +583,7 @@ bool RequestProcessor::write_wait_callback(const RequestHandler::Ptr& request_ha
                                            const RequestCallback::Ptr& callback) {
   PooledConnection::Ptr connection(
       connection_pool_manager_->find_least_busy(current_host->address()));
-  if (connection && connection->write(callback.get())) {
+  if (connection && connection->write(callback.get()) > 0) {
     // Stop the original request timer now that we have a response and
     // are waiting for the maximum wait time of the handler.
     request_handler->stop_timer();
