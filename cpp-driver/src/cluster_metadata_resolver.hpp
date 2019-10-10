@@ -71,6 +71,7 @@ public:
 
   virtual ~ClusterMetadataResolverFactory() {}
   virtual ClusterMetadataResolver::Ptr new_instance(const ClusterSettings& settings) const = 0;
+  virtual const char* name() const = 0;
 };
 
 /**
@@ -81,6 +82,7 @@ public:
 class DefaultClusterMetadataResolverFactory : public ClusterMetadataResolverFactory {
 public:
   virtual ClusterMetadataResolver::Ptr new_instance(const ClusterSettings& settings) const;
+  virtual const char* name() const { return "Default"; }
 };
 
 }}} // namespace datastax::internal::core
