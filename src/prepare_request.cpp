@@ -45,7 +45,7 @@ int PrepareRequest::encode(ProtocolVersion version, RequestCallback* callback,
     size_t pos = buf.encode_int32(0, flags);
 
     if (!keyspace().empty()) {
-      buf.encode_string(pos, keyspace().data(), keyspace().size());
+      buf.encode_string(pos, keyspace().data(), static_cast<uint16_t>(keyspace().size()));
     }
   }
   return length;

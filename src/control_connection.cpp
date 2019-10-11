@@ -304,40 +304,6 @@ public:
 
 static NopControlConnectionListener nop_listener__;
 
-bool DefaultAddressFactory::create(const Row* peers_row, const Host::Ptr& connected_host,
-                                   Address* address) {
-  return determine_address_for_peer_host(connected_host->address(), peers_row->get_by_name("peer"),
-                                         peers_row->get_by_name("rpc_address"), address);
-}
-
-bool SniAddressFactory::create(const Row* peers_row, const Host::Ptr& connected_host,
-                               Address* address) {
-  CassUuid host_id;
-  if (!peers_row->get_uuid_by_name("host_id", &host_id)) {
-    // Attempt to get an peer address for the error log.
-    Address peer_address;
-    const Value* peer_value = peers_row->get_by_name("peer");
-    if (!peer_value || !peer_value->decoder().as_inet(
-                           peer_value->size(), connected_host->address().port(), &peer_address)) {
-      LOG_WARN("Invalid address format for peer address");
-    }
-    LOG_ERROR("Invalid `host_id` for host. %s will be ignored.",
-              peer_address.is_valid() ? peer_address.to_string().c_str() : "<unknown>");
-    return false;
-  }
-  *address = Address(connected_host->address().hostname_or_address(),
-                     connected_host->address().port(), to_string(host_id));
-  return true;
-}
-
-static AddressFactory* create_address_factory_from_config(const Config& config) {
-  if (config.cloud_secure_connection_config().is_loaded()) {
-    return new SniAddressFactory();
-  } else {
-    return new DefaultAddressFactory();
-  }
-}
-
 ControlConnectionSettings::ControlConnectionSettings()
     : use_schema(CASS_DEFAULT_USE_SCHEMA)
     , use_token_aware_routing(CASS_DEFAULT_USE_TOKEN_AWARE_ROUTING)
@@ -412,8 +378,8 @@ void ControlConnection::refresh_node(RefreshNodeType type, const Address& addres
 
   LOG_DEBUG("Refresh node: %s", query.c_str());
 
-  if (write_and_flush(RequestCallback::Ptr(
-          new RefreshNodeCallback(address, type, is_all_peers, query, this))) < 0) {
+  RequestCallback::Ptr callback(new RefreshNodeCallback(address, type, is_all_peers, query, this));
+  if (write_and_flush(callback) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh node info");
     defunct();
   }
@@ -433,9 +399,7 @@ void ControlConnection::handle_refresh_node(RefreshNodeCallback* callback) {
     row = rows.row();
     if (callback->is_all_peers) {
       Address address;
-      bool is_valid_address = determine_address_for_peer_host(
-          connection_->host()->rpc_address(), row->get_by_name("peer"),
-          row->get_by_name("rpc_address"), &address);
+      bool is_valid_address = settings_.address_factory->create(row, connection_->host(), &address);
       if (is_valid_address && callback->address == address) {
         found_host = true;
       }
@@ -484,8 +448,9 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
 
   LOG_DEBUG("Refreshing keyspace %s", query.c_str());
 
-  if (write_and_flush(RequestCallback::Ptr(
-          new RefreshKeyspaceCallback(keyspace_name.to_string(), query, this))) < 0) {
+  RequestCallback::Ptr callback(
+      new RefreshKeyspaceCallback(keyspace_name.to_string(), query, this));
+  if (write_and_flush(callback) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh keyspace info");
     defunct();
   }
@@ -630,8 +595,9 @@ void ControlConnection::refresh_type(const StringRef& keyspace_name, const Strin
 
   LOG_DEBUG("Refreshing type %s", query.c_str());
 
-  if (!write_and_flush(RequestCallback::Ptr(new RefreshTypeCallback(
-          keyspace_name.to_string(), type_name.to_string(), query, this)))) {
+  RequestCallback::Ptr callback(
+      new RefreshTypeCallback(keyspace_name.to_string(), type_name.to_string(), query, this));
+  if (write_and_flush(callback) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh type info");
     defunct();
   }
@@ -690,9 +656,10 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
   request->set(1, CassString(function_name.data(), function_name.size()));
   request->set(2, signature.get());
 
-  if (!write_and_flush(RequestCallback::Ptr(
-          new RefreshFunctionCallback(keyspace_name.to_string(), function_name.to_string(),
-                                      to_strings(arg_types), is_aggregate, request, this)))) {
+  RequestCallback::Ptr callback(
+      new RefreshFunctionCallback(keyspace_name.to_string(), function_name.to_string(),
+                                  to_strings(arg_types), is_aggregate, request, this));
+  if (write_and_flush(callback) < 0) {
     LOG_ERROR("No more stream available while attempting to refresh function info");
     defunct();
   }

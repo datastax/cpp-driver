@@ -148,7 +148,7 @@ CassError cass_uuid_from_string_n(const char* str, size_t str_length, CassUuid* 
     if (hex_to_half_byte[p0] == -1 || hex_to_half_byte[p1] == -1) {
       return CASS_ERROR_LIB_BAD_PARAMS;
     }
-    buf[i] = (hex_to_half_byte[p0] << 4) + hex_to_half_byte[p1];
+    buf[i] = static_cast<char>(hex_to_half_byte[p0] << 4) + hex_to_half_byte[p1];
     pos += 2;
   }
 

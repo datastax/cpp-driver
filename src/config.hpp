@@ -78,7 +78,6 @@ public:
     profiles_.set_empty_key(String());
 
     // Assign the defaults to the cluster profile
-    default_profile_.set_consistency(CASS_DEFAULT_CONSISTENCY);
     default_profile_.set_serial_consistency(CASS_DEFAULT_SERIAL_CONSISTENCY);
     default_profile_.set_request_timeout(CASS_DEFAULT_REQUEST_TIMEOUT_MS);
     default_profile_.set_load_balancing_policy(new DCAwarePolicy());
@@ -386,6 +385,18 @@ public:
 
   void set_cluster_metadata_resolver_factory(const ClusterMetadataResolverFactory::Ptr& factory) {
     cluster_metadata_resolver_factory_ = factory;
+  }
+
+  void set_default_consistency(CassConsistency consistency) {
+    if (default_profile_.consistency() == CASS_CONSISTENCY_UNKNOWN) {
+      default_profile_.set_consistency(consistency);
+    }
+
+    for (ExecutionProfile::Map::iterator it = profiles_.begin(); it != profiles_.end(); ++it) {
+      if (it->second.consistency() == CASS_CONSISTENCY_UNKNOWN) {
+        it->second.set_consistency(consistency);
+      }
+    }
   }
 
 private:

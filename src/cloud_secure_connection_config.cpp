@@ -208,6 +208,8 @@ public:
         settings.control_connection_settings.connection_settings.connect_timeout_ms));
   }
 
+  virtual const char* name() const { return "Cloud"; }
+
 private:
   String host_;
   int port_;

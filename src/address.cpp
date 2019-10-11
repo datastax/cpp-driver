@@ -176,43 +176,6 @@ String Address::to_string(bool with_port) const {
 
 namespace datastax { namespace internal { namespace core {
 
-bool determine_address_for_peer_host(const Address& connected_address, const Value* peer_value,
-                                     const Value* rpc_value, Address* output) {
-  Address peer_address;
-  if (!peer_value ||
-      !peer_value->decoder().as_inet(peer_value->size(), connected_address.port(), &peer_address)) {
-    LOG_WARN("Invalid address format for peer address");
-    return false;
-  }
-  if (rpc_value && !rpc_value->is_null()) {
-    if (!rpc_value->decoder().as_inet(rpc_value->size(), connected_address.port(), output)) {
-      LOG_WARN("Invalid address format for rpc address");
-      return false;
-    }
-    if (connected_address == *output || connected_address == peer_address) {
-      LOG_DEBUG("system.peers on %s contains a line with rpc_address for itself. "
-                "This is not normal, but is a known problem for some versions of DSE. "
-                "Ignoring this entry.",
-                connected_address.to_string(false).c_str());
-      return false;
-    }
-    if (Address("0.0.0.0", 0).equals(*output, false) || Address("::", 0).equals(*output, false)) {
-      LOG_WARN("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact "
-               "instead. "
-               "If this is incorrect you should configure a specific interface for rpc_address on "
-               "the server.",
-               peer_address.to_string(false).c_str());
-      *output = peer_address;
-    }
-  } else {
-    LOG_WARN("No rpc_address for host %s in system.peers on %s. "
-             "Ignoring this entry.",
-             peer_address.to_string(false).c_str(), connected_address.to_string(false).c_str());
-    return false;
-  }
-  return true;
-}
-
 String determine_listen_address(const Address& address, const Row* row) {
   const Value* v = row->get_by_name("peer");
   if (v != NULL) {

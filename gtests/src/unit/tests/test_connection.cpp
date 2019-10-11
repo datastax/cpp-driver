@@ -303,7 +303,7 @@ TEST_F(ConnectionUnitTest, SslCancel) {
 }
 
 TEST_F(ConnectionUnitTest, Timeout) {
-  mockssandra::RequestHandler::Builder builder;
+  mockssandra::SimpleRequestHandlerBuilder builder;
   builder.on(mockssandra::OPCODE_STARTUP).no_result(); // Don't return a response
   mockssandra::SimpleCluster cluster(builder.build());
   ASSERT_EQ(cluster.start_all(), 0);

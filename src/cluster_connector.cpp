@@ -257,7 +257,7 @@ void ClusterConnector::on_connect(ControlConnector* connector) {
 
     cluster_.reset(new Cluster(connector->release_connection(), listener_, event_loop_,
                                connected_host, hosts, connector->schema(), default_policy, policies,
-                               local_dc_, settings_));
+                               local_dc_, connector->supported_options(), settings_));
 
     // Clear any connection errors and set the final negotiated protocol version.
     error_code_ = CLUSTER_OK;

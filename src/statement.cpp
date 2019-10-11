@@ -275,7 +275,7 @@ Statement::Statement(const Prepared* prepared)
     , page_size_(-1) {
   // <id> [short bytes] (or [string])
   const String& id = prepared->id();
-  query_or_id_.encode_string(0, id.data(), id.size());
+  query_or_id_.encode_string(0, id.data(), static_cast<uint16_t>(id.size()));
   // Inherit settings and keyspace from the prepared statement
   set_settings(prepared->request_settings());
   // If the keyspace wasn't explictly set then attempt to set it using the
@@ -315,7 +315,7 @@ int32_t Statement::encode_batch(ProtocolVersion version, RequestCallback* callba
   { // <n> [short]
     bufs->push_back(Buffer(sizeof(uint16_t)));
     Buffer& buf = bufs->back();
-    buf.encode_uint16(0, elements().size());
+    buf.encode_uint16(0, static_cast<uint16_t>(elements().size()));
     length += sizeof(uint16_t);
   }
 
@@ -408,7 +408,7 @@ int32_t Statement::encode_begin(ProtocolVersion version, uint16_t element_count,
   if (version >= CASS_PROTOCOL_VERSION_V5) {
     pos = buf.encode_int32(pos, flags);
   } else {
-    pos = buf.encode_byte(pos, flags);
+    pos = buf.encode_byte(pos, static_cast<uint8_t>(flags));
   }
 
   if (element_count > 0) {
@@ -501,7 +501,7 @@ int32_t Statement::encode_end(ProtocolVersion version, RequestCallback* callback
     }
 
     if (with_keyspace) {
-      pos = buf.encode_string(pos, keyspace().data(), keyspace().size());
+      pos = buf.encode_string(pos, keyspace().data(), static_cast<uint16_t>(keyspace().size()));
     }
   }
 
@@ -542,7 +542,7 @@ bool Statement::calculate_routing_key(const Vector<size_t>& key_indices,
       size_t size = buf.size() - sizeof(int32_t);
 
       char size_buf[sizeof(uint16_t)];
-      encode_uint16(size_buf, size);
+      encode_uint16(size_buf, static_cast<uint16_t>(size));
       routing_key->append(size_buf, sizeof(uint16_t));
       routing_key->append(buf.data() + sizeof(int32_t), size);
       routing_key->push_back(0);

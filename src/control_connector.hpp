@@ -165,6 +165,8 @@ public:
     return error_code_ == CONTROL_CONNECTION_ERROR_CONNECTION && connector_->is_auth_error();
   }
 
+  const StringMultimap& supported_options() const { return connector_->supported_options(); }
+
   ControlConnectionError error_code() const { return error_code_; }
   const String& error_message() const { return error_message_; }
   CassError ssl_error_code() { return connector_->ssl_error_code(); }
