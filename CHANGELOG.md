@@ -1,3 +1,19 @@
+1.10.0-alpha-2
+===========
+
+Features
+--------
+[CPP-812] - Enable warnings for implicit casts and fix problems
+[CPP-813] - Detect CaaS and change consistency default
+[CPP-817] - Provide error if mixed usage of secure connect bundle and contact points/ssl context
+[CPP-818] - Add missing configuration elements to Insights startup message
+
+Bug Fixes
+--------
+[CPP-802] - Handle prepared id mismatch when repreparing on the fly
+[CPP-815] - Schema agreement fails with SNI
+[CPP-811] - Requests won't complete if they exceed the number of streams on a connection
+
 1.10.0-alpha
 ===========
 

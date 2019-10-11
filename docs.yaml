@@ -20,6 +20,7 @@ sections:
     type:      markdown
     files:     ['cpp-driver/topics/README.md',
                 'cpp-driver/topics/basics/**/*.md',
+                'cpp-driver/topics/cloud/**/*.md',
                 'cpp-driver/topics/configuration/**/*.md',
                 'cpp-driver/topics/logging/**/*.md',
                 'cpp-driver/topics/metrics/**/*.md',
