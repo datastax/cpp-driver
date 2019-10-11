@@ -55,7 +55,7 @@ ProtocolVersion ProtocolVersion::newest_beta() {
 int ProtocolVersion::value() const { return value_; }
 
 bool ProtocolVersion::is_valid() const {
-  bool is_dse_version = value_ & DSE_PROTOCOL_VERSION_BIT;
+  bool is_dse_version = is_dse();
   if (value_ < CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
     LOG_ERROR("Protocol version %s is lower than the lowest supported "
               "protocol version %s",
@@ -77,10 +77,12 @@ bool ProtocolVersion::is_valid() const {
 
 bool ProtocolVersion::is_beta() const { return value_ == DSE_NEWEST_BETA_PROTOCOL_VERSION; }
 
+bool ProtocolVersion::is_dse() const { return (value_ & DSE_PROTOCOL_VERSION_BIT) != 0; }
+
 String ProtocolVersion::to_string() const {
   if (value_ > 0) {
     OStringStream ss;
-    if (value_ & DSE_PROTOCOL_VERSION_BIT) {
+    if (is_dse()) {
       ss << "DSEv" << (value_ & DSE_PROTOCOL_VERSION_MASK);
     } else {
       ss << "v" << value_;
@@ -100,8 +102,7 @@ bool ProtocolVersion::attempt_lower_supported(const String& host) {
   }
 
   int previous_version = value_;
-  bool is_dse_version = value_ & DSE_PROTOCOL_VERSION_BIT;
-  if (is_dse_version && value_ <= CASS_PROTOCOL_VERSION_DSEV1) {
+  if (is_dse() && value_ <= CASS_PROTOCOL_VERSION_DSEV1) {
     // Start trying Cassandra protocol versions
     value_ = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
   } else {

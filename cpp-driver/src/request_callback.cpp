@@ -86,10 +86,10 @@ int32_t RequestCallback::encode(BufferVec* bufs) {
 
   Buffer buf(header_size);
   size_t pos = 0;
-  pos = buf.encode_byte(pos, version.value());
-  pos = buf.encode_byte(pos, flags);
+  pos = buf.encode_byte(pos, static_cast<uint8_t>(version.value()));
+  pos = buf.encode_byte(pos, static_cast<uint8_t>(flags));
 
-  pos = buf.encode_int16(pos, stream_);
+  pos = buf.encode_int16(pos, static_cast<int16_t>(stream_));
 
   pos = buf.encode_byte(pos, req->opcode());
   buf.encode_int32(pos, length);

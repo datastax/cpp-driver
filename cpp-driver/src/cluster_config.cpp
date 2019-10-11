@@ -408,7 +408,7 @@ CassError cass_cluster_set_use_hostname_resolution(CassCluster* cluster, cass_bo
 
 CassError cass_cluster_set_use_randomized_contact_points(CassCluster* cluster,
                                                          cass_bool_t enabled) {
-  cluster->config().set_use_randomized_contact_points(enabled);
+  cluster->config().set_use_randomized_contact_points(enabled == cass_true);
   return CASS_OK;
 }
 

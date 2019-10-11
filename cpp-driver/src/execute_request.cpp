@@ -40,7 +40,7 @@ int ExecuteRequest::encode(ProtocolVersion version, RequestCallback* callback,
       length += bufs->back().size();
     }
   }
-  length += encode_begin(version, elements().size(), callback, bufs);
+  length += encode_begin(version, static_cast<uint16_t>(elements().size()), callback, bufs);
   int32_t result = encode_values(version, callback, bufs);
   if (result < 0) return result;
   length += result;

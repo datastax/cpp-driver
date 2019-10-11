@@ -333,7 +333,7 @@ size_t Socket::flush() {
 }
 
 bool Socket::is_closing() const {
-  return uv_is_closing(reinterpret_cast<const uv_handle_t*>(&tcp_));
+  return uv_is_closing(reinterpret_cast<const uv_handle_t*>(&tcp_)) != 0;
 }
 
 void Socket::close() {

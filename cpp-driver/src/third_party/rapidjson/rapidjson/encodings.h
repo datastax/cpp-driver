@@ -17,11 +17,16 @@
 
 #include "rapidjson.h"
 
-#if defined(_MSC_VER) && !defined(__clang__)
+#ifdef __clang__
+RAPIDJSON_DIAG_PUSH
+RAPIDJSON_DIAG_OFF(conversion)
+#elif defined(_MSC_VER)
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(4244) // conversion from 'type1' to 'type2', possible loss of data
 RAPIDJSON_DIAG_OFF(4702)  // unreachable code
-#elif defined(__GNUC__)
+#endif
+
+#ifdef __GNUC__
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(effc++)
 RAPIDJSON_DIAG_OFF(overflow)
@@ -709,7 +714,11 @@ struct Transcoder<Encoding, Encoding> {
 
 RAPIDJSON_NAMESPACE_END
 
-#if defined(__GNUC__) || (defined(_MSC_VER) && !defined(__clang__))
+#if defined(__clang__) || defined(_MSC_VER)
+RAPIDJSON_DIAG_POP
+#endif
+
+#ifdef __GNUC__
 RAPIDJSON_DIAG_POP
 #endif
 

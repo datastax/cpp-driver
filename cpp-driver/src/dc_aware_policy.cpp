@@ -92,7 +92,7 @@ QueryPlan* DCAwarePolicy::new_query_plan(const String& keyspace, RequestHandler*
 
 bool DCAwarePolicy::is_host_up(const Address& address) const {
   ScopedReadLock rl(&available_rwlock_);
-  return available_.count(address);
+  return available_.count(address) > 0;
 }
 
 void DCAwarePolicy::on_host_added(const Host::Ptr& host) {

@@ -42,6 +42,7 @@ RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(old-style-cast)
 RAPIDJSON_DIAG_OFF(padded)
 RAPIDJSON_DIAG_OFF(switch-enum)
+RAPIDJSON_DIAG_OFF(conversion)
 #elif defined(_MSC_VER)
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(4127)  // conditional expression is constant
