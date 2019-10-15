@@ -74,7 +74,7 @@ build_driver() {
   (
     cd build
     BUILD_INTEGRATION_TESTS=Off
-    if [ "${CI_SCHEDULE}" != "commit" ]; then
+    if [ "${CI_INTEGRATION_ENABLED}" == "true" ]; then
       BUILD_INTEGRATION_TESTS=On
     fi
     cmake -DCMAKE_BUILD_TYPE=Release \
