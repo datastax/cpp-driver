@@ -22,6 +22,7 @@ schedules:
         - os: ['ubuntu/trusty64/cpp', 'ubuntu/xenial64/cpp', 'centos/6-64/cpp', 'centos/7-64/cpp', 'osx/high-sierra']
     env_vars: |
       CI_SCHEDULE=nightly
+      CI_INTEGRATION_ENABLED=true
 architecture:
   - x64
 os:
@@ -63,6 +64,8 @@ release:
   matrix:
     exclude:
       - os: [ osx/high-sierra ]
+    env_vars: |
+      CI_SCHEDULE=release
   after:
     each:
       - script: |
