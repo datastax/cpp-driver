@@ -78,7 +78,7 @@ bool Decoder::decode_inet(CassInet* output) {
 }
 
 bool Decoder::as_inet(const int address_length, CassInet* output) const {
-  output->address_length = address_length;
+  output->address_length = static_cast<uint8_t>(address_length);
   if (output->address_length > CASS_INET_V6_LENGTH) {
     LOG_ERROR("Invalid inet address length of %d bytes", output->address_length);
     return false;

@@ -145,7 +145,8 @@ RequestProcessorSettings::RequestProcessorSettings()
     , new_request_ratio(CASS_DEFAULT_NEW_REQUEST_RATIO)
     , max_tracing_wait_time_ms(CASS_DEFAULT_MAX_TRACING_DATA_WAIT_TIME_MS)
     , retry_tracing_wait_time_ms(CASS_DEFAULT_RETRY_TRACING_DATA_WAIT_TIME_MS)
-    , tracing_consistency(CASS_DEFAULT_TRACING_CONSISTENCY) {
+    , tracing_consistency(CASS_DEFAULT_TRACING_CONSISTENCY)
+    , address_factory(new DefaultAddressFactory()) {
   profiles.set_empty_key("");
 }
 
@@ -161,7 +162,8 @@ RequestProcessorSettings::RequestProcessorSettings(const Config& config)
     , new_request_ratio(config.new_request_ratio())
     , max_tracing_wait_time_ms(config.max_tracing_wait_time_ms())
     , retry_tracing_wait_time_ms(config.retry_tracing_wait_time_ms())
-    , tracing_consistency(config.tracing_consistency()) {}
+    , tracing_consistency(config.tracing_consistency())
+    , address_factory(create_address_factory_from_config(config)) {}
 
 RequestProcessor::RequestProcessor(RequestProcessorListener* listener, EventLoop* event_loop,
                                    const ConnectionPoolManager::Ptr& connection_pool_manager,
@@ -338,8 +340,9 @@ bool RequestProcessor::on_wait_for_tracing_data(const RequestHandler::Ptr& reque
 bool RequestProcessor::on_wait_for_schema_agreement(const RequestHandler::Ptr& request_handler,
                                                     const Host::Ptr& current_host,
                                                     const Response::Ptr& response) {
-  SchemaAgreementHandler::Ptr handler(new SchemaAgreementHandler(
-      request_handler, current_host, response, this, settings_.max_schema_wait_time_ms));
+  SchemaAgreementHandler::Ptr handler(
+      new SchemaAgreementHandler(request_handler, current_host, response, this,
+                                 settings_.max_schema_wait_time_ms, settings_.address_factory));
 
   return write_wait_callback(request_handler, current_host, handler->callback());
 }
@@ -580,7 +583,7 @@ bool RequestProcessor::write_wait_callback(const RequestHandler::Ptr& request_ha
                                            const RequestCallback::Ptr& callback) {
   PooledConnection::Ptr connection(
       connection_pool_manager_->find_least_busy(current_host->address()));
-  if (connection && connection->write(callback.get())) {
+  if (connection && connection->write(callback.get()) > 0) {
     // Stop the original request timer now that we have a response and
     // are waiting for the maximum wait time of the handler.
     request_handler->stop_timer();

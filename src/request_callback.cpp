@@ -58,6 +58,7 @@ bool RequestCallback::skip_metadata() const {
 int32_t RequestCallback::encode(BufferVec* bufs) {
   const ProtocolVersion version = protocol_version_;
   if (version < CASS_LOWEST_SUPPORTED_PROTOCOL_VERSION) {
+    on_error(CASS_ERROR_LIB_MESSAGE_ENCODE, "Operation unsupported by this protocol version");
     return Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL;
   }
 
@@ -85,10 +86,10 @@ int32_t RequestCallback::encode(BufferVec* bufs) {
 
   Buffer buf(header_size);
   size_t pos = 0;
-  pos = buf.encode_byte(pos, version.value());
-  pos = buf.encode_byte(pos, flags);
+  pos = buf.encode_byte(pos, static_cast<uint8_t>(version.value()));
+  pos = buf.encode_byte(pos, static_cast<uint8_t>(flags));
 
-  pos = buf.encode_int16(pos, stream_);
+  pos = buf.encode_int16(pos, static_cast<int16_t>(stream_));
 
   pos = buf.encode_byte(pos, req->opcode());
   buf.encode_int32(pos, length);
@@ -245,8 +246,7 @@ ResultResponse::Ptr ChainedRequestCallback::result(const String& key) const {
 
 void ChainedRequestCallback::on_internal_write(Connection* connection) {
   if (chain_) {
-    int32_t result = connection->write_and_flush(chain_);
-    if (result == Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS) {
+    if (connection->write_and_flush(chain_) < 0) {
       on_error(CASS_ERROR_LIB_NO_STREAMS,
                "No streams available when attempting to write chained request");
     }

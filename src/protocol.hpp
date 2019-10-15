@@ -84,6 +84,13 @@ public:
   bool is_valid() const;
 
   /**
+   * Check to see if the protocol version's value is DSE.
+   *
+   * @return true if DSE, otherwise false;
+   */
+  bool is_dse() const;
+
+  /**
    * Check to see if the protocol version is a beta version.
    *
    * @return true if a beta version, otherwise false.

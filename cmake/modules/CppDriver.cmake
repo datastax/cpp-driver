@@ -151,11 +151,18 @@ macro(CassConfigureShared prefix)
   if("${prefix}" STREQUAL "DSE")
     set(STATIC_COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -DCASS_BUILDING")
   endif()
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
-     "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set_property(
+        TARGET ${PROJECT_LIB_NAME}
+        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-undefined-var-template -Werror")
+  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # To many superfluous warnings generated with GCC when using -Wconversion (see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40752)
     set_property(
         TARGET ${PROJECT_LIB_NAME}
         APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Werror")
+  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    set_property(
+        TARGET ${PROJECT_LIB_NAME}
+        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} /we4800")
   endif()
 endmacro()
 
@@ -181,11 +188,18 @@ macro(CassConfigureStatic prefix)
   if("${prefix}" STREQUAL "DSE")
     set(STATIC_COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -DCASS_STATIC")
   endif()
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
-     "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set_property(
+        TARGET ${PROJECT_LIB_NAME_STATIC}
+        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-undefined-var-template -Werror")
+  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # To many superfluous warnings generated with GCC when using -Wconversion (see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40752)
     set_property(
         TARGET ${PROJECT_LIB_NAME_STATIC}
         APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} -Werror")
+  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    set_property(
+        TARGET ${PROJECT_LIB_NAME_STATIC}
+        APPEND PROPERTY COMPILE_FLAGS "${STATIC_COMPILE_FLAGS} /we4800")
   endif()
 
   # Update the CXX flags to indicate the use of the static library
@@ -874,7 +888,6 @@ macro(CassSetCompilerFlags)
     # TODO(mpenick): Fix these "possible loss of data" warnings
     add_definitions(/wd4244)
     add_definitions(/wd4267)
-    add_definitions(/wd4800) # Performance warning due to automatic compiler casting from int to bool
 
     # Add preprocessor definitions for proper compilation
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)  # Remove warnings for not using safe functions (TODO: Fix codebase to be more secure for Visual Studio)

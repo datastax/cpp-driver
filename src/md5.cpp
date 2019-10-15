@@ -116,33 +116,33 @@ void Md5::final(uint8_t* result) {
   memset(&buffer_[used], 0, free - 8);
 
   lo_ <<= 3;
-  buffer_[56] = lo_;
-  buffer_[57] = lo_ >> 8;
-  buffer_[58] = lo_ >> 16;
-  buffer_[59] = lo_ >> 24;
-  buffer_[60] = hi_;
-  buffer_[61] = hi_ >> 8;
-  buffer_[62] = hi_ >> 16;
-  buffer_[63] = hi_ >> 24;
+  buffer_[56] = static_cast<unsigned char>(lo_);
+  buffer_[57] = static_cast<unsigned char>(lo_ >> 8);
+  buffer_[58] = static_cast<unsigned char>(lo_ >> 16);
+  buffer_[59] = static_cast<unsigned char>(lo_ >> 24);
+  buffer_[60] = static_cast<unsigned char>(hi_);
+  buffer_[61] = static_cast<unsigned char>(hi_ >> 8);
+  buffer_[62] = static_cast<unsigned char>(hi_ >> 16);
+  buffer_[63] = static_cast<unsigned char>(hi_ >> 24);
 
   body(buffer_, 64);
 
-  result[0] = a_;
-  result[1] = a_ >> 8;
-  result[2] = a_ >> 16;
-  result[3] = a_ >> 24;
-  result[4] = b_;
-  result[5] = b_ >> 8;
-  result[6] = b_ >> 16;
-  result[7] = b_ >> 24;
-  result[8] = c_;
-  result[9] = c_ >> 8;
-  result[10] = c_ >> 16;
-  result[11] = c_ >> 24;
-  result[12] = d_;
-  result[13] = d_ >> 8;
-  result[14] = d_ >> 16;
-  result[15] = d_ >> 24;
+  result[0] = static_cast<uint8_t>(a_);
+  result[1] = static_cast<uint8_t>(a_ >> 8);
+  result[2] = static_cast<uint8_t>(a_ >> 16);
+  result[3] = static_cast<uint8_t>(a_ >> 24);
+  result[4] = static_cast<uint8_t>(b_);
+  result[5] = static_cast<uint8_t>(b_ >> 8);
+  result[6] = static_cast<uint8_t>(b_ >> 16);
+  result[7] = static_cast<uint8_t>(b_ >> 24);
+  result[8] = static_cast<uint8_t>(c_);
+  result[9] = static_cast<uint8_t>(c_ >> 8);
+  result[10] = static_cast<uint8_t>(c_ >> 16);
+  result[11] = static_cast<uint8_t>(c_ >> 24);
+  result[12] = static_cast<uint8_t>(d_);
+  result[13] = static_cast<uint8_t>(d_ >> 8);
+  result[14] = static_cast<uint8_t>(d_ >> 16);
+  result[15] = static_cast<uint8_t>(d_ >> 24);
 
   memset(this, 0, sizeof(Md5));
 }

@@ -127,7 +127,7 @@ void WaitForHandler::on_retry_timeout(Timer* timer) {
     finish();
   } else if (connection_->write_and_flush(callback(requests_)) ==
              core::Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS) {
-    on_error(WaitForHandler::WAIT_FOR_ERROR_NO_STREAMS, "Connection closed");
+    on_error(WaitForHandler::WAIT_FOR_ERROR_NO_STREAMS, "No streams available");
     finish();
   }
 }

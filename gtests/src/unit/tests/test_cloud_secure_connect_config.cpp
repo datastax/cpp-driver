@@ -20,6 +20,7 @@
 #include "http_test.hpp"
 
 #include "cloud_secure_connection_config.hpp"
+#include "cluster_config.hpp"
 #include "cluster_connector.hpp"
 #include "cluster_metadata_resolver.hpp"
 #include "config.hpp"
@@ -57,10 +58,13 @@
 using datastax::String;
 using datastax::internal::core::AddressVec;
 using datastax::internal::core::CloudSecureConnectionConfig;
+using datastax::internal::core::ClusterConfig;
 using datastax::internal::core::ClusterMetadataResolver;
 using datastax::internal::core::ClusterSettings;
 using datastax::internal::core::Config;
 using datastax::internal::core::HttpClient;
+using datastax::internal::core::SslContext;
+using datastax::internal::core::SslContextFactory;
 using datastax::internal::enterprise::DsePlainTextAuthProvider;
 using datastax::internal::json::StringBuffer;
 using datastax::internal::json::Writer;
@@ -594,5 +598,90 @@ TEST_F(CloudMetadataServerTest, ResolveInvalidJsonErrorResponse) {
   EXPECT_EQ(logging_criteria_count(), 1);
 
   stop_http_server();
+}
+
+TEST_F(CloudMetadataServerTest, CloudConfiguredInvalidContactPointsOverride) {
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  create_zip_file(buffer.GetString());
+
+  ClusterConfig cluster_config;
+  CassCluster* cluster = CassCluster::to(&cluster_config);
+  EXPECT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster, creds_zip_file().c_str()));
+  add_logging_critera("Contact points cannot be overridden with cloud secure connection bundle");
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+            cass_cluster_set_contact_points(cluster, "some.contact.point"));
+  EXPECT_EQ(logging_criteria_count(), 1);
+}
+
+TEST_F(CloudMetadataServerTest, CloudConfiguredInvalidSslContextOverride) {
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  create_zip_file(buffer.GetString());
+
+  ClusterConfig cluster_config;
+  CassCluster* cluster = CassCluster::to(&cluster_config);
+  SslContext::Ptr ssl_context(SslContextFactory::create());
+  CassSsl* ssl = CassSsl::to(ssl_context.get());
+
+  EXPECT_EQ(CASS_OK, cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                         cluster, creds_zip_file().c_str()));
+  add_logging_critera("SSL context cannot be overridden with cloud secure connection bundle");
+  cass_cluster_set_ssl(cluster, ssl);
+  EXPECT_EQ(logging_criteria_count(), 1);
+}
+
+TEST_F(CloudMetadataServerTest, CloudConfiguredFailureContactPointsExist) {
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  create_zip_file(buffer.GetString());
+
+  ClusterConfig cluster_config;
+  CassCluster* cluster = CassCluster::to(&cluster_config);
+  EXPECT_EQ(CASS_OK, cass_cluster_set_contact_points(cluster, "some.contact.point"));
+  add_logging_critera("Contact points must not be specified with cloud secure connection bundle");
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+            cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                cluster, creds_zip_file().c_str()));
+  EXPECT_EQ(logging_criteria_count(), 1);
+}
+
+TEST_F(CloudMetadataServerTest, CloudConfiguredFailureSslContextExist) {
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  create_zip_file(buffer.GetString());
+
+  ClusterConfig cluster_config;
+  CassCluster* cluster = CassCluster::to(&cluster_config);
+  SslContext::Ptr ssl_context(SslContextFactory::create());
+  CassSsl* ssl = CassSsl::to(ssl_context.get());
+
+  cass_cluster_set_ssl(cluster, ssl);
+  add_logging_critera("SSL context must not be specified with cloud secure connection bundle");
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+            cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                cluster, creds_zip_file().c_str()));
+  EXPECT_EQ(logging_criteria_count(), 1);
+}
+
+TEST_F(CloudMetadataServerTest, CloudConfiguredFailureContactPointsAndSslContextExist) {
+  StringBuffer buffer;
+  full_config_credsv1(buffer);
+  create_zip_file(buffer.GetString());
+
+  ClusterConfig cluster_config;
+  CassCluster* cluster = CassCluster::to(&cluster_config);
+  SslContext::Ptr ssl_context(SslContextFactory::create());
+  CassSsl* ssl = CassSsl::to(ssl_context.get());
+
+  EXPECT_EQ(CASS_OK, cass_cluster_set_contact_points(cluster, "some.contact.point"));
+  cass_cluster_set_ssl(cluster, ssl);
+  add_logging_critera(
+      "Contact points and SSL context must not be specified with cloud secure connection bundle");
+  EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
+            cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(
+                cluster, creds_zip_file().c_str()));
+  EXPECT_EQ(logging_criteria_count(), 1);
 }
 #endif

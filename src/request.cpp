@@ -54,7 +54,7 @@ void cass_custom_payload_free(CassCustomPayload* payload) { payload->dec_ref(); 
 void CustomPayload::set(const char* name, size_t name_length, const uint8_t* value,
                         size_t value_size) {
   Buffer buf(sizeof(uint16_t) + name_length + sizeof(int32_t) + value_size);
-  size_t pos = buf.encode_string(0, name, name_length);
+  size_t pos = buf.encode_string(0, name, static_cast<uint16_t>(name_length));
   buf.encode_bytes(pos, reinterpret_cast<const char*>(value), value_size);
   items_[String(name, name_length)] = buf;
 }

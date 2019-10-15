@@ -72,13 +72,13 @@ CassDataType* cass_data_type_new_from_existing(const CassDataType* data_type) {
 }
 
 CassDataType* cass_data_type_new_tuple(size_t item_count) {
-  DataType* data_type = new CollectionType(CASS_VALUE_TYPE_TUPLE, item_count);
+  DataType* data_type = new CollectionType(CASS_VALUE_TYPE_TUPLE, item_count, false);
   data_type->inc_ref();
   return CassDataType::to(data_type);
 }
 
 CassDataType* cass_data_type_new_udt(size_t field_count) {
-  DataType* data_type = new UserType(field_count);
+  DataType* data_type = new UserType(field_count, false);
   data_type->inc_ref();
   return CassDataType::to(data_type);
 }

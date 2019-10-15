@@ -28,6 +28,7 @@
 #include "address.hpp"
 #include "event_loop.hpp"
 #include "list.hpp"
+#include "map.hpp"
 #include "ref_counted.hpp"
 #include "scoped_ptr.hpp"
 #include "string.hpp"
@@ -46,6 +47,7 @@
 using datastax::String;
 using datastax::internal::Atomic;
 using datastax::internal::List;
+using datastax::internal::Map;
 using datastax::internal::RefCounted;
 using datastax::internal::ScopedPtr;
 using datastax::internal::SharedRefPtr;
@@ -359,6 +361,8 @@ struct QueryParameters {
   int64_t timestamp;
   String keyspace;
 };
+
+int32_t encode_string_map(const Map<String, Vector<String> >& value, String* output);
 
 class Type {
 public:

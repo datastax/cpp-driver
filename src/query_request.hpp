@@ -50,7 +50,7 @@ private:
     ValueName(const String& name)
         : name(name)
         , buf(sizeof(uint16_t) + name.size()) {
-      buf.encode_string(0, name.data(), name.size());
+      buf.encode_string(0, name.data(), static_cast<uint16_t>(name.size()));
     }
 
     String name;

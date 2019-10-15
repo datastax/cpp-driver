@@ -130,34 +130,12 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
 
   int32_t request_size = socket_->write(callback.get());
 
-  if (request_size < 0) {
+  if (request_size <= 0) {
     stream_manager_.release(stream);
-
-    switch (request_size) {
-      case SocketRequest::SOCKET_REQUEST_ERROR_CLOSED:
-        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unable to write to close socket");
-        break;
-
-      case SocketRequest::SOCKET_REQUEST_ERROR_NO_HANDLER:
-        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
-                           "Socket is not properly configured with a handler");
-        break;
-
-      case Request::REQUEST_ERROR_BATCH_WITH_NAMED_VALUES:
-      case Request::REQUEST_ERROR_PARAMETER_UNSET:
-        // Already handled with a specific error.
-        break;
-
-      case Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL:
-        callback->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                           "Operation unsupported by this protocol version");
-        break;
-
-      default:
-        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unspecified write error occurred");
-        break;
+    if (request_size == 0) {
+      callback->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE, "The encoded request had no data to write");
+      return Request::REQUEST_ERROR_NO_DATA_WRITTEN;
     }
-
     return request_size;
   }
 
@@ -340,7 +318,8 @@ void Connection::restart_heartbeat_timer() {
 
 void Connection::on_heartbeat(Timer* timer) {
   if (!heartbeat_outstanding_ && !socket_->is_closing()) {
-    if (!write_and_flush(RequestCallback::Ptr(new HeartbeatCallback(this)))) {
+    RequestCallback::Ptr callback(new HeartbeatCallback(this));
+    if (write_and_flush(callback) < 0) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests
       // that never returned and as a result timed out.

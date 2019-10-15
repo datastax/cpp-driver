@@ -29,10 +29,10 @@ int QueryRequest::encode(ProtocolVersion version, RequestCallback* callback,
   int32_t result;
   int32_t length = encode_query_or_id(bufs);
   if (has_names_for_values()) {
-    length += encode_begin(version, value_names_->size(), callback, bufs);
+    length += encode_begin(version, static_cast<uint16_t>(value_names_->size()), callback, bufs);
     result = encode_values_with_names(version, callback, bufs);
   } else {
-    length += encode_begin(version, elements().size(), callback, bufs);
+    length += encode_begin(version, static_cast<uint16_t>(elements().size()), callback, bufs);
     result = encode_values(version, callback, bufs);
   }
   if (result < 0) return result;

@@ -250,6 +250,7 @@ public:
    * @param load_balancing_policies
    * @param local_dc The local datacenter determined by the metadata service for initializing the
    * load balancing policies.
+   * @param supported_options Supported options discovered during control connection.
    * @param settings The control connection settings to use for reconnecting the
    * control connection.
    */
@@ -258,7 +259,7 @@ public:
           const ControlConnectionSchema& schema,
           const LoadBalancingPolicy::Ptr& load_balancing_policy,
           const LoadBalancingPolicy::Vec& load_balancing_policies, const String& local_dc,
-          const ClusterSettings& settings);
+          const StringMultimap& supported_options, const ClusterSettings& settings);
 
   /**
    * Set the listener that will handle events for the cluster
@@ -353,6 +354,7 @@ public:
   const TokenMap::Ptr& token_map() const { return token_map_; }
   const String& local_dc() const { return local_dc_; }
   const VersionNumber& dse_server_version() const { return connection_->dse_server_version(); }
+  const StringMultimap& supported_options() const { return supported_options_; }
 
 private:
   friend class ClusterRunClose;
@@ -438,6 +440,7 @@ private:
   PreparedMetadata prepared_metadata_;
   TokenMap::Ptr token_map_;
   String local_dc_;
+  StringMultimap supported_options_;
   Timer timer_;
   bool is_recording_events_;
   ClusterEvent::Vec recorded_events_;

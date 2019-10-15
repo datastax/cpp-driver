@@ -234,7 +234,7 @@ void SocketWriteBase::on_close() {
 int32_t SocketWriteBase::write(SocketRequest* request) {
   size_t last_buffer_size = buffers_.size();
   int32_t request_size = request->encode(&buffers_);
-  if (request_size < 0) {
+  if (request_size <= 0) {
     buffers_.resize(last_buffer_size); // Rollback
     return request_size;
   }
@@ -333,7 +333,7 @@ size_t Socket::flush() {
 }
 
 bool Socket::is_closing() const {
-  return uv_is_closing(reinterpret_cast<const uv_handle_t*>(&tcp_));
+  return uv_is_closing(reinterpret_cast<const uv_handle_t*>(&tcp_)) != 0;
 }
 
 void Socket::close() {

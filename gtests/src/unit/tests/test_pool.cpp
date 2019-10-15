@@ -324,7 +324,7 @@ public:
     if (connection) {
       RequestStatus status(manager->loop(), 1);
       RequestCallback::Ptr callback(new RequestCallback(&status));
-      EXPECT_TRUE(connection->write(callback.get()))
+      EXPECT_TRUE(connection->write(callback.get()) > 0)
           << "Unable to write request to connection " << address.to_string();
       connection->flush(); // Flush requests to avoid unnecessary timeouts
       uv_run(loop(), UV_RUN_DEFAULT);
@@ -344,7 +344,7 @@ public:
       PooledConnection::Ptr connection = manager->find_least_busy(generator.next());
       if (connection) {
         RequestCallback::Ptr callback(new RequestCallback(status));
-        if (!connection->write(callback.get())) {
+        if (connection->write(callback.get()) < 0) {
           status->error_failed_write();
         }
       } else {

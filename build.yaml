@@ -9,6 +9,19 @@ schedules:
       slack: cpp-driver-dev-bots
     branches:
       include: ["/CPP-\\d+/", "master"]
+    env_vars: |
+      CI_SCHEDULE=commit
+  nightly:
+    schedule: nightly
+    notify:
+      slack: cpp-driver-dev-bots
+    branches:
+      include: ["/CPP-\\d+/", "master"]
+    matrix:
+      exclude:
+        - os: ['ubuntu/trusty64/cpp', 'ubuntu/xenial64/cpp', 'centos/6-64/cpp', 'centos/7-64/cpp', 'osx/high-sierra']
+    env_vars: |
+      CI_SCHEDULE=nightly
 architecture:
   - x64
 os:
@@ -19,7 +32,7 @@ os:
   - centos/7-64/cpp
   - osx/high-sierra
 env:
-  LIBUV_VERSION: 1.31.0
+  LIBUV_VERSION: 1.32.0
 build:
   - script: |
       . .build.sh

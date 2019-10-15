@@ -96,7 +96,7 @@ public:
 
     if (server_version_ >= "3.0.0") {
       session_.execute(format_string("CREATE MATERIALIZED VIEW %s "
-                                     "AS SELECT value "
+                                     "AS SELECT value, key "
                                      "   FROM %s"
                                      "   WHERE value IS NOT NULL and key IS NOT NULL "
                                      "PRIMARY KEY(value, key)",
@@ -319,9 +319,9 @@ CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, MaterializedViewMetaFu
  */
 CASSANDRA_INTEGRATION_TEST_F(SchemaNullStringApiArgsTest, FunctionAndAggregateMetaFunctions) {
   CHECK_VERSION(2.2.0);
-  // C* 3.x and later annotate collection columns as frozen.
+  // C* 3.x annotate collection columns as frozen.
   const CassFunctionMeta* function_meta =
-      (schema_meta_.version().major_version >= 3)
+      (schema_meta_.version().major_version == 3)
           ? cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final",
                                                 "frozen<tuple<int,bigint>>")
           : cass_keyspace_meta_function_by_name(keyspace_meta_.get(), "avg_final",
