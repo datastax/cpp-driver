@@ -1029,3 +1029,41 @@ TEST_F(ClusterUnitTest, NoContactPoints) {
   ASSERT_TRUE(connect_future->error());
   EXPECT_EQ(connect_future->error()->code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
+
+TEST_F(ClusterUnitTest, PortIsAssignedDuringConnection) {
+  mockssandra::SimpleCluster cluster(simple(), 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  AddressVec contact_points;
+  contact_points.push_back(Address("127.0.0.1", -1));
+
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
+
+  ClusterSettings settings; // Default port and metadata resolver
+  connector->with_settings(settings)->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+}
+
+TEST_F(ClusterUnitTest, HostIsResolvedAndPortIsAssignedDuringConnection) {
+  mockssandra::SimpleCluster cluster(simple(), 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  AddressVec contact_points;
+  contact_points.push_back(Address("localhost", -1));
+
+  Future::Ptr connect_future(new Future());
+  ClusterConnector::Ptr connector(
+      new ClusterConnector(contact_points, PROTOCOL_VERSION,
+                           bind_callback(on_connection_reconnect, connect_future.get())));
+
+  ClusterSettings settings; // Default port and metadata resolver
+  connector->with_settings(settings)->connect(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+}

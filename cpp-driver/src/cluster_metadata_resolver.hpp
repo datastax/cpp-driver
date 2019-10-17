@@ -75,7 +75,7 @@ public:
 };
 
 /**
- * This factory creates cluster metaadata resolvers that determine contact points using DNS.
+ * This factory creates cluster metadata resolvers that determine contact points using DNS.
  * Domain names with multiple A-records are expanded into multiple contact points and addresses
  * that are already resolved are passed through.
  */
