@@ -27,19 +27,91 @@
 using namespace datastax::internal;
 using namespace datastax::internal::core;
 
+class InorderLoadBalancingPolicy : public LoadBalancingPolicy {
+public:
+  typedef SharedRefPtr<LoadBalancingPolicy> Ptr;
+  typedef Vector<Ptr> Vec;
+
+  InorderLoadBalancingPolicy()
+      : LoadBalancingPolicy()
+      , hosts_(new HostVec()) {}
+
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
+                    const String& local_dc) {
+    hosts_->reserve(hosts.size());
+    std::transform(hosts.begin(), hosts.end(), std::back_inserter(*hosts_), GetHost());
+  }
+
+  virtual CassHostDistance distance(const Host::Ptr& host) const {
+    return CASS_HOST_DISTANCE_LOCAL;
+  }
+
+  virtual bool is_host_up(const Address& address) const {
+    return std::find_if(hosts_->begin(), hosts_->end(), FindAddress(address)) != hosts_->end();
+  }
+
+  virtual void on_host_added(const Host::Ptr& host) { add_host(hosts_, host); }
+
+  virtual void on_host_removed(const Host::Ptr& host) { remove_host(hosts_, host); }
+
+  virtual void on_host_up(const Host::Ptr& host) { add_host(hosts_, host); }
+
+  virtual void on_host_down(const Address& address) { remove_host(hosts_, address); }
+
+  virtual QueryPlan* new_query_plan(const String& keyspace, RequestHandler* request_handler,
+                                    const TokenMap* token_map) {
+    return new InternalQueryPlan(hosts_);
+  }
+
+  virtual LoadBalancingPolicy* new_instance() { return new InorderLoadBalancingPolicy(); }
+
+private:
+  struct FindAddress {
+
+    FindAddress(const Address& address)
+        : address(address) {}
+
+    bool operator()(const Host::Ptr& host) const { return host->address() == address; }
+
+    Address address;
+  };
+
+  class InternalQueryPlan : public datastax::internal::core::QueryPlan {
+  public:
+    InternalQueryPlan(const CopyOnWriteHostVec& hosts)
+        : index_(0)
+        , hosts_(hosts) {}
+
+    virtual Host::Ptr compute_next() {
+      if (index_ < hosts_->size()) {
+        return (*hosts_)[index_++];
+      }
+      return Host::Ptr();
+    }
+
+  private:
+    size_t index_;
+    CopyOnWriteHostVec hosts_;
+  };
+
+private:
+  CopyOnWriteHostVec hosts_;
+};
+
 class RequestProcessorUnitTest : public EventLoopTest {
 public:
   RequestProcessorUnitTest()
       : EventLoopTest("RequestProcessorUnitTest") {}
 
-  HostMap generate_hosts() {
+  HostMap generate_hosts(size_t num_hosts = 3) {
     HostMap hosts;
-    Host::Ptr host1(new Host(Address("127.0.0.1", PORT)));
-    Host::Ptr host2(new Host(Address("127.0.0.2", PORT)));
-    Host::Ptr host3(new Host(Address("127.0.0.3", PORT)));
-    hosts[host1->address()] = host1;
-    hosts[host2->address()] = host2;
-    hosts[host3->address()] = host3;
+    num_hosts = std::min(num_hosts, static_cast<size_t>(255));
+    for (size_t i = 1; i <= num_hosts; ++i) {
+      char buf[64];
+      sprintf(buf, "127.0.0.%d", static_cast<int>(i));
+      Host::Ptr host(new Host(Address(buf, PORT)));
+      hosts[host->address()] = host;
+    }
     return hosts;
   }
 
@@ -615,6 +687,76 @@ TEST_F(RequestProcessorUnitTest, RequestTimeout) {
   ASSERT_TRUE(response_future->wait_for(WAIT_FOR_TIME));
   ASSERT_TRUE(response_future->error());
   ASSERT_EQ(CASS_ERROR_LIB_REQUEST_TIMED_OUT, response_future->error()->code);
+
+  processor->close();
+  ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
+}
+
+TEST_F(RequestProcessorUnitTest, LowNumberOfStreams) {
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(mockssandra::OPCODE_QUERY)
+      .wait(1000) // Give  time for the streams to run out
+      .system_local()
+      .system_peers()
+      .empty_rows_result(1);
+  mockssandra::SimpleCluster cluster(builder.build(), 2); // Two node cluster
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Future::Ptr close_future(new Future());
+  CloseListener::Ptr listener(new CloseListener(close_future));
+
+  HostMap hosts(generate_hosts(2));
+  Future::Ptr connect_future(new Future());
+
+  ExecutionProfile profile;
+  profile.set_load_balancing_policy(new InorderLoadBalancingPolicy());
+  profile.set_speculative_execution_policy(new NoSpeculativeExecutionPolicy());
+  profile.set_retry_policy(new DefaultRetryPolicy());
+
+  RequestProcessorSettings settings;
+  settings.default_profile = profile;
+  settings.request_queue_size = 2 * CASS_MAX_STREAMS + 1; // Create a request queue with enough room
+
+  RequestProcessorInitializer::Ptr initializer(new RequestProcessorInitializer(
+      hosts.begin()->second, PROTOCOL_VERSION, hosts, TokenMap::Ptr(), "",
+      bind_callback(on_connected, connect_future.get())));
+  initializer->with_settings(settings)->with_listener(listener.get())->initialize(event_loop());
+
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_FALSE(connect_future->error());
+  RequestProcessor::Ptr processor(connect_future->processor());
+
+  // Saturate the hosts connections, but leave one stream.
+  for (int i = 0; i < 2 * CASS_MAX_STREAMS - 1; ++i) {
+    ResponseFuture::Ptr response_future(new ResponseFuture());
+    Statement::Ptr request(new QueryRequest("SELECT * FROM table"));
+    RequestHandler::Ptr request_handler(new RequestHandler(request, response_future));
+    processor->process_request(request_handler);
+  }
+
+  { // Try two more requests. One should succeed on "127.0.0.2" and the other should fail (out of
+    // streams).
+    ResponseFuture::Ptr response_future(new ResponseFuture());
+
+    Statement::Ptr request(new QueryRequest("SELECT * FROM table"));
+    request->set_record_attempted_addresses(true);
+    RequestHandler::Ptr request_handler(new RequestHandler(request, response_future));
+    processor->process_request(request_handler);
+
+    ResponseFuture::Ptr response_future_fail(new ResponseFuture());
+    RequestHandler::Ptr request_handler_fail(new RequestHandler(
+        Statement::Ptr(new QueryRequest("SELECT * FROM table")), response_future_fail));
+    processor->process_request(request_handler_fail);
+    ASSERT_TRUE(response_future_fail->wait_for(WAIT_FOR_TIME));
+    ASSERT_TRUE(response_future_fail->error());
+    EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, response_future_fail->error()->code);
+
+    ASSERT_TRUE(response_future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(response_future->error());
+    AddressVec attempted = response_future->attempted_addresses();
+    ASSERT_GE(attempted.size(), 1u);
+    EXPECT_EQ(attempted[0], Address("127.0.0.2", PORT));
+  }
 
   processor->close();
   ASSERT_TRUE(close_future->wait_for(WAIT_FOR_TIME));
