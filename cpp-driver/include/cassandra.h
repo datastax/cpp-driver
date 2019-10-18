@@ -54,7 +54,7 @@
 #define CASS_VERSION_MAJOR 2
 #define CASS_VERSION_MINOR 14
 #define CASS_VERSION_PATCH 0
-#define CASS_VERSION_SUFFIX "alpha2"
+#define CASS_VERSION_SUFFIX ""
 
 #ifdef __cplusplus
 extern "C" {
