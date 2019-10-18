@@ -140,7 +140,7 @@ CASSANDRA_INTEGRATION_TEST_F(SessionTest, ExternalHostListener) {
   // Restart node 1 (up event)
   ccm_->start_node(1);
   CCM::CassVersion cass_version = this->server_version_;
-  if (Options::is_dse()) {
+  if (!Options::is_cassandra()) {
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
   }
   if (cass_version >= "2.2") {

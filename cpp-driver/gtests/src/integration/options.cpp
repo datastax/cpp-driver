@@ -24,7 +24,8 @@
 #include <iostream>
 
 #define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.11.4")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.0.8")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("6.7.5")
+#define DEFAULT_OPTIONS_DDAC_VERSION CCM::DseVersion("5.1.17")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
@@ -32,7 +33,6 @@ bool Options::is_help_ = false;
 bool Options::is_keep_clusters_ = false;
 bool Options::is_log_tests_ = true;
 CCM::CassVersion Options::server_version_ = DEFAULT_OPTIONS_CASSSANDRA_VERSION;
-bool Options::is_dse_ = false;
 bool Options::use_git_ = false;
 std::string Options::branch_tag_;
 bool Options::use_install_dir_ = false;
@@ -55,6 +55,7 @@ CCM::DseCredentialsType Options::dse_credentials_type_;
 CCM::AuthenticationType Options::authentication_type_;
 CCM::DeploymentType Options::deployment_type_;
 std::set<TestCategory> Options::categories_;
+CCM::ServerType Options::server_type_;
 
 bool Options::initialize(int argc, char* argv[]) {
   // Only allow initialization to occur once
@@ -63,6 +64,7 @@ bool Options::initialize(int argc, char* argv[]) {
     dse_credentials_type_ = CCM::DseCredentialsType::USERNAME_PASSWORD;
     authentication_type_ = CCM::AuthenticationType::USERNAME_PASSWORD;
     deployment_type_ = CCM::DeploymentType::LOCAL;
+    server_type_ = CCM::ServerType::CASSANDRA;
 
     // Check for the help argument first (keeps defaults for help display)
     for (int i = 1; i < argc; ++i) {
@@ -77,6 +79,8 @@ bool Options::initialize(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
       if (std::string(argv[i]) == "--dse") {
         server_version_ = DEFAULT_OPTIONS_DSE_VERSION;
+      } else if (std::string(argv[i]) == "--ddac") {
+        server_version_ = DEFAULT_OPTIONS_DDAC_VERSION;
       }
     }
 
@@ -107,7 +111,9 @@ bool Options::initialize(int argc, char* argv[]) {
                     << std::endl;
         }
       } else if (key == "--dse") {
-        is_dse_ = true;
+        server_type_ = CCM::ServerType::DSE;
+      } else if (key == "--ddac") {
+        server_type_ = CCM::ServerType::DDAC;
       } else if (key == "--dse-username") {
         if (!value.empty()) {
           dse_username_ = value;
@@ -129,7 +135,7 @@ bool Options::initialize(int argc, char* argv[]) {
           }
         }
         if (!is_found) {
-          std::cerr << "Invalid DSE Credentials Type: Using default "
+          std::cerr << "Invalid DSE/DDAC Credentials Type: Using default "
                     << dse_credentials_type_.to_string() << std::endl;
         }
       } else if (key == "--git") {
@@ -272,7 +278,7 @@ bool Options::initialize(int argc, char* argv[]) {
       for (TestCategory::iterator iterator = TestCategory::begin(); iterator != TestCategory::end();
            ++iterator) {
         // Only add the DSE test category if DSE is enabled
-        if (*iterator != TestCategory::DSE || is_dse_) {
+        if (*iterator != TestCategory::DSE || is_dse()) {
           categories_.insert(*iterator);
         } else {
           std::cerr << "DSE Category Will be Ignored: DSE is not enabled [--dse]" << std::endl;
@@ -282,11 +288,11 @@ bool Options::initialize(int argc, char* argv[]) {
     if (deployment_type_ == CCM::DeploymentType::LOCAL) {
       host_ = "127.0.0.1";
     }
-    if (is_dse_ && !use_install_dir_) {
-      // Determine if the DSE credentials type should be updated
+    if (!is_cassandra() && !use_install_dir_) {
+      // Determine if the DSE/DDAC credentials type should be updated
       if (dse_credentials_type_ == CCM::DseCredentialsType::USERNAME_PASSWORD) {
         if (dse_username_.empty() || dse_password_.empty()) {
-          std::cerr << "Invalid Username and/or Password: Default to INI_FILE DSE credentials"
+          std::cerr << "Invalid Username and/or Password: Default to INI_FILE DSE/DDAC credentials"
                     << std::endl;
           dse_credentials_type_ = CCM::DseCredentialsType::INI_FILE;
         }
@@ -309,10 +315,11 @@ void Options::print_help() {
   std::cout << std::endl << "CCM Options:" << std::endl;
   std::cout << "  --version=[VERSION]" << std::endl
             << "      "
-            << "Cassandra/DSE version to use." << std::endl
+            << "Cassandra/DSE/DDAC version to use." << std::endl
             << "      Default:" << std::endl
             << "        Cassandra Version: " << server_version().to_string() << std::endl
-            << "        DSE Version: " << DEFAULT_OPTIONS_DSE_VERSION.to_string() << std::endl;
+            << "        DSE Version: " << DEFAULT_OPTIONS_DSE_VERSION.to_string() << std::endl
+            << "        DDAC Version: " << DEFAULT_OPTIONS_DDAC_VERSION.to_string() << std::endl;
   std::string categories;
   for (TestCategory::iterator iterator = TestCategory::begin(); iterator != TestCategory::end();
        ++iterator) {
@@ -330,16 +337,20 @@ void Options::print_help() {
   std::cout << "  --dse" << std::endl
             << "      "
             << "Indicate server version supplied is DSE." << std::endl;
+  std::cout << "  --ddac" << std::endl
+            << "      "
+            << "Indicate server version supplied is DDAC." << std::endl;
   std::cout << "  --dse-credentials=(USERNAME_PASSWORD|INI_FILE)" << std::endl
             << "      "
-            << "DSE credentials to use for download authentication. The default is " << std::endl
+            << "DSE/DDAC credentials to use for download authentication. The default is "
+            << std::endl
             << "      " << dse_credentials().to_string() << "." << std::endl;
   std::cout << "  --dse-username=[USERNAME]" << std::endl
             << "      "
-            << "Username to use for DSE download authentication." << std::endl;
+            << "Username to use for DSE/DDAC download authentication." << std::endl;
   std::cout << "  --dse-password=[PASSWORD]" << std::endl
             << "      "
-            << "Password to use for DSE download authentication." << std::endl;
+            << "Password to use for DSE/DDAC download authentication." << std::endl;
   std::cout << "  --git" << std::endl
             << "      "
             << "Indicate Cassandra/DSE server download should be obtained from" << std::endl
@@ -408,18 +419,20 @@ void Options::print_settings() {
   if (log_tests()) {
     std::cout << "  Logging driver messages" << std::endl;
   }
-  if (is_dse()) {
-    std::cout << "  DSE Version: " << CCM::DseVersion(server_version()).to_string() << std::endl;
+  if (!is_cassandra()) {
+    std::cout << "  " << server_type_.to_string()
+              << " Version: " << CCM::DseVersion(server_version()).to_string() << std::endl;
     if (!use_install_dir()) {
       if (dse_credentials() == CCM::DseCredentialsType::USERNAME_PASSWORD) {
         std::cout << "      Username: " << dse_username() << std::endl;
         std::cout << "      Password: " << dse_password() << std::endl;
       } else {
-        std::cout << "      Using INI file for DSE download authentication" << std::endl;
+        std::cout << "      Using INI file for DSE/DDAC download authentication" << std::endl;
       }
     }
   } else {
-    std::cout << "  Cassandra Version: " << server_version().to_string() << std::endl;
+    std::cout << "  " << server_type_.to_string() << " Version: " << server_version().to_string()
+              << std::endl;
   }
   if (use_install_dir()) {
     std::cout << "    Using installation directory [" << install_dir() << "]" << std::endl;
@@ -456,7 +469,13 @@ bool Options::log_tests() { return is_log_tests_; }
 
 CCM::CassVersion Options::server_version() { return server_version_; }
 
-bool Options::is_dse() { return is_dse_; }
+CCM::ServerType Options::server_type() { return server_type_; }
+
+bool Options::is_cassandra() { return server_type_ == CCM::ServerType::CASSANDRA; }
+
+bool Options::is_dse() { return server_type_ == CCM::ServerType::DSE; }
+
+bool Options::is_ddac() { return server_type_ == CCM::ServerType::DDAC; }
 
 CCM::DseCredentialsType Options::dse_credentials() {
   // Static initialization cannot be guaranteed
@@ -514,7 +533,7 @@ const std::string& Options::private_key() { return private_key_; }
 
 SharedPtr<CCM::Bridge, StdDeleter<CCM::Bridge> > Options::ccm() {
   return new CCM::Bridge(Options::server_version(), Options::use_git(), Options::branch_tag(),
-                         Options::use_install_dir(), Options::install_dir(), Options::is_dse(),
+                         Options::use_install_dir(), Options::install_dir(), Options::server_type(),
                          CCM::Bridge::DEFAULT_DSE_WORKLOAD, Options::cluster_prefix(),
                          Options::dse_credentials(), Options::dse_username(),
                          Options::dse_password(), Options::deployment_type(),

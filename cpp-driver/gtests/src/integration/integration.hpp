@@ -83,7 +83,7 @@
 #define CHECK_VERSION(version)                                                      \
   do {                                                                              \
     CCM::CassVersion cass_version = this->server_version_;                          \
-    if (Options::is_dse()) {                                                        \
+    if (!Options::is_cassandra()) {                                                 \
       cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
     }                                                                               \
     if (cass_version < #version) {                                                  \
@@ -98,7 +98,7 @@
 
 #define CHECK_VALUE_TYPE_VERSION(type)                                            \
   CCM::CassVersion cass_version = this->server_version_;                          \
-  if (Options::is_dse()) {                                                        \
+  if (!Options::is_cassandra()) {                                                 \
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
   }                                                                               \
   if (cass_version < type::supported_server_version()) {                          \

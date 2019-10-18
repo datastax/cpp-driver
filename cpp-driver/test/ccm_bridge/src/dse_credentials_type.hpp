@@ -23,7 +23,7 @@
 namespace CCM {
 
 /**
- * DSE credential stype indicating how authentication for DSE downloads is
+ * DSE credentials type indicating how authentication for DSE downloads is
  * performed through CCM
  */
 class DseCredentialsType {
