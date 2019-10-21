@@ -18,9 +18,7 @@
 
 class StatementTests : public Integration {
 public:
-  StatementTests() {
-    number_dc1_nodes_ = 2;
-  }
+  StatementTests() { number_dc1_nodes_ = 2; }
 };
 
 /**
@@ -108,9 +106,7 @@ CASSANDRA_INTEGRATION_TEST_F(StatementTests, SetHostWhereHostIsDown) {
 
 class StatementNoClusterTests : public StatementTests {
 public:
-  StatementNoClusterTests() {
-    is_ccm_requested_ = false;
-  }
+  StatementNoClusterTests() { is_ccm_requested_ = false; }
 };
 
 /**
