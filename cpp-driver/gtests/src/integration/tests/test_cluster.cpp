@@ -18,9 +18,7 @@
 
 class ClusterTests : public Integration {
 public:
-  ClusterTests() {
-    is_ccm_requested_ = false;
-  }
+  ClusterTests() { is_ccm_requested_ = false; }
 };
 
 /**

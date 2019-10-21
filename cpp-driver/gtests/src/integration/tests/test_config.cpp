@@ -18,9 +18,7 @@
 
 class ConfigTests : public Integration {
 public:
-  ConfigTests() {
-    Integration::SetUp();
-  }
+  ConfigTests() { Integration::SetUp(); }
 };
 
 CASSANDRA_INTEGRATION_TEST_F(ConfigTests, Options) {

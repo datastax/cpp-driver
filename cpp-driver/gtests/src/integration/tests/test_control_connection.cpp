@@ -273,8 +273,10 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests, Reconnection)
    * and ensure only the first node is used as the contact point for automatic
    * node discovery of the second node
    */
-  Cluster cluster = default_cluster().with_load_balance_round_robin().with_constant_reconnect(100).with_contact_points(
-      generate_contact_points(ccm_->get_ip_prefix(), 1));
+  Cluster cluster = default_cluster()
+                        .with_load_balance_round_robin()
+                        .with_constant_reconnect(100)
+                        .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
   Session session = cluster.connect();
 
   // Stop the first node and bootstrap a third node into the cluster
