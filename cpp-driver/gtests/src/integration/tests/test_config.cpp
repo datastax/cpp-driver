@@ -14,21 +14,23 @@
   limitations under the License.
 */
 
-#include <gtest/gtest.h>
+#include "integration.hpp"
 
-#include "cassandra.h"
+class ConfigTests : public Integration {
+public:
+  ConfigTests() {
+    Integration::SetUp();
+  }
+};
 
-#include "driver_utils.hpp"
-#include "objects/cluster.hpp"
-
-TEST(ConfigTest, Options) {
+CASSANDRA_INTEGRATION_TEST_F(ConfigTests, Options) {
   test::driver::Cluster cluster =
       test::driver::Cluster::build().with_connect_timeout(9999u).with_port(7000);
   EXPECT_EQ(9999u, test::driver::internals::Utils::connect_timeout(cluster.get()));
   EXPECT_EQ(7000, test::driver::internals::Utils::port(cluster.get()));
 }
 
-TEST(ConfigTest, ContactPointsSimple) {
+CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsSimple) {
   std::string contact_points = "127.0.0.1,127.0.0.2,127.0.0.3";
   test::driver::Cluster cluster =
       test::driver::Cluster::build().with_contact_points(contact_points);
@@ -36,7 +38,7 @@ TEST(ConfigTest, ContactPointsSimple) {
                test::driver::internals::Utils::contact_points(cluster.get()).c_str());
 }
 
-TEST(ConfigTest, ContactPointsClear) {
+CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsClear) {
   std::string contact_points = "127.0.0.1,127.0.0.2,127.0.0.3";
   test::driver::Cluster cluster =
       test::driver::Cluster::build().with_contact_points(contact_points);
@@ -46,7 +48,7 @@ TEST(ConfigTest, ContactPointsClear) {
   EXPECT_TRUE(test::driver::internals::Utils::contact_points(cluster.get()).empty());
 }
 
-TEST(ConfigTest, ContactPointsExtraCommas) {
+CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsExtraCommas) {
   std::string contact_points = ",,,,127.0.0.1,,,,127.0.0.2,127.0.0.3,,,,";
   test::driver::Cluster cluster =
       test::driver::Cluster::build().with_contact_points(contact_points);
@@ -54,7 +56,7 @@ TEST(ConfigTest, ContactPointsExtraCommas) {
                test::driver::internals::Utils::contact_points(cluster.get()).c_str());
 }
 
-TEST(ConfigTest, ContactPointsExtraWhitespace) {
+CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsExtraWhitespace) {
   std::string contact_points =
       "   ,\r\n,  ,   ,  127.0.0.1 ,,,  ,\t127.0.0.2,127.0.0.3,  \t\n, ,,   ";
   test::driver::Cluster cluster =
@@ -63,7 +65,7 @@ TEST(ConfigTest, ContactPointsExtraWhitespace) {
                test::driver::internals::Utils::contact_points(cluster.get()).c_str());
 }
 
-TEST(ConfigTest, ContactPointsAppend) {
+CASSANDRA_INTEGRATION_TEST_F(ConfigTests, ContactPointsAppend) {
   test::driver::Cluster cluster = test::driver::Cluster::build().with_contact_points("127.0.0.1");
   EXPECT_STREQ("127.0.0.1", test::driver::internals::Utils::contact_points(cluster.get()).c_str());
   cluster.with_contact_points("127.0.0.2");

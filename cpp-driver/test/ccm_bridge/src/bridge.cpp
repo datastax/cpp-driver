@@ -632,7 +632,7 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
 
     // Generate the cluster update configuration command and execute
     execute_ccm_command(generate_create_updateconf_command(cassandra_version_));
-    if (dse_version_ >= "6.7.0") {
+    if (is_dse() && dse_version_ >= "6.7.0") {
       update_cluster_configuration("user_defined_function_fail_micros", "5000000");
     }
 

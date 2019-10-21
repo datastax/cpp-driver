@@ -76,7 +76,7 @@ struct BatchTests : public test_utils::SingleSessionTest {
 const char* BatchTests::SIMPLE_TABLE_NAME = "simple_batch_testing_table";
 const char* BatchTests::COUNTER_TABLE_NAME = "counter_batch_testing_table";
 
-BOOST_AUTO_TEST_SUITE(batch)
+BOOST_AUTO_TEST_SUITE_WITH_DECOR(batch, *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(prepared) {
   CCM::CassVersion version = test_utils::get_version();

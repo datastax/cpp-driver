@@ -22,11 +22,12 @@
 #include <uv.h>
 
 // Macros to use for grouping Simulacron integration tests together
-#define SIMULACRON_TEST_NAME(test_name) Integration##_##simulacron##_##test_name
+#define SIMULACRON_INTEGRATION_TEST(test_case, test_name) \
+  INTEGRATION_TEST(Simulacron, test_case, test_name)
 #define SIMULACRON_INTEGRATION_TEST_F(test_case, test_name) \
-  INTEGRATION_TEST_F(simulacron, test_case, test_name)
+  INTEGRATION_TEST_F(Simulacron, test_case, test_name)
 #define SIMULACRON_INTEGRATION_TYPED_TEST_P(test_case, test_name) \
-  INTEGRATION_TYPED_TEST_P(simulacron, test_case, test_name)
+  INTEGRATION_TYPED_TEST_P(Simulacron, test_case, test_name)
 
 #define CHECK_SIMULACRON_AVAILABLE \
   if (!sc_) {                      \

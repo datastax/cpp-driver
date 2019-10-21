@@ -33,7 +33,7 @@ public:
       , ip_prefix(ccm->get_ip_prefix()) {}
 };
 
-BOOST_FIXTURE_TEST_SUITE(consistency, ConsistencyTests)
+BOOST_FIXTURE_TEST_SUITE_WITH_DECOR(consistency, ConsistencyTests, *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(simple_two_nodes) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());

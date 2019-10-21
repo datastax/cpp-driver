@@ -35,7 +35,7 @@
   }
 
 // Macros to use for grouping DSE integration tests together
-#define DSE_TEST_NAME(test_name) Integration##_##DSE##_##test_name
+#define DSE_INTEGRATION_TEST(test_case, test_name) INTEGRATION_TEST(DSE, test_case, test_name)
 #define DSE_INTEGRATION_TEST_F(test_case, test_name) INTEGRATION_TEST_F(DSE, test_case, test_name)
 #define DSE_INTEGRATION_TYPED_TEST_P(test_case, test_name) \
   INTEGRATION_TYPED_TEST_P(DSE, test_case, test_name)
