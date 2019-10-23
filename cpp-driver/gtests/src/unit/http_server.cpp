@@ -57,9 +57,9 @@ void Server::close() {
   }
 }
 
-bool Server::use_ssl(const String& key, const String& cert, const String& password /*= ""*/,
-                     const String& client_cert /*= ""*/) {
-  return server_connection_->use_ssl(key, cert, password, client_cert);
+bool Server::use_ssl(const String& key, const String& cert, const String& ca_cert /*= ""*/,
+                     bool require_client_cert /*= false*/) {
+  return server_connection_->use_ssl(key, cert, ca_cert, require_client_cert);
 }
 
 Server::ClientConnection::ClientConnection(internal::ServerConnection* server_connection,

@@ -20,8 +20,7 @@
 #include "socket_connector.hpp"
 #include "ssl.hpp"
 
-#define DNS_RELATIVE_HOSTNAME "cpp-driver.hostname"
-#define DNS_ABSOLUTE_HOSTNAME DNS_RELATIVE_HOSTNAME "."
+#define DNS_HOSTNAME "cpp-driver.hostname."
 #define DNS_IP_ADDRESS "127.254.254.254"
 
 using mockssandra::internal::ClientConnection;
@@ -154,7 +153,7 @@ public:
 
   bool verify_dns() {
     verify_dns_check(); // Verify address can be resolved
-    return HasFailure();
+    return !HasFailure();
   }
 
   static void on_socket_connected(SocketConnector* connector, String* result) {
@@ -192,24 +191,31 @@ public:
     }
   }
 
-  static void on_request(uv_getnameinfo_t* handle, int status, const char* hostname,
-                         const char* service) {
+  static void on_request(uv_getaddrinfo_t* handle, int status, struct addrinfo* res) {
     if (status) {
       FAIL() << "Unable to Execute Test: "
-             << "Add /etc/hosts entry " << DNS_IP_ADDRESS << "\t" << DNS_ABSOLUTE_HOSTNAME;
-    } else if (String(hostname) != String(DNS_ABSOLUTE_HOSTNAME)) {
-      FAIL() << "Invalid /etc/hosts entry for: '" << hostname << "' != '" << DNS_ABSOLUTE_HOSTNAME
-             << "'";
+             << "Add /etc/hosts entry " << DNS_IP_ADDRESS << "\t" << DNS_HOSTNAME;
+    } else {
+      bool match = false;
+      do {
+        Address address(res->ai_addr);
+        if (address.is_valid_and_resolved() && address == Address(DNS_IP_ADDRESS, 8888)) {
+          match = true;
+          break;
+        }
+        res = res->ai_next;
+      } while (res);
+      ASSERT_TRUE(match) << "Invalid /etc/hosts entry for: '" << DNS_HOSTNAME << "' != '"
+                         << DNS_IP_ADDRESS << "'";
     }
+    uv_freeaddrinfo(res);
   }
 
 private:
   void verify_dns_check() {
-    Address verify_entry(DNS_IP_ADDRESS, 8888);
-    uv_getnameinfo_t request;
+    uv_getaddrinfo_t request;
     Address::SocketStorage storage;
-    ASSERT_EQ(0,
-              uv_getnameinfo(loop(), &request, on_request, verify_entry.to_sockaddr(&storage), 0));
+    ASSERT_EQ(0, uv_getaddrinfo(loop(), &request, on_request, DNS_HOSTNAME, "8888", NULL));
     uv_run(loop(), UV_RUN_DEFAULT);
   }
 
@@ -237,7 +243,7 @@ TEST_F(SocketUnitTest, SimpleDns) {
   listen(Address(DNS_IP_ADDRESS, 8888));
 
   String result;
-  SocketConnector::Ptr connector(new SocketConnector(Address(DNS_RELATIVE_HOSTNAME, 8888),
+  SocketConnector::Ptr connector(new SocketConnector(Address(DNS_HOSTNAME, 8888),
                                                      bind_callback(on_socket_connected, &result)));
 
   connector->connect(loop());
@@ -387,14 +393,15 @@ TEST_F(SocketUnitTest, SslVerifyIdentity) {
 TEST_F(SocketUnitTest, SslVerifyIdentityDns) {
   if (!verify_dns()) return;
 
-  SocketSettings settings(use_ssl(DNS_RELATIVE_HOSTNAME));
+  SocketSettings settings(use_ssl(DNS_HOSTNAME));
 
   listen(Address(DNS_IP_ADDRESS, 8888));
 
   settings.ssl_context->set_verify_flags(CASS_SSL_VERIFY_PEER_IDENTITY_DNS);
+  settings.resolve_timeout_ms = 12000;
 
   String result;
-  SocketConnector::Ptr connector(new SocketConnector(Address(DNS_RELATIVE_HOSTNAME, 8888),
+  SocketConnector::Ptr connector(new SocketConnector(Address(DNS_HOSTNAME, 8888),
                                                      bind_callback(on_socket_connected, &result)));
 
   connector->with_settings(settings)->connect(loop());

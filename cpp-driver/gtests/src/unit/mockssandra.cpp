@@ -27,6 +27,7 @@
 
 #include <openssl/bio.h>
 #include <openssl/dh.h>
+#include <openssl/x509v3.h>
 
 #ifdef WIN32
 #include "winsock.h"
@@ -157,6 +158,8 @@ String Ssl::generate_cert(const String& key, String cn, String ca_cert, String c
     { // Read CA from string
       BIO* bio = BIO_new_mem_buf(const_cast<char*>(ca_cert.c_str()), ca_cert.length());
       if (!PEM_read_bio_X509(bio, &x509_ca, NULL, NULL)) {
+        X509_free(x509);
+        X509_REQ_free(x509_req);
         BIO_free(bio);
         return "";
       }
@@ -169,6 +172,9 @@ String Ssl::generate_cert(const String& key, String cn, String ca_cert, String c
       BIO* bio = BIO_new_mem_buf(const_cast<char*>(ca_key.c_str()), ca_key.length());
       if (!PEM_read_bio_PrivateKey(bio, &pkey_ca, NULL, NULL)) {
         BIO_free(bio);
+        X509_free(x509);
+        X509_free(x509_ca);
+        X509_REQ_free(x509_req);
         return "";
       }
       BIO_free(bio);
@@ -178,6 +184,21 @@ String Ssl::generate_cert(const String& key, String cn, String ca_cert, String c
     X509_free(x509_ca);
     EVP_PKEY_free(pkey_ca);
   } else {
+    if (cn == "CA") { // Set the purpose as a CA certificate.
+      X509_EXTENSION* x509_ex;
+      X509V3_CTX x509v3_ctx;
+      X509V3_set_ctx_nodb(&x509v3_ctx);
+      X509V3_set_ctx(&x509v3_ctx, x509, x509, NULL, NULL, 0);
+      x509_ex = X509V3_EXT_conf_nid(NULL, &x509v3_ctx, NID_basic_constraints,
+                                    const_cast<char*>("critical,CA:TRUE"));
+      if (!x509_ex) {
+        X509_free(x509);
+        X509_EXTENSION_free(x509_ex);
+        return "";
+      }
+      X509_add_ext(x509, x509_ex, -1);
+      X509_EXTENSION_free(x509_ex);
+    }
     X509_NAME* name = X509_get_subject_name(x509);
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC,
                                reinterpret_cast<const unsigned char*>("US"), -1, -1, 0);
@@ -212,6 +233,18 @@ static void print_ssl_error() {
   char buf[256];
   ERR_error_string_n(err, buf, sizeof(buf));
   fprintf(stderr, "%s\n", buf);
+}
+
+static X509* load_cert(const String& cert) {
+  X509* x509 = NULL;
+  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert.c_str()), cert.length());
+  if (PEM_read_bio_X509(bio, &x509, NULL, NULL) == NULL) {
+    print_ssl_error();
+    BIO_free(bio);
+    return NULL;
+  }
+  BIO_free(bio);
+  return x509;
 }
 
 struct WriteReq {
@@ -450,8 +483,8 @@ uv_loop_t* ServerConnection::loop() {
 }
 
 bool ServerConnection::use_ssl(const String& key, const String& cert,
-                               const String& password /*= ""*/,
-                               const String& client_cert /*= ""*/) {
+                               const String& ca_cert /*= ""*/,
+                               bool require_client_cert /*= false*/) {
   if (ssl_context_) {
     SSL_CTX_free(ssl_context_);
   }
@@ -461,31 +494,43 @@ bool ServerConnection::use_ssl(const String& key, const String& cert,
     return false;
   }
 
-  SSL_CTX_set_default_passwd_cb_userdata(ssl_context_, (void*)password.c_str());
+  SSL_CTX_set_default_passwd_cb_userdata(ssl_context_, (void*)"");
   SSL_CTX_set_default_passwd_cb(ssl_context_, on_password);
+  SSL_CTX_set_verify(ssl_context_, SSL_VERIFY_NONE, NULL);
 
-  X509* x509 = NULL;
-  { // Read cert from string
-    BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert.c_str()), cert.length());
-    if (PEM_read_bio_X509(bio, &x509, NULL, NULL) == NULL) {
+  { // Load server certificate
+    X509* x509 = load_cert(cert);
+    if (!x509) return false;
+    if (SSL_CTX_use_certificate(ssl_context_, x509) <= 0) {
       print_ssl_error();
-      BIO_free(bio);
+      X509_free(x509);
       return false;
     }
-    BIO_free(bio);
+    X509_free(x509);
   }
 
-  if (SSL_CTX_use_certificate(ssl_context_, x509) <= 0) {
-    print_ssl_error();
-    X509_free(x509);
-    return false;
+  if (!ca_cert.empty()) { // Load CA certificate
+    X509* x509 = load_cert(ca_cert);
+    if (!x509) return false;
+    if (SSL_CTX_add_extra_chain_cert(ssl_context_, x509) <= 0) { // Certificate freed by function
+      print_ssl_error();
+      X509_free(x509);
+      return false;
+    }
+    if (require_client_cert) {
+      X509_STORE* cert_store = SSL_CTX_get_cert_store(ssl_context_);
+      if (X509_STORE_add_cert(cert_store, x509) <= 0) {
+        print_ssl_error();
+        return false;
+      }
+      SSL_CTX_set_verify(ssl_context_, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+    }
   }
-  X509_free(x509);
 
   EVP_PKEY* pkey = NULL;
   { // Read key from string
     BIO* bio = BIO_new_mem_buf(const_cast<char*>(key.c_str()), key.length());
-    if (PEM_read_bio_PrivateKey(bio, &pkey, on_password, (void*)password.c_str()) == NULL) {
+    if (PEM_read_bio_PrivateKey(bio, &pkey, on_password, (void*)"") == NULL) {
       print_ssl_error();
       BIO_free(bio);
       return false;
@@ -507,43 +552,6 @@ bool ServerConnection::use_ssl(const String& key, const String& cert,
     return false;
   }
   DH_free(dh);
-
-  if (!client_cert.empty()) {
-    X509_STORE* trust_store = SSL_CTX_get_cert_store(static_cast<const SSL_CTX*>(ssl_context_));
-    STACK_OF(X509_INFO) * stack_info;
-
-    { // Read cert from string
-      BIO* bio = BIO_new_mem_buf(const_cast<char*>(client_cert.c_str()), client_cert.size());
-      if ((stack_info = PEM_X509_INFO_read_bio(bio, NULL, NULL, NULL)) == NULL) {
-        print_ssl_error();
-        BIO_free(bio);
-        return false;
-      }
-      BIO_free(bio);
-    }
-
-    if (stack_info) {
-      for (int i = 0; i < sk_X509_INFO_num(stack_info); i++) {
-        X509_INFO* info = sk_X509_INFO_value(stack_info, i);
-        if (info->x509) {
-          if (X509_STORE_add_cert(trust_store, info->x509) <= 0) {
-            print_ssl_error();
-            return false;
-          }
-        }
-        if (info->crl) {
-          if (X509_STORE_add_crl(trust_store, info->crl) <= -0) {
-            print_ssl_error();
-            return false;
-          }
-        }
-      }
-    }
-
-    sk_X509_INFO_pop_free(stack_info, X509_INFO_free);
-  }
-
-  SSL_CTX_set_verify(ssl_context_, SSL_VERIFY_NONE, 0);
 
   return true;
 }
