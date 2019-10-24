@@ -65,7 +65,7 @@ Integration::Integration()
   // Determine if the schema keyspaces table should be updated
   // TODO: Make cass_version (and dse_version) available for all tests
   CCM::CassVersion cass_version = server_version_;
-  if (Options::is_dse()) {
+  if (!Options::is_cassandra()) {
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
   }
   if (cass_version >= "3.0.0") {
@@ -145,7 +145,7 @@ void Integration::SetUp() {
       // Create and start the CCM cluster (if not already created)
       ccm_ = new CCM::Bridge(
           server_version_, Options::use_git(), Options::branch_tag(), Options::use_install_dir(),
-          Options::install_dir(), Options::is_dse(), dse_workload_, Options::cluster_prefix(),
+          Options::install_dir(), Options::server_type(), dse_workload_, Options::cluster_prefix(),
           Options::dse_credentials(), Options::dse_username(), Options::dse_password(),
           Options::deployment_type(), Options::authentication_type(), Options::host(),
           Options::port(), Options::username(), Options::password(), Options::public_key(),
@@ -319,6 +319,10 @@ void Integration::connect(Cluster cluster) {
 
   // Update the server version if branch_tag was specified
   if (Options::use_git() && !Options::branch_tag().empty()) {
+    if (Options::is_ddac()) {
+      FAIL() << "Unable to build DDAC from Branch/Tag";
+      return;
+    }
     if (Options::is_dse()) {
       server_version_ = ccm_->get_dse_version();
     } else {

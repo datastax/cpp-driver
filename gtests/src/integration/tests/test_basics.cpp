@@ -334,7 +334,7 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, NoCompactEnabledConnection) {
   CHECK_VERSION(3.0.16);
   CHECK_VERSION(3.11.2);
   CCM::CassVersion cass_version = server_version_;
-  if (Options::is_dse()) {
+  if (!Options::is_cassandra()) {
     if (server_version_ >= "6.0.0") {
       SKIP_TEST("Unsupported for DataStax Enterprise Version "
                 << server_version_.to_string()

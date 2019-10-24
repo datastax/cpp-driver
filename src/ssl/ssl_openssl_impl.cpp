@@ -320,7 +320,7 @@ private:
     }
 
     int i = -1;
-    while ((i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) > 0) {
+    while ((i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) >= 0) {
       X509_NAME_ENTRY* name_entry = X509_NAME_get_entry(name, i);
       if (name_entry == NULL) {
         return INVALID_CERT;

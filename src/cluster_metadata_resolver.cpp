@@ -25,8 +25,9 @@ namespace {
 
 class DefaultClusterMetadataResolver : public ClusterMetadataResolver {
 public:
-  DefaultClusterMetadataResolver(uint64_t resolve_timeout_ms)
-      : resolve_timeout_ms_(resolve_timeout_ms) {}
+  DefaultClusterMetadataResolver(uint64_t resolve_timeout_ms, int port)
+      : resolve_timeout_ms_(resolve_timeout_ms)
+      , port_(port) {}
 
 private:
   virtual void internal_resolve(uv_loop_t* loop, const AddressVec& contact_points) {
@@ -34,14 +35,17 @@ private:
 
     for (AddressVec::const_iterator it = contact_points.begin(), end = contact_points.end();
          it != end; ++it) {
+      // If the port is not set then use the default port value.
+      int port = it->port() <= 0 ? port_ : it->port();
+
       if (it->is_resolved()) {
-        resolved_contact_points_.push_back(*it);
+        resolved_contact_points_.push_back(Address(it->hostname_or_address(), port));
       } else {
         if (!resolver_) {
           resolver_.reset(
               new MultiResolver(bind_callback(&DefaultClusterMetadataResolver::on_resolve, this)));
         }
-        resolver_->resolve(loop, it->hostname_or_address(), it->port(), resolve_timeout_ms_);
+        resolver_->resolve(loop, it->hostname_or_address(), port, resolve_timeout_ms_);
       }
     }
 
@@ -89,6 +93,7 @@ private:
 private:
   MultiResolver::Ptr resolver_;
   const uint64_t resolve_timeout_ms_;
+  const int port_;
 };
 
 } // namespace
@@ -96,5 +101,6 @@ private:
 ClusterMetadataResolver::Ptr
 DefaultClusterMetadataResolverFactory::new_instance(const ClusterSettings& settings) const {
   return ClusterMetadataResolver::Ptr(new DefaultClusterMetadataResolver(
-      settings.control_connection_settings.connection_settings.socket_settings.resolve_timeout_ms));
+      settings.control_connection_settings.connection_settings.socket_settings.resolve_timeout_ms,
+      settings.port));
 }

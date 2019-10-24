@@ -70,9 +70,9 @@ public:
       : public RequestState
       , public Status<RequestState::Enum> {
   public:
-    RequestStatus(uv_loop_t* loop, int num_nodes = NUM_NODES)
+    RequestStatus(uv_loop_t* loop, int num_requests = NUM_NODES)
         : loop_(loop)
-        , remaining_(num_nodes) {}
+        , remaining_(num_requests) {}
 
     virtual void set(RequestState::Enum state) {
       Status<RequestStatus::Enum>::set(state);
@@ -88,13 +88,13 @@ public:
 
   protected:
     uv_loop_t* loop_;
-    size_t remaining_;
+    int remaining_;
   };
 
   class RequestStatusWithManager : public RequestStatus {
   public:
-    RequestStatusWithManager(uv_loop_t* loop, int num_nodes = NUM_NODES)
-        : RequestStatus(loop, num_nodes) {}
+    RequestStatusWithManager(uv_loop_t* loop, int num_requests = NUM_NODES)
+        : RequestStatus(loop, num_requests) {}
 
     ~RequestStatusWithManager() {
       ConnectionPoolManager::Ptr temp(manager());
@@ -352,6 +352,33 @@ public:
       }
       manager->flush(); // Flush requests to avoid unnecessary timeouts
     }
+  }
+
+  static void on_pool_connected_exhaust_streams(ConnectionPoolManagerInitializer* initializer,
+                                                RequestStatusWithManager* status) {
+    const Address address("127.0.0.1", 9042);
+    ConnectionPoolManager::Ptr manager = initializer->release_manager();
+    status->set_manager(manager);
+
+    for (size_t i = 0; i < CASS_MAX_STREAMS; ++i) {
+      PooledConnection::Ptr connection = manager->find_least_busy(address);
+
+      if (connection) {
+        RequestCallback::Ptr callback(new RequestCallback(status));
+        if (connection->write(callback.get()) < 0) {
+          status->error_failed_write();
+        }
+      } else {
+        status->error_no_connection();
+      }
+    }
+
+    PooledConnection::Ptr connection = manager->find_least_busy(address);
+    ASSERT_TRUE(connection);
+    RequestCallback::Ptr callback(new RequestCallback(status));
+    EXPECT_EQ(connection->write(callback.get()), Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS);
+
+    manager->flush();
   }
 
   static void on_pool_nop(ConnectionPoolManagerInitializer* initializer,
@@ -798,6 +825,17 @@ TEST_F(PoolUnitTest, PartialReconnect) {
   // TODO:
 }
 
-TEST_F(PoolUnitTest, LowNumberOfStreams) {
-  // TODO:
+TEST_F(PoolUnitTest, NoAvailableStreams) {
+  mockssandra::SimpleCluster cluster(simple(), 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  RequestStatusWithManager status(loop(), CASS_MAX_STREAMS);
+
+  ConnectionPoolManagerInitializer::Ptr initializer(new ConnectionPoolManagerInitializer(
+      PROTOCOL_VERSION, bind_callback(on_pool_connected_exhaust_streams, &status)));
+
+  initializer->initialize(loop(), hosts());
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(status.count(RequestStatus::SUCCESS), CASS_MAX_STREAMS) << status.results();
 }

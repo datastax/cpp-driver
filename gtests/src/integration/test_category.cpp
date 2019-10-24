@@ -23,7 +23,7 @@
 const TestCategory TestCategory::CASSANDRA("CASSANDRA", 0, "Cassandra", "*_Cassandra_*");
 const TestCategory TestCategory::DSE("DSE", 1, "DataStax Enterprise", "*_DSE_*");
 const TestCategory TestCategory::SIMULACRON("SIMULACRON", SHRT_MAX, "Simulated DSE (and Cassandra)",
-                                            "*_simulacron_*");
+                                            "*_Simulacron_*");
 
 // Static declarations for test type
 std::set<TestCategory> TestCategory::constants_;

@@ -294,7 +294,7 @@ public:
       : CassVersion(version) {}
 
   /**
-   * Create the CassVersion from a human readable string
+   * Create the DseVersion from a human readable string
    *
    * @param version_string String representation to convert
    */
@@ -477,17 +477,26 @@ public:
       return CassVersion("3.11.3-5113");
     } else if (*this == "5.1.14") {
       return CassVersion("3.11.3-5114");
-    } else if (*this >= "5.1.15" && *this < "6.0.0") {
-      if (*this > "5.1.15") {
+    } else if (*this == "5.1.15") {
+      return CassVersion("3.11.4-5115");
+    } else if (*this == "5.1.16") {
+      return CassVersion("3.11.4-5116");
+    } else if (*this >= "5.1.17" && *this < "6.0.0") {
+      if (*this > "5.1.17") {
         std::cerr << "Cassandra Version is not Defined: "
                   << "Add Cassandra version for DSE v" << this->to_string() << std::endl;
       }
-      return CassVersion("3.11.3-5115");
+      return CassVersion("3.11.4-5117");
     } else if (*this >= "6.0.0" && *this < "6.7.0") {
       return CassVersion(
           "3.11.2-5111"); // Versions before DSE 6.7 erroneously return they support Cassandra 4.0.0
     } else if (*this >= "6.7.0" && *this < "7.0.0") {
       return CassVersion("4.0.0");
+
+      // DSE version does not correspond to a valid Cassandra version
+      std::cerr << "Cassandra Version is not Defined: "
+                << "Add Cassandra version for DSE v" << this->to_string() << std::endl;
+      return CassVersion("0.0.0");
     }
 
     // DSE version does not correspond to a valid Cassandra version

@@ -52,8 +52,8 @@
 #VERBOSE=true
 
 ###############################################################################
-# DSE Options                                                                 #
-# Ensure USE_DSE=true to enable these options                                 #
+# DSE/DDAC Options                                                            #
+# Ensure USE_DSE=true or USE_DDAC=true to enable these options                #
 ###############################################################################
 ##
 # Flag to determine if DSE version should be loaded
@@ -62,15 +62,21 @@
 ##
 #USE_DSE=false
 ##
-# DSE Deployment Version
+# Flag to determine if DDAC version should be loaded
 #
-# DSE version to deploy using CCM
+# Uncomment to specify use of DDAC
+##
+#USE_DDAC=false
+##
+# DSE/DDAC Deployment Version
 #
-# Uncomment to specify DSE version
+# DSE/DDAC version to deploy using CCM
+#
+# Uncomment to specify DSE/DDAC version
 ##
-#DSE_VERSION=6.0.8
+#DSE_VERSION=6.7.5
 ##
-# CCM DSE Credentials Type (username_password|ini_file)
+# CCM DSE/DDAC Credentials Type (username_password|ini_file)
 #
 # Setting to indicate how DSE download through CCM should authenticate access
 #
@@ -78,7 +84,7 @@
 ##
 #DSE_CREDENTIALS_TYPE=username_password
 ##
-# DSE Username (Username)
+# DSE/DDAC Username (Username)
 #
 # Username for authenticating DSE download access
 #
@@ -86,7 +92,7 @@
 ##
 #DSE_USERNAME=
 ##
-# DSE Password (Password)
+# DSE/DDAC Password (Password)
 #
 # Password for authenticating DSE download access
 #

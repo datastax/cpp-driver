@@ -115,7 +115,7 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(datatypes, DataTypesTests)
+BOOST_FIXTURE_TEST_SUITE_WITH_DECOR(datatypes, DataTypesTests, *boost::unit_test::disabled())
 
 /**
  * Read/Write Datatypes

@@ -23,6 +23,7 @@
 #include "deployment_type.hpp"
 #include "dse_credentials_type.hpp"
 #include "process.hpp"
+#include "server_type.hpp"
 #include "tsocket.hpp"
 
 #include <map>
@@ -45,10 +46,12 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 
 // Default values
 #define DEFAULT_CASSANDRA_VERSION CassVersion("3.11.4")
-#define DEFAULT_DSE_VERSION DseVersion("6.0.8")
+#define DEFAULT_DSE_VERSION DseVersion("6.7.5")
 #define DEFAULT_USE_GIT false
 #define DEFAULT_USE_INSTALL_DIR false
+#define DEFAULT_SERVER_TYPE ServerType(ServerType::CASSANDRA)
 #define DEFAULT_USE_DSE false
+#define DEFAULT_USE_DDAC false
 #define DEFAULT_CLUSTER_PREFIX "cpp-driver"
 #define DEFAULT_DSE_CREDENTIALS DseCredentialsType::USERNAME_PASSWORD
 #define DEFAULT_DEPLOYMENT DeploymentType::LOCAL
@@ -158,8 +161,7 @@ public:
    *                        (default: DEAFAULT_USE_INSTALL_DIR)
    * @param install_dir Installation directory to use when use_install_dir is
    *                    enabled (default: Empty)
-   * @param use_dse True if CCM should load DSE for provided version; false
-   *               otherwise (default: DEFAULT_USE_DSE)
+   * @param server_type Server type CCM should create (default: CASSANDRA)
    * @param dse_workload DSE workload to utilize
    *                     (default: DEFAULT_DSE_WORKLOAD)
    * @param cluster_prefix Prefix to use when creating a cluster name
@@ -192,7 +194,7 @@ public:
    */
   Bridge(CassVersion cassandra_version = DEFAULT_CASSANDRA_VERSION, bool use_git = DEFAULT_USE_GIT,
          const std::string& branch_tag = "", bool use_install_dir = DEFAULT_USE_INSTALL_DIR,
-         const std::string& install_dir = "", bool use_dse = DEFAULT_USE_DSE,
+         const std::string& install_dir = "", ServerType server_type = DEFAULT_SERVER_TYPE,
          std::vector<DseWorkload> dse_workload = DEFAULT_DSE_WORKLOAD,
          const std::string& cluster_prefix = DEFAULT_CLUSTER_PREFIX,
          DseCredentialsType dse_credentials_type = DEFAULT_DSE_CREDENTIALS,
@@ -535,7 +537,26 @@ public:
    */
   void execute_cql_on_node(unsigned int node, const std::string& cql);
 
-  CCM_BRIDGE_DEPRECATED(bool is_dse() { return use_dse_; })
+  /**
+   * Determine if server type is Apache Cassandra
+   *
+   * @return True if Cassandra; false otherwise
+   */
+  bool is_cassandra() { return server_type_ == ServerType::CASSANDRA; }
+
+  /**
+   * Determine if server type is DataStax Enterprise
+   *
+   * @return True if DSE; false otherwise
+   */
+  bool is_dse() { return server_type_ == ServerType::DSE; }
+
+  /**
+   * Determine if server type is DataStax Distribution of Apache Cassandra
+   *
+   * @return True if DDAC; false otherwise
+   */
+  bool is_ddac() { return server_type_ == ServerType::DDAC; }
 
   /**
    * Force decommission of a node on the active Cassandra cluster
@@ -777,9 +798,9 @@ private:
    */
   std::string install_dir_;
   /**
-   * Flag to determine if DSE is being used
+   * Server type to use with CCM
    */
-  bool use_dse_;
+  ServerType server_type_;
   /**
    * Workload to apply to the DSE cluster
    *

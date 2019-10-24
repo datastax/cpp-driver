@@ -174,8 +174,8 @@ public:
   SSL_CTX* ssl_context() { return ssl_context_; }
   const ClientConnections& clients() const { return clients_; }
 
-  bool use_ssl(const String& key, const String& cert, const String& password = "",
-               const String& client_cert = "");
+  bool use_ssl(const String& key, const String& cert, const String& ca_cert = "",
+               bool require_client_cert = false);
 
   void listen(EventLoopGroup* event_loop_group);
   int wait_listen();
