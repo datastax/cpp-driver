@@ -76,7 +76,7 @@ rewrites:
     replace: /dse_features/graph
 links:
   - title: Releases
-    href:  http://downloads.datastax.com/cpp-driver
+    href:  http://downloads.datastax.com/cpp-driver/
   - title: Docs
     href:  http://docs.datastax.com/en/developer/cpp-driver-dse
   - title: Issues
