@@ -24,7 +24,7 @@
 #include <set>
 #include <string>
 
-BOOST_AUTO_TEST_SUITE(custom_payload)
+BOOST_AUTO_TEST_SUITE_WITH_DECOR(custom_payload, *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(simple) {
   CCM::CassVersion version = test_utils::get_version();

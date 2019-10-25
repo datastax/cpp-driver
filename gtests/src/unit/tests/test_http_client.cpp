@@ -30,7 +30,7 @@ class HttpClientUnitTest : public HttpTest {
 public:
   static void on_success_response(HttpClient* client, bool* flag) {
     *flag = true;
-    EXPECT_TRUE(client->is_ok());
+    EXPECT_TRUE(client->is_ok()) << "Failed to connect: " << client->error_message();
     EXPECT_EQ("text/plain", client->content_type());
     EXPECT_EQ(echo_response(), client->response_body());
   }
@@ -200,6 +200,65 @@ TEST_F(HttpClientUnitTest, Ssl) {
   client->with_settings(settings)->request(loop());
   uv_run(loop(), UV_RUN_DEFAULT);
   EXPECT_TRUE(is_success);
+
+  stop_http_server();
+}
+
+TEST_F(HttpClientUnitTest, NoClientCertProvidedSsl) {
+  String ca_key = mockssandra::Ssl::generate_key();
+  String ca_cert = mockssandra::Ssl::generate_cert(ca_key, "CA");
+
+  use_ssl(ca_key, ca_cert, HTTP_MOCK_HOSTNAME);
+  start_http_server();
+
+  bool is_failed = false;
+  HttpClient::Ptr client(new HttpClient(Address(HTTP_MOCK_SERVER_IP, HTTP_MOCK_SERVER_PORT), "/",
+                                        bind_callback(on_failed_response, &is_failed)));
+
+  SslContext::Ptr ssl_context(SslContextFactory::create());
+
+  // No client certificate provided
+
+  ssl_context->add_trusted_cert(ca_cert.c_str(), ca_cert.size());
+
+  SocketSettings settings;
+  settings.ssl_context = ssl_context;
+  client->with_settings(settings)->request(loop());
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_TRUE(is_failed);
+  EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_SOCKET);
+
+  stop_http_server();
+}
+
+TEST_F(HttpClientUnitTest, InvalidClientCertSsl) {
+  String ca_key = mockssandra::Ssl::generate_key();
+  String ca_cert = mockssandra::Ssl::generate_cert(ca_key, "CA");
+
+  String client_key = mockssandra::Ssl::generate_key();
+  String client_cert = mockssandra::Ssl::generate_cert(client_key, ""); // Self-signed
+
+  use_ssl(ca_key, ca_cert, HTTP_MOCK_HOSTNAME);
+  start_http_server();
+
+  bool is_failed = false;
+  HttpClient::Ptr client(new HttpClient(Address(HTTP_MOCK_SERVER_IP, HTTP_MOCK_SERVER_PORT), "/",
+                                        bind_callback(on_failed_response, &is_failed)));
+
+  SslContext::Ptr ssl_context(SslContextFactory::create());
+
+  ssl_context->set_cert(client_cert.c_str(), client_cert.size());
+  ssl_context->set_private_key(client_key.c_str(), client_key.size(), "",
+                               0); // No password expected for the private key
+  ssl_context->add_trusted_cert(ca_cert.c_str(), ca_cert.size());
+
+  SocketSettings settings;
+  settings.ssl_context = ssl_context;
+
+  client->with_settings(settings)->request(loop());
+  uv_run(loop(), UV_RUN_DEFAULT);
+  EXPECT_TRUE(is_failed);
+  EXPECT_EQ(client->error_code(), HttpClient::HTTP_CLIENT_ERROR_SOCKET);
 
   stop_http_server();
 }

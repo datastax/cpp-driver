@@ -37,11 +37,13 @@
 
 // Macros for grouping tests together
 #define GROUP_TEST_F(group_name, test_case, test_name) TEST_F(test_case, group_name##_##test_name)
+#define GROUP_TEST(group_name, test_case, test_name) TEST(test_case, group_name##_##test_name)
 #define GROUP_TYPED_TEST_P(group_name, test_case, test_name) \
   TYPED_TEST_P(test_case, group_name##_##test_name)
 
 // Macros to use for grouping integration tests together
-#define GROUP_INTEGRATION_TEST(server_type) GROUP_CONCAT(Integration, server_type)
+#define INTEGRATION_TEST(server_type, test_case, test_name) \
+  GROUP_TEST(Integration##_##server_type, test_case, test_name)
 #define INTEGRATION_TEST_F(server_type, test_case, test_name) \
   GROUP_TEST_F(Integration##_##server_type, test_case, test_name)
 #define INTEGRATION_TYPED_TEST_P(server_type, test_case, test_name) \
@@ -52,7 +54,8 @@
   GROUP_TYPED_TEST_P(DISABLED##_##Integration##_##server_type, test_case, est_name)
 
 // Macros to use for grouping Cassandra integration tests together
-#define CASSANDRA_TEST_NAME(test_name) Integration##_##Cassandra##_##test_name
+#define CASSANDRA_INTEGRATION_TEST(test_case, test_name) \
+  INTEGRATION_TEST(Cassandra, test_case, test_name)
 #define CASSANDRA_INTEGRATION_TEST_F(test_case, test_name) \
   INTEGRATION_TEST_F(Cassandra, test_case, test_name)
 #define CASSANDRA_INTEGRATION_TYPED_TEST_P(test_case, test_name) \
@@ -83,7 +86,7 @@
 #define CHECK_VERSION(version)                                                      \
   do {                                                                              \
     CCM::CassVersion cass_version = this->server_version_;                          \
-    if (Options::is_dse()) {                                                        \
+    if (!Options::is_cassandra()) {                                                 \
       cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
     }                                                                               \
     if (cass_version < #version) {                                                  \
@@ -98,7 +101,7 @@
 
 #define CHECK_VALUE_TYPE_VERSION(type)                                            \
   CCM::CassVersion cass_version = this->server_version_;                          \
-  if (Options::is_dse()) {                                                        \
+  if (!Options::is_cassandra()) {                                                 \
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
   }                                                                               \
   if (cass_version < type::supported_server_version()) {                          \

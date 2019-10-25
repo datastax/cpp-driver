@@ -14,7 +14,12 @@
   limitations under the License.
 */
 
-#include "objects/cluster.hpp"
+#include "integration.hpp"
+
+class ClusterTests : public Integration {
+public:
+  ClusterTests() { is_ccm_requested_ = false; }
+};
 
 /**
  * Set local dc to null for dc-aware lbp
@@ -23,7 +28,7 @@
  * @test_category configuration
  * @expected_result Error out because it is illegal to specify a null local-dc.
  */
-TEST(ClusterTest, SetLoadBalanceDcAwareNullLocalDc) {
+CASSANDRA_INTEGRATION_TEST_F(ClusterTests, SetLoadBalanceDcAwareNullLocalDc) {
   test::driver::Cluster cluster;
   EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS,
             cass_cluster_set_load_balance_dc_aware(cluster.get(), NULL, 99, cass_false));
@@ -36,7 +41,7 @@ TEST(ClusterTest, SetLoadBalanceDcAwareNullLocalDc) {
  * @test_category configuration
  * @expected_result CASS_ERROR_LIB_BAD_PARAMS.
  */
-TEST(ClusterTest, ExponentialReconnectionPolicyBadParameters) {
+CASSANDRA_INTEGRATION_TEST_F(ClusterTests, ExponentialReconnectionPolicyBadParameters) {
   test::driver::Cluster cluster;
 
   // Base delay must be greater than 1
@@ -54,7 +59,7 @@ TEST(ClusterTest, ExponentialReconnectionPolicyBadParameters) {
  * @test_category configuration
  * @expected_result CASS_ERROR_LIB_BAD_PARAMS.
  */
-TEST(ClusterTest, SecureConnectionBundleBadParameters) {
+CASSANDRA_INTEGRATION_TEST_F(ClusterTests, SecureConnectionBundleBadParameters) {
   test::driver::Cluster cluster;
 
   EXPECT_EQ(CASS_ERROR_LIB_BAD_PARAMS, cass_cluster_set_cloud_secure_connection_bundle_n(

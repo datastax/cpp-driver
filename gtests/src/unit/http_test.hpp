@@ -50,47 +50,16 @@ public:
   void start_http_server() { server_.listen(); }
   void stop_http_server() { server_.close(); }
 
-  datastax::internal::core::SocketSettings use_ssl(String cn = "127.0.0.1",
-                                                   bool is_server_using_ssl = true) {
-    datastax::internal::core::SocketSettings settings;
+  datastax::internal::core::SocketSettings use_ssl(const String& cn = HTTP_MOCK_HOSTNAME,
+                                                   bool is_server_using_ssl = true);
 
-#ifdef HAVE_OPENSSL
-    datastax::String ca_key = mockssandra::Ssl::generate_key();
-    ca_cert_ = mockssandra::Ssl::generate_cert(ca_key, cn);
-    key_ = mockssandra::Ssl::generate_key();
-    cert_ = mockssandra::Ssl::generate_cert(key_, cn, ca_cert_, ca_key);
-
-    datastax::internal::core::SslContext::Ptr ssl_context(
-        datastax::internal::core::SslContextFactory::create());
-    ssl_context->set_cert(cert().c_str(), cert().size());
-    ssl_context->set_private_key(key().c_str(), key().size(), "",
-                                 0); // No password expected for the private key
-    ssl_context->add_trusted_cert(ca_cert().c_str(), ca_cert().size());
-
-    settings.ssl_context = ssl_context;
-
-    if (is_server_using_ssl) {
-      server_.use_ssl(ca_key, ca_cert_, "", cert_);
-    }
-#endif
-
-    return settings;
-  }
-
-  void use_ssl(const String& key, const String& cert, const String& ca_key, const String& ca_cert) {
-#ifdef HAVE_OPENSSL
-    key_ = key;
-    cert_ = cert;
-    ca_cert_ = ca_cert;
-
-    server_.use_ssl(ca_key, ca_cert_, "", cert_);
-#endif
-  }
+  void use_ssl(const String& ca_cert, const String& ca_key, const String& cn);
 
 private:
   datastax::String ca_cert_;
   datastax::String cert_;
   datastax::String key_;
+
   mockssandra::http::Server server_;
 };
 

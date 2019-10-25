@@ -66,7 +66,7 @@ test::SimulacronCluster::SimulacronCluster()
 
   // Determine the release version (for priming nodes)
   CCM::CassVersion cassandra_version = Options::server_version();
-  if (Options::is_dse()) {
+  if (!Options::is_cassandra()) {
     CCM::DseVersion dse_version(cassandra_version);
     cassandra_version = dse_version.get_cass_version();
     if (cassandra_version == "0.0.0") {
@@ -127,7 +127,7 @@ void test::SimulacronCluster::create_cluster(
   }
 
   // Add the DSE version (if applicable)
-  if (Options::is_dse()) {
+  if (!Options::is_cassandra()) {
     paramters << "&dse_version=" << dse_version_;
     cluster_name << dse_version_;
   } else {

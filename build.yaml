@@ -33,7 +33,7 @@ os:
   - centos/7-64/cpp
   - osx/high-sierra
 env:
-  LIBUV_VERSION: 1.32.0
+  LIBUV_VERSION: 1.33.0
 build:
   - script: |
       . .build.sh

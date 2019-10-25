@@ -17,7 +17,8 @@
 #ifndef HTTP_MOCK_SERVER_HPP
 #define HTTP_MOCK_SERVER_HPP
 
-#define HTTP_MOCK_SERVER_IP "127.0.0.1"
+#define HTTP_MOCK_HOSTNAME "cpp-driver.hostname."
+#define HTTP_MOCK_SERVER_IP "127.254.254.254"
 #define HTTP_MOCK_SERVER_PORT 30443
 
 #include "http_parser.h"
@@ -61,8 +62,8 @@ public:
     close_connnection_after_request_ = enable;
   }
 
-  bool use_ssl(const String& key, const String& cert, const String& password = "",
-               const String& client_cert = "");
+  bool use_ssl(const String& key, const String& cert, const String& ca_cert = "",
+               bool require_client_cert = false);
 
   void listen();
   void close();

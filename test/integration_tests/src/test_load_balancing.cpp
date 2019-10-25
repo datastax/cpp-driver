@@ -54,7 +54,8 @@ public:
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(load_balancing, LoadBalancingTests)
+BOOST_FIXTURE_TEST_SUITE_WITH_DECOR(load_balancing, LoadBalancingTests,
+                                    *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(round_robin) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());

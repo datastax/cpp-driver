@@ -27,7 +27,11 @@ CassCluster* cass_cluster_new() { return CassCluster::to(new ClusterConfig()); }
 CassError cass_cluster_set_port(CassCluster* cluster, int port) {
   if (port <= 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
+  } else if (cluster->config().cloud_secure_connection_config().is_loaded()) {
+    LOG_ERROR("Port cannot be overridden with cloud secure connection bundle");
+    return CASS_ERROR_LIB_BAD_PARAMS;
   }
+
   cluster->config().set_port(port);
   return CASS_OK;
 }
@@ -117,7 +121,7 @@ CassError cass_cluster_set_contact_points_n(CassCluster* cluster, const char* co
     explode(String(contact_points, contact_points_length), exploded);
     for (Vector<String>::const_iterator it = exploded.begin(), end = exploded.end(); it != end;
          ++it) {
-      cluster->config().contact_points().push_back(Address(*it, cluster->config().port()));
+      cluster->config().contact_points().push_back(Address(*it, -1));
     }
   }
   return CASS_OK;

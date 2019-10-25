@@ -218,6 +218,25 @@ TEST_F(SessionBaseUnitTest, InvalidProtocol) {
   EXPECT_EQ(0, session_base.closed());
 }
 
+TEST_F(SessionBaseUnitTest, UnsupportedProtocol) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Config config;
+  config.set_protocol_version(ProtocolVersion(2)); // Unsupported protocol version
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  TestSessionBase session_base;
+
+  Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
+  EXPECT_TRUE(connect_future->error()->message.find(
+                  "Operation unsupported by this protocol version") != String::npos);
+  EXPECT_EQ(0, session_base.connected());
+  EXPECT_EQ(1, session_base.failed());
+  EXPECT_EQ(0, session_base.closed());
+}
+
 TEST_F(SessionBaseUnitTest, SslError) {
   mockssandra::SimpleCluster cluster(simple());
   use_ssl(&cluster);

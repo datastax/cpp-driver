@@ -104,6 +104,11 @@ CASSANDRA_INTEGRATION_TEST_F(StatementTests, SetHostWhereHostIsDown) {
   EXPECT_EQ(result.error_code(), CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
+class StatementNoClusterTests : public StatementTests {
+public:
+  StatementNoClusterTests() { is_ccm_requested_ = false; }
+};
+
 /**
  * Set a host on a statement using valid host strings.
  *
@@ -111,7 +116,7 @@ CASSANDRA_INTEGRATION_TEST_F(StatementTests, SetHostWhereHostIsDown) {
  * @test_category configuration
  * @expected_result Success
  */
-TEST(StatementTest, SetHostWithValidHostString) {
+CASSANDRA_INTEGRATION_TEST_F(StatementNoClusterTests, SetHostWithValidHostString) {
   Statement statement("");
   EXPECT_EQ(cass_statement_set_host(statement.get(), "127.0.0.1", 9042), CASS_OK);
   EXPECT_EQ(cass_statement_set_host(statement.get(), "::1", 9042), CASS_OK);
@@ -127,7 +132,7 @@ TEST(StatementTest, SetHostWithValidHostString) {
  * @test_category configuration
  * @expected_result Failure with the bad parameters error.
  */
-TEST(StatementTest, SetHostWithInvalidHostString) {
+CASSANDRA_INTEGRATION_TEST_F(StatementNoClusterTests, SetHostWithInvalidHostString) {
   Statement statement("");
   EXPECT_EQ(cass_statement_set_host(statement.get(), "notvalid", 9042), CASS_ERROR_LIB_BAD_PARAMS);
   EXPECT_EQ(cass_statement_set_host(statement.get(), "", 9042), CASS_ERROR_LIB_BAD_PARAMS);
@@ -141,7 +146,7 @@ TEST(StatementTest, SetHostWithInvalidHostString) {
  * @test_category configuration
  * @expected_result Success
  */
-TEST(StatementTest, SetHostWithValidHostInet) {
+CASSANDRA_INTEGRATION_TEST_F(StatementNoClusterTests, SetHostWithValidHostInet) {
   Statement statement("");
   CassInet valid;
   ASSERT_EQ(cass_inet_from_string("127.0.0.1", &valid), CASS_OK);
@@ -162,7 +167,7 @@ TEST(StatementTest, SetHostWithValidHostInet) {
  * @test_category configuration
  * @expected_result Failure with the bad parameters error.
  */
-TEST(StatementTest, SetHostWithInvalidHostInet) {
+CASSANDRA_INTEGRATION_TEST_F(StatementNoClusterTests, SetHostWithInvalidHostInet) {
   Statement statement("");
   CassInet invalid;
   invalid.address_length = 3; // Only 4 or 16 is valid (IPv4 and IPv6)

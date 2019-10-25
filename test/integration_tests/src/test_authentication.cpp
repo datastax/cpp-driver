@@ -83,7 +83,8 @@ void on_auth_initial(CassAuthenticator* auth, void* data) {
   cass_authenticator_set_error(auth, NULL);
 }
 
-BOOST_FIXTURE_TEST_SUITE(authentication, AuthenticationTests)
+BOOST_FIXTURE_TEST_SUITE_WITH_DECOR(authentication, AuthenticationTests,
+                                    *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(protocol_versions) {
   auth(3);

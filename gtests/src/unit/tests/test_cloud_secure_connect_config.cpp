@@ -47,9 +47,9 @@
 #endif
 
 #define SNI_LOCAL_DC "dc1"
-#define SNI_HOST "localhost"
+#define SNI_HOST HTTP_MOCK_HOSTNAME
 #define SNI_PORT 30002
-#define SNI_HOST_AND_PORT "localhost:30002"
+#define SNI_HOST_AND_PORT HTTP_MOCK_HOSTNAME ":30002"
 #define SNI_HOST_ID_1 "276b1694-64c4-4ba8-afb4-e33915a02f1e"
 #define SNI_HOST_ID_2 "8c29f723-5c1c-4ffd-a4ef-8c683a7fc02b"
 #define SNI_HOST_ID_3 "fb91d3ff-47cb-447d-b31d-c5721ca8d7ab"
@@ -91,9 +91,9 @@ public:
     tmp_zip_file_ = String(tmp, tmp_length) + PATH_SEPARATOR + CREDS_V1_ZIP_FILE;
 
     ca_key_ = Ssl::generate_key();
-    ca_cert_ = Ssl::generate_cert(ca_key_);
+    ca_cert_ = Ssl::generate_cert(ca_key_, "CA");
     key_ = Ssl::generate_key();
-    cert_ = Ssl::generate_cert(key_, "localhost", ca_cert_, ca_key_);
+    cert_ = Ssl::generate_cert(key_, "", ca_cert_, ca_key_);
   }
 
   const String& creds_zip_file() const { return tmp_zip_file_; }
@@ -335,11 +335,11 @@ public:
     CloudSecureConnectionConfigTest::SetUp();
 
     StringBuffer buffer;
-    full_config_credsv1(buffer, HTTP_MOCK_SERVER_IP, HTTP_MOCK_SERVER_PORT);
+    full_config_credsv1(buffer, HTTP_MOCK_HOSTNAME, HTTP_MOCK_SERVER_PORT);
     create_zip_file(buffer.GetString());
     cloud_config_.load(creds_zip_file(), &config_);
 
-    use_ssl(key(), cert(), ca_key(), ca_cert()); // Ensure HttpServer is configured to use SSL
+    use_ssl(ca_cert(), ca_key(), HTTP_MOCK_HOSTNAME); // Ensure HttpServer is configured to use SSL
 
     ClusterSettings settings(config_);
     resolver_ = config_.cluster_metadata_resolver_factory()->new_instance(settings);

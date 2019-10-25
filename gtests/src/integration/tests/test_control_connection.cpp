@@ -273,8 +273,10 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTwoNodeClusterTests, Reconnection)
    * and ensure only the first node is used as the contact point for automatic
    * node discovery of the second node
    */
-  Cluster cluster = default_cluster().with_load_balance_round_robin().with_contact_points(
-      generate_contact_points(ccm_->get_ip_prefix(), 1));
+  Cluster cluster = default_cluster()
+                        .with_load_balance_round_robin()
+                        .with_constant_reconnect(100)
+                        .with_contact_points(generate_contact_points(ccm_->get_ip_prefix(), 1));
   Session session = cluster.connect();
 
   // Stop the first node and bootstrap a third node into the cluster
@@ -554,7 +556,8 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionThreeNodeClusterTests, NodeDiscove
  */
 CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests, FullOutage) {
   CHECK_FAILURE;
-  connect(); // Create the default session
+  Cluster cluster = default_cluster().with_constant_reconnect(100);
+  connect(cluster);
 
   // Stop the cluster and attempt to perform a request
   ccm_->stop_cluster();
@@ -567,12 +570,11 @@ CASSANDRA_INTEGRATION_TEST_F(ControlConnectionTests, FullOutage) {
   for (unsigned short i = 0; i < cluster_ip_addresses.size(); ++i) {
     nodes.insert(i + 1);
   }
-  reset_logger_criteria("Scheduling reconnect for host ", nodes);
+  reset_logger_criteria("reconnect for host ", nodes);
 
   // Restart the cluster and wait for the nodes to reconnect
   ccm_->start_cluster();
   ASSERT_TRUE(wait_for_logger(nodes.size()));
-  msleep(3000); // TODO: Remove static sleep and check driver logs for reduced wait
 
   // Ensure all nodes are actively used
   std::set<unsigned short> expected_nodes;

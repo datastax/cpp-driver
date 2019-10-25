@@ -19,7 +19,7 @@
 /**
  * Startup options integration tests
  */
-class StartupOptionssTests : public Integration {};
+class StartupOptionsTests : public Integration {};
 
 /**
  * Verify driver name and version are assigned in startup options.
@@ -34,10 +34,10 @@ class StartupOptionssTests : public Integration {};
  * @cassandra_version 4.0.0
  * @expected_result Driver startup options are validated.
  */
-CASSANDRA_INTEGRATION_TEST_F(StartupOptionssTests, DriverOptions) {
+CASSANDRA_INTEGRATION_TEST_F(StartupOptionsTests, DriverOptions) {
   CHECK_FAILURE;
   CHECK_VERSION(4.0.0);
-  if (Options::is_dse()) {
+  if (!Options::is_cassandra()) {
     SKIP_TEST("Unsupported for DataStax Enterprise Version "
               << server_version_.to_string() << ": 'system_views.clients' is unavailable");
   }
