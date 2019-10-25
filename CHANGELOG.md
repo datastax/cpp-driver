@@ -4,6 +4,7 @@
 Bug Fixes
 --------
 * [CPP-819] - Ensure port is updated on already assigned contact points
+* [CPP-825] - Cloud should be verifying the peer certificates CN
 
 2.14.0-alpha2
 ===========
