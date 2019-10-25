@@ -67,11 +67,9 @@ StartupCallback::StartupCallback(Connector* connector, const Request::ConstPtr& 
 
 void StartupCallback::on_internal_set(ResponseMessage* response) {
   switch (response->opcode()) {
-#ifdef CASS_USE_OPTIONS
     case CQL_OPCODE_SUPPORTED:
       connector_->on_supported(response);
       break;
-#endif
 
     case CQL_OPCODE_ERROR: {
       ErrorResponse* error = static_cast<ErrorResponse*>(response->response_body().get());
@@ -280,26 +278,19 @@ void Connector::on_ready_or_register_for_events() {
   }
 }
 
-// TODO: We don't currently do anything with the options returned from the
-// SUPPORTED response. In the not too distant future we will be using these
-// options for at least compression, but likely other things too.
-#ifdef CASS_USE_OPTIONS
-void ConnectionConnector::on_supported(ResponseMessage* response) {
+void Connector::on_supported(ResponseMessage* response) {
   SupportedResponse* supported = static_cast<SupportedResponse*>(response->response_body().get());
-
-  // TODO: Do something with the supported info
-  (void)supported;
+  supported_options_ = supported->supported_options();
 
   connection_->write_and_flush(RequestCallback::Ptr(new StartupCallback(
       this, Request::ConstPtr(new StartupRequest(settings_.application_name,
                                                  settings_.application_version, settings_.client_id,
                                                  settings_.no_compact)))));
 }
-#endif
 
 void Connector::on_authenticate(const String& class_name) {
   Authenticator::Ptr auth(settings_.auth_provider->new_authenticator(
-      socket_connector_->address(), socket_connector_->hostname(), class_name));
+      host_->address(), socket_connector_->hostname(), class_name));
   if (!auth) {
     on_error(CONNECTION_ERROR_AUTH, "Authentication required but no auth provider set");
   } else {
@@ -355,15 +346,9 @@ void Connector::on_connect(SocketConnector* socket_connector) {
       socket->set_handler(new ConnectionHandler(connection_.get()));
     }
 
-#ifdef CASS_USE_OPTIONS
     connection_->write_and_flush(
         RequestCallback::Ptr(new StartupCallback(this, Request::ConstPtr(new OptionsRequest()))));
-#else
-    connection_->write_and_flush(RequestCallback::Ptr(new StartupCallback(
-        this, Request::ConstPtr(new StartupRequest(settings_.application_name,
-                                                   settings_.application_version,
-                                                   settings_.client_id, settings_.no_compact)))));
-#endif
+
   } else if (socket_connector->is_canceled() || is_timeout_error()) {
     finish();
   } else if (socket_connector->error_code() == SocketConnector::SOCKET_ERROR_CONNECT) {

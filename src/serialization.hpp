@@ -66,8 +66,8 @@ inline char* encode_uint16(char* output, uint16_t value) {
 }
 
 inline const char* decode_uint16(const char* input, uint16_t& output) {
-  output = (static_cast<uint16_t>(static_cast<uint8_t>(input[1])) << 0) |
-           (static_cast<uint16_t>(static_cast<uint8_t>(input[0])) << 8);
+  output = static_cast<uint16_t>((static_cast<uint16_t>(static_cast<uint8_t>(input[1])) << 0) |
+                                 (static_cast<uint16_t>(static_cast<uint8_t>(input[0])) << 8));
   return input + sizeof(uint16_t);
 }
 
@@ -78,8 +78,8 @@ inline char* encode_int16(char* output, int16_t value) {
 }
 
 inline const char* decode_int16(const char* input, int16_t& output) {
-  output = (static_cast<int16_t>(static_cast<uint8_t>(input[1])) << 0) |
-           (static_cast<int16_t>(static_cast<uint8_t>(input[0])) << 8);
+  output = static_cast<int16_t>((static_cast<int16_t>(static_cast<uint8_t>(input[1])) << 0) |
+                                (static_cast<int16_t>(static_cast<uint8_t>(input[0])) << 8));
   return input + sizeof(int16_t);
 }
 

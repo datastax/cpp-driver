@@ -18,12 +18,15 @@
 
 #include "bridge.hpp"
 #include "options.hpp"
+#include "ssl.hpp"
 #include "win_debug.hpp"
 
 #include "cassandra.h"
 #include "test_utils.hpp"
 
 #include <ostream>
+
+using datastax::internal::core::SslContextFactory;
 
 /**
  * Bootstrap listener for handling start and end of the integration tests.
@@ -64,6 +67,10 @@ public:
       Options::ccm()->remove_all_clusters();
     }
   }
+
+  void OnTestStart(const testing::TestInfo& test_information) { SslContextFactory::init(); }
+
+  void OnTestEnd(const testing::TestInfo& test_information) { SslContextFactory::cleanup(); }
 
 private:
   /**
@@ -106,11 +113,7 @@ std::string generate_filter(TestCategory category, const std::string& base_filte
 int main(int argc, char* argv[]) {
   // Initialize the Google testing framework
   testing::InitGoogleTest(&argc, argv);
-
-  // Add a bootstrap mechanism for program start and finish
-  BootstrapListener* listener = NULL;
   testing::TestEventListeners& listeners = testing::UnitTest::GetInstance()->listeners();
-  listeners.Append(listener = new BootstrapListener());
 
 #if defined(_WIN32) && defined(_DEBUG)
   // Add the memory leak checking to the listener callbacks
@@ -120,6 +123,10 @@ int main(int argc, char* argv[]) {
   VLDMarkAllLeaksAsReported();
 #endif
 #endif
+
+  // Add a bootstrap mechanism for program start and finish
+  BootstrapListener* listener = NULL;
+  listeners.Append(listener = new BootstrapListener());
 
   // Initialize the options for the integration test
   if (Options::initialize(argc, argv)) {

@@ -16,6 +16,7 @@
 
 #include "unit.hpp"
 
+#include "batch_request.hpp"
 #include "constants.hpp"
 #include "control_connection.hpp"
 #include "query_request.hpp"
@@ -32,8 +33,9 @@ public:
 
   void connect(const Config& config = Config()) {
     Config temp(config);
-    temp.contact_points().push_back("127.0.0.1");
-    temp.contact_points().push_back("127.0.0.2"); // At least one more host (in case node 1 is down)
+    temp.contact_points().push_back(Address("127.0.0.1", 9042));
+    temp.contact_points().push_back(
+        Address("127.0.0.2", 9042)); // At least one more host (in case node 1 is down)
     Future::Ptr connect_future(session.connect(temp));
     ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
         << "Timed out waiting for session to connect";
@@ -54,7 +56,8 @@ public:
     CassInet inet;
     ASSERT_TRUE(value->decoder().as_inet(value->size(), &inet));
 
-    ASSERT_TRUE(Address::from_inet(inet.address, inet.address_length, 9042, output));
+    *output = Address(inet.address, inet.address_length, 9042);
+    ASSERT_TRUE(output->is_valid_and_resolved());
   }
 
   Session session;
@@ -120,4 +123,46 @@ TEST_F(StatementUnitTest, SetHostWhereHostIsDown) {
 
   ASSERT_TRUE(future->error());
   EXPECT_EQ(future->error()->code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+}
+
+TEST_F(StatementUnitTest, ErrorBatchWithNamedParameters) {
+  mockssandra::SimpleCluster cluster(simple(), 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  connect();
+
+  BatchRequest::Ptr batch(new BatchRequest(CASS_BATCH_TYPE_UNLOGGED));
+
+  Statement::Ptr request(new QueryRequest("SELECT * FROM does_not_matter WHERE key = ?",
+                                          1)); // Space for a named parameter
+
+  request->set("key", 42); // Use named parameters
+
+  batch->add_statement(request.get());
+
+  ResponseFuture::Ptr future(session.execute(Request::ConstPtr(batch)));
+  future->wait();
+
+  ASSERT_TRUE(future->error());
+  EXPECT_EQ(future->error()->code, CASS_ERROR_LIB_BAD_PARAMS);
+  EXPECT_EQ(future->error()->message, "Batches cannot contain queries with named values");
+}
+
+TEST_F(StatementUnitTest, ErrorParametersUnset) {
+  mockssandra::SimpleCluster cluster(simple(), 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Config config;
+  config.set_protocol_version(ProtocolVersion(3));
+
+  connect(config);
+
+  Statement::Ptr request(new QueryRequest("SELECT * FROM does_not_matter WHERE key = ?",
+                                          1)); // Parameters start as unset
+
+  ResponseFuture::Ptr future(session.execute(Request::ConstPtr(request)));
+  future->wait();
+
+  ASSERT_TRUE(future->error());
+  EXPECT_EQ(future->error()->code, CASS_ERROR_LIB_PARAMETER_UNSET);
 }

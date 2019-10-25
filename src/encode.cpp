@@ -23,7 +23,7 @@ namespace datastax { namespace internal { namespace core {
 static char* encode_vint(char* output, uint64_t value, size_t value_size) {
   if (value_size == 1) {
     // This is just a one byte value; write it and get out.
-    *output = value;
+    *output = static_cast<char>(value);
     return output + 1;
   }
 

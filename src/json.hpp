@@ -73,10 +73,12 @@ public:
 
 typedef datastax::rapidjson::UTF8<> UTF8;
 typedef datastax::rapidjson::MemoryPoolAllocator<json::Allocator> MemoryPoolAllocator;
+typedef datastax::rapidjson::MemoryStream MemoryStream;
 
 typedef datastax::rapidjson::GenericDocument<UTF8, MemoryPoolAllocator, json::Allocator> Document;
 typedef datastax::rapidjson::GenericValue<UTF8, MemoryPoolAllocator> Value;
 typedef datastax::rapidjson::GenericStringBuffer<UTF8, json::Allocator> StringBuffer;
+typedef datastax::rapidjson::AutoUTFInputStream<unsigned, MemoryStream> AutoUTFMemoryInputStream;
 
 template <typename OutputStream, typename SourceEncoding = UTF8, typename TargetEncoding = UTF8,
           typename StackAllocator = json::Allocator,

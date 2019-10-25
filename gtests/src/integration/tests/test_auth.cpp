@@ -200,7 +200,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, BadCredentials) {
 
   // Add the proper logging criteria (based on server version)
   CCM::CassVersion cass_version = this->server_version_;
-  if (Options::is_dse()) {
+  if (!Options::is_cassandra()) {
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
   }
   if (cass_version >= "3.10") {
@@ -242,7 +242,7 @@ CASSANDRA_INTEGRATION_TEST_F(AuthenticationTests, AuthenticatorSetErrorNull) {
 
   // Add the proper logging criteria (based on server version)
   CCM::CassVersion cass_version = this->server_version_;
-  if (Options::is_dse()) {
+  if (!Options::is_cassandra()) {
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
   }
   if (cass_version >= "3.10") {

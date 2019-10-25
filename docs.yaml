@@ -53,10 +53,13 @@ rewrites:
   - http://www.datastax.com/documentation/cql/3.1: https://docs.datastax.com/en/archived/cql/3.1
   - http://www.datastax.com/documentation/cassandra/2.: https://docs.datastax.com/en/archived/cassandra/2.
   - http://downloads.datastax.com/cpp-driver: https://downloads.datastax.com/cpp-driver/
+  - http://www.datastax.com/dev/blog/datastax-c-driver(.*)$: https://www.datastax.com/blog/
 rules:
   use_path_nav_files_only: true
 
 versions:
+  - name: "2.14"
+    ref: 2.14.0
   - name: "2.13"
     ref: 2.13.0
   - name: "2.12"

@@ -38,11 +38,9 @@ private:
 
 }}} // namespace datastax::internal::core
 
-RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& connected_host,
-                                                         ProtocolVersion protocol_version,
-                                                         const HostMap& hosts,
-                                                         const TokenMap::Ptr& token_map,
-                                                         const Callback& callback)
+RequestProcessorInitializer::RequestProcessorInitializer(
+    const Host::Ptr& connected_host, ProtocolVersion protocol_version, const HostMap& hosts,
+    const TokenMap::Ptr& token_map, const String& local_dc, const Callback& callback)
     : event_loop_(NULL)
     , listener_(NULL)
     , metrics_(NULL)
@@ -51,6 +49,7 @@ RequestProcessorInitializer::RequestProcessorInitializer(const Host::Ptr& connec
     , protocol_version_(protocol_version)
     , hosts_(hosts)
     , token_map_(token_map)
+    , local_dc_(local_dc)
     , error_code_(REQUEST_PROCESSOR_OK)
     , callback_(callback) {
   uv_mutex_init(&mutex_);
@@ -158,7 +157,8 @@ void RequestProcessorInitializer::on_initialize(ConnectionPoolManagerInitializer
     error_message_ = "Unable to connect to any hosts";
   } else {
     processor_.reset(new RequestProcessor(listener_, event_loop_, initializer->release_manager(),
-                                          connected_host_, hosts_, token_map_, settings_, random_));
+                                          connected_host_, hosts_, token_map_, settings_, random_,
+                                          local_dc_));
 
     int rc = processor_->init(RequestProcessor::Protected());
     if (rc != 0) {

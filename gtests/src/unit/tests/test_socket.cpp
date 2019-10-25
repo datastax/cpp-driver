@@ -20,9 +20,56 @@
 #include "socket_connector.hpp"
 #include "ssl.hpp"
 
-#define SSL_VERIFY_PEER_DNS_RELATIVE_HOSTNAME "cpp-driver.hostname"
-#define SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME SSL_VERIFY_PEER_DNS_RELATIVE_HOSTNAME "."
-#define SSL_VERIFY_PEER_DNS_IP_ADDRESS "127.254.254.254"
+#define DNS_HOSTNAME "cpp-driver.hostname."
+#define DNS_IP_ADDRESS "127.254.254.254"
+
+using mockssandra::internal::ClientConnection;
+using mockssandra::internal::ClientConnectionFactory;
+using mockssandra::internal::ServerConnection;
+
+class CloseConnection : public ClientConnection {
+public:
+  CloseConnection(ServerConnection* server)
+      : ClientConnection(server) {}
+
+  virtual int on_accept() {
+    int rc = accept();
+    if (rc != 0) {
+      return rc;
+    }
+    close();
+    return rc;
+  }
+};
+
+class CloseConnectionFactory : public ClientConnectionFactory {
+public:
+  virtual ClientConnection* create(ServerConnection* server) const {
+    return new CloseConnection(server);
+  }
+};
+
+class SniServerNameConnection : public ClientConnection {
+public:
+  SniServerNameConnection(ServerConnection* server)
+      : ClientConnection(server) {}
+
+  virtual void on_read(const char* data, size_t len) {
+    const char* server_name = sni_server_name();
+    if (server_name) {
+      write(String(server_name) + " - Closed");
+    } else {
+      write("<unknown> - Closed");
+    }
+  }
+};
+
+class SniServerNameConnectionFactory : public ClientConnectionFactory {
+public:
+  virtual ClientConnection* create(ServerConnection* server) const {
+    return new SniServerNameConnection(server);
+  }
+};
 
 using namespace datastax;
 using namespace datastax::internal;
@@ -88,17 +135,25 @@ public:
     return settings;
   }
 
-  void listen() { ASSERT_EQ(server_.listen(), 0); }
-
-  void reset(const Address& address) { server_.reset(address); }
+  void listen(const Address& address = Address("127.0.0.1", 8888)) {
+    ASSERT_EQ(server_.listen(address), 0);
+  }
 
   void close() { server_.close(); }
 
-  void use_close_immediately() { server_.use_close_immediately(); }
+  void use_close_immediately() { server_.use_connection_factory(new CloseConnectionFactory()); }
+  void use_sni_server_name() {
+    server_.use_connection_factory(new SniServerNameConnectionFactory());
+  }
 
   virtual void TearDown() {
     LoopTest::TearDown();
     close();
+  }
+
+  bool verify_dns() {
+    verify_dns_check(); // Verify address can be resolved
+    return !HasFailure();
   }
 
   static void on_socket_connected(SocketConnector* connector, String* result) {
@@ -136,16 +191,32 @@ public:
     }
   }
 
-  static void on_request(uv_getnameinfo_t* handle, int status, const char* hostname,
-                         const char* service) {
+  static void on_request(uv_getaddrinfo_t* handle, int status, struct addrinfo* res) {
     if (status) {
-      FAIL() << "Unable to Execute Test SocketUnitTest.SslVerifyIdentityDns: "
-             << "Add /etc/hosts entry " << SSL_VERIFY_PEER_DNS_IP_ADDRESS << "\t"
-             << SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME;
-    } else if (String(hostname) != String(SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME)) {
-      FAIL() << "Invalid /etc/hosts entry for: '" << hostname << "' != '"
-             << SSL_VERIFY_PEER_DNS_ABSOLUTE_HOSTNAME << "'";
+      FAIL() << "Unable to Execute Test: "
+             << "Add /etc/hosts entry " << DNS_IP_ADDRESS << "\t" << DNS_HOSTNAME;
+    } else {
+      bool match = false;
+      do {
+        Address address(res->ai_addr);
+        if (address.is_valid_and_resolved() && address == Address(DNS_IP_ADDRESS, 8888)) {
+          match = true;
+          break;
+        }
+        res = res->ai_next;
+      } while (res);
+      ASSERT_TRUE(match) << "Invalid /etc/hosts entry for: '" << DNS_HOSTNAME << "' != '"
+                         << DNS_IP_ADDRESS << "'";
     }
+    uv_freeaddrinfo(res);
+  }
+
+private:
+  void verify_dns_check() {
+    uv_getaddrinfo_t request;
+    Address::SocketStorage storage;
+    ASSERT_EQ(0, uv_getaddrinfo(loop(), &request, on_request, DNS_HOSTNAME, "8888", NULL));
+    uv_run(loop(), UV_RUN_DEFAULT);
   }
 
 private:
@@ -166,10 +237,26 @@ TEST_F(SocketUnitTest, Simple) {
   EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
 }
 
-TEST_F(SocketUnitTest, Ssl) {
-  listen();
+TEST_F(SocketUnitTest, SimpleDns) {
+  if (!verify_dns()) return;
 
+  listen(Address(DNS_IP_ADDRESS, 8888));
+
+  String result;
+  SocketConnector::Ptr connector(new SocketConnector(Address(DNS_HOSTNAME, 8888),
+                                                     bind_callback(on_socket_connected, &result)));
+
+  connector->connect(loop());
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
+}
+
+TEST_F(SocketUnitTest, Ssl) {
   SocketSettings settings(use_ssl());
+
+  listen();
 
   String result;
   SocketConnector::Ptr connector(
@@ -180,6 +267,24 @@ TEST_F(SocketUnitTest, Ssl) {
   uv_run(loop(), UV_RUN_DEFAULT);
 
   EXPECT_EQ(result, "The socket is successfully connected and wrote data - Closed");
+}
+
+TEST_F(SocketUnitTest, SslSniServerName) {
+  SocketSettings settings(use_ssl());
+
+  use_sni_server_name();
+  listen();
+
+  String result;
+  SocketConnector::Ptr connector(
+      new SocketConnector(Address("127.0.0.1", 8888, "TestSniServerName"),
+                          bind_callback(on_socket_connected, &result)));
+
+  connector->with_settings(settings)->connect(loop());
+
+  uv_run(loop(), UV_RUN_DEFAULT);
+
+  EXPECT_EQ(result, "TestSniServerName - Closed");
 }
 
 TEST_F(SocketUnitTest, Refused) {
@@ -194,10 +299,10 @@ TEST_F(SocketUnitTest, Refused) {
 }
 
 TEST_F(SocketUnitTest, SslClose) {
+  SocketSettings settings(use_ssl());
+
   use_close_immediately();
   listen();
-
-  SocketSettings settings(use_ssl());
 
   Vector<SocketConnector::Ptr> connectors;
 
@@ -241,9 +346,9 @@ TEST_F(SocketUnitTest, Cancel) {
 }
 
 TEST_F(SocketUnitTest, SslCancel) {
-  listen();
-
   SocketSettings settings(use_ssl());
+
+  listen();
 
   Vector<SocketConnector::Ptr> connectors;
 
@@ -268,9 +373,10 @@ TEST_F(SocketUnitTest, SslCancel) {
 }
 
 TEST_F(SocketUnitTest, SslVerifyIdentity) {
+  SocketSettings settings(use_ssl("127.0.0.1"));
+
   listen();
 
-  SocketSettings settings(use_ssl("127.0.0.1"));
   settings.ssl_context->set_verify_flags(CASS_SSL_VERIFY_PEER_IDENTITY);
 
   String result;
@@ -285,26 +391,17 @@ TEST_F(SocketUnitTest, SslVerifyIdentity) {
 }
 
 TEST_F(SocketUnitTest, SslVerifyIdentityDns) {
-  // Verify address can be resolved
-  Address verify_entry;
-  Address::from_string(SSL_VERIFY_PEER_DNS_IP_ADDRESS, 8888, &verify_entry);
-  uv_getnameinfo_t request;
-  ASSERT_EQ(0, uv_getnameinfo(loop(), &request, on_request,
-                              static_cast<const Address>(verify_entry).addr(), 0));
-  uv_run(loop(), UV_RUN_DEFAULT);
-  if (this->HasFailure()) { // Make test fail due to DNS not configured
-    return;
-  }
+  if (!verify_dns()) return;
 
-  reset(Address(SSL_VERIFY_PEER_DNS_IP_ADDRESS,
-                8888)); // Ensure the echo server is listening on the correct address
-  listen();
+  SocketSettings settings(use_ssl(DNS_HOSTNAME));
 
-  SocketSettings settings(use_ssl(SSL_VERIFY_PEER_DNS_RELATIVE_HOSTNAME));
+  listen(Address(DNS_IP_ADDRESS, 8888));
+
   settings.ssl_context->set_verify_flags(CASS_SSL_VERIFY_PEER_IDENTITY_DNS);
+  settings.resolve_timeout_ms = 12000;
 
   String result;
-  SocketConnector::Ptr connector(new SocketConnector(Address(SSL_VERIFY_PEER_DNS_IP_ADDRESS, 8888),
+  SocketConnector::Ptr connector(new SocketConnector(Address(DNS_HOSTNAME, 8888),
                                                      bind_callback(on_socket_connected, &result)));
 
   connector->with_settings(settings)->connect(loop());

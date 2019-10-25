@@ -95,7 +95,8 @@ public:
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(control_connection, ControlConnectionTests)
+BOOST_FIXTURE_TEST_SUITE_WITH_DECOR(control_connection, ControlConnectionTests,
+                                    *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(connect_invalid_ip) {
   test_utils::CassLog::reset("Unable to establish a control connection to host "

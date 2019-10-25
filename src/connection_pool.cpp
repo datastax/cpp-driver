@@ -27,6 +27,13 @@ using namespace datastax;
 using namespace datastax::internal::core;
 
 static inline bool least_busy_comp(const PooledConnection::Ptr& a, const PooledConnection::Ptr& b) {
+  // Don't consider closed connections to be the least busy.
+  if (a->is_closing()) { // "a" is closed so it can't be the least busy.
+    return false;
+  } else if (b->is_closing()) { // "a" is not close, but "b" is closed so "a" is less busy.
+    return true;
+  }
+  // Both "a" and "b" are not closed so compare their inflight request counts.
   return a->inflight_request_count() < b->inflight_request_count();
 }
 
@@ -89,10 +96,12 @@ ConnectionPool::ConnectionPool(const Connection::Vec& connections, ConnectionPoo
 }
 
 PooledConnection::Ptr ConnectionPool::find_least_busy() const {
-  if (connections_.empty()) {
+  PooledConnection::Vec::const_iterator it =
+      std::min_element(connections_.begin(), connections_.end(), least_busy_comp);
+  if (it == connections_.end() || (*it)->is_closing()) {
     return PooledConnection::Ptr();
   }
-  return *std::min_element(connections_.begin(), connections_.end(), least_busy_comp);
+  return *it;
 }
 
 bool ConnectionPool::has_connections() const { return !connections_.empty(); }

@@ -52,9 +52,11 @@ Integration::Integration()
     , is_with_vnodes_(false)
     , is_randomized_contact_points_(false)
     , is_schema_metadata_(false)
+    , is_ccm_requested_(true)
     , is_ccm_start_requested_(true)
     , is_ccm_start_node_individually_(false)
     , is_session_requested_(true)
+    , is_keyspace_change_requested_(true)
     , is_test_chaotic_(false)
     , is_beta_protocol_(Options::is_beta_protocol())
     , protocol_version_(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION)
@@ -63,7 +65,7 @@ Integration::Integration()
   // Determine if the schema keyspaces table should be updated
   // TODO: Make cass_version (and dse_version) available for all tests
   CCM::CassVersion cass_version = server_version_;
-  if (Options::is_dse()) {
+  if (!Options::is_cassandra()) {
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
   }
   if (cass_version >= "3.0.0") {
@@ -138,47 +140,49 @@ void Integration::SetUp() {
   data_center_nodes.push_back(number_dc1_nodes_);
   data_center_nodes.push_back(number_dc2_nodes_);
 
-  try {
-    // Create and start the CCM cluster (if not already created)
-    ccm_ = new CCM::Bridge(
-        server_version_, Options::use_git(), Options::branch_tag(), Options::use_install_dir(),
-        Options::install_dir(), Options::is_dse(), dse_workload_, Options::cluster_prefix(),
-        Options::dse_credentials(), Options::dse_username(), Options::dse_password(),
-        Options::deployment_type(), Options::authentication_type(), Options::host(),
-        Options::port(), Options::username(), Options::password(), Options::public_key(),
-        Options::private_key(), Options::is_verbose_ccm());
-    if (ccm_->create_cluster(data_center_nodes, is_with_vnodes_, is_password_authenticator_,
-                             is_ssl_, is_client_authentication_)) {
-      if (is_ccm_start_requested_) {
-        if (is_ccm_start_node_individually_) {
-          for (unsigned short node = 1; node <= (number_dc1_nodes_ + number_dc2_nodes_); ++node) {
-            if (is_password_authenticator_) {
-              ccm_->start_node(node, "-Dcassandra.superuser_setup_delay_ms=0");
-            } else {
-              ccm_->start_node(node);
+  if (is_ccm_requested_) {
+    try {
+      // Create and start the CCM cluster (if not already created)
+      ccm_ = new CCM::Bridge(
+          server_version_, Options::use_git(), Options::branch_tag(), Options::use_install_dir(),
+          Options::install_dir(), Options::server_type(), dse_workload_, Options::cluster_prefix(),
+          Options::dse_credentials(), Options::dse_username(), Options::dse_password(),
+          Options::deployment_type(), Options::authentication_type(), Options::host(),
+          Options::port(), Options::username(), Options::password(), Options::public_key(),
+          Options::private_key(), Options::is_verbose_ccm());
+      if (ccm_->create_cluster(data_center_nodes, is_with_vnodes_, is_password_authenticator_,
+                               is_ssl_, is_client_authentication_)) {
+        if (is_ccm_start_requested_) {
+          if (is_ccm_start_node_individually_) {
+            for (unsigned short node = 1; node <= (number_dc1_nodes_ + number_dc2_nodes_); ++node) {
+              if (is_password_authenticator_) {
+                ccm_->start_node(node, "-Dcassandra.superuser_setup_delay_ms=0");
+              } else {
+                ccm_->start_node(node);
+              }
             }
-          }
-        } else {
-          if (is_password_authenticator_) {
-            ccm_->start_cluster("-Dcassandra.superuser_setup_delay_ms=0");
           } else {
-            ccm_->start_cluster();
+            if (is_password_authenticator_) {
+              ccm_->start_cluster("-Dcassandra.superuser_setup_delay_ms=0");
+            } else {
+              ccm_->start_cluster();
+            }
           }
         }
       }
-    }
 
-    // Generate the default contact points
-    contact_points_ =
-        generate_contact_points(ccm_->get_ip_prefix(), number_dc1_nodes_ + number_dc2_nodes_);
+      // Generate the default contact points
+      contact_points_ =
+          generate_contact_points(ccm_->get_ip_prefix(), number_dc1_nodes_ + number_dc2_nodes_);
 
-    // Determine if the session connection should be established
-    if (is_session_requested_ && is_ccm_start_requested_) {
-      connect();
+      // Determine if the session connection should be established
+      if (is_session_requested_ && is_ccm_start_requested_) {
+        connect();
+      }
+    } catch (CCM::BridgeException be) {
+      // Issue creating the CCM bridge instance (force failure)
+      FAIL() << be.what();
     }
-  } catch (CCM::BridgeException be) {
-    // Issue creating the CCM bridge instance (force failure)
-    FAIL() << be.what();
   }
 }
 
@@ -206,7 +210,9 @@ void Integration::TearDown() {
   // Determine if the CCM cluster should be destroyed
   if (is_test_chaotic_) {
     // Destroy the current cluster and reset the chaos flag for the next test
-    ccm_->remove_cluster();
+    if (!Options::keep_clusters()) {
+      ccm_->remove_cluster();
+    }
     is_test_chaotic_ = false;
   }
 }
@@ -295,6 +301,16 @@ void Integration::drop_type(const std::string& type_name) {
   session_.execute(drop_type_query.str(), CASS_CONSISTENCY_ANY, false, false);
 }
 
+bool Integration::use_keyspace(const std::string& keyspace_name) {
+  std::stringstream use_keyspace_query;
+  use_keyspace_query << "USE " << keyspace_name;
+  session_.execute(use_keyspace_query.str());
+  if (this->HasFailure()) {
+    return false;
+  }
+  return true;
+}
+
 void Integration::connect(Cluster cluster) {
   // Establish the session connection
   cluster_ = cluster;
@@ -303,6 +319,10 @@ void Integration::connect(Cluster cluster) {
 
   // Update the server version if branch_tag was specified
   if (Options::use_git() && !Options::branch_tag().empty()) {
+    if (Options::is_ddac()) {
+      FAIL() << "Unable to build DDAC from Branch/Tag";
+      return;
+    }
     if (Options::is_dse()) {
       server_version_ = ccm_->get_dse_version();
     } else {
@@ -317,9 +337,9 @@ void Integration::connect(Cluster cluster) {
   CHECK_FAILURE;
 
   // Update the session to use the new keyspace by default
-  std::stringstream use_keyspace_query;
-  use_keyspace_query << "USE " << keyspace_name_;
-  session_.execute(use_keyspace_query.str());
+  if (is_keyspace_change_requested_) {
+    use_keyspace(keyspace_name_);
+  }
 }
 
 void Integration::connect() {

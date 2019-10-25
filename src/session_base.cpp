@@ -159,7 +159,8 @@ void SessionBase::notify_closed() {
 }
 
 void SessionBase::on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
-                             const HostMap& hosts, const TokenMap::Ptr& token_map) {
+                             const HostMap& hosts, const TokenMap::Ptr& token_map,
+                             const String& local_dc) {
   notify_connected();
 }
 
@@ -185,8 +186,21 @@ void SessionBase::on_close(Cluster* cluster) {
 void SessionBase::on_initialize(ClusterConnector* connector) {
   if (connector->is_ok()) {
     cluster_ = connector->release_cluster();
+
+    // Handle default consistency level for DBaaS
+    StringMultimap::const_iterator it = cluster_->supported_options().find("PRODUCT_TYPE");
+    if (it != cluster_->supported_options().end() && it->second[0] == CASS_DBAAS_PRODUCT_TYPE) {
+      config_.set_default_consistency(CASS_DEFAULT_DBAAS_CONSISTENCY);
+
+      if (it->second.size() > 1) {
+        LOG_DEBUG("PRODUCT_TYPE has more than one type: %s", implode(it->second).c_str());
+      }
+    } else {
+      config_.set_default_consistency(CASS_DEFAULT_CONSISTENCY);
+    }
+
     on_connect(cluster_->connected_host(), cluster_->protocol_version(),
-               cluster_->available_hosts(), cluster_->token_map());
+               cluster_->available_hosts(), cluster_->token_map(), cluster_->local_dc());
   } else {
     assert(!connector->is_canceled() && "Cluster connection process canceled");
     switch (connector->error_code()) {

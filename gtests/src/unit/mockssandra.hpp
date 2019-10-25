@@ -28,6 +28,7 @@
 #include "address.hpp"
 #include "event_loop.hpp"
 #include "list.hpp"
+#include "map.hpp"
 #include "ref_counted.hpp"
 #include "scoped_ptr.hpp"
 #include "string.hpp"
@@ -46,6 +47,7 @@
 using datastax::String;
 using datastax::internal::Atomic;
 using datastax::internal::List;
+using datastax::internal::Map;
 using datastax::internal::RefCounted;
 using datastax::internal::ScopedPtr;
 using datastax::internal::SharedRefPtr;
@@ -62,7 +64,8 @@ namespace mockssandra {
 class Ssl {
 public:
   static String generate_key();
-  static String generate_cert(const String& key, String cn = "");
+  static String generate_cert(const String& key, String cn = "", String ca_cert = "",
+                              String ca_key = "");
 };
 
 namespace internal {
@@ -102,6 +105,8 @@ public:
 
 protected:
   int accept();
+
+  const char* sni_server_name() const;
 
 private:
   static void on_close(uv_handle_t* handle);
@@ -144,6 +149,7 @@ private:
 class ClientConnectionFactory {
 public:
   virtual ClientConnection* create(ServerConnection* server) const = 0;
+  virtual ~ClientConnectionFactory() {}
 };
 
 class ServerConnectionTask : public RefCounted<ServerConnectionTask> {
@@ -168,7 +174,8 @@ public:
   SSL_CTX* ssl_context() { return ssl_context_; }
   const ClientConnections& clients() const { return clients_; }
 
-  bool use_ssl(const String& key, const String& cert, const String& password = "");
+  bool use_ssl(const String& key, const String& cert, const String& ca_cert = "",
+               bool require_client_cert = false);
 
   void listen(EventLoopGroup* event_loop_group);
   int wait_listen();
@@ -354,6 +361,8 @@ struct QueryParameters {
   int64_t timestamp;
   String keyspace;
 };
+
+int32_t encode_string_map(const Map<String, Vector<String> >& value, String* output);
 
 class Type {
 public:
@@ -1204,7 +1213,7 @@ private:
 
 class SimpleEventLoopGroup : public RoundRobinEventLoopGroup {
 public:
-  SimpleEventLoopGroup(size_t num_threads = 1);
+  SimpleEventLoopGroup(size_t num_threads = 1, const String& thread_name = "mockssandra");
   ~SimpleEventLoopGroup();
 };
 
@@ -1246,53 +1255,39 @@ private:
 
 class SimpleEchoServer {
 public:
-  SimpleEchoServer(const Address& address = Address("127.0.0.1", 8888))
-      : event_loop_group_(1)
-      , server_(new internal::ServerConnection(address, factory_)) {}
+  SimpleEchoServer()
+      : factory_(new EchoClientConnectionFactory())
+      , event_loop_group_(1) {}
 
   ~SimpleEchoServer() { close(); }
 
   void close() {
-    server_->close();
-    server_->wait_close();
+    if (server_) {
+      server_->close();
+      server_->wait_close();
+    }
   }
 
   String use_ssl(const String& cn = "") {
-    String key(Ssl::generate_key());
-    String cert(Ssl::generate_cert(key, cn));
-    if (!server_->use_ssl(key, cert)) {
-      return "";
-    }
-    return cert;
+    ssl_key_ = Ssl::generate_key();
+    ssl_cert_ = Ssl::generate_cert(ssl_key_, cn);
+    return ssl_cert_;
   }
 
-  void use_close_immediately() { factory_.use_close_immediately(); }
+  void use_connection_factory(internal::ClientConnectionFactory* factory) {
+    factory_.reset(factory);
+  }
 
-  int listen() {
+  int listen(const Address& address = Address("127.0.0.1", 8888)) {
+    server_.reset(new internal::ServerConnection(address, *factory_));
+    if (!ssl_key_.empty() && !ssl_cert_.empty() && !server_->use_ssl(ssl_key_, ssl_cert_)) {
+      return -1;
+    }
     server_->listen(&event_loop_group_);
     return server_->wait_listen();
   }
 
-  void reset(const Address& address) {
-    server_.reset(new internal::ServerConnection(address, factory_));
-  }
-
 private:
-  class CloseConnection : public internal::ClientConnection {
-  public:
-    CloseConnection(internal::ServerConnection* server)
-        : internal::ClientConnection(server) {}
-
-    virtual int on_accept() {
-      int rc = accept();
-      if (rc != 0) {
-        return rc;
-      }
-      close();
-      return rc;
-    }
-  };
-
   class EchoConnection : public internal::ClientConnection {
   public:
     EchoConnection(internal::ServerConnection* server)
@@ -1301,29 +1296,19 @@ private:
     virtual void on_read(const char* data, size_t len) { write(data, len); }
   };
 
-  class ClientConnectionFactory : public internal::ClientConnectionFactory {
+  class EchoClientConnectionFactory : public internal::ClientConnectionFactory {
   public:
-    ClientConnectionFactory()
-        : close_immediately_(false) {}
-
-    void use_close_immediately() { close_immediately_ = true; }
-
     virtual internal::ClientConnection* create(internal::ServerConnection* server) const {
-      if (close_immediately_) {
-        return new CloseConnection(server);
-      } else {
-        return new EchoConnection(server);
-      }
+      return new EchoConnection(server);
     }
-
-  private:
-    bool close_immediately_;
   };
 
 private:
-  ClientConnectionFactory factory_;
+  ScopedPtr<internal::ClientConnectionFactory> factory_;
   SimpleEventLoopGroup event_loop_group_;
   internal::ServerConnection::Ptr server_;
+  String ssl_key_;
+  String ssl_cert_;
 };
 
 } // namespace mockssandra

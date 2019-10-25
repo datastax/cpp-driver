@@ -18,6 +18,7 @@
 #define DATASTAX_INTERNAL_CONTROL_CONNECTION_HPP
 
 #include "address.hpp"
+#include "address_factory.hpp"
 #include "config.hpp"
 #include "connection.hpp"
 #include "connector.hpp"
@@ -141,12 +142,50 @@ public:
  * A mapping between a host's address and it's listening address. The listening
  * address is used to look up a peer in the "system.peers" table.
  */
-class ListenAddressMap : public DenseHashMap<Address, String, AddressHash> {
+class ListenAddressMap : public DenseHashMap<Address, String> {
 public:
   ListenAddressMap() {
     set_empty_key(Address::EMPTY_KEY);
     set_deleted_key(Address::DELETED_KEY);
   }
+};
+
+/**
+ * Control connection settings.
+ */
+struct ControlConnectionSettings {
+  /**
+   * Constructor. Initialize with default settings.
+   */
+  ControlConnectionSettings();
+
+  /**
+   * Constructor. Initialize the settings from a config object.
+   *
+   * @param config The config object.
+   */
+  ControlConnectionSettings(const Config& config);
+
+  /**
+   * The settings for the underlying connection.
+   */
+  ConnectionSettings connection_settings;
+
+  /**
+   * If true then the control connection will listen for schema events.
+   */
+  bool use_schema;
+
+  /**
+   * If true then the control connection will listen for keyspace schema
+   * events. This is needed for the keyspaces replication strategy.
+   */
+  bool use_token_aware_routing;
+
+  /**
+   * A factory for creating addresses (for the connection process).
+   */
+  AddressFactory::Ptr address_factory;
 };
 
 /**
@@ -168,16 +207,13 @@ public:
    *
    * @param connection The wrapped connection.
    * @param listener A listener to handle events.
-   * @param use_schema If true then connection will get additional data for
-   * schema events, otherwise it will ignore those events.
-   * @param token_aware_routing If true the connection will get additional data
-   * for keyspace schema changes, otherwise it will ignore those events.
+   * @param settings The control connection's settings.
    * @param server_version The version number of the server implementation.
    * @param dse_server_version The version number of the DSE server implementation.
    * @param listen_addresses The current state of the listen addresses map.
    */
   ControlConnection(const Connection::Ptr& connection, ControlConnectionListener* listener,
-                    bool use_schema, bool token_aware_routing, const VersionNumber& server_version,
+                    const ControlConnectionSettings& settings, const VersionNumber& server_version,
                     const VersionNumber& dse_server_version, ListenAddressMap listen_addresses);
 
   /**
@@ -210,6 +246,8 @@ public:
   const Address& address() const { return connection_->address(); }
 
   const String& address_string() const { return connection_->address_string(); }
+
+  const Address& resolved_address() const { return connection_->resolved_address(); }
 
   ProtocolVersion protocol_version() const { return connection_->protocol_version(); }
 
@@ -256,8 +294,7 @@ private:
 
 private:
   Connection::Ptr connection_;
-  bool use_schema_;
-  bool token_aware_routing_;
+  ControlConnectionSettings settings_;
   VersionNumber server_version_;
   VersionNumber dse_server_version_;
   ListenAddressMap listen_addresses_;

@@ -130,7 +130,7 @@ int BatchRequest::encode(ProtocolVersion version, RequestCallback* callback,
     Buffer buf(buf_size);
 
     size_t pos = buf.encode_byte(0, type_);
-    buf.encode_uint16(pos, statements().size());
+    buf.encode_uint16(pos, static_cast<uint16_t>(statements().size()));
 
     bufs->push_back(buf);
     length += buf_size;
@@ -183,7 +183,7 @@ int BatchRequest::encode(ProtocolVersion version, RequestCallback* callback,
     if (version >= CASS_PROTOCOL_VERSION_V5) {
       pos = buf.encode_int32(pos, flags);
     } else {
-      pos = buf.encode_byte(pos, flags);
+      pos = buf.encode_byte(pos, static_cast<uint8_t>(flags));
     }
 
     if (callback->serial_consistency() != 0) {
@@ -195,7 +195,7 @@ int BatchRequest::encode(ProtocolVersion version, RequestCallback* callback,
     }
 
     if (version.supports_set_keyspace() && !keyspace().empty()) {
-      pos = buf.encode_string(pos, keyspace().data(), keyspace().size());
+      pos = buf.encode_string(pos, keyspace().data(), static_cast<uint16_t>(keyspace().size()));
     }
 
     bufs->push_back(buf);

@@ -134,6 +134,8 @@ struct RequestProcessorSettings {
   uint64_t retry_tracing_wait_time_ms;
 
   CassConsistency tracing_consistency;
+
+  AddressFactory::Ptr address_factory;
 };
 
 /**
@@ -163,12 +165,13 @@ public:
    * @param token_map The current token map.
    * @param settings The current settings for the request processor.
    * @param random A RNG for randomizing hosts in the load balancing policies.
+   * @param local_dc The local datacenter for initializing the load balancing policies.
    */
   RequestProcessor(RequestProcessorListener* listener, EventLoop* event_loop,
                    const ConnectionPoolManager::Ptr& connection_pool_manager,
                    const Host::Ptr& connected_host, const HostMap& hosts,
                    const TokenMap::Ptr& token_map, const RequestProcessorSettings& settings,
-                   Random* random);
+                   Random* random, const String& local_dc);
 
   /**
    * Close/Terminate the request request processor (thread-safe).

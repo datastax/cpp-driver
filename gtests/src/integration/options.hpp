@@ -67,17 +67,35 @@ public:
    */
   static bool log_tests();
   /**
-   * Get the server version (Cassandra/DSE) to use
+   * Get the server version (Cassandra/DSE/DDAC) to use
    *
-   * @return Cassandra/DSE version to use
+   * @return Cassandra/DSE/DDAC version to use
    */
   static CCM::CassVersion server_version();
+  /**
+   * Get the server type (Cassandra/DSE/DDAC)
+   *
+   * @return Server type
+   */
+  static CCM::ServerType server_type();
+  /**
+   * Flag to determine if Cassandra should be used or not
+   *
+   * @return True if Cassandra should be used; false otherwise
+   */
+  static bool is_cassandra();
   /**
    * Flag to determine if DSE should be used or not
    *
    * @return True if DSE should be used; false otherwise
    */
   static bool is_dse();
+  /**
+   * Flag to determine if DDAC should be used or not
+   *
+   * @return True if DDAC should be used; false otherwise
+   */
+  static bool is_ddac();
   /**
    * Get the DSE credentials type (username|password/INI file)
    *
@@ -240,13 +258,13 @@ private:
    */
   static bool is_log_tests_;
   /**
-   * Server version to use (Cassandra/DSE)
+   * Server version to use (Cassandra/DSE/DDAC)
    */
   static CCM::CassVersion server_version_;
   /**
-   * Flag to indicate if DSE should be used instead of Cassandra
+   * Server type to use
    */
-  static bool is_dse_;
+  static CCM::ServerType server_type_;
   /**
    * Flag to determine if Cassandra should be built from ASF git (github if DSE)
    */

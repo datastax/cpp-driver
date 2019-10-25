@@ -26,7 +26,7 @@ struct ConfigTests {
   ConfigTests() {}
 };
 
-BOOST_FIXTURE_TEST_SUITE(config, ConfigTests)
+BOOST_FIXTURE_TEST_SUITE_WITH_DECOR(config, ConfigTests, *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(options) {
   test_utils::CassClusterPtr cluster(cass_cluster_new());

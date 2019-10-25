@@ -22,9 +22,24 @@
 #define SSL_HANDSHAKE_MAX_BUFFER_SIZE (16 * 1024 + 5)
 
 using namespace datastax;
+using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 namespace datastax { namespace internal { namespace core {
+
+namespace {
+
+// Used for debugging resolved addresses.
+String to_string(const AddressVec& addresses) {
+  String result;
+  for (AddressVec::const_iterator it = addresses.begin(), end = addresses.end(); it != end; ++it) {
+    if (!result.empty()) result.append(", ");
+    result.append(it->to_string());
+  }
+  return result;
+}
+
+} // namespace
 
 /**
  * A socket handler that handles the SSL handshake process.
@@ -85,6 +100,8 @@ SocketSettings::SocketSettings(const Config& config)
     , max_reusable_write_objects(config.max_reusable_write_objects())
     , local_address(config.local_address()) {}
 
+Atomic<size_t> SocketConnector::resolved_address_offset_(0);
+
 SocketConnector::SocketConnector(const Address& address, const Callback& callback)
     : address_(address)
     , callback_(callback)
@@ -99,23 +116,34 @@ SocketConnector* SocketConnector::with_settings(const SocketSettings& settings) 
 void SocketConnector::connect(uv_loop_t* loop) {
   inc_ref(); // For the event loop
 
-  if (settings_.hostname_resolution_enabled) {
-    // Run hostname resolution then connect.
-    resolver_.reset(new NameResolver(address_, bind_callback(&SocketConnector::on_resolve, this)));
+  if (!address_.is_resolved()) { // Address not resolved
+    hostname_ = address_.hostname_or_address();
+
+    resolver_.reset(new Resolver(hostname_, address_.port(),
+                                 bind_callback(&SocketConnector::on_resolve, this)));
     resolver_->resolve(loop, settings_.resolve_timeout_ms);
   } else {
-    // Postpone the connection process until after this method ends because it
-    // can call the callback (via on_error() when when the socket fails to
-    // init/bind) and destroy its parent.
-    no_resolve_timer_.start(loop,
-                            0, // Run connect immediately after.
-                            bind_callback(&SocketConnector::on_no_resolve, this));
+    resolved_address_ = address_;
+
+    if (settings_.hostname_resolution_enabled) { // Run hostname resolution then connect.
+      name_resolver_.reset(
+          new NameResolver(address_, bind_callback(&SocketConnector::on_name_resolve, this)));
+      name_resolver_->resolve(loop, settings_.resolve_timeout_ms);
+    } else {
+      // Postpone the connection process until after this method ends because it
+      // can call the callback (via on_error() when when the socket fails to
+      // init/bind) and destroy its parent.
+      no_resolve_timer_.start(loop,
+                              0, // Run connect immediately after.
+                              bind_callback(&SocketConnector::on_no_resolve, this));
+    }
   }
 }
 
 void SocketConnector::cancel() {
   error_code_ = SOCKET_CANCELED;
   if (resolver_) resolver_->cancel();
+  if (name_resolver_) name_resolver_->cancel();
   if (connector_) connector_->cancel();
   if (socket_) socket_->close();
 }
@@ -127,7 +155,7 @@ Socket::Ptr SocketConnector::release_socket() {
 }
 
 void SocketConnector::internal_connect(uv_loop_t* loop) {
-  Socket::Ptr socket(new Socket(address_, settings_.max_reusable_write_objects));
+  Socket::Ptr socket(new Socket(resolved_address_, settings_.max_reusable_write_objects));
 
   if (uv_tcp_init(loop, socket->handle()) != 0) {
     on_error(SOCKET_ERROR_INIT, "Unable to initialize TCP object");
@@ -140,7 +168,8 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
   // This needs to be done after setting the socket to properly cleanup.
   const Address& local_address = settings_.local_address;
   if (local_address.is_valid()) {
-    int rc = uv_tcp_bind(socket->handle(), local_address.addr(), 0);
+    Address::SocketStorage storage;
+    int rc = uv_tcp_bind(socket->handle(), local_address.to_sockaddr(&storage), 0);
     if (rc != 0) {
       on_error(SOCKET_ERROR_BIND, "Unable to bind local address: " + String(uv_strerror(rc)));
 
@@ -158,10 +187,11 @@ void SocketConnector::internal_connect(uv_loop_t* loop) {
   }
 
   if (settings_.ssl_context) {
-    ssl_session_.reset(settings_.ssl_context->create_session(address_, hostname_));
+    ssl_session_.reset(settings_.ssl_context->create_session(resolved_address_, hostname_,
+                                                             address_.server_name()));
   }
 
-  connector_.reset(new TcpConnector(address_));
+  connector_.reset(new TcpConnector(resolved_address_));
   connector_->connect(socket_->handle(), bind_callback(&SocketConnector::on_connect, this));
 }
 
@@ -182,10 +212,8 @@ void SocketConnector::ssl_handshake() {
   size_t size = ssl_session_->outgoing().read(buf, SSL_HANDSHAKE_MAX_BUFFER_SIZE);
   if (size > 0) {
     socket_->write_and_flush(new BufferSocketRequest(Buffer(buf, size)));
-  }
-
-  // If the handshake process is done then verify the certificate and finish.
-  if (ssl_session_->is_handshake_done()) {
+  } else if (ssl_session_->is_handshake_done()) { // If the handshake process is done then verify
+                                                  // the certificate and finish.
     ssl_session_->verify();
     if (ssl_session_->has_error()) {
       on_error(SOCKET_ERROR_SSL_VERIFY,
@@ -253,7 +281,26 @@ void SocketConnector::on_connect(TcpConnector* tcp_connector) {
   }
 }
 
-void SocketConnector::on_resolve(NameResolver* resolver) {
+void SocketConnector::on_resolve(Resolver* resolver) {
+  if (resolver->is_success()) {
+    const AddressVec& addresses(resolver->addresses());
+    LOG_DEBUG("Resolved the addresses %s for hostname %s", to_string(addresses).c_str(),
+              hostname_.c_str());
+    resolved_address_ = Address(
+        addresses[resolved_address_offset_.fetch_add(MEMORY_ORDER_RELAXED) % addresses.size()],
+        address_.server_name()); // Keep the server name for debugging
+    internal_connect(resolver->loop());
+  } else if (is_canceled() || resolver->is_canceled()) {
+    finish();
+  } else if (resolver->is_timed_out()) {
+    on_error(SOCKET_ERROR_RESOLVE_TIMEOUT, "Timed out attempting to resolve hostname");
+  } else {
+    on_error(SOCKET_ERROR_RESOLVE,
+             "Unable to resolve hostname '" + String(uv_strerror(resolver->uv_status())) + "'");
+  }
+}
+
+void SocketConnector::on_name_resolve(NameResolver* resolver) {
   if (resolver->is_success()) {
     LOG_DEBUG("Resolved the hostname %s for address %s", resolver->hostname().c_str(),
               resolver->address().to_string().c_str());

@@ -29,39 +29,6 @@ class Metrics;
 class SchemaConnectorRequestCallback;
 
 /**
- * Control connection settings.
- */
-struct ControlConnectionSettings {
-  /**
-   * Constructor. Initialize with default settings.
-   */
-  ControlConnectionSettings();
-
-  /**
-   * Constructor. Initialize the settings from a config object.
-   *
-   * @param config The config object.
-   */
-  ControlConnectionSettings(const Config& config);
-
-  /**
-   * The settings for the underlying connection.
-   */
-  ConnectionSettings connection_settings;
-
-  /**
-   * If true then the control connection will listen for schema events.
-   */
-  bool use_schema;
-
-  /**
-   * If true then the control connection will listen for keyspace schema
-   * events. This is needed for the keyspaces replication strategy.
-   */
-  bool token_aware_routing;
-};
-
-/**
  * The initial schema metadata retrieved from the cluster when the control
  * connection is established.
  */
@@ -197,6 +164,8 @@ public:
   bool is_auth_error() const {
     return error_code_ == CONTROL_CONNECTION_ERROR_CONNECTION && connector_->is_auth_error();
   }
+
+  const StringMultimap& supported_options() const { return connector_->supported_options(); }
 
   ControlConnectionError error_code() const { return error_code_; }
   const String& error_message() const { return error_message_; }

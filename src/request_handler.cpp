@@ -36,6 +36,20 @@ using namespace datastax;
 using namespace datastax::internal;
 using namespace datastax::internal::core;
 
+static String to_hex(const String& byte_id) {
+  static const char half_byte_to_hex[] = { '0', '1', '2', '3', '4', '5', '6', '7',
+                                           '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+  OStringStream ss;
+
+  const char* data = byte_id.data();
+  for (size_t i = 0; i < byte_id.length(); ++i) {
+    uint8_t byte = static_cast<uint8_t>(data[i]);
+    ss << half_byte_to_hex[(byte >> 4) & 0x0F];
+    ss << half_byte_to_hex[byte & 0x0F];
+  }
+  return ss.str();
+}
+
 class SingleHostQueryPlan : public QueryPlan {
 public:
   SingleHostQueryPlan(const Address& address)
@@ -53,7 +67,7 @@ private:
 
 class PrepareCallback : public SimpleRequestCallback {
 public:
-  PrepareCallback(const String& query, RequestExecution* request_execution);
+  PrepareCallback(const String& query, const String& id, RequestExecution* request_execution);
 
 private:
   class PrepareRequest : public core::PrepareRequest {
@@ -72,21 +86,29 @@ private:
 
 private:
   RequestExecution::Ptr request_execution_;
+  String id_;
 };
 
-PrepareCallback::PrepareCallback(const String& query, RequestExecution* request_execution)
+PrepareCallback::PrepareCallback(const String& query, const String& id,
+                                 RequestExecution* request_execution)
     : SimpleRequestCallback(
           Request::ConstPtr(new PrepareRequest(query, request_execution->request()->keyspace(),
                                                request_execution->request_timeout_ms())))
-    , request_execution_(request_execution) {}
+    , request_execution_(request_execution)
+    , id_(id) {}
 
 void PrepareCallback::on_internal_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT: {
       ResultResponse* result = static_cast<ResultResponse*>(response->response_body().get());
       if (result->kind() == CASS_RESULT_KIND_PREPARED) {
-        request_execution_->notify_result_metadata_changed(request(), result);
-        request_execution_->on_retry_current_host();
+        String result_id = result->prepared_id().to_string();
+        if (id_ != result_id) {
+          request_execution_->notify_prepared_id_mismatch(id_, result_id);
+        } else {
+          request_execution_->notify_result_metadata_changed(request(), result);
+          request_execution_->on_retry_current_host();
+        }
       } else {
         request_execution_->on_retry_next_host();
       }
@@ -306,18 +328,54 @@ void RequestHandler::internal_retry(RequestExecution* request_execution) {
     return;
   }
 
-  bool is_successful = false;
-  while (request_execution->current_host()) {
+  bool is_done = false;
+  while (!is_done && request_execution->current_host()) {
     PooledConnection::Ptr connection =
         manager_->find_least_busy(request_execution->current_host()->address());
-    if (connection && connection->write(request_execution)) {
-      is_successful = true;
-      break;
+    if (connection) {
+      int32_t result = connection->write(request_execution);
+
+      if (result > 0) {
+        is_done = true;
+      } else {
+        switch (result) {
+          case SocketRequest::SOCKET_REQUEST_ERROR_CLOSED:
+            // This should never happen, but retry with next host if it does.
+            request_execution->next_host();
+            break;
+
+          case SocketRequest::SOCKET_REQUEST_ERROR_NO_HANDLER:
+            set_error(CASS_ERROR_LIB_WRITE_ERROR,
+                      "Socket is not properly configured with a handler");
+            is_done = true;
+            break;
+
+          case Request::REQUEST_ERROR_NO_AVAILABLE_STREAM_IDS:
+            // Retry with next host
+            request_execution->next_host();
+            break;
+
+          case Request::REQUEST_ERROR_BATCH_WITH_NAMED_VALUES:
+          case Request::REQUEST_ERROR_PARAMETER_UNSET:
+          case Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL:
+          case Request::REQUEST_ERROR_NO_DATA_WRITTEN:
+            // Already handled with a specific error.
+            is_done = true;
+            break;
+
+          default:
+            set_error(CASS_ERROR_LIB_WRITE_ERROR, "Unspecified write error occurred");
+            is_done = true;
+            break;
+        }
+      }
+    } else {
+      // No connection available on the current host, move to the next host.
+      request_execution->next_host();
     }
-    request_execution->next_host();
   }
 
-  if (!is_successful) {
+  if (!request_execution->current_host()) {
     set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "All hosts in current policy attempted "
                                                  "and were either unavailable or failed");
   }
@@ -335,7 +393,7 @@ void RequestExecution::on_execute_next(Timer* timer) { request_handler_->execute
 void RequestExecution::on_retry_current_host() { retry_current_host(); }
 
 void RequestExecution::on_retry_next_host() {
-  current_host_->decrement_inflight_requests();
+  if (current_host_) current_host_->decrement_inflight_requests();
   retry_next_host();
 }
 
@@ -392,14 +450,8 @@ void RequestExecution::on_set(ResponseMessage* response) {
 }
 
 void RequestExecution::on_error(CassError code, const String& message) {
-  current_host_->decrement_inflight_requests();
-
-  // Handle recoverable errors by retrying with the next host
-  if (code == CASS_ERROR_LIB_WRITE_ERROR || code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {
-    retry_next_host();
-  } else {
-    set_error(code, message);
-  }
+  if (current_host_) current_host_->decrement_inflight_requests();
+  set_error(code, message);
 }
 
 void RequestExecution::notify_result_metadata_changed(const Request* request,
@@ -429,6 +481,17 @@ void RequestExecution::notify_result_metadata_changed(const Request* request,
   } else {
     assert(false && "Invalid response type for a result metadata change");
   }
+}
+
+void RequestExecution::notify_prepared_id_mismatch(const String& expected_id,
+                                                   const String& received_id) {
+  OStringStream ss;
+  ss << "ID mismatch while trying to prepare query (expected ID " << to_hex(expected_id)
+     << ", received ID " << to_hex(received_id)
+     << "). This prepared statement won't work anymore. This usually happens when you run a "
+        "'USE...' query after the statement was prepared.";
+  String message = ss.str();
+  request_handler_->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE, message);
 }
 
 void RequestExecution::on_result_response(Connection* connection, ResponseMessage* response) {
@@ -572,14 +635,17 @@ void RequestExecution::on_error_response(Connection* connection, ResponseMessage
 }
 
 void RequestExecution::on_error_unprepared(Connection* connection, ErrorResponse* error) {
-  String query;
+  LOG_DEBUG("Unprepared error response returned for request: %s",
+            error->message().to_string().c_str());
 
+  String query;
+  String id = error->prepared_id().to_string();
   if (request()->opcode() == CQL_OPCODE_EXECUTE) {
     const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
     query = execute->prepared()->query();
   } else if (request()->opcode() == CQL_OPCODE_BATCH) {
     const BatchRequest* batch = static_cast<const BatchRequest*>(request());
-    if (!batch->find_prepared_query(error->prepared_id().to_string(), &query)) {
+    if (!batch->find_prepared_query(id, &query)) {
       set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
                 "Unable to find prepared statement in batch statement");
       return;
@@ -591,7 +657,8 @@ void RequestExecution::on_error_unprepared(Connection* connection, ErrorResponse
     return;
   }
 
-  if (!connection->write_and_flush(RequestCallback::Ptr(new PrepareCallback(query, this)))) {
+  RequestCallback::Ptr callback(new PrepareCallback(query, id, this));
+  if (connection->write_and_flush(callback) < 0) {
     // Try to prepare on the same host but on a different connection
     retry_current_host();
   }

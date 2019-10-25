@@ -25,6 +25,7 @@
 #include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
+#include <openssl/tls1.h>
 #include <openssl/x509v3.h>
 #include <string.h>
 
@@ -34,6 +35,22 @@
 #define ASN1_STRING_get0_data ASN1_STRING_data
 #else
 #define SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE SSL_F_USE_CERTIFICATE_CHAIN_FILE
+#endif
+
+#if defined(OPENSSL_VERSION_NUMBER) && \
+    !defined(LIBRESSL_VERSION_NUMBER) // Required as OPENSSL_VERSION_NUMBER for LibreSSL is defined
+                                      // as 2.0.0
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#define SSL_CLIENT_METHOD TLS_client_method
+#else
+#define SSL_CLIENT_METHOD SSLv23_client_method
+#endif
+#else
+#if (LIBRESSL_VERSION_NUMBER >= 0x20302000L)
+#define SSL_CLIENT_METHOD TLS_client_method
+#else
+#define SSL_CLIENT_METHOD SSLv23_client_method
+#endif
 #endif
 
 using namespace datastax;
@@ -251,7 +268,7 @@ public:
   static Result match(X509* cert, const Address& address) {
     Result result = match_subject_alt_names_ipadd(cert, address);
     if (result == NO_SAN_PRESENT) {
-      result = match_common_name_ipaddr(cert, address.to_string());
+      result = match_common_name_ipaddr(cert, address.hostname_or_address());
     }
     return result;
   }
@@ -303,7 +320,7 @@ private:
     }
 
     int i = -1;
-    while ((i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) > 0) {
+    while ((i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) >= 0) {
       X509_NAME_ENTRY* name_entry = X509_NAME_get_entry(name, i);
       if (name_entry == NULL) {
         return INVALID_CERT;
@@ -410,20 +427,23 @@ private:
   }
 };
 
-OpenSslSession::OpenSslSession(const Address& address, const String& hostname, int flags,
-                               SSL_CTX* ssl_ctx)
-    : SslSession(address, hostname, flags)
+OpenSslSession::OpenSslSession(const Address& address, const String& hostname,
+                               const String& sni_server_name, int flags, SSL_CTX* ssl_ctx)
+    : SslSession(address, hostname, sni_server_name, flags)
     , ssl_(SSL_new(ssl_ctx))
     , incoming_state_(&incoming_)
     , outgoing_state_(&outgoing_)
     , incoming_bio_(rb::RingBufferBio::create(&incoming_state_))
     , outgoing_bio_(rb::RingBufferBio::create(&outgoing_state_)) {
   SSL_set_bio(ssl_, incoming_bio_, outgoing_bio_);
-  SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_NONE, ssl_no_verify_callback);
 #if DEBUG_SSL
   SSL_CTX_set_info_callback(ssl_ctx, ssl_info_callback);
 #endif
   SSL_set_connect_state(ssl_);
+
+  if (!sni_server_name_.empty()) {
+    SSL_set_tlsext_host_name(ssl_, const_cast<char*>(sni_server_name_.c_str()));
+  }
 }
 
 OpenSslSession::~OpenSslSession() { SSL_free(ssl_); }
@@ -509,22 +529,26 @@ int OpenSslSession::decrypt(char* buf, size_t size) {
 
 void OpenSslSession::check_error(int rc) {
   int err = SSL_get_error(ssl_, rc);
-  if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_NONE) {
+  if (err == SSL_ERROR_ZERO_RETURN) {
+    error_code_ = CASS_ERROR_SSL_CLOSED;
+  } else if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_NONE) {
     error_code_ = CASS_ERROR_SSL_PROTOCOL_ERROR;
     error_message_ = ssl_error_string();
   }
 }
 
 OpenSslContext::OpenSslContext()
-    : ssl_ctx_(SSL_CTX_new(SSLv23_client_method()))
+    : ssl_ctx_(SSL_CTX_new(SSL_CLIENT_METHOD()))
     , trusted_store_(X509_STORE_new()) {
   SSL_CTX_set_cert_store(ssl_ctx_, trusted_store_);
+  SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, ssl_no_verify_callback);
 }
 
 OpenSslContext::~OpenSslContext() { SSL_CTX_free(ssl_ctx_); }
 
-SslSession* OpenSslContext::create_session(const Address& address, const String& hostname) {
-  return new OpenSslSession(address, hostname, verify_flags_, ssl_ctx_);
+SslSession* OpenSslContext::create_session(const Address& address, const String& hostname,
+                                           const String& sni_server_name) {
+  return new OpenSslSession(address, hostname, sni_server_name, verify_flags_, ssl_ctx_);
 }
 
 CassError OpenSslContext::add_trusted_cert(const char* cert, size_t cert_length) {

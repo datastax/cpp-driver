@@ -19,14 +19,16 @@
 using namespace datastax;
 using namespace datastax::internal::core;
 
-NoSslSession::NoSslSession(const Address& address, const String& hostname)
-    : SslSession(address, hostname, CASS_SSL_VERIFY_NONE) {
+NoSslSession::NoSslSession(const Address& address, const String& hostname,
+                           const String& sni_server_name)
+    : SslSession(address, hostname, sni_server_name, CASS_SSL_VERIFY_NONE) {
   error_code_ = CASS_ERROR_LIB_NOT_IMPLEMENTED;
   error_message_ = "SSL support not built into driver";
 }
 
-SslSession* NoSslContext::create_session(const Address& address, const String& hostname) {
-  return new NoSslSession(address, hostname);
+SslSession* NoSslContext::create_session(const Address& address, const String& hostname,
+                                         const String& sni_server_name) {
+  return new NoSslSession(address, hostname, sni_server_name);
 }
 
 CassError NoSslContext::add_trusted_cert(const char* cert, size_t cert_length) {

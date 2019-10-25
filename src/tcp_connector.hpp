@@ -63,7 +63,8 @@ public:
     callback_ = callback;
     status_ = CONNECTING;
 
-    rc = uv_tcp_connect(&req_, handle, static_cast<const Address>(address_).addr(), on_connect);
+    Address::SocketStorage storage;
+    rc = uv_tcp_connect(&req_, handle, address_.to_sockaddr(&storage), on_connect);
 
     if (rc != 0) {
       status_ = FAILED_BAD_PARAM;

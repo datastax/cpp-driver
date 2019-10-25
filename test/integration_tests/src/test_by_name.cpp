@@ -186,7 +186,7 @@ struct ByNameTests : public test_utils::SingleSessionTest {
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(by_name, ByNameTests)
+BOOST_FIXTURE_TEST_SUITE_WITH_DECOR(by_name, ByNameTests, *boost::unit_test::disabled())
 
 BOOST_AUTO_TEST_CASE(bind_and_get_prepared) {
   test_utils::CassPreparedPtr prepared = test_utils::prepare(session, INSERT_BY_NAME);

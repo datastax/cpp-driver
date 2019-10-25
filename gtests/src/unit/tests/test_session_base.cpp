@@ -44,25 +44,27 @@ public:
 
 protected:
   virtual void on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
-                          const HostMap& hosts, const TokenMap::Ptr& token_map) {
+                          const HostMap& hosts, const TokenMap::Ptr& token_map,
+                          const String& local_dc) {
     ++connected_;
-    ASSERT_STREQ("127.0.0.1", connected_host->address_string().c_str());
-    ASSERT_EQ(ProtocolVersion(PROTOCOL_VERSION), protocol_version);
-    ASSERT_EQ(1u, hosts.size());
-    ASSERT_EQ(state(), SESSION_STATE_CONNECTING);
+
+    EXPECT_STREQ("127.0.0.1", connected_host->address_string().c_str());
+    EXPECT_EQ(ProtocolVersion(PROTOCOL_VERSION), protocol_version);
+    EXPECT_EQ(1u, hosts.size());
+    EXPECT_EQ(state(), SESSION_STATE_CONNECTING);
     notify_connected();
   }
 
   virtual void on_connect_failed(CassError code, const String& message) {
     ++failed_;
-    ASSERT_EQ(state(), SESSION_STATE_CONNECTING);
+    EXPECT_EQ(state(), SESSION_STATE_CONNECTING);
     notify_connect_failed(code, message);
-    ASSERT_EQ(state(), SESSION_STATE_CLOSED);
+    EXPECT_EQ(state(), SESSION_STATE_CLOSED);
   }
 
   virtual void on_close() {
     ++closed_;
-    ASSERT_EQ(state(), SESSION_STATE_CLOSING);
+    EXPECT_EQ(state(), SESSION_STATE_CLOSING);
     notify_closed();
   }
 
@@ -79,7 +81,7 @@ TEST_F(SessionBaseUnitTest, Simple) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   TestSessionBase session_base;
 
   Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
@@ -103,7 +105,7 @@ TEST_F(SessionBaseUnitTest, SimpleEmptyKeyspaceWithoutRandom) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_use_randomized_contact_points(false);
   TestSessionBase session_base;
 
@@ -129,7 +131,7 @@ TEST_F(SessionBaseUnitTest, Ssl) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_ssl_context(settings.socket_settings.ssl_context.get());
   TestSessionBase session_base;
 
@@ -155,8 +157,8 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsIp) {
 
   Config config;
   config.set_use_randomized_contact_points(false);
-  config.contact_points().push_back("123.456.789.012");
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("123.456.789.012", 9042));
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   TestSessionBase session_base;
 
   Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
@@ -179,8 +181,8 @@ TEST_F(SessionBaseUnitTest, SimpleInvalidContactPointsHostname) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("doesnotexist.dne");
-  config.contact_points().push_back("localhost");
+  config.contact_points().push_back(Address("doesnotexist.dne", 9042));
+  config.contact_points().push_back(Address("localhost", 9042));
   TestSessionBase session_base;
 
   Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
@@ -205,12 +207,31 @@ TEST_F(SessionBaseUnitTest, InvalidProtocol) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   TestSessionBase session_base;
 
   Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
   ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
   EXPECT_EQ(CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL, connect_future->error()->code);
+  EXPECT_EQ(0, session_base.connected());
+  EXPECT_EQ(1, session_base.failed());
+  EXPECT_EQ(0, session_base.closed());
+}
+
+TEST_F(SessionBaseUnitTest, UnsupportedProtocol) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Config config;
+  config.set_protocol_version(ProtocolVersion(2)); // Unsupported protocol version
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  TestSessionBase session_base;
+
+  Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME));
+  EXPECT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, connect_future->error()->code);
+  EXPECT_TRUE(connect_future->error()->message.find(
+                  "Operation unsupported by this protocol version") != String::npos);
   EXPECT_EQ(0, session_base.connected());
   EXPECT_EQ(1, session_base.failed());
   EXPECT_EQ(0, session_base.closed());
@@ -224,7 +245,7 @@ TEST_F(SessionBaseUnitTest, SslError) {
   SslContext::Ptr invalid_ssl_context(SslContextFactory::create());
   invalid_ssl_context->set_verify_flags(CASS_SSL_VERIFY_PEER_CERT);
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_ssl_context(invalid_ssl_context.get());
   TestSessionBase session_base;
 
@@ -241,7 +262,7 @@ TEST_F(SessionBaseUnitTest, Auth) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_credentials("cassandra", "cassandra");
   TestSessionBase session_base;
 
@@ -263,7 +284,7 @@ TEST_F(SessionBaseUnitTest, BadCredentials) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   TestSessionBase session_base;
 
   Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
@@ -276,7 +297,7 @@ TEST_F(SessionBaseUnitTest, BadCredentials) {
 
 TEST_F(SessionBaseUnitTest, NoHostsAvailable) {
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   TestSessionBase session_base;
 
   Future::Ptr connect_future(session_base.connect(config, KEYSPACE));
@@ -292,7 +313,7 @@ TEST_F(SessionBaseUnitTest, ConnectWhenAlreadyConnected) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   TestSessionBase session_base;
 
   {
@@ -323,7 +344,7 @@ TEST_F(SessionBaseUnitTest, CloseWhenAlreadyClosed) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   TestSessionBase session_base;
 
   Future::Ptr connect_future(session_base.connect(config, KEYSPACE));

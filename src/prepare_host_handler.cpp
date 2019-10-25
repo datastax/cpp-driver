@@ -111,8 +111,8 @@ void PrepareHostHandler::prepare_next() {
     // Set the keyspace in case per request keyspaces are supported
     prepare_request->set_keyspace(current_keyspace_);
 
-    if (!connection_->write(
-            PrepareCallback::Ptr(new PrepareCallback(prepare_request, Ptr(this))))) {
+    PrepareCallback::Ptr callback(new PrepareCallback(prepare_request, Ptr(this)));
+    if (connection_->write(callback) < 0) {
       LOG_WARN("Failed to write prepare request while preparing all queries on host %s",
                host_->address_string().c_str());
       close();
@@ -134,8 +134,8 @@ bool PrepareHostHandler::check_and_set_keyspace() {
   const String& keyspace((*current_entry_it_)->keyspace());
 
   if (keyspace != current_keyspace_) {
-    if (!connection_->write_and_flush(
-            PrepareCallback::Ptr(new SetKeyspaceCallback(keyspace, Ptr(this))))) {
+    PrepareCallback::Ptr callback(new SetKeyspaceCallback(keyspace, Ptr(this)));
+    if (connection_->write_and_flush(callback) < 0) {
       LOG_WARN("Failed to write \"USE\" keyspace request while preparing all queries on host %s",
                host_->address_string().c_str());
       close();

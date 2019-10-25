@@ -80,3 +80,13 @@ bool Row::get_string_by_name(const StringRef& name, String* out) const {
   *out = value->decoder().as_string();
   return true;
 }
+
+bool Row::get_uuid_by_name(const StringRef& name, CassUuid* out) const {
+  const Value* value = get_by_name(name);
+  if (value == NULL || value->is_null() || value->value_type() != CASS_VALUE_TYPE_UUID ||
+      value->value_type() == CASS_VALUE_TYPE_TIMEUUID) {
+    return false;
+  }
+  *out = value->as_uuid();
+  return true;
+}

@@ -61,7 +61,7 @@ public:
 
     if (server_version_ >= "3.0.0") {
       session_.execute(format_string("CREATE MATERIALIZED VIEW %s "
-                                     "AS SELECT value "
+                                     "AS SELECT value, key "
                                      "   FROM %s"
                                      "   WHERE value IS NOT NULL and key IS NOT NULL "
                                      "PRIMARY KEY(value, key)",

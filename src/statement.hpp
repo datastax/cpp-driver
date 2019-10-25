@@ -59,7 +59,7 @@ public:
     }
   }
 
-  bool has_names_for_values() const { return flags_ & CASS_QUERY_FLAG_NAMES_FOR_VALUES; }
+  bool has_names_for_values() const { return (flags_ & CASS_QUERY_FLAG_NAMES_FOR_VALUES) != 0; }
 
   int32_t page_size() const { return page_size_; }
 

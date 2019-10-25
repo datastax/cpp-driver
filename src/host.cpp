@@ -140,6 +140,24 @@ void Host::set(const Row* row, bool use_tokens) {
       }
     }
   }
+
+  v = row->get_by_name("rpc_address");
+  if (v && !v->is_null()) {
+    if (!v->decoder().as_inet(v->size(), address_.port(), &rpc_address_)) {
+      LOG_WARN("Invalid address format for `rpc_address`");
+    }
+    if (Address("0.0.0.0", 0).equals(rpc_address_, false) ||
+        Address("::", 0).equals(rpc_address_, false)) {
+      LOG_WARN("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact "
+               "instead. "
+               "If this is incorrect you should configure a specific interface for rpc_address on "
+               "the server.",
+               address_string_.c_str());
+    }
+  } else {
+    LOG_WARN("No rpc_address for host %s in system.local or system.peers.",
+             address_string_.c_str());
+  }
 }
 
 ExternalHostListener::ExternalHostListener(const CassHostListenerCallback callback, void* data)

@@ -112,9 +112,12 @@ protected:
    * connection.
    * @param hosts The current hosts in the cluster.
    * @param token_map The token map for the cluster.
+   * @param local_dc The local datacenter for the cluster determined by the metadata service for
+   * initializing the load balancing policies.
    */
   virtual void on_connect(const Host::Ptr& connected_host, ProtocolVersion protocol_version,
-                          const HostMap& hosts, const TokenMap::Ptr& token_map);
+                          const HostMap& hosts, const TokenMap::Ptr& token_map,
+                          const String& local_dc);
 
   /**
    * A callback called after the control connection fails to connect. By default

@@ -17,6 +17,7 @@
 #include "cluster_config.hpp"
 
 using namespace datastax;
+using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 extern "C" {
@@ -26,13 +27,21 @@ CassCluster* cass_cluster_new() { return CassCluster::to(new ClusterConfig()); }
 CassError cass_cluster_set_port(CassCluster* cluster, int port) {
   if (port <= 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
+  } else if (cluster->config().cloud_secure_connection_config().is_loaded()) {
+    LOG_ERROR("Port cannot be overridden with cloud secure connection bundle");
+    return CASS_ERROR_LIB_BAD_PARAMS;
   }
+
   cluster->config().set_port(port);
   return CASS_OK;
 }
 
 void cass_cluster_set_ssl(CassCluster* cluster, CassSsl* ssl) {
-  cluster->config().set_ssl_context(ssl->from());
+  if (cluster->config().cloud_secure_connection_config().is_loaded()) {
+    LOG_ERROR("SSL context cannot be overridden with cloud secure connection bundle");
+  } else {
+    cluster->config().set_ssl_context(ssl->from());
+  }
 }
 
 CassError cass_cluster_set_protocol_version(CassCluster* cluster, int protocol_version) {
@@ -100,10 +109,20 @@ CassError cass_cluster_set_contact_points(CassCluster* cluster, const char* cont
 
 CassError cass_cluster_set_contact_points_n(CassCluster* cluster, const char* contact_points,
                                             size_t contact_points_length) {
+  if (cluster->config().cloud_secure_connection_config().is_loaded()) {
+    LOG_ERROR("Contact points cannot be overridden with cloud secure connection bundle");
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+
   if (contact_points_length == 0) {
     cluster->config().contact_points().clear();
   } else {
-    explode(String(contact_points, contact_points_length), cluster->config().contact_points());
+    Vector<String> exploded;
+    explode(String(contact_points, contact_points_length), exploded);
+    for (Vector<String>::const_iterator it = exploded.begin(), end = exploded.end(); it != end;
+         ++it) {
+      cluster->config().contact_points().push_back(Address(*it, -1));
+    }
   }
   return CASS_OK;
 }
@@ -393,7 +412,7 @@ CassError cass_cluster_set_use_hostname_resolution(CassCluster* cluster, cass_bo
 
 CassError cass_cluster_set_use_randomized_contact_points(CassCluster* cluster,
                                                          cass_bool_t enabled) {
-  cluster->config().set_use_randomized_contact_points(enabled);
+  cluster->config().set_use_randomized_contact_points(enabled == cass_true);
   return CASS_OK;
 }
 
@@ -448,12 +467,15 @@ CassError cass_cluster_set_local_address(CassCluster* cluster, const char* name)
 
 CassError cass_cluster_set_local_address_n(CassCluster* cluster, const char* name,
                                            size_t name_length) {
-  Address address; // default to AF_UNSPEC
-  if (name_length == 0 || name == NULL ||
-      Address::from_string(String(name, name_length), 0, &address)) {
-    cluster->config().set_local_address(address);
+  if (name_length == 0 || name == NULL) {
+    cluster->config().set_local_address(Address());
   } else {
-    return CASS_ERROR_LIB_HOST_RESOLUTION;
+    Address address(String(name, name_length), 0);
+    if (address.is_valid_and_resolved()) {
+      cluster->config().set_local_address(address);
+    } else {
+      return CASS_ERROR_LIB_HOST_RESOLUTION;
+    }
   }
   return CASS_OK;
 }
@@ -467,6 +489,53 @@ CassError cass_cluster_set_host_listener_callback(CassCluster* cluster,
                                                   CassHostListenerCallback callback, void* data) {
   cluster->config().set_host_listener(
       DefaultHostListener::Ptr(new ExternalHostListener(callback, data)));
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_cloud_secure_connection_bundle(CassCluster* cluster, const char* path) {
+  return cass_cluster_set_cloud_secure_connection_bundle_n(cluster, path, SAFE_STRLEN(path));
+}
+
+CassError cass_cluster_set_cloud_secure_connection_bundle_n(CassCluster* cluster, const char* path,
+                                                            size_t path_length) {
+  if (cluster->config().contact_points().empty() && !cluster->config().ssl_context()) {
+    SslContextFactory::init_once();
+  }
+  return cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(cluster, path,
+                                                                           path_length);
+}
+
+CassError cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init(CassCluster* cluster,
+                                                                          const char* path) {
+  return cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(cluster, path,
+                                                                           SAFE_STRLEN(path));
+}
+
+CassError cass_cluster_set_cloud_secure_connection_bundle_no_ssl_lib_init_n(CassCluster* cluster,
+                                                                            const char* path,
+                                                                            size_t path_length) {
+  const AddressVec& contact_points = cluster->config().contact_points();
+  const SslContext::Ptr& ssl_context = cluster->config().ssl_context();
+  if (!contact_points.empty() || ssl_context) {
+    String message;
+    if (!cluster->config().contact_points().empty()) {
+      message.append("Contact points");
+    }
+    if (cluster->config().ssl_context()) {
+      if (!message.empty()) {
+        message.append(" and ");
+      }
+      message.append("SSL context");
+    }
+    message.append(" must not be specified with cloud secure connection bundle");
+    LOG_ERROR("%s", message.c_str());
+
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+
+  if (!cluster->config().set_cloud_secure_connection_bundle(String(path, path_length))) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
   return CASS_OK;
 }
 

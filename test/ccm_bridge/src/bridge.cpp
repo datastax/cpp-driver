@@ -95,6 +95,7 @@
 #define CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE "deployment_type"
 #define CCM_CONFIGURATION_KEY_VERBOSE "verbose"
 #define CCM_CONFIGURATION_KEY_USE_DSE "use_dse"
+#define CCM_CONFIGURATION_KEY_USE_DDAC "use_ddac"
 #define CCM_CONFIGURATION_KEY_DSE_VERSION "dse_version"
 #define CCM_CONFIGURATION_KEY_DSE_CREDENTIALS_TYPE "dse_credentials_type"
 #define CCM_CONFIGURATION_KEY_DSE_USERNAME "dse_username"
@@ -122,7 +123,7 @@ using namespace CCM;
 CCM::Bridge::Bridge(
     CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/, bool use_git /*= DEFAULT_USE_GIT*/,
     const std::string& branch_tag /* ""*/, bool use_install_dir /*=DEFAULT_USE_INSTALL_DIR*/,
-    const std::string& install_dir /*=""*/, bool use_dse /*= DEFAULT_USE_DSE*/,
+    const std::string& install_dir /*=""*/, ServerType server_type /*= DEFAULT_SERVER_TYPE*/,
     std::vector<DseWorkload> dse_workload /*= DEFAULT_DSE_WORKLOAD*/,
     const std::string& cluster_prefix /*= DEFAULT_CLUSTER_PREFIX*/,
     DseCredentialsType dse_credentials_type /*= DEFAULT_DSE_CREDENTIALS*/,
@@ -139,7 +140,7 @@ CCM::Bridge::Bridge(
     , branch_tag_(branch_tag)
     , use_install_dir_(use_install_dir)
     , install_dir_(install_dir)
-    , use_dse_(use_dse)
+    , server_type_(server_type)
     , dse_workload_(dse_workload)
     , cluster_prefix_(cluster_prefix)
     , authentication_type_(authentication_type)
@@ -164,8 +165,8 @@ CCM::Bridge::Bridge(
   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 #endif
-  // Determine if DSE is being used
-  if (use_dse_) {
+  // Determine if DSE/DDAC is being used
+  if (!is_cassandra()) {
     dse_version_ = DseVersion(server_version.to_string());
     cassandra_version_ = dse_version_.get_cass_version();
   }
@@ -200,7 +201,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
     , dse_version_(DEFAULT_DSE_VERSION)
     , use_git_(DEFAULT_USE_GIT)
     , use_install_dir_(DEFAULT_USE_INSTALL_DIR)
-    , use_dse_(DEFAULT_USE_DSE)
+    , server_type_(DEFAULT_SERVER_TYPE)
     , dse_workload_(DEFAULT_DSE_WORKLOAD)
     , cluster_prefix_(DEFAULT_CLUSTER_PREFIX)
     , authentication_type_(DEFAULT_AUTHENTICATION)
@@ -273,23 +274,38 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
           } else if (key.compare(CCM_CONFIGURATION_KEY_USE_DSE) == 0) {
             // Convert the value
             std::stringstream ss(value);
-            if (!(ss >> std::boolalpha >> use_dse_).fail()) {
+            bool use_dse = false;
+            if (!(ss >> std::boolalpha >> use_dse).fail()) {
+              if (use_dse) server_type_ = ServerType::DSE;
               continue;
             } else {
               LOG_ERROR("Invalid flag \"" << value << "\" for " << CCM_CONFIGURATION_KEY_USE_DSE
-                                          << "; defaulting to \""
-                                          << (DEFAULT_USE_DSE ? "true" : "false") << "\"");
-              use_dse_ = DEFAULT_USE_DSE;
+                                          << "; defaulting to \"" << DEFAULT_SERVER_TYPE.name()
+                                          << "\"");
+              server_type_ = DEFAULT_SERVER_TYPE;
+            }
+          } else if (key.compare(CCM_CONFIGURATION_KEY_USE_DDAC) == 0) {
+            // Convert the value
+            std::stringstream ss(value);
+            bool use_ddac = false;
+            if (!(ss >> std::boolalpha >> use_ddac).fail()) {
+              if (use_ddac) server_type_ = ServerType::DDAC;
+              continue;
+            } else {
+              LOG_ERROR("Invalid flag \"" << value << "\" for " << CCM_CONFIGURATION_KEY_USE_DDAC
+                                          << "; defaulting to \"" << DEFAULT_SERVER_TYPE.name()
+                                          << "\"");
+              server_type_ = DEFAULT_SERVER_TYPE;
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_DSE_CREDENTIALS_TYPE) == 0) {
-            // Determine the DSE credentials type
+            // Determine the DSE/DDAC credentials type
             for (DseCredentialsType::iterator iterator = DseCredentialsType::begin();
                  iterator != DseCredentialsType::end(); ++iterator) {
               if (*iterator == value) {
                 dse_credentials_type_ = *iterator;
                 break;
               } else {
-                LOG_ERROR("Invalid DSE credential type \"" << value << "\"");
+                LOG_ERROR("Invalid DSE/DDAC credential type \"" << value << "\"");
               }
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_DSE_USERNAME) == 0) {
@@ -368,8 +384,8 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
                                                      << "\"; defaults will be used");
   }
 
-  // Determine if DSE is being used
-  if (use_dse_) {
+  // Determine if DSE/DDAC is being used
+  if (!is_cassandra()) {
     cassandra_version_ = dse_version_.get_cass_version();
   }
 
@@ -381,8 +397,8 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   // Display the configuration settings being used
   LOG("Host: " << host_);
   LOG("Cassandra Version: " << cassandra_version_.to_string());
-  if (use_dse_) {
-    LOG("DSE Version: " << dse_version_.to_string());
+  if (!is_cassandra()) {
+    LOG(server_type_.to_string() << " Version: " << dse_version_.to_string());
   }
   if (use_git_ && !branch_tag_.empty()) {
     LOG("  Branch/Tag: " << branch_tag_);
@@ -546,7 +562,7 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
                             is_password_authenticator, is_ssl, is_client_authentication);
   for (std::vector<DseWorkload>::iterator iterator = dse_workload_.begin();
        iterator != dse_workload_.end(); ++iterator) {
-    if (use_dse_ && *iterator != DSE_WORKLOAD_CASSANDRA) {
+    if (is_dse() && *iterator != DSE_WORKLOAD_CASSANDRA) {
       cluster_name.append("-").append(dse_workloads_[*iterator]);
     }
   }
@@ -563,7 +579,17 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
       create_command.push_back("--install-dir=" + install_dir_);
     } else {
       create_command.push_back("-v");
-      if (use_dse_) {
+      if (is_cassandra()) {
+        if (use_git_) {
+          if (branch_tag_.empty()) {
+            create_command.push_back("git:cassandra-" + cassandra_version_.to_string());
+          } else {
+            create_command.push_back("git:" + branch_tag_);
+          }
+        } else {
+          create_command.push_back(cassandra_version_.to_string());
+        }
+      } else {
         if (use_git_) {
           if (branch_tag_.empty()) {
             create_command.push_back("git:" + dse_version_.to_string());
@@ -577,20 +603,12 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
           create_command.push_back("--dse-username=" + dse_username_);
           create_command.push_back("--dse-password=" + dse_password_);
         }
-      } else {
-        if (use_git_) {
-          if (branch_tag_.empty()) {
-            create_command.push_back("git:cassandra-" + cassandra_version_.to_string());
-          } else {
-            create_command.push_back("git:" + branch_tag_);
-          }
-        } else {
-          create_command.push_back(cassandra_version_.to_string());
-        }
       }
     }
-    if (use_dse_) {
+    if (is_dse()) {
       create_command.push_back("--dse");
+    } else if (is_ddac()) {
+      create_command.push_back("--ddac");
     }
     create_command.push_back("-b");
 
@@ -614,7 +632,7 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
 
     // Generate the cluster update configuration command and execute
     execute_ccm_command(generate_create_updateconf_command(cassandra_version_));
-    if (dse_version_ >= "6.7.0") {
+    if (is_dse() && dse_version_ >= "6.7.0") {
       update_cluster_configuration("user_defined_function_fail_micros", "5000000");
     }
 
@@ -639,7 +657,7 @@ bool CCM::Bridge::create_cluster(std::vector<unsigned short> data_center_nodes,
     }
 
     // Set the DSE workload (if applicable)
-    if (use_dse_ && !(dse_workload_.size() == 1 && dse_workload_[0] == DSE_WORKLOAD_CASSANDRA)) {
+    if (is_dse() && !(dse_workload_.size() == 1 && dse_workload_[0] == DSE_WORKLOAD_CASSANDRA)) {
       set_dse_workloads(dse_workload_);
     }
   }
@@ -888,7 +906,7 @@ unsigned int CCM::Bridge::add_node(const std::string& data_center /*= ""*/) {
     add_node_command.push_back("-d");
     add_node_command.push_back(data_center);
   }
-  if (use_dse_) {
+  if (is_dse()) {
     add_node_command.push_back("--dse");
   }
   add_node_command.push_back(generate_node_name(node));
@@ -917,8 +935,8 @@ bool CCM::Bridge::decommission_node(unsigned int node, bool is_force /*= false*/
   std::vector<std::string> decommission_node_command;
   decommission_node_command.push_back(generate_node_name(node));
   decommission_node_command.push_back("decommission");
-  if (is_force && ((!use_dse_ && cassandra_version_ >= "3.12") || // Cassandra v3.12+
-                   (use_dse_ && dse_version_ >= "5.1.0"))) {      // DataStax Enterprise v5.1.0+
+  if (is_force && ((is_cassandra() && cassandra_version_ >= "3.12") || // Cassandra v3.12+
+                   (!is_cassandra() && dse_version_ >= "5.1.0"))) { // DataStax Enterprise v5.1.0+
     decommission_node_command.push_back("--force");
   }
   execute_ccm_command(decommission_node_command);
@@ -1186,7 +1204,7 @@ DseVersion CCM::Bridge::get_dse_version() {
   }
 
   // Unable to determine version information from active cluster
-  throw BridgeException("Unable to determine version information from active DSE cluster \"" +
+  throw BridgeException("Unable to determine version information from active DSE/DDAC cluster \"" +
                         get_active_cluster() + "\"");
 }
 
@@ -1214,7 +1232,7 @@ DseVersion CCM::Bridge::get_dse_version(const std::string& configuration_file) {
     }
   }
 
-  // Return the DSE version
+  // Return the DSE/DDAC version
   return dse_version;
 }
 
@@ -1698,9 +1716,11 @@ std::string CCM::Bridge::execute_ccm_command(const std::vector<std::string>& com
   std::string output;
   if (deployment_type_ == DeploymentType::LOCAL) {
 #ifdef _WIN32
-    if (use_dse_) {
-      throw BridgeException("DSE v" + dse_version_.to_string() +
-                            " cannot be launched on Windows platform");
+    if (!is_cassandra()) {
+      std::stringstream message;
+      message << server_type_.to_string() << " v" << dse_version_.to_string()
+              << " cannot be launched on Windows platform";
+      throw BridgeException(message.str());
     }
 #endif
     utils::Process::Result result = utils::Process::execute(ccm_command);
@@ -1756,7 +1776,7 @@ std::string CCM::Bridge::generate_cluster_name(CassVersion cassandra_version,
                                                bool is_ssl, bool is_client_authentication) {
   std::stringstream cluster_name;
   std::string server_version =
-      use_dse_ ? dse_version_.to_string(false) : cassandra_version.to_string(false);
+      !is_cassandra() ? dse_version_.to_string(false) : cassandra_version.to_string(false);
   std::replace(server_version.begin(), server_version.end(), '.', '-');
   cluster_name << cluster_prefix_ << "_" << server_version << "_"
                << generate_cluster_nodes(data_center_nodes, '-');
@@ -1794,8 +1814,8 @@ CCM::Bridge::generate_create_updateconf_command(CassVersion cassandra_version) {
   // Create the update configuration command (common updates)
   std::vector<std::string> updateconf_command;
   updateconf_command.push_back("updateconf");
-  // Disable optimizations (limits) when using DSE
-  if (!use_dse_) {
+  // Disable optimizations (limits) when using DSE/DDAC
+  if (is_cassandra()) {
     updateconf_command.push_back("--rt=10000");
     updateconf_command.push_back("read_request_timeout_in_ms:10000");
     updateconf_command.push_back("write_request_timeout_in_ms:10000");

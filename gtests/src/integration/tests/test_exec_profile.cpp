@@ -302,8 +302,15 @@ CASSANDRA_INTEGRATION_TEST_F(ExecutionProfileTest, Consistency) {
   batch.set_execution_profile("consistency");
   result = session_.execute(batch, false);
   ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result.error_code());
-  ASSERT_TRUE(contains(result.error_message(),
-                       "SERIAL is not supported as conditional update commit consistency"));
+  CCM::CassVersion cass_version = server_version_;
+  if (!Options::is_cassandra()) {
+    cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version();
+  }
+  std::string expected_message = "SERIAL is not supported as conditional update commit consistency";
+  if (cass_version >= "4.0.0") {
+    expected_message = "You must use conditional updates for serializable writes";
+  }
+  ASSERT_TRUE(contains(result.error_message(), expected_message));
 
   // Execute a simple query with assigned profile (should fail)
   insert_.set_execution_profile("consistency");

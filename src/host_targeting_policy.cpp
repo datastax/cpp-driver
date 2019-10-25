@@ -21,11 +21,11 @@ using namespace datastax::internal;
 using namespace datastax::internal::core;
 
 void HostTargetingPolicy::init(const SharedRefPtr<Host>& connected_host, const core::HostMap& hosts,
-                               Random* random) {
+                               Random* random, const String& local_dc) {
   for (core::HostMap::const_iterator it = hosts.begin(), end = hosts.end(); it != end; ++it) {
     hosts_[it->first] = it->second;
   }
-  ChainedLoadBalancingPolicy::init(connected_host, hosts, random);
+  ChainedLoadBalancingPolicy::init(connected_host, hosts, random, local_dc);
 }
 
 QueryPlan* HostTargetingPolicy::new_query_plan(const String& keyspace,

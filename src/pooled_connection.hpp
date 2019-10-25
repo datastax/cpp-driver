@@ -51,10 +51,9 @@ public:
    * the connection pool manager flushes the request.
    *
    * @param callback A request callback that handles the request.
-   * @return Returns true if the request was written, otherwise, an error
-   * occurred.
+   * @return The number of bytes written, or negative if an error occurred.
    */
-  bool write(RequestCallback* callback);
+  int32_t write(RequestCallback* callback);
 
   /**
    * Flush pending writes.
@@ -72,6 +71,13 @@ public:
    * @return The number of outstanding requests.
    */
   int inflight_request_count() const;
+
+  /**
+   * Determine if the connection is closing.
+   *
+   * @return Returns true if closing.
+   */
+  bool is_closing() const;
 
 public:
   const String& keyspace() const { return connection_->keyspace(); } // Test only

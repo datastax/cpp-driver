@@ -65,7 +65,7 @@ public:
     return *this;
   }
 
-  operator bool() const { return invoker_; }
+  operator bool() const { return invoker_ != NULL; }
 
   R operator()(const Arg& arg) const { return invoker_->invoke(arg); }
 

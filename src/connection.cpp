@@ -47,19 +47,18 @@ HeartbeatCallback::HeartbeatCallback(Connection* connection)
     , connection_(connection) {}
 
 void HeartbeatCallback::on_internal_set(ResponseMessage* response) {
-  LOG_TRACE("Heartbeat completed on host %s", connection_->socket_->address_string().c_str());
+  LOG_TRACE("Heartbeat completed on host %s", connection_->host_->address_string().c_str());
   connection_->heartbeat_outstanding_ = false;
 }
 
 void HeartbeatCallback::on_internal_error(CassError code, const String& message) {
   LOG_WARN("An error occurred on host %s during a heartbeat request: %s",
-           connection_->socket_->address_string().c_str(), message.c_str());
+           connection_->host_->address_string().c_str(), message.c_str());
   connection_->heartbeat_outstanding_ = false;
 }
 
 void HeartbeatCallback::on_internal_timeout() {
-  LOG_WARN("Heartbeat request timed out on host %s",
-           connection_->socket_->address_string().c_str());
+  LOG_WARN("Heartbeat request timed out on host %s", connection_->host_->address_string().c_str());
   connection_->heartbeat_outstanding_ = false;
 }
 
@@ -116,8 +115,6 @@ Connection::Connection(const Socket::Ptr& socket, const Host::Ptr& host,
     , heartbeat_interval_secs_(heartbeat_interval_secs)
     , heartbeat_outstanding_(false) {
   inc_ref(); // For the event loop
-
-  assert(host_->address() == socket_->address() && "Host doesn't match socket address");
   host_->increment_connection_count();
 }
 
@@ -133,34 +130,12 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
 
   int32_t request_size = socket_->write(callback.get());
 
-  if (request_size < 0) {
+  if (request_size <= 0) {
     stream_manager_.release(stream);
-
-    switch (request_size) {
-      case SocketRequest::SOCKET_REQUEST_ERROR_CLOSED:
-        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unable to write to close socket");
-        break;
-
-      case SocketRequest::SOCKET_REQUEST_ERROR_NO_HANDLER:
-        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR,
-                           "Socket is not properly configured with a handler");
-        break;
-
-      case Request::REQUEST_ERROR_BATCH_WITH_NAMED_VALUES:
-      case Request::REQUEST_ERROR_PARAMETER_UNSET:
-        // Already handled with a specific error.
-        break;
-
-      case Request::REQUEST_ERROR_UNSUPPORTED_PROTOCOL:
-        callback->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                           "Operation unsupported by this protocol version");
-        break;
-
-      default:
-        callback->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unspecified write error occurred");
-        break;
+    if (request_size == 0) {
+      callback->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE, "The encoded request had no data to write");
+      return Request::REQUEST_ERROR_NO_DATA_WRITTEN;
     }
-
     return request_size;
   }
 
@@ -169,7 +144,7 @@ int32_t Connection::write(const RequestCallback::Ptr& callback) {
 
   LOG_TRACE("Sending message type %s with stream %d on host %s",
             opcode_to_string(callback->request()->opcode()).c_str(), stream,
-            socket_->address_string().c_str());
+            host_->address_string().c_str());
 
   callback->set_state(RequestCallback::REQUEST_STATE_WRITING);
 
@@ -274,7 +249,7 @@ void Connection::on_read(const char* buf, size_t size) {
       LOG_TRACE("Consumed message type %s with stream %d, input %u, remaining %u on host %s",
                 opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
                 static_cast<unsigned int>(size), static_cast<unsigned int>(remaining),
-                socket_->address_string().c_str());
+                host_->address_string().c_str());
 
       if (response->stream() < 0) {
         if (response->opcode() == CQL_OPCODE_EVENT) {
@@ -343,7 +318,8 @@ void Connection::restart_heartbeat_timer() {
 
 void Connection::on_heartbeat(Timer* timer) {
   if (!heartbeat_outstanding_ && !socket_->is_closing()) {
-    if (!write_and_flush(RequestCallback::Ptr(new HeartbeatCallback(this)))) {
+    RequestCallback::Ptr callback(new HeartbeatCallback(this));
+    if (write_and_flush(callback) < 0) {
       // Recycling only this connection with a timeout error. This is unlikely and
       // it means the connection ran out of stream IDs as a result of requests
       // that never returned and as a result timed out.

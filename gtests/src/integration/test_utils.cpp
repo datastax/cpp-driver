@@ -148,9 +148,9 @@ std::vector<std::string> test::Utils::explode(const std::string& input,
 
 bool test::Utils::file_exists(const std::string& filename) {
   uv_fs_t request;
-  int error_code = uv_fs_open(NULL, &request, filename.c_str(), O_RDONLY, 0, NULL);
+  int error_code = uv_fs_stat(NULL, &request, filename.c_str(), NULL);
   uv_fs_req_cleanup(&request);
-  return error_code != UV_ENOENT;
+  return error_code == 0;
 }
 
 std::string test::Utils::indent(const std::string& input, unsigned int indent) {
@@ -273,4 +273,11 @@ bool test::Utils::wait_for_port(const std::string& ip_address, unsigned short po
 
   // Unable to establish connection to node on port
   return false;
+}
+
+std::string test::Utils::home_directory() {
+  char home[FILE_PATH_SIZE] = { 0 };
+  size_t home_length = sizeof(home);
+  uv_os_homedir(home, &home_length);
+  return std::string(home, home_length);
 }

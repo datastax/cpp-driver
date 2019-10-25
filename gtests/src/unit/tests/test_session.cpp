@@ -47,10 +47,14 @@ public:
     outage_plan->stop_node(1, OUTAGE_PLAN_DELAY);
   }
 
-  void query_on_threads(Session* session) {
+  void query_on_threads(Session* session, bool is_chaotic = false) {
     uv_thread_t threads[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; ++i) {
-      ASSERT_EQ(0, uv_thread_create(&threads[i], query, session));
+      if (is_chaotic) {
+        ASSERT_EQ(0, uv_thread_create(&threads[i], query_is_chaotic, session));
+      } else {
+        ASSERT_EQ(0, uv_thread_create(&threads[i], query, session));
+      }
     }
     for (int i = 0; i < NUM_THREADS; ++i) {
       uv_thread_join(&threads[i]);
@@ -73,7 +77,7 @@ public:
     for (size_t i = 1; i <= num_nodes; ++i) {
       OStringStream ss;
       ss << "127.0.0." << i;
-      config.contact_points().push_back(ss.str());
+      config.contact_points().push_back(Address(ss.str(), 9042));
     }
     if (ssl_context) {
       config.set_ssl_context(ssl_context);
@@ -89,20 +93,46 @@ public:
         << cass_error_desc(close_future->error()->code) << ": " << close_future->error()->message;
   }
 
-  static void query(Session* session) {
+  static void query(Session* session, bool is_chaotic = false) {
     QueryRequest::Ptr request(new QueryRequest("blah", 0));
     request->set_is_idempotent(true);
 
     Future::Ptr future = session->execute(request, NULL);
     ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME)) << "Timed out executing query";
-    ASSERT_FALSE(future->error()) << cass_error_desc(future->error()->code) << ": "
-                                  << future->error()->message;
+    if (future->error()) fprintf(stderr, "%s\n", cass_error_desc(future->error()->code));
+    if (is_chaotic) {
+      ASSERT_TRUE(future->error() == NULL ||
+                  future->error()->code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE)
+          << cass_error_desc(future->error()->code) << ": " << future->error()->message;
+    } else {
+      ASSERT_FALSE(future->error())
+          << cass_error_desc(future->error()->code) << ": " << future->error()->message;
+    }
   }
 
   // uv_thread_create
   static void query(void* arg) {
     Session* session = static_cast<Session*>(arg);
     query(session);
+  }
+  static void query_is_chaotic(void* arg) {
+    Session* session = static_cast<Session*>(arg);
+    query(session, true);
+  }
+
+  bool check_consistency(const Session& session, CassConsistency expected_consistency,
+                         CassConsistency expected_profile_consistency) {
+    Config session_config = session.config();
+    EXPECT_EQ(expected_consistency, session_config.consistency());
+
+    const ExecutionProfile::Map& profiles = session_config.profiles();
+    for (ExecutionProfile::Map::const_iterator it = profiles.begin(), end = profiles.end();
+         it != end; ++it) {
+      if (expected_profile_consistency != it->second.consistency()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   class HostEventFuture : public Future {
@@ -195,6 +225,54 @@ public:
     uv_mutex_t mutex_;
     EventQueue events_;
   };
+
+  class LocalDcClusterMetadataResolver : public ClusterMetadataResolver {
+  public:
+    LocalDcClusterMetadataResolver(const String& local_dc)
+        : desired_local_dc_(local_dc) {}
+
+  private:
+    virtual void internal_resolve(uv_loop_t* loop, const AddressVec& contact_points) {
+      resolved_contact_points_ = contact_points;
+      local_dc_ = desired_local_dc_;
+      callback_(this);
+    }
+
+    virtual void internal_cancel() {}
+
+  private:
+    String desired_local_dc_;
+  };
+
+  class LocalDcClusterMetadataResolverFactory : public ClusterMetadataResolverFactory {
+  public:
+    LocalDcClusterMetadataResolverFactory(const String& local_dc)
+        : local_dc_(local_dc) {}
+
+    virtual ClusterMetadataResolver::Ptr new_instance(const ClusterSettings& settings) const {
+      return ClusterMetadataResolver::Ptr(new LocalDcClusterMetadataResolver(local_dc_));
+    }
+
+    virtual const char* name() const { return "LocalDc"; }
+
+  private:
+    String local_dc_;
+  };
+
+  class SupportedDbaasOptions : public mockssandra::Action {
+  public:
+    virtual void on_run(mockssandra::Request* request) const {
+      Vector<String> product_type;
+      product_type.push_back("DATASTAX_APOLLO");
+
+      StringMultimap supported;
+      supported["PRODUCT_TYPE"] = product_type;
+
+      String body;
+      mockssandra::encode_string_map(supported, &body);
+      request->write(mockssandra::OPCODE_SUPPORTED, body);
+    }
+  };
 };
 
 TEST_F(SessionUnitTest, ExecuteQueryNotConnected) {
@@ -216,7 +294,7 @@ TEST_F(SessionUnitTest, InvalidKeyspace) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   Session session;
 
   Future::Ptr connect_future(session.connect(config, "invalid"));
@@ -231,7 +309,7 @@ TEST_F(SessionUnitTest, InvalidDataCenter) {
   ASSERT_EQ(cluster.start_all(), 0);
 
   Config config;
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_load_balancing_policy(new DCAwarePolicy("invalid_data_center", 0, false));
   Session session;
 
@@ -248,7 +326,7 @@ TEST_F(SessionUnitTest, InvalidLocalAddress) {
 
   Config config;
   config.set_local_address(Address("1.1.1.1", PORT)); // Invalid
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_load_balancing_policy(new DCAwarePolicy("invalid_data_center", 0, false));
   Session session;
 
@@ -295,7 +373,7 @@ TEST_F(SessionUnitTest, ExecuteQueryReusingSessionChaotic) {
   Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
     connect(&session, NULL, WAIT_FOR_TIME * 3, 4);
-    query(&session);
+    query(&session, true);
     close(&session, WAIT_FOR_TIME * 3);
   }
 }
@@ -312,7 +390,7 @@ TEST_F(SessionUnitTest, ExecuteQueryReusingSessionUsingSslChaotic) {
   Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
     connect(&session, ssl_context.get(), WAIT_FOR_TIME * 3, 4);
-    query(&session);
+    query(&session, true);
     close(&session, WAIT_FOR_TIME * 3);
   }
 }
@@ -360,7 +438,8 @@ TEST_F(SessionUnitTest, ExecuteQueryWithCompleteOutageSpinDown) {
   QueryRequest::Ptr request(new QueryRequest("blah", 0));
   Future::Ptr future = session.execute(request, NULL);
   ASSERT_TRUE(future->wait_for(WAIT_FOR_TIME));
-  ASSERT_EQ(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, future->error()->code);
+  EXPECT_TRUE(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE == future->error()->code ||
+              CASS_ERROR_LIB_REQUEST_TIMED_OUT == future->error()->code);
 
   // Restart a node and execute query to ensure session recovers
   ASSERT_EQ(cluster.start(2), 0);
@@ -403,7 +482,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithThreadsChaotic) {
 
   Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
-    query_on_threads(&session);
+    query_on_threads(&session, true);
   }
 
   close(&session);
@@ -422,7 +501,7 @@ TEST_F(SessionUnitTest, ExecuteQueryWithThreadsUsingSslChaotic) {
 
   Future::Ptr outage_future = execute_outage_plan(&outage_plan);
   while (!outage_future->wait_for(1000)) { // 1 millisecond wait
-    query_on_threads(&session);
+    query_on_threads(&session, true);
   }
 
   close(&session);
@@ -436,7 +515,7 @@ TEST_F(SessionUnitTest, HostListener) {
 
   Config config;
   config.set_constant_reconnect(100); // Reconnect immediately
-  config.contact_points().push_back("127.0.0.2");
+  config.contact_points().push_back(Address("127.0.0.2", 9042));
   config.set_host_listener(listener);
 
   Session session;
@@ -494,7 +573,7 @@ TEST_F(SessionUnitTest, HostListenerDCAwareLocal) {
 
   Config config;
   config.set_constant_reconnect(100); // Reconnect immediately
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_host_listener(listener);
 
   Session session;
@@ -531,7 +610,7 @@ TEST_F(SessionUnitTest, HostListenerDCAwareRemote) {
 
   Config config;
   config.set_constant_reconnect(100); // Reconnect immediately
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_load_balancing_policy(new DCAwarePolicy("dc1", 1, false));
   config.set_host_listener(listener);
 
@@ -573,7 +652,7 @@ TEST_F(SessionUnitTest, HostListenerNodeDown) {
 
   Config config;
   config.set_constant_reconnect(100); // Reconnect immediately
-  config.contact_points().push_back("127.0.0.1");
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
   config.set_host_listener(listener);
 
   Session session;
@@ -608,4 +687,299 @@ TEST_F(SessionUnitTest, HostListenerNodeDown) {
   close(&session);
 
   ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, LocalDcUpdatedOnPolicy) {
+  mockssandra::SimpleCluster cluster(simple(), 3, 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.4", 9042));
+  config.set_cluster_metadata_resolver_factory(
+      ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+  config.set_host_listener(listener);
+
+  Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table (should skip DC1)
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the request processors are using DC2 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.4", future->address().to_string());
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, LocalDcNotOverriddenOnPolicy) {
+  mockssandra::SimpleCluster cluster(simple(), 1, 3);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_load_balancing_policy(new DCAwarePolicy("dc1"));
+  config.set_cluster_metadata_resolver_factory(
+      ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+  config.set_host_listener(listener);
+
+  Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table (should be DC1)
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the request processors are using DC1 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.1", future->address().to_string());
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, LocalDcOverriddenOnPolicyUsingExecutionProfiles) {
+  mockssandra::SimpleCluster cluster(simple(), 3, 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.4", 9042));
+  config.set_use_randomized_contact_points(
+      false); // Ensure round robin order over DC for query execution
+  config.set_cluster_metadata_resolver_factory(
+      ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+  config.set_host_listener(listener);
+
+  ExecutionProfile profile;
+  profile.set_load_balancing_policy(new DCAwarePolicy());
+  config.set_execution_profile("use_propagated_local_dc", &profile);
+
+  Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table (should be DC2)
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC2 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.4", future->address().to_string());
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC2 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+    request->set_execution_profile_name("use_propagated_local_dc");
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.4", future->address().to_string());
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, LocalDcNotOverriddenOnPolicyUsingExecutionProfiles) {
+  mockssandra::SimpleCluster cluster(simple(), 3, 1);
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  TestHostListener::Ptr listener(new TestHostListener());
+
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.4", 9042));
+  config.set_use_randomized_contact_points(
+      false); // Ensure round robin order over DC for query execution
+  config.set_cluster_metadata_resolver_factory(
+      ClusterMetadataResolverFactory::Ptr(new LocalDcClusterMetadataResolverFactory("dc2")));
+  config.set_host_listener(listener);
+
+  ExecutionProfile profile;
+  profile.set_load_balancing_policy(new DCAwarePolicy("dc1"));
+  config.set_execution_profile("use_dc1", &profile);
+
+  Session session;
+  connect(config, &session);
+
+  { // Initial nodes available from peers table (should be DC1 and DC2)
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.1", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.2", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.3", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::ADD_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+    EXPECT_EQ(HostEventFuture::Event(HostEventFuture::START_NODE, Address("127.0.0.4", 9042)),
+              listener->wait_for_event(WAIT_FOR_TIME));
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC2 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_EQ("127.0.0.4", future->address().to_string());
+  }
+
+  for (int i = 0; i < 20; ++i) { // Validate the default profile is using DC1 only
+    QueryRequest::Ptr request(new QueryRequest("blah", 0));
+    request->set_execution_profile_name("use_dc1");
+
+    ResponseFuture::Ptr future = session.execute(request, NULL);
+    EXPECT_TRUE(future->wait_for(WAIT_FOR_TIME));
+    EXPECT_FALSE(future->error());
+    EXPECT_NE("127.0.0.4", future->address().to_string());
+  }
+
+  close(&session);
+
+  ASSERT_EQ(0u, listener->event_count());
+}
+
+TEST_F(SessionUnitTest, NoContactPoints) {
+  // No cluster needed
+
+  Config config;
+  config.contact_points().clear();
+
+  Session session;
+  Future::Ptr connect_future(session.connect(config));
+  ASSERT_TRUE(connect_future->wait_for(WAIT_FOR_TIME))
+      << "Timed out waiting for session to connect";
+  ASSERT_TRUE(connect_future->error());
+  EXPECT_EQ(connect_future->error()->code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+}
+
+TEST_F(SessionUnitTest, DefaultConsistency) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Session session;
+  {
+    Config session_config = session.config();
+    EXPECT_EQ(CASS_CONSISTENCY_UNKNOWN, session_config.consistency());
+  }
+
+  ExecutionProfile profile;
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_execution_profile("profile", &profile);
+  connect(config, &session);
+
+  EXPECT_TRUE(check_consistency(session, CASS_DEFAULT_CONSISTENCY, CASS_DEFAULT_CONSISTENCY));
+
+  close(&session);
+}
+
+TEST_F(SessionUnitTest, DefaultConsistencyExecutionProfileNotUpdated) {
+  mockssandra::SimpleCluster cluster(simple());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Session session;
+  {
+    Config session_config = session.config();
+    EXPECT_EQ(CASS_CONSISTENCY_UNKNOWN, session_config.consistency());
+  }
+
+  ExecutionProfile profile;
+  profile.set_consistency(CASS_CONSISTENCY_LOCAL_QUORUM);
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_execution_profile("profile", &profile);
+  connect(config, &session);
+
+  EXPECT_TRUE(check_consistency(session, CASS_DEFAULT_CONSISTENCY, CASS_CONSISTENCY_LOCAL_QUORUM));
+
+  close(&session);
+}
+
+TEST_F(SessionUnitTest, DbaasDetectionUpdateDefaultConsistency) {
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(mockssandra::OPCODE_OPTIONS).execute(new SupportedDbaasOptions());
+  mockssandra::SimpleCluster cluster(builder.build());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Session session;
+  {
+    Config session_config = session.config();
+    EXPECT_EQ(CASS_CONSISTENCY_UNKNOWN, session_config.consistency());
+  }
+
+  ExecutionProfile profile;
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_execution_profile("profile", &profile);
+  connect(config, &session);
+
+  EXPECT_TRUE(
+      check_consistency(session, CASS_DEFAULT_DBAAS_CONSISTENCY, CASS_DEFAULT_DBAAS_CONSISTENCY));
+
+  close(&session);
+}
+
+TEST_F(SessionUnitTest, DbaasDefaultConsistencyExecutionProfileNotUpdate) {
+  mockssandra::SimpleRequestHandlerBuilder builder;
+  builder.on(mockssandra::OPCODE_OPTIONS).execute(new SupportedDbaasOptions());
+  mockssandra::SimpleCluster cluster(builder.build());
+  ASSERT_EQ(cluster.start_all(), 0);
+
+  Session session;
+  {
+    Config session_config = session.config();
+    EXPECT_EQ(CASS_CONSISTENCY_UNKNOWN, session_config.consistency());
+  }
+
+  ExecutionProfile profile;
+  profile.set_consistency(CASS_CONSISTENCY_LOCAL_ONE);
+  Config config;
+  config.contact_points().push_back(Address("127.0.0.1", 9042));
+  config.set_execution_profile("profile", &profile);
+  connect(config, &session);
+
+  EXPECT_TRUE(
+      check_consistency(session, CASS_DEFAULT_DBAAS_CONSISTENCY, CASS_CONSISTENCY_LOCAL_ONE));
+
+  close(&session);
 }

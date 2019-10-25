@@ -31,14 +31,15 @@ public:
 
   virtual bool decode(Decoder& decoder);
 
-  const Vector<String> compression() { return compression_; }
-  const Vector<String> cql_versions() { return cql_versions_; }
-  const Vector<String> protocol_versions() { return protocol_versions_; }
+  /**
+   * Get the supported options provided by the server.
+   *
+   * @return Supported options; all keys are normalized (uppercase).
+   */
+  const StringMultimap& supported_options() const { return supported_options_; }
 
 private:
-  Vector<String> compression_;
-  Vector<String> cql_versions_;
-  Vector<String> protocol_versions_;
+  StringMultimap supported_options_;
 };
 
 }}} // namespace datastax::internal::core

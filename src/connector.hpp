@@ -164,7 +164,7 @@ public:
 public:
   uv_loop_t* loop() { return loop_; }
 
-  const Address& address() const { return socket_connector_->address(); }
+  const Address& address() const { return host_->address(); }
   const ProtocolVersion protocol_version() const { return protocol_version_; }
 
   bool is_ok() const { return error_code_ == CONNECTION_OK; }
@@ -180,6 +180,8 @@ public:
   bool is_critical_error() const {
     return is_auth_error() || is_ssl_error() || is_invalid_protocol() || is_keyspace_error();
   }
+
+  const StringMultimap& supported_options() const { return supported_options_; }
 
   ConnectionError error_code() { return error_code_; }
   const String& error_message() { return error_message_; }
@@ -216,6 +218,8 @@ private:
 
   ConnectionError error_code_;
   String error_message_;
+
+  StringMultimap supported_options_;
 
   ProtocolVersion protocol_version_;
   String keyspace_;

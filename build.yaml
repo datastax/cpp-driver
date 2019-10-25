@@ -9,6 +9,20 @@ schedules:
       slack: cpp-driver-dev-bots
     branches:
       include: ["/CPP-\\d+/", "master"]
+    env_vars: |
+      CI_SCHEDULE=commit
+  nightly:
+    schedule: nightly
+    notify:
+      slack: cpp-driver-dev-bots
+    branches:
+      include: ["/CPP-\\d+/", "master"]
+    matrix:
+      exclude:
+        - os: ['ubuntu/trusty64/cpp', 'ubuntu/xenial64/cpp', 'centos/6-64/cpp', 'centos/7-64/cpp', 'osx/high-sierra']
+    env_vars: |
+      CI_SCHEDULE=nightly
+      CI_INTEGRATION_ENABLED=true
 architecture:
   - x64
 os:
@@ -19,7 +33,7 @@ os:
   - centos/7-64/cpp
   - osx/high-sierra
 env:
-  LIBUV_VERSION: 1.29.1
+  LIBUV_VERSION: 1.33.0
 build:
   - script: |
       . .build.sh
@@ -33,11 +47,15 @@ build:
 
       build/cassandra-unit-tests --gtest_output=xml:cassandra-unit-test-results.xml
 
+      if [ -f build/cassandra-integration-tests ]; then
+        build/cassandra-integration-tests --category=cassandra --keep-clusters --verbose --gtest_filter=DbaasTests* --gtest_output=xml:dbaas-integration-test-results.xml
+      fi
+
       install_driver
       test_installed_driver 'cassandra'
 
   - xunit:
-    - "*unit-test-results.xml"
+    - "*test-results.xml"
 package:
   allow_empty: true
   include: # list of files and glob paths to include in the artifact, relative to the current working directory
@@ -46,6 +64,8 @@ release:
   matrix:
     exclude:
       - os: [ osx/high-sierra ]
+    env_vars: |
+      CI_SCHEDULE=release
   after:
     each:
       - script: |

@@ -37,11 +37,13 @@
 
 // Macros for grouping tests together
 #define GROUP_TEST_F(group_name, test_case, test_name) TEST_F(test_case, group_name##_##test_name)
+#define GROUP_TEST(group_name, test_case, test_name) TEST(test_case, group_name##_##test_name)
 #define GROUP_TYPED_TEST_P(group_name, test_case, test_name) \
   TYPED_TEST_P(test_case, group_name##_##test_name)
 
 // Macros to use for grouping integration tests together
-#define GROUP_INTEGRATION_TEST(server_type) GROUP_CONCAT(Integration, server_type)
+#define INTEGRATION_TEST(server_type, test_case, test_name) \
+  GROUP_TEST(Integration##_##server_type, test_case, test_name)
 #define INTEGRATION_TEST_F(server_type, test_case, test_name) \
   GROUP_TEST_F(Integration##_##server_type, test_case, test_name)
 #define INTEGRATION_TYPED_TEST_P(server_type, test_case, test_name) \
@@ -52,7 +54,8 @@
   GROUP_TYPED_TEST_P(DISABLED##_##Integration##_##server_type, test_case, est_name)
 
 // Macros to use for grouping Cassandra integration tests together
-#define CASSANDRA_TEST_NAME(test_name) Integration##_##Cassandra##_##test_name
+#define CASSANDRA_INTEGRATION_TEST(test_case, test_name) \
+  INTEGRATION_TEST(Cassandra, test_case, test_name)
 #define CASSANDRA_INTEGRATION_TEST_F(test_case, test_name) \
   INTEGRATION_TEST_F(Cassandra, test_case, test_name)
 #define CASSANDRA_INTEGRATION_TYPED_TEST_P(test_case, test_name) \
@@ -83,7 +86,7 @@
 #define CHECK_VERSION(version)                                                      \
   do {                                                                              \
     CCM::CassVersion cass_version = this->server_version_;                          \
-    if (Options::is_dse()) {                                                        \
+    if (!Options::is_cassandra()) {                                                 \
       cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
     }                                                                               \
     if (cass_version < #version) {                                                  \
@@ -98,7 +101,7 @@
 
 #define CHECK_VALUE_TYPE_VERSION(type)                                            \
   CCM::CassVersion cass_version = this->server_version_;                          \
-  if (Options::is_dse()) {                                                        \
+  if (!Options::is_cassandra()) {                                                 \
     cass_version = static_cast<CCM::DseVersion>(cass_version).get_cass_version(); \
   }                                                                               \
   if (cass_version < type::supported_server_version()) {                          \
@@ -107,8 +110,12 @@
 
 #define CHECK_CONTINUE(flag, message) ASSERT_TRUE(flag) << message;
 
-#define CASSANDRA_KEY_VALUE_TABLE_FORMAT "CREATE TABLE %s (key %s PRIMARY KEY, value %s)"
+#define CASSANDRA_KEY_VALUE_TABLE_FORMAT \
+  "CREATE TABLE IF NOT EXISTS %s (key %s PRIMARY KEY, value %s)"
+#define CASSANDRA_KEY_VALUE_QUALIFIED_TABLE_FORMAT \
+  "CREATE TABLE IF NOT EXISTS %s.%s (key %s PRIMARY KEY, value %s)"
 #define CASSANDRA_KEY_VALUE_INSERT_FORMAT "INSERT INTO %s (key, value) VALUES(%s, %s)"
+#define CASSANDRA_KEY_VALUE_QUALIFIED_INSERT_FORMAT "INSERT INTO %s.%s (key, value) VALUES(%s, %s)"
 #define CASSANDRA_SELECT_VALUE_FORMAT "SELECT value FROM %s WHERE key=%s"
 #define CASSANDRA_DELETE_ROW_FORMAT "DELETE FROM %s WHERE key=%s"
 #define CASSANDRA_UPDATE_VALUE_FORMAT "UPDATE %s SET value=%s WHERE key=%s"
@@ -253,6 +260,12 @@ protected:
    */
   bool is_schema_metadata_;
   /**
+   * Setting to determine if CCM instance should be created. True if CCM instance
+   * should be created; false otherwise.
+   * (DEFAULT: true)
+   */
+  bool is_ccm_requested_;
+  /**
    * Setting to determine if CCM cluster should be started. True if CCM cluster
    * should be started; false otherwise.
    * (DEFAULT: true)
@@ -272,6 +285,11 @@ protected:
    * (DEFAULT: true)
    */
   bool is_session_requested_;
+  /**
+   * Flag to indicate if the newly created keyspace should be set for the session connection.
+   * (DEFAULT: true)
+   */
+  bool is_keyspace_change_requested_;
   /**
    * Flag to indicate if a test is chaotic and should have its CCM cluster
    * destroyed
@@ -368,6 +386,14 @@ protected:
    * @param type_name Table to drop from the current keyspace
    */
   virtual void drop_type(const std::string& type_name);
+
+  /**
+   * Update the current keyspace used by the session
+   *
+   * @param keyspace_name Keyspace to use
+   * @return True if keyspace was changed; false otherwise
+   */
+  virtual bool use_keyspace(const std::string& keyspace_name);
 
   /**
    * Establish the session connection using provided cluster object.

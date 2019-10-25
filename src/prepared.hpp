@@ -69,7 +69,8 @@ public:
         , keyspace_(keyspace)
         , result_metadata_id_(sizeof(uint16_t) + result_metadata_id.size())
         , result_(result) {
-      result_metadata_id_.encode_string(0, result_metadata_id.data(), result_metadata_id.size());
+      result_metadata_id_.encode_string(0, result_metadata_id.data(),
+                                        static_cast<uint16_t>(result_metadata_id.size()));
     }
 
     const String& query() const { return query_; }

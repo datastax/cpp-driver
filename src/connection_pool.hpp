@@ -104,7 +104,7 @@ public:
   typedef SharedRefPtr<ConnectionPool> Ptr;
   typedef DenseHashMap<DelayedConnector*, ReconnectionSchedule*> ReconnectionSchedules;
 
-  class Map : public DenseHashMap<Address, Ptr, AddressHash> {
+  class Map : public DenseHashMap<Address, Ptr> {
   public:
     Map() {
       set_empty_key(Address::EMPTY_KEY);
@@ -131,7 +131,7 @@ public:
 
   /**
    * Find the least busy connection for the pool. The least busy connection has
-   * the lowest number of outstanding requests.
+   * the lowest number of outstanding requests and is not closed.
    *
    * @return The least busy connection or null if no connection is available.
    */

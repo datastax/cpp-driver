@@ -192,15 +192,15 @@ class CollectionType : public CompositeType {
 public:
   typedef SharedRefPtr<const CollectionType> ConstPtr;
 
-  CollectionType(CassValueType collection_type, bool is_frozen)
+  explicit CollectionType(CassValueType collection_type, bool is_frozen)
       : CompositeType(collection_type, is_frozen) {}
 
-  CollectionType(CassValueType collection_type, size_t types_count, bool is_frozen)
+  explicit CollectionType(CassValueType collection_type, size_t types_count, bool is_frozen)
       : CompositeType(collection_type, is_frozen) {
     types_.reserve(types_count);
   }
 
-  CollectionType(CassValueType collection_type, const DataType::Vec& types, bool is_frozen)
+  explicit CollectionType(CassValueType collection_type, const DataType::Vec& types, bool is_frozen)
       : CompositeType(collection_type, types, is_frozen) {}
 
   virtual bool equals(const DataType::ConstPtr& data_type) const {
@@ -310,19 +310,20 @@ public:
 
   typedef CaseInsensitiveHashTable<Field>::EntryVec FieldVec;
 
-  UserType(bool is_frozen)
+  explicit UserType(bool is_frozen)
       : DataType(CASS_VALUE_TYPE_UDT, is_frozen) {}
 
-  UserType(size_t field_count, bool is_frozen)
+  explicit UserType(size_t field_count, bool is_frozen)
       : DataType(CASS_VALUE_TYPE_UDT, is_frozen)
       , fields_(field_count) {}
 
-  UserType(const String& keyspace, const String& type_name, bool is_frozen)
+  explicit UserType(const String& keyspace, const String& type_name, bool is_frozen)
       : DataType(CASS_VALUE_TYPE_UDT, is_frozen)
       , keyspace_(keyspace)
       , type_name_(type_name) {}
 
-  UserType(const String& keyspace, const String& type_name, const FieldVec& fields, bool is_frozen)
+  explicit UserType(const String& keyspace, const String& type_name, const FieldVec& fields,
+                    bool is_frozen)
       : DataType(CASS_VALUE_TYPE_UDT, is_frozen)
       , keyspace_(keyspace)
       , type_name_(type_name)

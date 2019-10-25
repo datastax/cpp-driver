@@ -36,7 +36,8 @@ public:
 
   ~DCAwarePolicy();
 
-  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random);
+  virtual void init(const Host::Ptr& connected_host, const HostMap& hosts, Random* random,
+                    const String& local_dc);
 
   virtual CassHostDistance distance(const Host::Ptr& host) const;
 
