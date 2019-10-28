@@ -484,3 +484,90 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, FutureCallbackAfterSet) {
   ASSERT_TRUE(result != NULL);
   EXPECT_EQ(1u, Result(result).row_count());
 }
+
+/**
+ * Verify that paging and paging using the token properly returns rows.
+ *
+ * @expected_result Expect 10 pages of 10 rows using both paging methods.
+ */
+CASSANDRA_INTEGRATION_TEST_F(BasicsTests, Paging) {
+  CHECK_FAILURE;
+
+  session_.execute(
+      format_string(CASSANDRA_COMPOSITE_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "int"));
+
+  { // Insert rows
+    Statement insert_statement(format_string(CASSANDRA_COMPOSITE_KEY_VALUE_INSERT_FORMAT,
+                                             table_name_.c_str(), "0", "?", "?"),
+                               2);
+
+    for (int i = 0; i < 100; ++i) {
+      insert_statement.bind<TimeUuid>(0, uuid_generator_.generate_timeuuid());
+      insert_statement.bind<Integer>(1, Integer(i));
+      session_.execute(insert_statement);
+    }
+  }
+
+  { // Page through inserted rows
+    Statement select_statement(
+        format_string(CASSANDRA_COMPOSITE_SELECT_VALUE_FORMAT, table_name_.c_str(), "0"));
+    select_statement.set_paging_size(10);
+
+    size_t num_pages = 0;
+
+    while (true) {
+      Result result = session_.execute(select_statement);
+      if (!result.has_more_pages()) break;
+      EXPECT_EQ(10u, result.row_count());
+      num_pages++;
+      select_statement.set_paging_state(result);
+    }
+
+    EXPECT_EQ(10u, num_pages);
+  }
+
+  { // Page through inserted rows using page state token
+    Statement select_statement(
+        format_string(CASSANDRA_COMPOSITE_SELECT_VALUE_FORMAT, table_name_.c_str(), "0"));
+    select_statement.set_paging_size(10);
+
+    size_t num_pages = 0;
+
+    while (true) {
+      Result result = session_.execute(select_statement);
+      if (!result.has_more_pages()) break;
+      EXPECT_EQ(10u, result.row_count());
+      num_pages++;
+      std::string token = result.paging_state_token();
+      EXPECT_FALSE(token.empty());
+      select_statement.set_paging_state_token(token);
+    }
+
+    EXPECT_EQ(10u, num_pages);
+  }
+}
+
+/**
+ * Verify that a query of an empty table returns the correct paging state.
+ *
+ * @expected_result The result should signal no more pages and have an empty paging token.
+ */
+CASSANDRA_INTEGRATION_TEST_F(BasicsTests, PagingEmpty) {
+  CHECK_FAILURE;
+
+  session_.execute(
+      format_string(CASSANDRA_COMPOSITE_KEY_VALUE_TABLE_FORMAT, table_name_.c_str(), "int", "int"));
+
+  // No rows inserted
+
+  Statement select_statement(
+      format_string(CASSANDRA_COMPOSITE_SELECT_VALUE_FORMAT, table_name_.c_str(), "0"));
+  select_statement.set_paging_size(10);
+
+  Result result = session_.execute(select_statement);
+
+  EXPECT_FALSE(result.has_more_pages());
+
+  std::string token = result.paging_state_token();
+  EXPECT_TRUE(token.empty());
+}

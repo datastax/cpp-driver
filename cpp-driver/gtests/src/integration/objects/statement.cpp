@@ -17,7 +17,12 @@
 #include "statement.hpp"
 
 #include "objects/custom_payload.hpp"
+#include "objects/result.hpp"
 
 void test::driver::Statement::set_custom_payload(CustomPayload custom_payload) {
   ASSERT_EQ(CASS_OK, cass_statement_set_custom_payload(get(), custom_payload.get()));
+}
+
+void test::driver::Statement::set_paging_state(const test::driver::Result& result) {
+  ASSERT_EQ(CASS_OK, cass_statement_set_paging_state(get(), result.get()));
 }

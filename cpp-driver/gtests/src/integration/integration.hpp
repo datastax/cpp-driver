@@ -122,6 +122,13 @@
 #define SELECT_ALL_SYSTEM_LOCAL_CQL "SELECT * FROM system.local"
 #define SELECT_COUNT_FORMAT "SELECT COUNT(*) FROM %s LIMIT 1000000"
 
+#define CASSANDRA_COMPOSITE_KEY_VALUE_TABLE_FORMAT                                         \
+  "CREATE TABLE IF NOT EXISTS %s (primary_key %s, column_key timeuuid, value %s, PRIMARY " \
+  "KEY(primary_key, column_key))"
+#define CASSANDRA_COMPOSITE_KEY_VALUE_INSERT_FORMAT \
+  "INSERT INTO %s (primary_key, column_key, value) VALUES(%s, %s, %s)"
+#define CASSANDRA_COMPOSITE_SELECT_VALUE_FORMAT "SELECT value FROM %s WHERE primary_key=%s"
+
 using namespace test;
 using namespace test::driver;
 

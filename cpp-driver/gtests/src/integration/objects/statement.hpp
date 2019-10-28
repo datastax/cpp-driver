@@ -32,6 +32,7 @@ namespace test { namespace driver {
 
 // Forward declaration for circular dependency
 class CustomPayload;
+class Result;
 
 /**
  * Wrapped statement object
@@ -214,6 +215,31 @@ public:
    */
   void set_host(const CassInet* host, int port) {
     ASSERT_EQ(CASS_OK, cass_statement_set_host_inet(get(), host, port));
+  }
+
+  /**
+   * Set the paging size for the statement.
+   *
+   * @param page_size
+   */
+  void set_paging_size(int page_size) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_paging_size(get(), page_size));
+  }
+
+  /**
+   * Set the paging state for the statement.
+   *
+   * @param result
+   */
+  void set_paging_state(const Result& result);
+
+  /**
+   * Set the raw paging state token for the statement.
+   *
+   * @param token
+   */
+  void set_paging_state_token(const std::string& token) {
+    ASSERT_EQ(CASS_OK, cass_statement_set_paging_state_token(get(), token.c_str(), token.size()));
   }
 };
 

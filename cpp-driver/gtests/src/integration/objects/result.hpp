@@ -193,6 +193,25 @@ public:
     return Uuid();
   }
 
+  /**
+   * Determine if a follow up query would return more results.
+   *
+   * @return true if there are more pages; otherwise false
+   */
+  bool has_more_pages() const { return cass_result_has_more_pages(get()) == cass_true; }
+
+  /**
+   * Get the paging state token.
+   *
+   * @return The paging state token.
+   */
+  std::string paging_state_token() const {
+    const char* token = NULL;
+    size_t token_length = 0;
+    cass_result_paging_state_token(get(), &token, &token_length);
+    return std::string(token, token_length);
+  }
+
 private:
   /**
    * Future wrapped object
