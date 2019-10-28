@@ -78,6 +78,13 @@ public:
   }
 
   /**
+   * Asynchronously close the session.
+   *
+   * @return A future to track the closing process of the session.
+   */
+  Future close_async() { return cass_session_close(get()); }
+
+  /**
    * Get the error code that occurred during the connection
    *
    * @return Error code of the future

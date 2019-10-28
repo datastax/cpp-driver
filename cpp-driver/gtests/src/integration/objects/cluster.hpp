@@ -362,6 +362,23 @@ public:
   Session connect(const std::string& keyspace = "", bool assert_ok = true) {
     return Session::connect(get(), keyspace, assert_ok);
   }
+
+  /**
+   * Asynchronously connect the provided session with the settings of this cluster object.
+   *
+   * @param session The session to connect.
+   * @param keyspace Keyspace to use (default: None)
+   * @return A future to track the connection process of the session.
+   */
+  Future connect_async(Session& session, const std::string& keyspace = "") {
+    Future future;
+    if (keyspace.empty()) {
+      future = cass_session_connect(session.get(), get());
+    } else {
+      future = cass_session_connect_keyspace(session.get(), get(), keyspace.c_str());
+    }
+    return future;
+  }
 };
 
 }} // namespace test::driver

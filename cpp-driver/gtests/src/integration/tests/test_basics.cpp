@@ -396,3 +396,91 @@ CASSANDRA_INTEGRATION_TEST_F(BasicsTests, NoCompactEnabledConnection) {
     ASSERT_TRUE(row.next().as<Blob>().is_null());
   }
 }
+
+static void on_future_callback_connect_close(CassFuture* future, void* data) {
+  bool* is_success = static_cast<bool*>(data);
+  *is_success = cass_future_error_code(future) == CASS_OK;
+}
+
+/**
+ * Verify a future callback is called when connecting a session.
+ *
+ * @expected_result The flag is set correctly inside the connect future callback.
+ */
+CASSANDRA_INTEGRATION_TEST_F(BasicsTests, FutureCallbackConnect) {
+  CHECK_FAILURE;
+
+  Session session;
+  Future future = default_cluster().connect_async(session);
+
+  bool is_success = false;
+  cass_future_set_callback(future.get(), on_future_callback_connect_close, &is_success);
+
+  future.wait();
+
+  EXPECT_TRUE(is_success);
+}
+
+/**
+ * Verify a future callback is called when closing a session.
+ *
+ * @expected_result The flag is set correctly inside the close future callback.
+ */
+CASSANDRA_INTEGRATION_TEST_F(BasicsTests, FutureCallbackClose) {
+  CHECK_FAILURE;
+
+  Session session = default_cluster().connect();
+
+  Future future = session.close_async();
+
+  bool is_success = false;
+  cass_future_set_callback(future.get(), on_future_callback_connect_close, &is_success);
+
+  future.wait();
+
+  EXPECT_TRUE(is_success);
+}
+
+static void on_future_callback_result(CassFuture* future, void* data) {
+  const CassResult** result = static_cast<const CassResult**>(data);
+  *result = cass_future_get_result(future);
+}
+
+/**
+ * Verify a future callback is called with query results.
+ *
+ * @expected_result Result correctly returned in the future callback.
+ */
+CASSANDRA_INTEGRATION_TEST_F(BasicsTests, FutureCallbackResult) {
+  CHECK_FAILURE;
+
+  Future future = session_.execute_async(SELECT_ALL_SYSTEM_LOCAL_CQL);
+
+  const CassResult* result = NULL;
+  cass_future_set_callback(future.get(), on_future_callback_result, &result);
+
+  future.wait();
+
+  ASSERT_TRUE(result != NULL);
+  EXPECT_EQ(1u, Result(result).row_count());
+}
+
+/**
+ * Verify a future callback is called correctly after the query results have been set.
+ *
+ * @expected_result Result correctly returned in the future callback.
+ */
+CASSANDRA_INTEGRATION_TEST_F(BasicsTests, FutureCallbackAfterSet) {
+  CHECK_FAILURE;
+
+  Future future = session_.execute_async(SELECT_ALL_SYSTEM_LOCAL_CQL);
+
+  future.wait(); // Wait for result before setting the callback
+
+  const CassResult* result = NULL;
+  // Callback should be called immediately with the already retrieved result.
+  cass_future_set_callback(future.get(), on_future_callback_result, &result);
+
+  ASSERT_TRUE(result != NULL);
+  EXPECT_EQ(1u, Result(result).row_count());
+}
