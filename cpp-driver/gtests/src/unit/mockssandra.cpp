@@ -748,27 +748,27 @@ int ServerConnection::on_password(char* buf, int size, int rwflag, void* passwor
     }                                                   \
   } while (0)
 
-inline const char* decode_int8(const char* input, const char* end, int8_t* value) {
+const char* decode_int8(const char* input, const char* end, int8_t* value) {
   CHECK(input + 1, "Unable to decode byte");
   *value = static_cast<int8_t>(input[0]);
   return input + sizeof(int8_t);
 }
 
-inline const char* decode_int16(const char* input, const char* end, int16_t* value) {
+const char* decode_int16(const char* input, const char* end, int16_t* value) {
   CHECK(input + 2, "Unable to decode signed short");
   *value = (static_cast<int16_t>(static_cast<uint8_t>(input[1])) << 0) |
            (static_cast<int16_t>(static_cast<uint8_t>(input[0])) << 8);
   return input + sizeof(int16_t);
 }
 
-inline const char* decode_uint16(const char* input, const char* end, uint16_t* value) {
+const char* decode_uint16(const char* input, const char* end, uint16_t* value) {
   CHECK(input + 2, "Unable to decode unsigned short");
   *value = (static_cast<uint16_t>(static_cast<uint8_t>(input[1])) << 0) |
            (static_cast<uint16_t>(static_cast<uint8_t>(input[0])) << 8);
   return input + sizeof(uint16_t);
 }
 
-inline const char* decode_int32(const char* input, const char* end, int32_t* value) {
+const char* decode_int32(const char* input, const char* end, int32_t* value) {
   CHECK(input + 4, "Unable to decode integer");
   *value = (static_cast<int32_t>(static_cast<uint8_t>(input[3])) << 0) |
            (static_cast<int32_t>(static_cast<uint8_t>(input[2])) << 8) |
@@ -777,7 +777,7 @@ inline const char* decode_int32(const char* input, const char* end, int32_t* val
   return input + sizeof(int32_t);
 }
 
-inline const char* decode_int64(const char* input, const char* end, int64_t* value) {
+const char* decode_int64(const char* input, const char* end, int64_t* value) {
   CHECK(input + 8, "Unable to decode long");
   *value = (static_cast<int64_t>(static_cast<uint8_t>(input[7])) << 0) |
            (static_cast<int64_t>(static_cast<uint8_t>(input[6])) << 8) |
@@ -790,7 +790,7 @@ inline const char* decode_int64(const char* input, const char* end, int64_t* val
   return input + sizeof(int64_t);
 }
 
-inline const char* decode_string(const char* input, const char* end, String* output) {
+const char* decode_string(const char* input, const char* end, String* output) {
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   CHECK(pos + len, "Unable to decode string");
@@ -798,7 +798,7 @@ inline const char* decode_string(const char* input, const char* end, String* out
   return pos + len;
 }
 
-inline const char* decode_long_string(const char* input, const char* end, String* output) {
+const char* decode_long_string(const char* input, const char* end, String* output) {
   int32_t len = 0;
   const char* pos = decode_int32(input, end, &len);
   CHECK(pos + len, "Unable to decode long string");
@@ -807,7 +807,7 @@ inline const char* decode_long_string(const char* input, const char* end, String
   return pos + len;
 }
 
-inline const char* decode_bytes(const char* input, const char* end, String* output) {
+const char* decode_bytes(const char* input, const char* end, String* output) {
   int32_t len = 0;
   const char* pos = decode_int32(input, end, &len);
   if (len > 0) {
@@ -817,7 +817,7 @@ inline const char* decode_bytes(const char* input, const char* end, String* outp
   return pos + len;
 }
 
-inline const char* decode_uuid(const char* input, CassUuid* output) {
+const char* decode_uuid(const char* input, CassUuid* output) {
   output->time_and_version = static_cast<uint64_t>(static_cast<uint8_t>(input[3]));
   output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[2])) << 8;
   output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[1])) << 16;
@@ -837,8 +837,8 @@ inline const char* decode_uuid(const char* input, CassUuid* output) {
   return input + 16;
 }
 
-inline const char* decode_string_map(const char* input, const char* end,
-                                     Vector<std::pair<String, String> >* output) {
+const char* decode_string_map(const char* input, const char* end,
+                              Vector<std::pair<String, String> >* output) {
 
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
@@ -853,7 +853,7 @@ inline const char* decode_string_map(const char* input, const char* end,
   return pos;
 }
 
-inline const char* decode_stringlist(const char* input, const char* end, Vector<String>* output) {
+const char* decode_stringlist(const char* input, const char* end, Vector<String>* output) {
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   output->reserve(len);
@@ -865,7 +865,7 @@ inline const char* decode_stringlist(const char* input, const char* end, Vector<
   return pos;
 }
 
-inline const char* decode_values(const char* input, const char* end, Vector<String>* output) {
+const char* decode_values(const char* input, const char* end, Vector<String>* output) {
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   output->reserve(len);
@@ -877,8 +877,8 @@ inline const char* decode_values(const char* input, const char* end, Vector<Stri
   return pos;
 }
 
-inline const char* decode_values_with_names(const char* input, const char* end,
-                                            Vector<String>* names, Vector<String>* values) {
+const char* decode_values_with_names(const char* input, const char* end, Vector<String>* names,
+                                     Vector<String>* values) {
   uint16_t len = 0;
   const char* pos = decode_uint16(input, end, &len);
   names->reserve(len);
@@ -1011,24 +1011,24 @@ const char* decode_prepare_params(int version, const char* input, const char* en
   return pos;
 }
 
-inline int32_t encode_int8(int8_t value, String* output) {
+int32_t encode_int8(int8_t value, String* output) {
   output->push_back(static_cast<char>(value));
   return 1;
 }
 
-inline int32_t encode_int16(int16_t value, String* output) {
+int32_t encode_int16(int16_t value, String* output) {
   output->push_back(static_cast<char>(value >> 8));
   output->push_back(static_cast<char>(value >> 0));
   return 2;
 }
 
-inline int32_t encode_uint16(uint16_t value, String* output) {
+int32_t encode_uint16(uint16_t value, String* output) {
   output->push_back(static_cast<char>(value >> 8));
   output->push_back(static_cast<char>(value >> 0));
   return 2;
 }
 
-inline int32_t encode_int32(int32_t value, String* output) {
+int32_t encode_int32(int32_t value, String* output) {
   output->push_back(static_cast<char>(value >> 24));
   output->push_back(static_cast<char>(value >> 16));
   output->push_back(static_cast<char>(value >> 8));
@@ -1036,13 +1036,13 @@ inline int32_t encode_int32(int32_t value, String* output) {
   return 4;
 }
 
-inline int32_t encode_string(const String& value, String* output) {
+int32_t encode_string(const String& value, String* output) {
   int32_t size = encode_uint16(value.size(), output) + value.size();
   output->append(value);
   return size + value.size();
 }
 
-inline int32_t encode_string_list(const Vector<String>& value, String* output) {
+int32_t encode_string_list(const Vector<String>& value, String* output) {
   int32_t size = encode_int16(value.size(), output);
   for (Vector<String>::const_iterator it = value.begin(), end = value.end(); it != end; ++it) {
     size += encode_string(*it, output);
@@ -1050,13 +1050,13 @@ inline int32_t encode_string_list(const Vector<String>& value, String* output) {
   return size;
 }
 
-inline int32_t encode_bytes(const String& value, String* output) {
+int32_t encode_bytes(const String& value, String* output) {
   int32_t size = encode_int32(value.size(), output) + value.size();
   output->append(value);
   return size + value.size();
 }
 
-inline int32_t encode_inet(const Address& value, String* output) {
+int32_t encode_inet(const Address& value, String* output) {
   uint8_t buf[16];
   uint8_t len = value.to_inet(buf);
   encode_int8(len, output);
@@ -1067,7 +1067,7 @@ inline int32_t encode_inet(const Address& value, String* output) {
   return 1 + len + 4;
 }
 
-inline int32_t encode_uuid(CassUuid uuid, String* output) {
+int32_t encode_uuid(CassUuid uuid, String* output) {
   uint64_t time_and_version = uuid.time_and_version;
   char buf[16];
   buf[3] = static_cast<char>(time_and_version & 0x00000000000000FFLL);

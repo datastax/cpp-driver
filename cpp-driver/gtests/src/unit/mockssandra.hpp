@@ -296,8 +296,8 @@ enum {
   RESULT_VOID = 0x0001,
   RESULT_ROWS = 0x0002,
   RESULT_SET_KEYSPACE = 0x0003,
-  RESULT_SET_PREPARED = 0x0004,
-  RESULT_SET_SCHEMA_CHANGE = 0x0005
+  RESULT_PREPARED = 0x0004,
+  RESULT_SCHEMA_CHANGE = 0x0005
 };
 
 enum {
@@ -362,6 +362,8 @@ struct QueryParameters {
   String keyspace;
 };
 
+int32_t encode_int32(int32_t value, String* output);
+int32_t encode_string(const String& value, String* output);
 int32_t encode_string_map(const Map<String, Vector<String> >& value, String* output);
 
 class Type {
