@@ -21,6 +21,7 @@
 #include "objects/object_base.hpp"
 
 #include "objects/custom_payload.hpp"
+#include "objects/error_result.hpp"
 #include "objects/future.hpp"
 #include "objects/iterator.hpp"
 
@@ -105,6 +106,13 @@ public:
    * @return Error message
    */
   const std::string error_message() { return future_.error_message(); }
+
+  /**
+   * Get the error result object for the server-side failure
+   *
+   * @return Error result object
+   */
+  ErrorResult error_result() const { return ErrorResult(future_); }
 
   /**
    * Get the host/address of the future
