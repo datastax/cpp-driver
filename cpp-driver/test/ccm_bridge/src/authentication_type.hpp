@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
-#ifndef __CCM_AUTHENTICATION_TYPE_HPP__
-#define __CCM_AUTHENTICATION_TYPE_HPP__
+#ifndef CCM_AUTHENTICATION_TYPE_HPP
+#define CCM_AUTHENTICATION_TYPE_HPP
 
-#include <set>
+#include <cctype>
 #include <string>
 
 namespace CCM {
@@ -27,115 +27,55 @@ namespace CCM {
  */
 class AuthenticationType {
 public:
-  /**
-   * Iterator for authentication type constants
-   */
-  typedef std::set<AuthenticationType>::iterator iterator;
+  enum Type { INVALID, USERNAME_PASSWORD, PUBLIC_KEY };
 
-  /**
-   * Username/Password authentication type; SSH process is authenticated via
-   * plain text username and password
-   */
-  static const AuthenticationType USERNAME_PASSWORD;
-  /**
-   * Public key authentication type; SSH process is authenticated via public
-   * key
-   */
-  static const AuthenticationType PUBLIC_KEY;
+  AuthenticationType(Type type = USERNAME_PASSWORD)
+      : type_(type) {}
 
-  /**
-   * Name of constant
-   *
-   * @return Name of constant
-   */
-  const std::string& name() const;
-  /**
-   * Ordinal of constant
-   *
-   * @return Ordinal of constant
-   */
-  short ordinal() const;
-  /**
-   * Get the display name
-   *
-   * @return Display name of authentication type
-   */
-  const std::string& to_string() const;
+  const char* name() const {
+    switch (type_) {
+      case USERNAME_PASSWORD:
+        return "USERNAME_PASSWORD";
+      case PUBLIC_KEY:
+        return "PUBLIC_KEY";
+      default:
+        return "INVALID";
+    }
+  }
 
-  /**
-   * Less than (can be used for sorting)
-   *
-   * @param object Right hand side comparison object
-   * @return True if LHS < RHS; false otherwise
-   */
-  bool operator<(const AuthenticationType& object) const;
-  /**
-   * Equal to
-   *
-   * @param object Right hand side comparison object
-   * @return True if LHS == RHS; false otherwise
-   */
-  bool operator==(const AuthenticationType& object) const;
-  /**
-   * Equal to (case-incentive string comparison)
-   *
-   * @param object Right hand side comparison object
-   * @return True if LHS == RHS; false otherwise
-   */
-  bool operator==(const std::string& object) const;
+  const char* to_string() const {
+    switch (type_) {
+      case USERNAME_PASSWORD:
+        return "Username and Password";
+      case PUBLIC_KEY:
+        return "Public Key";
+      default:
+        return "Invalid Authentication Type";
+    }
+  }
 
-  /**
-   * First item in the authentication constants
-   *
-   * @return Iterator pointing to the first element in the set
-   */
-  static std::set<AuthenticationType>::iterator begin();
-  /**
-   * Last item in the authentication constants
-   *
-   * @return Iterator pointing to the last element in the set
-   */
-  static std::set<AuthenticationType>::iterator end();
+  bool operator==(const AuthenticationType& other) const { return type_ == other.type_; }
 
-  /**
-   * Default constructor to handle issues with static initialization of
-   * constant authentication types
-   */
-  AuthenticationType();
+  static AuthenticationType from_string(const std::string& str) {
+    if (iequals(AuthenticationType(USERNAME_PASSWORD).name(), str)) {
+      return AuthenticationType(USERNAME_PASSWORD);
+    } else if (iequals(AuthenticationType(PUBLIC_KEY).name(), str)) {
+      return AuthenticationType(PUBLIC_KEY);
+    }
+    return AuthenticationType(INVALID);
+  }
 
 private:
-  /**
-   * Authentication type constants
-   */
-  static std::set<AuthenticationType> constants_;
-  /**
-   * Name of constant
-   */
-  std::string name_;
-  /**
-   * Ordinal of constant
-   */
-  short ordinal_;
-  /**
-   * Display name for constant
-   */
-  std::string display_name_;
+  static bool iequalsc(char l, char r) { return std::tolower(l) == std::tolower(r); }
 
-  /**
-   * Constructor
-   *
-   * @param name Name for authentication type
-   * @param display_name Display name for authentication type
-   */
-  AuthenticationType(const std::string& name, int ordinal, const std::string& display_name);
-  /**
-   * Get the authentication type constants
-   *
-   * @return List of authentication type constants
-   */
-  static const std::set<AuthenticationType>& get_constants();
+  static bool iequals(const std::string& lhs, const std::string& rhs) {
+    return lhs.size() == rhs.size() && std::equal(lhs.begin(), lhs.end(), rhs.begin(), iequalsc);
+  }
+
+private:
+  Type type_;
 };
 
 } // namespace CCM
 
-#endif // __CCM_AUTHENTICATION_TYPE_HPP__
+#endif // CCM_AUTHENTICATION_TYPE_HPP

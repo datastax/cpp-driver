@@ -123,20 +123,12 @@ bool Options::initialize(int argc, char* argv[]) {
           dse_password_ = value;
         }
       } else if (key == "--dse-credentials") {
-        bool is_found = false;
-        if (!value.empty()) {
-          for (CCM::DseCredentialsType::iterator iterator = CCM::DseCredentialsType::begin();
-               iterator != CCM::DseCredentialsType::end(); ++iterator) {
-            if (*iterator == value) {
-              dse_credentials_type_ = *iterator;
-              is_found = true;
-              break;
-            }
-          }
-        }
-        if (!is_found) {
+        CCM::DseCredentialsType type = CCM::DseCredentialsType::from_string(value);
+        if (type == CCM::DseCredentialsType::INVALID) {
           std::cerr << "Invalid DSE/DDAC Credentials Type: Using default "
                     << dse_credentials_type_.to_string() << std::endl;
+        } else {
+          dse_credentials_type_ = type;
         }
       } else if (key == "--git") {
         use_git_ = true;
@@ -198,36 +190,20 @@ bool Options::initialize(int argc, char* argv[]) {
       }
 #ifdef CASS_USE_LIBSSH2
       else if (key == "--authentication") {
-        bool is_found = false;
-        if (!value.empty()) {
-          for (CCM::AuthenticationType::iterator iterator = CCM::AuthenticationType::begin();
-               iterator != CCM::AuthenticationType::end(); ++iterator) {
-            if (*iterator == value) {
-              authentication_type_ = *iterator;
-              is_found = true;
-              break;
-            }
-          }
-        }
-        if (!is_found) {
+        CCM::AuthenticationType type = CCM::AuthenticationType::from_string(value);
+        if (type == CCM::AuthenticationType::INVALID) {
           std::cerr << "Invalid Authentication Type: Using default "
                     << authentication_type_.to_string() << std::endl;
+        } else {
+          authentication_type_ = type;
         }
       } else if (key == "--deployment") {
-        bool is_found = false;
-        if (!value.empty()) {
-          for (CCM::DeploymentType::iterator iterator = CCM::DeploymentType::begin();
-               iterator != CCM::DeploymentType::end(); ++iterator) {
-            if (*iterator == value) {
-              deployment_type_ = *iterator;
-              is_found = true;
-              break;
-            }
-          }
-        }
-        if (!is_found) {
+        CCM::DeploymentType type = CCM::DeploymentType::from_string(value);
+        if (type == CCM::DeploymentType::INVALID) {
           std::cerr << "Invalid Deployment Type: Using default " << deployment_type_.to_string()
                     << std::endl;
+        } else {
+          deployment_type_ = type;
         }
       } else if (key == "--host") {
         if (!value.empty()) {

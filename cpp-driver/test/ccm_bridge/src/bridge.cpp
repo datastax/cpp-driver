@@ -298,15 +298,12 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
               server_type_ = DEFAULT_SERVER_TYPE;
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_DSE_CREDENTIALS_TYPE) == 0) {
-            // Determine the DSE/DDAC credentials type
-            for (DseCredentialsType::iterator iterator = DseCredentialsType::begin();
-                 iterator != DseCredentialsType::end(); ++iterator) {
-              if (*iterator == value) {
-                dse_credentials_type_ = *iterator;
-                break;
-              } else {
-                LOG_ERROR("Invalid DSE/DDAC credential type \"" << value << "\"");
-              }
+            // Determine the DSE credentials type
+            DseCredentialsType type = DseCredentialsType::from_string(value);
+            if (type == DseCredentialsType::INVALID) {
+              LOG_ERROR("Invalid DSE/DDAC credential type \"" << value << "\"");
+            } else {
+              dse_credentials_type_ = type;
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_DSE_USERNAME) == 0) {
             dse_username_ = value;
@@ -315,26 +312,20 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
 #ifdef CASS_USE_LIBSSH2
           } else if (key.compare(CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE) == 0) {
             // Determine the deployment type
-            for (DeploymentType::iterator iterator = DeploymentType::begin();
-                 iterator != DeploymentType::end(); ++iterator) {
-              if (*iterator == value) {
-                deployment_type_ = *iterator;
-                break;
-              } else {
-                LOG_ERROR("Invalid deployment type \"" << value << "\"");
-              }
+            DeploymentType type = DeploymentType::from_string(value);
+            if (type == DeploymentType::INVALID) {
+              LOG_ERROR("Invalid deployment type \"" << value << "\"");
+            } else {
+              deployment_type_ = type;
             }
 #endif
           } else if (key.compare(CCM_CONFIGURATION_KEY_AUTHENTICATION_TYPE) == 0) {
             // Determine the authentication type
-            for (AuthenticationType::iterator iterator = AuthenticationType::begin();
-                 iterator != AuthenticationType::end(); ++iterator) {
-              if (*iterator == value) {
-                authentication_type_ = *iterator;
-                break;
-              } else {
-                LOG_ERROR("Invalid authentication type \"" << value << "\"");
-              }
+            AuthenticationType type = AuthenticationType::from_string(value);
+            if (type == AuthenticationType::INVALID) {
+              LOG_ERROR("Invalid authentication type \"" << value << "\"");
+            } else {
+              authentication_type_ = type;
             }
 #ifdef CASS_USE_LIBSSH2
           } else if (key.compare(CCM_CONFIGURATION_KEY_HOST) == 0) {

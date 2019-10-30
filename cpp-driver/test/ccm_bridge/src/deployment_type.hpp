@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
-#ifndef __CCM_DEPLOYMENT_TYPE_HPP__
-#define __CCM_DEPLOYMENT_TYPE_HPP__
+#ifndef CCM_DEPLOYMENT_TYPE_HPP
+#define CCM_DEPLOYMENT_TYPE_HPP
 
-#include <set>
+#include <algorithm>
 #include <string>
 
 namespace CCM {
@@ -27,115 +27,66 @@ namespace CCM {
  */
 class DeploymentType {
 public:
-  /**
-   * Iterator for deployment type constants
-   */
-  typedef std::set<DeploymentType>::iterator iterator;
-
-  /**
-   * Local deployment type; commands are executed through local process
-   */
-  static const DeploymentType LOCAL;
 #ifdef CASS_USE_LIBSSH2
-  /**
-   * Remote deployment type; commands are executed though libssh2
-   */
-  static const DeploymentType REMOTE;
+  enum Type { INVALID, LOCAL, REMOTE };
+#else
+  enum Type { INVALID, LOCAL };
 #endif
 
-  /**
-   * Name of constant
-   *
-   * @return Name of constant
-   */
-  const std::string& name() const;
-  /**
-   * Ordinal of constant
-   *
-   * @return Ordinal of constant
-   */
-  short ordinal() const;
-  /**
-   * Get the display name
-   *
-   * @return Display name of deployment type
-   */
-  const std::string& to_string() const;
+  DeploymentType(Type type = LOCAL)
+      : type_(type) {}
 
-  /**
-   * Less than (can be used for sorting)
-   *
-   * @param object Right hand side comparison object
-   * @return True if LHS < RHS; false otherwise
-   */
-  bool operator<(const DeploymentType& object) const;
-  /**
-   * Equal to
-   *
-   * @param object Right hand side comparison object
-   * @return True if LHS == RHS; false otherwise
-   */
-  bool operator==(const DeploymentType& object) const;
-  /**
-   * Equal to (case-incentive string comparison)
-   *
-   * @param object Right hand side comparison object
-   * @return True if LHS == RHS; false otherwise
-   */
-  bool operator==(const std::string& object) const;
+  const char* name() const {
+    switch (type_) {
+      case LOCAL:
+        return "LOCAL";
+#ifdef CASS_USE_LIBSSH2
+      case REMOTE:
+        return "REMOTE";
+#endif
+      default:
+        return "INVALID";
+    }
+  }
 
-  /**
-   * First item in the deployment constants
-   *
-   * @return Iterator pointing to the first element in the set
-   */
-  static std::set<DeploymentType>::iterator begin();
-  /**
-   * Last item in the deployment constants
-   *
-   * @return Iterator pointing to the last element in the set
-   */
-  static std::set<DeploymentType>::iterator end();
+  const char* to_string() const {
+    switch (type_) {
+      case LOCAL:
+        return "Local";
+#ifdef CASS_USE_LIBSSH2
+      case REMOTE:
+        return "Remote";
+#endif
+      default:
+        return "Invalid Deployment Type";
+    }
+  }
 
-  /**
-   * Default constructor to handle issues with static initialization of
-   * constant deployment types
-   */
-  DeploymentType();
+  bool operator==(const DeploymentType& other) const { return type_ == other.type_; }
+
+  static DeploymentType from_string(const std::string& str) {
+    if (iequals(DeploymentType(LOCAL).name(), str)) {
+      return DeploymentType(LOCAL);
+    }
+#ifdef CASS_USE_LIBSSH2
+    else if (iequals(DeploymentType(REMOTE).name(), str)) {
+      return DeploymentType(REMOTE);
+    }
+#endif
+    return DeploymentType(INVALID);
+  }
 
 private:
-  /**
-   * Deployment type constants
-   */
-  static std::set<DeploymentType> constants_;
-  /**
-   * Name of constant
-   */
-  std::string name_;
-  /**
-   * Ordinal of constant
-   */
-  short ordinal_;
-  /**
-   * Display name for constant
-   */
-  std::string display_name_;
+  static bool iequalsc(char l, char r) { return std::tolower(l) == std::tolower(r); }
 
-  /**
-   * Constructor
-   *
-   * @param name Name for deployment type
-   * @param display_name Display name for deployment type
-   */
-  DeploymentType(const std::string& name, int ordinal, const std::string& display_name);
-  /**
-   * Get the deployment type constants
-   *
-   * @return List of deployment type constants
-   */
-  static const std::set<DeploymentType>& get_constants();
+  static bool iequals(const std::string& lhs, const std::string& rhs) {
+    return lhs.size() == rhs.size() && std::equal(lhs.begin(), lhs.end(), rhs.begin(), iequalsc);
+  }
+
+private:
+  Type type_;
 };
 
 } // namespace CCM
 
-#endif // __CCM_DEPLOYMENT_TYPE_HPP__
+#endif // CCM_DEPLOYMENT_TYPE_HPP
