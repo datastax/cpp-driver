@@ -399,6 +399,21 @@ public:
     return *this;
   }
 
+  /*
+   * Enable constant speculative execution
+   *
+   *
+   * @param constant_delay_ms Constant delay (in milliseconds)
+   * @param max_speculative_executions Maximum number of speculative executions
+   * @return Cluster object
+   */
+  Cluster& with_constant_speculative_execution_policy(int64_t constant_delay_ms,
+                                                      int max_speculative_executions) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_constant_speculative_execution_policy(
+                           get(), constant_delay_ms, max_speculative_executions));
+    return *this;
+  }
+
   /**
    * Create a new session and establish a connection to the server;
    * synchronously
